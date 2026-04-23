@@ -101,10 +101,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "LATT_GenerateCharacteristicVectorSet arithmetic_mat "
-                   "arithmetic_vect choice [MaFile] [OutFormat] [OutFile]\n";
+                   "arithmetic_vect choice [MatFile] [OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
       std::cerr << "LATT_GenerateCharacteristicVectorSet arithmetic_mat "
-                   "arithmetic_vect choice [MaFile]\n";
+                   "arithmetic_vect choice [MatFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "arithmetic_mat: mpq_class\n";
       std::cerr << "arithmetic_vect: mpz_class\n";

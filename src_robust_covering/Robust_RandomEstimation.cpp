@@ -30,8 +30,8 @@ void process_B(size_t const &n_iter, std::string const &MatFile,
 }
 
 void process_A(std::string const &arithmetic, size_t const &n_iter,
-               std::string MatFile, std::string OutFormat,
-               std::string OutFile) {
+               std::string const &MatFile, std::string const &OutFormat,
+               std::string const &OutFile) {
   if (arithmetic == "gmp") {
     using T = mpq_class;
     using Tint = mpz_class;

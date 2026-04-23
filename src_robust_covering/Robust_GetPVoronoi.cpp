@@ -48,8 +48,8 @@ void process_B(std::string const &MatFile,
   print_stderr_stdout_file(OutFile, f_print);
 }
 
-void process_A(std::string const &arithmetic, std::string MatFile, std::string VFile,
-               std::string OutFormat, std::string OutFile) {
+void process_A(std::string const &arithmetic, std::string const &MatFile, std::string const &VFile,
+               std::string const &OutFormat, std::string const &OutFile) {
   if (arithmetic == "gmp") {
     using T = mpq_class;
     using Tint = mpz_class;

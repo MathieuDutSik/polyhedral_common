@@ -438,7 +438,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
   os << "TSPACE: Equiv, |ListComm|=" << LinSpa.ListComm.size()
      << " |ListSubspaces|=" << LinSpa.ListSubspaces.size() << "\n";
   os << "TSPACE: Equiv, |ListMat1|=" << ListMat1.size()
-     << " |ListMat1|=" << ListMat1.size() << "\n";
+     << " |ListMat2|=" << ListMat2.size() << "\n";
 #endif
   std::optional<std::vector<Tidx>> opt1 =
       TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(
