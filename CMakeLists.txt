@@ -19,7 +19,6 @@ find_package(MPI REQUIRED COMPONENTS CXX)
 pkg_check_modules(GMPXX REQUIRED IMPORTED_TARGET gmpxx)
 pkg_check_modules(CDDGMP REQUIRED cddgmp)
 pkg_check_modules(CDDLIB REQUIRED cddlib)
-pkg_check_modules(FLINT REQUIRED IMPORTED_TARGET flint)
 
 find_library(GMP_LIBRARY NAMES gmp REQUIRED)
 find_path(GLPK_INCLUDE_DIR NAMES glpk.h REQUIRED)
@@ -211,8 +210,6 @@ target_link_libraries(
     ${CDDLIB_LINK_LIBRARIES}
 )
 
-add_library(polyhedral_flint_support INTERFACE)
-target_link_libraries(polyhedral_flint_support INTERFACE PkgConfig::FLINT)
 
 add_library(polyhedral_netcdf_support INTERFACE)
 target_include_directories(polyhedral_netcdf_support INTERFACE "${NETCDF_INCLUDE_DIR}")
@@ -228,7 +225,6 @@ target_link_libraries(
   polyhedral_copos_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_flint_support
     polyhedral_glpk_support
 )
 
@@ -247,7 +243,6 @@ target_link_libraries(
   polyhedral_perfect_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_flint_support
     polyhedral_glpk_support
     polyhedral_cddgmp_support
     polyhedral_mpi_support
@@ -258,7 +253,6 @@ target_link_libraries(
   polyhedral_short_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_flint_support
     polyhedral_glpk_support
 )
 
@@ -294,7 +288,6 @@ target_link_libraries(
   polyhedral_poly_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_flint_support
     polyhedral_glpk_support
     polyhedral_cddgmp_support
 )
@@ -534,6 +527,7 @@ set(
   TSPACE_FileFormatConversion
   TSPACE_Stabilizer
   TSPACE_Equivalence
+  TSPACE_IntegralSaturation
   TEST_EquiStabFamily
   LATT_ComputeShortestOrbits
   GRP_TestFiniteness
