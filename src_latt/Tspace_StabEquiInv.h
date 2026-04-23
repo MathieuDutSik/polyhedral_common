@@ -83,7 +83,7 @@ MyMatrix<T> get_mat_from_shv_perm(Telt const &elt, MyMatrix<T> const &SHV_T,
                                   [[maybe_unused]] MyMatrix<T> const &eMat) {
   std::optional<MyMatrix<T>> opt = FindTransformationGeneral(SHV_T, SHV_T, elt);
   MyMatrix<T> Pmat = unfold_opt(opt, "Failed to get transformation");
-#ifdef DEBUG_TSPACE_FUNCTIONS
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   if (!IsIntegralMatrix(Pmat)) {
     std::cerr << "TSPACE: The matrix TransMat should be integral\n";
     throw TerminalException{1};
@@ -458,7 +458,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
   std::optional<MyMatrix<T>> opt2 =
       FindTransformationGeneral(SHV2_T, SHV1_T, eltInv);
   MyMatrix<T> OneEquiv = unfold_opt(opt2, "Failed to get transformation");
-#ifdef DEBUG_TSPACE_FUNCTIONS
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   if (!IsIntegralMatrix(OneEquiv)) {
     std::cerr << "TSPACE: Equiv, The matrix TransMat should be integral\n";
     throw TerminalException{1};

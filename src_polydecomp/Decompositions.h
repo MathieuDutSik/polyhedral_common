@@ -20,11 +20,15 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#define DEBUG_POLYHEDRAL_DECOMPOSITION
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_POLYHEDRAL_DECOMPOSITION
 #endif
 
 #ifdef TIMINGS
-#define TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#define TIMINGS_POLYHEDRAL_DECOMPOSITION
 #endif
 
 // possible strategies for computing isomorphsim
@@ -387,7 +391,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
     os << "i=" << i << "\n";
 #endif
     std::vector<std::pair<size_t, Tent<T, Tint, Tidx_value>>> NewListCand;
-#ifdef SANITY_CHECK_POLYEDRAL_DECOMPOSITION
+#ifdef SANITY_CHECK_POLYHEDRAL_DECOMPOSITION
     using Tface =
       std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
     std::vector<Tface> list_face;
@@ -595,17 +599,17 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
   HumanTime time;
   if (TestPairwiseIntersection) {
     for (size_t i_cone = 0; i_cone < n_cone; i_cone++) {
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
       std::cerr << "i_cone=" << i_cone << " / " << n_cone << "\n";
 #endif
-#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITION
       std::cerr << "|DECOMP: IsFullDimensional tests|=" << time << "\n";
 #endif
       for (size_t j_cone = i_cone + 1; j_cone < n_cone; j_cone++) {
         MyMatrix<T> FACtot =
             Concatenate(l_cone[i_cone].FAC, l_cone[j_cone].FAC);
         if (IsFullDimensional_V1(FACtot, os)) {
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
           std::cerr << "Cone i_cone=" << i_cone << " and j_cone=" << j_cone
                     << " are overlapping\n";
 #endif
@@ -613,14 +617,14 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
         }
       }
     }
-#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITION
     std::cerr << "|DECOMP: pairwise intersection tests|=" << time << "\n";
 #endif
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     std::cerr << "Passing the pairwise intersection test\n";
 #endif
   } else {
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     std::cerr << "Not doing the pairwise intersection test\n";
 #endif
   }
@@ -635,10 +639,10 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
     }
   }
   int n_ext_tot = MapEXT.size();
-#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITION
   std::cerr << "|DECOMP: MapEXT 1|=" << time << "\n";
 #endif
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
   std::cerr << "DECOMP: n_ext_tot=" << n_ext_tot << "\n";
 #endif
   MyMatrix<T> EXTtot(n_ext_tot, dim);
@@ -650,14 +654,14 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
     }
     pos++;
   }
-#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITION
   std::cerr << "|DECOMP: EXTtot|=" << time << "\n";
 #endif
   for (int i_ext_tot = 0; i_ext_tot < n_ext_tot; i_ext_tot++) {
     MyVector<T> eEXT = GetMatrixRow(EXTtot, i_ext_tot);
     MapEXT[eEXT] = i_ext_tot;
   }
-#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITION
   std::cerr << "|DECOMP: MapEXT 2|=" << time << "\n";
 #endif
   // We match the facets in order to find which ones are
@@ -685,10 +689,10 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
       FACmult[f].push_back(eEnt);
     }
   }
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
   std::cerr << "DECOMP: |FACmult|=" << FACmult.size() << "\n";
 #endif
-#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITION
   std::cerr << "|DECOMP: FACmult|=" << time << "\n";
 #endif
   // We check that the facets matched only once have all
@@ -696,7 +700,7 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
   // At the same time, we build the set of facets (with
   // no duplication)
   std::set<MyVector<T>> SetFAC;
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
   size_t n_size1 = 0;
 #endif
   auto is_matching_facet = [&](MyVector<T> const &eFAC) -> bool {
@@ -725,15 +729,15 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
         return {};
       }
       SetFAC.insert(eFAC);
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
       n_size1++;
 #endif
     }
   }
-#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITION
   std::cerr << "|DECOMP: SetFAC|=" << time << "\n";
 #endif
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
   std::cerr << "DECOMP: SetFAC n_size1=" << n_size1
             << " |SetFAC|=" << SetFAC.size() << "\n";
 #endif
@@ -749,7 +753,7 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
     ListFACfinal.push_back(eFAC);
     pos_fac++;
   }
-#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITION
   std::cerr << "|DECOMP: FACfinal|=" << time << "\n";
 #endif
   // Selecting the vertices of the right rank.
@@ -776,10 +780,10 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
     }
   }
   MyMatrix<T> EXTfinal = MatrixFromVectorFamily(ListEXT);
-#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
+#ifdef TIMINGS_POLYHEDRAL_DECOMPOSITION
   std::cerr << "|DECOMP: EXTfinal|=" << time << "\n";
 #endif
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
   std::cerr << "DECOMP: EXTfinal |ListEXT|=" << ListEXT.size() << "\n";
 #endif
   ConeSimpDesc<T> cone{EXTfinal, FACfinal};

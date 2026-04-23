@@ -12,6 +12,10 @@
 #define DEBUG_TRIPLE
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_TRIPLE
+#endif
+
 /*
   When working with polyhedral complexes, one needs often to
   deal with a situation where we do not have simple equivalence

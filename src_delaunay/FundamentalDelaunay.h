@@ -19,6 +19,7 @@
 
 #ifdef DEBUG
 #define DEBUG_FUNDAMENTAL_DELAUNAY
+#define DEBUG_DELAUNAY
 #endif
 
 #ifdef SANITY_CHECK

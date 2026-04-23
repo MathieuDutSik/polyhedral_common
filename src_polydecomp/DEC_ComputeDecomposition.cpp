@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     std::vector<std::vector<FaceDesc>> ListListDomain;
     if (opt == "strategy2_from_high") {
       std::cerr << "Matching strategy2_from_high\n";
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
       compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones, G, std::cerr);
 #endif
       ListListDomain =

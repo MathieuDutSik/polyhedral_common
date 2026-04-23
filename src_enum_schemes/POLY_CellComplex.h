@@ -14,6 +14,10 @@
 #include <string>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_CELL_SCHEME
+#endif
+
 const size_t seed_partition = 10;
 const size_t seed_hashmap = 20;
 

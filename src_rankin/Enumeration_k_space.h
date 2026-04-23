@@ -10,6 +10,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_RANKIN
+#endif
+
 // Returns the Hermite constant at the n-th power.
 // That is the mmaximum of min(A)^n / det(A)
 // --
