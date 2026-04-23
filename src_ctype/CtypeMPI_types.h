@@ -426,8 +426,10 @@ std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>>
 CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
                    [[maybe_unused]] std::ostream &os) {
   int n_edge = TheCtype.rows();
+  Tidx n_edge_idx = n_edge;
   int n_edgered = n_edge / 2;
   int n_cols = TheCtype.cols();
+  Tidx n_cols_idx = n_cols;
 #ifdef PRINT_TRIPLE
   os << "n_edge=" << n_edge << " n_cols=" << n_cols << "\n";
   os << "TEST TheCtype=\n";
@@ -441,7 +443,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
 #ifdef PRINT_TRIPLE
       os << "get_nature pos=" << pos << "\n";
 #endif
-      for (Tidx i_col = 0; i_col < n_cols; i_col++)
+      for (Tidx i_col = 0; i_col < n_cols_idx; i_col++)
         if (TheCtype(pos, i_col) != eV(i_col))
           return false;
       return true;
@@ -470,21 +472,21 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
         return 2 * pos + 1;
       return -1;
     };
-    int pos = get_value();
+    Tidx pos = get_value();
 #ifdef PRINT_TRIPLE
-    os << "After get_value pos=" << pos << "\n";
+    os << "After get_value pos=" << static_cast<int>(pos) << "\n";
 #endif
     if (pos > start_idx)
       return pos;
     return -1;
   };
   MyVector<T> eDiff(n_cols);
-  for (Tidx i = 0; i < n_edge; i++)
-    for (Tidx j = i + 1; j < n_edge; j++) {
+  for (Tidx i = 0; i < n_edge_idx; i++)
+    for (Tidx j = i + 1; j < n_edge_idx; j++) {
 #ifdef PRINT_TRIPLE
       os << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j) << "\n";
 #endif
-      for (Tidx i_col = 0; i_col < n_cols; i_col++)
+      for (Tidx i_col = 0; i_col < n_cols_idx; i_col++)
         eDiff(i_col) = -TheCtype(i, i_col) - TheCtype(j, i_col);
 #ifdef PRINT_TRIPLE
       os << "We have eDiff=" << StringVectorGAP(eDiff) << "\n";
@@ -712,6 +714,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   os << "|CTYP: Insert inequalities|=" << time << "\n";
 #endif
   int n_edgered = n_edge / 2;
+  Tidx n_edgered_idx = n_edgered;
 #ifdef PRINT_GET_ADJ
   int nb_match = 0;
   int nb_pass = 0;
@@ -784,7 +787,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
     return true;
   };
   auto TestApplicabilityCriterion = [&](triple<Tidx> const &e_triple) -> bool {
-    for (Tidx e = 0; e < n_edgered; e++)
+    for (Tidx e = 0; e < n_edgered_idx; e++)
       if (TestApplicabilityCriterion_with_e(e_triple, e))
         return true;
     return false;
