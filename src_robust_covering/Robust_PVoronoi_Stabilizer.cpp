@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Robust_PVoronoi_Stabilizer [arith] [MatFile] [PVoronoiFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "arithmetic: gmp\n";
-      std::cerr << "OutFormat: GAP\n";
+      std::cerr << "OutFormat: GAP, CPP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }

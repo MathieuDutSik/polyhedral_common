@@ -47,10 +47,10 @@ int main(int argc, char *argv[]) {
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Robust_RandomEstimation arithmetic n_iter [MaFile] "
+      std::cerr << "Robust_RandomEstimation arithmetic n_iter [MatFile] "
                    "[OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
-      std::cerr << "Robust_RandomEstimation arithmetic n_iter [MaFile]\n";
+      std::cerr << "Robust_RandomEstimation arithmetic n_iter [MatFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "arithmetic: gmp\n";
       std::cerr << "n_iter: 1, 10, or whatever you want\n";

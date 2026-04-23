@@ -700,6 +700,7 @@ add_polyhedral_binary(
 set(
   ROBUST_PROGRAMS
   Robust_RandomEstimation
+  Robust_RandomVertexEstimation
   Robust_GetPVoronoi
   Robust_PVoronoi_Stabilizer
   Robust_ExactRobustCoveringDensity

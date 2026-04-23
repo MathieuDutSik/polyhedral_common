@@ -58,9 +58,9 @@ int main(int argc, char *argv[]) {
     if (argc != 5 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Robust_ExactRobustCoveringDensity [arith] [MaFile] [OutFormat] [OutFile]\n";
+      std::cerr << "Robust_ExactRobustCoveringDensity [arith] [MatFile] [OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
-      std::cerr << "Robust_ExactRobustCoveringDensity [arith] [MaFile]\n";
+      std::cerr << "Robust_ExactRobustCoveringDensity [arith] [MatFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "arithmetic: gmp\n";
       std::cerr << "OutFormat: GAP\n";

@@ -68,9 +68,9 @@ int main(int argc, char *argv[]) {
       OutFile = argv[5];
     }
     process_A(arithmetic, n_iter, MatFile, OutFormat, OutFile);
-    std::cerr << "Normal termination of Robust_RandomEstimation\n";
+    std::cerr << "Normal termination of Robust_RandomVertexEstimation\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in Robust_RandomEstimation\n";
+    std::cerr << "Error in Robust_RandomVertexEstimation\n";
     exit(e.eVal);
   }
   runtime(time);

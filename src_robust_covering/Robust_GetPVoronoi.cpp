@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Robust_GetPVoronoi [arith] [MatFile] [VFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "arithmetic: gmp\n";
-      std::cerr << "OutFormat: GAP\n";
+      std::cerr << "OutFormat: GAP, CPP, boost\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }
