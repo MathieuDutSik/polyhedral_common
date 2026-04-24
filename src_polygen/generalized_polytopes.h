@@ -1352,10 +1352,7 @@ MyMatrix<T> get_vertices_gp_bnd(GeneralizedPolytope<T> const &gp,
     std::vector<MyVector<T>> l_fac;
     for (auto &kv : bnd.full_data_facets) {
       MyVector<T> const &eFAC = kv.first;
-      T scal(0);
-      for (int i = 0; i < dim; i++) {
-        scal += eFAC(i) * eEXT(i);
-      }
+      T scal = eFAC.dot(eEXT);
       if (scal == 0) {
         std::optional<MyVector<T>> opt = SolutionMat(kv.second.NSP, eEXT);
         if (!opt) {

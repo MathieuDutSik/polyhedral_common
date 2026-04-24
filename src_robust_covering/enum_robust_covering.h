@@ -1889,16 +1889,16 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   int dim = G.rows();
   std::vector<MyMatrix<Tint>> LGen = ArithmeticAutomorphismGroup<T,Tint,Tgroup>(G, os);
   std::vector<MyMatrix<Tint>> LElt = get_group_elements(LGen, os);
-  std::vector<MyMatrix<T>> LEltAff;
+  std::vector<MyMatrix<T>> LEltAff_T;
   for (auto & elt: LElt) {
-    MyMatrix<T> eEltAff = ZeroMatrix<T>(dim + 1, dim + 1);
-    eEltAff(0,0) = 1;
+    MyMatrix<T> eEltAff_T = ZeroMatrix<T>(dim + 1, dim + 1);
+    eEltAff_T(0,0) = 1;
     for (int i=0; i<dim; i++) {
       for (int j=0; j<dim; j++) {
-        eEltAff(i+1, j+1) = UniversalScalarConversion<T,Tint>(elt(i,j));
+        eEltAff_T(i+1, j+1) = UniversalScalarConversion<T,Tint>(elt(i,j));
       }
     }
-    LEltAff.push_back(eEltAff);
+    LEltAff_T.push_back(eEltAff_T);
   }
 
   auto get_min_max=[&](MyMatrix<T> const& EXT) -> std::pair<std::vector<Tint>, std::vector<Tint>> {
@@ -1976,16 +1976,25 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     l_pv.push_back(pv);
     l_bnd.push_back(bnd);
     size_t n_pv = l_pv.size();
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    size_t n_trans = 0;
+#endif
     for (size_t i_pv=0; i_pv<=n_pv; i_pv++) {
-      for (auto & eEltAff_T: LEltAff) {
+      for (auto & eEltAff_T: LEltAff_T) {
         GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv].gp, eEltAff_T);
         std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_pv]);
         for (auto &trans: l_trans) {
           GeneralizedPolytope<T> gp2 = mat_product(gp1, trans);
           reduce_boundary_generalized_polytope(l_bnd[i_pv], gp2, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+          n_trans += 1;
+#endif
         }
       }
     }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: capp, f_insert, n_pv=" << n_pv << " n_trans=" << n_trans << "\n";
+#endif
   };
   f_insert(pv);
 #ifdef DEBUG_ENUM_P_POLYTOPES
