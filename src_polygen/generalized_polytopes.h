@@ -76,6 +76,10 @@
 #define DEBUG_GENERALIZED_POLYTOPE
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_GENERALIZED_POLYTOPE
+#endif
+
 
 template <typename T> struct SinglePolytope {
   MyMatrix<T> EXT;
@@ -1330,9 +1334,6 @@ template <typename T>
 MyMatrix<T> get_vertices_gp_bnd(GeneralizedPolytope<T> const &gp,
                                 BoundaryGeneralizedPolytope<T> const &bnd,
                                 std::ostream &os) {
-  if (gp.empty()) {
-    return {};
-  }
   int dim = gp.dim;
   std::unordered_set<MyVector<T>> set_vertices;
   for (size_t i = 0; i < gp.size(); i++) {
@@ -1349,16 +1350,27 @@ MyMatrix<T> get_vertices_gp_bnd(GeneralizedPolytope<T> const &gp,
 #endif
   std::vector<MyVector<T>> l_vertices;
   for (auto &eEXT : set_vertices) {
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: |eEXT|=" << eEXT.size() << " eEXT=" << StringVectorGAP(eEXT) << "\n";
+#endif
     std::vector<MyVector<T>> l_fac;
     for (auto &kv : bnd.full_data_facets) {
       MyVector<T> const &eFAC = kv.first;
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+      os << "GP: |eFAC|=" << eFAC.size() << " eFAC=" << StringVectorGAP(eFAC) << "\n";
+#endif
       T scal = eFAC.dot(eEXT);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+      os << "GP: scal=" << scal << "\n";
+#endif
       if (scal == 0) {
         std::optional<MyVector<T>> opt = SolutionMat(kv.second.NSP, eEXT);
+#ifdef SANITY_CHECK_GENERALIZED_POLYTOPE
         if (!opt) {
           std::cerr << "GP: It should be in the subspace\n";
           throw TerminalException{1};
         }
+#endif
         MyVector<T> const &eEXTred = *opt;
         bool test1 = is_interior_gp_vert(kv.second.gp_minus, eEXTred, os);
         bool test2 = is_interior_gp_vert(kv.second.gp_plus, eEXTred, os);

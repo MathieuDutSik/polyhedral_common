@@ -1136,7 +1136,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
       is_correct = false;
       return true;
     }
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
     os << "ROBUST:   kippp, pass 1\n";
 #endif
     MyMatrix<Tint> const &min_m = list_min_parallelepipeds[0];
@@ -1154,7 +1154,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
       is_correct = false;
       return true;
     }
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
     os << "ROBUST:   kippp, pass 2\n";
 #endif
     if (min == 0) {
@@ -1166,11 +1166,11 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
       is_correct = false;
       return true;
     }
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
     os << "ROBUST:   kippp, pass 3\n";
 #endif
     GenericRobustM<Tint> const &robust_m_min = ext_robust_m_min.robust_m;
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
     os << "ROBUST:   kippp, robust_m_min, index="
        << robust_m_min.index << " M=\n";
     WriteMatrix(os, robust_m_min.M);
@@ -1180,8 +1180,8 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
         robust_m_min.v_long(); // It is the shortest for the other structures!
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, v_short="
-       << StringVectorGAP(v_short) << "\n";
-    os << "ROBUST:   kippp, |l_excluded_max|=" << l_excluded_max.size() << "\n";
+       << StringVectorGAP(v_short)
+       << " |l_excluded_max|=" << l_excluded_max.size() << "\n";
 #endif
     std::vector<GenericRobustM<Tint>> list_robust_m;
     insert_excluded_max(robust_m_min,
@@ -1190,7 +1190,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
                         m_full_ineq,
                         os);
 
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
     os << "ROBUST:   kippp, pass 3, step 1\n";
 #endif
 #ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
@@ -1979,9 +1979,9 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
     size_t n_trans = 0;
 #endif
-    for (size_t i_pv=0; i_pv<=n_pv; i_pv++) {
+    for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
       for (auto & eEltAff_T: LEltAff_T) {
-        GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv].gp, eEltAff_T);
+        GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv-1].gp, eEltAff_T);
         std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_pv]);
         for (auto &trans: l_trans) {
           GeneralizedPolytope<T> gp2 = mat_product(gp1, trans);
