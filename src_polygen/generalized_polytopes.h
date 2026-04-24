@@ -457,6 +457,7 @@ SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
 }
 
 template <typename T> struct GeneralizedPolytope {
+  int dim;
   std::vector<SinglePolytope<T>> polytopes;
   size_t size() const {
     return polytopes.size();
@@ -482,7 +483,7 @@ template <typename T> struct GeneralizedPolytope {
 
 template <typename T>
 void WriteEntryGAP(std::ostream &os_out, GeneralizedPolytope<T> const &gp) {
-  os_out << "rec(polytopes:=[";
+  os_out << "rec(dim:=" << gp.dim << ", polytopes:=[";
   bool IsFirst = true;
   for (auto &sp : gp.polytopes) {
     if (!IsFirst) {
@@ -495,7 +496,7 @@ void WriteEntryGAP(std::ostream &os_out, GeneralizedPolytope<T> const &gp) {
 }
 
 template <typename T>
-GeneralizedPolytope<T> list_ext_to_generalizedpolytope(std::vector<MyMatrix<T>> const& list_ext) {
+GeneralizedPolytope<T> list_ext_to_generalizedpolytope(int const& dim, std::vector<MyMatrix<T>> const& list_ext) {
   std::vector<SinglePolytope<T>> polytopes;
   for (size_t i=0; i<list_ext.size(); i++) {
     MyMatrix<T> const& EXT = list_ext[i];
@@ -503,7 +504,7 @@ GeneralizedPolytope<T> list_ext_to_generalizedpolytope(std::vector<MyMatrix<T>> 
     SinglePolytope<T> sp = get_single_polytope(FAC, EXT);
     polytopes.push_back(sp);
   }
-  GeneralizedPolytope<T> gp{polytopes};
+  GeneralizedPolytope<T> gp{dim, polytopes};
   return gp;
 }
 
@@ -514,7 +515,8 @@ GeneralizedPolytope<T> mat_product(GeneralizedPolytope<T> const& gp, MyMatrix<T>
     SinglePolytope<T> sp_new = mat_product(sp, P);
     polytopes.push_back(sp_new);
   }
-  GeneralizedPolytope<T> gp_new{polytopes};
+  int dim = gp.dim;
+  GeneralizedPolytope<T> gp_new{dim, polytopes};
   return gp_new;
 }
 
@@ -764,6 +766,7 @@ template <typename T>
 std::vector<GeneralizedPolytope<T>>
 connected_components_decomposition(GeneralizedPolytope<T> const &gp,
                                    std::ostream &os) {
+  int dim = gp.dim;
   struct TrackInfo {
     size_t i_poly;
     int sign;
@@ -799,12 +802,12 @@ connected_components_decomposition(GeneralizedPolytope<T> const &gp,
     size_t n_match = l_ti.size();
     for (size_t i_match = 0; i_match < n_match; i_match++) {
       for (size_t j_match = i_match + 1; j_match < n_match; j_match++) {
-        MyMatrix<T> FACtot = Concatenate(l_ti[i_match].FAC, l_ti[j_match].FAC);
+        MyMatrix<T> FACtot = Concatenate(l_ti[i_match].FACrel, l_ti[j_match].FACrel);
         bool test = IsFullDimensional(FACtot, os);
         if (test) {
           int sign_prod = l_ti[i_match].sign * l_ti[j_match].sign;
           if (sign_prod == 1) {
-            std::cerr << "GP: If that occurs, then it means that we have empty "
+            std::cerr << "GP: If that occurs, then it means that we have non-empty "
                          "intersection\n";
             throw TerminalException{1};
           }
@@ -819,10 +822,11 @@ connected_components_decomposition(GeneralizedPolytope<T> const &gp,
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(GR);
   std::vector<GeneralizedPolytope<T>> l_gp;
   for (auto &eConn : LConn) {
-    GeneralizedPolytope<T> gp_ins;
+    std::vector<SinglePolytope<T>> polytopes;
     for (auto &i_poly : eConn) {
-      gp_ins.polytopes.push_back(gp.polytopes[i_poly]);
+      polytopes.push_back(gp.polytopes[i_poly]);
     }
+    GeneralizedPolytope<T> gp_ins{dim, polytopes};
     l_gp.push_back(std::move(gp_ins));
   }
   return l_gp;
@@ -833,6 +837,7 @@ GeneralizedPolytope<T>
 intersection_gp_gp(GeneralizedPolytope<T> const &gp1,
                    GeneralizedPolytope<T> const &gp2,
                    std::ostream &os) {
+  int dim = gp1.dim;
   size_t n_polytope1 = gp1.size();
   size_t n_polytope2 = gp2.size();
   std::vector<SinglePolytope<T>> polytopes;
@@ -847,7 +852,8 @@ intersection_gp_gp(GeneralizedPolytope<T> const &gp1,
       }
     }
   }
-  return {polytopes};
+  GeneralizedPolytope<T> gp_ret{dim, polytopes};
+  return gp_ret;
 }
 
 template <typename T>
@@ -923,15 +929,18 @@ GeneralizedPolytope<T> difference_p_p(SinglePolytope<T> const &p1,
                                       SinglePolytope<T> const &p2,
                                       std::ostream &os) {
   std::vector<SinglePolytope<T>> new_polytopes;
+  int dim = p1.EXT.cols();
   MyMatrix<T> FACconcat = Concatenate(p1.FAC, p2.FAC);
   if (!IsFullDimensional(FACconcat, os)) {
     // p2 is not contained in p1, so returning just p1.
     new_polytopes.push_back(p1);
-    return {new_polytopes};
+    GeneralizedPolytope<T> gp_new{dim, new_polytopes};
+    return gp_new;
   }
   if (is_contained_p_p(p2, p1, os)) {
     // p1 totally contained in p2. Returning empty
-    return {new_polytopes};
+    GeneralizedPolytope<T> gp_new{dim, new_polytopes};
+    return gp_new;
   }
   int n_fac2 = p2.FAC.rows();
   std::vector<MyVector<T>> l_ineq;
@@ -950,7 +959,8 @@ GeneralizedPolytope<T> difference_p_p(SinglePolytope<T> const &p1,
     }
     l_ineq.push_back(eFAC2);
   }
-  return {new_polytopes};
+  GeneralizedPolytope<T> gp_ret{dim, new_polytopes};
+  return gp_ret;
 }
 
 
@@ -985,6 +995,7 @@ template <typename T>
 GeneralizedPolytope<T> difference_gp_p(GeneralizedPolytope<T> const &gp,
                                        SinglePolytope<T> const &p,
                                        std::ostream &os) {
+  int dim = gp.dim;
   std::vector<SinglePolytope<T>> new_polytopes;
   for (size_t i = 0; i < gp.size(); i++) {
     GeneralizedPolytope<T> gp_out = difference_p_p(gp.polytopes[i], p, os);
@@ -992,7 +1003,8 @@ GeneralizedPolytope<T> difference_gp_p(GeneralizedPolytope<T> const &gp,
       new_polytopes.push_back(poly);
     }
   }
-  return {new_polytopes};
+  GeneralizedPolytope<T> gp_ret{dim, new_polytopes};
+  return gp_ret;
 }
 
 // Compute the difference gp1 - gp2.
@@ -1328,13 +1340,13 @@ void reduce_boundary_generalized_polytope(BoundaryGeneralizedPolytope<T> &bnd,
 }
 
 template <typename T>
-std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const &gp,
-                                      BoundaryGeneralizedPolytope<T> const &bnd,
-                                      std::ostream &os) {
+MyMatrix<T> get_vertices_gp_bnd(GeneralizedPolytope<T> const &gp,
+                                BoundaryGeneralizedPolytope<T> const &bnd,
+                                std::ostream &os) {
   if (gp.empty()) {
     return {};
   }
-  int dim = gp.polytopes[0].FAC.cols();
+  int dim = gp.dim;
   std::unordered_set<MyVector<T>> set_vertices;
   for (size_t i = 0; i < gp.size(); i++) {
     int n_ext = gp.polytopes[i].EXT.rows();
@@ -1344,7 +1356,7 @@ std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const &gp,
     }
   }
 #ifdef DEBUG_GENERALIZED_POLYTOPE
-  os << "GP: get_vertices, |gp|=" << gp.size() << " |set_vertices|=" << set_vertices.size() << "\n";
+  os << "GP: get_vertices_gp_bnd, |gp|=" << gp.size() << " |set_vertices|=" << set_vertices.size() << "\n";
   write_generalized_polytope(gp, os);
   write_boundary_generalized_polytope(bnd, os);
 #endif
@@ -1376,8 +1388,50 @@ std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const &gp,
       l_vertices.push_back(eEXT);
     }
   }
-  return l_vertices;
+  return MatrixFromVectorFamilyDim(dim, l_vertices);
 }
+
+template <typename T>
+MyMatrix<T> get_vertices_gp(GeneralizedPolytope<T> const &gp, std::ostream &os) {
+  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(gp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: convert_p_voronoi_part, step 3\n";
+#endif
+  return get_vertices_gp_bnd(gp, bnd, os);
+}
+
+template <typename T>
+size_t ComputeHash_gp(GeneralizedPolytope<T> const &gp, size_t seed_in, std::ostream& os) {
+  MyMatrix<T> M1 = get_vertices_gp(gp, os);
+  MyMatrix<T> M2 = reorder_matrix(M1);
+  return Matrix_Hash(M2, seed_in);
+}
+
+
+template<typename T>
+std::vector<GeneralizedPolytope<T>> get_p_voronoi_orbit(std::vector<MyMatrix<T>> const& LGen,
+                                                        GeneralizedPolytope<T> const& gp,
+                                                        std::ostream &os) {
+  auto f_prod=[&](GeneralizedPolytope<T> const& gp,
+                  MyMatrix<T> const& P) -> GeneralizedPolytope<T> {
+    return mat_product(gp, P);
+  };
+  auto f_hash=[&](GeneralizedPolytope<T> const& gp) -> size_t {
+    size_t seed_in = 34;
+    return ComputeHash_gp(gp, seed_in, os);
+  };
+  auto f_equal=[&](GeneralizedPolytope<T> const& gp1, GeneralizedPolytope<T> const& gp2) -> bool {
+    return is_equal(gp1, gp2, os);
+  };
+  return OrbitComputationGen(LGen, gp, f_prod, f_hash, f_equal, os);
+}
+
+
+
+
+
+
+
 
 template<typename T>
 T volume_gp(GeneralizedPolytope<T> const& gp,  [[maybe_unused]] std::ostream& os) {
@@ -1421,6 +1475,7 @@ ConvexBoundary<T> ReadEntryCPP_ConvexBoundary(std::istream &is) {
 
 template <typename T>
 void WriteEntryCPP(std::ostream &os, GeneralizedPolytope<T> const &gp) {
+  os << gp.dim << "\n";
   size_t n = gp.polytopes.size();
   os << n << "\n";
   for (size_t i = 0; i < n; i++) {
@@ -1430,13 +1485,15 @@ void WriteEntryCPP(std::ostream &os, GeneralizedPolytope<T> const &gp) {
 
 template <typename T>
 GeneralizedPolytope<T> ReadEntryCPP_GeneralizedPolytope(std::istream &is) {
+  int dim;
+  is >> dim;
   size_t n;
   is >> n;
   std::vector<SinglePolytope<T>> polytopes;
   for (size_t i = 0; i < n; i++) {
     polytopes.push_back(ReadEntryCPP_SinglePolytope<T>(is));
   }
-  return {polytopes};
+  return {dim, polytopes};
 }
 
 namespace boost::serialization {

@@ -376,6 +376,30 @@ void WriteEntryGAP(std::ostream &os_out, GenericRobustM<Tint> const &grm) {
   os_out << ")";
 }
 
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>> get_parall_stabilizer(DataLattice<T, Tint, Tgroup> &eData,
+                                                  GenericRobustM<Tint> const& robust_m_min) {
+  std::ostream &os = eData.rddo.os;
+  using Telt = typename Tgroup::Telt;
+  MyMatrix<T> const& GramMat = eData.solver.GramMat;
+  MyMatrix<T> const& SHV = eData.SHV;
+  MyMatrix<T> EXTparall = robust_m_min.template get_ext_t<T>();
+  Tgroup GRP = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXTparall, os);
+#ifdef DEBUG_P_VORONOI_STABILIZER
+  os << "ROBUST: get_parall_stabilizer |G|=" << GRP.size() << "\n";
+#endif
+  std::vector<Telt> LGen = GRP.SmallGeneratingSet();
+  std::vector<MyMatrix<Tint>> l_gens;
+  for (auto & eGen: LGen) {
+    MyMatrix<T> P_T = RepresentVertexPermutation(EXTparall, EXTparall, eGen);
+    MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
+    l_gens.emplace_back(std::move(P));
+  }
+  return l_gens;
+}
+
+
+
 template <typename T, typename Tint> struct ExtendedGenericRobustM {
   T max;
   bool is_correct;
@@ -614,6 +638,76 @@ void WriteEntryGAP(std::ostream &os_out, PVoronoi<T, Tint> const &pv) {
   os_out << ")";
 }
 
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup> &eData,
+                                                     PVoronoi<T, Tint> const &pv) {
+  std::ostream &os = eData.rddo.os;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using TgroupOut = std::pair<std::vector<Telt>, Tgroup>;
+  MyMatrix<T> const& EXT_T = pv.EXT;
+  MyMatrix<T> const& GramMat = eData.solver.GramMat;
+  MyMatrix<T> const& SHV = eData.SHV;
+  Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXT_T, os);
+  Tidx n_act = EXT_T.rows();
+  std::vector<Telt> LGenBig = GRPbig.SmallGeneratingSet();
+  std::vector<Telt> LGenSma;
+  auto f_correct=[&](Telt const& x) -> bool {
+    MyMatrix<T> P = RepresentVertexPermutation(EXT_T, EXT_T, x);
+    GeneralizedPolytope<T> gp_img = mat_product(pv.gp, P);
+    return is_equal(pv.gp, gp_img, os);
+  };
+  TgroupOut pair =
+    get_intermediate_group<Tgroup,decltype(f_correct)>(n_act, LGenSma, LGenBig, f_correct, os);
+  std::vector<MyMatrix<Tint>> l_gens;
+  for (auto & eGen: pair.first) {
+    MyMatrix<T> P_T = RepresentVertexPermutation(EXT_T, EXT_T, eGen);
+    MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
+    l_gens.emplace_back(std::move(P));
+  }
+#ifdef DEBUG_P_VORONOI_STABILIZER
+  os << "ROBUST: get_p_voronoi_stabilizer |G|=" << pair.second.size() << "\n";
+#endif
+  return l_gens;
+}
+
+
+template<typename T, typename Tint, typename Tgroup>
+void check_p_voronoi_groups(DataLattice<T, Tint, Tgroup> &eData,
+                            PVoronoi<T, Tint> const &pv) {
+  std::ostream &os = eData.rddo.os;
+  std::vector<MyMatrix<Tint>> LGenPVoronoi = get_p_voronoi_stabilizer(eData, pv);
+  std::vector<MyMatrix<Tint>> LGenParall = get_parall_stabilizer(eData, pv.robust_m_min);
+  std::vector<MyMatrix<T>> LGenParall_T = UniversalStdVectorMatrixConversion<T,Tint>(LGenParall);
+  std::vector<GeneralizedPolytope<T>> orbit = get_p_voronoi_orbit(LGenParall_T, pv.gp, os);
+
+  size_t GRPparall_ord = get_group_elements(LGenParall, os).size();
+  size_t GRPp_vor_ord = get_group_elements(LGenPVoronoi, os).size();
+  size_t orbit_len = orbit.size();
+  if (GRPparall_ord != orbit_len * GRPp_vor_ord) {
+    std::cerr << "ROBUST: GRPparall_ord=" << GRPparall_ord << "\n";
+    std::cerr << "ROBUST: GRPp_vor_ord=" << GRPp_vor_ord << "\n";
+    std::cerr << "ROBUST: orbit_len=" << orbit_len << "\n";
+    std::cerr << "ROBUST: Inconsistent stabilizer and orbit computation\n";
+    throw TerminalException{1};
+  }
+
+  std::vector<SinglePolytope<T>> polytopes;
+  for (auto& gp: orbit) {
+    polytopes.insert(polytopes.end(), gp.polytopes.begin(), gp.polytopes.end());
+  }
+  GeneralizedPolytope<T> gp_merge{pv.gp.dim, polytopes};
+  std::vector<GeneralizedPolytope<T>> lconn = connected_components_decomposition(gp_merge, os);
+  if (lconn.size() != orbit_len) {
+    std::cerr << "ROBUST: The entries of the orbit should be connected\n";
+    std::cerr << "ROBUST: and be pairwise not conncted\n";
+    throw TerminalException{1};
+  }
+}
+
+
+
+
 /*
   The robust_m_min is defining the P-polytope.
   This is what we are after in the end.
@@ -685,24 +779,17 @@ PVoronoi<T,Tint> convert_p_voronoi_part(PVoronoiPart<T,Tint> const& pvp, std::os
   os << "ROBUST: convert_p_voronoi_part, step 1\n";
 #endif
   std::vector<SinglePolytope<T>> polytopes;
+  int dim = pvp.l_cb[0].sp.EXT.cols();
   for (auto & cb: pvp.l_cb) {
     polytopes.push_back(cb.sp);
   }
-  GeneralizedPolytope<T> gp{polytopes};
+  GeneralizedPolytope<T> gp{dim, polytopes};
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: convert_p_voronoi_part, step 2\n";
 #endif
-  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(gp, os);
+  MyMatrix<T> EXT = get_vertices_gp(gp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: convert_p_voronoi_part, step 3\n";
-#endif
-  std::vector<MyVector<T>> l_vert = get_vertices(gp, bnd, os);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: convert_p_voronoi_part, step 4\n";
-#endif
-  MyMatrix<T> EXT = MatrixFromVectorFamily(l_vert);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: convert_p_voronoi_part, step 5\n";
 #endif
   return {pvp.robust_m_min,
           pvp.l_cb,
@@ -1439,75 +1526,13 @@ std::optional<ConvexBoundary<T>> get_next_side_vector(SoftConvexBoundary<T,Tint>
   return {};
 }
 
-template<typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup> &eData,
-                                                     PVoronoi<T, Tint> const &pv) {
-  std::ostream &os = eData.rddo.os;
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  using TgroupOut = std::pair<std::vector<Telt>, Tgroup>;
-  auto f_group_out=[&](MyMatrix<T> const& EXTin) -> TgroupOut {
-    MyMatrix<T> const& GramMat = eData.solver.GramMat;
-    MyMatrix<T> const& SHV = eData.SHV;
-#ifdef DEBUG_P_VORONOI_STABILIZER
-    os << "ROBUST: f_group_out, step 1\n";
-#endif
-    Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXTin, os);
-#ifdef DEBUG_P_VORONOI_STABILIZER
-    os << "ROBUST: f_group_out, step 2\n";
-#endif
-    Tidx n_act = EXTin.rows();
-    std::vector<Telt> LGenBig = GRPbig.SmallGeneratingSet();
-    std::vector<Telt> LGenSma;
-    auto f_correct=[&](Telt const& x) -> bool {
-#ifdef DEBUG_P_VORONOI_STABILIZER
-      os << "ROBUST: f_group_out / f_correct, step 1\n";
-#endif
-      MyMatrix<T> P = RepresentVertexPermutation(EXTin, EXTin, x);
-#ifdef DEBUG_P_VORONOI_STABILIZER
-      os << "ROBUST: f_group_out / f_correct, step 2\n";
-#endif
-      GeneralizedPolytope<T> gp_img = mat_product(pv.gp, P);
-#ifdef DEBUG_P_VORONOI_STABILIZER
-      os << "ROBUST: f_group_out / f_correct, step 3\n";
-#endif
-      bool test = is_equal(pv.gp, gp_img, os);
-#ifdef DEBUG_P_VORONOI_STABILIZER
-      os << "ROBUST: f_group_out / f_correct, step 4\n";
-#endif
-      return test;
-    };
-#ifdef DEBUG_P_VORONOI_STABILIZER
-    os << "ROBUST: f_group_out, step 3\n";
-#endif
-    return get_intermediate_group<Tgroup,decltype(f_correct)>(n_act, LGenSma, LGenBig, f_correct, os);
-  };
-  MyMatrix<T> const& EXT_T = pv.EXT;
-  std::pair<std::vector<Telt>, Tgroup> pair1 = f_group_out(EXT_T);
-  std::vector<MyMatrix<Tint>> l_gens;
-  for (auto & eGen: pair1.first) {
-    MyMatrix<T> P_T = RepresentVertexPermutation(EXT_T, EXT_T, eGen);
-    MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
-    l_gens.emplace_back(std::move(P));
-  }
-#ifdef DEBUG_P_VORONOI_STABILIZER
-  {
-    MyMatrix<T> EXTparal = pv.robust_m_min.template get_ext_t<T>();
-    MyMatrix<T> const& GramMat = eData.solver.GramMat;
-    MyMatrix<T> const& SHV = eData.SHV;
-    Tgroup GRPparall = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXTparal, os);
-    os << "ROBUST: get_p_voronoi_stabilizer |G(pv)|=" << pair1.second.size()
-       << " |G(parall)|=" << GRPparall.size() << "\n";
-  }
-#endif
-  return l_gens;
-}
 
 
-
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::optional<PVoronoi<T, Tint>>
-find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ostream &os) {
+find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
+  std::ostream &os = eData.rddo.os;
+  CVPSolver<T,Tint> const& solver = eData.solver;
   MyMatrix<T> const& G = solver.GramMat;
   std::optional<PVoronoiPart<T,Tint>> opt = kernel_l1_p_polytope_part<T,Tint>(solver, {}, eV, os);
   if (!opt) {
@@ -1673,6 +1698,9 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
   os << "ROBUST: find_p_voronoi, FAC=\n";
   WriteMatrix(os, FAC);
 #endif
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
+  check_p_voronoi_groups(eData, p_voronoi);
+#endif
   return p_voronoi;
 }
 
@@ -1680,10 +1708,11 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 
 
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 PVoronoi<T, Tint>
-initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
-  int dim = solver.GramMat.rows();
+initial_p_polytope(DataLattice<T, Tint, Tgroup> &eData) {
+  std::ostream &os = eData.rddo.os;
+  int dim = eData.solver.GramMat.rows();
   int denom = 20;
   while (true) {
     MyVector<T> eV = get_random_vector<T>(denom, dim);
@@ -1691,7 +1720,7 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
     os << "ROBUST: ipp, before find_p_voronoi, eV="
        << StringVectorGAP(eV) << " denom=" << denom << "\n";
 #endif
-    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, eV, os);
+    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(eData, eV);
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: ipp, after find_p_voronoi\n";
 #endif
@@ -1730,7 +1759,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: flapv, gapp x=" << StringVector(x) << "\n";
 #endif
-    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, x, os);
+    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(eData, x);
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: flapv, opt.has_value()=" << opt.has_value() << "\n";
 #endif
@@ -1801,9 +1830,8 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<PVoronoi<T, Tint>>
 compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   std::ostream &os = eData.rddo.os;
-  CVPSolver<T, Tint> const &solver = eData.solver;
   std::vector<PVoronoi<T, Tint>> l_ppoly;
-  PVoronoi<T, Tint> ppoly = initial_p_polytope(solver, os);
+  PVoronoi<T, Tint> ppoly = initial_p_polytope(eData);
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: capp, After initial_p_polytope\n";
 #endif

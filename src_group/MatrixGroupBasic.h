@@ -389,6 +389,63 @@ std::vector<T2> OrbitComputation(std::vector<T1> const &ListGen, T2 const &a,
   return *opt;
 }
 
+template<typename T>
+std::vector<T> get_group_elements(std::vector<T> const &ListGen, std::ostream &os) {
+  auto f_prod=[&](T const& x, T const& y) -> T {
+    return x * y;
+  };
+  T const& a = ListGen[0];
+  return OrbitComputation(ListGen, a, f_prod, os);
+}
+
+
+
+template <typename T1, typename T2, typename Fprod, typename Fhash, typename Fequal>
+std::vector<T2>
+OrbitComputationGen(std::vector<T1> const &ListGen, T2 const &a,
+                    const Fprod &f_prod,
+                    const Fhash &f_hash,
+                    const Fequal &f_equal,
+                    [[maybe_unused]] std::ostream &os) {
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MATGRPBAS: Begin of OrbitComputation_limit\n";
+#endif
+  std::vector<T2> TheOrbit;
+  std::unordered_map<T2, uint8_t, decltype(f_hash), decltype(f_equal)> map({}, f_hash, f_equal);
+  auto fInsert = [&](T2 const &u) -> void {
+    uint8_t &pos = map[u];
+    if (pos == 0) {
+      pos = 1;
+      TheOrbit.push_back(u);
+    }
+  };
+  fInsert(a);
+  size_t start = 0;
+  while (true) {
+    size_t len = TheOrbit.size();
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MATGRPBAS: OrbitComputationGen start=" << start << " len=" << len
+       << "\n";
+#endif
+    if (start == len) {
+      break;
+    }
+    for (size_t i = start; i < len; i++) {
+      // Doing a copy to avoid memory problem.
+      T2 x = TheOrbit[i];
+      for (auto &eGen : ListGen) {
+        T2 u = f_prod(x, eGen);
+        fInsert(u);
+      }
+    }
+    start = len;
+  }
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MATGRPBAS: End of OrbitComputation_limit\n";
+#endif
+  return TheOrbit;
+}
+
 /*
 template <typename T1, typename T2, typename Fprod>
 std::vector<T2> OrbitComputationSort(std::vector<T1> const &ListGen, T2 const

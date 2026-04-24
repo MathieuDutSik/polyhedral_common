@@ -12,10 +12,8 @@ void process(std::string const &GenPolyFile,
              std::string const &OutFile) {
   std::vector<MyMatrix<T>> list_ext = ReadListMatrixFile<T>(GenPolyFile);
   int dim = list_ext[0].cols();
-  GeneralizedPolytope<T> gp = list_ext_to_generalizedpolytope(list_ext);
-  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(gp, std::cerr);
-  std::vector<MyVector<T>> l_vert = get_vertices(gp, bnd, std::cerr);
-  MyMatrix<T> EXT = MatrixFromVectorFamilyDim(dim, l_vert);
+  GeneralizedPolytope<T> gp = list_ext_to_generalizedpolytope(dim, list_ext);
+  MyMatrix<T> EXT = get_vertices_gp(gp, std::cerr);
 
   auto f_print=[&](std::ostream& os_out) -> void {
     if (OutFormat == "GAP") {

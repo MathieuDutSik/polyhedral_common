@@ -12,8 +12,9 @@ void process(std::string const &GenPolyFile1,
              std::string const &OutFile) {
   std::vector<MyMatrix<T>> list_ext1 = ReadListMatrixFile<T>(GenPolyFile1);
   std::vector<MyMatrix<T>> list_ext2 = ReadListMatrixFile<T>(GenPolyFile2);
-  GeneralizedPolytope<T> gp1 = list_ext_to_generalizedpolytope(list_ext1);
-  GeneralizedPolytope<T> gp2 = list_ext_to_generalizedpolytope(list_ext2);
+  int dim = list_ext1[0].cols();
+  GeneralizedPolytope<T> gp1 = list_ext_to_generalizedpolytope(dim, list_ext1);
+  GeneralizedPolytope<T> gp2 = list_ext_to_generalizedpolytope(dim, list_ext2);
   GeneralizedPolytope<T> gp_d12 = difference_gp_gp(gp1, gp2, std::cerr);
   GeneralizedPolytope<T> gp_d21 = difference_gp_gp(gp1, gp2, std::cerr);
   GeneralizedPolytope<T> gp_int = intersection_gp_gp(gp1, gp2, std::cerr);

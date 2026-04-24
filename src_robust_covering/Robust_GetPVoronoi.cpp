@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 
 // clang-format off
+#include "Permutation.h"
+#include "Group.h"
 #include "NumberTheory.h"
 #include "enum_robust_covering.h"
 // clang-format on
@@ -10,14 +12,23 @@ void process_B(std::string const &MatFile,
                std::string const &VFile,
                std::string const &OutFormat,
                std::string const &OutFile) {
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using TintGroup = mpz_class;
+  using Tgroup = permutalib::Group<Telt, TintGroup>;
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
   auto get_p_voronoi=[&]() -> PVoronoi<T, Tint> {
     CVPSolver<T, Tint> solver(GramMat, std::cerr);
+    int dimEXT = GramMat.rows() + 1;
+    PolyHeuristicSerial<TintGroup> AllArr =
+    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
+    DataLattice<T, Tint, Tgroup> eData =
+    GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, std::cerr);
     if (!IsExistingFile(VFile)) {
-      return initial_p_polytope<T,Tint>(solver, std::cerr);
+      return initial_p_polytope<T,Tint>(eData);
     }
     MyVector<T> eV = ReadVectorFile<T>(VFile);
-    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, eV, std::cerr);
+    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(eData, eV);
     if (!opt) {
       std::cerr << "ROBUST: The find_p_voronoi failed\n";
       throw TerminalException{1};
