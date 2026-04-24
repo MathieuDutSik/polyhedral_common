@@ -1900,6 +1900,9 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     }
     LEltAff_T.push_back(eEltAff_T);
   }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: capp, |LEltAff_T|=" << LEltAff_T.size() << "\n";
+#endif
 
   auto get_min_max=[&](MyMatrix<T> const& EXT) -> std::pair<std::vector<Tint>, std::vector<Tint>> {
     std::vector<Tint> l_min;
@@ -1926,6 +1929,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     V.push_back(work_val);
     while(true) {
       work_val += 1;
+      V.push_back(work_val);
       if (work_val == val_max) {
         break;
       }
@@ -1953,6 +1957,9 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
       Tint min_trans = bnd_min - gp_max;
       Tint max_trans = bnd_max - gp_min;
       std::vector<Tint> l_trans = get_full_interval(min_trans, max_trans);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: get_transformations, i=" << i << " min_trans=" << min_trans << " max_trans=" << max_trans << " |l_trans|=" << l_trans.size() << "\n";
+#endif
       ll_trans.push_back(l_trans);
       l_size.push_back(l_trans.size());
     }
@@ -1967,6 +1974,9 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
       }
       l_matrix.push_back(A);
     }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: get_transformations, |l_matrix|=" << l_matrix.size() << "\n";
+#endif
     return l_matrix;
   };
 
@@ -1986,6 +1996,9 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
       for (auto & eEltAff_T: LEltAff_T) {
         GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv-1].gp, eEltAff_T);
         std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_pv]);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+        os << "ROBUST: get_transformations, |l_trans|=" << l_trans.size() << "\n";
+#endif
         for (auto &trans: l_trans) {
           GeneralizedPolytope<T> gp2 = mat_product(gp1, trans);
           reduce_boundary_generalized_polytope(l_bnd[i_pv], gp2, os);
@@ -2005,7 +2018,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
 #endif
   auto treat_one_entry=[&]() -> bool {
     for (size_t i_pv=0; i_pv<l_pv.size(); i_pv++) {
-      if (l_bnd[i_pv].is_empty()) {
+      if (!l_bnd[i_pv].is_empty()) {
         T min_norm = min_pairwise_norm(l_pv[i_pv].EXT, G);
         PVoronoi<T, Tint> eadj = get_one_adjacent_p_voronoi(eData, min_norm, l_bnd[i_pv]);
         f_insert(eadj);
