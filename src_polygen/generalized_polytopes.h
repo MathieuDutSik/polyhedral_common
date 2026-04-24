@@ -376,10 +376,6 @@ std::optional<ConvexBoundary<T>> convexboundary_halfspaces_int(ConvexBoundary<T>
   return cb_ret;
 }
 
-
-
-
-
 template<typename T>
 int get_matching_face_position(MyMatrix<T> const& FAC, MyVector<T> const& eFAC) {
   int n_fac = FAC.rows();
@@ -403,15 +399,6 @@ int get_matching_face_position(MyMatrix<T> const& FAC, MyVector<T> const& eFAC) 
   }
   return -1;
 }
-
-
-
-
-
-
-
-
-
 
 template <typename T>
 MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {
@@ -1399,6 +1386,33 @@ MyMatrix<T> get_vertices_gp(GeneralizedPolytope<T> const &gp, std::ostream &os) 
 #endif
   return get_vertices_gp_bnd(gp, bnd, os);
 }
+
+template <typename T>
+MyMatrix<T> get_vertices_bnd(BoundaryGeneralizedPolytope<T> const& bnd, std::ostream &os) {
+  int dim = bnd.n;
+  std::unordered_set<MyVector<T>> set_vert;
+  for (auto & kv: bnd.full_data_facets) {
+    auto f_insert=[&](GeneralizedPolytope<T> const& gp) -> void {
+      MyMatrix<T> EXT1 = get_vertices_gp(gp, os);
+      MyMatrix<T> EXT2 = EXT1 * kv.second.NSP;
+      int n_ext = EXT2.rows();
+      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        MyVector<T> V = GetMatrixRow(EXT2, i_ext);
+        set_vert.insert(V);
+      }
+    };
+    f_insert(kv.second.gp_plus);
+    f_insert(kv.second.gp_minus);
+  }
+  std::vector<MyVector<T>> l_vert(set_vert.begin(), set_vert.end());
+  return MatrixFromVectorFamilyDim(dim, l_vert);
+}
+
+
+
+
+
+
 
 template <typename T>
 size_t ComputeHash_gp(GeneralizedPolytope<T> const &gp, size_t seed_in, std::ostream& os) {

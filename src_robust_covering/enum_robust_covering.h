@@ -8,6 +8,7 @@
 #include "LatticeDelaunay.h"
 #include "subgroup_algorithms.h"
 #include "POLY_RedundancyElimination.h"
+#include "LatticeStabEquiCan.h"
 #include "COMB_Combinatorics.h"
 #include "boost_serialization.h"
 // clang-format on
@@ -381,10 +382,10 @@ std::vector<MyMatrix<Tint>> get_parall_stabilizer(DataLattice<T, Tint, Tgroup> &
                                                   GenericRobustM<Tint> const& robust_m_min) {
   std::ostream &os = eData.rddo.os;
   using Telt = typename Tgroup::Telt;
-  MyMatrix<T> const& GramMat = eData.solver.GramMat;
+  MyMatrix<T> const& G = eData.solver.GramMat;
   MyMatrix<T> const& SHV = eData.SHV;
   MyMatrix<T> EXTparall = robust_m_min.template get_ext_t<T>();
-  Tgroup GRP = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXTparall, os);
+  Tgroup GRP = Polytope_StabilizerKernel<T,Tint,Tgroup>(G, SHV, EXTparall, os);
 #ifdef DEBUG_P_VORONOI_STABILIZER
   os << "ROBUST: get_parall_stabilizer |G|=" << GRP.size() << "\n";
 #endif
@@ -646,9 +647,9 @@ std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup
   using Tidx = typename Telt::Tidx;
   using TgroupOut = std::pair<std::vector<Telt>, Tgroup>;
   MyMatrix<T> const& EXT_T = pv.EXT;
-  MyMatrix<T> const& GramMat = eData.solver.GramMat;
+  MyMatrix<T> const& G = eData.solver.GramMat;
   MyMatrix<T> const& SHV = eData.SHV;
-  Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXT_T, os);
+  Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(G, SHV, EXT_T, os);
   Tidx n_act = EXT_T.rows();
   std::vector<Telt> LGenBig = GRPbig.SmallGeneratingSet();
   std::vector<Telt> LGenSma;
@@ -971,15 +972,15 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
     for (int i = 0; i < dim; i++) {
       eEXT(i) = EXTbig(i_ext, i + 1) / EXTbig(i_ext, 0);
     }
-    MyMatrix<T> const &GramMat = solver.GramMat;
+    MyMatrix<T> const &G = solver.GramMat;
     MyVector<T> v_short_T = UniversalVectorConversion<T, Tint>(v_short);
     MyVector<T> diff = eEXT - v_short_T;
-    T norm = EvaluationQuadForm(GramMat, diff);
+    T norm = EvaluationQuadForm(G, diff);
     std::vector<MyVector<Tint>> ListVect =
         solver.at_most_dist_vectors(eEXT, norm);
     resultCVP<T, Tint> res_cvp{norm, MatrixFromVectorFamily(ListVect)};
     std::optional<ResultDirectEnumeration<T, Tint>> opt_rde =
-        compute_and_enumerate_structures(solver.GramMat, res_cvp, eEXT, os);
+        compute_and_enumerate_structures(G, res_cvp, eEXT, os);
     if (!opt_rde) {
       std::cerr << "ROBUST: get_p_polytope_vertices_and_test_them failed. We "
                    "should have one\n";
@@ -1000,7 +1001,8 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
 template <typename T, typename Tint>
 T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   int denom = 10000;
-  int dim = solver.GramMat.rows();
+  MyMatrix<T> const& G = solver.GramMat;
+  int dim = G.rows();
   T upper_bound(0);
   int max_iter = 10;
   for (int iter=0; iter<max_iter; iter++) {
@@ -1008,7 +1010,7 @@ T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
     if (!IsIntegralVector(eV)) {
       ResultRobustClosest<T, Tint> rrc =
           compute_robust_closest<T, Tint>(solver, eV, os);
-      T value = compute_upper_bound_rrc(solver.GramMat, rrc);
+      T value = compute_upper_bound_rrc(G, rrc);
       if (upper_bound == 0) {
         // First step
         upper_bound = value;
@@ -1023,8 +1025,8 @@ T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
 }
 
 template <typename T>
-T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
-  int n = GramMat.rows();
+T get_upper_bound_ext(MyMatrix<T> const &G, MyMatrix<T> const &EXT) {
+  int n = G.rows();
   int n_ext = EXT.rows();
   MyVector<T> diff(n);
   T upper_bound(0);
@@ -1033,7 +1035,7 @@ T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
       for (int i = 0; i < n; i++) {
         diff(i) = EXT(i_ext, i + 1) - EXT(j_ext, i + 1);
       }
-      T norm = EvaluationQuadForm(GramMat, diff);
+      T norm = EvaluationQuadForm(G, diff);
       if (norm > upper_bound) {
         upper_bound = norm;
       }
@@ -1354,8 +1356,8 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef SANITY_CHECK_EXTENSIVE_ENUM_P_POLYTOPES
   if (opt) {
     PVoronoiPart<T, Tint> const& pvp1 = *opt;
-    MyMatrix<T> const& GramMat = solver.GramMat;
-    int dim = GramMat.rows();
+    MyMatrix<T> const& G = solver.GramMat;
+    int dim = G.rows();
     MyVector<T> eV_red(dim);
     for (int i=0; i<dim; i++) {
       eV_red(i) = eV(i + 1);
@@ -1373,7 +1375,7 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
       for (int i = 0; i < dim; i++) {
         diff(i) = v_long_T(i) - EXT1(i_row, i + 1);
       }
-      T norm = EvaluationQuadForm(GramMat, diff);
+      T norm = EvaluationQuadForm(G, diff);
       if (norm > max_norm) {
         max_norm = norm;
       }
@@ -1411,10 +1413,10 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
         for (size_t i_parall=0; i_parall<n_parall; i_parall++) {
           MyMatrix<Tint> M_paral = reorder_matrix(rrc.list_parallelepipeds[i_parall]);
           bool in_list = set.contains(M_paral);
-          ExtendedGenericRobustM<T, Tint> egr = get_generic_robust_m(M_paral, GramMat, fV_red, os);
+          ExtendedGenericRobustM<T, Tint> egr = get_generic_robust_m(M_paral, G, fV_red, os);
           MyVector<Tint> v_l = egr.robust_m.v_long();
           MyVector<T> diff = eV_red - UniversalVectorConversion<T,Tint>(v_l);
-          T norm = EvaluationQuadForm(GramMat, diff);
+          T norm = EvaluationQuadForm(G, diff);
           std::cerr << "ROBUST i_parall=" << i_parall << "/" << n_parall << " norm=" << egr.max << " v_long=" << StringVectorGAP(v_l) << " in_list=" << in_list << " norm=" << norm << " M=" << StringMatrixGAP_line(M_paral) << "\n";
         }
         std::cerr << "ROBUST: That is not what is expected for an inner point\n";
@@ -1422,7 +1424,7 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
       }
 
       MyMatrix<Tint> M2 = reorder_matrix(rrc.list_parallelepipeds[0]);
-      ExtendedGenericRobustM<T, Tint> egr = get_generic_robust_m(M2, GramMat, fV_red, os);
+      ExtendedGenericRobustM<T, Tint> egr = get_generic_robust_m(M2, G, fV_red, os);
       if (v_long != egr.robust_m.v_long()) {
         std::cerr << "ROBUST: v_long is inconsistent\n";
         throw TerminalException{1};
@@ -1735,24 +1737,11 @@ initial_p_polytope(DataLattice<T, Tint, Tgroup> &eData) {
   }
 }
 
-
-
-
-
-
 template <typename T, typename Tint, typename Tgroup>
-std::vector<PVoronoi<T, Tint>>
-find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
-                             PVoronoi<T, Tint> const &pv) {
+PVoronoi<T, Tint> get_one_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
+                                             T const& min_norm,
+                                             BoundaryGeneralizedPolytope<T> const& bnd) {
   std::ostream &os = eData.rddo.os;
-  CVPSolver<T, Tint> const &solver = eData.solver;
-  MyMatrix<T> const& G = solver.GramMat;
-  T min_norm = min_pairwise_norm(pv.EXT, G);
-  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pv.gp, os);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: flapv, We have bnd\n";
-  //  print_raw_boundary(bnd, os);
-#endif
   auto get_adj_p_polytope = [&](InteriorPtDir<T> const& ipd_test,
                                 MyVector<T> const &x)
       -> std::optional<PVoronoi<T, Tint>> {
@@ -1780,36 +1769,53 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     }
     return opt;
   };
-  auto get_adj = [&]() -> PVoronoi<T, Tint> {
-    T factor = min_norm;
-    int N = 1;
-    while (true) {
-      std::optional<InteriorPtDir<T>> opt1 = get_random_interior_point_bnd(bnd, N, os);
+  T factor = min_norm;
+  int N = 1;
+  while (true) {
+    std::optional<InteriorPtDir<T>> opt1 = get_random_interior_point_bnd(bnd, N, os);
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-      if (!opt1) {
-        std::cerr << "ROBUST: Failed to find the random interior point\n";
-        throw TerminalException{1};
-      }
-#endif
-      InteriorPtDir<T> const& ipd = *opt1;
-      InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: flapv, ga, N=" << N << "     ipd=" << ipd.to_string() << "\n";
-      os << "ROBUST: flapv, ga, N=" << N << " ipd_opp=" << ipd_opp.to_string() << "\n";
-#endif
-      MyVector<T>  x = ipd_opp.get_point(factor);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: flapv, ga, factor=" << factor << "\n";
-#endif
-      std::optional<PVoronoi<T, Tint>> opt2 =
-          get_adj_p_polytope(ipd_opp, x);
-      if (opt2) {
-        return *opt2;
-      }
-      factor = factor / 2;
-      N += 1;
+    if (!opt1) {
+      std::cerr << "ROBUST: Failed to find the random interior point\n";
+      throw TerminalException{1};
     }
-  };
+#endif
+    InteriorPtDir<T> const& ipd = *opt1;
+    InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: flapv, ga, N=" << N << "     ipd=" << ipd.to_string() << "\n";
+    os << "ROBUST: flapv, ga, N=" << N << " ipd_opp=" << ipd_opp.to_string() << "\n";
+#endif
+    MyVector<T>  x = ipd_opp.get_point(factor);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: flapv, ga, factor=" << factor << "\n";
+#endif
+    std::optional<PVoronoi<T, Tint>> opt2 =
+      get_adj_p_polytope(ipd_opp, x);
+    if (opt2) {
+      return *opt2;
+    }
+    factor = factor / 2;
+    N += 1;
+  }
+}
+
+
+
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<PVoronoi<T, Tint>>
+find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
+                             PVoronoi<T, Tint> const &pv) {
+  std::ostream &os = eData.rddo.os;
+  CVPSolver<T, Tint> const &solver = eData.solver;
+  MyMatrix<T> const& G = solver.GramMat;
+  T min_norm = min_pairwise_norm(pv.EXT, G);
+  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pv.gp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: flapv, We have bnd\n";
+  //  print_raw_boundary(bnd, os);
+#endif
+
   std::vector<PVoronoi<T, Tint>> l_adj;
   while(true) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1818,8 +1824,8 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     bool test = bnd.is_empty();
     if (test) {
       break;
-     }
-    PVoronoi<T, Tint> eadj = get_adj();
+    }
+    PVoronoi<T, Tint> eadj = get_one_adjacent_p_voronoi(eData, min_norm, bnd);
     reduce_boundary_generalized_polytope(bnd, eadj.gp, os);
     l_adj.push_back(eadj);
   }
@@ -1828,7 +1834,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<PVoronoi<T, Tint>>
-compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
+compute_all_p_polytopes_V1(DataLattice<T, Tint, Tgroup> &eData) {
   std::ostream &os = eData.rddo.os;
   std::vector<PVoronoi<T, Tint>> l_ppoly;
   PVoronoi<T, Tint> ppoly = initial_p_polytope(eData);
@@ -1871,13 +1877,151 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   return l_ppoly;
 }
 
+
+
+
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<PVoronoi<T, Tint>>
+compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
+  std::ostream &os = eData.rddo.os;
+  MyMatrix<T> const& G = eData.solver.GramMat;
+  int dim = G.rows();
+  std::vector<MyMatrix<Tint>> LGen = ArithmeticAutomorphismGroup<T,Tint,Tgroup>(G, os);
+  std::vector<MyMatrix<Tint>> LElt = get_group_elements(LGen, os);
+  std::vector<MyMatrix<T>> LEltAff;
+  for (auto & elt: LElt) {
+    MyMatrix<T> eEltAff = ZeroMatrix<T>(dim + 1, dim + 1);
+    eEltAff(0,0) = 1;
+    for (int i=0; i<dim; i++) {
+      for (int j=0; j<dim; j++) {
+        eEltAff(i+1, j+1) = UniversalScalarConversion<T,Tint>(elt(i,j));
+      }
+    }
+    LEltAff.push_back(eEltAff);
+  }
+
+  auto get_min_max=[&](MyMatrix<T> const& EXT) -> std::pair<std::vector<Tint>, std::vector<Tint>> {
+    std::vector<Tint> l_min;
+    std::vector<Tint> l_max;
+    int n_row = EXT.rows();
+    for (int i=0; i<dim; i++) {
+      std::vector<T> V;
+      for (int i_row=0; i_row<n_row; i_row++) {
+        V.push_back(EXT(i_row, i+1));
+      }
+      T min1 = VectorMin(V);
+      Tint min2 = UniversalFloorScalarInteger<Tint,T>(min1);
+      T max1 = VectorMax(V);
+      Tint max2 = UniversalCeilScalarInteger<Tint,T>(max1);
+      l_min.push_back(min2);
+      l_max.push_back(max2);
+    }
+    return {l_min, l_max};
+  };
+
+  auto get_full_interval=[&](Tint const& val_min, Tint const& val_max) -> std::vector<Tint> {
+    std::vector<Tint> V;
+    Tint work_val = val_min;
+    V.push_back(work_val);
+    while(true) {
+      work_val += 1;
+      if (work_val == val_max) {
+        break;
+      }
+    }
+    return V;
+  };
+
+  // Find the possible transformations of gp such that
+  // gp overlaps with bnd.
+  auto get_transformations=[&](GeneralizedPolytope<T> const& gp, BoundaryGeneralizedPolytope<T> const& bnd) -> std::vector<MyMatrix<T>> {
+    MyMatrix<T> EXT_bnd = get_vertices_bnd(bnd, os);
+    std::pair<std::vector<Tint>, std::vector<Tint>> pair_bnd = get_min_max(EXT_bnd);
+    MyMatrix<T> EXT_gp = get_vertices_gp(gp, os);
+    std::pair<std::vector<Tint>, std::vector<Tint>> pair_gp = get_min_max(EXT_gp);
+    std::vector<std::vector<Tint>> ll_trans;
+    std::vector<int> l_size;
+    for (int i=0; i<dim; i++) {
+      Tint bnd_min = pair_bnd.first[i];
+      Tint bnd_max = pair_bnd.second[i];
+      Tint gp_min = pair_gp.first[i];
+      Tint gp_max = pair_gp.second[i];
+      Tint min_trans = bnd_min - gp_max;
+      Tint max_trans = bnd_max - gp_min;
+      std::vector<Tint> l_trans = get_full_interval(min_trans, max_trans);
+      ll_trans.push_back(l_trans);
+      l_size.push_back(l_trans.size());
+    }
+    BlockIterationMultiple bim(l_size);
+    std::vector<MyMatrix<T>> l_matrix;
+    for (auto & v_choice: bim) {
+      MyMatrix<T> A = IdentityMat<T>(dim + 1);
+      for (int i=0; i<dim; i++) {
+        Tint val = ll_trans[i][v_choice[i]];
+        T val_T = UniversalScalarConversion<T,Tint>(val);
+        A(0, i+1) = val_T;
+      }
+      l_matrix.push_back(A);
+    }
+    return l_matrix;
+  };
+
+
+  std::vector<PVoronoi<T, Tint>> l_pv;
+  std::vector<BoundaryGeneralizedPolytope<T>> l_bnd;
+  PVoronoi<T, Tint> pv = initial_p_polytope(eData);
+  auto f_insert=[&](PVoronoi<T, Tint> const& pv) -> void {
+    BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pv.gp, os);
+    l_pv.push_back(pv);
+    l_bnd.push_back(bnd);
+    size_t n_pv = l_pv.size();
+    for (size_t i_pv=0; i_pv<=n_pv; i_pv++) {
+      for (auto & eEltAff_T: LEltAff) {
+        GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv].gp, eEltAff_T);
+        std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_pv]);
+        for (auto &trans: l_trans) {
+          GeneralizedPolytope<T> gp2 = mat_product(gp1, trans);
+          reduce_boundary_generalized_polytope(l_bnd[i_pv], gp2, os);
+        }
+      }
+    }
+  };
+  f_insert(pv);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: capp, After initial_p_polytope\n";
+#endif
+  auto treat_one_entry=[&]() -> bool {
+    for (size_t i_pv=0; i_pv<l_pv.size(); i_pv++) {
+      if (l_bnd[i_pv].is_empty()) {
+        T min_norm = min_pairwise_norm(l_pv[i_pv].EXT, G);
+        PVoronoi<T, Tint> eadj = get_one_adjacent_p_voronoi(eData, min_norm, l_bnd[i_pv]);
+        f_insert(eadj);
+        return false;
+      }
+    }
+    return true;
+  };
+  while(true) {
+    bool is_finished = treat_one_entry();
+    if (is_finished) {
+      break;
+    }
+  }
+  return l_pv;
+}
+
+
+
+
+
 template <typename T, typename Tint, typename Tgroup>
 T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
   std::vector<PVoronoi<T, Tint>> l_ppoly =
       compute_all_p_polytopes(eData);
   T max_sqr_radius(0);
-  MyMatrix<T> const &GramMat = eData.solver.GramMat;
-  int dim = GramMat.rows();
+  MyMatrix<T> const &G = eData.solver.GramMat;
+  int dim = G.rows();
   MyVector<T> diff(dim);
   for (auto &ppoly : l_ppoly) {
     MyVector<Tint> v_long = ppoly.robust_m_min.v_long();
@@ -1887,7 +2031,7 @@ T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
       for (int i = 0; i < dim; i++) {
         diff(i) = v_long_T(i) - ppoly.EXT(i_ext, i + 1);
       }
-      T norm = EvaluationQuadForm(GramMat, diff);
+      T norm = EvaluationQuadForm(G, diff);
       if (norm > max_sqr_radius) {
         max_sqr_radius = norm;
       }
@@ -1897,10 +2041,10 @@ T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
 }
 
 template <typename T, typename Tint>
-T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
+T random_vertex_estimation_robust_covering(MyMatrix<T> const &G, size_t n_iter,
                                            std::ostream &os) {
-  CVPSolver<T, Tint> solver(GramMat, os);
-  int dim = GramMat.rows();
+  CVPSolver<T, Tint> solver(G, os);
+  int dim = G.rows();
   T max_cov(0);
   std::vector<MyVector<Tint>> l_excluded_max;
   MyVector<T> diff(dim);
@@ -1932,7 +2076,7 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_
         for (int i=0; i<dim; i++) {
           diff(i) = v_long_T(i) - pvp.l_cb[0].sp.EXT(i_row, i+1);
         }
-        T norm = EvaluationQuadForm(GramMat, diff);
+        T norm = EvaluationQuadForm(G, diff);
         if (norm > max_local) {
           max_local = norm;
 #ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
