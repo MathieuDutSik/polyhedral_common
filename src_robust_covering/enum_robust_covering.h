@@ -332,13 +332,32 @@ template <typename Tint> struct GenericRobustM {
   MyVector<Tint> v_long() const { return GetMatrixRow(M, index); }
   std::vector<MyVector<Tint>> get_short_vectors() const {
     std::vector<MyVector<Tint>> l_v;
-    for (int i_row=0; i_row<M.rows(); i_row++) {
+    int n_row = M.rows();
+    for (int i_row=0; i_row<n_row; i_row++) {
       if (i_row != index) {
         MyVector<Tint> V = GetMatrixRow(M, i_row);
         l_v.emplace_back(std::move(V));
       }
     }
     return l_v;
+  }
+  template<typename T>
+  MyMatrix<T> get_ext_t() const {
+    int n_row = M.rows();
+    int n_vect = n_row - 1;
+    int dim = M.cols();
+    int i_vect = 0;
+    MyMatrix<T> EXTret(n_vect, dim + 1);
+    for (int i_row=0; i_row<n_row; i_row++) {
+      if (i_row != index) {
+        EXTret(i_vect, 0) = 1;
+        for (int i=0; i<dim; i++) {
+          EXTret(i_vect, i+1) = UniversalScalarConversion<T,Tint>(M(i_row, i));
+        }
+        i_vect += 1;
+      }
+    }
+    return EXTret;
   }
 };
 
@@ -1420,6 +1439,70 @@ std::optional<ConvexBoundary<T>> get_next_side_vector(SoftConvexBoundary<T,Tint>
   return {};
 }
 
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup> &eData,
+                                                     PVoronoi<T, Tint> const &pv) {
+  std::ostream &os = eData.rddo.os;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using TgroupOut = std::pair<std::vector<Telt>, Tgroup>;
+  auto f_group_out=[&](MyMatrix<T> const& EXTin) -> TgroupOut {
+    MyMatrix<T> const& GramMat = eData.solver.GramMat;
+    MyMatrix<T> const& SHV = eData.SHV;
+#ifdef DEBUG_P_VORONOI_STABILIZER
+    os << "ROBUST: f_group_out, step 1\n";
+#endif
+    Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXTin, os);
+#ifdef DEBUG_P_VORONOI_STABILIZER
+    os << "ROBUST: f_group_out, step 2\n";
+#endif
+    Tidx n_act = EXTin.rows();
+    std::vector<Telt> LGenBig = GRPbig.SmallGeneratingSet();
+    std::vector<Telt> LGenSma;
+    auto f_correct=[&](Telt const& x) -> bool {
+#ifdef DEBUG_P_VORONOI_STABILIZER
+      os << "ROBUST: f_group_out / f_correct, step 1\n";
+#endif
+      MyMatrix<T> P = RepresentVertexPermutation(EXTin, EXTin, x);
+#ifdef DEBUG_P_VORONOI_STABILIZER
+      os << "ROBUST: f_group_out / f_correct, step 2\n";
+#endif
+      GeneralizedPolytope<T> gp_img = mat_product(pv.gp, P);
+#ifdef DEBUG_P_VORONOI_STABILIZER
+      os << "ROBUST: f_group_out / f_correct, step 3\n";
+#endif
+      bool test = is_equal(pv.gp, gp_img, os);
+#ifdef DEBUG_P_VORONOI_STABILIZER
+      os << "ROBUST: f_group_out / f_correct, step 4\n";
+#endif
+      return test;
+    };
+#ifdef DEBUG_P_VORONOI_STABILIZER
+    os << "ROBUST: f_group_out, step 3\n";
+#endif
+    return get_intermediate_group<Tgroup,decltype(f_correct)>(n_act, LGenSma, LGenBig, f_correct, os);
+  };
+  MyMatrix<T> const& EXT_T = pv.EXT;
+  std::pair<std::vector<Telt>, Tgroup> pair1 = f_group_out(EXT_T);
+  std::vector<MyMatrix<Tint>> l_gens;
+  for (auto & eGen: pair1.first) {
+    MyMatrix<T> P_T = RepresentVertexPermutation(EXT_T, EXT_T, eGen);
+    MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
+    l_gens.emplace_back(std::move(P));
+  }
+#ifdef DEBUG_P_VORONOI_STABILIZER
+  {
+    MyMatrix<T> EXTparal = pv.robust_m_min.template get_ext_t<T>();
+    MyMatrix<T> const& GramMat = eData.solver.GramMat;
+    MyMatrix<T> const& SHV = eData.SHV;
+    Tgroup GRPparall = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXTparal, os);
+    os << "ROBUST: get_p_voronoi_stabilizer |G(pv)|=" << pair1.second.size()
+       << " |G(parall)|=" << GRPparall.size() << "\n";
+  }
+#endif
+  return l_gens;
+}
+
 
 
 template <typename T, typename Tint>
@@ -1621,79 +1704,6 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
     }
     denom += 1;
   }
-}
-
-template<typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup> &eData,
-                                                     PVoronoi<T, Tint> const &pv) {
-  std::ostream &os = eData.rddo.os;
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  using TgroupOut = std::pair<std::vector<Telt>, Tgroup>;
-  auto f_group_out=[&](MyMatrix<T> const& EXTin) -> TgroupOut {
-    MyMatrix<T> const& GramMat = eData.solver.GramMat;
-    MyMatrix<T> const& SHV = eData.SHV;
-#ifdef DEBUG_P_VORONOI_STABILIZER
-    os << "ROBUST: f_group_out, step 1\n";
-#endif
-    Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXTin, os);
-#ifdef DEBUG_P_VORONOI_STABILIZER
-    os << "ROBUST: f_group_out, step 2\n";
-#endif
-    Tidx n_act = EXTin.rows();
-    std::vector<Telt> LGenBig = GRPbig.SmallGeneratingSet();
-    std::vector<Telt> LGenSma;
-    auto f_correct=[&](Telt const& x) -> bool {
-#ifdef DEBUG_P_VORONOI_STABILIZER
-      os << "ROBUST: f_group_out / f_correct, step 1\n";
-#endif
-      MyMatrix<T> P = RepresentVertexPermutation(EXTin, EXTin, x);
-#ifdef DEBUG_P_VORONOI_STABILIZER
-      os << "ROBUST: f_group_out / f_correct, step 2\n";
-#endif
-      GeneralizedPolytope<T> gp_img = mat_product(pv.gp, P);
-#ifdef DEBUG_P_VORONOI_STABILIZER
-      os << "ROBUST: f_group_out / f_correct, step 3\n";
-#endif
-      bool test = is_equal(pv.gp, gp_img, os);
-#ifdef DEBUG_P_VORONOI_STABILIZER
-      os << "ROBUST: f_group_out / f_correct, step 4\n";
-#endif
-      return test;
-    };
-#ifdef DEBUG_P_VORONOI_STABILIZER
-    os << "ROBUST: f_group_out, step 3\n";
-#endif
-    return get_intermediate_group<Tgroup,decltype(f_correct)>(n_act, LGenSma, LGenBig, f_correct, os);
-  };
-  MyMatrix<T> const& EXT_T = pv.EXT;
-  std::pair<std::vector<Telt>, Tgroup> pair1 = f_group_out(EXT_T);
-  std::vector<MyMatrix<Tint>> l_gens;
-  for (auto & eGen: pair1.first) {
-    MyMatrix<T> P_T = RepresentVertexPermutation(EXT_T, EXT_T, eGen);
-    MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
-    l_gens.emplace_back(std::move(P));
-  }
-#ifdef DEBUG_P_VORONOI_STABILIZER
-  int dim = eData.solver.GramMat.rows();
-  os << "ROBUST: get_p_voronoi_stabilizer |G|=" << pair1.second.size() << "\n";
-  std::vector<MyVector<Tint>> EXT1 = pv.robust_m_min.get_short_vectors();
-  int n_vect = EXT1.size();
-  MyMatrix<T> EXT2(n_vect, dim + 1);
-  for (int i_vect=0; i_vect<n_vect; i_vect++) {
-    EXT2(i_vect, 0) = 1;
-    MyVector<Tint> const& V = EXT1[i_vect];
-    for (int i=0; i<dim; i++) {
-      EXT2(i_vect, i+1) = UniversalScalarConversion<T,Tint>(V(i));
-    }
-  }
-  os << "ROBUST: We have EXT2=\n";
-  WriteMatrix(os, EXT2);
-  std::pair<std::vector<Telt>, Tgroup> pair2 = f_group_out(EXT2);
-  os << "ROBUST: get_p_voronoi_stabilizer |G(pv)|=" << pair1.second.size()
-     << " |G(parall)|=" << pair2.second.size() << "\n";
-#endif
-  return l_gens;
 }
 
 
