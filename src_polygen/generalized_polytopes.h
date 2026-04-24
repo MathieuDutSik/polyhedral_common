@@ -1094,7 +1094,7 @@ template <typename T>
 BoundaryGeneralizedPolytope<T>
 find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
                                    std::ostream &os) {
-  int n = gp.polytopes[0].FAC.cols();
+  int dim = gp.dim;
   std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
 #ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
   os << "GP:  find_generalized_polytope_boundary(fgpb) start\n";
@@ -1116,6 +1116,8 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
       DataFacetPlusMinus<T> &rec = full_data_facets[pair.first];
       if (rec.NSP.rows() == 0) {
         rec.NSP = NullspaceMatSingleVectorExt(eFAC);
+        rec.gp_plus.dim = dim - 1;
+        rec.gp_minus.dim = dim - 1;
 #ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
         os << "GP: find_generalized_polytope_boundary, rec.NSP=\n";
         WriteMatrix(os, rec.NSP);
@@ -1144,6 +1146,12 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
         difference_gp_gp(kv.second.gp_plus, kv.second.gp_minus, os);
     GeneralizedPolytope<T> diff_m_p =
         difference_gp_gp(kv.second.gp_minus, kv.second.gp_plus, os);
+#ifdef SANITY_CHECK_GENERALIZED_POLYTOPE
+    if (diff_p_m.dim == 0 || diff_m_p.dim == 0) {
+      std::cerr << "GP: diff_p_m.dim=" << diff_p_m.dim << " diff_m_p.dim=" << diff_m_p.dim << "\n";
+      throw TerminalException{1};
+    }
+#endif
     if (diff_p_m.empty() && diff_m_p.empty()) {
       to_remove.push_back(kv.first);
     } else {
@@ -1154,7 +1162,7 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
   for (auto &vect : to_remove) {
     full_data_facets.erase(vect);
   }
-  return {n, full_data_facets};
+  return {dim, full_data_facets};
 }
 
 
@@ -1347,6 +1355,7 @@ MyMatrix<T> get_vertices_gp_bnd(GeneralizedPolytope<T> const &gp,
   os << "GP: get_vertices_gp_bnd, |gp|=" << gp.size() << " |set_vertices|=" << set_vertices.size() << "\n";
   write_generalized_polytope(gp, os);
   write_boundary_generalized_polytope(bnd, os);
+  os << "GP: gp.dim=" << gp.dim << " bnd.n=" << bnd.n << "\n";
 #endif
   std::vector<MyVector<T>> l_vertices;
   for (auto &eEXT : set_vertices) {
@@ -1364,7 +1373,13 @@ MyMatrix<T> get_vertices_gp_bnd(GeneralizedPolytope<T> const &gp,
       os << "GP: scal=" << scal << "\n";
 #endif
       if (scal == 0) {
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+        os << "GP: scal=0, step 1\n";
+#endif
         std::optional<MyVector<T>> opt = SolutionMat(kv.second.NSP, eEXT);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+        os << "GP: scal=0, step 2\n";
+#endif
 #ifdef SANITY_CHECK_GENERALIZED_POLYTOPE
         if (!opt) {
           std::cerr << "GP: It should be in the subspace\n";
@@ -1372,19 +1387,42 @@ MyMatrix<T> get_vertices_gp_bnd(GeneralizedPolytope<T> const &gp,
         }
 #endif
         MyVector<T> const &eEXTred = *opt;
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+        os << "GP: scal=0, step 3\n";
+#endif
         bool test1 = is_interior_gp_vert(kv.second.gp_minus, eEXTred, os);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+        os << "GP: scal=0, step 4\n";
+#endif
         bool test2 = is_interior_gp_vert(kv.second.gp_plus, eEXTred, os);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+        os << "GP: scal=0, step 5\n";
+#endif
         if (test1 || test2) {
           l_fac.push_back(eFAC);
         }
       }
     }
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: Before MatrixFromVectorFamilyDim\n";
+#endif
     int rnk = RankMat(MatrixFromVectorFamilyDim(dim, l_fac));
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: After MatrixFromVectorFamilyDim rnk=" << rnk << "\n";
+#endif
     if (rnk == dim - 1) {
       l_vertices.push_back(eEXT);
     }
   }
-  return MatrixFromVectorFamilyDim(dim, l_vertices);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+  os << "GP: Before returning l_vertices dim=" << dim << "\n";
+#endif
+  MyMatrix<T> MVert = MatrixFromVectorFamilyDim(dim, l_vertices);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+  os << "GP: Before returning MVert=\n";
+  WriteMatrix(os, MVert);
+#endif
+  return MVert;
 }
 
 template <typename T>
@@ -1393,7 +1431,11 @@ MyMatrix<T> get_vertices_gp(GeneralizedPolytope<T> const &gp, std::ostream &os) 
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: convert_p_voronoi_part, step 3\n";
 #endif
-  return get_vertices_gp_bnd(gp, bnd, os);
+  MyMatrix<T> EXT = get_vertices_gp_bnd(gp, bnd, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: get_vertices_gp, we have EXT\n";
+#endif
+  return EXT;
 }
 
 template <typename T>
@@ -1403,7 +1445,17 @@ MyMatrix<T> get_vertices_bnd(BoundaryGeneralizedPolytope<T> const& bnd, std::ost
   for (auto & kv: bnd.full_data_facets) {
     auto f_insert=[&](GeneralizedPolytope<T> const& gp) -> void {
       MyMatrix<T> EXT1 = get_vertices_gp(gp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: get_vertices_bnd, we have dim=" << gp.dim << " EXT1\n";
+      os << "ROBUST: get_vertices_bnd, EXT1=\n";
+      WriteMatrix(os, EXT1);
+      os << "ROBUST: get_vertices_bnd, NSP=\n";
+      WriteMatrix(os, kv.second.NSP);
+#endif
       MyMatrix<T> EXT2 = EXT1 * kv.second.NSP;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: get_vertices_bnd, we have EXT2\n";
+#endif
       int n_ext = EXT2.rows();
       for (int i_ext=0; i_ext<n_ext; i_ext++) {
         MyVector<T> V = GetMatrixRow(EXT2, i_ext);

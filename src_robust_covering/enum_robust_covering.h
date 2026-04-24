@@ -1939,6 +1939,9 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     MyMatrix<T> EXT_bnd = get_vertices_bnd(bnd, os);
     std::pair<std::vector<Tint>, std::vector<Tint>> pair_bnd = get_min_max(EXT_bnd);
     MyMatrix<T> EXT_gp = get_vertices_gp(gp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: capp, we have EXT_gp\n";
+#endif
     std::pair<std::vector<Tint>, std::vector<Tint>> pair_gp = get_min_max(EXT_gp);
     std::vector<std::vector<Tint>> ll_trans;
     std::vector<int> l_size;
