@@ -1127,9 +1127,14 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
        << " |tot_list_parallelepipeds|=" << tot_list_parallelepipeds.size()
        << " min=" << min << "\n";
 #endif
-    if (list_min_parallelepipeds.size() > 1) {
+    size_t n_min_parall = list_min_parallelepipeds.size();
+    if (n_min_parall > 1) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST:   kippp, is_correct=false by n_list_min_parallelepipeds > 1\n";
+      for (size_t i=0; i<n_min_parall; i++) {
+        os << "ROBUST:   kippp, i=" << i << " M=\n";
+        WriteMatrix(os, list_min_parallelepipeds[i]);
+      }
 #endif
       // We mark is_correct=false since there is no chance that this degeneracy will be
       // resolved by further enumeration. The degeneracy is there and will remain.
@@ -1208,6 +1213,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #endif
         T val = compute_upper_bound_mat(G, eM);
         if (val < upper_bound) {
+          // A better upper bound is found.
           upper_bound = val;
         }
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
@@ -1703,6 +1709,10 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
   check_p_voronoi_groups(eData, p_voronoi);
 #endif
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  T volume = volume_gp(p_voronoi.gp, os);
+  os << "ROBUST: find_p_voronoi, volume=" << volume << "\n";
+#endif
   return p_voronoi;
 }
 
@@ -1908,6 +1918,12 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     std::vector<Tint> l_min;
     std::vector<Tint> l_max;
     int n_row = EXT.rows();
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
+    if (n_row == 0) {
+      std::cerr << "ROBUST: get_min_max, we have n_row=0\n";
+      throw TerminalException{1};
+    }
+#endif
     for (int i=0; i<dim; i++) {
       std::vector<T> V;
       for (int i_row=0; i_row<n_row; i_row++) {
@@ -1993,9 +2009,13 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     size_t n_trans = 0;
 #endif
     for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
-      for (auto & eEltAff_T: LEltAff_T) {
-        GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv-1].gp, eEltAff_T);
-        if (!l_bnd[i_pv].is_empty()) {
+      if (!l_bnd[i_pv].is_empty()) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+        double vol_bnd = volume_bnd(l_bnd[i_pv], os);
+        os << "ROBUST: f_insert, starting with vol_bnd=" << vol_bnd << "\n";
+#endif
+        for (auto & eEltAff_T: LEltAff_T) {
+          GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv-1].gp, eEltAff_T);
           std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_pv]);
 #ifdef DEBUG_ENUM_P_POLYTOPES
           os << "ROBUST: get_transformations, |l_trans|=" << l_trans.size() << "\n";
@@ -2004,6 +2024,8 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
             GeneralizedPolytope<T> gp2 = mat_product(gp1, trans);
             reduce_boundary_generalized_polytope(l_bnd[i_pv], gp2, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
+            double vol_bnd = volume_bnd(l_bnd[i_pv], os);
+            os << "ROBUST: f_insert,     now vol_bnd=" << vol_bnd << "\n";
             n_trans += 1;
 #endif
           }
