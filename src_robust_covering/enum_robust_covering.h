@@ -1995,16 +1995,18 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
       for (auto & eEltAff_T: LEltAff_T) {
         GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv-1].gp, eEltAff_T);
-        std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_pv]);
+        if (!l_bnd[i_pv].is_empty()) {
+          std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_pv]);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST: get_transformations, |l_trans|=" << l_trans.size() << "\n";
+          os << "ROBUST: get_transformations, |l_trans|=" << l_trans.size() << "\n";
 #endif
-        for (auto &trans: l_trans) {
-          GeneralizedPolytope<T> gp2 = mat_product(gp1, trans);
-          reduce_boundary_generalized_polytope(l_bnd[i_pv], gp2, os);
+          for (auto &trans: l_trans) {
+            GeneralizedPolytope<T> gp2 = mat_product(gp1, trans);
+            reduce_boundary_generalized_polytope(l_bnd[i_pv], gp2, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-          n_trans += 1;
+            n_trans += 1;
 #endif
+          }
         }
       }
     }

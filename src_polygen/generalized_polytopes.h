@@ -472,6 +472,16 @@ template <typename T> struct GeneralizedPolytope {
   }
 };
 
+template<typename T>
+T volume_gp(GeneralizedPolytope<T> const& gp,  [[maybe_unused]] std::ostream& os) {
+  T volume(0);
+  for (auto & sp: gp.polytopes) {
+    T vol = lrs::Kernel_VolumePolytope(sp.EXT);
+    volume += vol;
+  }
+  return volume;
+}
+
 template <typename T>
 void WriteEntryGAP(std::ostream &os_out, GeneralizedPolytope<T> const &gp) {
   os_out << "rec(dim:=" << gp.dim << ", polytopes:=[";
@@ -1046,8 +1056,26 @@ template <typename T> struct BoundaryGeneralizedPolytope {
 
 
 template <typename T>
+double volume_bnd(BoundaryGeneralizedPolytope<T> const&bnd, [[maybe_unused]] std::ostream& os) {
+  double total_volume = 0;
+  for (auto & kv: bnd.full_data_facets) {
+    T volume = volume_gp(kv.second.gp_plus, os) + volume_gp(kv.second.gp_minus, os);
+    double volume_d = UniversalScalarConversion<double,T>(volume);
+    MyMatrix<T> eProd = kv.second.NSP * kv.second.NSP.transpose();
+    T det = DeterminantMat(eProd);
+    double det_d = UniversalScalarConversion<double,T>(det);
+    double single_volume = volume_d * sqrt(det_d);
+    total_volume += single_volume;
+  }
+  return total_volume;
+}
+
+
+
+
+template <typename T>
 void write_generalized_polytope(GeneralizedPolytope<T> const&gp,
-                                 std::ostream& os_out) {
+                                std::ostream& os_out) {
   size_t n_p = gp.polytopes.size();
   os_out << "GP: n_p=" << n_p << "\n";
   for (size_t i_p=0; i_p<n_p; i_p++) {
@@ -1501,22 +1529,6 @@ std::vector<GeneralizedPolytope<T>> get_p_voronoi_orbit(std::vector<MyMatrix<T>>
   return OrbitComputationGen(LGen, gp, f_prod, f_hash, f_equal, os);
 }
 
-
-
-
-
-
-
-
-template<typename T>
-T volume_gp(GeneralizedPolytope<T> const& gp,  [[maybe_unused]] std::ostream& os) {
-  T volume(0);
-  for (auto & sp: gp.polytopes) {
-    T vol = lrs::Kernel_VolumePolytope(sp.EXT);
-    volume += vol;
-  }
-  return volume;
-}
 
 template <typename T>
 void WriteEntryCPP(std::ostream &os, SinglePolytope<T> const &sp) {
