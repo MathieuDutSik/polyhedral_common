@@ -818,14 +818,14 @@ get_generic_robust_m(MyMatrix<Tint> const &M, MyMatrix<T> const &G,
     throw TerminalException{1};
   }
 #endif
-#ifdef DEBUG_GET_INEQ_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES_DISABLE
   os << "ROBUST:   ggrm, eV=" << StringVectorGAP(eV) << "\n";
 #endif
   for (int index = 0; index < n_ineq; index++) {
     MyVector<Tint> fV = GetMatrixRow(M, index);
     MyVector<T> diff = UniversalVectorConversion<T, Tint>(fV) - eV;
     T norm = EvaluationQuadForm(G, diff);
-#ifdef DEBUG_GET_INEQ_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES_DISABLE
     double norm_d = UniversalScalarConversion<double, T>(norm);
     os << "ROBUST:   ggrm, index=" << index
        << " fV=" << StringVector(fV) << " norm=" << norm << " norm_d=" << norm_d
@@ -851,7 +851,7 @@ get_generic_robust_m(MyMatrix<Tint> const &M, MyMatrix<T> const &G,
   if (n_att > 1) {
     is_correct = false;
   }
-#ifdef DEBUG_GET_INEQ_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES_DISABLE
   double max_d = UniversalScalarConversion<double, T>(max);
   os << "ROBUST:   ggrm, best_index=" << best_index
      << " max=" << max << " max_d=" << max_d << "\n";
@@ -1132,8 +1132,12 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST:   kippp, is_correct=false by n_list_min_parallelepipeds > 1\n";
       for (size_t i=0; i<n_min_parall; i++) {
-        os << "ROBUST:   kippp, i=" << i << " M=\n";
-        WriteMatrix(os, list_min_parallelepipeds[i]);
+        MyMatrix<Tint> const &min_m = list_min_parallelepipeds[i];
+        ExtendedGenericRobustM<T, Tint> ext_robust_m_min =
+          get_generic_robust_m(min_m, G, eV_red, os);
+        MyVector<Tint> v_long = ext_robust_m_min.robust_m.v_long();
+        os << "ROBUST:   kippp, i=" << i << " v_long=" << StringVectorGAP(v_long) << " M=\n";
+        WriteMatrix(os, reorder_matrix(min_m));
       }
 #endif
       // We mark is_correct=false since there is no chance that this degeneracy will be
@@ -2009,13 +2013,13 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     size_t n_trans = 0;
 #endif
     for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
-      if (!l_bnd[i_pv].is_empty()) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        double vol_bnd = volume_bnd(l_bnd[i_pv], os);
-        os << "ROBUST: f_insert, starting with vol_bnd=" << vol_bnd << "\n";
+      double vol_bnd = volume_bnd(l_bnd[i_pv], os);
+      os << "ROBUST: f_insert, starting with vol_bnd=" << vol_bnd << "\n";
 #endif
-        for (auto & eEltAff_T: LEltAff_T) {
-          GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv-1].gp, eEltAff_T);
+      for (auto & eEltAff_T: LEltAff_T) {
+        GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv-1].gp, eEltAff_T);
+        if (!l_bnd[i_pv].is_empty()) {
           std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_pv]);
 #ifdef DEBUG_ENUM_P_POLYTOPES
           os << "ROBUST: get_transformations, |l_trans|=" << l_trans.size() << "\n";
