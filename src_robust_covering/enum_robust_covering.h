@@ -473,12 +473,6 @@ struct MapFullIneq {
   // If std::vector<_> is empty, then the inequality is a hard one.
   // If std::vector<_>, then it is a soft one and that indicates what
   void insert_hard_ineq(MyVector<T> const& eIneq) {
-#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-    if (m.contains(eIneq)) {
-      std::cerr << "ROBUST: A hard inequality should be present only once. eIneq=" << StringVectorGAP(eIneq) << "\n";
-      throw TerminalException{1};
-    }
-#endif
     m[eIneq] = {};
   }
   void insert_soft_ineq(MyVector<T> const& eIneq, GenericRobustM<Tint> const& grm) {
@@ -2068,11 +2062,47 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
 
   std::vector<PVoronoi<T, Tint>> l_pv;
   std::vector<BoundaryGeneralizedPolytope<T>> l_bnd;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  std::vector<double> l_vol_bnd;
+  struct DataPV {
+    int orb_ident;
+    T volume;
+    MyVector<T> min_iso;
+    size_t stab_size;
+  };
+  auto to_string=[&](DataPV const& dpv) -> std::string {
+    std::ostringstream o_str;
+    o_str << "i=" << dpv.orb_ident << " vol=" << dpv.volume << " min_iso=" << dpv.min_iso << " ss=" << dpv.stab_size;
+    return o_str.str();
+  };
+  std::vector<DataPV> l_data;
+  auto get_identifier=[&](PVoronoi<T, Tint> const& pv) -> DataPV {
+    MyVector<T> eIso = Isobarycenter(pv.EXT);
+    std::unordered_set<MyVector<T>> set_v;
+    for (auto &eEltAff_T: LEltAff_T) {
+      MyVector<T> eImg1 = eEltAff_T.transpose() * eIso;
+      MyVector<T> eImg2 = ReductionMod1vector<T,Tint>(eImg1).second;
+      set_v.insert(eImg2);
+    }
+    int orb_ident = set_v.size();
+    T volume = volume_gp(pv.gp, os);
+    MyVector<T> min_iso = *set_v.begin();
+    std::vector<MyMatrix<Tint>> l_gens = get_p_voronoi_stabilizer(eData, pv);
+    size_t stab_size = get_group_elements(l_gens, os).size();
+    return {orb_ident, volume, min_iso, stab_size};
+  };
+#endif
   PVoronoi<T, Tint> pv = initial_p_polytope(eData);
   auto f_insert=[&](PVoronoi<T, Tint> const& pv) -> void {
     BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pv.gp, os);
     l_pv.push_back(pv);
     l_bnd.push_back(bnd);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    double vol_bnd = volume_bnd(bnd, os);
+    l_vol_bnd.push_back(vol_bnd);
+    DataPV dpv = get_identifier(pv);
+    l_data.push_back(dpv);
+#endif
     size_t n_pv = l_pv.size();
 #ifdef DEBUG_ENUM_P_POLYTOPES
     size_t n_trans = 0;
@@ -2093,8 +2123,6 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
             GeneralizedPolytope<T> gp2 = mat_product(gp1, trans);
             reduce_boundary_generalized_polytope(l_bnd[i_pv], gp2, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-            double vol_bnd = volume_bnd(l_bnd[i_pv], os);
-            os << "ROBUST: f_insert,     now vol_bnd=" << vol_bnd << "\n";
             n_trans += 1;
 #endif
           }
@@ -2103,6 +2131,13 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: capp, f_insert, n_pv=" << n_pv << " n_trans=" << n_trans << "\n";
+    for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
+      double vol_bnd = volume_bnd(l_bnd[i_pv], os);
+      l_vol_bnd[i_pv] = vol_bnd;
+    }
+    for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
+      os << "ROBUST: capp_vol_bnd, i_pv=" << i_pv << " vol_bnd=" << l_vol_bnd[i_pv] << " info:" << to_string(l_data[i_pv]) << "\n";
+    }
 #endif
   };
   f_insert(pv);
