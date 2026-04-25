@@ -379,25 +379,77 @@ void WriteEntryGAP(std::ostream &os_out, GenericRobustM<Tint> const &grm) {
 
 template<typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> get_parall_stabilizer(DataLattice<T, Tint, Tgroup> &eData,
-                                                  GenericRobustM<Tint> const& robust_m_min) {
+                                                  std::vector<GenericRobustM<Tint>> const& l_robust_m_min) {
   std::ostream &os = eData.rddo.os;
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using TgroupOut = std::pair<std::vector<Telt>, Tgroup>;
   MyMatrix<T> const& G = eData.solver.GramMat;
   MyMatrix<T> const& SHV = eData.SHV;
-  MyMatrix<T> EXTparall = robust_m_min.template get_ext_t<T>();
-  Tgroup GRP = Polytope_StabilizerKernel<T,Tint,Tgroup>(G, SHV, EXTparall, os);
+  int dim = SHV.cols();
+  std::unordered_set<MyVector<T>> set_vert;
+  std::unordered_set<MyMatrix<T>> set_ext_parall;
+  for (auto & robust_m_min: l_robust_m_min) {
+    MyMatrix<T> EXTparall = robust_m_min.template get_ext_t<T>();
+    for (int i_row=0; i_row<EXTparall.rows(); i_row++) {
+      MyVector<T> V = GetMatrixRow(EXTparall, i_row);
+      set_vert.insert(V);
+    }
+    set_ext_parall.insert(EXTparall);
+  }
+  int n_row_tot = set_vert.size();
+  MyMatrix<T> EXTparallTot(n_row_tot, dim + 1);
+  int pos = 0;
+  std::unordered_map<MyVector<T>, int> vert_to_index;
+  for (auto & V: set_vert) {
+    for (int i=0; i<=dim; i++) {
+      EXTparallTot(pos, i) = V(i);
+    }
+    vert_to_index[V] = pos;
+    pos += 1;
+  }
+  size_t n_vert_tot = pos;
+  std::unordered_set<Face> set_face_ext_parall;
+  for (auto& EXTparall: set_ext_parall) {
+    Face f(n_vert_tot);
+    for (int i_row=0; i_row<EXTparall.rows(); i_row++) {
+      MyVector<T> V = GetMatrixRow(EXTparall, i_row);
+      int pos = vert_to_index.at(V);
+      f[pos] = 1;
+    }
+    set_face_ext_parall.insert(f);
+  }
+  Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(G, SHV, EXTparallTot, os);
 #ifdef DEBUG_P_VORONOI_STABILIZER
-  os << "ROBUST: get_parall_stabilizer |G|=" << GRP.size() << "\n";
+  os << "ROBUST: get_parall_stabilizer |Gbig|=" << GRPbig.size() << "\n";
 #endif
-  std::vector<Telt> LGen = GRP.SmallGeneratingSet();
+  Tidx n_act = n_vert_tot;
+  std::vector<Telt> LGenBig = GRPbig.SmallGeneratingSet();
+  std::vector<Telt> LGenSma;
+  auto f_correct=[&](Telt const& x) -> bool {
+    for (auto & f: set_face_ext_parall) {
+      Face f_img = OnFace(f, x);
+      if (!set_face_ext_parall.contains(f_img)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  TgroupOut pair =
+    get_intermediate_group<Tgroup,decltype(f_correct)>(n_act, LGenSma, LGenBig, f_correct, os);
+#ifdef DEBUG_P_VORONOI_STABILIZER
+  os << "ROBUST: get_parall_stabilizer |G|=" << pair.second.size() << "\n";
+#endif
   std::vector<MyMatrix<Tint>> l_gens;
-  for (auto & eGen: LGen) {
-    MyMatrix<T> P_T = RepresentVertexPermutation(EXTparall, EXTparall, eGen);
+  for (auto & eGen: pair.first) {
+    MyMatrix<T> P_T = RepresentVertexPermutation(EXTparallTot, EXTparallTot, eGen);
     MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
     l_gens.emplace_back(std::move(P));
   }
   return l_gens;
 }
+
+
 
 
 
@@ -590,7 +642,8 @@ void WriteEntryGAP(std::ostream &os_out, SoftConvexBoundary<T, Tint> const &scb)
   It is a full enumeration result.
  */
 template <typename T, typename Tint> struct PVoronoi {
-  GenericRobustM<Tint> robust_m_min;
+  MyVector<Tint> v_long;
+  std::vector<GenericRobustM<Tint>> l_robust_m_min;
   std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
   std::vector<HardConvexBoundary<T>> l_hcb;
   GeneralizedPolytope<T> gp;
@@ -599,7 +652,11 @@ template <typename T, typename Tint> struct PVoronoi {
 
 template <typename T, typename Tint>
 std::ostream &operator<<(std::ostream &os, PVoronoi<T, Tint> const &pv) {
-  os << "PVoronoi(\n  robust_m_min=" << pv.robust_m_min << "\n";
+  os << "PVoronoi(\n  v_long=" << pv.v_long << "\n";
+  os << "  |l_robust_m_min|=" << pv.l_robust_m_min.size() << "\n";
+  for (size_t i = 0; i < pv.l_robust_m_min.size(); i++) {
+    os << "  l_robust_m_min[" << i << "]=" << pv.l_robust_m_min[i] << "\n";
+  }
   os << "  |l_cb|=" << pv.l_cb.size() << "\n";
   for (size_t i = 0; i < pv.l_cb.size(); i++) {
     os << "  l_cb[" << i << "]=" << pv.l_cb[i] << "\n";
@@ -678,7 +735,7 @@ void check_p_voronoi_groups(DataLattice<T, Tint, Tgroup> &eData,
                             PVoronoi<T, Tint> const &pv) {
   std::ostream &os = eData.rddo.os;
   std::vector<MyMatrix<Tint>> LGenPVoronoi = get_p_voronoi_stabilizer(eData, pv);
-  std::vector<MyMatrix<Tint>> LGenParall = get_parall_stabilizer(eData, pv.robust_m_min);
+  std::vector<MyMatrix<Tint>> LGenParall = get_parall_stabilizer(eData, pv.l_robust_m_min);
   std::vector<MyMatrix<T>> LGenParall_T = UniversalStdVectorMatrixConversion<T,Tint>(LGenParall);
   std::vector<GeneralizedPolytope<T>> orbit = get_p_voronoi_orbit(LGenParall_T, pv.gp, os);
 
@@ -716,7 +773,8 @@ void check_p_voronoi_groups(DataLattice<T, Tint, Tgroup> &eData,
   It is a partial enumeration result.
  */
 template <typename T, typename Tint> struct PVoronoiPart {
-  GenericRobustM<Tint> robust_m_min;
+  MyVector<Tint> v_long;
+  std::vector<GenericRobustM<Tint>> l_robust_m_min;
   std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
   std::vector<HardConvexBoundary<T>> l_hcb;
   std::vector<SoftConvexBoundary<T,Tint>> l_scb;
@@ -724,7 +782,11 @@ template <typename T, typename Tint> struct PVoronoiPart {
 
 template <typename T, typename Tint>
 std::ostream &operator<<(std::ostream &os, PVoronoiPart<T, Tint> const &pvp) {
-  os << "PVoronoiPart(\n  robust_m_min=" << pvp.robust_m_min << "\n";
+  os << "PVoronoiPart(\n  v_long=" << pvp.v_long << "\n";
+  os << "  |l_robust_m_min|=" << pvp.l_robust_m_min.size() << "\n";
+  for (size_t i = 0; i < pvp.l_robust_m_min.size(); i++) {
+    os << "  l_robust_m_min[" << i << "]=" << pvp.l_robust_m_min[i] << "\n";
+  }
   os << "  |l_cb|=" << pvp.l_cb.size() << "\n";
   for (size_t i = 0; i < pvp.l_cb.size(); i++) {
     os << "  l_cb[" << i << "]=" << pvp.l_cb[i] << "\n";
@@ -792,7 +854,8 @@ PVoronoi<T,Tint> convert_p_voronoi_part(PVoronoiPart<T,Tint> const& pvp, std::os
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: convert_p_voronoi_part, step 3\n";
 #endif
-  return {pvp.robust_m_min,
+  return {pvp.v_long,
+          pvp.l_robust_m_min,
           pvp.l_cb,
           pvp.l_hcb,
           gp,
@@ -937,12 +1000,11 @@ void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
 }
 
 template <typename T, typename Tint>
-void insert_excluded_max(GenericRobustM<Tint> const &robust_m,
+void insert_excluded_max(MyVector<Tint> const& v_long,
                          MyMatrix<T> const &G,
                          std::vector<MyVector<Tint>> const& l_excluded_max,
                          MapFullIneq<T,Tint> & m_full_ineq,
                          [[maybe_unused]] std::ostream &os) {
-  MyVector<Tint> v_long = robust_m.v_long();
   for (auto & v_short: l_excluded_max) {
 #ifdef DEBUG_GET_INEQ_P_POLYTOPES
     os << "ROBUST:   iem, v_short=" << StringVector(v_short) << "\n";
@@ -1087,8 +1149,8 @@ bool are_vertices_correct(CVPSolver<T, Tint> const &solver,
 template <typename T, typename Tint>
 std::optional<PVoronoiPart<T, Tint>>
 kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
-                               std::vector<MyVector<Tint>> const& l_excluded_max,
-                               MyVector<T> const &eV, std::ostream &os) {
+                          std::vector<MyVector<Tint>> const& l_excluded_max,
+                          MyVector<T> const &eV, std::ostream &os) {
   MyMatrix<T> const &G = solver.GramMat;
   if (IsIntegralVector(eV)) {
     // Nothing can be done here
@@ -1115,6 +1177,15 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
     // Building the set of inequalities from the definition.
     //
     T const &min = rde.min;
+    if (min == 0) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST:   kippp, is_correct=false by min=0\n";
+#endif
+      // Wrong value of "min". This will remain no matter what. So we mark
+      // with is_correct=false
+      is_correct = false;
+      return true;
+    }
     std::vector<MyMatrix<Tint>> const &list_min_parallelepipeds =
         rde.list_min_parallelepipeds;
     std::vector<MyMatrix<Tint>> const &tot_list_parallelepipeds =
@@ -1127,73 +1198,72 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
        << " |tot_list_parallelepipeds|=" << tot_list_parallelepipeds.size()
        << " min=" << min << "\n";
 #endif
+    std::unordered_set<MyVector<Tint>> set_v_long;
+    std::unordered_set<MyMatrix<Tint>> set_matrix_min;
+    std::vector<GenericRobustM<Tint>> l_robust_m_min;
     size_t n_min_parall = list_min_parallelepipeds.size();
-    if (n_min_parall > 1) {
+    T upper_bound(0);
+    auto f_update_upper_bound=[&](T const& val) -> void {
+      if (upper_bound == 0) {
+        upper_bound = val;
+      } else {
+        if (val < upper_bound) {
+          upper_bound = val;
+        }
+      }
+    };
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
+    os << "ROBUST:   kippp, pass 1 n_min_parall=" << n_min_parall << "\n";
+#endif
+    for (size_t i=0; i<n_min_parall; i++) {
+      MyMatrix<Tint> const &min_m = list_min_parallelepipeds[i];
+      ExtendedGenericRobustM<T, Tint> ext_robust_m_min =
+        get_generic_robust_m(min_m, G, eV_red, os);
+      if (!ext_robust_m_min.is_correct) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+        os << "ROBUST:   kippp, is_correct=false by "
+          "!ext_robust_m_min.is_correct\n";
+#endif
+        // We mark is_correct=false since the minimal has at least two extremal
+        // vectors. This problem will remain no matter how many other parallelepiped
+        // we have
+        is_correct = false;
+        return true;
+      }
+      GenericRobustM<Tint> const &robust_m_min = ext_robust_m_min.robust_m;
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
+      os << "ROBUST:   kippp, robust_m_min, index="
+         << robust_m_min.index << " M=\n";
+      WriteMatrix(os, robust_m_min.M);
+#endif
+      insert_inner_ineqs_parallelepiped(robust_m_min, G, m_full_ineq, os);
+      MyVector<Tint> v_long = ext_robust_m_min.robust_m.v_long();
+      T val = compute_upper_bound_mat(G, min_m);
+      // Updates
+      set_matrix_min.insert(min_m);
+      set_v_long.insert(v_long);
+      l_robust_m_min.push_back(robust_m_min);
+      f_update_upper_bound(val);
+    }
+    if (set_v_long.size() > 1) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST:   kippp, is_correct=false by n_list_min_parallelepipeds > 1\n";
-      for (size_t i=0; i<n_min_parall; i++) {
-        MyMatrix<Tint> const &min_m = list_min_parallelepipeds[i];
-        ExtendedGenericRobustM<T, Tint> ext_robust_m_min =
-          get_generic_robust_m(min_m, G, eV_red, os);
-        MyVector<Tint> v_long = ext_robust_m_min.robust_m.v_long();
-        os << "ROBUST:   kippp, i=" << i << " v_long=" << StringVectorGAP(v_long) << " M=\n";
-        WriteMatrix(os, reorder_matrix(min_m));
-      }
 #endif
       // We mark is_correct=false since there is no chance that this degeneracy will be
       // resolved by further enumeration. The degeneracy is there and will remain.
       is_correct = false;
       return true;
     }
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-    os << "ROBUST:   kippp, pass 1\n";
-#endif
-    MyMatrix<Tint> const &min_m = list_min_parallelepipeds[0];
-    T upper_bound = compute_upper_bound_mat(G, min_m);
-    ExtendedGenericRobustM<T, Tint> ext_robust_m_min =
-        get_generic_robust_m(min_m, G, eV_red, os);
-    if (!ext_robust_m_min.is_correct) {
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST:   kippp, is_correct=false by "
-            "!ext_robust_m_min.is_correct\n";
-#endif
-      // We mark is_correct=false since the minimal has at least two extremal
-      // vectors. This problem will remain no matter how many other parallelepiped
-      // we have
-      is_correct = false;
-      return true;
-    }
+    MyVector<Tint> v_short = *set_v_long.begin(); // It is the shortest for the other structures!
 #ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
     os << "ROBUST:   kippp, pass 2\n";
 #endif
-    if (min == 0) {
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST:   kippp, is_correct=false by min=0\n";
-#endif
-      // Wrong value of "min". This will remain no matter what. So we mark
-      // with is_correct=false
-      is_correct = false;
-      return true;
-    }
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-    os << "ROBUST:   kippp, pass 3\n";
-#endif
-    GenericRobustM<Tint> const &robust_m_min = ext_robust_m_min.robust_m;
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-    os << "ROBUST:   kippp, robust_m_min, index="
-       << robust_m_min.index << " M=\n";
-    WriteMatrix(os, robust_m_min.M);
-#endif
-    insert_inner_ineqs_parallelepiped(robust_m_min, G, m_full_ineq, os);
-    MyVector<Tint> v_short =
-        robust_m_min.v_long(); // It is the shortest for the other structures!
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, v_short="
        << StringVectorGAP(v_short)
        << " |l_excluded_max|=" << l_excluded_max.size() << "\n";
 #endif
-    std::vector<GenericRobustM<Tint>> list_robust_m;
-    insert_excluded_max(robust_m_min,
+    insert_excluded_max(v_short,
                         G,
                         l_excluded_max,
                         m_full_ineq,
@@ -1204,22 +1274,17 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #endif
 #ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
     size_t i_m = 0;
+    size_t n_other = tot_list_parallelepipeds.size() - set_matrix_min.size();
 #endif
+    std::vector<GenericRobustM<Tint>> list_robust_m;
     for (auto &eM : tot_list_parallelepipeds) {
-      if (eM != min_m) {
+      if (!set_matrix_min.contains(eM)) {
 #ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-        os << "ROBUST:   --------- "
-           << i_m
-           << "/"
-           << tot_list_parallelepipeds.size()
-           << " ------------\n";
+        os << "ROBUST:   --------- " << i_m << "/" << n_other << " ------------\n";
         i_m += 1;
 #endif
         T val = compute_upper_bound_mat(G, eM);
-        if (val < upper_bound) {
-          // A better upper bound is found.
-          upper_bound = val;
-        }
+        f_update_upper_bound(val);
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
             get_generic_robust_m(eM, G, eV_red, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
@@ -1338,7 +1403,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 6\n";
 #endif
-    ppoly = PVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
+    ppoly = PVoronoiPart<T,Tint>{v_short, l_robust_m_min, {c_bl}, l_hcb, l_scb};
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 7 TheNorm=" << TheNorm << "\n";
     os << "ROBUST: kippp, final, step 7 upper_bound=" << upper_bound << "\n";
@@ -1552,7 +1617,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
   }
   PVoronoiPart<T, Tint> pvp = *opt;
   T min_norm = min_pairwise_norm(pvp.l_cb[0].sp.EXT, G);
-  MyVector<Tint> v_crit = pvp.robust_m_min.v_long();
+  MyVector<Tint> const& v_crit = pvp.v_long;
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: find_p_voronoi, step 1\n";
 #endif
@@ -2077,7 +2142,7 @@ T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
   int dim = G.rows();
   MyVector<T> diff(dim);
   for (auto &ppoly : l_ppoly) {
-    MyVector<Tint> v_long = ppoly.robust_m_min.v_long();
+    MyVector<Tint> const& v_long = ppoly.v_long;
     MyVector<T> v_long_T = UniversalVectorConversion<T, Tint>(v_long);
     int n_ext = ppoly.EXT.rows();
     for (int i_ext = 0; i_ext < n_ext; i_ext++) {
