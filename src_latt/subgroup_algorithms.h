@@ -6,6 +6,9 @@
 #define DEBUG_SUBGROUP_ALGORITHM
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_SUBGROUP_ALGORITHM
+#endif
 
 template<typename Tgroup, typename Fcorrect>
 std::pair<std::vector<typename Tgroup::Telt>, Tgroup> get_intermediate_group(typename Tgroup::Telt::Tidx const& n_act,
@@ -20,6 +23,12 @@ std::pair<std::vector<typename Tgroup::Telt>, Tgroup> get_intermediate_group(typ
   Tgroup GRPsma(LGenSma_work, n_act);
 #ifdef DEBUG_SUBGROUP_ALGORITHM
   os << "SUBA: get_intermediate_group |GRPbig|=" << GRPbig.size() << " |GRPsma|=" << GRPsma.size() << "\n";
+#endif
+#ifdef SANITY_CHECK_SUBGROUP_ALGORITHM
+  if (!GRPbig.IsSubgroup(GRPsma)) {
+    std::cerr << "SUBA: GRPsma1 should be a subgroup of GRPbig1\n";
+    throw TerminalException{1};
+  }
 #endif
   auto try_upgrade = [&]() -> std::optional<Telt> {
     // We can use either the left or right cosets.
@@ -85,6 +94,12 @@ std::optional<Tout> get_intermediate_equivalence(typename Tgroup::Telt::Tidx con
   Tgroup GRPsma1(LGenSma1_work, n_act);
 #ifdef DEBUG_SUBGROUP_ALGORITHM
   os << "SUBA: get_intermediate_equivalence |GRPbig1|=" << GRPbig1.size() << " |GRPsma1|=" << GRPsma1.size() << "\n";
+#endif
+#ifdef SANITY_CHECK_SUBGROUP_ALGORITHM
+  if (!GRPbig1.IsSubgroup(GRPsma1)) {
+    std::cerr << "SUBA: GRPsma1 should be a subgroup of GRPbig1\n";
+    throw TerminalException{1};
+  }
 #endif
   struct PartSol {
     std::optional<Telt> new_gen;

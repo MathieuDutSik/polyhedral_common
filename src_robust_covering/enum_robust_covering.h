@@ -304,7 +304,7 @@
 #define DEBUG_ENUM_P_POLYTOPES
 #define DEBUG_ROBUST_VERTEX_ENUM
 #define DEBUG_GET_INEQ_P_POLYTOPES
-#define DEBUG_P_VORONOI_STABILIZER
+#define DEBUG_P_VORONOI_STAB_EQUIV
 #endif
 
 #ifdef DEBUG
@@ -316,6 +316,7 @@
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_ENUM_P_POLYTOPES
 #define SANITY_CHECK_ROBUST_VERTEX_ENUM
+#define SANITY_CHECK_P_VORONOI_STAB_EQUIV
 #endif
 
 #ifdef DISABLE_DEBUG_ENUM_P_POLYTOPES
@@ -735,6 +736,9 @@ std::optional<MyMatrix<Tint>> get_p_voronoi_equivalence(DataLattice<T, Tint, Tgr
   MyMatrix<T> const& EXT2_T = pv2.EXT;
   int n_row1 = EXT1_T.rows();
   int n_row2 = EXT2_T.rows();
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+  os << "ROBUST: get_p_voronoi_equivalence n_row1=" << n_row1 << " n_row2=" << n_row2 << "\n";
+#endif
   if (n_row1 != n_row2) {
 #ifdef DEBUG_P_VORONOI_STAB_EQUIV
     os << "ROBUST: get_p_voronoi_equivalence |EXT1|=" << n_row1 << " |EXT2|=" << n_row2 << "\n";
@@ -743,6 +747,9 @@ std::optional<MyMatrix<Tint>> get_p_voronoi_equivalence(DataLattice<T, Tint, Tgr
     return {};
   }
   std::optional<MyMatrix<T>> opt1 = Polytope_TestEquivalence(eData, EXT1_T, EXT2_T);
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+  os << "ROBUST: get_p_voronoi_equivalence We have opt1\n";
+#endif
   if (!opt1) {
 #ifdef DEBUG_P_VORONOI_STAB_EQUIV
     os << "ROBUST: get_p_voronoi_equivalence failed to find equivalence\n";
@@ -750,15 +757,30 @@ std::optional<MyMatrix<Tint>> get_p_voronoi_equivalence(DataLattice<T, Tint, Tgr
     return {};
   }
   MyMatrix<T> const& OneEquiv = *opt1;
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+  os << "ROBUST: get_p_voronoi_equivalence We have OneEquiv\n";
+#endif
 
   Tgroup GRPbig1 = Polytope_StabilizerKernel(eData, EXT1_T);
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+  os << "ROBUST: get_p_voronoi_equivalence We have GRPbig1\n";
+#endif
   Tidx n_act = n_row1;
   std::vector<Telt> LGenBig1 = GRPbig1.SmallGeneratingSet();
   std::vector<Telt> LGenSma1;
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+  os << "ROBUST: get_p_voronoi_equivalence We have LGenBig1 / LGenSma1\n";
+#endif
 
 
   auto f_get_out=[&](Telt const& x) -> MyMatrix<T> {
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+    os << "ROBUST: get_p_voronoi_equivalence f_get_out, step 1\n";
+#endif
     std::optional<MyMatrix<T>> opt2 = FindTransformationGeneral(EXT1_T, EXT1_T, x);
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+    os << "ROBUST: get_p_voronoi_equivalence f_get_out, step 2\n";
+#endif
 #ifdef SANITY_CHECK_P_VORONOI_STAB_EQUIV
     if (!opt2) {
       std::cerr << "We should have been able to realize the equivalence\n";
@@ -768,16 +790,29 @@ std::optional<MyMatrix<Tint>> get_p_voronoi_equivalence(DataLattice<T, Tint, Tgr
     return *opt2;
   };
   auto f_is_ok=[&](MyMatrix<T> const& x) -> bool {
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+    os << "ROBUST: get_p_voronoi_equivalence f_is_ok, step 1\n";
+#endif
     GeneralizedPolytope<T> gp_img = mat_product(pv1.gp, x);
-    return is_equal(pv2.gp, gp_img, os);
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+    os << "ROBUST: get_p_voronoi_equivalence f_is_ok, step 2\n";
+#endif
+    bool test = is_equal(pv2.gp, gp_img, os);
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+    os << "ROBUST: get_p_voronoi_equivalence f_is_ok, step 3\n";
+#endif
+    return test;
   };
   std::optional<MyMatrix<T>> opt3 = get_intermediate_equivalence<MyMatrix<T>,Tgroup,decltype(f_get_out),decltype(f_is_ok)>(n_act,
-                                                                                                                           LGenBig1,
                                                                                                                            LGenSma1,
+                                                                                                                           LGenBig1,
                                                                                                                            OneEquiv,
                                                                                                                            f_get_out,
                                                                                                                            f_is_ok,
                                                                                                                            os);
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+  os << "ROBUST: get_p_voronoi_equivalence We have opt3\n";
+#endif
   if (!opt3) {
 #ifdef DEBUG_P_VORONOI_STAB_EQUIV
     os << "ROBUST: get_p_voronoi_equivalence failed by get_intermediate_equivalence\n";
@@ -1884,11 +1919,11 @@ PVoronoi<T, Tint> get_one_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData
                                 MyVector<T> const &x)
       -> std::optional<PVoronoi<T, Tint>> {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, gapp x=" << StringVector(x) << "\n";
+    os << "ROBUST: goapv, gapp x=" << StringVector(x) << "\n";
 #endif
     std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(eData, x);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, opt.has_value()=" << opt.has_value() << "\n";
+    os << "ROBUST: goapv, opt.has_value()=" << opt.has_value() << "\n";
 #endif
     if (!opt) {
       return {};
@@ -1896,11 +1931,11 @@ PVoronoi<T, Tint> get_one_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData
     PVoronoi<T, Tint> const &ppoly_adj = *opt;
     BoundaryGeneralizedPolytope<T> bnd_adj = find_generalized_polytope_boundary(ppoly_adj.gp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, before is_boundary_point\n";
+    os << "ROBUST: goapv, before is_boundary_point\n";
 #endif
     bool test = is_boundary_point(ipd_test, bnd_adj, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, ipd_test=" << ipd_test.to_string() << " test=" << test << "\n";
+    os << "ROBUST: goapv, ipd_test=" << ipd_test.to_string() << " test=" << test << "\n";
 #endif
     if (!test) {
       return {};
@@ -1920,16 +1955,19 @@ PVoronoi<T, Tint> get_one_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData
     InteriorPtDir<T> const& ipd = *opt1;
     InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, ga, N=" << N << "     ipd=" << ipd.to_string() << "\n";
-    os << "ROBUST: flapv, ga, N=" << N << " ipd_opp=" << ipd_opp.to_string() << "\n";
+    os << "ROBUST: goapv, ga, N=" << N << "     ipd=" << ipd.to_string() << "\n";
+    os << "ROBUST: goapv, ga, N=" << N << " ipd_opp=" << ipd_opp.to_string() << "\n";
 #endif
     MyVector<T>  x = ipd_opp.get_point(factor);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, ga, factor=" << factor << "\n";
+    os << "ROBUST: goapv, ga, factor=" << factor << "\n";
 #endif
     std::optional<PVoronoi<T, Tint>> opt2 =
       get_adj_p_polytope(ipd_opp, x);
     if (opt2) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: goapv, now returning\n";
+#endif
       return *opt2;
     }
     factor = factor / 2;
@@ -1964,6 +2002,9 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
       break;
     }
     PVoronoi<T, Tint> eadj = get_one_adjacent_p_voronoi(eData, min_norm, bnd);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: Now we have eadj\n";
+#endif
     reduce_boundary_generalized_polytope(bnd, eadj.gp, os);
     l_adj.push_back(eadj);
   }
@@ -2159,7 +2200,13 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
 #endif
   PVoronoi<T, Tint> pv = initial_p_polytope(eData);
   auto f_insert=[&](PVoronoi<T, Tint> const& pv) -> void {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_insert, step 1\n";
+#endif
     BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pv.gp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_insert, step 2\n";
+#endif
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
     for (auto &pv2: l_pv) {
       std::optional<MyMatrix<Tint>> opt1 = get_p_voronoi_equivalence(eData, pv, pv2);
@@ -2172,10 +2219,16 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     l_pv.push_back(pv);
     l_bnd.push_back(bnd);
 #ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_insert, step 3\n";
+#endif
+#ifdef DEBUG_ENUM_P_POLYTOPES
     double vol_bnd = volume_bnd(bnd, os);
     l_vol_bnd.push_back(vol_bnd);
     DataPV dpv = get_identifier(pv);
     l_data.push_back(dpv);
+#endif
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_insert, step 4\n";
 #endif
     size_t n_pv = l_pv.size();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -2204,6 +2257,9 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
       }
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_insert, step 5\n";
+#endif
+#ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: capp, f_insert, n_pv=" << n_pv << " n_trans=" << n_trans << "\n";
     for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
       double vol_bnd = volume_bnd(l_bnd[i_pv], os);
@@ -2231,6 +2287,9 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
       if (!l_bnd[i_pv].is_empty()) {
         T min_norm = min_pairwise_norm(l_pv[i_pv].EXT, G);
         PVoronoi<T, Tint> eadj = get_one_adjacent_p_voronoi(eData, min_norm, l_bnd[i_pv]);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+        os << "ROBUST: capp, we have eadj\n";
+#endif
         f_insert(eadj);
         return false;
       }

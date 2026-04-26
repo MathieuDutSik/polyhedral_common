@@ -338,13 +338,13 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   // The direct approach failed, let us use the pt-wise-stab and the cosets for
   // resolving that.
   //
-  std::vector<Telt> LGenPerm;
+  std::vector<Telt> LGenPerm; // This is the big group
   for (auto &eList : ListGen) {
     Telt ePerm(eList);
     LGenPerm.emplace_back(std::move(ePerm));
   }
   PermutationBuilder<T, Telt> builder(SHV_T);
-  std::vector<Telt> LGenGlobStab_perm;
+  std::vector<Telt> LGenGlobStab_perm; // This is the small group
   for (auto &eGen : LinSpa.PtStabGens) {
     Telt ePerm = builder.get_permutation(eGen, os);
     LGenGlobStab_perm.emplace_back(std::move(ePerm));

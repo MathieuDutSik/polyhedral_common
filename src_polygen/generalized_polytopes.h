@@ -74,6 +74,7 @@
 
 #ifdef DEBUG
 #define DEBUG_GENERALIZED_POLYTOPE
+#define DEBUG_BND_VOLUME
 #endif
 
 #ifdef SANITY_CHECK
@@ -1058,14 +1059,36 @@ template <typename T> struct BoundaryGeneralizedPolytope {
 template <typename T>
 double volume_bnd(BoundaryGeneralizedPolytope<T> const&bnd, [[maybe_unused]] std::ostream& os) {
   double total_volume = 0;
+#ifdef DEBUG_BND_VOLUME
+  size_t idx = 0;
+  size_t n_pos = bnd.full_data_facets.size();
+#endif
   for (auto & kv: bnd.full_data_facets) {
     T volume = volume_gp(kv.second.gp_plus, os) + volume_gp(kv.second.gp_minus, os);
+#ifdef DEBUG_BND_VOLUME
+    os << "GP: idx=" << idx << "/" << n_pos << " volume=" << volume << "\n";
+#endif
     double volume_d = UniversalScalarConversion<double,T>(volume);
+#ifdef DEBUG_BND_VOLUME
+    os << "GP: idx=" << idx << "/" << n_pos << " volume_d=" << volume_d << "\n";
+#endif
     MyMatrix<T> eProd = kv.second.NSP * kv.second.NSP.transpose();
     T det = DeterminantMat(eProd);
+#ifdef DEBUG_BND_VOLUME
+    os << "GP: idx=" << idx << "/" << n_pos << " det=" << det << "\n";
+#endif
     double det_d = UniversalScalarConversion<double,T>(det);
+#ifdef DEBUG_BND_VOLUME
+    os << "GP: idx=" << idx << "/" << n_pos << " det_d=" << det_d << "\n";
+#endif
     double single_volume = volume_d * sqrt(det_d);
+#ifdef DEBUG_BND_VOLUME
+    os << "GP: idx=" << idx << "/" << n_pos << " single_volume=" << single_volume << "\n";
+#endif
     total_volume += single_volume;
+#ifdef DEBUG_BND_VOLUME
+    idx += 1;
+#endif
   }
   return total_volume;
 }
