@@ -143,10 +143,12 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
 }
 
 template <typename T, typename Tint, typename Tgroup, typename Fcent>
-Tgroup PolytopeGen_StabilizerKernel(MyMatrix<T> const &GramMat,
+Tgroup PolytopeGen_StabilizerKernel(DataLattice<T, Tint, Tgroup> &eData,
                                     Fcent f_cent,
-                                    MyMatrix<T> const &SHV,
-                                    MyMatrix<T> const &EXT_T, std::ostream &os) {
+                                    MyMatrix<T> const &EXT_T) {
+  std::ostream &os = eData.rddo.os;
+  MyMatrix<T> const& GramMat = eData.solver.GramMat;
+  MyMatrix<T> const& SHV = eData.SHV;
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
 #endif
@@ -172,24 +174,23 @@ Tgroup PolytopeGen_StabilizerKernel(MyMatrix<T> const &GramMat,
 }
 
 template <typename T, typename Tint, typename Tgroup>
-Tgroup Polytope_StabilizerKernel(MyMatrix<T> const &GramMat,
-                                 MyMatrix<T> const &SHV,
-                                 MyMatrix<T> const &EXT_T, std::ostream &os) {
+Tgroup Polytope_StabilizerKernel(DataLattice<T, Tint, Tgroup> &eData,
+                                 MyMatrix<T> const &EXT_T) {
   auto f_cent=[&](MyMatrix<T> const& EXT_T) -> MyVector<T> {
     return get_reduced_isobarycenter(EXT_T);
   };
-  return PolytopeGen_StabilizerKernel<T,Tint,Tgroup, decltype(f_cent)>(GramMat, f_cent, SHV, EXT_T, os);
+  return PolytopeGen_StabilizerKernel<T,Tint,Tgroup, decltype(f_cent)>(eData, f_cent, EXT_T);
 }
 
 
 
 template <typename T, typename Tint, typename Tgroup>
-Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
-                           MyMatrix<T> const &EXT_T, std::ostream &os) {
+Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> &eData,
+                           MyMatrix<T> const &EXT_T) {
   auto f_cent=[&](MyMatrix<T> const& EXT_T) -> MyVector<T> {
     return get_reduced_center(eData.solver.GramMat, EXT_T);
   };
-  return PolytopeGen_StabilizerKernel<T, Tint, Tgroup, decltype(f_cent)>(eData.solver.GramMat, f_cent, eData.SHV, EXT_T, os);
+  return PolytopeGen_StabilizerKernel<T, Tint, Tgroup, decltype(f_cent)>(eData, f_cent, EXT_T);
 }
 
 template <typename T, typename Tint, typename Tgroup, typename Fcent>
@@ -622,7 +623,7 @@ ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |EXT_T|=" << EXT_T.rows() << " / " << EXT_T.cols() << "\n";
 #endif
-  Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, EXT_T, os);
+  Tgroup GRPlatt = Delaunay_Stabilizer(eData, EXT_T);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |GRPlatt|=" << GRPlatt.size() << "\n";
 #endif

@@ -384,9 +384,7 @@ std::vector<MyMatrix<Tint>> get_parall_stabilizer(DataLattice<T, Tint, Tgroup> &
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using TgroupOut = std::pair<std::vector<Telt>, Tgroup>;
-  MyMatrix<T> const& G = eData.solver.GramMat;
-  MyMatrix<T> const& SHV = eData.SHV;
-  int dim = SHV.cols();
+  int dim = eData.SHV.cols();
   std::unordered_set<MyVector<T>> set_vert;
   std::unordered_set<MyMatrix<T>> set_ext_parall;
   for (auto & robust_m_min: l_robust_m_min) {
@@ -419,7 +417,7 @@ std::vector<MyMatrix<Tint>> get_parall_stabilizer(DataLattice<T, Tint, Tgroup> &
     }
     set_face_ext_parall.insert(f);
   }
-  Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(G, SHV, EXTparallTot, os);
+  Tgroup GRPbig = Polytope_StabilizerKernel(eData, EXTparallTot);
 #ifdef DEBUG_P_VORONOI_STABILIZER
   os << "ROBUST: get_parall_stabilizer |Gbig|=" << GRPbig.size() << "\n";
 #endif
@@ -667,9 +665,14 @@ std::ostream &operator<<(std::ostream &os, PVoronoi<T, Tint> const &pv) {
 
 template <typename T, typename Tint>
 void WriteEntryGAP(std::ostream &os_out, PVoronoi<T, Tint> const &pv) {
-  os_out << "rec(robust_m_min:=";
-  WriteEntryGAP(os_out, pv.robust_m_min);
-  os_out << ", l_cb:=[";
+  os_out << "rec(v_long:=" << StringVectorGAP(pv.v_long) << ", l_robust_m_min:=[";
+  for (size_t i = 0; i < pv.l_robust_m_min.size(); i++) {
+    if (i > 0) {
+      os_out << ",";
+    }
+    WriteEntryGAP(os_out, pv.l_robust_m_min[i]);
+  }
+  os_out << "], l_cb:=[";
   for (size_t i = 0; i < pv.l_cb.size(); i++) {
     if (i > 0) {
       os_out << ",";
@@ -698,9 +701,7 @@ std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup
   using Tidx = typename Telt::Tidx;
   using TgroupOut = std::pair<std::vector<Telt>, Tgroup>;
   MyMatrix<T> const& EXT_T = pv.EXT;
-  MyMatrix<T> const& G = eData.solver.GramMat;
-  MyMatrix<T> const& SHV = eData.SHV;
-  Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(G, SHV, EXT_T, os);
+  Tgroup GRPbig = Polytope_StabilizerKernel(eData, EXT_T);
   Tidx n_act = EXT_T.rows();
   std::vector<Telt> LGenBig = GRPbig.SmallGeneratingSet();
   std::vector<Telt> LGenSma;
@@ -717,12 +718,76 @@ std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup
     MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
     l_gens.emplace_back(std::move(P));
   }
-#ifdef DEBUG_P_VORONOI_STABILIZER
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
   os << "ROBUST: get_p_voronoi_stabilizer |G|=" << pair.second.size() << "\n";
 #endif
   return l_gens;
 }
 
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> get_p_voronoi_equivalence(DataLattice<T, Tint, Tgroup> &eData,
+                                                        PVoronoi<T, Tint> const &pv1,
+                                                        PVoronoi<T, Tint> const &pv2) {
+  std::ostream &os = eData.rddo.os;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  MyMatrix<T> const& EXT1_T = pv1.EXT;
+  MyMatrix<T> const& EXT2_T = pv2.EXT;
+  int n_row1 = EXT1_T.rows();
+  int n_row2 = EXT2_T.rows();
+  if (n_row1 != n_row2) {
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+    os << "ROBUST: get_p_voronoi_equivalence |EXT1|=" << n_row1 << " |EXT2|=" << n_row2 << "\n";
+    os << "ROBUST: So, they are not equivalent\n";
+#endif
+    return {};
+  }
+  std::optional<MyMatrix<T>> opt1 = Polytope_TestEquivalence(eData, EXT1_T, EXT2_T);
+  if (!opt1) {
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+    os << "ROBUST: get_p_voronoi_equivalence failed to find equivalence\n";
+#endif
+    return {};
+  }
+  MyMatrix<T> const& OneEquiv = *opt1;
+
+  Tgroup GRPbig1 = Polytope_StabilizerKernel(eData, EXT1_T);
+  Tidx n_act = n_row1;
+  std::vector<Telt> LGenBig1 = GRPbig1.SmallGeneratingSet();
+  std::vector<Telt> LGenSma1;
+
+
+  auto f_get_out=[&](Telt const& x) -> MyMatrix<T> {
+    std::optional<MyMatrix<T>> opt2 = FindTransformationGeneral(EXT1_T, EXT1_T, x);
+#ifdef SANITY_CHECK_P_VORONOI_STAB_EQUIV
+    if (!opt2) {
+      std::cerr << "We should have been able to realize the equivalence\n";
+      throw TerminalException{1};
+    }
+#endif
+    return *opt2;
+  };
+  auto f_is_ok=[&](MyMatrix<T> const& x) -> bool {
+    GeneralizedPolytope<T> gp_img = mat_product(pv1.gp, x);
+    return is_equal(pv2.gp, gp_img, os);
+  };
+  std::optional<MyMatrix<T>> opt3 = get_intermediate_equivalence<MyMatrix<T>,Tgroup,decltype(f_get_out),decltype(f_is_ok)>(n_act,
+                                                                                                                           LGenBig1,
+                                                                                                                           LGenSma1,
+                                                                                                                           OneEquiv,
+                                                                                                                           f_get_out,
+                                                                                                                           f_is_ok,
+                                                                                                                           os);
+  if (!opt3) {
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+    os << "ROBUST: get_p_voronoi_equivalence failed by get_intermediate_equivalence\n";
+#endif
+    return {};
+  }
+  MyMatrix<T> const& result1 = *opt3;
+  MyMatrix<Tint> result2 = UniversalMatrixConversion<Tint,T>(result1);
+  return result2;
+}
 
 template<typename T, typename Tint, typename Tgroup>
 void check_p_voronoi_groups(DataLattice<T, Tint, Tgroup> &eData,
@@ -2095,6 +2160,15 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   PVoronoi<T, Tint> pv = initial_p_polytope(eData);
   auto f_insert=[&](PVoronoi<T, Tint> const& pv) -> void {
     BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pv.gp, os);
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
+    for (auto &pv2: l_pv) {
+      std::optional<MyMatrix<Tint>> opt1 = get_p_voronoi_equivalence(eData, pv, pv2);
+      if (opt1.has_value()) {
+        std::cerr << "ROBUST: The inserted pv is actually already present\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
     l_pv.push_back(pv);
     l_bnd.push_back(bnd);
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -2135,9 +2209,17 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
       double vol_bnd = volume_bnd(l_bnd[i_pv], os);
       l_vol_bnd[i_pv] = vol_bnd;
     }
+    os << "ROBUST: capp_vol_bnd\n";
     for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
-      os << "ROBUST: capp_vol_bnd, i_pv=" << i_pv << " vol_bnd=" << l_vol_bnd[i_pv] << " info:" << to_string(l_data[i_pv]) << "\n";
+      os << "ROBUST: capp_vol_bnd, i_pv=" << i_pv << " vol_bnd=" << l_vol_bnd[i_pv] << "\n";
     }
+    os << "ROBUST: capp_info\n";
+    T sum_vol(0);
+    for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
+      os << "ROBUST: capp_info, i_pv=" << i_pv << " info:" << to_string(l_data[i_pv]) << "\n";
+      sum_vol += l_data[i_pv].orb_ident * l_data[i_pv].volume;
+    }
+    os << "ROBUST: capp, sum_vol=" << sum_vol << "\n";
 #endif
   };
   f_insert(pv);
@@ -2218,7 +2300,7 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &G, size_t n_iter,
 #endif
     if (opt) {
       PVoronoiPart<T, Tint> const& pvp = *opt;
-      MyVector<Tint> v_long = pvp.robust_m_min.v_long();
+      MyVector<Tint> const& v_long = pvp.v_long;
       MyVector<T> v_long_T = UniversalVectorConversion<T,Tint>(v_long);
       int n_row = pvp.l_cb[0].sp.EXT.rows();
       T max_local(0);
@@ -2348,7 +2430,12 @@ SoftConvexBoundary<T, Tint> ReadEntryCPP_SoftConvexBoundary(std::istream &is) {
 
 template <typename T, typename Tint>
 void WriteEntryCPP(std::ostream &os, PVoronoi<T, Tint> const &pv) {
-  WriteEntryCPP(os, pv.robust_m_min);
+  WriteVector(os, pv.v_long);
+  size_t n_robust = pv.l_robust_m_min.size();
+  os << n_robust << "\n";
+  for (size_t i = 0; i < n_robust; i++) {
+    WriteEntryCPP(os, pv.l_robust_m_min[i]);
+  }
   size_t n_cb = pv.l_cb.size();
   os << n_cb << "\n";
   for (size_t i = 0; i < n_cb; i++) {
@@ -2365,7 +2452,13 @@ void WriteEntryCPP(std::ostream &os, PVoronoi<T, Tint> const &pv) {
 
 template <typename T, typename Tint>
 PVoronoi<T, Tint> ReadEntryCPP_PVoronoi(std::istream &is) {
-  GenericRobustM<Tint> robust_m_min = ReadEntryCPP_GenericRobustM<Tint>(is);
+  MyVector<Tint> v_long = ReadVector<Tint>(is);
+  size_t n_robust;
+  is >> n_robust;
+  std::vector<GenericRobustM<Tint>> l_robust_m_min;
+  for (size_t i = 0; i < n_robust; i++) {
+    l_robust_m_min.push_back(ReadEntryCPP_GenericRobustM<Tint>(is));
+  }
   size_t n_cb;
   is >> n_cb;
   std::vector<ConvexBlock<T, Tint>> l_cb;
@@ -2380,7 +2473,7 @@ PVoronoi<T, Tint> ReadEntryCPP_PVoronoi(std::istream &is) {
   }
   GeneralizedPolytope<T> gp = ReadEntryCPP_GeneralizedPolytope<T>(is);
   MyMatrix<T> EXT = ReadMatrix<T>(is);
-  return {robust_m_min, l_cb, l_hcb, gp, EXT};
+  return {v_long, l_robust_m_min, l_cb, l_hcb, gp, EXT};
 }
 
 template <typename T, typename Tint>
@@ -2429,7 +2522,7 @@ inline void serialize(Archive &ar, SoftConvexBoundary<T, Tint> &val,
 template <class Archive, typename T, typename Tint>
 inline void serialize(Archive &ar, PVoronoi<T, Tint> &val,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("robust_m_min", val.robust_m_min);
+  ar &make_nvp("l_robust_m_min", val.l_robust_m_min);
   ar &make_nvp("l_cb", val.l_cb);
   ar &make_nvp("l_hcb", val.l_hcb);
   ar &make_nvp("gp", val.gp);
