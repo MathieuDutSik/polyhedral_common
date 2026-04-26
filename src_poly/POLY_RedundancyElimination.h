@@ -641,7 +641,7 @@ std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& 
 #ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
   bool test = IsFullDimensional(M, os);
   if (!test) {
-    std::cerr << "REDUND: The cone must be full dimensional for doing the non-reundant stuff\n";
+    std::cerr << "REDUND: The cone must be full dimensional for doing the non-redundant stuff\n";
     throw TerminalException{1};
   }
 #endif

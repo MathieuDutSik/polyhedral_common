@@ -1435,15 +1435,43 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
       }
     }
 #endif
-    bool test = is_full_dimensional_bounded_polytope(list_ineq, os);
+    bool test_full_dim = IsFullDimensional(list_ineq, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: kippp, is_full_dim_bounded_p, test=" << test << "\n";
+    os << "ROBUST: kippp, test_full_dim=" << test_full_dim
+       << " eV_red=" << StringVectorGAP(eV_red) << "\n";
 #endif
-    if (!test) {
+    if (!test_full_dim) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: kippp, failing by "
-            "is_full_dimensional_bounded_polytope\n";
+      os << "ROBUST: kippp, exiting of the loop because the PVornoi if not full dimensional\n";
 #endif
+      // We DO set is_correct=false, because with the current set of inequalities
+      // we get a NOT full dimensional set. Adding more inequalities will not
+      // change that fact.
+      is_correct = false;
+      return true;
+    }
+
+    bool test_polytope = is_full_dimensional_bounded_polytope(list_ineq, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, is_full_dim_bounded_p, test_polytope=" << test_polytope << "\n";
+    if (false) {
+      int rnk = RankMat(list_ineq);
+      os << "ROBUST: kippp, rnk=" << rnk << " list_ineq=" << list_ineq.rows() << " / " << list_ineq.cols() << "\n";
+      os << "ROBUST: kippp, before get_non_redundant_indices\n";
+      std::vector<int> list_irred = get_non_redundant_indices(list_ineq, os);
+      os << "ROBUST: kippp, |list_irred|=" << list_irred.size() << "\n";
+      MyMatrix<T> FAC = SelectRow(list_ineq, list_irred);
+      MyMatrix<T> EXTbig = DirectDualDescription_mat(FAC, os);
+      os << "ROBUST: kippp, EXTbig=\n";
+      WriteMatrix(os, EXTbig);
+    }
+#endif
+    if (!test_polytope) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: kippp, failing by is_full_dimensional_bounded_polytope\n";
+#endif
+      // We do NOT set is_correct=false, because by adding more inequalities
+      // we could get a polytope.
       return false;
     }
     //
@@ -2231,7 +2259,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     os << "ROBUST: f_insert, step 4\n";
 #endif
     size_t n_pv = l_pv.size();
-    auto f_treat=[&](size_t i_pv, size_t i_bnd) -> void {
+    auto f_treat=[&](size_t const& i_pv, size_t const& i_bnd) -> void {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       size_t n_trans = 0;
 #endif
@@ -2260,7 +2288,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
       size_t i_bnd = n_pv - 1;
       f_treat(i_pv, i_bnd);
     }
-    // The newly inserted pv should be reduced the existing boundaries.
+    // The newly inserted pv should be used to reduce the existing boundaries.
     for (size_t i_bnd=0; i_bnd<n_pv; i_bnd++) {
       size_t i_pv = n_pv - 1;
       f_treat(i_pv, i_bnd);

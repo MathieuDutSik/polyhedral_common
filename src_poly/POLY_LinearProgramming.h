@@ -62,6 +62,7 @@
 #define SANITY_CHECK_SEARCH_POSITIVE_RELATION
 #define SANITY_CHECK_FULL_RANK_FACET_SET
 #define SANITY_CHECK_FIND_SINGLE_VERTEX
+#define SANITY_CHECK_IS_BOUNDED_POLYTOPE
 #endif
 
 #ifdef TIMINGS
@@ -1879,9 +1880,13 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 template <typename T>
 bool is_full_dimensional_bounded_polytope(MyMatrix<T> const &FAC,
                                           std::ostream &os) {
+#ifdef SANITY_CHECK_IS_BOUNDED_POLYTOPE
   if (!IsFullDimensional(FAC, os)) {
-    return false;
+    std::cerr << "LP: is_full_dimensional_bounded_polytope require\n";
+    std::cerr << "LP: the polytope to be bounded\n";
+    throw TerminalException{1};
   }
+#endif
   int dim = FAC.cols();
   MyVector<T> IneqFund(dim);
   IneqFund(0) = 1;
