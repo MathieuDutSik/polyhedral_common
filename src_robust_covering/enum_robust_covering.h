@@ -2231,36 +2231,44 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     os << "ROBUST: f_insert, step 4\n";
 #endif
     size_t n_pv = l_pv.size();
+    auto f_treat=[&](size_t i_pv, size_t i_bnd) -> void {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    size_t n_trans = 0;
-#endif
-    for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      double vol_bnd = volume_bnd(l_bnd[i_pv], os);
-      os << "ROBUST: f_insert, starting with vol_bnd=" << vol_bnd << "\n";
+      size_t n_trans = 0;
 #endif
       for (auto & eEltAff_T: LEltAff_T) {
-        GeneralizedPolytope<T> gp1 = mat_product(l_pv[n_pv-1].gp, eEltAff_T);
-        if (!l_bnd[i_pv].is_empty()) {
-          std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_pv]);
+        GeneralizedPolytope<T> gp1 = mat_product(l_pv[i_pv].gp, eEltAff_T);
+        if (!l_bnd[i_bnd].is_empty()) {
+          std::vector<MyMatrix<T>> l_trans = get_transformations(gp1, l_bnd[i_bnd]);
 #ifdef DEBUG_ENUM_P_POLYTOPES
           os << "ROBUST: get_transformations, |l_trans|=" << l_trans.size() << "\n";
 #endif
           for (auto &trans: l_trans) {
             GeneralizedPolytope<T> gp2 = mat_product(gp1, trans);
-            reduce_boundary_generalized_polytope(l_bnd[i_pv], gp2, os);
+            reduce_boundary_generalized_polytope(l_bnd[i_bnd], gp2, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
             n_trans += 1;
 #endif
           }
         }
       }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: capp, f_treat, i_pv=" << n_pv << " i_bnd=" << i_bnd << " n_trans=" << n_trans << "\n";
+#endif
+    };
+    // The existing pv should be used to reduce the newly inserted one.
+    for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
+      size_t i_bnd = n_pv - 1;
+      f_treat(i_pv, i_bnd);
+    }
+    // The newly inserted pv should be reduced the existing boundaries.
+    for (size_t i_bnd=0; i_bnd<n_pv; i_bnd++) {
+      size_t i_pv = n_pv - 1;
+      f_treat(i_pv, i_bnd);
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: f_insert, step 5\n";
 #endif
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: capp, f_insert, n_pv=" << n_pv << " n_trans=" << n_trans << "\n";
     for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
       double vol_bnd = volume_bnd(l_bnd[i_pv], os);
       l_vol_bnd[i_pv] = vol_bnd;
@@ -2304,10 +2312,6 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   }
   return l_pv;
 }
-
-
-
-
 
 template <typename T, typename Tint, typename Tgroup>
 T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
@@ -2396,10 +2400,6 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &G, size_t n_iter,
   }
   return max_cov;
 }
-
-
-
-
 
 template <typename Tint>
 void WriteEntryCPP(std::ostream &os, GenericRobustM<Tint> const &grm) {

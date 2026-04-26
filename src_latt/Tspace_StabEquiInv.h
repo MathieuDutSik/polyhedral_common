@@ -338,16 +338,21 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   // The direct approach failed, let us use the pt-wise-stab and the cosets for
   // resolving that.
   //
-  std::vector<Telt> LGenPerm; // This is the big group
+  // The group of symmetry preserving ListMat and SHV could in fact not
+  // preserve the T-space. But at the very least, the full symmetry group
+  // is a subgroup of this one.
+  std::vector<Telt> LGenPerm_big;
   for (auto &eList : ListGen) {
     Telt ePerm(eList);
-    LGenPerm.emplace_back(std::move(ePerm));
+    LGenPerm_big.emplace_back(std::move(ePerm));
   }
   PermutationBuilder<T, Telt> builder(SHV_T);
-  std::vector<Telt> LGenGlobStab_perm; // This is the small group
+  // The group elements that preserve the whole T-space, will preserve
+  // the matrix considered here. And so it is a subgroup of the full group.
+  std::vector<Telt> LGenPerm_sma;
   for (auto &eGen : LinSpa.PtStabGens) {
     Telt ePerm = builder.get_permutation(eGen, os);
-    LGenGlobStab_perm.emplace_back(std::move(ePerm));
+    LGenPerm_sma.emplace_back(std::move(ePerm));
   }
 
   auto f_correct=[&](Telt const& x) -> bool {
@@ -357,8 +362,8 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   };
 
   std::pair<std::vector<Telt>, Tgroup> pair = get_intermediate_group<Tgroup,decltype(f_correct)>(n_row,
-                                                                                                 LGenGlobStab_perm,
-                                                                                                 LGenPerm,
+                                                                                                 LGenPerm_sma,
+                                                                                                 LGenPerm_big,
                                                                                                  f_correct, os);
   return get_from_perms_and_group<T, Tgroup>(pair);
 }
@@ -486,16 +491,21 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
   std::vector<std::vector<Tidx>> ListGen1 =
       GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV1_T, ListMat1,
                                                               Vdiag1, os);
-  std::vector<Telt> LGenPerm1;
+  // The group of symmetry preserving ListMat and SHV could in fact not
+  // preserve the T-space. But at the very least, the full symmetry group
+  // is a subgroup of this one.
+  std::vector<Telt> LGenPerm_big;
   for (auto &eList1 : ListGen1) {
     Telt ePerm1(eList1);
-    LGenPerm1.push_back(ePerm1);
+    LGenPerm_big.push_back(ePerm1);
   }
   PermutationBuilder<T, Telt> builder1(SHV1_T);
-  std::vector<Telt> LGenGlobStab1_perm;
+  // The group elements that preserve the whole T-space, will preserve
+  // the matrix considered here. And so it is a subgroup of the full group.
+  std::vector<Telt> LGenPerm_sma;
   for (auto &eGen : LinSpa.PtStabGens) {
     Telt ePerm = builder1.get_permutation(eGen, os);
-    LGenGlobStab1_perm.push_back(ePerm);
+    LGenPerm_sma.push_back(ePerm);
   }
   auto f_get_out=[&](Telt const& x) -> MyMatrix<T> {
     return get_mat_from_shv_perm(x, SHV1_T, eMat1);
@@ -504,8 +514,8 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
     return is_stab_space(x, LinSpa);
   };
   std::optional<MyMatrix<T>> result = get_intermediate_equivalence<MyMatrix<T>,Tgroup,decltype(f_get_out),decltype(f_is_ok)>(n_row,
-                                                                                                                             LGenGlobStab1_perm,
-                                                                                                                             LGenPerm1,
+                                                                                                                             LGenPerm_sma,
+                                                                                                                             LGenPerm_big,
                                                                                                                              OneEquiv,
                                                                                                                              f_get_out,
                                                                                                                              f_is_ok,
