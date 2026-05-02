@@ -825,9 +825,18 @@ std::optional<MyMatrix<Tint>> get_p_voronoi_equivalence(DataLattice<T, Tint, Tgr
 }
 
 template<typename T, typename Tint, typename Tgroup>
-void check_p_voronoi_groups(DataLattice<T, Tint, Tgroup> &eData,
-                            PVoronoi<T, Tint> const &pv) {
+void check_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
+                     PVoronoi<T, Tint> const &pv) {
   std::ostream &os = eData.rddo.os;
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+  os << "ROBUST: check_p_voronoi |gp|=" << pv.gp.polytopes.size() << "\n";
+#endif
+  bool test = check_pairwise_intersection(pv.gp, os);
+  if (!test) {
+    std::cerr << "ROBUST: The generalized polytope does not satisfy the pairwise\n";
+    std::cerr << "ROBUST: intersection property\n";
+    throw TerminalException{1};
+  }
   std::vector<MyMatrix<Tint>> LGenPVoronoi = get_p_voronoi_stabilizer(eData, pv);
   std::vector<MyMatrix<Tint>> LGenParall = get_parall_stabilizer(eData, pv.l_robust_m_min);
   std::vector<MyMatrix<T>> LGenParall_T = UniversalStdVectorMatrixConversion<T,Tint>(LGenParall);
@@ -842,6 +851,14 @@ void check_p_voronoi_groups(DataLattice<T, Tint, Tgroup> &eData,
     std::cerr << "ROBUST: orbit_len=" << orbit_len << "\n";
     std::cerr << "ROBUST: Inconsistent stabilizer and orbit computation\n";
     throw TerminalException{1};
+  }
+#ifdef DEBUG_P_VORONOI_STAB_EQUIV
+  os << "ROBUST: check_p_voronoi GRPparall_ord=" << GRPparall_ord << " GRPp_vor_ord=" << GRPp_vor_ord << " orbit_len=" << orbit_len << "\n";
+#endif
+  for (size_t i_orbit=0; i_orbit<orbit_len; i_orbit++) {
+    os << "ROBUST: check_p_voronoi, i_orbit=" << i_orbit << " EXT=\n";
+    MyMatrix<T> EXT = get_vertices_gp(orbit[i_orbit], os);
+    WriteMatrix(os, reorder_matrix(EXT));
   }
 
   std::vector<SinglePolytope<T>> polytopes;
@@ -1898,7 +1915,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
   WriteMatrix(os, FAC);
 #endif
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-  check_p_voronoi_groups(eData, p_voronoi);
+  check_p_voronoi(eData, p_voronoi);
 #endif
 #ifdef DEBUG_ENUM_P_POLYTOPES
   T volume = volume_gp(p_voronoi.gp, os);

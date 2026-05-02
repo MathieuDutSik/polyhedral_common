@@ -55,12 +55,12 @@ find_library(
     /opt/homebrew/lib
     /usr/local/lib
 )
-if(NOT NETCDF_INCLUDE_DIR OR NOT NETCDF_LIBRARY OR NOT NETCDF_CXX_LIBRARY)
-  message(
-    FATAL_ERROR
-      "netCDF C/C++ libraries were not found. Set NETCDF_INCLUDE_DIR, "
-      "NETCDF_LIBRARY and NETCDF_CXX_LIBRARY."
-  )
+if(NETCDF_INCLUDE_DIR AND NETCDF_LIBRARY AND NETCDF_CXX_LIBRARY)
+  set(HAVE_NETCDF TRUE)
+  message(STATUS "netCDF found — CTYP_* targets will be built")
+else()
+  set(HAVE_NETCDF FALSE)
+  message(STATUS "netCDF not found — CTYP_* targets will be skipped")
 endif()
 
 set(NAUTY_PREFIX "${CMAKE_BINARY_DIR}/external/nauty")
@@ -211,14 +211,16 @@ target_link_libraries(
 )
 
 
-add_library(polyhedral_netcdf_support INTERFACE)
-target_include_directories(polyhedral_netcdf_support INTERFACE "${NETCDF_INCLUDE_DIR}")
-target_link_libraries(
-  polyhedral_netcdf_support
-  INTERFACE
-    "${NETCDF_CXX_LIBRARY}"
-    "${NETCDF_LIBRARY}"
-)
+if(HAVE_NETCDF)
+  add_library(polyhedral_netcdf_support INTERFACE)
+  target_include_directories(polyhedral_netcdf_support INTERFACE "${NETCDF_INCLUDE_DIR}")
+  target_link_libraries(
+    polyhedral_netcdf_support
+    INTERFACE
+      "${NETCDF_CXX_LIBRARY}"
+      "${NETCDF_LIBRARY}"
+  )
+endif()
 
 add_library(polyhedral_copos_support INTERFACE)
 target_link_libraries(
@@ -292,15 +294,17 @@ target_link_libraries(
     polyhedral_cddgmp_support
 )
 
-add_library(polyhedral_ctype_support INTERFACE)
-target_link_libraries(
-  polyhedral_ctype_support
-  INTERFACE
-    polyhedral_group_support
-    polyhedral_cdd_double_support
-    polyhedral_mpi_support
-    polyhedral_netcdf_support
-)
+if(HAVE_NETCDF)
+  add_library(polyhedral_ctype_support INTERFACE)
+  target_link_libraries(
+    polyhedral_ctype_support
+    INTERFACE
+      polyhedral_group_support
+      polyhedral_cdd_double_support
+      polyhedral_mpi_support
+      polyhedral_netcdf_support
+  )
+endif()
 
 add_library(polyhedral_sparse_solver_support INTERFACE)
 target_link_libraries(polyhedral_sparse_solver_support INTERFACE polyhedral_common)
@@ -620,29 +624,31 @@ foreach(target IN LISTS POLY_PROGRAMS)
   )
 endforeach()
 
-set(
-  CTYPE_PROGRAMS
-  CTYP_PrepareInitialFile
-  CTYP_MPI_Enumeration_c
-  CTYP_ComputeInvariant
-  CTYP_PrepareAdjacencyFile
-  CTYP_MPI_EnumerationAdjacencies
-  CTYP_CheckAdjacency
-  CTYP_SearchMatrix
-  CTYP_LookForNoFreeVector
-  CTYP_MPI_AdjScheme
-  CTYP_ComputeHashStat
-  CTYP_ComputeInvariant_B
-  NC_ComputeAverage
-)
-foreach(target IN LISTS CTYPE_PROGRAMS)
-  add_polyhedral_binary(
-    ${target}
-    "${CMAKE_SOURCE_DIR}/src_ctype/${target}.cpp"
-    polyhedral_ctype_support
-    "${POLY_C_CDDLIB_MPQ_SOURCE}"
+if(HAVE_NETCDF)
+  set(
+    CTYPE_PROGRAMS
+    CTYP_PrepareInitialFile
+    CTYP_MPI_Enumeration_c
+    CTYP_ComputeInvariant
+    CTYP_PrepareAdjacencyFile
+    CTYP_MPI_EnumerationAdjacencies
+    CTYP_CheckAdjacency
+    CTYP_SearchMatrix
+    CTYP_LookForNoFreeVector
+    CTYP_MPI_AdjScheme
+    CTYP_ComputeHashStat
+    CTYP_ComputeInvariant_B
+    NC_ComputeAverage
   )
-endforeach()
+  foreach(target IN LISTS CTYPE_PROGRAMS)
+    add_polyhedral_binary(
+      ${target}
+      "${CMAKE_SOURCE_DIR}/src_ctype/${target}.cpp"
+      polyhedral_ctype_support
+      "${POLY_C_CDDLIB_MPQ_SOURCE}"
+    )
+  endforeach()
+endif()
 
 set(
   SPARSE_SOLVER_PROGRAMS
