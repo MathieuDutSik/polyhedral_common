@@ -598,7 +598,7 @@ template <typename T> void dd_WriteLP(std::ostream &os, dd_lpdata<T> *lp) {
       os << "maximize\n";
     else
       os << "minimize\n";
-    dd_WriteArow(os, lp->A[lp->objrow - 1], lp->d);
+    dd_WriteArow(os, lp->A[lp->objrow], lp->d);
   }
 }
 
@@ -639,11 +639,11 @@ void dd_WriteLPResult(std::ostream &os, dd_lpdata<T> *lp, dd_ErrorType err) {
   if (lp->objective == dd_LPmax || lp->objective == dd_LPmin) {
     os << "* Objective function is\n";
     for (j = 0; j < lp->d; j++) {
-      if (j > 0 && lp->A[lp->objrow - 1][j] >= 0)
+      if (j > 0 && lp->A[lp->objrow][j] >= 0)
         os << " +";
       if (j > 0 && (j % 5) == 0)
         os << "\n";
-      os << lp->A[lp->objrow - 1][j];
+      os << lp->A[lp->objrow][j];
       if (j > 0)
         os << " X[" << j << "]";
     }
@@ -1166,8 +1166,8 @@ dd_lpdata<T> *dd_CreateLPData(dd_rowrange m, dd_colrange d) {
   lp->solver = dd_choiceLPSolverDefault; /* set the default lp solver */
   lp->d = d;
   lp->m = m;
-  lp->objrow = m;
-  lp->rhscol = 1L;
+  lp->objrow = m - 1;  // 0-based: last row of A
+  lp->rhscol = 0;      // 0-based: first column of A
   lp->objective = dd_LPnone;
   lp->LPS = dd_LPSundecided;
 
@@ -1205,7 +1205,7 @@ dd_lpdata<T> *dd_CreateLPData(dd_rowrange m, dd_colrange d) {
 template <typename T> void dd_LPData_reset_m(dd_rowrange m, dd_lpdata<T> *lp) {
   dd_colrange d = lp->d;
   lp->m = m;
-  lp->objrow = m;
+  lp->objrow = m - 1;  // 0-based: last row of A
   for (int i = 0; i <= d; i++)
     lp->nbindex[i] = 0;
   for (int i = 0; i <= d; i++)
@@ -2120,8 +2120,8 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
   *selected = false;
   *lps = dd_LPSundecided;
   for (j = 1; j <= d_size; j++) {
-    if (j != rhscol) {
-      dd_TableauEntry(data->rcost[j - 1], d_size, A, Ts, objrow, j);
+    if (j != rhscol + 1) {
+      dd_TableauEntry(data->rcost[j - 1], d_size, A, Ts, objrow + 1, j);
       if (data->rcost[j - 1] > 0) {
         dualfeasible = false;
       }
@@ -2130,14 +2130,14 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
   if (dualfeasible) {
     while ((*lps == dd_LPSundecided) && (!rowselected) && (!colselected)) {
       for (i = 1; i <= m_size; i++) {
-        if (i != objrow && bflag[i] == -1) { /* i is a basic variable */
+        if (i != objrow + 1 && bflag[i] == -1) { /* i is a basic variable */
           if (Phase1) {
             dd_TableauEntry(val, d_size, A, Ts, i, bflag[m_size]);
             val = -val;
             /* for dual Phase I.  The RHS (dual objective) is the negative of
              * the auxiliary variable column. */
           } else {
-            dd_TableauEntry(val, d_size, A, Ts, i, rhscol);
+            dd_TableauEntry(val, d_size, A, Ts, i, rhscol + 1);
           }
           if (val < minval) {
             *r = i;
@@ -2152,7 +2152,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
         set_emptyset(data->tieset);
         for (j = 1; j <= d_size; j++) {
           dd_TableauEntry(val, d_size, A, Ts, *r, j);
-          if (j != rhscol && val > 0) {
+          if (j != rhscol + 1 && val > 0) {
             bool is_field = true;
             if (is_field) {
               rat = -data->rcost[j - 1] / val;
@@ -2212,7 +2212,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
                     if (set_member(j, data->tieset)) {
                       dd_TableauEntry(val, d_size, A, Ts, *r, j);
                       dd_TableauEntry(valn, d_size, A, Ts, iref, j);
-                      if (j != rhscol && val > 0) {
+                      if (j != rhscol + 1 && val > 0) {
                         rat = valn / val;
                         if (*s == 0 || rat < minrat) {
                           minrat = rat;
@@ -2404,7 +2404,7 @@ void dd_ResetTableau(dd_rowrange m_size, dd_colrange d_size, T **Ts,
   /* Initialize T and nbindex */
   for (j = 1; j <= d_size; j++)
     nbindex[j] = -j;
-  nbindex[rhscol] = 0;
+  nbindex[rhscol + 1] = 0;
   /* RHS is already in nonbasis and is considered to be associated
      with the zero-th row of input. */
   dd_SetToIdentity(d_size, Ts);
@@ -2413,7 +2413,7 @@ void dd_ResetTableau(dd_rowrange m_size, dd_colrange d_size, T **Ts,
   for (i = 1; i <= m_size; i++)
     bflag[i] = -1;
   /* all basic variables have index -1 */
-  bflag[objrow] = 0;
+  bflag[objrow + 1] = 0;
   /* bflag of the objective variable is 0,
      different from other basic variables which have -1 */
   for (j = 1; j <= d_size; j++)
@@ -2436,8 +2436,8 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
   *lps = dd_LPSundecided;
   while ((*lps == dd_LPSundecided) && (!rowselected) && (!colselected)) {
     for (i = 1; i <= m_size; i++) {
-      if (i != objrow && bflag[i] == -1) { /* i is a basic variable */
-        dd_TableauEntry(val, d_size, A, Ts, i, rhscol);
+      if (i != objrow + 1 && bflag[i] == -1) { /* i is a basic variable */
+        dd_TableauEntry(val, d_size, A, Ts, i, rhscol + 1);
         if (val < 0) {
           rowselected = true;
           *r = i;
@@ -2445,7 +2445,7 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
         }
       } else {
         if (bflag[i] > 0) { /* i is nonbasic variable */
-          dd_TableauEntry(val, d_size, A, Ts, objrow, bflag[i]);
+          dd_TableauEntry(val, d_size, A, Ts, objrow + 1, bflag[i]);
           if (val > 0) {
             colselected = true;
             *s = bflag[i];
@@ -2472,7 +2472,7 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
     } else {
       if (colselected) {
         for (i = 1; i <= m_size; i++) {
-          if (i != objrow && bflag[i] == -1) { /* i is a basic variable */
+          if (i != objrow + 1 && bflag[i] == -1) { /* i is a basic variable */
             dd_TableauEntry(val, d_size, A, Ts, i, *s);
             if (val < 0) {
               rowselected = true;
@@ -2570,8 +2570,8 @@ void dd_FindLPBasis(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
 
   set_initialize(&RowSelected, m_size);
   set_initialize(&ColSelected, d_size);
-  set_addelem(RowSelected, objrow);
-  set_addelem(ColSelected, rhscol);
+  set_addelem(RowSelected, objrow + 1);
+  set_addelem(ColSelected, rhscol + 1);
 
   stop = false;
   do { /* Find a LP basis */
@@ -2586,8 +2586,8 @@ void dd_FindLPBasis(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
       rank++;
     } else {
       for (j = 1; j <= d_size && *lps == dd_LPSundecided; j++) {
-        if (j != rhscol && nbindex[j] < 0) {
-          dd_TableauEntry(val, d_size, A, Ts, objrow, j);
+        if (j != rhscol + 1 && nbindex[j] < 0) {
+          dd_TableauEntry(val, d_size, A, Ts, objrow + 1, j);
           if (val != 0) { /* dual inconsistent */
             *lps = dd_StrucDualInconsistent;
             *cs = j;
@@ -2640,8 +2640,8 @@ void dd_FindLPBasis2(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
   set_initialize(&DependentCols, d_size);
   set_initialize(&ColSelected, d_size);
   set_initialize(&NopivotRow, m_size);
-  set_addelem(RowSelected, objrow);
-  set_addelem(ColSelected, rhscol);
+  set_addelem(RowSelected, objrow + 1);
+  set_addelem(ColSelected, rhscol + 1);
   set_compl(NopivotRow, NopivotRow); /* set NopivotRow to be the groundset */
 
   for (j = 2; j <= d_size; j++)
@@ -2744,8 +2744,8 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
   ms =
       0; /* ms will be the index of column which has the largest reduced cost */
   for (j = 1; j <= d_size; j++) {
-    if (j != rhscol) {
-      dd_TableauEntry(data->rcost[j - 1], d_size, A, Ts, objrow, j);
+    if (j != rhscol + 1) {
+      dd_TableauEntry(data->rcost[j - 1], d_size, A, Ts, objrow + 1, j);
       if (data->rcost[j - 1] > maxcost) {
         maxcost = data->rcost[j - 1];
         ms = j;
@@ -2773,7 +2773,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
     /* Ratio Test: ms will be now the index of column which has the largest
        reduced cost over the auxiliary row entry */
     for (j = 1; j <= d_size; j++) {
-      if ((j != rhscol) && data->rcost[j - 1] > 0) {
+      if ((j != rhscol + 1) && data->rcost[j - 1] > 0) {
         dd_TableauEntry(axvalue, d_size, A, Ts, local_m_size, j);
         if (axvalue >= 0) {
           *err = dd_NumericallyInconsistent;
@@ -2844,7 +2844,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
            dual feasible but local_m_size is still in nonbasis. We must pivot in
            the auxiliary variable local_m_size.
         */
-        dd_TableauEntry(x, d_size, A, Ts, objrow, ms);
+        dd_TableauEntry(x, d_size, A, Ts, objrow + 1, ms);
         if (x < 0) {
           *err = dd_NoError;
           *lps = dd_DualInconsistent;
@@ -2893,13 +2893,13 @@ void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
                             [[maybe_unused]] std::ostream &os) {
   *err = dd_NoError;
   for (dd_colrange j = 0; j < lp->d; j++)
-    lp->A[lp->objrow - 1][j] = -lp->A[lp->objrow - 1][j];
+    lp->A[lp->objrow][j] = -lp->A[lp->objrow][j];
   dd_DualSimplexMaximize(lp, err, data, maxiter, os);
   lp->optvalue = -lp->optvalue;
   for (dd_colrange j = 0; j < lp->d; j++) {
     if (lp->LPS != dd_Inconsistent)
       lp->dsol[j] = -lp->dsol[j];
-    lp->A[lp->objrow - 1][j] = -lp->A[lp->objrow - 1][j];
+    lp->A[lp->objrow][j] = -lp->A[lp->objrow][j];
   }
 }
 
@@ -3113,7 +3113,7 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
 
   *err = dd_NoError;
   for (dd_colrange j = 0; j < lp->d; j++)
-    lp->A[lp->objrow - 1][j] = -lp->A[lp->objrow - 1][j];
+    lp->A[lp->objrow][j] = -lp->A[lp->objrow][j];
   dd_CrissCrossMaximize(lp, err, data, maxiter, os);
   lp->optvalue = -lp->optvalue;
   for (dd_colrange j = 0; j < lp->d; j++) {
@@ -3121,7 +3121,7 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
       /* Inconsistent certificate stays valid for minimization, 0.94e */
       lp->dsol[j] = -lp->dsol[j];
     }
-    lp->A[lp->objrow - 1][j] = -lp->A[lp->objrow - 1][j];
+    lp->A[lp->objrow][j] = -lp->A[lp->objrow][j];
   }
 }
 
@@ -3261,14 +3261,14 @@ the LP.
   switch (LPS) {
   case dd_Optimal:
     for (j = 0; j < d_size; j++) {
-      sol[j] = Ts[j][rhscol - 1];
-      dd_TableauEntry(x, d_size, A, Ts, objrow, j + 1);
+      sol[j] = Ts[j][rhscol];
+      dd_TableauEntry(x, d_size, A, Ts, objrow + 1, j + 1);
       dsol[j] = -x;
-      dd_TableauEntry(optvalue, d_size, A, Ts, objrow, rhscol);
+      dd_TableauEntry(optvalue, d_size, A, Ts, objrow + 1, rhscol + 1);
     }
     for (i = 1; i <= m_size; i++) {
       if (bflag[i] == -1) { /* i is a basic variable */
-        dd_TableauEntry(x, d_size, A, Ts, i, rhscol);
+        dd_TableauEntry(x, d_size, A, Ts, i, rhscol + 1);
         if (x > 0)
           set_addelem(posset, i);
       }
@@ -3279,7 +3279,7 @@ the LP.
     if (localdebug)
       std::cout << "SetSolutions: LP is inconsistent.\n";
     for (j = 0; j < d_size; j++) {
-      sol[j] = Ts[j][rhscol - 1];
+      sol[j] = Ts[j][rhscol];
       dd_TableauEntry(x, d_size, A, Ts, re, j + 1);
       dsol[j] = -x;
     }
@@ -3310,7 +3310,7 @@ the LP.
       printf("SetSolutions: LP is dual inconsistent.\n");
     for (j = 0; j < d_size; j++) {
       sol[j] = Ts[j][se - 1];
-      dd_TableauEntry(x, d_size, A, Ts, objrow, j + 1);
+      dd_TableauEntry(x, d_size, A, Ts, objrow + 1, j + 1);
       dsol[j] = -x;
     }
     break;
@@ -3323,14 +3323,14 @@ the LP.
     break;
 
   case dd_StrucDualInconsistent:
-    dd_TableauEntry(x, d_size, A, Ts, objrow, se);
+    dd_TableauEntry(x, d_size, A, Ts, objrow + 1, se);
     if (x > 0)
       sw = 1;
     else
       sw = -1;
     for (j = 0; j < d_size; j++) {
       sol[j] = sw * Ts[j][se - 1];
-      dd_TableauEntry(x, d_size, A, Ts, objrow, j + 1);
+      dd_TableauEntry(x, d_size, A, Ts, objrow + 1, j + 1);
       dsol[j] = -x;
     }
     if (localdebug)
@@ -3518,8 +3518,8 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
   lpnew->objective = dd_LPmax;
 
   for (i = 0; i < lp->m; i++)
-    if (lp->A[i][lp->rhscol - 1] > bmax)
-      bmax = lp->A[i][lp->rhscol - 1];
+    if (lp->A[i][lp->rhscol] > bmax)
+      bmax = lp->A[i][lp->rhscol];
   bceil = bm * bmax;
 
   for (i = 0; i < lp->m; i++)
