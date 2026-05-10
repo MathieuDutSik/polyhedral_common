@@ -1118,11 +1118,11 @@ void dd_InitializeConeData(dd_rowrange m, dd_colrange d,
   for (int i = 0; i <= (*cone)->m_alloc; i++)
     (*cone)->OrderVector[i] = 0;
 
-  (*cone)->newcol = new long[((*cone)->d) + 1];
-  for (int i = 0; i <= (*cone)->d; i++)
-    (*cone)->newcol[i] = 0;
-  for (j = 0; j <= (*cone)->d; j++)
-    (*cone)->newcol[j] = j;   /* identity map, initially */
+  (*cone)->newcol = new long[(*cone)->d];
+  /* newcol is 0-based; stored values are 1-based column indices, with 0 as
+     "removed" sentinel.  Identity init: newcol[j] = j + 1 for j in [0, d). */
+  for (j = 0; j < (*cone)->d; j++)
+    (*cone)->newcol[j] = j + 1;
   (*cone)->LinearityDim = -2; /* -2 if it is not computed */
   (*cone)->ColReduced = false;
   (*cone)->d_orig = d;
@@ -1587,7 +1587,7 @@ template <typename T>
 void dd_CopyRay(T *a, dd_colrange d_origsize, dd_raydata<T> *RR,
                 dd_colindex reducedcol) {
   for (long j = 0; j < d_origsize; j++) {
-    long j1 = reducedcol[j + 1];
+    long j1 = reducedcol[j];
     if (j1 > 0) {
       a[j] = RR->Ray[j1 - 1];
       /* the original column j is mapped to j1, and thus
@@ -1818,7 +1818,7 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly) {
 
   total = poly->child->LinearityDim + poly->child->FeasibleRayCount;
 
-  if (poly->child->d <= 0 || poly->child->newcol[1] == 0)
+  if (poly->child->d <= 0 || poly->child->newcol[0] == 0)
     total = total - 1;
   if (total == 0 && poly->homogeneous &&
       poly->representation == dd_Inequality) {
@@ -1838,10 +1838,10 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly) {
     }
     RayPtr = RayPtr->Next;
   }
-  for (j = 2; j <= poly->d; j++) {
+  for (j = 1; j < poly->d; j++) {
     if (poly->child->newcol[j] == 0) {
       for (j1 = 0; j1 < poly->d; j1++)
-        M->matrix[i][j1] = poly->child->Bsave[j1][j - 1];
+        M->matrix[i][j1] = poly->child->Bsave[j1][j];
       set_addelem(M->linset, i + 1);
       i++;
     }
@@ -5236,10 +5236,10 @@ template <typename T> void dd_ColumnReduce(dd_conedata<T> *cone) {
       if (j1 < j) {
         for (dd_rowrange i = 0; i < cone->m; i++)
           cone->A[i][j1 - 1] = cone->A[i][j - 1];
-        cone->newcol[j] = j1;
+        cone->newcol[j - 1] = j1;
       }
     } else {
-      cone->newcol[j] = 0;
+      cone->newcol[j - 1] = 0;
     }
   }
   cone->d = j1; /* update the dimension. cone->d_orig remembers the old. */
@@ -5809,7 +5809,7 @@ template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
 
   auto clean = [&]() -> void {
     if (cone->d <= 0 ||
-        cone->newcol[1] == 0) { /* fixing the number of output */
+        cone->newcol[0] == 0) { /* fixing the number of output */
       cone->parent->n = cone->LinearityDim + cone->FeasibleRayCount - 1;
       cone->parent->ldim = cone->LinearityDim - 1;
     } else {
