@@ -870,8 +870,9 @@ template <typename T> struct dd_conedata {
   dd_colrange d_orig; /* the size d of the original matrix A */
   dd_colindex newcol; /* the size d of the original matrix A */
 
-  dd_colindex InitialRayIndex; /* InitialRayIndex[s] (s>=1) stores the corr. row
-                                  index */
+  dd_colindex InitialRayIndex; /* InitialRayIndex[s] (0-based s) stores the
+                                  corresponding 1-based row index, or 0 if
+                                  unassigned */
   dd_rowindex OrderVector;
   bool RecomputeRowOrder;
   dd_rowset GroundSet, EqualitySet, NonequalitySet, AddedHalfspaces,
@@ -1111,8 +1112,10 @@ void dd_InitializeConeData(dd_rowrange m, dd_colrange d,
   (*cone)->Edges = new dd_adjacencydata<T> *[(*cone)->m_alloc];
   for (j = 0; j < (*cone)->m_alloc; j++)
     (*cone)->Edges[j] = nullptr;
-  (*cone)->InitialRayIndex = new long[d + 1];
-  for (int i = 0; i <= d; i++)
+  (*cone)->InitialRayIndex = new long[d];
+  /* InitialRayIndex is 0-based; stored values are 1-based row indices,
+     with 0 as "unassigned" sentinel. */
+  for (int i = 0; i < d; i++)
     (*cone)->InitialRayIndex[i] = 0;
   (*cone)->OrderVector = new long[(*cone)->m_alloc + 1];
   for (int i = 0; i <= (*cone)->m_alloc; i++)
@@ -5231,7 +5234,7 @@ template <typename T> void dd_ColumnReduce(dd_conedata<T> *cone) {
   dd_colrange j1 = 0;
 
   for (dd_colrange j = 1; j <= cone->d; j++) {
-    if (cone->InitialRayIndex[j] > 0) {
+    if (cone->InitialRayIndex[j - 1] > 0) {
       j1++;
       if (j1 < j) {
         for (dd_rowrange i = 0; i < cone->m; i++)
@@ -5318,7 +5321,7 @@ template <typename T> void dd_FindBasis(dd_conedata<T> *cone, long *rank) {
 
   *rank = 0;
   stop = false;
-  for (j = 0; j <= cone->d; j++)
+  for (j = 0; j < cone->d; j++)
     cone->InitialRayIndex[j] = 0;
   set_emptyset(cone->InitialHalfspaces);
   set_initialize(&ColSelected, cone->d);
@@ -5336,8 +5339,8 @@ template <typename T> void dd_FindBasis(dd_conedata<T> *cone, long *rank) {
       set_addelem(cone->InitialHalfspaces, r);
       set_addelem(NopivotRow, r);
       set_addelem(ColSelected, s);
-      cone->InitialRayIndex[s] =
-          r; /* cone->InitialRayIndex[s] stores the corr. row index */
+      cone->InitialRayIndex[s - 1] =
+          r; /* InitialRayIndex[s-1] (0-based) stores the 1-based row index */
       (*rank)++;
       //        std::cout << "dd_GaussianColumnPivot call 9\n";
       dd_GaussianColumnPivot(cone->d, cone->A, cone->B, r, s, Rtemp.data());
@@ -5874,7 +5877,7 @@ template <typename T> void dd_InitialDataSetup(dd_conedata<T> *cone) {
     dd_ZeroIndexSet(cone->m, cone->d, cone->A, Vector1.data(), ZSet);
     if (set_subset(cone->EqualitySet, ZSet)) {
       dd_AddRay(cone, Vector1.data());
-      if (cone->InitialRayIndex[r] == 0)
+      if (cone->InitialRayIndex[r - 1] == 0)
         dd_AddRay(cone, Vector2.data());
     }
   }
