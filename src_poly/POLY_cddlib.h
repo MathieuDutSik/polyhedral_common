@@ -1037,12 +1037,13 @@ dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d) {
   poly->representation = dd_Inequality;
   poly->homogeneous = false;
 
-  poly->EqualityIndex = new int[m + 2];
-  /* size increased to m+2 in 092b because it is used by the child cone,
-     This is a bug fix suggested by Thao Dang. */
-  /* ith component is 1 if it is equality, -1 if it is strict inequality, 0
-   * otherwise. */
-  for (i = 0; i <= m + 1; i++)
+  poly->EqualityIndex = new int[m + 1];
+  /* Size is m+1 because the child cone may use indices up to m
+     (0-based) when cone->m = poly->m + 1 in the non-homogeneous
+     inequality case. */
+  /* ith component (0-based) is 1 if it is equality, -1 if it is strict
+   * inequality, 0 otherwise. */
+  for (i = 0; i <= m; i++)
     poly->EqualityIndex[i] = 0;
 
   poly->IsEmpty =
@@ -1571,7 +1572,7 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err,
 
   for (i = 0; i < M->rowsize; i++) {
     if (set_member(i + 1, M->linset))
-      poly->EqualityIndex[i + 1] = 1;
+      poly->EqualityIndex[i] = 1;
     for (j = 0; j < M->colsize; j++) {
       poly->A[i][j] = M->matrix[i][j];
       if (j == 0 && M->matrix[i][0] != 0)
@@ -1867,7 +1868,7 @@ dd_matrixdata<T> *dd_CopyInput(dd_polyhedradata<T> *poly) {
   M = dd_CreateMatrix<T>(poly->m, poly->d);
   dd_CopyAmatrix(M->matrix, poly->A, poly->m, poly->d);
   for (i = 0; i < poly->m; i++)
-    if (poly->EqualityIndex[i + 1] == 1)
+    if (poly->EqualityIndex[i] == 1)
       set_addelem(M->linset, i + 1);
   // dd_MatrixIntegerFilter(M);
   if (poly->representation == dd_Generator)
@@ -4789,9 +4790,9 @@ template <typename T> void dd_SetInequalitySets(dd_conedata<T> *cone) {
   set_emptyset(cone->NonequalitySet);
   for (i = 1; i <= (cone->parent->m); i++) {
     set_addelem(cone->GroundSet, i);
-    if (cone->parent->EqualityIndex[i] == 1)
+    if (cone->parent->EqualityIndex[i - 1] == 1)
       set_addelem(cone->EqualitySet, i);
-    if (cone->parent->EqualityIndex[i] == -1)
+    if (cone->parent->EqualityIndex[i - 1] == -1)
       set_addelem(cone->NonequalitySet, i);
   }
 }
@@ -4966,7 +4967,7 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone, dd_raydata<T> *Ray1,
     }
     for (it = cone->Iteration + 1; it < fmin && lastchance; it++) {
       it_row = cone->OrderVector[it];
-      if (cone->parent->EqualityIndex[it_row] >= 0 &&
+      if (cone->parent->EqualityIndex[it_row - 1] >= 0 &&
           set_member(it_row, Face1)) {
         lastchance = false;
         (cone->count_int_bad)++;
