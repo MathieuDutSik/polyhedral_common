@@ -6,7 +6,7 @@ Print("Beginning TestSimpleDualDesc\n");
 TestSimpleDD:=function(EXT, command, n_fac)
     local dim, FileI, FileO, arith, choice, eProg, TheCommand, FAC, eFAC, ListScal, ListIncd;
     dim:=Length(EXT[1]);
-    FAC:=get_dual_desc(EXT, command);
+    FAC:=get_dual_desc(EXT, command, true);
     if is_error(FAC) then
         return false;
     fi;

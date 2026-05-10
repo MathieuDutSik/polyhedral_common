@@ -563,16 +563,15 @@ template <typename T> struct dd_lpdata {
 
 template <typename T>
 void dd_WriteAmatrix(std::ostream &os, T **A, long rowmax, long colmax) {
-  long i, j;
   if (A == NULL) {
     os << "WriteAmatrix: The requested matrix is empty\n";
     return;
   }
   os << "begin\n";
   os << " " << rowmax << " " << colmax << " rational\n";
-  for (i = 1; i <= rowmax; i++) {
-    for (j = 1; j <= colmax; j++) {
-      os << " " << A[i - 1][j - 1];
+  for (long i = 0; i < rowmax; i++) {
+    for (long j = 0; j < colmax; j++) {
+      os << " " << A[i][j];
     }
     os << "\n";
   }
@@ -1147,9 +1146,9 @@ dd_conedata<T> *dd_ConeDataLoad(dd_polyhedradata<T> *poly) {
   cone->parent = poly;
   poly->child = cone;
 
-  for (i = 1; i <= poly->m; i++)
-    for (j = 1; j <= cone->d; j++)
-      cone->A[i - 1][j - 1] = poly->A[i - 1][j - 1];
+  for (i = 0; i < poly->m; i++)
+    for (j = 0; j < cone->d; j++)
+      cone->A[i][j] = poly->A[i][j];
 
   if (poly->representation == dd_Inequality && !poly->homogeneous) {
     cone->A[m - 1][0] = 1;
@@ -1570,12 +1569,12 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err,
   poly->representation = M->representation;
   poly->homogeneous = true;
 
-  for (i = 1; i <= M->rowsize; i++) {
-    if (set_member(i, M->linset))
-      poly->EqualityIndex[i] = 1;
-    for (j = 1; j <= M->colsize; j++) {
-      poly->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
-      if (j == 1 && M->matrix[i - 1][j - 1] != 0)
+  for (i = 0; i < M->rowsize; i++) {
+    if (set_member(i + 1, M->linset))
+      poly->EqualityIndex[i + 1] = 1;
+    for (j = 0; j < M->colsize; j++) {
+      poly->A[i][j] = M->matrix[i][j];
+      if (j == 0 && M->matrix[i][0] != 0)
         poly->homogeneous = false;
     }
   }
@@ -1586,15 +1585,14 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err,
 template <typename T>
 void dd_CopyRay(T *a, dd_colrange d_origsize, dd_raydata<T> *RR,
                 dd_colindex reducedcol) {
-  long j, j1;
-  for (j = 1; j <= d_origsize; j++) {
-    j1 = reducedcol[j];
+  for (long j = 0; j < d_origsize; j++) {
+    long j1 = reducedcol[j + 1];
     if (j1 > 0) {
-      a[j - 1] = RR->Ray[j1 - 1];
+      a[j] = RR->Ray[j1 - 1];
       /* the original column j is mapped to j1, and thus
          copy the corresponding component */
     } else {
-      a[j - 1] = 0;
+      a[j] = 0;
       /* original column is redundant and removed for computation */
     }
   }
@@ -1623,31 +1621,31 @@ template <typename T> void dd_ComputeAinc(dd_polyhedradata<T> *poly) {
      it is poly->m+1.   See dd_ConeDataLoad.
   */
   poly->Ainc = new set_type[m1];
-  for (i = 1; i <= m1; i++)
-    set_initialize(&(poly->Ainc[i - 1]), poly->n);
+  for (i = 0; i < m1; i++)
+    set_initialize(&(poly->Ainc[i]), poly->n);
   set_initialize(&(poly->Ared), m1);
   set_initialize(&(poly->Adom), m1);
 
-  for (k = 1; k <= poly->n; k++) {
-    for (i = 1; i <= poly->m; i++) {
+  for (k = 0; k < poly->n; k++) {
+    for (i = 0; i < poly->m; i++) {
       sum = 0;
-      for (j = 1; j <= poly->d; j++)
-        sum += poly->A[i - 1][j - 1] * M->matrix[k - 1][j - 1];
+      for (j = 0; j < poly->d; j++)
+        sum += poly->A[i][j] * M->matrix[k][j];
       if (sum == 0) {
-        set_addelem(poly->Ainc[i - 1], k);
+        set_addelem(poly->Ainc[i], k + 1);
       }
     }
     if (!(poly->homogeneous) && poly->representation == dd_Inequality) {
-      if (M->matrix[k - 1][0] == 0) {
+      if (M->matrix[k][0] == 0) {
         set_addelem(poly->Ainc[m1 - 1],
-                    k); /* added infinity inequality (1,0,0,...,0) */
+                    k + 1); /* added infinity inequality (1,0,0,...,0) */
       }
     }
   }
 
-  for (i = 1; i <= m1; i++) {
-    if (set_card(poly->Ainc[i - 1]) == M->rowsize) {
-      set_addelem(poly->Adom, i);
+  for (i = 0; i < m1; i++) {
+    if (set_card(poly->Ainc[i]) == M->rowsize) {
+      set_addelem(poly->Adom, i + 1);
     }
   }
   for (i = m1; i >= 1; i--) {
@@ -1718,10 +1716,10 @@ dd_setfamily *dd_CopyIncidence(dd_polyhedradata<T> *poly) {
   if (poly->AincGenerated == false)
     dd_ComputeAinc(poly);
   dd_setfamily *F = dd_CreateSetFamily(poly->n, poly->m1);
-  for (i = 1; i <= poly->m1; i++)
-    for (k = 1; k <= poly->n; k++)
-      if (set_member(k, poly->Ainc[i - 1]))
-        set_addelem(F->set[k - 1], i);
+  for (i = 0; i < poly->m1; i++)
+    for (k = 0; k < poly->n; k++)
+      if (set_member(k + 1, poly->Ainc[i]))
+        set_addelem(F->set[k], i + 1);
   return F;
 }
 
@@ -1802,10 +1800,10 @@ dd_setfamily *dd_CopyInputAdjacency(dd_polyhedradata<T> *poly) {
   if (poly->AincGenerated == false)
     dd_ComputeAinc(poly);
   dd_setfamily *F = dd_CreateSetFamily(poly->m1, poly->m1);
-  for (i = 1; i <= poly->m1; i++)
-    for (j = 1; j <= poly->m1; j++)
-      if (i != j && dd_InputAdjacentQ<T>(common, lastn, poly, i, j))
-        set_addelem(F->set[i - 1], j);
+  for (i = 0; i < poly->m1; i++)
+    for (j = 0; j < poly->m1; j++)
+      if (i != j && dd_InputAdjacentQ<T>(common, lastn, poly, i + 1, j + 1))
+        set_addelem(F->set[i], j + 1);
   return F;
 }
 
@@ -1868,9 +1866,9 @@ dd_matrixdata<T> *dd_CopyInput(dd_polyhedradata<T> *poly) {
 
   M = dd_CreateMatrix<T>(poly->m, poly->d);
   dd_CopyAmatrix(M->matrix, poly->A, poly->m, poly->d);
-  for (i = 1; i <= poly->m; i++)
-    if (poly->EqualityIndex[i] == 1)
-      set_addelem(M->linset, i);
+  for (i = 0; i < poly->m; i++)
+    if (poly->EqualityIndex[i + 1] == 1)
+      set_addelem(M->linset, i + 1);
   // dd_MatrixIntegerFilter(M);
   if (poly->representation == dd_Generator)
     M->representation = dd_Generator;
@@ -1915,17 +1913,17 @@ template <typename T> dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M) {
   lp = dd_CreateLPData<T>(m, d);
   lp->objective = M->objective;
 
-  irev = M->rowsize; /* the first row of the linc reversed inequalities. */
-  for (i = 1; i <= M->rowsize; i++) {
-    if (set_member(i, M->linset)) {
+  irev = M->rowsize - 1; /* the first row of the linc reversed inequalities. */
+  for (i = 0; i < M->rowsize; i++) {
+    if (set_member(i + 1, M->linset)) {
       irev++;
-      set_addelem(lp->equalityset, i); /* it is equality. */
+      set_addelem(lp->equalityset, i + 1); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
       for (j = 0; j < M->colsize; j++)
-        lp->A[irev - 1][j] = -M->matrix[i - 1][j];
+        lp->A[irev][j] = -M->matrix[i][j];
     }
     for (j = 0; j < M->colsize; j++)
-      lp->A[i - 1][j] = M->matrix[i - 1][j];
+      lp->A[i][j] = M->matrix[i][j];
   }
   for (j = 0; j < M->colsize; j++)
     lp->A[m - 1][j] = M->rowvec[j]; /* objective row */
@@ -1954,8 +1952,8 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
   lp = dd_Matrix2LP(M);
   lp->objective =
       dd_LPmax; /* since the objective is zero, this is not important */
-  for (j = 1; j <= M->colsize; j++) {
-    lp->A[m - 1][j - 1] = 0; /* set the objective to zero. */
+  for (j = 0; j < M->colsize; j++) {
+    lp->A[m - 1][j] = 0; /* set the objective to zero. */
   }
 
   return lp;
@@ -2007,30 +2005,30 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R,
   lp = dd_CreateLPData<T>(m, d);
   lp->objective = dd_LPmax;
 
-  irev = M->rowsize; /* the first row of the linc reversed inequalities. */
-  for (i = 1; i <= M->rowsize; i++) {
-    if (set_member(i, L)) {
+  irev = M->rowsize - 1; /* the first row of the linc reversed inequalities. */
+  for (i = 0; i < M->rowsize; i++) {
+    if (set_member(i + 1, L)) {
       irev++;
-      set_addelem(lp->equalityset, i); /* it is equality. */
+      set_addelem(lp->equalityset, i + 1); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
-      for (j = 1; j <= M->colsize; j++)
-        lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 1];
+      for (j = 0; j < M->colsize; j++)
+        lp->A[irev][j] = -M->matrix[i][j];
     } else {
-      if (set_member(i, S)) {
-        lp->A[i - 1][M->colsize] = -1;
+      if (set_member(i + 1, S)) {
+        lp->A[i][M->colsize] = -1;
       }
     }
-    for (j = 1; j <= M->colsize; j++) {
-      lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
+    for (j = 0; j < M->colsize; j++) {
+      lp->A[i][j] = M->matrix[i][j];
     }
   }
-  for (j = 1; j <= d; j++) {
-    lp->A[m - 2][j - 1] = 0; /* initialize */
+  for (j = 0; j < d; j++) {
+    lp->A[m - 2][j] = 0; /* initialize */
   }
   lp->A[m - 2][0] = 1;           /* the bounding constraint. */
   lp->A[m - 2][M->colsize] = -1; /* the bounding constraint. */
-  for (j = 1; j <= d; j++) {
-    lp->A[m - 1][j - 1] = 0; /* initialize */
+  for (j = 0; j < d; j++) {
+    lp->A[m - 1][j] = 0; /* initialize */
   }
   lp->A[m - 1][M->colsize] = 1;
 
@@ -2333,28 +2331,28 @@ void dd_GaussianColumnPivot(dd_colrange d_size, T **X, T **Ts, dd_rowrange r,
   bool is_field = true;
   if (is_field) {
     Xtemp0 = Rtemp[s - 1];
-    for (j = 1; j <= d_size; j++) {
-      if (j != s) {
-        Xtemp = Rtemp[j - 1] / Xtemp0;
-        for (j1 = 1; j1 <= d_size; j1++)
-          Ts[j1 - 1][j - 1] -= Xtemp * Ts[j1 - 1][s - 1];
+    for (j = 0; j < d_size; j++) {
+      if (j + 1 != s) {
+        Xtemp = Rtemp[j] / Xtemp0;
+        for (j1 = 0; j1 < d_size; j1++)
+          Ts[j1][j] -= Xtemp * Ts[j1][s - 1];
       }
     }
-    for (j = 1; j <= d_size; j++)
-      Ts[j - 1][s - 1] /= Xtemp0;
+    for (j = 0; j < d_size; j++)
+      Ts[j][s - 1] /= Xtemp0;
   } else {
     // ring case now
-    for (j = 1; j <= d_size; j++) {
-      if (j != s) {
-        for (j1 = 1; j1 <= d_size; j1++) {
-          Ts[j1 - 1][j - 1] = Rtemp[s - 1] * Ts[j1 - 1][j - 1] -
-                              Rtemp[j - 1] * Ts[j1 - 1][s - 1];
+    for (j = 0; j < d_size; j++) {
+      if (j + 1 != s) {
+        for (j1 = 0; j1 < d_size; j1++) {
+          Ts[j1][j] = Rtemp[s - 1] * Ts[j1][j] -
+                      Rtemp[j] * Ts[j1][s - 1];
         }
       }
     }
     Xtemp0 = Rtemp[s - 1];
-    for (j = 1; j <= d_size; j++)
-      Ts[j - 1][s - 1] /= Xtemp0;
+    for (j = 0; j < d_size; j++)
+      Ts[j][s - 1] /= Xtemp0;
     for (j = 1; j <= d_size; j++) {
       if (j != s) {
         T alpha;
@@ -2389,14 +2387,9 @@ void dd_GaussianColumnPivot2(dd_colrange d_size, T **A, T **Ts,
 }
 
 template <typename T> void dd_SetToIdentity(dd_colrange d_size, T **Ts) {
-  dd_colrange j1, j2;
-
-  for (j1 = 1; j1 <= d_size; j1++) {
-    for (j2 = 1; j2 <= d_size; j2++) {
-      if (j1 == j2)
-        Ts[j1 - 1][j2 - 1] = 1;
-      else
-        Ts[j1 - 1][j2 - 1] = 0;
+  for (dd_colrange j1 = 0; j1 < d_size; j1++) {
+    for (dd_colrange j2 = 0; j2 < d_size; j2++) {
+      Ts[j1][j2] = (j1 == j2) ? 1 : 0;
     }
   }
 }
@@ -2898,16 +2891,15 @@ template <typename T>
 void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
                             data_temp_simplex<T> *data, size_t const &maxiter,
                             [[maybe_unused]] std::ostream &os) {
-  dd_colrange j;
   *err = dd_NoError;
-  for (j = 1; j <= lp->d; j++)
-    lp->A[lp->objrow - 1][j - 1] = -lp->A[lp->objrow - 1][j - 1];
+  for (dd_colrange j = 0; j < lp->d; j++)
+    lp->A[lp->objrow - 1][j] = -lp->A[lp->objrow - 1][j];
   dd_DualSimplexMaximize(lp, err, data, maxiter, os);
   lp->optvalue = -lp->optvalue;
-  for (j = 1; j <= lp->d; j++) {
+  for (dd_colrange j = 0; j < lp->d; j++) {
     if (lp->LPS != dd_Inconsistent)
-      lp->dsol[j - 1] = -lp->dsol[j - 1];
-    lp->A[lp->objrow - 1][j - 1] = -lp->A[lp->objrow - 1][j - 1];
+      lp->dsol[j] = -lp->dsol[j];
+    lp->A[lp->objrow - 1][j] = -lp->A[lp->objrow - 1][j];
   }
 }
 
@@ -3120,16 +3112,16 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
   dd_colrange j;
 
   *err = dd_NoError;
-  for (j = 1; j <= lp->d; j++)
-    lp->A[lp->objrow - 1][j - 1] = -lp->A[lp->objrow - 1][j - 1];
+  for (dd_colrange j = 0; j < lp->d; j++)
+    lp->A[lp->objrow - 1][j] = -lp->A[lp->objrow - 1][j];
   dd_CrissCrossMaximize(lp, err, data, maxiter, os);
   lp->optvalue = -lp->optvalue;
-  for (j = 1; j <= lp->d; j++) {
+  for (dd_colrange j = 0; j < lp->d; j++) {
     if (lp->LPS != dd_Inconsistent) {
       /* Inconsistent certificate stays valid for minimization, 0.94e */
-      lp->dsol[j - 1] = -lp->dsol[j - 1];
+      lp->dsol[j] = -lp->dsol[j];
     }
-    lp->A[lp->objrow - 1][j - 1] = -lp->A[lp->objrow - 1][j - 1];
+    lp->A[lp->objrow - 1][j] = -lp->A[lp->objrow - 1][j];
   }
 }
 
@@ -3268,10 +3260,10 @@ the LP.
     std::cout << "SetSolutions:\n";
   switch (LPS) {
   case dd_Optimal:
-    for (j = 1; j <= d_size; j++) {
-      sol[j - 1] = Ts[j - 1][rhscol - 1];
-      dd_TableauEntry(x, d_size, A, Ts, objrow, j);
-      dsol[j - 1] = -x;
+    for (j = 0; j < d_size; j++) {
+      sol[j] = Ts[j][rhscol - 1];
+      dd_TableauEntry(x, d_size, A, Ts, objrow, j + 1);
+      dsol[j] = -x;
       dd_TableauEntry(optvalue, d_size, A, Ts, objrow, rhscol);
     }
     for (i = 1; i <= m_size; i++) {
@@ -3286,10 +3278,10 @@ the LP.
   case dd_Inconsistent:
     if (localdebug)
       std::cout << "SetSolutions: LP is inconsistent.\n";
-    for (j = 1; j <= d_size; j++) {
-      sol[j - 1] = Ts[j - 1][rhscol - 1];
-      dd_TableauEntry(x, d_size, A, Ts, re, j);
-      dsol[j - 1] = -x;
+    for (j = 0; j < d_size; j++) {
+      sol[j] = Ts[j][rhscol - 1];
+      dd_TableauEntry(x, d_size, A, Ts, re, j + 1);
+      dsol[j] = -x;
     }
     break;
 
@@ -3316,10 +3308,10 @@ the LP.
   case dd_DualInconsistent:
     if (localdebug)
       printf("SetSolutions: LP is dual inconsistent.\n");
-    for (j = 1; j <= d_size; j++) {
-      sol[j - 1] = Ts[j - 1][se - 1];
-      dd_TableauEntry(x, d_size, A, Ts, objrow, j);
-      dsol[j - 1] = -x;
+    for (j = 0; j < d_size; j++) {
+      sol[j] = Ts[j][se - 1];
+      dd_TableauEntry(x, d_size, A, Ts, objrow, j + 1);
+      dsol[j] = -x;
     }
     break;
 
@@ -3336,10 +3328,10 @@ the LP.
       sw = 1;
     else
       sw = -1;
-    for (j = 1; j <= d_size; j++) {
-      sol[j - 1] = sw * Ts[j - 1][se - 1];
-      dd_TableauEntry(x, d_size, A, Ts, objrow, j);
-      dsol[j - 1] = -x;
+    for (j = 0; j < d_size; j++) {
+      sol[j] = sw * Ts[j][se - 1];
+      dd_TableauEntry(x, d_size, A, Ts, objrow, j + 1);
+      dsol[j] = -x;
     }
     if (localdebug)
       std::cout << "SetSolutions: LP is dual inconsistent.\n";
@@ -3525,24 +3517,24 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
   lpnew = dd_CreateLPData<T>(m, d);
   lpnew->objective = dd_LPmax;
 
-  for (i = 1; i <= lp->m; i++)
-    if (lp->A[i - 1][lp->rhscol - 1] > bmax)
-      bmax = lp->A[i - 1][lp->rhscol - 1];
+  for (i = 0; i < lp->m; i++)
+    if (lp->A[i][lp->rhscol - 1] > bmax)
+      bmax = lp->A[i][lp->rhscol - 1];
   bceil = bm * bmax;
 
-  for (i = 1; i <= lp->m; i++)
-    for (j = 1; j <= lp->d; j++)
-      lpnew->A[i - 1][j - 1] = lp->A[i - 1][j - 1];
+  for (i = 0; i < lp->m; i++)
+    for (j = 0; j < lp->d; j++)
+      lpnew->A[i][j] = lp->A[i][j];
 
-  for (i = 1; i <= lp->m; i++)
-    lpnew->A[i - 1][lp->d] = -1;
+  for (i = 0; i < lp->m; i++)
+    lpnew->A[i][lp->d] = -1;
 
-  for (j = 1; j <= lp->d; j++)
-    lpnew->A[m - 2][j - 1] = 0; /* new row (bceil, 0,...,0,-1) */
+  for (j = 0; j < lp->d; j++)
+    lpnew->A[m - 2][j] = 0;     /* new row (bceil, 0,...,0,-1) */
   lpnew->A[m - 2][0] = bceil;   /* new row (bceil, 0,...,0,-1) */
 
-  for (j = 1; j <= d - 1; j++)
-    lpnew->A[m - 1][j - 1] = 0; /* new obj row with (0,...,0,1) */
+  for (j = 0; j < d - 1; j++)
+    lpnew->A[m - 1][j] = 0; /* new obj row with (0,...,0,1) */
   lpnew->A[m - 1][d - 1] = 1;
   return lpnew;
 }
@@ -3564,20 +3556,20 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M) {
   lp->objective = dd_LPmax;
   lp->redcheck_extensive = false; /* this is default */
 
-  irev = M->rowsize; /* the first row of the linc reversed inequalities. */
-  for (i = 1; i <= M->rowsize; i++) {
-    if (set_member(i, M->linset)) {
+  irev = M->rowsize - 1; /* the first row of the linc reversed inequalities. */
+  for (i = 0; i < M->rowsize; i++) {
+    if (set_member(i + 1, M->linset)) {
       irev++;
-      set_addelem(lp->equalityset, i); /* it is equality. */
+      set_addelem(lp->equalityset, i + 1); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
-      for (j = 1; j <= M->colsize; j++) {
-        lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 1];
+      for (j = 0; j < M->colsize; j++) {
+        lp->A[irev][j] = -M->matrix[i][j];
       }
     } else {
-      lp->A[i - 1][d - 1] = -1; /* b_I + A_I x - 1 z >= 0  (z=x_d) */
+      lp->A[i][d - 1] = -1; /* b_I + A_I x - 1 z >= 0  (z=x_d) */
     }
-    for (j = 1; j <= M->colsize; j++) {
-      lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
+    for (j = 0; j < M->colsize; j++) {
+      lp->A[i][j] = M->matrix[i][j];
     }
   }
   lp->A[m - 2][0] = 1;
@@ -3615,24 +3607,24 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M) {
   lp->objective = dd_LPmax;
   lp->redcheck_extensive = false; /* this is default */
 
-  irev = M->rowsize; /* the first row of the linc reversed inequalities. */
-  for (i = 1; i <= M->rowsize; i++) {
-    lp->A[i - 1][0] = 0; /* It is almost completely degerate LP */
-    if (set_member(i, M->linset)) {
+  irev = M->rowsize - 1; /* the first row of the linc reversed inequalities. */
+  for (i = 0; i < M->rowsize; i++) {
+    lp->A[i][0] = 0; /* It is almost completely degerate LP */
+    if (set_member(i + 1, M->linset)) {
       irev++;
-      set_addelem(lp->equalityset, i); /* it is equality. */
+      set_addelem(lp->equalityset, i + 1); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
-      for (j = 2; j <= d - 1; j++) {
-        lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 2];
+      for (j = 1; j < d - 1; j++) {
+        lp->A[irev][j] = -M->matrix[i][j - 1];
       }
       if (localdebug)
-        fprintf(stdout, "equality row %ld generates the reverse row %ld.\n", i,
-                irev);
+        fprintf(stdout, "equality row %ld generates the reverse row %ld.\n",
+                i + 1, irev + 1);
     } else {
-      lp->A[i - 1][d - 1] = -1;
+      lp->A[i][d - 1] = -1;
     }
-    for (j = 2; j <= d - 1; j++) {
-      lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 2];
+    for (j = 1; j < d - 1; j++) {
+      lp->A[i][j] = M->matrix[i][j - 1];
     }
   }
   lp->A[m - 2][0] = 1;
@@ -3665,19 +3657,19 @@ void dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest,
   lp->objective = dd_LPmin;
   lp->redcheck_extensive = false; /* this is default */
 
-  irev = M->rowsize; /* the first row of the linc reversed inequalities. */
-  for (i = 1; i <= M->rowsize; i++) {
-    if (set_member(i, M->linset)) {
+  irev = M->rowsize - 1; /* the first row of the linc reversed inequalities. */
+  for (i = 0; i < M->rowsize; i++) {
+    if (set_member(i + 1, M->linset)) {
       irev++;
-      set_addelem(lp->equalityset, i); /* it is equality. */
-      for (j = 1; j <= d; j++)
-        lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 1];
+      set_addelem(lp->equalityset, i + 1); /* it is equality. */
+      for (j = 0; j < d; j++)
+        lp->A[irev][j] = -M->matrix[i][j];
     }
-    for (j = 1; j <= d; j++)
-      lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
+    for (j = 0; j < d; j++)
+      lp->A[i][j] = M->matrix[i][j];
   }
-  for (j = 1; j <= d; j++)
-    lp->A[m - 1][j - 1] = M->matrix[itest - 1][j - 1];
+  for (j = 0; j < d; j++)
+    lp->A[m - 1][j] = M->matrix[itest - 1][j];
   lp->A[itest - 1][0] += T(1); /* relax the original inequality by one */
 }
 
@@ -3700,26 +3692,25 @@ void dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest,
   lp->objective = dd_LPmin;
   lp->redcheck_extensive = false; /* this is default */
 
-  irev = M->rowsize; /* the first row of the linc reversed inequalities. */
-  for (i = 1; i <= M->rowsize; i++) {
-    if (i == itest)
-      lp->A[i - 1][0] =
-          1; /* this is to make the LP bounded, ie. the min >= -1 */
+  irev = M->rowsize - 1; /* the first row of the linc reversed inequalities. */
+  for (i = 0; i < M->rowsize; i++) {
+    if (i + 1 == itest)
+      lp->A[i][0] = 1; /* this is to make the LP bounded, ie. the min >= -1 */
     else
-      lp->A[i - 1][0] = 0; /* It is almost completely degerate LP */
-    if (set_member(i, M->linset)) {
+      lp->A[i][0] = 0; /* It is almost completely degerate LP */
+    if (set_member(i + 1, M->linset)) {
       irev++;
-      set_addelem(lp->equalityset, i); /* it is equality. */
+      set_addelem(lp->equalityset, i + 1); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
-      for (j = 2; j <= d; j++)
-        lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 2];
+      for (j = 1; j < d; j++)
+        lp->A[irev][j] = -M->matrix[i][j - 1];
     }
-    for (j = 2; j <= d; j++)
-      lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 2];
+    for (j = 1; j < d; j++)
+      lp->A[i][j] = M->matrix[i][j - 1];
   }
   /* objective is to violate the inequality in question.  */
-  for (j = 2; j <= d; j++)
-    lp->A[m - 1][j - 1] = M->matrix[itest - 1][j - 2];
+  for (j = 1; j < d; j++)
+    lp->A[m - 1][j] = M->matrix[itest - 1][j - 1];
   lp->A[m - 1][0] = 0; /* the constant term for the objective is zero */
 }
 
@@ -3758,27 +3749,27 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M,
   lp = dd_CreateLPData<T>(m, d);
   lp->objective = dd_LPmax;
 
-  irev = M->rowsize; /* the first row of the linc reversed inequalities. */
-  for (i = 1; i <= M->rowsize; i++) {
-    if (i == itest)
-      lp->A[i - 1][0] = 0; /* this is a half of the boundary constraint. */
+  irev = M->rowsize - 1; /* the first row of the linc reversed inequalities. */
+  for (i = 0; i < M->rowsize; i++) {
+    if (i + 1 == itest)
+      lp->A[i][0] = 0; /* this is a half of the boundary constraint. */
     else
-      lp->A[i - 1][0] = 0; /* It is almost completely degerate LP */
-    if (set_member(i, M->linset) || i == itest) {
+      lp->A[i][0] = 0; /* It is almost completely degerate LP */
+    if (set_member(i + 1, M->linset) || i + 1 == itest) {
       irev++;
-      set_addelem(lp->equalityset, i); /* it is equality. */
+      set_addelem(lp->equalityset, i + 1); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
-      for (j = 2; j <= d; j++)
-        lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 2];
+      for (j = 1; j < d; j++)
+        lp->A[irev][j] = -M->matrix[i][j - 1];
     }
-    for (j = 2; j <= d; j++) {
-      lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 2];
-      lp->A[m - 1][j - 1] +=
-          lp->A[i - 1][j - 1]; /* the objective is the sum of all ineqalities */
+    for (j = 1; j < d; j++) {
+      lp->A[i][j] = M->matrix[i][j - 1];
+      lp->A[m - 1][j] +=
+          lp->A[i][j]; /* the objective is the sum of all ineqalities */
     }
   }
-  for (j = 2; j <= d; j++) {
-    lp->A[m - 2][j - 1] = -lp->A[m - 1][j - 1];
+  for (j = 1; j < d; j++) {
+    lp->A[m - 2][j] = -lp->A[m - 1][j];
     /* to make an LP bounded.  */
   }
   lp->A[m - 2][0] = 1; /* the constant term for the bounding constraint is 1 */
@@ -5180,8 +5171,8 @@ template <typename T> void dd_FreePolyhedra(dd_polyhedradata<T> *poly) {
     dd_FreeArow(poly->c);
   delete[] poly->EqualityIndex;
   if (poly->AincGenerated) {
-    for (i = 1; i <= poly->m1; i++) {
-      set_free(poly->Ainc[i - 1]);
+    for (i = 0; i < poly->m1; i++) {
+      set_free(poly->Ainc[i]);
     }
     delete[] poly->Ainc;
     set_free(poly->Ared);
@@ -5200,10 +5191,10 @@ void dd_ZeroIndexSet(dd_rowrange m_size, dd_colrange d_size, T **A, T *x,
 
   /* Changed by Marc Pfetsch 010219 */
   set_emptyset(ZS);
-  for (i = 1; i <= m_size; i++) {
-    dd_AValue(&temp, d_size, A, x, i);
+  for (i = 0; i < m_size; i++) {
+    dd_AValue(&temp, d_size, A, x, i + 1);
     if (temp == 0)
-      set_addelem(ZS, i);
+      set_addelem(ZS, i + 1);
   }
 }
 
@@ -5231,23 +5222,20 @@ void dd_CopyNormalizedAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d) {
 template <typename T>
 void dd_PermuteCopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d,
                            dd_rowindex roworder) {
-  dd_rowrange i;
-
-  for (i = 1; i <= m; i++) {
-    dd_CopyArow(Acopy[i - 1], A[roworder[i] - 1], d);
+  for (dd_rowrange i = 0; i < m; i++) {
+    dd_CopyArow(Acopy[i], A[roworder[i + 1] - 1], d);
   }
 }
 
 template <typename T> void dd_ColumnReduce(dd_conedata<T> *cone) {
-  dd_colrange j, j1 = 0;
-  dd_rowrange i;
+  dd_colrange j1 = 0;
 
-  for (j = 1; j <= cone->d; j++) {
+  for (dd_colrange j = 1; j <= cone->d; j++) {
     if (cone->InitialRayIndex[j] > 0) {
       j1++;
       if (j1 < j) {
-        for (i = 1; i <= cone->m; i++)
-          cone->A[i - 1][j1 - 1] = cone->A[i - 1][j - 1];
+        for (dd_rowrange i = 0; i < cone->m; i++)
+          cone->A[i][j1 - 1] = cone->A[i][j - 1];
         cone->newcol[j] = j1;
       }
     } else {

@@ -515,8 +515,28 @@ get_integral_interior_point:=function(FAC, method)
     return EXTint;
 end;
 
-get_dual_desc_kernel:=function(EXT, method, choice)
-    local TmpDir, FileI, FileO, FileE, eProg, command, TheCommand, FAC;
+extract_runtime_from_log:=function(FileE)
+    local lines, line, prefix, rest, idx;
+    if IsExistingFile(FileE)=false then
+        return "unknown";
+    fi;
+    lines:=SplitString(StringFile(FileE), "\n");
+    prefix:="runtime = ";
+    for line in lines do
+        if Length(line) >= Length(prefix) and line{[1..Length(prefix)]}=prefix then
+            rest:=line{[Length(prefix)+1..Length(line)]};
+            idx:=PositionSublist(rest, " timeanddate=");
+            if idx <> fail then
+                rest:=rest{[1..idx-1]};
+            fi;
+            return rest;
+        fi;
+    od;
+    return "unknown";
+end;
+
+get_dual_desc_kernel:=function(EXT, method, choice, print_info)
+    local TmpDir, FileI, FileO, FileE, eProg, command, TheCommand, FAC, runtime_str;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -525,7 +545,13 @@ get_dual_desc_kernel:=function(EXT, method, choice)
     eProg:=GetBinaryFilename("POLY_dual_description");
     TheCommand:=Concatenation(eProg, " rational  ", method, " ", choice, " ", FileI, " ", FileO, " 2>", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("EXT=", Length(EXT), "x", Length(EXT[1]), " command=", method, " runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
+        RemoveFile(FileI);
+        RemoveFile(FileE);
         return "program failure: POLY_dual_description failed to create the file";
     fi;
     FAC:=ReadAsFunction(FileO)();
@@ -535,16 +561,28 @@ get_dual_desc_kernel:=function(EXT, method, choice)
     return FAC;
 end;
 
-get_dual_desc:=function(EXT, method)
-    local choice;
-    choice:="GAP";
-    return get_dual_desc_kernel(EXT, method, choice);
+get_dual_desc:=function(arg)
+    local EXT, method, print_info;
+    EXT:=arg[1];
+    method:=arg[2];
+    if Length(arg) >= 3 then
+        print_info:=arg[3];
+    else
+        print_info:=false;
+    fi;
+    return get_dual_desc_kernel(EXT, method, "GAP", print_info);
 end;
 
-get_dual_desc_incidence:=function(EXT, method)
-    local choice;
-    choice:="GAPincidence";
-    return get_dual_desc_kernel(EXT, method, choice);
+get_dual_desc_incidence:=function(arg)
+    local EXT, method, print_info;
+    EXT:=arg[1];
+    method:=arg[2];
+    if Length(arg) >= 3 then
+        print_info:=arg[3];
+    else
+        print_info:=false;
+    fi;
+    return get_dual_desc_kernel(EXT, method, "GAPincidence", print_info);
 end;
 
 

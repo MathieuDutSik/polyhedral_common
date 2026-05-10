@@ -4,6 +4,7 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheorySafeInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "POLY_lrslib.h"
 // clang-format on
 
@@ -81,6 +82,10 @@ int main(int argc, char *argv[]) {
       }
       if (arith == "rational") {
         using T = mpq_class;
+        return process<T>(eFileI, OutFormat, os);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
         return process<T>(eFileI, OutFormat, os);
       }
       if (arith == "double") {
