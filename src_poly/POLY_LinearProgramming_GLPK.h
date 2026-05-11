@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "POLY_Fundamental.h"
+#include "MAT_SparseMatrix.h"
 #include <glpk.h>
 #include <string>
 #include <vector>

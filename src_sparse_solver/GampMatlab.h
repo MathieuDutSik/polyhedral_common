@@ -4,6 +4,7 @@
 
 // clang-format off>
 #include "MAT_Matrix.h"
+#include "MAT_SparseMatrix.h"
 #include <algorithm>
 #include <string>
 #include <vector>
