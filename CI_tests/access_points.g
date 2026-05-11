@@ -613,6 +613,37 @@ get_cdd_skeletons:=function(EXT)
 end;
 
 
+# Run POLY_LinearDetermineByInequalities.  Given an H-representation
+# matrix FAC, returns a matrix whose rows span the affine span of the
+# polytope (so a 4x4 identity when the polytope is full-dimensional in
+# 4 columns, fewer rows when the system has implicit linearities).
+# Returns a string starting with "program failure: ..." on error.
+get_linear_determine_by_inequalities:=function(FAC)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, Mat;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, FAC);
+    eProg:=GetBinaryFilename("POLY_LinearDetermineByInequalities");
+    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO,
+                              " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        RemoveFile(FileI);
+        RemoveFile(FileE);
+        return Concatenation("program failure: ",
+                             "POLY_LinearDetermineByInequalities ",
+                             "did not create the output");
+    fi;
+    Mat:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return Mat;
+end;
+
+
 test_shortest_realizability:=function(SHV)
     local TmpDir, FileI, FileO, FileE, eProg, TheCommand, eRec;
     TmpDir:=DirectoryTemporary();
