@@ -196,8 +196,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "safe_rational : rational arithmetic based on int64_t that "
                    "fails\n";
       std::cerr << "    gracefully on overflow\n";
-      std::cerr << "integer  : integer arithmetic on input\n";
-      std::cerr << "rational : rational arithmetic on input\n";
+      std::cerr << "mpz_class : integer arithmetic over GMP mpz_class\n";
+      std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
       std::cerr
@@ -221,11 +221,11 @@ int main(int argc, char *argv[]) {
         using T = Rational<SafeInt64>;
         return process<T>(eFileI, choice, os);
       }
-      if (arith == "integer") {
+      if (arith == "mpz_class") {
         using T = mpz_class;
         return process<T>(eFileI, choice, os);
       }
-      if (arith == "rational") {
+      if (arith == "mpq_class") {
         using T = mpq_class;
         return process<T>(eFileI, choice, os);
       }
@@ -261,8 +261,8 @@ int main(int argc, char *argv[]) {
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
-      std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
-                   "RealAlgebraic\n";
+      std::cerr << "Available possibilities: mpq_class, mpz_class, Qsqrt5, "
+                   "Qsqrt2, RealAlgebraic\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(eFileO, call_lrs);

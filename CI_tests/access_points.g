@@ -273,7 +273,7 @@ get_ext_volume:=function(EXT)
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_lrs_volume");
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_lrs_volume should have created a file";
@@ -293,7 +293,7 @@ get_triangulation_of_polytope:=function(EXT)
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_lrs_triangulation");
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_lrs_volume should have created a file";
@@ -356,7 +356,7 @@ get_interior_point:=function(FAC)
     FileO:=Filename(TmpDir, "Interior.out");
     WriteMatrixFile(FileI, FAC);
     eProg:=GetBinaryFilename("POLY_GeometricallyUniqueInteriorPoint");
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_GeometricallyUniqueInteriorPoint failed to create an output file";
@@ -416,7 +416,7 @@ get_group_skeleton:=function(EXT, GRP, LevSearch)
     strOut:=Concatenation(strOut, " ComputeTotalNumberFaces = T\n");
     strOut:=Concatenation(strOut, " method_spann = \"LinearProgramming\"\n");
     strOut:=Concatenation(strOut, " method_final = \"all\"\n");
-    strOut:=Concatenation(strOut, " Arithmetic = \"rational\"\n");
+    strOut:=Concatenation(strOut, " Arithmetic = \"mpq_class\"\n");
     strOut:=Concatenation(strOut, " LevSearch = ", String(LevSearch), "\n");
     strOut:=Concatenation(strOut, "/\n");
     strOut:=Concatenation(strOut, "\n");
@@ -543,7 +543,7 @@ get_dual_desc_kernel:=function(EXT, method, choice, print_info)
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_dual_description");
-    TheCommand:=Concatenation(eProg, " rational  ", method, " ", choice, " ", FileI, " ", FileO, " 2>", FileE);
+    TheCommand:=Concatenation(eProg, " mpq_class ", method, " ", choice, " ", FileI, " ", FileO, " 2>", FileE);
     Exec(TheCommand);
     if print_info then
         runtime_str:=extract_runtime_from_log(FileE);
@@ -597,7 +597,7 @@ get_cdd_skeletons:=function(EXT)
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_cdd_skeletons");
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO,
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO,
                               " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
@@ -626,7 +626,7 @@ get_linear_determine_by_inequalities:=function(FAC)
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, FAC);
     eProg:=GetBinaryFilename("POLY_LinearDetermineByInequalities");
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO,
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO,
                               " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then

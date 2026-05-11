@@ -22,7 +22,7 @@ TestIdx:=function(i)
     #
     eFileIrred1:=Concatenation("Irred_1_", String(i));
     fProg:=GetBinaryFilename("POLY_redundancy");
-    fCommand:=Concatenation(fProg, " HitAndRun rational ", eFile, " GAP ", eFileIrred1);
+    fCommand:=Concatenation(fProg, " HitAndRun mpq_class ", eFile, " GAP ", eFileIrred1);
     Print("fCommand=", fCommand, "\n");
     Exec(fCommand);
     if IsExistingFile(eFileIrred1)=false then
@@ -35,7 +35,7 @@ TestIdx:=function(i)
     if DoTest2_Clarkson then
         eFileIrred2:=Concatenation("Irred_2_", String(i));
         gProg2:=GetBinaryFilename("POLY_redundancy");
-        gCommand2:=Concatenation(gProg2, " Clarkson rational ", eFile, " GAP ", eFileIrred2);
+        gCommand2:=Concatenation(gProg2, " Clarkson mpq_class ", eFile, " GAP ", eFileIrred2);
         Print("gCommand2=", gCommand2, "\n");
         Exec(gCommand2);
         if IsExistingFile(eFileIrred2)=false then
@@ -54,7 +54,7 @@ TestIdx:=function(i)
     if DoTest3_Equivariant then
         eFileIrred3:=Concatenation("Irred_3_", String(i));
         gProg3:=GetBinaryFilename("POLY_redundancyGroup");
-        gCommand3:=Concatenation(gProg3, " Equivariant rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred3);
+        gCommand3:=Concatenation(gProg3, " Equivariant mpq_class ", eFile, " ", eFileGRP, " GAP ", eFileIrred3);
         Exec(gCommand3);
         Print("gCommand3=", gCommand3, "\n");
         if IsExistingFile(eFileIrred3)=false then
@@ -73,7 +73,7 @@ TestIdx:=function(i)
     if DoTest4_ClarksonBlock then
         eFileIrred4:=Concatenation("Irred_4_", String(i));
         gProg4:=GetBinaryFilename("POLY_redundancyGroup");
-        gCommand4:=Concatenation(gProg4, " ClarksonBlock rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred4);
+        gCommand4:=Concatenation(gProg4, " ClarksonBlock mpq_class ", eFile, " ", eFileGRP, " GAP ", eFileIrred4);
         Print("gCommand4=", gCommand4, "\n");
         Exec(gCommand4);
         if IsExistingFile(eFileIrred4)=false then

@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "safe_rational : rational based on int64_t that fails "
                    "gracefully of overflowing\n";
-      std::cerr << "rational : rational arithmetic on input\n";
+      std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
       std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a "
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
         using T = Rational<SafeInt64>;
         return process<T>(eFileI, os_out, std::cerr);
       }
-      if (arith == "rational") {
+      if (arith == "mpq_class") {
         using T = mpq_class;
         return process<T>(eFileI, os_out, std::cerr);
       }
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
-      std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
+      std::cerr << "Available possibilities: mpq_class, Qsqrt5, Qsqrt2, "
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };

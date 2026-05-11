@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "safe_rational : rational arithmetic based on int64_t that "
                    "fails\n";
       std::cerr << "    gracefully if overflowing\n";
-      std::cerr << "rational : rational arithmetic on input\n";
+      std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
       std::cerr
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
         using T = Rational<SafeInt64>;
         return full_process_type<T>(FileFAC, FileINEQ);
       }
-      if (arith == "rational") {
+      if (arith == "mpq_class") {
         using T = mpq_class;
         return full_process_type<T>(FileFAC, FileINEQ);
       }

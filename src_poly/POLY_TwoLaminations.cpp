@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "POLY_TwoLaminations [arith] [opt] [FileM] [OutFormat] "
                    "[OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "arith: rational\n";
+      std::cerr << "arith: mpq_class\n";
       std::cerr << "opt: one or all\n";
       std::cerr << "FileM: File of the matrix\n";
       return -1;
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
     }
     //
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "rational") {
+      if (arith == "mpq_class") {
         using T = mpq_class;
         return process<T>(opt, FileM, OutFormat, os);
       }

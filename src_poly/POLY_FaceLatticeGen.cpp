@@ -17,7 +17,7 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
     using T = Rational<SafeInt64>;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
   }
-  if (arith == "rational") {
+  if (arith == "mpq_class") {
     using T = mpq_class;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
   }

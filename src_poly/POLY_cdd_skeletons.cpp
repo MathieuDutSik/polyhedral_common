@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
                    "boost header library\n";
       std::cerr << "mpq_rational           : rational arithmetic based on "
                    "boost mpq data type\n";
-      std::cerr << "rational               : rational arithmetic over GMP "
+      std::cerr << "mpq_class              : rational arithmetic over GMP "
                    "mpq_class\n";
       std::cerr
           << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::mpq_rational;
         return process<T>(FileEXT, OutFormat, os_out, std::cerr);
       }
-      if (arith == "rational") {
+      if (arith == "mpq_class") {
         using T = mpq_class;
         return process<T>(FileEXT, OutFormat, os_out, std::cerr);
       }

@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
         return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
                                                   OutFormat, os_out);
       }
-      if (arith == "rational") {
+      if (arith == "mpq_class") {
         using T = mpq_class;
         return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
                                                   OutFormat, os_out);

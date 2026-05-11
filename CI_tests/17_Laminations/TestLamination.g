@@ -6,7 +6,7 @@ TestLamination:=function(eRec)
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
     #
     eProg:=GetBinaryFilename("POLY_TwoLaminations");
-    TheCommand:=Concatenation(eProg, " rational one ", eRec.FileIn, " GAP ", FileOut);
+    TheCommand:=Concatenation(eProg, " mpq_class one ", eRec.FileIn, " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");

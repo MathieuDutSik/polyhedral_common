@@ -19,7 +19,7 @@ TestRedundancy:=function(eRec)
     Print("We have eFileGRP=", eFileGRP, "\n");
     #
     fProg:=GetBinaryFilename("POLY_redundancyGroup");
-    fCommand:=Concatenation(fProg, " Equivariant rational ", eRec.eFile, " ", eFileGRP, " GAP ", eFileIrred);
+    fCommand:=Concatenation(fProg, " Equivariant mpq_class ", eRec.eFile, " ", eFileGRP, " GAP ", eFileIrred);
     Print("fCommand=", fCommand, "\n");
     Exec(fCommand);
     if IsExistingFile(eFileIrred)=false then
