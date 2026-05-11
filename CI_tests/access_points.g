@@ -586,6 +586,31 @@ get_dual_desc_incidence:=function(arg)
 end;
 
 
+# Run POLY_cdd_skeletons (cdd::DualDescriptionAdjacencies).
+# Returns rec(FAC, nbVertSkel, SkelEdges, nbVertRidge, RidgeEdges) on
+# success, or a string starting with "program failure: ..." on error.
+get_cdd_skeletons:=function(EXT)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, eRec;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, EXT);
+    eProg:=GetBinaryFilename("POLY_cdd_skeletons");
+    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO,
+                              " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        RemoveFile(FileI);
+        RemoveFile(FileE);
+        return "program failure: POLY_cdd_skeletons did not create the output";
+    fi;
+    eRec:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return eRec;
+end;
 
 
 test_shortest_realizability:=function(SHV)

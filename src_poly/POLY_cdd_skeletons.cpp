@@ -51,8 +51,7 @@ void WriteEdgesCPP(std::ostream &os, Tgr const &gr) {
 template <typename T>
 void process(std::string const &eFile, std::string const &OutFormat,
              std::ostream &os_out, std::ostream &os) {
-  std::ifstream is(eFile);
-  MyMatrix<T> EXT = ReadMatrixLrsCdd<T>(is);
+  MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
   int rnk = RankMat(EXT);
   int nbCol = EXT.cols();
   if (rnk != nbCol) {
