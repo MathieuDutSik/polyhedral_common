@@ -4,6 +4,8 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "Group.h"
 #include "POLY_Kskeletton.h"
 #include "Permutation.h"
@@ -63,6 +65,16 @@ int main(int argc, char *argv[]) {
       }
       if (arith == "mpq_class") {
         using T = mpq_class;
+        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
+                                                  OutFormat, os_out);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
+                                                  OutFormat, os_out);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
         return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
                                                   OutFormat, os_out);
       }

@@ -4,6 +4,8 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "Group.h"
 #include "POLY_Kskeletton.h"
 #include "Permutation.h"
@@ -19,6 +21,14 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
   }
   if (arith == "mpq_class") {
     using T = mpq_class;
+    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
+  }
+  if (arith == "mpq_rational") {
+    using T = boost::multiprecision::mpq_rational;
+    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
+  }
+  if (arith == "cpp_rational") {
+    using T = boost::multiprecision::cpp_rational;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
   }
   if (arith == "Qsqrt5") {

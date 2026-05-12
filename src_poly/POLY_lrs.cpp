@@ -4,6 +4,8 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheorySafeInt.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "POLY_lrslib.h"
 // clang-format on
 
@@ -198,6 +200,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "    gracefully on overflow\n";
       std::cerr << "mpz_class : integer arithmetic over GMP mpz_class\n";
       std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
+      std::cerr << "mpq_rational : rational arithmetic over "
+                   "boost::multiprecision::mpq_rational\n";
+      std::cerr << "cpp_rational : rational arithmetic over "
+                   "boost::multiprecision::cpp_rational\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
       std::cerr
@@ -227,6 +233,14 @@ int main(int argc, char *argv[]) {
       }
       if (arith == "mpq_class") {
         using T = mpq_class;
+        return process<T>(eFileI, choice, os);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        return process<T>(eFileI, choice, os);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
         return process<T>(eFileI, choice, os);
       }
       if (arith == "double") {

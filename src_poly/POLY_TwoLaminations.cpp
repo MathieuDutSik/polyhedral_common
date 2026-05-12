@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "Laminations.h"
 // clang-format on
 
@@ -61,7 +63,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "POLY_TwoLaminations [arith] [opt] [FileM] [OutFormat] "
                    "[OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "arith: mpq_class\n";
+      std::cerr << "arith: mpq_class, mpq_rational, cpp_rational\n";
       std::cerr << "opt: one or all\n";
       std::cerr << "FileM: File of the matrix\n";
       return -1;
@@ -80,6 +82,14 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os) -> void {
       if (arith == "mpq_class") {
         using T = mpq_class;
+        return process<T>(opt, FileM, OutFormat, os);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        return process<T>(opt, FileM, OutFormat, os);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
         return process<T>(opt, FileM, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith=" << arith

@@ -8,6 +8,8 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "POLY_Fundamental.h"
 #include "POLY_DirectDualDesc.h"
 #include "GRP_DoubleCoset.h"
@@ -73,6 +75,10 @@ int main(int argc, char *argv[]) {
                    "fails\n";
       std::cerr << "    gracefully on overflow\n";
       std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
+      std::cerr << "mpq_rational : rational arithmetic over "
+                   "boost::multiprecision::mpq_rational\n";
+      std::cerr << "cpp_rational : rational arithmetic over "
+                   "boost::multiprecision::cpp_rational\n";
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
       std::cerr
@@ -121,6 +127,14 @@ int main(int argc, char *argv[]) {
       }
       if (arith == "mpq_class") {
         using T = Trat;
+        return process<T, Tgroup>(eFileI, eFileG, command, OutFormat, os);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        return process<T, Tgroup>(eFileI, eFileG, command, OutFormat, os);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
         return process<T, Tgroup>(eFileI, eFileG, command, OutFormat, os);
       }
       if (arith == "Qsqrt5") {
