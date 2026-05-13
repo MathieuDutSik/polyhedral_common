@@ -700,7 +700,7 @@ bool operator<(TcombPair<Ttype, Tnorm> const &a,
   if (a.norm > b.norm) {
     return false;
   }
-  return a.pair.first < b.pair.first;
+  return std::less<Ttype>{}(a.pair.first, b.pair.first);
 }
 
 template <typename Ttype, typename Tnorm, typename Fcomplexity>

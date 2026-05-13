@@ -7,8 +7,8 @@
 // clang-format on
 
 template <typename T, typename Tint>
-void process_C(std::string choice, std::string MatFile,
-               std::string const &OutFormat, std::string const &OutFile) {
+void process(std::string choice, std::string MatFile,
+             std::string const &OutFormat, std::string const &OutFile) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
   auto f = [&]() -> MyMatrix<Tint> {
     if (choice == "shortest") {
@@ -72,78 +72,52 @@ void process_C(std::string choice, std::string MatFile,
   print_stderr_stdout_file(OutFile, f_print);
 }
 
-template <typename T>
-void process_B(std::string const &arithmetic_vec, std::string choice,
-               std::string MatFile, std::string OutFormat,
-               std::string OutFile) {
-  if (arithmetic_vec == "mpz_class") {
-    using Tint = mpz_class;
-    return process_C<T, Tint>(choice, MatFile, OutFormat, OutFile);
-  }
-  if (arithmetic_vec == "mpz_int") {
-    using Tint = boost::multiprecision::mpz_int;
-    return process_C<T, Tint>(choice, MatFile, OutFormat, OutFile);
-  }
-  if (arithmetic_vec == "cpp_int") {
-    using Tint = boost::multiprecision::cpp_int;
-    return process_C<T, Tint>(choice, MatFile, OutFormat, OutFile);
-  }
-  std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";
-  throw TerminalException{1};
-}
-
-void process_A(std::string const &arithmetic_mat,
-               std::string const &arithmetic_vec, std::string choice,
-               std::string MatFile, std::string OutFormat,
-               std::string OutFile) {
-  if (arithmetic_mat == "mpq_class") {
-    using T = mpq_class;
-    return process_B<T>(arithmetic_vec, choice, MatFile, OutFormat, OutFile);
-  }
-  if (arithmetic_mat == "mpq_rational") {
-    using T = boost::multiprecision::mpq_rational;
-    return process_B<T>(arithmetic_vec, choice, MatFile, OutFormat, OutFile);
-  }
-  if (arithmetic_mat == "cpp_rational") {
-    using T = boost::multiprecision::cpp_rational;
-    return process_B<T>(arithmetic_vec, choice, MatFile, OutFormat, OutFile);
-  }
-  std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";
-  throw TerminalException{1};
-}
-
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 7 && argc != 5) {
+    if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_GenerateCharacteristicVectorSet arithmetic_mat "
-                   "arithmetic_vect choice [MatFile] [OutFormat] [OutFile]\n";
+      std::cerr << "LATT_GenerateCharacteristicVectorSet [arith] choice [MatFile] [OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
-      std::cerr << "LATT_GenerateCharacteristicVectorSet arithmetic_mat "
-                   "arithmetic_vect choice [MatFile]\n";
+      std::cerr << "LATT_GenerateCharacteristicVectorSet [arith] choice [MatFile]\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic_mat: mpq_class, mpq_rational, cpp_rational\n";
-      std::cerr << "arithmetic_vect: mpz_class, mpz_int, cpp_int\n";
+      std::cerr << "[arith]: gmp, gmp_boost, multi_boost\n";
       std::cerr << "choice: shortest, relevant_voronoi, "
                    "filtered_relevant_voronoi, fullrank, spanning\n";
       std::cerr << "OutFormat: norms, GAP, CPP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }
-    std::string arithmetic_mat = argv[1];
-    std::string arithmetic_vec = argv[2];
-    std::string choice = argv[3];
-    std::string MatFile = argv[4];
+    std::string arith = argv[1];
+    std::string choice = argv[2];
+    std::string MatFile = argv[3];
     std::string OutFormat = "norms";
     std::string OutFile = "stderr";
     if (argc == 7) {
-      OutFormat = argv[5];
-      OutFile = argv[6];
+      OutFormat = argv[4];
+      OutFile = argv[5];
     }
-    process_A(arithmetic_mat, arithmetic_vec, choice, MatFile, OutFormat,
-              OutFile);
+    auto f=[&]() -> void {
+      if (arith == "gmp") {
+        using T = mpq_class;
+        using Tint = mpz_class;
+        return process<T,Tint>(choice, MatFile, OutFormat, OutFile);
+      }
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return process<T,Tint>(choice, MatFile, OutFormat, OutFile);
+      }
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
+        return process<T,Tint>(choice, MatFile, OutFormat, OutFile);
+      }
+      std::cerr << "process_A failure: No matching entry for arith\n";
+      throw TerminalException{1};
+    };
+    f();
     std::cerr << "Normal termination of LATT_GenerateCharacteristicVectorSet\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_GenerateCharacteristicVectorSet\n";
