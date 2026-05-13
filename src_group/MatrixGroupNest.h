@@ -40,6 +40,26 @@ PreImageSubgroupContainer(std::vector<MyMatrix<T>> const &ListMatrGens,
 }
 
 template <typename T, typename Tgroup>
+std::optional<MyMatrix<T>>
+RepresentativeActionMatrixPermSubsetContainer(
+    std::vector<MyMatrix<T>> const &ListMatr,
+    std::vector<typename Tgroup::Telt> const &ListPerm,
+    MyMatrix<T> const &id_matr, Face const &eFace1, Face const &eFace2) {
+  using Telt = typename Tgroup::Telt;
+  using TintGroup = typename Tgroup::Tint;
+  std::vector<MyMatrixContainer<T>> ListMatr_ct = get_vector_mmc(ListMatr);
+  MyMatrixContainer<T> id_matr_ct(id_matr);
+  std::optional<MyMatrixContainer<T>> opt =
+      permutalib::RepresentativeActionMatrixPermSubset<
+          Telt, MyMatrixContainer<T>, TintGroup>(ListMatr_ct, ListPerm,
+                                                  id_matr_ct, eFace1, eFace2);
+  if (opt) {
+    return opt->get_const_m();
+  }
+  return {};
+}
+
+template <typename T, typename Tgroup>
 std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
 StabilizerRightCosetMatrixPermSubsetContainer(
     std::vector<MyMatrix<T>> const &ListMatr,

@@ -810,28 +810,14 @@ inline std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: Beginning of MatrixIntegral_RepresentativeAction(!has)\n";
 #endif
-  using Telt = typename Tgroup::Telt;
-  using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-  std::vector<MyMatrixContainer<T>> ListMatrCont;
-  for (auto & eMatr: ListMatr) {
-    MyMatrixContainer<T> mmc(eMatr);
-    ListMatrCont.push_back(mmc);
-  }
-  MyMatrixContainer<T> id_matr_cont(id_matr);
-  std::optional<MyMatrixContainer<T>> opt =
-      permutalib::RepresentativeActionMatrixPermSubset<Telt, MyMatrixContainer<T>,
-                                                       TintGroup>(
-          ListMatrCont, ListPermGens, id_matr_cont, eFace1, eFace2);
+  std::optional<MyMatrix<T>> opt =
+      RepresentativeActionMatrixPermSubsetContainer<T, Tgroup>(
+          ListMatr, ListPermGens, id_matr, eFace1, eFace2);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: Ending of MatrixIntegral_RepresentativeAction 2\n";
 #endif
-  if (opt) {
-    MyMatrixContainer<T> const& mmc = *opt;
-    return mmc.get_const_m();
-  } else {
-    return {};
-  }
+  return opt;
 }
 
 /*
