@@ -101,51 +101,6 @@ namespace std {
 
 
 
-template<typename T, typename Tgroup>
-std::vector<MyMatrix<T>> PreImageSubgroupContainer(std::vector<MyMatrix<T>> const& ListMatrGens,
-                                                   std::vector<typename Tgroup::Telt> const& ListPermGens,
-                                                   MyMatrix<T> const& id_matr,
-                                                   Tgroup const& stab,
-                                                   [[maybe_unused]] std::ostream& os) {
-  std::vector<MyMatrixContainer<T>> ListMatrGens_ct = get_vector_mmc(ListMatrGens);
-  MyMatrixContainer<T> id_matr_ct(id_matr);
-  std::vector<MyMatrixContainer<T>> l_ret_ct =
-    permutalib::PreImageSubgroup<Tgroup,MyMatrixContainer<T>>(ListMatrGens_ct,
-                                                              ListPermGens,
-                                                              id_matr_ct,
-                                                              stab);
-  std::vector<MyMatrix<T>> l_ret;
-  for (auto & eMatr: l_ret_ct) {
-    l_ret.push_back(eMatr.get_m());
-  }
-  return l_ret;
-}
-
-template<typename T, typename Tgroup>
-std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
-StabilizerRightCosetMatrixPermSubsetContainer(std::vector<MyMatrix<T>> const &ListMatr,
-                                              std::vector<typename Tgroup::Telt> const& ListPerm,
-                                              MyMatrix<T> const& id_matr,
-                                              Face const& eFace) {
-  using Telt = typename Tgroup::Telt;
-  using TintGroup = typename Tgroup::Tint;
-  std::vector<MyMatrixContainer<T>> ListMatr_ct = get_vector_mmc(ListMatr);
-  MyMatrixContainer<T> id_matr_ct(id_matr);
-  std::pair<std::vector<MyMatrixContainer<T>>, std::vector<MyMatrixContainer<T>>> pair =
-      permutalib::StabilizerRightCosetMatrixPermSubset<Telt, MyMatrixContainer<T>, TintGroup>(
-          ListMatr_ct, ListPerm, id_matr_ct, eFace);
-  std::vector<MyMatrix<T>> list1;
-  for (auto & M: pair.first) {
-    list1.push_back(M.get_const_m());
-  }
-  std::vector<MyMatrix<T>> list2;
-  for (auto & M: pair.second) {
-    list2.push_back(M.get_const_m());
-  }
-  return {std::move(list1), std::move(list2)};
-}
-
-
 template <typename T>
 void write_matrix_group(std::vector<MyMatrix<T>> const &list_mat,
                         std::string const &context) {

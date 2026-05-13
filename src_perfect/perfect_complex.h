@@ -7,6 +7,7 @@
 #include "triples.h"
 #include "GampMatlab.h"
 #include "FiniteMatrixGroupTest.h"
+#include "MatrixGroupNest.h"
 #include "MatrixGroupSimplification.h"
 #include "SignatureSymmetric.h"
 #include "boost_serialization.h"
@@ -89,12 +90,12 @@ struct PerfectFormInfoForComplex {
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> gram;
   MyMatrix<Tint> EXT; // Not necessarily full-dimensional
-  std::optional<permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>> opt_pre_imager;
+  std::optional<PreImagerElementContainer<Tint, Telt, TintGroup>> opt_pre_imager;
   Tgroup GRP_ext; // Group acting on the shortest vectors
   std::vector<sing_adj<Tint>> l_sing_adj;
   MyMatrix<Tint> find_matrix(Telt const& x, [[maybe_unused]] std::ostream& os) const {
     if (opt_pre_imager) {
-      permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup> const& pre_imager = *opt_pre_imager;
+      PreImagerElementContainer<Tint, Telt, TintGroup> const& pre_imager = *opt_pre_imager;
       std::optional<MyMatrix<Tint>> opt = pre_imager.get_preimage(x);
       MyMatrix<Tint> M = unfold_opt(opt, "The element elt should belong to the group");
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
@@ -156,7 +157,7 @@ inline void load(Archive &ar, PerfectFormInfoForComplex<T, Tint, Tgroup> &val,
     std::vector<Telt> l_perm =
         get_list_elt_from_list_matrices<Tint, Telt>(l_matr, val.EXT, std::cerr);
     MyMatrix<Tint> id = IdentityMat<Tint>(val.EXT.cols());
-    val.opt_pre_imager = permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>(
+    val.opt_pre_imager = PreImagerElementContainer<Tint, Telt, TintGroup>(
         l_matr, l_perm, id);
   } else {
     val.opt_pre_imager = {};
@@ -235,12 +236,12 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
     }
     MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.rec_shv.SHV);
     // In some cases, EXT is not full dimensional. We need an alternate strategy for that.
-    std::optional<permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>> opt_pre_imager;
+    std::optional<PreImagerElementContainer<Tint, Telt, TintGroup>> opt_pre_imager;
     if (RankMat(EXT) < EXT.cols()) {
       std::vector<MyMatrix<Tint>> const& l_matr = ePerf.x.GRP_matr;
       std::vector<Telt> l_perm = get_list_elt_from_list_matrices<Tint,Telt>(l_matr, EXT, os);
       MyMatrix<Tint> id = IdentityMat<Tint>(EXT.cols());
-      opt_pre_imager = permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>(l_matr, l_perm, id);
+      opt_pre_imager = PreImagerElementContainer<Tint, Telt, TintGroup>(l_matr, l_perm, id);
     }
     Tgroup const& GRP_ext = ePerf.x.GRP;
     PerfectFormInfoForComplex<T,Tint,Tgroup> perfect{ePerf.x.Gram, std::move(EXT), opt_pre_imager, GRP_ext, std::move(l_sing_adj)};

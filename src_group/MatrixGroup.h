@@ -16,6 +16,7 @@
 #include "lorentzian_linalg.h"
 #include "MatrixGroupSimplification.h"
 #include "MatrixGroupBasic.h"
+#include "MatrixGroupNest.h"
 #include "MatrixGroupLemma.h"
 #include "TestGroup.h"
 #include <limits>
@@ -167,21 +168,20 @@ struct FiniteIsotropicMatrixGroupHelper {
 template <typename T, typename Telt, typename TintGroup>
 struct PreImager_General {
 private:
-  permutalib::PreImagerElement<Telt, MyMatrixContainer<T>, TintGroup> inner;
+  PreImagerElementContainer<T, Telt, TintGroup> inner;
 
 public:
   PreImager_General(std::vector<MyMatrix<T>> const &l_matr,
                     std::vector<Telt> const &l_perm, int const &dim)
-    : inner(get_vector_mmc(l_matr), l_perm, IdentityMat<T>(dim)) {
+    : inner(l_matr, l_perm, IdentityMat<T>(dim)) {
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "MATGRP: After building inner\n";
 #endif
   }
   MyMatrix<T> pre_image_elt(Telt const &elt,
                             [[maybe_unused]] std::ostream &os) const {
-    std::optional<MyMatrixContainer<T>> opt = inner.get_preimage(elt);
-    MyMatrixContainer<T> mmc = unfold_opt(opt, "The element elt should belong to the group");
-    return mmc.get_const_m();
+    std::optional<MyMatrix<T>> opt = inner.get_preimage(elt);
+    return unfold_opt(opt, "The element elt should belong to the group");
   }
 #if defined SANITY_CHECK_MATRIX_GROUP || defined DEBUG_MATRIX_GROUP ||         \
     defined TIMINGS_MATRIX_GROUP

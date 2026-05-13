@@ -3,7 +3,6 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
-#include "Group.h"
 #include "Permutation.h"
 #include "MatrixGroupSimplification.h"
 // clang-format on
