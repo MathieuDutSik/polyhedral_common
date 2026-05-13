@@ -57,8 +57,7 @@ PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const &ListMatr,
      << " |ListPerm|=" << ListPerm.size() << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatr1 =
-      permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(ListMatr, ListPerm,
-                                                        id_matr, eGRP);
+    PreImageSubgroupContainer<T,Tgroup>(ListMatr, ListPerm, id_matr, eGRP, os);
 #ifdef TIMINGS_MATRIX_GROUP_LEMMA
   os << "|MATGRPBAS: PreImageSubgroupOneStep, permutalib::PreImageSubgroup|="
      << time << "\n";

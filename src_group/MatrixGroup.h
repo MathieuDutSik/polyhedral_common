@@ -166,20 +166,21 @@ struct FiniteIsotropicMatrixGroupHelper {
 template <typename T, typename Telt, typename TintGroup>
 struct PreImager_General {
 private:
-  permutalib::PreImagerElement<Telt, MyMatrix<T>, TintGroup> inner;
+  permutalib::PreImagerElement<Telt, MyMatrixContainer<T>, TintGroup> inner;
 
 public:
   PreImager_General(std::vector<MyMatrix<T>> const &l_matr,
                     std::vector<Telt> const &l_perm, int const &dim)
-      : inner(l_matr, l_perm, IdentityMat<T>(dim)) {
+    : inner(get_vector_mmc(l_matr), l_perm, IdentityMat<T>(dim)) {
 #ifdef DEBUG_MATRIX_GROUP
     std::cerr << "MATGRP: After building inner\n";
 #endif
   }
   MyMatrix<T> pre_image_elt(Telt const &elt,
                             [[maybe_unused]] std::ostream &os) const {
-    std::optional<MyMatrix<T>> opt = inner.get_preimage(elt);
-    return unfold_opt(opt, "The element elt should belong to the group");
+    std::optional<MyMatrixContainer<T>> opt = inner.get_preimage(elt);
+    MyMatrixContainer<T> mmc = unfold_opt(opt, "The element elt should belong to the group");
+    return mmc.get_const_m();
   }
 #if defined SANITY_CHECK_MATRIX_GROUP || defined DEBUG_MATRIX_GROUP ||         \
     defined TIMINGS_MATRIX_GROUP
@@ -782,12 +783,9 @@ MatrixIntegral_Stabilizer_RightCoset(
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: Begin MatrixIntegral_Stabilizer(!has)\n";
 #endif
-  using Telt = typename Tgroup::Telt;
-  using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
   std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
-      permutalib::StabilizerRightCosetMatrixPermSubset<Telt, MyMatrix<T>,
-                                                       TintGroup>(
+    StabilizerRightCosetMatrixPermSubsetContainer<T,Tgroup>(
           ListMatr, ListPermGens, id_matr, eFace);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: After StabilizerRightCosetMatrixPermSubset\n";
@@ -814,14 +812,25 @@ inline std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-  std::optional<MyMatrix<T>> opt =
-      permutalib::RepresentativeActionMatrixPermSubset<Telt, MyMatrix<T>,
+  std::vector<MyMatrixContainer<T>> ListMatrCont;
+  for (auto & eMatr: ListMatr) {
+    MyMatrixContainer<T> mmc(eMatr);
+    ListMatrCont.push_back(mmc);
+  }
+  MyMatrixContainer<T> id_matr_cont(id_matr);
+  std::optional<MyMatrixContainer<T>> opt =
+      permutalib::RepresentativeActionMatrixPermSubset<Telt, MyMatrixContainer<T>,
                                                        TintGroup>(
-          ListMatr, ListPermGens, id_matr, eFace1, eFace2);
+          ListMatrCont, ListPermGens, id_matr_cont, eFace1, eFace2);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: Ending of MatrixIntegral_RepresentativeAction 2\n";
 #endif
-  return opt;
+  if (opt) {
+    MyMatrixContainer<T> const& mmc = *opt;
+    return mmc.get_const_m();
+  } else {
+    return {};
+  }
 }
 
 /*

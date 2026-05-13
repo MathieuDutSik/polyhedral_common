@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "Permutation.h"
+#include "Group.h"
 #include "MatrixGroupSimplification.h"
 // clang-format on
 
