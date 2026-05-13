@@ -32,8 +32,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   {
     std::map<std::string, int> ListIntValues;
     std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic_T"] = "gmp_rational";
-    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["arithmetic"] = "gmp";
     ListIntValues["n"] = -1;
     SingleBlock BlockDATA;
     BlockDATA.setListIntValues(ListIntValues);

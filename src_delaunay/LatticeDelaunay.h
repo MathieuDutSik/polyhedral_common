@@ -852,8 +852,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   // DATA
   {
     std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic_T"] = "gmp_rational";
-    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["arithmetic"] = "gmp";
     ListStringValues["GRAMfile"] = "unset.gram";
     ListStringValues["SVRfile"] = "unset.svr";
     ListStringValues["choice_initial"] = "direct";

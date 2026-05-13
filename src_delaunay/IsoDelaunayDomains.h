@@ -1859,8 +1859,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   // DATA
   {
     std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic_T"] = "gmp_rational";
-    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["arithmetic"] = "gmp";
     ListStringValues["FileDualDescription"] = "unset";
     ListStringValues["CommonGramMat"] = "unset";
     ListStringValues["CVPmethod"] = "SVexact";

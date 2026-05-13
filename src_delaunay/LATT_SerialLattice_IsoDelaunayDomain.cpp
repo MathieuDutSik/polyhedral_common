@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "IsoDelaunayDomains.h"
 #include "Permutation.h"
@@ -53,31 +55,28 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
   }
 }
 
-template <typename T> void process_B(FullNamelist const &eFull) {
-  std::string arithmetic_Tint =
-      GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
-  if (arithmetic_Tint == "gmp_integer") {
+void process_C(FullNamelist const &eFull) {
+  std::string arithmetic =
+      GetNamelistStringEntry(eFull, "DATA", "arithmetic");
+  if (arithmetic == "gmp") {
+    using T = mpq_class;
     using Tint = mpz_class;
     return process_A<T, Tint>(eFull);
   }
-  std::cerr << "LATT_SerialLattice_IsoDelaunayDomain B: Failed to find a "
-               "matching type for arithmetic_Tint="
-            << arithmetic_Tint << "\n";
-  std::cerr << "Available types: gmp_integer\n";
-  throw TerminalException{1};
-}
-
-void process_C(FullNamelist const &eFull) {
-  std::string arithmetic_T =
-      GetNamelistStringEntry(eFull, "DATA", "arithmetic_T");
-  if (arithmetic_T == "gmp_rational") {
-    using T = mpq_class;
-    return process_B<T>(eFull);
+  if (arithmetic == "gmp_boost") {
+    using T = boost::multiprecision::mpq_rational;
+    using Tint = boost::multiprecision::mpz_int;
+    return process_A<T, Tint>(eFull);
   }
-  std::cerr << "LATT_SerialLattice_IsoDelaunayDomain A: Failed to find a "
-               "matching type for arithmetic_T="
-            << arithmetic_T << "\n";
-  std::cerr << "Available types: gmp_rational\n";
+  if (arithmetic == "multi_boost") {
+    using T = boost::multiprecision::cpp_rational;
+    using Tint = boost::multiprecision::cpp_int;
+    return process_A<T, Tint>(eFull);
+  }
+  std::cerr << "LATT_SerialLattice_IsoDelaunayDomain: Failed to find a "
+               "matching type for arithmetic="
+            << arithmetic << "\n";
+  std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
   throw TerminalException{1};
 }
 

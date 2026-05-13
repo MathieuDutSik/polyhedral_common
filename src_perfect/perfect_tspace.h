@@ -395,8 +395,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
   // DATA
   {
     std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic_T"] = "gmp_rational";
-    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["arithmetic"] = "gmp";
     ListStringValues["FileDualDescription"] = "unset";
     SingleBlock BlockDATA;
     BlockDATA.setListStringValues(ListStringValues);
@@ -416,8 +415,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
   {
     std::map<std::string, std::string> ListStringValues;
     std::map<std::string, bool> ListBoolValues;
-    ListStringValues["arithmetic_T"] = "gmp_rational";
-    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["arithmetic"] = "gmp";
     ListStringValues["FileDualDescription"] = "unset";
     ListStringValues["CacheFile"] = "none";
     ListBoolValues["ComputeComplex"] = false;

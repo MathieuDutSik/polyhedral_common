@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "IsoDelaunayDomains_mpi.h"
 #include "Permutation.h"
@@ -15,32 +17,28 @@ void process_C(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   return ComputeLatticeIsoDelaunayDomains_MPI<T, Tint, Tgroup>(comm, eFull);
 }
 
-template <typename T>
-void process_B(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  std::string arithmetic_Tint =
-      GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
-  if (arithmetic_Tint == "gmp_integer") {
+void process_A(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  std::string arithmetic =
+      GetNamelistStringEntry(eFull, "DATA", "arithmetic");
+  if (arithmetic == "gmp") {
+    using T = mpq_class;
     using Tint = mpz_class;
     return process_C<T, Tint>(comm, eFull);
   }
-  std::cerr << "LATT_MPI_Lattice_IsoDelaunayDomain B: Failed to find a "
-               "matching type for arithmetic_Tint="
-            << arithmetic_Tint << "\n";
-  std::cerr << "Available types: gmp_integer\n";
-  throw TerminalException{1};
-}
-
-void process_A(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  std::string arithmetic_T =
-      GetNamelistStringEntry(eFull, "DATA", "arithmetic_T");
-  if (arithmetic_T == "gmp_rational") {
-    using T = mpq_class;
-    return process_B<T>(comm, eFull);
+  if (arithmetic == "gmp_boost") {
+    using T = boost::multiprecision::mpq_rational;
+    using Tint = boost::multiprecision::mpz_int;
+    return process_C<T, Tint>(comm, eFull);
   }
-  std::cerr << "LATT_MPI_Lattice_IsoDelaunayDomain A: Failed to find a "
-               "matching type for arithmetic_T="
-            << arithmetic_T << "\n";
-  std::cerr << "Available types: gmp_rational\n";
+  if (arithmetic == "multi_boost") {
+    using T = boost::multiprecision::cpp_rational;
+    using Tint = boost::multiprecision::cpp_int;
+    return process_C<T, Tint>(comm, eFull);
+  }
+  std::cerr << "LATT_MPI_Lattice_IsoDelaunayDomain: Failed to find a "
+               "matching type for arithmetic="
+            << arithmetic << "\n";
+  std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
   throw TerminalException{1};
 }
 
