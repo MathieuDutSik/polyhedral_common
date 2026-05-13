@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "enum_robust_covering.h"
 // clang-format on
@@ -37,6 +39,16 @@ void process_A(std::string const &arithmetic, size_t const &n_iter,
     using Tint = mpz_class;
     return process_B<T, Tint>(n_iter, MatFile, OutFormat, OutFile);
   }
+  if (arithmetic == "gmp_boost") {
+    using T = boost::multiprecision::mpq_rational;
+    using Tint = boost::multiprecision::mpz_int;
+    return process_B<T, Tint>(n_iter, MatFile, OutFormat, OutFile);
+  }
+  if (arithmetic == "multi_boost") {
+    using T = boost::multiprecision::cpp_rational;
+    using Tint = boost::multiprecision::cpp_int;
+    return process_B<T, Tint>(n_iter, MatFile, OutFormat, OutFile);
+  }
   std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";
   throw TerminalException{1};
 }
@@ -52,7 +64,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "       or\n";
       std::cerr << "Robust_RandomVertexEstimation arithmetic n_iter [MatFile]\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic: gmp\n";
+      std::cerr << "arithmetic: gmp, gmp_boost, multi_boost\n";
+      std::cerr << "  gmp         : T = mpq_class, Tint = mpz_class\n";
+      std::cerr << "  gmp_boost   : T = boost::multiprecision::mpq_rational, Tint = boost::multiprecision::mpz_int\n";
+      std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, Tint = boost::multiprecision::cpp_int\n";
       std::cerr << "n_iter: 1, 10, or whatever you want\n";
       std::cerr << "OutFormat: GAP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";

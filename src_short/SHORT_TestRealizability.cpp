@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "Group.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "Permutation.h"
 #include "SHORT_Realizability.h"
@@ -56,7 +58,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "SHORT_TestRealizability [arith] [FileIn] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "[arith]        : The arithmetic being used, only gmp is possible\n";
+      std::cerr << "[arith]        : The arithmetic being used: gmp, gmp_boost, or multi_boost\n";
+      std::cerr << "  gmp         : T = mpq_class, Tint = mpz_class\n";
+      std::cerr << "  gmp_boost   : T = boost::multiprecision::mpq_rational, Tint = boost::multiprecision::mpz_int\n";
+      std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, Tint = boost::multiprecision::cpp_int\n";
       std::cerr << "[FileIn]       : The input file of the system\n";
       std::cerr << "[OutFormat]    : The output format, TXT or GAP\n";
       std::cerr << "[OutFile]      : The output file of the program\n";
@@ -76,6 +81,16 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
+        return test_realizability<T,Tint>(FileSHV, OutFormat, OutFile);
+      }
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return test_realizability<T,Tint>(FileSHV, OutFormat, OutFile);
+      }
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
         return test_realizability<T,Tint>(FileSHV, OutFormat, OutFile);
       }
       std::cerr << "SHORT_TestRealizability failed to find mathching arothmetic\n";

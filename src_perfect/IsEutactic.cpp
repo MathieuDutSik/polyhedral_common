@@ -1,7 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheory.h"
 #include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheorySafeInt.h"
@@ -29,6 +30,16 @@ void compute_eutacticity(std::string const &arithmetic,
   if (arithmetic == "gmp") {
     using T = mpq_class;
     using Tint = mpz_class;
+    return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
+  }
+  if (arithmetic == "gmp_boost") {
+    using T = boost::multiprecision::mpq_rational;
+    using Tint = boost::multiprecision::mpz_int;
+    return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
+  }
+  if (arithmetic == "multi_boost") {
+    using T = boost::multiprecision::cpp_rational;
+    using Tint = boost::multiprecision::cpp_int;
     return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
   }
   std::cerr << "Failed to find a matching arithmetic\n";

@@ -1,8 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+
 // clang-format off
-#include "NumberTheory.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheory.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "edgewalk.h"
@@ -13,7 +14,7 @@ void process(std::string const &MatFile, std::string const &OutFormat,
              std::ostream &os_out) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
-  using TintGroup = mpz_class;
+  using TintGroup = Tint;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
   MyMatrix<T> LorMat = ReadMatrixFile<T>(MatFile);
   //
@@ -47,6 +48,16 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
+        return process<T, Tint>(MatFile, OutFormat, os_out);
+      }
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return process<T, Tint>(MatFile, OutFormat, os_out);
+      }
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(MatFile, OutFormat, os_out);
       }
       std::cerr << "Failed to find matching entry for arith=" << arith << "\n";

@@ -1,7 +1,7 @@
 // Copyright (C) 202" Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
+#include "NumberTheoryCommon.h"
 #include "CombinedAlgorithms.h"
 #include "Group.h"
 #include "Permutation.h"

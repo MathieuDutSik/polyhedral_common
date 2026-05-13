@@ -3,6 +3,8 @@
 // clang-format off
 #include "Permutation.h"
 #include "Group.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "enum_robust_covering.h"
 // clang-format on
@@ -53,7 +55,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "       or\n";
       std::cerr << "Robust_PVoronoi_Stabilizer [arith] [MatFile] [PVoronoiFile]\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic: gmp\n";
+      std::cerr << "arithmetic: gmp, gmp_boost, multi_boost\n";
+      std::cerr << "  gmp         : T = mpq_class, Tint = mpz_class\n";
+      std::cerr << "  gmp_boost   : T = boost::multiprecision::mpq_rational, Tint = boost::multiprecision::mpz_int\n";
+      std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, Tint = boost::multiprecision::cpp_int\n";
       std::cerr << "OutFormat: GAP, CPP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
@@ -71,6 +76,16 @@ int main(int argc, char *argv[]) {
       if (arithmetic == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
+        return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
+      }
+      if (arithmetic == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
+      }
+      if (arithmetic == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
       }
       std::cerr << "failure: No matching entry for arithmetic\n";

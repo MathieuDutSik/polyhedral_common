@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "FiniteMatrixGroupFund.h"
 // clang-format on
@@ -50,6 +52,14 @@ int main(int argc, char *argv[]) {
     auto f=[&]() -> void {
       if (arith == "gmp") {
         using Tint = mpz_class;
+        return process<Tint>(FileListMat, OutFormat, OutFile);
+      }
+      if (arith == "gmp_boost") {
+        using Tint = boost::multiprecision::mpz_int;
+        return process<Tint>(FileListMat, OutFormat, OutFile);
+      }
+      if (arith == "multi_boost") {
+        using Tint = boost::multiprecision::cpp_int;
         return process<Tint>(FileListMat, OutFormat, OutFile);
       }
       std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";

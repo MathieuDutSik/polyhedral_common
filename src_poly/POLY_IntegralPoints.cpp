@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "POLY_PolytopeInt.h"
 // clang-format on
@@ -70,6 +72,16 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
+        return process<T,Tint>(FileFac, method, OutFormat, OutFile);
+      }
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return process<T,Tint>(FileFac, method, OutFormat, OutFile);
+      }
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
         return process<T,Tint>(FileFac, method, OutFormat, OutFile);
       }
       std::cerr << "Failed to find a matching arithmetic for arith=" << arith << "\n";

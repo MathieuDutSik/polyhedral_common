@@ -1,7 +1,9 @@
 // Copyright (C) 202" Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheoryCommon.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryGmp.h"
+#include "NumberTheoryCommon.h"
 #include "NumberTheorySafeInt.h"
 #include "Positivity.h"
 // clang-format on
@@ -51,7 +53,7 @@ int main(int argc, char *argv[]) {
       std::cerr
           << "LATT_FindPositiveVector [arith] [FileI] [CritNorm] [StrictIneq]\n";
       std::cerr << "\n";
-      std::cerr << "Possibilities for arith: gmp\n";
+      std::cerr << "Possibilities for arith: gmp, gmp_boost, multi_boost\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -69,6 +71,18 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
+        return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
+                                os);
+      }
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
+                                os);
+      }
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
                                 os);
       }

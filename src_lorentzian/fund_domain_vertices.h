@@ -2,6 +2,8 @@
 #ifndef SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
 #define SRC_LORENTZIAN_FUND_DOMAIN_VERTICES_H_
 
+// clang-format off
+#include "lorentzian_linalg.h"
 #include <limits>
 #include <set>
 #include <string>
@@ -9,6 +11,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #ifdef DEBUG
 #define DEBUG_QMAT

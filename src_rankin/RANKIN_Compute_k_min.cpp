@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "rational.h"
 #include "Enumeration_k_space.h"
@@ -25,6 +27,16 @@ void compute_k_min(std::string const &arithmetic, int const &k,
   if (arithmetic == "gmp") {
     using T = mpq_class;
     using Tint = mpz_class;
+    return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
+  }
+  if (arithmetic == "gmp_boost") {
+    using T = boost::multiprecision::mpq_rational;
+    using Tint = boost::multiprecision::mpz_int;
+    return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
+  }
+  if (arithmetic == "multi_boost") {
+    using T = boost::multiprecision::cpp_rational;
+    using Tint = boost::multiprecision::cpp_int;
     return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
   }
   if (arithmetic == "double") {

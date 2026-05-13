@@ -3,6 +3,8 @@
 /* Copyright: Frank Vallentin 2005, frank.vallentin@gmail.com */
 
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
 # include "NumberTheoryBoostGmpInt.h"
 #else
@@ -125,6 +127,16 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
+        return process<T, Tint>(choice, FileGram, FileVect, OutFormat, os);
+      }
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return process<T, Tint>(choice, FileGram, FileVect, OutFormat, os);
+      }
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(choice, FileGram, FileVect, OutFormat, os);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith

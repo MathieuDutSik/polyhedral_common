@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "perfect_complex.h"
 #include "Permutation.h"
@@ -88,6 +90,16 @@ int main(int argc, char *argv[]) {
       if (arithmetic == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
+        return process<T,Tint,Tgroup>(eFull);
+      }
+      if (arithmetic == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return process<T,Tint,Tgroup>(eFull);
+      }
+      if (arithmetic == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
         return process<T,Tint,Tgroup>(eFull);
       }
       std::cerr << "Failed to find a matching entry for arithmetic=" << arithmetic << "\n";

@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "Shvec_exact.h"
 #include "LatticeStabEquiCan.h"
@@ -40,7 +42,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_ComputeShortestOrbitsBasis [arith] [FileM] "
                    "[OutFormat] [OutFille]\n";
       std::cerr << "\n";
-      std::cerr << "arith: gmp\n";
+      std::cerr << "arith: gmp, gmp_boost, multi_boost\n";
       std::cerr << "FileM: The Gram matrix on input\n";
       return -1;
     }
@@ -62,6 +64,16 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
+        return compute_orbit_basis<Tgroup, T, Tint>(FileM, OutFormat, os);
+      }
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return compute_orbit_basis<Tgroup, T, Tint>(FileM, OutFormat, os);
+      }
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
         return compute_orbit_basis<Tgroup, T, Tint>(FileM, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith=" << arith

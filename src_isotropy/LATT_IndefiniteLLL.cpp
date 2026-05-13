@@ -71,18 +71,16 @@ int main(int argc, char *argv[]) {
         using Tint = SafeInt64;
         return process<T, Tint>(FileI, OutFormat, os);
       }
-      if (arith == "boost_cpp") {
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return process<T, Tint>(FileI, OutFormat, os);
+      }
+      if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(FileI, OutFormat, os);
       }
-      /*
-      if (arith == "boost_gmp") {
-        using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return process<T,Tint>(FileI, OutFormat, os);
-      }
-      */
       std::cerr << "Failed to find a matching type\n";
       throw TerminalException{1};
     };
