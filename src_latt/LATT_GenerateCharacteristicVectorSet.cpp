@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "InvariantVectorFamily.h"
 // clang-format on
@@ -78,6 +80,14 @@ void process_B(std::string const &arithmetic_vec, std::string choice,
     using Tint = mpz_class;
     return process_C<T, Tint>(choice, MatFile, OutFormat, OutFile);
   }
+  if (arithmetic_vec == "mpz_int") {
+    using Tint = boost::multiprecision::mpz_int;
+    return process_C<T, Tint>(choice, MatFile, OutFormat, OutFile);
+  }
+  if (arithmetic_vec == "cpp_int") {
+    using Tint = boost::multiprecision::cpp_int;
+    return process_C<T, Tint>(choice, MatFile, OutFormat, OutFile);
+  }
   std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";
   throw TerminalException{1};
 }
@@ -88,6 +98,14 @@ void process_A(std::string const &arithmetic_mat,
                std::string OutFile) {
   if (arithmetic_mat == "mpq_class") {
     using T = mpq_class;
+    return process_B<T>(arithmetic_vec, choice, MatFile, OutFormat, OutFile);
+  }
+  if (arithmetic_mat == "mpq_rational") {
+    using T = boost::multiprecision::mpq_rational;
+    return process_B<T>(arithmetic_vec, choice, MatFile, OutFormat, OutFile);
+  }
+  if (arithmetic_mat == "cpp_rational") {
+    using T = boost::multiprecision::cpp_rational;
     return process_B<T>(arithmetic_vec, choice, MatFile, OutFormat, OutFile);
   }
   std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";
@@ -106,8 +124,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_GenerateCharacteristicVectorSet arithmetic_mat "
                    "arithmetic_vect choice [MatFile]\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic_mat: mpq_class\n";
-      std::cerr << "arithmetic_vect: mpz_class\n";
+      std::cerr << "arithmetic_mat: mpq_class, mpq_rational, cpp_rational\n";
+      std::cerr << "arithmetic_vect: mpz_class, mpz_int, cpp_int\n";
       std::cerr << "choice: shortest, relevant_voronoi, "
                    "filtered_relevant_voronoi, fullrank, spanning\n";
       std::cerr << "OutFormat: norms, GAP, CPP\n";

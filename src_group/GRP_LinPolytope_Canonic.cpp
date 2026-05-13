@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "PolytopeEquiStab.h"
 // clang-format on
@@ -57,6 +59,14 @@ int main(int argc, char *argv[]) {
     auto f_work=[&]() -> void {
       if (arith == "mpq_class") {
         using T = mpq_class;
+        return process<T>(FileExt, OutFormat, OutFile);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        return process<T>(FileExt, OutFormat, OutFile);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
         return process<T>(FileExt, OutFormat, OutFile);
       }
       std::cerr << "GRP_LinPolytope_Canonic: No matching entry for arith=" << arith << "\n";

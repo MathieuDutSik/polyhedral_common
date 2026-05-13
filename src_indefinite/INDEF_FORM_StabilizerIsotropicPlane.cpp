@@ -1,5 +1,7 @@
 // Copyright (C) 202" Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "CombinedAlgorithms.h"
@@ -7,10 +9,14 @@
 #include "Permutation.h"
 // clang-format on
 
-template <typename T, typename Tint, typename Tgroup>
+template <typename T, typename Tint>
 void process(std::string const &QFile, std::string const &PlaneFile,
              std::string const &choice, std::string const &OutFormat,
              std::ostream &os_out) {
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using TintGroup = Tint;
+  using Tgroup = permutalib::Group<Telt, TintGroup>;
   MyMatrix<T> Qmat = ReadMatrixFile<T>(QFile);
   MyMatrix<Tint> Plane = ReadMatrixFile<Tint>(PlaneFile);
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
@@ -63,17 +69,21 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[5];
       OutFile = argv[6];
     }
-    using Tidx = uint32_t;
-    using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using TintGroup = mpz_class;
-    using Tgroup = permutalib::Group<Telt, TintGroup>;
-    //
     auto f = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T, Tint, Tgroup>(QFile, PlaneFile, choice, OutFormat,
-                                        os);
+        return process<T, Tint>(QFile, PlaneFile, choice, OutFormat, os);
+      }
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return process<T, Tint>(QFile, PlaneFile, choice, OutFormat, os);
+      }
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
+        return process<T, Tint>(QFile, PlaneFile, choice, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

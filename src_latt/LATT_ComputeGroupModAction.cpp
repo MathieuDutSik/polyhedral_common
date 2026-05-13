@@ -1,8 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 
 // clang-format off
-#include "NumberTheory.h"
 #include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheory.h"
 #include "NumberTheorySafeInt.h"
 #include "Group.h"
 #include "Permutation.h"
@@ -51,6 +52,14 @@ void process(std::string const &arith,
     using T = mpz_class;
     return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
   }
+  if (arith == "mpz_int") {
+    using T = boost::multiprecision::mpz_int;
+    return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
+  }
+  if (arith == "cpp_int") {
+    using T = boost::multiprecision::cpp_int;
+    return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
+  }
   std::cerr << "Failed to find a matching entry for arith\n";
   throw TerminalException{1};
 }
@@ -66,7 +75,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_ComputeGroupModAction [arith] [list_matrix_file] [mod_val]\n";
       std::cerr << "\n";
       std::cerr << "    where\n";
-      std::cerr << "arith: mpz_class\n";
+      std::cerr << "arith: mpz_class, mpz_int, cpp_int\n";
       std::cerr << "list_matrix_file: The input matrix file\n";
       std::cerr << "mod_val: The modulo considered\n";
       std::cerr << "OutFormat: GAP or simple (optional, default: simple)\n";

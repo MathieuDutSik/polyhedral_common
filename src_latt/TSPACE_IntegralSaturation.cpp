@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "Tspace_ListMatSaturation.h"
 // clang-format on
@@ -42,6 +44,14 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os) -> void {
       if (arith == "mpq_class") {
         using T = mpq_class;
+        return IntegralSaturation<T>(FileI, OutFormat, os);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        return IntegralSaturation<T>(FileI, OutFormat, os);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
         return IntegralSaturation<T>(FileI, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith\n";

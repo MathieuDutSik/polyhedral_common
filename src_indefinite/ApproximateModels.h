@@ -798,9 +798,10 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: n=" << n << "\n";
 #endif
+    Tint Xdiv2_int = UniversalScalarConversion<Tint,T>(Xdiv2);
     MyVector<Tint> eSol = ZeroVector<Tint>(n);
     eSol(0) = 1;
-    eSol(1) = Xdiv2;
+    eSol(1) = Xdiv2_int;
     return eSol;
   };
   return {GetApproximateGroup, SetListClassesOrbitwise,

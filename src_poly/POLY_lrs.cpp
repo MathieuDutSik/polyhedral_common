@@ -199,6 +199,10 @@ int main(int argc, char *argv[]) {
                    "fails\n";
       std::cerr << "    gracefully on overflow\n";
       std::cerr << "mpz_class : integer arithmetic over GMP mpz_class\n";
+      std::cerr << "mpz_int : integer arithmetic over "
+                   "boost::multiprecision::mpz_int\n";
+      std::cerr << "cpp_int : integer arithmetic over "
+                   "boost::multiprecision::cpp_int\n";
       std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
       std::cerr << "mpq_rational : rational arithmetic over "
                    "boost::multiprecision::mpq_rational\n";
@@ -229,6 +233,14 @@ int main(int argc, char *argv[]) {
       }
       if (arith == "mpz_class") {
         using T = mpz_class;
+        return process<T>(eFileI, choice, os);
+      }
+      if (arith == "mpz_int") {
+        using T = boost::multiprecision::mpz_int;
+        return process<T>(eFileI, choice, os);
+      }
+      if (arith == "cpp_int") {
+        using T = boost::multiprecision::cpp_int;
         return process<T>(eFileI, choice, os);
       }
       if (arith == "mpq_class") {

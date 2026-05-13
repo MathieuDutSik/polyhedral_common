@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -43,7 +45,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "GRP_MatrixGroupSimplification [Arith] [FileMatrGroup]\n";
       std::cerr << "\n";
-      std::cerr << "Arith         : mpq_class / mpz_class\n";
+      std::cerr << "Arith         : mpq_class / mpz_class / mpq_rational / cpp_rational / mpz_int / cpp_int\n";
       std::cerr << "FileMatrGroup : The file containing the list of matrices\n";
       std::cerr << "OutFormat     : Optional parameter GAP / CPP\n";
       std::cerr
@@ -69,8 +71,24 @@ int main(int argc, char *argv[]) {
         using T = mpz_class;
         return process<T>(FileMatrGroup, OutFormat, os);
       }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+      if (arith == "mpz_int") {
+        using T = boost::multiprecision::mpz_int;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+      if (arith == "cpp_int") {
+        using T = boost::multiprecision::cpp_int;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
       std::cerr << "Failed to find a matching arith. Allowed is mpq_class / "
-                   "mpz_class\n";
+                   "mpz_class / mpq_rational / cpp_rational / mpz_int / cpp_int\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, f);

@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "generalized_polytopes.h"
 // clang-format on
@@ -53,6 +55,14 @@ int main(int argc, char *argv[]) {
     auto f=[&]() -> void {
       if (arith == "mpq_class") {
         using T = mpq_class;
+        return process<T>(PolyFile, OutFormat, OutFile);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        return process<T>(PolyFile, OutFormat, OutFile);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
         return process<T>(PolyFile, OutFormat, OutFile);
       }
       std::cerr << "Error for the template parameter arith=" << arith << "\n";

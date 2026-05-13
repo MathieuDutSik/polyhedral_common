@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -95,6 +97,22 @@ int main(int argc, char *argv[]) {
       }
       if (arith == "mpz_class") {
         using T = mpz_class;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+      if (arith == "mpq_rational") {
+        using T = boost::multiprecision::mpq_rational;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+      if (arith == "cpp_rational") {
+        using T = boost::multiprecision::cpp_rational;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+      if (arith == "mpz_int") {
+        using T = boost::multiprecision::mpz_int;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+      if (arith == "cpp_int") {
+        using T = boost::multiprecision::cpp_int;
         return process<T>(FileMatrGroup, OutFormat, os);
       }
       std::cerr << "Failed to find a matching arith\n";

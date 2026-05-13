@@ -13,6 +13,7 @@
 #include "Timings.h"
 #include "factorizations.h"
 #include "two_dim_lorentzian.h"
+#include "lorentzian_linalg.h"
 #include "MatrixGroupSimplification.h"
 #include "MatrixGroupBasic.h"
 #include "MatrixGroupLemma.h"
