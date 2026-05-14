@@ -288,7 +288,7 @@ add_library(polyhedral_poly_support INTERFACE)
 target_link_libraries(
   polyhedral_poly_support
   INTERFACE
-    polyhedral_group_support
+    polyhedral_common
     polyhedral_glpk_support
     polyhedral_cddgmp_support
 )
