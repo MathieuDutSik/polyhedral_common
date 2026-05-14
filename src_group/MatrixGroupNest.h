@@ -12,6 +12,72 @@
 // clang-format on
 
 /*
+  MyMatrixContainer<T>: a thin wrapper around MyMatrix<T> that lives in the
+  global namespace so ADL can reach our operator< / operator== / Inverse /
+  IsIdentity / hash from inside permutalib templates, regardless of the
+  namespace T itself lives in (e.g. boost::multiprecision::mpq_rational).
+ */
+template <typename T>
+struct MyMatrixContainer {
+private:
+  MyMatrix<T> m;
+public:
+  MyMatrixContainer(MyMatrix<T> const& _m) : m(_m) {}
+  MyMatrixContainer() {}
+  bool is_identity() const {
+    return IsIdentity(m);
+  }
+  MyMatrixContainer<T> inverse() const {
+    MyMatrix<T> m_ret = Inverse(m);
+    return MyMatrixContainer<T>(m_ret);
+  }
+  MyMatrix<T> const& get_const_m() const {
+    return m;
+  }
+  MyMatrix<T>& get_m() {
+    return m;
+  }
+};
+
+template<typename T>
+std::vector<MyMatrixContainer<T>> get_vector_mmc(std::vector<MyMatrix<T>> const& list1) {
+  std::vector<MyMatrixContainer<T>> v;
+  for (auto &M : list1) {
+    MyMatrixContainer<T> mmc(M);
+    v.push_back(mmc);
+  }
+  return v;
+}
+
+template <typename T>
+MyMatrixContainer<T> operator*(MyMatrixContainer<T> const &v1,
+                               MyMatrixContainer<T> const &v2) {
+  MyMatrix<T> M = v1.get_const_m() * v2.get_const_m();
+  return MyMatrixContainer<T>(M);
+}
+
+template <typename T>
+void operator*=(MyMatrixContainer<T> &v1, MyMatrixContainer<T> const &v2) {
+  v1.get_m() *= v2.get_const_m();
+}
+
+template <typename T>
+bool operator==(MyMatrixContainer<T> const& v1, MyMatrixContainer<T> const &v2) {
+  return v1.get_const_m() == v2.get_const_m();
+}
+
+namespace std {
+template <typename T> struct hash<MyMatrixContainer<T>> {
+  std::size_t operator()(const MyMatrixContainer<T> &e_val) const {
+    MyMatrix<T> const& M = e_val.get_const_m();
+    return hash<MyMatrix<T>>()(M);
+  }
+};
+// clang-format off
+}  // namespace std
+// clang-format on
+
+/*
   Thin wrappers around permutalib primitives that take TeltMatr =
   MyMatrixContainer<T>.  Wrapping MyMatrix<T> inside MyMatrixContainer<T>
   (which lives in the global namespace) keeps ADL happy when permutalib
