@@ -159,7 +159,6 @@ target_link_libraries(
   polyhedral_isotropy_support
   INTERFACE
     polyhedral_common
-    polyhedral_nauty
 )
 
 add_library(polyhedral_mpi_support INTERFACE)
@@ -392,6 +391,9 @@ set(
   POLY_EvaluateBalinski
   POLY_sampling_facets
   POLY_DirectSerialDualDesc
+  POLY_FaceLatticeGen
+  POLY_DirectFaceLattice
+  POLY_dual_description_group
 )
 foreach(target IN LISTS DUALDESC_PROGRAMS)
   add_polyhedral_binary(
@@ -597,17 +599,14 @@ set(
   POLY_redundancyGroup
   POLY_IntegralPoints
   POLY_SkelettonClarkson
-  POLY_FaceLatticeGen
   VectFamily_ColumnReduction
   POLY_lrs
   POLY_SmallPolytope
   POLY_LinearDetermineByInequalities
   POLY_IsPointedCone
-  POLY_DirectFaceLattice
   POLY_SolutionMatNonnegative
   POLY_cdd_LinearProgramming
   POLY_dual_description
-  POLY_dual_description_group
   POLY_GetFullRankFacetSet
   POLY_GeometricallyUniqueInteriorPoint
   POLY_lrs_volume

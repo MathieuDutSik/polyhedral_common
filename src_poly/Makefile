@@ -2,12 +2,12 @@ PROGRAM		= POLY_CreateAffineBasis \
 		  POLY_cdd_skeletons POLY_SolutionMatNonnegativeComplete \
 		  POLY_redundancy POLY_redundancyGroup \
 		  POLY_IntegralPoints POLY_SkelettonClarkson \
-		  POLY_FaceLatticeGen VectFamily_ColumnReduction \
+		  VectFamily_ColumnReduction \
 		  POLY_lrs POLY_SmallPolytope \
 		  POLY_LinearDetermineByInequalities \
-		  POLY_IsPointedCone POLY_DirectFaceLattice \
+		  POLY_IsPointedCone \
 		  POLY_SolutionMatNonnegative POLY_cdd_LinearProgramming \
-		  POLY_dual_description POLY_dual_description_group \
+		  POLY_dual_description \
 		  POLY_GetFullRankFacetSet  \
 		  POLY_GeometricallyUniqueInteriorPoint \
 		  POLY_lrs_volume POLY_lrs_triangulation POLY_TwoLaminations POLY_lrs_triang_facets

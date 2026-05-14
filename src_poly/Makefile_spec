@@ -1,8 +1,6 @@
 #PROGRAM		= POLY_IsPointedCone
 #PROGRAM		= VectFamily_Reduction
 #PROGRAM		= VectFamily_ColumnReduction
-#PROGRAM		= POLY_FaceLatticeGen
-#PROGRAM		= POLY_DirectFaceLattice
 #PROGRAM		= POLY_process_csdp
 #PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_GeometricallyUniqueInteriorPoint
@@ -15,7 +13,6 @@
 #PROGRAM		= POLY_IsomorphismReduction
 #PROGRAM		= POLY_SolutionMatNonnegative
 #PROGRAM		= POLY_dual_description
-#PROGRAM		= POLY_dual_description_group
 #PROGRAM		= POLY_sampling_facets
 #PROGRAM		= POLY_cdd_LinearProgramming
 #PROGRAM		= POLY_SkelettonClarkson

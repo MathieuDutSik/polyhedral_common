@@ -103,7 +103,7 @@ jobs:
 
       - name: Test face lattice code
         run: |
-          cd src_poly && make -f Makefile_facelatticegen && cd ..
+          cd src_dualdesc && make -f Makefile_facelatticegen && cd ..
           pwd
           echo "After compilation of face lattice gen"
 
