@@ -1296,7 +1296,7 @@ template <typename T> inline dd_rowrange get_m_size(dd_matrixdata<T> *M) {
 template <typename T> inline dd_rowrange get_d_size(dd_matrixdata<T> *M) {
   dd_colrange d;
   if (M->representation == dd_Generator) {
-    std::cout << " Generator case\n";
+    std::cerr << " Generator case\n";
     d = M->colsize + 1;
   } else {
     d = M->colsize;
@@ -1306,10 +1306,10 @@ template <typename T> inline dd_rowrange get_d_size(dd_matrixdata<T> *M) {
 
 template <typename T>
 dd_lpdata<T> *dd_CreateLPData_from_M(dd_matrixdata<T> *M) {
-  bool localdebug = false;
   dd_colrange d = get_d_size(M);
-  if (localdebug)
-    std::cout << "dd_CreateLPData_from_M d=" << d << "\n";
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "dd_CreateLPData_from_M d=" << d << "\n";
+#endif
   dd_rowrange m = get_m_size(M);
   return dd_CreateLPData<T>(m, d);
 }
@@ -1617,8 +1617,7 @@ dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,
     set_emptyset(M2->linset);
     for (i = 1; i <= m; i++) {
       if (newpos2[newpos1[i]] > 0) {
-        printf("newpos1[%ld]=%ld, newpos2[newpos1[%ld]]=%ld\n", i, newpos1[i],
-               i, newpos2[newpos1[i]]);
+        std::cerr << "newpos1[" << i << "]=" << newpos1[i] << ", newpos2[newpos1[" << i << "]]=" << newpos2[newpos1[i]] << "\n";
         if (set_member(i, M->linset))
           set_addelem(M2->linset, newpos2[newpos1[i]]);
         (*newpos)[i] = newpos2[newpos1[i]];
@@ -1951,7 +1950,7 @@ template <typename T> void dd_SetLinearity(dd_matrixdata<T> *M, char *line) {
     i++;
   }
   if (i != eqsize) {
-    std::cout << "* Warning: there are inconsistencies in linearity setting.\n";
+    std::cerr << "* Warning: there are inconsistencies in linearity setting.\n";
   }
   return;
 }
@@ -2357,7 +2356,6 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset,
   T temp, prod;
   dd_polyhedradata<T> *dualpoly;
   dd_ErrorType err = dd_NoError;
-  bool localdebug = false;
 
   *error = dd_NoError;
   m = M->rowsize;
@@ -2420,8 +2418,9 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset,
       }
     }
   }
-  if (localdebug)
-    printf("Size of the projection system: %ld x %ld\n", mproj, dproj);
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "Size of the projection system: " << mproj << " x " << dproj << "\n";
+#endif
 
   dd_FreePolyhedra(dualpoly);
   dd_FreeMatrix(Mdual);
@@ -2439,32 +2438,31 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,
   dd_rowrange i, inew, ip, in, iz, m, mpos = 0, mneg = 0, mzero = 0, mnew;
   dd_colrange j, d, dnew;
   T temp1, temp2;
-  bool localdebug = false;
 
   *error = dd_NoError;
   m = M->rowsize;
   d = M->colsize;
   if (d <= 1) {
     *error = dd_ColIndexOutOfRange;
-    if (localdebug)
-      printf(
-          "The number of column is too small: %ld for Fourier's Elimination.\n",
-          d);
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "The number of column is too small: " << d << " for Fourier's Elimination.\n";
+#endif
     return nullptr;
   }
 
   if (M->representation == dd_Generator) {
     *error = dd_NotAvailForV;
-    if (localdebug)
-      printf("Fourier's Elimination cannot be applied to a V-polyhedron.\n");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "Fourier's Elimination cannot be applied to a V-polyhedron.\n";
+#endif
     return nullptr;
   }
 
   if (set_card(M->linset) > 0) {
     *error = dd_CannotHandleLinearity;
-    if (localdebug)
-      printf("The Fourier Elimination function does not handle equality in "
-             "this version.\n");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "The Fourier Elimination function does not handle equality in this version.\n";
+#endif
     return nullptr;
   }
 
@@ -3010,7 +3008,7 @@ void dd_GaussianColumnPivot(dd_colrange d_size, T **X, T **Ts, dd_rowrange r,
         T alpha;
         dd_TableauEntry(alpha, d_size, X, Ts, r, j);
         if (alpha != 0)
-          std::cout << "j=" << j << " alpha=" << alpha << "\n";
+          std::cerr << "j=" << j << " alpha=" << alpha << "\n";
       }
     }
   }
@@ -3174,9 +3172,9 @@ template <typename T>
 void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err,
                          data_temp_simplex<T> *data, size_t const &maxiter,
                          std::ostream &os) {
-  bool localdebug = false;
-  if (localdebug)
-    std::cout << "Running dd_DualSimplexSolve\n";
+#ifdef LOCALDEBUG_CDD
+    os << "Running dd_DualSimplexSolve\n";
+#endif
   switch (lp->objective) {
   case dd_LPmax:
 #ifdef DEBUG_CDD
@@ -3284,7 +3282,6 @@ void dd_FindLPBasis2(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
   dd_colset ColSelected, DependentCols;
   dd_rowset RowSelected, NopivotRow;
   T val;
-  bool localdebug = false;
 
   dd_rowrange r, negcount = 0;
   dd_colrange j, s;
@@ -3341,14 +3338,13 @@ void dd_FindLPBasis2(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
           *found = false; /* not supposed to be independent */
         else
           *found = true;
-        if (localdebug) {
-          printf("Try to check the dependent cols:");
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "Try to check the dependent cols:";
           if (chosen)
-            printf("They are not dependent.  Can still pivot on (%ld, %ld)\n",
-                   r, s);
+            std::cerr << "They are not dependent.  Can still pivot on (" << r << ", " << s << ")\n";
           else
-            printf("They are indeed dependent.\n");
-        }
+            std::cerr << "They are indeed dependent.\n";
+#endif
       } else {
         *found = true;
       }
@@ -3383,7 +3379,7 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
      A[m_size] must have been allocated.
   */
   bool phase1, dualfeasible = true;
-  bool localdebug = false, chosen, stop;
+  bool chosen, stop;
   dd_LPStatusType LPSphase1;
   long pivots_p1 = 0;
   dd_rowrange i, r_val;
@@ -3473,10 +3469,9 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
     dd_GaussianColumnPivot2(d_size, A, Ts, nbindex, bflag, local_m_size, ms,
                             data->Rtemp);
     pivots_p1++;
-    if (localdebug) {
-      printf("\ndd_FindDualFeasibleBasis: Pivot on %ld %ld.\n", local_m_size,
-             ms);
-    }
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "\ndd_FindDualFeasibleBasis: Pivot on " << local_m_size << " " << ms << ".\n";
+#endif
 
     for (j = 1; j <= d_size; j++)
       data->nbindex_ref[j] = nbindex[j];
@@ -3573,7 +3568,6 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   bool stop, chosen, phase1, found;
   long pivots_ds = 0, pivots_p0 = 0, pivots_p1 = 0, pivots_pc = 0, maxpivots,
        maxpivfactor = 20;
-  bool localdebug1 = false;
   dd_rowrange i, r;
   dd_colrange j, s;
   size_t n_iter;
@@ -3699,15 +3693,15 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
       }
     }
     if (!chosen && lp->LPS == dd_LPSundecided) {
-      if (localdebug1) {
-        std::cout
+#ifdef LOCALDEBUG_CDD
+        std::cerr
             << "Warning: an emergency CC pivot in Phase II is performed\n";
         /* In principle this should not be executed because we already have dual
            feasibility attained and dual simplex pivot should have been chosen.
            This might occur under floating point computation, or the case of
            cycling.
         */
-      }
+#endif
 
       dd_SelectCrissCrossPivot(lp->m, lp->d, lp->A, lp->B, data->bflag,
                                lp->objrow, lp->rhscol, &r, &s, &chosen,
@@ -3908,14 +3902,14 @@ the LP.
   dd_rowrange i;
   dd_colrange j;
   T x, sw;
-  int localdebug = false;
 
   if (LPS == dd_TooManyIterations) {
     return;
   }
 
-  if (localdebug)
-    std::cout << "SetSolutions:\n";
+#ifdef LOCALDEBUG_CDD
+    os << "SetSolutions:\n";
+#endif
   switch (LPS) {
   case dd_Optimal:
     for (j = 1; j <= d_size; j++) {
@@ -3934,8 +3928,9 @@ the LP.
 
     break;
   case dd_Inconsistent:
-    if (localdebug)
-      std::cout << "SetSolutions: LP is inconsistent.\n";
+#ifdef LOCALDEBUG_CDD
+      os << "SetSolutions: LP is inconsistent.\n";
+#endif
     for (j = 1; j <= d_size; j++) {
       sol[j - 1] = Ts[j - 1][rhscol - 1];
       dd_TableauEntry(x, d_size, A, Ts, re, j);
@@ -3944,28 +3939,29 @@ the LP.
     break;
 
   case dd_LPSundecided:
-    std::cout
+    os
         << "Case dd_LPSundecided has not been programmed in dd_SetSolutions\n";
     throw TerminalException{1};
 
   case dd_StrucInconsistent:
-    std::cout << "Case dd_StrucInconsistent has not been programmed in "
+    os << "Case dd_StrucInconsistent has not been programmed in "
                  "dd_SetSolutions\n";
     throw TerminalException{1};
 
   case dd_Unbounded:
-    std::cout
+    os
         << "Case dd_Unbounded has not been programmed in dd_SetSolutions\n";
     throw TerminalException{1};
 
   case dd_DualUnbounded:
-    std::cout
+    os
         << "Case dd_DualUnbounded has not been programmed in dd_SetSolutions\n";
     throw TerminalException{1};
 
   case dd_DualInconsistent:
-    if (localdebug)
-      printf("SetSolutions: LP is dual inconsistent.\n");
+#ifdef LOCALDEBUG_CDD
+      os << "SetSolutions: LP is dual inconsistent.\n";
+#endif
     for (j = 1; j <= d_size; j++) {
       sol[j - 1] = Ts[j - 1][se - 1];
       dd_TableauEntry(x, d_size, A, Ts, objrow, j);
@@ -3991,8 +3987,9 @@ the LP.
       dd_TableauEntry(x, d_size, A, Ts, objrow, j);
       dsol[j - 1] = -x;
     }
-    if (localdebug)
-      std::cout << "SetSolutions: LP is dual inconsistent.\n";
+#ifdef LOCALDEBUG_CDD
+      os << "SetSolutions: LP is dual inconsistent.\n";
+#endif
     break;
   }
 }
@@ -4053,10 +4050,10 @@ template <typename T> dd_lpdata<double> *dd_LPgmp2LPf(dd_lpdata<T> *lp) {
   dd_rowrange i;
   dd_colrange j;
   dd_lpdata<double> *lpf;
-  bool localdebug = false;
 
-  if (localdebug)
-    std::cout << "Converting a GMP-LP to a float-LP.\n";
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "Converting a GMP-LP to a float-LP.\n";
+#endif
 
   lpf = dd_CreateLPData<double>(lp->m, lp->d);
   lpf->objective = lp->objective;
@@ -4225,7 +4222,6 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M) {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
   dd_lpdata<T> *lp;
-  bool localdebug = false;
 
   linc = set_card(M->linset);
   m = M->rowsize + 1 + linc + 1;
@@ -4260,10 +4256,10 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M) {
   lp->A[m - 1][d - 1] = 1;
   /* objective is to maximize z.  */
 
-  if (localdebug) {
-    std::cout << "dd_CreateLP_H_ImplicitLinearity: an new lp is\n";
-    dd_WriteLP(std::cout, lp);
-  }
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "dd_CreateLP_H_ImplicitLinearity: an new lp is\n";
+    dd_WriteLP(std::cerr, lp);
+#endif
 
   return lp;
 }
@@ -4273,7 +4269,6 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M) {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
   dd_lpdata<T> *lp;
-  bool localdebug = false;
 
   linc = set_card(M->linset);
   m = M->rowsize + 1 + linc + 1;
@@ -4298,9 +4293,9 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M) {
       for (j = 2; j <= d - 1; j++) {
         lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 2];
       }
-      if (localdebug)
-        fprintf(stdout, "equality row %ld generates the reverse row %ld.\n", i,
-                irev);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "equality row " << i << " generates the reverse row " << irev << ".\n";
+#endif
     } else {
       lp->A[i - 1][d - 1] = -1;
     }
@@ -4314,10 +4309,10 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M) {
   lp->A[m - 1][d - 1] = 1;
   /* objective is to maximize z.  */
 
-  if (localdebug) {
-    fprintf(stdout, "dd_CreateLP_V_ImplicitLinearity: an new lp is\n");
-    dd_WriteLP(std::cout, lp);
-  }
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "dd_CreateLP_V_ImplicitLinearity: an new lp is\n";
+    dd_WriteLP(std::cerr, lp);
+#endif
 
   return lp;
 }
@@ -4498,14 +4493,13 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
   dd_colrange j;
   dd_lpdata<T> *lp;
   dd_ErrorType err = dd_NoError;
-  bool answer = false, localdebug = false;
+  bool answer = false;
 
   *error = dd_NoError;
   if (set_member(itest, M->linset)) {
-    if (localdebug)
-      printf(
-          "The %ld th row is linearity and redundancy checking is skipped.\n",
-          itest);
+#ifdef LOCALDEBUG_CDD
+      os << "The " << itest << " th row is linearity and redundancy checking is skipped.\n";
+#endif
     return answer;
   }
 
@@ -4526,12 +4520,14 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
 
     if (lp->optvalue < 0) {
       answer = false;
-      if (localdebug)
-        fprintf(stdout, "==> %ld th row is nonredundant.\n", itest);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "==> " << itest << " th row is nonredundant.\n";
+#endif
     } else {
       answer = true;
-      if (localdebug)
-        fprintf(stdout, "==> %ld th row is redundant.\n", itest);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "==> " << itest << " th row is redundant.\n";
+#endif
     }
   }
   dd_FreeLPData(lp);
@@ -4553,14 +4549,13 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
   dd_colrange j;
   dd_lpdata<T> *lp;
   dd_ErrorType err = dd_NoError;
-  bool answer = false, localdebug = false;
+  bool answer = false;
 
   *error = dd_NoError;
   if (set_member(itest, M->linset)) {
-    if (localdebug)
-      printf(
-          "The %ld th row is linearity and redundancy checking is skipped.\n",
-          itest);
+#ifdef LOCALDEBUG_CDD
+      os << "The " << itest << " th row is linearity and redundancy checking is skipped.\n";
+#endif
     return answer;
   }
 
@@ -4588,12 +4583,14 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
 
     if (lp->optvalue < 0) {
       answer = false;
-      if (localdebug)
-        fprintf(stdout, "==> %ld th row is nonredundant.\n", itest);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "==> " << itest << " th row is nonredundant.\n";
+#endif
     } else {
       answer = true;
-      if (localdebug)
-        fprintf(stdout, "==> %ld th row is redundant.\n", itest);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "==> " << itest << " th row is redundant.\n";
+#endif
     }
   }
   dd_FreeLPData(lp);
@@ -4607,7 +4604,6 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_rowset redset;
   dd_matrixdata<T> *Mcopy;
   T *cvec; /* certificate */
-  bool localdebug = false;
 
   m = M->rowsize;
   dd_colrange d = get_d_size(M);
@@ -4618,13 +4614,15 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error,
   data_temp_simplex<T> *data = allocate_data_simplex<T>(get_m_size(M), d);
   for (i = m; i >= 1; i--) {
     if (dd_Redundant(Mcopy, i, cvec, error, data, maxiter, os)) {
-      if (localdebug)
-        printf("dd_RedundantRows: the row %ld is redundant.\n", i);
+#ifdef LOCALDEBUG_CDD
+        os << "dd_RedundantRows: the row " << i << " is redundant.\n";
+#endif
       set_addelem(redset, i);
       dd_MatrixRowRemove(&Mcopy, i);
     } else {
-      if (localdebug)
-        printf("dd_RedundantRows: the row %ld is essential.\n", i);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "dd_RedundantRows: the row " << i << " is essential.\n";
+#endif
     }
     if (*error != dd_NoError)
       goto _L99;
@@ -4651,7 +4649,6 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
   dd_matrixdata<T> *M1 = nullptr;
   T *cvec; /* certificate */
   bool success = false;
-  bool localdebug = false;
 
   m = (*M)->rowsize;
   set_initialize(redset, m);
@@ -4659,11 +4656,13 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
   for (i = 1; i <= m; i++) {
     if ((*newpos)[i] <= 0)
       set_addelem(*redset, i);
-    if (localdebug)
-      printf(" %ld:%ld", i, (*newpos)[i]);
+#ifdef LOCALDEBUG_CDD
+      os << " " << i << ":" << (*newpos)[i];
+#endif
   }
-  if (localdebug)
-    printf("\n");
+#ifdef LOCALDEBUG_CDD
+    os << "\n";
+#endif
 
   if ((*M)->representation == dd_Generator) {
     d = (*M)->colsize + 1;
@@ -4671,13 +4670,10 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
     d = (*M)->colsize;
   }
   m1 = M1->rowsize;
-  if (localdebug) {
-    fprintf(stdout,
-            "dd_MatrixRedundancyRemove: By sorting, %ld rows have been "
-            "removed.  The remaining has %ld rows.\n",
-            m - m1, m1);
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "dd_MatrixRedundancyRemove: By sorting, " << m - m1 << " rows have been removed.  The remaining has " << m1 << " rows.\n";
     /* dd_WriteMatrix(stdout,M1);  */
-  }
+#endif
   dd_AllocateArow(d, &cvec);
   set_initialize(&redset1, M1->rowsize);
   k = 1;
@@ -4699,12 +4695,10 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
       }
       set_free(redset1);
       set_initialize(&redset1, M1->rowsize);
-      if (localdebug) {
-        printf("dd_MatrixRedundancyRemove: the row %ld is redundant. The new "
-               "matrix has %ld rows.\n",
-               k, M1->rowsize);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "dd_MatrixRedundancyRemove: the row " << k << " is redundant. The new matrix has " << M1->rowsize << " rows.\n";
         /* dd_WriteMatrix(stdout, M1);  */
-      }
+#endif
       delete[] newpos1;
     } else {
       if (set_card(redset1) > 0) {
@@ -4725,19 +4719,18 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
         set_initialize(&redset1, M1->rowsize);
         delete[] newpos1;
       }
-      if (localdebug) {
-        printf("dd_MatrixRedundancyRemove: the row %ld is essential. The new "
-               "matrix has %ld rows.\n",
-               k, M1->rowsize);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "dd_MatrixRedundancyRemove: the row " << k << " is essential. The new matrix has " << M1->rowsize << " rows.\n";
         /* dd_WriteMatrix(stdout, M1);  */
-      }
+#endif
       k++;
     }
     if (*error != dd_NoError)
       goto _L99;
   } while (k <= M1->rowsize);
-  if (localdebug)
+#ifdef LOCALDEBUG_CDD
     dd_WriteMatrix(stdout, M1);
+#endif
   success = true;
 
 _L99:
@@ -4808,14 +4801,12 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
   dd_lpdata<T> *lp;
   dd_ErrorType err = dd_NoError;
   bool answer = false;
-  bool localdebug = false;
 
   *error = dd_NoError;
   if (set_member(itest, M->linset)) {
-    if (localdebug)
-      printf("The %ld th row is linearity and strong redundancy checking is "
-             "skipped.\n",
-             itest);
+#ifdef LOCALDEBUG_CDD
+      os << "The " << itest << " th row is linearity and strong redundancy checking is skipped.\n";
+#endif
     goto _L99;
   }
 
@@ -4840,37 +4831,39 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
     if (M->representation == dd_Inequality) {
       if (lp->optvalue > 0) {
         answer = true;
-        if (localdebug)
-          fprintf(stdout, "==> %ld th inequality is strongly redundant.\n",
-                  itest);
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "==> " << itest << " th inequality is strongly redundant.\n";
+#endif
       } else {
         answer = false;
-        if (localdebug)
-          fprintf(stdout, "==> %ld th inequality is not strongly redundant.\n",
-                  itest);
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "==> " << itest << " th inequality is not strongly redundant.\n";
+#endif
       }
     } else {
       if (lp->optvalue < 0) {
         answer = false;
-        if (localdebug)
-          fprintf(stdout, "==> %ld th point is not strongly redundant.\n",
-                  itest);
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "==> " << itest << " th point is not strongly redundant.\n";
+#endif
       } else {
         /* for V-representation, we have to solve another LP */
         dd_FreeLPData(lp);
         lp = dd_CreateLP_V_SRedundancy(M, itest);
         dd_LPSolve(lp, dd_DualSimplex, &err, maxiter, os);
-        if (localdebug)
-          dd_WriteLPResult(std::cout, lp, err);
+#ifdef LOCALDEBUG_CDD
+          dd_WriteLPResult(std::cerr, lp, err);
+#endif
         if (lp->optvalue > 0) {
           answer = false;
-          if (localdebug)
-            fprintf(stdout, "==> %ld th point is not strongly redundant.\n",
-                    itest);
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "==> " << itest << " th point is not strongly redundant.\n";
+#endif
         } else {
           answer = true;
-          if (localdebug)
-            fprintf(stdout, "==> %ld th point is strongly redundant.\n", itest);
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "==> " << itest << " th point is strongly redundant.\n";
+#endif
         }
       }
     }
@@ -4889,7 +4882,6 @@ dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_rowset redset;
   dd_matrixdata<T> *Mcopy;
   T *cvec; /* certificate */
-  bool localdebug = false;
 
   m = M->rowsize;
   if (M->representation == dd_Generator) {
@@ -4902,14 +4894,15 @@ dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error,
   set_initialize(&redset, m);
   for (i = m; i >= 1; i--) {
     if (dd_SRedundant(Mcopy, i, cvec, error, maxiter, os)) {
-      if (localdebug)
-        printf("dd_SRedundantRows: the row %ld is strongly redundant.\n", i);
+#ifdef LOCALDEBUG_CDD
+        os << "dd_SRedundantRows: the row " << i << " is strongly redundant.\n";
+#endif
       set_addelem(redset, i);
       dd_MatrixRowRemove(&Mcopy, i);
     } else {
-      if (localdebug)
-        printf("dd_SRedundantRows: the row %ld is not strongly redundant.\n",
-               i);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "dd_SRedundantRows: the row " << i << " is not strongly redundant.\n";
+#endif
     }
     if (*error != dd_NoError)
       goto _L99;
@@ -4936,16 +4929,15 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_colrange j, k, d;
   T *shootdir;
   dd_LPSolverType solver = dd_DualSimplex;
-  bool localdebug = false;
 
   m = M->rowsize;
   d = M->colsize;
   dd_rowset redset;
   set_initialize(&redset, m);
   dd_AllocateArow(d, &shootdir);
-  if (localdebug) {
-    std::cout << "ViaShooting : M->colsize=" << M->colsize << "\n";
-  }
+#ifdef LOCALDEBUG_CDD
+    os << "ViaShooting : M->colsize=" << M->colsize << "\n";
+#endif
 #ifdef DEBUG_CDD
   os << "CDD: dd_RedundantRowsViaShooting, step 2 *error=" << dd_ShortErrorMessages(*error) << "\n";
 #endif
@@ -4979,11 +4971,11 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
     for (j = 0; j < d; j++)
       lpw->A[mi - 1][j] = lpw->A[mi - 2][j];
     lpw->A[mi - 2][0] += T(1);
-    if (localdebug) {
-      std::cout << "Hyperplane case\n";
-      std::cout << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
-      dd_WriteLP(std::cout, lpw);
-    }
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "Hyperplane case\n";
+      std::cerr << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
+      dd_WriteLP(std::cerr, lpw);
+#endif
     dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data, maxiter, os);
     lpw->A[mi - 2][0] -= T(1);
     if (lpw->optvalue < 0)
@@ -5022,36 +5014,40 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_lpdata<T> *lp = dd_MakeLPforInteriorFinding(lp0);
   dd_FreeLPData(lp0);
   dd_LPSolve(lp, solver, &err, maxiter, os);
-  if (localdebug) {
-    std::cout << "lp->sol=";
-    dd_WriteT(std::cout, lp->sol, d);
-  }
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "lp->sol=";
+    dd_WriteT(std::cerr, lp->sol, d);
+#endif
 #ifdef DEBUG_CDD
   os << "CDD: dd_RedundantRowsViaShooting, step 6 *error=" << dd_ShortErrorMessages(*error) << "\n";
 #endif
 
   if (lp->optvalue > 0) {
-    if (localdebug)
-      std::cout << "dd_Positive=T case\n";
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "dd_Positive=T case\n";
+#endif
     /* An interior point is found.  Use rayshooting to find some nonredundant
        inequalities. */
     for (k = 0; k < d; k++)
       shootdir[k] = 0;
     for (j = 1; j < d; j++) {
       shootdir[j] = 1; /* j-th unit vector */
-      if (localdebug)
-        dd_WriteT(std::cout, shootdir, d);
+#ifdef LOCALDEBUG_CDD
+        dd_WriteT(std::cerr, shootdir, d);
+#endif
       ired = dd_RayShooting(M, lp->sol, shootdir);
-      if (localdebug)
-        printf("nonredundant row %3ld found by shooting.\n", ired);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "nonredundant row " << ired << " found by shooting.\n";
+#endif
       if (ired > 0 && !set_member(ired, is_decided)) {
         set_addelem(is_decided, ired);
         insert_entry_in_lpw(ired);
       }
       shootdir[j] = -1; /* negative of the j-th unit vector */
       ired = dd_RayShooting(M, lp->sol, shootdir);
-      if (localdebug)
-        printf("nonredundant row %3ld found by shooting.\n", ired);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "nonredundant row " << ired << " found by shooting.\n";
+#endif
       if (ired > 0 && !set_member(ired, is_decided)) {
         set_addelem(is_decided, ired);
         insert_entry_in_lpw(ired);
@@ -5059,68 +5055,65 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
       shootdir[j] = 0; /* restore to 0 */
     }
 
-    if (localdebug) {
-      printf("The initial nonredundant set is:");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "The initial nonredundant set is:";
       for (i = 1; i <= m; i++)
         if (set_member(i, is_decided))
-          printf(" %ld", i);
-      printf("\n");
-    }
+          std::cerr << " " << i;
+      std::cerr << "\n";
+#endif
 
     i = 1;
     while (i <= m) {
-      if (localdebug)
-        std::cout << "i=" << i << " is_decided=" << set_member(i, is_decided)
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "i=" << i << " is_decided=" << set_member(i, is_decided)
                   << "\n";
+#endif
       if (!set_member(i,
                       is_decided)) { /* the ith inequality is not yet checked */
-        if (localdebug)
-          std::cout << "Checking redundancy of " << i << " th inequality\n";
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "Checking redundancy of " << i << " th inequality\n";
+#endif
         insert_entry_in_lpw(i);
-        if (localdebug) {
-          std::cout << "M->matrix[i-1]=";
-          dd_WriteT(std::cout, M->matrix[i - 1], d);
-        }
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "M->matrix[i-1]=";
+          dd_WriteT(std::cerr, M->matrix[i - 1], d);
+#endif
         if (!dd_Redundant_loc()) {
           for (k = 0; k < d; k++)
             shootdir[k] = lpw->sol[k] - lp->sol[k];
-          if (localdebug) {
-            std::cout << "shootdir=";
-            dd_WriteT(std::cout, shootdir, d);
-          }
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "shootdir=";
+            dd_WriteT(std::cerr, shootdir, d);
+#endif
           ired = dd_RayShooting(M, lp->sol, shootdir);
           set_addelem(is_decided, ired);
           set_entry_in_lpw(ired);
-          if (localdebug) {
-            fprintf(stdout,
-                    "The %ld th inequality is nonredundant for the subsystem\n",
-                    i);
-            fprintf(stdout,
-                    "The nonredundancy of %ld th inequality is found by "
-                    "shooting.\n",
-                    ired);
-            dd_WriteT(std::cout, M->matrix[ired - 1], d);
-          }
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "The " << i << " th inequality is nonredundant for the subsystem\n";
+            std::cerr << "The nonredundancy of " << ired << " th inequality is found by shooting.\n";
+            dd_WriteT(std::cerr, M->matrix[ired - 1], d);
+#endif
         } else {
-          if (localdebug)
-            fprintf(stdout,
-                    "The %ld th inequality is redundant for the subsystem and "
-                    "thus for the whole.\n",
-                    i);
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "The " << i << " th inequality is redundant for the subsystem and thus for the whole.\n";
+#endif
           set_addelem(is_decided, i);
           decrement_entry_in_lpw();
           set_addelem(redset, i);
           i++;
         }
       } else {
-        if (localdebug)
-          std::cout << "Case already decided\n";
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "Case already decided\n";
+#endif
         i++;
       }
     }
   } else {
-    if (localdebug)
-      std::cout << "dd_Positive=F case\n";
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "dd_Positive=F case\n";
+#endif
     /* No interior point is found.  Apply the standard LP technique.  */
     set_free(redset);
     redset = dd_RedundantRows(M, error, maxiter, os);
@@ -5152,7 +5145,6 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_colrange j, k, d;
   T *shootdir;
   dd_LPSolverType solver = dd_DualSimplex;
-  bool localdebug = true;
   //  bool localdebug = false;
 
   m = M->rowsize;
@@ -5161,9 +5153,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_rowset redset;
   set_initialize(&redset, m);
   dd_AllocateArow(d, &shootdir);
-  if (localdebug) {
-    std::cout << "ViaShooting : M->colsize=" << M->colsize << "\n";
-  }
+#ifdef LOCALDEBUG_CDD
+    os << "ViaShooting : M->colsize=" << M->colsize << "\n";
+#endif
 
   if (set_card(M->linset) != 0) {
     std::cerr << "This code works only in the absence of linearity relations\n";
@@ -5185,11 +5177,11 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
     for (j = 0; j < d; j++)
       lpw->A[mi - 1][j] = lpw->A[mi - 2][j];
     lpw->A[mi - 2][0] += T(1);
-    if (localdebug) {
-      std::cout << "Hyperplane case\n";
-      std::cout << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
-      dd_WriteLP(std::cout, lpw);
-    }
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "Hyperplane case\n";
+      std::cerr << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
+      dd_WriteLP(std::cerr, lpw);
+#endif
     dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data, maxiter, os);
     lpw->A[mi - 2][0] -= T(1);
     return lpw->optvalue >= 0;
@@ -5238,123 +5230,132 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_lpdata<T> *lp = dd_MakeLPforInteriorFinding(lp0);
   dd_FreeLPData(lp0);
   dd_LPSolve(lp, solver, &err, maxiter, os);
-  if (localdebug) {
-    std::cout << "lp->sol=";
-    dd_WriteT(std::cout, lp->sol, d);
-  }
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "lp->sol=";
+    dd_WriteT(std::cerr, lp->sol, d);
+#endif
 
   if (lp->optvalue > 0) {
-    if (localdebug)
-      std::cout << "dd_Positive=T case\n";
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "dd_Positive=T case\n";
+#endif
     /* An interior point is found.  Use rayshooting to find some nonredundant
        inequalities. */
     for (k = 0; k < d; k++)
       shootdir[k] = 0;
     for (j = 1; j < d; j++) {
       shootdir[j] = 1; /* j-th unit vector */
-      if (localdebug)
-        dd_WriteT(std::cout, shootdir, d);
+#ifdef LOCALDEBUG_CDD
+        dd_WriteT(std::cerr, shootdir, d);
+#endif
       ired = dd_RayShooting(M, lp->sol, shootdir);
-      if (localdebug)
-        std::cout << "nonredundant row " << ired << " found by shooting\n";
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "nonredundant row " << ired << " found by shooting\n";
+#endif
       if (ired > 0 && !set_member(ired, is_decided)) {
         std::vector<dd_rowrange> eBlock = get_block(ired);
-        std::cout << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
+        std::cerr << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
         for (auto &jred : eBlock) {
           set_addelem(is_decided, jred);
-          std::cout << "1: Deciding " << jred << "\n";
+          std::cerr << "1: Deciding " << jred << "\n";
           insert_entry_in_lpw(jred);
         }
       }
       shootdir[j] = -1; /* negative of the j-th unit vector */
       ired = dd_RayShooting(M, lp->sol, shootdir);
-      if (localdebug)
-        printf("nonredundant row %3ld found by shooting.\n", ired);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "nonredundant row " << ired << " found by shooting.\n";
+#endif
       if (ired > 0 && !set_member(ired, is_decided)) {
         std::vector<dd_rowrange> eBlock = get_block(ired);
-        std::cout << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
+        std::cerr << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
         for (auto &jred : eBlock) {
           set_addelem(is_decided, jred);
-          std::cout << "2: Deciding " << jred << "\n";
+          std::cerr << "2: Deciding " << jred << "\n";
           insert_entry_in_lpw(jred);
         }
       }
       shootdir[j] = 0; /* restore to 0 */
     }
 
-    if (localdebug) {
-      printf("The initial nonredundant set is:");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "The initial nonredundant set is:";
       for (i = 1; i <= m; i++)
         if (set_member(i, is_decided))
-          printf(" %ld", i);
-      printf("\n");
-    }
+          std::cerr << " " << i;
+      std::cerr << "\n";
+#endif
 
     i = 1;
     while (i <= m) {
-      if (localdebug)
-        std::cout << "i=" << i << " is_decided=" << set_member(i, is_decided)
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "i=" << i << " is_decided=" << set_member(i, is_decided)
                   << "\n";
+#endif
       if (!set_member(i,
                       is_decided)) { /* the ith inequality is not yet checked */
-        if (localdebug)
-          std::cout << "Checking redundancy of " << i << " th inequality\n";
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "Checking redundancy of " << i << " th inequality\n";
+#endif
         insert_entry_in_lpw(i);
-        if (localdebug) {
-          std::cout << "M->matrix[i-1]=";
-          dd_WriteT(std::cout, M->matrix[i - 1], d);
-        }
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "M->matrix[i-1]=";
+          dd_WriteT(std::cerr, M->matrix[i - 1], d);
+#endif
         if (!dd_Redundant_loc()) {
           for (k = 0; k < d; k++)
             shootdir[k] = lpw->sol[k] - lp->sol[k];
-          if (localdebug) {
-            std::cout << "shootdir=";
-            dd_WriteT(std::cout, shootdir, d);
-          }
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "shootdir=";
+            dd_WriteT(std::cerr, shootdir, d);
+#endif
           ired = dd_RayShooting(M, lp->sol, shootdir);
           if (!set_member(ired, is_decided)) {
             std::vector<dd_rowrange> eBlock = get_block(ired);
-            std::cout << "ired=" << ired << " |eBlock|=" << eBlock.size()
+            std::cerr << "ired=" << ired << " |eBlock|=" << eBlock.size()
                       << "\n";
             for (auto &jred : eBlock) {
               set_addelem(is_decided, jred);
-              std::cout << "3: Deciding " << jred << "\n";
+              std::cerr << "3: Deciding " << jred << "\n";
               set_entry_in_lpw(jred);
             }
           }
-          if (localdebug) {
-            std::cout << "The " << i
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "The " << i
                       << " inequality is nonredundant for the subsystem\n";
-            std::cout << "The nonredundancy of " << ired
+            std::cerr << "The nonredundancy of " << ired
                       << "% inequality is found by shooting\n";
-            dd_WriteT(std::cout, M->matrix[ired - 1], d);
-          }
+            dd_WriteT(std::cerr, M->matrix[ired - 1], d);
+#endif
         } else {
-          if (localdebug)
-            std::cout << "The " << i
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "The " << i
                       << " inequality is redundant for the subsystem and thus "
                          "for the whole\n";
+#endif
           decrement_entry_in_lpw();
           if (!set_member(i, is_decided)) {
             std::vector<dd_rowrange> eBlock = get_block(i);
-            std::cout << "i=" << i << " |eBlock|=" << eBlock.size() << "\n";
+            std::cerr << "i=" << i << " |eBlock|=" << eBlock.size() << "\n";
             for (auto &jred : eBlock) {
               set_addelem(is_decided, jred);
-              std::cout << "4: Deciding " << jred << "\n";
+              std::cerr << "4: Deciding " << jred << "\n";
               set_addelem(redset, jred);
             }
           }
           i++;
         }
       } else {
-        if (localdebug)
-          std::cout << "Case already decided\n";
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "Case already decided\n";
+#endif
         i++;
       }
     }
   } else {
-    if (localdebug)
-      std::cout << "dd_Positive=F case\n";
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "dd_Positive=F case\n";
+#endif
     /* No interior point is found.  Apply the standard LP technique.  */
     set_free(redset);
     redset = dd_RedundantRows(M, error, maxiter, os);
@@ -5492,14 +5493,13 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
   dd_colrange j;
   dd_lpdata<T> *lp;
   dd_ErrorType err = dd_NoError;
-  bool answer = false, localdebug = false;
+  bool answer = false;
 
   *error = dd_NoError;
   if (set_member(itest, M->linset)) {
-    if (localdebug)
-      printf(
-          "The %ld th row is linearity and redundancy checking is skipped.\n",
-          itest);
+#ifdef LOCALDEBUG_CDD
+      os << "The " << itest << " th row is linearity and redundancy checking is skipped.\n";
+#endif
     return answer;
   }
 
@@ -5522,13 +5522,14 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
 
     if (lp->LPS == dd_Optimal && lp->optvalue == 0) {
       answer = true;
-      if (localdebug)
-        fprintf(stdout, "==> %ld th data is an implicit linearity.\n", itest);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "==> " << itest << " th data is an implicit linearity.\n";
+#endif
     } else {
       answer = false;
-      if (localdebug)
-        fprintf(stdout, "==> %ld th data is not an implicit linearity.\n",
-                itest);
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "==> " << itest << " th data is not an implicit linearity.\n";
+#endif
     }
   }
   dd_FreeLPData(lp);
@@ -5574,7 +5575,6 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
   dd_ErrorType err = dd_NoError;
   T *cvec; /* certificate for implicit linearity */
 
-  bool localdebug = false;
   int answer = 0; // Used to return the value in the old CDD code.
 
   *error = dd_NoError;
@@ -5595,8 +5595,9 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
       certificate[j] = lp->sol[j];
     }
 
-    if (localdebug)
-      dd_WriteLPResult(std::cout, lp, err);
+#ifdef LOCALDEBUG_CDD
+      dd_WriteLPResult(std::cerr, lp, err);
+#endif
 
     /* *posset contains a set of row indices that are recognized as
      * nonlinearity.  */
@@ -5613,23 +5614,27 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
     if (lp->LPS == dd_Optimal) {
       if (lp->optvalue > 0) {
         answer = 1;
-        if (localdebug)
-          fprintf(stdout, "==> The matrix has no implicit linearity.\n");
+#ifdef LOCALDEBUG_CDD
+          std::cerr << "==> The matrix has no implicit linearity.\n";
+#endif
       } else {
         if (lp->optvalue < 0) {
           answer = -1;
-          if (localdebug)
-            fprintf(stdout, "==> The matrix defines the trivial system.\n");
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "==> The matrix defines the trivial system.\n";
+#endif
         } else {
           answer = 0;
-          if (localdebug)
-            fprintf(stdout, "==> The matrix has some implicit linearity.\n");
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "==> The matrix has some implicit linearity.\n";
+#endif
         }
       }
     } else {
       answer = -2;
-      if (localdebug)
-        fprintf(stdout, "==> The LP fails.\n");
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "==> The LP fails.\n";
+#endif
     }
     if (answer == 0) {
       /* List the implicit linearity rows */
@@ -5637,10 +5642,10 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
         if (!set_member(i, lp->posset_extra)) {
           if (dd_ImplicitLinearity(M, i, cvec, error, maxiter, os)) {
             set_addelem(*imp_linrows, i);
-            if (localdebug) {
-              fprintf(stdout, " row %ld is implicit linearity\n", i);
-              fprintf(stdout, "\n");
-            }
+#ifdef LOCALDEBUG_CDD
+              std::cerr << " row " << i << " is implicit linearity\n";
+              std::cerr << "\n";
+#endif
           }
           if (*error != dd_NoError)
             goto _L999;
@@ -5824,19 +5829,16 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
   T *vecmin, *vec;
   T min, t1, t2, alpha, t1min;
   bool started = false;
-  bool localdebug = false;
   T dd_one;
   dd_one = 1;
   m = M->rowsize;
   d = M->colsize;
   if (dd_one != p[0]) {
-    fprintf(stdout, "Warning: RayShooting is called with a point with first "
-                    "coordinate not 1.\n");
+    std::cerr << "Warning: RayShooting is called with a point with first coordinate not 1.\n";
     p[0] = dd_one;
   }
   if (r[0] != 0) {
-    fprintf(stdout, "Warning: RayShooting is called with a direction with "
-                    "first coordinate not 0.\n");
+    std::cerr << "Warning: RayShooting is called with a direction with first coordinate not 0.\n";
     r[0] = 0;
   }
 
@@ -5845,8 +5847,9 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
 
   for (i = 1; i <= m; i++) {
     dd_InnerProduct(t1, d, M->matrix[i - 1], p);
-    if (localdebug)
-      std::cout << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
+#endif
     if (t1 > 0) {
       dd_InnerProduct(t2, d, M->matrix[i - 1], r);
       bool is_field = true;
@@ -5857,17 +5860,19 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
           min = alpha;
           t1min = t1; /* store the denominator. */
           started = true;
-          if (localdebug)
-            std::cout << "dd_RayShooting: Level 1: imin = " << imin
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "dd_RayShooting: Level 1: imin = " << imin
                       << " and min = " << min << "\n";
+#endif
         } else {
           if (alpha < min) {
             imin = i;
             min = alpha;
             t1min = t1; /* store the denominator. */
-            if (localdebug)
-              std::cout << "dd_RayShootni: Level 2: imin = " << imin
+#ifdef LOCALDEBUG_CDD
+              std::cerr << "dd_RayShootni: Level 2: imin = " << imin
                         << " and min = " << min << "\n";
+#endif
           } else {
             if (alpha == min) { /* tie break */
               for (j = 1; j <= d; j++) {
@@ -5878,9 +5883,10 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
                 imin = i;
                 min = alpha;
                 t1min = t1; /* store the denominator. */
-                if (localdebug)
-                  std::cout << "dd_RayShooting: Level 3: imin = " << imin
+#ifdef LOCALDEBUG_CDD
+                  std::cerr << "dd_RayShooting: Level 3: imin = " << imin
                             << " and min = " << min << "\n";
+#endif
               }
             }
           }
@@ -5891,17 +5897,19 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
           min = t2;
           t1min = t1; /* store the denominator. */
           started = true;
-          if (localdebug)
-            std::cout << "dd_RayShooting: Level 1: imin = " << imin
+#ifdef LOCALDEBUG_CDD
+            std::cerr << "dd_RayShooting: Level 1: imin = " << imin
                       << " and min = " << min << "\n";
+#endif
         } else {
           if (dd_SmallerFrac(t2, t1, min, t1min)) {
             imin = i;
             min = t2;
             t1min = t1; /* store the denominator. */
-            if (localdebug)
-              std::cout << "dd_RayShootni: Level 2: imin = " << imin
+#ifdef LOCALDEBUG_CDD
+              std::cerr << "dd_RayShootni: Level 2: imin = " << imin
                         << " and min = " << min << "\n";
+#endif
           } else {
             if (dd_EqualFrac(t2, t1, min, t1min)) { /* tie break */
               if (dd_LexSmallerFrac(M->matrix[i - 1], t1, M->matrix[imin - 1],
@@ -5909,9 +5917,10 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
                 imin = i;
                 min = t2;
                 t1min = t1; /* store the denominator. */
-                if (localdebug)
-                  std::cout << "dd_RayShooting: Level 3: imin = " << imin
+#ifdef LOCALDEBUG_CDD
+                  std::cerr << "dd_RayShooting: Level 3: imin = " << imin
                             << " and min = " << min << "\n";
+#endif
               }
             }
           }
@@ -6166,7 +6175,6 @@ template <typename T>
 void dd_CheckAdjacency(dd_conedata<T> *cone, dd_raydata<T> **RP1,
                        dd_raydata<T> **RP2, bool *adjacent) {
   dd_raydata<T> *TempRay;
-  bool localdebug = false;
   dd_rowset Face, Face1;
   set_initialize(&Face, cone->m);
   set_initialize(&Face1, cone->m);
@@ -6176,10 +6184,9 @@ void dd_CheckAdjacency(dd_conedata<T> *cone, dd_raydata<T> **RP1,
   set_int(Face, Face1, cone->AddedHalfspaces);
   if (set_card(Face) < cone->d - 2) {
     *adjacent = false;
-    if (localdebug) {
-      fprintf(stdout, "non adjacent: set_card(face) %ld < %ld = cone->d.\n",
-              set_card(Face), cone->d);
-    }
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "non adjacent: set_card(face) " << set_card(Face) << " < " << cone->d << " = cone->d.\n";
+#endif
     set_free(Face);
     set_free(Face1);
     return;
@@ -6257,7 +6264,6 @@ void dd_StoreRay1(dd_conedata<T> *cone, T *p,
   dd_colrange j;
   T temp;
   dd_raydata<T> *RR;
-  bool localdebug = false;
 
   RR = cone->LastRay;
   *feasible = true;
@@ -6270,14 +6276,14 @@ void dd_StoreRay1(dd_conedata<T> *cone, T *p,
     dd_AValue(&temp, cone->d, cone->A, p, k);
     if (temp == 0) {
       set_addelem(RR->ZeroSet, k);
-      if (localdebug) {
-        fprintf(stdout, "recognized zero!\n");
-      }
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "recognized zero!\n";
+#endif
     }
     if (temp < 0) {
-      if (localdebug) {
-        fprintf(stdout, "recognized negative!\n");
-      }
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "recognized negative!\n";
+#endif
       *feasible = false;
       if (fii > cone->m)
         fii = i; /* the first violating inequality index */
@@ -6328,32 +6334,31 @@ void dd_StoreRay2(dd_conedata<T> *cone, T *p, bool *feasible,
 
 template <typename T> void dd_AddRay(dd_conedata<T> *cone, T *p) {
   bool feasible, weaklyfeasible;
-  bool localdebug = false;
 
   if (cone->FirstRay == nullptr) {
     cone->FirstRay = new dd_raydata<T>;
     cone->FirstRay->Ray = new T[cone->d];
-    if (localdebug)
-      fprintf(stdout, "Create the first ray pointer\n");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "Create the first ray pointer\n";
+#endif
     cone->LastRay = cone->FirstRay;
     cone->ArtificialRay->Next = cone->FirstRay;
   } else {
     cone->LastRay->Next = new dd_raydata<T>;
     cone->LastRay->Next->Ray = new T[cone->d];
-    if (localdebug)
-      fprintf(stdout, "Create a new ray pointer\n");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "Create a new ray pointer\n";
+#endif
     cone->LastRay = cone->LastRay->Next;
   }
   cone->LastRay->Next = nullptr;
   cone->RayCount++;
   cone->TotalRayCount++;
-  if (localdebug) {
+#ifdef LOCALDEBUG_CDD
     if (cone->TotalRayCount % 100 == 0) {
-      fprintf(stdout,
-              "*Rays (Total, Currently Active, Feasible) =%8ld%8ld%8ld\n",
-              cone->TotalRayCount, cone->RayCount, cone->FeasibleRayCount);
+      std::cerr << "*Rays (Total, Currently Active, Feasible) =" << cone->TotalRayCount << cone->RayCount << cone->FeasibleRayCount << "\n";
     }
-  }
+#endif
   if (cone->parent->RelaxedEnumeration) {
     dd_StoreRay2(cone, p, &feasible, &weaklyfeasible);
     if (weaklyfeasible)
@@ -6369,10 +6374,9 @@ template <typename T> void dd_AddRay(dd_conedata<T> *cone, T *p) {
 }
 
 template <typename T> void dd_AddArtificialRay(dd_conedata<T> *cone) {
-  bool localdebug = false;
 
   if (cone->ArtificialRay != nullptr) {
-    fprintf(stdout, "Warning !!!  FirstRay in not nil.  Illegal Call\n");
+    std::cerr << "Warning !!!  FirstRay in not nil.  Illegal Call\n";
     return;
   }
 
@@ -6386,8 +6390,9 @@ template <typename T> void dd_AddArtificialRay(dd_conedata<T> *cone) {
   cone->ArtificialRay = new dd_raydata<T>;
   cone->ArtificialRay->Ray = new T[d1];
 
-  if (localdebug)
-    fprintf(stdout, "Create the artificial ray pointer\n");
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "Create the artificial ray pointer\n";
+#endif
 
   cone->LastRay = cone->ArtificialRay;
   bool feasible;
@@ -6405,7 +6410,6 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone, dd_raydata<T> *Ray1,
   dd_raydata<T> *Rmin;
   dd_raydata<T> *Rmax;
   dd_adjacencydata<T> *NewEdge;
-  bool localdebug = false;
   dd_rowset ZSmin, ZSmax;
   dd_rowset Face, Face1;
 
@@ -6427,32 +6431,31 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone, dd_raydata<T> *Ray1,
   }
   ZSmin = Rmin->ZeroSet;
   ZSmax = Rmax->ZeroSet;
-  if (localdebug) {
-    fprintf(stdout, "dd_ConditionalAddEdge: FMIN = %ld (row%ld)   FMAX=%ld\n",
-            fmin, cone->OrderVector[fmin], fmax);
-  }
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "dd_ConditionalAddEdge: FMIN = " << fmin << " (row" << cone->OrderVector[fmin] << ")   FMAX=" << fmax << "\n";
+#endif
   if (fmin == fmax) {
-    if (localdebug)
-      fprintf(stdout,
-              "dd_ConditionalAddEdge: equal FII value-> No edge added\n");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "dd_ConditionalAddEdge: equal FII value-> No edge added\n";
+#endif
   } else if (set_member(cone->OrderVector[fmin], ZSmax)) {
-    if (localdebug)
-      fprintf(stdout,
-              "dd_ConditionalAddEdge: No strong separation -> No edge added\n");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "dd_ConditionalAddEdge: No strong separation -> No edge added\n";
+#endif
   } else { /* the pair will be separated at the iteration fmin */
     lastchance = true;
     /* flag to check it will be the last chance to store the edge candidate */
     set_int(Face1, ZSmax, ZSmin);
     cone->count_int++;
-    if (localdebug) {
-      fprintf(stdout, "Face: ");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "Face: ";
       for (it = 1; it <= cone->m; it++) {
         it_row = cone->OrderVector[it];
         if (set_member(it_row, Face1))
-          fprintf(stdout, "%ld ", it_row);
+          std::cerr << it_row << " ";
       }
-      fprintf(stdout, "\n");
-    }
+      std::cerr << "\n";
+#endif
     for (it = cone->Iteration + 1; it < fmin && lastchance; it++) {
       it_row = cone->OrderVector[it];
       if (cone->parent->EqualityIndex[it_row] >= 0 &&
@@ -6546,14 +6549,12 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
   bool ptr2found, quit;
   long pos1, pos2;
   float workleft, prevworkleft = 110.0, totalpairs;
-  bool localdebug = false;
 
   totalpairs = (cone->ZeroRayCount - 1.0) * (cone->ZeroRayCount - 2.0) + 1.0;
   Ptr2begin = nullptr;
   if (RRbegin == nullptr || RRend == nullptr) {
     if (1)
-      fprintf(stdout,
-              "Warning: dd_UpdateEdges called with nullptr pointer(s)\n");
+      std::cerr << "Warning: dd_UpdateEdges called with nullptr pointer(s)\n";
     return;
   }
   Ptr1 = RRbegin;
@@ -6584,15 +6585,13 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
     pos1++;
     workleft = 100.0 * (cone->ZeroRayCount - pos1) *
                (cone->ZeroRayCount - pos1 - 1.0) / totalpairs;
-    if (localdebug) {
+#ifdef LOCALDEBUG_CDD
       if (cone->ZeroRayCount >= 500 && pos1 % 10 == 0 &&
           prevworkleft - workleft >= 10) {
-        fprintf(stdout,
-                "*Work of iteration %5ld(/%ld): %4ld/%4ld => %4.1f%% left\n",
-                cone->Iteration, cone->m, pos1, cone->ZeroRayCount, workleft);
+        std::cerr << "*Work of iteration " << cone->Iteration << "(/" << cone->m << "): " << pos1 << "/" << cone->ZeroRayCount << " => " << workleft << "% left\n";
         prevworkleft = workleft;
       }
-    }
+#endif
   } while (Ptr1 != RRend && Ptr1 != nullptr);
 }
 
@@ -6761,7 +6760,6 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows,
   dd_rowrange r;
   dd_colrange s;
   long rank;
-  bool localdebug = false;
   std::vector<T> Rtemp(M->colsize);
 
   rank = 0;
@@ -6784,9 +6782,10 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows,
     dd_SelectPivot2(M->rowsize, M->colsize, M->matrix, B, roworder.data(),
                     PriorityRow, M->rowsize, NopivotRow, ColSelected, &r, &s,
                     &chosen);
-    if (localdebug && chosen)
-      fprintf(stdout, "Procedure dd_MatrixRank: pivot on (r,s) =(%ld, %ld).\n",
-              r, s);
+#ifdef LOCALDEBUG_CDD
+    if (chosen)
+      std::cerr << "Procedure dd_MatrixRank: pivot on (r,s) =(" << r << ", " << s << ").\n";
+#endif
     if (chosen) {
       set_addelem(NopivotRow, r);
       set_addelem(*rowbasis, r);
@@ -6814,7 +6813,6 @@ template <typename T> void dd_FindBasis(dd_conedata<T> *cone, long *rank) {
   dd_colset ColSelected;
   dd_rowrange r;
   dd_colrange j, s;
-  bool localdebug = false;
   std::vector<T> Rtemp(cone->d);
 
   *rank = 0;
@@ -6830,9 +6828,10 @@ template <typename T> void dd_FindBasis(dd_conedata<T> *cone, long *rank) {
     dd_SelectPivot2(cone->m, cone->d, cone->A, cone->B, cone->OrderVector,
                     cone->EqualitySet, cone->m, NopivotRow, ColSelected, &r, &s,
                     &chosen);
-    if (localdebug && chosen)
-      fprintf(stdout, "Procedure dd_FindBasis: pivot on (r,s) =(%ld, %ld).\n",
-              r, s);
+#ifdef LOCALDEBUG_CDD
+    if (chosen)
+      std::cerr << "Procedure dd_FindBasis: pivot on (r,s) =(" << r << ", " << s << ").\n";
+#endif
     if (chosen) {
       set_addelem(cone->InitialHalfspaces, r);
       set_addelem(NopivotRow, r);
@@ -6858,7 +6857,6 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found) {
   dd_rowrange i;
   long rank;
   dd_RowOrderType roworder_save = dd_LexMin;
-  bool localdebug = false;
 
   *found = false;
   set_initialize(&CandidateRows, cone->m);
@@ -6875,17 +6873,17 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found) {
   /*all rows not in NonequalitySet are candidates for initial cone*/
   dd_FindBasis(cone, &rank);
   cone->LinearityDim = cone->d - rank;
-  if (localdebug)
-    fprintf(stdout, "Linearity Dimension = %ld\n", cone->LinearityDim);
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "Linearity Dimension = " << cone->LinearityDim << "\n";
+#endif
   if (cone->LinearityDim > 0) {
     dd_ColumnReduce(cone);
     dd_FindBasis(cone, &rank);
   }
   if (!set_subset(cone->EqualitySet, cone->InitialHalfspaces))
-    if (localdebug)
-      fprintf(
-          stdout,
-          "Equality set is dependent. Equality Set and an initial basis:\n");
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "Equality set is dependent. Equality Set and an initial basis:\n";
+#endif
   *found = true;
   set_free(CandidateRows);
   if (cone->parent->InitBasisAtBottom == true)
@@ -6903,10 +6901,10 @@ template <typename T>
 void dd_CheckEquality(dd_colrange d_size, dd_raydata<T> **RP1,
                       dd_raydata<T> **RP2, bool *equal) {
   long j;
-  bool localdebug = false;
 
-  if (localdebug)
-    fprintf(stdout, "Check equality of two rays\n");
+#ifdef LOCALDEBUG_CDD
+    std::cerr << "Check equality of two rays\n";
+#endif
   *equal = true;
   j = 1;
   while (j <= d_size && *equal) {
@@ -6915,7 +6913,7 @@ void dd_CheckEquality(dd_colrange d_size, dd_raydata<T> **RP1,
     j++;
   }
   if (*equal)
-    fprintf(stdout, "Equal records found !!!!\n");
+    std::cerr << "Equal records found !!!!\n";
 }
 
 template <typename T>
@@ -7106,8 +7104,7 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
   PrevPtr = cone->ArtificialRay;
   Ptr = cone->FirstRay;
   if (PrevPtr->Next != Ptr)
-    fprintf(stdout, "Error at dd_DeleteNegativeRays: ArtificialRay does not "
-                    "point the FirstRay.\n");
+    std::cerr << "Error at dd_DeleteNegativeRays: ArtificialRay does not point the FirstRay.\n";
   completed = false;
   while (Ptr != nullptr && !completed) {
     if (Ptr->ARay < 0) {
@@ -7126,7 +7123,7 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
     temp = Ptr->ARay;
     if (temp < 0) {
       if (!negfound) {
-        fprintf(stdout, "Error: An infeasible ray found after their removal\n");
+        std::cerr << "Error: An infeasible ray found after their removal\n";
         negfound = true;
       }
     } else {
@@ -7266,7 +7263,6 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
   double prevprogress, progress;
   T value1, value2;
   bool adj, equal, completed;
-  bool localdebug = false;
 
   dd_EvaluateARay1(hnew, cone);
   /*Check feasibility of rays w.r.t. hnew
@@ -7323,13 +7319,12 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
     pos1++;
     progress =
         100.0 * (static_cast<double>(pos1) / pos2) * (2.0 * pos2 - pos1) / pos2;
-    if (progress - prevprogress >= 10 && pos1 % 10 == 0 && localdebug) {
-      fprintf(
-          stdout,
-          "*Progress of iteration %5ld(/%ld):   %4ld/%4ld => %4.1f%% done\n",
-          cone->Iteration, cone->m, pos1, pos2, progress);
+#ifdef LOCALDEBUG_CDD
+    if (progress - prevprogress >= 10 && pos1 % 10 == 0) {
+      std::cerr << "*Progress of iteration " << cone->Iteration << "(/" << cone->m << "):   " << pos1 << "/" << pos2 << " => " << progress << "% done\n";
       prevprogress = progress;
     }
+#endif
   }
   if (cone->RayCount == cone->WeaklyFeasibleRayCount)
     cone->CompStatus = dd_AllFound;
@@ -7339,7 +7334,6 @@ template <typename T>
 void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
 /* This procedure must be used under PreOrderedRun mode */
 {
-  bool localdebug = false;
   dd_raydata<T> *RayPtr1;
   dd_raydata<T> *RayPtr2;
 
@@ -7382,8 +7376,10 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
 
   if (cone->Iteration < cone->m) {
     if (cone->ZeroHead != nullptr && cone->ZeroHead != cone->LastRay) {
-      if (cone->ZeroRayCount > 200 && localdebug)
-        fprintf(stdout, "*New edges being scanned...\n");
+#ifdef LOCALDEBUG_CDD
+      if (cone->ZeroRayCount > 200)
+        std::cerr << "*New edges being scanned...\n";
+#endif
       dd_UpdateEdges(cone, cone->ZeroHead, cone->LastRay);
     }
   }
@@ -7471,7 +7467,6 @@ dd_rowrange dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded) {
 template <typename T>
 dd_rowrange dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded) {
   long i, fea, inf, max, tmax, fi = 0, infi = 0;
-  bool localdebug = false;
 
   max = -1;
   dd_rowrange retidx = 0;
@@ -7490,15 +7485,13 @@ dd_rowrange dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded) {
       }
     }
   }
-  if (localdebug) {
+#ifdef LOCALDEBUG_CDD
     if (max == fi) {
-      fprintf(stdout, "*infeasible rays (min) =%5ld, #feas rays =%5ld\n", infi,
-              fi);
+      std::cerr << "*infeasible rays (min) =" << infi << ", #feas rays =" << fi << "\n";
     } else {
-      fprintf(stdout, "*infeasible rays (max) =%5ld, #feas rays =%5ld\n", infi,
-              fi);
+      std::cerr << "*infeasible rays (max) =" << infi << ", #feas rays =" << fi << "\n";
     }
-  }
+#endif
   return retidx;
 }
 
@@ -7670,7 +7663,7 @@ in highest order.
         cone->OrderVector[i] = oj;
       }
     } else {
-      fprintf(stdout, "UpdateRowOrder: Error.\n");
+      std::cerr << "UpdateRowOrder: Error.\n";
       return;
     }
   }
@@ -7737,7 +7730,6 @@ template <typename T> void dd_DDInit(dd_conedata<T> *cone) {
 
 template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
   dd_rowrange itemp, otemp;
-  bool localdebug = false;
 
   auto clean = [&]() -> void {
     if (cone->d <= 0 ||
@@ -7758,10 +7750,9 @@ template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
   while (cone->Iteration <= cone->m) {
     dd_rowrange hh = dd_SelectNextHalfspace(cone, cone->WeaklyAddedHalfspaces);
     if (set_member(hh, cone->NonequalitySet)) { /* Skip the row hh */
-      if (localdebug) {
-        fprintf(stdout,
-                "*The row # %3ld should be inactive and thus skipped.\n", hh);
-      }
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "*The row # " << hh << " should be inactive and thus skipped.\n";
+#endif
       set_addelem(cone->WeaklyAddedHalfspaces, hh);
     } else {
       if (cone->PreOrderedRun) {
@@ -7781,12 +7772,9 @@ template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
       cone->OrderVector[itemp] = otemp;
       /* store the dynamic ordering in ordervec */
     }
-    if (localdebug) {
-      fprintf(stdout,
-              "(Iter, Row, #Total, #Curr, #Feas)= %5ld %5ld %9ld %6ld %6ld\n",
-              cone->Iteration, hh, cone->TotalRayCount, cone->RayCount,
-              cone->FeasibleRayCount);
-    }
+#ifdef LOCALDEBUG_CDD
+      std::cerr << "(Iter, Row, #Total, #Curr, #Feas)= " << cone->Iteration << " " << hh << " " << cone->TotalRayCount << " " << cone->RayCount << " " << cone->FeasibleRayCount << "\n";
+#endif
     if (cone->CompStatus == dd_AllFound || cone->CompStatus == dd_RegionEmpty) {
       set_addelem(cone->AddedHalfspaces, hh);
       return clean();
@@ -7957,7 +7945,6 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const &TheEXT) {
   dd_rowrange m_input, i;
   dd_colrange d_input, j;
   dd_RepresentationType rep;
-  bool localdebug = false;
 
   m_input = TheEXT.rows();
   d_input = TheEXT.cols();
@@ -7969,9 +7956,10 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const &TheEXT) {
   for (i = 0; i < m_input; i++)
     for (j = 0; j < d_input; j++) {
       M->matrix[i][j] = TheEXT(i, j);
-      if (localdebug)
-        std::cout << "i=" << i << " j=" << j << " value=" << TheEXT(i, j)
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "i=" << i << " j=" << j << " value=" << TheEXT(i, j)
                   << "\n";
+#endif
     }
   return M;
 }
@@ -7982,7 +7970,6 @@ dd_matrixdata<T> *MyMatrix_PolyFile2MatrixExt(MyMatrix<T> const &TheEXT) {
   dd_rowrange m_input, i;
   dd_colrange d_input, j;
   dd_RepresentationType rep;
-  bool localdebug = false;
 
   m_input = TheEXT.rows();
   d_input = TheEXT.cols();
@@ -7995,9 +7982,10 @@ dd_matrixdata<T> *MyMatrix_PolyFile2MatrixExt(MyMatrix<T> const &TheEXT) {
     M->matrix[i][0] = 0;
     for (j = 0; j < d_input; j++) {
       M->matrix[i][j + 1] = TheEXT(i, j);
-      if (localdebug)
-        std::cout << "i=" << i << " j=" << j << " value=" << TheEXT(i, j)
+#ifdef LOCALDEBUG_CDD
+        std::cerr << "i=" << i << " j=" << j << " value=" << TheEXT(i, j)
                   << "\n";
+#endif
     }
   }
   return M;
