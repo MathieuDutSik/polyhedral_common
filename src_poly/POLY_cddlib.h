@@ -1296,7 +1296,9 @@ template <typename T> inline dd_rowrange get_m_size(dd_matrixdata<T> *M) {
 template <typename T> inline dd_rowrange get_d_size(dd_matrixdata<T> *M) {
   dd_colrange d;
   if (M->representation == dd_Generator) {
+#ifdef LOCALDEBUG_CDD
     std::cerr << " Generator case\n";
+#endif
     d = M->colsize + 1;
   } else {
     d = M->colsize;
@@ -1617,7 +1619,9 @@ dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,
     set_emptyset(M2->linset);
     for (i = 1; i <= m; i++) {
       if (newpos2[newpos1[i]] > 0) {
+#ifdef LOCALDEBUG_CDD
         std::cerr << "newpos1[" << i << "]=" << newpos1[i] << ", newpos2[newpos1[" << i << "]]=" << newpos2[newpos1[i]] << "\n";
+#endif
         if (set_member(i, M->linset))
           set_addelem(M2->linset, newpos2[newpos1[i]]);
         (*newpos)[i] = newpos2[newpos1[i]];
@@ -1950,7 +1954,9 @@ template <typename T> void dd_SetLinearity(dd_matrixdata<T> *M, char *line) {
     i++;
   }
   if (i != eqsize) {
+#ifdef LOCALDEBUG_CDD
     std::cerr << "* Warning: there are inconsistencies in linearity setting.\n";
+#endif
   }
   return;
 }
@@ -3007,8 +3013,10 @@ void dd_GaussianColumnPivot(dd_colrange d_size, T **X, T **Ts, dd_rowrange r,
       if (j != s) {
         T alpha;
         dd_TableauEntry(alpha, d_size, X, Ts, r, j);
+#ifdef LOCALDEBUG_CDD
         if (alpha != 0)
           std::cerr << "j=" << j << " alpha=" << alpha << "\n";
+#endif
       }
     }
   }
@@ -4943,7 +4951,9 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
 #endif
 
   if (set_card(M->linset) != 0) {
+#ifdef LOCALDEBUG_CDD
     std::cerr << "This code works only in the absence of linearity relations\n";
+#endif
     *error = dd_NonZeroLinearity;
 #ifdef DEBUG_CDD
     os << "CDD: Error dd_NonZeroLinearity\n";
@@ -5149,7 +5159,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
 
   m = M->rowsize;
   d = M->colsize;
+#ifdef LOCALDEBUG_CDD
   std::cerr << "m=" << m << " d=" << d << "\n";
+#endif
   dd_rowset redset;
   set_initialize(&redset, m);
   dd_AllocateArow(d, &shootdir);
@@ -5158,7 +5170,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
 #endif
 
   if (set_card(M->linset) != 0) {
+#ifdef LOCALDEBUG_CDD
     std::cerr << "This code works only in the absence of linearity relations\n";
+#endif
     *error = dd_NonZeroLinearity;
     return redset;
   }
