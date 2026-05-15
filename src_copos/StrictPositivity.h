@@ -5,7 +5,7 @@
 // clang-format off
 #include "Copositivity.h"
 #include "shortest_flipping.h"
-#include "Tspace_General.h"
+#include "Tspace_Canonical.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,19 +29,19 @@ template <typename T, typename Tint> struct NakedPerfect {
 };
 
 template <typename T, typename Tint>
-NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
+NakedPerfect<T, Tint> GetNakedPerfectCone(std::vector<MyMatrix<T>> const &ListMat,
                                           MyMatrix<T> const &eGram,
                                           Tshortest<T, Tint> const &rec_shv,
                                           [[maybe_unused]] std::ostream &os) {
   int nbSHV = rec_shv.SHV.rows();
   std::vector<int> ListPos(nbSHV);
-  int nbMat = LinSpa.ListMat.size();
+  int nbMat = ListMat.size();
   int n = eGram.rows();
   MyMatrix<T> RyshkovLoc(nbSHV, nbMat);
   for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
     MyVector<Tint> eVect = GetMatrixRow(rec_shv.SHV, iSHV);
     for (int iMat = 0; iMat < nbMat; iMat++) {
-      T eSum = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], eVect);
+      T eSum = EvaluationQuadForm<T, Tint>(ListMat[iMat], eVect);
       RyshkovLoc(iSHV, iMat) = eSum;
     }
   }
@@ -151,10 +151,10 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
   }
 #endif
   int n = eMat.rows();
-  LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(n);
-  MyVector<T> eMatExpr = LINSPA_GetVectorOfMatrixExpression(LinSpa, eMat);
+  std::vector<MyMatrix<T>> ListMat = TSPACE_canonical_get_list_matrices<T>(n);
+  MyVector<T> eMatExpr = TSPACE_canonical_get_expression(eMat);
 #ifdef DEBUG_STRICT_POSITIVITY
-  int dimLinSpa = LinSpa.ListMat.size();
+  int dimLinSpa = ListMat.size();
   os << "STR: dimLinSpa=" << dimLinSpa << "\n";
   os << "STR: eMatExpr=";
   WriteVectorNoDim(os, eMatExpr);
@@ -171,7 +171,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     Tshortest<T, Tint> rec_shv =
         CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis, os);
     NakedPerfect<T, Tint> eNaked =
-        GetNakedPerfectCone(LinSpa, SearchMatrix, rec_shv, os);
+        GetNakedPerfectCone(ListMat, SearchMatrix, rec_shv, os);
     int nbBlock = eNaked.ListBlock.size();
 
     T ScalMat = MatrixScalarProduct(SearchMatrix, eMat);

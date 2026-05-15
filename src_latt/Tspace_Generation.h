@@ -3,6 +3,7 @@
 #define SRC_LATT_TSPACE_GENERATION_H_
 
 // clang-format off
+#include "Tspace_Canonical.h"
 #include <vector>
 // clang-format on
 
@@ -15,16 +16,7 @@
 #endif
 
 template <typename T> LinSpaceMatrix<T> ComputeCanonicalSpace(int const &n) {
-  std::vector<MyMatrix<T>> ListMat;
-  for (int i = 0; i < n; i++) {
-    for (int j = i; j < n; j++) {
-      MyMatrix<T> eMat(n, n);
-      ZeroAssignation(eMat);
-      eMat(i, j) = 1;
-      eMat(j, i) = 1;
-      ListMat.push_back(eMat);
-    }
-  }
+  std::vector<MyMatrix<T>> ListMat = TSPACE_canonical_get_list_matrices<T>(n);
   MyMatrix<T> SuperMat = IdentityMat<T>(n);
   std::vector<MyMatrix<T>> ListComm;
   return BuildLinSpace(SuperMat, ListMat, ListComm);
