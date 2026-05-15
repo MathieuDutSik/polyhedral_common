@@ -196,20 +196,20 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const &Latt,
   }
   //
   T c0 = -u1_norm / k1_norm;
-  T cS = 1 / k1_norm;
+  T cS = T(1) / k1_norm;
   T hinp = -c0 / cS;
   T h;
-  if (cS > 0) {
+  if (cS > T(0)) {
     h = UniversalCeilScalarInteger<T, T>(hinp);
     if (hinp == h)
-      h += 1;
+      h += T(1);
   } else {
     h = UniversalFloorScalarInteger<T, T>(hinp);
     if (hinp == h)
-      h -= 1;
+      h -= T(1);
   }
   T c = c0 + h * cS;
-  if (c <= 0) {
+  if (c <= T(0)) {
     std::cerr << "LORLIN: We should have c>0\n";
     throw TerminalException{1};
   }
@@ -1067,7 +1067,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
   LorentzianFinitenessGroupTester(MyMatrix<T> const &_G, std::ostream &_os)
       : G(_G), os(_os) {
     int dim = G.rows();
-    T dim_T = dim;
+    T dim_T(dim);
     std::vector<T> V = GetIntegralMatricesPossibleOrders<T>(dim_T);
     max_finite_order = UniversalScalarConversion<int, T>(V[V.size() - 1]);
     InvariantBasis = IdentityMat<Tint>(dim);

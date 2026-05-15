@@ -306,7 +306,7 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
 
 template <typename T, typename Tint>
 MyVector<Tint> GetV0_vector(const MyMatrix<T> &G, std::ostream &os) {
-  T CritNorm = 0;
+  T CritNorm(0);
   bool StrictIneq = true;
   return GetShortIntegralVector<T, Tint>(G, CritNorm, StrictIneq, os);
 }
@@ -447,7 +447,7 @@ template <typename T, typename Tint>
 DataMappingVinbergProblem<T, Tint>
 Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
                 const Tint &k, std::ostream &os) {
-  if (k == 1 || k == 2) {
+  if (k == Tint(1) || k == Tint(2)) {
     // No need for some complex linear algebra work,
     // returning directly
     MyVector<T> a_T = UniversalVectorConversion<T, Tint>(a);
@@ -475,7 +475,7 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   }
   std::optional<MyVector<Tint>> opt = SolutionIntMat(Bmat, m2_Ga);
   if (!opt)
-    return {{}, {}, 0, {}, {}, false};
+    return {{}, {}, T(0), {}, {}, false};
   // The solution res is of dimension 2n-1
   MyVector<Tint> res = *opt;
   //

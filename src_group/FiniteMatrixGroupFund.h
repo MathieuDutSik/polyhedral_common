@@ -20,23 +20,23 @@
 template <typename T>
 std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
   auto is_prime = [](T const &x) -> bool {
-    if (x == 1)
+    if (x == T(1))
       return false;
-    if (x == 2)
+    if (x == T(2))
       return true;
-    T div = 2;
+    T div(2);
     while (true) {
       T res = ResInt(x, div);
-      if (res == 0)
+      if (res == T(0))
         return false;
-      div += 1;
+      div += T(1);
       if (div * div > x)
         break;
     }
     return true;
   };
   std::vector<T> ListPrime;
-  for (T val = 2; val <= N + 1; val++) {
+  for (T val(2); val <= N + T(1); val += T(1)) {
     bool test = is_prime(val);
 #ifdef DEBUG_FINITE_MATRIX_GROUP
     std::cerr << "FMGT: val=" << val << " test=" << test << "\n";
@@ -54,16 +54,16 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
     std::vector<pair> l_pair;
   };
   auto get_pair = [&](T const &eprime, int const &k) -> pair {
-    if (eprime == 2 && k == 1)
-      return {2, 0};
+    if (eprime == T(2) && k == 1)
+      return {T(2), T(0)};
     T pow1 = MyPow(eprime, k - 1);
     T fact = pow1 * eprime;
-    T dim_cost = pow1 * (eprime - 1);
+    T dim_cost = pow1 * (eprime - T(1));
     return {fact, dim_cost};
   };
   auto get_l_pair = [&](T const &eprime) -> std::vector<pair> {
     std::vector<pair> l_pair;
-    l_pair.push_back({1, 0});
+    l_pair.push_back({T(1), T(0)});
     int k = 1;
     while (true) {
       pair epair = get_pair(eprime, k);
@@ -93,8 +93,8 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
 #endif
   std::vector<T> l_order;
   for (auto &V : BlockIterationMultiple(VectSiz)) {
-    T tot_dim = 0;
-    T order = 1;
+    T tot_dim(0);
+    T order(1);
     for (size_t iPrime = 0; iPrime < ListPrime.size(); iPrime++) {
       int pos = V[iPrime];
       pair epair = l_desc[iPrime].l_pair[pos];

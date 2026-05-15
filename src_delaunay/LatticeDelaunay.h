@@ -105,7 +105,7 @@ MyVector<T> get_reduced_isobarycenter(MyMatrix<T> const& EXT) {
     for (int i_row=0; i_row<n_row; i_row++) {
       scal += EXT(i_row, i_col+1);
     }
-    eIso(i_col) = scal / n_row;
+    eIso(i_col) = scal / T(n_row);
   }
   return eIso;
 }
