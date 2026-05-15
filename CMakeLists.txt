@@ -225,7 +225,7 @@ add_library(polyhedral_copos_support INTERFACE)
 target_link_libraries(
   polyhedral_copos_support
   INTERFACE
-    polyhedral_group_support
+    polyhedral_common
     polyhedral_glpk_support
 )
 
