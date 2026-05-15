@@ -1863,7 +1863,7 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
     for (auto & ebnd: fce.boundaries[index-1].ll_bound[face1.iOrb].l_bound) {
       MyMatrix<Tint> M = ebnd.M * face1.M;
       std::pair<size_t, int> p = cb2.get_position(ebnd.iOrb, M);
-      T value = p.second * ebnd.sign;
+      T value = T(p.second) * T(ebnd.sign);
       int iCol = p.first;
       T2 entry(iRow, iCol, value);
       tripletList.push_back(entry);

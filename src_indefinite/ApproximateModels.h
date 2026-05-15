@@ -108,7 +108,7 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const &Qmat,
     Tint scal1_tint = UniversalScalarConversion<Tint, T>(scal1);
     eImg += scal1_tint * f;
     T scal2 = ScalarProductQuadForm(Qmat, y, f);
-    T scal3 = (xNorm / 2) * scal2;
+    T scal3 = (xNorm / T(2)) * scal2;
     Tint scal2_tint = UniversalScalarConversion<Tint, T>(scal2);
     Tint scal3_tint = UniversalScalarConversion<Tint, T>(scal3);
     eImg -= scal3_tint * f;
@@ -597,7 +597,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
     if (ResInt(X, two) == T(1)) {
       return {};
     }
-    T Xdiv2 = X / 2;
+    T Xdiv2 = X / T(2);
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: EnumerateVectorOverDiscriminant Xdiv2=" << Xdiv2 << "\n";
 #endif
@@ -640,7 +640,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
         MyVector<T> eClass3 = DivV * eClass2;
         T X_res1 = ResInt(Xdiv2, DivV);
         T X_res2 = ResInt(Xdiv2, DivV_sqr);
-        T Aclass3_norm = EvaluationQuadForm(Gmat, eClass3) / 2;
+        T Aclass3_norm = EvaluationQuadForm(Gmat, eClass3) / T(2);
         T Aclass3_res1 = ResInt(Aclass3_norm, DivV);
         T Aclass3_res2 = ResInt(Aclass3_norm, DivV_sqr);
 #ifdef DEBUG_APPROXIMATE_MODELS
@@ -676,7 +676,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
           if (IsInteger(quot)) { // If not then the equation has no solution
             MyVector<T> w = quot * eRec.V;
             MyVector<T> eClass4 = eClass3 + DivV * w;
-            T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / 2;
+            T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / T(2);
             T Aclass4_res2 = ResInt(Aclass4_norm, DivV_sqr);
 #ifdef DEBUG_APPROXIMATE_MODELS
             os << "MODEL: EnumerateVectorOverDiscriminant w="
@@ -741,8 +741,8 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
     os << "MODEL: Beginning of GetCoveringOrbitRepresentatives 1: X=" << X
        << "\n";
 #endif
-    if (X == 0) {
-      return EnumerateVectorOverDiscriminant(0, os);
+    if (X == T(0)) {
+      return EnumerateVectorOverDiscriminant(T(0), os);
     }
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: Before GetSquareDivisor\n";
@@ -789,7 +789,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
 #endif
       return {};
     }
-    T Xdiv2 = X / 2;
+    T Xdiv2 = X / T(2);
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: Xdiv2=" << Xdiv2 << "\n";
 #endif

@@ -252,16 +252,16 @@ gen_cuspidal_request_full_info(MyMatrix<T> const &G,
   std::vector<T> Vdiag;
   for (auto &eV : eReq.l_ui) {
     l_vect.push_back(eV);
-    Vdiag.push_back(1);
+    Vdiag.push_back(T(1));
   }
   MyVector<Tint> k_tint =
       UniversalVectorConversion<Tint, T>(RemoveFractionVector(eReq.k));
   l_vect.push_back(k_tint);
-  Vdiag.push_back(2);
+  Vdiag.push_back(T(2));
   MyVector<Tint> kp_tint =
       UniversalVectorConversion<Tint, T>(RemoveFractionVector(eReq.kP));
   l_vect.push_back(kp_tint);
-  Vdiag.push_back(3);
+  Vdiag.push_back(T(3));
   size_t n_row = Vdiag.size();
   //
   using Tidx = uint32_t;

@@ -374,7 +374,7 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple_inner(
 #endif
 
   int n_rows = SHV1_T.rows();
-  std::vector<T> Vdiag(n_rows, 0);
+  std::vector<T> Vdiag(n_rows, T(0));
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: Before the TestEquivalence_ListMat_Vdiag\n";
 #endif

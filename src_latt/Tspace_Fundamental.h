@@ -316,7 +316,7 @@ ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
   MyMatrix<Tint> SHV =
       ExtractInvariantVectorFamilyZbasis<T, Tint>(SuperMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  std::vector<T> Vdiag(SHV_T.rows(), 0);
+  std::vector<T> Vdiag(SHV_T.rows(), T(0));
   std::vector<std::vector<Tidx>> ListGenPerm =
       GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
                                                               Vdiag, os);
@@ -353,7 +353,7 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> TheMat = ZeroMatrix<T>(n, n);
   for (auto &eMat : LinSpa.ListMat) {
     int coef = random() % (2 * N + 1) - N;
-    TheMat += coef * eMat;
+    TheMat += T(coef) * eMat;
   }
   while (true) {
     if (IsPositiveDefinite(TheMat, os)) {
@@ -371,7 +371,7 @@ bool IsSymmetryGroupCorrect(MyMatrix<T> const &GramMat,
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV.rows();
-  std::vector<T> Vdiag(n_row, 0);
+  std::vector<T> Vdiag(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat = {GramMat};
   std::vector<std::vector<Tidx>> ListGen =
       GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,

@@ -1052,11 +1052,11 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   }
 #endif
   auto get_incd_status = [&](int iVert, MyVector<T> const &eFac) -> bool {
-    T eSum = 0;
+    T eSum(0);
     for (int u = 0; u <= n + 1; u++) {
       eSum += TotalListVertices(iVert, u) * eFac(u);
     }
-    return eSum == 0;
+    return eSum == T(0);
   };
   // The Linc is not ordered while the Linc_face by virtue of being built as a
   // Face has an ordered intrinsic to it.

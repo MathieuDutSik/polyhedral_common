@@ -162,9 +162,9 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   for (int i = 0; i < n; i++) {
     for (int j = i; j < n; j++) {
       MyMatrix<T> eMat = ZeroMatrix<T>(2 * n, 2 * n);
-      eMat(i, j) = 1;
-      eMat(j, i) = 1;
-      T eVal = eSum / 2;
+      eMat(i, j) = T(1);
+      eMat(j, i) = T(1);
+      T eVal = eSum / T(2);
       eMat(n + i, j) = eVal;
       eMat(n + j, i) = eVal;
       eMat(i, n + j) = eVal;
@@ -179,10 +179,10 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   for (int i = 0; i < n - 1; i++) {
     for (int j = i + 1; j < n; j++) {
       MyMatrix<T> eMat = ZeroMatrix<T>(2 * n, 2 * n);
-      eMat(n + i, j) = 1;
-      eMat(j, n + i) = 1;
-      eMat(n + j, i) = -1;
-      eMat(i, n + j) = -1;
+      eMat(n + i, j) = T(1);
+      eMat(j, n + i) = T(1);
+      eMat(n + j, i) = T(-1);
+      eMat(i, n + j) = T(-1);
       ListMat.push_back(eMat);
     }
   }
@@ -191,8 +191,8 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   // in which the SuperMat truly lives.
   MyMatrix<T> SuperMat_pre = ZeroMatrix<T>(2 * n, 2 * n);
   for (int i = 0; i < n; i++) {
-    SuperMat_pre(i, i) = 1;
-    T eVal = eSum / 2;
+    SuperMat_pre(i, i) = T(1);
+    T eVal = eSum / T(2);
     SuperMat_pre(n + i, i) = eVal;
     SuperMat_pre(i, n + i) = eVal;
     //

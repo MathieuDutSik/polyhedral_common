@@ -298,7 +298,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer_SHV n_row=" << n_row << "\n";
 #endif
-  std::vector<T> Vdiag(n_row, 0);
+  std::vector<T> Vdiag(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat =
       GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
 
@@ -388,7 +388,7 @@ size_t LINSPA_Invariant_SHV(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
                             std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   int n_row = SHV_T.rows();
-  std::vector<T> Vdiag(n_row, 0);
+  std::vector<T> Vdiag(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat =
       GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
   return GetInvariant_ListMat_Vdiag<T, Tfield>(seed, SHV_T, ListMat, Vdiag, os);
@@ -434,7 +434,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
     return {};
   }
   int n_row = SHV1_T.rows();
-  std::vector<T> Vdiag1(n_row, 0), Vdiag2(n_row, 0);
+  std::vector<T> Vdiag1(n_row, T(0)), Vdiag2(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat1 =
       GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspaces);
   std::vector<MyMatrix<T>> ListMat2 =
