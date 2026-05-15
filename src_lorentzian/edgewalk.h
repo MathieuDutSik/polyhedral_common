@@ -104,7 +104,7 @@ template <typename T>
 MyMatrix<T> ComputeLattice_LN(MyMatrix<T> const &G, T const &N) {
   int n = G.rows();
   MyMatrix<T> M1 = IdentityMat<T>(n);
-  MyMatrix<T> M2 = (N / 2) * Inverse(G);
+  MyMatrix<T> M2 = (N / T(2)) * Inverse(G);
   return IntersectionLattice(M1, M2);
 }
 
@@ -642,8 +642,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
       select which one
      */
     auto get_positive_norm_vector = [&]() -> MyVector<T> {
-      T two = 2;
-      T alpha = 1;
+      T two(2);
+      T alpha(1);
       while (true) {
         for (int i_bas = 0; i_bas < 2; i_bas++) {
           MyVector<T> v_bas = GetMatrixRow(Pplane, i_bas);

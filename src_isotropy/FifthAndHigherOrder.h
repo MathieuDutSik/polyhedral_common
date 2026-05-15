@@ -188,7 +188,7 @@ MyMatrix<T> compute_fifth_basis(MyMatrix<T> const &Q, std::ostream &os) {
   auto get_sign_vector = [&](int const &sign) -> MyVector<T> {
     MyMatrix<T> ProdM = M * Q;
     MyMatrix<T> NSP = NullspaceTrMat(ProdM);
-    MyMatrix<T> QuadQ = sign * NSP * Q * NSP.transpose();
+    MyMatrix<T> QuadQ = T(sign) * NSP * Q * NSP.transpose();
     T CritNorm(0);
     bool StrictIneq = true;
     MyVector<T> v1 =

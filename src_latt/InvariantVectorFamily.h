@@ -384,7 +384,7 @@ MyMatrix<Tint> ComputeVoronoiRelevantVector(MyMatrix<T> const &GramMat,
       MyVector<T> eV(n);
       for (int u = 0; u < n; u++) {
         T val = UniversalScalarConversion<T, int>(eVect[u]);
-        eV(u) = val / 2;
+        eV(u) = val / T(2);
       }
       resultCVP<T, Tint> result = solver.nearest_vectors(eV);
       if (result.ListVect.rows() == 2) {

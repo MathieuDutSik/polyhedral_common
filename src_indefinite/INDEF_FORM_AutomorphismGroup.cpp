@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheorySafeInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "CombinedAlgorithms.h"
@@ -75,6 +76,11 @@ int main(int argc, char *argv[]) {
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
+        return process<T, Tint>(MatFile, OutFormat, os);
+      }
+      if (arith == "safe") {
+        using T = Rational<SafeInt64>;
+        using Tint = SafeInt64;
         return process<T, Tint>(MatFile, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";

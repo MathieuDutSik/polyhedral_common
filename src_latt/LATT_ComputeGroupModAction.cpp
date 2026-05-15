@@ -52,6 +52,10 @@ void process(std::string const &arith,
     using T = mpz_class;
     return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
   }
+  if (arith == "safe_integer") {
+    using T = SafeInt64;
+    return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
+  }
   if (arith == "mpz_int") {
     using T = boost::multiprecision::mpz_int;
     return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);

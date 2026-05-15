@@ -3,6 +3,7 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "parall_search.h"
 // clang-format on
@@ -47,6 +48,11 @@ void process_A(std::string const &arithmetic, size_t const &n_iter,
   if (arithmetic == "multi_boost") {
     using T = boost::multiprecision::cpp_rational;
     using Tint = boost::multiprecision::cpp_int;
+    return process_B<T, Tint>(n_iter, MatFile, OutFormat, OutFile);
+  }
+  if (arithmetic == "safe") {
+    using T = Rational<SafeInt64>;
+    using Tint = SafeInt64;
     return process_B<T, Tint>(n_iter, MatFile, OutFormat, OutFile);
   }
   std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";

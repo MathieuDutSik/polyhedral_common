@@ -21,28 +21,28 @@
 // which gets us min(A)^n <= H(n) det(A)
 template <typename T> T GetUpperBoundHermitePower(int n) {
   if (n == 1) {
-    return 1;
+    return T(1);
   }
   if (n == 2) {
-    return T(4) / 3;
+    return T(4) / T(3);
   }
   if (n == 3) {
-    return 2;
+    return T(2);
   }
   if (n == 4) {
-    return 4;
+    return T(4);
   }
   if (n == 5) {
-    return 8;
+    return T(8);
   }
   if (n == 6) {
-    return T(64) / 3;
+    return T(64) / T(3);
   }
   if (n == 7) {
-    return 64;
+    return T(64);
   }
   if (n == 8) {
-    return 256;
+    return T(256);
   }
   int h = n * (n - 1) / 2;
   T base = T(4) / T(3);
@@ -154,12 +154,12 @@ template <typename T> T get_multiple_value(MyMatrix<T> const &M) {
   int n = M.rows();
   auto get_mat_mult = [&]() -> T {
     for (int i = 0; i < n; i++) {
-      T quot = fr.TheMat(i, i) / 2;
+      T quot = fr.TheMat(i, i) / T(2);
       if (!IsInteger(quot)) {
-        return 1;
+        return T(1);
       }
     }
-    return 2;
+    return T(2);
   };
   return get_mat_mult() / fr.TheMult;
 }
@@ -179,14 +179,14 @@ T MaxKBound(T const &C, int const &k, MyMatrix<T> const &M) {
     // Assumed to be exact arithmetic.
     // pretty inefficient but actually fine.
     T delta = get_multiple_value(M);
-    auto is_corr = [&](T const &val) -> T {
+    auto is_corr = [&](T const &val) -> bool {
       T ret = val;
       for (int i = 1; i < k; i++) {
         ret *= val;
       }
       return ret <= C;
     };
-    T val = 0;
+    T val(0);
     while (true) {
       T val_new = val + delta;
       if (is_corr(val_new)) {

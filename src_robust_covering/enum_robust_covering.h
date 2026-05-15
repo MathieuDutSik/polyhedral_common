@@ -1827,7 +1827,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
         os << "ROBUST: fpe, op3 exit\n";
 #endif
-        shift = shift / 2;
+        shift = shift / T(2);
         N += 1;
         continue;
       }
@@ -1843,7 +1843,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
         os << "ROBUST: fpe, eIneq_op=" << StringVectorGAP(eIneq_op) << "\n";
         os << "ROBUST: fpe, pos = -1 exit\n";
 #endif
-        shift = shift / 2;
+        shift = shift / T(2);
         N += 1;
         continue;
       }
@@ -2015,7 +2015,7 @@ PVoronoi<T, Tint> get_one_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData
 #endif
       return *opt2;
     }
-    factor = factor / 2;
+    factor = factor / T(2);
     N += 1;
   }
 }

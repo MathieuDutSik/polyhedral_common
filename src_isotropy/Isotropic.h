@@ -143,7 +143,7 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q,
   using Tint = typename underlying_ring<T>::ring_type;
   int n = Q.rows();
   auto get_norm = [&](MyMatrix<T> const &mat) -> T {
-    T sum = 0;
+    T sum(0);
     for (int i = 0; i < n; i++)
       for (int j = 0; j < n; j++)
         sum += T_abs(mat(i, j));

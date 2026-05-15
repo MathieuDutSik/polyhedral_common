@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "Tspace_ListMatSaturation.h"
 // clang-format on
@@ -44,6 +45,10 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os) -> void {
       if (arith == "mpq_class") {
         using T = mpq_class;
+        return IntegralSaturation<T>(FileI, OutFormat, os);
+      }
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
         return IntegralSaturation<T>(FileI, OutFormat, os);
       }
       if (arith == "mpq_rational") {

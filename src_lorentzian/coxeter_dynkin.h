@@ -132,7 +132,7 @@ template <typename T> IrrCoxDyn<T> string_to_IrrCoxDyn(std::string const &s) {
               return IrrCoxDyn<T>{"I", 2, val};
             } else {
               size_t val = ParseScalar<size_t>(s_rem);
-              return IrrCoxDyn<T>{eLS, val, 0};
+              return IrrCoxDyn<T>{eLS, val, T(0)};
             }
           }
         }
@@ -155,14 +155,14 @@ template <typename T> IrrCoxDyn<T> string_to_IrrCoxDyn(std::string const &s) {
 
 template <typename T>
 MyMatrix<T> Kernel_IrrCoxDyn_to_matrix(IrrCoxDyn<T> const &cd) {
-  T val_comm = 2;
-  T val_single_edge = 3;
+  T val_comm(2);
+  T val_single_edge(3);
   // 4 shows up in F4, Bn = Cn, tilde{Bn}, tilde{Cn}, tilde{F4}.
-  T val_four = 4;
+  T val_four(4);
   // 5 shows up in H3, H4
-  T val_five = 5;
+  T val_five(5);
   // Shows up in G2 and tilde{G2}
-  T val_six = 6;
+  T val_six(6);
   std::string type = cd.type;
   int dim = cd.dim;
   int n_vert = GetNrVertices(cd);
@@ -300,17 +300,17 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram M=\n";
   WriteMatrix(std::cerr, M);
 #endif
-  T val_comm = 2;
-  T val_single_edge = 3;
+  T val_comm(2);
+  T val_single_edge(3);
   // 4 shows up in F4, Bn = Cn, tilde{Bn}, tilde{Cn}, tilde{F4}.
-  T val_four = 4;
+  T val_four(4);
   // 5 shows up in H3, H4
-  T val_five = 5;
+  T val_five(5);
   // 6 shows up in G2 and tilde{G2}
-  T val_six = 6;
+  T val_six(6);
   size_t n_vert = M.rows();
   if (n_vert == 1)
-    return IrrCoxDyn<T>{"A", 1, 0};
+    return IrrCoxDyn<T>{"A", 1, T(0)};
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 1\n";
 #endif
@@ -376,7 +376,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       if (i != i_4)
         if (M(i, i_4) != 3)
           return {};
-    return IrrCoxDyn<T>{"tildeD", 4, 0};
+    return IrrCoxDyn<T>{"tildeD", 4, T(0)};
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 4\n";
@@ -399,7 +399,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       return {};
     if (n_higher_edge != 0)
       return {};
-    return IrrCoxDyn<T>{"tildeA", n_vert - 1, 0};
+    return IrrCoxDyn<T>{"tildeA", n_vert - 1, T(0)};
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 5\n";
@@ -408,7 +408,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
   if (list_deg1.size() == 2 && list_deg2.size() == n_vert - 2 &&
       n_higher_edge == 0) {
     // Only An is possible so ok.
-    return IrrCoxDyn<T>{"A", n_vert, 0};
+    return IrrCoxDyn<T>{"A", n_vert, T(0)};
   }
   // An and tilde{An} have been covered
   if (list_deg3.size() > 2) {
@@ -428,7 +428,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       if (n_deg1 != 2)
         return {};
     }
-    return IrrCoxDyn<T>{"tildeD", n_vert - 1, 0};
+    return IrrCoxDyn<T>{"tildeD", n_vert - 1, T(0)};
   }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr
@@ -446,13 +446,13 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       for (auto &eVert : list_deg1)
         if (list_isolated_adjacent[eVert] != val_four)
           return {};
-      return IrrCoxDyn<T>{"tildeC", n_vert - 1, 0};
+      return IrrCoxDyn<T>{"tildeC", n_vert - 1, T(0)};
     }
     if (multiplicity[val_four] == 1) {
       // Possibilities: Bn=Cn, F4, tilde{F4}, and B2 are possible
       if (n_vert == 2) {
         // Case below is actually I2(4)
-        return IrrCoxDyn<T>{"B", 2, 0};
+        return IrrCoxDyn<T>{"B", 2, T(0)};
       }
       if (n_higher_edge != 1) {
         // There are other edges, excluded.
@@ -468,15 +468,15 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       }
       if (n_sing == 2) {
         if (n_vert == 4) {
-          return IrrCoxDyn<T>{"F", 4, 0};
+          return IrrCoxDyn<T>{"F", 4, T(0)};
         }
         if (n_vert == 5) {
-          return IrrCoxDyn<T>{"tildeF", 4, 0};
+          return IrrCoxDyn<T>{"tildeF", 4, T(0)};
         }
       }
       if (n_four == 1 && n_sing == 1) {
         // Only possibility is to have 4 at one extremity. This is Bn = Cn
-        return IrrCoxDyn<T>{"B", n_vert, 0};
+        return IrrCoxDyn<T>{"B", n_vert, T(0)};
       }
       // No other possibilities
       return {};
@@ -487,7 +487,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
     if (multiplicity[val_five] == 1) {
       // Looking for H2, H3, H4
       if (n_vert == 2)
-        return IrrCoxDyn<T>{"H", 2, 0};
+        return IrrCoxDyn<T>{"H", 2, T(0)};
       if (n_vert > 5)
         return {};
       size_t n_sing = 0;
@@ -501,9 +501,9 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       if (n_sing == 1 && n_five == 1) {
         // It is H3 or H4 depending on the dimension
         if (n_vert == 3)
-          return IrrCoxDyn<T>{"H", 3, 0};
+          return IrrCoxDyn<T>{"H", 3, T(0)};
         if (n_vert == 4)
-          return IrrCoxDyn<T>{"H", 4, 0};
+          return IrrCoxDyn<T>{"H", 4, T(0)};
       }
       return {};
     }
@@ -514,9 +514,9 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
         return {};
       }
       if (n_vert == 2)
-        return IrrCoxDyn<T>{"G", 2, 0};
+        return IrrCoxDyn<T>{"G", 2, T(0)};
       if (n_vert == 3)
-        return IrrCoxDyn<T>{"tildeG", 2, 0};
+        return IrrCoxDyn<T>{"tildeG", 2, T(0)};
       return {};
     }
     if (n_vert == 2) {
@@ -554,7 +554,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       // All neighbors are single. Only one possibility
       if (n_sing_simple != 2)
         return {};
-      return IrrCoxDyn<T>{"tildeB", 3, 0};
+      return IrrCoxDyn<T>{"tildeB", 3, T(0)};
     }
     if (n_sing != 2 || n_sing_simple != 2)
       return {};
@@ -563,7 +563,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       if (list_isolated_adjacent[eVert] == val_four)
         has_edge_four = true;
     if (has_edge_four) {
-      return IrrCoxDyn<T>{"tildeB", n_vert - 1, 0};
+      return IrrCoxDyn<T>{"tildeB", n_vert - 1, T(0)};
     }
     return {};
   }
@@ -595,36 +595,36 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
   }
   if (map_len[1] == 3) {
     // It is D4
-    return IrrCoxDyn<T>{"D", 4, 0};
+    return IrrCoxDyn<T>{"D", 4, T(0)};
   }
   if (map_len[1] == 2) {
     // It is Dn
-    return IrrCoxDyn<T>{"D", n_vert, 0};
+    return IrrCoxDyn<T>{"D", n_vert, T(0)};
   }
   if (map_len[1] == 1 && map_len[2] == 2) {
     // It is E6
-    return IrrCoxDyn<T>{"E", 6, 0};
+    return IrrCoxDyn<T>{"E", 6, T(0)};
   }
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[3] == 1) {
     // It is E7
-    return IrrCoxDyn<T>{"E", 7, 0};
+    return IrrCoxDyn<T>{"E", 7, T(0)};
   }
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[4] == 1) {
     // It is E8
-    return IrrCoxDyn<T>{"E", 8, 0};
+    return IrrCoxDyn<T>{"E", 8, T(0)};
   }
   // In spherical, no other possibilities left
   if (map_len[2] == 3) {
     // It is tilde{E6}
-    return IrrCoxDyn<T>{"tildeE", 6, 0};
+    return IrrCoxDyn<T>{"tildeE", 6, T(0)};
   }
   if (map_len[1] == 1 && map_len[3] == 2) {
     // It is tilde{E7}
-    return IrrCoxDyn<T>{"tildeE", 7, 0};
+    return IrrCoxDyn<T>{"tildeE", 7, T(0)};
   }
   if (map_len[1] == 1 && map_len[2] == 1 && map_len[5] == 1) {
     // It is tilde{E8}
-    return IrrCoxDyn<T>{"tildeE", 8, 0};
+    return IrrCoxDyn<T>{"tildeE", 8, T(0)};
   }
   // No other possibilities left
   return {};
@@ -659,7 +659,7 @@ bool CheckIrreducibleDiagram(const MyMatrix<T> &M, DiagramSelector const &DS) {
 template <typename T>
 std::vector<std::vector<size_t>>
 GetIrreducibleComponents(const MyMatrix<T> &M) {
-  T val_comm = 2;
+  T val_comm(2);
   size_t dim = M.rows();
   GraphBitset eG(dim);
   for (size_t i = 0; i < dim; i++) {
@@ -714,10 +714,10 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
 #ifdef SANITY_CHECK_EFFICIENT_ENUMERATION
   std::set<MyVector<T>> SetExtensions;
 #endif
-  T val_comm = 2;
-  T val_single_edge = 3;
-  T val_four = 4;
-  T val_six = 6;
+  T val_comm(2);
+  T val_single_edge(3);
+  T val_four(4);
+  T val_six(6);
   // For supporting I1(infinity)
   T val_inf = practical_infinity<T>();
   size_t n_vert = M.rows();
@@ -1813,10 +1813,10 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
 #endif
   std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
   std::set<MyVector<T>> SetExtensions;
-  T val_comm = 2;
-  T val_single_edge = 3;
-  T val_four = 4;
-  T val_six = 6;
+  T val_comm(2);
+  T val_single_edge(3);
+  T val_four(4);
+  T val_six(6);
   // For supporting I1(infinity) we need some infinity value
   T val_inf = practical_infinity<T>();
   std::vector<T> allowed_vals;
@@ -2082,7 +2082,7 @@ ComputeCoxeterMatrix(MyMatrix<T> const &G,
                      std::vector<MyVector<Tint>> const &l_root) {
   int n = G.rows();
   auto get_scal = [&](int i, int j) -> T {
-    T sum = 0;
+    T sum(0);
     for (int u = 0; u < n; u++)
       for (int v = 0; v < n; v++)
         sum += G(u, v) * l_root[i](u) * l_root[j](v);
@@ -2091,24 +2091,24 @@ ComputeCoxeterMatrix(MyMatrix<T> const &G,
   T cossqr_val3 = T(1) / T(4);
   T cossqr_val4 = T(1) / T(2);
   T cossqr_val6 = T(3) / T(4);
-  T cossqr_valInf = 1;
+  T cossqr_valInf(1);
   T pr_inf = practical_infinity<T>();
   auto get_cossqr_scal = [&](int i, int j) -> std::pair<T, T> {
     T scal12 = get_scal(i, j);
     if (i == j) {
       return {scal12, scal12};
     } else {
-      if (scal12 == 0)
-        return {2, scal12};
+      if (scal12 == T(0))
+        return {T(2), scal12};
       T scal11 = get_scal(i, i);
       T scal22 = get_scal(j, j);
       T quot = (scal12 * scal12) / (scal11 * scal22);
       if (quot == cossqr_val3)
-        return {3, scal12};
+        return {T(3), scal12};
       if (quot == cossqr_val4)
-        return {4, scal12};
+        return {T(4), scal12};
       if (quot == cossqr_val6)
-        return {6, scal12};
+        return {T(6), scal12};
       if (quot == cossqr_valInf)
         return {pr_inf, scal12};
       std::cerr << "i=" << i << " j=" << j << "\n";
@@ -2209,19 +2209,19 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
 #ifdef DEBUG_COMPUTE_POSSIBLE_EXTENSIONS
   std::cerr << "|l_vect|=" << l_vect.size() << "\n";
 #endif
-  T val2 = 0;
+  T val2(0);
   T val3 = T(1) / T(4);
   T val4 = T(1) / T(2);
   T val6 = T(3) / T(4);
-  T valInfinity = 1;
+  T valInfinity(1);
   auto get_cos_square = [&](T val) -> T {
-    if (val == 2)
+    if (val == T(2))
       return val2;
-    if (val == 3)
+    if (val == T(3))
       return val3;
-    if (val == 4)
+    if (val == T(4))
       return val4;
-    if (val == 6)
+    if (val == T(6))
       return val6;
     if (val == practical_infinity<T>())
       return valInfinity;

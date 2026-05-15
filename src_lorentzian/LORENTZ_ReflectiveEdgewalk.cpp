@@ -3,6 +3,7 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "Group.h"
 #include "Permutation.h"
@@ -58,6 +59,11 @@ int main(int argc, char *argv[]) {
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
+        return process<T, Tint>(MatFile, OutFormat, os_out);
+      }
+      if (arith == "safe") {
+        using T = Rational<SafeInt64>;
+        using Tint = SafeInt64;
         return process<T, Tint>(MatFile, OutFormat, os_out);
       }
       std::cerr << "Failed to find matching entry for arith=" << arith << "\n";

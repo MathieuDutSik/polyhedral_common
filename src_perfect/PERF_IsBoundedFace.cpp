@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "perfect_complex.h"
 #include "Permutation.h"
@@ -100,6 +101,11 @@ int main(int argc, char *argv[]) {
       if (arithmetic == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
+        return process<T,Tint,Tgroup>(eFull);
+      }
+      if (arithmetic == "safe") {
+        using T = Rational<SafeInt64>;
+        using Tint = SafeInt64;
         return process<T,Tint,Tgroup>(eFull);
       }
       std::cerr << "Failed to find a matching entry for arithmetic=" << arithmetic << "\n";

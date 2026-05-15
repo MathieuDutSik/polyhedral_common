@@ -146,7 +146,7 @@ std::vector<MyVector<T>> GetPositiveDirections_diag(MyMatrix<T> const &M,
   for (int i = 0; i < n; i++) {
     if (RedMat(i, i) > 0) {
       MyVector<T> eVect = GetMatrixRow(Transform, i);
-      T sum = 0;
+      T sum(0);
       for (int j = 0; j < n; j++) {
         sum += T_abs(eVect(j));
       }
@@ -271,7 +271,7 @@ template <typename T, typename Tint> struct ApproxIterator {
     int pos = 0;
     for (auto &[step, coef] : map) {
       l_step(pos) = step;
-      l_next(pos) = step / 2;
+      l_next(pos) = step / T(2);
       ll_coef.push_back(coef);
       pos += 1;
     }
@@ -569,7 +569,7 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
 #endif
   int n = M.rows();
   auto L1_norm = [&](MyMatrix<T> const &M) -> T {
-    T sum = 0;
+    T sum(0);
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         sum += T_abs(M(i, j));
@@ -707,7 +707,7 @@ MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const &M,
   os << "POS: GetShortVectorSpecified: beginning\n";
 #endif
   int n = M.rows();
-  Tint eMult = 1;
+  Tint eMult(1);
   while (true) {
     for (auto &eVect : ListVect) {
       MyVector<Tint> V(n);

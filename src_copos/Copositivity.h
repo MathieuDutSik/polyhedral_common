@@ -191,7 +191,7 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
     os << "COP: ComputeHXZmaxNorm : Before computing ListH, Lambda and X\n";
 #endif
     for (int i = nupdt - 1; i >= 0; i--) {
-      T eNumber = 0;
+      T eNumber(0);
       for (int j = i + 1; j < n; j++)
         eNumber += TheBasisReord(j, i) * Lambda[j];
       T eFr = FractionalPart(-eNumber) / AII[i];
@@ -226,7 +226,7 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
 #endif
       T Qii = eSymmMatC(i, i);
       T eNorm = Qii * Lambda[i] * Lambda[i];
-      T eW = 0;
+      T eW(0);
 #ifdef DEBUG_COPOSITIVITY
       os << "COP: Norm compute step 1\n";
 #endif
@@ -509,8 +509,8 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
   };
   int OptMinimum = 1;
   bool IsFirst = true;
-  Tint MinSumXY = 0;
-  T MaxValQuot = 0;
+  Tint MinSumXY(0);
+  T MaxValQuot(0);
   for (int i = 0; i < n - 1; i++)
     for (int j = i + 1; j < n; j++) {
       T a = eSymmMatB(i, i);
@@ -518,8 +518,8 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
       T c = eSymmMatB(j, j);
       if (b < 0) {
         std::pair<Tint, Tint> CandXY;
-        Tint sumCoef = 0;
-        T eQuot = 0;
+        Tint sumCoef(0);
+        T eQuot(0);
         if (OptMinimum == 1) {
           CandXY = {1, 1};
           eQuot = (b * b) / (a * c);

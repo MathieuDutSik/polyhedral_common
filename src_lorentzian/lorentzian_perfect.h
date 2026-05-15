@@ -242,7 +242,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
   std::optional<MyVector<T>> opt_basic = SolutionMat(Ubasis_T, eTrans_basic);
   MyVector<T> eSol_basic = unfold_opt(opt_basic, "Getting eSol_basic");
   T eSquareDist_basic = beta_basic * beta_basic * eNorm;
-  Tint eVal = 1;
+  Tint eVal(1);
   while (true) {
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     T scal_expe1 = eVal * TheRec.gcd;
@@ -421,7 +421,7 @@ LORENTZ_SearchInitialVector(MyMatrix<T> const &LorMat,
     if (!LVect.empty()) {
       return LVect;
     }
-    MaxScal *= 2;
+    MaxScal *= T(2);
   }
 }
 
@@ -544,7 +544,7 @@ GetUpperBound(MyMatrix<T> const &LorMat, MyVector<T> const &eNSPbas,
   //
   // Get raw upper bound
   //
-  T iShift = 1;
+  T iShift(1);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   MyVector<T> eBas_V = LorMatInv * eBas;
   MyVector<T> eDir_V = LorMatInv * eDir;
@@ -565,7 +565,7 @@ GetUpperBound(MyMatrix<T> const &LorMat, MyVector<T> const &eNSPbas,
 #endif
       break;
     }
-    iShift *= 2;
+    iShift *= T(2);
   }
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: GetUpperBound, step 4\n";
@@ -711,7 +711,7 @@ LORENTZ_Kernel_Flipping(MyMatrix<T> const &LorMat,
   }
 #endif
   bool OnlyShortest = true;
-  T TheLowerBound = 0;
+  T TheLowerBound(0);
   std::optional<T> TheUpperBound_opt =
       GetUpperBound(LorMat, eNSPbas, eNSPdir, os);
   if (!TheUpperBound_opt) {
@@ -1222,7 +1222,7 @@ size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
       }
       V(i) = sum;
     }
-    T scal = 0;
+    T scal(0);
     for (int i = 0; i < n; i++) {
       scal += V(i) * EXT_T(iRow, i);
     }

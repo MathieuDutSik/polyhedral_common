@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "rational.h"
 #include "Enumeration_k_space.h"
@@ -37,6 +38,11 @@ void compute_k_min(std::string const &arithmetic, int const &k,
   if (arithmetic == "multi_boost") {
     using T = boost::multiprecision::cpp_rational;
     using Tint = boost::multiprecision::cpp_int;
+    return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
+  }
+  if (arithmetic == "safe") {
+    using T = Rational<SafeInt64>;
+    using Tint = SafeInt64;
     return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
   }
   if (arithmetic == "double") {

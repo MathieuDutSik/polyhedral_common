@@ -249,7 +249,7 @@ std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
 
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV_T.rows();
-  std::vector<T> Vdiag(n_row, 0);
+  std::vector<T> Vdiag(n_row, T(0));
 
   std::vector<std::vector<Tidx>> ListGen =
       GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV_T, ListMat, Vdiag,

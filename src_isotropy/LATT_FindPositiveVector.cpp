@@ -86,6 +86,12 @@ int main(int argc, char *argv[]) {
         return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
                                 os);
       }
+      if (arith == "safe") {
+        using T = Rational<SafeInt64>;
+        using Tint = SafeInt64;
+        return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
+                                os);
+      }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
     };

@@ -1514,7 +1514,7 @@ template <typename T, typename Tint> struct FirstNorm {
 template <typename T, typename Tint>
 FirstNorm<T, Tint> GetFirstNorm(ApproximateModel<T, Tint> const &approx,
                                 std::ostream &os) {
-  T X = 1;
+  T X(1);
 #ifdef DEBUG_APPROXIMATE_MODELS
   os << "MODEL: Beginning of GetFirstNorm\n";
 #endif

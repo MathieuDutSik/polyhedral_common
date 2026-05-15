@@ -1617,7 +1617,7 @@ template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
   int dim = EXT.cols() - 1;
   T det_to_vol(1);
   for (int u = 1; u <= dim; u++) {
-    det_to_vol *= u;
+    det_to_vol *= T(u);
   }
   T total_volume = sum_det / det_to_vol;
 #ifdef SANITY_CHECK_LRSLIB

@@ -2026,7 +2026,7 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
     for (size_t iMat = 0; iMat < nbMat; iMat++) {
       MyVector<T> V(n);
       for (size_t i = 0; i < n; i++) {
-        T eVal = 0;
+        T eVal(0);
         for (size_t j = 0; j < n; j++)
           eVal += ListMat[iMat](j, i) * SHV(iRow, j);
         V(i) = eVal;
@@ -2037,7 +2037,7 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
   std::vector<T> ListScal(nbMat);
   auto f2 = [&](size_t iCol) -> std::vector<T> {
     for (size_t iMat = 0; iMat < nbMat; iMat++) {
-      T eScal = 0;
+      T eScal(0);
       for (size_t i = 0; i < n; i++)
         eScal += ListV[iMat](i) * SHV(iCol, i);
       ListScal[iMat] = eScal;

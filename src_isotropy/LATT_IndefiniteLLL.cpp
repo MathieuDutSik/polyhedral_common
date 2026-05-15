@@ -81,6 +81,11 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(FileI, OutFormat, os);
       }
+      if (arith == "safe") {
+        using T = Rational<SafeInt64>;
+        using Tint = SafeInt64;
+        return process<T, Tint>(FileI, OutFormat, os);
+      }
       std::cerr << "Failed to find a matching type\n";
       throw TerminalException{1};
     };

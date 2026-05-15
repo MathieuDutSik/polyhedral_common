@@ -429,7 +429,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M,
     os << "ILLL: eval: i=" << i << " j=" << j << " c=" << c << "\n";
 #endif
     //
-    T delta_off = 0;
+    T delta_off(0);
     for (int k = 0; k < n; k++) {
       if (k != i) {
         T val1 = T_abs(Mwork(i, k));

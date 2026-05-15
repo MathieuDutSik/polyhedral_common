@@ -53,7 +53,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     T eSum = EvaluationQuadForm<T, T>(GramMat, eVect);
     eIneq(0) = eSum;
     for (int iCol = 0; iCol < dim; iCol++) {
-      T eSumB = 0;
+      T eSumB(0);
       for (int iRow = 0; iRow < dim; iRow++)
         eSumB += eVect(iRow) * GramMat(iRow, iCol);
       eIneq(iCol + 1) = -2 * eSumB;
@@ -171,7 +171,7 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
             EvaluationQuadForm<T, T>(GramMat, fV);
     ListB(idx) = Sum;
     for (int i = 0; i < n; i++) {
-      T vSum = 0;
+      T vSum(0);
       for (int j = 0; j < n; j++) {
         vSum += GramMat(i, j) * (eV(j) - fV(j));
       }
@@ -275,7 +275,7 @@ public:
       v1(i) = EXT(V[0], i + 1);
     }
     G_v1 = EvaluateLineVector(LineGramMat, v1);
-    two_v1_G = 2 * GramMat * v1;
+    two_v1_G = T(2) * GramMat * v1;
     MyMatrix<T> Equa(cnt - 1, n + 1);
     MyVector<T> v2(n);
     for (size_t i_vert = 0; i_vert < cnt - 1; i_vert++) {
@@ -283,7 +283,7 @@ public:
         v2(i) = EXT(V[i_vert + 1], i + 1);
       }
       T G_v2 = EvaluateLineVector(LineGramMat, v2);
-      MyVector<T> two_v2_G = 2 * GramMat * v2;
+      MyVector<T> two_v2_G = T(2) * GramMat * v2;
       Equa(i_vert, 0) = G_v1 - G_v2;
       for (int i = 0; i < n; i++) {
         Equa(i_vert, i + 1) = two_v2_G(i) - two_v1_G(i);
@@ -316,7 +316,7 @@ public:
   // v2 should be a point outside of the plane
   CP<T> GetCenterRadius(MyVector<T> const &v2) {
     T G_v2 = EvaluateLineVector(LineGramMat, v2);
-    MyVector<T> two_v1_m_v2_G = two_v1_G - 2 * GramMat * v2;
+    MyVector<T> two_v1_m_v2_G = two_v1_G - T(2) * GramMat * v2;
     T C_cst = G_v1 - G_v2 - two_v1_m_v2_G.dot(ePt);
     T D_cst = two_v1_m_v2_G.dot(eDir);
     T t = C_cst / D_cst;
@@ -324,14 +324,14 @@ public:
     MyVector<T> delta = eCent - v1;
     T eSqrDist = EvaluateLineVector(LineGramMat, delta);
     MyVector<T> eCentRet(n + 1);
-    eCentRet(0) = 1;
+    eCentRet(0) = T(1);
     for (int i = 0; i < n; i++)
       eCentRet(i + 1) = eCent(i);
     return {eSqrDist, eCentRet};
   }
   T GetRadius(MyVector<T> const &v2) {
     T G_v2 = EvaluateLineVector(LineGramMat, v2);
-    MyVector<T> two_v1_m_v2_G = two_v1_G - 2 * GramMat * v2;
+    MyVector<T> two_v1_m_v2_G = two_v1_G - T(2) * GramMat * v2;
     T C_cst = G_v1 - G_v2 - two_v1_m_v2_G.dot(ePt);
     T D_cst = two_v1_m_v2_G.dot(eDir);
     T t = C_cst / D_cst;
@@ -359,7 +359,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
     throw TerminalException{1};
   };
   int iColFind = get_iColFind();
-  T delta = -T_sign(TheFac(1 + iColFind));
+  T delta(-T_sign(TheFac(1 + iColFind)));
   int jRow = eInc.find_first();
   MyVector<T> SelectedVertex(dim);
   for (int i = 0; i < dim; i++)
@@ -508,7 +508,7 @@ std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const &GramMat,
     Mat1(0, i + 1) = -eVect(i);
     Mat1(i + 1, 0) = -eVect(i);
   }
-  T eScal = 1;
+  T eScal(1);
   for (int i = 0; i < n; i++)
     eScal += eVect(i) * TheCenterRed(i);
   Mat1(0, 0) = eScal;

@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "lorentzian_perfect_mpi.h"
 #include "Permutation.h"
@@ -33,6 +34,11 @@ void process_A(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   if (arithmetic == "multi_boost") {
     using T = boost::multiprecision::cpp_rational;
     using Tint = boost::multiprecision::cpp_int;
+    return process_C<T, Tint>(comm, eFull);
+  }
+  if (arithmetic == "safe") {
+    using T = Rational<SafeInt64>;
+    using Tint = SafeInt64;
     return process_C<T, Tint>(comm, eFull);
   }
   std::cerr << "LORENTZ_MPI_PerfectLorentzian: Failed to find a matching "

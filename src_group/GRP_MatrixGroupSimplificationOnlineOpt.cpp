@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "OnlineExhaustiveReduction.h"
 // clang-format on
@@ -92,8 +93,16 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return process<T>(FileMatrGroup, OutFormat, os);
       }
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
       if (arith == "mpz_class") {
         using T = mpz_class;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+      if (arith == "safe_integer") {
+        using T = SafeInt64;
         return process<T>(FileMatrGroup, OutFormat, os);
       }
       if (arith == "mpq_rational") {

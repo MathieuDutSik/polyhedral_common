@@ -42,6 +42,11 @@ void compute_eutacticity(std::string const &arithmetic,
     using Tint = boost::multiprecision::cpp_int;
     return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
   }
+  if (arithmetic == "safe") {
+    using T = Rational<SafeInt64>;
+    using Tint = SafeInt64;
+    return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
+  }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
 }

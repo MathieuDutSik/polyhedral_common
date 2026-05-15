@@ -3,6 +3,7 @@
 #include "NumberTheory.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheorySafeInt.h"
 #include "Laminations.h"
 // clang-format on
 
@@ -82,6 +83,10 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os) -> void {
       if (arith == "mpq_class") {
         using T = mpq_class;
+        return process<T>(opt, FileM, OutFormat, os);
+      }
+      if (arith == "safe_rational") {
+        using T = Rational<SafeInt64>;
         return process<T>(opt, FileM, OutFormat, os);
       }
       if (arith == "mpq_rational") {
