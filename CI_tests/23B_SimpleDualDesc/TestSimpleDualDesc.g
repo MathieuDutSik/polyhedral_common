@@ -2,30 +2,38 @@ Read("../common.g");
 Read("../access_points.g");
 Print("Beginning TestSimpleDualDesc\n");
 
+#l_arith:=["mpq_class", "safe_rational", "cpp_rational", "mpq_rational"];
+l_arith:=["mpq_class", "cpp_rational", "mpq_rational"];
+
 
 TestSimpleDD:=function(EXT, command, n_fac)
-    local dim, FileI, FileO, arith, choice, eProg, TheCommand, FAC, eFAC, ListScal, ListIncd;
+    local dim, arith, options, choice, FAC, eFAC, ListScal, ListIncd;
     dim:=Length(EXT[1]);
-    FAC:=get_dual_desc(EXT, command, true);
-    if is_error(FAC) then
-        return false;
-    fi;
-    if Length(FAC)<>n_fac then
-        Print("Incorrect number of facets. That qualifies as a fail\n");
-        return false;
-    fi;
-    for eFAC in FAC
+    for arith in l_arith
     do
-        ListScal:=List(EXT, x->x*eFAC);
-        if Minimum(ListScal) < 0 then
-            Print("Find a negative scalar product, a fail for sure\n");
+        options:=rec(print_info:=true, arith:=arith);
+        FAC:=get_dual_desc(EXT, command, options);
+        if is_error(FAC) then
             return false;
         fi;
-        ListIncd:=Filtered([1..Length(EXT)], x->ListScal[x]=0);
-        if RankMat(EXT{ListIncd}) <> dim-1 then
-            Print("The rank is not correct. A fail\n");
+        if Length(FAC)<>n_fac then
+            Print("|FAC|=", Length(FAC), " n_fac=", n_fac, "\n");
+            Print("Incorrect number of facets. That qualifies as a fail\n");
             return false;
         fi;
+        for eFAC in FAC
+        do
+            ListScal:=List(EXT, x->x*eFAC);
+            if Minimum(ListScal) < 0 then
+                Print("Find a negative scalar product, a fail for sure\n");
+                return false;
+            fi;
+            ListIncd:=Filtered([1..Length(EXT)], x->ListScal[x]=0);
+            if RankMat(EXT{ListIncd}) <> dim-1 then
+                Print("The rank is not correct. A fail\n");
+                return false;
+            fi;
+        od;
     od;
     return true;
 end;

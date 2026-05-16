@@ -535,19 +535,34 @@ extract_runtime_from_log:=function(FileE)
     return "unknown";
 end;
 
-get_dual_desc_kernel:=function(EXT, method, choice, print_info)
-    local TmpDir, FileI, FileO, FileE, eProg, command, TheCommand, FAC, runtime_str;
+get_dual_desc_kernel:=function(arg)
+    local choice, EXT, method, options, arith, print_info,
+          TmpDir, FileI, FileO, FileE, eProg, TheCommand, FAC, runtime_str;
+    choice:=arg[1];
+    EXT:=arg[2];
+    method:=arg[3];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 4 then
+        options:=arg[4];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_dual_description");
-    TheCommand:=Concatenation(eProg, " mpq_class ", method, " ", choice, " ", FileI, " ", FileO, " 2>", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", method, " ", choice, " ", FileI, " ", FileO, " 2>", FileE);
     Exec(TheCommand);
     if print_info then
         runtime_str:=extract_runtime_from_log(FileE);
-        Print("EXT=", Length(EXT), "x", Length(EXT[1]), " command=", method, " runtime=", runtime_str, "\n");
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=", method, " runtime=", runtime_str, "\n");
     fi;
     if IsExistingFile(FileO)=false then
         RemoveFile(FileI);
@@ -562,44 +577,45 @@ get_dual_desc_kernel:=function(EXT, method, choice, print_info)
 end;
 
 get_dual_desc:=function(arg)
-    local EXT, method, print_info;
-    EXT:=arg[1];
-    method:=arg[2];
-    if Length(arg) >= 3 then
-        print_info:=arg[3];
-    else
-        print_info:=false;
-    fi;
-    return get_dual_desc_kernel(EXT, method, "GAP", print_info);
+    return CallFuncList(get_dual_desc_kernel, Concatenation(["GAP"], arg));
 end;
 
 get_dual_desc_incidence:=function(arg)
-    local EXT, method, print_info;
-    EXT:=arg[1];
-    method:=arg[2];
-    if Length(arg) >= 3 then
-        print_info:=arg[3];
-    else
-        print_info:=false;
-    fi;
-    return get_dual_desc_kernel(EXT, method, "GAPincidence", print_info);
+    return CallFuncList(get_dual_desc_kernel, Concatenation(["GAPincidence"], arg));
 end;
 
 
 # Run POLY_cdd_skeletons (cdd::DualDescriptionAdjacencies).
 # Returns rec(FAC, nbVertSkel, SkelEdges, nbVertRidge, RidgeEdges) on
 # success, or a string starting with "program failure: ..." on error.
-get_cdd_skeletons:=function(EXT)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, eRec;
+get_cdd_skeletons:=function(arg)
+    local EXT, options, arith, print_info,
+          TmpDir, FileI, FileO, FileE, eProg, TheCommand, eRec, runtime_str;
+    EXT:=arg[1];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_cdd_skeletons");
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO,
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO,
                               " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=POLY_cdd_skeletons runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         RemoveFile(FileI);
         RemoveFile(FileE);
