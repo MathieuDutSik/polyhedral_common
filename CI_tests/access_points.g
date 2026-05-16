@@ -1,13 +1,29 @@
-get_grp_automorphy:=function(EXT)
-    local TmpDir, FileI, FileO, FileE, arith, eProg, TheCommand, TheGRP_rat;
+get_grp_automorphy:=function(arg)
+    local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, TheGRP_rat, runtime_str;
+    EXT:=arg[1];
+    arith:="rational";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("GRP_LinPolytope_Automorphism");
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " RecGAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " RecGAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=GRP_LinPolytope_Automorphism runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: GRP_LinPolytope_Automorphism did not return anything, likely crash";
     fi;
@@ -18,16 +34,32 @@ get_grp_automorphy:=function(EXT)
     return TheGRP_rat;
 end;
 
-get_grp_integral_automorphy:=function(EXT)
-    local TmpDir, FileI, FileO, FileE, arith, eProg, TheCommand, TheGRP_int;
+get_grp_integral_automorphy:=function(arg)
+    local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, TheGRP_int, runtime_str;
+    EXT:=arg[1];
+    arith:="mpz_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("GRP_LinPolytopeIntegral_Automorphism");
-    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " RecGAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " RecGAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=GRP_LinPolytopeIntegral_Automorphism runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: GRP_LinPolytopeIntegral_Automorphism did not return anything, likely crash";
     fi;
@@ -38,8 +70,21 @@ get_grp_integral_automorphy:=function(EXT)
     return TheGRP_int;
 end;
 
-get_double_cosets_matrix_group:=function(EXT, GRPperm)
-    local TmpDir, FileI, FileO, FileE, FileGRP_V, eProg, TheCommand, RecResult;
+get_double_cosets_matrix_group:=function(arg)
+    local EXT, GRPperm, options, arith, print_info, TmpDir, FileI, FileO, FileE, FileGRP_V, eProg, TheCommand, RecResult, runtime_str;
+    EXT:=arg[1];
+    GRPperm:=arg[2];
+    arith:="mpz_class";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -48,9 +93,13 @@ get_double_cosets_matrix_group:=function(EXT, GRPperm)
     WriteMatrixFile(FileI, EXT);
     WriteGroupFile(FileGRP_V, Length(EXT), GRPperm);
     eProg:=GetBinaryFilename("GRP_LinPolytopeIntegral_Automorphism_DoubleCoset");
-    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", FileGRP_V, " RecGAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " ", FileGRP_V, " RecGAP ", FileO, " 2> ", FileE);
 #    Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=GRP_LinPolytopeIntegral_Automorphism_DoubleCoset runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: GRP_LinPolytopeIntegral_Automorphism_DoubleCoset should have created a file";
     fi;
@@ -62,8 +111,18 @@ get_double_cosets_matrix_group:=function(EXT, GRPperm)
     return RecResult;
 end;
 
-get_linear_space_stabilizer_double_cosets:=function(GRPmatr, TheSpace, GRP_Vmatr)
-    local TmpDir, FileGRP, FileSPA, FileGRP_V, FileO, FileE, eProg, TheCommand, RecResult;
+get_linear_space_stabilizer_double_cosets:=function(arg)
+    local GRPmatr, TheSpace, GRP_Vmatr, options, print_info, TmpDir, FileGRP, FileSPA, FileGRP_V, FileO, FileE, eProg, TheCommand, RecResult, runtime_str;
+    GRPmatr:=arg[1];
+    TheSpace:=arg[2];
+    GRP_Vmatr:=arg[3];
+    print_info:=false;
+    if Length(arg) >= 4 then
+        options:=arg[4];
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileGRP:=Filename(TmpDir, "Test.grp");
     FileSPA:=Filename(TmpDir, "Test.space");
@@ -77,6 +136,10 @@ get_linear_space_stabilizer_double_cosets:=function(GRPmatr, TheSpace, GRP_Vmatr
     TheCommand:=Concatenation(eProg, " ", FileGRP, " ", FileSPA, " ", FileGRP_V, " ", FileO, " 2> ", FileE);
 #    Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  TheSpace=", Length(TheSpace), "x", Length(TheSpace[1]), " command=GRP_LinearSpace_Stabilizer_DoubleCoset runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: GRP_LinearSpace_Stabilizer_DoubleCoset should have created a file";
     fi;
@@ -90,17 +153,33 @@ get_linear_space_stabilizer_double_cosets:=function(GRPmatr, TheSpace, GRP_Vmatr
 end;
 
 
-get_linpolytopeintegral_aut_rightcoset:=function(EXT)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, result;
+get_linpolytopeintegral_aut_rightcoset:=function(arg)
+    local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, result, runtime_str;
+    EXT:=arg[1];
+    arith:="mpz_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("GRP_LinPolytopeIntegral_Automorphism_RightCoset");
-    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
 #    Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=GRP_LinPolytopeIntegral_Automorphism_RightCoset runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: GRP_LinPolytopeIntegral_Automorphism_RightCoset should have created a file";
     fi;
@@ -115,8 +194,21 @@ end;
 
 
 
-test_polytope_integral_equivalence:=function(EXT1, EXT2)
-    local TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, result;
+test_polytope_integral_equivalence:=function(arg)
+    local EXT1, EXT2, options, arith, print_info, TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, result, runtime_str;
+    EXT1:=arg[1];
+    EXT2:=arg[2];
+    arith:="mpz_class";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     File1:=Filename(TmpDir, "Test1.in");
     File2:=Filename(TmpDir, "Test2.in");
@@ -125,9 +217,13 @@ test_polytope_integral_equivalence:=function(EXT1, EXT2)
     WriteMatrixFile(File1, EXT1);
     WriteMatrixFile(File2, EXT2);
     eProg:=GetBinaryFilename("GRP_LinPolytopeIntegral_Isomorphism");
-    TheCommand:=Concatenation(eProg, " mpz_class ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
 #    Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT1=", Length(EXT1), "x", Length(EXT1[1]), " EXT2=", Length(EXT2), "x", Length(EXT2[1]), " arith=", arith, " command=GRP_LinPolytopeIntegral_Isomorphism runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: The GRP_LinPolytopeIntegral_Isomorphism has not created a file";
     fi;
@@ -139,16 +235,32 @@ test_polytope_integral_equivalence:=function(EXT1, EXT2)
     return result;
 end;
 
-get_canonic_form:=function(EXT)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, EXT_can;
+get_canonic_form:=function(arg)
+    local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, EXT_can, runtime_str;
+    EXT:=arg[1];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Can.in");
     FileO:=Filename(TmpDir, "Can.out");
     FileE:=Filename(TmpDir, "Can.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("GRP_LinPolytope_Canonic");
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=GRP_LinPolytope_Canonic runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: The GRP_LinPolytope_Canonic did not return anything";
     fi;
@@ -159,8 +271,21 @@ get_canonic_form:=function(EXT)
     return EXT_can;
 end;
 
-get_isomorphism_result:=function(EXT1, EXT2)
-    local TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, result;
+get_isomorphism_result:=function(arg)
+    local EXT1, EXT2, options, arith, print_info, TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, result, runtime_str;
+    EXT1:=arg[1];
+    EXT2:=arg[2];
+    arith:="rational";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     File1:=Filename(TmpDir, "Test1.in");
     File2:=Filename(TmpDir, "Test2.in");
@@ -169,8 +294,12 @@ get_isomorphism_result:=function(EXT1, EXT2)
     WriteMatrixFile(File1, EXT1);
     WriteMatrixFile(File2, EXT2);
     eProg:=GetBinaryFilename("GRP_LinPolytope_Isomorphism");
-    TheCommand:=Concatenation(eProg, " rational ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT1=", Length(EXT1), "x", Length(EXT1[1]), " EXT2=", Length(EXT2), "x", Length(EXT2[1]), " arith=", arith, " command=GRP_LinPolytope_Isomorphism runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: The GRP_LinPolytope_Isomorphism did not return anything";
     fi;
@@ -183,8 +312,20 @@ get_isomorphism_result:=function(EXT1, EXT2)
 end;
 
 
-get_saturated_space:=function(ListMat)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, ListMatRet;
+get_saturated_space:=function(arg)
+    local ListMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, ListMatRet, runtime_str;
+    ListMat:=arg[1];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Saturation.in");
     FileO:=Filename(TmpDir, "Saturation.out");
@@ -192,8 +333,12 @@ get_saturated_space:=function(ListMat)
     WriteListMatrixFile(FileI, ListMat);
 
     eProg:=GetBinaryFilename("TSPACE_IntegralSaturation");
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  |ListMat|=", Length(ListMat), " arith=", arith, " command=TSPACE_IntegralSaturation runtime=", runtime_str, "\n");
+    fi;
 
     ListMatRet:=ReadAsFunction(FileO)();
     RemoveFile(FileI);
@@ -202,8 +347,20 @@ get_saturated_space:=function(ListMat)
     return ListMatRet;
 end;
 
-get_latt_canonical_form:=function(eMat)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+get_latt_canonical_form:=function(arg)
+    local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    eMat:=arg[1];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Can.in");
     FileO:=Filename(TmpDir, "Can.out");
@@ -211,8 +368,12 @@ get_latt_canonical_form:=function(eMat)
     WriteMatrixFile(FileI, eMat);
     #
     eProg:=GetBinaryFilename("LATT_Canonicalize");
-    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP_full ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP_full ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " arith=", arith, " command=LATT_Canonicalize runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: The LATT_Canonicalize has failed";
     fi;
@@ -223,8 +384,16 @@ get_latt_canonical_form:=function(eMat)
     return U;
 end;
 
-get_latt_automorphism_group:=function(eMat)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+get_latt_automorphism_group:=function(arg)
+    local eMat, options, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    eMat:=arg[1];
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Aut.in");
     FileO:=Filename(TmpDir, "Aut.out");
@@ -234,6 +403,10 @@ get_latt_automorphism_group:=function(eMat)
     eProg:=GetBinaryFilename("LATT_Automorphism");
     TheCommand:=Concatenation(eProg, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " command=LATT_Automorphism runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         Print("get_latt_automorphism_group, no return file\n");
         return fail;
@@ -245,16 +418,37 @@ get_latt_automorphism_group:=function(eMat)
     return U;
 end;
 
-get_fullrank_invariant_family:=function(eG, method)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+get_fullrank_invariant_family:=function(arg)
+    local eG, method, options, arith_rat, arith_int, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    eG:=arg[1];
+    method:=arg[2];
+    arith_rat:="mpq_class";
+    arith_int:="mpz_class";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith_rat) then
+            arith_rat:=options.arith_rat;
+        fi;
+        if IsBound(options.arith_int) then
+            arith_int:=options.arith_int;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Fullrank.in");
     FileO:=Filename(TmpDir, "Fullrank.out");
     FileE:=Filename(TmpDir, "Fullrank.err");
     WriteMatrixFile(FileI, eG);
     eProg:=GetBinaryFilename("LATT_GenerateCharacteristicVectorSet");
-    TheCommand:=Concatenation(eProg, " mpq_class mpz_class ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith_rat, " ", arith_int, " ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eG=", Length(eG), "x", Length(eG[1]), " arith_rat=", arith_rat, " arith_int=", arith_int, " method=", method, " command=LATT_GenerateCharacteristicVectorSet runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: LATT_GenerateCharacteristicVectorSet did not return anything";
     fi;
@@ -265,16 +459,32 @@ get_fullrank_invariant_family:=function(eG, method)
     return U;
 end;
 
-get_ext_volume:=function(EXT)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, the_volume;
+get_ext_volume:=function(arg)
+    local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, the_volume, runtime_str;
+    EXT:=arg[1];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_lrs_volume");
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=POLY_lrs_volume runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_lrs_volume should have created a file";
     fi;
@@ -285,16 +495,32 @@ get_ext_volume:=function(EXT)
     return the_volume;
 end;
 
-get_triangulation_of_polytope:=function(EXT)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, one_triangulation;
+get_triangulation_of_polytope:=function(arg)
+    local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, one_triangulation, runtime_str;
+    EXT:=arg[1];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_lrs_triangulation");
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=POLY_lrs_triangulation runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_lrs_volume should have created a file";
     fi;
@@ -306,8 +532,21 @@ get_triangulation_of_polytope:=function(EXT)
 end;
 
 
-get_polygen_difference:=function(gp1, gp2)
-    local TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, result;
+get_polygen_difference:=function(arg)
+    local gp1, gp2, options, arith, print_info, TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, result, runtime_str;
+    gp1:=arg[1];
+    gp2:=arg[2];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     File1:=Filename(TmpDir, "Test.in1");
     File2:=Filename(TmpDir, "Test.in2");
@@ -316,8 +555,12 @@ get_polygen_difference:=function(gp1, gp2)
     WriteListMatrixFile(File1, gp1);
     WriteListMatrixFile(File2, gp2);
     eProg:=GetBinaryFilename("PolyGen_Difference");
-    TheCommand:=Concatenation(eProg, " mpq_class ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  |gp1|=", Length(gp1), " |gp2|=", Length(gp2), " arith=", arith, " command=PolyGen_Difference runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: PolyGen_Difference should have created a file";
     fi;
@@ -329,16 +572,32 @@ get_polygen_difference:=function(gp1, gp2)
     return result;
 end;
 
-get_polygen_vertices:=function(gp)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, result;
+get_polygen_vertices:=function(arg)
+    local gp, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, result, runtime_str;
+    gp:=arg[1];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteListMatrixFile(FileI, gp);
     eProg:=GetBinaryFilename("PolyGen_vertices");
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  |gp|=", Length(gp), " arith=", arith, " command=PolyGen_vertices runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: PolyGen_vertices should have created a file";
     fi;
@@ -349,15 +608,31 @@ get_polygen_vertices:=function(gp)
     return result;
 end;
 
-get_interior_point:=function(FAC)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, TheV;
+get_interior_point:=function(arg)
+    local FAC, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, TheV, runtime_str;
+    FAC:=arg[1];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Interior.in");
     FileO:=Filename(TmpDir, "Interior.out");
     WriteMatrixFile(FileI, FAC);
     eProg:=GetBinaryFilename("POLY_GeometricallyUniqueInteriorPoint");
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  FAC=", Length(FAC), "x", Length(FAC[1]), " arith=", arith, " command=POLY_GeometricallyUniqueInteriorPoint runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_GeometricallyUniqueInteriorPoint failed to create an output file";
     fi;
@@ -371,8 +646,17 @@ end;
 
 
 
-get_latt_isomorphism_test:=function(eMat1, eMat2)
-    local TmpDir, FileIn1, FileIn2, FileOut, FileErr, eProg, TheCommand, U;
+get_latt_isomorphism_test:=function(arg)
+    local eMat1, eMat2, options, print_info, TmpDir, FileIn1, FileIn2, FileOut, FileErr, eProg, TheCommand, U, runtime_str;
+    eMat1:=arg[1];
+    eMat2:=arg[2];
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileIn1:=Filename(TmpDir, "Isom1.in");
     FileIn2:=Filename(TmpDir, "Isom2.in");
@@ -383,6 +667,10 @@ get_latt_isomorphism_test:=function(eMat1, eMat2)
     #
     eProg:=GetBinaryFilename("LATT_Isomorphism");
     TheCommand:=Concatenation(eProg, " ", FileIn1, " ", FileIn2, " GAP ", FileOut, " 2> ", FileErr);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileErr);
+        Print("  eMat1=", Length(eMat1), "x", Length(eMat1[1]), " eMat2=", Length(eMat2), "x", Length(eMat2[1]), " command=LATT_Isomorphism runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileOut)=false then
         return "program failure: LATT_Isomorphism failed to create a file";
     fi;
@@ -396,8 +684,22 @@ end;
 
 
 
-get_group_skeleton:=function(EXT, GRP, LevSearch)
-    local TmpDir, FileEXT, FileGRP, FileInputNml, FileGrpOut, FileResultOut, FileE, strOut, output, eProg, TheCommand, GRPout, result;
+get_group_skeleton:=function(arg)
+    local EXT, GRP, LevSearch, options, arith, print_info, TmpDir, FileEXT, FileGRP, FileInputNml, FileGrpOut, FileResultOut, FileE, strOut, output, eProg, TheCommand, GRPout, result, runtime_str;
+    EXT:=arg[1];
+    GRP:=arg[2];
+    LevSearch:=arg[3];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 4 then
+        options:=arg[4];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileEXT:=Filename(TmpDir, "Test.ext");
     FileGRP:=Filename(TmpDir, "Test.grp");
@@ -416,7 +718,7 @@ get_group_skeleton:=function(EXT, GRP, LevSearch)
     strOut:=Concatenation(strOut, " ComputeTotalNumberFaces = T\n");
     strOut:=Concatenation(strOut, " method_spann = \"LinearProgramming\"\n");
     strOut:=Concatenation(strOut, " method_final = \"all\"\n");
-    strOut:=Concatenation(strOut, " Arithmetic = \"mpq_class\"\n");
+    strOut:=Concatenation(strOut, " Arithmetic = \"", arith, "\"\n");
     strOut:=Concatenation(strOut, " LevSearch = ", String(LevSearch), "\n");
     strOut:=Concatenation(strOut, "/\n");
     strOut:=Concatenation(strOut, "\n");
@@ -431,6 +733,10 @@ get_group_skeleton:=function(EXT, GRP, LevSearch)
     eProg:=GetBinaryFilename("POLY_FaceLatticeGen");
     TheCommand:=Concatenation(eProg, " ", FileInputNml, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " LevSearch=", LevSearch, " command=POLY_FaceLatticeGen runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileGrpOut)=false then
         return "program failure: POLY_FaceLatticeGen failed to create the group file";
     fi;
@@ -449,8 +755,21 @@ get_group_skeleton:=function(EXT, GRP, LevSearch)
 end;
 
 
-sample_facet_polytope:=function(EXT, method)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, result;
+sample_facet_polytope:=function(arg)
+    local EXT, method, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, result, runtime_str;
+    EXT:=arg[1];
+    method:=arg[2];
+    arith:="rational";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -458,8 +777,12 @@ sample_facet_polytope:=function(EXT, method)
     WriteMatrixFile(FileI, EXT);
     #
     eProg:=GetBinaryFilename("POLY_sampling_facets");
-    TheCommand:=Concatenation(eProg, " rational ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " method=", method, " command=POLY_sampling_facets runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_sampling_facets failed to create the output";
     fi;
@@ -471,8 +794,20 @@ sample_facet_polytope:=function(EXT, method)
 end;
 
 
-test_matrix_group_finiteness:=function(GRPmatr)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+test_matrix_group_finiteness:=function(arg)
+    local GRPmatr, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    GRPmatr:=arg[1];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Finiteness_test.input");
     FileO:=Filename(TmpDir, "Finiteness_test.result");
@@ -480,9 +815,13 @@ test_matrix_group_finiteness:=function(GRPmatr)
     WriteListMatrixFile(FileI, GRPmatr);
     #
     eProg:=GetBinaryFilename("GRP_TestFiniteness");
-    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     #
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  |GRPmatr|=", Length(GRPmatr), " arith=", arith, " command=GRP_TestFiniteness runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: GRP_TestFiniteness failed to create the output";
     fi;
@@ -495,16 +834,33 @@ end;
 
 
 
-get_integral_interior_point:=function(FAC, method)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, EXTint;
+get_integral_interior_point:=function(arg)
+    local FAC, method, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, EXTint, runtime_str;
+    FAC:=arg[1];
+    method:=arg[2];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.fac");
     FileO:=Filename(TmpDir, "Test.vertint");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, FAC);
     eProg:=GetBinaryFilename("POLY_IntegralPoints");
-    TheCommand:=Concatenation(eProg, " gmp ", method, " ", FileI, " CPP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", method, " ", FileI, " CPP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  FAC=", Length(FAC), "x", Length(FAC[1]), " arith=", arith, " method=", method, " command=POLY_IntegralPoints runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_IntegralPoints failed to create the file";
     fi;
@@ -634,17 +990,33 @@ end;
 # polytope (so a 4x4 identity when the polytope is full-dimensional in
 # 4 columns, fewer rows when the system has implicit linearities).
 # Returns a string starting with "program failure: ..." on error.
-get_linear_determine_by_inequalities:=function(FAC)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, Mat;
+get_linear_determine_by_inequalities:=function(arg)
+    local FAC, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, Mat, runtime_str;
+    FAC:=arg[1];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, FAC);
     eProg:=GetBinaryFilename("POLY_LinearDetermineByInequalities");
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO,
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO,
                               " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  FAC=", Length(FAC), "x", Length(FAC[1]), " arith=", arith, " command=POLY_LinearDetermineByInequalities runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         RemoveFile(FileI);
         RemoveFile(FileE);
@@ -660,8 +1032,20 @@ get_linear_determine_by_inequalities:=function(FAC)
 end;
 
 
-test_shortest_realizability:=function(SHV)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, eRec;
+test_shortest_realizability:=function(arg)
+    local SHV, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, eRec, runtime_str;
+    SHV:=arg[1];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -669,8 +1053,12 @@ test_shortest_realizability:=function(SHV)
     #
     WriteMatrixFile(FileI, SHV);
     eProg:=GetBinaryFilename("SHORT_TestRealizability");
-    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  SHV=", Length(SHV), "x", Length(SHV[1]), " arith=", arith, " command=SHORT_TestRealizability runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: SHORT_TestRealizability did not return a file";
     fi;
@@ -683,8 +1071,21 @@ test_shortest_realizability:=function(SHV)
 end;
 
 
-quadratic_form_isotropic_test_generic:=function(eProg, mat)
-    local TmpDir, FileI, FileO, FileE, TheCommand, U;
+quadratic_form_isotropic_test_generic:=function(arg)
+    local eProg, mat, options, arith, print_info, TmpDir, FileI, FileO, FileE, TheCommand, U, runtime_str;
+    eProg:=arg[1];
+    mat:=arg[2];
+    arith:="rational";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -695,8 +1096,12 @@ quadratic_form_isotropic_test_generic:=function(eProg, mat)
     #
     WriteMatrixFile(FileI, mat);
     #
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  mat=", Length(mat), "x", Length(mat[1]), " arith=", arith, " command=", eProg, " runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: Isotropic program errors";
     fi;
@@ -707,10 +1112,11 @@ quadratic_form_isotropic_test_generic:=function(eProg, mat)
     return U;
 end;
 
-quadratic_form_is_isotropic:=function(mat)
-    local eProg, result;
+quadratic_form_is_isotropic:=function(arg)
+    local mat, eProg, result;
+    mat:=arg[1];
     eProg:=GetBinaryFilename("LATT_TestIsotropic");
-    result:=quadratic_form_isotropic_test_generic(eProg, mat);
+    result:=CallFuncList(quadratic_form_isotropic_test_generic, Concatenation([eProg], arg));
     if is_error(result) then
         return result;
     fi;
@@ -718,10 +1124,11 @@ quadratic_form_is_isotropic:=function(mat)
 end;
 
 
-quadratic_form_isotropic_vector:=function(mat)
-    local eProg, result;
+quadratic_form_isotropic_vector:=function(arg)
+    local mat, eProg, result;
+    mat:=arg[1];
     eProg:=GetBinaryFilename("LATT_FindIsotropic");
-    result:=quadratic_form_isotropic_test_generic(eProg, mat);
+    result:=CallFuncList(quadratic_form_isotropic_test_generic, Concatenation([eProg], arg));
     if is_error(result) then
         return result;
     fi;
@@ -732,8 +1139,20 @@ quadratic_form_isotropic_vector:=function(mat)
     fi;
 end;
 
-get_lattice_covering:=function(eMat)
-    local TmpDir, FileI, FileN, FileO, FileE, output, strOut, eProg, TheCommand, U, UseMpi;
+get_lattice_covering:=function(arg)
+    local eMat, options, arith, print_info, TmpDir, FileI, FileN, FileO, FileE, output, strOut, eProg, TheCommand, U, UseMpi, runtime_str;
+    eMat:=arg[1];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "DelaunayEnum.in");
     FileN:=Filename(TmpDir, "DelaunayEnum.nml");
@@ -767,10 +1186,14 @@ get_lattice_covering:=function(eMat)
         TheCommand:=Concatenation(eProg, " ", FileN);
     else
         eProg:=GetBinaryFilename("LATT_SerialComputeDelaunay");
-        TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP_Covering ", FileO, " 2> ", FileE);
+        TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP_Covering ", FileO, " 2> ", FileE);
     fi;
 #    Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " arith=", arith, " command=LATT_SerialComputeDelaunay runtime=", runtime_str, "\n");
+    fi;
     #
     if IsExistingFile(FileO)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
@@ -784,8 +1207,20 @@ get_lattice_covering:=function(eMat)
     return U;
 end;
 
-get_robust_lattice_covering_density:=function(eMat)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, the_result;
+get_robust_lattice_covering_density:=function(arg)
+    local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, the_result, runtime_str;
+    eMat:=arg[1];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "RobustEnum.in");
     FileO:=Filename(TmpDir, "RobustEnum.out");
@@ -795,8 +1230,12 @@ get_robust_lattice_covering_density:=function(eMat)
     Print("TestEnumeration, FileIn created\n");
 
     eProg:=GetBinaryFilename("Robust_ExactRobustCoveringDensity");
-    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " arith=", arith, " command=Robust_ExactRobustCoveringDensity runtime=", runtime_str, "\n");
+    fi;
     the_result:=ReadAsFunction(FileO)();
     RemoveFile(FileI);
     RemoveFile(FileO);
@@ -805,8 +1244,22 @@ get_robust_lattice_covering_density:=function(eMat)
 end;
 
 
-find_positive_vectors:=function(M, CritNorm, StrictIneq)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, V;
+find_positive_vectors:=function(arg)
+    local M, CritNorm, StrictIneq, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, V, runtime_str;
+    M:=arg[1];
+    CritNorm:=arg[2];
+    StrictIneq:=arg[3];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 4 then
+        options:=arg[4];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -815,8 +1268,12 @@ find_positive_vectors:=function(M, CritNorm, StrictIneq)
     WriteMatrixFile(FileI, M);
     #
     eProg:=GetBinaryFilename("LATT_FindPositiveVector");
-    TheCommand:=Concatenation(eProg, " gmp ", FileI, " ", String(CritNorm), " ", String(StrictIneq), " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " ", String(CritNorm), " ", String(StrictIneq), " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  M=", Length(M), "x", Length(M[1]), " arith=", arith, " CritNorm=", CritNorm, " command=LATT_FindPositiveVector runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: LATT_FindPositiveVector did not return anything, likely crash";
     fi;
@@ -828,8 +1285,20 @@ find_positive_vectors:=function(M, CritNorm, StrictIneq)
 end;
 
 
-get_orbit_shortest:=function(eG)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+get_orbit_shortest:=function(arg)
+    local eG, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    eG:=arg[1];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -837,8 +1306,12 @@ get_orbit_shortest:=function(eG)
     WriteMatrixFile(FileI, eG);
     #
     eProg:=GetBinaryFilename("LATT_ComputeShortestOrbits");
-    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eG=", Length(eG), "x", Length(eG[1]), " arith=", arith, " command=LATT_ComputeShortestOrbits runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: LATT_ComputeShortestOrbits did not return anything, likely crash";
     fi;
@@ -855,16 +1328,32 @@ end;
 
 
 
-INDEF_FORM_Stabilizer:=function(eGram)
-    local TmpDir, FileI, FileO, FileE, eProg, U, TheCommand;
+INDEF_FORM_Stabilizer:=function(arg)
+    local eGram, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, U, TheCommand, runtime_str;
+    eGram:=arg[1];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=GetFreeFile("Err_indef_form_autom_");
     WriteMatrixFile(FileI, eGram);
     eProg:=GetBinaryFilename("INDEF_FORM_AutomorphismGroup");
-    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eGram=", Length(eGram), "x", Length(eGram[1]), " arith=", arith, " command=INDEF_FORM_AutomorphismGroup runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: INDEF_FORM_Stabilizer did not return anything, likely crash";
     fi;
@@ -875,8 +1364,21 @@ INDEF_FORM_Stabilizer:=function(eGram)
     return Group(U);
 end;
 
-INDEF_FORM_TestEquivalence:=function(eGram1, eGram2)
-    local TmpDir, eProg, FileM1, FileM2, FileO, FileE, TheCommand, U;
+INDEF_FORM_TestEquivalence:=function(arg)
+    local eGram1, eGram2, options, arith, print_info, TmpDir, eProg, FileM1, FileM2, FileO, FileE, TheCommand, U, runtime_str;
+    eGram1:=arg[1];
+    eGram2:=arg[2];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileM1:=Filename(TmpDir, "Mat1.in");
     FileM2:=Filename(TmpDir, "Mat2.in");
@@ -885,8 +1387,12 @@ INDEF_FORM_TestEquivalence:=function(eGram1, eGram2)
     WriteMatrixFile(FileM1, eGram1);
     WriteMatrixFile(FileM2, eGram2);
     eProg:=GetBinaryFilename("INDEF_FORM_TestEquivalence");
-    TheCommand:=Concatenation(eProg, " gmp ", FileM1, " ", FileM2, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileM1, " ", FileM2, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eGram1=", Length(eGram1), "x", Length(eGram1[1]), " eGram2=", Length(eGram2), "x", Length(eGram2[1]), " arith=", arith, " command=INDEF_FORM_TestEquivalence runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: Nothing returned by INDEF_FORM_TestEquivalence, maybe a crash";
     fi;
@@ -899,16 +1405,33 @@ INDEF_FORM_TestEquivalence:=function(eGram1, eGram2)
 end;
 
 
-INDEF_FORM_GetOrbitRepresentative:=function(eGram, Xnorm)
-    local TmpDir, eProg, FileM, FileO, FileE, TheCommand, U;
+INDEF_FORM_GetOrbitRepresentative:=function(arg)
+    local eGram, Xnorm, options, arith, print_info, TmpDir, eProg, FileM, FileO, FileE, TheCommand, U, runtime_str;
+    eGram:=arg[1];
+    Xnorm:=arg[2];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileM:=Filename(TmpDir, "Mat.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileM, eGram);
     eProg:=GetBinaryFilename("INDEF_FORM_GetOrbitRepresentative");
-    TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(Xnorm), " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileM, " ", String(Xnorm), " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eGram=", Length(eGram), "x", Length(eGram[1]), " arith=", arith, " Xnorm=", Xnorm, " command=INDEF_FORM_GetOrbitRepresentative runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: Nothing returned by INDEF_FORM_GetOrbitRepresentative, likely crash or something";
     fi;
@@ -919,16 +1442,34 @@ INDEF_FORM_GetOrbitRepresentative:=function(eGram, Xnorm)
     return U;
 end;
 
-INDEF_FORM_GetOrbitIsotropic:=function(eGram, kDim, choice)
-    local TmpDir, eProg, FileM, FileO, FileE, TheCommand, U;
+INDEF_FORM_GetOrbitIsotropic:=function(arg)
+    local eGram, kDim, choice, options, arith, print_info, TmpDir, eProg, FileM, FileO, FileE, TheCommand, U, runtime_str;
+    eGram:=arg[1];
+    kDim:=arg[2];
+    choice:=arg[3];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 4 then
+        options:=arg[4];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileM:=Filename(TmpDir, "Mat.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileM, eGram);
     eProg:=GetBinaryFilename("INDEF_FORM_GetOrbit_IsotropicKplane");
-    TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(kDim), " ", choice, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileM, " ", String(kDim), " ", choice, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eGram=", Length(eGram), "x", Length(eGram[1]), " arith=", arith, " kDim=", kDim, " choice=", choice, " command=INDEF_FORM_GetOrbit_IsotropicKplane runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: Nothing returned by INDEF_FORM_GetOrbitIsotropic, likely crash or something";
     fi;
@@ -943,8 +1484,16 @@ end;
 
 
 
-GetReflectivityInformation:=function(LorMat)
-    local n, TmpDir, FileI, FileN, FileO, FileE, strOut, eProg, TheCommand, U;
+GetReflectivityInformation:=function(arg)
+    local LorMat, options, print_info, n, TmpDir, FileI, FileN, FileO, FileE, strOut, eProg, TheCommand, U, runtime_str;
+    LorMat:=arg[1];
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     n:=Length(LorMat);
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
@@ -969,6 +1518,10 @@ GetReflectivityInformation:=function(LorMat)
     eProg:=GetBinaryFilename("LORENTZ_FundDomain_AllcockEdgewalk");
     TheCommand:=Concatenation(eProg, " ", FileN, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  LorMat=", Length(LorMat), "x", Length(LorMat[1]), " command=LORENTZ_FundDomain_AllcockEdgewalk runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
 #        Print(NullMat(5));
         return "program failure: Nothing returned by LORENTZ_FundDomain_AllcockEdgewalk, likely crash or something";
@@ -983,8 +1536,20 @@ end;
 
 
 
-test_copositivity:=function(eMat)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+test_copositivity:=function(arg)
+    local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    eMat:=arg[1];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -992,8 +1557,12 @@ test_copositivity:=function(eMat)
     WriteMatrixFile(FileI, eMat);
     #
     eProg:=GetBinaryFilename("CP_TestCopositivity");
-    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " arith=", arith, " command=CP_TestCopositivity runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: CP_TestCopositivity did not return anything";
     fi;
@@ -1004,8 +1573,20 @@ test_copositivity:=function(eMat)
     return U;
 end;
 
-test_complete_positivity:=function(eMat)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+test_complete_positivity:=function(arg)
+    local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    eMat:=arg[1];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -1013,8 +1594,12 @@ test_complete_positivity:=function(eMat)
     WriteMatrixFile(FileI, eMat);
     #
     eProg:=GetBinaryFilename("CP_TestCompletePositivity");
-    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " arith=", arith, " command=CP_TestCompletePositivity runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: CP_TestCompletePositivity did not return anything";
     fi;
@@ -1027,17 +1612,34 @@ end;
 
 
 
-get_matrix_group_mod_information:=function(ListGen, p_val)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+get_matrix_group_mod_information:=function(arg)
+    local ListGen, p_val, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    ListGen:=arg[1];
+    p_val:=arg[2];
+    arith:="mpz_class";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteListMatrixFile(FileI, ListGen);
     eProg:=GetBinaryFilename("LATT_ResolveModAction");
-    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO);
-#    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " ", String(p_val), " GAP ", FileO);
+#    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " ", String(p_val), " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  |ListGen|=", Length(ListGen), " arith=", arith, " p_val=", p_val, " command=LATT_ResolveModAction runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: Nothing returned by LATT_ResolveModAction, likely crash or something";
     fi;
@@ -1049,8 +1651,17 @@ get_matrix_group_mod_information:=function(ListGen, p_val)
 end;
 
 
-test_equivalent_lorentzian_matrices:=function(mat1, mat2)
-    local TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, U;
+test_equivalent_lorentzian_matrices:=function(arg)
+    local mat1, mat2, options, print_info, TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    mat1:=arg[1];
+    mat2:=arg[2];
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     #
     TmpDir:=DirectoryTemporary();
     File1:=Filename(TmpDir, "Indef_Equi.mat1");
@@ -1063,6 +1674,10 @@ test_equivalent_lorentzian_matrices:=function(mat1, mat2)
     eProg:=GetBinaryFilename("LORENTZ_PERF_Isomorphism");
     TheCommand:=Concatenation(eProg, " ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  mat1=", Length(mat1), "x", Length(mat1[1]), " mat2=", Length(mat2), "x", Length(mat2[1]), " command=LORENTZ_PERF_Isomorphism runtime=", runtime_str, "\n");
+    fi;
     #
     if IsExistingFile(FileO)=false then
         return "program failure: LORENTZ_PERF_Isomorphism failure for perfect matrices";
@@ -1075,8 +1690,16 @@ test_equivalent_lorentzian_matrices:=function(mat1, mat2)
     return U;
 end;
 
-stabilizer_lorentzian_matrix:=function(mat)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+stabilizer_lorentzian_matrix:=function(arg)
+    local mat, options, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    mat:=arg[1];
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     #
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Indef_Stab.mat");
@@ -1088,6 +1711,10 @@ stabilizer_lorentzian_matrix:=function(mat)
     eProg:=GetBinaryFilename("LORENTZ_PERF_Automorphism");
     TheCommand:=Concatenation(eProg, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  mat=", Length(mat), "x", Length(mat[1]), " command=LORENTZ_PERF_Automorphism runtime=", runtime_str, "\n");
+    fi;
     #
     if IsExistingFile(FileO)=false then
         return "program failure: LORENTZ_PERF_Automorphism failed to create a file";
@@ -1101,17 +1728,34 @@ end;
 
 
 
-get_grp_size_matrix_group_mod_action:=function(ListGen, p_val)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+get_grp_size_matrix_group_mod_action:=function(arg)
+    local ListGen, p_val, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    ListGen:=arg[1];
+    p_val:=arg[2];
+    arith:="mpz_class";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteListMatrixFile(FileI, ListGen);
     eProg:=GetBinaryFilename("LATT_ComputeGroupModAction");
-    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO);
-#    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " ", String(p_val), " GAP ", FileO);
+#    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " ", String(p_val), " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  |ListGen|=", Length(ListGen), " arith=", arith, " p_val=", p_val, " command=LATT_ComputeGroupModAction runtime=", runtime_str, "\n");
+    fi;
     if IsExistingFile(FileO)=false then
         return "program failure: Nothing returned by LATT_ResolveModAction, likely crash or something";
     fi;
@@ -1192,10 +1836,24 @@ end;
 
 
 
-__PERFCOMP_Write_t_space:=function(output, desc)
+__PERFCOMP_Write_t_space:=function(arg)
+    local output, desc, options, arithmetic_T, arithmetic_Tint;
+    output:=arg[1];
+    desc:=arg[2];
+    arithmetic_T:="gmp_rational";
+    arithmetic_Tint:="gmp_integer";
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arithmetic_T) then
+            arithmetic_T:=options.arithmetic_T;
+        fi;
+        if IsBound(options.arithmetic_Tint) then
+            arithmetic_Tint:=options.arithmetic_Tint;
+        fi;
+    fi;
     AppendTo(output, "&DATA\n");
-    AppendTo(output, " arithmetic_T = \"gmp_rational\"\n");
-    AppendTo(output, " arithmetic_Tint = \"gmp_integer\"\n");
+    AppendTo(output, " arithmetic_T = \"", arithmetic_T, "\"\n");
+    AppendTo(output, " arithmetic_Tint = \"", arithmetic_Tint, "\"\n");
     AppendTo(output, " OnlyWellRounded = ", FORTRAN_logical(desc.only_well_rounded), "\n");
     AppendTo(output, " ComputeBoundary = T\n");
     AppendTo(output, " ComputeContractingHomotopy = T\n");
@@ -1206,14 +1864,22 @@ __PERFCOMP_Write_t_space:=function(output, desc)
     write_t_space(output, desc);
 end;
 
-PERFCOMP_group_generators:=function(desc)
-    local TmpDir, FileN, FileO, FileE, output, ListGen, binary, cmd;
+PERFCOMP_group_generators:=function(arg)
+    local desc, options, print_info, TmpDir, FileN, FileO, FileE, output, ListGen, binary, cmd, runtime_str;
+    desc:=arg[1];
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
     FileO:=Filename(TmpDir, "PerfComp.out");
     FileE:=Filename(TmpDir, "PerfComp.err");
     output:=OutputTextFile(FileN, true);
-    __PERFCOMP_Write_t_space(output, desc);
+    CallFuncList(__PERFCOMP_Write_t_space, Concatenation([output, desc], arg{[2..Length(arg)]}));
     AppendTo(output, "&QUERIES\n");
     AppendTo(output, " FileGroupGenerators = \"", FileO, "\"\n");
     AppendTo(output, "/\n");
@@ -1222,6 +1888,10 @@ PERFCOMP_group_generators:=function(desc)
     binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
     cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
     Exec(cmd);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  desc.nature=", desc.nature, " command=PERF_SerialPerfectComputation/FileGroupGenerators runtime=", runtime_str, "\n");
+    fi;
     #
     ListGen:=ReadAsFunction(FileO)();
     RemoveFile(FileN);

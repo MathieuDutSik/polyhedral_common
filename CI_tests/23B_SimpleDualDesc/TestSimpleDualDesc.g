@@ -2,13 +2,18 @@ Read("../common.g");
 Read("../access_points.g");
 Print("Beginning TestSimpleDualDesc\n");
 
-#l_arith:=["mpq_class", "safe_rational", "cpp_rational", "mpq_rational"];
-l_arith:=["mpq_class", "cpp_rational", "mpq_rational"];
+l_arith1:=["mpq_class", "safe_rational", "cpp_rational", "mpq_rational"];
+l_arith2:=["mpq_class", "cpp_rational", "mpq_rational"];
 
 
 TestSimpleDD:=function(EXT, command, n_fac)
-    local dim, arith, options, choice, FAC, eFAC, ListScal, ListIncd;
+    local dim, l_arith, arith, options, choice, FAC, eFAC, ListScal, ListIncd;
     dim:=Length(EXT[1]);
+    if command="pd_lrs" then
+        l_arith:=l_arith2;
+    else
+        l_arith:=l_arith1;
+    fi;
     for arith in l_arith
     do
         options:=rec(print_info:=true, arith:=arith);
