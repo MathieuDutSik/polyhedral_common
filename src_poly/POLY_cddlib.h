@@ -6894,8 +6894,8 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found) {
     dd_ColumnReduce(cone);
     dd_FindBasis(cone, &rank);
   }
-  if (!set_subset(cone->EqualitySet, cone->InitialHalfspaces))
 #ifdef LOCALDEBUG_CDD
+  if (!set_subset(cone->EqualitySet, cone->InitialHalfspaces))
       std::cerr << "Equality set is dependent. Equality Set and an initial basis:\n";
 #endif
   *found = true;

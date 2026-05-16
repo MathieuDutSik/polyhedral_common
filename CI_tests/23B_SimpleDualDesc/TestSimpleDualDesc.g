@@ -39,7 +39,7 @@ TestSimpleDD:=function(EXT, command, n_fac)
 end;
 
 File1:="Example1_pd_lrs_1084_26";
-File2:="Example2_lrs_cdd_27_99";
+File2:="Example2_lrs_cdd_27_99_schlafli";
 File3:="Example3_48_11432";
 File4:="Example4_cdd_lrs_CUTP6";
 File5:="Example5_cdd_lrs_tsp6";
