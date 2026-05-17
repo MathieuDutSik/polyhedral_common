@@ -56,48 +56,10 @@ jobs:
           sudo apt-get install -y autoconf autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
 
-      - name: Build test code
-        run: |
-
-          pwd
-          echo "After pwd"
-
-          ls basic_common_cpp
-          echo "After ls basic_common_cpp"
-
-          mkdir basic_common_cpp/ExternalLib/nauty/build
-          cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install && cd ../../../..
-          pwd
-          echo "After nauty compilation"
-
-          # BLISS
-          cd /home/runner && unzip work/polyhedral_common/polyhedral_common/basic_common_cpp/ExternalLib/bliss-0.77.zip
-          mkdir -p /home/runner/opt/libbliss/lib
-          mkdir -p /home/runner/opt/libbliss/include
-          echo "After directory creation"
-          cd /home/runner/opt/libbliss/lib && cmake /home/runner/bliss-0.77 && make
-          echo "After compilation"
-          cd /home/runner/opt/libbliss/include && cp /home/runner/bliss-0.77/src/*.hh .
-          echo "After header files copy"
-          cd /home/runner/work/polyhedral_common/polyhedral_common
-          echo "After cd"
-          pwd
-          echo "After bliss compilation"
-
-          # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
-          wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
-          tar -xzf eigen-3.3.9.tar.gz
-          mv eigen-3.3.9 /home/runner/work/opt/eigen
-          pwd
-          echo "After eigen-3.3.9 set up"
-
-          # Downloading and compiling gap
-          wget -q https://github.com/gap-system/gap/releases/download/v4.14.0/gap-4.14.0.tar.gz
-          tar -xzf gap-4.14.0.tar.gz
-          cd gap-4.14.0 && ./configure && make && cd ..
-          pwd
-          ln -s gap-4.14.0/gap gap.sh
-
+      - uses: ./.github/actions/install-nauty
+      - uses: ./.github/actions/install-bliss
+      - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-gap
       - name: Compiling the test programs.
         run: |
           cd src_group && make -f Makefile_integral_automorphy && cd ..

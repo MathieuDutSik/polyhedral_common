@@ -1,0 +1,25 @@
+name: 'Install bliss'
+description: 'Unzip the vendored bliss-0.77 source and build it into $LIBBLISS_PATH (which must be set in the calling workflow''s env). Requires cmake and unzip.'
+inputs:
+  version:
+    description: 'bliss version (matches the vendored basic_common_cpp/ExternalLib/bliss-<version>.zip).'
+    required: false
+    default: '0.77'
+runs:
+  using: 'composite'
+  steps:
+    - name: Build vendored bliss ${{ inputs.version }}
+      shell: bash
+      run: |
+        set -e
+        if [ -z "$LIBBLISS_PATH" ]; then
+          echo "LIBBLISS_PATH must be set in the calling workflow's env block" >&2
+          exit 1
+        fi
+        VERSION="${{ inputs.version }}"
+        SRC_DIR="$HOME/bliss-${VERSION}"
+        rm -rf "$SRC_DIR"
+        ( cd "$HOME" && unzip -q "$GITHUB_WORKSPACE/basic_common_cpp/ExternalLib/bliss-${VERSION}.zip" )
+        mkdir -p "$LIBBLISS_PATH/lib" "$LIBBLISS_PATH/include"
+        ( cd "$LIBBLISS_PATH/lib" && cmake "$SRC_DIR" && make )
+        cp "$SRC_DIR/src/"*.hh "$LIBBLISS_PATH/include/"

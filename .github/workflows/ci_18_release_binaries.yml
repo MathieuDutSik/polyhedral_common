@@ -58,27 +58,11 @@ jobs:
           sudo apt-get install -y autoconf autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
 
+      - uses: ./.github/actions/install-nauty
+      - uses: ./.github/actions/install-eigen
+
       - name: Build and release
         run: |
-          ls
-          echo "After ls"
-
-          pwd
-          echo "After pwd"
-
-          ls basic_common_cpp
-          echo "After ls basic_common_cpp"
-
-          mkdir basic_common_cpp/ExternalLib/nauty/build
-          cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install && cd ../../../..
-          echo "After nauty compilation"
-
-          # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
-          wget https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
-          tar -vxzf eigen-3.3.9.tar.gz
-          mv eigen-3.3.9 /home/runner/work/opt/eigen
-          echo "After eigen-3.3.9 set up"
-
           # We need to compile GMP in static
           # wget --no-check-certificate https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2
           wget https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2

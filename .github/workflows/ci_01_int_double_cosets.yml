@@ -56,34 +56,9 @@ jobs:
           sudo apt-get install -y libglpk-dev
           sudo apt-get install -y autoconf autotools-dev libtool
 
-      - name: Build test code
-        run: |
-
-          pwd
-          echo "After pwd"
-
-          ls basic_common_cpp
-          echo "After ls basic_common_cpp"
-
-          mkdir basic_common_cpp/ExternalLib/nauty/build
-          cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install && cd ../../../..
-          pwd
-          echo "After nauty compilation"
-
-          # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
-          wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
-          tar -xzf eigen-3.3.9.tar.gz
-          mv eigen-3.3.9 /home/runner/work/opt/eigen
-          pwd
-          echo "After eigen-3.3.9 set up"
-
-          # Downloading and compiling gap
-          wget -q https://github.com/gap-system/gap/releases/download/v4.14.0/gap-4.14.0.tar.gz
-          tar -xzf gap-4.14.0.tar.gz
-          cd gap-4.14.0 && ./configure && make && cd ..
-          pwd
-          ln -s gap-4.14.0/gap gap.sh
-
+      - uses: ./.github/actions/install-nauty
+      - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-gap
       - name: Test integral automorphy
         run: |
           cd src_group && make -f Makefile_double_cosets && cd ..

@@ -1,3 +1,23 @@
+extract_runtime_from_log:=function(FileE)
+    local lines, line, prefix, rest, idx;
+    if IsExistingFile(FileE)=false then
+        return "unknown";
+    fi;
+    lines:=SplitString(StringFile(FileE), "\n");
+    prefix:="runtime = ";
+    for line in lines do
+        if Length(line) >= Length(prefix) and line{[1..Length(prefix)]}=prefix then
+            rest:=line{[Length(prefix)+1..Length(line)]};
+            idx:=PositionSublist(rest, " timeanddate=");
+            if idx <> fail then
+                rest:=rest{[1..idx-1]};
+            fi;
+            return rest;
+        fi;
+    od;
+    return "unknown";
+end;
+
 get_grp_automorphy:=function(arg)
     local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, TheGRP_rat, runtime_str;
     EXT:=arg[1];
@@ -869,26 +889,6 @@ get_integral_interior_point:=function(arg)
     RemoveFile(FileO);
     RemoveFile(FileE);
     return EXTint;
-end;
-
-extract_runtime_from_log:=function(FileE)
-    local lines, line, prefix, rest, idx;
-    if IsExistingFile(FileE)=false then
-        return "unknown";
-    fi;
-    lines:=SplitString(StringFile(FileE), "\n");
-    prefix:="runtime = ";
-    for line in lines do
-        if Length(line) >= Length(prefix) and line{[1..Length(prefix)]}=prefix then
-            rest:=line{[Length(prefix)+1..Length(line)]};
-            idx:=PositionSublist(rest, " timeanddate=");
-            if idx <> fail then
-                rest:=rest{[1..idx-1]};
-            fi;
-            return rest;
-        fi;
-    od;
-    return "unknown";
 end;
 
 get_dual_desc_kernel:=function(arg)

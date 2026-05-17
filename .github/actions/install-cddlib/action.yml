@@ -1,0 +1,27 @@
+name: 'Install cddlib'
+description: 'Clone cddlib from upstream and install it to $CDDLIB_PATH (which must be set in the calling workflow''s env). Requires autoconf, libtool, libgmp-dev.'
+inputs:
+  ref:
+    description: 'Git ref (tag or commit) of cddlib to check out. Empty means default branch.'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Build cddlib
+      shell: bash
+      run: |
+        set -e
+        if [ -z "$CDDLIB_PATH" ]; then
+          echo "CDDLIB_PATH must be set in the calling workflow's env block" >&2
+          exit 1
+        fi
+        git clone https://github.com/cddlib/cddlib
+        cd cddlib
+        if [ -n "${{ inputs.ref }}" ]; then
+          git checkout "${{ inputs.ref }}"
+        fi
+        ./bootstrap
+        ./configure --prefix="$CDDLIB_PATH"
+        make
+        make install

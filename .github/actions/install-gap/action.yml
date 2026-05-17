@@ -1,0 +1,20 @@
+name: 'Install GAP'
+description: 'Download and build GAP, leaving a gap.sh symlink in the workspace root.'
+inputs:
+  version:
+    description: 'GAP version to install.'
+    required: false
+    default: '4.14.0'
+runs:
+  using: 'composite'
+  steps:
+    - name: Build GAP ${{ inputs.version }}
+      shell: bash
+      run: |
+        set -e
+        VERSION="${{ inputs.version }}"
+        wget -q "https://github.com/gap-system/gap/releases/download/v${VERSION}/gap-${VERSION}.tar.gz"
+        tar -xzf "gap-${VERSION}.tar.gz"
+        ( cd "gap-${VERSION}" && ./configure && make )
+        ln -sf "gap-${VERSION}/gap" gap.sh
+        rm -f "gap-${VERSION}.tar.gz"

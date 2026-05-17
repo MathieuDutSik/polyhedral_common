@@ -1,0 +1,17 @@
+name: 'Install nauty'
+description: 'Build the vendored nauty (basic_common_cpp/ExternalLib/nauty) and install it to $NAUTY_PATH (which must be set in the calling workflow''s env). Requires cmake.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Build vendored nauty
+      shell: bash
+      run: |
+        set -e
+        if [ -z "$NAUTY_PATH" ]; then
+          echo "NAUTY_PATH must be set in the calling workflow's env block" >&2
+          exit 1
+        fi
+        mkdir -p basic_common_cpp/ExternalLib/nauty/build
+        cd basic_common_cpp/ExternalLib/nauty/build
+        cmake -DCMAKE_INSTALL_PREFIX:PATH="$NAUTY_PATH" ..
+        make all install

@@ -1,0 +1,24 @@
+name: 'Install Eigen'
+description: 'Download Eigen source and place it at $EIGEN_PATH (which must be set in the calling workflow''s env).'
+inputs:
+  version:
+    description: 'Eigen version to install. 3.4.0 has a bug for algebraic data types; 3.3.9 is known good.'
+    required: false
+    default: '3.3.9'
+runs:
+  using: 'composite'
+  steps:
+    - name: Download Eigen ${{ inputs.version }}
+      shell: bash
+      run: |
+        set -e
+        if [ -z "$EIGEN_PATH" ]; then
+          echo "EIGEN_PATH must be set in the calling workflow's env block" >&2
+          exit 1
+        fi
+        VERSION="${{ inputs.version }}"
+        wget -q "https://gitlab.com/libeigen/eigen/-/archive/${VERSION}/eigen-${VERSION}.tar.gz"
+        tar -xzf "eigen-${VERSION}.tar.gz"
+        mkdir -p "$(dirname "$EIGEN_PATH")"
+        mv "eigen-${VERSION}" "$EIGEN_PATH"
+        rm -f "eigen-${VERSION}.tar.gz"

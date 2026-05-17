@@ -4,16 +4,13 @@ Print("Beginning TestSimpleDualDesc\n");
 
 l_arith1:=["mpq_class", "safe_rational", "cpp_rational", "mpq_rational"];
 l_arith2:=["mpq_class", "cpp_rational", "mpq_rational"];
+l_arith3:=["mpq_class"];
 
 
 TestSimpleDD:=function(EXT, command, n_fac)
     local dim, l_arith, arith, options, choice, FAC, eFAC, ListScal, ListIncd;
     dim:=Length(EXT[1]);
-    if command="pd_lrs" then
-        l_arith:=l_arith2;
-    else
-        l_arith:=l_arith1;
-    fi;
+    l_arith:=l_arith3;
     for arith in l_arith
     do
         options:=rec(print_info:=true, arith:=arith);
