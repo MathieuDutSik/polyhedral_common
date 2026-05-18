@@ -5508,7 +5508,7 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
      implicit linearity are recognized with dd_MatrixCanonicalizeLinearity.
   */
 
-  dd_rowrange i, k, m, m1;
+  dd_rowrange i, k, m;
   dd_colrange d;
   dd_rowset redset1;
   dd_rowindex newpos1;
@@ -7692,9 +7692,6 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
   dd_rowrange fii1;
   bool ptr2found, quit;
   long pos1, pos2;
-  float workleft, prevworkleft = 110.0, totalpairs;
-
-  totalpairs = (cone->ZeroRayCount - 1.0) * (cone->ZeroRayCount - 2.0) + 1.0;
   Ptr2begin = nullptr;
   if (RRbegin == nullptr || RRend == nullptr) {
     if (1) {
@@ -7739,17 +7736,6 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
     }
     Ptr1 = Ptr1->Next;
     pos1++;
-    workleft = 100.0 * (cone->ZeroRayCount - pos1) *
-               (cone->ZeroRayCount - pos1 - 1.0) / totalpairs;
-#ifdef LOCALDEBUG_CDD
-    if (cone->ZeroRayCount >= 500 && pos1 % 10 == 0 &&
-        prevworkleft - workleft >= 10) {
-      std::cerr << "*Work of iteration " << cone->Iteration << "(/" << cone->m
-                << "): " << pos1 << "/" << cone->ZeroRayCount << " => "
-                << workleft << "% left\n";
-      prevworkleft = workleft;
-    }
-#endif
   } while (Ptr1 != RRend && Ptr1 != nullptr);
 }
 
@@ -8531,7 +8517,6 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
   dd_raydata<T> *RayPtr2s;
   dd_raydata<T> *RayPtr3;
   long pos1, pos2;
-  double prevprogress, progress;
   T value1, value2;
   bool adj, equal, completed;
 
@@ -8568,7 +8553,6 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
   }
   RayPtr2 = RayPtr2s;      /*2nd feasible ray to scan and compare with 1st*/
   RayPtr3 = cone->LastRay; /*Last feasible for scanning*/
-  prevprogress = -10.0;
   pos1 = 1;
   completed = false;
   while ((RayPtr1 != RayPtr2s) && !completed) {
@@ -8596,16 +8580,6 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
       completed = true;
     }
     pos1++;
-    progress =
-        100.0 * (static_cast<double>(pos1) / pos2) * (2.0 * pos2 - pos1) / pos2;
-#ifdef LOCALDEBUG_CDD
-    if (progress - prevprogress >= 10 && pos1 % 10 == 0) {
-      std::cerr << "*Progress of iteration " << cone->Iteration << "(/"
-                << cone->m << "):   " << pos1 << "/" << pos2 << " => "
-                << progress << "% done\n";
-      prevprogress = progress;
-    }
-#endif
   }
   if (cone->RayCount == cone->WeaklyFeasibleRayCount) {
     cone->CompStatus = dd_AllFound;
@@ -8772,7 +8746,10 @@ dd_rowrange dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded) {
 
 template <typename T>
 dd_rowrange dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded) {
-  long i, fea, inf, max, tmax, fi = 0, infi = 0;
+#ifdef LOCALDEBUG_CDD
+  long fi = 0, infi = 0;
+#endif
+  long i, fea, inf, max, tmax;
 
   max = -1;
   dd_rowrange retidx = 0;
@@ -8789,8 +8766,10 @@ dd_rowrange dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded) {
       }
       if (tmax > max) {
         max = tmax;
+#ifdef LOCALDEBUG_CDD
         fi = fea;
         infi = inf;
+#endif
         retidx = i;
       }
     }
