@@ -10,6 +10,7 @@
 
 // clang-format off
 #include "Basic_string.h"
+#include "Basic_external_program.h"
 #include "MAT_MatrixInt.h"
 #include <algorithm>
 #include <string>

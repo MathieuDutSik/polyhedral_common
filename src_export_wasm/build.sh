@@ -6,17 +6,20 @@ set -euo pipefail
 # verify that the area's templates compile cleanly under POLYHEDRAL_WASM
 # (which disables external-program invocation, signal handling, MPI, etc.).
 #
-# Requires emscripten (emcc) on PATH. On macOS:  brew install emscripten
+# Requires emscripten (emcc, emconfigure, emmake) on PATH.
+# On macOS:  brew install emscripten
 #
-# Companion harness in ../basic_common_cpp/src_wasm/ builds the lower-level
-# matrix/number-theory smoke tests; this directory exercises the higher-level
-# polyhedral areas: src_poly, src_copos, src_isotropy, src_group, src_latt,
-# src_polygen, src_short, src_sparse_solver.
+# nauty is built once into build/nauty-install/ by running its upstream
+# autoconf-generated configure under emconfigure; the resulting libnauty.a
+# is linked into the smoke tests that pull in GRAPH_traces.h (currently
+# only Test_wasm_short via SHORT_Realizability).
 
 cd "$(dirname "$0")"
 
 BOOST_INC="${BOOST_INC:-/opt/homebrew/opt/boost/include}"
 EIGEN_INC="${EIGEN_INC:-/opt/homebrew/include/eigen3}"
+NAUTY_TAG="${NAUTY_TAG:-2.8.9}"
+NAUTY_REPO="${NAUTY_REPO:-https://github.com/MathieuDutSik/nauty}"
 
 if [ ! -d "$BOOST_INC" ]; then
   echo "Boost include dir not found at $BOOST_INC (set BOOST_INC env var)" >&2
@@ -29,6 +32,40 @@ fi
 
 ROOT="$(cd .. && pwd)"
 BCPP="$ROOT/basic_common_cpp"
+WORKDIR="$(pwd)/build"
+NAUTY_SRC="$WORKDIR/nauty-src"
+NAUTY_INSTALL="$WORKDIR/nauty-install"
+NAUTY_LIB="$NAUTY_INSTALL/lib/libnauty.a"
+NAUTY_INC="$NAUTY_INSTALL/include/nauty"
+mkdir -p "$WORKDIR"
+
+ensure_wasm_nauty() {
+  if [ -f "$NAUTY_LIB" ]; then
+    echo "==> nauty (wasm) already built: $NAUTY_LIB"
+    return
+  fi
+  if [ ! -d "$NAUTY_SRC" ]; then
+    echo "==> Cloning nauty $NAUTY_TAG from $NAUTY_REPO"
+    git clone --depth 1 --branch "$NAUTY_TAG" "$NAUTY_REPO" "$NAUTY_SRC"
+  fi
+  echo "==> Building nauty under emscripten in $NAUTY_SRC"
+  (
+    cd "$NAUTY_SRC"
+    # Force-disable thread-local storage and pthreads; emscripten's TLS support
+    # is opt-in and nauty's configure auto-detects it on the host instead.
+    emconfigure ./configure \
+      --prefix="$NAUTY_INSTALL" \
+      --disable-popcnt \
+      --disable-clz \
+      --disable-tls
+    emmake make
+    emmake make install
+  )
+  if [ ! -f "$NAUTY_LIB" ]; then
+    echo "ERROR: $NAUTY_LIB not produced by emmake install" >&2
+    exit 1
+  fi
+}
 
 INCLUDES=(
   # Basic common (lower-level)
@@ -69,22 +106,46 @@ CXXFLAGS=(
   -DPOLYHEDRAL_WASM
 )
 
-mkdir -p build
+# Tests that pull in GRAPH_traces.h (and therefore need libnauty linked).
+# Currently this is just src_short (via SHORT_Realizability → equivalence
+# code → WeightMatrix → GRAPH_Bindings → GRAPH_traces).
+needs_nauty() {
+  case "$1" in
+    Test_wasm_short.cpp) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Build nauty up-front if any source needs it, so the failure (if any)
+# happens before the per-test loop.
 shopt -s nullglob
 sources=(Test_wasm_*.cpp)
 shopt -u nullglob
-
 if [ "${#sources[@]}" -eq 0 ]; then
   echo "No Test_wasm_*.cpp sources found." >&2
   exit 1
+fi
+need_nauty=0
+for src in "${sources[@]}"; do
+  if needs_nauty "$src"; then
+    need_nauty=1
+    break
+  fi
+done
+if [ "$need_nauty" -eq 1 ]; then
+  ensure_wasm_nauty
 fi
 
 n_fail=0
 for src in "${sources[@]}"; do
   name="${src%.cpp}"
   out="build/${name}.js"
+  extra=()
+  if needs_nauty "$src"; then
+    extra=(-I"$NAUTY_INC" "$NAUTY_LIB")
+  fi
   echo "==> Building $src -> $out"
-  if ! emcc "${CXXFLAGS[@]}" "${INCLUDES[@]}" "$src" -o "$out"; then
+  if ! emcc "${CXXFLAGS[@]}" "${INCLUDES[@]}" "${extra[@]}" "$src" -o "$out"; then
     echo "    BUILD FAILED for $src" >&2
     n_fail=$((n_fail + 1))
     continue
