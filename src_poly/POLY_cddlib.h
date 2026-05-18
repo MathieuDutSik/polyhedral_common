@@ -5539,8 +5539,8 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
   } else {
     d = (*M)->colsize;
   }
-  m1 = M1->rowsize;
 #ifdef LOCALDEBUG_CDD
+  int m1 = M1->rowsize;
   std::cerr << "dd_MatrixRedundancyRemove: By sorting, " << m - m1
             << " rows have been removed.  The remaining has " << m1
             << " rows.\n";
@@ -7691,7 +7691,7 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
   dd_raydata<T> *Ptr2begin;
   dd_rowrange fii1;
   bool ptr2found, quit;
-  long pos1, pos2;
+  long pos2;
   Ptr2begin = nullptr;
   if (RRbegin == nullptr || RRend == nullptr) {
     if (1) {
@@ -7700,7 +7700,6 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
     return;
   }
   Ptr1 = RRbegin;
-  pos1 = 1;
   do {
     #ifdef TRACKING_OPERATION_CDD
       std::cerr << "TRACKING_OPERATION_CDD: Entry 289\n";
@@ -7735,7 +7734,6 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
       }
     }
     Ptr1 = Ptr1->Next;
-    pos1++;
   } while (Ptr1 != RRend && Ptr1 != nullptr);
 }
 
@@ -8516,7 +8514,6 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
   dd_raydata<T> *RayPtr2;
   dd_raydata<T> *RayPtr2s;
   dd_raydata<T> *RayPtr3;
-  long pos1, pos2;
   T value1, value2;
   bool adj, equal, completed;
 
@@ -8535,13 +8532,11 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
     return; /* Sicne there is no hnew-infeasible ray and nothing to do */
   } else {
     RayPtr2s = RayPtr1->Next; /* RayPtr2s must point the first feasible ray */
-    pos2 = 1;
     while (RayPtr2s != nullptr && RayPtr2s->ARay < 0) {
       #ifdef TRACKING_OPERATION_CDD
         std::cerr << "TRACKING_OPERATION_CDD: Entry 319\n";
       #endif
       RayPtr2s = RayPtr2s->Next;
-      pos2++;
     }
   }
   if (RayPtr2s == nullptr) {
@@ -8553,7 +8548,6 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
   }
   RayPtr2 = RayPtr2s;      /*2nd feasible ray to scan and compare with 1st*/
   RayPtr3 = cone->LastRay; /*Last feasible for scanning*/
-  pos1 = 1;
   completed = false;
   while ((RayPtr1 != RayPtr2s) && !completed) {
     #ifdef TRACKING_OPERATION_CDD
@@ -8579,7 +8573,6 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
     } else {
       completed = true;
     }
-    pos1++;
   }
   if (cone->RayCount == cone->WeaklyFeasibleRayCount) {
     cone->CompStatus = dd_AllFound;
@@ -10272,8 +10265,6 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &EXT,
   }
   return CDD_LinearProgramming_exact_V2<T, double>(EXT, eVect, os);
 }
-
-#include "POLY_cddlib_external.h"
 
 // clang-format off
 #endif  // SRC_POLY_POLY_CDDLIB_H_
