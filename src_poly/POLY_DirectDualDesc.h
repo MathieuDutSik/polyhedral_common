@@ -8,7 +8,9 @@
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
 #include "MAT_MatrixInt.h"
+#ifndef POLYHEDRAL_WASM
 #include "POLY_DirectDualDesc_External.h"
+#endif
 #include "POLY_DualDescription_PrimalDual.h"
 #include "SmallPolytopes.h"
 #include <algorithm>
@@ -93,6 +95,7 @@ template <typename T> bool is_method_supported(std::string const &prog) {
   if (prog == "pd_lrs")
     return true;
   //
+#ifndef POLYHEDRAL_WASM
   if constexpr (is_implementation_of_Q<T>::value) {
     if (prog == "glrs")
       return true;
@@ -106,6 +109,7 @@ template <typename T> bool is_method_supported(std::string const &prog) {
     if (prog == "normaliz")
       return true;
   }
+#endif
   return false;
 }
 
@@ -178,6 +182,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
   //
   // The external programs are available only for rationl types
   //
+#ifndef POLYHEDRAL_WASM
   if constexpr (is_implementation_of_Q<T>::value) {
     eProg = "glrs";
     ListProg.push_back(eProg);
@@ -199,6 +204,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     if (ansProg == eProg)
       return DualDescExternalProgramIncidence(EXT, "normaliz", os);
   }
+#endif
   //
   std::cerr << "DDD: ERROR in DirectFacetComputationIncidence\n";
   terminate_direct_dual_desc(ansProg, ListProg);
@@ -244,6 +250,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   //
   // The external programs are available only for rationl types
   //
+#ifndef POLYHEDRAL_WASM
   if constexpr (is_implementation_of_Q<T>::value) {
     eProg = "glrs";
     ListProg.push_back(eProg);
@@ -265,6 +272,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     if (ansProg == eProg)
       return DualDescExternalProgramIneq(EXT, "normaliz", os);
   }
+#endif
   //
   std::cerr << "DDD: ERROR in DirectFacetComputationInequalities\n";
   terminate_direct_dual_desc(ansProg, ListProg);
@@ -312,6 +320,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
   //
   // The external programs are available only for rationl types
   //
+#ifndef POLYHEDRAL_WASM
   if constexpr (is_implementation_of_Q<T>::value) {
     eProg = "glrs";
     ListProg.push_back(eProg);
@@ -333,6 +342,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     if (ansProg == eProg)
       return DualDescExternalProgramFaceIneq(EXT, "normaliz", f_process, os);
   }
+#endif
   //
   std::cerr << "DDD: ERROR in DirectFacetComputationFaceIneq\n";
   terminate_direct_dual_desc(ansProg, ListProg);

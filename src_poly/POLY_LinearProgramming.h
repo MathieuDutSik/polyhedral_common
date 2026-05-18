@@ -3,13 +3,11 @@
 #define SRC_POLY_POLY_LINEARPROGRAMMING_H_
 
 // clang-format off
-#include "Basic_file.h"
 #include "Basic_string.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_Fundamental.h"
 #include "POLY_LinearProgrammingFund.h"
 #include "POLY_cddlib.h"
-#include "basic_datafile.h"
 #include <string>
 #include <vector>
 #include <unordered_map>

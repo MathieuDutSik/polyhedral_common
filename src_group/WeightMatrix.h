@@ -23,7 +23,6 @@
 
 // clang-format off
 #include "GRAPH_Bindings.h"
-#include "Basic_file.h"
 #include "Basic_string.h"
 #include "Boost_bitset.h"
 #include "COMB_Combinatorics_elem.h"
