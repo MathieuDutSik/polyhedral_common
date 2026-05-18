@@ -4,16 +4,16 @@
 
 // Compile-time + run-time gate for the external `ppl_lcdd` binary.  Returns
 // true only when (a) the arithmetic T is a rational implementation and (b)
-// `ppl_lcdd` is on PATH.  Under POLYHEDRAL_WASM the answer is always false
+// `ppl_lcdd` is on PATH.  Under WASM_PLATFORM the answer is always false
 // because the WASM build cannot spawn external programs.
 
 // clang-format off
-#ifndef POLYHEDRAL_WASM
+#ifndef WASM_PLATFORM
 #include "Basic_file.h"
 #endif
 // clang-format on
 
-#ifdef POLYHEDRAL_WASM
+#ifdef WASM_PLATFORM
 
 template <typename T> inline bool IsPPLpossible() { return false; }
 

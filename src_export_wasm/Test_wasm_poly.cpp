@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // Wasm smoke test for src_poly. Pulls in the four public CDD entry points
 // (dual description, linear programming, redundancy, skeletons) under
-// POLYHEDRAL_WASM so the external-program branches are excluded.
+// WASM_PLATFORM so the external-program branches are excluded.
 
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryCommon.h"

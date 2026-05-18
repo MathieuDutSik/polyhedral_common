@@ -8,7 +8,7 @@
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
 #include "MAT_MatrixInt.h"
-#ifndef POLYHEDRAL_WASM
+#ifndef WASM_PLATFORM
 #include "POLY_DirectDualDesc_External.h"
 #endif
 #include "POLY_DualDescription_PrimalDual.h"
@@ -95,7 +95,7 @@ template <typename T> bool is_method_supported(std::string const &prog) {
   if (prog == "pd_lrs")
     return true;
   //
-#ifndef POLYHEDRAL_WASM
+#ifndef WASM_PLATFORM
   if constexpr (is_implementation_of_Q<T>::value) {
     if (prog == "glrs")
       return true;
@@ -182,7 +182,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
   //
   // The external programs are available only for rationl types
   //
-#ifndef POLYHEDRAL_WASM
+#ifndef WASM_PLATFORM
   if constexpr (is_implementation_of_Q<T>::value) {
     eProg = "glrs";
     ListProg.push_back(eProg);
@@ -250,7 +250,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   //
   // The external programs are available only for rationl types
   //
-#ifndef POLYHEDRAL_WASM
+#ifndef WASM_PLATFORM
   if constexpr (is_implementation_of_Q<T>::value) {
     eProg = "glrs";
     ListProg.push_back(eProg);
@@ -320,7 +320,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
   //
   // The external programs are available only for rationl types
   //
-#ifndef POLYHEDRAL_WASM
+#ifndef WASM_PLATFORM
   if constexpr (is_implementation_of_Q<T>::value) {
     eProg = "glrs";
     ListProg.push_back(eProg);

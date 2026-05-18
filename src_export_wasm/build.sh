@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Smoke-build every Test_wasm_*.cpp in this directory under WebAssembly via
 # emscripten. Each test #includes the public headers of one src_* area to
-# verify that the area's templates compile cleanly under POLYHEDRAL_WASM
+# verify that the area's templates compile cleanly under WASM_PLATFORM
 # (which disables external-program invocation, signal handling, MPI, etc.).
 #
 # Requires emscripten (emcc, emconfigure, emmake) on PATH.
@@ -103,7 +103,7 @@ CXXFLAGS=(
   -Wno-deprecated-declarations
   -D_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
   -DINCLUDE_NUMBER_THEORY_BOOST_CPP_INT
-  -DPOLYHEDRAL_WASM
+  -DWASM_PLATFORM
 )
 
 # Tests that pull in GRAPH_traces.h (and therefore need libnauty linked).

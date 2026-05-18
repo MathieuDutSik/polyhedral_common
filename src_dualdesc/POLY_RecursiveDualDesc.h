@@ -3014,7 +3014,7 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull,
   return GRP;
 }
 
-#ifndef POLYHEDRAL_WASM
+#ifndef WASM_PLATFORM
 bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull,
                                [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.get_block("DATA");
@@ -3158,7 +3158,7 @@ template <typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   // Setting up the Control C event.
   ExitEvent = false;
-#ifndef POLYHEDRAL_WASM
+#ifndef WASM_PLATFORM
   if (Get_InterceptCtrlC_statuc(eFull, std::cerr)) {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     std::cerr << "RDD: Before submission of signal_callback_handler\n";
