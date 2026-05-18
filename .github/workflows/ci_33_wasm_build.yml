@@ -1,0 +1,58 @@
+name: CI(33) of Wasm export build
+
+# Builds src_export_wasm/Test_wasm_*.cpp under emscripten with
+# -DWASM_PLATFORM, so any regression that re-introduces a host-only
+# dependency (signal, external program, MPI, nauty linkage) into the
+# eight WASM-exported areas (src_poly, src_copos, src_isotropy,
+# src_group, src_latt, src_polygen, src_short, src_sparse_solver)
+# is caught here.
+
+on:
+  # One time per month
+  schedule:
+    - cron: "0 0 27 * *"
+  # Manually triggered
+  workflow_dispatch:
+
+jobs:
+  build-wasm:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    env:
+      # build.sh defaults to macOS Homebrew paths; override with the
+      # apt-installed Linux paths.
+      BOOST_INC: /usr/include
+      EIGEN_INC: /usr/include/eigen3
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install host deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake git wget pkg-config \
+            libboost-dev libeigen3-dev \
+            autoconf autotools-dev libtool
+
+      - name: Set up emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.74
+          actions-cache-folder: emsdk-cache
+
+      # Speeds up reruns: nauty is cloned + built into
+      # src_export_wasm/build/nauty-install on first run; cache that.
+      - name: Cache wasm-compiled nauty
+        id: nauty-cache
+        uses: actions/cache@v4
+        with:
+          path: src_export_wasm/build/nauty-install
+          key: nauty-wasm-2.8.9-${{ runner.os }}
+
+      - name: Build and run Wasm smoke tests
+        run: |
+          cd src_export_wasm
+          ./build.sh
