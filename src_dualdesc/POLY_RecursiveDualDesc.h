@@ -3014,6 +3014,7 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull,
   return GRP;
 }
 
+#ifndef POLYHEDRAL_WASM
 bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull,
                                [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.get_block("DATA");
@@ -3023,6 +3024,7 @@ bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull,
 #endif
   return intercept_ctrl_c;
 }
+#endif
 
 template <typename Tint>
 void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const &AllArr,
@@ -3156,6 +3158,7 @@ template <typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   // Setting up the Control C event.
   ExitEvent = false;
+#ifndef POLYHEDRAL_WASM
   if (Get_InterceptCtrlC_statuc(eFull, std::cerr)) {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     std::cerr << "RDD: Before submission of signal_callback_handler\n";
@@ -3166,6 +3169,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
     std::cerr << "RDD: Do not capture the CtrlC event\n";
 #endif
   }
+#endif
   //
   using TintGroup = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
