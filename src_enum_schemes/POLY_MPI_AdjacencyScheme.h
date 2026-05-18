@@ -5,6 +5,7 @@
 // clang-format off
 #include "POLY_AdjacencyScheme.h"
 #include "MPI_functionality.h"
+#include "basic_datafile.h"
 // clang-format on
 
 #ifdef DEBUG
@@ -18,6 +19,64 @@
 #ifdef TIMINGS
 #define TIMINGS_MPI_ADJACENCY_SCHEME
 #endif
+
+template <typename T>
+void PartialEnum_FullRead(std::string const &prefix, std::string const &suffix,
+                          bool const &Saving, std::vector<T> &l_obj,
+                          std::vector<uint8_t> &l_status, std::ostream &os) {
+  std::string FileNb = prefix + "number_orbit" + suffix;
+  std::string FileStatus = prefix + "orbit_status" + suffix;
+  std::string FileDatabase = prefix + "database" + suffix;
+  bool is_database_present = false;
+  if (Saving) {
+    is_database_present = IsExistingFile(FileNb);
+  }
+  if (is_database_present) {
+    size_t n_orbit = FileNumber_Read(FileNb);
+#ifdef DEBUG_MPI_ADJACENCY_SCHEME
+    os << "MPI_ADJ_SCH: reading database n_orbit=" << n_orbit << "\n";
+#endif
+    l_status = FileBool_FullRead(FileStatus, n_orbit, os);
+    l_obj = FileData_FullRead<T>(FileDatabase, os);
+#ifdef DEBUG_MPI_ADJACENCY_SCHEME
+    os << "MPI_ADJ_SCH: reading database l_obj read\n";
+#endif
+    if (l_obj.size() != n_orbit) {
+      std::cerr << "We have n_ent=" << l_obj.size() << " n_orbit=" << n_orbit
+                << "\n";
+      std::cerr << "But they should be matching\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
+template <typename T>
+void PartialEnum_FullWrite(std::string const &prefix, std::string const &suffix,
+                           bool const &Saving, std::vector<T> const &l_obj,
+                           std::vector<uint8_t> const &l_status,
+                           [[maybe_unused]] std::ostream &os) {
+  std::string FileNb = prefix + "number_orbit" + suffix;
+  std::string FileStatus = prefix + "orbit_status" + suffix;
+  std::string FileDatabase = prefix + "database" + suffix;
+  if (Saving) {
+    size_t n_obj = l_obj.size();
+    // The data
+    FileData_FullWrite(FileDatabase, l_obj);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: writing database fdata written down\n";
+#endif
+    // The status
+    FileBool_FullWrite(FileStatus, l_status);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: writing database FileStatus written down\n";
+#endif
+    // The number
+    FileNumber_Write(FileNb, n_obj);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: writing database FileNumber written down\n";
+#endif
+  }
+}
 
 template <typename TadjO> struct AdjO_MPI {
   TadjO x;
