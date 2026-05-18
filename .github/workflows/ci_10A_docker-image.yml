@@ -1,9 +1,9 @@
-name: CI(10) Docker Image polyhedral_common
+name: CI(10A) Docker Image polyhedral_common
 
 on:
   # One time per month
   schedule:
-    - cron: "0 0 10 * *"
+    - cron: "0 0 10 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
 jobs:

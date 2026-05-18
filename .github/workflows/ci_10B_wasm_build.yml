@@ -1,4 +1,4 @@
-name: CI(33) of Wasm export build
+name: CI(10B) of Wasm export build
 
 # Builds src_export_wasm/Test_wasm_*.cpp under emscripten with
 # -DWASM_PLATFORM, so any regression that re-introduces a host-only
@@ -10,7 +10,7 @@ name: CI(33) of Wasm export build
 on:
   # One time per month
   schedule:
-    - cron: "0 0 27 * *"
+    - cron: "0 0 10 2,4,6,8,10,12 *"
   # Manually triggered
   workflow_dispatch:
 

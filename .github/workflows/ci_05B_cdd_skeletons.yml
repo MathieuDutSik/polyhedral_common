@@ -1,4 +1,4 @@
-name: CI(08) of cone intersections
+name: CI(05B) of CDD skeletons (DualDescriptionAdjacencies)
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -7,7 +7,7 @@ name: CI(08) of cone intersections
 on:
   # One time per month
   schedule:
-    - cron: "0 0 8 * *"
+    - cron: "0 0 5 2,4,6,8,10,12 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -33,7 +33,6 @@ jobs:
       LIBBLISS_PATH: /home/runner/opt/libbliss
       LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
       LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
-      MPI_LINK_CPP: "-lboost_mpi"
       POLYHEDRAL_COMMON_SOURCE_CODE: "/home/runner/work/polyhedral_common/polyhedral_common"
 
     steps:
@@ -56,20 +55,22 @@ jobs:
           sudo apt-get install -y libglpk-dev
           sudo apt-get install -y autoconf autoconf-archive autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
-          sudo apt-get install -y openmpi-bin libopenmpi-dev
 
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-cddlib
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
-
-      - name: Test cone intersections
+      - name: Test CDD skeletons
         run: |
-          cd src_polydecomp && make -f Makefile_cone_int && cd ..
-          pwd
-          echo "After compilation of Cone intersection test code"
+          cd src_poly && make -f Makefile_cdd_skeletons && cd ..
+          echo "After compilation of POLY_cdd_skeletons"
 
-          cd CI_tests/08_ConeIntersection
-          ../../src_polydecomp/DEC_TestIntersectionMethods FamilyCones.txt
+          cd CI_tests/31_CddSkeletons
+          ../../gap.sh < TestCddSkeletons.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
           cd ../..
+          echo "After CDD skeletons tests"

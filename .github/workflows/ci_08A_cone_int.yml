@@ -1,4 +1,4 @@
-name: CI(32) of LinearDetermineByInequalities
+name: CI(08A) of cone intersections
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -7,7 +7,7 @@ name: CI(32) of LinearDetermineByInequalities
 on:
   # One time per month
   schedule:
-    - cron: "0 0 25 2,4,6,8,10,12 *"
+    - cron: "0 0 8 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -33,6 +33,7 @@ jobs:
       LIBBLISS_PATH: /home/runner/opt/libbliss
       LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
       LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+      MPI_LINK_CPP: "-lboost_mpi"
       POLYHEDRAL_COMMON_SOURCE_CODE: "/home/runner/work/polyhedral_common/polyhedral_common"
 
     steps:
@@ -55,22 +56,20 @@ jobs:
           sudo apt-get install -y libglpk-dev
           sudo apt-get install -y autoconf autoconf-archive autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
+          sudo apt-get install -y openmpi-bin libopenmpi-dev
 
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-cddlib
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
-      - name: Test LinearDetermineByInequalities
-        run: |
-          cd src_poly && make -f Makefile_linear_determine && cd ..
-          echo "After compilation of POLY_LinearDetermineByInequalities"
 
-          cd CI_tests/32_LinearDetermineByInequalities
-          ../../gap.sh < TestLinearDetermine.g
-          if [ ! -f "CI_CONCLUSION" ]; then
-            echo "The gap test code has not created the expected file" >&2
-            exit 1
-          fi
+      - name: Test cone intersections
+        run: |
+          cd src_polydecomp && make -f Makefile_cone_int && cd ..
+          pwd
+          echo "After compilation of Cone intersection test code"
+
+          cd CI_tests/08_ConeIntersection
+          ../../src_polydecomp/DEC_TestIntersectionMethods FamilyCones.txt
           cd ../..
-          echo "After LinearDetermineByInequalities tests"

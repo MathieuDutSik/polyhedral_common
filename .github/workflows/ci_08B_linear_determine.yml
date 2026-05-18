@@ -1,4 +1,4 @@
-name: CI(31) of CDD skeletons (DualDescriptionAdjacencies)
+name: CI(08B) of LinearDetermineByInequalities
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -7,7 +7,7 @@ name: CI(31) of CDD skeletons (DualDescriptionAdjacencies)
 on:
   # One time per month
   schedule:
-    - cron: "0 0 31 1,3,5,7,8,10,12 *"
+    - cron: "0 0 8 2,4,6,8,10,12 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -61,16 +61,16 @@ jobs:
       - uses: ./.github/actions/install-cddlib
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
-      - name: Test CDD skeletons
+      - name: Test LinearDetermineByInequalities
         run: |
-          cd src_poly && make -f Makefile_cdd_skeletons && cd ..
-          echo "After compilation of POLY_cdd_skeletons"
+          cd src_poly && make -f Makefile_linear_determine && cd ..
+          echo "After compilation of POLY_LinearDetermineByInequalities"
 
-          cd CI_tests/31_CddSkeletons
-          ../../gap.sh < TestCddSkeletons.g
+          cd CI_tests/32_LinearDetermineByInequalities
+          ../../gap.sh < TestLinearDetermine.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1
           fi
           cd ../..
-          echo "After CDD skeletons tests"
+          echo "After LinearDetermineByInequalities tests"
