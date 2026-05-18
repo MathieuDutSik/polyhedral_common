@@ -10,12 +10,22 @@
 using cpp_rational = boost::multiprecision::cpp_rational;
 
 int main() {
-  // The identity matrix is copositive (x^T I x = ||x||^2 >= 0 always).
+  // The identity matrix has positive diagonal and non-negative off-diagonal,
+  // so the cheap sufficient test in TestCopositivityByPositivityCoeff
+  // returns true.
   MyMatrix<cpp_rational> M = IdentityMat<cpp_rational>(3);
-  RequestCopositivity<cpp_rational> request{0, true};
-  CopositivityInfoReduction<cpp_rational> info =
-      EnumerateCopositiveShortVector<cpp_rational, cpp_rational>(
-          M, request, std::cerr);
-  std::cerr << "Test_wasm_copos: |reductions|=" << info.nbReduction << "\n";
+  bool is_copo = TestCopositivityByPositivityCoeff(M);
+  if (!is_copo) {
+    std::cerr << "Test_wasm_copos: I_3 should be copositive\n";
+    return 1;
+  }
+  // And a clearly non-copositive matrix: negative diagonal entry rules it out.
+  MyMatrix<cpp_rational> Mneg = IdentityMat<cpp_rational>(3);
+  Mneg(0, 0) = -1;
+  if (TestCopositivityByPositivityCoeff(Mneg)) {
+    std::cerr << "Test_wasm_copos: matrix with -1 on diag flagged copositive\n";
+    return 1;
+  }
+  std::cerr << "Test_wasm_copos: OK\n";
   return 0;
 }
