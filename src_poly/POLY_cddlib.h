@@ -62,6 +62,9 @@ using set_card_lut_t = unsigned char;
 template <typename T> void dd_WriteT(std::ostream &os, T *a, int d) {
   os << "CDD: dd_WriteT a=";
   for (int i = 0; i < d; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 1\n";
+    #endif
     os << "  " << a[i];
   }
   os << "\n";
@@ -165,6 +168,9 @@ void set_initialize(set_type *setp, long length)
   *setp = new ulong[forlim1];
   (*setp)[0] = ulong(len); /* size of the ground set */
   for (i = 1; i < forlim1; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 2\n";
+    #endif
     (*setp)[i] = 0;
   }
 }
@@ -183,6 +189,9 @@ void reset_initialize(set_type *setp, long length)
   using ulong = unsigned long;
   (*setp)[0] = ulong(len); /* size of the ground set */
   for (i = 1; i < forlim1; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 3\n";
+    #endif
     (*setp)[i] = 0;
   }
 }
@@ -192,6 +201,9 @@ void set_emptyset(set_type set)
 {
   long forlim = set_blocks(set[0]) - 1;
   for (long i = 1; i <= forlim; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 4\n";
+    #endif
     set[i] = 0;
   }
 }
@@ -201,6 +213,9 @@ void set_copy(set_type setcopy, set_type set)
 {
   long forlim = set_blocks(setcopy[0]) - 1;
   for (long i = 1; i <= forlim; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 5\n";
+    #endif
     setcopy[i] = set[i];
   }
 }
@@ -238,6 +253,9 @@ inline void set_int(set_type set, set_type set1, set_type set2)
 {
   long forlim = set_blocks(set[0]) - 1;
   for (long i = 1; i <= forlim; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 6\n";
+    #endif
     set[i] = (set1[i] & set2[i]);
   }
 }
@@ -247,6 +265,9 @@ inline void set_uni(set_type set, set_type set1, set_type set2)
 {
   long forlim = set_blocks(set[0]) - 1;
   for (long i = 1; i <= forlim; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 7\n";
+    #endif
     set[i] = set1[i] | set2[i];
   }
 }
@@ -257,6 +278,9 @@ inline void set_diff(set_type set, set_type set1, set_type set2)
 {
   long forlim = set_blocks(set[0]) - 1;
   for (long i = 1; i <= forlim; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 8\n";
+    #endif
     set[i] = set1[i] & (~set2[i]);
   }
 }
@@ -270,11 +294,17 @@ inline void set_compl(set_type set, set_type set1)
 
   forlim = set_blocks(set[0]) - 1;
   for (i = 1; i <= forlim; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 9\n";
+    #endif
     set[i] = ~set1[i];
   }
   l = (set[0] - 1) %
       SETBITS; /* the position of the last elem in the last block */
   for (j = l + 1; j <= (long)SETBITS - 1; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 10\n";
+    #endif
     change = one << j;
     set[forlim] = (set[forlim] | change) ^ change;
   }
@@ -287,6 +317,9 @@ inline bool set_subset(set_type set1, set_type set2)
   long i, forlim;
   forlim = set_blocks(set2[0]) - 1;
   for (i = 1; i <= forlim && reply; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 11\n";
+    #endif
     if ((set1[i] | set2[i]) != set2[i]) {
       reply = false;
     }
@@ -320,6 +353,9 @@ inline long set_card(set_type set) {
   set_card_lut_t *p;
   p = (set_card_lut_t *)&set[1];
   for (block = 0; block < LUTBLOCKS(set); block++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 12\n";
+    #endif
     car += set_card_lut[p[block]];
   }
   return car;
@@ -339,6 +375,9 @@ inline void dd_InnerProduct(T &prod, dd_colrange d, T *v1, T *v2) {
   dd_colrange j;
   prod = 0;
   for (j = 0; j < d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 13\n";
+    #endif
     prod += v1[j] * v2[j];
   }
 }
@@ -580,7 +619,13 @@ void dd_WriteAmatrix(std::ostream &os, T **A, long rowmax, long colmax) {
   os << "begin\n";
   os << " " << rowmax << " " << colmax << " rational\n";
   for (i = 1; i <= rowmax; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 14\n";
+    #endif
     for (j = 1; j <= colmax; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 15\n";
+      #endif
       os << " " << A[i - 1][j - 1];
     }
     os << "\n";
@@ -591,6 +636,9 @@ void dd_WriteAmatrix(std::ostream &os, T **A, long rowmax, long colmax) {
 template <typename T> void dd_WriteArow(std::ostream &os, T *a, dd_colrange d) {
   dd_colrange j;
   for (j = 0; j < d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 16\n";
+    #endif
     os << " " << a[j];
   }
   os << "\n";
@@ -651,6 +699,9 @@ void dd_WriteLPResult(std::ostream &os, dd_lpdata<T> *lp, dd_ErrorType err) {
   if (lp->objective == dd_LPmax || lp->objective == dd_LPmin) {
     os << "* Objective function is\n";
     for (j = 0; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 17\n";
+      #endif
       if (j > 0 && lp->A[lp->objrow - 1][j] >= 0) {
         os << " +";
       }
@@ -671,10 +722,16 @@ void dd_WriteLPResult(std::ostream &os, dd_lpdata<T> *lp, dd_ErrorType err) {
     os << "begin\n";
     os << "  primal_solution\n";
     for (j = 1; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 18\n";
+      #endif
       os << "  " << j << " : " << lp->sol[j] << "\n";
     }
     os << "  dual_solution\n";
     for (j = 1; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 19\n";
+      #endif
       if (lp->nbindex[j + 1] > 0) {
         os << "  " << lp->nbindex[j + 1] << " : " << lp->dsol[j] << "\n";
       }
@@ -691,6 +748,9 @@ void dd_WriteLPResult(std::ostream &os, dd_lpdata<T> *lp, dd_ErrorType err) {
     os << "  dual_direction\n";
     os << "  " << lp->re << " : 1\n";
     for (j = 1; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 20\n";
+      #endif
       if (lp->nbindex[j + 1] > 0) {
         os << "  " << lp->nbindex[j + 1] << " : " << lp->dsol[j] << "\n";
       }
@@ -706,6 +766,9 @@ void dd_WriteLPResult(std::ostream &os, dd_lpdata<T> *lp, dd_ErrorType err) {
     os << "begin\n";
     os << "  primal_direction\n";
     for (j = 1; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 21\n";
+      #endif
       os << "  " << j << " : " << lp->sol[j] << "\n";
     }
     os << "end\n";
@@ -770,6 +833,9 @@ template <typename T> void dd_FreeAmatrix(dd_rowrange m, T **A) {
 
   if (A != nullptr) {
     for (i = 0; i < m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 22\n";
+      #endif
       delete[] A[i];
     }
     delete[] A;
@@ -781,6 +847,9 @@ template <typename T> void dd_FreeBmatrix(dd_colrange d, T **B) {
 
   if (B != nullptr) {
     for (j = 0; j < d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 23\n";
+      #endif
       delete[] B[j];
     }
     delete[] B;
@@ -844,6 +913,9 @@ void dd_FreeSetFamily(dd_setfamily *F) {
     }
     /* the smallest created size is one */
     for (i = 0; i < f1; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 24\n";
+      #endif
       set_free(F->set[i]);
     }
     delete[] F->set;
@@ -989,6 +1061,9 @@ dd_setfamily *dd_CreateSetFamily(dd_bigrange fsize, dd_bigrange ssize) {
   dd_setfamily *F = new dd_setfamily;
   F->set = new set_type[f1];
   for (i = 0; i < f1; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 25\n";
+    #endif
     set_initialize(&(F->set[i]), s1);
   }
   F->famsize = f0;
@@ -1022,6 +1097,9 @@ void dd_AllocateAmatrix(dd_rowrange m, dd_colrange d, T ***A) {
     (*A) = new T *[m];
   }
   for (i = 0; i < m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 26\n";
+    #endif
     (*A)[i] = new T[d];
   }
 }
@@ -1037,6 +1115,9 @@ template <typename T> void dd_AllocateBmatrix(dd_colrange d, T ***B) {
 
   (*B) = new T *[d];
   for (j = 0; j < d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 27\n";
+    #endif
     (*B)[j] = new T[d];
   }
 }
@@ -1140,6 +1221,9 @@ dd_polyhedradata<T> *dd_CreatePolyhedraData(dd_rowrange m, dd_colrange d) {
   /* ith component is 1 if it is equality, -1 if it is strict inequality, 0
    * otherwise. */
   for (i = 0; i <= m + 1; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 28\n";
+    #endif
     poly->EqualityIndex[i] = 0;
   }
 
@@ -1211,22 +1295,37 @@ void dd_InitializeConeData(dd_rowrange m, dd_colrange d,
 
   (*cone)->Edges = new dd_adjacencydata<T> *[(*cone)->m_alloc];
   for (j = 0; j < (*cone)->m_alloc; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 29\n";
+    #endif
     (*cone)->Edges[j] = nullptr;
   }
   (*cone)->InitialRayIndex = new long[d + 1];
   for (int i = 0; i <= d; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 30\n";
+    #endif
     (*cone)->InitialRayIndex[i] = 0;
   }
   (*cone)->OrderVector = new long[(*cone)->m_alloc + 1];
   for (int i = 0; i <= (*cone)->m_alloc; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 31\n";
+    #endif
     (*cone)->OrderVector[i] = 0;
   }
 
   (*cone)->newcol = new long[((*cone)->d) + 1];
   for (int i = 0; i <= (*cone)->d; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 32\n";
+    #endif
     (*cone)->newcol[i] = 0;
   }
   for (j = 0; j <= (*cone)->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 33\n";
+    #endif
     (*cone)->newcol[j] = j; /* identity map, initially */
   }
   (*cone)->LinearityDim = -2; /* -2 if it is not computed */
@@ -1255,7 +1354,13 @@ dd_conedata<T> *dd_ConeDataLoad(dd_polyhedradata<T> *poly) {
   poly->child = cone;
 
   for (i = 1; i <= poly->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 34\n";
+    #endif
     for (j = 1; j <= cone->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 35\n";
+      #endif
       cone->A[i - 1][j - 1] = poly->A[i - 1][j - 1];
     }
   }
@@ -1263,6 +1368,9 @@ dd_conedata<T> *dd_ConeDataLoad(dd_polyhedradata<T> *poly) {
   if (poly->representation == dd_Inequality && !poly->homogeneous) {
     cone->A[m - 1][0] = 1;
     for (j = 1; j < d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 36\n";
+      #endif
       cone->A[m - 1][j] = 0;
     }
   }
@@ -1285,9 +1393,15 @@ dd_lpdata<T> *dd_CreateLPData(dd_rowrange m, dd_colrange d) {
   lp->nbindex = new long[d + 1];
   lp->given_nbindex = new long[d + 1];
   for (int i = 0; i <= d; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 37\n";
+    #endif
     lp->nbindex[i] = 0;
   }
   for (int i = 0; i <= d; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 38\n";
+    #endif
     lp->given_nbindex[i] = 0;
   }
   set_initialize(&(lp->equalityset), m);
@@ -1320,9 +1434,15 @@ template <typename T> void dd_LPData_reset_m(dd_rowrange m, dd_lpdata<T> *lp) {
   lp->m = m;
   lp->objrow = m;
   for (int i = 0; i <= d; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 39\n";
+    #endif
     lp->nbindex[i] = 0;
   }
   for (int i = 0; i <= d; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 40\n";
+    #endif
     lp->given_nbindex[i] = 0;
   }
   reset_initialize(&(lp->equalityset), m);
@@ -1362,6 +1482,9 @@ dd_lpdata<T> *dd_CreateLPData_from_M(dd_matrixdata<T> *M) {
 template <typename T> void dd_CopyArow(T *acopy, T *a, dd_colrange d) {
   dd_colrange j;
   for (j = 0; j < d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 41\n";
+    #endif
     acopy[j] = a[j];
   }
 }
@@ -1371,6 +1494,9 @@ void dd_CopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d) {
   dd_rowrange i;
 
   for (i = 0; i < m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 42\n";
+    #endif
     dd_CopyArow(Acopy[i], A[i], d);
   }
 }
@@ -1435,12 +1561,21 @@ dd_matrixdata<T> *dd_MatrixAppend(dd_matrixdata<T> *M1, dd_matrixdata<T> *M2) {
     dd_CopyAmatrix(M->matrix, M1->matrix, m1, d);
     dd_CopyArow(M->rowvec, M1->rowvec, d);
     for (i = 0; i < m1; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 43\n";
+      #endif
       if (set_member(i + 1, M1->linset)) {
         set_addelem(M->linset, i + 1);
       }
     }
     for (i = 0; i < m2; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 44\n";
+      #endif
       for (j = 0; j < d; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 45\n";
+        #endif
         M->matrix[m1 + i][j] = M2->matrix[i][j];
       }
       /* append the second matrix */
@@ -1456,6 +1591,9 @@ void dd_RandomPermutation(dd_rowindex OV, long t, unsigned int seed) {
   long k, j, ovj;
   srand(seed);
   for (j = t; j > 1; j--) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 46\n";
+    #endif
     k = 1 + random() % t;
     //    std::cerr << "j=" << j << " r=" << r << " u=" << u << " xk=" << xk <<
     //    " k=" << k << "\n"; std::cerr << "j=" << j << " k=" << k << "\n";
@@ -1475,6 +1613,9 @@ bool dd_LexSmaller(T *v1, T *v2,
   determined = false;
   j = 1;
   do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 47\n";
+    #endif
     if (v1[j - 1] != v2[j - 1]) {
       if (v1[j - 1] < v2[j - 1]) {
         smaller = true;
@@ -1497,6 +1638,9 @@ bool dd_LexSmallerFrac(T *v1, T q1, T *v2, T q2,
   determined = false;
   j = 1;
   do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 48\n";
+    #endif
     if (!dd_EqualFrac(v1[j - 1], q1, v2[j - 1], q2)) {    /* 086 */
       if (dd_SmallerFrac(v1[j - 1], q1, v2[j - 1], q2)) { /*086 */
         smaller = true;
@@ -1523,10 +1667,19 @@ long dd_Partition(dd_rowindex OV, long p, long r, T **A, long dmax) {
   i = p - 1;
   j = r + 1;
   while (true) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 49\n";
+    #endif
     do {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 50\n";
+      #endif
       j--;
     } while (dd_LexLarger(A[OV[j] - 1], x, dmax));
     do {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 51\n";
+      #endif
       i++;
     } while (dd_LexSmaller(A[OV[i] - 1], x, dmax));
     if (i < j) {
@@ -1569,12 +1722,18 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,
   std::vector<long> roworder(m + 1, 0);
   *newpos = new long[m + 1];
   for (i = 0; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 52\n";
+    #endif
     (*newpos)[i] = 0;
   }
   if (m >= 0 && d >= 0) {
     Mnorm = dd_MatrixNormalizedCopy(M);
     Mcopy = dd_CreateMatrix<T>(m, d);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 53\n";
+      #endif
       roworder[i] = i;
     }
 
@@ -1584,6 +1743,9 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,
     dd_PermuteCopyAmatrix(Mcopy->matrix, Mnorm->matrix, m, d, roworder);
     dd_CopyArow(Mcopy->rowvec, M->rowvec, d);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 54\n";
+      #endif
       if (set_member(roworder[i], M->linset)) {
         set_addelem(Mcopy->linset, i);
       }
@@ -1617,10 +1779,16 @@ dd_matrixdata<T> *dd_MatrixUniqueCopy(dd_matrixdata<T> *M,
   preferredrows = M->linset;
   roworder = new long[m + 1];
   for (i = 0; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 55\n";
+    #endif
     roworder[i] = 0;
   }
   if (m >= 0 && d >= 0) {
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 56\n";
+      #endif
       roworder[i] = i;
     }
     dd_UniqueRows(roworder, 1, m, M->matrix, d, preferredrows, &uniqrows);
@@ -1629,6 +1797,9 @@ dd_matrixdata<T> *dd_MatrixUniqueCopy(dd_matrixdata<T> *M,
     dd_PermutePartialCopyAmatrix(Mcopy->matrix, M->matrix, m, d, roworder);
     dd_CopyArow(Mcopy->rowvec, M->rowvec, d);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 57\n";
+      #endif
       if (roworder[i] > 0 && set_member(i, M->linset)) {
         set_addelem(Mcopy->linset, roworder[i]);
       }
@@ -1662,17 +1833,26 @@ dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,
   d = M->colsize;
   *newpos = new long[m + 1];
   for (i = 0; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 58\n";
+    #endif
     (*newpos)[i] = 0;
   }
   std::vector<long> newpos1r(m + 1, 0);
   if (m >= 0 && d >= 0) {
     M1 = dd_MatrixNormalizedSortedCopy(M, &newpos1);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 59\n";
+      #endif
       newpos1r[newpos1[i]] = i; /* reverse of newpos1 */
     }
     M2 = dd_MatrixUniqueCopy(M1, &newpos2);
     set_emptyset(M2->linset);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 60\n";
+      #endif
       if (newpos2[newpos1[i]] > 0) {
 #ifdef LOCALDEBUG_CDD
         std::cerr << "newpos1[" << i << "]=" << newpos1[i]
@@ -1711,18 +1891,27 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,
   d = M->colsize;
   *newpos = new long[m + 1];
   for (i = 0; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 61\n";
+    #endif
     (*newpos)[i] = 0;
   }
   std::vector<long> newpos1r(m + 1, 0);
   if (m >= 0 && d >= 0) {
     M1 = dd_MatrixNormalizedSortedCopy(M, &newpos1);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 62\n";
+      #endif
       newpos1r[newpos1[i]] = i; /* reverse of newpos1 */
     }
     M2 = dd_MatrixUniqueCopy(M1, &newpos2);
     dd_FreeMatrix(M1);
     set_emptyset(M2->linset);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 63\n";
+      #endif
       if (newpos2[newpos1[i]] > 0) {
         if (set_member(i, M->linset)) {
           set_addelem(M2->linset, newpos2[newpos1[i]]);
@@ -1736,6 +1925,9 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,
     ii = 0;
     set_emptyset(M2->linset);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 64\n";
+      #endif
       k = (*newpos)[i];
       if (k > 0) {
         ii += 1;
@@ -1778,12 +1970,21 @@ bool dd_MatrixAppendTo(dd_matrixdata<T> **M1, dd_matrixdata<T> *M2) {
     dd_CopyAmatrix(M->matrix, (*M1)->matrix, m1, d);
     dd_CopyArow(M->rowvec, (*M1)->rowvec, d);
     for (i = 0; i < m1; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 65\n";
+      #endif
       if (set_member(i + 1, (*M1)->linset)) {
         set_addelem(M->linset, i + 1);
       }
     }
     for (i = 0; i < m2; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 66\n";
+      #endif
       for (j = 0; j < d; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 67\n";
+        #endif
         M->matrix[m1 + i][j] = M2->matrix[i][j];
       }
       /* append the second matrix */
@@ -1810,6 +2011,9 @@ void dd_MatrixRowRemove(dd_matrixdata<T> **M, dd_rowrange r) /* 092 */
     set_delelem((*M)->linset, r);
     /* slide the row headers */
     for (i = r; i < m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 68\n";
+      #endif
       (*M)->matrix[i - 1] = (*M)->matrix[i];
       if (set_member(i + 1, (*M)->linset)) {
         set_delelem((*M)->linset, i + 1);
@@ -1832,6 +2036,9 @@ void dd_MatrixRowRemove2(dd_matrixdata<T> **M, dd_rowrange r) /* 094 */
     set_delelem((*M)->linset, r);
     /* slide the row headers */
     for (i = r; i < m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 69\n";
+      #endif
       (*M)->matrix[i - 1] = (*M)->matrix[i];
       if (set_member(i + 1, (*M)->linset)) {
         set_delelem((*M)->linset, i + 1);
@@ -1854,12 +2061,18 @@ dd_matrixdata<T> *dd_MatrixSubmatrix(dd_matrixdata<T> *M,
   msub = m;
   if (m >= 0 && d >= 0) {
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 70\n";
+      #endif
       if (set_member(i, delset)) {
         msub -= 1;
       }
     }
     Msub = dd_CreateMatrix<T>(msub, d);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 71\n";
+      #endif
       if (!set_member(i, delset)) {
         dd_CopyArow(Msub->matrix[isub - 1], M->matrix[i - 1], d);
         if (set_member(i, M->linset)) {
@@ -1894,15 +2107,24 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2(dd_matrixdata<T> *M, dd_rowset delset,
   if (m >= 0 && d >= 0) {
     roworder = new long[m + 1];
     for (i = 0; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 72\n";
+      #endif
       roworder[i] = 0;
     }
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 73\n";
+      #endif
       if (set_member(i, delset)) {
         msub -= 1;
       }
     }
     Msub = dd_CreateMatrix<T>(msub, d);
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 74\n";
+      #endif
       if (set_member(i, delset)) {
         roworder[i] = 0; /* zero means the row i is removed */
       } else {
@@ -1939,9 +2161,15 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2L(dd_matrixdata<T> *M, dd_rowset delset,
   if (m >= 0 && d >= 0) {
     roworder = new long[m + 1];
     for (i = 0; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 75\n";
+      #endif
       roworder[i] = 0;
     }
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 76\n";
+      #endif
       if (set_member(i, delset)) {
         msub -= 1;
       }
@@ -1950,6 +2178,9 @@ dd_matrixdata<T> *dd_MatrixSubmatrix2L(dd_matrixdata<T> *M, dd_rowset delset,
     iL = 1;
     iI = set_card(M->linset) + 1; /* starting positions */
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 77\n";
+      #endif
       if (set_member(i, delset)) {
         roworder[i] = 0; /* zero means the row i is removed */
       } else {
@@ -2019,6 +2250,9 @@ template <typename T> void dd_SetLinearity(dd_matrixdata<T> *M, char *line) {
   next = strtok(line, ct);
   eqsize = atol(next);
   while (i < eqsize && (next = strtok(nullptr, ct)) != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 78\n";
+    #endif
     var = atol(next);
     set_addelem(M->linset, var);
     i++;
@@ -2047,10 +2281,16 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err,
   poly->homogeneous = true;
 
   for (i = 1; i <= M->rowsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 79\n";
+    #endif
     if (set_member(i, M->linset)) {
       poly->EqualityIndex[i] = 1;
     }
     for (j = 1; j <= M->colsize; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 80\n";
+      #endif
       poly->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
       if (j == 1 && M->matrix[i - 1][j - 1] != 0) {
         poly->homogeneous = false;
@@ -2078,10 +2318,16 @@ dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType horder,
   poly->homogeneous = true;
 
   for (i = 1; i <= M->rowsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 81\n";
+    #endif
     if (set_member(i, M->linset)) {
       poly->EqualityIndex[i] = 1;
     }
     for (j = 1; j <= M->colsize; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 82\n";
+      #endif
       poly->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
       if (j == 1 && M->matrix[i - 1][j - 1] != 0) {
         poly->homogeneous = false;
@@ -2097,6 +2343,9 @@ void dd_CopyRay(T *a, dd_colrange d_origsize, dd_raydata<T> *RR,
                 dd_colindex reducedcol) {
   long j, j1;
   for (j = 1; j <= d_origsize; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 83\n";
+    #endif
     j1 = reducedcol[j];
     if (j1 > 0) {
       a[j - 1] = RR->Ray[j1 - 1];
@@ -2134,15 +2383,27 @@ template <typename T> void dd_ComputeAinc(dd_polyhedradata<T> *poly) {
   */
   poly->Ainc = new set_type[m1];
   for (i = 1; i <= m1; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 84\n";
+    #endif
     set_initialize(&(poly->Ainc[i - 1]), poly->n);
   }
   set_initialize(&(poly->Ared), m1);
   set_initialize(&(poly->Adom), m1);
 
   for (k = 1; k <= poly->n; k++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 85\n";
+    #endif
     for (i = 1; i <= poly->m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 86\n";
+      #endif
       sum = 0;
       for (j = 1; j <= poly->d; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 87\n";
+        #endif
         sum += poly->A[i - 1][j - 1] * M->matrix[k - 1][j - 1];
       }
       if (sum == 0) {
@@ -2158,17 +2419,26 @@ template <typename T> void dd_ComputeAinc(dd_polyhedradata<T> *poly) {
   }
 
   for (i = 1; i <= m1; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 88\n";
+    #endif
     if (set_card(poly->Ainc[i - 1]) == M->rowsize) {
       set_addelem(poly->Adom, i);
     }
   }
   for (i = m1; i >= 1; i--) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 89\n";
+    #endif
     if (set_card(poly->Ainc[i - 1]) == 0) {
       redundant = true;
       set_addelem(poly->Ared, i);
     } else {
       redundant = false;
       for (k = 1; k <= m1; k++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 90\n";
+        #endif
         if (k != i && !set_member(k, poly->Ared) &&
             !set_member(k, poly->Adom) &&
             set_subset(poly->Ainc[i - 1], poly->Ainc[k - 1])) {
@@ -2216,6 +2486,9 @@ bool dd_InputAdjacentQ(set_type &common, long &lastn, dd_polyhedradata<T> *poly,
   set_int(common, poly->Ainc[i1 - 1], poly->Ainc[i2 - 1]);
   i = 0;
   while (i < poly->m1) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 91\n";
+    #endif
     i++;
     if (i != i1 && i != i2 && !set_member(i, poly->Ared) &&
         !set_member(i, poly->Adom) && set_subset(common, poly->Ainc[i - 1]))
@@ -2237,7 +2510,13 @@ dd_setfamily *dd_CopyIncidence(dd_polyhedradata<T> *poly) {
   }
   dd_setfamily *F = dd_CreateSetFamily(poly->n, poly->m1);
   for (i = 1; i <= poly->m1; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 92\n";
+    #endif
     for (k = 1; k <= poly->n; k++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 93\n";
+      #endif
       if (set_member(k, poly->Ainc[i - 1])) {
         set_addelem(F->set[k - 1], i);
       }
@@ -2258,6 +2537,9 @@ dd_setfamily *dd_CopyInputIncidence(dd_polyhedradata<T> *poly) {
   }
   dd_setfamily *F = dd_CreateSetFamily(poly->m1, poly->n);
   for (i = 0; i < poly->m1; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 94\n";
+    #endif
     set_copy(F->set[i], poly->Ainc[i]);
   }
   return F;
@@ -2291,8 +2573,14 @@ dd_setfamily *dd_CopyAdjacency(dd_polyhedradata<T> *poly) {
   poly->child->LastRay->Next = nullptr;
   for (RayPtr1 = poly->child->FirstRay, pos1 = 1; RayPtr1 != nullptr;
        RayPtr1 = RayPtr1->Next, pos1++) {
+         #ifdef TRACKING_OPERATION_CDD
+           std::cerr << "TRACKING_OPERATION_CDD: Entry 95\n";
+         #endif
     for (RayPtr2 = poly->child->FirstRay, pos2 = 1; RayPtr2 != nullptr;
          RayPtr2 = RayPtr2->Next, pos2++) {
+           #ifdef TRACKING_OPERATION_CDD
+             std::cerr << "TRACKING_OPERATION_CDD: Entry 96\n";
+           #endif
       if (RayPtr1 != RayPtr2) {
         dd_CheckAdjacency(poly->child, &RayPtr1, &RayPtr2, &adj);
         if (adj) {
@@ -2304,11 +2592,17 @@ dd_setfamily *dd_CopyAdjacency(dd_polyhedradata<T> *poly) {
   lstart = poly->n - poly->ldim + 1;
   set_compl(allset, allset); /* allset is set to the ground set. */
   for (k = lstart; k <= poly->n; k++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 97\n";
+    #endif
     set_addelem(linset, k); /* linearity set */
     set_copy(F->set[k - 1],
              allset); /* linearity generator is adjacent to all */
   }
   for (k = 1; k < lstart; k++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 98\n";
+    #endif
     set_uni(F->set[k - 1], F->set[k - 1], linset);
     /* every generator is adjacent to all linearity generators */
   }
@@ -2331,7 +2625,13 @@ dd_setfamily *dd_CopyInputAdjacency(dd_polyhedradata<T> *poly) {
   }
   dd_setfamily *F = dd_CreateSetFamily(poly->m1, poly->m1);
   for (i = 1; i <= poly->m1; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 99\n";
+    #endif
     for (j = 1; j <= poly->m1; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 100\n";
+      #endif
       if (i != j && dd_InputAdjacentQ<T>(common, lastn, poly, i, j)) {
         set_addelem(F->set[i - 1], j);
       }
@@ -2366,6 +2666,9 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly) {
   dd_matrixdata<T> *M = dd_CreateMatrix<T>(total, poly->d);
   RayPtr = poly->child->FirstRay;
   while (RayPtr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 101\n";
+    #endif
     if (RayPtr->feasible) {
       dd_CopyRay(M->matrix[i], poly->d, RayPtr, poly->child->newcol);
       i++;
@@ -2373,8 +2676,14 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly) {
     RayPtr = RayPtr->Next;
   }
   for (j = 2; j <= poly->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 102\n";
+    #endif
     if (poly->child->newcol[j] == 0) {
       for (j1 = 0; j1 < poly->d; j1++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 103\n";
+        #endif
         M->matrix[i][j1] = poly->child->Bsave[j1][j - 1];
       }
       set_addelem(M->linset, i + 1);
@@ -2385,6 +2694,9 @@ dd_matrixdata<T> *dd_CopyOutput(dd_polyhedradata<T> *poly) {
     // output the origin for homogeneous H-polyhedron with no rays.
     M->matrix[0][0] = 1;
     for (j = 1; j < poly->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 104\n";
+      #endif
       M->matrix[0][j] = 0;
     }
   }
@@ -2405,6 +2717,9 @@ dd_matrixdata<T> *dd_CopyInput(dd_polyhedradata<T> *poly) {
   M = dd_CreateMatrix<T>(poly->m, poly->d);
   dd_CopyAmatrix(M->matrix, poly->A, poly->m, poly->d);
   for (i = 1; i <= poly->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 105\n";
+    #endif
     if (poly->EqualityIndex[i] == 1) {
       set_addelem(M->linset, i);
     }
@@ -2476,6 +2791,9 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset,
   k = 0;
   delsize = 0;
   for (j = 1; j <= d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 106\n";
+    #endif
     if (set_member(j, delset)) {
       delsize++;
       delindex[k] = j; /* stores the kth deletion column index */
@@ -2491,14 +2809,23 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset,
   Mdual = dd_CreateMatrix<T>(mdual, ddual);
   Mdual->representation = dd_Inequality;
   for (i = 1; i <= delsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 107\n";
+    #endif
     set_addelem(Mdual->linset, i); /* equality */
     for (j = 1; j <= m; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 108\n";
+      #endif
       Mdual->matrix[i - 1][j] = M->matrix[j - 1][delindex[i - 1] - 1];
     }
   }
 
   k = 0;
   for (i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 109\n";
+    #endif
     if (!set_member(i, M->linset)) {
       /* set nonnegativity for the dual variable associated with
          each non-linearity inequality. */
@@ -2520,11 +2847,20 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset,
   set_copy(Mproj->linset, Gdual->linset);
 
   for (i = 0; i < mproj; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 110\n";
+    #endif
     k = 0;
     for (j = 1; j <= d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 111\n";
+      #endif
       if (!set_member(j, delset)) {
         prod = 0;
         for (h = 1; h <= m; h++) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 112\n";
+          #endif
           prod += M->matrix[h - 1][j - 1] * Gdual->matrix[i][h];
         }
         Mproj->matrix[i][k] = prod;
@@ -2589,6 +2925,9 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,
   std::vector<long> zerorowindex(m, 0);
 
   for (i = 0; i < m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 113\n";
+    #endif
     if (M->matrix[i][d - 1] > 0) {
       posrowindex[mpos] = i;
       mpos++;
@@ -2616,7 +2955,13 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,
 
   /* Copy the inequalities independent of x_d to the top of the new matrix. */
   for (iz = 0; iz < mzero; iz++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 114\n";
+    #endif
     for (j = 0; j < dnew; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 115\n";
+      #endif
       Mnew->matrix[iz][j] = M->matrix[zerorowindex[iz]][j];
     }
   }
@@ -2624,10 +2969,19 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,
   /* Create the new inequalities by combining x_d positive and negative ones. */
   inew = mzero; /* the index of the last x_d zero inequality */
   for (ip = 0; ip < mpos; ip++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 116\n";
+    #endif
     for (in = 0; in < mneg; in++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 117\n";
+      #endif
       temp1 = -M->matrix[negrowindex[in]][d - 1];
       temp2 = M->matrix[posrowindex[ip]][d - 1];
       for (j = 0; j < dnew; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 118\n";
+        #endif
         Mnew->matrix[inew][j] = M->matrix[posrowindex[ip]][j] * temp1 +
                                 M->matrix[negrowindex[in]][j] * temp2;
       }
@@ -2654,19 +3008,31 @@ template <typename T> dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M) {
 
   irev = M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 119\n";
+    #endif
     if (set_member(i, M->linset)) {
       irev++;
       set_addelem(lp->equalityset, i); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
       for (j = 0; j < M->colsize; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 120\n";
+        #endif
         lp->A[irev - 1][j] = -M->matrix[i - 1][j];
       }
     }
     for (j = 0; j < M->colsize; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 121\n";
+      #endif
       lp->A[i - 1][j] = M->matrix[i - 1][j];
     }
   }
   for (j = 0; j < M->colsize; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 122\n";
+    #endif
     lp->A[m - 1][j] = M->rowvec[j]; /* objective row */
   }
   return lp;
@@ -2695,6 +3061,9 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
   lp->objective =
       dd_LPmax; /* since the objective is zero, this is not important */
   for (j = 1; j <= M->colsize; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 123\n";
+    #endif
     lp->A[m - 1][j - 1] = 0; /* set the objective to zero. */
   }
 
@@ -2749,11 +3118,17 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R,
 
   irev = M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 124\n";
+    #endif
     if (set_member(i, L)) {
       irev++;
       set_addelem(lp->equalityset, i); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
       for (j = 1; j <= M->colsize; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 125\n";
+        #endif
         lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 1];
       }
     } else {
@@ -2762,15 +3137,24 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R,
       }
     }
     for (j = 1; j <= M->colsize; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 126\n";
+      #endif
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
     }
   }
   for (j = 1; j <= d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 127\n";
+    #endif
     lp->A[m - 2][j - 1] = 0; /* initialize */
   }
   lp->A[m - 2][0] = 1;           /* the bounding constraint. */
   lp->A[m - 2][M->colsize] = -1; /* the bounding constraint. */
   for (j = 1; j <= d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 128\n";
+    #endif
     lp->A[m - 1][j - 1] = 0; /* initialize */
   }
   lp->A[m - 1][M->colsize] = 1;
@@ -2802,6 +3186,9 @@ template <typename T> bool dd_LPReverseRow(dd_lpdata<T> *lp, dd_rowrange i) {
   if (i >= 1 && i <= lp->m) {
     lp->LPS = dd_LPSundecided;
     for (j = 1; j <= lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 129\n";
+      #endif
       lp->A[i - 1][j - 1] = -lp->A[i - 1][j - 1];
       /* negating the i-th constraint of A */
     }
@@ -2818,6 +3205,9 @@ bool dd_LPReplaceRow(dd_lpdata<T> *lp, dd_rowrange i, T *a) {
   if (i >= 1 && i <= lp->m) {
     lp->LPS = dd_LPSundecided;
     for (j = 1; j <= lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 130\n";
+      #endif
       lp->A[i - 1][j - 1] = a[j - 1];
       /* replacing the i-th constraint by a */
     }
@@ -2834,6 +3224,9 @@ void dd_TableauEntry(T &x, dd_colrange d_size, T **X, T **Ts, dd_rowrange r,
   dd_colrange j;
   x = 0;
   for (j = 0; j < d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 131\n";
+    #endif
     x += X[r - 1][j] * Ts[j][s - 1];
   }
 }
@@ -2850,8 +3243,14 @@ void dd_GetRedundancyInformation(dd_rowrange m_size, dd_colrange d_size, T **A,
   bool red = false;
 
   for (i = 1; i <= m_size; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 132\n";
+    #endif
     red = true;
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 133\n";
+      #endif
       dd_TableauEntry(x, d_size, A, Ts, i, j);
       if (red && x < 0) {
         red = false;
@@ -2896,6 +3295,9 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
   *selected = false;
   *lps = dd_LPSundecided;
   for (j = 1; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 134\n";
+    #endif
     if (j != rhscol) {
       dd_TableauEntry(data->rcost[j - 1], d_size, A, Ts, objrow, j);
       if (data->rcost[j - 1] > 0) {
@@ -2905,7 +3307,13 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
   }
   if (dualfeasible) {
     while ((*lps == dd_LPSundecided) && (!rowselected) && (!colselected)) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 135\n";
+      #endif
       for (i = 1; i <= m_size; i++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 136\n";
+        #endif
         if (i != objrow && bflag[i] == -1) { /* i is a basic variable */
           if (Phase1) {
             dd_TableauEntry(val, d_size, A, Ts, i, bflag[m_size]);
@@ -2927,6 +3335,9 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
         rowselected = true;
         set_emptyset(data->tieset);
         for (j = 1; j <= d_size; j++) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 137\n";
+          #endif
           dd_TableauEntry(val, d_size, A, Ts, *r, j);
           if (j != rhscol && val > 0) {
             bool is_field = true;
@@ -2968,6 +3379,9 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
             *s = 0;
             k = 2; /* k runs through the column indices except RHS. */
             do {
+              #ifdef TRACKING_OPERATION_CDD
+                std::cerr << "TRACKING_OPERATION_CDD: Entry 138\n";
+              #endif
               iref = nbindex_ref[k]; /* iref runs though the reference basic
                                         indices */
               if (iref > 0) {
@@ -2985,6 +3399,9 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
                 } else {
                   *s = 0;
                   for (j = 1; j <= d_size; j++) {
+                    #ifdef TRACKING_OPERATION_CDD
+                      std::cerr << "TRACKING_OPERATION_CDD: Entry 139\n";
+                    #endif
                     if (set_member(j, data->tieset)) {
                       dd_TableauEntry(val, d_size, A, Ts, *r, j);
                       dd_TableauEntry(valn, d_size, A, Ts, iref, j);
@@ -3027,6 +3444,9 @@ void dd_SelectPreorderedNext2(dd_rowrange m_size, rowset excluded,
 
   *hnext = 0;
   for (i = 1; i <= m_size && *hnext == 0; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 140\n";
+    #endif
     k = OV[i];
     if (!set_member(k, excluded)) {
       *hnext = k;
@@ -3053,14 +3473,23 @@ void dd_SelectPivot2(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
   set_initialize(&rowexcluded, m_size);
   set_copy(rowexcluded, NopivotRow);
   for (i = rowmax + 1; i <= m_size; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 141\n";
+    #endif
     set_addelem(rowexcluded, i); /* cannot pivot on any row > rmax */
   }
   *selected = false;
   do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 142\n";
+    #endif
     rtemp = 0;
     i = 1;
     while (i <= m_size &&
-           rtemp == 0) { /* equalityset vars have highest priorities */
+           rtemp == 0) {
+             #ifdef TRACKING_OPERATION_CDD
+               std::cerr << "TRACKING_OPERATION_CDD: Entry 143\n";
+             #endif /* equalityset vars have highest priorities */
       if (set_member(i, equalityset) && !set_member(i, rowexcluded)) {
         rtemp = i;
       }
@@ -3073,6 +3502,9 @@ void dd_SelectPivot2(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
       *r = rtemp;
       *s = 1;
       while (*s <= d_size && !*selected) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 144\n";
+        #endif
         dd_TableauEntry(Xtemp, d_size, A, Ts, *r, *s);
         if (!set_member(*s, NopivotCol) && Xtemp != 0) {
           *selected = true;
@@ -3105,27 +3537,45 @@ void dd_GaussianColumnPivot(dd_colrange d_size, T **X, T **Ts, dd_rowrange r,
   T Xtemp0, Xtemp;
 
   for (j = 1; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 145\n";
+    #endif
     dd_TableauEntry(Rtemp[j - 1], d_size, X, Ts, r, j);
   }
   bool is_field = true;
   if (is_field) {
     Xtemp0 = Rtemp[s - 1];
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 146\n";
+      #endif
       if (j != s) {
         Xtemp = Rtemp[j - 1] / Xtemp0;
         for (j1 = 1; j1 <= d_size; j1++) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 147\n";
+          #endif
           Ts[j1 - 1][j - 1] -= Xtemp * Ts[j1 - 1][s - 1];
         }
       }
     }
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 148\n";
+      #endif
       Ts[j - 1][s - 1] /= Xtemp0;
     }
   } else {
     // ring case now
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 149\n";
+      #endif
       if (j != s) {
         for (j1 = 1; j1 <= d_size; j1++) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 150\n";
+          #endif
           Ts[j1 - 1][j - 1] = Rtemp[s - 1] * Ts[j1 - 1][j - 1] -
                               Rtemp[j - 1] * Ts[j1 - 1][s - 1];
         }
@@ -3133,9 +3583,15 @@ void dd_GaussianColumnPivot(dd_colrange d_size, T **X, T **Ts, dd_rowrange r,
     }
     Xtemp0 = Rtemp[s - 1];
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 151\n";
+      #endif
       Ts[j - 1][s - 1] /= Xtemp0;
     }
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 152\n";
+      #endif
       if (j != s) {
         T alpha;
         dd_TableauEntry(alpha, d_size, X, Ts, r, j);
@@ -3176,7 +3632,13 @@ template <typename T> void dd_SetToIdentity(dd_colrange d_size, T **Ts) {
   dd_colrange j1, j2;
 
   for (j1 = 1; j1 <= d_size; j1++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 153\n";
+    #endif
     for (j2 = 1; j2 <= d_size; j2++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 154\n";
+      #endif
       if (j1 == j2) {
         Ts[j1 - 1][j2 - 1] = 1;
       } else {
@@ -3195,6 +3657,9 @@ void dd_ResetTableau(dd_rowrange m_size, dd_colrange d_size, T **Ts,
 
   /* Initialize T and nbindex */
   for (j = 1; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 155\n";
+    #endif
     nbindex[j] = -j;
   }
   nbindex[rhscol] = 0;
@@ -3204,6 +3669,9 @@ void dd_ResetTableau(dd_rowrange m_size, dd_colrange d_size, T **Ts,
 
   /* Set the bflag according to nbindex */
   for (i = 1; i <= m_size; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 156\n";
+    #endif
     bflag[i] = -1;
   }
   /* all basic variables have index -1 */
@@ -3211,6 +3679,9 @@ void dd_ResetTableau(dd_rowrange m_size, dd_colrange d_size, T **Ts,
   /* bflag of the objective variable is 0,
      different from other basic variables which have -1 */
   for (j = 1; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 157\n";
+    #endif
     if (nbindex[j] > 0) {
       bflag[nbindex[j]] = j;
     }
@@ -3231,7 +3702,13 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
   *selected = false;
   *lps = dd_LPSundecided;
   while ((*lps == dd_LPSundecided) && (!rowselected) && (!colselected)) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 158\n";
+    #endif
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 159\n";
+      #endif
       if (i != objrow && bflag[i] == -1) { /* i is a basic variable */
         dd_TableauEntry(val, d_size, A, Ts, i, rhscol);
         if (val < 0) {
@@ -3255,6 +3732,9 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
       return;
     } else if (rowselected) {
       for (i = 1; i <= m_size; i++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 160\n";
+        #endif
         if (bflag[i] > 0) { /* i is nonbasic variable */
           dd_TableauEntry(val, d_size, A, Ts, *r, bflag[i]);
           if (val > 0) {
@@ -3268,6 +3748,9 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
     } else {
       if (colselected) {
         for (i = 1; i <= m_size; i++) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 161\n";
+          #endif
           if (i != objrow && bflag[i] == -1) { /* i is a basic variable */
             dd_TableauEntry(val, d_size, A, Ts, i, *s);
             if (val < 0) {
@@ -3370,7 +3853,10 @@ void dd_FindLPBasis(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
   set_addelem(ColSelected, rhscol);
 
   stop = false;
-  do { /* Find a LP basis */
+  do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 162\n";
+    #endif /* Find a LP basis */
     dd_SelectPivot2(m_size, d_size, A, Ts, OV, equalityset, m_size, RowSelected,
                     ColSelected, &r, &s, &chosen);
     if (chosen) {
@@ -3382,6 +3868,9 @@ void dd_FindLPBasis(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
       rank++;
     } else {
       for (j = 1; j <= d_size && *lps == dd_LPSundecided; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 163\n";
+        #endif
         if (j != rhscol && nbindex[j] < 0) {
           dd_TableauEntry(val, d_size, A, Ts, objrow, j);
           if (val != 0) { /* dual inconsistent */
@@ -3441,6 +3930,9 @@ void dd_FindLPBasis2(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
   set_compl(NopivotRow, NopivotRow); /* set NopivotRow to be the groundset */
 
   for (j = 2; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 164\n";
+    #endif
     if (nbindex[j] > 0) {
       set_delelem(NopivotRow, nbindex[j]);
     } else {
@@ -3457,7 +3949,10 @@ void dd_FindLPBasis2(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
       NopivotRow); /* RowSelected is the set of rows not allowed to poviot on */
 
   stop = false;
-  do { /* Find a LP basis */
+  do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 165\n";
+    #endif /* Find a LP basis */
     dd_SelectPivot2(m_size, d_size, A, Ts, OV, equalityset, m_size, RowSelected,
                     ColSelected, &r, &s, &chosen);
     if (chosen) {
@@ -3499,6 +3994,9 @@ void dd_FindLPBasis2(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
   } while (!stop);
 
   for (j = 1; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 166\n";
+    #endif
     if (nbindex[j] > 0) {
       bflag[nbindex[j]] = j;
     }
@@ -3545,6 +4043,9 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
   ms =
       0; /* ms will be the index of column which has the largest reduced cost */
   for (j = 1; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 167\n";
+    #endif
     if (j != rhscol) {
       dd_TableauEntry(data->rcost[j - 1], d_size, A, Ts, objrow, j);
       if (data->rcost[j - 1] > maxcost) {
@@ -3559,8 +4060,14 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
 
   if (!dualfeasible) {
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 168\n";
+      #endif
       A[local_m_size - 1][j - 1] = 0;
       for (l = 1; l <= d_size; l++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 169\n";
+        #endif
         if (nbindex[l] > 0) {
           scaling = l + 10;
           A[local_m_size - 1][j - 1] -= A[nbindex[l] - 1][j - 1] * scaling;
@@ -3575,6 +4082,9 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
     /* Ratio Test: ms will be now the index of column which has the largest
        reduced cost over the auxiliary row entry */
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 170\n";
+      #endif
       if ((j != rhscol) && data->rcost[j - 1] > 0) {
         dd_TableauEntry(axvalue, d_size, A, Ts, local_m_size, j);
         if (axvalue >= 0) {
@@ -3624,13 +4134,19 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
 #endif
 
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 171\n";
+      #endif
       data->nbindex_ref[j] = nbindex[j];
     }
     /* set the reference basis to be the current feasible basis. */
 
     phase1 = true;
     stop = false;
-    do { /* Dual Simplex Phase I */
+    do {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 172\n";
+      #endif /* Dual Simplex Phase I */
       chosen = false;
       LPSphase1 = dd_LPSundecided;
       if (pivots_p1 > maxpivots) {
@@ -3656,6 +4172,9 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
 
         r_val = 0;
         for (i = 1; i <= local_m_size; i++) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 173\n";
+          #endif
           if (bflag[i] < 0) {
             /* i is basic and not the objective variable */
             dd_TableauEntry(val, d_size, A, Ts, i, ms); /* auxiliary column*/
@@ -3698,11 +4217,17 @@ void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
   dd_colrange j;
   *err = dd_NoError;
   for (j = 1; j <= lp->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 174\n";
+    #endif
     lp->A[lp->objrow - 1][j - 1] = -lp->A[lp->objrow - 1][j - 1];
   }
   dd_DualSimplexMaximize(lp, err, data, maxiter, os);
   lp->optvalue = -lp->optvalue;
   for (j = 1; j <= lp->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 175\n";
+    #endif
     if (lp->LPS != dd_Inconsistent) {
       lp->dsol[j - 1] = -lp->dsol[j - 1];
     }
@@ -3737,6 +4262,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   /* *err=dd_NoError; */
   set_emptyset(lp->redset_extra);
   for (i = 0; i <= 4; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 176\n";
+    #endif
     lp->pivots[i] = 0;
   }
   maxpivots =
@@ -3786,6 +4314,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
   /* set the reference basis to be the current feasible basis. */
   for (j = 1; j <= lp->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 177\n";
+    #endif
     data->nbindex_ref_ds[j] = lp->nbindex[j];
   }
 
@@ -3817,6 +4348,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   stop = false;
   n_iter = 0;
   do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 178\n";
+    #endif
     n_iter += 1;
 #ifdef DEBUG_CDD_DISABLE
     os << "CDD: dd_DualSimplexMaximize n_iter=" << n_iter << "\n";
@@ -3921,11 +4455,17 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
 
   *err = dd_NoError;
   for (j = 1; j <= lp->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 179\n";
+    #endif
     lp->A[lp->objrow - 1][j - 1] = -lp->A[lp->objrow - 1][j - 1];
   }
   dd_CrissCrossMaximize(lp, err, data, maxiter, os);
   lp->optvalue = -lp->optvalue;
   for (j = 1; j <= lp->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 180\n";
+    #endif
     if (lp->LPS != dd_Inconsistent) {
       /* Inconsistent certificate stays valid for minimization, 0.94e */
       lp->dsol[j - 1] = -lp->dsol[j - 1];
@@ -3954,6 +4494,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   *err = dd_NoError;
   std::vector<long> nbtemp(lp->d + 1, 0);
   for (i = 0; i <= 4; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 181\n";
+    #endif
     lp->pivots[i] = 0;
   }
   /* Initializing control variables. */
@@ -3981,7 +4524,10 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
   stop = false;
   n_iter = 0;
-  do { /* Criss-Cross Method */
+  do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 182\n";
+    #endif /* Criss-Cross Method */
     n_iter += 1;
 #ifdef DEBUG_CDD_DISABLE
     os << "CDD: dd_CrissCrossMaximize n_iter=" << n_iter << "\n";
@@ -4071,12 +4617,18 @@ the LP.
   switch (LPS) {
   case dd_Optimal:
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 183\n";
+      #endif
       sol[j - 1] = Ts[j - 1][rhscol - 1];
       dd_TableauEntry(x, d_size, A, Ts, objrow, j);
       dsol[j - 1] = -x;
       dd_TableauEntry(optvalue, d_size, A, Ts, objrow, rhscol);
     }
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 184\n";
+      #endif
       if (bflag[i] == -1) { /* i is a basic variable */
         dd_TableauEntry(x, d_size, A, Ts, i, rhscol);
         if (x > 0) {
@@ -4091,6 +4643,9 @@ the LP.
     os << "SetSolutions: LP is inconsistent.\n";
 #endif
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 185\n";
+      #endif
       sol[j - 1] = Ts[j - 1][rhscol - 1];
       dd_TableauEntry(x, d_size, A, Ts, re, j);
       dsol[j - 1] = -x;
@@ -4119,6 +4674,9 @@ the LP.
     os << "SetSolutions: LP is dual inconsistent.\n";
 #endif
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 186\n";
+      #endif
       sol[j - 1] = Ts[j - 1][se - 1];
       dd_TableauEntry(x, d_size, A, Ts, objrow, j);
       dsol[j - 1] = -x;
@@ -4140,6 +4698,9 @@ the LP.
       sw = -1;
     }
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 187\n";
+      #endif
       sol[j - 1] = sw * Ts[j - 1][se - 1];
       dd_TableauEntry(x, d_size, A, Ts, objrow, j);
       dsol[j - 1] = -x;
@@ -4161,12 +4722,18 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size, dd_colrange d_size, T **A,
   switch (ho) {
   case dd_MaxIndex:
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 188\n";
+      #endif
       OV[i] = m_size - i + 1;
     }
     break;
 
   case dd_LexMin:
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 189\n";
+      #endif
       OV[i] = i;
     }
     dd_QuickSort(OV, 1, m_size, A, d_size);
@@ -4174,10 +4741,16 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size, dd_colrange d_size, T **A,
 
   case dd_LexMax:
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 190\n";
+      #endif
       OV[i] = i;
     }
     dd_QuickSort(OV, 1, m_size, A, d_size);
-    for (i = 1; i <= m_size / 2; i++) { /* just reverse the order */
+    for (i = 1; i <= m_size / 2; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 191\n";
+      #endif /* just reverse the order */
       itemp = OV[i];
       OV[i] = OV[m_size - i + 1];
       OV[m_size - i + 1] = itemp;
@@ -4186,6 +4759,9 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size, dd_colrange d_size, T **A,
 
   case dd_RandomRow:
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 192\n";
+      #endif
       OV[i] = i;
     }
     if (rseed <= 0) {
@@ -4196,6 +4772,9 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size, dd_colrange d_size, T **A,
 
   case dd_MinIndex:
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 193\n";
+      #endif
       OV[i] = i;
     }
     break;
@@ -4204,6 +4783,9 @@ void dd_ComputeRowOrderVector2(dd_rowrange m_size, dd_colrange d_size, T **A,
   case dd_MaxCutoff:
   case dd_MixCutoff:
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 194\n";
+      #endif
       OV[i] = i;
     }
     break;
@@ -4223,11 +4805,17 @@ template <typename T> dd_lpdata<double> *dd_LPgmp2LPf(dd_lpdata<T> *lp) {
   lpf->objective = lp->objective;
 
   for (i = 1; i <= lp->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 195\n";
+    #endif
     if (set_member(i, lp->equalityset)) {
       set_addelem(lpf->equalityset, i);
     }
     /* it is equality. Its reversed row will not be in this set */
     for (j = 1; j <= lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 196\n";
+      #endif
       lpf->A[i - 1][j - 1] =
           UniversalScalarConversion<double, T>(lp->A[i - 1][j - 1]);
     }
@@ -4271,6 +4859,9 @@ When LP is dual-inconsistent then *se returns the evidence column.
 
   lp->total_pivots = 0;
   for (i = 0; i <= 4; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 197\n";
+    #endif
     lp->total_pivots += lp->pivots[i];
   }
   if (*err == dd_NoError) {
@@ -4327,6 +4918,9 @@ When LP is dual-inconsistent then *se returns the evidence column.
 
   lp->total_pivots = 0;
   for (i = 0; i <= 4; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 198\n";
+    #endif
     lp->total_pivots += lp->pivots[i];
   }
   if (*err == dd_NoError) {
@@ -4366,6 +4960,9 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
   lpnew->objective = dd_LPmax;
 
   for (i = 1; i <= lp->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 199\n";
+    #endif
     if (lp->A[i - 1][lp->rhscol - 1] > bmax) {
       bmax = lp->A[i - 1][lp->rhscol - 1];
     }
@@ -4373,21 +4970,36 @@ dd_lpdata<T> *dd_MakeLPforInteriorFinding(dd_lpdata<T> *lp)
   bceil = bm * bmax;
 
   for (i = 1; i <= lp->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 200\n";
+    #endif
     for (j = 1; j <= lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 201\n";
+      #endif
       lpnew->A[i - 1][j - 1] = lp->A[i - 1][j - 1];
     }
   }
 
   for (i = 1; i <= lp->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 202\n";
+    #endif
     lpnew->A[i - 1][lp->d] = -1;
   }
 
   for (j = 1; j <= lp->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 203\n";
+    #endif
     lpnew->A[m - 2][j - 1] = 0; /* new row (bceil, 0,...,0,-1) */
   }
   lpnew->A[m - 2][0] = bceil; /* new row (bceil, 0,...,0,-1) */
 
   for (j = 1; j <= d - 1; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 204\n";
+    #endif
     lpnew->A[m - 1][j - 1] = 0; /* new obj row with (0,...,0,1) */
   }
   lpnew->A[m - 1][d - 1] = 1;
@@ -4412,17 +5024,26 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M) {
 
   irev = M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 205\n";
+    #endif
     if (set_member(i, M->linset)) {
       irev++;
       set_addelem(lp->equalityset, i); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
       for (j = 1; j <= M->colsize; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 206\n";
+        #endif
         lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 1];
       }
     } else {
       lp->A[i - 1][d - 1] = -1; /* b_I + A_I x - 1 z >= 0  (z=x_d) */
     }
     for (j = 1; j <= M->colsize; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 207\n";
+      #endif
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
     }
   }
@@ -4462,12 +5083,18 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M) {
 
   irev = M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 208\n";
+    #endif
     lp->A[i - 1][0] = 0; /* It is almost completely degerate LP */
     if (set_member(i, M->linset)) {
       irev++;
       set_addelem(lp->equalityset, i); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
       for (j = 2; j <= d - 1; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 209\n";
+        #endif
         lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 2];
       }
 #ifdef LOCALDEBUG_CDD
@@ -4478,6 +5105,9 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M) {
       lp->A[i - 1][d - 1] = -1;
     }
     for (j = 2; j <= d - 1; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 210\n";
+      #endif
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 2];
     }
   }
@@ -4513,18 +5143,30 @@ void dd_CreateLP_H_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest,
 
   irev = M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 211\n";
+    #endif
     if (set_member(i, M->linset)) {
       irev++;
       set_addelem(lp->equalityset, i); /* it is equality. */
       for (j = 1; j <= d; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 212\n";
+        #endif
         lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 1];
       }
     }
     for (j = 1; j <= d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 213\n";
+      #endif
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
     }
   }
   for (j = 1; j <= d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 214\n";
+    #endif
     lp->A[m - 1][j - 1] = M->matrix[itest - 1][j - 1];
   }
   lp->A[itest - 1][0] += T(1); /* relax the original inequality by one */
@@ -4551,6 +5193,9 @@ void dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest,
 
   irev = M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 215\n";
+    #endif
     if (i == itest) {
       lp->A[i - 1][0] =
           1; /* this is to make the LP bounded, ie. the min >= -1 */
@@ -4562,15 +5207,24 @@ void dd_CreateLP_V_Redundancy(dd_matrixdata<T> *M, dd_rowrange itest,
       set_addelem(lp->equalityset, i); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
       for (j = 2; j <= d; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 216\n";
+        #endif
         lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 2];
       }
     }
     for (j = 2; j <= d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 217\n";
+      #endif
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 2];
     }
   }
   /* objective is to violate the inequality in question.  */
   for (j = 2; j <= d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 218\n";
+    #endif
     lp->A[m - 1][j - 1] = M->matrix[itest - 1][j - 2];
   }
   lp->A[m - 1][0] = 0; /* the constant term for the objective is zero */
@@ -4613,6 +5267,9 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M,
 
   irev = M->rowsize; /* the first row of the linc reversed inequalities. */
   for (i = 1; i <= M->rowsize; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 219\n";
+    #endif
     if (i == itest) {
       lp->A[i - 1][0] = 0; /* this is a half of the boundary constraint. */
     } else {
@@ -4623,16 +5280,25 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M,
       set_addelem(lp->equalityset, i); /* it is equality. */
       /* the reversed row irev is not in the equality set. */
       for (j = 2; j <= d; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 220\n";
+        #endif
         lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 2];
       }
     }
     for (j = 2; j <= d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 221\n";
+      #endif
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 2];
       lp->A[m - 1][j - 1] +=
           lp->A[i - 1][j - 1]; /* the objective is the sum of all ineqalities */
     }
   }
   for (j = 2; j <= d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 222\n";
+    #endif
     lp->A[m - 2][j - 1] = -lp->A[m - 1][j - 1];
     /* to make an LP bounded.  */
   }
@@ -4704,6 +5370,9 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
     *error = err;
   } else {
     for (j = 0; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 223\n";
+      #endif
       certificate[j] = lp->sol[j];
     }
 
@@ -4768,6 +5437,9 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
     /* itest row might be redundant in the lp but this has nothing to do with
     its redundancy in the original system M.   Thus we must delete it.  */
     for (j = 0; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 224\n";
+      #endif
       certificate[j] = lp->sol[j];
     }
 
@@ -4803,6 +5475,9 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error,
   set_initialize(&redset, m);
   data_temp_simplex<T> *data = allocate_data_simplex<T>(get_m_size(M), d);
   for (i = m; i >= 1; i--) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 225\n";
+    #endif
     if (dd_Redundant(Mcopy, i, cvec, error, data, maxiter, os)) {
 #ifdef LOCALDEBUG_CDD
       os << "dd_RedundantRows: the row " << i << " is redundant.\n";
@@ -4845,6 +5520,9 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
   set_initialize(redset, m);
   M1 = dd_MatrixSortedUniqueCopy(*M, newpos);
   for (i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 226\n";
+    #endif
     if ((*newpos)[i] <= 0) {
       set_addelem(*redset, i);
     }
@@ -4872,10 +5550,16 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
   set_initialize(&redset1, M1->rowsize);
   k = 1;
   do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 227\n";
+    #endif
     if (dd_RedundantExtensive(M1, k, cvec, &redset1, error, maxiter, os)) {
       set_addelem(redset1, k);
       dd_MatrixRowsRemove2(&M1, redset1, &newpos1);
       for (i = 1; i <= m; i++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 228\n";
+        #endif
         if ((*newpos)[i] > 0) {
           if (set_member((*newpos)[i], redset1)) {
             set_addelem(*redset, i);
@@ -4900,6 +5584,9 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
       if (set_card(redset1) > 0) {
         dd_MatrixRowsRemove2(&M1, redset1, &newpos1);
         for (i = 1; i <= m; i++) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 229\n";
+          #endif
           if ((*newpos)[i] > 0) {
             if (set_member((*newpos)[i], redset1)) {
               set_addelem(*redset, i);
@@ -5025,6 +5712,9 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
   } else {
 
     for (j = 0; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 230\n";
+      #endif
       certificate[j] = lp->sol[j];
     }
 
@@ -5097,6 +5787,9 @@ dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_AllocateArow(d, &cvec);
   set_initialize(&redset, m);
   for (i = m; i >= 1; i--) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 231\n";
+    #endif
     if (dd_SRedundant(Mcopy, i, cvec, error, maxiter, os)) {
 #ifdef LOCALDEBUG_CDD
       os << "dd_SRedundantRows: the row " << i << " is strongly redundant.\n";
@@ -5181,6 +5874,9 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
     dd_colrange j;
     dd_rowrange mi = lpw->m;
     for (j = 0; j < d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 232\n";
+      #endif
       lpw->A[mi - 1][j] = lpw->A[mi - 2][j];
     }
     lpw->A[mi - 2][0] += T(1);
@@ -5200,12 +5896,18 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
   auto set_entry_in_lpw = [&](dd_rowrange irow) -> void {
     dd_rowrange mi = lpw->m;
     for (k = 0; k < d; k++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 233\n";
+      #endif
       lpw->A[mi - 2][k] = M->matrix[irow - 1][k];
     }
   };
   auto insert_entry_in_lpw = [&](dd_rowrange irow) -> void {
     dd_rowrange mi = lpw->m;
     for (k = 0; k < d; k++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 234\n";
+      #endif
       lpw->A[mi - 1][k] = M->matrix[irow - 1][k];
     }
     mi++;
@@ -5247,9 +5949,15 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
     /* An interior point is found.  Use rayshooting to find some nonredundant
        inequalities. */
     for (k = 0; k < d; k++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 235\n";
+      #endif
       shootdir[k] = 0;
     }
     for (j = 1; j < d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 236\n";
+      #endif
       shootdir[j] = 1; /* j-th unit vector */
 #ifdef LOCALDEBUG_CDD
       dd_WriteT(std::cerr, shootdir, d);
@@ -5277,6 +5985,9 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
 #ifdef LOCALDEBUG_CDD
     std::cerr << "The initial nonredundant set is:";
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 237\n";
+      #endif
       if (set_member(i, is_decided)) {
         std::cerr << " " << i;
       }
@@ -5286,6 +5997,9 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
 
     i = 1;
     while (i <= m) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 238\n";
+      #endif
 #ifdef LOCALDEBUG_CDD
       std::cerr << "i=" << i << " is_decided=" << set_member(i, is_decided)
                 << "\n";
@@ -5302,6 +6016,9 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
 #endif
         if (!dd_Redundant_loc()) {
           for (k = 0; k < d; k++) {
+            #ifdef TRACKING_OPERATION_CDD
+              std::cerr << "TRACKING_OPERATION_CDD: Entry 239\n";
+            #endif
             shootdir[k] = lpw->sol[k] - lp->sol[k];
           }
 #ifdef LOCALDEBUG_CDD
@@ -5406,6 +6123,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
     dd_colrange j;
     dd_rowrange mi = lpw->m;
     for (j = 0; j < d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 240\n";
+      #endif
       lpw->A[mi - 1][j] = lpw->A[mi - 2][j];
     }
     lpw->A[mi - 2][0] += T(1);
@@ -5421,12 +6141,18 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
   auto set_entry_in_lpw = [&](dd_rowrange irow) -> void {
     dd_rowrange mi = lpw->m;
     for (k = 0; k < d; k++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 241\n";
+      #endif
       lpw->A[mi - 2][k] = M->matrix[irow - 1][k];
     }
   };
   auto insert_entry_in_lpw = [&](dd_rowrange irow) -> void {
     dd_rowrange mi = lpw->m;
     for (k = 0; k < d; k++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 242\n";
+      #endif
       lpw->A[mi - 1][k] = M->matrix[irow - 1][k];
     }
     mi++;
@@ -5443,6 +6169,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
   set_initialize(&is_decided, m);
   int e_max = 0;
   for (auto &e_val : BlockBelong) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 243\n";
+    #endif
     if (e_val > e_max) {
       e_max = e_val;
     }
@@ -5450,6 +6179,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
   size_t n_block = e_max + 1;
   std::vector<std::vector<dd_rowrange>> list_blocks(n_block);
   for (size_t i = 0; i < BlockBelong.size(); i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 244\n";
+    #endif
     int iBlock = BlockBelong[i];
     dd_rowrange iredw = i + 1;
     list_blocks[iBlock].push_back(iredw);
@@ -5477,9 +6209,15 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
     /* An interior point is found.  Use rayshooting to find some nonredundant
        inequalities. */
     for (k = 0; k < d; k++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 245\n";
+      #endif
       shootdir[k] = 0;
     }
     for (j = 1; j < d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 246\n";
+      #endif
       shootdir[j] = 1; /* j-th unit vector */
 #ifdef LOCALDEBUG_CDD
       dd_WriteT(std::cerr, shootdir, d);
@@ -5492,6 +6230,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
         std::vector<dd_rowrange> eBlock = get_block(ired);
         std::cerr << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
         for (auto &jred : eBlock) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 247\n";
+          #endif
           set_addelem(is_decided, jred);
           std::cerr << "1: Deciding " << jred << "\n";
           insert_entry_in_lpw(jred);
@@ -5506,6 +6247,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
         std::vector<dd_rowrange> eBlock = get_block(ired);
         std::cerr << "ired=" << ired << " |eBlock|=" << eBlock.size() << "\n";
         for (auto &jred : eBlock) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 248\n";
+          #endif
           set_addelem(is_decided, jred);
           std::cerr << "2: Deciding " << jred << "\n";
           insert_entry_in_lpw(jred);
@@ -5517,6 +6261,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
 #ifdef LOCALDEBUG_CDD
     std::cerr << "The initial nonredundant set is:";
     for (i = 1; i <= m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 249\n";
+      #endif
       if (set_member(i, is_decided)) {
         std::cerr << " " << i;
       }
@@ -5526,6 +6273,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
 
     i = 1;
     while (i <= m) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 250\n";
+      #endif
 #ifdef LOCALDEBUG_CDD
       std::cerr << "i=" << i << " is_decided=" << set_member(i, is_decided)
                 << "\n";
@@ -5542,6 +6292,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
 #endif
         if (!dd_Redundant_loc()) {
           for (k = 0; k < d; k++) {
+            #ifdef TRACKING_OPERATION_CDD
+              std::cerr << "TRACKING_OPERATION_CDD: Entry 251\n";
+            #endif
             shootdir[k] = lpw->sol[k] - lp->sol[k];
           }
 #ifdef LOCALDEBUG_CDD
@@ -5554,6 +6307,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
             std::cerr << "ired=" << ired << " |eBlock|=" << eBlock.size()
                       << "\n";
             for (auto &jred : eBlock) {
+              #ifdef TRACKING_OPERATION_CDD
+                std::cerr << "TRACKING_OPERATION_CDD: Entry 252\n";
+              #endif
               set_addelem(is_decided, jred);
               std::cerr << "3: Deciding " << jred << "\n";
               set_entry_in_lpw(jred);
@@ -5577,6 +6333,9 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
             std::vector<dd_rowrange> eBlock = get_block(i);
             std::cerr << "i=" << i << " |eBlock|=" << eBlock.size() << "\n";
             for (auto &jred : eBlock) {
+              #ifdef TRACKING_OPERATION_CDD
+                std::cerr << "TRACKING_OPERATION_CDD: Entry 253\n";
+              #endif
               set_addelem(is_decided, jred);
               std::cerr << "4: Deciding " << jred << "\n";
               set_addelem(redset, jred);
@@ -5630,6 +6389,9 @@ dd_setfamily *dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error,
   Mcopy = dd_MatrixCopy(M);
   F = dd_CreateSetFamily(m, m);
   for (i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 254\n";
+    #endif
     if (!set_member(i, M->linset)) {
       set_addelem(Mcopy->linset, i);
       redset = dd_RedundantRows(Mcopy, error, maxiter, os);
@@ -5672,6 +6434,9 @@ dd_setfamily *dd_Matrix2WeakAdjacency(dd_matrixdata<T> *M, dd_ErrorType *error,
   Mcopy = dd_MatrixCopy(M);
   F = dd_CreateSetFamily(m, m);
   for (i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 255\n";
+    #endif
     if (!set_member(i, M->linset)) {
       set_addelem(Mcopy->linset, i);
       redset = dd_SRedundantRows(Mcopy, error, maxiter, os);
@@ -5759,6 +6524,9 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
     *error = err;
   } else {
     for (j = 0; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 256\n";
+      #endif
       certificate[j] = lp->sol[j];
     }
 
@@ -5835,6 +6603,9 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
   } else {
 
     for (j = 0; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 257\n";
+      #endif
       certificate[j] = lp->sol[j];
     }
 
@@ -5882,6 +6653,9 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
     if (answer == 0) {
       /* List the implicit linearity rows */
       for (i = m; i >= 1; i--) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 258\n";
+        #endif
         if (!set_member(i, lp->posset_extra)) {
           if (dd_ImplicitLinearity(M, i, cvec, error, maxiter, os)) {
             set_addelem(*imp_linrows, i);
@@ -5898,6 +6672,9 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
     }
     if (answer == -1) {
       for (i = m; i >= 1; i--) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 259\n";
+        #endif
         set_addelem(*imp_linrows, i);
       }
     }
@@ -5963,6 +6740,9 @@ bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M,
   dd_MatrixShiftupLinearity(M, &newpos1);
 
   for (i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 260\n";
+    #endif
     k = (*newpos)[i];
     if (k > 0) {
       (*newpos)[i] = newpos1[k];
@@ -5997,6 +6777,9 @@ bool dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset,
   set_initialize(redset, m);
   revpos = new long[m + 1];
   for (i = 0; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 261\n";
+    #endif
     revpos[i] = 0;
   }
 
@@ -6007,6 +6790,9 @@ bool dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset,
   }
 
   for (i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 262\n";
+    #endif
     k = (*newpos)[i];
     if (k > 0) {
       revpos[k] = i; /* inverse of *newpos[] */
@@ -6021,6 +6807,9 @@ bool dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset,
   }
 
   for (i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 263\n";
+    #endif
     k = (*newpos)[i];
     if (k > 0) {
       (*newpos)[i] = newpos1[k];
@@ -6102,6 +6891,9 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
   dd_AllocateArow(d, &vec);
 
   for (i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 264\n";
+    #endif
     dd_InnerProduct(t1, d, M->matrix[i - 1], p);
 #ifdef LOCALDEBUG_CDD
     std::cerr << "dd_RayShooting: i=" << i << " t1=" << t1 << "\n";
@@ -6132,6 +6924,9 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
           } else {
             if (alpha == min) { /* tie break */
               for (j = 1; j <= d; j++) {
+                #ifdef TRACKING_OPERATION_CDD
+                  std::cerr << "TRACKING_OPERATION_CDD: Entry 265\n";
+                #endif
                 vecmin[j - 1] = M->matrix[imin - 1][j - 1] / t1min;
                 vec[j - 1] = M->matrix[i - 1][j - 1] / t1;
               }
@@ -6219,6 +7014,9 @@ arithmetics.
 
   std::vector<long> nbtemp(d_size + 1, 0);
   for (i = 0; i <= 4; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 266\n";
+    #endif
     pivots[i] = 0;
   }
 
@@ -6233,6 +7031,9 @@ arithmetics.
 
   fbasisrank = d_size - 1;
   for (j = 1; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 267\n";
+    #endif
     if (nbindex[j] < 0) {
       fbasisrank = fbasisrank - 1;
     }
@@ -6264,6 +7065,9 @@ arithmetics.
   switch (LPS) {
   case dd_Optimal:
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 268\n";
+      #endif
       if (i != objrow && data->bflag[i] == -1) { /* i is a basic variable */
         dd_TableauEntry(val, d_size, A, Ts, i, rhscol);
         if (val < 0) {
@@ -6283,6 +7087,9 @@ arithmetics.
     break;
   case dd_Inconsistent:
     for (j = 1; j <= d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 269\n";
+      #endif
       dd_TableauEntry(val, d_size, A, Ts, re, j);
       if (j == rhscol) {
         if (val >= 0) {
@@ -6316,6 +7123,9 @@ arithmetics.
 
   case dd_DualInconsistent:
     for (i = 1; i <= m_size; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 270\n";
+      #endif
       dd_TableauEntry(val, d_size, A, Ts, i, data->bflag[is]);
       if (i == objrow) {
         if (val <= 0) {
@@ -6351,6 +7161,9 @@ void dd_BasisStatusMinimize(dd_rowrange m_size, dd_colrange d_size, T **A,
   dd_colrange j;
 
   for (j = 1; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 271\n";
+    #endif
     A[objrow - 1][j - 1] = -A[objrow - 1][j - 1];
   }
   dd_BasisStatusMaximize(m_size, d_size, A, Ts, equalityset, objrow, rhscol,
@@ -6358,6 +7171,9 @@ void dd_BasisStatusMinimize(dd_rowrange m_size, dd_colrange d_size, T **A,
                          pivots, found, LPScorrect, data, os);
   optvalue = -optvalue;
   for (j = 1; j <= d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 272\n";
+    #endif
     if (LPS != dd_Inconsistent) {
       /* Inconsistent certificate stays valid for minimization, 0.94e */
       dsol[j - 1] = -dsol[j - 1];
@@ -6387,10 +7203,16 @@ void dd_BasisStatus(dd_lpdata<double> *lpf, dd_lpdata<T> *lp, bool *LPScorrect,
       lp->re = lpf->re;
       lp->se = se;
       for (j = 1; j <= lp->d; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 273\n";
+        #endif
         lp->nbindex[j] = lpf->nbindex[j];
       }
     }
     for (i = 1; i <= 5; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 274\n";
+      #endif
       lp->pivots[i - 1] += lpf->pivots[i - 1];
     }
     break;
@@ -6407,10 +7229,16 @@ void dd_BasisStatus(dd_lpdata<double> *lpf, dd_lpdata<T> *lp, bool *LPScorrect,
       lp->re = lpf->re;
       lp->se = se;
       for (j = 1; j <= lp->d; j++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 275\n";
+        #endif
         lp->nbindex[j] = lpf->nbindex[j];
       }
     }
     for (i = 1; i <= 5; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 276\n";
+      #endif
       lp->pivots[i - 1] += lpf->pivots[i - 1];
     }
     break;
@@ -6463,6 +7291,9 @@ void dd_CheckAdjacency(dd_conedata<T> *cone, dd_raydata<T> **RP1,
   }
   TempRay = cone->FirstRay;
   while (TempRay != nullptr && *adjacent) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 277\n";
+    #endif
     if (TempRay != *RP1 && TempRay != *RP2) {
       set_int(Face1, TempRay->ZeroSet, cone->AddedHalfspaces);
       if (set_subset(Face, Face1)) {
@@ -6501,6 +7332,9 @@ template <typename T> void dd_SetInequalitySets(dd_conedata<T> *cone) {
   set_emptyset(cone->EqualitySet);
   set_emptyset(cone->NonequalitySet);
   for (i = 1; i <= (cone->parent->m); i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 278\n";
+    #endif
     set_addelem(cone->GroundSet, i);
     if (cone->parent->EqualityIndex[i] == 1) {
       set_addelem(cone->EqualitySet, i);
@@ -6520,6 +7354,9 @@ void dd_AValue(T *val, dd_colrange d_size, T **A, T *p, dd_rowrange i) {
   /* Changed by Marc Pfetsch 010219 */
 
   for (j = 0; j < d_size; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 279\n";
+    #endif
     *val += A[i - 1][j] * p[j];
   }
 }
@@ -6537,9 +7374,15 @@ void dd_StoreRay1(dd_conedata<T> *cone, T *p,
   *feasible = true;
   set_initialize(&(RR->ZeroSet), cone->m);
   for (j = 0; j < cone->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 280\n";
+    #endif
     RR->Ray[j] = p[j];
   }
   for (i = 1; i <= cone->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 281\n";
+    #endif
     k = cone->OrderVector[i];
     dd_AValue(&temp, cone->d, cone->A, p, k);
     if (temp == 0) {
@@ -6579,9 +7422,15 @@ void dd_StoreRay2(dd_conedata<T> *cone, T *p, bool *feasible,
   *weaklyfeasible = true;
   set_initialize(&(RR->ZeroSet), cone->m);
   for (j = 0; j < cone->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 282\n";
+    #endif
     RR->Ray[j] = p[j];
   }
   for (i = 1; i <= cone->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 283\n";
+    #endif
     k = cone->OrderVector[i];
     dd_AValue(&temp, cone->d, cone->A, p, k);
     if (temp == 0) {
@@ -6728,6 +7577,9 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone, dd_raydata<T> *Ray1,
 #ifdef LOCALDEBUG_CDD
     std::cerr << "Face: ";
     for (it = 1; it <= cone->m; it++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 284\n";
+      #endif
       it_row = cone->OrderVector[it];
       if (set_member(it_row, Face1)) {
         std::cerr << it_row << " ";
@@ -6736,6 +7588,9 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone, dd_raydata<T> *Ray1,
     std::cerr << "\n";
 #endif
     for (it = cone->Iteration + 1; it < fmin && lastchance; it++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 285\n";
+      #endif
       it_row = cone->OrderVector[it];
       if (cone->parent->EqualityIndex[it_row] >= 0 &&
           set_member(it_row, Face1)) {
@@ -6755,6 +7610,9 @@ void dd_ConditionalAddEdge(dd_conedata<T> *cone, dd_raydata<T> *Ray1,
       } else {
         TempRay = ValidFirstRay; /* the first ray for adjacency checking */
         while (TempRay != nullptr && adjacent) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 286\n";
+          #endif
           if (TempRay != Ray1 && TempRay != Ray2) {
             set_int(Face1, TempRay->ZeroSet, cone->AddedHalfspaces);
             if (set_subset(Face, Face1)) {
@@ -6800,9 +7658,15 @@ template <typename T> void dd_CreateInitialEdges(dd_conedata<T> *cone) {
   }
   Ptr1 = cone->FirstRay;
   while (Ptr1 != cone->LastRay && Ptr1 != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 287\n";
+    #endif
     fii1 = Ptr1->FirstInfeasIndex;
     Ptr2 = Ptr1->Next;
     while (Ptr2 != nullptr) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 288\n";
+      #endif
       fii2 = Ptr2->FirstInfeasIndex;
       dd_CheckAdjacency(cone, &Ptr1, &Ptr2, &adj);
       if (fii1 != fii2 && adj) {
@@ -6841,11 +7705,17 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
   Ptr1 = RRbegin;
   pos1 = 1;
   do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 289\n";
+    #endif
     ptr2found = false;
     quit = false;
     fii1 = Ptr1->FirstInfeasIndex;
     pos2 = 2;
     for (Ptr2 = Ptr1->Next; !ptr2found && !quit; Ptr2 = Ptr2->Next, pos2++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 290\n";
+      #endif
       if (Ptr2->FirstInfeasIndex > fii1) {
         Ptr2begin = Ptr2;
         ptr2found = true;
@@ -6858,6 +7728,9 @@ void dd_UpdateEdges(dd_conedata<T> *cone, dd_raydata<T> *RRbegin,
     if (ptr2found) {
       quit = false;
       for (Ptr2 = Ptr2begin; !quit; Ptr2 = Ptr2->Next) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 291\n";
+        #endif
         dd_ConditionalAddEdge(cone, Ptr1, Ptr2, RRbegin);
         if (Ptr2 == RRend || Ptr2->Next == nullptr) {
           quit = true;
@@ -6888,6 +7761,9 @@ template <typename T> void dd_FreeDDMemory0(dd_conedata<T> *cone) {
   PrevPtr = cone->ArtificialRay;
   if (PrevPtr != nullptr) {
     for (Ptr = cone->ArtificialRay->Next; Ptr != nullptr; Ptr = Ptr->Next) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 292\n";
+      #endif
       delete[] PrevPtr->Ray;
       delete[] PrevPtr->ZeroSet;
       delete PrevPtr;
@@ -6946,6 +7822,9 @@ template <typename T> void dd_FreePolyhedra(dd_polyhedradata<T> *poly) {
   delete[] poly->EqualityIndex;
   if (poly->AincGenerated) {
     for (i = 1; i <= poly->m1; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 293\n";
+      #endif
       set_free(poly->Ainc[i - 1]);
     }
     delete[] poly->Ainc;
@@ -6966,6 +7845,9 @@ void dd_ZeroIndexSet(dd_rowrange m_size, dd_colrange d_size, T **A, T *x,
   /* Changed by Marc Pfetsch 010219 */
   set_emptyset(ZS);
   for (i = 1; i <= m_size; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 294\n";
+    #endif
     dd_AValue(&temp, d_size, A, x, i);
     if (temp == 0) {
       set_addelem(ZS, i);
@@ -6976,7 +7858,13 @@ void dd_ZeroIndexSet(dd_rowrange m_size, dd_colrange d_size, T **A, T *x,
 template <typename T>
 void dd_CopyBmatrix(dd_colrange d_size, T **Ts, T **TCOPY) {
   for (dd_rowrange i = 0; i < d_size; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 295\n";
+    #endif
     for (dd_colrange j = 0; j < d_size; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 296\n";
+      #endif
       TCOPY[i][j] = Ts[i][j];
     }
   }
@@ -6992,6 +7880,9 @@ void dd_CopyNormalizedAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d) {
   dd_rowrange i;
 
   for (i = 0; i < m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 297\n";
+    #endif
     dd_CopyNormalizedArow(Acopy[i], A[i], d);
   }
 }
@@ -7002,6 +7893,9 @@ void dd_PermuteCopyAmatrix(T **Acopy, T **A, dd_rowrange m, dd_colrange d,
   dd_rowrange i;
 
   for (i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 298\n";
+    #endif
     dd_CopyArow(Acopy[i - 1], A[roworder[i] - 1], d);
   }
 }
@@ -7012,6 +7906,9 @@ void dd_PermutePartialCopyAmatrix(T **Acopy, T **A, dd_rowrange m,
   /* copy the rows of A whose roworder is positive.  roworder[i] is the row
    * index of the copied row. */
   for (dd_rowrange i = 1; i <= m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 299\n";
+    #endif
     if (roworder[i] > 0) {
       dd_CopyArow(Acopy[roworder[i] - 1], A[i - 1], d);
     }
@@ -7023,10 +7920,16 @@ template <typename T> void dd_ColumnReduce(dd_conedata<T> *cone) {
   dd_rowrange i;
 
   for (j = 1; j <= cone->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 300\n";
+    #endif
     if (cone->InitialRayIndex[j] > 0) {
       j1++;
       if (j1 < j) {
         for (i = 1; i <= cone->m; i++) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 301\n";
+          #endif
           cone->A[i - 1][j1 - 1] = cone->A[i - 1][j - 1];
         }
         cone->newcol[j] = j1;
@@ -7068,11 +7971,17 @@ long dd_MatrixRank(dd_matrixdata<T> *M, dd_rowset ignoredrows,
   dd_SetToIdentity(M->colsize, B);
   std::vector<long> roworder(M->rowsize + 1);
   for (r = 0; r < M->rowsize; r++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 302\n";
+    #endif
     roworder[r + 1] = r + 1;
   }
   roworder[M->rowsize] = 0;
 
-  do { /* Find a set of rows for a basis */
+  do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 303\n";
+    #endif /* Find a set of rows for a basis */
     dd_SelectPivot2(M->rowsize, M->colsize, M->matrix, B, roworder.data(),
                     PriorityRow, M->rowsize, NopivotRow, ColSelected, &r, &s,
                     &chosen);
@@ -7115,6 +8024,9 @@ template <typename T> void dd_FindBasis(dd_conedata<T> *cone, long *rank) {
   *rank = 0;
   stop = false;
   for (j = 0; j <= cone->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 304\n";
+    #endif
     cone->InitialRayIndex[j] = 0;
   }
   set_emptyset(cone->InitialHalfspaces);
@@ -7122,7 +8034,10 @@ template <typename T> void dd_FindBasis(dd_conedata<T> *cone, long *rank) {
   set_initialize(&NopivotRow, cone->m);
   set_copy(NopivotRow, cone->NonequalitySet);
   dd_SetToIdentity(cone->d, cone->B);
-  do { /* Find a set of rows for a basis */
+  do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 305\n";
+    #endif /* Find a set of rows for a basis */
     dd_SelectPivot2(cone->m, cone->d, cone->A, cone->B, cone->OrderVector,
                     cone->EqualitySet, cone->m, NopivotRow, ColSelected, &r, &s,
                     &chosen);
@@ -7169,6 +8084,9 @@ void dd_FindInitialRays(dd_conedata<T> *cone, bool *found) {
     cone->PreOrderedRun = true;
   }
   for (i = 1; i <= cone->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 306\n";
+    #endif
     if (!set_member(i, cone->NonequalitySet)) {
       set_addelem(CandidateRows, i);
     }
@@ -7214,6 +8132,9 @@ void dd_CheckEquality(dd_colrange d_size, dd_raydata<T> **RP1,
   *equal = true;
   j = 1;
   while (j <= d_size && *equal) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 307\n";
+    #endif
     if ((*RP1)->Ray[j - 1] != (*RP2)->Ray[j - 1]) {
       *equal = false;
     }
@@ -7238,6 +8159,9 @@ void dd_CreateNewRay(dd_conedata<T> *cone, dd_raydata<T> *Ptr1,
   v1 = T_abs(a1);
   v2 = T_abs(a2);
   for (j = 0; j < cone->d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 308\n";
+    #endif
     NewRay[j] = Ptr1->Ray[j] * v2 + Ptr2->Ray[j] * v1;
   }
   dd_AddRay(cone, NewRay);
@@ -7265,8 +8189,14 @@ void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone)
     throw TerminalException{1};
   }
   while (Ptr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 309\n";
+    #endif
     temp = 0;
     for (j = 0; j < cone->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 310\n";
+      #endif
       temp += cone->A[i - 1][j] * Ptr->Ray[j];
     }
     Ptr->ARay = temp;
@@ -7315,10 +8245,16 @@ void dd_EvaluateARay2(dd_rowrange i, dd_conedata<T> *cone)
   cone->NegLast = nullptr;
   Ptr = cone->FirstRay;
   while (Ptr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 311\n";
+    #endif
     NextPtr = Ptr->Next; /* remember the Next record */
     Ptr->Next = nullptr; /* then clear the Next pointer */
     temp = 0;
     for (j = 0; j < cone->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 312\n";
+      #endif
       temp += cone->A[i - 1][j] * Ptr->Ray[j];
     }
     Ptr->ARay = temp;
@@ -7422,6 +8358,9 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
   }
   completed = false;
   while (Ptr != nullptr && !completed) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 313\n";
+    #endif
     if (Ptr->ARay < 0) {
       dd_Eliminate(cone, &PrevPtr);
       Ptr = PrevPtr->Next;
@@ -7434,6 +8373,9 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
   Ptr = cone->FirstRay;
   cone->ZeroRayCount = 0;
   while (Ptr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 314\n";
+    #endif
     NextPtr = Ptr->Next; /* remember the Next record */
     temp = Ptr->ARay;
     if (temp < 0) {
@@ -7464,6 +8406,9 @@ void dd_DeleteNegativeRays(dd_conedata<T> *cone)
           ZeroPtr1 = nullptr;
           for (ZeroPtr0 = cone->ZeroHead; !found && ZeroPtr0 != nullptr;
                ZeroPtr0 = ZeroPtr0->Next) {
+                 #ifdef TRACKING_OPERATION_CDD
+                   std::cerr << "TRACKING_OPERATION_CDD: Entry 315\n";
+                 #endif
             fiitest = ZeroPtr0->FirstInfeasIndex;
             if (fiitest >= fii) {
               found = true;
@@ -7528,8 +8473,14 @@ void dd_FeasibilityIndices(long *fnum, long *infnum, dd_rowrange i,
   *infnum = 0;
   Ptr = cone->FirstRay;
   while (Ptr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 316\n";
+    #endif
     temp = 0;
     for (j = 0; j < cone->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 317\n";
+      #endif
       temp += cone->A[i - 1][j] * Ptr->Ray[j];
     }
     if (temp >= 0) {
@@ -7551,6 +8502,9 @@ bool dd_LexEqual(T *v1, T *v2,
   determined = false;
   j = 1;
   do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 318\n";
+    #endif
     if (v1[j - 1] != v2[j - 1]) { /* 093c */
       equal = false;
       determined = true;
@@ -7598,6 +8552,9 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
     RayPtr2s = RayPtr1->Next; /* RayPtr2s must point the first feasible ray */
     pos2 = 1;
     while (RayPtr2s != nullptr && RayPtr2s->ARay < 0) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 319\n";
+      #endif
       RayPtr2s = RayPtr2s->Next;
       pos2++;
     }
@@ -7615,6 +8572,9 @@ void dd_AddNewHalfspace1(dd_conedata<T> *cone, dd_rowrange hnew)
   pos1 = 1;
   completed = false;
   while ((RayPtr1 != RayPtr2s) && !completed) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 320\n";
+    #endif
     value1 = RayPtr1->ARay;
     value2 = RayPtr2->ARay;
     dd_CheckEquality(cone->d, &RayPtr1, &RayPtr2, &equal);
@@ -7679,6 +8639,9 @@ void dd_AddNewHalfspace2(dd_conedata<T> *cone, dd_rowrange hnew)
 
   EdgePtr = cone->Edges[cone->Iteration];
   while (EdgePtr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 321\n";
+    #endif
     RayPtr1 = EdgePtr->Ray1;
     RayPtr2 = EdgePtr->Ray2;
     fii1 = RayPtr1->FirstInfeasIndex;
@@ -7723,6 +8686,9 @@ dd_rowrange dd_SelectNextHalfspace0(dd_conedata<T> *cone, dd_rowset excluded) {
   i = cone->m;
   determined = false;
   do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 322\n";
+    #endif
     if (set_member(i, excluded)) {
       i--;
     } else {
@@ -7745,6 +8711,9 @@ dd_rowrange dd_SelectNextHalfspace1(dd_conedata<T> *cone, dd_rowset excluded) {
   i = 1;
   determined = false;
   do {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 323\n";
+    #endif
     if (set_member(i, excluded)) {
       i++;
     } else {
@@ -7765,6 +8734,9 @@ dd_rowrange dd_SelectNextHalfspace2(dd_conedata<T> *cone, dd_rowset excluded) {
   infmin = cone->RayCount + 1;
   dd_rowrange retidx = 0;
   for (i = 1; i <= cone->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 324\n";
+    #endif
     if (!set_member(i, excluded)) {
       dd_FeasibilityIndices(&fea, &inf, i, cone);
       if (inf < infmin) {
@@ -7784,6 +8756,9 @@ dd_rowrange dd_SelectNextHalfspace3(dd_conedata<T> *cone, dd_rowset excluded) {
   infmax = -1;
   dd_rowrange retidx = 0;
   for (i = 1; i <= cone->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 325\n";
+    #endif
     if (!set_member(i, excluded)) {
       dd_FeasibilityIndices(&fea, &inf, i, cone);
       if (inf > infmax) {
@@ -7802,6 +8777,9 @@ dd_rowrange dd_SelectNextHalfspace4(dd_conedata<T> *cone, dd_rowset excluded) {
   max = -1;
   dd_rowrange retidx = 0;
   for (i = 1; i <= cone->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 326\n";
+    #endif
     if (!set_member(i, excluded)) {
       dd_FeasibilityIndices(&fea, &inf, i, cone);
       if (fea <= inf) {
@@ -7838,6 +8816,9 @@ dd_rowrange dd_SelectNextHalfspace5(dd_conedata<T> *cone, dd_rowset excluded) {
   minindex = 0;
   v1 = nullptr;
   for (i = 1; i <= cone->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 327\n";
+    #endif
     if (!set_member(i, excluded)) {
       v2 = cone->A[i - 1];
       if (minindex == 0) {
@@ -7863,6 +8844,9 @@ dd_rowrange dd_SelectNextHalfspace6(dd_conedata<T> *cone, dd_rowset excluded) {
   maxindex = 0;
   v1 = nullptr;
   for (i = 1; i <= cone->m; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 328\n";
+    #endif
     if (!set_member(i, excluded)) {
       v2 = cone->A[i - 1];
       if (maxindex == 0) {
@@ -7902,6 +8886,9 @@ void dd_UniqueRows(dd_rowindex OV, long p, long r, T **A, long dmax,
   x = A[p - 1];
   OV[p] = j; /* tentative row index of the candidate */
   for (i = p + 1; i <= r; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 329\n";
+    #endif
     if (!dd_LexEqual(x, A[i - 1], dmax)) {
       /* a new row vector found. */
       iuniq = i;
@@ -7930,12 +8917,18 @@ template <typename T> void dd_ComputeRowOrderVector(dd_conedata<T> *cone) {
   switch (cone->HalfspaceOrder) {
   case dd_MaxIndex:
     for (i = 1; i <= cone->m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 330\n";
+      #endif
       cone->OrderVector[i] = cone->m - i + 1;
     }
     break;
 
   case dd_MinIndex:
     for (i = 1; i <= cone->m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 331\n";
+      #endif
       cone->OrderVector[i] = i;
     }
     break;
@@ -7945,6 +8938,9 @@ template <typename T> void dd_ComputeRowOrderVector(dd_conedata<T> *cone) {
   case dd_MixCutoff:
   case dd_MaxCutoff:
     for (i = 1; i <= cone->m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 332\n";
+      #endif
       cone->OrderVector[i] = i;
     }
     dd_RandomPermutation(cone->OrderVector, cone->m, cone->rseed);
@@ -7953,11 +8949,17 @@ template <typename T> void dd_ComputeRowOrderVector(dd_conedata<T> *cone) {
 
   case dd_LexMax:
     for (i = 1; i <= cone->m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 333\n";
+      #endif
       cone->OrderVector[i] = i;
     }
     dd_RandomPermutation(cone->OrderVector, cone->m, cone->rseed);
     dd_QuickSort(cone->OrderVector, 1, cone->m, cone->A, cone->d);
-    for (i = 1; i <= cone->m / 2; i++) { /* just reverse the order */
+    for (i = 1; i <= cone->m / 2; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 334\n";
+      #endif /* just reverse the order */
       itemp = cone->OrderVector[i];
       cone->OrderVector[i] = cone->OrderVector[cone->m - i + 1];
       cone->OrderVector[cone->m - i + 1] = itemp;
@@ -7966,6 +8968,9 @@ template <typename T> void dd_ComputeRowOrderVector(dd_conedata<T> *cone) {
 
   case dd_RandomRow:
     for (i = 1; i <= cone->m; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 335\n";
+      #endif
       cone->OrderVector[i] = i;
     }
     dd_RandomPermutation(cone->OrderVector, cone->m, cone->rseed);
@@ -7986,8 +8991,14 @@ in highest order.
   found = true;
   rr = set_card(PriorityRows);
   for (i = 1; i <= rr; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 336\n";
+    #endif
     found = false;
     for (j = i; j <= cone->m && !found; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 337\n";
+      #endif
       oj = cone->OrderVector[j];
       if (set_member(oj, PriorityRows)) {
         found = true;
@@ -7999,6 +9010,9 @@ in highest order.
         /* shift everything lower: ov[i]->cone->ov[i+1]..ov[j1-1]->cone->ov[j1]
          */
         for (k = j1; k >= i; k--) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 338\n";
+          #endif
           cone->OrderVector[k] = cone->OrderVector[k - 1];
         }
         cone->OrderVector[i] = oj;
@@ -8016,6 +9030,9 @@ dd_rowrange dd_SelectPreorderedNext(dd_conedata<T> *cone, dd_rowset excluded) {
 
   dd_rowrange retidx = 0;
   for (i = 1; i <= cone->m && retidx == 0; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 339\n";
+    #endif
     k = cone->OrderVector[i];
     if (!set_member(k, excluded)) {
       retidx = k;
@@ -8090,6 +9107,9 @@ template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
     return clean();
   }
   while (cone->Iteration <= cone->m) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 340\n";
+    #endif
     dd_rowrange hh = dd_SelectNextHalfspace(cone, cone->WeaklyAddedHalfspaces);
     if (set_member(hh, cone->NonequalitySet)) { /* Skip the row hh */
 #ifdef LOCALDEBUG_CDD
@@ -8109,6 +9129,9 @@ template <typename T> void dd_DDMain(dd_conedata<T> *cone) {
     if (!cone->PreOrderedRun) {
       otemp = -400;
       for (itemp = 1; cone->OrderVector[itemp] != hh; itemp++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 341\n";
+        #endif
         otemp = cone->OrderVector[cone->Iteration];
       }
       cone->OrderVector[cone->Iteration] = hh;
@@ -8146,7 +9169,13 @@ template <typename T> void dd_InitialDataSetup(dd_conedata<T> *cone) {
   set_copy(cone->WeaklyAddedHalfspaces, cone->InitialHalfspaces);
   dd_UpdateRowOrderVector(cone, cone->InitialHalfspaces);
   for (r = 1; r <= cone->d; r++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 342\n";
+    #endif
     for (j = 0; j < cone->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 343\n";
+      #endif
       Vector1[j] = cone->B[j][r - 1];
       Vector2[j] = -cone->B[j][r - 1];
     }
@@ -8307,7 +9336,13 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const &TheEXT) {
   M->representation = rep;
 
   for (i = 0; i < m_input; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 344\n";
+    #endif
     for (j = 0; j < d_input; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 345\n";
+      #endif
       M->matrix[i][j] = TheEXT(i, j);
 #ifdef LOCALDEBUG_CDD
       std::cerr << "i=" << i << " j=" << j << " value=" << TheEXT(i, j) << "\n";
@@ -8332,8 +9367,14 @@ dd_matrixdata<T> *MyMatrix_PolyFile2MatrixExt(MyMatrix<T> const &TheEXT) {
   M->representation = rep;
 
   for (i = 0; i < m_input; i++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 346\n";
+    #endif
     M->matrix[i][0] = 0;
     for (j = 0; j < d_input; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 347\n";
+      #endif
       M->matrix[i][j + 1] = TheEXT(i, j);
 #ifdef LOCALDEBUG_CDD
       std::cerr << "i=" << i << " j=" << j << " value=" << TheEXT(i, j) << "\n";
@@ -8348,6 +9389,9 @@ MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const &nbCol) {
   dd_raydata<T> *RayPtr = poly->child->FirstRay;
   int nbRay = 0;
   while (RayPtr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 348\n";
+    #endif
     if (RayPtr->feasible) {
       nbRay++;
     }
@@ -8357,8 +9401,14 @@ MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const &nbCol) {
   int iRay = 0;
   RayPtr = poly->child->FirstRay;
   while (RayPtr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 349\n";
+    #endif
     if (RayPtr->feasible) {
       for (int iCol = 0; iCol < nbCol; iCol++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 350\n";
+        #endif
         TheFAC(iRay, iCol) = RayPtr->Ray[iCol];
       }
       iRay++;
@@ -8377,8 +9427,14 @@ vectface ListIncd_from_poly(dd_polyhedradata<T> const *poly,
   T eScal;
   Face f(nbRow);
   while (RayPtr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 351\n";
+    #endif
     if (RayPtr->feasible) {
       for (size_t iRow = 0; iRow < nbRow; iRow++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 352\n";
+        #endif
         long elem = iRow + 1;
         f[iRow] = set_member(elem, RayPtr->ZeroSet);
       }
@@ -8398,12 +9454,21 @@ void ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
   T eScal;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbCol)};
   while (RayPtr != nullptr) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 353\n";
+    #endif
     if (RayPtr->feasible) {
       for (size_t iRow = 0; iRow < nbRow; iRow++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 354\n";
+        #endif
         long elem = iRow + 1;
         pair.first[iRow] = set_member(elem, RayPtr->ZeroSet);
       }
       for (size_t iCol = 0; iCol < nbCol; iCol++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 355\n";
+        #endif
         pair.second(iCol) = RayPtr->Ray[iCol];
       }
       f_process(pair);
@@ -8439,6 +9504,9 @@ std::vector<int> RedundancyReductionClarksonKernel(MyMatrix<T> const &TheEXT,
   }
   std::vector<int> ListIdx;
   for (int i_row = 0; i_row < nbRow; i_row++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 356\n";
+    #endif
     bool isin = set_member(i_row + 1, redset);
     if (!isin) {
       ListIdx.push_back(i_row);
@@ -8483,6 +9551,9 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
   }
   std::vector<int> ListIdx;
   for (int i_row = 0; i_row < nbRow; i_row++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 357\n";
+    #endif
     bool isin = set_member(i_row + 1, redset);
     if (!isin) {
       ListIdx.push_back(i_row);
@@ -8513,6 +9584,9 @@ KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const &FAC,
   Face f(nbRow);
   std::vector<MyVector<T>> ListV;
   for (int iRow = 0; iRow < nbRow; iRow++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 358\n";
+    #endif
     long elem = iRow + 1;
     bool test = set_member(elem, linset);
     f[iRow] = test;
@@ -8564,6 +9638,9 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
   auto get_linear_entry = [&]() -> std::optional<int> {
     dd_ErrorType error = dd_NoError;
     for (int iRow = 0; iRow < nbRow; iRow++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 359\n";
+      #endif
       long i = iRow + 1;
       bool test = dd_ImplicitLinearity(M, i, cvec.data(), &error, maxiter, os);
       if (error != dd_NoError) {
@@ -8599,6 +9676,9 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
     std::vector<int> l_zeros;
     std::unordered_map<MyVector<T>, std::vector<int>> map;
     for (int iRow = 0; iRow < nbRow; iRow++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 360\n";
+      #endif
       MyVector<T> V = GetMatrixRow(FAC, iRow);
       MyVector<T> ScalV = NSP * V;
 #ifdef DEBUG_CDD
@@ -8624,7 +9704,13 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
     std::vector<std::vector<int>> ll_idx(siz);
     int pos = 0;
     for (auto &kv : map) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 361\n";
+      #endif
       for (int u = 0; u < nbCol - 1; u++) {
+        #ifdef TRACKING_OPERATION_CDD
+          std::cerr << "TRACKING_OPERATION_CDD: Entry 362\n";
+        #endif
         FACred(pos, u) = kv.first(u);
       }
       ll_idx[pos] = kv.second;
@@ -8652,11 +9738,20 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
     MyMatrix<T> NSPnew = pairRed.first * NSP;
     Face f(nbRow);
     for (auto &idx : l_zeros) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 363\n";
+      #endif
       f[idx] = 1;
     }
     for (int u = 0; u < siz; u++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 364\n";
+      #endif
       if (pairRed.second[u]) {
         for (auto &pos : ll_idx[u]) {
+          #ifdef TRACKING_OPERATION_CDD
+            std::cerr << "TRACKING_OPERATION_CDD: Entry 365\n";
+          #endif
           f[pos] = 1;
         }
       }
@@ -8741,7 +9836,13 @@ void WriteInputFileCdd(std::string const &FileName, MyMatrix<T> const &ListIneq,
   os << "begin\n";
   os << " " << nbRow << " " << nbCol << " integer\n";
   for (int iRow = 0; iRow < nbRow; iRow++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 366\n";
+    #endif
     for (int iCol = 0; iCol < nbCol; iCol++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 367\n";
+      #endif
       os << " " << ListIneq(iRow, iCol);
     }
     os << "\n";
@@ -8880,6 +9981,9 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(
   if (PrimalDefined) {
     MyVector<T> DirectSolution(nbCol - 1);
     for (j = 1; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 368\n";
+      #endif
       DirectSolution(j - 1) = lp->sol[j];
     }
     eSol.PrimalDefined = true;
@@ -8888,6 +9992,9 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(
   MyVector<T> DualSolution = ZeroVector<T>(nbRow);
   if (DualDefined) {
     for (j = 1; j < lp->d; j++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 369\n";
+      #endif
       idx = lp->nbindex[j + 1];
       if (idx > 0) {
         DualSolution(idx - 1) = lp->dsol[j];
@@ -8919,6 +10026,9 @@ template <typename T> bool is_lifting_possible(cdd::dd_lpdata<T> *lp) {
   }
   cdd::dd_colrange j, d = lp->d;
   for (j = 1; j < d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 370\n";
+    #endif
     long idx = lp->nbindex[j + 1];
     if (idx <= 0) {
       // A negative index means that we do not have a full configuration of
@@ -8953,6 +10063,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   os << "CDD: Definition of V and M (step 1)\n";
 #endif
   for (j = 1; j < d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 371\n";
+    #endif
     long idx = lp->nbindex[j + 1];
 #ifdef DEBUG_CDD_DISABLE
     os << "CDD: j=" << static_cast<int>(j) << "/" << static_cast<int>(d)
@@ -8961,6 +10074,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #endif
     V(j - 1) = EXT(idx - 1, 0);
     for (i = 0; i < d - 1; i++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 372\n";
+      #endif
       M(i, j - 1) = -EXT(idx - 1, i + 1);
     }
 #ifdef DEBUG_CDD_DISABLE
@@ -8985,8 +10101,14 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   //
   MyVector<T> const &DirectSolution = *optA;
   for (int iRow = 0; iRow < nbRow; iRow++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 373\n";
+    #endif
     T eSum = EXT(iRow, 0);
     for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 374\n";
+      #endif
       eSum += DirectSolution(iCol) * EXT(iRow, iCol + 1);
     }
     if (eSum < 0) {
@@ -8999,6 +10121,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   }
   T objDirect = eVect(0);
   for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 375\n";
+    #endif
     objDirect += DirectSolution(iCol) * eVect(iCol + 1);
   }
 #ifdef DEBUG_CDD
@@ -9009,6 +10134,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   //
   MyVector<T> eVectRed(nbCol - 1);
   for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 376\n";
+    #endif
     eVectRed(iCol) = eVect(iCol + 1);
   }
 #ifdef DEBUG_CDD
@@ -9016,8 +10144,14 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #endif
   MyMatrix<T> M2(nbCol - 1, nbCol - 1);
   for (j = 1; j < d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 377\n";
+    #endif
     long idx = lp->nbindex[j + 1];
     for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+      #ifdef TRACKING_OPERATION_CDD
+        std::cerr << "TRACKING_OPERATION_CDD: Entry 378\n";
+      #endif
       M2(j - 1, iCol) = EXT(idx - 1, iCol + 1);
     }
   }
@@ -9038,6 +10172,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   MyVector<T> DualSolution = ZeroVector<T>(nbRow);
   T objDual = eVect(0);
   for (j = 1; j < d; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 379\n";
+    #endif
     long idx = lp->nbindex[j + 1];
     T scal = -partDualSolution(j - 1);
     DualSolution(idx - 1) = scal;
@@ -9087,6 +10224,9 @@ LpSolution<T> CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT,
   cdd::dd_colrange j;
   cdd::dd_colrange d_input = EXT.cols();
   for (j = 0; j < d_input; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 380\n";
+    #endif
     M->rowvec[j] = eVect(j);
   }
   lp = cdd::dd_Matrix2LP(M);
@@ -9160,6 +10300,9 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   cdd::dd_colrange j;
   cdd::dd_colrange d_input = EXT.cols();
   for (j = 0; j < d_input; j++) {
+    #ifdef TRACKING_OPERATION_CDD
+      std::cerr << "TRACKING_OPERATION_CDD: Entry 381\n";
+    #endif
     M->rowvec[j] = UniversalScalarConversion<Tfloat, T>(eVect(j));
   }
   lp = cdd::dd_Matrix2LP(M);

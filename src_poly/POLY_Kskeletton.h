@@ -6,6 +6,7 @@
 #include "GRAPH_Bindings.h"
 #include "GRAPH_GraphicalBasic.h"
 #include "GRP_GroupFct.h"
+#include "GRP_GroupFile.h"
 #include "MAT_Matrix.h"
 #include "Namelist.h"
 #include "POLY_LinearProgramming.h"

@@ -8,6 +8,7 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "Group.h"
 #include "POLY_Kskeletton.h"
+#include "GRP_GroupFile.h"
 #include "Permutation.h"
 // clang-format on
 

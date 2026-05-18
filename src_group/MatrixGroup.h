@@ -54,6 +54,10 @@
 #define TRACK_INFO_MATRIX_GROUP
 #endif
 
+#ifdef TRACK_INFO_MATRIX_GROUP
+#include "GRP_GroupFile.h"
+#endif
+
 //
 
 template <typename T, typename Telt> struct PreImager_Finite {
@@ -1598,12 +1602,6 @@ inline std::vector<MyMatrix<T>> MatrixIntegral_PreImageSubgroup(
   bool test = GRP_build.IsSubgroup(eGRP);
   os << "MATGRP: Begin MatrixIntegral_PreImageSubgroup(!has) IsSubgroup="
      << test << "\n";
-  if (false) {
-    WriteGroupFile("GRP_build", GRP_build);
-    WriteGroupFile("eGRP", eGRP);
-    std::cerr << "Now debugging from here\n";
-    throw TerminalException{1};
-  }
 #endif
 #ifdef TIMINGS_MATRIX_GROUP
   MicrosecondTime time;

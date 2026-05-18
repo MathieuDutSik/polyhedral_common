@@ -37,6 +37,10 @@
 #define TRACK_INFO_MATRIX_GROUP_LEMMA
 #endif
 
+#ifdef TRACK_INFO_MATRIX_GROUP_LEMMA
+#include "GRP_GroupFile.h"
+#endif
+
 /*
   This is about The Schreier Lemma, finding pre-image of subgroups.
   The problem is to make it as efficient as possible.

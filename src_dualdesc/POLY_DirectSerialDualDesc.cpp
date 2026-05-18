@@ -8,6 +8,7 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheorySafeInt.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "GRP_GroupFile.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on

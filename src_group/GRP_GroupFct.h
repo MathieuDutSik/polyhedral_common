@@ -3,7 +3,6 @@
 #define SRC_GROUP_GRP_GROUPFCT_H_
 
 // clang-format off
-#include "Basic_file.h"
 #include "Basic_string.h"
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
@@ -133,16 +132,6 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
   return Tgroup(ListGen, n);
 }
 
-template <typename Tgroup> Tgroup ReadGroupFile(std::string const &file_name) {
-  if (!IsExistingFile(file_name)) {
-    std::cerr << "Error in ReadGroupFile\n";
-    std::cerr << "file_name=" << file_name << " does not appear to exist\n";
-    throw TerminalException{1};
-  }
-  std::ifstream is(file_name);
-  return ReadGroup<Tgroup>(is);
-}
-
 template <typename Tgroup>
 void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
   using Telt = typename Tgroup::Telt;
@@ -158,24 +147,6 @@ void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
     }
     os << "\n";
   }
-}
-
-template <typename Tgroup>
-void PrintRepresentativeAction_OnSets_GRP_f1_f2(Tgroup const &GRP,
-                                                Face const &f1,
-                                                Face const &f2) {
-  std::string prefix = "RepresentativeAction_OnSets_GRP_f1_f2_idx";
-  std::string FileOut = FindAvailableFileFromPrefix(prefix);
-  std::ofstream os(FileOut);
-  WriteGroup(os, GRP);
-  auto f_print = [&](Face const &f) -> void {
-    for (size_t i = 0; i < f.size(); i++) {
-      os << " " << f[i];
-    }
-    os << "\n";
-  };
-  f_print(f1);
-  f_print(f2);
 }
 
 template <typename Tgroup> std::string StringGroup(Tgroup const &TheGRP) {
@@ -194,12 +165,6 @@ template <typename Tgroup> std::string StringGroup(Tgroup const &TheGRP) {
     }
   }
   return strOut;
-}
-
-template <typename Tgroup>
-void WriteGroupFile(std::string const &eFile, Tgroup const &TheGRP) {
-  std::ofstream os(eFile);
-  WriteGroup(os, TheGRP);
 }
 
 template <typename Tgroup>
@@ -249,29 +214,6 @@ void WriteGroupGAP(std::ostream &os, Tgroup const &TheGRP) {
   os << "GRP:=Group(ListGen);\n";
   os << "SetSize(GRP, " << TheGRP.size() << ");\n";
   os << "return GRP;\n";
-}
-
-template <typename Tgroup>
-void WriteGroupFileGAP(std::string const &eFile, Tgroup const &TheGRP) {
-  std::ofstream osf(eFile);
-  WriteGroupGAP(osf, TheGRP);
-}
-
-template <typename Tgroup>
-void WriteGroupFormat(std::string const &FileGroup,
-                      std::string const &OutFormat, Tgroup const &TheGRP) {
-  auto f_print = [&](std::ostream &os) -> void {
-    if (OutFormat == "CPP") {
-      return WriteGroup(os, TheGRP);
-    }
-    if (OutFormat == "GAP") {
-      return WriteGroupGAP(os, TheGRP);
-    }
-    std::cerr
-        << "Failed to find a matching entry. Allowed types are GAP and CPP\n";
-    throw TerminalException{1};
-  };
-  print_stderr_stdout_file(FileGroup, f_print);
 }
 
 //

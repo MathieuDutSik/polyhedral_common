@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "GRP_GroupFct.h"
+#include "GRP_GroupFile.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "PolytopeEquiStabInt.h"

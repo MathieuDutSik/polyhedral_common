@@ -4,6 +4,7 @@
 #include "NumberTheoryGmp.h"
 #include "Group.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "GRP_GroupFile.h"
 #include "POLY_RecursiveDualDesc_MPI.h"
 #include "Permutation.h"
 // clang-format on
