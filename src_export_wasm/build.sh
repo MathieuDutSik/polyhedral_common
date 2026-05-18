@@ -114,11 +114,15 @@ CXXFLAGS=(
 )
 
 # Tests that pull in GRAPH_traces.h (and therefore need libnauty linked).
-# Currently this is just src_short (via SHORT_Realizability → equivalence
-# code → WeightMatrix → GRAPH_Bindings → GRAPH_traces).
+# Anything going through the equivalence / canonicalization path
+# (WeightMatrix → GRAPH_Bindings → GRAPH_traces) ends up here:
+#   - Test_wasm_short      (SHORT_Realizability)
+#   - Test_wasm_polytope_aut (LinPolytope_Automorphism)
+#   - Test_wasm_gram_aut   (ArithmeticAutomorphismGroupMultiple)
 needs_nauty() {
   case "$1" in
-    Test_wasm_short.cpp) return 0 ;;
+    Test_wasm_short.cpp|Test_wasm_polytope_aut.cpp|Test_wasm_gram_aut.cpp)
+      return 0 ;;
     *) return 1 ;;
   esac
 }
