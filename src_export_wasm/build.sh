@@ -18,7 +18,7 @@ cd "$(dirname "$0")"
 
 BOOST_INC="${BOOST_INC:-/opt/homebrew/opt/boost/include}"
 EIGEN_INC="${EIGEN_INC:-/opt/homebrew/include/eigen3}"
-NAUTY_TAG="${NAUTY_TAG:-2.8.9}"
+NAUTY_TAG="${NAUTY_TAG:-2.9.3}"
 NAUTY_REPO="${NAUTY_REPO:-https://github.com/MathieuDutSik/nauty}"
 
 if [ ! -d "$BOOST_INC" ]; then
@@ -36,7 +36,9 @@ WORKDIR="$(pwd)/build"
 NAUTY_SRC="$WORKDIR/nauty-src"
 NAUTY_INSTALL="$WORKDIR/nauty-install"
 NAUTY_LIB="$NAUTY_INSTALL/lib/libnauty.a"
-NAUTY_INC="$NAUTY_INSTALL/include/nauty"
+# nauty's `make install` drops the headers directly in $prefix/include
+# (traces.h, nauty.h, ...), not in a `nauty/` subdir.
+NAUTY_INC="$NAUTY_INSTALL/include"
 mkdir -p "$WORKDIR"
 
 ensure_wasm_nauty() {
@@ -51,9 +53,14 @@ ensure_wasm_nauty() {
   echo "==> Building nauty under emscripten in $NAUTY_SRC"
   (
     cd "$NAUTY_SRC"
-    # Force-disable thread-local storage and pthreads; emscripten's TLS support
-    # is opt-in and nauty's configure auto-detects it on the host instead.
+    # --host=wasm32-unknown-emscripten forces autoconf into cross-compile
+    # mode; without it configure picks up the local triple (e.g.
+    # aarch64-apple-darwin) and runs Apple-specific linker tests
+    # (-single_module, -force_load) that wasm-ld rejects.
+    # --disable-popcnt/clz/tls suppress CPU/TLS feature autodetection,
+    # which would otherwise try to run a probe binary on the target.
     emconfigure ./configure \
+      --host=wasm32-unknown-emscripten \
       --prefix="$NAUTY_INSTALL" \
       --disable-popcnt \
       --disable-clz \
@@ -145,7 +152,9 @@ for src in "${sources[@]}"; do
     extra=(-I"$NAUTY_INC" "$NAUTY_LIB")
   fi
   echo "==> Building $src -> $out"
-  if ! emcc "${CXXFLAGS[@]}" "${INCLUDES[@]}" "${extra[@]}" "$src" -o "$out"; then
+  # ${extra[@]+"${extra[@]}"} expands to nothing when `extra` is empty;
+  # plain "${extra[@]}" tripped `set -u` (treats empty-array as unset).
+  if ! emcc "${CXXFLAGS[@]}" "${INCLUDES[@]}" ${extra[@]+"${extra[@]}"} "$src" -o "$out"; then
     echo "    BUILD FAILED for $src" >&2
     n_fail=$((n_fail + 1))
     continue
