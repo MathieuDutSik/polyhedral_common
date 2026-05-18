@@ -6,6 +6,7 @@
 #include "Basic_file.h"
 #include "Heuristic_ThompsonSampling.h"
 #include "Namelist.h"
+#include "POLY_HasPPL.h"
 #include <limits>
 #include <string>
 #include <vector>
@@ -344,18 +345,6 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
       "2", "2 groupsize > 5000000000000 incidence > 1000000 repr",
       "2 groupsize > 5000000000000 incidence > 100000 repr", "canonic"};
   return HeuristicFromListString<T>(ListString);
-}
-
-template <typename T>
-  requires(is_implementation_of_Q<T>::value)
-inline bool IsPPLpossible() {
-  return IsProgramInPath("ppl_lcdd");
-}
-
-template <typename T>
-  requires(!is_implementation_of_Q<T>::value)
-inline bool IsPPLpossible() {
-  return false;
 }
 
 // Description: When choosing the dual description method, it can be hard
