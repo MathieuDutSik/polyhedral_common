@@ -2581,8 +2581,8 @@ vectface DUALDESC_AdjacencyDecomposition(
       TheGRPrelevant = GRP;
       BankSymmCheck = true;
     }
-    Tint GroupSizeComp = TheGRPrelevant.size();
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
+    Tint GroupSizeComp = TheGRPrelevant.size();
     os << "RDD: RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
        << " TheDim=" << EXT.cols() << " |EXT|=" << nbRow << "\n";
 #endif

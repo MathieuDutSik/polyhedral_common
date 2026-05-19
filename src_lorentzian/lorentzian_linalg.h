@@ -438,8 +438,8 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
   }
 #endif
   MyVector<T> V1 = GetMatrixRow(NSP, 0);
-  T eNorm_V1 = V1.dot(G2 * V1);
 #ifdef SANITY_CHECK_LORENTZIAN_LINALG
+  T eNorm_V1 = V1.dot(G2 * V1);
   if (eNorm_V1 != 0) {
     terminate(
         "The orthogonal space of Subspace2 should be an isotropic vector");

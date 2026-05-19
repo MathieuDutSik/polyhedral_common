@@ -117,7 +117,9 @@ LLLMatrixGroupReduction(Thelper const &helper,
 }
 
 template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
+#ifdef SANITY_CHECK_MATRIX_GROUP_BASIC
   T TheDet = T_abs(DeterminantMat(TheSpace));
+#endif
   T eDiv(1);
   int n = TheSpace.rows();
   RecSolutionIntMat<T> eCan(TheSpace);

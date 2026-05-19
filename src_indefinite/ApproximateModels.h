@@ -677,8 +677,8 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
             MyVector<T> w = quot * eRec.V;
             MyVector<T> eClass4 = eClass3 + DivV * w;
             T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / T(2);
-            T Aclass4_res2 = ResInt(Aclass4_norm, DivV_sqr);
 #ifdef DEBUG_APPROXIMATE_MODELS
+            T Aclass4_res2 = ResInt(Aclass4_norm, DivV_sqr);
             os << "MODEL: EnumerateVectorOverDiscriminant w="
                << StringVectorGAP(w) << "\n";
             os << "MODEL: EnumerateVectorOverDiscriminant eClass4="

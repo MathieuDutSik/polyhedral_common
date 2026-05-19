@@ -100,9 +100,41 @@ INCLUDES=(
   -I"$EIGEN_INC"
 )
 
+# --- Optimization flags ---
+#
+# emscripten honors all the standard clang levels plus a couple of WASM-
+# specific extras. Pick based on what matters:
+#
+#   -O0                  no optimization; fastest build, biggest+slowest .wasm
+#   -O1 / -O2 / -O3      usual clang levels (-O3 == max speed)
+#   -Os                  optimize for size; modest speed loss vs -O2
+#   -Oz                  emscripten/clang extension; more aggressive than -Os.
+#                        Smallest .wasm achievable without LTO.
+#   -flto                link-time optimization. Biggest single-shot size win
+#                        for template-heavy C++ (cross-TU inlining, dead-code
+#                        elimination); typically 30-60% smaller .wasm.
+#   -g                   keep DWARF debug info, function names in stack traces.
+#
+# emscripten runs wasm-opt internally after compile; the level it picks
+# tracks the -O flag here, so -O3/-Os/-Oz also enable progressively more
+# aggressive post-link wasm-opt passes.
+#
+# Typical recipes:
+#   web deploy (size matters): -Oz -flto       (+ --closure 1 for JS glue)
+#   node/server (speed):       -O3 -flto       (current setting)
+#   debugging:                 -O0 -g
+#
+# Note: --minify 0 below applies only to the JS glue file emcc emits, not
+# to the .wasm itself; it keeps the glue readable for debugging.
+#
+# Caveat for -flto: every input object has to be built with it. If you want
+# libnauty.a included in LTO, pass CFLAGS=-flto to emconfigure inside
+# ensure_wasm_nauty as well; otherwise libnauty links in but is skipped by
+# the LTO pass (still works, just less compact).
 CXXFLAGS=(
   -std=c++20
-  -O2
+  -O3
+  -flto
   --minify
   0
   -Wall

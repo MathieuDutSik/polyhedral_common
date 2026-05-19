@@ -236,8 +236,10 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
   MyVector<Tint> const &eBasSol_basic = TheRec.V;
   MyVector<T> eBasSol_T_basic =
       UniversalVectorConversion<T, Tint>(eBasSol_basic);
+#ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   T scal1_basic = eBasSol_T_basic.dot(eVect_LorMat);
   T scal2_basic = alpha_basic * eVect.dot(eVect_LorMat);
+#endif
   MyVector<T> eTrans_basic = alpha_basic * eVect - eBasSol_T_basic;
   std::optional<MyVector<T>> opt_basic = SolutionMat(Ubasis_T, eTrans_basic);
   MyVector<T> eSol_basic = unfold_opt(opt_basic, "Getting eSol_basic");
@@ -257,9 +259,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #endif
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 3\n";
-#endif
     T alpha = eVal * alpha_basic;
-#ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 4 alpha=" << alpha
        << "\n";
     T scal1 = eVal * scal1_basic;
