@@ -95,7 +95,7 @@ Face ComputeFaceLpSolution(MyMatrix<T> const &EXT, LpSolution<T> const &eSol) {
     }
   }
 #ifdef TIMINGS_LINEAR_PROGRAMMING_FUND
-  std::cerr << "|eFace|=" << time << "\n";
+  std::cerr << "|LP: eFace|=" << time << "\n";
 #endif
   return eFace;
 }
