@@ -1827,7 +1827,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
     if (!DS.OnlySpherical)
       allowed_vals.push_back(val_inf);
   } else {
-    for (T val = val_single_edge; val < 128; val++)
+    for (T val = val_single_edge; val < 128; val += 1)
       allowed_vals.push_back(val);
     if (!DS.OnlySpherical)
       allowed_vals.push_back(val_inf);
@@ -2009,7 +2009,7 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
     for (size_t i = 0; i < dim; i++) {
       for (size_t j = 0; j < dim; j++) {
         if (i != j) {
-          for (T val = val_single_edge; val <= val_six; val++) {
+          for (T val = val_single_edge; val <= val_six; val += 1) {
             MyVector<T> V = V_basic;
             V(i) = val_single_edge;
             V(j) = val;
