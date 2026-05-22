@@ -32,8 +32,7 @@ get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&DATA\n");
-    AppendTo(output, " arithmetic_T = \"gmp_rational\"\n");
-    AppendTo(output, " arithmetic_Tint = \"gmp_integer\"\n");
+    AppendTo(output, " arithmetic = \"gmp\"\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&TSPACE\n");

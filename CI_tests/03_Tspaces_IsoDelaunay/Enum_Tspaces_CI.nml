@@ -8,8 +8,7 @@
 /
 
 &DATA
- arithmetic_T = "gmp_rational"
- arithmetic_Tint = "gmp_integer"
+ arithmetic = "gmp"
  FileDualDescription = "unset"
  CVPmethod = "SVexact"
 /

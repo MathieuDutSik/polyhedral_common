@@ -18,8 +18,7 @@ TestEnumeration:=function(eRec)
     strOut:=Concatenation(strOut, "/\n");
     strOut:=Concatenation(strOut, "\n");
     strOut:=Concatenation(strOut, "&DATA\n");
-    strOut:=Concatenation(strOut, " arithmetic_T = \"gmp_rational\"\n");
-    strOut:=Concatenation(strOut, " arithmetic_Tint = \"gmp_integer\"\n");
+    strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
     strOut:=Concatenation(strOut, " n = ", String(eRec.n), "\n");
     strOut:=Concatenation(strOut, "/\n");
     #

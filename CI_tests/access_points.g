@@ -1165,8 +1165,7 @@ get_lattice_covering:=function(arg)
     UseMpi:=false;
     if UseMpi then
         strOut:="&DATA\n";
-        strOut:=Concatenation(strOut, " arithmetic_T = \"gmp_rational\"\n");
-        strOut:=Concatenation(strOut, " arithmetic_Tint = \"gmp_integer\"\n");
+        strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
         strOut:=Concatenation(strOut, " GRAMfile = \"", FileI, "\"\n");
         strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
         strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
@@ -1837,23 +1836,18 @@ end;
 
 
 __PERFCOMP_Write_t_space:=function(arg)
-    local output, desc, options, arithmetic_T, arithmetic_Tint;
+    local output, desc, options, arithmetic;
     output:=arg[1];
     desc:=arg[2];
-    arithmetic_T:="gmp_rational";
-    arithmetic_Tint:="gmp_integer";
+    arithmetic:="gmp";
     if Length(arg) >= 3 then
         options:=arg[3];
-        if IsBound(options.arithmetic_T) then
-            arithmetic_T:=options.arithmetic_T;
-        fi;
-        if IsBound(options.arithmetic_Tint) then
-            arithmetic_Tint:=options.arithmetic_Tint;
+        if IsBound(options.arithmetic) then
+            arithmetic:=options.arithmetic;
         fi;
     fi;
     AppendTo(output, "&DATA\n");
-    AppendTo(output, " arithmetic_T = \"", arithmetic_T, "\"\n");
-    AppendTo(output, " arithmetic_Tint = \"", arithmetic_Tint, "\"\n");
+    AppendTo(output, " arithmetic = \"", arithmetic, "\"\n");
     AppendTo(output, " OnlyWellRounded = ", FORTRAN_logical(desc.only_well_rounded), "\n");
     AppendTo(output, " ComputeBoundary = T\n");
     AppendTo(output, " ComputeContractingHomotopy = T\n");
