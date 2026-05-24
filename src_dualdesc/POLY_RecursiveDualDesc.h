@@ -19,6 +19,9 @@
 #include "ClassicLLL.h"
 #include "Databank.h"
 #include "PERM_Fct.h"
+#ifndef WASM_PLATFORM
+#include "Basic_interrupt.h"
+#endif
 #include <limits>
 #include <set>
 #include <map>
@@ -1911,18 +1914,9 @@ Read_AllStandardHeuristicSerial_File(std::string const &eFile,
 
 template <typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
-  // Setting up the Control C event.
-  ExitEvent = false;
 #ifndef WASM_PLATFORM
   if (Get_InterceptCtrlC_statuc(eFull, std::cerr)) {
-#ifdef DEBUG_RECURSIVE_DUAL_DESC
-    std::cerr << "RDD: Before submission of signal_callback_handler\n";
-#endif
-    signal(SIGINT, signal_callback_handler);
-  } else {
-#ifdef DEBUG_RECURSIVE_DUAL_DESC
-    std::cerr << "RDD: Do not capture the CtrlC event\n";
-#endif
+    enable_sig_int();
   }
 #endif
   //
