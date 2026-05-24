@@ -18,39 +18,6 @@
 #undef DEBUG_DATABANK
 #endif
 
-size_t get_matching_power(size_t const &val) {
-  size_t pow = 1;
-  size_t pos = 0;
-  while (true) {
-    if (pow >= val)
-      return pos;
-    pow *= 2;
-    pos++;
-  }
-}
-
-template <typename Tgroup_impl> struct TripleStore {
-  using Tgroup = Tgroup_impl;
-  using Tint = typename Tgroup::Tint;
-  Tgroup GRP;
-  std::vector<Tint> ListPossOrbsize;
-  vectface ListFace;
-};
-
-namespace boost::serialization {
-
-template <class Archive, typename Tgroup>
-inline void serialize(Archive &ar, TripleStore<Tgroup> &triple,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("GRP", triple.GRP);
-  ar &make_nvp("ListPossOrbsize", triple.ListPossOrbsize);
-  ar &make_nvp("ListFace", triple.ListFace);
-}
-
-// clang-format off
-}  // namespace boost::serialization
-// clang-format on
-
 template <typename Tkey, typename Tval>
 std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
   using T = typename Tkey::value_type;
