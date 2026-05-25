@@ -39,6 +39,15 @@ NAUTY_LIB="$NAUTY_INSTALL/lib/libnauty.a"
 # nauty's `make install` drops the headers directly in $prefix/include
 # (traces.h, nauty.h, ...), not in a `nauty/` subdir.
 NAUTY_INC="$NAUTY_INSTALL/include"
+# boost_serialization is the only non-header-only piece of Boost that the
+# polytope/lattice code needs (extended_type_info registry + archive base
+# classes referenced by every `serialize()` member). Build it from the
+# modular repo with emcc directly -- b2 cross-compile is overkill for the
+# ~35 .cpp files we need.
+BOOST_SERIAL_TAG="${BOOST_SERIAL_TAG:-boost-1.85.0}"
+BOOST_SERIAL_REPO="${BOOST_SERIAL_REPO:-https://github.com/boostorg/serialization}"
+BOOST_SERIAL_SRC="$WORKDIR/boost-serialization-src"
+BOOST_SERIAL_LIB="$WORKDIR/libboost_serialization.a"
 mkdir -p "$WORKDIR"
 
 ensure_wasm_nauty() {
@@ -70,6 +79,41 @@ ensure_wasm_nauty() {
   )
   if [ ! -f "$NAUTY_LIB" ]; then
     echo "ERROR: $NAUTY_LIB not produced by emmake install" >&2
+    exit 1
+  fi
+}
+
+ensure_wasm_boost_serialization() {
+  if [ -f "$BOOST_SERIAL_LIB" ]; then
+    echo "==> boost_serialization (wasm) already built: $BOOST_SERIAL_LIB"
+    return
+  fi
+  if [ ! -d "$BOOST_SERIAL_SRC" ]; then
+    echo "==> Cloning boost_serialization $BOOST_SERIAL_TAG from $BOOST_SERIAL_REPO"
+    git clone --depth 1 --branch "$BOOST_SERIAL_TAG" \
+      "$BOOST_SERIAL_REPO" "$BOOST_SERIAL_SRC"
+  fi
+  echo "==> Building boost_serialization under emscripten"
+  (
+    cd "$BOOST_SERIAL_SRC/src"
+    # BOOST_*_SOURCE defines tell the headers not to emit MSVC dllimport
+    # attributes; BOOST_ALL_NO_LIB suppresses the auto-link pragmas that
+    # would otherwise try to pull a Windows-only .lib symbol.
+    # -I points at the modular repo's own headers first, then at the
+    # full Boost include tree for transitive deps (throw_exception, io,
+    # core, etc.).
+    emcc -std=c++20 -O2 \
+      -I"$BOOST_SERIAL_SRC/include" \
+      -I"$BOOST_INC" \
+      -DBOOST_ARCHIVE_SOURCE \
+      -DBOOST_WARCHIVE_SOURCE \
+      -DBOOST_SERIALIZATION_SOURCE \
+      -DBOOST_ALL_NO_LIB \
+      -c ./*.cpp
+    emar rcs "$BOOST_SERIAL_LIB" ./*.o
+  )
+  if [ ! -f "$BOOST_SERIAL_LIB" ]; then
+    echo "ERROR: $BOOST_SERIAL_LIB not produced" >&2
     exit 1
   fi
 }
@@ -149,9 +193,14 @@ CXXFLAGS=(
   -DWASM_PLATFORM
 )
 
-# Tests that pull in GRAPH_traces.h (and therefore need libnauty linked).
-# Anything going through the equivalence / canonicalization path
-# (WeightMatrix → GRAPH_Bindings → GRAPH_traces) ends up here:
+
+# Tests that pull in the equivalence/canonicalization path and so need BOTH
+# libnauty linked AND a wasm build of libboost_serialization (every
+# Tspace/Delaunay/Perfect header defines `serialize()` members that
+# reference the boost-archive registry). The path is
+# WeightMatrix → GRAPH_Bindings → GRAPH_traces (for nauty) and
+# any serialize() member function (for boost_serialization). The two
+# always travel together in this code base, so a single flag covers both:
 #   - Test_wasm_short        (SHORT_Realizability)
 #   - Test_wasm_polytope_aut (LinPolytope_Automorphism)
 #   - Test_wasm_gram_aut     (ArithmeticAutomorphismGroupMultiple)
@@ -187,6 +236,7 @@ for src in "${sources[@]}"; do
 done
 if [ "$need_nauty" -eq 1 ]; then
   ensure_wasm_nauty
+  ensure_wasm_boost_serialization
 fi
 
 n_fail=0
@@ -195,7 +245,7 @@ for src in "${sources[@]}"; do
   out="build/${name}.js"
   extra=()
   if needs_nauty "$src"; then
-    extra=(-I"$NAUTY_INC" "$NAUTY_LIB")
+    extra=(-I"$NAUTY_INC" "$NAUTY_LIB" "$BOOST_SERIAL_LIB")
   fi
   echo "==> Building $src -> $out"
   # ${extra[@]+"${extra[@]}"} expands to nothing when `extra` is empty;

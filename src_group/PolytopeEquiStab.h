@@ -231,8 +231,8 @@ MyMatrix<T> GetQmatrix_NotFullRank(MyMatrix<T> const &TheEXT,
 template <typename T, typename Tidx, typename Treturn, typename F>
 Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
                        F f) {
-  size_t nbRow = TheEXT.rows();
-  size_t max_val = std::numeric_limits<Tidx>::max();
+  uint64_t nbRow = TheEXT.rows();
+  uint64_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
     std::cerr
         << "PES: Error in FCT_EXT_Qinput due to too small coefficient range\n";
