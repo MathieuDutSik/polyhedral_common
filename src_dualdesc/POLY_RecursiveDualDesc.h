@@ -1796,39 +1796,6 @@ bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull,
 }
 #endif
 
-template <typename Tint>
-void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const &AllArr,
-                              std::ostream &os) {
-  os << "RDD: PrintPolyHeuristicSerial, beginning\n";
-  os << "RDD: OutFile=" << AllArr.OutFile << "\n";
-  os << "RDD: OutFormat=" << AllArr.OutFormat << "\n";
-  os << "RDD: DeterministicRuntime=" << AllArr.DeterministicRuntime << "\n";
-  os << "RDD: port=" << AllArr.port << "\n";
-  os << "RDD: bank_parallelization_method="
-     << AllArr.bank_parallelization_method << "\n";
-  os << "RDD: SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
-  os << "RDD: AdditionalSymmetryHeuristicFile\n"
-     << AllArr.AdditionalSymmetry << "\n";
-  os << "RDD: DualDescriptionThompsonFile\n"
-     << AllArr.DualDescriptionProgram << "\n";
-  os << "RDD: MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
-  os << "RDD: BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
-  os << "RDD: CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
-  os << "RDD: ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
-  os << "RDD: OrbitSplitTechnique\n" << AllArr.OrbitSplitTechnique << "\n";
-  os << "RDD: CommThreadHeuristicFile\n" << AllArr.CommThread << "\n";
-  os << "RDD: ChoiceCanonicalizationFile\n"
-     << AllArr.ChoiceCanonicalization << "\n";
-  os << "RDD: max_runtime=" << AllArr.max_runtime << "\n";
-  os << "RDD: DD_Saving=" << AllArr.DD_Saving << "\n";
-  os << "RDD: DD_Prefix=" << AllArr.DD_Prefix << "\n";
-  os << "RDD: BANK_Saving=" << AllArr.BANK_Saving << "\n";
-  os << "RDD: BANK_Prefix=" << AllArr.BANK_Prefix << "\n";
-  os << "RDD: AdvancedTerminationCriterion="
-     << AllArr.AdvancedTerminationCriterion << "\n";
-  os << "RDD: SimpleExchangeScheme=" << AllArr.SimpleExchangeScheme << "\n";
-}
-
 template <typename T, typename TintGroup>
 PolyHeuristicSerial<TintGroup>
 Read_AllStandardHeuristicSerial([[maybe_unused]] FullNamelist const &eFull, int const &dimEXT,
