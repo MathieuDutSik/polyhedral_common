@@ -10,59 +10,6 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration_kernel(LinSpaceMatrix<T> const& LinSpa,
-                                                                            PerfectComplexOptions const& pco,
-                                                                            std::ostream& os) {
-  using TintGroup = typename Tgroup::Tint;
-  int n = LinSpa.n;
-  int dimEXT = LinSpa.ListMat.size();
-  PolyHeuristicSerial<TintGroup> AllArr =
-      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
-  //
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-  bool keep_generators = false;
-  bool reduce_gram_matrix = false;
-  DataPerfectTspace<T, Tint, Tgroup> data{
-      LinSpa, OnlineHierarchicalMatrixReduction<Tint>(n, std::cerr),
-      keep_generators, reduce_gram_matrix, std::move(rddo)};
-  using Tdata = DataPerfectTspaceFunc<T, Tint, Tgroup>;
-  Tdata data_func{std::move(data)};
-  using Tobj = typename Tdata::Tobj;
-  using TadjO = typename Tdata::TadjO;
-  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
-  auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
-    return false;
-  };
-  int max_runtime_second = 0;
-  std::vector<Tout> l_tot =
-      EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
-          data_func, f_incorrect, max_runtime_second);
-  os << "|l_tot|=" << l_tot.size() << "\n";
-  FullComplexEnumeration<T, Tint, Tgroup> fce = full_perfect_complex_enumeration(l_tot, LinSpa, pco, os);
-  if (pco.compute_boundary) {
-    bool test = are_product_zeros(fce, os);
-    os << "are_product_zeros, test=" << GAP_logical(test) << "\n";
-  } else {
-    os << "no boundary available\n";
-  }
-  return fce;
-}
-
-template <typename T, typename Tint, typename Tgroup>
-bool is_correct_fce(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
-                    LinSpaceMatrix<T> const& LinSpa,
-                    PerfectComplexOptions const& pco) {
-  if (!LinSpaceMatrixEqual(LinSpa, fce.pctdi.LinSpa)) {
-    return false;
-  }
-  if (!PerfectComplexOptionsEqual(pco, fce.pctdi.pco)) {
-    return false;
-  }
-  return true;
-}
-
-
-template <typename T, typename Tint, typename Tgroup>
 FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration(LinSpaceMatrix<T> const& LinSpa,
                                                                      PerfectComplexOptions const& pco,
                                                                      std::string const& CacheFile,
