@@ -10,6 +10,9 @@
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"
 #include "POLY_Heuristics.h"
+#ifndef WASM_PLATFORM
+#include "POLY_HeuristicsFile.h"
+#endif
 #include "POLY_Kskeletton.h"
 #include "POLY_SamplingFacet.h"
 #include "PolytopeEquiStab.h"
@@ -832,8 +835,6 @@ public:
     return IteratorFaceType(foc, end_index_undone());
   }
 };
-
-
 
 template <typename T, typename Tidx_value> struct LazyWMat {
 public:
@@ -1817,84 +1818,15 @@ void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const &AllArr,
   os << "RDD: SimpleExchangeScheme=" << AllArr.SimpleExchangeScheme << "\n";
 }
 
-template <typename Tint>
-void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
-                                 PolyHeuristicSerial<Tint> &AllArr,
-                                 std::ostream &os) {
-  //
-  SingleBlock const &BlockMETHOD = eFull.get_block("METHOD");
-  SingleBlock const &BlockBANK = eFull.get_block("BANK");
-  SingleBlock const &BlockDATA = eFull.get_block("DATA");
-  //
-  bool BANK_Saving = BlockBANK.get_bool("Saving");
-  AllArr.BANK_Saving = BANK_Saving;
-  //
-  std::string BANK_Prefix = BlockBANK.get_string("Prefix");
-  AllArr.BANK_Prefix = BANK_Prefix;
-  //
-  std::string OutFile = BlockDATA.get_string("OutFile");
-  AllArr.OutFile = OutFile;
-  //
-  bool DeterministicRuntime = BlockDATA.get_bool("DeterministicRuntime");
-  if (!DeterministicRuntime) {
-    unsigned seed = get_random_seed();
-    srand(seed);
-  }
-  //
-  std::string OutFormat = BlockDATA.get_string("OutFormat");
-  AllArr.OutFormat = OutFormat;
-  //
-  int port_i = BlockDATA.get_int("port");
-  uint16_t port = port_i;
-  AllArr.port = port;
-  //
-  std::string bank_parallelization_method =
-      BlockDATA.get_string("bank_parallelization_method");
-  AllArr.bank_parallelization_method = bank_parallelization_method;
-  //
-  SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, os);
-  SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile",
-               AllArr.AdditionalSymmetry, os);
-  SetThompsonSampling(eFull, "DualDescriptionThompsonFile",
-                      AllArr.DualDescriptionProgram, os);
-  SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet, os);
-  SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave, os);
-  SetHeuristic(eFull, "CheckDatabaseBankFile", AllArr.CheckDatabaseBank, os);
-  SetHeuristic(eFull, "ChosenDatabaseFile", AllArr.ChosenDatabase, os);
-  SetHeuristic(eFull, "OrbitSplitTechniqueFile", AllArr.OrbitSplitTechnique,
-               os);
-  SetHeuristic(eFull, "CommThreadHeuristicFile", AllArr.CommThread, os);
-  SetHeuristic(eFull, "ChoiceCanonicalizationFile",
-               AllArr.ChoiceCanonicalization, os);
-  //
-  bool DD_Saving = BlockMETHOD.get_bool("Saving");
-  AllArr.DD_Saving = DD_Saving;
-  //
-  std::string DD_Prefix = BlockMETHOD.get_string("Prefix");
-  AllArr.DD_Prefix = DD_Prefix;
-  //
-  int max_runtime = BlockDATA.get_int("max_runtime");
-  AllArr.max_runtime = max_runtime;
-  //
-  bool AdvancedTerminationCriterion =
-      BlockDATA.get_bool("AdvancedTerminationCriterion");
-  AllArr.AdvancedTerminationCriterion = AdvancedTerminationCriterion;
-  //
-  bool SimpleExchangeScheme = BlockDATA.get_bool("SimpleExchangeScheme");
-  AllArr.SimpleExchangeScheme = SimpleExchangeScheme;
-  //
-#ifdef DEBUG_RECURSIVE_DUAL_DESC
-  PrintPolyHeuristicSerial(AllArr, os);
-#endif
-}
-
 template <typename T, typename TintGroup>
 PolyHeuristicSerial<TintGroup>
 Read_AllStandardHeuristicSerial(FullNamelist const &eFull, int const &dimEXT,
                                 std::ostream &os) {
   PolyHeuristicSerial<TintGroup> AllArr =
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+#ifndef WASM_PLATFORM
   UpdateHeuristicSerial_eFull(eFull, AllArr, os);
+#endif
   return AllArr;
 }
 
@@ -1904,11 +1836,13 @@ Read_AllStandardHeuristicSerial_File(std::string const &eFile,
                                      int const &dimEXT, std::ostream &os) {
   PolyHeuristicSerial<TintGroup> AllArr =
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+#ifndef WASM_PLATFORM
   if (eFile != "unset") {
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     NAMELIST_ReadNamelistFile(eFile, eFull);
     UpdateHeuristicSerial_eFull(eFull, AllArr, os);
   }
+#endif
   return AllArr;
 }
 

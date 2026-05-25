@@ -416,28 +416,6 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
 }
 
 template <typename TintGroup>
-void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
-                  TheHeuristic<TintGroup> &eHeu,
-                  [[maybe_unused]] std::ostream &os) {
-  SingleBlock const &BlockHEU = eFull.get_block("HEURISTIC");
-  std::string NamelistEntFile = BlockHEU.get_string(NamelistEnt);
-  if (NamelistEntFile != "unset.heu") {
-#ifdef DEBUG_HEURISTICS
-    os << "NamelistEntFile for heuristic=" << NamelistEntFile << "\n";
-#endif
-    IsExistingFileDie(NamelistEntFile);
-    std::ifstream is(NamelistEntFile);
-    try {
-      eHeu = ReadHeuristic<TintGroup>(is);
-    } catch (TerminalException const &e) {
-      std::cerr << "Failed in reading the file NamelistEntFile=" << NamelistEnt
-                << "\n";
-      throw TerminalException{1};
-    }
-  }
-}
-
-template <typename TintGroup>
 void SetThompsonSampling(FullNamelist const &eFull,
                          std::string const &NamelistEnt,
                          ThompsonSamplingHeuristic<TintGroup> &eTS,
