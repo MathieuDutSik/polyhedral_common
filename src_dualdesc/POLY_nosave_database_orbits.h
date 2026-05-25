@@ -43,18 +43,18 @@ public:
   // ---If method file is absent then we assume it was computed with the
   // default.
   // ---Otherwise we read it.
-  void write_method(std::string const &eFileMethod, int const &method) const {
+  void write_method([[maybe_unused]] std::string const &eFileMethod, [[maybe_unused]] int const &method) const {
   }
-  int read_method(std::string const &eFileMethod) const {
+  int read_method([[maybe_unused]] std::string const &eFileMethod) const {
     return bb.get_default_strategy();
   }
   bool is_database_present() const {
     return false;
   }
   NoSaveDatabaseOrbits() = delete;
-  NoSaveDatabaseOrbits(const DatabaseOrbits<TbasicBank> &) = delete;
-  NoSaveDatabaseOrbits(DatabaseOrbits<TbasicBank> &&) = delete;
-  NoSaveDatabaseOrbits &operator=(const DatabaseOrbits<TbasicBank> &) = delete;
+  NoSaveDatabaseOrbits(const NoSaveDatabaseOrbits<TbasicBank> &) = delete;
+  NoSaveDatabaseOrbits(NoSaveDatabaseOrbits<TbasicBank> &&) = delete;
+  NoSaveDatabaseOrbits &operator=(const NoSaveDatabaseOrbits<TbasicBank> &) = delete;
   void print_status() const {
 #ifdef TRACK_RUN
     os << "RDD: Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone
@@ -85,7 +85,7 @@ public:
 #endif
     print_status();
   }
-  vectface ReadDatabase(size_t const &n_read) const {
+  vectface ReadDatabase([[maybe_unused]] size_t const &n_read) const {
     vectface vfo(bb.delta + 1);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RDD: No database present\n";

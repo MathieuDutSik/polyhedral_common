@@ -24,10 +24,11 @@
 #include "POLY_GAP.h"
 #include "Balinski_basic.h"
 #include "ClassicLLL.h"
-#include "Databank.h"
 #include "PERM_Fct.h"
+#include "Databank.h"
 #ifndef WASM_PLATFORM
 #include "Basic_interrupt.h"
+#include "Databank_asio.h"
 #endif
 #include <limits>
 #include <set>
@@ -880,10 +881,12 @@ std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T> &EXT,
 template <typename Tgroup>
 void CheckTermination(
     PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr) {
+#ifndef WASM_PLATFORM
   if (ExitEvent) {
     std::cerr << "Terminating the program by Ctrl-C\n";
     throw TerminalException{1};
   }
+#endif
   if (AllArr.max_runtime > 0) {
     std::cerr << "max_runtime=" << AllArr.max_runtime << "\n";
     int runtime = si(AllArr.start);
@@ -1679,7 +1682,7 @@ void OutputFacets_stream(const MyMatrix<T> &EXT, const vectface &TheOutput,
   }
   if (OutFormat == "SetInt") {
     os_out << TheOutput.size() << "\n";
-    using Tnumber = mpz_class;
+    using Tnumber = T;
     for (const Face &f : TheOutput) {
       Tnumber res = getsetasint<Tnumber>(f);
       os_out << res << "\n";
@@ -1828,7 +1831,7 @@ void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const &AllArr,
 
 template <typename T, typename TintGroup>
 PolyHeuristicSerial<TintGroup>
-Read_AllStandardHeuristicSerial(FullNamelist const &eFull, int const &dimEXT,
+Read_AllStandardHeuristicSerial([[maybe_unused]] FullNamelist const &eFull, int const &dimEXT,
                                 std::ostream &os) {
   PolyHeuristicSerial<TintGroup> AllArr =
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
@@ -1840,7 +1843,7 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull, int const &dimEXT,
 
 template <typename T, typename TintGroup>
 PolyHeuristicSerial<TintGroup>
-Read_AllStandardHeuristicSerial_File(std::string const &eFile,
+Read_AllStandardHeuristicSerial_File([[maybe_unused]] std::string const &eFile,
                                      int const &dimEXT, std::ostream &os) {
   PolyHeuristicSerial<TintGroup> AllArr =
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
@@ -1886,6 +1889,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
           TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix,
           os);
     }
+#ifndef WASM_PLATFORM
     if (AllArr.bank_parallelization_method == "bank_asio") {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
@@ -1893,6 +1897,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
           TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix,
           std::cerr);
     }
+#endif
     std::cerr
         << "Failed to find a matching entry for bank_parallelization_method\n";
     std::cerr << "Allowed methods are serial, bank_asio\n";

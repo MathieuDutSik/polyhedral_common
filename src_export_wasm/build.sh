@@ -92,6 +92,11 @@ INCLUDES=(
   -I"$ROOT/src_latt"
   -I"$ROOT/src_polygen"
   -I"$ROOT/src_short"
+  -I"$ROOT/src_dualdesc"
+  -I"$ROOT/src_enum_schemes"
+  -I"$ROOT/src_polydecomp"
+  -I"$ROOT/src_perfect"
+  -I"$ROOT/src_delaunay"
   -I"$ROOT/src_sparse_solver"
   -I"$ROOT/src_lorentzian"
   -I"$ROOT/permutalib/src"
@@ -147,12 +152,18 @@ CXXFLAGS=(
 # Tests that pull in GRAPH_traces.h (and therefore need libnauty linked).
 # Anything going through the equivalence / canonicalization path
 # (WeightMatrix → GRAPH_Bindings → GRAPH_traces) ends up here:
-#   - Test_wasm_short      (SHORT_Realizability)
+#   - Test_wasm_short        (SHORT_Realizability)
 #   - Test_wasm_polytope_aut (LinPolytope_Automorphism)
-#   - Test_wasm_gram_aut   (ArithmeticAutomorphismGroupMultiple)
+#   - Test_wasm_gram_aut     (ArithmeticAutomorphismGroupMultiple)
+#   - Test_wasm_delaunay     (Delaunay_Stabilizer → polytope equivalence)
+#   - Test_wasm_isodelaunay  (initial-tesselation builder → Delaunay equivalence)
+#   - Test_wasm_lorentz_aut  (LORENTZ_GetGeneratorsAutom → polytope automorphism)
+#   - Test_wasm_perfect      (DataPerfectTspaceFunc → polytope equivalence)
 needs_nauty() {
   case "$1" in
-    Test_wasm_short.cpp|Test_wasm_polytope_aut.cpp|Test_wasm_gram_aut.cpp)
+    Test_wasm_short.cpp|Test_wasm_polytope_aut.cpp|Test_wasm_gram_aut.cpp|\
+Test_wasm_delaunay.cpp|Test_wasm_isodelaunay.cpp|Test_wasm_lorentz_aut.cpp|\
+Test_wasm_perfect.cpp)
       return 0 ;;
     *) return 1 ;;
   esac
