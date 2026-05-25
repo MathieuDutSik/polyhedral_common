@@ -2,11 +2,10 @@
 #ifndef SRC_DUALDESC_POLY_DATABASE_ORBITS_H_
 #define SRC_DUALDESC_POLY_DATABASE_ORBITS_H_
 
-// Holds the `DatabaseOrbits<TbasicBank>` class extracted from
+// Holds the `NoSaveDatabaseOrbits<TbasicBank>` class extracted from
 // POLY_RecursiveDualDesc.h. The class wraps a `TbasicBank` (face-orbit
-// store) with optional on-disk persistence (eFileEXT / eFileGRP /
-// eFileNB / eFileFB / eFileFF / eFileMethod) so that long enumerations
-// can be resumed after a crash. Macros used internally
+// store) with no on-disk persistence. This is to be used for context
+// without save such as WASM platform. Macros used internally
 // (DEBUG_RECURSIVE_DUAL_DESC, TIMINGS_RECURSIVE_DUAL_DESC, TRACK_DATABASE,
 // TRACK_RUN) are intentionally shared with POLY_RecursiveDualDesc.h --
 // when this file is included from there, all four toggles are already
@@ -18,7 +17,7 @@
 #include <unordered_set>
 // clang-format on
 
-template <typename TbasicBank> struct DatabaseOrbits {
+template <typename TbasicBank> struct NoSaveDatabaseOrbits {
 public:
   using Tgroup = typename TbasicBank::Tgroup;
   using T = typename TbasicBank::T;
@@ -52,10 +51,10 @@ public:
   bool is_database_present() const {
     return false;
   }
-  DatabaseOrbits() = delete;
-  DatabaseOrbits(const DatabaseOrbits<TbasicBank> &) = delete;
-  DatabaseOrbits(DatabaseOrbits<TbasicBank> &&) = delete;
-  DatabaseOrbits &operator=(const DatabaseOrbits<TbasicBank> &) = delete;
+  NoSaveDatabaseOrbits() = delete;
+  NoSaveDatabaseOrbits(const DatabaseOrbits<TbasicBank> &) = delete;
+  NoSaveDatabaseOrbits(DatabaseOrbits<TbasicBank> &&) = delete;
+  NoSaveDatabaseOrbits &operator=(const DatabaseOrbits<TbasicBank> &) = delete;
   void print_status() const {
 #ifdef TRACK_RUN
     os << "RDD: Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone
@@ -65,14 +64,10 @@ public:
        << " " << strPresChar << "\n\n";
 #endif
   }
-  DatabaseOrbits(TbasicBank &bb, const std::string &MainPrefix,
-                 const bool &_AdvancedTerminationCriterion, std::ostream &os)
+  NoSaveDatabaseOrbits(TbasicBank &bb,
+                       const bool &_AdvancedTerminationCriterion, std::ostream &os)
       : CritSiz(bb.EXT.cols() - 2), bb(bb),
         AdvancedTerminationCriterion(_AdvancedTerminationCriterion), os(os) {
-#ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: MainPrefix=" << MainPrefix << "\n";
-#endif
-    eFileMethod = MainPrefix + ".method";
     strPresChar = "|EXT|=" + std::to_string(bb.nbRow) + "/" +
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
@@ -147,9 +142,9 @@ public:
     }
     print_status();
   }
-  ~DatabaseOrbits() {
+  ~NoSaveDatabaseOrbits() {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: Clean closing of the DatabaseOrbits\n";
+    os << "RDD: Clean closing of the NoSaveDatabaseOrbits\n";
 #endif
   }
   // FuncListOrbitIncidence() {

@@ -4,7 +4,11 @@
 
 // clang-format off
 #include "POLY_dualdesc_database.h"
+#ifdef WASM_PLATFORM
+#include "POLY_nosave_database_orbits.h"
+#else
 #include "POLY_database_orbits.h"
+#endif
 #include "GRP_DoubleCoset.h"
 #include "MAT_MatrixInt.h"
 #include "Namelist.h"
@@ -1104,8 +1108,12 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> &TheMap, Fdd &f_dd,
     std::ostream &os) {
+#ifdef WASM_PLATFORM
+  NoSaveDatabaseOrbits<TbasicBank> RPL(bb, AllArr.AdvancedTerminationCriterion, os);
+#else
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.DD_Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
+#endif
   // The choice only really makes sense for the canonic, for repr no choice is
   // implied.
   auto set_up = [&]() -> void {
