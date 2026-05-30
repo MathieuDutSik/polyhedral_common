@@ -172,6 +172,11 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   std::string FileCells = BlockQUERIES.get_string("FileCells");
   if (FileCells != "null") {
     int index = BlockQUERIES.get_int("IndexCell");
+    int n_levels = fce.levels.size();
+    if (index < 0 || index >= n_levels) {
+      std::cerr << "Error with IndexCells, index=" << index << " n_levels=" << n_levels << "\n";
+      throw TerminalException{1};
+    }
     int n_orb = fce.levels[index].l_faces.size();
     std::ofstream os_out(FileCells);
     os_out << "return [";
@@ -189,6 +194,11 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   std::string FileListUpperBoundary = BlockQUERIES.get_string("FileListUpperBoundary");
   if (FileListUpperBoundary != "null") {
     int index = BlockQUERIES.get_int("IndexUpperBoundary");
+    int n_levels = fce.levels.size();
+    if (index < 0 || index >= n_levels) {
+      std::cerr << "Error with IndexUpperBoundary, index=" << index << " n_levels=" << n_levels << "\n";
+      throw TerminalException{1};
+    }
     int n_orb = fce.levels[index].l_faces.size();
     std::ofstream os_out(FileListUpperBoundary);
     os_out << "return [";
@@ -220,6 +230,11 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   std::string FileListLowerBoundary = BlockQUERIES.get_string("FileListLowerBoundary");
   if (FileListLowerBoundary != "null") {
     int index = BlockQUERIES.get_int("IndexLowerBoundary");
+    int n_levels = fce.levels.size();
+    if (index < 0 || index >= n_levels) {
+      std::cerr << "Error with IndexLowerBoundary, index=" << index << " n_levels=" << n_levels << "\n";
+      throw TerminalException{1};
+    }
     int n_orb = fce.levels[index].l_faces.size();
     std::ofstream os_out(FileListLowerBoundary);
     os_out << "return [";

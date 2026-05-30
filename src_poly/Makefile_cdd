@@ -1,4 +1,4 @@
-PROGRAM		= POLY_redundancy POLY_cdd_skeletons POLY_cdd_LinearProgramming POLY_LinearDetermineByInequalities
+PROGRAM		= POLY_redundancy POLY_cdd_skeletons POLY_cdd_LinearProgramming POLY_LinearDetermineByInequalities POLY_dual_description
 #PROGRAM		= POLY_redundancy
 
 OBJECTS		= $(PROGRAM:%=%.o)
@@ -19,16 +19,23 @@ CC		= g++ -std=c++20 -Wall -Wextra -O3
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_lorentzian -I../src_latt -I../src_group -I.
 
+
+
+
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_lorentzian -I../src_latt -I../src_group -I.
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) -DEIGEN_NO_DEBUG
+CHASHMAP 	= -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
+CDEFS           = -DTRACKING_OPERATION_CDD
+
+CTOTAL = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread
 
 %.o: %.cpp
 	@echo
 	@echo compile $<
-	$(CC) $(OUTPUTFLAG) $@ $(CLOCAL) $(CFLAGS) $(NOLINKFLAG) $<
+	$(CC) $(OUTPUTFLAG) $@ $(CTOTAL) $(NOLINKFLAG) $<
 
 all:	$(PROGRAM)
 
