@@ -62,7 +62,7 @@ $(PROGRAM): 	$(OBJECTS)
 		@echo
 		@echo link $@
 		$(CC) $(LINKOBJECTS) $(DEBUGFLAG) $@.o $(LIBS) -o $@
-		dsymutil $@
+#		dsymutil $@
 
 clean:;
 	rm -f *.o

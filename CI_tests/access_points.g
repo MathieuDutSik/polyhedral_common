@@ -1,3 +1,15 @@
+is_error:=function(input)
+    local test;
+    if IsString(input)=false then
+        return false;
+    fi;
+    test:=starts_with(input, "program failure")<>fail;
+    if test then
+        Print("Something went wrong with error=", input, "\n");
+    fi;
+    return test;
+end;
+
 extract_runtime_from_log:=function(FileE)
     local lines, line, prefix, rest, idx;
     if IsExistingFile(FileE)=false then
@@ -1858,12 +1870,13 @@ __PERFCOMP_Write_t_space:=function(arg)
     write_t_space(output, desc);
 end;
 
-PERFCOMP_group_generators:=function(arg)
-    local desc, options, print_info, TmpDir, FileN, FileO, FileE, output, ListGen, binary, cmd, runtime_str;
+PERFCOMP_general_query:=function(arg)
+    local desc, general_query, options, print_info, TmpDir, FileN, FileO, FileE, output, ListGen, binary, cmd, runtime_str;
     desc:=arg[1];
+    general_query:=arg[2];
     print_info:=false;
-    if Length(arg) >= 2 then
-        options:=arg[2];
+    if Length(arg) >= 3 then
+        options:=arg[3];
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
         fi;
@@ -1873,9 +1886,9 @@ PERFCOMP_group_generators:=function(arg)
     FileO:=Filename(TmpDir, "PerfComp.out");
     FileE:=Filename(TmpDir, "PerfComp.err");
     output:=OutputTextFile(FileN, true);
-    CallFuncList(__PERFCOMP_Write_t_space, Concatenation([output, desc], arg{[2..Length(arg)]}));
+    CallFuncList(__PERFCOMP_Write_t_space, Concatenation([output, desc], arg{[3..Length(arg)]}));
     AppendTo(output, "&QUERIES\n");
-    AppendTo(output, " FileGroupGenerators = \"", FileO, "\"\n");
+    AppendTo(output, " ", general_query, " = \"", FileO, "\"\n");
     AppendTo(output, "/\n");
     CloseStream(output);
     #
@@ -1894,6 +1907,21 @@ PERFCOMP_group_generators:=function(arg)
     return ListGen;
 end;
 
+
+PERFCOMP_group_generators:=function(arg)
+    local desc, general_query;
+    desc:=arg[1];
+    general_query:="FileGroupGenerators";
+    return CallFuncList(PERFCOMP_general_query, Concatenation([desc, general_query], arg{[2..Length(arg)]}));
+end;
+
+
+PERFCOMP_list_number_orbit:=function(arg)
+    local desc, general_query;
+    desc:=arg[1];
+    general_query:="FileListNumberOrbit";
+    return CallFuncList(PERFCOMP_general_query, Concatenation([desc, general_query], arg{[2..Length(arg)]}));
+end;
 
 
 get_rec_tspace:=function(desc)

@@ -55,6 +55,20 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     WriteListMatrixGAP(os_out, list_gen);
     os_out << ";\n";
   }
+  std::string FileListNumberOrbit = BlockQUERIES.get_string("FileListNumberOrbit");
+  if (FileListNumberOrbit != "null") {
+    int n_levels = fce.levels.size();
+    std::ofstream os_out(FileListNumberOrbit);
+    os_out << "return [";
+    for (int index=0; index<n_levels; index++) {
+      if (index>0) {
+        os_out << ",";
+      }
+      int n_orb = fce.levels[index].l_faces.size();
+      os_out << n_orb;
+    }
+    os_out << "];\n";
+  }
 
   /*
     The queries related to individual cells

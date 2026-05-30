@@ -1,3 +1,30 @@
+starts_with:=function(big_str, small_str)
+    local len_sma, len_big, red_str;
+    len_sma:=Length(small_str);
+    len_big:=Length(big_str);
+    if len_sma > len_big then
+        return fail;
+    fi;
+    red_str:=big_str{[1..len_sma]};
+    if red_str<>small_str then
+        return fail;
+    fi;
+    return big_str{[len_sma+1..len_big]};
+end;
+
+GetFreeFile:=function(prefix)
+    local iFile, eFile;
+    iFile:=1;
+    while(true)
+    do
+        eFile:=Concatenation(prefix, String(iFile));
+        if IsExistingFile(eFile)=false then
+            return eFile;
+        fi;
+        iFile:=iFile + 1;
+    od;
+end;
+
 ReadTextFile:=function(FileIn)
     local ListLines, file, TheRead, len, TheReadRed;
     ListLines:=[];
@@ -68,33 +95,6 @@ GetBinaryFilename:=function(FileName)
     Print("We did not find it in the PATH nor in the directory\n");
     Print("POLYHEDRAL_COMMON_SOURCE_CODE\n");
     Error("Please make it available by compiling or putting the right paths");
-end;
-
-
-starts_with:=function(big_str, small_str)
-    local len_sma, len_big, red_str;
-    len_sma:=Length(small_str);
-    len_big:=Length(big_str);
-    if len_sma > len_big then
-        return fail;
-    fi;
-    red_str:=big_str{[1..len_sma]};
-    if red_str<>small_str then
-        return fail;
-    fi;
-    return big_str{[len_sma+1..len_big]};
-end;
-
-is_error:=function(input)
-    local test;
-    if IsString(input)=false then
-        return false;
-    fi;
-    test:=starts_with(input, "program failure")<>fail;
-    if test then
-        Print("Something went wrong with error=", input, "\n");
-    fi;
-    return test;
 end;
 
 
@@ -360,19 +360,6 @@ SaveDataToFile:=function(FileName, OBJ)
   output:=OutputTextFile(FileName, true);;
   AppendTo(output, "return ", OBJ, ";\n");
   CloseStream(output);
-end;
-
-GetFreeFile:=function(prefix)
-    local iFile, eFile;
-    iFile:=1;
-    while(true)
-    do
-        eFile:=Concatenation(prefix, String(iFile));
-        if IsExistingFile(eFile)=false then
-            return eFile;
-        fi;
-        iFile:=iFile + 1;
-    od;
 end;
 
 ListFileDirectory:=function(TheDir)
