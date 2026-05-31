@@ -132,6 +132,8 @@ IntegralSaturationSpace(std::vector<MyMatrix<T>> const &ListMat,
 #endif
   if (BigMat_renorm.rows() != n_mat) {
     std::cerr << "TSPACE: Incoherence in the dimensions\n";
+    std::cerr << "BigMat_renorm.rows()=" << BigMat_renorm.rows() << "\n";
+    std::cerr << "n_mat=" << n_mat << "\n";
     throw TerminalException{1};
   }
   std::vector<MyMatrix<T>> ListMatRet;

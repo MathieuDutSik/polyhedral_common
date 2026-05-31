@@ -11,6 +11,10 @@
 #define DEBUG_TSPACE_GENERATION
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_TSPACE_GENERATION
+#endif
+
 #ifdef DISABLE_DEBUG_TSPACE_GENERATION
 #undef DEBUG_TSPACE_GENERATION
 #endif
@@ -40,6 +44,14 @@ MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const &eMatB,
       eMatN(i2 + n, j2) = eVal2;
     }
   }
+#ifdef SANITY_CHECK_TSPACE_GENERATION
+  if (!IsSymmetricMatrix(eMatN)) {
+    std::cerr << "The matrix is not symmetric\n";
+    std::cerr << "eMatN=\n";
+    WriteMatrix(std::cerr, eMatN);
+    throw TerminalException{1};
+  }
+#endif
   return eMatN;
 }
 
@@ -105,7 +117,7 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
     throw TerminalException{1};
   }
   for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
+    for (int j = i; j < n; j++) {
       {
         MyMatrix<T> eMatB = ZeroMatrix<T>(n,n);
         MyMatrix<T> eMatC = ZeroMatrix<T>(n,n);
