@@ -8,6 +8,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
+#include "SignatureSymmetric.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
@@ -41,6 +42,17 @@ int main(int argc, char *argv[]) {
       OutFile = argv[3];
     }
     std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
+    if (ListMat.empty()) {
+      std::cerr << "LATT_Automorphism: The input matrix list in " << FileListMat
+                << " is empty\n";
+      throw TerminalException{1};
+    }
+    if (!IsSymmetricMatrix(ListMat[0]) ||
+        !IsPositiveDefinite(ListMat[0], std::cerr)) {
+      std::cerr << "LATT_Automorphism: The first input Gram matrix in "
+                << FileListMat << " is not symmetric positive definite\n";
+      throw TerminalException{1};
+    }
 
     std::vector<MyMatrix<Tint>> ListGen =
         ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,

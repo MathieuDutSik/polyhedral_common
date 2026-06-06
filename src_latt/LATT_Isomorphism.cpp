@@ -8,6 +8,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
+#include "SignatureSymmetric.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
@@ -44,6 +45,28 @@ int main(int argc, char *argv[]) {
     }
     std::vector<MyMatrix<T>> ListMat1 = ReadListMatrixFile<T>(FileListMat1);
     std::vector<MyMatrix<T>> ListMat2 = ReadListMatrixFile<T>(FileListMat2);
+    if (ListMat1.empty()) {
+      std::cerr << "LATT_Isomorphism: The input matrix list in " << FileListMat1
+                << " is empty\n";
+      throw TerminalException{1};
+    }
+    if (ListMat2.empty()) {
+      std::cerr << "LATT_Isomorphism: The input matrix list in " << FileListMat2
+                << " is empty\n";
+      throw TerminalException{1};
+    }
+    if (!IsSymmetricMatrix(ListMat1[0]) ||
+        !IsPositiveDefinite(ListMat1[0], std::cerr)) {
+      std::cerr << "LATT_Isomorphism: The first input Gram matrix in "
+                << FileListMat1 << " is not symmetric positive definite\n";
+      throw TerminalException{1};
+    }
+    if (!IsSymmetricMatrix(ListMat2[0]) ||
+        !IsPositiveDefinite(ListMat2[0], std::cerr)) {
+      std::cerr << "LATT_Isomorphism: The first input Gram matrix in "
+                << FileListMat2 << " is not symmetric positive definite\n";
+      throw TerminalException{1};
+    }
 
     std::optional<MyMatrix<Tint>> equiv =
       ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2, std::cerr);

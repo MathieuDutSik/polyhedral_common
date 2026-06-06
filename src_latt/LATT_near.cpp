@@ -14,6 +14,7 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
 #include "Shvec_exact.h"
+#include "SignatureSymmetric.h"
 // clang-format on
 
 template <typename T, typename Tint>
@@ -21,6 +22,12 @@ void process(std::string const &choice, std::string const &FileGram,
              std::string const &FileVect, std::string const &OutFormat,
              std::ostream &os) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileGram);
+  if (!IsSymmetricMatrix(GramMat) ||
+      !IsPositiveDefinite(GramMat, std::cerr)) {
+    std::cerr << "LATT_near: The input Gram matrix in " << FileGram
+              << " is not symmetric positive definite\n";
+    throw TerminalException{1};
+  }
   int n = GramMat.rows();
   auto get_vect = [&]() -> MyVector<T> {
     if (FileVect == "zero") {

@@ -5,12 +5,18 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "LatticeStabEquiCan.h"
+#include "SignatureSymmetric.h"
 // clang-format on
 
 template <typename T, typename Tint>
 void ComputeCanonical(std::string const &FileI, std::string const &OutFormat,
                       std::ostream &os) {
   MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
+  if (!IsSymmetricMatrix(eMat) || !IsPositiveDefinite(eMat, std::cerr)) {
+    std::cerr << "LATT_Canonicalize: The input Gram matrix in " << FileI
+              << " is not symmetric positive definite\n";
+    throw TerminalException{1};
+  }
   MyMatrix<Tint> B = ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
   MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
   MyMatrix<T> eMat_red = B_T * eMat * B_T.transpose();
