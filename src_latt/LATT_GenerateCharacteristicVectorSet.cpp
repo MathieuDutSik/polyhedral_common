@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
     std::string MatFile = argv[3];
     std::string OutFormat = "norms";
     std::string OutFile = "stderr";
-    if (argc == 7) {
+    if (argc == 6) {
       OutFormat = argv[4];
       OutFile = argv[5];
     }

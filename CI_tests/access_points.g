@@ -451,19 +451,15 @@ get_latt_automorphism_group:=function(arg)
 end;
 
 get_fullrank_invariant_family:=function(arg)
-    local eG, method, options, arith_rat, arith_int, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    local eG, method, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
     eG:=arg[1];
     method:=arg[2];
-    arith_rat:="mpq_class";
-    arith_int:="mpz_class";
+    arith:="gmp";
     print_info:=false;
     if Length(arg) >= 3 then
         options:=arg[3];
-        if IsBound(options.arith_rat) then
-            arith_rat:=options.arith_rat;
-        fi;
-        if IsBound(options.arith_int) then
-            arith_int:=options.arith_int;
+        if IsBound(options.arith) then
+            arith:=options.arith;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -475,11 +471,11 @@ get_fullrank_invariant_family:=function(arg)
     FileE:=Filename(TmpDir, "Fullrank.err");
     WriteMatrixFile(FileI, eG);
     eProg:=GetBinaryFilename("LATT_GenerateCharacteristicVectorSet");
-    TheCommand:=Concatenation(eProg, " ", arith_rat, " ", arith_int, " ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if print_info then
         runtime_str:=extract_runtime_from_log(FileE);
-        Print("  eG=", Length(eG), "x", Length(eG[1]), " arith_rat=", arith_rat, " arith_int=", arith_int, " method=", method, " command=LATT_GenerateCharacteristicVectorSet runtime=", runtime_str, "\n");
+        Print("  eG=", Length(eG), "x", Length(eG[1]), " arith=", arith, " method=", method, " command=LATT_GenerateCharacteristicVectorSet runtime=", runtime_str, "\n");
     fi;
     if IsExistingFile(FileO)=false then
         return "program failure: LATT_GenerateCharacteristicVectorSet did not return anything";
