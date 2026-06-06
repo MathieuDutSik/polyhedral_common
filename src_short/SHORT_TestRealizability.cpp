@@ -16,7 +16,11 @@ void test_realizability(std::string const& FileSHV, std::string const& OutFormat
   using Tgroup = permutalib::Group<Telt, TintGroup>;
 
   MyMatrix<Tint> SHV = ReadMatrixFile<Tint>(FileSHV);
-
+  if (RankMat(SHV) != SHV.cols()) {
+    std::cerr << "SHORT_TestRealizability: The input matrix in "
+              << FileSHV << " is not of full rank\n";
+    throw TerminalException{1};
+  }
 
   ReplyRealizability<T, Tint> eRes = SHORT_TestRealizabilityShortestFamily<T, Tint, Tgroup>(SHV, std::cerr);
 

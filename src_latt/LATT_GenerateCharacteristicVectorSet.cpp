@@ -11,6 +11,12 @@ template <typename T, typename Tint>
 void process(std::string choice, std::string MatFile,
              std::string const &OutFormat, std::string const &OutFile) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
+  if (!IsSymmetricMatrix(GramMat) ||
+      !IsPositiveDefinite(GramMat, std::cerr)) {
+    std::cerr << "LATT_GenerateCharacteristicVectorSet: The input Gram matrix in "
+              << MatFile << " is not symmetric positive definite\n";
+    throw TerminalException{1};
+  }
   auto f = [&]() -> MyMatrix<Tint> {
     if (choice == "shortest") {
       Tshortest<T, Tint> rec = T_ShortestVector<T, Tint>(GramMat, std::cerr);
