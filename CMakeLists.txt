@@ -17,7 +17,7 @@ find_package(Boost REQUIRED COMPONENTS mpi serialization)
 find_package(MPI REQUIRED COMPONENTS CXX)
 
 pkg_check_modules(GMPXX REQUIRED IMPORTED_TARGET gmpxx)
-pkg_check_modules(CDDGMP REQUIRED cddgmp)
+pkg_check_modules(CDDGMP cddgmp)
 pkg_check_modules(CDDLIB REQUIRED cddlib)
 
 find_library(GMP_LIBRARY NAMES gmp REQUIRED)
@@ -173,23 +173,25 @@ add_library(polyhedral_glpk_support INTERFACE)
 target_include_directories(polyhedral_glpk_support INTERFACE "${GLPK_INCLUDE_DIR}")
 target_link_libraries(polyhedral_glpk_support INTERFACE "${GLPK_LIBRARY}")
 
-add_library(polyhedral_cddgmp_support INTERFACE)
-target_include_directories(
-  polyhedral_cddgmp_support
-  INTERFACE
-    ${CDDGMP_INCLUDE_DIRS}
-    "${CDD_HEADER_DIR}"
-)
-target_link_directories(
-  polyhedral_cddgmp_support
-  INTERFACE
-    ${CDDGMP_LIBRARY_DIRS}
-)
-target_link_libraries(
-  polyhedral_cddgmp_support
-  INTERFACE
-    ${CDDGMP_LINK_LIBRARIES}
-)
+if(CDDGMP_FOUND)
+  add_library(polyhedral_cddgmp_support INTERFACE)
+  target_include_directories(
+    polyhedral_cddgmp_support
+    INTERFACE
+      ${CDDGMP_INCLUDE_DIRS}
+      "${CDD_HEADER_DIR}"
+  )
+  target_link_directories(
+    polyhedral_cddgmp_support
+    INTERFACE
+      ${CDDGMP_LIBRARY_DIRS}
+  )
+  target_link_libraries(
+    polyhedral_cddgmp_support
+    INTERFACE
+      ${CDDGMP_LINK_LIBRARIES}
+  )
+endif()
 
 add_library(polyhedral_cdd_double_support INTERFACE)
 target_include_directories(
@@ -235,9 +237,11 @@ target_link_libraries(
   INTERFACE
     polyhedral_group_support
     polyhedral_glpk_support
-    polyhedral_cddgmp_support
     polyhedral_mpi_support
 )
+if(CDDGMP_FOUND)
+  target_link_libraries(polyhedral_dualdesc_support INTERFACE polyhedral_cddgmp_support)
+endif()
 
 add_library(polyhedral_perfect_support INTERFACE)
 target_link_libraries(
@@ -245,9 +249,11 @@ target_link_libraries(
   INTERFACE
     polyhedral_group_support
     polyhedral_glpk_support
-    polyhedral_cddgmp_support
     polyhedral_mpi_support
 )
+if(CDDGMP_FOUND)
+  target_link_libraries(polyhedral_perfect_support INTERFACE polyhedral_cddgmp_support)
+endif()
 
 add_library(polyhedral_short_support INTERFACE)
 target_link_libraries(
@@ -290,8 +296,10 @@ target_link_libraries(
   INTERFACE
     polyhedral_common
     polyhedral_glpk_support
-    polyhedral_cddgmp_support
 )
+if(CDDGMP_FOUND)
+  target_link_libraries(polyhedral_poly_support INTERFACE polyhedral_cddgmp_support)
+endif()
 
 if(HAVE_NETCDF)
   add_library(polyhedral_ctype_support INTERFACE)
@@ -314,8 +322,10 @@ target_link_libraries(
   INTERFACE
     polyhedral_group_support
     polyhedral_glpk_support
-    polyhedral_cddgmp_support
 )
+if(CDDGMP_FOUND)
+  target_link_libraries(polyhedral_polydecomp_support INTERFACE polyhedral_cddgmp_support)
+endif()
 
 add_library(polyhedral_polygen_support INTERFACE)
 target_link_libraries(
@@ -355,8 +365,6 @@ function(add_polyhedral_binary target source support_target)
   add_executable(${target} ${source} ${ARGN})
   target_link_libraries(${target} PRIVATE ${support_target})
 endfunction()
-
-set(POLY_C_CDDLIB_MPQ_SOURCE "${CMAKE_SOURCE_DIR}/src_poly/POLY_c_cddlib_mpq.cpp")
 
 set(
   COPOS_PROGRAMS
@@ -400,7 +408,6 @@ foreach(target IN LISTS DUALDESC_PROGRAMS)
     ${target}
     "${CMAKE_SOURCE_DIR}/src_dualdesc/${target}.cpp"
     polyhedral_dualdesc_support
-    "${POLY_C_CDDLIB_MPQ_SOURCE}"
   )
 endforeach()
 
@@ -499,7 +506,6 @@ foreach(target IN LISTS PERFECT_PROGRAMS)
     ${target}
     "${CMAKE_SOURCE_DIR}/src_perfect/${target}.cpp"
     polyhedral_perfect_support
-    "${POLY_C_CDDLIB_MPQ_SOURCE}"
   )
 endforeach()
 
@@ -586,7 +592,6 @@ foreach(target IN LISTS LORENTZIAN_PROGRAMS)
     ${target}
     "${CMAKE_SOURCE_DIR}/src_lorentzian/${target}.cpp"
     polyhedral_lorentzian_support
-    "${POLY_C_CDDLIB_MPQ_SOURCE}"
   )
 endforeach()
 
@@ -619,7 +624,6 @@ foreach(target IN LISTS POLY_PROGRAMS)
     ${target}
     "${CMAKE_SOURCE_DIR}/src_poly/${target}.cpp"
     polyhedral_poly_support
-    "${POLY_C_CDDLIB_MPQ_SOURCE}"
   )
 endforeach()
 
@@ -644,7 +648,6 @@ if(HAVE_NETCDF)
       ${target}
       "${CMAKE_SOURCE_DIR}/src_ctype/${target}.cpp"
       polyhedral_ctype_support
-      "${POLY_C_CDDLIB_MPQ_SOURCE}"
     )
   endforeach()
 endif()
@@ -673,7 +676,6 @@ foreach(target IN LISTS POLYDECOMP_PROGRAMS)
     ${target}
     "${CMAKE_SOURCE_DIR}/src_polydecomp/${target}.cpp"
     polyhedral_polydecomp_support
-    "${POLY_C_CDDLIB_MPQ_SOURCE}"
   )
 endforeach()
 
@@ -693,7 +695,6 @@ add_polyhedral_binary(
   POINCARE_Initial_Computation
   "${CMAKE_SOURCE_DIR}/src_poincare_polyhedron/POINCARE_Initial_Computation.cpp"
   polyhedral_poincare_support
-  "${POLY_C_CDDLIB_MPQ_SOURCE}"
 )
 
 set(

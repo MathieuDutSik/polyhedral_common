@@ -3,11 +3,11 @@
 #ifdef USE_CDDLIB
 
 #include "Boost_bitset_kernel.h"
+#include "setoper.h"
 #include "cdd.h"
 #ifndef DISABLE_MPQ_CLASS
 #include "gmpxx.h"
 #endif
-#include "setoper.h"
 #include <boost/multiprecision/gmp.hpp>
 #include <vector>
 
