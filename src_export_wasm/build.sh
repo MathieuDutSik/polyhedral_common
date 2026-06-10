@@ -102,9 +102,14 @@ ensure_wasm_boost_serialization() {
     # -I points at the modular repo's own headers first, then at the
     # full Boost include tree for transitive deps (throw_exception, io,
     # core, etc.).
+    # -idirafter for $BOOST_INC: when BOOST_INC points at /usr/include (as in
+    # the Linux CI), plain -I would inject the host glibc tree ahead of the
+    # wasi-libc sysroot, so libc++'s `#include_next <stdlib.h>` would land on
+    # /usr/include/stdlib.h and fail on glibc-only bits/libc-header-start.h.
+    # -idirafter appends BOOST_INC strictly after the sysroot search path.
     emcc -std=c++20 -O2 \
       -I"$BOOST_SERIAL_SRC/include" \
-      -I"$BOOST_INC" \
+      -idirafter "$BOOST_INC" \
       -DBOOST_ARCHIVE_SOURCE \
       -DBOOST_WARCHIVE_SOURCE \
       -DBOOST_SERIALIZATION_SOURCE \
@@ -144,9 +149,10 @@ INCLUDES=(
   -I"$ROOT/src_sparse_solver"
   -I"$ROOT/src_lorentzian"
   -I"$ROOT/permutalib/src"
-  # External
-  -I"$BOOST_INC"
-  -I"$EIGEN_INC"
+  # External: -idirafter (not -I) so the host include tree never shadows the
+  # wasm sysroot. See ensure_wasm_boost_serialization above for details.
+  -idirafter "$BOOST_INC"
+  -idirafter "$EIGEN_INC"
 )
 
 # --- Optimization flags ---
