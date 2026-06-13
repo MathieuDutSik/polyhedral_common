@@ -1291,8 +1291,8 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 template <typename T, typename Tint>
 std::optional<PVoronoiPart<T, Tint>>
 kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
-                               std::vector<MyVector<Tint>> const& l_excluded_max,
-                               MyVector<T> const &eV, std::ostream &os) {
+                          std::vector<MyVector<Tint>> const& l_excluded_max,
+                          MyVector<T> const &eV, std::ostream &os) {
   std::optional<PVoronoiPart<T, Tint>> opt =
       kernel_l2_p_polytope_part(solver, l_excluded_max, eV, os);
 #ifdef SANITY_CHECK_EXTENSIVE_ENUM_P_POLYTOPES
@@ -1655,7 +1655,9 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 template <typename T, typename Tint, typename Tgroup>
 PVoronoi<T, Tint>
 initial_p_polytope(DataLattice<T, Tint, Tgroup> &eData) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
   std::ostream &os = eData.rddo.os;
+#endif
   int dim = eData.solver.GramMat.rows();
   int denom = 20;
   while (true) {
@@ -1776,55 +1778,6 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   }
   return l_adj;
 }
-
-template <typename T, typename Tint, typename Tgroup>
-std::vector<PVoronoi<T, Tint>>
-compute_all_p_polytopes_V1(DataLattice<T, Tint, Tgroup> &eData) {
-  std::ostream &os = eData.rddo.os;
-  std::vector<PVoronoi<T, Tint>> l_ppoly;
-  PVoronoi<T, Tint> ppoly = initial_p_polytope(eData);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: capp, After initial_p_polytope\n";
-#endif
-  l_ppoly.push_back(ppoly);
-  auto f_insert = [&](PVoronoi<T, Tint> const &f_ppoly) -> void {
-    for (auto &e_ppoly : l_ppoly) {
-      std::optional<MyMatrix<T>> opt_equiv =
-          Polytope_TestEquivalence<T, Tint, Tgroup>(eData, e_ppoly.EXT,
-                                                    f_ppoly.EXT);
-      if (opt_equiv.has_value()) {
-        return;
-      }
-    }
-    l_ppoly.push_back(f_ppoly);
-  };
-  size_t start = 0;
-  while (true) {
-    size_t len = l_ppoly.size();
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: capp, start=" << start << " len=" << len << "\n";
-#endif
-    for (size_t i_p = start; i_p < len; i_p++) {
-      std::vector<PVoronoi<T, Tint>> l_adj =
-          find_list_adjacent_p_voronoi(eData, l_ppoly[i_p]);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: capp, i_p=" << i_p << " |l_adj|=" << l_adj.size() << "\n";
-#endif
-      for (auto &eAdj : l_adj) {
-        f_insert(eAdj);
-      }
-    }
-    if (len == l_ppoly.size()) {
-      break;
-    }
-    start = len;
-  }
-  return l_ppoly;
-}
-
-
-
-
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<PVoronoi<T, Tint>>
@@ -2087,6 +2040,7 @@ T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
   MyMatrix<T> const &G = eData.solver.GramMat;
   int dim = G.rows();
   MyVector<T> diff(dim);
+  std::optional<MyVector<T>> best_vector;
   for (auto &ppoly : l_ppoly) {
     MyVector<Tint> const& v_long = ppoly.v_long;
     MyVector<T> v_long_T = UniversalVectorConversion<T, Tint>(v_long);
@@ -2098,9 +2052,20 @@ T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
       T norm = EvaluationQuadForm(G, diff);
       if (norm > max_sqr_radius) {
         max_sqr_radius = norm;
+        best_vector = diff;
       }
     }
   }
+#ifdef DEBUG_ROBUST_VERTEX_ENUM
+  std::ostream &os = eData.rddo.os;
+  os << "ROBUST: After kernel_l1_p_polytope_part\n";
+  if (best_vector) {
+    MyVector<T> const& V = *best_vector;
+    os << "ROBUST: compute_square_robust_covering_radius, best_vector=" << StringVectorGAP(V) << "\n";
+  } else {
+    os << "ROBUST: compute_square_robust_covering_radius, no best_vector\n";
+  }
+#endif
   return max_sqr_radius;
 }
 
@@ -2110,8 +2075,21 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &G, size_t n_iter,
   CVPSolver<T, Tint> solver(G, os);
   int dim = G.rows();
   T max_cov(0);
+  MyVector<T> V_test(dim+1);
+  std::optional<MyVector<T>> best_vector;
+  auto update_value=[&](MyVector<T> const& V_test, MyVector<T> const& v_long_T) -> void {
+    MyVector<T> diff(dim);
+    for (int i=0; i<dim; i++) {
+      diff(i) = v_long_T(i) - V_test(i+1);
+    }
+    T norm = EvaluationQuadForm(G, diff);
+    if (norm > max_cov) {
+      max_cov = norm;
+      best_vector = V_test;
+    }
+  };
+
   std::vector<MyVector<Tint>> l_excluded_max;
-  MyVector<T> diff(dim);
   for (size_t iter = 0; iter < n_iter; iter++) {
     int denom = random() % 1000000 + 1;
     MyVector<T> eV = get_random_vector<T>(denom, dim);
@@ -2133,36 +2111,32 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &G, size_t n_iter,
       MyVector<T> v_long_T = UniversalVectorConversion<T,Tint>(v_long);
       int n_row = pvp.l_cb[0].sp.EXT.rows();
       T max_local(0);
-#ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
-      MyVector<T> V_test(dim+1);
-#endif
       for (int i_row=0; i_row<n_row; i_row++) {
-        for (int i=0; i<dim; i++) {
-          diff(i) = v_long_T(i) - pvp.l_cb[0].sp.EXT(i_row, i+1);
+        for (int i=0; i<=dim; i++) {
+          V_test(i) = pvp.l_cb[0].sp.EXT(i_row, i);
         }
-        T norm = EvaluationQuadForm(G, diff);
-        if (norm > max_local) {
-          max_local = norm;
-#ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
-          for (int i=0; i<=dim; i++) {
-            V_test(i) = pvp.l_cb[0].sp.EXT(i_row, i);
-          }
-#endif
-        }
-      }
-      if (max_local > max_cov) {
-        max_cov = max_local;
-#ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
-        ResultRobustClosest<T, Tint> rrc =
-          compute_robust_closest<T, Tint>(solver, V_test, os);
-        if (rrc.robust_minimum != max_local) {
-          std::cerr << "ROBUST: max_local=" << max_local << " robust_minimum=" << rrc.robust_minimum << "\n";
-          std::cerr << "ROBUST: inconsistent norms\n";
-          throw TerminalException{1};
-        }
-#endif
+        update_value(V_test, v_long_T);
       }
     }
+  }
+
+
+
+
+  if (best_vector) {
+    MyVector<T> const& V_test = *best_vector;
+#ifdef DEBUG_ROBUST_VERTEX_ENUM
+    os << "ROBUST: random_vertex_estimation_robust_covering, best_vector=" << StringVectorGAP(V_test) << "\n";
+#endif
+#ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
+    ResultRobustClosest<T, Tint> rrc =
+      compute_robust_closest<T, Tint>(solver, V_test, os);
+    if (rrc.robust_minimum != max_cov) {
+      std::cerr << "ROBUST: max_cov=" << max_cov << " robust_minimum=" << rrc.robust_minimum << "\n";
+      std::cerr << "ROBUST: inconsistent norms\n";
+      throw TerminalException{1};
+    }
+#endif
   }
   return max_cov;
 }
