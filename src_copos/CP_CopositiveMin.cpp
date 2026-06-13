@@ -21,7 +21,7 @@ void compute(std::string const &FileI, std::string const &OutFormat,
   Tshortest<T, Tint> eSh =
       CopositiveShortestVector<T, Tint>(eSymmMat, InitialBasis, std::cerr);
 
-  if (OutFormat == "clear") {
+  if (OutFormat == "classic") {
     os << "eMin=" << eSh.min << "\n";
     WriteMatrix(os, eSh.SHV);
     return;
