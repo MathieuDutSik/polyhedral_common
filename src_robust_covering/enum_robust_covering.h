@@ -1537,6 +1537,10 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #endif
     T shift = min_norm / T(10);
     int N = 1;
+    int i_iter = 0;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: Starting at |pvp|=" << pvp.l_cb.size() << "\n";
+#endif
     while(true) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_1, N=" << N << " shift=" << shift << "\n";
@@ -1575,11 +1579,11 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
         N += 1;
         continue;
       }
-      SinglePolytope<T> const& sp = p_poly_vor_part.l_cb[0].sp;
+      ConvexBlock<T,Tint> const& ecb = p_poly_vor_part.l_cb[0];
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_5\n";
 #endif
-      std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, sp, os);
+      std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, ecb.sp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_6\n";
 #endif
@@ -1593,8 +1597,25 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_7\n";
 #endif
-      pvp.l_cb.push_back(p_poly_vor_part.l_cb[0]);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: |pvp|=" << pvp.l_cb.size() << " i_iter=" << i_iter << "\n";
+#endif
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
+      {
+        size_t idx = 0;
+        for (auto & part: pvp.l_cb) {
+          bool test = is_pairwise_intersecting(ecb.sp, part.sp, os);
+          if (test) {
+            std::cerr << "ROBUST: ecb should not intersect with pvp entry idx=" << idx << "\n";
+            throw TerminalException{1};
+          }
+          idx += 1;
+        }
+      }
+#endif
+      pvp.l_cb.push_back(ecb);
       int index = pvp.l_cb.size() - 1;
+      i_iter += 1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_8\n";
 #endif
@@ -1615,13 +1636,13 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 
 
 #ifdef DEBUG_ENUM_P_POLYTOPES
-  size_t iter = 0;
+  size_t j_iter = 0;
 #endif
   while(true) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: find_p_voronoi, |l_hcb|=" << pvp.l_hcb.size()
-       << " |l_scb|=" << pvp.l_scb.size() << " iter=" << iter << "\n";
-    iter += 1;
+       << " |l_scb|=" << pvp.l_scb.size() << " j_iter=" << j_iter << "\n";
+    j_iter += 1;
 #endif
     bool test = f_process_entry();
 #ifdef DEBUG_ENUM_P_POLYTOPES

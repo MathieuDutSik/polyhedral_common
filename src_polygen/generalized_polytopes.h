@@ -522,6 +522,19 @@ GeneralizedPolytope<T> mat_product(GeneralizedPolytope<T> const& gp, MyMatrix<T>
   return gp_new;
 }
 
+template <typename T>
+bool is_pairwise_intersecting(SinglePolytope<T> const& sp1, SinglePolytope<T> const& sp2, std::ostream &os) {
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+  os << "GP: is_pairwise_intersecting, sp1.FAC=\n";
+  WriteMatrix(os, sp1.FAC);
+  os << "GP: is_pairwise_intersecting, sp2.FAC=\n";
+  WriteMatrix(os, sp2.FAC);
+#endif
+  MyMatrix<T> FAC = Concatenate(sp1.FAC, sp2.FAC);
+  return IsFullDimensional(FAC, os);
+}
+
+
 
 template <typename T>
 bool check_pairwise_intersection(GeneralizedPolytope<T> const &gp,
@@ -529,8 +542,7 @@ bool check_pairwise_intersection(GeneralizedPolytope<T> const &gp,
   size_t n_comp = gp.size();
   for (size_t i = 0; i < n_comp; i++) {
     for (size_t j = i + 1; j < n_comp; j++) {
-      MyMatrix<T> FAC = Concatenate(gp.polytopes[i].FAC, gp.polytopes[j].FAC);
-      bool test = IsFullDimensional(FAC, os);
+      bool test = is_pairwise_intersecting(gp.polytopes[i], gp.polytopes[j], os);
       if (test) {
         return false;
       }
