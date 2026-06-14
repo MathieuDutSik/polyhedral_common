@@ -1490,10 +1490,10 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #endif
 
   auto f_process_entry=[&]() -> void {
-    size_t len = pvp.l_scb.size();
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: fpe, step 1\n";
+    os << "ROBUST: Starting at_pvp |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " |pvp.l_scb|=" << pvp.l_scb.size() << "\n";
 #endif
+    size_t len = pvp.l_scb.size();
     SoftConvexBoundary<T,Tint> scb = pvp.l_scb[len-1];
     pvp.l_scb.pop_back();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1518,7 +1518,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #endif
     std::optional<ConvexBoundary<T>> opt1 = get_next_side_vector(scb, G, v_crit, v_long, l_excluded_max, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: fpe, step 7\n";
+    os << "ROBUST: fpe, step 7 opt1.has_value()=" << opt1.has_value() << "\n";
 #endif
     if (!opt1) {
       HardConvexBoundary<T> hcb{scb.index_cb, scb.cb};
@@ -1535,9 +1535,6 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
     T shift = min_norm / T(10);
     int N = 1;
     int i_iter = 0;
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: Starting at |pvp|=" << pvp.l_cb.size() << "\n";
-#endif
     while(true) {
       i_iter += 1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1546,9 +1543,6 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       MyVector<T> eIso = cb_new.random_interior_point(N, os);
       InteriorPtDir<T> ipd_new{eIso, cb_new.V};
       MyVector<T> fV = ipd_new.get_point(shift);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: fpe, step 10_2, shift=" << shift << "\n";
-#endif
       std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_l1_p_polytope_part(solver, l_excluded_max, fV, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_3 opt3.has_value()=" << opt3.has_value() << "\n";
@@ -1583,7 +1577,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #endif
       std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, ecb.sp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: fpe, step 10_6\n";
+      os << "ROBUST: fpe, step 10_6 |l_cb|=" << l_cb.size() << "\n";
 #endif
       for (auto& cb2: l_cb) {
         SoftConvexBoundary<T,Tint> scb_new{scb.index_cb, cb2, l_excluded_max, scb.l_robust_m};
@@ -1593,7 +1587,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
         pvp.l_hcb.push_back(hcb);
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: |pvp|=" << pvp.l_cb.size() << " i_iter=" << i_iter << "\n";
+      os << "ROBUST: |pvp.l_cb|=" << pvp.l_cb.size() << " i_iter=" << i_iter << "\n";
 #endif
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
       {
@@ -1684,7 +1678,7 @@ initial_p_polytope(DataLattice<T, Tint, Tgroup> &eData) {
 #endif
     std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(eData, eV);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: ipp, after find_p_voronoi\n";
+    os << "ROBUST: ipp, after find_p_voronoi, opt.has_value()=" << opt.has_value() << "\n";
 #endif
     if (opt) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
