@@ -1478,7 +1478,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T,Tint> const& solver = eData.solver;
   MyMatrix<T> const& G = solver.GramMat;
-  std::optional<PVoronoiPart<T,Tint>> opt = kernel_l1_p_polytope_part<T,Tint>(solver, {}, eV, os);
+  std::optional<PVoronoiPart<T,Tint>> opt = kernel_l1_p_polytope_part(solver, {}, eV, os);
   if (!opt) {
     return {};
   }
@@ -1489,11 +1489,8 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
   os << "ROBUST: find_p_voronoi, step 1\n";
 #endif
 
-  auto f_process_entry=[&]() -> bool {
+  auto f_process_entry=[&]() -> void {
     size_t len = pvp.l_scb.size();
-    if (len == 0) {
-      return true;
-    }
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: fpe, step 1\n";
 #endif
@@ -1526,7 +1523,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
     if (!opt1) {
       HardConvexBoundary<T> hcb{scb.index_cb, scb.cb};
       pvp.l_hcb.push_back(hcb);
-      return false;
+      return;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: fpe, step 8\n";
@@ -1542,6 +1539,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
     os << "ROBUST: Starting at |pvp|=" << pvp.l_cb.size() << "\n";
 #endif
     while(true) {
+      i_iter += 1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_1, N=" << N << " shift=" << shift << "\n";
 #endif
@@ -1551,9 +1549,9 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_2, shift=" << shift << "\n";
 #endif
-      std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_l1_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
+      std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_l1_p_polytope_part(solver, l_excluded_max, fV, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: fpe, step 10_3\n";
+      os << "ROBUST: fpe, step 10_3 opt3.has_value()=" << opt3.has_value() << "\n";
 #endif
       if (!opt3) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1564,14 +1562,15 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
         continue;
       }
       PVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
-      int pos = get_position_vec_in_mat(p_poly_vor_part.l_cb[0].sp.FAC, eIneq_op);
+      ConvexBlock<T,Tint> const& ecb = p_poly_vor_part.l_cb[0];
+      int pos = get_position_vec_in_mat(ecb.sp.FAC, eIneq_op);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: fpe, step 10_4\n";
+      os << "ROBUST: fpe, step 10_4, pos=" << pos << "\n";
 #endif
       if (pos == -1) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST: fpe, p_poly_vor_part.l_cb[0].sp.FAC=\n";
-        WriteMatrix(os, p_poly_vor_part.l_cb[0].sp.FAC);
+        os << "ROBUST: fpe, ecb.sp.FAC=\n";
+        WriteMatrix(os, ecb.sp.FAC);
         os << "ROBUST: fpe, eIneq_op=" << StringVectorGAP(eIneq_op) << "\n";
         os << "ROBUST: fpe, pos = -1 exit\n";
 #endif
@@ -1579,7 +1578,6 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
         N += 1;
         continue;
       }
-      ConvexBlock<T,Tint> const& ecb = p_poly_vor_part.l_cb[0];
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_5\n";
 #endif
@@ -1594,9 +1592,6 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       for (auto& hcb: p_poly_vor_part.l_hcb) {
         pvp.l_hcb.push_back(hcb);
       }
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: fpe, step 10_7\n";
-#endif
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: |pvp|=" << pvp.l_cb.size() << " i_iter=" << i_iter << "\n";
 #endif
@@ -1615,9 +1610,8 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #endif
       pvp.l_cb.push_back(ecb);
       int index = pvp.l_cb.size() - 1;
-      i_iter += 1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: fpe, step 10_8\n";
+      os << "ROBUST: fpe, step 10_8, index=" << index << "\n";
 #endif
       // That part needs to be improved, since the inserted faces could match
       for (auto& scb: p_poly_vor_part.l_scb) {
@@ -1630,7 +1624,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: f_process_entry, step 10_9\n";
 #endif
-      return false;
+      return;
     }
   };
 
@@ -1644,13 +1638,14 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
        << " |l_scb|=" << pvp.l_scb.size() << " j_iter=" << j_iter << "\n";
     j_iter += 1;
 #endif
-    bool test = f_process_entry();
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: find_p_voronoi, test=" << test << "\n";
-#endif
-    if (test) {
+    size_t len = pvp.l_scb.size();
+    if (len == 0) {
       break;
     }
+    f_process_entry();
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: find_p_voronoi, after f_process_entry\n";
+#endif
   }
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: find_p_voronoi, Before convert_p_voronoi_part\n";
