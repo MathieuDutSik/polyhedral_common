@@ -977,11 +977,34 @@ GeneralizedPolytope<T> difference_p_p(SinglePolytope<T> const &p1,
   return gp_ret;
 }
 
+template<typename T>
+std::vector<ConvexBoundary<T>> convex_boundary_minus_cb(ConvexBoundary<T> const& cb1, ConvexBoundary<T> const& cb2,  std::ostream &os) {
+#ifdef SANITY_CHECK_GENERALIZED_POLYTOPE
+  if (cb1.V != - cb2.V) {
+    std::cerr << "GP: The vector V of cb1 and cb2 should be a difference\n";
+    throw TerminalException{1};
+  }
+  if (cb1.NSP != cb2.NSP) {
+    std::cerr << "GP: The NSP should be the same for cb1 and cb2\n";
+    throw TerminalException{1};
+  }
+#endif
+  GeneralizedPolytope<T> gp = difference_p_p(cb1.sp, cb2.sp, os);
+  std::vector<ConvexBoundary<T>> l_cb;
+  for (auto& sp: gp.polytopes) {
+    ConvexBoundary<T> cb_new{cb1.V, cb1.NSP, sp};
+    l_cb.push_back(cb_new);
+  }
+  return l_cb;
+}
+
+
+
 
 
 
 template<typename T>
-std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const& cb, SinglePolytope<T> const& sp,  std::ostream &os) {
+std::vector<ConvexBoundary<T>> convex_boundary_minus_sp(ConvexBoundary<T> const& cb, SinglePolytope<T> const& sp,  std::ostream &os) {
   MyVector<T> eFAC = ScalarCanonicalizationVector(cb.V);
   int i_fac = get_matching_face_position(sp.FAC, eFAC);
   if (i_fac == -1) {

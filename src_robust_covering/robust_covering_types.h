@@ -6,6 +6,11 @@
 #include "boost_serialization.h"
 // clang-format on
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_ROBUST_COVERING_TYPES
+#endif
+
+
 // A family of vectors with the index which is the farthest.
 template <typename Tint> struct GenericRobustM {
   int index;
@@ -193,14 +198,14 @@ struct SoftConvexBoundary {
   std::vector<MyVector<Tint>> l_excluded_max; // The excluded vectors. Cannot use the ConvexBlock since they can vary.
   std::vector<GenericRobustM<Tint>> l_robust_m;
   MyVector<Tint> v_long() const {
-#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
+#ifdef SANITY_CHECK_ROBUST_COVERING_TYPES
     if (l_robust_m.empty()) {
       std::cerr << "ROBUST: l_robust_m should be non-empty for getting the v_long\n";
       throw TerminalException{1};
     }
 #endif
     MyVector<Tint> v_long = l_robust_m[0].v_long();
-#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
+#ifdef SANITY_CHECK_ROBUST_COVERING_TYPES
     size_t len = l_robust_m.size();
     for (size_t i=1; i<len; i++) {
       MyVector<Tint> v = l_robust_m[i].v_long();
@@ -443,7 +448,82 @@ template <typename T, typename Tint> struct PVoronoiPart {
   std::vector<GenericRobustM<Tint>> l_robust_m_min;
   std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
   std::vector<HardConvexBoundary<T>> l_hcb;
-  std::vector<SoftConvexBoundary<T,Tint>> l_scb;
+  std::map<MyVector<T>, std::vector<SoftConvexBoundary<T,Tint>>> map_scb;
+  size_t n_scb() const {
+    size_t n_val = 0;
+    for (auto & kv: map_scb) {
+      n_val += kv.second.size();
+    }
+    return n_val;
+  }
+  SoftConvexBoundary<T,Tint> get_one_scb() const {
+    auto iter = map_scb.begin();
+#ifdef SANITY_CHECK_ROBUST_COVERING_TYPES
+    if (iter == map_scb.end()) {
+      std::cerr << "ROBUST_TYPES: map_sb should not be empty\n";
+      throw TerminalException{1};
+    }
+#endif
+    std::vector<SoftConvexBoundary<T,Tint>> const& l_scb = iter->second;
+#ifdef SANITY_CHECK_ROBUST_COVERING_TYPES
+    if (l_scb.empty()) {
+      std::cerr << "ROBUST_TYPES: l_scb should not be empty\n";
+      throw TerminalException{1};
+    }
+#endif
+    return l_scb[0];
+  }
+  void insert_scb(SoftConvexBoundary<T,Tint> const& scb, std::ostream& os) {
+    // The insertion of this soft convex boundary can increase but also decrease it.
+    // We need to keep track of what we already have.
+    MyVector<T> V = - scb.cb.V;
+    MyVector<T> V_opp = - V;
+    if (!map_scb.contains(V_opp)) {
+      map_scb[V].push_back(scb);
+      // Not present, needs to insert
+      return;
+    }
+    std::vector<SoftConvexBoundary<T,Tint>> l_scb = map_scb.at(V);
+    std::vector<SoftConvexBoundary<T,Tint>> l_scb_new;
+    std::vector<ConvexBoundary<T>> l_cb_ins{scb.cb};
+    for (auto & scb_old: l_scb) {
+      std::vector<MyVector<Tint>> const& l_excluded_max = scb_old.l_excluded_max;
+      std::vector<GenericRobustM<Tint>> const& l_robust_m = scb_old.l_robust_m;
+      std::vector<ConvexBoundary<T>> l_cb_ins_new;
+      for (auto & cb_ins: l_cb_ins) {
+        std::vector<ConvexBoundary<T>> l_cb_a = convex_boundary_minus_cb(scb_old.cb, cb_ins, os);
+        for (auto & cb_a: l_cb_a) {
+          SoftConvexBoundary<T,Tint> cbN{cb_a, l_excluded_max, l_robust_m};
+          l_scb_new.push_back(cbN);
+        }
+        std::vector<ConvexBoundary<T>> l_cb_b = convex_boundary_minus_cb(cb_ins, scb_old.cb, os);
+        for (auto& cb_b: l_cb_b) {
+          l_cb_ins_new.push_back(cb_b);
+        }
+      }
+      l_cb_ins = l_cb_ins_new;
+    }
+    if (l_cb_ins.size() > 0) {
+      for (auto & cb_ins: l_cb_ins) {
+        SoftConvexBoundary<T,Tint> scb_ins{cb_ins, scb.l_excluded_max, scb.l_robust_m};
+        map_scb[V].push_back(scb_ins);
+      }
+    }
+    if (l_scb_new.size() == 0) {
+      map_scb.erase(V_opp);
+    } else {
+      map_scb[V_opp] = l_scb_new;
+    }
+  }
+  std::vector<SoftConvexBoundary<T,Tint>> get_l_scb() const {
+    std::vector<SoftConvexBoundary<T,Tint>> l_scb;
+    for (auto & kv: map_scb) {
+      for (auto & entry: kv.second) {
+        l_scb.push_back(entry);
+      }
+    }
+    return l_scb;
+  }
 };
 
 template <typename T, typename Tint>
@@ -461,7 +541,7 @@ std::ostream &operator<<(std::ostream &os, PVoronoiPart<T, Tint> const &pvp) {
   for (size_t i = 0; i < pvp.l_hcb.size(); i++) {
     os << "  l_hcb[" << i << "]=" << pvp.l_hcb[i] << "\n";
   }
-  os << "  |l_scb|=" << pvp.l_scb.size() << "\n";
+  os << "  |map_scb|=" << pvp.map_scb.size() << "\n";
   for (size_t i = 0; i < pvp.l_scb.size(); i++) {
     os << "  l_scb[" << i << "]=" << pvp.l_scb[i] << "\n";
   }

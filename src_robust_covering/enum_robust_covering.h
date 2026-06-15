@@ -280,9 +280,6 @@
     + Keeping track of hard and soft facets is mandatory.
     + If there is no extension from a soft facet, then we
       need to convert it to hard.
-    + 
-
-
     need to switch to
 
   ---- THE L-TYPE THEORY SIDE ----
@@ -673,7 +670,7 @@ T min_pairwise_norm(MyMatrix<T> const& EXT, MyMatrix<T> const& G) {
 template <typename T, typename Tint>
 PVoronoi<T,Tint> convert_p_voronoi_part(PVoronoiPart<T,Tint> const& pvp, std::ostream& os) {
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-  if (!pvp.l_scb.empty()) {
+  if (!pvp.map_scb.empty()) {
     std::cerr << "ROBUST: We still have soft boundaries\n";
     throw TerminalException{1};
   }
@@ -1255,7 +1252,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
       return false;
     }
     std::vector<HardConvexBoundary<T>> l_hcb;
-    std::vector<SoftConvexBoundary<T,Tint>> l_scb;
+    std::map<MyVector<T>, std::vector<SoftConvexBoundary<T,Tint>>> map_scb;
     for (size_t i_irred=0; i_irred<list_irred.size(); i_irred++) {
       ConvexBoundary<T> c_bnd = get_convex_boundary(sp, i_irred, os);
       MyVector<T> const& V = c_bnd.V;
@@ -1265,7 +1262,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
         l_hcb.push_back(hcb);
       } else {
         SoftConvexBoundary<T,Tint> scb{c_bnd, l_excluded_max, l_grm};
-        l_scb.push_back(scb);
+        map_scb[V].push_back(scb);
       }
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1275,7 +1272,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 6\n";
 #endif
-    ppoly = PVoronoiPart<T,Tint>{v_short, l_robust_m_min, {c_bl}, l_hcb, l_scb};
+    ppoly = PVoronoiPart<T,Tint>{v_short, l_robust_m_min, {c_bl}, l_hcb, map_scb};
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 7 TheNorm=" << TheNorm << "\n";
     os << "ROBUST: kippp, final, step 7 upper_bound=" << upper_bound << "\n";
@@ -1500,11 +1497,12 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 
   auto f_process_entry=[&]() -> void {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: Starting at_pvp |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " |pvp.l_scb|=" << pvp.l_scb.size() << "\n";
+    os << "ROBUST: Starting at_pvp |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " |pvp.l_scb|=" << pvp.n_scb() << "\n";
+    for (auto & kv: pvp.map_scb) {
+      os << "  V=" << StringVectorGAP(kv.first) << " |l_scb|=" << kv.second.size() << "\n";
+    }
 #endif
-    size_t len = pvp.l_scb.size();
-    SoftConvexBoundary<T,Tint> scb = pvp.l_scb[len-1];
-    pvp.l_scb.pop_back();
+    SoftConvexBoundary<T,Tint> scb = pvp.get_one_scb();
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: fpe, step 2\n";
 #endif
@@ -1572,9 +1570,6 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #endif
       if (pos == -1) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST: fpe, ecb.sp.FAC=\n";
-        WriteMatrix(os, ecb.sp.FAC);
-        os << "ROBUST: fpe, eIneq_op=" << StringVectorGAP(eIneq_op) << "\n";
         os << "ROBUST: fpe, pos = -1 exit\n";
 #endif
         shift = shift / T(2);
@@ -1584,14 +1579,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_5\n";
 #endif
-      std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, ecb.sp, os);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: fpe, step 10_6 |l_cb|=" << l_cb.size() << "\n";
-#endif
-      for (auto& cb2: l_cb) {
-        SoftConvexBoundary<T,Tint> scb_new{cb2, l_excluded_max, scb.l_robust_m};
-        pvp.l_scb.push_back(scb_new);
-      }
+      // The hard boundaries are hard for a reason and do not need to be removed.
       for (auto& hcb: p_poly_vor_part.l_hcb) {
         pvp.l_hcb.push_back(hcb);
       }
@@ -1609,16 +1597,9 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       }
 #endif
       pvp.l_cb.push_back(ecb);
-      int index = pvp.l_cb.size() - 1;
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: fpe, step 10_8, index=" << index << "\n";
-#endif
       // That part needs to be improved, since the inserted faces could match
-      for (auto& scb: p_poly_vor_part.l_scb) {
-        if (scb.cb.V != eIneq_op) {
-          SoftConvexBoundary<T,Tint> scb_new = scb;
-          pvp.l_scb.push_back(scb_new);
-        }
+      for (auto& scb: p_poly_vor_part.get_l_scb()) {
+        pvp.insert_scb(scb, os);
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: f_process_entry, step 10_9\n";
@@ -1634,10 +1615,10 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
   while(true) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: find_p_voronoi, |l_hcb|=" << pvp.l_hcb.size()
-       << " |l_scb|=" << pvp.l_scb.size() << " j_iter=" << j_iter << "\n";
+       << " |l_scb|=" << pvp.n_scb() << " j_iter=" << j_iter << "\n";
     j_iter += 1;
 #endif
-    size_t len = pvp.l_scb.size();
+    size_t len = pvp.n_scb();
     if (len == 0) {
       break;
     }
