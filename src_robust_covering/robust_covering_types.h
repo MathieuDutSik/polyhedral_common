@@ -150,35 +150,31 @@ inline void serialize(Archive &ar, ConvexBlock<T, Tint> &val,
 
 template<typename T>
 struct HardConvexBoundary {
-  int index_cb; // The corresponding face;
   ConvexBoundary<T> sp;
 };
 
 template <typename T>
 std::ostream &operator<<(std::ostream &os, HardConvexBoundary<T> const &hcb) {
-  os << "HardConvexBoundary(index_cb=" << hcb.index_cb << " V=" << StringVectorGAP(hcb.sp.V) << ")";
+  os << "HardConvexBoundary(V=" << StringVectorGAP(hcb.sp.V) << ")";
   return os;
 }
 
 template <typename T>
 void WriteEntryGAP(std::ostream &os_out, HardConvexBoundary<T> const &hcb) {
-  os_out << "rec(index_cb:=" << hcb.index_cb << ", sp:=";
+  os_out << "rec(sp:=";
   WriteEntryGAP(os_out, hcb.sp);
   os_out << ")";
 }
 
 template <typename T>
 void WriteEntryCPP(std::ostream &os, HardConvexBoundary<T> const &hcb) {
-  os << hcb.index_cb << "\n";
   WriteEntryCPP(os, hcb.sp);
 }
 
 template <typename T>
 HardConvexBoundary<T> ReadEntryCPP_HardConvexBoundary(std::istream &is) {
-  int index_cb;
-  is >> index_cb;
   ConvexBoundary<T> sp = ReadEntryCPP_ConvexBoundary<T>(is);
-  return {index_cb, sp};
+  return {sp};
 }
 
 namespace boost::serialization {
@@ -186,7 +182,6 @@ namespace boost::serialization {
 template <class Archive, typename T>
 inline void serialize(Archive &ar, HardConvexBoundary<T> &val,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("index_cb", val.index_cb);
   ar &make_nvp("sp", val.sp);
 }
 
@@ -194,7 +189,6 @@ inline void serialize(Archive &ar, HardConvexBoundary<T> &val,
 
 template<typename T, typename Tint>
 struct SoftConvexBoundary {
-  int index_cb; // The corresponding face;
   ConvexBoundary<T> cb;
   std::vector<MyVector<Tint>> l_excluded_max; // The excluded vectors. Cannot use the ConvexBlock since they can vary.
   std::vector<GenericRobustM<Tint>> l_robust_m;
@@ -222,8 +216,7 @@ struct SoftConvexBoundary {
 
 template <typename T, typename Tint>
 std::ostream &operator<<(std::ostream &os, SoftConvexBoundary<T, Tint> const &scb) {
-  os << "SoftConvexBoundary(index_cb=" << scb.index_cb
-     << " V=" << StringVectorGAP(scb.cb.V)
+  os << "SoftConvexBoundary(V=" << StringVectorGAP(scb.cb.V)
      << " |l_excluded_max|=" << scb.l_excluded_max.size()
      << " |l_robust_m|=" << scb.l_robust_m.size() << ")";
   return os;
@@ -231,7 +224,7 @@ std::ostream &operator<<(std::ostream &os, SoftConvexBoundary<T, Tint> const &sc
 
 template <typename T, typename Tint>
 void WriteEntryGAP(std::ostream &os_out, SoftConvexBoundary<T, Tint> const &scb) {
-  os_out << "rec(index_cb:=" << scb.index_cb << ", cb:=";
+  os_out << "rec(cb:=";
   WriteEntryGAP(os_out, scb.cb);
   os_out << ", l_excluded_max:=[";
   for (size_t i = 0; i < scb.l_excluded_max.size(); i++) {
@@ -252,7 +245,6 @@ void WriteEntryGAP(std::ostream &os_out, SoftConvexBoundary<T, Tint> const &scb)
 
 template <typename T, typename Tint>
 void WriteEntryCPP(std::ostream &os, SoftConvexBoundary<T, Tint> const &scb) {
-  os << scb.index_cb << "\n";
   WriteEntryCPP(os, scb.cb);
   size_t n_excl = scb.l_excluded_max.size();
   os << n_excl << "\n";
@@ -268,8 +260,6 @@ void WriteEntryCPP(std::ostream &os, SoftConvexBoundary<T, Tint> const &scb) {
 
 template <typename T, typename Tint>
 SoftConvexBoundary<T, Tint> ReadEntryCPP_SoftConvexBoundary(std::istream &is) {
-  int index_cb;
-  is >> index_cb;
   ConvexBoundary<T> cb = ReadEntryCPP_ConvexBoundary<T>(is);
   size_t n_excl;
   is >> n_excl;
@@ -283,7 +273,7 @@ SoftConvexBoundary<T, Tint> ReadEntryCPP_SoftConvexBoundary(std::istream &is) {
   for (size_t i = 0; i < n_robust; i++) {
     l_robust_m.push_back(ReadEntryCPP_GenericRobustM<Tint>(is));
   }
-  return {index_cb, cb, l_excluded_max, l_robust_m};
+  return {cb, l_excluded_max, l_robust_m};
 }
 
 namespace boost::serialization {
@@ -291,7 +281,6 @@ namespace boost::serialization {
 template <class Archive, typename T, typename Tint>
 inline void serialize(Archive &ar, SoftConvexBoundary<T, Tint> &val,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("index_cb", val.index_cb);
   ar &make_nvp("cb", val.cb);
   ar &make_nvp("l_excluded_max", val.l_excluded_max);
   ar &make_nvp("l_robust_m", val.l_robust_m);
@@ -303,7 +292,11 @@ inline void serialize(Archive &ar, SoftConvexBoundary<T, Tint> &val,
   The robust_m_min is defining the P-polytope.
   This is what we are after in the end.
   ----
-  It is a full enumeration result.
+  It is a full enumeration result describing a PVoronoi
+  * v_long is the vector realizing the maximum.
+  * l_robust_m_min is the set of parallelepipeds realizing
+    the minimum. Could be more than 1.
+  * 
  */
 template <typename T, typename Tint> struct PVoronoi {
   MyVector<Tint> v_long;

@@ -413,7 +413,8 @@ struct MapFullIneq {
   // Map from the inequalities to the parallelepipeds
   std::map<MyVector<T>, std::vector<GenericRobustM<Tint>>> m;
   // If std::vector<_> is empty, then the inequality is a hard one.
-  // If std::vector<_>, then it is a soft one and that indicates what
+  // If std::vector<_> is not empty then it is a soft one and what.
+  // parallelepipeds to use.
   void insert_hard_ineq(MyVector<T> const& eIneq) {
     m[eIneq] = {};
   }
@@ -985,6 +986,10 @@ bool are_vertices_correct(CVPSolver<T, Tint> const &solver,
 // Find the defining inequalities of a polytope.
 // It should fail and return None if the point eV is not generic enough.
 // Which should lead to an increase in randomness.
+//
+// The l_excluded_max is a set of vectors that satisfy
+// * The long vector of the best should satisfy the inequality
+//   N(v - long) >= N(v - excluded)
 template <typename T, typename Tint>
 std::optional<PVoronoiPart<T, Tint>>
 kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
@@ -1255,12 +1260,12 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
       ConvexBoundary<T> c_bnd = get_convex_boundary(sp, i_irred, os);
       MyVector<T> const& V = c_bnd.V;
       std::vector<GenericRobustM<Tint>> l_grm = m_full_ineq.get_list_paralls(V);
-      if (!l_grm.empty()) {
-        SoftConvexBoundary<T,Tint> scb{0, c_bnd, l_excluded_max, l_grm};
-        l_scb.push_back(scb);
-      } else {
-        HardConvexBoundary<T> hcb{0, c_bnd};
+      if (l_grm.empty()) {
+        HardConvexBoundary<T> hcb{c_bnd};
         l_hcb.push_back(hcb);
+      } else {
+        SoftConvexBoundary<T,Tint> scb{c_bnd, l_excluded_max, l_grm};
+        l_scb.push_back(scb);
       }
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1287,6 +1292,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
     return {};
   }
 }
+
 
 template <typename T, typename Tint>
 std::optional<PVoronoiPart<T, Tint>>
@@ -1391,12 +1397,12 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
   Get a possible vector to consider
  */
 template<typename T, typename Tint>
-std::optional<ConvexBoundary<T>> get_next_side_vector(SoftConvexBoundary<T,Tint> const& scb,
-                                                      MyMatrix<T> const& G,
-                                                      MyVector<Tint> const& v_crit,
-                                                      MyVector<Tint> const& v_long,
-                                                      std::vector<MyVector<Tint>> const& l_excluded_max,
-                                                      std::ostream& os) {
+std::optional<ConvexBoundary<T>> get_next_side_cb(SoftConvexBoundary<T,Tint> const& scb,
+                                                  MyMatrix<T> const& G,
+                                                  MyVector<Tint> const& v_crit,
+                                                  MyVector<Tint> const& v_long,
+                                                  std::vector<MyVector<Tint>> const& l_excluded_max,
+                                                  std::ostream& os) {
 
   std::vector<MyVector<T>> l_vertices = scb.cb.get_list_vertices();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1471,14 +1477,17 @@ std::optional<ConvexBoundary<T>> get_next_side_vector(SoftConvexBoundary<T,Tint>
 }
 
 
-
+/*
+  This is the loop for finding the decomposition.
+ */
 template <typename T, typename Tint, typename Tgroup>
 std::optional<PVoronoi<T, Tint>>
 find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T,Tint> const& solver = eData.solver;
   MyMatrix<T> const& G = solver.GramMat;
-  std::optional<PVoronoiPart<T,Tint>> opt = kernel_l1_p_polytope_part(solver, {}, eV, os);
+  std::vector<MyVector<Tint>> l_excluded_max_start;
+  std::optional<PVoronoiPart<T,Tint>> opt = kernel_l1_p_polytope_part(solver, l_excluded_max_start, eV, os);
   if (!opt) {
     return {};
   }
@@ -1516,12 +1525,12 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: fpe, step 6\n";
 #endif
-    std::optional<ConvexBoundary<T>> opt1 = get_next_side_vector(scb, G, v_crit, v_long, l_excluded_max, os);
+    std::optional<ConvexBoundary<T>> opt1 = get_next_side_cb(scb, G, v_crit, v_long, l_excluded_max, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: fpe, step 7 opt1.has_value()=" << opt1.has_value() << "\n";
 #endif
     if (!opt1) {
-      HardConvexBoundary<T> hcb{scb.index_cb, scb.cb};
+      HardConvexBoundary<T> hcb{scb.cb};
       pvp.l_hcb.push_back(hcb);
       return;
     }
@@ -1580,7 +1589,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       os << "ROBUST: fpe, step 10_6 |l_cb|=" << l_cb.size() << "\n";
 #endif
       for (auto& cb2: l_cb) {
-        SoftConvexBoundary<T,Tint> scb_new{scb.index_cb, cb2, l_excluded_max, scb.l_robust_m};
+        SoftConvexBoundary<T,Tint> scb_new{cb2, l_excluded_max, scb.l_robust_m};
         pvp.l_scb.push_back(scb_new);
       }
       for (auto& hcb: p_poly_vor_part.l_hcb) {
@@ -1590,15 +1599,12 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       os << "ROBUST: |pvp.l_cb|=" << pvp.l_cb.size() << " i_iter=" << i_iter << "\n";
 #endif
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-      {
-        size_t idx = 0;
-        for (auto & part: pvp.l_cb) {
-          bool test = is_pairwise_intersecting(ecb.sp, part.sp, os);
-          if (test) {
-            std::cerr << "ROBUST: ecb should not intersect with pvp entry idx=" << idx << "\n";
-            throw TerminalException{1};
-          }
-          idx += 1;
+      for (size_t idx=0; idx<pvp.l_cb.size(); idx++) {
+        ConvexBlock<T, Tint> const& part = pvp.l_cb[idx];
+        bool test = is_pairwise_intersecting(ecb.sp, part.sp, os);
+        if (test) {
+          std::cerr << "ROBUST: ecb should not intersect with pvp entry idx=" << idx << "\n";
+          throw TerminalException{1};
         }
       }
 #endif
@@ -1611,7 +1617,6 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       for (auto& scb: p_poly_vor_part.l_scb) {
         if (scb.cb.V != eIneq_op) {
           SoftConvexBoundary<T,Tint> scb_new = scb;
-          scb_new.index_cb = index;
           pvp.l_scb.push_back(scb_new);
         }
       }
