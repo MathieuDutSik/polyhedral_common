@@ -1403,8 +1403,8 @@ std::optional<ConvexBoundary<T>> get_next_side_cb(SoftConvexBoundary<T,Tint> con
 
   std::vector<MyVector<T>> l_vertices = scb.cb.get_list_vertices();
 #ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: gnsv v_long=" << StringVectorGAP(v_long) << "\n";
-  os << "ROBUST: gnsv l_vertices=\n";
+  os << "ROBUST: gnsc v_long=" << StringVectorGAP(v_long) << "\n";
+  os << "ROBUST: gnsc l_vertices=\n";
   WriteMatrix(os, MatrixFromVectorFamily(l_vertices));
 #endif
   MyVector<T> v_long_T = UniversalVectorConversion<T,Tint>(v_long);
@@ -1442,7 +1442,7 @@ std::optional<ConvexBoundary<T>> get_next_side_cb(SoftConvexBoundary<T,Tint> con
     }
     int n_choice = l_cand_rel.size();
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: gnsv iter=" << iter << " n_choice=" << n_choice << "\n";
+    os << "ROBUST: gnsc iter=" << iter << " n_choice=" << n_choice << "\n";
     iter += 1;
 #endif
     if (n_choice == 0) {
@@ -1468,7 +1468,7 @@ std::optional<ConvexBoundary<T>> get_next_side_cb(SoftConvexBoundary<T,Tint> con
     }
   }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: gnsv nothing was found\n";
+  os << "ROBUST: gnsc nothing was found\n";
 #endif
   return {};
 }
@@ -1476,6 +1476,8 @@ std::optional<ConvexBoundary<T>> get_next_side_cb(SoftConvexBoundary<T,Tint> con
 
 /*
   This is the loop for finding the decomposition.
+  ----
+  
  */
 template <typename T, typename Tint, typename Tgroup>
 std::optional<PVoronoi<T, Tint>>
@@ -1497,9 +1499,12 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 
   auto f_process_entry=[&]() -> void {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: Starting at_pvp |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " |pvp.l_scb|=" << pvp.n_scb() << "\n";
+    os << "ROBUST: start_fpe |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " |pvp.l_scb|=" << pvp.n_scb() << "\n";
     for (auto & kv: pvp.map_scb) {
-      os << "  V=" << StringVectorGAP(kv.first) << " |l_scb|=" << kv.second.size() << "\n";
+      os << "ROBUST: start_fpe soft V=" << StringVectorGAP(kv.first) << " |l_scb|=" << kv.second.size() << "\n";
+    }
+    for (auto & hcb: pvp.l_hcb) {
+      os << "ROBUST: start_fpe hard V=" << StringVectorGAP(hcb.sp.V) << "\n";
     }
 #endif
     SoftConvexBoundary<T,Tint> scb = pvp.get_one_scb();
@@ -1565,6 +1570,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       }
       PVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
       ConvexBlock<T,Tint> const& ecb = p_poly_vor_part.l_cb[0];
+      // Checks if the obtained ConvexBlock is adjacent to the existing block.
       int pos = get_position_vec_in_mat(ecb.sp.FAC, eIneq_op);
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_4, pos=" << pos << "\n";
@@ -1600,6 +1606,9 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       pvp.l_cb.push_back(ecb);
       // That part needs to be improved, since the inserted faces could match
       for (auto& scb: p_poly_vor_part.get_l_scb()) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+        os << "ROBUST: Removal scb V=" << StringVectorGAP(scb.cb.V) << "\n";
+#endif
         pvp.insert_scb(scb, os);
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES

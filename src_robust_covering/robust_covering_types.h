@@ -512,9 +512,7 @@ template <typename T, typename Tint> struct PVoronoiPart {
           l_scb_new.push_back(cbN);
         }
         std::vector<ConvexBoundary<T>> l_cb_b = convex_boundary_minus_cb(cb_ins, scb_old.cb, os);
-        for (auto& cb_b: l_cb_b) {
-          l_cb_ins_new.push_back(cb_b);
-        }
+        l_cb_ins_new.insert(l_cb_ins_new.end(), l_cb_b.begin(), l_cb_b.end());
       }
       l_cb_ins = l_cb_ins_new;
     }
