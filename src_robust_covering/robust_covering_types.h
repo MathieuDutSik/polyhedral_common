@@ -471,7 +471,22 @@ template <typename T, typename Tint> struct PVoronoiPart {
       throw TerminalException{1};
     }
 #endif
-    return l_scb[0];
+    size_t len = l_scb.size();
+    return l_scb[len - 1];
+  }
+  void drop_from_one_scb(SoftConvexBoundary<T,Tint> const& scb) {
+    MyVector<T> const& V = scb.cb.V;
+#ifdef SANITY_CHECK_ROBUST_COVERING_TYPES
+    if (!map_scb.contains(V)) {
+      std::cerr << "ROBUST_TYPES: V should be in map_scb\n";
+      throw TerminalException{1};
+    }
+#endif
+    std::vector<SoftConvexBoundary<T,Tint>> & l_scb = map_scb[V];
+    l_scb.pop_back();
+    if (l_scb.empty()) {
+      map_scb.erase(V);
+    }
   }
   void insert_scb(SoftConvexBoundary<T,Tint> const& scb, std::ostream& os) {
     // The insertion of this soft convex boundary can increase but also decrease it.

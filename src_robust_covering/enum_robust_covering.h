@@ -1528,6 +1528,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
     os << "ROBUST: fpe, step 7 opt1.has_value()=" << opt1.has_value() << "\n";
 #endif
     if (!opt1) {
+      pvp.drop_from_one_scb(scb);
       HardConvexBoundary<T> hcb{scb.cb};
       pvp.l_hcb.push_back(hcb);
       return;
