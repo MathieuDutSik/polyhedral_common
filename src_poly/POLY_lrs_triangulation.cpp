@@ -46,6 +46,30 @@ void process(std::string const &eFileI, std::string const &OutFormat,
     os_out << ";\n";
     return;
   }
+  if (OutFormat == "GAPtrig_det") {
+    os_out << "return [";
+    bool is_first = true;
+    for (auto &trig : vf) {
+      MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
+      T det = T_abs(DeterminantMat(EXTtrig));
+      if (!is_first) {
+        os_out << ",";
+      }
+      is_first = false;
+      size_t siz = trig.count();
+      os_out << "rec(LV:=[";
+      boost::dynamic_bitset<>::size_type eVal = trig.find_first();
+      for (size_t i = 0; i < siz; i++) {
+        if (i > 0)
+          os_out << ",";
+        os_out << int(eVal + 1);
+        eVal = trig.find_next(eVal);
+      }
+      os_out << "], det:=" << det << ")";
+    }
+    os_out << "];\n";
+    return;
+  }
   std::cerr << "Failed to find a matching output\n";
   throw TerminalException{1};
 }

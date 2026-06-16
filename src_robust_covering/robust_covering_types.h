@@ -155,31 +155,31 @@ inline void serialize(Archive &ar, ConvexBlock<T, Tint> &val,
 
 template<typename T>
 struct HardConvexBoundary {
-  ConvexBoundary<T> sp;
+  ConvexBoundary<T> cb;
 };
 
 template <typename T>
 std::ostream &operator<<(std::ostream &os, HardConvexBoundary<T> const &hcb) {
-  os << "HardConvexBoundary(V=" << StringVectorGAP(hcb.sp.V) << ")";
+  os << "HardConvexBoundary(V=" << StringVectorGAP(hcb.cb.V) << ")";
   return os;
 }
 
 template <typename T>
 void WriteEntryGAP(std::ostream &os_out, HardConvexBoundary<T> const &hcb) {
-  os_out << "rec(sp:=";
-  WriteEntryGAP(os_out, hcb.sp);
+  os_out << "rec(cb:=";
+  WriteEntryGAP(os_out, hcb.cb);
   os_out << ")";
 }
 
 template <typename T>
 void WriteEntryCPP(std::ostream &os, HardConvexBoundary<T> const &hcb) {
-  WriteEntryCPP(os, hcb.sp);
+  WriteEntryCPP(os, hcb.cb);
 }
 
 template <typename T>
 HardConvexBoundary<T> ReadEntryCPP_HardConvexBoundary(std::istream &is) {
-  ConvexBoundary<T> sp = ReadEntryCPP_ConvexBoundary<T>(is);
-  return {sp};
+  ConvexBoundary<T> cb = ReadEntryCPP_ConvexBoundary<T>(is);
+  return {cb};
 }
 
 namespace boost::serialization {
@@ -187,7 +187,46 @@ namespace boost::serialization {
 template <class Archive, typename T>
 inline void serialize(Archive &ar, HardConvexBoundary<T> &val,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("sp", val.sp);
+  ar &make_nvp("cb", val.cb);
+}
+
+} // namespace boost::serialization
+
+template<typename T>
+struct ExclConvexBoundary {
+  ConvexBoundary<T> cb;
+};
+
+template <typename T>
+std::ostream &operator<<(std::ostream &os, ExclConvexBoundary<T> const &ecb) {
+  os << "ExclConvexBoundary(V=" << StringVectorGAP(ecb.cb.V) << ")";
+  return os;
+}
+
+template <typename T>
+void WriteEntryGAP(std::ostream &os_out, ExclConvexBoundary<T> const &ecb) {
+  os_out << "rec(cb:=";
+  WriteEntryGAP(os_out, ecb.cb);
+  os_out << ")";
+}
+
+template <typename T>
+void WriteEntryCPP(std::ostream &os, ExclConvexBoundary<T> const &ecb) {
+  WriteEntryCPP(os, ecb.cb);
+}
+
+template <typename T>
+ExclConvexBoundary<T> ReadEntryCPP_HardConvexBoundary(std::istream &is) {
+  ConvexBoundary<T> cb = ReadEntryCPP_ConvexBoundary<T>(is);
+  return {cb};
+}
+
+namespace boost::serialization {
+
+template <class Archive, typename T>
+inline void serialize(Archive &ar, ExclConvexBoundary<T> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("cb", val.cb);
 }
 
 } // namespace boost::serialization
@@ -333,6 +372,97 @@ std::ostream &operator<<(std::ostream &os, PVoronoi<T, Tint> const &pv) {
   return os;
 }
 
+struct Hard {};
+struct Excl {};
+template<typename T, typename Tint>
+struct Soft {
+  std::vector<std::vector<GenericRobustM<Tint>>> values;
+};
+
+template<typename T, typename Tint>
+using IneqHES = std::variant<Hard, Excl, Soft<T,Tint>>;
+
+
+template<typename T, typename Tint>
+struct MapFullIneq {
+  // Map from the inequalities to the parallelepipeds
+  std::set<MyVector<T>> m_hard;
+  std::set<MyVector<T>> m_excl;
+  std::map<MyVector<T>, std::vector<GenericRobustM<Tint>>> m_soft;
+  // Define v_long is the vector of the parallelepiped.
+  // * A hard inequality is one coming from parallelepipeds realizing the
+  //   minimum.
+  //   It is of the form N(x - v) <= N(x - v_long).
+  // * A excl inequality is one coming from external parallelepipeds
+  //   being excluded.
+  //   It is of the form N(x - v) <= N(x - v_long).
+  // * A soft inequality are one of the form
+  //   N(x - v) >= N(x - v_long).
+  //   coming from the single parallelepipeds.
+  void insert_hard_ineq(MyVector<T> const& eIneq) {
+    m_hard.insert(eIneq);
+  }
+  void insert_excl_ineq(MyVector<T> const& eIneq) {
+    m_excl.insert(eIneq);
+  }
+  void insert_soft_ineq(MyVector<T> const& eIneq, GenericRobustM<Tint> const& grm) {
+    m_soft[eIneq].push_back(grm);
+  }
+  MyMatrix<T> get_list_ineq([[maybe_unused]] std::ostream &os) {
+    std::vector<MyVector<T>> l_ineq;
+    for (auto &k: m_hard) {
+      l_ineq.push_back(k);
+    }
+    for (auto &k: m_excl) {
+      l_ineq.push_back(k);
+    }
+    for (auto &kv: m_soft) {
+      l_ineq.push_back(kv.first);
+    }
+    int n_ineq = l_ineq.size();
+    if (n_ineq == 0) {
+      return ZeroMatrix<T>(0,0);
+    }
+    MyMatrix<T> M = MatrixFromVectorFamily(l_ineq);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: get_list_ineq n_ineq=" << n_ineq << "\n";
+#endif
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES_DISABLE
+    bool test = no_duplicated_scalar_multiple(M);
+    if (!test) {
+      std::cerr << "ROBUST: The matrix M has duplication\n";
+      throw TerminalException{1};
+    }
+#endif
+    return M;
+  }
+  IneqHES<T,Tint> get_description(int const& idx) const {
+    int n_hard = m_hard.size();
+    int n_excl = m_excl.size();
+    if (idx < n_hard) {
+      IneqHES<T,Tint> val = Hard {};
+      return val;
+    }
+    if (idx < n_hard + n_excl) {
+      IneqHES<T,Tint> val = Excl {};
+      return val;
+    }
+    auto iter = m_soft.begin();
+    for (int u=n_hard + n_excl; u<idx; u++) {
+      iter++;
+    }
+    std::vector<GenericRobustM<Tint>> const& l_grm = *iter;
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
+    if (!l_grm.empty()) {
+      std::cerr << "ROBUST: l_grm should be non-empty\n";
+      throw TerminalException{1};
+    }
+#endif
+    IneqHES<T,Tint> val = Soft {l_grm};
+    return val;
+  }
+};
+
 template <typename T, typename Tint>
 void WriteEntryGAP(std::ostream &os_out, PVoronoi<T, Tint> const &pv) {
   os_out << "rec(v_long:=" << StringVectorGAP(pv.v_long) << ", l_robust_m_min:=[";
@@ -448,6 +578,7 @@ template <typename T, typename Tint> struct PVoronoiPart {
   std::vector<GenericRobustM<Tint>> l_robust_m_min;
   std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
   std::vector<HardConvexBoundary<T>> l_hcb;
+  std::vector<ExclConvexBoundary<T>> l_ecb;
   std::map<MyVector<T>, std::vector<SoftConvexBoundary<T,Tint>>> map_scb;
   size_t n_scb() const {
     size_t n_val = 0;

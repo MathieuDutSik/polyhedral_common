@@ -12,7 +12,7 @@ PROGRAM		= TEST_WeightMatrixLimited \
 		  GRP_IsomorphismReduction GRP_GroupAverage_Matrix GRP_GroupAverage_Vector \
 		  GRP_LinearSpace_Stabilizer_DoubleCoset GRP_LinPolytopeIntegral_Automorphism_DoubleCoset \
 		  GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer \
-		  GRP_MatrixGroupSimplification \
+		  GRP_MatrixGroupSimplification GRP_TestFinitenessSimp \
 		  GRP_MatrixGroupSimplificationOnline \
 		  GRP_MatrixGroupSimplificationOnlineOpt
 
