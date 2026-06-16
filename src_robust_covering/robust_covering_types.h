@@ -376,7 +376,7 @@ struct Hard {};
 struct Excl {};
 template<typename T, typename Tint>
 struct Soft {
-  std::vector<std::vector<GenericRobustM<Tint>>> values;
+  std::vector<GenericRobustM<Tint>> values;
 };
 
 template<typename T, typename Tint>
@@ -451,15 +451,16 @@ struct MapFullIneq {
     for (int u=n_hard + n_excl; u<idx; u++) {
       iter++;
     }
-    std::vector<GenericRobustM<Tint>> const& l_grm = *iter;
+    std::vector<GenericRobustM<Tint>> const& l_grm = iter->second;
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
     if (!l_grm.empty()) {
       std::cerr << "ROBUST: l_grm should be non-empty\n";
       throw TerminalException{1};
     }
 #endif
-    IneqHES<T,Tint> val = Soft {l_grm};
-    return val;
+    Soft<T,Tint> val1{l_grm};
+    IneqHES<T,Tint> val2 = val1;
+    return val2;
   }
 };
 
