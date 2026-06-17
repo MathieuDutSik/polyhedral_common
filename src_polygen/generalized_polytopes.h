@@ -985,6 +985,21 @@ std::vector<ConvexBoundary<T>> convex_boundary_minus_cb(ConvexBoundary<T> const&
     throw TerminalException{1};
   }
   if (cb1.NSP != cb2.NSP) {
+    std::cerr << "GP: cb1.V=\n";
+    WriteVector(std::cerr, cb1.V);
+    std::cerr << "GP: cb2.V=\n";
+    WriteVector(std::cerr, cb2.V);
+    std::cerr << "GP: cb1.NSP=\n";
+    WriteMatrix(std::cerr, cb1.NSP);
+    std::cerr << "GP: cb2.NSP=\n";
+    WriteMatrix(std::cerr, cb2.NSP);
+    //
+    MyMatrix<T> NSP1 = NullspaceMatSingleVectorExt(cb1.V);
+    MyMatrix<T> NSP2 = NullspaceMatSingleVectorExt(cb2.V);
+    std::cerr << "GP: NSP1=\n";
+    WriteMatrix(std::cerr, NSP1);
+    std::cerr << "GP: NSP2=\n";
+    WriteMatrix(std::cerr, NSP2);
     std::cerr << "GP: The NSP should be the same for cb1 and cb2\n";
     throw TerminalException{1};
   }

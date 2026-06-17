@@ -732,9 +732,41 @@ MyVector<T> random_interior_pt(MyMatrix<T> const& M,
   return V;
 }
 
+
+/*
+  Same as NullspaceMatSingleVector except that
+  NullspaceMatSingleVector_SignCan(V) = NullspaceMatSingleVector_SignCan(-V)
+  for all vector.
+ */
+template <typename T>
+MyMatrix<T> NullspaceMatSingleVector_SignCan(MyVector<T> const &V) {
+  int n = V.size();
+  for (int i = 0; i < n; i++) {
+    T val = V(i);
+    if (val != 0) {
+      int sign = T_sign(val);
+#ifdef DEBUG_POLY_FUNDAMENTAL
+      std::cerr << "POLY: NullspaceMatSingleVector_SignCan, i=" << i << " sign=" << sign << " val=" << val << "\n";
+#endif
+      MyMatrix<T> NSP = ZeroMatrix<T>(n - 1, n);
+      int pos = 0;
+      for (int j = 0; j < n; j++) {
+        if (i != j) {
+          NSP(pos, i) = - sign * V(j);
+          NSP(pos, j) = sign * val;
+          pos++;
+        }
+      }
+      return NSP;
+    }
+  }
+  std::cerr << "Failed to find a non-zero index\n";
+  throw TerminalException{1};
+}
+
 template<typename T>
 MyMatrix<T> NullspaceMatSingleVectorExt(MyVector<T> const &V) {
-  MyMatrix<T> NSP = NullspaceMatSingleVector(V);
+  MyMatrix<T> NSP = NullspaceMatSingleVector_SignCan(V);
   int n_row = NSP.rows();
   int n_col = NSP.cols();
   for (int i_row=0; i_row<n_row; i_row++) {
