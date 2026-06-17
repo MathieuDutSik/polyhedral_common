@@ -807,7 +807,7 @@ void insert_excluded_max(MyVector<Tint> const& v_long,
     os << "ROBUST:   iem, v_short=" << StringVector(v_short) << "\n";
 #endif
     MyVector<T> eIneq = get_ineq(G, v_short, v_long);
-    m_full_ineq.insert_hard_ineq(eIneq);
+    m_full_ineq.insert_excl_ineq(eIneq);
   }
 }
 
@@ -963,7 +963,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
     eV_red(i) = eV(i + 1);
   }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: kippp eV=" << StringVectorGAP(eV) << "\n";
+  os << "ROBUST: kippp start eV=" << StringVectorGAP(eV) << "\n";
 #endif
   // The is_correct variable indicate whether the initial point eV is correct.
   // In the course of the enumeration, we encounter some errors. Some merely
@@ -1496,7 +1496,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 
   auto f_process_entry=[&]() -> void {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: start_fpe |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " |pvp.l_scb|=" << pvp.n_scb() << "\n";
+    os << "ROBUST: start_fpe |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " |pvp.l_ecb|=" << pvp.l_ecb.size() << " |pvp.l_scb|=" << pvp.n_scb() << "\n";
     for (auto & kv: pvp.map_scb) {
       os << "ROBUST: start_fpe soft V=" << StringVectorGAP(kv.first) << " |l_scb|=" << kv.second.size() << "\n";
     }
@@ -1518,7 +1518,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #endif
     l_excluded_max.push_back(v_long);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: fpe, step 5\n";
+    os << "ROBUST: fpe, step 5 |l_excluded_max|=" << l_excluded_max.size() << "\n";
 #endif
     MyVector<T> eIneq = get_ineq(G, v_crit, v_long);
     MyVector<T> eIneq_op = - eIneq;
@@ -1566,9 +1566,12 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
         continue;
       }
       PVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
-      ConvexBlock<T,Tint> const& ecb = p_poly_vor_part.l_cb[0];
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: fpe, step 10_3B |p_poly_vor_part.l_ecb|=" << p_poly_vor_part.l_ecb.size() << "\n";
+#endif
+      ConvexBlock<T,Tint> const& new_cb = p_poly_vor_part.l_cb[0];
       // Checks if the obtained ConvexBlock is adjacent to the existing block.
-      int pos = get_position_vec_in_mat(ecb.sp.FAC, eIneq_op);
+      int pos = get_position_vec_in_mat(new_cb.sp.FAC, eIneq_op);
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_4, pos=" << pos << "\n";
 #endif
@@ -1593,15 +1596,21 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
       for (size_t idx=0; idx<pvp.l_cb.size(); idx++) {
         ConvexBlock<T, Tint> const& part = pvp.l_cb[idx];
-        bool test = is_pairwise_intersecting(ecb.sp, part.sp, os);
+        bool test = is_pairwise_intersecting(new_cb.sp, part.sp, os);
         if (test) {
-          std::cerr << "ROBUST: ecb should not intersect with pvp entry idx=" << idx << "\n";
+          std::cerr << "ROBUST: new_cb.sp.FAC=\n";
+          WriteMatrix(std::cerr, new_cb.sp.FAC);
+          std::cerr << "ROBUST: part.sp.FAC=\n";
+          WriteMatrix(std::cerr, part.sp.FAC);
+          std::cerr << "ROBUST: new_cb should not intersect with pvp entry idx=" << idx << "\n";
           throw TerminalException{1};
         }
       }
 #endif
-      pvp.l_cb.push_back(ecb);
-      // That part needs to be improved, since the inserted faces could match
+      pvp.l_cb.push_back(new_cb);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: |p_poly_vor_part.l_ecb|=" << p_poly_vor_part.l_ecb.size() << "\n";
+#endif
       for (auto& ecb: p_poly_vor_part.l_ecb) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
         os << "ROBUST: Removal ecb.cb.V=" << StringVectorGAP(ecb.cb.V) << "\n";
