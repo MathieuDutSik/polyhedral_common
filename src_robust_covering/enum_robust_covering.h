@@ -1445,9 +1445,36 @@ std::optional<ConvexBoundary<T>> get_next_side_cb(SoftConvexBoundary<T,Tint> con
 
 
 /*
-  This is the loop for finding the decomposition.
+  This is the loop for finding the decomposition of the P-Voronoi
+  into several convex blocks.
   ----
-  
+  What is being used in the process is the type PVoronoiPart
+  which contains three kinds of inequalities:
+  * Hard inequalities. Originally, they are the ones of the form
+    N(x - v_l) >= N(x - w) for w in the initial integral parallelepiped.
+    Those exist no matter what.
+  * Excl inequalities. They are the ones of the form
+    N(x - v_l) >= N(x - w) for w a vector in an IP that has been
+    exluded in previous iterations.
+  * Soft inequalities of the form
+    N(x - v_l) <= N(x - w) for w a vector in a IP that is there
+    because we found it.
+  ----
+  The PVoronoiPart is used for two purposes (Code smell for sure):
+  * As a container for the "find_p_voronoi". There the l_excl
+    does not play a role.
+  * As a return type for "kernel_l1_p_polytope_part". There all
+    return type roles are clear.
+  Now, what can happen?
+  The logic seems to be unavoidable:
+  * We obtain when we create new stuff some new polytopes with
+    excluded faces.
+  * Those excluded faces have to be used to reduce the soft
+    inequalities that remain.
+
+
+
+  The working instances in the enumeration are the hardboundaries
  */
 template <typename T, typename Tint, typename Tgroup>
 std::optional<PVoronoi<T, Tint>>
@@ -1561,7 +1588,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
         pvp.l_hcb.push_back(hcb);
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: |pvp.l_cb|=" << pvp.l_cb.size() << " i_iter=" << i_iter << "\n";
+      os << "ROBUST: |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " i_iter=" << i_iter << "\n";
 #endif
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
       for (size_t idx=0; idx<pvp.l_cb.size(); idx++) {
@@ -1575,11 +1602,11 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #endif
       pvp.l_cb.push_back(ecb);
       // That part needs to be improved, since the inserted faces could match
-      for (auto& scb: p_poly_vor_part.get_l_scb()) {
+      for (auto& ecb: p_poly_vor_part.l_ecb) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST: Removal scb V=" << StringVectorGAP(scb.cb.V) << "\n";
+        os << "ROBUST: Removal ecb.cb.V=" << StringVectorGAP(ecb.cb.V) << "\n";
 #endif
-        pvp.insert_scb(scb, os);
+        pvp.insert_ecb(ecb, os);
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: f_process_entry, step 10_9\n";

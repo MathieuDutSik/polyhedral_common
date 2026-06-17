@@ -340,7 +340,6 @@ inline void serialize(Archive &ar, SoftConvexBoundary<T, Tint> &val,
   * v_long is the vector realizing the maximum.
   * l_robust_m_min is the set of parallelepipeds realizing
     the minimum. Could be more than 1.
-  * 
  */
 template <typename T, typename Tint> struct PVoronoi {
   MyVector<Tint> v_long;
@@ -620,40 +619,46 @@ template <typename T, typename Tint> struct PVoronoiPart {
       map_scb.erase(V);
     }
   }
-  void insert_scb(SoftConvexBoundary<T,Tint> const& scb, std::ostream& os) {
-    // The insertion of this soft convex boundary can increase but also decrease it.
-    // We need to keep track of what we already have.
-    MyVector<T> V = - scb.cb.V;
+  void insert_ecb(ExclConvexBoundary<T> const& ecb, std::ostream& os) {
+    // The insertion of this excluded convex boundary is naturally eliminating
+    // some soft convex bounday
+    MyVector<T> V = ecb.cb.V;
     MyVector<T> V_opp = - V;
+#ifdef DEBUG_ROBUST_COVERING_TYPES
+    os << "ROBUST_TYPE: insert_ecb, V=" << StringVectorGAP(V) << " V_opp=" << StringVectorGAP(V_opp) << "\n";
+#endif
     if (!map_scb.contains(V_opp)) {
-      map_scb[V].push_back(scb);
-      // Not present, needs to insert
+#ifdef DEBUG_ROBUST_COVERING_TYPES
+      os << "ROBUST_TYPE: insert_ecb, nothing to do here\n";
+#endif
+      // Nothing to do
       return;
     }
-    std::vector<SoftConvexBoundary<T,Tint>> l_scb = map_scb.at(V);
+    std::vector<SoftConvexBoundary<T,Tint>> l_scb = map_scb.at(V_opp);
     std::vector<SoftConvexBoundary<T,Tint>> l_scb_new;
-    std::vector<ConvexBoundary<T>> l_cb_ins{scb.cb};
-    for (auto & scb_old: l_scb) {
-      std::vector<MyVector<Tint>> const& l_excluded_max = scb_old.l_excluded_max;
-      std::vector<GenericRobustM<Tint>> const& l_robust_m = scb_old.l_robust_m;
+    std::vector<ConvexBoundary<T>> l_cb_ins{ecb.cb};
+    for (auto & scb: l_scb) {
+      std::vector<MyVector<Tint>> const& l_excluded_max = scb.l_excluded_max;
+      std::vector<GenericRobustM<Tint>> const& l_robust_m = scb.l_robust_m;
       std::vector<ConvexBoundary<T>> l_cb_ins_new;
       for (auto & cb_ins: l_cb_ins) {
-        std::vector<ConvexBoundary<T>> l_cb_a = convex_boundary_minus_cb(scb_old.cb, cb_ins, os);
+        std::vector<ConvexBoundary<T>> l_cb_a = convex_boundary_minus_cb(scb.cb, cb_ins, os);
         for (auto & cb_a: l_cb_a) {
           SoftConvexBoundary<T,Tint> cbN{cb_a, l_excluded_max, l_robust_m};
           l_scb_new.push_back(cbN);
         }
-        std::vector<ConvexBoundary<T>> l_cb_b = convex_boundary_minus_cb(cb_ins, scb_old.cb, os);
+        std::vector<ConvexBoundary<T>> l_cb_b = convex_boundary_minus_cb(cb_ins, scb.cb, os);
         l_cb_ins_new.insert(l_cb_ins_new.end(), l_cb_b.begin(), l_cb_b.end());
       }
       l_cb_ins = l_cb_ins_new;
     }
+#ifdef SANITY_CHECK_ROBUST_COVERING_TYPES
     if (l_cb_ins.size() > 0) {
-      for (auto & cb_ins: l_cb_ins) {
-        SoftConvexBoundary<T,Tint> scb_ins{cb_ins, scb.l_excluded_max, scb.l_robust_m};
-        map_scb[V].push_back(scb_ins);
-      }
+      std::cerr << "ROBUST_TYPES: The length is non-zero so, not all cells are being cancelled\n";
+      std::cerr << "ROBUST_TYPES: This might be a bug\n";
+      throw TerminalException{1};
     }
+#endif
     if (l_scb_new.size() == 0) {
       map_scb.erase(V_opp);
     } else {
