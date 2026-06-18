@@ -120,8 +120,14 @@ EnumerateStarOf0(DelaunayTesselation<T, Tgroup> const &DT, std::ostream &os) {
   std::queue<State> bfs;
 
   int n_orbits = DT.l_dels.size();
+  os << "QuantExport: starting BFS, n_orbits=" << n_orbits << "\n";
   for (int i_orb = 0; i_orb < n_orbits; i_orb++) {
-    MyMatrix<T> const &EXT_orb = DT.l_dels[i_orb].EXT;
+    Delaunay_Entry<T, Tgroup> const &entry = DT.l_dels[i_orb];
+    os << "QuantExport:   orbit " << i_orb
+       << ": |EXT|=" << entry.EXT.rows() << "x" << entry.EXT.cols()
+       << " |ListAdj|=" << entry.ListAdj.size()
+       << " |GRP|=" << entry.GRP.size() << "\n";
+    MyMatrix<T> const &EXT_orb = entry.EXT;
     int nv = EXT_orb.rows();
     for (int v = 0; v < nv; v++) {
       MyMatrix<T> EXT_t = TranslateToOrigin(EXT_orb, v);
@@ -130,6 +136,23 @@ EnumerateStarOf0(DelaunayTesselation<T, Tgroup> const &DT, std::ostream &os) {
         bfs.push({i_orb, EXT_t});
         star.push_back(EXT_t);
       }
+    }
+  }
+  os << "QuantExport: after seeding, |star|=" << star.size() << "\n";
+
+  // Precompute, for each orbit rep, the matrix representations M_g for every
+  // g in its stabilizer GRP. Each ListAdj entry corresponds to one orbit of
+  // facets under GRP — we orbit-expand by walking the action of GRP on the
+  // neighbour's vertex matrix (acting on the right, since rows are vertices).
+  using Telt = typename Tgroup::Telt;
+  std::vector<std::vector<MyMatrix<T>>> grp_matrices(n_orbits);
+  for (int i_orb = 0; i_orb < n_orbits; i_orb++) {
+    Delaunay_Entry<T, Tgroup> const &entry = DT.l_dels[i_orb];
+    std::vector<Telt> elements = entry.GRP.get_all_element();
+    grp_matrices[i_orb].reserve(elements.size());
+    for (Telt const &g : elements) {
+      grp_matrices[i_orb].push_back(
+          RepresentVertexPermutation(entry.EXT, entry.EXT, g));
     }
   }
 
@@ -143,21 +166,25 @@ EnumerateStarOf0(DelaunayTesselation<T, Tgroup> const &DT, std::ostream &os) {
       t_shift(k - 1) = s.EXT(0, k) - entry.EXT(0, k);
     }
     for (Delaunay_AdjO<T> const &adj : entry.ListAdj) {
-      MyMatrix<T> nbr_in_orbframe = DT.l_dels[adj.iOrb].EXT * adj.eBigMat;
-      MyMatrix<T> nbr_EXT(nbr_in_orbframe.rows(), nc);
-      for (int j = 0; j < nbr_in_orbframe.rows(); j++) {
-        nbr_EXT(j, 0) = T(1);
-        for (int k = 1; k < nc; k++) {
-          nbr_EXT(j, k) = nbr_in_orbframe(j, k) + t_shift(k - 1);
+      MyMatrix<T> nbr_in_orbframe_base =
+          DT.l_dels[adj.iOrb].EXT * adj.eBigMat;
+      for (MyMatrix<T> const &M_g : grp_matrices[s.i_orb]) {
+        MyMatrix<T> nbr_in_orbframe = nbr_in_orbframe_base * M_g;
+        MyMatrix<T> nbr_EXT(nbr_in_orbframe.rows(), nc);
+        for (int j = 0; j < nbr_in_orbframe.rows(); j++) {
+          nbr_EXT(j, 0) = T(1);
+          for (int k = 1; k < nc; k++) {
+            nbr_EXT(j, k) = nbr_in_orbframe(j, k) + t_shift(k - 1);
+          }
         }
-      }
-      if (!ContainsOrigin(nbr_EXT)) {
-        continue;
-      }
-      auto key = CanonicalKey(nbr_EXT);
-      if (seen.insert(key).second) {
-        bfs.push({adj.iOrb, nbr_EXT});
-        star.push_back(nbr_EXT);
+        if (!ContainsOrigin(nbr_EXT)) {
+          continue;
+        }
+        auto key = CanonicalKey(nbr_EXT);
+        if (seen.insert(key).second) {
+          bfs.push({adj.iOrb, nbr_EXT});
+          star.push_back(nbr_EXT);
+        }
       }
     }
   }
