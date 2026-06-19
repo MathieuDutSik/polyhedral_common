@@ -327,12 +327,15 @@ function find_critical_points(L::LType, G; method=:polyhedral)
                             parameters = collect(p_param))
         println("Monodromy: System has ", length(eqs_param),
                 " equations in ", d+1, " variables, ", n_eqs, " parameters")
-        # Starting solution: principal V^n form Q_0 = (n+1)I − J.
+        # Starting solution: use the L-type's own `test_point_Q` (which lives
+        # in the cone interior of THIS L-type). For V^n this is the principal
+        # form; for other L-types (Δ_2, Δ_3, ...) it's a different Gram matrix.
         x_start_vec = zeros(Float64, d)
-        kk = 1
-        for i in 1:n, j in i:n
-            x_start_vec[kk] = (i == j) ? Float64(n) : -1.0
-            kk += 1
+        let kk = 1
+            for i in 1:n, j in i:n
+                x_start_vec[kk] = Float64(L.test_Q[i, j])
+                kk += 1
+            end
         end
         G_grad_first = HC.differentiate(G_hc, hc_qvars[1])
         det_grad_first = HC.differentiate(detQ_hc, hc_qvars[1])

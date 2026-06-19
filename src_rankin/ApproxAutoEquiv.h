@@ -130,12 +130,12 @@ WeightMatrix<true, T, uint32_t> GetWeightMatrix_tol(MyMatrix<T> const &eG,
   return WMat;
 }
 
-// Check if M is an approximate automorphism of eG, i.e. that
-// |(M^T eG M - eG)_{ij}| < tol for every (i, j).
+// Check if M is an approximate automorphism of eG using the convention
+// M eG M^T = eG up to tolerance (matches LatticeStabEquiCan.h).
 template <typename T>
 bool IsApproximateAutomorphism(MyMatrix<T> const &eG, MyMatrix<T> const &M,
                                T const &tol) {
-  MyMatrix<T> diff = M.transpose() * eG * M - eG;
+  MyMatrix<T> diff = M * eG * M.transpose() - eG;
   int n = diff.rows();
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
@@ -148,8 +148,8 @@ bool IsApproximateAutomorphism(MyMatrix<T> const &eG, MyMatrix<T> const &M,
 }
 
 // Compute generators of the approximate automorphism group of eG.
-// The returned matrices act by v -> M * v on column vectors (equivalently,
-// every generator M satisfies M^T eG M approx eG within tol).
+// Each returned generator M satisfies M * eG * M^T approx eG within tol,
+// matching the convention used in src_latt/LatticeStabEquiCan.h.
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>>
 ApproximateAutomorphismGroup(MyMatrix<T> const &eG, T const &tol,

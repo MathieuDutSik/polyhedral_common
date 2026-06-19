@@ -2029,7 +2029,7 @@ GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
 template <typename T, typename Tint, typename Tgroup>
 struct IsoDelaunayDomain_Obj {
   IsoDelaunayDomain<T, Tint, Tgroup> DT_gram;
-  std::vector<FullAdjInfo<T>> ListIneq;
+  std::vector<FullAdjInfo<T>> ListIneqRed;
   Tgroup GRPperm;
 };
 
@@ -2039,9 +2039,9 @@ void WriteBasicEntryGAP(std::ostream &os_out,
   os_out << "DT_gram:=";
   WriteEntryGAP(os_out, ent.DT_gram);
   //
-  os_out << ", ListIneq:=[";
+  os_out << ", ListIneqRed:=[";
   bool IsFirst = true;
-  for (auto &eFullAI : ent.ListIneq) {
+  for (auto &eFullAI : ent.ListIneqRed) {
     if (!IsFirst) {
       os_out << ",";
     }
@@ -2071,13 +2071,10 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
   os_out << "GRPpermSize:=" << ent.GRPperm.size();
   int dimSpace = data.LinSpa.ListMat.size();
   int n = ent.DT_gram.GramMat.rows();
-  MyMatrix<T> FAC = GetFACineq(ent.ListIneq);
-  MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
-  std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
+  MyMatrix<T> FAC = GetFACineq(ent.ListIneqRed);
   int nbIneq = FAC.rows();
   MyMatrix<T> const &SHV_T = ent.DT_gram.SHV_T;
-  os_out << ", n_ineq:=" << nbIneq;
-  os_out << ", n_irred:=" << ListIrred.size();
+  os_out << ", n_ineq_red:=" << nbIneq;
   os_out << ", det:=" << DeterminantMat(ent.DT_gram.GramMat);
   os_out << ", n_shv:=" << SHV_T.rows();
   //
@@ -2124,9 +2121,9 @@ void WriteEntryPYTHON(std::ostream &os_out,
   os_out << "{\"DT_gram\":";
   WriteEntryPYTHON(os_out, ent.DT_gram);
   //
-  os_out << ", \"ListIneq\":[";
+  os_out << ", \"ListIneqRed\":[";
   bool IsFirst = true;
-  for (auto &eFullAI : ent.ListIneq) {
+  for (auto &eFullAI : ent.ListIneqRed) {
     if (!IsFirst) {
       os_out << ",";
     }
@@ -2145,7 +2142,7 @@ template <class Archive, typename T, typename Tint, typename Tgroup>
 inline void serialize(Archive &ar, IsoDelaunayDomain_Obj<T, Tint, Tgroup> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("DT_gram", eRec.DT_gram);
-  ar &make_nvp("ListIneq", eRec.ListIneq);
+  ar &make_nvp("ListIneqRed", eRec.ListIneqRed);
   ar &make_nvp("GRPperm", eRec.GRPperm);
 }
 } // namespace boost::serialization
@@ -2155,7 +2152,7 @@ inline void serialize(Archive &ar, IsoDelaunayDomain_Obj<T, Tint, Tgroup> &eRec,
 
 template <typename T, typename Tint, typename Tgroup>
 struct ResultDelaunayAdj {
-  std::vector<FullAdjInfo<T>> ListIneq;
+  std::vector<FullAdjInfo<T>> ListIneqRed;
   Tgroup GRPperm;
   std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
 };
@@ -2251,6 +2248,7 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
      << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
 #endif
   std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
+  std::vector<FullAdjInfo<T>> ListIneqRed;
   for (auto &i : l_idx) {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
     MicrosecondTime time_s_adj;
@@ -2278,8 +2276,9 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: f_adj, We have test for TestMat\n";
 #endif
+    FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
+    ListIneqRed.push_back(eRecIneq);
     if (test) {
-      FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
       DelaunayTesselation<T, Tgroup> DTadj =
         FlippingLtype<T, Tgroup>(x.DT, x.GramMat,
                                  eRecIneq.ListAdjInfo, data.rddo);
@@ -2310,7 +2309,7 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: Before returning l_adj\n";
 #endif
-  return {ListIneq, GRPperm, l_adj};
+  return {ListIneqRed, GRPperm, l_adj};
 }
 
 
@@ -2379,7 +2378,7 @@ struct DataIsoDelaunayDomainsFunc {
   std::vector<TadjI> f_adj(Tobj &x_in) {
     IsoDelaunayDomain<T, Tint, Tgroup> const& x = x_in.DT_gram;
     ResultDelaunayAdj<T,Tint,Tgroup> result = get_result_delaunay_adj(x, data);
-    x_in.ListIneq = result.ListIneq;
+    x_in.ListIneqRed = result.ListIneqRed;
     x_in.GRPperm = result.GRPperm;
     return result.l_adj;
   }
