@@ -2150,6 +2150,173 @@ inline void serialize(Archive &ar, IsoDelaunayDomain_Obj<T, Tint, Tgroup> &eRec,
 }
 } // namespace boost::serialization
 
+
+
+
+template <typename T, typename Tint, typename Tgroup>
+struct ResultDelaunayAdj {
+  std::vector<FullAdjInfo<T>> ListIneq;
+  Tgroup GRPperm;
+  std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
+};
+
+template <typename T, typename Tint, typename Tgroup>
+ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const& x, DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  std::ostream &os = data.rddo.os;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time_f_adj;
+#endif
+  int n = data.LinSpa.n;
+  int dimSpace = data.LinSpa.ListMat.size();
+  // compute the inequalities
+  std::vector<FullAdjInfo<T>> ListIneq =
+    ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(x.DT, data.LinSpa.ListLineMat, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: f_adj, ComputeDefiningIneqIsoDelaunayDomain|=" << time_f_adj
+       << "\n";
+#endif
+  // Compute the irredundant ones as well as the l_ineq / map_ineq
+  MyMatrix<T> FAC = GetFACineq(ListIneq);
+  MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
+  std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: f_adj, get_non_redundant_indices|=" << time_f_adj << "\n";
+#endif
+  size_t nbIrred = ListIrred.size();
+  MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISODEL: f_adj: |FAC|=" << FAC.rows() << " / " << FAC.cols()
+     << " nbIrred=" << nbIrred << "\n";
+  os << "ISODEL: f_adj, x.GramMat=\n";
+  WriteMatrix(os, x.GramMat);
+#endif
+  std::vector<MyVector<T>> l_ineq;
+  std::unordered_map<MyVector<T>, size_t> map_ineq;
+  for (size_t i = 0; i < nbIrred; i++) {
+    MyVector<T> eV = GetMatrixRow(FACred, i);
+    MyVector<T> eVred = RemoveFractionVector(eV);
+    l_ineq.push_back(eVred);
+    map_ineq[eV] = i;
+  }
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: f_adj, l_ineq - map_ineq|=" << time_f_adj << "\n";
+#endif
+  // Compute the automorphism group on the central gram and then the facets
+  std::vector<MyMatrix<T>> ListGenTot =
+    LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: f_adj, LINSPA_ComputeStabilizer|=" << time_f_adj << "\n";
+#endif
+  std::vector<Telt> ListPermGens;
+  for (auto &eGenTot : ListGenTot) {
+    MyMatrix<T> MatSpace = matrix_in_t_space(eGenTot, data.LinSpa);
+    std::vector<Tidx> l_pos(nbIrred);
+    for (size_t i = 0; i < nbIrred; i++) {
+      MyVector<T> const &eV = l_ineq[i];
+      // There are actually two transpose here:
+      // * One from going from action in the space to action on the dual
+      // * One for going from row to column action
+      MyVector<T> eVimg = MatSpace * eV;
+      MyVector<T> eVimg_red = RemoveFractionVector(eVimg);
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
+      if (map_ineq.find(eVimg_red) == map_ineq.end()) {
+        std::cerr << "ISODEL: eGenTot=\n";
+        WriteMatrix(std::cerr, eGenTot);
+        std::cerr << "ISODEL: i=" << i << " eVimg=" << StringVector(eVimg)
+                  << "\n";
+        std::cerr << "ISODEL: i=" << i << " eVimg=" << StringVector(eVimg_red)
+                  << "\n";
+        std::cerr << "ISODEL: FACred=\n";
+        WriteMatrix(std::cerr, FACred);
+        std::cerr << "ISODEL: The entry eVimg is missing from the map\n";
+        throw TerminalException{1};
+      }
+#endif
+      size_t pos = map_ineq.at(eVimg_red);
+      l_pos[i] = pos;
+    }
+    Telt ePermGen(l_pos);
+    ListPermGens.push_back(ePermGen);
+  }
+  Tgroup GRPperm = Tgroup(ListPermGens, nbIrred);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: f_adj, GRPperm|=" << time_f_adj << "\n";
+#endif
+
+  std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISODEL: f_adj: |GRPperm|=" << GRPperm.size()
+     << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
+#endif
+  std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
+  for (auto &i : l_idx) {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_s_adj;
+#endif
+    int idxIrred = ListIrred[i];
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISODEL: f_adj, i=" << i << " idxIrred=" << idxIrred << "\n";
+#endif
+    MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    os << "|ISODEL: s_adj, GetSpaceInteriorPointFacet|=" << time_s_adj
+       << "\n";
+#endif
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISODEL: f_adj, We have TestPt\n";
+#endif
+    MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);
+    for (int u = 0; u < dimSpace; u++) {
+      TestMat += TestPt(u) * data.LinSpa.ListMat[u];
+    }
+    bool test = IsPositiveDefinite(TestMat, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    os << "|ISODEL: s_adj, IsPositiveDefinite|=" << time_s_adj << "\n";
+#endif
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISODEL: f_adj, We have test for TestMat\n";
+#endif
+    if (test) {
+      FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
+      DelaunayTesselation<T, Tgroup> DTadj =
+        FlippingLtype<T, Tgroup>(x.DT, x.GramMat,
+                                 eRecIneq.ListAdjInfo, data.rddo);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      os << "|ISODEL: s_adj, FlippingLtype|=" << time_s_adj << "\n";
+#endif
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISODEL: After FlippingLtype\n";
+#endif
+      MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, DTadj, os);
+      MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
+      MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
+#endif
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISODEL: After GetInteriorGramMatrix\n";
+#endif
+      IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{
+        std::move(DTadj), std::move(M), std::move(SHV_T)};
+      IsoDelaunayDomain_AdjI<T, Tint, Tgroup> eAdj{eRecIneq.eIneq, IsoDelAdj};
+      l_adj.push_back(eAdj);
+    }
+  }
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: f_adj, all flips|=" << time_f_adj << "\n";
+#endif
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISODEL: Before returning l_adj\n";
+#endif
+  return {ListIneq, GRPperm, l_adj};
+}
+
+
+
+
+
 template <typename T, typename Tint, typename Tgroup>
 struct DataIsoDelaunayDomainsFunc {
   DataIsoDelaunayDomains<T, Tint, Tgroup> data;
@@ -2210,159 +2377,11 @@ struct DataIsoDelaunayDomainsFunc {
     return {std::move(x_ret), std::move(ret)};
   }
   std::vector<TadjI> f_adj(Tobj &x_in) {
-    using Telt = typename Tgroup::Telt;
-    using Tidx = typename Telt::Tidx;
-    std::ostream &os = data.rddo.os;
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    MicrosecondTime time_f_adj;
-#endif
-    int n = data.LinSpa.n;
-    int dimSpace = data.LinSpa.ListMat.size();
-    IsoDelaunayDomain<T, Tint, Tgroup> &x = x_in.DT_gram;
-    // compute the inequalities
-    std::vector<FullAdjInfo<T>> ListIneq =
-        ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
-            x.DT, data.LinSpa.ListLineMat, os);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: f_adj, ComputeDefiningIneqIsoDelaunayDomain|=" << time_f_adj
-       << "\n";
-#endif
-    x_in.ListIneq = ListIneq;
-    // Compute the irredundant ones as well as the l_ineq / map_ineq
-    MyMatrix<T> FAC = GetFACineq(ListIneq);
-    MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
-    std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: f_adj, get_non_redundant_indices|=" << time_f_adj << "\n";
-#endif
-    size_t nbIrred = ListIrred.size();
-    MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: f_adj: |FAC|=" << FAC.rows() << " / " << FAC.cols()
-       << " nbIrred=" << nbIrred << "\n";
-    os << "ISODEL: f_adj, x.GramMat=\n";
-    WriteMatrix(os, x.GramMat);
-#endif
-    std::vector<MyVector<T>> l_ineq;
-    std::unordered_map<MyVector<T>, size_t> map_ineq;
-    for (size_t i = 0; i < nbIrred; i++) {
-      MyVector<T> eV = GetMatrixRow(FACred, i);
-      MyVector<T> eVred = RemoveFractionVector(eV);
-      l_ineq.push_back(eVred);
-      map_ineq[eV] = i;
-    }
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: f_adj, l_ineq - map_ineq|=" << time_f_adj << "\n";
-#endif
-    // Compute the automorphism group on the central gram and then the facets
-    std::vector<MyMatrix<T>> ListGenTot =
-        LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat, os);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: f_adj, LINSPA_ComputeStabilizer|=" << time_f_adj << "\n";
-#endif
-    std::vector<Telt> ListPermGens;
-    for (auto &eGenTot : ListGenTot) {
-      MyMatrix<T> MatSpace = matrix_in_t_space(eGenTot, data.LinSpa);
-      std::vector<Tidx> l_pos(nbIrred);
-      for (size_t i = 0; i < nbIrred; i++) {
-        MyVector<T> const &eV = l_ineq[i];
-        // There are actually two transpose here:
-        // * One from going from action in the space to action on the dual
-        // * One for going from row to column action
-        MyVector<T> eVimg = MatSpace * eV;
-        MyVector<T> eVimg_red = RemoveFractionVector(eVimg);
-#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
-        if (map_ineq.find(eVimg_red) == map_ineq.end()) {
-          std::cerr << "ISODEL: eGenTot=\n";
-          WriteMatrix(std::cerr, eGenTot);
-          std::cerr << "ISODEL: i=" << i << " eVimg=" << StringVector(eVimg)
-                    << "\n";
-          std::cerr << "ISODEL: i=" << i << " eVimg=" << StringVector(eVimg_red)
-                    << "\n";
-          std::cerr << "ISODEL: FACred=\n";
-          WriteMatrix(std::cerr, FACred);
-          std::cerr << "ISODEL: The entry eVimg is missing from the map\n";
-          throw TerminalException{1};
-        }
-#endif
-        size_t pos = map_ineq.at(eVimg_red);
-        l_pos[i] = pos;
-      }
-      Telt ePermGen(l_pos);
-      ListPermGens.push_back(ePermGen);
-    }
-    Tgroup GRPperm = Tgroup(ListPermGens, nbIrred);
-    x_in.GRPperm = GRPperm;
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: f_adj, GRPperm|=" << time_f_adj << "\n";
-#endif
-
-    std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: f_adj: |GRPperm|=" << GRPperm.size()
-       << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
-#endif
-    std::vector<TadjI> l_adj;
-    for (auto &i : l_idx) {
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-      MicrosecondTime time_s_adj;
-#endif
-      int idxIrred = ListIrred[i];
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISODEL: f_adj, i=" << i << " idxIrred=" << idxIrred << "\n";
-#endif
-      MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i, os);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-      os << "|ISODEL: s_adj, GetSpaceInteriorPointFacet|=" << time_s_adj
-         << "\n";
-#endif
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISODEL: f_adj, We have TestPt\n";
-#endif
-      MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);
-      for (int u = 0; u < dimSpace; u++) {
-        TestMat += TestPt(u) * data.LinSpa.ListMat[u];
-      }
-      bool test = IsPositiveDefinite(TestMat, os);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-      os << "|ISODEL: s_adj, IsPositiveDefinite|=" << time_s_adj << "\n";
-#endif
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISODEL: f_adj, We have test for TestMat\n";
-#endif
-      if (test) {
-        FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
-        DelaunayTesselation<T, Tgroup> DTadj =
-            FlippingLtype<T, Tgroup>(x.DT, x.GramMat,
-                                           eRecIneq.ListAdjInfo, data.rddo);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-        os << "|ISODEL: s_adj, FlippingLtype|=" << time_s_adj << "\n";
-#endif
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        os << "ISODEL: After FlippingLtype\n";
-#endif
-        MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, DTadj, os);
-        MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
-        MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-        os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
-#endif
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        os << "ISODEL: After GetInteriorGramMatrix\n";
-#endif
-        IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{
-            std::move(DTadj), std::move(M), std::move(SHV_T)};
-        TadjI eAdj{eRecIneq.eIneq, IsoDelAdj};
-        l_adj.push_back(eAdj);
-      }
-    }
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: f_adj, all flips|=" << time_f_adj << "\n";
-#endif
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: Before returning l_adj\n";
-#endif
-    return l_adj;
+    IsoDelaunayDomain<T, Tint, Tgroup> const& x = x_in.DT_gram;
+    ResultDelaunayAdj<T,Tint,Tgroup> result = get_result_delaunay_adj(x, data);
+    x_in.ListIneq = result.ListIneq;
+    x_in.GRPperm = result.GRPperm;
+    return result.l_adj;
   }
   Tobj f_adji_obj(TadjI const &x) { return {x.DT_gram, {}, {}}; }
   size_t f_complexity([[maybe_unused]] Tobj const &x) {
