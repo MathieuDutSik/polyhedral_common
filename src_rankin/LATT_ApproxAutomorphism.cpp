@@ -24,19 +24,28 @@ void compute_approx_automorphism_kernel(std::string const &eFile,
   T tol = ParseScalar<T>(strTol);
   std::cerr << "LATT_ApproxAutomorphism: dim=" << eG.rows() << " tol=" << tol
             << "\n";
-  std::vector<MyMatrix<T>> ListGen =
+  std::optional<std::vector<MyMatrix<Tint>>> opt =
       ApproximateAutomorphismGroup<T, Tint, Tgroup>(eG, tol, std::cerr);
   auto prt = [&](std::ostream &os) -> void {
     if (OutFormat == "GAP") {
       os << "return ";
-      WriteListMatrixGAP(os, ListGen);
+      if (opt) {
+        WriteListMatrixGAP(os, *opt);
+      } else {
+        os << "fail";
+      }
       os << ";\n";
       return;
     }
     if (OutFormat == "Oscar") {
-      os << ListGen.size() << "\n";
-      for (auto &eMat : ListGen) {
-        WriteMatrix(os, eMat);
+      if (opt) {
+        std::vector<MyMatrix<Tint>> ListGen = *opt;
+        os << ListGen.size() << "\n";
+        for (auto &eMat : ListGen) {
+          WriteMatrix(os, eMat);
+        }
+      } else {
+        os << "-1\n";
       }
       return;
     }
