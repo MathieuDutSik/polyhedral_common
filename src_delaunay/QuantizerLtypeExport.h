@@ -108,89 +108,212 @@ std::vector<std::vector<T>> CanonicalKey(MyMatrix<T> const &EXT) {
   return rows;
 }
 
-template <typename T, typename Tgroup>
-std::vector<MyMatrix<T>>
-EnumerateStarOf0(DelaunayTesselation<T, Tgroup> const &DT, std::ostream &os) {
-  std::set<std::vector<std::vector<T>>> seen;
-  std::vector<MyMatrix<T>> star;
-  struct State {
-    int i_orb;
-    MyMatrix<T> EXT;
-  };
-  std::queue<State> bfs;
-
-  int n_orbits = DT.l_dels.size();
-  os << "QuantExport: starting BFS, n_orbits=" << n_orbits << "\n";
-  for (int i_orb = 0; i_orb < n_orbits; i_orb++) {
-    Delaunay_Entry<T, Tgroup> const &entry = DT.l_dels[i_orb];
-    os << "QuantExport:   orbit " << i_orb
-       << ": |EXT|=" << entry.EXT.rows() << "x" << entry.EXT.cols()
-       << " |ListAdj|=" << entry.ListAdj.size()
-       << " |GRP|=" << entry.GRP.size() << "\n";
-    MyMatrix<T> const &EXT_orb = entry.EXT;
-    int nv = EXT_orb.rows();
-    for (int v = 0; v < nv; v++) {
-      MyMatrix<T> EXT_t = TranslateToOrigin(EXT_orb, v);
-      auto key = CanonicalKey(EXT_t);
-      if (seen.insert(key).second) {
-        bfs.push({i_orb, EXT_t});
-        star.push_back(EXT_t);
-      }
-    }
-  }
-  os << "QuantExport: after seeding, |star|=" << star.size() << "\n";
-
-  // Precompute, for each orbit rep, the matrix representations M_g for every
-  // g in its stabilizer GRP. Each ListAdj entry corresponds to one orbit of
-  // facets under GRP — we orbit-expand by walking the action of GRP on the
-  // neighbour's vertex matrix (acting on the right, since rows are vertices).
-  using Telt = typename Tgroup::Telt;
-  std::vector<std::vector<MyMatrix<T>>> grp_matrices(n_orbits);
-  for (int i_orb = 0; i_orb < n_orbits; i_orb++) {
-    Delaunay_Entry<T, Tgroup> const &entry = DT.l_dels[i_orb];
-    std::vector<Telt> elements = entry.GRP.get_all_element();
-    grp_matrices[i_orb].reserve(elements.size());
-    for (Telt const &g : elements) {
-      grp_matrices[i_orb].push_back(
-          RepresentVertexPermutation(entry.EXT, entry.EXT, g));
-    }
-  }
-
-  while (!bfs.empty()) {
-    State s = bfs.front();
-    bfs.pop();
-    Delaunay_Entry<T, Tgroup> const &entry = DT.l_dels[s.i_orb];
-    int nc = s.EXT.cols();
-    MyVector<T> t_shift(nc - 1);
+// Canonicalize a Delaunay-vertex matrix modulo Z^n translation: translate so
+// the lex-smallest non-homogeneous row becomes the origin, then sort the rows.
+template <typename T>
+std::vector<std::vector<T>> CanonicalKeyModZn(MyMatrix<T> const &EXT) {
+  int nv = EXT.rows();
+  int nc = EXT.cols();
+  // Find lex-min row by lattice coords (columns 1..).
+  int min_row = 0;
+  for (int j = 1; j < nv; j++) {
+    bool smaller = false;
     for (int k = 1; k < nc; k++) {
-      t_shift(k - 1) = s.EXT(0, k) - entry.EXT(0, k);
+      if (EXT(j, k) < EXT(min_row, k)) {
+        smaller = true;
+        break;
+      }
+      if (EXT(j, k) > EXT(min_row, k)) {
+        break;
+      }
     }
-    for (Delaunay_AdjO<T> const &adj : entry.ListAdj) {
-      MyMatrix<T> nbr_in_orbframe_base =
-          DT.l_dels[adj.iOrb].EXT * adj.eBigMat;
-      for (MyMatrix<T> const &M_g : grp_matrices[s.i_orb]) {
-        MyMatrix<T> nbr_in_orbframe = nbr_in_orbframe_base * M_g;
-        MyMatrix<T> nbr_EXT(nbr_in_orbframe.rows(), nc);
-        for (int j = 0; j < nbr_in_orbframe.rows(); j++) {
-          nbr_EXT(j, 0) = T(1);
-          for (int k = 1; k < nc; k++) {
-            nbr_EXT(j, k) = nbr_in_orbframe(j, k) + t_shift(k - 1);
-          }
-        }
-        if (!ContainsOrigin(nbr_EXT)) {
-          continue;
-        }
-        auto key = CanonicalKey(nbr_EXT);
-        if (seen.insert(key).second) {
-          bfs.push({adj.iOrb, nbr_EXT});
-          star.push_back(nbr_EXT);
+    if (smaller) {
+      min_row = j;
+    }
+  }
+  std::vector<std::vector<T>> rows;
+  rows.reserve(nv);
+  for (int j = 0; j < nv; j++) {
+    std::vector<T> v(nc - 1);
+    for (int k = 1; k < nc; k++) {
+      v[k - 1] = EXT(j, k) - EXT(min_row, k);
+    }
+    rows.push_back(std::move(v));
+  }
+  std::sort(rows.begin(), rows.end());
+  return rows;
+}
+
+// Lift an n×n matrix g (acting on lattice rows by right multiplication) to an
+// (n+1)×(n+1) matrix that fixes the homogeneous column. Result is a block
+// matrix [[1, 0], [0, g]] when rows are (1, v).
+template <typename T>
+MyMatrix<T> LiftToHomog(MyMatrix<T> const &g) {
+  int n = g.rows();
+  MyMatrix<T> out(n + 1, n + 1);
+  for (int i = 0; i < n + 1; i++) {
+    for (int j = 0; j < n + 1; j++) {
+      out(i, j) = T(0);
+    }
+  }
+  out(0, 0) = T(1);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      out(i + 1, j + 1) = g(i, j);
+    }
+  }
+  return out;
+}
+
+// Enumerate Delaunay simplices containing the origin. Implementation follows
+// the orbit-of-shapes approach:
+//   1. Compute the lattice automorphism group Aut(L) via LINSPA_ComputeStabilizer.
+//   2. Lift each n×n generator to a (n+1)×(n+1) homogeneous matrix.
+//   3. For each Delaunay orbit rep, BFS the Aut(L)-orbit of its vertex matrix,
+//      canonicalizing modulo Z^n translation, to collect all distinct Delaunay
+//      shapes that occur in star(0, 𝓓).
+//   4. For each shape, translate by -v for each vertex v to put it at origin;
+//      the resulting matrix is one member of star(0, 𝓓).
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<T>>
+EnumerateStarOf0(DelaunayTesselation<T, Tgroup> const &DT,
+                 LinSpaceMatrix<T> const &LinSpa,
+                 MyMatrix<T> const &Q0, std::ostream &os) {
+  std::vector<MyMatrix<T>> autL_gens =
+      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, Q0, os);
+  os << "QuantExport: Aut(L) has " << autL_gens.size() << " generator(s)\n";
+
+  std::vector<MyMatrix<T>> autL_homog;
+  autL_homog.reserve(autL_gens.size());
+  for (MyMatrix<T> const &g : autL_gens) {
+    autL_homog.push_back(LiftToHomog(g));
+  }
+
+  // BFS the orbit of each Delaunay orbit rep under Aut(L), modulo Z^n.
+  std::set<std::vector<std::vector<T>>> seen_shapes;
+  std::vector<MyMatrix<T>> shape_reps;
+  for (Delaunay_Entry<T, Tgroup> const &entry : DT.l_dels) {
+    auto k0 = CanonicalKeyModZn(entry.EXT);
+    if (seen_shapes.insert(k0).second) {
+      shape_reps.push_back(entry.EXT);
+    }
+  }
+  {
+    std::queue<MyMatrix<T>> q;
+    for (MyMatrix<T> const &S : shape_reps) {
+      q.push(S);
+    }
+    while (!q.empty()) {
+      MyMatrix<T> X = q.front();
+      q.pop();
+      for (MyMatrix<T> const &g_h : autL_homog) {
+        MyMatrix<T> gX = X * g_h;
+        auto key = CanonicalKeyModZn(gX);
+        if (seen_shapes.insert(key).second) {
+          q.push(gX);
+          shape_reps.push_back(gX);
         }
       }
     }
   }
+  os << "QuantExport: |distinct shapes mod Z^n| = " << shape_reps.size() << "\n";
 
+  // For each shape, translate so each vertex becomes the origin.
+  std::set<std::vector<std::vector<T>>> seen_star;
+  std::vector<MyMatrix<T>> star;
+  for (MyMatrix<T> const &D : shape_reps) {
+    int nv = D.rows();
+    for (int v = 0; v < nv; v++) {
+      MyMatrix<T> D_t = TranslateToOrigin(D, v);
+      auto key = CanonicalKey(D_t);
+      if (seen_star.insert(key).second) {
+        star.push_back(D_t);
+      }
+    }
+  }
   os << "QuantExport: enumerated |star(0,D)| = " << star.size() << "\n";
   return star;
+}
+
+// ---------------------------------------------------------------------------
+// Cone-facet inequality orbit expansion under Aut(L)
+// ---------------------------------------------------------------------------
+//
+// The classic-T-space basis (TSPACE_canonical_get_list_matrices) is:
+//   M_{aa} = E_{aa}                       (diagonal entries)
+//   M_{ab} = E_{ab} + E_{ba}              (off-diagonal entries, a < b)
+//
+// A linear inequality V · a > 0 on T-space coords corresponds to the symmetric
+// "dual" matrix X (with V[idx(a,a)] = X[a,a] and V[idx(a,b)] = 2·X[a,b] for
+// a < b). Aut(L) acts on Q ∈ S^n by Q → g^T Q g; the dual action on X is
+// X → g X g^T.
+
+template <typename T>
+MyVector<T> InequalityFromSymMatClassic(MyMatrix<T> const &X) {
+  int n = X.rows();
+  int d = n * (n + 1) / 2;
+  MyVector<T> V(d);
+  int idx = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = i; j < n; j++) {
+      T mult = (i == j) ? T(1) : T(2);
+      V(idx) = mult * X(i, j);
+      idx++;
+    }
+  }
+  return V;
+}
+
+template <typename T>
+MyMatrix<T> SymMatFromInequalityClassic(MyVector<T> const &V, int n) {
+  MyMatrix<T> X(n, n);
+  int idx = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = i; j < n; j++) {
+      T mult = (i == j) ? T(1) : T(2);
+      X(i, j) = V(idx) / mult;
+      X(j, i) = X(i, j);
+      idx++;
+    }
+  }
+  return X;
+}
+
+template <typename T>
+std::vector<MyVector<T>> OrbitInequalityUnderAutL(
+    MyVector<T> const &V_start,
+    std::vector<MyMatrix<T>> const &autL_gens,
+    int n) {
+  auto to_key = [](MyVector<T> const &v) -> std::vector<T> {
+    std::vector<T> out(v.size());
+    for (int i = 0; i < v.size(); i++) {
+      out[i] = v(i);
+    }
+    return out;
+  };
+  std::set<std::vector<T>> seen;
+  std::vector<MyVector<T>> result;
+  std::queue<MyVector<T>> q;
+  MyVector<T> V0 = ScalarCanonicalizationVector(V_start);
+  if (seen.insert(to_key(V0)).second) {
+    q.push(V0);
+    result.push_back(V0);
+  }
+  while (!q.empty()) {
+    MyVector<T> V = q.front();
+    q.pop();
+    MyMatrix<T> X = SymMatFromInequalityClassic(V, n);
+    for (MyMatrix<T> const &g : autL_gens) {
+      MyMatrix<T> X_new = g * X * g.transpose();
+      MyVector<T> V_new = InequalityFromSymMatClassic(X_new);
+      V_new = ScalarCanonicalizationVector(V_new);
+      if (seen.insert(to_key(V_new)).second) {
+        q.push(V_new);
+        result.push_back(V_new);
+      }
+    }
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -338,11 +461,74 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
                              std::ostream &os) {
   int n = LinSpa.n;
 
-  std::vector<FullAdjInfo<T>> facets =
+  std::vector<FullAdjInfo<T>> facets_raw =
       ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(IDD.DT, LinSpa.ListLineMat,
                                                      os);
+  os << "QuantExport: ComputeDefiningIneq returned " << facets_raw.size()
+     << " orbit rep(s) of inequalities\n";
 
-  std::vector<MyMatrix<T>> star = EnumerateStarOf0<T, Tgroup>(IDD.DT, os);
+  // Orbit-expand inequalities under Aut(L) using matrix_in_t_space (which
+  // accounts for the two transposes — Q-space action vs functional action,
+  // row vs column action). Then dedup and filter redundant.
+  std::vector<MyMatrix<T>> autL_gens_for_ineq =
+      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, IDD.GramMat, os);
+  os << "QuantExport: Aut(L) has " << autL_gens_for_ineq.size()
+     << " generator(s) for inequality expansion\n";
+  std::vector<MyMatrix<T>> tspace_action;
+  tspace_action.reserve(autL_gens_for_ineq.size());
+  for (MyMatrix<T> const &g : autL_gens_for_ineq) {
+    tspace_action.push_back(matrix_in_t_space(g, LinSpa));
+  }
+  auto to_key = [](MyVector<T> const &v) -> std::vector<T> {
+    std::vector<T> out(v.size());
+    for (int i = 0; i < v.size(); i++) {
+      out[i] = v(i);
+    }
+    return out;
+  };
+  std::set<std::vector<T>> facet_seen;
+  std::vector<MyVector<T>> facets_all;
+  std::queue<MyVector<T>> ineq_bfs;
+  for (FullAdjInfo<T> const &fai : facets_raw) {
+    MyVector<T> v0 = RemoveFractionVector(fai.eIneq);
+    if (facet_seen.insert(to_key(v0)).second) {
+      ineq_bfs.push(v0);
+      facets_all.push_back(v0);
+    }
+  }
+  while (!ineq_bfs.empty()) {
+    MyVector<T> v = ineq_bfs.front();
+    ineq_bfs.pop();
+    for (MyMatrix<T> const &MatSpace : tspace_action) {
+      MyVector<T> v_img = MatSpace * v;
+      MyVector<T> v_img_red = RemoveFractionVector(v_img);
+      if (facet_seen.insert(to_key(v_img_red)).second) {
+        ineq_bfs.push(v_img_red);
+        facets_all.push_back(v_img_red);
+      }
+    }
+  }
+  os << "QuantExport: after Aut(L) orbit-expansion, |all inequalities| = "
+     << facets_all.size() << "\n";
+
+  // Filter to non-redundant (= actual cone facets) using lrs-based redundancy
+  // detection, matching f_adj's pattern.
+  MyMatrix<T> FAC(facets_all.size(), facets_all[0].size());
+  for (size_t i = 0; i < facets_all.size(); i++) {
+    for (int j = 0; j < facets_all[i].size(); j++) {
+      FAC(i, j) = facets_all[i](j);
+    }
+  }
+  MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
+  std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
+  std::vector<MyVector<T>> facets;
+  for (int idx : ListIrred) {
+    facets.push_back(facets_all[idx]);
+  }
+  os << "QuantExport: irredundant cone facets = " << facets.size() << "\n";
+
+  std::vector<MyMatrix<T>> star =
+      EnumerateStarOf0<T, Tint, Tgroup>(IDD.DT, LinSpa, IDD.GramMat, os);
   int N = static_cast<int>(star.size());
 
   MyMatrix<T> EXT_DV(N, n + 1);
@@ -387,7 +573,7 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
 
   out << "  \"cone_facets_tspace\": [\n";
   for (size_t i = 0; i < facets.size(); i++) {
-    MyVector<T> const &v = facets[i].eIneq;
+    MyVector<T> const &v = facets[i];
     out << "    [";
     for (int k = 0; k < v.size(); k++) {
       if (k > 0) out << ", ";
@@ -395,6 +581,25 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
     }
     out << "]";
     if (i + 1 < facets.size()) out << ",";
+    out << "\n";
+  }
+  out << "  ],\n";
+
+  out << "  \"autL_generators\": [\n";
+  for (size_t i = 0; i < autL_gens_for_ineq.size(); i++) {
+    MyMatrix<T> const &g = autL_gens_for_ineq[i];
+    out << "    [";
+    for (int r = 0; r < g.rows(); r++) {
+      if (r > 0) out << ", ";
+      out << "[";
+      for (int c = 0; c < g.cols(); c++) {
+        if (c > 0) out << ", ";
+        WriteRationalJSON(out, g(r, c));
+      }
+      out << "]";
+    }
+    out << "]";
+    if (i + 1 < autL_gens_for_ineq.size()) out << ",";
     out << "\n";
   }
   out << "  ],\n";
