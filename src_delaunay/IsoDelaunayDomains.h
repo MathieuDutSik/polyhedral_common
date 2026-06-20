@@ -2157,6 +2157,39 @@ struct ResultDelaunayAdj {
   std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
 };
 
+/*
+  Number of extreme rays r of the L-type domain of x (interpreted as
+  vectors in the t-space) such that the Gram matrix
+    sum_u r_u * LinSpa.ListMat[u]
+  is NOT of full rank. This is the objective function minimized by the
+  random walk in LookForFullRankRayDomain: 0 means every ray of the
+  domain corresponds to a full-rank Gram matrix.
+ */
+template <typename T, typename Tint, typename Tgroup>
+int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+                         DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+                         std::ostream &os) {
+  int n = data.LinSpa.n;
+  int dimSpace = data.LinSpa.ListMat.size();
+  std::vector<FullAdjInfo<T>> ListIneq =
+      ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
+          x.DT, data.LinSpa.ListLineMat, os);
+  MyMatrix<T> FAC = GetFACineq(ListIneq);
+  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
+  int n_row = EXT.rows();
+  int count = 0;
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
+    for (int u = 0; u < dimSpace; u++) {
+      RayMat += EXT(i_row, u) * data.LinSpa.ListMat[u];
+    }
+    if (RankMat(RayMat) < n) {
+      count++;
+    }
+  }
+  return count;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const& x, DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
   using Telt = typename Tgroup::Telt;
@@ -2312,8 +2345,113 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
   return {ListIneqRed, GRPperm, l_adj};
 }
 
+/*
+  Take n_iter unbiased random steps in the adjacency graph of iso-Delaunay
+  domains. Used to escape a local minimum of the ray-rank objective.
+ */
+template <typename T, typename Tint, typename Tgroup>
+IsoDelaunayDomain<T, Tint, Tgroup>
+RandomWalkIsoDelaunay(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+                      DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+                      int n_iter, std::ostream &os) {
+  IsoDelaunayDomain<T, Tint, Tgroup> Work = x;
+  for (int iter = 0; iter < n_iter; iter++) {
+    ResultDelaunayAdj<T, Tint, Tgroup> result =
+        get_result_delaunay_adj(Work, data);
+    int n_adj = result.l_adj.size();
+    if (n_adj == 0) {
+      os << "ISODEL: RandomWalkIsoDelaunay, no adjacent domain at iter="
+         << iter << ", stopping early\n";
+      break;
+    }
+    int pos = random() % n_adj;
+    Work = result.l_adj[pos].DT_gram;
+  }
+  return Work;
+}
 
+/*
+  Greedy descent on the ray-rank objective, modelled on
+  src_ctype/CTYP_LookForNoFreeVector.cpp::GetLocalFreenessMinimum.
 
+  Strategy:
+  * Compute the number of non-full-rank rays of the current domain
+    (CountNonFullRankRays).
+  * Enumerate adjacent domains and evaluate the same objective on each.
+  * If at least one adjacent strictly improves, jump to a (uniformly
+    random) one among those tying for the minimum.
+  * Otherwise, perform n_walk_steps random adjacency jumps to leave
+    the basin.
+  * Return as soon as the objective reaches zero, writing the
+    corresponding Gram matrix to a fresh file under Prefix. If the
+    objective is at most max_s but still positive we also dump the
+    Gram matrix (useful for collecting near-misses).
+ */
+template <typename T, typename Tint, typename Tgroup>
+void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+                              std::string const &Prefix, int const &max_s,
+                              int const &n_walk_steps, std::ostream &os) {
+  IsoDelaunayDomain<T, Tint, Tgroup> Work = GetInitialIsoDelaunayDomain(data);
+  int curr_count = CountNonFullRankRays(Work, data, os);
+  os << "ISODEL: LookForFullRankRayDomain, initial curr_count=" << curr_count
+     << "\n";
+  int iter1 = 0;
+  int iter2 = 0;
+  while (true) {
+    ResultDelaunayAdj<T, Tint, Tgroup> result =
+        get_result_delaunay_adj(Work, data);
+    int n_adj = result.l_adj.size();
+    if (n_adj == 0) {
+      os << "ISODEL: LookForFullRankRayDomain, no adjacent domain available, "
+            "restarting via random walk\n";
+      Work = RandomWalkIsoDelaunay(Work, data, n_walk_steps, os);
+      curr_count = CountNonFullRankRays(Work, data, os);
+      iter1++;
+      iter2 = 0;
+      continue;
+    }
+    std::vector<int> ListCount;
+    for (int i = 0; i < n_adj; i++) {
+      int c = CountNonFullRankRays(result.l_adj[i].DT_gram, data, os);
+      ListCount.push_back(c);
+    }
+    int the_min = VectorMin(ListCount);
+    if (the_min >= curr_count && curr_count > 0) {
+      Work = RandomWalkIsoDelaunay(Work, data, n_walk_steps, os);
+      curr_count = CountNonFullRankRays(Work, data, os);
+      os << "ISODEL: LookForFullRankRayDomain, iter1=" << iter1
+         << " iter2=" << iter2
+         << " After RandomWalk curr_count=" << curr_count << "\n";
+      iter1++;
+      iter2 = 0;
+    } else {
+      curr_count = the_min;
+      std::vector<size_t> ListIdx;
+      for (size_t u = 0; u < ListCount.size(); u++) {
+        if (ListCount[u] == the_min) {
+          ListIdx.push_back(u);
+        }
+      }
+      int n_min = ListIdx.size();
+      int pos = random() % n_min;
+      os << "ISODEL: LookForFullRankRayDomain, iter1=" << iter1
+         << " iter2=" << iter2 << " curr_count=" << curr_count
+         << " n_min=" << n_min << " pos=" << pos << "\n";
+      Work = result.l_adj[ListIdx[pos]].DT_gram;
+      if (curr_count <= max_s) {
+        std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+        WriteMatrixFile(FileOut, Work.GramMat);
+        os << "ISODEL: LookForFullRankRayDomain, wrote candidate Gram matrix "
+              "to "
+           << FileOut << " (curr_count=" << curr_count << ")\n";
+      }
+      if (curr_count == 0) {
+        return;
+      }
+      iter2++;
+    }
+  }
+}
 
 
 template <typename T, typename Tint, typename Tgroup>
