@@ -5,6 +5,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "IsoDelaunayDomains.h"
+#include "lt_complex.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on
@@ -33,25 +34,60 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
                                                          std::cerr);
 
+  bool compute_full_dimensional =
+      BlockDATA.get_bool("compute_full_dimensional");
+
   DataIsoDelaunayDomains<T, Tint, Tgroup> data =
       get_data_isodelaunay_domains<T, Tint, Tgroup>(eFull, AllArr, std::cerr);
-  //
-  using Tdata = DataIsoDelaunayDomainsFunc<T, Tint, Tgroup>;
-  Tdata data_func{std::move(data)};
-  using Tobj = typename Tdata::Tobj;
-  using TadjO = typename Tdata::TadjO;
-  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
-  auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
-    return false;
-  };
-  std::vector<Tout> l_tot =
-      EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
-          data_func, f_incorrect, max_runtime_second);
+
+  if (compute_full_dimensional) {
+    // Original path: enumerate only the top-dimensional iso-Delaunay domains.
+    using Tdata = DataIsoDelaunayDomainsFunc<T, Tint, Tgroup>;
+    Tdata data_func{std::move(data)};
+    using Tobj = typename Tdata::Tobj;
+    using TadjO = typename Tdata::TadjO;
+    using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
+    auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
+      return false;
+    };
+    std::vector<Tout> l_tot =
+        EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
+            data_func, f_incorrect, max_runtime_second);
+    std::ofstream os_out(OutFile);
+    bool result =
+        WriteFamilyObjects(data_func.data, OutFormat, os_out, l_tot, std::cerr);
+    if (result) {
+      std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+                << "\n";
+      throw TerminalException{1};
+    }
+    return;
+  }
+  // Full enumeration: top-dimensional cells plus all their lower-dim
+  // faces, identified across cells via the triples machinery.
+  LtypeComplexOptions opts{compute_full_dimensional};
+  FullLtypeComplexEnumeration<T, Tint, Tgroup> flce =
+      get_full_ltype_complex_enumeration_kernel<T, Tint, Tgroup>(
+          data, opts, max_runtime_second, std::cerr);
   std::ofstream os_out(OutFile);
-  bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
-  if (result) {
-    std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
-              << "\n";
+  if (OutFormat == "GAP") {
+    WriteFullLtypeComplexEnumerationGAP(os_out, flce);
+  } else if (OutFormat == "NumberGAP") {
+    size_t total = 0;
+    os_out << "return rec(per_level:=[";
+    int n_level = flce.levels.size();
+    for (int i_level = 0; i_level < n_level; i_level++) {
+      if (i_level > 0)
+        os_out << ", ";
+      size_t cnt = flce.levels[i_level].l_faces.size();
+      total += cnt;
+      os_out << cnt;
+    }
+    os_out << "], nb:=" << total << ");\n";
+  } else {
+    std::cerr << "LATT_SerialLattice_IsoDelaunayDomain: Unsupported OutFormat="
+              << OutFormat << " for compute_full_dimensional=F\n";
+    std::cerr << "Supported: GAP, NumberGAP\n";
     throw TerminalException{1};
   }
 }

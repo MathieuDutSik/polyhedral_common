@@ -19,11 +19,6 @@ bool is_integrally_saturated_matrix_space(
   }
   int n = ListMat[0].rows();
   int sym_dim = (n + 1) * n / 2;
-  if (n_mat == sym_dim) {
-    std::cerr << "TSPACE: We have n_mat=" << n_mat
-              << " equal to sym_dim=" << sym_dim << "\n";
-    throw TerminalException{1};
-  }
   MyMatrix<T> BigMat(n_mat, sym_dim);
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
     if (!IsIntegralMatrix(ListMat[i_mat])) {
@@ -36,6 +31,14 @@ bool is_integrally_saturated_matrix_space(
         pos++;
       }
     }
+  }
+  if (n_mat == sym_dim) {
+    // BigMat is square: the basis is saturated iff it spans the
+    // integer lattice of symmetric matrices, i.e. |det(BigMat)| = 1.
+    // Short-circuit because the NullspaceIntTrMat path below assumes
+    // a strict subspace and chokes on an empty intermediate kernel.
+    T det = T_abs(DeterminantMat(BigMat));
+    return det == 1;
   }
   MyMatrix<T> NSP1 = NullspaceIntTrMat(BigMat);
   MyMatrix<T> BigMat_renorm = NullspaceIntTrMat(NSP1);

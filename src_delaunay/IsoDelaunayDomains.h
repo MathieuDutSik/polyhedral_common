@@ -1859,8 +1859,11 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
     ListStringValues["FileDualDescription"] = "unset";
     ListStringValues["CommonGramMat"] = "unset";
     ListStringValues["CVPmethod"] = "SVexact";
+    std::map<std::string, bool> ListBoolValues;
+    ListBoolValues["compute_full_dimensional"] = true;
     SingleBlock BlockDATA;
     BlockDATA.setListStringValues(ListStringValues);
+    BlockDATA.setListBoolValues(ListBoolValues);
     ListBlock["DATA"] = BlockDATA;
   }
   // TSPACE

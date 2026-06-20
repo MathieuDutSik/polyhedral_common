@@ -216,7 +216,7 @@ void WriteEntryCPP(std::ostream &os, ExclConvexBoundary<T> const &ecb) {
 }
 
 template <typename T>
-ExclConvexBoundary<T> ReadEntryCPP_HardConvexBoundary(std::istream &is) {
+ExclConvexBoundary<T> ReadEntryCPP_ExclConvexBoundary(std::istream &is) {
   ConvexBoundary<T> cb = ReadEntryCPP_ConvexBoundary<T>(is);
   return {cb};
 }
