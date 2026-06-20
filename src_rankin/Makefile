@@ -1,4 +1,4 @@
-PROGRAM		= RANKIN_Compute_k_min LATT_ApproxAutomorphism
+PROGRAM		= RANKIN_Compute_k_min LATT_ApproxAutomorphism LATT_ApproxEquivalence
 #PROGRAM		= LORENTZ_ComputeDomain
 #PROGRAM		= Test
 

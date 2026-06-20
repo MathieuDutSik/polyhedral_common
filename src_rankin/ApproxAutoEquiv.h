@@ -57,7 +57,11 @@ std::pair<MyMatrix<Tint>, T> GetApproxShortVectors_tol(MyMatrix<T> const &eG,
 #endif
 
   CVPSolver<T, Tint> solver(eG, os);
-  std::vector<MyVector<Tint>> ListVect = solver.fixed_norm_vectors(max_norm);
+  // We enumerate every lattice vector v (in the central-symmetry half) of norm
+  // at most max_norm, not only those that sit on the exact shell, so that the
+  // "+ 2 * tol" buffer above (used when max_norm comes from another lattice)
+  // actually captures the extra vectors instead of giving an empty set.
+  std::vector<MyVector<Tint>> ListVect = solver.at_most_norm_vectors(max_norm);
 #ifdef DEBUG_APPROX_AUTO_EQUIV
   os << "AAE: |short vectors|=" << ListVect.size() << " (centrally symmetric)\n";
 #endif
@@ -128,6 +132,48 @@ bool IsApproximateAutomorphism(MyMatrix<T> const &eG, MyMatrix<Tint> const &M,
   return true;
 }
 
+// Reorder the weights of WMat2 so that they align with the weights of WMatRef
+// within tolerance tol. Returns false if the two weight lists cannot be put in
+// approximate bijection (different sizes or some weight has no match within
+// tol). The semantics mirror the exact RenormalizeWeightMatrix in
+// WeightMatrix.h, but pair weights using T_abs(diff) < tol instead of equality.
+template <typename T>
+bool RenormalizeWeightMatrix_tol(
+    WeightMatrix<true, T, uint32_t> const &WMatRef,
+    WeightMatrix<true, T, uint32_t> &WMat2, T const &tol) {
+  if (WMatRef.rows() != WMat2.rows()) {
+    return false;
+  }
+  std::vector<T> const &ListWeightRef = WMatRef.GetWeight();
+  std::vector<T> const &ListWeight2 = WMat2.GetWeight();
+  size_t nbEnt = ListWeightRef.size();
+  if (nbEnt != ListWeight2.size()) {
+    return false;
+  }
+  std::vector<uint32_t> gListRev(nbEnt);
+  std::vector<bool> matched(nbEnt, false);
+  for (size_t i = 0; i < nbEnt; i++) {
+    bool found = false;
+    for (size_t j = 0; j < nbEnt; j++) {
+      if (matched[j]) {
+        continue;
+      }
+      T diff = ListWeight2[j] - ListWeightRef[i];
+      if (T_abs(diff) < tol) {
+        gListRev[j] = static_cast<uint32_t>(i);
+        matched[j] = true;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+  WMat2.ReorderingOfWeights(gListRev);
+  return true;
+}
+
 // Compute generators of the approximate automorphism group of eG.
 // Each returned generator M satisfies M * eG * M^T approx eG within tol,
 // matching the convention used in src_latt/LatticeStabEquiCan.h.
@@ -176,6 +222,92 @@ ApproximateAutomorphismGroup(MyMatrix<T> const &eG, T const &tol,
   os << "AAE: returning " << ListGen.size() << " approximate generators\n";
 #endif
   return ListGen;
+}
+
+// Check that the integer matrix M is an approximate equivalence from eG1 to
+// eG2, i.e. that M * eG1 * M^T approx eG2 within tol on every entry (same
+// convention as in src_latt/LatticeStabEquiCan.h).
+template <typename T, typename Tint>
+bool IsApproximateEquivalence(MyMatrix<T> const &eG1, MyMatrix<T> const &eG2,
+                              MyMatrix<Tint> const &M, T const &tol) {
+  MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(M);
+  MyMatrix<T> diff = M_T * eG1 * M_T.transpose() - eG2;
+  int n = diff.rows();
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (T_abs(diff(i, j)) >= tol) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+// Approximate arithmetic equivalence between two positive definite Gram
+// matrices eG1 and eG2 up to tolerance tol. On success returns an integer
+// matrix M with M * eG1 * M^T approx eG2 within tol (same convention as
+// ArithmeticEquivalence in src_latt/LatticeStabEquiCan.h). Returns std::nullopt
+// if no such equivalence is detected. There is no "honest failure" report (in
+// contrast to the automorphism path): inability to find an equivalence is
+// reported as "not equivalent".
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+ApproximateEquivalence(MyMatrix<T> const &eG1, MyMatrix<T> const &eG2,
+                       T const &tol, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  std::optional<T> max_norm_opt1;
+  std::pair<MyMatrix<Tint>, T> pair1 =
+      GetApproxShortVectors_tol<T, Tint>(eG1, max_norm_opt1, tol, os);
+  MyMatrix<Tint> const &SHV1 = pair1.first;
+  T const &max_norm = pair1.second;
+  std::optional<T> max_norm_opt2(max_norm);
+  std::pair<MyMatrix<Tint>, T> pair2 =
+      GetApproxShortVectors_tol<T, Tint>(eG2, max_norm_opt2, tol, os);
+  MyMatrix<Tint> const &SHV2 = pair2.first;
+#ifdef DEBUG_APPROX_AUTO_EQUIV
+  os << "AAE: |SHV1|=" << SHV1.rows() << " |SHV2|=" << SHV2.rows() << "\n";
+#endif
+  if (SHV1.rows() != SHV2.rows()) {
+    return {};
+  }
+  WeightMatrix<true, T, uint32_t> WMat1 =
+      GetWeightMatrix_tol<T, Tint>(eG1, SHV1, tol, os);
+  WMat1.ReorderingSetWeight();
+  WeightMatrix<true, T, uint32_t> WMat2 =
+      GetWeightMatrix_tol<T, Tint>(eG2, SHV2, tol, os);
+  WMat2.ReorderingSetWeight();
+  bool test = RenormalizeWeightMatrix_tol<T>(WMat1, WMat2, tol);
+  if (!test) {
+#ifdef DEBUG_APPROX_AUTO_EQUIV
+    os << "AAE: tolerance-aware renormalization failed\n";
+#endif
+    return {};
+  }
+  std::optional<Telt> opt_perm =
+      TestEquivalenceWeightMatrix_norenorm_perm<T, Telt, uint32_t>(WMat2, WMat1,
+                                                                   os);
+  if (!opt_perm) {
+#ifdef DEBUG_APPROX_AUTO_EQUIV
+    os << "AAE: no graph isomorphism between the weighted matrices\n";
+#endif
+    return {};
+  }
+  std::optional<MyMatrix<Tint>> opt_mat =
+      FindTransformation<Tint, Telt>(SHV2, SHV1, *opt_perm);
+  if (!opt_mat) {
+#ifdef DEBUG_APPROX_AUTO_EQUIV
+    os << "AAE: no linear lift of the permutation\n";
+#endif
+    return {};
+  }
+  MyMatrix<Tint> const &M = *opt_mat;
+  if (!IsApproximateEquivalence(eG1, eG2, M, tol)) {
+#ifdef DEBUG_APPROX_AUTO_EQUIV
+    os << "AAE: lift is not an approximate equivalence\n";
+#endif
+    return {};
+  }
+  return M;
 }
 
 // clang-format off
