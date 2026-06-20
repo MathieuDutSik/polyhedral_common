@@ -5,13 +5,13 @@
 // clang-format off
 #include "IsoDelaunayDomains.h"
 #include "MAT_MatrixInt.h"
+#include "SignatureSymmetric.h"
 #include "Tspace_StabEquiInv.h"
-#include "MatrixGroupNest.h"
-#include "triples.h"
 #include "boost_serialization.h"
 #include <boost/dynamic_bitset/serialization.hpp>
 #include <fstream>
 #include <set>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -27,103 +27,29 @@
 /*
   Enumeration of the cells of the L-type complex.
 
-  This mirrors the design of src_perfect/perfect_complex.h, but for
-  iso-Delaunay (L-type) domains:
-
-  * Top-dimensional cells come from the iso-Delaunay enumeration.
-  * Lower-dimensional cells are obtained by walking down the faces of
-    the top-dimensional cones and identifying equivalent faces using
-    the triples machinery (src_polydecomp/triples.h).
+  The cone of positive semidefinite quadratic forms is subdivided into
+  cells (closures of L-type / iso-Delaunay domains) of every dimension
+  1 <= idx <= n*(n+1)/2. Each top-dimensional iso-Delaunay domain comes
+  from the standard iso-Delaunay enumeration; the lower-dim cells are
+  faces of the top-dim cones in the t-space.
 
   Per cell we expose:
   * The space of quadratic forms (LinSpa.ListMat, shared)
   * The inequalities (and equalities) defining the cell in the t-space
   * An inner ray (interior point of the cell, in t-space coordinates)
 
-  The action used is the action of the lattice automorphisms on the
-  t-space: a group element g acts on t-space coordinates c by
-    c |-> matrix_in_t_space(g, LinSpa).transpose() * c
-  which is the same convention as PermutationBuilder uses for the
-  shortest-vector action in perfect_complex.h.
+  With compute_full_dimensional = T, we keep only the cells whose inner
+  ray represents a positive-definite Gram matrix (the "full-dimensional"
+  cells in the user's terminology). Cells with degenerate inner forms
+  (i.e. inner ray on the boundary of the PSD cone) are dropped.
+
+  For each top-dim iso-Delaunay cell we enumerate its faces locally by
+  walking the face lattice of its L-type cone in the t-space, quotienting
+  by the lattice stabiliser acting on the inequalities. Cross-cell
+  equivalences for the codim-1 facets are inherited from the iso-Delaunay
+  adjacency structure (each facet appears as exactly one orbit per
+  adjacency pair).
  */
-
-//
-// Helpers: rays of the L-type cone are determined only up to positive
-// scaling. To use them as identifiers in groups / containers we
-// canonicalise each row to a primitive integer vector with the first
-// non-zero entry positive (CanonicalizeVectorToInvertible). A custom
-// permutation builder applies the same canonical form to the image of
-// each ray under a t-space action before looking it up.
-//
-
-template <typename T>
-MyMatrix<T> canonicalize_ext_rows(MyMatrix<T> const &EXT) {
-  int n_row = EXT.rows();
-  int n_col = EXT.cols();
-  MyMatrix<T> out(n_row, n_col);
-  for (int i_row = 0; i_row < n_row; i_row++) {
-    MyVector<T> v = GetMatrixRow(EXT, i_row);
-    MyVector<T> v_can = CanonicalizeVectorToInvertible(v);
-    AssignMatrixRow(out, i_row, v_can);
-  }
-  return out;
-}
-
-template <typename T, typename Telt>
-struct RayPermutationBuilder {
-  using Tidx = typename Telt::Tidx;
-  int n_row;
-  std::vector<MyVector<T>> ListV;
-  std::unordered_map<MyVector<T>, Tidx> MapV;
-  RayPermutationBuilder(MyMatrix<T> const &EXT_can) {
-    n_row = EXT_can.rows();
-    for (int i_row = 0; i_row < n_row; i_row++) {
-      MyVector<T> eV = GetMatrixRow(EXT_can, i_row);
-      Tidx i_row_idx = static_cast<Tidx>(i_row);
-      ListV.push_back(eV);
-      MapV[eV] = i_row_idx;
-    }
-  }
-  Telt get_permutation(MyMatrix<T> const &M,
-                       [[maybe_unused]] std::ostream &os) const {
-    std::vector<Tidx> eList(n_row);
-    for (int i_row = 0; i_row < n_row; i_row++) {
-      MyVector<T> Vimg = M.transpose() * ListV[i_row];
-      MyVector<T> Vimg_can = CanonicalizeVectorToInvertible(Vimg);
-      auto it = MapV.find(Vimg_can);
-      if (it == MapV.end()) {
-        std::cerr << "LTCOMP: image ray not in EXT\n";
-        std::cerr << "LTCOMP: source ray index " << i_row << "\n";
-        std::cerr << "LTCOMP: source ray V=" << StringVectorGAP(ListV[i_row]) << "\n";
-        std::cerr << "LTCOMP: image Vimg=" << StringVectorGAP(Vimg) << "\n";
-        std::cerr << "LTCOMP: image Vimg_can=" << StringVectorGAP(Vimg_can) << "\n";
-        std::cerr << "LTCOMP: matrix M=\n";
-        WriteMatrix(std::cerr, M);
-        std::cerr << "LTCOMP: known EXT rows:\n";
-        for (int j = 0; j < n_row; j++) {
-          std::cerr << "  " << j << ": " << StringVectorGAP(ListV[j]) << "\n";
-        }
-        throw TerminalException{1};
-      }
-      eList[i_row] = it->second;
-    }
-    return Telt(std::move(eList));
-  }
-};
-
-template <typename T, typename Telt>
-std::vector<Telt>
-get_ray_perms_from_list_matrices(std::vector<MyMatrix<T>> const &l_matr,
-                                 MyMatrix<T> const &EXT_can,
-                                 std::ostream &os) {
-  RayPermutationBuilder<T, Telt> builder(EXT_can);
-  std::vector<Telt> ret;
-  ret.reserve(l_matr.size());
-  for (auto &M : l_matr) {
-    ret.push_back(builder.get_permutation(M, os));
-  }
-  return ret;
-}
 
 struct LtypeComplexOptions {
   bool compute_full_dimensional;
@@ -143,695 +69,480 @@ inline void serialize(Archive &ar, LtypeComplexOptions &val,
 }  // namespace boost::serialization
 
 //
-// Top-dimensional cell info
-//
-
-template <typename T, typename Tint_impl, typename Tgroup_impl>
-struct LtypeInfoForComplex {
-  using Tint = T;
-  using TintLattice = Tint_impl;
-  using Tgroup = Tgroup_impl;
-  using Telt = typename Tgroup::Telt;
-  using TintGroup = typename Tgroup::Tint;
-  MyMatrix<T> GramMat;
-  MyMatrix<T> EXT;
-  MyMatrix<T> ListIneq;
-  std::optional<PreImagerElementContainer<T, Telt, TintGroup>> opt_pre_imager;
-  Tgroup GRP_ext;
-  std::vector<sing_adj<T>> l_sing_adj;
-  MyMatrix<T> find_matrix(Telt const &x, [[maybe_unused]] std::ostream &os) const {
-    if (opt_pre_imager) {
-      PreImagerElementContainer<T, Telt, TintGroup> const &pre_imager =
-          *opt_pre_imager;
-      std::optional<MyMatrix<T>> opt = pre_imager.get_preimage(x);
-      MyMatrix<T> M = unfold_opt(opt, "The element should belong to the group");
-#ifdef SANITY_CHECK_LT_COMPLEX
-      RayPermutationBuilder<T, Telt> builder(EXT);
-      Telt x_img = builder.get_permutation(M, os);
-      if (x_img != x) {
-        std::cerr << "LTCOMP: Inconsistency in pre_image computation\n";
-        throw TerminalException{1};
-      }
-#endif
-      return M;
-    }
-    MyMatrix<T> M = FindTransformation(EXT, EXT, x);
-#ifdef SANITY_CHECK_LT_COMPLEX
-    RayPermutationBuilder<T, Telt> builder(EXT);
-    Telt x_img = builder.get_permutation(M, os);
-    if (x_img != x) {
-      std::cerr << "LTCOMP: Inconsistency in pre_image computation\n";
-      throw TerminalException{1};
-    }
-#endif
-    return M;
-  }
-};
-
-namespace boost::serialization {
-template <class Archive, typename T, typename Tint, typename Tgroup>
-inline void save(Archive &ar, LtypeInfoForComplex<T, Tint, Tgroup> const &val,
-                 [[maybe_unused]] const unsigned int version) {
-  bool has_pre_imager = val.opt_pre_imager.has_value();
-  ar &make_nvp("GramMat", val.GramMat);
-  ar &make_nvp("EXT", val.EXT);
-  ar &make_nvp("ListIneq", val.ListIneq);
-  ar &make_nvp("GRP_ext", val.GRP_ext);
-  ar &make_nvp("l_sing_adj", val.l_sing_adj);
-  ar &make_nvp("has_pre_imager", has_pre_imager);
-  if (has_pre_imager) {
-    std::vector<MyMatrix<T>> l_matr = val.opt_pre_imager->get_list_matr_gens();
-    ar &make_nvp("l_matr", l_matr);
-  }
-}
-
-template <class Archive, typename T, typename Tint, typename Tgroup>
-inline void load(Archive &ar, LtypeInfoForComplex<T, Tint, Tgroup> &val,
-                 [[maybe_unused]] const unsigned int version) {
-  bool has_pre_imager = false;
-  ar &make_nvp("GramMat", val.GramMat);
-  ar &make_nvp("EXT", val.EXT);
-  ar &make_nvp("ListIneq", val.ListIneq);
-  ar &make_nvp("GRP_ext", val.GRP_ext);
-  ar &make_nvp("l_sing_adj", val.l_sing_adj);
-  ar &make_nvp("has_pre_imager", has_pre_imager);
-  if (has_pre_imager) {
-    std::vector<MyMatrix<T>> l_matr;
-    ar &make_nvp("l_matr", l_matr);
-    if (l_matr.empty()) {
-      std::cerr << "LTCOMP: Missing l_matr for preimage reconstruction\n";
-      throw TerminalException{1};
-    }
-    using Telt = typename Tgroup::Telt;
-    using TintGroup = typename Tgroup::Tint;
-    std::vector<Telt> l_perm =
-        get_ray_perms_from_list_matrices<T, Telt>(l_matr, val.EXT, std::cerr);
-    MyMatrix<T> id = IdentityMat<T>(val.EXT.cols());
-    val.opt_pre_imager =
-        PreImagerElementContainer<T, Telt, TintGroup>(l_matr, l_perm, id);
-  } else {
-    val.opt_pre_imager = {};
-  }
-}
-
-template <class Archive, typename T, typename Tint, typename Tgroup>
-inline void serialize(Archive &ar, LtypeInfoForComplex<T, Tint, Tgroup> &val,
-                      const unsigned int version) {
-  split_free(ar, val, version);
-}
-}  // namespace boost::serialization
-
-template <typename T, typename Tint, typename Tgroup>
-struct LtypeComplexTopDimInfo {
-  std::vector<LtypeInfoForComplex<T, Tint, Tgroup>> l_ltype;
-  LinSpaceMatrix<T> LinSpa;
-  LtypeComplexOptions opts;
-};
-
-namespace boost::serialization {
-template <class Archive, typename T, typename Tint, typename Tgroup>
-inline void serialize(Archive &ar,
-                      LtypeComplexTopDimInfo<T, Tint, Tgroup> &val,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("l_ltype", val.l_ltype);
-  ar &make_nvp("LinSpa", val.LinSpa);
-  ar &make_nvp("opts", val.opts);
-}
-}  // namespace boost::serialization
-
-//
-// Build the top-dimensional info from the iso-Delaunay enumeration.
-//
-// l_tot is the output of EnumerateAndStore_Serial for iso-Delaunay
-// domains; we recover EXT (extreme rays of each L-type cone), the
-// group acting on EXT, and the adjacency information needed by the
-// triples machinery.
-//
-
-template <typename T, typename Tint, typename Tgroup>
-LtypeComplexTopDimInfo<T, Tint, Tgroup> generate_ltype_complex_top_dim_info(
-    std::vector<DatabaseEntry_Serial<IsoDelaunayDomain_Obj<T, Tint, Tgroup>,
-                                     IsoDelaunayDomain_AdjO<T, Tint>>> const
-        &l_tot,
-    LinSpaceMatrix<T> const &LinSpa, LtypeComplexOptions const &opts,
-    std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using TintGroup = typename Tgroup::Tint;
-  std::vector<LtypeInfoForComplex<T, Tint, Tgroup>> l_ltype;
-  size_t n_cell = l_tot.size();
-#ifdef DEBUG_LT_COMPLEX
-  os << "LTCOMP: generate_ltype_complex_top_dim_info n_cell=" << n_cell << "\n";
-#endif
-  for (size_t i_cell = 0; i_cell < n_cell; i_cell++) {
-    auto const &eCell = l_tot[i_cell];
-    int dimSpace = LinSpa.ListMat.size();
-    // Recompute the full irredundant set of Voronoi inequalities for
-    // this iso-Delaunay domain; the database's `ListIneqRed` keeps
-    // only one representative per GRPperm orbit which is not enough
-    // to build the L-type cone's full extreme-ray decomposition.
-    std::vector<FullAdjInfo<T>> ListIneq_all =
-        ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
-            eCell.x.DT_gram.DT, LinSpa.ListLineMat, os);
-    MyMatrix<T> FAC_full = GetFACineq(ListIneq_all);
-    MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC_full);
-    std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
-    size_t nbIneq = ListIrred.size();
-    MyMatrix<T> FAC(nbIneq, dimSpace);
-    for (size_t i = 0; i < nbIneq; i++) {
-      AssignMatrixRow(FAC, i, ListIneq_all[ListIrred[i]].eIneq);
-    }
-    // Extreme rays of the L-type cone (in t-space coordinates).
-    // We canonicalise each ray so that it has a unique primitive
-    // representative; the action on rays is then a permutation we can
-    // recover via RayPermutationBuilder.
-    MyMatrix<T> EXT_raw = DirectDualDescription_mat(FAC, os);
-    MyMatrix<T> EXT = canonicalize_ext_rows(EXT_raw);
-    int n_ext = EXT.rows();
-    // Group acting on EXT.
-    // We obtain matrix generators of the lattice stabilizer from the
-    // (already computed) GRPperm acting on inequalities — but we need
-    // their action on rays. We re-derive them from the t-space action
-    // matrices coming from LINSPA_ComputeStabilizer.
-    std::vector<MyMatrix<T>> ListGenTot =
-        LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eCell.x.DT_gram.GramMat,
-                                                  os);
-    std::vector<MyMatrix<T>> ListMatSpace;
-    ListMatSpace.reserve(ListGenTot.size());
-    for (auto &eGenTot : ListGenTot) {
-      ListMatSpace.push_back(matrix_in_t_space(eGenTot, LinSpa));
-    }
-    std::vector<Telt> l_perm =
-        get_ray_perms_from_list_matrices<T, Telt>(ListMatSpace, EXT, os);
-    Tgroup GRP_ext(l_perm, n_ext);
-    std::optional<PreImagerElementContainer<T, Telt, TintGroup>> opt_pre_imager;
-    if (RankMat(EXT) < EXT.cols()) {
-      MyMatrix<T> id = IdentityMat<T>(EXT.cols());
-      opt_pre_imager = PreImagerElementContainer<T, Telt, TintGroup>(
-          ListMatSpace, l_perm, id);
-    }
-    // Adjacency entries: convert each iso-Delaunay adjacency into a
-    // sing_adj describing which face of EXT is the corresponding facet.
-    std::vector<sing_adj<T>> l_sing_adj;
-    l_sing_adj.reserve(eCell.ListAdj.size());
-    for (auto &eAdj : eCell.ListAdj) {
-      size_t jCone = static_cast<size_t>(eAdj.iOrb);
-      MyVector<T> const &Vineq = eAdj.x.V;
-      // Face of EXT lying on this facet hyperplane.
-      Face f_ext(n_ext);
-      for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-        MyVector<T> Vray = GetMatrixRow(EXT, i_ext);
-        T scal = Vineq.dot(Vray);
-        if (scal == 0) {
-          f_ext[i_ext] = 1;
-        }
-      }
-      // Action on the t-space induced by the lattice element eBigMat.
-      // For L-types EXT lives in the t-space itself (= the cone of
-      // quadratic forms), so the eMat used by the triples machinery is
-      // the direct t-space action — not its inverse as in
-      // perfect_complex.h, where EXT is the dual vector configuration.
-      MyMatrix<T> eBigMat_T = UniversalMatrixConversion<T, Tint>(eAdj.x.eBigMat);
-      MyMatrix<T> eMat = matrix_in_t_space(eBigMat_T, LinSpa);
-      sing_adj<T> adj{jCone, f_ext, std::move(eMat)};
-      l_sing_adj.emplace_back(std::move(adj));
-    }
-    LtypeInfoForComplex<T, Tint, Tgroup> info{eCell.x.DT_gram.GramMat,
-                                              std::move(EXT),
-                                              std::move(FAC),
-                                              std::move(opt_pre_imager),
-                                              std::move(GRP_ext),
-                                              std::move(l_sing_adj)};
-    l_ltype.emplace_back(std::move(info));
-  }
-  return {std::move(l_ltype), LinSpa, opts};
-}
-
-//
 // A cell of the L-type complex.
 //
 
-template <typename T, typename Tint, typename Tgroup>
-struct LtypeFace {
-  std::vector<triple<T>> l_triple;
-  std::vector<MyMatrix<T>> l_gens;
-  MyMatrix<T> EXT;
-  Tgroup GRP_ext;
+template <typename T>
+struct LtypeCell {
+  // Subset of the parent top-dim cone's irredundant facet inequalities
+  // that are tight on this cell (= equalities of the cell in t-space).
+  Face f_inc;
+  // The parent top-dim iso-Delaunay cell index in l_tot.
+  int i_top;
+  // Inequalities (rows of length dimSpace) defining the cone in t-space
+  // (the non-tight irredundant inequalities of the parent restricted to
+  // the affine span of this cell).
   MyMatrix<T> ListIneq;
+  // Equalities (rows of length dimSpace) carving out the affine span of
+  // this cell inside t-space (= the tight inequalities of the parent).
   MyMatrix<T> ListEqua;
+  // Interior point of the cell, in t-space coordinates.
   MyVector<T> inner_ray;
+  // Gram matrix corresponding to inner_ray, for the pos-def filter.
+  MyMatrix<T> inner_gram;
+  // Whether inner_gram is positive definite (i.e. the cell is "full
+  // dimensional" in the user's sense).
+  bool inner_is_pos_def;
 };
 
 namespace boost::serialization {
-template <class Archive, typename T, typename Tint, typename Tgroup>
-inline void serialize(Archive &ar, LtypeFace<T, Tint, Tgroup> &val,
+template <class Archive, typename T>
+inline void serialize(Archive &ar, LtypeCell<T> &val,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("l_triple", val.l_triple);
-  ar &make_nvp("l_gens", val.l_gens);
-  ar &make_nvp("EXT", val.EXT);
-  ar &make_nvp("GRP_ext", val.GRP_ext);
+  ar &make_nvp("f_inc", val.f_inc);
+  ar &make_nvp("i_top", val.i_top);
   ar &make_nvp("ListIneq", val.ListIneq);
   ar &make_nvp("ListEqua", val.ListEqua);
   ar &make_nvp("inner_ray", val.inner_ray);
+  ar &make_nvp("inner_gram", val.inner_gram);
+  ar &make_nvp("inner_is_pos_def", val.inner_is_pos_def);
 }
 }  // namespace boost::serialization
 
-template <typename T, typename Tint, typename Tgroup>
-struct LtypeFaces {
-  std::vector<LtypeFace<T, Tint, Tgroup>> l_faces;
+template <typename T>
+struct LtypeCellsAtLevel {
+  // idx of the cells at this level (= dimension in t-space).
+  int idx;
+  std::vector<LtypeCell<T>> l_cells;
 };
 
 namespace boost::serialization {
-template <class Archive, typename T, typename Tint, typename Tgroup>
-inline void serialize(Archive &ar, LtypeFaces<T, Tint, Tgroup> &val,
+template <class Archive, typename T>
+inline void serialize(Archive &ar, LtypeCellsAtLevel<T> &val,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("l_faces", val.l_faces);
+  ar &make_nvp("idx", val.idx);
+  ar &make_nvp("l_cells", val.l_cells);
+}
+}  // namespace boost::serialization
+
+template <typename T>
+struct FullLtypeComplexEnumeration {
+  LinSpaceMatrix<T> LinSpa;
+  LtypeComplexOptions opts;
+  // Grouped by dimension idx (= dim of cell in t-space).
+  std::vector<LtypeCellsAtLevel<T>> levels;
+};
+
+namespace boost::serialization {
+template <class Archive, typename T>
+inline void serialize(Archive &ar, FullLtypeComplexEnumeration<T> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("LinSpa", val.LinSpa);
+  ar &make_nvp("opts", val.opts);
+  ar &make_nvp("levels", val.levels);
 }
 }  // namespace boost::serialization
 
 //
-// Helpers used to compute the inequalities / inner ray attached to a
-// face of a top-dimensional cell.
+// Helpers.
 //
 
+// Build a Gram matrix from a t-space coordinate vector.
 template <typename T>
-Face find_tight_facets(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
-                       Face const &f_ext) {
-  int nbIneq = FAC.rows();
-  Face f_ineq(nbIneq);
-  std::vector<int> indices;
-  indices.reserve(f_ext.count());
-  for (int i = 0; i < static_cast<int>(f_ext.size()); i++) {
-    if (f_ext[i] == 1) {
-      indices.push_back(i);
-    }
+MyMatrix<T> gram_from_tspace_vec(MyVector<T> const &v,
+                                 std::vector<MyMatrix<T>> const &ListMat) {
+  int dimSpace = ListMat.size();
+  int n = ListMat[0].rows();
+  MyMatrix<T> M = ZeroMatrix<T>(n, n);
+  for (int u = 0; u < dimSpace; u++) {
+    M += v(u) * ListMat[u];
   }
-  for (int j = 0; j < nbIneq; j++) {
-    MyVector<T> Vineq = GetMatrixRow(FAC, j);
-    bool all_zero = true;
-    for (int i : indices) {
-      MyVector<T> Vray = GetMatrixRow(EXT, i);
-      if (Vineq.dot(Vray) != 0) {
-        all_zero = false;
-        break;
-      }
-    }
-    if (all_zero) {
-      f_ineq[j] = 1;
-    }
-  }
-  return f_ineq;
+  return M;
 }
 
+// Action of g (lattice element in GL_n(Z)) on FAC indices. The
+// inequality W transforms as W -> matrix_in_t_space(g) * W, exactly
+// matching the convention used inside get_result_delaunay_adj.
+template <typename T, typename Telt>
+Telt permutation_on_fac(MyMatrix<T> const &MatSpace, MyMatrix<T> const &FAC) {
+  using Tidx = typename Telt::Tidx;
+  int n_row = FAC.rows();
+  std::unordered_map<MyVector<T>, Tidx> MapV;
+  for (int i = 0; i < n_row; i++) {
+    MyVector<T> W = GetMatrixRow(FAC, i);
+    MyVector<T> W_red = RemoveFractionVector(W);
+    MapV[W_red] = static_cast<Tidx>(i);
+  }
+  std::vector<Tidx> img(n_row);
+  for (int i = 0; i < n_row; i++) {
+    MyVector<T> W = GetMatrixRow(FAC, i);
+    MyVector<T> W_img = MatSpace * W;
+    MyVector<T> W_img_red = RemoveFractionVector(W_img);
+    auto it = MapV.find(W_img_red);
+    if (it == MapV.end()) {
+      std::cerr << "LTCOMP: permutation_on_fac: image inequality not in FAC\n";
+      throw TerminalException{1};
+    }
+    img[i] = it->second;
+  }
+  return Telt(std::move(img));
+}
+
+// Group acting on FAC indices, derived from the lattice stabiliser of
+// the cell's interior Gram matrix.
+template <typename T, typename Tint, typename Tgroup>
+Tgroup get_fac_permutation_group(LinSpaceMatrix<T> const &LinSpa,
+                                  MyMatrix<T> const &GramMat,
+                                  MyMatrix<T> const &FAC, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  std::vector<MyMatrix<T>> ListGenTot =
+      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, GramMat, os);
+  std::vector<Telt> l_perm;
+  l_perm.reserve(ListGenTot.size());
+  for (auto &g : ListGenTot) {
+    MyMatrix<T> MatSpace = matrix_in_t_space(g, LinSpa);
+    l_perm.push_back(permutation_on_fac<T, Telt>(MatSpace, FAC));
+  }
+  return Tgroup(l_perm, FAC.rows());
+}
+
+// Compute (ListIneq, ListEqua) by splitting FAC according to which
+// inequalities are marked as tight in f_inc.
 template <typename T>
 std::pair<MyMatrix<T>, MyMatrix<T>>
-split_ineq_equa(MyMatrix<T> const &FAC, Face const &f_ineq) {
+split_fac(MyMatrix<T> const &FAC, Face const &f_inc) {
   int nbIneq = FAC.rows();
   int dim = FAC.cols();
-  int n_eq = f_ineq.count();
+  int n_eq = f_inc.count();
   int n_in = nbIneq - n_eq;
   MyMatrix<T> ListIneq(n_in, dim);
   MyMatrix<T> ListEqua(n_eq, dim);
   int pos_in = 0;
   int pos_eq = 0;
   for (int j = 0; j < nbIneq; j++) {
-    MyVector<T> Vineq = GetMatrixRow(FAC, j);
-    if (f_ineq[j] == 1) {
-      AssignMatrixRow(ListEqua, pos_eq, Vineq);
+    MyVector<T> W = GetMatrixRow(FAC, j);
+    if (f_inc[j] == 1) {
+      AssignMatrixRow(ListEqua, pos_eq, W);
       pos_eq += 1;
     } else {
-      AssignMatrixRow(ListIneq, pos_in, Vineq);
+      AssignMatrixRow(ListIneq, pos_in, W);
       pos_in += 1;
     }
   }
   return {std::move(ListIneq), std::move(ListEqua)};
 }
 
-template <typename T, typename Tint, typename Tgroup>
-MyVector<T>
-get_inner_ray_for_face(LtypeComplexTopDimInfo<T, Tint, Tgroup> const &lctdi,
-                       triple<T> const &t, std::ostream &os) {
-  LtypeInfoForComplex<T, Tint, Tgroup> const &cone =
-      lctdi.l_ltype[t.iCone];
-  MyMatrix<T> const &FAC = cone.ListIneq;
-  Face f_ineq = find_tight_facets(FAC, cone.EXT, t.f_ext);
-  int nbIneq = FAC.rows();
-  int dim = FAC.cols();
-  int n_eq = f_ineq.count();
-  if (n_eq == 0) {
-    return GetSpaceInteriorPoint_Basic(FAC, os);
-  }
-  int n_in = nbIneq - n_eq;
-  MyMatrix<T> ListIneq(n_in, dim);
-  MyMatrix<T> ListEqua(n_eq, dim);
-  int pos_in = 0;
-  int pos_eq = 0;
-  for (int j = 0; j < nbIneq; j++) {
-    MyVector<T> Vineq = GetMatrixRow(FAC, j);
-    if (f_ineq[j] == 1) {
-      AssignMatrixRow(ListEqua, pos_eq, Vineq);
-      pos_eq += 1;
-    } else {
-      AssignMatrixRow(ListIneq, pos_in, Vineq);
-      pos_in += 1;
+// Compute an interior point of the face defined by f_inc, in t-space
+// coordinates. Returns std::nullopt if the face is empty (e.g. the
+// equalities are inconsistent with the strict inequalities).
+template <typename T>
+std::optional<MyVector<T>> get_face_interior(MyMatrix<T> const &FAC,
+                                              Face const &f_inc,
+                                              std::ostream &os) {
+  try {
+    int nbIneq = FAC.rows();
+    int n_eq = f_inc.count();
+    if (nbIneq - n_eq == 0) {
+      // Pure linear subspace; pick the origin (does not count as a
+      // real cell of the L-type complex).
+      return {};
     }
-  }
-  MyVector<T> inner = GetSpaceInteriorPoint(ListIneq, ListEqua, os);
-  // Pull it back to the top-dim cell's own frame.
-  MyMatrix<T> eMat_T = t.eMat;
-  return eMat_T.transpose() * inner;
-}
-
-//
-// First step: register each top-dim cell as a face cell.
-//
-
-template <typename T, typename Tint, typename Tgroup>
-LtypeFaces<T, Tint, Tgroup> get_first_step_ltype_complex_enumeration(
-    LtypeComplexTopDimInfo<T, Tint, Tgroup> const &lctdi, std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  std::vector<LtypeFace<T, Tint, Tgroup>> l_faces;
-  int dimSpace = lctdi.LinSpa.ListMat.size();
-  size_t n_top = lctdi.l_ltype.size();
-#ifdef DEBUG_LT_COMPLEX
-  os << "LTCOMP: get_first_step_ltype_complex_enumeration n_top=" << n_top
-     << "\n";
-#endif
-  for (size_t i_top = 0; i_top < n_top; i_top++) {
-    LtypeInfoForComplex<T, Tint, Tgroup> const &top = lctdi.l_ltype[i_top];
-    int n_ext = top.EXT.rows();
-    Face f_ext(n_ext);
-    for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-      f_ext[i_ext] = 1;
-    }
-    MyMatrix<T> eMatId = IdentityMat<T>(dimSpace);
-    triple<T> t{i_top, f_ext, eMatId};
-    std::vector<triple<T>> l_triple = {t};
-    std::vector<MyMatrix<T>> l_gens;
-    std::vector<Telt> l_elt = top.GRP_ext.SmallGeneratingSet();
-    for (auto &ePermGen : l_elt) {
-      MyMatrix<T> eMatrGen = top.find_matrix(ePermGen, os);
-      l_gens.push_back(eMatrGen);
-    }
-    MyVector<T> inner_ray = GetSpaceInteriorPoint_Basic(top.ListIneq, os);
-    MyMatrix<T> ListEqua(0, dimSpace);
-    LtypeFace<T, Tint, Tgroup> face{
-        std::move(l_triple), std::move(l_gens),  top.EXT,
-        top.GRP_ext,         top.ListIneq,       std::move(ListEqua),
-        std::move(inner_ray)};
-    l_faces.emplace_back(std::move(face));
-  }
-  return {std::move(l_faces)};
-}
-
-//
-// Step from a level to the next (lower) one.
-//
-
-template <typename T, typename Tint, typename Tgroup>
-LtypeFaces<T, Tint, Tgroup>
-compute_next_level_ltype(LtypeComplexTopDimInfo<T, Tint, Tgroup> const &lctdi,
-                         LtypeFaces<T, Tint, Tgroup> const &level,
-                         std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  int dimSpace = lctdi.LinSpa.ListMat.size();
-  std::vector<LtypeFace<T, Tint, Tgroup>> l_faces;
-  auto find_matching_entry =
-      [&](triple<T> const &t) -> std::optional<std::pair<int, MyMatrix<T>>> {
-    int i_dom = 0;
-    for (auto &face1 : l_faces) {
-      std::optional<MyMatrix<T>> opt =
-          test_triple_in_listtriple(lctdi.l_ltype, face1.l_triple, t, os);
-      if (opt) {
-        return std::pair<int, MyMatrix<T>>{i_dom, *opt};
-      }
-      i_dom += 1;
-    }
-    return {};
-  };
-  using Tfull_triple =
-      std::pair<std::vector<triple<T>>, std::vector<MyMatrix<T>>>;
-  auto get_initial_triple = [&](LtypeFace<T, Tint, Tgroup> const &face,
-                                Face const &eIncd_sma) -> triple<T> {
-    triple<T> const &t_big = face.l_triple[0];
-    size_t iCone = t_big.iCone;
-    int n_ext_big = lctdi.l_ltype[iCone].EXT.rows();
-    Face f(n_ext_big);
-    size_t index = 0;
-    for (int i = 0; i < n_ext_big; i++) {
-      if (t_big.f_ext[i] == 1) {
-        if (eIncd_sma[index] == 1) {
-          f[i] = 1;
-        }
-        index += 1;
-      }
-    }
-    triple<T> t{iCone, f, t_big.eMat};
-    return canonicalize_triple(lctdi.l_ltype, t, os);
-  };
-  auto f_insert = [&](triple<T> const &t,
-                      std::optional<Tfull_triple> &opt_t) -> int {
-    std::optional<std::pair<int, MyMatrix<T>>> opt = find_matching_entry(t);
-    if (opt) {
-      return opt->first;
-    }
-    if (!opt_t) {
-      opt_t = get_spanning_list_triple(lctdi.l_ltype, t, os);
-    }
-    Tfull_triple const &pair = *opt_t;
-    int iCone = t.iCone;
-    int n_ext = t.f_ext.count();
-    int n_ext_big = lctdi.l_ltype[iCone].EXT.rows();
-    MyMatrix<T> EXT_face_raw(n_ext, dimSpace);
-    int pos = 0;
-    for (int i_big = 0; i_big < n_ext_big; i_big++) {
-      if (t.f_ext[i_big] == 1) {
-        MyVector<T> V1 = GetMatrixRow(lctdi.l_ltype[iCone].EXT, i_big);
-        MyVector<T> V2 = t.eMat.transpose() * V1;
-        AssignMatrixRow(EXT_face_raw, pos, V2);
-        pos += 1;
-      }
-    }
-    MyMatrix<T> EXT_face = canonicalize_ext_rows(EXT_face_raw);
-    RayPermutationBuilder<T, Telt> builder(EXT_face);
-    std::vector<Telt> l_gens_perm;
-    for (auto &eMatrGen : pair.second) {
-      Telt elt = builder.get_permutation(eMatrGen, os);
-      l_gens_perm.push_back(std::move(elt));
-    }
-    Tgroup GRP_ext(l_gens_perm, n_ext);
-    MyMatrix<T> const &FAC = lctdi.l_ltype[iCone].ListIneq;
-    Face f_ineq = find_tight_facets(FAC, lctdi.l_ltype[iCone].EXT, t.f_ext);
-    auto split = split_ineq_equa(FAC, f_ineq);
-    MyMatrix<T> ListIneq_local = split.first;
-    MyMatrix<T> ListEqua_local = split.second;
-    MyVector<T> inner_local;
-    int n_eq = f_ineq.count();
     if (n_eq == 0) {
-      inner_local = GetSpaceInteriorPoint_Basic(ListIneq_local, os);
-    } else {
-      inner_local = GetSpaceInteriorPoint(ListIneq_local, ListEqua_local, os);
+      MyVector<T> v = GetSpaceInteriorPoint_Basic(FAC, os);
+      return v;
     }
-    // Express inequalities, equalities and inner ray in the face's own
-    // frame. Rays transform as v -> eMat^T * v, so to preserve the
-    // pairing W^T v inequalities transform as W -> eMat^{-1} * W, i.e.
-    // for the row layout, ListIneq -> ListIneq * eMat^{-T}.
-    MyMatrix<T> eMatT = t.eMat.transpose();
-    MyMatrix<T> eMat_inv = Inverse(t.eMat);
-    MyMatrix<T> eMat_inv_T = eMat_inv.transpose();
-    MyMatrix<T> ListIneq_pulled = ListIneq_local * eMat_inv_T;
-    MyMatrix<T> ListEqua_pulled = ListEqua_local * eMat_inv_T;
-    MyVector<T> inner_pulled = eMatT * inner_local;
-    LtypeFace<T, Tint, Tgroup> face{
-        pair.first,           pair.second,
-        std::move(EXT_face),  std::move(GRP_ext),
-        std::move(ListIneq_pulled), std::move(ListEqua_pulled),
-        std::move(inner_pulled)};
-    int i_dom = static_cast<int>(l_faces.size());
-    l_faces.emplace_back(std::move(face));
-    return i_dom;
-  };
-  size_t n_level = level.l_faces.size();
-  for (size_t i = 0; i < n_level; i++) {
-    LtypeFace<T, Tint, Tgroup> const &face = level.l_faces[i];
-    // The facets of this face cell come from the inequalities of the
-    // parent top-dim cone, restricted to the rays of the face. Each
-    // inequality which is not already tight gives a candidate facet.
-    triple<T> const &t_big = face.l_triple[0];
-    size_t iCone = t_big.iCone;
-    LtypeInfoForComplex<T, Tint, Tgroup> const &top = lctdi.l_ltype[iCone];
-    MyMatrix<T> const &FAC_top = top.ListIneq;
-    int nbIneq = FAC_top.rows();
-    int n_ext_big = top.EXT.rows();
-    Face f_ineq_active =
-        find_tight_facets(FAC_top, top.EXT, t_big.f_ext);
-    // List of relevant rays (the ones in the current face).
-    std::vector<int> face_rays;
-    face_rays.reserve(t_big.f_ext.count());
-    for (int i_big = 0; i_big < n_ext_big; i_big++) {
-      if (t_big.f_ext[i_big] == 1) {
-        face_rays.push_back(i_big);
+    auto split = split_fac(FAC, f_inc);
+    MyVector<T> v = GetSpaceInteriorPoint(split.first, split.second, os);
+    return v;
+  } catch (TerminalException const &) {
+    return {};
+  }
+}
+
+//
+// Enumerate the cell orbits of one top-dimensional L-type cone modulo
+// the lattice stabiliser GRPperm. We walk the face lattice top-down
+// using a BFS by f_inc bit count, quotienting via OptCanonicalImage.
+//
+// The face lattice is bounded by 2^|FAC| faces; for the small cones
+// arising in low-dim iso-Delaunay enumeration this is manageable.
+//
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<LtypeCell<T>>
+enumerate_face_orbits_for_top_cell(int i_top, LinSpaceMatrix<T> const &LinSpa,
+                                    MyMatrix<T> const &FAC,
+                                    Tgroup const &GRPperm, std::ostream &os) {
+  int nbIneq = FAC.rows();
+  int dimSpace = LinSpa.ListMat.size();
+  std::vector<LtypeCell<T>> out;
+  std::unordered_set<Face> seen_canonical;
+  std::vector<Face> frontier;
+  // Level 0: the full top-dim cone (no tight inequalities).
+  Face empty_f(nbIneq);
+  Face empty_can = GRPperm.OptCanonicalImage(empty_f);
+  seen_canonical.insert(empty_can);
+  frontier.push_back(empty_f);
+  // Build the level-0 cell.
+  {
+    std::optional<MyVector<T>> opt_inner = get_face_interior(FAC, empty_f, os);
+    if (!opt_inner) {
+      std::cerr << "LTCOMP: failed to find an interior point for the "
+                   "top-dim cell of i_top="
+                << i_top << "\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> inner_ray = *opt_inner;
+    MyMatrix<T> inner_gram = gram_from_tspace_vec(inner_ray, LinSpa.ListMat);
+    bool pd = IsPositiveDefinite(inner_gram, os);
+    auto split = split_fac(FAC, empty_f);
+    out.push_back(LtypeCell<T>{empty_f, i_top, std::move(split.first),
+                                std::move(split.second),
+                                std::move(inner_ray), std::move(inner_gram),
+                                pd});
+  }
+  // Descend: at each step, for each face in the frontier, generate all
+  // covers (one extra tight inequality) and keep the new ones modulo
+  // GRPperm and modulo "same face = same affine span" (a cover is only
+  // kept if its dim is strictly less than the parent's, otherwise it
+  // describes the same cell).
+  while (!frontier.empty()) {
+    std::vector<Face> next_frontier;
+    for (auto const &f_inc : frontier) {
+      int dim_parent;
+      {
+        auto split = split_fac(FAC, f_inc);
+        dim_parent = dimSpace - RankMat(split.second);
       }
-    }
-    std::set<Face> seen;
-    for (int j = 0; j < nbIneq; j++) {
-      if (f_ineq_active[j] == 1) {
+      if (dim_parent <= 1) {
+        // The cell is at most 1-dimensional; its only "facet" is the
+        // origin (excluded from the L-type complex).
         continue;
       }
-      MyVector<T> Vineq = GetMatrixRow(FAC_top, j);
-      Face eIncd_big(n_ext_big);
-      int pos_in_face = 0;
-      Face eIncd_sma(face_rays.size());
-      bool any_nonzero = false;
-      for (int i_big : face_rays) {
-        MyVector<T> Vray = GetMatrixRow(top.EXT, i_big);
-        if (Vineq.dot(Vray) == 0) {
-          eIncd_big[i_big] = 1;
-          eIncd_sma[pos_in_face] = 1;
-        } else {
-          any_nonzero = true;
+      for (int j = 0; j < nbIneq; j++) {
+        if (f_inc[j] == 1)
+          continue;
+        Face f_new = f_inc;
+        f_new[j] = 1;
+        auto split_new = split_fac(FAC, f_new);
+        int rank_new = RankMat(split_new.second);
+        int dim_new = dimSpace - rank_new;
+        if (dim_new >= dim_parent)
+          continue;  // Tightening this inequality is implied by f_inc.
+        if (dim_new < 1)
+          continue;
+        // Saturate f_new: add all FAC indices whose row lies in the
+        // span of the current equalities, so that two equivalent
+        // descriptions of the same face collapse.
+        Face f_sat = f_new;
+        for (int k = 0; k < nbIneq; k++) {
+          if (f_sat[k] == 1)
+            continue;
+          MyVector<T> Wk = GetMatrixRow(FAC, k);
+          MyMatrix<T> Augmented(split_new.second.rows() + 1, dimSpace);
+          for (int r = 0; r < split_new.second.rows(); r++) {
+            for (int c = 0; c < dimSpace; c++) {
+              Augmented(r, c) = split_new.second(r, c);
+            }
+          }
+          for (int c = 0; c < dimSpace; c++) {
+            Augmented(split_new.second.rows(), c) = Wk(c);
+          }
+          if (RankMat(Augmented) == rank_new) {
+            f_sat[k] = 1;
+          }
         }
-        pos_in_face += 1;
+        Face f_can = GRPperm.OptCanonicalImage(f_sat);
+        if (seen_canonical.contains(f_can))
+          continue;
+        seen_canonical.insert(f_can);
+        std::optional<MyVector<T>> opt_inner =
+            get_face_interior(FAC, f_sat, os);
+        if (!opt_inner)
+          continue;  // Face is empty (inconsistent strict + equalities).
+        MyVector<T> inner_ray = *opt_inner;
+        MyMatrix<T> inner_gram =
+            gram_from_tspace_vec(inner_ray, LinSpa.ListMat);
+        bool pd = IsPositiveDefinite(inner_gram, os);
+        auto split_keep = split_fac(FAC, f_sat);
+        out.push_back(LtypeCell<T>{f_sat, i_top, std::move(split_keep.first),
+                                    std::move(split_keep.second),
+                                    std::move(inner_ray),
+                                    std::move(inner_gram), pd});
+        next_frontier.push_back(f_sat);
       }
-      if (!any_nonzero || eIncd_sma.count() == 0) {
-        continue;
-      }
-      if (seen.contains(eIncd_sma)) {
-        continue;
-      }
-      seen.insert(eIncd_sma);
-      triple<T> t = get_initial_triple(face, eIncd_sma);
-      std::optional<Tfull_triple> opt_t;
-      (void)f_insert(t, opt_t);
     }
+    frontier = std::move(next_frontier);
   }
-  return {std::move(l_faces)};
+  return out;
 }
 
 //
-// Full enumeration of all cells of the L-type complex.
+// Full enumeration: build per-top-cell face orbits, deduplicate across
+// top-cells using the iso-Delaunay adjacency structure, then group by
+// dimension idx and (optionally) filter to positive-definite cells.
 //
 
 template <typename T, typename Tint, typename Tgroup>
-struct FullLtypeComplexEnumeration {
-  LtypeComplexTopDimInfo<T, Tint, Tgroup> lctdi;
-  std::vector<LtypeFaces<T, Tint, Tgroup>> levels;
-};
-
-namespace boost::serialization {
-template <class Archive, typename T, typename Tint, typename Tgroup>
-inline void serialize(Archive &ar,
-                      FullLtypeComplexEnumeration<T, Tint, Tgroup> &val,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("lctdi", val.lctdi);
-  ar &make_nvp("levels", val.levels);
-}
-}  // namespace boost::serialization
-
-template <typename T, typename Tint, typename Tgroup>
-FullLtypeComplexEnumeration<T, Tint, Tgroup>
-full_ltype_complex_enumeration(LtypeComplexTopDimInfo<T, Tint, Tgroup> lctdi,
-                               std::ostream &os) {
-  std::vector<LtypeFaces<T, Tint, Tgroup>> levels;
-  LtypeFaces<T, Tint, Tgroup> level0 =
-      get_first_step_ltype_complex_enumeration(lctdi, os);
-  levels.push_back(level0);
-#ifdef DEBUG_LT_COMPLEX
-  os << "LTCOMP: level 0 has " << level0.l_faces.size() << " faces\n";
-#endif
-  if (lctdi.opts.compute_full_dimensional) {
-    return {std::move(lctdi), std::move(levels)};
-  }
-  while (true) {
-    LtypeFaces<T, Tint, Tgroup> next =
-        compute_next_level_ltype(lctdi, levels.back(), os);
-#ifdef DEBUG_LT_COMPLEX
-    os << "LTCOMP: next level has " << next.l_faces.size() << " faces\n";
-#endif
-    if (next.l_faces.empty()) {
-      break;
-    }
-    levels.emplace_back(std::move(next));
-  }
-  return {std::move(lctdi), std::move(levels)};
-}
-
-template <typename T, typename Tint, typename Tgroup>
-FullLtypeComplexEnumeration<T, Tint, Tgroup>
-get_full_ltype_complex_enumeration_kernel(
-    DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
-    LtypeComplexOptions const &opts, int max_runtime_second, std::ostream &os) {
-  using Tdata = DataIsoDelaunayDomainsFunc<T, Tint, Tgroup>;
-  Tdata data_func{std::move(data)};
-  using Tobj = typename Tdata::Tobj;
-  using TadjO = typename Tdata::TadjO;
-  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
-  auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
-    return false;
-  };
-  std::vector<Tout> l_tot =
-      EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
-          data_func, f_incorrect, max_runtime_second);
+FullLtypeComplexEnumeration<T>
+get_full_ltype_complex_enumeration_from_ltot(
+    std::vector<DatabaseEntry_Serial<IsoDelaunayDomain_Obj<T, Tint, Tgroup>,
+                                     IsoDelaunayDomain_AdjO<T, Tint>>> const
+        &l_tot,
+    LinSpaceMatrix<T> const &LinSpa, LtypeComplexOptions const &opts,
+    std::ostream &os) {
+  int dimSpace = LinSpa.ListMat.size();
   os << "LTCOMP: |l_tot|=" << l_tot.size() << "\n";
-  LtypeComplexTopDimInfo<T, Tint, Tgroup> lctdi =
-      generate_ltype_complex_top_dim_info<T, Tint, Tgroup>(
-          l_tot, data_func.data.LinSpa, opts, os);
-  return full_ltype_complex_enumeration(std::move(lctdi), os);
+  int n_cell = l_tot.size();
+  std::vector<std::vector<LtypeCell<T>>> per_cell;
+  per_cell.resize(n_cell);
+  // Cache of FAC per top-cell, used for cross-cell facet identification.
+  std::vector<MyMatrix<T>> cached_FAC(n_cell);
+  for (int i_top = 0; i_top < n_cell; i_top++) {
+    auto const &eCell = l_tot[i_top];
+    std::vector<FullAdjInfo<T>> ListIneq_all =
+        ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
+            eCell.x.DT_gram.DT, LinSpa.ListLineMat, os);
+    MyMatrix<T> FAC_full = GetFACineq(ListIneq_all);
+    MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC_full);
+    std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
+    int nbIrred = ListIrred.size();
+    MyMatrix<T> FAC(nbIrred, dimSpace);
+    for (int i = 0; i < nbIrred; i++) {
+      AssignMatrixRow(FAC, i, ListIneq_all[ListIrred[i]].eIneq);
+    }
+    cached_FAC[i_top] = FAC;
+    Tgroup GRPperm = get_fac_permutation_group<T, Tint, Tgroup>(
+        LinSpa, eCell.x.DT_gram.GramMat, FAC, os);
+    os << "LTCOMP: i_top=" << i_top << " nbIrred=" << nbIrred
+       << " |GRPperm|=" << GRPperm.size() << "\n";
+    per_cell[i_top] = enumerate_face_orbits_for_top_cell<T, Tint, Tgroup>(
+        i_top, LinSpa, FAC, GRPperm, os);
+    os << "LTCOMP: i_top=" << i_top
+       << " local face orbits=" << per_cell[i_top].size() << "\n";
+  }
+  // Deduplicate codim-1 facets across top cells using the iso-Delaunay
+  // adjacency structure: each adjacency identifies one facet of A with
+  // one facet of B, so we drop B's copy of the shared facet.
+  std::vector<std::vector<bool>> drop(n_cell);
+  for (int i_top = 0; i_top < n_cell; i_top++) {
+    drop[i_top].resize(per_cell[i_top].size(), false);
+  }
+  for (int i_top = 0; i_top < n_cell; i_top++) {
+    auto const &eCell = l_tot[i_top];
+    MyMatrix<T> const &FAC_A = cached_FAC[i_top];
+    int nbIrred_A = FAC_A.rows();
+    for (auto const &eAdj : eCell.ListAdj) {
+      int j_top = eAdj.iOrb;
+      if (j_top <= i_top)
+        continue;  // Process each unordered pair once.
+      MyVector<T> const &W_A = eAdj.x.V;
+      // Find the index of this inequality among FAC_A's rows.
+      int idx_A = -1;
+      MyVector<T> W_A_red = RemoveFractionVector(W_A);
+      for (int i = 0; i < nbIrred_A; i++) {
+        MyVector<T> W_row = GetMatrixRow(FAC_A, i);
+        if (RemoveFractionVector(W_row) == W_A_red) {
+          idx_A = i;
+          break;
+        }
+      }
+      if (idx_A == -1)
+        continue;  // Should not normally happen, but be safe.
+      // Find the cell in per_cell[j_top] whose f_inc activates the
+      // shared inequality (after mapping through eBigMat).
+      MyMatrix<T> eBigMat_T =
+          UniversalMatrixConversion<T, Tint>(eAdj.x.eBigMat);
+      MyMatrix<T> MatSpace = matrix_in_t_space(eBigMat_T, LinSpa);
+      MyVector<T> W_B = MatSpace * W_A;
+      MyVector<T> W_B_red = RemoveFractionVector(W_B);
+      MyMatrix<T> const &FAC_B = cached_FAC[j_top];
+      int idx_B = -1;
+      for (int i = 0; i < FAC_B.rows(); i++) {
+        MyVector<T> W_row = GetMatrixRow(FAC_B, i);
+        if (RemoveFractionVector(W_row) == W_B_red) {
+          idx_B = i;
+          break;
+        }
+      }
+      if (idx_B == -1)
+        continue;
+      // Drop B's orbit that has f_inc = {idx_B} (and any descendant
+      // that already has idx_B set, since those are identified with
+      // descendants on A's side via the same eBigMat).
+      for (size_t k = 0; k < per_cell[j_top].size(); k++) {
+        if (per_cell[j_top][k].f_inc[idx_B] == 1) {
+          drop[j_top][k] = true;
+        }
+      }
+    }
+  }
+  // Assemble the final list, grouped by dim idx.
+  std::map<int, std::vector<LtypeCell<T>>> grouped;
+  for (int i_top = 0; i_top < n_cell; i_top++) {
+    for (size_t k = 0; k < per_cell[i_top].size(); k++) {
+      if (drop[i_top][k])
+        continue;
+      LtypeCell<T> const &cell = per_cell[i_top][k];
+      if (opts.compute_full_dimensional && !cell.inner_is_pos_def)
+        continue;
+      int idx = dimSpace - cell.ListEqua.rows();
+      grouped[idx].push_back(cell);
+    }
+  }
+  FullLtypeComplexEnumeration<T> ret;
+  ret.LinSpa = LinSpa;
+  ret.opts = opts;
+  for (auto &kv : grouped) {
+    LtypeCellsAtLevel<T> lv;
+    lv.idx = kv.first;
+    lv.l_cells = std::move(kv.second);
+    ret.levels.push_back(std::move(lv));
+  }
+  return ret;
 }
 
 //
 // Output: write the enumeration in GAP form.
 //
-// For each cell we emit a record with the space of quadratic forms,
-// the inequalities and equalities that define the cone, and an inner
-// ray.
-//
 
-template <typename T, typename Tint, typename Tgroup>
-void WriteLtypeFaceGAP(std::ostream &os_out,
-                       LinSpaceMatrix<T> const &LinSpa,
-                       LtypeFace<T, Tint, Tgroup> const &face) {
-  os_out << "rec(ListMat:=";
-  WriteListMatrixGAP(os_out, LinSpa.ListMat);
-  os_out << ", ListIneq:=";
-  WriteMatrixGAP(os_out, face.ListIneq);
+template <typename T>
+void WriteLtypeCellGAP(std::ostream &os_out, LtypeCell<T> const &cell) {
+  os_out << "rec(idx_in_tspace:=" << (cell.ListIneq.cols() - cell.ListEqua.rows())
+         << ", i_top:=" << (cell.i_top + 1) << ", ListIneq:=";
+  WriteMatrixGAP(os_out, cell.ListIneq);
   os_out << ", ListEqua:=";
-  WriteMatrixGAP(os_out, face.ListEqua);
-  os_out << ", inner_ray:=" << StringVectorGAP(face.inner_ray);
-  os_out << ", EXT:=";
-  WriteMatrixGAP(os_out, face.EXT);
+  WriteMatrixGAP(os_out, cell.ListEqua);
+  os_out << ", inner_ray:=" << StringVectorGAP(cell.inner_ray);
+  os_out << ", inner_gram:=" << StringMatrixGAP(cell.inner_gram);
+  os_out << ", inner_is_pos_def:=" << GAP_logical(cell.inner_is_pos_def);
   os_out << ")";
 }
 
-template <typename T, typename Tint, typename Tgroup>
+template <typename T>
 void WriteFullLtypeComplexEnumerationGAP(
-    std::ostream &os_out,
-    FullLtypeComplexEnumeration<T, Tint, Tgroup> const &flce) {
+    std::ostream &os_out, FullLtypeComplexEnumeration<T> const &flce) {
   os_out << "return rec(ListMat:=";
-  WriteListMatrixGAP(os_out, flce.lctdi.LinSpa.ListMat);
+  WriteListMatrixGAP(os_out, flce.LinSpa.ListMat);
   os_out << ", levels:=[";
   int n_level = flce.levels.size();
   for (int i_level = 0; i_level < n_level; i_level++) {
-    if (i_level > 0) {
+    if (i_level > 0)
       os_out << ",\n";
-    }
-    os_out << "[";
-    int n_face = flce.levels[i_level].l_faces.size();
-    for (int i_face = 0; i_face < n_face; i_face++) {
-      if (i_face > 0) {
+    LtypeCellsAtLevel<T> const &lv = flce.levels[i_level];
+    os_out << "rec(idx:=" << lv.idx << ", cells:=[";
+    for (size_t k = 0; k < lv.l_cells.size(); k++) {
+      if (k > 0)
         os_out << ",\n";
-      }
-      WriteLtypeFaceGAP(os_out, flce.lctdi.LinSpa,
-                        flce.levels[i_level].l_faces[i_face]);
+      WriteLtypeCellGAP(os_out, lv.l_cells[k]);
     }
-    os_out << "]";
+    os_out << "])";
   }
   os_out << "]);\n";
 }
 
-//
-// Access: per-cell summary that mirrors the description in the spec.
-//
-
+// Per-cell summary that matches the spec ("space of quadratic forms",
+// "inequalities that define the cone", "inner ray").
 template <typename T>
 struct LtypeCellSummary {
   std::vector<MyMatrix<T>> ListMat;
@@ -840,14 +551,12 @@ struct LtypeCellSummary {
   MyVector<T> inner_ray;
 };
 
-template <typename T, typename Tint, typename Tgroup>
-LtypeCellSummary<T> get_ltype_cell_summary(
-    FullLtypeComplexEnumeration<T, Tint, Tgroup> const &flce, int i_level,
-    int i_face) {
-  LtypeFace<T, Tint, Tgroup> const &face =
-      flce.levels[i_level].l_faces[i_face];
-  return {flce.lctdi.LinSpa.ListMat, face.ListIneq, face.ListEqua,
-          face.inner_ray};
+template <typename T>
+LtypeCellSummary<T>
+get_ltype_cell_summary(FullLtypeComplexEnumeration<T> const &flce, int i_level,
+                       int i_cell) {
+  LtypeCell<T> const &cell = flce.levels[i_level].l_cells[i_cell];
+  return {flce.LinSpa.ListMat, cell.ListIneq, cell.ListEqua, cell.inner_ray};
 }
 
 // clang-format off

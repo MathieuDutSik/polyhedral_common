@@ -1860,7 +1860,11 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
     ListStringValues["CommonGramMat"] = "unset";
     ListStringValues["CVPmethod"] = "SVexact";
     std::map<std::string, bool> ListBoolValues;
-    ListBoolValues["compute_full_dimensional"] = true;
+    // Default false keeps the historical behaviour of enumerating only
+    // the top-dimensional iso-Delaunay domains. Set to true to run the
+    // full L-type complex enumeration (top-dim + lower-dim cells, with
+    // the positive-definite filter applied per cell).
+    ListBoolValues["compute_full_dimensional"] = false;
     SingleBlock BlockDATA;
     BlockDATA.setListStringValues(ListStringValues);
     BlockDATA.setListBoolValues(ListBoolValues);
@@ -2174,13 +2178,18 @@ int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
                          std::ostream &os) {
   int n = data.LinSpa.n;
   int dimSpace = data.LinSpa.ListMat.size();
+  MicrosecondTime time_non;
   std::vector<FullAdjInfo<T>> ListIneq =
       ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
           x.DT, data.LinSpa.ListLineMat, os);
+  os << "|ISODEL: CountNonFullRankRays, ComputeDefiningIneqIsoDelaunayDomain|=" << time_non << "\n";
   MyMatrix<T> FAC = GetFACineq(ListIneq);
+  os << "|ISODEL: CountNonFullRankRays, GetFACineq|=" << time_non << "\n";
   std::vector<int> ListIrred = get_non_redundant_indices(FAC, os);
+  os << "|ISODEL: CountNonFullRankRays, get_non_redundant_indices|=" << time_non << "\n";
   MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
   MyMatrix<T> EXT = DirectDualDescription_mat(FACred, os);
+  os << "|ISODEL: CountNonFullRankRays, DirectDualDescription_mat|=" << time_non << "\n";
   int n_row = EXT.rows();
   int count = 0;
   for (int i_row = 0; i_row < n_row; i_row++) {
@@ -2191,6 +2200,7 @@ int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
     int delta = n - RankMat(RayMat);
     count += delta;
   }
+  os << "|ISODEL: CountNonFullRankRays, count|=" << time_non << "\n";
   return count;
 }
 
@@ -2359,9 +2369,11 @@ RandomWalkIsoDelaunay(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
                       int n_iter, std::ostream &os) {
   IsoDelaunayDomain<T, Tint, Tgroup> Work = x;
   for (int iter = 0; iter < n_iter; iter++) {
+    os << "ISODEL: RandomWalkIsoDelaunay iter=" << iter << "/" << n_iter << "\n";
     ResultDelaunayAdj<T, Tint, Tgroup> result =
         get_result_delaunay_adj(Work, data);
     int n_adj = result.l_adj.size();
+    os << "ISODEL: RandomWalkIsoDelaunay n_adj=" << n_adj << "\n";
     if (n_adj == 0) {
       os << "ISODEL: RandomWalkIsoDelaunay, no adjacent domain at iter="
          << iter << ", stopping early\n";
@@ -2401,6 +2413,7 @@ void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
                               int const &n_walk_steps, int const &max_iter,
                               std::ostream &os) {
   IsoDelaunayDomain<T, Tint, Tgroup> Work = GetInitialIsoDelaunayDomain(data);
+  os << "ISODEL: LookForFullRankRayDomain, before CountNonFullRankRays\n";
   int curr_count = CountNonFullRankRays(Work, data, os);
   os << "ISODEL: LookForFullRankRayDomain, initial curr_count=" << curr_count
      << "\n";
@@ -2425,10 +2438,13 @@ void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
     std::vector<int> ListCount;
     for (int i = 0; i < n_adj; i++) {
       int c = CountNonFullRankRays(result.l_adj[i].DT_gram, data, os);
+      os << "ISODEL: LookForFullRankRayDomain, i=" << i << "/" << n_adj << " c=" << c << "\n";
       ListCount.push_back(c);
     }
     int the_min = VectorMin(ListCount);
+    os << "ISODEL: LookForFullRankRayDomain, the_min=" << the_min << " curr_count=" << curr_count << "\n";
     if (the_min >= curr_count && curr_count > 0) {
+      os << "ISODEL: Before RandomWalkIsoDelaunay\n";
       Work = RandomWalkIsoDelaunay(Work, data, n_walk_steps, os);
       curr_count = CountNonFullRankRays(Work, data, os);
       os << "ISODEL: LookForFullRankRayDomain, iter1=" << iter1
