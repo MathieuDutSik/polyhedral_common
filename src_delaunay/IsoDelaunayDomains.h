@@ -2178,7 +2178,9 @@ int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
       ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
           x.DT, data.LinSpa.ListLineMat, os);
   MyMatrix<T> FAC = GetFACineq(ListIneq);
-  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
+  std::vector<int> ListIrred = get_non_redundant_indices(FAC, os);
+  MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
+  MyMatrix<T> EXT = DirectDualDescription_mat(FACred, os);
   int n_row = EXT.rows();
   int count = 0;
   for (int i_row = 0; i_row < n_row; i_row++) {
@@ -2186,9 +2188,8 @@ int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
     for (int u = 0; u < dimSpace; u++) {
       RayMat += EXT(i_row, u) * data.LinSpa.ListMat[u];
     }
-    if (RankMat(RayMat) < n) {
-      count++;
-    }
+    int delta = n - RankMat(RayMat);
+    count += delta;
   }
   return count;
 }
@@ -2212,8 +2213,7 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
 #endif
   // Compute the irredundant ones as well as the l_ineq / map_ineq
   MyMatrix<T> FAC = GetFACineq(ListIneq);
-  MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
-  std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
+  std::vector<int> ListIrred = get_non_redundant_indices(FAC, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: f_adj, get_non_redundant_indices|=" << time_f_adj << "\n";
 #endif
@@ -2405,13 +2405,8 @@ void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
         get_result_delaunay_adj(Work, data);
     int n_adj = result.l_adj.size();
     if (n_adj == 0) {
-      os << "ISODEL: LookForFullRankRayDomain, no adjacent domain available, "
-            "restarting via random walk\n";
-      Work = RandomWalkIsoDelaunay(Work, data, n_walk_steps, os);
-      curr_count = CountNonFullRankRays(Work, data, os);
-      iter1++;
-      iter2 = 0;
-      continue;
+      std::cerr << "ISODEL: We should have at least one adjacent domain\n";
+      throw TerminalException{1};
     }
     std::vector<int> ListCount;
     for (int i = 0; i < n_adj; i++) {

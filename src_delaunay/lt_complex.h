@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "IsoDelaunayDomains.h"
+#include "MAT_MatrixInt.h"
 #include "Tspace_StabEquiInv.h"
 #include "MatrixGroupNest.h"
 #include "triples.h"
@@ -46,6 +47,75 @@
   shortest-vector action in perfect_complex.h.
  */
 
+//
+// Helpers: rays of the L-type cone are determined only up to positive
+// scaling. To use them as identifiers in groups / containers we
+// canonicalise each row to a primitive integer vector with the first
+// non-zero entry positive (CanonicalizeVectorToInvertible). A custom
+// permutation builder applies the same canonical form to the image of
+// each ray under a t-space action before looking it up.
+//
+
+template <typename T>
+MyMatrix<T> canonicalize_ext_rows(MyMatrix<T> const &EXT) {
+  int n_row = EXT.rows();
+  int n_col = EXT.cols();
+  MyMatrix<T> out(n_row, n_col);
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    MyVector<T> v = GetMatrixRow(EXT, i_row);
+    MyVector<T> v_can = CanonicalizeVectorToInvertible(v);
+    AssignMatrixRow(out, i_row, v_can);
+  }
+  return out;
+}
+
+template <typename T, typename Telt>
+struct RayPermutationBuilder {
+  using Tidx = typename Telt::Tidx;
+  int n_row;
+  std::vector<MyVector<T>> ListV;
+  std::unordered_map<MyVector<T>, Tidx> MapV;
+  RayPermutationBuilder(MyMatrix<T> const &EXT_can) {
+    n_row = EXT_can.rows();
+    for (int i_row = 0; i_row < n_row; i_row++) {
+      MyVector<T> eV = GetMatrixRow(EXT_can, i_row);
+      Tidx i_row_idx = static_cast<Tidx>(i_row);
+      ListV.push_back(eV);
+      MapV[eV] = i_row_idx;
+    }
+  }
+  Telt get_permutation(MyMatrix<T> const &M,
+                       [[maybe_unused]] std::ostream &os) const {
+    std::vector<Tidx> eList(n_row);
+    for (int i_row = 0; i_row < n_row; i_row++) {
+      MyVector<T> Vimg = M.transpose() * ListV[i_row];
+      MyVector<T> Vimg_can = CanonicalizeVectorToInvertible(Vimg);
+      auto it = MapV.find(Vimg_can);
+      if (it == MapV.end()) {
+        std::cerr << "LTCOMP: image ray not in EXT\n";
+        std::cerr << "LTCOMP: source ray index " << i_row << "\n";
+        throw TerminalException{1};
+      }
+      eList[i_row] = it->second;
+    }
+    return Telt(std::move(eList));
+  }
+};
+
+template <typename T, typename Telt>
+std::vector<Telt>
+get_ray_perms_from_list_matrices(std::vector<MyMatrix<T>> const &l_matr,
+                                 MyMatrix<T> const &EXT_can,
+                                 std::ostream &os) {
+  RayPermutationBuilder<T, Telt> builder(EXT_can);
+  std::vector<Telt> ret;
+  ret.reserve(l_matr.size());
+  for (auto &M : l_matr) {
+    ret.push_back(builder.get_permutation(M, os));
+  }
+  return ret;
+}
+
 struct LtypeComplexOptions {
   bool compute_full_dimensional;
 };
@@ -87,7 +157,8 @@ struct LtypeInfoForComplex {
       std::optional<MyMatrix<T>> opt = pre_imager.get_preimage(x);
       MyMatrix<T> M = unfold_opt(opt, "The element should belong to the group");
 #ifdef SANITY_CHECK_LT_COMPLEX
-      Telt x_img = get_elt_from_matrix<T, Telt>(M, EXT, os);
+      RayPermutationBuilder<T, Telt> builder(EXT);
+      Telt x_img = builder.get_permutation(M, os);
       if (x_img != x) {
         std::cerr << "LTCOMP: Inconsistency in pre_image computation\n";
         throw TerminalException{1};
@@ -97,7 +168,8 @@ struct LtypeInfoForComplex {
     }
     MyMatrix<T> M = FindTransformation(EXT, EXT, x);
 #ifdef SANITY_CHECK_LT_COMPLEX
-    Telt x_img = get_elt_from_matrix<T, Telt>(M, EXT, os);
+    RayPermutationBuilder<T, Telt> builder(EXT);
+    Telt x_img = builder.get_permutation(M, os);
     if (x_img != x) {
       std::cerr << "LTCOMP: Inconsistency in pre_image computation\n";
       throw TerminalException{1};
@@ -144,7 +216,7 @@ inline void load(Archive &ar, LtypeInfoForComplex<T, Tint, Tgroup> &val,
     using Telt = typename Tgroup::Telt;
     using TintGroup = typename Tgroup::Tint;
     std::vector<Telt> l_perm =
-        get_list_elt_from_list_matrices<T, Telt>(l_matr, val.EXT, std::cerr);
+        get_ray_perms_from_list_matrices<T, Telt>(l_matr, val.EXT, std::cerr);
     MyMatrix<T> id = IdentityMat<T>(val.EXT.cols());
     val.opt_pre_imager =
         PreImagerElementContainer<T, Telt, TintGroup>(l_matr, l_perm, id);
@@ -212,7 +284,11 @@ LtypeComplexTopDimInfo<T, Tint, Tgroup> generate_ltype_complex_top_dim_info(
       AssignMatrixRow(FAC, i, ListIneqRed[i].eIneq);
     }
     // Extreme rays of the L-type cone (in t-space coordinates).
-    MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
+    // We canonicalise each ray so that it has a unique primitive
+    // representative; the action on rays is then a permutation we can
+    // recover via RayPermutationBuilder.
+    MyMatrix<T> EXT_raw = DirectDualDescription_mat(FAC, os);
+    MyMatrix<T> EXT = canonicalize_ext_rows(EXT_raw);
     int n_ext = EXT.rows();
 #ifdef DEBUG_LT_COMPLEX
     os << "LTCOMP: i_cell=" << i_cell << " nbIneq=" << nbIneq
@@ -232,7 +308,7 @@ LtypeComplexTopDimInfo<T, Tint, Tgroup> generate_ltype_complex_top_dim_info(
       ListMatSpace.push_back(matrix_in_t_space(eGenTot, LinSpa));
     }
     std::vector<Telt> l_perm =
-        get_list_elt_from_list_matrices<T, Telt>(ListMatSpace, EXT, os);
+        get_ray_perms_from_list_matrices<T, Telt>(ListMatSpace, EXT, os);
     Tgroup GRP_ext(l_perm, n_ext);
     std::optional<PreImagerElementContainer<T, Telt, TintGroup>> opt_pre_imager;
     if (RankMat(EXT) < EXT.cols()) {
@@ -513,17 +589,18 @@ compute_next_level_ltype(LtypeComplexTopDimInfo<T, Tint, Tgroup> const &lctdi,
     int iCone = t.iCone;
     int n_ext = t.f_ext.count();
     int n_ext_big = lctdi.l_ltype[iCone].EXT.rows();
-    MyMatrix<T> EXT_face(n_ext, dimSpace);
+    MyMatrix<T> EXT_face_raw(n_ext, dimSpace);
     int pos = 0;
     for (int i_big = 0; i_big < n_ext_big; i_big++) {
       if (t.f_ext[i_big] == 1) {
         MyVector<T> V1 = GetMatrixRow(lctdi.l_ltype[iCone].EXT, i_big);
         MyVector<T> V2 = t.eMat.transpose() * V1;
-        AssignMatrixRow(EXT_face, pos, V2);
+        AssignMatrixRow(EXT_face_raw, pos, V2);
         pos += 1;
       }
     }
-    PermutationBuilder<T, Telt> builder(EXT_face);
+    MyMatrix<T> EXT_face = canonicalize_ext_rows(EXT_face_raw);
+    RayPermutationBuilder<T, Telt> builder(EXT_face);
     std::vector<Telt> l_gens_perm;
     for (auto &eMatrGen : pair.second) {
       Telt elt = builder.get_permutation(eMatrGen, os);
