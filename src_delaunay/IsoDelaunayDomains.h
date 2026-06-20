@@ -2389,18 +2389,32 @@ RandomWalkIsoDelaunay(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
     corresponding Gram matrix to a fresh file under Prefix. If the
     objective is at most max_s but still positive we also dump the
     Gram matrix (useful for collecting near-misses).
+  * Bail out after max_iter outer-loop iterations even if the
+    objective never reaches zero. This matters because in low
+    dimension (n = 2..5 of the Classic t-space) every iso-Delaunay
+    domain provably has some rank-1 extreme ray, so the target is
+    unreachable and a strict "return on zero" would loop forever.
  */
 template <typename T, typename Tint, typename Tgroup>
 void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
                               std::string const &Prefix, int const &max_s,
-                              int const &n_walk_steps, std::ostream &os) {
+                              int const &n_walk_steps, int const &max_iter,
+                              std::ostream &os) {
   IsoDelaunayDomain<T, Tint, Tgroup> Work = GetInitialIsoDelaunayDomain(data);
   int curr_count = CountNonFullRankRays(Work, data, os);
   os << "ISODEL: LookForFullRankRayDomain, initial curr_count=" << curr_count
      << "\n";
   int iter1 = 0;
   int iter2 = 0;
+  int total_iter = 0;
   while (true) {
+    if (total_iter >= max_iter) {
+      os << "ISODEL: LookForFullRankRayDomain, reached max_iter=" << max_iter
+         << " without hitting curr_count=0 (current curr_count=" << curr_count
+         << "), returning\n";
+      return;
+    }
+    total_iter++;
     ResultDelaunayAdj<T, Tint, Tgroup> result =
         get_result_delaunay_adj(Work, data);
     int n_adj = result.l_adj.size();

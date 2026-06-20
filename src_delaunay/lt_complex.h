@@ -94,6 +94,15 @@ struct RayPermutationBuilder {
       if (it == MapV.end()) {
         std::cerr << "LTCOMP: image ray not in EXT\n";
         std::cerr << "LTCOMP: source ray index " << i_row << "\n";
+        std::cerr << "LTCOMP: source ray V=" << StringVectorGAP(ListV[i_row]) << "\n";
+        std::cerr << "LTCOMP: image Vimg=" << StringVectorGAP(Vimg) << "\n";
+        std::cerr << "LTCOMP: image Vimg_can=" << StringVectorGAP(Vimg_can) << "\n";
+        std::cerr << "LTCOMP: matrix M=\n";
+        WriteMatrix(std::cerr, M);
+        std::cerr << "LTCOMP: known EXT rows:\n";
+        for (int j = 0; j < n_row; j++) {
+          std::cerr << "  " << j << ": " << StringVectorGAP(ListV[j]) << "\n";
+        }
         throw TerminalException{1};
       }
       eList[i_row] = it->second;
@@ -275,13 +284,21 @@ LtypeComplexTopDimInfo<T, Tint, Tgroup> generate_ltype_complex_top_dim_info(
 #endif
   for (size_t i_cell = 0; i_cell < n_cell; i_cell++) {
     auto const &eCell = l_tot[i_cell];
-    // Inequalities defining this cell.
-    std::vector<FullAdjInfo<T>> const &ListIneqRed = eCell.x.ListIneqRed;
-    size_t nbIneq = ListIneqRed.size();
     int dimSpace = LinSpa.ListMat.size();
+    // Recompute the full irredundant set of Voronoi inequalities for
+    // this iso-Delaunay domain; the database's `ListIneqRed` keeps
+    // only one representative per GRPperm orbit which is not enough
+    // to build the L-type cone's full extreme-ray decomposition.
+    std::vector<FullAdjInfo<T>> ListIneq_all =
+        ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
+            eCell.x.DT_gram.DT, LinSpa.ListLineMat, os);
+    MyMatrix<T> FAC_full = GetFACineq(ListIneq_all);
+    MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC_full);
+    std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
+    size_t nbIneq = ListIrred.size();
     MyMatrix<T> FAC(nbIneq, dimSpace);
     for (size_t i = 0; i < nbIneq; i++) {
-      AssignMatrixRow(FAC, i, ListIneqRed[i].eIneq);
+      AssignMatrixRow(FAC, i, ListIneq_all[ListIrred[i]].eIneq);
     }
     // Extreme rays of the L-type cone (in t-space coordinates).
     // We canonicalise each ray so that it has a unique primitive
@@ -290,10 +307,6 @@ LtypeComplexTopDimInfo<T, Tint, Tgroup> generate_ltype_complex_top_dim_info(
     MyMatrix<T> EXT_raw = DirectDualDescription_mat(FAC, os);
     MyMatrix<T> EXT = canonicalize_ext_rows(EXT_raw);
     int n_ext = EXT.rows();
-#ifdef DEBUG_LT_COMPLEX
-    os << "LTCOMP: i_cell=" << i_cell << " nbIneq=" << nbIneq
-       << " n_ext=" << n_ext << "\n";
-#endif
     // Group acting on EXT.
     // We obtain matrix generators of the lattice stabilizer from the
     // (already computed) GRPperm acting on inequalities — but we need
@@ -333,13 +346,12 @@ LtypeComplexTopDimInfo<T, Tint, Tgroup> generate_ltype_complex_top_dim_info(
         }
       }
       // Action on the t-space induced by the lattice element eBigMat.
+      // For L-types EXT lives in the t-space itself (= the cone of
+      // quadratic forms), so the eMat used by the triples machinery is
+      // the direct t-space action — not its inverse as in
+      // perfect_complex.h, where EXT is the dual vector configuration.
       MyMatrix<T> eBigMat_T = UniversalMatrixConversion<T, Tint>(eAdj.x.eBigMat);
-      MyMatrix<T> MatSpace = matrix_in_t_space(eBigMat_T, LinSpa);
-      // For the perfect-complex convention the eMat is the inverse of
-      // the matrix coming out of the database (the database matrix maps
-      // the source cell forward, the triples machinery uses the matrix
-      // pulling the neighbour's rays back into the source's frame).
-      MyMatrix<T> eMat = Inverse(MatSpace);
+      MyMatrix<T> eMat = matrix_in_t_space(eBigMat_T, LinSpa);
       sing_adj<T> adj{jCone, f_ext, std::move(eMat)};
       l_sing_adj.emplace_back(std::move(adj));
     }
