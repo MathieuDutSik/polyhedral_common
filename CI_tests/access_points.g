@@ -1192,8 +1192,29 @@ get_lattice_covering:=function(arg)
         eProg:=GetBinaryFilename("LATT_MPI_ComputeDelaunay");
         TheCommand:=Concatenation(eProg, " ", FileN);
     else
+        strOut:="&SYSTEM\n";
+        strOut:=Concatenation(strOut, " OutFormat = \"GAP_Covering\"\n");
+        strOut:=Concatenation(strOut, " OutFile = \"", FileO, "\"\n");
+        strOut:=Concatenation(strOut, " max_runtime_second = 0\n");
+        strOut:=Concatenation(strOut, " Saving = F\n");
+        strOut:=Concatenation(strOut, "/\n");
+        strOut:=Concatenation(strOut, "\n");
+        strOut:=Concatenation(strOut, "&DATA\n");
+        strOut:=Concatenation(strOut, " arithmetic = \"", arith, "\"\n");
+        strOut:=Concatenation(strOut, " GRAMfile = \"", FileI, "\"\n");
+        strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
+        strOut:=Concatenation(strOut, " CacheFile = \"none\"\n");
+        strOut:=Concatenation(strOut, "/\n");
+        strOut:=Concatenation(strOut, "\n");
+        strOut:=Concatenation(strOut, "&QUERIES\n");
+        strOut:=Concatenation(strOut, " FileQuantization = \"null\"\n");
+        strOut:=Concatenation(strOut, "/\n");
+        #
+        WriteStringFile(FileN, strOut);
+        Print("TestEnumeration, FileNml created\n");
+        #
         eProg:=GetBinaryFilename("LATT_SerialComputeDelaunay");
-        TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP_Covering ", FileO, " 2> ", FileE);
+        TheCommand:=Concatenation(eProg, " ", FileN, " 2> ", FileE);
     fi;
 #    Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);

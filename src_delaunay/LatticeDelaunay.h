@@ -870,6 +870,88 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   return FullNamelist(ListBlock);
 }
 
+// The namelist for the serial Delaunay computation. On top of the enumeration
+// it caches the tesselation (DATA/CacheFile) and exposes a QUERIES block with
+// additional computations done on the tesselation (the model is
+// PERF_SerialPerfectComputation.cpp). New per-tesselation computations get one
+// more entry in the QUERIES block.
+FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // SYSTEM
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  // DATA
+  {
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["arithmetic"] = "gmp";
+    ListStringValues["GRAMfile"] = "unset.gram";
+    ListStringValues["SVRfile"] = "unset.svr";
+    ListStringValues["choice_initial"] = "direct";
+    ListStringValues["FileDualDescription"] = "unset";
+    ListStringValues["CacheFile"] = "none";
+    SingleBlock BlockDATA;
+    BlockDATA.setListStringValues(ListStringValues);
+    ListBlock["DATA"] = BlockDATA;
+  }
+  // QUERIES
+  {
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["FileQuantization"] = "null";
+    SingleBlock BlockQUERIES;
+    BlockQUERIES.setListStringValues(ListStringValues);
+    ListBlock["QUERIES"] = BlockQUERIES;
+  }
+  // Merging all data
+  return FullNamelist(ListBlock);
+}
+
+template <typename T, typename Tgroup>
+void write_delaunay_to_file(std::string const &file,
+                            DelaunayTesselation<T, Tgroup> const &DT) {
+  std::ofstream ofs(file);
+  boost::archive::text_oarchive oa(ofs);
+  oa << DT;
+}
+
+template <typename T, typename Tgroup>
+DelaunayTesselation<T, Tgroup>
+read_delaunay_from_file(std::string const &file) {
+  DelaunayTesselation<T, Tgroup> DT;
+  std::ifstream ifs(file);
+  boost::archive::text_iarchive ia(ifs);
+  ia >> DT;
+  return DT;
+}
+
+// Compute the Delaunay tesselation, or load it from CacheFile if that file
+// already exists (and save it there after computing it otherwise). CacheFile
+// equal to "none" disables the caching.
+template <typename T, typename Tint, typename Tgroup>
+DelaunayTesselation<T, Tgroup>
+get_delaunay_tessellation_serial(DataLattice<T, Tint, Tgroup> &data,
+                                 std::string const &CacheFile,
+                                 int const &max_runtime_second,
+                                 std::ostream &os) {
+  auto compute = [&]() -> DelaunayTesselation<T, Tgroup> {
+    auto f_incorrect =
+        [&]([[maybe_unused]] Delaunay_Obj<T, Tgroup> const &x) -> bool {
+      return false;
+    };
+    std::optional<DelaunayTesselation<T, Tgroup>> opt =
+        EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(
+            data, f_incorrect, max_runtime_second);
+    return unfold_opt(opt, "The Delaunay tesselation");
+  };
+  if (CacheFile == "none") {
+    return compute();
+  }
+  if (IsExistingFile(CacheFile)) {
+    return read_delaunay_from_file<T, Tgroup>(CacheFile);
+  }
+  DelaunayTesselation<T, Tgroup> DT = compute();
+  write_delaunay_to_file<T, Tgroup>(CacheFile, DT);
+  return DT;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 DataLattice<T, Tint, Tgroup>
 GetDataLattice(MyMatrix<T> const &GramMat,
