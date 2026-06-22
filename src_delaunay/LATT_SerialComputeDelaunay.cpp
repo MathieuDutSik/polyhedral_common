@@ -5,6 +5,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "LatticeDelaunay.h"
+#include "QuantizationIntegral.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on
@@ -30,6 +31,25 @@ void process(std::string const &GramFile, std::string const &OutFormat,
           data_lattice, f_incorrect, max_runtime_second);
   DelaunayTesselation<T, Tgroup> DT =
       unfold_opt(opt, "The Delaunay tesselation");
+  if (OutFormat == "GAP_QUANT" || OutFormat == "PYTHON_QUANT") {
+    QuantizationResult<T> qres =
+        ComputeQuantizationIntegral<T, Tint, Tgroup>(data_lattice, GramMat, DT,
+                                                     std::cerr);
+    if (OutFormat == "PYTHON_QUANT") {
+      os_out << "{\"DelaunayTesselation\":";
+      WriteEntryPYTHON(os_out, DT);
+      os_out << ", \"Quantization\":";
+      WriteQuantizationPYTHON(os_out, qres);
+      os_out << "}";
+    } else {
+      os_out << "return rec(DelaunayTesselation:=";
+      WriteEntryGAP(os_out, DT);
+      os_out << ",\nQuantization:=";
+      WriteQuantizationGAP(os_out, qres);
+      os_out << ");\n";
+    }
+    return;
+  }
   WriteDelaunayTesselation(OutFormat, os_out, GramMat, DT);
 }
 
@@ -47,6 +67,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "     or\n";
       std::cerr << "LATT_SerialComputeDelaunay [arith] [GramFile] [OutFormat] "
                    "[OutFile]\n";
+      std::cerr << "\n";
+      std::cerr << "OutFormat: GAP, PYTHON, GAP_Covering, nothing\n";
+      std::cerr << "     GAP_QUANT / PYTHON_QUANT: also compute the "
+                   "quantization integral\n";
+      std::cerr << "     (second moment of the Voronoi cell) and append it to "
+                   "the output\n";
       return -1;
     }
     std::string arith = argv[1];
