@@ -9,6 +9,9 @@
 #include "Group.h"
 // clang-format on
 
+// Given a positive definite form Q and a general symmetric perturbation H,
+// study the deformation Q + t H: compute the Taylor data at t = 0 of
+// SecMoment(t) and the derivatives of the normalized quantizer G(t).
 template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &Qfile, std::string const &Hfile,
              std::ostream &os) {
@@ -17,34 +20,23 @@ void process(std::string const &Qfile, std::string const &Hfile,
   int n = Q.rows();
   os << "QDEF: n=" << n << "\n";
   //
-  // 1. The common symmetry group of (Q, H).
-  //
-  std::vector<MyMatrix<T>> gens_T =
-      compute_qh_symmetry_gens<T, Tint, Tgroup>(Q, H, os);
-  os << "QDEF: |symmetry generators|=" << gens_T.size() << "\n";
-  //
-  // 2. The T-space of the invariant forms.
-  //
-  LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, gens_T, os);
-  os << "QDEF: T-space dimension=" << LinSpa.ListMat.size() << "\n";
-  // Check that Q and H are in the T-space.
-  MyVector<T> cQ = LINSPA_GetVectorOfMatrixExpression(LinSpa, Q);
-  MyVector<T> cH = LINSPA_GetVectorOfMatrixExpression(LinSpa, H);
-  os << "QDEF: Q and H are in the T-space\n";
-  //
-  // 3. The iso-Delaunay segment.
-  //
-  T t_init(1);
-  IsoDelaunaySegment<T, Tgroup> seg =
-      find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, H, t_init, os);
-  os << "QDEF: number of Delaunay orbits=" << seg.DT.l_dels.size() << "\n";
-  os << "QDEF: number of defining inequalities=" << seg.ListIneq.size() << "\n";
-  os << "QDEF: bounded segment=" << seg.bounded << "\n";
-  os << "QDEF: tmax=" << seg.tmax << "\n";
+  DeformationDerivatives<T> der =
+      compute_deformation_derivatives<T, Tint, Tgroup>(Q, H, os);
+  os << "QDEF: SecMoment(t) reconstructed as a rational function of degree "
+     << der.secmoment_degree << "\n";
+  os << "QDEF: SecMoment(0)   = " << der.S0 << "\n";
+  os << "QDEF: SecMoment'(0)  = " << der.S1 << "\n";
+  os << "QDEF: SecMoment''(0) = " << der.S2 << "\n";
+  os << "QDEF: det(Q)         = " << der.det0 << "\n";
+  os << "QDEF: det'(0)        = " << der.det1 << "\n";
+  os << "QDEF: det''(0)       = " << der.det2 << "\n";
+  os << "QDEF: G(0)           = " << der.G0 << "\n";
+  os << "QDEF: G'(0)          = " << der.G1 << "\n";
+  os << "QDEF: G''(0)         = " << der.G2 << "\n";
 }
 
-template <typename T, typename Tint> void process_B(std::string const &Qfile,
-                                                    std::string const &Hfile) {
+template <typename T, typename Tint>
+void process_B(std::string const &Qfile, std::string const &Hfile) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint_grp = mpz_class;
@@ -79,7 +71,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_QuantizationDeformation [arith] [Qfile] [Hfile]\n";
       std::cerr << "     arith   gmp, safe\n";
       std::cerr << "     Qfile   the positive definite form Q\n";
-      std::cerr << "     Hfile   the symmetric perturbation H\n";
+      std::cerr << "     Hfile   the symmetric perturbation H (any symmetric "
+                   "form)\n";
       return -1;
     }
     std::string arith = argv[1];
