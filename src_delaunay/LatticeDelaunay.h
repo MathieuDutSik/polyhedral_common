@@ -691,7 +691,12 @@ FindDelaunayPolytopeExtended(DataLattice<T, Tint, Tgroup> &data) {
 }
 
 template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
-  DataLattice<T, Tint, Tgroup> data;
+  // The DataLattice is borrowed (reference), not owned: the enumeration only
+  // needs it for the duration of the run, and the caller must keep using it
+  // afterwards (e.g. data.solver.GramMat for the quantization integral). It
+  // cannot be a moved-in value anyway, since DataLattice has reference members
+  // and is therefore not move-assignable.
+  DataLattice<T, Tint, Tgroup> &data;
   using Tobj = Delaunay_Obj<T, Tgroup>;
   using TadjI = Delaunay_AdjI<T>;
   using TadjO = Delaunay_AdjO_spec<T>;
@@ -809,7 +814,7 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
      << data.rddo.AllArr.OutFile << "\n";
 #endif
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
-  Tdata data_func{std::move(data)};
+  Tdata data_func{data};
   using Tobj = typename Tdata::Tobj;
   using TadjO = typename Tdata::TadjO;
   using Tout = std::vector<DatabaseEntry_Serial<Tobj, TadjO>>;

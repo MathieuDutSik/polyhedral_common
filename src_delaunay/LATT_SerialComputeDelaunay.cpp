@@ -33,7 +33,7 @@ void process(std::string const &GramFile, std::string const &OutFormat,
       unfold_opt(opt, "The Delaunay tesselation");
   if (OutFormat == "GAP_QUANT" || OutFormat == "PYTHON_QUANT") {
     QuantizationResult<T> qres =
-        ComputeQuantizationIntegral<T, Tint, Tgroup>(data_lattice, GramMat, DT,
+        ComputeQuantizationIntegral<T, Tint, Tgroup>(data_lattice, DT,
                                                      std::cerr);
     if (OutFormat == "PYTHON_QUANT") {
       os_out << "{\"DelaunayTesselation\":";

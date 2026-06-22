@@ -57,14 +57,10 @@ struct QuantizationComputer {
   int n;
   MyMatrix<T> const &GramMat;
 
-  // Note: GramMat is passed explicitly rather than read from data.solver,
-  // because the Delaunay enumeration moves the solver out of the DataLattice,
-  // leaving data.solver.GramMat empty afterwards.
   QuantizationComputer(DataLattice<T, Tint, Tgroup> &data,
-                       MyMatrix<T> const &GramMat,
                        DelaunayTesselation<T, Tgroup> const &DT,
                        std::ostream &os)
-      : data(data), DT(DT), os(os), n(data.n), GramMat(GramMat) {}
+      : data(data), DT(DT), os(os), n(data.n), GramMat(data.solver.GramMat) {}
 
   // -------- small geometric helpers (homogeneous coordinates) --------
 
@@ -1093,10 +1089,9 @@ struct QuantizationComputer {
 template <typename T, typename Tint, typename Tgroup>
 QuantizationResult<T>
 ComputeQuantizationIntegral(DataLattice<T, Tint, Tgroup> &data,
-                            MyMatrix<T> const &GramMat,
                             DelaunayTesselation<T, Tgroup> const &DT,
                             std::ostream &os) {
-  QuantizationComputer<T, Tint, Tgroup> comp(data, GramMat, DT, os);
+  QuantizationComputer<T, Tint, Tgroup> comp(data, DT, os);
   return comp.compute();
 }
 

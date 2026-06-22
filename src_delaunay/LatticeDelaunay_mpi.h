@@ -136,7 +136,7 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
   DataLattice<T, Tint, Tgroup> data =
       get_data_lattice<T, Tint, Tgroup>(eFull, AllArr, os);
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
-  Tdata data_func{std::move(data)};
+  Tdata data_func{data};
   using Tobj = typename Tdata::Tobj;
   using TadjO = typename Tdata::TadjO;
   using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
