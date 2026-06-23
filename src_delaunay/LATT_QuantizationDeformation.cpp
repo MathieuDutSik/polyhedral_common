@@ -24,6 +24,10 @@ void process(std::string const &Qfile, std::string const &Hfile,
       compute_deformation_derivatives<T, Tint, Tgroup>(Q, H, os);
   os << "QDEF: SecMoment(t) reconstructed as a rational function of degree "
      << der.secmoment_degree << "\n";
+  os << "QDEF: SecMoment numerator   = " << StringVectorGAP(der.secmoment_num)
+     << "\n";
+  os << "QDEF: SecMoment denominator = " << StringVectorGAP(der.secmoment_den)
+     << "\n";
   os << "QDEF: SecMoment(0)   = " << der.S0 << "\n";
   os << "QDEF: SecMoment'(0)  = " << der.S1 << "\n";
   os << "QDEF: SecMoment''(0) = " << der.S2 << "\n";
