@@ -6,6 +6,7 @@
 #include "NumberTheory.h"
 #include "LatticeDelaunay.h"
 #include "QuantizationIntegral.h"
+#include "FreeVectors.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on
@@ -56,6 +57,13 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     os_out << "return ";
     WriteQuantizationGAP(os_out, qres);
     os_out << ";\n";
+  }
+  std::string FileFreeVectors = BlockQUERIES.get_string("FileFreeVectors");
+  if (FileFreeVectors != "null") {
+    FreeVectorsResult<Tint> fres =
+        compute_free_vectors<T, Tint, Tgroup>(GramMat, DT, os);
+    std::ofstream os_out(FileFreeVectors);
+    WriteFreeVectorsGAP(os_out, fres);
   }
 }
 
