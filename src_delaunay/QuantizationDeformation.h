@@ -216,11 +216,15 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
 // ---------------------------------------------------------------------------
 // Equivalence of deformation directions under the symmetry group.
 //
-// The deformed form Q + t v v^T, viewed in the coordinates given by an
-// automorphism U of Q (U^T Q U = Q), becomes Q + t (U^T v)(U^T v)^T. So two
-// vectors v and w give isometric deformations (hence the same quantization
-// function of t) iff w = +/- U^T v for some U in Aut(Q). The invariant
-// v^T Q^{-1} v is preserved by v -> U^T v and is a quick necessary test.
+// The form Q + t v v^T transforms under a change of basis M as
+// M^T (Q + t v v^T) M = Q + t (M^T v)(M^T v)^T, so two vectors v, w give
+// isometric deformations iff w = +/- M^T v for some M with M^T Q M = Q.
+// ArithmeticAutomorphismGroup returns generators g with g Q g^T = Q, i.e.
+// g = M^T; hence the deformation action is v -> g v (g the returned generator),
+// NOT v -> g^T v. The invariant v^T Q^{-1} v is preserved by v -> g v (it
+// follows from g Q g^T = Q that g^T Q^{-1} g = Q^{-1}) and is a quick necessary
+// test. (Contrast with the relevant/lattice vectors in FreeVectors.h, which are
+// genuine lattice vectors and transform as c -> g^T c.)
 // ---------------------------------------------------------------------------
 
 template <typename Tint>
@@ -236,11 +240,12 @@ MyVector<Tint> sign_canonicalize_vector(MyVector<Tint> const &v) {
   return v;
 }
 
-// The orbit of v0 under v -> U^T v (and sign), U ranging over the generators.
+// The deformation orbit of v0 under v -> g v (and sign), g ranging over the
+// generators returned by ArithmeticAutomorphismGroup (g Q g^T = Q).
 template <typename Tint>
 std::unordered_set<MyVector<Tint>>
-orbit_vector_transpose(std::vector<MyMatrix<Tint>> const &gens,
-                       MyVector<Tint> const &v0) {
+orbit_vector_deformation(std::vector<MyMatrix<Tint>> const &gens,
+                         MyVector<Tint> const &v0) {
   std::unordered_set<MyVector<Tint>> orb;
   std::vector<MyVector<Tint>> todo;
   MyVector<Tint> c0 = sign_canonicalize_vector(v0);
@@ -250,7 +255,7 @@ orbit_vector_transpose(std::vector<MyMatrix<Tint>> const &gens,
     MyVector<Tint> v = todo.back();
     todo.pop_back();
     for (auto &U : gens) {
-      MyVector<Tint> w = U.transpose() * v;
+      MyVector<Tint> w = U * v;
       MyVector<Tint> cw = sign_canonicalize_vector(w);
       if (orb.insert(cw).second) {
         todo.push_back(cw);
@@ -263,7 +268,7 @@ orbit_vector_transpose(std::vector<MyMatrix<Tint>> const &gens,
 template <typename Tint>
 bool vectors_equivalent(std::vector<MyMatrix<Tint>> const &gens,
                         MyVector<Tint> const &v, MyVector<Tint> const &w) {
-  std::unordered_set<MyVector<Tint>> orb = orbit_vector_transpose(gens, v);
+  std::unordered_set<MyVector<Tint>> orb = orbit_vector_deformation(gens, v);
   return orb.count(sign_canonicalize_vector(w)) > 0;
 }
 

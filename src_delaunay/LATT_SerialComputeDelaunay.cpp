@@ -5,6 +5,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "LatticeDelaunay.h"
+#include "Rigidity.h"
 #include "QuantizationIntegral.h"
 #include "FreeVectors.h"
 #include "Permutation.h"
@@ -64,6 +65,13 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
         compute_free_vectors<T, Tint, Tgroup>(GramMat, DT, os);
     std::ofstream os_out(FileFreeVectors);
     WriteFreeVectorsGAP(os_out, fres);
+  }
+  std::string FileRigidityDegree = BlockQUERIES.get_string("FileRigidityDegree");
+  if (FileRigidityDegree != "null") {
+    int rigidity =
+        ComputeRigidityDegreeLattice<T, Tint, Tgroup>(GramMat, DT, os);
+    std::ofstream os_out(FileRigidityDegree);
+    os_out << "return " << rigidity << ";\n";
   }
 }
 
