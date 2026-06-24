@@ -129,6 +129,17 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     std::ofstream os_out(FileDeformationOrbits);
     WriteDeformationOrbitsGAP(os_out, ores);
   }
+  // Hessian of the normalized quantizer constant G at Q and its signature,
+  // assembled from the orbit equations of the rank-one directions v v^T (with
+  // |v_i| <= HessianBound), plus rank-two seeds when needed.
+  std::string FileHessian = BlockQUERIES.get_string("FileHessian");
+  if (FileHessian != "null") {
+    int bound = BlockQUERIES.get_int("HessianBound");
+    HessianResult<T> hres =
+        compute_hessian_signature<T, Tint, Tgroup>(GramMat, bound, os);
+    std::ofstream os_out(FileHessian);
+    WriteHessianGAP(os_out, hres);
+  }
 }
 
 template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {

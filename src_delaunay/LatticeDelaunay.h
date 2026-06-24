@@ -901,9 +901,11 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
     ListStringValues["FileIsoDelaunayDomain"] = "null";
     ListStringValues["FileDeformation"] = "null";
     ListStringValues["FileDeformationOrbits"] = "null";
+    ListStringValues["FileHessian"] = "null";
     std::map<std::string, int> ListIntValues;
     ListIntValues["DeformationBound"] = 1;
     ListIntValues["DeformationNumberOrbit"] = 6;
+    ListIntValues["HessianBound"] = 1;
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     BlockQUERIES.setListIntValues(ListIntValues);
