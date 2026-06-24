@@ -5,11 +5,13 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "LatticeDelaunay.h"
+#include "IsoDelaunayDomains.h"
 #include "Rigidity.h"
 #include "QuantizationIntegral.h"
 #include "FreeVectors.h"
 #include "Permutation.h"
 #include "Group.h"
+#include <boost/archive/text_oarchive.hpp>
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
@@ -72,6 +74,36 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
         ComputeRigidityDegreeLattice<T, Tint, Tgroup>(GramMat, DT, os);
     std::ofstream os_out(FileRigidityDegree);
     os_out << "return " << rigidity << ";\n";
+  }
+  std::string FileIsoDelaunayDomain =
+      BlockQUERIES.get_string("FileIsoDelaunayDomain");
+  if (FileIsoDelaunayDomain != "null") {
+    // Only meaningful when the iso-Delaunay domain has full L-type
+    // dimension, i.e. the L-space (= lineality of the L-type cone) has
+    // dim n*(n+1)/2 — equivalently, every iso-Delaunay-domain inequality
+    // is non-degenerate and the polyhedron is full-dim in canonical Sym^n.
+    // Lower rigidity means the lattice sits on a wall and the iso-Delaunay
+    // representation would be ill-defined.
+    int n = GramMat.rows();
+    int sym_dim = (n * (n + 1)) / 2;
+    int rigidity =
+        ComputeRigidityDegreeLattice<T, Tint, Tgroup>(GramMat, DT, os);
+    if (rigidity != sym_dim) {
+      std::cerr << "LATT_SerialComputeDelaunay: FileIsoDelaunayDomain "
+                   "requires rigidity == n*(n+1)/2 = "
+                << sym_dim << " but rigidity=" << rigidity << "\n";
+      throw TerminalException{1};
+    }
+    // Compute SHV_T (full-rank invariant family), then bundle DT + GramMat
+    // + SHV_T as an IsoDelaunayDomain and write it via boost::serialization
+    // (text_oarchive — same format used by SerializeMatrix and friends).
+    MyMatrix<Tint> SHV =
+        ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
+    MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+    IsoDelaunayDomain<T, Tint, Tgroup> x_iso{DT, GramMat, SHV_T};
+    std::ofstream ofs(FileIsoDelaunayDomain);
+    boost::archive::text_oarchive oa(ofs);
+    oa << x_iso;
   }
 }
 

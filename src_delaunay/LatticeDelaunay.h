@@ -898,6 +898,7 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
     ListStringValues["FileQuantization"] = "null";
     ListStringValues["FileFreeVectors"] = "null";
     ListStringValues["FileRigidityDegree"] = "null";
+    ListStringValues["FileIsoDelaunayDomain"] = "null";
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     ListBlock["QUERIES"] = BlockQUERIES;
