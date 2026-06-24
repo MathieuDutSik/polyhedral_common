@@ -6,9 +6,12 @@
 #include "IsoDelaunayDomains.h"
 #include "LatticeStabEquiCan.h"
 #include "QuantizationIntegral.h"
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <optional>
+#include <sstream>
+#include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -52,14 +55,18 @@ std::vector<MyMatrix<T>> compute_qh_symmetry_gens(MyMatrix<T> const &Q,
   return gens_T;
 }
 
-// The T-space of the forms invariant under the symmetry group generators.
+// The T-space of the forms invariant under the symmetry group generators. We
+// use Q itself as the positive-definite reference matrix of the space (it is
+// invariant under the generators, hence lies in the T-space), so there is no
+// need to search for one.
 template <typename T, typename Tint, typename Tgroup>
 LinSpaceMatrix<T> build_qh_tspace(MyMatrix<T> const &Q,
                                   std::vector<MyMatrix<T>> const &gens_T,
                                   std::ostream &os) {
   int n = Q.rows();
   std::vector<MyMatrix<T>> ListMat = BasisInvariantForm<T>(n, gens_T, os);
-  return BuildLinSpaceMatrix<T, Tint, Tgroup>(ListMat, os);
+  std::vector<MyMatrix<T>> ListComm;
+  return BuildLinSpace<T>(Q, ListMat, ListComm);
 }
 
 // The Delaunay tesselation of a concrete Gram matrix (no caching).
@@ -627,6 +634,148 @@ DeformationDerivatives<T> compute_deformation_derivatives(MyMatrix<T> const &Q,
       reconstruct_secmoment<T, decltype(sampler)>(tpool, sampler, max_degree,
                                                   os);
   return deformation_derivatives<T>(S, detpoly, n);
+}
+
+// GAP-readable record of the deformation along Q + t H (exact rationals only;
+// the irrational normalized G(t) derivatives are left to the caller).
+template <typename T>
+void WriteDeformationGAP(std::ostream &os_out,
+                        DeformationDerivatives<T> const &der) {
+  os_out << "return rec(SecMoment0:=" << der.S0 << ", SecMoment1:=" << der.S1
+         << ", SecMoment2:=" << der.S2 << ",\n";
+  os_out << "numerator:=" << StringVectorGAP(der.secmoment_num) << ",\n";
+  os_out << "denominator:=" << StringVectorGAP(der.secmoment_den) << ",\n";
+  os_out << "degree:=" << der.secmoment_degree << ",\n";
+  os_out << "det0:=" << der.det0 << ", det1:=" << der.det1
+         << ", det2:=" << der.det2 << ");\n";
+}
+
+// ---------------------------------------------------------------------------
+// Orbit scan: representatives of integer vectors |v_i| <= bound under the
+// deformation action of Aut(Q), with the second derivative G''(0) of
+// G(Q + t v v^T) for the first K orbits (sorted by the invariant v^T Q^{-1} v).
+// ---------------------------------------------------------------------------
+
+template <typename T, typename Tint> struct DeformationOrbitEntry {
+  MyVector<Tint> rep;
+  long orbit_size;
+  T invariant; // v^T Q^{-1} v
+  T S0;        // SecMoment(0)
+  T S2;        // SecMoment''(0)
+  T det0;
+  T det1;
+  T det2;
+  double G2; // G''(0)
+};
+
+template <typename T, typename Tint> struct DeformationOrbitResult {
+  int total_orbits;
+  std::vector<DeformationOrbitEntry<T, Tint>> entries;
+};
+
+template <typename T, typename Tint, typename Tgroup>
+DeformationOrbitResult<T, Tint>
+compute_deformation_orbits(MyMatrix<T> const &Q, int bound, int K,
+                           std::ostream &os) {
+  int n = Q.rows();
+  MyMatrix<T> Qinv = Inverse(Q);
+  std::vector<MyMatrix<Tint>> autom =
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os);
+  os << "QORB: n=" << n << " |Aut(Q) generators|=" << autom.size() << "\n";
+  // Enumerate integer vectors with |v_i| <= bound (antipodally reduced).
+  std::vector<MyVector<Tint>> candidates;
+  std::unordered_set<MyVector<Tint>> seen_cand;
+  MyVector<Tint> v = ZeroVector<Tint>(n);
+  int range = 2 * bound + 1;
+  long total = 1;
+  for (int i = 0; i < n; i++) {
+    total *= range;
+  }
+  for (long code = 0; code < total; code++) {
+    long c = code;
+    bool is_zero = true;
+    for (int i = 0; i < n; i++) {
+      int digit = c % range;
+      c /= range;
+      v(i) = digit - bound;
+      if (v(i) != 0) {
+        is_zero = false;
+      }
+    }
+    if (is_zero) {
+      continue;
+    }
+    MyVector<Tint> cv = sign_canonicalize_vector(v);
+    if (seen_cand.insert(cv).second) {
+      candidates.push_back(cv);
+    }
+  }
+  // Classify the candidates into orbits.
+  std::unordered_set<MyVector<Tint>> assigned;
+  struct OrbitRec {
+    MyVector<Tint> rep;
+    long orbit_size;
+    T invariant;
+  };
+  std::vector<OrbitRec> orbits;
+  for (auto &cand : candidates) {
+    if (assigned.count(cand) > 0) {
+      continue;
+    }
+    std::unordered_set<MyVector<Tint>> orb =
+        orbit_vector_deformation(autom, cand);
+    for (auto &w : orb) {
+      assigned.insert(w);
+    }
+    MyVector<T> cand_T = UniversalVectorConversion<T, Tint>(cand);
+    T invariant = cand_T.dot(Qinv * cand_T);
+    orbits.push_back(OrbitRec{cand, static_cast<long>(orb.size()), invariant});
+  }
+  std::sort(orbits.begin(), orbits.end(),
+            [](OrbitRec const &a, OrbitRec const &b) -> bool {
+              return a.invariant < b.invariant;
+            });
+  os << "QORB: number of vector orbits (|v_i|<=" << bound
+     << ")=" << orbits.size() << "\n";
+  DeformationOrbitResult<T, Tint> res;
+  res.total_orbits = orbits.size();
+  int nb = std::min<int>(K, orbits.size());
+  os << "QORB: computing G''(0) for the first " << nb << " orbits\n";
+  for (int i = 0; i < nb; i++) {
+    OrbitRec const &orb = orbits[i];
+    MyVector<T> v_T = UniversalVectorConversion<T, Tint>(orb.rep);
+    MyMatrix<T> H = v_T * v_T.transpose();
+    DeformationDerivatives<T> der =
+        compute_deformation_derivatives<T, Tint, Tgroup>(Q, H, os);
+    os << "QORB: orbit " << i << " v=" << StringVectorGAP(orb.rep)
+       << " |orbit|=" << orb.orbit_size << " vTQinvV=" << orb.invariant << "\n";
+    os << "QORB:   SecMoment''(0)=" << der.S2 << " G''(0)=" << der.G2 << "\n";
+    res.entries.push_back(DeformationOrbitEntry<T, Tint>{
+        orb.rep, orb.orbit_size, orb.invariant, der.S0, der.S2, der.det0,
+        der.det1, der.det2, der.G2});
+  }
+  return res;
+}
+
+template <typename T, typename Tint>
+void WriteDeformationOrbitsGAP(std::ostream &os_out,
+                              DeformationOrbitResult<T, Tint> const &res) {
+  os_out << "return rec(nbVectorOrbit:=" << res.total_orbits << ",\n";
+  os_out << "nbEvaluated:=" << res.entries.size() << ",\n";
+  os_out << "ListOrbit:=[";
+  bool IsFirst = true;
+  for (auto &e : res.entries) {
+    if (!IsFirst) {
+      os_out << ",\n";
+    }
+    IsFirst = false;
+    os_out << "rec(v:=" << StringVectorGAP(e.rep)
+           << ", OrbitSize:=" << e.orbit_size << ", vTQinvV:=" << e.invariant
+           << ", SecMoment0:=" << e.S0 << ", SecMoment2:=" << e.S2
+           << ", det0:=" << e.det0 << ", det1:=" << e.det1
+           << ", det2:=" << e.det2 << ", Gpp:=" << e.G2 << ")";
+  }
+  os_out << "]);\n";
 }
 
 // clang-format off

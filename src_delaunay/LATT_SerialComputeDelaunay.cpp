@@ -8,6 +8,7 @@
 #include "IsoDelaunayDomains.h"
 #include "Rigidity.h"
 #include "QuantizationIntegral.h"
+#include "QuantizationDeformation.h"
 #include "FreeVectors.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -104,6 +105,29 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     std::ofstream ofs(FileIsoDelaunayDomain);
     boost::archive::text_oarchive oa(ofs);
     oa << x_iso;
+  }
+  // Second differential of G along Q + t H for a symmetric direction H read
+  // from FileDeformation; the record is written to FileDeformation + ".output".
+  std::string FileDeformation = BlockQUERIES.get_string("FileDeformation");
+  if (FileDeformation != "null") {
+    MyMatrix<T> H = ReadMatrixFile<T>(FileDeformation);
+    DeformationDerivatives<T> der =
+        compute_deformation_derivatives<T, Tint, Tgroup>(GramMat, H, os);
+    std::ofstream os_out(FileDeformation + ".output");
+    WriteDeformationGAP(os_out, der);
+  }
+  // Orbit scan of the rank-one directions v v^T: G''(0) per orbit of integer
+  // vectors |v_i| <= DeformationBound under Aut(Q), first DeformationNumberOrbit
+  // orbits.
+  std::string FileDeformationOrbits =
+      BlockQUERIES.get_string("FileDeformationOrbits");
+  if (FileDeformationOrbits != "null") {
+    int bound = BlockQUERIES.get_int("DeformationBound");
+    int Korb = BlockQUERIES.get_int("DeformationNumberOrbit");
+    DeformationOrbitResult<T, Tint> ores =
+        compute_deformation_orbits<T, Tint, Tgroup>(GramMat, bound, Korb, os);
+    std::ofstream os_out(FileDeformationOrbits);
+    WriteDeformationOrbitsGAP(os_out, ores);
   }
 }
 

@@ -899,8 +899,14 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
     ListStringValues["FileFreeVectors"] = "null";
     ListStringValues["FileRigidityDegree"] = "null";
     ListStringValues["FileIsoDelaunayDomain"] = "null";
+    ListStringValues["FileDeformation"] = "null";
+    ListStringValues["FileDeformationOrbits"] = "null";
+    std::map<std::string, int> ListIntValues;
+    ListIntValues["DeformationBound"] = 1;
+    ListIntValues["DeformationNumberOrbit"] = 6;
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
+    BlockQUERIES.setListIntValues(ListIntValues);
     ListBlock["QUERIES"] = BlockQUERIES;
   }
   // Merging all data
@@ -933,7 +939,7 @@ DelaunayTesselation<T, Tgroup>
 get_delaunay_tessellation_serial(DataLattice<T, Tint, Tgroup> &data,
                                  std::string const &CacheFile,
                                  int const &max_runtime_second,
-                                 std::ostream &os) {
+                                 [[maybe_unused]] std::ostream &os) {
   auto compute = [&]() -> DelaunayTesselation<T, Tgroup> {
     auto f_incorrect =
         [&]([[maybe_unused]] Delaunay_Obj<T, Tgroup> const &x) -> bool {

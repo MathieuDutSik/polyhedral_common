@@ -561,8 +561,6 @@ set(
   LATT_SerialLattice_IsoDelaunayDomain
   LATT_MPI_ComputeDelaunay
   LATT_SerialComputeDelaunay
-  LATT_QuantizationDeformation
-  LATT_QuantizationDeformationOrbits
 )
 foreach(target IN LISTS DELAUNAY_PROGRAMS)
   add_polyhedral_binary(

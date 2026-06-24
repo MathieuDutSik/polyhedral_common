@@ -39,19 +39,38 @@ void process(std::string const &FileIso, std::ostream &os_out) {
   int n = x.GramMat.rows();
   int sym_dim = (n * (n + 1)) / 2;
   LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(n);
+  os << "ANA: n=" << n << " sym_dim=" << sym_dim
+     << " |DT|=" << x.DT.l_dels.size() << "\n";
   //
+  HumanTime t1;
   std::vector<FullAdjInfo<T>> ListIneq =
       ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
           x.DT, LinSpa.ListLineMat, os);
   int n_ineq = ListIneq.size();
+  os << "ANA: ComputeDefiningIneqIsoDelaunayDomain done n_ineq=" << n_ineq
+     << " |elapsed|=" << t1 << "\n";
   //
+  // Direct dual description on the raw FAC. lrs (the default backend
+  // chosen by get_dual_desc_method) handles redundant rows in the input
+  // itself; doing it this way avoids the Clarkson shooting loop in
+  // get_non_redundant_indices, which is O(n_ineq^2) LPs in rational
+  // arithmetic and is the bottleneck on dim-6 primitive L-types.
+  HumanTime t2;
   MyMatrix<T> FAC = GetFACineq(ListIneq);
-  std::vector<int> ListIrred = get_non_redundant_indices(FAC, os);
-  int n_irred = ListIrred.size();
-  MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
-  //
-  MyMatrix<T> EXT = DirectDualDescription_mat(FACred, os);
+  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
   int n_ray = EXT.rows();
+  os << "ANA: DirectDualDescription_mat (FAC->EXT) done n_ray=" << n_ray
+     << " |elapsed|=" << t2 << "\n";
+  //
+  // Irredundant facet count: come back EXT -> FAC. Each row of the result
+  // is a defining inequality (a facet); redundant rows of the original FAC
+  // are dropped.
+  HumanTime t3;
+  MyMatrix<T> FACred = DirectDualDescription_mat(EXT, os);
+  int n_irred = FACred.rows();
+  os << "ANA: DirectDualDescription_mat (EXT->FAC) done n_irred=" << n_irred
+     << " |elapsed|=" << t3 << "\n";
+  //
   std::map<int, int> rank_tally;
   int dimSpace = LinSpa.ListMat.size();
   for (int i_row = 0; i_row < n_ray; i_row++) {
