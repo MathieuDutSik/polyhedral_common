@@ -32,7 +32,6 @@ TestHessian:=function(eRec)
     strOut:=Concatenation(strOut, "/\n\n");
     strOut:=Concatenation(strOut, "&QUERIES\n");
     strOut:=Concatenation(strOut, " FileHessian = \"", FileO, "\"\n");
-    strOut:=Concatenation(strOut, " HessianBound = 1\n");
     strOut:=Concatenation(strOut, "/\n");
     WriteStringFile(FileN, strOut);
     #

@@ -905,7 +905,6 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
     std::map<std::string, int> ListIntValues;
     ListIntValues["DeformationBound"] = 1;
     ListIntValues["DeformationNumberOrbit"] = 6;
-    ListIntValues["HessianBound"] = 1;
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     BlockQUERIES.setListIntValues(ListIntValues);

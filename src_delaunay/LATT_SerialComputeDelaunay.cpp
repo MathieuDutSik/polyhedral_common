@@ -134,9 +134,8 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
   // |v_i| <= HessianBound), plus rank-two seeds when needed.
   std::string FileHessian = BlockQUERIES.get_string("FileHessian");
   if (FileHessian != "null") {
-    int bound = BlockQUERIES.get_int("HessianBound");
     HessianResult<T> hres =
-        compute_hessian_signature<T, Tint, Tgroup>(GramMat, bound, os);
+        compute_hessian_signature<T, Tint, Tgroup>(GramMat, os);
     std::ofstream os_out(FileHessian);
     WriteHessianGAP(os_out, hres);
   }

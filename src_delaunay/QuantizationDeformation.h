@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "IsoDelaunayDomains.h"
+#include "InvariantVectorFamily.h"
 #include "LatticeStabEquiCan.h"
 #include "QuantizationIntegral.h"
 #include <algorithm>
@@ -943,10 +944,10 @@ template <typename T> struct HessianResult {
 };
 
 // Compute the Hessian of G at Q and its signature by the moment-derivative
-// method. bound controls the box |v_i| <= bound of integer vectors whose
-// rank-one directions v v^T form the basis of Sym^n.
+// method. The rank-one basis of Sym^n is built shell by shell of increasing
+// dual norm v^T Q^{-1} v (no bound parameter).
 template <typename T, typename Tint, typename Tgroup>
-HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q, int bound,
+HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
                                            std::ostream &os) {
   int n = Q.rows();
   int N = n * (n + 1) / 2;
@@ -971,74 +972,61 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q, int bound,
   std::vector<MyMatrix<Tint>> autom =
       ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os);
   os << "QHESS: |Aut(Q) generators|=" << autom.size() << "\n";
-  // Phase A: a rank-one basis of Sym^n. Enumerate integer vectors in the box,
-  // sort by the deformation invariant v^T Q^{-1} v (smallest first, since that
-  // controls the cost and degree of the moment derivative), and greedily keep v
-  // whenever v v^T increases the rank of the family, until the v v^T span Sym^n.
-  // No derivatives here.
-  std::vector<MyVector<Tint>> cand;
-  std::unordered_set<MyVector<Tint>> seen_cand;
-  int range = 2 * bound + 1;
-  long total = 1;
-  for (int i = 0; i < n; i++) {
-    total *= range;
-  }
-  for (long code = 0; code < total; code++) {
-    long c = code;
-    bool is_zero = true;
-    MyVector<Tint> v(n);
-    for (int i = 0; i < n; i++) {
-      int digit = c % range;
-      c /= range;
-      v(i) = digit - bound;
-      if (v(i) != 0) {
-        is_zero = false;
-      }
-    }
-    if (is_zero) {
-      continue;
-    }
-    MyVector<Tint> cv = sign_canonicalize_vector(v);
-    if (seen_cand.insert(cv).second) {
-      cand.push_back(cv);
-    }
-  }
-  std::stable_sort(
-      cand.begin(), cand.end(),
-      [&](MyVector<Tint> const &a, MyVector<Tint> const &b) -> bool {
-        MyVector<T> aT = UniversalVectorConversion<T, Tint>(a);
-        MyVector<T> bT = UniversalVectorConversion<T, Tint>(b);
-        return aT.dot(Qinv * aT) < bT.dot(Qinv * bT);
-      });
+  // Phase A: a rank-one basis of Sym^n, built shell by shell of increasing dual
+  // norm v^T Q^{-1} v -- the deformation invariant that controls the cost and
+  // degree of the moment derivative, so the cheapest directions come first. We
+  // enumerate integer vectors by the integer dual form Qadj = det(Q) Q^{-1} =
+  // adj(Q) (whose norm is det(Q) v^T Q^{-1} v) with a CVPSolver, exactly as in
+  // ExtractInvariantVectorFamily, keeping v whenever v v^T raises the rank of
+  // the family, until the v v^T span Sym^n. No derivatives, no bound parameter.
+  T detQ = DeterminantMat(Q);
+  MyMatrix<T> Qadj = detQ * Qinv; // adjugate of Q: integral, positive definite
+  CVPSolver<T, Tint> solver(Qadj, os);
+  T incr = GetSmallestIncrement(Qadj);
+  T norm = incr;
   std::vector<MyVector<Tint>> basis;      // the chosen v_k
   std::vector<std::vector<T>> basis_rows; // GetLineVector(v_k v_k^T)
-  for (auto &v : cand) {
-    if (static_cast<int>(basis.size()) == N) {
+  std::unordered_set<MyVector<Tint>> seen_cand;
+  int shell = 0;
+  int const max_shell = 100000; // safety guard; termination is guaranteed
+  while (static_cast<int>(basis.size()) < N) {
+    if (++shell > max_shell) {
       break;
     }
-    MyVector<T> vT = UniversalVectorConversion<T, Tint>(v);
-    MyMatrix<T> B = vT * vT.transpose();
-    std::vector<T> row = GetLineVector(B); // symmetric vectorization, length N
-    int cur = static_cast<int>(basis_rows.size());
-    MyMatrix<T> Test(cur + 1, N);
-    for (int r = 0; r < cur; r++) {
+    std::vector<MyVector<Tint>> ListVect = solver.fixed_norm_vectors(norm);
+    for (auto &v0 : ListVect) {
+      if (static_cast<int>(basis.size()) == N) {
+        break;
+      }
+      MyVector<Tint> v = sign_canonicalize_vector(v0);
+      if (!seen_cand.insert(v).second) {
+        continue;
+      }
+      MyVector<T> vT = UniversalVectorConversion<T, Tint>(v);
+      MyMatrix<T> B = vT * vT.transpose();
+      std::vector<T> row = GetLineVector(B); // symmetric vectorization, length N
+      int cur = static_cast<int>(basis_rows.size());
+      MyMatrix<T> Test(cur + 1, N);
+      for (int r = 0; r < cur; r++) {
+        for (int c2 = 0; c2 < N; c2++) {
+          Test(r, c2) = basis_rows[r][c2];
+        }
+      }
       for (int c2 = 0; c2 < N; c2++) {
-        Test(r, c2) = basis_rows[r][c2];
+        Test(cur, c2) = row[c2];
+      }
+      if (RankMat(Test) == cur + 1) {
+        basis.push_back(v);
+        basis_rows.push_back(row);
       }
     }
-    for (int c2 = 0; c2 < N; c2++) {
-      Test(cur, c2) = row[c2];
-    }
-    if (RankMat(Test) == cur + 1) {
-      basis.push_back(v);
-      basis_rows.push_back(row);
-    }
+    norm += incr;
   }
   res.nbBasis = static_cast<int>(basis.size());
-  os << "QHESS: rank-one basis size=" << res.nbBasis << "/" << N << "\n";
+  os << "QHESS: rank-one basis size=" << res.nbBasis << "/" << N
+     << " (max dual norm " << (norm - incr) << ")\n";
   if (res.nbBasis != N) {
-    os << "QHESS: WARNING v v^T do not span Sym^n with bound=" << bound
-       << " (increase HessianBound)\n";
+    os << "QHESS: WARNING v v^T do not span Sym^n (shell guard hit)\n";
     return res;
   }
   // Phase B: DM[v_k v_k^T] for each basis vector, one evaluation per Aut(Q)
