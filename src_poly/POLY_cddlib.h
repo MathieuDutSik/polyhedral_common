@@ -9486,6 +9486,9 @@ std::vector<int> RedundancyReductionClarksonKernel(MyMatrix<T> const &TheEXT,
   }
   dd_FreeMatrix(M);
   set_free(redset);
+#ifdef DEBUG_CDD
+  os << "CDD: RedundancyReductionClarksonKernel |ListIdx|=" << ListIdx.size() << "\n";
+#endif
   return ListIdx;
 }
 

@@ -646,7 +646,7 @@ std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& 
   }
 #endif
   std::vector<int> list_irredA = cdd::RedundancyReductionClarksonExt(M, os);
-#ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
+#ifdef SANITY_CHECK_EXTENSIVE_ELIMINATION_REDUNDANCY
   MyMatrix<T> M_ext = AddZeroColumn(M);
   std::vector<int> list_irredB = Kernel_GetNonRedundant_CDD(M_ext, os);
   if (!is_equal_list_irred(list_irredA, list_irredB)) {

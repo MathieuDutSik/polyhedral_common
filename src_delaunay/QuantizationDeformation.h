@@ -9,9 +9,11 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <map>
 #include <optional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -781,220 +783,200 @@ void WriteDeformationOrbitsGAP(std::ostream &os_out,
 // ---------------------------------------------------------------------------
 // Hessian of the normalized quantizer constant G at the point Q.
 //
-// G is scale invariant, so it really lives on the (n(n+1)/2 - 1)-dimensional
-// space of forms modulo scaling. We assemble its Hessian as a quadratic form on
-// Sym^n (the symmetric n x n matrices): for a direction H, the second
-// directional derivative G''(0) along Q + t H equals Hess(H, H) (the path is a
-// straight line, so there is no first-order correction). Factoring out the
-// universal positive constant (1/n) det(Q)^{-1/n} leaves the *rational*
-// quadratic form
-//   R(H) = S'' - (2/n)(D'/D) S' - (1/n)(D''/D) S + ((n+1)/n^2)(D'/D)^2 S
-// (S, S', S'' the SecMoment Taylor data; D, D', D'' those of det(Q + t H)),
-// which has the same signature as Hess. The group Aut(Q) acts on directions by
-// H -> g H g^T (g Q g^T = Q) and R is invariant, so a single evaluation R(D)
-// yields one linear equation in the unknown coefficients beta_{bb'} for every
-// element of the orbit of D. We accumulate equations -- from the orbits of the
-// rank-one directions v v^T (v short integer vectors), and, when those do not
-// suffice (rank-one directions alone cannot resolve forms that vanish on the
-// Veronese cone), from a few rank-two seed directions -- together with the
-// radial relations Hess(Q, .) = 0, until the system has full rank. We then
-// solve it exactly and read off the signature.
+// G is scale invariant, so it lives on the (n(n+1)/2 - 1)-dimensional space of
+// forms modulo scaling. We compute its Hessian as a quadratic form on Sym^n via
+// the derivative of the second-moment matrix M(Q) = \int u u^T (the SecMomentMat
+// of the quantization integral). Writing S = SecMoment(Q), A_i = Q^{-1} H_i, the
+// (rational) Hessian bilinear form -- equal to G''(0) along Q + t H up to the
+// universal positive factor (1/n) det(Q)^{-1/n}, hence with the same signature --
+// is
+//
+//   R(H1,H2) = <H1, DM[H2]>
+//              - (1/n)[ (tr A1) tr(M H2) + (tr A2) tr(M H1) ]
+//              + (S/n) tr(A1 A2) + (S/n^2)(tr A1)(tr A2),
+//
+// where DM[H] = d/dt M(Q + t H)|_0. The crucial point is that DM is *linear* in
+// H, so it is determined by its values on a basis of Sym^n; a basis made of
+// rank-one forms v v^T (v short integer vectors) suffices -- there is no need to
+// evaluate higher-rank directions, and the 147-type plateau of the scalar method
+// does not arise. For rank-one directions everything simplifies:
+// <v v^T, DM> = v^T DM v, tr(M v v^T) = v^T M v, tr A = v^T Q^{-1} v, and
+// tr(Q^{-1} v v^T Q^{-1} w w^T) = (v^T Q^{-1} w)^2. Aut(Q) acts by v -> g v and
+// DM transforms equivariantly, DM[(g v)(g v)^T] = g^{-T} DM[v v^T] g^{-1}, so a
+// single matrix-derivative evaluation per orbit suffices.
 // ---------------------------------------------------------------------------
 
-// The rational value R(H) = G''(0) / ((1/n) det(Q)^{-1/n}).
+// The rational value R(H) = G''(0) / ((1/n) det(Q)^{-1/n}) from the scalar
+// deformation data; used only as an independent cross-check of the Hessian.
 //
 // Beware the differing conventions inside DeformationDerivatives: S0/S1/S2 are
 // the *derivatives* S(0), S'(0), S''(0), whereas det0/det1/det2 are the *Taylor
-// coefficients* of det(Q + t H) (so det1 = D'(0) but det2 = D''(0)/2). The
-// second derivative is therefore D''(0) = 2*det2. (For rank-one directions
-// det(Q + t v v^T) is linear in t by the matrix-determinant lemma, so det2 = 0
-// and this factor is invisible; it only matters for higher-rank directions.)
+// coefficients* of det(Q + t H) (so det1 = D'(0) but det2 = D''(0)/2).
 template <typename T>
 T rational_hessian_value(DeformationDerivatives<T> const &der, int n) {
-  T S = der.S0;    // S(0)
-  T S1 = der.S1;   // S'(0)
-  T S2 = der.S2;   // S''(0)
-  T D = der.det0;  // D(0)
-  T D1 = der.det1; // D'(0)
-  T D2 = T(2) * der.det2; // D''(0) = 2 * [t^2] det(Q + t H)
+  T S = der.S0;
+  T S1 = der.S1;
+  T S2 = der.S2;
+  T D = der.det0;
+  T D1 = der.det1;
+  T D2 = T(2) * der.det2; // D''(0)
   T Tn(n);
-  T ratio1 = D1 / D; // D'/D
-  T ratio2 = D2 / D; // D''/D
-  T R = S2 - (T(2) / Tn) * ratio1 * S1 - (T(1) / Tn) * ratio2 * S +
-        ((Tn + T(1)) / (Tn * Tn)) * ratio1 * ratio1 * S;
-  return R;
+  T r1 = D1 / D;
+  T r2 = D2 / D;
+  return S2 - (T(2) / Tn) * r1 * S1 - (T(1) / Tn) * r2 * S +
+         ((Tn + T(1)) / (Tn * Tn)) * r1 * r1 * S;
 }
 
-// The standard basis of Sym^n: pairs (i, j) with i <= j, the basis element
-// being E_ii when i == j and E_ij + E_ji when i < j.
-inline std::vector<std::pair<int, int>> sym_basis_pairs(int n) {
-  std::vector<std::pair<int, int>> pairs;
+// The full quantization result (second moment S and second-moment matrix M) of
+// the lattice with the given Gram matrix.
+template <typename T, typename Tint, typename Tgroup>
+QuantizationResult<T> quant_at_gram(MyMatrix<T> const &GramMat,
+                                    std::ostream &os) {
+  using TintGroup = typename Tgroup::Tint;
+  int dimEXT = GramMat.rows() + 1;
+  PolyHeuristicSerial<TintGroup> AllArr =
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+  DataLattice<T, Tint, Tgroup> data =
+      GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
+  DelaunayTesselation<T, Tgroup> DT =
+      get_delaunay_tessellation_serial<T, Tint, Tgroup>(data, "none", 0, os);
+  return ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT, os);
+}
+
+// DM[B] = d/dt M(Q + t B)|_0, the derivative of the second-moment matrix along
+// the ray Q + t B. Same machinery as compute_deformation_derivatives (iso-
+// Delaunay segment, sampling, exact interpolation) but interpolating each entry
+// of the matrix M(t) instead of the scalar SecMoment(t).
+template <typename T, typename Tint, typename Tgroup>
+MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
+                                      MyMatrix<T> const &B, std::ostream &os) {
+  int n = Q.rows();
+  std::vector<MyMatrix<T>> gens_T =
+      compute_qh_symmetry_gens<T, Tint, Tgroup>(Q, B, os);
+  LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, gens_T, os);
+  IsoDelaunaySegment<T, Tgroup> seg =
+      find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, B, T(1), os);
+  int pool_size = 4 * n + 30;
+  std::vector<T> tpool;
+  T half_tmax = seg.tmax / T(2);
+  for (int k = 1; k <= pool_size; k++) {
+    tpool.push_back(half_tmax * T(k) / T(pool_size + 1));
+  }
+  MyVector<T> detpoly = det_polynomial<T>(Q, B);
+  T detQ = detpoly(0);
+  MyVector<T> den = detpoly / detQ;
+  int max_degree = 4 * n;
+  // Lazy cache of the (expensive) matrix samples M(Q + t B).
+  std::map<T, MyMatrix<T>> mcache;
+  auto getM = [&](T const &tt) -> MyMatrix<T> const & {
+    auto it = mcache.find(tt);
+    if (it == mcache.end()) {
+      MyMatrix<T> G = Q + tt * B;
+      QuantizationResult<T> q = quant_at_gram<T, Tint, Tgroup>(G, os);
+      it = mcache.emplace(tt, q.SecMomentMat).first;
+    }
+    return it->second;
+  };
+  MyMatrix<T> DM(n, n);
   for (int i = 0; i < n; i++) {
     for (int j = i; j < n; j++) {
-      pairs.push_back({i, j});
+      auto sampler = [&](T const &tt) -> T { return getM(tt)(i, j); };
+      std::optional<RationalFunc<T>> opt =
+          reconstruct_secmoment_known_denominator<T, decltype(sampler)>(
+              tpool, sampler, den, max_degree, os);
+      T deriv;
+      if (opt) {
+        deriv = deformation_derivatives<T>(*opt, detpoly, n).S1;
+      } else {
+        RationalFunc<T> Sf = reconstruct_secmoment<T, decltype(sampler)>(
+            tpool, sampler, max_degree, os);
+        deriv = deformation_derivatives<T>(Sf, detpoly, n).S1;
+      }
+      DM(i, j) = deriv;
+      DM(j, i) = deriv;
     }
   }
-  return pairs;
+  return DM;
 }
 
-// Coordinates of a symmetric matrix D in the basis sym_basis_pairs(n): the
-// coefficient on (i, j) is simply D(i, j).
-template <typename T>
-MyVector<T> sym_coords(MyMatrix<T> const &D,
-                       std::vector<std::pair<int, int>> const &pairs) {
-  int N = pairs.size();
-  MyVector<T> c(N);
-  for (int b = 0; b < N; b++) {
-    c(b) = D(pairs[b].first, pairs[b].second);
-  }
-  return c;
-}
-
-// A bounded set of elements of the group generated by gens (BFS from the
-// identity, capped). Any subset of genuine group elements gives valid equations
-// g D g^T, R(g D g^T) = R(D); we only need enough images to reach full rank.
+// The orbit of v0 under v -> g v (sign-canonicalized), together with a group
+// element g realizing each member: member = sign_canonicalize(g v0).
 template <typename Tint>
-std::vector<MyMatrix<Tint>>
-generate_group_elements(std::vector<MyMatrix<Tint>> const &gens, int n,
-                        size_t cap) {
-  std::vector<MyMatrix<Tint>> elts;
+std::vector<std::pair<MyVector<Tint>, MyMatrix<Tint>>>
+orbit_elements(std::vector<MyMatrix<Tint>> const &gens,
+               MyVector<Tint> const &v0) {
+  int n = v0.size();
+  std::vector<std::pair<MyVector<Tint>, MyMatrix<Tint>>> orb;
   std::unordered_set<MyVector<Tint>> seen;
-  auto key = [&](MyMatrix<Tint> const &M) -> MyVector<Tint> {
-    MyVector<Tint> v(n * n);
-    int idx = 0;
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        v(idx++) = M(i, j);
-      }
-    }
-    return v;
-  };
+  MyVector<Tint> c0 = sign_canonicalize_vector(v0);
   MyMatrix<Tint> Id = IdentityMat<Tint>(n);
-  elts.push_back(Id);
-  seen.insert(key(Id));
+  orb.push_back({c0, Id});
+  seen.insert(c0);
   size_t head = 0;
-  while (head < elts.size() && elts.size() < cap) {
-    MyMatrix<Tint> cur = elts[head++];
-    for (auto &g : gens) {
-      MyMatrix<Tint> nx = g * cur;
-      if (seen.insert(key(nx)).second) {
-        elts.push_back(nx);
-        if (elts.size() >= cap) {
-          break;
-        }
+  while (head < orb.size()) {
+    MyVector<Tint> v = orb[head].first;
+    MyMatrix<Tint> g = orb[head].second;
+    head++;
+    for (auto &U : gens) {
+      MyVector<Tint> w = U * v;
+      MyVector<Tint> cw = sign_canonicalize_vector(w);
+      if (seen.insert(cw).second) {
+        orb.push_back({cw, U * g});
       }
     }
   }
-  return elts;
+  return orb;
 }
 
 template <typename T> struct HessianResult {
   int n;
   int N;             // dim Sym^n = n(n+1)/2
-  bool solved;       // the linear system had full rank and a solution
-  bool with_radial;  // the Hess(Q,.)=0 rows were consistent and used
-  int nbEval;        // number of (expensive) R-evaluations
-  int rank_reached;  // rank of the assembled system
-  MyMatrix<T> beta;  // the N x N Hessian (rational, up to a positive scale)
-  T radial_residual; // max |(beta q)_b|, should be 0 at a critical point
-  T data_residual;   // max |c^T beta c - R| over all evaluated directions
-  int nbPlus;        // signature of the full N x N Hessian
+  bool solved;
+  int nbEval;        // number of (expensive) matrix-derivative evaluations
+  int nbBasis;       // number of rank-one basis directions (= N when solved)
+  MyMatrix<T> beta;  // the N x N Hessian in the v v^T basis (up to + scale)
+  T radial_residual; // max |(beta c)| with sum c_k v_k v_k^T = Q (0 if critical)
+  T check_residual;  // |R_predicted - R_measured| on an independent direction
+  int nbPlus;
   int nbMinus;
   int nbZero;        // includes the one radial (scaling) zero
 };
 
-// Compute the Hessian of G at Q and its signature, by the orbit-equation method
-// described above. bound controls the box |v_i| <= bound of integer vectors
-// whose rank-one directions seed the equations.
+// Compute the Hessian of G at Q and its signature by the moment-derivative
+// method. bound controls the box |v_i| <= bound of integer vectors whose
+// rank-one directions v v^T form the basis of Sym^n.
 template <typename T, typename Tint, typename Tgroup>
 HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q, int bound,
                                            std::ostream &os) {
   int n = Q.rows();
+  int N = n * (n + 1) / 2;
   MyMatrix<T> Qinv = Inverse(Q);
-  std::vector<std::pair<int, int>> pairs = sym_basis_pairs(n);
-  int N = pairs.size();
-  // Unknown index table: symmetric pairs (b, b'), b <= b'.
-  std::vector<std::vector<int>> uidx(N, std::vector<int>(N, -1));
-  int Munk = 0;
-  for (int b = 0; b < N; b++) {
-    for (int bp = b; bp < N; bp++) {
-      uidx[b][bp] = Munk;
-      uidx[bp][b] = Munk;
-      Munk++;
-    }
-  }
-  os << "QHESS: n=" << n << " dim(Sym^n)=" << N << " unknowns=" << Munk << "\n";
-  MyVector<T> qc = sym_coords<T>(Q, pairs);
-  // The data equation contributed by a direction with coordinates c:
-  // sum_{b<=b'} coef * beta_{bb'} = R, coef = c_b^2 (b==b') or 2 c_b c_b'.
-  auto row_from_coords = [&](MyVector<T> const &c) -> MyVector<T> {
-    MyVector<T> row = ZeroVector<T>(Munk);
-    for (int b = 0; b < N; b++) {
-      if (c(b) == 0) {
-        continue;
-      }
-      row(uidx[b][b]) += c(b) * c(b);
-      for (int bp = b + 1; bp < N; bp++) {
-        row(uidx[b][bp]) += T(2) * c(b) * c(bp);
-      }
-    }
-    return row;
-  };
-  // Radial rows: Hess(Q, H_b) = sum_{b'} q_{b'} beta_{b b'} = 0.
-  std::vector<MyVector<T>> radial_rows;
-  for (int b0 = 0; b0 < N; b0++) {
-    MyVector<T> row = ZeroVector<T>(Munk);
-    for (int bp = 0; bp < N; bp++) {
-      row(uidx[b0][bp]) += qc(bp);
-    }
-    radial_rows.push_back(row);
-  }
-  // We keep only a linearly independent set of equations (at most Munk rows),
-  // so the working matrix never grows without bound. A batch of candidate rows
-  // is appended and the set is re-reduced to independent rows via
-  // TMat_SelectRowCol; the radial rows are seeded first (rhs 0) and kept.
-  std::vector<MyVector<T>> indep_rows;
-  std::vector<T> indep_rhs;
-  auto reduce_indep = [&]() -> void {
-    int nb = static_cast<int>(indep_rows.size());
-    MyMatrix<T> A(nb, Munk);
-    for (int r = 0; r < nb; r++) {
-      A.row(r) = indep_rows[r].transpose();
-    }
-    SelectionRowCol<T> sel = TMat_SelectRowCol(A);
-    std::vector<MyVector<T>> nr;
-    std::vector<T> nrhs;
-    for (int idx : sel.ListRowSelect) {
-      nr.push_back(indep_rows[idx]);
-      nrhs.push_back(indep_rhs[idx]);
-    }
-    indep_rows = std::move(nr);
-    indep_rhs = std::move(nrhs);
-  };
-  for (auto &rr : radial_rows) {
-    indep_rows.push_back(rr);
-    indep_rhs.push_back(T(0));
-  }
-  reduce_indep();
-  // Append a batch of (row, value) candidates, keep an independent set, and
-  // return the resulting rank.
-  auto add_batch =
-      [&](std::vector<std::pair<MyVector<T>, T>> const &cand) -> int {
-    for (auto &pr : cand) {
-      indep_rows.push_back(pr.first);
-      indep_rhs.push_back(pr.second);
-    }
-    reduce_indep();
-    return static_cast<int>(indep_rows.size());
-  };
-  // The evaluated directions (coordinates, R), replayed at the end to check
-  // that the solved Hessian reproduces every measurement.
-  std::vector<std::pair<MyVector<T>, T>> evals;
-  // Aut(Q) generators and the box of integer vectors, classified into orbits.
+  os << "QHESS: n=" << n << " dim(Sym^n)=" << N << "\n";
+  HessianResult<T> res;
+  res.n = n;
+  res.N = N;
+  res.solved = false;
+  res.nbEval = 0;
+  res.nbBasis = 0;
+  res.beta = ZeroMatrix<T>(N, N);
+  res.radial_residual = T(0);
+  res.check_residual = T(0);
+  res.nbPlus = 0;
+  res.nbMinus = 0;
+  res.nbZero = 0;
+  // M(Q) and S = SecMoment(Q).
+  QuantizationResult<T> q0 = quant_at_gram<T, Tint, Tgroup>(Q, os);
+  MyMatrix<T> M0 = q0.SecMomentMat;
+  T S = q0.SecMoment;
   std::vector<MyMatrix<Tint>> autom =
       ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os);
   os << "QHESS: |Aut(Q) generators|=" << autom.size() << "\n";
-  std::vector<MyVector<Tint>> candidates;
+  // Phase A: a rank-one basis of Sym^n. Enumerate integer vectors in the box,
+  // sort by the deformation invariant v^T Q^{-1} v (smallest first, since that
+  // controls the cost and degree of the moment derivative), and greedily keep v
+  // whenever v v^T increases the rank of the family, until the v v^T span Sym^n.
+  // No derivatives here.
+  std::vector<MyVector<Tint>> cand;
   std::unordered_set<MyVector<Tint>> seen_cand;
   int range = 2 * bound + 1;
   long total = 1;
@@ -1018,187 +1000,159 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q, int bound,
     }
     MyVector<Tint> cv = sign_canonicalize_vector(v);
     if (seen_cand.insert(cv).second) {
-      candidates.push_back(cv);
+      cand.push_back(cv);
     }
   }
-  std::unordered_set<MyVector<Tint>> assigned;
-  struct OrbitRec {
-    MyVector<Tint> rep;
-    std::vector<MyVector<Tint>> members;
-    T invariant;
-  };
-  std::vector<OrbitRec> orbits;
-  for (auto &cand : candidates) {
-    if (assigned.count(cand) > 0) {
-      continue;
-    }
-    std::unordered_set<MyVector<Tint>> orb =
-        orbit_vector_deformation(autom, cand);
-    std::vector<MyVector<Tint>> members;
-    for (auto &w : orb) {
-      assigned.insert(w);
-      members.push_back(w);
-    }
-    MyVector<T> cand_T = UniversalVectorConversion<T, Tint>(cand);
-    T invariant = cand_T.dot(Qinv * cand_T);
-    orbits.push_back(OrbitRec{cand, members, invariant});
-  }
-  std::sort(orbits.begin(), orbits.end(),
-            [](OrbitRec const &a, OrbitRec const &b) -> bool {
-              return a.invariant < b.invariant;
-            });
-  os << "QHESS: " << orbits.size() << " rank-one orbits (|v_i|<=" << bound
-     << ")\n";
-  int nbEval = 0;
-  bool full = false;
-  // Phase 1: rank-one orbit seeds, evaluated by increasing invariant. Rank-one
-  // directions can only ever resolve the "quartic" part of the Hessian, so the
-  // rank saturates below Munk; we stop after a few consecutive orbits add
-  // nothing (plateau) rather than evaluating every orbit.
-  int prev_rank = static_cast<int>(indep_rows.size());
-  int no_gain = 0;
-  int const plateau_limit = 3;
-  for (auto &orb : orbits) {
-    MyVector<T> v_T = UniversalVectorConversion<T, Tint>(orb.rep);
-    MyMatrix<T> H = v_T * v_T.transpose();
-    DeformationDerivatives<T> der =
-        compute_deformation_derivatives<T, Tint, Tgroup>(Q, H, os);
-    T R = rational_hessian_value<T>(der, n);
-    nbEval++;
-    evals.push_back({sym_coords<T>(H, pairs), R});
-    std::vector<std::pair<MyVector<T>, T>> cand;
-    for (auto &w : orb.members) {
-      MyVector<T> w_T = UniversalVectorConversion<T, Tint>(w);
-      MyMatrix<T> Dw = w_T * w_T.transpose();
-      cand.push_back({row_from_coords(sym_coords<T>(Dw, pairs)), R});
-    }
-    int rk = add_batch(cand);
-    os << "QHESS: rank-one orbit vTQinvV=" << orb.invariant
-       << " |orbit|=" << orb.members.size() << " R=" << R << " rank=" << rk
-       << "/" << Munk << "\n";
-    if (rk == Munk) {
-      full = true;
+  std::stable_sort(
+      cand.begin(), cand.end(),
+      [&](MyVector<Tint> const &a, MyVector<Tint> const &b) -> bool {
+        MyVector<T> aT = UniversalVectorConversion<T, Tint>(a);
+        MyVector<T> bT = UniversalVectorConversion<T, Tint>(b);
+        return aT.dot(Qinv * aT) < bT.dot(Qinv * bT);
+      });
+  std::vector<MyVector<Tint>> basis;      // the chosen v_k
+  std::vector<std::vector<T>> basis_rows; // GetLineVector(v_k v_k^T)
+  for (auto &v : cand) {
+    if (static_cast<int>(basis.size()) == N) {
       break;
     }
-    if (rk == prev_rank) {
-      no_gain++;
-    } else {
-      no_gain = 0;
-      prev_rank = rk;
+    MyVector<T> vT = UniversalVectorConversion<T, Tint>(v);
+    MyMatrix<T> B = vT * vT.transpose();
+    std::vector<T> row = GetLineVector(B); // symmetric vectorization, length N
+    int cur = static_cast<int>(basis_rows.size());
+    MyMatrix<T> Test(cur + 1, N);
+    for (int r = 0; r < cur; r++) {
+      for (int c2 = 0; c2 < N; c2++) {
+        Test(r, c2) = basis_rows[r][c2];
+      }
     }
-    if (no_gain >= plateau_limit) {
-      os << "QHESS: rank-one plateau at rank=" << rk << "\n";
-      break;
+    for (int c2 = 0; c2 < N; c2++) {
+      Test(cur, c2) = row[c2];
+    }
+    if (RankMat(Test) == cur + 1) {
+      basis.push_back(v);
+      basis_rows.push_back(row);
     }
   }
-  // Phase 2: rank-two seeds E_ij + E_ji, expanded by the group, when rank-one
-  // directions cannot resolve the whole quadratic form.
-  if (!full) {
-    os << "QHESS: rank-one seeds insufficient; adding rank-two seeds\n";
-    std::vector<MyMatrix<Tint>> Gelts =
-        generate_group_elements<Tint>(autom, n, 800);
-    os << "QHESS: |group elements (capped)|=" << Gelts.size() << "\n";
-    for (int i = 0; i < n && !full; i++) {
-      for (int j = i + 1; j < n && !full; j++) {
-        MyMatrix<T> D = ZeroMatrix<T>(n, n);
-        D(i, j) = 1;
-        D(j, i) = 1;
-        DeformationDerivatives<T> der =
-            compute_deformation_derivatives<T, Tint, Tgroup>(Q, D, os);
-        T R = rational_hessian_value<T>(der, n);
-        nbEval++;
-        evals.push_back({sym_coords<T>(D, pairs), R});
-        std::vector<std::pair<MyVector<T>, T>> cand;
-        for (auto &g : Gelts) {
-          MyMatrix<T> g_T = UniversalMatrixConversion<T, Tint>(g);
-          MyMatrix<T> Dp = g_T * D * g_T.transpose();
-          cand.push_back({row_from_coords(sym_coords<T>(Dp, pairs)), R});
-        }
-        int rk = add_batch(cand);
-        os << "QHESS: rank-two seed (" << i << "," << j << ") R=" << R
-           << " rank=" << rk << "/" << Munk << "\n";
-        if (rk == Munk) {
-          full = true;
-        }
+  res.nbBasis = static_cast<int>(basis.size());
+  os << "QHESS: rank-one basis size=" << res.nbBasis << "/" << N << "\n";
+  if (res.nbBasis != N) {
+    os << "QHESS: WARNING v v^T do not span Sym^n with bound=" << bound
+       << " (increase HessianBound)\n";
+    return res;
+  }
+  // Phase B: DM[v_k v_k^T] for each basis vector, one evaluation per Aut(Q)
+  // orbit (others by the equivariance DM[(g v)(g v)^T] = g^{-T} DM[v v^T] g^{-1}).
+  std::unordered_map<MyVector<Tint>, std::pair<int, MyMatrix<Tint>>> covered;
+  std::vector<MyMatrix<T>> DM_reps;
+  std::vector<MyMatrix<T>> DM_basis(N);
+  for (int k = 0; k < N; k++) {
+    MyVector<Tint> v = basis[k];
+    auto it = covered.find(v);
+    if (it == covered.end()) {
+      MyVector<T> vT = UniversalVectorConversion<T, Tint>(v);
+      MyMatrix<T> B = vT * vT.transpose();
+      MyMatrix<T> DM = compute_moment_derivative<T, Tint, Tgroup>(Q, B, os);
+      res.nbEval++;
+      int rep_id = static_cast<int>(DM_reps.size());
+      DM_reps.push_back(DM);
+      for (auto &pr : orbit_elements<Tint>(autom, v)) {
+        covered[pr.first] = {rep_id, pr.second};
+      }
+      os << "QHESS: orbit rep v=" << StringVectorGAP(v)
+         << " vTQinvV=" << vT.dot(Qinv * vT) << " (eval " << res.nbEval << ")\n";
+      it = covered.find(v);
+    }
+    int rep_id = it->second.first;
+    MyMatrix<Tint> g = it->second.second; // v = sign_canon(g * rep)
+    MyMatrix<T> gT = UniversalMatrixConversion<T, Tint>(g);
+    MyMatrix<T> ginv = Inverse(gT);
+    DM_basis[k] = ginv.transpose() * DM_reps[rep_id] * ginv;
+  }
+  // Phase C: assemble the Hessian Gram matrix in the v_k v_k^T basis.
+  std::vector<MyVector<T>> vbasis(N);
+  for (int k = 0; k < N; k++) {
+    vbasis[k] = UniversalVectorConversion<T, Tint>(basis[k]);
+  }
+  T Tn(n);
+  MyMatrix<T> beta(N, N);
+  for (int k = 0; k < N; k++) {
+    T qk = vbasis[k].dot(Qinv * vbasis[k]);
+    T mk = vbasis[k].dot(M0 * vbasis[k]);
+    for (int l = 0; l < N; l++) {
+      T ql = vbasis[l].dot(Qinv * vbasis[l]);
+      T ml = vbasis[l].dot(M0 * vbasis[l]);
+      T qkl = vbasis[k].dot(Qinv * vbasis[l]);
+      T dm_kl = vbasis[k].dot(DM_basis[l] * vbasis[k]); // <B_k, DM[B_l]>
+      T val = dm_kl - (T(1) / Tn) * (qk * ml + ql * mk) +
+              (S / Tn) * qkl * qkl + (S / (Tn * Tn)) * qk * ql;
+      beta(k, l) = val;
+    }
+  }
+  // Symmetrize (the <B_k,DM[B_l]> term is symmetric in exact arithmetic).
+  MyMatrix<T> betaS(N, N);
+  for (int k = 0; k < N; k++) {
+    for (int l = 0; l < N; l++) {
+      betaS(k, l) = (beta(k, l) + beta(l, k)) / T(2);
+    }
+  }
+  res.beta = betaS;
+  res.solved = true;
+  // Radial check: the coordinates c of Q in the v_k v_k^T basis satisfy
+  // beta c = Hess(Q, .) = 0 at a critical point.
+  MyMatrix<T> Bmat(N, N);
+  for (int k = 0; k < N; k++) {
+    for (int r = 0; r < N; r++) {
+      Bmat(r, k) = basis_rows[k][r];
+    }
+  }
+  MyVector<T> qvec(N);
+  {
+    std::vector<T> qrow = GetLineVector(Q);
+    for (int r = 0; r < N; r++) {
+      qvec(r) = qrow[r];
+    }
+  }
+  MyMatrix<T> BmatT = Bmat.transpose();
+  std::optional<MyVector<T>> optc = SolutionMat(BmatT, qvec);
+  if (optc) {
+    MyVector<T> bc = betaS * (*optc);
+    for (int k = 0; k < N; k++) {
+      T av = bc(k) < 0 ? T(-bc(k)) : bc(k);
+      if (av > res.radial_residual) {
+        res.radial_residual = av;
       }
     }
   }
-  HessianResult<T> res;
-  res.n = n;
-  res.N = N;
-  res.nbEval = nbEval;
-  res.rank_reached = static_cast<int>(indep_rows.size());
-  res.solved = false;
-  res.with_radial = true;
-  res.beta = ZeroMatrix<T>(N, N);
-  res.radial_residual = T(0);
-  res.data_residual = T(0);
-  res.nbPlus = 0;
-  res.nbMinus = 0;
-  res.nbZero = 0;
-  if (!full) {
-    os << "QHESS: WARNING system underdetermined, rank=" << res.rank_reached
-       << "/" << Munk << " after " << nbEval << " evaluations\n";
-    return res;
-  }
-  // The independent set is now a square full-rank system (radial rows included),
-  // so it has a unique exact solution.
-  MyMatrix<T> A(Munk, Munk);
-  MyVector<T> b(Munk);
-  for (int r = 0; r < Munk; r++) {
-    A.row(r) = indep_rows[r].transpose();
-    b(r) = indep_rhs[r];
-  }
-  MyMatrix<T> AT = A.transpose();
-  std::optional<MyVector<T>> opt = SolutionMat(AT, b);
-  if (!opt) {
-    os << "QHESS: WARNING no exact solution found\n";
-    return res;
-  }
-  MyVector<T> u = *opt;
-  for (int b = 0; b < N; b++) {
-    for (int bp = b; bp < N; bp++) {
-      res.beta(b, bp) = u(uidx[b][bp]);
-      res.beta(bp, b) = u(uidx[b][bp]);
-    }
-  }
-  // Radial residual beta q (exactly 0 at a critical point).
-  MyVector<T> bq = res.beta * qc;
-  for (int b = 0; b < N; b++) {
-    T av = bq(b) < 0 ? T(-bq(b)) : bq(b);
-    if (av > res.radial_residual) {
-      res.radial_residual = av;
-    }
-  }
-  // Data residual: the solved Hessian must reproduce every measured R(D).
-  for (auto &pr : evals) {
-    MyVector<T> c = pr.first;
-    T val = c.dot(res.beta * c);
-    T av = val - pr.second;
-    if (av < 0) {
-      av = -av;
-    }
-    if (av > res.data_residual) {
-      res.data_residual = av;
-    }
-  }
-  if (res.data_residual != T(0) || res.radial_residual != T(0)) {
-    os << "QHESS: WARNING residuals nonzero (Q not critical?): radial="
-       << res.radial_residual << " data=" << res.data_residual << "\n";
-  }
-  DiagSymMat<T> diag = DiagonalizeSymmetricMatrix(res.beta, os);
+  // Signature.
+  DiagSymMat<T> diag = DiagonalizeSymmetricMatrix(betaS, os);
   res.nbPlus = diag.nbPlus;
   res.nbMinus = diag.nbMinus;
   res.nbZero = diag.nbZero;
-  res.solved = true;
   int mZero = res.nbZero > 0 ? res.nbZero - 1 : 0;
   os << "QHESS: full Sym^n signature (nbPlus,nbMinus,nbZero)=(" << res.nbPlus
      << "," << res.nbMinus << "," << res.nbZero << ")\n";
   os << "QHESS: Hessian signature on the m=" << (N - 1)
      << " dimensional space (nbPlus,nbMinus,nbZero)=(" << res.nbPlus << ","
      << res.nbMinus << "," << mZero << ")\n";
-  os << "QHESS: nbEval=" << nbEval << " radial_residual=" << res.radial_residual
-     << " data_residual=" << res.data_residual << "\n";
+  os << "QHESS: nbEval=" << res.nbEval
+     << " radial_residual=" << res.radial_residual << "\n";
+  // Independent cross-check: predict R for a held-out direction H = B_0 + B_1
+  // (coordinates e_0 + e_1) via beta, and compare with a direct scalar
+  // deformation computation along Q + t H.
+  if (N >= 2) {
+    MyMatrix<T> Ba = vbasis[0] * vbasis[0].transpose();
+    MyMatrix<T> Bb = vbasis[1] * vbasis[1].transpose();
+    MyMatrix<T> H = Ba + Bb;
+    T predicted = betaS(0, 0) + T(2) * betaS(0, 1) + betaS(1, 1);
+    DeformationDerivatives<T> der =
+        compute_deformation_derivatives<T, Tint, Tgroup>(Q, H, os);
+    T measured = rational_hessian_value<T>(der, n);
+    T diff = predicted - measured;
+    res.check_residual = diff < 0 ? T(-diff) : diff;
+    os << "QHESS: cross-check predicted=" << predicted
+       << " measured=" << measured << " residual=" << res.check_residual << "\n";
+  }
   return res;
 }
 
@@ -1208,10 +1162,9 @@ void WriteHessianGAP(std::ostream &os_out, HessianResult<T> const &res) {
   os_out << "return rec(n:=" << res.n << ", dimSpace:=" << res.N
          << ", dimHessian:=" << (res.N - 1) << ",\n";
   os_out << "solved:=" << (res.solved ? "true" : "false")
-         << ", usedRadial:=" << (res.with_radial ? "true" : "false")
-         << ", nbEval:=" << res.nbEval << ", rank:=" << res.rank_reached
+         << ", nbEval:=" << res.nbEval << ", nbBasis:=" << res.nbBasis
          << ", radialResidual:=" << res.radial_residual
-         << ", dataResidual:=" << res.data_residual << ",\n";
+         << ", checkResidual:=" << res.check_residual << ",\n";
   os_out << "signatureFull:=rec(nbPlus:=" << res.nbPlus
          << ", nbMinus:=" << res.nbMinus << ", nbZero:=" << res.nbZero
          << "),\n";
