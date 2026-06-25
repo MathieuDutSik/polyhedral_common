@@ -61,8 +61,8 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test the quantization deformation
         run: |
-          cd src_delaunay && make LATT_QuantizationDeformation && cd ..
-          echo "After compilation of LATT_QuantizationDeformation"
+          cd src_delaunay && make LATT_SerialComputeDelaunay && cd ..
+          echo "After compilation of LATT_SerialComputeDelaunay"
 
           cd CI_tests/33_QuantizationDeformation
           ../../gap.sh < TestQuantizationDeformation.g

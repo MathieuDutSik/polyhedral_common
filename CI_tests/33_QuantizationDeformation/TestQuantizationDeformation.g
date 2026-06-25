@@ -1,22 +1,43 @@
 Read("../common.g");
 Print("Beginning TestQuantizationDeformation\n");
 
-# Deformation of the quantizer along Q + t H. We test the E6 root lattice with
-# H = e1 e1^T, for which the exact answer is known:
+# Deformation of the quantizer along Q + t H, computed as a QUERIES option of
+# LATT_SerialComputeDelaunay (FileDeformation). The query value is the file
+# holding the symmetric direction H; the result is written to that file with the
+# suffix ".output". We test the E6 root lattice with H = e1 e1^T, for which the
+# exact answer is known:
 #   SecMoment(t) = (15/28 + 5/6 t + 1/9 t^2) / (1 + 4/3 t)
 #   SecMoment(0)=15/28, SecMoment'(0)=5/42, SecMoment''(0)=-2/21
 TestDeformation:=function(eRec)
-    local Q, H, TmpDir, FileQ, FileH, FileO, eProg, TheCommand, U, is_correct;
-    Q:=eRec.Q;
-    H:=eRec.H;
+    local TmpDir, FileQ, FileH, FileO, FileN, FileE, strOut, eProg, TheCommand,
+          U, is_correct;
     TmpDir:=DirectoryTemporary();
     FileQ:=Filename(TmpDir, "Q.in");
     FileH:=Filename(TmpDir, "H.in");
-    FileO:=Filename(TmpDir, "Out.g");
-    WriteMatrixFile(FileQ, Q);
-    WriteMatrixFile(FileH, H);
-    eProg:=GetBinaryFilename("LATT_QuantizationDeformation");
-    TheCommand:=Concatenation(eProg, " gmp ", FileQ, " ", FileH, " ", FileO);
+    FileO:=Concatenation(FileH, ".output");
+    FileN:=Filename(TmpDir, "Deform.nml");
+    FileE:=Filename(TmpDir, "Deform.err");
+    WriteMatrixFile(FileQ, eRec.Q);
+    WriteMatrixFile(FileH, eRec.H);
+    #
+    strOut:="&SYSTEM\n";
+    strOut:=Concatenation(strOut, " OutFormat = \"nothing\"\n");
+    strOut:=Concatenation(strOut, " OutFile = \"unset.out\"\n");
+    strOut:=Concatenation(strOut, " max_runtime_second = 0\n");
+    strOut:=Concatenation(strOut, "/\n\n");
+    strOut:=Concatenation(strOut, "&DATA\n");
+    strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
+    strOut:=Concatenation(strOut, " GRAMfile = \"", FileQ, "\"\n");
+    strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
+    strOut:=Concatenation(strOut, " CacheFile = \"none\"\n");
+    strOut:=Concatenation(strOut, "/\n\n");
+    strOut:=Concatenation(strOut, "&QUERIES\n");
+    strOut:=Concatenation(strOut, " FileDeformation = \"", FileH, "\"\n");
+    strOut:=Concatenation(strOut, "/\n");
+    WriteStringFile(FileN, strOut);
+    #
+    eProg:=GetBinaryFilename("LATT_SerialComputeDelaunay");
+    TheCommand:=Concatenation(eProg, " ", FileN, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
@@ -26,6 +47,7 @@ TestDeformation:=function(eRec)
     RemoveFile(FileQ);
     RemoveFile(FileH);
     RemoveFile(FileO);
+    RemoveFile(FileN);
     is_correct:=U.SecMoment0=eRec.SecMoment0
                 and U.SecMoment1=eRec.SecMoment1
                 and U.SecMoment2=eRec.SecMoment2
