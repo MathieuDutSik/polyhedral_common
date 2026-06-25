@@ -129,9 +129,9 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     std::ofstream os_out(FileDeformationOrbits);
     WriteDeformationOrbitsGAP(os_out, ores);
   }
-  // Hessian of the normalized quantizer constant G at Q and its signature,
-  // assembled from the orbit equations of the rank-one directions v v^T (with
-  // |v_i| <= HessianBound), plus rank-two seeds when needed.
+  // Hessian of the normalized quantizer constant G at Q and its signature, via
+  // the moment-derivative method on a rank-one basis v v^T built shell by shell
+  // of increasing dual norm v^T Q^{-1} v.
   std::string FileHessian = BlockQUERIES.get_string("FileHessian");
   if (FileHessian != "null") {
     HessianResult<T> hres =

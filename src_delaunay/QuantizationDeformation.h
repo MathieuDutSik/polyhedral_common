@@ -41,6 +41,10 @@
 #define DEBUG_QUANTIZATION_DEFORMATION
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_QUANTIZATION_DEFORMATION
+#endif
+
 // The common symmetry group Stab(Q) cap Stab(H), as a list of matrix
 // generators over T. Q must be positive definite (it is used to extract the
 // finite vector family).
@@ -1125,9 +1129,12 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
      << res.nbMinus << "," << mZero << ")\n";
   os << "QHESS: nbEval=" << res.nbEval
      << " radial_residual=" << res.radial_residual << "\n";
+#ifdef SANITY_CHECK_QUANTIZATION_DEFORMATION
   // Independent cross-check: predict R for a held-out direction H = B_0 + B_1
   // (coordinates e_0 + e_1) via beta, and compare with a direct scalar
-  // deformation computation along Q + t H.
+  // deformation computation along Q + t H. This costs an extra (expensive)
+  // deformation evaluation, so it is only done under SANITY_CHECK; an
+  // inconsistency is a hard error.
   if (N >= 2) {
     MyMatrix<T> Ba = vbasis[0] * vbasis[0].transpose();
     MyMatrix<T> Bb = vbasis[1] * vbasis[1].transpose();
@@ -1138,9 +1145,14 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
     T measured = rational_hessian_value<T>(der, n);
     T diff = predicted - measured;
     res.check_residual = diff < 0 ? T(-diff) : diff;
-    os << "QHESS: cross-check predicted=" << predicted
-       << " measured=" << measured << " residual=" << res.check_residual << "\n";
+    if (res.check_residual != T(0)) {
+      std::cerr << "QHESS: cross-check FAILED, the assembled Hessian disagrees "
+                   "with the direct deformation: predicted="
+                << predicted << " measured=" << measured << "\n";
+      throw TerminalException{1};
+    }
   }
+#endif
   return res;
 }
 
