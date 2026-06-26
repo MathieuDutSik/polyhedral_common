@@ -903,7 +903,6 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
     ListStringValues["FileDeformationOrbits"] = "null";
     ListStringValues["FileHessian"] = "null";
     std::map<std::string, int> ListIntValues;
-    ListIntValues["DeformationBound"] = 1;
     ListIntValues["DeformationNumberOrbit"] = 6;
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);

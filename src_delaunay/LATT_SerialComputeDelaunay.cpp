@@ -116,18 +116,42 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     std::ofstream os_out(FileDeformation + ".output");
     WriteDeformationGAP(os_out, der);
   }
-  // Orbit scan of the rank-one directions v v^T: G''(0) per orbit of integer
-  // vectors |v_i| <= DeformationBound under Aut(Q), first DeformationNumberOrbit
-  // orbits.
+  // Orbit scan of the rank-one directions v v^T: G''(0) for the first
+  // DeformationNumberOrbit orbits of integer vectors under Aut(Q), ordered by the
+  // invariant v^T Q^{-1} v. We get the orbit representatives shell by shell with
+  // get_k_short_orbit_vectors, enumerating by the (integer) dual norm
+  // v^T adj(Q) v = det(Q) v^T Q^{-1} v, then evaluate each one.
   std::string FileDeformationOrbits =
       BlockQUERIES.get_string("FileDeformationOrbits");
   if (FileDeformationOrbits != "null") {
-    int bound = BlockQUERIES.get_int("DeformationBound");
-    int Korb = BlockQUERIES.get_int("DeformationNumberOrbit");
-    DeformationOrbitResult<T, Tint> ores =
-        compute_deformation_orbits<T, Tint, Tgroup>(GramMat, bound, Korb, os);
+    size_t Korb = BlockQUERIES.get_int("DeformationNumberOrbit");
+    MyMatrix<T> Qinv = Inverse(GramMat);
+    MyMatrix<T> Qadj = DeterminantMat(GramMat) * Qinv; // adj(Q): integral, PD
+    std::vector<MyMatrix<Tint>> autom =
+        ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
+    std::vector<MyVector<Tint>> reps =
+        get_k_short_orbit_vectors<T, Tint>(Qadj, autom, Korb, os);
     std::ofstream os_out(FileDeformationOrbits);
-    WriteDeformationOrbitsGAP(os_out, ores);
+    os_out << "return rec(nbEvaluated:=" << reps.size() << ",\nListOrbit:=[";
+    bool IsFirst = true;
+    for (auto &v : reps) {
+      MyVector<T> v_T = UniversalVectorConversion<T, Tint>(v);
+      MyMatrix<T> H = v_T * v_T.transpose();
+      DeformationDerivatives<T> der =
+          compute_deformation_derivatives<T, Tint, Tgroup>(GramMat, H, os);
+      T invariant = v_T.dot(Qinv * v_T);
+      long orbit_size = orbit_vector_deformation(autom, v).size();
+      if (!IsFirst) {
+        os_out << ",\n";
+      }
+      IsFirst = false;
+      os_out << "rec(v:=" << StringVectorGAP(v) << ", OrbitSize:=" << orbit_size
+             << ", vTQinvV:=" << invariant << ", SecMoment0:=" << der.S0
+             << ", SecMoment2:=" << der.S2 << ", det0:=" << der.det0
+             << ", det1:=" << der.det1 << ", det2:=" << der.det2
+             << ", Gpp:=" << der.G2 << ")";
+    }
+    os_out << "]);\n";
   }
   // Hessian of the normalized quantizer constant G at Q and its signature, via
   // the moment-derivative method on a rank-one basis v v^T built shell by shell
