@@ -68,7 +68,7 @@ jobs:
 
           cd CI_tests/26B_Matrix_group_finiteness
           tar -vxzf Finiteness.tar.gz
-          ../../gap.sh TestFiniteness.g
+          ../../gap.sh TestGrpFiniteness.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1
