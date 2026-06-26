@@ -5,7 +5,6 @@
 // clang-format off
 #include "MAT_Matrix.h"
 #include "ExceptionsFunc.h"
-#include <optional>
 #include <ostream>
 #include <utility>
 #include <vector>
@@ -63,11 +62,11 @@ template <typename T> struct RationalFunc {
 // Reconstruct a rational function N(t)/den(t) where the denominator den (with
 // den(0) = 1) is known exactly and only the numerator polynomial N (of degree
 // <= max_degree) has to be interpolated. The numerator degree is increased until
-// extra held-out samples validate the fit. Returns nothing if no numerator of
-// degree <= max_degree fits, i.e. either the supplied denominator is wrong or
-// the numerator degree exceeds max_degree -- the caller decides how to react.
+// extra held-out samples validate the fit. Throws if no numerator of degree
+// <= max_degree fits, i.e. either the supplied denominator is wrong or the
+// numerator degree exceeds max_degree.
 template <typename T, typename Fsampler>
-std::optional<RationalFunc<T>>
+RationalFunc<T>
 reconstruct_rational_known_denominator(std::vector<T> const &tpool,
                                        Fsampler sampler, MyVector<T> const &den,
                                        int max_degree,
@@ -125,7 +124,10 @@ reconstruct_rational_known_denominator(std::vector<T> const &tpool,
       return RationalFunc<T>{P, den, d};
     }
   }
-  return {};
+  std::cerr << "POLY: known-denominator reconstruction failed: no numerator of "
+               "degree <= "
+            << max_degree << " fits (wrong denominator or degree too high)\n";
+  throw TerminalException{1};
 }
 
 // clang-format off

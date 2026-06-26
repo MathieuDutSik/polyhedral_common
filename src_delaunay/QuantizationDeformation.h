@@ -447,15 +447,9 @@ DeformationDerivatives<T> compute_deformation_derivatives(MyMatrix<T> const &Q,
   T detQ = detpoly(0);
   MyVector<T> den = detpoly / detQ;
   int max_degree = 4 * n;
-  std::optional<RationalFunc<T>> opt =
-      reconstruct_rational_known_denominator<T, decltype(sampler)>(
-          tpool, sampler, den, max_degree, os);
-  if (!opt) {
-    std::cerr << "QDEF: numerator degree exceeds max_degree=" << max_degree
-              << "\n";
-    throw TerminalException{1};
-  }
-  return deformation_derivatives<T>(*opt, detpoly, n);
+  RationalFunc<T> S = reconstruct_rational_known_denominator<T, decltype(sampler)>(
+      tpool, sampler, den, max_degree, os);
+  return deformation_derivatives<T>(S, detpoly, n);
 }
 
 // GAP-readable record of the deformation along Q + t H (exact rationals only;
@@ -719,16 +713,10 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
   for (int i = 0; i < n; i++) {
     for (int j = i; j < n; j++) {
       auto sampler = [&](T const &tt) -> T { return getM(tt)(i, j); };
-      std::optional<RationalFunc<T>> opt =
+      RationalFunc<T> Sf =
           reconstruct_rational_known_denominator<T, decltype(sampler)>(
               tpool, sampler, den2, max_degree, os);
-      if (!opt) {
-        std::cerr << "QDEF: moment-matrix entry (" << i << "," << j
-                  << ") not fit by denominator det^2 (numerator degree may "
-                     "exceed max_degree=" << max_degree << ")\n";
-        throw TerminalException{1};
-      }
-      T deriv = deformation_derivatives<T>(*opt, detpoly, n).S1;
+      T deriv = deformation_derivatives<T>(Sf, detpoly, n).S1;
       DM(i, j) = deriv;
       DM(j, i) = deriv;
     }
