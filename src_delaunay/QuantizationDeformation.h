@@ -291,9 +291,11 @@ bool vectors_equivalent(std::vector<MyMatrix<Tint>> const &gens,
 // exactly.
 // ---------------------------------------------------------------------------
 
-// The SecMoment of a concrete Gram matrix (a single sample).
+// The full quantization result (second moment S, second-moment matrix M, ...)
+// of the lattice with the given Gram matrix.
 template <typename T, typename Tint, typename Tgroup>
-T secmoment_at_gram(MyMatrix<T> const &GramMat, std::ostream &os) {
+QuantizationResult<T> quant_at_gram(MyMatrix<T> const &GramMat,
+                                    std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
   int dimEXT = GramMat.rows() + 1;
   PolyHeuristicSerial<TintGroup> AllArr =
@@ -302,9 +304,14 @@ T secmoment_at_gram(MyMatrix<T> const &GramMat, std::ostream &os) {
       GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
   DelaunayTesselation<T, Tgroup> DT =
       get_delaunay_tessellation_serial<T, Tint, Tgroup>(data, "none", 0, os);
-  QuantizationResult<T> q =
-      ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT, os);
-  return q.SecMoment;
+  return ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT, os);
+}
+
+// The SecMoment of a concrete Gram matrix (a single sample). The second moment
+// integral is the real object, so this just reads it off quant_at_gram.
+template <typename T, typename Tint, typename Tgroup>
+T secmoment_at_gram(MyMatrix<T> const &GramMat, std::ostream &os) {
+  return quant_at_gram<T, Tint, Tgroup>(GramMat, os).SecMoment;
 }
 
 // det(Q + t H) as an exact polynomial in t (degree <= n).
@@ -433,25 +440,22 @@ DeformationDerivatives<T> compute_deformation_derivatives(MyMatrix<T> const &Q,
     return secmoment_at_gram<T, Tint, Tgroup>(G, os);
   };
   MyVector<T> detpoly = det_polynomial<T>(Q, H);
-  // The denominator of SecMoment(t) is det(Q + t H)/det(Q) (degree <= n, with
-  // constant term 1). Interpolate only the numerator polynomial; this halves
-  // the number of (expensive) samples. Fall back to a full rational fit if the
-  // denominator turns out not to be det.
+  // The denominator of SecMoment(t) is exactly det(Q + t H)/det(Q) (degree <= n,
+  // constant term 1), so we only interpolate the numerator polynomial. A nullopt
+  // therefore cannot mean "wrong denominator" -- it can only mean the numerator
+  // degree exceeds max_degree, i.e. max_degree is too small.
   T detQ = detpoly(0);
   MyVector<T> den = detpoly / detQ;
   int max_degree = 4 * n;
   std::optional<RationalFunc<T>> opt =
       reconstruct_rational_known_denominator<T, decltype(sampler)>(
           tpool, sampler, den, max_degree, os);
-  if (opt) {
-    return deformation_derivatives<T>(*opt, detpoly, n);
+  if (!opt) {
+    std::cerr << "QDEF: numerator degree exceeds max_degree=" << max_degree
+              << "\n";
+    throw TerminalException{1};
   }
-  os << "QDEF: denominator is not det(Q+tH); falling back to full rational "
-        "reconstruction\n";
-  RationalFunc<T> S =
-      reconstruct_rational<T, decltype(sampler)>(tpool, sampler, max_degree,
-                                                  os);
-  return deformation_derivatives<T>(S, detpoly, n);
+  return deformation_derivatives<T>(*opt, detpoly, n);
 }
 
 // GAP-readable record of the deformation along Q + t H (exact rationals only;
@@ -600,26 +604,46 @@ void WriteDeformationOrbitsGAP(std::ostream &os_out,
 // Hessian of the normalized quantizer constant G at the point Q.
 //
 // G is scale invariant, so it lives on the (n(n+1)/2 - 1)-dimensional space of
-// forms modulo scaling. We compute its Hessian as a quadratic form on Sym^n via
-// the derivative of the second-moment matrix M(Q) = \int u u^T (the SecMomentMat
-// of the quantization integral). Writing S = SecMoment(Q), A_i = Q^{-1} H_i, the
-// (rational) Hessian bilinear form -- equal to G''(0) along Q + t H up to the
-// universal positive factor (1/n) det(Q)^{-1/n}, hence with the same signature --
-// is
+// forms modulo scaling. Its Hessian is a quadratic form on Sym^n; we want the
+// full symmetric bilinear form Hess(H1,H2) (to read off its signature), not just
+// the diagonal directional second derivatives.
+//
+// WHY THE SECOND-MOMENT *MATRIX* is used (the initially surprising part).
+// The naive route takes the scalar second derivative R(H) = G''(0) along Q + tH
+// -- that is the diagonal Hess(H,H) -- for many rank-one directions H = v v^T,
+// and polarizes. This cannot work: R(v v^T) is a quartic polynomial in v, so the
+// rank-one scalar values, for ALL integer v at once, span only the space of
+// quartics (dimension C(n+3,4) = 126 for n=6), far short of the
+// C(n(n+1)/2 + 1, 2) = 231 coefficients of the Hessian. The reconstruction
+// plateaus (the "147 = 126 + 21" wall) and the off-Veronese part of the Hessian
+// is simply invisible to rank-one scalar second derivatives.
+//
+// The way out is to differentiate the second-moment MATRIX itself,
+//   M(Q) = \int_{V_0(Q)} u u^T du   (the SecMomentMat of the quantization),
+//   DM[H] = d/dt M(Q + t H) |_{t=0}.
+// Unlike the scalar R, the map H |-> DM[H] is *linear*, hence determined by its
+// values on a basis of Sym^n -- and a basis of rank-one forms v v^T suffices,
+// because each DM[v v^T] is a whole matrix (a full ROW of the Hessian), not one
+// number. So rank-one directions DO determine everything; there is no quartic
+// plateau.
+//
+// With M = M(Q), S = SecMoment(Q) = tr(Q M) and A_i = Q^{-1} H_i, the Hessian
+// (rational; equal to G''(0) up to the positive factor (1/n) det(Q)^{-1/n}, so
+// with the same signature) is the polarization
 //
 //   R(H1,H2) = <H1, DM[H2]>
 //              - (1/n)[ (tr A1) tr(M H2) + (tr A2) tr(M H1) ]
-//              + (S/n) tr(A1 A2) + (S/n^2)(tr A1)(tr A2),
+//              + (S/n) tr(A1 A2) + (S/n^2)(tr A1)(tr A2).
 //
-// where DM[H] = d/dt M(Q + t H)|_0. The crucial point is that DM is *linear* in
-// H, so it is determined by its values on a basis of Sym^n; a basis made of
-// rank-one forms v v^T (v short integer vectors) suffices -- there is no need to
-// evaluate higher-rank directions, and the 147-type plateau of the scalar method
-// does not arise. For rank-one directions everything simplifies:
-// <v v^T, DM> = v^T DM v, tr(M v v^T) = v^T M v, tr A = v^T Q^{-1} v, and
+// For rank-one directions everything simplifies: <v v^T, DM> = v^T DM v,
+// tr(M v v^T) = v^T M v, tr A = v^T Q^{-1} v, and
 // tr(Q^{-1} v v^T Q^{-1} w w^T) = (v^T Q^{-1} w)^2. Aut(Q) acts by v -> g v and
-// DM transforms equivariantly, DM[(g v)(g v)^T] = g^{-T} DM[v v^T] g^{-1}, so a
-// single matrix-derivative evaluation per orbit suffices.
+// DM is equivariant, DM[(g v)(g v)^T] = g^{-T} DM[v v^T] g^{-1}, so one
+// matrix-derivative evaluation per Aut(Q)-orbit determines DM on the whole orbit
+// (for E6/E7 a single orbit of short vectors already spans Sym^n -> one
+// evaluation). Each DM[v v^T] is obtained (in compute_moment_derivative) by
+// interpolating M(Q + t v v^T) entrywise, each entry having the known
+// denominator det(Q + t v v^T)^2.
 // ---------------------------------------------------------------------------
 
 // The rational value R(H) = G''(0) / ((1/n) det(Q)^{-1/n}) from the scalar
@@ -643,22 +667,6 @@ T rational_hessian_value(DeformationDerivatives<T> const &der, int n) {
          ((Tn + T(1)) / (Tn * Tn)) * r1 * r1 * S;
 }
 
-// The full quantization result (second moment S and second-moment matrix M) of
-// the lattice with the given Gram matrix.
-template <typename T, typename Tint, typename Tgroup>
-QuantizationResult<T> quant_at_gram(MyMatrix<T> const &GramMat,
-                                    std::ostream &os) {
-  using TintGroup = typename Tgroup::Tint;
-  int dimEXT = GramMat.rows() + 1;
-  PolyHeuristicSerial<TintGroup> AllArr =
-      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
-  DataLattice<T, Tint, Tgroup> data =
-      GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
-  DelaunayTesselation<T, Tgroup> DT =
-      get_delaunay_tessellation_serial<T, Tint, Tgroup>(data, "none", 0, os);
-  return ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT, os);
-}
-
 // DM[B] = d/dt M(Q + t B)|_0, the derivative of the second-moment matrix along
 // the ray Q + t B. Same machinery as compute_deformation_derivatives (iso-
 // Delaunay segment, sampling, exact interpolation) but interpolating each entry
@@ -680,7 +688,21 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
   }
   MyVector<T> detpoly = det_polynomial<T>(Q, B);
   T detQ = detpoly(0);
-  MyVector<T> den = detpoly / detQ;
+  MyVector<T> den = detpoly / detQ; // det(Q+tB)/det(Q), constant term 1
+  // Each entry M_ij(t) of the second-moment matrix has denominator
+  // (det(Q+tB)/det(Q))^2: the Voronoi-cell vertices (Delaunay circumcenters,
+  // solutions of a linear system in Q+tB) carry denominator det(Q+tB), and the
+  // moment u_i u_j integrated over the (unit-volume) cell is quadratic in those
+  // vertices, hence det^2. Only the contraction tr((Q+tB) M) = SecMoment(t)
+  // collapses back to a single det. So we interpolate each entry with the known
+  // denominator den^2 = (det(Q+tB)/det(Q))^2. (Verified exactly on A3/E6/A6/D6.)
+  int dl = den.size();
+  MyVector<T> den2 = ZeroVector<T>(2 * dl - 1);
+  for (int a = 0; a < dl; a++) {
+    for (int b = 0; b < dl; b++) {
+      den2(a + b) += den(a) * den(b);
+    }
+  }
   int max_degree = 4 * n;
   // Lazy cache of the (expensive) matrix samples M(Q + t B).
   std::map<T, MyMatrix<T>> mcache;
@@ -699,16 +721,14 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
       auto sampler = [&](T const &tt) -> T { return getM(tt)(i, j); };
       std::optional<RationalFunc<T>> opt =
           reconstruct_rational_known_denominator<T, decltype(sampler)>(
-              tpool, sampler, den, max_degree, os);
-      RationalFunc<T> Sf = [&]() -> RationalFunc<T> {
-        if (opt) {
-          return *opt;
-        } else {
-          return reconstruct_rational<T, decltype(sampler)>(
-            tpool, sampler, max_degree, os);
-        }
-      }();
-      T deriv = deformation_derivatives<T>(Sf, detpoly, n).S1;
+              tpool, sampler, den2, max_degree, os);
+      if (!opt) {
+        std::cerr << "QDEF: moment-matrix entry (" << i << "," << j
+                  << ") not fit by denominator det^2 (numerator degree may "
+                     "exceed max_degree=" << max_degree << ")\n";
+        throw TerminalException{1};
+      }
+      T deriv = deformation_derivatives<T>(*opt, detpoly, n).S1;
       DM(i, j) = deriv;
       DM(j, i) = deriv;
     }
