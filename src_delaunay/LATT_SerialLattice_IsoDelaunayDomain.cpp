@@ -26,8 +26,6 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
-  std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
-  CreateDirectory(STORAGE_Prefix);
   //
   std::string FileDualDesc = BlockDATA.get_string("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =

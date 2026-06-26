@@ -56,11 +56,7 @@ std::vector<MyMatrix<T>> compute_qh_symmetry_gens(MyMatrix<T> const &Q,
   std::vector<MyMatrix<T>> ListMat{Q, H};
   std::vector<MyMatrix<Tint>> gens_i =
       ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);
-  std::vector<MyMatrix<T>> gens_T;
-  for (auto &g : gens_i) {
-    gens_T.push_back(UniversalMatrixConversion<T, Tint>(g));
-  }
-  return gens_T;
+  return UniversalStdVectorMatrixConversion<T,Tint>(gens_i);
 }
 
 // The T-space of the forms invariant under the symmetry group generators. We
@@ -704,14 +700,15 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
       std::optional<RationalFunc<T>> opt =
           reconstruct_rational_known_denominator<T, decltype(sampler)>(
               tpool, sampler, den, max_degree, os);
-      T deriv;
-      if (opt) {
-        deriv = deformation_derivatives<T>(*opt, detpoly, n).S1;
-      } else {
-        RationalFunc<T> Sf = reconstruct_rational<T, decltype(sampler)>(
+      RationalFunc<T> Sf = [&]() -> RationalFunc<T> {
+        if (opt) {
+          return *opt;
+        } else {
+          return reconstruct_rational<T, decltype(sampler)>(
             tpool, sampler, max_degree, os);
-        deriv = deformation_derivatives<T>(Sf, detpoly, n).S1;
-      }
+        }
+      }();
+      T deriv = deformation_derivatives<T>(Sf, detpoly, n).S1;
       DM(i, j) = deriv;
       DM(j, i) = deriv;
     }
@@ -806,12 +803,7 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   std::vector<MyVector<Tint>> basis;   // the chosen v_k
   std::vector<MyVector<T>> basis_rows; // SymmetricMatrixToVector(v_k v_k^T)
   std::unordered_set<MyVector<Tint>> seen_cand;
-  int shell = 0;
-  int const max_shell = 100000; // safety guard; termination is guaranteed
   while (static_cast<int>(basis.size()) < N) {
-    if (++shell > max_shell) {
-      break;
-    }
     std::vector<MyVector<Tint>> ListVect = solver.fixed_norm_vectors(norm);
     for (auto &v0 : ListVect) {
       if (static_cast<int>(basis.size()) == N) {
@@ -840,10 +832,6 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   res.nbBasis = static_cast<int>(basis.size());
   os << "QHESS: rank-one basis size=" << res.nbBasis << "/" << N
      << " (max dual norm " << (norm - incr) << ")\n";
-  if (res.nbBasis != N) {
-    os << "QHESS: WARNING v v^T do not span Sym^n (shell guard hit)\n";
-    return res;
-  }
   // Phase B: DM[v_k v_k^T] for each basis vector, one evaluation per Aut(Q)
   // orbit (others by the equivariance DM[(g v)(g v)^T] = g^{-T} DM[v v^T] g^{-1}).
   std::unordered_map<MyVector<Tint>, std::pair<int, MyMatrix<Tint>>> covered;
