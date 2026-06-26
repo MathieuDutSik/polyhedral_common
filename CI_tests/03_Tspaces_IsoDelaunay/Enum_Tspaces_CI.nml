@@ -2,7 +2,7 @@
  max_runtime_second = 0
  ApplyStdUnitbuf = T
  Saving = F
- Prefix = "/irrelevant/"
+ Prefix = "/tmp/Enum_Tspaces_CI/"
  OutFile = "Result"
  OutFormat = "NumberGAP"
 /

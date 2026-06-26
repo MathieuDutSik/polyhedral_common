@@ -447,6 +447,20 @@ reconstruct_secmoment_known_denominator(std::vector<T> const &tpool,
       }
     }
     if (ok) {
+#ifdef SANITY_CHECK_QUANTIZATION_DEFORMATION
+      // Further validation: the interpolated numerator must reproduce every
+      // remaining sample of the pool exactly, not only the nval held out for
+      // acceptance. Each further value is an extra (expensive) evaluation.
+      for (int i = N + nval; i < static_cast<int>(tpool.size()); i++) {
+        std::pair<T, T> pr = get(i);
+        if (eval_poly(P, pr.first) != pr.second) {
+          std::cerr << "QDEF: known-denominator interpolation SANITY_CHECK "
+                       "FAILED at t="
+                    << pr.first << " (degree " << d << ")\n";
+          throw TerminalException{1};
+        }
+      }
+#endif
 #ifdef DEBUG_QUANTIZATION_DEFORMATION
       os << "QDEF: numerator (known denominator) converged at degree=" << d
          << "\n";
@@ -499,6 +513,19 @@ RationalFunc<T> reconstruct_secmoment(std::vector<T> const &tpool,
       }
     }
     if (ok) {
+#ifdef SANITY_CHECK_QUANTIZATION_DEFORMATION
+      // Further validation: the interpolated rational function must reproduce
+      // every remaining sample of the pool exactly, not only the nval held out
+      // for acceptance. Each further value is an extra (expensive) evaluation.
+      for (int i = N + nval; i < static_cast<int>(tpool.size()); i++) {
+        std::pair<T, T> pr = get(i);
+        if (eval_poly(P, pr.first) != pr.second * eval_poly(D, pr.first)) {
+          std::cerr << "QDEF: rational interpolation SANITY_CHECK FAILED at t="
+                    << pr.first << " (degree " << d << ")\n";
+          throw TerminalException{1};
+        }
+      }
+#endif
 #ifdef DEBUG_QUANTIZATION_DEFORMATION
       os << "QDEF: reconstruct_secmoment converged at degree=" << d << "\n";
 #endif
@@ -988,8 +1015,8 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   CVPSolver<T, Tint> solver(Qadj, os);
   T incr = GetSmallestIncrement(Qadj);
   T norm = incr;
-  std::vector<MyVector<Tint>> basis;      // the chosen v_k
-  std::vector<std::vector<T>> basis_rows; // GetLineVector(v_k v_k^T)
+  std::vector<MyVector<Tint>> basis;   // the chosen v_k
+  std::vector<MyVector<T>> basis_rows; // SymmetricMatrixToVector(v_k v_k^T)
   std::unordered_set<MyVector<Tint>> seen_cand;
   int shell = 0;
   int const max_shell = 100000; // safety guard; termination is guaranteed
@@ -1008,17 +1035,13 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
       }
       MyVector<T> vT = UniversalVectorConversion<T, Tint>(v);
       MyMatrix<T> B = vT * vT.transpose();
-      std::vector<T> row = GetLineVector(B); // symmetric vectorization, length N
+      MyVector<T> row = SymmetricMatrixToVector(B); // length N
       int cur = static_cast<int>(basis_rows.size());
       MyMatrix<T> Test(cur + 1, N);
       for (int r = 0; r < cur; r++) {
-        for (int c2 = 0; c2 < N; c2++) {
-          Test(r, c2) = basis_rows[r][c2];
-        }
+        Test.row(r) = basis_rows[r].transpose();
       }
-      for (int c2 = 0; c2 < N; c2++) {
-        Test(cur, c2) = row[c2];
-      }
+      Test.row(cur) = row.transpose();
       if (RankMat(Test) == cur + 1) {
         basis.push_back(v);
         basis_rows.push_back(row);
@@ -1091,21 +1114,13 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   res.beta = betaS;
   res.solved = true;
   // Radial check: the coordinates c of Q in the v_k v_k^T basis satisfy
-  // beta c = Hess(Q, .) = 0 at a critical point.
-  MyMatrix<T> Bmat(N, N);
+  // beta c = Hess(Q, .) = 0 at a critical point. We solve sum_k c_k vec(B_k) =
+  // vec(Q) with vec = SymmetricMatrixToVector (BmatT has row k = vec(B_k)).
+  MyMatrix<T> BmatT(N, N);
   for (int k = 0; k < N; k++) {
-    for (int r = 0; r < N; r++) {
-      Bmat(r, k) = basis_rows[k][r];
-    }
+    BmatT.row(k) = basis_rows[k].transpose();
   }
-  MyVector<T> qvec(N);
-  {
-    std::vector<T> qrow = GetLineVector(Q);
-    for (int r = 0; r < N; r++) {
-      qvec(r) = qrow[r];
-    }
-  }
-  MyMatrix<T> BmatT = Bmat.transpose();
+  MyVector<T> qvec = SymmetricMatrixToVector(Q);
   std::optional<MyVector<T>> optc = SolutionMat(BmatT, qvec);
   if (optc) {
     MyVector<T> bc = betaS * (*optc);

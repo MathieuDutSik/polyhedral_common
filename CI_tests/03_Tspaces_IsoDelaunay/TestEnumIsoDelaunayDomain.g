@@ -21,7 +21,7 @@ end;
 # Reading the files from the storage
 # It is fixed because we do not want to change them
 read_existing_file:=function(eFile)
-    local is, SuperMat, ListMat_pre, ListMat, ListComm, ListSubspaces, PtStabGens, l_spanning_elements, PairwiseScalarInv;
+    local is, SuperMat, ListMat_pre, ListMat, ListComm, ListSubspaces, PtStabGens, l_spanning_elements, l_outer_elements, PairwiseScalarInv;
     is:=InputTextFile(eFile);
     SuperMat:=InputStreamMatrix(is);
     ListMat_pre:=InputStreamListMatrix(is);
@@ -30,8 +30,9 @@ read_existing_file:=function(eFile)
     ListSubspaces:=InputStreamListMatrix(is);
     PtStabGens:=InputStreamListMatrix(is);
     l_spanning_elements:=[];
+    l_outer_elements:=[];
     PairwiseScalarInv:=get_pairwise_scalar_inv(ListMat, SuperMat);
-    return rec(SuperMat:=SuperMat, ListMat:=ListMat, ListComm:=ListComm, ListSubspaces:=ListSubspaces, PtStabGens:=PtStabGens, l_spanning_elements:=l_spanning_elements, PairwiseScalarInv:=PairwiseScalarInv);
+    return rec(SuperMat:=SuperMat, ListMat:=ListMat, ListComm:=ListComm, ListSubspaces:=ListSubspaces, PtStabGens:=PtStabGens, l_spanning_elements:=l_spanning_elements, l_outer_elements:=l_outer_elements, PairwiseScalarInv:=PairwiseScalarInv);
 end;
 
 
@@ -45,6 +46,7 @@ write_linear_space_input:=function(eFile, RecLinSpa)
     OutputStreamListMatrix(os, RecLinSpa.ListSubspaces);
     OutputStreamListMatrix(os, RecLinSpa.PtStabGens);
     OutputStreamListMatrix(os, RecLinSpa.l_spanning_elements);
+    OutputStreamListMatrix(os, RecLinSpa.l_outer_elements);
     OutputStreamMatrix(os, RecLinSpa.PairwiseScalarInv);
     CloseStream(os);
 end;
