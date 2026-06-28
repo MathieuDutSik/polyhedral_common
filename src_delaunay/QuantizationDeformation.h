@@ -8,8 +8,8 @@
 #include "LatticeStabEquiCan.h"
 #include "QuantizationIntegral.h"
 #include "polynomial.h"
+#include "jet.h"
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <map>
 #include <optional>
@@ -375,61 +375,39 @@ template <typename T>
 DeformationDerivatives<T> deformation_derivatives(RationalFunc<T> const &S,
                                                   MyVector<T> const &detpoly,
                                                   int n) {
-  // Order-2 jets in t (arrays [c0, c1, c2]) over T.
-  auto jet_of_poly = [](MyVector<T> const &C) -> std::array<T, 3> {
-    std::array<T, 3> j{T(0), T(0), T(0)};
-    for (int i = 0; i < C.size() && i < 3; i++) {
-      j[i] = C(i);
-    }
-    return j;
-  };
-  auto jet_mul = [](std::array<T, 3> const &a,
-                    std::array<T, 3> const &b) -> std::array<T, 3> {
-    return {a[0] * b[0], a[0] * b[1] + a[1] * b[0],
-            a[0] * b[2] + a[1] * b[1] + a[2] * b[0]};
-  };
-  // Inverse of a jet with non-zero constant term: 1/(d0 + d1 t + d2 t^2).
-  auto jet_inv = [](std::array<T, 3> const &d) -> std::array<T, 3> {
-    T i0 = T(1) / d[0];
-    T i1 = -d[1] * i0 * i0;
-    T i2 = (d[1] * d[1] - d[0] * d[2]) * i0 * i0 * i0;
-    return {i0, i1, i2};
-  };
-  std::array<T, 3> Pj = jet_of_poly(S.P);
-  std::array<T, 3> Dj = jet_of_poly(S.D);
-  std::array<T, 3> Sj = jet_mul(Pj, jet_inv(Dj));
+  // We need up to the second derivative, so order-2 jets in t suffice. Recall a
+  // jet's coefficient of t^k is the k-th Taylor coefficient (the k-th derivative
+  // divided by k!), hence the factor 2 below for the second derivatives.
+  int order = 2;
+  // Exact jet of SecMoment(t) = P(t) / D(t) at t = 0, over T.
+  Jet<T> Pj = jet_from_poly(S.P, order);
+  Jet<T> Dj = jet_from_poly(S.D, order);
+  Jet<T> Sj = Pj * jet_inverse(Dj);
   DeformationDerivatives<T> res;
-  res.S0 = Sj[0];
-  res.S1 = Sj[1];
-  res.S2 = T(2) * Sj[2];
+  res.S0 = Sj.coeffs[0];
+  res.S1 = Sj.coeffs[1];
+  res.S2 = T(2) * Sj.coeffs[2];
   res.secmoment_degree = S.degree;
   res.secmoment_num = S.P;
   res.secmoment_den = S.D;
   res.det0 = detpoly.size() > 0 ? detpoly(0) : T(0);
   res.det1 = detpoly.size() > 1 ? detpoly(1) : T(0);
   res.det2 = detpoly.size() > 2 ? detpoly(2) : T(0);
-  // Numerical part: G(t) = (1/n) det(t)^(-1/n) S(t).
+  // Numerical part: the normalized quantizer G(t) = (1/n) det(t)^(-1/n) S(t),
+  // as a double jet (det^(-1/n) is irrational).
   double a = 1.0 / static_cast<double>(n);
-  double c0 = UniversalScalarConversion<double, T>(res.det0);
-  double c1 = UniversalScalarConversion<double, T>(res.det1);
-  double c2 = UniversalScalarConversion<double, T>(res.det2);
-  double s0 = UniversalScalarConversion<double, T>(Sj[0]);
-  double s1 = UniversalScalarConversion<double, T>(Sj[1]);
-  double s2 = UniversalScalarConversion<double, T>(Sj[2]);
-  // jet of det^(-a): c0^(-a) * (1 + r1 t + r2 t^2)^(-a), r1=c1/c0, r2=c2/c0.
-  double r1 = c1 / c0;
-  double r2 = c2 / c0;
-  double base = std::pow(c0, -a);
-  double d0 = base;
-  double d1 = base * (-a) * r1;
-  double d2 = base * ((-a) * r2 + (-a) * (-a - 1.0) / 2.0 * r1 * r1);
-  // jet of G = a * det^(-a) * S.
-  double g0 = a * (d0 * s0);
-  double g1 = a * (d0 * s1 + d1 * s0);
-  double g2 = a * (d0 * s2 + d1 * s1 + d2 * s0);
-  res.G0 = g0;
-  res.G1 = g1;
-  res.G2 = 2.0 * g2;
+  Jet<double> det_jet{order,
+                      {UniversalScalarConversion<double, T>(res.det0),
+                       UniversalScalarConversion<double, T>(res.det1),
+                       UniversalScalarConversion<double, T>(res.det2)}};
+  Jet<double> S_jet{order,
+                    {UniversalScalarConversion<double, T>(Sj.coeffs[0]),
+                     UniversalScalarConversion<double, T>(Sj.coeffs[1]),
+                     UniversalScalarConversion<double, T>(Sj.coeffs[2])}};
+  Jet<double> G_jet = jet_scalar_mult(a, jet_pow(det_jet, -a) * S_jet);
+  res.G0 = G_jet.coeffs[0];
+  res.G1 = G_jet.coeffs[1];
+  res.G2 = 2.0 * G_jet.coeffs[2];
   return res;
 }
 
