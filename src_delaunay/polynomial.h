@@ -34,6 +34,21 @@ template <typename T> T eval_poly(MyVector<T> const &C, T const &t) {
   return s;
 }
 
+// Product of two polynomials given by their coefficient vectors (c0 + c1 t +
+// ...). The result has degree deg(A) + deg(B).
+template <typename T>
+MyVector<T> poly_product(MyVector<T> const &A, MyVector<T> const &B) {
+  int da = A.size();
+  int db = B.size();
+  MyVector<T> C = ZeroVector<T>(da + db - 1);
+  for (int a = 0; a < da; a++) {
+    for (int b = 0; b < db; b++) {
+      C(a + b) += A(a) * B(b);
+    }
+  }
+  return C;
+}
+
 // Interpolate the polynomial of degree <= deg through the points (t_k, v_k).
 template <typename T>
 MyVector<T> poly_from_values(std::vector<T> const &ts, std::vector<T> const &vs,

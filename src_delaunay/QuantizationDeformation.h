@@ -503,13 +503,7 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
   // vertices, hence det^2. Only the contraction tr((Q+tB) M) = SecMoment(t)
   // collapses back to a single det. So we interpolate each entry with the known
   // denominator den^2 = (det(Q+tB)/det(Q))^2. (Verified exactly on A3/E6/A6/D6.)
-  int dl = den.size();
-  MyVector<T> den2 = ZeroVector<T>(2 * dl - 1);
-  for (int a = 0; a < dl; a++) {
-    for (int b = 0; b < dl; b++) {
-      den2(a + b) += den(a) * den(b);
-    }
-  }
+  MyVector<T> den2 = poly_product(den, den);
   int max_degree = 4 * n;
   // Lazy cache of the (expensive) matrix samples M(Q + t B).
   std::map<T, MyMatrix<T>> mcache;
