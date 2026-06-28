@@ -149,18 +149,6 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
     }
     return s;
   };
-  // A defining inequality whose T-space projection is the zero functional does
-  // not constrain the segment (this happens for degenerate directions, e.g. H
-  // proportional to Q where Q + t H is a pure rescaling): such an inequality
-  // must be ignored rather than read as a wall.
-  auto is_zero = [](MyVector<T> const &v) -> bool {
-    for (int i = 0; i < v.size(); i++) {
-      if (v(i) != 0) {
-        return false;
-      }
-    }
-    return true;
-  };
   T t = t_init;
   T two(2);
   int n_iter = 0;
@@ -207,8 +195,11 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
     std::vector<MyVector<T>> oriented;
     bool probe_generic = true;
     for (auto &fai : ListIneq) {
-      if (is_zero(fai.eIneq)) {
-        continue;
+      if (IsZeroVector(fai.eIneq)) {
+        std::cerr << "QDEF: a defining inequality of the iso-Delaunay domain is "
+                     "zero in the T-space; with a generic probe in span{Q,H} "
+                     "every entry of ListIneq must be a non-zero wall\n";
+        throw TerminalException{1};
       }
       T s = dotprod(fai.eIneq, c_probe);
       if (s == 0) {
