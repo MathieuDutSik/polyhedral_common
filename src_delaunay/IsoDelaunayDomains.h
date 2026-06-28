@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <map>
 #include <memory>
+#include <set>
 #include <utility>
 #include <limits>
 // clang-format on
@@ -34,6 +35,9 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_ISO_DELAUNAY_DOMAIN
+#define SANITY_CHECK_MULTIPLE_INEQUALITY
+#define SANITY_CHECK_DELAUNAY_INTERSECTION
+#define SANITY_CHECK_DELAUNAY_NO_EQUALITY
 #endif
 
 template <typename T, typename Tint, typename Tgroup>
@@ -371,11 +375,93 @@ std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(
     VoronoiInequalityPreComput<T> vipc =
         BuildVoronoiIneqPreCompute<T>(DT.l_dels[i_del].EXT, os);
     ContainerMatrix<T> cont(DT.l_dels[i_del].EXT);
+#ifdef SANITY_CHECK_DELAUNAY_NO_EQUALITY
+    // A Delaunay polytope of a generic form of the T-space must be co-spherical
+    // throughout the T-space: every non-basis vertex must give the zero Voronoi
+    // regulator. A non-zero one means the polytope is co-spherical only on a
+    // wall, i.e. the form lies on an iso-Delaunay wall (it is not generic) --
+    // exactly what makes the defining inequalities ill-defined.
+    {
+      MyMatrix<T> const &EXTcur = DT.l_dels[i_del].EXT;
+      int n_row_cur = EXTcur.rows();
+      for (int i_row = 0; i_row < n_row_cur; i_row++) {
+        if (vipc.f_basis[i_row] == 0) {
+          MyVector<T> TheVert = GetMatrixRow(EXTcur, i_row);
+          MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, ListGram, os);
+          if (!IsZeroVector(V)) {
+            std::cerr << "DELAUNAY_NO_EQUALITY: SANITY_CHECK failed: Delaunay "
+                         "polytope i_del=" << i_del << " induces an equality "
+                         "in the T-space (non-basis vertex regulator V="
+                      << StringVectorGAP(V) << " is non-zero); the form is on "
+                         "an iso-Delaunay wall, not generic\n";
+            throw TerminalException{1};
+          }
+        }
+      }
+    }
+#endif
     auto get_ineq = [&](int const &i_adj) -> MyVector<T> {
       Delaunay_AdjO<T> const &adj = DT.l_dels[i_del].ListAdj[i_adj];
       int j_del = adj.iOrb;
       MyMatrix<T> EXTadj = DT.l_dels[j_del].EXT * adj.eBigMat;
       int len = EXTadj.rows();
+#ifdef SANITY_CHECK_DELAUNAY_INTERSECTION
+      // The current polytope and the adjacent one EXTadj must share a facet, so
+      // the vertices common to both span a hyperplane: as homogeneous vectors
+      // they must have rank exactly n. A smaller rank means the recorded
+      // adjacency is not a genuine facet-neighbour (the Delaunay polytopes /
+      // their adjacencies were not computed correctly).
+      {
+        std::vector<MyVector<T>> common;
+        for (int u = 0; u < len; u++) {
+          MyVector<T> TheVert = GetMatrixRow(EXTadj, u);
+          std::optional<size_t> opt = cont.GetIdx_v(TheVert);
+          if (opt) {
+            common.push_back(TheVert);
+          }
+        }
+        int n = EXTadj.cols() - 1;
+        MyMatrix<T> Mcommon = MatrixFromVectorFamily(common);
+        int rnk = RankMat(Mcommon);
+        if (rnk != n) {
+          std::cerr << "DELAUNAY_INTERSECTION: SANITY_CHECK failed: the vertices "
+                       "common to a Delaunay polytope and its recorded "
+                       "neighbour have rank " << rnk << " but a facet requires "
+                       "rank n=" << n << " (|common|=" << common.size() << ")\n";
+          throw TerminalException{1};
+        }
+      }
+#endif
+#ifdef SANITY_CHECK_MULTIPLE_INEQUALITY
+      // The vertices of the adjacent Delaunay polytope that are not in the
+      // current polytope all lie on the far side of the shared facet, so the
+      // Voronoi inequalities they induce must all be scalar multiples of each
+      // other (they express the single condition that the shared facet stays
+      // Delaunay). After ScalarCanonicalizationVector they must therefore all
+      // be equal: the set below must have size 1.
+      {
+        std::set<MyVector<T>> set_ineq;
+        for (int u = 0; u < len; u++) {
+          MyVector<T> TheVert = GetMatrixRow(EXTadj, u);
+          std::optional<size_t> opt = cont.GetIdx_v(TheVert);
+          if (!opt) {
+            MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, ListGram, os);
+            set_ineq.insert(ScalarCanonicalizationVector(V));
+          }
+        }
+        if (set_ineq.size() != 1) {
+          std::cerr << "MULTIPLE_INEQUALITY: SANITY_CHECK failed: the Voronoi "
+                       "inequalities from the vertices of an adjacent Delaunay "
+                       "polytope are not all multiples of each other (canonical "
+                       "set size=" << set_ineq.size() << ")\n";
+          for (auto &eV : set_ineq) {
+            std::cerr << "MULTIPLE_INEQUALITY:   canon=" << StringVectorGAP(eV)
+                      << "\n";
+          }
+          throw TerminalException{1};
+        }
+      }
+#endif
       for (int u = 0; u < len; u++) {
         MyVector<T> TheVert = GetMatrixRow(EXTadj, u);
         std::optional<size_t> opt = cont.GetIdx_v(TheVert);
@@ -2541,7 +2627,7 @@ struct DataIsoDelaunayDomainsFunc {
     TadjO ret{x.V, eBigMat};
     return {std::move(x_ret), std::move(ret)};
   }
-  std::vector<TadjI> f_adj(Tobj &x_in) {
+  std::optional<std::vector<TadjI>> f_adj(Tobj &x_in) {
     IsoDelaunayDomain<T, Tint, Tgroup> const& x = x_in.DT_gram;
     ResultDelaunayAdj<T,Tint,Tgroup> result = get_result_delaunay_adj(x, data);
     x_in.ListIneqRed = result.ListIneqRed;

@@ -12,6 +12,7 @@
 #include "GraverBasis.h"
 #include "SystemNamelist.h"
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 #include <memory>
@@ -30,6 +31,49 @@
 #undef DEBUG_DELAUNAY_ENUMERATION
 #endif
 
+// Given a Delaunay cell EXT1 and an adjacent Delaunay cell EXT2 (sharing a
+// facet of EXT1), decide whether TestGram keeps EXT1 a Delaunay cell: every
+// vertex of EXT2 that is not a vertex of EXT1 (the apex(es) across the shared
+// facet) must lie outside or on the circumsphere of EXT1 computed under
+// TestGram. We work in the full space of symmetric matrices (no T-space): the
+// circumcenter/radius of EXT1 under TestGram is computed directly and the apex
+// distance is compared to the radius, so the sign is unambiguous (no
+// orientation convention to trust). When EXT2 has no apex outside EXT1 (it
+// would not be a genuine neighbour), the cell is vacuously acceptable.
+template <typename T>
+bool IsDelaunayPairAcceptableForGramMat(MyMatrix<T> const &EXT1,
+                                        MyMatrix<T> const &EXT2,
+                                        MyMatrix<T> const &TestGram,
+                                        [[maybe_unused]] std::ostream &os) {
+  int n = TestGram.rows();
+  // The circumsphere is built from an affine basis of EXT1 (a simplex, so the
+  // centre is always well defined under TestGram) rather than from all of its
+  // vertices: a non-simplicial cell is co-spherical only for the gram that
+  // generated it, not for TestGram, so the full-vertex system would be
+  // inconsistent. This matches the affine-basis construction used by
+  // ComputeDefiningIneqIsoDelaunayDomain.
+  SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
+  MyMatrix<T> EXT1basis = SelectRow(EXT1, eSelect.ListRowSelect);
+  CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(TestGram, EXT1basis);
+  ContainerMatrix<T> cont(EXT1);
+  int len = EXT2.rows();
+  for (int u = 0; u < len; u++) {
+    MyVector<T> w = GetMatrixRow(EXT2, u);
+    std::optional<size_t> opt = cont.GetIdx_v(w);
+    if (!opt) {
+      MyVector<T> eW(n);
+      for (int i = 0; i < n; i++) {
+        eW(i) = cp.eCent(i + 1) - w(i + 1);
+      }
+      T sqr_dist = EvaluationQuadForm<T, T>(TestGram, eW);
+      if (sqr_dist < cp.SquareRadius) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   int n;
   MyMatrix<T> SHV;
@@ -37,6 +81,12 @@ template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   MyMatrix<Tint> ShvGraverBasis;
   std::string choice_initial;
   RecordDualDescOperation<T, Tgroup> rddo;
+  // Optional acceptability filter used by the enumeration's f_adj: when set, a
+  // Delaunay tesselation is only accepted if it is also the Delaunay
+  // tesselation of CommonGramMat, i.e. every cell stays Delaunay for
+  // CommonGramMat. As soon as an adjacent apex violates this, f_adj returns
+  // nullopt and the enumeration stops. Left empty for the ordinary enumeration.
+  std::optional<MyMatrix<T>> CommonGramMat = {};
 };
 
 template <typename T>
@@ -697,6 +747,11 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
   // cannot be a moved-in value anyway, since DataLattice has reference members
   // and is therefore not move-assignable.
   DataLattice<T, Tint, Tgroup> &data;
+  // Set to false by f_adj when data.CommonGramMat is present and the
+  // tesselation being enumerated is not valid for it (an apex falls inside a
+  // circumsphere). The caller reads it to tell a genuine stop from a complete
+  // enumeration.
+  bool is_correct = true;
   using Tobj = Delaunay_Obj<T, Tgroup>;
   using TadjI = Delaunay_AdjI<T>;
   using TadjO = Delaunay_AdjO_spec<T>;
@@ -731,10 +786,21 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
     TadjO ret{x.eInc, eBigMat};
     return {x_ret, ret};
   }
-  std::vector<TadjI> f_adj(Tobj &x) {
+  std::optional<std::vector<TadjI>> f_adj(Tobj &x) {
     std::pair<Tgroup, std::vector<TadjI>> pair =
         ComputeGroupAndAdjacencies<T, Tint, Tgroup>(data, x.EXT);
     x.GRP = pair.first;
+    if (data.CommonGramMat) {
+      MyMatrix<T> const &TestGram = *data.CommonGramMat;
+      std::ostream &os = data.rddo.os;
+      for (auto &adj : pair.second) {
+        if (!IsDelaunayPairAcceptableForGramMat<T>(x.EXT, adj.EXT, TestGram,
+                                                   os)) {
+          is_correct = false;
+          return {};
+        }
+      }
+    }
     return pair.second;
   }
   Tobj f_adji_obj(TadjI const &x) {
@@ -836,7 +902,7 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, after "
         "EnumerateAndStore_Serial\n";
 #endif
-  if (is_incorrect) {
+  if (is_incorrect || !data_func.is_correct) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: EnumerationDelaunayPolytopes: opt not matching\n";
 #endif

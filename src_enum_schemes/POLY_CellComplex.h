@@ -222,7 +222,13 @@ EnumerateAndStoreLevel_Serial(Tdata &data, std::vector<Tobj> const &l_input,
   std::vector < std::vector<BoundSerial<Tequiv>> ll_bound;
   auto f_adj = [&](int const &i_orb) -> std::vector<TadjI> {
     Tobj &x = l_obj[i_orb].x;
-    return data.f_adj(x);
+    std::optional<std::vector<TadjI>> opt = data.f_adj(x);
+    if (!opt) {
+      std::cerr << "CELL_SCHEME: f_adj returned nullopt, but the cell-complex "
+                   "scheme does not support early termination via f_adj\n";
+      throw TerminalException{1};
+    }
+    return *opt;
   };
   auto f_idx_obj = [&](size_t const &idx) -> Tobj { return l_obj[idx]; };
   auto f_n_treated = [&]() -> size_t { return 0; };

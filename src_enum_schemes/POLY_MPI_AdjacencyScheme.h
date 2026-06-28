@@ -1016,7 +1016,13 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
   std::vector<uint8_t> l_status;
   auto f_adj = [&](int const &i_orb) -> std::vector<TadjI> {
     Tobj &x = l_obj[i_orb].x;
-    return data.f_adj(x);
+    std::optional<std::vector<TadjI>> opt = data.f_adj(x);
+    if (!opt) {
+      std::cerr << "MPI_ADJ_SCH: f_adj returned nullopt, but the MPI adjacency "
+                   "scheme does not support early termination via f_adj\n";
+      throw TerminalException{1};
+    }
+    return *opt;
   };
   auto f_set_adj = [&](int const &i_orb,
                        std::vector<TadjO_work> const &ListAdj) -> void {

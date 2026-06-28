@@ -295,7 +295,7 @@ struct DataPerfectTspaceFunc {
     }
   }
 
-  std::vector<TadjI> f_adj(Tobj &x) {
+  std::optional<std::vector<TadjI>> f_adj(Tobj &x) {
     std::ostream &os = get_os();
     std::pair<Tgroup, std::vector<MyMatrix<Tint>>> pair =
         SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.rec_shv,

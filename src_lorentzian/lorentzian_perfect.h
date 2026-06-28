@@ -1423,7 +1423,7 @@ struct DataPerfectLorentzianFunc {
     TadjO ret{x.eInc, eBigMat};
     return {x_ret, ret};
   }
-  std::vector<TadjI> f_adj(Tobj &x) {
+  std::optional<std::vector<TadjI>> f_adj(Tobj &x) {
 #ifdef TIMINGS_LORENTZIAN_PERFECT
     MicrosecondTime time;
 #endif

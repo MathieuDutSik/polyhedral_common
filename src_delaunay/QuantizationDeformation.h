@@ -59,31 +59,60 @@ std::vector<MyMatrix<T>> compute_qh_symmetry_gens(MyMatrix<T> const &Q,
   return UniversalStdVectorMatrixConversion<T,Tint>(gens_i);
 }
 
-// The T-space of the forms invariant under the symmetry group generators. We
-// use Q itself as the positive-definite reference matrix of the space (it is
-// invariant under the generators, hence lies in the T-space), so there is no
-// need to search for one.
+// The T-space for the deformation is the 2-dimensional space spanned by Q and H
+// -- the ray Q + t H lives in it, and that is the only space the deformation
+// explores. The common symmetry generators of (Q, H) are recorded as the point
+// stabilizer of the T-space (PtStabGens), NOT used to build a larger invariant
+// space. Using the full invariant space is wrong here: a deformation running
+// along an iso-Delaunay wall (a cell co-spherical only on the ray) would induce
+// an equality in that larger space and be (incorrectly) rejected as non-generic,
+// whereas in span{Q, H} such a cell's Voronoi regulator vanishes on both Q and H
+// (V . Q = V . H = 0), so no equality is induced and the deformation is handled.
+// Q is the positive-definite reference matrix (SuperMat) of the space.
 template <typename T, typename Tint, typename Tgroup>
-LinSpaceMatrix<T> build_qh_tspace(MyMatrix<T> const &Q,
+LinSpaceMatrix<T> build_qh_tspace(MyMatrix<T> const &Q, MyMatrix<T> const &H,
                                   std::vector<MyMatrix<T>> const &gens_T,
-                                  std::ostream &os) {
-  int n = Q.rows();
-  std::vector<MyMatrix<T>> ListMat = BasisInvariantForm<T>(n, gens_T, os);
+                                  [[maybe_unused]] std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat{Q, H};
   std::vector<MyMatrix<T>> ListComm;
-  return BuildLinSpace<T>(Q, ListMat, ListComm);
+  LinSpaceMatrix<T> LinSpa = BuildLinSpace<T>(Q, ListMat, ListComm);
+  LinSpa.PtStabGens = gens_T;
+  return LinSpa;
 }
 
-// The Delaunay tesselation of a concrete Gram matrix (no caching).
+// The Delaunay tesselation of the concrete Gram matrix GramMat (no caching),
+// usable as a generic probe of TestGram's iso-Delaunay domain in the T-space
+// LinSpa. Two conditions are enforced during the enumeration and a violation of
+// either makes it abort (returning nullopt, so find_iso_delaunay_segment halves
+// t and retries):
+//  - genericity (f_incorrect): no cell may induce an equality in the T-space
+//    (IsDelaunayPolytopeInducingEqualities), i.e. GramMat must be a generic
+//    interior point of its iso-Delaunay domain, not sitting on a wall. On a wall
+//    the defining inequalities are ill-defined and order-dependent.
+//  - acceptability (DataLattice::CommonGramMat): f_adj, which has the
+//    adjacencies at hand, checks every cell/neighbour pair with
+//    IsDelaunayPairAcceptableForGramMat and aborts as soon as an adjacent apex
+//    falls inside a circumsphere under TestGram, i.e. TestGram lies in a
+//    different domain than GramMat.
+// A non-null result therefore certifies that GramMat is generic and that
+// TestGram shares its Delaunay tesselation.
 template <typename T, typename Tint, typename Tgroup>
-DelaunayTesselation<T, Tgroup> delaunay_for_gram(MyMatrix<T> const &GramMat,
-                                                 std::ostream &os) {
+std::optional<DelaunayTesselation<T, Tgroup>>
+delaunay_for_gram(MyMatrix<T> const &GramMat, LinSpaceMatrix<T> const &LinSpa,
+                  MyMatrix<T> const &TestGram, std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
   int dimEXT = GramMat.rows() + 1;
   PolyHeuristicSerial<TintGroup> AllArr =
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   DataLattice<T, Tint, Tgroup> data =
       GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
-  return get_delaunay_tessellation_serial<T, Tint, Tgroup>(data, "none", 0, os);
+  data.CommonGramMat = TestGram;
+  auto f_incorrect = [&](Delaunay_Obj<T, Tgroup> const &x) -> bool {
+    return IsDelaunayPolytopeInducingEqualities(x.EXT, LinSpa, os);
+  };
+  int max_runtime_second = 0;
+  return EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(
+      data, f_incorrect, max_runtime_second);
 }
 
 template <typename T, typename Tgroup> struct IsoDelaunaySegment {
@@ -154,8 +183,19 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
       t /= two;
       continue;
     }
-    DelaunayTesselation<T, Tgroup> DT =
-        delaunay_for_gram<T, Tint, Tgroup>(G, os);
+    // Enumerate the Delaunay tesselation of the probe G = Q + t H, aborting if
+    // Q is not acceptable for some cell, i.e. the segment [Q, Q + t H] leaves
+    // the iso-Delaunay domain. A nullopt therefore means "halve and retry".
+    std::optional<DelaunayTesselation<T, Tgroup>> opt_DT =
+        delaunay_for_gram<T, Tint, Tgroup>(G, LinSpa, Q, os);
+    if (!opt_DT) {
+#ifdef DEBUG_QUANTIZATION_DEFORMATION
+      os << "QDEF: t=" << t << " segment leaves the domain, halving\n";
+#endif
+      t /= two;
+      continue;
+    }
+    DelaunayTesselation<T, Tgroup> DT = *opt_DT;
     std::vector<FullAdjInfo<T>> ListIneq =
         ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(DT, LinSpa.ListLineMat,
                                                         os);
@@ -188,20 +228,20 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
       t /= two;
       continue;
     }
-    bool q_inside = true;
+#ifdef SANITY_CHECK_QUANTIZATION_DEFORMATION
+    // delaunay_for_gram already aborted if Q was not acceptable for some cell of
+    // the probe's tesselation, so Q must lie in the oriented cone. Re-derive that
+    // q_inside condition from the (deduplicated) defining inequalities and fail
+    // loudly should the per-cell test and the global cone ever disagree.
     for (auto &oe : oriented) {
       if (dotprod(oe, cQ) < 0) {
-        q_inside = false;
-        break;
+        std::cerr << "QDEF: SANITY_CHECK failed at t=" << t
+                  << ": Q outside the iso-Delaunay domain although "
+                     "delaunay_for_gram accepted every cell\n";
+        throw TerminalException{1};
       }
     }
-    if (!q_inside) {
-#ifdef DEBUG_QUANTIZATION_DEFORMATION
-      os << "QDEF: t=" << t << " segment leaves the domain, halving\n";
 #endif
-      t /= two;
-      continue;
-    }
     // The segment [Q, Q + t H] is inside a single iso-Delaunay domain. Compute
     // the exact exit point of the ray from Q in the direction H.
     bool bounded = false;
@@ -424,7 +464,7 @@ DeformationDerivatives<T> compute_deformation_derivatives(MyMatrix<T> const &Q,
   int n = Q.rows();
   std::vector<MyMatrix<T>> gens_T =
       compute_qh_symmetry_gens<T, Tint, Tgroup>(Q, H, os);
-  LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, gens_T, os);
+  LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, H, gens_T, os);
   T t_init(1);
   IsoDelaunaySegment<T, Tgroup> seg =
       find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, H, t_init, os);
@@ -543,7 +583,7 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
   int n = Q.rows();
   std::vector<MyMatrix<T>> gens_T =
       compute_qh_symmetry_gens<T, Tint, Tgroup>(Q, B, os);
-  LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, gens_T, os);
+  LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, B, gens_T, os);
   IsoDelaunaySegment<T, Tgroup> seg =
       find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, B, T(1), os);
   int pool_size = 4 * n + 30;

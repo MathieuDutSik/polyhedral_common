@@ -152,7 +152,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataCtypeFunc {
     TadjO ret{};
     return {x_ret, ret};
   }
-  std::vector<TadjI> f_adj(Tobj &x_in) {
+  std::optional<std::vector<TadjI>> f_adj(Tobj &x_in) {
     using Tidx = typename Tgroup::Telt::Tidx;
     TypeCtypeExch<Tint> x = x_in.ctype_arr;
     int nb_free = CTYP_GetNumberFreeVectors(x);

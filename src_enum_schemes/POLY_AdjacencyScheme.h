@@ -292,10 +292,17 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #ifdef TIMINGS_ADJACENCY_SCHEME
     os << "|ADJ_SCH: get_notdone_idx / f_save_status|=" << time << "\n";
 #endif
-    std::vector<TadjI> l_adj_i = f_adj(idx);
+    std::optional<std::vector<TadjI>> opt_adj_i = f_adj(idx);
 #ifdef TIMINGS_ADJACENCY_SCHEME
     os << "|ADJ_SCH: f_adj|=" << time << "\n";
 #endif
+    if (!opt_adj_i) {
+      // f_adj signalled that the object being enumerated is not acceptable
+      // (e.g. the tesselation is not valid for a requested Gram matrix). Stop.
+      early_termination = true;
+      return;
+    }
+    std::vector<TadjI> const &l_adj_i = *opt_adj_i;
     std::vector<TadjO> l_adj_o;
     for (auto &adj_i : l_adj_i) {
       TadjO adj_o = process_singleEntry_AdjI(adj_i);
@@ -502,7 +509,7 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
   };
   std::vector<DatabaseEntry_Serial<Tobj, TadjO>> l_obj;
   std::vector<uint8_t> l_status;
-  auto f_adj = [&](int const &i_orb) -> std::vector<TadjI> {
+  auto f_adj = [&](int const &i_orb) -> std::optional<std::vector<TadjI>> {
     Tobj &x = l_obj[i_orb].x;
     return data.f_adj(x);
   };
