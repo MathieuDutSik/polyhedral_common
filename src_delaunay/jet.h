@@ -19,6 +19,16 @@ template <typename T> struct Jet {
   std::vector<T> coeffs; // size order + 1
 };
 
+// The k-th derivative at t = 0 of the jet, i.e. k! times the coefficient of
+// t^k (the coefficient is the k-th Taylor coefficient).
+template <typename T> T jet_derivative(Jet<T> const &j, int k) {
+  T fact(1);
+  for (int i = 2; i <= k; i++) {
+    fact *= T(i);
+  }
+  return fact * j.coeffs[k];
+}
+
 // Convert a jet coefficient-wise to another scalar type (e.g. an exact Jet<T>
 // to a numerical Jet<double>), analogous to UniversalScalarConversion.
 template <typename Tout, typename Tin>
