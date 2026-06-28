@@ -396,14 +396,9 @@ DeformationDerivatives<T> deformation_derivatives(RationalFunc<T> const &S,
   // Numerical part: the normalized quantizer G(t) = (1/n) det(t)^(-1/n) S(t),
   // as a double jet (det^(-1/n) is irrational).
   double a = 1.0 / static_cast<double>(n);
-  Jet<double> det_jet{order,
-                      {UniversalScalarConversion<double, T>(res.det0),
-                       UniversalScalarConversion<double, T>(res.det1),
-                       UniversalScalarConversion<double, T>(res.det2)}};
-  Jet<double> S_jet{order,
-                    {UniversalScalarConversion<double, T>(Sj.coeffs[0]),
-                     UniversalScalarConversion<double, T>(Sj.coeffs[1]),
-                     UniversalScalarConversion<double, T>(Sj.coeffs[2])}};
+  Jet<double> det_jet =
+      UniversalJetConversion<double, T>(jet_from_poly(detpoly, order));
+  Jet<double> S_jet = UniversalJetConversion<double, T>(Sj);
   Jet<double> G_jet = jet_scalar_mult(a, jet_pow(det_jet, -a) * S_jet);
   res.G0 = G_jet.coeffs[0];
   res.G1 = G_jet.coeffs[1];

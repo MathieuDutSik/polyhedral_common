@@ -19,6 +19,17 @@ template <typename T> struct Jet {
   std::vector<T> coeffs; // size order + 1
 };
 
+// Convert a jet coefficient-wise to another scalar type (e.g. an exact Jet<T>
+// to a numerical Jet<double>), analogous to UniversalScalarConversion.
+template <typename Tout, typename Tin>
+Jet<Tout> UniversalJetConversion(Jet<Tin> const &j) {
+  std::vector<Tout> coeffs(j.order + 1);
+  for (int i = 0; i <= j.order; i++) {
+    coeffs[i] = UniversalScalarConversion<Tout, Tin>(j.coeffs[i]);
+  }
+  return {j.order, std::move(coeffs)};
+}
+
 // The truncation to a jet of the given order of the polynomial with coefficient
 // vector C (c0 + c1 t + ...). Missing coefficients are zero.
 template <typename T> Jet<T> jet_from_poly(MyVector<T> const &C, int order) {
