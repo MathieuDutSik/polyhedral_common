@@ -140,7 +140,7 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
       DeformationDerivatives<T> der =
           compute_deformation_derivatives<T, Tint, Tgroup>(GramMat, H, os);
       T invariant = v_T.dot(Qinv * v_T);
-      long orbit_size = orbit_vector_deformation(autom, v).size();
+      long orbit_size = orbit_elements(autom, v).size();
       if (!IsFirst) {
         os_out << ",\n";
       }

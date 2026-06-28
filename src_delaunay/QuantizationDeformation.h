@@ -270,38 +270,6 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
 // ---------------------------------------------------------------------------
 
 
-// The deformation orbit of v0 under v -> g v (and sign), g ranging over the
-// generators returned by ArithmeticAutomorphismGroup (g Q g^T = Q).
-template <typename Tint>
-std::unordered_set<MyVector<Tint>>
-orbit_vector_deformation(std::vector<MyMatrix<Tint>> const &gens,
-                         MyVector<Tint> const &v0) {
-  std::unordered_set<MyVector<Tint>> orb;
-  std::vector<MyVector<Tint>> todo;
-  MyVector<Tint> c0 = SignCanonicalizeVector(v0);
-  orb.insert(c0);
-  todo.push_back(c0);
-  while (!todo.empty()) {
-    MyVector<Tint> v = todo.back();
-    todo.pop_back();
-    for (auto &U : gens) {
-      MyVector<Tint> w = U * v;
-      MyVector<Tint> cw = SignCanonicalizeVector(w);
-      if (orb.insert(cw).second) {
-        todo.push_back(cw);
-      }
-    }
-  }
-  return orb;
-}
-
-template <typename Tint>
-bool vectors_equivalent(std::vector<MyMatrix<Tint>> const &gens,
-                        MyVector<Tint> const &v, MyVector<Tint> const &w) {
-  std::unordered_set<MyVector<Tint>> orb = orbit_vector_deformation(gens, v);
-  return orb.count(SignCanonicalizeVector(w)) > 0;
-}
-
 // ---------------------------------------------------------------------------
 // Phase 2: the quantization as a function of t, by sampling + exact rational
 // interpolation. The combinatorics is constant on the open segment, so the
