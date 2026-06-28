@@ -167,6 +167,10 @@ inline void serialize(Archive &ar, entryAdjO<TadjO> &eRec,
 }
 } // namespace boost::serialization
 
+// Returns whether the enumeration is correct: true if it ran to completion or
+// stopped on the time limit (a valid, possibly partial, result), false if it
+// was terminated early by a rejection (f_insert / f_adj signalling an
+// unacceptable object).
 template <typename Tobj, typename TadjI, typename TadjO, typename Fnext,
           typename Finsert, typename Fadji_obj, typename Fidx_obj,
           typename Fsave_status, typename Finit, typename Fadj,
@@ -372,9 +376,10 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     }
     if (max_time_second > 0 && si(start) > max_time_second) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: returning false due to si(start) > max_time_second > 0\n";
+      os << "ADJ_SCH: returning true (valid partial result) due to si(start) > "
+            "max_time_second > 0\n";
 #endif
-      return false;
+      return true;
     }
 #ifdef TIMINGS_ADJACENCY_SCHEME
     MicrosecondTime time_treat;
@@ -478,8 +483,12 @@ inline void serialize(Archive &ar, DatabaseEntry_Serial<Tobj, TadjO> &eRec,
 }
 } // namespace boost::serialization
 
+// Returns the enumerated database, or nullopt when the enumeration was
+// terminated early by a rejection (f_incorrect / f_adj signalling an
+// unacceptable object). A time-limited run still returns its partial database.
 template <typename Tdata, typename Fincorrect>
-std::vector<DatabaseEntry_Serial<typename Tdata::Tobj, typename Tdata::TadjO>>
+std::optional<
+    std::vector<DatabaseEntry_Serial<typename Tdata::Tobj, typename Tdata::TadjO>>>
 EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
                          int const &max_runtime_second) {
   using Tobj = typename Tdata::Tobj;
@@ -545,13 +554,16 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
       l_status[pos] = val_i;
     }
   };
-  (void)compute_adjacency_serial<
+  bool is_correct = compute_adjacency_serial<
       Tobj, TadjI, TadjO_work, decltype(f_next), decltype(f_insert),
       decltype(f_adji_obj), decltype(f_idx_obj), decltype(f_save_status),
       decltype(f_init), decltype(f_adj), decltype(f_set_adj), decltype(f_hash),
       decltype(f_repr), decltype(f_spann)>(
       max_runtime_second, f_next, f_insert, f_adji_obj, f_idx_obj,
       f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann, os);
+  if (!is_correct) {
+    return {};
+  }
   return l_obj;
 }
 

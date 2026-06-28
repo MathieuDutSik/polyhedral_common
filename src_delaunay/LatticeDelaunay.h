@@ -747,11 +747,6 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
   // cannot be a moved-in value anyway, since DataLattice has reference members
   // and is therefore not move-assignable.
   DataLattice<T, Tint, Tgroup> &data;
-  // Set to false by f_adj when data.CommonGramMat is present and the
-  // tesselation being enumerated is not valid for it (an apex falls inside a
-  // circumsphere). The caller reads it to tell a genuine stop from a complete
-  // enumeration.
-  bool is_correct = true;
   using Tobj = Delaunay_Obj<T, Tgroup>;
   using TadjI = Delaunay_AdjI<T>;
   using TadjO = Delaunay_AdjO_spec<T>;
@@ -796,7 +791,6 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
       for (auto &adj : pair.second) {
         if (!IsDelaunayPairAcceptableForGramMat<T>(x.EXT, adj.EXT, TestGram,
                                                    os)) {
-          is_correct = false;
           return {};
         }
       }
@@ -888,21 +882,13 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, before "
         "EnumerateAndStore_Serial\n";
 #endif
-  bool is_incorrect = false;
-  auto f_incorrect_bis = [&](Tobj const &x) -> bool {
-    bool test = f_incorrect(x);
-    if (test) {
-      is_incorrect = true;
-    }
-    return test;
-  };
-  Tout result = EnumerateAndStore_Serial<Tdata>(data_func, f_incorrect_bis,
-                                                max_runtime_second);
+  std::optional<Tout> opt_result =
+      EnumerateAndStore_Serial<Tdata>(data_func, f_incorrect, max_runtime_second);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, after "
         "EnumerateAndStore_Serial\n";
 #endif
-  if (is_incorrect || !data_func.is_correct) {
+  if (!opt_result) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: EnumerationDelaunayPolytopes: opt not matching\n";
 #endif
@@ -912,7 +898,8 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
   os << "DEL_ENUM: EnumerationDelaunayPolytopes: opt match\n";
 #endif
   DelaunayTesselation<T, Tgroup> DT =
-      DelaunayTesselation_From_DatabaseEntries_Serial<T, Tint, Tgroup>(result);
+      DelaunayTesselation_From_DatabaseEntries_Serial<T, Tint, Tgroup>(
+          *opt_result);
   return DT;
 }
 

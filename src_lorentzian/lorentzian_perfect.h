@@ -1548,9 +1548,11 @@ LORENTZ_GetGeneratorsAutom_Reduced(MyMatrix<T> const &LorMat,
     return false;
   };
   int max_runtime_second = 0;
-  std::vector<Tout> l_obj =
+  std::optional<std::vector<Tout>> opt_l_obj =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
+  std::vector<Tout> l_obj =
+      unfold_opt(opt_l_obj, "EnumerateAndStore_Serial (lorentzian automorphism)");
 
   std::vector<MyMatrix<Tint>> l_gen =
       LORENTZ_ExtractGeneratorsFromObjList<Tint, Telt>(l_obj);
@@ -1639,9 +1641,11 @@ LORENTZ_GetOrbitRepresentative_Kernel(MyMatrix<T> const &LorMat, T const &X,
     return false;
   };
   int max_runtime_second = 0;
-  std::vector<Tout> l_obj =
+  std::optional<std::vector<Tout>> opt_l_obj =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
+  std::vector<Tout> l_obj =
+      unfold_opt(opt_l_obj, "EnumerateAndStore_Serial (lorentzian, X sign)");
   if (X != 0) {
     std::cerr << "LORPERF: Some code needs to be written for one sign\n";
     std::cerr << "LORPERF: For the other sign, that seems to require different "
@@ -1953,9 +1957,16 @@ LORENTZ_TestEquivalenceMatrices_Reduced(MyMatrix<T> const &LorMat1,
     return false;
   };
   int max_runtime_second = 0;
-  std::vector<Tout> l_obj =
+  // Here f_incorrect stops the enumeration early as soon as an equivalence is
+  // found (stored in the captured "opt"); in that case EnumerateAndStore_Serial
+  // returns nullopt and we proceed with an empty database. The generators
+  // extracted below are only a non-essential optimization (used to shrink the
+  // equivalence), so dropping the partial database is harmless.
+  std::optional<std::vector<Tout>> opt_l_obj =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
+  std::vector<Tout> l_obj =
+      opt_l_obj ? std::move(*opt_l_obj) : std::vector<Tout>{};
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: After EnumerateAndStore_Serial function call\n";
 #endif

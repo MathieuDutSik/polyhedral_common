@@ -49,9 +49,11 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
   auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
     return false;
   };
-  std::vector<Tout> l_tot =
+  std::optional<std::vector<Tout>> opt_l_tot =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
+  std::vector<Tout> l_tot =
+      unfold_opt(opt_l_tot, "EnumerateAndStore_Serial (iso-Delaunay)");
 
   if (!compute_full_dimensional) {
     // Backward-compatible path: just emit the top-dimensional iso-Delaunay

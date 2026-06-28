@@ -177,8 +177,10 @@ inline void serialize(Archive &ar, AdjO_MPI<TadjO> &eRec,
   f_idx_obj(size_t) -> Tobj: should return the object from the database.
   f_save_status(int, bool) -> void : save the status in the database
   f_init() -> Tobj : get a starting element
-  f_adj(i_orb) -> std::vector<TadjI> : get the adjacent object
-     with i_orb the index of the orbit (used to assign for example the group)
+  f_adj(i_orb) -> std::optional<std::vector<TadjI>> : get the adjacent objects
+     with i_orb the index of the orbit (used to assign for example the group).
+     Returning a none triggers early termination (same disorderly exit as
+     f_insert returning true), used to reject an object during the enumeration.
   f_set_adj(int, std::vector<TadjO>) -> void : set the adjacencies to the ones
      computed.
   f_hash(size_t, Tobj) -> size_t : compute the hash from a specified seed.
@@ -559,7 +561,19 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #ifdef TIMINGS_MPI_ADJACENCY_SCHEME
     os << "|MPI_ADJ_SCH: process_one_entry_obj f_save_status|=" << time << "\n";
 #endif
-    std::vector<TadjI> l_adj = f_adj(idx);
+    std::optional<std::vector<TadjI>> opt_adj = f_adj(idx);
+    if (!opt_adj) {
+      // f_adj signalled that the object being enumerated is not acceptable
+      // (e.g. the tesselation is not valid for a requested Gram matrix). Trigger
+      // early termination, the same disorderly exit used by f_insert.
+#ifdef DEBUG_MPI_ADJACENCY_SCHEME
+      os << "MPI_ADJ_SCH: process_one_entry_obj f_adj returned nullopt, "
+            "triggering early termination\n";
+#endif
+      send_early_termination();
+      return false;
+    }
+    std::vector<TadjI> l_adj = *opt_adj;
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
     os << "MPI_ADJ_SCH: process_one_entry_obj |l_adj|=" << l_adj.size() << "\n";
 #endif
@@ -1014,15 +1028,9 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
   };
   std::vector<DatabaseEntry_MPI<Tobj, TadjO>> l_obj;
   std::vector<uint8_t> l_status;
-  auto f_adj = [&](int const &i_orb) -> std::vector<TadjI> {
+  auto f_adj = [&](int const &i_orb) -> std::optional<std::vector<TadjI>> {
     Tobj &x = l_obj[i_orb].x;
-    std::optional<std::vector<TadjI>> opt = data.f_adj(x);
-    if (!opt) {
-      std::cerr << "MPI_ADJ_SCH: f_adj returned nullopt, but the MPI adjacency "
-                   "scheme does not support early termination via f_adj\n";
-      throw TerminalException{1};
-    }
-    return *opt;
+    return data.f_adj(x);
   };
   auto f_set_adj = [&](int const &i_orb,
                        std::vector<TadjO_work> const &ListAdj) -> void {

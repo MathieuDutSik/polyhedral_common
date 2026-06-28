@@ -2017,9 +2017,11 @@ FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration_kernel(LinS
     return false;
   };
   int max_runtime_second = 0;
-  std::vector<Tout> l_tot =
+  std::optional<std::vector<Tout>> opt_l_tot =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
+  std::vector<Tout> l_tot =
+      unfold_opt(opt_l_tot, "EnumerateAndStore_Serial (perfect complex)");
   os << "|l_tot|=" << l_tot.size() << "\n";
   FullComplexEnumeration<T, Tint, Tgroup> fce = full_perfect_complex_enumeration(l_tot, LinSpa, pco, os);
   if (pco.compute_boundary) {
