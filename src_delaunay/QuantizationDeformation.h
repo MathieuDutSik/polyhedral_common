@@ -584,7 +584,9 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   int n = Q.rows();
   int N = n * (n + 1) / 2;
   MyMatrix<T> Qinv = Inverse(Q);
+#ifdef DEBUG_QUANTIZATION_DEFORMATION
   os << "QHESS: n=" << n << " dim(Sym^n)=" << N << "\n";
+#endif
   HessianResult<T> res;
   res.n = n;
   res.N = N;
@@ -603,7 +605,9 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   T S = q0.SecMoment;
   std::vector<MyMatrix<Tint>> autom =
       ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os);
+#ifdef DEBUG_QUANTIZATION_DEFORMATION
   os << "QHESS: |Aut(Q) generators|=" << autom.size() << "\n";
+#endif
   // Phase A: a rank-one basis of Sym^n, built shell by shell of increasing dual
   // norm v^T Q^{-1} v -- the deformation invariant that controls the cost and
   // degree of the moment derivative, so the cheapest directions come first. We
@@ -646,8 +650,10 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
     norm += incr;
   }
   res.nbBasis = static_cast<int>(basis.size());
+#ifdef DEBUG_QUANTIZATION_DEFORMATION
   os << "QHESS: rank-one basis size=" << res.nbBasis << "/" << N
      << " (max dual norm " << (norm - incr) << ")\n";
+#endif
   // Phase B: DM[v_k v_k^T] for each basis vector, one evaluation per Aut(Q)
   // orbit (others by the equivariance DM[(g v)(g v)^T] = g^{-T} DM[v v^T] g^{-1}).
   std::unordered_map<MyVector<Tint>, std::pair<int, MyMatrix<Tint>>> covered;
@@ -666,8 +672,10 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
       for (auto &pr : orbit_elements<Tint>(autom, v)) {
         covered[pr.first] = {rep_id, pr.second};
       }
+#ifdef DEBUG_QUANTIZATION_DEFORMATION
       os << "QHESS: orbit rep v=" << StringVectorGAP(v)
          << " vTQinvV=" << vT.dot(Qinv * vT) << " (eval " << res.nbEval << ")\n";
+#endif
       it = covered.find(v);
     }
     int rep_id = it->second.first;
@@ -728,6 +736,7 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   res.nbPlus = diag.nbPlus;
   res.nbMinus = diag.nbMinus;
   res.nbZero = diag.nbZero;
+#ifdef DEBUG_QUANTIZATION_DEFORMATION
   int mZero = res.nbZero > 0 ? res.nbZero - 1 : 0;
   os << "QHESS: full Sym^n signature (nbPlus,nbMinus,nbZero)=(" << res.nbPlus
      << "," << res.nbMinus << "," << res.nbZero << ")\n";
@@ -736,6 +745,7 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
      << res.nbMinus << "," << mZero << ")\n";
   os << "QHESS: nbEval=" << res.nbEval
      << " radial_residual=" << res.radial_residual << "\n";
+#endif
 #ifdef SANITY_CHECK_QUANTIZATION_DEFORMATION
   // Independent cross-check: predict R for a held-out direction H = B_0 + B_1
   // (coordinates e_0 + e_1) via beta, and compare with a direct scalar
