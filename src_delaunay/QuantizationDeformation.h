@@ -278,18 +278,6 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
 // genuine lattice vectors and transform as c -> g^T c.)
 // ---------------------------------------------------------------------------
 
-template <typename Tint>
-MyVector<Tint> sign_canonicalize_vector(MyVector<Tint> const &v) {
-  for (int i = 0; i < v.size(); i++) {
-    if (v(i) != 0) {
-      if (v(i) < 0) {
-        return MyVector<Tint>(-v);
-      }
-      return v;
-    }
-  }
-  return v;
-}
 
 // The deformation orbit of v0 under v -> g v (and sign), g ranging over the
 // generators returned by ArithmeticAutomorphismGroup (g Q g^T = Q).
@@ -299,7 +287,7 @@ orbit_vector_deformation(std::vector<MyMatrix<Tint>> const &gens,
                          MyVector<Tint> const &v0) {
   std::unordered_set<MyVector<Tint>> orb;
   std::vector<MyVector<Tint>> todo;
-  MyVector<Tint> c0 = sign_canonicalize_vector(v0);
+  MyVector<Tint> c0 = SignCanonicalizeVector(v0);
   orb.insert(c0);
   todo.push_back(c0);
   while (!todo.empty()) {
@@ -307,7 +295,7 @@ orbit_vector_deformation(std::vector<MyMatrix<Tint>> const &gens,
     todo.pop_back();
     for (auto &U : gens) {
       MyVector<Tint> w = U * v;
-      MyVector<Tint> cw = sign_canonicalize_vector(w);
+      MyVector<Tint> cw = SignCanonicalizeVector(w);
       if (orb.insert(cw).second) {
         todo.push_back(cw);
       }
@@ -320,7 +308,7 @@ template <typename Tint>
 bool vectors_equivalent(std::vector<MyMatrix<Tint>> const &gens,
                         MyVector<Tint> const &v, MyVector<Tint> const &w) {
   std::unordered_set<MyVector<Tint>> orb = orbit_vector_deformation(gens, v);
-  return orb.count(sign_canonicalize_vector(w)) > 0;
+  return orb.count(SignCanonicalizeVector(w)) > 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -645,7 +633,7 @@ orbit_elements(std::vector<MyMatrix<Tint>> const &gens,
   int n = v0.size();
   std::vector<std::pair<MyVector<Tint>, MyMatrix<Tint>>> orb;
   std::unordered_set<MyVector<Tint>> seen;
-  MyVector<Tint> c0 = sign_canonicalize_vector(v0);
+  MyVector<Tint> c0 = SignCanonicalizeVector(v0);
   MyMatrix<Tint> Id = IdentityMat<Tint>(n);
   orb.push_back({c0, Id});
   seen.insert(c0);
@@ -656,7 +644,7 @@ orbit_elements(std::vector<MyMatrix<Tint>> const &gens,
     head++;
     for (auto &U : gens) {
       MyVector<Tint> w = U * v;
-      MyVector<Tint> cw = sign_canonicalize_vector(w);
+      MyVector<Tint> cw = SignCanonicalizeVector(w);
       if (seen.insert(cw).second) {
         orb.push_back({cw, U * g});
       }
@@ -729,7 +717,7 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
       if (static_cast<int>(basis.size()) == N) {
         break;
       }
-      MyVector<Tint> v = sign_canonicalize_vector(v0);
+      MyVector<Tint> v = SignCanonicalizeVector(v0);
       if (!seen_cand.insert(v).second) {
         continue;
       }
