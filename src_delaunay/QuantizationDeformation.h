@@ -372,8 +372,14 @@ DeformationDerivatives<T> compute_deformation_derivatives(MyMatrix<T> const &Q,
   T t_init(1);
   IsoDelaunaySegment<T, Tgroup> seg =
       find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, H, t_init, os);
+  // The numerator of SecMoment(t) has degree at most 2n (it is n + 1 for a
+  // full-rank direction, and lower for lower-rank H), so max_degree = 2n and the
+  // pool needs exactly max_degree + 1 points to determine it. (The correctness
+  // of the reconstruction is checked, at extra subdivision points, inside
+  // reconstruct_rational_known_denominator under SANITY_CHECK_CORRECT_POLYNOMIAL.)
+  int max_degree = 2 * n;
+  int pool_size = max_degree + 1;
   // Sample strictly inside (0, tmax/2) to stay away from both walls.
-  int pool_size = 4 * n + 30;
   std::vector<T> tpool;
   T half_tmax = seg.tmax / T(2);
   for (int k = 1; k <= pool_size; k++) {
@@ -385,12 +391,9 @@ DeformationDerivatives<T> compute_deformation_derivatives(MyMatrix<T> const &Q,
   };
   MyVector<T> detpoly = det_polynomial<T>(Q, H);
   // The denominator of SecMoment(t) is exactly det(Q + t H)/det(Q) (degree <= n,
-  // constant term 1), so we only interpolate the numerator polynomial. A nullopt
-  // therefore cannot mean "wrong denominator" -- it can only mean the numerator
-  // degree exceeds max_degree, i.e. max_degree is too small.
+  // constant term 1), so we only interpolate the numerator polynomial.
   T detQ = detpoly(0);
   MyVector<T> den = detpoly / detQ;
-  int max_degree = 4 * n;
   RationalFunc<T> S = reconstruct_rational_known_denominator<T, decltype(sampler)>(
       tpool, sampler, den, max_degree, os);
   return deformation_derivatives<T>(S, detpoly, n);
@@ -487,7 +490,13 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
   LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, B, gens_T, os);
   IsoDelaunaySegment<T, Tgroup> seg =
       find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, B, T(1), os);
-  int pool_size = 4 * n + 30;
+  // Each entry M_ij(t) has numerator degree at most 2n (it is n + rank(B) in
+  // general, so 2n at full rank; B is rank one here, giving n + 1), so
+  // max_degree = 2n and the pool needs exactly max_degree + 1 points. (The
+  // reconstruction is checked at extra subdivision points inside
+  // reconstruct_rational_known_denominator under SANITY_CHECK_CORRECT_POLYNOMIAL.)
+  int max_degree = 2 * n;
+  int pool_size = max_degree + 1;
   std::vector<T> tpool;
   T half_tmax = seg.tmax / T(2);
   for (int k = 1; k <= pool_size; k++) {
@@ -504,7 +513,6 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
   // collapses back to a single det. So we interpolate each entry with the known
   // denominator den^2 = (det(Q+tB)/det(Q))^2. (Verified exactly on A3/E6/A6/D6.)
   MyVector<T> den2 = poly_product(den, den);
-  int max_degree = 4 * n;
   // Lazy cache of the (expensive) matrix samples M(Q + t B).
   std::map<T, MyMatrix<T>> mcache;
   auto getM = [&](T const &tt) -> MyMatrix<T> const & {
