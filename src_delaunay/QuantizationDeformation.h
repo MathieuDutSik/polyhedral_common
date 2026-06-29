@@ -540,35 +540,6 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
   return DM;
 }
 
-// The orbit of v0 under v -> g v (sign-canonicalized), together with a group
-// element g realizing each member: member = sign_canonicalize(g v0).
-template <typename Tint>
-std::vector<std::pair<MyVector<Tint>, MyMatrix<Tint>>>
-orbit_elements(std::vector<MyMatrix<Tint>> const &gens,
-               MyVector<Tint> const &v0) {
-  int n = v0.size();
-  std::vector<std::pair<MyVector<Tint>, MyMatrix<Tint>>> orb;
-  std::unordered_set<MyVector<Tint>> seen;
-  MyVector<Tint> c0 = SignCanonicalizeVector(v0);
-  MyMatrix<Tint> Id = IdentityMat<Tint>(n);
-  orb.push_back({c0, Id});
-  seen.insert(c0);
-  size_t head = 0;
-  while (head < orb.size()) {
-    MyVector<Tint> v = orb[head].first;
-    MyMatrix<Tint> g = orb[head].second;
-    head++;
-    for (auto &U : gens) {
-      MyVector<Tint> w = U * v;
-      MyVector<Tint> cw = SignCanonicalizeVector(w);
-      if (seen.insert(cw).second) {
-        orb.push_back({cw, U * g});
-      }
-    }
-  }
-  return orb;
-}
-
 template <typename T> struct HessianResult {
   int n;
   int N;             // dim Sym^n = n(n+1)/2
@@ -621,76 +592,113 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   // degree of the moment derivative, so the cheapest directions come first. We
   // enumerate integer vectors by the integer dual form Qadj = det(Q) Q^{-1} =
   // adj(Q) (whose norm is det(Q) v^T Q^{-1} v) with a CVPSolver, exactly as in
-  // ExtractInvariantVectorFamily, keeping v whenever v v^T raises the rank of
-  // the family, until the v v^T span Sym^n. No derivatives, no bound parameter.
+  // ExtractInvariantVectorFamily.
+  //
+  // Within each shell the vectors are grouped into Aut(Q) orbits and added one
+  // whole orbit at a time, because each orbit costs exactly one (expensive)
+  // moment-derivative evaluation in Phase B. Adding by orbit -- rather than
+  // greedily by individual vector -- keeps the number of orbits, and hence the
+  // number of evaluations, minimal: if a single orbit already completes the
+  // basis we never open a second orbit in the same shell. The group element g
+  // realizing each kept vector from its orbit representative (member =
+  // sign_canon(g * rep)) is recorded here, so Phase B needs no separate orbit
+  // enumeration.
   T detQ = DeterminantMat(Q);
   MyMatrix<T> Qadj = detQ * Qinv; // adjugate of Q: integral, positive definite
   CVPSolver<T, Tint> solver(Qadj, os);
   T incr = GetSmallestIncrement(Qadj);
   T norm = incr;
-  std::vector<MyVector<Tint>> basis;   // the chosen v_k
-  std::vector<MyVector<T>> basis_rows; // SymmetricMatrixToVector(v_k v_k^T)
-  std::unordered_set<MyVector<Tint>> seen_cand;
+  MyMatrix<Tint> Id = IdentityMat<Tint>(n);
+  std::vector<MyVector<Tint>> basis;      // the chosen v_k
+  std::vector<MyVector<T>> basis_rows;    // SymmetricMatrixToVector(v_k v_k^T)
+  std::vector<int> basis_orbit;           // evaluation-orbit index of each v_k
+  std::vector<MyMatrix<Tint>> basis_g;    // v_k = sign_canon(basis_g[k] * rep)
+  std::vector<MyVector<Tint>> orbit_reps; // one representative per evaluation
   while (static_cast<int>(basis.size()) < N) {
     std::vector<MyVector<Tint>> ListVect = solver.fixed_norm_vectors(norm);
+    std::unordered_set<MyVector<Tint>> assigned; // canon. vectors already placed
     for (auto &v0 : ListVect) {
       if (static_cast<int>(basis.size()) == N) {
         break;
       }
-      MyVector<Tint> v = SignCanonicalizeVector(v0);
-      if (!seen_cand.insert(v).second) {
-        continue;
+      MyVector<Tint> start = SignCanonicalizeVector(v0);
+      if (!assigned.insert(start).second) {
+        continue; // already enumerated within an earlier orbit of this shell
       }
-      MyVector<T> vT = UniversalVectorConversion<T, Tint>(v);
-      MyMatrix<T> B = vT * vT.transpose();
-      MyVector<T> row = SymmetricMatrixToVector(B); // length N
-      int cur = static_cast<int>(basis_rows.size());
-      MyMatrix<T> Test(cur + 1, N);
-      for (int r = 0; r < cur; r++) {
-        Test.row(r) = basis_rows[r].transpose();
+      // BFS the Aut(Q) orbit of "start", recording for each member a group
+      // element g with member = sign_canon(g * start). The orbit stays inside
+      // the shell (the dual norm is Aut(Q)-invariant).
+      std::vector<std::pair<MyVector<Tint>, MyMatrix<Tint>>> orbit;
+      orbit.push_back({start, Id});
+      size_t head = 0;
+      while (head < orbit.size()) {
+        MyVector<Tint> v = orbit[head].first;
+        MyMatrix<Tint> g = orbit[head].second;
+        head++;
+        for (auto &U : autom) {
+          MyVector<Tint> w = U * v;
+          MyVector<Tint> cw = SignCanonicalizeVector(w);
+          if (assigned.insert(cw).second) {
+            orbit.push_back({cw, U * g});
+          }
+        }
       }
-      Test.row(cur) = row.transpose();
-      if (RankMat(Test) == cur + 1) {
-        basis.push_back(v);
-        basis_rows.push_back(row);
+      // Greedily keep this orbit's vectors that raise the rank of the family.
+      // The orbit only "opens" an evaluation (an orbit_reps entry) once at least
+      // one of its vectors is kept.
+      int rep_id = -1;
+      for (auto &pr : orbit) {
+        if (static_cast<int>(basis.size()) == N) {
+          break;
+        }
+        MyVector<T> vT = UniversalVectorConversion<T, Tint>(pr.first);
+        MyMatrix<T> B = vT * vT.transpose();
+        MyVector<T> row = SymmetricMatrixToVector(B); // length N
+        int cur = static_cast<int>(basis_rows.size());
+        MyMatrix<T> Test(cur + 1, N);
+        for (int r = 0; r < cur; r++) {
+          Test.row(r) = basis_rows[r].transpose();
+        }
+        Test.row(cur) = row.transpose();
+        if (RankMat(Test) == cur + 1) {
+          if (rep_id == -1) {
+            rep_id = static_cast<int>(orbit_reps.size());
+            orbit_reps.push_back(start);
+          }
+          basis.push_back(pr.first);
+          basis_rows.push_back(row);
+          basis_orbit.push_back(rep_id);
+          basis_g.push_back(pr.second);
+        }
       }
     }
     norm += incr;
   }
   res.nbBasis = static_cast<int>(basis.size());
 #ifdef DEBUG_QUANTIZATION_DEFORMATION
-  os << "QHESS: rank-one basis size=" << res.nbBasis << "/" << N
-     << " (max dual norm " << (norm - incr) << ")\n";
+  os << "QHESS: rank-one basis size=" << res.nbBasis << "/" << N << " in "
+     << orbit_reps.size() << " orbit(s) (max dual norm " << (norm - incr)
+     << ")\n";
 #endif
-  // Phase B: DM[v_k v_k^T] for each basis vector, one evaluation per Aut(Q)
-  // orbit (others by the equivariance DM[(g v)(g v)^T] = g^{-T} DM[v v^T] g^{-1}).
-  std::unordered_map<MyVector<Tint>, std::pair<int, MyMatrix<Tint>>> covered;
-  std::vector<MyMatrix<T>> DM_reps;
+  // Phase B: one moment-derivative evaluation per orbit found in Phase A; every
+  // other basis vector follows by the equivariance
+  //   DM[(g v)(g v)^T] = g^{-T} DM[v v^T] g^{-1}.
+  std::vector<MyMatrix<T>> DM_reps(orbit_reps.size());
+  for (size_t o = 0; o < orbit_reps.size(); o++) {
+    MyVector<T> vT = UniversalVectorConversion<T, Tint>(orbit_reps[o]);
+    MyMatrix<T> B = vT * vT.transpose();
+    DM_reps[o] = compute_moment_derivative<T, Tint, Tgroup>(Q, B, os);
+    res.nbEval++;
+#ifdef DEBUG_QUANTIZATION_DEFORMATION
+    os << "QHESS: orbit rep v=" << StringVectorGAP(orbit_reps[o])
+       << " vTQinvV=" << vT.dot(Qinv * vT) << " (eval " << res.nbEval << ")\n";
+#endif
+  }
   std::vector<MyMatrix<T>> DM_basis(N);
   for (int k = 0; k < N; k++) {
-    MyVector<Tint> v = basis[k];
-    auto it = covered.find(v);
-    if (it == covered.end()) {
-      MyVector<T> vT = UniversalVectorConversion<T, Tint>(v);
-      MyMatrix<T> B = vT * vT.transpose();
-      MyMatrix<T> DM = compute_moment_derivative<T, Tint, Tgroup>(Q, B, os);
-      res.nbEval++;
-      int rep_id = static_cast<int>(DM_reps.size());
-      DM_reps.push_back(DM);
-      for (auto &pr : orbit_elements<Tint>(autom, v)) {
-        covered[pr.first] = {rep_id, pr.second};
-      }
-#ifdef DEBUG_QUANTIZATION_DEFORMATION
-      os << "QHESS: orbit rep v=" << StringVectorGAP(v)
-         << " vTQinvV=" << vT.dot(Qinv * vT) << " (eval " << res.nbEval << ")\n";
-#endif
-      it = covered.find(v);
-    }
-    int rep_id = it->second.first;
-    MyMatrix<Tint> g = it->second.second; // v = sign_canon(g * rep)
-    MyMatrix<T> gT = UniversalMatrixConversion<T, Tint>(g);
+    MyMatrix<T> gT = UniversalMatrixConversion<T, Tint>(basis_g[k]);
     MyMatrix<T> ginv = Inverse(gT);
-    DM_basis[k] = ginv.transpose() * DM_reps[rep_id] * ginv;
+    DM_basis[k] = ginv.transpose() * DM_reps[basis_orbit[k]] * ginv;
   }
   // Phase C: assemble the Hessian Gram matrix in the v_k v_k^T basis.
   std::vector<MyVector<T>> vbasis(N);
