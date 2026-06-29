@@ -62,6 +62,16 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     WriteQuantizationGAP(os_out, qres);
     os_out << ";\n";
   }
+  // Isotropy (extremal / "white" quantizer) test: GramMat times the Voronoi
+  // cell second-moment matrix is a scalar multiple of the identity. The defect
+  // matrix and the boolean are written to FileIsotropy.
+  std::string FileIsotropy = BlockQUERIES.get_string("FileIsotropy");
+  if (FileIsotropy != "null") {
+    IsotropyResult<T> ires =
+        ComputeIsotropy<T, Tint, Tgroup>(data, DT, GramMat, os);
+    std::ofstream os_out(FileIsotropy);
+    WriteIsotropyGAP(os_out, ires);
+  }
   std::string FileFreeVectors = BlockQUERIES.get_string("FileFreeVectors");
   if (FileFreeVectors != "null") {
     FreeVectorsResult<Tint> fres =

@@ -949,6 +949,7 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
   {
     std::map<std::string, std::string> ListStringValues;
     ListStringValues["FileQuantization"] = "null";
+    ListStringValues["FileIsotropy"] = "null";
     ListStringValues["FileFreeVectors"] = "null";
     ListStringValues["FileRigidityDegree"] = "null";
     ListStringValues["FileIsoDelaunayDomain"] = "null";

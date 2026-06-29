@@ -1123,6 +1123,65 @@ void WriteQuantizationPYTHON(std::ostream &os_out,
          << normg_string<T>(res.NormalizedSecondMoment) << "}";
 }
 
+// Isotropy (extremal / "white" quantizer) test. By the Zamir-Feder theorem the
+// optimal lattice quantizer is white: the second-moment matrix M of the Voronoi
+// cell is proportional to the inverse Gram matrix, equivalently
+//   GramMat * M = Lambda * I
+// for a scalar Lambda. We test this exactly: with Lambda = trace(GramMat*M)/n,
+// the lattice is isotropic iff the defect DefectMat = GramMat*M - Lambda*I is
+// the zero matrix. The Voronoi-cell volume normalization only rescales M, Lambda
+// and DefectMat by a common factor, so it does not affect the exact test.
+template <typename T> struct IsotropyResult {
+  MyMatrix<T> SecMomentMat;          // M = int_{V_0} u_i u_j (volume = TheVolume)
+  MyMatrix<T> GramTimesSecMomentMat; // GramMat * M
+  T Lambda;                          // trace(GramMat * M) / n
+  MyMatrix<T> DefectMat;             // GramMat * M - Lambda * I
+  bool IsIsotropic;                  // DefectMat == 0
+};
+
+template <typename T, typename Tint, typename Tgroup>
+IsotropyResult<T> ComputeIsotropy(DataLattice<T, Tint, Tgroup> &data,
+                                  DelaunayTesselation<T, Tgroup> const &DT,
+                                  MyMatrix<T> const &GramMat, std::ostream &os) {
+  QuantizationResult<T> qres =
+      ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT, os);
+  int n = GramMat.rows();
+  MyMatrix<T> M = qres.SecMomentMat;
+  MyMatrix<T> Prod = GramMat * M;
+  T tr(0);
+  for (int i = 0; i < n; i++) {
+    tr += Prod(i, i);
+  }
+  T Lambda = tr / T(n);
+  MyMatrix<T> DefectMat = Prod - Lambda * IdentityMat<T>(n);
+  bool IsIsotropic = true;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (DefectMat(i, j) != T(0)) {
+        IsIsotropic = false;
+      }
+    }
+  }
+  IsotropyResult<T> res;
+  res.SecMomentMat = M;
+  res.GramTimesSecMomentMat = Prod;
+  res.Lambda = Lambda;
+  res.DefectMat = DefectMat;
+  res.IsIsotropic = IsIsotropic;
+  return res;
+}
+
+template <typename T>
+void WriteIsotropyGAP(std::ostream &os_out, IsotropyResult<T> const &res) {
+  os_out << "return rec(SecMomentMat:=" << StringMatrixGAP(res.SecMomentMat)
+         << ",\n";
+  os_out << "GramTimesSecMomentMat:="
+         << StringMatrixGAP(res.GramTimesSecMomentMat) << ",\n";
+  os_out << "Lambda:=" << res.Lambda << ",\n";
+  os_out << "DefectMat:=" << StringMatrixGAP(res.DefectMat) << ",\n";
+  os_out << "IsIsotropic:=" << (res.IsIsotropic ? "true" : "false") << ");\n";
+}
+
 // clang-format off
 #endif  // SRC_DELAUNAY_QUANTIZATIONINTEGRAL_H_
 // clang-format on
