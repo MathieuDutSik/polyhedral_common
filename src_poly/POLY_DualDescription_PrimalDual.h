@@ -34,8 +34,7 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
   std::set<MyVector<T>> SetEXT;
   auto f_insert = [&](MyVector<T> const &eEXT) -> void {
     MyVector<T> eEXTred = ScalarCanonicalizationVector(eEXT);
-    if (!SetEXT.contains(eEXTred)) {
-      SetEXT.insert(eEXTred);
+    if (SetEXT.insert(eEXTred).second) {
       ListEXT.push_back(eEXTred);
     }
   };

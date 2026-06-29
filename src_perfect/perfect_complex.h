@@ -899,8 +899,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     std::vector<int> l_sign;
     std::vector<MyMatrix<Tint>> l_mat;
     auto insert_entry=[&](Face const& new_incd_sma, int const& new_sign, MyMatrix<Tint> const& new_mat) -> void {
-      if (!set_faces_gen.contains(new_incd_sma)) {
-        set_faces_gen.insert(new_incd_sma);
+      if (set_faces_gen.insert(new_incd_sma).second) {
         l_faces_gen.push_back(new_incd_sma);
         l_sign.push_back(new_sign);
         l_mat.push_back(new_mat);
@@ -1356,8 +1355,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
     auto g_insert=[&](MyMatrix<Tint> const& P) -> void {
       MyMatrix<Tint> EXTins = EXT_upp * P;
       MyMatrix<Tint> EXTcan = tot_set(EXTins);
-      if (!set_ext.contains(EXTcan)) {
-        set_ext.insert(EXTcan);
+      if (set_ext.insert(EXTcan).second) {
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
         {
           ContainerMatrix<Tint> cont(EXTins);
@@ -1472,8 +1470,7 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
           std::vector<PerfectFace<Tint>>& l_pf = l_topdims[i_perfect].ll_faces[i_dim];
           size_t n_exist = l_pf.size();
           auto g_insert=[&](Face const& f, MyMatrix<Tint> const& M) -> void {
-            if (!set.contains(f)) {
-              set.insert(f);
+            if (set.insert(f).second) {
               l_set.push_back(f);
               PerfectFace<Tint> pf{i_face, M};
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
@@ -1914,8 +1911,7 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& in
   auto f_insert=[&](TopPerfectCone<Tint> const& tpc) -> void {
     MyMatrix<Tint> EXT = fce.pctdi.l_perfect[tpc.i_perfect].EXT * tpc.M;
     MyMatrix<Tint> EXTcan = tot_set(EXT);
-    if (!set_ext.contains(EXTcan)) {
-      set_ext.insert(EXTcan);
+    if (set_ext.insert(EXTcan).second) {
       l_top.push_back(tpc);
     }
   };

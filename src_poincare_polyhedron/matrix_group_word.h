@@ -241,9 +241,8 @@ template <typename T> struct ShortVectorGroup {
             return RetElt;
           }
           n_cons++;
-          if (!set_done.contains(xNew)) {
+          if (set_done.insert(xNew).second) {
             list_active[xNew] = eList;
-            set_done.insert(xNew);
           }
         }
       }

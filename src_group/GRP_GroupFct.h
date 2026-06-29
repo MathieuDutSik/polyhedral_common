@@ -643,10 +643,9 @@ OrbitWithRepresentative(const Telt &id, std::vector<Telt> const &ListGen,
     for (size_t u = curr_pos; u < len; u++) {
       for (auto &eElt : ListGen) {
         Tobj eImg = act(ListObj[u].first, eElt);
-        if (!SetObj.contains(eImg)) {
+        if (SetObj.insert(eImg).second) {
           Telt NewElt = ListObj[u].second * eElt;
           ListObj.push_back({eImg, NewElt});
-          SetObj.insert(eImg);
         }
       }
     }
@@ -782,8 +781,7 @@ vectface OrbitSplittingSet_T(T_hash_set &ListTotal, Tgroup const &TheGRP) {
     vectface vf(n);
     size_t total_len = 0;
     auto f_insert = [&](Face const &f) -> void {
-      if (!SingleOrbit.contains(f)) {
-        SingleOrbit.insert(f);
+      if (SingleOrbit.insert(f).second) {
         ListTotal.erase(f);
         vf.push_back(f);
         total_len++;
@@ -832,8 +830,7 @@ void OrbitSplittingSet_Kernel(vectface const &PreListTotal,
     vectface vf(n);
     size_t total_len = 0;
     auto f_insert = [&](Face const &f) -> void {
-      if (!SingleOrbit.contains(f)) {
-        SingleOrbit.insert(f);
+      if (SingleOrbit.insert(f).second) {
         ListTotal.erase(f);
         vf.push_back(f);
         //        std::cerr << "erasing f=" << f << "\n";

@@ -1125,10 +1125,9 @@ GetMissing_TypeI_Gen2(StepEnum<T> const &se, DataFAC<T> const &datafac,
         for (int i = 0; i < datafac.n_mat; i++) {
           ResultOptim ro_new = f_increment(ro, i + 1);
           if (ro_new.the_scal < ro.the_scal) {
-            if (!l_done.contains(ro_new.the_x)) {
+            if (l_done.insert(ro_new.the_x).second) {
               l_result.push_back(ro_new);
               l_total.push_back(ro_new);
-              l_done.insert(ro_new.the_x);
               if (ro_new.the_scal < 0) {
                 has_negative = true;
               }
@@ -1483,9 +1482,8 @@ void InsertAndCheckRedundancy(StepEnum<T> &se,
           GetMissingInverseElement(se, datafac, svg, os);
       std::vector<CombElt<T>> ListMissB;
       for (auto &eElt : ListMiss) {
-        if (!ListTried.contains(eElt)) {
+        if (ListTried.insert(eElt).second) {
           ListMissB.push_back(eElt);
-          ListTried.insert(eElt);
         }
       }
       os << "PP: |ListMiss|=" << ListMiss.size()

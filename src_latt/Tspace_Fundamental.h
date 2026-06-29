@@ -576,8 +576,7 @@ MyMatrix<Tint> vector_family_saturation(MyMatrix<Tint> const& SHV, std::vector<M
   std::vector<MyVector<Tint>> l_vect;
   std::unordered_set<MyVector<Tint>> set_vect;
   auto f_insert=[&](MyVector<Tint> const& v) -> void {
-    if (!set_vect.contains(v)) {
-      set_vect.insert(v);
+    if (set_vect.insert(v).second) {
       l_vect.push_back(v);
     }
   };

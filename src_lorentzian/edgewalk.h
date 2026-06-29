@@ -1211,9 +1211,8 @@ std::vector<MyVector<Tint>> compute_full_root_orbit_iter(
     std::unordered_set<MyVector<Tint>> s_v;
     std::vector<MyVector<Tint>> l_v;
     auto f_ins = [&](MyVector<Tint> const &w) -> void {
-      if (s_v.contains(w))
+      if (!s_v.insert(w).second)
         return;
-      s_v.insert(w);
       l_v.push_back(w);
       TotalList.insert(w);
     };
@@ -1751,9 +1750,8 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
   auto f_isom = [&](MyMatrix<Tint> const &eP) -> bool {
     if (eP == IdMat)
       return false;
-    if (s_gen_isom_cox.contains(eP))
+    if (!s_gen_isom_cox.insert(eP).second)
       return false;
-    s_gen_isom_cox.insert(eP);
 #ifdef TRACK_INFOS_LOG
     std::cout << "rec(isom:=" << StringMatrixGAP(eP) << "),\n";
 #endif

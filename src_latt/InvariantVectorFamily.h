@@ -140,10 +140,9 @@ template <typename T> bool has_duplication(MyMatrix<T> const &SHV) {
   std::unordered_set<MyVector<T>> set;
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> V = GetMatrixRow(SHV, i_row);
-    if (set.contains(V)) {
+    if (!set.insert(V).second) {
       return true;
     }
-    set.insert(V);
   }
   return false;
 }
@@ -312,13 +311,13 @@ get_k_short_orbit_vectors(MyMatrix<T> const &GramMat,
       if (reps.size() >= K) {
         break;
       }
-      if (assigned.count(v) > 0) {
+      // The orbit of v under v -> g v (it stays within this norm shell, since
+      // the ListGen preserve the GramMat). insert().second is false when v was
+      // already assigned to an earlier orbit.
+      if (!assigned.insert(v).second) {
         continue;
       }
-      // The orbit of v under v -> g v (it stays within this norm shell, since
-      // the ListGen preserve the GramMat).
       std::vector<MyVector<Tint>> todo{v};
-      assigned.insert(v);
       while (!todo.empty()) {
         MyVector<Tint> w = todo.back();
         todo.pop_back();

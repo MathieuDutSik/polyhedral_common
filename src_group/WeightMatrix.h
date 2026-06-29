@@ -398,8 +398,7 @@ public:
     for (int j = 0; j < 2; j++) {
       while (true) {
         T genVal = GetSymmGenerateValue<T>(iVal);
-        if (!setWeight.contains(genVal)) {
-          setWeight.insert(genVal);
+        if (setWeight.insert(genVal).second) {
           RET_ListWeight.push_back(genVal);
           break;
         }
