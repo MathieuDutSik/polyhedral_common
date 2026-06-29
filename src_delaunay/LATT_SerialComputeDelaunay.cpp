@@ -129,18 +129,17 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     MyMatrix<T> Qadj = DeterminantMat(GramMat) * Qinv; // adj(Q): integral, PD
     std::vector<MyMatrix<Tint>> autom =
         ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
-    std::vector<MyVector<Tint>> reps =
+    std::vector<std::pair<MyVector<Tint>, size_t>> reps =
         get_k_short_orbit_vectors<T, Tint>(Qadj, autom, Korb, os);
     std::ofstream os_out(FileDeformationOrbits);
     os_out << "return rec(nbEvaluated:=" << reps.size() << ",\nListOrbit:=[";
     bool IsFirst = true;
-    for (auto &v : reps) {
+    for (auto &[v, orbit_size] : reps) {
       MyVector<T> v_T = UniversalVectorConversion<T, Tint>(v);
       MyMatrix<T> H = v_T * v_T.transpose();
       DeformationDerivatives<T> der =
           compute_deformation_derivatives<T, Tint, Tgroup>(GramMat, H, os);
       T invariant = v_T.dot(Qinv * v_T);
-      long orbit_size = orbit_elements(autom, v).size();
       if (!IsFirst) {
         os_out << ",\n";
       }
