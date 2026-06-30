@@ -115,7 +115,9 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
   //
   bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
   std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
-  CreateDirectory(STORAGE_Prefix);
+  if (STORAGE_Saving) {
+    CreateDirectory(STORAGE_Prefix);
+  }
   //
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");

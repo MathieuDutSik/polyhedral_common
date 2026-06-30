@@ -33,7 +33,9 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
 #endif
   bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
   std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
-  CreateDirectory(STORAGE_Prefix);
+  if (STORAGE_Saving) {
+    CreateDirectory(STORAGE_Prefix);
+  }
   //
   SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
