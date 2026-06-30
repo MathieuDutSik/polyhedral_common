@@ -65,3 +65,22 @@ The repo has accumulated a substantial library of helpers across `basic_common_c
 - Use the Serena MCP `find_symbol` / `search_for_pattern` tools rather than re-reading whole files.
 
 If a near-fit exists but isn't quite right, prefer extending or templatizing it over duplicating its body. Two copies of the same logic in different files is a bug — when the original is updated, the copy rots silently.
+
+## CI is calendar-scheduled, one workflow per day
+
+`.github/workflows/` follows a deliberately peculiar scheme that avoids saturating CI runners and keeps long-running test matrices spread out across the month. The rules:
+
+1. **Each CI workflow runs at most once per day.** All triggers are `schedule: cron:` based; pushes do not trigger CI. (Workflows can also be fired by hand via `workflow_dispatch`.)
+2. **The numeric index in the filename is the day of the month the workflow runs.** A file named `ci_NN_<slug>.yml` (or `ci_NNA_<slug>.yml` / `ci_NNB_<slug>.yml`) fires on day `NN`. For example `ci_14_schedule_full_sweep.yml` runs on the 14th: `cron: "0 0 14 * *"`.
+3. **`A` / `B` suffix splits the day across alternating months.** When two workflows share a day, the `A` variant runs in odd months and `B` in even months:
+   - `ci_02A_int_automorphy.yml`     → `cron: "0 0 2 1,3,5,7,9,11 *"` (Jan, Mar, May, Jul, Sep, Nov)
+   - `ci_02B_rat_automorphy.yml`     → `cron: "0 0 2 2,4,6,8,10,12 *"` (Feb, Apr, Jun, Aug, Oct, Dec)
+
+   So an `A` workflow fires every two months; same for `B`; together they cover every month, alternating.
+
+### Practical consequences
+
+- **Adding a new workflow.** Pick an unused day, name the file `ci_NN_<slug>.yml`, and set `cron: "0 0 NN * *"`. If the day is already taken by exactly one workflow that runs every month, convert that workflow to `ci_NNA_*` (odd months) and add yours as `ci_NNB_*` (even months) — update its cron accordingly. If both A and B slots are occupied, pick a different day.
+- **You will not see your push trigger CI.** A change merged today will first be exercised by whichever workflow's day comes next. To verify immediately, trigger by hand with `gh workflow run ci_NN_<slug>.yml` (or the Actions UI's "Run workflow" button) — this works because every workflow also declares `workflow_dispatch:`.
+- **Reading logs after a failure.** The user fetches CI failure logs via `gh run download` (or downloads the `L_<name>` zip from the Actions UI). When asked to diagnose a CI failure, expect the log location to be provided explicitly; do not assume it is under any particular path.
+- **Bi-monthly cadence on `A` / `B` workflows.** An issue introduced just after, say, `ci_10A`'s February run will not be caught by `ci_10A` again until April. If a change is suspected to affect an `A`/`B` workflow, trigger it manually rather than waiting two months.
