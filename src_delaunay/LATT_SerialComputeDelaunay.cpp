@@ -158,9 +158,9 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
              << ", vTQinvV:=" << invariant
              << ", SecMoment0:=" << jet_derivative(der.secmoment, 0)
              << ", SecMoment2:=" << jet_derivative(der.secmoment, 2)
-             << ", det0:=" << der.det.coeffs[0]
-             << ", det1:=" << der.det.coeffs[1]
-             << ", det2:=" << der.det.coeffs[2]
+             << ", det0:=" << jet_derivative(der.det, 0)
+             << ", det1:=" << jet_derivative(der.det, 1)
+             << ", det2:=" << jet_derivative(der.det, 2)
              << ", Gpp:=" << jet_derivative(der.G, 2) << ")";
     }
     os_out << "]);\n";

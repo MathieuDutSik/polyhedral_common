@@ -410,8 +410,12 @@ void WriteDeformationGAP(std::ostream &os_out,
   os_out << "numerator:=" << StringVectorGAP(der.secmoment_num) << ",\n";
   os_out << "denominator:=" << StringVectorGAP(der.secmoment_den) << ",\n";
   os_out << "degree:=" << der.secmoment_degree << ",\n";
-  os_out << "det0:=" << der.det.coeffs[0] << ", det1:=" << der.det.coeffs[1]
-         << ", det2:=" << der.det.coeffs[2] << ");\n";
+  // det0/det1/det2 are the 0th/1st/2nd derivatives of det(Q+tH) at t=0 (via
+  // jet_derivative = k! * coeff), matching the SecMoment0/1/2 convention above.
+  // (det2 is the second derivative D''(0) = 2*coeff_2, not the raw t^2 coeff.)
+  os_out << "det0:=" << jet_derivative(der.det, 0)
+         << ", det1:=" << jet_derivative(der.det, 1)
+         << ", det2:=" << jet_derivative(der.det, 2) << ");\n";
 }
 
 // ---------------------------------------------------------------------------
