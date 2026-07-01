@@ -105,9 +105,9 @@ set_dim2_nocomm_examples:=function()
     Add(ListCases, rec(n:=2, d:=-24, comm_choice:="Trivial", n_domains:=61));
 end;
 
-set_canonical_examples();
-#set_dim2_examples();
-#set_dim2_nocomm_examples();
+#set_canonical_examples();
+set_dim2_examples();
+set_dim2_nocomm_examples();
 
 
 
