@@ -1,0 +1,84 @@
+// Devcontainer for polyhedral_common — LLM-assisted development.
+//
+// Quick start (no IDE required):
+//   npm install -g @devcontainers/cli                     # one-time
+//   cd /path/to/polyhedral_common
+//   devcontainer up --workspace-folder .                  # build + start
+//   devcontainer exec --workspace-folder . bash           # attach a shell
+//
+// Inside the container, on first run, authenticate the LLM CLIs against
+// your subscriptions:
+//   $ claude /login                                       # browser flow
+//   $ codex login                                         # browser flow
+// Credentials persist in the `poly_llm_home` named docker volume below,
+// so subsequent `devcontainer up` invocations skip auth.
+//
+// Linux hosts: replace the `runArgs` -p lines with `"--network=host"` if
+// you find the OAuth callback uses a port not in the listed set.
+// macOS / Windows hosts (Docker Desktop): keep the -p lines.
+//
+// To pick up new MCP configs after rebuilding the image, delete
+// ~/.claude.json and ~/.codex/config.toml inside the container — the
+// postStartCommand will re-seed them from /usr/local/share/poly_llm/.
+{
+  "name": "polyhedral_common LLM dev",
+
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+
+  // The Microsoft C++ base image creates user `vscode` at UID 1000.
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "updateRemoteUserUID": false,
+
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+
+  // Persist OAuth credentials, MCP memory graph, uv cache, bash history,
+  // and npm globals across container recreations. Docker seeds this
+  // named volume from the image's /home/vscode on first use.
+  "mounts": [
+    "source=poly_llm_home,target=/home/vscode,type=volume"
+  ],
+
+  // Modular tooling: Node.js arrives via the official feature so the
+  // Dockerfile stays free of NodeSource bootstrap noise. Python ships
+  // with the MS C++ base, so no python feature is needed.
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+
+  // OAuth callback ports for `claude /login` and `codex login`. The
+  // exact ports vary by CLI version; this covers the commonly-seen
+  // values. Linux users may prefer `"--network=host"` instead.
+  "runArgs": [
+    "-p", "1455:1455",
+    "-p", "8000:8000",
+    "-p", "54545:54545"
+  ],
+
+  // Optional API-key passthrough; harmless when the env vars are unset.
+  "remoteEnv": {
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}"
+  },
+
+  // Lifecycle (in order, all run as `vscode` in /workspace):
+  //   onCreateCommand     — once at container creation; cheap setup.
+  //   postCreateCommand   — once at creation, after features; install LLM
+  //                         CLIs + the npm-based MCPs into ~/.npm-global
+  //                         (which lives in the named volume).
+  //   postStartCommand    — every container start; reseed MCP configs.
+  //   postAttachCommand   — every `devcontainer exec`/shell attach.
+  "onCreateCommand": "git -C /workspace submodule update --init --recursive || true",
+
+  "postCreateCommand": "npm install -g --silent @anthropic-ai/claude-code @openai/codex @modelcontextprotocol/server-sequential-thinking @modelcontextprotocol/server-memory",
+
+  "postStartCommand": "/usr/local/bin/poly_llm-restore.sh",
+
+  "postAttachCommand": "/usr/local/bin/poly_llm-welcome.sh"
+}
