@@ -4,7 +4,10 @@
 # g++, clang, cmake, gdb, a non-root `vscode` user at UID 1000, sudo,
 # locales, etc.), then layers:
 #   * polyhedral_common build deps: boost, eigen, gmp, glpk, cddlib,
-#     openmpi, libnauty2, libtbb, lrslib
+#     openmpi, libtbb, lrslib
+#   * nauty built from https://github.com/MathieuDutSik/nauty (tag 2.9.3)
+#     into /opt/nauty, with $NAUTY_PATH / $NAUTY_INCLUDE / $NAUTY_LINK
+#     exported so the per-directory Makefiles under src_*/ work directly
 #   * debug & dev tools: valgrind, clangd, clang-tidy, clang-format,
 #     ripgrep, fd-find, jq, tmux, etc.
 #   * uv + Serena MCP (pre-warmed)
@@ -46,10 +49,41 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
         libglpk-dev \
         libcdd-dev \
         libtbb-dev \
-        libnauty2-dev \
         openmpi-bin libopenmpi-dev \
         lrslib \
     && rm -rf /var/lib/apt/lists/*
+
+# ---------- nauty (built from the project's fork) ----------
+# Ubuntu 24.04 no longer ships libnauty2-dev. Build it here so both CMake
+# and the per-directory Makefiles (which reference $NAUTY_INCLUDE /
+# $NAUTY_LINK) find headers and libraries out of the box.
+# The top-level CMakeLists.txt still fetches its own copy via
+# ExternalProject_Add — that lives inside the CMake build tree and is
+# independent of this system-wide install.
+RUN git clone --depth 1 --branch 2.9.3 \
+        https://github.com/MathieuDutSik/nauty.git /tmp/nauty \
+ && cd /tmp/nauty \
+ && ./configure --prefix=/opt/nauty \
+ && make -j"$(nproc)" \
+ && make install \
+ && rm -rf /tmp/nauty
+
+# Env vars consumed by the per-directory Makefiles under src_*/.
+ENV NAUTY_PATH=/opt/nauty
+ENV NAUTY_INCLUDE="-I/opt/nauty/include"
+ENV NAUTY_LINK="-L/opt/nauty/lib -lnauty -Wl,-rpath,/opt/nauty/lib"
+
+# Standard env-var contract the per-directory Makefiles rely on. Setting
+# these here keeps `make` in any src_* directory buildable without extra
+# shell setup. `LIBBLISS_*` are intentionally left unset — bliss is not
+# installed; the Makefile passes -I with empty argument (GCC tolerates it)
+# and no bliss link fragment, which works for all targets that don't
+# actually reference bliss headers.
+ENV GMP_INCDIR=/usr/include
+ENV GMP_CXX_LINK="-lgmp -lgmpxx"
+ENV BOOST_INCDIR=/usr/include
+ENV BOOST_LINK="-lboost_serialization"
+ENV EIGEN_PATH=/usr/include/eigen3
 
 # Sanity check: every header / pkg-config that CMakeLists.txt probes must
 # resolve here. Failing fast at build time beats failing at devcontainer-up.

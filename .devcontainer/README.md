@@ -6,7 +6,7 @@ A short, practical guide to using the `.devcontainer/` in this repository for LL
 
 A pre-configured, containerized dev environment bundling:
 
-- The C/C++ toolchain (gcc, g++, clang, clangd, clang-tidy, clang-format), debug tools (valgrind, gdb, lldb, strace), and all polyhedral_common build deps (boost, eigen, gmp, glpk, cddlib, openmpi, libnauty2, libtbb, lrslib).
+- The C/C++ toolchain (gcc, g++, clang, clangd, clang-tidy, clang-format), debug tools (valgrind, gdb, lldb, strace), and the polyhedral_common apt build deps (boost, eigen, gmp, glpk, cddlib, openmpi, libtbb, lrslib). nauty is built from `github.com/MathieuDutSik/nauty` (tag 2.9.3) and installed to `/opt/nauty` with `NAUTY_PATH` / `NAUTY_INCLUDE` / `NAUTY_LINK` exported, so both CMake and the per-directory `Makefile`s under `src_*/` find it out of the box.
 - Node.js 22 and Python 3.
 - The LLM CLIs `claude` (Anthropic Claude Code) and `codex` (OpenAI Codex CLI), each pre-wired to the same three MCP servers:
   - **serena** — semantic code navigation (via `uv`)
