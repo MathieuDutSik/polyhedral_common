@@ -1,6 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "MAT_Matrix.h"
 #include "jet_number.h"
 // clang-format on
 
@@ -87,6 +88,30 @@ int main() {
     check(jet_deriv(det, 0) == T(1) && jet_deriv(det, 1) == T(0) &&
               jet_deriv(det, 2) == T(-4),
           "jet_deriv of 1 - 2 t^2 (0th, 1st, 2nd)");
+  }
+
+  // Feasibility of the numeric integral core over jets: MyMatrix<jet<T,N>> with
+  // DeterminantMat / Inverse (the operations center_homog and direct_integral
+  // rely on). Q + t H with Q = [[2,-1],[-1,2]], H = [[0,1],[1,0]].
+  {
+    constexpr int Nd = 2;
+    using JT = jet<T, Nd>;
+    JT t = JT::var();
+    MyMatrix<JT> M(2, 2);
+    M(0, 0) = JT(2);
+    M(0, 1) = JT(-1) + t;
+    M(1, 0) = JT(-1) + t;
+    M(1, 1) = JT(2);
+    // det(Q + tH) = (2)(2) - (-1+t)^2 = 4 - (1 - 2t + t^2) = 3 + 2t - t^2.
+    JT det = DeterminantMat(M);
+    check(det[0] == T(3) && det[1] == T(2) && det[2] == T(-1),
+          "DeterminantMat over jets: 3 + 2t - t^2");
+    // Inverse * M == I, checked at order N.
+    MyMatrix<JT> Inv = Inverse(M);
+    MyMatrix<JT> Prod = Inv * M;
+    bool inv_ok = Prod(0, 0) == JT(1) && Prod(1, 1) == JT(1) &&
+                  Prod(0, 1) == JT(0) && Prod(1, 0) == JT(0);
+    check(inv_ok, "Inverse over jets: Inv * M == I");
   }
 
   if (n_error == 0)
