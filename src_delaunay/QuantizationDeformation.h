@@ -46,6 +46,10 @@
 #define SANITY_CHECK_QUANTIZATION_DEFORMATION
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_QUANTIZATION_DEFORMATION
+#endif
+
 // The common symmetry group Stab(Q) cap Stab(H), as a list of matrix
 // generators over T. Q must be positive definite (it is used to extract the
 // finite vector family).
@@ -289,9 +293,22 @@ QuantizationResult<T> quant_at_gram(MyMatrix<T> const &GramMat,
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   DataLattice<T, Tint, Tgroup> data =
       GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
+#ifdef TIMINGS_QUANTIZATION_DEFORMATION
+  MicrosecondTime time_qag;
+#endif
   DelaunayTesselation<T, Tgroup> DT =
       get_delaunay_tessellation_serial<T, Tint, Tgroup>(data, "none", 0, os);
-  return ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT, os);
+#ifdef TIMINGS_QUANTIZATION_DEFORMATION
+  os << "QDEF_TIMING: quant_at_gram Delaunay orbits=" << DT.l_dels.size()
+     << " tessellation took " << time_qag << "\n";
+#endif
+  QuantizationResult<T> res =
+      ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT, os);
+#ifdef TIMINGS_QUANTIZATION_DEFORMATION
+  os << "QDEF_TIMING: quant_at_gram (Delaunay+integral) total took " << time_qag
+     << "\n";
+#endif
+  return res;
 }
 
 // The SecMoment of a concrete Gram matrix (a single sample). The second moment
@@ -528,6 +545,12 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
     }
     return it->second;
   };
+#ifdef TIMINGS_QUANTIZATION_DEFORMATION
+  MicrosecondTime time_orbit;
+  os << "QDEF_TIMING: compute_moment_derivative rank(B)="
+     << RankMat(B) << " pool_size=" << pool_size << " (samples t in (0,tmax/2))"
+     << " tmax=" << seg.tmax << "\n";
+#endif
   MyMatrix<T> DM(n, n);
   for (int i = 0; i < n; i++) {
     for (int j = i; j < n; j++) {
@@ -541,6 +564,10 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
       DM(j, i) = deriv;
     }
   }
+#ifdef TIMINGS_QUANTIZATION_DEFORMATION
+  os << "QDEF_TIMING: compute_moment_derivative done, " << mcache.size()
+     << " distinct samples evaluated, orbit took " << time_orbit << "\n";
+#endif
   return DM;
 }
 
