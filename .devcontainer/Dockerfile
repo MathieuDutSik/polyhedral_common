@@ -158,7 +158,8 @@ cat <<'BANNER'
  polyhedral_common LLM dev container
 
  LLM CLIs:           claude     codex
- First-time auth:    claude /login   ;   codex login
+ Auth:               host-side, no login here (CLAUDE_CODE_OAUTH_TOKEN
+                     env + bind-mounted ~/.codex; see devcontainer.json)
  MCP servers:        serena  sequentialthinking  memory
  Project root:       /workspace
 ==========================================================

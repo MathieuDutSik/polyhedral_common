@@ -6,20 +6,33 @@
 //   devcontainer up --workspace-folder .                  # build + start
 //   devcontainer exec --workspace-folder . bash           # attach a shell
 //
-// Inside the container, on first run, authenticate the LLM CLIs against
-// your subscriptions:
-//   $ claude /login                                       # browser flow
-//   $ codex login                                         # browser flow
-// Credentials persist in the `poly_llm_home` named docker volume below,
-// so subsequent `devcontainer up` invocations skip auth.
+// AUTHENTICATION — done ONCE ON THE HOST, never inside the container.
+// The container opens no ports and runs no browser login; it reuses the
+// subscription-OAuth credentials you created on the host. Both flows are
+// the subscription path, not API-key billing. The browser step happens
+// natively on your host (macOS), where ports and the browser just work,
+// so no OAuth callback port ever has to be published into the container.
 //
-// Linux hosts: replace the `runArgs` -p lines with `"--network=host"` if
-// you find the OAuth callback uses a port not in the listed set.
-// macOS / Windows hosts (Docker Desktop): keep the -p lines.
+//   Claude — run once on the host, then persist the printed token in
+//   your shell profile (e.g. ~/.zshrc); the container reads it via the
+//   `remoteEnv` CLAUDE_CODE_OAUTH_TOKEN entry below:
+//     $ claude setup-token
+//     $ export CLAUDE_CODE_OAUTH_TOKEN=<printed token>     # add to ~/.zshrc
+//
+//   Codex — log in once on the host (native browser, no Docker ports):
+//     $ codex login
+//   The container bind-mounts your host ~/.codex (see `mounts`), so it
+//   shares that same login and refreshes the token in place.
+//
+// Because all auth lives on the host, NO callback ports are published
+// (there is no `runArgs`): multiple containers can run side by side and
+// the host-port collisions that fixed ports used to cause are gone.
 //
 // To pick up new MCP configs after rebuilding the image, delete
-// ~/.claude.json and ~/.codex/config.toml inside the container — the
+// ~/.claude.json (and ~/.codex/config.toml) inside the container — the
 // postStartCommand will re-seed them from /usr/local/share/poly_llm/.
+// Note: ~/.codex is bind-mounted from the host, so its config.toml is
+// your host copy — editing/deleting it there affects the host.
 {
   "name": "polyhedral_common LLM dev",
 
@@ -36,11 +49,17 @@
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
 
-  // Persist OAuth credentials, MCP memory graph, uv cache, bash history,
-  // and npm globals across container recreations. Docker seeds this
-  // named volume from the image's /home/vscode on first use.
+  // Persist the MCP memory graph, uv cache, bash history, and npm globals
+  // across container recreations. Docker seeds this named volume from the
+  // image's /home/vscode on first use.
+  //
+  // The second mount reuses the host's codex subscription login: ~/.codex
+  // is bind-mounted in place (nested over the volume) so the shared
+  // auth.json is read directly and token refreshes persist back to the
+  // host. This replaces any in-container `codex login` / callback port.
   "mounts": [
-    "source=poly_llm_home,target=/home/vscode,type=volume"
+    "source=poly_llm_home,target=/home/vscode,type=volume",
+    "source=${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind"
   ],
 
   // Modular tooling: Node.js arrives via the official feature so the
@@ -52,19 +71,13 @@
     }
   },
 
-  // OAuth callback ports for `claude /login` and `codex login`. The
-  // exact ports vary by CLI version; this covers the commonly-seen
-  // values. Linux users may prefer `"--network=host"` instead.
-  "runArgs": [
-    "-p", "1455:1455",
-    "-p", "8000:8000",
-    "-p", "54545:54545"
-  ],
-
-  // Optional API-key passthrough; harmless when the env vars are unset.
+  // Claude subscription-OAuth token, generated once on the host with
+  // `claude setup-token` (see the header). This is the subscription
+  // path, not API billing. We deliberately do NOT pass ANTHROPIC_API_KEY
+  // / OPENAI_API_KEY through: an API key would override the subscription
+  // login. Codex needs nothing here — it uses the mounted ~/.codex.
   "remoteEnv": {
-    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
-    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}"
+    "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
   },
 
   // Lifecycle (in order, all run as `vscode` in /workspace):
