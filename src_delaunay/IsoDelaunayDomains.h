@@ -875,6 +875,13 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   std::unordered_map<MyVector<T>, size_t> ListVertices_rev;
   size_t idx_vertices = 1;
   Tgroup PermGRP;
+  // Building PermGRP (a stabilizer-chain computation) from scratch is not
+  // cheap, and the vertex/generator discovery loop below can trigger many
+  // insertion events in a row. Only the LAST rebuild before PermGRP is
+  // actually read (the isin() check below, or the facet-orbit computations
+  // in the second half of this function) matters, so the rebuild is done
+  // lazily: insertions just mark the group stale via group_dirty.
+  bool group_dirty = true;
   auto StandardGroupUpdate = [&]() -> void {
     std::vector<Telt> ListGen;
     Tidx n_act = idx_vertices - 1;
@@ -899,8 +906,13 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
     os << "ISODEL: FRING: StandardGroupUpdate After Tgroup |PermGRP|="
        << PermGRP.size() << "\n";
 #endif
+    group_dirty = false;
   };
-  StandardGroupUpdate();
+  auto ensure_group_updated = [&]() -> void {
+    if (group_dirty) {
+      StandardGroupUpdate();
+    }
+  };
   struct TypeOrbitCenter {
     int iDelaunay;
     MyMatrix<T> eBigMat;
@@ -938,6 +950,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
       ListVertices_rev[eV] = idx_vertices;
       idx_vertices++;
     }
+    group_dirty = true;
     size_t n_gen = ListPermGenList.size();
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertVertex, step 4, n_gen=" << n_gen << "\n";
@@ -993,6 +1006,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
         os << "ISODEL: FRING: opt, case exist\n";
 #endif
         Telt elt(*opt);
+        ensure_group_updated();
         return PermGRP.isin(elt);
       } else {
         std::vector<MyMatrix<T>> LGen = ListMatGens;
@@ -1064,7 +1078,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #endif
       ListPermGenList.push_back(*opt);
       ListMatGens.push_back(eMat);
-      StandardGroupUpdate();
+      group_dirty = true;
     }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertGenerator, step 4\n";
@@ -1083,7 +1097,9 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertCenter, step 2\n";
 #endif
-    StandardGroupUpdate();
+    // No group rebuild here: FuncInsertVertex above already marked the group
+    // dirty if it grew, and the only functional read within this call is
+    // FuncInsertGenerator's isin() check, which rebuilds lazily itself.
     auto get_iOrbFound = [&]() -> std::optional<size_t> {
       for (size_t iOrb = 0; iOrb < ListOrbitCenter.size(); iOrb++) {
         if (ListOrbitCenter[iOrb].iDelaunay == TheRec.iDelaunay) {
@@ -1189,6 +1205,10 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FRING: after first big loop\n";
 #endif
+  // Vertex/generator discovery is now complete: PermGRP must reflect all of
+  // it before the facet-orbit code below (FuncInsertFacet, Stabilizer_OnSets)
+  // starts reading it.
+  ensure_group_updated();
   // second part, the convex decomposition
   int nVert = ListVertices.size();
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN

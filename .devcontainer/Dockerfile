@@ -108,6 +108,7 @@ RUN pkg-config --exists eigen3 \
 RUN mkdir -p /usr/local/share/poly_llm && cat > /usr/local/share/poly_llm/claude.json <<'JSON'
 {
   "hasCompletedOnboarding": true,
+  "bypassPermissionsModeAccepted": true,
   "theme": "dark",
   "projects": {
     "/workspace": {
@@ -160,6 +161,29 @@ fi
 if [ ! -f "${HOME_DIR}/.codex/config.toml" ]; then
   cp /usr/local/share/poly_llm/codex.config.toml "${HOME_DIR}/.codex/config.toml"
 fi
+# Enforce always-on "YOLO" mode: this container is a disposable sandbox, so
+# every claude session bypasses permission prompts. defaultMode drives the
+# session; bypassPermissionsModeAccepted skips the one-time warning dialog.
+# Merged (not cp'd) on every start because claude owns these files and
+# rewrites them; the merge is idempotent and survives claude's own writes.
+python3 - "${HOME_DIR}" <<'PY' || true
+import json, os, sys
+home = sys.argv[1]
+def load(p):
+    try:
+        return json.load(open(p))
+    except Exception:
+        return {}
+sp = os.path.join(home, ".claude", "settings.json")
+os.makedirs(os.path.dirname(sp), exist_ok=True)
+s = load(sp)
+s.setdefault("permissions", {})["defaultMode"] = "bypassPermissions"
+json.dump(s, open(sp, "w"), indent=2)
+cp = os.path.join(home, ".claude.json")
+c = load(cp)
+c["bypassPermissionsModeAccepted"] = True
+json.dump(c, open(cp, "w"), indent=2)
+PY
 SH
 RUN chmod +x /usr/local/bin/poly_llm-restore.sh
 
@@ -173,6 +197,8 @@ cat <<'BANNER'
  LLM CLIs:           claude     codex
  Auth:               host-side, no login here (CLAUDE_CODE_OAUTH_TOKEN
                      env + bind-mounted ~/.codex; see devcontainer.json)
+ Permissions:        claude runs in bypass / YOLO mode (sandbox) — no
+                     prompts; this is intended, do not run untrusted code
  MCP servers:        serena  sequentialthinking  memory
  Project root:       /workspace
 ==========================================================
