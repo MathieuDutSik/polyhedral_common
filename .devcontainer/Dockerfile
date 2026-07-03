@@ -100,8 +100,21 @@ RUN pkg-config --exists eigen3 \
 # on /home/vscode (the standard persistence pattern) can't shadow them.
 # A postStartCommand in devcontainer.json copies them into the user's
 # home only when absent — user overrides are preserved.
+# Auth here comes from CLAUDE_CODE_OAUTH_TOKEN (env, set on the host), which
+# satisfies API auth but does NOT mark first-run onboarding complete. Without
+# these flags the interactive TUI still walks the theme / "Select login method"
+# / trust-folder wizard on every fresh container. Pre-seeding them skips the
+# wizard so the token is used directly.
 RUN mkdir -p /usr/local/share/poly_llm && cat > /usr/local/share/poly_llm/claude.json <<'JSON'
 {
+  "hasCompletedOnboarding": true,
+  "theme": "dark",
+  "projects": {
+    "/workspace": {
+      "hasTrustDialogAccepted": true,
+      "hasCompletedProjectOnboarding": true
+    }
+  },
   "mcpServers": {
     "serena": {
       "command": "uvx",
