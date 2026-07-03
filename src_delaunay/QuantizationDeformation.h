@@ -571,6 +571,52 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
   return DM;
 }
 
+// DM[B] = d/dt M(Q + t B)|_0 by a single jet computation instead of the
+// 2n+1-sample interpolation above. The metric Q + t B is carried as jet<T, N>,
+// so the quantization integral yields M(Q + t B) as its Taylor expansion at
+// t = 0 and the derivative is read straight off (jet_deriv(., 1)). The
+// tessellation must be over the base field, so it is built once at an interior
+// point t0 of the iso-Delaunay segment (the refined, metric-consistent
+// combinatorics that the samples also see); SHV is the Z-basis of the lattice,
+// computed on Q. The whole expensive recursion runs once, not 2n+1 times.
+template <typename T, typename Tint, typename Tgroup>
+MyMatrix<T> compute_moment_derivative_jet(MyMatrix<T> const &Q,
+                                          MyMatrix<T> const &B,
+                                          std::ostream &os) {
+  constexpr int N = 2;
+  using Tj = jet<T, N>;
+  using TintGroup = typename Tgroup::Tint;
+  int n = Q.rows();
+  std::vector<MyMatrix<T>> gens_T =
+      compute_qh_symmetry_gens<T, Tint, Tgroup>(Q, B, os);
+  LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, B, gens_T, os);
+  IsoDelaunaySegment<T, Tgroup> seg =
+      find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, B, T(1), os);
+  MyMatrix<T> Gram_t0 = Q + (seg.tmax / T(2)) * B;
+  int dimEXT = n + 1;
+  PolyHeuristicSerial<TintGroup> AllArr =
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+  DataLattice<T, Tint, Tgroup> data =
+      GetDataLattice<T, Tint, Tgroup>(Gram_t0, AllArr, os);
+  DelaunayTesselation<T, Tgroup> DT =
+      get_delaunay_tessellation_serial<T, Tint, Tgroup>(data, "none", 0, os);
+  MyMatrix<Tint> SHV_i = ExtractInvariantVectorFamilyZbasis<T, Tint>(Q, os);
+  MyMatrix<T> SHV = UniversalMatrixConversion<T, Tint>(SHV_i);
+  // The jet metric Q + t B (t = the infinitesimal variable).
+  Tj t = Tj::var();
+  MyMatrix<Tj> Gram_jet(n, n);
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++)
+      Gram_jet(i, j) = Tj(Q(i, j)) + t * Tj(B(i, j));
+  MyMatrix<Tj> M_jet =
+      QuantizationSecMomentMatJet<T, N, Tint, Tgroup>(DT, SHV, Gram_jet, n, os);
+  MyMatrix<T> DM(n, n);
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++)
+      DM(i, j) = jet_deriv(M_jet(i, j), 1);
+  return DM;
+}
+
 template <typename T> struct HessianResult {
   int n;
   int N;             // dim Sym^n = n(n+1)/2

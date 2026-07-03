@@ -8,6 +8,7 @@
 #include "POLY_lrslib.h"
 #include "InvariantVectorFamily.h"
 #include "MatrixGroupAverage.h"
+#include "jet_number.h"
 #include <iomanip>
 #include <map>
 #include <sstream>
@@ -55,21 +56,49 @@ template <typename T> struct QuantizationResult {
   double NormalizedSecondMoment;
 };
 
+// The computer needs only three things beyond the Delaunay tessellation: the
+// dimension n, the invariant vector family SHV (integer vectors, used by the
+// marked-center stabilizer/equivalence), and the metric GramMat. It does not
+// otherwise depend on the DataLattice (in particular not on its CVP solver), so
+// it is templated on a single scalar type T: instantiating it with T = jet<...>
+// re-evaluates the whole integral along a ray Q + t H (the tessellation being
+// constant along an iso-Delaunay segment), with SHV / DT / GramMat supplied as
+// the converted t = 0 data.
 template <typename T, typename Tint, typename Tgroup>
 struct QuantizationComputer {
   using Telt = typename Tgroup::Telt;
   using TintGrp = typename Tgroup::Tint;
 
-  DataLattice<T, Tint, Tgroup> &data;
   DelaunayTesselation<T, Tgroup> const &DT;
   std::ostream &os;
   int n;
-  MyMatrix<T> const &GramMat;
+  MyMatrix<T> SHV;
+  MyMatrix<T> GramMat;
 
+  // Ordinary constructor: take n and the metric from a DataLattice, and compute
+  // the Z-spanning invariant family ExtractInvariantVectorFamilyZbasis(GramMat)
+  // -- required for the automorphism group to be the exact lattice stabilizer
+  // without the integral refinement. This (LLL-based, integer) computation lives
+  // in the constructor rather than in compute() so that compute() never
+  // instantiates it: the deformation instantiation (T = jet) uses the direct
+  // constructor below and supplies the converted t = 0 family instead.
   QuantizationComputer(DataLattice<T, Tint, Tgroup> &data,
                        DelaunayTesselation<T, Tgroup> const &DT,
                        std::ostream &os)
-      : data(data), DT(DT), os(os), n(data.n), GramMat(data.solver.GramMat) {}
+      : DT(DT), os(os), n(data.n), GramMat(data.solver.GramMat) {
+    MyMatrix<Tint> SHV_i =
+        ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
+    SHV = UniversalMatrixConversion<T, Tint>(SHV_i);
+  }
+
+  // Direct constructor: explicit n, SHV, metric. Used for the deformation
+  // instantiation (T = jet), where SHV and GramMat are the converted t = 0
+  // family and the ray metric Q + t H.
+  QuantizationComputer(int n_in, MyMatrix<T> const &SHV_in,
+                       MyMatrix<T> const &GramMat_in,
+                       DelaunayTesselation<T, Tgroup> const &DT,
+                       std::ostream &os)
+      : DT(DT), os(os), n(n_in), SHV(SHV_in), GramMat(GramMat_in) {}
 
   // -------- small geometric helpers (homogeneous coordinates) --------
 
@@ -110,21 +139,6 @@ struct QuantizationComputer {
     std::stringstream ss;
     ss << x;
     return ParseScalar<T>(ss.str());
-  }
-
-  // The lcm of the denominators of the entries (GAP ListFactors).
-  T list_factors(MyVector<T> const &v) const {
-    MyVector<T> scaled = RemoveFractionVector(v);
-    int len = v.size();
-    for (int i = 0; i < len; i++) {
-      if (v(i) != 0) {
-        T quot = scaled(i) / v(i);
-        if (quot < 0)
-          quot = -quot;
-        return quot;
-      }
-    }
-    return T(1);
   }
 
   // -------- the lattice stabilizer / equivalence with a marked center --------
@@ -168,16 +182,20 @@ struct QuantizationComputer {
     using Tgr = GraphListAdj;
     using Tidx_value = int16_t;
     MyVector<T> c = affine_part(center_h);
-    MyMatrix<T> EXText = get_reduced_delaunay_shv(EXT, GramMat, data.SHV, c);
+    MyMatrix<T> EXText = get_reduced_delaunay_shv(EXT, GramMat, SHV, c);
     WeightMatrix<true, T, Tidx_value> WMat =
         GetSimpleWeightMatrix<T, Tidx_value>(EXText, GramMat, os);
+    // SHV is a Z-spanning invariant family (ExtractInvariantVectorFamilyZbasis),
+    // so every weight-preserving permutation maps that Z-basis onto itself and
+    // its realization lies in GL_n(Z): GRPisom is already the lattice
+    // automorphism group. The integral refinement (LinPolytopeIntegral_Stabilizer
+    // -> GetZbasis, which needs a Euclidean domain and is not jet-able) is only
+    // needed for a smaller, non-spanning SHV, which we deliberately avoid here.
     Tgroup GRPisom =
         GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
-    MyMatrix<T> EXTextInt = RemoveFractionMatrix(EXText);
-    Tgroup GRPlatt = LinPolytopeIntegral_Stabilizer(EXTextInt, GRPisom, os);
     MatrixGroupInfo info;
-    info.order = GRPlatt.size();
-    for (auto &eGen : GRPlatt.GeneratorsOfGroup()) {
+    info.order = GRPisom.size();
+    for (auto &eGen : GRPisom.GeneratorsOfGroup()) {
       MyMatrix<T> L = FindTransformation<T, Telt>(EXText, EXText, eGen);
       info.gens.push_back(affine_from_linear(L, c));
     }
@@ -204,8 +222,8 @@ struct QuantizationComputer {
         M(0, i + 1) = delta(i);
       return M;
     };
-    MyMatrix<T> EXText1 = get_reduced_delaunay_shv(EXT1, GramMat, data.SHV, c1);
-    MyMatrix<T> EXText2 = get_reduced_delaunay_shv(EXT2, GramMat, data.SHV, c2);
+    MyMatrix<T> EXText1 = get_reduced_delaunay_shv(EXT1, GramMat, SHV, c1);
+    MyMatrix<T> EXText2 = get_reduced_delaunay_shv(EXT2, GramMat, SHV, c2);
     WeightMatrix<true, T, Tidx_value> WMat1 =
         GetSimpleWeightMatrix<T, Tidx_value>(EXText1, GramMat, os);
     WeightMatrix<true, T, Tidx_value> WMat2 =
@@ -215,19 +233,13 @@ struct QuantizationComputer {
     if (!eRes)
       return {};
     Telt const &eElt = *eRes;
+    // With a Z-spanning SHV the equivalence realized by FindTransformation is
+    // automatically unimodular (it maps one Z-basis onto the other), so the
+    // integral-isomorphism fallback is unnecessary.
     MyMatrix<T> MatEquiv = FindTransformation<T, Telt>(EXText1, EXText2, eElt);
     if (IsIntegralMatrix(MatEquiv))
       return extend(MatEquiv);
-    Tgroup GRPisom1 =
-        GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
-    MyMatrix<T> EXTextInt1 = RemoveFractionMatrix(EXText1);
-    MyMatrix<T> EXTextInt2 = RemoveFractionMatrix(EXText2);
-    std::optional<MyMatrix<T>> opt =
-        LinPolytopeIntegral_Isomorphism<T, Tgroup>(EXTextInt1, EXTextInt2,
-                                                   GRPisom1, eElt, os);
-    if (!opt)
-      return {};
-    return extend(*opt);
+    return {};
   }
 
   // -------- the invariant used as a fast prefilter for equivalence --------
@@ -239,12 +251,11 @@ struct QuantizationComputer {
     int rank;
     bool iso_eq_center;
     T sqr_radius;
-    T lfactors;
     std::vector<std::pair<T, int>> dist_occ;
     bool operator==(DelInvariant const &o) const {
       return nbVert == o.nbVert && rank == o.rank &&
              iso_eq_center == o.iso_eq_center && sqr_radius == o.sqr_radius &&
-             lfactors == o.lfactors && dist_occ == o.dist_occ;
+             dist_occ == o.dist_occ;
     }
   };
 
@@ -255,7 +266,6 @@ struct QuantizationComputer {
     inv.rank = RankMat(EXT);
     MyVector<T> cp = center_homog(EXT);
     inv.sqr_radius = square_radius(EXT);
-    inv.lfactors = list_factors(cp);
     MyVector<T> eIso = isobarycenter_homog(EXT);
     inv.iso_eq_center = (eIso == cp);
     std::map<T, int> map_occ;
@@ -278,23 +288,15 @@ struct QuantizationComputer {
 
   struct PairInvariant {
     DelInvariant inv_over;
-    std::vector<T> list_iso_center;
     bool operator==(PairInvariant const &o) const {
-      return inv_over == o.inv_over && list_iso_center == o.list_iso_center;
+      return inv_over == o.inv_over;
     }
   };
 
-  PairInvariant invariant_of_pair(MyMatrix<T> const &EXT,
+  PairInvariant invariant_of_pair([[maybe_unused]] MyMatrix<T> const &EXT,
                                   MyMatrix<T> const &EXTover) const {
     PairInvariant pinv;
     pinv.inv_over = delaunay_invariant(EXTover);
-    MyVector<T> isoOver = isobarycenter_homog(EXTover);
-    MyVector<T> isoEXT = isobarycenter_homog(EXT);
-    for (int DelVal : {3, 5, 7, 11}) {
-      T dv(DelVal);
-      MyVector<T> eIso = (isoOver + dv * isoEXT) / (dv + T(1));
-      pinv.list_iso_center.push_back(list_factors(eIso));
-    }
     return pinv;
   }
 
@@ -308,9 +310,12 @@ struct QuantizationComputer {
     for (int iVert = 0; iVert < nbVert; iVert++)
       for (int i = 0; i < n; i++)
         SpaceBas(iVert, i) = EXT(iVert, i + 1) - EXT(0, i + 1);
-    MyMatrix<T> SpaceBasInt = RemoveFractionMatrix(SpaceBas);
-    MyMatrix<T> Prod = GramMat * SpaceBasInt.transpose();
-    MyMatrix<T> NSP = NullspaceIntMat(Prod);
+    // The Gram-orthogonal complement of the cell's affine span. A field basis
+    // (NullspaceMat, jet-able) is enough; the integer/primitive basis of the old
+    // NullspaceIntMat is not needed and is not jet-able. SpaceBas is already
+    // integer (differences of integer vertices), so no fraction clearing.
+    MyMatrix<T> Prod = GramMat * SpaceBas.transpose();
+    MyMatrix<T> NSP = NullspaceMat(Prod);
     int dimNSP = NSP.rows();
     MyMatrix<T> TheBasis(1 + dimNSP, n + 1);
     for (int i = 0; i < n + 1; i++)
@@ -929,14 +934,9 @@ struct QuantizationComputer {
 
   // GAP QuantizationIntegral.
   QuantizationResult<T> compute() {
-    // The marked-center face stabilizer/equivalence needs an
-    // automorphism-invariant spanning vector family (the Delaunay enumeration
-    // itself works with full-dimensional polytopes, so it leaves SHV empty).
-    if (data.SHV.rows() == 0) {
-      MyMatrix<Tint> SHV_i =
-          ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
-      data.SHV = UniversalMatrixConversion<T, Tint>(SHV_i);
-    }
+    // SHV (the Z-spanning invariant family used by the marked-center stabilizer/
+    // equivalence) is filled by the constructor -- see the note there on why the
+    // LLL-based computation is kept out of compute().
     Symbol TheInit = initial_pair();
     SoftComp TheRes = recursive_integral_evaluation(TheInit);
     MyMatrix<T> Id = IdentityMat<T>(n + 1);
@@ -974,6 +974,47 @@ ComputeQuantizationIntegral(DataLattice<T, Tint, Tgroup> &data,
                             std::ostream &os) {
   QuantizationComputer<T, Tint, Tgroup> comp(data, DT, os);
   return comp.compute();
+}
+
+// Reinterpret a Delaunay tessellation (whose EXT / adjacency matrices are
+// integer, hence constant along an iso-Delaunay segment) over another scalar
+// type -- e.g. T -> jet<T, N> to evaluate the integral along a ray Q + t H.
+template <typename Tout, typename Tin, typename Tgroup>
+DelaunayTesselation<Tout, Tgroup>
+ConvertTesselationScalar(DelaunayTesselation<Tin, Tgroup> const &DT) {
+  DelaunayTesselation<Tout, Tgroup> out;
+  for (auto &e : DT.l_dels) {
+    Delaunay_Entry<Tout, Tgroup> eo;
+    eo.EXT = UniversalMatrixConversion<Tout, Tin>(e.EXT);
+    eo.GRP = e.GRP;
+    for (auto &adj : e.ListAdj) {
+      Delaunay_AdjO<Tout> ao;
+      ao.eInc = adj.eInc;
+      ao.eBigMat = UniversalMatrixConversion<Tout, Tin>(adj.eBigMat);
+      ao.iOrb = adj.iOrb;
+      eo.ListAdj.push_back(std::move(ao));
+    }
+    out.l_dels.push_back(std::move(eo));
+  }
+  return out;
+}
+
+// Compile/feasibility probe: instantiate the quantization computer over jets.
+// Given the t = 0 tessellation, invariant family and a jet Gram matrix, run the
+// whole integral over jet<T, N> and return the second-moment matrix as jets.
+template <typename T, int N, typename Tint, typename Tgroup>
+MyMatrix<jet<T, N>>
+QuantizationSecMomentMatJet(DelaunayTesselation<T, Tgroup> const &DT_base,
+                            MyMatrix<T> const &SHV_base,
+                            MyMatrix<jet<T, N>> const &GramMat_jet, int n,
+                            std::ostream &os) {
+  using Tj = jet<T, N>;
+  DelaunayTesselation<Tj, Tgroup> DT_jet =
+      ConvertTesselationScalar<Tj, T, Tgroup>(DT_base);
+  MyMatrix<Tj> SHV_jet = UniversalMatrixConversion<Tj, T>(SHV_base);
+  QuantizationComputer<Tj, Tint, Tgroup> comp(n, SHV_jet, GramMat_jet, DT_jet,
+                                              os);
+  return comp.compute().SecMomentMat;
 }
 
 template <typename T> std::string normg_string(double val) {
