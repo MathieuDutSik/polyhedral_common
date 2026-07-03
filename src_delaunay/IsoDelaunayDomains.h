@@ -1835,9 +1835,18 @@ FlippingLtype(DelaunayTesselation<T, Tgroup> const &ListOrbitDelaunay,
   for (int iOrb = 0; iOrb < n_del_ret; iOrb++) {
     DelaunaySymb ds = NewListOrbitDelaunay[iOrb];
     std::vector<Delaunay_AdjIneqO<T, T>> ListAdj;
-    VoronoiInequalityPreComput<T> vipc =
-        BuildVoronoiIneqPreComputeChecked<T>(l_dels[iOrb].EXT, ListGram, os);
-    ContainerMatrix<T> cont(l_dels[iOrb].EXT);
+    // Most orbits surviving a flip have every adjacency in Case 1 (no
+    // recomputation needed at all), so building the Voronoi precompute for
+    // this orbit is deferred until an adjacency actually requires it.
+    std::optional<VoronoiInequalityPreComput<T>> vipc_opt;
+    std::optional<ContainerMatrix<T>> cont_opt;
+    auto ensure_vipc_cont = [&]() -> void {
+      if (!vipc_opt) {
+        vipc_opt.emplace(
+            BuildVoronoiIneqPreComputeChecked<T>(l_dels[iOrb].EXT, ListGram, os));
+        cont_opt.emplace(l_dels[iOrb].EXT);
+      }
+    };
     if (ds.Position == Position_old) {
       int iDelaunay = ds.iDelaunay;
       int n_adj_old = ListOrbitDelaunay.l_dels[iDelaunay].ListAdj.size();
@@ -1856,8 +1865,10 @@ FlippingLtype(DelaunayTesselation<T, Tgroup> const &ListOrbitDelaunay,
               DTI_old.l_dels[iDelaunay].ListAdj[i_adj_old].eIneq;
 #ifdef SANITY_CHECK_FLIP_CASE1_INEQ
           {
+            ensure_vipc_cont();
             MyVector<T> eIneqCheck = ComputeDelaunayAdjIneq(
-                vipc, cont, l_dels[iOrbAdj].EXT, eAdj.eBigMat, ListGram, os);
+                *vipc_opt, *cont_opt, l_dels[iOrbAdj].EXT, eAdj.eBigMat,
+                ListGram, os);
             if (eIneqCheck != eIneq) {
               std::cerr << "FLIP_CASE1_INEQ: SANITY_CHECK failed: the "
                            "inequality of an unmelted (Case 1) adjacency "
@@ -1909,8 +1920,9 @@ FlippingLtype(DelaunayTesselation<T, Tgroup> const &ListOrbitDelaunay,
           // Case 2: this orbit is unmelted but its neighbour was melted into
           // a new polytope, so the shared facet's inequality must be
           // recomputed against the new neighbour.
+          ensure_vipc_cont();
           MyVector<T> eIneq = ComputeDelaunayAdjIneq(
-              vipc, cont, l_dels[Pos].EXT, BigMat1, ListGram, os);
+              *vipc_opt, *cont_opt, l_dels[Pos].EXT, BigMat1, ListGram, os);
           Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, BigMat1, Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 2");
@@ -1985,8 +1997,9 @@ FlippingLtype(DelaunayTesselation<T, Tgroup> const &ListOrbitDelaunay,
           std::optional<size_t> optN = get_symbol_position(dss);
           int Pos = unfold_opt(optN, "Failed to find entry for Case 3");
           MyMatrix<T> BigMat2 = TheFoundAdj4.eBigMat * TheMat4 * BigMat1;
+          ensure_vipc_cont();
           MyVector<T> eIneq = ComputeDelaunayAdjIneq(
-              vipc, cont, l_dels[Pos].EXT, BigMat2, ListGram, os);
+              *vipc_opt, *cont_opt, l_dels[Pos].EXT, BigMat2, ListGram, os);
           Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, BigMat2, Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 3");
@@ -2010,8 +2023,9 @@ FlippingLtype(DelaunayTesselation<T, Tgroup> const &ListOrbitDelaunay,
             MyMatrix<T> BigMat1 = TheFoundAdj1.eBigMat * TheMat1 *
                                       ListInfo[iInfo][jFacet].eBigMat *
                                       eAdj.eBigMat;
+            ensure_vipc_cont();
             MyVector<T> eIneq = ComputeDelaunayAdjIneq(
-                vipc, cont, l_dels[Pos2].EXT, BigMat1, ListGram, os);
+                *vipc_opt, *cont_opt, l_dels[Pos2].EXT, BigMat1, ListGram, os);
             Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, BigMat1, Pos2, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 4");
@@ -2040,8 +2054,9 @@ FlippingLtype(DelaunayTesselation<T, Tgroup> const &ListOrbitDelaunay,
                 Inverse(ListInfo[jInfo][iFacet2].eBigMat) *
                 TheFoundAdj1.eBigMat * TheMat1 *
                 ListInfo[iInfo][jFacet].eBigMat * eAdj.eBigMat;
+            ensure_vipc_cont();
             MyVector<T> eIneq = ComputeDelaunayAdjIneq(
-                vipc, cont, l_dels[Pos].EXT, BigMat1, ListGram, os);
+                *vipc_opt, *cont_opt, l_dels[Pos].EXT, BigMat1, ListGram, os);
             Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, BigMat1, Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 5");
@@ -2053,8 +2068,9 @@ FlippingLtype(DelaunayTesselation<T, Tgroup> const &ListOrbitDelaunay,
           DelaunaySymb dss{Position_new, -1, iInfo, jFacet};
           std::optional<size_t> opt = get_symbol_position(dss);
           int Pos = unfold_opt(opt, "Case 5");
+          ensure_vipc_cont();
           MyVector<T> eIneq = ComputeDelaunayAdjIneq(
-              vipc, cont, l_dels[Pos].EXT, eAdj.eBigMat, ListGram, os);
+              *vipc_opt, *cont_opt, l_dels[Pos].EXT, eAdj.eBigMat, ListGram, os);
           Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, eAdj.eBigMat, Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 6");
