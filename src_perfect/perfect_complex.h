@@ -673,19 +673,34 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #endif
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   std::vector<ListBoundEntry<Tint>> ll_bound;
-  auto find_matching_entry=[&](triple<Tint> const& t) -> std::optional<std::pair<int,MyMatrix<Tint>>> {
-    int i_domain = 0;
-    for (auto & face1: l_faces) {
-      std::optional<MyMatrix<Tint>> opt =
-        test_triple_in_listtriple(pctdi.l_perfect, face1.l_triple, t, os);
-      if (opt) {
-        MyMatrix<Tint> const& M = *opt;
-        std::pair<int,MyMatrix<Tint>> p{i_domain, M};
-        return p;
-      }
-      i_domain += 1;
+  // Index of every (iCone, f_ext) pair appearing in any already inserted
+  // face's spanning list of triples, mapping to the index of the face it
+  // belongs to and a representative triple matrix for that (iCone, f_ext).
+  // This turns find_matching_entry from an O(|l_faces| * avg |l_triple|)
+  // scan (redone for every facet processed) into an O(1) average lookup.
+  // By construction the spanning lists of distinct faces are disjoint
+  // (each face is one equivalence class), so first-inserted-wins via
+  // try_emplace faithfully matches the original first-match scan order.
+  std::unordered_map<size_t, std::unordered_map<Face, std::pair<int, MyMatrix<Tint>>>> map_triple_index;
+  auto index_face_triples=[&](int i_domain, std::vector<triple<Tint>> const& l_triple) -> void {
+    for (auto const& tri : l_triple) {
+      map_triple_index[tri.iCone].try_emplace(tri.f_ext, i_domain, tri.eMat);
     }
-    return {};
+  };
+  auto find_matching_entry=[&](triple<Tint> const& t) -> std::optional<std::pair<int,MyMatrix<Tint>>> {
+    auto iter1 = map_triple_index.find(t.iCone);
+    if (iter1 == map_triple_index.end()) {
+      return {};
+    }
+    auto iter2 = iter1->second.find(t.f_ext);
+    if (iter2 == iter1->second.end()) {
+      return {};
+    }
+    int i_domain = iter2->second.first;
+    MyMatrix<Tint> const& eMat1 = iter2->second.second;
+    MyMatrix<Tint> M = Inverse(eMat1) * t.eMat;
+    std::pair<int,MyMatrix<Tint>> p{i_domain, M};
+    return p;
   };
   using Tfull_triple = std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
   auto need_opt_t=[&]([[maybe_unused]] PerfectBoundednessProperty const& pbp, [[maybe_unused]] triple<Tint> const& t) -> bool {
@@ -818,6 +833,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #endif
     int i_domain = l_faces.size();
     l_faces.push_back(face);
+    index_face_triples(i_domain, pair.first);
     MyMatrix<Tint> M = IdentityMat<Tint>(n);
     std::pair<int, MyMatrix<Tint>> p{i_domain, M};
 #ifdef DEBUG_PERFECT_COMPLEX
