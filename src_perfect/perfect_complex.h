@@ -234,7 +234,7 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
       sing_adj<Tint> adj{jCone, f_ext, eMat};
       l_sing_adj.emplace_back(std::move(adj));
     }
-    MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.rec_shv.SHV);
+    MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.tsp.rec_shv.SHV);
     // In some cases, EXT is not full dimensional. We need an alternate strategy for that.
     std::optional<PreImagerElementContainer<Tint, Telt, TintGroup>> opt_pre_imager;
     if (RankMat(EXT) < EXT.cols()) {
