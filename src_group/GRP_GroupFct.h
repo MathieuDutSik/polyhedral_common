@@ -940,31 +940,39 @@ bool is_subset(Face const &f1, Face const &f2) {
 }
 
 /*
-  This is a combinatorial algorithm for finding all group elements g such that
-  set2 \subset g . set1 We could probably do better with double coset
-  decompositions.
+  The orbit {(g.set1, g) : g in GRP_ext} with one representative element g per
+  image face. This is the expensive part of FindContainingOrbit and depends only
+  on (GRP_ext, set1), so callers that query many set2 against the same
+  (GRP_ext, set1) can compute it once and reuse it.
  */
 template <typename Tgroup>
 std::vector<std::pair<Face, typename Tgroup::Telt>>
-FindContainingOrbit(Tgroup const &GRP_ext, Face const &set1, Face const &set2) {
+OrbitFacesRepresentatives(Tgroup const &GRP_ext, Face const &set1) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  Tgroup stab1 = GRP_ext.Stabilizer_OnSets(set1);
-  Tgroup stab2 = GRP_ext.Stabilizer_OnSets(set2);
-#ifdef DEBUG_GROUP
-  std::cerr << "|stab1=" << stab1.size() << " |stab2|=" << stab2.size() << "\n";
-#endif
   std::vector<Telt> LGen = GRP_ext.GeneratorsOfGroup();
   Tidx n = GRP_ext.n_act();
   Telt id(n);
   auto f_act = [](const Face &x, const Telt &u) -> Face {
     return OnFace(x, u);
   };
-  std::vector<std::pair<Face, Telt>> LPair =
-      OrbitWithRepresentative(id, LGen, set1, f_act);
-#ifdef DEBUG_GROUP
-  std::cerr << "|LPair|=" << LPair.size() << "\n";
-#endif
+  return OrbitWithRepresentative(id, LGen, set1, f_act);
+}
+
+/*
+  Given the precomputed orbit LPair of set1 (see OrbitFacesRepresentatives) and
+  the precomputed stabilizer stab2 of set2, finish FindContainingOrbit. stab2 is
+  taken as an argument because a caller iterating many set1 (adjacencies) against
+  a fixed set2 would otherwise recompute Stabilizer_OnSets(set2) every time.
+ */
+template <typename Tgroup>
+std::vector<std::pair<Face, typename Tgroup::Telt>>
+FindContainingOrbit_fromOrbit(Tgroup const &GRP_ext,
+                              std::vector<std::pair<Face, typename Tgroup::Telt>> const &LPair,
+                              Face const &set2, Tgroup const &stab2) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  Tidx n = GRP_ext.n_act();
   std::unordered_map<Face, Telt> map_face_elt;
   vectface list_face(n);
   for (auto &ePair : LPair) {
@@ -983,6 +991,23 @@ FindContainingOrbit(Tgroup const &GRP_ext, Face const &set1, Face const &set2) {
     list_ret.push_back({eRepr, eElt});
   }
   return list_ret;
+}
+
+/*
+  This is a combinatorial algorithm for finding all group elements g such that
+  set2 \subset g . set1 We could probably do better with double coset
+  decompositions.
+ */
+template <typename Tgroup>
+std::vector<std::pair<Face, typename Tgroup::Telt>>
+FindContainingOrbit(Tgroup const &GRP_ext, Face const &set1, Face const &set2) {
+  std::vector<std::pair<Face, typename Tgroup::Telt>> LPair =
+      OrbitFacesRepresentatives(GRP_ext, set1);
+#ifdef DEBUG_GROUP
+  std::cerr << "|LPair|=" << LPair.size() << "\n";
+#endif
+  Tgroup stab2 = GRP_ext.Stabilizer_OnSets(set2);
+  return FindContainingOrbit_fromOrbit(GRP_ext, LPair, set2, stab2);
 }
 
 // This is a remake of the "Partition<Tidx>" in partition.h of

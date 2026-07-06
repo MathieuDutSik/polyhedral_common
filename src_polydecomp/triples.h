@@ -5,6 +5,8 @@
 // clang-format off
 #include "boost_serialization.h"
 #include <boost/dynamic_bitset/serialization.hpp>
+#include <unordered_map>
+#include <vector>
 // clang-format on
 
 
@@ -72,7 +74,7 @@ inline void serialize(Archive &ar, sing_adj<Tint> &val,
 }
 }  // namespace boost::serialization
 
-// The minimal types used for 
+// The minimal types used for
 template<typename Tint, typename Tgroup>
 struct TopConeMin {
   using Telt = typename Tgroup::Telt;
@@ -82,6 +84,18 @@ struct TopConeMin {
   std::vector<sing_adj<Tint>> l_sing_adj;
   MyMatrix<Tint> find_matrix(Telt const& x, [[maybe_unused]] std::ostream& os) const {
     return FindTransformation(EXT, EXT, x);
+  }
+  // Memoized orbit of an adjacency facet under GRP_ext (see the identically
+  // named method on PerfectFormInfoForComplex for the rationale).
+  mutable std::unordered_map<Face, std::vector<std::pair<Face, Telt>>> orbit_cache{};
+  std::vector<std::pair<Face, Telt>> const& orbit_representatives(Face const& set1) const {
+    auto iter = orbit_cache.find(set1);
+    if (iter != orbit_cache.end()) {
+      return iter->second;
+    }
+    std::vector<std::pair<Face, Telt>> res = OrbitFacesRepresentatives(GRP_ext, set1);
+    auto ret = orbit_cache.emplace(set1, std::move(res));
+    return ret.first->second;
   }
 };
 
@@ -225,16 +239,23 @@ get_spanning_list_triple(
 #endif
   };
   std::vector<triple<Tint>> l_triple;
+  // Index of the (iCone, f_ext) of every triple already in l_triple, mapping to
+  // that triple's eMat. Each (iCone, f_ext) occurs at most once in l_triple, so
+  // this replaces the O(|l_triple|) test_equiv_triple scan (redone for every
+  // candidate) by an O(1) average lookup. For a candidate ef_A that is already
+  // present, test_equiv_triple(ef_A, stored) = Inverse(ef_A.eMat) * stored.eMat,
+  // so the same stabilizer generator is produced and inserted in the same order.
+  std::unordered_map<size_t, std::unordered_map<Face, MyMatrix<Tint>>> triple_map;
   auto f_insert = [&](const triple<Tint> &ef_A) -> void {
-    for (const auto &ef_B : l_triple) {
-      std::optional<MyMatrix<Tint>> equiv_opt =
-        test_equiv_triple(l_cones, ef_A, ef_B, os);
-      if (equiv_opt) {
-        f_insert_generator(*equiv_opt);
-        return;
-      }
+    std::unordered_map<Face, MyMatrix<Tint>> &inner = triple_map[ef_A.iCone];
+    auto iter = inner.find(ef_A.f_ext);
+    if (iter != inner.end()) {
+      MyMatrix<Tint> equiv = Inverse(ef_A.eMat) * iter->second;
+      f_insert_generator(equiv);
+      return;
     }
-    l_triple.emplace_back(std::move(ef_A));
+    inner.emplace(ef_A.f_ext, ef_A.eMat);
+    l_triple.push_back(ef_A);
     const Ttopcone &uC = l_cones[ef_A.iCone];
     Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
@@ -259,6 +280,9 @@ get_spanning_list_triple(
       // of std::vector can be freed and reallocated.
       triple<Tint> ef = l_triple[i];
       const Ttopcone &eC = l_cones[ef.iCone];
+      // Stabilizer of ef.f_ext: needed by FindContainingOrbit for every
+      // adjacency of this cone, but it depends only on ef, so compute it once.
+      Tgroup stab_ef = eC.GRP_ext.Stabilizer_OnSets(ef.f_ext);
 #ifdef DEBUG_TRIPLE
       os << "TRIP: i=" << i << " iCone=" << ef.iCone << "\n";
       size_t n_facet = 0;
@@ -271,8 +295,13 @@ get_spanning_list_triple(
         int n_act = eC.GRP_ext.n_act();
         os << "TRIP: n_act=" << n_act << " jCone=" << jCone << "\n";
 #endif
+        // The orbit of e_sing_adj.f_ext under eC.GRP_ext depends only on the
+        // cone and the adjacency facet, so it is memoized on the cone and reused
+        // across every triple/face that touches this cone.
+        std::vector<std::pair<Face, Telt>> const &l_orbit =
+            eC.orbit_representatives(e_sing_adj.f_ext);
         std::vector<std::pair<Face, Telt>> l_pair =
-            FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
+            FindContainingOrbit_fromOrbit(eC.GRP_ext, l_orbit, ef.f_ext, stab_ef);
 #ifdef DEBUG_TRIPLE
         os << "TRIP: |l_pair|=" << l_pair.size() << "\n";
 #endif

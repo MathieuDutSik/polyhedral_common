@@ -93,21 +93,29 @@ struct PerfectFormInfoForComplex {
   std::optional<PreImagerElementContainer<Tint, Telt, TintGroup>> opt_pre_imager;
   Tgroup GRP_ext; // Group acting on the shortest vectors
   std::vector<sing_adj<Tint>> l_sing_adj;
+  // find_matrix(x) is a pure function of (this cone, x), but it is one of the
+  // hottest operations of the complex enumeration: it is called once per
+  // spanning-list candidate (and again inside canonicalize_triple), and the
+  // spanning-list BFS revisits the same cone -- and thus the same group
+  // elements -- for the many faces that touch it. Realising a permutation as an
+  // integer matrix (FindTransformation, an integer linear solve) is expensive,
+  // so we memoize it. The cache is transient state, not part of the value, so
+  // it is neither serialized nor compared.
+  mutable std::unordered_map<Telt, MyMatrix<Tint>> find_matrix_cache{};
   MyMatrix<Tint> find_matrix(Telt const& x, [[maybe_unused]] std::ostream& os) const {
-    if (opt_pre_imager) {
-      PreImagerElementContainer<Tint, Telt, TintGroup> const& pre_imager = *opt_pre_imager;
-      std::optional<MyMatrix<Tint>> opt = pre_imager.get_preimage(x);
-      MyMatrix<Tint> M = unfold_opt(opt, "The element elt should belong to the group");
-#ifdef SANITY_CHECK_PERFECT_COMPLEX
-      Telt x_img = get_elt_from_matrix<Tint,Telt>(M, EXT, os);
-      if (x_img != x) {
-        std::cerr << "PERFCOMP: Inconsistency in the pre_image computation\n";
-        throw TerminalException{1};
-      }
-#endif
-      return M;
+    auto iter = find_matrix_cache.find(x);
+    if (iter != find_matrix_cache.end()) {
+      return iter->second;
     }
-    MyMatrix<Tint> M = FindTransformation(EXT, EXT, x);
+    auto compute=[&]() -> MyMatrix<Tint> {
+      if (opt_pre_imager) {
+        PreImagerElementContainer<Tint, Telt, TintGroup> const& pre_imager = *opt_pre_imager;
+        std::optional<MyMatrix<Tint>> opt = pre_imager.get_preimage(x);
+        return unfold_opt(opt, "The element elt should belong to the group");
+      }
+      return FindTransformation(EXT, EXT, x);
+    };
+    MyMatrix<Tint> M = compute();
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
     Telt x_img = get_elt_from_matrix<Tint,Telt>(M, EXT, os);
     if (x_img != x) {
@@ -115,7 +123,23 @@ struct PerfectFormInfoForComplex {
       throw TerminalException{1};
     }
 #endif
+    find_matrix_cache.emplace(x, M);
     return M;
+  }
+  // Orbit of an adjacency facet under GRP_ext, keyed by the facet. This is the
+  // expensive part of FindContainingOrbit and depends only on (this cone,
+  // facet); the spanning-list BFS calls it once per (triple, adjacency), so the
+  // same (cone, facet) orbit is recomputed for every one of the many faces that
+  // touch this cone. Memoizing collapses that to one computation per facet.
+  mutable std::unordered_map<Face, std::vector<std::pair<Face, Telt>>> orbit_cache{};
+  std::vector<std::pair<Face, Telt>> const& orbit_representatives(Face const& set1) const {
+    auto iter = orbit_cache.find(set1);
+    if (iter != orbit_cache.end()) {
+      return iter->second;
+    }
+    std::vector<std::pair<Face, Telt>> res = OrbitFacesRepresentatives(GRP_ext, set1);
+    auto ret = orbit_cache.emplace(set1, std::move(res));
+    return ret.first->second;
   }
 };
 
