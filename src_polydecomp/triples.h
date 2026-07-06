@@ -6,6 +6,7 @@
 #include "boost_serialization.h"
 #include <boost/dynamic_bitset/serialization.hpp>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 // clang-format on
 
@@ -213,7 +214,13 @@ get_spanning_list_triple(
   using Tgroup = typename Ttopcone::Tgroup;
   using Telt = typename Tgroup::Telt;
   using Tint = typename Ttopcone::Tint;
-  std::vector<MyMatrix<Tint>> ListMatrGen;
+  // The spanning-list BFS produces one stabilizer (Schreier) generator per
+  // non-tree edge, which yields a great many identical generator matrices (for
+  // the perfect complex, typically well over 90% duplicates). They all generate
+  // the same group, so collecting them in a set deduplicates on the fly and
+  // keeps only the distinct generators that later have to be mapped to
+  // permutations and, generator by generator, tested for orientation-preservation.
+  std::unordered_set<MyMatrix<Tint>> ListSetGens;
   std::vector<MyVector<Tint>> EXTinner;
   // That value of dim should be overwritten later
   for (auto &ePt : FaceToVector<int>(ef_input.f_ext)) {
@@ -226,7 +233,7 @@ get_spanning_list_triple(
   os << "TRIP: |EXTinner|=" << EXTinner.size() << "\n";
 #endif
   auto f_insert_generator = [&](const MyMatrix<Tint> &eMatrGen) -> void {
-    ListMatrGen.push_back(eMatrGen);
+    ListSetGens.insert(eMatrGen);
 #ifdef DEBUG_TRIPLE
     for (auto &eV : EXTinner) {
       MyVector<Tint> Vimg = eMatrGen.transpose() * eV;
@@ -387,12 +394,14 @@ get_spanning_list_triple(
   }
 #ifdef DEBUG_TRIPLE
   os << "TRIP: |l_triple|=" << l_triple.size()
-     << " |ListMatrGen|=" << ListMatrGen.size() << "\n";
+     << " |ListSetGens|=" << ListSetGens.size() << "\n";
   os << "l_triple.iCon =";
   for (auto &e_ent : l_triple)
     os << " " << e_ent.iCone;
   os << "\n";
 #endif
+  std::vector<MyMatrix<Tint>> ListMatrGen(std::make_move_iterator(ListSetGens.begin()),
+                                          std::make_move_iterator(ListSetGens.end()));
   return {std::move(l_triple), std::move(ListMatrGen)};
 }
 
