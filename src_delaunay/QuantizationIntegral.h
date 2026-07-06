@@ -40,6 +40,10 @@
 #define DEBUG_QUANTIZATION_INTEGRAL
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_QUANTIZATION_INTEGRAL
+#endif
+
 // n! as a value of the (exact) scalar type T.
 template <typename T> T factorial(int const &n) {
   T ret(1);
@@ -232,6 +236,19 @@ struct QuantizationComputer {
     info.order = GRP.size();
     for (auto &eGen : GRP.GeneratorsOfGroup()) {
       MyMatrix<T> L = FindTransformation<T, Telt>(EXText, EXText, eGen);
+#ifdef SANITY_CHECK_QUANTIZATION_INTEGRAL
+      // Every stabilizer generator must be realized by a lattice automorphism,
+      // i.e. an integral (GL_n(Z)) linear map. A non-integral realization means
+      // the isometry group contains a symmetry that does not preserve the
+      // lattice (the vertex/SHV coloring is missing or wrong) -- exactly the bug
+      // that silently inflated the group and over-counted the cell moment.
+      if (!IsIntegralMatrix(L)) {
+        std::cerr << "QUANT: func_autom_center produced a NON-INTEGRAL "
+                     "automorphism; the isometry group is larger than the "
+                     "lattice automorphism group (bad vertex/SHV coloring)\n";
+        throw TerminalException{1};
+      }
+#endif
       info.gens.push_back(affine_from_linear(L, c));
     }
     return info;
@@ -275,6 +292,17 @@ struct QuantizationComputer {
       return {};
     Telt eElt(*eRes);
     MyMatrix<T> MatEquiv = FindTransformation<T, Telt>(EXText1, EXText2, eElt);
+#ifdef SANITY_CHECK_QUANTIZATION_INTEGRAL
+    // The equivalence must be realized by a lattice isomorphism (integral map).
+    // A non-integral realization means the coloring failed to keep the vertex
+    // and SHV blocks apart and the two cells were wrongly matched.
+    if (!IsIntegralMatrix(MatEquiv)) {
+      std::cerr << "QUANT: func_equiv_center produced a NON-INTEGRAL "
+                   "equivalence; it is not a lattice isomorphism (bad "
+                   "vertex/SHV coloring)\n";
+      throw TerminalException{1};
+    }
+#endif
     return extend(MatEquiv);
   }
 
