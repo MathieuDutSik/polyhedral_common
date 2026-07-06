@@ -56,6 +56,18 @@ template <typename T> struct QuantizationResult {
   double NormalizedSecondMoment;
 };
 
+// Evaluate a scalar at a concrete value t0 of the deformation parameter. A plain
+// scalar is t-independent and returns itself (t0 ignored); a jet collapses to the
+// base field via its Horner evaluation. This is what lets direct_integral pick a
+// non-degenerate rational point t0 at which to compute the (combinatorial, hence
+// t-independent) leaf triangulation, and orient each simplex volume, while the
+// integration itself keeps the full jet expansion.
+template <typename T> inline T eval_at(T const &x, T const &) { return x; }
+template <typename Tb, int N>
+inline Tb eval_at(jet<Tb, N> const &x, Tb const &t0) {
+  return x.eval(t0);
+}
+
 // The computer needs only three things beyond the Delaunay tessellation: the
 // dimension n, the invariant vector family SHV (integer vectors, used by the
 // marked-center stabilizer/equivalence), and the metric GramMat. It does not
@@ -74,6 +86,15 @@ struct QuantizationComputer {
   int n;
   MyMatrix<T> SHV;
   MyMatrix<T> GramMat;
+  // The base field underneath T (T itself for an ordinary scalar, the coefficient
+  // type for a jet); the type in which the leaf triangulation is computed.
+  using Tscal = std::decay_t<decltype(constant_term(std::declval<T const &>()))>;
+  // The deformation value t0 at which the leaf triangulation is evaluated and the
+  // simplices oriented. Only meaningful when T is a jet; for a plain scalar it is
+  // ignored by eval_at. For jets it must be an interior point of the iso-Delaunay
+  // segment (t0 = tmax/2, where the tessellation was pinned down), so that the
+  // evaluated polytope is non-degenerate and its triangulation is the t -> 0+ one.
+  Tscal t0_triang{};
 
   // Ordinary constructor: take n and the metric from a DataLattice, and compute
   // the Z-spanning invariant family ExtractInvariantVectorFamilyZbasis(GramMat)
@@ -97,8 +118,9 @@ struct QuantizationComputer {
   QuantizationComputer(int n_in, MyMatrix<T> const &SHV_in,
                        MyMatrix<T> const &GramMat_in,
                        DelaunayTesselation<T, Tgroup> const &DT,
-                       std::ostream &os)
-      : DT(DT), os(os), n(n_in), SHV(SHV_in), GramMat(GramMat_in) {}
+                       std::ostream &os, Tscal const &t0_in = Tscal())
+      : DT(DT), os(os), n(n_in), SHV(SHV_in), GramMat(GramMat_in),
+        t0_triang(t0_in) {}
 
   // -------- small geometric helpers (homogeneous coordinates) --------
 
@@ -207,7 +229,6 @@ struct QuantizationComputer {
   std::optional<MyMatrix<T>>
   func_equiv_center(MyMatrix<T> const &EXT1, MyVector<T> const &c1_h,
                     MyMatrix<T> const &EXT2, MyVector<T> const &c2_h) const {
-    using Tgr = GraphListAdj;
     using Tidx_value = int16_t;
     MyVector<T> c1 = affine_part(c1_h);
     MyVector<T> c2 = affine_part(c2_h);
@@ -443,7 +464,18 @@ struct QuantizationComputer {
     T IntDeg0(0);
     MyVector<T> IntDeg1 = ZeroVector<T>(nRel);
     MyMatrix<T> IntDeg2 = ZeroMatrix<T>(nRel, nRel);
-    vectface trig = lrs::GetTriangulation(EXTinBasis);
+    // The leaf triangulation is purely combinatorial (any triangulation of the
+    // cell integrates the polynomial identically), so it must NOT be run over
+    // jets: at t = 0 the split vertices coincide and lrs' fraction-free pivoting
+    // would divide by a zero divisor. Instead evaluate the (jet) vertices at the
+    // interior point t0, where the polytope is non-degenerate, and triangulate
+    // that rational polytope with the ordinary lrs. For a plain scalar T this is
+    // the identity (eval_at ignores t0) and reproduces the previous behaviour.
+    MyMatrix<Tscal> EXTinBasis_t0(nbVert, nRel + 1);
+    for (int iVert = 0; iVert < nbVert; iVert++)
+      for (int j = 0; j < nRel + 1; j++)
+        EXTinBasis_t0(iVert, j) = eval_at(EXTinBasis(iVert, j), t0_triang);
+    vectface trig = lrs::GetTriangulation(EXTinBasis_t0);
     // The covariance of the uniform distribution on a simplex with n+1 vertices
     // is (1/((n+1)(n+2))) sum_u (v_u - c)(v_u - c)^T; Tnp1 = n+1 is also the
     // barycenter divisor (vertex count). These are the linear factors (n+1),
@@ -457,8 +489,14 @@ struct QuantizationComputer {
       for (int u = 0; u < sdim; u++)
         for (int j = 0; j < nRel + 1; j++)
           EXTsimplex(u, j) = EXTinBasis(LV[u], j);
+      // Oriented volume: the jet determinant of a split simplex is alpha*t^d + ..
+      // (it vanishes at t = 0), so |.| is meaningless as a jet. Orient each
+      // simplex to be positive at t0 -- i.e. multiply the jet determinant by the
+      // sign of its value at t0 -- which makes the signed volumes of a
+      // t0-consistent triangulation add up to the cell integral, analytically in
+      // t. For a plain scalar eval_at is the identity, so this is exactly |det|.
       T VolSimplex = DeterminantMat(EXTsimplex);
-      if (VolSimplex < 0)
+      if (eval_at(VolSimplex, t0_triang) < 0)
         VolSimplex = -VolSimplex;
       MyVector<T> bary = ZeroVector<T>(nRel + 1);
       for (int u = 0; u < sdim; u++)
@@ -1007,13 +1045,15 @@ MyMatrix<jet<T, N>>
 QuantizationSecMomentMatJet(DelaunayTesselation<T, Tgroup> const &DT_base,
                             MyMatrix<T> const &SHV_base,
                             MyMatrix<jet<T, N>> const &GramMat_jet, int n,
-                            std::ostream &os) {
+                            T const &t0, std::ostream &os) {
   using Tj = jet<T, N>;
   DelaunayTesselation<Tj, Tgroup> DT_jet =
       ConvertTesselationScalar<Tj, T, Tgroup>(DT_base);
   MyMatrix<Tj> SHV_jet = UniversalMatrixConversion<Tj, T>(SHV_base);
+  // t0: the interior point of the iso-Delaunay segment at which the leaf
+  // triangulation is evaluated (see direct_integral). Tscal of jet<T,N> is T.
   QuantizationComputer<Tj, Tint, Tgroup> comp(n, SHV_jet, GramMat_jet, DT_jet,
-                                              os);
+                                              os, t0);
   return comp.compute().SecMomentMat;
 }
 

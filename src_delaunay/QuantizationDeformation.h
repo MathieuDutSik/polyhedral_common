@@ -608,8 +608,12 @@ MyMatrix<T> compute_moment_derivative_jet(MyMatrix<T> const &Q,
   for (int i = 0; i < n; i++)
     for (int j = 0; j < n; j++)
       Gram_jet(i, j) = Tj(Q(i, j)) + t * Tj(B(i, j));
-  MyMatrix<Tj> M_jet =
-      QuantizationSecMomentMatJet<T, N, Tint, Tgroup>(DT, SHV, Gram_jet, n, os);
+  // t0 = tmax/2: the interior point of the iso-Delaunay segment at which the DT
+  // was pinned down (Gram_t0). At this t the deformed polytopes are
+  // non-degenerate, so the leaf triangulation computed there is the t -> 0+ one.
+  T t0 = seg.tmax / T(2);
+  MyMatrix<Tj> M_jet = QuantizationSecMomentMatJet<T, N, Tint, Tgroup>(
+      DT, SHV, Gram_jet, n, t0, os);
   MyMatrix<T> DM(n, n);
   for (int i = 0; i < n; i++)
     for (int j = 0; j < n; j++)
