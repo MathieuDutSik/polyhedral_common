@@ -201,23 +201,36 @@ struct QuantizationComputer {
   // center.
   MatrixGroupInfo func_autom_center(MyMatrix<T> const &EXT,
                                     MyVector<T> const &center_h) const {
-    using Tgr = GraphListAdj;
-    using Tidx_value = int16_t;
+    using Tidx = typename Telt::Tidx;
     MyVector<T> c = affine_part(center_h);
     MyMatrix<T> EXText = get_reduced_delaunay_shv(EXT, GramMat, SHV, c);
-    WeightMatrix<true, T, Tidx_value> WMat =
-        GetSimpleWeightMatrix<T, Tidx_value>(EXText, GramMat, os);
-    // SHV is a Z-spanning invariant family (ExtractInvariantVectorFamilyZbasis),
-    // so every weight-preserving permutation maps that Z-basis onto itself and
-    // its realization lies in GL_n(Z): GRPisom is already the lattice
-    // automorphism group. The integral refinement (LinPolytopeIntegral_Stabilizer
-    // -> GetZbasis, which needs a Euclidean domain and is not jet-able) is only
-    // needed for a smaller, non-spanning SHV, which we deliberately avoid here.
-    Tgroup GRPisom =
-        GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
+    // Color the augmented point set {vertices - c} U {SHV} so the isometry
+    // search cannot MIX the two blocks. This is essential: a 4-dimensional cube
+    // face has vertices of norm sqrt(4)/2 = 1, exactly the norm of the SHV
+    // vectors +-e_i, so the two families sit on the same sphere. Without the
+    // coloring the combinatorial stabilizer contains "accidental" isometries
+    // swapping cube corners with +-e_i, whose linear realization has half-integer
+    // entries (not in GL_n(Z)); those first appear at n = 8 (index 3) and inflate
+    // the orbit multiplicity, over-counting the recursive cell moment by 3. With
+    // the coloring the stabilizer is block-preserving, and because SHV is a
+    // Z-basis its realization is automatically unimodular -- so we get the exact
+    // lattice automorphism group directly, jet-ably, with no integral refinement.
+    std::vector<MyMatrix<T>> ListMat{GramMat};
+    int nbVert = EXT.rows();
+    int nbP = EXText.rows();
+    std::vector<T> Vdiag(nbP, T(0));
+    for (int i = nbVert; i < nbP; i++)
+      Vdiag[i] = T(1);
+    std::vector<std::vector<Tidx>> ListGenPerm =
+        GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(EXText, ListMat,
+                                                           Vdiag, os);
+    std::vector<Telt> LGen;
+    for (auto &eList : ListGenPerm)
+      LGen.push_back(Telt(eList));
+    Tgroup GRP(LGen, nbP);
     MatrixGroupInfo info;
-    info.order = GRPisom.size();
-    for (auto &eGen : GRPisom.GeneratorsOfGroup()) {
+    info.order = GRP.size();
+    for (auto &eGen : GRP.GeneratorsOfGroup()) {
       MyMatrix<T> L = FindTransformation<T, Telt>(EXText, EXText, eGen);
       info.gens.push_back(affine_from_linear(L, c));
     }
@@ -229,7 +242,7 @@ struct QuantizationComputer {
   std::optional<MyMatrix<T>>
   func_equiv_center(MyMatrix<T> const &EXT1, MyVector<T> const &c1_h,
                     MyMatrix<T> const &EXT2, MyVector<T> const &c2_h) const {
-    using Tidx_value = int16_t;
+    using Tidx = typename Telt::Tidx;
     MyVector<T> c1 = affine_part(c1_h);
     MyVector<T> c2 = affine_part(c2_h);
     auto extend = [&](MyMatrix<T> const &L) -> MyMatrix<T> {
@@ -245,22 +258,24 @@ struct QuantizationComputer {
     };
     MyMatrix<T> EXText1 = get_reduced_delaunay_shv(EXT1, GramMat, SHV, c1);
     MyMatrix<T> EXText2 = get_reduced_delaunay_shv(EXT2, GramMat, SHV, c2);
-    WeightMatrix<true, T, Tidx_value> WMat1 =
-        GetSimpleWeightMatrix<T, Tidx_value>(EXText1, GramMat, os);
-    WeightMatrix<true, T, Tidx_value> WMat2 =
-        GetSimpleWeightMatrix<T, Tidx_value>(EXText2, GramMat, os);
-    std::optional<Telt> eRes =
-        TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2, os);
+    // Same coloring as func_autom_center: distinguish cell vertices from SHV so
+    // the equivalence cannot mix the two blocks. The single equivalence returned
+    // is then realized by a unimodular map (SHV is a Z-basis), so no coset search
+    // via the (non-jet-able) LinPolytopeIntegral_Isomorphism is needed.
+    std::vector<MyMatrix<T>> ListMat{GramMat};
+    std::vector<T> Vdiag1(EXText1.rows(), T(0)), Vdiag2(EXText2.rows(), T(0));
+    for (int i = EXT1.rows(); i < EXText1.rows(); i++)
+      Vdiag1[i] = T(1);
+    for (int i = EXT2.rows(); i < EXText2.rows(); i++)
+      Vdiag2[i] = T(1);
+    std::optional<std::vector<Tidx>> eRes =
+        TestEquivalence_ListMat_Vdiag<T, T, Tidx>(EXText1, ListMat, Vdiag1,
+                                                  EXText2, ListMat, Vdiag2, os);
     if (!eRes)
       return {};
-    Telt const &eElt = *eRes;
-    // With a Z-spanning SHV the equivalence realized by FindTransformation is
-    // automatically unimodular (it maps one Z-basis onto the other), so the
-    // integral-isomorphism fallback is unnecessary.
+    Telt eElt(*eRes);
     MyMatrix<T> MatEquiv = FindTransformation<T, Telt>(EXText1, EXText2, eElt);
-    if (IsIntegralMatrix(MatEquiv))
-      return extend(MatEquiv);
-    return {};
+    return extend(MatEquiv);
   }
 
   // -------- the invariant used as a fast prefilter for equivalence --------
