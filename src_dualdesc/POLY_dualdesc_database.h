@@ -573,20 +573,21 @@ int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP,
   return GetCanonicalizationMethod_Serial(vf, GRP, os);
 }
 
-template <typename T, typename Tgroup, typename Tidx_value>
+// Same as GetCanonicalInformation but consuming a precomputed
+// canonicalization triple. This allows the (expensive) graph
+// canonicalization of the polytope to be shared with the bank lookup
+// instead of being recomputed here.
+template <typename T, typename Tgroup>
 std::pair<MyMatrix<T>, TripleStore<Tgroup>>
-GetCanonicalInformation(MyMatrix<T> const &EXT,
-                        WeightMatrix<true, T, Tidx_value> const &WMat,
-                        Tgroup const &TheGRPrelevant,
-                        FaceOrbitsizeTableContainer<typename Tgroup::Tint> const
-                            &ListOrbitFaceOrbitsize,
-                        std::ostream &os) {
+GetCanonicalInformation_Triple(
+    TripleCanonic<T, Tgroup> eTriple, Tgroup const &TheGRPrelevant,
+    FaceOrbitsizeTableContainer<typename Tgroup::Tint> const
+        &ListOrbitFaceOrbitsize,
+    std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   std::vector<TintGroup> ListPossOrbSize =
       ListOrbitFaceOrbitsize.ListPossOrbsize;
-  TripleCanonic<T, Tgroup> eTriple =
-      CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat, os);
   bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
   size_t delta = ListOrbitFaceOrbitsize.vfo.get_n();
   Telt perm1 = Telt(eTriple.ListIdx);
@@ -607,7 +608,7 @@ GetCanonicalInformation(MyMatrix<T> const &EXT,
     // is correct.
     size_t size = ListOrbitFaceOrbitsize.size();
     int can_method =
-        GetCanonicalizationMethodRandom(EXT, TheGRPrelevant, size, os);
+        GetCanonicalizationMethodRandom(eTriple.EXT, TheGRPrelevant, size, os);
     UNORD_SET<Face> SetFace;
     Tgroup GRPext = trivial_extension_group(eTriple.GRP, delta);
     for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
@@ -624,25 +625,41 @@ GetCanonicalInformation(MyMatrix<T> const &EXT,
   return {std::move(eTriple.EXT), std::move(ePair)};
 }
 
-template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
+template <typename T, typename Tgroup, typename Tidx_value>
+std::pair<MyMatrix<T>, TripleStore<Tgroup>>
+GetCanonicalInformation(MyMatrix<T> const &EXT,
+                        WeightMatrix<true, T, Tidx_value> const &WMat,
+                        Tgroup const &TheGRPrelevant,
+                        FaceOrbitsizeTableContainer<typename Tgroup::Tint> const
+                            &ListOrbitFaceOrbitsize,
+                        std::ostream &os) {
+  TripleCanonic<T, Tgroup> eTriple =
+      CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat, os);
+  return GetCanonicalInformation_Triple<T, Tgroup>(
+      std::move(eTriple), TheGRPrelevant, ListOrbitFaceOrbitsize, os);
+}
+
+// The canonicalization triple of (EXT, WMat) is passed in precomputed so that
+// it can be shared with the bank lookup (getdualdesc_in_bank) rather than being
+// recomputed here. Both the "only canonic form" and the "full symmetry" paths
+// build the same canonical form triple.EXT (as CanonicalizationPolytopePair
+// does) so the resulting bank key is identical to the one used at lookup time.
+template <typename Tbank, typename T, typename Tgroup>
 void insert_entry_in_bank(
-    Tbank &bank, MyMatrix<T> const &EXT,
-    WeightMatrix<true, T, Tidx_value> const &WMat, Tgroup const &TheGRPrelevant,
-    bool const &BankSymmCheck,
+    Tbank &bank, TripleCanonic<T, Tgroup> triple,
+    Tgroup const &TheGRPrelevant, bool const &BankSymmCheck,
     FaceOrbitsizeTableContainer<typename Tgroup::Tint> const
         &ListOrbitFaceOrbitsize,
     std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-  using Tidx = typename Telt::Tidx;
   size_t delta = ListOrbitFaceOrbitsize.vfo.get_n();
   if (!BankSymmCheck) {
     // The computation was already done for the full symmetry group. Only
-    // canonic form is needed.
-    std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
-        CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat, os);
+    // canonic form is needed. triple.EXT / triple.ListIdx coincide with the
+    // pair returned by CanonicalizationPolytopePair.
     vectface ListFaceO(delta);
-    Telt perm1 = Telt(ePair.second);
+    Telt perm1 = Telt(triple.ListIdx);
     Telt ePerm = ~perm1;
     Telt ePermExt = trivial_extension(ePerm, delta);
     Face eFaceImg(delta);
@@ -654,11 +671,12 @@ void insert_entry_in_bank(
     std::vector<TintGroup> ListPossOrbSize =
         ListOrbitFaceOrbitsize.ListPossOrbsize;
     bank.InsertEntry(
-        std::move(ePair.first),
+        std::move(triple.EXT),
         {std::move(GrpConj), std::move(ListPossOrbSize), std::move(ListFaceO)});
   } else {
-    std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP = GetCanonicalInformation(
-        EXT, WMat, TheGRPrelevant, ListOrbitFaceOrbitsize, os);
+    std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP =
+        GetCanonicalInformation_Triple<T, Tgroup>(
+            std::move(triple), TheGRPrelevant, ListOrbitFaceOrbitsize, os);
     bank.InsertEntry(std::move(eP.first), std::move(eP.second));
   }
 }

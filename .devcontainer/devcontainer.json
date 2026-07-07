@@ -55,11 +55,7 @@
   // OAuth callback ports for `claude /login` and `codex login`. The
   // exact ports vary by CLI version; this covers the commonly-seen
   // values. Linux users may prefer `"--network=host"` instead.
-  "runArgs": [
-    "-p", "1455:1455",
-    "-p", "8000:8000",
-    "-p", "54545:54545"
-  ],
+  "runArgs": [],
 
   // Optional API-key passthrough; harmless when the env vars are unset.
   "remoteEnv": {
