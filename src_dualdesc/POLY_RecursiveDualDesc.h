@@ -70,7 +70,19 @@
 // #define ROBIN_HOOD_HASH
 #define SUBSET_HASH
 
+// The splitting decision produced by the Splitting heuristic: whether to run
+// the recursive adjacency decomposition on the polytope ("split") or to call
+// the direct dual description ("nosplit").
+enum class SplittingDecision { split, nosplit };
 
+inline SplittingDecision splitting_decision_from_string(std::string const &ans) {
+  if (ans == "split")
+    return SplittingDecision::split;
+  if (ans == "nosplit")
+    return SplittingDecision::nosplit;
+  std::cerr << "RDD: unknown splitting decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
 
 template <typename Tgroup>
 Tgroup StabilizerUsingOrbSize_OnSets(
@@ -907,8 +919,9 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   CheckTermination<Tgroup>(AllArr);
   std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint, T, Tgroup>(
       df.FF.EXT_face, df.Stab, AllArr.dimEXT);
-  std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
-  if (ansSplit != "split") {
+  SplittingDecision split_decision = splitting_decision_from_string(
+      HeuristicEvaluation(TheMap, AllArr.Splitting));
+  if (split_decision == SplittingDecision::nosplit) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_complete;
     MicrosecondTime time_step;

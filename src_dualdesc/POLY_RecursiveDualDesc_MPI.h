@@ -189,7 +189,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
   CheckTermination<Tgroup>(AllArr);
   std::map<std::string, Tint> TheMap =
       ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr.dimEXT);
-  std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
+  SplittingDecision split_decision = splitting_decision_from_string(
+      HeuristicEvaluation(TheMap, AllArr.Splitting));
   std::string ansCommThread = HeuristicEvaluation(TheMap, AllArr.CommThread);
   bool launch_comm_thread = (ansCommThread == "yes");
   std::thread comm_thread;
@@ -209,7 +210,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
       os << "|join|=" << time_join << "\n";
     }
   };
-  if (ansSplit != "split") {
+  if (split_decision == SplittingDecision::nosplit) {
     auto EXT = df.FF.EXT_face;
     auto Stab = df.Stab;
 
