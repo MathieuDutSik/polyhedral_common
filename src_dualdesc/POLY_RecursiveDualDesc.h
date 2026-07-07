@@ -134,6 +134,42 @@ inline DatabaseKind database_kind_from_string(std::string const &ans) {
   throw TerminalException{1};
 }
 
+// The decision produced by the CheckDatabaseBank heuristic: whether to query
+// the bank of already computed dual descriptions before recomputing.
+enum class BankCheckDecision { yes, no };
+
+inline BankCheckDecision bank_check_decision_from_string(std::string const &ans) {
+  if (ans == "yes")
+    return BankCheckDecision::yes;
+  if (ans == "no")
+    return BankCheckDecision::no;
+  std::cerr << "RDD: unknown bank check decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
+// The decision produced by the BankSave heuristic: whether to write the
+// computed dual description into the bank for later reuse.
+enum class BankSaveDecision { yes, no };
+
+inline std::string bank_save_decision_to_string(BankSaveDecision dec) {
+  switch (dec) {
+  case BankSaveDecision::yes:
+    return "yes";
+  case BankSaveDecision::no:
+    return "no";
+  }
+  return "unknown";
+}
+
+inline BankSaveDecision bank_save_decision_from_string(std::string const &ans) {
+  if (ans == "yes")
+    return BankSaveDecision::yes;
+  if (ans == "no")
+    return BankSaveDecision::no;
+  std::cerr << "RDD: unknown bank save decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
 template <typename Tgroup>
 Tgroup StabilizerUsingOrbSize_OnSets(
     Tgroup const &GRP, std::pair<Face, typename Tgroup::Tint> const &pair) {
@@ -1373,9 +1409,9 @@ vectface DUALDESC_AdjacencyDecomposition(
   //
   // Checking if the entry is present in the map.
   //
-  std::string ansBankCheck =
-      HeuristicEvaluation(TheMap, AllArr.CheckDatabaseBank);
-  if (ansBankCheck == "yes") {
+  BankCheckDecision bank_check_decision = bank_check_decision_from_string(
+      HeuristicEvaluation(TheMap, AllArr.CheckDatabaseBank));
+  if (bank_check_decision == BankCheckDecision::yes) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_bankcheck;
 #endif
@@ -1467,12 +1503,14 @@ vectface DUALDESC_AdjacencyDecomposition(
   FaceOrbitsizeTableContainer<Tint> ListOrbitFaceOrbitsize =
       compute_decomposition();
   TheMap["time"] = si(start);
-  std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
+  BankSaveDecision bank_save_decision =
+      bank_save_decision_from_string(HeuristicEvaluation(TheMap, AllArr.BankSave));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-  os << "RDD: elapsed_seconds=" << s(start) << " ansBank=" << ansBank
+  os << "RDD: elapsed_seconds=" << s(start)
+     << " bank_save=" << bank_save_decision_to_string(bank_save_decision)
      << " NeedSplit=" << NeedSplit << "\n";
 #endif
-  if (ansBank == "yes") {
+  if (bank_save_decision == BankSaveDecision::yes) {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RDD: Before insert_entry_in_bank\n";
 #endif
