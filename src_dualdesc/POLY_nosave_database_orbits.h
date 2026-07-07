@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_DUALDESC_POLY_DATABASE_ORBITS_H_
-#define SRC_DUALDESC_POLY_DATABASE_ORBITS_H_
+#ifndef SRC_DUALDESC_POLY_NOSAVE_DATABASE_ORBITS_H_
+#define SRC_DUALDESC_POLY_NOSAVE_DATABASE_ORBITS_H_
 
 // Holds the `NoSaveDatabaseOrbits<TbasicBank>` class extracted from
 // POLY_RecursiveDualDesc.h. The class wraps a `TbasicBank` (face-orbit
@@ -21,7 +21,6 @@ template <typename TbasicBank> struct NoSaveDatabaseOrbits {
 public:
   using Tgroup = typename TbasicBank::Tgroup;
   using T = typename TbasicBank::T;
-  using Telt = typename Tgroup::Telt;
   using Tint = typename TbasicBank::Tint;
   Tint CritSiz;
   TbasicBank &bb;
@@ -33,7 +32,6 @@ private:
   bool NeedToFlush;
   bool AdvancedTerminationCriterion;
   std::ostream &os;
-  size_t delta;
   std::string strPresChar;
   HumanTime time;
 
@@ -71,7 +69,6 @@ public:
     strPresChar = "|EXT|=" + std::to_string(bb.nbRow) + "/" +
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
-    delta = bb.delta;
     NeedToFlush = true;
     int val = bb.get_default_strategy();
     bb.the_method = val;
@@ -232,5 +229,5 @@ public:
 };
 
 // clang-format off
-#endif  // SRC_DUALDESC_POLY_DATABASE_ORBITS_H_
+#endif  // SRC_DUALDESC_POLY_NOSAVE_DATABASE_ORBITS_H_
 // clang-format on

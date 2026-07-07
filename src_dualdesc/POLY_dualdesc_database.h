@@ -92,6 +92,18 @@ size_t get_matching_power(size_t const &val) {
   }
 }
 
+// Apply a permutation to every face of a vectface, returning the images.
+template <typename Telt>
+vectface ImageVectface(vectface const &vf, Telt const &perm, size_t n_ent) {
+  vectface result(n_ent);
+  Face eFaceImg(n_ent);
+  for (auto const &eFace : vf) {
+    OnFace_inplace(eFaceImg, eFace, perm);
+    result.push_back(eFaceImg);
+  }
+  return result;
+}
+
 template <typename T, typename Tgroup> struct TripleCanonic {
   MyMatrix<T> EXT;
   Tgroup GRP;
@@ -593,14 +605,10 @@ GetCanonicalInformation_Triple(
   Telt ePerm = ~eTriple.perm;
   Telt ePermExt = trivial_extension(ePerm, delta);
   vectface ListFaceO(delta);
-  Face eFaceImg(delta);
   if (!NeedRemapOrbit) {
     // We needed to compute the full group, but it turned out to be the same
     // as the input group.
-    for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
-      OnFace_inplace(eFaceImg, eFace, ePermExt);
-      ListFaceO.push_back(eFaceImg);
-    }
+    ListFaceO = ImageVectface(ListOrbitFaceOrbitsize.vfo, ePermExt, delta);
   } else {
     // The full group is bigger than the input group. So we need to reduce.
     // The used method for canonicalization does not matter, so everything
@@ -609,6 +617,7 @@ GetCanonicalInformation_Triple(
     int can_method =
         GetCanonicalizationMethodRandom(eTriple.EXT, TheGRPrelevant, size, os);
     UNORD_SET<Face> SetFace;
+    Face eFaceImg(delta);
     Tgroup GRPext = trivial_extension_group(eTriple.GRP, delta);
     for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
       OnFace_inplace(eFaceImg, eFace, ePermExt);
@@ -657,14 +666,9 @@ void insert_entry_in_bank(
     // The computation was already done for the full symmetry group. Only
     // canonic form is needed. triple.EXT / triple.perm coincide with the
     // pair returned by CanonicalizationPolytopePair.
-    vectface ListFaceO(delta);
     Telt ePerm = ~triple.perm;
     Telt ePermExt = trivial_extension(ePerm, delta);
-    Face eFaceImg(delta);
-    for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
-      OnFace_inplace(eFaceImg, eFace, ePermExt);
-      ListFaceO.push_back(eFaceImg);
-    }
+    vectface ListFaceO = ImageVectface(ListOrbitFaceOrbitsize.vfo, ePermExt, delta);
     Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
     std::vector<TintGroup> ListPossOrbSize =
         ListOrbitFaceOrbitsize.ListPossOrbsize;

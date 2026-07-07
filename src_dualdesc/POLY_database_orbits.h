@@ -24,7 +24,6 @@ template <typename TbasicBank> struct DatabaseOrbits {
 public:
   using Tgroup = typename TbasicBank::Tgroup;
   using T = typename TbasicBank::T;
-  using Telt = typename Tgroup::Telt;
   using Tint = typename TbasicBank::Tint;
   Tint CritSiz;
   TbasicBank &bb;
@@ -39,7 +38,6 @@ private:
   bool NeedToFlush;
   bool AdvancedTerminationCriterion;
   std::ostream &os;
-  size_t delta;
   std::string strPresChar;
   HumanTime time;
 
@@ -82,6 +80,14 @@ public:
       return bb.get_default_strategy();
     }
   }
+  void remove_database_files() const {
+    RemoveFileIfExist(eFileNB);
+    RemoveFileIfExist(eFileFB);
+    RemoveFileIfExist(eFileFF);
+    RemoveFileIfExist(eFileEXT);
+    RemoveFileIfExist(eFileGRP);
+    RemoveFileIfExist(eFileMethod);
+  }
   bool is_database_present() const {
     if (IsExistingFile(eFileEXT) == false) {
       return false;
@@ -98,12 +104,7 @@ public:
 #ifdef TRACK_DATABASE
       os << "Database got changed, removing old one\n";
 #endif
-      RemoveFileIfExist(eFileNB);
-      RemoveFileIfExist(eFileFB);
-      RemoveFileIfExist(eFileFF);
-      RemoveFileIfExist(eFileEXT);
-      RemoveFileIfExist(eFileGRP);
-      RemoveFileIfExist(eFileMethod);
+      remove_database_files();
     }
     return false;
   }
@@ -137,7 +138,6 @@ public:
     strPresChar = "|EXT|=" + std::to_string(bb.nbRow) + "/" +
                   std::to_string(bb.nbCol) +
                   " |GRP|=" + std::to_string(bb.GRP.size());
-    delta = bb.delta;
     NeedToFlush = true;
     int val = read_method(eFileMethod);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
@@ -365,12 +365,7 @@ public:
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     NeedToFlush = false;
     if (SavingTrigger) {
-      RemoveFileIfExist(eFileNB);
-      RemoveFileIfExist(eFileFB);
-      RemoveFileIfExist(eFileFF);
-      RemoveFileIfExist(eFileEXT);
-      RemoveFileIfExist(eFileGRP);
-      RemoveFileIfExist(eFileMethod);
+      remove_database_files();
     }
     return bb.GetListFaceOrbitsize();
   }

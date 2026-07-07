@@ -681,11 +681,7 @@ public:
     InsertEntryDatabase({face_i, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face) {
-    Face f_red(nbRow);
-    for (int i = 0; i < nbRow; i++) {
-      f_red[i] = face[i];
-    }
-    FuncInsert(f_red);
+    FuncInsert(face_reduction(face, nbRow));
   }
   void FuncPutOrbitAsDone(size_t const &iOrb) {
     std::pair<Face, Tint> eEnt = foc.RetrieveListOrbitEntry(iOrb);
@@ -1080,24 +1076,12 @@ vectface getdualdesc_in_bank(Tbank &bank,
   Telt const &ePerm = triple.perm;
   size_t n = triple.EXT.rows();
   if (GRP.size() == RecAns.GRP.size()) {
-    vectface ListReprTrans(n);
-    Face eFaceImg(n);
-    vectface ListFace = vectface_reduction(RecAns.ListFace, n);
-    for (auto const &eFace : ListFace) {
-      OnFace_inplace(eFaceImg, eFace, ePerm);
-      ListReprTrans.push_back(eFaceImg);
-    }
-    return ListReprTrans;
+    return ImageVectface(vectface_reduction(RecAns.ListFace, n), ePerm, n);
   }
   Tgroup GrpConj = RecAns.GRP.GroupConjugate(ePerm);
   size_t delta = RecAns.ListFace.get_n();
   Telt ePermExt = trivial_extension(ePerm, delta);
-  vectface ListReprTrans(delta);
-  Face eFaceImg(delta);
-  for (auto const &eFace : RecAns.ListFace) {
-    OnFace_inplace(eFaceImg, eFace, ePermExt);
-    ListReprTrans.push_back(eFaceImg);
-  }
+  vectface ListReprTrans = ImageVectface(RecAns.ListFace, ePermExt, delta);
   FaceOrbitsizeTableContainer<TintGroup> fotc(RecAns.ListPossOrbsize, n,
                                               std::move(ListReprTrans));
   return OrbitSplittingListOrbitGen(GrpConj, GRP, fotc, AllArr, os);
