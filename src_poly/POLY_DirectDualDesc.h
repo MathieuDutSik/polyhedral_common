@@ -14,6 +14,7 @@
 #include "POLY_DualDescription_PrimalDual.h"
 #include "SmallPolytopes.h"
 #include <algorithm>
+#include <optional>
 #include <utility>
 #include <string>
 #include <vector>
@@ -69,296 +70,330 @@ template <typename T> T Convert_Set_To_T(std::vector<size_t> const &V) {
   return retval;
 }
 
-template <typename T> bool is_method_supported(std::string const &prog) {
-  if (prog == "cdd_cbased") {
+// The dual description program to use for a direct (non-recursive)
+// computation. This is the type-safe replacement for the "ansProg" strings.
+// The string form is still available (parsed from the heuristics / command
+// line) via dual_desc_program_from_string.
+enum class DualDescProgram {
+  cdd_cbased,
+  cdd,
+  lrs_ring,
+  small_polytopes,
+  lrs,
+  pd_lrs,
+  glrs,
+  ppl_ext,
+  cdd_ext,
+  normaliz,
+};
+
+// The string encoding of the program, used for logging and error messages and
+// for writing the value back into the string-based heuristic machinery.
+inline std::string dual_desc_program_to_string(DualDescProgram prog) {
+  switch (prog) {
+  case DualDescProgram::cdd_cbased:
+    return "cdd_cbased";
+  case DualDescProgram::cdd:
+    return "cdd";
+  case DualDescProgram::lrs_ring:
+    return "lrs_ring";
+  case DualDescProgram::small_polytopes:
+    return "small_polytopes";
+  case DualDescProgram::lrs:
+    return "lrs";
+  case DualDescProgram::pd_lrs:
+    return "pd_lrs";
+  case DualDescProgram::glrs:
+    return "glrs";
+  case DualDescProgram::ppl_ext:
+    return "ppl_ext";
+  case DualDescProgram::cdd_ext:
+    return "cdd_ext";
+  case DualDescProgram::normaliz:
+    return "normaliz";
+  }
+  return "unknown";
+}
+
+// Parses the string form of the program. Returns nullopt if the string is not
+// a known dual description program (e.g. "fullrankfacetset" handled elsewhere).
+inline std::optional<DualDescProgram>
+dual_desc_program_from_string_opt(std::string const &prog) {
+  if (prog == "cdd_cbased")
+    return DualDescProgram::cdd_cbased;
+  if (prog == "cdd")
+    return DualDescProgram::cdd;
+  if (prog == "lrs_ring")
+    return DualDescProgram::lrs_ring;
+  if (prog == "small_polytopes")
+    return DualDescProgram::small_polytopes;
+  if (prog == "lrs")
+    return DualDescProgram::lrs;
+  if (prog == "pd_lrs")
+    return DualDescProgram::pd_lrs;
+  if (prog == "glrs")
+    return DualDescProgram::glrs;
+  if (prog == "ppl_ext")
+    return DualDescProgram::ppl_ext;
+  if (prog == "cdd_ext")
+    return DualDescProgram::cdd_ext;
+  if (prog == "normaliz")
+    return DualDescProgram::normaliz;
+  return {};
+}
+
+// Same as above but errors out on an unknown program.
+inline DualDescProgram dual_desc_program_from_string(std::string const &prog) {
+  std::optional<DualDescProgram> opt = dual_desc_program_from_string_opt(prog);
+  if (!opt) {
+    std::cerr << "DDD: ERROR: unknown dual description program prog=" << prog
+              << "\n";
+    throw TerminalException{1};
+  }
+  return *opt;
+}
+
+template <typename T> bool is_method_supported(DualDescProgram prog) {
+  switch (prog) {
+  case DualDescProgram::cdd_cbased:
 #ifdef USE_CDDLIB
     return true;
 #else
     return false;
 #endif
-  }
-  //
-  if constexpr (is_ring_field<T>::value) {
-    if (prog == "cdd")
-      return true;
-    // If it is a field, then it makes sense to look at the internal ring
-    if (prog == "lrs_ring")
-      return true;
-  }
-  //
-  if (prog == "small_polytopes")
+  case DualDescProgram::cdd:
+  case DualDescProgram::lrs_ring:
+    // CDD and the lrs internal ring require T to be a field.
+    return is_ring_field<T>::value;
+  case DualDescProgram::small_polytopes:
+  case DualDescProgram::lrs:
+  case DualDescProgram::pd_lrs:
+    // Applies to the field or ring case.
     return true;
-  // It applies to the field case or ring
-  if (prog == "lrs")
-    return true;
-  // It applies to the field case or ring
-  if (prog == "pd_lrs")
-    return true;
-  //
+  case DualDescProgram::glrs:
+  case DualDescProgram::ppl_ext:
+  case DualDescProgram::cdd_ext:
+  case DualDescProgram::normaliz:
+    // The external programs are available only for rational types.
 #ifndef WASM_PLATFORM
-  if constexpr (is_implementation_of_Q<T>::value) {
-    if (prog == "glrs")
-      return true;
-    //
-    if (prog == "ppl_ext")
-      return true;
-    //
-    if (prog == "cdd_ext")
-      return true;
-    //
-    if (prog == "normaliz")
-      return true;
-  }
+    return is_implementation_of_Q<T>::value;
+#else
+    return false;
 #endif
+  }
   return false;
 }
 
-[[noreturn]] void
-terminate_direct_dual_desc(std::string const &ansProg,
-                           std::vector<std::string> const &ListProg) {
-  std::cerr << "DDD: ERROR: No right program found with ansProg=" << ansProg
-            << "\n";
-  std::cerr << "DDD: List of authorized programs :";
-  bool IsFirst = true;
-  for (auto &eP : ListProg) {
-    if (!IsFirst)
-      std::cerr << " ,";
-    IsFirst = false;
-    std::cerr << " " << eP;
-  }
-  std::cerr << "\n";
+template <typename T> bool is_method_supported(std::string const &prog) {
+  std::optional<DualDescProgram> opt = dual_desc_program_from_string_opt(prog);
+  return opt.has_value() && is_method_supported<T>(*opt);
+}
+
+[[noreturn]] inline void
+terminate_direct_dual_desc(std::string const &context, DualDescProgram prog) {
+  std::cerr << "DDD: ERROR in " << context
+            << ": no available handler for program "
+            << dual_desc_program_to_string(prog) << "\n";
   throw TerminalException{1};
 }
 
 template <typename T>
 vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
-                                         std::string const &ansProg,
+                                         DualDescProgram prog,
                                          std::ostream &os) {
 #ifdef DEBUG_DUAL_DESC
-  os << "DDD: DirectFacetComputationIncidence, ansProg=" << ansProg << "\n";
+  os << "DDD: DirectFacetComputationIncidence, prog="
+     << dual_desc_program_to_string(prog) << "\n";
 #endif
-  std::string eProg;
-  std::vector<std::string> ListProg;
-  //
-  eProg = "cdd_cbased";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg) {
+  switch (prog) {
+  case DualDescProgram::cdd_cbased:
 #ifdef USE_CDDLIB
     return cbased_cdd::DualDescription_incd(EXT);
 #else
     std::cerr << "DDD: The code has been compiled without the CDDLIB library\n";
     throw TerminalException{1};
 #endif
-  }
-  //
-  if constexpr (is_ring_field<T>::value) {
+  case DualDescProgram::cdd:
     // CDD certainly requires the ring to be a field
-    eProg = "cdd";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
+    if constexpr (is_ring_field<T>::value)
       return cdd::DualDescription_incd(EXT, os);
+    break;
+  case DualDescProgram::lrs_ring:
     // If it is a field, then it makes sense to look at the internal ring
-    eProg = "lrs_ring";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
+    if constexpr (is_ring_field<T>::value)
       return lrs::DualDescription_incd_reduction(EXT);
-  }
-  // Small polytopes have special solutions
-  eProg = "small_polytopes";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
+    break;
+  case DualDescProgram::small_polytopes:
+    // Small polytopes have special solutions
     return SmallPolytope_Incidence(EXT, os);
-  // It applies to the field case or ring
-  eProg = "lrs";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
+  case DualDescProgram::lrs:
+    // It applies to the field case or ring
     return lrs::DualDescription_incd(EXT);
-  // It applies to the field case or ring
-  eProg = "pd_lrs";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
+  case DualDescProgram::pd_lrs:
+    // It applies to the field case or ring
     return POLY_DualDescription_PrimalDualIncidence(EXT, os);
-  //
-  //
-  // The external programs are available only for rationl types
-  //
+  case DualDescProgram::glrs:
+  case DualDescProgram::ppl_ext:
+  case DualDescProgram::cdd_ext:
+  case DualDescProgram::normaliz:
+    // The external programs are available only for rational types
 #ifndef WASM_PLATFORM
-  if constexpr (is_implementation_of_Q<T>::value) {
-    eProg = "glrs";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramIncidence(EXT, "glrs", os);
-    //
-    eProg = "ppl_ext";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramIncidence(EXT, "ppl_lcdd", os);
-    //
-    eProg = "cdd_ext";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramIncidence(EXT, "lcdd_gmp", os);
-    //
-    eProg = "normaliz";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramIncidence(EXT, "normaliz", os);
-  }
+    if constexpr (is_implementation_of_Q<T>::value) {
+      if (prog == DualDescProgram::glrs)
+        return DualDescExternalProgramIncidence(EXT, "glrs", os);
+      if (prog == DualDescProgram::ppl_ext)
+        return DualDescExternalProgramIncidence(EXT, "ppl_lcdd", os);
+      if (prog == DualDescProgram::cdd_ext)
+        return DualDescExternalProgramIncidence(EXT, "lcdd_gmp", os);
+      if (prog == DualDescProgram::normaliz)
+        return DualDescExternalProgramIncidence(EXT, "normaliz", os);
+    }
 #endif
-  //
-  std::cerr << "DDD: ERROR in DirectFacetComputationIncidence\n";
-  terminate_direct_dual_desc(ansProg, ListProg);
+    break;
+  }
+  terminate_direct_dual_desc("DirectFacetComputationIncidence", prog);
+}
+
+template <typename T>
+vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
+                                         std::string const &ansProg,
+                                         std::ostream &os) {
+  return DirectFacetComputationIncidence(
+      EXT, dual_desc_program_from_string(ansProg), os);
+}
+
+template <typename T>
+MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
+                                               DualDescProgram prog,
+                                               std::ostream &os) {
+#ifdef DEBUG_DUAL_DESC
+  os << "DDD: DirectFacetComputationInequalities, prog="
+     << dual_desc_program_to_string(prog) << "\n";
+#endif
+  switch (prog) {
+  case DualDescProgram::cdd:
+    // CDD certainly requires a field for working out.
+    if constexpr (is_ring_field<T>::value)
+      return cdd::DualDescription(EXT, os);
+    break;
+  case DualDescProgram::lrs_ring:
+    // For lrs_ring, we certainly need to have a field for T
+    if constexpr (is_ring_field<T>::value)
+      return lrs::DualDescription_reduction(EXT);
+    break;
+  case DualDescProgram::small_polytopes:
+    // Small polytopes have special solutions
+    return SmallPolytope_Ineq(EXT, os);
+  case DualDescProgram::lrs:
+    // lrs does not use divisions, so work even if not field.
+    return lrs::DualDescription(EXT);
+  case DualDescProgram::pd_lrs:
+    // It applies to the field case or ring
+    return POLY_DualDescription_PrimalDualInequalities(EXT, os);
+  case DualDescProgram::glrs:
+  case DualDescProgram::ppl_ext:
+  case DualDescProgram::cdd_ext:
+  case DualDescProgram::normaliz:
+    // The external programs are available only for rational types
+#ifndef WASM_PLATFORM
+    if constexpr (is_implementation_of_Q<T>::value) {
+      if (prog == DualDescProgram::glrs)
+        return DualDescExternalProgramIneq(EXT, "glrs", os);
+      if (prog == DualDescProgram::ppl_ext)
+        return DualDescExternalProgramIneq(EXT, "ppl_lcdd", os);
+      if (prog == DualDescProgram::cdd_ext)
+        return DualDescExternalProgramIneq(EXT, "lcdd_gmp", os);
+      if (prog == DualDescProgram::normaliz)
+        return DualDescExternalProgramIneq(EXT, "normaliz", os);
+    }
+#endif
+    break;
+  case DualDescProgram::cdd_cbased:
+    // Not available for the inequalities computation.
+    break;
+  }
+  terminate_direct_dual_desc("DirectFacetComputationInequalities", prog);
 }
 
 template <typename T>
 MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
                                                std::string const &ansProg,
                                                std::ostream &os) {
+  return DirectFacetComputationInequalities(
+      EXT, dual_desc_program_from_string(ansProg), os);
+}
+
+template <typename T, typename Fprocess>
+void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
+                                    DualDescProgram prog, Fprocess f_process,
+                                    std::ostream &os) {
 #ifdef DEBUG_DUAL_DESC
-  os << "DDD: DirectFacetComputationInequalities, ansProg=" << ansProg << "\n";
+  os << "DDD: DirectFacetComputationFaceIneq, prog="
+     << dual_desc_program_to_string(prog) << "\n";
 #endif
-  std::string eProg;
-  std::vector<std::string> ListProg;
-  //
-  if constexpr (is_ring_field<T>::value) {
-    // CDD certainly requires a field for working out.
-    eProg = "cdd";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return cdd::DualDescription(EXT, os);
-    // For lrs_ring, we certainly need to have a field for T
-    eProg = "lrs_ring";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return lrs::DualDescription_reduction(EXT);
-  }
-  // Small polytopes have special solutions
-  eProg = "small_polytopes";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return SmallPolytope_Ineq(EXT, os);
-  // lrs does not use divisions, so work even if not field.
-  eProg = "lrs";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return lrs::DualDescription(EXT);
-  // It applies to the field case or ring
-  eProg = "pd_lrs";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return POLY_DualDescription_PrimalDualInequalities(EXT, os);
-  //
-  // The external programs are available only for rationl types
-  //
+  switch (prog) {
+  case DualDescProgram::cdd:
+    // CDD requires for T to be a field
+    if constexpr (is_ring_field<T>::value)
+      return cdd::DualDescriptionFaceIneq(EXT, f_process, os);
+    break;
+  case DualDescProgram::lrs_ring:
+    // For lrs_ring that computes in a subring, we need T to be a field.
+    if constexpr (is_ring_field<T>::value)
+      return lrs::DualDescriptionFaceIneq_reduction(EXT, f_process);
+    break;
+  case DualDescProgram::small_polytopes:
+    // Small polytopes can have special solutions
+    return SmallPolytope_FaceIneq(EXT, f_process, os);
+  case DualDescProgram::lrs:
+    // T can be a field or a ring here
+    return lrs::DualDescriptionFaceIneq(EXT, f_process);
+  case DualDescProgram::pd_lrs:
+    // It applies to the field case or ring
+    return POLY_DualDescription_PrimalDualFaceIneq(EXT, f_process, os);
+  case DualDescProgram::glrs:
+  case DualDescProgram::ppl_ext:
+  case DualDescProgram::cdd_ext:
+  case DualDescProgram::normaliz:
+    // The external programs are available only for rational types
 #ifndef WASM_PLATFORM
-  if constexpr (is_implementation_of_Q<T>::value) {
-    eProg = "glrs";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramIneq(EXT, "glrs", os);
-    //
-    eProg = "ppl_ext";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramIneq(EXT, "ppl_lcdd", os);
-    //
-    eProg = "cdd_ext";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramIneq(EXT, "lcdd_gmp", os);
-    //
-    eProg = "normaliz";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramIneq(EXT, "normaliz", os);
-  }
+    if constexpr (is_implementation_of_Q<T>::value) {
+      if (prog == DualDescProgram::glrs)
+        return DualDescExternalProgramFaceIneq(EXT, "glrs", f_process, os);
+      if (prog == DualDescProgram::ppl_ext)
+        return DualDescExternalProgramFaceIneq(EXT, "ppl_lcdd", f_process, os);
+      if (prog == DualDescProgram::cdd_ext)
+        return DualDescExternalProgramFaceIneq(EXT, "lcdd_gmp", f_process, os);
+      if (prog == DualDescProgram::normaliz)
+        return DualDescExternalProgramFaceIneq(EXT, "normaliz", f_process, os);
+    }
 #endif
-  //
-  std::cerr << "DDD: ERROR in DirectFacetComputationInequalities\n";
-  terminate_direct_dual_desc(ansProg, ListProg);
+    break;
+  case DualDescProgram::cdd_cbased:
+    // Not available for the face/inequality computation.
+    break;
+  }
+  terminate_direct_dual_desc("DirectFacetComputationFaceIneq", prog);
 }
 
 template <typename T, typename Fprocess>
 void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
                                     std::string const &ansProg,
                                     Fprocess f_process, std::ostream &os) {
-#ifdef DEBUG_DUAL_DESC
-  os << "DDD: DirectFacetComputationFaceIneq, ansProg=" << ansProg << "\n";
-#endif
-  std::string eProg;
-  std::vector<std::string> ListProg;
-  //
-  if constexpr (is_ring_field<T>::value) {
-    // CDD requires for T to be a field
-    eProg = "cdd";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return cdd::DualDescriptionFaceIneq(EXT, f_process, os);
-    // For lrs_ring that computes in a subring, we need T to be a field.
-    eProg = "lrs_ring";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return lrs::DualDescriptionFaceIneq_reduction(EXT, f_process);
-  }
-  // We need to make it work also for ase without reduction if that makes sense
-  // which is not sure at all.
-  // Small polytopes can have special solutions
-  eProg = "small_polytopes";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return SmallPolytope_FaceIneq(EXT, f_process, os);
-  // T can be a field or a ring here
-  eProg = "lrs";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return lrs::DualDescriptionFaceIneq(EXT, f_process);
-  // It applies to the field case or ring
-  eProg = "pd_lrs";
-  ListProg.push_back(eProg);
-  if (ansProg == eProg)
-    return POLY_DualDescription_PrimalDualFaceIneq(EXT, f_process, os);
-  //
-  // The external programs are available only for rationl types
-  //
-#ifndef WASM_PLATFORM
-  if constexpr (is_implementation_of_Q<T>::value) {
-    eProg = "glrs";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramFaceIneq(EXT, "glrs", f_process, os);
-    //
-    eProg = "ppl_ext";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramFaceIneq(EXT, "ppl_lcdd", f_process, os);
-    //
-    eProg = "cdd_ext";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramFaceIneq(EXT, "lcdd_gmp", f_process, os);
-    //
-    eProg = "normaliz";
-    ListProg.push_back(eProg);
-    if (ansProg == eProg)
-      return DualDescExternalProgramFaceIneq(EXT, "normaliz", f_process, os);
-  }
-#endif
-  //
-  std::cerr << "DDD: ERROR in DirectFacetComputationFaceIneq\n";
-  terminate_direct_dual_desc(ansProg, ListProg);
+  return DirectFacetComputationFaceIneq(
+      EXT, dual_desc_program_from_string(ansProg), f_process, os);
 }
 
 template <typename T, typename Tgroup>
 vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
-                                     std::string const &ansProg,
-                                     std::ostream &os) {
+                                     DualDescProgram prog, std::ostream &os) {
 #ifdef TIMINGS_DUAL_DESC
   MicrosecondTime time;
 #endif
 #ifdef KEY_VALUE_DUAL_DESC
   MicrosecondTime time_total;
 #endif
-  vectface ListIncd = DirectFacetComputationIncidence(EXT, ansProg, os);
+  vectface ListIncd = DirectFacetComputationIncidence(EXT, prog, os);
 #ifdef DEBUG_DUAL_DESC
   os << "DDD: |ListIncd|=" << ListIncd.size() << "\n";
 #endif
@@ -375,17 +410,25 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef KEY_VALUE_DUAL_DESC
   os << "DDD: KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_"
-     << EXT.cols() << "_" << GRP.size() << "_" << ansProg << "_"
-     << ListIncd.size() << "_" << TheOutput.size() << ") VALUE=(" << time_total
-     << ")\n";
+     << EXT.cols() << "_" << GRP.size() << "_"
+     << dual_desc_program_to_string(prog) << "_" << ListIncd.size() << "_"
+     << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
 #endif
   return TheOutput;
 }
 
 template <typename T, typename Tgroup>
+vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
+                                     std::string const &ansProg,
+                                     std::ostream &os) {
+  return DirectFacetOrbitComputation(
+      EXT, GRP, dual_desc_program_from_string(ansProg), os);
+}
+
+template <typename T, typename Tgroup>
 std::vector<std::pair<Face, MyVector<T>>>
 DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
-                                std::string const &ansProg, std::ostream &os) {
+                                DualDescProgram prog, std::ostream &os) {
 #ifdef TIMINGS_DUAL_DESC
   MicrosecondTime time;
 #endif
@@ -396,7 +439,7 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   auto f_process = [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
     ListReturn.push_back(pair_face);
   };
-  DirectFacetComputationFaceIneq(EXT, ansProg, f_process, os);
+  DirectFacetComputationFaceIneq(EXT, prog, f_process, os);
 #ifdef TIMINGS_DUAL_DESC
   os << "|DDD: DualDescription|=" << time << "\n";
 #endif
@@ -417,11 +460,19 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 #endif
 #ifdef KEY_VALUE_DUAL_DESC
   os << "DDD: KEY=(DirectFacetIneqOrbitComputation_" << EXT.rows() << "_"
-     << EXT.cols() << "_" << GRP.size() << "_" << ansProg << "_"
-     << ListReturn.size() << "_" << TheOutput.size() << ") VALUE=("
-     << time_total << ")\n";
+     << EXT.cols() << "_" << GRP.size() << "_"
+     << dual_desc_program_to_string(prog) << "_" << ListReturn.size() << "_"
+     << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
 #endif
   return TheOutput;
+}
+
+template <typename T, typename Tgroup>
+std::vector<std::pair<Face, MyVector<T>>>
+DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
+                                std::string const &ansProg, std::ostream &os) {
+  return DirectFacetIneqOrbitComputation(
+      EXT, GRP, dual_desc_program_from_string(ansProg), os);
 }
 
 /*
