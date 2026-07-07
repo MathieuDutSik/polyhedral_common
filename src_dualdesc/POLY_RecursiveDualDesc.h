@@ -110,6 +110,30 @@ additional_symmetry_decision_from_string(std::string const &ans) {
   throw TerminalException{1};
 }
 
+// The database implementation chosen by the ChosenDatabase heuristic:
+// "canonic" (store canonical images) or "repr" (test with representative
+// action).
+enum class DatabaseKind { canonic, repr };
+
+inline std::string database_kind_to_string(DatabaseKind kind) {
+  switch (kind) {
+  case DatabaseKind::canonic:
+    return "canonic";
+  case DatabaseKind::repr:
+    return "repr";
+  }
+  return "unknown";
+}
+
+inline DatabaseKind database_kind_from_string(std::string const &ans) {
+  if (ans == "canonic")
+    return DatabaseKind::canonic;
+  if (ans == "repr")
+    return DatabaseKind::repr;
+  std::cerr << "RDD: unknown chosen database ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
 template <typename Tgroup>
 Tgroup StabilizerUsingOrbSize_OnSets(
     Tgroup const &GRP, std::pair<Face, typename Tgroup::Tint> const &pair) {
@@ -1403,19 +1427,20 @@ vectface DUALDESC_AdjacencyDecomposition(
        << " TheDim=" << EXT.cols() << " |EXT|=" << nbRow << "\n";
 #endif
     std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
-    std::string ansChosenDatabase =
-        HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
+    DatabaseKind database_kind =
+        database_kind_from_string(HeuristicEvaluation(TheMap, AllArr.ChosenDatabase));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: ChosenDatabase = " << ansChosenDatabase << "\n";
+    os << "RDD: ChosenDatabase = " << database_kind_to_string(database_kind)
+       << "\n";
 #endif
-    if (ansChosenDatabase == "canonic") {
+    if (database_kind == DatabaseKind::canonic) {
       using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
       TbasicBank bb(EXT, EXT_int, TheGRPrelevant, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
           TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
     }
-    if (ansChosenDatabase == "repr") {
+    if (database_kind == DatabaseKind::repr) {
       WeightMatrix<true, int, Tidx_value> WMat =
           WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(TheGRPrelevant, os);
       auto f_repr = [&](const Face &f1, const Face &f2) -> bool {
