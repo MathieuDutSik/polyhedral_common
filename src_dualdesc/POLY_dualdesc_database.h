@@ -95,7 +95,7 @@ size_t get_matching_power(size_t const &val) {
 template <typename T, typename Tgroup> struct TripleCanonic {
   MyMatrix<T> EXT;
   Tgroup GRP;
-  std::vector<typename Tgroup::Telt::Tidx> ListIdx;
+  typename Tgroup::Telt perm;
 };
 
 template <typename T, typename Tidx, typename Tidx_value>
@@ -152,7 +152,7 @@ CanonicalizationPolytopeTriple(MyMatrix<T> const &EXT,
   }
   Tgroup GRP(LGen, n_row);
   //
-  return {std::move(EXTretB), std::move(GRP), std::move(PairCanGrp.first)};
+  return {std::move(EXTretB), std::move(GRP), Telt(std::move(PairCanGrp.first))};
 }
 
 template <typename T>
@@ -590,8 +590,7 @@ GetCanonicalInformation_Triple(
       ListOrbitFaceOrbitsize.ListPossOrbsize;
   bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
   size_t delta = ListOrbitFaceOrbitsize.vfo.get_n();
-  Telt perm1 = Telt(eTriple.ListIdx);
-  Telt ePerm = ~perm1;
+  Telt ePerm = ~eTriple.perm;
   Telt ePermExt = trivial_extension(ePerm, delta);
   vectface ListFaceO(delta);
   Face eFaceImg(delta);
@@ -656,11 +655,10 @@ void insert_entry_in_bank(
   size_t delta = ListOrbitFaceOrbitsize.vfo.get_n();
   if (!BankSymmCheck) {
     // The computation was already done for the full symmetry group. Only
-    // canonic form is needed. triple.EXT / triple.ListIdx coincide with the
+    // canonic form is needed. triple.EXT / triple.perm coincide with the
     // pair returned by CanonicalizationPolytopePair.
     vectface ListFaceO(delta);
-    Telt perm1 = Telt(triple.ListIdx);
-    Telt ePerm = ~perm1;
+    Telt ePerm = ~triple.perm;
     Telt ePermExt = trivial_extension(ePerm, delta);
     Face eFaceImg(delta);
     for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {

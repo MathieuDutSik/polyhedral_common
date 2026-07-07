@@ -1061,7 +1061,7 @@ OrbitSplittingListOrbitGen(const Tgroup &GRPbig, const Tgroup &GRPsma,
 
 // The canonicalization triple of (EXT, WMat) is passed in precomputed. Its
 // triple.EXT is the bank key (identical to CanonicalizationPolytopePair's
-// canonical form) and triple.ListIdx the associated ordering.
+// canonical form) and triple.perm the associated ordering.
 template <typename Tbank, typename T, typename Tgroup>
 vectface getdualdesc_in_bank(Tbank &bank,
                              TripleCanonic<T, Tgroup> const &triple,
@@ -1077,7 +1077,7 @@ vectface getdualdesc_in_bank(Tbank &bank,
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: Finding a matching entry in the bank\n";
 #endif
-  Telt ePerm = Telt(triple.ListIdx);
+  Telt const &ePerm = triple.perm;
   size_t n = triple.EXT.rows();
   if (GRP.size() == RecAns.GRP.size()) {
     vectface ListReprTrans(n);
