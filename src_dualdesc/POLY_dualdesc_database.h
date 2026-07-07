@@ -452,10 +452,12 @@ public:
     }
     vectface vf_ins(delta);
     vfo = std::move(vf_ins);
+    // The low n bits and the following n_bit_orbsize bits together cover all
+    // delta bits, so f is fully overwritten each iteration and can be reused.
+    Face f(delta);
     for (auto &eFace : vf) {
       TintGroup orbitSize = GRP.OrbitSize_OnSets(eFace);
       size_t idx_orb = OrbSize_Map[orbitSize];
-      Face f(delta);
       for (size_t i = 0; i < n; i++)
         f[i] = eFace[i];
       size_t work_idx = idx_orb;

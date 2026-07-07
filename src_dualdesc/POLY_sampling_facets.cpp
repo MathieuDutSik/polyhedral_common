@@ -20,9 +20,6 @@ void process(std::string const &eFileI, std::string const &ansSamp,
   MyMatrix<T> EXTred = SelectColumn(EXT, eList);
   vectface vf = DirectComputationInitialFacetSet(EXTred, ansSamp, std::cerr);
   OutputFacets_stream(EXT, vf, os_out, OutFormat, os_out);
-  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
-            << "\n";
-  throw TerminalException{1};
 }
 
 int main(int argc, char *argv[]) {

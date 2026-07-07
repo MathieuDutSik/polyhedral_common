@@ -445,7 +445,7 @@ public:
         Face const &f = pair.first;
         Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
         return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP,
-                StabRed};
+                std::move(StabRed)};
       }
     }
     std::cerr << "Failed to find an undone orbit\n";
@@ -722,7 +722,8 @@ public:
     std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
     Face const &f = pair.first;
     Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
-    return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP, StabRed};
+    return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP,
+            std::move(StabRed)};
   }
   void InsertListOrbitEntry(Face const &f,
                             [[maybe_unused]] const size_t &i_orbit) {

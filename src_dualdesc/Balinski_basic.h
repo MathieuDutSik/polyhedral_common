@@ -268,8 +268,9 @@ bool EvaluationConnectednessCriterion_Kernel(
     return false;
   };
   std::unordered_map<Face, bool> map_face_status;
-  auto get_opt_face_status = [&](const pfr &x) -> std::optional<bool> {
-    Face f_can = GRP.OptCanonicalImage(x.second);
+  // The canonical image is expensive, so it is computed once per call and
+  // shared between the lookup and the insertion.
+  auto get_opt_face_status = [&](const Face &f_can) -> std::optional<bool> {
     auto iter = map_face_status.find(f_can);
     if (iter == map_face_status.end()) {
       return {};
@@ -277,22 +278,22 @@ bool EvaluationConnectednessCriterion_Kernel(
       return iter->second;
     }
   };
-  auto insert_pfr = [&](const pfr &x, const bool &val) -> bool {
-    Face f_can = GRP.OptCanonicalImage(x.second);
+  auto insert_pfr = [&](const Face &f_can, const bool &val) -> bool {
     map_face_status[f_can] = val;
     return val;
   };
   std::function<bool(const pfr &)> get_face_status = [&](const pfr &x) -> bool {
-    std::optional<bool> val_opt = get_opt_face_status(x);
+    Face f_can = GRP.OptCanonicalImage(x.second);
+    std::optional<bool> val_opt = get_opt_face_status(f_can);
     if (val_opt) {
       return *val_opt;
     }
     bool val = evaluate_single_entry(x);
     if (val) {
-      return insert_pfr(x, val);
+      return insert_pfr(f_can, val);
     } else {
       if (!f_recur(x))
-        return insert_pfr(x, false);
+        return insert_pfr(f_can, false);
       // Looking at the facets and maybe we can so conclude
 #ifdef DEBUG_BALINSKI
       os << "BAL: After the f_recur\n";
@@ -321,7 +322,7 @@ bool EvaluationConnectednessCriterion_Kernel(
         }
         return true;
       };
-      return insert_pfr(x, iife_value());
+      return insert_pfr(f_can, iife_value());
     }
   };
   pfr init_pfr{0, Face(n_rows)};
