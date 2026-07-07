@@ -84,6 +84,32 @@ inline SplittingDecision splitting_decision_from_string(std::string const &ans) 
   throw TerminalException{1};
 }
 
+// The decision produced by the AdditionalSymmetry heuristic: whether to look
+// for additional symmetries (the full stabilizer of the weight matrix, "yes")
+// or to reuse the input group as-is ("no").
+enum class AdditionalSymmetryDecision { yes, no };
+
+inline std::string
+additional_symmetry_decision_to_string(AdditionalSymmetryDecision dec) {
+  switch (dec) {
+  case AdditionalSymmetryDecision::yes:
+    return "yes";
+  case AdditionalSymmetryDecision::no:
+    return "no";
+  }
+  return "unknown";
+}
+
+inline AdditionalSymmetryDecision
+additional_symmetry_decision_from_string(std::string const &ans) {
+  if (ans == "yes")
+    return AdditionalSymmetryDecision::yes;
+  if (ans == "no")
+    return AdditionalSymmetryDecision::no;
+  std::cerr << "RDD: unknown additional symmetry decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
 template <typename Tgroup>
 Tgroup StabilizerUsingOrbSize_OnSets(
     Tgroup const &GRP, std::pair<Face, typename Tgroup::Tint> const &pair) {
@@ -1355,12 +1381,14 @@ vectface DUALDESC_AdjacencyDecomposition(
   // subgroup.
   bool BankSymmCheck;
   auto compute_decomposition = [&]() -> FaceOrbitsizeTableContainer<Tint> {
-    std::string ansSymm =
-        HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
+    AdditionalSymmetryDecision symm_decision =
+        additional_symmetry_decision_from_string(
+            HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: ansSymm=" << ansSymm << "\n";
+    os << "RDD: ansSymm="
+       << additional_symmetry_decision_to_string(symm_decision) << "\n";
 #endif
-    if (ansSymm == "yes") {
+    if (symm_decision == AdditionalSymmetryDecision::yes) {
       TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
           lwm.GetWMat(), os);
       NeedSplit = TheGRPrelevant.size() != GRP.size();
