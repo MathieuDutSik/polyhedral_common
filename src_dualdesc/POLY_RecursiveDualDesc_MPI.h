@@ -215,7 +215,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
 
     start_comm_thread();
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
-    vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, ansProg, os);
+    DualDescProgram prog = dual_desc_program_from_string(ansProg);
+    vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, prog, os);
     AllArr.DualDescriptionProgram.pop(os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
     MicrosecondTime time_full;

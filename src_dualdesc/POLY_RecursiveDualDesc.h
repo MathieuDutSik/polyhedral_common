@@ -917,6 +917,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: ansProg|=" << time_step << "\n";
 #endif
+    DualDescProgram prog = dual_desc_program_from_string(ansProg);
     if (df.Stab.size() == 1) {
       auto f_process =
           [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
@@ -936,7 +937,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
         os << "|RDD: insert1|=" << time_loc << "\n";
 #endif
       };
-      DirectFacetComputationFaceIneq(df.FF.EXT_face, ansProg, f_process, os);
+      DirectFacetComputationFaceIneq(df.FF.EXT_face, prog, f_process, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: DirectFacetComputationFaceIneq|=" << time_step << "\n";
 #endif
@@ -946,7 +947,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
     } else {
       vectface TheOutput =
-          DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
+          DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, prog, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: TheOutput|=" << time_step << "\n";
 #endif
