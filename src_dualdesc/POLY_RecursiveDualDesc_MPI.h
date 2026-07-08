@@ -187,11 +187,11 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     Fcomm f_comm, std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
-  std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr.dimEXT);
+  PolytopeInputInfo<Tint> info =
+      ComputeInitialInfo<Tint>(df.FF.EXT_face, df.Stab, AllArr.dimEXT);
   SplittingDecision split_decision = splitting_decision_from_string(
-      HeuristicEvaluation(TheMap, AllArr.Splitting));
-  std::string ansCommThread = HeuristicEvaluation(TheMap, AllArr.CommThread);
+      dual_desc_heuristic_evaluation(AllArr.Splitting, info));
+  std::string ansCommThread = dual_desc_heuristic_evaluation(AllArr.CommThread, info);
   bool launch_comm_thread = (ansCommThread == "yes");
   std::thread comm_thread;
   std::atomic_bool done = false;
@@ -215,7 +215,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     auto Stab = df.Stab;
 
     start_comm_thread();
-    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
+    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(polytope_info_to_map(info));
     DualDescProgram prog = dual_desc_program_from_string(ansProg);
     vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, prog, os);
     AllArr.DualDescriptionProgram.pop(os);
@@ -247,7 +247,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     try {
       vectface TheOutput =
           DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-              TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap,
+              TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, info,
               AllArr, ePrefix, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       MicrosecondTime time_full;
@@ -289,7 +289,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     boost::mpi::communicator &comm, Tbank &TheBank, TbasicBank &bb,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix,
-    std::map<std::string, typename Tgroup::Tint> const &TheMap,
+    PolytopeInputInfo<typename Tgroup::Tint> const &info,
     std::ostream &os) {
   using Tint = typename TbasicBank::Tint;
   SingletonTime start;
@@ -303,7 +303,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     MicrosecondTime time;
 #endif
     std::string ansChoiceCanonic =
-        HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
+        dual_desc_heuristic_evaluation(AllArr.ChoiceCanonicalization, info);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
     os << "|HeuristicEvaluation|=" << time
        << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
@@ -446,7 +446,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
   os << "n_orb_loc=" << n_orb_loc << " n_orb_max=" << n_orb_max << "\n";
   if (n_orb_max == 0) {
-    std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
+    std::string ansSamp = dual_desc_heuristic_evaluation(AllArr.InitialFacetSet, info);
     os << "ansSamp=" << ansSamp << "\n";
     vectface vf_init = DirectComputationInitialFacetSet(bb.EXT, ansSamp, os);
     vectface vf_init_merge = merge_initial_samp(comm, vf_init, ansSamp, os);
@@ -739,8 +739,8 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   //
   using TbasicBank = DatabaseCanonic<T, TintGroup, Tgroup>;
   TbasicBank bb(EXTred, EXTred_int, GRP, os);
-  std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap<TintGroup>(EXTred, GRP, AllArr.dimEXT);
+  PolytopeInputInfo<TintGroup> info =
+      ComputeInitialInfo<TintGroup>(EXTred, GRP, AllArr.dimEXT);
   //
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
@@ -748,14 +748,14 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
       Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, os);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                         Tgroup, Tidx_value>(
-          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, info, os);
     }
     if (AllArr.bank_parallelization_method == "bank_asio") {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                         Tgroup, Tidx_value>(
-          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, info, os);
     }
     if (AllArr.bank_parallelization_method == "bank_mpi") {
       using Tbank = DataBankMpiClient<Tkey, Tval>;
@@ -763,7 +763,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
       if (i_rank < proc_bank) {
         return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                           Tgroup, Tidx_value>(
-            comm_work, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+            comm_work, TheBank, bb, AllArr, AllArr.DD_Prefix, info, os);
       } else {
         DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_Saving,
                                       AllArr.BANK_Prefix, os);

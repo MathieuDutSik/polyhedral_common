@@ -8,6 +8,7 @@
 #include "Namelist.h"
 #include "POLY_HasPPL.h"
 #include <limits>
+#include <map>
 #include <string>
 #include <vector>
 // clang-format on
@@ -56,15 +57,15 @@ template <typename TintGroup> struct PolytopeInputInfo {
     case PolytopeField::groupsize:
       return groupsize;
     case PolytopeField::incidence:
-      return TintGroup(incidence);
+      return UniversalScalarConversion<TintGroup, int>(incidence);
     case PolytopeField::rank:
-      return TintGroup(rank);
+      return UniversalScalarConversion<TintGroup, int>(rank);
     case PolytopeField::delta:
-      return TintGroup(delta);
+      return UniversalScalarConversion<TintGroup, int>(delta);
     case PolytopeField::level:
-      return TintGroup(level);
+      return UniversalScalarConversion<TintGroup, int>(level);
     case PolytopeField::time:
-      return TintGroup(time);
+      return UniversalScalarConversion<TintGroup, uint64_t>(time);
     }
     return TintGroup(0);
   }
@@ -143,6 +144,54 @@ dual_desc_heuristic_evaluation(DualDescHeuristic<TintGroup> const &heu,
       return eFullCond.result;
   }
   return heu.default_result;
+}
+
+inline std::string polytope_field_to_string(PolytopeField f) {
+  switch (f) {
+  case PolytopeField::groupsize:
+    return "groupsize";
+  case PolytopeField::incidence:
+    return "incidence";
+  case PolytopeField::rank:
+    return "rank";
+  case PolytopeField::delta:
+    return "delta";
+  case PolytopeField::level:
+    return "level";
+  case PolytopeField::time:
+    return "time";
+  }
+  return "unknown";
+}
+
+template <typename TintGroup>
+std::ostream &operator<<(std::ostream &os,
+                         DualDescHeuristic<TintGroup> const &heu) {
+  size_t len = heu.tests.size();
+  for (size_t i = 0; i < len; i++) {
+    DualDescFullCondition<TintGroup> const &eFullCond = heu.tests[i];
+    os << "   i=" << i << "/" << len;
+    for (auto const &eSingCond : eFullCond.conditions)
+      os << " (" << polytope_field_to_string(eSingCond.field) << " "
+         << static_cast<int>(eSingCond.op) << " " << eSingCond.value << ")";
+    os << " => " << eFullCond.result << "\n";
+  }
+  os << "      Default=" << heu.default_result;
+  return os;
+}
+
+// TRANSITIONAL: the Thompson-sampling program selector still consumes the
+// string map (its sampling state stores the candidate). This bridge is removed
+// once that sampler is made dual-description specific.
+template <typename TintGroup>
+std::map<std::string, TintGroup>
+polytope_info_to_map(PolytopeInputInfo<TintGroup> const &info) {
+  return {{"groupsize", info.groupsize},
+          {"incidence", UniversalScalarConversion<TintGroup, int>(info.incidence)},
+          {"rank", UniversalScalarConversion<TintGroup, int>(info.rank)},
+          {"delta", UniversalScalarConversion<TintGroup, int>(info.delta)},
+          {"level", UniversalScalarConversion<TintGroup, int>(info.level)},
+          {"time", UniversalScalarConversion<TintGroup, uint64_t>(info.time)}};
 }
 
 //
@@ -569,16 +618,16 @@ void SetThompsonSampling(FullNamelist const &eFull,
 }
 
 template <typename TintGroup> struct PolyHeuristicSerial {
-  TheHeuristic<TintGroup> Splitting;
-  TheHeuristic<TintGroup> BankSave;
-  TheHeuristic<TintGroup> AdditionalSymmetry;
+  DualDescHeuristic<TintGroup> Splitting;
+  DualDescHeuristic<TintGroup> BankSave;
+  DualDescHeuristic<TintGroup> AdditionalSymmetry;
   ThompsonSamplingHeuristic<TintGroup> DualDescriptionProgram;
-  TheHeuristic<TintGroup> InitialFacetSet;
-  TheHeuristic<TintGroup> CheckDatabaseBank;
-  TheHeuristic<TintGroup> ChosenDatabase;
+  DualDescHeuristic<TintGroup> InitialFacetSet;
+  DualDescHeuristic<TintGroup> CheckDatabaseBank;
+  DualDescHeuristic<TintGroup> ChosenDatabase;
   TheHeuristic<TintGroup> OrbitSplitTechnique;
-  TheHeuristic<TintGroup> CommThread;
-  TheHeuristic<TintGroup> ChoiceCanonicalization;
+  DualDescHeuristic<TintGroup> CommThread;
+  DualDescHeuristic<TintGroup> ChoiceCanonicalization;
   bool DD_Saving;
   bool AdvancedTerminationCriterion;
   bool SimpleExchangeScheme;
@@ -611,16 +660,17 @@ PolyHeuristicSerial<TintGroup> AllStandardHeuristicSerial(int const &dimEXT,
   std::string bank_parallelization_method = "serial";
   std::string DD_Prefix = "/irrelevant/";
   bool DeterministicRuntime = true;
-  return {StandardHeuristicSplitting<TintGroup>(),
-          StandardHeuristicBankSave<TintGroup>(),
-          StandardHeuristicAdditionalSymmetry<TintGroup>(),
+  return {convert_dual_desc_heuristic(StandardHeuristicSplitting<TintGroup>()),
+          convert_dual_desc_heuristic(StandardHeuristicBankSave<TintGroup>()),
+          convert_dual_desc_heuristic(
+              StandardHeuristicAdditionalSymmetry<TintGroup>()),
           ThompsonSamplingHeuristic<TintGroup>(eFull, os),
-          MethodInitialFacetSet<TintGroup>(),
-          MethodCheckDatabaseBank<TintGroup>(),
-          MethodChosenDatabase<TintGroup>(),
+          convert_dual_desc_heuristic(MethodInitialFacetSet<TintGroup>()),
+          convert_dual_desc_heuristic(MethodCheckDatabaseBank<TintGroup>()),
+          convert_dual_desc_heuristic(MethodChosenDatabase<TintGroup>()),
           MethodOrbitSplitTechnique<TintGroup>(),
-          StandardHeuristicCommThread<TintGroup>(),
-          MethodChoiceCanonicalization<TintGroup>(),
+          convert_dual_desc_heuristic(StandardHeuristicCommThread<TintGroup>()),
+          convert_dual_desc_heuristic(MethodChoiceCanonicalization<TintGroup>()),
           DD_Saving,
           AdvancedTerminationCriterion,
           SimpleExchangeScheme,
