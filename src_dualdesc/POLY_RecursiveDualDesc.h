@@ -1147,13 +1147,10 @@ OrbitSplittingListOrbitGen(const Tgroup &GRPbig, const Tgroup &GRPsma,
     return ListFaceOrbitsize.GetListFaces();
   }
   TintGroup index = ordGRPbig / ordGRPsma;
-  std::map<std::string, TintGroup> TheMap;
-  TheMap["groupsize_big"] = ordGRPbig;
-  TheMap["groupsize_sma"] = ordGRPsma;
-  TheMap["index"] = index;
-  TheMap["n_orbit"] = ListFaceOrbitsize.size();
+  OrbitSplitInputInfo<TintGroup> info{ordGRPbig, ordGRPsma, index,
+                                      ListFaceOrbitsize.size()};
   std::string method_split =
-      HeuristicEvaluation(TheMap, AllArr.OrbitSplitTechnique);
+      typed_heuristic_evaluation(AllArr.OrbitSplitTechnique, info);
   return OrbitSplittingListOrbit_spec(GRPbig, GRPsma, ListFaceOrbitsize,
                                       method_split, os);
 }

@@ -20,13 +20,19 @@
 //
 // Typed dual-description heuristic input and heuristic
 //
-// The information about the polytope that feeds the (non-Thompson) dual
-// description heuristics. This is the typed replacement for the former
-// std::map<std::string, TintGroup>: the group size stays a full TintGroup, the
-// combinatorial quantities are plain ints, and the elapsed time is a uint64_t.
-enum class PolytopeField { groupsize, incidence, rank, delta, level, time };
+// The dual-description heuristics no longer read a std::map<std::string,
+// TintGroup>. Each heuristic is typed over a set of named fields (a field enum)
+// and evaluated against an input struct exposing get_field(field). The generic
+// machinery is shared by the polytope-info heuristics and the orbit-splitting
+// heuristic.
 
-inline PolytopeField polytope_field_from_string(std::string const &name) {
+// --- The fields, one enum per heuristic input kind ---
+enum class PolytopeField { groupsize, incidence, rank, delta, level, time };
+enum class OrbitSplitField { groupsize_big, groupsize_sma, index, n_orbit };
+
+// Parse a field name into the field enum (tag-dispatched on the enum type).
+inline PolytopeField parse_heuristic_field(std::string const &name,
+                                           PolytopeField *) {
   if (name == "groupsize")
     return PolytopeField::groupsize;
   if (name == "incidence")
@@ -43,6 +49,55 @@ inline PolytopeField polytope_field_from_string(std::string const &name) {
   throw TerminalException{1};
 }
 
+inline OrbitSplitField parse_heuristic_field(std::string const &name,
+                                             OrbitSplitField *) {
+  if (name == "groupsize_big")
+    return OrbitSplitField::groupsize_big;
+  if (name == "groupsize_sma")
+    return OrbitSplitField::groupsize_sma;
+  if (name == "index")
+    return OrbitSplitField::index;
+  if (name == "n_orbit")
+    return OrbitSplitField::n_orbit;
+  std::cerr << "HEU: unknown orbit split field name=" << name << "\n";
+  throw TerminalException{1};
+}
+
+inline std::string heuristic_field_to_string(PolytopeField f) {
+  switch (f) {
+  case PolytopeField::groupsize:
+    return "groupsize";
+  case PolytopeField::incidence:
+    return "incidence";
+  case PolytopeField::rank:
+    return "rank";
+  case PolytopeField::delta:
+    return "delta";
+  case PolytopeField::level:
+    return "level";
+  case PolytopeField::time:
+    return "time";
+  }
+  return "unknown";
+}
+
+inline std::string heuristic_field_to_string(OrbitSplitField f) {
+  switch (f) {
+  case OrbitSplitField::groupsize_big:
+    return "groupsize_big";
+  case OrbitSplitField::groupsize_sma:
+    return "groupsize_sma";
+  case OrbitSplitField::index:
+    return "index";
+  case OrbitSplitField::n_orbit:
+    return "n_orbit";
+  }
+  return "unknown";
+}
+
+// --- The input structs, one per heuristic input kind ---
+// The group sizes stay full precision, the combinatorial quantities are plain
+// ints / size_t and are promoted to TintGroup only for comparison.
 template <typename TintGroup> struct PolytopeInputInfo {
   TintGroup groupsize;
   int incidence;
@@ -50,8 +105,6 @@ template <typename TintGroup> struct PolytopeInputInfo {
   int delta;
   int level;
   uint64_t time;
-  // Value of a field, promoted to TintGroup so it can be compared against the
-  // (arbitrary precision) heuristic thresholds.
   TintGroup get_field(PolytopeField f) const {
     switch (f) {
     case PolytopeField::groupsize:
@@ -71,48 +124,73 @@ template <typename TintGroup> struct PolytopeInputInfo {
   }
 };
 
-// The dual-description-specific heuristic: same shape as the generic
-// TheHeuristic, but the conditions reference typed PolytopeField entries
-// instead of string keys. It is obtained once, at load time, from the
-// string-parsed generic heuristic, and afterwards evaluated with no map.
-template <typename TintGroup> struct DualDescSingleCondition {
-  PolytopeField field;
+template <typename TintGroup> struct OrbitSplitInputInfo {
+  TintGroup groupsize_big;
+  TintGroup groupsize_sma;
+  TintGroup index;
+  size_t n_orbit;
+  TintGroup get_field(OrbitSplitField f) const {
+    switch (f) {
+    case OrbitSplitField::groupsize_big:
+      return groupsize_big;
+    case OrbitSplitField::groupsize_sma:
+      return groupsize_sma;
+    case OrbitSplitField::index:
+      return index;
+    case OrbitSplitField::n_orbit:
+      return UniversalScalarConversion<TintGroup, size_t>(n_orbit);
+    }
+    return TintGroup(0);
+  }
+};
+
+// --- The generic typed heuristic ---
+// Same shape as the generic TheHeuristic, but conditions reference a typed
+// field. It is obtained once, at load time, from the string-parsed generic
+// heuristic and afterwards evaluated with no map.
+template <typename TintGroup, typename TField> struct TypedHeuristicCondition {
+  TField field;
   HeuristicOp op;
   TintGroup value;
 };
 
-template <typename TintGroup> struct DualDescFullCondition {
-  std::vector<DualDescSingleCondition<TintGroup>> conditions;
+template <typename TintGroup, typename TField>
+struct TypedHeuristicFullCondition {
+  std::vector<TypedHeuristicCondition<TintGroup, TField>> conditions;
   std::string result;
 };
 
-template <typename TintGroup> struct DualDescHeuristic {
-  std::vector<DualDescFullCondition<TintGroup>> tests;
+template <typename TintGroup, typename TField> struct TypedHeuristic {
+  std::vector<TypedHeuristicFullCondition<TintGroup, TField>> tests;
   std::string default_result;
 };
 
 template <typename TintGroup>
-DualDescHeuristic<TintGroup>
-convert_dual_desc_heuristic(TheHeuristic<TintGroup> const &heu) {
-  DualDescHeuristic<TintGroup> result;
+using DualDescHeuristic = TypedHeuristic<TintGroup, PolytopeField>;
+template <typename TintGroup>
+using OrbitSplitHeuristic = TypedHeuristic<TintGroup, OrbitSplitField>;
+
+template <typename TintGroup, typename TField>
+TypedHeuristic<TintGroup, TField>
+convert_typed_heuristic(TheHeuristic<TintGroup> const &heu) {
+  TypedHeuristic<TintGroup, TField> result;
   for (auto const &eFullCond : heu.AllTests) {
-    DualDescFullCondition<TintGroup> new_full;
+    TypedHeuristicFullCondition<TintGroup, TField> new_full;
     new_full.result = eFullCond.TheResult;
-    for (auto const &eSingCond : eFullCond.TheConditions) {
+    for (auto const &eSingCond : eFullCond.TheConditions)
       new_full.conditions.push_back(
-          {polytope_field_from_string(eSingCond.eCond), eSingCond.eType,
-           eSingCond.NumValue});
-    }
+          {parse_heuristic_field(eSingCond.eCond,
+                                 static_cast<TField *>(nullptr)),
+           eSingCond.eType, eSingCond.NumValue});
     result.tests.push_back(std::move(new_full));
   }
   result.default_result = heu.DefaultResult;
   return result;
 }
 
-template <typename TintGroup>
-std::string
-dual_desc_heuristic_evaluation(DualDescHeuristic<TintGroup> const &heu,
-                               PolytopeInputInfo<TintGroup> const &info) {
+template <typename TintGroup, typename TField, typename TInput>
+std::string typed_heuristic_evaluation(TypedHeuristic<TintGroup, TField> const &heu,
+                                       TInput const &info) {
   for (auto const &eFullCond : heu.tests) {
     bool IsOK = true;
     for (auto const &eSingCond : eFullCond.conditions) {
@@ -146,38 +224,35 @@ dual_desc_heuristic_evaluation(DualDescHeuristic<TintGroup> const &heu,
   return heu.default_result;
 }
 
-inline std::string polytope_field_to_string(PolytopeField f) {
-  switch (f) {
-  case PolytopeField::groupsize:
-    return "groupsize";
-  case PolytopeField::incidence:
-    return "incidence";
-  case PolytopeField::rank:
-    return "rank";
-  case PolytopeField::delta:
-    return "delta";
-  case PolytopeField::level:
-    return "level";
-  case PolytopeField::time:
-    return "time";
-  }
-  return "unknown";
-}
-
-template <typename TintGroup>
+template <typename TintGroup, typename TField>
 std::ostream &operator<<(std::ostream &os,
-                         DualDescHeuristic<TintGroup> const &heu) {
+                         TypedHeuristic<TintGroup, TField> const &heu) {
   size_t len = heu.tests.size();
   for (size_t i = 0; i < len; i++) {
-    DualDescFullCondition<TintGroup> const &eFullCond = heu.tests[i];
+    TypedHeuristicFullCondition<TintGroup, TField> const &eFullCond =
+        heu.tests[i];
     os << "   i=" << i << "/" << len;
     for (auto const &eSingCond : eFullCond.conditions)
-      os << " (" << polytope_field_to_string(eSingCond.field) << " "
+      os << " (" << heuristic_field_to_string(eSingCond.field) << " "
          << static_cast<int>(eSingCond.op) << " " << eSingCond.value << ")";
     os << " => " << eFullCond.result << "\n";
   }
   os << "      Default=" << heu.default_result;
   return os;
+}
+
+// Thin wrappers preserving the polytope-info heuristic call sites.
+template <typename TintGroup>
+DualDescHeuristic<TintGroup>
+convert_dual_desc_heuristic(TheHeuristic<TintGroup> const &heu) {
+  return convert_typed_heuristic<TintGroup, PolytopeField>(heu);
+}
+
+template <typename TintGroup>
+std::string
+dual_desc_heuristic_evaluation(DualDescHeuristic<TintGroup> const &heu,
+                               PolytopeInputInfo<TintGroup> const &info) {
+  return typed_heuristic_evaluation(heu, info);
 }
 
 // TRANSITIONAL: the Thompson-sampling program selector still consumes the
@@ -625,7 +700,7 @@ template <typename TintGroup> struct PolyHeuristicSerial {
   DualDescHeuristic<TintGroup> InitialFacetSet;
   DualDescHeuristic<TintGroup> CheckDatabaseBank;
   DualDescHeuristic<TintGroup> ChosenDatabase;
-  TheHeuristic<TintGroup> OrbitSplitTechnique;
+  OrbitSplitHeuristic<TintGroup> OrbitSplitTechnique;
   DualDescHeuristic<TintGroup> CommThread;
   DualDescHeuristic<TintGroup> ChoiceCanonicalization;
   bool DD_Saving;
@@ -668,7 +743,8 @@ PolyHeuristicSerial<TintGroup> AllStandardHeuristicSerial(int const &dimEXT,
           convert_dual_desc_heuristic(MethodInitialFacetSet<TintGroup>()),
           convert_dual_desc_heuristic(MethodCheckDatabaseBank<TintGroup>()),
           convert_dual_desc_heuristic(MethodChosenDatabase<TintGroup>()),
-          MethodOrbitSplitTechnique<TintGroup>(),
+          convert_typed_heuristic<TintGroup, OrbitSplitField>(
+              MethodOrbitSplitTechnique<TintGroup>()),
           convert_dual_desc_heuristic(StandardHeuristicCommThread<TintGroup>()),
           convert_dual_desc_heuristic(MethodChoiceCanonicalization<TintGroup>()),
           DD_Saving,

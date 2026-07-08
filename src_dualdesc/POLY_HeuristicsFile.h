@@ -41,11 +41,12 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
   }
 }
 
-// Same as above but for the typed dual-description heuristics: the file is
-// parsed with the generic reader and then converted to the typed form.
-template <typename TintGroup>
+// Same as above but for the typed dual-description heuristics (any field type):
+// the file is parsed with the generic reader and then converted to the typed
+// form.
+template <typename TintGroup, typename TField>
 void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
-                  DualDescHeuristic<TintGroup> &eHeu,
+                  TypedHeuristic<TintGroup, TField> &eHeu,
                   [[maybe_unused]] std::ostream &os) {
   SingleBlock const &BlockHEU = eFull.get_block("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.get_string(NamelistEnt);
@@ -56,7 +57,8 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
     IsExistingFileDie(NamelistEntFile);
     std::ifstream is(NamelistEntFile);
     try {
-      eHeu = convert_dual_desc_heuristic<TintGroup>(ReadHeuristic<TintGroup>(is));
+      eHeu =
+          convert_typed_heuristic<TintGroup, TField>(ReadHeuristic<TintGroup>(is));
     } catch (TerminalException const &e) {
       std::cerr << "Failed in reading the file NamelistEntFile=" << NamelistEnt
                 << "\n";
