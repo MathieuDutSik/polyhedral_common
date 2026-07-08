@@ -257,11 +257,17 @@ bool operator<(FundInvariantVectorFamily<Tint> const &x,
   return false;
 }
 
+// Core search loop. Returns the family before antipodal duplication (one
+// representative per +/-v pair); ExtractInvariantVectorFamily below
+// duplicates it to restore the historical (fully duplicated) public
+// return convention. Callers that only need one representative per pair
+// (e.g. to feed conversion_and_duplication themselves later) should call
+// this directly instead of duplicating then immediately halving again.
 template <typename T, typename Tint, typename Ffinal, typename Finvariant>
-MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &GramMat,
-                                            Ffinal f_final,
-                                            Finvariant f_invariant,
-                                            std::ostream &os) {
+MyMatrix<Tint> ExtractInvariantVectorFamilyHalf(MyMatrix<T> const &GramMat,
+                                                Ffinal f_final,
+                                                Finvariant f_invariant,
+                                                std::ostream &os) {
   int n = GramMat.rows();
   T incr = GetSmallestIncrement(GramMat);
   T MaxNorm = GetMaxNorm<T, Tint>(GramMat, os);
@@ -282,11 +288,22 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &GramMat,
       SHVret = SHVtest;
       fi_ret = fi_test;
       if (f_final(SHVret, fi_ret)) {
-        return matrix_duplication(SHVret);
+        return SHVret;
       }
     }
     norm += incr;
   }
+}
+
+template <typename T, typename Tint, typename Ffinal, typename Finvariant>
+MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &GramMat,
+                                            Ffinal f_final,
+                                            Finvariant f_invariant,
+                                            std::ostream &os) {
+  MyMatrix<Tint> SHVhalf =
+      ExtractInvariantVectorFamilyHalf<T, Tint, Ffinal, Finvariant>(
+          GramMat, f_final, f_invariant, os);
+  return matrix_duplication(SHVhalf);
 }
 
 // Representatives of the first K orbits of nonzero integer vectors under the
@@ -357,9 +374,12 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat,
   return ExtractInvariantVectorFamily<T, Tint, decltype(f_final), decltype(f_invariant)>(eMat, f_final, f_invariant, os);
 }
 
+// Half version (one representative per +/-v pair, no antipodal
+// duplication) of ExtractInvariantVectorFamilyZbasis below, for callers
+// that would otherwise immediately undo the duplication themselves.
 template <typename T, typename Tint>
-MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
-                                                  std::ostream &os) {
+MyMatrix<Tint> ExtractInvariantVectorFamilyZbasisHalf(MyMatrix<T> const &eMat,
+                                                      std::ostream &os) {
   int n = eMat.cols();
   auto f_final = [&]([[maybe_unused]] MyMatrix<Tint> const &M, FundInvariantVectorFamily<Tint> const& fi) -> bool {
     return IsCompleteSystem(fi, n);
@@ -367,7 +387,13 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
   auto f_invariant=[&](MyMatrix<Tint> const &M) -> FundInvariantVectorFamily<Tint> {
     return ComputeFundamentalInvariant(M, os);
   };
-  return ExtractInvariantVectorFamily<T, Tint, decltype(f_final), decltype(f_invariant)>(eMat, f_final, f_invariant, os);
+  return ExtractInvariantVectorFamilyHalf<T, Tint, decltype(f_final), decltype(f_invariant)>(eMat, f_final, f_invariant, os);
+}
+
+template <typename T, typename Tint>
+MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
+                                                  std::ostream &os) {
+  return matrix_duplication(ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(eMat, os));
 }
 
 template <typename T, typename Tint>

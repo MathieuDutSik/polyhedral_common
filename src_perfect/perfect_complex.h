@@ -93,21 +93,29 @@ struct PerfectFormInfoForComplex {
   std::optional<PreImagerElementContainer<Tint, Telt, TintGroup>> opt_pre_imager;
   Tgroup GRP_ext; // Group acting on the shortest vectors
   std::vector<sing_adj<Tint>> l_sing_adj;
+  // find_matrix(x) is a pure function of (this cone, x), but it is one of the
+  // hottest operations of the complex enumeration: it is called once per
+  // spanning-list candidate (and again inside canonicalize_triple), and the
+  // spanning-list BFS revisits the same cone -- and thus the same group
+  // elements -- for the many faces that touch it. Realising a permutation as an
+  // integer matrix (FindTransformation, an integer linear solve) is expensive,
+  // so we memoize it. The cache is transient state, not part of the value, so
+  // it is neither serialized nor compared.
+  mutable std::unordered_map<Telt, MyMatrix<Tint>> find_matrix_cache{};
   MyMatrix<Tint> find_matrix(Telt const& x, [[maybe_unused]] std::ostream& os) const {
-    if (opt_pre_imager) {
-      PreImagerElementContainer<Tint, Telt, TintGroup> const& pre_imager = *opt_pre_imager;
-      std::optional<MyMatrix<Tint>> opt = pre_imager.get_preimage(x);
-      MyMatrix<Tint> M = unfold_opt(opt, "The element elt should belong to the group");
-#ifdef SANITY_CHECK_PERFECT_COMPLEX
-      Telt x_img = get_elt_from_matrix<Tint,Telt>(M, EXT, os);
-      if (x_img != x) {
-        std::cerr << "PERFCOMP: Inconsistency in the pre_image computation\n";
-        throw TerminalException{1};
-      }
-#endif
-      return M;
+    auto iter = find_matrix_cache.find(x);
+    if (iter != find_matrix_cache.end()) {
+      return iter->second;
     }
-    MyMatrix<Tint> M = FindTransformation(EXT, EXT, x);
+    auto compute=[&]() -> MyMatrix<Tint> {
+      if (opt_pre_imager) {
+        PreImagerElementContainer<Tint, Telt, TintGroup> const& pre_imager = *opt_pre_imager;
+        std::optional<MyMatrix<Tint>> opt = pre_imager.get_preimage(x);
+        return unfold_opt(opt, "The element elt should belong to the group");
+      }
+      return FindTransformation(EXT, EXT, x);
+    };
+    MyMatrix<Tint> M = compute();
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
     Telt x_img = get_elt_from_matrix<Tint,Telt>(M, EXT, os);
     if (x_img != x) {
@@ -115,7 +123,23 @@ struct PerfectFormInfoForComplex {
       throw TerminalException{1};
     }
 #endif
+    find_matrix_cache.emplace(x, M);
     return M;
+  }
+  // Orbit of an adjacency facet under GRP_ext, keyed by the facet. This is the
+  // expensive part of FindContainingOrbit and depends only on (this cone,
+  // facet); the spanning-list BFS calls it once per (triple, adjacency), so the
+  // same (cone, facet) orbit is recomputed for every one of the many faces that
+  // touch this cone. Memoizing collapses that to one computation per facet.
+  mutable std::unordered_map<Face, std::vector<std::pair<Face, Telt>>> orbit_cache{};
+  std::vector<std::pair<Face, Telt>> const& orbit_representatives(Face const& set1) const {
+    auto iter = orbit_cache.find(set1);
+    if (iter != orbit_cache.end()) {
+      return iter->second;
+    }
+    std::vector<std::pair<Face, Telt>> res = OrbitFacesRepresentatives(GRP_ext, set1);
+    auto ret = orbit_cache.emplace(set1, std::move(res));
+    return ret.first->second;
   }
 };
 
@@ -234,7 +258,7 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
       sing_adj<Tint> adj{jCone, f_ext, eMat};
       l_sing_adj.emplace_back(std::move(adj));
     }
-    MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.rec_shv.SHV);
+    MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.tsp.rec_shv.SHV);
     // In some cases, EXT is not full dimensional. We need an alternate strategy for that.
     std::optional<PreImagerElementContainer<Tint, Telt, TintGroup>> opt_pre_imager;
     if (RankMat(EXT) < EXT.cols()) {
@@ -673,19 +697,34 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #endif
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   std::vector<ListBoundEntry<Tint>> ll_bound;
-  auto find_matching_entry=[&](triple<Tint> const& t) -> std::optional<std::pair<int,MyMatrix<Tint>>> {
-    int i_domain = 0;
-    for (auto & face1: l_faces) {
-      std::optional<MyMatrix<Tint>> opt =
-        test_triple_in_listtriple(pctdi.l_perfect, face1.l_triple, t, os);
-      if (opt) {
-        MyMatrix<Tint> const& M = *opt;
-        std::pair<int,MyMatrix<Tint>> p{i_domain, M};
-        return p;
-      }
-      i_domain += 1;
+  // Index of every (iCone, f_ext) pair appearing in any already inserted
+  // face's spanning list of triples, mapping to the index of the face it
+  // belongs to and a representative triple matrix for that (iCone, f_ext).
+  // This turns find_matching_entry from an O(|l_faces| * avg |l_triple|)
+  // scan (redone for every facet processed) into an O(1) average lookup.
+  // By construction the spanning lists of distinct faces are disjoint
+  // (each face is one equivalence class), so first-inserted-wins via
+  // try_emplace faithfully matches the original first-match scan order.
+  std::unordered_map<size_t, std::unordered_map<Face, std::pair<int, MyMatrix<Tint>>>> map_triple_index;
+  auto index_face_triples=[&](int i_domain, std::vector<triple<Tint>> const& l_triple) -> void {
+    for (auto const& tri : l_triple) {
+      map_triple_index[tri.iCone].try_emplace(tri.f_ext, i_domain, tri.eMat);
     }
-    return {};
+  };
+  auto find_matching_entry=[&](triple<Tint> const& t) -> std::optional<std::pair<int,MyMatrix<Tint>>> {
+    auto iter1 = map_triple_index.find(t.iCone);
+    if (iter1 == map_triple_index.end()) {
+      return {};
+    }
+    auto iter2 = iter1->second.find(t.f_ext);
+    if (iter2 == iter1->second.end()) {
+      return {};
+    }
+    int i_domain = iter2->second.first;
+    MyMatrix<Tint> const& eMat1 = iter2->second.second;
+    MyMatrix<Tint> M = Inverse(eMat1) * t.eMat;
+    std::pair<int,MyMatrix<Tint>> p{i_domain, M};
+    return p;
   };
   using Tfull_triple = std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
   auto need_opt_t=[&]([[maybe_unused]] PerfectBoundednessProperty const& pbp, [[maybe_unused]] triple<Tint> const& t) -> bool {
@@ -818,6 +857,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #endif
     int i_domain = l_faces.size();
     l_faces.push_back(face);
+    index_face_triples(i_domain, pair.first);
     MyMatrix<Tint> M = IdentityMat<Tint>(n);
     std::pair<int, MyMatrix<Tint>> p{i_domain, M};
 #ifdef DEBUG_PERFECT_COMPLEX

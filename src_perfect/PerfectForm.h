@@ -13,6 +13,7 @@
 #include "POLY_RecursiveDualDesc.h"
 #include "MatrixGroupAverage.h"
 #include <map>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -633,16 +634,52 @@ MyMatrix<T> conversion_and_duplication(MyMatrix<Tint> const &SHV) {
   return SHV_T;
 }
 
+// Perfect-form specific companion to Tshortest: whether rec_shv.SHV is
+// itself a full-dimensional Z-basis is expensive to determine (RankMat +
+// Int_IndexLattice), and if not, finding an equivalent basis that is
+// (ExtractInvariantVectorFamilyZbasisHalf) is itself another non-trivial
+// computation. Both depend only on rec_shv (and the Gram matrix it was
+// computed for), so this bundles the answer alongside rec_shv, computed
+// once when the perfect-form object/candidate is first built, instead of
+// being recomputed on every equivalence test / hash / stabilizer query
+// made against it afterwards.
+// inv_z_basis is nullopt when rec_shv.SHV is already a full-dimensional
+// Z-basis; otherwise it holds an equivalent basis (in the same
+// non-duplicated, "half" format as rec_shv.SHV -- one representative per
+// +/-v pair) to use instead, so get_fulldim_zbasis_shv_t can re-expand
+// either one uniformly via conversion_and_duplication.
+template <typename T, typename Tint> struct TshortestPerfect {
+  Tshortest<T, Tint> rec_shv;
+  std::optional<MyMatrix<Tint>> inv_z_basis;
+};
+
 template <typename T, typename Tint>
-MyMatrix<T> get_fulldim_zbasis_shv_t(MyMatrix<T> const &eMat, Tshortest<T, Tint> const &rec_shv,
-                      std::ostream &os) {
-  MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(rec_shv.SHV);
+TshortestPerfect<T, Tint> build_tshortest_perfect(MyMatrix<T> const &eMat,
+                                                  Tshortest<T, Tint> rec_shv,
+                                                  std::ostream &os) {
   if (IsFullDimZbasis(rec_shv.SHV, os)) {
-    return conversion_and_duplication<T, Tint>(rec_shv.SHV);
+    return {std::move(rec_shv), {}};
   }
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
-  return UniversalMatrixConversion<T, Tint>(SHV);
+  MyMatrix<Tint> SHV_half = ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(eMat, os);
+  return {std::move(rec_shv), std::move(SHV_half)};
 }
+
+template <typename T, typename Tint>
+MyMatrix<T> get_fulldim_zbasis_shv_t(TshortestPerfect<T, Tint> const &tsp) {
+  if (tsp.inv_z_basis) {
+    return conversion_and_duplication<T, Tint>(*tsp.inv_z_basis);
+  }
+  return conversion_and_duplication<T, Tint>(tsp.rec_shv.SHV);
+}
+
+namespace boost::serialization {
+template <class Archive, typename T, typename Tint>
+inline void serialize(Archive &ar, TshortestPerfect<T, Tint> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("rec_shv", eRec.rec_shv);
+  ar &make_nvp("inv_z_basis", eRec.inv_z_basis);
+}
+} // namespace boost::serialization
 
 template <typename T, typename Tint>
 MyMatrix<Tint> get_fulldim_shv_tint(MyMatrix<T> const &eMat, Tshortest<T, Tint> const &rec_shv,
@@ -658,10 +695,10 @@ MyMatrix<Tint> get_fulldim_shv_tint(MyMatrix<T> const &eMat, Tshortest<T, Tint> 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
     LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eMat1,
-    MyMatrix<T> const &eMat2, Tshortest<T, Tint> const &rec_shv1,
-    Tshortest<T, Tint> const &rec_shv2, std::ostream &os) {
-  MyMatrix<T> SHV1_T = get_fulldim_zbasis_shv_t(eMat1, rec_shv1, os);
-  MyMatrix<T> SHV2_T = get_fulldim_zbasis_shv_t(eMat2, rec_shv2, os);
+    MyMatrix<T> const &eMat2, TshortestPerfect<T, Tint> const &tsp1,
+    TshortestPerfect<T, Tint> const &tsp2, std::ostream &os) {
+  MyMatrix<T> SHV1_T = get_fulldim_zbasis_shv_t(tsp1);
+  MyMatrix<T> SHV2_T = get_fulldim_zbasis_shv_t(tsp2);
 #ifdef SANITY_CHECK_PERFECT_REPR
   if (has_duplication(SHV1_T)) {
     std::cerr << "PERF: SHV1 has duplication\n";
@@ -707,8 +744,8 @@ template <typename T, typename Tint>
 size_t
 SimplePerfect_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
                         MyMatrix<T> const &eMat,
-                        Tshortest<T, Tint> const &rec_shv, std::ostream &os) {
-  MyMatrix<T> SHV_T = get_fulldim_zbasis_shv_t(eMat, rec_shv, os);
+                        TshortestPerfect<T, Tint> const &tsp, std::ostream &os) {
+  MyMatrix<T> SHV_T = get_fulldim_zbasis_shv_t(tsp);
   return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, os);
 }
 
@@ -716,12 +753,12 @@ template <typename T, typename Tint, typename Tgroup>
 std::pair<Tgroup, std::vector<MyMatrix<Tint>>>
 SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
                          MyMatrix<T> const &eMat,
-                         Tshortest<T, Tint> const &rec_shv, std::ostream &os) {
+                         TshortestPerfect<T, Tint> const &tsp, std::ostream &os) {
   //
   // Functionality for checking quality of equivalences
   //
-  MyMatrix<T> SHVorig_T = conversion_and_duplication<T, Tint>(rec_shv.SHV);
-  MyMatrix<T> SHV_T = get_fulldim_zbasis_shv_t(eMat, rec_shv, os);
+  MyMatrix<T> SHVorig_T = conversion_and_duplication<T, Tint>(tsp.rec_shv.SHV);
+  MyMatrix<T> SHV_T = get_fulldim_zbasis_shv_t(tsp);
   Result_ComputeStabilizer_SHV<T, Tgroup> result =
       LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T, os);
 #ifdef DEBUG_PERFECT_FORM

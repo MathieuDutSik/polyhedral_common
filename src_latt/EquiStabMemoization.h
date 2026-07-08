@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "MAT_MatrixInt.h"
+#include <iterator>
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
@@ -253,30 +254,24 @@ public:
 // when we pass a threshold like 1, 2, 4, 8, 16. When we pass the threshold
 // the underlying vector gets deallocated and a newer larger gets
 // allocated.
+// Lookup of a previously seen input is done via an unordered_map keyed on
+// Tin (rather than a linear scan) so that repeated queries are O(1) on
+// average instead of O(n) in the number of distinct inputs seen so far.
 template <typename Fcomp, typename Tin, typename Tout> struct Memoization {
   Fcomp f_comp;
-  std::vector<Tin> ListI;
   std::list<Tout> ListO;
+  std::unordered_map<Tin, typename std::list<Tout>::const_iterator> MapIdx;
   Memoization(Fcomp _f_comp) : f_comp(_f_comp) {}
-  size_t get_index(Tin const &input) {
-    size_t len = ListI.size();
-    for (size_t i = 0; i < len; i++) {
-      if (ListI[i] == input) {
-        return i;
-      }
+  Tout const &comp(Tin const &input) {
+    auto iter = MapIdx.find(input);
+    if (iter != MapIdx.end()) {
+      return *(iter->second);
     }
     Tout output = f_comp(input);
-    ListI.push_back(input);
-    ListO.push_back(output);
-    return len;
-  }
-  Tout const &comp(Tin const &input) {
-    size_t index = get_index(input);
-    auto iter = ListO.cbegin();
-    for (size_t u = 0; u < index; u++) {
-      iter++;
-    }
-    return *iter;
+    ListO.push_back(std::move(output));
+    auto list_iter = std::prev(ListO.cend());
+    MapIdx.emplace(input, list_iter);
+    return *list_iter;
   }
 };
 

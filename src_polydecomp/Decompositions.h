@@ -36,6 +36,7 @@
 template <typename T, typename Tint_inp, typename Tgroup_inp> struct ConeDesc {
   using Tint = Tint_inp;
   using Tgroup = Tgroup_inp;
+  using Telt = typename Tgroup::Telt;
   MyMatrix<T> EXT_T;
   MyMatrix<Tint> EXT;
   MyMatrix<T> FAC;
@@ -44,8 +45,20 @@ template <typename T, typename Tint_inp, typename Tgroup_inp> struct ConeDesc {
   Tgroup GRP_ext;
   Tgroup GRP_fac;
   std::vector<sing_adj<Tint>> l_sing_adj;
-  MyMatrix<Tint> find_matrix(typename Tgroup::Telt const& x, [[maybe_unused]] std::ostream &os) const {
+  MyMatrix<Tint> find_matrix(Telt const& x, [[maybe_unused]] std::ostream &os) const {
     return FindTransformation(EXT, EXT, x);
+  }
+  // Memoized orbit of an adjacency facet under GRP_ext (see the identically
+  // named method on TopConeMin for the rationale).
+  mutable std::unordered_map<Face, std::vector<std::pair<Face, Telt>>> orbit_cache{};
+  std::vector<std::pair<Face, Telt>> const& orbit_representatives(Face const& set1) const {
+    auto iter = orbit_cache.find(set1);
+    if (iter != orbit_cache.end()) {
+      return iter->second;
+    }
+    std::vector<std::pair<Face, Telt>> res = OrbitFacesRepresentatives(GRP_ext, set1);
+    auto ret = orbit_cache.emplace(set1, std::move(res));
+    return ret.first->second;
   }
 };
 
