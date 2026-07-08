@@ -671,6 +671,11 @@ ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
   std::ostream &os = eData.rddo.os;
   MyMatrix<T> const& GramMat = eData.solver.GramMat;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: ComputeGroupAndAdjacencies, GramMat=\n";
+  WriteMatrix(os, GramMat);
+  os << "DEL_ENUM: ComputeGroupAndAdjacencies, EXT_T=\n";
+  WriteMatrix(os, EXT_T);
+  os << "DEL_ENUM: ComputeGroupAndAdjacencies rnk(EXT_T)=" << RankMat(EXT_T) << "\n";
   os << "DEL_ENUM: |EXT_T|=" << EXT_T.rows() << " / " << EXT_T.cols() << "\n";
 #endif
   Tgroup GRPlatt = Delaunay_Stabilizer(eData, EXT_T);

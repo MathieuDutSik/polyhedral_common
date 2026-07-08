@@ -235,7 +235,13 @@ struct QuantizationComputer {
     MatrixGroupInfo info;
     info.order = GRP.size();
     for (auto &eGen : GRP.GeneratorsOfGroup()) {
+#ifdef DEBUG_QUANTIZATION_INTEGRAL
+      os << "QI: func_autom_center, Before FindTransformation\n";
+#endif
       MyMatrix<T> L = FindTransformation<T, Telt>(EXText, EXText, eGen);
+#ifdef DEBUG_QUANTIZATION_INTEGRAL
+      os << "QI: func_autom_center, After FindTransformation\n";
+#endif
 #ifdef SANITY_CHECK_QUANTIZATION_INTEGRAL
       // Every stabilizer generator must be realized by a lattice automorphism,
       // i.e. an integral (GL_n(Z)) linear map. A non-integral realization means
@@ -291,7 +297,13 @@ struct QuantizationComputer {
     if (!eRes)
       return {};
     Telt eElt(*eRes);
+#ifdef DEBUG_QUANTIZATION_INTEGRAL
+    os << "QI: func_equiv_center, Before FindTransformation\n";
+#endif
     MyMatrix<T> MatEquiv = FindTransformation<T, Telt>(EXText1, EXText2, eElt);
+#ifdef DEBUG_QUANTIZATION_INTEGRAL
+    os << "QI: func_equiv_center, After FindTransformation\n";
+#endif
 #ifdef SANITY_CHECK_QUANTIZATION_INTEGRAL
     // The equivalence must be realized by a lattice isomorphism (integral map).
     // A non-integral realization means the coloring failed to keep the vertex
@@ -676,7 +688,7 @@ struct QuantizationComputer {
                 std::optional<Telt> optElt =
                     TheStab.RepresentativeAction_OnSets(eAdjacency.eInc, fInc);
                 Telt eElt = unfold_opt(
-                    optElt, "soft_computation: RepresentativeAction fails");
+                    optElt, "QI: soft_computation: RepresentativeAction fails");
                 MyMatrix<T> const &TheEXT2 = DT.l_dels[eAdjacency.iOrb].EXT;
                 MyMatrix<T> PhiMat =
                     RepresentVertexPermutation<T, Telt>(TheEXT, TheEXT, eElt);
@@ -689,7 +701,7 @@ struct QuantizationComputer {
                   MyVector<T> V = GetMatrixRow(EXT, iE);
                   std::optional<size_t> opt = cont.GetIdx_v(V);
                   size_t pos = unfold_opt(
-                      opt, "soft_computation: vertex not found in adjacent");
+                      opt, "QI: soft_computation: vertex not found in adjacent");
                   eSet2[pos] = 1;
                 }
                 FuncInsertRecord({eAdjacency.iOrb, eG2, eSet2});

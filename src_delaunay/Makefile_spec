@@ -1,9 +1,9 @@
 #PROGRAM		= LATT_FindOneVertex LATT_MPI_Lattice_IsoDelaunayDomain LATT_SerialLattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay
 #PROGRAM		= LATT_MPI_ComputeDelaunay
-#PROGRAM		= LATT_SerialComputeDelaunay
+PROGRAM		= LATT_SerialComputeDelaunay
 #PROGRAM		= LATT_AnalysisIsoDelaunay
 #PROGRAM		= LATT_SerialLattice_IsoDelaunayDomain
-PROGRAM		= LATT_LookForFullRankRayDomain
+#PROGRAM		= LATT_LookForFullRankRayDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -33,7 +33,11 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 #CDEFS           = -DDEBUG_CANONIC -DTIMINGS
 #CDEFS           = -DCHECK_SHVEC
 #CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
-CDEFS           =
+#CDEFS           = -DSANITY_CHECK
+#CDEFS           = -DSANITY_CHECK -DDEBUG
+#CDEFS           = -DDEBUG_QUANTIZATION_INTEGRAL
+CDEFS           = -DDEBUG_DELAUNAY_ENUMERATION
+#CDEFS           =
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
