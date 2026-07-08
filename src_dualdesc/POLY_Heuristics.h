@@ -17,6 +17,135 @@
 #endif
 
 //
+// Typed dual-description heuristic input and heuristic
+//
+// The information about the polytope that feeds the (non-Thompson) dual
+// description heuristics. This is the typed replacement for the former
+// std::map<std::string, TintGroup>: the group size stays a full TintGroup, the
+// combinatorial quantities are plain ints, and the elapsed time is a uint64_t.
+enum class PolytopeField { groupsize, incidence, rank, delta, level, time };
+
+inline PolytopeField polytope_field_from_string(std::string const &name) {
+  if (name == "groupsize")
+    return PolytopeField::groupsize;
+  if (name == "incidence")
+    return PolytopeField::incidence;
+  if (name == "rank")
+    return PolytopeField::rank;
+  if (name == "delta")
+    return PolytopeField::delta;
+  if (name == "level")
+    return PolytopeField::level;
+  if (name == "time")
+    return PolytopeField::time;
+  std::cerr << "HEU: unknown polytope field name=" << name << "\n";
+  throw TerminalException{1};
+}
+
+template <typename TintGroup> struct PolytopeInputInfo {
+  TintGroup groupsize;
+  int incidence;
+  int rank;
+  int delta;
+  int level;
+  uint64_t time;
+  // Value of a field, promoted to TintGroup so it can be compared against the
+  // (arbitrary precision) heuristic thresholds.
+  TintGroup get_field(PolytopeField f) const {
+    switch (f) {
+    case PolytopeField::groupsize:
+      return groupsize;
+    case PolytopeField::incidence:
+      return TintGroup(incidence);
+    case PolytopeField::rank:
+      return TintGroup(rank);
+    case PolytopeField::delta:
+      return TintGroup(delta);
+    case PolytopeField::level:
+      return TintGroup(level);
+    case PolytopeField::time:
+      return TintGroup(time);
+    }
+    return TintGroup(0);
+  }
+};
+
+// The dual-description-specific heuristic: same shape as the generic
+// TheHeuristic, but the conditions reference typed PolytopeField entries
+// instead of string keys. It is obtained once, at load time, from the
+// string-parsed generic heuristic, and afterwards evaluated with no map.
+template <typename TintGroup> struct DualDescSingleCondition {
+  PolytopeField field;
+  HeuristicOp op;
+  TintGroup value;
+};
+
+template <typename TintGroup> struct DualDescFullCondition {
+  std::vector<DualDescSingleCondition<TintGroup>> conditions;
+  std::string result;
+};
+
+template <typename TintGroup> struct DualDescHeuristic {
+  std::vector<DualDescFullCondition<TintGroup>> tests;
+  std::string default_result;
+};
+
+template <typename TintGroup>
+DualDescHeuristic<TintGroup>
+convert_dual_desc_heuristic(TheHeuristic<TintGroup> const &heu) {
+  DualDescHeuristic<TintGroup> result;
+  for (auto const &eFullCond : heu.AllTests) {
+    DualDescFullCondition<TintGroup> new_full;
+    new_full.result = eFullCond.TheResult;
+    for (auto const &eSingCond : eFullCond.TheConditions) {
+      new_full.conditions.push_back(
+          {polytope_field_from_string(eSingCond.eCond), eSingCond.eType,
+           eSingCond.NumValue});
+    }
+    result.tests.push_back(std::move(new_full));
+  }
+  result.default_result = heu.DefaultResult;
+  return result;
+}
+
+template <typename TintGroup>
+std::string
+dual_desc_heuristic_evaluation(DualDescHeuristic<TintGroup> const &heu,
+                               PolytopeInputInfo<TintGroup> const &info) {
+  for (auto const &eFullCond : heu.tests) {
+    bool IsOK = true;
+    for (auto const &eSingCond : eFullCond.conditions) {
+      TintGroup eValue = info.get_field(eSingCond.field);
+      bool WeMatch = false;
+      switch (eSingCond.op) {
+      case HeuristicOp::Gt:
+        WeMatch = (eValue > eSingCond.value);
+        break;
+      case HeuristicOp::Ge:
+        WeMatch = (eValue >= eSingCond.value);
+        break;
+      case HeuristicOp::Eq:
+        WeMatch = (eValue == eSingCond.value);
+        break;
+      case HeuristicOp::Lt:
+        WeMatch = (eValue < eSingCond.value);
+        break;
+      case HeuristicOp::Le:
+        WeMatch = (eValue <= eSingCond.value);
+        break;
+      }
+      if (!WeMatch) {
+        IsOK = false;
+        break;
+      }
+    }
+    if (IsOK)
+      return eFullCond.result;
+  }
+  return heu.default_result;
+}
+
+//
 // Heuristic business
 //
 
