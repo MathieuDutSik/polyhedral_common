@@ -215,7 +215,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     auto Stab = df.Stab;
 
     start_comm_thread();
-    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(polytope_info_to_map(info));
+    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(info.named_map());
     DualDescProgram prog = dual_desc_program_from_string(ansProg);
     vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, prog, os);
     AllArr.DualDescriptionProgram.pop(os);

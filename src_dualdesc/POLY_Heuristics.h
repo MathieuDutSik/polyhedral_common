@@ -7,6 +7,7 @@
 #include "Heuristic_ThompsonSampling.h"
 #include "Namelist.h"
 #include "POLY_HasPPL.h"
+#include <array>
 #include <limits>
 #include <map>
 #include <string>
@@ -29,6 +30,12 @@
 // --- The fields, one enum per heuristic input kind ---
 enum class PolytopeField { groupsize, incidence, rank, delta, level, time };
 enum class OrbitSplitField { groupsize_big, groupsize_sma, index, n_orbit };
+
+// The full list of polytope fields, the single source of truth used both by
+// the heuristic evaluation and by the Thompson-sampler named-map view below.
+inline constexpr std::array<PolytopeField, 6> polytope_all_fields = {
+    PolytopeField::groupsize, PolytopeField::incidence, PolytopeField::rank,
+    PolytopeField::delta,     PolytopeField::level,     PolytopeField::time};
 
 // Parse a field name into the field enum (tag-dispatched on the enum type).
 inline PolytopeField parse_heuristic_field(std::string const &name,
@@ -121,6 +128,17 @@ template <typename TintGroup> struct PolytopeInputInfo {
       return UniversalScalarConversion<TintGroup, uint64_t>(time);
     }
     return TintGroup(0);
+  }
+  // Named-map view of the typed info, consumed by the map-based heuristic
+  // layers: the shared, disk-persisted Thompson learner (intrinsically keyed by
+  // field name) and the generic HeuristicEvaluation. The names come from
+  // heuristic_field_to_string, so there is a single source of truth and no
+  // hand-written string literals.
+  std::map<std::string, TintGroup> named_map() const {
+    std::map<std::string, TintGroup> m;
+    for (PolytopeField f : polytope_all_fields)
+      m[heuristic_field_to_string(f)] = get_field(f);
+    return m;
   }
 };
 
@@ -253,20 +271,6 @@ std::string
 dual_desc_heuristic_evaluation(DualDescHeuristic<TintGroup> const &heu,
                                PolytopeInputInfo<TintGroup> const &info) {
   return typed_heuristic_evaluation(heu, info);
-}
-
-// TRANSITIONAL: the Thompson-sampling program selector still consumes the
-// string map (its sampling state stores the candidate). This bridge is removed
-// once that sampler is made dual-description specific.
-template <typename TintGroup>
-std::map<std::string, TintGroup>
-polytope_info_to_map(PolytopeInputInfo<TintGroup> const &info) {
-  return {{"groupsize", info.groupsize},
-          {"incidence", UniversalScalarConversion<TintGroup, int>(info.incidence)},
-          {"rank", UniversalScalarConversion<TintGroup, int>(info.rank)},
-          {"delta", UniversalScalarConversion<TintGroup, int>(info.delta)},
-          {"level", UniversalScalarConversion<TintGroup, int>(info.level)},
-          {"time", UniversalScalarConversion<TintGroup, uint64_t>(info.time)}};
 }
 
 //

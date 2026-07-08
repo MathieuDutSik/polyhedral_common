@@ -1014,7 +1014,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     MicrosecondTime time_step;
 #endif
     std::string ansProg =
-        AllArr.DualDescriptionProgram.get_eval(polytope_info_to_map(info));
+        AllArr.DualDescriptionProgram.get_eval(info.named_map());
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: ansProg|=" << time_step << "\n";
 #endif
