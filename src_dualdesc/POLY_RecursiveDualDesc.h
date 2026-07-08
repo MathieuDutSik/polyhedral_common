@@ -210,8 +210,10 @@ public:
   int nbCol;
   size_t delta;
   FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
-  int the_method; // we use an indifferent name because we also have it for
-                  // DatabaseRepr
+  // The canonicalization strategy. DatabaseRepr also carries this field, but
+  // only ever with the trivial default value.
+  CanonicStrategy canonic_method;
+
 private:
   UNORD_SET<size_t, std::function<size_t(Tidx_orbit)>,
             std::function<bool(Tidx_orbit, Tidx_orbit)>>
@@ -254,7 +256,7 @@ public:
   DatabaseCanonic(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const &_EXT_int,
                   Tgroup const &_GRP, std::ostream &_os)
       : EXT(_EXT), EXT_int(_EXT_int), GRP(_GRP), foc(GRP), os(_os) {
-    the_method = std::numeric_limits<int>::max();
+    canonic_method = CanonicStrategy::unset;
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
@@ -342,47 +344,47 @@ public:
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
   }
-  int evaluate_method_serial(vectface const &vf) const {
+  CanonicStrategy evaluate_method_serial(vectface const &vf) const {
     return GetCanonicalizationMethod_Serial(vf, GRP, os);
   }
-  int evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
-    return STRATEGY_MISS;
+  CanonicStrategy evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
+    return CanonicStrategy::miss;
   }
   Face operation_face(Face const &face) {
-    return CanonicalImageGeneralDualDesc(the_method, GRP, foc.recConvert, face,
+    return CanonicalImageGeneralDualDesc(canonic_method, GRP, foc.recConvert, face,
                                          os);
   }
-  int convert_string_method(std::string const &choice) const {
+  CanonicStrategy convert_string_method(std::string const &choice) const {
     if (choice == "canonic")
-      return CANONIC_STRATEGY__CANONICAL_IMAGE;
+      return CanonicStrategy::canonical_image;
     if (choice == "canonic_initial_triv")
-      return CANONIC_STRATEGY__INITIAL_TRIV;
+      return CanonicStrategy::initial_triv;
     if (choice == "canonic_initial_triv_limited1")
-      return CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1;
+      return CanonicStrategy::initial_triv_limited1;
     if (choice == "store")
-      return CANONIC_STRATEGY__STORE;
+      return CanonicStrategy::store;
     std::cerr << "The value of choice is not an allowed one\n";
     std::cerr
         << "Only possibilities are canonic, canonic_initial_triv, store\n";
     throw TerminalException{1};
   }
   bool use_f_insert_pair() {
-    if (the_method == CANONIC_STRATEGY__CANONICAL_IMAGE) {
+    if (canonic_method == CanonicStrategy::canonical_image) {
       return true;
     }
-    if (the_method == CANONIC_STRATEGY__STORE) {
+    if (canonic_method == CanonicStrategy::store) {
       return true;
     }
-    if (the_method == CANONIC_STRATEGY__INITIAL_TRIV) {
+    if (canonic_method == CanonicStrategy::initial_triv) {
       return false;
     }
-    if (the_method == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
+    if (canonic_method == CanonicStrategy::initial_triv_limited1) {
       return false;
     }
-    std::cerr << "The value of the_method was not correctly set\n";
+    std::cerr << "The value of canonic_method was not correctly set\n";
     throw TerminalException{1};
   }
-  int get_default_strategy() { return CANONIC_STRATEGY__DEFAULT; }
+  CanonicStrategy get_default_strategy() { return CANONIC_STRATEGY__DEFAULT; }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
@@ -677,7 +679,7 @@ public:
   int nbCol;
   size_t delta;
   FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
-  int the_method;
+  CanonicStrategy canonic_method;
 
 private:
   std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>
@@ -728,22 +730,22 @@ public:
     CompleteList_SetUndone.clear();
     CompleteList_SetDone.clear();
   }
-  int evaluate_method_serial([[maybe_unused]] vectface const &vf) const {
-    return REPR_STRATEGY__DEFAULT;
+  CanonicStrategy evaluate_method_serial([[maybe_unused]] vectface const &vf) const {
+    return CANONIC_STRATEGY__DEFAULT;
   }
-  int evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
-    return REPR_STRATEGY__DEFAULT;
+  CanonicStrategy evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
+    return CANONIC_STRATEGY__DEFAULT;
   }
   Face operation_face(Face const &eFlip) { return eFlip; }
-  int convert_string_method(std::string const &choice) const {
+  CanonicStrategy convert_string_method(std::string const &choice) const {
     if (choice == "default")
-      return REPR_STRATEGY__DEFAULT;
+      return CANONIC_STRATEGY__DEFAULT;
     std::cerr << "The value of choice is not an allowed one\n";
     std::cerr << "Only possibility is default\n";
     throw TerminalException{1};
   }
   bool use_f_insert_pair() { return false; }
-  int get_default_strategy() { return REPR_STRATEGY__DEFAULT; }
+  CanonicStrategy get_default_strategy() { return CANONIC_STRATEGY__DEFAULT; }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     CompleteList_SetUndone.clear();
     CompleteList_SetDone.clear();
@@ -1121,7 +1123,7 @@ void vectface_update_method(vectface &vfo, TbasicBank &bb,
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow
      << "\n";
-  os << "RDD: vectface_update_method bb.the_method=" << bb.the_method << "\n";
+  os << "RDD: vectface_update_method bb.canonic_method=" << canonic_strategy_to_string(bb.canonic_method) << "\n";
 #endif
   for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
     Face fo = vfo[i_orbit];
@@ -1224,7 +1226,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RDD: action=" << action << "\n";
 #endif
-    auto f_recompute = [&](int const &method) -> void {
+    auto f_recompute = [&](CanonicStrategy const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: n_orbit|=" << time << "\n";
@@ -1249,7 +1251,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
       os << "|RDD: method update|=" << time << "\n";
 #endif
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-      os << "RDD: bb.the_method=" << bb.the_method << "\n";
+      os << "RDD: bb.canonic_method=" << canonic_strategy_to_string(bb.canonic_method) << "\n";
 #endif
       RPL.DirectAppendDatabase(std::move(vfo));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
@@ -1266,9 +1268,9 @@ Kernel_DUALDESC_AdjacencyDecomposition(
       return RPL.LoadDatabase();
     }
     if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
-      int method = bb.convert_string_method(ansChoiceCanonic);
+      CanonicStrategy method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-      os << "Before f_recompute, method=" << method
+      os << "Before f_recompute, method=" << canonic_strategy_to_string(method)
          << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
       return f_recompute(method);
@@ -1278,11 +1280,11 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: get_runtime_testcase|=" << time << "\n";
 #endif
-      int method = RPL.bb.evaluate_method_serial(vf);
+      CanonicStrategy method = RPL.bb.evaluate_method_serial(vf);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: evaluate_method_serial|=" << time << "\n";
 #endif
-      if (method == bb.the_method) {
+      if (method == bb.canonic_method) {
         return RPL.LoadDatabase();
       } else {
         return f_recompute(method);

@@ -80,8 +80,8 @@ public:
       return DATABASE_ACTION__SIMPLE_LOAD;
     if (choice == "guess")
       return DATABASE_ACTION__GUESS;
-    int choice_i = bb.convert_string_method(choice);
-    if (bb.the_method == choice_i)
+    CanonicStrategy choice_i = bb.convert_string_method(choice);
+    if (bb.canonic_method == choice_i)
       return DATABASE_ACTION__SIMPLE_LOAD;
     return DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE;
   }

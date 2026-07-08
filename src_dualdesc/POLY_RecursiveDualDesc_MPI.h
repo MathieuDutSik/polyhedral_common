@@ -23,15 +23,15 @@
 #endif
 
 template <typename Tgroup>
-int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
+CanonicStrategy GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
                                   vectface const &vf, Tgroup const &GRP,
                                   std::ostream &os) {
   int n_proc = comm.size();
-  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
+  std::vector<CanonicStrategy> list_considered = GetPossibleCanonicalizationMethod(GRP);
   int64_t miss_val = std::numeric_limits<int64_t>::max();
   int64_t upper_limit_local = miss_val;
   int64_t upper_limit_global = miss_val;
-  int chosen_method = CANONIC_STRATEGY__DEFAULT;
+  CanonicStrategy chosen_method = CANONIC_STRATEGY__DEFAULT;
   int64_t effective_upper_limit = miss_val;
   std::vector<int64_t> V_runtime;
   for (auto &method : list_considered) {
@@ -313,7 +313,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     os << "|determine_action_database|=" << time << " action=" << action
        << "\n";
 #endif
-    auto f_recompute = [&](int const &method) -> void {
+    auto f_recompute = [&](CanonicStrategy const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|n_orbit|=" << time << "\n";
@@ -346,9 +346,9 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       return RPL.LoadDatabase();
     }
     if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
-      int method = bb.convert_string_method(ansChoiceCanonic);
+      CanonicStrategy method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
-      os << "Before f_recompute, method=" << method
+      os << "Before f_recompute, method=" << canonic_strategy_to_string(method)
          << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
       return f_recompute(method);
@@ -358,11 +358,11 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|get_runtime_testcase|=" << time << "\n";
 #endif
-      int method = RPL.bb.evaluate_method_mpi(vf);
+      CanonicStrategy method = RPL.bb.evaluate_method_mpi(vf);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|evaluate_method_mpi|=" << time << "\n";
 #endif
-      if (method == STRATEGY_MISS) {
+      if (method == CanonicStrategy::miss) {
         method = GetCanonicalizationMethod_MPI(comm, vf, bb.GRP, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
         os << "|GetCanonicalizationMethod_MPI|=" << time << "\n";
@@ -371,7 +371,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|evaluate_method_serial|=" << time << "\n";
 #endif
-      if (method == bb.the_method) {
+      if (method == bb.canonic_method) {
         return RPL.LoadDatabase();
       } else {
         return f_recompute(method);
