@@ -71,11 +71,12 @@
     }
   },
 
-  // Claude subscription-OAuth token, generated once on the host with
-  // `claude setup-token` (see the header). This is the subscription
-  // path, not API billing. We deliberately do NOT pass ANTHROPIC_API_KEY
-  // / OPENAI_API_KEY through: an API key would override the subscription
-  // login. Codex needs nothing here — it uses the mounted ~/.codex.
+  // OAuth callback ports for `claude /login` and `codex login`. The
+  // exact ports vary by CLI version; this covers the commonly-seen
+  // values. Linux users may prefer `"--network=host"` instead.
+  "runArgs": [],
+
+  // Optional API-key passthrough; harmless when the env vars are unset.
   "remoteEnv": {
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
   },

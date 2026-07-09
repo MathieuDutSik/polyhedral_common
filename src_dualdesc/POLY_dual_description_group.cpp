@@ -26,10 +26,7 @@ void process(std::string const &eFileI, std::string const &eFileG,
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   vectface vf = DirectFacetComputationIncidence(EXT, ansProg, os);
   Tgroup GRP = ReadGroupFile<Tgroup>(eFileG);
-  std::unordered_set<Face> SetFace;
-  for (auto &eFace : vf) {
-    SetFace.insert(eFace);
-  }
+  std::unordered_set<Face> SetFace(vf.begin(), vf.end());
   vectface vfo = OrbitSplittingSet_T(SetFace, GRP);
   if (OutFormat == "GAP") {
     os << "return ";

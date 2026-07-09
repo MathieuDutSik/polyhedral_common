@@ -439,33 +439,6 @@ void SetThompsonSampling(FullNamelist const &eFull,
   }
 }
 
-template <typename TintGroup> struct PolyHeuristic {
-  TheHeuristic<TintGroup> Splitting;
-  TheHeuristic<TintGroup> CommThread;
-  TheHeuristic<TintGroup> BankSave;
-  TheHeuristic<TintGroup> AdditionalSymmetry;
-  TheHeuristic<TintGroup> DualDescriptionProgram;
-  TheHeuristic<TintGroup> StabEquivFacet;
-  TheHeuristic<TintGroup> InitialFacetSet;
-  TheHeuristic<TintGroup> ChoiceCanonicalization;
-  bool DD_Saving;
-  bool DD_Memory;
-};
-
-template <typename TintGroup> PolyHeuristic<TintGroup> AllStandardHeuristic() {
-  PolyHeuristic<TintGroup> AllArr;
-  AllArr.Splitting = StandardHeuristicSplitting<TintGroup>();
-  AllArr.CommThread = StandardHeuristicCommThread<TintGroup>();
-  AllArr.BankSave = StandardHeuristicBankSave<TintGroup>();
-  AllArr.AdditionalSymmetry = StandardHeuristicAdditionalSymmetry<TintGroup>();
-  AllArr.DualDescriptionProgram =
-      StandardHeuristicDualDescriptionProgram<TintGroup>();
-  AllArr.StabEquivFacet = StandardHeuristicStabEquiv<TintGroup>();
-  AllArr.InitialFacetSet = MethodInitialFacetSet<TintGroup>();
-  AllArr.ChoiceCanonicalization = MethodChoiceCanonicalization<TintGroup>();
-  return AllArr;
-}
-
 template <typename TintGroup> struct PolyHeuristicSerial {
   TheHeuristic<TintGroup> Splitting;
   TheHeuristic<TintGroup> BankSave;

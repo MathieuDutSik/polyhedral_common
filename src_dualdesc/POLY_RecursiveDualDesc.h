@@ -31,6 +31,7 @@
 #include "Databank_asio.h"
 #endif
 #include <limits>
+#include <optional>
 #include <set>
 #include <map>
 #include <string>
@@ -444,7 +445,7 @@ public:
         Face const &f = pair.first;
         Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
         return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP,
-                StabRed};
+                std::move(StabRed)};
       }
     }
     std::cerr << "Failed to find an undone orbit\n";
@@ -680,11 +681,7 @@ public:
     InsertEntryDatabase({face_i, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face) {
-    Face f_red(nbRow);
-    for (int i = 0; i < nbRow; i++) {
-      f_red[i] = face[i];
-    }
-    FuncInsert(f_red);
+    FuncInsert(face_reduction(face, nbRow));
   }
   void FuncPutOrbitAsDone(size_t const &iOrb) {
     std::pair<Face, Tint> eEnt = foc.RetrieveListOrbitEntry(iOrb);
@@ -725,7 +722,8 @@ public:
     std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
     Face const &f = pair.first;
     Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
-    return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP, StabRed};
+    return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP,
+            std::move(StabRed)};
   }
   void InsertListOrbitEntry(Face const &f,
                             [[maybe_unused]] const size_t &i_orbit) {
@@ -919,6 +917,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: ansProg|=" << time_step << "\n";
 #endif
+    DualDescProgram prog = dual_desc_program_from_string(ansProg);
     if (df.Stab.size() == 1) {
       auto f_process =
           [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
@@ -938,7 +937,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
         os << "|RDD: insert1|=" << time_loc << "\n";
 #endif
       };
-      DirectFacetComputationFaceIneq(df.FF.EXT_face, ansProg, f_process, os);
+      DirectFacetComputationFaceIneq(df.FF.EXT_face, prog, f_process, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: DirectFacetComputationFaceIneq|=" << time_step << "\n";
 #endif
@@ -948,7 +947,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
     } else {
       vectface TheOutput =
-          DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
+          DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, prog, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: TheOutput|=" << time_step << "\n";
 #endif
@@ -1058,45 +1057,33 @@ OrbitSplittingListOrbitGen(const Tgroup &GRPbig, const Tgroup &GRPsma,
                                       method_split, os);
 }
 
-template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
-vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
-                             WeightMatrix<true, T, Tidx_value> const &WMat,
+// The canonicalization triple of (EXT, WMat) is passed in precomputed. Its
+// triple.EXT is the bank key (identical to CanonicalizationPolytopePair's
+// canonical form) and triple.perm the associated ordering.
+template <typename Tbank, typename T, typename Tgroup>
+vectface getdualdesc_in_bank(Tbank &bank,
+                             TripleCanonic<T, Tgroup> const &triple,
                              Tgroup const &GRP,
                              PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
                              std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-  using Tidx = typename Telt::Tidx;
-  std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
-      CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat, os);
-  const TripleStore<Tgroup> &RecAns = bank.GetDualDesc(ePair.first);
+  const TripleStore<Tgroup> &RecAns = bank.GetDualDesc(triple.EXT);
   if (RecAns.ListFace.empty()) {
     return vectface(0);
   }
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: Finding a matching entry in the bank\n";
 #endif
-  Telt ePerm = Telt(ePair.second);
-  size_t n = EXT.rows();
+  Telt const &ePerm = triple.perm;
+  size_t n = triple.EXT.rows();
   if (GRP.size() == RecAns.GRP.size()) {
-    vectface ListReprTrans(n);
-    Face eFaceImg(n);
-    vectface ListFace = vectface_reduction(RecAns.ListFace, n);
-    for (auto const &eFace : ListFace) {
-      OnFace_inplace(eFaceImg, eFace, ePerm);
-      ListReprTrans.push_back(eFaceImg);
-    }
-    return ListReprTrans;
+    return ImageVectface(vectface_reduction(RecAns.ListFace, n), ePerm, n);
   }
   Tgroup GrpConj = RecAns.GRP.GroupConjugate(ePerm);
   size_t delta = RecAns.ListFace.get_n();
   Telt ePermExt = trivial_extension(ePerm, delta);
-  vectface ListReprTrans(delta);
-  Face eFaceImg(delta);
-  for (auto const &eFace : RecAns.ListFace) {
-    OnFace_inplace(eFaceImg, eFace, ePermExt);
-    ListReprTrans.push_back(eFaceImg);
-  }
+  vectface ListReprTrans = ImageVectface(RecAns.ListFace, ePermExt, delta);
   FaceOrbitsizeTableContainer<TintGroup> fotc(RecAns.ListPossOrbsize, n,
                                               std::move(ListReprTrans));
   return OrbitSplittingListOrbitGen(GrpConj, GRP, fotc, AllArr, os);
@@ -1309,14 +1296,32 @@ vectface DUALDESC_AdjacencyDecomposition(
   CheckTermination<Tgroup>(AllArr);
   int nbRow = EXT.rows();
   LazyWMat<T, Tidx_value> lwm(EXT, os);
+  // The canonicalization of the polytope is expensive (graph canonicalization).
+  // It is needed both for the bank lookup and for the bank insertion, so we
+  // compute it at most once and share it between the two.
+  std::optional<TripleCanonic<T, Tgroup>> opt_canonic_triple;
+  auto get_canonic_triple = [&]() -> TripleCanonic<T, Tgroup> & {
+    if (!opt_canonic_triple) {
+      opt_canonic_triple =
+          CanonicalizationPolytopeTriple<T, Tgroup>(EXT, lwm.GetWMat(), os);
+    }
+    return *opt_canonic_triple;
+  };
   //
   // Checking if the entry is present in the map.
   //
   std::string ansBankCheck =
       HeuristicEvaluation(TheMap, AllArr.CheckDatabaseBank);
   if (ansBankCheck == "yes") {
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+    MicrosecondTime time_bankcheck;
+#endif
     vectface ListFace =
-        getdualdesc_in_bank(TheBank, EXT, lwm.GetWMat(), GRP, AllArr, os);
+        getdualdesc_in_bank(TheBank, get_canonic_triple(), GRP, AllArr, os);
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+    os << "|RDD: bankcheck nbRow=" << nbRow << " hit=" << (!ListFace.empty())
+       << "|=" << time_bankcheck << "\n";
+#endif
     if (!ListFace.empty())
       return ListFace;
   }
@@ -1405,8 +1410,16 @@ vectface DUALDESC_AdjacencyDecomposition(
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RDD: Before insert_entry_in_bank\n";
 #endif
-    insert_entry_in_bank(TheBank, EXT, lwm.GetWMat(), TheGRPrelevant,
-                         BankSymmCheck, ListOrbitFaceOrbitsize, os);
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+    MicrosecondTime time_bankinsert;
+#endif
+    insert_entry_in_bank(TheBank, std::move(get_canonic_triple()),
+                         TheGRPrelevant, BankSymmCheck, ListOrbitFaceOrbitsize,
+                         os);
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+    os << "|RDD: bankinsert nbRow=" << nbRow
+       << " BankSymmCheck=" << BankSymmCheck << "|=" << time_bankinsert << "\n";
+#endif
   }
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: Before return section\n";
