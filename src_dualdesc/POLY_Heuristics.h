@@ -696,6 +696,36 @@ void SetThompsonSampling(FullNamelist const &eFull,
   }
 }
 
+// How the polytope bank is shared across the computation: kept in-process
+// ("serial"), served over asio to a separate bank process ("bank_asio"), or
+// distributed over MPI ranks ("bank_mpi", MPI runs only).
+enum class BankParallelizationMethod { serial, bank_asio, bank_mpi };
+
+inline std::string
+bank_parallelization_method_to_string(BankParallelizationMethod method) {
+  switch (method) {
+  case BankParallelizationMethod::serial:
+    return "serial";
+  case BankParallelizationMethod::bank_asio:
+    return "bank_asio";
+  case BankParallelizationMethod::bank_mpi:
+    return "bank_mpi";
+  }
+  return "unknown";
+}
+
+inline BankParallelizationMethod
+bank_parallelization_method_from_string(std::string const &method) {
+  if (method == "serial")
+    return BankParallelizationMethod::serial;
+  if (method == "bank_asio")
+    return BankParallelizationMethod::bank_asio;
+  if (method == "bank_mpi")
+    return BankParallelizationMethod::bank_mpi;
+  std::cerr << "HEU: unknown bank_parallelization_method=" << method << "\n";
+  throw TerminalException{1};
+}
+
 template <typename TintGroup> struct PolyHeuristicSerial {
   DualDescHeuristic<TintGroup> Splitting;
   DualDescHeuristic<TintGroup> BankSave;
@@ -717,7 +747,7 @@ template <typename TintGroup> struct PolyHeuristicSerial {
   std::string BANK_Prefix;
   std::string OutFormat;
   std::string OutFile;
-  std::string bank_parallelization_method;
+  BankParallelizationMethod bank_parallelization_method;
   std::string DD_Prefix;
   int dimEXT;
   bool DeterministicRuntime;
@@ -736,7 +766,8 @@ PolyHeuristicSerial<TintGroup> AllStandardHeuristicSerial(int const &dimEXT,
   std::string BANK_Prefix = "/unset/";
   std::string OutFormat = "GAP";
   std::string OutFile = "unset.out";
-  std::string bank_parallelization_method = "serial";
+  BankParallelizationMethod bank_parallelization_method =
+      BankParallelizationMethod::serial;
   std::string DD_Prefix = "/irrelevant/";
   bool DeterministicRuntime = true;
   return {convert_dual_desc_heuristic(StandardHeuristicSplitting<TintGroup>()),
@@ -776,7 +807,8 @@ void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const &AllArr,
   os << "RDD: DeterministicRuntime=" << AllArr.DeterministicRuntime << "\n";
   os << "RDD: port=" << AllArr.port << "\n";
   os << "RDD: bank_parallelization_method="
-     << AllArr.bank_parallelization_method << "\n";
+     << bank_parallelization_method_to_string(AllArr.bank_parallelization_method)
+     << "\n";
   os << "RDD: SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
   os << "RDD: AdditionalSymmetryHeuristicFile\n"
      << AllArr.AdditionalSymmetry << "\n";

@@ -667,13 +667,13 @@ void Reset_Directories(boost::mpi::communicator &comm,
   int i_rank = comm.rank();
   auto update_string = [&](std::string &str_ref) -> void {
     if (i_rank < n_proc - 1 ||
-        AllArr.bank_parallelization_method != "bank_mpi") {
+        AllArr.bank_parallelization_method != BankParallelizationMethod::bank_mpi) {
       update_path_using_nproc_iproc(str_ref, n_proc, i_rank);
       CreateDirectory(str_ref);
     }
   };
   if (AllArr.BANK_Saving) {
-    if (AllArr.bank_parallelization_method == "serial")
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::serial)
       update_string(AllArr.BANK_Prefix);
     else
       CreateDirectory(AllArr.BANK_Prefix);
@@ -719,7 +719,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   srand(time(NULL) + 12345 * i_rank);
   Reset_Directories(comm, AllArr);
   size_t n_rows = EXTred.rows();
-  if (AllArr.bank_parallelization_method == "bank_mpi" && n_proc < 2) {
+  if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi && n_proc < 2) {
     std::cerr << "For the bank_mpi we need at least 2 nodes. n_proc=" << n_proc
               << "\n";
     throw TerminalException{1};
@@ -727,13 +727,13 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   int proc_bank = n_proc - 1;
   int i_proc_ret = 0;
   auto msg_term_bank = [&]() -> void {
-    if (AllArr.bank_parallelization_method == "bank_mpi" &&
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi &&
         i_rank == i_proc_ret) {
       os << "sending bank_mpi termination signal\n";
       comm.send(proc_bank, tag_mpi_bank_end, val_mpi_bank_end);
     }
   };
-  if (AllArr.bank_parallelization_method == "bank_mpi" && i_rank == n_proc - 1)
+  if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi && i_rank == n_proc - 1)
     pos_generator = 1;
   boost::mpi::communicator comm_work = comm.split(pos_generator);
   //
@@ -743,21 +743,21 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
       ComputeInitialInfo<TintGroup>(EXTred, GRP, AllArr.dimEXT);
   //
   auto get_vectface = [&]() -> vectface {
-    if (AllArr.bank_parallelization_method == "serial") {
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::serial) {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, os);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                         Tgroup, Tidx_value>(
           comm, TheBank, bb, AllArr, AllArr.DD_Prefix, info, os);
     }
-    if (AllArr.bank_parallelization_method == "bank_asio") {
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_asio) {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                         Tgroup, Tidx_value>(
           comm, TheBank, bb, AllArr, AllArr.DD_Prefix, info, os);
     }
-    if (AllArr.bank_parallelization_method == "bank_mpi") {
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi) {
       using Tbank = DataBankMpiClient<Tkey, Tval>;
       Tbank TheBank(comm);
       if (i_rank < proc_bank) {
@@ -772,14 +772,16 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
     }
     std::cerr << "No match for bank_parallelization_method\n";
     std::cerr << "AllArr.bank_parallelization_method="
-              << AllArr.bank_parallelization_method << "\n";
+              << bank_parallelization_method_to_string(
+                     AllArr.bank_parallelization_method)
+              << "\n";
     std::cerr << "Allowed methods are serial, bank_asio, bank_mpi\n";
     throw TerminalException{1};
   };
 
   try {
     vectface vf = get_vectface();
-    if (AllArr.bank_parallelization_method == "bank_mpi" and
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi and
         i_rank == proc_bank) {
       os << "Closed DataBankMpiServer" << std::endl;
       return;

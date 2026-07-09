@@ -1965,7 +1965,8 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   PolytopeInputInfo<TintGroup> info =
       ComputeInitialInfo<TintGroup, T, Tgroup>(EXTred, GRP, AllArr.dimEXT);
   auto get_vectface = [&]() -> vectface {
-    if (AllArr.bank_parallelization_method == "serial") {
+    if (AllArr.bank_parallelization_method ==
+        BankParallelizationMethod::serial) {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, os);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
@@ -1973,7 +1974,8 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
           os);
     }
 #ifndef WASM_PLATFORM
-    if (AllArr.bank_parallelization_method == "bank_asio") {
+    if (AllArr.bank_parallelization_method ==
+        BankParallelizationMethod::bank_asio) {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(

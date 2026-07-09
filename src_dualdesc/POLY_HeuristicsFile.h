@@ -100,7 +100,8 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   //
   std::string bank_parallelization_method =
       BlockDATA.get_string("bank_parallelization_method");
-  AllArr.bank_parallelization_method = bank_parallelization_method;
+  AllArr.bank_parallelization_method =
+      bank_parallelization_method_from_string(bank_parallelization_method);
   //
   SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, os);
   SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile",
