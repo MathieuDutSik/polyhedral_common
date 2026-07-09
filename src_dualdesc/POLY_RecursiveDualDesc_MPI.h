@@ -308,9 +308,9 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     os << "|HeuristicEvaluation|=" << time
        << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
-    int action = RPL.determine_action_database(ansChoiceCanonic);
+    DatabaseAction action = RPL.determine_action_database(ansChoiceCanonic);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
-    os << "|determine_action_database|=" << time << " action=" << action
+    os << "|determine_action_database|=" << time << " action=" << database_action_to_string(action)
        << "\n";
 #endif
     auto f_recompute = [&](CanonicStrategy const &method) -> void {
@@ -339,13 +339,13 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       os << "|DirectAppendDatabase|=" << time << "\n";
 #endif
     };
-    if (action == DATABASE_ACTION__SIMPLE_LOAD) {
+    if (action == DatabaseAction::simple_load) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "Before RPL.LoadDatabase()\n";
 #endif
       return RPL.LoadDatabase();
     }
-    if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
+    if (action == DatabaseAction::recompute_and_shuffle) {
       CanonicStrategy method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "Before f_recompute, method=" << canonic_strategy_to_string(method)
@@ -353,7 +353,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 #endif
       return f_recompute(method);
     }
-    if (action == DATABASE_ACTION__GUESS) {
+    if (action == DatabaseAction::guess) {
       vectface vf = RPL.get_runtime_testcase();
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|get_runtime_testcase|=" << time << "\n";
@@ -377,8 +377,8 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
         return f_recompute(method);
       }
     }
-    std::cerr << "Failed to find a matching entry for action=" << action
-              << "\n";
+    std::cerr << "Failed to find a matching entry for action="
+              << database_action_to_string(action) << "\n";
     throw TerminalException{1};
   };
   set_up();

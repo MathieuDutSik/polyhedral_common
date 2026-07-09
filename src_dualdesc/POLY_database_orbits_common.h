@@ -75,15 +75,15 @@ public:
       return vectface_reduction(vfo, nbRow);
     }
   }
-  int determine_action_database(std::string const &choice) {
+  DatabaseAction determine_action_database(std::string const &choice) {
     if (choice == "load")
-      return DATABASE_ACTION__SIMPLE_LOAD;
+      return DatabaseAction::simple_load;
     if (choice == "guess")
-      return DATABASE_ACTION__GUESS;
+      return DatabaseAction::guess;
     CanonicStrategy choice_i = bb.convert_string_method(choice);
     if (bb.canonic_method == choice_i)
-      return DATABASE_ACTION__SIMPLE_LOAD;
-    return DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE;
+      return DatabaseAction::simple_load;
+    return DatabaseAction::recompute_and_shuffle;
   }
   void FuncInsert(Face const &face) { bb.FuncInsert(face); }
   void FuncInsertPair(Face const &face) { bb.FuncInsertPair(face); }

@@ -75,10 +75,22 @@ inline std::string canonic_strategy_to_string(CanonicStrategy strategy) {
   return "unknown";
 }
 
-// Those constants express the choice for the database
-static const int DATABASE_ACTION__SIMPLE_LOAD = 0;
-static const int DATABASE_ACTION__GUESS = 1;
-static const int DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE = 2;
+// The action to take on the on-disk orbit database when resuming a run: load it
+// as-is, guess whether the stored canonicalization still matches, or recompute
+// and reshuffle it under the current canonicalization.
+enum class DatabaseAction { simple_load, guess, recompute_and_shuffle };
+
+inline std::string database_action_to_string(DatabaseAction action) {
+  switch (action) {
+  case DatabaseAction::simple_load:
+    return "simple_load";
+  case DatabaseAction::guess:
+    return "guess";
+  case DatabaseAction::recompute_and_shuffle:
+    return "recompute_and_shuffle";
+  }
+  return "unknown";
+}
 
 template <typename Tgroup_impl> struct TripleStore {
   using Tgroup = Tgroup_impl;
