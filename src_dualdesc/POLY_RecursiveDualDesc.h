@@ -170,6 +170,19 @@ inline BankSaveDecision bank_save_decision_from_string(std::string const &ans) {
   throw TerminalException{1};
 }
 
+// The decision produced by the CommThread heuristic (MPI only): whether to
+// launch a dedicated communication thread while computing the dual description.
+enum class CommThreadDecision { yes, no };
+
+inline CommThreadDecision comm_thread_decision_from_string(std::string const &ans) {
+  if (ans == "yes")
+    return CommThreadDecision::yes;
+  if (ans == "no")
+    return CommThreadDecision::no;
+  std::cerr << "RDD: unknown comm thread decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
 template <typename Tgroup>
 Tgroup StabilizerUsingOrbSize_OnSets(
     Tgroup const &GRP, std::pair<Face, typename Tgroup::Tint> const &pair) {

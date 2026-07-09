@@ -191,8 +191,9 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
       ComputeInitialInfo<Tint>(df.FF.EXT_face, df.Stab, AllArr.dimEXT);
   SplittingDecision split_decision = splitting_decision_from_string(
       dual_desc_heuristic_evaluation(AllArr.Splitting, info));
-  std::string ansCommThread = dual_desc_heuristic_evaluation(AllArr.CommThread, info);
-  bool launch_comm_thread = (ansCommThread == "yes");
+  CommThreadDecision comm_thread_decision = comm_thread_decision_from_string(
+      dual_desc_heuristic_evaluation(AllArr.CommThread, info));
+  bool launch_comm_thread = (comm_thread_decision == CommThreadDecision::yes);
   std::thread comm_thread;
   std::atomic_bool done = false;
   auto start_comm_thread = [&]() -> void {
