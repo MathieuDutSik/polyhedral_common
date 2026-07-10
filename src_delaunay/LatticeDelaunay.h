@@ -691,6 +691,12 @@ ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
     MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
         GramMat, eData.solver, eData.ShvGraverBasis, EXT_T, eOrbB, os);
     MyMatrix<T> EXTadj_T = UniversalMatrixConversion<T,Tint>(EXTadj);
+#ifdef SANITY_CHECK_DELAUNAY_ENUMERATION
+    if (RankMat(EXTadj_T) != GramMat.rows() + 1) {
+      std::cerr << "DEL_ENUM: Incorrect rank of matrix EXTadj_T\n";
+      throw TerminalException{1};
+    }
+#endif
     Delaunay_AdjI<T> eAdj{eOrbB, EXTadj_T};
     ListAdj.push_back(eAdj);
   }

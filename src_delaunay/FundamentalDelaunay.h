@@ -116,6 +116,13 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
       os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|="
          << RetEXT.rows() << " vertices\n";
 #endif
+#ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
+      if (RankMat(RetEXT) != dim + 1) {
+        std::cerr << "DEL: FindDelaunayPolytope (initial) RetEXT rank="
+                  << RankMat(RetEXT) << " expected " << (dim + 1) << "\n";
+        throw TerminalException{1};
+      }
+#endif
       return RetEXT;
     } else {
       for (int iVect = 0; iVect < nbVectTot; iVect++) {
@@ -479,6 +486,12 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
     for (int i = 0; i < dim; i++)
       RetEXT(iVect, i + 1) = reply.ListVect(iVect, i);
   }
+#ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
+  if (RankMat(RetEXT) != dim+1) {
+    std::cerr << "DEL: RetEXT should be of the right rank\n";
+    throw TerminalException{1};
+  }
+#endif
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
   os << "|DEL: FindAdjacentDelaunayPolytope|=" << time << "\n";
 #endif
