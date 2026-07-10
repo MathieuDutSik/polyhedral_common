@@ -439,11 +439,10 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
           n_error += 1;
           std::cerr << "DEL: Incorrect rank of output EXT_adj_aff\n";
         }
-        std::cerr << "DEL: |EXT|=" << EXT.rows() << " |eInc|=" << eInc.count() << " / " << eInc.size() << "\n";
         for (int i=0; i<EXT.rows(); i++) {
           MyVector<T> V(dim);
           for (int iCol=0; iCol<dim; iCol++) {
-            V(i) = EXT(i, iCol+1);
+            V(iCol) = EXT(i, iCol+1);
           }
           if (eInc[i] == 1) {
             if (!setEXT_adj.contains(V)) {
@@ -458,6 +457,8 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
           }
         }
         if (n_error > 0) {
+          std::cerr << "DEL: |EXT|=" << EXT.rows() << " / " << EXT.cols()
+                    << " |eInc|=" << eInc.count() << " / " << eInc.size() << "\n";
           std::cerr << "DEL: There has been n_error=" << n_error << "\n";
           throw TerminalException{1};
         }
