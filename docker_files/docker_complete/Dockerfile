@@ -32,6 +32,19 @@ RUN apt-get install -y wget emacs joe
 RUN apt-get install -y g++ gcc gfortran clang
 RUN apt-get install -y git cmake
 
+# Replace GNU ld with mold. Linking heavy MPI executables (e.g.
+# LATT_MPI_Lattice_IsoDelaunayDomain) with -g -O3 + static Boost.MPI + bliss
+# + nauty peaks at several GB per link — enough that GNU ld gets killed by
+# the OOM killer inside Docker Desktop's default 8 GB VM. mold is a drop-in
+# replacement that uses 2-5x less memory (and is also faster). dpkg-divert
+# then a symlink is the standard way to override the system linker for both
+# `ld` and `ld.bfd` codepaths in gcc's collect2.
+RUN apt-get install -y mold \
+ && dpkg-divert --divert /usr/bin/ld.orig --rename /usr/bin/ld \
+ && ln -sf /usr/bin/mold /usr/bin/ld \
+ && dpkg-divert --divert /usr/bin/ld.bfd.orig --rename /usr/bin/ld.bfd \
+ && ln -sf /usr/bin/mold /usr/bin/ld.bfd
+
 
 # openmpi
 RUN apt-get install -y openmpi-bin libopenmpi-dev

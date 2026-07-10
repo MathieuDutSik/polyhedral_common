@@ -420,8 +420,50 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
       for (int i = 0; i < dim; i++)
         eCenter(i) = eCP.eCent(i + 1);
       resultCVP<T, Tint> reply = solver.nearest_vectors(eCenter);
-      if (reply.TheNorm == eCP.SquareRadius)
+      if (reply.TheNorm == eCP.SquareRadius) {
+#ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
+        size_t n_error = 0;
+        std::unordered_set<MyVector<T>> setEXT_adj;
+        int n_row = reply.ListVect.rows();
+        MyMatrix<T> EXT_adj_aff(n_row, dim + 1);
+        for (int iRow=0; iRow<n_row; iRow++) {
+          MyVector<Tint> v_i = GetMatrixRow(reply.ListVect, iRow);
+          MyVector<T> v = UniversalVectorConversion<T,Tint>(v_i);
+          EXT_adj_aff(iRow, 0) = 1;
+          for (int i=0; i<dim; i++) {
+            EXT_adj_aff(iRow, i+1) = v(i);
+          }
+          setEXT_adj.insert(v);
+        }
+        if (RankMat(EXT_adj_aff) != dim + 1) {
+          n_error += 1;
+          std::cerr << "DEL: Incorrect rank of output EXT_adj_aff\n";
+        }
+        std::cerr << "DEL: |EXT|=" << EXT.rows() << " |eInc|=" << eInc.count() << " / " << eInc.size() << "\n";
+        for (int i=0; i<EXT.rows(); i++) {
+          MyVector<T> V(dim);
+          for (int iCol=0; iCol<dim; iCol++) {
+            V(i) = EXT(i, iCol+1);
+          }
+          if (eInc[i] == 1) {
+            if (!setEXT_adj.contains(V)) {
+              n_error += 1;
+              std::cerr << "DEL: Failed to contain a vertex from eInc\n";
+            }
+          } else {
+            if (setEXT_adj.contains(V)) {
+              n_error += 1;
+              std::cerr << "DEL: Containing a vertex out of eInc\n";
+            }
+          }
+        }
+        if (n_error > 0) {
+          std::cerr << "DEL: There has been n_error=" << n_error << "\n";
+          throw TerminalException{1};
+        }
+#endif
         return reply;
+      }
       for (int i = 0; i < dim; i++)
         SelectedVertex(i) =
             UniversalScalarConversion<T, Tint>(reply.ListVect(0, i));
