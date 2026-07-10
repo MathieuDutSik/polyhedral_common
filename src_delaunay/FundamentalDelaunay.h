@@ -42,9 +42,10 @@ MyVector<T> FuncRandomDirection(int const &n, int const &siz) {
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
-                                    CVPSolver<T, Tint> const& solver,
-                                    std::ostream &os) {
+std::optional<MyMatrix<Tint>> FindDelaunayPolytope_direction(CVPSolver<T, Tint> const& solver,
+                                                             MyVector<T> const& TheRandomDirection,
+                                                             std::ostream &os) {
+  MyMatrix<T> const& GramMat = solver.GramMat;
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int dim = GramMat.rows();
   std::vector<MyVector<T>> ListIneq_vect;
@@ -68,7 +69,6 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     V2(i) = -1;
     ListIneq_vect.push_back(DefiningInequality(V2));
   }
-  MyVector<T> TheRandomDirection = FuncRandomDirection<T>(dim + 1, 10);
   while (true) {
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     MicrosecondTime time;
@@ -92,15 +92,9 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     }
 #endif
     MyVector<T> eVect = eSol.DirectSolution;
-#ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
-    // The LP optimum must be a vertex of the polyhedron; otherwise it lies on a
-    // positive-dimensional face and the CVP centered there yields a degenerate
-    // (non-full-dimensional) Delaunay polytope.
     if (!IsVertexOfPolyhedron(ListIneq, eVect)) {
-      std::cerr << "DEL: the LP solution is not a vertex of the polyhedron\n";
-      throw TerminalException{1};
+      return {};
     }
-#endif
     T TheNorm = EvaluationQuadForm<T, T>(GramMat, eVect);
     // There has been an attempt to accelerate the computation by stopping
     // when we found a vector of norm lower than TheNorm. This turn out
@@ -147,6 +141,29 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
     os << "DEL: |ListIneq_vect|=" << ListIneq_vect.size() << "\n";
 #endif
+  }
+
+
+}
+
+
+
+
+template <typename T, typename Tint>
+MyMatrix<Tint> FindDelaunayPolytope(CVPSolver<T, Tint> const& solver,
+                                    std::ostream &os) {
+  int dim = solver.GramMat.rows();
+  int N = 3;
+  while (true) {
+    MyVector<T> TheRandomDirection = FuncRandomDirection<T>(dim + 1, N);
+    std::optional<MyMatrix<Tint>> opt = FindDelaunayPolytope_direction<T,Tint>(solver, TheRandomDirection, os);
+    if (opt) {
+#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
+      os << "DEL: FindDelaunayPolytope, find a Delaunay at N=" << N << "\n";
+#endif
+      return *opt;
+    }
+    N += 1;
   }
 }
 
@@ -359,12 +376,13 @@ public:
 
 template <typename T, typename Tint>
 MyMatrix<Tint> FindAdjacentDelaunayPolytope(
-    MyMatrix<T> const &GramMat, CVPSolver<T, Tint> const& solver,
+    CVPSolver<T, Tint> const& solver,
     MyMatrix<Tint> const &ShvGraverBasis, MyMatrix<T> const &EXT,
     Face const &eInc, std::ostream &os) {
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
   MicrosecondTime time;
 #endif
+  MyMatrix<T> const& GramMat = solver.GramMat;
   int dim = GramMat.rows();
   MyVector<T> TheFac = FindFacetInequality(EXT, eInc);
   auto get_iColFind = [&]() -> int {
@@ -508,13 +526,12 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
-                                           CVPSolver<T, Tint> const& solver,
+MyMatrix<Tint> FindDelaunayPolytope_random(CVPSolver<T, Tint> const& solver,
                                            MyMatrix<Tint> const &ShvGraverBasis,
                                            int const &target_ext, int max_iter,
                                            std::string method,
                                            std::ostream &os) {
-  MyMatrix<Tint> EXTret = FindDelaunayPolytope<T, Tint>(GramMat, solver, os);
+  MyMatrix<Tint> EXTret = FindDelaunayPolytope<T, Tint>(solver, os);
   for (int iter = 0; iter < max_iter; iter++) {
     MyMatrix<T> EXTret_T = UniversalMatrixConversion<T, Tint>(EXTret);
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
@@ -530,7 +547,7 @@ MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
       int n_max = std::numeric_limits<int>::max();
       for (auto &eFace : vf) {
         MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
-            GramMat, solver, ShvGraverBasis, EXTret_T, eFace, os);
+            solver, ShvGraverBasis, EXTret_T, eFace, os);
         int nbRow = EXTadj.rows();
         if (nbRow < n_max) {
           EXTwork = EXTadj;

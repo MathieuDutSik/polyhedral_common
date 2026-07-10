@@ -669,10 +669,9 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<T>>>
 ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
                            MyMatrix<T> const &EXT_T) {
   std::ostream &os = eData.rddo.os;
-  MyMatrix<T> const& GramMat = eData.solver.GramMat;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: ComputeGroupAndAdjacencies, GramMat=\n";
-  WriteMatrix(os, GramMat);
+  WriteMatrix(os, eData.solver.GramMat);
   os << "DEL_ENUM: ComputeGroupAndAdjacencies, EXT_T=\n";
   WriteMatrix(os, EXT_T);
   os << "DEL_ENUM: ComputeGroupAndAdjacencies rnk(EXT_T)=" << RankMat(EXT_T) << "\n";
@@ -689,10 +688,10 @@ ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
   std::vector<Delaunay_AdjI<T>> ListAdj;
   for (auto &eOrbB : TheOutput) {
     MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
-        GramMat, eData.solver, eData.ShvGraverBasis, EXT_T, eOrbB, os);
+        eData.solver, eData.ShvGraverBasis, EXT_T, eOrbB, os);
     MyMatrix<T> EXTadj_T = UniversalMatrixConversion<T,Tint>(EXTadj);
 #ifdef SANITY_CHECK_DELAUNAY_ENUMERATION
-    if (RankMat(EXTadj_T) != GramMat.rows() + 1) {
+    if (RankMat(EXTadj_T) != eData.solver.GramMat.rows() + 1) {
       std::cerr << "DEL_ENUM: Incorrect rank of matrix EXTadj_T\n";
       throw TerminalException{1};
     }
@@ -729,21 +728,21 @@ FindDelaunayPolytopeExtended(DataLattice<T, Tint, Tgroup> &data) {
   std::string const &choice = data.choice_initial;
   std::ostream &os = data.rddo.os;
   if (choice == "direct") {
-    return FindDelaunayPolytope<T, Tint>(GramMat, solver, os);
+    return FindDelaunayPolytope<T, Tint>(solver, os);
   }
   if (choice == "simple_iter") {
     int target_ext = 2 * GramMat.rows();
     int max_iter = 10;
     std::string method = "lp_cdd";
     return FindDelaunayPolytope_random<T, Tint>(
-        GramMat, solver, ShvGraverBasis, target_ext, max_iter, method, os);
+        solver, ShvGraverBasis, target_ext, max_iter, method, os);
   }
   if (choice == "sampling") {
     int target_ext = 0;
     int max_iter = std::numeric_limits<int>::max();
     std::string method = "sampling";
     return FindDelaunayPolytope_random<T, Tint>(
-        GramMat, solver, ShvGraverBasis, target_ext, max_iter, method, os);
+        solver, ShvGraverBasis, target_ext, max_iter, method, os);
   }
   std::cerr
       << "Failed to find a relevant method for FindDelaunayPolytopeExtended\n";

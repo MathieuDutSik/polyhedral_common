@@ -13,8 +13,7 @@ void process(std::string const &FileM, std::string const &OutFormat,
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileM);
   HumanTime time_total;
   CVPSolver<T, Tint> solver(GramMat, std::cerr);
-  MyMatrix<Tint> EXT =
-      FindDelaunayPolytope<T, Tint>(GramMat, solver, std::cerr);
+  MyMatrix<Tint> EXT = FindDelaunayPolytope<T, Tint>(solver, std::cerr);
   std::cerr << "|FindDelaunayPolytope|=" << time_total << "\n";
   if (OutFormat == "GAP") {
     os << "return ";
