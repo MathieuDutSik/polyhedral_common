@@ -155,6 +155,31 @@ MyVector<T> GetDirectSolutionExt(LpSolution<T> const &eSol) {
   return V;
 }
 
+// Whether a point is a vertex of the polyhedron { x : ListIneq * (1,x) >= 0 }.
+// A point is a vertex iff the inequalities tight at it (ListIneq(r,.) . (1,x) = 0)
+// have rank dim, i.e. their gradients span the ambient space and pin the point
+// down. Otherwise the point lies on a positive-dimensional face. ListIneq rows
+// are (constant, coefficients) of length dim+1; eVect has length dim.
+template <typename T>
+bool IsVertexOfPolyhedron(MyMatrix<T> const &ListIneq, MyVector<T> const &eVect) {
+  int dim = eVect.size();
+  std::vector<MyVector<T>> tight;
+  for (int r = 0; r < ListIneq.rows(); r++) {
+    T val = ListIneq(r, 0);
+    for (int i = 0; i < dim; i++)
+      val += ListIneq(r, i + 1) * eVect(i);
+    if (val == 0) {
+      MyVector<T> grad(dim);
+      for (int i = 0; i < dim; i++)
+        grad(i) = ListIneq(r, i + 1);
+      tight.push_back(grad);
+    }
+  }
+  if (tight.empty())
+    return dim == 0;
+  return RankMat(MatrixFromVectorFamily(tight)) == dim;
+}
+
 // clang-format off
 #endif  // SRC_POLY_POLY_LINEARPROGRAMMINGFUND_H_
 // clang-format on

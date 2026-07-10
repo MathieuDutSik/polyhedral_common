@@ -92,6 +92,15 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     }
 #endif
     MyVector<T> eVect = eSol.DirectSolution;
+#ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
+    // The LP optimum must be a vertex of the polyhedron; otherwise it lies on a
+    // positive-dimensional face and the CVP centered there yields a degenerate
+    // (non-full-dimensional) Delaunay polytope.
+    if (!IsVertexOfPolyhedron(ListIneq, eVect)) {
+      std::cerr << "DEL: the LP solution is not a vertex of the polyhedron\n";
+      throw TerminalException{1};
+    }
+#endif
     T TheNorm = EvaluationQuadForm<T, T>(GramMat, eVect);
     // There has been an attempt to accelerate the computation by stopping
     // when we found a vector of norm lower than TheNorm. This turn out
