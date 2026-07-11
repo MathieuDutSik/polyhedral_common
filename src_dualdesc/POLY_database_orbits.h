@@ -123,7 +123,7 @@ public:
     eFileMethod = MainPrefix + ".method";
     CanonicStrategy val = read_method(eFileMethod);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: read_method val=" << canonic_strategy_to_string(val) << "\n";
+    os << "RDD: read_method val=" << std::to_string(val) << "\n";
 #endif
     bb.canonic_method = val;
     if (SavingTrigger && !is_database_present()) {

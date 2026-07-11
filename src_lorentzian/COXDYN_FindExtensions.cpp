@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     std::vector<MyVector<T>> LVect = FindDiagramExtensions(M, DS);
     for (auto &eV : LVect) {
       MyMatrix<T> Mext = ExtendMatrix(M, eV);
-      std::string stro = coxdyn_matrix_to_string(Mext);
+      std::string stro = std::to_string(Mext);
       LOut.push_back(stro);
     }
     size_t len = LVect.size();

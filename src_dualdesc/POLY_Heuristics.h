@@ -70,7 +70,8 @@ inline OrbitSplitField parse_heuristic_field(std::string const &name,
   throw TerminalException{1};
 }
 
-inline std::string heuristic_field_to_string(PolytopeField f) {
+namespace std {
+inline std::string to_string(PolytopeField f) {
   switch (f) {
   case PolytopeField::groupsize:
     return "groupsize";
@@ -87,8 +88,10 @@ inline std::string heuristic_field_to_string(PolytopeField f) {
   }
   return "unknown";
 }
+}  // namespace std
 
-inline std::string heuristic_field_to_string(OrbitSplitField f) {
+namespace std {
+inline std::string to_string(OrbitSplitField f) {
   switch (f) {
   case OrbitSplitField::groupsize_big:
     return "groupsize_big";
@@ -101,6 +104,7 @@ inline std::string heuristic_field_to_string(OrbitSplitField f) {
   }
   return "unknown";
 }
+}  // namespace std
 
 // --- The input structs, one per heuristic input kind ---
 // The group sizes stay full precision, the combinatorial quantities are plain
@@ -132,12 +136,12 @@ template <typename TintGroup> struct PolytopeInputInfo {
   // Named-map view of the typed info, consumed by the map-based heuristic
   // layers: the shared, disk-persisted Thompson learner (intrinsically keyed by
   // field name) and the generic HeuristicEvaluation. The names come from
-  // heuristic_field_to_string, so there is a single source of truth and no
+  // to_string, so there is a single source of truth and no
   // hand-written string literals.
   std::map<std::string, TintGroup> named_map() const {
     std::map<std::string, TintGroup> m;
     for (PolytopeField f : polytope_all_fields)
-      m[heuristic_field_to_string(f)] = get_field(f);
+      m[std::to_string(f)] = get_field(f);
     return m;
   }
 };
@@ -251,7 +255,7 @@ std::ostream &operator<<(std::ostream &os,
         heu.tests[i];
     os << "   i=" << i << "/" << len;
     for (auto const &eSingCond : eFullCond.conditions)
-      os << " (" << heuristic_field_to_string(eSingCond.field) << " "
+      os << " (" << std::to_string(eSingCond.field) << " "
          << static_cast<int>(eSingCond.op) << " " << eSingCond.value << ")";
     os << " => " << eFullCond.result << "\n";
   }
