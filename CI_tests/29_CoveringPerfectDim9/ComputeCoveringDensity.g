@@ -4,12 +4,12 @@ Print("Beginning ComputeCoveringDensity\n");
 
 
 TestComputation:=function(eRec)
-    local TmpDir, FileIn, FileNml, FileOut, output, strOut, eProg, TheCommand, U, is_correct, UseMpi;
+    local result;
     result:=get_lattice_covering(eRec.eMat);
     if is_error(result) then
         return false;
     fi;
-    Print("TheCov=", U.TheCov, "  det=", U.TheDet, "  CovDensity=", U.CovDensity, "\n");
+    Print("TheCov=", result.TheCov, "  det=", result.TheDet, "  CovDensity=", result.CovDensity, "\n");
     return true;
 end;
 
@@ -25,7 +25,7 @@ od;
 
 
 FullTest:=function()
-    local n_error, iRec, eRec, RecReply;
+    local n_error, iRec, eRec, reply;
     n_error:=0;
     iRec:=0;
     for eRec in ListRec
