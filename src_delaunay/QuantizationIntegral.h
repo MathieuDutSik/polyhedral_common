@@ -201,6 +201,33 @@ struct QuantizationComputer {
     return v;
   }
 
+  // Realize a combinatorial (jet-)equivalence eElt between two augmented cell
+  // configurations as an explicit linear map. FindTransformation over jets
+  // divides by a zero divisor whenever the t = 0 configuration is rank-deficient
+  // -- a cell vertex row that only becomes independent for t > 0. But such a map
+  // is always a lattice (auto/iso)morphism: integral and t-independent. It maps
+  // each Taylor level of the jet to the same level, so it maps the configuration
+  // evaluated at any concrete t identically. Evaluate at the interior reference
+  // point t0 = tmax/2 -- where the metric Gram(t0) is non-degenerate and the
+  // configuration is full rank -- and solve there. The unique integral map
+  // returned is the correct realization at every order (the constant term t = 0
+  // is NOT usable: that is precisely the rank-deficient point). For an ordinary
+  // scalar T, eval_at ignores t0 and this reproduces FindTransformation.
+  MyMatrix<T> find_transformation_ref(MyMatrix<T> const &X1,
+                                      MyMatrix<T> const &X2,
+                                      Telt const &eElt) const {
+    using Tc = std::decay_t<decltype(constant_term(std::declval<T const &>()))>;
+    auto to_ref = [&](MyMatrix<T> const &X) -> MyMatrix<Tc> {
+      MyMatrix<Tc> Xe(X.rows(), X.cols());
+      for (int i = 0; i < X.rows(); i++)
+        for (int j = 0; j < X.cols(); j++)
+          Xe(i, j) = eval_at(X(i, j), t0_triang);
+      return Xe;
+    };
+    MyMatrix<Tc> Lc = FindTransformation<Tc, Telt>(to_ref(X1), to_ref(X2), eElt);
+    return UniversalMatrixConversion<T, Tc>(Lc);
+  }
+
   // FuncAutom(EXT, center): affine automorphisms of EXT fixing the marked
   // center.
   MatrixGroupInfo func_autom_center(MyMatrix<T> const &EXT,
@@ -238,7 +265,7 @@ struct QuantizationComputer {
 #ifdef DEBUG_QUANTIZATION_INTEGRAL
       os << "QI: func_autom_center, Before FindTransformation\n";
 #endif
-      MyMatrix<T> L = FindTransformation<T, Telt>(EXText, EXText, eGen);
+      MyMatrix<T> L = find_transformation_ref(EXText, EXText, eGen);
 #ifdef DEBUG_QUANTIZATION_INTEGRAL
       os << "QI: func_autom_center, After FindTransformation\n";
 #endif
@@ -300,7 +327,7 @@ struct QuantizationComputer {
 #ifdef DEBUG_QUANTIZATION_INTEGRAL
     os << "QI: func_equiv_center, Before FindTransformation\n";
 #endif
-    MyMatrix<T> MatEquiv = FindTransformation<T, Telt>(EXText1, EXText2, eElt);
+    MyMatrix<T> MatEquiv = find_transformation_ref(EXText1, EXText2, eElt);
 #ifdef DEBUG_QUANTIZATION_INTEGRAL
     os << "QI: func_equiv_center, After FindTransformation\n";
 #endif
@@ -386,12 +413,20 @@ struct QuantizationComputer {
     for (int iVert = 0; iVert < nbVert; iVert++)
       for (int i = 0; i < n; i++)
         SpaceBas(iVert, i) = EXT(iVert, i + 1) - EXT(0, i + 1);
-    // The Gram-orthogonal complement of the cell's affine span. A field basis
-    // (NullspaceMat, jet-able) is enough; the integer/primitive basis of the old
-    // NullspaceIntMat is not needed and is not jet-able. SpaceBas is already
-    // integer (differences of integer vertices), so no fraction clearing.
-    MyMatrix<T> Prod = GramMat * SpaceBas.transpose();
-    MyMatrix<T> NSP = NullspaceMat(Prod);
+    // The Gram-orthogonal complement of the cell's affine span, { x : x^T G s = 0
+    // for all s in span(SpaceBas) }. Rather than NullspaceMat(G * SpaceBas^T) --
+    // whose row reduction, over jets, divides by a zero-divisor pivot wherever
+    // the t = 0 metric makes the reduced product degenerate -- we use the
+    // identity x _|__G span(S)  <=>  G^T x _|__I span(S), i.e.
+    //   NSP = NullspaceTrMat(SpaceBas) * G^{-1}.
+    // NullspaceTrMat(SpaceBas) is the ordinary (identity) orthogonal complement
+    // of the span; SpaceBas is t-independent (differences of the cell's fixed
+    // vertices), so this nullspace is over constant jets and never hits a
+    // zero divisor. Inverse(GramMat) is safe because the constant term of GramMat
+    // is Q, which is invertible. The two together give the same jet-valued
+    // Gram-orthogonal complement, division-free.
+    MyMatrix<T> Ncomp = NullspaceTrMat(SpaceBas);
+    MyMatrix<T> NSP = Ncomp * Inverse(GramMat);
     int dimNSP = NSP.rows();
     MyMatrix<T> TheBasis(1 + dimNSP, n + 1);
     for (int i = 0; i < n + 1; i++)
