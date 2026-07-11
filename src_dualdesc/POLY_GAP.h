@@ -8,30 +8,21 @@
 
 namespace datagap {
 
-static const int int_scalar = 1;
-static const int int_string = 2;
-static const int int_permutation = 3;
-static const int int_group = 4;
-static const int int_list = 5;
-static const int int_record = 6;
+// The kind of GAP object a DataGAP holds; selects which of the payload members
+// below is meaningful.
+enum class GapObjectNature { scalar, string, permutation, group, list, record };
 
 template <typename T, typename Telt> struct DataGAP {
-  // 1: for scalar value
-  // 2: for string
-  // 3: for permutation
-  // 4: for Group
-  // 5: for List
-  // 6: for record
-  int Nature;
-  // 1: value
+  GapObjectNature Nature;
+  // scalar: value
   T scalar;
-  // 2: for a string
+  // string: for a string
   std::string string;
-  // 3: permutation
+  // permutation
   Telt permutation;
-  // 4, 5: List of entries, which applies for group as well.
+  // group, list: List of entries, which applies for group as well.
   std::vector<DataGAP<T, Telt>> ListEnt;
-  // 5: The entries of record
+  // record: The entries of record
   std::vector<std::pair<std::string, DataGAP<T, Telt>>> ListRec;
 };
 
@@ -81,7 +72,7 @@ DataGAP<T, Telt> ParseGAPString(std::string const &full_str) {
       throw TerminalException{1};
     }
     std::string str = std::string(full_str.substr(1, n_char - 2));
-    return {int_string, {}, str, {}, {}, {}};
+    return {GapObjectNature::string, {}, str, {}, {}, {}};
   }
   // Case 5: a list
   if (full_str.substr(0, 1) == "[") {
@@ -95,7 +86,7 @@ DataGAP<T, Telt> ParseGAPString(std::string const &full_str) {
     for (auto &estr : LStr) {
       LVal.push_back(ParseGAPString<T, Telt>(estr));
     }
-    return {int_list, {}, {}, {}, LVal, {}};
+    return {GapObjectNature::list, {}, {}, {}, LVal, {}};
   }
   // Case 4: a group
   if (full_str.substr(0, 1) == "G") {
@@ -113,7 +104,7 @@ DataGAP<T, Telt> ParseGAPString(std::string const &full_str) {
     for (auto &estr : LStr) {
       LVal.push_back(ParseGAPString<T, Telt>(estr));
     }
-    return {int_group, {}, {}, {}, LVal, {}};
+    return {GapObjectNature::group, {}, {}, {}, LVal, {}};
   }
   // Case 6: the record
   if (full_str.substr(0, 1) == "r") {
@@ -135,16 +126,16 @@ DataGAP<T, Telt> ParseGAPString(std::string const &full_str) {
       DataGAP<T, Telt> eEnt = ParseGAPString<T, Telt>(sstr);
       LVal.push_back({name, eEnt});
     }
-    return {int_record, {}, {}, {}, {}, LVal};
+    return {GapObjectNature::record, {}, {}, {}, {}, LVal};
   }
   // Case 3: the permutation case
   if (full_str.substr(0, 1) == "(") {
     Telt g(full_str);
-    return {int_permutation, {}, {}, g, {}, {}};
+    return {GapObjectNature::permutation, {}, {}, g, {}, {}};
   }
   // Case 1: the element
   T scalar = ParseScalar<T>(std::string(full_str));
-  return {int_scalar, scalar, {}, {}, {}, {}};
+  return {GapObjectNature::scalar, scalar, {}, {}, {}, {}};
 }
 
 template <typename T, typename Telt>
@@ -188,7 +179,7 @@ DataGAP<T, Telt> ParseGAPFile(std::string const &eFile) {
 
 template <typename T, typename Telt>
 T ConvertGAPread_ScalarT(DataGAP<T, Telt> const &data) {
-  if (data.Nature != int_scalar) {
+  if (data.Nature != GapObjectNature::scalar) {
     std::cerr << "It should be a scalar for effective conversion to scalar\n";
     throw TerminalException{1};
   }
@@ -197,7 +188,7 @@ T ConvertGAPread_ScalarT(DataGAP<T, Telt> const &data) {
 
 template <typename T, typename Telt>
 MyMatrix<T> ConvertGAPread_MyVectorT(DataGAP<T, Telt> const &data) {
-  if (data.Nature != int_list) {
+  if (data.Nature != GapObjectNature::list) {
     std::cerr << "It should be a list for effective conversion to MyVector\n";
     throw TerminalException{1};
   }
@@ -213,7 +204,7 @@ MyMatrix<T> ConvertGAPread_MyVectorT(DataGAP<T, Telt> const &data) {
 
 template <typename T, typename Telt>
 MyMatrix<T> ConvertGAPread_MyMatrixT(DataGAP<T, Telt> const &data) {
-  if (data.Nature != int_list) {
+  if (data.Nature != GapObjectNature::list) {
     std::cerr << "It should be a list for effective conversion to MyMatrix\n";
     throw TerminalException{1};
   }
@@ -225,7 +216,7 @@ MyMatrix<T> ConvertGAPread_MyMatrixT(DataGAP<T, Telt> const &data) {
 
 template <typename T, typename Telt>
 Telt ConvertGAPread_Permutation(DataGAP<T, Telt> const &data) {
-  if (data.Nature != int_permutation) {
+  if (data.Nature != GapObjectNature::permutation) {
     std::cerr << "It should be a permutation for effective conversion to "
                  "permutation\n";
     throw TerminalException{1};
@@ -238,7 +229,7 @@ Tgroup
 ConvertGAPread_PermutationGroup(DataGAP<T, typename Tgroup::Telt> const &data,
                                 int const &n) {
   using Telt = typename Tgroup::Telt;
-  if (data.Nature != int_group) {
+  if (data.Nature != GapObjectNature::group) {
     std::cerr << "It should be a group for effective conversion to MyMatrix\n";
     throw TerminalException{1};
   }
@@ -253,7 +244,7 @@ ConvertGAPread_PermutationGroup(DataGAP<T, typename Tgroup::Telt> const &data,
 
 template <typename T, typename Telt>
 Face ConvertGAPread_Face(DataGAP<T, Telt> const &data, int const &n) {
-  if (data.Nature != int_list) {
+  if (data.Nature != GapObjectNature::list) {
     std::cerr << "It should be a list for effective conversion to face\n";
     throw TerminalException{1};
   }
@@ -268,7 +259,7 @@ Face ConvertGAPread_Face(DataGAP<T, Telt> const &data, int const &n) {
 
 template <typename T, typename Telt>
 vectface ConvertGAPread_ListFace(DataGAP<T, Telt> const &data, int const &n) {
-  if (data.Nature != int_list) {
+  if (data.Nature != GapObjectNature::list) {
     std::cerr << "It should be a list for effective conversion to list(face)\n";
     throw TerminalException{1};
   }

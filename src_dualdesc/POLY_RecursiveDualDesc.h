@@ -70,7 +70,118 @@
 // #define ROBIN_HOOD_HASH
 #define SUBSET_HASH
 
+// The splitting decision produced by the Splitting heuristic: whether to run
+// the recursive adjacency decomposition on the polytope ("split") or to call
+// the direct dual description ("nosplit").
+enum class SplittingDecision { split, nosplit };
 
+inline SplittingDecision splitting_decision_from_string(std::string const &ans) {
+  if (ans == "split")
+    return SplittingDecision::split;
+  if (ans == "nosplit")
+    return SplittingDecision::nosplit;
+  std::cerr << "RDD: unknown splitting decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
+// The decision produced by the AdditionalSymmetry heuristic: whether to look
+// for additional symmetries (the full stabilizer of the weight matrix, "yes")
+// or to reuse the input group as-is ("no").
+enum class AdditionalSymmetryDecision { yes, no };
+
+inline std::string
+additional_symmetry_decision_to_string(AdditionalSymmetryDecision dec) {
+  switch (dec) {
+  case AdditionalSymmetryDecision::yes:
+    return "yes";
+  case AdditionalSymmetryDecision::no:
+    return "no";
+  }
+  return "unknown";
+}
+
+inline AdditionalSymmetryDecision
+additional_symmetry_decision_from_string(std::string const &ans) {
+  if (ans == "yes")
+    return AdditionalSymmetryDecision::yes;
+  if (ans == "no")
+    return AdditionalSymmetryDecision::no;
+  std::cerr << "RDD: unknown additional symmetry decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
+// The database implementation chosen by the ChosenDatabase heuristic:
+// "canonic" (store canonical images) or "repr" (test with representative
+// action).
+enum class DatabaseKind { canonic, repr };
+
+inline std::string database_kind_to_string(DatabaseKind kind) {
+  switch (kind) {
+  case DatabaseKind::canonic:
+    return "canonic";
+  case DatabaseKind::repr:
+    return "repr";
+  }
+  return "unknown";
+}
+
+inline DatabaseKind database_kind_from_string(std::string const &ans) {
+  if (ans == "canonic")
+    return DatabaseKind::canonic;
+  if (ans == "repr")
+    return DatabaseKind::repr;
+  std::cerr << "RDD: unknown chosen database ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
+// The decision produced by the CheckDatabaseBank heuristic: whether to query
+// the bank of already computed dual descriptions before recomputing.
+enum class BankCheckDecision { yes, no };
+
+inline BankCheckDecision bank_check_decision_from_string(std::string const &ans) {
+  if (ans == "yes")
+    return BankCheckDecision::yes;
+  if (ans == "no")
+    return BankCheckDecision::no;
+  std::cerr << "RDD: unknown bank check decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
+// The decision produced by the BankSave heuristic: whether to write the
+// computed dual description into the bank for later reuse.
+enum class BankSaveDecision { yes, no };
+
+inline std::string bank_save_decision_to_string(BankSaveDecision dec) {
+  switch (dec) {
+  case BankSaveDecision::yes:
+    return "yes";
+  case BankSaveDecision::no:
+    return "no";
+  }
+  return "unknown";
+}
+
+inline BankSaveDecision bank_save_decision_from_string(std::string const &ans) {
+  if (ans == "yes")
+    return BankSaveDecision::yes;
+  if (ans == "no")
+    return BankSaveDecision::no;
+  std::cerr << "RDD: unknown bank save decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
+// The decision produced by the CommThread heuristic (MPI only): whether to
+// launch a dedicated communication thread while computing the dual description.
+enum class CommThreadDecision { yes, no };
+
+inline CommThreadDecision comm_thread_decision_from_string(std::string const &ans) {
+  if (ans == "yes")
+    return CommThreadDecision::yes;
+  if (ans == "no")
+    return CommThreadDecision::no;
+  std::cerr << "RDD: unknown comm thread decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
 
 template <typename Tgroup>
 Tgroup StabilizerUsingOrbSize_OnSets(
@@ -112,8 +223,10 @@ public:
   int nbCol;
   size_t delta;
   FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
-  int the_method; // we use an indifferent name because we also have it for
-                  // DatabaseRepr
+  // The canonicalization strategy. DatabaseRepr also carries this field, but
+  // only ever with the trivial default value.
+  CanonicStrategy canonic_method;
+
 private:
   UNORD_SET<size_t, std::function<size_t(Tidx_orbit)>,
             std::function<bool(Tidx_orbit, Tidx_orbit)>>
@@ -156,7 +269,7 @@ public:
   DatabaseCanonic(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const &_EXT_int,
                   Tgroup const &_GRP, std::ostream &_os)
       : EXT(_EXT), EXT_int(_EXT_int), GRP(_GRP), foc(GRP), os(_os) {
-    the_method = std::numeric_limits<int>::max();
+    canonic_method = CanonicStrategy::unset;
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
@@ -244,47 +357,47 @@ public:
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
   }
-  int evaluate_method_serial(vectface const &vf) const {
+  CanonicStrategy evaluate_method_serial(vectface const &vf) const {
     return GetCanonicalizationMethod_Serial(vf, GRP, os);
   }
-  int evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
-    return STRATEGY_MISS;
+  CanonicStrategy evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
+    return CanonicStrategy::miss;
   }
   Face operation_face(Face const &face) {
-    return CanonicalImageGeneralDualDesc(the_method, GRP, foc.recConvert, face,
+    return CanonicalImageGeneralDualDesc(canonic_method, GRP, foc.recConvert, face,
                                          os);
   }
-  int convert_string_method(std::string const &choice) const {
+  CanonicStrategy convert_string_method(std::string const &choice) const {
     if (choice == "canonic")
-      return CANONIC_STRATEGY__CANONICAL_IMAGE;
+      return CanonicStrategy::canonical_image;
     if (choice == "canonic_initial_triv")
-      return CANONIC_STRATEGY__INITIAL_TRIV;
+      return CanonicStrategy::initial_triv;
     if (choice == "canonic_initial_triv_limited1")
-      return CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1;
+      return CanonicStrategy::initial_triv_limited1;
     if (choice == "store")
-      return CANONIC_STRATEGY__STORE;
+      return CanonicStrategy::store;
     std::cerr << "The value of choice is not an allowed one\n";
     std::cerr
         << "Only possibilities are canonic, canonic_initial_triv, store\n";
     throw TerminalException{1};
   }
   bool use_f_insert_pair() {
-    if (the_method == CANONIC_STRATEGY__CANONICAL_IMAGE) {
+    if (canonic_method == CanonicStrategy::canonical_image) {
       return true;
     }
-    if (the_method == CANONIC_STRATEGY__STORE) {
+    if (canonic_method == CanonicStrategy::store) {
       return true;
     }
-    if (the_method == CANONIC_STRATEGY__INITIAL_TRIV) {
+    if (canonic_method == CanonicStrategy::initial_triv) {
       return false;
     }
-    if (the_method == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
+    if (canonic_method == CanonicStrategy::initial_triv_limited1) {
       return false;
     }
-    std::cerr << "The value of the_method was not correctly set\n";
+    std::cerr << "The value of canonic_method was not correctly set\n";
     throw TerminalException{1};
   }
-  int get_default_strategy() { return CANONIC_STRATEGY__DEFAULT; }
+  CanonicStrategy get_default_strategy() { return CANONIC_STRATEGY__DEFAULT; }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     DictOrbit.clear();
     CompleteList_SetUndone.clear();
@@ -579,7 +692,7 @@ public:
   int nbCol;
   size_t delta;
   FaceOrbsizeContainer<Tgroup, Torbsize, Tidx> foc;
-  int the_method;
+  CanonicStrategy canonic_method;
 
 private:
   std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>
@@ -630,22 +743,22 @@ public:
     CompleteList_SetUndone.clear();
     CompleteList_SetDone.clear();
   }
-  int evaluate_method_serial([[maybe_unused]] vectface const &vf) const {
-    return REPR_STRATEGY__DEFAULT;
+  CanonicStrategy evaluate_method_serial([[maybe_unused]] vectface const &vf) const {
+    return CANONIC_STRATEGY__DEFAULT;
   }
-  int evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
-    return REPR_STRATEGY__DEFAULT;
+  CanonicStrategy evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
+    return CANONIC_STRATEGY__DEFAULT;
   }
   Face operation_face(Face const &eFlip) { return eFlip; }
-  int convert_string_method(std::string const &choice) const {
+  CanonicStrategy convert_string_method(std::string const &choice) const {
     if (choice == "default")
-      return REPR_STRATEGY__DEFAULT;
+      return CANONIC_STRATEGY__DEFAULT;
     std::cerr << "The value of choice is not an allowed one\n";
     std::cerr << "Only possibility is default\n";
     throw TerminalException{1};
   }
   bool use_f_insert_pair() { return false; }
-  int get_default_strategy() { return REPR_STRATEGY__DEFAULT; }
+  CanonicStrategy get_default_strategy() { return CANONIC_STRATEGY__DEFAULT; }
   FaceOrbitsizeTableContainer<Tint> GetListFaceOrbitsize() {
     CompleteList_SetUndone.clear();
     CompleteList_SetDone.clear();
@@ -860,20 +973,19 @@ private:
 };
 
 template <typename Tint, typename T, typename Tgroup>
-std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T> &EXT,
-                                              const Tgroup &GRP,
-                                              int const &dimEXT) {
+PolytopeInputInfo<Tint> ComputeInitialInfo(const MyMatrix<T> &EXT,
+                                           const Tgroup &GRP,
+                                           int const &dimEXT) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
-  std::map<std::string, Tint> TheMap;
-  int delta = nbRow - nbCol;
-  int level = dimEXT - nbCol;
-  TheMap["groupsize"] = GRP.size();
-  TheMap["incidence"] = nbRow;
-  TheMap["rank"] = nbCol;
-  TheMap["delta"] = delta;
-  TheMap["level"] = level;
-  return TheMap;
+  PolytopeInputInfo<Tint> info;
+  info.groupsize = GRP.size();
+  info.incidence = nbRow;
+  info.rank = nbCol;
+  info.delta = nbRow - nbCol;
+  info.level = dimEXT - nbCol;
+  info.time = 0;
+  return info;
 }
 
 template <typename Tgroup>
@@ -905,15 +1017,17 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     Fdd &f_dd, std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
-  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint, T, Tgroup>(
+  PolytopeInputInfo<Tint> info = ComputeInitialInfo<Tint, T, Tgroup>(
       df.FF.EXT_face, df.Stab, AllArr.dimEXT);
-  std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
-  if (ansSplit != "split") {
+  SplittingDecision split_decision = splitting_decision_from_string(
+      dual_desc_heuristic_evaluation(AllArr.Splitting, info));
+  if (split_decision == SplittingDecision::nosplit) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_complete;
     MicrosecondTime time_step;
 #endif
-    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
+    std::string ansProg =
+        AllArr.DualDescriptionProgram.get_eval(info.named_map());
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: ansProg|=" << time_step << "\n";
 #endif
@@ -984,7 +1098,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
   } else {
     vectface TheOutput = f_dd(TheBank, df.FF.EXT_face, df.FF.EXT_face_int,
-                              df.Stab, TheMap, AllArr, ePrefix, os);
+                              df.Stab, info, AllArr, ePrefix, os);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RDD: |outputsize|=" << TheOutput.size() << "\n";
 #endif
@@ -1022,7 +1136,7 @@ void vectface_update_method(vectface &vfo, TbasicBank &bb,
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow
      << "\n";
-  os << "RDD: vectface_update_method bb.the_method=" << bb.the_method << "\n";
+  os << "RDD: vectface_update_method bb.canonic_method=" << canonic_strategy_to_string(bb.canonic_method) << "\n";
 #endif
   for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
     Face fo = vfo[i_orbit];
@@ -1046,13 +1160,10 @@ OrbitSplittingListOrbitGen(const Tgroup &GRPbig, const Tgroup &GRPsma,
     return ListFaceOrbitsize.GetListFaces();
   }
   TintGroup index = ordGRPbig / ordGRPsma;
-  std::map<std::string, TintGroup> TheMap;
-  TheMap["groupsize_big"] = ordGRPbig;
-  TheMap["groupsize_sma"] = ordGRPsma;
-  TheMap["index"] = index;
-  TheMap["n_orbit"] = ListFaceOrbitsize.size();
+  OrbitSplitInputInfo<TintGroup> info{ordGRPbig, ordGRPsma, index,
+                                      ListFaceOrbitsize.size()};
   std::string method_split =
-      HeuristicEvaluation(TheMap, AllArr.OrbitSplitTechnique);
+      typed_heuristic_evaluation(AllArr.OrbitSplitTechnique, info);
   return OrbitSplittingListOrbit_spec(GRPbig, GRPsma, ListFaceOrbitsize,
                                       method_split, os);
 }
@@ -1096,7 +1207,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, TbasicBank &bb,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix,
-    std::map<std::string, typename Tgroup::Tint> &TheMap, Fdd &f_dd,
+    PolytopeInputInfo<typename Tgroup::Tint> &info, Fdd &f_dd,
     std::ostream &os) {
 #ifdef WASM_PLATFORM
   NoSaveDatabaseOrbits<TbasicBank> RPL(bb, AllArr.AdvancedTerminationCriterion, os);
@@ -1111,21 +1222,21 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     MicrosecondTime time;
 #endif
     std::string ansChoiceCanonic =
-        HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
+        dual_desc_heuristic_evaluation(AllArr.ChoiceCanonicalization, info);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: HeuristicEvaluation|=" << time << "\n";
 #endif
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RDD: ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
-    int action = RPL.determine_action_database(ansChoiceCanonic);
+    DatabaseAction action = RPL.determine_action_database(ansChoiceCanonic);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: determine_action_database|=" << time << "\n";
 #endif
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: action=" << action << "\n";
+    os << "RDD: action=" << database_action_to_string(action) << "\n";
 #endif
-    auto f_recompute = [&](int const &method) -> void {
+    auto f_recompute = [&](CanonicStrategy const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: n_orbit|=" << time << "\n";
@@ -1150,7 +1261,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
       os << "|RDD: method update|=" << time << "\n";
 #endif
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-      os << "RDD: bb.the_method=" << bb.the_method << "\n";
+      os << "RDD: bb.canonic_method=" << canonic_strategy_to_string(bb.canonic_method) << "\n";
 #endif
       RPL.DirectAppendDatabase(std::move(vfo));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
@@ -1160,37 +1271,37 @@ Kernel_DUALDESC_AdjacencyDecomposition(
       os << "|RDD: DirectAppendDatabase|=" << time << "\n";
 #endif
     };
-    if (action == DATABASE_ACTION__SIMPLE_LOAD) {
+    if (action == DatabaseAction::simple_load) {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
       os << "RDD: Before RPL.LoadDatabase()\n";
 #endif
       return RPL.LoadDatabase();
     }
-    if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
-      int method = bb.convert_string_method(ansChoiceCanonic);
+    if (action == DatabaseAction::recompute_and_shuffle) {
+      CanonicStrategy method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-      os << "Before f_recompute, method=" << method
+      os << "Before f_recompute, method=" << canonic_strategy_to_string(method)
          << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
       return f_recompute(method);
     }
-    if (action == DATABASE_ACTION__GUESS) {
+    if (action == DatabaseAction::guess) {
       vectface vf = RPL.get_runtime_testcase();
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: get_runtime_testcase|=" << time << "\n";
 #endif
-      int method = RPL.bb.evaluate_method_serial(vf);
+      CanonicStrategy method = RPL.bb.evaluate_method_serial(vf);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: evaluate_method_serial|=" << time << "\n";
 #endif
-      if (method == bb.the_method) {
+      if (method == bb.canonic_method) {
         return RPL.LoadDatabase();
       } else {
         return f_recompute(method);
       }
     }
-    std::cerr << "Failed to find a matching entry for action=" << action
-              << "\n";
+    std::cerr << "Failed to find a matching entry for action="
+              << database_action_to_string(action) << "\n";
     throw TerminalException{1};
   };
   set_up();
@@ -1211,7 +1322,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
      << "\n";
 #endif
   if (nr_orbit == 0) {
-    std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
+    std::string ansSamp = dual_desc_heuristic_evaluation(AllArr.InitialFacetSet, info);
 #ifdef TRACK_RUN
     os << "RDD: ansSamp=" << ansSamp << " |EXT|=" << bb.EXT.rows() << "/"
        << bb.EXT.cols() << "\n";
@@ -1274,18 +1385,18 @@ template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT,
     MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int,
-    Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> &TheMap,
+    Tgroup const &GRP, PolytopeInputInfo<typename Tgroup::Tint> &info,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix, std::ostream &os) {
   auto f_dd =
       [](Tbank &TheBank_i, MyMatrix<T> const &EXT_i,
          MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int_i,
          Tgroup const &GRP_i,
-         std::map<std::string, typename Tgroup::Tint> &TheMap_i,
+         PolytopeInputInfo<typename Tgroup::Tint> &info_i,
          PolyHeuristicSerial<typename Tgroup::Tint> &AllArr_i,
          std::string const &ePrefix_i, std::ostream &os_i) -> vectface {
     return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-        TheBank_i, EXT_i, EXT_int_i, GRP_i, TheMap_i, AllArr_i, ePrefix_i,
+        TheBank_i, EXT_i, EXT_int_i, GRP_i, info_i, AllArr_i, ePrefix_i,
         os_i);
   };
   using Tgr = GraphListAdj;
@@ -1310,9 +1421,9 @@ vectface DUALDESC_AdjacencyDecomposition(
   //
   // Checking if the entry is present in the map.
   //
-  std::string ansBankCheck =
-      HeuristicEvaluation(TheMap, AllArr.CheckDatabaseBank);
-  if (ansBankCheck == "yes") {
+  BankCheckDecision bank_check_decision = bank_check_decision_from_string(
+      dual_desc_heuristic_evaluation(AllArr.CheckDatabaseBank, info));
+  if (bank_check_decision == BankCheckDecision::yes) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_bankcheck;
 #endif
@@ -1342,12 +1453,14 @@ vectface DUALDESC_AdjacencyDecomposition(
   // subgroup.
   bool BankSymmCheck;
   auto compute_decomposition = [&]() -> FaceOrbitsizeTableContainer<Tint> {
-    std::string ansSymm =
-        HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
+    AdditionalSymmetryDecision symm_decision =
+        additional_symmetry_decision_from_string(
+            dual_desc_heuristic_evaluation(AllArr.AdditionalSymmetry, info));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: ansSymm=" << ansSymm << "\n";
+    os << "RDD: ansSymm="
+       << additional_symmetry_decision_to_string(symm_decision) << "\n";
 #endif
-    if (ansSymm == "yes") {
+    if (symm_decision == AdditionalSymmetryDecision::yes) {
       TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
           lwm.GetWMat(), os);
       NeedSplit = TheGRPrelevant.size() != GRP.size();
@@ -1362,19 +1475,20 @@ vectface DUALDESC_AdjacencyDecomposition(
        << " TheDim=" << EXT.cols() << " |EXT|=" << nbRow << "\n";
 #endif
     std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
-    std::string ansChosenDatabase =
-        HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
+    DatabaseKind database_kind =
+        database_kind_from_string(dual_desc_heuristic_evaluation(AllArr.ChosenDatabase, info));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: ChosenDatabase = " << ansChosenDatabase << "\n";
+    os << "RDD: ChosenDatabase = " << database_kind_to_string(database_kind)
+       << "\n";
 #endif
-    if (ansChosenDatabase == "canonic") {
+    if (database_kind == DatabaseKind::canonic) {
       using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
       TbasicBank bb(EXT, EXT_int, TheGRPrelevant, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
-          TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
+          TheBank, bb, AllArr, MainPrefix, info, f_dd, os);
     }
-    if (ansChosenDatabase == "repr") {
+    if (database_kind == DatabaseKind::repr) {
       WeightMatrix<true, int, Tidx_value> WMat =
           WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(TheGRPrelevant, os);
       auto f_repr = [&](const Face &f1, const Face &f2) -> bool {
@@ -1392,7 +1506,7 @@ vectface DUALDESC_AdjacencyDecomposition(
                     os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
-          TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
+          TheBank, bb, AllArr, MainPrefix, info, f_dd, os);
     }
     std::cerr << "RDD: compute_split_or_not: Failed to find a matching entry\n";
     std::cerr << "RDD: Authorized values: canonic, repr\n";
@@ -1400,13 +1514,15 @@ vectface DUALDESC_AdjacencyDecomposition(
   };
   FaceOrbitsizeTableContainer<Tint> ListOrbitFaceOrbitsize =
       compute_decomposition();
-  TheMap["time"] = si(start);
-  std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
+  info.time = static_cast<uint64_t>(si(start));
+  BankSaveDecision bank_save_decision =
+      bank_save_decision_from_string(dual_desc_heuristic_evaluation(AllArr.BankSave, info));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-  os << "RDD: elapsed_seconds=" << s(start) << " ansBank=" << ansBank
+  os << "RDD: elapsed_seconds=" << s(start)
+     << " bank_save=" << bank_save_decision_to_string(bank_save_decision)
      << " NeedSplit=" << NeedSplit << "\n";
 #endif
-  if (ansBank == "yes") {
+  if (bank_save_decision == BankSaveDecision::yes) {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RDD: Before insert_entry_in_bank\n";
 #endif
@@ -1859,22 +1975,24 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   PolyHeuristicSerial<TintGroup> AllArr =
       Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, os);
   //
-  std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr.dimEXT);
+  PolytopeInputInfo<TintGroup> info =
+      ComputeInitialInfo<TintGroup, T, Tgroup>(EXTred, GRP, AllArr.dimEXT);
   auto get_vectface = [&]() -> vectface {
-    if (AllArr.bank_parallelization_method == "serial") {
+    if (AllArr.bank_parallelization_method ==
+        BankParallelizationMethod::serial) {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, os);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix,
+          TheBank, EXTred, EXTred_int, GRP, info, AllArr, AllArr.DD_Prefix,
           os);
     }
 #ifndef WASM_PLATFORM
-    if (AllArr.bank_parallelization_method == "bank_asio") {
+    if (AllArr.bank_parallelization_method ==
+        BankParallelizationMethod::bank_asio) {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix,
+          TheBank, EXTred, EXTred_int, GRP, info, AllArr, AllArr.DD_Prefix,
           std::cerr);
     }
 #endif
@@ -1923,10 +2041,10 @@ DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP,
   //
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   Tbank TheBank(BANK_Saving, BANK_Prefix, os);
-  std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr.dimEXT);
+  PolytopeInputInfo<TintGroup> info =
+      ComputeInitialInfo<TintGroup, T, Tgroup>(EXTred, GRP, AllArr.dimEXT);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, os);
+      TheBank, EXTred, EXTred_int, GRP, info, AllArr, DD_Prefix, os);
 }
 
 template <typename T, typename Tgroup> struct RecordDualDescOperation {
@@ -1972,10 +2090,10 @@ DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
   std::string DD_Prefix = "totally_irrelevant_second";
   //
   MyMatrix<Text_int> EXT_int = Get_EXT_int(EXT);
-  std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap<TintGroup, T, Tgroup>(EXT, GRP, rddo.AllArr.dimEXT);
+  PolytopeInputInfo<TintGroup> info =
+      ComputeInitialInfo<TintGroup, T, Tgroup>(EXT, GRP, rddo.AllArr.dimEXT);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      rddo.TheBank, EXT, EXT_int, GRP, TheMap, rddo.AllArr, DD_Prefix, os);
+      rddo.TheBank, EXT, EXT_int, GRP, info, rddo.AllArr, DD_Prefix, os);
 }
 
 template <typename T, typename Tgroup>

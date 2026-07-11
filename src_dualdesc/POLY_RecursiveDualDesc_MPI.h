@@ -23,15 +23,15 @@
 #endif
 
 template <typename Tgroup>
-int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
+CanonicStrategy GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
                                   vectface const &vf, Tgroup const &GRP,
                                   std::ostream &os) {
   int n_proc = comm.size();
-  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
+  std::vector<CanonicStrategy> list_considered = GetPossibleCanonicalizationMethod(GRP);
   int64_t miss_val = std::numeric_limits<int64_t>::max();
   int64_t upper_limit_local = miss_val;
   int64_t upper_limit_global = miss_val;
-  int chosen_method = CANONIC_STRATEGY__DEFAULT;
+  CanonicStrategy chosen_method = CANONIC_STRATEGY__DEFAULT;
   int64_t effective_upper_limit = miss_val;
   std::vector<int64_t> V_runtime;
   for (auto &method : list_considered) {
@@ -187,11 +187,13 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     Fcomm f_comm, std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
-  std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr.dimEXT);
-  std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
-  std::string ansCommThread = HeuristicEvaluation(TheMap, AllArr.CommThread);
-  bool launch_comm_thread = (ansCommThread == "yes");
+  PolytopeInputInfo<Tint> info =
+      ComputeInitialInfo<Tint>(df.FF.EXT_face, df.Stab, AllArr.dimEXT);
+  SplittingDecision split_decision = splitting_decision_from_string(
+      dual_desc_heuristic_evaluation(AllArr.Splitting, info));
+  CommThreadDecision comm_thread_decision = comm_thread_decision_from_string(
+      dual_desc_heuristic_evaluation(AllArr.CommThread, info));
+  bool launch_comm_thread = (comm_thread_decision == CommThreadDecision::yes);
   std::thread comm_thread;
   std::atomic_bool done = false;
   auto start_comm_thread = [&]() -> void {
@@ -209,12 +211,12 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
       os << "|join|=" << time_join << "\n";
     }
   };
-  if (ansSplit != "split") {
+  if (split_decision == SplittingDecision::nosplit) {
     auto EXT = df.FF.EXT_face;
     auto Stab = df.Stab;
 
     start_comm_thread();
-    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(TheMap);
+    std::string ansProg = AllArr.DualDescriptionProgram.get_eval(info.named_map());
     DualDescProgram prog = dual_desc_program_from_string(ansProg);
     vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, prog, os);
     AllArr.DualDescriptionProgram.pop(os);
@@ -246,7 +248,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     try {
       vectface TheOutput =
           DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-              TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap,
+              TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, info,
               AllArr, ePrefix, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       MicrosecondTime time_full;
@@ -288,7 +290,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     boost::mpi::communicator &comm, Tbank &TheBank, TbasicBank &bb,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix,
-    std::map<std::string, typename Tgroup::Tint> const &TheMap,
+    PolytopeInputInfo<typename Tgroup::Tint> const &info,
     std::ostream &os) {
   using Tint = typename TbasicBank::Tint;
   SingletonTime start;
@@ -302,17 +304,17 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     MicrosecondTime time;
 #endif
     std::string ansChoiceCanonic =
-        HeuristicEvaluation(TheMap, AllArr.ChoiceCanonicalization);
+        dual_desc_heuristic_evaluation(AllArr.ChoiceCanonicalization, info);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
     os << "|HeuristicEvaluation|=" << time
        << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
-    int action = RPL.determine_action_database(ansChoiceCanonic);
+    DatabaseAction action = RPL.determine_action_database(ansChoiceCanonic);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
-    os << "|determine_action_database|=" << time << " action=" << action
+    os << "|determine_action_database|=" << time << " action=" << database_action_to_string(action)
        << "\n";
 #endif
-    auto f_recompute = [&](int const &method) -> void {
+    auto f_recompute = [&](CanonicStrategy const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|n_orbit|=" << time << "\n";
@@ -338,30 +340,30 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       os << "|DirectAppendDatabase|=" << time << "\n";
 #endif
     };
-    if (action == DATABASE_ACTION__SIMPLE_LOAD) {
+    if (action == DatabaseAction::simple_load) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "Before RPL.LoadDatabase()\n";
 #endif
       return RPL.LoadDatabase();
     }
-    if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
-      int method = bb.convert_string_method(ansChoiceCanonic);
+    if (action == DatabaseAction::recompute_and_shuffle) {
+      CanonicStrategy method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
-      os << "Before f_recompute, method=" << method
+      os << "Before f_recompute, method=" << canonic_strategy_to_string(method)
          << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
       return f_recompute(method);
     }
-    if (action == DATABASE_ACTION__GUESS) {
+    if (action == DatabaseAction::guess) {
       vectface vf = RPL.get_runtime_testcase();
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|get_runtime_testcase|=" << time << "\n";
 #endif
-      int method = RPL.bb.evaluate_method_mpi(vf);
+      CanonicStrategy method = RPL.bb.evaluate_method_mpi(vf);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|evaluate_method_mpi|=" << time << "\n";
 #endif
-      if (method == STRATEGY_MISS) {
+      if (method == CanonicStrategy::miss) {
         method = GetCanonicalizationMethod_MPI(comm, vf, bb.GRP, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
         os << "|GetCanonicalizationMethod_MPI|=" << time << "\n";
@@ -370,14 +372,14 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|evaluate_method_serial|=" << time << "\n";
 #endif
-      if (method == bb.the_method) {
+      if (method == bb.canonic_method) {
         return RPL.LoadDatabase();
       } else {
         return f_recompute(method);
       }
     }
-    std::cerr << "Failed to find a matching entry for action=" << action
-              << "\n";
+    std::cerr << "Failed to find a matching entry for action="
+              << database_action_to_string(action) << "\n";
     throw TerminalException{1};
   };
   set_up();
@@ -445,7 +447,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
   os << "n_orb_loc=" << n_orb_loc << " n_orb_max=" << n_orb_max << "\n";
   if (n_orb_max == 0) {
-    std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
+    std::string ansSamp = dual_desc_heuristic_evaluation(AllArr.InitialFacetSet, info);
     os << "ansSamp=" << ansSamp << "\n";
     vectface vf_init = DirectComputationInitialFacetSet(bb.EXT, ansSamp, os);
     vectface vf_init_merge = merge_initial_samp(comm, vf_init, ansSamp, os);
@@ -666,13 +668,13 @@ void Reset_Directories(boost::mpi::communicator &comm,
   int i_rank = comm.rank();
   auto update_string = [&](std::string &str_ref) -> void {
     if (i_rank < n_proc - 1 ||
-        AllArr.bank_parallelization_method != "bank_mpi") {
+        AllArr.bank_parallelization_method != BankParallelizationMethod::bank_mpi) {
       update_path_using_nproc_iproc(str_ref, n_proc, i_rank);
       CreateDirectory(str_ref);
     }
   };
   if (AllArr.BANK_Saving) {
-    if (AllArr.bank_parallelization_method == "serial")
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::serial)
       update_string(AllArr.BANK_Prefix);
     else
       CreateDirectory(AllArr.BANK_Prefix);
@@ -718,7 +720,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   srand(time(NULL) + 12345 * i_rank);
   Reset_Directories(comm, AllArr);
   size_t n_rows = EXTred.rows();
-  if (AllArr.bank_parallelization_method == "bank_mpi" && n_proc < 2) {
+  if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi && n_proc < 2) {
     std::cerr << "For the bank_mpi we need at least 2 nodes. n_proc=" << n_proc
               << "\n";
     throw TerminalException{1};
@@ -726,43 +728,43 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   int proc_bank = n_proc - 1;
   int i_proc_ret = 0;
   auto msg_term_bank = [&]() -> void {
-    if (AllArr.bank_parallelization_method == "bank_mpi" &&
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi &&
         i_rank == i_proc_ret) {
       os << "sending bank_mpi termination signal\n";
       comm.send(proc_bank, tag_mpi_bank_end, val_mpi_bank_end);
     }
   };
-  if (AllArr.bank_parallelization_method == "bank_mpi" && i_rank == n_proc - 1)
+  if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi && i_rank == n_proc - 1)
     pos_generator = 1;
   boost::mpi::communicator comm_work = comm.split(pos_generator);
   //
   using TbasicBank = DatabaseCanonic<T, TintGroup, Tgroup>;
   TbasicBank bb(EXTred, EXTred_int, GRP, os);
-  std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap<TintGroup>(EXTred, GRP, AllArr.dimEXT);
+  PolytopeInputInfo<TintGroup> info =
+      ComputeInitialInfo<TintGroup>(EXTred, GRP, AllArr.dimEXT);
   //
   auto get_vectface = [&]() -> vectface {
-    if (AllArr.bank_parallelization_method == "serial") {
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::serial) {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, os);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                         Tgroup, Tidx_value>(
-          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, info, os);
     }
-    if (AllArr.bank_parallelization_method == "bank_asio") {
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_asio) {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                         Tgroup, Tidx_value>(
-          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+          comm, TheBank, bb, AllArr, AllArr.DD_Prefix, info, os);
     }
-    if (AllArr.bank_parallelization_method == "bank_mpi") {
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi) {
       using Tbank = DataBankMpiClient<Tkey, Tval>;
       Tbank TheBank(comm);
       if (i_rank < proc_bank) {
         return MPI_Kernel_DUALDESC_AdjacencyDecomposition<Tbank, TbasicBank, T,
                                                           Tgroup, Tidx_value>(
-            comm_work, TheBank, bb, AllArr, AllArr.DD_Prefix, TheMap, os);
+            comm_work, TheBank, bb, AllArr, AllArr.DD_Prefix, info, os);
       } else {
         DataBankMpiServer<Tkey, Tval>(comm, AllArr.BANK_Saving,
                                       AllArr.BANK_Prefix, os);
@@ -771,14 +773,16 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
     }
     std::cerr << "No match for bank_parallelization_method\n";
     std::cerr << "AllArr.bank_parallelization_method="
-              << AllArr.bank_parallelization_method << "\n";
+              << bank_parallelization_method_to_string(
+                     AllArr.bank_parallelization_method)
+              << "\n";
     std::cerr << "Allowed methods are serial, bank_asio, bank_mpi\n";
     throw TerminalException{1};
   };
 
   try {
     vectface vf = get_vectface();
-    if (AllArr.bank_parallelization_method == "bank_mpi" and
+    if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi and
         i_rank == proc_bank) {
       os << "Closed DataBankMpiServer" << std::endl;
       return;

@@ -7,7 +7,9 @@
 #include "Heuristic_ThompsonSampling.h"
 #include "Namelist.h"
 #include "POLY_HasPPL.h"
+#include <array>
 #include <limits>
+#include <map>
 #include <string>
 #include <vector>
 // clang-format on
@@ -15,6 +17,261 @@
 #ifdef DEBUG
 #define DEBUG_HEURISTICS
 #endif
+
+//
+// Typed dual-description heuristic input and heuristic
+//
+// The dual-description heuristics no longer read a std::map<std::string,
+// TintGroup>. Each heuristic is typed over a set of named fields (a field enum)
+// and evaluated against an input struct exposing get_field(field). The generic
+// machinery is shared by the polytope-info heuristics and the orbit-splitting
+// heuristic.
+
+// --- The fields, one enum per heuristic input kind ---
+enum class PolytopeField { groupsize, incidence, rank, delta, level, time };
+enum class OrbitSplitField { groupsize_big, groupsize_sma, index, n_orbit };
+
+// The full list of polytope fields, the single source of truth used both by
+// the heuristic evaluation and by the Thompson-sampler named-map view below.
+inline constexpr std::array<PolytopeField, 6> polytope_all_fields = {
+    PolytopeField::groupsize, PolytopeField::incidence, PolytopeField::rank,
+    PolytopeField::delta,     PolytopeField::level,     PolytopeField::time};
+
+// Parse a field name into the field enum (tag-dispatched on the enum type).
+inline PolytopeField parse_heuristic_field(std::string const &name,
+                                           PolytopeField *) {
+  if (name == "groupsize")
+    return PolytopeField::groupsize;
+  if (name == "incidence")
+    return PolytopeField::incidence;
+  if (name == "rank")
+    return PolytopeField::rank;
+  if (name == "delta")
+    return PolytopeField::delta;
+  if (name == "level")
+    return PolytopeField::level;
+  if (name == "time")
+    return PolytopeField::time;
+  std::cerr << "HEU: unknown polytope field name=" << name << "\n";
+  throw TerminalException{1};
+}
+
+inline OrbitSplitField parse_heuristic_field(std::string const &name,
+                                             OrbitSplitField *) {
+  if (name == "groupsize_big")
+    return OrbitSplitField::groupsize_big;
+  if (name == "groupsize_sma")
+    return OrbitSplitField::groupsize_sma;
+  if (name == "index")
+    return OrbitSplitField::index;
+  if (name == "n_orbit")
+    return OrbitSplitField::n_orbit;
+  std::cerr << "HEU: unknown orbit split field name=" << name << "\n";
+  throw TerminalException{1};
+}
+
+inline std::string heuristic_field_to_string(PolytopeField f) {
+  switch (f) {
+  case PolytopeField::groupsize:
+    return "groupsize";
+  case PolytopeField::incidence:
+    return "incidence";
+  case PolytopeField::rank:
+    return "rank";
+  case PolytopeField::delta:
+    return "delta";
+  case PolytopeField::level:
+    return "level";
+  case PolytopeField::time:
+    return "time";
+  }
+  return "unknown";
+}
+
+inline std::string heuristic_field_to_string(OrbitSplitField f) {
+  switch (f) {
+  case OrbitSplitField::groupsize_big:
+    return "groupsize_big";
+  case OrbitSplitField::groupsize_sma:
+    return "groupsize_sma";
+  case OrbitSplitField::index:
+    return "index";
+  case OrbitSplitField::n_orbit:
+    return "n_orbit";
+  }
+  return "unknown";
+}
+
+// --- The input structs, one per heuristic input kind ---
+// The group sizes stay full precision, the combinatorial quantities are plain
+// ints / size_t and are promoted to TintGroup only for comparison.
+template <typename TintGroup> struct PolytopeInputInfo {
+  TintGroup groupsize;
+  int incidence;
+  int rank;
+  int delta;
+  int level;
+  uint64_t time;
+  TintGroup get_field(PolytopeField f) const {
+    switch (f) {
+    case PolytopeField::groupsize:
+      return groupsize;
+    case PolytopeField::incidence:
+      return UniversalScalarConversion<TintGroup, int>(incidence);
+    case PolytopeField::rank:
+      return UniversalScalarConversion<TintGroup, int>(rank);
+    case PolytopeField::delta:
+      return UniversalScalarConversion<TintGroup, int>(delta);
+    case PolytopeField::level:
+      return UniversalScalarConversion<TintGroup, int>(level);
+    case PolytopeField::time:
+      return UniversalScalarConversion<TintGroup, uint64_t>(time);
+    }
+    return TintGroup(0);
+  }
+  // Named-map view of the typed info, consumed by the map-based heuristic
+  // layers: the shared, disk-persisted Thompson learner (intrinsically keyed by
+  // field name) and the generic HeuristicEvaluation. The names come from
+  // heuristic_field_to_string, so there is a single source of truth and no
+  // hand-written string literals.
+  std::map<std::string, TintGroup> named_map() const {
+    std::map<std::string, TintGroup> m;
+    for (PolytopeField f : polytope_all_fields)
+      m[heuristic_field_to_string(f)] = get_field(f);
+    return m;
+  }
+};
+
+template <typename TintGroup> struct OrbitSplitInputInfo {
+  TintGroup groupsize_big;
+  TintGroup groupsize_sma;
+  TintGroup index;
+  size_t n_orbit;
+  TintGroup get_field(OrbitSplitField f) const {
+    switch (f) {
+    case OrbitSplitField::groupsize_big:
+      return groupsize_big;
+    case OrbitSplitField::groupsize_sma:
+      return groupsize_sma;
+    case OrbitSplitField::index:
+      return index;
+    case OrbitSplitField::n_orbit:
+      return UniversalScalarConversion<TintGroup, size_t>(n_orbit);
+    }
+    return TintGroup(0);
+  }
+};
+
+// --- The generic typed heuristic ---
+// Same shape as the generic TheHeuristic, but conditions reference a typed
+// field. It is obtained once, at load time, from the string-parsed generic
+// heuristic and afterwards evaluated with no map.
+template <typename TintGroup, typename TField> struct TypedHeuristicCondition {
+  TField field;
+  HeuristicOp op;
+  TintGroup value;
+};
+
+template <typename TintGroup, typename TField>
+struct TypedHeuristicFullCondition {
+  std::vector<TypedHeuristicCondition<TintGroup, TField>> conditions;
+  std::string result;
+};
+
+template <typename TintGroup, typename TField> struct TypedHeuristic {
+  std::vector<TypedHeuristicFullCondition<TintGroup, TField>> tests;
+  std::string default_result;
+};
+
+template <typename TintGroup>
+using DualDescHeuristic = TypedHeuristic<TintGroup, PolytopeField>;
+template <typename TintGroup>
+using OrbitSplitHeuristic = TypedHeuristic<TintGroup, OrbitSplitField>;
+
+template <typename TintGroup, typename TField>
+TypedHeuristic<TintGroup, TField>
+convert_typed_heuristic(TheHeuristic<TintGroup> const &heu) {
+  TypedHeuristic<TintGroup, TField> result;
+  for (auto const &eFullCond : heu.AllTests) {
+    TypedHeuristicFullCondition<TintGroup, TField> new_full;
+    new_full.result = eFullCond.TheResult;
+    for (auto const &eSingCond : eFullCond.TheConditions)
+      new_full.conditions.push_back(
+          {parse_heuristic_field(eSingCond.eCond,
+                                 static_cast<TField *>(nullptr)),
+           eSingCond.eType, eSingCond.NumValue});
+    result.tests.push_back(std::move(new_full));
+  }
+  result.default_result = heu.DefaultResult;
+  return result;
+}
+
+template <typename TintGroup, typename TField, typename TInput>
+std::string typed_heuristic_evaluation(TypedHeuristic<TintGroup, TField> const &heu,
+                                       TInput const &info) {
+  for (auto const &eFullCond : heu.tests) {
+    bool IsOK = true;
+    for (auto const &eSingCond : eFullCond.conditions) {
+      TintGroup eValue = info.get_field(eSingCond.field);
+      bool WeMatch = false;
+      switch (eSingCond.op) {
+      case HeuristicOp::Gt:
+        WeMatch = (eValue > eSingCond.value);
+        break;
+      case HeuristicOp::Ge:
+        WeMatch = (eValue >= eSingCond.value);
+        break;
+      case HeuristicOp::Eq:
+        WeMatch = (eValue == eSingCond.value);
+        break;
+      case HeuristicOp::Lt:
+        WeMatch = (eValue < eSingCond.value);
+        break;
+      case HeuristicOp::Le:
+        WeMatch = (eValue <= eSingCond.value);
+        break;
+      }
+      if (!WeMatch) {
+        IsOK = false;
+        break;
+      }
+    }
+    if (IsOK)
+      return eFullCond.result;
+  }
+  return heu.default_result;
+}
+
+template <typename TintGroup, typename TField>
+std::ostream &operator<<(std::ostream &os,
+                         TypedHeuristic<TintGroup, TField> const &heu) {
+  size_t len = heu.tests.size();
+  for (size_t i = 0; i < len; i++) {
+    TypedHeuristicFullCondition<TintGroup, TField> const &eFullCond =
+        heu.tests[i];
+    os << "   i=" << i << "/" << len;
+    for (auto const &eSingCond : eFullCond.conditions)
+      os << " (" << heuristic_field_to_string(eSingCond.field) << " "
+         << static_cast<int>(eSingCond.op) << " " << eSingCond.value << ")";
+    os << " => " << eFullCond.result << "\n";
+  }
+  os << "      Default=" << heu.default_result;
+  return os;
+}
+
+// Thin wrappers preserving the polytope-info heuristic call sites.
+template <typename TintGroup>
+DualDescHeuristic<TintGroup>
+convert_dual_desc_heuristic(TheHeuristic<TintGroup> const &heu) {
+  return convert_typed_heuristic<TintGroup, PolytopeField>(heu);
+}
+
+template <typename TintGroup>
+std::string
+dual_desc_heuristic_evaluation(DualDescHeuristic<TintGroup> const &heu,
+                               PolytopeInputInfo<TintGroup> const &info) {
+  return typed_heuristic_evaluation(heu, info);
+}
 
 //
 // Heuristic business
@@ -439,17 +696,47 @@ void SetThompsonSampling(FullNamelist const &eFull,
   }
 }
 
+// How the polytope bank is shared across the computation: kept in-process
+// ("serial"), served over asio to a separate bank process ("bank_asio"), or
+// distributed over MPI ranks ("bank_mpi", MPI runs only).
+enum class BankParallelizationMethod { serial, bank_asio, bank_mpi };
+
+inline std::string
+bank_parallelization_method_to_string(BankParallelizationMethod method) {
+  switch (method) {
+  case BankParallelizationMethod::serial:
+    return "serial";
+  case BankParallelizationMethod::bank_asio:
+    return "bank_asio";
+  case BankParallelizationMethod::bank_mpi:
+    return "bank_mpi";
+  }
+  return "unknown";
+}
+
+inline BankParallelizationMethod
+bank_parallelization_method_from_string(std::string const &method) {
+  if (method == "serial")
+    return BankParallelizationMethod::serial;
+  if (method == "bank_asio")
+    return BankParallelizationMethod::bank_asio;
+  if (method == "bank_mpi")
+    return BankParallelizationMethod::bank_mpi;
+  std::cerr << "HEU: unknown bank_parallelization_method=" << method << "\n";
+  throw TerminalException{1};
+}
+
 template <typename TintGroup> struct PolyHeuristicSerial {
-  TheHeuristic<TintGroup> Splitting;
-  TheHeuristic<TintGroup> BankSave;
-  TheHeuristic<TintGroup> AdditionalSymmetry;
+  DualDescHeuristic<TintGroup> Splitting;
+  DualDescHeuristic<TintGroup> BankSave;
+  DualDescHeuristic<TintGroup> AdditionalSymmetry;
   ThompsonSamplingHeuristic<TintGroup> DualDescriptionProgram;
-  TheHeuristic<TintGroup> InitialFacetSet;
-  TheHeuristic<TintGroup> CheckDatabaseBank;
-  TheHeuristic<TintGroup> ChosenDatabase;
-  TheHeuristic<TintGroup> OrbitSplitTechnique;
-  TheHeuristic<TintGroup> CommThread;
-  TheHeuristic<TintGroup> ChoiceCanonicalization;
+  DualDescHeuristic<TintGroup> InitialFacetSet;
+  DualDescHeuristic<TintGroup> CheckDatabaseBank;
+  DualDescHeuristic<TintGroup> ChosenDatabase;
+  OrbitSplitHeuristic<TintGroup> OrbitSplitTechnique;
+  DualDescHeuristic<TintGroup> CommThread;
+  DualDescHeuristic<TintGroup> ChoiceCanonicalization;
   bool DD_Saving;
   bool AdvancedTerminationCriterion;
   bool SimpleExchangeScheme;
@@ -460,7 +747,7 @@ template <typename TintGroup> struct PolyHeuristicSerial {
   std::string BANK_Prefix;
   std::string OutFormat;
   std::string OutFile;
-  std::string bank_parallelization_method;
+  BankParallelizationMethod bank_parallelization_method;
   std::string DD_Prefix;
   int dimEXT;
   bool DeterministicRuntime;
@@ -479,19 +766,22 @@ PolyHeuristicSerial<TintGroup> AllStandardHeuristicSerial(int const &dimEXT,
   std::string BANK_Prefix = "/unset/";
   std::string OutFormat = "GAP";
   std::string OutFile = "unset.out";
-  std::string bank_parallelization_method = "serial";
+  BankParallelizationMethod bank_parallelization_method =
+      BankParallelizationMethod::serial;
   std::string DD_Prefix = "/irrelevant/";
   bool DeterministicRuntime = true;
-  return {StandardHeuristicSplitting<TintGroup>(),
-          StandardHeuristicBankSave<TintGroup>(),
-          StandardHeuristicAdditionalSymmetry<TintGroup>(),
+  return {convert_dual_desc_heuristic(StandardHeuristicSplitting<TintGroup>()),
+          convert_dual_desc_heuristic(StandardHeuristicBankSave<TintGroup>()),
+          convert_dual_desc_heuristic(
+              StandardHeuristicAdditionalSymmetry<TintGroup>()),
           ThompsonSamplingHeuristic<TintGroup>(eFull, os),
-          MethodInitialFacetSet<TintGroup>(),
-          MethodCheckDatabaseBank<TintGroup>(),
-          MethodChosenDatabase<TintGroup>(),
-          MethodOrbitSplitTechnique<TintGroup>(),
-          StandardHeuristicCommThread<TintGroup>(),
-          MethodChoiceCanonicalization<TintGroup>(),
+          convert_dual_desc_heuristic(MethodInitialFacetSet<TintGroup>()),
+          convert_dual_desc_heuristic(MethodCheckDatabaseBank<TintGroup>()),
+          convert_dual_desc_heuristic(MethodChosenDatabase<TintGroup>()),
+          convert_typed_heuristic<TintGroup, OrbitSplitField>(
+              MethodOrbitSplitTechnique<TintGroup>()),
+          convert_dual_desc_heuristic(StandardHeuristicCommThread<TintGroup>()),
+          convert_dual_desc_heuristic(MethodChoiceCanonicalization<TintGroup>()),
           DD_Saving,
           AdvancedTerminationCriterion,
           SimpleExchangeScheme,
@@ -517,7 +807,8 @@ void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const &AllArr,
   os << "RDD: DeterministicRuntime=" << AllArr.DeterministicRuntime << "\n";
   os << "RDD: port=" << AllArr.port << "\n";
   os << "RDD: bank_parallelization_method="
-     << AllArr.bank_parallelization_method << "\n";
+     << bank_parallelization_method_to_string(AllArr.bank_parallelization_method)
+     << "\n";
   os << "RDD: SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
   os << "RDD: AdditionalSymmetryHeuristicFile\n"
      << AllArr.AdditionalSymmetry << "\n";

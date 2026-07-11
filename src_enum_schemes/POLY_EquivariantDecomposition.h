@@ -174,7 +174,7 @@ std::vector<ComponentDecomposition<T, Tgroup>> get_full_decomposition(
     std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
   std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap(EXT, GRP, AllArr.dimEXT);
+      ComputeInitialInfo<TintGroup>(EXT, GRP, AllArr.dimEXT).named_map();
   std::vector<ComponentDecomposition<T>> l_comp_decomp;
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {

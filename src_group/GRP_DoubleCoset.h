@@ -692,20 +692,102 @@ vectface DoubleCosetDescription_SingleCoset_Block(
   return eListSma;
 }
 
+// The concrete method used to split the orbits of BigGRP into orbits of the
+// subgroup SmaGRP. "guess" is a meta-selector resolved (by benchmarking) in
+// OrbitSplittingListOrbit_spec before the kernel is reached. The
+// canonic_initial_triv_exhaustive_limit variant carries a numeric threshold,
+// held in DoubleCosetMethodSpec::exhaustive_limit.
+enum class DoubleCosetMethod {
+  repr,
+  canonic,
+  canonic_initial_triv,
+  exhaustive_std,
+  exhaustive_sparse,
+  exhaustive_robin,
+  exhaustive_hopscotch,
+  single_cosets,
+  canonic_initial_triv_exhaustive_limit,
+  guess
+};
+
+inline std::string double_coset_method_to_string(DoubleCosetMethod method) {
+  switch (method) {
+  case DoubleCosetMethod::repr:
+    return "repr";
+  case DoubleCosetMethod::canonic:
+    return "canonic";
+  case DoubleCosetMethod::canonic_initial_triv:
+    return "canonic_initial_triv";
+  case DoubleCosetMethod::exhaustive_std:
+    return "exhaustive_std";
+  case DoubleCosetMethod::exhaustive_sparse:
+    return "exhaustive_sparse";
+  case DoubleCosetMethod::exhaustive_robin:
+    return "exhaustive_robin";
+  case DoubleCosetMethod::exhaustive_hopscotch:
+    return "exhaustive_hopscotch";
+  case DoubleCosetMethod::single_cosets:
+    return "single_cosets";
+  case DoubleCosetMethod::canonic_initial_triv_exhaustive_limit:
+    return "canonic_initial_triv_exhaustive_limit";
+  case DoubleCosetMethod::guess:
+    return "guess";
+  }
+  return "unknown";
+}
+
+// The parsed method plus, for canonic_initial_triv_exhaustive_limit, its numeric
+// threshold. The string is parsed once, at the OrbitSplittingListOrbit_spec
+// boundary; the kernel then dispatches on the enum.
+template <typename Tint> struct DoubleCosetMethodSpec {
+  DoubleCosetMethod kind;
+  Tint exhaustive_limit{};
+};
+
+template <typename Tint>
+DoubleCosetMethodSpec<Tint>
+parse_double_coset_method(std::string const &method_split) {
+  if (method_split == "repr")
+    return {DoubleCosetMethod::repr};
+  if (method_split == "canonic")
+    return {DoubleCosetMethod::canonic};
+  if (method_split == "canonic_initial_triv")
+    return {DoubleCosetMethod::canonic_initial_triv};
+  if (method_split == "exhaustive_std")
+    return {DoubleCosetMethod::exhaustive_std};
+  if (method_split == "exhaustive_sparse")
+    return {DoubleCosetMethod::exhaustive_sparse};
+  if (method_split == "exhaustive_robin" || method_split == "exhaustive")
+    return {DoubleCosetMethod::exhaustive_robin};
+  if (method_split == "exhaustive_hopscotch")
+    return {DoubleCosetMethod::exhaustive_hopscotch};
+  if (method_split == "single_cosets")
+    return {DoubleCosetMethod::single_cosets};
+  if (method_split == "guess")
+    return {DoubleCosetMethod::guess};
+  std::optional<std::string> opt =
+      get_postfix(method_split, "canonic_initial_triv_exhaustive_limit");
+  if (opt) {
+    Tint n = ParseScalar<Tint>(*opt);
+    return {DoubleCosetMethod::canonic_initial_triv_exhaustive_limit, n};
+  }
+  std::cerr << "DCOS: unknown double coset method_split=" << method_split << "\n";
+  throw TerminalException{1};
+}
+
 template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
-vectface
-OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
-                                   const Tface_orbitsize &ListFaceOrbitsize,
-                                   std::string const &method_split,
-                                   Fterminal f_terminal, std::ostream &os) {
-  using Tint = typename Tgroup::Tint;
+vectface OrbitSplittingListOrbitKernel_spec(
+    Tgroup const &BigGRP, Tgroup const &SmaGRP,
+    const Tface_orbitsize &ListFaceOrbitsize,
+    DoubleCosetMethodSpec<typename Tgroup::Tint> const &spec,
+    Fterminal f_terminal, std::ostream &os) {
 #ifdef TIMINGS_DOUBLE_COSET
   MicrosecondTime time;
 #endif
 #ifdef DEBUG_DOUBLE_COSET
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
-     << " |vf|=" << ListFaceOrbitsize.size() << " method_split=" << method_split
-     << "\n";
+     << " |vf|=" << ListFaceOrbitsize.size()
+     << " method=" << double_coset_method_to_string(spec.kind) << "\n";
 #endif
 #ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, ListFaceOrbitsize);
@@ -714,58 +796,47 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
   PrintAllRawDoubleCosetEntries(BigGRP, SmaGRP, ListFaceOrbitsize);
 #endif
   auto get_split = [&]() -> vectface {
-    if (method_split == "repr") {
+    switch (spec.kind) {
+    case DoubleCosetMethod::repr:
       return DoubleCosetDescription_Representation_Block(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
-    }
-    if (method_split == "canonic") {
+    case DoubleCosetMethod::canonic:
       return DoubleCosetDescription_Canonic_Block(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
-    }
-    if (method_split == "canonic_initial_triv") {
+    case DoubleCosetMethod::canonic_initial_triv:
       return DoubleCosetDescription_CanonicInitialTriv_Block(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
-    }
-    if (method_split == "exhaustive_std") {
+    case DoubleCosetMethod::exhaustive_std:
       return DoubleCosetDescription_Exhaustive_Block_T<
           Tgroup, std::unordered_set<Face>>(BigGRP, SmaGRP, ListFaceOrbitsize,
                                             f_terminal, os);
-    }
-    if (method_split == "exhaustive_sparse") {
+    case DoubleCosetMethod::exhaustive_sparse:
       return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,
                                                        tsl::sparse_set<Face>>(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
-    }
-    if (method_split == "exhaustive_robin" || method_split == "exhaustive") {
+    case DoubleCosetMethod::exhaustive_robin:
       // That variant seems a little bit faster
       return DoubleCosetDescription_Exhaustive_Block_T<Tgroup,
                                                        tsl::robin_set<Face>>(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
-    }
-    if (method_split == "exhaustive_hopscotch") {
+    case DoubleCosetMethod::exhaustive_hopscotch:
       return DoubleCosetDescription_Exhaustive_Block_T<
           Tgroup, tsl::hopscotch_set<Face>>(BigGRP, SmaGRP, ListFaceOrbitsize,
                                             f_terminal, os);
-    }
-    if (method_split == "single_cosets") {
+    case DoubleCosetMethod::single_cosets:
       return DoubleCosetDescription_SingleCoset_Block(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
-    }
-    /*
-    if (method_split == "double_cosets") {
-      return DoubleCosetDescription_DoubleCoset_Block(
-          BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
-    }
-    */
-    std::optional<std::string> opt =
-        get_postfix(method_split, "canonic_initial_triv_exhaustive_limit");
-    if (opt) {
+    case DoubleCosetMethod::canonic_initial_triv_exhaustive_limit:
       // In this scheme, we use the exhaustive method when the orbit size is
-      // lower than n. Otherwise, we use the canonic_initial_triv method.
-      std::string const &n_str = *opt;
-      Tint n = ParseScalar<Tint>(n_str);
+      // lower than exhaustive_limit. Otherwise, we use the
+      // canonic_initial_triv method.
       return DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(
-          BigGRP, SmaGRP, ListFaceOrbitsize, n, f_terminal, os);
+          BigGRP, SmaGRP, ListFaceOrbitsize, spec.exhaustive_limit, f_terminal,
+          os);
+    case DoubleCosetMethod::guess:
+      // "guess" is resolved in OrbitSplittingListOrbit_spec and never reaches
+      // the kernel.
+      break;
     }
     std::cerr << "Failed to find a matching entry in get_split\n";
     throw TerminalException{1};
@@ -800,71 +871,79 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
                                       std::string const &method_split,
                                       std::ostream &os) {
   using Tint = typename Tgroup::Tint;
-  auto f_direct = [&](std::string const &the_method) -> vectface {
+  auto f_direct = [&](DoubleCosetMethodSpec<Tint> const &the_spec) -> vectface {
     auto f_terminal = [&]() -> bool { return false; };
     return OrbitSplittingListOrbitKernel_spec(BigGRP, SmaGRP, ListFaceOrbitsize,
-                                              the_method, f_terminal, os);
+                                              the_spec, f_terminal, os);
   };
-  if (method_split != "guess") {
-    return f_direct(method_split);
-  } else {
-    // Now it is "guess" being used.
-    if (ListFaceOrbitsize.size() < 3000) {
-      // Too small orbit size, sampling is too expensive.
-      Tint index = BigGRP.size() / SmaGRP.size();
-      if (index < 50) {
-        return f_direct("single_cosets");
-      }
-      if (SmaGRP.size() < 200) {
-        return f_direct("exhaustive");
-      }
-      return f_direct("canonic");
-    }
-    // Doing the sampling since we have a very large number of orbits
-    // to treat.
-    std::vector<std::string> Lmethod = {"canonic", "canonic_initial_triv",
-                                        "exhaustive_std", "exhaustive_robin",
-                                        "single_cosets"};
-    int64_t max_val = std::numeric_limits<int64_t>::max();
-    int64_t smallest_time = max_val;
-    std::string chosen_method = "unset";
-    auto evaluate_time = [&](std::string const &the_method) -> int64_t {
-      int64_t the_time = max_val;
-      int iter = 0;
-      int n_iter = 100; // Enough for sampling the speed.
-      NanosecondTime time;
-      auto f_terminal = [&]() -> bool {
-        iter++;
-        int64_t duration = time.const_eval_int64();
-        if (iter == n_iter) {
-          the_time = duration;
-#ifdef DEBUG_DOUBLE_COSET
-          os << "Finished the n_iter=" << n_iter << "\n";
-#endif
-          return true;
-        }
-        if (duration > smallest_time) {
-#ifdef DEBUG_DOUBLE_COSET
-          os << "duration already larger, no need to continue for method="
-             << the_method << "\n";
-#endif
-          return true;
-        }
-        return false;
-      };
-      (void)OrbitSplittingListOrbitKernel_spec(
-          BigGRP, SmaGRP, ListFaceOrbitsize, the_method, f_terminal, os);
-      return the_time;
-    };
-    for (auto &method : Lmethod) {
-      int64_t time = evaluate_time(method);
-      if (time < smallest_time) {
-        chosen_method = method;
-        smallest_time = time;
-      }
-    }
-    return f_direct(chosen_method);
+  auto f_kind = [&](DoubleCosetMethod kind) -> vectface {
+    return f_direct(DoubleCosetMethodSpec<Tint>{kind});
+  };
+  DoubleCosetMethodSpec<Tint> spec = parse_double_coset_method<Tint>(method_split);
+  if (spec.kind != DoubleCosetMethod::guess) {
+    return f_direct(spec);
   }
+  // Now it is "guess" being used.
+  if (ListFaceOrbitsize.size() < 3000) {
+    // Too small orbit size, sampling is too expensive.
+    Tint index = BigGRP.size() / SmaGRP.size();
+    if (index < 50) {
+      return f_kind(DoubleCosetMethod::single_cosets);
+    }
+    if (SmaGRP.size() < 200) {
+      return f_kind(DoubleCosetMethod::exhaustive_robin);
+    }
+    return f_kind(DoubleCosetMethod::canonic);
+  }
+  // Doing the sampling since we have a very large number of orbits
+  // to treat.
+  std::vector<DoubleCosetMethod> Lmethod = {
+      DoubleCosetMethod::canonic, DoubleCosetMethod::canonic_initial_triv,
+      DoubleCosetMethod::exhaustive_std, DoubleCosetMethod::exhaustive_robin,
+      DoubleCosetMethod::single_cosets};
+  int64_t max_val = std::numeric_limits<int64_t>::max();
+  int64_t smallest_time = max_val;
+  // Defaults to canonic; with >= 3000 orbits and n_iter=100 at least one method
+  // always completes the sampling and updates this below.
+  DoubleCosetMethod chosen_method = DoubleCosetMethod::canonic;
+  auto evaluate_time = [&](DoubleCosetMethod the_method) -> int64_t {
+    int64_t the_time = max_val;
+    int iter = 0;
+    int n_iter = 100; // Enough for sampling the speed.
+    NanosecondTime time;
+    auto f_terminal = [&]() -> bool {
+      iter++;
+      int64_t duration = time.const_eval_int64();
+      if (iter == n_iter) {
+        the_time = duration;
+#ifdef DEBUG_DOUBLE_COSET
+        os << "Finished the n_iter=" << n_iter << "\n";
+#endif
+        return true;
+      }
+      if (duration > smallest_time) {
+#ifdef DEBUG_DOUBLE_COSET
+        os << "duration already larger, no need to continue for method="
+           << double_coset_method_to_string(the_method) << "\n";
+#endif
+        return true;
+      }
+      return false;
+    };
+    (void)OrbitSplittingListOrbitKernel_spec(BigGRP, SmaGRP, ListFaceOrbitsize,
+                                             DoubleCosetMethodSpec<Tint>{
+                                                 the_method},
+                                             f_terminal, os);
+    return the_time;
+  };
+  for (auto &method : Lmethod) {
+    int64_t time = evaluate_time(method);
+    if (time < smallest_time) {
+      chosen_method = method;
+      smallest_time = time;
+    }
+  }
+  return f_kind(chosen_method);
 }
 
 template <typename Tgroup, typename Tface_orbitsize>

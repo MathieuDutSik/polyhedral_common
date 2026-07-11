@@ -39,25 +39,58 @@
 #define UNORD_SET tsl::hopscotch_set
 #endif
 
-// Those constants are for the canonic strategy since we have 3 different
-// methods available
-static const int CANONIC_STRATEGY__CANONICAL_IMAGE = 0;
-static const int CANONIC_STRATEGY__STORE = 1;
-static const int CANONIC_STRATEGY__INITIAL_TRIV = 2;
-// This is for the constant 5000
-static const int CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1 = 4;
+// The canonicalization strategy stored in a database's canonic_method field.
+// canonical_image is the all-around reasonable default that the other methods
+// have to compete against. unset is the initial (not-yet-chosen) value and miss
+// indicates that no method could be selected (e.g. the MPI evaluation).
+enum class CanonicStrategy {
+  canonical_image,
+  store,
+  initial_triv,
+  initial_triv_limited1,
+  unset,
+  miss,
+};
 
-// Those constants are for the default strategy
-static const int CANONIC_STRATEGY__DEFAULT = CANONIC_STRATEGY__CANONICAL_IMAGE;
-static const int REPR_STRATEGY__DEFAULT = 0; // More or less irrelevant here
+// The default strategy used when nothing better has been selected. Also the
+// (irrelevant) strategy of the representative-based database.
+inline constexpr CanonicStrategy CANONIC_STRATEGY__DEFAULT =
+    CanonicStrategy::canonical_image;
 
-// Constant indicating failure of finding the miss
-static const int STRATEGY_MISS = -1;
+inline std::string canonic_strategy_to_string(CanonicStrategy strategy) {
+  switch (strategy) {
+  case CanonicStrategy::canonical_image:
+    return "canonical_image";
+  case CanonicStrategy::store:
+    return "store";
+  case CanonicStrategy::initial_triv:
+    return "initial_triv";
+  case CanonicStrategy::initial_triv_limited1:
+    return "initial_triv_limited1";
+  case CanonicStrategy::unset:
+    return "unset";
+  case CanonicStrategy::miss:
+    return "miss";
+  }
+  return "unknown";
+}
 
-// Those constants express the choice for the database
-static const int DATABASE_ACTION__SIMPLE_LOAD = 0;
-static const int DATABASE_ACTION__GUESS = 1;
-static const int DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE = 2;
+// The action to take on the on-disk orbit database when resuming a run: load it
+// as-is, guess whether the stored canonicalization still matches, or recompute
+// and reshuffle it under the current canonicalization.
+enum class DatabaseAction { simple_load, guess, recompute_and_shuffle };
+
+inline std::string database_action_to_string(DatabaseAction action) {
+  switch (action) {
+  case DatabaseAction::simple_load:
+    return "simple_load";
+  case DatabaseAction::guess:
+    return "guess";
+  case DatabaseAction::recompute_and_shuffle:
+    return "recompute_and_shuffle";
+  }
+  return "unknown";
+}
 
 template <typename Tgroup_impl> struct TripleStore {
   using Tgroup = Tgroup_impl;
@@ -212,39 +245,39 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
   This is a simple canonicalization function that does not return the Orbitsize
  */
 template <typename Tgroup>
-Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
+Face CanonicalImageDualDesc(CanonicStrategy const &method_choice, Tgroup const &GRP,
                             Face const &f, [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_CANONICAL_LIMITED_V2
   os << "RDD: Entry " << StringGroup(GRP) << " " << StringFace(f) << "\n";
 #endif
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "RDD: CAN_LIM: Beginning of CanonicalImageDualDesc method_choice="
-     << method_choice << "\n";
+     << canonic_strategy_to_string(method_choice) << "\n";
   WriteGroup(os, GRP);
   os << "RDD: f=" << StringFace(f) << "\n";
 #endif
-  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE) {
+  if (method_choice == CanonicStrategy::canonical_image) {
     Face f_red = GRP.CanonicalImage(f);
 #ifdef DEBUG_CANONICAL_LIMITED
     os << "RDD: CAN_LIM: After CanonicalImage\n";
 #endif
     return f_red;
   }
-  if (method_choice == CANONIC_STRATEGY__STORE) {
+  if (method_choice == CanonicStrategy::store) {
     Face f_red = GRP.StoreCanonicalImage(f);
 #ifdef DEBUG_CANONICAL_LIMITED
     os << "RDD: CAN_LIM: After StoreCanonicalImage\n";
 #endif
     return f_red;
   }
-  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV) {
+  if (method_choice == CanonicStrategy::initial_triv) {
     Face f_red = GRP.CanonicalImageInitialTriv(f);
 #ifdef DEBUG_CANONICAL_LIMITED
     os << "RDD: CAN_LIM: After CanonicalImageInitialTriv\n";
 #endif
     return f_red;
   }
-  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
+  if (method_choice == CanonicStrategy::initial_triv_limited1) {
     try {
       Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
 #ifdef DEBUG_CANONICAL_LIMITED
@@ -258,7 +291,7 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
     }
   }
   std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
-  std::cerr << "method_choice=" << method_choice << "\n";
+  std::cerr << "method_choice=" << canonic_strategy_to_string(method_choice) << "\n";
   throw TerminalException{1};
 }
 
@@ -349,7 +382,7 @@ template <typename Torbsize, typename Tgroup> struct DataFaceOrbitSize {
  */
 template <typename Torbsize, typename Tgroup>
 Face CanonicalImageGeneralDualDesc(
-    int const &method_choice, Tgroup const &GRP,
+    CanonicStrategy const &method_choice, Tgroup const &GRP,
     DataFaceOrbitSize<Torbsize, Tgroup> &recConvert, Face const &f,
     [[maybe_unused]] std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
@@ -359,32 +392,32 @@ Face CanonicalImageGeneralDualDesc(
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "RDD: CAN_LIM: Beginning of CanonicalImageGeneralDualDesc "
         "method_choice="
-     << method_choice << "\n";
+     << canonic_strategy_to_string(method_choice) << "\n";
   WriteGroup(os, GRP);
   os << "RDD: CAN_LIM: f=" << StringFace(f) << "\n";
 #endif
-  if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE) {
+  if (method_choice == CanonicStrategy::canonical_image) {
     std::pair<Face, TintGroup> pair = GRP.CanonicalImageOrbitSize(f);
 #ifdef DEBUG_CANONICAL_LIMITED
     os << "RDD: CAN_LIM: After CanonicalImageOrbitSize\n";
 #endif
     return recConvert.ConvertFaceOrbitSize(pair);
   }
-  if (method_choice == CANONIC_STRATEGY__STORE) {
+  if (method_choice == CanonicStrategy::store) {
     std::pair<Face, TintGroup> pair = GRP.StoreCanonicalImageOrbitSize(f);
 #ifdef DEBUG_CANONICAL_LIMITED
     os << "RDD: CAN_LIM: After StoreCanonicalImageOrbitSize\n";
 #endif
     return recConvert.ConvertFaceOrbitSize(pair);
   }
-  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV) {
+  if (method_choice == CanonicStrategy::initial_triv) {
     Face f_red = GRP.CanonicalImageInitialTriv(f);
 #ifdef DEBUG_CANONICAL_LIMITED
     os << "RDD: CAN_LIM: After CanonicalImageInitialTriv\n";
 #endif
     return f_red;
   }
-  if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1) {
+  if (method_choice == CanonicStrategy::initial_triv_limited1) {
     try {
       Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
 #ifdef DEBUG_CANONICAL_LIMITED
@@ -398,7 +431,7 @@ Face CanonicalImageGeneralDualDesc(
     }
   }
   std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
-  std::cerr << "method_choice=" << method_choice << "\n";
+  std::cerr << "method_choice=" << canonic_strategy_to_string(method_choice) << "\n";
   throw TerminalException{1};
 }
 
@@ -525,20 +558,20 @@ Tgroup trivial_extension_group(Tgroup const &eGroup, size_t const &delta) {
 }
 
 template <typename Tgroup>
-std::vector<int> GetPossibleCanonicalizationMethod(Tgroup const &GRP) {
-  // We put first the CANONIC_STRATEGY__CANONICAL_IMAGE as it is an all around
+std::vector<CanonicStrategy> GetPossibleCanonicalizationMethod(Tgroup const &GRP) {
+  // We put first the CanonicStrategy::canonical_image as it is an all around
   // reasonable method on which other methods have to compete with.
-  std::vector<int> list_considered = {CANONIC_STRATEGY__CANONICAL_IMAGE,
-                                      CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1};
+  std::vector<CanonicStrategy> list_considered = {CanonicStrategy::canonical_image,
+                                      CanonicStrategy::initial_triv_limited1};
   if (GRP.size() < 20000) { // We need to exclude that strategy if too large as
                             // that strategy has no chance.
-    list_considered.push_back(CANONIC_STRATEGY__STORE);
+    list_considered.push_back(CanonicStrategy::store);
   }
   return list_considered;
 }
 
 template <typename Tgroup>
-int64_t time_evaluation_can_method(int const &method, vectface const &vf,
+int64_t time_evaluation_can_method(CanonicStrategy const &method, vectface const &vf,
                                    Tgroup const &GRP, int64_t upper_limit,
                                    std::ostream &os) {
   NanosecondTime time;
@@ -554,11 +587,11 @@ int64_t time_evaluation_can_method(int const &method, vectface const &vf,
 }
 
 template <typename Tgroup>
-int GetCanonicalizationMethod_Serial(vectface const &vf, Tgroup const &GRP,
+CanonicStrategy GetCanonicalizationMethod_Serial(vectface const &vf, Tgroup const &GRP,
                                      std::ostream &os) {
-  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
+  std::vector<CanonicStrategy> list_considered = GetPossibleCanonicalizationMethod(GRP);
   int64_t upper_limit = std::numeric_limits<int64_t>::max();
-  int chosen_method = CANONIC_STRATEGY__DEFAULT;
+  CanonicStrategy chosen_method = CANONIC_STRATEGY__DEFAULT;
   for (auto &method : list_considered) {
     int64_t runtime =
         time_evaluation_can_method(method, vf, GRP, upper_limit, os);
@@ -571,12 +604,12 @@ int GetCanonicalizationMethod_Serial(vectface const &vf, Tgroup const &GRP,
 }
 
 template <typename T, typename Tgroup>
-int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP,
+CanonicStrategy GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                     size_t size, std::ostream &os) {
   if (size < 10000) {
     if (GRP.size() < 200)
-      return CANONIC_STRATEGY__STORE;
-    return CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1;
+      return CanonicStrategy::store;
+    return CanonicStrategy::initial_triv_limited1;
   }
   int n = EXT.rows();
   vectface vf(n);
@@ -616,7 +649,7 @@ GetCanonicalInformation_Triple(
     // The used method for canonicalization does not matter, so everything
     // is correct.
     size_t size = ListOrbitFaceOrbitsize.size();
-    int can_method =
+    CanonicStrategy can_method =
         GetCanonicalizationMethodRandom(eTriple.EXT, TheGRPrelevant, size, os);
     UNORD_SET<Face> SetFace;
     Face eFaceImg(delta);

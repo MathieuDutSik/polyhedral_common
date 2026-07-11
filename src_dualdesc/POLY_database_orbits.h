@@ -42,11 +42,11 @@ public:
   // ---If method file is absent then we assume it was computed with the
   // default.
   // ---Otherwise we read it.
-  void write_method(std::string const &eFileMethod, int const &method) const {
+  void write_method(std::string const &eFileMethod, CanonicStrategy const &method) const {
     std::ofstream os_file(eFileMethod);
-    os_file << method;
+    os_file << static_cast<int>(method);
   }
-  int read_method(std::string const &eFileMethod) const {
+  CanonicStrategy read_method(std::string const &eFileMethod) const {
 #ifdef TRACK_DATABASE
     os << "SavingTrigger=" << SavingTrigger << " eFileMethod=" << eFileMethod
        << "\n";
@@ -59,9 +59,9 @@ public:
 #ifdef TRACK_DATABASE
         os << "The file does not exists\n";
 #endif
-        int the_method = bb.get_default_strategy();
-        write_method(eFileMethod, the_method);
-        return the_method;
+        CanonicStrategy canonic_method = bb.get_default_strategy();
+        write_method(eFileMethod, canonic_method);
+        return canonic_method;
       } else {
 #ifdef TRACK_DATABASE
         os << "The file exists\n";
@@ -69,7 +69,7 @@ public:
         std::ifstream is_file(eFileMethod);
         int method;
         is_file >> method;
-        return method;
+        return static_cast<CanonicStrategy>(method);
       }
     } else {
       return bb.get_default_strategy();
@@ -121,11 +121,11 @@ public:
     eFileFB = MainPrefix + ".fb";
     eFileFF = MainPrefix + ".ff";
     eFileMethod = MainPrefix + ".method";
-    int val = read_method(eFileMethod);
+    CanonicStrategy val = read_method(eFileMethod);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: read_method val=" << val << "\n";
+    os << "RDD: read_method val=" << canonic_strategy_to_string(val) << "\n";
 #endif
-    bb.the_method = val;
+    bb.canonic_method = val;
     if (SavingTrigger && !is_database_present()) {
       if (!FILE_IsFileMakeable(eFileEXT)) {
         std::cerr << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
@@ -146,7 +146,7 @@ public:
     fn.setval(0);
     ff.direct_write(V_empty);
     fb.direct_write(V_empty);
-    write_method(eFileMethod, bb.the_method);
+    write_method(eFileMethod, bb.canonic_method);
     std::ofstream os_grp(eFileGRP);
     os_grp << bb.GRP;
     WriteMatrixFile(eFileEXT, bb.EXT);
@@ -227,10 +227,10 @@ public:
     }
     return vfo;
   }
-  void set_method(int const &the_method) {
-    bb.the_method = the_method;
+  void set_method(CanonicStrategy const &canonic_method) {
+    bb.canonic_method = canonic_method;
     if (SavingTrigger) {
-      write_method(eFileMethod, the_method);
+      write_method(eFileMethod, canonic_method);
     }
   }
   void DirectAppendDatabase(vectface &&vf) {

@@ -36,8 +36,8 @@ public:
   // default.
   // ---Otherwise we read it.
   void write_method([[maybe_unused]] std::string const &eFileMethod,
-                    [[maybe_unused]] int const &method) const {}
-  int read_method([[maybe_unused]] std::string const &eFileMethod) const {
+                    [[maybe_unused]] CanonicStrategy const &method) const {}
+  CanonicStrategy read_method([[maybe_unused]] std::string const &eFileMethod) const {
     return bb.get_default_strategy();
   }
   bool is_database_present() const { return false; }
@@ -50,8 +50,8 @@ public:
                        const bool &_AdvancedTerminationCriterion,
                        std::ostream &os)
       : Base(bb, _AdvancedTerminationCriterion, os) {
-    int val = bb.get_default_strategy();
-    bb.the_method = val;
+    CanonicStrategy val = bb.get_default_strategy();
+    bb.canonic_method = val;
   }
   size_t preload_nb_orbit() const { return 0; }
   void LoadDatabase() {
@@ -67,7 +67,7 @@ public:
 #endif
     return vfo;
   }
-  void set_method(int const &the_method) { bb.the_method = the_method; }
+  void set_method(CanonicStrategy const &canonic_method) { bb.canonic_method = canonic_method; }
   void DirectAppendDatabase(vectface &&vf) {
     bb.clear();
     size_t n_orbit = vf.size();

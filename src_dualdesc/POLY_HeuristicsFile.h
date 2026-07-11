@@ -41,6 +41,32 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
   }
 }
 
+// Same as above but for the typed dual-description heuristics (any field type):
+// the file is parsed with the generic reader and then converted to the typed
+// form.
+template <typename TintGroup, typename TField>
+void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
+                  TypedHeuristic<TintGroup, TField> &eHeu,
+                  [[maybe_unused]] std::ostream &os) {
+  SingleBlock const &BlockHEU = eFull.get_block("HEURISTIC");
+  std::string NamelistEntFile = BlockHEU.get_string(NamelistEnt);
+  if (NamelistEntFile != "unset.heu") {
+#ifdef DEBUG_HEURISTICS
+    os << "NamelistEntFile for heuristic=" << NamelistEntFile << "\n";
+#endif
+    IsExistingFileDie(NamelistEntFile);
+    std::ifstream is(NamelistEntFile);
+    try {
+      eHeu =
+          convert_typed_heuristic<TintGroup, TField>(ReadHeuristic<TintGroup>(is));
+    } catch (TerminalException const &e) {
+      std::cerr << "Failed in reading the file NamelistEntFile=" << NamelistEnt
+                << "\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
 template <typename Tint>
 void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
                                  PolyHeuristicSerial<Tint> &AllArr,
@@ -74,7 +100,8 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   //
   std::string bank_parallelization_method =
       BlockDATA.get_string("bank_parallelization_method");
-  AllArr.bank_parallelization_method = bank_parallelization_method;
+  AllArr.bank_parallelization_method =
+      bank_parallelization_method_from_string(bank_parallelization_method);
   //
   SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, os);
   SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile",
