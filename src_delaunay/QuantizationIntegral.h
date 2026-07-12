@@ -201,31 +201,21 @@ struct QuantizationComputer {
     return v;
   }
 
-  // Realize a combinatorial (jet-)equivalence eElt between two augmented cell
-  // configurations as an explicit linear map. FindTransformation over jets
-  // divides by a zero divisor whenever the t = 0 configuration is rank-deficient
-  // -- a cell vertex row that only becomes independent for t > 0. But such a map
-  // is always a lattice (auto/iso)morphism: integral and t-independent. It maps
-  // each Taylor level of the jet to the same level, so it maps the configuration
-  // evaluated at any concrete t identically. Evaluate at the interior reference
-  // point t0 = tmax/2 -- where the metric Gram(t0) is non-degenerate and the
-  // configuration is full rank -- and solve there. The unique integral map
-  // returned is the correct realization at every order (the constant term t = 0
-  // is NOT usable: that is precisely the rank-deficient point). For an ordinary
-  // scalar T, eval_at ignores t0 and this reproduces FindTransformation.
-  MyMatrix<T> find_transformation_ref(MyMatrix<T> const &X1,
-                                      MyMatrix<T> const &X2,
-                                      Telt const &eElt) const {
-    using Tc = std::decay_t<decltype(constant_term(std::declval<T const &>()))>;
-    auto to_ref = [&](MyMatrix<T> const &X) -> MyMatrix<Tc> {
-      MyMatrix<Tc> Xe(X.rows(), X.cols());
-      for (int i = 0; i < X.rows(); i++)
-        for (int j = 0; j < X.cols(); j++)
-          Xe(i, j) = eval_at(X(i, j), t0_triang);
-      return Xe;
-    };
-    MyMatrix<Tc> Lc = FindTransformation<Tc, Telt>(to_ref(X1), to_ref(X2), eElt);
-    return UniversalMatrixConversion<T, Tc>(Lc);
+  // Evaluate a jet matrix at the non-degenerate reference point t0 = tmax/2,
+  // collapsing it to the base field. The lattice stabilizer / equivalence and its
+  // realizing integral map are constant along the OPEN iso-Delaunay segment, so
+  // computing them at the interior point t0 yields the correct generic-segment
+  // group -- which is the t -> 0+ group, NOT the inflated t = 0 wall group -- over
+  // a non-degenerate rational configuration. The whole weight-matrix machinery
+  // (canonical ordering, GetBasisFromOrdering, TestEquivalence) then runs in the
+  // base field and never divides by a zero divisor. For an ordinary scalar T this
+  // is the identity (eval_at ignores t0), reproducing the original computation.
+  MyMatrix<Tscal> eval_mat_ref(MyMatrix<T> const &M) const {
+    MyMatrix<Tscal> R(M.rows(), M.cols());
+    for (int i = 0; i < M.rows(); i++)
+      for (int j = 0; j < M.cols(); j++)
+        R(i, j) = eval_at(M(i, j), t0_triang);
+    return R;
   }
 
   // FuncAutom(EXT, center): affine automorphisms of EXT fixing the marked
@@ -246,15 +236,19 @@ struct QuantizationComputer {
     // the coloring the stabilizer is block-preserving, and because SHV is a
     // Z-basis its realization is automatically unimodular -- so we get the exact
     // lattice automorphism group directly, jet-ably, with no integral refinement.
-    std::vector<MyMatrix<T>> ListMat{GramMat};
+    // The stabilizer (and its realization) is computed at the reference point t0
+    // over the base field (see eval_mat_ref): correct generic-segment group, no
+    // zero-divisor in the weight-matrix machinery.
+    MyMatrix<Tscal> EXText_ref = eval_mat_ref(EXText);
+    std::vector<MyMatrix<Tscal>> ListMat{eval_mat_ref(GramMat)};
     int nbVert = EXT.rows();
     int nbP = EXText.rows();
-    std::vector<T> Vdiag(nbP, T(0));
+    std::vector<Tscal> Vdiag(nbP, Tscal(0));
     for (int i = nbVert; i < nbP; i++)
-      Vdiag[i] = T(1);
+      Vdiag[i] = Tscal(1);
     std::vector<std::vector<Tidx>> ListGenPerm =
-        GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(EXText, ListMat,
-                                                           Vdiag, os);
+        GetListGenAutomorphism_ListMat_Vdiag<Tscal, Tscal, Tgroup>(
+            EXText_ref, ListMat, Vdiag, os);
     std::vector<Telt> LGen;
     for (auto &eList : ListGenPerm)
       LGen.push_back(Telt(eList));
@@ -265,7 +259,9 @@ struct QuantizationComputer {
 #ifdef DEBUG_QUANTIZATION_INTEGRAL
       os << "QI: func_autom_center, Before FindTransformation\n";
 #endif
-      MyMatrix<T> L = find_transformation_ref(EXText, EXText, eGen);
+      MyMatrix<Tscal> Lc =
+          FindTransformation<Tscal, Telt>(EXText_ref, EXText_ref, eGen);
+      MyMatrix<T> L = UniversalMatrixConversion<T, Tscal>(Lc);
 #ifdef DEBUG_QUANTIZATION_INTEGRAL
       os << "QI: func_autom_center, After FindTransformation\n";
 #endif
@@ -312,22 +308,30 @@ struct QuantizationComputer {
     // the equivalence cannot mix the two blocks. The single equivalence returned
     // is then realized by a unimodular map (SHV is a Z-basis), so no coset search
     // via the (non-jet-able) LinPolytopeIntegral_Isomorphism is needed.
-    std::vector<MyMatrix<T>> ListMat{GramMat};
-    std::vector<T> Vdiag1(EXText1.rows(), T(0)), Vdiag2(EXText2.rows(), T(0));
+    // Equivalence (and its realization) at the reference point t0 over the base
+    // field (see eval_mat_ref): correct generic-segment equivalence, no
+    // zero-divisor in the weight-matrix machinery.
+    MyMatrix<Tscal> EXText1_ref = eval_mat_ref(EXText1);
+    MyMatrix<Tscal> EXText2_ref = eval_mat_ref(EXText2);
+    std::vector<MyMatrix<Tscal>> ListMat{eval_mat_ref(GramMat)};
+    std::vector<Tscal> Vdiag1(EXText1.rows(), Tscal(0)),
+        Vdiag2(EXText2.rows(), Tscal(0));
     for (int i = EXT1.rows(); i < EXText1.rows(); i++)
-      Vdiag1[i] = T(1);
+      Vdiag1[i] = Tscal(1);
     for (int i = EXT2.rows(); i < EXText2.rows(); i++)
-      Vdiag2[i] = T(1);
+      Vdiag2[i] = Tscal(1);
     std::optional<std::vector<Tidx>> eRes =
-        TestEquivalence_ListMat_Vdiag<T, T, Tidx>(EXText1, ListMat, Vdiag1,
-                                                  EXText2, ListMat, Vdiag2, os);
+        TestEquivalence_ListMat_Vdiag<Tscal, Tscal, Tidx>(
+            EXText1_ref, ListMat, Vdiag1, EXText2_ref, ListMat, Vdiag2, os);
     if (!eRes)
       return {};
     Telt eElt(*eRes);
 #ifdef DEBUG_QUANTIZATION_INTEGRAL
     os << "QI: func_equiv_center, Before FindTransformation\n";
 #endif
-    MyMatrix<T> MatEquiv = find_transformation_ref(EXText1, EXText2, eElt);
+    MyMatrix<Tscal> MatEquivC =
+        FindTransformation<Tscal, Telt>(EXText1_ref, EXText2_ref, eElt);
+    MyMatrix<T> MatEquiv = UniversalMatrixConversion<T, Tscal>(MatEquivC);
 #ifdef DEBUG_QUANTIZATION_INTEGRAL
     os << "QI: func_equiv_center, After FindTransformation\n";
 #endif
