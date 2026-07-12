@@ -239,18 +239,16 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     }
     // Now trying to do the flipping
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "STR: Before FindViolatedFace nbIter=" << nbIter << "\n";
+    os << "STR: Before FindViolatedFacetInequality nbIter=" << nbIter << "\n";
 #endif
     MyVector<T> eMatVect = SymmetricMatrixToVector(eMat);
-    Face eFace = FindViolatedFace(ConeClassical, eMatVect, os);
+    MyVector<T> eFacet =
+        FindViolatedFacetInequality(ConeClassical, eMatVect, os);
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "STR: eFace.count=" << eFace.count() << " eFace.size=" << eFace.size()
-       << "\n";
-    os << "STR: Before FindFacetInequality nbIter=" << nbIter << "\n";
+    os << "STR: After FindViolatedFacetInequality nbIter=" << nbIter << "\n";
     os << "STR: RankMat(ConeClassical)=" << RankMat(ConeClassical) << "\n";
 #endif
     int dimSymm = ConeClassical.cols();
-    MyVector<T> eFacet = FindFacetInequality(ConeClassical, eFace);
     for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
       T eSum(0);
       for (int u = 0; u < dimSymm; u++)

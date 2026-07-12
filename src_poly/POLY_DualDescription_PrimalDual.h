@@ -76,8 +76,7 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
         // expensive, so it has to be done only if we are sure that
         // it is needed.
         if (!has_violating_facet(eFACred)) {
-          Face face = FindViolatedFace(FAC, eFACred, os);
-          MyVector<T> eEXT = FindFacetInequality(FAC, face);
+          MyVector<T> eEXT = FindViolatedFacetInequality(FAC, eFACred, os);
           f_insert(eEXT);
           ListNewEXT.push_back(eEXT);
         }
