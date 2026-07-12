@@ -1986,12 +1986,47 @@ MyVector<T> FindViolatedFacetInequality(MyMatrix<T> const &EXT,
   };
   auto sanity_verify = [&](MyVector<T> const &f) -> MyVector<T> {
 #ifdef SANITY_CHECK_LINEAR_PROGRAM
-    T scal(0);
+    // (1) f must not be the zero vector.
+    bool is_zero = true;
+    for (int iCol = 0; iCol < nbCol; iCol++) {
+      if (f(iCol) != 0) { is_zero = false; break; }
+    }
+    if (is_zero) {
+      std::cerr << "LP: FindViolatedFacetInequality: returned zero vector\n";
+      throw TerminalException{1};
+    }
+    // (2) f must be violated by eVect (the whole point of the function):
+    //     f . eVect < 0.
+    T scal_v(0);
     for (int iCol = 0; iCol < nbCol; iCol++)
-      scal += f(iCol) * eVect(iCol);
-    if (scal >= 0) {
+      scal_v += f(iCol) * eVect(iCol);
+    if (scal_v >= 0) {
       std::cerr << "LP: FindViolatedFacetInequality: returned inequality is "
-                   "not violated by eVect (scal=" << scal << ")\n";
+                   "not violated by eVect (f.eVect=" << scal_v << ")\n";
+      throw TerminalException{1};
+    }
+    // (3) f must be a supporting hyperplane of cone(EXT):
+    //     f . EXT[i] >= 0 for every extreme ray i. Collect tight rows.
+    Face tightFace(nbRow);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      T scal(0);
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        scal += f(iCol) * EXT(iRow, iCol);
+      if (scal < 0) {
+        std::cerr << "LP: FindViolatedFacetInequality: returned inequality is "
+                     "not a supporting hyperplane of cone(EXT): EXT[" << iRow
+                  << "] . f = " << scal << " < 0\n";
+        throw TerminalException{1};
+      }
+      if (scal == 0) tightFace[iRow] = 1;
+    }
+    // (4) The tight rows must span a hyperplane of codim 1 in R^nbCol, so
+    //     that f genuinely defines a facet (not a higher-codim face).
+    int tight_rank = GetFacetRank(EXT, tightFace);
+    if (tight_rank != nbCol - 1) {
+      std::cerr << "LP: FindViolatedFacetInequality: incidence rank "
+                << tight_rank << " != nbCol - 1 (" << (nbCol - 1)
+                << "); returned inequality is not a facet\n";
       throw TerminalException{1};
     }
 #endif
