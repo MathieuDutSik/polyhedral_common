@@ -49,7 +49,7 @@ The following functions are used for the dual description:
 
 Other points:
   * For each dual description function, there is one function that returns a **vectface**, one function that returns a **MyMatrix<T>** and one function that returns a **std::vector<std::pair<Face,MyVector<T>>>**. The last function is taking the most memory.
-  * The function provided are **lrs**, **lrs_ring**, **cdd**, **ppl**, **normaliz**.
+  * The function provided are **lrs**, **cdd**, **ppl**, **normaliz**. When *T* is a field, **lrs** transparently uses the fraction-reduction internal-ring variant (formerly exposed as *lrs_ring*).
   * Some of the function calls are external.
   * The method **pd_lrs** uses the primal dual technique by using lrs for the check.
 

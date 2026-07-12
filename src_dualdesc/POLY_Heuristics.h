@@ -419,9 +419,9 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 // * "cdd_cbased": Available only for mpq_class, uses the C-based version
 //  by C-linking
 // * "cdd": The templatized cdd (only for fields)
-// * "lrs_ring": The templatized lrs (only for fields) but fractions reduced
-//   to integers or more precisely just ring operations.
-// * "lrs": The templatized lrs (for fields and rings)
+// * "lrs": The templatized lrs (for fields and rings). When T is a field,
+//   the implementation internally uses the fraction-reduction variant
+//   (previously exposed as "lrs_ring"); this is transparent to callers.
 // * "glrs": The external program glrs (only for types implementing Q)
 // * "ppl_ext": The external program ppl_lcdd (only for types implementing Q)
 // * "cdd_ext": The external program cdd (only for types implementing Q)
@@ -627,9 +627,9 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
                                          "/"};
   //
   std::vector<std::string> lstr_thompson_prior{"&THOMPSON_PRIOR"};
-  std::string s1 = " ListAnswer = \"cdd\", \"lrs_ring\"";
+  std::string s1 = " ListAnswer = \"cdd\", \"lrs\"";
   std::string s2 = " ListName = \"only_cdd\", \"only_lrs\"";
-  std::string s3 = " ListDescription = \"cdd:distri1\", \"lrs_ring:distri1\"";
+  std::string s3 = " ListDescription = \"cdd:distri1\", \"lrs:distri1\"";
   bool test = IsPPLpossible<T>();
   if (test) {
     s1 += ", \"ppl_ext\"";

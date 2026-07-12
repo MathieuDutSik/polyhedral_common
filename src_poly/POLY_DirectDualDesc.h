@@ -77,7 +77,6 @@ template <typename T> T Convert_Set_To_T(std::vector<size_t> const &V) {
 enum class DualDescProgram {
   cdd_cbased,
   cdd,
-  lrs_ring,
   small_polytopes,
   lrs,
   pd_lrs,
@@ -96,8 +95,6 @@ inline std::string to_string(DualDescProgram prog) {
     return "cdd_cbased";
   case DualDescProgram::cdd:
     return "cdd";
-  case DualDescProgram::lrs_ring:
-    return "lrs_ring";
   case DualDescProgram::small_polytopes:
     return "small_polytopes";
   case DualDescProgram::lrs:
@@ -125,8 +122,6 @@ dual_desc_program_from_string_opt(std::string const &prog) {
     return DualDescProgram::cdd_cbased;
   if (prog == "cdd")
     return DualDescProgram::cdd;
-  if (prog == "lrs_ring")
-    return DualDescProgram::lrs_ring;
   if (prog == "small_polytopes")
     return DualDescProgram::small_polytopes;
   if (prog == "lrs")
@@ -164,8 +159,7 @@ template <typename T> bool is_method_supported(DualDescProgram prog) {
     return false;
 #endif
   case DualDescProgram::cdd:
-  case DualDescProgram::lrs_ring:
-    // CDD and the lrs internal ring require T to be a field.
+    // CDD requires T to be a field.
     return is_ring_field<T>::value;
   case DualDescProgram::small_polytopes:
   case DualDescProgram::lrs:
@@ -220,16 +214,16 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     if constexpr (is_ring_field<T>::value)
       return cdd::DualDescription_incd(EXT, os);
     break;
-  case DualDescProgram::lrs_ring:
-    // If it is a field, then it makes sense to look at the internal ring
-    if constexpr (is_ring_field<T>::value)
-      return lrs::DualDescription_incd_reduction(EXT);
-    break;
   case DualDescProgram::small_polytopes:
     // Small polytopes have special solutions
     return SmallPolytope_Incidence(EXT, os);
   case DualDescProgram::lrs:
-    // It applies to the field case or ring
+    // lrs works for both fields and rings. When T is a field, prefer the
+    // fraction-reduction variant which computes in the internal ring
+    // (faster). This is an implementation detail, not exposed as a
+    // separate program.
+    if constexpr (is_ring_field<T>::value)
+      return lrs::DualDescription_incd_reduction(EXT);
     return lrs::DualDescription_incd(EXT);
   case DualDescProgram::pd_lrs:
     // It applies to the field case or ring
@@ -278,16 +272,15 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     if constexpr (is_ring_field<T>::value)
       return cdd::DualDescription(EXT, os);
     break;
-  case DualDescProgram::lrs_ring:
-    // For lrs_ring, we certainly need to have a field for T
-    if constexpr (is_ring_field<T>::value)
-      return lrs::DualDescription_reduction(EXT);
-    break;
   case DualDescProgram::small_polytopes:
     // Small polytopes have special solutions
     return SmallPolytope_Ineq(EXT, os);
   case DualDescProgram::lrs:
-    // lrs does not use divisions, so work even if not field.
+    // lrs does not use divisions, so it works even if T is not a field.
+    // When T is a field, prefer the fraction-reduction variant (faster);
+    // this is an implementation detail, not exposed as a separate program.
+    if constexpr (is_ring_field<T>::value)
+      return lrs::DualDescription_reduction(EXT);
     return lrs::DualDescription(EXT);
   case DualDescProgram::pd_lrs:
     // It applies to the field case or ring
@@ -339,16 +332,15 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     if constexpr (is_ring_field<T>::value)
       return cdd::DualDescriptionFaceIneq(EXT, f_process, os);
     break;
-  case DualDescProgram::lrs_ring:
-    // For lrs_ring that computes in a subring, we need T to be a field.
-    if constexpr (is_ring_field<T>::value)
-      return lrs::DualDescriptionFaceIneq_reduction(EXT, f_process);
-    break;
   case DualDescProgram::small_polytopes:
     // Small polytopes can have special solutions
     return SmallPolytope_FaceIneq(EXT, f_process, os);
   case DualDescProgram::lrs:
-    // T can be a field or a ring here
+    // T can be a field or a ring. When T is a field, prefer the
+    // fraction-reduction variant (faster); this is an implementation
+    // detail, not exposed as a separate program.
+    if constexpr (is_ring_field<T>::value)
+      return lrs::DualDescriptionFaceIneq_reduction(EXT, f_process);
     return lrs::DualDescriptionFaceIneq(EXT, f_process);
   case DualDescProgram::pd_lrs:
     // It applies to the field case or ring
