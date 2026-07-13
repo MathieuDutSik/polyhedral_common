@@ -72,6 +72,21 @@ inline Tb eval_at(jet<Tb, N> const &x, Tb const &t0) {
   return x.eval(t0);
 }
 
+// Valuation (order of the first non-zero Taylor coefficient): 0 for an ordinary
+// non-zero scalar, leading_index for a jet. Used only to profile how many leaf
+// simplices are degenerate at t = 0 (a simplex volume of valuation d contributes
+// to the moment only at order >= d).
+template <typename T> inline int scalar_valuation(T const &x) {
+  return (x == T(0)) ? 1000 : 0;
+}
+template <typename Tb, int N> inline int scalar_valuation(jet<Tb, N> const &x) {
+  return x.leading_index();
+}
+#ifdef PROFILE_SIMPLEX_VALUATION
+inline long g_simplex_valuation[32] = {0};
+inline long g_simplex_total = 0;
+#endif
+
 // The computer needs only three things beyond the Delaunay tessellation: the
 // dimension n, the invariant vector family SHV (integer vectors, used by the
 // marked-center stabilizer/equivalence), and the metric GramMat. It does not
@@ -129,7 +144,8 @@ struct QuantizationComputer {
   // -------- small geometric helpers (homogeneous coordinates) --------
 
   // The center (and radius) of the circumscribing sphere, homogeneous, length
-  // n+1 with eCent(0) = 1.
+  // n+1 with eCent(0) = 1. The recursion applies these to Delaunay FACES of every
+  // dimension (down to single vertices), so they must use the general routine.
   MyVector<T> center_homog(MyMatrix<T> const &EXT) const {
     CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
     return eCP.eCent;
@@ -138,6 +154,13 @@ struct QuantizationComputer {
   T square_radius(MyMatrix<T> const &EXT) const {
     CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
     return eCP.SquareRadius;
+  }
+
+  // Same, but for a FULL Delaunay cell (DT.l_dels[...].EXT), which is always
+  // full-dimensional -- so the faster CenterRadiusDelaunayPolytope applies.
+  MyVector<T> center_homog_fulldim(MyMatrix<T> const &EXT) const {
+    CP<T> eCP = CenterRadiusDelaunayPolytope<T>(GramMat, EXT);
+    return eCP.eCent;
   }
 
   // Isobarycenter, homogeneous, length n+1 (first coordinate equals 1).
@@ -590,6 +613,15 @@ struct QuantizationComputer {
       // t0-consistent triangulation add up to the cell integral, analytically in
       // t. For a plain scalar eval_at is the identity, so this is exactly |det|.
       T VolSimplex = DeterminantMat(EXTsimplex);
+#ifdef PROFILE_SIMPLEX_VALUATION
+      {
+        int val = scalar_valuation(VolSimplex);
+        if (val > 31)
+          val = 31;
+        g_simplex_valuation[val]++;
+        g_simplex_total++;
+      }
+#endif
       if (eval_at(VolSimplex, t0_triang) < 0)
         VolSimplex = -VolSimplex;
       MyVector<T> bary = ZeroVector<T>(nRel + 1);
@@ -712,7 +744,7 @@ struct QuantizationComputer {
           TintGrp index = OrdStabEXT / DStabEXT.size();
           NumberIncident += index;
           MyVector<T> TheCenter =
-              apply_matrix(center_homog(TheEXT), eRecord.eMat);
+              apply_matrix(center_homog_fulldim(TheEXT), eRecord.eMat);
           MyVector<T> SingleInv = OrbitBarycenter(TheCenter, StabEXT.gens);
           T indexT = tint_grp_to_T(index);
           SumElement += indexT * SingleInv;
@@ -773,7 +805,7 @@ struct QuantizationComputer {
     std::set<MyVector<T>> seen;
     for (auto &eSoft : sc.ListRecord) {
       MyMatrix<T> const &TheEXT = DT.l_dels[eSoft.iOrb].EXT;
-      MyVector<T> eCenter = apply_matrix(center_homog(TheEXT), eSoft.eMat);
+      MyVector<T> eCenter = apply_matrix(center_homog_fulldim(TheEXT), eSoft.eMat);
       std::vector<MyVector<T>> orb =
           OrbitComputation_vector(StabGens, eCenter);
       for (auto &v : orb)
@@ -1148,7 +1180,15 @@ QuantizationSecMomentMatJet(DelaunayTesselation<T, Tgroup> const &DT_base,
   // triangulation is evaluated (see direct_integral). Tscal of jet<T,N> is T.
   QuantizationComputer<Tj, Tint, Tgroup> comp(n, SHV_jet, GramMat_jet, DT_jet,
                                               os, t0);
-  return comp.compute().SecMomentMat;
+  MyMatrix<jet<T, N>> res = comp.compute().SecMomentMat;
+#ifdef PROFILE_SIMPLEX_VALUATION
+  os << "SIMPLEX_VALUATION total=" << g_simplex_total << "\n";
+  for (int v = 0; v < 8; v++)
+    if (g_simplex_valuation[v] > 0)
+      os << "  valuation " << v << ": " << g_simplex_valuation[v] << " ("
+         << (100.0 * g_simplex_valuation[v] / g_simplex_total) << "%)\n";
+#endif
+  return res;
 }
 
 template <typename T> std::string normg_string(double val) {
