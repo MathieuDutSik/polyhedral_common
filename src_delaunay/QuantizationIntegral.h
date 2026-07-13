@@ -558,24 +558,6 @@ struct QuantizationComputer {
       for (int j = 0; j < nRel + 1; j++)
         EXTinBasis(iVert, j) = c(j);
     }
-    // List of unit Gram matrices and their coefficients.
-    std::vector<MyMatrix<T>> ListGramMat;
-    std::vector<T> ListCoef;
-    for (int i = 0; i < nRel; i++) {
-      MyMatrix<T> H = ZeroMatrix<T>(nRel, nRel);
-      H(i, i) = 1;
-      ListGramMat.push_back(H);
-      ListCoef.push_back(T(1));
-    }
-    for (int i = 0; i < nRel - 1; i++) {
-      for (int j = i + 1; j < nRel; j++) {
-        MyMatrix<T> H = ZeroMatrix<T>(nRel, nRel);
-        H(i, j) = 1;
-        H(j, i) = 1;
-        ListGramMat.push_back(H);
-        ListCoef.push_back(T(1) / T(2));
-      }
-    }
     T IntDeg0(0);
     MyVector<T> IntDeg1 = ZeroVector<T>(nRel);
     MyMatrix<T> IntDeg2 = ZeroMatrix<T>(nRel, nRel);
@@ -627,28 +609,33 @@ struct QuantizationComputer {
         for (int j = 0; j < nRel + 1; j++)
           bary(j) += EXTsimplex(u, j);
       bary /= Tnp1;
-      // Spatial coordinates of the barycenter, and of the origin relative to it.
+      // Spatial coordinates of the barycenter.
       MyVector<T> barySpace = bary.tail(nRel);
-      MyVector<T> eDiff0 = -barySpace;
       // Centered vertex coordinates (rows = v_u - c, spatial part only).
       MyMatrix<T> Diff(sdim, nRel);
       for (int u = 0; u < sdim; u++)
         for (int a = 0; a < nRel; a++)
           Diff(u, a) = EXTsimplex(u, a + 1) - barySpace(a);
-      for (size_t iMat = 0; iMat < ListCoef.size(); iMat++) {
-        MyMatrix<T> const &H = ListGramMat[iMat];
-        // sum_u (v_u - c)^T H (v_u - c) over the simplex vertices.
-        T TheSum(0);
-        for (int u = 0; u < sdim; u++) {
-          MyVector<T> eDiff = GetMatrixRow(Diff, u);
-          TheSum += eDiff.dot(H * eDiff);
+      // Second-moment contribution of this simplex. Forming the covariance
+      // S = Diff^T Diff once (O(nRel^2 * sdim)) replaces the previous contraction
+      // of each of the ~nRel^2 unit matrices H against every centered vertex,
+      // which built a DENSE H*eDiff per H and per vertex (O(nRel^4 * sdim)). For
+      // the uniform distribution on the simplex the second moment about the origin
+      // is  M2(a,b) = Vol * ( c_a c_b + S(a,b) / ((nRel+1)(nRel+2)) ), c=barySpace.
+      MyMatrix<T> S(nRel, nRel);
+      for (int a = 0; a < nRel; a++)
+        for (int b = a; b < nRel; b++) {
+          T s(0);
+          for (int u = 0; u < sdim; u++)
+            s += Diff(u, a) * Diff(u, b);
+          S(a, b) = s;
+          S(b, a) = s;
         }
-        // c^T H c (value of the quadratic form at the barycenter).
-        T quad0 = eDiff0.dot(H * eDiff0);
-        T TheInt = quad0 + TheSum / (Tnp1 * Tnp2);
-        T fact = VolSimplex * ListCoef[iMat] * TheInt;
-        IntDeg2 += fact * H;
-      }
+      T invDenom = T(1) / (Tnp1 * Tnp2);
+      for (int a = 0; a < nRel; a++)
+        for (int b = 0; b < nRel; b++)
+          IntDeg2(a, b) +=
+              VolSimplex * (barySpace(a) * barySpace(b) + S(a, b) * invDenom);
       IntDeg0 += VolSimplex;
       for (int a = 0; a < nRel; a++)
         IntDeg1(a) += VolSimplex * barySpace(a);
