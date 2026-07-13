@@ -117,6 +117,10 @@ struct QuantizationComputer {
   // segment (t0 = tmax/2, where the tessellation was pinned down), so that the
   // evaluated polytope is non-degenerate and its triangulation is the t -> 0+ one.
   Tscal t0_triang{};
+  // The metric evaluated at t0 (see eval_mat_ref), wrapped in the single-element
+  // ListMat the weight-matrix equivalence/automorphism engine expects. Constant
+  // during the recursion, so built once in the constructor.
+  std::vector<MyMatrix<Tscal>> ListMat_ref;
 
   // Ordinary constructor: take n and the metric from a DataLattice, and compute
   // the Z-spanning invariant family ExtractInvariantVectorFamilyZbasis(GramMat)
@@ -133,6 +137,7 @@ struct QuantizationComputer {
         ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
     SHV = UniversalMatrixConversion<T, Tint>(SHV_i);
     GramMatInv = Inverse(GramMat);
+    ListMat_ref = {eval_mat_ref(GramMat)};
   }
 
   // Direct constructor: explicit n, SHV, metric. Used for the deformation
@@ -145,6 +150,7 @@ struct QuantizationComputer {
       : DT(DT), os(os), n(n_in), SHV(SHV_in), GramMat(GramMat_in),
         t0_triang(t0_in) {
     GramMatInv = Inverse(GramMat);
+    ListMat_ref = {eval_mat_ref(GramMat)};
   }
 
   // -------- small geometric helpers (homogeneous coordinates) --------
@@ -267,7 +273,6 @@ struct QuantizationComputer {
     // over the base field (see eval_mat_ref): correct generic-segment group, no
     // zero-divisor in the weight-matrix machinery.
     MyMatrix<Tscal> EXText_ref = eval_mat_ref(EXText);
-    std::vector<MyMatrix<Tscal>> ListMat{eval_mat_ref(GramMat)};
     int nbVert = EXT.rows();
     int nbP = EXText.rows();
     std::vector<Tscal> Vdiag(nbP, Tscal(0));
@@ -275,7 +280,7 @@ struct QuantizationComputer {
       Vdiag[i] = Tscal(1);
     std::vector<std::vector<Tidx>> ListGenPerm =
         GetListGenAutomorphism_ListMat_Vdiag<Tscal, Tscal, Tgroup>(
-            EXText_ref, ListMat, Vdiag, os);
+            EXText_ref, ListMat_ref, Vdiag, os);
     std::vector<Telt> LGen;
     for (auto &eList : ListGenPerm)
       LGen.push_back(Telt(eList));
@@ -340,7 +345,6 @@ struct QuantizationComputer {
     // zero-divisor in the weight-matrix machinery.
     MyMatrix<Tscal> EXText1_ref = eval_mat_ref(EXText1);
     MyMatrix<Tscal> EXText2_ref = eval_mat_ref(EXText2);
-    std::vector<MyMatrix<Tscal>> ListMat{eval_mat_ref(GramMat)};
     std::vector<Tscal> Vdiag1(EXText1.rows(), Tscal(0)),
         Vdiag2(EXText2.rows(), Tscal(0));
     for (int i = EXT1.rows(); i < EXText1.rows(); i++)
@@ -349,7 +353,8 @@ struct QuantizationComputer {
       Vdiag2[i] = Tscal(1);
     std::optional<std::vector<Tidx>> eRes =
         TestEquivalence_ListMat_Vdiag<Tscal, Tscal, Tidx>(
-            EXText1_ref, ListMat, Vdiag1, EXText2_ref, ListMat, Vdiag2, os);
+            EXText1_ref, ListMat_ref, Vdiag1, EXText2_ref, ListMat_ref, Vdiag2,
+            os);
     if (!eRes)
       return {};
     Telt eElt(*eRes);
@@ -398,16 +403,11 @@ struct QuantizationComputer {
     int nbVert = EXT.rows();
     inv.nbVert = nbVert;
     inv.rank = RankMat(EXT);
-#ifdef DISABLE_CENTER_OPTS
-    MyVector<T> cp = center_homog(EXT);
-    inv.sqr_radius = square_radius(EXT);
-#else
     // Center and radius are both needed here, so compute the circumsphere once
     // (center_homog + square_radius would each solve for the center separately).
     CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
     MyVector<T> const &cp = eCP.eCent;
     inv.sqr_radius = eCP.SquareRadius;
-#endif
     MyVector<T> eIso = isobarycenter_homog(EXT);
     inv.iso_eq_center = (eIso == cp);
     std::map<T, int> map_occ;
@@ -465,11 +465,7 @@ struct QuantizationComputer {
     // is Q, which is invertible. The two together give the same jet-valued
     // Gram-orthogonal complement, division-free.
     MyMatrix<T> Ncomp = NullspaceTrMat(SpaceBas);
-#ifdef DISABLE_CENTER_OPTS
-    MyMatrix<T> NSP = Ncomp * Inverse(GramMat);
-#else
     MyMatrix<T> NSP = Ncomp * GramMatInv;
-#endif
     int dimNSP = NSP.rows();
     MyMatrix<T> TheBasis(1 + dimNSP, n + 1);
     for (int i = 0; i < n + 1; i++)
@@ -578,7 +574,8 @@ struct QuantizationComputer {
     }
     T IntDeg0(0);
     MyVector<T> IntDeg1 = ZeroVector<T>(nRel);
-    MyMatrix<T> IntDeg2 = ZeroMatrix<T>(nRel, nRel);
+    // Degree-2 integral, symmetric, stored as its upper triangle (a <= b) flat.
+    std::vector<T> IntDeg2ut(nRel * (nRel + 1) / 2, T(0));
     // The leaf triangulation is purely combinatorial (any triangulation of the
     // cell integrates the polynomial identically), so it must NOT be run over
     // jets: at t = 0 the split vertices coincide and lrs' fraction-free pivoting
@@ -597,6 +594,7 @@ struct QuantizationComputer {
     // (n+2), NOT factorials -- the overall n! normalization is applied at the
     // very end via factorial(nRel).
     T Tnp1(nRel + 1), Tnp2(nRel + 2);
+    T invDenom = T(1) / (Tnp1 * Tnp2); // constant, hoisted out of the loop
     for (auto &eSimplex : trig) {
       std::vector<int> LV = FaceToVector<int>(eSimplex);
       int sdim = LV.size();
@@ -634,34 +632,37 @@ struct QuantizationComputer {
       for (int u = 0; u < sdim; u++)
         for (int a = 0; a < nRel; a++)
           Diff(u, a) = EXTsimplex(u, a + 1) - barySpace(a);
-      // Second-moment contribution of this simplex. Forming the covariance
-      // S = Diff^T Diff once (O(nRel^2 * sdim)) replaces the previous contraction
-      // of each of the ~nRel^2 unit matrices H against every centered vertex,
-      // which built a DENSE H*eDiff per H and per vertex (O(nRel^4 * sdim)). For
-      // the uniform distribution on the simplex the second moment about the origin
-      // is  M2(a,b) = Vol * ( c_a c_b + S(a,b) / ((nRel+1)(nRel+2)) ), c=barySpace.
-      MyMatrix<T> S(nRel, nRel);
+      // Second-moment contribution of this simplex, accumulated on the upper
+      // triangle only (the matrix is symmetric). Forming the covariance
+      // Diff^T Diff replaces the previous contraction of each of the ~nRel^2 unit
+      // matrices H against every centered vertex (a dense H*eDiff per H and per
+      // vertex, O(nRel^4*sdim)); for the uniform distribution on the simplex the
+      // second moment about the origin is
+      //   M2(a,b) = Vol * ( c_a c_b + (Diff^T Diff)(a,b) / ((nRel+1)(nRel+2)) ).
+      int pos = 0;
       for (int a = 0; a < nRel; a++)
         for (int b = a; b < nRel; b++) {
           T s(0);
           for (int u = 0; u < sdim; u++)
             s += Diff(u, a) * Diff(u, b);
-          S(a, b) = s;
-          S(b, a) = s;
+          IntDeg2ut[pos] +=
+              VolSimplex * (barySpace(a) * barySpace(b) + s * invDenom);
+          pos++;
         }
-      T invDenom = T(1) / (Tnp1 * Tnp2);
-      for (int a = 0; a < nRel; a++)
-        for (int b = 0; b < nRel; b++)
-          IntDeg2(a, b) +=
-              VolSimplex * (barySpace(a) * barySpace(b) + S(a, b) * invDenom);
       IntDeg0 += VolSimplex;
       for (int a = 0; a < nRel; a++)
         IntDeg1(a) += VolSimplex * barySpace(a);
     }
     MyMatrix<T> ret = ZeroMatrix<T>(nRel + 1, nRel + 1);
-    for (int i = 0; i < nRel; i++)
-      for (int j = 0; j < nRel; j++)
-        ret(i + 1, j + 1) = IntDeg2(i, j);
+    {
+      int pos = 0;
+      for (int a = 0; a < nRel; a++)
+        for (int b = a; b < nRel; b++) {
+          ret(a + 1, b + 1) = IntDeg2ut[pos];
+          ret(b + 1, a + 1) = IntDeg2ut[pos];
+          pos++;
+        }
+    }
     for (int i = 0; i < nRel; i++) {
       ret(0, i + 1) = IntDeg1(i);
       ret(i + 1, 0) = IntDeg1(i);
