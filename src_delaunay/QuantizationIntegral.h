@@ -147,8 +147,7 @@ struct QuantizationComputer {
   // n+1 with eCent(0) = 1. The recursion applies these to Delaunay FACES of every
   // dimension (down to single vertices), so they must use the general routine.
   MyVector<T> center_homog(MyMatrix<T> const &EXT) const {
-    CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
-    return eCP.eCent;
+    return CenterDelaunayPolytopeGeneral<T>(GramMat, EXT);
   }
 
   T square_radius(MyMatrix<T> const &EXT) const {
@@ -157,10 +156,9 @@ struct QuantizationComputer {
   }
 
   // Same, but for a FULL Delaunay cell (DT.l_dels[...].EXT), which is always
-  // full-dimensional -- so the faster CenterRadiusDelaunayPolytope applies.
+  // full-dimensional -- so the faster CenterDelaunayPolytope applies.
   MyVector<T> center_homog_fulldim(MyMatrix<T> const &EXT) const {
-    CP<T> eCP = CenterRadiusDelaunayPolytope<T>(GramMat, EXT);
-    return eCP.eCent;
+    return CenterDelaunayPolytope<T>(GramMat, EXT);
   }
 
   // Isobarycenter, homogeneous, length n+1 (first coordinate equals 1).

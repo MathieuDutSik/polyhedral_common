@@ -172,57 +172,63 @@ template <typename T> struct CP {
   MyVector<T> eCent;
 };
 
+// Squared circumscribing radius from a KNOWN center (homogeneous eCent): the
+// squared distance (in GramMat) from the center to the first vertex.
 template <typename T>
-CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
+T SquareRadiusFromCenter(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
+                         MyVector<T> const &eCent) {
+  int n = GramMat.rows();
+  MyVector<T> eW(n);
+  for (int i = 0; i < n; i++)
+    eW(i) = eCent(i + 1) - EXT(0, i + 1);
+  return EvaluationQuadForm<T, T>(GramMat, eW);
+}
+
+// Center (homogeneous, length n+1, eCent(0) = 1) of the circumscribing sphere of
+// a Delaunay polytope, general version: it determines the affine span of EXT (a
+// rank/nullspace computation, TMat_SelectRowCol) and adds the corresponding
+// equations, so the center is well defined even when EXT is lower-dimensional.
+// Many callers only need the center; the radius is one extra quadratic form,
+// added by CenterRadiusDelaunayPolytopeGeneral.
+template <typename T>
+MyVector<T> CenterDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
                                           MyMatrix<T> const &EXT) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n = GramMat.rows();
-  /*  std::cerr << "GramMat=\n";
-  WriteMatrixGAP(std::cerr, GramMat);
-  std::cerr << "EXT=\n";
-  WriteMatrixGAP(std::cerr, EXT);*/
-
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT);
   int dimNSP = eSelect.NSP.rows();
-  //  std::cerr << "dimNSP=" << dimNSP << "\n";
-  int nbEqua = dimNSP + EXT.rows() - 1;
-  //  std::cerr << "nbEqua=" << nbEqua << "\n";
   int nbVert = EXT.rows();
+  int nbEqua = dimNSP + nbVert - 1;
   MyMatrix<T> ListEquation(n, nbEqua);
   MyVector<T> ListB(nbEqua);
   int idx = 0;
   MyVector<T> eV(n);
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++)
     eV(i) = EXT(0, i + 1);
-  }
+  T normV = EvaluationQuadForm<T, T>(GramMat, eV);
   for (int iVert = 1; iVert < nbVert; iVert++) {
     MyVector<T> fV(n);
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++)
       fV(i) = EXT(iVert, i + 1);
-    }
-    T Sum = EvaluationQuadForm<T, T>(GramMat, eV) -
-            EvaluationQuadForm<T, T>(GramMat, fV);
-    ListB(idx) = Sum;
+    ListB(idx) = normV - EvaluationQuadForm<T, T>(GramMat, fV);
     for (int i = 0; i < n; i++) {
       T vSum(0);
-      for (int j = 0; j < n; j++) {
+      for (int j = 0; j < n; j++)
         vSum += GramMat(i, j) * (eV(j) - fV(j));
-      }
       ListEquation(i, idx) = 2 * vSum;
     }
     idx++;
   }
   for (int iNSP = 0; iNSP < dimNSP; iNSP++) {
     ListB(idx) = eSelect.NSP(iNSP, 0);
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++)
       ListEquation(i, idx) = -eSelect.NSP(iNSP, i + 1);
-    }
     idx++;
   }
   std::optional<MyVector<T>> opt = SolutionMat(ListEquation, ListB);
 #ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
   if (!opt) {
-    std::cerr << "DEL: Error in CenterRadiusDelaunayPolytopeGeneral\n";
+    std::cerr << "DEL: Error in CenterDelaunayPolytopeGeneral\n";
     std::cerr << "DEL: The linear system has no solution\n";
     throw TerminalException{1};
   }
@@ -230,23 +236,29 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
   MyVector<T> const &eSol = *opt;
   MyVector<T> eCent(1 + n);
   eCent(0) = 1;
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++)
     eCent(i + 1) = eSol(i);
-  }
-  auto get_sqr_dist = [&](int iVert) -> T {
-    MyVector<T> eW(n);
-    for (int i = 0; i < n; i++) {
-      eW(i) = eSol(i) - EXT(iVert, i + 1);
-    }
-    return EvaluationQuadForm<T, T>(GramMat, eW);
-  };
-  T SquareRadius = get_sqr_dist(0);
+  return eCent;
+}
+
+// Center and squared radius, general version: the center (the expensive part)
+// plus one quadratic form for the radius.
+template <typename T>
+CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
+                                          MyMatrix<T> const &EXT) {
+  MyVector<T> eCent = CenterDelaunayPolytopeGeneral(GramMat, EXT);
+  T SquareRadius = SquareRadiusFromCenter(GramMat, EXT, eCent);
 #ifdef DEBUG_DELAUNAY
+  int n = GramMat.rows();
+  int nbVert = EXT.rows();
   for (int iVert = 1; iVert < nbVert; iVert++) {
-    T eNorm = get_sqr_dist(iVert);
+    MyVector<T> eW(n);
+    for (int i = 0; i < n; i++)
+      eW(i) = eCent(i + 1) - EXT(iVert, i + 1);
+    T eNorm = EvaluationQuadForm<T, T>(GramMat, eW);
     if (SquareRadius != eNorm) {
-      std::cerr << "DEL: SquareRadius=" << SquareRadius << "\n";
-      std::cerr << "DEL: eNorm=" << eNorm << "\n";
+      std::cerr << "DEL: SquareRadius=" << SquareRadius << " eNorm=" << eNorm
+                << "\n";
       std::cerr << "DEL: Error in the Solutioning\n";
       throw TerminalException{1};
     }
@@ -255,28 +267,24 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
   return {std::move(SquareRadius), std::move(eCent)};
 }
 
-// Circumcenter (in the metric GramMat) and squared radius of a FULL-DIMENSIONAL
-// Delaunay polytope, i.e. one whose vertices affinely span the whole space.
-// CenterRadiusDelaunayPolytopeGeneral must first determine the affine span of EXT
-// (a rank/nullspace computation, TMat_SelectRowCol(EXT)) and add the
-// corresponding equations, because for a lower-dimensional polytope the center is
-// only determined within that span. When the polytope is known to be
-// full-dimensional the equidistance equations alone determine the center
-// uniquely, so we skip the span computation entirely -- one fewer elimination and
-// fewer equations. Same output as the general routine (checked under SANITY).
+// Center of the circumscribing sphere of a FULL-DIMENSIONAL Delaunay polytope
+// (its vertices affinely span the whole space). The general routine must first
+// determine the affine span of EXT (TMat_SelectRowCol) so that the center is
+// defined for a lower-dimensional polytope; when EXT is known to be
+// full-dimensional the equidistance equations alone determine the center, so we
+// skip the span computation entirely -- one fewer elimination and fewer
+// equations. Same center as the general routine (checked under SANITY).
 template <typename T>
-CP<T> CenterRadiusDelaunayPolytope(MyMatrix<T> const &GramMat,
+MyVector<T> CenterDelaunayPolytope(MyMatrix<T> const &GramMat,
                                    MyMatrix<T> const &EXT) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n = GramMat.rows();
   int nbVert = EXT.rows();
 #ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
-  // The polytope must be full-dimensional: the homogeneous EXT (n+1 columns) has
-  // rank n+1.
   int rnk = RankMat(EXT);
   if (rnk != n + 1) {
-    std::cerr << "DEL: CenterRadiusDelaunayPolytope called on a NON-full-"
-                 "dimensional polytope: rank(EXT)="
+    std::cerr << "DEL: CenterDelaunayPolytope called on a NON-full-dimensional "
+                 "polytope: rank(EXT)="
               << rnk << " != n+1=" << (n + 1) << "\n";
     throw TerminalException{1};
   }
@@ -303,8 +311,8 @@ CP<T> CenterRadiusDelaunayPolytope(MyMatrix<T> const &GramMat,
   std::optional<MyVector<T>> opt = SolutionMat(ListEquation, ListB);
 #ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
   if (!opt) {
-    std::cerr << "DEL: CenterRadiusDelaunayPolytope: the equidistance system "
-                 "has no solution (polytope not co-spherical?)\n";
+    std::cerr << "DEL: CenterDelaunayPolytope: the equidistance system has no "
+                 "solution (polytope not co-spherical?)\n";
     throw TerminalException{1};
   }
 #endif
@@ -313,24 +321,27 @@ CP<T> CenterRadiusDelaunayPolytope(MyMatrix<T> const &GramMat,
   eCent(0) = 1;
   for (int i = 0; i < n; i++)
     eCent(i + 1) = eSol(i);
-  MyVector<T> eW(n);
-  for (int i = 0; i < n; i++)
-    eW(i) = eSol(i) - EXT(0, i + 1);
-  T SquareRadius = EvaluationQuadForm<T, T>(GramMat, eW);
 #ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
-  // The result must coincide with the general routine.
-  CP<T> ref = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
-  bool ok = (ref.SquareRadius == SquareRadius) &&
-            (ref.eCent.size() == eCent.size());
+  MyVector<T> ref = CenterDelaunayPolytopeGeneral<T>(GramMat, EXT);
+  bool ok = (ref.size() == eCent.size());
   for (int i = 0; ok && i < eCent.size(); i++)
-    if (ref.eCent(i) != eCent(i))
+    if (ref(i) != eCent(i))
       ok = false;
   if (!ok) {
-    std::cerr << "DEL: CenterRadiusDelaunayPolytope disagrees with the general "
+    std::cerr << "DEL: CenterDelaunayPolytope disagrees with the general "
                  "routine\n";
     throw TerminalException{1};
   }
 #endif
+  return eCent;
+}
+
+// Center and squared radius, full-dimensional version.
+template <typename T>
+CP<T> CenterRadiusDelaunayPolytope(MyMatrix<T> const &GramMat,
+                                   MyMatrix<T> const &EXT) {
+  MyVector<T> eCent = CenterDelaunayPolytope(GramMat, EXT);
+  T SquareRadius = SquareRadiusFromCenter(GramMat, EXT, eCent);
   return {std::move(SquareRadius), std::move(eCent)};
 }
 
