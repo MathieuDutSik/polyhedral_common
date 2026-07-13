@@ -105,6 +105,9 @@ struct QuantizationComputer {
   int n;
   MyMatrix<T> SHV;
   MyMatrix<T> GramMat;
+  // Inverse of the (fixed) metric, cached: get_basis needs G^{-1} once per cell,
+  // but the metric never changes during the recursion.
+  MyMatrix<T> GramMatInv;
   // The base field underneath T (T itself for an ordinary scalar, the coefficient
   // type for a jet); the type in which the leaf triangulation is computed.
   using Tscal = std::decay_t<decltype(constant_term(std::declval<T const &>()))>;
@@ -129,6 +132,7 @@ struct QuantizationComputer {
     MyMatrix<Tint> SHV_i =
         ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
     SHV = UniversalMatrixConversion<T, Tint>(SHV_i);
+    GramMatInv = Inverse(GramMat);
   }
 
   // Direct constructor: explicit n, SHV, metric. Used for the deformation
@@ -139,7 +143,9 @@ struct QuantizationComputer {
                        DelaunayTesselation<T, Tgroup> const &DT,
                        std::ostream &os, Tscal const &t0_in = Tscal())
       : DT(DT), os(os), n(n_in), SHV(SHV_in), GramMat(GramMat_in),
-        t0_triang(t0_in) {}
+        t0_triang(t0_in) {
+    GramMatInv = Inverse(GramMat);
+  }
 
   // -------- small geometric helpers (homogeneous coordinates) --------
 
@@ -392,8 +398,16 @@ struct QuantizationComputer {
     int nbVert = EXT.rows();
     inv.nbVert = nbVert;
     inv.rank = RankMat(EXT);
+#ifdef DISABLE_CENTER_OPTS
     MyVector<T> cp = center_homog(EXT);
     inv.sqr_radius = square_radius(EXT);
+#else
+    // Center and radius are both needed here, so compute the circumsphere once
+    // (center_homog + square_radius would each solve for the center separately).
+    CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
+    MyVector<T> const &cp = eCP.eCent;
+    inv.sqr_radius = eCP.SquareRadius;
+#endif
     MyVector<T> eIso = isobarycenter_homog(EXT);
     inv.iso_eq_center = (eIso == cp);
     std::map<T, int> map_occ;
@@ -451,7 +465,11 @@ struct QuantizationComputer {
     // is Q, which is invertible. The two together give the same jet-valued
     // Gram-orthogonal complement, division-free.
     MyMatrix<T> Ncomp = NullspaceTrMat(SpaceBas);
+#ifdef DISABLE_CENTER_OPTS
     MyMatrix<T> NSP = Ncomp * Inverse(GramMat);
+#else
+    MyMatrix<T> NSP = Ncomp * GramMatInv;
+#endif
     int dimNSP = NSP.rows();
     MyMatrix<T> TheBasis(1 + dimNSP, n + 1);
     for (int i = 0; i < n + 1; i++)
