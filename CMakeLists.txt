@@ -89,6 +89,15 @@ set_target_properties(
 add_dependencies(polyhedral_nauty NautyDirectPackage)
 
 add_library(polyhedral_common INTERFACE)
+# Pooled GMP allocator (basic_common_cpp/src_number/gmp_pool_allocator.h): ~46%
+# faster on the exact-rational hot paths, on by default. Every target linking
+# polyhedral_common gets the process-global pool; MPI targets additionally get
+# GMP_POOL_THREAD_SAFE (see polyhedral_mpi_support below), since they run a
+# background communication thread.
+option(GMP_POOL "Enable the pooled GMP allocator" ON)
+if(GMP_POOL)
+  target_compile_definitions(polyhedral_common INTERFACE GMP_POOL)
+endif()
 target_include_directories(
   polyhedral_common
   INTERFACE
@@ -168,6 +177,13 @@ target_link_libraries(
     Boost::mpi
     MPI::MPI_CXX
 )
+# MPI targets run a background communication thread (POLY_RecursiveDualDesc_MPI.h),
+# so several threads use GMP concurrently: switch the pool to its thread_local
+# mode. (MPI is otherwise multi-process, where the global pool would already be
+# fine.)
+if(GMP_POOL)
+  target_compile_definitions(polyhedral_mpi_support INTERFACE GMP_POOL_THREAD_SAFE)
+endif()
 
 add_library(polyhedral_glpk_support INTERFACE)
 target_include_directories(polyhedral_glpk_support INTERFACE "${GLPK_INCLUDE_DIR}")
