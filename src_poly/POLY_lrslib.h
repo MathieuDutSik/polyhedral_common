@@ -1446,14 +1446,16 @@ void Kernel_Simplices_Facets_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig,
   freeLRS(P, Q);
 }
 
-template <typename T> vectface GetTriangulation(MyMatrix<T> const &EXT) {
-  int nbRow = EXT.rows();
-  vectface vf(nbRow);
-  Face trig(nbRow);
+// Each simplex is returned as the sorted-ascending list of its vertex indices
+// (0-based rows of EXT), the natural representation the lrs kernel produces --
+// no packing into a Face bitset and unpacking on the receiving side.
+template <typename T>
+std::vector<std::vector<int>> GetTriangulation(MyMatrix<T> const &EXT) {
+  [[maybe_unused]] int nbRow = EXT.rows();
+  std::vector<std::vector<int>> l_trig;
   auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q) -> bool {
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      trig[iRow] = 0;
-    }
+    std::vector<int> esimp;
+    esimp.reserve(P->d);
     for (int i = 0; i < P->d; i++) {
       int idx1 = P->C[i];
       int idx2 = Q->lastdv;
@@ -1464,11 +1466,12 @@ template <typename T> vectface GetTriangulation(MyMatrix<T> const &EXT) {
         throw TerminalException{1};
       }
 #endif
-      trig[idx] = 1;
+      esimp.push_back(idx);
     }
+    std::sort(esimp.begin(), esimp.end());
 #ifdef SANITY_CHECK_LRSLIB
     // determinants should be equal but they are not
-    MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
+    MyMatrix<T> EXTtrig = SelectRow(EXT, esimp);
     T det = DeterminantMat(EXTtrig);
     if (T_abs(det) != P->det) {
       std::cerr << "LRS: det(EXTtrig)=" << det << " P->det=" << P->det << "\n";
@@ -1476,26 +1479,28 @@ template <typename T> vectface GetTriangulation(MyMatrix<T> const &EXT) {
       throw TerminalException{1};
     }
 #endif
-    vf.push_back(trig);
+    l_trig.push_back(std::move(esimp));
     return true;
   };
   MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
   Kernel_Simplices_cond(EXText, f);
-  return vf;
+  return l_trig;
 }
 
-// Gets the triangulation and the facets at the same time.
+// Gets the triangulation and the facets at the same time. The triangulation is a
+// list of simplices, each the sorted-ascending list of its vertex indices (see
+// GetTriangulation); the facets are genuine faces (subsets of vertices) and stay
+// a vectface.
 template <typename T>
-std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
+std::pair<std::vector<std::vector<int>>, vectface>
+GetTriangulationFacet(MyMatrix<T> const &EXT) {
   int nbRow = EXT.rows();
-  vectface vf_trig(nbRow);
+  std::vector<std::vector<int>> l_trig;
   vectface vf_facet(nbRow);
-  Face trig(nbRow);
   Face facet(nbRow);
   auto f_trig = [&](lrs_dic<T> *P, lrs_dat<T> *Q) -> bool {
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      trig[iRow] = 0;
-    }
+    std::vector<int> esimp;
+    esimp.reserve(P->d);
     for (int i = 0; i < P->d; i++) {
       int idx1 = P->C[i];
       int idx2 = Q->lastdv;
@@ -1506,10 +1511,11 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
         throw TerminalException{1};
       }
 #endif
-      trig[idx] = 1;
+      esimp.push_back(idx);
     }
+    std::sort(esimp.begin(), esimp.end());
 #ifdef SANITY_CHECK_LRSLIB
-    MyMatrix<T> Mtrig = SelectRow(EXT, trig);
+    MyMatrix<T> Mtrig = SelectRow(EXT, esimp);
     int rnk = RankMat(Mtrig);
     if (rnk != EXT.cols()) {
       std::cerr << "LRS: Mtrig should have maximal rank\n";
@@ -1521,7 +1527,7 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
       throw TerminalException{1};
     }
 #endif
-    vf_trig.push_back(trig);
+    l_trig.push_back(std::move(esimp));
     return true;
   };
   auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
@@ -1552,9 +1558,11 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
   }
   size_t expected_size = EXT.cols() - 1;
   std::unordered_map<Face, size_t> map;
-  for (auto & f: vf_trig) {
-    std::vector<size_t> f_v = FaceToVector<size_t>(f);
-    for (auto &miss_vert: f_v) {
+  for (auto & esimp: l_trig) {
+    Face f(nbRow);
+    for (auto &idx: esimp)
+      f[idx] = 1;
+    for (auto &miss_vert: esimp) {
       Face f_a = f;
       f_a[miss_vert] = 0;
       if (f_a.count() != expected_size) {
@@ -1574,9 +1582,29 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
     }
   }
 #endif
-  return {std::move(vf_trig), std::move(vf_facet)};
+  return {std::move(l_trig), std::move(vf_facet)};
 }
 
+// GAP-format string of a triangulation (a list of simplices, each a list of
+// 0-based vertex indices as returned by GetTriangulation/GetTriangulationFacet),
+// emitted 1-indexed to match the GAP convention.
+inline std::string
+StringTriangulationGAP(std::vector<std::vector<int>> const &l_trig) {
+  std::string ret = "[";
+  for (size_t i = 0; i < l_trig.size(); i++) {
+    if (i > 0)
+      ret += ",";
+    ret += "[";
+    for (size_t j = 0; j < l_trig[i].size(); j++) {
+      if (j > 0)
+        ret += ",";
+      ret += std::to_string(l_trig[i][j] + 1);
+    }
+    ret += "]";
+  }
+  ret += "]";
+  return ret;
+}
 
 template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
   T sum_det(0);
@@ -1621,7 +1649,8 @@ template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
   }
   T total_volume = sum_det / det_to_vol;
 #ifdef SANITY_CHECK_LRSLIB
-  std::pair<vectface, vectface> pair = GetTriangulationFacet(EXT);
+  std::pair<std::vector<std::vector<int>>, vectface> pair =
+      GetTriangulationFacet(EXT);
   T sum_det_b(0);
   for (auto & trig: pair.first) {
     MyMatrix<T> Mtrig = SelectRow(EXT, trig);

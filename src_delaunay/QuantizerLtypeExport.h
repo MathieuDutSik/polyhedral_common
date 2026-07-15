@@ -387,22 +387,17 @@ MyVector<T> CircumcenterUnder(MyMatrix<T> const &D, MyMatrix<T> const &Q0) {
 // Boundary extraction from the lrs triangulation of DV(0)
 // ---------------------------------------------------------------------------
 
-// Given a triangulation of an n-polytope into n-simplices (each represented
-// as a Face = boolean vector over N vertex indices), return the list of
-// boundary (n-1)-simplices: those (n-1)-faces appearing in exactly one
-// n-simplex.
+// Given a triangulation of an n-polytope into n-simplices (each the sorted list
+// of its vertex indices), return the list of boundary (n-1)-simplices: those
+// (n-1)-faces appearing in exactly one n-simplex.
 inline std::vector<std::vector<int>>
-ExtractBoundarySimplices(vectface const &trig, std::ostream &os) {
+ExtractBoundarySimplices(std::vector<std::vector<int>> const &trig,
+                         std::ostream &os) {
   std::map<std::vector<int>, int> facet_count;
-  for (size_t t = 0; t < trig.size(); t++) {
-    Face const &T_simp = trig[t];
-    std::vector<int> verts;
-    boost::dynamic_bitset<>::size_type pos = T_simp.find_first();
-    while (pos != boost::dynamic_bitset<>::npos) {
-      verts.push_back(static_cast<int>(pos));
-      pos = T_simp.find_next(pos);
-    }
+  for (auto const &verts : trig) {
     // Each (n-1)-facet of this n-simplex is obtained by dropping one vertex.
+    // verts is sorted, so every dropped-vertex facet is sorted too and matches
+    // across the two simplices sharing it.
     int nverts = static_cast<int>(verts.size());
     for (int skip = 0; skip < nverts; skip++) {
       std::vector<int> facet;
@@ -540,7 +535,7 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
     }
   }
 
-  vectface trig = lrs::GetTriangulation(EXT_DV);
+  std::vector<std::vector<int>> trig = lrs::GetTriangulation(EXT_DV);
   os << "QuantExport: DV(0) triangulated into " << trig.size() << " n-simplices\n";
 
   std::vector<std::vector<int>> boundary = ExtractBoundarySimplices(trig, os);

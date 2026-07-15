@@ -13,7 +13,7 @@ template <typename T>
 void process(std::string const &eFileI, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  vectface vf = lrs::GetTriangulation(EXT);
+  std::vector<std::vector<int>> vf = lrs::GetTriangulation(EXT);
   if (OutFormat == "Volume") {
     T sum_det(0);
     for (auto &trig : vf) {
@@ -36,14 +36,8 @@ void process(std::string const &eFileI, std::string const &OutFormat,
     os_out << "NbTrig=" << vf.size() << "\n";
     return;
   }
-  if (OutFormat == "Trigs") {
-    os_out << "return " << StringVectfaceGAP(vf) << ";\n";
-    return;
-  }
-  if (OutFormat == "GAP") {
-    os_out << "return ";
-    VectVectInt_Gap_Print(os_out, vf);
-    os_out << ";\n";
+  if (OutFormat == "Trigs" || OutFormat == "GAP") {
+    os_out << "return " << lrs::StringTriangulationGAP(vf) << ";\n";
     return;
   }
   if (OutFormat == "GAPtrig_det") {
@@ -56,14 +50,11 @@ void process(std::string const &eFileI, std::string const &OutFormat,
         os_out << ",";
       }
       is_first = false;
-      size_t siz = trig.count();
       os_out << "rec(LV:=[";
-      boost::dynamic_bitset<>::size_type eVal = trig.find_first();
-      for (size_t i = 0; i < siz; i++) {
+      for (size_t i = 0; i < trig.size(); i++) {
         if (i > 0)
           os_out << ",";
-        os_out << int(eVal + 1);
-        eVal = trig.find_next(eVal);
+        os_out << (trig[i] + 1);
       }
       os_out << "], det:=" << det << ")";
     }

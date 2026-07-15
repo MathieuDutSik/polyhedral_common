@@ -60,7 +60,7 @@ template <typename T> struct DecompositionEquiv {
 template <typename T, typename Tgroup> struct ComponentDecomposition {
   MyMatrix<T> EXT;
   Tgroup GRPperm;
-  vectface vf_trig;
+  std::vector<std::vector<int>> vf_trig;
   std::vector<DecompositionEquiv<T, Tint>> ListEquiv;
 };
 
@@ -94,6 +94,22 @@ vectface vf_add_one_included_vertex(vectface const &vf) {
     vf_ret.push_back(fnew);
   }
   return vf_ret;
+}
+
+// Cone a triangulation (list of index-simplices) by adding an apex vertex, whose
+// index is the number of existing vertices n (= the new largest index, so the
+// sorted-ascending order of each simplex is preserved by appending it).
+inline std::vector<std::vector<int>>
+trig_add_one_included_vertex(std::vector<std::vector<int>> const &l_trig,
+                             int n) {
+  std::vector<std::vector<int>> ret;
+  ret.reserve(l_trig.size());
+  for (auto &esimp : l_trig) {
+    std::vector<int> e = esimp;
+    e.push_back(n);
+    ret.push_back(std::move(e));
+  }
+  return ret;
 }
 
 Face face_add_one_included_vertex(Face const &eFace) {
@@ -178,7 +194,8 @@ std::vector<ComponentDecomposition<T, Tgroup>> get_full_decomposition(
   std::vector<ComponentDecomposition<T>> l_comp_decomp;
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
-    std::pair<vectface, vectface> pair = GetTriangulationFacet(EXT);
+    std::pair<std::vector<std::vector<int>>, vectface> pair =
+        GetTriangulationFacet(EXT);
     vectface ListOrbFacet = OrbitSplittingSet(pair.second, GRP);
     std::vector<DecompositionEquiv<T, Tint>> ListEquiv;
     for (auto &f : ListOrbFacet) {
@@ -290,7 +307,8 @@ std::vector<ComponentDecomposition<T, Tgroup>> get_full_decomposition(
       }
       vectface vf_facet(nbRow);
       for (auto &ecd : local_vec_cd) {
-        vectface vf_trig = vf_add_one_included_vertex(ecd.vf_trig);
+        std::vector<std::vector<int>> vf_trig =
+            trig_add_one_included_vertex(ecd.vf_trig, ecd.EXT.rows());
         MyMatrix<T> EXTcomp = GetFacetIso(EXT, facet);
         Tgroup GRPperm = group_add_one_vertex(ecd.GRPperm);
         std::vector<DecompositionEquiv<T>> ListEquiv;
