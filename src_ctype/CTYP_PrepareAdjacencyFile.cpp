@@ -9,6 +9,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  maybe_install_tls_gmp_pool();
   MPI_Init(&argc, &argv);
   int irank_i;
   MPI_Comm_rank(MPI_COMM_WORLD, &irank_i);

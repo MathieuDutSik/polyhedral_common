@@ -69,6 +69,7 @@ void process(FullNamelist const &eFull) {
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;

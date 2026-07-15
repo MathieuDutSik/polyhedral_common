@@ -24,6 +24,7 @@ void compute(std::string const &FileI, std::string const &OutFormat,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time1;
   try {
     if (argc != 3 && argc != 5) {

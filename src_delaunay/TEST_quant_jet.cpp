@@ -26,4 +26,5 @@ using Tgroup = permutalib::Group<Telt, Tint_grp>;
                                                          T(1) / T(2), std::cerr);
 }
 
-int main() { return 0; }
+int main() {
+  maybe_install_gmp_pool(); return 0; }

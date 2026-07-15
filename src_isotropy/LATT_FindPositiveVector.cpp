@@ -44,6 +44,7 @@ void process(std::string const &FileI, std::string const &strCritNorm,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     if (argc != 5 && argc != 7) {

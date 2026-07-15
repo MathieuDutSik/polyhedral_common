@@ -121,6 +121,7 @@ void process_C(FullNamelist const &eFull) {
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_EXPORT_QUANTIZER_LTYPE();

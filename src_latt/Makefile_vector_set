@@ -20,7 +20,7 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 #CDEFS           = -DDEBUG_CANONIC -DTIMINGS
 #CDEFS           = -DCHECK_SHVEC
 #CDEFS           =
-CDEFS           = -DDEBUG_INVARIANT_VECTOR_FAMILY
+CDEFS           = -DGMP_POOL -DDEBUG_INVARIANT_VECTOR_FAMILY
 #CDEFS           =
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

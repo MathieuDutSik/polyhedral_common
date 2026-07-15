@@ -17,7 +17,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 CC		= g++ -std=c++20 -Wall -Wextra -O3
 
 #COPTIONS        = -DDEBUG -DSANITY_CHECK
-COPTIONS        = $(CHOICE_COMPILATION)
+COPTIONS        = -DGMP_POOL $(CHOICE_COMPILATION)
 
 
 NOLINKFLAG 	= -c

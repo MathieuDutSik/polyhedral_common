@@ -33,6 +33,7 @@ void process(std::string const& FileExt, std::string const& OutFormat, std::stri
 
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time1;
   try {
     if (argc != 3 && argc != 5) {

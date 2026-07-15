@@ -86,6 +86,7 @@ void GetLocalFreenessMinimum(int const &dim, int const &max_s,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time1;
   try {
     using Tint = int64_t;

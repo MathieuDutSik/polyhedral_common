@@ -26,6 +26,7 @@ void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<Tint> &M,
 }
 
 int main() {
+  maybe_install_tls_gmp_pool();
   boost::mpi::environment env(boost::mpi::threading::serialized);
   if (env.thread_level() < boost::mpi::threading::serialized) {
     env.abort(-1);

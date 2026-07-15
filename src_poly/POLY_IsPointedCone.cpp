@@ -24,6 +24,7 @@ void process(std::string const &eFileI, std::ostream &os_out,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time1;
   try {
     if (argc != 3) {

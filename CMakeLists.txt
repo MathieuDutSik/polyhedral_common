@@ -91,9 +91,10 @@ add_dependencies(polyhedral_nauty NautyDirectPackage)
 add_library(polyhedral_common INTERFACE)
 # Pooled GMP allocator (basic_common_cpp/src_number/gmp_pool_allocator.h): ~46%
 # faster on the exact-rational hot paths, on by default. Every target linking
-# polyhedral_common gets the process-global pool; MPI targets additionally get
-# GMP_POOL_THREAD_SAFE (see polyhedral_mpi_support below), since they run a
-# background communication thread.
+# polyhedral_common gets the process-global pool, and each main() triggers it
+# with maybe_install_gmp_pool() (a no-op without this define). A single flag for
+# serial and MPI. Global vs thread-local pool state is a runtime choice made in
+# main() (maybe_install_gmp_pool vs maybe_install_tls_gmp_pool), not a build flag.
 option(GMP_POOL "Enable the pooled GMP allocator" ON)
 if(GMP_POOL)
   target_compile_definitions(polyhedral_common INTERFACE GMP_POOL)
@@ -177,13 +178,11 @@ target_link_libraries(
     Boost::mpi
     MPI::MPI_CXX
 )
-# MPI targets run a background communication thread (POLY_RecursiveDualDesc_MPI.h),
-# so several threads use GMP concurrently: switch the pool to its thread_local
-# mode. (MPI is otherwise multi-process, where the global pool would already be
-# fine.)
-if(GMP_POOL)
-  target_compile_definitions(polyhedral_mpi_support INTERFACE GMP_POOL_THREAD_SAFE)
-endif()
+# Thread-safety of the GMP pool is chosen at the call site, not by a build flag:
+# MPI entry points call maybe_install_tls_gmp_pool() (thread-local pool state)
+# instead of maybe_install_gmp_pool() (process-global). Both flavours are always
+# compiled in; GMP_POOL alone (above) enables them. Nothing MPI-specific needed
+# here for the pool.
 
 add_library(polyhedral_glpk_support INTERFACE)
 target_include_directories(polyhedral_glpk_support INTERFACE "${GLPK_INCLUDE_DIR}")

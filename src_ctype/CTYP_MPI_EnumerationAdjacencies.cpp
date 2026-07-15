@@ -150,6 +150,7 @@ void NC_WriteMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> const &M,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_tls_gmp_pool();
   MPI_Init(&argc, &argv);
   int irank_i, n_pes_i;
   MPI_Comm_size(MPI_COMM_WORLD, &n_pes_i);

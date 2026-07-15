@@ -8,6 +8,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  maybe_install_tls_gmp_pool();
   boost::mpi::environment env(boost::mpi::threading::serialized);
   if (env.thread_level() < boost::mpi::threading::serialized) {
     env.abort(-1);

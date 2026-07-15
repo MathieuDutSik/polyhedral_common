@@ -31,6 +31,7 @@ void write_group(std::vector<MyMatrix<T>> const &LGen,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     using T = mpq_class;

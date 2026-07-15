@@ -14,7 +14,7 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE) $(
 CHASHMAP	= -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
 #CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
-CDEFS           = $(CHOICE_COMPILATION)
+CDEFS           = -DGMP_POOL $(CHOICE_COMPILATION)
 
 CTOTAL          = -std=c++20 $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

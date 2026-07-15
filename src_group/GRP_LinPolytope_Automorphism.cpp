@@ -101,6 +101,7 @@ void full_process_B(std::string const &arith, std::string const &eFile,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time1;
   try {
     if (argc != 3 && argc != 5) {

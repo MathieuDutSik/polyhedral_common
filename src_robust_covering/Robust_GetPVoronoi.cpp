@@ -89,6 +89,7 @@ void process_A(std::string const &arithmetic, std::string const &MatFile, std::s
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     if (argc != 6 && argc != 4) {

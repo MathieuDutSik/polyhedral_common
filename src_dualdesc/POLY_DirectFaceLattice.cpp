@@ -30,6 +30,7 @@ void MainFunctionFaceLattice(std::string const &FACfile,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     using Tidx = uint16_t;

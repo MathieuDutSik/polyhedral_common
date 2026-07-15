@@ -42,6 +42,7 @@ void Process_eFull_select_type(boost::mpi::communicator &comm,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_tls_gmp_pool();
   // The construction is relatively subtle.
   // ---We need to have the env and comm on top.
   // ---This is because throwing an exception that goes

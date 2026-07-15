@@ -40,7 +40,7 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
-CDEFS           = -DUSE_CDDLIB
+CDEFS           = -DGMP_POOL -DUSE_CDDLIB
 
 #COPTIONS        = -DPRINT_FLIP -DPRINT_TRIPLE -DPRINT_GET_ADJ -DDEBUG_CRITERION_ELIMINATION
 COPTIONS        =

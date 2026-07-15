@@ -56,6 +56,7 @@ void AppendSingleCtype_T(MyMatrix<Tinput> const &M, int const &NbAdj,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     using Tint = int;

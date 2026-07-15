@@ -13,7 +13,7 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 
 #CDEFS           = -DDEBUG -DTIMINGS -DSANITY_CHECK
-CDEFS           = $(CHOICE_COMPILATION)
+CDEFS           = -DGMP_POOL $(CHOICE_COMPILATION)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

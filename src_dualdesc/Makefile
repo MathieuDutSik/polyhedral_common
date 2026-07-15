@@ -20,12 +20,12 @@ OUTPUTFLAG 	= -o
 
 #COPTIONS        = -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #COPTIONS        = -DTIMINGS
-COPTIONS        = $(CHOICE_COMPILATION)
+COPTIONS        = -DGMP_POOL $(CHOICE_COMPILATION)
 
 ENV_OPTIONS     = $(DUALDESC_COMPILATION_OPTIONS)
 
 #COPTIONS        = -DDEBUG -DTIMINGS -DTRACK_DATABASE -DLRS_PRINT_ANALYSIS
-COPTIONS        =
+COPTIONS        = -DGMP_POOL
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CLOCAL          = -I../src_basic -I../basic_common_cpp   -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_poly -I../src_isotropy -I../permutalib/src -I.

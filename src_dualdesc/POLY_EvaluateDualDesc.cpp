@@ -12,6 +12,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   try {
     if (argc != 6) {
       std::cerr << "POLY_EvaluateDualDesc [ListOrbit] [FileEXT] [Incidence] "

@@ -15,7 +15,7 @@ OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_number -I../src -I../src_matrix -I../src_basic -I../src_comb
 
-CFLAGS 		= $(AUTODIFF_INCLUDE) -I$(EIGEN_PATH)
+CFLAGS 		= $(AUTODIFF_INCLUDE) -I$(EIGEN_PATH) -DGMP_POOL
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK)
 

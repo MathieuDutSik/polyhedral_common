@@ -55,6 +55,7 @@ void process(std::string const &arith,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     if (argc != 4 && argc != 6) {

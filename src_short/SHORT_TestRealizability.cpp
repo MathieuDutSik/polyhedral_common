@@ -54,6 +54,7 @@ void test_realizability(std::string const& FileSHV, std::string const& OutFormat
 
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time1;
   try {
     if (argc != 3 && argc != 5) {

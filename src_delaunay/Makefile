@@ -20,9 +20,9 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
 #CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
-# GMP_POOL: pooled GMP allocator (gmp_pool_allocator.h), on by default. This is
-# serial code, so the process-global pool is used. (Multi-threaded programs must
-# additionally define GMP_POOL_THREAD_SAFE for a thread_local pool.)
+# GMP_POOL: pooled GMP allocator (gmp_pool_allocator.h), on by default. Global vs
+# thread-local pool is chosen in main() (maybe_install_gmp_pool for serial,
+# maybe_install_tls_gmp_pool for MPI/threaded), not by a build flag.
 CDEFS           = -DGMP_POOL $(CHOICE_COMPILATION)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)

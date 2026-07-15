@@ -31,6 +31,7 @@ void process(std::string const& FileListMat, std::string const& OutFormat, std::
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     if (argc != 3 && argc != 5) {

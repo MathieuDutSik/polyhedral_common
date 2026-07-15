@@ -90,6 +90,7 @@ void compute_approx_equivalence(std::string const &arithmetic,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     if (argc != 5 && argc != 7) {

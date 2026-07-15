@@ -26,6 +26,7 @@ void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<Tint> &M,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   try {
     if (argc != 2) {
       std::cerr << "CTYP_ComputeAverage [FileName]\n";

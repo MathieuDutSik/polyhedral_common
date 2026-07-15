@@ -80,6 +80,7 @@ void process(std::string choice, std::string MatFile,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     if (argc != 6 && argc != 4) {

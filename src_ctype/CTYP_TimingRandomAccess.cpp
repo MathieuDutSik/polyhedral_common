@@ -59,6 +59,7 @@ void NC_WriteMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> const &M,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   //
   using Tint = int;
   //

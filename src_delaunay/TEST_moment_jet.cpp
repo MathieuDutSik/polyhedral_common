@@ -20,6 +20,7 @@ using Telt = permutalib::SingleSidedPerm<Tidx>;
 using Tgroup = permutalib::Group<Telt, mpz_class>;
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   if (argc != 2) {
     std::cerr << "TEST_moment_jet [Gram.file]\n";
     return -1;

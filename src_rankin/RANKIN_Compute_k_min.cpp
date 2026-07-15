@@ -55,6 +55,7 @@ void compute_k_min(std::string const &arithmetic, int const &k,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   try {
     if (argc != 5) {
       std::cerr << "This program is used as\n";

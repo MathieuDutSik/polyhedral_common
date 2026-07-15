@@ -30,6 +30,7 @@ void write_result(std::optional<MyMatrix<T>> const &opt,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     using T = mpq_class;

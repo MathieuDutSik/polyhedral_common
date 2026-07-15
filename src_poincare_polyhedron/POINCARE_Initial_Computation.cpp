@@ -46,6 +46,7 @@ void Process_rec_option(RecOption const &rec_option, std::ostream &os) {
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time;
   try {
     FullNamelist eFull = NAMELIST_GetPoincareInput();

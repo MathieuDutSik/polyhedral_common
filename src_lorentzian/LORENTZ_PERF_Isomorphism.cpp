@@ -70,6 +70,7 @@ void process_C(std::string const &FileMatrix1, std::string const &FileMatrix2,
 }
 
 int main(int argc, char *argv[]) {
+  maybe_install_gmp_pool();
   HumanTime time1;
   try {
     if (argc != 3 && argc != 5) {
