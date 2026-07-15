@@ -824,8 +824,18 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   for (size_t o = 0; o < orbit_reps.size(); o++) {
     MyVector<T> vT = UniversalVectorConversion<T, Tint>(orbit_reps[o]);
     MyMatrix<T> B = vT * vT.transpose();
-    DM_reps[o] = compute_moment_derivative<T, Tint, Tgroup>(Q, B, os);
+    // The fast jet moment derivative is the default; the interpolation
+    // ("polynomial") method is kept as an exact cross-check under SANITY_CHECK.
+    DM_reps[o] = compute_moment_derivative_jet<T, Tint, Tgroup>(Q, B, os);
     res.nbEval++;
+#ifdef SANITY_CHECK_QUANTIZATION_DEFORMATION
+    MyMatrix<T> DM_poly = compute_moment_derivative<T, Tint, Tgroup>(Q, B, os);
+    if (DM_reps[o] != DM_poly) {
+      std::cerr << "QHESS: jet vs polynomial moment-derivative mismatch at orbit "
+                << o << "\n";
+      throw TerminalException{1};
+    }
+#endif
 #ifdef DEBUG_QUANTIZATION_DEFORMATION
     os << "QHESS: orbit rep v=" << StringVectorGAP(orbit_reps[o])
        << " vTQinvV=" << vT.dot(Qinv * vT) << " (eval " << res.nbEval << ")\n";

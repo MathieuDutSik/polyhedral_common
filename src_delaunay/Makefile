@@ -1,4 +1,4 @@
-PROGRAM		= LATT_FindOneVertex LATT_MPI_Lattice_IsoDelaunayDomain LATT_SerialLattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay LATT_ExportQuantizerLtype LATT_LookForFullRankRayDomain LATT_AnalysisIsoDelaunay TEST_moment_jet TEST_moment_diag TEST_jet_only
+PROGRAM		= LATT_FindOneVertex LATT_MPI_Lattice_IsoDelaunayDomain LATT_SerialLattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay LATT_ExportQuantizerLtype LATT_LookForFullRankRayDomain LATT_AnalysisIsoDelaunay
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
