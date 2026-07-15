@@ -156,12 +156,12 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
       IsFirst = false;
       os_out << "rec(v:=" << StringVectorGAP(v) << ", OrbitSize:=" << orbit_size
              << ", vTQinvV:=" << invariant
-             << ", SecMoment0:=" << jet_derivative(der.secmoment, 0)
-             << ", SecMoment2:=" << jet_derivative(der.secmoment, 2)
-             << ", det0:=" << jet_derivative(der.det, 0)
-             << ", det1:=" << jet_derivative(der.det, 1)
-             << ", det2:=" << jet_derivative(der.det, 2)
-             << ", Gpp:=" << jet_derivative(der.G, 2) << ")";
+             << ", SecMoment0:=" << jet_deriv(der.secmoment, 0)
+             << ", SecMoment2:=" << jet_deriv(der.secmoment, 2)
+             << ", det0:=" << jet_deriv(der.det, 0)
+             << ", det1:=" << jet_deriv(der.det, 1)
+             << ", det2:=" << jet_deriv(der.det, 2)
+             << ", Gpp:=" << jet_deriv(der.G, 2) << ")";
     }
     os_out << "]);\n";
   }

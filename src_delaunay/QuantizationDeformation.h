@@ -8,8 +8,8 @@
 #include "LatticeStabEquiCan.h"
 #include "QuantizationIntegral.h"
 #include "polynomial.h"
-#include "jet.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <map>
 #include <optional>
@@ -332,16 +332,67 @@ MyVector<T> det_polynomial(MyMatrix<T> const &Q, MyMatrix<T> const &H) {
   return poly_from_values(ts, vs, n);
 }
 
+// --- helpers on the order-N jet type jet<T, N> (from jet_number.h) ---
+// jet<T, N> itself provides the arithmetic (operator*, inverse, jet_deriv); these
+// four wrappers cover what the deformation code additionally needs. They live here
+// rather than in the src_number jet_number.h because jet_from_poly depends on the
+// matrix-layer MyVector and jet_pow on std::pow (floating-point only).
+
+// The order-N jet of the polynomial c0 + c1 t + ... with coefficient vector C
+// (missing coefficients are zero).
+template <typename T, int N> jet<T, N> jet_from_poly(MyVector<T> const &C) {
+  std::array<T, N + 1> coeffs;
+  for (int i = 0; i <= N; i++)
+    coeffs[i] = (i < C.size()) ? C(i) : T(0);
+  return jet<T, N>::from_coeffs(std::move(coeffs));
+}
+
+// Coefficient-wise conversion of a jet to another scalar type (e.g. an exact
+// jet<mpq_class, N> to a numerical jet<double, N>).
+template <typename Tout, typename Tin, int N>
+jet<Tout, N> UniversalJetConversion(jet<Tin, N> const &j) {
+  std::array<Tout, N + 1> coeffs;
+  for (int i = 0; i <= N; i++)
+    coeffs[i] = UniversalScalarConversion<Tout, Tin>(j[i]);
+  return jet<Tout, N>::from_coeffs(std::move(coeffs));
+}
+
+// Scalar multiple of a jet.
+template <typename T, int N>
+jet<T, N> jet_scalar_mult(T const &scal, jet<T, N> const &a) {
+  std::array<T, N + 1> coeffs;
+  for (int i = 0; i <= N; i++)
+    coeffs[i] = scal * a[i];
+  return jet<T, N>::from_coeffs(std::move(coeffs));
+}
+
+// f^p for a jet f with non-zero constant term and a scalar exponent p (J.C.P.
+// Miller recurrence). The leading coefficient uses std::pow(c0, p), so this is
+// meant for a floating-point T (used for the irrational power det(t)^(-1/n)).
+template <typename T, int N>
+jet<T, N> jet_pow(jet<T, N> const &f, T const &p) {
+  std::array<T, N + 1> b;
+  T const &c0 = f[0];
+  b[0] = std::pow(c0, p);
+  for (int k = 1; k <= N; k++) {
+    T s(0);
+    for (int j = 1; j <= k; j++)
+      s += (p * T(j) - T(k - j)) * f[j] * b[k - j];
+    b[k] = s / (T(k) * c0);
+  }
+  return jet<T, N>::from_coeffs(std::move(b));
+}
+
 template <typename T> struct DeformationDerivatives {
-  // Order-2 Taylor jets at t = 0. Use jet_derivative(., k) for the k-th
-  // derivative and .coeffs[k] for the k-th Taylor coefficient.
+  // Order-2 Taylor jets at t = 0. Use jet_deriv(., k) for the k-th derivative and
+  // [k] for the k-th Taylor coefficient.
   // SecMoment(t), exact.
-  Jet<T> secmoment;
+  jet<T, 2> secmoment;
   // det(Q + t H), exact.
-  Jet<T> det;
+  jet<T, 2> det;
   // The dimensionless normalized second moment G(t) = (1/n) det^(-1/n) S(t),
   // numerical (det^(-1/n) is irrational).
-  Jet<double> G;
+  jet<double, 2> G;
   int secmoment_degree;
   // The reconstructed SecMoment(t) = num(t) / den(t) (den(0) = 1). When den is
   // the constant 1, SecMoment(t) is a polynomial.
@@ -358,20 +409,20 @@ DeformationDerivatives<T> deformation_derivatives(RationalFunc<T> const &S,
   // We need up to the second derivative, so order-2 jets in t suffice. Recall a
   // jet's coefficient of t^k is the k-th Taylor coefficient (the k-th derivative
   // divided by k!), hence the factor 2 below for the second derivatives.
-  int order = 2;
   DeformationDerivatives<T> res;
   // Exact jet of SecMoment(t) = P(t) / D(t) at t = 0, over T.
-  res.secmoment = jet_from_poly(S.P, order) * jet_inverse(jet_from_poly(S.D, order));
-  res.det = jet_from_poly(detpoly, order);
+  res.secmoment = jet_from_poly<T, 2>(S.P) * inverse(jet_from_poly<T, 2>(S.D));
+  res.det = jet_from_poly<T, 2>(detpoly);
   res.secmoment_degree = S.degree;
   res.secmoment_num = S.P;
   res.secmoment_den = S.D;
   // Numerical part: the normalized quantizer G(t) = (1/n) det(t)^(-1/n) S(t),
   // as a double jet (det^(-1/n) is irrational).
   double a = 1.0 / static_cast<double>(n);
-  Jet<double> det_jet = UniversalJetConversion<double, T>(res.det);
-  Jet<double> S_jet = UniversalJetConversion<double, T>(res.secmoment);
-  res.G = jet_scalar_mult(a, jet_pow(det_jet, -a) * S_jet);
+  jet<double, 2> det_jet = UniversalJetConversion<double, T, 2>(res.det);
+  jet<double, 2> S_jet = UniversalJetConversion<double, T, 2>(res.secmoment);
+  jet<double, 2> prod = jet_pow<double, 2>(det_jet, -a) * S_jet;
+  res.G = jet_scalar_mult<double, 2>(a, prod);
   return res;
 }
 
@@ -421,18 +472,18 @@ DeformationDerivatives<T> compute_deformation_derivatives(MyMatrix<T> const &Q,
 template <typename T>
 void WriteDeformationGAP(std::ostream &os_out,
                         DeformationDerivatives<T> const &der) {
-  os_out << "return rec(SecMoment0:=" << jet_derivative(der.secmoment, 0)
-         << ", SecMoment1:=" << jet_derivative(der.secmoment, 1)
-         << ", SecMoment2:=" << jet_derivative(der.secmoment, 2) << ",\n";
+  os_out << "return rec(SecMoment0:=" << jet_deriv(der.secmoment, 0)
+         << ", SecMoment1:=" << jet_deriv(der.secmoment, 1)
+         << ", SecMoment2:=" << jet_deriv(der.secmoment, 2) << ",\n";
   os_out << "numerator:=" << StringVectorGAP(der.secmoment_num) << ",\n";
   os_out << "denominator:=" << StringVectorGAP(der.secmoment_den) << ",\n";
   os_out << "degree:=" << der.secmoment_degree << ",\n";
   // det0/det1/det2 are the 0th/1st/2nd derivatives of det(Q+tH) at t=0 (via
-  // jet_derivative = k! * coeff), matching the SecMoment0/1/2 convention above.
+  // jet_deriv = k! * coeff), matching the SecMoment0/1/2 convention above.
   // (det2 is the second derivative D''(0) = 2*coeff_2, not the raw t^2 coeff.)
-  os_out << "det0:=" << jet_derivative(der.det, 0)
-         << ", det1:=" << jet_derivative(der.det, 1)
-         << ", det2:=" << jet_derivative(der.det, 2) << ");\n";
+  os_out << "det0:=" << jet_deriv(der.det, 0)
+         << ", det1:=" << jet_deriv(der.det, 1)
+         << ", det2:=" << jet_deriv(der.det, 2) << ");\n";
 }
 
 // ---------------------------------------------------------------------------
@@ -485,12 +536,12 @@ void WriteDeformationGAP(std::ostream &os_out,
 // deformation data; used only as an independent cross-check of the Hessian.
 template <typename T>
 T rational_hessian_value(DeformationDerivatives<T> const &der, int n) {
-  T S = jet_derivative(der.secmoment, 0);
-  T S1 = jet_derivative(der.secmoment, 1);
-  T S2 = jet_derivative(der.secmoment, 2);
-  T D = jet_derivative(der.det, 0);
-  T D1 = jet_derivative(der.det, 1);
-  T D2 = jet_derivative(der.det, 2); // D''(0)
+  T S = jet_deriv(der.secmoment, 0);
+  T S1 = jet_deriv(der.secmoment, 1);
+  T S2 = jet_deriv(der.secmoment, 2);
+  T D = jet_deriv(der.det, 0);
+  T D1 = jet_deriv(der.det, 1);
+  T D2 = jet_deriv(der.det, 2); // D''(0)
   T Tn(n);
   T r1 = D1 / D;
   T r2 = D2 / D;
@@ -559,7 +610,7 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
           reconstruct_rational_known_denominator<T, decltype(sampler)>(
               tpool, sampler, den2, max_degree, os);
       T deriv =
-          jet_derivative(deformation_derivatives<T>(Sf, detpoly, n).secmoment, 1);
+          jet_deriv(deformation_derivatives<T>(Sf, detpoly, n).secmoment, 1);
       DM(i, j) = deriv;
       DM(j, i) = deriv;
     }
