@@ -603,11 +603,18 @@ struct QuantizationComputer {
         for (int j = 0; j < nRel + 1; j++)
           EXTsimplex(u, j) = EXTinBasis(LV[u], j);
       // Oriented volume: the jet determinant of a split simplex is alpha*t^d + ..
-      // (it vanishes at t = 0), so |.| is meaningless as a jet. Orient each
-      // simplex to be positive at t0 -- i.e. multiply the jet determinant by the
-      // sign of its value at t0 -- which makes the signed volumes of a
-      // t0-consistent triangulation add up to the cell integral, analytically in
-      // t. For a plain scalar eval_at is the identity, so this is exactly |det|.
+      // (it vanishes at t = 0), so its sign is meaningless as a jet. trig is a
+      // valid triangulation at the interior point t0, so the correct orientation
+      // is the sign of the EXACT volume there: making every signed jet volume
+      // positive at t0 reconstructs the cell integral as an analytic function of t
+      // (equal to it on a neighbourhood of t0, hence -- both being polynomials --
+      // for all t, including t -> 0^+). That sign must be the EXACT (untruncated)
+      // volume at t0, i.e. the determinant of the simplex in the t0-evaluated
+      // rational polytope EXTinBasis_t0. Using instead the order-N-truncated jet
+      // determinant evaluated at t0 (eval_at(VolSimplex, t0)) can give the WRONG
+      // sign at a large t0 -- that truncation error, not any leaf-flip, is what
+      // forced the tiny t0 = tmax/1000000. For a plain scalar T, EXTinBasis_t0 ==
+      // EXTinBasis, so this reduces to the ordinary sign of |det|.
       T VolSimplex = DeterminantMat(EXTsimplex);
 #ifdef PROFILE_SIMPLEX_VALUATION
       {
@@ -618,7 +625,23 @@ struct QuantizationComputer {
         g_simplex_total++;
       }
 #endif
-      if (eval_at(VolSimplex, t0_triang) < 0)
+      MyMatrix<Tscal> EXTsimplex_t0(sdim, nRel + 1);
+      for (int u = 0; u < sdim; u++)
+        for (int j = 0; j < nRel + 1; j++)
+          EXTsimplex_t0(u, j) = EXTinBasis_t0(LV[u], j);
+      Tscal detT0 = DeterminantMat(EXTsimplex_t0);
+#ifdef SANITY_CHECK_QUANTIZATION_INTEGRAL
+      // trig triangulates the polytope evaluated at the non-degenerate interior
+      // point t0, so every leaf simplex must have non-zero volume there. A zero
+      // here means the triangulation is invalid (or t0 is degenerate).
+      if (detT0 == Tscal(0)) {
+        std::cerr << "QUANTIZATION_INTEGRAL: degenerate leaf simplex (zero volume "
+                     "at the interior point t0); the leaf triangulation is "
+                     "invalid\n";
+        throw TerminalException{1};
+      }
+#endif
+      if (detT0 < Tscal(0))
         VolSimplex = -VolSimplex;
       MyVector<T> bary = ZeroVector<T>(nRel + 1);
       for (int u = 0; u < sdim; u++)

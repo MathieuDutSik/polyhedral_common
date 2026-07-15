@@ -608,10 +608,15 @@ MyMatrix<T> compute_moment_derivative_jet(MyMatrix<T> const &Q,
   for (int i = 0; i < n; i++)
     for (int j = 0; j < n; j++)
       Gram_jet(i, j) = Tj(Q(i, j)) + t * Tj(B(i, j));
-  // t0 = tmax/2: the interior point of the iso-Delaunay segment at which the DT
-  // was pinned down (Gram_t0). At this t the deformed polytopes are
-  // non-degenerate, so the leaf triangulation computed there is the t -> 0+ one.
-  T t0 = seg.tmax / T(1000000); // HYPOTHESIS TEST: below the first leaf-flip
+  // t0 = tmax/2: an interior point of the iso-Delaunay segment (the same point
+  // where DT was pinned, Gram_t0) at which the leaf triangulation is built and
+  // each simplex oriented. The RESULT DOES NOT DEPEND ON t0: QuantizationSecMoment-
+  // MatJet orients every leaf simplex by its EXACT volume sign at t0 (a rational
+  // determinant), so any interior t0 yields the same exact derivative. Earlier a
+  // tiny t0 = tmax/1000000 was needed only to mask an orientation read off the
+  // order-2-truncated jet volume, whose sign is wrong at a large t0 -- fixed in
+  // QuantizationIntegral.h.
+  T t0 = seg.tmax / T(2); // interior point for the leaf triangulation
   MyMatrix<Tj> M_jet = QuantizationSecMomentMatJet<T, N, Tint, Tgroup>(
       DT, SHV, Gram_jet, n, t0, os);
   MyMatrix<T> DM(n, n);
