@@ -1,6 +1,6 @@
 &HEURISTIC_PRIOR
   DefaultPrior = "state_ppl_ext"
-  ListConclusion = "state_small_polytopes", "state_lrs_ring"
+  ListConclusion = "state_small_polytopes", "state_lrs"
   ListFullCond = "delta < 2", "delta < 8"
 /
 
@@ -29,7 +29,7 @@
 
 
 &THOMPSON_PRIOR
-  ListAnswer = "small_polytopes", "lrs_ring", "ppl_ext"
-  ListDescription = "small_polytopes:distri1", "lrs_ring:distri1", "ppl_ext:distri1"
-  ListName = "state_small_polytopes", "state_lrs_ring", "state_ppl_ext"
+  ListAnswer = "small_polytopes", "lrs", "ppl_ext"
+  ListDescription = "small_polytopes:distri1", "lrs:distri1", "ppl_ext:distri1"
+  ListName = "state_small_polytopes", "state_lrs", "state_ppl_ext"
 /

@@ -30,6 +30,6 @@
 
 &THOMPSON_PRIOR
   ListAnswer = "lrsring_pplext_cdd", "ppl_ext"
-  ListDescription = "lrs_ring:distri1 ppl_ext:distri1 cdd:distri1", "ppl_ext:distriTriv"
+  ListDescription = "lrs:distri1 ppl_ext:distri1 cdd:distri1", "ppl_ext:distriTriv"
   ListName = "state_opts", "state_ppl_ext"
 /

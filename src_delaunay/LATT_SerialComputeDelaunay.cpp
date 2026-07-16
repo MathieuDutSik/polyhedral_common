@@ -15,6 +15,136 @@
 #include <boost/archive/text_oarchive.hpp>
 // clang-format on
 
+template <typename T> struct HessianPlusResult {
+  int n;
+  int N;               // dim Sym^n = n(n+1)/2
+  bool found;          // a rank-one direction with strictly positive curvature
+  bool spanned;        // the sampled rank-one directions span Sym^n
+  int nbEval;          // moment-derivative evaluations used
+  MyVector<T> witness; // the direction v with beta_vv > 0 (found=true)
+  T value;             // beta_vv on the witness (found=true)
+};
+
+// Weaker, cheaper companion of compute_hessian_signature: decide whether the
+// quantizer Hessian at Q has ANY positive direction, without assembling the whole
+// Hessian or its signature. It scans rank-one directions v v^T (exactly as the
+// full Hessian enumerates them -- shell by shell of increasing dual norm
+// v^T Q^{-1} v, one moment-derivative evaluation per Aut(Q)-orbit, since the
+// Hessian value along the direction,
+//   beta_vv = <B, DM[B]> - (2/n) qv mv + (S/n) qv^2 + (S/n^2) qv^2,
+// with B = v v^T, qv = v^T Q^{-1} v, mv = v^T M0 v, is constant on an orbit) and
+// returns as soon as one is strictly positive. A '+' is a sound, EXACT witness
+// that the Hessian is not negative semidefinite (Q is not a local maximum of the
+// normalized quantizer). This is the intended use on the hard, low-symmetry forms
+// where the full signature needs too many orbit evaluations: if a positive
+// direction shows up early we stop after a handful. If the sampled directions span
+// Sym^n with none positive (spanned=true) no rank-one '+' exists; the full Hessian
+// could still have a '+' on a higher-rank direction, so this test is deliberately
+// weaker.
+template <typename T, typename Tint, typename Tgroup>
+HessianPlusResult<T> HasHessianPlus(MyMatrix<T> const &Q, std::ostream &os) {
+  int n = Q.rows();
+  int N = n * (n + 1) / 2;
+  HessianPlusResult<T> res;
+  res.n = n;
+  res.N = N;
+  res.found = false;
+  res.spanned = false;
+  res.nbEval = 0;
+  res.value = T(0);
+  MyMatrix<T> Qinv = Inverse(Q);
+  QuantizationResult<T> q0 = quant_at_gram<T, Tint, Tgroup>(Q, os);
+  MyMatrix<T> M0 = q0.SecMomentMat;
+  T S = q0.SecMoment;
+  std::vector<MyMatrix<Tint>> autom =
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os);
+  T Tn(n);
+  T detQ = DeterminantMat(Q);
+  MyMatrix<T> Qadj = detQ * Qinv; // adjugate: integral, positive definite
+  CVPSolver<T, Tint> solver(Qadj, os);
+  T incr = GetSmallestIncrement(Qadj);
+  T norm = incr;
+  std::unordered_set<MyVector<Tint>> assigned;
+  std::vector<MyVector<T>> span_rows; // rows spanning the reached subspace of Sym^n
+  while (!res.spanned) {
+    std::vector<MyVector<Tint>> ListVect = solver.fixed_norm_vectors(norm);
+    for (auto &v0 : ListVect) {
+      MyVector<Tint> start = SignCanonicalizeVector(v0);
+      if (!assigned.insert(start).second) {
+        continue;
+      }
+      // The whole Aut(Q)-orbit of "start" shares the same beta_vv; enumerate it
+      // (marks the members and lets the spanning test use them for free).
+      std::vector<MyVector<Tint>> orbit{start};
+      size_t head = 0;
+      while (head < orbit.size()) {
+        MyVector<Tint> v = orbit[head];
+        head++;
+        for (auto &U : autom) {
+          MyVector<Tint> w = U * v;
+          MyVector<Tint> cw = SignCanonicalizeVector(w);
+          if (assigned.insert(cw).second) {
+            orbit.push_back(cw);
+          }
+        }
+      }
+      // One moment-derivative evaluation for the orbit; check the Hessian diagonal.
+      MyVector<T> vRep = UniversalVectorConversion<T, Tint>(start);
+      MyMatrix<T> B = vRep * vRep.transpose();
+      MyMatrix<T> DM = compute_moment_derivative_jet<T, Tint, Tgroup>(Q, B, os);
+      res.nbEval++;
+      T qv = vRep.dot(Qinv * vRep);
+      T mv = vRep.dot(M0 * vRep);
+      T dm = vRep.dot(DM * vRep);
+      T beta_vv = dm - (T(2) / Tn) * qv * mv + (S / Tn) * qv * qv +
+                  (S / (Tn * Tn)) * qv * qv;
+      if (beta_vv > T(0)) {
+        res.found = true;
+        res.witness = vRep;
+        res.value = beta_vv;
+        return res;
+      }
+      // No '+': this orbit only advances the Sym^n spanning bound.
+      for (auto &m : orbit) {
+        MyVector<T> vm = UniversalVectorConversion<T, Tint>(m);
+        MyMatrix<T> Bm = vm * vm.transpose();
+        MyVector<T> row = SymmetricMatrixToVector(Bm);
+        int cur = static_cast<int>(span_rows.size());
+        MyMatrix<T> Test(cur + 1, N);
+        for (int r = 0; r < cur; r++) {
+          Test.row(r) = span_rows[r].transpose();
+        }
+        Test.row(cur) = row.transpose();
+        if (RankMat(Test) == cur + 1) {
+          span_rows.push_back(row);
+        }
+        if (static_cast<int>(span_rows.size()) == N) {
+          res.spanned = true;
+          break;
+        }
+      }
+      if (res.spanned) {
+        break;
+      }
+    }
+    norm += incr;
+  }
+  return res;
+}
+
+template <typename T>
+void WriteHessianPlusGAP(std::ostream &os_out, HessianPlusResult<T> const &res) {
+  os_out << "return rec(n:=" << res.n << ", dimSpace:=" << res.N
+         << ", hasHessianPlus:=" << (res.found ? "true" : "false")
+         << ", spanned:=" << (res.spanned ? "true" : "false")
+         << ", nbEval:=" << res.nbEval;
+  if (res.found) {
+    os_out << ", witness:=" << StringVectorGAP(res.witness)
+           << ", value:=" << res.value;
+  }
+  os_out << ");\n";
+}
+
 template <typename T, typename Tint, typename Tgroup>
 void process_A(FullNamelist const &eFull, std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
@@ -179,6 +309,14 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
         compute_hessian_signature<T, Tint, Tgroup>(GramMat, os);
     std::ofstream os_out(FileHessian);
     WriteHessianGAP(os_out, hres);
+  }
+  // Weaker but cheaper: does the Hessian have any positive direction? Scans
+  // rank-one directions and stops at the first one with positive curvature.
+  std::string FileHessianPlus = BlockQUERIES.get_string("FileHessianPlus");
+  if (FileHessianPlus != "null") {
+    HessianPlusResult<T> hpres = HasHessianPlus<T, Tint, Tgroup>(GramMat, os);
+    std::ofstream os_out(FileHessianPlus);
+    WriteHessianPlusGAP(os_out, hpres);
   }
 }
 
