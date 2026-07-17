@@ -111,7 +111,12 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     MyMatrix<Tint> SHV =
         ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
     MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-    IsoDelaunayDomain<T, Tint, Tgroup> x_iso{DT, GramMat, SHV_T};
+    // The rigidity check above guarantees the tesselation is generic over the
+    // full canonical space, so its Voronoi inequalities are well defined.
+    LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(n);
+    DelaunayTesselationIneq<T, Tgroup> DTI =
+        BuildDelaunayTesselationIneq<T, Tgroup>(DT, LinSpa.ListLineMat, os);
+    IsoDelaunayDomain<T, Tint, Tgroup> x_iso{DTI, GramMat, SHV_T};
     std::ofstream ofs(FileIsoDelaunayDomain);
     boost::archive::text_oarchive oa(ofs);
     oa << x_iso;

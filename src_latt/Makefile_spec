@@ -1,4 +1,4 @@
-PROGRAM		= LATT_Canonicalize
+#PROGRAM		= LATT_Canonicalize
 #PROGRAM		= LATT_getMatrixScalProd
 #PROGRAM		= LATT_Automorphism
 #PROGRAM		= LATT_Isomorphism
@@ -20,7 +20,7 @@ PROGRAM		= LATT_Canonicalize
 #PROGRAM		= LATT_ComputeShortestOrbits
 #PROGRAM		= LATT_FindOneVertex
 #PROGRAM		= LATT_SerialComputeDelaunay
-#PROGRAM		= TSPACE_IntegralSaturation
+PROGRAM		= TSPACE_IntegralSaturation
 #PROGRAM		= TSPACE_FileFormatConversion
 #PROGRAM		= LATT_ResolveModAction
 #PROGRAM		= LATT_ComputeGroupModAction

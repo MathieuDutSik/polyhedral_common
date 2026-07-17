@@ -93,8 +93,10 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
 
   // Build a minimal IsoDelaunayDomain. The SHV_T field is not used by the
   // exporter; provide an empty matrix to satisfy the struct.
+  DelaunayTesselationIneq<T, Tgroup> DTI =
+      BuildDelaunayTesselationIneq<T, Tgroup>(DT, LinSpa.ListLineMat, std::cerr);
   MyMatrix<T> SHV_T(0, LinSpa.n);
-  IsoDelaunayDomain<T, Tint, Tgroup> IDD{std::move(DT), GramMat,
+  IsoDelaunayDomain<T, Tint, Tgroup> IDD{std::move(DTI), GramMat,
                                          std::move(SHV_T)};
 
   quantizer_export::WriteQuantizerLtypeJSON<T, Tint, Tgroup>(

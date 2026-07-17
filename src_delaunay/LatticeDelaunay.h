@@ -526,14 +526,18 @@ void check_delaunay_tessellation(DelaunayTesselation<T, Tgroup> const &DT,
   }
 }
 
-template <typename T, typename Tgroup>
-void WriteEntryGAP(std::ostream &os_out,
-                   DelaunayTesselation<T, Tgroup> const &DT) {
+// Shared body of WriteEntryGAP for any tesselation whose entries expose
+// EXT / GRP / ListAdj (each adjacency exposing iOrb / eInc / eBigMat). Both
+// DelaunayTesselation (Delaunay_Entry) and DelaunayTesselationIneq
+// (Delaunay_EntryIneq) delegate here so the GAP layout stays in one place.
+template <typename T, typename Tgroup, typename Tentry>
+void WriteEntryGAP_l_dels(std::ostream &os_out,
+                          std::vector<Tentry> const &l_dels) {
   using Telt = typename Tgroup::Telt;
   os_out << "[";
-  size_t n_del = DT.l_dels.size();
+  size_t n_del = l_dels.size();
   for (size_t i_del = 0; i_del < n_del; i_del++) {
-    Delaunay_Entry<T, Tgroup> const &eDel = DT.l_dels[i_del];
+    Tentry const &eDel = l_dels[i_del];
     MyMatrix<T> const &EXT = eDel.EXT;
     if (i_del > 0)
       os_out << ",";
@@ -599,6 +603,12 @@ void WriteEntryGAP(std::ostream &os_out,
   os_out << "]";
 }
 
+template <typename T, typename Tgroup>
+void WriteEntryGAP(std::ostream &os_out,
+                   DelaunayTesselation<T, Tgroup> const &DT) {
+  WriteEntryGAP_l_dels<T, Tgroup>(os_out, DT.l_dels);
+}
+
 template <typename T, typename Tint, typename Tgroup>
 void WriteDetailedEntryGAP(
     std::ostream &os_out,
@@ -608,14 +618,14 @@ void WriteDetailedEntryGAP(
   WriteEntryGAP(os_out, DT);
 }
 
-template <typename T, typename Tgroup>
-void WriteEntryPYTHON(std::ostream &os_out,
-                      DelaunayTesselation<T, Tgroup> const &DT) {
+template <typename T, typename Tgroup, typename Tentry>
+void WriteEntryPYTHON_l_dels(std::ostream &os_out,
+                             std::vector<Tentry> const &l_dels) {
   using Telt = typename Tgroup::Telt;
   os_out << "[";
-  size_t n_del = DT.l_dels.size();
+  size_t n_del = l_dels.size();
   for (size_t i_del = 0; i_del < n_del; i_del++) {
-    Delaunay_Entry<T, Tgroup> const &eDel = DT.l_dels[i_del];
+    Tentry const &eDel = l_dels[i_del];
     MyMatrix<T> const &EXT = eDel.EXT;
     int n_vert = EXT.rows();
     if (i_del > 0)
@@ -662,6 +672,12 @@ void WriteEntryPYTHON(std::ostream &os_out,
     os_out << "]}";
   }
   os_out << "]";
+}
+
+template <typename T, typename Tgroup>
+void WriteEntryPYTHON(std::ostream &os_out,
+                      DelaunayTesselation<T, Tgroup> const &DT) {
+  WriteEntryPYTHON_l_dels<T, Tgroup>(os_out, DT.l_dels);
 }
 
 template <typename T, typename Tint, typename Tgroup>

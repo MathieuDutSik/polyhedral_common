@@ -176,7 +176,7 @@ MyMatrix<T> LiftToHomog(MyMatrix<T> const &g) {
 //      the resulting matrix is one member of star(0, 𝓓).
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>>
-EnumerateStarOf0(DelaunayTesselation<T, Tgroup> const &DT,
+EnumerateStarOf0(DelaunayTesselationIneq<T, Tgroup> const &DT,
                  LinSpaceMatrix<T> const &LinSpa,
                  MyMatrix<T> const &Q0, std::ostream &os) {
   std::vector<MyMatrix<T>> autL_gens =
@@ -192,7 +192,7 @@ EnumerateStarOf0(DelaunayTesselation<T, Tgroup> const &DT,
   // BFS the orbit of each Delaunay orbit rep under Aut(L), modulo Z^n.
   std::set<std::vector<std::vector<T>>> seen_shapes;
   std::vector<MyMatrix<T>> shape_reps;
-  for (Delaunay_Entry<T, Tgroup> const &entry : DT.l_dels) {
+  for (Delaunay_EntryIneq<T, Tgroup> const &entry : DT.l_dels) {
     auto k0 = CanonicalKeyModZn(entry.EXT);
     if (seen_shapes.insert(k0).second) {
       shape_reps.push_back(entry.EXT);
@@ -457,8 +457,7 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
   int n = LinSpa.n;
 
   std::vector<FullAdjInfo<T>> facets_raw =
-      ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(IDD.DT, LinSpa.ListLineMat,
-                                                     os);
+      ComputeListIneqFromTesselationIneq<T, Tgroup>(IDD.DT);
   os << "QuantExport: ComputeDefiningIneq returned " << facets_raw.size()
      << " orbit rep(s) of inequalities\n";
 

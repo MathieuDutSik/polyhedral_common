@@ -47,8 +47,7 @@ void process(std::string const &FileIso, std::ostream &os_out) {
   // (3) one dual description on the irredundant FACred.
   HumanTime t1;
   std::vector<FullAdjInfo<T>> ListIneq =
-      ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
-          x.DT, LinSpa.ListLineMat, os);
+      ComputeListIneqFromTesselationIneq<T, Tgroup>(x.DT);
   int n_ineq = ListIneq.size();
   os << "ANA: ComputeDefiningIneqIsoDelaunayDomain done n_ineq=" << n_ineq
      << " |elapsed|=" << t1 << "\n";

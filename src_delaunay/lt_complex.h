@@ -330,8 +330,7 @@ get_full_ltype_complex_enumeration_from_ltot(
   for (size_t i_top = 0; i_top < l_tot.size(); i_top++) {
     auto const &eCell = l_tot[i_top];
     std::vector<FullAdjInfo<T>> ListIneq_all =
-        ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
-            eCell.x.DT_gram.DT, LinSpa.ListLineMat, os);
+        ComputeListIneqFromTesselationIneq<T, Tgroup>(eCell.x.DT_gram.DT);
     MyMatrix<T> FAC_full = GetFACineq(ListIneq_all);
     MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC_full);
     std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
