@@ -2459,6 +2459,23 @@ struct ResultDelaunayAdj {
 };
 
 /*
+  The combinatorial part of the adjacency computation: the reduced defining
+  inequalities, the permutation group acting on them and, for each orbit
+  representative, whether the facet leads to a genuine (positive-definite)
+  adjacent iso-Delaunay domain. This deliberately stops short of the
+  expensive FlippingLtype: l_test[k] tells whether ListIneqRed[k] is
+  flippable, but the flip itself is left to get_adjacent. Callers that only
+  need one neighbour (e.g. RandomWalkIsoDelaunay) thus avoid flipping every
+  facet.
+ */
+template <typename T, typename Tint, typename Tgroup>
+struct PreResultDelaunayAdj {
+  std::vector<FullAdjInfo<T>> ListIneqRed;
+  Tgroup GRPperm;
+  std::vector<bool> l_test;
+};
+
+/*
   Number of extreme rays r of the L-type domain of x (interpreted as
   vectors in the t-space) such that the Gram matrix
     sum_u r_u * LinSpa.ListMat[u]
@@ -2497,8 +2514,14 @@ int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   return count;
 }
 
+/*
+  Combinatorial pre-computation of the adjacencies: everything except the
+  expensive per-facet FlippingLtype. See PreResultDelaunayAdj.
+ */
 template <typename T, typename Tint, typename Tgroup>
-ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const& x, DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
+PreResultDelaunayAdj<T, Tint, Tgroup>
+get_pre_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+                            DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::ostream &os = data.rddo.os;
@@ -2508,9 +2531,8 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
   int n = data.LinSpa.n;
   int dimSpace = data.LinSpa.ListMat.size();
   // The inequalities are already carried by the stored tessellation.
-  DelaunayTesselationIneq<T, Tgroup> const &DTI = x.DT;
   std::vector<FullAdjInfo<T>> ListIneq =
-    ComputeListIneqFromTesselationIneq<T, Tgroup>(DTI);
+    ComputeListIneqFromTesselationIneq<T, Tgroup>(x.DT);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: f_adj, ComputeListIneqFromTesselationIneq|=" << time_f_adj
        << "\n";
@@ -2587,97 +2609,109 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
   os << "ISODEL: f_adj: |GRPperm|=" << GRPperm.size()
      << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
 #endif
-  std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
   std::vector<FullAdjInfo<T>> ListIneqRed;
+  std::vector<bool> l_test;
   for (auto &i : l_idx) {
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    MicrosecondTime time_s_adj;
-#endif
     int idxIrred = ListIrred[i];
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: f_adj, i=" << i << " idxIrred=" << idxIrred << "\n";
 #endif
     MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i, os);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: s_adj, GetSpaceInteriorPointFacet|=" << time_s_adj
-       << "\n";
-#endif
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: f_adj, We have TestPt\n";
-#endif
     MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);
     for (int u = 0; u < dimSpace; u++) {
       TestMat += TestPt(u) * data.LinSpa.ListMat[u];
     }
     bool test = IsPositiveDefinite(TestMat, os);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: s_adj, IsPositiveDefinite|=" << time_s_adj << "\n";
-#endif
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: f_adj, We have test for TestMat\n";
-#endif
-    FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
-    ListIneqRed.push_back(eRecIneq);
-    if (test) {
-      DelaunayTesselationIneq<T, Tgroup> DTIadj =
-        FlippingLtype<T, Tgroup>(DTI, x.GramMat,
-                                 eRecIneq.ListAdjInfo,
-                                 data.LinSpa.ListLineMat, data.rddo);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-      os << "|ISODEL: s_adj, FlippingLtype|=" << time_s_adj << "\n";
-#endif
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISODEL: After FlippingLtype\n";
-#endif
-      std::vector<FullAdjInfo<T>> ListIneqAdj =
-        ComputeListIneqFromTesselationIneq<T, Tgroup>(DTIadj);
-#ifdef SANITY_CHECK_FLIP_INEQ_CONSISTENCY
-      // End-to-end check that the incrementally-updated inequalities
-      // (Case 1 reused, other cases recomputed) match a full from-scratch
-      // recomputation on the flipped tessellation.
-      {
-        std::vector<FullAdjInfo<T>> ListIneqAdjSlow =
-          ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
-              StripDelaunayTesselationIneq<T, Tgroup>(DTIadj),
-              data.LinSpa.ListLineMat, os);
-        std::set<MyVector<T>> setFast, setSlow;
-        for (auto &eFullAI : ListIneqAdj) {
-          setFast.insert(eFullAI.eIneq);
-        }
-        for (auto &eFullAI : ListIneqAdjSlow) {
-          setSlow.insert(eFullAI.eIneq);
-        }
-        if (setFast != setSlow) {
-          std::cerr << "FLIP_INEQ_CONSISTENCY: SANITY_CHECK failed: the "
-                       "incrementally flipped inequalities do not match a "
-                       "full recomputation on the flipped tessellation\n";
-          throw TerminalException{1};
-        }
-      }
-#endif
-      MyMatrix<T> FACadj = GetFACineq(ListIneqAdj);
-      MyMatrix<T> M = get_interior_gram_matrix_lp(data.LinSpa, FACadj, os);
-      MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
-      MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-      os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
-#endif
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISODEL: After GetInteriorGramMatrix\n";
-#endif
-      IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{
-        std::move(DTIadj), std::move(M), std::move(SHV_T)};
-      IsoDelaunayDomain_AdjI<T, Tint, Tgroup> eAdj{eRecIneq.eIneq, IsoDelAdj};
-      l_adj.push_back(eAdj);
-    }
+    ListIneqRed.push_back(ListIneq[idxIrred]);
+    l_test.push_back(test);
   }
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-  os << "|ISODEL: f_adj, all flips|=" << time_f_adj << "\n";
+  os << "|ISODEL: f_adj, pre-result|=" << time_f_adj << "\n";
+#endif
+  return {std::move(ListIneqRed), std::move(GRPperm), std::move(l_test)};
+}
+
+/*
+  Perform the actual flip across the facet eRecIneq and build the resulting
+  adjacent iso-Delaunay domain. This is the expensive step, isolated so that
+  it can be run only for the neighbour(s) actually needed.
+ */
+template <typename T, typename Tint, typename Tgroup>
+IsoDelaunayDomain_AdjI<T, Tint, Tgroup>
+get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+             DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+             FullAdjInfo<T> const &eRecIneq) {
+  std::ostream &os = data.rddo.os;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time_s_adj;
+#endif
+  DelaunayTesselationIneq<T, Tgroup> DTIadj =
+    FlippingLtype<T, Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo,
+                             data.LinSpa.ListLineMat, data.rddo);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: s_adj, FlippingLtype|=" << time_s_adj << "\n";
 #endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-  os << "ISODEL: Before returning l_adj\n";
+  os << "ISODEL: After FlippingLtype\n";
 #endif
-  return {ListIneqRed, GRPperm, l_adj};
+  std::vector<FullAdjInfo<T>> ListIneqAdj =
+    ComputeListIneqFromTesselationIneq<T, Tgroup>(DTIadj);
+#ifdef SANITY_CHECK_FLIP_INEQ_CONSISTENCY
+  // End-to-end check that the incrementally-updated inequalities
+  // (Case 1 reused, other cases recomputed) match a full from-scratch
+  // recomputation on the flipped tessellation.
+  {
+    std::vector<FullAdjInfo<T>> ListIneqAdjSlow =
+      ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
+          StripDelaunayTesselationIneq<T, Tgroup>(DTIadj),
+          data.LinSpa.ListLineMat, os);
+    std::set<MyVector<T>> setFast, setSlow;
+    for (auto &eFullAI : ListIneqAdj) {
+      setFast.insert(eFullAI.eIneq);
+    }
+    for (auto &eFullAI : ListIneqAdjSlow) {
+      setSlow.insert(eFullAI.eIneq);
+    }
+    if (setFast != setSlow) {
+      std::cerr << "FLIP_INEQ_CONSISTENCY: SANITY_CHECK failed: the "
+                   "incrementally flipped inequalities do not match a "
+                   "full recomputation on the flipped tessellation\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  MyMatrix<T> FACadj = GetFACineq(ListIneqAdj);
+  MyMatrix<T> M = get_interior_gram_matrix_lp(data.LinSpa, FACadj, os);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
+#endif
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISODEL: After GetInteriorGramMatrix\n";
+#endif
+  IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{
+    std::move(DTIadj), std::move(M), std::move(SHV_T)};
+  return {eRecIneq.eIneq, std::move(IsoDelAdj)};
+}
+
+/*
+  Full adjacency computation: the combinatorial pre-result followed by an
+  actual flip for every flippable facet.
+ */
+template <typename T, typename Tint, typename Tgroup>
+ResultDelaunayAdj<T, Tint, Tgroup>
+get_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+                        DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
+  PreResultDelaunayAdj<T, Tint, Tgroup> pre =
+    get_pre_result_delaunay_adj<T, Tint, Tgroup>(x, data);
+  std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
+  for (size_t k = 0; k < pre.l_test.size(); k++) {
+    if (pre.l_test[k]) {
+      l_adj.push_back(get_adjacent<T, Tint, Tgroup>(x, data, pre.ListIneqRed[k]));
+    }
+  }
+  return {std::move(pre.ListIneqRed), std::move(pre.GRPperm), std::move(l_adj)};
 }
 
 /*
@@ -2692,9 +2726,17 @@ RandomWalkIsoDelaunay(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   IsoDelaunayDomain<T, Tint, Tgroup> Work = x;
   for (int iter = 0; iter < n_iter; iter++) {
     os << "ISODEL: RandomWalkIsoDelaunay iter=" << iter << "/" << n_iter << "\n";
-    ResultDelaunayAdj<T, Tint, Tgroup> result =
-        get_result_delaunay_adj(Work, data);
-    int n_adj = result.l_adj.size();
+    // Only the combinatorial part is needed to know which facets are
+    // flippable; the actual flip is done for the single chosen neighbour.
+    PreResultDelaunayAdj<T, Tint, Tgroup> pre =
+        get_pre_result_delaunay_adj(Work, data);
+    std::vector<size_t> l_flippable;
+    for (size_t k = 0; k < pre.l_test.size(); k++) {
+      if (pre.l_test[k]) {
+        l_flippable.push_back(k);
+      }
+    }
+    int n_adj = l_flippable.size();
     os << "ISODEL: RandomWalkIsoDelaunay n_adj=" << n_adj << "\n";
     if (n_adj == 0) {
       os << "ISODEL: RandomWalkIsoDelaunay, no adjacent domain at iter="
@@ -2702,7 +2744,7 @@ RandomWalkIsoDelaunay(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
       break;
     }
     int pos = random() % n_adj;
-    Work = result.l_adj[pos].DT_gram;
+    Work = get_adjacent(Work, data, pre.ListIneqRed[l_flippable[pos]]).DT_gram;
   }
   return Work;
 }
