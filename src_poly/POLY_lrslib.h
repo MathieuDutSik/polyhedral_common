@@ -1461,9 +1461,11 @@ void Kernel_Simplices_Facets_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig,
   freeLRS(P, Q);
 }
 
-// Each simplex is returned as the sorted-ascending list of its vertex indices
-// (0-based rows of EXT), the natural representation the lrs kernel produces --
-// no packing into a Face bitset and unpacking on the receiving side.
+// Each simplex is returned as the list of its vertex indices (0-based rows of
+// EXT) in the order the lrs kernel emits them -- no packing into a Face bitset
+// and unpacking on the receiving side, and no reordering. Consumers that need a
+// canonical vertex order (e.g. to match a facet shared by two simplices) sort
+// locally; see ExtractBoundarySimplices in QuantizerLtypeExport.h.
 template <typename T>
 std::vector<std::vector<int>> GetTriangulation(MyMatrix<T> const &EXT) {
   [[maybe_unused]] int nbRow = EXT.rows();
@@ -1508,10 +1510,10 @@ std::vector<std::vector<int>> GetTriangulation(MyMatrix<T> const &EXT) {
             inv_parity = -inv_parity;
     }
 #endif
-    std::sort(esimp.begin(), esimp.end());
 #ifdef SANITY_CHECK_LRSLIB
     // Magnitude-only check (the original, still-working sanity check).
-    // Verifies that LRS's P->det matches |det| of the sorted simplex.
+    // Verifies that LRS's P->det matches |det| of the simplex (row order,
+    // hence the sign, is irrelevant since we compare absolute values).
     MyMatrix<T> EXTtrig = SelectRow(EXT, esimp);
     T det = DeterminantMat(EXTtrig);
     if (T_abs(det) != P->det) {
@@ -1568,9 +1570,9 @@ std::vector<std::vector<int>> GetTriangulation(MyMatrix<T> const &EXT) {
 }
 
 // Gets the triangulation and the facets at the same time. The triangulation is a
-// list of simplices, each the sorted-ascending list of its vertex indices (see
-// GetTriangulation); the facets are genuine faces (subsets of vertices) and stay
-// a vectface.
+// list of simplices, each the list of its vertex indices in the order the lrs
+// kernel emits them (see GetTriangulation); the facets are genuine faces
+// (subsets of vertices) and stay a vectface.
 template <typename T>
 std::pair<std::vector<std::vector<int>>, vectface>
 GetTriangulationFacet(MyMatrix<T> const &EXT) {
@@ -1593,7 +1595,6 @@ GetTriangulationFacet(MyMatrix<T> const &EXT) {
 #endif
       esimp.push_back(idx);
     }
-    std::sort(esimp.begin(), esimp.end());
 #ifdef SANITY_CHECK_LRSLIB
     MyMatrix<T> Mtrig = SelectRow(EXT, esimp);
     int rnk = RankMat(Mtrig);

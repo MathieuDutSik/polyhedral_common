@@ -387,17 +387,21 @@ MyVector<T> CircumcenterUnder(MyMatrix<T> const &D, MyMatrix<T> const &Q0) {
 // Boundary extraction from the lrs triangulation of DV(0)
 // ---------------------------------------------------------------------------
 
-// Given a triangulation of an n-polytope into n-simplices (each the sorted list
-// of its vertex indices), return the list of boundary (n-1)-simplices: those
-// (n-1)-faces appearing in exactly one n-simplex.
+// Given a triangulation of an n-polytope into n-simplices (each a list of its
+// vertex indices, in arbitrary order), return the list of boundary
+// (n-1)-simplices: those (n-1)-faces appearing in exactly one n-simplex.
 inline std::vector<std::vector<int>>
 ExtractBoundarySimplices(std::vector<std::vector<int>> const &trig,
                          std::ostream &os) {
   std::map<std::vector<int>, int> facet_count;
-  for (auto const &verts : trig) {
+  for (auto const &verts_in : trig) {
+    // Sort the simplex here so that a facet obtained by dropping one vertex is
+    // itself sorted and therefore compares equal (as the std::map key) across
+    // the two simplices sharing it. GetTriangulation does not canonicalize the
+    // vertex order, so this is where the ordering is imposed.
+    std::vector<int> verts = verts_in;
+    std::sort(verts.begin(), verts.end());
     // Each (n-1)-facet of this n-simplex is obtained by dropping one vertex.
-    // verts is sorted, so every dropped-vertex facet is sorted too and matches
-    // across the two simplices sharing it.
     int nverts = static_cast<int>(verts.size());
     for (int skip = 0; skip < nverts; skip++) {
       std::vector<int> facet;
