@@ -420,8 +420,8 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 //  by C-linking
 // * "cdd": The templatized cdd (only for fields)
 // * "lrs": The templatized lrs (for fields and rings). When T is a field,
-//   the implementation internally uses the fraction-reduction variant
-//   (previously exposed as "lrs_ring"); this is transparent to callers.
+//   the implementation internally uses the fraction-reduction variant;
+//   this is transparent to callers.
 // * "glrs": The external program glrs (only for types implementing Q)
 // * "ppl_ext": The external program ppl_lcdd (only for types implementing Q)
 // * "cdd_ext": The external program cdd (only for types implementing Q)
