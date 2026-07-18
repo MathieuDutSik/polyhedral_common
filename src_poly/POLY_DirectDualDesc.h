@@ -270,11 +270,6 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     // Small polytopes have special solutions
     return SmallPolytope_Ineq(EXT, os);
   case DualDescProgram::lrs:
-    // lrs does not use divisions, so it works even if T is not a field.
-    // When T is a field, prefer the fraction-reduction variant (faster);
-    // this is an implementation detail, not exposed as a separate program.
-    if constexpr (is_ring_field<T>::value)
-      return lrs::DualDescription_reduction(EXT);
     return lrs::DualDescription(EXT);
   case DualDescProgram::pd_lrs:
     // It applies to the field case or ring
@@ -330,11 +325,6 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     // Small polytopes can have special solutions
     return SmallPolytope_FaceIneq(EXT, f_process, os);
   case DualDescProgram::lrs:
-    // T can be a field or a ring. When T is a field, prefer the
-    // fraction-reduction variant (faster); this is an implementation
-    // detail, not exposed as a separate program.
-    if constexpr (is_ring_field<T>::value)
-      return lrs::DualDescriptionFaceIneq_reduction(EXT, f_process);
     return lrs::DualDescriptionFaceIneq(EXT, f_process);
   case DualDescProgram::pd_lrs:
     // It applies to the field case or ring
