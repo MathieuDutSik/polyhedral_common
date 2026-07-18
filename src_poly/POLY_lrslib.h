@@ -1826,7 +1826,7 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
                        [[maybe_unused]] lrs_dat<Tring> *Q,
                        [[maybe_unused]] int const &col, Tring *out) -> void {
       for (int i = 0; i < nbColRed; i++)
-        V(i) = out[i + shift];
+        V(i) = UniversalScalarConversion<T,Tring>(out[i + shift]);
       ListVect.push_back(V);
     };
     Kernel_DualDescription(EXTring, f_facet);
@@ -1864,7 +1864,7 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
     auto f_facet = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
                        Tring *out) -> void {
       for (int i = 0; i < nbColRed; i++)
-        pair.second(i) = out[i + shift];
+        pair.second(i) = UniversalScalarConversion<T,Tring>(out[i + shift]);
       set_face(P, Q, col, pair.first);
       f_process(pair);
     };
