@@ -1219,13 +1219,14 @@ triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
     WriteMatrix(os, eMatPerf);
     os << "PERCOMP: Before LINSPA_TestEquivalenceGramMatrix_SHV\n";
 #endif
+    std::optional<MyMatrix<T>> CommonGramMat;
     auto f_get_equiv=[&]() -> std::optional<MyMatrix<T>> {
       if (SHVfd1_T.rows() == 0) {
 #ifdef DEBUG_PERFECT_COMPLEX
         os << "PERFCOMP: f_get_equiv case 1\n";
 #endif
         return LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
-            LinSpa, eMatPerf, cone.gram, SHV1_T, SHV2_T, os);
+            LinSpa, eMatPerf, cone.gram, SHV1_T, SHV2_T, CommonGramMat, os);
       } else {
 #ifdef DEBUG_PERFECT_COMPLEX
         os << "PERFCOMP: f_get_equiv case 2\n";
@@ -1233,7 +1234,7 @@ triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
         MyMatrix<Tint> SHVfd2_Tint = ExtractInvariantVectorFamilyFullRank<T,Tint>(cone.gram, os);
         MyMatrix<T> SHVfd2_T = UniversalMatrixConversion<T, Tint>(SHVfd2_Tint);
         return LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
-            LinSpa, eMatPerf, cone.gram, SHVfd1_T, SHVfd2_T, os);
+            LinSpa, eMatPerf, cone.gram, SHVfd1_T, SHVfd2_T, CommonGramMat, os);
       }
     };
     std::optional<MyMatrix<T>> opt = f_get_equiv();

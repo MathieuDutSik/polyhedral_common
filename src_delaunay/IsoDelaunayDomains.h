@@ -726,25 +726,13 @@ DelaunayTesselation<T, Tgroup> GetInitialGenericDelaunayTesselation(
 #endif
       return true;
     }
-    if (data.CommonGramMat) {
-      MyMatrix<T> const &TestGram = *data.CommonGramMat;
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISODEL: Before IsDelaunayAcceptableForGramMat\n";
-#endif
-      bool test2 =
-          IsDelaunayAcceptableForGramMat(EXT, data.LinSpa, TestGram, os);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISODEL: After IsDelaunayAcceptableForGramMat test2=" << test2
-         << "\n";
-#endif
-      if (!test2) {
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        os << "ISODEL: GetInitialGenericDelaunayTesselation, true by "
-              "IsDelaunayAcceptableForGramMat\n";
-#endif
-        return true;
-      }
-    }
+    // Note: when CommonGramMat is imposed, the seed domain must contain G in
+    // its closure. This is NOT enforced here: IsDelaunayAcceptableForGramMat
+    // is vacuous on a generic (all-simplex) tessellation, so it cannot pin the
+    // random domain to G. The correct, non-vacuous membership test (G on the
+    // right side of every defining wall) is applied to the whole candidate
+    // domain below, and the candidate is a perturbation of G rather than a
+    // random form.
     return false;
   };
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -784,6 +772,66 @@ DelaunayTesselation<T, Tgroup> GetInitialGenericDelaunayTesselation(
 #endif
     return result;
   };
+  if (data.CommonGramMat) {
+    // Star-of-G seed: we need a top-dimensional (generic) iso-Delaunay domain
+    // whose closure contains G. G generally lies on walls shared by several
+    // such domains, so we cannot hit one by sampling random forms. Instead we
+    // perturb G: Q = k*G + P with P a small generic form. As k grows Q tends to
+    // the ray of G (domains are scale-invariant cones), so for k large enough Q
+    // is interior to one of the domains touching G, whose closure then contains
+    // G. We check membership explicitly (G on the accepted side of every
+    // defining wall) because the tessellation-level acceptability predicate is
+    // vacuous on generic domains.
+    MyMatrix<T> const &G = *data.CommonGramMat;
+    MyVector<T> g_vec = LINSPA_GetVectorOfMatrixExpression(data.LinSpa, G);
+    auto g_in_closure =
+        [&](DelaunayTesselation<T, Tgroup> const &DT,
+            MyMatrix<T> const &Q) -> bool {
+      std::vector<FullAdjInfo<T>> ListIneq =
+          ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
+              DT, data.LinSpa.ListLineMat, os);
+      MyVector<T> c_vec = LINSPA_GetVectorOfMatrixExpression(data.LinSpa, Q);
+      for (auto &eRec : ListIneq) {
+        // Q is strictly interior, so eIneq.dot(c_vec) != 0 fixes the accepted
+        // orientation of each wall; G is inside the closure iff it is never on
+        // the strictly opposite side.
+        T s_g = eRec.eIneq.dot(g_vec);
+        T s_c = eRec.eIneq.dot(c_vec);
+        if (s_g * s_c < 0) {
+          return false;
+        }
+      }
+      return true;
+    };
+    size_t n_iter = 0;
+    int N = 1;
+    int k = 1;
+    while (true) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISODEL: star-of-G seed, n_iter=" << n_iter << " N=" << N
+         << " k=" << k << "\n";
+#endif
+      MyMatrix<T> P =
+          GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(
+              data.LinSpa, N, os);
+      MyMatrix<T> Q = T(k) * G + P;
+      std::optional<DelaunayTesselation<T, Tgroup>> opt = test_matrix(Q);
+      if (opt && g_in_closure(*opt, Q)) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISODEL: star-of-G seed found containing G\n";
+#endif
+        return *opt;
+      }
+      // Push Q toward the ray of G by growing k; periodically refresh the
+      // perturbation and its magnitude to escape a bad direction.
+      k *= 2;
+      n_iter += 1;
+      if (n_iter % 8 == 0) {
+        N += 1;
+        k = 1;
+      }
+    }
+  }
   size_t n_iter = 0;
   int N = 2;
   while (true) {
@@ -2117,6 +2165,11 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
     ListStringValues["arithmetic"] = "gmp";
     ListStringValues["FileDualDescription"] = "unset";
     ListStringValues["CommonGramMat"] = "unset";
+    // When set to a directory/prefix P (not "unset"), each enumerated
+    // iso-Delaunay domain is written as a boost text-archive of an
+    // IsoDelaunayDomain to the file P<i> (i = 0, 1, ...), consumable by
+    // LATT_AnalysisIsoDelaunay.
+    ListStringValues["PrefixIsoDelaunayDomains"] = "unset";
     ListStringValues["CVPmethod"] = "SVexact";
     std::map<std::string, bool> ListBoolValues;
     // Default false keeps the historical behaviour of enumerating only
@@ -2473,6 +2526,33 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
 #endif
   int n = data.LinSpa.n;
   int dimSpace = data.LinSpa.ListMat.size();
+  // When a common Gram matrix G is imposed, the enumeration is restricted to
+  // the "star of G": the iso-Delaunay domains whose closure contains G. G is a
+  // point of the current domain's closure (the seed passes the acceptability
+  // check and this invariant is preserved on every accepted adjacency below).
+  // Crossing a wall reaches an adjacent domain that still contains G if and
+  // only if G lies exactly on that wall, i.e. the wall's defining inequality
+  // vanishes at G. The stored inequality is ScalarCanonicalizationVector(V), a
+  // nonzero multiple of the Voronoi inequality V, so V.dot(g_vec)==0 is tested
+  // sign-independently as eIneq.dot(g_vec)==0. g_vec is the T-space coordinate
+  // vector of G.
+  std::optional<MyVector<T>> g_vec;
+  if (data.CommonGramMat) {
+    g_vec = LINSPA_GetVectorOfMatrixExpression(data.LinSpa, *data.CommonGramMat);
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
+    // Invariant: G must lie in the closure of the current domain. Check it with
+    // the same acceptability predicate that defines domain membership for the
+    // seed, which is orientation-free (unlike the per-wall inequality sign).
+    for (auto &eDel : x.DT.l_dels) {
+      if (!IsDelaunayAcceptableForGramMat(eDel.EXT, data.LinSpa,
+                                          *data.CommonGramMat, os)) {
+        std::cerr << "ISODEL: f_adj, CommonGramMat G is not in the closure of "
+                     "the current domain. The seed domain must contain G.\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+  }
   // compute the inequalities
   DelaunayTesselationIneq<T, Tgroup> DTI =
     BuildDelaunayTesselationIneq<T, Tgroup>(x.DT, data.LinSpa.ListLineMat, os);
@@ -2509,7 +2589,8 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
 #endif
   // Compute the automorphism group on the central gram and then the facets
   std::vector<MyMatrix<T>> ListGenTot =
-    LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat, os);
+    LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat,
+                                              data.CommonGramMat, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: f_adj, LINSPA_ComputeStabilizer|=" << time_f_adj << "\n";
 #endif
@@ -2585,6 +2666,19 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
 #endif
     FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
     ListIneqRed.push_back(eRecIneq);
+    if (g_vec) {
+      // Star-of-G restriction: only cross a wall on which G lies, i.e. the
+      // adjacent domain still contains G in its closure. G lies on this wall
+      // iff its Voronoi inequality vanishes at G (sign-independent, see above).
+      T scal = eRecIneq.eIneq.dot(*g_vec);
+      if (scal != 0) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISODEL: f_adj, skipping wall i=" << i
+           << " not containing CommonGramMat (scal=" << scal << ")\n";
+#endif
+        continue;
+      }
+    }
     if (test) {
       DelaunayTesselationIneq<T, Tgroup> DTIadj =
         FlippingLtype<T, Tgroup>(x.DT, DTI, x.GramMat,
@@ -2600,6 +2694,21 @@ ResultDelaunayAdj<T,Tint,Tgroup> get_result_delaunay_adj(IsoDelaunayDomain<T, Ti
         ComputeListIneqFromTesselationIneq<T, Tgroup>(DTIadj);
       DelaunayTesselation<T, Tgroup> DTadj =
         StripDelaunayTesselationIneq<T, Tgroup>(DTIadj);
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
+      if (g_vec) {
+        // We only reach here for a wall on which G lies (scal==0), so the
+        // flipped domain must still contain G in its closure. Verify it with
+        // the acceptability predicate to guard the star-of-G restriction.
+        for (auto &eDel : DTadj.l_dels) {
+          if (!IsDelaunayAcceptableForGramMat(eDel.EXT, data.LinSpa,
+                                              *data.CommonGramMat, os)) {
+            std::cerr << "ISODEL: f_adj, star-of-G: crossed a wall with scal==0 "
+                         "but the adjacent domain does not contain G\n";
+            throw TerminalException{1};
+          }
+        }
+      }
+#endif
 #ifdef SANITY_CHECK_FLIP_INEQ_CONSISTENCY
       // End-to-end check that the incrementally-updated inequalities
       // (Case 1 reused, other cases recomputed) match a full from-scratch
@@ -2798,7 +2907,7 @@ struct DataIsoDelaunayDomainsFunc {
     }
     if (method == 2) {
       return LINSPA_Invariant_SHV<T>(seed, data.LinSpa, x.DT_gram.GramMat,
-                                     x.DT_gram.SHV_T, os);
+                                     x.DT_gram.SHV_T, data.CommonGramMat, os);
     }
     std::cerr << "No valid method for computing the hash\n";
     throw TerminalException{1};
@@ -2811,7 +2920,7 @@ struct DataIsoDelaunayDomainsFunc {
     std::optional<MyMatrix<T>> opt =
         LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
             data.LinSpa, x.DT_gram.GramMat, y.DT_gram.GramMat, x.DT_gram.SHV_T,
-            y.DT_gram.SHV_T, data.rddo.os);
+            y.DT_gram.SHV_T, data.CommonGramMat, data.rddo.os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     data.rddo.os
         << "ISODEL: f_repr, after LINSPA_TestEquivalenceGramMatrix_SHV\n";

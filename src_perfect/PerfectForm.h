@@ -724,9 +724,10 @@ std::optional<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
   os << "PERF: TestEquivalence, eMat2=\n";
   WriteMatrix(os, RemoveFractionMatrix(eMat2));
 #endif
+  std::optional<MyMatrix<T>> CommonGramMat;
   std::optional<MyMatrix<T>> opt =
-      LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(LinSpa, eMat1, eMat2,
-                                                      SHV1_T, SHV2_T, os);
+      LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
+          LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, CommonGramMat, os);
 #ifdef DEBUG_PERFECT_REPR
   os << "PERF: TestEquivalence, det1=" << DeterminantMat(eMat1)
      << " det2=" << DeterminantMat(eMat2)
@@ -746,7 +747,8 @@ SimplePerfect_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
                         MyMatrix<T> const &eMat,
                         TshortestPerfect<T, Tint> const &tsp, std::ostream &os) {
   MyMatrix<T> SHV_T = get_fulldim_zbasis_shv_t(tsp);
-  return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, os);
+  std::optional<MyMatrix<T>> CommonGramMat;
+  return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, CommonGramMat, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -759,8 +761,10 @@ SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
   //
   MyMatrix<T> SHVorig_T = conversion_and_duplication<T, Tint>(tsp.rec_shv.SHV);
   MyMatrix<T> SHV_T = get_fulldim_zbasis_shv_t(tsp);
+  std::optional<MyMatrix<T>> CommonGramMat;
   Result_ComputeStabilizer_SHV<T, Tgroup> result =
-      LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T, os);
+      LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T,
+                                              CommonGramMat, os);
 #ifdef DEBUG_PERFECT_FORM
   os << "PERFECT: SimplePerfect_Stabilizer, we have result\n";
   os << "PERFECT: SimplePerfect_Stabilizer |SHVorig_T|=" << SHVorig_T.rows()
