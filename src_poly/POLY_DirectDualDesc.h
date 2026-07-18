@@ -218,12 +218,6 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     // Small polytopes have special solutions
     return SmallPolytope_Incidence(EXT, os);
   case DualDescProgram::lrs:
-    // lrs works for both fields and rings. When T is a field, prefer the
-    // fraction-reduction variant which computes in the internal ring
-    // (faster). This is an implementation detail, not exposed as a
-    // separate program.
-    if constexpr (is_ring_field<T>::value)
-      return lrs::DualDescription_incd_reduction(EXT);
     return lrs::DualDescription_incd(EXT);
   case DualDescProgram::pd_lrs:
     // It applies to the field case or ring

@@ -1768,17 +1768,39 @@ std::pair<MyMatrix<T>, int> FirstColumnZeroCond(MyMatrix<T> const &M) {
   return {M, 0};
 }
 
+// Incidence-only dual description. lrs works for both fields and rings; the
+// field-vs-ring choice is made here (not by the callers). When T is a field,
+// the enumeration is run over its underlying ring (integer arithmetic), which
+// is exact and faster; when T is already a ring, lrs runs directly on it.
 template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
   size_t nbRow = EXTwork.rows();
   vectface ListIncd(nbRow);
   Face face(nbRow);
-  auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
-                     [[maybe_unused]] T *out) -> void {
-    set_face(P, Q, col, face);
-    ListIncd.push_back(face);
-  };
-  Kernel_DualDescription(EXTwork, f_facet);
+  if constexpr (is_ring_field<T>::value) {
+    using Tring = typename underlying_ring<T>::ring_type;
+    size_t nbCol = EXTwork.cols();
+    MyMatrix<Tring> EXTring(nbRow, nbCol);
+    for (size_t iRow = 0; iRow < nbRow; iRow++) {
+      MyVector<T> eRow1 = GetMatrixRow(EXTwork, iRow);
+      MyVector<T> eRow2 = NonUniqueScaleToIntegerVector(eRow1);
+      MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
+      AssignMatrixRow(EXTring, iRow, eRow3);
+    }
+    auto f_facet = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
+                       [[maybe_unused]] Tring *out) -> void {
+      set_face(P, Q, col, face);
+      ListIncd.push_back(face);
+    };
+    Kernel_DualDescription(EXTring, f_facet);
+  } else {
+    auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
+                       [[maybe_unused]] T *out) -> void {
+      set_face(P, Q, col, face);
+      ListIncd.push_back(face);
+    };
+    Kernel_DualDescription(EXTwork, f_facet);
+  }
   return ListIncd;
 }
 
@@ -1836,30 +1858,6 @@ vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
     return nbFound != UpperLimit;
   };
   Kernel_DualDescription_cond(EXTwork, f_facet);
-  return ListIncd;
-}
-
-template <typename T>
-vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
-  MyMatrix<T> EXTwork = FirstColumnZero(EXT);
-  using Tring = typename underlying_ring<T>::ring_type;
-  size_t nbCol = EXTwork.cols();
-  size_t nbRow = EXTwork.rows();
-  MyMatrix<Tring> EXTring(nbRow, nbCol);
-  for (size_t iRow = 0; iRow < nbRow; iRow++) {
-    MyVector<T> eRow1 = GetMatrixRow(EXTwork, iRow);
-    MyVector<T> eRow2 = NonUniqueScaleToIntegerVector(eRow1);
-    MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
-    AssignMatrixRow(EXTring, iRow, eRow3);
-  }
-  vectface ListIncd(nbRow);
-  Face face(nbRow);
-  auto f_facet = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
-                     [[maybe_unused]] Tring *out) -> void {
-    set_face(P, Q, col, face);
-    ListIncd.push_back(face);
-  };
-  Kernel_DualDescription(EXTring, f_facet);
   return ListIncd;
 }
 
