@@ -587,7 +587,11 @@ struct QuantizationComputer {
     for (int iVert = 0; iVert < nbVert; iVert++)
       for (int j = 0; j < nRel + 1; j++)
         EXTinBasis_t0(iVert, j) = eval_at(EXTinBasis(iVert, j), t0_triang);
-    std::vector<std::vector<int>> trig = lrs::GetTriangulation(EXTinBasis_t0);
+    // Triangulate the t0-evaluated polytope, keeping each simplex together with
+    // its SIGNED determinant there (detT0). lrs produces the determinant
+    // essentially for free, so this replaces a per-simplex DeterminantMat.
+    std::vector<std::pair<std::vector<int>, Tscal>> trig =
+        lrs::GetTriangulationDet(EXTinBasis_t0);
     // The covariance of the uniform distribution on a simplex with n+1 vertices
     // is (1/((n+1)(n+2))) sum_u (v_u - c)(v_u - c)^T; Tnp1 = n+1 is also the
     // barycenter divisor (vertex count). These are the linear factors (n+1),
@@ -595,7 +599,7 @@ struct QuantizationComputer {
     // very end via factorial(nRel).
     T Tnp1(nRel + 1), Tnp2(nRel + 2);
     T invDenom = T(1) / (Tnp1 * Tnp2); // constant, hoisted out of the loop
-    for (auto &LV : trig) {
+    for (auto &[LV, detT0] : trig) {
       int sdim = LV.size();
       MyMatrix<T> EXTsimplex(sdim, nRel + 1);
       for (int u = 0; u < sdim; u++)
@@ -624,11 +628,6 @@ struct QuantizationComputer {
         g_simplex_total++;
       }
 #endif
-      MyMatrix<Tscal> EXTsimplex_t0(sdim, nRel + 1);
-      for (int u = 0; u < sdim; u++)
-        for (int j = 0; j < nRel + 1; j++)
-          EXTsimplex_t0(u, j) = EXTinBasis_t0(LV[u], j);
-      Tscal detT0 = DeterminantMat(EXTsimplex_t0);
 #ifdef SANITY_CHECK_QUANTIZATION_INTEGRAL
       // trig triangulates the polytope evaluated at the non-degenerate interior
       // point t0, so every leaf simplex must have non-zero volume there. A zero

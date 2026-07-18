@@ -1462,21 +1462,26 @@ void Kernel_Simplices_Facets_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig,
   freeLRS(P, Q);
 }
 
-// Each simplex is returned as the list of its vertex indices (0-based rows of
-// EXT) in the order the lrs kernel emits them -- no packing into a Face bitset
-// and unpacking on the receiving side, and no reordering. Consumers that need a
-// canonical vertex order (e.g. to match a facet shared by two simplices) sort
-// locally; see ExtractBoundarySimplices in QuantizerLtypeExport.h.
-template <typename T>
-std::vector<std::vector<int>> GetTriangulation(MyMatrix<T> const &EXT) {
+// Core triangulation enumerator: for each simplex of the lrs triangulation of
+// EXT it calls f_trig_det(trig, det), where
+//  * trig is the list of vertex indices (0-based rows of EXT) in the order the
+//    lrs kernel emits them (cobasis order) -- no Face packing, no reordering;
+//  * det is the SIGNED determinant of SelectRow(EXT, trig).
+//
+// The magnitude |det| is P->det (produced by lrs for free). The sign is
+//   sign(det) = sign_calibration * P->det_sign * col_parity
+// where P->det_sign is lrs's cumulative sign of the physical basis determinant
+// (kept correct across dictionary copies, see copy_dict); col_parity is the
+// parity of the physical column order Col[0..d-1] of the cobasis (the
+// permutation taking the emitted cobasis order to lrs's physical column order);
+// and sign_calibration is a per-enumeration +-1 constant absorbing lrs's
+// initial-basis sign and the fixed decision-variable row order. It is fixed
+// once, at the first simplex, by a single DeterminantMat; every subsequent
+// signed determinant is then obtained with no elimination at all.
+template <typename T, typename Ftrig_det>
+void GetTriangulationDet_f(MyMatrix<T> const &EXT, Ftrig_det f_trig_det) {
   [[maybe_unused]] int nbRow = EXT.rows();
-  std::vector<std::vector<int>> l_trig;
-#ifdef SANITY_CHECK_LRSLIB
-  // Per-enumeration ±1 calibration of the recovered combinatorial sign
-  // against the true signed determinant. 0 = not yet calibrated; ±1 after the
-  // first callback. Captured by reference in `f_trig` (below) via [&].
   int sign_calibration = 0;
-#endif
   auto f_trig = [&](lrs_dic<T> *P, lrs_dat<T> *Q) -> bool {
     std::vector<int> esimp;
     esimp.reserve(P->d);
@@ -1492,55 +1497,76 @@ std::vector<std::vector<int>> GetTriangulation(MyMatrix<T> const &EXT) {
 #endif
       esimp.push_back(idx);
     }
-#ifdef SANITY_CHECK_LRSLIB
-    // Verify the full SIGNED determinant of the simplex, recovered from the
-    // LRS running state without any extra elimination. The magnitude is
-    // P->det; the sign is
-    //   sign(det) = sign_calibration * P->det_sign * col_parity
-    // where:
-    //  * P->det_sign is LRS's cumulative sign of the physical basis
-    //    determinant (kept correct across dictionary copies, see copy_dict);
-    //  * col_parity is the parity of the physical column order Col[0..d-1] of
-    //    the cobasis, i.e. the permutation taking the emitted (sorted-cobasis)
-    //    vertex order to LRS's physical column order;
-    //  * sign_calibration is a per-enumeration ±1 constant absorbing LRS's
-    //    initial-basis sign and the fixed decision-variable row order. It is
-    //    fixed once, at the first simplex, by one determinant computation.
-    // The emitted esimp is in cobasis order, so this recovers exactly the sign
-    // of det(SelectRow(EXT, esimp)).
-    MyMatrix<T> EXTtrig = SelectRow(EXT, esimp);
-    T det = DeterminantMat(EXTtrig);
-    if (T_abs(det) != P->det) {
-      std::cerr << "LRS: det(EXTtrig)=" << det << " P->det=" << P->det << "\n";
-      std::cerr << "LRS: but their absolute value should be equal\n";
-      throw TerminalException{1};
-    }
     int col_parity = 1;
     for (int i = 0; i < P->d; i++)
       for (int j = i + 1; j < P->d; j++)
         if (P->Col[i] > P->Col[j])
           col_parity = -col_parity;
-    int true_sign = (det > 0) ? 1 : -1;
     int comb_sign = P->det_sign * col_parity;
+    T det;
     if (sign_calibration == 0) {
-      sign_calibration = true_sign * comb_sign;
-    } else {
-      int predicted_sign = sign_calibration * comb_sign;
-      if (true_sign != predicted_sign) {
-        std::cerr << "LRS: signed-determinant recovery failed:"
-                  << " det=" << det << " P->det=" << P->det
-                  << " det_sign=" << P->det_sign
-                  << " col_parity=" << col_parity
-                  << " sign_calibration=" << sign_calibration << "\n";
+      // First simplex: compute the true signed determinant once and use it to
+      // fix the global sign convention for all remaining simplices.
+      MyMatrix<T> EXTtrig = SelectRow(EXT, esimp);
+      det = DeterminantMat(EXTtrig);
+#ifdef SANITY_CHECK_LRSLIB
+      if (T_abs(det) != P->det) {
+        std::cerr << "LRS: det(EXTtrig)=" << det << " P->det=" << P->det
+                  << " but their absolute value should be equal\n";
         throw TerminalException{1};
       }
-    }
 #endif
-    l_trig.push_back(std::move(esimp));
+      int true_sign = (det > 0) ? 1 : -1;
+      sign_calibration = true_sign * comb_sign;
+    } else {
+      det = P->det;
+      if (sign_calibration * comb_sign < 0)
+        det = -det;
+    }
+    f_trig_det(esimp, det);
     return true;
   };
   MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
   Kernel_Simplices_cond(EXText, f_trig);
+}
+
+// Triangulation with, for each simplex, the SIGNED determinant of its vertex
+// matrix SelectRow(EXT, trig).
+template <typename T>
+std::vector<std::pair<std::vector<int>, T>>
+GetTriangulationDet(MyMatrix<T> const &EXT) {
+  std::vector<std::pair<std::vector<int>, T>> l_trig;
+  auto f_trig_det = [&](std::vector<int> const &trig, T const &det) -> void {
+#ifdef SANITY_CHECK_LRSLIB
+    // Cross-check the cheaply recovered signed determinant against a full
+    // determinant computation on every simplex.
+    MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
+    T det_check = DeterminantMat(EXTtrig);
+    if (det_check != det) {
+      std::cerr << "LRS: GetTriangulationDet signed-determinant mismatch: "
+                << "recovered=" << det << " actual=" << det_check << "\n";
+      throw TerminalException{1};
+    }
+#endif
+    l_trig.push_back({trig, det});
+  };
+  GetTriangulationDet_f<T>(EXT, f_trig_det);
+  return l_trig;
+}
+
+// Each simplex is returned as the list of its vertex indices (0-based rows of
+// EXT) in the order the lrs kernel emits them -- no packing into a Face bitset
+// and unpacking on the receiving side, and no reordering. Consumers that need a
+// canonical vertex order (e.g. to match a facet shared by two simplices) sort
+// locally; see ExtractBoundarySimplices in QuantizerLtypeExport.h.
+template <typename T>
+std::vector<std::vector<int>> GetTriangulation(MyMatrix<T> const &EXT) {
+  std::vector<std::vector<int>> l_trig;
+  auto f_trig_det = [&](std::vector<int> const &trig,
+                        [[maybe_unused]] T const &det) -> void {
+    l_trig.push_back(trig);
+  };
+  GetTriangulationDet_f<T>(EXT, f_trig_det);
   return l_trig;
 }
 
