@@ -77,6 +77,7 @@ int main(int argc, char *argv[]) {
         using Tint = mpz_class;
         return process<T, Tint>(QFile, PlaneFile, choice, OutFormat, os);
       }
+#ifdef ENABLE_ALL_NUMERICAL_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
         using Tint = boost::multiprecision::mpz_int;
@@ -92,6 +93,7 @@ int main(int argc, char *argv[]) {
         using Tint = SafeInt64;
         return process<T, Tint>(QFile, PlaneFile, choice, OutFormat, os);
       }
+#endif
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
     };
