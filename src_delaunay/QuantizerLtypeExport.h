@@ -179,8 +179,9 @@ std::vector<MyMatrix<T>>
 EnumerateStarOf0(DelaunayTesselationIneq<T, Tgroup> const &DT,
                  LinSpaceMatrix<T> const &LinSpa,
                  MyMatrix<T> const &Q0, std::ostream &os) {
+  std::optional<MyMatrix<T>> CommonGramMat;
   std::vector<MyMatrix<T>> autL_gens =
-      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, Q0, os);
+      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, Q0, CommonGramMat, os);
   os << "QuantExport: Aut(L) has " << autL_gens.size() << " generator(s)\n";
 
   std::vector<MyMatrix<T>> autL_homog;
@@ -468,8 +469,10 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
   // Orbit-expand inequalities under Aut(L) using matrix_in_t_space (which
   // accounts for the two transposes — Q-space action vs functional action,
   // row vs column action). Then dedup and filter redundant.
+  std::optional<MyMatrix<T>> CommonGramMat;
   std::vector<MyMatrix<T>> autL_gens_for_ineq =
-      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, IDD.GramMat, os);
+      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, IDD.GramMat,
+                                                CommonGramMat, os);
   os << "QuantExport: Aut(L) has " << autL_gens_for_ineq.size()
      << " generator(s) for inequality expansion\n";
   std::vector<MyMatrix<T>> tspace_action;

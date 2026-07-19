@@ -285,10 +285,11 @@ template <typename T, typename Tgroup>
 bool cells_are_gram_equivalent(LtypeCell<T> const &c1, LtypeCell<T> const &c2,
                                 LinSpaceMatrix<T> const &LinSpa,
                                 std::ostream &os) {
+  std::optional<MyMatrix<T>> CommonGramMat;
   std::optional<MyMatrix<T>> opt =
-      LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(LinSpa, c1.inner_gram,
-                                                      c2.inner_gram, c1.SHV_T,
-                                                      c2.SHV_T, os);
+      LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
+          LinSpa, c1.inner_gram, c2.inner_gram, c1.SHV_T, c2.SHV_T,
+          CommonGramMat, os);
   return opt.has_value();
 }
 

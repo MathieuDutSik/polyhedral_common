@@ -290,6 +290,7 @@ template <typename T, typename Tgroup>
 Result_ComputeStabilizer_SHV<T, Tgroup>
 LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
                              MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
+                             std::optional<MyMatrix<T>> const &CommonGramMat,
                              std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -301,6 +302,12 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   std::vector<T> Vdiag(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat =
       GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
+  // When a common Gram matrix is imposed on all the domains, the stabilizer
+  // must preserve it. Adding it to the list restricts the automorphisms to
+  // the subgroup that also fixes CommonGramMat.
+  if (CommonGramMat) {
+    ListMat.push_back(*CommonGramMat);
+  }
 
   std::vector<std::vector<Tidx>> ListGen =
       GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
@@ -371,11 +378,14 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>>
 LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
-                         MyMatrix<T> const &eMat, std::ostream &os) {
+                         MyMatrix<T> const &eMat,
+                         std::optional<MyMatrix<T>> const &CommonGramMat,
+                         std::ostream &os) {
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   Result_ComputeStabilizer_SHV<T, Tgroup> result =
-      LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T, os);
+      LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T,
+                                              CommonGramMat, os);
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer, we have result\n";
 #endif
@@ -385,12 +395,19 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
 template <typename T>
 size_t LINSPA_Invariant_SHV(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
                             MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
+                            std::optional<MyMatrix<T>> const &CommonGramMat,
                             std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   int n_row = SHV_T.rows();
   std::vector<T> Vdiag(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat =
       GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
+  // When a common Gram matrix is imposed on all the domains, the relevant
+  // equivalences must preserve it. Adding it to the list of matrices makes
+  // the invariant compatible with that restricted equivalence.
+  if (CommonGramMat) {
+    ListMat.push_back(*CommonGramMat);
+  }
   return GetInvariant_ListMat_Vdiag<T, Tfield>(seed, SHV_T, ListMat, Vdiag, os);
 }
 
@@ -399,7 +416,8 @@ size_t LINSPA_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
                         MyMatrix<T> const &eMat, std::ostream &os) {
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, os);
+  std::optional<MyMatrix<T>> CommonGramMat;
+  return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, CommonGramMat, os);
 }
 
 
@@ -413,7 +431,8 @@ template <typename T, typename Tgroup>
 std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
     LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eMat1,
     MyMatrix<T> const &eMat2, MyMatrix<T> const &SHV1_T,
-    MyMatrix<T> const &SHV2_T, std::ostream &os) {
+    MyMatrix<T> const &SHV2_T,
+    std::optional<MyMatrix<T>> const &CommonGramMat, std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -439,6 +458,14 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
       GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspaces);
   std::vector<MyMatrix<T>> ListMat2 =
       GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
+  // When a common Gram matrix is imposed on all the domains, the equivalence
+  // has to preserve it. Adding it identically to both lists forces the
+  // matching permutation (and thus the recovered transformation) to satisfy
+  // P * CommonGramMat * P^T = CommonGramMat.
+  if (CommonGramMat) {
+    ListMat1.push_back(*CommonGramMat);
+    ListMat2.push_back(*CommonGramMat);
+  }
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: Equiv, |ListComm|=" << LinSpa.ListComm.size()
      << " |ListSubspaces|=" << LinSpa.ListSubspaces.size() << "\n";
@@ -472,6 +499,14 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
   if (eMat1_img != eMat2) {
     std::cerr << "TSPACE: Equiv, The matrix TransMat does not preserve eMat\n";
     throw TerminalException{1};
+  }
+  if (CommonGramMat) {
+    MyMatrix<T> CommonImg =
+        OneEquiv * (*CommonGramMat) * OneEquiv.transpose();
+    if (CommonImg != *CommonGramMat) {
+      std::cerr << "TSPACE: Equiv, TransMat does not preserve CommonGramMat\n";
+      throw TerminalException{1};
+    }
   }
 #endif
   if (is_stab_space(OneEquiv, LinSpa)) {
@@ -532,8 +567,16 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
       std::cerr << "TSPACE: Equiv, we do not have an equivalence\n";
       throw TerminalException{1};
     }
+    if (CommonGramMat) {
+      MyMatrix<T> CommonImg = eMat_T * (*CommonGramMat) * eMat_T.transpose();
+      if (CommonImg != *CommonGramMat) {
+        std::cerr << "TSPACE: Equiv, equivalence does not preserve "
+                     "CommonGramMat\n";
+        throw TerminalException{1};
+      }
+    }
   } else {
-    Tgroup FullGRP1(LGenPerm1, n_row);
+    Tgroup FullGRP1(LGenPerm_big, n_row);
     for (auto &elt : FullGRP1) {
       MyMatrix<T> eMatr = get_mat_from_shv_perm(elt, SHV1_T, eMat1);
       MyMatrix<T> eProd_T = OneEquiv * eMatr;
@@ -556,9 +599,10 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
+  std::optional<MyMatrix<T>> CommonGramMat;
   std::optional<MyMatrix<T>> opt =
-      LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(LinSpa, eMat1, eMat2,
-                                                      SHV1_T, SHV2_T, os);
+      LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
+          LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, CommonGramMat, os);
   if (!opt) {
     return {};
   }

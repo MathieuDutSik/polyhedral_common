@@ -8,6 +8,7 @@
 #include "lt_complex.h"
 #include "Permutation.h"
 #include "Group.h"
+#include <boost/archive/text_oarchive.hpp>
 // clang-format on
 
 template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
@@ -54,6 +55,20 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
           data_func, f_incorrect, max_runtime_second);
   std::vector<Tout> l_tot =
       unfold_opt(opt_l_tot, "EnumerateAndStore_Serial (iso-Delaunay)");
+
+  // Optionally dump each enumerated domain as a boost text-archive of an
+  // IsoDelaunayDomain (the format read by LATT_AnalysisIsoDelaunay), reusing
+  // the already-computed tessellations. Skipped when the entry is "unset".
+  std::string PrefixIsoDel =
+      BlockDATA.get_string("PrefixIsoDelaunayDomains");
+  if (PrefixIsoDel != "unset") {
+    for (size_t i = 0; i < l_tot.size(); i++) {
+      std::string FileName = PrefixIsoDel + std::to_string(i);
+      std::ofstream ofs(FileName);
+      boost::archive::text_oarchive oa(ofs);
+      oa << l_tot[i].x.DT_gram;
+    }
+  }
 
   if (!compute_full_dimensional) {
     // Backward-compatible path: just emit the top-dimensional iso-Delaunay

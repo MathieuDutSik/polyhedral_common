@@ -60,8 +60,10 @@ int main(int argc, char *argv[]) {
     //
     LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace, std::cerr);
     MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
+    std::optional<MyMatrix<T>> CommonGramMat;
     std::vector<MyMatrix<T>> ListGen =
-        LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, std::cerr);
+        LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, CommonGramMat,
+                                                  std::cerr);
     auto f = [&](std::ostream &os_out) -> void {
       write_group(ListGen, OutFormat, os_out);
     };
