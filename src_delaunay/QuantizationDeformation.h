@@ -885,6 +885,12 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   }
   MyVector<T> qvec = SymmetricMatrixToVector(Q);
   std::optional<MyVector<T>> optc = SolutionMat(BmatT, qvec);
+#ifdef SANITY_CHECK_QUANTIZATION_DEFORMATION
+  if (!optc) {
+    std::cerr << "QHESS: No solution found\n";
+    throw TerminalException{1};
+  }
+#endif
   if (optc) {
     MyVector<T> bc = betaS * (*optc);
     for (int k = 0; k < N; k++) {
