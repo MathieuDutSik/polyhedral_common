@@ -726,13 +726,9 @@ DelaunayTesselation<T, Tgroup> GetInitialGenericDelaunayTesselation(
 #endif
       return true;
     }
-    // Note: when CommonGramMat is imposed, the seed domain must contain G in
-    // its closure. This is NOT enforced here: IsDelaunayAcceptableForGramMat
-    // is vacuous on a generic (all-simplex) tessellation, so it cannot pin the
-    // random domain to G. The correct, non-vacuous membership test (G on the
-    // right side of every defining wall) is applied to the whole candidate
-    // domain below, and the candidate is a perturbation of G rather than a
-    // random form.
+    // Note: when CommonGramMat is imposed, the requirement that the seed domain
+    // contains G in its closure is a whole-domain condition, so it is enforced
+    // by contains_common below rather than by this per-cell predicate.
     return false;
   };
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -772,89 +768,65 @@ DelaunayTesselation<T, Tgroup> GetInitialGenericDelaunayTesselation(
 #endif
     return result;
   };
+  // When a common Gram matrix G is imposed, the seed must be a generic
+  // (top-dimensional) iso-Delaunay domain whose closure contains G. G generally
+  // lies on the walls shared by several such domains, so we seed near its ray:
+  // GramMat = P + scale*G with P a generic random form. Since iso-Delaunay
+  // domains are scale-invariant cones, P + scale*G tends to the ray of G as
+  // scale grows, hence lands in a domain whose closure contains G. We double
+  // scale until the containment test succeeds. Without CommonGramMat this is
+  // the ordinary random seed (scale unused, contains_common vacuously true) and
+  // we instead grow the random amplitude N to escape a box of finite
+  // possibilities.
+  std::optional<MyVector<T>> g_vec;
   if (data.CommonGramMat) {
-    // Star-of-G seed: we need a top-dimensional (generic) iso-Delaunay domain
-    // whose closure contains G. G generally lies on walls shared by several
-    // such domains, so we cannot hit one by sampling random forms. Instead we
-    // perturb G: Q = k*G + P with P a small generic form. As k grows Q tends to
-    // the ray of G (domains are scale-invariant cones), so for k large enough Q
-    // is interior to one of the domains touching G, whose closure then contains
-    // G. We check membership explicitly (G on the accepted side of every
-    // defining wall) because the tessellation-level acceptability predicate is
-    // vacuous on generic domains.
-    MyMatrix<T> const &G = *data.CommonGramMat;
-    MyVector<T> g_vec = LINSPA_GetVectorOfMatrixExpression(data.LinSpa, G);
-    auto g_in_closure =
-        [&](DelaunayTesselation<T, Tgroup> const &DT,
-            MyMatrix<T> const &Q) -> bool {
-      std::vector<FullAdjInfo<T>> ListIneq =
-          ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
-              DT, data.LinSpa.ListLineMat, os);
-      MyVector<T> c_vec = LINSPA_GetVectorOfMatrixExpression(data.LinSpa, Q);
-      for (auto &eRec : ListIneq) {
-        // Q is strictly interior, so eIneq.dot(c_vec) != 0 fixes the accepted
-        // orientation of each wall; G is inside the closure iff it is never on
-        // the strictly opposite side.
-        T s_g = eRec.eIneq.dot(g_vec);
-        T s_c = eRec.eIneq.dot(c_vec);
-        if (s_g * s_c < 0) {
-          return false;
-        }
-      }
+    g_vec = LINSPA_GetVectorOfMatrixExpression(data.LinSpa, *data.CommonGramMat);
+  }
+  auto contains_common = [&](DelaunayTesselation<T, Tgroup> const &DT,
+                             MyMatrix<T> const &GramMat) -> bool {
+    if (!g_vec) {
       return true;
-    };
-    size_t n_iter = 0;
-    int N = 1;
-    int k = 1;
-    while (true) {
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISODEL: star-of-G seed, n_iter=" << n_iter << " N=" << N
-         << " k=" << k << "\n";
-#endif
-      MyMatrix<T> P =
-          GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(
-              data.LinSpa, N, os);
-      MyMatrix<T> Q = T(k) * G + P;
-      std::optional<DelaunayTesselation<T, Tgroup>> opt = test_matrix(Q);
-      if (opt && g_in_closure(*opt, Q)) {
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        os << "ISODEL: star-of-G seed found containing G\n";
-#endif
-        return *opt;
-      }
-      // Push Q toward the ray of G by growing k; periodically refresh the
-      // perturbation and its magnitude to escape a bad direction.
-      k *= 2;
-      n_iter += 1;
-      if (n_iter % 8 == 0) {
-        N += 1;
-        k = 1;
+    }
+    std::vector<FullAdjInfo<T>> ListIneq =
+        ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(
+            DT, data.LinSpa.ListLineMat, os);
+    MyVector<T> c_vec = LINSPA_GetVectorOfMatrixExpression(data.LinSpa, GramMat);
+    for (auto &eRec : ListIneq) {
+      // GramMat is strictly interior, so eIneq.dot(c_vec) != 0 fixes the
+      // accepted orientation of each wall; G is in the closure iff it is never
+      // on the strictly opposite side.
+      T s_g = eRec.eIneq.dot(*g_vec);
+      T s_c = eRec.eIneq.dot(c_vec);
+      if (s_g * s_c < 0) {
+        return false;
       }
     }
-  }
+    return true;
+  };
   size_t n_iter = 0;
   int N = 2;
+  T scale(1);
   while (true) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: Before GetRandomPositiveDefiniteNoNontrivialSymm, n_iter="
-       << n_iter << " N=" << N << "\n";
+       << n_iter << " N=" << N << " scale=" << scale << "\n";
 #endif
     MyMatrix<T> GramMat =
         GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(data.LinSpa,
                                                                    N, os);
+    if (data.CommonGramMat) {
+      GramMat += scale * (*data.CommonGramMat);
+    }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: After GetRandomPositiveDefiniteNoNontrivialSymm, GramMat=\n";
     WriteMatrix(os, GramMat);
 #endif
     std::optional<DelaunayTesselation<T, Tgroup>> opt = test_matrix(GramMat);
-    if (opt) {
+    if (opt && contains_common(*opt, GramMat)) {
       return *opt;
     }
-    // We do increase the randomness if it fails. Otherwise, we may be stuck in
-    // a box of finite possibilities where none of those are ok. So, we need to
-    // increase the index N. And we have to increase it aggressively since
-    // otherwise, the number of iteration would be very large.
     n_iter += 1;
+    scale *= T(2);
     N += n_iter;
   }
   std::cerr << "ISODEL: Failed to find a matching entry in "
