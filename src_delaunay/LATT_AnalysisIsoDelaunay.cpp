@@ -5,6 +5,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "IsoDelaunayDomains.h"
+#include "QuantizerLtypeExport.h"
 #include "Permutation.h"
 #include "Group.h"
 #include <boost/archive/text_iarchive.hpp>
@@ -14,31 +15,55 @@
   Reads an iso-Delaunay domain (boost text_oarchive of IsoDelaunayDomain<T,
   Tint, Tgroup> as written by LATT_SerialComputeDelaunay's FileIsoDelaunayDomain
   QUERIES option or by LATT_SerialLattice_IsoDelaunayDomain's per-domain dump)
-  and reports:
+  and always reports the cheap combinatorial data:
     * |ListIneq|   — full set of defining inequalities
                      (ComputeDefiningIneqIsoDelaunayDomain)
     * |ListIrred|  — irredundant inequalities (get_non_redundant_indices)
-    * For each extreme ray r of the cone, the rank of
-        sum_u r_u * LinSpa.ListMat[u]
-      and a tally of how many rays fall in each rank bucket.
+
+  Everything that needs the extreme rays of the cone (the dual description) or
+  is otherwise expensive is a QUERIES option, computed only when its entry is
+  set to something other than "null":
+
+    * FileFullRankRays      — writes the full-rank (rank n, positive definite)
+                              extreme rays — the "rigid" forms on the domain's
+                              boundary — as a GAP list of Gram matrices.
+                              Collecting these over every iso-Delaunay domain and
+                              reducing up to arithmetic equivalence gives the
+                              rigid lattices of the T-space (7 in the classic
+                              5-dimensional case).
+    * FileRankTally         — writes, as a GAP list of [rank, count] pairs, the
+                              tally of how many extreme rays r fall in each rank
+                              bucket of sum_u r_u * LinSpa.ListMat[u].
+    * FileInnerGramMat      — writes a Gram matrix in the relative interior of
+                              the L-type cone (get_interior_gram_matrix_lp).
+    * FileQuantizerLtypeJSON — writes the (simplex-Delaunay) L-type as JSON for
+                              the Julia downstream (formerly the standalone
+                              LATT_ExportQuantizerLtype program).
+
+  FileFullRankRays and FileRankTally share the extreme-ray enumeration, so the
+  dual description is computed once if either is requested.
 
   Driven by a namelist (DATA: arithmetic, FileIsoDelaunay; SYSTEM: OutFile;
-  QUERIES: FileFullRankRays). The QUERIES entry FileFullRankRays, when not
-  "null", writes the full-rank (rank n, positive definite) extreme rays — the
-  "rigid" forms on the domain's boundary — as a GAP list of Gram matrices.
-  Collecting these over every iso-Delaunay domain and reducing up to arithmetic
-  equivalence gives the rigid lattices of the T-space (7 in the classic
-  5-dimensional case).
+  QUERIES: the entries above). The canonical GL_n(Z) T-space is used
+  (ComputeCanonicalSpace).
  */
 
 template <typename T, typename Tint>
-void process(std::string const &FileIso, std::string const &FileFullRankRays,
-             std::ostream &os_out) {
+void process(FullNamelist const &eFull, std::ostream &os_out) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
   std::ostream &os = std::cerr;
+  //
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockQUERIES = eFull.get_block("QUERIES");
+  std::string FileIso = BlockDATA.get_string("FileIsoDelaunay");
+  std::string FileFullRankRays = BlockQUERIES.get_string("FileFullRankRays");
+  std::string FileRankTally = BlockQUERIES.get_string("FileRankTally");
+  std::string FileInnerGramMat = BlockQUERIES.get_string("FileInnerGramMat");
+  std::string FileQuantizerLtypeJSON =
+      BlockQUERIES.get_string("FileQuantizerLtypeJSON");
   //
   IsoDelaunayDomain<T, Tint, Tgroup> x;
   {
@@ -51,10 +76,9 @@ void process(std::string const &FileIso, std::string const &FileFullRankRays,
   LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(n);
   os << "ANA: n=" << n << " sym_dim=" << sym_dim
      << " |DT|=" << x.DT.l_dels.size() << "\n";
-  // Same sequence as IsoDelaunayDomains.h::CountNonFullRankRays:
+  // Always-computed combinatorial data:
   // (1) build the full inequality set,
-  // (2) eliminate redundancy with get_non_redundant_indices,
-  // (3) one dual description on the irredundant FACred.
+  // (2) eliminate redundancy with get_non_redundant_indices.
   HumanTime t1;
   std::vector<FullAdjInfo<T>> ListIneq =
       ComputeListIneqFromTesselationIneq<T, Tgroup>(x.DT);
@@ -70,49 +94,73 @@ void process(std::string const &FileIso, std::string const &FileFullRankRays,
   os << "ANA: get_non_redundant_indices done n_irred=" << n_irred
      << " |elapsed|=" << t2 << "\n";
   //
-  HumanTime t3;
-  MyMatrix<T> EXT = DirectDualDescription_mat(FACred, os);
-  int n_ray = EXT.rows();
-  os << "ANA: DirectDualDescription_mat done n_ray=" << n_ray
-     << " |elapsed|=" << t3 << "\n";
-  //
-  std::map<int, int> rank_tally;
-  // The full-rank (rank n, positive definite) extreme rays: the "rigid" forms
-  // living on this domain's boundary. Kept in primitive (fraction-free) form so
-  // that a ray and its positive multiples collapse to a single matrix.
-  std::vector<MyMatrix<T>> full_rank_rays;
-  int dimSpace = LinSpa.ListMat.size();
-  for (int i_row = 0; i_row < n_ray; i_row++) {
-    MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
-    for (int u = 0; u < dimSpace; u++) {
-      RayMat += EXT(i_row, u) * LinSpa.ListMat[u];
-    }
-    int rk = RankMat(RayMat);
-    rank_tally[rk]++;
-    if (rk == n && IsPositiveDefinite(RayMat, os)) {
-      full_rank_rays.push_back(RemoveFractionMatrix(RayMat));
-    }
-  }
-  //
   os_out << "n=" << n << " sym_dim=" << sym_dim << "\n";
   os_out << "n_ineq=" << n_ineq << "\n";
   os_out << "n_irred=" << n_irred << "\n";
-  os_out << "n_ray=" << n_ray << "\n";
-  os_out << "rank_tally=[";
-  bool first = true;
-  for (auto &kv : rank_tally) {
-    if (!first) {
-      os_out << ", ";
+  //
+  // QUERIES options over the extreme rays (rank tally and/or full-rank rays).
+  // Both need the extreme rays, so the (potentially expensive) dual description
+  // on FACred is computed once, only when at least one of them is requested.
+  bool need_rank_tally = FileRankTally != "null";
+  bool need_full_rank_rays = FileFullRankRays != "null";
+  if (need_rank_tally || need_full_rank_rays) {
+    HumanTime t3;
+    MyMatrix<T> EXT = DirectDualDescription_mat(FACred, os);
+    int n_ray = EXT.rows();
+    os << "ANA: DirectDualDescription_mat done n_ray=" << n_ray
+       << " |elapsed|=" << t3 << "\n";
+    os_out << "n_ray=" << n_ray << "\n";
+    std::map<int, int> rank_tally;
+    // The full-rank (rank n, positive definite) extreme rays: the "rigid" forms
+    // living on this domain's boundary. Kept in primitive (fraction-free) form
+    // so that a ray and its positive multiples collapse to a single matrix.
+    std::vector<MyMatrix<T>> full_rank_rays;
+    int dimSpace = LinSpa.ListMat.size();
+    for (int i_row = 0; i_row < n_ray; i_row++) {
+      MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
+      for (int u = 0; u < dimSpace; u++) {
+        RayMat += EXT(i_row, u) * LinSpa.ListMat[u];
+      }
+      int rk = RankMat(RayMat);
+      if (need_rank_tally) {
+        rank_tally[rk]++;
+      }
+      if (need_full_rank_rays && rk == n && IsPositiveDefinite(RayMat, os)) {
+        full_rank_rays.push_back(RemoveFractionMatrix(RayMat));
+      }
     }
-    first = false;
-    os_out << "(rank=" << kv.first << ", count=" << kv.second << ")";
+    if (need_rank_tally) {
+      // GAP list of [rank, count] pairs.
+      std::ofstream os_rt(FileRankTally);
+      os_rt << "return [";
+      bool first = true;
+      for (auto &kv : rank_tally) {
+        if (!first) {
+          os_rt << ", ";
+        }
+        first = false;
+        os_rt << "[" << kv.first << ", " << kv.second << "]";
+      }
+      os_rt << "];\n";
+    }
+    if (need_full_rank_rays) {
+      std::string FileName = FileFullRankRays;
+      WriteListMatrixFileGAP(FileName, full_rank_rays);
+    }
   }
-  os_out << "]\n";
-  // Optional QUERIES output: the full-rank extreme rays (rigid forms) of this
-  // domain, as a GAP list of Gram matrices. Skipped when the entry is "null".
-  if (FileFullRankRays != "null") {
-    std::string FileName = FileFullRankRays;
-    WriteListMatrixFileGAP(FileName, full_rank_rays);
+  //
+  // QUERIES option: the interior (inner) Gram matrix of the iso-Delaunay domain,
+  // i.e. a Gram matrix in the relative interior of the L-type cone.
+  if (FileInnerGramMat != "null") {
+    MyMatrix<T> InnerGram = get_interior_gram_matrix_lp(LinSpa, FAC, os);
+    WriteMatrixFile(FileInnerGramMat, InnerGram);
+  }
+  //
+  // QUERIES option: JSON export of the (simplex-Delaunay) L-type for the Julia
+  // downstream (formerly the standalone LATT_ExportQuantizerLtype program).
+  if (FileQuantizerLtypeJSON != "null") {
+    quantizer_export::WriteQuantizerLtypeJSON<T, Tint, Tgroup>(
+        x, LinSpa, FileQuantizerLtypeJSON, os);
   }
 }
 
@@ -135,6 +183,15 @@ FullNamelist NAMELIST_GetStandard_ANALYSIS_ISODELAUNAY() {
     // The full-rank (rigid) extreme rays of the domain, as a GAP list of Gram
     // matrices. "null" (the default) skips the computation.
     ListStringValues["FileFullRankRays"] = "null";
+    // The tally of extreme-ray ranks, as a GAP list of [rank, count] pairs.
+    // "null" (the default) skips the computation.
+    ListStringValues["FileRankTally"] = "null";
+    // A Gram matrix in the relative interior of the L-type cone. "null" (the
+    // default) skips the computation.
+    ListStringValues["FileInnerGramMat"] = "null";
+    // JSON export of the (simplex-Delaunay) L-type for the Julia downstream.
+    // "null" (the default) skips the computation.
+    ListStringValues["FileQuantizerLtypeJSON"] = "null";
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     ListBlock["QUERIES"] = BlockQUERIES;
@@ -145,31 +202,28 @@ FullNamelist NAMELIST_GetStandard_ANALYSIS_ISODELAUNAY() {
 void process_C(FullNamelist const &eFull) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
-  SingleBlock const &BlockQUERIES = eFull.get_block("QUERIES");
   std::string arith = BlockDATA.get_string("arithmetic");
-  std::string FileIso = BlockDATA.get_string("FileIsoDelaunay");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
-  std::string FileFullRankRays = BlockQUERIES.get_string("FileFullRankRays");
   auto f = [&](std::ostream &os_out) -> void {
     if (arith == "gmp") {
       using T = mpq_class;
       using Tint = mpz_class;
-      return process<T, Tint>(FileIso, FileFullRankRays, os_out);
+      return process<T, Tint>(eFull, os_out);
     }
     if (arith == "gmp_boost") {
       using T = boost::multiprecision::mpq_rational;
       using Tint = boost::multiprecision::mpz_int;
-      return process<T, Tint>(FileIso, FileFullRankRays, os_out);
+      return process<T, Tint>(eFull, os_out);
     }
     if (arith == "multi_boost") {
       using T = boost::multiprecision::cpp_rational;
       using Tint = boost::multiprecision::cpp_int;
-      return process<T, Tint>(FileIso, FileFullRankRays, os_out);
+      return process<T, Tint>(eFull, os_out);
     }
     if (arith == "safe") {
       using T = Rational<SafeInt64>;
       using Tint = SafeInt64;
-      return process<T, Tint>(FileIso, FileFullRankRays, os_out);
+      return process<T, Tint>(eFull, os_out);
     }
     std::cerr << "LATT_AnalysisIsoDelaunay: Failed to find a matching type for "
                  "arithmetic="
