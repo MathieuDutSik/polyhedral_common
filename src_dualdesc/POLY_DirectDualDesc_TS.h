@@ -12,9 +12,11 @@
 // workload.
 //
 // Contract on the sampler:
-//   * ListAnswer in the ThompsonSamplingHeuristic namelist should contain
-//     exactly "lrs" and "cdd" (or a subset thereof). Any other returned
-//     answer is defensively mapped to "lrs".
+//   * The Thompson state consumed by the _ts functions must list both
+//     "lrs" and "cdd" as options in its ListDescription (e.g.
+//     "lrs:distri1 cdd:distri1"), so that both are Thompson-sampled at
+//     every level. Any answer other than "lrs"/"cdd" is defensively
+//     mapped to "lrs".
 //   * The caller owns the sampler's lifetime. Its posterior distribution
 //     is stateful; reuse the same instance across calls to accumulate
 //     learning.
@@ -84,7 +86,8 @@ ts_pick_program(MyMatrix<T> const &EXT,
 // Zero-configuration factory. Returns a ThompsonSamplingHeuristic<Tint>
 // preconfigured for DirectDualDescription_*_ts:
 //
-//   * Answers = {"lrs", "cdd"} only.
+//   * A single Thompson state ("state_opts") offers both "lrs" and "cdd"
+//     as options, so both are Thompson-sampled at every level.
 //   * Only one feature is used to separate the sampler's blocks: `delta`
 //     (= nbRow - nbCol, the polytope's excess-vertices count).
 //   * `delta` is binned in intervals of width 5: [0,4], [5,9], …,
@@ -124,11 +127,18 @@ MakeLrsVsCddThompsonSampler(std::ostream &os) {
       " ListDescription = \"0.0\"",
       "/",
   };
+  // A single Thompson state offering *both* methods. Because both "lrs"
+  // and "cdd" appear in the same ListDescription, get_lowest_sampling
+  // draws from each option's empirical distribution and returns the
+  // fastest — i.e. the two options are genuinely sampled against each
+  // other at every level. (ListAnswer is a per-state label; it only
+  // matters for noprior states, which we do not use here, but its length
+  // must match ListName / ListDescription.)
   std::vector<std::string> lstr_thompson_prior = {
       "&THOMPSON_PRIOR",
-      " ListAnswer = \"lrs\", \"cdd\"",
-      " ListName = \"only_lrs\", \"only_cdd\"",
-      " ListDescription = \"lrs:distri1\", \"cdd:distri1\"",
+      " ListAnswer = \"lrs_cdd\"",
+      " ListName = \"state_opts\"",
+      " ListDescription = \"lrs:distri1 cdd:distri1\"",
       "/",
   };
   std::vector<std::string> lstr_key = {
@@ -137,16 +147,16 @@ MakeLrsVsCddThompsonSampler(std::ostream &os) {
       " ListDescription = \"" + bin_desc + "\"",
       "/",
   };
-  // ListFullCond = "delta < 0" is trivially false in this problem
-  // (delta = nbRow - nbCol is >= 0 for any well-posed dual-desc input),
-  // so the classical-heuristic override never fires and the Thompson
-  // sampler drives every choice. The Conclusion string is required to
-  // be non-empty but never consulted.
+  // Every delta bucket resolves to the single "state_opts" state, which
+  // offers both "lrs" and "cdd". delta = nbRow - nbCol is >= 0 for any
+  // well-posed dual-desc input, so the "delta >= 0" condition is always
+  // true; together with the identical DefaultPrior it guarantees that
+  // both options are Thompson-sampled at every level, whatever delta is.
   std::vector<std::string> lstr_heuristic_prior = {
       "&HEURISTIC_PRIOR",
-      " DefaultPrior = \"noprior:10\"",
-      " ListFullCond = \"delta < 0\"",
-      " ListConclusion = \"only_lrs\"",
+      " DefaultPrior = \"state_opts\"",
+      " ListFullCond = \"delta >= 0\"",
+      " ListConclusion = \"state_opts\"",
       "/",
   };
   std::vector<std::string> lstr_io = {

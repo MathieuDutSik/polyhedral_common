@@ -5,6 +5,7 @@
 // clang-format off
 #include "POLY_LinearProgramming.h"
 #include "POLY_RedundancyElimination.h"
+#include "POLY_DirectDualDesc_TS.h"
 #include "Shvec_exact.h"
 #include "Positivity.h"
 #include "LatticeDelaunay.h"
@@ -2486,6 +2487,7 @@ struct PreResultDelaunayAdj {
 template <typename T, typename Tint, typename Tgroup>
 int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
                          DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+                         ThompsonSamplingHeuristic<typename Tgroup::Tint> &eTS,
                          std::ostream &os) {
   int n = data.LinSpa.n;
   int dimSpace = data.LinSpa.ListMat.size();
@@ -2498,7 +2500,7 @@ int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   std::vector<int> ListIrred = get_non_redundant_indices(FAC, os);
   os << "|ISODEL: CountNonFullRankRays, get_non_redundant_indices|=" << time_non << "\n";
   MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
-  MyMatrix<T> EXT = DirectDualDescription_mat(FACred, os);
+  MyMatrix<T> EXT = DirectDualDescription_mat_ts(FACred, eTS, os);
   os << "|ISODEL: CountNonFullRankRays, DirectDualDescription_mat|=" << time_non << "\n";
   int n_row = EXT.rows();
   int count = 0;
@@ -2777,8 +2779,13 @@ void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
                               int const &n_walk_steps, int const &max_iter,
                               std::ostream &os) {
   IsoDelaunayDomain<T, Tint, Tgroup> Work = GetInitialIsoDelaunayDomain(data);
+  // One stateful lrs-vs-cdd Thompson sampler shared across every
+  // CountNonFullRankRays call so the posterior keeps accumulating over
+  // the whole random walk.
+  ThompsonSamplingHeuristic<typename Tgroup::Tint> eTS =
+      MakeLrsVsCddThompsonSampler<typename Tgroup::Tint>(os);
   os << "ISODEL: LookForFullRankRayDomain, before CountNonFullRankRays\n";
-  int curr_count = CountNonFullRankRays(Work, data, os);
+  int curr_count = CountNonFullRankRays(Work, data, eTS, os);
   os << "ISODEL: LookForFullRankRayDomain, initial curr_count=" << curr_count
      << "\n";
   int iter1 = 0;
@@ -2801,7 +2808,7 @@ void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
     }
     std::vector<int> ListCount;
     for (int i = 0; i < n_adj; i++) {
-      int c = CountNonFullRankRays(result.l_adj[i].DT_gram, data, os);
+      int c = CountNonFullRankRays(result.l_adj[i].DT_gram, data, eTS, os);
       os << "ISODEL: LookForFullRankRayDomain, i=" << i << "/" << n_adj << " c=" << c << "\n";
       ListCount.push_back(c);
     }
@@ -2810,7 +2817,7 @@ void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
     if (the_min >= curr_count && curr_count > 0) {
       os << "ISODEL: Before RandomWalkIsoDelaunay\n";
       Work = RandomWalkIsoDelaunay(Work, data, n_walk_steps, os);
-      curr_count = CountNonFullRankRays(Work, data, os);
+      curr_count = CountNonFullRankRays(Work, data, eTS, os);
       os << "ISODEL: LookForFullRankRayDomain, iter1=" << iter1
          << " iter2=" << iter2
          << " After RandomWalk curr_count=" << curr_count << "\n";
