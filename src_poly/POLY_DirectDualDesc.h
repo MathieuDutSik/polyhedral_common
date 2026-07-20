@@ -12,6 +12,7 @@
 #include "POLY_DirectDualDesc_External.h"
 #endif
 #include "POLY_DualDescription_PrimalDual.h"
+#include "POLY_DualDescription_BeneathBeyond.h"
 #include "SmallPolytopes.h"
 #include <algorithm>
 #include <optional>
@@ -80,6 +81,7 @@ enum class DualDescProgram {
   small_polytopes,
   lrs,
   pd_lrs,
+  beneath_beyond,
   glrs,
   ppl_ext,
   cdd_ext,
@@ -101,6 +103,8 @@ inline std::string to_string(DualDescProgram prog) {
     return "lrs";
   case DualDescProgram::pd_lrs:
     return "pd_lrs";
+  case DualDescProgram::beneath_beyond:
+    return "beneath_beyond";
   case DualDescProgram::glrs:
     return "glrs";
   case DualDescProgram::ppl_ext:
@@ -128,6 +132,8 @@ dual_desc_program_from_string_opt(std::string const &prog) {
     return DualDescProgram::lrs;
   if (prog == "pd_lrs")
     return DualDescProgram::pd_lrs;
+  if (prog == "beneath_beyond")
+    return DualDescProgram::beneath_beyond;
   if (prog == "glrs")
     return DualDescProgram::glrs;
   if (prog == "ppl_ext")
@@ -166,6 +172,10 @@ template <typename T> bool is_method_supported(DualDescProgram prog) {
   case DualDescProgram::pd_lrs:
     // Applies to the field or ring case.
     return true;
+  case DualDescProgram::beneath_beyond:
+    // Beneath-and-beyond computes facet normals through a nullspace, so it
+    // requires T to be a field (like cdd).
+    return is_ring_field<T>::value;
   case DualDescProgram::glrs:
   case DualDescProgram::ppl_ext:
   case DualDescProgram::cdd_ext:
@@ -222,6 +232,11 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
   case DualDescProgram::pd_lrs:
     // It applies to the field case or ring
     return POLY_DualDescription_PrimalDualIncidence(EXT, os);
+  case DualDescProgram::beneath_beyond:
+    // Native beneath-and-beyond, full-dimensional pointed cone (field only)
+    if constexpr (is_ring_field<T>::value)
+      return POLY_DualDescription_BeneathBeyondIncidence(EXT, os);
+    break;
   case DualDescProgram::glrs:
   case DualDescProgram::ppl_ext:
   case DualDescProgram::cdd_ext:
@@ -274,6 +289,11 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   case DualDescProgram::pd_lrs:
     // It applies to the field case or ring
     return POLY_DualDescription_PrimalDualInequalities(EXT, os);
+  case DualDescProgram::beneath_beyond:
+    // Native beneath-and-beyond, full-dimensional pointed cone (field only)
+    if constexpr (is_ring_field<T>::value)
+      return POLY_DualDescription_BeneathBeyondInequalities(EXT, os);
+    break;
   case DualDescProgram::glrs:
   case DualDescProgram::ppl_ext:
   case DualDescProgram::cdd_ext:
@@ -329,6 +349,11 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
   case DualDescProgram::pd_lrs:
     // It applies to the field case or ring
     return POLY_DualDescription_PrimalDualFaceIneq(EXT, f_process, os);
+  case DualDescProgram::beneath_beyond:
+    // Native beneath-and-beyond, full-dimensional pointed cone (field only)
+    if constexpr (is_ring_field<T>::value)
+      return POLY_DualDescription_BeneathBeyondFaceIneq(EXT, f_process, os);
+    break;
   case DualDescProgram::glrs:
   case DualDescProgram::ppl_ext:
   case DualDescProgram::cdd_ext:
