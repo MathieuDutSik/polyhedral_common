@@ -8,6 +8,7 @@
 #include "MAT_MatrixInt.h"
 #include <map>
 #include <set>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -59,11 +60,24 @@
 // positive* facet is a horizon ridge; ridge u {p} spans a new facet. Interior
 // rays (no visible facet) produce nothing.
 //
-// A key simplification versus the polymake code: each facet stores its full
-// incidence over *all* rows, computed once from its normal at creation. Because
-// a facet's supporting hyperplane is fixed for its whole lifetime, its
-// incidence {r : normal . r == 0} is time invariant, so incident rays are
-// absorbed automatically and no incremental incidence bookkeeping is needed.
+// The new facet normal is NOT recomputed from a nullspace. Its supporting
+// hyperplane must contain the ridge (= the intersection of the two parent
+// hyperplanes) and the new ray p, so it is the unique combination of the two
+// parent normals killing p:
+//   normal_new = (normal_ip . p) * normal_iv - (normal_iv . p) * normal_ip,
+// with iv the visible parent (normal_iv . p < 0) and ip the positive parent
+// (normal_ip . p > 0). This is a positive combination of two inward normals, so
+// it is inward-oriented for free. Only the nbCol initial simplex facets need a
+// genuine nullspace. (This mirrors the ratio-step of the FlippingFramework in
+// POLY_Fundamental.h.)
+//
+// Each facet stores its full incidence over *all* rows, computed once from its
+// normal at creation. Because a facet's supporting hyperplane is fixed for its
+// whole lifetime, its incidence {r : normal . r == 0} is time invariant, so
+// incident rays are absorbed automatically and no incremental incidence
+// bookkeeping is needed. The incidence cannot be replaced by ridge u {p}: for
+// non-simplicial facets (e.g. cut / metric polytopes) the true facet is
+// strictly larger than the seed. Deduplication is by this incidence Face.
 
 template <typename T> struct BeneathBeyondFacet {
   MyVector<T> normal; // normal . row >= 0 on every row, == 0 on the incidence
@@ -151,21 +165,37 @@ BeneathBeyond_Kernel(MyMatrix<T> const &EXT,
   for (auto &eRow : basis)
     in_basis[eRow] = 1;
 
-  auto make_facet = [&](Face const &seed) -> BeneathBeyondFacet<T> {
-    MyVector<T> normal = FindFacetInequality(EXT, seed);
-    normal = ScalarCanonicalizationVector(normal);
+  // Build a facet record from an (unnormalized) inward normal: canonicalize it
+  // (only to keep the coordinates small over repeated linear combinations) and
+  // scan its incidence. Canonicalization may reverse the sign for non-rational
+  // fields, so restore the orientation of the raw normal.
+  auto facet_from_normal = [&](MyVector<T> const &raw) -> BeneathBeyondFacet<T> {
+    MyVector<T> normal = ScalarCanonicalizationVector(raw);
+    for (int iCol = 0; iCol < nbCol; iCol++) {
+      if (raw(iCol) != 0) {
+        if ((normal(iCol) > 0) != (raw(iCol) > 0))
+          normal = -normal;
+        break;
+      }
+    }
     Face incd = beneath_beyond::facet_incidence(EXT, normal);
     return {std::move(normal), std::move(incd)};
   };
 
   std::vector<BeneathBeyondFacet<T>> facets;
-  // The nbCol facets of the simplicial cone: drop one basis ray at a time.
+  // The nbCol facets of the simplicial cone: drop one basis ray at a time. These
+  // are the only normals obtained from a nullspace; every later facet is a cheap
+  // linear combination of two existing ones (see below). Orient each inward, so
+  // it is positive on the dropped basis ray.
   for (int iBas = 0; iBas < nbCol; iBas++) {
     Face seed(nbRow);
     for (int jBas = 0; jBas < nbCol; jBas++)
       if (jBas != iBas)
         seed[basis[jBas]] = 1;
-    facets.push_back(make_facet(seed));
+    MyVector<T> normal = FindFacetInequality(EXT, seed);
+    if (beneath_beyond::facet_scal(EXT, normal, basis[iBas]) < 0)
+      normal = -normal;
+    facets.push_back(facet_from_normal(normal));
   }
 
   // Insert the remaining rays one at a time.
@@ -176,10 +206,13 @@ BeneathBeyond_Kernel(MyMatrix<T> const &EXT,
     os << "BENEATH_BEYOND: inserting ray p=" << p
        << " |facets|=" << facets.size() << "\n";
 #endif
-    // Classify the current facets w.r.t. p.
+    // Classify the current facets w.r.t. p, keeping the scalar products so the
+    // new facet normals can be assembled from them without a nullspace.
+    std::vector<T> scal_p(facets.size());
     std::vector<size_t> visible, positive;
     for (size_t i = 0; i < facets.size(); i++) {
       T scal = beneath_beyond::facet_scal(EXT, facets[i].normal, p);
+      scal_p[i] = scal;
       if (scal < 0)
         visible.push_back(i);
       else if (scal > 0)
@@ -195,17 +228,22 @@ BeneathBeyond_Kernel(MyMatrix<T> const &EXT,
     for (size_t iv : visible)
       to_delete[iv] = 1;
 
-    // Horizon ridges: a ridge shared by a visible and a strictly positive facet
-    // (rank nbCol-2). ridge u {p} spans a new facet. New facets are deduplicated
-    // by normal against each other AND against the surviving facets: in
-    // degenerate position an incident facet created earlier may already coincide
-    // with a horizon facet of this step (its full-incidence scan already listed
-    // p), and must not be duplicated.
+    // Horizon ridges: a ridge shared by a visible facet (scal < 0) and a
+    // strictly positive facet (scal > 0), of rank nbCol-2. The new facet spans
+    // ridge u {p}; its supporting hyperplane is the unique combination of the
+    // two parent hyperplanes that also passes through p:
+    //   normal = scal_p[ip] * normal[iv] - scal_p[iv] * normal[ip].
+    // Since scal_p[ip] > 0 and -scal_p[iv] > 0 and both parents are >= 0 on the
+    // whole cone, this combination is automatically inward-oriented, is zero on
+    // the ridge, and is zero on p. No nullspace is needed.
+    // Facets are deduplicated by their incidence Face, which merges coplanar
+    // horizon facets (non-generic position) and rejects a horizon facet that
+    // coincides with a surviving (incident) facet.
     std::vector<BeneathBeyondFacet<T>> new_facets;
-    std::set<MyVector<T>> seen_normals;
+    std::unordered_set<Face> seen_faces;
     for (size_t i = 0; i < facets.size(); i++)
       if (!to_delete[i])
-        seen_normals.insert(facets[i].normal);
+        seen_faces.insert(facets[i].incd);
     for (size_t iv : visible) {
       for (size_t ip : positive) {
         Face ridge = facets[iv].incd & facets[ip].incd;
@@ -213,10 +251,10 @@ BeneathBeyond_Kernel(MyMatrix<T> const &EXT,
           continue;
         if (beneath_beyond::face_rank(EXT, ridge) != nbCol - 2)
           continue;
-        Face seed = ridge;
-        seed[p] = 1;
-        BeneathBeyondFacet<T> nf = make_facet(seed);
-        if (seen_normals.insert(nf.normal).second)
+        MyVector<T> normal =
+            scal_p[ip] * facets[iv].normal - scal_p[iv] * facets[ip].normal;
+        BeneathBeyondFacet<T> nf = facet_from_normal(normal);
+        if (seen_faces.insert(nf.incd).second)
           new_facets.push_back(std::move(nf));
       }
     }
