@@ -46,6 +46,18 @@
 // original is deliberately not handled here; feed such inputs through the
 // existing preprocessing (or use cdd/lrs) instead.
 //
+// Two kernels are provided, producing identical output (cross-checked):
+//  * BeneathBeyond_Kernel: the straightforward version described just below --
+//    it rediscovers the horizon by testing visible x positive facet pairs and
+//    stores each facet's incidence by a full scan. Kept as a simple correctness
+//    oracle and used by the tests.
+//  * BeneathBeyond_Kernel_DualGraph: a port of polymake's update_facets that
+//    maintains a facet adjacency graph and carries incidence forward
+//    incrementally, avoiding the per-facet scan and the pairwise ridge search.
+//    It is the default behind the public entry points below because it is one
+//    to three orders of magnitude faster on the degenerate polytopes
+//    (cut / metric / TSP) that dominate this codebase.
+//
 // The facet enumeration requires T to be a field (facet normals are obtained
 // through FindFacetInequality / a nullspace computation). The triangulation
 // helper below only uses determinants and a row basis, so it also accepts ring
@@ -336,9 +348,10 @@ BeneathBeyond_Kernel(MyMatrix<T> const &EXT,
 }
 
 namespace beneath_beyond {
-// A facet node of the dual graph: its supporting inequality, its incidence, the
-// ids of the facets it shares a ridge with, and a liveness flag (deleted facets
-// are tombstoned rather than erased, so ids stay stable).
+// A facet node of the dual graph. `incd` is the incidence over the points
+// inserted so far, maintained incrementally (a new facet starts as ridge u {p},
+// an incident facet absorbs p), so no EXT scan is ever performed. Once every
+// point has been inserted, `incd` is the full incidence.
 template <typename T> struct DGFacet {
   MyVector<T> normal;
   Face incd;
@@ -347,17 +360,24 @@ template <typename T> struct DGFacet {
 };
 } // namespace beneath_beyond
 
-// Dual-graph beneath-and-beyond. Same result as BeneathBeyond_Kernel, but the
-// horizon is read off an incrementally-maintained facet adjacency graph instead
-// of being rediscovered by testing every visible x positive pair -- which was
-// 60-80% of the plain kernel's time on non-generic polytopes. Per inserted ray:
-//   * classify the live facets by sign(normal . p)  (O(#facets));
-//   * every graph edge from a visible facet to a strictly positive facet is a
-//     horizon ridge -> a new facet (normal by the flip formula), with no rank
-//     test, since adjacency already certifies the ridge;
-//   * new/incident facets are rewired among themselves (a small local set) with
-//     the rank-based ridge test;
-//   * visible facets are tombstoned and unlinked.
+// Dual-graph beneath-and-beyond, ported from polymake's update_facets. It carries
+// the incidence forward incrementally and reconnects new facets by a purely
+// combinatorial (set-containment) ridge test, so -- unlike BeneathBeyond_Kernel --
+// it does no per-facet incidence scan and no rank test in the main loop. It
+// returns the same facets as BeneathBeyond_Kernel (cross-checked). Field type,
+// full-dimensional pointed cone only.
+//
+// Per inserted ray p:
+//   * classify the live facets by sign(normal . p): visible (<0), incident (=0);
+//   * absorb p into the incident facets (incd += p);
+//   * for every dual-graph edge from a visible facet to a strictly positive one
+//     (a horizon ridge) create a new facet with incidence ridge u {p} and normal
+//     from the flip formula; coplanar new facets (equal normal) are merged;
+//   * delete the visible facets;
+//   * reconnect the touched facets (new + incident) with the incl-maximality test
+//     on their incidence sets -- the crucial point being that these sets contain
+//     only already-processed points, which is what makes the combinatorial test
+//     exact.
 template <typename T>
 std::vector<BeneathBeyondFacet<T>>
 BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
@@ -388,9 +408,9 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
 
   using DGF = beneath_beyond::DGFacet<T>;
   std::vector<DGF> F;
-  auto add_facet = [&](BeneathBeyondFacet<T> &&bf) -> int {
+  auto add_facet = [&](MyVector<T> normal, Face incd) -> int {
     int id = F.size();
-    F.push_back(DGF{std::move(bf.normal), std::move(bf.incd), {}, true});
+    F.push_back(DGF{std::move(normal), std::move(incd), {}, true});
     return id;
   };
   auto edge_exists = [&](int a, int b) -> bool {
@@ -400,21 +420,44 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
     return false;
   };
   auto add_edge = [&](int a, int b) {
-    F[a].adj.push_back(b);
-    F[b].adj.push_back(a);
+    if (!edge_exists(a, b)) {
+      F[a].adj.push_back(b);
+      F[b].adj.push_back(a);
+    }
+  };
+  auto remove_edge = [&](int a, int b) {
+    auto rm = [&](int x, int y) {
+      auto &v = F[x].adj;
+      v.erase(std::remove(v.begin(), v.end(), y), v.end());
+    };
+    rm(a, b);
+    rm(b, a);
+  };
+  // Canonicalize an inward normal and restore the orientation of `raw` (which
+  // canonicalization may reverse for non-rational fields).
+  auto canon = [&](MyVector<T> const &raw) -> MyVector<T> {
+    MyVector<T> normal = ScalarCanonicalizationVector(raw);
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      if (raw(iCol) != 0) {
+        if ((normal(iCol) > 0) != (raw(iCol) > 0))
+          normal = -normal;
+        break;
+      }
+    return normal;
   };
 
-  // Initial simplicial cone: nbCol facets, every pair sharing a ridge, so the
-  // dual graph starts as the complete graph.
+  // Initial simplicial cone: nbCol facets (incidence = the nbCol-1 basis rays
+  // spanning each), forming a complete dual graph.
   std::vector<int> init;
   for (int iBas = 0; iBas < nbCol; iBas++) {
     Face seed(nbRow);
     for (int jBas = 0; jBas < nbCol; jBas++)
       if (jBas != iBas)
         seed[basis[jBas]] = 1;
-    MyVector<T> normal = FindFacetInequality(EXT, seed);
-    init.push_back(add_facet(
-        beneath_beyond::facet_from_normal_interior(EXT, normal, basis[iBas])));
+    MyVector<T> normal = ScalarCanonicalizationVector(FindFacetInequality(EXT, seed));
+    if (beneath_beyond::facet_scal(EXT, normal, basis[iBas]) < 0)
+      normal = -normal;
+    init.push_back(add_facet(std::move(normal), seed));
   }
   for (size_t i = 0; i < init.size(); i++)
     for (size_t j = i + 1; j < init.size(); j++)
@@ -423,19 +466,24 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
   for (int p = 0; p < nbRow; p++) {
     if (in_basis[p])
       continue;
-    // Classify the live facets: the visible ones (to be replaced) and the
-    // incident ones (facets p lies on, which survive and can gain adjacencies).
-    std::vector<T> scal(F.size());
+    // Classify the live facets: sign of normal . p.
+    std::vector<T> sval(F.size());
+    std::vector<int> orient(F.size(), 2);
     std::vector<int> visible, incident;
     for (size_t i = 0; i < F.size(); i++) {
       if (!F[i].alive)
         continue;
       T s = beneath_beyond::facet_scal(EXT, F[i].normal, p);
-      scal[i] = s;
-      if (s < 0)
+      sval[i] = s;
+      if (s < 0) {
+        orient[i] = -1;
         visible.push_back(static_cast<int>(i));
-      else if (s == 0)
+      } else if (s > 0) {
+        orient[i] = 1;
+      } else {
+        orient[i] = 0;
         incident.push_back(static_cast<int>(i));
+      }
     }
     if (visible.empty())
       continue;
@@ -445,42 +493,45 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
        << "\n";
 #endif
 
-    // Create the new facets from the horizon ridges (visible -> strictly positive
-    // edges), with the normal from the flip formula. Deduplicate by incidence
-    // against each other and against the incident facets: in non-generic position
-    // a horizon facet can coincide with an incident facet (whose full incidence
-    // already lists p), which is then reused instead of duplicated.
-    std::unordered_map<Face, int> incd_to_facet;
+    // p lies on every incident facet: absorb it.
     for (int fi : incident)
-      incd_to_facet.emplace(F[fi].incd, fi);
+      F[fi].incd[p] = 1;
+
+    // Horizon: each edge from a visible facet to a strictly positive one is a
+    // ridge; ridge u {p} is a new facet, its normal the flip combination of the
+    // two parents. Deduplicate by normal against the incident facets and among
+    // the new facets, merging incidences of coplanar facets.
+    std::map<MyVector<T>, int> norm_to_facet;
+    for (int fi : incident)
+      norm_to_facet.emplace(F[fi].normal, fi);
     std::vector<int> new_facets;
-    std::vector<std::pair<int, int>> nf_parent; // (new facet, positive parent)
+    std::vector<std::pair<int, int>> nf_parent;
     for (int iv : visible) {
       std::vector<int> nbrs = F[iv].adj; // copy: add_facet may reallocate F
       for (int g : nbrs) {
-        if (!F[g].alive || scal[g] <= 0)
+        if (!F[g].alive || orient[g] <= 0)
           continue;
-        MyVector<T> raw = scal[g] * F[iv].normal - scal[iv] * F[g].normal;
-        BeneathBeyondFacet<T> bf = beneath_beyond::facet_from_normal(EXT, raw);
-        auto it = incd_to_facet.find(bf.incd);
+        Face incd = F[iv].incd & F[g].incd;
+        incd[p] = 1;
+        MyVector<T> normal =
+            canon(sval[g] * F[iv].normal - sval[iv] * F[g].normal);
+        auto it = norm_to_facet.find(normal);
         int nf;
-        if (it == incd_to_facet.end()) {
-          Face key = bf.incd;
-          nf = add_facet(std::move(bf));
-          incd_to_facet.emplace(std::move(key), nf);
+        if (it == norm_to_facet.end()) {
+          nf = add_facet(normal, incd);
+          norm_to_facet.emplace(std::move(normal), nf);
           new_facets.push_back(nf);
         } else {
           nf = it->second;
+          F[nf].incd |= incd; // coplanar facet: merge incidences
         }
         nf_parent.push_back({nf, g});
       }
     }
     for (auto &pr : nf_parent)
-      if (!edge_exists(pr.first, pr.second))
-        add_edge(pr.first, pr.second);
+      add_edge(pr.first, pr.second);
 
-    // Tombstone the visible facets and unlink them BEFORE rewiring, so the
-    // maximality test below only ever compares against surviving facets.
+    // Delete the visible facets.
     for (int iv : visible) {
       for (int g : F[iv].adj) {
         auto &ga = F[g].adj;
@@ -490,15 +541,14 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
       F[iv].alive = false;
     }
 
-    // Rewire the facets that now touch p (new + incident) among themselves. A
-    // pair (fa, fb) is joined iff R = fa ∩ fb is a ridge (rank nbCol-2). Two
-    // cheap filters cut down the number of rank tests: R must carry at least
-    // nbCol-2 rays, and -- since every current edge of fa is a genuine ridge and
-    // all ridges share the same dimension -- if R is comparable (subset or
-    // superset) to any existing ridge of fa it cannot be a new ridge, so it is
-    // skipped. Only candidates incomparable to all of fa's ridges are verified.
+    // Reconnect the touched facets (new + incident). A pair (fa, fb) becomes an
+    // edge iff R = fa ∩ fb is a maximal proper common face (a ridge). Maximality
+    // is decided combinatorially (polymake's incl) against fa's current ridges:
+    // an existing ridge contained in R is not maximal and is dropped; if R is
+    // contained in an existing ridge it is not maximal and rejected.
     std::vector<int> touch = new_facets;
     touch.insert(touch.end(), incident.begin(), incident.end());
+    int min_ridge = nbCol - 2;
     for (size_t a = 0; a < touch.size(); a++) {
       int fa = touch[a];
       for (size_t b = a + 1; b < touch.size(); b++) {
@@ -506,27 +556,37 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
         if (edge_exists(fa, fb))
           continue;
         Face R = F[fa].incd & F[fb].incd;
-        if (static_cast<int>(R.count()) < nbCol - 2)
+        if (static_cast<int>(R.count()) < min_ridge)
           continue;
-        bool comparable = false;
-        for (int nbr : F[fa].adj) {
-          if (beneath_beyond::face_incl(F[fa].incd & F[nbr].incd, R) != 2) {
-            comparable = true;
+        bool add = true;
+        std::vector<int> nbrs = F[fa].adj; // copy: edges may be removed below
+        for (int nbr : nbrs) {
+          int inc = beneath_beyond::face_incl(F[fa].incd & F[nbr].incd, R);
+          if (inc == 2)
+            continue;
+          if (inc <= 0)
+            remove_edge(fa, nbr);
+          if (inc >= 0) {
+            add = false;
             break;
           }
         }
-        if (comparable)
-          continue;
-        if (beneath_beyond::face_rank(EXT, R) == nbCol - 2)
+        if (add)
           add_edge(fa, fb);
       }
     }
   }
 
+  // The incrementally-carried incidence lists exactly the extreme rays on each
+  // facet, which is complete when the input has no redundant rays. To match the
+  // reference kernel on every input (redundant rays lie on a facet too), the
+  // final incidence is recomputed from the normal with a single scan -- one pass
+  // over the final facets only, not the per-facet scan of the plain kernel.
   std::vector<BeneathBeyondFacet<T>> result;
   for (auto &f : F)
     if (f.alive)
-      result.push_back({std::move(f.normal), std::move(f.incd)});
+      result.push_back(
+          {f.normal, beneath_beyond::facet_incidence(EXT, f.normal)});
 #ifdef TIMINGS_BENEATH_BEYOND
   os << "BENEATH_BEYOND(DG): |EXT|=" << nbRow << "/" << nbCol
      << " |facets|=" << result.size() << " time=" << time << "\n";
@@ -538,7 +598,8 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
 template <typename T>
 vectface POLY_DualDescription_BeneathBeyondIncidence(MyMatrix<T> const &EXT,
                                                      std::ostream &os) {
-  std::vector<BeneathBeyondFacet<T>> facets = BeneathBeyond_Kernel(EXT, os);
+  std::vector<BeneathBeyondFacet<T>> facets =
+      BeneathBeyond_Kernel_DualGraph(EXT, os);
   vectface vf(EXT.rows());
   for (auto &facet : facets)
     vf.push_back(facet.incd);
@@ -549,7 +610,8 @@ vectface POLY_DualDescription_BeneathBeyondIncidence(MyMatrix<T> const &EXT,
 template <typename T>
 MyMatrix<T> POLY_DualDescription_BeneathBeyondInequalities(MyMatrix<T> const &EXT,
                                                            std::ostream &os) {
-  std::vector<BeneathBeyondFacet<T>> facets = BeneathBeyond_Kernel(EXT, os);
+  std::vector<BeneathBeyondFacet<T>> facets =
+      BeneathBeyond_Kernel_DualGraph(EXT, os);
   int n_facet = facets.size();
   int nbCol = EXT.cols();
   MyMatrix<T> FAC(n_facet, nbCol);
@@ -563,7 +625,8 @@ template <typename T, typename Fprocess>
 void POLY_DualDescription_BeneathBeyondFaceIneq(MyMatrix<T> const &EXT,
                                                 Fprocess f_process,
                                                 std::ostream &os) {
-  std::vector<BeneathBeyondFacet<T>> facets = BeneathBeyond_Kernel(EXT, os);
+  std::vector<BeneathBeyondFacet<T>> facets =
+      BeneathBeyond_Kernel_DualGraph(EXT, os);
   for (auto &facet : facets) {
     std::pair<Face, MyVector<T>> pair{facet.incd, facet.normal};
     f_process(pair);
