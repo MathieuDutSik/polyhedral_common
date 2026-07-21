@@ -1,9 +1,9 @@
-name: CI(30) of CommonGramMat iso-Delaunay (rigid lattices and stars)
+name: CI(22) of CommonGramMat iso-Delaunay (rigid lattices and stars)
 
 on:
   # One time per month
   schedule:
-    - cron: "0 0 30 * *"
+    - cron: "0 0 22 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -69,7 +69,7 @@ jobs:
           pwd
           echo "After compilation of LATT_Canonicalize"
 
-          cd CI_tests/37_CommonG_IsoDelaunay
+          cd CI_tests/22_CommonG_IsoDelaunay
           ../../gap.sh < TestCommonGIsoDelaunay.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
