@@ -9,12 +9,14 @@ Print("Beginning TestSerialDelaunayQueries\n");
 #   FileHessian        -> Hessian of the normalized quantizer constant
 #   FileRigidityDegree -> rigidity degree of a lattice
 #   FileIsotropy       -> isotropy ("white" quantizer) test
-# The last category instead exercises the GAP_Covering output format (covering
-# density of a lattice), reached through the get_lattice_covering access point.
+# The Covering category instead exercises the GAP_Covering output format
+# (covering density of a lattice), reached through the get_lattice_covering
+# access point. The Enumeration category exercises the plain OutFormat="GAP"
+# Delaunay-polytope enumeration and checks the number of orbits.
 # The categories previously lived in separate CI entries (33_QuantizationDeformation,
 # 34_FreeVectors, 35_QuantizationHessian, 35_RigidityDegree, 36_QuantizationIsotropy,
-# 29_CoveringPerfectDim9); they are merged here since they all exercise
-# LATT_SerialComputeDelaunay.
+# 29_CoveringPerfectDim9, 22_EnumLatticeDelaunays); they are merged here since
+# they all exercise LATT_SerialComputeDelaunay.
 
 # Shared driver: writes the Gram matrix, assembles the namelist with the caller's
 # &QUERIES body, and runs LATT_SerialComputeDelaunay. Returns nothing; the caller
@@ -306,13 +308,70 @@ ListRecCovering:=function()
 end;
 
 # --------------------------------------------------------------------------- #
+# Delaunay polytope enumeration (formerly the separate CI entry
+# 22_EnumLatticeDelaunays, which drove the MPI binary LATT_MPI_ComputeDelaunay).
+# The serial binary LATT_SerialComputeDelaunay performs the same enumeration; we
+# run it with OutFormat="GAP" (no &QUERIES option set) and check that the number
+# of orbits of Delaunay polytopes matches the expected value. Both binaries emit
+# the same GAP list of orbit representatives, so the count is comparable.
+TestEnumeration:=function(eRec)
+    local TmpDir, FileG, FileN, FileO, FileE, strOut, eProg, TheCommand, U,
+          obtained, is_correct;
+    TmpDir:=DirectoryTemporary();
+    FileG:=Filename(TmpDir, "Gram.in");
+    FileN:=Filename(TmpDir, "Enum.nml");
+    FileO:=Filename(TmpDir, "Enum.out");
+    FileE:=Filename(TmpDir, "Enum.err");
+    WriteMatrixFile(FileG, eRec.eG);
+    #
+    strOut:="&SYSTEM\n";
+    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
+    strOut:=Concatenation(strOut, " OutFile = \"", FileO, "\"\n");
+    strOut:=Concatenation(strOut, " max_runtime_second = 0\n");
+    strOut:=Concatenation(strOut, "/\n\n");
+    strOut:=Concatenation(strOut, "&DATA\n");
+    strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
+    strOut:=Concatenation(strOut, " GRAMfile = \"", FileG, "\"\n");
+    strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
+    strOut:=Concatenation(strOut, " CacheFile = \"none\"\n");
+    strOut:=Concatenation(strOut, "/\n\n");
+    strOut:=Concatenation(strOut, "&QUERIES\n");
+    strOut:=Concatenation(strOut, "/\n");
+    WriteStringFile(FileN, strOut);
+    #
+    eProg:=GetBinaryFilename("LATT_SerialComputeDelaunay");
+    TheCommand:=Concatenation(eProg, " ", FileN, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        Print("name=", eRec.name,
+              " The output file is not existing. That qualifies as a fail\n");
+        return false;
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileG);
+    RemoveFile(FileN);
+    RemoveFile(FileO);
+    obtained:=Length(U);
+    is_correct:=obtained=eRec.n_del;
+    Print("name=", eRec.name, " n_del=", eRec.n_del, " obtained=", obtained,
+          " is_correct=", is_correct, "\n");
+    return is_correct;
+end;
+
+# The lattices to enumerate are read from the ListCasesDelaunayEnum file.
+ListRecEnumeration:=function()
+    return ReadAsFunction("ListCasesDelaunayEnum")();
+end;
+
+# --------------------------------------------------------------------------- #
 AllCategories:=[
 rec(label:="Deformation", tester:=TestDeformation, cases:=ListRecDeformation),
 rec(label:="FreeVectors",  tester:=TestFreeVectors,  cases:=ListRecFreeVectors),
 rec(label:="Hessian",      tester:=TestHessian,      cases:=ListRecHessian),
 rec(label:="Rigidity",     tester:=TestRigidity,     cases:=ListRecRigidity),
 rec(label:="Isotropy",     tester:=TestIsotropy,     cases:=ListRecIsotropy),
-rec(label:="Covering",     tester:=TestCovering,     cases:=ListRecCovering())
+rec(label:="Covering",     tester:=TestCovering,     cases:=ListRecCovering()),
+rec(label:="Enumeration",  tester:=TestEnumeration,  cases:=ListRecEnumeration())
 ];
 
 FullTest:=function()
