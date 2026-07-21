@@ -31,7 +31,6 @@
 #define TIMINGS_BENEATH_BEYOND
 #endif
 
-
 // Beneath-and-beyond convex hull method (a.k.a. the incremental / placing
 // algorithm; see Joswig "Beneath-and-Beyond revisited" and the polymake
 // implementation beneath_beyond_impl.h).
@@ -361,7 +360,6 @@ template <typename T> struct DGFacet {
   std::vector<int> adj;
   bool alive;
 };
-} // namespace beneath_beyond
 
 // Dual-graph beneath-and-beyond, ported from polymake's update_facets. It carries
 // the incidence forward incrementally and reconnects new facets by a purely
@@ -513,11 +511,6 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
     }
     if (visible.empty())
       continue;
-#ifdef DEBUG_BENEATH_BEYOND
-    os << "BENEATH_BEYOND(DG): ray p=" << p << " |facets|=" << F.size()
-       << " |visible|=" << visible.size() << " |incident|=" << incident.size()
-       << "\n";
-#endif
 
     // p lies on every incident facet: absorb it.
     for (int fi : incident)
@@ -642,6 +635,7 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
 #endif
   return result;
 }
+} // namespace beneath_beyond
 
 // Runs the dual-graph kernel and returns facets with T-typed normals. The
 // beneath-and-beyond arithmetic uses no field division (the flip formula and the
@@ -662,7 +656,7 @@ BeneathBeyond_run(MyMatrix<T> const &EXT, std::ostream &os) {
       AssignMatrixRow(EXTring, iRow, UniversalVectorConversion<Tring, T>(eRow));
     }
     std::vector<BeneathBeyondFacet<Tring>> ring_facets =
-        BeneathBeyond_Kernel_DualGraph(EXTring, os);
+        beneath_beyond::BeneathBeyond_Kernel_DualGraph(EXTring, os);
     std::vector<BeneathBeyondFacet<T>> result;
     result.reserve(ring_facets.size());
     for (auto &f : ring_facets)
@@ -670,7 +664,7 @@ BeneathBeyond_run(MyMatrix<T> const &EXT, std::ostream &os) {
           {UniversalVectorConversion<T, Tring>(f.normal), std::move(f.incd)});
     return result;
   } else {
-    return BeneathBeyond_Kernel_DualGraph(EXT, os);
+    return beneath_beyond::BeneathBeyond_Kernel_DualGraph(EXT, os);
   }
 }
 
