@@ -1,4 +1,4 @@
-#PROGRAM		= LATT_Canonicalize
+PROGRAM		= LATT_Canonicalize
 #PROGRAM		= LATT_getMatrixScalProd
 #PROGRAM		= LATT_Automorphism
 #PROGRAM		= LATT_Isomorphism
@@ -20,7 +20,7 @@
 #PROGRAM		= LATT_ComputeShortestOrbits
 #PROGRAM		= LATT_FindOneVertex
 #PROGRAM		= LATT_SerialComputeDelaunay
-PROGRAM		= TSPACE_IntegralSaturation
+#PROGRAM		= TSPACE_IntegralSaturation
 #PROGRAM		= TSPACE_FileFormatConversion
 #PROGRAM		= LATT_ResolveModAction
 #PROGRAM		= LATT_ComputeGroupModAction
@@ -52,7 +52,8 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I../src_group -I../src_dualdesc -I../src_short -I../src_isotropy -I../src_enum_schemes -I.
 
 #COPTIONS        =
-COPTIONS        = -DGMP_POOL -DDEBUG
+COPTIONS        = -DGMP_POOL
+#COPTIONS        = -DGMP_POOL -DDEBUG
 #COPTIONS        = -DSANITY_CHECK -DDEBUG -DTIMINGS -DDISABLE_DEBUG_CLASSIC_LLL -DDISABLE_DEBUG_SIGNATURE_SYMMETRIC
 #COPTIONS        = -DTIMINGS_ISO_DELAUNAY_DOMAIN -DTIMINGS_ADJACENCY_SCHEME -DDEBUG_ADJACENCY_SCHEME -DDEBUG_ISO_DELAUNAY_DOMAIN_PRESENTATION
 #COPTIONS        = -DTIMINGS_ADJACENCY_SCHEME -DDEBUG_ADJACENCY_SCHEME -DSANITY_CHECK_TSPACE_FUNCTIONS -DDEBUG_TSPACE_FUNCTIONS

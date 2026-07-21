@@ -1,9 +1,16 @@
 Read("../common.g");
 Read("../access_points.g");
-Print("Beginning Test enumeration of iso-Delaunay domains\n");
+Print("Beginning Test enumeration of iso-Delaunay / L-type domains\n");
 
 method:="serial";
 #method:="mpi";
+
+# ==========================================================================
+# Phase 1: iso-Delaunay domains of stored T-spaces (Bravais / Coxeter).
+# The T-space is read from a fixed storage file, written back out in the
+# LinSpa format, and LATT_SerialLattice_IsoDelaunayDomain is run to count the
+# iso-Delaunay domains, which is compared against the stored expected number.
+# ==========================================================================
 
 get_pairwise_scalar_inv:=function(ListMat, SuperMat)
     local ListB, pairwise_scalar, eB, eLine;
@@ -135,7 +142,7 @@ end;
 
 
 
-FullTest:=function()
+TestStoredTspaces:=function()
     local n_error, iRec, eRec, RecReply;
     n_error:=0;
     iRec:=0;
@@ -151,7 +158,165 @@ FullTest:=function()
     return n_error;
 end;
 
-n_error:=FullTest();
+
+# ==========================================================================
+# Phase 2: L-type domains for T-spaces from algebraic theory (formerly the
+# separate CI entry 07B_L_domains_algebraic_rings). It relies on the same
+# binary LATT_SerialLattice_IsoDelaunayDomain. The T-space is described by an
+# imaginary quadratic field (discriminant d, dimension n); the namelist is
+# built on the fly and the number of L-type domains is compared to the
+# expected value.
+#   comm_choice = "Use_realimag": group GL_n(Z[x]).
+#   comm_choice = "Trivial":      group GL_n(Z[x]) with the conjugation.
+# ==========================================================================
+
+#keep_err:=false;
+keep_err:=true;
+
+get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
+    local strRun, FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
+    #
+    strRun:=Concatenation("_", String(n), "_", String(d));
+    FileNml:=Concatenation("LtypeDomains", strRun , ".nml");
+    FileResult:=Concatenation("Result", strRun);
+    FileErr:=Concatenation("ERR_enumeration", strRun);
+    RemoveFileIfExist(FileNml);
+    RemoveFileIfExist(FileResult);
+    #
+    info:=GetFundamentalInfo(d);
+    if info.IsCorrect=false then
+        Print("Discriminant d=", d, " is not valid, skipping\n");
+        return fail;
+    fi;
+    #
+    # Create the namelist file
+    output:=OutputTextFile(FileNml, true);
+    AppendTo(output, "&SYSTEM\n");
+    AppendTo(output, " max_runtime_second = 0\n");
+    AppendTo(output, " ApplyStdUnitbuf = T\n");
+    AppendTo(output, " Saving = F\n");
+    AppendTo(output, " Prefix = \"/tmp/LtypeDomain/\"\n");
+    AppendTo(output, " OutFile = \"", FileResult, "\"\n");
+    AppendTo(output, " OutFormat = \"ObjectGAP\"\n");
+    AppendTo(output, "/\n");
+    AppendTo(output, "\n");
+    AppendTo(output, "&DATA\n");
+    AppendTo(output, " arithmetic = \"gmp\"\n");
+    AppendTo(output, "/\n");
+    AppendTo(output, "\n");
+    AppendTo(output, "&TSPACE\n");
+    AppendTo(output, " TypeTspace = \"", info.type_tspace, "\"\n");
+    AppendTo(output, " FileLinSpa = \"unset.linspa\"\n");
+    AppendTo(output, " SuperMatMethod = \"NotNeeded\"\n");
+    AppendTo(output, " ListComm = \"", comm_choice, "\"\n");
+    AppendTo(output, " PtGroupMethod = \"Trivial\"\n");
+    AppendTo(output, " FileListSubspaces = \"unset\"\n");
+    AppendTo(output, " RealImagDim = ", n, "\n");
+    AppendTo(output, " RealImagSum = ", info.eSum, "\n");
+    AppendTo(output, " RealImagProd = ", info.eProd, "\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
+    #
+    eProg:=GetBinaryFilename(fProg);
+    TheCommand:=Concatenation(eProg, " ", FileNml);
+    if keep_error then
+        TheCommand:=Concatenation(TheCommand, " 2> ", FileErr);
+    fi;
+    Print("keep_error=", keep_error, " TheCommand=", TheCommand, "\n");
+    Exec(TheCommand);
+    #
+    if IsExistingFile(FileResult)=false then
+        Print("The output file is not existing. That qualifies as a fail\n");
+        return fail;
+    fi;
+    U:=ReadAsFunction(FileResult)();
+    RemoveFile(FileErr);
+    RemoveFile(FileNml);
+    RemoveFile(FileResult);
+    return U;
+end;
+
+
+
+
+
+ListCases:=[];
+
+set_canonical_examples:=function()
+    Add(ListCases, rec(n:=4, d:=-4, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=3, d:=-3, comm_choice:="Use_realimag", n_domains:=23413));
+    Add(ListCases, rec(n:=3, d:=-4, comm_choice:="Use_realimag", n_domains:=206));
+end;
+
+set_dim2_examples:=function()
+    Add(ListCases, rec(n:=2, d:=-3, comm_choice:="Use_realimag", n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-4, comm_choice:="Use_realimag", n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-7, comm_choice:="Use_realimag", n_domains:=16));
+    Add(ListCases, rec(n:=2, d:=-8, comm_choice:="Use_realimag", n_domains:=5));
+    Add(ListCases, rec(n:=2, d:=-11, comm_choice:="Use_realimag", n_domains:=58));
+    Add(ListCases, rec(n:=2, d:=-15, comm_choice:="Use_realimag", n_domains:=127));
+    Add(ListCases, rec(n:=2, d:=-19, comm_choice:="Use_realimag", n_domains:=198));
+    Add(ListCases, rec(n:=2, d:=-20, comm_choice:="Use_realimag", n_domains:=61));
+    Add(ListCases, rec(n:=2, d:=-23, comm_choice:="Use_realimag", n_domains:=343));
+    Add(ListCases, rec(n:=2, d:=-24, comm_choice:="Use_realimag", n_domains:=86));
+end;
+
+set_dim2_nocomm_examples:=function()
+    Add(ListCases, rec(n:=2, d:=-3, comm_choice:="Trivial", n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-4, comm_choice:="Trivial", n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-7, comm_choice:="Trivial", n_domains:=11));
+    Add(ListCases, rec(n:=2, d:=-8, comm_choice:="Trivial", n_domains:=5));
+    Add(ListCases, rec(n:=2, d:=-11, comm_choice:="Trivial", n_domains:=35));
+    Add(ListCases, rec(n:=2, d:=-15, comm_choice:="Trivial", n_domains:=74));
+    Add(ListCases, rec(n:=2, d:=-19, comm_choice:="Trivial", n_domains:=112));
+    Add(ListCases, rec(n:=2, d:=-20, comm_choice:="Trivial", n_domains:=43));
+    Add(ListCases, rec(n:=2, d:=-23, comm_choice:="Trivial", n_domains:=190));
+    Add(ListCases, rec(n:=2, d:=-24, comm_choice:="Trivial", n_domains:=61));
+end;
+
+#set_canonical_examples();
+set_dim2_examples();
+set_dim2_nocomm_examples();
+
+
+
+#ListProg:=["LATT_SerialLattice_IsoDelaunayDomain", "LATT_MPI_Lattice_IsoDelaunayDomain"];
+ListProg:=["LATT_SerialLattice_IsoDelaunayDomain"];
+
+TestAlgebraicRings:=function()
+    local n_error, n_case, i_case, eCase, fProg, eRec;
+    n_error:=0;
+    n_case:=Length(ListCases);
+    for i_case in [1..n_case]
+    do
+        eCase:=ListCases[i_case];
+        Print("----------------------------------------------------------------------\n");
+        Print("i_case=", i_case, "/", n_case, " eCase=", eCase, "\n");
+        for fProg in ListProg
+        do
+            eRec:=get_rec_info(fProg, eCase.d, eCase.n, eCase.comm_choice, keep_err);
+            if eRec=fail then
+                Print("Failing because eRec=fail\n");
+                n_error:=n_error+1;
+            elif IsBound(eCase.n_domains) then
+                if Length(eRec)<>eCase.n_domains then
+                    Print("Enumeration, |eRec|=", Length(eRec), " n_perf=", eCase.n_domains, "\n");
+                    n_error:=n_error+1;
+                fi;
+            else
+                Print("Number of L-type domains found=", Length(eRec), "\n");
+            fi;
+        od;
+    od;
+    return n_error;
+end;
+
+
+# ==========================================================================
+# Combined decision: both phases must pass.
+# ==========================================================================
+
+n_error:=TestStoredTspaces() + TestAlgebraicRings();
 Print("n_error=", n_error, "\n");
 
 CI_Decision_Reset();

@@ -1,19 +1,15 @@
-name: CI(07B) of enumerating equivariant domains for algebraic rings
-
-# https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
-# model taken from https://github.com/mockersf/kmanb/releases
-# on: release
+name: CI(29) of Serial Delaunay computations
 
 on:
   # One time per month
   schedule:
-    - cron: "0 0 7 2,4,6,8,10,12 *"
+    - cron: "0 0 29 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
 jobs:
   build-linux:
-    timeout-minutes: 90  # 1:30 hours
+    timeout-minutes: 120  # 2 hours
     runs-on: ubuntu-latest
     env:
       GMP_INCDIR: /usr/include
@@ -63,16 +59,16 @@ jobs:
       - uses: ./.github/actions/install-cddlib
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
-      - name: Test enumeration of Lattice Delaunay polytopes
+      - name: Test the serial Delaunay computations
         run: |
-          cd src_delaunay && make -f Makefile_tspace_isodelaunay && cd ..
-          pwd
-          echo "After compilation of LATT_MPI_Lattice_IsoDelaunayDomain"
+          cd src_delaunay && make LATT_SerialComputeDelaunay && cd ..
+          echo "After compilation of LATT_SerialComputeDelaunay"
 
-          cd CI_tests/07B_L_domains_algebraic_rings
-          ../../gap.sh < TestSequence.g
+          cd CI_tests/29_SerialDelaunayQueries
+          ../../gap.sh < TestSerialDelaunayQueries.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1
           fi
           cd ../..
+          echo "After the tests"
