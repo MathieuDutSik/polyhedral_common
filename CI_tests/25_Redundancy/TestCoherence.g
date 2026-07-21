@@ -1,5 +1,16 @@
 Read("../common.g");
-Print("Beginning TestCoherencen");
+Print("Beginning TestCoherence (redundancy)\n");
+
+# ==========================================================================
+# Phase 1: C-type-5 polytopes, cross-method consistency of the irredundant
+# facet computation. For each stored polytope TheCtype_5_<i> we compute the
+# automorphism group (GRP_LinPolytope_Automorphism) and the set of irredundant
+# facets by several methods, checking they all agree:
+#   1. POLY_redundancy       HitAndRun
+#   2. POLY_redundancy       Clarkson
+#   3. POLY_redundancyGroup  Equivariant   (uses the automorphism group)
+#   4. POLY_redundancyGroup  ClarksonBlock (disabled, needs more work)
+# ==========================================================================
 
 DoTest2_Clarkson:=true;
 DoTest3_Equivariant:=true;
@@ -91,19 +102,81 @@ TestIdx:=function(i)
     return true;
 end;
 
+TestCtype5:=function()
+    local n_error, i;
+    n_error:=0;
+    for i in [1..76]
+    do
+        if TestIdx(i)=false then
+            n_error:=n_error + 1;
+        fi;
+    od;
+    return n_error;
+end;
 
 
-n_error:=0;
-ListIdx:=[1..76];
-#ListIdx:=[7];
+# ==========================================================================
+# Phase 2: equivariant redundancy on the larger "walls" polytope (formerly the
+# separate CI entry 25_RedundantEquiv). It relies on the same binaries; we
+# compute the automorphism group and the equivariant irredundant facets and
+# check the number of irredundant facets.
+# ==========================================================================
 
-for i in ListIdx
-do
-    test:=TestIdx(i);
-    if test=false then
-        n_error:=n_error + 1;
+TestRedundancy:=function(eRec)
+    local eFileGRP, eFileIrred, eProg, eCommand, fProg, fCommand, U;
+    eFileGRP:=Filename(DirectoryTemporary(), "Test.grp");
+    eFileIrred:=Filename(DirectoryTemporary(), "Test.irred");
+    RemoveFileIfExist(eFileGRP);
+    RemoveFileIfExist(eFileIrred);
+    #
+    eProg:=GetBinaryFilename("GRP_LinPolytope_Automorphism");
+    eCommand:=Concatenation(eProg, " rational ", eRec.eFile, " GAP ", eFileGRP);
+    Print("eCommand=", eCommand, "\n");
+    Exec(eCommand);
+    if IsExistingFile(eFileGRP)=false then
+        Print("Missing file eFileGRP=", eFileGRP, "\n");
+        return false;
     fi;
-od;
+    Print("We have eFileGRP=", eFileGRP, "\n");
+    #
+    fProg:=GetBinaryFilename("POLY_redundancyGroup");
+    fCommand:=Concatenation(fProg, " Equivariant mpq_class ", eRec.eFile, " ", eFileGRP, " GAP ", eFileIrred);
+    Print("fCommand=", fCommand, "\n");
+    Exec(fCommand);
+    if IsExistingFile(eFileIrred)=false then
+        Print("Missing file eFileIrred=", eFileIrred, "\n");
+        return false;
+    fi;
+    Print("We have eFileIrred=", eFileIrred, "\n");
+    U:=ReadAsFunction(eFileIrred)();
+    RemoveFileIfExist(eFileGRP);
+    RemoveFileIfExist(eFileIrred);
+    if Length(U)<>eRec.n_irred then
+        Print("Wrong number of entries");
+        return false;
+    fi;
+    return true;
+end;
+
+TestWalls:=function()
+    local n_error, ListRec, eRec;
+    n_error:=0;
+    ListRec:=[rec(eFile:="walls", n_irred:=2400)]; #Need to put the correct value
+    for eRec in ListRec
+    do
+        if TestRedundancy(eRec)=false then
+            n_error:=n_error + 1;
+        fi;
+    od;
+    return n_error;
+end;
+
+
+# ==========================================================================
+# Combined decision: both phases must pass.
+# ==========================================================================
+
+n_error:=TestCtype5() + TestWalls();
 Print("n_error=", n_error, "\n");
 
 CI_Decision_Reset();
@@ -113,5 +186,3 @@ else
     Print("Normal case\n");
     CI_Write_Ok();
 fi;
-
-
