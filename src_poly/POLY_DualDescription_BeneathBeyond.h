@@ -7,6 +7,8 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include <algorithm>
+#include <bit>
+#include <cstdint>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -101,6 +103,63 @@ template <typename T> struct BeneathBeyondFacet {
 };
 
 namespace beneath_beyond {
+
+// A row-set packed into 64-bit blocks. It exists because boost::dynamic_bitset
+// (our Face) offers no block access, so its operator& / operator&= / count()
+// carry per-call overhead that dominates when a hot loop does millions of
+// intersection-size and subset tests on small, fixed-width row sets -- exactly
+// the beneath-and-beyond reconnection. The block loops below inline to a couple
+// of `and`+`popcount` instructions. This is deliberately generic (nothing
+// beneath-and-beyond specific) so it can be reused wherever such inner loops
+// show up.
+struct PackedSet {
+  std::vector<uint64_t> w;
+  PackedSet() = default;
+  explicit PackedSet(int nbBit) : w((nbBit + 63) / 64, 0) {}
+  void set(int i) { w[i >> 6] |= uint64_t(1) << (i & 63); }
+  void or_with(PackedSet const &o) {
+    for (size_t i = 0; i < w.size(); i++)
+      w[i] |= o.w[i];
+  }
+  long count() const {
+    long c = 0;
+    for (uint64_t x : w)
+      c += std::popcount(x);
+    return c;
+  }
+};
+
+// |a intersect b|, without materializing the intersection.
+inline long inter_count(PackedSet const &a, PackedSet const &b) {
+  long c = 0;
+  for (size_t i = 0; i < a.w.size(); i++)
+    c += std::popcount(a.w[i] & b.w[i]);
+  return c;
+}
+
+// out = a intersect b (out already sized like a and b).
+inline void inter_into(PackedSet const &a, PackedSet const &b, PackedSet &out) {
+  for (size_t i = 0; i < a.w.size(); i++)
+    out.w[i] = a.w[i] & b.w[i];
+}
+
+// Conversions to/from the boost Face used at the algorithm's boundaries.
+inline PackedSet packed_from_face(Face const &f) {
+  PackedSet s(f.size());
+  boost::dynamic_bitset<>::size_type i = f.find_first();
+  while (i != boost::dynamic_bitset<>::npos) {
+    s.set(static_cast<int>(i));
+    i = f.find_next(i);
+  }
+  return s;
+}
+inline Face face_from_packed(PackedSet const &s, int nbBit) {
+  Face f(nbBit);
+  for (int i = 0; i < nbBit; i++)
+    if ((s.w[i >> 6] >> (i & 63)) & 1)
+      f[i] = 1;
+  return f;
+}
 
 // Scalar product normal . EXT.row(iRow).
 template <typename T>
@@ -356,7 +415,7 @@ namespace beneath_beyond {
 // point has been inserted, `incd` is the full incidence.
 template <typename T> struct DGFacet {
   MyVector<T> normal;
-  Face incd;
+  PackedSet incd; // incidence over the inserted-so-far rays, packed for speed
   std::vector<int> adj;
   bool alive;
 };
@@ -409,7 +468,7 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
 
   using DGF = beneath_beyond::DGFacet<T>;
   std::vector<DGF> F;
-  auto add_facet = [&](MyVector<T> normal, Face incd) -> int {
+  auto add_facet = [&](MyVector<T> normal, PackedSet incd) -> int {
     int id = F.size();
     F.push_back(DGF{std::move(normal), std::move(incd), {}, true});
     return id;
@@ -439,10 +498,9 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
   // neighbour of the fa being processed. Monotonic tokens avoid clearing it.
   std::vector<long> nbr_tok;
   long cur_tok = 0;
-  // Reused scratch bitsets so the reconnection's set intersections are done
-  // in place (boost::dynamic_bitset's operator& allocates a temporary each call,
-  // which dominated the reconnection over hundreds of millions of pairs).
-  Face sR(nbRow), sE(nbRow);
+  // Reused scratch sets so the reconnection's intersections are materialized in
+  // place, only when actually needed (never per rejected pair).
+  PackedSet sR(nbRow), sE(nbRow);
   // Canonicalize an inward normal and restore the orientation of `raw` (which
   // canonicalization may reverse for non-rational fields).
   auto canon = [&](MyVector<T> const &raw) -> MyVector<T> {
@@ -481,7 +539,8 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
     }
     if (beneath_beyond::facet_scal(EXT, normal, basis[iBas]) < 0)
       normal = -normal;
-    init.push_back(add_facet(std::move(normal), seed));
+    init.push_back(
+        add_facet(std::move(normal), beneath_beyond::packed_from_face(seed)));
   }
   for (size_t i = 0; i < init.size(); i++)
     for (size_t j = i + 1; j < init.size(); j++)
@@ -514,7 +573,7 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
 
     // p lies on every incident facet: absorb it.
     for (int fi : incident)
-      F[fi].incd[p] = 1;
+      F[fi].incd.set(p);
 
     // Horizon: each edge from a visible facet to a strictly positive one is a
     // ridge; ridge u {p} is a new facet, its normal the flip combination of the
@@ -530,19 +589,20 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
       for (int g : nbrs) {
         if (!F[g].alive || orient[g] <= 0)
           continue;
-        Face incd = F[iv].incd & F[g].incd;
-        incd[p] = 1;
+        PackedSet incd(nbRow);
+        beneath_beyond::inter_into(F[iv].incd, F[g].incd, incd);
+        incd.set(p);
         MyVector<T> raw = sval[g] * F[iv].normal - sval[iv] * F[g].normal;
         MyVector<T> normal = canon(raw);
         auto it = norm_to_facet.find(normal);
         int nf;
         if (it == norm_to_facet.end()) {
-          nf = add_facet(normal, incd);
+          nf = add_facet(normal, std::move(incd));
           norm_to_facet.emplace(std::move(normal), nf);
           new_facets.push_back(nf);
         } else {
           nf = it->second;
-          F[nf].incd |= incd; // coplanar facet: merge incidences
+          F[nf].incd.or_with(incd); // coplanar facet: merge incidences
         }
         nf_parent.push_back({nf, g});
       }
@@ -576,26 +636,24 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
       ++cur_tok;
       for (int x : F[fa].adj)
         nbr_tok[x] = cur_tok;
-      Face const &fa_incd = F[fa].incd;
+      PackedSet const &fa_incd = F[fa].incd;
       for (size_t b = a + 1; b < touch.size(); b++) {
         int fb = touch[b];
         if (nbr_tok[fb] == cur_tok)
           continue;
-        sR = fa_incd;
-        sR &= F[fb].incd; // sR = R = fa ∩ fb
-        long cR = sR.count();
+        // Size filter first, without materializing R -- most pairs fail here.
+        long cR = beneath_beyond::inter_count(fa_incd, F[fb].incd);
         if (cR < min_ridge)
           continue;
+        beneath_beyond::inter_into(fa_incd, F[fb].incd, sR); // sR = R
         bool add = true;
         std::vector<int> nbrs = F[fa].adj; // copy: edges may be removed below
         for (int nbr : nbrs) {
           // Relation of the existing ridge E = fa ∩ nbr to the candidate R,
           // from set sizes (E ⊆ R iff |E∩R|==|E|, R ⊆ E iff |E∩R|==|R|).
-          sE = fa_incd;
-          sE &= F[nbr].incd; // sE = E
+          beneath_beyond::inter_into(fa_incd, F[nbr].incd, sE); // sE = E
           long cE = sE.count();
-          sE &= sR;              // sE = E ∩ R
-          long cER = sE.count();
+          long cER = beneath_beyond::inter_count(sE, sR); // |E ∩ R|
           bool E_sub_R = (cER == cE);
           bool R_sub_E = (cER == cR);
           if (!E_sub_R && !R_sub_E)
@@ -628,7 +686,8 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
   std::vector<BeneathBeyondFacet<T>> result;
   for (auto &f : F)
     if (f.alive)
-      result.push_back({std::move(f.normal), std::move(f.incd)});
+      result.push_back({std::move(f.normal),
+                        beneath_beyond::face_from_packed(f.incd, nbRow)});
 #ifdef TIMINGS_BENEATH_BEYOND
   os << "BENEATH_BEYOND(DG): |EXT|=" << nbRow << "/" << nbCol
      << " |facets|=" << result.size() << " time=" << time << "\n";
