@@ -1620,10 +1620,8 @@ rational: the rational type, what you want in 99.999\% of cases\n\
 safe_rational: The safe rational type. Based on int64_t but failing gracefully\n\
 Qsqrt5: coordinates in the field Q(sqrt(5))\n\
 Qsqrt2: coordinates in the field Q(sqrt(2))\n\
-RealAlgebraic: coordinate in a real algebraic field";
-    ListStringValues_doc["FileAlgebraicField"] = "Default: unset\n\
-The file containing the description of the real algebraic field.\n\
-This is needed of RealAlgebraic is selected";
+RealAlgebraic=FileDesc: coordinate in the real algebraic field whose description\n\
+  is contained in the file FileDesc";
     ListStringValues_doc["EXTfile"] =
       "The file containing the coordinate of the output file";
     ListStringValues_doc["GRPfile"] =
@@ -1870,14 +1868,17 @@ std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   std::string const &NumericalType = BlockDATA.get_string("NumericalType");
   std::vector<std::string> Ltype{"safe_rational", "rational", "cpp_rational",
-                                 "mpq_rational",  "Qsqrt2",   "Qsqrt5",
-                                 "RealAlgebraic"};
-  if (PositionVect(Ltype, NumericalType) == -1) {
+                                 "mpq_rational",  "Qsqrt2",   "Qsqrt5"};
+  // The real algebraic case carries the field description file as a postfix:
+  // NumericalType = "RealAlgebraic=<FileAlgebraicField>".
+  bool is_real_algebraic =
+      get_postfix(NumericalType, "RealAlgebraic=").has_value();
+  if (PositionVect(Ltype, NumericalType) == -1 && !is_real_algebraic) {
     std::cerr << "NumericalType=" << NumericalType << "\n";
     std::cerr << "Ltype =";
     for (auto &e_type : Ltype)
       std::cerr << " " << e_type;
-    std::cerr << "\n";
+    std::cerr << " RealAlgebraic=<FileAlgebraicField>\n";
     throw TerminalException{1};
   }
   return NumericalType;

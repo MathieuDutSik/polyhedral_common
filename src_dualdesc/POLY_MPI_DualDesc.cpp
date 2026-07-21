@@ -90,11 +90,11 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat, 2>;
         return Process_eFull_select_type<T>(world, eFull);
       }
-      if (NumericalType == "RealAlgebraic") {
+      std::optional<std::string> opt_realalgebraic =
+          get_postfix(NumericalType, "RealAlgebraic=");
+      if (opt_realalgebraic) {
         using T_rat = mpq_class;
-        SingleBlock const &BlockDATA = eFull.get_block("DATA");
-        std::string FileAlgebraicField =
-            BlockDATA.get_string("FileAlgebraicField");
+        std::string FileAlgebraicField = *opt_realalgebraic;
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
