@@ -84,6 +84,11 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat, 5>;
         return Process<T>(eFull);
       }
+      if (NumericalType == "Qsqrt3") {
+        using Trat = mpq_class;
+        using T = QuadField<Trat, 3>;
+        return Process<T>(eFull);
+      }
       if (NumericalType == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
