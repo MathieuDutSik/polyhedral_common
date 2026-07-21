@@ -31,6 +31,7 @@
 #define TIMINGS_BENEATH_BEYOND
 #endif
 
+
 // Beneath-and-beyond convex hull method (a.k.a. the incremental / placing
 // algorithm; see Joswig "Beneath-and-Beyond revisited" and the polymake
 // implementation beneath_beyond_impl.h).
@@ -433,6 +434,15 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
     rm(a, b);
     rm(b, a);
   };
+  // Scratch used by the reconnection to answer "is fb already a neighbour of the
+  // current fa?" in O(1): nbr_tok[x] holds the token stamped when x was last a
+  // neighbour of the fa being processed. Monotonic tokens avoid clearing it.
+  std::vector<long> nbr_tok;
+  long cur_tok = 0;
+  // Reused scratch bitsets so the reconnection's set intersections are done
+  // in place (boost::dynamic_bitset's operator& allocates a temporary each call,
+  // which dominated the reconnection over hundreds of millions of pairs).
+  Face sR(nbRow), sE(nbRow);
   // Canonicalize an inward normal and restore the orientation of `raw` (which
   // canonicalization may reverse for non-rational fields).
   auto canon = [&](MyVector<T> const &raw) -> MyVector<T> {
@@ -513,8 +523,8 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
           continue;
         Face incd = F[iv].incd & F[g].incd;
         incd[p] = 1;
-        MyVector<T> normal =
-            canon(sval[g] * F[iv].normal - sval[iv] * F[g].normal);
+        MyVector<T> raw = sval[g] * F[iv].normal - sval[iv] * F[g].normal;
+        MyVector<T> normal = canon(raw);
         auto it = norm_to_facet.find(normal);
         int nf;
         if (it == norm_to_facet.end()) {
@@ -549,44 +559,67 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
     std::vector<int> touch = new_facets;
     touch.insert(touch.end(), incident.begin(), incident.end());
     int min_ridge = nbCol - 2;
+    if (nbr_tok.size() < F.size())
+      nbr_tok.resize(F.size(), 0);
     for (size_t a = 0; a < touch.size(); a++) {
       int fa = touch[a];
+      // Stamp fa's current neighbours so "does edge (fa,fb) exist?" is O(1).
+      ++cur_tok;
+      for (int x : F[fa].adj)
+        nbr_tok[x] = cur_tok;
+      Face const &fa_incd = F[fa].incd;
       for (size_t b = a + 1; b < touch.size(); b++) {
         int fb = touch[b];
-        if (edge_exists(fa, fb))
+        if (nbr_tok[fb] == cur_tok)
           continue;
-        Face R = F[fa].incd & F[fb].incd;
-        if (static_cast<int>(R.count()) < min_ridge)
+        sR = fa_incd;
+        sR &= F[fb].incd; // sR = R = fa ∩ fb
+        long cR = sR.count();
+        if (cR < min_ridge)
           continue;
         bool add = true;
         std::vector<int> nbrs = F[fa].adj; // copy: edges may be removed below
         for (int nbr : nbrs) {
-          int inc = beneath_beyond::face_incl(F[fa].incd & F[nbr].incd, R);
-          if (inc == 2)
-            continue;
-          if (inc <= 0)
+          // Relation of the existing ridge E = fa ∩ nbr to the candidate R,
+          // from set sizes (E ⊆ R iff |E∩R|==|E|, R ⊆ E iff |E∩R|==|R|).
+          sE = fa_incd;
+          sE &= F[nbr].incd; // sE = E
+          long cE = sE.count();
+          sE &= sR;              // sE = E ∩ R
+          long cER = sE.count();
+          bool E_sub_R = (cER == cE);
+          bool R_sub_E = (cER == cR);
+          if (!E_sub_R && !R_sub_E)
+            continue; // incomparable
+          if (E_sub_R) {
             remove_edge(fa, nbr);
-          if (inc >= 0) {
+            nbr_tok[nbr] = 0; // fa lost this neighbour
+          }
+          if (R_sub_E) {
             add = false;
             break;
           }
         }
-        if (add)
-          add_edge(fa, fb);
+        if (add) {
+          // fb is known to be absent from fa's neighbours (nbr_tok check above).
+          F[fa].adj.push_back(fb);
+          F[fb].adj.push_back(fa);
+          nbr_tok[fb] = cur_tok; // fa gained this neighbour
+        }
       }
     }
   }
 
-  // The incrementally-carried incidence lists exactly the extreme rays on each
-  // facet, which is complete when the input has no redundant rays. To match the
-  // reference kernel on every input (redundant rays lie on a facet too), the
-  // final incidence is recomputed from the normal with a single scan -- one pass
-  // over the final facets only, not the per-facet scan of the plain kernel.
+  // The incrementally-carried incidence lists the extreme rays on each facet,
+  // which is exactly the facet incidence under this header's extreme-ray
+  // precondition (verified against the full-scan reference kernel). Redundant
+  // rays -- which also lie on a facet -- are outside that precondition and would
+  // need BeneathBeyond_Kernel's full scan; here we keep the incremental incidence
+  // and avoid rescanning every facet.
   std::vector<BeneathBeyondFacet<T>> result;
   for (auto &f : F)
     if (f.alive)
-      result.push_back(
-          {f.normal, beneath_beyond::facet_incidence(EXT, f.normal)});
+      result.push_back({std::move(f.normal), std::move(f.incd)});
 #ifdef TIMINGS_BENEATH_BEYOND
   os << "BENEATH_BEYOND(DG): |EXT|=" << nbRow << "/" << nbCol
      << " |facets|=" << result.size() << " time=" << time << "\n";
