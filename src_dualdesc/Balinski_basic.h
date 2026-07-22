@@ -56,7 +56,7 @@ template <typename Tint>
 bool ComputeStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
                          const Tint &CritSiz) {
   return eComb.nbOrbitDone > 0 &&
-    (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0);
+    (eComb.nbUndone <= CritSiz || eComb.eSetUndone.any());
 }
 
 // The condition on nbOrbitDone make the check more complex.
@@ -65,7 +65,7 @@ bool ComputeStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
 template <typename Tint>
 bool MonotonicCheckStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
                                 const Tint &CritSiz) {
-  return eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0;
+  return eComb.nbUndone <= CritSiz || eComb.eSetUndone.any();
 }
 
 template <typename Tint> struct StatusUndoneOrbitInfo {
@@ -214,7 +214,7 @@ bool EvaluationConnectednessCriterion_Kernel(
     for (size_t i = 0; i < n_rows; i++)
       fint[i] = 1;
     for (size_t i_vert = 0; i_vert < n_vert; i_vert++) {
-      Face e_vert = vf_undone[i_vert];
+      Face const &e_vert = vf_undone[i_vert];
       if (is_vert_in_face(e_vert)) {
         list_vert.push_back(i_vert);
         fint &= e_vert;

@@ -2401,7 +2401,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       size_t siz_act = eFace1.size();
       Tgroup GRPperm(ListPermGens, siz_act);
 #ifdef SANITY_CHECK_MATRIX_GROUP
-      if (eFace1.count() == 0 && eFace2.count() == 0) {
+      if (eFace1.none() && eFace2.none()) {
         std::cerr << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = "
                      "|eFace2| = 0\n";
         std::cerr << "Clear bug\n";

@@ -1047,7 +1047,7 @@ public:
     lengths.push_back(siz_out);
     Tidx cell_in;
     Tidx cell_out;
-    if (f.count() > 0 && f.count() < f.size()) {
+    if (f.any() && !f.all()) {
       n_part = 2;
       cell_in = 0;
       cell_out = 1;

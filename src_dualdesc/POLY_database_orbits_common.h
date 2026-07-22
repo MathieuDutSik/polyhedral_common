@@ -107,7 +107,7 @@ public:
     typename TbasicBank::iterator_face iter = bb.begin_face_undone();
     while (iter != bb.end_face_undone()) {
       eSetReturn &= OrbitIntersection(bb.GRP, *iter);
-      if (eSetReturn.count() == 0) {
+      if (eSetReturn.none()) {
         return eSetReturn;
       }
       iter++;
@@ -136,7 +136,7 @@ public:
           return true;
         }
         Face eSetUndone = ComputeIntersectionUndone();
-        if (eSetUndone.count() > 0) {
+        if (eSetUndone.any()) {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
           os << "RDD: Termination by linear programming criterion "
                 "|eSetUndone|="
