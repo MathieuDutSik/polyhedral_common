@@ -1,0 +1,51 @@
+name: CI(13B) Windows / CMake compile test
+
+# Compile-only check of the CMake build on Windows (MSYS2 / MINGW64). Mirrors
+# basic_common_cpp's Windows job: only cmake configure + build is exercised, the
+# resulting binaries are not run here.
+
+on:
+  # Even months (the odd months are used by ci_13A_lorentzian_stab_equi).
+  schedule:
+    - cron: "0 0 13 2,4,6,8,10,12 *"
+  # Manually triggered
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    timeout-minutes: 120
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2 (MINGW64)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            base-devel
+            git
+            unzip
+            wget
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-gmp
+            mingw-w64-x86_64-boost
+            mingw-w64-x86_64-eigen3
+            mingw-w64-x86_64-glpk
+            mingw-w64-x86_64-msmpi
+
+      - name: Configure with CMake
+        run: |
+          cmake -S . -B build -G "MSYS Makefiles"
+
+      - name: Build
+        run: |
+          cmake --build build
