@@ -1868,7 +1868,7 @@ std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   std::string const &NumericalType = BlockDATA.get_string("NumericalType");
   std::vector<std::string> Ltype{"safe_rational", "rational", "cpp_rational",
-                                 "mpq_rational",  "Qsqrt2",   "Qsqrt5"};
+                                 "mpq_rational",  "Qsqrt2", "Qsqrt3", "Qsqrt5"};
   // The real algebraic case carries the field description file as a postfix:
   // NumericalType = "RealAlgebraic=<FileAlgebraicField>".
   bool is_real_algebraic =
