@@ -10,15 +10,42 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
+# On Windows (LLP64), Eigen::Index defaults to std::ptrdiff_t == `long long`,
+# for which gmpxx provides no constructor, so Eigen-internal conversions such as
+# RealScalar(Index) are ambiguous for mpz_class / mpq_class. Force Eigen::Index
+# to `long`, which gmpxx accepts. On LP64 (Linux/macOS) std::ptrdiff_t already
+# is `long`, so this is a no-op there.
+if(WIN32)
+  add_compile_definitions(EIGEN_DEFAULT_DENSE_INDEX_TYPE=long)
+endif()
+
+# MPI (and Boost.MPI) is not available on MSYS2/MinGW yet, so default it off on
+# Windows. When off, the MPI-parallel programs are skipped and the shared
+# polyhedral_mpi_support interface stays empty.
+if(WIN32)
+  set(_with_mpi_default OFF)
+else()
+  set(_with_mpi_default ON)
+endif()
+option(WITH_MPI "Build the MPI-parallel programs (requires Boost.MPI + MPI)" ${_with_mpi_default})
+
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
-find_package(Boost REQUIRED COMPONENTS mpi serialization)
-find_package(MPI REQUIRED COMPONENTS CXX)
+if(WITH_MPI)
+  find_package(Boost REQUIRED COMPONENTS mpi serialization)
+  find_package(MPI REQUIRED COMPONENTS CXX)
+else()
+  find_package(Boost REQUIRED COMPONENTS serialization)
+endif()
 
 pkg_check_modules(GMPXX REQUIRED IMPORTED_TARGET gmpxx)
 pkg_check_modules(CDDGMP cddgmp)
-pkg_check_modules(CDDLIB REQUIRED cddlib)
+# The external cddlib (double) is only used when compiling with -DUSE_CDDLIB,
+# which the CMake build never does (it uses the internal C++ port in
+# POLY_cddlib.h). Keep it optional so the build works where cddlib is absent
+# (e.g. MSYS2/MinGW).
+pkg_check_modules(CDDLIB cddlib)
 
 find_library(GMP_LIBRARY NAMES gmp REQUIRED)
 find_path(GLPK_INCLUDE_DIR NAMES glpk.h REQUIRED)
@@ -31,7 +58,6 @@ find_path(
     ${CDDLIB_INCLUDE_DIRS}
   PATH_SUFFIXES
     cddlib
-  REQUIRED
 )
 
 find_path(
@@ -171,13 +197,18 @@ target_link_libraries(
     polyhedral_common
 )
 
+# Always defined so the many *_support groups can reference it unconditionally;
+# only populated with the actual MPI libraries when WITH_MPI is on. When off it
+# is an empty interface library and linking it is a no-op.
 add_library(polyhedral_mpi_support INTERFACE)
-target_link_libraries(
-  polyhedral_mpi_support
-  INTERFACE
-    Boost::mpi
-    MPI::MPI_CXX
-)
+if(WITH_MPI)
+  target_link_libraries(
+    polyhedral_mpi_support
+    INTERFACE
+      Boost::mpi
+      MPI::MPI_CXX
+  )
+endif()
 # Thread-safety of the GMP pool is chosen at the call site, not by a build flag:
 # MPI entry points call maybe_install_tls_gmp_pool() (thread-local pool state)
 # instead of maybe_install_gmp_pool() (process-global). Both flavours are always
@@ -208,23 +239,25 @@ if(CDDGMP_FOUND)
   )
 endif()
 
-add_library(polyhedral_cdd_double_support INTERFACE)
-target_include_directories(
-  polyhedral_cdd_double_support
-  INTERFACE
-    ${CDDLIB_INCLUDE_DIRS}
-    "${CDD_HEADER_DIR}"
-)
-target_link_directories(
-  polyhedral_cdd_double_support
-  INTERFACE
-    ${CDDLIB_LIBRARY_DIRS}
-)
-target_link_libraries(
-  polyhedral_cdd_double_support
-  INTERFACE
-    ${CDDLIB_LINK_LIBRARIES}
-)
+if(CDDLIB_FOUND)
+  add_library(polyhedral_cdd_double_support INTERFACE)
+  target_include_directories(
+    polyhedral_cdd_double_support
+    INTERFACE
+      ${CDDLIB_INCLUDE_DIRS}
+      "${CDD_HEADER_DIR}"
+  )
+  target_link_directories(
+    polyhedral_cdd_double_support
+    INTERFACE
+      ${CDDLIB_LIBRARY_DIRS}
+  )
+  target_link_libraries(
+    polyhedral_cdd_double_support
+    INTERFACE
+      ${CDDLIB_LINK_LIBRARIES}
+  )
+endif()
 
 
 if(HAVE_NETCDF)
@@ -403,13 +436,11 @@ set(
   DUALDESC_PROGRAMS
   POLY_CheckCanonicalGAP
   POLY_SerialDualDesc
-  POLY_MPI_DualDesc
   POLY_RunTheBank
   POLY_DatabaseRestructuration
   POLY_FindNeededBalinski
   POLY_EvaluateDualDesc
   POLY_ReadPartialEnum
-  Read_MPI_sizes
   POLY_UpgradeDatabase
   POLY_EvaluateBalinski
   POLY_sampling_facets
@@ -511,7 +542,6 @@ endforeach()
 
 set(
   PERFECT_PROGRAMS
-  PERF_MPI_EnumeratePerfectCones
   IsEutactic
   PERF_SerialPerfectComputation
   PERF_IsBoundedFace
@@ -572,9 +602,7 @@ endforeach()
 set(
   DELAUNAY_PROGRAMS
   LATT_FindOneVertex
-  LATT_MPI_Lattice_IsoDelaunayDomain
   LATT_SerialLattice_IsoDelaunayDomain
-  LATT_MPI_ComputeDelaunay
   LATT_SerialComputeDelaunay
 )
 foreach(target IN LISTS DELAUNAY_PROGRAMS)
@@ -599,7 +627,6 @@ set(
   LATT_GetIntegralMatricesPossibleOrders
   LORENTZ_PERF_Automorphism
   LORENTZ_PERF_Isomorphism
-  LORENTZ_MPI_PerfectLorentzian
   LORENTZ_ReflectiveEdgewalk
 )
 foreach(target IN LISTS LORENTZIAN_PROGRAMS)
@@ -609,6 +636,30 @@ foreach(target IN LISTS LORENTZIAN_PROGRAMS)
     polyhedral_lorentzian_support
   )
 endforeach()
+
+# MPI-parallel programs: built only when WITH_MPI is on (see the top of this
+# file). Their sources use Boost.MPI / MPI directly, unlike the serial programs
+# above which only reference the empty polyhedral_mpi_support interface.
+if(WITH_MPI)
+  add_polyhedral_binary(POLY_MPI_DualDesc
+    "${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_MPI_DualDesc.cpp"
+    polyhedral_dualdesc_support)
+  add_polyhedral_binary(Read_MPI_sizes
+    "${CMAKE_SOURCE_DIR}/src_dualdesc/Read_MPI_sizes.cpp"
+    polyhedral_dualdesc_support)
+  add_polyhedral_binary(PERF_MPI_EnumeratePerfectCones
+    "${CMAKE_SOURCE_DIR}/src_perfect/PERF_MPI_EnumeratePerfectCones.cpp"
+    polyhedral_perfect_support)
+  add_polyhedral_binary(LATT_MPI_Lattice_IsoDelaunayDomain
+    "${CMAKE_SOURCE_DIR}/src_delaunay/LATT_MPI_Lattice_IsoDelaunayDomain.cpp"
+    polyhedral_delaunay_support)
+  add_polyhedral_binary(LATT_MPI_ComputeDelaunay
+    "${CMAKE_SOURCE_DIR}/src_delaunay/LATT_MPI_ComputeDelaunay.cpp"
+    polyhedral_delaunay_support)
+  add_polyhedral_binary(LORENTZ_MPI_PerfectLorentzian
+    "${CMAKE_SOURCE_DIR}/src_lorentzian/LORENTZ_MPI_PerfectLorentzian.cpp"
+    polyhedral_lorentzian_support)
+endif()
 
 set(
   POLY_PROGRAMS
@@ -646,14 +697,11 @@ if(HAVE_NETCDF)
   set(
     CTYPE_PROGRAMS
     CTYP_PrepareInitialFile
-    CTYP_MPI_Enumeration_c
     CTYP_ComputeInvariant
     CTYP_PrepareAdjacencyFile
-    CTYP_MPI_EnumerationAdjacencies
     CTYP_CheckAdjacency
     CTYP_SearchMatrix
     CTYP_LookForNoFreeVector
-    CTYP_MPI_AdjScheme
     CTYP_ComputeHashStat
     CTYP_ComputeInvariant_B
     NC_ComputeAverage
@@ -665,6 +713,18 @@ if(HAVE_NETCDF)
       polyhedral_ctype_support
     )
   endforeach()
+  if(WITH_MPI)
+    foreach(target IN ITEMS
+      CTYP_MPI_Enumeration_c
+      CTYP_MPI_EnumerationAdjacencies
+      CTYP_MPI_AdjScheme)
+      add_polyhedral_binary(
+        ${target}
+        "${CMAKE_SOURCE_DIR}/src_ctype/${target}.cpp"
+        polyhedral_ctype_support
+      )
+    endforeach()
+  endif()
 endif()
 
 set(
