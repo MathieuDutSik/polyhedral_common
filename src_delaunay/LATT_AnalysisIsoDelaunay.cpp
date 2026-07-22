@@ -210,6 +210,7 @@ void process_C(FullNamelist const &eFull) {
       using Tint = mpz_class;
       return process<T, Tint>(eFull, os_out);
     }
+#ifdef ENABLE_ALL_NUMERICAL_TYPES
     if (arith == "gmp_boost") {
       using T = boost::multiprecision::mpq_rational;
       using Tint = boost::multiprecision::mpz_int;
@@ -225,6 +226,7 @@ void process_C(FullNamelist const &eFull) {
       using Tint = SafeInt64;
       return process<T, Tint>(eFull, os_out);
     }
+#endif
     std::cerr << "LATT_AnalysisIsoDelaunay: Failed to find a matching type for "
                  "arithmetic="
               << arith << "\n";
