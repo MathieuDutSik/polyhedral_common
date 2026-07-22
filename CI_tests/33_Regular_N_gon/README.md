@@ -62,6 +62,28 @@ Minimal polynomial: `64 x^6 - 112 x^4 + 56 x^2 - 7 = 0`.
   (sin(8*pi/7) = -sin(6*pi/7), sin(10*pi/7) = -sin(4*pi/7), sin(12*pi/7) = -sin(2*pi/7))
 
 
+N = 9  (x = sin(2*pi/9))
+------------------------
+
+Minimal polynomial: `64 x^6 - 96 x^4 + 36 x^2 - 3 = 0`.
+
+  cos(0)       = 1
+  cos(2*pi/9)  = -8*x^4 + 10*x^2 - 2
+  cos(4*pi/9)  = 1 - 2*x^2
+  cos(6*pi/9)  = -1/2                       (= cos(2*pi/3))
+  cos(8*pi/9)  = 8*x^4 - 8*x^2 + 1
+  cos(10*pi/9) = cos(8*pi/9) = 8*x^4 - 8*x^2 + 1
+  cos(12*pi/9) = cos(6*pi/9) = -1/2
+  cos(14*pi/9) = cos(4*pi/9) = 1 - 2*x^2
+  cos(16*pi/9) = cos(2*pi/9) = -8*x^4 + 10*x^2 - 2
+
+  sin(2*pi/9)  = x
+  sin(4*pi/9)  = -16*x^5 + 20*x^3 - 4*x
+  sin(6*pi/9)  = 3*x - 4*x^3                (= sqrt(3)/2)
+  sin(8*pi/9)  = -16*x^5 + 20*x^3 - 5*x
+  (sin(2*pi*(9-k)/9) = -sin(2*pi*k/9))
+
+
 How to use it
 -------------
 
@@ -76,10 +98,14 @@ Automorphism group of the polytope (the dihedral group of order 2N):
   ./GRP_LinPolytope_Automorphism RealAlgebraic=FileDesc7 Regular7gon
   # -> |GRP|=14   (dihedral D_7)
 
+  ./GRP_LinPolytope_Automorphism RealAlgebraic=FileDesc9 Regular9gon
+  # -> |GRP|=18   (dihedral D_9)
+
 Dual description (facets); a regular N-gon has N facets:
 
   ./POLY_dual_description RealAlgebraic=FileDesc5 cdd CPP Regular5gon out5
   ./POLY_dual_description RealAlgebraic=FileDesc7 cdd CPP Regular7gon out7
+  ./POLY_dual_description RealAlgebraic=FileDesc9 cdd CPP Regular9gon out9
 
 Note: for a real algebraic field use the output format `CPP` (or `control`); the
 `GAP` output format does not support algebraic field entries.
