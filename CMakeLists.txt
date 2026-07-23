@@ -173,6 +173,12 @@ target_link_libraries(
     PkgConfig::GMPXX
     "${GMP_LIBRARY}"
 )
+if(WIN32)
+  # Boost.Asio (pulled in transitively, e.g. via Boost serialization / the
+  # bank networking code) needs Winsock on Windows: WSAStartup / WSACleanup
+  # live in ws2_32, and some extended socket calls in mswsock.
+  target_link_libraries(polyhedral_common INTERFACE ws2_32 mswsock)
+endif()
 
 add_library(polyhedral_group_support INTERFACE)
 target_link_libraries(
