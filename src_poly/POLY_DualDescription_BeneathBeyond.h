@@ -763,10 +763,18 @@ void POLY_DualDescription_BeneathBeyondFaceIneq(MyMatrix<T> const &EXT,
   }
 }
 
-// Placing triangulation produced by the beneath-and-beyond insertion order,
-// with, for each simplex, the SIGNED determinant of its vertex matrix
-// SelectRow(EXT, simplex) -- the same (simplex, det) format as
-// lrs::GetTriangulationDet, so the two are interchangeable.
+// Placing triangulation produced by the beneath-and-beyond insertion order.
+// Streaming variant: for each simplex, as soon as it is created, this calls
+//   f_trig_det(simplex, det)
+// where
+//  * simplex is the sorted list of its nbCol vertex row indices, and
+//  * det is the SIGNED determinant of SelectRow(EXT, simplex).
+// This is the callback analogue of lrs::GetTriangulationDet_f: the caller's
+// consumer never has to hold the full simplex list. Note, however, that unlike
+// lrs' reverse search the *producer* still keeps the growing triangulation as
+// working state (needed to recompute the boundary at each step), so this bounds
+// the consumer's memory, not the producer's -- see the discussion in
+// POLY_lrslib.h on why beneath-and-beyond is not a bounded-memory tree search.
 //
 // The determinant comes essentially for free: the visibility test that decides
 // whether ray p cones over a boundary cell already computes dp, the signed
@@ -779,14 +787,16 @@ void POLY_DualDescription_BeneathBeyondFaceIneq(MyMatrix<T> const &EXT,
 // cone p over every boundary (d-1)-cell of the current triangulation that is
 // strictly visible from p (p on the opposite side of the cell's hyperplane from
 // the cell's apex). Redundant rays see no boundary cell and are skipped
-// automatically. The boundary cells are recomputed each step (a (d-1)-face is
-// on the boundary iff it belongs to exactly one simplex), which is simpler and
-// less error-prone than threading the triangulation through the facet update,
-// at the cost of some speed.
-template <typename T>
-std::vector<std::pair<std::vector<int>, T>>
-POLY_DualDescription_BeneathBeyondTriangulationDet(
-    MyMatrix<T> const &EXT, [[maybe_unused]] std::ostream &os) {
+// automatically. The placing triangulation is append-only (existing simplices
+// are never subdivided or removed), which is exactly what makes emit-on-creation
+// valid. The boundary cells are recomputed each step (a (d-1)-face is on the
+// boundary iff it belongs to exactly one simplex), which is simpler and less
+// error-prone than threading the triangulation through the facet update, at the
+// cost of some speed.
+template <typename T, typename Ftrig_det>
+void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
+    MyMatrix<T> const &EXT, [[maybe_unused]] std::ostream &os,
+    Ftrig_det f_trig_det) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
 #ifdef TIMINGS_BENEATH_BEYOND
@@ -818,14 +828,19 @@ POLY_DualDescription_BeneathBeyondTriangulationDet(
   for (auto &eRow : basis)
     in_basis[eRow] = 1;
 
-  std::vector<std::pair<std::vector<int>, T>> simplices;
+  // Producer working state: only the vertex lists are needed to recompute the
+  // boundary; determinants are streamed to f_trig_det, never retained here.
+  std::vector<std::vector<int>> simplices;
+  [[maybe_unused]] size_t n_simplices = 0;
   {
     std::vector<int> simplex = basis;
     std::sort(simplex.begin(), simplex.end());
     // The initial simplex is the only determinant the visibility test does not
     // yield; one DeterminantMat fixes it, in sorted-row order like the rest.
     T det = DeterminantMat(SelectRow(EXT, simplex));
-    simplices.push_back({std::move(simplex), det});
+    f_trig_det(simplex, det);
+    n_simplices++;
+    simplices.push_back(std::move(simplex));
   }
 
   for (int p = 0; p < nbRow; p++) {
@@ -835,8 +850,7 @@ POLY_DualDescription_BeneathBeyondTriangulationDet(
     // boundary iff exactly one simplex contains it. Keep one apex (the dropped
     // vertex) to orient the visibility test.
     std::map<std::vector<int>, std::pair<int, int>> faces; // face -> (count, apex)
-    for (auto &kv : simplices) {
-      std::vector<int> const &simplex = kv.first;
+    for (auto &simplex : simplices) {
       for (int i = 0; i < nbCol; i++) {
         std::vector<int> face;
         face.reserve(nbCol - 1);
@@ -848,7 +862,7 @@ POLY_DualDescription_BeneathBeyondTriangulationDet(
         ref.second = simplex[i];
       }
     }
-    std::vector<std::pair<std::vector<int>, T>> new_simplices;
+    std::vector<std::vector<int>> new_simplices;
     for (auto &kv : faces) {
       if (kv.second.first != 1)
         continue; // interior face
@@ -882,7 +896,9 @@ POLY_DualDescription_BeneathBeyondTriangulationDet(
         throw TerminalException{1};
       }
 #endif
-      new_simplices.push_back({std::move(simplex), det});
+      f_trig_det(simplex, det);
+      n_simplices++;
+      new_simplices.push_back(std::move(simplex));
     }
     for (auto &e : new_simplices)
       simplices.push_back(std::move(e));
@@ -890,24 +906,39 @@ POLY_DualDescription_BeneathBeyondTriangulationDet(
 
 #ifdef TIMINGS_BENEATH_BEYOND
   os << "BENEATH_BEYOND: triangulationDet |EXT|=" << nbRow << "/" << nbCol
-     << " |simplices|=" << simplices.size() << " time=" << time << "\n";
+     << " |simplices|=" << n_simplices << " time=" << time << "\n";
 #endif
-  return simplices;
+}
+
+// Placing triangulation with, for each simplex, the SIGNED determinant of its
+// vertex matrix SelectRow(EXT, simplex) -- the same (simplex, det) format as
+// lrs::GetTriangulationDet, so the two are interchangeable. Thin wrapper that
+// collects the streamed simplices into a vector.
+template <typename T>
+std::vector<std::pair<std::vector<int>, T>>
+POLY_DualDescription_BeneathBeyondTriangulationDet(MyMatrix<T> const &EXT,
+                                                   std::ostream &os) {
+  std::vector<std::pair<std::vector<int>, T>> l_trig;
+  auto f_trig_det = [&](std::vector<int> const &trig, T const &det) -> void {
+    l_trig.push_back({trig, det});
+  };
+  POLY_DualDescription_BeneathBeyondTriangulationDet_f<T>(EXT, os, f_trig_det);
+  return l_trig;
 }
 
 // Placing triangulation as a bare list of simplices, each the sorted list of
-// its nbCol vertex row indices (same format as lrs::GetTriangulation). This is
-// the determinant-carrying enumeration above with the determinants dropped.
+// its nbCol vertex row indices (same format as lrs::GetTriangulation). Thin
+// wrapper that collects the streamed simplices, dropping the determinants.
 template <typename T>
 std::vector<std::vector<int>>
 POLY_DualDescription_BeneathBeyondTriangulation(MyMatrix<T> const &EXT,
                                                 std::ostream &os) {
-  std::vector<std::pair<std::vector<int>, T>> trig =
-      POLY_DualDescription_BeneathBeyondTriangulationDet(EXT, os);
   std::vector<std::vector<int>> simplices;
-  simplices.reserve(trig.size());
-  for (auto &e : trig)
-    simplices.push_back(std::move(e.first));
+  auto f_trig_det = [&](std::vector<int> const &trig,
+                        [[maybe_unused]] T const &det) -> void {
+    simplices.push_back(trig);
+  };
+  POLY_DualDescription_BeneathBeyondTriangulationDet_f<T>(EXT, os, f_trig_det);
   return simplices;
 }
 
