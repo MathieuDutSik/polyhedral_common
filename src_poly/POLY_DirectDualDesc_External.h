@@ -293,7 +293,7 @@ vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
   using Tlong = int64_t;
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
-  mpz_class n_col_mpz(n_col);
+  mpz_class n_col_mpz = UniversalScalarConversion<mpz_class, size_t>(n_col);
   size_t DimEXT = n_col + 1;
   size_t shift = GetShift(EXT, eCommand);
   Tint eScal;
