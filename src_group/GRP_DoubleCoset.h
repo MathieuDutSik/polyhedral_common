@@ -982,7 +982,7 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet = DoubleCosetDescription_Canonic<Tgroup>(
         BigGens, SmaGRP, eSet, TotalSize, os_err);
-    Tint orb_siz = ListListSet.size();
+    Tint orb_siz = UniversalScalarConversion<Tint, size_t>(ListListSet.size());
     nb_orbit_sma += orb_siz;
     for (auto &eFace : ListListSet) {
       Tint res = getsetasint<Tint>(eFace);
