@@ -306,7 +306,7 @@ public:
     size_t len = vf.size();
     list_diag_weight.resize(len);
     for (size_t i = 0; i < len; i++)
-      list_diag_weight[i] = i;
+      list_diag_weight[i] = UniversalScalarConversion<T, size_t>(i);
     list_diag_idx.resize(nbRow);
     for (size_t i = 0; i < len; i++) {
       Face f = vf[i];
@@ -408,7 +408,7 @@ public:
           list_offdiag_idx[pos_offdiag + pos] = idx_weight;
           pos = f_b.find_next(pos);
         }
-        list_offdiag_weight.push_back(idx_weight);
+        list_offdiag_weight.push_back(UniversalScalarConversion<T, size_t>(idx_weight));
         idx_weight++;
       }
       pos_offdiag += len;
