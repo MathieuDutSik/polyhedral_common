@@ -763,18 +763,16 @@ void POLY_DualDescription_BeneathBeyondFaceIneq(MyMatrix<T> const &EXT,
   }
 }
 
-// Placing triangulation produced by the beneath-and-beyond insertion order.
-// Streaming variant: for each simplex, as soon as it is created, this calls
-//   f_trig_det(simplex, det)
-// where
-//  * simplex is the sorted list of its nbCol vertex row indices, and
-//  * det is the SIGNED determinant of SelectRow(EXT, simplex).
-// This is the callback analogue of lrs::GetTriangulationDet_f: the caller's
-// consumer never has to hold the full simplex list. Note, however, that unlike
-// lrs' reverse search the *producer* still keeps the growing triangulation as
-// working state (needed to recompute the boundary at each step), so this bounds
-// the consumer's memory, not the producer's -- see the discussion in
-// POLY_lrslib.h on why beneath-and-beyond is not a bounded-memory tree search.
+// Core placing-triangulation enumeration, running entirely in the working type
+// Twork on EXTwork. For each simplex, as soon as it is created, it calls
+//   f_core(simplex, det_work)
+// where simplex is the sorted list of its nbCol vertex row indices and det_work
+// is the SIGNED determinant of SelectRow(EXTwork, simplex) in Twork. Twork may
+// be an integer-scaled copy of a rational input (see the field wrapper below),
+// in which case det_work is off from the true determinant by the product of the
+// per-row scales; the caller corrects for that. All arithmetic here is ring
+// arithmetic (determinants, sign tests, gcd), so Twork can be the underlying
+// ring even when the original type is a field.
 //
 // The determinant comes essentially for free: the visibility test that decides
 // whether ray p cones over a boundary cell already computes dp, the signed
@@ -793,17 +791,17 @@ void POLY_DualDescription_BeneathBeyondFaceIneq(MyMatrix<T> const &EXT,
 // boundary iff it belongs to exactly one simplex), which is simpler and less
 // error-prone than threading the triangulation through the facet update, at the
 // cost of some speed.
-template <typename T, typename Ftrig_det>
-void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
-    MyMatrix<T> const &EXT, [[maybe_unused]] std::ostream &os,
-    Ftrig_det f_trig_det) {
-  int nbRow = EXT.rows();
-  int nbCol = EXT.cols();
+template <typename Twork, typename Fcore>
+void BeneathBeyond_TriangulationDet_core(MyMatrix<Twork> const &EXTwork,
+                                         [[maybe_unused]] std::ostream &os,
+                                         Fcore f_core) {
+  int nbRow = EXTwork.rows();
+  int nbCol = EXTwork.cols();
 #ifdef TIMINGS_BENEATH_BEYOND
   MicrosecondTime time;
 #endif
 #ifdef SANITY_CHECK_BENEATH_BEYOND
-  int rank = RankMat(EXT);
+  int rank = RankMat(EXTwork);
   if (rank != nbCol) {
     std::cerr << "BeneathBeyond(triang): EXT must span a full-dimensional cone, "
               << "RankMat(EXT)=" << rank << " but nbCol=" << nbCol << "\n";
@@ -813,23 +811,23 @@ void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
 
   // Signed d x d determinant of the rows (face vertices, then extra), where the
   // face keeps its stored order so signs are comparable across calls.
-  auto det_face_point = [&](std::vector<int> const &face, int extra) -> T {
-    MyMatrix<T> M(nbCol, nbCol);
+  auto det_face_point = [&](std::vector<int> const &face, int extra) -> Twork {
+    MyMatrix<Twork> M(nbCol, nbCol);
     for (int i = 0; i < nbCol - 1; i++)
       for (int j = 0; j < nbCol; j++)
-        M(i, j) = EXT(face[i], j);
+        M(i, j) = EXTwork(face[i], j);
     for (int j = 0; j < nbCol; j++)
-      M(nbCol - 1, j) = EXT(extra, j);
+      M(nbCol - 1, j) = EXTwork(extra, j);
     return DeterminantMat(M);
   };
 
-  std::vector<int> basis = TMat_ListRowSelect(EXT);
+  std::vector<int> basis = TMat_ListRowSelect(EXTwork);
   Face in_basis(nbRow);
   for (auto &eRow : basis)
     in_basis[eRow] = 1;
 
   // Producer working state: only the vertex lists are needed to recompute the
-  // boundary; determinants are streamed to f_trig_det, never retained here.
+  // boundary; determinants are streamed to f_core, never retained here.
   std::vector<std::vector<int>> simplices;
   [[maybe_unused]] size_t n_simplices = 0;
   {
@@ -837,8 +835,8 @@ void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
     std::sort(simplex.begin(), simplex.end());
     // The initial simplex is the only determinant the visibility test does not
     // yield; one DeterminantMat fixes it, in sorted-row order like the rest.
-    T det = DeterminantMat(SelectRow(EXT, simplex));
-    f_trig_det(simplex, det);
+    Twork det = DeterminantMat(SelectRow(EXTwork, simplex));
+    f_core(simplex, det);
     n_simplices++;
     simplices.push_back(std::move(simplex));
   }
@@ -868,11 +866,13 @@ void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
         continue; // interior face
       std::vector<int> const &face = kv.first;
       int apex = kv.second.second;
-      T dp = det_face_point(face, p);
+      Twork dp = det_face_point(face, p);
       if (dp == 0)
         continue; // p coplanar with the face: not strictly visible
-      T da = det_face_point(face, apex);
-      // p is visible from outside iff on the opposite side from the apex.
+      Twork da = det_face_point(face, apex);
+      // p is visible from outside iff on the opposite side from the apex. The
+      // sign of a determinant is invariant under the positive per-row scaling
+      // that produces EXTwork, so this test is identical to the field one.
       if ((dp > 0) == (da > 0))
         continue;
       // dp is the signed determinant of the rows [face..., p]. The stored
@@ -887,16 +887,16 @@ void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
       for (int f : face)
         if (f > p)
           n_inv++;
-      T det = ((n_inv % 2) == 0) ? dp : -dp;
+      Twork det = ((n_inv % 2) == 0) ? dp : -dp;
 #ifdef SANITY_CHECK_BENEATH_BEYOND
-      T det_check = DeterminantMat(SelectRow(EXT, simplex));
+      Twork det_check = DeterminantMat(SelectRow(EXTwork, simplex));
       if (det_check != det) {
         std::cerr << "BeneathBeyond(triang): signed-determinant mismatch, "
                   << "recovered=" << det << " actual=" << det_check << "\n";
         throw TerminalException{1};
       }
 #endif
-      f_trig_det(simplex, det);
+      f_core(simplex, det);
       n_simplices++;
       new_simplices.push_back(std::move(simplex));
     }
@@ -908,6 +908,59 @@ void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
   os << "BENEATH_BEYOND: triangulationDet |EXT|=" << nbRow << "/" << nbCol
      << " |simplices|=" << n_simplices << " time=" << time << "\n";
 #endif
+}
+
+// Placing triangulation produced by the beneath-and-beyond insertion order.
+// Streaming variant: for each simplex, as soon as it is created, this calls
+//   f_trig_det(simplex, det)
+// where
+//  * simplex is the sorted list of its nbCol vertex row indices, and
+//  * det is the SIGNED determinant of SelectRow(EXT, simplex), in type T.
+// This is the callback analogue of lrs::GetTriangulationDet_f: the caller's
+// consumer never has to hold the full simplex list. Note, however, that unlike
+// lrs' reverse search the *producer* still keeps the growing triangulation as
+// working state (needed to recompute the boundary at each step), so this bounds
+// the consumer's memory, not the producer's -- see the discussion in
+// POLY_lrslib.h on why beneath-and-beyond is not a bounded-memory tree search.
+//
+// Ring/field split (same idiom as lrs::DualDescription): the enumeration uses
+// only ring operations, so when T is a field each ray is scaled to an integer
+// vector and the whole placing triangulation runs on the underlying ring
+// (typically ~3x faster). The determinant then needs the care the field version
+// hides: row i of the ring matrix is scale[i] * (row i of EXT), so the ring
+// determinant of a simplex is (prod_i scale[i]) times the true one. We keep the
+// per-row scales (the cleared denominators) and divide them back out to recover
+// the exact rational determinant. The scales are positive, so simplex identity
+// and orientation are untouched -- only the determinant magnitude is corrected.
+template <typename T, typename Ftrig_det>
+void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
+    MyMatrix<T> const &EXT, std::ostream &os, Ftrig_det f_trig_det) {
+  if constexpr (is_ring_field<T>::value) {
+    using Tring = typename underlying_ring<T>::ring_type;
+    int nbRow = EXT.rows();
+    int nbCol = EXT.cols();
+    MyMatrix<Tring> EXTring(nbRow, nbCol);
+    std::vector<T> scale(nbRow); // per-row cleared denominator, positive
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      FractionVector<T> fr =
+          NonUniqueScaleToIntegerVectorPlusCoeff(GetMatrixRow(EXT, iRow));
+      scale[iRow] = fr.TheMult; // EXTring row = fr.TheMult * (EXT row)
+      AssignMatrixRow(EXTring, iRow,
+                      UniversalVectorConversion<Tring, T>(fr.TheVect));
+    }
+    auto f_core = [&](std::vector<int> const &simplex,
+                      Tring const &det_ring) -> void {
+      // det(EXT rows) = det(EXTring rows) / prod scale[i] over the simplex.
+      T denom(1);
+      for (int idx : simplex)
+        denom *= scale[idx];
+      T det = UniversalScalarConversion<T, Tring>(det_ring) / denom;
+      f_trig_det(simplex, det);
+    };
+    BeneathBeyond_TriangulationDet_core(EXTring, os, f_core);
+  } else {
+    BeneathBeyond_TriangulationDet_core(EXT, os, f_trig_det);
+  }
 }
 
 // Placing triangulation with, for each simplex, the SIGNED determinant of its
