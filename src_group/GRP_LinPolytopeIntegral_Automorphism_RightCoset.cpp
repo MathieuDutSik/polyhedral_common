@@ -36,7 +36,7 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
       s_elt.insert(prod);
     }
   }
-  Tint s_elt_size = s_elt.size();
+  Tint s_elt_size = UniversalScalarConversion<Tint, size_t>(s_elt.size());
   if (s_elt_size != GRPisom.size()) {
     std::cerr << "|s_elt|=" << s_elt.size() << " |GRPisom|=" << GRPisom.size()
               << "\n";
