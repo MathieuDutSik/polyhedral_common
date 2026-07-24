@@ -337,7 +337,7 @@ private:
     size_t len_sW = Vtot.W.size();
     size_t res = n % len_sW;
     size_t q = n / len_sW;
-    return Vtot.W[res] + q * Vtot.v0;
+    return Vtot.W[res] + UniversalScalarConversion<Tint, size_t>(q) * Vtot.v0;
   }
   Tint get_k() const {
     bool we_found = false;

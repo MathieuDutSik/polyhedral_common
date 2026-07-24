@@ -811,10 +811,10 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
       T norm1 = eval_quad(Gwork, e_vect1);
       size_t ord = 1;
       while (true) {
-        T norm2 = ord * ord * norm1;
+        T norm2 = UniversalScalarConversion<T, size_t>(ord * ord) * norm1;
         if (norm2 > res_norm)
           break;
-        MyVector<Tint> e_vect2 = ord * e_vect1;
+        MyVector<Tint> e_vect2 = UniversalScalarConversion<Tint, size_t>(ord) * e_vect1;
         l_vect2.push_back(e_vect2);
         ord++;
       }
