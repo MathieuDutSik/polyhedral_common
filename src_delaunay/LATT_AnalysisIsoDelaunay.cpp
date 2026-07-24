@@ -24,6 +24,11 @@
   is otherwise expensive is a QUERIES option, computed only when its entry is
   set to something other than "null":
 
+    * FileFacets            — writes the irredundant defining inequalities of
+                              the L-type cone (FACred, i.e. its facets) as a
+                              matrix (CPP format, one facet inequality per row).
+                              Cheap: it needs only the redundancy elimination,
+                              not the dual description.
     * FileFullRankRays      — writes the full-rank (rank n, positive definite)
                               extreme rays — the "rigid" forms on the domain's
                               boundary — as a GAP list of Gram matrices.
@@ -59,6 +64,7 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   SingleBlock const &BlockQUERIES = eFull.get_block("QUERIES");
   std::string FileIso = BlockDATA.get_string("FileIsoDelaunay");
+  std::string FileFacets = BlockQUERIES.get_string("FileFacets");
   std::string FileFullRankRays = BlockQUERIES.get_string("FileFullRankRays");
   std::string FileRankTally = BlockQUERIES.get_string("FileRankTally");
   std::string FileInnerGramMat = BlockQUERIES.get_string("FileInnerGramMat");
@@ -97,6 +103,13 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
   os_out << "n=" << n << " sym_dim=" << sym_dim << "\n";
   os_out << "n_ineq=" << n_ineq << "\n";
   os_out << "n_irred=" << n_irred << "\n";
+  //
+  // QUERIES option: the facets of the L-type cone, i.e. the irredundant
+  // defining inequalities FACred (one facet inequality per row). Cheap: it
+  // reuses the redundancy elimination already done above.
+  if (FileFacets != "null") {
+    WriteMatrixFile(FileFacets, FACred);
+  }
   //
   // QUERIES options over the extreme rays (rank tally and/or full-rank rays).
   // Both need the extreme rays, so the (potentially expensive) dual description
@@ -180,6 +193,9 @@ FullNamelist NAMELIST_GetStandard_ANALYSIS_ISODELAUNAY() {
   // QUERIES
   {
     std::map<std::string, std::string> ListStringValues;
+    // The facets (irredundant defining inequalities FACred) of the L-type cone,
+    // as a matrix in CPP format. "null" (the default) skips the writing.
+    ListStringValues["FileFacets"] = "null";
     // The full-rank (rigid) extreme rays of the domain, as a GAP list of Gram
     // matrices. "null" (the default) skips the computation.
     ListStringValues["FileFullRankRays"] = "null";
