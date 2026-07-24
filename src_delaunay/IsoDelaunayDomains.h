@@ -2866,11 +2866,11 @@ void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
                               int const &n_walk_steps, int const &max_iter,
                               std::ostream &os) {
   IsoDelaunayDomain<T, Tint, Tgroup> Work = GetInitialIsoDelaunayDomain(data);
-  // One stateful lrs-vs-cdd Thompson sampler shared across every
+  // One stateful lrs/cdd/bb Thompson sampler shared across every
   // CountNonFullRankRays call so the posterior keeps accumulating over
   // the whole random walk.
   ThompsonSamplingHeuristic<typename Tgroup::Tint> eTS =
-      MakeLrsVsCddThompsonSampler<typename Tgroup::Tint>(os);
+      MakeDualDescThompsonSampler<typename Tgroup::Tint>(os);
   os << "ISODEL: LookForFullRankRayDomain, before CountNonFullRankRays\n";
   int curr_count = CountNonFullRankRays(Work, data, eTS, os);
   os << "ISODEL: LookForFullRankRayDomain, initial curr_count=" << curr_count

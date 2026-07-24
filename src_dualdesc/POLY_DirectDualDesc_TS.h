@@ -4,19 +4,20 @@
 // The plain DirectDualDescription_* functions in POLY_DirectDualDesc.h
 // pick their method through get_dual_desc_method, which currently just
 // returns "lrs" unconditionally. That leaves on the table the choice
-// between "lrs" and "cdd", both of which can be genuinely faster than
-// the other depending on the shape of EXT. The _ts variants here let a
-// caller supply a ThompsonSamplingHeuristic that samples between "lrs"
-// and "cdd", records the wall time of each attempt, and progressively
-// converges on the empirically-fastest choice for the caller's
-// workload.
+// between "lrs", "cdd" and "bb" (beneath-and-beyond), each of which can
+// be genuinely faster than the others depending on the shape of EXT. The
+// _ts variants here let a caller supply a ThompsonSamplingHeuristic that
+// samples between "lrs", "cdd" and "bb", records the wall time of each
+// attempt, and progressively converges on the empirically-fastest choice
+// for the caller's workload.
 //
 // Contract on the sampler:
-//   * The Thompson state consumed by the _ts functions must list both
-//     "lrs" and "cdd" as options in its ListDescription (e.g.
-//     "lrs:distri1 cdd:distri1"), so that both are Thompson-sampled at
-//     every level. Any answer other than "lrs"/"cdd" is defensively
-//     mapped to "lrs".
+//   * The Thompson state consumed by the _ts functions must list the
+//     methods "lrs", "cdd" and "bb" as options in its ListDescription
+//     (e.g. "lrs:distri1 cdd:distri1 bb:distri1"), so that all three are
+//     Thompson-sampled at every level. Any answer other than
+//     "lrs"/"cdd"/"bb" is defensively mapped to "lrs" (which works for
+//     both fields and rings). Note that "cdd" and "bb" require a field.
 //   * The caller owns the sampler's lifetime. Its posterior distribution
 //     is stateful; reuse the same instance across calls to accumulate
 //     learning.
@@ -65,10 +66,10 @@ inline std::map<std::string, Tint> ts_features(int nbRow, int nbCol) {
   return info.named_map();
 }
 
-// Sample a program and map the string to a DualDescProgram. Only "lrs" and
-// "cdd" are exposed; anything else is a namelist-configuration bug and we
-// fall back to "lrs" (which is a safe default because it works for both
-// fields and rings).
+// Sample a program and map the string to a DualDescProgram. Only "lrs",
+// "cdd" and "bb" are exposed; anything else is a namelist-configuration bug
+// and we fall back to "lrs" (which is a safe default because it works for
+// both fields and rings).
 template <typename T, typename Tint>
 inline DualDescProgram
 ts_pick_program(MyMatrix<T> const &EXT,
@@ -78,6 +79,8 @@ ts_pick_program(MyMatrix<T> const &EXT,
     return DualDescProgram::cdd;
   if (choice == "lrs")
     return DualDescProgram::lrs;
+  if (choice == "bb")
+    return DualDescProgram::beneath_beyond;
   return DualDescProgram::lrs;
 }
 
@@ -86,15 +89,15 @@ ts_pick_program(MyMatrix<T> const &EXT,
 // Zero-configuration factory. Returns a ThompsonSamplingHeuristic<Tint>
 // preconfigured for DirectDualDescription_*_ts:
 //
-//   * A single Thompson state ("state_opts") offers both "lrs" and "cdd"
-//     as options, so both are Thompson-sampled at every level.
+//   * A single Thompson state ("state_opts") offers "lrs", "cdd" and "bb"
+//     as options, so all three are Thompson-sampled at every level.
 //   * Only one feature is used to separate the sampler's blocks: `delta`
 //     (= nbRow - nbCol, the polytope's excess-vertices count).
 //   * `delta` is binned in intervals of width 5: [0,4], [5,9], …,
 //     [95,99], then a tail bin [100, infinity) so very wide polytopes
 //     don't create an unbounded number of empty bins.
 //   * The empirical prior is dirac at 0.0 with a weak seed (Nstart = 2)
-//     and modest memory (Nmax = 25). Both answers start indistinguishable;
+//     and modest memory (Nmax = 25). All answers start indistinguishable;
 //     the sampler explores each and lets timings differentiate them.
 //   * No classical-heuristic override — the sampler drives every choice.
 //
@@ -103,7 +106,7 @@ ts_pick_program(MyMatrix<T> const &EXT,
 // everything the previous ones learned.
 template <typename Tint>
 inline ThompsonSamplingHeuristic<Tint>
-MakeLrsVsCddThompsonSampler(std::ostream &os) {
+MakeDualDescThompsonSampler(std::ostream &os) {
   // Build the KEY_COMPRESSION.ListDescription string: 20 finite width-5
   // bins covering [0, 99], plus one open-ended tail bin [100, infinity).
   std::string bin_desc;
@@ -127,18 +130,18 @@ MakeLrsVsCddThompsonSampler(std::ostream &os) {
       " ListDescription = \"0.0\"",
       "/",
   };
-  // A single Thompson state offering *both* methods. Because both "lrs"
-  // and "cdd" appear in the same ListDescription, get_lowest_sampling
+  // A single Thompson state offering *all three* methods. Because "lrs",
+  // "cdd" and "bb" appear in the same ListDescription, get_lowest_sampling
   // draws from each option's empirical distribution and returns the
-  // fastest — i.e. the two options are genuinely sampled against each
+  // fastest — i.e. the three options are genuinely sampled against each
   // other at every level. (ListAnswer is a per-state label; it only
   // matters for noprior states, which we do not use here, but its length
   // must match ListName / ListDescription.)
   std::vector<std::string> lstr_thompson_prior = {
       "&THOMPSON_PRIOR",
-      " ListAnswer = \"lrs_cdd\"",
+      " ListAnswer = \"lrs_cdd_bb\"",
       " ListName = \"state_opts\"",
-      " ListDescription = \"lrs:distri1 cdd:distri1\"",
+      " ListDescription = \"lrs:distri1 cdd:distri1 bb:distri1\"",
       "/",
   };
   std::vector<std::string> lstr_key = {
@@ -148,10 +151,10 @@ MakeLrsVsCddThompsonSampler(std::ostream &os) {
       "/",
   };
   // Every delta bucket resolves to the single "state_opts" state, which
-  // offers both "lrs" and "cdd". delta = nbRow - nbCol is >= 0 for any
+  // offers "lrs", "cdd" and "bb". delta = nbRow - nbCol is >= 0 for any
   // well-posed dual-desc input, so the "delta >= 0" condition is always
-  // true; together with the identical DefaultPrior it guarantees that
-  // both options are Thompson-sampled at every level, whatever delta is.
+  // true; together with the identical DefaultPrior it guarantees that all
+  // three options are Thompson-sampled at every level, whatever delta is.
   std::vector<std::string> lstr_heuristic_prior = {
       "&HEURISTIC_PRIOR",
       " DefaultPrior = \"state_opts\"",
@@ -161,7 +164,7 @@ MakeLrsVsCddThompsonSampler(std::ostream &os) {
   };
   std::vector<std::string> lstr_io = {
       "&IO",
-      " name = \"lrs_vs_cdd\"",
+      " name = \"dualdesc_ts\"",
       " WriteLog = F",
       " ProcessExistingDataIfExist = F",
       " LogFileToProcess = \"input_logfile\"",
