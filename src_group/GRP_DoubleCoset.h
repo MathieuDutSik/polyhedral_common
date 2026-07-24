@@ -329,7 +329,7 @@ vectface DoubleCosetDescription_Exhaustive_T(
   Face eFaceImg(n);
   size_t pos = 0;
   while (true) {
-    Tint SizeGen = total_len;
+    Tint SizeGen = UniversalScalarConversion<Tint, size_t>(total_len);
     if (SizeGen == TotalSize)
       break;
     size_t new_pos = total_len;

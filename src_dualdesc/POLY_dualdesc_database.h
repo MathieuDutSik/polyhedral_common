@@ -233,7 +233,7 @@ std::vector<Tint> GetAllPossibilities(std::map<Tidx, int> const &eMap) {
     std::vector<Tint> NewVal;
     Tint ePow = 1;
     // Needed conversion below because of Mac typing issues.
-    Tint kv_first_tint = size_t(kv.first);
+    Tint kv_first_tint = UniversalScalarConversion<Tint, size_t>(size_t(kv.first));
     for (int i = 0; i <= kv.second; i++) {
       for (auto &eVal : LVal) {
         NewVal.push_back(ePow * eVal);
