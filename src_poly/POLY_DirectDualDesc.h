@@ -132,7 +132,7 @@ dual_desc_program_from_string_opt(std::string const &prog) {
     return DualDescProgram::lrs;
   if (prog == "pd_lrs")
     return DualDescProgram::pd_lrs;
-  if (prog == "beneath_beyond")
+  if (prog == "beneath_beyond" || prog == "bb")
     return DualDescProgram::beneath_beyond;
   if (prog == "glrs")
     return DualDescProgram::glrs;
