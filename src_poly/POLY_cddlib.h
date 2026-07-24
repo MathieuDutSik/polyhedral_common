@@ -70,7 +70,9 @@ template <typename T> void dd_WriteT(std::ostream &os, T *a, int d) {
   os << "\n";
 }
 
-template <typename T> inline bool dd_LargerFrac(T val1, T q1, T val2, T q2) {
+template <typename T>
+inline bool dd_LargerFrac(T const &val1, T const &q1, T const &val2,
+                          T const &q2) {
 #ifdef DEBUG_CDD
   assert(q1 > 0);
   assert(q2 > 0);
@@ -79,7 +81,8 @@ template <typename T> inline bool dd_LargerFrac(T val1, T q1, T val2, T q2) {
 }
 
 template <typename T>
-inline bool dd_SmallerFrac(T val1, T q1, T val2, T q2)
+inline bool dd_SmallerFrac(T const &val1, T const &q1, T const &val2,
+                           T const &q2)
 // We want to have val1 / q1 < val2 / q2 which is equivalent to val1 * q2 < val2
 // * q1
 {
@@ -90,7 +93,9 @@ inline bool dd_SmallerFrac(T val1, T q1, T val2, T q2)
   return val1 * q2 < val2 * q1;
 }
 
-template <typename T> inline bool dd_EqualFrac(T val1, T q1, T val2, T q2) {
+template <typename T>
+inline bool dd_EqualFrac(T const &val1, T const &q1, T const &val2,
+                         T const &q2) {
 #ifdef DEBUG_CDD
   assert(q1 > 0);
   assert(q2 > 0);
@@ -1629,7 +1634,7 @@ bool dd_LexSmaller(T *v1, T *v2,
 }
 
 template <typename T>
-bool dd_LexSmallerFrac(T *v1, T q1, T *v2, T q2,
+bool dd_LexSmallerFrac(T *v1, T const &q1, T *v2, T const &q2,
                        long dmax) { /* dmax is the size of vectors v1,v2 */
   bool determined, smaller;
   dd_colrange j;
@@ -3340,32 +3345,18 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
           #endif
           dd_TableauEntry(val, d_size, A, Ts, *r, j);
           if (j != rhscol && val > 0) {
-            bool is_field = true;
-            if (is_field) {
-              rat = -data->rcost[j - 1] / val;
-              if (*s == 0 || rat < minrat) {
-                minrat = rat;
-                *s = j;
-                set_emptyset(data->tieset);
-                set_addelem(data->tieset, j);
-              } else {
-                if (rat == minrat) {
-                  set_addelem(data->tieset, j);
-                }
-              }
+            // Division-free ratio test: track minrat as the fraction
+            // minrat / minrat_q and compare by cross-multiplication.
+            rat = -data->rcost[j - 1];
+            if (*s == 0 || dd_SmallerFrac(rat, val, minrat, minrat_q)) {
+              minrat = rat;
+              minrat_q = val;
+              *s = j;
+              set_emptyset(data->tieset);
+              set_addelem(data->tieset, j);
             } else {
-              // ring case
-              rat = -data->rcost[j - 1];
-              if (*s == 0 || dd_SmallerFrac(rat, val, minrat, minrat_q)) {
-                minrat = rat;
-                minrat_q = val;
-                *s = j;
-                set_emptyset(data->tieset);
+              if (dd_EqualFrac(rat, val, minrat, minrat_q)) {
                 set_addelem(data->tieset, j);
-              } else {
-                if (dd_EqualFrac(rat, val, minrat, minrat_q)) {
-                  set_addelem(data->tieset, j);
-                }
               }
             }
           }
@@ -3406,14 +3397,17 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
                       dd_TableauEntry(val, d_size, A, Ts, *r, j);
                       dd_TableauEntry(valn, d_size, A, Ts, iref, j);
                       if (j != rhscol && val > 0) {
-                        rat = valn / val;
-                        if (*s == 0 || rat < minrat) {
-                          minrat = rat;
+                        // Division-free comparison of valn / val with
+                        // minrat / minrat_q, as in the main ratio test.
+                        if (*s == 0 ||
+                            dd_SmallerFrac(valn, val, minrat, minrat_q)) {
+                          minrat = valn;
+                          minrat_q = val;
                           *s = j;
                           set_emptyset(data->stieset);
                           set_addelem(data->stieset, j);
                         } else {
-                          if (rat == minrat) {
+                          if (dd_EqualFrac(valn, val, minrat, minrat_q)) {
                             set_addelem(data->stieset, j);
                           }
                         }
@@ -3545,12 +3539,15 @@ void dd_GaussianColumnPivot(dd_colrange d_size, T **X, T **Ts, dd_rowrange r,
   bool is_field = true;
   if (is_field) {
     Xtemp0 = Rtemp[s - 1];
+    // Invert the pivot once: all 2 d_size - 1 divisions below are by Xtemp0,
+    // and for types like RealField a division costs a full linear solve.
+    T Xinv = 1 / Xtemp0;
     for (j = 1; j <= d_size; j++) {
       #ifdef TRACKING_OPERATION_CDD
         std::cerr << "TRACKING_OPERATION_CDD: Entry 146\n";
       #endif
       if (j != s) {
-        Xtemp = Rtemp[j - 1] / Xtemp0;
+        Xtemp = Rtemp[j - 1] * Xinv;
         for (j1 = 1; j1 <= d_size; j1++) {
           #ifdef TRACKING_OPERATION_CDD
             std::cerr << "TRACKING_OPERATION_CDD: Entry 147\n";
@@ -3563,7 +3560,7 @@ void dd_GaussianColumnPivot(dd_colrange d_size, T **X, T **Ts, dd_rowrange r,
       #ifdef TRACKING_OPERATION_CDD
         std::cerr << "TRACKING_OPERATION_CDD: Entry 148\n";
       #endif
-      Ts[j - 1][s - 1] /= Xtemp0;
+      Ts[j - 1][s - 1] *= Xinv;
     }
   } else {
     // ring case now
@@ -4096,22 +4093,13 @@ void dd_FindDualFeasibleBasis(dd_rowrange m_size, dd_colrange d_size, T **A,
         // So now axvalue < 0
         axvalue = -axvalue;
         // So now axvalue > 0
-        bool is_field = true;
-        if (is_field) {
-          axvalue =
-              data->rcost[j - 1] / axvalue; /* axvalue is the negative of ratio
-                                               that is to be maximized. */
-          if (axvalue > maxratio) {
-            maxratio = axvalue;
-            ms = j;
-          }
-        } else {
-          if (dd_LargerFrac(data->rcost[j - 1], axvalue, maxratio,
-                            maxratio_q)) {
-            maxratio = data->rcost[j - 1];
-            maxratio_q = axvalue;
-            ms = j;
-          }
+        // Division-free maximization of rcost[j-1] / axvalue, tracked as the
+        // fraction maxratio / maxratio_q.
+        if (dd_LargerFrac(data->rcost[j - 1], axvalue, maxratio,
+                          maxratio_q)) {
+          maxratio = data->rcost[j - 1];
+          maxratio_q = axvalue;
+          ms = j;
         }
       }
     }
@@ -6868,9 +6856,8 @@ bool dd_ExistsRestrictedFace(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S,
 template <typename T>
 dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
   dd_rowrange imin = -1, i, m;
-  dd_colrange j, d;
-  T *vecmin, *vec;
-  T min, t1, t2, alpha, t1min;
+  dd_colrange d;
+  T min, t1, t2, t1min;
   bool started = false;
   T dd_one;
   dd_one = 1;
@@ -6887,9 +6874,6 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
     r[0] = 0;
   }
 
-  dd_AllocateArow(d, &vecmin);
-  dd_AllocateArow(d, &vec);
-
   for (i = 1; i <= m; i++) {
     #ifdef TRACKING_OPERATION_CDD
       std::cerr << "TRACKING_OPERATION_CDD: Entry 264\n";
@@ -6900,79 +6884,37 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
 #endif
     if (t1 > 0) {
       dd_InnerProduct(t2, d, M->matrix[i - 1], r);
-      bool is_field = true;
-      if (is_field) {
-        alpha = t2 / t1;
-        if (!started) {
-          imin = i;
-          min = alpha;
-          t1min = t1; /* store the denominator. */
-          started = true;
+      // Division-free minimization of t2 / t1: track the minimum as the
+      // fraction min / t1min and compare by cross-multiplication.
+      if (!started) {
+        imin = i;
+        min = t2;
+        t1min = t1; /* store the denominator. */
+        started = true;
 #ifdef LOCALDEBUG_CDD
-          std::cerr << "dd_RayShooting: Level 1: imin = " << imin
-                    << " and min = " << min << "\n";
+        std::cerr << "dd_RayShooting: Level 1: imin = " << imin
+                  << " and min = " << min << "\n";
 #endif
-        } else {
-          if (alpha < min) {
-            imin = i;
-            min = alpha;
-            t1min = t1; /* store the denominator. */
-#ifdef LOCALDEBUG_CDD
-            std::cerr << "dd_RayShootni: Level 2: imin = " << imin
-                      << " and min = " << min << "\n";
-#endif
-          } else {
-            if (alpha == min) { /* tie break */
-              for (j = 1; j <= d; j++) {
-                #ifdef TRACKING_OPERATION_CDD
-                  std::cerr << "TRACKING_OPERATION_CDD: Entry 265\n";
-                #endif
-                vecmin[j - 1] = M->matrix[imin - 1][j - 1] / t1min;
-                vec[j - 1] = M->matrix[i - 1][j - 1] / t1;
-              }
-              if (dd_LexSmaller(vec, vecmin, d)) {
-                imin = i;
-                min = alpha;
-                t1min = t1; /* store the denominator. */
-#ifdef LOCALDEBUG_CDD
-                std::cerr << "dd_RayShooting: Level 3: imin = " << imin
-                          << " and min = " << min << "\n";
-#endif
-              }
-            }
-          }
-        }
       } else {
-        if (!started) {
+        if (dd_SmallerFrac(t2, t1, min, t1min)) {
           imin = i;
           min = t2;
           t1min = t1; /* store the denominator. */
-          started = true;
 #ifdef LOCALDEBUG_CDD
-          std::cerr << "dd_RayShooting: Level 1: imin = " << imin
+          std::cerr << "dd_RayShootni: Level 2: imin = " << imin
                     << " and min = " << min << "\n";
 #endif
         } else {
-          if (dd_SmallerFrac(t2, t1, min, t1min)) {
-            imin = i;
-            min = t2;
-            t1min = t1; /* store the denominator. */
+          if (dd_EqualFrac(t2, t1, min, t1min)) { /* tie break */
+            if (dd_LexSmallerFrac(M->matrix[i - 1], t1, M->matrix[imin - 1],
+                                  t1min, d)) {
+              imin = i;
+              min = t2;
+              t1min = t1; /* store the denominator. */
 #ifdef LOCALDEBUG_CDD
-            std::cerr << "dd_RayShootni: Level 2: imin = " << imin
-                      << " and min = " << min << "\n";
+              std::cerr << "dd_RayShooting: Level 3: imin = " << imin
+                        << " and min = " << min << "\n";
 #endif
-          } else {
-            if (dd_EqualFrac(t2, t1, min, t1min)) { /* tie break */
-              if (dd_LexSmallerFrac(M->matrix[i - 1], t1, M->matrix[imin - 1],
-                                    t1min, d)) {
-                imin = i;
-                min = t2;
-                t1min = t1; /* store the denominator. */
-#ifdef LOCALDEBUG_CDD
-                std::cerr << "dd_RayShooting: Level 3: imin = " << imin
-                          << " and min = " << min << "\n";
-#endif
-              }
             }
           }
         }
@@ -6980,8 +6922,6 @@ dd_rowrange dd_RayShooting(dd_matrixdata<T> *M, T *p, T *r) {
     }
   }
 
-  dd_FreeArow(vecmin);
-  dd_FreeArow(vec);
   return imin;
 }
 
