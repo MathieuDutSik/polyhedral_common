@@ -443,12 +443,9 @@ set(
   POLY_CheckCanonicalGAP
   POLY_SerialDualDesc
   POLY_RunTheBank
-  POLY_DatabaseRestructuration
-  POLY_FindNeededBalinski
   POLY_EvaluateDualDesc
   POLY_ReadPartialEnum
   POLY_UpgradeDatabase
-  POLY_EvaluateBalinski
   POLY_sampling_facets
   POLY_DirectSerialDualDesc
   POLY_FaceLatticeGen
@@ -652,6 +649,17 @@ if(WITH_MPI)
     polyhedral_dualdesc_support)
   add_polyhedral_binary(Read_MPI_sizes
     "${CMAKE_SOURCE_DIR}/src_dualdesc/Read_MPI_sizes.cpp"
+    polyhedral_dualdesc_support)
+  # These include POLY_RecursiveDualDesc_MPI.h (-> boost/mpi.hpp) even though
+  # they are not named *_MPI_*, so they too require Boost.MPI.
+  add_polyhedral_binary(POLY_DatabaseRestructuration
+    "${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_DatabaseRestructuration.cpp"
+    polyhedral_dualdesc_support)
+  add_polyhedral_binary(POLY_FindNeededBalinski
+    "${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_FindNeededBalinski.cpp"
+    polyhedral_dualdesc_support)
+  add_polyhedral_binary(POLY_EvaluateBalinski
+    "${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_EvaluateBalinski.cpp"
     polyhedral_dualdesc_support)
   add_polyhedral_binary(PERF_MPI_EnumeratePerfectCones
     "${CMAKE_SOURCE_DIR}/src_perfect/PERF_MPI_EnumeratePerfectCones.cpp"
