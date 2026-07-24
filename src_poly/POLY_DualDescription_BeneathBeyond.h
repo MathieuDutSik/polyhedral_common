@@ -935,7 +935,10 @@ void BeneathBeyond_TriangulationDet_core(MyMatrix<Twork> const &EXTwork,
 template <typename T, typename Ftrig_det>
 void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
     MyMatrix<T> const &EXT, std::ostream &os, Ftrig_det f_trig_det) {
-  if constexpr (is_ring_field<T>::value) {
+  // The ring path applies to exact fields only; floating fields (double/float)
+  // have no exact underlying ring and no denominators to clear, so they run
+  // directly.
+  if constexpr (is_ring_field<T>::value && !std::is_floating_point_v<T>) {
     using Tring = typename underlying_ring<T>::ring_type;
     int nbRow = EXT.rows();
     int nbCol = EXT.cols();

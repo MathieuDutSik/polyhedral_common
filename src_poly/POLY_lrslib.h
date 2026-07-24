@@ -1462,27 +1462,26 @@ void Kernel_Simplices_Facets_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig,
   freeLRS(P, Q);
 }
 
-// Core triangulation enumerator: for each simplex of the lrs triangulation of
-// EXT it calls f_trig_det(trig, det), where
-//  * trig is the list of vertex indices (0-based rows of EXT) in the order the
-//    lrs kernel emits them (cobasis order) -- no Face packing, no reordering;
-//  * det is the SIGNED determinant of SelectRow(EXT, trig).
-//
-// The magnitude |det| is P->det (produced by lrs for free). The sign is
-//   sign(det) = sign_calibration * P->det_sign * col_parity
-// where P->det_sign is lrs's cumulative sign of the physical basis determinant
-// (kept correct across dictionary copies, see copy_dict); col_parity is the
-// parity of the physical column order Col[0..d-1] of the cobasis (the
-// permutation taking the emitted cobasis order to lrs's physical column order);
-// and sign_calibration is a per-enumeration +-1 constant absorbing lrs's
-// initial-basis sign and the fixed decision-variable row order. It is fixed
-// once, at the first simplex, by a single DeterminantMat; every subsequent
-// signed determinant is then obtained with no elimination at all.
-template <typename T, typename Ftrig_det>
-void GetTriangulationDet_f(MyMatrix<T> const &EXT, Ftrig_det f_trig_det) {
-  [[maybe_unused]] int nbRow = EXT.rows();
-  int sign_calibration = 0;
-  auto f_trig = [&](lrs_dic<T> *P, lrs_dat<T> *Q) -> bool {
+// Working-type core for GetTriangulationDet_f. Runs the lrs triangulation
+// kernel on EXTwork and, for each simplex, calls
+//   f(esimp, mag, comb_sign)
+// where
+//  * esimp is the list of vertex indices (0-based rows of EXTwork) in the order
+//    the lrs kernel emits them (cobasis order) -- no Face packing, no reordering;
+//  * mag = P->det, the NONNEGATIVE magnitude of the working basis determinant
+//    (produced by lrs for free); and
+//  * comb_sign = P->det_sign * col_parity is lrs' combinatorial orientation of
+//    the basis, where P->det_sign is lrs's cumulative sign of the physical basis
+//    determinant (kept correct across dictionary copies, see copy_dict) and
+//    col_parity is the parity of the physical column order Col[0..d-1] of the
+//    cobasis (the permutation taking the emitted cobasis order to lrs's physical
+//    column order).
+// The caller turns (mag, comb_sign) into the signed determinant in its target
+// type; see GetTriangulationDet_f.
+template <typename Twork, typename F>
+void GetTriangulationDet_core(MyMatrix<Twork> const &EXTwork, F f) {
+  [[maybe_unused]] int nbRow = EXTwork.rows();
+  auto f_trig = [&](lrs_dic<Twork> *P, lrs_dat<Twork> *Q) -> bool {
     std::vector<int> esimp;
     esimp.reserve(P->d);
     for (int i = 0; i < P->d; i++) {
@@ -1503,31 +1502,108 @@ void GetTriangulationDet_f(MyMatrix<T> const &EXT, Ftrig_det f_trig_det) {
         if (P->Col[i] > P->Col[j])
           col_parity = -col_parity;
     int comb_sign = P->det_sign * col_parity;
-    T det;
-    if (sign_calibration == 0) {
-      // First simplex: compute the true signed determinant once and use it to
-      // fix the global sign convention for all remaining simplices.
-      MyMatrix<T> EXTtrig = SelectRow(EXT, esimp);
-      det = DeterminantMat(EXTtrig);
-#ifdef SANITY_CHECK_LRSLIB
-      if (T_abs(det) != P->det) {
-        std::cerr << "LRS: det(EXTtrig)=" << det << " P->det=" << P->det
-                  << " but their absolute value should be equal\n";
-        throw TerminalException{1};
-      }
-#endif
-      int true_sign = (det > 0) ? 1 : -1;
-      sign_calibration = true_sign * comb_sign;
-    } else {
-      det = P->det;
-      if (sign_calibration * comb_sign < 0)
-        det = -det;
-    }
-    f_trig_det(esimp, det);
+    f(esimp, P->det, comb_sign);
     return true;
   };
-  MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
+  MyMatrix<Twork> EXText = AddFirstZeroColumn(EXTwork);
   Kernel_Simplices_cond(EXText, f_trig);
+}
+
+// Core triangulation enumerator: for each simplex of the lrs triangulation of
+// EXT it calls f_trig_det(trig, det), where
+//  * trig is the list of vertex indices (0-based rows of EXT) in the order the
+//    lrs kernel emits them (cobasis order) -- no Face packing, no reordering;
+//  * det is the SIGNED determinant of SelectRow(EXT, trig).
+//
+// The magnitude |det| is P->det (produced by lrs for free); the sign is
+// sign_calibration * comb_sign, a per-enumeration +-1 constant absorbing lrs's
+// initial-basis sign and the fixed decision-variable row order, fixed once at
+// the first simplex by a single DeterminantMat and applied with no elimination
+// thereafter.
+//
+// Ring/field split (same idiom as DualDescription): the lrs pivoting is
+// fraction-free, so when T is a field each ray is scaled to an integer vector
+// and the whole enumeration runs on the underlying ring (fraction-free integer
+// pivoting, typically ~3x faster). The determinant then needs care: row i of
+// the ring matrix is scale[i] * (row i of EXT), and AddFirstZeroColumn only
+// prepends a 0 (= scale[i]*0), so P->det on the ring is (prod_i scale[i]) times
+// the true magnitude. We keep the per-row scales (the cleared denominators) and
+// divide them back out. The scales are positive, so lrs' orientation machinery
+// and the sign calibration are untouched -- only the magnitude is corrected, and
+// the sign is anchored by one true signed determinant on the original rows.
+template <typename T, typename Ftrig_det>
+void GetTriangulationDet_f(MyMatrix<T> const &EXT, Ftrig_det f_trig_det) {
+  // The ring path applies to exact fields only; floating fields (double/float)
+  // have no exact underlying ring and no denominators to clear, so they run
+  // directly.
+  if constexpr (is_ring_field<T>::value && !std::is_floating_point_v<T>) {
+    using Tring = typename underlying_ring<T>::ring_type;
+    int nbRow = EXT.rows();
+    int nbCol = EXT.cols();
+    MyMatrix<Tring> EXTring(nbRow, nbCol);
+    std::vector<T> scale(nbRow); // per-row cleared denominator, positive
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      FractionVector<T> fr =
+          NonUniqueScaleToIntegerVectorPlusCoeff(GetMatrixRow(EXT, iRow));
+      scale[iRow] = fr.TheMult; // EXTring row = fr.TheMult * (EXT row)
+      AssignMatrixRow(EXTring, iRow,
+                      UniversalVectorConversion<Tring, T>(fr.TheVect));
+    }
+    int sign_calibration = 0;
+    auto f = [&](std::vector<int> const &esimp, Tring const &mag_ring,
+                 int comb_sign) -> void {
+      T denom(1);
+      for (int idx : esimp)
+        denom *= scale[idx];
+      T det;
+      if (sign_calibration == 0) {
+        // Anchor the sign convention with one true signed determinant on the
+        // original (unscaled) rows.
+        det = DeterminantMat(SelectRow(EXT, esimp));
+#ifdef SANITY_CHECK_LRSLIB
+        if (T_abs(det) * denom != UniversalScalarConversion<T, Tring>(mag_ring)) {
+          std::cerr << "LRS: |det|*denom=" << T_abs(det) * denom
+                    << " P->det(ring)=" << mag_ring
+                    << " but they should be equal\n";
+          throw TerminalException{1};
+        }
+#endif
+        int true_sign = (det > 0) ? 1 : -1;
+        sign_calibration = true_sign * comb_sign;
+      } else {
+        T mag = UniversalScalarConversion<T, Tring>(mag_ring) / denom;
+        det = (sign_calibration * comb_sign < 0) ? -mag : mag;
+      }
+      f_trig_det(esimp, det);
+    };
+    GetTriangulationDet_core<Tring>(EXTring, f);
+  } else {
+    int sign_calibration = 0;
+    auto f = [&](std::vector<int> const &esimp, T const &mag,
+                 int comb_sign) -> void {
+      T det;
+      if (sign_calibration == 0) {
+        // First simplex: compute the true signed determinant once and use it to
+        // fix the global sign convention for all remaining simplices.
+        det = DeterminantMat(SelectRow(EXT, esimp));
+#ifdef SANITY_CHECK_LRSLIB
+        if (T_abs(det) != mag) {
+          std::cerr << "LRS: det(EXTtrig)=" << det << " P->det=" << mag
+                    << " but their absolute value should be equal\n";
+          throw TerminalException{1};
+        }
+#endif
+        int true_sign = (det > 0) ? 1 : -1;
+        sign_calibration = true_sign * comb_sign;
+      } else {
+        det = mag;
+        if (sign_calibration * comb_sign < 0)
+          det = -det;
+      }
+      f_trig_det(esimp, det);
+    };
+    GetTriangulationDet_core<T>(EXT, f);
+  }
 }
 
 // Triangulation with, for each simplex, the SIGNED determinant of its vertex
