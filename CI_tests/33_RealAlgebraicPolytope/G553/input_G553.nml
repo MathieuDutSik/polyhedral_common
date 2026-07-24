@@ -1,0 +1,30 @@
+&DATA
+ NumericalType = "RealAlgebraic=FileDesc5"
+ EXTfile = "G553.ext"
+ GRPfile = "G553.grp"
+ OutFile = "orbits_G553"
+ OutFormat = "GAP"
+ DeterministicRuntime = F
+ max_runtime = 1800
+ AdvancedTerminationCriterion = F
+/
+
+&HEURISTIC
+ SplittingHeuristicFile          = "Split.heu"
+ AdditionalSymmetryHeuristicFile = "AddiSym.heu"
+ DualDescriptionThompsonFile     = "DualDesc.ts"
+ MethodInitialFacetSetFile       = "InitFacet.heu"
+ BankSaveHeuristicFile           = "Bank_mpi_nobank.heu"
+ ChosenDatabaseFile              = "Bank_canonic.heu"
+ CheckDatabaseBankFile           = "Bank_mpi_nobank.heu"
+/
+
+&METHOD
+ Saving = F
+ Prefix = "./Saving_Polyhedral/"
+/
+
+&BANK
+ Saving = F
+ Prefix = "./Saving_Bank/"
+/
