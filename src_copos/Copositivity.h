@@ -731,13 +731,14 @@ CopositivityTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const &eSymmMat,
     FAC(nbCol, iNSP + 1) = eSum;
   }
   LpSolution<T> eSol = CDD_LinearProgramming(FAC, ToBeMinimized, os);
-  if (!eSol.PrimalDefined)
+  if (!eSol.DirectSolution)
     return {true, "on the surface ok", eVectZero};
+  MyVector<T> const &DirectSolution = *eSol.DirectSolution;
   MyVector<T> eVect1(nbCol);
   for (int iCol = 0; iCol < nbCol; iCol++) {
     T eSum(0);
     for (int iNSP = 0; iNSP < nbNSP; iNSP++) {
-      eSum += eSol.DirectSolution(iNSP) * NSP(iNSP, iCol);
+      eSum += DirectSolution(iNSP) * NSP(iNSP, iCol);
     }
     eVect1(iCol) = eSum;
   }

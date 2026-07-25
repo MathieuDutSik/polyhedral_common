@@ -49,17 +49,17 @@ CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
   LpSolution<T> eSol;
   bool PrimalDefined;
   is >> PrimalDefined;
-  eSol.PrimalDefined = PrimalDefined;
   bool DualDefined;
   is >> DualDefined;
-  eSol.DualDefined = DualDefined;
   MyVector<T> DualSolution = ReadVector<T>(is);
-  eSol.DualSolution = DualSolution;
+  if (DualDefined)
+    eSol.DualSolution = DualSolution;
   T OptimalValue;
   is >> OptimalValue;
   eSol.OptimalValue = OptimalValue;
   MyVector<T> DirectSolution = ReadVector<T>(is);
-  eSol.DirectSolution = DirectSolution;
+  if (PrimalDefined)
+    eSol.DirectSolution = DirectSolution;
   CleanFile();
   return eSol;
 }
@@ -70,8 +70,8 @@ LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
                                               std::ostream &os) {
   LpSolution<T> eSol1 = CDD_LinearProgramming(TheEXT, eVect, os);
   LpSolution<T> eSol2 = CDD_LinearProgramming_External(TheEXT, eVect, os);
-  if (eSol1.PrimalDefined != eSol2.PrimalDefined ||
-      eSol1.DualDefined != eSol2.DualDefined) {
+  if (eSol1.DirectSolution.has_value() != eSol2.DirectSolution.has_value() ||
+      eSol1.DualSolution.has_value() != eSol2.DualSolution.has_value()) {
     WriteInputFileCdd("bugSearch.ine", TheEXT, eVect);
     std::cerr << "We find the bug we were after\n";
     throw TerminalException{1};

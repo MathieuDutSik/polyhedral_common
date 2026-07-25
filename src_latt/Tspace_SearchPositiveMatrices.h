@@ -63,14 +63,15 @@ public:
     // Solving the linear program
     //
     LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
-    if (!eSol.PrimalDefined || !eSol.DualDefined) {
+    if (!eSol.DirectSolution || !eSol.DualSolution) {
       std::optional<MyMatrix<T>> reply = {};
       pos_def = reply;
       return;
     }
+    MyVector<T> const &DirectSolution = *eSol.DirectSolution;
     MyMatrix<T> TrySuperMat = ZeroMatrix<T>(n, n);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      TrySuperMat += eSol.DirectSolution(i_mat) * ListMat[i_mat];
+      TrySuperMat += DirectSolution(i_mat) * ListMat[i_mat];
     }
     if (IsPositiveDefinite(TrySuperMat, os)) {
       std::optional<MyMatrix<T>> reply = TrySuperMat;
@@ -201,12 +202,13 @@ GetOnePositiveSemiDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
     // Solving the linear program
     //
     LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
-    if (!eSol.PrimalDefined || !eSol.DualDefined) {
+    if (!eSol.DirectSolution || !eSol.DualSolution) {
       return {};
     }
+    MyVector<T> const &DirectSolution = *eSol.DirectSolution;
     MyMatrix<T> TrySuperMat = ZeroMatrix<T>(n, n);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      TrySuperMat += eSol.DirectSolution(i_mat) * ListMat[i_mat];
+      TrySuperMat += DirectSolution(i_mat) * ListMat[i_mat];
     }
     if (IsPositiveSemiDefinite(TrySuperMat, os)) {
       return TrySuperMat;

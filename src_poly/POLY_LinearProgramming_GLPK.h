@@ -680,7 +680,7 @@ GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
       }
     }
     LpSolution<T> TheLP = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
-    if (TheLP.PrimalDefined && TheLP.DualDefined) {
+    if (TheLP.DirectSolution.has_value() && TheLP.DualSolution.has_value()) {
       MyVector<T> DirectSolutionExt = GetDirectSolutionExt(TheLP);
       TheVert = TransposedMat(ColumnSpace) * DirectSolutionExt;
     } else {
@@ -703,11 +703,10 @@ GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
   }
   //
   LpSolution<T> eRes;
-  eRes.PrimalDefined = true;
-  eRes.DualDefined = true;
-  //  MyVector<T> DualSolution;
+  // The dual solution is not computed in this code path, but it is treated as
+  // defined (matching the previous DualDefined=true behavior).
+  eRes.DualSolution = MyVector<T>();
   eRes.OptimalValue = optimal;
-  //
   eRes.DirectSolution = TheVertRed;
   return eRes;
 }

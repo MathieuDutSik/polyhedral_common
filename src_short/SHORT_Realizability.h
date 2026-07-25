@@ -278,17 +278,18 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
     MyMatrix<T> SetIneq = SortUnicizeMatrix(ListIneq);
     LpSolution<T> eSol = CDD_LinearProgramming(SetIneq, ToBeMinimized, os);
 #ifdef DEBUG_SHORTEST_CONFIG
-    os << "SHORT: DualDefined=" << eSol.DualDefined << " PrimalDefined=" << eSol.PrimalDefined << "\n";
+    os << "SHORT: DualDefined=" << eSol.DualSolution.has_value() << " PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";
 #endif
-    if (!eSol.PrimalDefined && eSol.DualDefined) {
+    if (!eSol.DirectSolution && eSol.DualSolution) {
 #ifdef DEBUG_SHORTEST_CONFIG
       os << "SHORT: DualDefined but not primal defined\n";
 #endif
+      MyVector<T> const &DualSolution = *eSol.DualSolution;
       int nbIneqSet = SetIneq.rows();
       MyVector<T> SumIneq = ZeroVector<T>(dimSpa + 1);
       for (int i = 0; i < nbIneqSet; i++) {
         MyVector<T> eRow = GetMatrixRow(SetIneq, i);
-        SumIneq += eSol.DualSolution(i) * eRow;
+        SumIneq += DualSolution(i) * eRow;
       }
       bool IsZeroVector = true;
       for (int i = 0; i < dimSpa; i++) {
@@ -304,7 +305,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
       }
       std::cerr << "SHORT: It seems we have a big problem here. Please correct\n";
       throw TerminalException{1};
-    } else if (eSol.PrimalDefined && !eSol.DualDefined) {
+    } else if (eSol.DirectSolution && !eSol.DualSolution) {
 #ifdef DEBUG_SHORTEST_CONFIG
       os << "SHORT: PrimalDefined but not dual defined\n";
 #endif
@@ -321,7 +322,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
       os << "SHORT: We have optimal value\n";
 #endif
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
-      if (!eSol.PrimalDefined || !eSol.DualDefined) {
+      if (!eSol.DirectSolution || !eSol.DualSolution) {
         std::cerr << "SHORT: We have a real problem to solve. Please debug\n";
         throw TerminalException{1};
       }
@@ -345,7 +346,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
 #endif
         return not_realizable_family<T,Tint>();
       }
-      MyVector<T> eVectEmb = eSol.DirectSolution;
+      MyVector<T> const &eVectEmb = *eSol.DirectSolution;
       MyVector<T> rVect = GetDirectSolutionExt(eSol);
       MyMatrix<T> eMatSec = GetMatrixFromBasis(TheBasis, eVectEmb);
 #ifdef DEBUG_SHORTEST_CONFIG

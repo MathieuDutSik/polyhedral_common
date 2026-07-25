@@ -424,16 +424,16 @@ bool computeIt_polytope(const FullGramInfo<T> &request,
     //
     Vminimize(1 + i) = 1;
     eSol = CDD_LinearProgramming(FACwork, Vminimize, os);
-    if (eSol.DualDefined && eSol.PrimalDefined) {
+    if (eSol.DualSolution && eSol.DirectSolution) {
       // Well defined so we get a potential lower bound
       Tint eLow = UniversalCeilScalarInteger<Tint, T>(eSol.OptimalValue);
       if (eLow > lower)
         lower = eLow;
     }
-    if (!eSol.DualDefined && eSol.PrimalDefined) {
+    if (!eSol.DualSolution && eSol.DirectSolution) {
       // Infinite direction. Therefore no better bound available
     }
-    if (!eSol.PrimalDefined) {
+    if (!eSol.DirectSolution) {
       // No feasible solution. Therefore not feasible.
       // This will lead to a backtrack operation
       upper = lower - 1;
@@ -442,17 +442,17 @@ bool computeIt_polytope(const FullGramInfo<T> &request,
     //
     Vminimize(1 + i) = -1;
     eSol = CDD_LinearProgramming(FACwork, Vminimize, os);
-    if (eSol.DualDefined && eSol.PrimalDefined) {
+    if (eSol.DualSolution && eSol.DirectSolution) {
       // Well defined so we get a potential upper bound
       Tint eUpp = UniversalFloorScalarInteger<Tint, T>(-eSol.OptimalValue);
       if (eUpp < upper)
         upper = eUpp;
     }
-    if (!eSol.DualDefined &&
-        eSol.PrimalDefined) { // Infinite direction. Therefore no bound
-                              // available
+    if (!eSol.DualSolution &&
+        eSol.DirectSolution) { // Infinite direction. Therefore no bound
+                               // available
     }
-    if (!eSol.PrimalDefined) { // No feasible solution. Therefore not feasible.
+    if (!eSol.DirectSolution) { // No feasible solution. Therefore not feasible.
       upper = lower - 1;       // This will lead to a backtrack operation
       return;
     }

@@ -28,13 +28,13 @@ void process(std::string const &eFileFAC, std::string const &eFileIneq,
   if (OutFormat == "GAP") {
     os << "return rec(";
     os << "OptimalValue:=" << eSol.OptimalValue;
-    if (eSol.PrimalDefined) {
-      os << ",\n primal_solution:=" << StringVectorGAP(eSol.DirectSolution);
+    if (eSol.DirectSolution) {
+      os << ",\n primal_solution:=" << StringVectorGAP(*eSol.DirectSolution);
     }
-    if (eSol.DualDefined) {
-      os << ",\n dual_solution:=" << StringVectorGAP(eSol.DualSolution);
+    if (eSol.DualSolution) {
+      os << ",\n dual_solution:=" << StringVectorGAP(*eSol.DualSolution);
     }
-    if (eSol.PrimalDefined && eSol.DualDefined) {
+    if (eSol.DirectSolution && eSol.DualSolution) {
       os << ", face:=";
       Face eFace = ComputeFaceLpSolution(TheEXT, eSol);
       WriteFaceGAP(os, eFace);
@@ -44,13 +44,13 @@ void process(std::string const &eFileFAC, std::string const &eFileIneq,
   }
   if (OutFormat == "Oscar") {
     os << eSol.OptimalValue << "\n";
-    if (eSol.PrimalDefined) {
-      WriteVector(os, eSol.DirectSolution);
+    if (eSol.DirectSolution) {
+      WriteVector(os, *eSol.DirectSolution);
     } else {
       os << "0\n";
     }
-    if (eSol.DualDefined) {
-      WriteVector(os, eSol.DualSolution);
+    if (eSol.DualSolution) {
+      WriteVector(os, *eSol.DualSolution);
     } else {
       os << "0\n";
     }

@@ -5,6 +5,7 @@
 // clang-format off
 #include "Boost_bitset.h"
 #include "MAT_Matrix.h"
+#include <optional>
 #include <string>
 // clang-format on
 
@@ -35,21 +36,23 @@ template <typename T> struct LpSolutionSimple {
   MyVector<int> ColumnStatus;
 };
 
+// The primal solution is available iff DirectSolution has a value.
+// The dual solution is available iff DualSolution has a value.
 template <typename T> struct LpSolution {
-  bool PrimalDefined = false;
-  bool DualDefined = false;
   T OptimalValue;
-  MyVector<T> DualSolution;
-  MyVector<T> DirectSolution;
+  std::optional<MyVector<T>> DualSolution;
+  std::optional<MyVector<T>> DirectSolution;
 };
 
 template <typename T>
 void PrintLpSolution(LpSolution<T> const &eSol, std::ostream &os) {
-  os << "PrimalDefined=" << eSol.PrimalDefined << "\n";
-  os << "DualDefined=" << eSol.DualDefined << "\n";
-  os << "DualSolution=" << StringVector(eSol.DualSolution) << "\n";
+  os << "PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";
+  os << "DualDefined=" << eSol.DualSolution.has_value() << "\n";
+  if (eSol.DualSolution)
+    os << "DualSolution=" << StringVector(*eSol.DualSolution) << "\n";
   os << "OptimalValue=" << eSol.OptimalValue << "\n";
-  os << "DirectSolution=" << StringVector(eSol.DirectSolution) << "\n";
+  if (eSol.DirectSolution)
+    os << "DirectSolution=" << StringVector(*eSol.DirectSolution) << "\n";
 }
 
 template <typename T>
@@ -58,12 +61,13 @@ Face ComputeFaceLpSolution(MyMatrix<T> const &EXT, LpSolution<T> const &eSol) {
   int nbCol = EXT.cols();
   Face eFace(nbRow);
 #ifdef SANITY_CHECK_LINEAR_PROGRAMMING_FUND
-  if (!eSol.DualDefined || !eSol.PrimalDefined) {
+  if (!eSol.DualSolution || !eSol.DirectSolution) {
     std::cerr << "We should have DualDefined and PrimalDefined for the "
                  "computation to make sense\n";
     throw TerminalException{1};
   }
 #endif
+  MyVector<T> const &DirectSolution = *eSol.DirectSolution;
   // The comparison with values makes sense only of the dual program is
   // defined. Otherwise, what we may get is actually a primal_direction and
   // it would just not make sense with negative values for eSum.
@@ -73,15 +77,15 @@ Face ComputeFaceLpSolution(MyMatrix<T> const &EXT, LpSolution<T> const &eSol) {
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T eSum = EXT(iRow, 0);
     for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-      eSum += eSol.DirectSolution(iCol) * EXT(iRow, iCol + 1);
+      eSum += DirectSolution(iCol) * EXT(iRow, iCol + 1);
     }
 #ifdef SANITY_CHECK_LINEAR_PROGRAMMING_FUND
     if (eSum < 0) {
       std::cerr << "CDD_LinearProgramming Error iRow=" << iRow
                 << " eSum=" << eSum << "\n";
-      std::cerr << "DualDefined=" << eSol.DualDefined
-                << " PrimalDefined=" << eSol.PrimalDefined << "\n";
-      std::cerr << "DirectSolution =" << StringVector(eSol.DirectSolution)
+      std::cerr << "DualDefined=" << eSol.DualSolution.has_value()
+                << " PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";
+      std::cerr << "DirectSolution =" << StringVector(DirectSolution)
                 << "\n";
       std::cerr << "EXT=\n";
       WriteMatrix(std::cerr, EXT);
@@ -109,13 +113,14 @@ bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
                                  [[maybe_unused]] std::ostream &os) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
+  MyVector<T> const &DualSolution = *eSol.DualSolution;
   MyVector<T> V(nbCol - 1);
   T objDual = eVect(0);
   for (int iCol = 0; iCol < nbCol - 1; iCol++) {
     V(iCol) = eVect(iCol + 1);
   }
   for (int iRow = 0; iRow < nbRow; iRow++) {
-    T scal = eSol.DualSolution(iRow);
+    T scal = DualSolution(iRow);
     for (int iCol = 0; iCol < nbCol - 1; iCol++) {
       V(iCol) += scal * EXT(iRow, iCol + 1);
     }
@@ -146,11 +151,12 @@ bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
 
 template <typename T>
 MyVector<T> GetDirectSolutionExt(LpSolution<T> const &eSol) {
-  int siz = eSol.DirectSolution.size();
+  MyVector<T> const &DirectSolution = *eSol.DirectSolution;
+  int siz = DirectSolution.size();
   MyVector<T> V(siz + 1);
   V(0) = 1;
   for (int i = 0; i < siz; i++) {
-    V(i + 1) = eSol.DirectSolution(i);
+    V(i + 1) = DirectSolution(i);
   }
   return V;
 }

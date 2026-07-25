@@ -67,9 +67,9 @@ void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std:
   for (int i = 0; i < dim - pos; i++) {
     Vminimize(1 + i) = 1;
     eSol = CDD_LinearProgramming(FACin, Vminimize, os);
-    if (!eSol.DualDefined || !eSol.PrimalDefined) {
-      std::cerr << "eSol.DualDefined=" << eSol.DualDefined
-                << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
+    if (!eSol.DualSolution || !eSol.DirectSolution) {
+      std::cerr << "eSol.DualDefined=" << eSol.DualSolution.has_value()
+                << " eSol.PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";
       std::cerr << "Failed computation of ListLow at i=" << i
                 << " which means that\n";
       std::cerr << "the polytope is unbounded and thus the integer point "
@@ -80,9 +80,9 @@ void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std:
     //
     Vminimize(1 + i) = -1;
     eSol = CDD_LinearProgramming(FACin, Vminimize, os);
-    if (!eSol.DualDefined || !eSol.PrimalDefined) {
-      std::cerr << "eSol.DualDefined=" << eSol.DualDefined
-                << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
+    if (!eSol.DualSolution || !eSol.DirectSolution) {
+      std::cerr << "eSol.DualDefined=" << eSol.DualSolution.has_value()
+                << " eSol.PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";
       std::cerr << "Failed computation of ListUpp at i=" << i
                 << " which means that\n";
       std::cerr << "the polytope is unbounded and thus the integer point "

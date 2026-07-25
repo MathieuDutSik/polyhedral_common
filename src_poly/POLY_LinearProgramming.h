@@ -155,7 +155,7 @@ MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
 #ifdef DEBUG_POLYTOPIZATION
   os << "LP: Polytopization, After CDD_LinearProgramming\n";
 #endif
-  if (!eSol.PrimalDefined) {
+  if (!eSol.DirectSolution) {
     std::cerr << "LP: The optimization resulted in a result whose primal\n";
     std::cerr << "LP: is not defined\n";
     std::cerr << "LP: This likely means that the set of inequalities\n";
@@ -165,7 +165,7 @@ MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
     std::cerr << "LP: together imply some equalities\n";
     throw TerminalException{1};
   }
-  MyVector<T> SolDir = eSol.DirectSolution;
+  MyVector<T> const &SolDir = *eSol.DirectSolution;
   ZeroAssignation(eBasis);
   for (int iCol = 0; iCol < nbCol; iCol++)
     eBasis(iCol, 0) = SolDir(iCol);
@@ -246,7 +246,7 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
       eVect(iCol) = eVal;
     }
     LpSolution<T> eSol = CDD_LinearProgramming(EXT, eVect, os);
-    MyVector<T> const &SolDir = eSol.DirectSolution;
+    MyVector<T> const &SolDir = *eSol.DirectSolution;
     T const &OptimalValue = eSol.OptimalValue;
 #ifdef DEBUG_FIND_SINGLE_VERTEX
     os << "LP: nbCol=" << nbCol << " |SolDir|=" << SolDir.size() << "\n";
@@ -496,16 +496,16 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect,
   eResult.has_relation = false;
   eResult.has_internal_vector = true;
   bool IsDone = false;
-  if (eSol.PrimalDefined && eSol.DualDefined) {
+  if (eSol.DirectSolution && eSol.DualSolution) {
     IsDone = true;
     eResult.eTestExist = false;
-    eResult.InternalVector = eSol.DirectSolution;
+    eResult.InternalVector = *eSol.DirectSolution;
   }
-  if (!eSol.PrimalDefined && eSol.DualDefined) {
+  if (!eSol.DirectSolution && eSol.DualSolution) {
     IsDone = true;
     eResult.eTestExist = true;
 #ifdef PRINT_LINEAR_PROGRAM_RESULT
-    MyVector<T> const &V = eSol.DualSolution;
+    MyVector<T> const &V = *eSol.DualSolution;
     // That seems actually less easy to obtain than we expected.
     // More work is needed here.
     T max_V = V(0);
@@ -606,8 +606,8 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
   PosRelRes<T> eResult;
   eResult.has_relation = true;
   eResult.has_internal_vector = false;
-  if (eSol.PrimalDefined && eSol.DualDefined) {
-    MyVector<T> DirSol = eSol.DirectSolution;
+  if (eSol.DirectSolution && eSol.DualSolution) {
+    MyVector<T> const &DirSol = *eSol.DirectSolution;
     eResult.eTestExist = true;
     MyVector<T> eVectRel(nbRelation);
     for (int iRel = 0; iRel < nbRelation; iRel++)
@@ -725,10 +725,10 @@ SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect, MyVector<T> const &eVect,
     eIneq(1 + iCol) = eVect(iCol);
   //
   LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, eIneq, os);
-  if (!eSol.DualDefined) {
+  if (!eSol.DualSolution) {
     return {};
   }
-  MyVector<T> TheRet = -eSol.DualSolution;
+  MyVector<T> TheRet = -*eSol.DualSolution;
   return TheRet;
 }
 
@@ -756,16 +756,16 @@ GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
   //
   LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, eIneq, os);
   auto GetSolNonnegative = [&]() -> std::optional<MyVector<T>> {
-    if (!eSol.DualDefined) {
+    if (!eSol.DualSolution) {
       return {};
     }
-    MyVector<T> TheRet = -eSol.DualSolution;
+    MyVector<T> TheRet = -*eSol.DualSolution;
     return TheRet;
   };
   std::optional<MyVector<T>> SolNonnegative = GetSolNonnegative();
   auto GetExtremeRay = [&]() -> std::optional<MyVector<T>> {
-    if (eSol.PrimalDefined) {
-      MyVector<T> V = eSol.DirectSolution;
+    if (eSol.DirectSolution) {
+      MyVector<T> const &V = *eSol.DirectSolution;
       MyVector<T> LScal = ListVect * V;
       for (int iVect = 0; iVect < nbVect; iVect++) {
         if (LScal(iVect) < 0) {
@@ -1316,7 +1316,7 @@ bool IsFullDimensional(MyMatrix<T> const &FAC, std::ostream &os) {
     SumIneq(iCol) = sum;
   }
   LpSolution<T> eSol = CDD_LinearProgramming(FACexp, SumIneq, os);
-  if (eSol.PrimalDefined && eSol.DualDefined) {
+  if (eSol.DirectSolution && eSol.DualSolution) {
     return true;
   }
   return false;
@@ -1341,12 +1341,12 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC,
   }
   LpSolution<T> eSol =
       CDD_LinearProgramming(ListInequalities, ToBeMinimized, os);
-  if (!eSol.PrimalDefined || !eSol.DualDefined) {
+  if (!eSol.DirectSolution || !eSol.DualSolution) {
     std::cerr << "LP: Failed to find an interior point by linear programming\n";
     std::cerr << "LP: Maybe the cone is actually not full dimensional\n";
     throw TerminalException{1};
   }
-  MyVector<T> eVect = eSol.DirectSolution;
+  MyVector<T> const &eVect = *eSol.DirectSolution;
 #ifdef DEBUG_LINEAR_PROGRAM
   MyVector<T> ListScal = FAC * eVect;
   for (int i_row = 0; i_row < n_rows; i_row++) {
@@ -1377,7 +1377,7 @@ bool TestCriterionNonDegenerate(
     LpSolution<T> const &eSol, [[maybe_unused]] std::ostream &os) {
   int n_row = ListIneq.rows();
   int n_col = ListIneq.cols();
-  MyVector<T> eSolDual = -eSol.DualSolution;
+  MyVector<T> eSolDual = -*eSol.DualSolution;
 #ifdef DEBUG_LINEAR_PROGRAM
   os << "LP: OptimalValue=" << eSol.OptimalValue << "\n";
   os << "LP: eSolDual=" << StringVectorGAP(eSolDual) << "\n";
@@ -1493,7 +1493,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, CDD_LinearProgramming, after\n";
 #endif
-  if (!eSol.PrimalDefined || !eSol.DualDefined) {
+  if (!eSol.DirectSolution || !eSol.DualSolution) {
     std::cerr << "LP: Failed to find an interior point by linear programming\n";
     std::cerr << "LP: Maybe the cone is actually not full dimensional\n";
     throw TerminalException{1};
@@ -1504,7 +1504,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
   os << "LP: GGUIP, is_non_degenerate=" << is_non_degenerate << "\n";
 #endif
   if (is_non_degenerate) {
-    MyVector<T> V = eSol.DirectSolution;
+    MyVector<T> const &V = *eSol.DirectSolution;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
     os << "LP: GGUIP, returns a solution\n";
     os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size()
@@ -1546,7 +1546,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
   }
 #endif
   if (pair.first.rows() == 1) {
-    MyVector<T> V = eSol.DirectSolution;
+    MyVector<T> const &V = *eSol.DirectSolution;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
     os << "LP: GGUIP, returns a solution\n";
     os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size()
@@ -1908,7 +1908,7 @@ bool has_empty_intersection(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     eMinimize(1 + i + dim) = 1;
   }
   LpSolution<T> eSol = CDD_LinearProgramming(FAC, eMinimize, os);
-  if (!eSol.PrimalDefined || !eSol.DualDefined) {
+  if (!eSol.DirectSolution || !eSol.DualSolution) {
     return false;
   }
   return true;
@@ -1954,12 +1954,13 @@ MyVector<T> FindViolatedFacetInequality(MyMatrix<T> const &EXT,
   for (int iCol = 0; iCol < nbCol; iCol++)
     ToMinimize(iCol + 1) = eVect(iCol);
   LpSolution<T> eSol = CDD_LinearProgramming(EXT_ext, ToMinimize, os);
+  MyVector<T> const &DirectSolution = *eSol.DirectSolution;
   Face incFace(nbRow);
   std::vector<int> incident;
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T scal(0);
     for (int iCol = 0; iCol < nbCol; iCol++)
-      scal += EXT(iRow, iCol) * eSol.DirectSolution(iCol);
+      scal += EXT(iRow, iCol) * DirectSolution(iCol);
     if (scal == 0) {
       incFace[iRow] = 1;
       incident.push_back(iRow);

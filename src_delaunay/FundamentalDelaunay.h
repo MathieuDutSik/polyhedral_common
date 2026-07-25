@@ -86,12 +86,12 @@ std::optional<MyMatrix<Tint>> FindDelaunayPolytope_direction(CVPSolver<T, Tint> 
     os << "|DEL: Computing LP eSol|=" << time << "\n";
 #endif
 #ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
-    if (!eSol.PrimalDefined) {
+    if (!eSol.DirectSolution) {
       std::cerr << "DEL: We should have a primal solution\n";
       throw TerminalException{1};
     }
 #endif
-    MyVector<T> eVect = eSol.DirectSolution;
+    MyVector<T> const &eVect = *eSol.DirectSolution;
     if (!IsVertexOfPolyhedron(ListIneq, eVect)) {
       return {};
     }

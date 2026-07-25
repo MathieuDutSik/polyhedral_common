@@ -9833,7 +9833,6 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(
       #endif
       DirectSolution(j - 1) = lp->sol[j];
     }
-    eSol.PrimalDefined = true;
     eSol.DirectSolution = DirectSolution;
   }
   MyVector<T> DualSolution = ZeroVector<T>(nbRow);
@@ -9847,7 +9846,6 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(
         DualSolution(idx - 1) = lp->dsol[j];
       }
     }
-    eSol.DualDefined = true;
     eSol.DualSolution = DualSolution;
   }
   if (PrimalDefined && DualDefined) {
@@ -10047,8 +10045,6 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   os << "CDD: An apparently valid solution has been found\n";
 #endif
   LpSolution<T> eSol;
-  eSol.PrimalDefined = true;
-  eSol.DualDefined = true;
   eSol.DualSolution = DualSolution;
   eSol.OptimalValue = objDirect;
   eSol.DirectSolution = DirectSolution;
@@ -10094,27 +10090,27 @@ LpSolution<T> CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT,
           std::cerr << "CDD: We should have the same optimal value\n";
           throw TerminalException{1};
         }
-        if (eSolA.DualSolution != eSolB.DualSolution) {
+        if (*eSolA.DualSolution != *eSolB.DualSolution) {
           std::cerr << "CDD: DualSolution(A)="
-                    << StringVector(eSolA.DualSolution) << "\n";
+                    << StringVector(*eSolA.DualSolution) << "\n";
           std::cerr << "CDD: DualSolution(B)="
-                    << StringVector(eSolB.DualSolution) << "\n";
+                    << StringVector(*eSolB.DualSolution) << "\n";
           throw TerminalException{1};
         }
-        if (eSolA.DirectSolution != eSolB.DirectSolution) {
+        if (*eSolA.DirectSolution != *eSolB.DirectSolution) {
           std::cerr << "CDD: DirectSolution(A)="
-                    << StringVector(eSolA.DirectSolution) << "\n";
+                    << StringVector(*eSolA.DirectSolution) << "\n";
           std::cerr << "CDD_ DirectSolution(B)="
-                    << StringVector(eSolB.DirectSolution) << "\n";
+                    << StringVector(*eSolB.DirectSolution) << "\n";
           throw TerminalException{1};
         }
-        os << "CDD: DualSolution(A)=" << StringVector(eSolA.DualSolution)
+        os << "CDD: DualSolution(A)=" << StringVector(*eSolA.DualSolution)
            << "\n";
-        os << "CDD: DualSolution(B)=" << StringVector(eSolB.DualSolution)
+        os << "CDD: DualSolution(B)=" << StringVector(*eSolB.DualSolution)
            << "\n";
-        os << "CDD: DirectSolution(A)=" << StringVector(eSolA.DirectSolution)
+        os << "CDD: DirectSolution(A)=" << StringVector(*eSolA.DirectSolution)
            << "\n";
-        os << "CDD: DirectSolution(B)=" << StringVector(eSolB.DirectSolution)
+        os << "CDD: DirectSolution(B)=" << StringVector(*eSolB.DirectSolution)
            << "\n";
       } else {
         std::cerr << "CDD: We should have been able to lift the solution\n";

@@ -192,20 +192,21 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
     os << "-------------------\n";
 #endif
     LpSolution<T> eSol = CDD_LinearProgramming(EXT_sel, eRow, os);
-    if (!eSol.DualDefined || !eSol.PrimalDefined) {
+    if (!eSol.DualSolution || !eSol.DirectSolution) {
       return {false, {}};
     }
     if (eSol.OptimalValue < 0)
       return {false, {}};
+    MyVector<T> const &DualSolution = *eSol.DualSolution;
     std::vector<int> ListIdx;
     int n_rows_ineq = ListIRow.size();
     for (int i_row = 0; i_row < n_rows_ineq; i_row++) {
-      T e_val = -eSol.DualSolution(i_row);
+      T e_val = -DualSolution(i_row);
 #ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
       if (e_val < 0) {
         std::cerr << "REDUND: The coefficient should be non-negative\n";
         for (int j_row = 0; j_row < n_rows_ineq; j_row++) {
-          std::cerr << " " << eSol.DualSolution(j_row);
+          std::cerr << " " << DualSolution(j_row);
         }
         std::cerr << "\n";
         throw TerminalException{1};
@@ -590,7 +591,7 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
       MyMatrix<T> M_sel = SelectColumnAddZero(M, eSelect.ListColSelect);
       MyVector<T> V_sel = SelectColumnVectorAddZero(V, eSelect.ListColSelect);
       LpSolution<T> eSol = CDD_LinearProgramming(M_sel, V_sel, os);
-      if (!eSol.DualDefined || !eSol.PrimalDefined) {
+      if (!eSol.DualSolution || !eSol.DirectSolution) {
         return false;
       }
       if (eSol.OptimalValue < 0)
