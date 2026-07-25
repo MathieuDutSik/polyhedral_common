@@ -489,10 +489,32 @@ template <typename T> struct FractionFreeSimplex {
     return sol;
   }
 
+  // Perform phase-0 style pivots so that the slack variables of the listed
+  // rows become cobasic. This is used to warm start the solver from a basis
+  // obtained by other means (typically the floating-point solver). The rows
+  // are only a hint: rows that cannot be pivoted are silently skipped and
+  // the normal phases repair whatever is left.
+  void ApplyBasisHint(std::vector<int> const &rows) {
+    for (int r : rows) {
+      if (r < 0 || r >= m || !is_slack(row_owner[r])) {
+        continue;
+      }
+      for (int j = 1; j <= n_x; j++) {
+        if (is_x(col_owner[j]) && Tab(r, j) != 0) {
+          DoPivot(r, j);
+          break;
+        }
+      }
+    }
+  }
+
   LpSolution<T> solve() {
     // Phase 0: pivot the free variables out of the cobasis.
     std::optional<MyVector<T>> pending_ray;
     for (int j = 1; j <= n_x; j++) {
+      if (!is_x(col_owner[j])) {
+        continue;
+      }
       int r_found = -1;
       for (int i = 0; i < m; i++) {
         if (is_slack(row_owner[i]) && Tab(i, j) != 0) {
@@ -538,16 +560,576 @@ template <typename T> struct FractionFreeSimplex {
 // free simplex method. See the top of the file for the conventions of the
 // returned LpSolution<T>.
 template <typename T>
-LpSolution<T> SIMPLEX_LinearProgramming(MyMatrix<T> const &ListIneq,
-                                        MyVector<T> const &ToBeMinimized,
-                                        std::ostream &os) {
+LpSolution<T> SIMPLEX_LinearProgramming_exact(MyMatrix<T> const &ListIneq,
+                                              MyVector<T> const &ToBeMinimized,
+                                              std::ostream &os) {
 #ifdef TIMINGS_SIMPLEX_CLARKSON
   MicrosecondTime time;
 #endif
   FractionFreeSimplex<T> solver(ListIneq, ToBeMinimized, os);
   LpSolution<T> sol = solver.solve();
 #ifdef TIMINGS_SIMPLEX_CLARKSON
-  os << "|SIMPLEX_CLARKSON: SIMPLEX_LinearProgramming|=" << time << "\n";
+  os << "|SIMPLEX_CLARKSON: SIMPLEX_LinearProgramming_exact|=" << time << "\n";
+#endif
+  return sol;
+}
+
+enum class FloatLpStatus { Optimal, Infeasible, Unbounded, Unreliable };
+
+// The outcome of the floating-point solve: a status and the cobasis at
+// termination (the original indices of the rows whose slack variables are
+// cobasic). Both are only hints; every conclusion drawn from them is
+// certified in exact arithmetic before being returned to the caller.
+struct FloatBasisHint {
+  FloatLpStatus status;
+  std::vector<int> cobasis_rows;
+};
+
+/*
+  Floating-point version of the dictionary simplex above. It follows the
+  same three phases but with the classical normalized pivot update and
+  epsilon tolerances instead of exact sign tests. Its only purpose is to
+  produce a candidate optimal basis fast; correctness is never assumed.
+  Failure modes (cycling, tiny pivots, wrong rank decisions) are handled by
+  an iteration cap leading to the Unreliable status, and by the exact
+  certification and repair done by the caller.
+ */
+template <typename Tfloat> struct FloatSimplex {
+  int m;
+  int n_x;
+  int ncol;
+  MyMatrix<Tfloat> Tab;
+  std::vector<int> row_owner;
+  std::vector<int> col_owner;
+  bool use_bland;
+  int degen_count;
+  int degen_threshold;
+  size_t iter_count;
+  size_t max_iter;
+  Tfloat eps_pivot;
+  Tfloat eps_cost;
+  Tfloat eps_feas;
+
+  // The matrix rows are expected to be prescaled to entries of order 1.
+  FloatSimplex(MyMatrix<Tfloat> const &ListIneq,
+               MyVector<Tfloat> const &ToBeMinimized)
+      : m(ListIneq.rows()), n_x(ListIneq.cols() - 1), ncol(n_x + 2),
+        Tab(m + 1, ncol), row_owner(m), col_owner(ncol), use_bland(false),
+        degen_count(0), degen_threshold(20 + 4 * (m + n_x)), iter_count(0),
+        max_iter(100 * static_cast<size_t>(m + n_x) + 1000),
+        eps_pivot(1e-11), eps_cost(1e-9), eps_feas(1e-9) {
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j <= n_x; j++) {
+        Tab(i, j) = ListIneq(i, j);
+      }
+      Tab(i, ncol - 1) = 0;
+      row_owner[i] = 1 + i;
+    }
+    for (int j = 0; j <= n_x; j++) {
+      Tab(m, j) = ToBeMinimized(j);
+    }
+    Tab(m, ncol - 1) = 0;
+    col_owner[0] = -2;
+    for (int k = 0; k < n_x; k++) {
+      col_owner[1 + k] = 1 + m + k;
+    }
+    col_owner[ncol - 1] = -1;
+  }
+
+  bool is_slack(int v) const { return v >= 1 && v <= m; }
+  bool is_x(int v) const { return v > m; }
+
+  std::vector<int> GetCobasisRows() const {
+    std::vector<int> rows;
+    for (int j = 1; j < ncol; j++) {
+      if (is_slack(col_owner[j])) {
+        rows.push_back(col_owner[j] - 1);
+      }
+    }
+    return rows;
+  }
+
+  FloatBasisHint Result(FloatLpStatus status) const {
+    return {status, GetCobasisRows()};
+  }
+
+  void DoPivot(int r, int s) {
+    iter_count++;
+    Tfloat inv = 1 / Tab(r, s);
+    for (int j = 0; j < ncol; j++) {
+      if (j == s || (j > 0 && col_owner[j] == -1)) {
+        continue;
+      }
+      Tab(r, j) = -Tab(r, j) * inv;
+    }
+    Tab(r, s) = inv;
+    for (int i = 0; i <= m; i++) {
+      if (i == r) {
+        continue;
+      }
+      Tfloat c_is = Tab(i, s);
+      if (c_is != 0) {
+        for (int j = 0; j < ncol; j++) {
+          if (j == s || (j > 0 && col_owner[j] == -1)) {
+            continue;
+          }
+          Tab(i, j) += c_is * Tab(r, j);
+        }
+        Tab(i, s) = c_is * inv;
+      }
+    }
+    std::swap(row_owner[r], col_owner[s]);
+  }
+
+  int SelectEntering(int crow) const {
+    int best = -1;
+    for (int j = 1; j < ncol; j++) {
+      if (col_owner[j] < 1) {
+        continue;
+      }
+      if (!(Tab(crow, j) < -eps_cost)) {
+        continue;
+      }
+      if (best == -1) {
+        best = j;
+        continue;
+      }
+      if (use_bland) {
+        if (col_owner[j] < col_owner[best]) {
+          best = j;
+        }
+      } else {
+        if (Tab(crow, j) < Tab(crow, best)) {
+          best = j;
+        }
+      }
+    }
+    return best;
+  }
+
+  // Ratio test with a stability tie-break: among rows whose ratio is within
+  // a small window of the minimum, prefer the largest pivot magnitude.
+  int RatioTest(int s) const {
+    int best = -1;
+    Tfloat best_ratio = 0;
+    for (int i = 0; i < m; i++) {
+      if (row_owner[i] > m) {
+        continue;
+      }
+      Tfloat den = -Tab(i, s);
+      if (!(den > eps_pivot)) {
+        continue;
+      }
+      Tfloat num = Tab(i, 0);
+      if (num < 0) {
+        num = 0;
+      }
+      Tfloat ratio = num / den;
+      if (best == -1) {
+        best = i;
+        best_ratio = ratio;
+        continue;
+      }
+      Tfloat window = eps_feas * (1 + best_ratio);
+      if (ratio < best_ratio - window) {
+        best = i;
+        best_ratio = ratio;
+      } else if (ratio < best_ratio + window) {
+        if (use_bland) {
+          if (row_owner[i] < row_owner[best]) {
+            best = i;
+            if (ratio < best_ratio) {
+              best_ratio = ratio;
+            }
+          }
+        } else {
+          if (-Tab(i, s) > -Tab(best, s)) {
+            best = i;
+            if (ratio < best_ratio) {
+              best_ratio = ratio;
+            }
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  void TrackDegeneracy(int r) {
+    if (Tab(r, 0) < eps_feas) {
+      degen_count++;
+      if (!use_bland && degen_count > degen_threshold) {
+        use_bland = true;
+      }
+    } else {
+      degen_count = 0;
+    }
+  }
+
+  FloatBasisHint solve() {
+    // Phase 0 with partial pivoting on the free variable columns.
+    bool has_lineality_obj = false;
+    for (int j = 1; j <= n_x; j++) {
+      if (!is_x(col_owner[j])) {
+        continue;
+      }
+      int r_found = -1;
+      Tfloat best_mag = eps_pivot;
+      for (int i = 0; i < m; i++) {
+        if (!is_slack(row_owner[i])) {
+          continue;
+        }
+        Tfloat mag = Tab(i, j) < 0 ? -Tab(i, j) : Tab(i, j);
+        if (mag > best_mag) {
+          best_mag = mag;
+          r_found = i;
+        }
+      }
+      if (r_found >= 0) {
+        DoPivot(r_found, j);
+        continue;
+      }
+      Tfloat obj_mag = Tab(m, j) < 0 ? -Tab(m, j) : Tab(m, j);
+      if (obj_mag > eps_cost) {
+        has_lineality_obj = true;
+      }
+      col_owner[j] = -1;
+    }
+    // Phase 1
+    bool need_phase1 = false;
+    for (int i = 0; i < m; i++) {
+      if (is_slack(row_owner[i]) && Tab(i, 0) < -eps_feas) {
+        need_phase1 = true;
+        break;
+      }
+    }
+    if (need_phase1) {
+      int aux_col = ncol - 1;
+      int r_min = -1;
+      for (int i = 0; i < m; i++) {
+        bool viol = is_slack(row_owner[i]) && Tab(i, 0) < -eps_feas;
+        Tab(i, aux_col) = viol ? 1 : 0;
+        if (viol && (r_min == -1 || Tab(i, 0) < Tab(r_min, 0))) {
+          r_min = i;
+        }
+      }
+      Tab(m, aux_col) = 0;
+      col_owner[aux_col] = 0;
+      DoPivot(r_min, aux_col);
+      int raux = r_min;
+      bool feasible = false;
+      while (iter_count < max_iter) {
+        int s = SelectEntering(raux);
+        if (s == -1) {
+          if (Tab(raux, 0) < eps_feas * 10) {
+            int s2 = -1;
+            Tfloat best_mag = eps_pivot;
+            for (int j = 1; j < ncol; j++) {
+              if (col_owner[j] < 1) {
+                continue;
+              }
+              Tfloat mag = Tab(raux, j) < 0 ? -Tab(raux, j) : Tab(raux, j);
+              if (mag > best_mag) {
+                best_mag = mag;
+                s2 = j;
+              }
+            }
+            if (s2 == -1) {
+              return Result(FloatLpStatus::Unreliable);
+            }
+            DoPivot(raux, s2);
+            col_owner[s2] = -1;
+            feasible = true;
+            break;
+          }
+          return Result(FloatLpStatus::Infeasible);
+        }
+        int r = RatioTest(s);
+        if (r == -1) {
+          return Result(FloatLpStatus::Unreliable);
+        }
+        TrackDegeneracy(r);
+        DoPivot(r, s);
+        if (r == raux) {
+          col_owner[s] = -1;
+          feasible = true;
+          break;
+        }
+      }
+      if (!feasible) {
+        return Result(FloatLpStatus::Unreliable);
+      }
+    }
+    if (has_lineality_obj) {
+      return Result(FloatLpStatus::Unbounded);
+    }
+    // Phase 2
+    while (iter_count < max_iter) {
+      int s = SelectEntering(m);
+      if (s == -1) {
+        return Result(FloatLpStatus::Optimal);
+      }
+      int r = RatioTest(s);
+      if (r == -1) {
+        return Result(FloatLpStatus::Unbounded);
+      }
+      TrackDegeneracy(r);
+      DoPivot(r, s);
+    }
+    return Result(FloatLpStatus::Unreliable);
+  }
+};
+
+// Convert the LP data to floating point with row scaling and solve it,
+// returning the basis hint.
+template <typename T, typename Tfloat>
+FloatBasisHint ComputeFloatBasisHint(MyMatrix<T> const &ListIneq,
+                                     MyVector<T> const &ToBeMinimized) {
+  int m = ListIneq.rows();
+  int n = ListIneq.cols();
+  MyMatrix<Tfloat> A(m, n);
+  for (int i = 0; i < m; i++) {
+    Tfloat max_mag = 0;
+    for (int j = 0; j < n; j++) {
+      A(i, j) = UniversalScalarConversion<Tfloat, T>(ListIneq(i, j));
+      Tfloat mag = A(i, j) < 0 ? -A(i, j) : A(i, j);
+      if (mag > max_mag) {
+        max_mag = mag;
+      }
+    }
+    if (max_mag > 0) {
+      for (int j = 0; j < n; j++) {
+        A(i, j) /= max_mag;
+      }
+    }
+  }
+  MyVector<Tfloat> obj(n);
+  Tfloat max_mag = 0;
+  for (int j = 0; j < n; j++) {
+    obj(j) = UniversalScalarConversion<Tfloat, T>(ToBeMinimized(j));
+    Tfloat mag = obj(j) < 0 ? -obj(j) : obj(j);
+    if (mag > max_mag) {
+      max_mag = mag;
+    }
+  }
+  if (max_mag > 0) {
+    for (int j = 0; j < n; j++) {
+      obj(j) /= max_mag;
+    }
+  }
+  FloatSimplex<Tfloat> solver(A, obj);
+  return solver.solve();
+}
+
+// Solve the square k x k system M x = rhs by fraction-free Bareiss
+// elimination with row pivoting. Returns (xnum, den) with x = xnum / den
+// and den = +-det(M), or an empty optional when M is singular. All the
+// elimination arithmetic consists of exact divisions, so for integral
+// input everything stays integral (no gcd cascades); fractions only appear
+// in the O(k^2) back substitution.
+template <typename T>
+std::optional<std::pair<MyVector<T>, T>>
+FractionFreeSolveSquare(MyMatrix<T> W, MyVector<T> rhs) {
+  int k = W.rows();
+  std::vector<int> pivrow(k);
+  std::vector<uint8_t> used(k, 0);
+  T prev(1);
+  for (int t = 0; t < k; t++) {
+    int r_sel = -1;
+    for (int r = 0; r < k; r++) {
+      if (!used[r] && W(r, t) != 0) {
+        r_sel = r;
+        break;
+      }
+    }
+    if (r_sel == -1) {
+      return {};
+    }
+    used[r_sel] = 1;
+    pivrow[t] = r_sel;
+    T const &piv = W(r_sel, t);
+    for (int r = 0; r < k; r++) {
+      if (used[r]) {
+        continue;
+      }
+      for (int j = t + 1; j < k; j++) {
+        W(r, j) = (W(r, j) * piv - W(r, t) * W(r_sel, j)) / prev;
+      }
+      rhs(r) = (rhs(r) * piv - W(r, t) * rhs(r_sel)) / prev;
+      W(r, t) = T(0);
+    }
+    prev = piv;
+  }
+  // Rows pivrow[t] form a triangular system: back substitution.
+  MyVector<T> x(k);
+  for (int t = k - 1; t >= 0; t--) {
+    int R = pivrow[t];
+    T val = rhs(R);
+    for (int j = t + 1; j < k; j++) {
+      val -= W(R, j) * x(j);
+    }
+    x(t) = val / W(R, t);
+  }
+  // The last pivot is +-det(M), and by Cramer's rule det(M) * x is
+  // integral for integral input.
+  MyVector<T> xnum(k);
+  for (int t = 0; t < k; t++) {
+    xnum(t) = x(t) * prev;
+  }
+  return std::pair<MyVector<T>, T>(std::move(xnum), prev);
+}
+
+// Given a candidate optimal basis (a set of n_x row indices), reconstruct
+// the exact vertex and the exact dual multipliers by two fraction-free
+// linear solves and check the full optimality certificate: the vertex is
+// feasible for all rows, the multipliers are nonpositive and supported on
+// the basis, and the primal and dual objective values agree. By weak
+// duality a success is a complete proof of optimality. Any failure returns
+// an empty optional. The feasibility scan is done on denominator-cleared
+// values so that for integral input it is pure integer arithmetic.
+template <typename T>
+std::optional<LpSolution<T>>
+SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
+                     MyVector<T> const &ToBeMinimized,
+                     std::vector<int> const &rows,
+                     [[maybe_unused]] std::ostream &os) {
+  int m = ListIneq.rows();
+  int n_x = ListIneq.cols() - 1;
+  if (static_cast<int>(rows.size()) != n_x) {
+    return {};
+  }
+  // The vertex: x with b_r + a_r . x = 0 for every basis row r, that is
+  // M x = -b_B with M(j, i) = a_{r_j, i}.
+  MyMatrix<T> M(n_x, n_x);
+  MyVector<T> rhs(n_x);
+  std::vector<uint8_t> in_basis(m, 0);
+  for (int j = 0; j < n_x; j++) {
+    int r = rows[j];
+    if (r < 0 || r >= m) {
+      return {};
+    }
+    in_basis[r] = 1;
+    rhs(j) = -ListIneq(r, 0);
+    for (int i = 0; i < n_x; i++) {
+      M(j, i) = ListIneq(r, i + 1);
+    }
+  }
+  std::optional<std::pair<MyVector<T>, T>> optX =
+      FractionFreeSolveSquare(M, rhs);
+  if (!optX) {
+    return {};
+  }
+  MyVector<T> const &xnum = optX->first;
+  T const &den = optX->second;
+  bool den_pos = den > 0;
+  // Feasibility of the vertex: den * f_i(x) = b_i * den + a_i . xnum must
+  // have the sign of den. The basis rows are tight by construction.
+  for (int i = 0; i < m; i++) {
+    if (in_basis[i]) {
+      continue;
+    }
+    T eSum = ListIneq(i, 0) * den;
+    for (int k = 0; k < n_x; k++) {
+      eSum += ListIneq(i, k + 1) * xnum(k);
+    }
+    if (den_pos ? (eSum < 0) : (eSum > 0)) {
+      return {};
+    }
+  }
+  T primalNum = ToBeMinimized(0) * den;
+  for (int k = 0; k < n_x; k++) {
+    primalNum += ToBeMinimized(k + 1) * xnum(k);
+  }
+  T primalValue = primalNum / den;
+  // The dual multipliers: pd with sum_j pd_j a_{r_j} = c_red, that is
+  // M^T pd = c_red. Then lambda_{r_j} = -pd_j must be nonpositive.
+  MyMatrix<T> MT(n_x, n_x);
+  MyVector<T> rhs2(n_x);
+  for (int j = 0; j < n_x; j++) {
+    int r = rows[j];
+    for (int i = 0; i < n_x; i++) {
+      MT(i, j) = ListIneq(r, i + 1);
+    }
+  }
+  for (int i = 0; i < n_x; i++) {
+    rhs2(i) = ToBeMinimized(i + 1);
+  }
+  std::optional<std::pair<MyVector<T>, T>> optP =
+      FractionFreeSolveSquare(MT, rhs2);
+  if (!optP) {
+    return {};
+  }
+  MyVector<T> const &pdnum = optP->first;
+  T const &dden = optP->second;
+  bool dden_pos = dden > 0;
+  T dualNum(0);
+  for (int j = 0; j < n_x; j++) {
+    if (dden_pos ? (pdnum(j) < 0) : (pdnum(j) > 0)) {
+      return {};
+    }
+    dualNum += pdnum(j) * ListIneq(rows[j], 0);
+  }
+  T dualValue = ToBeMinimized(0) - dualNum / dden;
+  if (dualValue != primalValue) {
+    return {};
+  }
+  MyVector<T> x(n_x);
+  for (int k = 0; k < n_x; k++) {
+    x(k) = xnum(k) / den;
+  }
+  MyVector<T> DualSolution = ZeroVector<T>(m);
+  for (int j = 0; j < n_x; j++) {
+    DualSolution(rows[j]) = -pdnum(j) / dden;
+  }
+  LpSolution<T> sol;
+  sol.OptimalValue = primalValue;
+  sol.DirectSolution = x;
+  sol.DualSolution = DualSolution;
+  return sol;
+}
+
+// The main entry point: solve the LP in floating point first, certify the
+// resulting basis exactly, and fall back to the exact fraction free solver
+// warm started from the floating-point basis when certification fails or
+// when the floating-point solver reports anything else than optimality.
+// The output is always exact and certificate-backed.
+template <typename T, typename Tfloat = double>
+LpSolution<T> SIMPLEX_LinearProgramming(MyMatrix<T> const &ListIneq,
+                                        MyVector<T> const &ToBeMinimized,
+                                        std::ostream &os) {
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  MicrosecondTime time;
+#endif
+  int n_x = ListIneq.cols() - 1;
+  if (n_x < 3) {
+    return SIMPLEX_LinearProgramming_exact(ListIneq, ToBeMinimized, os);
+  }
+  FloatBasisHint hint =
+      ComputeFloatBasisHint<T, Tfloat>(ListIneq, ToBeMinimized);
+  if (hint.status == FloatLpStatus::Optimal) {
+    std::optional<LpSolution<T>> opt =
+        SIMPLEX_CertifyBasis(ListIneq, ToBeMinimized, hint.cobasis_rows, os);
+    if (opt) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+      os << "SIMPLEX_CLARKSON: floating-point basis certified\n";
+#endif
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+      os << "|SIMPLEX_CLARKSON: SIMPLEX_LinearProgramming(lift)|=" << time
+         << "\n";
+#endif
+      return *opt;
+    }
+  }
+#ifdef DEBUG_SIMPLEX_CLARKSON
+  os << "SIMPLEX_CLARKSON: falling back to the exact solver, float status="
+     << static_cast<int>(hint.status) << "\n";
+#endif
+  FractionFreeSimplex<T> solver(ListIneq, ToBeMinimized, os);
+  solver.ApplyBasisHint(hint.cobasis_rows);
+  LpSolution<T> sol = solver.solve();
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  os << "|SIMPLEX_CLARKSON: SIMPLEX_LinearProgramming(fallback)|=" << time
+     << "\n";
 #endif
   return sol;
 }
