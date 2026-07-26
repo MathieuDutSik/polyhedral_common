@@ -423,7 +423,7 @@ bool computeIt_polytope(const FullGramInfo<T> &request,
     MyVector<T> Vminimize = ZeroVector<T>(len);
     //
     Vminimize(1 + i) = 1;
-    eSol = CDD_LinearProgramming(FACwork, Vminimize, os);
+    eSol = SIMPLEX_LinearProgramming(FACwork, Vminimize, os);
     if (eSol.DualSolution && eSol.DirectSolution) {
       // Well defined so we get a potential lower bound
       Tint eLow = UniversalCeilScalarInteger<Tint, T>(eSol.OptimalValue);
@@ -441,7 +441,7 @@ bool computeIt_polytope(const FullGramInfo<T> &request,
     }
     //
     Vminimize(1 + i) = -1;
-    eSol = CDD_LinearProgramming(FACwork, Vminimize, os);
+    eSol = SIMPLEX_LinearProgramming(FACwork, Vminimize, os);
     if (eSol.DualSolution && eSol.DirectSolution) {
       // Well defined so we get a potential upper bound
       Tint eUpp = UniversalFloorScalarInteger<Tint, T>(-eSol.OptimalValue);

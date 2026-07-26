@@ -191,7 +191,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
     os << "\n";
     os << "-------------------\n";
 #endif
-    LpSolution<T> eSol = CDD_LinearProgramming(EXT_sel, eRow, os);
+    LpSolution<T> eSol = SIMPLEX_LinearProgramming(EXT_sel, eRow, os);
     if (!eSol.DualSolution || !eSol.DirectSolution) {
       return {false, {}};
     }
@@ -590,7 +590,7 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
         return false;
       MyMatrix<T> M_sel = SelectColumnAddZero(M, eSelect.ListColSelect);
       MyVector<T> V_sel = SelectColumnVectorAddZero(V, eSelect.ListColSelect);
-      LpSolution<T> eSol = CDD_LinearProgramming(M_sel, V_sel, os);
+      LpSolution<T> eSol = SIMPLEX_LinearProgramming(M_sel, V_sel, os);
       if (!eSol.DualSolution || !eSol.DirectSolution) {
         return false;
       }

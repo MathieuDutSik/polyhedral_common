@@ -276,7 +276,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
       }
     }
     MyMatrix<T> SetIneq = SortUnicizeMatrix(ListIneq);
-    LpSolution<T> eSol = CDD_LinearProgramming(SetIneq, ToBeMinimized, os);
+    LpSolution<T> eSol = SIMPLEX_LinearProgramming(SetIneq, ToBeMinimized, os);
 #ifdef DEBUG_SHORTEST_CONFIG
     os << "SHORT: DualDefined=" << eSol.DualSolution.has_value() << " PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";
 #endif

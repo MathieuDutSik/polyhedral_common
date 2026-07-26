@@ -730,7 +730,7 @@ CopositivityTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const &eSymmMat,
     ToBeMinimized(iNSP + 1) = eSum;
     FAC(nbCol, iNSP + 1) = eSum;
   }
-  LpSolution<T> eSol = CDD_LinearProgramming(FAC, ToBeMinimized, os);
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(FAC, ToBeMinimized, os);
   if (!eSol.DirectSolution)
     return {true, "on the surface ok", eVectZero};
   MyVector<T> const &DirectSolution = *eSol.DirectSolution;

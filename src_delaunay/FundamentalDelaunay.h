@@ -81,7 +81,7 @@ std::optional<MyMatrix<Tint>> FindDelaunayPolytope_direction(CVPSolver<T, Tint> 
     os << "DEL: nbVect=" << ListIneq.rows() << "\n";
 #endif
     LpSolution<T> eSol =
-        CDD_LinearProgramming(ListIneq, TheRandomDirection, os);
+        SIMPLEX_LinearProgramming(ListIneq, TheRandomDirection, os);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     os << "|DEL: Computing LP eSol|=" << time << "\n";
 #endif

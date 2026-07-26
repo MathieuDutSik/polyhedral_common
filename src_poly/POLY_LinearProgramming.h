@@ -7,6 +7,7 @@
 #include "MAT_MatrixInt.h"
 #include "POLY_Fundamental.h"
 #include "POLY_LinearProgrammingFund.h"
+#include "POLY_SimplexClarkson.h"
 #include "POLY_cddlib.h"
 #include <string>
 #include <vector>
@@ -151,7 +152,7 @@ MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
 #ifdef DEBUG_POLYTOPIZATION
   os << "LP: Polytopization, Before CDD_LinearProgramming\n";
 #endif
-  LpSolution<T> eSol = CDD_LinearProgramming(nMat, eVect, os);
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(nMat, eVect, os);
 #ifdef DEBUG_POLYTOPIZATION
   os << "LP: Polytopization, After CDD_LinearProgramming\n";
 #endif
@@ -245,7 +246,7 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
       T eVal(a - b);
       eVect(iCol) = eVal;
     }
-    LpSolution<T> eSol = CDD_LinearProgramming(EXT, eVect, os);
+    LpSolution<T> eSol = SIMPLEX_LinearProgramming(EXT, eVect, os);
     MyVector<T> const &SolDir = *eSol.DirectSolution;
     T const &OptimalValue = eSol.OptimalValue;
 #ifdef DEBUG_FIND_SINGLE_VERTEX
@@ -491,7 +492,7 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect,
       eMinimize(iCol + 1) += ListVect(iRow, iCol);
     }
   }
-  LpSolution<T> eSol = CDD_LinearProgramming(ListVectExt, eMinimize, os);
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListVectExt, eMinimize, os);
   PosRelRes<T> eResult;
   eResult.has_relation = false;
   eResult.has_internal_vector = true;
@@ -602,7 +603,7 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
 #endif
   MyMatrix<T> MatInequalities = MatrixFromVectorFamily(ListInequalities);
   LpSolution<T> eSol =
-      CDD_LinearProgramming(MatInequalities, ToBeMinimized, os);
+      SIMPLEX_LinearProgramming(MatInequalities, ToBeMinimized, os);
   PosRelRes<T> eResult;
   eResult.has_relation = true;
   eResult.has_internal_vector = false;
@@ -724,7 +725,7 @@ SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect, MyVector<T> const &eVect,
   for (int iCol = 0; iCol < nbCol; iCol++)
     eIneq(1 + iCol) = eVect(iCol);
   //
-  LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, eIneq, os);
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, eIneq, os);
   if (!eSol.DualSolution) {
     return {};
   }
@@ -754,7 +755,7 @@ GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
   for (int iCol = 0; iCol < nbCol; iCol++)
     eIneq(1 + iCol) = eVect(iCol);
   //
-  LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, eIneq, os);
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, eIneq, os);
   auto GetSolNonnegative = [&]() -> std::optional<MyVector<T>> {
     if (!eSol.DualSolution) {
       return {};
@@ -1315,7 +1316,7 @@ bool IsFullDimensional(MyMatrix<T> const &FAC, std::ostream &os) {
     }
     SumIneq(iCol) = sum;
   }
-  LpSolution<T> eSol = CDD_LinearProgramming(FACexp, SumIneq, os);
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(FACexp, SumIneq, os);
   if (eSol.DirectSolution && eSol.DualSolution) {
     return true;
   }
@@ -1340,7 +1341,7 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC,
       ToBeMinimized(i_col) += ListInequalities(i_row, i_col);
   }
   LpSolution<T> eSol =
-      CDD_LinearProgramming(ListInequalities, ToBeMinimized, os);
+      SIMPLEX_LinearProgramming(ListInequalities, ToBeMinimized, os);
   if (!eSol.DirectSolution || !eSol.DualSolution) {
     std::cerr << "LP: Failed to find an interior point by linear programming\n";
     std::cerr << "LP: Maybe the cone is actually not full dimensional\n";
@@ -1489,7 +1490,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
   os << "LP: GGUIP, CDD_LinearProgramming, before\n";
 #endif
   LpSolution<T> eSol =
-      CDD_LinearProgramming(ListInequalities, ToBeMinimized, os);
+      SIMPLEX_LinearProgramming(ListInequalities, ToBeMinimized, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, CDD_LinearProgramming, after\n";
 #endif
@@ -1907,7 +1908,7 @@ bool has_empty_intersection(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   for (int i = 0; i < dim; i++) {
     eMinimize(1 + i + dim) = 1;
   }
-  LpSolution<T> eSol = CDD_LinearProgramming(FAC, eMinimize, os);
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(FAC, eMinimize, os);
   if (!eSol.DirectSolution || !eSol.DualSolution) {
     return false;
   }
@@ -1953,7 +1954,7 @@ MyVector<T> FindViolatedFacetInequality(MyMatrix<T> const &EXT,
   ToMinimize(0) = 0;
   for (int iCol = 0; iCol < nbCol; iCol++)
     ToMinimize(iCol + 1) = eVect(iCol);
-  LpSolution<T> eSol = CDD_LinearProgramming(EXT_ext, ToMinimize, os);
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(EXT_ext, ToMinimize, os);
   MyVector<T> const &DirectSolution = *eSol.DirectSolution;
   Face incFace(nbRow);
   std::vector<int> incident;

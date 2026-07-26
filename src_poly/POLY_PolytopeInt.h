@@ -66,7 +66,7 @@ void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std:
 #endif
   for (int i = 0; i < dim - pos; i++) {
     Vminimize(1 + i) = 1;
-    eSol = CDD_LinearProgramming(FACin, Vminimize, os);
+    eSol = SIMPLEX_LinearProgramming(FACin, Vminimize, os);
     if (!eSol.DualSolution || !eSol.DirectSolution) {
       std::cerr << "eSol.DualDefined=" << eSol.DualSolution.has_value()
                 << " eSol.PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";
@@ -79,7 +79,7 @@ void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std:
     ListLow[i + pos] = UniversalCeilScalarInteger<Tint, T>(eSol.OptimalValue);
     //
     Vminimize(1 + i) = -1;
-    eSol = CDD_LinearProgramming(FACin, Vminimize, os);
+    eSol = SIMPLEX_LinearProgramming(FACin, Vminimize, os);
     if (!eSol.DualSolution || !eSol.DirectSolution) {
       std::cerr << "eSol.DualDefined=" << eSol.DualSolution.has_value()
                 << " eSol.PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";

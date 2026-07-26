@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "POLY_Fundamental.h"
+#include "POLY_SimplexClarkson.h"
 #include "MAT_SparseMatrix.h"
 #include <glpk.h>
 #include <string>
@@ -632,7 +633,7 @@ GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
       GLPK_LinearProgramming_Kernel_Dense_LIBRARY(ListEqua, ListIneq,
                                                   ToBeMinimized, eGLPKoption);
   if (!eResSimple.PrimalDefined) {
-    return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    return SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
   }
   int nbIneq = ListIneq.rows();
   std::cerr << "nbIneq=" << nbIneq << "\n";
@@ -647,7 +648,7 @@ GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
   MyMatrix<T> NSP = NullspaceTrMat(ListIneqSel);
   int dimNSP = NSP.rows();
   if (dimNSP == 0) {
-    return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    return SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
   }
   MyVector<T> TheVert;
   int nbCol = NSP.cols();
@@ -667,7 +668,7 @@ GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
       }
     }
     if (iNSPselect == -1)
-      return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+      return SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
     MyMatrix<T> ColumnSpace(dimNSP, nbCol);
     AssignMatrixRow(ColumnSpace, 0, eFirstPoint);
     int pos = 0;
@@ -679,12 +680,12 @@ GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
         AssignMatrixRow(ColumnSpace, pos, eVec);
       }
     }
-    LpSolution<T> TheLP = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    LpSolution<T> TheLP = SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
     if (TheLP.DirectSolution.has_value() && TheLP.DualSolution.has_value()) {
       MyVector<T> DirectSolutionExt = GetDirectSolutionExt(TheLP);
       TheVert = TransposedMat(ColumnSpace) * DirectSolutionExt;
     } else {
-      return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+      return SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
     }
   }
   T optimal = ScalarProduct(ToBeMinimized, TheVert);
@@ -718,7 +719,7 @@ LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
   std::optional<LpSolution<T>> optA =
       GLPK_LinearProgramming(ListIneq, ToBeMinimized, os);
   if (!optA) {
-    return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    return SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
   }
   LpSolution<T> const &eSol = *optA;
   Face eFace = ComputeFaceLpSolution(ListIneq, eSol);
@@ -729,7 +730,7 @@ LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
   std::optional<MyVector<T>> optB =
       SolutionMatNonnegative(ListIneq_Incd, eVectTest, os);
   if (!optB)
-    return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    return SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
   return eSol;
 }
 

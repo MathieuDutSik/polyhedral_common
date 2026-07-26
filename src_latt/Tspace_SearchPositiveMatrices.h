@@ -62,7 +62,7 @@ public:
     //
     // Solving the linear program
     //
-    LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
     if (!eSol.DirectSolution || !eSol.DualSolution) {
       std::optional<MyMatrix<T>> reply = {};
       pos_def = reply;
@@ -201,7 +201,7 @@ GetOnePositiveSemiDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
     //
     // Solving the linear program
     //
-    LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
     if (!eSol.DirectSolution || !eSol.DualSolution) {
       return {};
     }
