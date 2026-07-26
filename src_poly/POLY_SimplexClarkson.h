@@ -1134,6 +1134,352 @@ LpSolution<T> SIMPLEX_LinearProgramming(MyMatrix<T> const &ListIneq,
   return sol;
 }
 
+/*
+  Clarkson redundancy elimination.
+
+  Given inequalities f_i(x) = b_i + a_i . x >= 0, the row i is redundant
+  when removing it does not change the feasible set, that is when
+  min f_i over the other rows is >= 0. The direct algorithm solves one such
+  LP per row over the full system. Clarkson's output-sensitive algorithm
+  (Clarkson, "More output-sensitive geometric algorithms"; Fukuda,
+  "Polyhedral computation", chapter 7) instead maintains a set S of rows
+  certified nonredundant and tests each row i only against S:
+  --- If min f_i over S (with the relaxation f_i + 1 >= 0 to keep the LP
+      bounded) is >= 0 then i is redundant for S, hence for the full system.
+  --- Otherwise the LP witness x* satisfies f_S(x*) >= 0, f_i(x*) < 0, and
+      shooting a ray from an interior point z towards x* certifies the
+      first-hit row as nonredundant (a facet); that row joins S.
+  Each LP thus either decides a row or grows S, so at most m + |S| LPs are
+  solved, each over roughly |S| rows only, and each solved by the float-first
+  certified solver above. The ray shooting uses the same division-free
+  minimum-ratio selection with lexicographic tie-breaking as cddlib's
+  dd_RayShooting, which guarantees the selected row is a facet (with a
+  consistent smallest-index representative for proportional duplicate rows).
+
+  When no interior point exists (the feasible set is not full dimensional)
+  the code falls back to the direct algorithm.
+ */
+
+// The direct redundancy elimination: one LP per row over the currently
+// kept rows. Used as fallback and as a test oracle. The rows are processed
+// in decreasing index order, as in dd_RedundantRows, so that among a group
+// of mutually redundant rows (duplicates, positive multiples) the smallest
+// index is kept -- the same representative the ray shooting tie-break of
+// the Clarkson method selects.
+template <typename T>
+std::vector<int>
+SIMPLEX_RedundancyReductionDirect(MyMatrix<T> const &ListIneq,
+                                  std::ostream &os) {
+  int m = ListIneq.rows();
+  int n = ListIneq.cols();
+  std::vector<uint8_t> keep(m, 1);
+  for (int i = m - 1; i >= 0; i--) {
+    int n_kept = 0;
+    for (int j = 0; j < m; j++) {
+      if (j != i && keep[j]) {
+        n_kept++;
+      }
+    }
+    MyMatrix<T> LPmat(n_kept + 1, n);
+    int pos = 0;
+    for (int j = 0; j < m; j++) {
+      if (j != i && keep[j]) {
+        for (int k = 0; k < n; k++) {
+          LPmat(pos, k) = ListIneq(j, k);
+        }
+        pos++;
+      }
+    }
+    for (int k = 0; k < n; k++) {
+      LPmat(pos, k) = ListIneq(i, k);
+    }
+    LPmat(pos, 0) += T(1);
+    MyVector<T> obj(n);
+    for (int k = 0; k < n; k++) {
+      obj(k) = ListIneq(i, k);
+    }
+    LpSolution<T> sol = SIMPLEX_LinearProgramming(LPmat, obj, os);
+    if (!sol.DirectSolution || !sol.DualSolution) {
+      std::cerr << "SIMPLEX_CLARKSON: the redundancy LP should always be "
+                   "feasible and bounded\n";
+      throw TerminalException{1};
+    }
+    if (sol.OptimalValue >= 0) {
+      keep[i] = 0;
+    }
+  }
+  std::vector<int> ListIdx;
+  for (int i = 0; i < m; i++) {
+    if (keep[i]) {
+      ListIdx.push_back(i);
+    }
+  }
+  return ListIdx;
+}
+
+template <typename T> struct ClarksonRedundancyReduction {
+  MyMatrix<T> const &ListIneq_;
+  std::ostream &os_;
+  int m;
+  int n_x;
+  std::vector<uint8_t> decided;
+  std::vector<uint8_t> redundant;
+  std::vector<int> S;
+  MyVector<T> z;
+  MyVector<T> Fz;
+#ifdef DEBUG_SIMPLEX_CLARKSON
+  size_t n_lp = 0;
+  size_t n_shoot = 0;
+#endif
+
+  ClarksonRedundancyReduction(MyMatrix<T> const &ListIneq, std::ostream &os)
+      : ListIneq_(ListIneq), os_(os), m(ListIneq.rows()),
+        n_x(ListIneq.cols() - 1), decided(m, 0), redundant(m, 0) {}
+
+  // Compute an interior point z with f_i(z) > 0 for all i by maximizing
+  // the margin t subject to f_i(x) - t >= 0 and t <= 1. Returns false when
+  // the feasible set is not full dimensional.
+  bool ComputeInteriorPoint() {
+    MyMatrix<T> LPmat(m + 1, n_x + 2);
+    for (int i = 0; i < m; i++) {
+      for (int k = 0; k <= n_x; k++) {
+        LPmat(i, k) = ListIneq_(i, k);
+      }
+      LPmat(i, n_x + 1) = T(-1);
+    }
+    for (int k = 0; k <= n_x; k++) {
+      LPmat(m, k) = T(0);
+    }
+    LPmat(m, 0) = T(1);
+    LPmat(m, n_x + 1) = T(-1);
+    MyVector<T> obj = ZeroVector<T>(n_x + 2);
+    obj(n_x + 1) = T(-1);
+    LpSolution<T> sol = SIMPLEX_LinearProgramming(LPmat, obj, os_);
+    if (!sol.DirectSolution || !sol.DualSolution) {
+      std::cerr << "SIMPLEX_CLARKSON: the interior point LP should always "
+                   "be feasible and bounded\n";
+      throw TerminalException{1};
+    }
+    if (!(sol.OptimalValue < 0)) {
+      return false;
+    }
+    MyVector<T> const &xt = *sol.DirectSolution;
+    z = MyVector<T>(n_x);
+    for (int k = 0; k < n_x; k++) {
+      z(k) = xt(k);
+    }
+    Fz = MyVector<T>(m);
+    for (int i = 0; i < m; i++) {
+      T eSum = ListIneq_(i, 0);
+      for (int k = 0; k < n_x; k++) {
+        eSum += ListIneq_(i, k + 1) * z(k);
+      }
+      Fz(i) = eSum;
+#ifdef SANITY_CHECK_SIMPLEX_CLARKSON
+      if (!(Fz(i) > 0)) {
+        std::cerr << "SIMPLEX_CLARKSON: the interior point is not interior "
+                     "at row "
+                  << i << "\n";
+        throw TerminalException{1};
+      }
+#endif
+    }
+    return true;
+  }
+
+  // Shoot the ray z + t d for t > 0 and return the first row hit, that is
+  // the row minimizing the ratio (a_i . d) / f_i(z) provided this minimum
+  // is negative, with the lexicographic tie-break of dd_RayShooting.
+  // Returns -1 when the ray never exits the feasible set.
+  int RayShoot(MyVector<T> const &d) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+    n_shoot++;
+#endif
+    int imin = -1;
+    T min_num(0);
+    T min_den(1);
+    for (int i = 0; i < m; i++) {
+      T t2(0);
+      for (int k = 0; k < n_x; k++) {
+        t2 += ListIneq_(i, k + 1) * d(k);
+      }
+      if (imin == -1) {
+        imin = i;
+        min_num = t2;
+        min_den = Fz(i);
+        continue;
+      }
+      T lhs = t2 * min_den;
+      T rhs = min_num * Fz(i);
+      if (lhs < rhs) {
+        imin = i;
+        min_num = t2;
+        min_den = Fz(i);
+      } else {
+        if (lhs == rhs) {
+          // Tie: keep the lexicographically smaller normalized row.
+          for (int k = 0; k <= n_x; k++) {
+            T val_i = ListIneq_(i, k) * min_den;
+            T val_min = ListIneq_(imin, k) * Fz(i);
+            if (val_i < val_min) {
+              imin = i;
+              min_num = t2;
+              min_den = Fz(i);
+              break;
+            }
+            if (val_i > val_min) {
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (imin == -1 || !(min_num < 0)) {
+      return -1;
+    }
+    return imin;
+  }
+
+  void CertifyNonRedundant(int r) {
+    decided[r] = 1;
+    S.push_back(r);
+  }
+
+  // Certify some facets cheaply by shooting along the coordinate
+  // directions before starting the main loop.
+  void Seed() {
+    MyVector<T> d = ZeroVector<T>(n_x);
+    for (int k = 0; k < n_x; k++) {
+      for (int sigma = 0; sigma < 2; sigma++) {
+        d(k) = sigma == 0 ? T(1) : T(-1);
+        int ired = RayShoot(d);
+        if (ired >= 0 && !decided[ired]) {
+          CertifyNonRedundant(ired);
+        }
+      }
+      d(k) = T(0);
+    }
+  }
+
+  // The redundancy test of row i against the current set S, with the
+  // relaxation of row i keeping the LP bounded. Returns the solution of
+  // the LP minimizing f_i.
+  LpSolution<T> SolveRedundancyLP(int i) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+    n_lp++;
+#endif
+    int n = n_x + 1;
+    int n_S = S.size();
+    MyMatrix<T> LPmat(n_S + 1, n);
+    for (int pos = 0; pos < n_S; pos++) {
+      int j = S[pos];
+      for (int k = 0; k < n; k++) {
+        LPmat(pos, k) = ListIneq_(j, k);
+      }
+    }
+    for (int k = 0; k < n; k++) {
+      LPmat(n_S, k) = ListIneq_(i, k);
+    }
+    LPmat(n_S, 0) += T(1);
+    MyVector<T> obj(n);
+    for (int k = 0; k < n; k++) {
+      obj(k) = ListIneq_(i, k);
+    }
+    LpSolution<T> sol = SIMPLEX_LinearProgramming(LPmat, obj, os_);
+    if (!sol.DirectSolution || !sol.DualSolution) {
+      std::cerr << "SIMPLEX_CLARKSON: the redundancy LP should always be "
+                   "feasible and bounded\n";
+      throw TerminalException{1};
+    }
+    return sol;
+  }
+
+  std::vector<int> run() {
+    if (m == 0) {
+      return {};
+    }
+    if (!ComputeInteriorPoint()) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+      os_ << "SIMPLEX_CLARKSON: no interior point, falling back to the "
+             "direct algorithm\n";
+#endif
+      return SIMPLEX_RedundancyReductionDirect(ListIneq_, os_);
+    }
+    Seed();
+    for (int i = 0; i < m; i++) {
+      while (!decided[i]) {
+        LpSolution<T> sol = SolveRedundancyLP(i);
+        if (sol.OptimalValue >= 0) {
+          decided[i] = 1;
+          redundant[i] = 1;
+        } else {
+          MyVector<T> const &xstar = *sol.DirectSolution;
+          MyVector<T> d(n_x);
+          for (int k = 0; k < n_x; k++) {
+            d(k) = xstar(k) - z(k);
+          }
+          int ired = RayShoot(d);
+          if (ired < 0 || decided[ired]) {
+            std::cerr << "SIMPLEX_CLARKSON: the ray shooting returned "
+                      << ired << " which is impossible since the witness "
+                      << "violates row " << i << "\n";
+            throw TerminalException{1};
+          }
+          CertifyNonRedundant(ired);
+        }
+      }
+    }
+#ifdef DEBUG_SIMPLEX_CLARKSON
+    os_ << "SIMPLEX_CLARKSON: Clarkson done, m=" << m << " |S|=" << S.size()
+        << " n_lp=" << n_lp << " n_shoot=" << n_shoot << "\n";
+#endif
+    std::vector<int> ListIdx;
+    for (int i = 0; i < m; i++) {
+      if (!redundant[i]) {
+        ListIdx.push_back(i);
+      }
+    }
+    return ListIdx;
+  }
+};
+
+// Clarkson redundancy elimination for rows in inhomogeneous form: row i is
+// the inequality ListIneq(i,0) + sum_j ListIneq(i,j) x_j >= 0. Returns the
+// ascending list of indices of the nonredundant rows.
+template <typename T>
+std::vector<int>
+SIMPLEX_RedundancyReductionClarkson(MyMatrix<T> const &ListIneq,
+                                    std::ostream &os) {
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  MicrosecondTime time;
+#endif
+  ClarksonRedundancyReduction<T> crr(ListIneq, os);
+  std::vector<int> ListIdx = crr.run();
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  os << "|SIMPLEX_CLARKSON: SIMPLEX_RedundancyReductionClarkson|=" << time
+     << "\n";
+#endif
+  return ListIdx;
+}
+
+// Variant for the homogeneous cone setting: rows of FAC are inequalities
+// sum_j FAC(i,j) x_j >= 0. This matches cdd::RedundancyReductionClarksonExt.
+template <typename T>
+std::vector<int>
+SIMPLEX_RedundancyReductionClarksonExt(MyMatrix<T> const &FAC,
+                                       std::ostream &os) {
+  int m = FAC.rows();
+  int n = FAC.cols();
+  MyMatrix<T> ListIneq(m, n + 1);
+  for (int i = 0; i < m; i++) {
+    ListIneq(i, 0) = T(0);
+    for (int j = 0; j < n; j++) {
+      ListIneq(i, j + 1) = FAC(i, j);
+    }
+  }
+  return SIMPLEX_RedundancyReductionClarkson(ListIneq, os);
+}
+
 // clang-format off
 #endif  // SRC_POLY_POLY_SIMPLEXCLARKSON_H_
 // clang-format on
