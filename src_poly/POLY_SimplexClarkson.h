@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "POLY_LinearProgrammingFund.h"
+#include "MAT_NonUniqueRescale.h"
 #include <optional>
 #include <utility>
 #include <vector>
@@ -82,8 +83,50 @@
   after a run of degenerate pivots, which guarantees termination.
  */
 
+// A vector given as a numerator vector and a positive denominator, so
+// that the actual value is num / den without the division being done.
+template <typename T> struct VectorNumDen {
+  MyVector<T> num;
+  T den;
+  // The quotient num / den computed in the field Tfield.
+  template <typename Tfield> MyVector<Tfield> get_vector() const {
+    Tfield den_field = UniversalScalarConversion<Tfield, T>(den);
+    int siz = num.size();
+    MyVector<Tfield> V(siz);
+    for (int i = 0; i < siz; i++) {
+      V(i) = UniversalScalarConversion<Tfield, T>(num(i)) / den_field;
+    }
+    return V;
+  }
+};
+
+/*
+  The scaled form of a linear programming solution, used for the reduction
+  to the underlying ring. All the entries are ring elements and the actual
+  solution is recovered by the quotients
+  --- OptimalValue = OptimalValueNum / OptimalValueDen
+  --- DirectSolution = DirectSolution->num / DirectSolution->den
+  --- DualSolution = DualSolution->num / DualSolution->den
+  with all denominators positive. The status encoding matches LpSolution:
+  Optimal = both optionals set, Infeasible = only DualSolution (a Farkas
+  certificate), Unbounded = only DirectSolution (a ray, meaningful up to
+  positive scaling). Since OptimalValueDen > 0, sign-based callers (e.g.
+  the Clarkson method) read the sign of the optimal value directly from
+  OptimalValueNum.
+ */
+template <typename T> struct LpSolutionScaled {
+  T OptimalValueNum;
+  T OptimalValueDen;
+  std::optional<VectorNumDen<T>> DualSolution;
+  std::optional<VectorNumDen<T>> DirectSolution;
+};
+
+// The solver works for a field T, and also for a ring T in which the
+// exact divisions of the fraction-free pivoting (Bareiss) are available
+// through operator/ (e.g. mpz_class, SafeInt64). In the ring case only
+// solve_scaled() may be called since the plain solve() divides by the
+// determinant when building the solution.
 template <typename T> struct FractionFreeSimplex {
-  static_assert(is_ring_field<T>::value, "Requires T to be a field");
   // Variable identifiers: 0 is the phase-1 auxiliary variable, 1..m are the
   // slack variables of the rows, m+1..m+n_x are the x variables. Bland's
   // rule uses this numbering, with the auxiliary variable smallest so that
@@ -299,10 +342,11 @@ template <typename T> struct FractionFreeSimplex {
     return r_min;
   }
 
-  // Phase 1: minimize the auxiliary variable. Returns the infeasibility
-  // solution if the minimum is positive, and an empty optional when primal
-  // feasibility has been reached.
-  std::optional<LpSolution<T>> RunPhase1() {
+  // Phase 1: minimize the auxiliary variable. Returns the row of the
+  // auxiliary variable if its minimum is positive (the problem is then
+  // infeasible) and an empty optional when primal feasibility has been
+  // reached.
+  std::optional<int> RunPhase1() {
     if (!NeedPhase1()) {
       return {};
     }
@@ -332,7 +376,7 @@ template <typename T> struct FractionFreeSimplex {
           col_owner[s2] = -1;
           return {};
         }
-        return BuildInfeasible(raux);
+        return raux;
       }
       int r = RatioTest(s);
 #ifdef SANITY_CHECK_SIMPLEX_CLARKSON
@@ -353,7 +397,9 @@ template <typename T> struct FractionFreeSimplex {
   }
 
   // Phase 2: minimize the objective row over the feasible dictionary.
-  LpSolution<T> RunPhase2() {
+  // Returns -1 at optimality and otherwise the entering column giving an
+  // unbounded direction.
+  int RunPhase2() {
 #ifdef DEBUG_SIMPLEX_CLARKSON
     size_t n_pivot = 0;
 #endif
@@ -364,7 +410,7 @@ template <typename T> struct FractionFreeSimplex {
         os_ << "SIMPLEX_CLARKSON: phase 2 finished optimal after " << n_pivot
             << " pivots\n";
 #endif
-        return BuildOptimal();
+        return -1;
       }
       int r = RatioTest(s);
       if (r == -1) {
@@ -372,7 +418,7 @@ template <typename T> struct FractionFreeSimplex {
         os_ << "SIMPLEX_CLARKSON: phase 2 finished unbounded after " << n_pivot
             << " pivots\n";
 #endif
-        return BuildUnbounded(GetRayOfColumn(s, 1));
+        return s;
       }
       TrackDegeneracy(r);
       DoPivot(r, s);
@@ -489,6 +535,143 @@ template <typename T> struct FractionFreeSimplex {
     return sol;
   }
 
+  // The scaled builders: same solutions as the Build* functions above but
+  // reported without any division, as numerators together with the positive
+  // denominator det. They are the only builders usable in the ring case.
+  LpSolutionScaled<T> BuildOptimalScaled() const {
+    LpSolutionScaled<T> sol;
+    sol.OptimalValueNum = Tab(m, 0);
+    sol.OptimalValueDen = det;
+    MyVector<T> xnum = ZeroVector<T>(n_x);
+    for (int i = 0; i < m; i++) {
+      if (is_x(row_owner[i])) {
+        xnum(row_owner[i] - 1 - m) = Tab(i, 0);
+      }
+    }
+    MyVector<T> dualnum = ZeroVector<T>(m);
+    for (int j = 1; j < ncol; j++) {
+      if (is_slack(col_owner[j])) {
+        dualnum(col_owner[j] - 1) = -Tab(m, j);
+      }
+    }
+    sol.DirectSolution = VectorNumDen<T>{xnum, det};
+    sol.DualSolution = VectorNumDen<T>{dualnum, det};
+#ifdef SANITY_CHECK_SIMPLEX_CLARKSON
+    // Feasibility of the point, with the denominator cleared.
+    for (int i = 0; i < m; i++) {
+      T eSum = ListIneq_(i, 0) * det;
+      for (int k = 0; k < n_x; k++) {
+        eSum += ListIneq_(i, k + 1) * xnum(k);
+      }
+      if (eSum < 0) {
+        std::cerr << "SIMPLEX_CLARKSON: scaled optimal point violates row "
+                  << i << "\n";
+        throw TerminalException{1};
+      }
+    }
+    // The dual certificate: lambda <= 0, det * c_red + sum_i dualnum_i a_i
+    // is zero and the objective values agree.
+    for (int i = 0; i < m; i++) {
+      if (dualnum(i) > 0) {
+        std::cerr << "SIMPLEX_CLARKSON: scaled dual has a positive entry at "
+                  << i << "\n";
+        throw TerminalException{1};
+      }
+    }
+    for (int k = 0; k < n_x; k++) {
+      T eSum = obj_(k + 1) * det;
+      for (int i = 0; i < m; i++) {
+        eSum += dualnum(i) * ListIneq_(i, k + 1);
+      }
+      if (eSum != 0) {
+        std::cerr << "SIMPLEX_CLARKSON: scaled dual combination nonzero at "
+                     "coordinate "
+                  << k << "\n";
+        throw TerminalException{1};
+      }
+    }
+    T eVal = obj_(0) * det;
+    for (int i = 0; i < m; i++) {
+      eVal += dualnum(i) * ListIneq_(i, 0);
+    }
+    if (eVal != sol.OptimalValueNum) {
+      std::cerr << "SIMPLEX_CLARKSON: scaled dual objective differs from the "
+                   "optimal value\n";
+      throw TerminalException{1};
+    }
+#endif
+    return sol;
+  }
+
+  LpSolutionScaled<T> BuildInfeasibleScaled(int raux) const {
+    LpSolutionScaled<T> sol;
+    MyVector<T> dualnum = ZeroVector<T>(m);
+    for (int j = 1; j < ncol; j++) {
+      if (is_slack(col_owner[j])) {
+        dualnum(col_owner[j] - 1) = -Tab(raux, j);
+      }
+    }
+    sol.DualSolution = VectorNumDen<T>{dualnum, det};
+#ifdef SANITY_CHECK_SIMPLEX_CLARKSON
+    T eConst(0);
+    MyVector<T> eSum = ZeroVector<T>(n_x);
+    for (int i = 0; i < m; i++) {
+      if (dualnum(i) > 0) {
+        std::cerr << "SIMPLEX_CLARKSON: scaled Farkas certificate has a "
+                     "positive entry at row "
+                  << i << "\n";
+        throw TerminalException{1};
+      }
+      eConst += dualnum(i) * ListIneq_(i, 0);
+      for (int k = 0; k < n_x; k++) {
+        eSum(k) += dualnum(i) * ListIneq_(i, k + 1);
+      }
+    }
+    if (!(eConst > 0)) {
+      std::cerr << "SIMPLEX_CLARKSON: scaled Farkas certificate has "
+                   "nonpositive constant\n";
+      throw TerminalException{1};
+    }
+    for (int k = 0; k < n_x; k++) {
+      if (eSum(k) != 0) {
+        std::cerr << "SIMPLEX_CLARKSON: scaled Farkas certificate does not "
+                     "sum to zero at coordinate "
+                  << k << "\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    return sol;
+  }
+
+  LpSolutionScaled<T> BuildUnboundedScaled(MyVector<T> const &d) const {
+    LpSolutionScaled<T> sol;
+    sol.DirectSolution = VectorNumDen<T>{d, det};
+#ifdef SANITY_CHECK_SIMPLEX_CLARKSON
+    for (int i = 0; i < m; i++) {
+      T eSum(0);
+      for (int k = 0; k < n_x; k++) {
+        eSum += ListIneq_(i, k + 1) * d(k);
+      }
+      if (eSum < 0) {
+        std::cerr << "SIMPLEX_CLARKSON: scaled unbounded ray violates row "
+                  << i << "\n";
+        throw TerminalException{1};
+      }
+    }
+    T eObj(0);
+    for (int k = 0; k < n_x; k++) {
+      eObj += obj_(k + 1) * d(k);
+    }
+    if (!(eObj < 0)) {
+      std::cerr << "SIMPLEX_CLARKSON: scaled unbounded ray does not decrease "
+                   "the objective\n";
+      throw TerminalException{1};
+    }
+#endif
+    return sol;
+  }
+
   // Perform phase-0 style pivots so that the slack variables of the listed
   // rows become cobasic. This is used to warm start the solver from a basis
   // obtained by other means (typically the floating-point solver). The rows
@@ -508,8 +691,9 @@ template <typename T> struct FractionFreeSimplex {
     }
   }
 
-  LpSolution<T> solve() {
-    // Phase 0: pivot the free variables out of the cobasis.
+  // Phase 0: pivot the free variables out of the cobasis. Returns a
+  // lineality direction decreasing the objective when one exists.
+  std::optional<MyVector<T>> RunPhase0() {
     std::optional<MyVector<T>> pending_ray;
     for (int j = 1; j <= n_x; j++) {
       if (!is_x(col_owner[j])) {
@@ -536,14 +720,19 @@ template <typename T> struct FractionFreeSimplex {
 #ifdef DEBUG_SIMPLEX_CLARKSON
     os_ << "SIMPLEX_CLARKSON: phase 0 done, det=" << det << "\n";
 #endif
+    return pending_ray;
+  }
+
+  LpSolution<T> solve() {
+    std::optional<MyVector<T>> pending_ray = RunPhase0();
     // Phase 1: primal feasibility. Infeasibility takes precedence over the
     // unboundedness detected in phase 0.
-    std::optional<LpSolution<T>> infeas = RunPhase1();
-    if (infeas) {
+    std::optional<int> raux = RunPhase1();
+    if (raux) {
 #ifdef DEBUG_SIMPLEX_CLARKSON
       os_ << "SIMPLEX_CLARKSON: the problem is infeasible\n";
 #endif
-      return *infeas;
+      return BuildInfeasible(*raux);
     }
     if (pending_ray) {
 #ifdef DEBUG_SIMPLEX_CLARKSON
@@ -551,7 +740,36 @@ template <typename T> struct FractionFreeSimplex {
 #endif
       return BuildUnbounded(*pending_ray);
     }
-    return RunPhase2();
+    int s = RunPhase2();
+    if (s == -1) {
+      return BuildOptimal();
+    }
+    return BuildUnbounded(GetRayOfColumn(s, 1));
+  }
+
+  // The scaled variant of solve() for the ring case. Same phases, but the
+  // solution is reported without any division: numerator vectors together
+  // with the positive denominator det.
+  LpSolutionScaled<T> solve_scaled() {
+    std::optional<MyVector<T>> pending_ray = RunPhase0();
+    std::optional<int> raux = RunPhase1();
+    if (raux) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+      os_ << "SIMPLEX_CLARKSON: the problem is infeasible\n";
+#endif
+      return BuildInfeasibleScaled(*raux);
+    }
+    if (pending_ray) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+      os_ << "SIMPLEX_CLARKSON: unbounded via a lineality direction\n";
+#endif
+      return BuildUnboundedScaled(*pending_ray);
+    }
+    int s = RunPhase2();
+    if (s == -1) {
+      return BuildOptimalScaled();
+    }
+    return BuildUnboundedScaled(GetRayOfColumn(s, 1));
   }
 };
 
@@ -921,12 +1139,13 @@ FloatBasisHint ComputeFloatBasisHint(MyMatrix<T> const &ListIneq,
   return solver.solve();
 }
 
-// Solve the square k x k system M x = rhs by fraction-free Bareiss
-// elimination with row pivoting. Returns (xnum, den) with x = xnum / den
-// and den = +-det(M), or an empty optional when M is singular. All the
-// elimination arithmetic consists of exact divisions, so for integral
-// input everything stays integral (no gcd cascades); fractions only appear
-// in the O(k^2) back substitution.
+// Solve the square k x k system M x = rhs by the fraction-free
+// Gauss-Jordan elimination (Montante method) with row pivoting. Returns
+// (xnum, den) with x = xnum / den and den = +-det(M), or an empty optional
+// when M is singular. Every division of the elimination is exact, so the
+// function is usable for a ring T (e.g. mpz_class) as well as for a field:
+// for integral input everything stays integral with entries bounded by
+// minors, and no division other than the exact ones occurs.
 template <typename T>
 std::optional<std::pair<MyVector<T>, T>>
 FractionFreeSolveSquare(MyMatrix<T> W, MyVector<T> rhs) {
@@ -947,34 +1166,28 @@ FractionFreeSolveSquare(MyMatrix<T> W, MyVector<T> rhs) {
     }
     used[r_sel] = 1;
     pivrow[t] = r_sel;
-    T const &piv = W(r_sel, t);
+    T piv = W(r_sel, t);
     for (int r = 0; r < k; r++) {
-      if (used[r]) {
+      if (r == r_sel) {
         continue;
       }
-      for (int j = t + 1; j < k; j++) {
-        W(r, j) = (W(r, j) * piv - W(r, t) * W(r_sel, j)) / prev;
+      T coef = W(r, t);
+      for (int j = 0; j < k; j++) {
+        if (j == t) {
+          continue;
+        }
+        W(r, j) = (W(r, j) * piv - coef * W(r_sel, j)) / prev;
       }
-      rhs(r) = (rhs(r) * piv - W(r, t) * rhs(r_sel)) / prev;
+      rhs(r) = (rhs(r) * piv - coef * rhs(r_sel)) / prev;
       W(r, t) = T(0);
     }
     prev = piv;
   }
-  // Rows pivrow[t] form a triangular system: back substitution.
-  MyVector<T> x(k);
-  for (int t = k - 1; t >= 0; t--) {
-    int R = pivrow[t];
-    T val = rhs(R);
-    for (int j = t + 1; j < k; j++) {
-      val -= W(R, j) * x(j);
-    }
-    x(t) = val / W(R, t);
-  }
-  // The last pivot is +-det(M), and by Cramer's rule det(M) * x is
-  // integral for integral input.
+  // At completion every pivot row pivrow[t] has prev = +-det(M) in column
+  // t and zeros elsewhere, so rhs(pivrow[t]) is det(M) * x_t.
   MyVector<T> xnum(k);
   for (int t = 0; t < k; t++) {
-    xnum(t) = x(t) * prev;
+    xnum(t) = rhs(pivrow[t]);
   }
   return std::pair<MyVector<T>, T>(std::move(xnum), prev);
 }
@@ -1088,15 +1301,125 @@ SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
   return sol;
 }
 
+// The scaled variant of SIMPLEX_CertifyBasis for the ring case. The same
+// two fraction-free solves and the same optimality certificate, with all
+// the checks done on denominator-cleared quantities so that no division
+// (other than the exact ones inside the Bareiss elimination) occurs.
+template <typename T>
+std::optional<LpSolutionScaled<T>>
+SIMPLEX_CertifyBasisScaled(MyMatrix<T> const &ListIneq,
+                           MyVector<T> const &ToBeMinimized,
+                           std::vector<int> const &rows,
+                           [[maybe_unused]] std::ostream &os) {
+  int m = ListIneq.rows();
+  int n_x = ListIneq.cols() - 1;
+  if (static_cast<int>(rows.size()) != n_x) {
+    return {};
+  }
+  MyMatrix<T> M(n_x, n_x);
+  MyVector<T> rhs(n_x);
+  std::vector<uint8_t> in_basis(m, 0);
+  for (int j = 0; j < n_x; j++) {
+    int r = rows[j];
+    if (r < 0 || r >= m) {
+      return {};
+    }
+    in_basis[r] = 1;
+    rhs(j) = -ListIneq(r, 0);
+    for (int i = 0; i < n_x; i++) {
+      M(j, i) = ListIneq(r, i + 1);
+    }
+  }
+  std::optional<std::pair<MyVector<T>, T>> optX =
+      FractionFreeSolveSquare(M, rhs);
+  if (!optX) {
+    return {};
+  }
+  MyVector<T> xnum = optX->first;
+  T den = optX->second;
+  if (den < 0) {
+    den = -den;
+    for (int k = 0; k < n_x; k++) {
+      xnum(k) = -xnum(k);
+    }
+  }
+  for (int i = 0; i < m; i++) {
+    if (in_basis[i]) {
+      continue;
+    }
+    T eSum = ListIneq(i, 0) * den;
+    for (int k = 0; k < n_x; k++) {
+      eSum += ListIneq(i, k + 1) * xnum(k);
+    }
+    if (eSum < 0) {
+      return {};
+    }
+  }
+  T primalNum = ToBeMinimized(0) * den;
+  for (int k = 0; k < n_x; k++) {
+    primalNum += ToBeMinimized(k + 1) * xnum(k);
+  }
+  MyMatrix<T> MT(n_x, n_x);
+  MyVector<T> rhs2(n_x);
+  for (int j = 0; j < n_x; j++) {
+    int r = rows[j];
+    for (int i = 0; i < n_x; i++) {
+      MT(i, j) = ListIneq(r, i + 1);
+    }
+  }
+  for (int i = 0; i < n_x; i++) {
+    rhs2(i) = ToBeMinimized(i + 1);
+  }
+  std::optional<std::pair<MyVector<T>, T>> optP =
+      FractionFreeSolveSquare(MT, rhs2);
+  if (!optP) {
+    return {};
+  }
+  MyVector<T> pdnum = optP->first;
+  T dden = optP->second;
+  if (dden < 0) {
+    dden = -dden;
+    for (int j = 0; j < n_x; j++) {
+      pdnum(j) = -pdnum(j);
+    }
+  }
+  T dualNum(0);
+  for (int j = 0; j < n_x; j++) {
+    if (pdnum(j) < 0) {
+      return {};
+    }
+    dualNum += pdnum(j) * ListIneq(rows[j], 0);
+  }
+  // Value equality primalNum / den == ToBeMinimized(0) - dualNum / dden,
+  // cross-multiplied since both denominators are positive.
+  if (primalNum * dden != (ToBeMinimized(0) * dden - dualNum) * den) {
+    return {};
+  }
+  MyVector<T> dualnum_full = ZeroVector<T>(m);
+  for (int j = 0; j < n_x; j++) {
+    dualnum_full(rows[j]) = -pdnum(j);
+  }
+  LpSolutionScaled<T> sol;
+  sol.OptimalValueNum = primalNum;
+  sol.OptimalValueDen = den;
+  sol.DirectSolution = VectorNumDen<T>{xnum, den};
+  sol.DualSolution = VectorNumDen<T>{dualnum_full, dden};
+  return sol;
+}
+
 // The main entry point: solve the LP in floating point first, certify the
 // resulting basis exactly, and fall back to the exact fraction free solver
 // warm started from the floating-point basis when certification fails or
 // when the floating-point solver reports anything else than optimality.
-// The output is always exact and certificate-backed.
-template <typename T, typename Tfloat = double>
-LpSolution<T> SIMPLEX_LinearProgramming(MyMatrix<T> const &ListIneq,
-                                        MyVector<T> const &ToBeMinimized,
-                                        std::ostream &os) {
+// The output is always exact and certificate-backed. This is the kernel
+// operating in the arithmetic of T itself; the general entry point
+// SIMPLEX_LinearProgramming below reduces a field T to its underlying ring
+// first.
+template <typename T>
+LpSolution<T> SIMPLEX_LinearProgramming_field(MyMatrix<T> const &ListIneq,
+                                              MyVector<T> const &ToBeMinimized,
+                                              std::ostream &os) {
+  using Tfloat = double;
 #ifdef TIMINGS_SIMPLEX_CLARKSON
   MicrosecondTime time;
 #endif
@@ -1132,6 +1455,143 @@ LpSolution<T> SIMPLEX_LinearProgramming(MyMatrix<T> const &ListIneq,
      << "\n";
 #endif
   return sol;
+}
+
+// The scaled counterpart of SIMPLEX_LinearProgramming_field, usable when T
+// is a ring with exact division (e.g. mpz_class): float-first solve, scaled
+// certification, and scaled exact fallback. No division in T occurs.
+template <typename T>
+LpSolutionScaled<T>
+SIMPLEX_LinearProgramming_scaled(MyMatrix<T> const &ListIneq,
+                                 MyVector<T> const &ToBeMinimized,
+                                 std::ostream &os) {
+  using Tfloat = double;
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  MicrosecondTime time;
+#endif
+  int n_x = ListIneq.cols() - 1;
+  if (n_x >= 3) {
+    FloatBasisHint hint =
+        ComputeFloatBasisHint<T, Tfloat>(ListIneq, ToBeMinimized);
+    if (hint.status == FloatLpStatus::Optimal) {
+      std::optional<LpSolutionScaled<T>> opt = SIMPLEX_CertifyBasisScaled(
+          ListIneq, ToBeMinimized, hint.cobasis_rows, os);
+      if (opt) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+        os << "SIMPLEX_CLARKSON: floating-point basis certified (scaled)\n";
+#endif
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+        os << "|SIMPLEX_CLARKSON: SIMPLEX_LinearProgramming_scaled(lift)|="
+           << time << "\n";
+#endif
+        return *opt;
+      }
+    }
+    FractionFreeSimplex<T> solver(ListIneq, ToBeMinimized, os);
+    solver.ApplyBasisHint(hint.cobasis_rows);
+    LpSolutionScaled<T> sol = solver.solve_scaled();
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+    os << "|SIMPLEX_CLARKSON: SIMPLEX_LinearProgramming_scaled(fallback)|="
+       << time << "\n";
+#endif
+    return sol;
+  }
+  FractionFreeSimplex<T> solver(ListIneq, ToBeMinimized, os);
+  LpSolutionScaled<T> sol = solver.solve_scaled();
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  os << "|SIMPLEX_CLARKSON: SIMPLEX_LinearProgramming_scaled|=" << time
+     << "\n";
+#endif
+  return sol;
+}
+
+/*
+  The reduction to the underlying ring, following the design of
+  POLY_lrslib.h: when T is a field (and not a floating point type), the
+  rows and the objective are scaled once to ring elements, the whole
+  computation runs in the ring Tring = underlying_ring<T>::ring_type
+  through the scaled solver, and the solution is scaled back to T at the
+  boundary. Otherwise the field kernel operating directly in T is used.
+
+  The scalings and their inverses: with rows a'_i = c_i * a_i and
+  objective c' = c_obj * c (all c_i, c_obj > 0), the feasible set is
+  unchanged, so the optimal point is unchanged; the optimal value gets
+  multiplied by c_obj; and the dual multipliers transform as
+  lambda_i = lambda'_i * c_i / c_obj. The Farkas certificate of the
+  infeasible case transforms as lambda_i = lambda'_i * c_i and the
+  unbounded ray is unchanged (it is meaningful up to positive scaling).
+
+  Cost note: the boundary conversion is O(m d) ring element creations
+  per call. With the ring-arithmetic implementation of
+  RemoveFractionVectorPlusCoeffRing the measured cost of a single LP is
+  at parity with the field kernel on float-certified instances, and the
+  ring is about three times faster whenever the exact machinery runs
+  (certification of a difficult basis, exact fallback). Where many LPs
+  are solved on the same matrix (the Clarkson redundancy elimination),
+  the matrix is converted once and the solver runs on ring data
+  throughout.
+ */
+template <typename T>
+LpSolution<T> SIMPLEX_LinearProgramming_ring(MyMatrix<T> const &ListIneq,
+                                             MyVector<T> const &ToBeMinimized,
+                                             std::ostream &os) {
+  if constexpr (is_ring_field<T>::value && !std::is_floating_point_v<T>) {
+    using Tring = typename underlying_ring<T>::ring_type;
+    int nbRow = ListIneq.rows();
+    int nbCol = ListIneq.cols();
+    MyMatrix<Tring> ListIneqRing(nbRow, nbCol);
+    std::vector<T> RowMult(nbRow);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      FractionVectorRing<T> fr =
+          RemoveFractionVectorPlusCoeffRing(GetMatrixRow(ListIneq, iRow));
+      RowMult[iRow] = fr.TheMult;
+      AssignMatrixRow(ListIneqRing, iRow, fr.TheVect);
+    }
+    FractionVectorRing<T> fr_obj =
+        RemoveFractionVectorPlusCoeffRing(ToBeMinimized);
+    T const &ObjMult = fr_obj.TheMult;
+    MyVector<Tring> const &objRing = fr_obj.TheVect;
+    LpSolutionScaled<Tring> solRing =
+        SIMPLEX_LinearProgramming_scaled(ListIneqRing, objRing, os);
+    LpSolution<T> sol;
+    if (solRing.DirectSolution && solRing.DualSolution) {
+      // Optimal case.
+      MyVector<T> DualSolution = solRing.DualSolution->template get_vector<T>();
+      for (int i = 0; i < nbRow; i++) {
+        DualSolution(i) *= RowMult[i] / ObjMult;
+      }
+      sol.OptimalValue =
+          UniversalScalarConversion<T, Tring>(solRing.OptimalValueNum) /
+          (UniversalScalarConversion<T, Tring>(solRing.OptimalValueDen) *
+           ObjMult);
+      sol.DirectSolution = solRing.DirectSolution->template get_vector<T>();
+      sol.DualSolution = DualSolution;
+      return sol;
+    }
+    if (solRing.DualSolution) {
+      // Infeasible case: the Farkas certificate, meaningful up to a global
+      // positive scaling, is unscaled row-wise.
+      MyVector<T> DualSolution = solRing.DualSolution->template get_vector<T>();
+      for (int i = 0; i < nbRow; i++) {
+        DualSolution(i) *= RowMult[i];
+      }
+      sol.DualSolution = DualSolution;
+      return sol;
+    }
+    // Unbounded case: the ray is meaningful up to positive scaling.
+    sol.DirectSolution = solRing.DirectSolution->template get_vector<T>();
+    return sol;
+  } else {
+    return SIMPLEX_LinearProgramming_field(ListIneq, ToBeMinimized, os);
+  }
+}
+
+// The main public entry point: the reduction to the underlying ring.
+template <typename T>
+LpSolution<T> SIMPLEX_LinearProgramming(MyMatrix<T> const &ListIneq,
+                                        MyVector<T> const &ToBeMinimized,
+                                        std::ostream &os) {
+  return SIMPLEX_LinearProgramming_ring(ListIneq, ToBeMinimized, os);
 }
 
 /*
@@ -1198,13 +1658,13 @@ SIMPLEX_RedundancyReductionDirect(MyMatrix<T> const &ListIneq,
     for (int k = 0; k < n; k++) {
       obj(k) = ListIneq(i, k);
     }
-    LpSolution<T> sol = SIMPLEX_LinearProgramming(LPmat, obj, os);
+    LpSolutionScaled<T> sol = SIMPLEX_LinearProgramming_scaled(LPmat, obj, os);
     if (!sol.DirectSolution || !sol.DualSolution) {
       std::cerr << "SIMPLEX_CLARKSON: the redundancy LP should always be "
                    "feasible and bounded\n";
       throw TerminalException{1};
     }
-    if (sol.OptimalValue >= 0) {
+    if (sol.OptimalValueNum >= 0) {
       keep[i] = 0;
     }
   }
@@ -1225,7 +1685,11 @@ template <typename T> struct ClarksonRedundancyReduction {
   std::vector<uint8_t> decided;
   std::vector<uint8_t> redundant;
   std::vector<int> S;
-  MyVector<T> z;
+  // The interior point z = z_num / z_den with z_den > 0. The values Fz are
+  // scaled accordingly: Fz(i) = z_den * f_i(z), which leaves the ratio
+  // comparisons and tie-breaks of the ray shooting unchanged.
+  MyVector<T> z_num;
+  T z_den;
   MyVector<T> Fz;
 #ifdef DEBUG_SIMPLEX_CLARKSON
   size_t n_lp = 0;
@@ -1254,25 +1718,26 @@ template <typename T> struct ClarksonRedundancyReduction {
     LPmat(m, n_x + 1) = T(-1);
     MyVector<T> obj = ZeroVector<T>(n_x + 2);
     obj(n_x + 1) = T(-1);
-    LpSolution<T> sol = SIMPLEX_LinearProgramming(LPmat, obj, os_);
+    LpSolutionScaled<T> sol = SIMPLEX_LinearProgramming_scaled(LPmat, obj, os_);
     if (!sol.DirectSolution || !sol.DualSolution) {
       std::cerr << "SIMPLEX_CLARKSON: the interior point LP should always "
                    "be feasible and bounded\n";
       throw TerminalException{1};
     }
-    if (!(sol.OptimalValue < 0)) {
+    if (!(sol.OptimalValueNum < 0)) {
       return false;
     }
-    MyVector<T> const &xt = *sol.DirectSolution;
-    z = MyVector<T>(n_x);
+    MyVector<T> const &xt_num = sol.DirectSolution->num;
+    z_den = sol.DirectSolution->den;
+    z_num = MyVector<T>(n_x);
     for (int k = 0; k < n_x; k++) {
-      z(k) = xt(k);
+      z_num(k) = xt_num(k);
     }
     Fz = MyVector<T>(m);
     for (int i = 0; i < m; i++) {
-      T eSum = ListIneq_(i, 0);
+      T eSum = ListIneq_(i, 0) * z_den;
       for (int k = 0; k < n_x; k++) {
-        eSum += ListIneq_(i, k + 1) * z(k);
+        eSum += ListIneq_(i, k + 1) * z_num(k);
       }
       Fz(i) = eSum;
 #ifdef SANITY_CHECK_SIMPLEX_CLARKSON
@@ -1364,7 +1829,7 @@ template <typename T> struct ClarksonRedundancyReduction {
   // The redundancy test of row i against the current set S, with the
   // relaxation of row i keeping the LP bounded. Returns the solution of
   // the LP minimizing f_i.
-  LpSolution<T> SolveRedundancyLP(int i) {
+  LpSolutionScaled<T> SolveRedundancyLP(int i) {
 #ifdef DEBUG_SIMPLEX_CLARKSON
     n_lp++;
 #endif
@@ -1385,7 +1850,7 @@ template <typename T> struct ClarksonRedundancyReduction {
     for (int k = 0; k < n; k++) {
       obj(k) = ListIneq_(i, k);
     }
-    LpSolution<T> sol = SIMPLEX_LinearProgramming(LPmat, obj, os_);
+    LpSolutionScaled<T> sol = SIMPLEX_LinearProgramming_scaled(LPmat, obj, os_);
     if (!sol.DirectSolution || !sol.DualSolution) {
       std::cerr << "SIMPLEX_CLARKSON: the redundancy LP should always be "
                    "feasible and bounded\n";
@@ -1408,15 +1873,18 @@ template <typename T> struct ClarksonRedundancyReduction {
     Seed();
     for (int i = 0; i < m; i++) {
       while (!decided[i]) {
-        LpSolution<T> sol = SolveRedundancyLP(i);
-        if (sol.OptimalValue >= 0) {
+        LpSolutionScaled<T> sol = SolveRedundancyLP(i);
+        if (sol.OptimalValueNum >= 0) {
           decided[i] = 1;
           redundant[i] = 1;
         } else {
-          MyVector<T> const &xstar = *sol.DirectSolution;
+          // The direction towards the witness x* = xnum / xden from
+          // z = z_num / z_den, cleared of the positive denominators.
+          MyVector<T> const &xnum = sol.DirectSolution->num;
+          T const &xden = sol.DirectSolution->den;
           MyVector<T> d(n_x);
           for (int k = 0; k < n_x; k++) {
-            d(k) = xstar(k) - z(k);
+            d(k) = xnum(k) * z_den - z_num(k) * xden;
           }
           int ired = RayShoot(d);
           if (ired < 0 || decided[ired]) {
@@ -1549,14 +2017,15 @@ template <typename T> struct ClarksonRedundancyReductionBlock {
     }
     for (int i = 0; i < core.m; i++) {
       while (!core.decided[i]) {
-        LpSolution<T> sol = core.SolveRedundancyLP(i);
-        if (sol.OptimalValue >= 0) {
+        LpSolutionScaled<T> sol = core.SolveRedundancyLP(i);
+        if (sol.OptimalValueNum >= 0) {
           MarkRedundantBlock(i);
         } else {
-          MyVector<T> const &xstar = *sol.DirectSolution;
+          MyVector<T> const &xnum = sol.DirectSolution->num;
+          T const &xden = sol.DirectSolution->den;
           MyVector<T> dir(core.n_x);
           for (int k = 0; k < core.n_x; k++) {
-            dir(k) = xstar(k) - core.z(k);
+            dir(k) = xnum(k) * core.z_den - core.z_num(k) * xden;
           }
           int ired = core.RayShoot(dir);
           if (ired < 0 || core.decided[ired]) {
@@ -1587,6 +2056,29 @@ template <typename T> struct ClarksonRedundancyReductionBlock {
 // Clarkson redundancy elimination for rows in inhomogeneous form: row i is
 // the inequality ListIneq(i,0) + sum_j ListIneq(i,j) x_j >= 0. Returns the
 // ascending list of indices of the nonredundant rows.
+//
+// The reduction to the underlying ring, following the design of
+// POLY_lrslib.h: for a field T the rows are scaled once to ring elements
+// (the redundancy status of a row is invariant under positive row scaling,
+// so no unscaling of the output is needed) and the whole computation --
+// interior point, redundancy LPs, ray shooting -- runs over the ring
+// through the scaled solver. Since one Clarkson run solves many LPs on
+// the same data, the one-time conversion is well amortized.
+template <typename T>
+MyMatrix<typename underlying_ring<T>::ring_type>
+SIMPLEX_ScaleRowsToRing(MyMatrix<T> const &ListIneq) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  int nbRow = ListIneq.rows();
+  int nbCol = ListIneq.cols();
+  MyMatrix<Tring> ListIneqRing(nbRow, nbCol);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    FractionVectorRing<T> fr =
+        RemoveFractionVectorPlusCoeffRing(GetMatrixRow(ListIneq, iRow));
+    AssignMatrixRow(ListIneqRing, iRow, fr.TheVect);
+  }
+  return ListIneqRing;
+}
+
 template <typename T>
 std::vector<int>
 SIMPLEX_RedundancyReductionClarkson(MyMatrix<T> const &ListIneq,
@@ -1594,8 +2086,16 @@ SIMPLEX_RedundancyReductionClarkson(MyMatrix<T> const &ListIneq,
 #ifdef TIMINGS_SIMPLEX_CLARKSON
   MicrosecondTime time;
 #endif
-  ClarksonRedundancyReduction<T> crr(ListIneq, os);
-  std::vector<int> ListIdx = crr.run();
+  std::vector<int> ListIdx;
+  if constexpr (is_ring_field<T>::value && !std::is_floating_point_v<T>) {
+    using Tring = typename underlying_ring<T>::ring_type;
+    MyMatrix<Tring> ListIneqRing = SIMPLEX_ScaleRowsToRing(ListIneq);
+    ClarksonRedundancyReduction<Tring> crr(ListIneqRing, os);
+    ListIdx = crr.run();
+  } else {
+    ClarksonRedundancyReduction<T> crr(ListIneq, os);
+    ListIdx = crr.run();
+  }
 #ifdef TIMINGS_SIMPLEX_CLARKSON
   os << "|SIMPLEX_CLARKSON: SIMPLEX_RedundancyReductionClarkson|=" << time
      << "\n";
@@ -1606,6 +2106,7 @@ SIMPLEX_RedundancyReductionClarkson(MyMatrix<T> const &ListIneq,
 // The block accelerated variant: BlockBelong[i] is the orbit index of
 // row i under a symmetry group of the inequality system. See the comment
 // of ClarksonRedundancyReductionBlock for the correctness requirements.
+// The same reduction to the underlying ring applies.
 template <typename T>
 std::vector<int>
 SIMPLEX_RedundancyReductionClarksonBlocks(MyMatrix<T> const &ListIneq,
@@ -1614,8 +2115,16 @@ SIMPLEX_RedundancyReductionClarksonBlocks(MyMatrix<T> const &ListIneq,
 #ifdef TIMINGS_SIMPLEX_CLARKSON
   MicrosecondTime time;
 #endif
-  ClarksonRedundancyReductionBlock<T> crrb(ListIneq, BlockBelong, os);
-  std::vector<int> ListIdx = crrb.run();
+  std::vector<int> ListIdx;
+  if constexpr (is_ring_field<T>::value && !std::is_floating_point_v<T>) {
+    using Tring = typename underlying_ring<T>::ring_type;
+    MyMatrix<Tring> ListIneqRing = SIMPLEX_ScaleRowsToRing(ListIneq);
+    ClarksonRedundancyReductionBlock<Tring> crrb(ListIneqRing, BlockBelong, os);
+    ListIdx = crrb.run();
+  } else {
+    ClarksonRedundancyReductionBlock<T> crrb(ListIneq, BlockBelong, os);
+    ListIdx = crrb.run();
+  }
 #ifdef TIMINGS_SIMPLEX_CLARKSON
   os << "|SIMPLEX_CLARKSON: SIMPLEX_RedundancyReductionClarksonBlocks|="
      << time << "\n";
