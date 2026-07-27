@@ -150,11 +150,11 @@ MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
   }
   //
 #ifdef DEBUG_POLYTOPIZATION
-  os << "LP: Polytopization, Before CDD_LinearProgramming\n";
+  os << "LP: Polytopization, Before SIMPLEX_LinearProgramming\n";
 #endif
   LpSolution<T> eSol = SIMPLEX_LinearProgramming(nMat, eVect, os);
 #ifdef DEBUG_POLYTOPIZATION
-  os << "LP: Polytopization, After CDD_LinearProgramming\n";
+  os << "LP: Polytopization, After SIMPLEX_LinearProgramming\n";
 #endif
   if (!eSol.DirectSolution) {
     std::cerr << "LP: The optimization resulted in a result whose primal\n";
@@ -1487,12 +1487,12 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
       ToBeMinimized(i_col) += ListInequalities(i_row, i_col);
   }
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  os << "LP: GGUIP, CDD_LinearProgramming, before\n";
+  os << "LP: GGUIP, SIMPLEX_LinearProgramming, before\n";
 #endif
   LpSolution<T> eSol =
       SIMPLEX_LinearProgramming(ListInequalities, ToBeMinimized, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  os << "LP: GGUIP, CDD_LinearProgramming, after\n";
+  os << "LP: GGUIP, SIMPLEX_LinearProgramming, after\n";
 #endif
   if (!eSol.DirectSolution || !eSol.DualSolution) {
     std::cerr << "LP: Failed to find an interior point by linear programming\n";

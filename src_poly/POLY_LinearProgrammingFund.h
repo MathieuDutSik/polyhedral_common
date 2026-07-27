@@ -81,7 +81,7 @@ Face ComputeFaceLpSolution(MyMatrix<T> const &EXT, LpSolution<T> const &eSol) {
     }
 #ifdef SANITY_CHECK_LINEAR_PROGRAMMING_FUND
     if (eSum < 0) {
-      std::cerr << "CDD_LinearProgramming Error iRow=" << iRow
+      std::cerr << "LinearProgramming Error iRow=" << iRow
                 << " eSum=" << eSum << "\n";
       std::cerr << "DualDefined=" << eSol.DualSolution.has_value()
                 << " PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";

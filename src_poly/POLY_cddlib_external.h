@@ -3,6 +3,7 @@
 #define SRC_POLY_POLY_CDDLIB_EXTERNAL_H_
 
 #include "POLY_cddlib.h"
+#include "POLY_SimplexClarkson.h"
 
 template <typename T>
 LpSolution<T>
@@ -68,7 +69,7 @@ template <typename T>
 LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
                                               MyVector<T> const &eVect,
                                               std::ostream &os) {
-  LpSolution<T> eSol1 = CDD_LinearProgramming(TheEXT, eVect, os);
+  LpSolution<T> eSol1 = SIMPLEX_LinearProgramming(TheEXT, eVect, os);
   LpSolution<T> eSol2 = CDD_LinearProgramming_External(TheEXT, eVect, os);
   if (eSol1.DirectSolution.has_value() != eSol2.DirectSolution.has_value() ||
       eSol1.DualSolution.has_value() != eSol2.DualSolution.has_value()) {
