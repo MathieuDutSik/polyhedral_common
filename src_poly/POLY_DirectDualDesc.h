@@ -4,7 +4,6 @@
 
 // clang-format off
 #include "Basic_string.h"
-#include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
 #include "MAT_MatrixInt.h"
@@ -76,7 +75,6 @@ template <typename T> T Convert_Set_To_T(std::vector<size_t> const &V) {
 // The string form is still available (parsed from the heuristics / command
 // line) via dual_desc_program_from_string.
 enum class DualDescProgram {
-  cdd_cbased,
   cdd,
   small_polytopes,
   lrs,
@@ -93,8 +91,6 @@ enum class DualDescProgram {
 namespace std {
 inline std::string to_string(DualDescProgram prog) {
   switch (prog) {
-  case DualDescProgram::cdd_cbased:
-    return "cdd_cbased";
   case DualDescProgram::cdd:
     return "cdd";
   case DualDescProgram::small_polytopes:
@@ -122,8 +118,6 @@ inline std::string to_string(DualDescProgram prog) {
 // a known dual description program (e.g. "fullrankfacetset" handled elsewhere).
 inline std::optional<DualDescProgram>
 dual_desc_program_from_string_opt(std::string const &prog) {
-  if (prog == "cdd_cbased")
-    return DualDescProgram::cdd_cbased;
   if (prog == "cdd")
     return DualDescProgram::cdd;
   if (prog == "small_polytopes")
@@ -158,12 +152,6 @@ inline DualDescProgram dual_desc_program_from_string(std::string const &prog) {
 
 template <typename T> bool is_method_supported(DualDescProgram prog) {
   switch (prog) {
-  case DualDescProgram::cdd_cbased:
-#ifdef USE_CDDLIB
-    return true;
-#else
-    return false;
-#endif
   case DualDescProgram::cdd:
     // CDD requires T to be a field.
     return is_ring_field<T>::value;
@@ -212,13 +200,6 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
      << std::to_string(prog) << "\n";
 #endif
   switch (prog) {
-  case DualDescProgram::cdd_cbased:
-#ifdef USE_CDDLIB
-    return cbased_cdd::DualDescription_incd(EXT);
-#else
-    std::cerr << "DDD: The code has been compiled without the CDDLIB library\n";
-    throw TerminalException{1};
-#endif
   case DualDescProgram::cdd:
     // CDD certainly requires the ring to be a field
     if constexpr (is_ring_field<T>::value)
@@ -312,9 +293,6 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     }
 #endif
     break;
-  case DualDescProgram::cdd_cbased:
-    // Not available for the inequalities computation.
-    break;
   }
   terminate_direct_dual_desc("DirectFacetComputationInequalities", prog);
 }
@@ -371,9 +349,6 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
         return DualDescExternalProgramFaceIneq(EXT, "normaliz", f_process, os);
     }
 #endif
-    break;
-  case DualDescProgram::cdd_cbased:
-    // Not available for the face/inequality computation.
     break;
   }
   terminate_direct_dual_desc("DirectFacetComputationFaceIneq", prog);

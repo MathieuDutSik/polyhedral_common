@@ -416,8 +416,6 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 // * "delta": the difference between the incidence and the rank.
 //
 // Possible output:
-// * "cdd_cbased": Available only for mpq_class, uses the C-based version
-//  by C-linking
 // * "cdd": The templatized cdd (only for fields)
 // * "lrs": The templatized lrs (for fields and rings). When T is a field,
 //   the implementation internally uses the fraction-reduction variant;
