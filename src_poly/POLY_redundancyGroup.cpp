@@ -28,26 +28,12 @@ void process(std::string const &FileEXT, std::string const &FileGRP,
   Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
   std::cerr << "|GRP|=" << GRP.size() << " nbRow=" << nbRow << "\n";
   auto get_list_irred = [&]() -> std::vector<int> {
-    if (method == "ClarksonBlock") {
-      vectface vfo = DecomposeOrbitPoint_Full(GRP);
-      size_t n_orbit = vfo.size();
-      std::vector<int> BlockBelong(nbRow);
-      for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
-        Face f = vfo[i_orbit];
-        for (size_t i = 0; i < nbRow; i++) {
-          if (f[i] == 1) {
-            BlockBelong[i] = i_orbit;
-          }
-        }
-      }
-      return cdd::RedundancyReductionClarksonBlocks(EXT, BlockBelong, os);
-    }
     if (method == "Equivariant") {
       std::cerr << "process: before GetNonRedundant_Equivariant\n";
       return GetNonRedundant_Equivariant(EXT, GRP, os);
     }
     std::cerr << "Failed to find a relevant method\n";
-    std::cerr << "Allowed ones: ClarksonBlock and Equivariant\n";
+    std::cerr << "Allowed ones: Equivariant\n";
     throw TerminalException{1};
   };
   std::vector<int> ListIrred = get_list_irred();
@@ -99,7 +85,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- method ---\n";
       std::cerr << "\n";
-      std::cerr << "ClarksonBlock : For using Clarkson method wwith blocks\n";
       std::cerr << "Equivariant   : For using the equivariant method\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
@@ -191,9 +176,9 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, compute_redundancy);
-    std::cerr << "Normal termination of POLY_redundancyClarksonBlocks\n";
+    std::cerr << "Normal termination of POLY_redundancyGroup\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POLY_redundancyClarksonBlocks\n";
+    std::cerr << "Error in POLY_redundancyGroup\n";
     exit(e.eVal);
   }
   runtime(time1);
