@@ -19,7 +19,7 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
   MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
   auto get_list_irred = [&]() -> std::vector<int> {
     if (method == "Clarkson") {
-      return cdd::RedundancyReductionClarkson(EXT, os);
+      return SIMPLEX_RedundancyReductionClarkson(EXT, os);
     }
     if (method == "HitAndRun") {
       return EliminationByRedundance_HitAndRun(EXT, os);

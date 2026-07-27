@@ -994,7 +994,7 @@ Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, std::ostream &os) {
         FAC_local(i_ineq, i + 1) = eFACred(i);
     }
     std::vector<int> ListIrred =
-        cdd::RedundancyReductionClarkson(FAC_local, os);
+        SIMPLEX_RedundancyReductionClarkson(FAC_local, os);
     for (auto &eIrred : ListIrred) {
       int pos = ListIdx[eIrred];
       f_adj[pos + i_fac * n_fac] = 1;
