@@ -15,7 +15,9 @@ int main(int argc, char *argv[]) {
   boost::mpi::communicator world;
   HumanTime time;
   using T = mpq_class;
-  using Tint = int;
+  // int is not enough: the canonicalization of the principal domain in
+  // dimension 6 overflows Rational<int> arithmetic.
+  using Tint = int64_t;
   using Tidx = uint16_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;

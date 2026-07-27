@@ -13,6 +13,7 @@
 #include "MAT_Matrix.h"
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
+#include "POLY_SimplexClarkson.h"
 #include "PolytopeEquiStabInt.h"
 #include <cstring>
 #include <functional>
@@ -867,8 +868,24 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #ifdef TIMINGS
   os << "|CTYP: ListInformations|=" << time << "\n";
 #endif
+#ifdef CTYP_CLARKSON_SIMPLEX
+  // The exact Clarkson of POLY_SimplexClarkson.h. The entries T are a
+  // small integer type, so the matrix is converted to mpz first: the
+  // fraction-free pivoting works on minors that can overflow the small
+  // type. Measured on the n=6 enumeration (July 2026) this is about 3.5
+  // times slower per call than the floating point version below, the
+  // price of the exact certification of every conclusion.
+  MyMatrix<mpz_class> ListIneq_mpz =
+      UniversalMatrixConversion<mpz_class, T>(ListInequalities);
   std::vector<int> ListIrred =
-      cbased_cdd::RedundancyReductionClarkson(ListInequalities);
+      SIMPLEX_RedundancyReductionClarkson(ListIneq_mpz, os);
+#else
+  // The floating point Clarkson: the computation is done in double
+  // arithmetic without exactness guarantee, with a fallback to the exact
+  // method on floating point breakdown.
+  std::vector<int> ListIrred =
+      SIMPLEX_RedundancyReductionClarksonFloat(ListInequalities, os);
+#endif
 #ifdef TIMINGS
   os << "|CTYP: RedundancyReductionClarkson|=" << time << "\n";
 #endif

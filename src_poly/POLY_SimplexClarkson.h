@@ -871,6 +871,21 @@ template <typename Tfloat> struct FloatSimplex {
     return {status, GetCobasisRows()};
   }
 
+  // The value of the objective at the current dictionary, meaningful at
+  // the Optimal status.
+  Tfloat GetOptimalValue() const { return Tab(m, 0); }
+
+  // The current point of the dictionary, meaningful at the Optimal status.
+  MyVector<Tfloat> GetPrimalSolution() const {
+    MyVector<Tfloat> x = ZeroVector<Tfloat>(n_x);
+    for (int i = 0; i < m; i++) {
+      if (is_x(row_owner[i])) {
+        x(row_owner[i] - 1 - m) = Tab(i, 0);
+      }
+    }
+    return x;
+  }
+
   void DoPivot(int r, int s) {
     iter_count++;
     Tfloat inv = 1 / Tab(r, s);
@@ -2148,6 +2163,279 @@ SIMPLEX_RedundancyReductionClarksonExt(MyMatrix<T> const &FAC,
     }
   }
   return SIMPLEX_RedundancyReductionClarkson(ListIneq, os);
+}
+
+/*
+  The floating point Clarkson redundancy elimination, the native
+  replacement for cbased_cdd::RedundancyReductionClarkson (the C-linked
+  cddlib version). The whole computation -- interior point, redundancy
+  LPs, ray shooting -- runs in double arithmetic with epsilon tolerances
+  and no exact verification, which is what makes it fast; the conclusions
+  carry no exactness guarantee, exactly as for the cddlib version it
+  replaces. The rows are scaled to unit max-norm for numerical stability,
+  which changes neither the redundancy statuses nor the ray shooting
+  selections (all the comparisons are homogeneous in the row scalings).
+
+  When the floating point solver reports a breakdown (iteration limit,
+  failed ratio test) or the ray shooting cannot certify progress, the
+  whole computation falls back to the exact Clarkson method -- a safety
+  net that cddlib did not have.
+ */
+template <typename T> struct ClarksonRedundancyReductionFloat {
+  using Tfloat = double;
+  MyMatrix<Tfloat> A;
+  std::ostream &os_;
+  int m;
+  int n_x;
+  std::vector<uint8_t> decided;
+  std::vector<uint8_t> redundant;
+  std::vector<int> S;
+  MyVector<Tfloat> z;
+  MyVector<Tfloat> Fz;
+  Tfloat eps_decide;
+  bool breakdown;
+#ifdef DEBUG_SIMPLEX_CLARKSON
+  size_t n_lp = 0;
+  size_t n_shoot = 0;
+#endif
+
+  ClarksonRedundancyReductionFloat(MyMatrix<T> const &ListIneq,
+                                   std::ostream &os)
+      : A(ListIneq.rows(), ListIneq.cols()), os_(os), m(ListIneq.rows()),
+        n_x(ListIneq.cols() - 1), decided(m, 0), redundant(m, 0),
+        eps_decide(1e-9), breakdown(false) {
+    for (int i = 0; i < m; i++) {
+      Tfloat max_mag = 0;
+      for (int j = 0; j <= n_x; j++) {
+        A(i, j) = UniversalScalarConversion<Tfloat, T>(ListIneq(i, j));
+        Tfloat mag = A(i, j) < 0 ? -A(i, j) : A(i, j);
+        if (mag > max_mag) {
+          max_mag = mag;
+        }
+      }
+      if (max_mag > 0) {
+        for (int j = 0; j <= n_x; j++) {
+          A(i, j) /= max_mag;
+        }
+      }
+    }
+  }
+
+  // Compute an interior point by maximizing the margin t subject to
+  // f_i(x) - t >= 0 and t <= 1. Returns false when no interior point with
+  // a clear margin is found; breakdown is set on solver failure.
+  bool ComputeInteriorPoint() {
+    MyMatrix<Tfloat> LPmat(m + 1, n_x + 2);
+    for (int i = 0; i < m; i++) {
+      for (int k = 0; k <= n_x; k++) {
+        LPmat(i, k) = A(i, k);
+      }
+      LPmat(i, n_x + 1) = -1;
+    }
+    for (int k = 0; k <= n_x; k++) {
+      LPmat(m, k) = 0;
+    }
+    LPmat(m, 0) = 1;
+    LPmat(m, n_x + 1) = -1;
+    MyVector<Tfloat> obj = ZeroVector<Tfloat>(n_x + 2);
+    obj(n_x + 1) = -1;
+    FloatSimplex<Tfloat> solver(LPmat, obj);
+    FloatBasisHint hint = solver.solve();
+    if (hint.status != FloatLpStatus::Optimal) {
+      breakdown = true;
+      return false;
+    }
+    if (!(solver.GetOptimalValue() < -eps_decide)) {
+      return false;
+    }
+    MyVector<Tfloat> xt = solver.GetPrimalSolution();
+    z = MyVector<Tfloat>(n_x);
+    for (int k = 0; k < n_x; k++) {
+      z(k) = xt(k);
+    }
+    Fz = MyVector<Tfloat>(m);
+    for (int i = 0; i < m; i++) {
+      Tfloat eSum = A(i, 0);
+      for (int k = 0; k < n_x; k++) {
+        eSum += A(i, k + 1) * z(k);
+      }
+      Fz(i) = eSum;
+    }
+    return true;
+  }
+
+  // The floating point ray shooting from z along d: the first hit row by
+  // the minimum ratio rule with the lexicographic tie-break, as in
+  // cddlib's dd_RayShooting. Rows with a nonpositive value at z do not
+  // participate, as in cddlib. Returns -1 when the ray does not exit.
+  int RayShoot(MyVector<Tfloat> const &d) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+    n_shoot++;
+#endif
+    int imin = -1;
+    Tfloat min_num(0);
+    Tfloat min_den(1);
+    for (int i = 0; i < m; i++) {
+      if (!(Fz(i) > 0)) {
+        continue;
+      }
+      Tfloat t2 = 0;
+      for (int k = 0; k < n_x; k++) {
+        t2 += A(i, k + 1) * d(k);
+      }
+      if (imin == -1) {
+        imin = i;
+        min_num = t2;
+        min_den = Fz(i);
+        continue;
+      }
+      Tfloat lhs = t2 * min_den;
+      Tfloat rhs = min_num * Fz(i);
+      if (lhs < rhs - eps_decide) {
+        imin = i;
+        min_num = t2;
+        min_den = Fz(i);
+      } else {
+        if (lhs < rhs + eps_decide) {
+          // Tie: keep the lexicographically smaller normalized row.
+          for (int k = 0; k <= n_x; k++) {
+            Tfloat val_i = A(i, k) * min_den;
+            Tfloat val_min = A(imin, k) * Fz(i);
+            if (val_i < val_min - eps_decide) {
+              imin = i;
+              min_num = t2;
+              min_den = Fz(i);
+              break;
+            }
+            if (val_i > val_min + eps_decide) {
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (imin == -1 || !(min_num < -eps_decide)) {
+      return -1;
+    }
+    return imin;
+  }
+
+  void CertifyNonRedundant(int r) {
+    decided[r] = 1;
+    S.push_back(r);
+  }
+
+  void Seed() {
+    MyVector<Tfloat> d = ZeroVector<Tfloat>(n_x);
+    for (int k = 0; k < n_x; k++) {
+      for (int sigma = 0; sigma < 2; sigma++) {
+        d(k) = sigma == 0 ? Tfloat(1) : Tfloat(-1);
+        int ired = RayShoot(d);
+        if (ired >= 0 && !decided[ired]) {
+          CertifyNonRedundant(ired);
+        }
+      }
+      d(k) = 0;
+    }
+  }
+
+  std::vector<int> run() {
+    for (int i = 0; i < m; i++) {
+      while (!decided[i]) {
+        // The redundancy LP of row i against S, with the relaxation of
+        // row i keeping the LP bounded.
+#ifdef DEBUG_SIMPLEX_CLARKSON
+        n_lp++;
+#endif
+        int n = n_x + 1;
+        int n_S = S.size();
+        MyMatrix<Tfloat> LPmat(n_S + 1, n);
+        for (int pos = 0; pos < n_S; pos++) {
+          int j = S[pos];
+          for (int k = 0; k < n; k++) {
+            LPmat(pos, k) = A(j, k);
+          }
+        }
+        for (int k = 0; k < n; k++) {
+          LPmat(n_S, k) = A(i, k);
+        }
+        LPmat(n_S, 0) += 1;
+        MyVector<Tfloat> obj(n);
+        for (int k = 0; k < n; k++) {
+          obj(k) = A(i, k);
+        }
+        FloatSimplex<Tfloat> solver(LPmat, obj);
+        FloatBasisHint hint = solver.solve();
+        if (hint.status != FloatLpStatus::Optimal) {
+          breakdown = true;
+          return {};
+        }
+        if (solver.GetOptimalValue() >= -eps_decide) {
+          decided[i] = 1;
+          redundant[i] = 1;
+        } else {
+          MyVector<Tfloat> xstar = solver.GetPrimalSolution();
+          MyVector<Tfloat> d(n_x);
+          for (int k = 0; k < n_x; k++) {
+            d(k) = xstar(k) - z(k);
+          }
+          int ired = RayShoot(d);
+          if (ired < 0 || decided[ired]) {
+            // The floating point shooting failed to certify progress.
+            breakdown = true;
+            return {};
+          }
+          CertifyNonRedundant(ired);
+        }
+      }
+    }
+#ifdef DEBUG_SIMPLEX_CLARKSON
+    os_ << "SIMPLEX_CLARKSON: ClarksonFloat done, m=" << m
+        << " |S|=" << S.size() << " n_lp=" << n_lp << " n_shoot=" << n_shoot
+        << "\n";
+#endif
+    std::vector<int> ListIdx;
+    for (int i = 0; i < m; i++) {
+      if (!redundant[i]) {
+        ListIdx.push_back(i);
+      }
+    }
+    return ListIdx;
+  }
+};
+
+// The floating point Clarkson redundancy elimination, replacing
+// cbased_cdd::RedundancyReductionClarkson. The conclusions are computed in
+// double arithmetic and carry no exactness guarantee. On floating point
+// breakdown or when no interior point is found the exact method is used
+// instead.
+template <typename T>
+std::vector<int>
+SIMPLEX_RedundancyReductionClarksonFloat(MyMatrix<T> const &ListIneq,
+                                         std::ostream &os) {
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  MicrosecondTime time;
+#endif
+  ClarksonRedundancyReductionFloat<T> crrf(ListIneq, os);
+  std::vector<int> ListIdx;
+  if (crrf.ComputeInteriorPoint()) {
+    crrf.Seed();
+    ListIdx = crrf.run();
+  } else {
+    crrf.breakdown = true;
+  }
+  if (crrf.breakdown) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+    os << "SIMPLEX_CLARKSON: ClarksonFloat breakdown, falling back to the "
+          "exact method\n";
+#endif
+    ListIdx = SIMPLEX_RedundancyReductionClarkson(ListIneq, os);
+  }
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  os << "|SIMPLEX_CLARKSON: SIMPLEX_RedundancyReductionClarksonFloat|=" << time
+     << "\n";
+#endif
+  return ListIdx;
 }
 
 // clang-format off
