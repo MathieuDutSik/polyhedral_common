@@ -14,7 +14,7 @@ Print("Beginning TestCoherence (redundancy)\n");
 
 DoTest2_Clarkson:=true;
 DoTest3_Equivariant:=true;
-DoTest4_ClarksonBlock:=false; # This requires more work
+DoTest4_ClarksonBlock:=true;
 
 
 
@@ -23,7 +23,9 @@ TestIdx:=function(i)
     eFile:=Concatenation("TheCtype_5_", String(i));
     eFileGRP:=Concatenation("TheCtype_5_", String(i), ".grp");
     eProg:=GetBinaryFilename("GRP_LinPolytope_Automorphism");
-    eCommand:=Concatenation(eProg, " rational ", eFile, " GAP ", eFileGRP);
+    # The CPP output format is the native WriteGroup format, which is the
+    # one that POLY_redundancyGroup can read back (GAP format cannot).
+    eCommand:=Concatenation(eProg, " rational ", eFile, " CPP ", eFileGRP);
     Print("eCommand=", eCommand, "\n");
     Exec(eCommand);
     if IsExistingFile(eFileGRP)=false then
@@ -130,7 +132,7 @@ TestRedundancy:=function(eRec)
     RemoveFileIfExist(eFileIrred);
     #
     eProg:=GetBinaryFilename("GRP_LinPolytope_Automorphism");
-    eCommand:=Concatenation(eProg, " rational ", eRec.eFile, " GAP ", eFileGRP);
+    eCommand:=Concatenation(eProg, " rational ", eRec.eFile, " CPP ", eFileGRP);
     Print("eCommand=", eCommand, "\n");
     Exec(eCommand);
     if IsExistingFile(eFileGRP)=false then
@@ -161,7 +163,9 @@ end;
 TestWalls:=function()
     local n_error, ListRec, eRec;
     n_error:=0;
-    ListRec:=[rec(eFile:="walls", n_irred:=2400)]; #Need to put the correct value
+    # The value 2576 is confirmed by the Clarkson, ClarksonBlock and
+    # Equivariant methods which all agree on the walls polytope.
+    ListRec:=[rec(eFile:="walls", n_irred:=2576)];
     for eRec in ListRec
     do
         if TestRedundancy(eRec)=false then

@@ -47,7 +47,7 @@ void full_process_A(std::string const &eFile, std::string const &OutFormat,
     WriteListMatrix(os, ListGenMatr);
     return;
   }
-  if (OutFormat == "Oscar") {
+  if (OutFormat == "Oscar" || OutFormat == "CPP") {
     WriteGroup(os, GRP);
     return;
   }
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "FileEXT   : The list of vectors\n";
       std::cerr << "OutFormat : The format of output (GAP, ListMatrixFile, or "
-                   "Oscar)\n";
+                   "Oscar/CPP)\n";
       std::cerr << "FileGRP   : The file for outputting the group\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";

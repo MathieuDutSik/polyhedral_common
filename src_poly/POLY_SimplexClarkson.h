@@ -1443,6 +1443,147 @@ template <typename T> struct ClarksonRedundancyReduction {
   }
 };
 
+/*
+  The block (orbit) accelerated Clarkson redundancy elimination. When a
+  group of symmetries of the inequality system permutes the rows, the
+  facet-ness of a row is constant on each orbit. Since for a full
+  dimensional system the Clarkson notions "redundant" (valid on the
+  polyhedron) and "nonredundant" (a facet) are complementary, both
+  conclusions propagate to the whole orbit:
+  --- a row certified nonredundant by ray shooting certifies its whole
+      orbit, which then enters the certified set S in one step;
+  --- a row proven redundant against S is redundant for the full system
+      (S only relaxes the polyhedron), hence so is its whole orbit.
+  Each LP or ray shot thus decides an entire orbit and the number of LPs
+  scales with the number of orbits instead of the number of rows.
+
+  The blocks are given by BlockBelong: BlockBelong[i] is the block index
+  of row i, with values covering 0..n_block-1. Correctness requires the
+  blocks to be orbits (or unions of orbits) of a genuine symmetry group
+  of the inequality system and the rows to be pairwise non-proportional;
+  otherwise the status propagation is unsound.
+
+  The class reuses the machinery of ClarksonRedundancyReduction (interior
+  point, ray shooting, redundancy LP) through a contained core object and
+  only the driving loop differs by the orbit-wise propagation.
+ */
+template <typename T> struct ClarksonRedundancyReductionBlock {
+  ClarksonRedundancyReduction<T> core;
+  std::vector<std::vector<int>> Blocks;
+  std::vector<int> block_id;
+
+  ClarksonRedundancyReductionBlock(MyMatrix<T> const &ListIneq,
+                                   std::vector<int> const &BlockBelong,
+                                   std::ostream &os)
+      : core(ListIneq, os) {
+#ifdef SANITY_CHECK_SIMPLEX_CLARKSON
+    if (static_cast<int>(BlockBelong.size()) != core.m) {
+      std::cerr << "SIMPLEX_CLARKSON: |BlockBelong|=" << BlockBelong.size()
+                << " but the matrix has " << core.m << " rows\n";
+      throw TerminalException{1};
+    }
+#endif
+    int n_block = 0;
+    for (int i = 0; i < core.m; i++) {
+#ifdef SANITY_CHECK_SIMPLEX_CLARKSON
+      if (BlockBelong[i] < 0) {
+        std::cerr << "SIMPLEX_CLARKSON: negative block index at row " << i
+                  << "\n";
+        throw TerminalException{1};
+      }
+#endif
+      if (BlockBelong[i] >= n_block) {
+        n_block = BlockBelong[i] + 1;
+      }
+    }
+    block_id = BlockBelong;
+    Blocks.resize(n_block);
+    for (int i = 0; i < core.m; i++) {
+      Blocks[BlockBelong[i]].push_back(i);
+    }
+  }
+
+  // A certified facet certifies its whole orbit, which enters S.
+  void CertifyNonRedundantBlock(int r) {
+    for (int j : Blocks[block_id[r]]) {
+      if (!core.decided[j]) {
+        core.decided[j] = 1;
+        core.S.push_back(j);
+      }
+    }
+  }
+
+  // A row proven redundant is redundant for the full system and so is
+  // its whole orbit.
+  void MarkRedundantBlock(int i) {
+    for (int j : Blocks[block_id[i]]) {
+      if (!core.decided[j]) {
+        core.decided[j] = 1;
+        core.redundant[j] = 1;
+      }
+    }
+  }
+
+  std::vector<int> run() {
+    if (core.m == 0) {
+      return {};
+    }
+    if (!core.ComputeInteriorPoint()) {
+#ifdef DEBUG_SIMPLEX_CLARKSON
+      core.os_ << "SIMPLEX_CLARKSON: no interior point, falling back to the "
+                  "direct algorithm\n";
+#endif
+      return SIMPLEX_RedundancyReductionDirect(core.ListIneq_, core.os_);
+    }
+    // Seeding by coordinate direction shots, with orbit propagation.
+    MyVector<T> d = ZeroVector<T>(core.n_x);
+    for (int k = 0; k < core.n_x; k++) {
+      for (int sigma = 0; sigma < 2; sigma++) {
+        d(k) = sigma == 0 ? T(1) : T(-1);
+        int ired = core.RayShoot(d);
+        if (ired >= 0 && !core.decided[ired]) {
+          CertifyNonRedundantBlock(ired);
+        }
+      }
+      d(k) = T(0);
+    }
+    for (int i = 0; i < core.m; i++) {
+      while (!core.decided[i]) {
+        LpSolution<T> sol = core.SolveRedundancyLP(i);
+        if (sol.OptimalValue >= 0) {
+          MarkRedundantBlock(i);
+        } else {
+          MyVector<T> const &xstar = *sol.DirectSolution;
+          MyVector<T> dir(core.n_x);
+          for (int k = 0; k < core.n_x; k++) {
+            dir(k) = xstar(k) - core.z(k);
+          }
+          int ired = core.RayShoot(dir);
+          if (ired < 0 || core.decided[ired]) {
+            std::cerr << "SIMPLEX_CLARKSON: the ray shooting returned "
+                      << ired << " which is impossible since the witness "
+                      << "violates row " << i << "\n";
+            throw TerminalException{1};
+          }
+          CertifyNonRedundantBlock(ired);
+        }
+      }
+    }
+#ifdef DEBUG_SIMPLEX_CLARKSON
+    core.os_ << "SIMPLEX_CLARKSON: ClarksonBlock done, m=" << core.m
+             << " n_block=" << Blocks.size() << " |S|=" << core.S.size()
+             << " n_lp=" << core.n_lp << " n_shoot=" << core.n_shoot << "\n";
+#endif
+    std::vector<int> ListIdx;
+    for (int i = 0; i < core.m; i++) {
+      if (!core.redundant[i]) {
+        ListIdx.push_back(i);
+      }
+    }
+    return ListIdx;
+  }
+};
+
 // Clarkson redundancy elimination for rows in inhomogeneous form: row i is
 // the inequality ListIneq(i,0) + sum_j ListIneq(i,j) x_j >= 0. Returns the
 // ascending list of indices of the nonredundant rows.
@@ -1458,6 +1599,26 @@ SIMPLEX_RedundancyReductionClarkson(MyMatrix<T> const &ListIneq,
 #ifdef TIMINGS_SIMPLEX_CLARKSON
   os << "|SIMPLEX_CLARKSON: SIMPLEX_RedundancyReductionClarkson|=" << time
      << "\n";
+#endif
+  return ListIdx;
+}
+
+// The block accelerated variant: BlockBelong[i] is the orbit index of
+// row i under a symmetry group of the inequality system. See the comment
+// of ClarksonRedundancyReductionBlock for the correctness requirements.
+template <typename T>
+std::vector<int>
+SIMPLEX_RedundancyReductionClarksonBlocks(MyMatrix<T> const &ListIneq,
+                                          std::vector<int> const &BlockBelong,
+                                          std::ostream &os) {
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  MicrosecondTime time;
+#endif
+  ClarksonRedundancyReductionBlock<T> crrb(ListIneq, BlockBelong, os);
+  std::vector<int> ListIdx = crrb.run();
+#ifdef TIMINGS_SIMPLEX_CLARKSON
+  os << "|SIMPLEX_CLARKSON: SIMPLEX_RedundancyReductionClarksonBlocks|="
+     << time << "\n";
 #endif
   return ListIdx;
 }

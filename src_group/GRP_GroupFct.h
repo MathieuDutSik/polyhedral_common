@@ -108,6 +108,13 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
   int n_i;
   is >> n_i;
   is >> nbGen;
+  if (is.fail()) {
+    std::cerr << "ReadGroup operation failed: the header (n nbGen) could not "
+                 "be parsed.\n";
+    std::cerr << "The expected format is the one of WriteGroup. A GAP-style "
+                 "group file (return Group([...]);) cannot be read here.\n";
+    throw TerminalException{1};
+  }
   Tidx n = Tidx(n_i);
   std::vector<Telt> ListGen;
   for (int iGen = 0; iGen < nbGen; iGen++) {
@@ -115,6 +122,12 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
     for (Tidx i = 0; i < n; i++) {
       int eVal_i;
       is >> eVal_i;
+      if (is.fail()) {
+        std::cerr << "ReadGroup operation failed: truncated generator data "
+                     "at iGen="
+                  << iGen << " i=" << i << "\n";
+        throw TerminalException{1};
+      }
       Tidx eVal = Tidx(eVal_i);
       if (eVal >= n) {
         std::cerr << "n=" << n_i << " nbGen=" << nbGen << "\n";

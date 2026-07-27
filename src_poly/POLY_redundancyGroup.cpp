@@ -27,13 +27,33 @@ void process(std::string const &FileEXT, std::string const &FileGRP,
   size_t nbRow = EXT.rows();
   Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
   std::cerr << "|GRP|=" << GRP.size() << " nbRow=" << nbRow << "\n";
+  if (GRP.n_act() != nbRow) {
+    std::cerr << "The group acts on n_act=" << GRP.n_act()
+              << " points but the matrix has nbRow=" << nbRow << " rows\n";
+    std::cerr << "The group file must be for the action on the rows\n";
+    throw TerminalException{1};
+  }
   auto get_list_irred = [&]() -> std::vector<int> {
+    if (method == "ClarksonBlock") {
+      vectface vfo = DecomposeOrbitPoint_Full(GRP);
+      size_t n_orbit = vfo.size();
+      std::vector<int> BlockBelong(nbRow);
+      for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
+        Face f = vfo[i_orbit];
+        for (size_t i = 0; i < nbRow; i++) {
+          if (f[i] == 1) {
+            BlockBelong[i] = i_orbit;
+          }
+        }
+      }
+      return SIMPLEX_RedundancyReductionClarksonBlocks(EXT, BlockBelong, os);
+    }
     if (method == "Equivariant") {
       std::cerr << "process: before GetNonRedundant_Equivariant\n";
       return GetNonRedundant_Equivariant(EXT, GRP, os);
     }
     std::cerr << "Failed to find a relevant method\n";
-    std::cerr << "Allowed ones: Equivariant\n";
+    std::cerr << "Allowed ones: ClarksonBlock and Equivariant\n";
     throw TerminalException{1};
   };
   std::vector<int> ListIrred = get_list_irred();
@@ -85,6 +105,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- method ---\n";
       std::cerr << "\n";
+      std::cerr << "ClarksonBlock : The Clarkson method with orbit-wise "
+                   "propagation of the conclusions\n";
       std::cerr << "Equivariant   : For using the equivariant method\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
