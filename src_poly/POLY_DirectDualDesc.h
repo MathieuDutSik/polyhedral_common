@@ -154,14 +154,18 @@ template <typename T> bool is_method_supported(DualDescProgram prog) {
   switch (prog) {
   case DualDescProgram::cdd:
     // Served by the double description method, which runs division-free.
-  case DualDescProgram::small_polytopes:
   case DualDescProgram::lrs:
-  case DualDescProgram::pd_lrs:
+  case DualDescProgram::beneath_beyond:
+    // Beneath-and-beyond runs in ring arithmetic; the one nullspace (the
+    // initial simplicial cone) is taken over the overlying field.
     // Applies to the field or ring case.
     return true;
-  case DualDescProgram::beneath_beyond:
-    // Beneath-and-beyond computes facet normals through a nullspace, so it
-    // requires T to be a field.
+  case DualDescProgram::small_polytopes:
+    // The kernel vectors are computed by a field solver for the types
+    // without an accelerated subset solver.
+  case DualDescProgram::pd_lrs:
+    // The polytopization and the initial full rank facet set compute
+    // nullspaces over T, so a field is required.
     return is_ring_field<T>::value;
   case DualDescProgram::glrs:
   case DualDescProgram::ppl_ext:
@@ -203,18 +207,21 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     // The double description method, applicable to the field or ring case
     return double_desc::DualDescription_incd(EXT, os);
   case DualDescProgram::small_polytopes:
-    // Small polytopes have special solutions
-    return SmallPolytope_Incidence(EXT, os);
+    // Small polytopes have special solutions (field-based kernel solver)
+    if constexpr (is_ring_field<T>::value)
+      return SmallPolytope_Incidence(EXT, os);
+    break;
   case DualDescProgram::lrs:
     return lrs::DualDescription_incd(EXT);
   case DualDescProgram::pd_lrs:
-    // It applies to the field case or ring
-    return POLY_DualDescription_PrimalDualIncidence(EXT, os);
-  case DualDescProgram::beneath_beyond:
-    // Native beneath-and-beyond, full-dimensional pointed cone (field only)
+    // The polytopization requires a field
     if constexpr (is_ring_field<T>::value)
-      return POLY_DualDescription_BeneathBeyondIncidence(EXT, os);
+      return POLY_DualDescription_PrimalDualIncidence(EXT, os);
     break;
+  case DualDescProgram::beneath_beyond:
+    // Native beneath-and-beyond, full-dimensional pointed cone,
+    // applicable to the field or ring case
+    return POLY_DualDescription_BeneathBeyondIncidence(EXT, os);
   case DualDescProgram::glrs:
   case DualDescProgram::ppl_ext:
   case DualDescProgram::cdd_ext:
@@ -258,18 +265,21 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     // The double description method, applicable to the field or ring case
     return double_desc::DualDescription(EXT, os);
   case DualDescProgram::small_polytopes:
-    // Small polytopes have special solutions
-    return SmallPolytope_Ineq(EXT, os);
+    // Small polytopes have special solutions (field-based kernel solver)
+    if constexpr (is_ring_field<T>::value)
+      return SmallPolytope_Ineq(EXT, os);
+    break;
   case DualDescProgram::lrs:
     return lrs::DualDescription(EXT);
   case DualDescProgram::pd_lrs:
-    // It applies to the field case or ring
-    return POLY_DualDescription_PrimalDualInequalities(EXT, os);
-  case DualDescProgram::beneath_beyond:
-    // Native beneath-and-beyond, full-dimensional pointed cone (field only)
+    // The polytopization requires a field
     if constexpr (is_ring_field<T>::value)
-      return POLY_DualDescription_BeneathBeyondInequalities(EXT, os);
+      return POLY_DualDescription_PrimalDualInequalities(EXT, os);
     break;
+  case DualDescProgram::beneath_beyond:
+    // Native beneath-and-beyond, full-dimensional pointed cone,
+    // applicable to the field or ring case
+    return POLY_DualDescription_BeneathBeyondInequalities(EXT, os);
   case DualDescProgram::glrs:
   case DualDescProgram::ppl_ext:
   case DualDescProgram::cdd_ext:
@@ -313,18 +323,21 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     // The double description method, applicable to the field or ring case
     return double_desc::DualDescriptionFaceIneq(EXT, f_process, os);
   case DualDescProgram::small_polytopes:
-    // Small polytopes can have special solutions
-    return SmallPolytope_FaceIneq(EXT, f_process, os);
+    // Small polytopes have special solutions (field-based kernel solver)
+    if constexpr (is_ring_field<T>::value)
+      return SmallPolytope_FaceIneq(EXT, f_process, os);
+    break;
   case DualDescProgram::lrs:
     return lrs::DualDescriptionFaceIneq(EXT, f_process);
   case DualDescProgram::pd_lrs:
-    // It applies to the field case or ring
-    return POLY_DualDescription_PrimalDualFaceIneq(EXT, f_process, os);
-  case DualDescProgram::beneath_beyond:
-    // Native beneath-and-beyond, full-dimensional pointed cone (field only)
+    // The polytopization requires a field
     if constexpr (is_ring_field<T>::value)
-      return POLY_DualDescription_BeneathBeyondFaceIneq(EXT, f_process, os);
+      return POLY_DualDescription_PrimalDualFaceIneq(EXT, f_process, os);
     break;
+  case DualDescProgram::beneath_beyond:
+    // Native beneath-and-beyond, full-dimensional pointed cone,
+    // applicable to the field or ring case
+    return POLY_DualDescription_BeneathBeyondFaceIneq(EXT, f_process, os);
   case DualDescProgram::glrs:
   case DualDescProgram::ppl_ext:
   case DualDescProgram::cdd_ext:
