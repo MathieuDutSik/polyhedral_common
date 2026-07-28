@@ -25,8 +25,7 @@
 /*
   Fraction-free simplex algorithm for exact linear programming.
 
-  This is a from-scratch replacement for the linear programming core of
-  POLY_cddlib.h. The eventual goal of this file is:
+  The design of this file is:
   --- A fraction-free simplex LP solver (this code).
   --- A floating-point first phase whose terminal basis is certified (and
       if needed repaired) by the exact code.
@@ -38,7 +37,8 @@
       f_i(x) = ListIneq(i,0) + sum_j ListIneq(i,j) x_j >= 0.
   --- ToBeMinimized is a vector of length n encoding the objective
       g(x) = ToBeMinimized(0) + sum_j ToBeMinimized(j) x_j to be minimized.
-  The returned LpSolution<T> follows the conventions of CDD_LinearProgramming:
+  The returned LpSolution<T> follows the conventions used by the callers
+  in POLY_LinearProgramming.h:
   --- Optimal: DirectSolution = optimal point x (length n-1),
       DualSolution = multipliers lambda <= 0 (length m) with
       c_red + sum_i lambda_i a_i = 0 and
@@ -1626,10 +1626,10 @@ LpSolution<T> SIMPLEX_LinearProgramming(MyMatrix<T> const &ListIneq,
       first-hit row as nonredundant (a facet); that row joins S.
   Each LP thus either decides a row or grows S, so at most m + |S| LPs are
   solved, each over roughly |S| rows only, and each solved by the float-first
-  certified solver above. The ray shooting uses the same division-free
-  minimum-ratio selection with lexicographic tie-breaking as cddlib's
-  dd_RayShooting, which guarantees the selected row is a facet (with a
-  consistent smallest-index representative for proportional duplicate rows).
+  certified solver above. The ray shooting uses a division-free
+  minimum-ratio selection with lexicographic tie-breaking, which
+  guarantees the selected row is a facet (with a consistent
+  smallest-index representative for proportional duplicate rows).
 
   When no interior point exists (the feasible set is not full dimensional)
   the code falls back to the direct algorithm.
@@ -1637,7 +1637,7 @@ LpSolution<T> SIMPLEX_LinearProgramming(MyMatrix<T> const &ListIneq,
 
 // The direct redundancy elimination: one LP per row over the currently
 // kept rows. Used as fallback and as a test oracle. The rows are processed
-// in decreasing index order, as in dd_RedundantRows, so that among a group
+// in decreasing index order, so that among a group
 // of mutually redundant rows (duplicates, positive multiples) the smallest
 // index is kept -- the same representative the ray shooting tie-break of
 // the Clarkson method selects.
@@ -1769,7 +1769,7 @@ template <typename T> struct ClarksonRedundancyReduction {
 
   // Shoot the ray z + t d for t > 0 and return the first row hit, that is
   // the row minimizing the ratio (a_i . d) / f_i(z) provided this minimum
-  // is negative, with the lexicographic tie-break of dd_RayShooting.
+  // is negative, with a lexicographic tie-break over the scaled rows.
   // Returns -1 when the ray never exits the feasible set.
   int RayShoot(MyVector<T> const &d) {
 #ifdef DEBUG_SIMPLEX_CLARKSON
@@ -2148,7 +2148,7 @@ SIMPLEX_RedundancyReductionClarksonBlocks(MyMatrix<T> const &ListIneq,
 }
 
 // Variant for the homogeneous cone setting: rows of FAC are inequalities
-// sum_j FAC(i,j) x_j >= 0. This matches cdd::RedundancyReductionClarksonExt.
+// sum_j FAC(i,j) x_j >= 0.
 template <typename T>
 std::vector<int>
 SIMPLEX_RedundancyReductionClarksonExt(MyMatrix<T> const &FAC,
@@ -2166,20 +2166,18 @@ SIMPLEX_RedundancyReductionClarksonExt(MyMatrix<T> const &FAC,
 }
 
 /*
-  The floating point Clarkson redundancy elimination, the native
-  replacement for the formerly used C-linked cddlib version
-  (cbased_cdd::RedundancyReductionClarkson, now removed). The whole computation -- interior point, redundancy
-  LPs, ray shooting -- runs in double arithmetic with epsilon tolerances
-  and no exact verification, which is what makes it fast; the conclusions
-  carry no exactness guarantee, exactly as for the cddlib version it
-  replaces. The rows are scaled to unit max-norm for numerical stability,
-  which changes neither the redundancy statuses nor the ray shooting
-  selections (all the comparisons are homogeneous in the row scalings).
+  The floating point Clarkson redundancy elimination. The whole
+  computation -- interior point, redundancy LPs, ray shooting -- runs in
+  double arithmetic with epsilon tolerances and no exact verification,
+  which is what makes it fast; the conclusions carry no exactness
+  guarantee. The rows are scaled to unit max-norm for numerical
+  stability, which changes neither the redundancy statuses nor the ray
+  shooting selections (all the comparisons are homogeneous in the row
+  scalings).
 
   When the floating point solver reports a breakdown (iteration limit,
   failed ratio test) or the ray shooting cannot certify progress, the
-  whole computation falls back to the exact Clarkson method -- a safety
-  net that cddlib did not have.
+  whole computation falls back to the exact Clarkson method.
  */
 template <typename T> struct ClarksonRedundancyReductionFloat {
   using Tfloat = double;
@@ -2265,9 +2263,9 @@ template <typename T> struct ClarksonRedundancyReductionFloat {
   }
 
   // The floating point ray shooting from z along d: the first hit row by
-  // the minimum ratio rule with the lexicographic tie-break, as in
-  // cddlib's dd_RayShooting. Rows with a nonpositive value at z do not
-  // participate, as in cddlib. Returns -1 when the ray does not exit.
+  // the minimum ratio rule with the lexicographic tie-break. Rows with a
+  // nonpositive value at z do not participate. Returns -1 when the ray
+  // does not exit.
   int RayShoot(MyVector<Tfloat> const &d) {
 #ifdef DEBUG_SIMPLEX_CLARKSON
     n_shoot++;
@@ -2404,11 +2402,10 @@ template <typename T> struct ClarksonRedundancyReductionFloat {
   }
 };
 
-// The floating point Clarkson redundancy elimination, replacing the
-// formerly used C-linked cddlib version. The conclusions are computed in
-// double arithmetic and carry no exactness guarantee. On floating point
-// breakdown or when no interior point is found the exact method is used
-// instead.
+// The floating point Clarkson redundancy elimination. The conclusions
+// are computed in double arithmetic and carry no exactness guarantee. On
+// floating point breakdown or when no interior point is found the exact
+// method is used instead.
 template <typename T>
 std::vector<int>
 SIMPLEX_RedundancyReductionClarksonFloat(MyMatrix<T> const &ListIneq,

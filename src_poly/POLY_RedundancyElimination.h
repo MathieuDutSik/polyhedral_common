@@ -5,7 +5,7 @@
 // clang-format off
 #include "GRP_GroupFct.h"
 #include "POLY_LinearProgramming.h"
-#include "POLY_cddlib.h"
+#include "POLY_double_description.h"
 #include <algorithm>
 #include <set>
 #include <utility>
@@ -81,27 +81,27 @@ std::vector<int> get_non_redundant_from_dd(const MyMatrix<T> &M,
 
 // Fairly expensive function. But useful for debugging
 template <typename T>
-std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M,
+std::vector<int> Kernel_GetNonRedundant_DualDesc(const MyMatrix<T> &M,
                                             std::ostream &os) {
   MyMatrix<T> Mred = ColumnReduction(M);
-  MyMatrix<T> EXT = cdd::DualDescription(Mred, os);
+  MyMatrix<T> EXT = double_desc::DualDescription(Mred, os);
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  MyMatrix<T> FAC = cdd::DualDescription(EXT, os);
-  os << "REDUND: Kernel_GetNonRedundant_CDD_A, M=\n";
+  MyMatrix<T> FAC = double_desc::DualDescription(EXT, os);
+  os << "REDUND: Kernel_GetNonRedundant_DualDesc_A, M=\n";
   WriteMatrix(os, M);
-  os << "REDUND: Kernel_GetNonRedundant_CDD_B, Mred=\n";
+  os << "REDUND: Kernel_GetNonRedundant_DualDesc_B, Mred=\n";
   WriteMatrix(os, Mred);
-  os << "REDUND: Kernel_GetNonRedundant_CDD_C, EXT=\n";
+  os << "REDUND: Kernel_GetNonRedundant_DualDesc_C, EXT=\n";
   WriteMatrix(os, EXT);
-  os << "REDUND: Kernel_GetNonRedundant_CDD_D, FAC=\n";
+  os << "REDUND: Kernel_GetNonRedundant_DualDesc_D, FAC=\n";
   WriteMatrix(os, FAC);
 #endif
   return get_non_redundant_from_dd(Mred, EXT, os);
 }
 
 template <typename T>
-MyMatrix<T> GetNonRedundant_CDD(const MyMatrix<T> &M, std::ostream &os) {
-  return SelectRow(M, Kernel_GetNonRedundant_CDD(M, os));
+MyMatrix<T> GetNonRedundant_DualDesc(const MyMatrix<T> &M, std::ostream &os) {
+  return SelectRow(M, Kernel_GetNonRedundant_DualDesc(M, os));
 }
 
 template <typename T> struct FacetizationInfo {
@@ -649,7 +649,7 @@ std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& 
   std::vector<int> list_irredA = SIMPLEX_RedundancyReductionClarksonExt(M, os);
 #ifdef SANITY_CHECK_EXTENSIVE_ELIMINATION_REDUNDANCY
   MyMatrix<T> M_ext = AddZeroColumn(M);
-  std::vector<int> list_irredB = Kernel_GetNonRedundant_CDD(M_ext, os);
+  std::vector<int> list_irredB = Kernel_GetNonRedundant_DualDesc(M_ext, os);
   if (!is_equal_list_irred(list_irredA, list_irredB)) {
     std::cerr << "REDUND: Both method return inconsistent results\n";
     std::cerr << "REDUND: M=\n";

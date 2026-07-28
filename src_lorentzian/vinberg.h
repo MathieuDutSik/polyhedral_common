@@ -9,7 +9,6 @@
 #include "POLY_DirectDualDesc.h"
 #include "POLY_PolytopeInt.h"
 #include "POLY_RedundancyElimination.h"
-#include "POLY_cddlib.h"
 #include "Positivity.h"
 #include "coxeter_dynkin.h"
 #include "fund_domain_vertices.h"
@@ -1271,10 +1270,9 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot,
 #ifdef DEBUG_VINBERG
     os << "Mroot=\n";
     WriteMatrix(os, Mroot);
-    os << "Before cdd::DualDescription\n";
+    os << "Before DirectDualDescription_mat\n";
 #endif
-    // maybe use another dual description function
-    return cdd::DualDescription(Mroot);
+    return DirectDualDescription_mat(Mroot, os);
   };
   MyMatrix<T> FAC = get_facets();
 #ifdef DEBUG_VINBERG

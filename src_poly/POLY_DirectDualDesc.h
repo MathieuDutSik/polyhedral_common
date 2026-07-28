@@ -4,7 +4,7 @@
 
 // clang-format off
 #include "Basic_string.h"
-#include "POLY_cddlib.h"
+#include "POLY_double_description.h"
 #include "POLY_lrslib.h"
 #include "MAT_MatrixInt.h"
 #ifndef WASM_PLATFORM
@@ -153,8 +153,7 @@ inline DualDescProgram dual_desc_program_from_string(std::string const &prog) {
 template <typename T> bool is_method_supported(DualDescProgram prog) {
   switch (prog) {
   case DualDescProgram::cdd:
-    // CDD requires T to be a field.
-    return is_ring_field<T>::value;
+    // Served by the double description method, which runs division-free.
   case DualDescProgram::small_polytopes:
   case DualDescProgram::lrs:
   case DualDescProgram::pd_lrs:
@@ -162,7 +161,7 @@ template <typename T> bool is_method_supported(DualDescProgram prog) {
     return true;
   case DualDescProgram::beneath_beyond:
     // Beneath-and-beyond computes facet normals through a nullspace, so it
-    // requires T to be a field (like cdd).
+    // requires T to be a field.
     return is_ring_field<T>::value;
   case DualDescProgram::glrs:
   case DualDescProgram::ppl_ext:
@@ -201,10 +200,8 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
 #endif
   switch (prog) {
   case DualDescProgram::cdd:
-    // CDD certainly requires the ring to be a field
-    if constexpr (is_ring_field<T>::value)
-      return cdd::DualDescription_incd(EXT, os);
-    break;
+    // The double description method, applicable to the field or ring case
+    return double_desc::DualDescription_incd(EXT, os);
   case DualDescProgram::small_polytopes:
     // Small polytopes have special solutions
     return SmallPolytope_Incidence(EXT, os);
@@ -258,10 +255,8 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
 #endif
   switch (prog) {
   case DualDescProgram::cdd:
-    // CDD certainly requires a field for working out.
-    if constexpr (is_ring_field<T>::value)
-      return cdd::DualDescription(EXT, os);
-    break;
+    // The double description method, applicable to the field or ring case
+    return double_desc::DualDescription(EXT, os);
   case DualDescProgram::small_polytopes:
     // Small polytopes have special solutions
     return SmallPolytope_Ineq(EXT, os);
@@ -315,10 +310,8 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
 #endif
   switch (prog) {
   case DualDescProgram::cdd:
-    // CDD requires for T to be a field
-    if constexpr (is_ring_field<T>::value)
-      return cdd::DualDescriptionFaceIneq(EXT, f_process, os);
-    break;
+    // The double description method, applicable to the field or ring case
+    return double_desc::DualDescriptionFaceIneq(EXT, f_process, os);
   case DualDescProgram::small_polytopes:
     // Small polytopes can have special solutions
     return SmallPolytope_FaceIneq(EXT, f_process, os);
