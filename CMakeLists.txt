@@ -40,26 +40,9 @@ else()
 endif()
 
 pkg_check_modules(GMPXX REQUIRED IMPORTED_TARGET gmpxx)
-pkg_check_modules(CDDGMP cddgmp)
-# The external cddlib (double) is only used when compiling with -DUSE_CDDLIB,
-# which the CMake build never does (it uses the internal C++ port in
-# POLY_cddlib.h). Keep it optional so the build works where cddlib is absent
-# (e.g. MSYS2/MinGW).
-pkg_check_modules(CDDLIB cddlib)
-
 find_library(GMP_LIBRARY NAMES gmp REQUIRED)
 find_path(GLPK_INCLUDE_DIR NAMES glpk.h REQUIRED)
 find_library(GLPK_LIBRARY NAMES glpk REQUIRED)
-find_path(
-  CDD_HEADER_DIR
-  NAMES setoper.h cdd.h
-  HINTS
-    ${CDDGMP_INCLUDE_DIRS}
-    ${CDDLIB_INCLUDE_DIRS}
-  PATH_SUFFIXES
-    cddlib
-)
-
 find_path(
   NETCDF_INCLUDE_DIR
   NAMES netcdf
@@ -225,46 +208,6 @@ add_library(polyhedral_glpk_support INTERFACE)
 target_include_directories(polyhedral_glpk_support INTERFACE "${GLPK_INCLUDE_DIR}")
 target_link_libraries(polyhedral_glpk_support INTERFACE "${GLPK_LIBRARY}")
 
-if(CDDGMP_FOUND)
-  add_library(polyhedral_cddgmp_support INTERFACE)
-  target_include_directories(
-    polyhedral_cddgmp_support
-    INTERFACE
-      ${CDDGMP_INCLUDE_DIRS}
-      "${CDD_HEADER_DIR}"
-  )
-  target_link_directories(
-    polyhedral_cddgmp_support
-    INTERFACE
-      ${CDDGMP_LIBRARY_DIRS}
-  )
-  target_link_libraries(
-    polyhedral_cddgmp_support
-    INTERFACE
-      ${CDDGMP_LINK_LIBRARIES}
-  )
-endif()
-
-if(CDDLIB_FOUND)
-  add_library(polyhedral_cdd_double_support INTERFACE)
-  target_include_directories(
-    polyhedral_cdd_double_support
-    INTERFACE
-      ${CDDLIB_INCLUDE_DIRS}
-      "${CDD_HEADER_DIR}"
-  )
-  target_link_directories(
-    polyhedral_cdd_double_support
-    INTERFACE
-      ${CDDLIB_LIBRARY_DIRS}
-  )
-  target_link_libraries(
-    polyhedral_cdd_double_support
-    INTERFACE
-      ${CDDLIB_LINK_LIBRARIES}
-  )
-endif()
-
 
 if(HAVE_NETCDF)
   add_library(polyhedral_netcdf_support INTERFACE)
@@ -293,9 +236,6 @@ target_link_libraries(
     polyhedral_glpk_support
     polyhedral_mpi_support
 )
-if(CDDGMP_FOUND)
-  target_link_libraries(polyhedral_dualdesc_support INTERFACE polyhedral_cddgmp_support)
-endif()
 
 add_library(polyhedral_perfect_support INTERFACE)
 target_link_libraries(
@@ -305,9 +245,6 @@ target_link_libraries(
     polyhedral_glpk_support
     polyhedral_mpi_support
 )
-if(CDDGMP_FOUND)
-  target_link_libraries(polyhedral_perfect_support INTERFACE polyhedral_cddgmp_support)
-endif()
 
 add_library(polyhedral_short_support INTERFACE)
 target_link_libraries(
@@ -351,9 +288,6 @@ target_link_libraries(
     polyhedral_common
     polyhedral_glpk_support
 )
-if(CDDGMP_FOUND)
-  target_link_libraries(polyhedral_poly_support INTERFACE polyhedral_cddgmp_support)
-endif()
 
 if(HAVE_NETCDF)
   add_library(polyhedral_ctype_support INTERFACE)
@@ -377,9 +311,6 @@ target_link_libraries(
     polyhedral_group_support
     polyhedral_glpk_support
 )
-if(CDDGMP_FOUND)
-  target_link_libraries(polyhedral_polydecomp_support INTERFACE polyhedral_cddgmp_support)
-endif()
 
 add_library(polyhedral_polygen_support INTERFACE)
 target_link_libraries(

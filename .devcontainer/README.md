@@ -6,7 +6,6 @@ A short, practical guide to using the `.devcontainer/` in this repository for LL
 
 A pre-configured, containerized dev environment bundling:
 
-- The C/C++ toolchain (gcc, g++, clang, clangd, clang-tidy, clang-format), debug tools (valgrind, gdb, lldb, strace), and the polyhedral_common apt build deps (boost, eigen, gmp, glpk, cddlib, openmpi, libtbb, lrslib). nauty is built from `github.com/MathieuDutSik/nauty` (tag 2.9.3) and installed to `/opt/nauty` with `NAUTY_PATH` / `NAUTY_INCLUDE` / `NAUTY_LINK` exported, so both CMake and the per-directory `Makefile`s under `src_*/` find it out of the box.
 - Node.js 22 and Python 3.
 - The LLM CLIs `claude` (Anthropic Claude Code) and `codex` (OpenAI Codex CLI), each pre-wired to the same three MCP servers:
   - **serena** — semantic code navigation (via `uv`)
@@ -186,7 +185,6 @@ devcontainer up --workspace-folder .
 
 **Old MCP configs after image rebuild.** See the note under [Persistence model](#persistence-model). `rm ~/.claude.json ~/.codex/config.toml` inside the container, then exit and `devcontainer up` again.
 
-**"Build env sanity check" fails.** The final Dockerfile stage runs a `pkg-config --exists eigen3 cddlib` + command probe. If it fails, apt didn't install one of the polyhedral_common deps — check the build log for the specific missing package.
 
 **`git push` fails from inside the container.** SSH keys or gitconfig aren't shared. Either commit from the host, or add these `mounts` entries to `devcontainer.json` and rebuild:
 

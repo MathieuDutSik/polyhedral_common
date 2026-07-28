@@ -2,16 +2,11 @@
 #ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 #define SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 
-// The USE_CDDLIB is needed so that the include with POLY_c_cddlib.h is
-// effective. This is needed so that cbased_cdd is available.
-#define USE_CDDLIB
-
 // clang-format off
 #include "Boost_bitset.h"
 #include "COMB_Combinatorics.h"
 #include "COMB_Combinatorics_buildset.h"
 #include "MAT_Matrix.h"
-#include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
 #include "POLY_SimplexClarkson.h"
 #include "PolytopeEquiStabInt.h"
@@ -869,16 +864,12 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   os << "|CTYP: ListInformations|=" << time << "\n";
 #endif
 #ifdef CTYP_CLARKSON_SIMPLEX
-  // The exact Clarkson of POLY_SimplexClarkson.h. The entries T are a
-  // small integer type, so the matrix is converted to mpz first: the
-  // fraction-free pivoting works on minors that can overflow the small
-  // type. Measured on the n=6 enumeration (July 2026) this is about 3.5
-  // times slower per call than the floating point version below, the
-  // price of the exact certification of every conclusion.
-  MyMatrix<mpz_class> ListIneq_mpz =
-      UniversalMatrixConversion<mpz_class, T>(ListInequalities);
+  // The exact Clarkson of POLY_SimplexClarkson.h. Measured on the n=6
+  // enumeration (July 2026) this is about 24 times slower per call than
+  // the floating point version below, the price of the exact
+  // certification of every conclusion.
   std::vector<int> ListIrred =
-      SIMPLEX_RedundancyReductionClarkson(ListIneq_mpz, os);
+      SIMPLEX_RedundancyReductionClarkson(ListInequalities, os);
 #else
   // The floating point Clarkson: the computation is done in double
   // arithmetic without exactness guarantee, with a fallback to the exact

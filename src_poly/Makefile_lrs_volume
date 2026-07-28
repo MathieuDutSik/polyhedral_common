@@ -1,6 +1,6 @@
 PROGRAM		= POLY_lrs_volume
 
-SRCFILES	= POLY_c_cddlib_mpq.cpp
+SRCFILES	=
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 

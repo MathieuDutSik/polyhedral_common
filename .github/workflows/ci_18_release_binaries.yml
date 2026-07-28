@@ -24,9 +24,6 @@ jobs:
       EIGEN_PATH: /home/runner/work/opt/eigen
       GLPK_INCLUDE: "-I/usr/include"
       GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
-      CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
-      CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
-      CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
       NETCDF_CXX_ALLINC: "-I/home/runner/work/opt/netcdf-cxx4-4.3.1/include -I/home/runner/work/opt/netcdf-cxx4-4.3.1/include"
       NETCDF_CXX_LINK: "-L/home/runner/work/opt/netcdf-cxx4-4.3.1/lib -lnetcdf_c++4 -Wl,-rpath,/home/runner/work/opt/netcdf-cxx4-4.3.1/lib"
       NAUTY_PATH: /home/runner/work/opt/nauty
@@ -56,7 +53,6 @@ jobs:
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
           sudo apt-get install -y libglpk-dev
           sudo apt-get install -y autoconf autotools-dev libtool
-          sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
 
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-eigen

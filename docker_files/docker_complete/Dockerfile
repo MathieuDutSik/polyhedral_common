@@ -88,15 +88,6 @@ ENV FLINT_INCDIR /include
 ENV FLINT_LINK -lflint
 
 
-# CDDLIB
-RUN apt-get install -y autoconf autoconf-archive autotools-dev libtool
-RUN apt-get install -y texlive-latex-base # needed for the manual to be compiled
-RUN git clone https://github.com/cddlib/cddlib
-RUN cd cddlib && ./bootstrap && ./configure --prefix=/opt/cddlib && make && make install
-ENV CDDLIB_PATH /opt/cddlib
-ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
-ENV CDDLIB_DOUBLE_LINK "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
-ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
 
 # PPL
@@ -133,7 +124,7 @@ RUN mv /tmp/include /opt/linbox
 RUN mv /tmp/bin /opt/linbox
 ENV LINBOX_PATH /opt/linbox
 ENV LINBOX_INCLUDE "-DHAVE_CONFIG_H -DDISABLE_COMMENTATOR -DNDEBUG -UDEBUG -fopenmp -I$LINBOX_PATH/include"
-ENV LINBOX_LINK "-fopenmp -lntl -lflint -L$LINBOX_PATH/lib -lopenblas -lpthread -lgfortran -lgivaro -lgmpxx -lgmp -Wl,-rpath,$CDDLIB_PATH/lib"
+ENV LINBOX_LINK "-fopenmp -lntl -lflint -L$LINBOX_PATH/lib -lopenblas -lpthread -lgfortran -lgivaro -lgmpxx -lgmp -Wl,-rpath,$LINBOX_PATH/lib"
 
 
 # cloning polyhedral code

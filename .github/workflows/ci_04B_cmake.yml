@@ -23,10 +23,6 @@ jobs:
       EIGEN_PATH: /home/runner/work/opt/eigen
       GLPK_INCLUDE: "-I/usr/include"
       GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
-      CDDLIB_PATH: "/home/runner/work/opt/cddlib"
-      CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
-      CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
-      CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
       NAUTY_PATH: /home/runner/work/opt/nauty
       NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
       NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
@@ -47,7 +43,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
-          sudo apt-get install -y wget g++ gcc cmake libgmp-dev libglpk-dev libcdd-dev libeigen3-dev autoconf autotools-dev libtool
+          sudo apt-get install -y wget g++ gcc cmake libgmp-dev libglpk-dev libeigen3-dev autoconf autotools-dev libtool
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
 
       - name: Install Eigen

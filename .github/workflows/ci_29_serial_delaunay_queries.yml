@@ -19,10 +19,6 @@ jobs:
       EIGEN_PATH: /home/runner/work/opt/eigen
       GLPK_INCLUDE: "-I/usr/include"
       GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
-      CDDLIB_PATH: "/home/runner/work/opt/cddlib"
-      CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
-      CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
-      CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
       NAUTY_PATH: /home/runner/work/opt/nauty
       NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
       NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
@@ -51,12 +47,10 @@ jobs:
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
           sudo apt-get install -y libglpk-dev
           sudo apt-get install -y autoconf autoconf-archive autotools-dev libtool
-          sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
           sudo apt-get install -y openmpi-bin libopenmpi-dev
 
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
-      - uses: ./.github/actions/install-cddlib
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
       - name: Test the serial Delaunay computations

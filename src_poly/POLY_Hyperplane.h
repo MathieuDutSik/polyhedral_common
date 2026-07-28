@@ -3,7 +3,7 @@
 #define SRC_POLY_POLY_HYPERPLANE_H_
 
 // clang-format off
-#include "POLY_c_cddlib.h"
+#include "POLY_SimplexClarkson.h"
 #include "POLY_cddlib.h"
 #include <string>
 #include <unordered_set>
@@ -68,13 +68,11 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
   std::unordered_set<Face> ListDone;
   std::unordered_set<Face> ListUndone;
   ListUndone.insert(GetSingleEntry());
-#ifdef USE_CDDLIB
   auto fInsert = [&](Face const &f) -> void {
     if (ListDone.contains(f))
       return;
     ListUndone.insert(f);
   };
-#endif
   auto ProcessAdjacent = [&](Face const &eF) -> void {
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "ProcessAdjacent eF=" << StringFace(eF) << "\n";
@@ -92,11 +90,8 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
     std::cerr << "ListInequalities=\n";
     WriteMatrix(std::cerr, ListInequalities);
 #endif
-#ifdef USE_CDDLIB
     std::vector<int> ListIrred =
-        cbased_cdd::RedundancyReductionClarkson(ListInequalities);
-    //    std::vector<int> ListIrred =
-    //    cdd::RedundancyReductionClarkson(ListInequalities);
+        SIMPLEX_RedundancyReductionClarksonFloat(ListInequalities, std::cerr);
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
 #endif
@@ -118,10 +113,6 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
 #endif
       fInsert(newF);
     }
-#else
-    std::cerr << "We need to compile with USE_CDDLIB\n";
-    throw TerminalException{1};
-#endif
   };
   while (true) {
     if (ListUndone.empty())

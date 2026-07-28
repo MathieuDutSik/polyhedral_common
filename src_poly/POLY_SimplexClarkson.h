@@ -2167,8 +2167,8 @@ SIMPLEX_RedundancyReductionClarksonExt(MyMatrix<T> const &FAC,
 
 /*
   The floating point Clarkson redundancy elimination, the native
-  replacement for cbased_cdd::RedundancyReductionClarkson (the C-linked
-  cddlib version). The whole computation -- interior point, redundancy
+  replacement for the formerly used C-linked cddlib version
+  (cbased_cdd::RedundancyReductionClarkson, now removed). The whole computation -- interior point, redundancy
   LPs, ray shooting -- runs in double arithmetic with epsilon tolerances
   and no exact verification, which is what makes it fast; the conclusions
   carry no exactness guarantee, exactly as for the cddlib version it
@@ -2404,8 +2404,8 @@ template <typename T> struct ClarksonRedundancyReductionFloat {
   }
 };
 
-// The floating point Clarkson redundancy elimination, replacing
-// cbased_cdd::RedundancyReductionClarkson. The conclusions are computed in
+// The floating point Clarkson redundancy elimination, replacing the
+// formerly used C-linked cddlib version. The conclusions are computed in
 // double arithmetic and carry no exactness guarantee. On floating point
 // breakdown or when no interior point is found the exact method is used
 // instead.
@@ -2437,6 +2437,7 @@ SIMPLEX_RedundancyReductionClarksonFloat(MyMatrix<T> const &ListIneq,
 #endif
   return ListIdx;
 }
+
 
 // clang-format off
 #endif  // SRC_POLY_POLY_SIMPLEXCLARKSON_H_

@@ -52,15 +52,6 @@ RUN mkdir -p /opt
 RUN cd /opt && git clone https://gitlab.com/libeigen/eigen.git
 ENV EIGEN_PATH /opt/eigen
 
-# CDDLIB
-RUN apt-get install -y autoconf autoconf-archive autotools-dev libtool
-RUN apt-get install -y texlive-latex-base # needed for the manual to be compiled
-RUN git clone https://github.com/cddlib/cddlib
-RUN cd cddlib && ./bootstrap && ./configure --prefix=/opt/cddlib && make && make install
-ENV CDDLIB_PATH /opt/cddlib
-ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
-ENV CDDLIB_DOUBLE_LINK "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
-ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
 # cloning polyhedral code
 RUN mkdir -p GIT

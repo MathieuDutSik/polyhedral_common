@@ -1,6 +1,6 @@
 PROGRAM		= CTYP_PrepareInitialFile CTYP_MPI_Enumeration_c CTYP_ComputeInvariant CTYP_PrepareAdjacencyFile CTYP_MPI_EnumerationAdjacencies CTYP_CheckAdjacency CTYP_SearchMatrix CTYP_LookForNoFreeVector CTYP_MPI_AdjScheme CTYP_ComputeHashStat CTYP_ComputeInvariant_B NC_ComputeAverage
 
-SRCFILES        = POLY_c_cddlib_mpq.cpp
+SRCFILES        =
 OBJECTS         = $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 LINKOBJECTS     = $(SRCFILES:.cpp=.o)
 
@@ -12,15 +12,15 @@ NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../basic_common_cpp   -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_dualdesc -I../src_poly -I../src_perfect -I../permutalib/src -I../src_lorentzian -I../src_isotropy -I../src_enum_schemes -I.
-CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(shell pkg-config --cflags ompi) $(CDDLIB_INCLUDE) $(NAUTY_INCLUDE) $(NETCDF_CXX_ALLINC)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(shell pkg-config --cflags ompi) $(NAUTY_INCLUDE) $(NETCDF_CXX_ALLINC)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
-#CDEFS           = -DUSE_CDDLIB -DERR_LOG
+#CDEFS           = -DERR_LOG
 CDEFS           = -DGMP_POOL $(CHOICE_COMPILATION)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(shell pkg-config --libs ompi) $(MPI_LINK_CPP) $(CDDLIB_DOUBLE_LINK) $(NAUTY_LINK) $(NETCDF_CXX_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(shell pkg-config --libs ompi) $(MPI_LINK_CPP) $(NAUTY_LINK) $(NETCDF_CXX_LINK)
 
 
 %.o: %.cpp

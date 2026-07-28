@@ -12,7 +12,7 @@ PROGRAM		= POLY_CreateAffineBasis \
 		  POLY_GeometricallyUniqueInteriorPoint \
 		  POLY_lrs_volume POLY_lrs_triangulation POLY_TwoLaminations POLY_lrs_triang_facets
 
-SRCFILES	= POLY_c_cddlib_mpq.cpp
+SRCFILES	=
 
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 
@@ -27,7 +27,7 @@ NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_isotropy -I../permutalib/src
-CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(FLINT_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(FLINT_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
 #CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC
@@ -36,7 +36,7 @@ CDEFS           = -DGMP_POOL $(CHOICE_COMPILATION)
 CTOTAL = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(FLINT_LINK) $(BOOST_LINK) $(GLPK_LINK) $(NAUTY_LINK) $(CDDLIB_GMP_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(FLINT_LINK) $(BOOST_LINK) $(GLPK_LINK) $(NAUTY_LINK)
 
 %.o: %.cpp
 	@echo

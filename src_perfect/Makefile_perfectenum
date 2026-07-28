@@ -1,7 +1,7 @@
 #PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialPerfectComputation
 PROGRAM		= PERF_SerialPerfectComputation
 
-SRCFILES	= POLY_c_cddlib_mpq.cpp
+SRCFILES	=
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
