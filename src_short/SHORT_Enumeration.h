@@ -2,6 +2,10 @@
 #ifndef SRC_SHORT_SHORT_ENUMERATION_H_
 #define SRC_SHORT_SHORT_ENUMERATION_H_
 
+// clang-format off
+#include "POLY_DirectDualDesc.h"
+// clang-format on
+
 // Canonicalize the vector under the action of the symmetric group
 // and inversion (group size 2^n n!)
 //
@@ -256,7 +260,7 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
     }
   }
   MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
-  MyMatrix<T> EXT = cdd::DualDescription(FAC, os);
+  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
   std::vector<MyVector<Tint>> ListPt =
       GetListIntegralPoint<T, Tint>(FAC, EXT, os);
   //
