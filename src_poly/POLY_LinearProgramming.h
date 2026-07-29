@@ -1003,6 +1003,175 @@ Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, std::ostream &os) {
   return f_adj;
 }
 
+/*
+  Test whether the row i0 of the homogeneous system FAC x >= 0 is an
+  implicit equality, that is whether f_{i0}(x) = 0 on the whole feasible
+  cone. The LP maximizes f_{i0} capped at 1: since the system is
+  homogeneous the optimal value is either 0 (implicit equality) or 1.
+  Returns the optimal point when the value is 1, a feasible witness with
+  f_{i0} = 1, and nothing for an implicit equality.
+*/
+template <typename T>
+std::optional<MyVector<T>>
+GetWitnessNotImplicitEquality(MyMatrix<T> const &FAC, int const &i0,
+                              std::ostream &os) {
+  int nbRow = FAC.rows();
+  int nbCol = FAC.cols();
+  MyMatrix<T> ListIneq(nbRow + 1, 1 + nbCol);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    ListIneq(iRow, 0) = T(0);
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      ListIneq(iRow, 1 + iCol) = FAC(iRow, iCol);
+  }
+  ListIneq(nbRow, 0) = T(1);
+  for (int iCol = 0; iCol < nbCol; iCol++)
+    ListIneq(nbRow, 1 + iCol) = -FAC(i0, iCol);
+  MyVector<T> ToBeMinimized(1 + nbCol);
+  ToBeMinimized(0) = T(0);
+  for (int iCol = 0; iCol < nbCol; iCol++)
+    ToBeMinimized(1 + iCol) = -FAC(i0, iCol);
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
+  if (!eSol.DirectSolution || !eSol.DualSolution) {
+    std::cerr << "LP: The zero vector is feasible and the objective is "
+                 "capped, so the LP must be optimal\n";
+    throw TerminalException{1};
+  }
+  if (eSol.OptimalValue == 0) {
+    return {};
+  }
+  return *eSol.DirectSolution;
+}
+
+/*
+  The implicit equalities of FAC x >= 0 by one LP per undecided row. The
+  witness points are accumulated: a sum of feasible points is feasible,
+  so every row positive at the accumulated witness is certified to not
+  be an implicit equality without an LP.
+*/
+template <typename T>
+std::pair<MyMatrix<T>, Face>
+KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const &FAC,
+                                                        std::ostream &os) {
+  int nbRow = FAC.rows();
+  int nbCol = FAC.cols();
+  Face f(nbRow);
+  MyVector<T> z = ZeroVector<T>(nbCol);
+  std::vector<MyVector<T>> ListV;
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    MyVector<T> eRow = GetMatrixRow(FAC, iRow);
+    if (eRow.dot(z) > 0) {
+      continue;
+    }
+    std::optional<MyVector<T>> opt =
+        GetWitnessNotImplicitEquality(FAC, iRow, os);
+    if (opt) {
+      z += *opt;
+    } else {
+      f[iRow] = 1;
+      ListV.push_back(eRow);
+    }
+  }
+#ifdef DEBUG_LINEAR_PROGRAM
+  os << "LP: DirectLP |ListV|=" << ListV.size() << "\n";
+#endif
+  if (ListV.empty()) {
+    MyMatrix<T> Spa = IdentityMat<T>(nbCol);
+    return {std::move(Spa), std::move(f)};
+  }
+  MyMatrix<T> MatEqua = MatrixFromVectorFamily(ListV);
+  MyMatrix<T> NSP = NullspaceTrMat(MatEqua);
+  return {std::move(NSP), std::move(f)};
+}
+
+/*
+  The implicit equalities of FAC x >= 0, exploiting every equality found
+  to the full: when a row is recognized as an implicit equality, the
+  whole system is projected onto its hyperplane and the search recurses
+  in the lower dimension. The gain is not just the dimensionality: many
+  inequalities become multiples of each other in the subspace and are
+  merged. The witness accumulation of the DirectLP variant is used in
+  the scan for the first equality.
+*/
+template <typename T>
+std::pair<MyMatrix<T>, Face>
+KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
+    MyMatrix<T> const &FAC, std::ostream &os) {
+  int nbRow = FAC.rows();
+  int nbCol = FAC.cols();
+#ifdef DEBUG_LINEAR_PROGRAM
+  os << "LP: LPandNullspace, nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+#endif
+  MyVector<T> z = ZeroVector<T>(nbCol);
+  auto get_linear_entry = [&]() -> std::optional<int> {
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      MyVector<T> eRow = GetMatrixRow(FAC, iRow);
+      if (eRow.dot(z) > 0) {
+        continue;
+      }
+      std::optional<MyVector<T>> opt =
+          GetWitnessNotImplicitEquality(FAC, iRow, os);
+      if (!opt) {
+        return iRow;
+      }
+      z += *opt;
+    }
+    return {};
+  };
+  std::optional<int> opt = get_linear_entry();
+  if (!opt) {
+    MyMatrix<T> Spa = IdentityMat<T>(nbCol);
+    Face f(nbRow);
+    return {std::move(Spa), std::move(f)};
+  }
+  int idx = *opt;
+#ifdef DEBUG_LINEAR_PROGRAM
+  os << "LP: LPandNullspace, idx=" << idx << "\n";
+#endif
+  MyVector<T> Vlin = GetMatrixRow(FAC, idx);
+  MyMatrix<T> NSP = NullspaceMatSingleVector(Vlin);
+  std::vector<int> l_zeros;
+  std::unordered_map<MyVector<T>, std::vector<int>> map;
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    MyVector<T> V = GetMatrixRow(FAC, iRow);
+    MyVector<T> ScalV = NSP * V;
+    if (IsZeroVector(ScalV)) {
+      l_zeros.push_back(iRow);
+    } else {
+      MyVector<T> ScalVcan = CanonicalizeVector(ScalV);
+      map[ScalVcan].push_back(iRow);
+    }
+  }
+  int siz = map.size();
+#ifdef DEBUG_LINEAR_PROGRAM
+  os << "LP: LPandNullspace, siz=" << siz << " nbRow=" << nbRow << "\n";
+#endif
+  MyMatrix<T> FACred(siz, nbCol - 1);
+  std::vector<std::vector<int>> ll_idx(siz);
+  int pos = 0;
+  for (auto &kv : map) {
+    for (int u = 0; u < nbCol - 1; u++) {
+      FACred(pos, u) = kv.first(u);
+    }
+    ll_idx[pos] = kv.second;
+    pos++;
+  }
+  std::pair<MyMatrix<T>, Face> pairRed =
+      KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred, os);
+  MyMatrix<T> NSPnew = pairRed.first * NSP;
+  Face f(nbRow);
+  for (auto &eIdx : l_zeros) {
+    f[eIdx] = 1;
+  }
+  for (int u = 0; u < siz; u++) {
+    if (pairRed.second[u]) {
+      for (auto &ePos : ll_idx[u]) {
+        f[ePos] = 1;
+      }
+    }
+  }
+  return {std::move(NSPnew), std::move(f)};
+}
+
 template <typename T>
 std::pair<MyMatrix<T>, Face>
 KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(MyMatrix<T> const &FAC,
@@ -1091,13 +1260,10 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
   (void)KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
   os << "|LP: KernelLinearDeterminedByInequalitiesAndIndices_DualMeth|=" << time
      << "\n";
-  size_t maxiter1 = 0; // An abstracting leakage for sure
-  (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(
-      FAC, maxiter1, os);
+  (void)KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
   os << "|LP: KernelLinearDeterminedByInequalitiesAndIndices_DirectLP|=" << time
      << "\n";
-  (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC,
-                                                                           os);
+  (void)KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
   os << "|LP: KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace|="
      << time << "\n";
 #endif
@@ -1125,10 +1291,8 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
   os << "Before KernelLinearDeterminedByInequalitiesAndIndices_DirectLP\n";
   os << "res_dual.first=\n";
   WriteMatrix(os, res_dual.first);
-  size_t maxiter2 = 0; // An abstracting leakage for sure
   std::pair<MyMatrix<T>, Face> res_dir_lp =
-      cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(
-          FAC, maxiter2, os);
+      KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
   os << "|res_dir_lp|=" << res_dir_lp.first.rows() << " / "
      << res_dir_lp.first.cols() << "\n";
   os << "LP: res_dir_lp.second=" << StringFace(res_dir_lp.second) << "\n";
@@ -1137,8 +1301,7 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
   os << "Before "
         "KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
   std::pair<MyMatrix<T>, Face> res_dir_lp_nsp =
-      cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC,
-                                                                         os);
+      KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
   os << "|res_dir_lp_nsp|=" << res_dir_lp_nsp.first.rows() << " / "
      << res_dir_lp_nsp.first.cols() << "\n";
   os << "LP: res_dir_lp_nsp.second=" << StringFace(res_dir_lp_nsp.second)
@@ -1184,8 +1347,9 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
   if (dim_dual < dim_direct) {
     return KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
   } else {
-    return cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
-        FAC, os);
+    // The witness accumulation makes the DirectLP variant faster than the
+    // LPandNullspace one in the row-heavy regime as well.
+    return KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
   }
 }
 
