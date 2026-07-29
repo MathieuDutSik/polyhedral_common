@@ -6,7 +6,7 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryCommon.h"
 #include "MAT_Matrix.h"
-#include "POLY_double_description.h"
+#include "POLY_DualDesc_double_description.h"
 #include "POLY_DirectDualDesc.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_RedundancyElimination.h"

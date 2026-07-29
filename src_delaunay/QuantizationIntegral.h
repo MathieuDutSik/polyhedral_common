@@ -5,7 +5,7 @@
 // clang-format off
 #include "LatticeDelaunay.h"
 #include "POLY_Fundamental.h"
-#include "POLY_lrslib.h"
+#include "POLY_DualDesc_lrslib.h"
 #include "InvariantVectorFamily.h"
 #include "MatrixGroupAverage.h"
 #include "jet_number.h"

@@ -1,5 +1,5 @@
-#ifndef SRC_POLY_POLY_LRSLIB_H_
-#define SRC_POLY_POLY_LRSLIB_H_
+#ifndef SRC_POLY_POLY_DUALDESC_LRSLIB_H_
+#define SRC_POLY_POLY_DUALDESC_LRSLIB_H_
 /* A templatized version of David Avis' lrs.
  * Code is mainly taken from lrslib.c
  *
@@ -1980,5 +1980,5 @@ vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
 
 // clang-format off
 }  // namespace lrs
-#endif  // SRC_POLY_POLY_LRSLIB_H_
+#endif  // SRC_POLY_POLY_DUALDESC_LRSLIB_H_
 // clang-format on

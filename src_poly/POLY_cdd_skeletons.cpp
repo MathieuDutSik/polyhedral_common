@@ -7,7 +7,7 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "GRAPH_GraphicalFunctions.h"
-#include "POLY_double_description.h"
+#include "POLY_DualDesc_double_description.h"
 // clang-format on
 
 namespace {

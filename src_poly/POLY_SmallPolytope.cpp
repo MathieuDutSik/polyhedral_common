@@ -5,7 +5,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "POLY_LinearProgramming.h"
-#include "POLY_lrslib.h"
+#include "POLY_DualDesc_lrslib.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

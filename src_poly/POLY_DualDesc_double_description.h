@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_POLY_DOUBLE_DESCRIPTION_H_
-#define SRC_POLY_POLY_DOUBLE_DESCRIPTION_H_
+#ifndef SRC_POLY_POLY_DUALDESC_DOUBLE_DESCRIPTION_H_
+#define SRC_POLY_POLY_DUALDESC_DOUBLE_DESCRIPTION_H_
 
 // clang-format off
 #include "Boost_bitset.h"
@@ -42,7 +42,7 @@
       free, and the rays are reduced by their content (an exact division)
       to keep the entries small. For a field type T the public entry
       points scale the rows once to the underlying ring, in the same way
-      as POLY_lrslib.h, the fraction-free simplex and the beneath-beyond
+      as POLY_DualDesc_lrslib.h, the fraction-free simplex and the beneath-beyond
       method.
   --- Standard containers: the rays live in a std::vector and the zero
       sets are Face bitsets, mirrored as packed words in the adjacency
@@ -736,5 +736,5 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process,
 
 // clang-format off
 }  // namespace double_desc
-#endif  // SRC_POLY_POLY_DOUBLE_DESCRIPTION_H_
+#endif  // SRC_POLY_POLY_DUALDESC_DOUBLE_DESCRIPTION_H_
 // clang-format on

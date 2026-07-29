@@ -39,7 +39,7 @@
 #define SRC_DELAUNAY_QUANTIZERLTYPEEXPORT_H_
 
 #include "IsoDelaunayDomains.h"
-#include "POLY_lrslib.h"
+#include "POLY_DualDesc_lrslib.h"
 #include <fstream>
 #include <map>
 #include <queue>

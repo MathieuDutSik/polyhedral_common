@@ -6,7 +6,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "POLY_lrslib.h"
+#include "POLY_DualDesc_lrslib.h"
 // clang-format on
 
 template <typename T>

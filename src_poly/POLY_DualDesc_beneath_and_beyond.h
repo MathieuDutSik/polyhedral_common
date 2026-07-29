@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_POLY_DUALDESCRIPTION_BENEATHBEYOND_H_
-#define SRC_POLY_POLY_DUALDESCRIPTION_BENEATHBEYOND_H_
+#ifndef SRC_POLY_POLY_DUALDESC_BENEATH_AND_BEYOND_H_
+#define SRC_POLY_POLY_DUALDESC_BENEATH_AND_BEYOND_H_
 
 // clang-format off
 #include "POLY_Fundamental.h"
@@ -921,7 +921,7 @@ void BeneathBeyond_TriangulationDet_core(MyMatrix<Twork> const &EXTwork,
 // lrs' reverse search the *producer* still keeps the growing triangulation as
 // working state (needed to recompute the boundary at each step), so this bounds
 // the consumer's memory, not the producer's -- see the discussion in
-// POLY_lrslib.h on why beneath-and-beyond is not a bounded-memory tree search.
+// POLY_DualDesc_lrslib.h on why beneath-and-beyond is not a bounded-memory tree search.
 //
 // Ring/field split (same idiom as lrs::DualDescription): the enumeration uses
 // only ring operations, so when T is a field each ray is scaled to an integer
@@ -999,5 +999,5 @@ POLY_DualDescription_BeneathBeyondTriangulation(MyMatrix<T> const &EXT,
 }
 
 // clang-format off
-#endif  // SRC_POLY_POLY_DUALDESCRIPTION_BENEATHBEYOND_H_
+#endif  // SRC_POLY_POLY_DUALDESC_BENEATH_AND_BEYOND_H_
 // clang-format on

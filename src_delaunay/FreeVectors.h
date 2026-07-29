@@ -5,7 +5,7 @@
 // clang-format off
 #include "LatticeDelaunay.h"
 #include "LatticeStabEquiCan.h"
-#include "POLY_double_description.h"
+#include "POLY_DualDesc_double_description.h"
 #include <set>
 #include <sstream>
 #include <string>

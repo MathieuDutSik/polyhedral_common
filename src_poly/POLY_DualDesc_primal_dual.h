@@ -1,11 +1,11 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_POLY_DUALDESCRIPTION_PRIMALDUAL_H_
-#define SRC_POLY_POLY_DUALDESCRIPTION_PRIMALDUAL_H_
+#ifndef SRC_POLY_POLY_DUALDESC_PRIMAL_DUAL_H_
+#define SRC_POLY_POLY_DUALDESC_PRIMAL_DUAL_H_
 
 // clang-format off
 #include "POLY_LinearProgramming.h"
 #include "POLY_Fundamental.h"
-#include "POLY_lrslib.h"
+#include "POLY_DualDesc_lrslib.h"
 #include <set>
 #include <vector>
 #include <utility>
@@ -156,5 +156,5 @@ void POLY_DualDescription_PrimalDualFaceIneq(MyMatrix<T> const &FAC,
 }
 
 // clang-format off
-#endif  // SRC_POLY_POLY_DUALDESCRIPTION_PRIMALDUAL_H_
+#endif  // SRC_POLY_POLY_DUALDESC_PRIMAL_DUAL_H_
 // clang-format on

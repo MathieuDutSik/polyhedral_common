@@ -4,14 +4,14 @@
 
 // clang-format off
 #include "Basic_string.h"
-#include "POLY_double_description.h"
-#include "POLY_lrslib.h"
+#include "POLY_DualDesc_double_description.h"
+#include "POLY_DualDesc_lrslib.h"
 #include "MAT_MatrixInt.h"
 #ifndef WASM_PLATFORM
 #include "POLY_DirectDualDesc_External.h"
 #endif
-#include "POLY_DualDescription_PrimalDual.h"
-#include "POLY_DualDescription_BeneathBeyond.h"
+#include "POLY_DualDesc_primal_dual.h"
+#include "POLY_DualDesc_beneath_and_beyond.h"
 #include "SmallPolytopes.h"
 #include <algorithm>
 #include <optional>

@@ -6,7 +6,7 @@
 #include "LatticeStabEquiCan.h"
 #include "OnlineExhaustiveReduction.h"
 #include "PerfectForm.h"
-#include "POLY_lrslib.h"
+#include "POLY_DualDesc_lrslib.h"
 #include "Positivity.h"
 #include "POLY_AdjacencyScheme.h"
 #include "hash_functions.h"

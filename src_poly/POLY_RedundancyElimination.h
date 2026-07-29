@@ -5,7 +5,7 @@
 // clang-format off
 #include "GRP_GroupFct.h"
 #include "POLY_LinearProgramming.h"
-#include "POLY_double_description.h"
+#include "POLY_DualDesc_double_description.h"
 #include <algorithm>
 #include <set>
 #include <utility>
