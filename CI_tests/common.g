@@ -47,54 +47,63 @@ ReadTextFile:=function(FileIn)
     return ListLines;
 end;
 
+# The root of the polyhedral_common source code, determined from the
+# current directory: the CI tests all run from CI_tests/<section>, so
+# the root is two levels up. This replaces the former
+# POLYHEDRAL_COMMON_SOURCE_CODE environment variable, which could
+# silently point at another checkout with stale binaries.
+GetSourceCodePath:=function()
+    local path;
+    path:="../..";
+    if IsExistingFile("../common.g")=false or IsDirectoryPath(Concatenation(path, "/src_poly"))=false then
+        Print("The current directory does not look like a CI_tests section\n");
+        Print("of the polyhedral_common source code\n");
+        Error("Run the test from its directory CI_tests/<section>");
+    fi;
+    return path;
+end;
+
 GetBinaryFilename:=function(FileName)
-    local TmpDir, TmpFile, eProg, path, TmpFileB, command, read_text_file, FullProg;
-    # If accessible, use the path;
+    local TmpDir, read_first_line, path, TmpFileB, command, eProg, FullProg, TmpFile;
     TmpDir:=DirectoryTemporary();
-    TmpFile:=Filename(TmpDir, "Test.in");
-    Exec("which ", FileName, " > ", TmpFile);
-    read_text_file:=function(TheFile)
+    read_first_line:=function(TheFile)
         local list_lines;
         list_lines:=ReadTextFile(TheFile);
-        if Length(list_lines)>1 then
-            Print("list_lines=", list_lines, "\n");
-            Error("Two programs available, odd case in my opinion");
-        fi;
-        if Length(list_lines)=1 then
+        if Length(list_lines)>=1 then
             return list_lines[1];
         fi;
         return fail;
     end;
-    eProg:=read_text_file(TmpFile);
-    if eProg<fail then
+    # Search the source code tree of the current directory. Several
+    # builds of the binary can be present (e.g. src_poly and build/bin);
+    # the most recently built one is used.
+    path:=GetSourceCodePath();
+    TmpFileB:=Filename(TmpDir, "TestB.in");
+    command:=Concatenation("(cd ", path, " && find . -name ", FileName, " -type f -exec ls -t {} + > ", TmpFileB, ")");
+    Exec(command);
+    eProg:=read_first_line(TmpFileB);
+    if eProg<>fail then
+        FullProg:=Concatenation(path, "/", eProg);
+        if IsExistingFile(FullProg)=false then
+            Print("FullProg=", FullProg, "\n");
+            Error("The file should exist A");
+        fi;
+        return FullProg;
+    fi;
+    # Fall back to the PATH for binaries not built in the tree.
+    TmpFile:=Filename(TmpDir, "Test.in");
+    Exec("which ", FileName, " > ", TmpFile);
+    eProg:=read_first_line(TmpFile);
+    if eProg<>fail then
         if IsExistingFile(eProg)=false then
             Print("eProg=", eProg, "\n");
-            Error("The file should exist A");
+            Error("The file should exist B");
         fi;
         return eProg;
     fi;
-    # Querying the environment variable
-    if IsBound(GAPInfo.SystemEnvironment.POLYHEDRAL_COMMON_SOURCE_CODE) then
-        path:=GAPInfo.SystemEnvironment.POLYHEDRAL_COMMON_SOURCE_CODE;
-        TmpFileB:=Filename(TmpDir, "TestB.in");
-        command:=Concatenation("(cd ", path, " && find . -name ", FileName, " > ", TmpFileB, ")");
-#        Print("command=", command, "\n");
-        Exec(command);
-        eProg:=read_text_file(TmpFileB);
-#        Print("eProg=", eProg, "\n");
-        if eProg<>fail then
-            FullProg:=Concatenation(path, "/", eProg);
-            if IsExistingFile(FullProg)=false then
-                Print("FullProg=", FullProg, "\n");
-                Error("The file should exist B");
-            fi;
-            return FullProg;
-        fi;
-    fi;
     Print("We failed to find the program ", FileName, "\n");
-    Print("We did not find it in the PATH nor in the directory\n");
-    Print("POLYHEDRAL_COMMON_SOURCE_CODE\n");
-    Error("Please make it available by compiling or putting the right paths");
+    Print("We did not find it in the source code tree nor in the PATH\n");
+    Error("Please make it available by compiling it");
 end;
 
 
