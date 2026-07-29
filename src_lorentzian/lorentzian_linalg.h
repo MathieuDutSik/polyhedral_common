@@ -7,7 +7,6 @@
 #include "FiniteMatrixGroupFund.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
-#include "POLY_cddlib.h"
 #include "POLY_RedundancyElimination.h"
 #include "Positivity.h"
 #include <algorithm>

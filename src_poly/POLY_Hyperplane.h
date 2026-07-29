@@ -4,7 +4,6 @@
 
 // clang-format off
 #include "POLY_SimplexClarkson.h"
-#include "POLY_cddlib.h"
 #include <string>
 #include <unordered_set>
 #include <utility>

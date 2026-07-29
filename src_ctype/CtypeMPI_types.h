@@ -7,7 +7,6 @@
 #include "COMB_Combinatorics.h"
 #include "COMB_Combinatorics_buildset.h"
 #include "MAT_Matrix.h"
-#include "POLY_cddlib.h"
 #include "POLY_SimplexClarkson.h"
 #include "PolytopeEquiStabInt.h"
 #include <cstring>

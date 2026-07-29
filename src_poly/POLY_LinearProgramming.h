@@ -8,7 +8,6 @@
 #include "POLY_Fundamental.h"
 #include "POLY_LinearProgrammingFund.h"
 #include "POLY_SimplexClarkson.h"
-#include "POLY_cddlib.h"
 #include <string>
 #include <vector>
 #include <unordered_map>

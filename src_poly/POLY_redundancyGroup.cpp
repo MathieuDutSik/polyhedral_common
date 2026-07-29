@@ -9,7 +9,6 @@
 #include "GRP_GroupFct.h"
 #include "GRP_GroupFile.h"
 #include "Group.h"
-#include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
 #include "POLY_RedundancyElimination.h"
 #include "Permutation.h"

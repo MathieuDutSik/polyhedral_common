@@ -6,7 +6,6 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "POLY_cddlib.h"
 #include "POLY_lrslib.h"
 #include "POLY_RedundancyElimination.h"
 // clang-format on
