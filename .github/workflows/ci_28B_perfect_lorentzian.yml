@@ -59,11 +59,19 @@ jobs:
       - name: Test enumeration of perfect cones in Lorentzian lattices
         run: |
           cd src_lorentzian && make -f Makefile_perfect_lorentzian && cd ..
+          cd src_lorentzian && make -f Makefile_stab_equi && cd ..
           pwd
-          echo "After compilation of LORENTZ_MPI_PerfectLorentzian"
+          echo "After compilation of LORENTZ_MPI_PerfectLorentzian and stab/equi"
 
           cd CI_tests/28B_LorentzianPerf
           ../../gap.sh < TestPerfLorentzian.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          tar -xzf TestCasesEqui.tar.gz
+          tar -xzf TestCasesStab.tar.gz
+          ../../gap.sh < TestStabEquiv.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1

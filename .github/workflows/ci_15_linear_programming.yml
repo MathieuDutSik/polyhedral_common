@@ -1,13 +1,13 @@
-name: CI(13A) of Lorentzian Stab Equi code
+name: CI(15) of Linear programming
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
 # on: release
 
 on:
-  # Odd months (the even months are used by ci_13B_windows).
+  # One time per month
   schedule:
-    - cron: "0 0 13 1,3,5,7,9,11 *"
+    - cron: "0 0 15 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -48,25 +48,27 @@ jobs:
           sudo apt-get install -y libgmp-dev
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
           sudo apt-get install -y libglpk-dev
-          sudo apt-get install -y autoconf autotools-dev libtool
+          sudo apt-get install -y autoconf autoconf-archive autotools-dev libtool
 
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
-      - name: Test Lorentzian stab/equi software
+      - name: Test linear programming
         run: |
-          cd src_lorentzian && make -f Makefile_stab_equi && cd ..
-          pwd
-          echo "After compilation of stab/equi for lorentzian matrices"
+          cd src_poly && make -f Makefile_linear_programming && cd ..
+          echo "After compilation of linear programming code"
 
-          cd CI_tests/13_LorentzianStabEqui
-          tar -vxzf TestCasesEqui.tar.gz
-          tar -vxzf TestCasesStab.tar.gz
-          ../../gap.sh < TestStabEquiv.g
+          cd CI_tests/15_LinearProgramming
+          ../../gap.sh < TestLinearProgramming.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          ../../gap.sh < TestLinearDetermine.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1
           fi
           cd ../..
-          echo "After all the tests"
+          echo "After the tests of linear programming"
