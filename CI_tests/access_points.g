@@ -1040,6 +1040,61 @@ get_linear_determine_by_inequalities:=function(arg)
 end;
 
 
+# Solve the linear program: minimize ineq[1] + Sum_j ineq[j+1] x_j over
+# { x : FAC[i][1] + Sum_j FAC[i][j+1] x_j >= 0 }.
+# Returns a record with OptimalValue and, depending on the outcome:
+# --- Optimal: primal_solution, dual_solution and face (the tight rows);
+# --- Infeasible: only dual_solution (a Farkas certificate);
+# --- Unbounded: only primal_solution (an unbounded ray).
+get_linear_programming:=function(arg)
+    local FAC, ineq, options, arith, print_info, TmpDir, FileFAC, FileIneq, FileO, FileE, output, eProg, TheCommand, TheLP, runtime_str;
+    FAC:=arg[1];
+    ineq:=arg[2];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileFAC:=Filename(TmpDir, "Test.fac");
+    FileIneq:=Filename(TmpDir, "Test.ineq");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileFAC, FAC);
+    output:=OutputTextFile(FileIneq, true);
+    WriteVector(output, ineq);
+    CloseStream(output);
+    eProg:=GetBinaryFilename("POLY_cdd_LinearProgramming");
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileFAC, " ", FileIneq,
+                              " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  FAC=", Length(FAC), "x", Length(FAC[1]), " arith=", arith, " command=POLY_cdd_LinearProgramming runtime=", runtime_str, "\n");
+    fi;
+    if IsExistingFile(FileO)=false then
+        RemoveFile(FileFAC);
+        RemoveFile(FileIneq);
+        RemoveFile(FileE);
+        return Concatenation("program failure: ",
+                             "POLY_cdd_LinearProgramming ",
+                             "did not create the output");
+    fi;
+    TheLP:=ReadAsFunction(FileO)();
+    RemoveFile(FileFAC);
+    RemoveFile(FileIneq);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return TheLP;
+end;
+
+
 test_shortest_realizability:=function(arg)
     local SHV, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, eRec, runtime_str;
     SHV:=arg[1];
