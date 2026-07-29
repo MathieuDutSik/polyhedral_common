@@ -5,7 +5,7 @@
 // clang-format off
 #include "LatticeDelaunay.h"
 #include "LatticeStabEquiCan.h"
-#include "POLY_cdd_graph.h"
+#include "POLY_double_description.h"
 #include <set>
 #include <sstream>
 #include <string>
@@ -95,11 +95,12 @@ compute_free_vectors(MyMatrix<T> const &GramMat,
   for (auto &eDel : DT.l_dels) {
     MyMatrix<T> const &EXT_T = eDel.EXT;
     MyMatrix<Tint> EXT = UniversalMatrixConversion<Tint, T>(EXT_T);
-    cdd::DDA<T> dda = cdd::DualDescriptionAdjacencies(EXT_T, os);
+    double_desc::DDA<T> dda =
+        double_desc::DualDescriptionAdjacencies(EXT_T, false, true, os);
     int nbVert = EXT.rows();
     for (int i = 0; i < nbVert; i++) {
       for (int j = i + 1; j < nbVert; j++) {
-        if (dda.SkelGraph.IsAdjacent(i, j)) {
+        if (dda.SkelGraph->IsAdjacent(i, j)) {
           MyVector<Tint> r =
               free_affine_part(EXT, i) - free_affine_part(EXT, j);
           f_insert(r);

@@ -7,7 +7,7 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "GRAPH_GraphicalFunctions.h"
-#include "POLY_cdd_graph.h"
+#include "POLY_double_description.h"
 // clang-format on
 
 namespace {
@@ -59,23 +59,24 @@ void process(std::string const &eFile, std::string const &OutFormat,
     std::cerr << "rnk=" << rnk << " nbCol=" << nbCol << "\n";
     throw TerminalException{1};
   }
-  cdd::DDA<T> eDDA = cdd::DualDescriptionAdjacencies(EXT, os);
+  double_desc::DDA<T> eDDA =
+      double_desc::DualDescriptionAdjacencies(EXT, true, true, os);
   if (OutFormat == "GAP") {
     os_out << "return rec(FAC:=";
     WriteMatrixGAP(os_out, eDDA.EXT);
-    os_out << ",\n  nbVertSkel:=" << eDDA.SkelGraph.GetNbVert();
+    os_out << ",\n  nbVertSkel:=" << eDDA.SkelGraph->GetNbVert();
     os_out << ",\n  SkelEdges:=";
-    WriteEdgesGAP(os_out, eDDA.SkelGraph);
-    os_out << ",\n  nbVertRidge:=" << eDDA.RidgeGraph.GetNbVert();
+    WriteEdgesGAP(os_out, *eDDA.SkelGraph);
+    os_out << ",\n  nbVertRidge:=" << eDDA.RidgeGraph->GetNbVert();
     os_out << ",\n  RidgeEdges:=";
-    WriteEdgesGAP(os_out, eDDA.RidgeGraph);
+    WriteEdgesGAP(os_out, *eDDA.RidgeGraph);
     os_out << ");\n";
     return;
   }
   if (OutFormat == "CPP") {
     WriteMatrix(os_out, eDDA.EXT);
-    WriteEdgesCPP(os_out, eDDA.SkelGraph);
-    WriteEdgesCPP(os_out, eDDA.RidgeGraph);
+    WriteEdgesCPP(os_out, *eDDA.SkelGraph);
+    WriteEdgesCPP(os_out, *eDDA.RidgeGraph);
     return;
   }
   std::cerr << "Error in process, missing support for OutFormat=" << OutFormat

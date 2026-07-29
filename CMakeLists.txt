@@ -295,7 +295,6 @@ if(HAVE_NETCDF)
     polyhedral_ctype_support
     INTERFACE
       polyhedral_group_support
-      polyhedral_cdd_double_support
       polyhedral_mpi_support
       polyhedral_netcdf_support
   )
