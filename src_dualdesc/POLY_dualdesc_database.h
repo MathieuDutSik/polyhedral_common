@@ -183,9 +183,7 @@ CanonicalizationPolytopeTriple(MyMatrix<T> const &EXT,
     RevMap[j_row] = i_row;
     EXTcan.row(i_row) = EXT.row(j_row);
   }
-  MyMatrix<T> RowRed = RowReduction(EXTcan);
-  MyMatrix<T> EXTret = EXTcan * Inverse(RowRed);
-  MyMatrix<T> EXTretB = ScalarCanonicalizationMatrix(EXTret);
+  MyMatrix<T> EXTretB = CanonicalizeOrderedMatrix(EXTcan);
   //
   std::vector<Telt> LGen;
   for (auto &eGen : PairCanGrp.second) {
