@@ -878,11 +878,12 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     vectface ListIncd =
         DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, os);
     auto look_for_vector = [&]() -> void {
+      SubsetRankOneSolver<T> solver(FAC_T);
       for (auto &eFace : ListIncd) {
 #ifdef TIMINGS_VINBERG
         n_iter++;
 #endif
-        MyVector<T> V = FindFacetInequality(FAC_T, eFace);
+        MyVector<T> V = solver.GetPositiveKernelVector(eFace);
         T scal = V.dot(Vtot.G_T * V);
         if (scal <= 0) {
           opt = UniversalVectorConversion<Tint, T>(RemoveFractionVector(V));
@@ -951,11 +952,12 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     vectface ListIncd =
         DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, os);
     auto look_for_vector = [&]() -> void {
+      SubsetRankOneSolver<T> solver(FAC_T);
       for (auto &eFace : ListIncd) {
 #ifdef TIMINGS_VINBERG
         n_iter++;
 #endif
-        MyVector<T> V = FindFacetInequality(FAC_T, eFace);
+        MyVector<T> V = solver.GetPositiveKernelVector(eFace);
         T norm = V.dot(Vtot.G_T * V);
         map[norm]++;
         if (norm > 0) {

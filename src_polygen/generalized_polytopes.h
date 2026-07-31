@@ -340,6 +340,7 @@ ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_
   }
   int n_fac_ret = l_idx_facet.size();
   MyMatrix<T> FAC_ret(n_fac_ret, dim-1);
+  SubsetRankOneSolver<T> solver_ret(EXT_ret);
   for (int j_fac_ret=0; j_fac_ret<n_fac_ret; j_fac_ret++) {
     int j_fac = l_idx_facet[j_fac_ret];
     Face f2 = sp.facets[j_fac];
@@ -350,7 +351,7 @@ ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_
         f[pos] = 1;
       }
     }
-    MyVector<T> eFAC = FindFacetInequality(EXT_ret, f);
+    MyVector<T> eFAC = solver_ret.GetPositiveKernelVector(f);
     AssignMatrixRow(FAC_ret, j_fac_ret, eFAC);
   }
   SinglePolytope<T> sp_ret = get_single_polytope(FAC_ret, EXT_ret);

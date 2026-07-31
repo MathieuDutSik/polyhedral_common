@@ -204,28 +204,6 @@ BeneathBeyondFacet<T> facet_from_normal(MyMatrix<T> const &EXT,
   return {std::move(normal), std::move(incd)};
 }
 
-// Same, but the orientation is fixed by an "interior" row instead of by the raw
-// sign: the single EXT * normal pass is reused to both orient the facet (so it
-// is positive on `interior_row`) and read off its incidence -- no separate
-// scalar product is computed for the sign. Used for the initial simplex facets,
-// oriented on the dropped basis ray.
-template <typename T>
-BeneathBeyondFacet<T> facet_from_normal_interior(MyMatrix<T> const &EXT,
-                                                 MyVector<T> const &raw,
-                                                 int interior_row) {
-  int nbRow = EXT.rows();
-  MyVector<T> normal = ScalarCanonicalizationVector(raw);
-  MyVector<T> prod = EXT * normal;
-  if (prod(interior_row) < 0) {
-    normal = -normal;
-    prod = -prod;
-  }
-  Face incd(nbRow);
-  for (int iRow = 0; iRow < nbRow; iRow++)
-    if (prod(iRow) == 0)
-      incd[iRow] = 1;
-  return {std::move(normal), std::move(incd)};
-}
 
 // The sorted list of set positions of a face.
 inline std::vector<int> face_to_vector(Face const &f) {
@@ -319,16 +297,24 @@ BeneathBeyond_Kernel(MyMatrix<T> const &EXT,
   std::vector<BeneathBeyondFacet<T>> facets;
   // The nbCol facets of the simplicial cone: drop one basis ray at a time. These
   // are the only normals obtained from a nullspace; every later facet is a cheap
-  // linear combination of two existing ones (see below). Orient each inward, so
-  // it is positive on the dropped basis ray.
-  for (int iBas = 0; iBas < nbCol; iBas++) {
-    Face seed(nbRow);
-    for (int jBas = 0; jBas < nbCol; jBas++)
-      if (jBas != iBas)
-        seed[basis[jBas]] = 1;
-    MyVector<T> normal = FindFacetInequality(EXT, seed);
-    facets.push_back(
-        beneath_beyond::facet_from_normal_interior(EXT, normal, basis[iBas]));
+  // linear combination of two existing ones (see below). The subset solver is
+  // built once for the nbCol seeds and delivers the kernel vector together with
+  // its incidence in one pass. Orient each inward, so it is positive on the
+  // dropped basis ray.
+  {
+    SubsetRankOneSolver<T> solver(EXT);
+    for (int iBas = 0; iBas < nbCol; iBas++) {
+      Face seed(nbRow);
+      for (int jBas = 0; jBas < nbCol; jBas++)
+        if (jBas != iBas)
+          seed[basis[jBas]] = 1;
+      std::pair<MyVector<T>, Face> pair =
+          solver.GetPositiveKernelVectorAndFace(seed);
+      MyVector<T> normal = ScalarCanonicalizationVector(pair.first);
+      if (beneath_beyond::facet_scal(EXT, normal, basis[iBas]) < 0)
+        normal = -normal;
+      facets.push_back({std::move(normal), std::move(pair.second)});
+    }
   }
 
   // Insert the remaining rays one at a time.
@@ -516,27 +502,18 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
 
   // Initial simplicial cone: nbCol facets (incidence = the nbCol-1 basis rays
   // spanning each), forming a complete dual graph. The initial facet normals are
-  // the only place a nullspace (a field operation) is needed; when T is a ring we
-  // compute them over the overlying field and scale the result back to T, so the
-  // whole rest of the algorithm runs in ring arithmetic.
-  using Tfield = typename overlying_field<T>::field_type;
-  [[maybe_unused]] MyMatrix<Tfield> EXTfield;
-  if constexpr (!is_ring_field<T>::value)
-    EXTfield = UniversalMatrixConversion<Tfield, T>(EXT);
+  // the only place a kernel computation is needed; the subset solver is built
+  // once for the nbCol seeds and handles the arithmetic dispatch, so the whole
+  // rest of the algorithm runs in ring arithmetic.
+  SubsetRankOneSolver<T> solver(EXT);
   std::vector<int> init;
   for (int iBas = 0; iBas < nbCol; iBas++) {
     Face seed(nbRow);
     for (int jBas = 0; jBas < nbCol; jBas++)
       if (jBas != iBas)
         seed[basis[jBas]] = 1;
-    MyVector<T> normal;
-    if constexpr (is_ring_field<T>::value) {
-      normal = ScalarCanonicalizationVector(FindFacetInequality(EXT, seed));
-    } else {
-      MyVector<Tfield> nf = FindFacetInequality(EXTfield, seed);
-      normal = ScalarCanonicalizationVector(
-          UniversalVectorConversion<T, Tfield>(NonUniqueScaleToIntegerVector(nf)));
-    }
+    MyVector<T> normal =
+        ScalarCanonicalizationVector(solver.GetPositiveKernelVector(seed));
     if (beneath_beyond::facet_scal(EXT, normal, basis[iBas]) < 0)
       normal = -normal;
     init.push_back(

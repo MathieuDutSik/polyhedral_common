@@ -1801,9 +1801,10 @@ void OutputFacets_stream(const MyMatrix<T> &EXT, const vectface &TheOutput,
     int dim = eList.size();
     int n_facet = TheOutput.size();
     MyMatrix<T> M = ZeroMatrix<T>(n_facet, nbCol);
+    SubsetRankOneSolver<T> solver(EXTred);
     for (int i_facet = 0; i_facet < n_facet; i_facet++) {
       Face f = TheOutput[i_facet];
-      MyVector<T> eIneq = FindFacetInequality(EXTred, f);
+      MyVector<T> eIneq = solver.GetPositiveKernelVector(f);
       for (int i = 0; i < dim; i++) {
         M(i_facet, eList[i]) = eIneq(i);
       }

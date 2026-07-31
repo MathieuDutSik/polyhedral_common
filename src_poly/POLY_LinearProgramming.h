@@ -1935,8 +1935,9 @@ vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #ifdef SANITY_CHECK_FULL_RANK_FACET_SET
   MyMatrix<T> FACsamp(vf_ret.size(), dim);
   int pos = 0;
+  SubsetRankOneSolver<T> solver_samp(EXT);
   for (auto &face : vf_ret) {
-    MyVector<T> eFAC = FindFacetInequality(EXT, face);
+    MyVector<T> eFAC = solver_samp.GetPositiveKernelVector(face);
     AssignMatrixRow(FACsamp, pos, eFAC);
     pos++;
   }

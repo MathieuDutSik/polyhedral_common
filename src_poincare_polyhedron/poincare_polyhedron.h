@@ -63,8 +63,9 @@ DataEXT<T> GetTransposedDualDesc(vectface const &vf, MyMatrix<T> const &FAC) {
   MyMatrix<T> EXT(n_ext, n);
   int pos = 0;
   std::vector<Face> v_red(n_fac, Face(n_ext));
+  SubsetRankOneSolver<T> solver(FAC);
   for (auto &eInc : vf) {
-    MyVector<T> eEXT = FindFacetInequality(FAC, eInc);
+    MyVector<T> eEXT = solver.GetPositiveKernelVector(eInc);
     AssignMatrixRow(EXT, pos, eEXT);
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       v_red[i_fac][pos] = eInc[i_fac];

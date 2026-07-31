@@ -1711,8 +1711,9 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
           AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
       vectface vf = DualDescriptionStandard(ListIneq, GRP, AllArr, os);
       bool AllRaysInside = true;
+      SubsetRankOneSolver<T> solver(ListIneq);
       for (auto &eFace : vf) {
-        MyVector<T> V = FindFacetInequality(ListIneq, eFace);
+        MyVector<T> V = solver.GetPositiveKernelVector(eFace);
         T scal = V.dot(G * V);
         if (scal > 0)
           AllRaysInside = false;

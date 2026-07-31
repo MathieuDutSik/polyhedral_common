@@ -42,8 +42,9 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
   os << "Before GetFullRankFacetSet\n";
 #endif
   vectface vf = GetFullRankFacetSet(FAC, os);
+  SubsetRankOneSolver<T> solver_fac(FAC);
   for (auto &face : vf) {
-    MyVector<T> eEXT = FindFacetInequality(FAC, face);
+    MyVector<T> eEXT = solver_fac.GetPositiveKernelVector(face);
     (void)f_insert(eEXT);
   }
 #ifdef DEBUG_PRIMAL_DUAL
@@ -67,8 +68,9 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
       }
       return false;
     };
+    SubsetRankOneSolver<T> solver_ext(EXT);
     for (auto &face : vf_myfac) {
-      MyVector<T> eFAC = FindFacetInequality(EXT, face);
+      MyVector<T> eFAC = solver_ext.GetPositiveKernelVector(face);
       MyVector<T> eFACred = ScalarCanonicalizationVector(eFAC);
       // Missing so operation is needed
       if (!SetFAC.contains(eFACred)) {

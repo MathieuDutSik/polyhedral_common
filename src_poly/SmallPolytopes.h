@@ -121,19 +121,15 @@ vectface SmallPolytope_Incidence(MyMatrix<T> const &EXT, std::ostream &os) {
 
 template <typename T>
 MyMatrix<T> SmallPolytope_Ineq(MyMatrix<T> const &EXT, std::ostream &os) {
-  using Tint = typename SubsetRankOneSolver<T>::Tint;
   vectface vf = SmallPolytope_Incidence(EXT, os);
-  MyMatrix<Tint> EXT_int = Get_EXT_int(EXT);
-  SubsetRankOneSolver<T> solver(EXT_int);
+  SubsetRankOneSolver<T> solver(EXT);
   size_t n_fac = EXT.rows();
   int n_col = EXT.cols();
   MyMatrix<T> FAC(n_fac, n_col);
   size_t i_fac = 0;
   for (auto &eFace : vf) {
-    MyVector<Tint> Vint = solver.GetPositiveKernelVector(eFace);
-    for (int i_col = 0; i_col < n_col; i_col++) {
-      FAC(i_fac, i_col) = UniversalScalarConversion<T, Tint>(Vint(i_col));
-    }
+    MyVector<T> V = solver.GetPositiveKernelVector(eFace);
+    AssignMatrixRow(FAC, i_fac, V);
     i_fac++;
   }
   return FAC;
@@ -147,16 +143,11 @@ void SmallPolytope_FaceIneq(MyMatrix<T> const &EXT, Fprocess f_process,
 #ifdef DEBUG_SMALL_POLYTOPE
   os << "SmallPolytope_FaceIneq, n_row=" << n_row << " n_col=" << n_col << "\n";
 #endif
-  using Tint = typename SubsetRankOneSolver<T>::Tint;
   vectface vf = SmallPolytope_Incidence(EXT, os);
-  MyMatrix<Tint> EXT_int = Get_EXT_int(EXT);
-  SubsetRankOneSolver<T> solver(EXT_int);
+  SubsetRankOneSolver<T> solver(EXT);
   std::pair<Face, MyVector<T>> pair{Face(n_row), MyVector<T>(n_col)};
   for (auto &eFace : vf) {
-    MyVector<Tint> Vint = solver.GetPositiveKernelVector(eFace);
-    for (int i_col = 0; i_col < n_col; i_col++) {
-      pair.second(i_col) = UniversalScalarConversion<T, Tint>(Vint(i_col));
-    }
+    pair.second = solver.GetPositiveKernelVector(eFace);
     pair.first = eFace;
 #ifdef SANITY_CHECK_SMALL_POLYTOPE
     for (int i_row = 0; i_row < n_row; i_row++) {

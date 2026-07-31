@@ -1330,9 +1330,10 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   };
   std::vector<RepartEntry<T, Tgroup>> ListOrbitFacet;
   std::vector<RepartEntryProv> ListOrbitFacet_prov;
+  SubsetRankOneSolver<T> solver(TotalListVertices);
   for (auto &eRec : ListOrbitCenter) {
     Face Linc_face = VectorToFace(eRec.Linc, nVert);
-    MyVector<T> eFac = FindFacetInequality(TotalListVertices, Linc_face);
+    MyVector<T> eFac = solver.GetPositiveKernelVector(Linc_face);
     Tgroup TheStab;
     int8_t Position = -1;
     std::vector<Delaunay_AdjO<T>> ListAdj;

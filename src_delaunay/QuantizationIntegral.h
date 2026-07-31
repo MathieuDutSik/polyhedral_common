@@ -895,8 +895,9 @@ struct QuantizationComputer {
     }
     int nbFAC = RelFAC.size();
     MyMatrix<T> FAC(nbFAC, n + 1);
+    SubsetRankOneSolver<T> solver(TheEXT);
     for (int x = 0; x < nbFAC; x++) {
-      MyVector<T> ineq = FindFacetInequality(TheEXT, RelFAC[x]);
+      MyVector<T> ineq = solver.GetPositiveKernelVector(RelFAC[x]);
       for (int j = 0; j < n + 1; j++)
         FAC(x, j) = ineq(j);
     }

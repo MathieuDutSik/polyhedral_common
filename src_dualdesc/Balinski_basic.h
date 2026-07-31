@@ -128,9 +128,10 @@ MyMatrix<T> GetVertexSet_from_vectface(MyMatrix<T> const &FAC,
   size_t n_cols = FAC.cols();
   size_t n_vert = vf.size();
   MyMatrix<T> EXT(n_vert, n_cols);
+  SubsetRankOneSolver<T> solver(FAC);
   for (size_t i_vert = 0; i_vert < n_vert; i_vert++) {
     Face f = vf[i_vert];
-    MyVector<T> eEXT = FindFacetInequality(FAC, f);
+    MyVector<T> eEXT = solver.GetPositiveKernelVector(f);
     for (size_t i_col = 0; i_col < n_cols; i_col++)
       EXT(i_vert, i_col) = eEXT(i_col);
   }

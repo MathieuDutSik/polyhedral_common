@@ -229,46 +229,8 @@ inline void CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList,
 
 template <typename T>
 MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
-  size_t nbRow = TheEXT.rows();
-  size_t nbCol = TheEXT.cols();
-  MyVector<T> eVect(nbCol);
-  if constexpr (is_ring_field<T>::value) {
-    size_t nb = OneInc.count();
-    boost::dynamic_bitset<>::size_type aRow = OneInc.find_first();
-    auto f = [&](MyMatrix<T> &M, size_t eRank,
-                 [[maybe_unused]] size_t iRow) -> void {
-      M.row(eRank) = TheEXT.row(aRow);
-      aRow = OneInc.find_next(aRow);
-    };
-    MyMatrix<T> NSP =
-        NullspaceTrMatTarget_Kernel<T, decltype(f)>(nb, nbCol, 1, f);
-    for (size_t iCol = 0; iCol < nbCol; iCol++)
-      eVect(iCol) = NSP(0, iCol);
-  } else {
-    // Over a ring the kernel is computed by the exact subset solver,
-    // with a saturated content one output.
-    SubsetRankOneSolver_Ring<T> solver(TheEXT);
-    eVect = solver.GetKernelVector(OneInc);
-  }
-  for (size_t iRow = 0; iRow < nbRow; iRow++) {
-    if (OneInc[iRow])
-      continue;
-    T eScal(0);
-    for (size_t iCol = 0; iCol < nbCol; iCol++)
-      eScal += eVect(iCol) * TheEXT(iRow, iCol);
-    if (eScal > 0)
-      return eVect;
-    if (eScal < 0)
-      return -eVect;
-  }
-  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
-  std::cerr << "|f|=" << OneInc.size() << " / " << OneInc.count() << "\n";
-  std::cerr << "eVect=" << StringVectorGAP(eVect) << "\n";
-  std::cerr << "Rank=" << RankMat(TheEXT) << "\n";
-  std::cerr << "TheEXT=\n";
-  WriteMatrix(std::cerr, TheEXT);
-  std::cerr << "FindFacetInequality: Failed to find the defining inequality\n";
-  throw TerminalException{1};
+  SubsetRankOneSolver<T> solver(TheEXT);
+  return solver.GetPositiveKernelVector(OneInc);
 }
 
 template <typename T>
@@ -515,7 +477,7 @@ private:
   int idx_drop;
   MyMatrix<Tint> EXT_red;
   MyMatrix<Tint> EXT_red_sub;
-  SubsetRankOneSolver<T> solver;
+  subsetsolver_type<T> solver;
 #ifdef DEBUG_POLY_FUNDAMENTAL
   MyMatrix<T> EXT_debug;
 #endif
@@ -535,7 +497,7 @@ public:
         idx_drop(get_idx_drop(FacetIneq)),
         EXT_red(DropColumn(EXT_int, idx_drop)),
         EXT_red_sub(SelectRow(EXT_red, PairIncs.second)),
-        solver(SubsetRankOneSolver<T>(EXT_red_sub)),
+        solver(subsetsolver_type<T>(EXT_red_sub)),
         EXT_face(GetEXT_face(EXT, idx_drop, PairIncs.second)),
         EXT_face_int(GetEXT_face(EXT_int, idx_drop, PairIncs.second)), os(_os) {
 #ifdef DEBUG_POLY_FUNDAMENTAL
