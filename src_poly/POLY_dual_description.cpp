@@ -89,6 +89,11 @@ int main(int argc, char *argv[]) {
                    "boost mpq data type\n";
       std::cerr << "mpq_class              : rational arithmetic over GMP "
                    "mpq_class\n";
+      std::cerr << "mpz_class              : integer ring arithmetic over GMP "
+                   "mpz_class\n";
+      std::cerr << "safe_integer           : integer arithmetic based on "
+                   "int64_t that fails\n";
+      std::cerr << "    gracefully on overflowing\n";
       std::cerr
           << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
       std::cerr
@@ -139,6 +144,14 @@ int main(int argc, char *argv[]) {
       }
       if (arith == "mpq_class") {
         using T = mpq_class;
+        return process<T>(eFileI, command, choice, os_out);
+      }
+      if (arith == "mpz_class") {
+        using T = mpz_class;
+        return process<T>(eFileI, command, choice, os_out);
+      }
+      if (arith == "safe_integer") {
+        using T = SafeInt64;
         return process<T>(eFileI, command, choice, os_out);
       }
       if (arith == "Qsqrt5") {
