@@ -702,9 +702,10 @@ ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
   os << "DEL_ENUM: |TheOutput|=" << TheOutput.size() << "\n";
 #endif
   std::vector<Delaunay_AdjI<T>> ListAdj;
+  SubsetRankOneSolver<T> ext_solver(EXT_T);
   for (auto &eOrbB : TheOutput) {
     MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
-        eData.solver, eData.ShvGraverBasis, EXT_T, eOrbB, os);
+        eData.solver, eData.ShvGraverBasis, EXT_T, ext_solver, eOrbB, os);
     MyMatrix<T> EXTadj_T = UniversalMatrixConversion<T,Tint>(EXTadj);
 #ifdef SANITY_CHECK_DELAUNAY_ENUMERATION
     if (RankMat(EXTadj_T) != eData.solver.GramMat.rows() + 1) {

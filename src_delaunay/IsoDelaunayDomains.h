@@ -1480,6 +1480,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #endif
       FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int,
                                  Linc_face, os);
+      SubsetRankOneSolver<T> solver_tlv(TotalListVertices);
       for (auto &eFace : vf) {
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
         CheckFacetInequality(EXT2, eFace, "FuncInsertFace EXT2 eFace");
@@ -1498,7 +1499,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
         os << "ISODEL: After FlipFace |eInc|=" << eInc.size() << " / "
            << eInc.count() << "\n";
 #endif
-        MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
+        MyVector<T> eFac = solver_tlv.GetPositiveKernelVector(eInc);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: FRING: We have eFac\n";
 #endif

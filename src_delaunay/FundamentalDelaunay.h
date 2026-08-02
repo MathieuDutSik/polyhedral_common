@@ -468,13 +468,13 @@ template <typename T, typename Tint>
 MyMatrix<Tint> FindAdjacentDelaunayPolytope(
     CVPSolver<T, Tint> const& solver,
     MyMatrix<Tint> const &ShvGraverBasis, MyMatrix<T> const &EXT,
-    Face const &eInc, std::ostream &os) {
+    SubsetRankOneSolver<T> &ext_solver, Face const &eInc, std::ostream &os) {
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
   MicrosecondTime time;
 #endif
   MyMatrix<T> const& GramMat = solver.GramMat;
   int dim = GramMat.rows();
-  MyVector<T> TheFac = FindFacetInequality(EXT, eInc);
+  MyVector<T> TheFac = ext_solver.GetPositiveKernelVector(eInc);
   auto get_iColFind = [&]() -> int {
     for (int iCol = 0; iCol < dim; iCol++)
       if (TheFac(1 + iCol) != 0)
@@ -632,12 +632,13 @@ MyMatrix<Tint> FindDelaunayPolytope_random(CVPSolver<T, Tint> const& solver,
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
     os << "  |vf|=" << vf.size() << "\n";
 #endif
+    SubsetRankOneSolver<T> ext_solver(EXTret_T);
     auto get_adj_cand = [&]() -> MyMatrix<Tint> {
       MyMatrix<Tint> EXTwork;
       int n_max = std::numeric_limits<int>::max();
       for (auto &eFace : vf) {
         MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
-            solver, ShvGraverBasis, EXTret_T, eFace, os);
+            solver, ShvGraverBasis, EXTret_T, ext_solver, eFace, os);
         int nbRow = EXTadj.rows();
         if (nbRow < n_max) {
           EXTwork = EXTadj;

@@ -189,12 +189,13 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
   size_t pos = 0;
 #endif
 
+  SubsetRankOneSolver<T> solver_perf(ryshk.PerfDomEXT);
   for (auto &incd_sma : ryshk.ListIncd) {
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: pos=" << pos << " incd_sma=" << incd_sma << "\n";
     pos += 1;
 #endif
-    MyVector<T> eFacet = FindFacetInequality(ryshk.PerfDomEXT, incd_sma);
+    MyVector<T> eFacet = solver_perf.GetPositiveKernelVector(incd_sma);
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     // That seems to slow down things
     //    MyMatrix<T> eMatDirScal = ScalarCanonicalizationMatrix(eMatDir);
