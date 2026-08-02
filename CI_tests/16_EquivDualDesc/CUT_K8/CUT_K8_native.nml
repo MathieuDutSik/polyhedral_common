@@ -10,7 +10,7 @@
 &HEURISTIC
  SplittingHeuristicFile          = "Split.heu"
  AdditionalSymmetryHeuristicFile = "unset.heu"
- DualDescriptionThompsonFile     = "DualDesc_heu.ts"
+ DualDescriptionThompsonFile     = "DualDesc_heu_native.ts"
  MethodInitialFacetSetFile       = "InitFacet.heu"
  BankSaveHeuristicFile           = "Bank.heu"
 /

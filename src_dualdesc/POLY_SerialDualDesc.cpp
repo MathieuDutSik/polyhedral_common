@@ -57,12 +57,10 @@ int main(int argc, char *argv[]) {
     //
     std::string NumericalType = GetNumericalType(eFull);
     auto process = [&]() -> void {
-      /*
-        if (NumericalType == "integer") {
+      if (NumericalType == "integer") {
         using T = mpz_class;
-        Process<T>(eFull);
-        }
-      */
+        return Process<T>(eFull);
+      }
       if (NumericalType == "safe_rational") {
         using T = Rational<SafeInt64>;
         return Process<T>(eFull);

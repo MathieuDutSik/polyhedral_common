@@ -475,6 +475,20 @@ public:
 template <typename T> struct FlippingFramework_Accelerate {
 private:
   using Tint = typename SubsetRankOneSolver<T>::Tint;
+  // The facet inequality from the reduced matrix: the kernel is taken
+  // on the facet rows only (the tables of the one shot solver then
+  // cover just those rows) and the sign is fixed on the full matrix.
+  static MyVector<Tint> get_facet_ineq(MyMatrix<Tint> const &EXT_int,
+                                       Face const &OneInc) {
+    MyMatrix<Tint> EXT_sel = SelectRow(EXT_int, OneInc);
+    subsetsolver_type<T> solver_sel(EXT_sel);
+    Face f_full(EXT_sel.rows());
+    for (int i = 0; i < EXT_sel.rows(); i++)
+      f_full[i] = 1;
+    MyVector<Tint> V = solver_sel.GetKernelVector(f_full);
+    SubsetRankOneSolver_SignFix(EXT_int, OneInc, V);
+    return V;
+  }
   Face OneInc;
   int e_incd0;
   int e_incd1;
@@ -503,7 +517,7 @@ public:
         ListScal(e_incd0), f_select(e_incd0),
         PairIncs(Dynamic_bitset_to_vectorints(OneInc)),
         EXT_int(Get_EXT_int(EXT)),
-        FacetIneq(NonUniqueRescaleVecRing(FindFacetInequality(EXT, OneInc))),
+        FacetIneq(get_facet_ineq(EXT_int, OneInc)),
         idx_drop(get_idx_drop(FacetIneq)),
         EXT_red(DropColumn(EXT_int, idx_drop)),
         EXT_red_sub(SelectRow(EXT_red, PairIncs.second)),

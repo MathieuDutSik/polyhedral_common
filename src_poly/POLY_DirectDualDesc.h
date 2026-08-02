@@ -187,6 +187,21 @@ template <typename T> bool is_method_supported(std::string const &prog) {
   return opt.has_value() && is_method_supported<T>(*opt);
 }
 
+// The heuristics may name a program that the arithmetic cannot serve
+// (e.g. an external program over a ring type): the double description
+// method, which runs for every type, serves as the substitute.
+template <typename T>
+DualDescProgram ResolveSupportedProgram(DualDescProgram prog,
+                                        [[maybe_unused]] std::ostream &os) {
+  if (is_method_supported<T>(prog))
+    return prog;
+#ifdef DEBUG_DUAL_DESC
+  os << "DDD: program " << std::to_string(prog)
+     << " is not available for the arithmetic, substituting cdd\n";
+#endif
+  return DualDescProgram::cdd;
+}
+
 [[noreturn]] inline void
 terminate_direct_dual_desc(std::string const &context, DualDescProgram prog) {
   std::cerr << "DDD: ERROR in " << context

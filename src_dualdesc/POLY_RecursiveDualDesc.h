@@ -1030,7 +1030,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: ansProg|=" << time_step << "\n";
 #endif
-    DualDescProgram prog = dual_desc_program_from_string(ansProg);
+    DualDescProgram prog =
+        ResolveSupportedProgram<T>(dual_desc_program_from_string(ansProg), os);
     if (df.Stab.size() == 1) {
       auto f_process =
           [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
@@ -1607,6 +1608,7 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
     ListStringValues_doc["NumericalType"] = "Default: rational\n\
 The numerical type being used for the computation. Possible values:\n\
 rational: the rational type, what you want in 99.999\% of cases\n\
+integer: the integer ring, the whole computation runs division free\n\
 safe_rational: The safe rational type. Based on int64_t but failing gracefully\n\
 Qsqrt5: coordinates in the field Q(sqrt(5))\n\
 Qsqrt2: coordinates in the field Q(sqrt(2))\n\
@@ -1858,8 +1860,10 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
 std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   std::string const &NumericalType = BlockDATA.get_string("NumericalType");
-  std::vector<std::string> Ltype{"safe_rational", "rational", "cpp_rational",
-                                 "mpq_rational",  "Qsqrt2", "Qsqrt3", "Qsqrt5"};
+  std::vector<std::string> Ltype{"integer",      "safe_rational",
+                                 "rational",     "cpp_rational",
+                                 "mpq_rational", "Qsqrt2",
+                                 "Qsqrt3",       "Qsqrt5"};
   // The real algebraic case carries the field description file as a postfix:
   // NumericalType = "RealAlgebraic=<FileAlgebraicField>".
   bool is_real_algebraic =
