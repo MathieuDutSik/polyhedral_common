@@ -317,6 +317,20 @@ Face get_fret(std::pair<std::vector<int>, std::vector<int>> const &PairIncs,
   return fret;
 }
 
+template <typename T>
+  requires(!has_reduction_subset_solver<T>::value)
+inline MyMatrix<typename SubsetRankOneSolver<T>::Tint>
+Get_EXT_int(MyMatrix<T> const &EXT) {
+  return EXT;
+}
+
+template <typename T>
+  requires(has_reduction_subset_solver<T>::value)
+inline MyMatrix<typename SubsetRankOneSolver<T>::Tint>
+Get_EXT_int(MyMatrix<T> const &EXT) {
+  return UniqueRescaleRowsRing(EXT);
+}
+
 // This is the FlippingFramework for a given facet F of a polytope.
 //
 // After the constructor is built, then we provide a function for
@@ -333,7 +347,6 @@ Face get_fret(std::pair<std::vector<int>, std::vector<int>> const &PairIncs,
 // used. But the problem is to store them.
 template <typename T> struct FlippingFramework_Field {
 private:
-  using Tint = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> EXT_red;
   Face OneInc;
   int e_incd0;
@@ -350,10 +363,8 @@ private:
 
 public:
   MyMatrix<T> EXT_face;
-  MyMatrix<Tint> EXT_face_int;
-  FlippingFramework_Field(MyMatrix<T> const &EXT,
-                          [[maybe_unused]] MyMatrix<Tint> const &EXT_int,
-                          Face const &_OneInc, std::ostream &_os)
+  FlippingFramework_Field(MyMatrix<T> const &EXT, Face const &_OneInc,
+                          std::ostream &_os)
       : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()),
         e_incd1(OneInc.count()), nbRow(EXT.rows()), nbCol(EXT.cols()),
         PairIncs(Dynamic_bitset_to_vectorints(OneInc)), ListInvScal(e_incd0),
@@ -381,7 +392,6 @@ public:
     // Now the EXT face that is used by other procedure
     //
     EXT_face = GetEXT_face(EXT, idx_drop, PairIncs.second);
-    EXT_face_int = GetEXT_face(EXT_int, idx_drop, PairIncs.second);
   }
   Face InternalFlipFaceIneq(Face const &sInc, const T *out) {
     // We need to compute a vertex in the facet, but not the ridge
@@ -455,8 +465,8 @@ public:
   }
 };
 
-// The flipping framework operating on the integer matrix EXT_int: all
-// the arithmetic (the scalar products and the division-free
+// The flipping framework operating on its own integer reduction of the
+// input: all the arithmetic (the scalar products and the division-free
 // minimum-ratio comparisons) is over Tint, and the kernel vectors come
 // from the dispatched SubsetRankOneSolver -- the Fp accelerated one for
 // the rational types, the exact ring one for the euclidean rings. The
@@ -473,6 +483,7 @@ private:
   std::vector<Tint> ListScal;
   Face f_select;
   std::pair<std::vector<int>, std::vector<int>> PairIncs;
+  MyMatrix<Tint> EXT_int;
   MyVector<Tint> FacetIneq;
   int idx_drop;
   MyMatrix<Tint> EXT_red;
@@ -484,22 +495,20 @@ private:
 
 public:
   MyMatrix<T> EXT_face;
-  MyMatrix<Tint> EXT_face_int;
   std::ostream &os;
-  FlippingFramework_Accelerate(MyMatrix<T> const &EXT,
-                               MyMatrix<Tint> const &EXT_int,
-                               Face const &_OneInc, std::ostream &_os)
+  FlippingFramework_Accelerate(MyMatrix<T> const &EXT, Face const &_OneInc,
+                               std::ostream &_os)
       : OneInc(_OneInc), e_incd0(OneInc.size() - OneInc.count()),
         e_incd1(OneInc.count()), nbRow(EXT.rows()), nbCol(EXT.cols()),
         ListScal(e_incd0), f_select(e_incd0),
         PairIncs(Dynamic_bitset_to_vectorints(OneInc)),
+        EXT_int(Get_EXT_int(EXT)),
         FacetIneq(NonUniqueRescaleVecRing(FindFacetInequality(EXT, OneInc))),
         idx_drop(get_idx_drop(FacetIneq)),
         EXT_red(DropColumn(EXT_int, idx_drop)),
         EXT_red_sub(SelectRow(EXT_red, PairIncs.second)),
         solver(subsetsolver_type<T>(EXT_red_sub)),
-        EXT_face(GetEXT_face(EXT, idx_drop, PairIncs.second)),
-        EXT_face_int(GetEXT_face(EXT_int, idx_drop, PairIncs.second)), os(_os) {
+        EXT_face(GetEXT_face(EXT, idx_drop, PairIncs.second)), os(_os) {
 #ifdef DEBUG_POLY_FUNDAMENTAL
     EXT_debug = EXT;
 #endif
@@ -594,13 +603,10 @@ using flipping_type = std::conditional_t<
 template <typename T> class FlippingFramework {
 public:
   flipping_type<T> flipping;
-  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> const &EXT_face;
-  MyMatrix<Text_int> const &EXT_face_int;
-  FlippingFramework(MyMatrix<T> const &EXT, MyMatrix<Text_int> const &EXT_int,
-                    Face const &OneInc, std::ostream &os)
-      : flipping(EXT, EXT_int, OneInc, os), EXT_face(flipping.EXT_face),
-        EXT_face_int(flipping.EXT_face_int) {}
+  FlippingFramework(MyMatrix<T> const &EXT, Face const &OneInc,
+                    std::ostream &os)
+      : flipping(EXT, OneInc, os), EXT_face(flipping.EXT_face) {}
   Face FlipFace(Face const &sInc) { return flipping.FlipFace(sInc); }
   Face FlipFaceIneq(std::pair<Face, MyVector<T>> const &pair) {
     return flipping.FlipFaceIneq(pair);
@@ -608,38 +614,19 @@ public:
 };
 
 template <typename T>
-  requires(!has_reduction_subset_solver<T>::value)
-inline MyMatrix<typename SubsetRankOneSolver<T>::Tint>
-Get_EXT_int(MyMatrix<T> const &EXT) {
-  return EXT;
-}
-
-template <typename T>
-  requires(has_reduction_subset_solver<T>::value)
-inline MyMatrix<typename SubsetRankOneSolver<T>::Tint>
-Get_EXT_int(MyMatrix<T> const &EXT) {
-  return UniqueRescaleRowsRing(EXT);
-}
-
-template <typename T>
 Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
                      Face const &sInc, std::ostream &os) {
-  using Tint = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> TheEXT = ColumnReduction(EXT);
-  MyMatrix<Tint> TheEXT_int = Get_EXT_int(TheEXT);
-  FlippingFramework<T> TheFram(TheEXT, TheEXT_int, OneInc, os);
+  FlippingFramework<T> TheFram(TheEXT, OneInc, os);
   return TheFram.FlipFace(sInc);
 }
 
 template <typename T> struct SimplifiedFlippingFramework {
-  using Tint = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> TheEXT;
-  MyMatrix<Tint> TheEXT_int;
   FlippingFramework<T> TheFram;
   SimplifiedFlippingFramework(MyMatrix<T> const &EXT, Face const &OneInc,
                               std::ostream &os)
-      : TheEXT(ColumnReduction(EXT)), TheEXT_int(Get_EXT_int(TheEXT)),
-        TheFram(TheEXT, TheEXT_int, OneInc, os) {}
+      : TheEXT(ColumnReduction(EXT)), TheFram(TheEXT, OneInc, os) {}
   Face FlipFace(Face const &sInc) { return TheFram.FlipFace(sInc); }
 };
 

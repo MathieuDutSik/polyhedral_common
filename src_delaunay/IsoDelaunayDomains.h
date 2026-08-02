@@ -1427,11 +1427,6 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #endif
     return {{}, std::move(eBigMat), iOrb};
   };
-  using Text_int = typename SubsetRankOneSolver<T>::Tint;
-  MyMatrix<Text_int> TotalListVertices_int = Get_EXT_int(TotalListVertices);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-  os << "ISODEL: FRING: we have TotalListVertices_int\n";
-#endif
   size_t nOrbStart = 0;
   size_t nOrb;
   while (true) {
@@ -1478,8 +1473,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
       CheckFacetInequality(TotalListVertices, Linc_face,
                            "FuncInsertFace TotalListVertices Linc_face");
 #endif
-      FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int,
-                                 Linc_face, os);
+      FlippingFramework<T> frame(TotalListVertices, Linc_face, os);
       SubsetRankOneSolver<T> solver_tlv(TotalListVertices);
       for (auto &eFace : vf) {
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN

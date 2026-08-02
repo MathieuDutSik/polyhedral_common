@@ -248,8 +248,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     try {
       vectface TheOutput =
           DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-              TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, info,
-              AllArr, ePrefix, os);
+              TheBank, df.FF.EXT_face, df.Stab, info, AllArr, ePrefix, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       MicrosecondTime time_full;
       os << "|outputsize|=" << TheOutput.size() << "\n";
@@ -692,7 +691,6 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
-  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   int i_rank = comm.rank();
   int n_proc = comm.size();
   int pos_generator = 0;
@@ -712,7 +710,6 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   //
   MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, os);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
-  MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   int dimEXT = EXTred.cols();
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
   PolyHeuristicSerial<TintGroup> AllArr =
@@ -739,7 +736,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   boost::mpi::communicator comm_work = comm.split(pos_generator);
   //
   using TbasicBank = DatabaseCanonic<T, TintGroup, Tgroup>;
-  TbasicBank bb(EXTred, EXTred_int, GRP, os);
+  TbasicBank bb(EXTred, GRP, os);
   PolytopeInputInfo<TintGroup> info =
       ComputeInitialInfo<TintGroup>(EXTred, GRP, AllArr.dimEXT);
   //

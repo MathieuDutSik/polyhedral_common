@@ -53,14 +53,23 @@ end;
 # POLYHEDRAL_COMMON_SOURCE_CODE environment variable, which could
 # silently point at another checkout with stale binaries.
 GetSourceCodePath:=function()
-    local path;
+    local path, TmpDir, TmpFile, list_lines;
     path:="../..";
     if IsExistingFile("../common.g")=false or IsDirectoryPath(Concatenation(path, "/src_poly"))=false then
         Print("The current directory does not look like a CI_tests section\n");
         Print("of the polyhedral_common source code\n");
         Error("Run the test from its directory CI_tests/<section>");
     fi;
-    return path;
+    # The absolute path is needed, since some drivers run the binaries
+    # from a subdirectory of the test section.
+    TmpDir:=DirectoryTemporary();
+    TmpFile:=Filename(TmpDir, "cwd");
+    Exec(Concatenation("(cd ", path, " && pwd > ", TmpFile, ")"));
+    list_lines:=ReadTextFile(TmpFile);
+    if Length(list_lines)>=1 then
+        return list_lines[1];
+    fi;
+    Error("Failed to determine the absolute source code path");
 end;
 
 GetBinaryFilename:=function(FileName)

@@ -216,10 +216,8 @@ public:
   using T = T_inp;
   using Tint = Tint_inp;
   using Tgroup = Tgroup_inp;
-  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   using Telt = typename Tgroup::Telt;
   const MyMatrix<T> &EXT;
-  const MyMatrix<Text_int> &EXT_int;
   const Tgroup &GRP;
   using Torbsize = uint32_t;
   using Tidx = typename Telt::Tidx;
@@ -270,9 +268,9 @@ public:
     }
     foc.Counts_InsertOrbit(status, orbSize);
   }
-  DatabaseCanonic(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const &_EXT_int,
-                  Tgroup const &_GRP, std::ostream &_os)
-      : EXT(_EXT), EXT_int(_EXT_int), GRP(_GRP), foc(GRP), os(_os) {
+  DatabaseCanonic(MyMatrix<T> const &_EXT, Tgroup const &_GRP,
+                  std::ostream &_os)
+      : EXT(_EXT), GRP(_GRP), foc(GRP), os(_os) {
     canonic_method = CanonicStrategy::unset;
 
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
@@ -561,7 +559,7 @@ public:
         std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
         Face const &f = pair.first;
         Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
-        return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP,
+        return {pos, f, FlippingFramework<T>(EXT, f, os), GRP,
                 std::move(StabRed)};
       }
     }
@@ -685,10 +683,8 @@ public:
   using T = T_inp;
   using Tint = Tint_inp;
   using Tgroup = Tgroup_inp;
-  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   using Telt = typename Tgroup::Telt;
   const MyMatrix<T> &EXT;
-  const MyMatrix<Text_int> &EXT_int;
   const Tgroup &GRP;
   using Torbsize = uint32_t;
   using Tidx = typename Telt::Tidx;
@@ -730,10 +726,9 @@ public:
     }
     foc.Counts_InsertOrbit(status, orbSize);
   }
-  DatabaseRepr(MyMatrix<T> const &_EXT, MyMatrix<Text_int> const &_EXT_int,
-               Tgroup const &_GRP, Frepr f_repr, Forbitsize f_orbitsize,
-               Finv f_inv, std::ostream &_os)
-      : EXT(_EXT), EXT_int(_EXT_int), GRP(_GRP), foc(GRP), f_repr(f_repr),
+  DatabaseRepr(MyMatrix<T> const &_EXT, Tgroup const &_GRP, Frepr f_repr,
+               Forbitsize f_orbitsize, Finv f_inv, std::ostream &_os)
+      : EXT(_EXT), GRP(_GRP), foc(GRP), f_repr(f_repr),
         f_orbitsize(f_orbitsize), f_inv(f_inv), os(_os) {
     /* TRICK 6: The UNORD_SET only the index and this saves in memory usage. */
     n_act = GRP.n_act();
@@ -839,7 +834,7 @@ public:
     std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
     Face const &f = pair.first;
     Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
-    return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP,
+    return {pos, f, FlippingFramework<T>(EXT, f, os), GRP,
             std::move(StabRed)};
   }
   void InsertListOrbitEntry(Face const &f,
@@ -1101,8 +1096,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     os << "|RDD: DualDesc+flip+insertion|=" << time_complete << "\n";
 #endif
   } else {
-    vectface TheOutput = f_dd(TheBank, df.FF.EXT_face, df.FF.EXT_face_int,
-                              df.Stab, info, AllArr, ePrefix, os);
+    vectface TheOutput =
+        f_dd(TheBank, df.FF.EXT_face, df.Stab, info, AllArr, ePrefix, os);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RDD: |outputsize|=" << TheOutput.size() << "\n";
 #endif
@@ -1387,21 +1382,17 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 //
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
-    Tbank &TheBank, MyMatrix<T> const &EXT,
-    MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int,
-    Tgroup const &GRP, PolytopeInputInfo<typename Tgroup::Tint> &info,
+    Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
+    PolytopeInputInfo<typename Tgroup::Tint> &info,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix, std::ostream &os) {
   auto f_dd =
-      [](Tbank &TheBank_i, MyMatrix<T> const &EXT_i,
-         MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int_i,
-         Tgroup const &GRP_i,
+      [](Tbank &TheBank_i, MyMatrix<T> const &EXT_i, Tgroup const &GRP_i,
          PolytopeInputInfo<typename Tgroup::Tint> &info_i,
          PolyHeuristicSerial<typename Tgroup::Tint> &AllArr_i,
          std::string const &ePrefix_i, std::ostream &os_i) -> vectface {
     return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-        TheBank_i, EXT_i, EXT_int_i, GRP_i, info_i, AllArr_i, ePrefix_i,
-        os_i);
+        TheBank_i, EXT_i, GRP_i, info_i, AllArr_i, ePrefix_i, os_i);
   };
   using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
@@ -1487,7 +1478,7 @@ vectface DUALDESC_AdjacencyDecomposition(
 #endif
     if (database_kind == DatabaseKind::canonic) {
       using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
-      TbasicBank bb(EXT, EXT_int, TheGRPrelevant, os);
+      TbasicBank bb(EXT, TheGRPrelevant, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
           TheBank, bb, AllArr, MainPrefix, info, f_dd, os);
@@ -1506,8 +1497,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       };
       using TbasicBank = DatabaseRepr<T, Tint, Tgroup, decltype(f_repr),
                                       decltype(f_orbitsize), decltype(f_inv)>;
-      TbasicBank bb(EXT, EXT_int, TheGRPrelevant, f_repr, f_orbitsize, f_inv,
-                    os);
+      TbasicBank bb(EXT, TheGRPrelevant, f_repr, f_orbitsize, f_inv, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
           TheBank, bb, AllArr, MainPrefix, info, f_dd, os);
@@ -1972,12 +1962,10 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
-  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, os);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int dimEXT = EXTred.cols();
-  MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   PolyHeuristicSerial<TintGroup> AllArr =
       Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, os);
   //
@@ -1989,8 +1977,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
       using Tbank = DataBank<Tkey, Tval>;
       Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, os);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, EXTred_int, GRP, info, AllArr, AllArr.DD_Prefix,
-          os);
+          TheBank, EXTred, GRP, info, AllArr, AllArr.DD_Prefix, os);
     }
 #ifndef WASM_PLATFORM
     if (AllArr.bank_parallelization_method ==
@@ -1998,8 +1985,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
       using Tbank = DataBankAsioClient<Tkey, Tval>;
       Tbank TheBank(AllArr.port);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-          TheBank, EXTred, EXTred_int, GRP, info, AllArr, AllArr.DD_Prefix,
-          std::cerr);
+          TheBank, EXTred, GRP, info, AllArr, AllArr.DD_Prefix, std::cerr);
     }
 #endif
     std::cerr
@@ -2026,7 +2012,6 @@ DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP,
   using Tval = TripleStore<Tgroup>;
   using Tbank = DataBank<Tkey, Tval>;
   using Tidx_value = int32_t;
-  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   bool BANK_Saving = false;
   std::string BANK_Prefix = "totally_irrelevant_first";
   //
@@ -2045,12 +2030,11 @@ DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP,
   WriteMatrix(os, EXT2);
 #endif
   //
-  MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   Tbank TheBank(BANK_Saving, BANK_Prefix, os);
   PolytopeInputInfo<TintGroup> info =
       ComputeInitialInfo<TintGroup, T, Tgroup>(EXTred, GRP, AllArr.dimEXT);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      TheBank, EXTred, EXTred_int, GRP, info, AllArr, DD_Prefix, os);
+      TheBank, EXTred, GRP, info, AllArr, DD_Prefix, os);
 }
 
 template <typename T, typename Tgroup> struct RecordDualDescOperation {
@@ -2073,7 +2057,6 @@ DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
   using TintGroup = typename Tgroup::Tint;
   using Tbank = typename RecordDualDescOperation<T, Tgroup>::Tbank;
   using Tidx_value = int32_t;
-  using Text_int = typename SubsetRankOneSolver<T>::Tint;
   std::ostream &os = rddo.os;
   //
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
@@ -2095,11 +2078,10 @@ DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
   //
   std::string DD_Prefix = "totally_irrelevant_second";
   //
-  MyMatrix<Text_int> EXT_int = Get_EXT_int(EXT);
   PolytopeInputInfo<TintGroup> info =
       ComputeInitialInfo<TintGroup, T, Tgroup>(EXT, GRP, rddo.AllArr.dimEXT);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      rddo.TheBank, EXT, EXT_int, GRP, info, rddo.AllArr, DD_Prefix, os);
+      rddo.TheBank, EXT, GRP, info, rddo.AllArr, DD_Prefix, os);
 }
 
 template <typename T, typename Tgroup>
