@@ -78,9 +78,15 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
         // expensive, so it has to be done only if we are sure that
         // it is needed.
         if (!has_violating_facet(eFACred)) {
-          MyVector<T> eEXT = FindViolatedFacetInequality(FAC, eFACred, os);
-          f_insert(eEXT);
-          ListNewEXT.push_back(eEXT);
+          // An empty optional means the candidate is a valid inequality
+          // on the cone (a non-extreme interior point of it): nothing
+          // to cut, the candidate facet is definitive.
+          std::optional<MyVector<T>> opt =
+              FindViolatedFacetInequality(FAC, eFACred, os);
+          if (opt) {
+            f_insert(*opt);
+            ListNewEXT.push_back(*opt);
+          }
         }
       }
     }

@@ -242,8 +242,16 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     os << "STR: Before FindViolatedFacetInequality nbIter=" << nbIter << "\n";
 #endif
     MyVector<T> eMatVect = SymmetricMatrixToVector(eMat);
-    MyVector<T> eFacet =
+    // The matrix is not strictly positive at this point, so its vector
+    // lies outside the cone and some facet is violated.
+    std::optional<MyVector<T>> opt =
         FindViolatedFacetInequality(ConeClassical, eMatVect, os);
+    if (!opt) {
+      std::cerr << "STR: the vector violates no facet, contradicting the "
+                   "flipping invariant\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> eFacet = *opt;
 #ifdef DEBUG_STRICT_POSITIVITY
     os << "STR: After FindViolatedFacetInequality nbIter=" << nbIter << "\n";
     os << "STR: RankMat(ConeClassical)=" << RankMat(ConeClassical) << "\n";

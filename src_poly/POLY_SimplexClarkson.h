@@ -781,6 +781,9 @@ template <typename T>
 LpSolution<T> SIMPLEX_LinearProgramming_exact(MyMatrix<T> const &ListIneq,
                                               MyVector<T> const &ToBeMinimized,
                                               std::ostream &os) {
+  static_assert(is_ring_field<T>::value,
+                "LpSolution is fractional: a ring type must go through "
+                "SIMPLEX_LinearProgramming_scaled or the overlying field");
 #ifdef TIMINGS_SIMPLEX_CLARKSON
   MicrosecondTime time;
 #endif
@@ -1434,6 +1437,9 @@ template <typename T>
 LpSolution<T> SIMPLEX_LinearProgramming_field(MyMatrix<T> const &ListIneq,
                                               MyVector<T> const &ToBeMinimized,
                                               std::ostream &os) {
+  static_assert(is_ring_field<T>::value,
+                "LpSolution is fractional: a ring type must go through "
+                "SIMPLEX_LinearProgramming_scaled or the overlying field");
   using Tfloat = double;
 #ifdef TIMINGS_SIMPLEX_CLARKSON
   MicrosecondTime time;
@@ -1606,6 +1612,9 @@ template <typename T>
 LpSolution<T> SIMPLEX_LinearProgramming(MyMatrix<T> const &ListIneq,
                                         MyVector<T> const &ToBeMinimized,
                                         std::ostream &os) {
+  static_assert(is_ring_field<T>::value,
+                "LpSolution is fractional: a ring type must go through "
+                "SIMPLEX_LinearProgramming_scaled or the overlying field");
   return SIMPLEX_LinearProgramming_ring(ListIneq, ToBeMinimized, os);
 }
 

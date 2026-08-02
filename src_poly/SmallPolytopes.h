@@ -43,7 +43,11 @@ template <typename T>
 vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT,
                                   [[maybe_unused]] std::ostream &os) {
   int n_ext = EXT.rows();
-  MyMatrix<T> NSP = NullspaceMat(EXT);
+  // Only the signs of the row relation are used, so the nullspace over
+  // the overlying field serves the ring case as well.
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> NSP =
+      NullspaceMat(UniversalMatrixConversion<Tfield, T>(EXT));
 #ifdef SANITY_CHECK_SMALL_POLYTOPE
   if (NSP.rows() != 1) {
     std::cerr << "The rank is incorrect\n";
@@ -52,7 +56,7 @@ vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT,
 #endif
   std::vector<int> V_p, V_m, V_z;
   for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-    T val = NSP(0, i_ext);
+    Tfield val = NSP(0, i_ext);
     if (val > 0)
       V_p.push_back(i_ext);
     if (val < 0)
@@ -123,7 +127,9 @@ template <typename T>
 MyMatrix<T> SmallPolytope_Ineq(MyMatrix<T> const &EXT, std::ostream &os) {
   vectface vf = SmallPolytope_Incidence(EXT, os);
   SubsetRankOneSolver<T> solver(EXT);
-  size_t n_fac = EXT.rows();
+  // The near simplicial case has |V_p| * |V_m| + |V_z| facets, which can
+  // exceed the number of rows.
+  size_t n_fac = vf.size();
   int n_col = EXT.cols();
   MyMatrix<T> FAC(n_fac, n_col);
   size_t i_fac = 0;

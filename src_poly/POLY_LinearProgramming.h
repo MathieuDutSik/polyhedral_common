@@ -1951,32 +1951,41 @@ vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 
 template <typename T>
 vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
-#ifdef TIMINGS_FULL_RANK_FACET_SET
-  MicrosecondTime time;
-#endif
-  MyMatrix<T> EXT_B = ColumnReduction(EXT);
-#ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|LP: ColumnReduction|=" << time << "\n";
-#endif
-#ifdef DEBUG_FULL_RANK_FACET_SET
-  os << "LP: Before Polytopization\n";
-#endif
-  MyMatrix<T> EXT_C = Polytopization(EXT_B, os);
-#ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|LP: Polytopization|=" << time << "\n";
-#endif
-  MyMatrix<T> EXT_D = SetIsobarycenter(EXT_C);
-#ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|LP: SetIsobarycenter|=" << time << "\n";
-#endif
-#ifdef DEBUG_FULL_RANK_FACET_SET
-  os << "LP: Before Kernel_GetFullRankFacetSet\n";
-#endif
-  vectface vf = Kernel_GetFullRankFacetSet(EXT_D, os);
-#ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|LP: Kernel_GetFullRankFacetSet|=" << time << "\n";
-#endif
-  return vf;
+  if constexpr (is_ring_field<T>::value) {
+  #ifdef TIMINGS_FULL_RANK_FACET_SET
+    MicrosecondTime time;
+  #endif
+    MyMatrix<T> EXT_B = ColumnReduction(EXT);
+  #ifdef TIMINGS_FULL_RANK_FACET_SET
+    os << "|LP: ColumnReduction|=" << time << "\n";
+  #endif
+  #ifdef DEBUG_FULL_RANK_FACET_SET
+    os << "LP: Before Polytopization\n";
+  #endif
+    MyMatrix<T> EXT_C = Polytopization(EXT_B, os);
+  #ifdef TIMINGS_FULL_RANK_FACET_SET
+    os << "|LP: Polytopization|=" << time << "\n";
+  #endif
+    MyMatrix<T> EXT_D = SetIsobarycenter(EXT_C);
+  #ifdef TIMINGS_FULL_RANK_FACET_SET
+    os << "|LP: SetIsobarycenter|=" << time << "\n";
+  #endif
+  #ifdef DEBUG_FULL_RANK_FACET_SET
+    os << "LP: Before Kernel_GetFullRankFacetSet\n";
+  #endif
+    vectface vf = Kernel_GetFullRankFacetSet(EXT_D, os);
+  #ifdef TIMINGS_FULL_RANK_FACET_SET
+    os << "|LP: Kernel_GetFullRankFacetSet|=" << time << "\n";
+  #endif
+    return vf;
+  } else {
+    // The polytopization and the vertex finding go through the linear
+    // programming, which is inherently fractional; the output being
+    // combinatorial, the computation runs over the overlying field.
+    using Tfield = typename overlying_field<T>::field_type;
+    MyMatrix<Tfield> EXTfield = UniversalMatrixConversion<Tfield, T>(EXT);
+    return GetFullRankFacetSet(EXTfield, os);
+  }
 }
 
 /*
@@ -2089,6 +2098,11 @@ bool has_empty_intersection(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
 // candidate facet of C. Let A be the set of rows of EXT tight at that
 // candidate. Compute NSP = NullspaceMat(EXT[A]).
 //
+// * Valid case: the homogeneous LP is feasible at x = 0, so its outcome
+//   is either an optimum of value 0 (eVect is a valid inequality on the
+//   cone: nothing is violated, the empty optional is returned) or an
+//   unbounded ray r with eVect . r < 0 (the witness of the violation).
+//
 // * Fast path: NSP.rows() == 1. The LP result is a genuine vertex of C*
 //   (a facet of C) and NSP.row(0) is the facet inequality up to sign.
 //
@@ -2102,140 +2116,172 @@ bool has_empty_intersection(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
 //   Kernel_FindSingleVertex retries with random directions), so the
 //   slow path terminates.
 template <typename T>
-MyVector<T> FindViolatedFacetInequality(MyMatrix<T> const &EXT,
-                                        MyVector<T> const &eVect,
-                                        std::ostream &os) {
-  static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  int nbRow = EXT.rows();
-  int nbCol = EXT.cols();
-  MyMatrix<T> EXT_ext(nbRow, nbCol + 1);
-  MyVector<T> ToMinimize(nbCol + 1);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    EXT_ext(iRow, 0) = 0;
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      EXT_ext(iRow, iCol + 1) = EXT(iRow, iCol);
-  }
-  ToMinimize(0) = 0;
-  for (int iCol = 0; iCol < nbCol; iCol++)
-    ToMinimize(iCol + 1) = eVect(iCol);
-  LpSolution<T> eSol = SIMPLEX_LinearProgramming(EXT_ext, ToMinimize, os);
-  MyVector<T> const &DirectSolution = *eSol.DirectSolution;
-  Face incFace(nbRow);
-  std::vector<int> incident;
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    T scal(0);
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      scal += EXT(iRow, iCol) * DirectSolution(iCol);
-    if (scal == 0) {
-      incFace[iRow] = 1;
-      incident.push_back(iRow);
-    }
-  }
-  // NullspaceMat returns rows = basis of { v : EXT[incident] * v = 0 }.
-  // Its row count equals nbCol - rank(EXT[incident]); a facet corresponds to
-  // exactly 1 row (rank == nbCol - 1).
-  MyMatrix<T> NSP = NullspaceMat(SelectRow(EXT, incident));
-  auto orient_outward = [&](MyVector<T> const &f) -> MyVector<T> {
-    // Match FindFacetInequality's sign convention: pick the sign making
-    // f . EXT[j] > 0 for some non-incident j.
+std::optional<MyVector<T>>
+FindViolatedFacetInequality(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
+                            std::ostream &os) {
+  if constexpr (is_ring_field<T>::value) {
+    int nbRow = EXT.rows();
+    int nbCol = EXT.cols();
+    MyMatrix<T> EXT_ext(nbRow, nbCol + 1);
+    MyVector<T> ToMinimize(nbCol + 1);
     for (int iRow = 0; iRow < nbRow; iRow++) {
-      if (incFace[iRow]) continue;
-      T scal(0);
+      EXT_ext(iRow, 0) = 0;
       for (int iCol = 0; iCol < nbCol; iCol++)
-        scal += f(iCol) * EXT(iRow, iCol);
-      if (scal > 0) return f;
-      if (scal < 0) return -f;
+        EXT_ext(iRow, iCol + 1) = EXT(iRow, iCol);
     }
-    std::cerr << "LP: FindViolatedFacetInequality: every row is incident; "
-                 "cannot orient the facet inequality\n";
-    throw TerminalException{1};
-  };
-  auto sanity_verify = [&](MyVector<T> const &f) -> MyVector<T> {
+    ToMinimize(0) = 0;
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      ToMinimize(iCol + 1) = eVect(iCol);
+    LpSolution<T> eSol = SIMPLEX_LinearProgramming(EXT_ext, ToMinimize, os);
+    if (eSol.DualSolution) {
+      // The optimal case: the minimum of eVect . x over the cone is
+      // attained, hence equal to 0 and eVect is a valid inequality.
 #ifdef SANITY_CHECK_LINEAR_PROGRAM
-    // (1) f must not be the zero vector.
-    bool is_zero = true;
-    for (int iCol = 0; iCol < nbCol; iCol++) {
-      if (f(iCol) != 0) { is_zero = false; break; }
-    }
-    if (is_zero) {
-      std::cerr << "LP: FindViolatedFacetInequality: returned zero vector\n";
-      throw TerminalException{1};
-    }
-    // (2) f must be violated by eVect (the whole point of the function):
-    //     f . eVect < 0.
-    T scal_v(0);
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      scal_v += f(iCol) * eVect(iCol);
-    if (scal_v >= 0) {
-      std::cerr << "LP: FindViolatedFacetInequality: returned inequality is "
-                   "not violated by eVect (f.eVect=" << scal_v << ")\n";
-      throw TerminalException{1};
-    }
-    // (3) f must be a supporting hyperplane of cone(EXT):
-    //     f . EXT[i] >= 0 for every extreme ray i. Collect tight rows.
-    Face tightFace(nbRow);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      T scal(0);
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        scal += f(iCol) * EXT(iRow, iCol);
-      if (scal < 0) {
-        std::cerr << "LP: FindViolatedFacetInequality: returned inequality is "
-                     "not a supporting hyperplane of cone(EXT): EXT[" << iRow
-                  << "] . f = " << scal << " < 0\n";
+      if (eSol.OptimalValue != 0) {
+        std::cerr << "LP: FindViolatedFacetInequality: the homogeneous LP "
+                     "has the non-zero optimal value "
+                  << eSol.OptimalValue << "\n";
         throw TerminalException{1};
       }
-      if (scal == 0) tightFace[iRow] = 1;
+#endif
+      return {};
     }
-    // (4) The tight rows must span a hyperplane of codim 1 in R^nbCol, so
-    //     that f genuinely defines a facet (not a higher-codim face).
-    int tight_rank = GetFacetRank(EXT, tightFace);
-    if (tight_rank != nbCol - 1) {
-      std::cerr << "LP: FindViolatedFacetInequality: incidence rank "
-                << tight_rank << " != nbCol - 1 (" << (nbCol - 1)
-                << "); returned inequality is not a facet\n";
+    MyVector<T> const &DirectSolution = *eSol.DirectSolution;
+    Face incFace(nbRow);
+    std::vector<int> incident;
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      T scal(0);
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        scal += EXT(iRow, iCol) * DirectSolution(iCol);
+      if (scal == 0) {
+        incFace[iRow] = 1;
+        incident.push_back(iRow);
+      }
+    }
+    // NullspaceTrMat returns rows = basis of { v : EXT[incident] * v = 0 }.
+    // Its row count equals nbCol - rank(EXT[incident]); a facet corresponds to
+    // exactly 1 row (rank == nbCol - 1).
+    MyMatrix<T> NSP = NullspaceTrMat(SelectRow(EXT, incident));
+    auto orient_outward = [&](MyVector<T> const &f) -> MyVector<T> {
+      // Match FindFacetInequality's sign convention: pick the sign making
+      // f . EXT[j] > 0 for some non-incident j.
+      for (int iRow = 0; iRow < nbRow; iRow++) {
+        if (incFace[iRow]) continue;
+        T scal(0);
+        for (int iCol = 0; iCol < nbCol; iCol++)
+          scal += f(iCol) * EXT(iRow, iCol);
+        if (scal > 0) return f;
+        if (scal < 0) return -f;
+      }
+      std::cerr << "LP: FindViolatedFacetInequality: every row is incident; "
+                   "cannot orient the facet inequality\n";
+      throw TerminalException{1};
+    };
+    auto sanity_verify = [&](MyVector<T> const &f) -> MyVector<T> {
+  #ifdef SANITY_CHECK_LINEAR_PROGRAM
+      // (1) f must not be the zero vector.
+      bool is_zero = true;
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        if (f(iCol) != 0) { is_zero = false; break; }
+      }
+      if (is_zero) {
+        std::cerr << "LP: FindViolatedFacetInequality: returned zero vector\n";
+        throw TerminalException{1};
+      }
+      // (2) f must be violated by eVect (the whole point of the function):
+      //     f . eVect < 0.
+      T scal_v(0);
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        scal_v += f(iCol) * eVect(iCol);
+      if (scal_v >= 0) {
+        std::cerr << "LP: FindViolatedFacetInequality: returned inequality is "
+                     "not violated by eVect (f.eVect=" << scal_v << ")\n";
+        throw TerminalException{1};
+      }
+      // (3) f must be a supporting hyperplane of cone(EXT):
+      //     f . EXT[i] >= 0 for every extreme ray i. Collect tight rows.
+      Face tightFace(nbRow);
+      for (int iRow = 0; iRow < nbRow; iRow++) {
+        T scal(0);
+        for (int iCol = 0; iCol < nbCol; iCol++)
+          scal += f(iCol) * EXT(iRow, iCol);
+        if (scal < 0) {
+          std::cerr << "LP: FindViolatedFacetInequality: returned inequality is "
+                       "not a supporting hyperplane of cone(EXT): EXT[" << iRow
+                    << "] . f = " << scal << " < 0\n";
+          throw TerminalException{1};
+        }
+        if (scal == 0) tightFace[iRow] = 1;
+      }
+      // (4) The tight rows must span a hyperplane of codim 1 in R^nbCol, so
+      //     that f genuinely defines a facet (not a higher-codim face).
+      int tight_rank = GetFacetRank(EXT, tightFace);
+      if (tight_rank != nbCol - 1) {
+        std::cerr << "LP: FindViolatedFacetInequality: incidence rank "
+                  << tight_rank << " != nbCol - 1 (" << (nbCol - 1)
+                  << "); returned inequality is not a facet\n";
+        throw TerminalException{1};
+      }
+  #endif
+      return f;
+    };
+    if (NSP.rows() == 1) {
+      MyVector<T> f(nbCol);
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        f(iCol) = NSP(0, iCol);
+      return sanity_verify(orient_outward(f));
+    }
+    if (NSP.rows() == 0) {
+      std::cerr << "LP: FindViolatedFacetInequality: null space of incident "
+                   "rows is trivial; LP degenerate\n";
+      std::cerr << "LP: eVect=" << StringVectorGAP(eVect) << "\n";
+      std::cerr << "LP: DirectSolution=" << StringVectorGAP(DirectSolution)
+                << "\n";
+      std::cerr << "LP: n_incident=" << incident.size()
+                << " nbRow=" << nbRow << "\n";
       throw TerminalException{1};
     }
-#endif
-    return f;
-  };
-  if (NSP.rows() == 1) {
-    MyVector<T> f(nbCol);
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      f(iCol) = NSP(0, iCol);
-    return sanity_verify(orient_outward(f));
-  }
-  if (NSP.rows() == 0) {
-    std::cerr << "LP: FindViolatedFacetInequality: null space of incident "
-                 "rows is trivial; LP degenerate\n";
-    throw TerminalException{1};
-  }
-#ifdef DEBUG_LINEAR_PROGRAM
-  os << "LP: FindViolatedFacetInequality entering slow path (NSP.rows()="
-     << NSP.rows() << ")\n";
-#endif
-  int k = NSP.rows();
-  int nNon = nbRow - static_cast<int>(incident.size());
-  MyMatrix<T> M(nNon, k);
-  std::vector<int> non_incident_rows;
-  non_incident_rows.reserve(nNon);
-  int i_M = 0;
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    if (incFace[iRow]) continue;
-    non_incident_rows.push_back(iRow);
-    for (int j = 0; j < k; j++) {
-      T s(0);
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        s += EXT(iRow, iCol) * NSP(j, iCol);
-      M(i_M, j) = s;
+  #ifdef DEBUG_LINEAR_PROGRAM
+    os << "LP: FindViolatedFacetInequality entering slow path (NSP.rows()="
+       << NSP.rows() << ")\n";
+  #endif
+    int k = NSP.rows();
+    int nNon = nbRow - static_cast<int>(incident.size());
+    MyMatrix<T> M(nNon, k);
+    std::vector<int> non_incident_rows;
+    non_incident_rows.reserve(nNon);
+    int i_M = 0;
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      if (incFace[iRow]) continue;
+      non_incident_rows.push_back(iRow);
+      for (int j = 0; j < k; j++) {
+        T s(0);
+        for (int iCol = 0; iCol < nbCol; iCol++)
+          s += EXT(iRow, iCol) * NSP(j, iCol);
+        M(i_M, j) = s;
+      }
+      i_M++;
     }
-    i_M++;
+    Face vFace = FindOneInitialVertex(M, os);
+    Face fullFace = incFace;
+    for (int i = 0; i < nNon; i++) {
+      if (vFace[i]) fullFace[non_incident_rows[i]] = 1;
+    }
+    return sanity_verify(FindFacetInequality(EXT, fullFace));
+  } else {
+    // The vertex finding linear program is inherently fractional, so the
+    // computation runs over the overlying field; the facet inequality,
+    // meaningful up to a positive scaling, is scaled back to the ring.
+    using Tfield = typename overlying_field<T>::field_type;
+    MyMatrix<Tfield> EXTfield = UniversalMatrixConversion<Tfield, T>(EXT);
+    MyVector<Tfield> eVectField = UniversalVectorConversion<Tfield, T>(eVect);
+    std::optional<MyVector<Tfield>> opt =
+        FindViolatedFacetInequality(EXTfield, eVectField, os);
+    if (!opt) {
+      return {};
+    }
+    return UniversalVectorConversion<T, Tfield>(RemoveFractionVector(*opt));
   }
-  Face vFace = FindOneInitialVertex(M, os);
-  Face fullFace = incFace;
-  for (int i = 0; i < nNon; i++) {
-    if (vFace[i]) fullFace[non_incident_rows[i]] = 1;
-  }
-  return sanity_verify(FindFacetInequality(EXT, fullFace));
 }
 
 // clang-format off
