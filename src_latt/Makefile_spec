@@ -81,8 +81,8 @@ COPTIONS        = -DGMP_POOL
 #COPTIONS        = -DDEBUG_WEIGHT_MATRIX_SPECIFIED -DDEBUG_TSPACE_FUNCTIONS
 
 
-#CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)
-CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE) $(shell pkg-config --cflags ompi)
+#CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -isystem $(EIGEN_PATH)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -isystem $(EIGEN_PATH) $(NAUTY_INCLUDE) $(shell pkg-config --cflags ompi)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(COPTIONS)
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK) $(shell pkg-config --libs ompi) $(MPI_LINK_CPP) $(BOOST_LINK) $(GLPK_LINK)

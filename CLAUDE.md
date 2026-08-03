@@ -12,6 +12,12 @@ To change a file owned by one of these submodules (e.g. `Temp_common.h`, `Basic_
 
 If unsure whether a path lives inside a submodule, `cat .gitmodules` lists them.
 
+### Beware: several top-level `src_*` directories are symlinks into `basic_common_cpp/`
+
+`src_basic`, `src_number`, `src_matrix`, `src_comb`, and `src_graph` at the repo root are **git-tracked symlinks** (mode `120000`) pointing into the `basic_common_cpp/` submodule (e.g. `src_matrix -> basic_common_cpp/src_matrix/`). `AGENTS.md` and many `src_export_oscar/*.cpp` files are symlinks too. Editing `src_matrix/Makefile` therefore writes straight into the submodule — the same forbidden edit as above, just disguised, so it must follow the upstream-edit workflow.
+
+`find` / `os.walk` do not follow these symlinks (sweep scripts correctly skip them), but a direct path edit does resolve through them. Before editing any path under a top-level `src_*`, confirm it is a real file, not a symlink: `git ls-files --stage <dir>` (mode `120000` = symlink) or `readlink <dir>`. List them all with `git ls-files --stage | awk '$1==120000'`.
+
 ## Print statements must be gated by named `#ifdef` blocks
 
 Free-standing `std::cerr << ...`, `os << ...`, etc. that produce output unconditionally must not be added to the codebase. Every diagnostic line must live inside a named preprocessor gate, in one of three categories with different intents. The suffix is the **context** — usually the source-file area (`SHVEC`, `LATTICE_STAB_EQUI_CAN`, `TSPACE_FUNCTIONS`, …) — never a generic name like `DEBUG`.

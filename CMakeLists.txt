@@ -32,6 +32,19 @@ option(WITH_MPI "Build the MPI-parallel programs (requires Boost.MPI + MPI)" ${_
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
+# Treat Eigen headers as system headers. Eigen 3.3.9 (the pinned version) stores
+# its compile-time flags in anonymous enums and combines them, which under
+# -std=c++20 triggers -Wdeprecated-enum-enum-conversion thousands of times. Those
+# warnings come from an upstream header we cannot patch and would otherwise drown
+# out warnings in our own code, so mark Eigen's include dirs SYSTEM on the imported
+# target (mirrors the -isystem $(EIGEN_PATH) used in the Makefiles).
+if(TARGET Eigen3::Eigen)
+  get_target_property(_eigen_include_dirs Eigen3::Eigen INTERFACE_INCLUDE_DIRECTORIES)
+  if(_eigen_include_dirs)
+    set_target_properties(Eigen3::Eigen PROPERTIES
+      INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_eigen_include_dirs}")
+  endif()
+endif()
 if(WITH_MPI)
   find_package(Boost REQUIRED COMPONENTS mpi serialization)
   find_package(MPI REQUIRED COMPONENTS CXX)
