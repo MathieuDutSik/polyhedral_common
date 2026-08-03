@@ -114,20 +114,6 @@ RUN cmake -S /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty \
  && cmake --install /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build \
  && rm -rf /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build
 
-# Optional: ppl_lcdd, an external dual-description backend. The code probes for
-# it on PATH at runtime (POLY_HasPPL.h) and falls back cleanly when it is
-# absent, so this whole step can be deleted for a leaner image. Build PPL,
-# install the library, keep only the ppl_lcdd binary, then drop the source.
-RUN git clone --depth 1 https://github.com/BUGSENG/PPL /tmp/PPL \
- && cd /tmp/PPL \
- && autoreconf -i \
- && ./configure --prefix=/usr/local \
- && make \
- && make install \
- && cp /tmp/PPL/demos/ppl_lcdd/ppl_lcdd /usr/local/bin/ppl_lcdd \
- && ldconfig \
- && rm -rf /tmp/PPL
-
 # ---------------------------------------------------------------------------
 # Compile everything, then expose the binaries on PATH for convenience.
 # ---------------------------------------------------------------------------
