@@ -1860,10 +1860,11 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
 std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   std::string const &NumericalType = BlockDATA.get_string("NumericalType");
-  std::vector<std::string> Ltype{"integer",      "safe_rational",
-                                 "rational",     "cpp_rational",
-                                 "mpq_rational", "Qsqrt2",
-                                 "Qsqrt3",       "Qsqrt5"};
+  std::vector<std::string> Ltype{"integer",      "safe_integer",
+                                 "safe_rational", "rational",
+                                 "cpp_rational", "mpq_rational",
+                                 "Qsqrt2",       "Qsqrt3",
+                                 "Qsqrt5"};
   // The real algebraic case carries the field description file as a postfix:
   // NumericalType = "RealAlgebraic=<FileAlgebraicField>".
   bool is_real_algebraic =

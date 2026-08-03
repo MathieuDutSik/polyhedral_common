@@ -61,6 +61,10 @@ int main(int argc, char *argv[]) {
         using T = mpz_class;
         return Process<T>(eFull);
       }
+      if (NumericalType == "safe_integer") {
+        using T = SafeInt64;
+        return Process<T>(eFull);
+      }
       if (NumericalType == "safe_rational") {
         using T = Rational<SafeInt64>;
         return Process<T>(eFull);
@@ -121,6 +125,11 @@ int main(int argc, char *argv[]) {
     std::cerr << "The maximum runtime has been reached, exiting "
                  "POLY_SerialDualDesc\n";
     // exit(e.eVal);
+  } catch (SafeIntException const &e) {
+    std::cerr << "The int64_t arithmetic overflowed: rerun with an "
+                 "arbitrary precision NumericalType (integer, rational)\n";
+    std::cerr << "Error in POLY_SerialDualDesc\n";
+    exit(e.eVal);
   }
   runtime(time1);
 }
