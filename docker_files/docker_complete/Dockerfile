@@ -1,153 +1,142 @@
-# This dockerfile allows you to access to functionality of C++ polyhedral
+# polyhedral_common — C++ polyhedral computation toolkit.
+# This image contains the full build environment AND the compiled binaries,
+# ready to run.
 #
-# It is used in the following way:
-# ---Copy this "Dockerfile" to a directory, e.g. "docker".
-#    Do NOT rename the file.
-# ---Compile the dockerfile with the command
-#    docker build -t polyhedralcpp:build-env .
-# ---For building with no-cache option, use
-#    docker build --no-cache -t polyhedralcpp:build-env .
-# ---Run the docker and access a bash by doing
-#    docker run -i -t polyhedralcpp:build-env /bin/bash
+# Build (from the repository root):
+#   docker build -t polyhedralcpp:build-env --file docker_files/docker_complete/Dockerfile .
 #
-# Ask Mathieu Dutour Sikiric (mathieu.dutour@gmail.com) for questions.
+# Run — drops you into a shell in the repo, with every binary already on PATH:
+#   docker run -it polyhedralcpp:build-env
+#   POLY_dual_description --help        # e.g. any of the POLY_/LATT_/GRP_ tools
+#
+# Prebuilt images are published to: ghcr.io/mathieudutsik/polyhedral_common
+#   docker pull ghcr.io/mathieudutsik/polyhedral_common:latest
+#
+# Maintainer: Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 
 FROM ubuntu:24.04
 
-# Dockerfile maintainer (original author: Mathieu Dutour Sikiric)
 LABEL maintainer="mathieu.dutour@gmail.com"
+LABEL org.opencontainers.image.source="https://github.com/MathieuDutSik/polyhedral_common"
+LABEL org.opencontainers.image.description="C++ polyhedral computation toolkit (build environment + compiled binaries)"
 
+# noninteractive so tzdata and similar never block the build waiting on a prompt.
+ENV DEBIAN_FRONTEND=noninteractive
 
-# For unclear reason, all ubuntu installs must start by the following
-RUN apt-get update -y
+# ---------------------------------------------------------------------------
+# System packages. Installed in a single layer and the apt lists are removed
+# afterwards so they do not bloat the image.
+#   toolchain  : g++/gcc/gfortran/clang, make, cmake, pkg-config, autotools, git, wget
+#   linker     : mold (see the dpkg-divert step below)
+#   libraries  : openmpi, gmp, boost(+mpi,+serialization), glpk, flint(+ntl),
+#                netcdf-c++4 (required by src_ctype)
+#   convenience: sudo + a small editor + less for interactive use
+# ---------------------------------------------------------------------------
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates wget git file \
+      make cmake pkg-config autoconf automake libtool \
+      g++ gcc gfortran clang \
+      mold \
+      openmpi-bin libopenmpi-dev \
+      libgmp-dev \
+      libboost-dev libboost-mpi-dev libboost-serialization-dev \
+      libglpk-dev \
+      libflint-dev libntl-dev \
+      libnetcdf-c++4-dev \
+      libgdbm-dev libsnappy-dev zlib1g-dev \
+      sudo less nano rlwrap \
+ && rm -rf /var/lib/apt/lists/*
 
-
-# This specific package requires to be made non-interactive.
-RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
-
-
-# Install classic Ubuntu packages
-RUN apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap screen software-properties-common sudo unzip zlib1g-dev zsh
-RUN apt-get install -y wget emacs joe
-RUN apt-get install -y g++ gcc gfortran clang
-RUN apt-get install -y git cmake
-
-# Replace GNU ld with mold. Linking heavy MPI executables (e.g.
-# LATT_MPI_Lattice_IsoDelaunayDomain) with -g -O3 + static Boost.MPI + bliss
-# + nauty peaks at several GB per link — enough that GNU ld gets killed by
-# the OOM killer inside Docker Desktop's default 8 GB VM. mold is a drop-in
-# replacement that uses 2-5x less memory (and is also faster). dpkg-divert
-# then a symlink is the standard way to override the system linker for both
-# `ld` and `ld.bfd` codepaths in gcc's collect2.
-RUN apt-get install -y mold \
- && dpkg-divert --divert /usr/bin/ld.orig --rename /usr/bin/ld \
+# Replace GNU ld with mold. Linking the heavy MPI executables (e.g.
+# LATT_MPI_Lattice_IsoDelaunayDomain) with -g -O3 + static Boost.MPI + bliss +
+# nauty peaks at several GB per link — enough that GNU ld gets OOM-killed inside
+# Docker Desktop's default VM. mold is a drop-in replacement using 2-5x less
+# memory (and it is faster). dpkg-divert + symlink overrides both the `ld` and
+# `ld.bfd` codepaths in gcc's collect2.
+RUN dpkg-divert --divert /usr/bin/ld.orig --rename /usr/bin/ld \
  && ln -sf /usr/bin/mold /usr/bin/ld \
  && dpkg-divert --divert /usr/bin/ld.bfd.orig --rename /usr/bin/ld.bfd \
  && ln -sf /usr/bin/mold /usr/bin/ld.bfd
 
+# ---------------------------------------------------------------------------
+# Build-flag environment consumed by the polyhedral_common Makefiles.
+# ---------------------------------------------------------------------------
+ENV GMP_INCDIR="/usr/include" \
+    GMP_CXX_LINK="-lgmp -lgmpxx"
 
-# openmpi
-RUN apt-get install -y openmpi-bin libopenmpi-dev
+ENV BOOST_INCDIR="/usr/include" \
+    BOOST_LINK="-lboost_serialization" \
+    MPI_LINK_CPP="-lboost_mpi"
 
+ENV GLPK_PATH="/usr" \
+    GLPK_INCLUDE="-I/usr/include" \
+    GLPK_LINK="-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
 
-# GMP
-RUN apt-get install -y libgmp-dev
-ENV GMP_INCDIR "/usr/include"
-ENV GMP_CXX_LINK "-lgmp -lgmpxx"
+ENV FLINT_INCDIR="/usr/include" \
+    FLINT_LINK="-lflint"
 
+# netcdf-c++4 from the Ubuntu package: headers under /usr/include, the library
+# is libnetcdf_c++4 on the default linker search path.
+ENV NETCDF_CXX_ALLINC="-I/usr/include" \
+    NETCDF_CXX_LINK="-lnetcdf_c++4"
 
-# BOOST
-RUN apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
-ENV BOOST_INCDIR "/usr/include"
-ENV BOOST_LINK "-lboost_serialization"
-ENV MPI_LINK_CPP "-lboost_mpi"
+# Eigen is header-only. Pinned to 3.3.9 (the version the CI uses and is known
+# good for the exact/algebraic scalar types; 3.4.0 regresses on them) and
+# shallow-cloned to avoid pulling the full history. Change --branch to move it.
+RUN git clone --depth 1 --branch 3.3.9 https://gitlab.com/libeigen/eigen.git /opt/eigen
+ENV EIGEN_PATH="/opt/eigen"
 
+# ---------------------------------------------------------------------------
+# polyhedral_common source (with submodules) plus the two build-time deps that
+# are not packaged: bliss and nauty.
+# ---------------------------------------------------------------------------
+RUN git clone --depth 1 --recursive --shallow-submodules \
+      https://github.com/MathieuDutSik/polyhedral_common.git /GIT/polyhedral_common
 
-# downloading eigen (no compiling needed)
-RUN mkdir -p /opt
-RUN cd /opt && git clone https://gitlab.com/libeigen/eigen.git
-ENV EIGEN_PATH /opt/eigen
+# bliss (shallow). LIBBLISS_LINK rpaths the in-tree build directory, so it is
+# kept in the image.
+RUN git clone --depth 1 https://github.com/MathieuDutSik/bliss /GIT/bliss \
+ && cmake -S /GIT/bliss -B /GIT/bliss/build \
+ && cmake --build /GIT/bliss/build
+ENV LIBBLISS_INCDIR="/GIT/bliss/src" \
+    LIBBLISS_LINK="-L/GIT/bliss/build -lbliss -Wl,-rpath,/GIT/bliss/build"
 
+# nauty/traces from the vendored copy, installed into /opt/nauty; the build
+# directory is removed once installed.
+ENV NAUTY_PATH="/opt/nauty" \
+    NAUTY_INCLUDE="-I/opt/nauty/include" \
+    NAUTY_LINK="-L/opt/nauty/lib -lnauty_shared -Wl,-rpath,/opt/nauty/lib"
+RUN cmake -S /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty \
+          -B /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build \
+          -DCMAKE_INSTALL_PREFIX=/opt/nauty \
+ && cmake --build /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build \
+ && cmake --install /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build \
+ && rm -rf /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build
 
-# Threading Building Blocks
-RUN apt-get install -y libtbb-dev
-ENV TBB_INCDIR=/usr/include
-ENV TBB_LINK="-ltbb"
+# Optional: ppl_lcdd, an external dual-description backend. The code probes for
+# it on PATH at runtime (POLY_HasPPL.h) and falls back cleanly when it is
+# absent, so this whole step can be deleted for a leaner image. Build PPL,
+# install the library, keep only the ppl_lcdd binary, then drop the source.
+RUN git clone --depth 1 https://github.com/BUGSENG/PPL /tmp/PPL \
+ && cd /tmp/PPL \
+ && autoreconf -i \
+ && ./configure --prefix=/usr/local \
+ && make \
+ && make install \
+ && cp /tmp/PPL/demos/ppl_lcdd/ppl_lcdd /usr/local/bin/ppl_lcdd \
+ && ldconfig \
+ && rm -rf /tmp/PPL
 
+# ---------------------------------------------------------------------------
+# Compile everything, then expose the binaries on PATH for convenience.
+# ---------------------------------------------------------------------------
+WORKDIR /GIT/polyhedral_common
+RUN ./compile.sh
 
-# GLPK
-RUN apt-get install -y libglpk-dev
-ENV GLPK_PATH /usr
-ENV GLPK_INCLUDE "-I$GLPK_PATH/include"
-ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
+# Symlink every compiled ELF binary into /usr/local/bin so the tools can be
+# invoked by name (POLY_*, LATT_*, GRP_*, …) from any directory.
+RUN find /GIT/polyhedral_common/src_* -maxdepth 1 -type f -perm -u+x \
+      -exec sh -c 'file -b "$1" | grep -q ELF && ln -sf "$1" /usr/local/bin/' _ {} \;
 
-
-# flint
-RUN apt-get install -y libflint-dev libntl-dev
-ENV FLINT_INCDIR /include
-ENV FLINT_LINK -lflint
-
-
-
-
-# PPL
-RUN git clone https://github.com/BUGSENG/PPL
-RUN cd PPL && autoreconf -i && ./configure && make
-RUN cd /bin && ln -s /PPL/demos/ppl_lcdd/ppl_lcdd
-
-
-# Downloading PPL and compiling it
-RUN wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.gz
-RUN tar -vxzf hdf5-1.12.0.tar.gz && cd hdf5-1.12.0 && ./configure --with-default-api-version=v18 --prefix=/opt/hdf5-1.12.0 && make && make install
-
-# downloading netcdf functionality and compiling it
-RUN apt-get install -y libcurl4-openssl-dev m4
-RUN wget https://www.gfd-dennou.org/arch/netcdf/unidata-mirror/netcdf-c-4.8.0.tar.gz
-RUN wget https://fossies.org/linux/misc/netcdf-cxx4-4.3.1.tar.gz
-RUN tar -vxzf netcdf-c-4.8.0.tar.gz && cd netcdf-c-4.8.0 && export LDFLAGS="-L/opt/hdf5-1.12.0/lib -lhdf5_hl -lhdf5 -Wl,-rpath,/opt/hdf5-1.12.0/lib" && export CPPFLAGS="-I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-4.8.0 && make && make install
-RUN tar -vxzf netcdf-cxx4-4.3.1.tar.gz && cd netcdf-cxx4-4.3.1 && export LDFLAGS="-L/opt/netcdf-4.8.0/lib -lnetcdf -Wl,-rpath,/opt/netcdf-4.8.0/lib" && export CPPFLAGS="-I/opt/netcdf-4.8.0/include -I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-cxx4-4.3.1 && make && make install
-ENV NETCDF_CXX_PATH /opt/netcdf-cxx4-4.3.1
-ENV NETCDF_C_PATH /opt/netcdf-4.8.0
-ENV NETCDF_CXX_ALLINC "-I$NETCDF_CXX_PATH/include -I$NETCDF_C_PATH/include"
-ENV NETCDF_CXX_LINK "-L$NETCDF_CXX_PATH/lib -lnetcdf_c++4 -Wl,-rpath,$NETCDF_CXX_PATH/lib"
-
-
-
-
-# LINBOX
-RUN wget https://raw.githubusercontent.com/linbox-team/linbox/master/linbox-auto-install.sh
-RUN chmod +x linbox-auto-install.sh
-RUN ./linbox-auto-install.sh --enable-openblas=yes
-RUN mkdir /opt/linbox
-RUN mv /tmp/lib /opt/linbox
-RUN mv /tmp/include /opt/linbox
-RUN mv /tmp/bin /opt/linbox
-ENV LINBOX_PATH /opt/linbox
-ENV LINBOX_INCLUDE "-DHAVE_CONFIG_H -DDISABLE_COMMENTATOR -DNDEBUG -UDEBUG -fopenmp -I$LINBOX_PATH/include"
-ENV LINBOX_LINK "-fopenmp -lntl -lflint -L$LINBOX_PATH/lib -lopenblas -lpthread -lgfortran -lgivaro -lgmpxx -lgmp -Wl,-rpath,$LINBOX_PATH/lib"
-
-
-# cloning polyhedral code
-RUN mkdir -p GIT
-RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
-
-
-# bliss
-RUN cd GIT && git clone https://github.com/MathieuDutSik/bliss
-RUN cd GIT/bliss && mkdir build && cd build && cmake .. && make
-ENV LIBBLISS_INCDIR /GIT/bliss/src
-ENV LIBBLISS_LINK "-L/GIT/bliss/build -lbliss -Wl,-rpath,/GIT/bliss/build"
-
-
-# nauty/traces
-ENV NAUTY_PATH /opt/nauty
-ENV NAUTY_INCLUDE "-I$NAUTY_PATH/include"
-ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty_shared -Wl,-rpath,$NAUTY_PATH/lib"
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty && mkdir build
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH ..
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make all install
-
-
-# Compiling polyhedral functionality
-RUN cd GIT/polyhedral_common && ./compile.sh
-#RUN cd GIT/polyhedral_common && ./compile_dualdesc.sh
+CMD ["/bin/bash"]

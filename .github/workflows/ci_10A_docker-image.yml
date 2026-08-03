@@ -6,13 +6,39 @@ on:
     - cron: "0 0 10 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
+
+# GITHUB_TOKEN needs package write access to push to the GitHub Container
+# Registry (ghcr.io); contents:read is the default checkout permission.
+permissions:
+  contents: read
+  packages: write
+
 jobs:
 
   build:
-    timeout-minutes: 150  # 2 hours
+    timeout-minutes: 150  # 2 hours 30 minutes
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+
+    - name: Log in to the GitHub Container Registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+    # GHCR image names must be lowercase; the owner "MathieuDutSik" is not, so
+    # lowercase the whole "owner/repo" slug.
+    - name: Compute the image name
+      run: echo "IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
     - name: Build the Docker image
-      run: docker build -t polyhedralcpp:build-env . --file docker_files/docker_complete/Dockerfile
+      run: |
+        docker build \
+          -t "$IMAGE:latest" \
+          -t "$IMAGE:${GITHUB_SHA::7}" \
+          --file docker_files/docker_complete/Dockerfile \
+          .
+
+    - name: Push the Docker image to ghcr.io
+      run: |
+        docker push "$IMAGE:latest"
+        docker push "$IMAGE:${GITHUB_SHA::7}"
