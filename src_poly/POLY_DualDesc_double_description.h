@@ -118,7 +118,7 @@ std::vector<int> SelectIndependentRows(MyMatrix<T> const &M,
         T coef2 = V(c);
         for (int j = 0; j < nbCol; j++) {
           V(j) *= coef1;
-          V(j) -= coef2 * echelon[k](j);
+          SubMul(V(j), coef2, echelon[k](j));
         }
         NormalizeRayContent(V);
       }
@@ -252,12 +252,11 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
     processed[iRow] = 1;
     int n_neg = 0;
     for (auto &ray : rays) {
-      // The accumulation goes directly into ray.val: the fused
-      // multiply-add of the expression templates runs without any
-      // temporary and the capacity of val is reused across the rows.
+      // The accumulation goes directly into ray.val through the fused
+      // AddMul, and the capacity of val is reused across the rows.
       ray.val = 0;
       for (int j = 0; j < d; j++) {
-        ray.val += EXT(iRow, j) * ray.coord(j);
+        AddMul(ray.val, EXT(iRow, j), ray.coord(j));
       }
       if (ray.val < 0) {
         n_neg++;
@@ -361,7 +360,7 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
         MyVector<T> w(d);
         for (int j = 0; j < d; j++) {
           w(j) = rays[i1].val * rays[i2].coord(j);
-          w(j) -= rays[i2].val * rays[i1].coord(j);
+          SubMul(w(j), rays[i2].val, rays[i1].coord(j));
         }
         NormalizeRayContent(w);
         // The exact tight set, evaluated over the processed rows.
@@ -371,7 +370,7 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
         while (kRow != boost::dynamic_bitset<>::npos) {
           eSum = 0;
           for (int j = 0; j < d; j++) {
-            eSum += EXT(kRow, j) * w(j);
+            AddMul(eSum, EXT(kRow, j), w(j));
           }
           if (eSum == 0) {
             zero[kRow] = 1;
