@@ -17,7 +17,7 @@ MyMatrix<T> GetMatrixFromBasis(std::vector<MyMatrix<T>> const &ListMat,
     throw TerminalException{1};
   }
   for (int iMat = 0; iMat < nbMat; iMat++) {
-    RetMat += eVect(iMat) * ListMat[iMat];
+    MatAddMul(RetMat, eVect(iMat), ListMat[iMat]);
   }
   return RetMat;
 }
@@ -53,7 +53,7 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen,
         for (int k = 0; k < n; k++) {
           for (int l = 0; l < n; l++) {
             int pos = FuncPos(k, l);
-            TheEquation(pos) += -eGen(i, k) * eGen(j, l);
+            SubMul(TheEquation(pos), eGen(i, k), eGen(j, l));
           }
         }
         ListEquations.push_back(TheEquation);

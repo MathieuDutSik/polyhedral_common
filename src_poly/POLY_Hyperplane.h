@@ -45,7 +45,7 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
       for (int i_vect = 0; i_vect < n_vect; i_vect++) {
         T eScal = 0;
         for (int i = 0; i < n; i++)
-          eScal += V(i) * ListV(i_vect, i);
+          AddMul(eScal, V(i), ListV(i_vect, i));
         if (eScal == 0)
           return {false, f};
         if (eScal > 0)

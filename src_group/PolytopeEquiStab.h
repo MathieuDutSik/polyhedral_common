@@ -163,7 +163,7 @@ template <typename T> MyMatrix<T> Kernel_GetQmatrix(MyMatrix<T> const &TheEXT) {
     for (size_t jCol = iCol; jCol < nbCol; jCol++) {
       T eSum(0);
       for (size_t iRow = 0; iRow < nbRow; iRow++)
-        eSum += TheEXT(iRow, jCol) * TheEXT(iRow, iCol);
+        AddMul(eSum, TheEXT(iRow, jCol), TheEXT(iRow, iCol));
       QMat(iCol, jCol) = eSum;
       QMat(jCol, iCol) = eSum;
     }
@@ -249,28 +249,28 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       T eSum(0);
       for (size_t jCol = 0; jCol < nbCol; jCol++)
-        eSum += Qinput(iCol, jCol) * TheEXT(iRow, jCol);
+        AddMul(eSum, Qinput(iCol, jCol), TheEXT(iRow, jCol));
       V(iCol) = eSum;
     }
   };
   auto f2 = [&](size_t jRow) -> T {
     T eSum(0);
     for (size_t iCol = 0; iCol < nbCol; iCol++)
-      eSum += V(iCol) * TheEXT(jRow, iCol);
+      AddMul(eSum, V(iCol), TheEXT(jRow, iCol));
     return eSum;
   };
   auto f1tr = [&](size_t iRow) -> void {
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       T eSum(0);
       for (size_t jCol = 0; jCol < nbCol; jCol++)
-        eSum += Qinput(iCol, jCol) * TheEXT(iRow, jCol);
+        AddMul(eSum, Qinput(iCol, jCol), TheEXT(iRow, jCol));
       Vtr(iCol) = eSum;
     }
   };
   auto f2tr = [&](size_t jRow) -> T {
     T eSum(0);
     for (size_t iCol = 0; iCol < nbCol; iCol++)
-      eSum += Vtr(iCol) * TheEXT(jRow, iCol);
+      AddMul(eSum, Vtr(iCol), TheEXT(jRow, iCol));
     return eSum;
   };
   // Preemptive check that the subset is adequate
@@ -935,7 +935,7 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
       for (int iCol = 0; iCol < nbCol; iCol++) {
         T eSum(0);
         for (int jCol = 0; jCol < nbCol; jCol++) {
-          eSum += ListMat[iMat](jCol, iCol) * EXT(i, jCol);
+          AddMul(eSum, ListMat[iMat](jCol, iCol), EXT(i, jCol));
         }
         MatV(iMat, iCol) = eSum;
       }
@@ -946,7 +946,7 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
     for (int iMat = 0; iMat < nMat; iMat++) {
       T eSum(0);
       for (int iCol = 0; iCol < nbCol; iCol++)
-        eSum += MatV(iMat, iCol) * EXT(j, iCol);
+        AddMul(eSum, MatV(iMat, iCol), EXT(j, iCol));
       LScal[iMat] = eSum;
     }
     T eVal(0);
@@ -960,7 +960,7 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
       for (int iCol = 0; iCol < nbCol; iCol++) {
         T eSum(0);
         for (int jCol = 0; jCol < nbCol; jCol++) {
-          eSum += ListMat[iMat](iCol, jCol) * EXT(i, jCol);
+          AddMul(eSum, ListMat[iMat](iCol, jCol), EXT(i, jCol));
         }
         MatVtr(iMat, iCol) = eSum;
       }
@@ -971,7 +971,7 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
     for (int iMat = 0; iMat < nMat; iMat++) {
       T eSum(0);
       for (int iCol = 0; iCol < nbCol; iCol++)
-        eSum += MatVtr(iMat, iCol) * EXT(j, iCol);
+        AddMul(eSum, MatVtr(iMat, iCol), EXT(j, iCol));
       LScal[iMat] = eSum;
     }
     T eVal(0);
@@ -1005,7 +1005,7 @@ template <typename T> struct ListMat_Vdiag_WeightMat {
         for (int iCol = 0; iCol < nbCol; iCol++) {
           T eSum = 0;
           for (int jCol = 0; jCol < nbCol; jCol++) {
-            eSum += ListMat[iMat](jCol, iCol) * EXT(i, jCol);
+            AddMul(eSum, ListMat[iMat](jCol, iCol), EXT(i, jCol));
           }
           MatV(iMat, iCol) = eSum;
         }
@@ -1029,7 +1029,7 @@ template <typename T> struct ListMat_Vdiag_WeightMat {
       for (int iMat = 0; iMat < nMat; iMat++) {
         T eSum = 0;
         for (int iCol = 0; iCol < nbCol; iCol++)
-          eSum += MatV(iMat, iCol) * EXT(j_red, iCol);
+          AddMul(eSum, MatV(iMat, iCol), EXT(j_red, iCol));
         LScal[iMat] = eSum;
       }
     }
@@ -1633,13 +1633,13 @@ WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       T eSum = 0;
       for (size_t jCol = 0; jCol < nbCol; jCol++)
-        eSum += Qmat(iCol, jCol) * TheEXT(iPair, jCol);
+        AddMul(eSum, Qmat(iCol, jCol), TheEXT(iPair, jCol));
       V(iCol) = eSum;
     }
     for (size_t jPair = 0; jPair <= iPair; jPair++) {
       T eScal = 0;
       for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eScal += V(iCol) * TheEXT(jPair, iCol);
+        AddMul(eScal, V(iCol), TheEXT(jPair, iCol));
       bool ChgSign = false;
       if (eScal < 0) {
         eScal = -eScal;
@@ -1702,13 +1702,13 @@ GetSimpleWeightMatrixAntipodal(MyMatrix<T> const &TheEXT,
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       T eSum = 0;
       for (size_t jCol = 0; jCol < nbCol; jCol++)
-        eSum += Qmat(iCol, jCol) * TheEXT(iPair, jCol);
+        AddMul(eSum, Qmat(iCol, jCol), TheEXT(iPair, jCol));
       V(iCol) = eSum;
     }
     for (size_t jPair = 0; jPair <= iPair; jPair++) {
       T eSum1 = 0;
       for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eSum1 += V(iCol) * TheEXT(jPair, iCol);
+        AddMul(eSum1, V(iCol), TheEXT(jPair, iCol));
       T eSum2 = -eSum1;
       Tidx_value &value1 = ValueMap[eSum1];
       if (value1 == 0) {
@@ -2067,7 +2067,7 @@ GetWeightMatrix_ListComm(MyMatrix<T> const &TheEXT, MyMatrix<T> const &GramMat,
       for (size_t iCol = 0; iCol < nbCol; iCol++) {
         T eSum = 0;
         for (size_t jCol = 0; jCol < nbCol; jCol++)
-          eSum += ListProd[iMat](iCol, jCol) * TheEXT(iRow, jCol);
+          AddMul(eSum, ListProd[iMat](iCol, jCol), TheEXT(iRow, jCol));
         M(iMat, iCol) = eSum;
       }
     }
@@ -2077,7 +2077,7 @@ GetWeightMatrix_ListComm(MyMatrix<T> const &TheEXT, MyMatrix<T> const &GramMat,
     for (size_t iMat = 0; iMat <= nbComm; iMat++) {
       T eSum = 0;
       for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eSum += TheEXT(jRow, iCol) * M(iMat, iCol);
+        AddMul(eSum, TheEXT(jRow, iCol), M(iMat, iCol));
       eVectSum[iMat] = eSum;
     }
     return eVectSum;
@@ -2098,7 +2098,7 @@ GetWeightMatrix_ListMatrix(std::vector<MyMatrix<T>> const &ListMatrix,
       for (size_t iCol = 0; iCol < nbCol; iCol++) {
         T eSum = 0;
         for (size_t jCol = 0; jCol < nbCol; jCol++)
-          eSum += ListMatrix[iMat](iCol, jCol) * TheEXT(iRow, jCol);
+          AddMul(eSum, ListMatrix[iMat](iCol, jCol), TheEXT(iRow, jCol));
         M(iMat, iCol) = eSum;
       }
     }
@@ -2108,7 +2108,7 @@ GetWeightMatrix_ListMatrix(std::vector<MyMatrix<T>> const &ListMatrix,
     for (size_t iMat = 0; iMat < nbMat; iMat++) {
       T eSum = 0;
       for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eSum += TheEXT(jRow, iCol) * M(iMat, iCol);
+        AddMul(eSum, TheEXT(jRow, iCol), M(iMat, iCol));
       eVectScal[iMat] = eSum;
     }
     return eVectScal;
@@ -2143,13 +2143,13 @@ T_TranslateToMatrix_QM_SHV(MyMatrix<T> const &qMat, MyMatrix<Tint> const &SHV,
     for (size_t i = 0; i < n; i++) {
       T eVal = 0;
       for (size_t j = 0; j < n; j++)
-        eVal += qMat(j, i) * SHV(2 * iPair, j);
+        AddMul(eVal, qMat(j, i), SHV(2 * iPair, j));
       V(i) = eVal;
     }
     for (size_t jPair = 0; jPair <= iPair; jPair++) {
       T eScal = 0;
       for (size_t i = 0; i < n; i++)
-        eScal += V(i) * SHV(2 * jPair, i);
+        AddMul(eScal, V(i), SHV(2 * jPair, i));
       Tidx_value &value1 = ValueMap[eScal];
       if (value1 == 0) {
         // This is a missing value

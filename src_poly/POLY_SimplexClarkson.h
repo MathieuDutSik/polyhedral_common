@@ -449,7 +449,7 @@ template <typename T> struct FractionFreeSimplex {
     for (int i = 0; i < m; i++) {
       T eSum = ListIneq_(i, 0);
       for (int k = 0; k < n_x; k++) {
-        eSum += ListIneq_(i, k + 1) * DirectSolution(k);
+        AddMul(eSum, ListIneq_(i, k + 1), DirectSolution(k));
       }
       if (eSum < 0) {
         std::cerr << "SIMPLEX_CLARKSON: optimal point violates row " << i
@@ -485,9 +485,9 @@ template <typename T> struct FractionFreeSimplex {
                   << i << "\n";
         throw TerminalException{1};
       }
-      eConst += DualSolution(i) * ListIneq_(i, 0);
+      AddMul(eConst, DualSolution(i), ListIneq_(i, 0));
       for (int k = 0; k < n_x; k++) {
-        eSum(k) += DualSolution(i) * ListIneq_(i, k + 1);
+        AddMul(eSum(k), DualSolution(i), ListIneq_(i, k + 1));
       }
     }
     if (!(eConst > 0)) {
@@ -514,7 +514,7 @@ template <typename T> struct FractionFreeSimplex {
     for (int i = 0; i < m; i++) {
       T eSum(0);
       for (int k = 0; k < n_x; k++) {
-        eSum += ListIneq_(i, k + 1) * d(k);
+        AddMul(eSum, ListIneq_(i, k + 1), d(k));
       }
       if (eSum < 0) {
         std::cerr << "SIMPLEX_CLARKSON: unbounded ray violates row " << i
@@ -524,7 +524,7 @@ template <typename T> struct FractionFreeSimplex {
     }
     T eObj(0);
     for (int k = 0; k < n_x; k++) {
-      eObj += obj_(k + 1) * d(k);
+      AddMul(eObj, obj_(k + 1), d(k));
     }
     if (!(eObj < 0)) {
       std::cerr << "SIMPLEX_CLARKSON: unbounded ray does not decrease the "
@@ -561,7 +561,7 @@ template <typename T> struct FractionFreeSimplex {
     for (int i = 0; i < m; i++) {
       T eSum = ListIneq_(i, 0) * det;
       for (int k = 0; k < n_x; k++) {
-        eSum += ListIneq_(i, k + 1) * xnum(k);
+        AddMul(eSum, ListIneq_(i, k + 1), xnum(k));
       }
       if (eSum < 0) {
         std::cerr << "SIMPLEX_CLARKSON: scaled optimal point violates row "
@@ -581,7 +581,7 @@ template <typename T> struct FractionFreeSimplex {
     for (int k = 0; k < n_x; k++) {
       T eSum = obj_(k + 1) * det;
       for (int i = 0; i < m; i++) {
-        eSum += dualnum(i) * ListIneq_(i, k + 1);
+        AddMul(eSum, dualnum(i), ListIneq_(i, k + 1));
       }
       if (eSum != 0) {
         std::cerr << "SIMPLEX_CLARKSON: scaled dual combination nonzero at "
@@ -592,7 +592,7 @@ template <typename T> struct FractionFreeSimplex {
     }
     T eVal = obj_(0) * det;
     for (int i = 0; i < m; i++) {
-      eVal += dualnum(i) * ListIneq_(i, 0);
+      AddMul(eVal, dualnum(i), ListIneq_(i, 0));
     }
     if (eVal != sol.OptimalValueNum) {
       std::cerr << "SIMPLEX_CLARKSON: scaled dual objective differs from the "
@@ -622,9 +622,9 @@ template <typename T> struct FractionFreeSimplex {
                   << i << "\n";
         throw TerminalException{1};
       }
-      eConst += dualnum(i) * ListIneq_(i, 0);
+      AddMul(eConst, dualnum(i), ListIneq_(i, 0));
       for (int k = 0; k < n_x; k++) {
-        eSum(k) += dualnum(i) * ListIneq_(i, k + 1);
+        AddMul(eSum(k), dualnum(i), ListIneq_(i, k + 1));
       }
     }
     if (!(eConst > 0)) {
@@ -651,7 +651,7 @@ template <typename T> struct FractionFreeSimplex {
     for (int i = 0; i < m; i++) {
       T eSum(0);
       for (int k = 0; k < n_x; k++) {
-        eSum += ListIneq_(i, k + 1) * d(k);
+        AddMul(eSum, ListIneq_(i, k + 1), d(k));
       }
       if (eSum < 0) {
         std::cerr << "SIMPLEX_CLARKSON: scaled unbounded ray violates row "
@@ -661,7 +661,7 @@ template <typename T> struct FractionFreeSimplex {
     }
     T eObj(0);
     for (int k = 0; k < n_x; k++) {
-      eObj += obj_(k + 1) * d(k);
+      AddMul(eObj, obj_(k + 1), d(k));
     }
     if (!(eObj < 0)) {
       std::cerr << "SIMPLEX_CLARKSON: scaled unbounded ray does not decrease "
@@ -909,7 +909,7 @@ template <typename Tfloat> struct FloatSimplex {
           if (j == s || (j > 0 && col_owner[j] == -1)) {
             continue;
           }
-          Tab(i, j) += c_is * Tab(r, j);
+          AddMul(Tab(i, j), c_is, Tab(r, j));
         }
         Tab(i, s) = c_is * inv;
       }
@@ -1261,7 +1261,7 @@ SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
     }
     T eSum = ListIneq(i, 0) * den;
     for (int k = 0; k < n_x; k++) {
-      eSum += ListIneq(i, k + 1) * xnum(k);
+      AddMul(eSum, ListIneq(i, k + 1), xnum(k));
     }
     if (den_pos ? (eSum < 0) : (eSum > 0)) {
       return {};
@@ -1269,7 +1269,7 @@ SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
   }
   T primalNum = ToBeMinimized(0) * den;
   for (int k = 0; k < n_x; k++) {
-    primalNum += ToBeMinimized(k + 1) * xnum(k);
+    AddMul(primalNum, ToBeMinimized(k + 1), xnum(k));
   }
   T primalValue = primalNum / den;
   // The dual multipliers: pd with sum_j pd_j a_{r_j} = c_red, that is
@@ -1298,7 +1298,7 @@ SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
     if (dden_pos ? (pdnum(j) < 0) : (pdnum(j) > 0)) {
       return {};
     }
-    dualNum += pdnum(j) * ListIneq(rows[j], 0);
+    AddMul(dualNum, pdnum(j), ListIneq(rows[j], 0));
   }
   T dualValue = ToBeMinimized(0) - dualNum / dden;
   if (dualValue != primalValue) {
@@ -1367,7 +1367,7 @@ SIMPLEX_CertifyBasisScaled(MyMatrix<T> const &ListIneq,
     }
     T eSum = ListIneq(i, 0) * den;
     for (int k = 0; k < n_x; k++) {
-      eSum += ListIneq(i, k + 1) * xnum(k);
+      AddMul(eSum, ListIneq(i, k + 1), xnum(k));
     }
     if (eSum < 0) {
       return {};
@@ -1375,7 +1375,7 @@ SIMPLEX_CertifyBasisScaled(MyMatrix<T> const &ListIneq,
   }
   T primalNum = ToBeMinimized(0) * den;
   for (int k = 0; k < n_x; k++) {
-    primalNum += ToBeMinimized(k + 1) * xnum(k);
+    AddMul(primalNum, ToBeMinimized(k + 1), xnum(k));
   }
   MyMatrix<T> MT(n_x, n_x);
   MyVector<T> rhs2(n_x);
@@ -1406,7 +1406,7 @@ SIMPLEX_CertifyBasisScaled(MyMatrix<T> const &ListIneq,
     if (pdnum(j) < 0) {
       return {};
     }
-    dualNum += pdnum(j) * ListIneq(rows[j], 0);
+    AddMul(dualNum, pdnum(j), ListIneq(rows[j], 0));
   }
   // Value equality primalNum / den == ToBeMinimized(0) - dualNum / dden,
   // cross-multiplied since both denominators are positive.
@@ -1761,7 +1761,7 @@ template <typename T> struct ClarksonRedundancyReduction {
     for (int i = 0; i < m; i++) {
       T eSum = ListIneq_(i, 0) * z_den;
       for (int k = 0; k < n_x; k++) {
-        eSum += ListIneq_(i, k + 1) * z_num(k);
+        AddMul(eSum, ListIneq_(i, k + 1), z_num(k));
       }
       Fz(i) = eSum;
 #ifdef SANITY_CHECK_SIMPLEX_CLARKSON
@@ -1790,7 +1790,7 @@ template <typename T> struct ClarksonRedundancyReduction {
     for (int i = 0; i < m; i++) {
       T t2(0);
       for (int k = 0; k < n_x; k++) {
-        t2 += ListIneq_(i, k + 1) * d(k);
+        AddMul(t2, ListIneq_(i, k + 1), d(k));
       }
       if (imin == -1) {
         imin = i;
@@ -2264,7 +2264,7 @@ template <typename T> struct ClarksonRedundancyReductionFloat {
     for (int i = 0; i < m; i++) {
       Tfloat eSum = A(i, 0);
       for (int k = 0; k < n_x; k++) {
-        eSum += A(i, k + 1) * z(k);
+        AddMul(eSum, A(i, k + 1), z(k));
       }
       Fz(i) = eSum;
     }
@@ -2288,7 +2288,7 @@ template <typename T> struct ClarksonRedundancyReductionFloat {
       }
       Tfloat t2 = 0;
       for (int k = 0; k < n_x; k++) {
-        t2 += A(i, k + 1) * d(k);
+        AddMul(t2, A(i, k + 1), d(k));
       }
       if (imin == -1) {
         imin = i;

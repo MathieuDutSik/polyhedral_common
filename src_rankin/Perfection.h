@@ -80,7 +80,7 @@ MyMatrix<T> FindApproximateMatrix(MyMatrix<T> const &A0,
       T det = DeterminantMat(A_P);
       MyMatrix<T> Ainv = Inverse(A_P);
       T diff = det - 1;
-      f += diff * diff;
+      AddMul(f, diff, diff);
       for (int i_basis = 0; i_basis < dim_space; i_basis++) {
         MyMatrix<T> const &B1 = ll_B_k_P[i_space][i_basis];
         MyMatrix<T> prod1 = Ainv * B1;
@@ -106,7 +106,7 @@ MyMatrix<T> FindApproximateMatrix(MyMatrix<T> const &A0,
     }
     MyVector<T> delta = -Inverse(Hess_f) * grad_f;
     for (int i_basis = 0; i_basis < dim_space; i_basis++) {
-      A += delta(i_basis) * B_k[i_basis];
+      AddMul(A, delta(i_basis), B_k[i_basis]);
     }
   }
 }

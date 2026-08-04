@@ -128,7 +128,7 @@ vectface POLY_DualDescription_PrimalDualIncidence(MyMatrix<T> const &FAC,
     for (int i_row = 0; i_row < nbRow; i_row++) {
       T sum(0);
       for (int i = 0; i < dim; i++)
-        sum += FAC(i_row, i) * EXT(i_ext, i);
+        AddMul(sum, FAC(i_row, i), EXT(i_ext, i));
       if (sum == 0)
         f[i_row] = 1;
     }
@@ -154,7 +154,7 @@ void POLY_DualDescription_PrimalDualFaceIneq(MyMatrix<T> const &FAC,
     for (int i_row = 0; i_row < nbRow; i_row++) {
       T sum(0);
       for (int i = 0; i < dim; i++)
-        sum += FAC(i_row, i) * eEXT(i);
+        AddMul(sum, FAC(i_row, i), eEXT(i));
       if (sum == 0)
         f[i_row] = 1;
     }

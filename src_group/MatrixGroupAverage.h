@@ -207,9 +207,9 @@ OrbitBarycenterSymmetricMatrix(MyMatrix<T> const &M,
       for (int k = 0; k < n; k++) {
         for (int l = 0; l < n; l++) {
           int pos = Crev(k, l);
-          eGenExt(i_sym, pos) += eGen(k, i) * eGen(l, j);
+          AddMul(eGenExt(i_sym, pos), eGen(k, i), eGen(l, j));
           if (i != j) {
-            eGenExt(i_sym, pos) += eGen(k, j) * eGen(l, i);
+            AddMul(eGenExt(i_sym, pos), eGen(k, j), eGen(l, i));
           }
         }
       }

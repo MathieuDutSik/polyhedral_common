@@ -251,7 +251,7 @@ vectface DualDescExternalProgramIncidence(MyMatrix<T> const &EXT,
     for (size_t i_row = 0; i_row < n_row; i_row++) {
       eScal = 0;
       for (size_t i = shift; i < DimEXT; i++)
-        eScal += LVal[i] * EXT(i_row, i - shift);
+        AddMul(eScal, LVal[i], EXT(i_row, i - shift));
       f[i_row] = static_cast<bool>(eScal == 0);
     }
     vf.push_back(f);
@@ -324,14 +324,14 @@ vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
       for (size_t i_row = 0; i_row < n_row; i_row++) {
         eScal_Tlong = 0;
         for (size_t i = shift; i < DimEXT; i++)
-          eScal_Tlong += LVal_Tlong[i] * EXT_Tlong(i_row, i - shift);
+          AddMul(eScal_Tlong, LVal_Tlong[i], EXT_Tlong(i_row, i - shift));
         f[i_row] = static_cast<bool>(eScal_Tlong == 0);
       }
     } else {
       for (size_t i_row = 0; i_row < n_row; i_row++) {
         eScal = 0;
         for (size_t i = shift; i < DimEXT; i++)
-          eScal += LVal_int[i] * EXT_int(i_row, i - shift);
+          AddMul(eScal, LVal_int[i], EXT_int(i_row, i - shift));
         f[i_row] = static_cast<bool>(eScal == 0);
       }
     }
@@ -379,7 +379,7 @@ void DualDescExternalProgramFaceIneq(MyMatrix<T> const &EXT,
     for (size_t i_row = 0; i_row < n_row; i_row++) {
       eScal = 0;
       for (size_t i = shift; i < DimEXT; i++)
-        eScal += LVal[i] * EXT(i_row, i - shift);
+        AddMul(eScal, LVal[i], EXT(i_row, i - shift));
       pair.first[i_row] = static_cast<bool>(eScal == 0);
     }
     f_process(pair);

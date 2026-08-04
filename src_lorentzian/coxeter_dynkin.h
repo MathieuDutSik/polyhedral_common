@@ -2263,7 +2263,7 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
 #endif
     MyVector<T> u_component = ZeroVector<T>(dim);
     for (int i = 0; i < n_root; i++)
-      u_component += w(i) * UniversalVectorConversion<T, Tint>(l_root[i]);
+      VecAddMul(u_component, w(i), UniversalVectorConversion<T, Tint>(l_root[i]));
 #ifdef SANITY_CHECK
     if (res_norm == 0) {
       std::vector<MyVector<T>> l_root_tot;

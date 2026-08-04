@@ -340,7 +340,7 @@ T frobenius_inner(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
   T sum(0);
   for (int i_row=0; i_row<n_row; i_row++) {
     for (int i_col=0; i_col<n_col; i_col++) {
-      sum += M1(i_row,i_col) * M2(i_row,i_col);
+      AddMul(sum, M1(i_row,i_col), M2(i_row,i_col));
     }
   }
   return sum;
@@ -353,7 +353,7 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> TheMat = ZeroMatrix<T>(n, n);
   for (auto &eMat : LinSpa.ListMat) {
     int coef = random() % (2 * N + 1) - N;
-    TheMat += T(coef) * eMat;
+    MatAddMul(TheMat, T(coef), eMat);
   }
   while (true) {
     if (IsPositiveDefinite(TheMat, os)) {

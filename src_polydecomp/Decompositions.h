@@ -692,7 +692,7 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
         int i_ext_tot = MapEXT[eEXT];
         T sum = 0;
         for (int i = 0; i < dim; i++) {
-          sum += eEXT(i) * FAC(i_fac, i);
+          AddMul(sum, eEXT(i), FAC(i_fac, i));
         }
         if (sum == 0) {
           f[i_ext_tot] = 1;
@@ -720,7 +720,7 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
     for (int i_ext_tot = 0; i_ext_tot < n_ext_tot; i_ext_tot++) {
       T sum(0);
       for (int i = 0; i < dim; i++) {
-        sum += eFAC(i) * EXTtot(i_ext_tot, i);
+        AddMul(sum, eFAC(i), EXTtot(i_ext_tot, i));
       }
       if (sum < 0)
         return false;
@@ -779,7 +779,7 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
       MyVector<T> const &eFAC = ListFACfinal[i_fac_final];
       T sum = 0;
       for (int i = 0; i < dim; i++) {
-        sum += eFAC(i) * eEXT(i);
+        AddMul(sum, eFAC(i), eEXT(i));
       }
       if (sum == 0) {
         ListIncd.push_back(eFAC);
@@ -838,7 +838,7 @@ ConnectedComponentsPolyhedral(std::vector<ConeSimpDesc<T>> const &l_cone) {
         MyVector<T> eEXT = GetMatrixRow(e_cone.EXT, i_ext);
         T scal = 0;
         for (int i = 0; i < dim; i++)
-          scal += eEXT(i) * eFAC(i);
+          AddMul(scal, eEXT(i), eFAC(i));
         if (scal == 0) {
           size_t i_ext_tot = MapEXT.at(eEXT);
           f[i_ext_tot] = 1;

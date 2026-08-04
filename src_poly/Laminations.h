@@ -82,7 +82,7 @@ void compute_two_laminations_f(MyMatrix<T> const &M, F f) {
     for (auto &eRow : Voth) {
       T sum(0);
       for (int iCol = 0; iCol < dim; iCol++) {
-        sum += vect(iCol) * M2(eRow, iCol);
+        AddMul(sum, vect(iCol), M2(eRow, iCol));
       }
 #ifdef DEBUG_LAMINATIONS
       std::cerr << "LAM: eRow=" << eRow << " sum=" << sum << "\n";
@@ -97,7 +97,7 @@ void compute_two_laminations_f(MyMatrix<T> const &M, F f) {
     for (int iRow = 0; iRow < nbRow; iRow++) {
       T sum(0);
       for (int iCol = 0; iCol < dim; iCol++) {
-        sum += vect(iCol) * M2(iRow, iCol);
+        AddMul(sum, vect(iCol), M2(iRow, iCol));
       }
 #ifdef DEBUG_LAMINATIONS
       if (sum != 0 && sum != 1) {

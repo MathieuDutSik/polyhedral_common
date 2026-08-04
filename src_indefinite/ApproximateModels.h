@@ -106,13 +106,13 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const &Qmat,
     //
     T scal1 = ScalarProductQuadForm(Qmat, y, x);
     Tint scal1_tint = UniversalScalarConversion<Tint, T>(scal1);
-    eImg += scal1_tint * f;
+    VecAddMul(eImg, scal1_tint, f);
     T scal2 = ScalarProductQuadForm(Qmat, y, f);
     T scal3 = (xNorm / T(2)) * scal2;
     Tint scal2_tint = UniversalScalarConversion<Tint, T>(scal2);
     Tint scal3_tint = UniversalScalarConversion<Tint, T>(scal3);
-    eImg -= scal3_tint * f;
-    eImg -= scal2_tint * x;
+    VecSubMul(eImg, scal3_tint, f);
+    VecSubMul(eImg, scal2_tint, x);
     AssignMatrixRow(RetMat, u, eImg);
   }
 #ifdef DEBUG_APPROXIMATE_MODELS

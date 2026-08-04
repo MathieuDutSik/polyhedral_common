@@ -289,7 +289,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
       MyVector<T> SumIneq = ZeroVector<T>(dimSpa + 1);
       for (int i = 0; i < nbIneqSet; i++) {
         MyVector<T> eRow = GetMatrixRow(SetIneq, i);
-        SumIneq += DualSolution(i) * eRow;
+        VecAddMul(SumIneq, DualSolution(i), eRow);
       }
       bool IsZeroVector = true;
       for (int i = 0; i < dimSpa; i++) {

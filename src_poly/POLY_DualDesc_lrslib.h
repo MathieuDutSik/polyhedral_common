@@ -1297,7 +1297,7 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
           for (size_t iRow = 0; iRow < nbRow; iRow++) {
             T eScal(0);
             for (size_t iCol = 0; iCol < nbCol; iCol++) {
-              eScal += output[iCol] * EXT(iRow, iCol);
+              AddMul(eScal, output[iCol], EXT(iRow, iCol));
             }
             if (eScal == 0) {
               std::cerr << " " << iRow;

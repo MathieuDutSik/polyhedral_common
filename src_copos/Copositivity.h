@@ -738,7 +738,7 @@ CopositivityTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const &eSymmMat,
   for (int iCol = 0; iCol < nbCol; iCol++) {
     T eSum(0);
     for (int iNSP = 0; iNSP < nbNSP; iNSP++) {
-      eSum += DirectSolution(iNSP) * NSP(iNSP, iCol);
+      AddMul(eSum, DirectSolution(iNSP), NSP(iNSP, iCol));
     }
     eVect1(iCol) = eSum;
   }

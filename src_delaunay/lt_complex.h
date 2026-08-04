@@ -158,7 +158,7 @@ MyMatrix<T> gram_from_tspace_vec(MyVector<T> const &v,
   int n = ListMat[0].rows();
   MyMatrix<T> M = ZeroMatrix<T>(n, n);
   for (int u = 0; u < dimSpace; u++) {
-    M += v(u) * ListMat[u];
+    MatAddMul(M, v(u), ListMat[u]);
   }
   return M;
 }

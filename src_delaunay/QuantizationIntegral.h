@@ -419,7 +419,7 @@ struct QuantizationComputer {
         MyVector<T> prod = GramMat * eDiff;
         T dist(0);
         for (int u = 0; u < n; u++)
-          dist += eDiff(u) * prod(u);
+          AddMul(dist, eDiff(u), prod(u));
         map_occ[dist] += 1;
       }
     }
@@ -665,14 +665,14 @@ struct QuantizationComputer {
         for (int b = a; b < nRel; b++) {
           T s(0);
           for (int u = 0; u < sdim; u++)
-            s += Diff(u, a) * Diff(u, b);
+            AddMul(s, Diff(u, a), Diff(u, b));
           IntDeg2ut[pos] +=
               VolSimplex * (barySpace(a) * barySpace(b) + s * invDenom);
           pos++;
         }
       IntDeg0 += VolSimplex;
       for (int a = 0; a < nRel; a++)
-        IntDeg1(a) += VolSimplex * barySpace(a);
+        AddMul(IntDeg1(a), VolSimplex, barySpace(a));
     }
     MyMatrix<T> ret = ZeroMatrix<T>(nRel + 1, nRel + 1);
     {
@@ -772,7 +772,7 @@ struct QuantizationComputer {
               apply_matrix(center_homog_fulldim(TheEXT), eRecord.eMat);
           MyVector<T> SingleInv = OrbitBarycenter(TheCenter, StabEXT.gens);
           T indexT = tint_grp_to_T(index);
-          SumElement += indexT * SingleInv;
+          VecAddMul(SumElement, indexT, SingleInv);
           std::vector<Face> ListOrbitRelFacet;
           std::vector<Telt> StabGens = TheStab.GeneratorsOfGroup();
           for (auto &eAdjacency : TheAdjacencies) {
@@ -1084,7 +1084,7 @@ struct QuantizationComputer {
             transform_integral(lifted, NewBasis, sc.TheBasis);
         MyMatrix<T> sym =
             orbit_barycenter_symmetric_matrix(TheIntegralOrb, gens_in_basis);
-        TheIntegral += multT * sym;
+        MatAddMul(TheIntegral, multT, sym);
       }
     } else {
       std::vector<MyVector<T>> ListVert =
@@ -1136,7 +1136,7 @@ struct QuantizationComputer {
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         SecMomentMat(i, j) = TheInt(i + 1, j + 1);
-        SecMoment += GramMat(i, j) * TheInt(i + 1, j + 1);
+        AddMul(SecMoment, GramMat(i, j), TheInt(i + 1, j + 1));
       }
     }
     T TheVol = TheInt(0, 0);

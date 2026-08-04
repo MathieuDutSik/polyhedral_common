@@ -306,7 +306,7 @@ template <typename T> bool CheckCoveringParityClasses(MyMatrix<T> const &M) {
     for (size_t i = 0; i < n_cols; i++) {
       T res_T = ResInt(M(i_row, i), eTwo);
       int res = UniversalScalarConversion<int, T>(res_T);
-      pos += res * e_pow;
+      AddMul(pos, res, e_pow);
       e_pow *= 2;
     }
     if (pos == -1)
@@ -367,7 +367,7 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const &TheCtype,
           for (size_t i = 0; i < n_cols; i++) {
             T res_T = ResInt(V[i], eTwo);
             int res = UniversalScalarConversion<int, T>(res_T);
-            pos += res * e_pow;
+            AddMul(pos, res, e_pow);
             e_pow *= 2;
           }
           if (IsAssigned[pos] == 0) {
@@ -449,7 +449,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
       for (int i = 0; i < n_cols; i++) {
         T res_T = ResInt(eV(i), eTwo);
         int res = UniversalScalarConversion<int, T>(res_T);
-        pos += res * e_pow;
+        AddMul(pos, res, e_pow);
         e_pow *= 2;
       }
 #ifdef PRINT_TRIPLE
@@ -545,7 +545,7 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M,
       os << "  i=" << i << " M(iRow,i)=" << M(iRow, i) << " res_T=" << res_T
          << " res=" << res << " e_pow=" << e_pow << "\n";
 #endif
-      pos += res * e_pow;
+      AddMul(pos, res, e_pow);
       e_pow *= 2;
     }
 #ifdef PRINT_EXPRESS

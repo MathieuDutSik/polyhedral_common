@@ -1218,19 +1218,19 @@ size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
     for (int i = 0; i < n; i++) {
       T sum(0);
       for (int j = 0; j < n; j++) {
-        sum += LorMat(i, j) * EXT_T(iRow, j);
+        AddMul(sum, LorMat(i, j), EXT_T(iRow, j));
       }
       V(i) = sum;
     }
     T scal(0);
     for (int i = 0; i < n; i++) {
-      scal += V(i) * EXT_T(iRow, i);
+      AddMul(scal, V(i), EXT_T(iRow, i));
     }
     ListDiagNorm[scal] += 1;
     for (int jRow = iRow + 1; jRow < nbRow; jRow++) {
       T scal(0);
       for (int i = 0; i < n; i++) {
-        scal += V(i) * EXT_T(jRow, i);
+        AddMul(scal, V(i), EXT_T(jRow, i));
       }
       ListOffDiagNorm[scal] += 1;
     }

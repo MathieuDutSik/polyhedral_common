@@ -415,7 +415,7 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
     for (int i = 0; i < m; i++) {
       T eSum(0);
       for (int j = 0; j < d; j++) {
-        eSum += EXT(i, j) * ray.coord(j);
+        AddMul(eSum, EXT(i, j), ray.coord(j));
       }
       if (eSum < 0) {
         std::cerr << "DOUBLEDESC: An output ray is infeasible at row " << i

@@ -260,7 +260,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
       T eSum(0);
       for (int u = 0; u < dimSymm; u++)
-        eSum += eFacet(u) * ConeClassical(iBlock, u);
+        AddMul(eSum, eFacet(u), ConeClassical(iBlock, u));
     }
     //
     MyVector<T> Wvect = GetSymmetricMatrixWeightVector<T>(n);

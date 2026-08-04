@@ -397,19 +397,19 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
     for (int i = 0; i < n; i++) {
       T eSum(0);
       for (int j = 0; j < n; j++) {
-        eSum += GramMat(i, j) * EXTtrans_T(iVert, j);
+        AddMul(eSum, GramMat(i, j), EXTtrans_T(iVert, j));
       }
       V(i) = eSum;
     }
     T scal(0);
     for (int i = 0; i < n; i++) {
-      scal += V(i) * EXTtrans_T(iVert, i);
+      AddMul(scal, V(i), EXTtrans_T(iVert, i));
     }
     ListDiagNorm[scal] += 1;
     for (int jVert = iVert + 1; jVert < nbVert; jVert++) {
       T scal(0);
       for (int i = 0; i < n; i++) {
-        scal += V(i) * EXTtrans_T(jVert, i);
+        AddMul(scal, V(i), EXTtrans_T(jVert, i));
       }
       ListOffDiagNorm[scal] += 1;
     }

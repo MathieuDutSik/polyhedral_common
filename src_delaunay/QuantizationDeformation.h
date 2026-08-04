@@ -149,7 +149,7 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
   auto dotprod = [](MyVector<T> const &a, MyVector<T> const &b) -> T {
     T s(0);
     for (int i = 0; i < a.size(); i++) {
-      s += a(i) * b(i);
+      AddMul(s, a(i), b(i));
     }
     return s;
   };

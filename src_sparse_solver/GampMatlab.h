@@ -37,7 +37,7 @@ template <typename T> T L2_Norm(MyVector<T> const &b) {
   int siz = b.size();
   for (int i = 0; i < siz; i++) {
     T eVal = b(i);
-    eNorm += eVal * eVal;
+    AddMul(eNorm, eVal, eVal);
   }
   return sqrt(eNorm);
 }
@@ -516,7 +516,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
         T denom = eNorm * eNorm;
         T eScal = T_ScalarProduct(ry, ry);
         if (rho > 0) {
-          denom += rdmu * eScal;
+          AddMul(denom, rdmu, eScal);
         }
         stp = eScal / (denom + eps);
         Out.cntAt++;

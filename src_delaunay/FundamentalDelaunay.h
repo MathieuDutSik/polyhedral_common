@@ -56,7 +56,7 @@ std::optional<MyMatrix<Tint>> FindDelaunayPolytope_direction(CVPSolver<T, Tint> 
     for (int iCol = 0; iCol < dim; iCol++) {
       T eSumB(0);
       for (int iRow = 0; iRow < dim; iRow++)
-        eSumB += eVect(iRow) * GramMat(iRow, iCol);
+        AddMul(eSumB, eVect(iRow), GramMat(iRow, iCol));
       eIneq(iCol + 1) = -2 * eSumB;
     }
     return eIneq;
@@ -508,7 +508,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
         }
         T eScal = TheFac(0);
         for (int i = 0; i < dim; i++)
-          eScal += NewTestVert(i) * TheFac(i + 1);
+          AddMul(eScal, NewTestVert(i), TheFac(i + 1));
         if (eScal < 0) {
           T TheRadius = adps.GetRadius(NewTestVert);
           if (TheRadius < MinRadius) {
@@ -683,7 +683,7 @@ std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const &GramMat,
   }
   T eScal(1);
   for (int i = 0; i < n; i++)
-    eScal += eVect(i) * TheCenterRed(i);
+    AddMul(eScal, eVect(i), TheCenterRed(i));
   Mat1(0, 0) = eScal;
   MyMatrix<T> Mat2 = ZeroMatrix<T>(n + 1, n + 1);
   Mat2(0, 0) = 1;

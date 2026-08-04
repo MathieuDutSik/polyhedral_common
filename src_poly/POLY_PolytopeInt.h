@@ -22,7 +22,7 @@ MyMatrix<Tint> lll_reduction_matrix(MyMatrix<T> const& FAC, std::ostream& os) {
   for (int iRow = 0; iRow < nbRow; iRow++) {
     for (int i = 0; i < dim; i++) {
       for (int j = 0; j < dim; j++) {
-        TheGram(i,j) += FAC(iRow, i+1) * FAC(iRow, j+1);
+        AddMul(TheGram(i,j), FAC(iRow, i+1), FAC(iRow, j+1));
       }
     }
   }

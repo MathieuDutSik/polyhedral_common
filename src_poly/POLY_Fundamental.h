@@ -109,7 +109,7 @@ bool TestFacetInequality(MyMatrix<T> const &EXT, Face const &eList) {
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T eScal(0);
     for (int iCol = 0; iCol < nbCol; iCol++)
-      eScal += eVect(iCol) * EXT(iRow, iCol);
+      AddMul(eScal, eVect(iCol), EXT(iRow, iCol));
     if (eScal == 0) {
       if (eList[iRow] != 1) {
         return false;
@@ -178,7 +178,7 @@ void CheckFacetInequalityKernel(MyMatrix<T> const &EXT, Face const &eList,
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T eScal(0);
     for (int iCol = 0; iCol < nbCol; iCol++)
-      eScal += eVect(iCol) * EXT(iRow, iCol);
+      AddMul(eScal, eVect(iCol), EXT(iRow, iCol));
     if (eScal == 0) {
       if (eList[iRow] != 1) {
         std::cerr << "The vertex iRow has a zero scalar product but does not "
@@ -385,7 +385,7 @@ public:
       int iRow = PairIncs.first[pos_row];
       T eSum(0);
       for (int iCol = 0; iCol < nbCol; iCol++)
-        eSum += FacetIneq(iCol) * EXT(iRow, iCol);
+        AddMul(eSum, FacetIneq(iCol), EXT(iRow, iCol));
       ListInvScal[pos_row] = -1 / eSum;
     }
     //
@@ -399,7 +399,7 @@ public:
     int outRow = PairIncs.second[pos_outside];
     T eSum(0);
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
-      eSum += EXT_red(outRow, iCol) * out[iCol];
+      AddMul(eSum, EXT_red(outRow, iCol), out[iCol]);
     int eSign = 1;
     if (eSum < 0)
       eSign = -1;
@@ -415,7 +415,7 @@ public:
       int iRow = PairIncs.first[pos_row];
       T eSum(0);
       for (int iCol = 0; iCol < nbCol - 1; iCol++)
-        eSum += EXT_red(iRow, iCol) * out[iCol];
+        AddMul(eSum, EXT_red(iRow, iCol), out[iCol]);
       T beta = eSum * ListInvScal[pos_row];
       auto f_comp = [&]() -> bool {
         if (eSign == 1)
@@ -533,7 +533,7 @@ public:
       int iRow = PairIncs.first[pos_row];
       Tint eSum = 0;
       for (int iCol = 0; iCol < nbCol; iCol++)
-        eSum += FacetIneq(iCol) * EXT_int(iRow, iCol);
+        AddMul(eSum, FacetIneq(iCol), EXT_int(iRow, iCol));
       ListScal[pos_row] = eSum;
     }
   }
@@ -542,7 +542,7 @@ public:
     size_t pos_outside = get_pos_outside(sInc);
     Tint eSum = 0;
     for (int iCol = 0; iCol < nbCol - 1; iCol++)
-      eSum += EXT_red_sub(pos_outside, iCol) * V(iCol);
+      AddMul(eSum, EXT_red_sub(pos_outside, iCol), V(iCol));
     int eSign = 1;
     if (eSum < 0)
       eSign = -1;
@@ -557,7 +557,7 @@ public:
       Tint eSum = 0;
       Tint const &eScal = ListScal[pos_row];
       for (int iCol = 0; iCol < nbCol - 1; iCol++)
-        eSum += EXT_red(iRow, iCol) * V(iCol);
+        AddMul(eSum, EXT_red(iRow, iCol), V(iCol));
       delta = beta_max_num * eScal - eSum * beta_max_den;
       auto f_comp = [&]() -> bool {
         if (eSign == 1)

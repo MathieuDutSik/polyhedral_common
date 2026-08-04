@@ -321,7 +321,7 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
     Tint eNorm = 0;
     for (int i = 0; i < n; i++) {
       Tint eVal = ePt(i);
-      eNorm += eVal * eVal;
+      AddMul(eNorm, eVal, eVal);
       eLine(i) = eVal;
     }
     if (eNorm > 0) {

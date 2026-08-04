@@ -206,7 +206,7 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const &vipc,
     os << "ISODEL: VoronoiLinearInequality After EvaluateLineVector (first)\n";
 #endif
     for (int k = 0; k <= n; k++) {
-      val -= B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
+      SubMul(val, B(k), EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]));
     }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
     os << "ISODEL: VoronoiLinearInequality Summation of the entries\n";
@@ -226,7 +226,7 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const &vipc,
     for (auto &eLineMat : ListGram) {
       T val = EvaluateLineVector(eLineMat, TheVertRed);
       for (int k = 0; k <= n; k++) {
-        val -= B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
+        SubMul(val, B(k), EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]));
       }
       if (val != 0) {
         std::cerr << "For the vertex, the condition should be void and so we "
@@ -676,7 +676,7 @@ MyMatrix<T> get_interior_gram_matrix_lp(LinSpaceMatrix<T> const &LinSpa,
 #endif
   MyMatrix<T> RetMat = ZeroMatrix<T>(n, n);
   for (int u = 0; u < dimSpace; u++) {
-    RetMat += ThePt(u) * LinSpa.ListMat[u];
+    MatAddMul(RetMat, ThePt(u), LinSpa.ListMat[u]);
   }
   return RetMat;
 }
@@ -700,7 +700,7 @@ MyMatrix<T> get_interior_gram_matrix_lrs(LinSpaceMatrix<T> const &LinSpa,
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
     for (int u = 0; u < dimSpace; u++) {
-      RayMat += EXT(i_row, u) * LinSpa.ListMat[u];
+      MatAddMul(RayMat, EXT(i_row, u), LinSpa.ListMat[u]);
     }
     SumMatExtRay += RemoveFractionMatrix(RayMat);
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
@@ -1313,7 +1313,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   auto get_incd_status = [&](int iVert, MyVector<T> const &eFac) -> bool {
     T eSum(0);
     for (int u = 0; u <= n + 1; u++) {
-      eSum += TotalListVertices(iVert, u) * eFac(u);
+      AddMul(eSum, TotalListVertices(iVert, u), eFac(u));
     }
     return eSum == T(0);
   };
@@ -2407,7 +2407,7 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
     for (int u = 0; u < dimSpace; u++) {
-      RayMat += EXT(i_row, u) * data.LinSpa.ListMat[u];
+      MatAddMul(RayMat, EXT(i_row, u), data.LinSpa.ListMat[u]);
     }
     int rnk = RankMat(RayMat);
     map_rank[rnk] += 1;
@@ -2528,7 +2528,7 @@ int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
     for (int u = 0; u < dimSpace; u++) {
-      RayMat += EXT(i_row, u) * data.LinSpa.ListMat[u];
+      MatAddMul(RayMat, EXT(i_row, u), data.LinSpa.ListMat[u]);
     }
     int delta = n - RankMat(RayMat);
     count += delta;
@@ -2670,7 +2670,7 @@ get_pre_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
     MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i, os);
     MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);
     for (int u = 0; u < dimSpace; u++) {
-      TestMat += TestPt(u) * data.LinSpa.ListMat[u];
+      MatAddMul(TestMat, TestPt(u), data.LinSpa.ListMat[u]);
     }
     bool test = IsPositiveDefinite(TestMat, os);
     FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];

@@ -33,7 +33,7 @@ vectface ReduceVectfaceApproximate(MyMatrix<T> const &EXT, vectface const &vf,
       for (int i_row = 0; i_row < n_row; i_row++) {
         T eSum = 0;
         for (int i = 0; i < dim; i++) {
-          eSum += EXT(i_row, i) * eSelect.NSP(0, i);
+          AddMul(eSum, EXT(i_row, i), eSelect.NSP(0, i));
         }
         T absSum = T_abs(eSum);
         if (absSum < tolFacet) {

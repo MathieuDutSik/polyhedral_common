@@ -159,7 +159,7 @@ void SmallPolytope_FaceIneq(MyMatrix<T> const &EXT, Fprocess f_process,
     for (int i_row = 0; i_row < n_row; i_row++) {
       T scal(0);
       for (int i_col = 0; i_col < n_col; i_col++) {
-        scal += pair.second(i_col) * EXT(i_row, i_col);
+        AddMul(scal, pair.second(i_col), EXT(i_row, i_col));
       }
       if (scal < 0) {
         std::cerr << "Negative scalar product at i_row=" << i_row

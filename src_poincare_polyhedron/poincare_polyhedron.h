@@ -944,7 +944,7 @@ AdjacencyInfo<T> GetMissingFacetMatchingElement_DD(
       for (int i_fac = 0; i_fac < n_fac; i_fac++) {
         T scal = 0;
         for (int i = 0; i < n; i++) {
-          scal += dataext.EXT(i_ext, i) * FACimg(i_fac, i);
+          AddMul(scal, dataext.EXT(i_ext, i), FACimg(i_fac, i));
         }
         if (scal < 0) {
           f_insert_svg[i_ext] = 1;

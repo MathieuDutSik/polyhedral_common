@@ -28,7 +28,7 @@ template <typename T> T eval_poly(MyVector<T> const &C, T const &t) {
   T s(0);
   T tp(1);
   for (int i = 0; i < C.size(); i++) {
-    s += C(i) * tp;
+    AddMul(s, C(i), tp);
     tp *= t;
   }
   return s;

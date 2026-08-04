@@ -62,7 +62,7 @@ GramSchmidtOrthonormalization(MyMatrix<T> const &M, MyMatrix<Tint> const &B,
     for (int j = 0; j < i; j++) {
       T muij = (Bistar.dot(l_inf[j].Bistar_M)) / (l_inf[j].Bistar_norm);
       mu(i, j) = muij;
-      Bistar -= muij * Bstar[j];
+      VecSubMul(Bistar, muij, Bstar[j]);
     }
     MyVector<T> Bistar_M = M * Bistar;
     T scal = Bistar_M.dot(Bistar);
@@ -156,7 +156,7 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M,
       for (int j = 0; j < i; j++) {
         T val = ResGS.mu(i, j);
         Tint q = UniversalNearestScalarInteger<Tint, T>(val);
-        B.row(i) -= q * B.row(j);
+        RowSubMul(B, i, q, j);
       }
     }
     T mu = ResGS.mu(k, k - 1);
@@ -501,9 +501,9 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M,
     int j = x.j;
     Tint c = x.c;
     T c_T = UniversalScalarConversion<T, Tint>(c);
-    B.row(i) += c * B.row(j);
-    Mwork.row(i) += c_T * Mwork.row(j);
-    Mwork.col(i) += c_T * Mwork.col(j);
+    RowAddMul(B, i, c, j);
+    RowAddMul(Mwork, i, c_T, j);
+    ColAddMul(Mwork, i, c_T, j);
   };
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
   auto f_compute =

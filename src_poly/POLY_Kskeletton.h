@@ -85,7 +85,7 @@ vectface SPAN_face_LinearProgramming(Face const &face_fac,
           for (int iEqua = 0; iEqua < nbEqua; iEqua++) {
             T eSum(0);
             for (int iCol = 0; iCol < nbCol; iCol++)
-              eSum += FAC(jRow, iCol) * NSP(iEqua, iCol);
+              AddMul(eSum, FAC(jRow, iCol), NSP(iEqua, iCol));
             if (eSum != 0)
               return false;
           }
@@ -342,7 +342,7 @@ Face Compute_extfac_incd(const MyMatrix<T> &FAC, const MyMatrix<T> &EXT) {
     for (int iExt = 0; iExt < nbExt; iExt++) {
       T sum(0);
       for (int i = 0; i < nbCol; i++)
-        sum += FAC(iFac, i) * EXT(iExt, i);
+        AddMul(sum, FAC(iFac, i), EXT(iExt, i));
       if (sum == 0)
         extfac_incd[iFac * nbExt + iExt] = 1;
     }
@@ -439,7 +439,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
       for (int iExt = 0; iExt < nbExt; iExt++) {
         T sum(0);
         for (int i = 0; i < nbCol; i++)
-          sum += FAC(iFac, i) * EXT(iExt, i);
+          AddMul(sum, FAC(iFac, i), EXT(iExt, i));
         if (sum == 0)
           extfac_incd[iFac * nbExt + iExt] = 1;
       }
@@ -525,7 +525,7 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
       for (int iEqua = 0; iEqua < nbEqua; iEqua++) {
         T eSum(0);
         for (int iCol = 0; iCol < nbCol; iCol++) {
-          eSum += FAC(kRow, iCol) * NSP(iEqua, iCol);
+          AddMul(eSum, FAC(kRow, iCol), NSP(iEqua, iCol));
         }
         if (eSum != 0) {
           return false;

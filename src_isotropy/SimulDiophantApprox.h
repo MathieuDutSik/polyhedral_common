@@ -60,7 +60,7 @@ DiophantResult<Tint> SimultaneousDiophantineApproximation(MyVector<T> const &V,
     T eV = -V(i);
     GramMat(n, i) = eV;
     GramMat(i, n) = eV;
-    eCoeff += eV * eV;
+    AddMul(eCoeff, eV, eV);
   }
   auto IntPow = [](T eVal, int nb) -> T {
     T retV = 1;

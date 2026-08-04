@@ -268,7 +268,7 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
 #endif
       T contrib(0);
       for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-        contrib += EXT(iRow, iCol + 1) * SolDir(iCol);
+        AddMul(contrib, EXT(iRow, iCol + 1), SolDir(iCol));
       }
       T eSum = EXT(iRow, 0) + contrib;
       if (eSum == 0) {
@@ -407,7 +407,7 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
       for (int iRow = 0; iRow < nbRow; iRow++) {
         T eScal(0);
         for (int iCol = 0; iCol < nbCol; iCol++)
-          eScal += V(iCol) * ListVect(iRow, iCol);
+          AddMul(eScal, V(iCol), ListVect(iRow, iCol));
         if (eScal <= 0) {
           std::cerr
               << "LP: Error in SearchPositiveRelationSimple_DualMethod 1\n";
@@ -454,7 +454,7 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
       for (int iCol = 0; iCol < nbCol; iCol++) {
         T eSum(0);
         for (int iRow = 0; iRow < nbRow; iRow++)
-          eSum += V(iRow) * ListVect(iRow, iCol);
+          AddMul(eSum, V(iRow), ListVect(iRow, iCol));
         if (eSum != 0) {
           std::cerr << "LP: CheckResult_PositiveRelationSimple : error\n";
           std::cerr << "LP: checking TheRelat\n";
@@ -524,7 +524,7 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect,
     for (int iCol = 0; iCol < nbCol; iCol++) {
       T eSum(0);
       for (int iRow = 0; iRow < nbRow; iRow++) {
-        eSum += V(iRow) * ListVect(iRow, iCol);
+        AddMul(eSum, V(iRow), ListVect(iRow, iCol));
       }
       os << "LP: iCol=" << iCol << " eSum=" << eSum
          << " eMin(iRow)=" << eMinimize(iCol + 1) << "\n";
@@ -953,7 +953,7 @@ SolutionMatStrictlyPositive(MyMatrix<T> const &ListVect,
   MyVector<T> SumVect = ZeroVector<T>(dim);
   for (int iVect = 0; iVect < nbVect; iVect++) {
     MyVector<T> eRow = GetMatrixRow(ListVect, iVect);
-    SumVect += eSol(iVect) * eRow;
+    AddMul(SumVect, eSol(iVect), eRow);
   }
   if (SumVect != eVect) {
     std::cerr << "LP: eSol is not a solution of the system\n";
@@ -1550,7 +1550,7 @@ bool TestCriterionNonDegenerate(
   os << "LP: 1: TheSum=" << StringVectorGAP(TheSum) << "\n";
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
-    TheSum -= eSolDual(i_row) * eRow;
+    SubMul(TheSum, eSolDual(i_row), eRow);
   }
   os << "LP: 2: TheSum=" << StringVectorGAP(TheSum) << "\n";
   if (!IsZeroVector(TheSum)) {
@@ -2152,7 +2152,7 @@ FindViolatedFacetInequality(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
     for (int iRow = 0; iRow < nbRow; iRow++) {
       T scal(0);
       for (int iCol = 0; iCol < nbCol; iCol++)
-        scal += EXT(iRow, iCol) * DirectSolution(iCol);
+        AddMul(scal, EXT(iRow, iCol), DirectSolution(iCol));
       if (scal == 0) {
         incFace[iRow] = 1;
         incident.push_back(iRow);
@@ -2169,7 +2169,7 @@ FindViolatedFacetInequality(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
         if (incFace[iRow]) continue;
         T scal(0);
         for (int iCol = 0; iCol < nbCol; iCol++)
-          scal += f(iCol) * EXT(iRow, iCol);
+          AddMul(scal, f(iCol), EXT(iRow, iCol));
         if (scal > 0) return f;
         if (scal < 0) return -f;
       }
@@ -2192,7 +2192,7 @@ FindViolatedFacetInequality(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
       //     f . eVect < 0.
       T scal_v(0);
       for (int iCol = 0; iCol < nbCol; iCol++)
-        scal_v += f(iCol) * eVect(iCol);
+        AddMul(scal_v, f(iCol), eVect(iCol));
       if (scal_v >= 0) {
         std::cerr << "LP: FindViolatedFacetInequality: returned inequality is "
                      "not violated by eVect (f.eVect=" << scal_v << ")\n";
@@ -2204,7 +2204,7 @@ FindViolatedFacetInequality(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
       for (int iRow = 0; iRow < nbRow; iRow++) {
         T scal(0);
         for (int iCol = 0; iCol < nbCol; iCol++)
-          scal += f(iCol) * EXT(iRow, iCol);
+          AddMul(scal, f(iCol), EXT(iRow, iCol));
         if (scal < 0) {
           std::cerr << "LP: FindViolatedFacetInequality: returned inequality is "
                        "not a supporting hyperplane of cone(EXT): EXT[" << iRow
@@ -2257,7 +2257,7 @@ FindViolatedFacetInequality(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
       for (int j = 0; j < k; j++) {
         T s(0);
         for (int iCol = 0; iCol < nbCol; iCol++)
-          s += EXT(iRow, iCol) * NSP(j, iCol);
+          AddMul(s, EXT(iRow, iCol), NSP(j, iCol));
         M(i_M, j) = s;
       }
       i_M++;

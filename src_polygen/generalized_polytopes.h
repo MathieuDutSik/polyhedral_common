@@ -123,7 +123,7 @@ SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const 
     for (int i_ext = 0; i_ext < n_ext; i_ext++) {
       T scal(0);
       for (int i = 0; i < dim; i++) {
-        scal += FAC(i_fac, i) * EXT(i_ext, i);
+        AddMul(scal, FAC(i_fac, i), EXT(i_ext, i));
       }
       if (scal == 0) {
         f[i_ext] = 1;
@@ -645,7 +645,7 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> &gp,
         for (int i_ext1 = 0; i_ext1 < n_ext1; i_ext1++) {
           T scal(0);
           for (int i = 0; i < dim; i++) {
-            scal += EXT1(i_ext1, i) * FAC2(j_fac2, i);
+            AddMul(scal, EXT1(i_ext1, i), FAC2(j_fac2, i));
           }
           if (scal < 0) {
             return false;
@@ -879,7 +879,7 @@ bool is_contained_p_vert(SinglePolytope<T> const &p, MyVector<T> const &eEXT,
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     T scal(0);
     for (int i = 0; i < dim; i++) {
-      scal += p.FAC(i_fac, i) * eEXT(i);
+      AddMul(scal, p.FAC(i_fac, i), eEXT(i));
     }
     if (scal < 0) {
       return false;

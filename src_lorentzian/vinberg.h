@@ -1289,7 +1289,7 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot,
       T scal = 0;
       for (size_t i = 0; i < TheRank; i++) {
         int iCol = eSelect.ListColSelect[i];
-        scal += FAC(i_fac, i) * V_T(iCol);
+        AddMul(scal, FAC(i_fac, i), V_T(iCol));
       }
       if (scal > 0)
         n_plus++;

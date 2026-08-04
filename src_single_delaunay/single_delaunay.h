@@ -522,7 +522,7 @@ std::vector<MyMatrix<T>> sd_get_orbit_directions(SingleDelaunay<T,Tint> const& s
     for (int i=0; i<2; i++) {
       MyMatrix<T> QuadFunc = ZeroMatrix<T>(np1, np1);
       for (int i_dir=0; i_dir<n_dir; i_dir++) {
-        QuadFunc += NSP(i, i_dir) * basis_dir[i_dir];
+        AddMul(QuadFunc, NSP(i, i_dir), basis_dir[i_dir]);
       }
       MyVector<T> val_ext = get_ext_evals(QuadFunc);
       T min_val = val_ext.minCoeff();

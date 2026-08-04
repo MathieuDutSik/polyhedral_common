@@ -51,7 +51,7 @@ std::vector<int> get_non_redundant_from_dd(const MyMatrix<T> &M,
     for (int i_vert = 0; i_vert < n_vert; i_vert++) {
       T scal(0);
       for (int i_col = 0; i_col < n_col; i_col++) {
-        scal += EXT(i_vert, i_col) * M(i_row, i_col);
+        AddMul(scal, EXT(i_vert, i_col), M(i_row, i_col));
       }
       if (scal == 0) {
         eIncd.push_back(i_vert);

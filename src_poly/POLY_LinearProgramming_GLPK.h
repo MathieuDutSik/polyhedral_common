@@ -390,7 +390,7 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(
   }
   T TheOptimal = 0;
   for (int iVar = 0; iVar < nbVar; iVar++)
-    TheOptimal += DirectSolution(iVar) * ToBeMinimized(iVar);
+    AddMul(TheOptimal, DirectSolution(iVar), ToBeMinimized(iVar));
   CleanAtLeaving();
   return {true,           TheOptimal,        nbRow,        nbCol,
           DirectSolution, DirectSolutionExt, ColumnStatus, RowStatus};

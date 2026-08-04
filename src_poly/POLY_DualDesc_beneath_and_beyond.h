@@ -168,7 +168,7 @@ inline T facet_scal(MyMatrix<T> const &EXT, MyVector<T> const &normal,
   int nbCol = EXT.cols();
   T sum(0);
   for (int iCol = 0; iCol < nbCol; iCol++)
-    sum += normal(iCol) * EXT(iRow, iCol);
+    AddMul(sum, normal(iCol), EXT(iRow, iCol));
   return sum;
 }
 

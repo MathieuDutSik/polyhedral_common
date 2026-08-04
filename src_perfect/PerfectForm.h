@@ -444,7 +444,7 @@ bool is_bounded_self_dual(PairwiseScalarInfo<T> const& psi, std::vector<MyMatrix
   MyVector<T> ExprBasis = psi.PairwiseScalarInv * SumRay;
   MyMatrix<T> SumMat = ZeroMatrix<T>(n,n);
   for (int i_mat=0; i_mat<n_mat; i_mat++) {
-    SumMat += ExprBasis(i_mat) * ListMat[i_mat];
+    MatAddMul(SumMat, ExprBasis(i_mat), ListMat[i_mat]);
   }
 #ifdef SANITY_CHECK_POSITIVE_SEMIDEFINITE_SELF_DUAL
   if (!IsPositiveSemiDefinite(SumMat, os)) {

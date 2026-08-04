@@ -14,7 +14,7 @@ template <typename T> T sqr_estimate_maximal_determinant(MyMatrix<T> const &M) {
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T sum = 0;
     for (int iCol = 0; iCol < nbCol; iCol++)
-      sum += M(iRow, iCol) * M(iRow, iCol);
+      AddMul(sum, M(iRow, iCol), M(iRow, iCol));
     ListSqr.push_back(sum);
   }
   std::sort(ListSqr.begin(), ListSqr.end());

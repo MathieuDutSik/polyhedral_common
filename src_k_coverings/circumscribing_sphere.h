@@ -91,7 +91,7 @@ SphereFromIndependentSupport(MyMatrix<T> const &GramMat,
   MyVector<T> Center = p0;
   for (int iVect = 0; iVect < nbVect; iVect++)
     for (int i = 0; i < dim; i++)
-      Center(i) += (*optLambda)(iVect) * U(iVect, i);
+      AddMul(Center(i), (*optLambda)(iVect), U(iVect, i));
   T SquareRadius = SquaredDistance(GramMat, Center, p0);
   return CircumscribingSphere<T>{std::move(Center), std::move(SquareRadius),
                                  Support};

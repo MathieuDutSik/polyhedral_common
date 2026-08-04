@@ -94,7 +94,7 @@ IntersectionSubspaceMat(std::vector<MyMatrix<T>> const &A,
   for (int i = 0; i < dimInt; i++) {
     MyMatrix<T> uMat = ZeroMatrix<T>(n, n);
     for (int j = 0; j < kA; j++) {
-      uMat -= NSP(i, j) * A[j];
+      MatSubMul(uMat, NSP(i, j), A[j]);
     }
     result.push_back(uMat);
   }
@@ -189,7 +189,7 @@ ComputeLspace(MyMatrix<T> const &GramMat,
       MyMatrix<T> NewMat = ZeroMatrix<T>(n, n);
       int cur_dim = Lbasis.size();
       for (int j = 0; j < cur_dim; j++) {
-        NewMat += NSP(i, j) * Lbasis[j];
+        MatAddMul(NewMat, NSP(i, j), Lbasis[j]);
       }
       ProvLbasis.push_back(NewMat);
     }

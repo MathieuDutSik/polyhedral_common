@@ -600,7 +600,7 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
       int n_chg = 0;
       for (auto &eVectBasis : GraverBasis) {
         int alpha = GetAlpha(ImpVect, eVectBasis);
-        ImpVect += alpha * eVectBasis;
+        VecAddMul(ImpVect, Tint(alpha), eVectBasis);
         n_chg += alpha;
       }
       if (n_chg == 0) {
@@ -779,10 +779,10 @@ T EvaluateLineVector(std::vector<T> const &V_mat, MyVector<T> const &V) {
   for (int i = 0; i < n; i++) {
     pSum = 0;
     for (int j = i; j < n; j++) {
-      pSum += V_mat[pos] * V[j];
+      AddMul(pSum, V_mat[pos], V[j]);
       pos++;
     }
-    sum += pSum * V[i];
+    AddMul(sum, pSum, V[i]);
   }
   return sum;
 }
@@ -797,10 +797,10 @@ T EvaluateLineVectorShift(std::vector<T> const &V_mat, MyVector<T> const &V,
   for (int i = shift; i < n; i++) {
     pSum = 0;
     for (int j = i; j < n; j++) {
-      pSum += V_mat[pos] * V[j];
+      AddMul(pSum, V_mat[pos], V[j]);
       pos++;
     }
-    sum += pSum * V[i];
+    AddMul(sum, pSum, V[i]);
   }
   return sum;
 }

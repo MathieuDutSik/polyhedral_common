@@ -231,7 +231,7 @@ compute_free_vectors(MyMatrix<T> const &GramMat,
             for (int d = 0; d < dimNSP; d++) {
               Tint scal(0);
               for (int c = 0; c < n; c++) {
-                scal += NSP(d, c) * ListVectRed[iVect](c);
+                AddMul(scal, NSP(d, c), ListVectRed[iVect](c));
               }
               if (scal != 0) {
                 ortho = false;

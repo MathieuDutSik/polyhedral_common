@@ -77,7 +77,7 @@ Face ComputeFaceLpSolution(MyMatrix<T> const &EXT, LpSolution<T> const &eSol) {
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T eSum = EXT(iRow, 0);
     for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-      eSum += DirectSolution(iCol) * EXT(iRow, iCol + 1);
+      AddMul(eSum, DirectSolution(iCol), EXT(iRow, iCol + 1));
     }
 #ifdef SANITY_CHECK_LINEAR_PROGRAMMING_FUND
     if (eSum < 0) {
@@ -122,9 +122,9 @@ bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T scal = DualSolution(iRow);
     for (int iCol = 0; iCol < nbCol - 1; iCol++) {
-      V(iCol) += scal * EXT(iRow, iCol + 1);
+      AddMul(V(iCol), scal, EXT(iRow, iCol + 1));
     }
-    objDual += scal * EXT(iRow, 0);
+    AddMul(objDual, scal, EXT(iRow, 0));
   }
   for (int iCol = 0; iCol < nbCol - 1; iCol++) {
     if (V(iCol) != 0) {
@@ -173,7 +173,7 @@ bool IsVertexOfPolyhedron(MyMatrix<T> const &ListIneq, MyVector<T> const &eVect)
   for (int r = 0; r < ListIneq.rows(); r++) {
     T val = ListIneq(r, 0);
     for (int i = 0; i < dim; i++)
-      val += ListIneq(r, i + 1) * eVect(i);
+      AddMul(val, ListIneq(r, i + 1), eVect(i));
     if (val == 0) {
       MyVector<T> grad(dim);
       for (int i = 0; i < dim; i++)

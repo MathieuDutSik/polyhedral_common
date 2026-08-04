@@ -71,7 +71,7 @@ public:
     MyVector<T> const &DirectSolution = *eSol.DirectSolution;
     MyMatrix<T> TrySuperMat = ZeroMatrix<T>(n, n);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      TrySuperMat += DirectSolution(i_mat) * ListMat[i_mat];
+      MatAddMul(TrySuperMat, DirectSolution(i_mat), ListMat[i_mat]);
     }
     if (IsPositiveDefinite(TrySuperMat, os)) {
       std::optional<MyMatrix<T>> reply = TrySuperMat;
@@ -208,7 +208,7 @@ GetOnePositiveSemiDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
     MyVector<T> const &DirectSolution = *eSol.DirectSolution;
     MyMatrix<T> TrySuperMat = ZeroMatrix<T>(n, n);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      TrySuperMat += DirectSolution(i_mat) * ListMat[i_mat];
+      MatAddMul(TrySuperMat, DirectSolution(i_mat), ListMat[i_mat]);
     }
     if (IsPositiveSemiDefinite(TrySuperMat, os)) {
       return TrySuperMat;

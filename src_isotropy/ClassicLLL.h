@@ -89,28 +89,29 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat,
     if (Tfield(1) < mue(k, l) * 2 || mue(k, l) * 2 < Tfield(-1)) {
       Tint q = UniversalNearestScalarInteger<Tint, Tfield>(mue(k, l));
       Tmat q_T = UniversalScalarConversion<Tmat, Tint>(q);
+      Tfield q_F = UniversalScalarConversion<Tfield, Tint>(q);
 #ifdef DEBUG_CLASSIC_LLL
       os << "LLL: RED, before oper q=" << q << "\n";
       WriteMatrix(os, gram);
 #endif
-      gram(k, k) -= q_T * gram(k, l);
+      SubMul(gram(k, k), q_T, gram(k, l));
       for (int i = r + 1; i <= l; i++) {
-        gram(k, i) -= q_T * gram(l, i);
+        SubMul(gram(k, i), q_T, gram(l, i));
       }
       for (int i = l + 1; i <= k; i++) {
-        gram(k, i) -= q_T * gram(i, l);
+        SubMul(gram(k, i), q_T, gram(i, l));
       }
       for (int i = k + 1; i < n; i++) {
-        gram(i, k) -= q_T * gram(i, l);
+        SubMul(gram(i, k), q_T, gram(i, l));
       }
 #ifdef DEBUG_CLASSIC_LLL
       os << "LLL: After gram Oper\n";
       WriteMatrix(os, gram);
 #endif
-      mue(k, l) = mue(k, l) - q_T;
+      mue(k, l) = mue(k, l) - q_F;
       for (int i = r + 1; i <= l - 1; i++)
-        mue(k, i) -= q_T * mue(l, i);
-      H.row(k) -= q * H.row(l);
+        SubMul(mue(k, i), q_F, mue(l, i));
+      RowSubMul(H, k, q, l);
     }
   };
   Tfield y = Tfield(99) / Tfield(100);
@@ -164,9 +165,9 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat,
       for (int j = r + 1; j <= k - 1; j++) {
         ak(j) = UniversalScalarConversion<Tfield, Tmat>(gram(k, j));
         for (int i = r + 1; i <= j - 1; i++)
-          ak(j) -= mue(j, i) * ak(i);
+          SubMul(ak(j), mue(j, i), ak(i));
         mue(k, j) = ak(j) / B(j);
-        B(k) -= mue(k, j) * ak(j);
+        SubMul(B(k), mue(k, j), ak(j));
       }
     }
     RED(k - 1);

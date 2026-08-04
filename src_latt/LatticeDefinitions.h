@@ -151,7 +151,7 @@ void EnumerateOrbitPrimitiveVector(
     for (int i = 0; i < dim; i++) {
       int sum = 0;
       for (int j = 0; j < dim; j++)
-        sum += M(j, i) * V[j];
+        AddMul(sum, M(j, i), V[j]);
       int res = Canonicalization(sum);
       Vret[i] = res;
     }

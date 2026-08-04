@@ -142,7 +142,7 @@ dual2nd determinantSymMat_function(int const &n,
       int idx = MatRev(i, j);
       Aval *= Acoeff[idx];
     }
-    RetVal += eProd * Aval;
+    AddMul(RetVal, eProd, Aval);
   } while (std::next_permutation(eVect.begin(), eVect.end()));
   return RetVal;
 }
