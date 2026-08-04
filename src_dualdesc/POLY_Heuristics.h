@@ -6,7 +6,6 @@
 #include "Basic_file.h"
 #include "Heuristic_ThompsonSampling.h"
 #include "Namelist.h"
-#include "POLY_HasPPL.h"
 #include <array>
 #include <limits>
 #include <map>
@@ -399,7 +398,7 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 // * Not all algorithm are available for all the types. For rational
 // mpq_class everything works, but for algebraic types, that will not
 // be true.
-// * Some algorithm also have external function like glrs and ppl_lcdd
+// * Some algorithm also have external function like glrs
 // which tend to be faster but there is an overhead to calling external
 // programs.
 // * The lrs algorithm is only using addition, difference and multiplication.
@@ -421,7 +420,6 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 //   the implementation internally uses the fraction-reduction variant;
 //   this is transparent to callers.
 // * "glrs": The external program glrs (only for types implementing Q)
-// * "ppl_ext": The external program ppl_lcdd (only for types implementing Q)
 // * "cdd_ext": The external program cdd (only for types implementing Q)
 // * "normaliz": he external program normaliz (only for types implementing Q)
 template <typename T>
@@ -628,12 +626,6 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   std::string s1 = " ListAnswer = \"cdd\", \"lrs\"";
   std::string s2 = " ListName = \"only_cdd\", \"only_lrs\"";
   std::string s3 = " ListDescription = \"cdd:distri1\", \"lrs:distri1\"";
-  bool test = IsPPLpossible<T>();
-  if (test) {
-    s1 += ", \"ppl_ext\"";
-    s2 += ", \"only_ppl\"";
-    s3 += ", \"ppl_ext:distri1\"";
-  }
   lstr_thompson_prior.push_back(s1);
   lstr_thompson_prior.push_back(s2);
   lstr_thompson_prior.push_back(s3);
@@ -646,11 +638,7 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   std::vector<std::string> lstr_heuristic_prior = {
       "&HEURISTIC_PRIOR", " DefaultPrior = \"noprior:10\"",
       " ListFullCond = \"delta > 30\""};
-  if (test) {
-    lstr_heuristic_prior.push_back(" ListConclusion = \"only_ppl\"");
-  } else {
-    lstr_heuristic_prior.push_back(" ListConclusion = \"only_cdd\"");
-  }
+  lstr_heuristic_prior.push_back(" ListConclusion = \"only_cdd\"");
   lstr_heuristic_prior.push_back("/");
   //
   std::vector<std::string> lstr_io = {"&IO",

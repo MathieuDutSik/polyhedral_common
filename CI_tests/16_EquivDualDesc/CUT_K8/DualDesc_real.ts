@@ -1,5 +1,5 @@
 &HEURISTIC_PRIOR
-  DefaultPrior = "state_ppl_ext"
+  DefaultPrior = "state_cdd"
   ListConclusion = "state_opts"
   ListFullCond = "delta < 17"
 /
@@ -29,7 +29,7 @@
 
 
 &THOMPSON_PRIOR
-  ListAnswer = "lrsring_pplext_cdd", "ppl_ext"
-  ListDescription = "lrs:distri1 ppl_ext:distri1 cdd:distri1", "ppl_ext:distriTriv"
-  ListName = "state_opts", "state_ppl_ext"
+  ListAnswer = "lrsring_cdd", "cdd"
+  ListDescription = "lrs:distri1 cdd:distri1", "cdd:distriTriv"
+  ListName = "state_opts", "state_cdd"
 /
