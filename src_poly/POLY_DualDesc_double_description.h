@@ -363,28 +363,47 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
           SubMul(w(j), rays[i2].val, rays[i1].coord(j));
         }
         NormalizeRayContent(w);
-        // The exact tight set, evaluated over the processed rows.
+        // The exact tight set. For a processed row k the value a_k.w =
+        // val1 (a_k.r2) - val2 (a_k.r1) is a sum of two nonnegative terms
+        // (val1 > 0, -val2 > 0, and both rays are feasible on the
+        // processed rows), so it vanishes exactly when both do: the tight
+        // set is the common tight set of the pair plus the new row, with
+        // no evaluation needed.
         Face zero(m);
-        T eSum(0);
-        boost::dynamic_bitset<>::size_type kRow = processed.find_first();
-        while (kRow != boost::dynamic_bitset<>::npos) {
-          eSum = 0;
-          for (int j = 0; j < d; j++) {
-            AddMul(eSum, EXT(kRow, j), w(j));
+        for (size_t k = 0; k < n_words; k++) {
+          uint64_t w_com = common[k];
+          while (w_com != 0) {
+            int posz = 64 * k + __builtin_ctzll(w_com);
+            w_com &= w_com - 1;
+            zero[posz] = 1;
           }
-          if (eSum == 0) {
-            zero[kRow] = 1;
-          }
-#ifdef SANITY_CHECK_DOUBLE_DESCRIPTION
-          if (eSum < 0) {
-            std::cerr << "DOUBLEDESC: The new ray is infeasible at the "
-                         "processed row "
-                      << kRow << " which contradicts its construction\n";
-            throw TerminalException{1};
-          }
-#endif
-          kRow = processed.find_next(kRow);
         }
+        zero[iRow] = 1;
+#ifdef SANITY_CHECK_DOUBLE_DESCRIPTION
+        {
+          T eSum(0);
+          boost::dynamic_bitset<>::size_type kRow = processed.find_first();
+          while (kRow != boost::dynamic_bitset<>::npos) {
+            eSum = 0;
+            for (int j = 0; j < d; j++) {
+              AddMul(eSum, EXT(kRow, j), w(j));
+            }
+            if (eSum < 0) {
+              std::cerr << "DOUBLEDESC: The new ray is infeasible at the "
+                           "processed row "
+                        << kRow << " which contradicts its construction\n";
+              throw TerminalException{1};
+            }
+            if ((eSum == 0) != (zero[kRow] == 1)) {
+              std::cerr << "DOUBLEDESC: The combinatorial tight set differs "
+                           "from the evaluated one at the processed row "
+                        << kRow << "\n";
+              throw TerminalException{1};
+            }
+            kRow = processed.find_next(kRow);
+          }
+        }
+#endif
         new_rays.push_back({std::move(w), std::move(zero), T(0)});
       }
     }

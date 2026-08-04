@@ -27,6 +27,7 @@ Add(ListRec, rec(prefix:="24cell", n_orbit:=1));
 Add(ListRec, rec(prefix:="ContactE8", n_orbit:=2));
 Add(ListRec, rec(prefix:="CUT_K7", n_orbit:=11));
 #Add(ListRec, rec(prefix:="CUT_K8", n_orbit:=147));
+#Add(ListRec, rec(prefix:="CUT_K55", n_orbit:=1282));
 
 FullTest:=function()
     local iRec, eRec, nRec, test;

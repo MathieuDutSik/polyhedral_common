@@ -1,0 +1,5 @@
+3
+1 incidence <= 54 nosplit
+2 incidence <= 70 groupsize >= 16 split
+2 incidence <= 70 groupsize < 16 nosplit
+split
