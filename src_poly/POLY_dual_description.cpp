@@ -109,7 +109,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "pd_lrs   : the pd with lrs used for checks\n";
       std::cerr << "bb       : the beneath-and-beyond method\n";
       std::cerr << "glrs     : the external program glrs\n";
-      std::cerr << "cdd_ext  : the external program cdd_ext\n";
       std::cerr << "normaliz : the external program normaliz\n";
       std::cerr << "\n";
       std::cerr << "        --- choice ---\n";

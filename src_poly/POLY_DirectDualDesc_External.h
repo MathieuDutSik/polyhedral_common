@@ -3,7 +3,7 @@
 #define SRC_POLY_POLY_DIRECTDUALDESC_EXTERNAL_H_
 
 // This file contains the code that drives the external dual-description
-// programs (glrs, lcdd_gmp, normaliz).  Each entry point writes the
+// programs (glrs, normaliz).  Each entry point writes the
 // V-representation of EXT to a temporary file, invokes the chosen external
 // binary, then parses the produced inequalities back into the requested form
 // (incidence, inequality matrix, or face+inequality pair).
@@ -190,21 +190,6 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
           iLineLimit = iLine + n_facet + 1;
         }
       }
-      iLine++;
-    }
-    check_consistency();
-  }
-  if (eCommand == "lcdd_gmp") {
-    size_t headersize = 4, iLineLimit = 0;
-    while (std::getline(is, line)) {
-      if (iLine == headersize - 1) {
-        // Determining the number of entries
-        std::vector<std::string> LStr = STRING_Split(line, " ");
-        n_facet = ParseScalar<size_t>(LStr[0]);
-        iLineLimit = headersize + n_facet;
-      }
-      if (iLine >= headersize && (iLineLimit == 0 || iLine < iLineLimit))
-        process_line();
       iLine++;
     }
     check_consistency();

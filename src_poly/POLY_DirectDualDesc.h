@@ -81,7 +81,6 @@ enum class DualDescProgram {
   pd_lrs,
   beneath_beyond,
   glrs,
-  cdd_ext,
   normaliz,
 };
 
@@ -102,8 +101,6 @@ inline std::string to_string(DualDescProgram prog) {
     return "beneath_beyond";
   case DualDescProgram::glrs:
     return "glrs";
-  case DualDescProgram::cdd_ext:
-    return "cdd_ext";
   case DualDescProgram::normaliz:
     return "normaliz";
   }
@@ -127,8 +124,6 @@ dual_desc_program_from_string_opt(std::string const &prog) {
     return DualDescProgram::beneath_beyond;
   if (prog == "glrs")
     return DualDescProgram::glrs;
-  if (prog == "cdd_ext")
-    return DualDescProgram::cdd_ext;
   if (prog == "normaliz")
     return DualDescProgram::normaliz;
   return {};
@@ -164,7 +159,6 @@ template <typename T> bool is_method_supported(DualDescProgram prog) {
     // Applies to the field or ring case.
     return true;
   case DualDescProgram::glrs:
-  case DualDescProgram::cdd_ext:
   case DualDescProgram::normaliz:
     // The external programs are available only for rational types.
 #ifndef WASM_PLATFORM
@@ -229,15 +223,12 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     // applicable to the field or ring case
     return POLY_DualDescription_BeneathBeyondIncidence(EXT, os);
   case DualDescProgram::glrs:
-  case DualDescProgram::cdd_ext:
   case DualDescProgram::normaliz:
     // The external programs are available only for rational types
 #ifndef WASM_PLATFORM
     if constexpr (is_implementation_of_Q<T>::value) {
       if (prog == DualDescProgram::glrs)
         return DualDescExternalProgramIncidence(EXT, "glrs", os);
-      if (prog == DualDescProgram::cdd_ext)
-        return DualDescExternalProgramIncidence(EXT, "lcdd_gmp", os);
       if (prog == DualDescProgram::normaliz)
         return DualDescExternalProgramIncidence(EXT, "normaliz", os);
     }
@@ -280,15 +271,12 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     // applicable to the field or ring case
     return POLY_DualDescription_BeneathBeyondInequalities(EXT, os);
   case DualDescProgram::glrs:
-  case DualDescProgram::cdd_ext:
   case DualDescProgram::normaliz:
     // The external programs are available only for rational types
 #ifndef WASM_PLATFORM
     if constexpr (is_implementation_of_Q<T>::value) {
       if (prog == DualDescProgram::glrs)
         return DualDescExternalProgramIneq(EXT, "glrs", os);
-      if (prog == DualDescProgram::cdd_ext)
-        return DualDescExternalProgramIneq(EXT, "lcdd_gmp", os);
       if (prog == DualDescProgram::normaliz)
         return DualDescExternalProgramIneq(EXT, "normaliz", os);
     }
@@ -331,15 +319,12 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     // applicable to the field or ring case
     return POLY_DualDescription_BeneathBeyondFaceIneq(EXT, f_process, os);
   case DualDescProgram::glrs:
-  case DualDescProgram::cdd_ext:
   case DualDescProgram::normaliz:
     // The external programs are available only for rational types
 #ifndef WASM_PLATFORM
     if constexpr (is_implementation_of_Q<T>::value) {
       if (prog == DualDescProgram::glrs)
         return DualDescExternalProgramFaceIneq(EXT, "glrs", f_process, os);
-      if (prog == DualDescProgram::cdd_ext)
-        return DualDescExternalProgramFaceIneq(EXT, "lcdd_gmp", f_process, os);
       if (prog == DualDescProgram::normaliz)
         return DualDescExternalProgramFaceIneq(EXT, "normaliz", f_process, os);
     }

@@ -91,7 +91,6 @@ int main(int argc, char *argv[]) {
       std::cerr
           << "pd_lrs   : the primal dual technique with lrs used for test\n";
       std::cerr << "glrs     : the external program glrs\n";
-      std::cerr << "cdd_ext  : the external program cdd_ext\n";
       std::cerr << "normaliz : the external program normaliz\n";
       return -1;
     }

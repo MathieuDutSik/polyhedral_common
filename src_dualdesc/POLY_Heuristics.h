@@ -420,7 +420,6 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 //   the implementation internally uses the fraction-reduction variant;
 //   this is transparent to callers.
 // * "glrs": The external program glrs (only for types implementing Q)
-// * "cdd_ext": The external program cdd (only for types implementing Q)
 // * "normaliz": he external program normaliz (only for types implementing Q)
 template <typename T>
 TheHeuristic<T> StandardHeuristicDualDescriptionProgram() {
