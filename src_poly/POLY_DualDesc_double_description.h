@@ -290,7 +290,6 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
       zero_count[i] = rays[i].zero.count();
       boost::dynamic_bitset<>::size_type pos = rays[i].zero.find_first();
       while (pos != boost::dynamic_bitset<>::npos) {
-        row_tight[pos].push_back(i);
         zw[i * n_words + pos / 64] |= uint64_t(1) << (pos % 64);
         pos = rays[i].zero.find_next(pos);
       }
@@ -300,6 +299,26 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
         if (rays[i].val < 0) {
           Rneg.push_back(i);
         }
+      }
+    }
+    // The row lists are filled in decreasing tight-set size, so that the
+    // subset scan meets the likeliest containing rays first: the scan
+    // stops at the first hit and most examined pairs are not adjacent.
+    std::vector<int> ray_order(n_rays);
+    for (size_t i = 0; i < n_rays; i++) {
+      ray_order[i] = i;
+    }
+    std::sort(ray_order.begin(), ray_order.end(), [&](int a, int b) -> bool {
+      if (zero_count[a] != zero_count[b]) {
+        return zero_count[a] > zero_count[b];
+      }
+      return a < b;
+    });
+    for (auto &i : ray_order) {
+      boost::dynamic_bitset<>::size_type pos = rays[i].zero.find_first();
+      while (pos != boost::dynamic_bitset<>::npos) {
+        row_tight[pos].push_back(i);
+        pos = rays[i].zero.find_next(pos);
       }
     }
     std::vector<uint64_t> common(n_words);
