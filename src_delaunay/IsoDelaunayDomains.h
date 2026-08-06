@@ -924,6 +924,12 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #endif
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time_fring_full;
+  int64_t time_fring_group = 0, time_fring_stab = 0, time_fring_dualdesc = 0,
+          time_fring_flip = 0, time_fring_insert_facet = 0,
+          time_fring_onsets = 0, time_fring_reprvert = 0;
+#endif
   int n = InteriorElement.rows();
   std::vector<std::vector<Tidx>> ListPermGenList;
   std::vector<MyMatrix<T>> ListMatGens;
@@ -939,6 +945,9 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   // lazily: insertions just mark the group stale via group_dirty.
   bool group_dirty = true;
   auto StandardGroupUpdate = [&]() -> void {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_g;
+#endif
     std::vector<Telt> ListGen;
     Tidx n_act = idx_vertices - 1;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -963,6 +972,9 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
        << PermGRP.size() << "\n";
 #endif
     group_dirty = false;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    time_fring_group += time_g.eval_int64();
+#endif
   };
   auto ensure_group_updated = [&]() -> void {
     if (group_dirty) {
@@ -1381,8 +1393,14 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
       os << "ISODEL: FRING: FuncInsertFacet Linc_face2=" << Linc_face.size()
          << "\n";
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      MicrosecondTime time_o;
+#endif
       std::optional<Telt> opt = PermGRP.RepresentativeAction_OnSets(
           ListOrbitFacet_prov[iOrb].Linc_face, Linc_face);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      time_fring_onsets += time_o.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: FuncInsertFacet, after "
             "RepresentativeAction_OnSets\n";
@@ -1391,8 +1409,14 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: FRING: FuncInsertFacet, finding an equivalence\n";
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        MicrosecondTime time_rv;
+#endif
         MyMatrix<T> eBigMat = RepresentVertexPermutation(
             TotalListVerticesRed, TotalListVerticesRed, *opt);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        time_fring_reprvert += time_rv.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: FRING: FuncInsertFacet, We have eBigMat\n";
 #endif
@@ -1441,10 +1465,16 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
     for (size_t iOrb = nOrbStart; iOrb < nOrb; iOrb++) {
       Face const &Linc_face = ListOrbitFacet_prov[iOrb].Linc_face;
       std::vector<Tidx> const &Linc = ListOrbitFacet_prov[iOrb].Linc;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      MicrosecondTime time_s;
+#endif
       Tgroup Stab = PermGRP.Stabilizer_OnSets(Linc_face);
       Tgroup TheStabFace = ReducedGroupActionFace(Stab, Linc_face);
       Tgroup TheStabVect = ReducedGroupActionVect(Stab, Linc);
       ListOrbitFacet[iOrb].TheStab = TheStabVect;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      time_fring_stab += time_s.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: iOrb=" << iOrb << "\n";
       os << "ISODEL: FRING: |Linc_face|=" << Linc_face.size() << " / "
@@ -1465,7 +1495,13 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
       int idx_drop = get_idx_drop(ListOrbitFacet_prov[iOrb].eFac);
       MyMatrix<T> EXT2 =
           SelectRowDropColumnFace(TotalListVertices, Linc_face, idx_drop);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      MicrosecondTime time_d;
+#endif
       vectface vf = DualDescriptionRecordFullDim(EXT2, TheStabFace, rddo);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      time_fring_dualdesc += time_d.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: Second while |vf|=" << vf.size()
          << " |TheStabFace|=" << TheStabFace.size() << " |EXT2|=" << EXT2.rows()
@@ -1484,6 +1520,9 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
            << EXT2.cols() << " |eFace|=" << eFace.size() << " / "
            << eFace.count() << "\n";
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        MicrosecondTime time_fl;
+#endif
         Face eInc = frame.FlipFace(eFace);
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
         CheckFacetInequality(TotalListVertices, eInc,
@@ -1494,10 +1533,19 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
            << eInc.count() << "\n";
 #endif
         MyVector<T> eFac = solver_tlv.GetPositiveKernelVector(eInc);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        time_fring_flip += time_fl.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: FRING: We have eFac\n";
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        MicrosecondTime time_if;
+#endif
         Delaunay_AdjO<T> eAdj = FuncInsertFacet(eFac);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        time_fring_insert_facet += time_if.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: FRING: We have eAdj\n";
 #endif
@@ -1523,6 +1571,17 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FRING: we have ListOrbitFacet\n";
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: FRING: group_update|=" << time_fring_group << "\n";
+  os << "|ISODEL: FRING: stabilizer_onsets|=" << time_fring_stab << "\n";
+  os << "|ISODEL: FRING: dualdesc|=" << time_fring_dualdesc << "\n";
+  os << "|ISODEL: FRING: flip_kernel|=" << time_fring_flip << "\n";
+  os << "|ISODEL: FRING: insert_facet|=" << time_fring_insert_facet << "\n";
+  os << "|ISODEL: FRING: insert_facet_onsets|=" << time_fring_onsets << "\n";
+  os << "|ISODEL: FRING: insert_facet_reprvert|=" << time_fring_reprvert
+     << "\n";
+  os << "|ISODEL: FRING: full|=" << time_fring_full << "\n";
+#endif
   return {ListOrbitFacet, eIso};
 }
 
@@ -1541,6 +1600,11 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
   std::ostream &os = rddo.os;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FLT: FlippingLtype, begin\n";
+#endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time_flt_full;
+  int64_t time_flt_repart = 0, time_flt_onsets = 0, time_flt_bigmat = 0,
+          time_flt_vipc = 0, time_flt_ineq = 0;
 #endif
   using Tgr = GraphListAdj;
   using Telt = typename Tgroup::Telt;
@@ -1597,9 +1661,15 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
   int iInfo = 0;
   for (auto &eConn : ListGroupMelt) {
     size_t eIdx = eConn[0];
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_r;
+#endif
     FullRepart<T, Tgroup> fr = FindRepartitionningInfoNextGeneration(
         eIdx, ListOrbitDelaunay, ListInformationsOneFlipping, InteriorElement,
         rddo);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    time_flt_repart += time_r.eval_int64();
+#endif
     int n_facet = fr.cells.size();
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FLT: iInfo=" << iInfo << " |eConn|=" << eConn.size()
@@ -1711,10 +1781,22 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
                              "get_matching_listinfo EXT eAdj.eInc");
       }
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      MicrosecondTime time_o;
+#endif
       std::optional<Telt> opt =
           TheStab.RepresentativeAction_OnSets(eAdj.eInc, eInc);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      time_flt_onsets += time_o.eval_int64();
+#endif
       if (opt) {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        MicrosecondTime time_b;
+#endif
         MyMatrix<T> eBigMat = get_bigmat(*opt);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        time_flt_bigmat += time_b.eval_int64();
+#endif
         return {eAdj, eBigMat};
       }
     }
@@ -1731,11 +1813,23 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
     CheckFacetInequality(EXT, eInc, "get_matching_old_tessel EXT eInc");
 #endif
     for (auto &eAdj : ListOrbitDelaunay.l_dels[iDelaunayOld].ListAdj) {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      MicrosecondTime time_o;
+#endif
       std::optional<Telt> opt =
           ListOrbitDelaunay.l_dels[iDelaunayOld]
               .GRP.RepresentativeAction_OnSets(eAdj.eInc, eInc);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      time_flt_onsets += time_o.eval_int64();
+#endif
       if (opt) {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        MicrosecondTime time_b;
+#endif
         MyMatrix<T> eBigMat = RepresentVertexPermutation(EXT, EXT, *opt);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        time_flt_bigmat += time_b.eval_int64();
+#endif
         return {{eAdj.eInc, eAdj.eBigMat, eAdj.iOrb}, eBigMat};
       }
     }
@@ -1913,9 +2007,15 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
     std::optional<ContainerMatrix<T>> cont_opt;
     auto ensure_vipc_cont = [&]() -> void {
       if (!vipc_opt) {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        MicrosecondTime time_v;
+#endif
         vipc_opt.emplace(
             BuildVoronoiIneqPreComputeChecked<T>(l_dels[iOrb].EXT, ListGram, os));
         cont_opt.emplace(l_dels[iOrb].EXT);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        time_flt_vipc += time_v.eval_int64();
+#endif
       }
     };
     if (ds.Position == Position_old) {
@@ -1991,8 +2091,14 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
           // a new polytope, so the shared facet's inequality must be
           // recomputed against the new neighbour.
           ensure_vipc_cont();
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          MicrosecondTime time_i;
+#endif
           MyVector<T> eIneq = ComputeDelaunayAdjIneq(
               *vipc_opt, *cont_opt, l_dels[Pos].EXT, BigMat1, ListGram, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          time_flt_ineq += time_i.eval_int64();
+#endif
           Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, BigMat1, Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 2");
@@ -2068,8 +2174,14 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
           int Pos = unfold_opt(optN, "Failed to find entry for Case 3");
           MyMatrix<T> BigMat2 = TheFoundAdj4.eBigMat * TheMat4 * BigMat1;
           ensure_vipc_cont();
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          MicrosecondTime time_i;
+#endif
           MyVector<T> eIneq = ComputeDelaunayAdjIneq(
               *vipc_opt, *cont_opt, l_dels[Pos].EXT, BigMat2, ListGram, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          time_flt_ineq += time_i.eval_int64();
+#endif
           Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, BigMat2, Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 3");
@@ -2094,8 +2206,14 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
                                       ListInfo[iInfo][jFacet].eBigMat *
                                       eAdj.eBigMat;
             ensure_vipc_cont();
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+            MicrosecondTime time_i;
+#endif
             MyVector<T> eIneq = ComputeDelaunayAdjIneq(
                 *vipc_opt, *cont_opt, l_dels[Pos2].EXT, BigMat1, ListGram, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+            time_flt_ineq += time_i.eval_int64();
+#endif
             Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, BigMat1, Pos2, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 4");
@@ -2125,8 +2243,14 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
                 TheFoundAdj1.eBigMat * TheMat1 *
                 ListInfo[iInfo][jFacet].eBigMat * eAdj.eBigMat;
             ensure_vipc_cont();
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+            MicrosecondTime time_i;
+#endif
             MyVector<T> eIneq = ComputeDelaunayAdjIneq(
                 *vipc_opt, *cont_opt, l_dels[Pos].EXT, BigMat1, ListGram, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+            time_flt_ineq += time_i.eval_int64();
+#endif
             Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, BigMat1, Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 5");
@@ -2139,8 +2263,14 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
           std::optional<size_t> opt = get_symbol_position(dss);
           int Pos = unfold_opt(opt, "Case 5");
           ensure_vipc_cont();
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          MicrosecondTime time_i;
+#endif
           MyVector<T> eIneq = ComputeDelaunayAdjIneq(
               *vipc_opt, *cont_opt, l_dels[Pos].EXT, eAdj.eBigMat, ListGram, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          time_flt_ineq += time_i.eval_int64();
+#endif
           Delaunay_AdjIneqO<T, T> NAdj{eAdj.eInc, eAdj.eBigMat, Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 6");
@@ -2153,6 +2283,14 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
   }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FLT: Exiting\n";
+#endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: FLT: repartitionning|=" << time_flt_repart << "\n";
+  os << "|ISODEL: FLT: representative_onsets|=" << time_flt_onsets << "\n";
+  os << "|ISODEL: FLT: represent_vertex_perm|=" << time_flt_bigmat << "\n";
+  os << "|ISODEL: FLT: voronoi_precompute|=" << time_flt_vipc << "\n";
+  os << "|ISODEL: FLT: adj_inequality|=" << time_flt_ineq << "\n";
+  os << "|ISODEL: FLT: full|=" << time_flt_full << "\n";
 #endif
   return {std::move(l_dels)};
 }
