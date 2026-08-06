@@ -145,6 +145,56 @@ inline MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
   return UniversalMatrixConversion<T, Tfield>(RetMat_T);
 }
 
+/*
+  When many vertex permutations of one and the same vertex matrix EXT have
+  to be represented as matrices, the expensive part of
+  RepresentVertexPermutation --- the row-basis selection and the inversion
+  of the basis submatrix --- does not depend on the permutation. This
+  precompute does that work once; each represent() then only extracts the
+  image rows of the basis and does a single matrix product.
+  The referenced EXT must outlive the precompute and stay unchanged.
+ */
+template <typename T> struct RepresentVertexPermutationPreComput {
+  static_assert(is_ring_field<T>::value,
+                "RepresentVertexPermutationPreComput");
+  MyMatrix<T> const &EXT;
+  std::vector<int> ListRowSelect;
+  MyMatrix<T> M1inv;
+  RepresentVertexPermutationPreComput(MyMatrix<T> const &EXT) : EXT(EXT) {
+    SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT);
+    ListRowSelect = eSelect.ListRowSelect;
+    MyMatrix<T> M1 = SelectRow(EXT, ListRowSelect);
+    M1inv = Inverse(M1);
+  }
+  template <typename Telt> MyMatrix<T> represent(Telt const &ePerm) const {
+    size_t nbRow_s = ListRowSelect.size();
+    std::vector<int> ListRowSelectImg(nbRow_s);
+    for (size_t iRow = 0; iRow < nbRow_s; iRow++) {
+      ListRowSelectImg[iRow] = ePerm.at(ListRowSelect[iRow]);
+    }
+    MyMatrix<T> M2 = SelectRow(EXT, ListRowSelectImg);
+    MyMatrix<T> RetMat = M1inv * M2;
+#ifdef SANITY_CHECK_PERM_FCT
+    int nbRow = EXT.rows();
+    int nbCol = EXT.cols();
+    MyMatrix<T> EXT_img = EXT * RetMat;
+    MyMatrix<T> EXT_perm(nbRow, nbCol);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      int iRowImg = ePerm.at(iRow);
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        EXT_perm(iRow, iCol) = EXT(iRowImg, iCol);
+      }
+    }
+    if (!TestEqualityMatrix(EXT_img, EXT_perm)) {
+      std::cerr << "PERM: RepresentVertexPermutationPreComput: the "
+                   "represented matrix does not realize the permutation\n";
+      throw TerminalException{1};
+    }
+#endif
+    return RetMat;
+  }
+};
+
 template <typename T, typename Tidx>
 std::optional<std::vector<Tidx>>
 FindPermutationalEquivalence(MyMatrix<T> const &M1, MyMatrix<T> const &M2) {

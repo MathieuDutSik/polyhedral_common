@@ -1321,6 +1321,9 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   for (int iCol = 0; iCol < n; iCol++) {
     eIso(iCol + 1) /= nVert;
   }
+  // TotalListVerticesRed is fixed from here on and FuncInsertFacet represents
+  // many permutations of it, so the basis inversion is done once.
+  RepresentVertexPermutationPreComput<T> precomp_tlvr(TotalListVerticesRed);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FRING: we have TotalListVertices\n";
   os << "ISODEL: FRING: TotalListVertices=\n";
@@ -1428,8 +1431,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         MicrosecondTime time_rv;
 #endif
-        MyMatrix<T> eBigMat = RepresentVertexPermutation(
-            TotalListVerticesRed, TotalListVerticesRed, *opt);
+        MyMatrix<T> eBigMat = precomp_tlvr.represent(*opt);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_fring_reprvert += time_rv.eval_int64();
 #endif
@@ -1727,6 +1729,17 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
     Delaunay_AdjO<T> adj;
     MyMatrix<T> eBigMat;
   };
+  // Lazy per-orbit basis-inversion caches for representing vertex
+  // permutations: entry iDelaunay for the old tessellation orbits, entry
+  // (iInfo, iFacet) for the repartitioning facets (non-barrel only; the
+  // barrel case goes through FindTransformation_f on the extended matrix).
+  std::vector<std::optional<RepresentVertexPermutationPreComput<T>>>
+      l_precomp_old(n_dels);
+  std::vector<std::vector<std::optional<RepresentVertexPermutationPreComput<T>>>>
+      ll_precomp_info;
+  for (auto &eInfo : ListInfo) {
+    ll_precomp_info.emplace_back(eInfo.size());
+  }
   auto get_matching_listinfo = [&](int const &iInfo, int const &iFacet,
                                    Face const &eInc) -> MatchedFacet {
     MyMatrix<T> const &EXT = ListInfo[iInfo][iFacet].EXT;
@@ -1781,7 +1794,12 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
         MyMatrix<T> BigMat_T = FindTransformation_f(EXT_ext, EXT_ext, f);
         return BigMat_T;
       } else {
-        return RepresentVertexPermutation(EXT, EXT, ePerm);
+        std::optional<RepresentVertexPermutationPreComput<T>> &precomp =
+            ll_precomp_info[iInfo][iFacet];
+        if (!precomp) {
+          precomp.emplace(EXT);
+        }
+        return precomp->represent(ePerm);
       }
     };
     for (auto &eAdj : ListInfo[iInfo][iFacet].ListAdj) {
@@ -1843,7 +1861,12 @@ FlippingLtype(DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         MicrosecondTime time_b;
 #endif
-        MyMatrix<T> eBigMat = RepresentVertexPermutation(EXT, EXT, *opt);
+        std::optional<RepresentVertexPermutationPreComput<T>> &precomp =
+            l_precomp_old[iDelaunayOld];
+        if (!precomp) {
+          precomp.emplace(EXT);
+        }
+        MyMatrix<T> eBigMat = precomp->represent(*opt);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_flt_bigmat += time_b.eval_int64();
 #endif
