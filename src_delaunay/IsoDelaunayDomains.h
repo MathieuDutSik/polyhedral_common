@@ -1317,7 +1317,22 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #endif
   MyMatrix<T> TotalListVertices(nVert, n + 2);
   MyMatrix<T> TotalListVerticesRed(nVert, n + 1);
+  // The interior element is rescaled to be fraction-free: a positive
+  // rescaling of the lift does not change the regular subdivision, and with
+  // it the heights below are integral like the vertex coordinates, keeping
+  // the dual description and the facet kernels on integral data.
   std::vector<T> LineInterior = GetLineVector(InteriorElement);
+  {
+    int len = LineInterior.size();
+    MyVector<T> V_line(len);
+    for (int u = 0; u < len; u++) {
+      V_line(u) = LineInterior[u];
+    }
+    MyVector<T> V_scal = RemoveFractionVector(V_line);
+    for (int u = 0; u < len; u++) {
+      LineInterior[u] = V_scal(u);
+    }
+  }
   MyVector<T> eV(n);
   MyVector<T> eIso(n + 1);
   eIso(0) = 1;
