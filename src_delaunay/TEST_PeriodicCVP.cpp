@@ -66,6 +66,64 @@ BruteForce(MyMatrix<T> const &GramMat, PeriodicPointSet<Tint> const &pps,
   return {*min_norm, std::move(set_vect)};
 }
 
+/*
+  Direct check that the transformation maps the periodic point set into
+  itself: the images of the cosets translated over a box must all be
+  points of the set. Independent of the congruence reasoning of
+  PeriodicCosetPermutation.
+ */
+bool BruteForcePreserved(PeriodicPointSet<Tint> const &pps,
+                         PeriodicAffineTransform<Tint> const &x, int B) {
+  int n = pps.cosets_num.cols();
+  int m = pps.cosets_num.rows();
+  T N_T = UniversalScalarConversion<T, Tint>(pps.N);
+  T d_T = UniversalScalarConversion<T, Tint>(x.d);
+  std::vector<int> z(n, -B);
+  while (true) {
+    for (int k = 0; k < m; k++) {
+      // The point c_k + z, then its image under the transformation.
+      MyVector<T> p(n);
+      for (int j = 0; j < n; j++) {
+        T num = UniversalScalarConversion<T, Tint>(pps.cosets_num(k, j));
+        p(j) = num / N_T + T(z[j]);
+      }
+      MyVector<T> img(n);
+      for (int j = 0; j < n; j++) {
+        T eSum = UniversalScalarConversion<T, Tint>(x.w(j)) / d_T;
+        for (int i = 0; i < n; i++) {
+          eSum += p(i) * UniversalScalarConversion<T, Tint>(x.A(i, j));
+        }
+        img(j) = eSum;
+      }
+      // The image must have integral numerators over N and sit on a coset.
+      MyVector<Tint> u(n);
+      for (int j = 0; j < n; j++) {
+        T scaled = img(j) * N_T;
+        if (!IsInteger(scaled)) {
+          return false;
+        }
+        u(j) = UniversalScalarConversion<Tint, T>(scaled);
+      }
+      if (!GetCosetIndex(pps, u)) {
+        return false;
+      }
+    }
+    int pos = 0;
+    while (pos < n) {
+      z[pos]++;
+      if (z[pos] <= B) {
+        break;
+      }
+      z[pos] = -B;
+      pos++;
+    }
+    if (pos == n) {
+      break;
+    }
+  }
+  return true;
+}
+
 int main() {
   try {
     std::ostream &os = std::cerr;
@@ -118,6 +176,71 @@ int main() {
           }
         }
       }
+    }
+    // The coset-permutation predicate against the direct membership test.
+    // The transformations are drawn so that both answers occur.
+    {
+      int n = 2;
+      MyMatrix<T> Cosets(2, n);
+      Cosets(0, 0) = 0;
+      Cosets(0, 1) = 0;
+      Cosets(1, 0) = T(1) / T(2);
+      Cosets(1, 1) = T(1) / T(2);
+      PeriodicPointSet<Tint> pps =
+          PeriodicPointSetFromRational<Tint>(Cosets);
+      size_t n_pres = 0, n_not = 0;
+      for (int iter = 0; iter < 200; iter++) {
+        MyMatrix<Tint> A = IdentityMat<Tint>(n);
+        for (int k = 0; k < 4; k++) {
+          int i = rand_int(n), j = rand_int(n);
+          if (i == j) {
+            for (int u = 0; u < n; u++) {
+              A(i, u) = -A(i, u);
+            }
+          } else {
+            Tint c(rand_int(3) - 1);
+            for (int u = 0; u < n; u++) {
+              A(i, u) += c * A(j, u);
+            }
+          }
+        }
+        MyVector<Tint> w(n);
+        for (int j = 0; j < n; j++) {
+          w(j) = Tint(rand_int(9) - 4);
+        }
+        // Denominators 2 (the natural one) and 3 (never preserving here).
+        Tint d(iter % 3 == 0 ? 3 : 2);
+        PeriodicAffineTransform<Tint> x{A, w, d};
+        bool pred = IsPeriodicPointSetPreserved(pps, x);
+        bool bf = BruteForcePreserved(pps, x, 3);
+        check(pred == bf, "coset predicate against direct membership");
+        if (pred) {
+          n_pres++;
+        } else {
+          n_not++;
+        }
+        if (pred) {
+          // The announced permutation is the one actually realized.
+          std::vector<size_t> sigma = *PeriodicCosetPermutation(pps, x);
+          for (size_t k = 0; k < sigma.size(); k++) {
+            MyVector<Tint> img(n);
+            for (int j = 0; j < n; j++) {
+              Tint eSum = pps.N * x.w(j) / x.d;
+              for (int i = 0; i < n; i++) {
+                eSum += pps.cosets_num(k, i) * x.A(i, j);
+              }
+              img(j) = eSum;
+            }
+            std::optional<size_t> opt = GetCosetIndex(pps, img);
+            check(opt.has_value() && *opt == sigma[k],
+                  "announced coset permutation is realized");
+          }
+        }
+      }
+      check(n_pres > 0 && n_not > 0,
+            "both preserving and non preserving cases occur");
+      std::cerr << "coset predicate: preserved=" << n_pres
+                << " rejected=" << n_not << "\n";
     }
     std::cerr << "Normal termination of TEST_PeriodicCVP\n";
   } catch (TerminalException const &e) {
