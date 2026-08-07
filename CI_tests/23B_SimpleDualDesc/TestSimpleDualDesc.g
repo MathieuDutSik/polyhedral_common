@@ -2,7 +2,7 @@ Read("../common.g");
 Read("../access_points.g");
 Print("Beginning TestSimpleDualDesc\n");
 
-l_arith1:=["mpq_class", "safe_rational", "cpp_rational", "mpq_rational"];
+l_arith1:=["mpq_class", "cpp_rational", "mpq_rational"];
 l_arith2:=["mpq_class", "cpp_rational", "mpq_rational"];
 l_arith3:=["mpq_class"];
 # The integer ring arithmetic exercises the full ring computation

@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "IsoDelaunayDomains.h"
 #include "Permutation.h"
@@ -72,15 +71,10 @@ void process_C(FullNamelist const &eFull, int max_s, int n_try,
     using Tint = boost::multiprecision::cpp_int;
     return process_A<T, Tint>(eFull, max_s, n_try, n_walk_steps, max_iter);
   }
-  if (arithmetic == "safe") {
-    using T = Rational<SafeInt64>;
-    using Tint = SafeInt64;
-    return process_A<T, Tint>(eFull, max_s, n_try, n_walk_steps, max_iter);
-  }
   std::cerr << "LATT_LookForFullRankRayDomain: Failed to find a matching "
                "entry for arithmetic="
             << arithmetic << "\n";
-  std::cerr << "Available types: gmp, gmp_boost, multi_boost, safe\n";
+  std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
   throw TerminalException{1};
 }
 

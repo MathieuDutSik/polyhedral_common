@@ -661,6 +661,10 @@ void pivot(lrs_dic<T> *P, int64_t bas, int64_t cob)
   A[r][s] = P->det;
   P->det = Ars;
   storesign(P->det, globals::POS);
+  // Deferred overflow check (no-op except for TryInt64-like types): a wrapped
+  // value never survives past the pivot that produced it. The divisions above
+  // guard a garbage divisor internally, so nothing traps in between.
+  terminate_in_arithmetic_error<T>();
 }
 
 template <typename T>
@@ -1865,6 +1869,25 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
       MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
       AssignMatrixRow(EXTring, iRow, eRow3);
     }
+    // Attempt over TryInt64 first: machine-integer pivoting with the deferred
+    // overflow checks in pivot(). On overflow the partial output is discarded
+    // and the enumeration reruns over the exact ring.
+    if constexpr (use_try_int64<Tring>::value) {
+      try {
+        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64(EXTring);
+        auto f_facet_try = [&](lrs_dic<TryInt64> *P, lrs_dat<TryInt64> *Q,
+                               int const &col,
+                               [[maybe_unused]] TryInt64 *out) -> void {
+          set_face(P, Q, col, face);
+          ListIncd.push_back(face);
+        };
+        Kernel_DualDescription(EXTtry, f_facet_try);
+        terminate_in_arithmetic_error<TryInt64>();
+        return ListIncd;
+      } catch (TryIntException const &) {
+        ListIncd = vectface(nbRow);
+      }
+    }
     auto f_facet = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
                        [[maybe_unused]] Tring *out) -> void {
       set_face(P, Q, col, face);
@@ -1872,6 +1895,22 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
     };
     Kernel_DualDescription(EXTring, f_facet);
   } else {
+    if constexpr (use_try_int64<T>::value) {
+      try {
+        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64(EXTwork);
+        auto f_facet_try = [&](lrs_dic<TryInt64> *P, lrs_dat<TryInt64> *Q,
+                               int const &col,
+                               [[maybe_unused]] TryInt64 *out) -> void {
+          set_face(P, Q, col, face);
+          ListIncd.push_back(face);
+        };
+        Kernel_DualDescription(EXTtry, f_facet_try);
+        terminate_in_arithmetic_error<TryInt64>();
+        return ListIncd;
+      } catch (TryIntException const &) {
+        ListIncd = vectface(nbRow);
+      }
+    }
     auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
                        [[maybe_unused]] T *out) -> void {
       set_face(P, Q, col, face);
@@ -1900,6 +1939,25 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
       MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
       AssignMatrixRow(EXTring, iRow, eRow3);
     }
+    // Attempt over TryInt64 first, as in DualDescription_incd.
+    if constexpr (use_try_int64<Tring>::value) {
+      try {
+        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64(EXTring);
+        auto f_facet_try = [&]([[maybe_unused]] lrs_dic<TryInt64> *P,
+                               [[maybe_unused]] lrs_dat<TryInt64> *Q,
+                               [[maybe_unused]] int const &col,
+                               TryInt64 *out) -> void {
+          for (int i = 0; i < nbColRed; i++)
+            V(i) = ConvertFromTryInt64<T>(out[i + shift]);
+          ListVect.push_back(V);
+        };
+        Kernel_DualDescription(EXTtry, f_facet_try);
+        terminate_in_arithmetic_error<TryInt64>();
+        return MatrixFromVectorFamily(ListVect);
+      } catch (TryIntException const &) {
+        ListVect.clear();
+      }
+    }
     auto f_facet = [&]([[maybe_unused]] lrs_dic<Tring> *P,
                        [[maybe_unused]] lrs_dat<Tring> *Q,
                        [[maybe_unused]] int const &col, Tring *out) -> void {
@@ -1909,6 +1967,24 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
     };
     Kernel_DualDescription(EXTring, f_facet);
   } else {
+    if constexpr (use_try_int64<T>::value) {
+      try {
+        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64(EXTwork);
+        auto f_facet_try = [&]([[maybe_unused]] lrs_dic<TryInt64> *P,
+                               [[maybe_unused]] lrs_dat<TryInt64> *Q,
+                               [[maybe_unused]] int const &col,
+                               TryInt64 *out) -> void {
+          for (int i = 0; i < nbColRed; i++)
+            V(i) = ConvertFromTryInt64<T>(out[i + shift]);
+          ListVect.push_back(V);
+        };
+        Kernel_DualDescription(EXTtry, f_facet_try);
+        terminate_in_arithmetic_error<TryInt64>();
+        return MatrixFromVectorFamily(ListVect);
+      } catch (TryIntException const &) {
+        ListVect.clear();
+      }
+    }
     auto f_facet = [&]([[maybe_unused]] lrs_dic<T> *P,
                        [[maybe_unused]] lrs_dat<T> *Q,
                        [[maybe_unused]] int const &col, T *out) -> void {

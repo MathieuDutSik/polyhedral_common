@@ -4,7 +4,6 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
-#include "NumberTheorySafeInt.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "Zp_action.h"
@@ -50,10 +49,6 @@ void process(std::string const &arith,
              std::string const &OutFormat, std::ostream &os_out) {
   if (arith == "mpz_class") {
     using T = mpz_class;
-    return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
-  }
-  if (arith == "safe_integer") {
-    using T = SafeInt64;
     return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
   }
   if (arith == "mpz_int") {

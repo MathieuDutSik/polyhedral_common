@@ -1609,7 +1609,6 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
 The numerical type being used for the computation. Possible values:\n\
 rational: the rational type, what you want in 99.999\% of cases\n\
 integer: the integer ring, the whole computation runs division free\n\
-safe_rational: The safe rational type. Based on int64_t but failing gracefully\n\
 Qsqrt5: coordinates in the field Q(sqrt(5))\n\
 Qsqrt2: coordinates in the field Q(sqrt(2))\n\
 RealAlgebraic=FileDesc: coordinate in the real algebraic field whose description\n\
@@ -1860,8 +1859,7 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
 std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   std::string const &NumericalType = BlockDATA.get_string("NumericalType");
-  std::vector<std::string> Ltype{"integer",      "safe_integer",
-                                 "safe_rational", "rational",
+  std::vector<std::string> Ltype{"integer",      "rational",
                                  "cpp_rational", "mpq_rational",
                                  "Qsqrt2",       "Qsqrt3",
                                  "Qsqrt5"};

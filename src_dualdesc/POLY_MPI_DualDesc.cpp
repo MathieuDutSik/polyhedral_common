@@ -6,7 +6,6 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "POLY_RecursiveDualDesc_MPI.h"
@@ -72,10 +71,6 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     std::string NumericalType = GetNumericalType(eFull);
     auto process = [&]() -> void {
-      if (NumericalType == "safe_rational") {
-        using T = Rational<SafeInt64>;
-        return Process_eFull_select_type<T>(world, eFull);
-      }
       if (NumericalType == "rational") {
         using T = mpq_class;
         return Process_eFull_select_type<T>(world, eFull);

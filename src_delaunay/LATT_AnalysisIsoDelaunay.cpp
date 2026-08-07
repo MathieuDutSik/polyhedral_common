@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "IsoDelaunayDomains.h"
 #include "QuantizerLtypeExport.h"
@@ -237,16 +236,11 @@ void process_C(FullNamelist const &eFull) {
       using Tint = boost::multiprecision::cpp_int;
       return process<T, Tint>(eFull, os_out);
     }
-    if (arith == "safe") {
-      using T = Rational<SafeInt64>;
-      using Tint = SafeInt64;
-      return process<T, Tint>(eFull, os_out);
-    }
 #endif
     std::cerr << "LATT_AnalysisIsoDelaunay: Failed to find a matching type for "
                  "arithmetic="
               << arith << "\n";
-    std::cerr << "Available types: gmp, gmp_boost, multi_boost, safe\n";
+    std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
     throw TerminalException{1};
   };
   print_stderr_stdout_file(OutFile, f);

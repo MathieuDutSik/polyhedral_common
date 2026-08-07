@@ -5,7 +5,6 @@
 #include "Group.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "enum_robust_covering.h"
 // clang-format on
@@ -59,11 +58,6 @@ void process_A(std::string const &arithmetic, std::string const &MatFile,
   if (arithmetic == "multi_boost") {
     using T = boost::multiprecision::cpp_rational;
     using Tint = boost::multiprecision::cpp_int;
-    return process_B<T, Tint>(MatFile, OutFormat, OutFile);
-  }
-  if (arithmetic == "safe") {
-    using T = Rational<SafeInt64>;
-    using Tint = SafeInt64;
     return process_B<T, Tint>(MatFile, OutFormat, OutFile);
   }
   std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";

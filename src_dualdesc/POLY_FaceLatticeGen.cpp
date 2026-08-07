@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
@@ -110,10 +109,6 @@ template <typename Tgroup>
 void MainFunctionFaceLattice(FullNamelist const &eFull) {
   SingleBlock const &BlockPROC = eFull.get_block("PROC");
   std::string const &arith = BlockPROC.get_string("Arithmetic");
-  if (arith == "safe_rational") {
-    using T = Rational<SafeInt64>;
-    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
-  }
   if (arith == "mpq_class") {
     using T = mpq_class;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);

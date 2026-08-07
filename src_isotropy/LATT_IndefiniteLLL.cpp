@@ -4,7 +4,6 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
-#include "NumberTheorySafeInt.h"
 #include "Indefinite_LLL.h"
 // clang-format on
 
@@ -67,11 +66,6 @@ int main(int argc, char *argv[]) {
         using Tint = mpz_class;
         return process<T, Tint>(FileI, OutFormat, os);
       }
-      if (arith == "safe") {
-        using T = Rational<SafeInt64>;
-        using Tint = SafeInt64;
-        return process<T, Tint>(FileI, OutFormat, os);
-      }
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
         using Tint = boost::multiprecision::mpz_int;
@@ -80,11 +74,6 @@ int main(int argc, char *argv[]) {
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
-        return process<T, Tint>(FileI, OutFormat, os);
-      }
-      if (arith == "safe") {
-        using T = Rational<SafeInt64>;
-        using Tint = SafeInt64;
         return process<T, Tint>(FileI, OutFormat, os);
       }
       std::cerr << "Failed to find a matching type\n";

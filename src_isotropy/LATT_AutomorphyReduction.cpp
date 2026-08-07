@@ -4,7 +4,6 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
-#include "NumberTheorySafeInt.h"
 #include "DeterminantMinimization.h"
 // clang-format on
 
@@ -72,10 +71,6 @@ int main(int argc, char *argv[]) {
         return process<T>(FileI, OutFormat, os);
       }
       /*
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
-        return process<T>(FileI, OutFormat, os);
-      }
       */
 
       /*

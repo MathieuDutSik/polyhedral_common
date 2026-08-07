@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "PolytopeEquiStab.h"
 // clang-format on
@@ -61,10 +60,6 @@ int main(int argc, char *argv[]) {
     auto f_work=[&]() -> void {
       if (arith == "mpq_class") {
         using T = mpq_class;
-        return process<T>(FileExt, OutFormat, OutFile);
-      }
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
         return process<T>(FileExt, OutFormat, OutFile);
       }
       if (arith == "mpq_rational") {

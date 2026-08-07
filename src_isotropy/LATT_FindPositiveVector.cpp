@@ -4,7 +4,6 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryGmp.h"
 #include "NumberTheoryCommon.h"
-#include "NumberTheorySafeInt.h"
 #include "Positivity.h"
 // clang-format on
 
@@ -84,12 +83,6 @@ int main(int argc, char *argv[]) {
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
-        return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
-                                os);
-      }
-      if (arith == "safe") {
-        using T = Rational<SafeInt64>;
-        using Tint = SafeInt64;
         return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
                                 os);
       }

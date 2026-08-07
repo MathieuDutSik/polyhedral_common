@@ -46,7 +46,7 @@ command line (the `arith` argument of most programs). In practice:
 
 * **Integers** (`mpz_class`, `int64_t`, ...): a plain signed integer, e.g.
   `-3`, `0`, `42`.
-* **Rationals** (`mpq_class`, `cpp_rational`, `safe_rational`, ...): either a
+* **Rationals** (`mpq_class`, `cpp_rational`, ...): either a
   plain integer, or a fraction `p/q` with no surrounding spaces, e.g. `3/4`,
   `-7/2`, `5`. The fraction is expected in lowest terms on output; on input any
   `p/q` is accepted and normalised.
@@ -156,7 +156,9 @@ Practical notes
   optional output file path; when the output path is omitted the result is
   written to standard error / standard output as documented in the usage
   message.
-* **Choosing the arithmetic.** Prefer the cheapest arithmetic that is safe for
-  your data. `safe_rational` uses machine integers and aborts cleanly on
-  overflow; `mpq_class` / `cpp_rational` are unbounded but slower. This choice
+* **Choosing the arithmetic.** Prefer an exact unbounded type: `mpq_class`
+  (GMP) or `cpp_rational` / `mpq_rational` (Boost). These are always correct,
+  and the kernels internally attempt machine-integer arithmetic first (the
+  `TryInt64` deferred-overflow path) and fall back on overflow, so there is
+  no longer a faster-but-unsafe machine-integer option to weigh. This choice
   is made per run via the `arith` argument, never hard-coded in the file.

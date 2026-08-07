@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "rational.h"
 #include "Group.h"
@@ -76,12 +75,6 @@ void compute_approx_equivalence(std::string const &arithmetic,
   if (arithmetic == "multi_boost") {
     using T = boost::multiprecision::cpp_rational;
     using Tint = boost::multiprecision::cpp_int;
-    return compute_approx_equivalence_kernel<T, Tint>(eFile1, eFile2, strTol,
-                                                      OutFormat, OutFile);
-  }
-  if (arithmetic == "safe") {
-    using T = Rational<SafeInt64>;
-    using Tint = SafeInt64;
     return compute_approx_equivalence_kernel<T, Tint>(eFile1, eFile2, strTol,
                                                       OutFormat, OutFile);
   }

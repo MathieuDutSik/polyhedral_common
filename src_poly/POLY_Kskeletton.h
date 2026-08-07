@@ -716,7 +716,7 @@ The available options are LinearProgramming, ExtremeRays or ExtremeRaysNonSimpli
     ListStringValues_doc["method_final"] = "Default: all\n\
 Available options are all and stop_nonsimplicial";
     ListStringValues_doc["Arithmetic"] = "Default: rational\n\
-Other possibilities are safe_rational, Qsqrt2, Qsqrt5 and\n\
+Other possibilities are Qsqrt2, Qsqrt5 and\n\
 RealAlgebraic=FileDesc where FileDesc is the description";
     ListIntValues_doc["LevSearch"] = "Default: -1\n\
 The level of the search. If set to -1 then the full lattice is computed";

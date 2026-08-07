@@ -3,7 +3,6 @@
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "POLY_DualDesc_lrslib.h"
@@ -193,12 +192,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr
-          << "safe_integer  : integer arithmetic based on int64_t that fails\n";
-      std::cerr << "    gracefully on overflow\n";
-      std::cerr << "safe_rational : rational arithmetic based on int64_t that "
-                   "fails\n";
-      std::cerr << "    gracefully on overflow\n";
       std::cerr << "mpz_class : integer arithmetic over GMP mpz_class\n";
       std::cerr << "mpz_int : integer arithmetic over "
                    "boost::multiprecision::mpz_int\n";
@@ -224,14 +217,6 @@ int main(int argc, char *argv[]) {
     if (argc == 5)
       eFileO = argv[4];
     auto call_lrs = [&](std::ostream &os) -> void {
-      if (arith == "safe_integer") {
-        using T = SafeInt64;
-        return process<T>(eFileI, choice, os);
-      }
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
-        return process<T>(eFileI, choice, os);
-      }
       if (arith == "mpz_class") {
         using T = mpz_class;
         return process<T>(eFileI, choice, os);

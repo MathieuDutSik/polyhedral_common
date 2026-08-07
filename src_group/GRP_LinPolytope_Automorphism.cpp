@@ -8,7 +8,6 @@
 # include "NumberTheory.h"
 #endif
 #include "NumberTheoryRealField.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "Permutation.h"
 #include "PolytopeEquiStab.h"
@@ -65,10 +64,6 @@ void full_process_B(std::string const &arith, std::string const &eFile,
 #else
   using Trat = mpq_class;
 #endif
-  if (arith == "safe_rational") {
-    using T = Rational<SafeInt64>;
-    return full_process_A<T, Tgroup>(eFile, OutFormat, os);
-  }
   if (arith == "rational") {
     using T = Trat;
     return full_process_A<T, Tgroup>(eFile, OutFormat, os);
@@ -119,8 +114,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr
-          << "safe_rational           : safe_rational arithmetic on uint64_t\n";
       std::cerr << "     that fails gracefully\n";
       std::cerr << "rational                : rational arithmetic on input\n";
       std::cerr << "Qsqrt2                  : arithmetic over the field\n";

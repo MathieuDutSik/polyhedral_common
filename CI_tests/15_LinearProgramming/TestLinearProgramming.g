@@ -2,7 +2,7 @@ Read("../common.g");
 Read("../access_points.g");
 Print("Beginning TestLinearProgramming\n");
 
-l_arith:=["mpq_class", "safe_rational", "cpp_rational", "mpq_rational"];
+l_arith:=["mpq_class", "cpp_rational", "mpq_rational"];
 
 # The linear program is: minimize ineq[1] + Sum_j ineq[j+1] x_j over
 # { x : FAC[i][1] + Sum_j FAC[i][j+1] x_j >= 0 }. The three scenarios

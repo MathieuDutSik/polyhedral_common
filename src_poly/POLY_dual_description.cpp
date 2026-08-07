@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
@@ -80,9 +79,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational          : rational arithmetic based on "
-                   "int64_t that fails\n";
-      std::cerr << "    gracefully on overflowing\n";
       std::cerr << "cpp_rational           : rational arithmetic based on "
                    "boost header library\n";
       std::cerr << "mpq_rational           : rational arithmetic based on "
@@ -91,9 +87,6 @@ int main(int argc, char *argv[]) {
                    "mpq_class\n";
       std::cerr << "mpz_class              : integer ring arithmetic over GMP "
                    "mpz_class\n";
-      std::cerr << "safe_integer           : integer arithmetic based on "
-                   "int64_t that fails\n";
-      std::cerr << "    gracefully on overflowing\n";
       std::cerr
           << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
       std::cerr
@@ -128,10 +121,6 @@ int main(int argc, char *argv[]) {
     if (argc == 6)
       eFileO = argv[5];
     auto dual_desc = [&](std::ostream &os_out) -> void {
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
-        return process<T>(eFileI, command, choice, os_out);
-      }
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(eFileI, command, choice, os_out);
@@ -146,10 +135,6 @@ int main(int argc, char *argv[]) {
       }
       if (arith == "mpz_class") {
         using T = mpz_class;
-        return process<T>(eFileI, command, choice, os_out);
-      }
-      if (arith == "safe_integer") {
-        using T = SafeInt64;
         return process<T>(eFileI, command, choice, os_out);
       }
       if (arith == "Qsqrt5") {

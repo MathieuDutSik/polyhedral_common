@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
@@ -38,8 +37,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational : rational arithmetic based on int64_t that "
-                   "fails\n";
       std::cerr << "    gracefully if overflowing\n";
       std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
       std::cerr << "mpq_rational : rational arithmetic over "
@@ -60,10 +57,6 @@ int main(int argc, char *argv[]) {
     std::string FileFAC = argv[2];
     std::string FileINEQ = argv[3];
     auto evaluation = [&]() -> void {
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
-        return full_process_type<T>(FileFAC, FileINEQ);
-      }
       if (arith == "mpq_class") {
         using T = mpq_class;
         return full_process_type<T>(FileFAC, FileINEQ);

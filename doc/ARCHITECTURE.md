@@ -149,9 +149,12 @@ Cross-cutting concerns
 
 * **Arithmetic as a template parameter.** The number type is chosen at the
   command line, never hard-coded. The same header serves machine-integer,
-  GMP, and quadratic/real-algebraic runs. Pick the cheapest type that is safe
-  for the data (`safe_rational` aborts cleanly on overflow; `mpq_class` is
-  unbounded but slower).
+  GMP, and quadratic/real-algebraic runs. The exact types (`mpq_class`,
+  `mpz_class`) are unbounded and always correct; the kernels transparently
+  attempt the hot inner computations over machine integers first (the
+  `TryInt64` deferred-overflow path) and fall back to the exact type on
+  overflow, so machine-integer speed no longer requires an unsafe type
+  choice.
 * **Symmetry.** Canonicalization and stabiliser computations (`src_group`,
   `permutalib`) let the domain solvers enumerate one representative per orbit
   instead of the full set — the difference between feasible and infeasible on

@@ -6,7 +6,6 @@
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
-#include "NumberTheorySafeInt.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "GRP_GroupFile.h"
 #include "Permutation.h"
@@ -65,10 +64,6 @@ int main(int argc, char *argv[]) {
     std::string OutFile = argv[5];
     //
     auto f = [&]() -> void {
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
-        return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
-      }
       if (arith == "rational") {
         using T = mpq_class;
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);

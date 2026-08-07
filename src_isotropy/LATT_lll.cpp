@@ -4,7 +4,6 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
-#include "NumberTheorySafeInt.h"
 #include "ClassicLLL.h"
 // clang-format on
 
@@ -43,7 +42,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "LATT_lll arithmetic [FileI]\n";
       std::cerr << "\n";
-      std::cerr << "arithmetic : The arithmetic, e.g. gmp, safe, gmp_boost, "
+      std::cerr << "arithmetic : The arithmetic, e.g. gmp, gmp_boost, "
                    "multi_boost\n";
       std::cerr << "FileI      : The Gram matrix on input\n";
       std::cerr << "OutFormat  : Possible values:\n";
@@ -72,11 +71,6 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T, Tint>(FileI, OutFormat, os);
-      }
-      if (arith == "safe") {
-        using T = Rational<SafeInt64>;
-        using Tint = SafeInt64;
         return process<T, Tint>(FileI, OutFormat, os);
       }
       if (arith == "gmp_boost") {

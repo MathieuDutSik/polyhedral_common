@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "POLY_PolytopeInt.h"
 // clang-format on
@@ -84,11 +83,6 @@ int main(int argc, char *argv[]) {
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
-        return process<T,Tint>(FileFac, method, OutFormat, OutFile);
-      }
-      if (arith == "safe") {
-        using T = Rational<SafeInt64>;
-        using Tint = SafeInt64;
         return process<T,Tint>(FileFac, method, OutFormat, OutFile);
       }
       std::cerr << "Failed to find a matching arithmetic for arith=" << arith << "\n";

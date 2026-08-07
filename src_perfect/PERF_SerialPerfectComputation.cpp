@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "perfect_complex.h"
 #include "Permutation.h"
@@ -356,11 +355,6 @@ void process_D(FullNamelist const &eFull) {
   if (arithmetic == "multi_boost") {
     using T = boost::multiprecision::cpp_rational;
     using Tint = boost::multiprecision::cpp_int;
-    return process_B<T, Tint>(eFull);
-  }
-  if (arithmetic == "safe") {
-    using T = Rational<SafeInt64>;
-    using Tint = SafeInt64;
     return process_B<T, Tint>(eFull);
   }
   std::cerr

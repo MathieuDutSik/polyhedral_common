@@ -6,7 +6,6 @@
 # include "NumberTheory.h"
 #endif
 #include "NumberTheoryRealField.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
@@ -82,9 +81,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational          : rational arithmetic based on "
-                   "int64_t that fails\n";
-      std::cerr << "    gracefully on overflowing\n";
       std::cerr << "mpq_class              : rational arithmetic over GMP "
                    "mpq_class\n";
       std::cerr << "mpq_rational           : rational arithmetic over "
@@ -115,10 +111,6 @@ int main(int argc, char *argv[]) {
       eFileO = argv[5];
     }
     auto call_lp = [&](std::ostream &os) -> void {
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
-        return process<T>(eFileFAC, eFileIneq, OutFormat, os);
-      }
       if (arith == "mpq_class") {
         using T = Trat;
         return process<T>(eFileFAC, eFileIneq, OutFormat, os);

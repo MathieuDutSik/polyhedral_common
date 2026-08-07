@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
@@ -60,11 +59,6 @@ int main(int argc, char *argv[]) {
       OutFile = argv[6];
     }
     auto f = [&](std::ostream &os_out) -> void {
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
-        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
-                                                  OutFormat, os_out);
-      }
       if (arith == "mpq_class") {
         using T = mpq_class;
         return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,

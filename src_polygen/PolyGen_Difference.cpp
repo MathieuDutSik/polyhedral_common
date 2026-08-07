@@ -3,7 +3,6 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "generalized_polytopes.h"
 // clang-format on
@@ -86,10 +85,6 @@ int main(int argc, char *argv[]) {
     auto f=[&]() -> void {
       if (arith == "mpq_class") {
         using T = mpq_class;
-        return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
-      }
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
         return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
       }
       if (arith == "mpq_rational") {

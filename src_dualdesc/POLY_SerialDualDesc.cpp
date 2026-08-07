@@ -6,7 +6,6 @@
 #include "NumberTheoryGmp.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
-#include "NumberTheorySafeInt.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -59,14 +58,6 @@ int main(int argc, char *argv[]) {
     auto process = [&]() -> void {
       if (NumericalType == "integer") {
         using T = mpz_class;
-        return Process<T>(eFull);
-      }
-      if (NumericalType == "safe_integer") {
-        using T = SafeInt64;
-        return Process<T>(eFull);
-      }
-      if (NumericalType == "safe_rational") {
-        using T = Rational<SafeInt64>;
         return Process<T>(eFull);
       }
       if (NumericalType == "rational") {

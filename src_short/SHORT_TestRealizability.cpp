@@ -2,7 +2,6 @@
 #include "Group.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheory.h"
 #include "Permutation.h"
 #include "SHORT_Realizability.h"
@@ -97,11 +96,6 @@ int main(int argc, char *argv[]) {
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
-        return test_realizability<T,Tint>(FileSHV, OutFormat, OutFile);
-      }
-      if (arith == "safe") {
-        using T = Rational<SafeInt64>;
-        using Tint = SafeInt64;
         return test_realizability<T,Tint>(FileSHV, OutFormat, OutFile);
       }
       std::cerr << "SHORT_TestRealizability failed to find mathching arothmetic\n";

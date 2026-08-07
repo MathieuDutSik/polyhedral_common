@@ -5,7 +5,6 @@
 // clang-format off
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheorySafeInt.h"
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
 # include "NumberTheoryBoostGmpInt.h"
 #else
@@ -146,11 +145,6 @@ int main(int argc, char *argv[]) {
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
-        return process<T, Tint>(choice, FileGram, FileVect, OutFormat, os);
-      }
-      if (arith == "safe") {
-        using T = Rational<SafeInt64>;
-        using Tint = SafeInt64;
         return process<T, Tint>(choice, FileGram, FileVect, OutFormat, os);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith

@@ -2,7 +2,6 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
-#include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
@@ -37,8 +36,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "safe_rational : rational arithmetic based on int64_t that "
-                   "fails\n";
       std::cerr << "   gracefully if overflowing\n";
       std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
       std::cerr << "mpq_rational : rational arithmetic over "
@@ -56,10 +53,6 @@ int main(int argc, char *argv[]) {
     std::string arith = argv[1];
     std::string eFileI = argv[2];
     auto compute_skeleton = [&](std::ostream &os_out) -> void {
-      if (arith == "safe_rational") {
-        using T = Rational<SafeInt64>;
-        return process<T>(eFileI, os_out, std::cerr);
-      }
       if (arith == "mpq_class") {
         using T = mpq_class;
         return process<T>(eFileI, os_out, std::cerr);
