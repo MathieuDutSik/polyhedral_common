@@ -151,16 +151,17 @@ inline MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
   RepresentVertexPermutation --- the row-basis selection and the inversion
   of the basis submatrix --- does not depend on the permutation. This
   precompute does that work once; each represent() then only extracts the
-  image rows of the basis and does a single matrix product.
-  The referenced EXT must outlive the precompute and stay unchanged.
+  image rows of the basis and does a single matrix product. The precompute
+  owns its copy of EXT, so callers may hand in converted temporaries.
  */
 template <typename T> struct RepresentVertexPermutationPreComput {
   static_assert(is_ring_field<T>::value,
                 "RepresentVertexPermutationPreComput");
-  MyMatrix<T> const &EXT;
+  MyMatrix<T> EXT;
   std::vector<int> ListRowSelect;
   MyMatrix<T> M1inv;
-  RepresentVertexPermutationPreComput(MyMatrix<T> const &EXT) : EXT(EXT) {
+  RepresentVertexPermutationPreComput(MyMatrix<T> EXT_inp)
+      : EXT(std::move(EXT_inp)) {
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT);
     ListRowSelect = eSelect.ListRowSelect;
     MyMatrix<T> M1 = SelectRow(EXT, ListRowSelect);
