@@ -946,6 +946,11 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tring = typename underlying_ring<T>::ring_type;
+  // The lifted repartitionning geometry is integral, so its dual
+  // descriptions run over the ring. The bank of this record only lives for
+  // this repartitionning; the facet polytopes of one repartitionning are
+  // the candidates for isomorphy anyway.
+  RecordDualDescOperation<Tring, Tgroup> rddo_ring(rddo.AllArr, rddo.os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   MicrosecondTime time_fring_full;
   int64_t time_fring_group = 0, time_fring_stab = 0, time_fring_dualdesc = 0,
@@ -1315,7 +1320,11 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FRING: nVert=" << nVert << "\n";
 #endif
-  MyMatrix<T> TotalListVertices(nVert, n + 2);
+  // The lifted vertex matrix is over the ring: the vertex coordinates are
+  // lattice points and the heights are integral thanks to the fraction-free
+  // rescaling of the interior element below. The reduced (unlifted) matrix
+  // stays over the field since it feeds the affine-transformation machinery.
+  MyMatrix<Tring> TotalListVertices(nVert, n + 2);
   MyMatrix<T> TotalListVerticesRed(nVert, n + 1);
   // The interior element is rescaled to be fraction-free: a positive
   // rescaling of the lift does not change the regular subdivision, and with
@@ -1344,11 +1353,13 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
       TotalListVerticesRed(iVert, iCol + 1) = eVert(iCol + 1);
       T const& val = eVert(iCol + 1);
       eIso(iCol + 1) += val;
-      TotalListVertices(iVert, iCol + 1) = val;
+      TotalListVertices(iVert, iCol + 1) =
+          UniversalScalarConversion<Tring, T>(val);
       eV(iCol) = val;
     }
     T Height = EvaluateLineVector(LineInterior, eV);
-    TotalListVertices(iVert, n + 1) = Height;
+    TotalListVertices(iVert, n + 1) =
+        UniversalScalarConversion<Tring, T>(Height);
   }
   for (int iCol = 0; iCol < n; iCol++) {
     eIso(iCol + 1) /= nVert;
@@ -1361,7 +1372,9 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   os << "ISODEL: FRING: TotalListVertices=\n";
   WriteMatrix(os, TotalListVertices);
   os << "ISODEL: FRING: Before testing symmetry for TotalListVertices\n";
-  if (!IsSymmetryGroupOfPolytope(TotalListVertices, PermGRP)) {
+  MyMatrix<T> TotalListVertices_T =
+      UniversalMatrixConversion<T, Tring>(TotalListVertices);
+  if (!IsSymmetryGroupOfPolytope(TotalListVertices_T, PermGRP)) {
     std::cerr << "ISODEL: FRING: PermGRP is not a symmetry group of "
                  "TotalListVertices\n";
     throw TerminalException{1};
@@ -1373,12 +1386,12 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
     throw TerminalException{1};
   }
 #endif
-  auto get_incd_status = [&](int iVert, MyVector<T> const &eFac) -> bool {
-    T eSum(0);
+  auto get_incd_status = [&](int iVert, MyVector<Tring> const &eFac) -> bool {
+    Tring eSum(0);
     for (int u = 0; u <= n + 1; u++) {
       AddMul(eSum, TotalListVertices(iVert, u), eFac(u));
     }
-    return eSum == T(0);
+    return eSum == Tring(0);
   };
   // The Linc is not ordered while the Linc_face by virtue of being built as a
   // Face has an ordered intrinsic to it.
@@ -1387,16 +1400,16 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   // incidence are broken or need to be recomputed.
   // * Converting from one ordering to another is not too expensive overall.
   struct RepartEntryProv {
-    MyVector<T> eFac;
+    MyVector<Tring> eFac;
     std::vector<Tidx> Linc;
     Face Linc_face;
   };
   std::vector<RepartEntry<T, Tgroup>> ListOrbitFacet;
   std::vector<RepartEntryProv> ListOrbitFacet_prov;
-  SubsetRankOneSolver<T> solver(TotalListVertices);
+  SubsetRankOneSolver<Tring> solver(TotalListVertices);
   for (auto &eRec : ListOrbitCenter) {
     Face Linc_face = VectorToFace(eRec.Linc, nVert);
-    MyVector<T> eFac = solver.GetPositiveKernelVector(Linc_face);
+    MyVector<Tring> eFac = solver.GetPositiveKernelVector(Linc_face);
     Tgroup TheStab;
     int8_t Position = -1;
     std::vector<Delaunay_AdjO<T>> ListAdj;
@@ -1412,7 +1425,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FRING: we have ListOrbitFacet\n";
 #endif
-  auto FuncInsertFacet = [&](MyVector<T> const &eFac) -> Delaunay_AdjO<T> {
+  auto FuncInsertFacet = [&](MyVector<Tring> const &eFac) -> Delaunay_AdjO<T> {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertFacet, step 1\n";
 #endif
@@ -1543,12 +1556,12 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
       // Depending on the nature of the facet (low, barrel, top), the idx_drop
       // can very much vary. We cannot set it to
       int idx_drop = get_idx_drop(ListOrbitFacet_prov[iOrb].eFac);
-      MyMatrix<T> EXT2 =
+      MyMatrix<Tring> EXT2 =
           SelectRowDropColumnFace(TotalListVertices, Linc_face, idx_drop);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
       MicrosecondTime time_d;
 #endif
-      vectface vf = DualDescriptionRecordFullDim(EXT2, TheStabFace, rddo);
+      vectface vf = DualDescriptionRecordFullDim(EXT2, TheStabFace, rddo_ring);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
       time_fring_dualdesc += time_d.eval_int64();
 #endif
@@ -1559,8 +1572,8 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
       CheckFacetInequality(TotalListVertices, Linc_face,
                            "FuncInsertFace TotalListVertices Linc_face");
 #endif
-      FlippingFramework<T> frame(TotalListVertices, Linc_face, os);
-      SubsetRankOneSolver<T> solver_tlv(TotalListVertices);
+      FlippingFramework<Tring> frame(TotalListVertices, Linc_face, os);
+      SubsetRankOneSolver<Tring> solver_tlv(TotalListVertices);
       for (auto &eFace : vf) {
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
         CheckFacetInequality(EXT2, eFace, "FuncInsertFace EXT2 eFace");
@@ -1582,7 +1595,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
         os << "ISODEL: After FlipFace |eInc|=" << eInc.size() << " / "
            << eInc.count() << "\n";
 #endif
-        MyVector<T> eFac = solver_tlv.GetPositiveKernelVector(eInc);
+        MyVector<Tring> eFac = solver_tlv.GetPositiveKernelVector(eInc);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_fring_flip += time_fl.eval_int64();
 #endif
