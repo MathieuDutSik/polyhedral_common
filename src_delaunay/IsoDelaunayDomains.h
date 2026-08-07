@@ -9,6 +9,7 @@
 #include "Shvec_exact.h"
 #include "Positivity.h"
 #include "LatticeDelaunay.h"
+#include "TransformTraits.h"
 #include "Tspace_General.h"
 #include "SystemNamelist.h"
 #include <string>
@@ -373,39 +374,6 @@ inline void serialize(Archive &ar, FullAdjInfo<T> &eRec,
   the whole tessellation from scratch (see the Case 1 handling in
   FlippingLtype).
  */
-/*
-  The transformations of a Delaunay tessellation are stored in a dedicated
-  type Ttransform: MyMatrix<Tring> for the lattice case (integral affine
-  matrices, avoiding the GCD canonicalizations of the field type), an
-  affine pair with denominator for the periodic case. The flipping
-  machinery computes its transformation chains over the field T and
-  crosses the storage boundary through transform_traits: from_field must
-  reject (by termination) a field matrix not representable as a Ttransform,
-  which enforces the storage invariant.
- */
-template <typename Ttransform> struct transform_traits;
-
-template <typename Tring> struct transform_traits<MyMatrix<Tring>> {
-  template <typename T>
-  static MyMatrix<Tring> from_field(MyMatrix<T> const &M) {
-    return UniversalMatrixConversion<Tring, T>(M);
-  }
-  template <typename T>
-  static MyMatrix<T> to_field(MyMatrix<Tring> const &x) {
-    return UniversalMatrixConversion<T, Tring>(x);
-  }
-};
-
-template <typename Ttransform, typename T>
-Ttransform TransformFromFieldMatrix(MyMatrix<T> const &M) {
-  return transform_traits<Ttransform>::from_field(M);
-}
-
-template <typename T, typename Ttransform>
-MyMatrix<T> TransformToFieldMatrix(Ttransform const &x) {
-  return transform_traits<Ttransform>::template to_field<T>(x);
-}
-
 template <typename T, typename Ttransform> struct Delaunay_AdjIneqO {
   Face eInc;
   Ttransform eBigMat;

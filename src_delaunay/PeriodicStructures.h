@@ -1,0 +1,266 @@
+// Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+#ifndef SRC_DELAUNAY_PERIODICSTRUCTURES_H_
+#define SRC_DELAUNAY_PERIODICSTRUCTURES_H_
+
+// clang-format off
+#include "MAT_MatrixInt.h"
+#include "TransformTraits.h"
+#include <utility>
+#include <vector>
+// clang-format on
+
+/*
+  Structures for periodic point sets Z^n + {c_1, ..., c_m} and their affine
+  transformations. The design decisions (see the iso-Delaunay work):
+  --- The cosets c_k have a common denominator N that is a feature of the
+  point set: every transformation preserving the point set permutes the
+  cosets modulo Z^n, so its translation part lies in (1/N) Z^n as well.
+  --- A transformation is x -> x A + w / d with A in GL_n(Z) and w integral.
+  Composition of two transformations with the same denominator keeps that
+  denominator, and inversion keeps it as well (the linear part inverts over
+  the integers). Therefore, as long as no reduction of w / d is attempted,
+  the denominators are stable under all the group operations: the whole
+  transformation algebra is GCD-free.
+ */
+
+#ifdef DEBUG
+#define DEBUG_PERIODIC_STRUCTURES
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_PERIODIC_STRUCTURES
+#endif
+
+template <typename Tring> struct PeriodicAffineTransform {
+  // The map is x -> x A + w / d for a row vector x.
+  MyMatrix<Tring> A;
+  MyVector<Tring> w;
+  Tring d;
+};
+
+template <typename Tring>
+bool operator==(PeriodicAffineTransform<Tring> const &x,
+                PeriodicAffineTransform<Tring> const &y) {
+  // Compared without reduction: equality of maps requires cross products
+  // since the denominators are never reduced.
+  if (!TestEqualityMatrix(x.A, y.A)) {
+    return false;
+  }
+  int n = x.w.size();
+  for (int i = 0; i < n; i++) {
+    if (x.w(i) * y.d != y.w(i) * x.d) {
+      return false;
+    }
+  }
+  return true;
+}
+
+namespace boost::serialization {
+template <class Archive, typename Tring>
+inline void serialize(Archive &ar, PeriodicAffineTransform<Tring> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("A", eRec.A);
+  ar &make_nvp("w", eRec.w);
+  ar &make_nvp("d", eRec.d);
+}
+} // namespace boost::serialization
+
+template <typename Tring>
+PeriodicAffineTransform<Tring>
+IdentityPeriodicAffineTransform(int const &n, Tring const &d) {
+  MyMatrix<Tring> A = IdentityMat<Tring>(n);
+  MyVector<Tring> w = ZeroVector<Tring>(n);
+  return {std::move(A), std::move(w), d};
+}
+
+/*
+  Composition, in the same order as the matrix product of the corresponding
+  (n+1) x (n+1) matrices: (x * M1) * M2, that is x -> x A1 A2 + (w1 A2)/d1
+  + w2/d2. When the denominators agree (the invariant of the periodic
+  setting) the common denominator is kept; otherwise the product of the
+  denominators is used, without reduction.
+ */
+template <typename Tring>
+PeriodicAffineTransform<Tring>
+operator*(PeriodicAffineTransform<Tring> const &x,
+          PeriodicAffineTransform<Tring> const &y) {
+  MyMatrix<Tring> A = x.A * y.A;
+  MyVector<Tring> w1_img = y.A.transpose() * x.w;
+  if (x.d == y.d) {
+    MyVector<Tring> w = w1_img + y.w;
+    return {std::move(A), std::move(w), x.d};
+  }
+  MyVector<Tring> w = y.d * w1_img + x.d * y.w;
+  Tring d = x.d * y.d;
+  return {std::move(A), std::move(w), std::move(d)};
+}
+
+template <typename Tring>
+PeriodicAffineTransform<Tring>
+Inverse(PeriodicAffineTransform<Tring> const &x) {
+  // A is in GL_n(Z), so the ring inversion is exact; the translation
+  // becomes -(w Ainv)/d with the denominator unchanged.
+  MyMatrix<Tring> Ainv = Inverse(x.A);
+  MyVector<Tring> w = -(Ainv.transpose() * x.w);
+  return {std::move(Ainv), std::move(w), x.d};
+}
+
+/*
+  The transform_traits bridge to the flipping machinery: the field matrix of
+  x -> x A + w/d is the (n+1) x (n+1) matrix M with M(0,0)=1, M(i,0)=0,
+  M(0,j) = w_j/d and M(i,j) = A(i,j) for 1 <= i, j <= n, acting on rows
+  (1, v).
+ */
+template <typename Tring>
+struct transform_traits<PeriodicAffineTransform<Tring>> {
+  template <typename T>
+  static PeriodicAffineTransform<Tring> from_field(MyMatrix<T> const &M) {
+    int n = M.rows() - 1;
+#ifdef SANITY_CHECK_PERIODIC_STRUCTURES
+    if (M.cols() != n + 1 || M(0, 0) != T(1)) {
+      std::cerr << "PERIODIC: from_field: M is not affine normalized\n";
+      throw TerminalException{1};
+    }
+    for (int i = 1; i <= n; i++) {
+      if (M(i, 0) != T(0)) {
+        std::cerr << "PERIODIC: from_field: nonzero first column\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    MyMatrix<Tring> A(n, n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        A(i, j) = UniversalScalarConversion<Tring, T>(M(i + 1, j + 1));
+      }
+    }
+    // The translation is scaled together with a trailing 1: the scaled
+    // vector is integral, so its first n entries are the numerators and its
+    // last entry is the common denominator, both over the ring. Scaling the
+    // translation alone would not do, since the scaling coefficient of
+    // RemoveFractionVectorPlusCoeff is itself a fraction in general.
+    MyVector<T> trans_ext(n + 1);
+    for (int j = 0; j < n; j++) {
+      trans_ext(j) = M(0, j + 1);
+    }
+    trans_ext(n) = T(1);
+    FractionVector<T> fr = RemoveFractionVectorPlusCoeff(trans_ext);
+    MyVector<Tring> w(n);
+    for (int j = 0; j < n; j++) {
+      w(j) = UniversalScalarConversion<Tring, T>(fr.TheVect(j));
+    }
+    Tring d = UniversalScalarConversion<Tring, T>(fr.TheVect(n));
+    PeriodicAffineTransform<Tring> ret{std::move(A), std::move(w),
+                                       std::move(d)};
+#ifdef SANITY_CHECK_PERIODIC_STRUCTURES
+    MyMatrix<T> M_back = to_field<T>(ret);
+    if (!TestEqualityMatrix(M_back, M)) {
+      std::cerr << "PERIODIC: from_field: round trip failed\n";
+      throw TerminalException{1};
+    }
+#endif
+    return ret;
+  }
+  template <typename T>
+  static MyMatrix<T> to_field(PeriodicAffineTransform<Tring> const &x) {
+    int n = x.A.rows();
+    MyMatrix<T> M = ZeroMatrix<T>(n + 1, n + 1);
+    M(0, 0) = T(1);
+    T d_T = UniversalScalarConversion<T, Tring>(x.d);
+    for (int j = 0; j < n; j++) {
+      T w_T = UniversalScalarConversion<T, Tring>(x.w(j));
+      M(0, j + 1) = w_T / d_T;
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        M(i + 1, j + 1) = UniversalScalarConversion<T, Tring>(x.A(i, j));
+      }
+    }
+    return M;
+  }
+};
+
+/*
+  A periodic point set Z^n + {c_1, ..., c_m}: the cosets are stored as
+  integral numerators with the common denominator N, reduced to [0, N)^n.
+ */
+template <typename Tring> struct PeriodicPointSet {
+  MyMatrix<Tring> cosets_num;
+  Tring N;
+};
+
+// Entrywise representative in [0, N)^n of a scaled point.
+template <typename Tring>
+MyVector<Tring> PeriodicVectorMod(MyVector<Tring> const &u, Tring const &N) {
+  int n = u.size();
+  MyVector<Tring> ret(n);
+  for (int i = 0; i < n; i++) {
+    ret(i) = ResInt(u(i), N);
+  }
+  return ret;
+}
+
+/*
+  Build the periodic point set from the rational coset matrix: N is the
+  common denominator of all the entries and the numerators are reduced
+  modulo N.
+ */
+template <typename Tring, typename T>
+PeriodicPointSet<Tring> PeriodicPointSetFromRational(MyMatrix<T> const &Cosets) {
+  int m = Cosets.rows();
+  int n = Cosets.cols();
+  // Same trailing-1 trick as in transform_traits::from_field: all the coset
+  // entries are scaled together with a 1, so that the scaled entries are
+  // the numerators and the scaled 1 is the common denominator N.
+  MyVector<T> V(m * n + 1);
+  for (int k = 0; k < m; k++) {
+    for (int j = 0; j < n; j++) {
+      V(k * n + j) = Cosets(k, j);
+    }
+  }
+  V(m * n) = T(1);
+  FractionVector<T> fr = RemoveFractionVectorPlusCoeff(V);
+  Tring N = UniversalScalarConversion<Tring, T>(fr.TheVect(m * n));
+#ifdef SANITY_CHECK_PERIODIC_STRUCTURES
+  if (N <= 0) {
+    std::cerr << "PERIODIC: PeriodicPointSetFromRational: N should be "
+                 "positive\n";
+    throw TerminalException{1};
+  }
+#endif
+  MyMatrix<Tring> cosets_num(m, n);
+  for (int k = 0; k < m; k++) {
+    for (int j = 0; j < n; j++) {
+      Tring val =
+          UniversalScalarConversion<Tring, T>(fr.TheVect(k * n + j));
+      cosets_num(k, j) = ResInt(val, N);
+    }
+  }
+  return {std::move(cosets_num), std::move(N)};
+}
+
+// Index of the coset matching the scaled point u modulo N, if any.
+template <typename Tring>
+std::optional<size_t> GetCosetIndex(PeriodicPointSet<Tring> const &pps,
+                                    MyVector<Tring> const &u) {
+  MyVector<Tring> u_red = PeriodicVectorMod(u, pps.N);
+  int m = pps.cosets_num.rows();
+  int n = pps.cosets_num.cols();
+  for (int k = 0; k < m; k++) {
+    bool is_match = true;
+    for (int j = 0; j < n; j++) {
+      if (pps.cosets_num(k, j) != u_red(j)) {
+        is_match = false;
+        break;
+      }
+    }
+    if (is_match) {
+      return k;
+    }
+  }
+  return {};
+}
+
+// clang-format off
+#endif  // SRC_DELAUNAY_PERIODICSTRUCTURES_H_
+// clang-format on
