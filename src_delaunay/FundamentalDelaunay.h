@@ -41,10 +41,26 @@ MyVector<T> FuncRandomDirection(int const &n, int const &siz) {
   return eVect;
 }
 
-template <typename T, typename Tint>
-std::optional<MyMatrix<Tint>> FindDelaunayPolytope_direction(CVPSolver<T, Tint> const& solver,
-                                                             MyVector<T> const& TheRandomDirection,
-                                                             std::ostream &os) {
+/*
+  The Delaunay geometry below is written against a solver rather than
+  against a fixed one: the only things it asks of Tsolver are the member
+  GramMat and the method nearest_vectors, returning the closest points of
+  the point set to a given point together with their common distance.
+
+  That is the whole of what separates the lattice case from the periodic
+  one, so both use this code: the lattice solver enumerates the closest
+  points of Z^n, the periodic one the closest points of the periodic point
+  set expressed in the coordinates scaled by its denominator, in which it
+  is a union of cosets of a sublattice of Z^n. The other operation that
+  has to move between points of the set, the local improvement by the
+  Graver moves, is already a parameter (ShvGraverBasis) and only needs to
+  be given the moves of the relevant lattice.
+ */
+template <typename T, typename Tint, typename Tsolver>
+std::optional<MyMatrix<Tint>>
+FindDelaunayPolytope_direction(Tsolver const &solver,
+                               MyVector<T> const &TheRandomDirection,
+                               std::ostream &os) {
   MyMatrix<T> const& GramMat = solver.GramMat;
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int dim = GramMat.rows();
@@ -149,9 +165,8 @@ std::optional<MyMatrix<Tint>> FindDelaunayPolytope_direction(CVPSolver<T, Tint> 
 
 
 
-template <typename T, typename Tint>
-MyMatrix<Tint> FindDelaunayPolytope(CVPSolver<T, Tint> const& solver,
-                                    std::ostream &os) {
+template <typename T, typename Tint, typename Tsolver>
+MyMatrix<Tint> FindDelaunayPolytope(Tsolver const &solver, std::ostream &os) {
   int dim = solver.GramMat.rows();
   int N = 3;
   while (true) {
@@ -464,9 +479,9 @@ public:
   }
 };
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tsolver>
 MyMatrix<Tint> FindAdjacentDelaunayPolytope(
-    CVPSolver<T, Tint> const& solver,
+    Tsolver const &solver,
     MyMatrix<Tint> const &ShvGraverBasis, MyMatrix<T> const &EXT,
     SubsetRankOneSolver<T> &ext_solver, Face const &eInc, std::ostream &os) {
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
@@ -615,8 +630,8 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
   return RetEXT;
 }
 
-template <typename T, typename Tint>
-MyMatrix<Tint> FindDelaunayPolytope_random(CVPSolver<T, Tint> const& solver,
+template <typename T, typename Tint, typename Tsolver>
+MyMatrix<Tint> FindDelaunayPolytope_random(Tsolver const &solver,
                                            MyMatrix<Tint> const &ShvGraverBasis,
                                            int const &target_ext, int max_iter,
                                            std::string method,
