@@ -184,6 +184,37 @@ Face facet_incidence(MyMatrix<T> const &EXT, MyVector<T> const &normal) {
   return f;
 }
 
+// Select a row basis of EXT. Field types (mpq, the QuadField / RealField
+// extensions) use the field row selection; ring types (mpz, TryInt64) use the
+// division-free ring selection, which needs no overlying field -- that is what
+// lets the kernel run over TryInt64. Both return a maximal independent row set
+// (EXT is full-dimensional here, so nbCol rows).
+template <typename T>
+std::vector<int> bb_row_basis(MyMatrix<T> const &EXT) {
+  if constexpr (is_ring_field<T>::value)
+    return TMat_ListRowSelect(EXT);
+  else
+    return SelectIndependentRows(EXT);
+}
+
+// Reduce a normal to a primitive representative, to keep coordinates small
+// over repeated flip combinations. For a euclidean ring (mpz, TryInt64) this
+// is the gcd content reduction done purely in ring arithmetic -- crucially
+// field-free, so the kernel runs over TryInt64 which has no overlying field.
+// For the non-euclidean field extensions (QuadField, RealField, which have no
+// gcd) it defers to ScalarCanonicalizationVector. Callers restore the inward
+// orientation afterwards, so only the primitive direction matters here.
+template <typename T>
+MyVector<T> canonicalize_normal(MyVector<T> const &raw) {
+  if constexpr (is_euclidean_domain<T>::value) {
+    MyVector<T> V = raw;
+    NormalizeVectorContent(V);
+    return V;
+  } else {
+    return ScalarCanonicalizationVector(raw);
+  }
+}
+
 // Build a facet record from an (unnormalized) inward normal: canonicalize it
 // (only to keep coordinates small over repeated flip combinations; sign is
 // restored to the orientation of `raw`, so the inward direction is untouched)
@@ -192,7 +223,7 @@ template <typename T>
 BeneathBeyondFacet<T> facet_from_normal(MyMatrix<T> const &EXT,
                                         MyVector<T> const &raw) {
   int nbCol = EXT.cols();
-  MyVector<T> normal = ScalarCanonicalizationVector(raw);
+  MyVector<T> normal = beneath_beyond::canonicalize_normal(raw);
   for (int iCol = 0; iCol < nbCol; iCol++) {
     if (raw(iCol) != 0) {
       if ((normal(iCol) > 0) != (raw(iCol) > 0))
@@ -278,7 +309,7 @@ BeneathBeyond_Kernel(MyMatrix<T> const &EXT,
 #endif
 
   // The initial simplicial cone: d = nbCol linearly independent rays.
-  std::vector<int> basis = TMat_ListRowSelect(EXT);
+  std::vector<int> basis = beneath_beyond::bb_row_basis(EXT);
 #ifdef SANITY_CHECK_BENEATH_BEYOND
   if (static_cast<int>(basis.size()) != nbCol) {
     std::cerr << "BeneathBeyond: could not extract a full-rank basis, "
@@ -310,7 +341,7 @@ BeneathBeyond_Kernel(MyMatrix<T> const &EXT,
           seed[basis[jBas]] = 1;
       std::pair<MyVector<T>, Face> pair =
           solver.GetPositiveKernelVectorAndFace(seed);
-      MyVector<T> normal = ScalarCanonicalizationVector(pair.first);
+      MyVector<T> normal = beneath_beyond::canonicalize_normal(pair.first);
       if (beneath_beyond::facet_scal(EXT, normal, basis[iBas]) < 0)
         normal = -normal;
       facets.push_back({std::move(normal), std::move(pair.second)});
@@ -447,7 +478,7 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
   }
 #endif
 
-  std::vector<int> basis = TMat_ListRowSelect(EXT);
+  std::vector<int> basis = beneath_beyond::bb_row_basis(EXT);
   Face in_basis(nbRow);
   for (auto &eRow : basis)
     in_basis[eRow] = 1;
@@ -490,7 +521,7 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
   // Canonicalize an inward normal and restore the orientation of `raw` (which
   // canonicalization may reverse for non-rational fields).
   auto canon = [&](MyVector<T> const &raw) -> MyVector<T> {
-    MyVector<T> normal = ScalarCanonicalizationVector(raw);
+    MyVector<T> normal = beneath_beyond::canonicalize_normal(raw);
     for (int iCol = 0; iCol < nbCol; iCol++)
       if (raw(iCol) != 0) {
         if ((normal(iCol) > 0) != (raw(iCol) > 0))
@@ -513,7 +544,7 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
       if (jBas != iBas)
         seed[basis[jBas]] = 1;
     MyVector<T> normal =
-        ScalarCanonicalizationVector(solver.GetPositiveKernelVector(seed));
+        beneath_beyond::canonicalize_normal(solver.GetPositiveKernelVector(seed));
     if (beneath_beyond::facet_scal(EXT, normal, basis[iBas]) < 0)
       normal = -normal;
     init.push_back(
@@ -524,6 +555,9 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
       add_edge(init[i], init[j]);
 
   for (int p = 0; p < nbRow; p++) {
+    // Deferred overflow check (no-op except for TryInt64-like types): a
+    // wrapped value never survives past the ray insertion that produced it.
+    terminate_in_arithmetic_error<T>();
     if (in_basis[p])
       continue;
     // Classify the live facets: sign of normal . p.
@@ -691,6 +725,33 @@ BeneathBeyond_run(MyMatrix<T> const &EXT, std::ostream &os) {
       MyVector<T> eRow = NonUniqueScaleToIntegerVector(GetMatrixRow(EXT, iRow));
       AssignMatrixRow(EXTring, iRow, UniversalVectorConversion<Tring, T>(eRow));
     }
+    // Attempt over TryInt64 first: the kernel is heavy ring arithmetic
+    // (scalar products, flip combinations, gcd content reduction, ring kernel
+    // vectors), so the machine-integer attempt is a large win when the
+    // coefficients fit. It runs purely over the ring -- no overlying field --
+    // thanks to the ring-based SelectIndependentRows and the ring subset
+    // solver. On overflow (terminate_in_arithmetic_error in the ray loop) it
+    // falls back to the exact ring. Facet incidences are identical regardless
+    // of arithmetic; only the primitive normals are converted back.
+    if constexpr (use_try_int64<Tring>::value) {
+      try {
+        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64<TryInt64>(EXTring);
+        std::vector<BeneathBeyondFacet<TryInt64>> try_facets =
+            beneath_beyond::BeneathBeyond_Kernel_DualGraph(EXTtry, os);
+        terminate_in_arithmetic_error<TryInt64>();
+        std::vector<BeneathBeyondFacet<T>> result;
+        result.reserve(try_facets.size());
+        for (auto &f : try_facets) {
+          int len = f.normal.size();
+          MyVector<T> normal(len);
+          for (int u = 0; u < len; u++)
+            normal(u) = ConvertFromTryInt64<T>(f.normal(u));
+          result.push_back({std::move(normal), std::move(f.incd)});
+        }
+        return result;
+      } catch (TryIntException const &) {
+      }
+    }
     std::vector<BeneathBeyondFacet<Tring>> ring_facets =
         beneath_beyond::BeneathBeyond_Kernel_DualGraph(EXTring, os);
     std::vector<BeneathBeyondFacet<T>> result;
@@ -798,7 +859,7 @@ void BeneathBeyond_TriangulationDet_core(MyMatrix<Twork> const &EXTwork,
     return DeterminantMat(M);
   };
 
-  std::vector<int> basis = TMat_ListRowSelect(EXTwork);
+  std::vector<int> basis = beneath_beyond::bb_row_basis(EXTwork);
   Face in_basis(nbRow);
   for (auto &eRow : basis)
     in_basis[eRow] = 1;

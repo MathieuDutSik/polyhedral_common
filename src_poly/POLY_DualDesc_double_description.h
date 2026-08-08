@@ -64,96 +64,11 @@
 
 namespace double_desc {
 
-// Reduce the vector by its content, an exact division that keeps the
-// entries small along the computation. The gcd is seeded at zero and
-// computed with an early exit, and is positive so that no sign flip
-// occurs. Types without a gcd (e.g. the quadratic and real field
-// extensions, which act as their own ring) are left as they are: their
-// arithmetic reduces the entries internally.
-template <typename T> void NormalizeRayContent(MyVector<T> &V) {
-  if constexpr (is_euclidean_domain<T>::value) {
-    int n = V.size();
-    T eGCD(0);
-    for (int i = 0; i < n; i++) {
-      eGCD = GcdPair(eGCD, V(i));
-      if (eGCD == 1) {
-        return;
-      }
-    }
-    if constexpr (is_totally_ordered<T>::value) {
-      if (eGCD < 0) {
-        eGCD = -eGCD;
-      }
-    }
-    if (eGCD == 0 || eGCD == 1) {
-      return;
-    }
-    for (int i = 0; i < n; i++) {
-      V(i) = V(i) / eGCD;
-    }
-  }
-}
-
-/*
-  Greedy selection of a maximal set of linearly independent rows among the
-  listed candidates, in the given order, by division-free elimination.
-  Each candidate row is reduced against the echelon rows accumulated so
-  far using cross-multiplication only; the reduced rows are content
-  normalized to keep the entries small. Usable over a ring.
- */
-template <typename T>
-std::vector<int> SelectIndependentRows(MyMatrix<T> const &M,
-                                       std::vector<int> const &candidates,
-                                       size_t const &max_rank) {
-  int nbCol = M.cols();
-  std::vector<MyVector<T>> echelon;
-  std::vector<int> pivcol;
-  std::vector<int> selected;
-  for (auto &iRow : candidates) {
-    MyVector<T> V = GetMatrixRow(M, iRow);
-    for (size_t k = 0; k < echelon.size(); k++) {
-      int c = pivcol[k];
-      if (V(c) != 0) {
-        T coef1 = echelon[k](c);
-        T coef2 = V(c);
-        for (int j = 0; j < nbCol; j++) {
-          V(j) *= coef1;
-          SubMul(V(j), coef2, echelon[k](j));
-        }
-        NormalizeRayContent(V);
-      }
-    }
-    int c_piv = -1;
-    for (int j = 0; j < nbCol; j++) {
-      if (V(j) != 0) {
-        c_piv = j;
-        break;
-      }
-    }
-    if (c_piv >= 0) {
-      echelon.push_back(V);
-      pivcol.push_back(c_piv);
-      selected.push_back(iRow);
-      if (selected.size() == max_rank) {
-        return selected;
-      }
-    }
-  }
-  return selected;
-}
-
-// Greedy selection of a maximal independent set of columns, done by the
-// division-free row selection on the transposed matrix.
-template <typename T>
-std::vector<int> SelectIndependentColumns(MyMatrix<T> const &M) {
-  MyMatrix<T> Mtr = TransposedMat(M);
-  int nbRow = Mtr.rows();
-  std::vector<int> candidates(nbRow);
-  for (int i = 0; i < nbRow; i++) {
-    candidates[i] = i;
-  }
-  return SelectIndependentRows(Mtr, candidates, nbRow);
-}
+// NormalizeVectorContent (gcd content reduction) and the ring-based
+// SelectIndependentRows / SelectIndependentColumns now live in
+// basic_common_cpp/src_matrix/MAT_MatrixFund.h so beneath-and-beyond and any
+// other ring-arithmetic caller can share them; used unqualified below. The
+// kernel's own content reduction is NormalizeVectorContent.
 
 // A ray of the intermediate cone: its coordinates, the set of processed
 // rows it is tight on, and the cached scalar product with the row being
@@ -228,7 +143,7 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
         r(k) = -r(k);
       }
     }
-    NormalizeRayContent(r);
+    NormalizeVectorContent(r);
     Face zero(m);
     for (auto &iRow : basis) {
       if (iRow != basis[j]) {
@@ -381,7 +296,7 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
           w(j) = rays[i1].val * rays[i2].coord(j);
           SubMul(w(j), rays[i2].val, rays[i1].coord(j));
         }
-        NormalizeRayContent(w);
+        NormalizeVectorContent(w);
         // The exact tight set. For a processed row k the value a_k.w =
         // val1 (a_k.r2) - val2 (a_k.r1) is a sum of two nonnegative terms
         // (val1 > 0, -val2 > 0, and both rays are feasible on the
