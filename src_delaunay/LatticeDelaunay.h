@@ -123,6 +123,23 @@ Face get_face_delaunay_shv(MyMatrix<T> const &EXT, MyMatrix<T> const &SHV) {
   return eFace;
 }
 
+// The diagonal values separating the two blocks of the extended set: 0 for
+// the vertices of the Delaunay polytope, 1 for the short vectors.
+template <typename T>
+std::vector<T> get_vdiag_delaunay_shv(MyMatrix<T> const &EXT,
+                                      MyMatrix<T> const &SHV) {
+  int nbVert = EXT.rows();
+  int nbVect = SHV.rows();
+  std::vector<T> Vdiag(nbVert + nbVect);
+  for (int iVert = 0; iVert < nbVert; iVert++) {
+    Vdiag[iVert] = T(0);
+  }
+  for (int iVect = 0; iVect < nbVect; iVect++) {
+    Vdiag[nbVert + iVect] = T(1);
+  }
+  return Vdiag;
+}
+
 template <typename T> bool is_affine_integral(MyMatrix<T> const &M) {
   int dim = M.rows() - 1;
   for (int i = 0; i < dim; i++) {
@@ -204,16 +221,28 @@ Tgroup PolytopeGen_StabilizerKernel(DataLattice<T, Tint, Tgroup> &eData,
 #endif
   using Tidx_value = int16_t;
   using Tgr = GraphListAdj;
+  using Tidx = typename Tgroup::Telt::Tidx;
+  using Tfield = typename overlying_field<T>::field_type;
   //
   // Now extending with the SHV vector set
   //
   MyVector<T> Cent = f_cent(EXT_T);
   MyMatrix<T> EXText = get_reduced_delaunay_shv(EXT_T, GramMat, SHV, Cent);
-  WeightMatrix<true, T, Tidx_value> WMat =
-    GetSimpleWeightMatrix<T, Tidx_value>(EXText, GramMat, os);
+  // The vertices and the short vectors play different roles, so they get
+  // different diagonal values: an isometry of the extended set can then
+  // not map a vertex to a short vector, which the scalar products alone do
+  // not forbid (both blocks can have the same norms, as for the cube of
+  // Z^4 whose recentered vertices and minimal vectors together form the
+  // 24-cell).
+  std::vector<MyMatrix<T>> ListMat{GramMat};
+  std::vector<T> Vdiag = get_vdiag_delaunay_shv<T>(EXT_T, SHV);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
+      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(
+          EXText, ListMat, Vdiag, os);
   Face eFace = get_face_delaunay_shv(EXT_T, SHV);
   Tgroup PreGRPisom =
-      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
+      GetStabilizerWeightMatrix<std::vector<T>, Tgr, Tgroup, Tidx_value>(WMat,
+                                                                        os);
   // The whole chain acts on the extended set (vertices then SHV vectors):
   // the isometries are first restricted to those preserving the vertex
   // block, then to those preserving the lattice, and only the final result
@@ -265,6 +294,8 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   using Telt = typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
+  using Tidx = typename Telt::Tidx;
+  using Tfield = typename overlying_field<T>::field_type;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: Begin PolytopeGen_TestEquivalence\n";
 #endif
@@ -296,12 +327,21 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   };
   MyMatrix<T> EXText1 = get_reduced_delaunay_shv(EXT1_T, GramMat, eData.SHV, Cent1);
   MyMatrix<T> EXText2 = get_reduced_delaunay_shv(EXT2_T, GramMat, eData.SHV, Cent2);
-  WeightMatrix<true, T, Tidx_value> WMat1 =
-    GetSimpleWeightMatrix<T, Tidx_value>(EXText1, GramMat, os);
-  WeightMatrix<true, T, Tidx_value> WMat2 =
-    GetSimpleWeightMatrix<T, Tidx_value>(EXText2, GramMat, os);
+  // Same separation of the vertices from the short vectors as in the
+  // stabilizer: an equivalence that mapped a vertex to a short vector would
+  // not be an equivalence of the Delaunay polytopes.
+  std::vector<MyMatrix<T>> ListMat{GramMat};
+  std::vector<T> Vdiag1 = get_vdiag_delaunay_shv<T>(EXT1_T, eData.SHV);
+  std::vector<T> Vdiag2 = get_vdiag_delaunay_shv<T>(EXT2_T, eData.SHV);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 =
+      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(
+          EXText1, ListMat, Vdiag1, os);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 =
+      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(
+          EXText2, ListMat, Vdiag2, os);
   std::optional<Telt> eRes =
-      TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2, os);
+      TestEquivalenceWeightMatrix<std::vector<T>, Telt, Tidx_value>(WMat1,
+                                                                    WMat2, os);
 #ifdef SANITY_CHECK_DELAUNAY_ENUMERATION
   // The equivalence is searched on the extended sets, so it has to map the
   // vertex block onto the vertex block for the transformation it yields to
@@ -353,10 +393,9 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: Trying other strategy\n";
 #endif
-  Tgroup GRP1 =
-      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
   Tgroup GRPisom1 =
-      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
+      GetStabilizerWeightMatrix<std::vector<T>, Tgr, Tgroup, Tidx_value>(WMat1,
+                                                                        os);
   MyMatrix<T> EXTextInt1 = RemoveFractionMatrix(EXText1);
   MyMatrix<T> EXTextInt2 = RemoveFractionMatrix(EXText2);
   std::optional<MyMatrix<T>> opt =
