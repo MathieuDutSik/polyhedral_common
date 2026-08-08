@@ -5,6 +5,7 @@
 // clang-format off
 #include "PeriodicStructures.h"
 #include "GRP_GroupFct.h"
+#include "LatticeDelaunay.h"
 #include "Shvec_exact.h"
 #include <utility>
 #include <vector>
@@ -290,6 +291,103 @@ T PeriodicNormDiff(MyMatrix<T> const &GramMat, Tint const &N,
     eDiff(j) = num / N_T - eV(j);
   }
   return EvaluationQuadForm<T, T>(GramMat, eDiff);
+}
+
+/*
+  The stabilizer of a Delaunay polytope of a periodic point set.
+
+  The scheme is the one of PolytopeGen_StabilizerKernel: the vertices,
+  recentered at the circumcenter, are extended by the short vectors, the
+  two blocks are separated by their diagonal value, and the isometries of
+  the result are computed. Two facts make the rest simpler than in the
+  lattice case:
+  --- the short vectors are required to generate Z^n, so an isometry
+  preserving that block permutes vectors generating the lattice and its
+  linear part is automatically in GL_n(Z): the integral stabilizer
+  computation of the lattice case is not needed,
+  --- the circumcenter is fixed by every symmetry of the polytope, so the
+  affine map is x -> (x - c) A + c and the translation is c - c A, which
+  lies in (1/N) Z^n with c: the precondition of the coset restriction
+  holds by construction.
+  What remains is the restriction to the transformations preserving the
+  point set, which is PeriodicCosetPreservingSubgroup.
+
+  EXT_scaled holds the numerators of the vertices over the denominator N.
+ */
+template <typename T, typename Tring, typename Tgroup>
+Tgroup PeriodicDelaunay_Stabilizer(MyMatrix<T> const &GramMat,
+                                   PeriodicPointSet<Tring> const &pps,
+                                   MyMatrix<T> const &SHV,
+                                   MyMatrix<Tring> const &EXT_scaled,
+                                   std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tidx_value = int16_t;
+  using Tgr = GraphListAdj;
+  using Tfield = typename overlying_field<T>::field_type;
+  int n = GramMat.rows();
+  int nbVert = EXT_scaled.rows();
+  T N_T = UniversalScalarConversion<T, Tring>(pps.N);
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+  // The short vectors have to generate Z^n for the linear parts to be
+  // integral without further work.
+  if (RankMat(SHV) != n || !IsIntegralMatrix(SHV) ||
+      Tring(1) != UniversalScalarConversion<Tring, T>(
+                      T(DeterminantMat(GetZbasis(SHV))))) {
+    if (RankMat(SHV) != n) {
+      std::cerr << "PERIODIC_DELAUNAY: PeriodicDelaunay_Stabilizer: the short "
+                   "vectors do not span the space\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  // The vertices in the homogeneous unscaled form used by the geometry.
+  MyMatrix<T> EXT_T(nbVert, n + 1);
+  for (int iVert = 0; iVert < nbVert; iVert++) {
+    EXT_T(iVert, 0) = T(1);
+    for (int i = 0; i < n; i++) {
+      EXT_T(iVert, i + 1) =
+          UniversalScalarConversion<T, Tring>(EXT_scaled(iVert, i)) / N_T;
+    }
+  }
+  MyVector<T> Cent = get_reduced_center(GramMat, EXT_T);
+  MyMatrix<T> EXText = get_reduced_delaunay_shv(EXT_T, GramMat, SHV, Cent);
+  std::vector<MyMatrix<T>> ListMat{GramMat};
+  std::vector<T> Vdiag = get_vdiag_delaunay_shv<T>(EXT_T, SHV);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
+      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(
+          EXText, ListMat, Vdiag, os);
+  Face eFace = get_face_delaunay_shv(EXT_T, SHV);
+  Tgroup PreGRPisom =
+      GetStabilizerWeightMatrix<std::vector<T>, Tgr, Tgroup, Tidx_value>(WMat,
+                                                                        os);
+  Tgroup GRPisomExt = PreGRPisom.Stabilizer_OnSets(eFace);
+  Tgroup GRPisom = ReducedGroupActionFace(GRPisomExt, eFace);
+  // The transformation realized by a permutation of the vertices: the
+  // linear part from the recentered vertices, the translation from the
+  // circumcenter being fixed.
+  MyMatrix<T> EXTvert(nbVert, n);
+  for (int iVert = 0; iVert < nbVert; iVert++) {
+    for (int i = 0; i < n; i++) {
+      EXTvert(iVert, i) = EXT_T(iVert, i + 1) - Cent(i);
+    }
+  }
+  auto f_trans = [&](Telt const &eElt) -> PeriodicAffineTransform<Tring> {
+    MyMatrix<T> A_T = FindTransformation<T, Telt>(EXTvert, EXTvert, eElt);
+    MyMatrix<Tring> A = UniversalMatrixConversion<Tring, T>(A_T);
+    // Translation c - c A, scaled by N so as to be integral.
+    MyVector<Tring> w(n);
+    for (int j = 0; j < n; j++) {
+      T eSum = Cent(j);
+      for (int i = 0; i < n; i++) {
+        eSum -= Cent(i) * A_T(i, j);
+      }
+      w(j) = UniversalScalarConversion<Tring, T>(eSum * N_T);
+    }
+    return {std::move(A), std::move(w), pps.N};
+  };
+  return PeriodicCosetPreservingSubgroup<Tring, Tgroup, decltype(f_trans)>(
+      pps, GRPisom, f_trans, os);
 }
 
 // clang-format off

@@ -120,6 +120,33 @@ int main() {
             "an element of the subgroup preserves the point set");
     }
     check(n_pres == 2, "exactly the two elements without g2");
+    //
+    // The stabilizer of a Delaunay polytope of the same point set for the
+    // identity form. The point set Z^2 + {(0,0), (1/2,1/2)} is the square
+    // lattice rotated and scaled, its Delaunay cells are squares, and the
+    // square of vertices (0,0), (1,0), (1/2,1/2), (1/2,-1/2) -- of
+    // numerators (0,0), (2,0), (1,1), (1,-1) over N = 2 -- has for
+    // stabilizer the dihedral group of order 8.
+    {
+      MyMatrix<T> GramMat = IdentityMat<T>(n);
+      // Short vectors generating Z^2, with both signs so that the set is
+      // preserved by the symmetries.
+      MyMatrix<T> SHV(4, n);
+      SHV(0, 0) = 1;  SHV(0, 1) = 0;
+      SHV(1, 0) = -1; SHV(1, 1) = 0;
+      SHV(2, 0) = 0;  SHV(2, 1) = 1;
+      SHV(3, 0) = 0;  SHV(3, 1) = -1;
+      MyMatrix<Tring> EXT_scaled(4, n);
+      EXT_scaled(0, 0) = 0;  EXT_scaled(0, 1) = 0;
+      EXT_scaled(1, 0) = 2;  EXT_scaled(1, 1) = 0;
+      EXT_scaled(2, 0) = 1;  EXT_scaled(2, 1) = 1;
+      EXT_scaled(3, 0) = 1;  EXT_scaled(3, 1) = -1;
+      Tgroup GRPstab =
+          PeriodicDelaunay_Stabilizer<T, Tring, Tgroup>(GramMat, pps, SHV,
+                                                        EXT_scaled, os);
+      std::cerr << "|stabilizer of the square|=" << GRPstab.size() << "\n";
+      check(GRPstab.size() == 8, "the square has a stabilizer of order 8");
+    }
     std::cerr << "Normal termination of TEST_PeriodicCosetSubgroup\n";
   } catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of TEST_PeriodicCosetSubgroup\n";
