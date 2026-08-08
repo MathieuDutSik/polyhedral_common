@@ -568,24 +568,26 @@ inline void serialize(Archive &ar, PVoronoi<T, Tint> &val,
 
 
 /*
-  The robust_m_min is defining the P-polytope.
-  This is what we are after in the end.
-  ----
-  It is a partial enumeration result.
+  Container for the pending soft convex boundaries (the "frontier" of the
+  enumeration). It is keyed, for now, by the normal vector V of the boundary.
+  This is the single seam through which the soft boundaries are inserted,
+  queried and cancelled; isolating it here is the first step towards giving
+  each soft boundary a geometric identity rather than a normal-vector one.
  */
-template <typename T, typename Tint> struct PVoronoiPart {
-  MyVector<Tint> v_long;
-  std::vector<GenericRobustM<Tint>> l_robust_m_min;
-  std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
-  std::vector<HardConvexBoundary<T>> l_hcb;
-  std::vector<ExclConvexBoundary<T>> l_ecb;
+template <typename T, typename Tint> struct SoftBoundaryStore {
   std::map<MyVector<T>, std::vector<SoftConvexBoundary<T,Tint>>> map_scb;
+  bool empty() const {
+    return map_scb.empty();
+  }
   size_t n_scb() const {
     size_t n_val = 0;
     for (auto & kv: map_scb) {
       n_val += kv.second.size();
     }
     return n_val;
+  }
+  void insert(MyVector<T> const& V, SoftConvexBoundary<T,Tint> const& scb) {
+    map_scb[V].push_back(scb);
   }
   SoftConvexBoundary<T,Tint> get_one_scb() const {
     auto iter = map_scb.begin();
@@ -676,6 +678,37 @@ template <typename T, typename Tint> struct PVoronoiPart {
   }
 };
 
+/*
+  The robust_m_min is defining the P-polytope.
+  This is what we are after in the end.
+  ----
+  It is a partial enumeration result.
+ */
+template <typename T, typename Tint> struct PVoronoiPart {
+  MyVector<Tint> v_long;
+  std::vector<GenericRobustM<Tint>> l_robust_m_min;
+  std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
+  std::vector<HardConvexBoundary<T>> l_hcb;
+  std::vector<ExclConvexBoundary<T>> l_ecb;
+  SoftBoundaryStore<T,Tint> store_scb;
+  // Thin forwarders to store_scb, preserving the existing call sites.
+  size_t n_scb() const {
+    return store_scb.n_scb();
+  }
+  SoftConvexBoundary<T,Tint> get_one_scb() const {
+    return store_scb.get_one_scb();
+  }
+  void drop_from_one_scb(SoftConvexBoundary<T,Tint> const& scb) {
+    store_scb.drop_from_one_scb(scb);
+  }
+  void insert_ecb(ExclConvexBoundary<T> const& ecb, std::ostream& os) {
+    store_scb.insert_ecb(ecb, os);
+  }
+  std::vector<SoftConvexBoundary<T,Tint>> get_l_scb() const {
+    return store_scb.get_l_scb();
+  }
+};
+
 template <typename T, typename Tint>
 std::ostream &operator<<(std::ostream &os, PVoronoiPart<T, Tint> const &pvp) {
   os << "PVoronoiPart(\n  v_long=" << pvp.v_long << "\n";
@@ -691,9 +724,10 @@ std::ostream &operator<<(std::ostream &os, PVoronoiPart<T, Tint> const &pvp) {
   for (size_t i = 0; i < pvp.l_hcb.size(); i++) {
     os << "  l_hcb[" << i << "]=" << pvp.l_hcb[i] << "\n";
   }
-  os << "  |map_scb|=" << pvp.map_scb.size() << "\n";
-  for (size_t i = 0; i < pvp.l_scb.size(); i++) {
-    os << "  l_scb[" << i << "]=" << pvp.l_scb[i] << "\n";
+  std::vector<SoftConvexBoundary<T,Tint>> l_scb = pvp.get_l_scb();
+  os << "  |l_scb|=" << l_scb.size() << "\n";
+  for (size_t i = 0; i < l_scb.size(); i++) {
+    os << "  l_scb[" << i << "]=" << l_scb[i] << "\n";
   }
   os << ")";
   return os;

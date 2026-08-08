@@ -616,7 +616,7 @@ T min_pairwise_norm(MyMatrix<T> const& EXT, MyMatrix<T> const& G) {
 template <typename T, typename Tint>
 PVoronoi<T,Tint> convert_p_voronoi_part(PVoronoiPart<T,Tint> const& pvp, std::ostream& os) {
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-  if (!pvp.map_scb.empty()) {
+  if (!pvp.store_scb.empty()) {
     std::cerr << "ROBUST: We still have soft boundaries\n";
     throw TerminalException{1};
   }
@@ -1213,7 +1213,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
     }
     std::vector<HardConvexBoundary<T>> l_hcb;
     std::vector<ExclConvexBoundary<T>> l_ecb;
-    std::map<MyVector<T>, std::vector<SoftConvexBoundary<T,Tint>>> map_scb;
+    SoftBoundaryStore<T,Tint> store_scb;
     for (size_t i_irred=0; i_irred<list_irred.size(); i_irred++) {
       ConvexBoundary<T> c_bnd = get_convex_boundary(sp, i_irred, os);
       int idx = list_irred[i_irred];
@@ -1231,7 +1231,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
         }
         else if constexpr (std::is_same_v<T2, Soft<T,Tint>>) {
           SoftConvexBoundary<T,Tint> scb{c_bnd, l_excluded_max, x.values};
-          map_scb[V].push_back(scb);
+          store_scb.insert(V, scb);
         }
       }, val);
     }
@@ -1242,7 +1242,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 6\n";
 #endif
-    ppoly = PVoronoiPart<T,Tint>{v_short, l_robust_m_min, {c_bl}, l_hcb, l_ecb, map_scb};
+    ppoly = PVoronoiPart<T,Tint>{v_short, l_robust_m_min, {c_bl}, l_hcb, l_ecb, store_scb};
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 7 TheNorm=" << TheNorm << "\n";
     os << "ROBUST: kippp, final, step 7 upper_bound=" << upper_bound << "\n";
@@ -1497,7 +1497,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
   auto f_process_entry=[&]() -> void {
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: start_fpe |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " |pvp.l_ecb|=" << pvp.l_ecb.size() << " |pvp.l_scb|=" << pvp.n_scb() << "\n";
-    for (auto & kv: pvp.map_scb) {
+    for (auto & kv: pvp.store_scb.map_scb) {
       os << "ROBUST: start_fpe soft V=" << StringVectorGAP(kv.first) << " |l_scb|=" << kv.second.size() << "\n";
     }
     for (auto & hcb: pvp.l_hcb) {
