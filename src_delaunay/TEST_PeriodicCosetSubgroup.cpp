@@ -146,6 +146,61 @@ int main() {
                                                         EXT_scaled, os);
       std::cerr << "|stabilizer of the square|=" << GRPstab.size() << "\n";
       check(GRPstab.size() == 8, "the square has a stabilizer of order 8");
+      //
+      // Equivalence. The square translated by the coset (1/2,1/2), of
+      // numerators shifted by (1,1), is another Delaunay cell of the same
+      // point set, so the two must be equivalent, and the equivalence
+      // found must preserve the point set and realize the correspondence.
+      MyMatrix<Tring> EXT_shift(4, n);
+      for (int i = 0; i < 4; i++) {
+        EXT_shift(i, 0) = EXT_scaled(i, 0) + 1;
+        EXT_shift(i, 1) = EXT_scaled(i, 1) + 1;
+      }
+      std::optional<PeriodicAffineTransform<Tring>> opt_equiv =
+          PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
+              GramMat, pps, SHV, EXT_scaled, EXT_shift, os);
+      check(opt_equiv.has_value(), "the translated square is equivalent");
+      check(IsPeriodicPointSetPreserved(pps, *opt_equiv),
+            "the equivalence preserves the point set");
+      // The equivalence maps the first vertex set onto the second.
+      {
+        MyMatrix<T> M = transform_traits<PeriodicAffineTransform<Tring>>::
+            to_field<T>(*opt_equiv);
+        std::set<MyVector<Tring>> set2;
+        for (int i = 0; i < 4; i++) {
+          set2.insert(GetMatrixRow(EXT_shift, i));
+        }
+        T N_T = UniversalScalarConversion<T, Tring>(pps.N);
+        for (int i = 0; i < 4; i++) {
+          // The image of the point, back in numerator form.
+          MyVector<Tring> img(n);
+          for (int j = 0; j < n; j++) {
+            T eSum = M(0, j + 1);
+            for (int k = 0; k < n; k++) {
+              T coord =
+                  UniversalScalarConversion<T, Tring>(EXT_scaled(i, k)) / N_T;
+              eSum += coord * M(k + 1, j + 1);
+            }
+            img(j) = UniversalScalarConversion<Tring, T>(eSum * N_T);
+          }
+          check(set2.count(img) == 1,
+                "the equivalence maps a vertex onto a vertex of the second");
+        }
+      }
+      // A square that is NOT a cell of the point set: the same square
+      // translated by (1/2, 0), whose numerators are shifted by (1,0). It
+      // is isometric to the first but its vertices are not points of the
+      // set, so no equivalence may be returned.
+      MyMatrix<Tring> EXT_bad(4, n);
+      for (int i = 0; i < 4; i++) {
+        EXT_bad(i, 0) = EXT_scaled(i, 0) + 1;
+        EXT_bad(i, 1) = EXT_scaled(i, 1);
+      }
+      std::optional<PeriodicAffineTransform<Tring>> opt_bad =
+          PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
+              GramMat, pps, SHV, EXT_scaled, EXT_bad, os);
+      check(!opt_bad.has_value(),
+            "no equivalence to a square outside the point set");
     }
     std::cerr << "Normal termination of TEST_PeriodicCosetSubgroup\n";
   } catch (TerminalException const &e) {
