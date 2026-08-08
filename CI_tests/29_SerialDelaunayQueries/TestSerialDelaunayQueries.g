@@ -364,6 +364,103 @@ ListRecEnumeration:=function()
 end;
 
 # --------------------------------------------------------------------------- #
+# Delaunay enumeration with a non-empty set of short vectors (SVRfile).
+#
+# The short vectors are appended to the vertices of a Delaunay polytope before
+# its stabilizer and its isomorphisms are computed, to rigidify them. With an
+# empty SVRfile -- which is what every other case here uses -- that extension is
+# a no-op and the code path is never exercised, which is how a degree mismatch
+# between the permutation group and the extended vertex matrix stayed unnoticed
+# in PolytopeGen_StabilizerKernel.
+#
+# The check does not hardcode any group order: the short vectors are taken to be
+# ALL the minimal vectors of the lattice (both signs, so the set is symmetric),
+# which the whole automorphism group of the lattice preserves. Adding them can
+# therefore not change the answer, and the test requires the two runs to produce
+# the same orbits, with the same numbers of vertices and the same stabilizer
+# orders.
+RunEnumeration:=function(eG, shv)
+    local TmpDir, FileG, FileS, FileN, FileO, FileE, strSVR, strOut, eProg,
+          TheCommand, U;
+    TmpDir:=DirectoryTemporary();
+    FileG:=Filename(TmpDir, "Gram.in");
+    FileN:=Filename(TmpDir, "Enum.nml");
+    FileO:=Filename(TmpDir, "Enum.out");
+    FileE:=Filename(TmpDir, "Enum.err");
+    WriteMatrixFile(FileG, eG);
+    if shv = fail then
+        strSVR:="unset.svr";
+    else
+        FileS:=Filename(TmpDir, "Svr.in");
+        WriteMatrixFile(FileS, shv);
+        strSVR:=FileS;
+    fi;
+    #
+    strOut:="&SYSTEM\n";
+    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
+    strOut:=Concatenation(strOut, " OutFile = \"", FileO, "\"\n");
+    strOut:=Concatenation(strOut, " max_runtime_second = 0\n");
+    strOut:=Concatenation(strOut, "/\n\n");
+    strOut:=Concatenation(strOut, "&DATA\n");
+    strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
+    strOut:=Concatenation(strOut, " GRAMfile = \"", FileG, "\"\n");
+    strOut:=Concatenation(strOut, " SVRfile = \"", strSVR, "\"\n");
+    strOut:=Concatenation(strOut, " CacheFile = \"none\"\n");
+    strOut:=Concatenation(strOut, "/\n\n");
+    strOut:=Concatenation(strOut, "&QUERIES\n");
+    strOut:=Concatenation(strOut, "/\n");
+    WriteStringFile(FileN, strOut);
+    #
+    eProg:=GetBinaryFilename("LATT_SerialComputeDelaunay");
+    TheCommand:=Concatenation(eProg, " ", FileN, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return fail;
+    fi;
+    U:=ReadAsFunction(FileO)();
+    return U;
+end;
+
+# The invariant of an enumeration that the short vectors must not change: the
+# sorted list of (number of vertices, order of the stabilizer) of the orbits.
+EnumerationSignature:=function(U)
+    return SortedList(List(U, x->[Length(x.EXT),
+                                  Order(x.TheStab.PermutationStabilizer)]));
+end;
+
+TestEnumerationShortVectors:=function(eRec)
+    local shv, U_plain, U_shv, sig_plain, sig_shv, is_correct;
+    shv:=Concatenation(List(ShortestVectors(eRec.eG, eRec.minimum).vectors,
+                            v->[v, -v]));
+    U_plain:=RunEnumeration(eRec.eG, fail);
+    U_shv:=RunEnumeration(eRec.eG, shv);
+    if U_plain = fail or U_shv = fail then
+        Print("name=", eRec.name, " an output file is missing. That is a fail\n");
+        return false;
+    fi;
+    sig_plain:=EnumerationSignature(U_plain);
+    sig_shv:=EnumerationSignature(U_shv);
+    is_correct:=(sig_plain = sig_shv) and (Length(U_shv) = eRec.n_del);
+    Print("name=", eRec.name, " |shv|=", Length(shv),
+          " n_del=", Length(U_shv), " (expected ", eRec.n_del, ")\n");
+    Print("     signature without shv=", sig_plain, "\n");
+    Print("     signature with    shv=", sig_shv, "\n");
+    Print("     is_correct=", is_correct, "\n");
+    return is_correct;
+end;
+
+# E8: 2 orbits of Delaunay polytopes, the simplex and the cross-polytope, with
+# 240 minimal vectors.
+ListRecEnumerationShortVectors:=function()
+    local eG_E8;
+    eG_E8:=[ [ 2, 0, 0, 0, 0, 0, 1, 0 ], [ 0, 2, -1, 0, -1, 1, 0, 1 ],
+             [ 0, -1, 2, 1, 0, 0, 0, -1 ], [ 0, 0, 1, 2, 0, 0, 1, -1 ],
+             [ 0, -1, 0, 0, 2, -1, 1, -1 ], [ 0, 1, 0, 0, -1, 2, 0, 0 ],
+             [ 1, 0, 0, 1, 1, 0, 2, -1 ], [ 0, 1, -1, -1, -1, 0, -1, 2 ] ];
+    return [rec(name:="E8_shortvectors", eG:=eG_E8, minimum:=2, n_del:=2)];
+end;
+
+# --------------------------------------------------------------------------- #
 AllCategories:=[
 rec(label:="Deformation", tester:=TestDeformation, cases:=ListRecDeformation),
 rec(label:="FreeVectors",  tester:=TestFreeVectors,  cases:=ListRecFreeVectors),
@@ -371,7 +468,9 @@ rec(label:="Hessian",      tester:=TestHessian,      cases:=ListRecHessian),
 rec(label:="Rigidity",     tester:=TestRigidity,     cases:=ListRecRigidity),
 rec(label:="Isotropy",     tester:=TestIsotropy,     cases:=ListRecIsotropy),
 rec(label:="Covering",     tester:=TestCovering,     cases:=ListRecCovering()),
-rec(label:="Enumeration",  tester:=TestEnumeration,  cases:=ListRecEnumeration())
+rec(label:="Enumeration",  tester:=TestEnumeration,  cases:=ListRecEnumeration()),
+rec(label:="EnumerationShortVectors", tester:=TestEnumerationShortVectors,
+    cases:=ListRecEnumerationShortVectors())
 ];
 
 FullTest:=function()

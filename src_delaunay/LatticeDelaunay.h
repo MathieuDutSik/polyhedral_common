@@ -214,9 +214,19 @@ Tgroup PolytopeGen_StabilizerKernel(DataLattice<T, Tint, Tgroup> &eData,
   Face eFace = get_face_delaunay_shv(EXT_T, SHV);
   Tgroup PreGRPisom =
       GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
-  Tgroup GRPisom = ReducedGroupActionFace(PreGRPisom, eFace);
+  // The whole chain acts on the extended set (vertices then SHV vectors):
+  // the isometries are first restricted to those preserving the vertex
+  // block, then to those preserving the lattice, and only the final result
+  // is reduced to the vertices, which is the action the caller wants. The
+  // reduction cannot be done earlier, since EXTextInt has one row per
+  // extended point and LinPolytopeIntegral_Stabilizer reads the matrix
+  // through the permutations it is given. With an empty SHV the face is
+  // everything and both operations are the identity, which is why this
+  // only ever mattered when a set of short vectors is supplied.
+  Tgroup GRPisom = PreGRPisom.Stabilizer_OnSets(eFace);
   MyMatrix<T> EXTextInt = RemoveFractionMatrix(EXText);
-  Tgroup GRPlatt = LinPolytopeIntegral_Stabilizer(EXTextInt, GRPisom, os);
+  Tgroup GRPlattExt = LinPolytopeIntegral_Stabilizer(EXTextInt, GRPisom, os);
+  Tgroup GRPlatt = ReducedGroupActionFace(GRPlattExt, eFace);
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   os << "|DEL_ENUM: Delaunay_Stabilizer|=" << time << "\n";
 #endif
@@ -292,6 +302,30 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
     GetSimpleWeightMatrix<T, Tidx_value>(EXText2, GramMat, os);
   std::optional<Telt> eRes =
       TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2, os);
+#ifdef SANITY_CHECK_DELAUNAY_ENUMERATION
+  // The equivalence is searched on the extended sets, so it has to map the
+  // vertex block onto the vertex block for the transformation it yields to
+  // be an equivalence of the Delaunay polytopes. The weight matrix
+  // separates the two blocks whenever the circumradius differs from the
+  // norms of the short vectors, which is the generic situation, but the
+  // enumeration would be wrong without it.
+  if (eRes) {
+    int nbVert1 = EXT1_T.rows();
+    int nbTot = EXText1.rows();
+    for (int i = 0; i < nbTot; i++) {
+      int i_img = OnPoints(i, *eRes);
+      bool is_vert = (i < nbVert1);
+      bool is_vert_img = (i_img < nbVert1);
+      if (is_vert != is_vert_img) {
+        std::cerr << "DEL_ENUM: SANITY_CHECK failed: the equivalence of the "
+                     "extended Delaunay sets exchanges a vertex and a short "
+                     "vector (i=" << i << " i_img=" << i_img
+                  << " nbVert=" << nbVert1 << ")\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
   if (!eRes) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: Leaving PolytopeGen_TestEquivalence 1 with false\n";
