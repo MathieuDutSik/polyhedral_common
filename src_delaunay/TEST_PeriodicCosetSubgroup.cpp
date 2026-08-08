@@ -243,6 +243,36 @@ int main() {
       check(res.ListVect.rows() == nbVert,
             "the closest points are exactly the vertices of the cell");
     }
+    //
+    // A point set given by cosets none of which is the origin. It is the
+    // translate of the previous one by (1/4, 1/4), so it must be
+    // normalized to the very same set, and the geometry must apply to it
+    // just as well.
+    {
+      MyMatrix<T> Cosets2(2, n);
+      Cosets2(0, 0) = T(1) / T(4);
+      Cosets2(0, 1) = T(1) / T(4);
+      Cosets2(1, 0) = T(3) / T(4);
+      Cosets2(1, 1) = T(3) / T(4);
+      PeriodicPointSet<Tring> pps2 =
+          PeriodicPointSetFromRational<Tring>(Cosets2);
+      MyVector<Tring> zero = ZeroVector<Tring>(n);
+      check(GetCosetIndex(pps2, zero).has_value(),
+            "the normalized point set contains the origin");
+      check(pps2.N == 2, "the translated set has denominator 2");
+      check(pps2.cosets_num.rows() == 2, "it still has two cosets");
+      MyVector<Tring> half(n);
+      half(0) = 1;
+      half(1) = 1;
+      check(GetCosetIndex(pps2, half).has_value(),
+            "and its other coset is the half diagonal");
+      MyMatrix<T> GramMat2 = IdentityMat<T>(n);
+      PeriodicCVPSolver<T, Tring> psolver2(GramMat2, pps2, os);
+      MyMatrix<Tring> EXT2 = FindDelaunayPolytope<T, Tring>(psolver2, os);
+      std::cerr << "|cell of the translated set|=" << EXT2.rows()
+                << " vertices\n";
+      check(EXT2.rows() == 4, "the same square cell is found");
+    }
     std::cerr << "Normal termination of TEST_PeriodicCosetSubgroup\n";
   } catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of TEST_PeriodicCosetSubgroup\n";

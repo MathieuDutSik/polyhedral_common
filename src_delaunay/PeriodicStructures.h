@@ -204,23 +204,31 @@ MyVector<Tring> PeriodicVectorMod(MyVector<Tring> const &u, Tring const &N) {
   Build the periodic point set from the rational coset matrix: N is the
   common denominator of all the entries and the numerators are reduced
   modulo N.
+
+  The set is translated so that its first coset is the origin. A periodic
+  point set and its translates have the same Delaunay decomposition up to
+  that translation, and the Delaunay geometry needs a point of the set at
+  the origin: its defining inequalities read "at least as close to 0 as to
+  v", so the origin has to play the role of a point of the set. Rather
+  than carrying a base point through the geometry, one coset is made to be
+  the origin here, once.
  */
 template <typename Tring, typename T>
 PeriodicPointSet<Tring> PeriodicPointSetFromRational(MyMatrix<T> const &Cosets) {
-  int m = Cosets.rows();
+  int n_coset = Cosets.rows();
   int n = Cosets.cols();
   // Same trailing-1 trick as in transform_traits::from_field: all the coset
   // entries are scaled together with a 1, so that the scaled entries are
   // the numerators and the scaled 1 is the common denominator N.
-  MyVector<T> V(m * n + 1);
-  for (int k = 0; k < m; k++) {
+  MyVector<T> V(n_coset * n + 1);
+  for (int k = 0; k < n_coset; k++) {
     for (int j = 0; j < n; j++) {
       V(k * n + j) = Cosets(k, j);
     }
   }
-  V(m * n) = T(1);
+  V(n_coset * n) = T(1);
   FractionVector<T> fr = RemoveFractionVectorPlusCoeff(V);
-  Tring N = UniversalScalarConversion<Tring, T>(fr.TheVect(m * n));
+  Tring N = UniversalScalarConversion<Tring, T>(fr.TheVect(n_coset * n));
 #ifdef SANITY_CHECK_PERIODIC_STRUCTURES
   if (N <= 0) {
     std::cerr << "PERIODIC: PeriodicPointSetFromRational: N should be "
@@ -228,13 +236,38 @@ PeriodicPointSet<Tring> PeriodicPointSetFromRational(MyMatrix<T> const &Cosets) 
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<Tring> cosets_num(m, n);
-  for (int k = 0; k < m; k++) {
+  MyMatrix<Tring> cosets_num(n_coset, n);
+  for (int k = 0; k < n_coset; k++) {
     for (int j = 0; j < n; j++) {
       Tring val =
           UniversalScalarConversion<Tring, T>(fr.TheVect(k * n + j));
       cosets_num(k, j) = ResInt(val, N);
     }
+  }
+  // The translation putting the first coset at the origin.
+  MyVector<Tring> shift = GetMatrixRow(cosets_num, 0);
+  for (int k = 0; k < n_coset; k++) {
+    for (int j = 0; j < n; j++) {
+      Tring val = cosets_num(k, j) - shift(j);
+      cosets_num(k, j) = ResInt(val, N);
+    }
+  }
+  // The translation can leave a denominator larger than necessary, and
+  // the cost of the coset machinery is in N^n, so it is brought back down
+  // to the denominator the translated cosets actually need.
+  Tring g = N;
+  for (int k = 0; k < n_coset; k++) {
+    for (int j = 0; j < n; j++) {
+      g = GcdPair(g, cosets_num(k, j));
+    }
+  }
+  if (g != 1) {
+    for (int k = 0; k < n_coset; k++) {
+      for (int j = 0; j < n; j++) {
+        cosets_num(k, j) = QuoInt(cosets_num(k, j), g);
+      }
+    }
+    N = QuoInt(N, g);
   }
   return {std::move(cosets_num), std::move(N)};
 }
@@ -244,9 +277,9 @@ template <typename Tring>
 std::optional<size_t> GetCosetIndex(PeriodicPointSet<Tring> const &pps,
                                     MyVector<Tring> const &u) {
   MyVector<Tring> u_red = PeriodicVectorMod(u, pps.N);
-  int m = pps.cosets_num.rows();
+  int n_coset = pps.cosets_num.rows();
   int n = pps.cosets_num.cols();
-  for (int k = 0; k < m; k++) {
+  for (int k = 0; k < n_coset; k++) {
     bool is_match = true;
     for (int j = 0; j < n; j++) {
       if (pps.cosets_num(k, j) != u_red(j)) {

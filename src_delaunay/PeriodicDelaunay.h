@@ -110,7 +110,19 @@ template <typename T, typename Tint> struct PeriodicCVPSolver {
                     PeriodicPointSet<Tint> const &_pps, std::ostream &_os)
       : GramMat(_GramMat), solver(_GramMat, _os), pps(_pps),
         n(_GramMat.rows()),
-        N_T(UniversalScalarConversion<T, Tint>(_pps.N)) {}
+        N_T(UniversalScalarConversion<T, Tint>(_pps.N)) {
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+    // The geometry needs a point of the set at the origin, which
+    // PeriodicPointSetFromRational arranges by translating the set.
+    MyVector<Tint> zero = ZeroVector<Tint>(n);
+    if (!GetCosetIndex(pps, zero)) {
+      std::cerr << "PERIODIC_DELAUNAY: PeriodicCVPSolver: the point set does "
+                   "not contain the origin, it has to be translated so that "
+                   "one of its cosets is the origin\n";
+      throw TerminalException{1};
+    }
+#endif
+  }
   // In scaled coordinates the period lattice is N Z^n, so the moves
   // between points of the set are the unit vectors scaled by N.
   std::vector<MyVector<T>> get_seed_differences() const {
