@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "PeriodicStructures.h"
+#include "GRP_GroupFct.h"
 #include "Shvec_exact.h"
 #include <utility>
 #include <vector>
@@ -43,11 +44,11 @@ PeriodicClosestVectors(CVPSolver<T, Tint> const &solver,
                        PeriodicPointSet<Tint> const &pps,
                        MyVector<T> const &eV) {
   int n = eV.size();
-  int m = pps.cosets_num.rows();
+  int n_coset = pps.cosets_num.rows();
   T N_T = UniversalScalarConversion<T, Tint>(pps.N);
   std::optional<T> min_norm;
   std::vector<MyVector<Tint>> l_vect;
-  for (int k = 0; k < m; k++) {
+  for (int k = 0; k < n_coset; k++) {
     MyVector<T> eV_shift(n);
     for (int j = 0; j < n; j++) {
       T num = UniversalScalarConversion<T, Tint>(pps.cosets_num(k, j));
@@ -103,7 +104,7 @@ std::optional<std::vector<size_t>>
 PeriodicCosetPermutation(PeriodicPointSet<Tring> const &pps,
                          PeriodicAffineTransform<Tring> const &x) {
   int n = pps.cosets_num.cols();
-  int m = pps.cosets_num.rows();
+  int n_coset = pps.cosets_num.rows();
   Tring det = DeterminantMat(x.A);
   if (det != 1 && det != -1) {
     return {};
@@ -119,9 +120,9 @@ PeriodicCosetPermutation(PeriodicPointSet<Tring> const &pps,
     }
     w_scal(j) = QuoInt(prod, x.d);
   }
-  std::vector<size_t> sigma(m);
-  Face f_hit(m);
-  for (int k = 0; k < m; k++) {
+  std::vector<size_t> sigma(n_coset);
+  Face f_hit(n_coset);
+  for (int k = 0; k < n_coset; k++) {
     MyVector<Tring> img(n);
     for (int j = 0; j < n; j++) {
       Tring eSum = w_scal(j);
@@ -140,7 +141,7 @@ PeriodicCosetPermutation(PeriodicPointSet<Tring> const &pps,
 #ifdef SANITY_CHECK_PERIODIC_DELAUNAY
   // The induced map on the cosets is injective, being the restriction of a
   // bijection of the point set, so all the cosets must be reached.
-  if (static_cast<int>(f_hit.count()) != m) {
+  if (static_cast<int>(f_hit.count()) != n_coset) {
     std::cerr << "PERIODIC_DELAUNAY: PeriodicCosetPermutation: the induced "
                  "map on the cosets is not a bijection\n";
     throw TerminalException{1};
@@ -153,6 +154,125 @@ template <typename Tring>
 bool IsPeriodicPointSetPreserved(PeriodicPointSet<Tring> const &pps,
                                  PeriodicAffineTransform<Tring> const &x) {
   return PeriodicCosetPermutation(pps, x).has_value();
+}
+
+/*
+  The subgroup of the transformations preserving the periodic point set.
+
+  Preserving the point set is not a condition that can be tested generator
+  by generator: the elements failing it are not a subgroup complement, so
+  filtering the generators would not give the subgroup. It is however the
+  setwise stabilizer of the cosets under the action on the finite group
+  (Z / N)^n induced by the transformations, so it is obtained by letting
+  the group act on the disjoint union of the polytope vertices and the N^n
+  classes, taking the setwise stabilizer of the classes that are cosets,
+  and restricting the result back to the vertices.
+
+  f_trans maps a permutation of the vertices to the transformation it
+  realizes. Every generator must have a unimodular linear part and a
+  translation in (1 / N) Z^n, so that its action on the classes is defined;
+  that holds once the group has been restricted to the transformations
+  preserving the lattice.
+ */
+template <typename Tring, typename Tgroup, typename Fget_trans>
+Tgroup PeriodicCosetPreservingSubgroup(PeriodicPointSet<Tring> const &pps,
+                                       Tgroup const &GRP, Fget_trans f_trans,
+                                       [[maybe_unused]] std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  int n = pps.cosets_num.cols();
+  int n_coset = pps.cosets_num.rows();
+  size_t n_vert = GRP.n_act();
+  size_t N_s = UniversalScalarConversion<size_t, Tring>(pps.N);
+  // The classes of (Z / N)^n in the mixed radix order, which is the index
+  // used for the second block of the permutations.
+  size_t n_class = 1;
+  for (int i = 0; i < n; i++) {
+    n_class *= N_s;
+  }
+  size_t n_tot = n_vert + n_class;
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+  if (n_tot > static_cast<size_t>(std::numeric_limits<Tidx>::max())) {
+    std::cerr << "PERIODIC_DELAUNAY: PeriodicCosetPreservingSubgroup: the "
+                 "N^n classes overflow the permutation index type (n_class="
+              << n_class << ")\n";
+    throw TerminalException{1};
+  }
+#endif
+  auto class_index = [&](MyVector<Tring> const &u) -> size_t {
+    size_t idx = 0;
+    for (int i = n - 1; i >= 0; i--) {
+      Tring res = ResInt(u(i), pps.N);
+      idx = idx * N_s + UniversalScalarConversion<size_t, Tring>(res);
+    }
+    return idx;
+  };
+  auto class_vector = [&](size_t idx) -> MyVector<Tring> {
+    MyVector<Tring> u(n);
+    for (int i = 0; i < n; i++) {
+      u(i) = UniversalScalarConversion<Tring, size_t>(idx % N_s);
+      idx /= N_s;
+    }
+    return u;
+  };
+  std::vector<Telt> ListGenBig;
+  for (auto &eGen : GRP.SmallGeneratingSet()) {
+    PeriodicAffineTransform<Tring> x = f_trans(eGen);
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+    // The action on the classes is defined only for the transformations
+    // preserving the lattice: the group has to be restricted to those
+    // before being handed over.
+    Tring det = DeterminantMat(x.A);
+    if (det != 1 && det != -1) {
+      std::cerr << "PERIODIC_DELAUNAY: PeriodicCosetPreservingSubgroup: a "
+                   "generator has a non unimodular linear part\n";
+      throw TerminalException{1};
+    }
+    for (int j = 0; j < n; j++) {
+      Tring prod = pps.N * x.w(j);
+      if (ResInt(prod, x.d) != 0) {
+        std::cerr << "PERIODIC_DELAUNAY: PeriodicCosetPreservingSubgroup: a "
+                     "generator has a translation outside of (1/N) Z^n\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    MyVector<Tring> w_scal(n);
+    for (int j = 0; j < n; j++) {
+      Tring prod = pps.N * x.w(j);
+      w_scal(j) = QuoInt(prod, x.d);
+    }
+    std::vector<Tidx> eList(n_tot);
+    for (size_t i = 0; i < n_vert; i++) {
+      eList[i] = static_cast<Tidx>(OnPoints(static_cast<Tidx>(i), eGen));
+    }
+    for (size_t i_class = 0; i_class < n_class; i_class++) {
+      MyVector<Tring> u = class_vector(i_class);
+      MyVector<Tring> img(n);
+      for (int j = 0; j < n; j++) {
+        Tring eSum = w_scal(j);
+        for (int i = 0; i < n; i++) {
+          AddMul(eSum, u(i), x.A(i, j));
+        }
+        img(j) = eSum;
+      }
+      eList[n_vert + i_class] =
+          static_cast<Tidx>(n_vert + class_index(img));
+    }
+    ListGenBig.push_back(Telt(eList));
+  }
+  Tgroup GRPbig(ListGenBig, static_cast<Tidx>(n_tot));
+  Face f_coset(n_tot);
+  for (int k = 0; k < n_coset; k++) {
+    MyVector<Tring> u = GetMatrixRow(pps.cosets_num, k);
+    f_coset[n_vert + class_index(u)] = 1;
+  }
+  Tgroup GRPstab = GRPbig.Stabilizer_OnSets(f_coset);
+  Face f_vert(n_tot);
+  for (size_t i = 0; i < n_vert; i++) {
+    f_vert[i] = 1;
+  }
+  return ReducedGroupActionFace(GRPstab, f_vert);
 }
 
 /*
