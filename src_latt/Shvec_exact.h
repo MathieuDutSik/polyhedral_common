@@ -703,6 +703,23 @@ public:
     }
     return {shortest, {}};
   }
+  // Differences between points of the point set, spanning the space,
+  // used to seed the search for a Delaunay polytope: they are the moves
+  // of the lattice itself here. The Delaunay geometry asks for them
+  // rather than assuming them, since for a periodic point set the moves
+  // are those of the period lattice, not the unit vectors.
+  std::vector<MyVector<T>> get_seed_differences() const {
+    std::vector<MyVector<T>> ret;
+    for (int i = 0; i < dim; i++) {
+      MyVector<T> V1 = ZeroVector<T>(dim);
+      V1(i) = 1;
+      ret.push_back(V1);
+      MyVector<T> V2 = ZeroVector<T>(dim);
+      V2(i) = -1;
+      ret.push_back(V2);
+    }
+    return ret;
+  }
   resultCVP<T, Tint> nearest_vectors(MyVector<T> const &eV) const {
     if (IsIntegralVector(eV)) {
       T TheNorm(0);

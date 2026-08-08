@@ -202,6 +202,47 @@ int main() {
       check(!opt_bad.has_value(),
             "no equivalence to a square outside the point set");
     }
+    //
+    // The shared Delaunay geometry, run on the periodic point set through
+    // PeriodicCVPSolver. The cell it returns must be a genuine Delaunay
+    // cell of the point set: its vertices are points of the set, they are
+    // equidistant from the circumcenter, and no point of the set is
+    // strictly closer to the circumcenter than they are -- which is what
+    // the closest vector computation at the circumcenter decides.
+    {
+      MyMatrix<T> GramMat = IdentityMat<T>(n);
+      PeriodicCVPSolver<T, Tring> psolver(GramMat, pps, os);
+      // The cell is returned in homogeneous form, a leading column of 1
+      // followed by the scaled coordinates.
+      MyMatrix<Tring> EXT_hom_ring =
+          FindDelaunayPolytope<T, Tring>(psolver, os);
+      int nbVert = EXT_hom_ring.rows();
+      std::cerr << "|initial periodic Delaunay|=" << nbVert << " vertices\n";
+      check(nbVert >= n + 1, "the cell is full dimensional");
+      // Every vertex is a point of the periodic point set.
+      for (int i = 0; i < nbVert; i++) {
+        MyVector<Tring> u(n);
+        for (int j = 0; j < n; j++) {
+          u(j) = EXT_hom_ring(i, j + 1);
+        }
+        check(GetCosetIndex(pps, u).has_value(),
+              "a vertex of the cell is a point of the point set");
+      }
+      // The vertices are equidistant from the circumcenter and nothing is
+      // closer: the circumcenter is in scaled coordinates, so the closest
+      // vector computation of the solver applies directly.
+      MyMatrix<T> EXT_hom = UniversalMatrixConversion<T, Tring>(EXT_hom_ring);
+      CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_hom);
+      MyVector<T> Cent(n);
+      for (int j = 0; j < n; j++) {
+        Cent(j) = cp.eCent(j + 1);
+      }
+      resultCVP<T, Tring> res = psolver.nearest_vectors(Cent);
+      check(res.TheNorm == cp.SquareRadius,
+            "no point of the set is closer than the circumradius");
+      check(res.ListVect.rows() == nbVert,
+            "the closest points are exactly the vertices of the cell");
+    }
     std::cerr << "Normal termination of TEST_PeriodicCosetSubgroup\n";
   } catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of TEST_PeriodicCosetSubgroup\n";

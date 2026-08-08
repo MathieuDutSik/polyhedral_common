@@ -77,13 +77,11 @@ FindDelaunayPolytope_direction(Tsolver const &solver,
     }
     return eIneq;
   };
-  for (int i = 0; i < dim; i++) {
-    MyVector<T> V1 = ZeroVector<T>(dim);
-    V1(i) = 1;
-    ListIneq_vect.push_back(DefiningInequality(V1));
-    MyVector<T> V2 = ZeroVector<T>(dim);
-    V2(i) = -1;
-    ListIneq_vect.push_back(DefiningInequality(V2));
+  // The seeds are differences between points of the point set, which the
+  // solver provides: writing them as the unit vectors would assume that
+  // the point set is the lattice Z^n itself.
+  for (auto &eVect : solver.get_seed_differences()) {
+    ListIneq_vect.push_back(DefiningInequality(eVect));
   }
   while (true) {
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY

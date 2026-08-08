@@ -5,6 +5,7 @@
 // clang-format off
 #include "PeriodicStructures.h"
 #include "GRP_GroupFct.h"
+#include "FundamentalDelaunay.h"
 #include "LatticeDelaunay.h"
 #include "Shvec_exact.h"
 #include <utility>
@@ -82,6 +83,75 @@ PeriodicClosestVectors(CVPSolver<T, Tint> const &solver,
 #endif
   MyMatrix<Tint> ListVectScaled = MatrixFromVectorFamily(l_vect);
   return {*min_norm, std::move(ListVectScaled)};
+}
+
+/*
+  A solver over a periodic point set, with the interface the Delaunay
+  geometry asks for: the member GramMat and the method nearest_vectors.
+  With it, FindDelaunayPolytope and FindAdjacentDelaunayPolytope apply to
+  a periodic point set without a line of their code being specific to it.
+
+  Everything is expressed in the coordinates scaled by the denominator N
+  of the point set, in which the points are the integral vectors
+  congruent to a coset modulo N: the vertex matrices stay integral, as
+  the geometry requires. Scaling the points by N and keeping the form
+  amounts to scaling the form by N^2, which leaves the Delaunay
+  decomposition unchanged, so the only thing to respect is that the
+  distances returned here are the scaled ones -- the geometry compares
+  them to circumradii computed from the same scaled coordinates.
+ */
+template <typename T, typename Tint> struct PeriodicCVPSolver {
+  MyMatrix<T> GramMat;
+  CVPSolver<T, Tint> solver;
+  PeriodicPointSet<Tint> pps;
+  int n;
+  T N_T;
+  PeriodicCVPSolver(MyMatrix<T> const &_GramMat,
+                    PeriodicPointSet<Tint> const &_pps, std::ostream &_os)
+      : GramMat(_GramMat), solver(_GramMat, _os), pps(_pps),
+        n(_GramMat.rows()),
+        N_T(UniversalScalarConversion<T, Tint>(_pps.N)) {}
+  // In scaled coordinates the period lattice is N Z^n, so the moves
+  // between points of the set are the unit vectors scaled by N.
+  std::vector<MyVector<T>> get_seed_differences() const {
+    std::vector<MyVector<T>> ret;
+    for (int i = 0; i < n; i++) {
+      MyVector<T> V1 = ZeroVector<T>(n);
+      V1(i) = N_T;
+      ret.push_back(V1);
+      MyVector<T> V2 = ZeroVector<T>(n);
+      V2(i) = -N_T;
+      ret.push_back(V2);
+    }
+    return ret;
+  }
+  // The closest points of the point set to eV, all in scaled coordinates.
+  resultCVP<T, Tint> nearest_vectors(MyVector<T> const &eV) const {
+    MyVector<T> eV_unscaled(n);
+    for (int j = 0; j < n; j++) {
+      eV_unscaled(j) = eV(j) / N_T;
+    }
+    PeriodicCVPResult<T, Tint> res =
+        PeriodicClosestVectors(solver, pps, eV_unscaled);
+    return {res.TheNorm * N_T * N_T, res.ListVectScaled};
+  }
+};
+
+// The moves between points of a periodic point set, in scaled
+// coordinates: the period lattice is N Z^n there, so the moves of the
+// lattice have to be scaled by N as well.
+template <typename Tint>
+MyMatrix<Tint> PeriodicScaledGraverBasis(MyMatrix<Tint> const &ShvGraverBasis,
+                                         Tint const &N) {
+  int n_row = ShvGraverBasis.rows();
+  int n_col = ShvGraverBasis.cols();
+  MyMatrix<Tint> ret(n_row, n_col);
+  for (int i = 0; i < n_row; i++) {
+    for (int j = 0; j < n_col; j++) {
+      ret(i, j) = N * ShvGraverBasis(i, j);
+    }
+  }
+  return ret;
 }
 
 /*
