@@ -499,6 +499,27 @@ BuildPeriodicDelaunayIsoData(MyMatrix<T> const &GramMat,
           std::move(EXTvert), std::move(eFace), std::move(WMat)};
 }
 
+// A permutation of the extended set restricted to the vertex block. The
+// two blocks are separated by their diagonal value in the weight matrix,
+// so a vertex goes to a vertex and the restriction is a permutation.
+template <typename Telt>
+Telt RestrictPermToVertexBlock(Telt const &eElt, int const &nbVert) {
+  using Tidx = typename Telt::Tidx;
+  std::vector<Tidx> eList(nbVert);
+  for (int i = 0; i < nbVert; i++) {
+    Tidx img = OnPoints(static_cast<Tidx>(i), eElt);
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+    if (static_cast<int>(img) >= nbVert) {
+      std::cerr << "PERIODIC_DELAUNAY: RestrictPermToVertexBlock: a vertex is "
+                   "mapped outside of the vertex block\n";
+      throw TerminalException{1};
+    }
+#endif
+    eList[i] = img;
+  }
+  return Telt(eList);
+}
+
 // The transformation realized by a permutation of the extended set of
 // data1 onto the extended set of data2: the linear part from the
 // recentered vertices, the translation from the circumcenters.
@@ -599,9 +620,14 @@ PeriodicDelaunay_TestEquivalence(MyMatrix<T> const &GramMat,
   if (!eRes) {
     return {};
   }
+  // The equivalence is found on the extended sets, so it has the degree
+  // of those; the transformation is read off the vertices, so it is
+  // restricted to the vertex block first. The colouring of the two blocks
+  // makes the restriction well defined, a vertex going to a vertex.
+  Telt eRes_vert = RestrictPermToVertexBlock<Telt>(*eRes, data1.EXTvert.rows());
   PeriodicAffineTransform<Tring> m0 =
       PeriodicTransformFromPerm<T, Tring, Telt, Tidx_value>(data1, data2,
-                                                            *eRes, pps.N);
+                                                            eRes_vert, pps.N);
   if (IsPeriodicPointSetPreserved(pps, m0)) {
     return m0;
   }
@@ -646,6 +672,203 @@ PeriodicDelaunay_TestEquivalence(MyMatrix<T> const &GramMat,
 #endif
   return ret;
 }
+
+// The vertices of a cell back in the unscaled rational coordinates, the
+// leading column of 1 being kept.
+template <typename T, typename Tring>
+MyMatrix<T> PeriodicUnscaledVertices(MyMatrix<Tring> const &EXT_scaled,
+                                     Tring const &N) {
+  int nbVert = EXT_scaled.rows();
+  int n = EXT_scaled.cols() - 1;
+  T N_T = UniversalScalarConversion<T, Tring>(N);
+  MyMatrix<T> EXT_T(nbVert, n + 1);
+  for (int iVert = 0; iVert < nbVert; iVert++) {
+    EXT_T(iVert, 0) = T(1);
+    for (int i = 0; i < n; i++) {
+      EXT_T(iVert, i + 1) =
+          UniversalScalarConversion<T, Tring>(EXT_scaled(iVert, i + 1)) / N_T;
+    }
+  }
+  return EXT_T;
+}
+
+/*
+  An invariant of a cell of a periodic point set, used to sort the orbits
+  before the equivalence is tried. Beyond what the lattice invariant uses
+  -- the number of vertices and the multiset of the distances between them
+  -- the cosets the vertices belong to contribute through the multiset of
+  their counts, which is invariant since a symmetry permutes the cosets.
+ */
+template <typename T, typename Tring>
+size_t ComputeInvariantPeriodicDelaunay(MyMatrix<T> const &GramMat,
+                                        PeriodicPointSet<Tring> const &pps,
+                                        size_t const &seed,
+                                        MyMatrix<Tring> const &EXT_scaled) {
+  int nbVert = EXT_scaled.rows();
+  int n = GramMat.rows();
+  MyMatrix<T> EXT_T = PeriodicUnscaledVertices<T, Tring>(EXT_scaled, pps.N);
+  std::map<T, size_t> map_dist;
+  MyVector<T> eDiff(n);
+  for (int iVert = 0; iVert < nbVert; iVert++) {
+    for (int jVert = iVert + 1; jVert < nbVert; jVert++) {
+      for (int i = 0; i < n; i++) {
+        eDiff(i) = EXT_T(iVert, i + 1) - EXT_T(jVert, i + 1);
+      }
+      map_dist[EvaluationQuadForm<T, T>(GramMat, eDiff)] += 1;
+    }
+  }
+  // How many vertices sit on each coset, as a multiset: a symmetry may
+  // permute the cosets, so only the counts are invariant, not which coset
+  // carries which count.
+  std::map<size_t, size_t> map_coset;
+  {
+    std::vector<size_t> count(pps.cosets_num.rows(), 0);
+    for (int iVert = 0; iVert < nbVert; iVert++) {
+      MyVector<Tring> u(n);
+      for (int i = 0; i < n; i++) {
+        u(i) = EXT_scaled(iVert, i + 1);
+      }
+      std::optional<size_t> opt = GetCosetIndex(pps, u);
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+      if (!opt) {
+        std::cerr << "PERIODIC_DELAUNAY: ComputeInvariantPeriodicDelaunay: a "
+                     "vertex is not a point of the point set\n";
+        throw TerminalException{1};
+      }
+#endif
+      count[*opt] += 1;
+    }
+    for (auto &val : count) {
+      map_coset[val] += 1;
+    }
+  }
+  size_t hash = seed;
+  auto combine_hash = [](size_t &seed_i, size_t new_hash) -> void {
+    seed_i ^= new_hash + 0x9e3779b8 + (seed_i << 6) + (seed_i >> 2);
+  };
+  combine_hash(hash, static_cast<size_t>(nbVert));
+  for (auto &kv : map_dist) {
+    combine_hash(hash, std::hash<T>()(kv.first));
+    combine_hash(hash, kv.second);
+  }
+  for (auto &kv : map_coset) {
+    combine_hash(hash, kv.first);
+    combine_hash(hash, kv.second);
+  }
+  return hash;
+}
+
+/*
+  The data of a periodic Delaunay enumeration: the form, the point set,
+  the short vectors used to rigidify the isometry computations, the
+  solver, and the moves of the local improvement of the adjacency. The
+  short vectors have to generate Z^n, and the Graver moves are those of
+  the point set, hence scaled by N.
+ */
+template <typename T, typename Tring, typename Tgroup>
+struct PeriodicDataDelaunay {
+  MyMatrix<T> GramMat;
+  PeriodicPointSet<Tring> pps;
+  MyMatrix<T> SHV;
+  PeriodicCVPSolver<T, Tring> solver;
+  MyMatrix<Tring> ShvGraverBasisScaled;
+  RecordDualDescOperation<T, Tgroup> rddo;
+};
+
+template <typename T, typename Tring, typename Tgroup>
+PeriodicDataDelaunay<T, Tring, Tgroup> GetPeriodicDataDelaunay(
+    MyMatrix<T> const &GramMat, PeriodicPointSet<Tring> const &pps,
+    MyMatrix<T> const &SHV, MyMatrix<Tring> const &ShvGraverBasis,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, std::ostream &os) {
+  return {GramMat,
+          pps,
+          SHV,
+          PeriodicCVPSolver<T, Tring>(GramMat, pps, os),
+          PeriodicScaledGraverBasis(ShvGraverBasis, pps.N),
+          RecordDualDescOperation<T, Tgroup>(AllArr, os)};
+}
+
+// A cell of the tessellation, its vertices homogeneous and scaled.
+template <typename Tring, typename Tgroup> struct PeriodicDelaunay_Obj {
+  MyMatrix<Tring> EXT;
+  Tgroup GRP;
+};
+
+template <typename Tring> struct PeriodicDelaunay_AdjI {
+  Face eInc;
+  MyMatrix<Tring> EXT;
+};
+
+template <typename Tring> struct PeriodicDelaunay_AdjO {
+  Face eInc;
+  PeriodicAffineTransform<Tring> eBigMat;
+};
+
+/*
+  The enumeration of the orbits of Delaunay cells of a periodic point set,
+  in the form the shared adjacency scheme consumes. Every piece it is made
+  of is the periodic counterpart of the lattice one and nothing of the
+  scheme itself is periodic: the initial cell and the adjacent cells come
+  from the geometry templated on the solver, the orbits of facets from the
+  usual dual description, and the recognition of an already found cell
+  from the periodic equivalence.
+ */
+template <typename T, typename Tring, typename Tgroup>
+struct PeriodicDataDelaunayFunc {
+  PeriodicDataDelaunay<T, Tring, Tgroup> &data;
+  using Tobj = PeriodicDelaunay_Obj<Tring, Tgroup>;
+  using TadjI = PeriodicDelaunay_AdjI<Tring>;
+  using TadjO = PeriodicDelaunay_AdjO<Tring>;
+  std::ostream &get_os() { return data.rddo.os; }
+  Tobj f_init() {
+    MyMatrix<Tring> EXT =
+        FindDelaunayPolytope<T, Tring>(data.solver, data.rddo.os);
+    return {std::move(EXT), {}};
+  }
+  size_t f_hash(size_t const &seed, Tobj const &x) {
+    return ComputeInvariantPeriodicDelaunay<T, Tring>(data.GramMat, data.pps,
+                                                      seed, x.EXT);
+  }
+  std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
+    std::optional<PeriodicAffineTransform<Tring>> opt =
+        PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
+            data.GramMat, data.pps, data.SHV, y.EXT, x.EXT, data.rddo.os);
+    if (!opt) {
+      return {};
+    }
+    TadjO ret{y.eInc, *opt};
+    return ret;
+  }
+  std::pair<Tobj, TadjO> f_spann(TadjI const &x) {
+    Tobj x_ret{x.EXT, {}};
+    int n = data.GramMat.rows();
+    PeriodicAffineTransform<Tring> eBigMat =
+        IdentityPeriodicAffineTransform<Tring>(n, data.pps.N);
+    TadjO ret{x.eInc, std::move(eBigMat)};
+    return {std::move(x_ret), std::move(ret)};
+  }
+  std::optional<std::vector<TadjI>> f_adj(Tobj &x) {
+    std::ostream &os = data.rddo.os;
+    x.GRP = PeriodicDelaunay_Stabilizer<T, Tring, Tgroup>(
+        data.GramMat, data.pps, data.SHV, x.EXT, os);
+    MyMatrix<T> EXT_T = PeriodicUnscaledVertices<T, Tring>(x.EXT, data.pps.N);
+    vectface TheOutput = DualDescriptionRecordFullDim(EXT_T, x.GRP, data.rddo);
+    // The facets are described on the scaled vertices, which the geometry
+    // of the adjacency works with.
+    MyMatrix<T> EXT_scaled_T = UniversalMatrixConversion<T, Tring>(x.EXT);
+    SubsetRankOneSolver<T> ext_solver(EXT_scaled_T);
+    std::vector<TadjI> ListAdj;
+    for (auto &eOrbB : TheOutput) {
+      MyMatrix<Tring> EXTadj = FindAdjacentDelaunayPolytope<T, Tring>(
+          data.solver, data.ShvGraverBasisScaled, EXT_scaled_T, ext_solver,
+          eOrbB, os);
+      ListAdj.push_back({eOrbB, std::move(EXTadj)});
+    }
+    return ListAdj;
+  }
+  Tobj f_adji_obj(TadjI const &x) { return {x.EXT, {}}; }
+  size_t f_complexity(Tobj const &x) { return x.EXT.rows(); }
+};
 
 // clang-format off
 #endif  // SRC_DELAUNAY_PERIODICDELAUNAY_H_

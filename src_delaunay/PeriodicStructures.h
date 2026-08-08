@@ -201,6 +201,37 @@ MyVector<Tring> PeriodicVectorMod(MyVector<Tring> const &u, Tring const &N) {
 }
 
 /*
+  Whether the cosets form a group modulo Z^n, in which case the point set
+  is a lattice containing Z^n rather than a genuinely periodic set.
+
+  The coset formalism is not the right one for that case -- the set should
+  be described as the lattice it is -- so it is rejected at construction.
+  Z^2 + {(0,0), (1/2,1/2)} is such a set, the cosets being closed under
+  addition; Z^2 + {(0,0), (1/3,0)} is not, since (1/3,0) + (1/3,0) is
+  (2/3,0), which is not a coset.
+
+  The set contains the origin after normalization and is finite, so being
+  closed under addition is all that has to be checked.
+ */
+template <typename Tring>
+bool IsPeriodicPointSetLattice(PeriodicPointSet<Tring> const &pps) {
+  int n_coset = pps.cosets_num.rows();
+  int n = pps.cosets_num.cols();
+  for (int k1 = 0; k1 < n_coset; k1++) {
+    for (int k2 = k1; k2 < n_coset; k2++) {
+      MyVector<Tring> eSum(n);
+      for (int j = 0; j < n; j++) {
+        eSum(j) = pps.cosets_num(k1, j) + pps.cosets_num(k2, j);
+      }
+      if (!GetCosetIndex(pps, eSum)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/*
   Build the periodic point set from the rational coset matrix: N is the
   common denominator of all the entries and the numerators are reduced
   modulo N.
@@ -214,7 +245,8 @@ MyVector<Tring> PeriodicVectorMod(MyVector<Tring> const &u, Tring const &N) {
   the origin here, once.
  */
 template <typename Tring, typename T>
-PeriodicPointSet<Tring> PeriodicPointSetFromRational(MyMatrix<T> const &Cosets) {
+PeriodicPointSet<Tring>
+PeriodicPointSetFromRational_Kernel(MyMatrix<T> const &Cosets) {
   int n_coset = Cosets.rows();
   int n = Cosets.cols();
   // Same trailing-1 trick as in transform_traits::from_field: all the coset
@@ -270,6 +302,35 @@ PeriodicPointSet<Tring> PeriodicPointSetFromRational(MyMatrix<T> const &Cosets) 
     N = QuoInt(N, g);
   }
   return {std::move(cosets_num), std::move(N)};
+}
+
+// The point set, or nothing when the cosets form a group and the set is
+// therefore a lattice. For a caller that has to decide rather than to
+// require, a random generator of point sets among others.
+template <typename Tring, typename T>
+std::optional<PeriodicPointSet<Tring>>
+PeriodicPointSetFromRational_Opt(MyMatrix<T> const &Cosets) {
+  PeriodicPointSet<Tring> ret =
+      PeriodicPointSetFromRational_Kernel<Tring, T>(Cosets);
+  if (IsPeriodicPointSetLattice(ret)) {
+    return {};
+  }
+  return ret;
+}
+
+template <typename Tring, typename T>
+PeriodicPointSet<Tring> PeriodicPointSetFromRational(MyMatrix<T> const &Cosets) {
+  PeriodicPointSet<Tring> ret =
+      PeriodicPointSetFromRational_Kernel<Tring, T>(Cosets);
+#ifdef SANITY_CHECK_PERIODIC_STRUCTURES
+  if (IsPeriodicPointSetLattice(ret)) {
+    std::cerr << "PERIODIC: PeriodicPointSetFromRational: the cosets form a "
+                 "group modulo Z^n, so the point set is a lattice and has to "
+                 "be described as one rather than by cosets\n";
+    throw TerminalException{1};
+  }
+#endif
+  return ret;
 }
 
 // Index of the coset matching the scaled point u modulo N, if any.

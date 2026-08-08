@@ -150,8 +150,14 @@ int main() {
             Cosets(k, j) = T(rand_int(den)) / T(den);
           }
         }
-        PeriodicPointSet<Tint> pps =
-            PeriodicPointSetFromRational<Tint>(Cosets);
+        // Random cosets often form a group, and such a set is a lattice
+        // rather than a genuinely periodic one: those are skipped.
+        std::optional<PeriodicPointSet<Tint>> opt_pps =
+            PeriodicPointSetFromRational_Opt<Tint>(Cosets);
+        if (!opt_pps) {
+          continue;
+        }
+        PeriodicPointSet<Tint> pps = *opt_pps;
         CVPSolver<T, Tint> solver(GramMat, os);
         for (int i_pt = 0; i_pt < 4; i_pt++) {
           MyVector<T> eV(n);
@@ -184,8 +190,8 @@ int main() {
       MyMatrix<T> Cosets(2, n);
       Cosets(0, 0) = 0;
       Cosets(0, 1) = 0;
-      Cosets(1, 0) = T(1) / T(2);
-      Cosets(1, 1) = T(1) / T(2);
+      Cosets(1, 0) = T(1) / T(3);
+      Cosets(1, 1) = 0;
       PeriodicPointSet<Tint> pps =
           PeriodicPointSetFromRational<Tint>(Cosets);
       size_t n_pres = 0, n_not = 0;

@@ -34,32 +34,33 @@ int main() {
   try {
     std::ostream &os = std::cerr;
     int n = 2;
-    // The point set Z^2 + {(0,0), (1/2,1/2)}, of denominator 2.
+    // The point set Z^2 + {(0,0), (1/3,0)}, of denominator 3. It is
+    // genuinely periodic: (1/3,0) + (1/3,0) is (2/3,0), not a coset, so
+    // the cosets are not a group and the set is not a lattice.
     MyMatrix<T> Cosets(2, n);
     Cosets(0, 0) = 0;
     Cosets(0, 1) = 0;
-    Cosets(1, 0) = T(1) / T(2);
-    Cosets(1, 1) = T(1) / T(2);
+    Cosets(1, 0) = T(1) / T(3);
+    Cosets(1, 1) = 0;
     PeriodicPointSet<Tring> pps = PeriodicPointSetFromRational<Tring>(Cosets);
-    check(pps.N == 2, "denominator of the point set");
+    check(pps.N == 3, "denominator of the point set");
+    check(!IsPeriodicPointSetLattice(pps), "the point set is not a lattice");
     //
     // Two transformations of denominator 2, acting on a set of four
     // formal points so that the permutation determines the transformation:
-    //   g1: the exchange of the coordinates, which preserves the set,
-    //   g2: the translation by (1/2, 0), which does not (it maps the
-    //       coset (1/2,1/2) to (0,1/2), which is not a coset).
-    MyMatrix<Tring> A_swap(n, n);
-    A_swap(0, 0) = 0;
-    A_swap(0, 1) = 1;
-    A_swap(1, 0) = 1;
-    A_swap(1, 1) = 0;
+    //   g1: preserves the set,
+    //   g2: does not.
+    // g1 negates the second coordinate, which the cosets, all of second
+    // coordinate zero, do not see: it preserves the set. g2 negates the
+    // first, sending the coset 1/3 to -1/3, that is 2/3, which is not a
+    // coset: it does not. Both are involutions and they commute.
+    MyMatrix<Tring> A_g1 = IdentityMat<Tring>(n);
+    A_g1(1, 1) = -1;
     MyVector<Tring> w_zero = ZeroVector<Tring>(n);
-    Ttrans g1{A_swap, w_zero, Tring(2)};
-    MyMatrix<Tring> A_id = IdentityMat<Tring>(n);
-    MyVector<Tring> w_half(n);
-    w_half(0) = 1;
-    w_half(1) = 0;
-    Ttrans g2{A_id, w_half, Tring(2)};
+    Ttrans g1{A_g1, w_zero, Tring(3)};
+    MyMatrix<Tring> A_g2 = IdentityMat<Tring>(n);
+    A_g2(0, 0) = -1;
+    Ttrans g2{A_g2, w_zero, Tring(3)};
     check(IsPeriodicPointSetPreserved(pps, g1), "g1 preserves the set");
     check(!IsPeriodicPointSetPreserved(pps, g2), "g2 does not preserve it");
     //
@@ -89,7 +90,7 @@ int main() {
     auto f_trans = [&](Telt const &eElt) -> Ttrans {
       int img = OnPoints(0, eElt);
       int a = img % 2, b = img / 2;
-      Ttrans ret = IdentityPeriodicAffineTransform<Tring>(n, Tring(2));
+      Ttrans ret = IdentityPeriodicAffineTransform<Tring>(n, Tring(3));
       if (a == 1) {
         ret = ret * g1;
       }
@@ -121,174 +122,113 @@ int main() {
     }
     check(n_pres == 2, "exactly the two elements without g2");
     //
-    // The stabilizer of a Delaunay polytope of the same point set for the
-    // identity form. The point set Z^2 + {(0,0), (1/2,1/2)} is the square
-    // lattice rotated and scaled, its Delaunay cells are squares, and the
-    // square of vertices (0,0), (1,0), (1/2,1/2), (1/2,-1/2) -- of
-    // numerators (0,0), (2,0), (1,1), (1,-1) over N = 2 -- has for
-    // stabilizer the dihedral group of order 8.
+    // The enumeration of the Delaunay cells, and with it every piece of
+    // the periodic path: the initial cell and the adjacent ones from the
+    // geometry templated on the solver, the stabilizers, the orbits of
+    // facets from the dual description and the recognition of an already
+    // found cell from the periodic equivalence.
+    //
+    // The properties checked are those defining the answer rather than
+    // values read off a previous run: each cell is a Delaunay cell of the
+    // point set, its stabilizer is the one the stabilizer computation
+    // gives on its own, each adjacency transformation preserves the point
+    // set, and cells of different orbits are not equivalent.
     {
       MyMatrix<T> GramMat = IdentityMat<T>(n);
-      // Short vectors generating Z^2, with both signs so that the set is
-      // preserved by the symmetries.
       MyMatrix<T> SHV(4, n);
       SHV(0, 0) = 1;  SHV(0, 1) = 0;
       SHV(1, 0) = -1; SHV(1, 1) = 0;
       SHV(2, 0) = 0;  SHV(2, 1) = 1;
       SHV(3, 0) = 0;  SHV(3, 1) = -1;
-      // Homogeneous and scaled: leading 1, then the numerators over N = 2.
-      MyMatrix<Tring> EXT_scaled(4, n + 1);
-      EXT_scaled(0, 0) = 1; EXT_scaled(0, 1) = 0; EXT_scaled(0, 2) = 0;
-      EXT_scaled(1, 0) = 1; EXT_scaled(1, 1) = 2; EXT_scaled(1, 2) = 0;
-      EXT_scaled(2, 0) = 1; EXT_scaled(2, 1) = 1; EXT_scaled(2, 2) = 1;
-      EXT_scaled(3, 0) = 1; EXT_scaled(3, 1) = 1; EXT_scaled(3, 2) = -1;
-      Tgroup GRPstab =
-          PeriodicDelaunay_Stabilizer<T, Tring, Tgroup>(GramMat, pps, SHV,
-                                                        EXT_scaled, os);
-      std::cerr << "|stabilizer of the square|=" << GRPstab.size() << "\n";
-      check(GRPstab.size() == 8, "the square has a stabilizer of order 8");
-      //
-      // Equivalence. The square translated by the coset (1/2,1/2), of
-      // numerators shifted by (1,1), is another Delaunay cell of the same
-      // point set, so the two must be equivalent, and the equivalence
-      // found must preserve the point set and realize the correspondence.
-      MyMatrix<Tring> EXT_shift(4, n + 1);
-      for (int i = 0; i < 4; i++) {
-        EXT_shift(i, 0) = 1;
-        EXT_shift(i, 1) = EXT_scaled(i, 1) + 1;
-        EXT_shift(i, 2) = EXT_scaled(i, 2) + 1;
-      }
-      std::optional<PeriodicAffineTransform<Tring>> opt_equiv =
-          PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
-              GramMat, pps, SHV, EXT_scaled, EXT_shift, os);
-      check(opt_equiv.has_value(), "the translated square is equivalent");
-      check(IsPeriodicPointSetPreserved(pps, *opt_equiv),
-            "the equivalence preserves the point set");
-      // The equivalence maps the first vertex set onto the second.
-      {
-        MyMatrix<T> M = transform_traits<PeriodicAffineTransform<Tring>>::
-            to_field<T>(*opt_equiv);
-        std::set<MyVector<Tring>> set2;
-        for (int i = 0; i < 4; i++) {
-          set2.insert(GetMatrixRow(EXT_shift, i));
-        }
-        T N_T = UniversalScalarConversion<T, Tring>(pps.N);
-        for (int i = 0; i < 4; i++) {
-          // The image of the point, back in numerator form.
-          MyVector<Tring> img(n + 1);
-          img(0) = 1;
-          for (int j = 0; j < n; j++) {
-            T eSum = M(0, j + 1);
-            for (int k = 0; k < n; k++) {
-              T coord = UniversalScalarConversion<T, Tring>(
-                            EXT_scaled(i, k + 1)) / N_T;
-              eSum += coord * M(k + 1, j + 1);
-            }
-            img(j + 1) = UniversalScalarConversion<Tring, T>(eSum * N_T);
-          }
-          check(set2.count(img) == 1,
-                "the equivalence maps a vertex onto a vertex of the second");
-        }
-      }
-      // A square that is NOT a cell of the point set: the same square
-      // translated by (1/2, 0), whose numerators are shifted by (1,0). It
-      // is isometric to the first but its vertices are not points of the
-      // set, so no equivalence may be returned.
-      MyMatrix<Tring> EXT_bad(4, n + 1);
-      for (int i = 0; i < 4; i++) {
-        EXT_bad(i, 0) = 1;
-        EXT_bad(i, 1) = EXT_scaled(i, 1) + 1;
-        EXT_bad(i, 2) = EXT_scaled(i, 2);
-      }
-      std::optional<PeriodicAffineTransform<Tring>> opt_bad =
-          PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
-              GramMat, pps, SHV, EXT_scaled, EXT_bad, os);
-      check(!opt_bad.has_value(),
-            "no equivalence to a square outside the point set");
-    }
-    //
-    // The shared Delaunay geometry, run on the periodic point set through
-    // PeriodicCVPSolver. The cell it returns must be a genuine Delaunay
-    // cell of the point set: its vertices are points of the set, they are
-    // equidistant from the circumcenter, and no point of the set is
-    // strictly closer to the circumcenter than they are -- which is what
-    // the closest vector computation at the circumcenter decides.
-    {
-      MyMatrix<T> GramMat = IdentityMat<T>(n);
+      MyMatrix<Tring> Graver(4, n);
+      Graver(0, 0) = 1;  Graver(0, 1) = 0;
+      Graver(1, 0) = -1; Graver(1, 1) = 0;
+      Graver(2, 0) = 0;  Graver(2, 1) = 1;
+      Graver(3, 0) = 0;  Graver(3, 1) = -1;
+      PolyHeuristicSerial<Tint_grp> AllArr =
+          AllStandardHeuristicSerial<T, Tint_grp>(n + 1, os);
+      PeriodicDataDelaunay<T, Tring, Tgroup> data =
+          GetPeriodicDataDelaunay<T, Tring, Tgroup>(GramMat, pps, SHV, Graver,
+                                                    AllArr, os);
+      PeriodicDataDelaunayFunc<T, Tring, Tgroup> data_func{data};
+      auto f_incorrect = [&]([[maybe_unused]] PeriodicDelaunay_Obj<
+                             Tring, Tgroup> const &x) -> bool {
+        return false;
+      };
+      std::optional<std::vector<DatabaseEntry_Serial<
+          PeriodicDelaunay_Obj<Tring, Tgroup>,
+          PeriodicDelaunay_AdjO<Tring>>>>
+          opt = EnumerateAndStore_Serial(data_func, f_incorrect, 0);
+      check(opt.has_value(), "the enumeration terminated");
+      std::vector<DatabaseEntry_Serial<PeriodicDelaunay_Obj<Tring, Tgroup>,
+                                       PeriodicDelaunay_AdjO<Tring>>> const
+          &l_ent = *opt;
+      std::cerr << "|orbits of periodic Delaunay cells|=" << l_ent.size()
+                << "\n";
+      check(l_ent.size() > 0, "the enumeration found something");
       PeriodicCVPSolver<T, Tring> psolver(GramMat, pps, os);
-      // The cell is returned in homogeneous form, a leading column of 1
-      // followed by the scaled coordinates.
-      MyMatrix<Tring> EXT_hom_ring =
-          FindDelaunayPolytope<T, Tring>(psolver, os);
-      int nbVert = EXT_hom_ring.rows();
-      std::cerr << "|initial periodic Delaunay|=" << nbVert << " vertices\n";
-      check(nbVert >= n + 1, "the cell is full dimensional");
-      // Every vertex is a point of the periodic point set.
-      for (int i = 0; i < nbVert; i++) {
-        MyVector<Tring> u(n);
-        for (int j = 0; j < n; j++) {
-          u(j) = EXT_hom_ring(i, j + 1);
+      for (auto &eEnt : l_ent) {
+        MyMatrix<Tring> const &EXT = eEnt.x.EXT;
+        int nbVert = EXT.rows();
+        std::cerr << "   |vertices|=" << nbVert
+                  << " |stabilizer|=" << eEnt.x.GRP.size()
+                  << " |adjacencies|=" << eEnt.ListAdj.size() << "\n";
+        check(nbVert >= n + 1, "the cell is full dimensional");
+        // Its vertices are points of the point set.
+        for (int i = 0; i < nbVert; i++) {
+          MyVector<Tring> u(n);
+          for (int j2 = 0; j2 < n; j2++) {
+            u(j2) = EXT(i, j2 + 1);
+          }
+          check(GetCosetIndex(pps, u).has_value(),
+                "a vertex of a cell is a point of the point set");
         }
-        check(GetCosetIndex(pps, u).has_value(),
-              "a vertex of the cell is a point of the point set");
+        // It is a Delaunay cell: nothing of the set is strictly closer to
+        // its circumcenter than its vertices, and they are all at the
+        // circumradius.
+        MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(EXT);
+        CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
+        MyVector<T> Cent(n);
+        for (int j2 = 0; j2 < n; j2++) {
+          Cent(j2) = cp.eCent(j2 + 1);
+        }
+        resultCVP<T, Tring> res = psolver.nearest_vectors(Cent);
+        check(res.TheNorm == cp.SquareRadius,
+              "nothing of the set is closer than the circumradius");
+        check(res.ListVect.rows() == nbVert,
+              "the closest points are exactly the vertices");
+        // The stabilizer of the enumeration is the stabilizer.
+        Tgroup GRPdirect = PeriodicDelaunay_Stabilizer<T, Tring, Tgroup>(
+            GramMat, pps, SHV, EXT, os);
+        check(GRPdirect.size() == eEnt.x.GRP.size(),
+              "the stabilizer of the enumeration is the direct one");
+        // Every adjacency transformation preserves the point set.
+        for (auto &eAdj : eEnt.ListAdj) {
+          check(IsPeriodicPointSetPreserved(pps, eAdj.x.eBigMat),
+                "an adjacency transformation preserves the point set");
+        }
       }
-      // The vertices are equidistant from the circumcenter and nothing is
-      // closer: the circumcenter is in scaled coordinates, so the closest
-      // vector computation of the solver applies directly.
-      MyMatrix<T> EXT_hom = UniversalMatrixConversion<T, Tring>(EXT_hom_ring);
-      CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_hom);
-      MyVector<T> Cent(n);
-      for (int j = 0; j < n; j++) {
-        Cent(j) = cp.eCent(j + 1);
+      // A cell is equivalent to its translate by a period of the set, and
+      // cells of different orbits are not equivalent to each other.
+      {
+        MyMatrix<Tring> const &EXT0 = l_ent[0].x.EXT;
+        MyMatrix<Tring> EXT_tr = EXT0;
+        for (int i = 0; i < EXT_tr.rows(); i++) {
+          EXT_tr(i, 1) += pps.N;
+        }
+        check(PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
+                  GramMat, pps, SHV, EXT0, EXT_tr, os)
+                  .has_value(),
+              "a cell is equivalent to its translate by a period");
+        for (size_t i1 = 0; i1 < l_ent.size(); i1++) {
+          for (size_t i2 = i1 + 1; i2 < l_ent.size(); i2++) {
+            check(!PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
+                       GramMat, pps, SHV, l_ent[i1].x.EXT, l_ent[i2].x.EXT, os)
+                       .has_value(),
+                  "cells of different orbits are not equivalent");
+          }
+        }
       }
-      resultCVP<T, Tring> res = psolver.nearest_vectors(Cent);
-      check(res.TheNorm == cp.SquareRadius,
-            "no point of the set is closer than the circumradius");
-      check(res.ListVect.rows() == nbVert,
-            "the closest points are exactly the vertices of the cell");
-      // The conventions now agree, so the cell the geometry produced can
-      // be handed straight to the stabilizer. It is the same square as
-      // above, up to a symmetry of the point set, so the same order.
-      MyMatrix<T> SHV_geo(4, n);
-      SHV_geo(0, 0) = 1;  SHV_geo(0, 1) = 0;
-      SHV_geo(1, 0) = -1; SHV_geo(1, 1) = 0;
-      SHV_geo(2, 0) = 0;  SHV_geo(2, 1) = 1;
-      SHV_geo(3, 0) = 0;  SHV_geo(3, 1) = -1;
-      Tgroup GRPgeo = PeriodicDelaunay_Stabilizer<T, Tring, Tgroup>(
-          GramMat, pps, SHV_geo, EXT_hom_ring, os);
-      std::cerr << "|stabilizer of the cell found|=" << GRPgeo.size() << "\n";
-      check(GRPgeo.size() == 8,
-            "the cell the geometry found has the same stabilizer order");
-    }
-    //
-    // A point set given by cosets none of which is the origin. It is the
-    // translate of the previous one by (1/4, 1/4), so it must be
-    // normalized to the very same set, and the geometry must apply to it
-    // just as well.
-    {
-      MyMatrix<T> Cosets2(2, n);
-      Cosets2(0, 0) = T(1) / T(4);
-      Cosets2(0, 1) = T(1) / T(4);
-      Cosets2(1, 0) = T(3) / T(4);
-      Cosets2(1, 1) = T(3) / T(4);
-      PeriodicPointSet<Tring> pps2 =
-          PeriodicPointSetFromRational<Tring>(Cosets2);
-      MyVector<Tring> zero = ZeroVector<Tring>(n);
-      check(GetCosetIndex(pps2, zero).has_value(),
-            "the normalized point set contains the origin");
-      check(pps2.N == 2, "the translated set has denominator 2");
-      check(pps2.cosets_num.rows() == 2, "it still has two cosets");
-      MyVector<Tring> half(n);
-      half(0) = 1;
-      half(1) = 1;
-      check(GetCosetIndex(pps2, half).has_value(),
-            "and its other coset is the half diagonal");
-      MyMatrix<T> GramMat2 = IdentityMat<T>(n);
-      PeriodicCVPSolver<T, Tring> psolver2(GramMat2, pps2, os);
-      MyMatrix<Tring> EXT2 = FindDelaunayPolytope<T, Tring>(psolver2, os);
-      std::cerr << "|cell of the translated set|=" << EXT2.rows()
-                << " vertices\n";
-      check(EXT2.rows() == 4, "the same square cell is found");
     }
     std::cerr << "Normal termination of TEST_PeriodicCosetSubgroup\n";
   } catch (TerminalException const &e) {

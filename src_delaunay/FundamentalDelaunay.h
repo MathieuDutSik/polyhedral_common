@@ -488,20 +488,31 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
   MyMatrix<T> const& GramMat = solver.GramMat;
   int dim = GramMat.rows();
   MyVector<T> TheFac = ext_solver.GetPositiveKernelVector(eInc);
-  auto get_iColFind = [&]() -> int {
-    for (int iCol = 0; iCol < dim; iCol++)
-      if (TheFac(1 + iCol) != 0)
-        return iCol;
-    std::cerr << "Failed to find the matching iCol\n";
+  // The starting vertex is a point of the set strictly on the far side of
+  // the facet, obtained from a vertex of the facet by a move of the point
+  // set. The move has to be one of the set, not a unit vector: for a
+  // periodic point set in the scaled coordinates the moves are those of
+  // the period lattice, and a unit step would leave the set and make the
+  // walk converge to a degenerate cell.
+  auto get_move = [&]() -> MyVector<T> {
+    for (auto &eMove : solver.get_seed_differences()) {
+      T eScal(0);
+      for (int i = 0; i < dim; i++) {
+        AddMul(eScal, TheFac(1 + i), eMove(i));
+      }
+      if (eScal < 0) {
+        return eMove;
+      }
+    }
+    std::cerr << "DEL: no move of the point set goes to the far side of the "
+                 "facet\n";
     throw TerminalException{1};
   };
-  int iColFind = get_iColFind();
-  T delta(-T_sign(TheFac(1 + iColFind)));
+  MyVector<T> eMove = get_move();
   int jRow = eInc.find_first();
   MyVector<T> SelectedVertex(dim);
   for (int i = 0; i < dim; i++)
-    SelectedVertex(i) = EXT(jRow, i + 1);
-  SelectedVertex(iColFind) += delta;
+    SelectedVertex(i) = EXT(jRow, i + 1) + eMove(i);
   AdjacentDelaunayPointSolver<T> adps(GramMat, EXT, eInc, os);
   T MinRadius = adps.GetRadius(SelectedVertex);
   auto fGraverUpdate = [&]() -> void {
