@@ -136,11 +136,12 @@ int main() {
       SHV(1, 0) = -1; SHV(1, 1) = 0;
       SHV(2, 0) = 0;  SHV(2, 1) = 1;
       SHV(3, 0) = 0;  SHV(3, 1) = -1;
-      MyMatrix<Tring> EXT_scaled(4, n);
-      EXT_scaled(0, 0) = 0;  EXT_scaled(0, 1) = 0;
-      EXT_scaled(1, 0) = 2;  EXT_scaled(1, 1) = 0;
-      EXT_scaled(2, 0) = 1;  EXT_scaled(2, 1) = 1;
-      EXT_scaled(3, 0) = 1;  EXT_scaled(3, 1) = -1;
+      // Homogeneous and scaled: leading 1, then the numerators over N = 2.
+      MyMatrix<Tring> EXT_scaled(4, n + 1);
+      EXT_scaled(0, 0) = 1; EXT_scaled(0, 1) = 0; EXT_scaled(0, 2) = 0;
+      EXT_scaled(1, 0) = 1; EXT_scaled(1, 1) = 2; EXT_scaled(1, 2) = 0;
+      EXT_scaled(2, 0) = 1; EXT_scaled(2, 1) = 1; EXT_scaled(2, 2) = 1;
+      EXT_scaled(3, 0) = 1; EXT_scaled(3, 1) = 1; EXT_scaled(3, 2) = -1;
       Tgroup GRPstab =
           PeriodicDelaunay_Stabilizer<T, Tring, Tgroup>(GramMat, pps, SHV,
                                                         EXT_scaled, os);
@@ -151,10 +152,11 @@ int main() {
       // numerators shifted by (1,1), is another Delaunay cell of the same
       // point set, so the two must be equivalent, and the equivalence
       // found must preserve the point set and realize the correspondence.
-      MyMatrix<Tring> EXT_shift(4, n);
+      MyMatrix<Tring> EXT_shift(4, n + 1);
       for (int i = 0; i < 4; i++) {
-        EXT_shift(i, 0) = EXT_scaled(i, 0) + 1;
+        EXT_shift(i, 0) = 1;
         EXT_shift(i, 1) = EXT_scaled(i, 1) + 1;
+        EXT_shift(i, 2) = EXT_scaled(i, 2) + 1;
       }
       std::optional<PeriodicAffineTransform<Tring>> opt_equiv =
           PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
@@ -173,15 +175,16 @@ int main() {
         T N_T = UniversalScalarConversion<T, Tring>(pps.N);
         for (int i = 0; i < 4; i++) {
           // The image of the point, back in numerator form.
-          MyVector<Tring> img(n);
+          MyVector<Tring> img(n + 1);
+          img(0) = 1;
           for (int j = 0; j < n; j++) {
             T eSum = M(0, j + 1);
             for (int k = 0; k < n; k++) {
-              T coord =
-                  UniversalScalarConversion<T, Tring>(EXT_scaled(i, k)) / N_T;
+              T coord = UniversalScalarConversion<T, Tring>(
+                            EXT_scaled(i, k + 1)) / N_T;
               eSum += coord * M(k + 1, j + 1);
             }
-            img(j) = UniversalScalarConversion<Tring, T>(eSum * N_T);
+            img(j + 1) = UniversalScalarConversion<Tring, T>(eSum * N_T);
           }
           check(set2.count(img) == 1,
                 "the equivalence maps a vertex onto a vertex of the second");
@@ -191,10 +194,11 @@ int main() {
       // translated by (1/2, 0), whose numerators are shifted by (1,0). It
       // is isometric to the first but its vertices are not points of the
       // set, so no equivalence may be returned.
-      MyMatrix<Tring> EXT_bad(4, n);
+      MyMatrix<Tring> EXT_bad(4, n + 1);
       for (int i = 0; i < 4; i++) {
-        EXT_bad(i, 0) = EXT_scaled(i, 0) + 1;
-        EXT_bad(i, 1) = EXT_scaled(i, 1);
+        EXT_bad(i, 0) = 1;
+        EXT_bad(i, 1) = EXT_scaled(i, 1) + 1;
+        EXT_bad(i, 2) = EXT_scaled(i, 2);
       }
       std::optional<PeriodicAffineTransform<Tring>> opt_bad =
           PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
@@ -242,6 +246,19 @@ int main() {
             "no point of the set is closer than the circumradius");
       check(res.ListVect.rows() == nbVert,
             "the closest points are exactly the vertices of the cell");
+      // The conventions now agree, so the cell the geometry produced can
+      // be handed straight to the stabilizer. It is the same square as
+      // above, up to a symmetry of the point set, so the same order.
+      MyMatrix<T> SHV_geo(4, n);
+      SHV_geo(0, 0) = 1;  SHV_geo(0, 1) = 0;
+      SHV_geo(1, 0) = -1; SHV_geo(1, 1) = 0;
+      SHV_geo(2, 0) = 0;  SHV_geo(2, 1) = 1;
+      SHV_geo(3, 0) = 0;  SHV_geo(3, 1) = -1;
+      Tgroup GRPgeo = PeriodicDelaunay_Stabilizer<T, Tring, Tgroup>(
+          GramMat, pps, SHV_geo, EXT_hom_ring, os);
+      std::cerr << "|stabilizer of the cell found|=" << GRPgeo.size() << "\n";
+      check(GRPgeo.size() == 8,
+            "the cell the geometry found has the same stabilizer order");
     }
     //
     // A point set given by cosets none of which is the origin. It is the

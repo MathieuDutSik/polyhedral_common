@@ -464,13 +464,21 @@ BuildPeriodicDelaunayIsoData(MyMatrix<T> const &GramMat,
                  "forced to be integral\n";
     throw TerminalException{1};
   }
+  if (EXT_scaled.cols() != n + 1) {
+    std::cerr << "PERIODIC_DELAUNAY: BuildPeriodicDelaunayIsoData: the vertex "
+                 "matrix should be homogeneous, a leading column of 1 "
+                 "followed by the scaled coordinates\n";
+    throw TerminalException{1};
+  }
 #endif
+  // EXT_scaled is homogeneous, as the Delaunay geometry produces it: the
+  // leading column of 1 is kept and only the coordinates are unscaled.
   MyMatrix<T> EXT_T(nbVert, n + 1);
   for (int iVert = 0; iVert < nbVert; iVert++) {
     EXT_T(iVert, 0) = T(1);
     for (int i = 0; i < n; i++) {
       EXT_T(iVert, i + 1) =
-          UniversalScalarConversion<T, Tring>(EXT_scaled(iVert, i)) / N_T;
+          UniversalScalarConversion<T, Tring>(EXT_scaled(iVert, i + 1)) / N_T;
     }
   }
   MyVector<T> Cent = get_reduced_center(GramMat, EXT_T);
