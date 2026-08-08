@@ -2012,7 +2012,8 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
     T sum_vol(0);
     for (size_t i_pv=0; i_pv<n_pv; i_pv++) {
       os << "ROBUST: capp_info, i_pv=" << i_pv << " info:" << to_string(l_data[i_pv]) << "\n";
-      AddMul(sum_vol, l_data[i_pv].orb_ident, l_data[i_pv].volume);
+      T orb_ident_T = UniversalScalarConversion<T, int>(l_data[i_pv].orb_ident);
+      AddMul(sum_vol, orb_ident_T, l_data[i_pv].volume);
     }
     os << "ROBUST: capp, sum_vol=" << sum_vol << "\n";
 #endif

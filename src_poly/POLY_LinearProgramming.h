@@ -953,7 +953,7 @@ SolutionMatStrictlyPositive(MyMatrix<T> const &ListVect,
   MyVector<T> SumVect = ZeroVector<T>(dim);
   for (int iVect = 0; iVect < nbVect; iVect++) {
     MyVector<T> eRow = GetMatrixRow(ListVect, iVect);
-    AddMul(SumVect, eSol(iVect), eRow);
+    VecAddMul(SumVect, eSol(iVect), eRow);
   }
   if (SumVect != eVect) {
     std::cerr << "LP: eSol is not a solution of the system\n";
