@@ -398,8 +398,7 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 // * Not all algorithm are available for all the types. For rational
 // mpq_class everything works, but for algebraic types, that will not
 // be true.
-// * Some algorithm also have external function like glrs
-// which tend to be faster but there is an overhead to calling external
+// * The normaliz external function has an overhead to calling external
 // programs.
 // * The lrs algorithm is only using addition, difference and multiplication.
 // Hence it makes sense to reduce the fractions to integer and then do
@@ -419,8 +418,7 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 // * "lrs": The templatized lrs (for fields and rings). When T is a field,
 //   the implementation internally uses the fraction-reduction variant;
 //   this is transparent to callers.
-// * "glrs": The external program glrs (only for types implementing Q)
-// * "normaliz": he external program normaliz (only for types implementing Q)
+// * "normaliz": the external program normaliz (only for types implementing Q)
 template <typename T>
 TheHeuristic<T> StandardHeuristicDualDescriptionProgram() {
   std::vector<std::string> ListString = {"1", "1 incidence < 50 cdd", "cdd"};

@@ -3,7 +3,7 @@
 #define SRC_POLY_POLY_DIRECTDUALDESC_EXTERNAL_H_
 
 // This file contains the code that drives the external dual-description
-// programs (glrs, normaliz).  Each entry point writes the
+// programs (normaliz).  Each entry point writes the
 // V-representation of EXT to a temporary file, invokes the chosen external
 // binary, then parses the produced inequalities back into the requested form
 // (incidence, inequality matrix, or face+inequality pair).
@@ -129,7 +129,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     iret1 = RunExternalProgram(eCommand, {FileI}, std::nullopt, FileO, FileE);
   }
 #ifdef TIMINGS_DUAL_DESC_EXTERNAL
-  os << "|DDD: glrs/cdd|=" << time << "\n";
+  os << "|DDD: external|=" << time << "\n";
 #endif
 #ifdef DEBUG_DUAL_DESC_EXTERNAL
   os << "DDD: External program terminated\n";
@@ -193,18 +193,6 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
       iLine++;
     }
     check_consistency();
-  }
-  if (eCommand == "glrs") {
-    size_t headersize = 0;
-    while (std::getline(is, line)) {
-      if (line == "end")
-        break;
-      if (line == "begin")
-        headersize = iLine + 2;
-      if (headersize != 0 and iLine >= headersize)
-        process_line();
-      iLine++;
-    }
   }
 #ifdef TIMINGS_DUAL_DESC_EXTERNAL
   os << "|DDD: FileRead|=" << time << "\n";

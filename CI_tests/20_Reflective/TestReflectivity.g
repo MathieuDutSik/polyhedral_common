@@ -48,7 +48,7 @@ WritePoincareCase:=function(PrefixPoincare, ThePt, ListGen)
     #
     strOut:="&PROC\n";
     strOut:=Concatenation(strOut, " method_adjacent = \"linear_programming\"\n");
-    strOut:=Concatenation(strOut, " eCommand_DD = \"glrs\"\n");
+    strOut:=Concatenation(strOut, " eCommand_DD = \"lrs\"\n");
     strOut:=Concatenation(strOut, " MethodMissingI = \"Gen2\"\n");
     strOut:=Concatenation(strOut, " FileDataPoincare = \"", FilePoincare_Data, "\"\n");
     strOut:=Concatenation(strOut, " FileO = \"output.test\"\n");

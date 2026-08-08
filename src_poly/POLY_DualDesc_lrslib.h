@@ -50,6 +50,16 @@
 #endif
 
 namespace lrs {
+// The machine-integer type used for the fast attempt over a field input: the
+// pivoting runs over it and falls back to the exact ring on overflow. It
+// defaults to the exact-detection TryCarryInt64; define POLY_LRS_TRY_SIMD to
+// use the conservative, SIMD-friendly TrySimdInt64 instead (for A/B testing
+// the two deferred-overflow flavours in the pivot loop).
+#ifdef POLY_LRS_TRY_SIMD
+using LrsTryInt = TrySimdInt64;
+#else
+using LrsTryInt = TryCarryInt64;
+#endif
 // some #defines and global variables from the original lrs code
 namespace globals {
 const int64_t POS = 1L;
@@ -639,13 +649,27 @@ void pivot(lrs_dic<T> *P, int64_t bas, int64_t cob)
   P->det_sign *= static_cast<int>(sign(Ars));
   storesign(P->det, sign(Ars)); /*adjust determinant to new sign */
 
-  for (i = 0; i <= m_A; i++)
-    if (i != r)
-      for (j = 0; j <= d; j++)
-        if (j != s) {
-          /*        A[i][j]=(A[i][j]*Ars-A[i][s]*A[r][j])/P->det; */
-          A[i][j] = (A[i][j] * Ars - A[i][s] * A[r][j]) / P->det;
-        }
+  // The fraction-free Bareiss update A[i][j] = (A[i][j]*Ars - A[i][s]*A[r][j])
+  // / det. The invariants are hoisted out of the inner loop by hand: through
+  // the T** tableau the compiler cannot prove that the store to A[i][j] does
+  // not alias A[i][s], A[r][j] or P->det, so without this it reloads all of
+  // them every iteration. The value copies (not references) are what break the
+  // aliasing: A[i][s] is never written here (the j == s column is skipped) and
+  // row r is never written while i != r, so the hoist is exact. The j == s
+  // column is skipped by splitting the loop into [0,s) and (s,d] rather than
+  // testing j != s every iteration.
+  T const Ndet = P->det;
+  T *Ar = A[r];
+  for (i = 0; i <= m_A; i++) {
+    if (i == r)
+      continue;
+    T *Ai = A[i];
+    T const Ais = Ai[s];
+    for (j = 0; j < s; j++)
+      Ai[j] = (Ai[j] * Ars - Ais * Ar[j]) / Ndet;
+    for (j = s + 1; j <= d; j++)
+      Ai[j] = (Ai[j] * Ars - Ais * Ar[j]) / Ndet;
+  }
 
   if (Ars > 0) {
     for (j = 0; j <= d; j++) /* no need to change sign if Ars neg */
@@ -1036,10 +1060,6 @@ template <typename T> void lrs_free_dic(lrs_dic<T> *P, lrs_dat<T> *Q) {
 
   /* repeat until cache is empty */
   do {
-    /* I moved these here because I'm not certain the cached dictionaries
-       need to be the same size. Well, it doesn't cost anything to be safe. db
-     */
-
     int64_t m_A = P->m_A;
 
     for (i = 0; i <= m_A; i++)
@@ -1874,15 +1894,15 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
     // and the enumeration reruns over the exact ring.
     if constexpr (use_try_int64<Tring>::value) {
       try {
-        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64(EXTring);
-        auto f_facet_try = [&](lrs_dic<TryInt64> *P, lrs_dat<TryInt64> *Q,
+        MyMatrix<LrsTryInt> EXTtry = ConvertMatrixToTryInt64<LrsTryInt>(EXTring);
+        auto f_facet_try = [&](lrs_dic<LrsTryInt> *P, lrs_dat<LrsTryInt> *Q,
                                int const &col,
-                               [[maybe_unused]] TryInt64 *out) -> void {
+                               [[maybe_unused]] LrsTryInt *out) -> void {
           set_face(P, Q, col, face);
           ListIncd.push_back(face);
         };
         Kernel_DualDescription(EXTtry, f_facet_try);
-        terminate_in_arithmetic_error<TryInt64>();
+        terminate_in_arithmetic_error<LrsTryInt>();
         return ListIncd;
       } catch (TryIntException const &) {
         ListIncd = vectface(nbRow);
@@ -1897,15 +1917,15 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
   } else {
     if constexpr (use_try_int64<T>::value) {
       try {
-        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64(EXTwork);
-        auto f_facet_try = [&](lrs_dic<TryInt64> *P, lrs_dat<TryInt64> *Q,
+        MyMatrix<LrsTryInt> EXTtry = ConvertMatrixToTryInt64<LrsTryInt>(EXTwork);
+        auto f_facet_try = [&](lrs_dic<LrsTryInt> *P, lrs_dat<LrsTryInt> *Q,
                                int const &col,
-                               [[maybe_unused]] TryInt64 *out) -> void {
+                               [[maybe_unused]] LrsTryInt *out) -> void {
           set_face(P, Q, col, face);
           ListIncd.push_back(face);
         };
         Kernel_DualDescription(EXTtry, f_facet_try);
-        terminate_in_arithmetic_error<TryInt64>();
+        terminate_in_arithmetic_error<LrsTryInt>();
         return ListIncd;
       } catch (TryIntException const &) {
         ListIncd = vectface(nbRow);
@@ -1942,17 +1962,17 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
     // Attempt over TryInt64 first, as in DualDescription_incd.
     if constexpr (use_try_int64<Tring>::value) {
       try {
-        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64(EXTring);
-        auto f_facet_try = [&]([[maybe_unused]] lrs_dic<TryInt64> *P,
-                               [[maybe_unused]] lrs_dat<TryInt64> *Q,
+        MyMatrix<LrsTryInt> EXTtry = ConvertMatrixToTryInt64<LrsTryInt>(EXTring);
+        auto f_facet_try = [&]([[maybe_unused]] lrs_dic<LrsTryInt> *P,
+                               [[maybe_unused]] lrs_dat<LrsTryInt> *Q,
                                [[maybe_unused]] int const &col,
-                               TryInt64 *out) -> void {
+                               LrsTryInt *out) -> void {
           for (int i = 0; i < nbColRed; i++)
             V(i) = ConvertFromTryInt64<T>(out[i + shift]);
           ListVect.push_back(V);
         };
         Kernel_DualDescription(EXTtry, f_facet_try);
-        terminate_in_arithmetic_error<TryInt64>();
+        terminate_in_arithmetic_error<LrsTryInt>();
         return MatrixFromVectorFamily(ListVect);
       } catch (TryIntException const &) {
         ListVect.clear();
@@ -1969,17 +1989,17 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   } else {
     if constexpr (use_try_int64<T>::value) {
       try {
-        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64(EXTwork);
-        auto f_facet_try = [&]([[maybe_unused]] lrs_dic<TryInt64> *P,
-                               [[maybe_unused]] lrs_dat<TryInt64> *Q,
+        MyMatrix<LrsTryInt> EXTtry = ConvertMatrixToTryInt64<LrsTryInt>(EXTwork);
+        auto f_facet_try = [&]([[maybe_unused]] lrs_dic<LrsTryInt> *P,
+                               [[maybe_unused]] lrs_dat<LrsTryInt> *Q,
                                [[maybe_unused]] int const &col,
-                               TryInt64 *out) -> void {
+                               LrsTryInt *out) -> void {
           for (int i = 0; i < nbColRed; i++)
             V(i) = ConvertFromTryInt64<T>(out[i + shift]);
           ListVect.push_back(V);
         };
         Kernel_DualDescription(EXTtry, f_facet_try);
-        terminate_in_arithmetic_error<TryInt64>();
+        terminate_in_arithmetic_error<LrsTryInt>();
         return MatrixFromVectorFamily(ListVect);
       } catch (TryIntException const &) {
         ListVect.clear();
