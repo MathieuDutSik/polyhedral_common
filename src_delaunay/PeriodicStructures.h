@@ -161,6 +161,30 @@ struct transform_traits<PeriodicAffineTransform<Tring>> {
 #endif
     return ret;
   }
+  /*
+    The matrix acting on the coordinates scaled by the denominator, in
+    which the vertices of a periodic tessellation are stored: with u = N x
+    the map x -> x A + w / d of denominator d = N reads u -> u A + w, of
+    integral translation. That is the form the flipping needs, its
+    products of vertex matrices being in the scaled coordinates; the
+    inequalities it derives are then scaled by N^2, a positive multiple
+    which leaves the iso-Delaunay cone unchanged.
+   */
+  template <typename T>
+  static MyMatrix<T> to_field_acting(PeriodicAffineTransform<Tring> const &x) {
+    int n = x.A.rows();
+    MyMatrix<T> M = ZeroMatrix<T>(n + 1, n + 1);
+    M(0, 0) = T(1);
+    for (int j = 0; j < n; j++) {
+      M(0, j + 1) = UniversalScalarConversion<T, Tring>(x.w(j));
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        M(i + 1, j + 1) = UniversalScalarConversion<T, Tring>(x.A(i, j));
+      }
+    }
+    return M;
+  }
   template <typename T>
   static MyMatrix<T> to_field(PeriodicAffineTransform<Tring> const &x) {
     int n = x.A.rows();

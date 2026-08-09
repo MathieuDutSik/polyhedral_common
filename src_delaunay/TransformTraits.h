@@ -33,6 +33,14 @@ template <typename Tring> struct transform_traits<MyMatrix<Tring>> {
   static MyMatrix<T> to_field(MyMatrix<Tring> const &x) {
     return UniversalMatrixConversion<T, Tring>(x);
   }
+  // The matrix acting on the coordinates in which the vertices are
+  // stored. For a lattice those are the coordinates themselves, so this
+  // is the matrix; for a periodic point set the vertices are stored
+  // scaled and the acting matrix differs from the one above.
+  template <typename T>
+  static MyMatrix<T> to_field_acting(MyMatrix<Tring> const &x) {
+    return UniversalMatrixConversion<T, Tring>(x);
+  }
 };
 
 template <typename Ttransform, typename T>
@@ -43,6 +51,13 @@ Ttransform TransformFromFieldMatrix(MyMatrix<T> const &M) {
 template <typename T, typename Ttransform>
 MyMatrix<T> TransformToFieldMatrix(Ttransform const &x) {
   return transform_traits<Ttransform>::template to_field<T>(x);
+}
+
+// The matrix acting on the stored vertex coordinates, which is what the
+// flipping needs since it forms products of the vertex matrices with it.
+template <typename T, typename Ttransform>
+MyMatrix<T> TransformToActingMatrix(Ttransform const &x) {
+  return transform_traits<Ttransform>::template to_field_acting<T>(x);
 }
 
 // clang-format off
