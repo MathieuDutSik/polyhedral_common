@@ -6,6 +6,7 @@
 #include "PeriodicStructures.h"
 #include "GRP_GroupFct.h"
 #include "FundamentalDelaunay.h"
+#include "IsoDelaunayDomains.h"
 #include "LatticeDelaunay.h"
 #include "Shvec_exact.h"
 #include <utility>
@@ -869,6 +870,55 @@ struct PeriodicDataDelaunayFunc {
   Tobj f_adji_obj(TadjI const &x) { return {x.EXT, {}}; }
   size_t f_complexity(Tobj const &x) { return x.EXT.rows(); }
 };
+
+/*
+  The tessellation, in the form the iso-Delaunay machinery consumes, of
+  the orbits the enumeration produced.
+
+  Everything is in the scaled frame: the vertices are carried over as they
+  are and the transformations are read through their acting matrices, so
+  the products below are between matching frames. The inequalities come
+  out multiplied by N^2 with respect to the unscaled ones, and
+  ComputeDelaunayAdjIneq canonicalizes them anyway, so the defining system
+  of the iso-Delaunay domain is the same.
+
+  The form has to be GENERIC for the point set, that is its Delaunay cells
+  have to be simplices: a cell with more vertices is co-spherical only on
+  a wall of the iso-Delaunay domain, where the inequalities of the
+  tessellation are not defined. BuildVoronoiIneqPreComputeChecked says so
+  when the sanity checks are on.
+ */
+template <typename T, typename Tring, typename Tgroup>
+DelaunayTesselationIneq<T, Tgroup, PeriodicAffineTransform<Tring>>
+BuildPeriodicDelaunayTesselationIneq(
+    std::vector<DatabaseEntry_Serial<PeriodicDelaunay_Obj<Tring, Tgroup>,
+                                     PeriodicDelaunay_AdjO<Tring>>> const
+        &l_ent,
+    [[maybe_unused]] PeriodicPointSet<Tring> const &pps,
+    std::vector<std::vector<T>> const &ListGram, std::ostream &os) {
+  using Ttrans = PeriodicAffineTransform<Tring>;
+  int n_del = l_ent.size();
+  std::vector<Delaunay_EntryIneq<T, Tgroup, Ttrans>> l_dels(n_del);
+  for (int i_del = 0; i_del < n_del; i_del++) {
+    MyMatrix<Tring> const &EXT = l_ent[i_del].x.EXT;
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(EXT);
+    VoronoiInequalityPreComput<T> vipc =
+        BuildVoronoiIneqPreComputeChecked<T>(EXT_T, ListGram, os);
+    ContainerMatrix<T> cont(EXT_T);
+    std::vector<Delaunay_AdjIneqO<T, Ttrans>> ListAdj;
+    for (auto &eAdj : l_ent[i_del].ListAdj) {
+      MyMatrix<T> EXT_target_T =
+          UniversalMatrixConversion<T, Tring>(l_ent[eAdj.iOrb].x.EXT);
+      MyMatrix<T> M = TransformToActingMatrix<T>(eAdj.x.eBigMat);
+      MyVector<T> eIneq =
+          ComputeDelaunayAdjIneq(vipc, cont, EXT_target_T, M, ListGram, os);
+      ListAdj.push_back({eAdj.x.eInc, eAdj.x.eBigMat, eAdj.iOrb,
+                         std::move(eIneq)});
+    }
+    l_dels[i_del] = {EXT, l_ent[i_del].x.GRP, std::move(ListAdj)};
+  }
+  return {std::move(l_dels)};
+}
 
 // clang-format off
 #endif  // SRC_DELAUNAY_PERIODICDELAUNAY_H_

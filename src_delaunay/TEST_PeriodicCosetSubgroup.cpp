@@ -230,6 +230,84 @@ int main() {
         }
       }
     }
+    //
+    // The tessellation in the form the iso-Delaunay machinery consumes.
+    // It needs a GENERIC form, whose Delaunay cells are simplices: the
+    // identity form above gives rectangles, which are co-spherical only
+    // on a wall and where the inequalities are not defined. The form is
+    // perturbed off the diagonal to reach the interior of a domain.
+    {
+      MyMatrix<T> GramMat(n, n);
+      GramMat(0, 0) = 1;
+      GramMat(0, 1) = T(1) / T(7);
+      GramMat(1, 0) = T(1) / T(7);
+      GramMat(1, 1) = 1;
+      MyMatrix<T> SHV(4, n);
+      SHV(0, 0) = 1;  SHV(0, 1) = 0;
+      SHV(1, 0) = -1; SHV(1, 1) = 0;
+      SHV(2, 0) = 0;  SHV(2, 1) = 1;
+      SHV(3, 0) = 0;  SHV(3, 1) = -1;
+      MyMatrix<Tring> Graver(4, n);
+      Graver(0, 0) = 1;  Graver(0, 1) = 0;
+      Graver(1, 0) = -1; Graver(1, 1) = 0;
+      Graver(2, 0) = 0;  Graver(2, 1) = 1;
+      Graver(3, 0) = 0;  Graver(3, 1) = -1;
+      PolyHeuristicSerial<Tint_grp> AllArr =
+          AllStandardHeuristicSerial<T, Tint_grp>(n + 1, os);
+      PeriodicDataDelaunay<T, Tring, Tgroup> data =
+          GetPeriodicDataDelaunay<T, Tring, Tgroup>(GramMat, pps, SHV, Graver,
+                                                    AllArr, os);
+      PeriodicDataDelaunayFunc<T, Tring, Tgroup> data_func{data};
+      auto f_inc = [&]([[maybe_unused]] PeriodicDelaunay_Obj<Tring, Tgroup>
+                       const &x) -> bool { return false; };
+      auto opt = EnumerateAndStore_Serial(data_func, f_inc, 0);
+      check(opt.has_value(), "the enumeration at the generic form finished");
+      std::cerr << "|orbits at the generic form|=" << opt->size() << "\n";
+      // Generic means simplicial: n+1 vertices per cell.
+      for (auto &eEnt : *opt) {
+        std::cerr << "   |vertices|=" << eEnt.x.EXT.rows() << "\n";
+        check(eEnt.x.EXT.rows() == n + 1,
+              "the form is generic, its cells are simplices");
+      }
+      // The T-space of all the symmetric matrices of order n.
+      std::vector<std::vector<T>> ListGram;
+      for (int i = 0; i < n; i++) {
+        for (int j = i; j < n; j++) {
+          MyMatrix<T> eMat = ZeroMatrix<T>(n, n);
+          eMat(i, j) = 1;
+          eMat(j, i) = 1;
+          ListGram.push_back(GetLineVector(eMat));
+        }
+      }
+      DelaunayTesselationIneq<T, Tgroup, PeriodicAffineTransform<Tring>> DTI =
+          BuildPeriodicDelaunayTesselationIneq<T, Tring, Tgroup>(
+              *opt, pps, ListGram, os);
+      check(DTI.l_dels.size() == opt->size(),
+            "the tessellation has the orbits of the enumeration");
+      // Consistency: across each adjacency the image of the neighbour
+      // meets the cell exactly in the vertices of eInc.
+      for (auto &eDel : DTI.l_dels) {
+        MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(eDel.EXT);
+        ContainerMatrix<T> cont(EXT_T);
+        for (auto &eAdj : eDel.ListAdj) {
+          MyMatrix<T> EXTadj =
+              UniversalMatrixConversion<T, Tring>(DTI.l_dels[eAdj.iOrb].EXT) *
+              TransformToActingMatrix<T>(eAdj.eBigMat);
+          Face f_att(EXT_T.rows());
+          for (int u = 0; u < EXTadj.rows(); u++) {
+            MyVector<T> V = GetMatrixRow(EXTadj, u);
+            std::optional<size_t> o = cont.GetIdx_v(V);
+            if (o) {
+              f_att[*o] = 1;
+            }
+          }
+          check(f_att == eAdj.eInc,
+                "the adjacency meets the cell in the vertices of eInc");
+          check(eAdj.eIneq.size() > 0, "the adjacency carries an inequality");
+        }
+      }
+      std::cerr << "periodic tessellation built and consistent\n";
+    }
     std::cerr << "Normal termination of TEST_PeriodicCosetSubgroup\n";
   } catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of TEST_PeriodicCosetSubgroup\n";
