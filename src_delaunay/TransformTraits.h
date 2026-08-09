@@ -25,8 +25,16 @@
 template <typename Ttransform> struct transform_traits;
 
 template <typename Tring> struct transform_traits<MyMatrix<Tring>> {
+  // What reading a transformation off a matrix of the acting frame needs
+  // besides the matrix. Nothing for a lattice.
+  struct Tcontext {};
   template <typename T>
   static MyMatrix<Tring> from_field(MyMatrix<T> const &M) {
+    return UniversalMatrixConversion<Tring, T>(M);
+  }
+  template <typename T>
+  static MyMatrix<Tring> from_field_acting(MyMatrix<T> const &M,
+                                           [[maybe_unused]] Tcontext const &ctx) {
     return UniversalMatrixConversion<Tring, T>(M);
   }
   template <typename T>
@@ -58,6 +66,24 @@ MyMatrix<T> TransformToFieldMatrix(Ttransform const &x) {
 template <typename T, typename Ttransform>
 MyMatrix<T> TransformToActingMatrix(Ttransform const &x) {
   return transform_traits<Ttransform>::template to_field_acting<T>(x);
+}
+
+/*
+  The transformation of a matrix of the acting frame. It cannot be read
+  off the matrix alone in the periodic case: on the coordinates scaled by
+  the denominator the translation is integral, so nothing in the matrix
+  says what the denominator is. The context carries it.
+
+  It is also why the denominator is a feature of the point set and not of
+  each transformation: were it to vary, the product and the inverse would
+  have to reconcile the denominators of their operands, which is exactly
+  the reduction the algebra is built to avoid.
+ */
+template <typename Ttransform, typename T>
+Ttransform TransformFromActingMatrix(
+    MyMatrix<T> const &M,
+    typename transform_traits<Ttransform>::Tcontext const &ctx) {
+  return transform_traits<Ttransform>::from_field_acting(M, ctx);
 }
 
 // clang-format off

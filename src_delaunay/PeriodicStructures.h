@@ -113,6 +113,27 @@ Inverse(PeriodicAffineTransform<Tring> const &x) {
  */
 template <typename Tring>
 struct transform_traits<PeriodicAffineTransform<Tring>> {
+  // The denominator of the point set, which a matrix of the acting frame
+  // does not carry: its translation is integral there.
+  struct Tcontext {
+    Tring N;
+  };
+  template <typename T>
+  static PeriodicAffineTransform<Tring>
+  from_field_acting(MyMatrix<T> const &M, Tcontext const &ctx) {
+    int n = M.rows() - 1;
+    MyMatrix<Tring> A(n, n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        A(i, j) = UniversalScalarConversion<Tring, T>(M(i + 1, j + 1));
+      }
+    }
+    MyVector<Tring> w(n);
+    for (int j = 0; j < n; j++) {
+      w(j) = UniversalScalarConversion<Tring, T>(M(0, j + 1));
+    }
+    return {std::move(A), std::move(w), ctx.N};
+  }
   template <typename T>
   static PeriodicAffineTransform<Tring> from_field(MyMatrix<T> const &M) {
     int n = M.rows() - 1;
