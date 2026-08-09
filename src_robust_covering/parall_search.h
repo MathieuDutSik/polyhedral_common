@@ -5,6 +5,7 @@
 // clang-format off
 #include "Shvec_exact.h"
 #include "LatticeDelaunay.h"
+#include <algorithm>
 // clang-format on
 
 #ifdef DEBUG
@@ -26,17 +27,146 @@
 struct PartSolution {
   int vert;
   std::vector<int> l_dir;
-  Face full_set;
+  // Indices of the points of the partial parallelepiped, sorted and without
+  // repetition. Keeping the points as a sorted list of indices rather than as
+  // a subset of the whole family lets a level cost the size of the
+  // parallelepiped instead of the size of the family.
+  std::vector<int> pts;
 };
 
-template <typename Tint> struct DataVect {
+/*
+  The enumeration asks a single question about the family of points: given a
+  point of the family and a translation, which point of the family is its
+  image, if any. Answering it on the multiprecision coordinates, through a
+  hash of the whole vector, was the dominant cost of the whole program, so the
+  points are relocated on a bounded integer grid whenever their coordinates
+  allow it and the query becomes a few integer operations and one array
+  access. MapPointLocator keeps the former behaviour for the families that do
+  not fit on such a grid.
+ */
+
+// Above that many cells the bounding box is too sparse for the direct
+// addressing to be worth its memory and the map based locator is used.
+inline constexpr int64_t max_ncell_grid_locator = 1 << 22;
+
+struct GridPointLocator {
+  // A translation is a difference of grid coordinates.
+  using Trans = std::vector<int64_t>;
   int n_vect;
+  int dim;
+  // Coordinates relative to the corner of the bounding box, n_vect blocks of
+  // dim entries.
+  std::vector<int64_t> coord;
+  std::vector<int64_t> span;
+  std::vector<int64_t> stride;
+  // Index of the point sitting on a cell, -1 when the cell is empty.
+  std::vector<int> grid;
+  Trans get_trans() const { return Trans(dim); }
+  void set_trans(int const &i_add, int const &i_sub, Trans &t) const {
+    int64_t const *c_add = coord.data() + static_cast<size_t>(i_add) * dim;
+    int64_t const *c_sub = coord.data() + static_cast<size_t>(i_sub) * dim;
+    for (int k = 0; k < dim; k++) {
+      t[k] = c_add[k] - c_sub[k];
+    }
+  }
+  int translate(int const &i_pt, Trans const &t) const {
+    int64_t const *c_pt = coord.data() + static_cast<size_t>(i_pt) * dim;
+    int64_t flat = 0;
+    for (int k = 0; k < dim; k++) {
+      int64_t val = c_pt[k] + t[k];
+      if (val < 0 || val >= span[k]) {
+        return -1;
+      }
+      flat += val * stride[k];
+    }
+    return grid[flat];
+  }
+};
+
+// Returns nothing when the coordinates do not fit in int64_t or when the
+// bounding box needs too many cells.
+template <typename Tint>
+std::optional<GridPointLocator>
+get_grid_point_locator(MyMatrix<Tint> const &M) {
+  size_t n_vect = M.rows();
+  size_t dim = M.cols();
+  if (n_vect == 0) {
+    return {};
+  }
+  std::vector<int64_t> coord(n_vect * dim);
+  for (size_t i_vect = 0; i_vect < n_vect; i_vect++) {
+    for (size_t k = 0; k < dim; k++) {
+      Tint const &val = M(i_vect, k);
+      std::optional<int64_t> opt =
+          UniversalScalarConversionCheck<int64_t, Tint>(val);
+      if (!opt) {
+        return {};
+      }
+      // Several of the conversions to int64_t truncate instead of reporting
+      // the overflow, so the value is converted back and compared.
+      if (UniversalScalarConversion<Tint, int64_t>(*opt) != val) {
+        return {};
+      }
+      coord[i_vect * dim + k] = *opt;
+    }
+  }
+  std::vector<int64_t> span(dim), stride(dim);
+  int64_t n_cell = 1;
+  for (size_t k = 0; k < dim; k++) {
+    int64_t min_val = coord[k];
+    int64_t max_val = coord[k];
+    for (size_t i_vect = 1; i_vect < n_vect; i_vect++) {
+      int64_t val = coord[i_vect * dim + k];
+      min_val = std::min(min_val, val);
+      max_val = std::max(max_val, val);
+    }
+    for (size_t i_vect = 0; i_vect < n_vect; i_vect++) {
+      coord[i_vect * dim + k] -= min_val;
+    }
+    span[k] = max_val - min_val + 1;
+    stride[k] = n_cell;
+    if (span[k] > max_ncell_grid_locator / n_cell) {
+      return {};
+    }
+    n_cell *= span[k];
+  }
+  std::vector<int> grid(n_cell, -1);
+  for (size_t i_vect = 0; i_vect < n_vect; i_vect++) {
+    int64_t flat = 0;
+    for (size_t k = 0; k < dim; k++) {
+      flat += coord[i_vect * dim + k] * stride[k];
+    }
+    grid[flat] = static_cast<int>(i_vect);
+  }
+  return GridPointLocator{static_cast<int>(n_vect), static_cast<int>(dim),
+                          std::move(coord),         std::move(span),
+                          std::move(stride),        std::move(grid)};
+}
+
+template <typename Tint> struct MapPointLocator {
+  using Trans = MyVector<Tint>;
+  int n_vect;
+  int dim;
   std::vector<MyVector<Tint>> ListV;
   std::unordered_map<MyVector<Tint>, int> map;
+  Trans get_trans() const { return Trans(dim); }
+  void set_trans(int const &i_add, int const &i_sub, Trans &t) const {
+    t = ListV[i_add] - ListV[i_sub];
+  }
+  int translate(int const &i_pt, Trans const &t) const {
+    MyVector<Tint> V = ListV[i_pt] + t;
+    auto iter = map.find(V);
+    if (iter == map.end()) {
+      return -1;
+    }
+    return iter->second;
+  }
 };
 
-template <typename Tint> DataVect<Tint> get_data_vect(MyMatrix<Tint> const &M) {
+template <typename Tint>
+MapPointLocator<Tint> get_map_point_locator(MyMatrix<Tint> const &M) {
   int n_vect = M.rows();
+  int dim = M.cols();
   std::vector<MyVector<Tint>> ListV;
   std::unordered_map<MyVector<Tint>, int> map;
   for (int i_vect = 0; i_vect < n_vect; i_vect++) {
@@ -44,7 +174,7 @@ template <typename Tint> DataVect<Tint> get_data_vect(MyMatrix<Tint> const &M) {
     map[V] = i_vect;
     ListV.push_back(V);
   }
-  return {n_vect, std::move(ListV), std::move(map)};
+  return {n_vect, dim, std::move(ListV), std::move(map)};
 }
 
 /*
@@ -52,35 +182,39 @@ template <typename Tint> DataVect<Tint> get_data_vect(MyMatrix<Tint> const &M) {
   of fixed dimension.
   It is a simple tree search
  */
-template <typename Tint, typename Finsert>
-void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
+template <typename Tlocator, typename Finsert>
+void kernel_enumerate_parallelepiped(Tlocator const &loc, int const &p,
                                      Finsert f_insert,
                                      [[maybe_unused]] std::ostream &os) {
-  int n_vect = dv.n_vect;
+  int n_vect = loc.n_vect;
 #ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "PARALL:   kernel_enumerate_parallelepiped, n_vect=" << n_vect << "\n";
 #endif
+  // Reused across the whole search so that no allocation happens per node.
+  typename Tlocator::Trans trans = loc.get_trans();
+  std::vector<int> new_pts;
 
   auto span_new_solution =
       [&](PartSolution const &psol,
           int const &newdir) -> std::optional<PartSolution> {
-    Face new_set = psol.full_set;
-    MyVector<Tint> trans = dv.ListV[newdir] - dv.ListV[psol.vert];
-    for (int i_vect = 0; i_vect < n_vect; i_vect++) {
-      if (psol.full_set[i_vect] == 1) {
-        MyVector<Tint> newV = dv.ListV[i_vect] + trans;
-        auto iter = dv.map.find(newV);
-        if (iter == dv.map.end()) {
-          return {};
-        }
-        int pos = iter->second;
-        new_set[pos] = 1;
+    loc.set_trans(newdir, psol.vert, trans);
+    size_t n_old = psol.pts.size();
+    new_pts = psol.pts;
+    for (auto &i_pt : psol.pts) {
+      int pos = loc.translate(i_pt, trans);
+      if (pos == -1) {
+        return {};
       }
+      new_pts.push_back(pos);
     }
+    // The first half is already sorted, so only the image needs to be.
+    std::sort(new_pts.begin() + n_old, new_pts.end());
+    std::inplace_merge(new_pts.begin(), new_pts.begin() + n_old,
+                       new_pts.end());
+    new_pts.erase(std::unique(new_pts.begin(), new_pts.end()), new_pts.end());
     std::vector<int> l_dir = psol.l_dir;
     l_dir.push_back(newdir);
-    PartSolution newsol{psol.vert, std::move(l_dir), std::move(new_set)};
-    return newsol;
+    return PartSolution{psol.vert, std::move(l_dir), new_pts};
   };
 
   /*
@@ -94,20 +228,27 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
   auto span_part_solution =
       [&](PartSolution const &psol) -> std::vector<PartSolution> {
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-    os << "PARALL:   span_part_solution |full_set|=" << psol.full_set.size()
-       << " / " << psol.full_set.count() << "\n";
+    os << "PARALL:   span_part_solution |pts|=" << psol.pts.size() << "\n";
 #endif
     std::vector<PartSolution> list_sol;
     int i_start = 0;
     if (!psol.l_dir.empty()) {
       i_start = psol.l_dir.back() + 1;
     }
+    // psol.pts is sorted, so the points already in the parallelepiped are
+    // skipped with a cursor instead of a membership test.
+    size_t i_pts = 0;
+    while (i_pts < psol.pts.size() && psol.pts[i_pts] < i_start) {
+      i_pts++;
+    }
     for (int i_vect = i_start; i_vect < n_vect; i_vect++) {
-      if (psol.full_set[i_vect] == 0) {
-        std::optional<PartSolution> opt = span_new_solution(psol, i_vect);
-        if (opt) {
-          list_sol.push_back(*opt);
-        }
+      if (i_pts < psol.pts.size() && psol.pts[i_pts] == i_vect) {
+        i_pts++;
+        continue;
+      }
+      std::optional<PartSolution> opt = span_new_solution(psol, i_vect);
+      if (opt) {
+        list_sol.push_back(std::move(*opt));
       }
     }
     return list_sol;
@@ -115,10 +256,8 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
   auto get_all_starts = [&]() -> std::vector<PartSolution> {
     std::vector<PartSolution> l_sol;
     for (int i_vect = 0; i_vect < n_vect; i_vect++) {
-      Face full_set(n_vect);
-      full_set[i_vect] = 1;
-      PartSolution esol{i_vect, {}, full_set};
-      l_sol.push_back(esol);
+      PartSolution esol{i_vect, {}, {i_vect}};
+      l_sol.push_back(std::move(esol));
     }
     return l_sol;
   };
@@ -177,12 +316,12 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
         return GoUpNextInTree();
       }
       size_t new_choice = 0;
-      OneLevel new_level{new_sols, new_choice};
+      OneLevel new_level{std::move(new_sols), new_choice};
       int new_i_level = i_level + 1;
       if (l_levels.size() >= static_cast<size_t>(new_i_level + 1)) {
-        l_levels[new_i_level] = new_level;
+        l_levels[new_i_level] = std::move(new_level);
       } else {
-        l_levels.push_back(new_level);
+        l_levels.push_back(std::move(new_level));
       }
       i_level = new_i_level;
       return true;
@@ -204,17 +343,18 @@ inline int pow_two(int dim) {
   return pow;
 }
 
+
 template <typename Tint>
 std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const &M,
                                            std::ostream &os) {
-  DataVect<Tint> dv = get_data_vect(M);
-  std::unordered_set<Face> set_face;
+  int n_vect = M.rows();
   int dim = M.cols();
   int pow = pow_two(dim);
-  if (dv.n_vect < pow) {
+  if (n_vect < pow) {
     // No point trying to enumerate when there are no solutions.
     return {};
   }
+  std::unordered_set<Face> set_face;
   MyMatrix<Tint> Mdet(dim, dim);
   auto f_insert = [&](PartSolution const &psol) -> void {
     int e_vert = psol.vert;
@@ -226,13 +366,28 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const &M,
     }
     Tint det = DeterminantMat(Mdet);
     if (T_abs(det) == 1) {
-      set_face.insert(psol.full_set);
+      // The subset is materialized only for the parallelepipeds that are
+      // kept, which are a small part of the leaves of the search.
+      Face full_set(n_vect);
+      for (auto &i_pt : psol.pts) {
+        full_set[i_pt] = 1;
+      }
+      set_face.insert(std::move(full_set));
     }
   };
 #ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "PARALL:   Before kernel_enumerate_parallelepiped\n";
 #endif
-  kernel_enumerate_parallelepiped(dv, dim, f_insert, os);
+  std::optional<GridPointLocator> opt_grid = get_grid_point_locator(M);
+  if (opt_grid) {
+    kernel_enumerate_parallelepiped(*opt_grid, dim, f_insert, os);
+  } else {
+#ifdef DEBUG_ENUM_PARALL_SEARCH
+    os << "PARALL:   The points do not fit on a grid, using the map\n";
+#endif
+    kernel_enumerate_parallelepiped(get_map_point_locator(M), dim, f_insert,
+                                    os);
+  }
 #ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "PARALL:   After kernel_enumerate_parallelepiped\n";
 #endif

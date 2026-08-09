@@ -1544,10 +1544,12 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #endif
     T shift = min_norm / T(10);
     int N = 1;
-    int i_iter = 0;
-    while(true) {
-      i_iter += 1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
+    int i_iter = 0;
+#endif
+    while(true) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      i_iter += 1;
       os << "ROBUST: fpe, step 10_1, N=" << N << " shift=" << shift << "\n";
 #endif
       MyVector<T> eIso = cb_new.random_interior_point(N, os);
