@@ -67,17 +67,17 @@ int main(int argc, char *argv[]) {
         ReduceVectorFamily(M, method, std::cerr);
     std::cerr << "Output complexity measures\n";
     matrix_measure(pair.first);
-    auto print_mat = [&](std::ostream &os) -> void {
+    auto print_mat = [&](std::ostream &os_out) -> void {
       if (OutFormat == "GAP") {
-        os << "return ";
-        WriteMatrixGAP(os, pair.first);
-        os << ";\n";
+        os_out << "return ";
+        WriteMatrixGAP(os_out, pair.first);
+        os_out << ";\n";
         return;
       }
       if (OutFormat == "CPP") {
-        return WriteMatrix(os, pair.first);
+        return WriteMatrix(os_out, pair.first);
       }
-      std::cerr << "No matching format in print_mat\n";
+      std::cerr << "No matching format in print_mat. Allowed options: GAP, CPP\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileO, print_mat);
