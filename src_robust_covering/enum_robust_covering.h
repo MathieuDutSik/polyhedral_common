@@ -1762,39 +1762,6 @@ PVoronoi<T, Tint> get_one_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<PVoronoi<T, Tint>>
-find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
-                             PVoronoi<T, Tint> const &pv) {
-  std::ostream &os = eData.rddo.os;
-  CVPSolver<T, Tint> const &solver = eData.solver;
-  MyMatrix<T> const& G = solver.GramMat;
-  T min_norm = min_pairwise_norm(pv.EXT, G);
-  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pv.gp, os);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: flapv, We have bnd\n";
-  //  print_raw_boundary(bnd, os);
-#endif
-
-  std::vector<PVoronoi<T, Tint>> l_adj;
-  while(true) {
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv |l_adj|=" << l_adj.size() << "\n";
-#endif
-    bool test = bnd.is_empty();
-    if (test) {
-      break;
-    }
-    PVoronoi<T, Tint> eadj = get_one_adjacent_p_voronoi(eData, min_norm, bnd);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: Now we have eadj\n";
-#endif
-    reduce_boundary_generalized_polytope(bnd, eadj.gp, os);
-    l_adj.push_back(eadj);
-  }
-  return l_adj;
-}
-
-template <typename T, typename Tint, typename Tgroup>
-std::vector<PVoronoi<T, Tint>>
 compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   std::ostream &os = eData.rddo.os;
   MyMatrix<T> const& G = eData.solver.GramMat;

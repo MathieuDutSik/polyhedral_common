@@ -102,8 +102,8 @@ get_grid_point_locator(MyMatrix<Tint> const &M) {
       if (!opt) {
         return {};
       }
-      // Several of the conversions to int64_t truncate instead of reporting
-      // the overflow, so the value is converted back and compared.
+      // Converting back and comparing keeps the test independent of whether
+      // the conversion of Tint reports its overflows.
       if (UniversalScalarConversion<Tint, int64_t>(*opt) != val) {
         return {};
       }
@@ -403,30 +403,72 @@ template <typename T, typename Tint> struct ResultRobustClosest {
   std::vector<MyMatrix<Tint>> list_parallelepipeds;
 };
 
-template <typename T, typename Tint>
-T compute_upper_bound_mat(MyMatrix<T> const &GramMat, MyMatrix<Tint> const &M) {
-  int n_ent = M.rows();
-  T upper_value(0);
-  for (int i_ent = 0; i_ent < n_ent; i_ent++) {
-    MyVector<Tint> v1 = GetMatrixRow(M, i_ent);
-    for (int j_ent = i_ent + 1; j_ent < n_ent; j_ent++) {
-      MyVector<Tint> v2 = GetMatrixRow(M, j_ent);
-      MyVector<Tint> diff = v1 - v2;
-      T norm = EvaluationQuadForm(GramMat, diff);
-      if (norm > upper_value) {
-        upper_value = norm;
+/*
+  The largest squared distance between two vertices of a parallelepiped.
+
+  The quadratic form is evaluated for every pair of vertices, so the cost grows
+  with the square of the number of vertices and, the vertices being the 2^dim
+  corners of a box, quickly dominates. The evaluation is therefore done over
+  the underlying ring: the Gram matrix is scaled once to an integral matrix,
+  every norm is an integer numerator over the same positive denominator, and
+  only the returned value goes back to the field. That replaces the canonical-
+  izing field arithmetic of the fractions by plain multiply-accumulate.
+ */
+template <typename T> struct UpperBoundEvaluator {
+  using Tring = typename underlying_ring<T>::ring_type;
+  // ScaledGram = TheMult * GramMat with TheMult > 0, so the ordering of the
+  // norms is the ordering of the integral values.
+  MyMatrix<Tring> ScaledGram;
+  T TheMult;
+  int dim;
+  template <typename Tint> T eval(MyMatrix<Tint> const &M) const {
+    int n_ent = M.rows();
+    MyMatrix<Tring> Mring = UniversalMatrixConversion<Tring, Tint>(M);
+    MyVector<Tring> diff(dim);
+    Tring upper_value(0);
+    Tring norm, prod;
+    for (int i_ent = 0; i_ent < n_ent; i_ent++) {
+      for (int j_ent = i_ent + 1; j_ent < n_ent; j_ent++) {
+        for (int i = 0; i < dim; i++) {
+          diff(i) = Mring(i_ent, i) - Mring(j_ent, i);
+        }
+        norm = 0;
+        for (int i = 0; i < dim; i++) {
+          for (int j = 0; j < dim; j++) {
+            prod = diff(i) * diff(j);
+            AddMul(norm, prod, ScaledGram(i, j));
+          }
+        }
+        if (norm > upper_value) {
+          upper_value = norm;
+        }
       }
     }
+    return UniversalScalarConversion<T, Tring>(upper_value) / TheMult;
   }
-  return upper_value;
+};
+
+template <typename T>
+UpperBoundEvaluator<T> get_upper_bound_evaluator(MyMatrix<T> const &GramMat) {
+  FractionMatrixRing<T> frr = RemoveFractionMatrixPlusCoeffRing(GramMat);
+  int dim = GramMat.rows();
+  return UpperBoundEvaluator<T>{std::move(frr.TheMat), std::move(frr.TheMult),
+                                dim};
+}
+
+template <typename T, typename Tint>
+T compute_upper_bound_mat(MyMatrix<T> const &GramMat, MyMatrix<Tint> const &M) {
+  return get_upper_bound_evaluator(GramMat).eval(M);
 }
 
 template <typename T, typename Tint>
 T compute_upper_bound_rrc(MyMatrix<T> const &GramMat,
                           ResultRobustClosest<T, Tint> const &rrc) {
+  // The scaling of the Gram matrix is shared by all the parallelepipeds.
+  UpperBoundEvaluator<T> evaluator = get_upper_bound_evaluator(GramMat);
   T upper_value(0);
   for (auto &M : rrc.list_parallelepipeds) {
-    T value = compute_upper_bound_mat(GramMat, M);
+    T value = evaluator.eval(M);
     if (value == 0) {
       std::cerr << "PARALL: The value should be non-zero\n";
       throw TerminalException{1};
