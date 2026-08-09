@@ -83,6 +83,14 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
     return newsol;
   };
 
+  /*
+    The box spanned from psol.vert by the directions of psol.l_dir depends only
+    on the set of directions, not on the order in which they were added. Every
+    sub-box of a valid box is itself a valid partial solution, so restricting
+    the search to strictly increasing sequences of directions still reaches
+    every (vert, set of directions) pair, and reaches it exactly once instead of
+    once per permutation. That divides the size of the tree by dim!.
+   */
   auto span_part_solution =
       [&](PartSolution const &psol) -> std::vector<PartSolution> {
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
@@ -90,7 +98,11 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
        << " / " << psol.full_set.count() << "\n";
 #endif
     std::vector<PartSolution> list_sol;
-    for (int i_vect = 0; i_vect < n_vect; i_vect++) {
+    int i_start = 0;
+    if (!psol.l_dir.empty()) {
+      i_start = psol.l_dir.back() + 1;
+    }
+    for (int i_vect = i_start; i_vect < n_vect; i_vect++) {
       if (psol.full_set[i_vect] == 0) {
         std::optional<PartSolution> opt = span_new_solution(psol, i_vect);
         if (opt) {
