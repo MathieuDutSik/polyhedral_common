@@ -550,6 +550,8 @@ set(
   LATT_FindOneVertex
   LATT_SerialLattice_IsoDelaunayDomain
   LATT_SerialComputeDelaunay
+  LATT_AnalysisIsoDelaunay
+  LATT_LookForFullRankRayDomain
 )
 foreach(target IN LISTS DELAUNAY_PROGRAMS)
   add_polyhedral_binary(

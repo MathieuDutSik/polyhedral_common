@@ -193,10 +193,14 @@ EnumerateStarOf0(DelaunayTesselationIneq<T, Tgroup> const &DT,
   // BFS the orbit of each Delaunay orbit rep under Aut(L), modulo Z^n.
   std::set<std::vector<std::vector<T>>> seen_shapes;
   std::vector<MyMatrix<T>> shape_reps;
-  for (Delaunay_EntryIneq<T, Tgroup> const &entry : DT.l_dels) {
-    auto k0 = CanonicalKeyModZn(entry.EXT);
+  // The tessellation stores its vertices over the ring, the shapes below
+  // being handled over the field.
+  using Tring = typename underlying_ring<T>::ring_type;
+  for (auto const &entry : DT.l_dels) {
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(entry.EXT);
+    auto k0 = CanonicalKeyModZn(EXT_T);
     if (seen_shapes.insert(k0).second) {
-      shape_reps.push_back(entry.EXT);
+      shape_reps.push_back(std::move(EXT_T));
     }
   }
   {

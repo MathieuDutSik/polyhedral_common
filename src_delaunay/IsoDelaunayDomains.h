@@ -616,9 +616,10 @@ DelaunayTesselationIneq<T, Tgroup> BuildDelaunayTesselationIneq(
   DelaunayTesselationIneq into the grouped-by-canonical-inequality form
   used to build the defining system of the iso-Delaunay domain.
  */
-template <typename T, typename Tgroup>
+template <typename T, typename Tgroup,
+          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
 std::vector<FullAdjInfo<T>> ComputeListIneqFromTesselationIneq(
-    DelaunayTesselationIneq<T, Tgroup> const &DTI) {
+    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DTI) {
   std::unordered_map<MyVector<T>, std::vector<AdjInfo>> map;
   int n_del = DTI.l_dels.size();
   for (int i_del = 0; i_del < n_del; i_del++) {
@@ -661,9 +662,11 @@ MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const &ListIneq) {
   return FAC;
 }
 
-template <typename T, typename Tgroup>
-MyMatrix<T> get_list_ineq(DelaunayTesselationIneq<T, Tgroup> const &DTI,
-                          [[maybe_unused]] std::ostream &os) {
+template <typename T, typename Tgroup,
+          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+MyMatrix<T> get_list_ineq(
+    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DTI,
+    [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   MicrosecondTime time_interior;
 #endif
@@ -740,19 +743,23 @@ MyMatrix<T> get_interior_gram_matrix_lrs(LinSpaceMatrix<T> const &LinSpa,
   return SumMatExtRay;
 }
 
-template <typename T, typename Tgroup>
-MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
-                                  DelaunayTesselationIneq<T, Tgroup> const &DTI,
-                                  std::ostream &os) {
+template <typename T, typename Tgroup,
+          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+MyMatrix<T> GetInteriorGramMatrix(
+    LinSpaceMatrix<T> const &LinSpa,
+    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DTI,
+    std::ostream &os) {
   MyMatrix<T> FAC = get_list_ineq<T, Tgroup>(DTI, os);
   return get_interior_gram_matrix_lp(LinSpa, FAC, os);
 }
 
-template <typename T, typename Tgroup>
+template <typename T, typename Tgroup,
+          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
 std::pair<MyMatrix<T>, MyMatrix<T>>
-GetInteriorGramMatrices(LinSpaceMatrix<T> const &LinSpa,
-                        DelaunayTesselationIneq<T, Tgroup> const &DTI,
-                        std::ostream &os) {
+GetInteriorGramMatrices(
+    LinSpaceMatrix<T> const &LinSpa,
+    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DTI,
+    std::ostream &os) {
   MyMatrix<T> FAC = get_list_ineq<T, Tgroup>(DTI, os);
   MyMatrix<T> Mat1 = get_interior_gram_matrix_lp(LinSpa, FAC, os);
   MyMatrix<T> Mat2 = get_interior_gram_matrix_lrs(LinSpa, FAC, os);
@@ -2532,10 +2539,12 @@ inline void serialize(Archive &ar, IsoDelaunayDomain_AdjO<T, Tint> &eRec,
   BUT we should have some invariants coming from the Tspace and right now we
   have none.
  */
-template <typename T, typename Tint, typename Tgroup>
+template <typename T, typename Tint, typename Tgroup,
+          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
 size_t ComputeInvariantIsoDelaunayDomain(
     [[maybe_unused]] DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
-    size_t const &seed, DelaunayTesselationIneq<T, Tgroup> const &DT,
+    size_t const &seed,
+    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DT,
     [[maybe_unused]] std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
   std::map<size_t, size_t> map_delaunays;
