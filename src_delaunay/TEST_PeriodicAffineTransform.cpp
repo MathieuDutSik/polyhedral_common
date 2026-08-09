@@ -88,28 +88,32 @@ int main() {
         check(x_back == x, "from_field(to_field(x)) equals x");
       }
     }
-    // Periodic point set: cosets (0,0), (1/2,1/2) of the checkerboard.
+    // Periodic point set: cosets (0,0) and (1/3,0). It is genuinely
+    // periodic, the cosets not being a group modulo Z^2, which a point
+    // set described by cosets has to be -- a set like
+    // {(0,0), (1/2,1/2)} is a lattice and is refused at construction.
     MyMatrix<T> Cosets(2, 2);
     Cosets(0, 0) = 0;
     Cosets(0, 1) = 0;
-    Cosets(1, 0) = T(1) / T(2);
-    Cosets(1, 1) = T(1) / T(2);
+    Cosets(1, 0) = T(1) / T(3);
+    Cosets(1, 1) = 0;
     PeriodicPointSet<Tring> pps =
         PeriodicPointSetFromRational<Tring>(Cosets);
-    check(pps.N == 2, "denominator of the checkerboard");
+    check(pps.N == 3, "denominator of the point set");
+    check(!IsPeriodicPointSetLattice(pps), "the point set is not a lattice");
     MyVector<Tring> u(2);
-    u(0) = 5;
-    u(1) = -3;
-    std::optional<size_t> opt = GetCosetIndex(pps, u);
-    check(opt.has_value() && *opt == 1, "coset lookup of (5,-3)/2");
     u(0) = 4;
-    u(1) = -3;
+    u(1) = 0;
+    std::optional<size_t> opt = GetCosetIndex(pps, u);
+    check(opt.has_value() && *opt == 1, "coset lookup of (4,0)/3");
+    u(0) = 2;
+    u(1) = 0;
     check(!GetCosetIndex(pps, u).has_value(),
           "coset lookup of a point outside the set");
-    u(0) = -4;
+    u(0) = -3;
     u(1) = 6;
     std::optional<size_t> opt2 = GetCosetIndex(pps, u);
-    check(opt2.has_value() && *opt2 == 0, "coset lookup of (-4,6)/2");
+    check(opt2.has_value() && *opt2 == 0, "coset lookup of (-3,6)/3");
     std::cerr << "Normal termination of TEST_PeriodicAffineTransform\n";
   } catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of TEST_PeriodicAffineTransform\n";
