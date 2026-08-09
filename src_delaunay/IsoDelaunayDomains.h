@@ -448,7 +448,7 @@ StripDelaunayTesselationIneq(
   for (auto &eDel : DTI.l_dels) {
     std::vector<Delaunay_AdjO<T>> ListAdj;
     for (auto &eAdj : eDel.ListAdj) {
-      MyMatrix<T> eBigMat_T = TransformToFieldMatrix<T>(eAdj.eBigMat);
+      MyMatrix<T> eBigMat_T = TransformToActingMatrix<T>(eAdj.eBigMat);
       ListAdj.push_back({eAdj.eInc, std::move(eBigMat_T), eAdj.iOrb});
     }
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(eDel.EXT);
@@ -1305,7 +1305,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
       TypeOrbitCenter eEnt = ListOrbitCenter[iCent];
       for (auto &eCase : ListInformationsOneFlipping) {
         if (eEnt.iDelaunay == eCase.iOrb) {
-          MyMatrix<T> eBigMat = TransformToFieldMatrix<T>(
+          MyMatrix<T> eBigMat = TransformToActingMatrix<T>(
               ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].eBigMat);
           int iOrbAdj =
               ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].iOrb;
@@ -1667,10 +1667,11 @@ template <typename T, typename Tgroup,
 DelaunayTesselationIneq<T, Tgroup, Ttransform>
 FlippingLtype(
     DelaunayTesselationIneq<T, Tgroup, Ttransform> const &ListOrbitDelaunay,
-              MyMatrix<T> const &InteriorElement,
-              std::vector<AdjInfo> const &ListInformationsOneFlipping,
-              std::vector<std::vector<T>> const &ListGram,
-              RecordDualDescOperation<T, Tgroup> &rddo) {
+    MyMatrix<T> const &InteriorElement,
+    std::vector<AdjInfo> const &ListInformationsOneFlipping,
+    std::vector<std::vector<T>> const &ListGram,
+    typename transform_traits<Ttransform>::Tcontext const &ctx,
+    RecordDualDescOperation<T, Tgroup> &rddo) {
   std::ostream &os = rddo.os;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FLT: FlippingLtype, begin\n";
@@ -1937,7 +1938,7 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_flt_bigmat += time_b.eval_int64();
 #endif
-        MyMatrix<T> eAdjBigMat = TransformToFieldMatrix<T>(eAdj.eBigMat);
+        MyMatrix<T> eAdjBigMat = TransformToActingMatrix<T>(eAdj.eBigMat);
         return {{eAdj.eInc, std::move(eAdjBigMat), eAdj.iOrb}, eBigMat};
       }
     }
@@ -2086,7 +2087,7 @@ FlippingLtype(
     ContainerMatrix<T> cont(EXT);
     Face f_att(EXT.rows());
     MyMatrix<T> EXTadj =
-        l_EXT_T[NewAdj.iOrb] * TransformToFieldMatrix<T>(NewAdj.eBigMat);
+        l_EXT_T[NewAdj.iOrb] * TransformToActingMatrix<T>(NewAdj.eBigMat);
     os << "ISODEL: FLT: check_adj iOrb=" << iOrb
        << " NewAdj.iOrb=" << NewAdj.iOrb << "\n";
     os << "ISODEL: FLT:      |EXT|=" << EXT.rows() << " / " << EXT.cols()
@@ -2156,7 +2157,7 @@ FlippingLtype(
             ensure_vipc_cont();
             MyVector<T> eIneqCheck = ComputeDelaunayAdjIneq(
                 *vipc_opt, *cont_opt, l_EXT_T[iOrbAdj],
-                TransformToFieldMatrix<T>(eAdj.eBigMat),
+                TransformToActingMatrix<T>(eAdj.eBigMat),
                 ListGram, os);
             if (eIneqCheck != eIneq) {
               std::cerr << "FLIP_CASE1_INEQ: SANITY_CHECK failed: the "
@@ -2181,7 +2182,7 @@ FlippingLtype(
           int iFacet = vect_lower_iFacet[iDelaunayOld];
           RepartEntry<T, Tgroup> const &eFacet = ListInfo[iInfo][iFacet];
           MyMatrix<T> const &BigMat2 = eFacet.eBigMat;
-          MyMatrix<T> eAdjBigMat = TransformToFieldMatrix<T>(eAdj.eBigMat);
+          MyMatrix<T> eAdjBigMat = TransformToActingMatrix<T>(eAdj.eBigMat);
           MyMatrix<T> ImageEXT = get_EXTold_T(iDelaunayOld) * eAdjBigMat;
           Face Linc = get_face_msub_m(get_EXTold_T(iDelaunay),
                                       eAdj.eInc, ImageEXT);
@@ -2219,7 +2220,7 @@ FlippingLtype(
           time_flt_ineq += time_i.eval_int64();
 #endif
           Delaunay_AdjIneqO<T, Ttransform> NAdj{
-              eAdj.eInc, TransformFromFieldMatrix<Ttransform>(BigMat1), Pos,
+              eAdj.eInc, TransformFromActingMatrix<Ttransform>(BigMat1, ctx), Pos,
               eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 2");
@@ -2304,7 +2305,7 @@ FlippingLtype(
           time_flt_ineq += time_i.eval_int64();
 #endif
           Delaunay_AdjIneqO<T, Ttransform> NAdj{
-              eAdj.eInc, TransformFromFieldMatrix<Ttransform>(BigMat2), Pos,
+              eAdj.eInc, TransformFromActingMatrix<Ttransform>(BigMat2, ctx), Pos,
               eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 3");
@@ -2338,7 +2339,7 @@ FlippingLtype(
             time_flt_ineq += time_i.eval_int64();
 #endif
             Delaunay_AdjIneqO<T, Ttransform> NAdj{
-                eAdj.eInc, TransformFromFieldMatrix<Ttransform>(BigMat1), Pos2,
+                eAdj.eInc, TransformFromActingMatrix<Ttransform>(BigMat1, ctx), Pos2,
                 eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 4");
@@ -2377,7 +2378,7 @@ FlippingLtype(
             time_flt_ineq += time_i.eval_int64();
 #endif
             Delaunay_AdjIneqO<T, Ttransform> NAdj{
-                eAdj.eInc, TransformFromFieldMatrix<Ttransform>(BigMat1), Pos,
+                eAdj.eInc, TransformFromActingMatrix<Ttransform>(BigMat1, ctx), Pos,
                 eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 5");
@@ -2399,7 +2400,7 @@ FlippingLtype(
           time_flt_ineq += time_i.eval_int64();
 #endif
           Delaunay_AdjIneqO<T, Ttransform> NAdj{
-              eAdj.eInc, TransformFromFieldMatrix<Ttransform>(eAdj.eBigMat),
+              eAdj.eInc, TransformFromActingMatrix<Ttransform>(eAdj.eBigMat, ctx),
               Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 6");
@@ -2987,7 +2988,7 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 #endif
   DelaunayTesselationIneq<T, Tgroup> DTIadj =
     FlippingLtype<T, Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo,
-                             data.LinSpa.ListLineMat, data.rddo);
+                             data.LinSpa.ListLineMat, {}, data.rddo);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: s_adj, FlippingLtype|=" << time_s_adj << "\n";
 #endif
