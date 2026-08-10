@@ -57,7 +57,7 @@ Existing macros in use can be discovered with `grep -rh '#ifdef \(DEBUG\|SANITY_
 
 ## Builds must be warning-clean
 
-A build of polyhedral_common code must produce no compiler warnings. The only warnings tolerated are those emitted from upstream third-party headers (Boost, Eigen, GMP, GLPK, cddlib, MPI, etc.) that we cannot patch. Warnings in code we own — including the submodules `basic_common_cpp/` and `permutalib/` (which should be patched upstream) — are bugs and must be fixed before merge.
+A build of polyhedral_common code must produce no compiler warnings. The only warnings tolerated are those emitted from upstream third-party headers (Boost, Eigen, GMP, cddlib, MPI, etc.) that we cannot patch. Warnings in code we own — including the submodules `basic_common_cpp/` and `permutalib/` (which should be patched upstream) — are bugs and must be fixed before merge.
 
 When adding code, run a clean build and check the compiler output; do not assume "it worked last time" carries over.
 

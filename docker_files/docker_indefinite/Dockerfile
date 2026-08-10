@@ -65,11 +65,6 @@ RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty && mkdir build
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH ..
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make all install
 
-# GLPK
-RUN apt-get install -y libglpk-dev
-ENV GLPK_PATH /usr
-ENV GLPK_INCLUDE "-I$GLPK_PATH/include"
-ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
 
 # Compiling polyhedral functionality
 RUN cd GIT/polyhedral_common/src_indefinite && make -f Makefile_indef_ci

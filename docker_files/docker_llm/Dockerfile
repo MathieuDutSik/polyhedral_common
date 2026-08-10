@@ -4,7 +4,7 @@
 # It bundles:
 #   - C/C++ toolchain: gcc/g++/clang + clangd/clang-format/clang-tidy
 #   - Debug tools: valgrind, gdb, lldb, strace
-#   - Project build deps: cmake, boost, eigen3, gmp, glpk,
+#   - Project build deps: cmake, boost, eigen3, gmp,
 #     openmpi, libnauty2, libtbb
 #   - Node.js 22 LTS, Python 3 + uv
 #   - LLM CLIs:
@@ -90,7 +90,6 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
         libboost-all-dev \
         libeigen3-dev \
         libgmp-dev \
-        libglpk-dev \
         libtbb-dev \
         libnauty2-dev \
         openmpi-bin libopenmpi-dev \

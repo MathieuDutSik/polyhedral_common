@@ -22,8 +22,6 @@ jobs:
       BOOST_INCDIR: "/usr/include"
       BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
       EIGEN_PATH: /home/runner/work/opt/eigen
-      GLPK_INCLUDE: "-I/usr/include"
-      GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
       NETCDF_CXX_ALLINC: "-I/home/runner/work/opt/netcdf-cxx4-4.3.1/include -I/home/runner/work/opt/netcdf-cxx4-4.3.1/include"
       NETCDF_CXX_LINK: "-L/home/runner/work/opt/netcdf-cxx4-4.3.1/lib -lnetcdf_c++4 -Wl,-rpath,/home/runner/work/opt/netcdf-cxx4-4.3.1/lib"
       NAUTY_PATH: /home/runner/work/opt/nauty
@@ -50,7 +48,6 @@ jobs:
           sudo apt-get install -y cmake
           sudo apt-get install -y libgmp-dev
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
-          sudo apt-get install -y libglpk-dev
           sudo apt-get install -y autoconf autotools-dev libtool
 
       - uses: ./.github/actions/install-nauty

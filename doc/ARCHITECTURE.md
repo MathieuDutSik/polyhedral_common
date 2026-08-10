@@ -173,7 +173,7 @@ The build
 Each `src_*` directory is independently buildable: its `Makefile` declares its
 include paths (the `CLOCAL` line — the authoritative dependency list for that
 module) and its targets. There is also a top-level `CMakeLists.txt` covering the
-tree. External dependencies are GMP, Boost, Eigen, cddlib, GLPK, and nauty (plus
+tree. External dependencies are GMP, Boost, Eigen, cddlib, and nauty (plus
 optional FLINT / bliss / MPI); the submodules supply the rest.
 
 

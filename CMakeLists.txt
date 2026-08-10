@@ -54,8 +54,6 @@ endif()
 
 pkg_check_modules(GMPXX REQUIRED IMPORTED_TARGET gmpxx)
 find_library(GMP_LIBRARY NAMES gmp REQUIRED)
-find_path(GLPK_INCLUDE_DIR NAMES glpk.h REQUIRED)
-find_library(GLPK_LIBRARY NAMES glpk REQUIRED)
 find_path(
   NETCDF_INCLUDE_DIR
   NAMES netcdf
@@ -217,10 +215,6 @@ endif()
 # compiled in; GMP_POOL alone (above) enables them. Nothing MPI-specific needed
 # here for the pool.
 
-add_library(polyhedral_glpk_support INTERFACE)
-target_include_directories(polyhedral_glpk_support INTERFACE "${GLPK_INCLUDE_DIR}")
-target_link_libraries(polyhedral_glpk_support INTERFACE "${GLPK_LIBRARY}")
-
 
 if(HAVE_NETCDF)
   add_library(polyhedral_netcdf_support INTERFACE)
@@ -238,7 +232,6 @@ target_link_libraries(
   polyhedral_copos_support
   INTERFACE
     polyhedral_common
-    polyhedral_glpk_support
 )
 
 add_library(polyhedral_dualdesc_support INTERFACE)
@@ -246,7 +239,6 @@ target_link_libraries(
   polyhedral_dualdesc_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_glpk_support
     polyhedral_mpi_support
 )
 
@@ -255,7 +247,6 @@ target_link_libraries(
   polyhedral_perfect_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_glpk_support
     polyhedral_mpi_support
 )
 
@@ -264,7 +255,6 @@ target_link_libraries(
   polyhedral_short_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_glpk_support
 )
 
 add_library(polyhedral_latt_support INTERFACE)
@@ -272,7 +262,6 @@ target_link_libraries(
   polyhedral_latt_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_glpk_support
     polyhedral_mpi_support
 )
 
@@ -281,7 +270,6 @@ target_link_libraries(
   polyhedral_delaunay_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_glpk_support
     polyhedral_mpi_support
 )
 
@@ -299,7 +287,6 @@ target_link_libraries(
   polyhedral_poly_support
   INTERFACE
     polyhedral_common
-    polyhedral_glpk_support
 )
 
 if(HAVE_NETCDF)
@@ -321,7 +308,6 @@ target_link_libraries(
   polyhedral_polydecomp_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_glpk_support
 )
 
 add_library(polyhedral_polygen_support INTERFACE)
@@ -329,7 +315,6 @@ target_link_libraries(
   polyhedral_polygen_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_glpk_support
     polyhedral_mpi_support
 )
 
@@ -354,7 +339,6 @@ target_link_libraries(
   polyhedral_robust_support
   INTERFACE
     polyhedral_group_support
-    polyhedral_glpk_support
     polyhedral_mpi_support
 )
 

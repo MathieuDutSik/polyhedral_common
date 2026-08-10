@@ -28,7 +28,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # afterwards so they do not bloat the image.
 #   toolchain  : g++/gcc/gfortran/clang, make, cmake, pkg-config, autotools, git, wget
 #   linker     : mold (see the dpkg-divert step below)
-#   libraries  : openmpi, gmp, boost(+mpi,+serialization), glpk, flint(+ntl),
+#   libraries  : openmpi, gmp, boost(+mpi,+serialization), flint(+ntl),
 #                netcdf-c++4 (required by src_ctype)
 #   convenience: sudo + a small editor + less for interactive use
 # ---------------------------------------------------------------------------
@@ -41,7 +41,6 @@ RUN apt-get update \
       openmpi-bin libopenmpi-dev \
       libgmp-dev \
       libboost-dev libboost-mpi-dev libboost-serialization-dev \
-      libglpk-dev \
       libflint-dev libntl-dev \
       libnetcdf-c++4-dev \
       libgdbm-dev libsnappy-dev zlib1g-dev \
@@ -68,10 +67,6 @@ ENV GMP_INCDIR="/usr/include" \
 ENV BOOST_INCDIR="/usr/include" \
     BOOST_LINK="-lboost_serialization" \
     MPI_LINK_CPP="-lboost_mpi"
-
-ENV GLPK_PATH="/usr" \
-    GLPK_INCLUDE="-I/usr/include" \
-    GLPK_LINK="-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
 
 ENV FLINT_INCDIR="/usr/include" \
     FLINT_LINK="-lflint"

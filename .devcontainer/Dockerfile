@@ -3,7 +3,7 @@
 # Builds on Microsoft's reference C++ devcontainer base (ships with gcc,
 # g++, clang, cmake, gdb, a non-root `vscode` user at UID 1000, sudo,
 # locales, etc.), then layers:
-#   * polyhedral_common build deps: boost, eigen, gmp, glpk,
+#   * polyhedral_common build deps: boost, eigen, gmp,
 #     openmpi, libtbb, lrslib
 #   * nauty built from https://github.com/MathieuDutSik/nauty (tag 2.9.3)
 #     into /opt/nauty, with $NAUTY_PATH / $NAUTY_INCLUDE / $NAUTY_LINK
@@ -46,7 +46,6 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
         libboost-all-dev \
         libeigen3-dev \
         libgmp-dev \
-        libglpk-dev \
         libtbb-dev \
         openmpi-bin libopenmpi-dev \
         lrslib \

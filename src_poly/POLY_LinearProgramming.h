@@ -19,7 +19,7 @@
 
   The linear programming code is typically not in that place
   but in another. Typically we use CDD.
-  But there are potential alternatives, for example GLPK or LRS
+  But there are potential alternatives, for example LRS
   though they do not yet offer the full functionalities as CDD.
  */
 

@@ -15,7 +15,7 @@ COPTIONS        = -DGMP_POOL
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -isystem $(EIGEN_PATH) $(NAUTY_INCLUDE)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(COPTIONS)
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK) $(GLPK_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK)
 
 %.o: %.cpp
 	@echo

@@ -47,7 +47,6 @@ The project uses the following external libraries:
     Delaunay, perfect form, Lorentzian, C-type, and enumeration code.
 * OpenMPI or another compatible MPI implementation: runtime and compiler
   support for the MPI-enabled binaries.
-* GLPK: linear programming support.
 * cddlib: double description computations, both rational and floating-point
   variants.
 * FLINT: number-theoretic and arithmetic support in several subsystems.

@@ -67,11 +67,6 @@ RUN cd GIT && git clone https://github.com/MathieuDutSik/nauty
 RUN cd GIT/nauty && ./configure --prefix=/opt/nauty
 RUN cd GIT/nauty && make && make install
 
-# GLPK
-RUN apt-get install -y libglpk-dev
-ENV GLPK_PATH /usr
-ENV GLPK_INCLUDE "-I$GLPK_PATH/include"
-ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
 
 # Compiling polyhedral functionality
 RUN cd GIT/polyhedral_common/src_perfect && make -f Makefile_perfectenum
