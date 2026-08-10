@@ -479,12 +479,15 @@ void WriteCopositivityEnumResult(std::ostream &os_out,
   throw TerminalException{1};
 }
 
+// eSymmMatB is TheBasis * eSymmMat * TheBasis^T. Every caller has it already,
+// so it is passed in rather than recomputed: that product is the dominant cost
+// of a node of the tree.
 template <typename T, typename Tint>
-std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
-                                              MyMatrix<Tint> const &TheBasis) {
-  int n = eSymmMat.rows();
-  MyMatrix<T> TheBasis_T = UniversalMatrixConversion<T, Tint>(TheBasis);
-  MyMatrix<T> eSymmMatB = TheBasis_T * eSymmMat * TheBasis_T.transpose();
+std::vector<MyMatrix<Tint>>
+PairDecomposition([[maybe_unused]] MyMatrix<T> const &eSymmMat,
+                  MyMatrix<T> const &eSymmMatB,
+                  MyMatrix<Tint> const &TheBasis) {
+  int n = eSymmMatB.rows();
   std::pair<Tint, Tint> PairXY_found{-1, -1};
   std::pair<int, int> PairIJ_found{-1, -1};
   // We form a matrix
@@ -510,7 +513,12 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
   int OptMinimum = 1;
   bool IsFirst = true;
   Tint MinSumXY(0);
-  T MaxValQuot(0);
+  // The selection criterion of OptMinimum == 1 is the largest value of
+  // b^2 / (a c). The quotient is kept as a numerator and a denominator so that
+  // the comparison is a pair of products instead of a division. The callers
+  // have already established a >= 0 and c >= 0 and, for b < 0, b^2 <= a c, so
+  // a c is positive here and the denominators are positive.
+  T MaxQuotNum(0), MaxQuotDen(1);
   for (int i = 0; i < n - 1; i++)
     for (int j = i + 1; j < n; j++) {
       T a = eSymmMatB(i, i);
@@ -519,10 +527,11 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
       if (b < 0) {
         std::pair<Tint, Tint> CandXY;
         Tint sumCoef(0);
-        T eQuot(0);
+        T QuotNum(0), QuotDen(1);
         if (OptMinimum == 1) {
           CandXY = {1, 1};
-          eQuot = (b * b) / (a * c);
+          QuotNum = b * b;
+          QuotDen = a * c;
         }
         if (OptMinimum == 2) {
           CandXY = GetSplit(a, b, c);
@@ -531,12 +540,14 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
         auto InsertValue = [&]() -> bool {
           if (IsFirst) {
             IsFirst = false;
-            MaxValQuot = eQuot;
+            MaxQuotNum = QuotNum;
+            MaxQuotDen = QuotDen;
             MinSumXY = sumCoef;
             return true;
           }
-          if (OptMinimum == 1 && eQuot > MaxValQuot) {
-            MaxValQuot = eQuot;
+          if (OptMinimum == 1 && QuotNum * MaxQuotDen > MaxQuotNum * QuotDen) {
+            MaxQuotNum = QuotNum;
+            MaxQuotDen = QuotDen;
             return true;
           }
           if (OptMinimum == 2 && sumCoef < MinSumXY) {
@@ -597,12 +608,15 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
     TheBasis1.row(i) = eVect1;
     TheBasis2.row(i) = eVect2;
   }
-  MyMatrix<T> TheBasis1_T = UniversalMatrixConversion<T, Tint>(TheBasis1);
-  MyMatrix<T> TheBasis2_T = UniversalMatrixConversion<T, Tint>(TheBasis2);
-  MyMatrix<T> eSymmMatB1 = TheBasis1_T * eSymmMat * TheBasis1_T.transpose();
-  MyMatrix<T> eSymmMatB2 = TheBasis2_T * eSymmMat * TheBasis2_T.transpose();
 #ifdef SANITY_CHECK_COPOSITIVITY
+  // The two products of the children are needed by this check only. They used
+  // to be computed unconditionally, which cost two matrix products per node of
+  // the tree for nothing.
   if (OptMinimum == 2) {
+    MyMatrix<T> TheBasis1_T = UniversalMatrixConversion<T, Tint>(TheBasis1);
+    MyMatrix<T> TheBasis2_T = UniversalMatrixConversion<T, Tint>(TheBasis2);
+    MyMatrix<T> eSymmMatB1 = TheBasis1_T * eSymmMat * TheBasis1_T.transpose();
+    MyMatrix<T> eSymmMatB2 = TheBasis2_T * eSymmMat * TheBasis2_T.transpose();
     if (eSymmMatB1(iFound, jFound) < 0 || eSymmMatB2(iFound, jFound) < 0) {
       std::cerr << "COP: We clearly have a bug in our computation\n";
       throw TerminalException{1};
@@ -774,7 +788,8 @@ KernelEnumerateShortVectorInCone(MyMatrix<T> const &eSymmMat,
   //
   // Third, split the domain.
   //
-  std::vector<MyMatrix<Tint>> ListBasis = PairDecomposition(eSymmMat, TheBasis);
+  std::vector<MyMatrix<Tint>> ListBasis =
+      PairDecomposition(eSymmMat, eSymmMatB, TheBasis);
   std::vector<MyMatrix<Tint>> ListBasisInt;
   for (auto &eBasis : ListBasis) {
     CopositivityEnumResult<Tint> fEnumResult =
@@ -871,7 +886,7 @@ CopositivityTestResult<Tint> EnumerateCopositiveShortVector_Kernel(
     // Now doing the split
     //
     std::vector<MyMatrix<Tint>> ListBasis =
-        PairDecomposition(eSymmMat, TheBasis);
+        PairDecomposition(eSymmMat, eSymmMatB, TheBasis);
     position++;
     SetValue(position, GetDataPair(ListBasis));
     return true;
@@ -1031,24 +1046,28 @@ EnumerateListConeCopositive(MyMatrix<T> const &eSymmMat,
   return {true, std::move(ListCone)};
 }
 
-template <typename T, typename Tint>
+/*
+  The subdivision tree of the copositivity tests.
+
+  Every decision taken along the tree is the sign of an entry of
+  TheBasis * eSymmMat * TheBasis^T, or a comparison between two products of
+  such entries. All of them are unchanged when eSymmMat is multiplied by a
+  positive scalar, so the tree does not have to run over the field: the matrix
+  is scaled once to an integral one and every node then works over the
+  underlying ring. The certificate vector that comes out is integral and does
+  not depend on the scaling either.
+ */
+template <typename Tmat, typename Tint, typename Fsingle>
 CopositivityTestResult<Tint>
-TestCopositivity(MyMatrix<T> const &eSymmMat,
-                 MyMatrix<Tint> const &InitialBasis, std::ostream &os) {
+KernelTestCopositivity(MyMatrix<Tmat> const &eSymmMat,
+                       MyMatrix<Tint> const &InitialBasis, Fsingle f_single,
+                       std::ostream &os) {
   int n = eSymmMat.rows();
-  if (TestCopositivityByPositivityCoeff(eSymmMat)) {
-    CopositivityTestResult<Tint> result{true, "positive coeff", {}};
-    return result;
-  }
-  if (IsPositiveSemiDefinite(eSymmMat, os)) {
-    CopositivityTestResult<Tint> result{true, "positive semidefinite", {}};
-    return result;
-  }
 #ifdef DEBUG_COPOSITIVITY
   size_t nbCone = 0;
 #endif
   auto f_insert = [&]([[maybe_unused]] MyMatrix<Tint> const &TheBasis,
-                      MyMatrix<T> const &eSymmMatB) -> bool {
+                      MyMatrix<Tmat> const &eSymmMatB) -> bool {
     for (int i = 0; i < n; i++)
       for (int j = i + 1; j < n; j++)
         if (eSymmMatB(i, j) < 0)
@@ -1060,8 +1079,8 @@ TestCopositivity(MyMatrix<T> const &eSymmMat,
   };
   auto f_test =
       [&](MyMatrix<Tint> const &TheBasis,
-          MyMatrix<T> const &eSymmMatB) -> CopositivityTestResult<Tint> {
-    return SingleTestCopositivity(eSymmMat, TheBasis, eSymmMatB);
+          MyMatrix<Tmat> const &eSymmMatB) -> CopositivityTestResult<Tint> {
+    return f_single(eSymmMat, TheBasis, eSymmMatB);
   };
   CopositivityTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
       eSymmMat, InitialBasis, f_insert, f_test, os);
@@ -1071,36 +1090,53 @@ TestCopositivity(MyMatrix<T> const &eSymmMat,
   return eResult;
 }
 
+// Runs the tree over the underlying ring when the type allows it.
+template <typename T, typename Tint, typename Fsingle>
+CopositivityTestResult<Tint>
+RunCopositivityTree(MyMatrix<T> const &eSymmMat,
+                    MyMatrix<Tint> const &InitialBasis, Fsingle f_single,
+                    std::ostream &os) {
+  if constexpr (is_implementation_of_Q<T>::value) {
+    using Tring = typename underlying_ring<T>::ring_type;
+    MyMatrix<Tring> eSymmMat_ring =
+        RemoveFractionMatrixPlusCoeffRing(eSymmMat).TheMat;
+    return KernelTestCopositivity(eSymmMat_ring, InitialBasis, f_single, os);
+  } else {
+    return KernelTestCopositivity(eSymmMat, InitialBasis, f_single, os);
+  }
+}
+
+template <typename T, typename Tint>
+CopositivityTestResult<Tint>
+TestCopositivity(MyMatrix<T> const &eSymmMat,
+                 MyMatrix<Tint> const &InitialBasis, std::ostream &os) {
+  if (TestCopositivityByPositivityCoeff(eSymmMat)) {
+    CopositivityTestResult<Tint> result{true, "positive coeff", {}};
+    return result;
+  }
+  if (IsPositiveSemiDefinite(eSymmMat, os)) {
+    CopositivityTestResult<Tint> result{true, "positive semidefinite", {}};
+    return result;
+  }
+  auto f_single = [](auto const &M, MyMatrix<Tint> const &TheBasis,
+                     auto const &eSymmMatB) -> CopositivityTestResult<Tint> {
+    return SingleTestCopositivity<typename std::decay_t<decltype(M)>::Scalar,
+                                  Tint>(M, TheBasis, eSymmMatB);
+  };
+  return RunCopositivityTree(eSymmMat, InitialBasis, f_single, os);
+}
+
 template <typename T, typename Tint>
 CopositivityTestResult<Tint>
 TestStrictCopositivity(MyMatrix<T> const &eSymmMat,
                        MyMatrix<Tint> const &InitialBasis, std::ostream &os) {
-  int n = eSymmMat.rows();
-#ifdef DEBUG_COPOSITIVITY
-  size_t nbCone = 0;
-#endif
-  auto f_insert = [&]([[maybe_unused]] MyMatrix<Tint> const &TheBasis,
-                      MyMatrix<T> const &eSymmMatB) -> bool {
-    for (int i = 0; i < n; i++)
-      for (int j = i + 1; j < n; j++)
-        if (eSymmMatB(i, j) < 0)
-          return false;
-#ifdef DEBUG_COPOSITIVITY
-    nbCone++;
-#endif
-    return true;
+  auto f_single = [](auto const &M, MyMatrix<Tint> const &TheBasis,
+                     auto const &eSymmMatB) -> CopositivityTestResult<Tint> {
+    return SingleTestStrictCopositivity<
+        typename std::decay_t<decltype(M)>::Scalar, Tint>(M, TheBasis,
+                                                          eSymmMatB);
   };
-  auto f_test =
-      [&](MyMatrix<Tint> const &TheBasis,
-          MyMatrix<T> const &eSymmMatB) -> CopositivityTestResult<Tint> {
-    return SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
-  };
-  CopositivityTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
-      eSymmMat, InitialBasis, f_insert, f_test, os);
-#ifdef DEBUG_COPOSITIVITY
-  os << "COP: nbCone=" << nbCone << "\n";
-#endif
-  return eResult;
+  return RunCopositivityTree(eSymmMat, InitialBasis, f_single, os);
 }
 
 template <typename T, typename Tint>
