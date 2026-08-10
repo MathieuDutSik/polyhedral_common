@@ -7,7 +7,8 @@
 /*
   The coset-aware closest vector computation is checked against a brute
   force enumeration over a box of translations: same minimal norm and same
-  set of realizing points.
+  set of realizing points. Everything is in the single frame of the point
+  set D Z^n + {c_i}, whose points are integral.
  */
 
 using T = mpq_class;
@@ -41,7 +42,7 @@ BruteForce(MyMatrix<T> const &GramMat, PeriodicPointSet<Tint> const &pps,
       for (int j = 0; j < n; j++) {
         u(j) = pps.cosets_num(k, j) + pps.N * Tint(z[j]);
       }
-      T norm = PeriodicNormDiff(GramMat, pps.N, u, eV);
+      T norm = PeriodicNormDiff(GramMat, u, eV);
       if (!min_norm || norm < *min_norm) {
         min_norm = norm;
         set_vect.clear();
@@ -160,10 +161,12 @@ int main() {
         PeriodicPointSet<Tint> pps = *opt_pps;
         CVPSolver<T, Tint> solver(GramMat, os);
         for (int i_pt = 0; i_pt < 4; i_pt++) {
+          // A query point in the frame of the points themselves.
           MyVector<T> eV(n);
           for (int j = 0; j < n; j++) {
             eV(j) = T(rand_int(21) - 10) / T(3);
           }
+          eV = UniversalScalarConversion<T, Tint>(pps.N) * eV;
           PeriodicCVPResult<T, Tint> res =
               PeriodicClosestVectors(solver, pps, eV);
           std::pair<T, std::set<MyVector<Tint>>> bf =
@@ -177,7 +180,7 @@ int main() {
                 "set of closest points against brute force");
           // Every returned point realizes the announced norm.
           for (auto &u : set_res) {
-            check(PeriodicNormDiff(GramMat, pps.N, u, eV) == res.TheNorm,
+            check(PeriodicNormDiff(GramMat, u, eV) == res.TheNorm,
                   "returned point realizes the norm");
           }
         }

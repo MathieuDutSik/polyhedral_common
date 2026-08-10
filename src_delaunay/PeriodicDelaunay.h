@@ -22,13 +22,15 @@
 #endif
 
 /*
-  Closest vectors of a periodic point set Z^n + {c_1, ..., c_m} to a point.
+  Closest vectors of a periodic point set to a point.
 
-  The points are expressed by their numerators over the denominator N of
-  the point set: the point of numerator u is u / N, and u is congruent
-  modulo N to the numerator of the coset it belongs to. Keeping the scaled
-  form means the vertex matrices of the periodic Delaunay polytopes are
-  integral, exactly like in the lattice case.
+  The point set is D Z^n + {c_0 = 0, c_1, ..., c_m} with the c_i integral,
+  so its points ARE integral vectors -- those congruent to one of the c_i
+  modulo D -- and there is a single frame throughout, no scaled and
+  unscaled version of anything. The vertex matrices of the periodic
+  Delaunay polytopes are integral for the same reason as in the lattice
+  case, and a transformation preserving the set is an ordinary integral
+  affine matrix.
  */
 template <typename T, typename Tint> struct PeriodicCVPResult {
   T TheNorm;
@@ -48,26 +50,29 @@ PeriodicClosestVectors(CVPSolver<T, Tint> const &solver,
                        MyVector<T> const &eV) {
   int n = eV.size();
   int n_coset = pps.cosets_num.rows();
-  T N_T = UniversalScalarConversion<T, Tint>(pps.N);
+  T D_T = UniversalScalarConversion<T, Tint>(pps.N);
   std::optional<T> min_norm;
   std::vector<MyVector<Tint>> l_vect;
   for (int k = 0; k < n_coset; k++) {
+    // The points of the set on the coset c_k are the c_k + D y with y in
+    // Z^n, so the solver of Z^n is asked about (eV - c_k) / D and the
+    // distance it returns is the one sought divided by D^2.
     MyVector<T> eV_shift(n);
     for (int j = 0; j < n; j++) {
       T num = UniversalScalarConversion<T, Tint>(pps.cosets_num(k, j));
-      eV_shift(j) = eV(j) - num / N_T;
+      eV_shift(j) = (eV(j) - num) / D_T;
     }
     resultCVP<T, Tint> res = solver.nearest_vectors(eV_shift);
-    if (min_norm && res.TheNorm > *min_norm) {
+    T norm = res.TheNorm * D_T * D_T;
+    if (min_norm && norm > *min_norm) {
       continue;
     }
-    if (!min_norm || res.TheNorm < *min_norm) {
-      min_norm = res.TheNorm;
+    if (!min_norm || norm < *min_norm) {
+      min_norm = norm;
       l_vect.clear();
     }
     int n_vect = res.ListVect.rows();
     for (int i_vect = 0; i_vect < n_vect; i_vect++) {
-      // The point is c_k + z, of numerator cosets_num(k) + N z.
       MyVector<Tint> u(n);
       for (int j = 0; j < n; j++) {
         u(j) = pps.cosets_num(k, j) + pps.N * res.ListVect(i_vect, j);
@@ -138,15 +143,10 @@ template <typename T, typename Tint> struct PeriodicCVPSolver {
     }
     return ret;
   }
-  // The closest points of the point set to eV, all in scaled coordinates.
+  // The closest points of the point set to eV, one single frame.
   resultCVP<T, Tint> nearest_vectors(MyVector<T> const &eV) const {
-    MyVector<T> eV_unscaled(n);
-    for (int j = 0; j < n; j++) {
-      eV_unscaled(j) = eV(j) / N_T;
-    }
-    PeriodicCVPResult<T, Tint> res =
-        PeriodicClosestVectors(solver, pps, eV_unscaled);
-    return {res.TheNorm * N_T * N_T, res.ListVectScaled};
+    PeriodicCVPResult<T, Tint> res = PeriodicClosestVectors(solver, pps, eV);
+    return {res.TheNorm, res.ListVectScaled};
   }
 };
 
@@ -405,14 +405,12 @@ Tgroup PeriodicCosetPreservingSubgroup(PeriodicPointSet<Tring> const &pps,
   for the quadratic form GramMat.
  */
 template <typename T, typename Tint>
-T PeriodicNormDiff(MyMatrix<T> const &GramMat, Tint const &N,
-                   MyVector<Tint> const &u, MyVector<T> const &eV) {
+T PeriodicNormDiff(MyMatrix<T> const &GramMat, MyVector<Tint> const &u,
+                   MyVector<T> const &eV) {
   int n = eV.size();
-  T N_T = UniversalScalarConversion<T, Tint>(N);
   MyVector<T> eDiff(n);
   for (int j = 0; j < n; j++) {
-    T num = UniversalScalarConversion<T, Tint>(u(j));
-    eDiff(j) = num / N_T - eV(j);
+    eDiff(j) = UniversalScalarConversion<T, Tint>(u(j)) - eV(j);
   }
   return EvaluationQuadForm<T, T>(GramMat, eDiff);
 }
