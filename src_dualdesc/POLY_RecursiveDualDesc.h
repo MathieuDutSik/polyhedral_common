@@ -54,6 +54,10 @@
 #define DEBUG_REDUCTION
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_RECURSIVE_DUAL_DESC
+#endif
+
 #ifdef DISABLE_DEBUG_RECURSIVE_DUAL_DESC
 #undef DEBUG_RECURSIVE_DUAL_DESC
 #endif
@@ -406,7 +410,7 @@ public:
     return foc.GetListFaceOrbitsize();
   }
   void FuncInsert(Face const &face_can) {
-#ifdef DEBUG_RECURSIVE_DUAL_DESC
+#ifdef SANITY_CHECK_RECURSIVE_DUAL_DESC
     if (face_can.size() != static_cast<size_t>(nbRow)) {
       std::cerr << "We have |face_can|=" << face_can.size()
                 << " but nbRow=" << nbRow << "\n";
@@ -461,7 +465,7 @@ public:
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face_orbsize) {
-#ifdef DEBUG_RECURSIVE_DUAL_DESC
+#ifdef SANITY_CHECK_RECURSIVE_DUAL_DESC
     if (face_orbsize.size() != delta) {
       std::cerr << "RDD: We have |face_orbsize|=" << face_orbsize.size()
                 << " but delta=" << delta << "\n";
@@ -533,7 +537,7 @@ public:
     if (V.size() == 1) {
       CompleteList_SetUndone.erase(len);
     } else {
-#ifdef DEBUG_RECURSIVE_DUAL_DESC
+#ifdef SANITY_CHECK_RECURSIVE_DUAL_DESC
       if (V.empty()) {
         std::cerr << "We have V.size = 0 which is not allowed here\n";
         throw TerminalException{1};

@@ -8,6 +8,7 @@
 #include "MAT_MatrixInt.h"
 #include "POLY_LinearProgramming.h"
 #include "Positivity.h"
+#include "SPN_Decomposition.h"
 #include "SignatureSymmetric.h"
 #include <string>
 #include <unordered_set>
@@ -394,7 +395,10 @@ void WriteCopositivityTestResult(std::ostream &os_out,
   }
   if (OutFormat == "GAP") {
     os_out << "return rec(isCopositive:=" << GAP_logical(eResult.test);
-    if (!eResult.test) {
+    if (eResult.test) {
+      // Which of the criteria concluded.
+      os_out << ", nature:=\"" << eResult.strNature << "\"";
+    } else {
       os_out << ", violation_nature:=\"" << eResult.strNature << "\"";
       os_out << ", V:=" << StringVectorGAP(eResult.eVectResult1);
     }
@@ -1104,6 +1108,47 @@ RunCopositivityTree(MyMatrix<T> const &eSymmMat,
   } else {
     return KernelTestCopositivity(eSymmMat, InitialBasis, f_single, os);
   }
+}
+
+/*
+  The number of cutting plane rounds granted to the SPN criterion. Only used
+  by the callers that opt into it, see TestCopositivity_SPN below.
+ */
+static const size_t spn_max_iter_copositivity = 50;
+
+/*
+  A splitting Q = P + N with P positive semidefinite and N entrywise
+  non-negative makes Q copositive, since P[x] >= 0 always and N[x] >= 0 for
+  x >= 0. It is a sufficient criterion only, failing from n = 5 on, so only a
+  success concludes: neither a proof that no splitting exists nor an
+  inconclusive search says anything about copositivity.
+
+  This is deliberately not called by TestCopositivity. The separation of the
+  cutting plane loop goes through GetShortIntegralVector, whose cost is not
+  bounded by the dimension, and on badly scaled rational input it can exceed
+  by orders of magnitude the subdivision the criterion is meant to shortcut.
+  The matrix of Strekelj and Zalar used by the copositivity CI, whose last
+  entry is 1373628701/353935575, needs more than 200 seconds for a single
+  separation while its whole copositivity test takes a fraction of a second.
+  Until the separation has a cost bounded by the dimension, the criterion is
+  offered to the callers that want it rather than imposed on all of them.
+ */
+template <typename T, typename Tint>
+std::optional<CopositivityTestResult<Tint>>
+TestCopositivity_SPN(MyMatrix<T> const &eSymmMat, size_t const &max_iter,
+                     std::ostream &os) {
+  ResultSPN<T> spn = SearchSPNdecomposition<T, Tint>(eSymmMat, max_iter, os);
+  if (spn.status != SPNstatus::decomposition_found) {
+    return {};
+  }
+#ifdef SANITY_CHECK_COPOSITIVITY
+  if (!CheckSPNdecomposition(eSymmMat, spn, os)) {
+    std::cerr << "COP: the SPN decomposition returned is not valid\n";
+    throw TerminalException{1};
+  }
+#endif
+  CopositivityTestResult<Tint> result{true, "SPN decomposition", {}};
+  return result;
 }
 
 template <typename T, typename Tint>
