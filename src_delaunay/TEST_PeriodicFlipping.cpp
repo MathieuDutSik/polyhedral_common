@@ -211,6 +211,61 @@ int main() {
       n_flip++;
     }
     check(n_flip > 0, "at least one wall was flipped");
+    //
+    // The walk over the iso-Delaunay domains: what a flip produces has to
+    // be a valid input for the next one, which a single flip from a freshly
+    // enumerated tessellation does not exercise. The walk crosses a wall,
+    // computes the walls of the domain it lands in and crosses one of
+    // those, checking at every step that the tessellation is the Delaunay
+    // tessellation of the point set for the form reached.
+    DelaunayTesselationIneq<T, Tgroup> DTIcur = DTI;
+    MyVector<T> Gcur = Gvec;
+    size_t n_step = 0;
+    for (int i_step = 0; i_step < 6; i_step++) {
+      MyMatrix<T> GcurMat = get_matrix(Gcur);
+      std::vector<FullAdjInfo<T>> ListIneqCur =
+          ComputeListIneqFromTesselationIneq<T, Tgroup>(DTIcur);
+      MyMatrix<T> FACcur = GetFACineq(ListIneqCur);
+      std::vector<int> IrredCur = get_non_redundant_indices(FACcur, os);
+      MyMatrix<T> FACredCur = SelectRow(FACcur, IrredCur);
+      // The walls are taken in turn, so that the walk does not bounce
+      // between the same two domains.
+      std::optional<std::pair<MyVector<T>, FullAdjInfo<T>>> opt_wall;
+      int n_wall = FACredCur.rows();
+      for (int u = 0; u < n_wall; u++) {
+        int i_wall = (i_step + u) % n_wall;
+        MyVector<T> WallPt = GetSpaceInteriorPointFacet(FACredCur, i_wall, os);
+        MyVector<T> Beyond = WallPt + (WallPt - Gcur) / T(100);
+        if (IsPositiveDefinite(get_matrix(WallPt), os) &&
+            IsPositiveDefinite(get_matrix(Beyond), os)) {
+          opt_wall = std::pair<MyVector<T>, FullAdjInfo<T>>{
+              Beyond, ListIneqCur[IrredCur[i_wall]]};
+          break;
+        }
+      }
+      if (!opt_wall) {
+        // Every wall of the domain reached is at the boundary of the cone
+        // of the positive definite forms.
+        break;
+      }
+      MyVector<T> const &Beyond = opt_wall->first;
+      MyMatrix<T> BeyondMat = get_matrix(Beyond);
+      DelaunayTesselationIneq<T, Tgroup> DTInew = FlippingLtype<T, Tgroup>(
+          DTIcur, GcurMat, opt_wall->second.ListAdjInfo, ListGram, rddo);
+      check(IsDelaunayTesselation(DTInew, BeyondMat, pps, os),
+            "the tessellation reached by the walk is a Delaunay tessellation");
+      size_t n_orbit_dir = 0;
+      GetTesselation(BeyondMat, pps, ListGram, n_orbit_dir, os);
+      check(DTInew.l_dels.size() == n_orbit_dir,
+            "the walk agrees with the direct enumeration");
+      std::cerr << "   step " << i_step << ": |walls|=" << n_wall
+                << " |cells|=" << DTInew.l_dels.size() << "\n";
+      DTIcur = DTInew;
+      Gcur = Beyond;
+      n_step++;
+    }
+    check(n_step > 1, "the walk crossed more than one wall");
+    std::cerr << "|steps of the walk|=" << n_step << "\n";
     std::cerr << "|flipped walls|=" << n_flip << "\n";
     std::cerr << "Normal termination of TEST_PeriodicFlipping\n";
   } catch (TerminalException const &e) {
