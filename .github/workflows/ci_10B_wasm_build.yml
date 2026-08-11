@@ -38,9 +38,13 @@ jobs:
             autoconf autotools-dev libtool
 
       - name: Set up emscripten
+        # 3.1.74 cannot link the targets that reach a long double path: its
+        # lto/libc.a pulls in ldexpl.o, whose reference to scalbnl is not
+        # satisfied by any member of that archive. Later releases ship
+        # scalbnl.o and resolve it.
         uses: mymindstorm/setup-emsdk@v14
         with:
-          version: 3.1.74
+          version: 6.0.6
           actions-cache-folder: emsdk-cache
 
       # Speeds up reruns: nauty is cloned + built into
