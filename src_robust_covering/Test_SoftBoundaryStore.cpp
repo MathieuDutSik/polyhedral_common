@@ -95,6 +95,27 @@ int main() {
     // From the right side, footprint [0,1] (covers all of b_01):
     ConvexBoundary<T> b_right_full =
         boundary_on({{-1, 1, 0}, {2, -1, 0}, {0, 0, 1}, {1, 0, -1}}, {-1, 1, 0}, os);
+    // From the right side, footprint [1/4,3/4] (strictly inside b_01):
+    ConvexBoundary<T> b_right_mid =
+        boundary_on({{-1, 1, 0}, {2, -1, 0}, {-1, 0, 4}, {3, 0, -4}}, {-1, 1, 0}, os);
+
+    // 3-D ambient: boundaries on the plane x = 1 are 2-D squares.
+    // Box [0,1]^3, face x = 1 (normal (1,-1,0,0)), footprint (y,z) in [0,1]^2:
+    ConvexBoundary<T> f_unit =
+        boundary_on({{0, 1, 0, 0}, {1, -1, 0, 0}, {0, 0, 1, 0}, {1, 0, -1, 0},
+                     {0, 0, 0, 1}, {1, 0, 0, -1}}, {1, -1, 0, 0}, os);
+    // Box [0,1]x[1/2,3/2]x[0,1], face x = 1, footprint y in [1/2,3/2], z in [0,1]:
+    ConvexBoundary<T> f_yhalf =
+        boundary_on({{0, 1, 0, 0}, {1, -1, 0, 0}, {-1, 0, 2, 0}, {3, 0, -2, 0},
+                     {0, 0, 0, 1}, {1, 0, 0, -1}}, {1, -1, 0, 0}, os);
+    // Box [1,2]x[0,1]x[0,1], face x = 1 (normal (-1,1,0,0)), covers f_unit:
+    ConvexBoundary<T> f_right_full =
+        boundary_on({{-1, 1, 0, 0}, {2, -1, 0, 0}, {0, 0, 1, 0}, {1, 0, -1, 0},
+                     {0, 0, 0, 1}, {1, 0, 0, -1}}, {-1, 1, 0, 0}, os);
+    // Box [1,2]x[1/4,3/4]x[1/4,3/4], face x = 1, central square strictly inside f_unit:
+    ConvexBoundary<T> f_right_mid =
+        boundary_on({{-1, 1, 0, 0}, {2, -1, 0, 0}, {-1, 0, 4, 0}, {3, 0, -4, 0},
+                     {-1, 0, 0, 4}, {3, 0, 0, -4}}, {-1, 1, 0, 0}, os);
 
     // 1. add fresh.
     {
@@ -150,6 +171,64 @@ int main() {
       store.add(scb_of(b_01), os);
       store.reduce(b_01, os); // key -(1,-1,0) is absent
       check(store.n_scb() == 1, "reduce_no_match_noop");
+    }
+    // 7. reduce, middle cut (1-D): a facet strictly inside leaves two remnants.
+    {
+      SoftBoundaryStore<T, Tint> store;
+      store.add(scb_of(b_01), os);
+      store.reduce(b_right_mid, os);
+      check(store.n_scb() == 2, "reduce_middle_two_remnants");
+      check(all_disjoint(store, os), "reduce_middle_disjoint");
+    }
+    // 8. add, incoming strictly contains the stored one => two new remnants.
+    {
+      SoftBoundaryStore<T, Tint> store;
+      store.add(scb_of(b_sub), os);  // [1/4,3/4]
+      store.add(scb_of(b_01), os);   // [0,1] minus [1/4,3/4] = 2 pieces
+      check(store.n_scb() == 3, "add_around_two_remnants");
+      check(all_disjoint(store, os), "add_around_disjoint");
+    }
+    // 9. 3-D add fresh (2-D facet).
+    {
+      SoftBoundaryStore<T, Tint> store;
+      store.add(scb_of(f_unit), os);
+      check(store.n_scb() == 1, "add3d_fresh_count");
+      check(all_disjoint(store, os), "add3d_fresh_disjoint");
+    }
+    // 10. 3-D add same-key partial overlap => split, disjoint.
+    {
+      SoftBoundaryStore<T, Tint> store;
+      store.add(scb_of(f_unit), os);
+      store.add(scb_of(f_yhalf), os);
+      check(store.n_scb() == 2, "add3d_partial_count");
+      check(all_disjoint(store, os), "add3d_partial_disjoint");
+    }
+    // 11. 3-D reduce full cover => empty.
+    {
+      SoftBoundaryStore<T, Tint> store;
+      store.add(scb_of(f_unit), os);
+      store.reduce(f_right_full, os);
+      check(store.n_scb() == 0, "reduce3d_full_empties");
+    }
+    // 12. 3-D reduce, central hole => the face minus a middle square is a frame
+    //     (difference_p_p returns it as 4 rectangles).
+    {
+      SoftBoundaryStore<T, Tint> store;
+      store.add(scb_of(f_unit), os);
+      store.reduce(f_right_mid, os);
+      check(store.n_scb() == 4, "reduce3d_frame_count");
+      check(all_disjoint(store, os), "reduce3d_frame_disjoint");
+    }
+    // 13. mixed 3-D sequence: the disjoint invariant must hold after every step.
+    {
+      SoftBoundaryStore<T, Tint> store;
+      bool ok = true;
+      store.add(scb_of(f_unit), os);   ok = ok && all_disjoint(store, os);
+      store.add(scb_of(f_yhalf), os);  ok = ok && all_disjoint(store, os);
+      store.reduce(f_right_mid, os);   ok = ok && all_disjoint(store, os);
+      store.add(scb_of(f_unit), os);   ok = ok && all_disjoint(store, os);
+      store.reduce(f_right_full, os);  ok = ok && all_disjoint(store, os);
+      check(ok, "sequence3d_disjoint_invariant");
     }
   } catch (TerminalException const &e) {
     std::cerr << "Test aborted with TerminalException\n";

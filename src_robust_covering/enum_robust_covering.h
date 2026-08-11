@@ -1476,6 +1476,21 @@ std::optional<ConvexBoundary<T>> get_next_side_cb(SoftConvexBoundary<T,Tint> con
 
   The working instances in the enumeration are the hardboundaries
  */
+// Are the convex blocks of a cell pairwise interior-disjoint? Used by the
+// SANITY_CHECK that the disjoint-split insertion keeps l_cb a valid tiling.
+template <typename T, typename Tint>
+bool are_blocks_pairwise_disjoint(std::vector<ConvexBlock<T, Tint>> const& l_cb,
+                                  std::ostream& os) {
+  for (size_t i = 0; i < l_cb.size(); i++) {
+    for (size_t j = i + 1; j < l_cb.size(); j++) {
+      if (is_pairwise_intersecting(l_cb[i].sp, l_cb[j].sp, os)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 std::optional<PVoronoi<T, Tint>>
 find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
@@ -1595,21 +1610,32 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: |pvp.l_cb|=" << pvp.l_cb.size() << " |pvp.l_hcb|=" << pvp.l_hcb.size() << " i_iter=" << i_iter << "\n";
 #endif
-#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-      for (size_t idx=0; idx<pvp.l_cb.size(); idx++) {
-        ConvexBlock<T, Tint> const& part = pvp.l_cb[idx];
-        bool test = is_pairwise_intersecting(new_cb.sp, part.sp, os);
-        if (test) {
-          std::cerr << "ROBUST: new_cb.sp.FAC=\n";
-          WriteMatrix(std::cerr, new_cb.sp.FAC);
-          std::cerr << "ROBUST: part.sp.FAC=\n";
-          WriteMatrix(std::cerr, part.sp.FAC);
-          std::cerr << "ROBUST: new_cb should not intersect with pvp entry idx=" << idx << "\n";
-          throw TerminalException{1};
+      // Insert new_cb into l_cb, split against the existing blocks so the union
+      // stays interior-disjoint. new_cb may now overlap already-found blocks
+      // (covering domains); difference_p_p carves it down to the not-yet-covered
+      // part, which may be several pieces or empty.
+      {
+        std::vector<SinglePolytope<T>> pieces{new_cb.sp};
+        for (auto& block : pvp.l_cb) {
+          std::vector<SinglePolytope<T>> next;
+          for (auto& piece : pieces) {
+            GeneralizedPolytope<T> gp = difference_p_p(piece, block.sp, os);
+            for (auto& q : gp.polytopes) {
+              next.push_back(q);
+            }
+          }
+          pieces = std::move(next);
+        }
+        for (auto& piece : pieces) {
+          pvp.l_cb.push_back({new_cb.list_robust_m, piece});
         }
       }
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
+      if (!are_blocks_pairwise_disjoint(pvp.l_cb, os)) {
+        std::cerr << "ROBUST: l_cb blocks must be interior-disjoint after insertion\n";
+        throw TerminalException{1};
+      }
 #endif
-      pvp.l_cb.push_back(new_cb);
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: |p_poly_vor_part.l_ecb|=" << p_poly_vor_part.l_ecb.size() << "\n";
 #endif
@@ -1617,7 +1643,17 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
         os << "ROBUST: Removal ecb.cb.V=" << StringVectorGAP(ecb.cb.V) << "\n";
 #endif
-        pvp.insert_ecb(ecb, os);
+        // Cancel the crossed soft facet by subtracting this block facet's
+        // footprint from the boundaries stored on the opposite side. This is
+        // the tested "reduce" primitive; it replaces insert_ecb and matches it
+        // whenever the stored regions on that key are interior-disjoint.
+        pvp.store_scb.reduce(ecb.cb, os);
+      }
+      // Propagate the new block's own soft facets into the frontier, so the walk
+      // continues outward from it (a full traversal, not just a star around the
+      // seed). "add" keeps the regions stored at each normal interior-disjoint.
+      for (auto& soft: p_poly_vor_part.get_l_scb()) {
+        pvp.store_scb.add(soft, os);
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: f_process_entry, step 10_9\n";
