@@ -676,6 +676,54 @@ template <typename T, typename Tint> struct SoftBoundaryStore {
     }
     return l_scb;
   }
+  // Reduce (cancel): a freshly inserted block has the facet "facet"; every
+  // stored soft boundary lying on the opposite side of the same hyperplane
+  // (key -facet.V) gets that footprint subtracted. A boundary fully covered by
+  // "facet" disappears; a partially covered one is replaced by its remnants;
+  // the metadata (l_excluded_max, l_robust_m) is carried onto the remnants.
+  void reduce(ConvexBoundary<T> const& facet, std::ostream& os) {
+    MyVector<T> V_opp = - facet.V;
+    auto iter = map_scb.find(V_opp);
+    if (iter == map_scb.end()) {
+      return;
+    }
+    std::vector<SoftConvexBoundary<T,Tint>> l_scb_new;
+    for (auto & scb : iter->second) {
+      std::vector<ConvexBoundary<T>> remnants = convex_boundary_minus_cb(scb.cb, facet, os);
+      for (auto & r : remnants) {
+        l_scb_new.push_back({r, scb.l_excluded_max, scb.l_robust_m});
+      }
+    }
+    if (l_scb_new.empty()) {
+      map_scb.erase(iter);
+    } else {
+      iter->second = std::move(l_scb_new);
+    }
+  }
+  // Add a soft boundary while keeping the regions stored at its normal
+  // pairwise interior-disjoint: the incoming region is split against what is
+  // already present at that key, and only the not-yet-covered part is inserted.
+  // Idempotent when the incoming region is already covered.
+  void add(SoftConvexBoundary<T,Tint> const& scb_in, std::ostream& os) {
+    MyVector<T> const& V = scb_in.cb.V;
+    std::vector<ConvexBoundary<T>> incoming{scb_in.cb};
+    auto iter = map_scb.find(V);
+    if (iter != map_scb.end()) {
+      for (auto & existing : iter->second) {
+        std::vector<ConvexBoundary<T>> next;
+        for (auto & inc : incoming) {
+          GeneralizedPolytope<T> gp = difference_p_p(inc.sp, existing.cb.sp, os);
+          for (auto & piece : gp.polytopes) {
+            next.push_back({inc.V, inc.NSP, piece});
+          }
+        }
+        incoming = std::move(next);
+      }
+    }
+    for (auto & inc : incoming) {
+      map_scb[V].push_back({inc, scb_in.l_excluded_max, scb_in.l_robust_m});
+    }
+  }
 };
 
 /*
