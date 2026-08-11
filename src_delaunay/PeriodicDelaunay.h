@@ -171,47 +171,68 @@ MyMatrix<Tint> PeriodicScaledGraverBasis(MyMatrix<Tint> const &ShvGraverBasis,
   Whether an affine transformation preserves a periodic point set, and the
   permutation it induces on the cosets when it does.
 
-  With p = c_k + z and the transformation p -> p A + w / d, the image is
-  (c_k A + w / d) + z A. It stays in the point set for every z if and only
-  if A is unimodular (the lattice Z^n is preserved) and c_k A + w / d is a
-  coset modulo Z^n. Multiplied by the denominator N of the point set, that
-  last condition is the integral congruence
-
-      cosets_num(k) A + N w / d = cosets_num(sigma(k))   modulo N
-
-  so the whole test is integer arithmetic, provided N w / d is integral --
-  which is the invariant of the periodic setting, every transformation of
-  the point set having its translation in (1 / N) Z^n.
+  The point set being D Z^n + {c_0 = 0, c_1, ..., c_m} with the c_i
+  integral, a transformation of it is an ordinary integral affine matrix M
+  of order n+1 acting on the right of the rows (1, x): its linear part is
+  the lower right block A and its translation the first row w. The image
+  of p = c_k + D z is (c_k A + w) + D (z A), so the set is preserved
+  exactly when A is unimodular, which is what keeps D Z^n, and c_k A + w
+  is a coset modulo D. Everything is integer arithmetic.
  */
 template <typename Tring>
-std::optional<std::vector<size_t>>
-PeriodicCosetPermutation(PeriodicPointSet<Tring> const &pps,
-                         PeriodicAffineTransform<Tring> const &x) {
-  int n = pps.cosets_num.cols();
-  int n_coset = pps.cosets_num.rows();
-  Tring det = DeterminantMat(x.A);
-  if (det != 1 && det != -1) {
+struct PeriodicAffineParts {
+  MyMatrix<Tring> A;
+  MyVector<Tring> w;
+};
+
+// The linear part and the translation of an integral affine matrix, or
+// nothing when it is not integral -- which simply means the candidate is
+// not a transformation of the point set.
+template <typename Tring, typename T>
+std::optional<PeriodicAffineParts<Tring>>
+GetPeriodicAffineParts(MyMatrix<T> const &M) {
+  int n = M.rows() - 1;
+  if (!IsIntegralMatrix(M)) {
     return {};
   }
-  // The scaled translation N w / d, integral exactly when the translation
-  // lies in (1 / N) Z^n.
-  MyVector<Tring> w_scal(n);
-  for (int j = 0; j < n; j++) {
-    Tring prod = pps.N * x.w(j);
-    Tring res = ResInt(prod, x.d);
-    if (res != 0) {
-      return {};
+  MyMatrix<Tring> A(n, n);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      A(i, j) = UniversalScalarConversion<Tring, T>(M(i + 1, j + 1));
     }
-    w_scal(j) = QuoInt(prod, x.d);
+  }
+  MyVector<Tring> w(n);
+  for (int j = 0; j < n; j++) {
+    w(j) = UniversalScalarConversion<Tring, T>(M(0, j + 1));
+  }
+  return PeriodicAffineParts<Tring>{std::move(A), std::move(w)};
+}
+
+template <typename Tring, typename T>
+std::optional<std::vector<size_t>>
+PeriodicCosetPermutation(PeriodicPointSet<Tring> const &pps,
+                         MyMatrix<T> const &M) {
+  int n = pps.cosets_num.cols();
+  int n_coset = pps.cosets_num.rows();
+  std::optional<PeriodicAffineParts<Tring>> opt_parts =
+      GetPeriodicAffineParts<Tring, T>(M);
+  if (!opt_parts) {
+    return {};
+  }
+  MyMatrix<Tring> const &A = opt_parts->A;
+  MyVector<Tring> const &w = opt_parts->w;
+  Tring det = DeterminantMat(A);
+  if (det != 1 && det != -1) {
+    return {};
   }
   std::vector<size_t> sigma(n_coset);
   Face f_hit(n_coset);
   for (int k = 0; k < n_coset; k++) {
     MyVector<Tring> img(n);
     for (int j = 0; j < n; j++) {
-      Tring eSum = w_scal(j);
+      Tring eSum = w(j);
       for (int i = 0; i < n; i++) {
-        AddMul(eSum, pps.cosets_num(k, i), x.A(i, j));
+        AddMul(eSum, pps.cosets_num(k, i), A(i, j));
       }
       img(j) = eSum;
     }
@@ -234,14 +255,14 @@ PeriodicCosetPermutation(PeriodicPointSet<Tring> const &pps,
   return sigma;
 }
 
-template <typename Tring>
+template <typename Tring, typename T>
 bool IsPeriodicPointSetPreserved(PeriodicPointSet<Tring> const &pps,
-                                 PeriodicAffineTransform<Tring> const &x) {
-  return PeriodicCosetPermutation(pps, x).has_value();
+                                 MyMatrix<T> const &M) {
+  return PeriodicCosetPermutation<Tring, T>(pps, M).has_value();
 }
 
 /*
-  The action of the transformations on the classes of (Z / N)^n. The
+  The action of the transformations on the classes of (Z / D)^n. The
   condition of preserving the point set lives there: a transformation
   preserves it exactly when the induced permutation of the classes maps the
   cosets onto the cosets. Shared by the subgroup computation and by the
@@ -276,40 +297,38 @@ template <typename Tring> struct PeriodicClassAction {
     }
     return u;
   }
-  // The permutation of the classes induced by a transformation, which is
-  // defined as soon as the linear part is unimodular and the translation
-  // lies in (1 / N) Z^n.
-  std::vector<size_t>
-  permutation(PeriodicAffineTransform<Tring> const &x) const {
+  // The permutation of the classes induced by a transformation, defined
+  // as soon as it is one of the point set.
+  template <typename T>
+  std::vector<size_t> permutation(MyMatrix<T> const &M) const {
+    std::optional<PeriodicAffineParts<Tring>> opt_parts =
+        GetPeriodicAffineParts<Tring, T>(M);
 #ifdef SANITY_CHECK_PERIODIC_DELAUNAY
-    Tring det = DeterminantMat(x.A);
+    // The action on the classes is defined for the transformations of the
+    // point set only, so the group has to be restricted to those before
+    // being handed over.
+    if (!opt_parts) {
+      std::cerr << "PERIODIC_DELAUNAY: PeriodicClassAction: the matrix is not "
+                   "integral, so it is not a transformation of the set\n";
+      throw TerminalException{1};
+    }
+    Tring det = DeterminantMat(opt_parts->A);
     if (det != 1 && det != -1) {
       std::cerr << "PERIODIC_DELAUNAY: PeriodicClassAction: the linear part "
                    "is not unimodular\n";
       throw TerminalException{1};
     }
-    for (int j = 0; j < n; j++) {
-      Tring prod = pps.N * x.w(j);
-      if (ResInt(prod, x.d) != 0) {
-        std::cerr << "PERIODIC_DELAUNAY: PeriodicClassAction: the translation "
-                     "is outside of (1/N) Z^n\n";
-        throw TerminalException{1};
-      }
-    }
 #endif
-    MyVector<Tring> w_scal(n);
-    for (int j = 0; j < n; j++) {
-      Tring prod = pps.N * x.w(j);
-      w_scal(j) = QuoInt(prod, x.d);
-    }
+    MyMatrix<Tring> const &A = opt_parts->A;
+    MyVector<Tring> const &w = opt_parts->w;
     std::vector<size_t> ret(n_class);
     for (size_t i_class = 0; i_class < n_class; i_class++) {
       MyVector<Tring> u = get_vector(i_class);
       MyVector<Tring> img(n);
       for (int j = 0; j < n; j++) {
-        Tring eSum = w_scal(j);
+        Tring eSum = w(j);
         for (int i = 0; i < n; i++) {
-          AddMul(eSum, u(i), x.A(i, j));
+          AddMul(eSum, u(i), A(i, j));
         }
         img(j) = eSum;
       }
@@ -436,6 +455,10 @@ T PeriodicNormDiff(MyMatrix<T> const &GramMat, MyVector<Tint> const &u,
  */
 template <typename T, typename Tidx_value> struct PeriodicDelaunayIsoData {
   MyMatrix<T> EXT_T;
+  // The same vertices in the scaled frame, in which the point set is
+  // D Z^n + {c_i} with the c_i integral. The transformations are read off
+  // from those, so that they come out integral.
+  MyMatrix<T> EXT_scaled_T;
   MyVector<T> Cent;
   MyMatrix<T> EXText;
   // The recentered vertices alone: the permutations handed around act on
@@ -480,6 +503,7 @@ BuildPeriodicDelaunayIsoData(MyMatrix<T> const &GramMat,
           UniversalScalarConversion<T, Tring>(EXT_scaled(iVert, i + 1)) / N_T;
     }
   }
+  MyMatrix<T> EXT_scaled_T = UniversalMatrixConversion<T, Tring>(EXT_scaled);
   MyVector<T> Cent = get_reduced_center(GramMat, EXT_T);
   MyMatrix<T> EXText = get_reduced_delaunay_shv(EXT_T, GramMat, SHV, Cent);
   std::vector<MyMatrix<T>> ListMat{GramMat};
@@ -494,8 +518,9 @@ BuildPeriodicDelaunayIsoData(MyMatrix<T> const &GramMat,
       EXTvert(iVert, i) = EXText(iVert, i);
     }
   }
-  return {std::move(EXT_T),   std::move(Cent),  std::move(EXText),
-          std::move(EXTvert), std::move(eFace), std::move(WMat)};
+  return {std::move(EXT_T),  std::move(EXT_scaled_T), std::move(Cent),
+          std::move(EXText), std::move(EXTvert),      std::move(eFace),
+          std::move(WMat)};
 }
 
 // A permutation of the extended set restricted to the vertex block. The
@@ -519,28 +544,30 @@ Telt RestrictPermToVertexBlock(Telt const &eElt, int const &nbVert) {
   return Telt(eList);
 }
 
-// The transformation realized by a permutation of the extended set of
-// data1 onto the extended set of data2: the linear part from the
-// recentered vertices, the translation from the circumcenters.
-template <typename T, typename Tring, typename Telt, typename Tidx_value>
-PeriodicAffineTransform<Tring>
+/*
+  The transformation realized by a permutation of the vertices of data1
+  onto the vertices of data2, as an integral affine matrix.
+
+  It is read off the HOMOGENEOUS vertex matrices, whose rows (1, v) are
+  integral in this representation, rather than through the circumcentres:
+  the affine matrix then comes out of one FindTransformation and its
+  integrality is automatic, the extended set containing short vectors
+  which generate the period lattice D Z^n -- preserving them forces the
+  linear part to be integral, and the translation is the image of an
+  integral vertex minus its linear image. The circumcentres are still
+  needed to recentre the vertices for the weight matrix, which is what
+  makes the isometries linear, but nothing here uses them.
+
+  The permutation acts on the VERTEX block, so it is the homogeneous
+  vertex matrices that are passed, not the extended ones.
+ */
+template <typename T, typename Telt, typename Tidx_value>
+MyMatrix<T>
 PeriodicTransformFromPerm(PeriodicDelaunayIsoData<T, Tidx_value> const &data1,
                           PeriodicDelaunayIsoData<T, Tidx_value> const &data2,
-                          Telt const &eElt, Tring const &N) {
-  int n = data1.Cent.size();
-  MyMatrix<T> A_T =
-      FindTransformation<T, Telt>(data1.EXTvert, data2.EXTvert, eElt);
-  MyMatrix<Tring> A = UniversalMatrixConversion<Tring, T>(A_T);
-  T N_T = UniversalScalarConversion<T, Tring>(N);
-  MyVector<Tring> w(n);
-  for (int j = 0; j < n; j++) {
-    T eSum = data2.Cent(j);
-    for (int i = 0; i < n; i++) {
-      eSum -= data1.Cent(i) * A_T(i, j);
-    }
-    w(j) = UniversalScalarConversion<Tring, T>(eSum * N_T);
-  }
-  return {std::move(A), std::move(w), N};
+                          Telt const &eElt) {
+  return FindTransformation<T, Telt>(data1.EXT_scaled_T, data2.EXT_scaled_T,
+                                    eElt);
 }
 
 // The isometries of the extended set that preserve the vertex block,
@@ -575,9 +602,8 @@ Tgroup PeriodicDelaunay_Stabilizer(MyMatrix<T> const &GramMat,
       BuildPeriodicDelaunayIsoData<T, Tring, Tidx, Tidx_value>(
           GramMat, pps, SHV, EXT_scaled, os);
   Tgroup GRPisom = PeriodicDelaunayIsometryGroup<T, Tgroup, Tidx_value>(data, os);
-  auto f_trans = [&](Telt const &eElt) -> PeriodicAffineTransform<Tring> {
-    return PeriodicTransformFromPerm<T, Tring, Telt, Tidx_value>(data, data,
-                                                                 eElt, pps.N);
+  auto f_trans = [&](Telt const &eElt) -> MyMatrix<T> {
+    return PeriodicTransformFromPerm<T, Telt, Tidx_value>(data, data, eElt);
   };
   return PeriodicCosetPreservingSubgroup<Tring, Tgroup, decltype(f_trans)>(
       pps, GRPisom, f_trans, os);
@@ -597,7 +623,7 @@ Tgroup PeriodicDelaunay_Stabilizer(MyMatrix<T> const &GramMat,
   is what makes this more than a single check.
  */
 template <typename T, typename Tring, typename Tgroup>
-std::optional<PeriodicAffineTransform<Tring>>
+std::optional<MyMatrix<T>>
 PeriodicDelaunay_TestEquivalence(MyMatrix<T> const &GramMat,
                                  PeriodicPointSet<Tring> const &pps,
                                  MyMatrix<T> const &SHV,
@@ -624,9 +650,8 @@ PeriodicDelaunay_TestEquivalence(MyMatrix<T> const &GramMat,
   // restricted to the vertex block first. The colouring of the two blocks
   // makes the restriction well defined, a vertex going to a vertex.
   Telt eRes_vert = RestrictPermToVertexBlock<Telt>(*eRes, data1.EXTvert.rows());
-  PeriodicAffineTransform<Tring> m0 =
-      PeriodicTransformFromPerm<T, Tring, Telt, Tidx_value>(data1, data2,
-                                                            eRes_vert, pps.N);
+  MyMatrix<T> m0 =
+      PeriodicTransformFromPerm<T, Telt, Tidx_value>(data1, data2, eRes_vert);
   if (IsPeriodicPointSetPreserved(pps, m0)) {
     return m0;
   }
@@ -635,9 +660,8 @@ PeriodicDelaunay_TestEquivalence(MyMatrix<T> const &GramMat,
   // preimage by m0.
   PeriodicClassAction<Tring> act(pps);
   Tgroup GRPisom1 = PeriodicDelaunayIsometryGroup<T, Tgroup, Tidx_value>(data1, os);
-  auto f_trans1 = [&](Telt const &eElt) -> PeriodicAffineTransform<Tring> {
-    return PeriodicTransformFromPerm<T, Tring, Telt, Tidx_value>(data1, data1,
-                                                                 eElt, pps.N);
+  auto f_trans1 = [&](Telt const &eElt) -> MyMatrix<T> {
+    return PeriodicTransformFromPerm<T, Telt, Tidx_value>(data1, data1, eElt);
   };
   PeriodicUnionGroup<Tring, Tgroup> pug =
       BuildPeriodicUnionGroup<Tring, Tgroup, decltype(f_trans1)>(act, GRPisom1,
@@ -660,10 +684,10 @@ PeriodicDelaunay_TestEquivalence(MyMatrix<T> const &GramMat,
   for (size_t i = 0; i < n_vert; i++) {
     eList_vert[i] = static_cast<Tidx>(OnPoints(static_cast<Tidx>(i), *opt));
   }
-  PeriodicAffineTransform<Tring> h = f_trans1(Telt(eList_vert));
-  PeriodicAffineTransform<Tring> ret = h * m0;
+  MyMatrix<T> h = f_trans1(Telt(eList_vert));
+  MyMatrix<T> ret = h * m0;
 #ifdef SANITY_CHECK_PERIODIC_DELAUNAY
-  if (!IsPeriodicPointSetPreserved(pps, ret)) {
+  if (!IsPeriodicPointSetPreserved<Tring, T>(pps, ret)) {
     std::cerr << "PERIODIC_DELAUNAY: PeriodicDelaunay_TestEquivalence: the "
                  "equivalence found does not preserve the point set\n";
     throw TerminalException{1};
@@ -800,7 +824,7 @@ template <typename Tring> struct PeriodicDelaunay_AdjI {
 
 template <typename Tring> struct PeriodicDelaunay_AdjO {
   Face eInc;
-  PeriodicAffineTransform<Tring> eBigMat;
+  MyMatrix<Tring> eBigMat;
 };
 
 /*
@@ -829,20 +853,19 @@ struct PeriodicDataDelaunayFunc {
                                                       seed, x.EXT);
   }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
-    std::optional<PeriodicAffineTransform<Tring>> opt =
+    std::optional<MyMatrix<T>> opt =
         PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
             data.GramMat, data.pps, data.SHV, y.EXT, x.EXT, data.rddo.os);
     if (!opt) {
       return {};
     }
-    TadjO ret{y.eInc, *opt};
+    TadjO ret{y.eInc, UniversalMatrixConversion<Tring, T>(*opt)};
     return ret;
   }
   std::pair<Tobj, TadjO> f_spann(TadjI const &x) {
     Tobj x_ret{x.EXT, {}};
     int n = data.GramMat.rows();
-    PeriodicAffineTransform<Tring> eBigMat =
-        IdentityPeriodicAffineTransform<Tring>(n, data.pps.N);
+    MyMatrix<Tring> eBigMat = IdentityMat<Tring>(n + 1);
     TadjO ret{x.eInc, std::move(eBigMat)};
     return {std::move(x_ret), std::move(ret)};
   }
@@ -887,14 +910,14 @@ struct PeriodicDataDelaunayFunc {
   when the sanity checks are on.
  */
 template <typename T, typename Tring, typename Tgroup>
-DelaunayTesselationIneq<T, Tgroup, PeriodicAffineTransform<Tring>>
+DelaunayTesselationIneq<T, Tgroup, MyMatrix<Tring>>
 BuildPeriodicDelaunayTesselationIneq(
     std::vector<DatabaseEntry_Serial<PeriodicDelaunay_Obj<Tring, Tgroup>,
                                      PeriodicDelaunay_AdjO<Tring>>> const
         &l_ent,
     [[maybe_unused]] PeriodicPointSet<Tring> const &pps,
     std::vector<std::vector<T>> const &ListGram, std::ostream &os) {
-  using Ttrans = PeriodicAffineTransform<Tring>;
+  using Ttrans = MyMatrix<Tring>;
   int n_del = l_ent.size();
   std::vector<Delaunay_EntryIneq<T, Tgroup, Ttrans>> l_dels(n_del);
   for (int i_del = 0; i_del < n_del; i_del++) {

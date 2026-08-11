@@ -129,7 +129,6 @@ src_copos/CP_*
 src_ctype/CTYP_*
 src_ctype/NC_ComputeAverage
 src_delaunay/LATT_*
-src_delaunay/TEST_PeriodicAffineTransform
 src_delaunay/TEST_PeriodicCVP
 src_delaunay/TEST_PeriodicCosetSubgroup
 src_dualdesc/POLY_*

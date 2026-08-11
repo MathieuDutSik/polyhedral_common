@@ -71,39 +71,28 @@ BruteForce(MyMatrix<T> const &GramMat, PeriodicPointSet<Tint> const &pps,
   Direct check that the transformation maps the periodic point set into
   itself: the images of the cosets translated over a box must all be
   points of the set. Independent of the congruence reasoning of
-  PeriodicCosetPermutation.
+  PeriodicCosetPermutation. The transformation is the homogeneous integral
+  matrix, so the point p is mapped to (1, p) M.
  */
 bool BruteForcePreserved(PeriodicPointSet<Tint> const &pps,
-                         PeriodicAffineTransform<Tint> const &x, int B) {
+                         MyMatrix<Tint> const &M, int B) {
   int n = pps.cosets_num.cols();
-  int m = pps.cosets_num.rows();
-  T N_T = UniversalScalarConversion<T, Tint>(pps.N);
-  T d_T = UniversalScalarConversion<T, Tint>(x.d);
+  int n_coset = pps.cosets_num.rows();
   std::vector<int> z(n, -B);
   while (true) {
-    for (int k = 0; k < m; k++) {
-      // The point c_k + z, then its image under the transformation.
-      MyVector<T> p(n);
+    for (int k = 0; k < n_coset; k++) {
+      // The point c_k + N z, then its image under the transformation.
+      MyVector<Tint> p(n);
       for (int j = 0; j < n; j++) {
-        T num = UniversalScalarConversion<T, Tint>(pps.cosets_num(k, j));
-        p(j) = num / N_T + T(z[j]);
+        p(j) = pps.cosets_num(k, j) + pps.N * Tint(z[j]);
       }
-      MyVector<T> img(n);
-      for (int j = 0; j < n; j++) {
-        T eSum = UniversalScalarConversion<T, Tint>(x.w(j)) / d_T;
-        for (int i = 0; i < n; i++) {
-          eSum += p(i) * UniversalScalarConversion<T, Tint>(x.A(i, j));
-        }
-        img(j) = eSum;
-      }
-      // The image must have integral numerators over N and sit on a coset.
       MyVector<Tint> u(n);
       for (int j = 0; j < n; j++) {
-        T scaled = img(j) * N_T;
-        if (!IsInteger(scaled)) {
-          return false;
+        Tint eSum = M(0, j + 1);
+        for (int i = 0; i < n; i++) {
+          eSum += p(i) * M(i + 1, j + 1);
         }
-        u(j) = UniversalScalarConversion<Tint, T>(scaled);
+        u(j) = eSum;
       }
       if (!GetCosetIndex(pps, u)) {
         return false;
@@ -213,14 +202,15 @@ int main() {
             }
           }
         }
-        MyVector<Tint> w(n);
+        // The homogeneous integral matrix [[1, w], [0, A]].
+        MyMatrix<Tint> x = IdentityMat<Tint>(n + 1);
         for (int j = 0; j < n; j++) {
-          w(j) = Tint(rand_int(9) - 4);
+          x(0, j + 1) = Tint(rand_int(9) - 4);
+          for (int i = 0; i < n; i++) {
+            x(i + 1, j + 1) = A(i, j);
+          }
         }
-        // Denominators 2 (the natural one) and 3 (never preserving here).
-        Tint d(iter % 3 == 0 ? 3 : 2);
-        PeriodicAffineTransform<Tint> x{A, w, d};
-        bool pred = IsPeriodicPointSetPreserved(pps, x);
+        bool pred = IsPeriodicPointSetPreserved<Tint>(pps, x);
         bool bf = BruteForcePreserved(pps, x, 3);
         check(pred == bf, "coset predicate against direct membership");
         if (pred) {
@@ -230,13 +220,14 @@ int main() {
         }
         if (pred) {
           // The announced permutation is the one actually realized.
-          std::vector<size_t> sigma = *PeriodicCosetPermutation(pps, x);
+          std::vector<size_t> sigma =
+              *PeriodicCosetPermutation<Tint>(pps, x);
           for (size_t k = 0; k < sigma.size(); k++) {
             MyVector<Tint> img(n);
             for (int j = 0; j < n; j++) {
-              Tint eSum = pps.N * x.w(j) / x.d;
+              Tint eSum = x(0, j + 1);
               for (int i = 0; i < n; i++) {
-                eSum += pps.cosets_num(k, i) * x.A(i, j);
+                eSum += pps.cosets_num(k, i) * x(i + 1, j + 1);
               }
               img(j) = eSum;
             }

@@ -21,7 +21,7 @@ using Tidx = uint32_t;
 using Telt = permutalib::SingleSidedPerm<Tidx>;
 using Tint_grp = mpz_class;
 using Tgroup = permutalib::Group<Telt, Tint_grp>;
-using Ttrans = PeriodicAffineTransform<Tring>;
+using Ttrans = MyMatrix<T>;
 
 void check(bool test, std::string const &context) {
   if (!test) {
@@ -54,15 +54,13 @@ int main() {
     // coordinate zero, do not see: it preserves the set. g2 negates the
     // first, sending the coset 1/3 to -1/3, that is 2/3, which is not a
     // coset: it does not. Both are involutions and they commute.
-    MyMatrix<Tring> A_g1 = IdentityMat<Tring>(n);
-    A_g1(1, 1) = -1;
-    MyVector<Tring> w_zero = ZeroVector<Tring>(n);
-    Ttrans g1{A_g1, w_zero, Tring(3)};
-    MyMatrix<Tring> A_g2 = IdentityMat<Tring>(n);
-    A_g2(0, 0) = -1;
-    Ttrans g2{A_g2, w_zero, Tring(3)};
-    check(IsPeriodicPointSetPreserved(pps, g1), "g1 preserves the set");
-    check(!IsPeriodicPointSetPreserved(pps, g2), "g2 does not preserve it");
+    // As homogeneous integral affine matrices, no translation.
+    Ttrans g1 = IdentityMat<T>(n + 1);
+    g1(2, 2) = -1;
+    Ttrans g2 = IdentityMat<T>(n + 1);
+    g2(1, 1) = -1;
+    check(IsPeriodicPointSetPreserved<Tring>(pps, g1), "g1 preserves the set");
+    check(!IsPeriodicPointSetPreserved<Tring>(pps, g2), "g2 does not preserve it");
     //
     // The group is realized on four points, the permutation of the points
     // determining which product of g1 and g2 is meant. Both generators are
@@ -90,7 +88,7 @@ int main() {
     auto f_trans = [&](Telt const &eElt) -> Ttrans {
       int img = OnPoints(0, eElt);
       int a = img % 2, b = img / 2;
-      Ttrans ret = IdentityPeriodicAffineTransform<Tring>(n, Tring(3));
+      Ttrans ret = IdentityMat<T>(n + 1);
       if (a == 1) {
         ret = ret * g1;
       }
@@ -107,7 +105,7 @@ int main() {
     // be compared element by element.
     size_t n_pres = 0;
     for (auto &eElt : GRP.get_all_element()) {
-      if (IsPeriodicPointSetPreserved(pps, f_trans(eElt))) {
+      if (IsPeriodicPointSetPreserved<Tring>(pps, f_trans(eElt))) {
         n_pres++;
       }
     }
@@ -117,7 +115,7 @@ int main() {
           "the subgroup has the number of preserving elements");
     // Every element of the subgroup preserves the point set.
     for (auto &eElt : GRPsub.get_all_element()) {
-      check(IsPeriodicPointSetPreserved(pps, f_trans(eElt)),
+      check(IsPeriodicPointSetPreserved<Tring>(pps, f_trans(eElt)),
             "an element of the subgroup preserves the point set");
     }
     check(n_pres == 2, "exactly the two elements without g2");
@@ -204,7 +202,7 @@ int main() {
               "the stabilizer of the enumeration is the direct one");
         // Every adjacency transformation preserves the point set.
         for (auto &eAdj : eEnt.ListAdj) {
-          check(IsPeriodicPointSetPreserved(pps, eAdj.x.eBigMat),
+          check(IsPeriodicPointSetPreserved<Tring>(pps, eAdj.x.eBigMat),
                 "an adjacency transformation preserves the point set");
         }
       }
@@ -279,7 +277,7 @@ int main() {
           ListGram.push_back(GetLineVector(eMat));
         }
       }
-      DelaunayTesselationIneq<T, Tgroup, PeriodicAffineTransform<Tring>> DTI =
+      DelaunayTesselationIneq<T, Tgroup, MyMatrix<Tring>> DTI =
           BuildPeriodicDelaunayTesselationIneq<T, Tring, Tgroup>(
               *opt, pps, ListGram, os);
       check(DTI.l_dels.size() == opt->size(),
