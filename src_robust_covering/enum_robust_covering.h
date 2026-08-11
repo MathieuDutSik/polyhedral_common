@@ -1523,15 +1523,16 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: fpe, step 2\n";
 #endif
-    std::vector<MyVector<Tint>> l_excluded_max = scb.l_excluded_max;
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: fpe, step 3\n";
-#endif
     MyVector<Tint> v_long = scb.v_long();
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: fpe, step 4\n";
 #endif
-    l_excluded_max.push_back(v_long);
+    // Point-determined excl: pass only the witness of the soft facet being
+    // crossed, not the accumulated path history. This gives the neighbour block
+    // its parent-facing wall (so the pos adjacency check finds the shared facet)
+    // and removes the path dependence. Blocks may now overlap as covering
+    // domains, which the disjoint-split insertion and the store handle.
+    std::vector<MyVector<Tint>> l_excluded_max = {v_long};
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: fpe, step 5 |l_excluded_max|=" << l_excluded_max.size() << "\n";
 #endif
@@ -1563,6 +1564,13 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
     int i_iter = 0;
 #endif
     while(true) {
+      // Guard against an unbounded halving loop: if the adjacent block is never
+      // found across the soft facet, fail loudly instead of spinning forever.
+      if (N > 60) {
+        std::cerr << "ROBUST: fpe, probe/flip loop did not converge after "
+                  << N << " halvings; adjacent block not found across the soft facet\n";
+        throw TerminalException{1};
+      }
 #ifdef DEBUG_ENUM_P_POLYTOPES
       i_iter += 1;
       os << "ROBUST: fpe, step 10_1, N=" << N << " shift=" << shift << "\n";
@@ -1614,6 +1622,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       // stays interior-disjoint. new_cb may now overlap already-found blocks
       // (covering domains); difference_p_p carves it down to the not-yet-covered
       // part, which may be several pieces or empty.
+      bool added_new_block = false;
       {
         std::vector<SinglePolytope<T>> pieces{new_cb.sp};
         for (auto& block : pvp.l_cb) {
@@ -1626,6 +1635,7 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
           }
           pieces = std::move(next);
         }
+        added_new_block = !pieces.empty();
         for (auto& piece : pieces) {
           pvp.l_cb.push_back({new_cb.list_robust_m, piece});
         }
@@ -1652,8 +1662,13 @@ find_p_voronoi(DataLattice<T, Tint, Tgroup> &eData, MyVector<T> const &eV) {
       // Propagate the new block's own soft facets into the frontier, so the walk
       // continues outward from it (a full traversal, not just a star around the
       // seed). "add" keeps the regions stored at each normal interior-disjoint.
-      for (auto& soft: p_poly_vor_part.get_l_scb()) {
-        pvp.store_scb.add(soft, os);
+      // Skip this when the block was fully covered by already-found blocks: it
+      // then contributes no new geometry, all its facets are internal, and
+      // re-adding them would keep the frontier from ever draining.
+      if (added_new_block) {
+        for (auto& soft: p_poly_vor_part.get_l_scb()) {
+          pvp.store_scb.add(soft, os);
+        }
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: f_process_entry, step 10_9\n";
