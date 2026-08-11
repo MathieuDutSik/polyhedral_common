@@ -131,6 +131,7 @@ src_ctype/NC_ComputeAverage
 src_delaunay/LATT_*
 src_delaunay/TEST_PeriodicCVP
 src_delaunay/TEST_PeriodicCosetSubgroup
+src_delaunay/TEST_PeriodicFlipping
 src_dualdesc/POLY_*
 src_dualdesc/Read_MPI_sizes
 src_group/GRP_*
