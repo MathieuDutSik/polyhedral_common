@@ -107,7 +107,7 @@ ensure_wasm_boost_serialization() {
     # wasi-libc sysroot, so libc++'s `#include_next <stdlib.h>` would land on
     # /usr/include/stdlib.h and fail on glibc-only bits/libc-header-start.h.
     # -idirafter appends BOOST_INC strictly after the sysroot search path.
-    emcc -std=c++20 -O2 \
+    em++ -std=c++20 -O2 \
       -I"$BOOST_SERIAL_SRC/include" \
       -idirafter "$BOOST_INC" \
       -DBOOST_ARCHIVE_SOURCE \
@@ -256,7 +256,10 @@ for src in "${sources[@]}"; do
   echo "==> Building $src -> $out"
   # ${extra[@]+"${extra[@]}"} expands to nothing when `extra` is empty;
   # plain "${extra[@]}" tripped `set -u` (treats empty-array as unset).
-  if ! emcc "${CXXFLAGS[@]}" "${INCLUDES[@]}" ${extra[@]+"${extra[@]}"} "$src" -o "$out"; then
+  # em++ and not emcc: the C driver no longer links the C++ runtime just
+  # because the inputs are C++, so emcc leaves the standard library symbols
+  # undefined at link time from emscripten 6 on.
+  if ! em++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" ${extra[@]+"${extra[@]}"} "$src" -o "$out"; then
     echo "    BUILD FAILED for $src" >&2
     n_fail=$((n_fail + 1))
     continue
