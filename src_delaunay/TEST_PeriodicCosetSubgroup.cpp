@@ -277,7 +277,7 @@ int main() {
           ListGram.push_back(GetLineVector(eMat));
         }
       }
-      DelaunayTesselationIneq<T, Tgroup, MyMatrix<Tring>> DTI =
+      DelaunayTesselationIneq<T, Tgroup> DTI =
           BuildPeriodicDelaunayTesselationIneq<T, Tring, Tgroup>(
               *opt, pps, ListGram, os);
       check(DTI.l_dels.size() == opt->size(),
@@ -290,7 +290,7 @@ int main() {
         for (auto &eAdj : eDel.ListAdj) {
           MyMatrix<T> EXTadj =
               UniversalMatrixConversion<T, Tring>(DTI.l_dels[eAdj.iOrb].EXT) *
-              TransformToActingMatrix<T>(eAdj.eBigMat);
+              UniversalMatrixConversion<T, Tring>(eAdj.eBigMat);
           Face f_att(EXT_T.rows());
           for (int u = 0; u < EXTadj.rows(); u++) {
             MyVector<T> V = GetMatrixRow(EXTadj, u);

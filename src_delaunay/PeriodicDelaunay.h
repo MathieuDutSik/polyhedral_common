@@ -910,27 +910,26 @@ struct PeriodicDataDelaunayFunc {
   when the sanity checks are on.
  */
 template <typename T, typename Tring, typename Tgroup>
-DelaunayTesselationIneq<T, Tgroup, MyMatrix<Tring>>
+DelaunayTesselationIneq<T, Tgroup>
 BuildPeriodicDelaunayTesselationIneq(
     std::vector<DatabaseEntry_Serial<PeriodicDelaunay_Obj<Tring, Tgroup>,
                                      PeriodicDelaunay_AdjO<Tring>>> const
         &l_ent,
     [[maybe_unused]] PeriodicPointSet<Tring> const &pps,
     std::vector<std::vector<T>> const &ListGram, std::ostream &os) {
-  using Ttrans = MyMatrix<Tring>;
   int n_del = l_ent.size();
-  std::vector<Delaunay_EntryIneq<T, Tgroup, Ttrans>> l_dels(n_del);
+  std::vector<Delaunay_EntryIneq<T, Tgroup>> l_dels(n_del);
   for (int i_del = 0; i_del < n_del; i_del++) {
     MyMatrix<Tring> const &EXT = l_ent[i_del].x.EXT;
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(EXT);
     VoronoiInequalityPreComput<T> vipc =
         BuildVoronoiIneqPreComputeChecked<T>(EXT_T, ListGram, os);
     ContainerMatrix<T> cont(EXT_T);
-    std::vector<Delaunay_AdjIneqO<T, Ttrans>> ListAdj;
+    std::vector<Delaunay_AdjIneqO<T>> ListAdj;
     for (auto &eAdj : l_ent[i_del].ListAdj) {
       MyMatrix<T> EXT_target_T =
           UniversalMatrixConversion<T, Tring>(l_ent[eAdj.iOrb].x.EXT);
-      MyMatrix<T> M = TransformToActingMatrix<T>(eAdj.x.eBigMat);
+      MyMatrix<T> M = UniversalMatrixConversion<T, Tring>(eAdj.x.eBigMat);
       MyVector<T> eIneq =
           ComputeDelaunayAdjIneq(vipc, cont, EXT_target_T, M, ListGram, os);
       ListAdj.push_back({eAdj.x.eInc, eAdj.x.eBigMat, eAdj.iOrb,

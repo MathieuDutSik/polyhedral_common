@@ -9,7 +9,6 @@
 #include "Shvec_exact.h"
 #include "Positivity.h"
 #include "LatticeDelaunay.h"
-#include "TransformTraits.h"
 #include "Tspace_General.h"
 #include "SystemNamelist.h"
 #include <string>
@@ -374,48 +373,47 @@ inline void serialize(Archive &ar, FullAdjInfo<T> &eRec,
   the whole tessellation from scratch (see the Case 1 handling in
   FlippingLtype).
  */
-template <typename T, typename Ttransform> struct Delaunay_AdjIneqO {
+template <typename T> struct Delaunay_AdjIneqO {
+  using Tring = typename underlying_ring<T>::ring_type;
   Face eInc;
-  Ttransform eBigMat;
+  MyMatrix<Tring> eBigMat;
   int iOrb;
   MyVector<T> eIneq;
 };
 
-template <typename T, typename Tgroup,
-          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+template <typename T, typename Tgroup>
 struct Delaunay_EntryIneq {
   using Tring = typename underlying_ring<T>::ring_type;
   MyMatrix<Tring> EXT;
   Tgroup GRP;
-  std::vector<Delaunay_AdjIneqO<T, Ttransform>> ListAdj;
+  std::vector<Delaunay_AdjIneqO<T>> ListAdj;
 };
 
-template <typename T, typename Tgroup,
-          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+template <typename T, typename Tgroup>
 struct DelaunayTesselationIneq {
-  std::vector<Delaunay_EntryIneq<T, Tgroup, Ttransform>> l_dels;
+  std::vector<Delaunay_EntryIneq<T, Tgroup>> l_dels;
 };
 
 namespace boost::serialization {
-template <class Archive, typename T, typename Ttransform>
-inline void serialize(Archive &ar, Delaunay_AdjIneqO<T, Ttransform> &eRec,
+template <class Archive, typename T>
+inline void serialize(Archive &ar, Delaunay_AdjIneqO<T> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("eInc", eRec.eInc);
   ar &make_nvp("eBigMat", eRec.eBigMat);
   ar &make_nvp("iOrb", eRec.iOrb);
   ar &make_nvp("eIneq", eRec.eIneq);
 }
-template <class Archive, typename T, typename Tgroup, typename Ttransform>
+template <class Archive, typename T, typename Tgroup>
 inline void serialize(Archive &ar,
-                      Delaunay_EntryIneq<T, Tgroup, Ttransform> &eRec,
+                      Delaunay_EntryIneq<T, Tgroup> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("EXT", eRec.EXT);
   ar &make_nvp("GRP", eRec.GRP);
   ar &make_nvp("ListAdj", eRec.ListAdj);
 }
-template <class Archive, typename T, typename Tgroup, typename Ttransform>
+template <class Archive, typename T, typename Tgroup>
 inline void serialize(Archive &ar,
-                      DelaunayTesselationIneq<T, Tgroup, Ttransform> &eRec,
+                      DelaunayTesselationIneq<T, Tgroup> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("l_dels", eRec.l_dels);
 }
@@ -425,30 +423,30 @@ inline void serialize(Archive &ar,
 // Ineq tessellation is stripped to the plain (field type) tessellation and
 // the shared writers are used on that. Output is a cold path, so the
 // conversion cost does not matter.
-template <typename T, typename Tgroup, typename Ttransform>
+template <typename T, typename Tgroup>
 void WriteEntryGAP(std::ostream &os_out,
-                   DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DT) {
+                   DelaunayTesselationIneq<T, Tgroup> const &DT) {
   DelaunayTesselation<T, Tgroup> DT_field = StripDelaunayTesselationIneq(DT);
   WriteEntryGAP_l_dels<T, Tgroup>(os_out, DT_field.l_dels);
 }
 
-template <typename T, typename Tgroup, typename Ttransform>
+template <typename T, typename Tgroup>
 void WriteEntryPYTHON(std::ostream &os_out,
-                      DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DT) {
+                      DelaunayTesselationIneq<T, Tgroup> const &DT) {
   DelaunayTesselation<T, Tgroup> DT_field = StripDelaunayTesselationIneq(DT);
   WriteEntryPYTHON_l_dels<T, Tgroup>(os_out, DT_field.l_dels);
 }
 
-template <typename T, typename Tgroup, typename Ttransform>
+template <typename T, typename Tgroup>
 DelaunayTesselation<T, Tgroup>
 StripDelaunayTesselationIneq(
-    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DTI) {
+    DelaunayTesselationIneq<T, Tgroup> const &DTI) {
   using Tring = typename underlying_ring<T>::ring_type;
   std::vector<Delaunay_Entry<T, Tgroup>> l_dels;
   for (auto &eDel : DTI.l_dels) {
     std::vector<Delaunay_AdjO<T>> ListAdj;
     for (auto &eAdj : eDel.ListAdj) {
-      MyMatrix<T> eBigMat_T = TransformToActingMatrix<T>(eAdj.eBigMat);
+      MyMatrix<T> eBigMat_T = UniversalMatrixConversion<T, Tring>(eAdj.eBigMat);
       ListAdj.push_back({eAdj.eInc, std::move(eBigMat_T), eAdj.iOrb});
     }
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(eDel.EXT);
@@ -594,7 +592,7 @@ DelaunayTesselationIneq<T, Tgroup> BuildDelaunayTesselationIneq(
         BuildVoronoiIneqPreComputeChecked<T>(eDel.EXT, ListGram, os);
     ContainerMatrix<T> cont(eDel.EXT);
     int n_adj = eDel.ListAdj.size();
-    std::vector<Delaunay_AdjIneqO<T, MyMatrix<Tring>>> ListAdjIneq(n_adj);
+    std::vector<Delaunay_AdjIneqO<T>> ListAdjIneq(n_adj);
     for (int i_adj = 0; i_adj < n_adj; i_adj++) {
       Delaunay_AdjO<T> const &adj = eDel.ListAdj[i_adj];
       MyMatrix<T> const &EXT_target = DT.l_dels[adj.iOrb].EXT;
@@ -616,10 +614,9 @@ DelaunayTesselationIneq<T, Tgroup> BuildDelaunayTesselationIneq(
   DelaunayTesselationIneq into the grouped-by-canonical-inequality form
   used to build the defining system of the iso-Delaunay domain.
  */
-template <typename T, typename Tgroup,
-          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+template <typename T, typename Tgroup>
 std::vector<FullAdjInfo<T>> ComputeListIneqFromTesselationIneq(
-    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DTI) {
+    DelaunayTesselationIneq<T, Tgroup> const &DTI) {
   std::unordered_map<MyVector<T>, std::vector<AdjInfo>> map;
   int n_del = DTI.l_dels.size();
   for (int i_del = 0; i_del < n_del; i_del++) {
@@ -662,10 +659,9 @@ MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const &ListIneq) {
   return FAC;
 }
 
-template <typename T, typename Tgroup,
-          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+template <typename T, typename Tgroup>
 MyMatrix<T> get_list_ineq(
-    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DTI,
+    DelaunayTesselationIneq<T, Tgroup> const &DTI,
     [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   MicrosecondTime time_interior;
@@ -743,22 +739,20 @@ MyMatrix<T> get_interior_gram_matrix_lrs(LinSpaceMatrix<T> const &LinSpa,
   return SumMatExtRay;
 }
 
-template <typename T, typename Tgroup,
-          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+template <typename T, typename Tgroup>
 MyMatrix<T> GetInteriorGramMatrix(
     LinSpaceMatrix<T> const &LinSpa,
-    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DTI,
+    DelaunayTesselationIneq<T, Tgroup> const &DTI,
     std::ostream &os) {
   MyMatrix<T> FAC = get_list_ineq<T, Tgroup>(DTI, os);
   return get_interior_gram_matrix_lp(LinSpa, FAC, os);
 }
 
-template <typename T, typename Tgroup,
-          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+template <typename T, typename Tgroup>
 std::pair<MyMatrix<T>, MyMatrix<T>>
 GetInteriorGramMatrices(
     LinSpaceMatrix<T> const &LinSpa,
-    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DTI,
+    DelaunayTesselationIneq<T, Tgroup> const &DTI,
     std::ostream &os) {
   MyMatrix<T> FAC = get_list_ineq<T, Tgroup>(DTI, os);
   MyMatrix<T> Mat1 = get_interior_gram_matrix_lp(LinSpa, FAC, os);
@@ -933,11 +927,10 @@ template <typename T, typename Tgroup> struct FullRepart {
   to the new one. The lateral ones on the side are named "barrel" and are used
   when switching groups of repartitioning polytopes simultaneously.
  */
-template <typename T, typename Tgroup,
-          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+template <typename T, typename Tgroup>
 FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
     size_t eIdx,
-    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &ListOrbitDelaunay,
+    DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
     std::vector<AdjInfo> const &ListInformationsOneFlipping,
     MyMatrix<T> const &InteriorElement,
     RecordDualDescOperation<T, Tgroup> &rddo) {
@@ -1305,7 +1298,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
       TypeOrbitCenter eEnt = ListOrbitCenter[iCent];
       for (auto &eCase : ListInformationsOneFlipping) {
         if (eEnt.iDelaunay == eCase.iOrb) {
-          MyMatrix<T> eBigMat = TransformToActingMatrix<T>(
+          MyMatrix<T> eBigMat = UniversalMatrixConversion<T, Tring>(
               ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].eBigMat);
           int iOrbAdj =
               ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].iOrb;
@@ -1662,15 +1655,13 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
   and all the polyhedral computations are done in the
   FindRepartitionningInfoNextGeneration code.
  */
-template <typename T, typename Tgroup,
-          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
-DelaunayTesselationIneq<T, Tgroup, Ttransform>
+template <typename T, typename Tgroup>
+DelaunayTesselationIneq<T, Tgroup>
 FlippingLtype(
-    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &ListOrbitDelaunay,
+    DelaunayTesselationIneq<T, Tgroup> const &ListOrbitDelaunay,
     MyMatrix<T> const &InteriorElement,
     std::vector<AdjInfo> const &ListInformationsOneFlipping,
     std::vector<std::vector<T>> const &ListGram,
-    typename transform_traits<Ttransform>::Tcontext const &ctx,
     RecordDualDescOperation<T, Tgroup> &rddo) {
   std::ostream &os = rddo.os;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -1938,7 +1929,7 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_flt_bigmat += time_b.eval_int64();
 #endif
-        MyMatrix<T> eAdjBigMat = TransformToActingMatrix<T>(eAdj.eBigMat);
+        MyMatrix<T> eAdjBigMat = UniversalMatrixConversion<T, Tring>(eAdj.eBigMat);
         return {{eAdj.eInc, std::move(eAdjBigMat), eAdj.iOrb}, eBigMat};
       }
     }
@@ -2023,7 +2014,7 @@ FlippingLtype(
     }
     return {};
   };
-  std::vector<Delaunay_EntryIneq<T, Tgroup, Ttransform>> l_dels;
+  std::vector<Delaunay_EntryIneq<T, Tgroup>> l_dels;
   for (auto &eConn : ListGroupUnMelt) {
     if (eConn.size() > 1) {
       std::cerr << "Error of connected component computation\n";
@@ -2037,7 +2028,7 @@ FlippingLtype(
        << " iDelaunay=" << iDelaunay << "\n";
 #endif
     NewListOrbitDelaunay.push_back(ds);
-    Delaunay_EntryIneq<T, Tgroup, Ttransform> del{
+    Delaunay_EntryIneq<T, Tgroup> del{
       ListOrbitDelaunay.l_dels[iDelaunay].EXT,
       ListOrbitDelaunay.l_dels[iDelaunay].GRP,
       {}};
@@ -2057,7 +2048,7 @@ FlippingLtype(
         MyMatrix<Tring> EXT = UniversalMatrixConversion<Tring, T>(
             ListInfo[iInfo][iFacet].EXT);
         Tgroup GRP = ListInfo[iInfo][iFacet].TheStab;
-        Delaunay_EntryIneq<T, Tgroup, Ttransform> del{std::move(EXT), GRP, {}};
+        Delaunay_EntryIneq<T, Tgroup> del{std::move(EXT), GRP, {}};
         l_dels.push_back(del);
       }
     }
@@ -2081,13 +2072,13 @@ FlippingLtype(
        << " iDelaunay=" << iDelaunay << " iInfo=" << iInfo
        << " iFacet=" << iFacet << "\n";
   }
-  auto check_adj = [&](int iOrb, Delaunay_AdjIneqO<T, Ttransform> const &NewAdj,
+  auto check_adj = [&](int iOrb, Delaunay_AdjIneqO<T> const &NewAdj,
                        std::string const &context) -> void {
     MyMatrix<T> const &EXT = l_EXT_T[iOrb];
     ContainerMatrix<T> cont(EXT);
     Face f_att(EXT.rows());
     MyMatrix<T> EXTadj =
-        l_EXT_T[NewAdj.iOrb] * TransformToActingMatrix<T>(NewAdj.eBigMat);
+        l_EXT_T[NewAdj.iOrb] * UniversalMatrixConversion<T, Tring>(NewAdj.eBigMat);
     os << "ISODEL: FLT: check_adj iOrb=" << iOrb
        << " NewAdj.iOrb=" << NewAdj.iOrb << "\n";
     os << "ISODEL: FLT:      |EXT|=" << EXT.rows() << " / " << EXT.cols()
@@ -2118,7 +2109,7 @@ FlippingLtype(
   int n_del_ret = l_dels.size();
   for (int iOrb = 0; iOrb < n_del_ret; iOrb++) {
     DelaunaySymb ds = NewListOrbitDelaunay[iOrb];
-    std::vector<Delaunay_AdjIneqO<T, Ttransform>> ListAdj;
+    std::vector<Delaunay_AdjIneqO<T>> ListAdj;
     // Most orbits surviving a flip have every adjacency in Case 1 (no
     // recomputation needed at all), so building the Voronoi precompute for
     // this orbit is deferred until an adjacency actually requires it.
@@ -2141,7 +2132,7 @@ FlippingLtype(
       int iDelaunay = ds.iDelaunay;
       int n_adj_old = ListOrbitDelaunay.l_dels[iDelaunay].ListAdj.size();
       for (int i_adj_old = 0; i_adj_old < n_adj_old; i_adj_old++) {
-        Delaunay_AdjIneqO<T, Ttransform> const &eAdj =
+        Delaunay_AdjIneqO<T> const &eAdj =
             ListOrbitDelaunay.l_dels[iDelaunay].ListAdj[i_adj_old];
         int iDelaunayOld = eAdj.iOrb;
         DelaunaySymb dss{Position_old, iDelaunayOld, -1, -1};
@@ -2157,7 +2148,7 @@ FlippingLtype(
             ensure_vipc_cont();
             MyVector<T> eIneqCheck = ComputeDelaunayAdjIneq(
                 *vipc_opt, *cont_opt, l_EXT_T[iOrbAdj],
-                TransformToActingMatrix<T>(eAdj.eBigMat),
+                UniversalMatrixConversion<T, Tring>(eAdj.eBigMat),
                 ListGram, os);
             if (eIneqCheck != eIneq) {
               std::cerr << "FLIP_CASE1_INEQ: SANITY_CHECK failed: the "
@@ -2168,7 +2159,7 @@ FlippingLtype(
             }
           }
 #endif
-          Delaunay_AdjIneqO<T, Ttransform> NAdj{eAdj.eInc, eAdj.eBigMat, iOrbAdj,
+          Delaunay_AdjIneqO<T> NAdj{eAdj.eInc, eAdj.eBigMat, iOrbAdj,
                                         eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           os << "ISODEL: eAdj.eBigMat=\n";
@@ -2182,7 +2173,7 @@ FlippingLtype(
           int iFacet = vect_lower_iFacet[iDelaunayOld];
           RepartEntry<T, Tgroup> const &eFacet = ListInfo[iInfo][iFacet];
           MyMatrix<T> const &BigMat2 = eFacet.eBigMat;
-          MyMatrix<T> eAdjBigMat = TransformToActingMatrix<T>(eAdj.eBigMat);
+          MyMatrix<T> eAdjBigMat = UniversalMatrixConversion<T, Tring>(eAdj.eBigMat);
           MyMatrix<T> ImageEXT = get_EXTold_T(iDelaunayOld) * eAdjBigMat;
           Face Linc = get_face_msub_m(get_EXTold_T(iDelaunay),
                                       eAdj.eInc, ImageEXT);
@@ -2219,8 +2210,8 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_ineq += time_i.eval_int64();
 #endif
-          Delaunay_AdjIneqO<T, Ttransform> NAdj{
-              eAdj.eInc, TransformFromActingMatrix<Ttransform>(BigMat1, ctx), Pos,
+          Delaunay_AdjIneqO<T> NAdj{
+              eAdj.eInc, UniversalMatrixConversion<Tring, T>(BigMat1), Pos,
               eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 2");
@@ -2304,8 +2295,8 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_ineq += time_i.eval_int64();
 #endif
-          Delaunay_AdjIneqO<T, Ttransform> NAdj{
-              eAdj.eInc, TransformFromActingMatrix<Ttransform>(BigMat2, ctx), Pos,
+          Delaunay_AdjIneqO<T> NAdj{
+              eAdj.eInc, UniversalMatrixConversion<Tring, T>(BigMat2), Pos,
               eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 3");
@@ -2338,8 +2329,8 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
             time_flt_ineq += time_i.eval_int64();
 #endif
-            Delaunay_AdjIneqO<T, Ttransform> NAdj{
-                eAdj.eInc, TransformFromActingMatrix<Ttransform>(BigMat1, ctx), Pos2,
+            Delaunay_AdjIneqO<T> NAdj{
+                eAdj.eInc, UniversalMatrixConversion<Tring, T>(BigMat1), Pos2,
                 eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 4");
@@ -2377,8 +2368,8 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
             time_flt_ineq += time_i.eval_int64();
 #endif
-            Delaunay_AdjIneqO<T, Ttransform> NAdj{
-                eAdj.eInc, TransformFromActingMatrix<Ttransform>(BigMat1, ctx), Pos,
+            Delaunay_AdjIneqO<T> NAdj{
+                eAdj.eInc, UniversalMatrixConversion<Tring, T>(BigMat1), Pos,
                 eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 5");
@@ -2399,8 +2390,8 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_ineq += time_i.eval_int64();
 #endif
-          Delaunay_AdjIneqO<T, Ttransform> NAdj{
-              eAdj.eInc, TransformFromActingMatrix<Ttransform>(eAdj.eBigMat, ctx),
+          Delaunay_AdjIneqO<T> NAdj{
+              eAdj.eInc, UniversalMatrixConversion<Tring, T>(eAdj.eBigMat),
               Pos, eIneq};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 6");
@@ -2540,12 +2531,11 @@ inline void serialize(Archive &ar, IsoDelaunayDomain_AdjO<T, Tint> &eRec,
   BUT we should have some invariants coming from the Tspace and right now we
   have none.
  */
-template <typename T, typename Tint, typename Tgroup,
-          typename Ttransform = MyMatrix<typename underlying_ring<T>::ring_type>>
+template <typename T, typename Tint, typename Tgroup>
 size_t ComputeInvariantIsoDelaunayDomain(
     [[maybe_unused]] DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
     size_t const &seed,
-    DelaunayTesselationIneq<T, Tgroup, Ttransform> const &DT,
+    DelaunayTesselationIneq<T, Tgroup> const &DT,
     [[maybe_unused]] std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
   std::map<size_t, size_t> map_delaunays;
@@ -2988,7 +2978,7 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 #endif
   DelaunayTesselationIneq<T, Tgroup> DTIadj =
     FlippingLtype<T, Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo,
-                             data.LinSpa.ListLineMat, {}, data.rddo);
+                             data.LinSpa.ListLineMat, data.rddo);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: s_adj, FlippingLtype|=" << time_s_adj << "\n";
 #endif
