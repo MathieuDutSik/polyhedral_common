@@ -1,0 +1,163 @@
+#!/bin/bash
+# Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+#
+# Runs clang-tidy over the sources of the repository for a chosen list of
+# checks.
+#
+#   ./check_cpp_conformance misc-definitions-in-headers
+#   ./check_cpp_conformance cert-dcl58-cpp,misc-definitions-in-headers
+#   ./check_cpp_conformance --list
+#
+# Why clang-tidy and not the compiler: the rules of interest here are not
+# expressible as warnings. The 994 warning flags of clang, all of which
+# -Weverything turns on, say nothing about a program that opens namespace std
+# or that defines a non-inline function in a header. Those need a separate
+# pass over the parsed translation unit, which is what clang-tidy is.
+#
+# Because clang-tidy really is a compiler front end, it needs the same flags
+# as the build. Those come from a compilation database that CMake writes with
+# CMAKE_EXPORT_COMPILE_COMMANDS, generated here on first use.
+#
+# Checks worth knowing about, from what they report on this code base:
+#   misc-definitions-in-headers  non-inline function definitions in a header,
+#                                an ODR violation as soon as a header reaches
+#                                two translation units of one binary
+#   cert-dcl58-cpp               opening namespace std. Adding functions there
+#                                is never allowed; specializations are allowed
+#                                only if they depend on a program-defined type
+#                                and meet the requirements of the original
+#                                template, so the hits need triage
+#   cert-dcl59-cpp               unnamed namespace in a header
+#   cert-oop57-cpp               memset/memcpy applied to a non-trivial type
+#   cert-oop54-cpp               self-assignment not handled
+#   cert-err58-cpp               a static initializer that can throw
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_DIR="${CHECK_CPP_BUILD_DIR:-$ROOT/build_conformance}"
+JOBS="${CHECK_CPP_JOBS:-$( (command -v nproc >/dev/null && nproc) || sysctl -n hw.ncpu 2>/dev/null || echo 4)}"
+
+usage() {
+  sed -n '3,33p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  echo
+  echo "Usage: $(basename "$0") [--list] [--jobs N] <check1[,check2,...]>"
+  echo
+  echo "Environment:"
+  echo "  CLANG_TIDY            path to clang-tidy"
+  echo "  CHECK_CPP_BUILD_DIR   where the compilation database is built"
+  echo "  CHECK_CPP_JOBS        parallel jobs (default: number of cpus)"
+}
+
+# --- Locate clang-tidy. Homebrew keeps it out of the default PATH. ---
+find_clang_tidy() {
+  if [ -n "${CLANG_TIDY:-}" ]; then
+    echo "$CLANG_TIDY"
+    return
+  fi
+  local cand
+  for cand in clang-tidy /opt/homebrew/opt/llvm/bin/clang-tidy \
+              /usr/local/opt/llvm/bin/clang-tidy /usr/bin/clang-tidy; do
+    if command -v "$cand" >/dev/null 2>&1; then
+      command -v "$cand"
+      return
+    fi
+  done
+  return 1
+}
+
+CHECKS=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    --list) LIST_ONLY=1; shift ;;
+    --jobs) JOBS="$2"; shift 2 ;;
+    -*) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
+    *) CHECKS="$1"; shift ;;
+  esac
+done
+
+CLANG_TIDY="$(find_clang_tidy || true)"
+if [ -z "$CLANG_TIDY" ]; then
+  echo "ERROR: clang-tidy not found. Install LLVM, or set CLANG_TIDY." >&2
+  echo "  macOS:  brew install llvm" >&2
+  echo "  Debian: sudo apt-get install -y clang-tidy" >&2
+  exit 127
+fi
+
+if [ -n "${LIST_ONLY:-}" ]; then
+  "$CLANG_TIDY" --checks='-*,cert-*,misc-*,bugprone-*' --list-checks
+  exit 0
+fi
+
+if [ -z "$CHECKS" ]; then
+  echo "ERROR: no check list given." >&2
+  usage >&2
+  exit 2
+fi
+
+echo "==> clang-tidy: $CLANG_TIDY"
+"$CLANG_TIDY" --version | sed -n '2p' | sed 's/^/    /'
+
+# --- The compilation database. ---
+if [ ! -f "$BUILD_DIR/compile_commands.json" ]; then
+  echo "==> Generating the compilation database in $BUILD_DIR"
+  cmake -B "$BUILD_DIR" -S "$ROOT" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON > /dev/null
+fi
+n_tu=$(grep -c '"file"' "$BUILD_DIR/compile_commands.json" || true)
+echo "==> $n_tu translation units in the database"
+
+# Only our own headers. Without this the report is dominated by Boost, Eigen
+# and the standard library, none of which we can act on. The submodules are
+# included on purpose: their headers are ours to fix, upstream.
+HEADER_FILTER=".*/(src_[a-z_]+|basic_common_cpp/src_[a-z_]+|permutalib/src)/.*"
+
+echo "==> checks: $CHECKS"
+echo "==> jobs:   $JOBS"
+
+LOG="$(mktemp)"
+trap 'rm -f "$LOG"' EXIT
+
+# run-clang-tidy parallelizes over the database and ships with LLVM. Fall
+# back to a serial loop when it is absent.
+RUN_CLANG_TIDY="$(dirname "$CLANG_TIDY")/run-clang-tidy"
+if [ -x "$RUN_CLANG_TIDY" ]; then
+  "$RUN_CLANG_TIDY" -p "$BUILD_DIR" -quiet -j "$JOBS" \
+      -clang-tidy-binary "$CLANG_TIDY" \
+      -checks="-*,$CHECKS" -header-filter="$HEADER_FILTER" \
+      > "$LOG" 2>&1 || true
+else
+  echo "    (run-clang-tidy absent, going serial)"
+  python3 - "$BUILD_DIR/compile_commands.json" <<'PY' | while read -r f; do
+import json, sys
+for e in json.load(open(sys.argv[1])):
+    print(e["file"])
+PY
+    "$CLANG_TIDY" --quiet -p "$BUILD_DIR" \
+        --checks="-*,$CHECKS" --header-filter="$HEADER_FILTER" "$f" \
+        >> "$LOG" 2>&1 || true
+  done
+fi
+
+# One finding is reported once per translation unit that includes the header,
+# so the raw output is deduplicated on file:line:check.
+sort -u "$LOG" | grep -E "warning: .*\[[a-z0-9-]+\]$" | sort -u > "$LOG.uniq" || true
+n_find=$(wc -l < "$LOG.uniq" | tr -d ' ')
+
+echo
+if [ "$n_find" -eq 0 ]; then
+  echo "==> no finding for: $CHECKS"
+  exit 0
+fi
+
+echo "==> $n_find distinct finding(s)"
+echo
+echo "--- by check ---"
+grep -oE "\[[a-z0-9-]+\]$" "$LOG.uniq" | sort | uniq -c | sort -rn
+echo
+echo "--- by file ---"
+sed -E 's/:[0-9]+:[0-9]+:.*//' "$LOG.uniq" | sed "s|$ROOT/||" | sort | uniq -c | sort -rn | head -20
+echo
+echo "--- findings ---"
+sed "s|$ROOT/||" "$LOG.uniq"
+rm -f "$LOG.uniq"
+exit 1
