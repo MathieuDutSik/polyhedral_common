@@ -1001,9 +1001,8 @@ void CheckTermination(
   }
 #endif
   if (AllArr.max_runtime > 0) {
-    std::cerr << "max_runtime=" << AllArr.max_runtime << "\n";
     int runtime = si(AllArr.start);
-    std::cerr << "runtime=" << runtime << "\n";
+    std::cerr << "max_runtime=" << AllArr.max_runtime << " runtime=" << runtime << "\n";
     if (runtime > AllArr.max_runtime) {
       std::cerr << "The maximum runtime has been elapsed. max_runtime = "
                 << AllArr.max_runtime << "\n";
