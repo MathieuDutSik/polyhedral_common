@@ -1362,17 +1362,21 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     if (test_final)
       break;
     DataFacet<T, Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
-    size_t SelectedOrbit = df.SelectedOrbit;
+#ifdef TRACK_RUN
+    os << "RDD: Treating orbit=" << df.SelectedOrbit
+       << " |inc|=" << df.eInc.count()
+       << " |stab|=" << df.Stab.size() << "\n";
+#endif
     // Alternative way is to use CondTempDirectory. BUT
     // For many we actually do not need to have such a construction.
     // Need to think.
     std::string NewPrefix =
-        ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
+        ePrefix + "ADM" + std::to_string(df.SelectedOrbit) + "_";
     DUALDESC_AdjacencyDecomposition_and_insert<Tbank, T, Tgroup, Tidx_value,
                                                TbasicBank, decltype(f_insert),
                                                decltype(f_dd)>(
         TheBank, bb, df, AllArr, f_insert, f_dd, NewPrefix, os);
-    RPL.FuncPutOrbitAsDone(SelectedOrbit);
+    RPL.FuncPutOrbitAsDone(df.SelectedOrbit);
   }
   return RPL.GetListFaceOrbitsize();
 }
