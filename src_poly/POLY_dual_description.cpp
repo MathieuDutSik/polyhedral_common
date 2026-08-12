@@ -107,6 +107,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "control : the full data set for control and debugging\n";
       std::cerr << "CPP     : the matrix for output (also used in Oscar)\n";
+      std::cerr << "Number  : the number of rays found\n";
       std::cerr << "GAP     : returns a GAP readable file (except for "
                    "algebraic field)\n";
       return -1;

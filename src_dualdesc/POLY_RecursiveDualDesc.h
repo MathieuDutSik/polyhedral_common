@@ -1021,6 +1021,14 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   CheckTermination<Tgroup>(AllArr);
   PolytopeInputInfo<Tint> info = ComputeInitialInfo<Tint, T, Tgroup>(
       df.FF.EXT_face, df.Stab, AllArr.dimEXT);
+#ifdef TRACK_RUN_DISABLE
+  int n_row = df.FF.EXT_face.rows();
+  int n_col = df.FF.EXT_face.cols();
+  std::string Prefix = "EXTface_" + std::to_string(n_row)
+    + "_" + std::to_string(n_col) + "_";
+  std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+  WriteMatrixFile(FileOut, df.FF.EXT_face);
+#endif
   SplittingDecision split_decision = splitting_decision_from_string(
       dual_desc_heuristic_evaluation(AllArr.Splitting, info));
   if (split_decision == SplittingDecision::nosplit) {
