@@ -33,26 +33,9 @@ jobs:
       MPI_LINK_CPP: "-lboost_mpi"
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Install Dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
-          sudo apt install -y wget
-          sudo apt install -y g++ gcc
-          sudo apt install -y cmake
-          sudo apt install -y libgmp-dev
-          sudo apt install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
-          sudo apt install -y autoconf autoconf-archive automake autotools-dev libtool
-          sudo apt install -y texlive-latex-base # needed for the CDD manual to be compiled
-          sudo apt install -y openmpi-bin libopenmpi-dev
-          sudo apt install -y xz-utils
 
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss

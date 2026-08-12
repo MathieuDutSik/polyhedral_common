@@ -25,7 +25,7 @@ jobs:
       EIGEN_INC: /usr/include/eigen3
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -42,7 +42,7 @@ jobs:
         # lto/libc.a pulls in ldexpl.o, whose reference to scalbnl is not
         # satisfied by any member of that archive. Later releases ship
         # scalbnl.o and resolve it.
-        uses: mymindstorm/setup-emsdk@v14
+        uses: mymindstorm/setup-emsdk@v16
         with:
           version: 6.0.6
           actions-cache-folder: emsdk-cache
@@ -51,7 +51,7 @@ jobs:
       # src_export_wasm/build/nauty-install on first run; cache that.
       - name: Cache wasm-compiled nauty
         id: nauty-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: src_export_wasm/build/nauty-install
           key: nauty-wasm-2.8.9-${{ runner.os }}
