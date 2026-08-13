@@ -8,10 +8,8 @@
 #include "MAT_MatrixInt.h"
 #include "MAT_MatrixInverse.h"
 #include <algorithm>
-#include <deque>
 #include <list>
 #include <map>
-#include <memory>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -122,11 +120,6 @@ template <typename Tint> struct NmzKernel {
   size_t dim;
   size_t nr_gen;
   bool is_pyramid;
-  NmzKernel *Mother;
-  // local indices (in Mother) of this pyramid's generators; entry 0 is the
-  // apex, the rest ascending
-  std::vector<size_t> Mother_Key;
-  size_t apex;
 
   std::vector<uint8_t> in_triang;
   std::vector<size_t> GensInCone;
@@ -137,29 +130,32 @@ template <typename Tint> struct NmzKernel {
   // of the younger iff its common-generator set is NOT contained in
   // InsertedUpTo[max(a, b)].
   std::vector<Face> InsertedUpTo;
-  std::list<NmzFacet<Tint>> Facets;
+  std::vector<NmzFacet<Tint>> Facets;
   size_t old_nr_supp_hyps;
   size_t HypCounter;
   std::vector<size_t> Comparisons;
   size_t nrTotalComparisons;
-  std::list<NmzFacet<Tint>> LargeRecPyrs;
+  std::vector<NmzFacet<Tint>> LargeRecPyrs;
 
   // top cone
   NmzKernel(MyMatrix<Tint> const &_TopGen, std::ostream &_os)
       : TopGen(_TopGen), os(_os),
         dim(_TopGen.cols()), nr_gen(_TopGen.rows()), is_pyramid(false),
-        Mother(nullptr), apex(0), in_triang(nr_gen, 0), nrGensInCone(0),
+        in_triang(nr_gen, 0), nrGensInCone(0),
         old_nr_supp_hyps(0), HypCounter(1), nrTotalComparisons(0) {
     RowIdx.resize(nr_gen);
     for (size_t i = 0; i < nr_gen; i++)
       RowIdx[i] = static_cast<int>(i);
   }
 
-  // pyramid: generators are Mother's gens selected by Key (apex first)
-  NmzKernel(NmzKernel &C, std::vector<size_t> const &Key)
+  // pyramid: generators are C's gens selected by Key (apex first). The
+  // pyramid holds no back-reference to its creator: the give-back of its
+  // support hyperplanes is done by the caller (process_pyramid) once
+  // build_cone has finished.
+  NmzKernel(NmzKernel const &C, std::vector<size_t> const &Key)
       : TopGen(C.TopGen), os(C.os), dim(C.dim),
-        nr_gen(Key.size()), is_pyramid(true), Mother(&C), Mother_Key(Key),
-        apex(0), in_triang(nr_gen, 0), nrGensInCone(0), old_nr_supp_hyps(0),
+        nr_gen(Key.size()), is_pyramid(true),
+        in_triang(nr_gen, 0), nrGensInCone(0), old_nr_supp_hyps(0),
         HypCounter(1), nrTotalComparisons(0) {
     RowIdx.resize(nr_gen);
     for (size_t i = 0; i < nr_gen; i++)
@@ -194,7 +190,7 @@ template <typename Tint> struct NmzKernel {
   // primitive. Ring arithmetic only.
   void add_hyperplane(size_t new_generator, NmzFacet<Tint> const &positive,
                       NmzFacet<Tint> const &negative,
-                      std::list<NmzFacet<Tint>> &NewHyps,
+                      std::vector<NmzFacet<Tint>> &NewHyps,
                       bool known_to_be_simplicial) {
     NmzFacet<Tint> NewFacet;
     NewFacet.Hyp = MyVector<Tint>(dim);
@@ -291,7 +287,7 @@ template <typename Tint> struct NmzKernel {
       GensInCone.push_back(key[j]);
       Face nxt = InsertedUpTo.back();
       nxt.set(key[j]);
-      InsertedUpTo.push_back(nxt);
+      InsertedUpTo.push_back(std::move(nxt));
     }
     nrGensInCone = dim;
     nrTotalComparisons = dim * dim / 2;
@@ -323,9 +319,9 @@ template <typename Tint> struct NmzKernel {
     size_t subfacet_dim = dim - 2;
     size_t facet_dim = dim - 1;
 
-    std::deque<NmzFacet<Tint> *> Pos_Simp, Pos_Non_Simp;
-    std::deque<NmzFacet<Tint> *> Neg_Simp, Neg_Non_Simp;
-    std::deque<NmzFacet<Tint> *> Neutral_Simp, Neutral_Non_Simp;
+    std::vector<NmzFacet<Tint> *> Pos_Simp, Pos_Non_Simp;
+    std::vector<NmzFacet<Tint> *> Neg_Simp, Neg_Non_Simp;
+    std::vector<NmzFacet<Tint> *> Neutral_Simp, Neutral_Non_Simp;
 
     Face GenInPosHyp(nr_gen), GenInNegHyp(nr_gen);
     for (auto &facet : Facets) {
@@ -377,50 +373,59 @@ template <typename Tint> struct NmzKernel {
     size_t nr_NeuNonSimp = Neutral_Non_Simp.size();
 
     // subfacets of the negative simplicial facets
-    std::list<std::pair<Face, int>> Neg_Subfacet_Multi;
-    {
-      for (i = 0; i < nr_NegSimp; i++) {
-        Face RelGen_NegHyp = Gen_BothSides & Neg_Simp[i]->GenInHyp;
-        size_t nr_RelGen_NegHyp = 0;
-        for (j = 0; j < nr_gen; j++) {
-          if (RelGen_NegHyp.test(j))
-            nr_RelGen_NegHyp++;
-          if (nr_RelGen_NegHyp > subfacet_dim)
-            break;
-        }
-        if (nr_RelGen_NegHyp == subfacet_dim)
-          Neg_Subfacet_Multi.emplace_back(RelGen_NegHyp,
-                                          static_cast<int>(i));
-        if (nr_RelGen_NegHyp == facet_dim) {
-          for (k = 0; k < nr_gen; k++) {
-            if (RelGen_NegHyp.test(k)) {
-              Face subfacet = RelGen_NegHyp;
-              subfacet.reset(k);
-              Neg_Subfacet_Multi.emplace_back(subfacet, static_cast<int>(i));
-            }
+    std::vector<std::pair<Face, int>> Neg_Subfacet_Multi;
+    for (i = 0; i < nr_NegSimp; i++) {
+      Face RelGen_NegHyp = Gen_BothSides & Neg_Simp[i]->GenInHyp;
+      size_t nr_RelGen_NegHyp = 0;
+      for (j = 0; j < nr_gen; j++) {
+        if (RelGen_NegHyp.test(j))
+          nr_RelGen_NegHyp++;
+        if (nr_RelGen_NegHyp > subfacet_dim)
+          break;
+      }
+      if (nr_RelGen_NegHyp == facet_dim) {
+        for (k = 0; k < nr_gen; k++) {
+          if (RelGen_NegHyp.test(k)) {
+            Face subfacet = RelGen_NegHyp;
+            subfacet.reset(k);
+            Neg_Subfacet_Multi.emplace_back(std::move(subfacet),
+                                            static_cast<int>(i));
           }
         }
+      } else if (nr_RelGen_NegHyp == subfacet_dim) {
+        Neg_Subfacet_Multi.emplace_back(std::move(RelGen_NegHyp),
+                                        static_cast<int>(i));
       }
     }
-    Neg_Subfacet_Multi.sort();
+    std::sort(Neg_Subfacet_Multi.begin(), Neg_Subfacet_Multi.end());
     // a subfacet shared by two negative simplicial facets is interior to the
-    // negative side: remove both copies
-    for (auto jj = Neg_Subfacet_Multi.begin();
-         jj != Neg_Subfacet_Multi.end();) {
-      auto del = jj++;
-      if (jj != Neg_Subfacet_Multi.end() && (*jj).first == (*del).first) {
-        Neg_Subfacet_Multi.erase(del);
-        del = jj++;
-        Neg_Subfacet_Multi.erase(del);
+    // negative side: mark both copies (-2), pair by pair as the original's
+    // list erasure does
+    {
+      size_t p = 0;
+      while (p < Neg_Subfacet_Multi.size()) {
+        if (p + 1 < Neg_Subfacet_Multi.size() &&
+            Neg_Subfacet_Multi[p + 1].first == Neg_Subfacet_Multi[p].first) {
+          Neg_Subfacet_Multi[p].second = -2;
+          Neg_Subfacet_Multi[p + 1].second = -2;
+          p += 2;
+        } else {
+          p += 1;
+        }
       }
     }
-    size_t nr_NegSubfMult = Neg_Subfacet_Multi.size();
+    size_t nr_NegSubfMult = 0;
+    for (auto &entry : Neg_Subfacet_Multi)
+      if (entry.second != -2)
+        nr_NegSubfMult++;
 
     // remove those that lie in a neutral facet or a negative non-simplicial
     // facet (the size guards against a quadratic disaster are the original's)
     if (nr_NegSubfMult * (nr_NeuSimp + nr_NeuNonSimp + nr_NegNonSimp) <=
         100000000) {
       for (auto &entry : Neg_Subfacet_Multi) {
+        if (entry.second == -2)
+          continue;
         Face const &subfacet = entry.first;
         bool found = false;
         if (nr_NeuSimp < 100000) {
@@ -452,14 +457,14 @@ template <typename Tint> struct NmzKernel {
     {
       auto last_inserted = Neg_Subfacet.begin();
       for (auto &entry : Neg_Subfacet_Multi)
-        if (entry.second != -1)
-          last_inserted = Neg_Subfacet.insert(last_inserted, entry);
+        if (entry.second >= 0)
+          last_inserted = Neg_Subfacet.insert(last_inserted, std::move(entry));
     }
     size_t nr_NegSubf = Neg_Subfacet.size();
     Neg_Subfacet_Multi.clear();
 
-    std::vector<std::list<NmzFacet<Tint>>> NewHypsSimp(nr_PosSimp);
-    std::vector<std::list<NmzFacet<Tint>>> NewHypsNonSimp(nr_PosNonSimp);
+    std::vector<std::vector<NmzFacet<Tint>>> NewHypsSimp(nr_PosSimp);
+    std::vector<std::vector<NmzFacet<Tint>>> NewHypsNonSimp(nr_PosNonSimp);
 
     nrTotalComparisons += nr_NegNonSimp * nr_PosNonSimp;
 
@@ -625,9 +630,11 @@ template <typename Tint> struct NmzKernel {
     }
 
     for (i = 0; i < nr_PosSimp; i++)
-      Facets.splice(Facets.end(), NewHypsSimp[i]);
+      for (auto &hyp : NewHypsSimp[i])
+        Facets.emplace_back(std::move(hyp));
     for (i = 0; i < nr_PosNonSimp; i++)
-      Facets.splice(Facets.end(), NewHypsNonSimp[i]);
+      for (auto &hyp : NewHypsNonSimp[i])
+        Facets.emplace_back(std::move(hyp));
   }
 
   // select_supphyps_from: the mother cone (=this) selects the new global
@@ -637,7 +644,7 @@ template <typename Tint> struct NmzKernel {
   // would mean the same hyperplane is delivered by another pyramid, so this
   // one scalar-product filter is both the validity check and the
   // deduplication.
-  void select_supphyps_from(std::list<NmzFacet<Tint>> &NewFacets,
+  void select_supphyps_from(std::vector<NmzFacet<Tint>> &NewFacets,
                             size_t new_generator,
                             std::vector<size_t> const &Pyramid_key) {
     Face in_Pyr(nr_gen);
@@ -678,13 +685,16 @@ template <typename Tint> struct NmzKernel {
   // recursive pyramid, i.e. one negative facet matched directly against all
   // positive facets (more efficient than building the pyramid when the
   // pyramid is large).
+  // New hyperplanes go into the caller-owned NewHyps accumulator, NOT into
+  // Facets: the PosHyps pointers into Facets must stay valid across all the
+  // match calls of one evaluate_large_rec_pyramids round.
   void match_neg_hyp_with_pos_hyps(NmzFacet<Tint> const &Neg,
                                    size_t new_generator,
                                    std::vector<NmzFacet<Tint> *> const &PosHyps,
                                    Face const &GenIn_PosHyp,
-                                   std::list<Face> &Facets_0_1) {
+                                   std::list<Face> &Facets_0_1,
+                                   std::vector<NmzFacet<Tint>> &NewHyps) {
     size_t subfacet_dim = dim - 2;
-    std::list<NmzFacet<Tint>> NewHyps;
 
     Face RelGens_InNegHyp = Neg.GenInHyp & GenIn_PosHyp;
     size_t nr_RelGens_InNegHyp = RelGens_InNegHyp.count();
@@ -739,51 +749,52 @@ template <typename Tint> struct NmzKernel {
       if (common_subfacet)
         add_hyperplane(new_generator, *Pos, Neg, NewHyps, false);
     }
-    Facets.splice(Facets.end(), NewHyps);
   }
 
   void evaluate_large_rec_pyramids(size_t new_generator) {
     size_t nrLargeRecPyrs = LargeRecPyrs.size();
     if (nrLargeRecPyrs == 0)
       return;
+    // a std::list: the comparison test moves successful reducers to the front
     std::list<Face> Facets_0_1;
-    {
-      auto Fac = Facets.begin();
-      for (size_t i = 0; i < old_nr_supp_hyps; ++i, ++Fac) {
-        if (Fac->simplicial)
-          continue;
-        Facets_0_1.push_back(Fac->GenInHyp);
-      }
+    for (size_t i = 0; i < old_nr_supp_hyps; ++i) {
+      if (Facets[i].simplicial)
+        continue;
+      Facets_0_1.push_back(Facets[i].GenInHyp);
     }
     std::vector<NmzFacet<Tint> *> PosHyps;
     Face GenIn_PosHyp(nr_gen);
-    {
-      auto ii = Facets.begin();
-      for (size_t ij = 0; ij < old_nr_supp_hyps; ++ij, ++ii)
-        if (ii->ValNewGen > 0) {
-          GenIn_PosHyp |= ii->GenInHyp;
-          PosHyps.push_back(&(*ii));
-        }
-    }
+    for (size_t i = 0; i < old_nr_supp_hyps; ++i)
+      if (Facets[i].ValNewGen > 0) {
+        GenIn_PosHyp |= Facets[i].GenInHyp;
+        PosHyps.push_back(&Facets[i]);
+      }
     nrTotalComparisons += PosHyps.size() * nrLargeRecPyrs;
 #ifdef DEBUG_NORMALIZ_DUAL_DESC
     os << "NMZ: large pyramids " << nrLargeRecPyrs << "\n";
 #endif
+    std::vector<NmzFacet<Tint>> NewHyps;
     for (auto &Neg : LargeRecPyrs)
       match_neg_hyp_with_pos_hyps(Neg, new_generator, PosHyps, GenIn_PosHyp,
-                                  Facets_0_1);
+                                  Facets_0_1, NewHyps);
+    for (auto &hyp : NewHyps)
+      Facets.emplace_back(std::move(hyp));
     LargeRecPyrs.clear();
   }
 
   // process_pyramid: a simplicial pyramid is solved on the spot; a small one
-  // recurses into a child cone (which hands its facets back at the end of its
-  // build_cone); a large one is deferred to evaluate_large_rec_pyramids.
+  // recurses into a child cone whose facets are handed back through
+  // select_supphyps_from; a large one is deferred to
+  // evaluate_large_rec_pyramids. The give-back appends to Facets, so the hyp
+  // reference (a Facets element) is only read before any such append: the
+  // large-pyramid copy is taken first, and the other branches do not use it.
   void process_pyramid(std::vector<size_t> const &Pyramid_key,
                        size_t new_generator, NmzFacet<Tint> const &hyp) {
     if (Pyramid_key.size() == dim) {
       // simplicial pyramid: facet j of the pyramid contains all its
       // generators but the j-th
-      std::list<NmzFacet<Tint>> NewFacets;
+      std::vector<NmzFacet<Tint>> NewFacets;
+      NewFacets.reserve(dim);
       std::vector<MyVector<Tint>> normals = simplex_facet_normals(Pyramid_key);
       for (size_t j = 0; j < dim; j++) {
         NmzFacet<Tint> NewFacet;
@@ -818,8 +829,8 @@ template <typename Tint> struct NmzKernel {
       return;
     }
     NmzKernel<Tint> Pyramid(*this, Pyramid_key);
-    Pyramid.apex = new_generator;
     Pyramid.build_cone();
+    select_supphyps_from(Pyramid.Facets, new_generator, Pyramid_key);
     nrTotalComparisons += Pyramid.nrTotalComparisons;
   }
 
@@ -827,21 +838,23 @@ template <typename Tint> struct NmzKernel {
   void process_pyramids(size_t new_generator) {
     std::vector<size_t> Pyramid_key;
     Pyramid_key.reserve(nr_gen);
-    auto hyp = Facets.begin();
-    for (size_t kk = 0; kk < old_nr_supp_hyps; ++kk, ++hyp) {
-      if (hyp->ValNewGen == 0) {
-        hyp->GenInHyp.set(new_generator);
-        hyp->simplicial = false;
+    for (size_t kk = 0; kk < old_nr_supp_hyps; ++kk) {
+      // process_pyramid may append to Facets (small-pyramid give-back), so
+      // the reference is re-taken each iteration and not used afterwards
+      NmzFacet<Tint> &hyp = Facets[kk];
+      if (hyp.ValNewGen == 0) {
+        hyp.GenInHyp.set(new_generator);
+        hyp.simplicial = false;
         continue;
       }
-      if (hyp->ValNewGen > 0)
+      if (hyp.ValNewGen > 0)
         continue;
       Pyramid_key.clear();
       Pyramid_key.push_back(new_generator);
       for (size_t i = 0; i < nr_gen; i++)
-        if (in_triang[i] && hyp->GenInHyp.test(i))
+        if (in_triang[i] && hyp.GenInHyp.test(i))
           Pyramid_key.push_back(i);
-      process_pyramid(Pyramid_key, new_generator, *hyp);
+      process_pyramid(Pyramid_key, new_generator, hyp);
     }
     evaluate_large_rec_pyramids(new_generator);
   }
@@ -894,22 +907,16 @@ template <typename Tint> struct NmzKernel {
         find_new_facets(i);
       }
 
-      // remove the negative (visible) facets
-      {
-        auto l = Facets.begin();
-        for (size_t j = 0; j < old_nr_supp_hyps; j++) {
-          if (l->negative)
-            l = Facets.erase(l);
-          else
-            ++l;
-        }
-      }
+      // remove the negative (visible) facets; the facets appended during
+      // this step are never negative, so the erasure can scan everything
+      std::erase_if(Facets,
+                    [](NmzFacet<Tint> const &f) -> bool { return f.negative; });
       GensInCone.push_back(i);
       nrGensInCone++;
       {
         Face nxt = InsertedUpTo.back();
         nxt.set(i);
-        InsertedUpTo.push_back(nxt);
+        InsertedUpTo.push_back(std::move(nxt));
       }
       Comparisons.push_back(nrTotalComparisons);
       in_triang[i] = 1;
@@ -918,27 +925,20 @@ template <typename Tint> struct NmzKernel {
         os << "NMZ: gen=" << i + 1 << ", " << Facets.size() << " hyp\n";
 #endif
     }
-    if (is_pyramid)
-      Mother->select_supphyps_from(Facets, apex, Mother_Key);
   }
-};
-
-// The facet output type: primitive inward normal and full incidence over the
-// original rows.
-template <typename T> struct NormalizDDFacet {
-  MyVector<T> normal;
-  Face incd;
 };
 
 // Kernel driver on a ring matrix: sort the rows lexicographically (the
 // insertion order the original uses for support-hyperplane computations),
-// run build_cone, then translate the facets back to the original row order.
-// The incidence bits over inserted generators are exact by construction; the
-// rows never inserted (only possible when the input carries redundant rays)
-// are completed by scalar products.
-template <typename Tint>
-std::vector<NormalizDDFacet<Tint>>
-NormalizDualDesc_Kernel(MyMatrix<Tint> const &EXT, std::ostream &os) {
+// run build_cone, then hand each facet to the caller as
+// f_facet(MyVector<Tint>&& normal, Face&& incd) with the incidence over the
+// ORIGINAL row order -- no facet vector is materialized here. The incidence
+// bits over inserted generators are exact by construction; the rows never
+// inserted (only possible when the input carries redundant rays) are
+// completed by scalar products.
+template <typename Tint, typename Ffacet>
+void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
+                               Ffacet f_facet) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
 #ifdef TIMINGS_NORMALIZ_DUAL_DESC
@@ -978,8 +978,9 @@ NormalizDualDesc_Kernel(MyMatrix<Tint> const &EXT, std::ostream &os) {
     if (!kernel.in_triang[i])
       missing.push_back(i);
 
-  std::vector<NormalizDDFacet<Tint>> result;
-  result.reserve(kernel.Facets.size());
+#ifdef TIMINGS_NORMALIZ_DUAL_DESC
+  size_t n_facet = kernel.Facets.size();
+#endif
   for (auto &facet : kernel.Facets) {
     Face incd(nbRow);
     for (size_t i = 0; i < kernel.nr_gen; i++)
@@ -988,25 +989,48 @@ NormalizDualDesc_Kernel(MyMatrix<Tint> const &EXT, std::ostream &os) {
     for (auto &i : missing)
       if (kernel.v_scal(facet.Hyp, i) == 0)
         incd.set(perm[i]);
-    result.push_back({std::move(facet.Hyp), std::move(incd)});
+    f_facet(std::move(facet.Hyp), std::move(incd));
   }
 #ifdef TIMINGS_NORMALIZ_DUAL_DESC
   os << "NMZ: |EXT|=" << nbRow << "/" << nbCol
-     << " |facets|=" << result.size() << " time=" << time << "\n";
+     << " |facets|=" << n_facet << " time=" << time << "\n";
 #endif
-  return result;
 }
 
 } // namespace normaliz_dd
 
-// Runs the kernel and returns facets with T-typed normals. As in the
-// beneath-and-beyond wrapper: the arithmetic is division-free, so for a field
-// input the whole computation runs on the underlying integer ring, attempting
-// machine integers (TryInt64) first and falling back to the exact ring on
-// overflow. Facet incidences are combinatorial and type independent.
-template <typename T>
-std::vector<normaliz_dd::NormalizDDFacet<T>>
-NormalizDualDesc_run(MyMatrix<T> const &EXT, std::ostream &os) {
+// Convert a kernel-arithmetic normal back to T: identity for T itself,
+// unpacking for the TryInt64 machine integers, the universal conversion for
+// the underlying ring.
+template <typename T, typename Tw>
+MyVector<T> NormalizNormalConvert(MyVector<Tw> &&normal) {
+  if constexpr (std::is_same_v<T, Tw>) {
+    return std::move(normal);
+  } else if constexpr (std::is_same_v<Tw, TryInt64>) {
+    int len = normal.size();
+    MyVector<T> ret(len);
+    for (int u = 0; u < len; u++)
+      ret(u) = ConvertFromTryInt64<T>(normal(u));
+    return ret;
+  } else {
+    return UniversalVectorConversion<T, Tw>(normal);
+  }
+}
+
+// Runs the kernel and hands every facet to the caller as
+// f_facet(MyVector<Tw>&& normal, Face&& incd), where Tw is the arithmetic
+// the kernel ran on (T itself, its underlying integer ring, or TryInt64):
+// the callers convert the normal with NormalizNormalConvert -- or ignore it,
+// so the incidence-only entry point never converts a normal at all. As in
+// the beneath-and-beyond wrapper the arithmetic is division-free, so for a
+// field input the whole computation runs on the underlying integer ring,
+// attempting machine integers (TryInt64) first and falling back to the
+// exact ring on overflow. The TryInt64 attempt is buffered and replayed to
+// f_facet only after the overflow check has passed, so a fallback never
+// emits partial results.
+template <typename T, typename Ffacet>
+void NormalizDualDesc_process(MyMatrix<T> const &EXT, std::ostream &os,
+                              Ffacet f_facet) {
   if constexpr (is_ring_field<T>::value) {
     using Tring = typename underlying_ring<T>::ring_type;
     int nbRow = EXT.rows();
@@ -1019,44 +1043,34 @@ NormalizDualDesc_run(MyMatrix<T> const &EXT, std::ostream &os) {
     if constexpr (use_try_int64<Tring>::value) {
       try {
         MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64<TryInt64>(EXTring);
-        std::vector<normaliz_dd::NormalizDDFacet<TryInt64>> try_facets =
-            normaliz_dd::NormalizDualDesc_Kernel(EXTtry, os);
+        std::vector<std::pair<MyVector<TryInt64>, Face>> buffer;
+        normaliz_dd::NormalizDualDesc_Kernel_f(
+            EXTtry, os, [&buffer](MyVector<TryInt64> &&normal, Face &&incd) {
+              buffer.emplace_back(std::move(normal), std::move(incd));
+            });
         terminate_in_arithmetic_error<TryInt64>();
-        std::vector<normaliz_dd::NormalizDDFacet<T>> result;
-        result.reserve(try_facets.size());
-        for (auto &f : try_facets) {
-          int len = f.normal.size();
-          MyVector<T> normal(len);
-          for (int u = 0; u < len; u++)
-            normal(u) = ConvertFromTryInt64<T>(f.normal(u));
-          result.push_back({std::move(normal), std::move(f.incd)});
-        }
-        return result;
+        for (auto &entry : buffer)
+          f_facet(std::move(entry.first), std::move(entry.second));
+        return;
       } catch (TryIntException const &) {
       }
     }
-    std::vector<normaliz_dd::NormalizDDFacet<Tring>> ring_facets =
-        normaliz_dd::NormalizDualDesc_Kernel(EXTring, os);
-    std::vector<normaliz_dd::NormalizDDFacet<T>> result;
-    result.reserve(ring_facets.size());
-    for (auto &f : ring_facets)
-      result.push_back(
-          {UniversalVectorConversion<T, Tring>(f.normal), std::move(f.incd)});
-    return result;
+    normaliz_dd::NormalizDualDesc_Kernel_f(EXTring, os, f_facet);
   } else {
-    return normaliz_dd::NormalizDualDesc_Kernel(EXT, os);
+    normaliz_dd::NormalizDualDesc_Kernel_f(EXT, os, f_facet);
   }
 }
 
-// Facet incidences, matching DirectFacetComputationIncidence.
+// Facet incidences, matching DirectFacetComputationIncidence. The normals
+// are dropped without ever being converted.
 template <typename T>
 vectface POLY_DualDescription_NormalizIncidence(MyMatrix<T> const &EXT,
                                                 std::ostream &os) {
-  std::vector<normaliz_dd::NormalizDDFacet<T>> facets =
-      NormalizDualDesc_run(EXT, os);
   vectface vf(EXT.rows());
-  for (auto &facet : facets)
-    vf.push_back(facet.incd);
+  NormalizDualDesc_process(
+      EXT, os, [&vf]([[maybe_unused]] auto &&normal, Face &&incd) -> void {
+        vf.push_back(incd);
+      });
   return vf;
 }
 
@@ -1064,27 +1078,27 @@ vectface POLY_DualDescription_NormalizIncidence(MyMatrix<T> const &EXT,
 template <typename T>
 MyMatrix<T> POLY_DualDescription_NormalizInequalities(MyMatrix<T> const &EXT,
                                                       std::ostream &os) {
-  std::vector<normaliz_dd::NormalizDDFacet<T>> facets =
-      NormalizDualDesc_run(EXT, os);
-  int n_facet = facets.size();
-  int nbCol = EXT.cols();
-  MyMatrix<T> FAC(n_facet, nbCol);
-  for (int i = 0; i < n_facet; i++)
-    AssignMatrixRow(FAC, i, facets[i].normal);
-  return FAC;
+  std::vector<MyVector<T>> ListVect;
+  NormalizDualDesc_process(
+      EXT, os,
+      [&ListVect](auto &&normal, [[maybe_unused]] Face &&incd) -> void {
+        ListVect.push_back(NormalizNormalConvert<T>(std::move(normal)));
+      });
+  return MatrixFromVectorFamily(ListVect);
 }
 
-// (Face, inequality) pairs, matching DirectFacetComputationFaceIneq.
+// (Face, inequality) pairs, matching DirectFacetComputationFaceIneq: each
+// facet is streamed straight into f_process.
 template <typename T, typename Fprocess>
 void POLY_DualDescription_NormalizFaceIneq(MyMatrix<T> const &EXT,
                                            Fprocess f_process,
                                            std::ostream &os) {
-  std::vector<normaliz_dd::NormalizDDFacet<T>> facets =
-      NormalizDualDesc_run(EXT, os);
-  for (auto &facet : facets) {
-    std::pair<Face, MyVector<T>> pair{facet.incd, facet.normal};
-    f_process(pair);
-  }
+  NormalizDualDesc_process(
+      EXT, os, [&f_process](auto &&normal, Face &&incd) -> void {
+        std::pair<Face, MyVector<T>> pair{
+            std::move(incd), NormalizNormalConvert<T>(std::move(normal))};
+        f_process(pair);
+      });
 }
 
 // clang-format off
