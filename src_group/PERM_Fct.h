@@ -796,14 +796,25 @@ std::optional<MyMatrix<T>> FindTransformationGeneral_f(MyMatrix<T> const &EXT1,
     return {};
   int nbCol = EXT1.cols();
   int nbRow = EXT1.rows();
-  SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
-  int eRank = eSelect.TheRank;
+  // The row selection is by Gauss elimination over a field and by the
+  // division-free machinery over a ring, where the elimination is not
+  // available.
+  auto get_row_select = [&]() -> std::vector<int> {
+    if constexpr (is_ring_field<T>::value) {
+      SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
+      return eSelect.ListRowSelect;
+    } else {
+      return SelectIndependentRows(EXT1);
+    }
+  };
+  std::vector<int> ListRowSelect = get_row_select();
+  int eRank = ListRowSelect.size();
   if (eRank != nbCol)
     return {};
   MyMatrix<T> eMat1(nbCol, nbCol);
   MyMatrix<T> eMat2(nbCol, nbCol);
   for (int iRow = 0; iRow < nbCol; iRow++) {
-    int iRow1 = eSelect.ListRowSelect[iRow];
+    int iRow1 = ListRowSelect[iRow];
     int iRow2 = f(iRow1);
     eMat1.row(iRow) = EXT1.row(iRow1);
     eMat2.row(iRow) = EXT2.row(iRow2);

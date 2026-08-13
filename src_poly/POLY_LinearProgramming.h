@@ -1550,7 +1550,7 @@ bool TestCriterionNonDegenerate(
   os << "LP: 1: TheSum=" << StringVectorGAP(TheSum) << "\n";
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
-    SubMul(TheSum, eSolDual(i_row), eRow);
+    VecSubMul(TheSum, eSolDual(i_row), eRow);
   }
   os << "LP: 2: TheSum=" << StringVectorGAP(TheSum) << "\n";
   if (!IsZeroVector(TheSum)) {
