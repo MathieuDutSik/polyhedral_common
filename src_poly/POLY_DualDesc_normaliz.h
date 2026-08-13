@@ -6,7 +6,7 @@
 #include "POLY_DualDesc_beneath_and_beyond.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
-#include "MAT_Matrix_SubsetSolver.h"
+#include "MAT_MatrixInverse.h"
 #include <algorithm>
 #include <deque>
 #include <list>
@@ -67,10 +67,11 @@
 //    #hyperplanes) are deferred and matched one negative facet against all
 //    positive facets in match_neg_hyp_with_pos_hyps.
 //  * All arithmetic is ring arithmetic (FM combination, gcd content
-//    reduction, division-free rank tests via SelectIndependentRows, kernel
-//    vectors via the subset solver), so the kernel runs on the underlying
-//    integer ring of a field input -- and on TryInt64 with exact-ring
-//    fallback, as in the beneath-and-beyond wrapper.
+//    reduction, division-free rank tests via SelectIndependentRows, all the
+//    facet normals of a simplicial cone at once from one fraction-free
+//    adjugate), so the kernel runs on the underlying integer ring of a field
+//    input -- and on TryInt64 with exact-ring fallback, as in the
+//    beneath-and-beyond wrapper.
 //
 // What is deliberately not ported: OpenMP parallelization and its buffers,
 // triangulations / Hilbert series / multiplicity, the floating-point rank
@@ -112,10 +113,9 @@ template <typename Tint> struct NmzFacet {
 
 // One cone in the recursion (the top cone or a pyramid). Generators are not
 // copied: every level references rows of the one top matrix through RowIdx,
-// so the subset solver and the rank tests all run on the same matrix.
+// so the rank tests and simplex computations all run on the same matrix.
 template <typename Tint> struct NmzKernel {
   MyMatrix<Tint> const &TopGen;
-  SubsetRankOneSolver<Tint> &solver;
   std::ostream &os;
   // local generator i  <->  row RowIdx[i] of TopGen
   std::vector<int> RowIdx;
@@ -139,9 +139,8 @@ template <typename Tint> struct NmzKernel {
   std::list<NmzFacet<Tint>> LargeRecPyrs;
 
   // top cone
-  NmzKernel(MyMatrix<Tint> const &_TopGen, SubsetRankOneSolver<Tint> &_solver,
-            std::ostream &_os)
-      : TopGen(_TopGen), solver(_solver), os(_os),
+  NmzKernel(MyMatrix<Tint> const &_TopGen, std::ostream &_os)
+      : TopGen(_TopGen), os(_os),
         dim(_TopGen.cols()), nr_gen(_TopGen.rows()), is_pyramid(false),
         Mother(nullptr), apex(0), in_triang(nr_gen, 0), nrGensInCone(0),
         old_nr_supp_hyps(0), HypCounter(1), nrTotalComparisons(0) {
@@ -152,7 +151,7 @@ template <typename Tint> struct NmzKernel {
 
   // pyramid: generators are Mother's gens selected by Key (apex first)
   NmzKernel(NmzKernel &C, std::vector<size_t> const &Key)
-      : TopGen(C.TopGen), solver(C.solver), os(C.os), dim(C.dim),
+      : TopGen(C.TopGen), os(C.os), dim(C.dim),
         nr_gen(Key.size()), is_pyramid(true), Mother(&C), Mother_Key(Key),
         apex(0), in_triang(nr_gen, 0), nrGensInCone(0), old_nr_supp_hyps(0),
         HypCounter(1), nrTotalComparisons(0) {
@@ -212,22 +211,34 @@ template <typename Tint> struct NmzKernel {
     NewHyps.emplace_back(std::move(NewFacet));
   }
 
-  // Facet normal j of the simplicial cone spanned by the local generators
-  // key (|key| == dim, linearly independent): it vanishes on every key
-  // generator except key[j] and is positive there. One kernel vector per
-  // facet through the subset solver on the top matrix. (simplex_data in the
-  // original, which uses one matrix inversion.)
-  MyVector<Tint> simplex_facet_normal(std::vector<size_t> const &key,
-                                      size_t j) {
-    Face seed(TopGen.rows());
-    for (size_t k = 0; k < key.size(); k++)
-      if (k != j)
-        seed[RowIdx[key[k]]] = 1;
-    MyVector<Tint> normal =
-        beneath_beyond::canonicalize_normal(solver.GetPositiveKernelVector(seed));
-    if (v_scal(normal, key[j]) < 0)
-      normal = -normal;
-    return normal;
+  // All dim facet normals of the simplicial cone spanned by the local
+  // generators key (|key| == dim, linearly independent) at once: with S the
+  // generator submatrix, S * adj(S) = det(S) * Id, so column j of the
+  // adjugate vanishes on every key generator except key[j] -- one
+  // fraction-free elimination instead of dim kernel solves (simplex_data in
+  // the original). Each normal is content-reduced and oriented positive on
+  // its opposite generator.
+  std::vector<MyVector<Tint>>
+  simplex_facet_normals(std::vector<size_t> const &key) {
+    MyMatrix<Tint> S(dim, dim);
+    for (size_t k = 0; k < dim; k++) {
+      int row = RowIdx[key[k]];
+      for (size_t u = 0; u < dim; u++)
+        S(k, u) = TopGen(row, u);
+    }
+    std::pair<MyMatrix<Tint>, Tint> pair = AdjugateDeterminant(S);
+    std::vector<MyVector<Tint>> normals;
+    normals.reserve(dim);
+    for (size_t j = 0; j < dim; j++) {
+      MyVector<Tint> raw(dim);
+      for (size_t u = 0; u < dim; u++)
+        raw(u) = pair.first(u, j);
+      MyVector<Tint> normal = beneath_beyond::canonicalize_normal(raw);
+      if (v_scal(normal, key[j]) < 0)
+        normal = -normal;
+      normals.emplace_back(std::move(normal));
+    }
+    return normals;
   }
 
   // find_and_evaluate_start_simplex: the lex-first rank-dim subset of the
@@ -252,9 +263,10 @@ template <typename Tint> struct NmzKernel {
         pos++;
       key.push_back(pos);
     }
+    std::vector<MyVector<Tint>> normals = simplex_facet_normals(key);
     for (size_t j = 0; j < dim; j++) {
       NmzFacet<Tint> NewFacet;
-      NewFacet.Hyp = simplex_facet_normal(key, j);
+      NewFacet.Hyp = std::move(normals[j]);
       NewFacet.GenInHyp = Face(nr_gen);
       for (size_t k = 0; k < dim; k++)
         if (k != j)
@@ -865,9 +877,10 @@ template <typename Tint> struct NmzKernel {
       // simplicial pyramid: facet j of the pyramid contains all its
       // generators but the j-th
       std::list<NmzFacet<Tint>> NewFacets;
+      std::vector<MyVector<Tint>> normals = simplex_facet_normals(Pyramid_key);
       for (size_t j = 0; j < dim; j++) {
         NmzFacet<Tint> NewFacet;
-        NewFacet.Hyp = simplex_facet_normal(Pyramid_key, j);
+        NewFacet.Hyp = std::move(normals[j]);
         NewFacet.GenInHyp = Face(Pyramid_key.size());
         NewFacet.GenInHyp.set();
         NewFacet.GenInHyp.reset(j);
@@ -1043,8 +1056,7 @@ NormalizDualDesc_Kernel(MyMatrix<Tint> const &EXT, std::ostream &os) {
     for (int k = 0; k < nbCol; k++)
       EXTsort(i, k) = EXT(perm[i], k);
 
-  SubsetRankOneSolver<Tint> solver(EXTsort);
-  NmzKernel<Tint> kernel(EXTsort, solver, os);
+  NmzKernel<Tint> kernel(EXTsort, os);
   kernel.build_cone();
   terminate_in_arithmetic_error<Tint>();
 
