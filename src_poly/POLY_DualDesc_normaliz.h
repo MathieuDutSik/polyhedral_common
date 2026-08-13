@@ -131,6 +131,12 @@ template <typename Tint> struct NmzKernel {
   std::vector<uint8_t> in_triang;
   std::vector<size_t> GensInCone;
   size_t nrGensInCone;
+  // InsertedUpTo[s] = the set of generators inserted in the first s steps
+  // (GensInCone[0..s)), used for the word-parallel extension test: a facet
+  // pair born at steps (a, b) has gained a common generator since the birth
+  // of the younger iff its common-generator set is NOT contained in
+  // InsertedUpTo[max(a, b)].
+  std::vector<Face> InsertedUpTo;
   std::list<NmzFacet<Tint>> Facets;
   size_t old_nr_supp_hyps;
   size_t HypCounter;
@@ -279,9 +285,13 @@ template <typename Tint> struct NmzKernel {
       number_hyperplane(NewFacet, 0, 0);
       Facets.emplace_back(std::move(NewFacet));
     }
+    InsertedUpTo.push_back(Face(nr_gen));
     for (size_t j = 0; j < dim; j++) {
       in_triang[key[j]] = 1;
       GensInCone.push_back(key[j]);
+      Face nxt = InsertedUpTo.back();
+      nxt.set(key[j]);
+      InsertedUpTo.push_back(nxt);
     }
     nrGensInCone = dim;
     nrTotalComparisons = dim * dim / 2;
@@ -289,13 +299,17 @@ template <typename Tint> struct NmzKernel {
       nrTotalComparisons *= (nmz_arith_cost_factor<Tint>() / 4);
   }
 
-  // Division-free rank test: do the top rows of the listed local generators
-  // have rank >= target?
-  bool rank_at_least(std::vector<size_t> const &local_key, size_t target) {
+  // Division-free rank test: do the top rows of the generators selected by
+  // the face have rank >= target? Extraction of the row list happens only
+  // here, i.e. only when a rank test actually runs.
+  bool rank_face_at_least(Face const &f, size_t target) {
     std::vector<int> rows;
-    rows.reserve(local_key.size());
-    for (auto &i : local_key)
+    rows.reserve(f.count());
+    boost::dynamic_bitset<>::size_type i = f.find_first();
+    while (i != boost::dynamic_bitset<>::npos) {
       rows.push_back(RowIdx[i]);
+      i = f.find_next(i);
+    }
     return SelectIndependentRows(TopGen, rows, target).size() == target;
   }
 
@@ -452,17 +466,17 @@ template <typename Tint> struct NmzKernel {
     //
     // Positive simplicial vs negative simplicial and non-simplicial
     //
-    std::vector<size_t> key(nr_gen);
-    size_t nr_missing;
-    bool common_subfacet;
+    // The per-pair generator tests below run word-parallel on the incidence
+    // bitsets (in-place AND + popcount + subset test against InsertedUpTo)
+    // instead of the original's one-generator-at-a-time key loops: same
+    // accept/reject decisions, a fraction of the work, and no per-pair
+    // allocation.
+    Face RelGen_PosHyp(nr_gen);
+    Face CommonGens(nr_gen);
     for (i = 0; i < nr_PosSimp; i++) {
-      Face RelGen_PosHyp = Gen_BothSides & Pos_Simp[i]->GenInHyp;
-      size_t nr_RelGen_PosHyp = 0;
-      for (j = 0; j < nr_gen && nr_RelGen_PosHyp <= facet_dim; j++)
-        if (RelGen_PosHyp.test(j)) {
-          key[nr_RelGen_PosHyp] = j;
-          nr_RelGen_PosHyp++;
-        }
+      RelGen_PosHyp = Gen_BothSides;
+      RelGen_PosHyp &= Pos_Simp[i]->GenInHyp;
+      size_t nr_RelGen_PosHyp = RelGen_PosHyp.count();
       if (nr_RelGen_PosHyp < subfacet_dim)
         continue;
 
@@ -490,19 +504,13 @@ template <typename Tint> struct NmzKernel {
         }
       }
 
+      // reject on the first missing generator when only one subfacet fits
+      // (nr_RelGen == subfacet_dim), on the second one otherwise
+      size_t allowed_missing = (nr_RelGen_PosHyp == facet_dim) ? 1 : 0;
       for (j = 0; j < nr_NegNonSimp; j++) {
-        nr_missing = 0;
-        common_subfacet = true;
-        for (k = 0; k < nr_RelGen_PosHyp; k++) {
-          if (!Neg_Non_Simp[j]->GenInHyp.test(key[k])) {
-            nr_missing++;
-            if (nr_missing == 2 || nr_RelGen_PosHyp == subfacet_dim) {
-              common_subfacet = false;
-              break;
-            }
-          }
-        }
-        if (common_subfacet) {
+        CommonGens = RelGen_PosHyp;
+        CommonGens &= Neg_Non_Simp[j]->GenInHyp;
+        if (nr_RelGen_PosHyp - CommonGens.count() <= allowed_missing) {
           add_hyperplane(new_generator, *Pos_Simp[i], *Neg_Non_Simp[j],
                          NewHypsSimp[i], true);
           if (nr_RelGen_PosHyp == subfacet_dim)
@@ -526,10 +534,7 @@ template <typename Tint> struct NmzKernel {
         Facets_0_1.push_back(Neutral_Non_Simp[i]->GenInHyp);
       size_t nr_NonSimp = nr_PosNonSimp + nr_NegNonSimp + nr_NeuNonSimp;
 
-      size_t missing_bound, nr_CommonGens;
-      std::vector<size_t> common_key;
-      common_key.reserve(nr_gen);
-      std::vector<int> key_start(nrGensInCone);
+      size_t missing_bound;
 
       for (i = 0; i < nr_PosNonSimp; i++) {
         auto jj_map = Neg_Subfacet.begin();
@@ -545,22 +550,9 @@ template <typename Tint> struct NmzKernel {
         }
 
         NmzFacet<Tint> *PosHyp_Pointer = Pos_Non_Simp[i];
-        Face RelGen_PosHyp = Gen_BothSides & PosHyp_Pointer->GenInHyp;
-        size_t nr_RelGen_PosHyp = 0;
-        int last_existing = -1;
-        for (size_t jj = 0; jj < nrGensInCone; jj++) {
-          j = GensInCone[jj];
-          if (RelGen_PosHyp.test(j)) {
-            key[nr_RelGen_PosHyp] = j;
-            for (size_t kk = last_existing + 1; kk <= jj; kk++)
-              key_start[kk] = static_cast<int>(nr_RelGen_PosHyp);
-            nr_RelGen_PosHyp++;
-            last_existing = static_cast<int>(jj);
-          }
-        }
-        if (last_existing < static_cast<int>(nrGensInCone) - 1)
-          for (size_t kk = last_existing + 1; kk < nrGensInCone; kk++)
-            key_start[kk] = static_cast<int>(nr_RelGen_PosHyp);
+        RelGen_PosHyp = Gen_BothSides;
+        RelGen_PosHyp &= PosHyp_Pointer->GenInHyp;
+        size_t nr_RelGen_PosHyp = RelGen_PosHyp.count();
         if (nr_RelGen_PosHyp < subfacet_dim)
           continue;
 
@@ -583,53 +575,22 @@ template <typename Tint> struct NmzKernel {
                NegHyp_Pointer->Mother != 0) ||
               (NegHyp_Pointer->BornAt < PosHyp_Pointer->BornAt &&
                PosHyp_Pointer->Mother != 0);
-          size_t both_existing_from =
-              key_start[std::max(PosHyp_Pointer->BornAt,
-                                 NegHyp_Pointer->BornAt)];
 
-          nr_missing = 0;
-          nr_CommonGens = 0;
-          common_key.clear();
-          size_t second_loop_bound = nr_RelGen_PosHyp;
-          common_subfacet = true;
+          CommonGens = RelGen_PosHyp;
+          CommonGens &= NegHyp_Pointer->GenInHyp;
+          size_t nr_CommonGens = CommonGens.count();
+          if (nr_RelGen_PosHyp - nr_CommonGens > missing_bound)
+            continue;
 
           // Two facets that are not mother and daughter cannot have shared a
           // subfacet at the birth of the younger one: they intersect in a
           // subfacet now only if a common generator arrived afterwards.
           if (extension_test) {
-            bool extended = false;
-            second_loop_bound = both_existing_from;
-            for (k = both_existing_from; k < nr_RelGen_PosHyp; k++) {
-              if (!NegHyp_Pointer->GenInHyp.test(key[k])) {
-                nr_missing++;
-                if (nr_missing > missing_bound) {
-                  common_subfacet = false;
-                  break;
-                }
-              } else {
-                extended = true;
-                common_key.push_back(key[k]);
-                nr_CommonGens++;
-              }
-            }
-            if (!extended || !common_subfacet)
+            size_t both_born =
+                std::max(PosHyp_Pointer->BornAt, NegHyp_Pointer->BornAt);
+            if (CommonGens.is_subset_of(InsertedUpTo[both_born]))
               continue;
           }
-
-          for (k = 0; k < second_loop_bound; k++) {
-            if (!NegHyp_Pointer->GenInHyp.test(key[k])) {
-              nr_missing++;
-              if (nr_missing > missing_bound) {
-                common_subfacet = false;
-                break;
-              }
-            } else {
-              common_key.push_back(key[k]);
-              nr_CommonGens++;
-            }
-          }
-          if (!common_subfacet)
-            continue;
 
           if (subfacet_dim <= 2) {
             add_hyperplane(new_generator, *PosHyp_Pointer, *NegHyp_Pointer,
@@ -638,14 +599,14 @@ template <typename Tint> struct NmzKernel {
           }
 
           // rank test vs comparison test, by the a-priori cost estimate
+          bool common_subfacet = true;
           bool ranktest =
               (nr_NonSimp > nmz_arith_cost_factor<Tint>() * dim * dim *
                                 nr_CommonGens / 3);
           if (ranktest) {
-            if (!rank_at_least(common_key, subfacet_dim))
+            if (!rank_face_at_least(CommonGens, subfacet_dim))
               common_subfacet = false;
           } else {
-            Face CommonGens = RelGen_PosHyp & NegHyp_Pointer->GenInHyp;
             for (auto a = Facets_0_1.begin(); a != Facets_0_1.end(); ++a) {
               if (CommonGens.is_subset_of(*a) &&
                   (*a != PosHyp_Pointer->GenInHyp) &&
@@ -722,39 +683,17 @@ template <typename Tint> struct NmzKernel {
                                    std::vector<NmzFacet<Tint> *> const &PosHyps,
                                    Face const &GenIn_PosHyp,
                                    std::list<Face> &Facets_0_1) {
-    size_t missing_bound, nr_common_gens;
-    std::vector<size_t> common_key;
-    common_key.reserve(nr_gen);
-    std::vector<size_t> key(nr_gen);
-    bool common_subfacet;
     size_t subfacet_dim = dim - 2;
-    size_t nr_missing;
     std::list<NmzFacet<Tint>> NewHyps;
 
     Face RelGens_InNegHyp = Neg.GenInHyp & GenIn_PosHyp;
-
-    std::vector<int> key_start(nrGensInCone);
-    size_t nr_RelGens_InNegHyp = 0;
-    size_t j;
-    int last_existing = -1;
-    for (size_t jj = 0; jj < nrGensInCone; jj++) {
-      j = GensInCone[jj];
-      if (RelGens_InNegHyp.test(j)) {
-        key[nr_RelGens_InNegHyp] = j;
-        for (size_t kk = last_existing + 1; kk <= jj; kk++)
-          key_start[kk] = static_cast<int>(nr_RelGens_InNegHyp);
-        nr_RelGens_InNegHyp++;
-        last_existing = static_cast<int>(jj);
-      }
-    }
-    if (last_existing < static_cast<int>(nrGensInCone) - 1)
-      for (size_t kk = last_existing + 1; kk < nrGensInCone; kk++)
-        key_start[kk] = static_cast<int>(nr_RelGens_InNegHyp);
-
-    if (nr_RelGens_InNegHyp < dim - 2)
+    size_t nr_RelGens_InNegHyp = RelGens_InNegHyp.count();
+    if (nr_RelGens_InNegHyp < subfacet_dim)
       return;
-    missing_bound = nr_RelGens_InNegHyp - subfacet_dim;
+    size_t missing_bound = nr_RelGens_InNegHyp - subfacet_dim;
 
+    // Word-parallel pair tests, as in find_new_facets.
+    Face CommonGens(nr_gen);
     for (auto const &Pos : PosHyps) {
       if (Neg.Ident == Pos->Mother || Pos->Ident == Neg.Mother) {
         add_hyperplane(new_generator, *Pos, Neg, NewHyps, false);
@@ -764,63 +703,31 @@ template <typename Tint> struct NmzKernel {
           Neg.BornAt == Pos->BornAt ||
           (Neg.BornAt < Pos->BornAt && Pos->Mother != 0) ||
           (Pos->BornAt < Neg.BornAt && Neg.Mother != 0);
-      size_t both_existing_from = key_start[std::max(Neg.BornAt, Pos->BornAt)];
 
-      nr_missing = 0;
-      nr_common_gens = 0;
-      common_key.clear();
-      size_t second_loop_bound = nr_RelGens_InNegHyp;
-      common_subfacet = true;
-      Face common_gens(nr_gen);
-
+      CommonGens = RelGens_InNegHyp;
+      CommonGens &= Pos->GenInHyp;
+      size_t nr_common_gens = CommonGens.count();
+      if (nr_RelGens_InNegHyp - nr_common_gens > missing_bound)
+        continue;
       if (extension_test) {
-        bool extended = false;
-        second_loop_bound = both_existing_from;
-        for (size_t k = both_existing_from; k < nr_RelGens_InNegHyp; k++) {
-          if (!Pos->GenInHyp.test(key[k])) {
-            nr_missing++;
-            if (nr_missing > missing_bound) {
-              common_subfacet = false;
-              break;
-            }
-          } else {
-            extended = true;
-            common_key.push_back(key[k]);
-            common_gens.set(key[k]);
-            nr_common_gens++;
-          }
-        }
-        if (!extended || !common_subfacet)
+        size_t both_born = std::max(Neg.BornAt, Pos->BornAt);
+        if (CommonGens.is_subset_of(InsertedUpTo[both_born]))
           continue;
       }
-      for (size_t k = 0; k < second_loop_bound; k++) {
-        if (!Pos->GenInHyp.test(key[k])) {
-          nr_missing++;
-          if (nr_missing > missing_bound) {
-            common_subfacet = false;
-            break;
-          }
-        } else {
-          common_key.push_back(key[k]);
-          common_gens.set(key[k]);
-          nr_common_gens++;
-        }
-      }
-      if (!common_subfacet)
-        continue;
 
+      bool common_subfacet = true;
       if (!Pos->simplicial) {
         bool ranktest = true;
         if constexpr (nmz_arith_cost_factor<Tint>() != 1)
           ranktest = (old_nr_supp_hyps > nmz_arith_cost_factor<Tint>() * dim *
                                              dim * nr_common_gens / 3);
         if (ranktest) {
-          if (!rank_at_least(common_key, subfacet_dim))
+          if (!rank_face_at_least(CommonGens, subfacet_dim))
             common_subfacet = false;
         } else {
           for (auto hp_t = Facets_0_1.begin(); hp_t != Facets_0_1.end();
                ++hp_t) {
-            if (common_gens.is_subset_of(*hp_t) && (*hp_t != Neg.GenInHyp) &&
+            if (CommonGens.is_subset_of(*hp_t) && (*hp_t != Neg.GenInHyp) &&
                 (*hp_t != Pos->GenInHyp)) {
               Facets_0_1.splice(Facets_0_1.begin(), Facets_0_1, hp_t);
               common_subfacet = false;
@@ -999,6 +906,11 @@ template <typename Tint> struct NmzKernel {
       }
       GensInCone.push_back(i);
       nrGensInCone++;
+      {
+        Face nxt = InsertedUpTo.back();
+        nxt.set(i);
+        InsertedUpTo.push_back(nxt);
+      }
       Comparisons.push_back(nrTotalComparisons);
       in_triang[i] = 1;
 #ifdef DEBUG_NORMALIZ_DUAL_DESC
