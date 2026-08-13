@@ -1208,6 +1208,27 @@ struct PeriodicDataIsoDelaunayDomainsFunc {
   size_t f_complexity([[maybe_unused]] Tobj const &x) { return 0; }
 };
 
+FullNamelist NAMELIST_GetStandard_COMPUTE_PERIODIC_IsoDelaunayDomains() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // SYSTEM
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  // DATA
+  {
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["arithmetic"] = "gmp";
+    ListStringValues["FileDualDescription"] = "unset";
+    // The file with the rational coset matrix of the periodic point set:
+    // one coset per row, the zero coset included.
+    ListStringValues["FileCosets"] = "unset";
+    SingleBlock BlockDATA;
+    BlockDATA.setListStringValues(ListStringValues);
+    ListBlock["DATA"] = BlockDATA;
+  }
+  // TSPACE
+  ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
+  return FullNamelist(ListBlock);
+}
+
 // clang-format off
 #endif  // SRC_DELAUNAY_PERIODICDELAUNAY_H_
 // clang-format on
