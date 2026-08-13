@@ -83,6 +83,66 @@ RunPeriodicIsoDelaunay:=function()
     return 0;
 end;
 
+# The A4 + cosets family: c generates A4*/A4 = Z/5 in the A4 basis. The
+# expected orbit data (vertex count, stabilizer order) was computed
+# independently by the GAP Periodic_DelaunayDescriptionStandard and by
+# LATT_SerialPeriodicDelaunay, in exact agreement (August 2026).
+RunA4Family:=function()
+    local eProg, TmpDir, GramA4, c, c2, ListCase, n_error, eCase, FileG, FileC, FileNml, FileRes, FileErr, strNml, TheCommand, TheResult, TheRec, ListSiz;
+    eProg:=GetBinaryFilename("LATT_SerialPeriodicDelaunay");
+    TmpDir:=DirectoryTemporary();
+    GramA4:=[[2,-1,0,0],[-1,2,-1,0],[0,-1,2,-1],[0,0,-1,2]];
+    c :=[4/5, 3/5, 2/5, 1/5];
+    c2:=[3/5, 1/5, 4/5, 2/5];
+    ListCase:=[
+      rec(name:="A4+c",   cosets:=[[0,0,0,0], c],     expected:=[ [5,120], [20,240] ]),
+      rec(name:="A4+2c",  cosets:=[[0,0,0,0], c2],    expected:=[ [5,120], [8,48], [10,240] ]),
+      rec(name:="A4+c2c", cosets:=[[0,0,0,0], c, c2], expected:=[ [5,8], [5,120], [8,48] ])
+    ];
+    n_error:=0;
+    for eCase in ListCase
+    do
+        # The file writers of common.g append, so the names are made
+        # unique per case.
+        FileG:=Filename(TmpDir, Concatenation("Gram_", eCase.name));
+        FileC:=Filename(TmpDir, Concatenation("Cosets_", eCase.name));
+        FileNml:=Filename(TmpDir, Concatenation("Run_", eCase.name, ".nml"));
+        FileRes:=Filename(TmpDir, Concatenation("Result_", eCase.name));
+        FileErr:=Filename(TmpDir, Concatenation("run_", eCase.name, ".err"));
+        WriteMatrixFile(FileG, GramA4);
+        WriteMatrixFile(FileC, eCase.cosets);
+        strNml:="&SYSTEM\n";
+        strNml:=Concatenation(strNml, " max_runtime_second = 0\n");
+        strNml:=Concatenation(strNml, " ApplyStdUnitbuf = T\n");
+        strNml:=Concatenation(strNml, " Saving = F\n");
+        strNml:=Concatenation(strNml, " Prefix = \"/irrelevant/\"\n");
+        strNml:=Concatenation(strNml, " OutFile = \"", FileRes, "\"\n");
+        strNml:=Concatenation(strNml, " OutFormat = \"SummaryGAP\"\n");
+        strNml:=Concatenation(strNml, "/\n\n&DATA\n");
+        strNml:=Concatenation(strNml, " arithmetic = \"gmp\"\n");
+        strNml:=Concatenation(strNml, " GRAMfile = \"", FileG, "\"\n");
+        strNml:=Concatenation(strNml, " FileCosets = \"", FileC, "\"\n");
+        strNml:=Concatenation(strNml, "/\n");
+        WriteStringFile(FileNml, strNml);
+        TheCommand:=Concatenation(eProg, " ", FileNml, " 2> ", FileErr);
+        TheResult:=Exec_GetReturnValue(TheCommand);
+        if TheResult<>0 then
+            Print("LATT_SerialPeriodicDelaunay failed on ", eCase.name, "\n");
+            Exec(Concatenation("cat ", FileErr));
+            n_error:=n_error+1;
+        else
+            TheRec:=ReadAsFunction(FileRes)();
+            ListSiz:=Set(List(TheRec.ListRec, x->[x.nVert, x.ordStab]));
+            Print(eCase.name, ": nb=", TheRec.nb, " orbits=", ListSiz, "\n");
+            if ListSiz<>Set(eCase.expected) then
+                Print("The orbit data differs from the GAP-verified value\n");
+                n_error:=n_error+1;
+            fi;
+        fi;
+    od;
+    return n_error;
+end;
+
 FullTest:=function()
     local n_error, ListTest, eTest;
     n_error:=0;
@@ -94,6 +154,7 @@ FullTest:=function()
         n_error:=n_error + RunSelfCheckingTest(eTest);
     od;
     n_error:=n_error + RunPeriodicIsoDelaunay();
+    n_error:=n_error + RunA4Family();
     Print("FullTest: n_error=", n_error, "\n");
     return n_error;
 end;

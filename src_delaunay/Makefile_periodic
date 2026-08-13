@@ -1,4 +1,4 @@
-PROGRAM		= TEST_PeriodicCVP TEST_PeriodicCosetSubgroup TEST_PeriodicFlipping TEST_PeriodicTspaceStabEqui TEST_PeriodicIsoDelaunay LATT_SerialPeriodic_IsoDelaunayDomain
+PROGRAM		= TEST_PeriodicCVP TEST_PeriodicCosetSubgroup TEST_PeriodicFlipping TEST_PeriodicTspaceStabEqui TEST_PeriodicIsoDelaunay LATT_SerialPeriodic_IsoDelaunayDomain LATT_SerialPeriodicDelaunay
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
