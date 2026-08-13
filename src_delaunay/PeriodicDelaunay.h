@@ -951,9 +951,15 @@ struct PeriodicDataDelaunayFunc {
                                                       seed, x.EXT);
   }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
+    // The convention of the lattice scheme: the returned matrix maps the
+    // orbit representative x onto the concrete neighbour y, which is what
+    // ComputeDelaunayAdjIneq multiplies the representative with. The
+    // arguments were once reversed, which the symmetric cells of the
+    // dimension-2 tests did not detect and the rank check of
+    // SANITY_CHECK_DELAUNAY_INTERSECTION caught in dimension 4.
     std::optional<MyMatrix<T>> opt =
         PeriodicDelaunay_TestEquivalence<T, Tring, Tgroup>(
-            data.GramMat, data.pps, data.SHV, y.EXT, x.EXT, data.rddo.os);
+            data.GramMat, data.pps, data.SHV, x.EXT, y.EXT, data.rddo.os);
     if (!opt) {
       return {};
     }

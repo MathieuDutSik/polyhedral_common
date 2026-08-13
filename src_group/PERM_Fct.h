@@ -819,8 +819,25 @@ std::optional<MyMatrix<T>> FindTransformationGeneral_f(MyMatrix<T> const &EXT1,
     eMat1.row(iRow) = EXT1.row(iRow1);
     eMat2.row(iRow) = EXT2.row(iRow2);
   }
-  MyMatrix<T> eMat1inv = Inverse(eMat1);
-  MyMatrix<T> RetMat = eMat1inv * eMat2;
+  // Over a ring the inverse of the selected submatrix need not be
+  // representable even when the transformation itself is: solve over the
+  // field and keep the result only if it lies in the ring.
+  auto get_ret_mat = [&]() -> std::optional<MyMatrix<T>> {
+    if constexpr (is_ring_field<T>::value) {
+      MyMatrix<T> eMat1inv = Inverse(eMat1);
+      return eMat1inv * eMat2;
+    } else {
+      using Tfield = typename overlying_field<T>::field_type;
+      MyMatrix<Tfield> eMat1_f = UniversalMatrixConversion<Tfield, T>(eMat1);
+      MyMatrix<Tfield> eMat2_f = UniversalMatrixConversion<Tfield, T>(eMat2);
+      MyMatrix<Tfield> RetMat_f = Inverse(eMat1_f) * eMat2_f;
+      return UniversalMatrixConversionCheck<T, Tfield>(RetMat_f);
+    }
+  };
+  std::optional<MyMatrix<T>> opt_ret = get_ret_mat();
+  if (!opt_ret)
+    return {};
+  MyMatrix<T> const &RetMat = *opt_ret;
   MyMatrix<T> CheckMat = EXT1 * RetMat;
   for (int iRow1 = 0; iRow1 < nbRow; iRow1++) {
     int iRow2 = f(iRow1);
