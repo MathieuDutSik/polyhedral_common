@@ -2800,11 +2800,17 @@ int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 /*
   Combinatorial pre-computation of the adjacencies: everything except the
   expensive per-facet FlippingLtype. See PreResultDelaunayAdj.
+
+  The kernel takes the generators of the stabilizer of x.GramMat as an
+  argument instead of computing them, so that the enumeration of the
+  periodic iso-Delaunay domains can pass the subgroup that also preserves
+  its point set: the wall orbits are the orbits under that group.
  */
 template <typename T, typename Tint, typename Tgroup>
 PreResultDelaunayAdj<T, Tint, Tgroup>
-get_pre_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
-                            DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
+get_pre_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+                            DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+                            std::vector<MyMatrix<T>> const &ListGenTot) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::ostream &os = data.rddo.os;
@@ -2874,13 +2880,7 @@ get_pre_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: f_adj, l_ineq - map_ineq|=" << time_f_adj << "\n";
 #endif
-  // Compute the automorphism group on the central gram and then the facets
-  std::vector<MyMatrix<T>> ListGenTot =
-    LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat,
-                                              data.CommonGramMat, os);
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-  os << "|ISODEL: f_adj, LINSPA_ComputeStabilizer|=" << time_f_adj << "\n";
-#endif
+  // The permutations of the facets induced by the stabilizer generators.
   std::vector<Telt> ListPermGens;
   for (auto &eGenTot : ListGenTot) {
     MyMatrix<T> MatSpace = matrix_in_t_space(eGenTot, data.LinSpa);
@@ -2960,6 +2960,24 @@ get_pre_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   os << "|ISODEL: f_adj, pre-result|=" << time_f_adj << "\n";
 #endif
   return {std::move(ListIneqRed), std::move(GRPperm), std::move(l_test)};
+}
+
+template <typename T, typename Tint, typename Tgroup>
+PreResultDelaunayAdj<T, Tint, Tgroup>
+get_pre_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+                            DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
+  std::ostream &os = data.rddo.os;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time_f_adj;
+#endif
+  std::vector<MyMatrix<T>> ListGenTot =
+    LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat,
+                                              data.CommonGramMat, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: f_adj, LINSPA_ComputeStabilizer|=" << time_f_adj << "\n";
+#endif
+  return get_pre_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data,
+                                                             ListGenTot);
 }
 
 /*
@@ -3046,14 +3064,16 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 
 /*
   Full adjacency computation: the combinatorial pre-result followed by an
-  actual flip for every flippable facet.
+  actual flip for every flippable facet. Same kernel / wrapper split as
+  get_pre_result_delaunay_adj, and for the same reason.
  */
 template <typename T, typename Tint, typename Tgroup>
 ResultDelaunayAdj<T, Tint, Tgroup>
-get_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
-                        DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
+get_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+                        DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+                        std::vector<MyMatrix<T>> const &ListGenTot) {
   PreResultDelaunayAdj<T, Tint, Tgroup> pre =
-    get_pre_result_delaunay_adj<T, Tint, Tgroup>(x, data);
+    get_pre_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot);
   std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
   for (size_t k = 0; k < pre.l_test.size(); k++) {
     if (pre.l_test[k]) {
@@ -3061,6 +3081,16 @@ get_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
     }
   }
   return {std::move(pre.ListIneqRed), std::move(pre.GRPperm), std::move(l_adj)};
+}
+
+template <typename T, typename Tint, typename Tgroup>
+ResultDelaunayAdj<T, Tint, Tgroup>
+get_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+                        DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
+  std::vector<MyMatrix<T>> ListGenTot =
+    LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat,
+                                              data.CommonGramMat, data.rddo.os);
+  return get_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot);
 }
 
 /*
