@@ -418,7 +418,10 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 // * "lrs": The templatized lrs (for fields and rings). When T is a field,
 //   the implementation internally uses the fraction-reduction variant;
 //   this is transparent to callers.
-// * "normaliz": the external program normaliz (only for types implementing Q)
+// * "normaliz": the native port of the Normaliz primal algorithm
+//   (Fourier-Motzkin with pyramid decomposition, fields and rings)
+// * "normaliz_ext": the external program normaliz (only for types
+//   implementing Q)
 template <typename T>
 TheHeuristic<T> StandardHeuristicDualDescriptionProgram() {
   std::vector<std::string> ListString = {"1", "1 incidence < 50 cdd", "cdd"};
