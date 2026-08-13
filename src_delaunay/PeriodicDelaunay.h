@@ -1038,6 +1038,176 @@ BuildPeriodicDelaunayTesselationIneq(
   return {std::move(l_dels)};
 }
 
+/*
+  Whether the cells of the tessellation are the Delaunay cells of the
+  point set for the form: nothing of the set strictly inside any
+  circumsphere and the points on each sphere exactly the vertices. This is
+  the defining property, tested against the point set itself, so it is
+  what the tests confront the flipping and the domain enumeration with.
+ */
+template <typename T, typename Tring, typename Tgroup>
+bool IsPeriodicDelaunayTesselation(DelaunayTesselationIneq<T, Tgroup> const &DTI,
+                                   MyMatrix<T> const &GramMat,
+                                   PeriodicPointSet<Tring> const &pps,
+                                   std::ostream &os) {
+  int n = GramMat.rows();
+  PeriodicCVPSolver<T, Tring> psolver(GramMat, pps, os);
+  for (auto &eDel : DTI.l_dels) {
+    int nbVert = eDel.EXT.rows();
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(eDel.EXT);
+    CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
+    MyVector<T> Cent(n);
+    for (int i = 0; i < n; i++) {
+      Cent(i) = cp.eCent(i + 1);
+    }
+    resultCVP<T, Tring> res = psolver.nearest_vectors(Cent);
+    if (res.TheNorm != cp.SquareRadius || res.ListVect.rows() != nbVert) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/*
+  The enumeration of the periodic iso-Delaunay domains. The scheme is the
+  one of DataIsoDelaunayDomainsFunc with the point set entering at its
+  three places: the initial domain is built from the periodic Delaunay
+  enumeration, the wall orbits are the orbits under the stabilizer that
+  also preserves the point set, and the domains are recognized with the
+  point-set-preserving equivalence. The walls and the flips themselves are
+  the shared kernels of IsoDelaunayDomains.h.
+ */
+template <typename T, typename Tint, typename Tgroup>
+IsoDelaunayDomain<T, Tint, Tgroup> GetInitialPeriodicIsoDelaunayDomain(
+    DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+    PeriodicPointSet<Tint> const &pps) {
+  using TintGroup = typename Tgroup::Tint;
+  std::ostream &os = data.rddo.os;
+  if (!is_integrally_saturated_matrix_space(data.LinSpa.ListMat)) {
+    std::cerr << "PERIODIC_DELAUNAY: The space should be integral and fully "
+                 "span it\n";
+    throw TerminalException{1};
+  }
+  if (data.CommonGramMat) {
+    std::cerr << "PERIODIC_DELAUNAY: CommonGramMat is not supported for the "
+                 "periodic iso-Delaunay domains\n";
+    throw TerminalException{1};
+  }
+  // The tessellation of the point set at the form, or nothing if a cell
+  // induces an equality: the form is then on a wall and another one has
+  // to be drawn.
+  auto test_matrix = [&](MyMatrix<T> const &GramMat)
+      -> std::optional<DelaunayTesselationIneq<T, Tgroup>> {
+    bool test =
+        IsSymmetryGroupCorrect<T, Tint, Tgroup>(GramMat, data.LinSpa, os);
+    if (!test) {
+      return {};
+    }
+    MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
+    MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+    MyMatrix<Tint> Graver = GetGraverBasis<T, Tint>(GramMat);
+    int dimEXT = GramMat.rows() + 1;
+    PolyHeuristicSerial<TintGroup> AllArr =
+        AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+    PeriodicDataDelaunay<T, Tint, Tgroup> data_per =
+        GetPeriodicDataDelaunay<T, Tint, Tgroup>(GramMat, pps, SHV_T, Graver,
+                                                 AllArr, os);
+    PeriodicDataDelaunayFunc<T, Tint, Tgroup> data_func{data_per};
+    auto f_incorrect = [&](PeriodicDelaunay_Obj<Tint, Tgroup> const &x) -> bool {
+      MyMatrix<T> EXT_T = PeriodicUnscaledVertices<T, Tint>(x.EXT, pps.N);
+      return IsDelaunayPolytopeInducingEqualities(EXT_T, data.LinSpa, os);
+    };
+    auto opt = EnumerateAndStore_Serial(data_func, f_incorrect, 0);
+    if (!opt) {
+      return {};
+    }
+    return BuildPeriodicDelaunayTesselationIneq<T, Tint, Tgroup>(
+        *opt, pps, data.LinSpa.ListLineMat, os);
+  };
+  size_t n_iter = 0;
+  int N = 2;
+  while (true) {
+    MyMatrix<T> GramMat =
+        GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(data.LinSpa,
+                                                                   N, os);
+    std::optional<DelaunayTesselationIneq<T, Tgroup>> opt =
+        test_matrix(GramMat);
+    if (opt) {
+      MyMatrix<T> M = GetInteriorGramMatrix<T, Tgroup>(data.LinSpa, *opt, os);
+      MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
+      MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+      return {std::move(*opt), std::move(M), std::move(SHV_T)};
+    }
+    n_iter += 1;
+    N += n_iter;
+  }
+}
+
+template <typename T, typename Tint, typename Tgroup>
+struct PeriodicDataIsoDelaunayDomainsFunc {
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data;
+  PeriodicPointSet<Tint> pps;
+  using Tobj = IsoDelaunayDomain_Obj<T, Tint, Tgroup>;
+  using TadjI = IsoDelaunayDomain_AdjI<T, Tint, Tgroup>;
+  using TadjO = IsoDelaunayDomain_AdjO<T, Tint>;
+  std::ostream &get_os() { return data.rddo.os; }
+  // The coset-adequate stabilizer of the Gram matrix, as the matrix
+  // generators the wall kernels consume.
+  std::vector<MyMatrix<T>> get_stab_gens(MyMatrix<T> const &eMat,
+                                         MyMatrix<T> const &SHV_T) {
+    std::ostream &os = data.rddo.os;
+    Result_ComputeStabilizer_SHV<T, Tgroup> result =
+        LINSPA_ComputeStabilizer_SHV_Periodic<T, Tint, Tgroup>(
+            data.LinSpa, pps, eMat, SHV_T, data.CommonGramMat, os);
+    return result.get_list_matrix(SHV_T, eMat, data.LinSpa, os);
+  }
+  Tobj f_init() {
+    IsoDelaunayDomain<T, Tint, Tgroup> IsoDel =
+        GetInitialPeriodicIsoDelaunayDomain(data, pps);
+    Tobj x{IsoDel, {}, {}};
+    return x;
+  }
+  size_t f_hash(size_t const &seed, Tobj const &x) {
+    // The point set is the same for every domain of the enumeration, so
+    // the lattice invariant separates the domains just as well.
+    return LINSPA_Invariant_SHV<T>(seed, data.LinSpa, x.DT_gram.GramMat,
+                                   x.DT_gram.SHV_T, data.CommonGramMat,
+                                   data.rddo.os);
+  }
+  std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
+    std::optional<MyMatrix<T>> opt =
+        LINSPA_TestEquivalenceGramMatrix_SHV_Periodic<T, Tint, Tgroup>(
+            data.LinSpa, pps, x.DT_gram.GramMat, y.DT_gram.GramMat,
+            x.DT_gram.SHV_T, y.DT_gram.SHV_T, data.CommonGramMat,
+            data.rddo.os);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> eBigMat = UniversalMatrixConversion<Tint, T>(*opt);
+    TadjO ret{y.V, eBigMat};
+    return ret;
+  }
+  std::pair<Tobj, TadjO> f_spann(TadjI const &x) {
+    IsoDelaunayDomain<T, Tint, Tgroup> IsoDel = x.DT_gram;
+    Tobj x_ret{IsoDel, {}, {}};
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.LinSpa.n);
+    TadjO ret{x.V, eBigMat};
+    return {std::move(x_ret), std::move(ret)};
+  }
+  std::optional<std::vector<TadjI>> f_adj(Tobj &x_in) {
+    IsoDelaunayDomain<T, Tint, Tgroup> const &x = x_in.DT_gram;
+    std::vector<MyMatrix<T>> ListGenTot =
+        get_stab_gens(x.GramMat, x.SHV_T);
+    ResultDelaunayAdj<T, Tint, Tgroup> result =
+        get_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot);
+    x_in.ListIneqRed = result.ListIneqRed;
+    x_in.GRPperm = result.GRPperm;
+    return result.l_adj;
+  }
+  Tobj f_adji_obj(TadjI const &x) { return {x.DT_gram, {}, {}}; }
+  size_t f_complexity([[maybe_unused]] Tobj const &x) { return 0; }
+};
+
 // clang-format off
 #endif  // SRC_DELAUNAY_PERIODICDELAUNAY_H_
 // clang-format on

@@ -133,6 +133,7 @@ src_delaunay/TEST_PeriodicCVP
 src_delaunay/TEST_PeriodicCosetSubgroup
 src_delaunay/TEST_PeriodicFlipping
 src_delaunay/TEST_PeriodicTspaceStabEqui
+src_delaunay/TEST_PeriodicIsoDelaunay
 src_dualdesc/POLY_*
 src_dualdesc/Read_MPI_sizes
 src_group/GRP_*

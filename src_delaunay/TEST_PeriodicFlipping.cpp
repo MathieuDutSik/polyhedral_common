@@ -67,37 +67,6 @@ GetTesselation(MyMatrix<T> const &GramMat, PeriodicPointSet<Tring> const &pps,
                                                                 ListGram, os);
 }
 
-/*
-  The cells of a tessellation are Delaunay cells of the point set for the
-  form: nothing of the set is strictly inside the circumsphere and the
-  points on the sphere are exactly the vertices. The vertices are in the
-  scaled frame, in which the point set is D Z^n + {c_i}.
- */
-bool IsDelaunayTesselation(DelaunayTesselationIneq<T, Tgroup> const &DTI,
-                           MyMatrix<T> const &GramMat,
-                           PeriodicPointSet<Tring> const &pps,
-                           std::ostream &os) {
-  int n = GramMat.rows();
-  PeriodicCVPSolver<T, Tring> psolver(GramMat, pps, os);
-  for (auto &eDel : DTI.l_dels) {
-    int nbVert = eDel.EXT.rows();
-    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(eDel.EXT);
-    CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
-    MyVector<T> Cent(n);
-    for (int i = 0; i < n; i++) {
-      Cent(i) = cp.eCent(i + 1);
-    }
-    resultCVP<T, Tring> res = psolver.nearest_vectors(Cent);
-    // Something of the set strictly inside the circumsphere, or on it
-    // without being a vertex: the cell is not a Delaunay cell.
-    if (res.TheNorm != cp.SquareRadius ||
-        res.ListVect.rows() != nbVert) {
-      return false;
-    }
-  }
-  return true;
-}
-
 int main() {
   HumanTime time;
   try {
@@ -141,7 +110,7 @@ int main() {
     DelaunayTesselationIneq<T, Tgroup> DTI =
         GetTesselation(GramMat, pps, ListGram, n_orbit, os);
     std::cerr << "|orbits|=" << n_orbit << "\n";
-    check(IsDelaunayTesselation(DTI, GramMat, pps, os),
+    check(IsPeriodicDelaunayTesselation<T, Tring, Tgroup>(DTI, GramMat, pps, os),
           "the tessellation of the form is its Delaunay tessellation");
     // The defining inequalities of the iso-Delaunay domain, whose
     // irredundant ones are the walls.
@@ -184,9 +153,9 @@ int main() {
       // The flipped tessellation is the Delaunay tessellation of the point
       // set beyond the wall, and the original one is not: the flip really
       // crossed the wall.
-      check(IsDelaunayTesselation(DTIadj, BeyondMat, pps, os),
+      check(IsPeriodicDelaunayTesselation<T, Tring, Tgroup>(DTIadj, BeyondMat, pps, os),
             "the flipped tessellation is the one beyond the wall");
-      check(!IsDelaunayTesselation(DTI, BeyondMat, pps, os),
+      check(!IsPeriodicDelaunayTesselation<T, Tring, Tgroup>(DTI, BeyondMat, pps, os),
             "the tessellation before the flip is not the one beyond the wall");
       size_t n_orbit_dir = 0;
       DelaunayTesselationIneq<T, Tgroup> DTIdir =
@@ -252,7 +221,7 @@ int main() {
       MyMatrix<T> BeyondMat = get_matrix(Beyond);
       DelaunayTesselationIneq<T, Tgroup> DTInew = FlippingLtype<T, Tgroup>(
           DTIcur, GcurMat, opt_wall->second.ListAdjInfo, ListGram, rddo);
-      check(IsDelaunayTesselation(DTInew, BeyondMat, pps, os),
+      check(IsPeriodicDelaunayTesselation<T, Tring, Tgroup>(DTInew, BeyondMat, pps, os),
             "the tessellation reached by the walk is a Delaunay tessellation");
       size_t n_orbit_dir = 0;
       GetTesselation(BeyondMat, pps, ListGram, n_orbit_dir, os);
