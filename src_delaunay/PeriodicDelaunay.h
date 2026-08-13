@@ -262,6 +262,40 @@ bool IsPeriodicPointSetPreserved(PeriodicPointSet<Tring> const &pps,
 }
 
 /*
+  The affine extension of a linear part, if there is one: the smallest
+  translation making x -> x A + w preserve the point set. The image of
+  c_0 = 0 is the translation itself, so w has to be congruent to one of
+  the cosets and only n_coset candidates exist, not D^n. Note that a
+  linear part can fail on its own (it moves a coset off the coset set)
+  and be adequate all the same, -Id on {0, c} being the basic example:
+  the translation by c brings the image cosets {0, -c} back onto {0, c}.
+
+  The linear part acts the same in the scaled and the unscaled frame, so
+  the caller does not need to know about the scaling; the matrix returned
+  is homogeneous in the scaled frame like every periodic transformation.
+ */
+template <typename Tring, typename T>
+std::optional<MyMatrix<T>>
+PeriodicAffineExtension(PeriodicPointSet<Tring> const &pps,
+                        MyMatrix<T> const &LinPart) {
+  int n = LinPart.rows();
+  int n_coset = pps.cosets_num.rows();
+  for (int k = 0; k < n_coset; k++) {
+    MyMatrix<T> H = IdentityMat<T>(n + 1);
+    for (int j = 0; j < n; j++) {
+      H(0, j + 1) = UniversalScalarConversion<T, Tring>(pps.cosets_num(k, j));
+      for (int i = 0; i < n; i++) {
+        H(i + 1, j + 1) = LinPart(i, j);
+      }
+    }
+    if (IsPeriodicPointSetPreserved<Tring, T>(pps, H)) {
+      return H;
+    }
+  }
+  return {};
+}
+
+/*
   The action of the transformations on the classes of (Z / D)^n. The
   condition of preserving the point set lives there: a transformation
   preserves it exactly when the induced permutation of the classes maps the
@@ -694,6 +728,70 @@ PeriodicDelaunay_TestEquivalence(MyMatrix<T> const &GramMat,
   }
 #endif
   return ret;
+}
+
+/*
+  The stabilizer and the equivalence of Gram matrices under the
+  transformations that also preserve the periodic point set, which is what
+  the enumeration of the periodic iso-Delaunay domains recognizes its
+  domains with. Both are the lattice computations with one extra adequacy
+  condition on the matrices: the linear part has to admit an affine
+  extension preserving the point set. The condition is subgroup-defining
+  (the point-set-preserving affine transformations form a group and their
+  linear parts are its image), as the kernels require.
+
+  The generators of LinSpa.PtStabGens are handed to the kernels as
+  known-good elements, so they have to be adequate themselves: that is an
+  invariant of the input T-space, checked here, and the programs reading a
+  T-space together with a point set have to validate it unconditionally.
+ */
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+template <typename T, typename Tring>
+void CheckPtStabGensPreserveCosets(LinSpaceMatrix<T> const &LinSpa,
+                                   PeriodicPointSet<Tring> const &pps) {
+  for (auto &eGen : LinSpa.PtStabGens) {
+    if (!PeriodicAffineExtension<Tring, T>(pps, eGen)) {
+      std::cerr << "PERIODIC_DELAUNAY: a generator of PtStabGens admits no "
+                   "affine extension preserving the point set. The point "
+                   "stabilizer of the T-space has to stabilize the cosets "
+                   "for the periodic computations to be correct. eGen=\n";
+      WriteMatrix(std::cerr, eGen);
+      throw TerminalException{1};
+    }
+  }
+}
+#endif
+
+template <typename T, typename Tring, typename Tgroup>
+Result_ComputeStabilizer_SHV<T, Tgroup> LINSPA_ComputeStabilizer_SHV_Periodic(
+    LinSpaceMatrix<T> const &LinSpa, PeriodicPointSet<Tring> const &pps,
+    MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
+    std::optional<MyMatrix<T>> const &CommonGramMat, std::ostream &os) {
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+  CheckPtStabGensPreserveCosets(LinSpa, pps);
+#endif
+  auto f_extra = [&](MyMatrix<T> const &x) -> bool {
+    return PeriodicAffineExtension<Tring, T>(pps, x).has_value();
+  };
+  return LINSPA_ComputeStabilizer_SHV_Kernel<T, Tgroup, decltype(f_extra)>(
+      LinSpa, eMat, SHV_T, CommonGramMat, f_extra, os);
+}
+
+template <typename T, typename Tring, typename Tgroup>
+std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Periodic(
+    LinSpaceMatrix<T> const &LinSpa, PeriodicPointSet<Tring> const &pps,
+    MyMatrix<T> const &eMat1, MyMatrix<T> const &eMat2,
+    MyMatrix<T> const &SHV1_T, MyMatrix<T> const &SHV2_T,
+    std::optional<MyMatrix<T>> const &CommonGramMat, std::ostream &os) {
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+  CheckPtStabGensPreserveCosets(LinSpa, pps);
+#endif
+  auto f_extra = [&](MyMatrix<T> const &x) -> bool {
+    return PeriodicAffineExtension<Tring, T>(pps, x).has_value();
+  };
+  return LINSPA_TestEquivalenceGramMatrix_SHV_Kernel<T, Tgroup,
+                                                     decltype(f_extra)>(
+      LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, CommonGramMat, f_extra, os);
 }
 
 // The vertices of a cell back in the unscaled rational coordinates, the

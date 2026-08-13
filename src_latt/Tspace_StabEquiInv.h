@@ -286,12 +286,20 @@ Result_ComputeStabilizer_SHV<T, Tgroup> get_from_perms_and_group(
   * Use of the subspaces to build commutting projectors which are stabilized.
   * If all else fails, use of the cosets.
  */
-template <typename T, typename Tgroup>
+/*
+  The f_extra predicate is an extra adequacy condition on the solved
+  matrices, on top of the stabilization of the T-space. It has to be
+  subgroup-defining: satisfied by the identity and closed under product
+  and inverse, since generator adequacy is taken to imply group adequacy.
+  The trivial instantiation is the lattice case; the periodic point sets
+  add the preservation of their cosets.
+ */
+template <typename T, typename Tgroup, typename Fextra>
 Result_ComputeStabilizer_SHV<T, Tgroup>
-LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
+LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
                              MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
                              std::optional<MyMatrix<T>> const &CommonGramMat,
-                             std::ostream &os) {
+                             Fextra const &f_extra, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tfield = T;
@@ -325,7 +333,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
       Telt elt(eGen);
       std::optional<MyMatrix<T>> opt =
           is_corr_and_solve(elt, SHV_T, eMat, LinSpa);
-      if (opt) {
+      if (opt && f_extra(*opt)) {
         ListTransMat.push_back(*opt);
       } else {
         return {};
@@ -365,7 +373,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   auto f_correct=[&](Telt const& x) -> bool {
     std::optional<MyMatrix<T>> opt =
       is_corr_and_solve(x, SHV_T, eMat, LinSpa);
-    return opt.has_value();
+    return opt.has_value() && f_extra(*opt);
   };
 
   std::pair<std::vector<Telt>, Tgroup> pair = get_intermediate_group<Tgroup,decltype(f_correct)>(n_row,
@@ -373,6 +381,19 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
                                                                                                  LGenPerm_big,
                                                                                                  f_correct, os);
   return get_from_perms_and_group<T, Tgroup>(pair);
+}
+
+template <typename T, typename Tgroup>
+Result_ComputeStabilizer_SHV<T, Tgroup>
+LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
+                             MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
+                             std::optional<MyMatrix<T>> const &CommonGramMat,
+                             std::ostream &os) {
+  auto f_extra=[]([[maybe_unused]] MyMatrix<T> const& x) -> bool {
+    return true;
+  };
+  return LINSPA_ComputeStabilizer_SHV_Kernel<T, Tgroup, decltype(f_extra)>(
+      LinSpa, eMat, SHV_T, CommonGramMat, f_extra, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -427,12 +448,19 @@ size_t LINSPA_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
   * P M1 P^T = M2
   * P LinSpa.ListMat P^T  image is LinSpa.ListMat
 */
-template <typename T, typename Tgroup>
-std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
+/*
+  Same f_extra contract as LINSPA_ComputeStabilizer_SHV_Kernel: an extra
+  subgroup-defining adequacy condition on the matrices. An equivalence is
+  returned only if it satisfies it; the search over the automorphisms of
+  eMat1 continues past the candidates that do not.
+ */
+template <typename T, typename Tgroup, typename Fextra>
+std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
     LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eMat1,
     MyMatrix<T> const &eMat2, MyMatrix<T> const &SHV1_T,
     MyMatrix<T> const &SHV2_T,
-    std::optional<MyMatrix<T>> const &CommonGramMat, std::ostream &os) {
+    std::optional<MyMatrix<T>> const &CommonGramMat, Fextra const &f_extra,
+    std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -509,7 +537,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
     }
   }
 #endif
-  if (is_stab_space(OneEquiv, LinSpa)) {
+  if (is_stab_space(OneEquiv, LinSpa) && f_extra(OneEquiv)) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: Equiv, Direct approach success, no need to go further\n";
 #endif
@@ -546,7 +574,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
     return get_mat_from_shv_perm(x, SHV1_T, eMat1);
   };
   auto f_is_ok=[&](MyMatrix<T> const& x) -> bool {
-    return is_stab_space(x, LinSpa);
+    return is_stab_space(x, LinSpa) && f_extra(x);
   };
   std::optional<MyMatrix<T>> result = get_intermediate_equivalence<MyMatrix<T>,Tgroup,decltype(f_get_out),decltype(f_is_ok)>(n_row,
                                                                                                                              LGenPerm_sma,
@@ -580,7 +608,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
     for (auto &elt : FullGRP1) {
       MyMatrix<T> eMatr = get_mat_from_shv_perm(elt, SHV1_T, eMat1);
       MyMatrix<T> eProd_T = OneEquiv * eMatr;
-      if (is_stab_space(eProd_T, LinSpa)) {
+      if (is_stab_space(eProd_T, LinSpa) && f_extra(eProd_T)) {
         std::cerr << "TSPACE: We found an equivalence when we do not expect any\n";
         throw TerminalException{1};
       }
@@ -588,6 +616,20 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
   }
 #endif
   return result;
+}
+
+template <typename T, typename Tgroup>
+std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
+    LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eMat1,
+    MyMatrix<T> const &eMat2, MyMatrix<T> const &SHV1_T,
+    MyMatrix<T> const &SHV2_T,
+    std::optional<MyMatrix<T>> const &CommonGramMat, std::ostream &os) {
+  auto f_extra=[]([[maybe_unused]] MyMatrix<T> const& x) -> bool {
+    return true;
+  };
+  return LINSPA_TestEquivalenceGramMatrix_SHV_Kernel<T, Tgroup,
+                                                     decltype(f_extra)>(
+      LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, CommonGramMat, f_extra, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
