@@ -83,7 +83,8 @@ RunPeriodicIsoDelaunay:=function()
     return 0;
 end;
 
-# The A4 + cosets family: c generates A4*/A4 = Z/5 in the A4 basis. The
+# The A4 + cosets family (c generating A4*/A4 = Z/5 in the A4 basis) and
+# HE6 = E6 + {0, c6} (c6 of order 3 in E6*/E6). The
 # expected orbit data (vertex count, stabilizer order) was computed
 # independently by the GAP Periodic_DelaunayDescriptionStandard and by
 # LATT_SerialPeriodicDelaunay, in exact agreement (August 2026).
@@ -94,10 +95,14 @@ RunA4Family:=function()
     GramA4:=[[2,-1,0,0],[-1,2,-1,0],[0,-1,2,-1],[0,0,-1,2]];
     c :=[4/5, 3/5, 2/5, 1/5];
     c2:=[3/5, 1/5, 4/5, 2/5];
+    GramE6:=[[2,-1,0,0,0,0],[-1,2,-1,0,0,0],[0,-1,2,-1,0,-1],
+             [0,0,-1,2,-1,0],[0,0,0,-1,2,0],[0,0,-1,0,0,2]];
+    c6:=[1/3, 2/3, 0, 1/3, 2/3, 0];
     ListCase:=[
-      rec(name:="A4+c",   cosets:=[[0,0,0,0], c],     expected:=[ [5,120], [20,240] ]),
-      rec(name:="A4+2c",  cosets:=[[0,0,0,0], c2],    expected:=[ [5,120], [8,48], [10,240] ]),
-      rec(name:="A4+c2c", cosets:=[[0,0,0,0], c, c2], expected:=[ [5,8], [5,120], [8,48] ])
+      rec(name:="A4+c",   gram:=GramA4, cosets:=[[0,0,0,0], c],     expected:=[ [5,120], [20,240] ]),
+      rec(name:="A4+2c",  gram:=GramA4, cosets:=[[0,0,0,0], c2],    expected:=[ [5,120], [8,48], [10,240] ]),
+      rec(name:="A4+c2c", gram:=GramA4, cosets:=[[0,0,0,0], c, c2], expected:=[ [5,8], [5,120], [8,48] ]),
+      rec(name:="HE6",    gram:=GramE6, cosets:=[[0,0,0,0,0,0], c6], expected:=[ [54,103680] ])
     ];
     n_error:=0;
     for eCase in ListCase
@@ -109,7 +114,7 @@ RunA4Family:=function()
         FileNml:=Filename(TmpDir, Concatenation("Run_", eCase.name, ".nml"));
         FileRes:=Filename(TmpDir, Concatenation("Result_", eCase.name));
         FileErr:=Filename(TmpDir, Concatenation("run_", eCase.name, ".err"));
-        WriteMatrixFile(FileG, GramA4);
+        WriteMatrixFile(FileG, eCase.gram);
         WriteMatrixFile(FileC, eCase.cosets);
         strNml:="&SYSTEM\n";
         strNml:=Concatenation(strNml, " max_runtime_second = 0\n");
