@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <list>
 #include <map>
+#include <optional>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -85,10 +86,16 @@ namespace normaliz_dd {
 constexpr size_t nmz_SuppHypRecursionFactor = 320000;
 constexpr size_t nmz_largePyramidFactor = 20;
 // Factor by which multiprecision arithmetic is assumed slower than machine
-// integers (GMP_time_factor in full_cone.cpp). Machine types get 1.
+// integers (GMP_time_factor in full_cone.cpp). Machine types get 1 -- and so
+// do the deferred-overflow TryInt types, which are machine arithmetic with a
+// cheap check: classifying them as heavy would flip the rank-test /
+// comparison-test decisions and the pyramid recursion bound away from what
+// the reference uses for long long, which measurably loses on cones with a
+// large intermediate facet count (the comparison test scales with the facet
+// count, the rank test does not).
 template <typename Tint>
 constexpr size_t nmz_arith_cost_factor() {
-  if constexpr (std::is_fundamental<Tint>::value)
+  if constexpr (std::is_fundamental<Tint>::value || is_try_int<Tint>::value)
     return 1;
   else
     return 10;
@@ -295,18 +302,87 @@ template <typename Tint> struct NmzKernel {
       nrTotalComparisons *= (nmz_arith_cost_factor<Tint>() / 4);
   }
 
-  // Division-free rank test: do the top rows of the generators selected by
-  // the face have rank >= target? Extraction of the row list happens only
-  // here, i.e. only when a rank test actually runs.
-  bool rank_face_at_least(Face const &f, size_t target) {
-    std::vector<int> rows;
-    rows.reserve(f.count());
-    boost::dynamic_bitset<>::size_type i = f.find_first();
-    while (i != boost::dynamic_bitset<>::npos) {
-      rows.push_back(RowIdx[i]);
-      i = f.find_next(i);
+  // workspace of the Bareiss rank test, sized on first use and reused
+  // across calls (the test runs once per surviving candidate pair)
+  MyMatrix<Tint> rank_ws;
+
+  // Fraction-free (Bareiss) rank test: do the top rows of the generators
+  // selected by the face have rank >= target? Exact divisions by the
+  // previous pivot, no gcd reductions, so the cost matches the reference's
+  // long-long row echelon (the gcd-reducing SelectIndependentRows is an
+  // order of magnitude more expensive here and made the rank test a worse
+  // deal than the comparison test it replaces). For a deferred-overflow
+  // type an overflow OF THIS ELIMINATION is absorbed and reported as
+  // nullopt, so the caller falls back to the comparison test for that one
+  // candidate instead of aborting the whole run; a flag raised by earlier
+  // arithmetic is left untouched for the outer terminate check.
+  std::optional<bool> rank_face_at_least(Face const &f, size_t target) {
+    size_t nb_row = f.count();
+    if (nb_row < target)
+      return false;
+    if (rank_ws.rows() == 0)
+      rank_ws = MyMatrix<Tint>(nr_gen, dim);
+    size_t pos = 0;
+    boost::dynamic_bitset<>::size_type i_bit = f.find_first();
+    while (i_bit != boost::dynamic_bitset<>::npos) {
+      int row = RowIdx[i_bit];
+      for (size_t u = 0; u < dim; u++)
+        rank_ws(pos, u) = TopGen(row, u);
+      pos++;
+      i_bit = f.find_next(i_bit);
     }
-    return SelectIndependentRows(TopGen, rows, target).size() == target;
+    bool pre_correct = true;
+    if constexpr (uses_deferred_overflow<Tint>::value)
+      pre_correct = is_correct;
+    Tint prev(1);
+    size_t rank = 0;
+    size_t col = 0;
+    while (rank < target && col < dim) {
+      // pivot search in the current column, below the found pivots
+      size_t piv = rank;
+      while (piv < nb_row && rank_ws(piv, col) == 0)
+        piv++;
+      if (piv == nb_row) {
+        col++;
+        continue;
+      }
+      if (piv != rank)
+        for (size_t u = col; u < dim; u++)
+          std::swap(rank_ws(rank, u), rank_ws(piv, u));
+      Tint pivot = rank_ws(rank, col);
+      for (size_t i = rank + 1; i < nb_row; i++) {
+        Tint coef = rank_ws(i, col);
+        for (size_t u = col + 1; u < dim; u++) {
+          Tint val = pivot * rank_ws(i, u) - coef * rank_ws(rank, u);
+          Tint quot = val / prev; // exact division (Bareiss)
+#ifdef SANITY_CHECK_NORMALIZ_DUAL_DESC
+          if constexpr (!uses_deferred_overflow<Tint>::value) {
+            if (quot * prev != val) {
+              std::cerr << "NMZ: non-exact division in the Bareiss rank\n";
+              throw TerminalException{1};
+            }
+          }
+#endif
+          rank_ws(i, u) = quot;
+        }
+        rank_ws(i, col) = Tint(0);
+      }
+      prev = pivot;
+      rank++;
+      col++;
+    }
+    if constexpr (uses_deferred_overflow<Tint>::value) {
+      if (pre_correct && !is_correct) {
+        // the overflow came from this elimination only: absorb it
+        is_correct = true;
+        return {};
+      }
+      if (!is_correct)
+        // earlier arithmetic already overflowed; the result is unusable and
+        // the outer terminate check will abort the run
+        return {};
+    }
+    return rank == target;
   }
 
   // find_new_facets: the Fourier-Motzkin step, one insertion. The facets are
@@ -603,15 +679,22 @@ template <typename Tint> struct NmzKernel {
             continue;
           }
 
-          // rank test vs comparison test, by the a-priori cost estimate
+          // rank test vs comparison test, by the a-priori cost estimate; a
+          // rank test that overflowed sends the candidate to the comparison
+          // test instead
           bool common_subfacet = true;
           bool ranktest =
               (nr_NonSimp > nmz_arith_cost_factor<Tint>() * dim * dim *
                                 nr_CommonGens / 3);
           if (ranktest) {
-            if (!rank_face_at_least(CommonGens, subfacet_dim))
-              common_subfacet = false;
-          } else {
+            std::optional<bool> opt =
+                rank_face_at_least(CommonGens, subfacet_dim);
+            if (opt)
+              common_subfacet = *opt;
+            else
+              ranktest = false;
+          }
+          if (!ranktest) {
             for (auto a = Facets_0_1.begin(); a != Facets_0_1.end(); ++a) {
               if (CommonGens.is_subset_of(*a) &&
                   (*a != PosHyp_Pointer->GenInHyp) &&
@@ -732,9 +815,14 @@ template <typename Tint> struct NmzKernel {
           ranktest = (old_nr_supp_hyps > nmz_arith_cost_factor<Tint>() * dim *
                                              dim * nr_common_gens / 3);
         if (ranktest) {
-          if (!rank_face_at_least(CommonGens, subfacet_dim))
-            common_subfacet = false;
-        } else {
+          std::optional<bool> opt =
+              rank_face_at_least(CommonGens, subfacet_dim);
+          if (opt)
+            common_subfacet = *opt;
+          else
+            ranktest = false;
+        }
+        if (!ranktest) {
           for (auto hp_t = Facets_0_1.begin(); hp_t != Facets_0_1.end();
                ++hp_t) {
             if (CommonGens.is_subset_of(*hp_t) && (*hp_t != Neg.GenInHyp) &&
@@ -1006,7 +1094,7 @@ template <typename T, typename Tw>
 MyVector<T> NormalizNormalConvert(MyVector<Tw> &&normal) {
   if constexpr (std::is_same_v<T, Tw>) {
     return std::move(normal);
-  } else if constexpr (std::is_same_v<Tw, TryInt64>) {
+  } else if constexpr (is_try_int<Tw>::value) {
     int len = normal.size();
     MyVector<T> ret(len);
     for (int u = 0; u < len; u++)
