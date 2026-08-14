@@ -5,6 +5,7 @@
 // clang-format off
 #include "Namelist.h"
 #include "MatrixGroupAverage.h"
+#include "Tspace_ListMatSaturation.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -25,6 +26,7 @@
 SingleBlock SINGLEBLOCK_Get_Tspace_Description() {
   std::map<std::string, std::string> ListStringValues_doc;
   std::map<std::string, std::string> ListIntValues_doc;
+  std::map<std::string, std::string> ListBoolValues_doc;
   ListStringValues_doc["TypeTspace"] = "The possible type of T-space\n\
 InvGroup: The space of matrices invariant under a group\n   \
 RealQuad: The space corresponding to a real quadratic field\n   \
@@ -69,9 +71,13 @@ The filename for the list of subspaces that are preserved";
   ListStringValues_doc["FileLinSpa"] = "Default: unset\n\
 unset: If unset then the file is not needed\n\
 The filename used for reading the whole T-space";
+  ListBoolValues_doc["IntegralSaturation"] = "Default: F\n\
+For TypeTspace = Raw: replace the input basis by a basis of its integral\n\
+saturation, which the iso-Delaunay enumerations require";
   SingleBlock BlockTSPACE;
   BlockTSPACE.setListStringValues_doc(ListStringValues_doc);
   BlockTSPACE.setListIntValues_doc(ListIntValues_doc);
+  BlockTSPACE.setListBoolValues_doc(ListBoolValues_doc);
   return BlockTSPACE;
 }
 
@@ -387,6 +393,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     if (TypeTspace == "Raw") {
       std::string const &FileListMat = Blk.get_string("FileListMat");
       LinSpaRet.ListMat = ReadListMatrixFile<T>(FileListMat);
+      if (Blk.get_bool("IntegralSaturation")) {
+        LinSpaRet.ListMat = IntegralSaturationSpace(LinSpaRet.ListMat, os);
+      }
       set_paperwork();
       set_supermat();
       set_listcomm();
