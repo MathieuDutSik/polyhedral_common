@@ -1,0 +1,72 @@
+name: CI(31) C++ conformance checks with clang-tidy.
+
+# Checks the rules that the compiler cannot express as warnings. The 994
+# warning flags of clang, all of which -Weverything turns on, say nothing
+# about a program that opens namespace std or that defines a non-inline
+# function in a header; those need a pass over the parsed translation unit.
+#
+# Deliberately narrow. Only the checks that are green are enforced here, so
+# that the job fails on a regression and not on the backlog. New checks move
+# into CHECKS once their existing findings have been dealt with; the ones
+# still waiting are listed under "known, not yet enforced" below.
+
+on:
+  # One time per month
+  schedule:
+    - cron: "0 0 31 * *"
+  # Manually triggered
+  workflow_dispatch:
+
+jobs:
+  conformance:
+    timeout-minutes: 120  # 2 hours
+    runs-on: ubuntu-latest
+    env:
+      # The checks that the tree is expected to be clean for.
+      #
+      # Known, not yet enforced, with the count at the time of writing:
+      #   cert-dcl58-cpp                 4  opening namespace std. The check is
+      #                                     accurate: it accepts the std::hash /
+      #                                     std::formatter specializations on
+      #                                     program-defined types that
+      #                                     [namespace.std]/2 permits and flags
+      #                                     only functions added to std. All 4
+      #                                     are in submodules -- 2 in
+      #                                     basic_common_cpp (already fixed
+      #                                     upstream, waiting on a pointer bump)
+      #                                     and 2 std::to_string overloads in
+      #                                     permutalib/src/Permutation.h. Once
+      #                                     permutalib is fixed this can move
+      #                                     into CHECKS.
+      #                                     Not detected by it: the
+      #                                     hash<std::vector<T>> and
+      #                                     hash<std::pair<T1,T2>> in
+      #                                     basic_common_cpp/src_comb, which are
+      #                                     unrestricted in T and so cover
+      #                                     std::vector<int> too -- a real
+      #                                     violation the check does not see.
+      #   misc-definitions-in-headers  many non-inline functions in headers,
+      #                                     an ODR violation as soon as a
+      #                                     header reaches two translation
+      #                                     units of one binary.
+      CHECKS: "cert-dcl59-cpp,cert-oop57-cpp"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
+          sudo apt-get install -y wget g++ gcc cmake libgmp-dev libeigen3-dev autoconf autotools-dev libtool
+          sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
+          sudo apt-get install -y clang-tidy
+
+      - name: Report the versions
+        run: |
+          clang-tidy --version
+          cmake --version | head -1
+
+      - name: Run the conformance checks
+        run: ./check_cpp_conformance "$CHECKS"

@@ -6,6 +6,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "PolytopeEquiStabInt.h"
+#include <format>
 // clang-format on
 
 template <typename Tint>
@@ -54,7 +55,7 @@ void process_A(std::string const &FileExt, std::string const &FileGrpV,
       if (!IsFirst)
         strGAPperm += ",";
       IsFirst = false;
-      strGAPperm += std::to_string(eElt);
+      strGAPperm += std::format("{}", eElt);
     }
     strGAPperm += "]";
     return strGAPperm;

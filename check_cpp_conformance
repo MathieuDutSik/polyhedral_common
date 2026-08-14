@@ -99,9 +99,39 @@ echo "==> clang-tidy: $CLANG_TIDY"
 "$CLANG_TIDY" --version | sed -n '2p' | sed 's/^/    /'
 
 # --- The compilation database. ---
+#
+# The database has to name the SAME toolchain as clang-tidy, not merely a
+# working compiler. clang-tidy re-parses each translation unit itself, and it
+# derives its header search paths from the compiler named in the database. A
+# database written for /usr/bin/c++ (Apple clang) makes a Homebrew clang-tidy
+# fail to find <format>, so std::formatter is never declared and every
+# specialization of it is then reported as adding a new declaration to
+# namespace std -- a false positive that looks exactly like a real finding.
+# Hence: build the database with the clang++ that sits beside clang-tidy.
+CLANGXX="$(dirname "$CLANG_TIDY")/clang++"
+if [ ! -x "$CLANGXX" ]; then
+  CLANGXX=""
+fi
 if [ ! -f "$BUILD_DIR/compile_commands.json" ]; then
   echo "==> Generating the compilation database in $BUILD_DIR"
-  cmake -B "$BUILD_DIR" -S "$ROOT" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON > /dev/null
+  if [ -n "$CLANGXX" ]; then
+    echo "    using $CLANGXX (matching clang-tidy)"
+    cmake -B "$BUILD_DIR" -S "$ROOT" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+          -DCMAKE_CXX_COMPILER="$CLANGXX" > /dev/null
+  else
+    cmake -B "$BUILD_DIR" -S "$ROOT" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON > /dev/null
+  fi
+  # nauty and bliss are ExternalProject targets: their headers do not exist
+  # until they are built. clang-tidy needs them to parse the headers that
+  # include them, and a translation unit that does not parse makes the whole
+  # run meaningless, so they are built here rather than left to chance.
+  for tgt in $(awk '/ExternalProject_Add\(/{getline; gsub(/[ \t]/, "", $0); print}' \
+                   "$ROOT/CMakeLists.txt" 2>/dev/null); do
+    echo "==> Building external dependency $tgt"
+    if ! cmake --build "$BUILD_DIR" --target "$tgt" > /dev/null 2>&1; then
+      echo "    (build failed; its headers will be missing and the run unusable)"
+    fi
+  done
 fi
 n_tu=$(grep -c '"file"' "$BUILD_DIR/compile_commands.json" || true)
 echo "==> $n_tu translation units in the database"
@@ -138,6 +168,23 @@ PY
   done
 fi
 
+# A translation unit that does not parse produces an incomplete AST, and every
+# check then reports on it: findings that are not real, and silence where a
+# real finding was. Neither is detectable in the findings themselves, so the
+# parse errors are surfaced first and the run is declared unusable.
+grep -E "error: .*\[clang-diagnostic-error\]" "$LOG" | sort -u > "$LOG.err" || true
+n_err=$(wc -l < "$LOG.err" | tr -d ' ')
+if [ "$n_err" -ne 0 ]; then
+  echo
+  echo "==> $n_err distinct compile error(s): the results below are NOT reliable."
+  echo "    A translation unit that fails to parse yields an incomplete AST, on"
+  echo "    which the checks both invent findings and miss real ones."
+  sed "s|$ROOT/||" "$LOG.err" | head -10 | sed 's/^/      /'
+  if [ "$n_err" -gt 10 ]; then
+    echo "      ... and $((n_err - 10)) more"
+  fi
+fi
+
 # One finding is reported once per translation unit that includes the header,
 # so the raw output is deduplicated on file:line:check.
 sort -u "$LOG" | grep -E "warning: .*\[[a-z0-9-]+\]$" | sort -u > "$LOG.uniq" || true
@@ -145,6 +192,11 @@ n_find=$(wc -l < "$LOG.uniq" | tr -d ' ')
 
 echo
 if [ "$n_find" -eq 0 ]; then
+  if [ "$n_err" -ne 0 ]; then
+    echo "==> no finding for: $CHECKS -- but see the compile errors above."
+    echo "    Absence of findings on a tree that does not parse means nothing."
+    exit 1
+  fi
   echo "==> no finding for: $CHECKS"
   exit 0
 fi
