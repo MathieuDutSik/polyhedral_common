@@ -7,6 +7,7 @@
 #include "MAT_Matrix.h"
 #include "PermutationElt.h"
 #include "Indefinite_LLL.h"
+#include <format>
 // clang-format on
 
 #ifdef DEBUG
@@ -49,8 +50,8 @@ std::string compute_complexity_matrix(MyMatrix<T> const &mat) {
       }
     }
   }
-  return "(ell1=" + std::to_string(ell1) +
-         ", ellinf=" + std::to_string(ellinfinity) + ")";
+  return "(ell1=" + std::format("{}", ell1) +
+         ", ellinf=" + std::format("{}", ellinfinity) + ")";
 }
 
 template <typename T>
@@ -82,8 +83,8 @@ compute_complexity_listmat(std::vector<MyMatrix<T>> const &list_mat) {
     }
   }
   return "(n_gen=" + std::to_string(n_mat) +
-         ", ell1_global=" + std::to_string(ell1_global) +
-         ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
+         ", ell1_global=" + std::format("{}", ell1_global) +
+         ", ellinfinity=" + std::format("{}", ellinfinite_global) + ")";
 }
 
 template <bool always_equal>

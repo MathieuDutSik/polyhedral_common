@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     //
     MyMatrix<T> M = ReadMatrixFile<T>(FileCoxMat);
     std::vector<std::string> LOut;
-    std::string symb = std::to_string(M);
+    std::string symb = coxeter_dynkin_matrix_to_string(M);
     std::cerr << "symb=" << symb << "\n";
 
     std::vector<MyVector<T>> LVect = FindDiagramExtensions(M, DS);

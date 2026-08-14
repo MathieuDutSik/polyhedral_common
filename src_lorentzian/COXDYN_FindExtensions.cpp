@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     std::vector<MyVector<T>> LVect = FindDiagramExtensions(M, DS);
     for (auto &eV : LVect) {
       MyMatrix<T> Mext = ExtendMatrix(M, eV);
-      std::string stro = std::to_string(Mext);
+      std::string stro = coxeter_dynkin_matrix_to_string(Mext);
       LOut.push_back(stro);
     }
     size_t len = LVect.size();

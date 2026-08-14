@@ -710,8 +710,7 @@ enum class DoubleCosetMethod {
   guess
 };
 
-namespace std {
-inline std::string to_string(DoubleCosetMethod method) {
+inline std::string double_coset_method_to_string(DoubleCosetMethod method) {
   switch (method) {
   case DoubleCosetMethod::repr:
     return "repr";
@@ -736,7 +735,6 @@ inline std::string to_string(DoubleCosetMethod method) {
   }
   return "unknown";
 }
-}  // namespace std
 
 // The parsed method plus, for canonic_initial_triv_exhaustive_limit, its numeric
 // threshold. The string is parsed once, at the OrbitSplittingListOrbit_spec
@@ -789,7 +787,7 @@ vectface OrbitSplittingListOrbitKernel_spec(
 #ifdef DEBUG_DOUBLE_COSET
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
      << " |vf|=" << ListFaceOrbitsize.size()
-     << " method=" << std::to_string(spec.kind) << "\n";
+     << " method=" << double_coset_method_to_string(spec.kind) << "\n";
 #endif
 #ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, ListFaceOrbitsize);
@@ -926,7 +924,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
       if (duration > smallest_time) {
 #ifdef DEBUG_DOUBLE_COSET
         os << "duration already larger, no need to continue for method="
-           << std::to_string(the_method) << "\n";
+           << double_coset_method_to_string(the_method) << "\n";
 #endif
         return true;
       }

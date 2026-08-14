@@ -69,8 +69,7 @@ inline OrbitSplitField parse_heuristic_field(std::string const &name,
   throw TerminalException{1};
 }
 
-namespace std {
-inline std::string to_string(PolytopeField f) {
+inline std::string field_to_string(PolytopeField f) {
   switch (f) {
   case PolytopeField::groupsize:
     return "groupsize";
@@ -87,10 +86,8 @@ inline std::string to_string(PolytopeField f) {
   }
   return "unknown";
 }
-}  // namespace std
 
-namespace std {
-inline std::string to_string(OrbitSplitField f) {
+inline std::string field_to_string(OrbitSplitField f) {
   switch (f) {
   case OrbitSplitField::groupsize_big:
     return "groupsize_big";
@@ -103,7 +100,6 @@ inline std::string to_string(OrbitSplitField f) {
   }
   return "unknown";
 }
-}  // namespace std
 
 // --- The input structs, one per heuristic input kind ---
 // The group sizes stay full precision, the combinatorial quantities are plain
@@ -140,7 +136,7 @@ template <typename TintGroup> struct PolytopeInputInfo {
   std::map<std::string, TintGroup> named_map() const {
     std::map<std::string, TintGroup> m;
     for (PolytopeField f : polytope_all_fields)
-      m[std::to_string(f)] = get_field(f);
+      m[field_to_string(f)] = get_field(f);
     return m;
   }
 };
@@ -254,7 +250,7 @@ std::ostream &operator<<(std::ostream &os,
         heu.tests[i];
     os << "   i=" << i << "/" << len;
     for (auto const &eSingCond : eFullCond.conditions)
-      os << " (" << std::to_string(eSingCond.field) << " "
+      os << " (" << field_to_string(eSingCond.field) << " "
          << static_cast<int>(eSingCond.op) << " " << eSingCond.value << ")";
     os << " => " << eFullCond.result << "\n";
   }

@@ -12,6 +12,7 @@
 
 // clang-format off
 #include "Balinski_basic.h"
+#include <format>
 #include <string>
 // clang-format on
 
@@ -38,7 +39,7 @@ protected:
         AdvancedTerminationCriterion(_AdvancedTerminationCriterion), os(_os) {
     strPresChar = "|EXT|=" + std::to_string(bb.nbRow) + "/" +
                   std::to_string(bb.nbCol) +
-                  " |GRP|=" + std::to_string(bb.GRP.size());
+                  " |GRP|=" + std::format("{}", bb.GRP.size());
   }
   Derived &derived() { return static_cast<Derived &>(*this); }
   Derived const &derived() const {

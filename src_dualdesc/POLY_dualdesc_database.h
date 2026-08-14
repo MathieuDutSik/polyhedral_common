@@ -57,8 +57,7 @@ enum class CanonicStrategy {
 inline constexpr CanonicStrategy CANONIC_STRATEGY__DEFAULT =
     CanonicStrategy::canonical_image;
 
-namespace std {
-inline std::string to_string(CanonicStrategy strategy) {
+inline std::string canonic_strategy_to_string(CanonicStrategy strategy) {
   switch (strategy) {
   case CanonicStrategy::canonical_image:
     return "canonical_image";
@@ -75,15 +74,13 @@ inline std::string to_string(CanonicStrategy strategy) {
   }
   return "unknown";
 }
-}  // namespace std
 
 // The action to take on the on-disk orbit database when resuming a run: load it
 // as-is, guess whether the stored canonicalization still matches, or recompute
 // and reshuffle it under the current canonicalization.
 enum class DatabaseAction { simple_load, guess, recompute_and_shuffle };
 
-namespace std {
-inline std::string to_string(DatabaseAction action) {
+inline std::string database_action_to_string(DatabaseAction action) {
   switch (action) {
   case DatabaseAction::simple_load:
     return "simple_load";
@@ -94,7 +91,6 @@ inline std::string to_string(DatabaseAction action) {
   }
   return "unknown";
 }
-}  // namespace std
 
 template <typename Tgroup_impl> struct TripleStore {
   using Tgroup = Tgroup_impl;
@@ -254,7 +250,7 @@ Face CanonicalImageDualDesc(CanonicStrategy const &method_choice, Tgroup const &
 #endif
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "RDD: CAN_LIM: Beginning of CanonicalImageDualDesc method_choice="
-     << std::to_string(method_choice) << "\n";
+     << canonic_strategy_to_string(method_choice) << "\n";
   WriteGroup(os, GRP);
   os << "RDD: f=" << StringFace(f) << "\n";
 #endif
@@ -293,7 +289,8 @@ Face CanonicalImageDualDesc(CanonicStrategy const &method_choice, Tgroup const &
     }
   }
   std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
-  std::cerr << "method_choice=" << std::to_string(method_choice) << "\n";
+  std::cerr << "method_choice=" << canonic_strategy_to_string(method_choice)
+            << "\n";
   throw TerminalException{1};
 }
 
@@ -394,7 +391,7 @@ Face CanonicalImageGeneralDualDesc(
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "RDD: CAN_LIM: Beginning of CanonicalImageGeneralDualDesc "
         "method_choice="
-     << std::to_string(method_choice) << "\n";
+     << canonic_strategy_to_string(method_choice) << "\n";
   WriteGroup(os, GRP);
   os << "RDD: CAN_LIM: f=" << StringFace(f) << "\n";
 #endif
@@ -433,7 +430,8 @@ Face CanonicalImageGeneralDualDesc(
     }
   }
   std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
-  std::cerr << "method_choice=" << std::to_string(method_choice) << "\n";
+  std::cerr << "method_choice=" << canonic_strategy_to_string(method_choice)
+            << "\n";
   throw TerminalException{1};
 }
 

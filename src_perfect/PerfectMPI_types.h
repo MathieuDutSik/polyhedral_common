@@ -58,29 +58,29 @@ std::ostream &operator<<(std::ostream &os, TypeIndex const &obj) {
   return os;
 }
 
-namespace std {
-template <typename T> struct less<TypePerfectExch<T>> {
-  bool operator()(TypePerfectExch<T> const &eTPE1,
-                  TypePerfectExch<T> const &eTPE2) const {
-    if (eTPE1.incd < eTPE2.incd)
-      return true;
-    if (eTPE1.incd > eTPE2.incd)
-      return false;
-    //
-    int nbRow = eTPE1.eMat.rows();
-    for (int iRow = 0; iRow < nbRow; iRow++)
-      for (int iCol = 0; iCol < nbRow; iCol++) {
-        if (eTPE1.eMat(iRow, iCol) < eTPE2.eMat(iRow, iCol))
-          return true;
-        if (eTPE1.eMat(iRow, iCol) > eTPE2.eMat(iRow, iCol))
-          return false;
-      }
+// Ordering of TypePerfectExch. An operator< rather than a specialization of
+// std::less: [namespace.std] does permit that specialization, but libc++
+// rewrites std::less<Key> into the transparent std::less<> inside its
+// ordered containers, which then never sees it. An operator< is found by
+// ADL in every case.
+template <typename T>
+bool operator<(TypePerfectExch<T> const &eTPE1,
+               TypePerfectExch<T> const &eTPE2) {
+  if (eTPE1.incd < eTPE2.incd)
+    return true;
+  if (eTPE1.incd > eTPE2.incd)
     return false;
-  }
-};
-// clang-format off
-}  // namespace std
-// clang-format on
+  //
+  int nbRow = eTPE1.eMat.rows();
+  for (int iRow = 0; iRow < nbRow; iRow++)
+    for (int iCol = 0; iCol < nbRow; iCol++) {
+      if (eTPE1.eMat(iRow, iCol) < eTPE2.eMat(iRow, iCol))
+        return true;
+      if (eTPE1.eMat(iRow, iCol) > eTPE2.eMat(iRow, iCol))
+        return false;
+    }
+  return false;
+}
 
 namespace boost {
 namespace serialization {

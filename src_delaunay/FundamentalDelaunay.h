@@ -7,6 +7,7 @@
 #include "POLY_LinearProgramming.h"
 #include "Shvec_exact.h"
 #include "Positivity.h"
+#include <format>
 #include <limits>
 #include <string>
 #include <utility>
@@ -787,8 +788,8 @@ template <typename T> std::string to_stringGAP(ResultCov<T> const &x) {
          ", VolumeBall:=" + std::to_string(x.VolumeBall) +
          ", TheCov_d:=" + std::to_string(x.TheCov_d) +
          ", TheDim:=" + std::to_string(x.TheDim) +
-         ", TheDet:=" + std::to_string(x.TheDet) +
-         ", TheCov:=" + std::to_string(x.TheCov) + ")";
+         ", TheDet:=" + std::format("{}", x.TheDet) +
+         ", TheCov:=" + std::format("{}", x.TheCov) + ")";
 }
 
 // clang-format off

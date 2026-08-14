@@ -119,8 +119,7 @@ additional_symmetry_decision_from_string(std::string const &ans) {
 // action).
 enum class DatabaseKind { canonic, repr };
 
-namespace std {
-inline std::string to_string(DatabaseKind kind) {
+inline std::string database_kind_to_string(DatabaseKind kind) {
   switch (kind) {
   case DatabaseKind::canonic:
     return "canonic";
@@ -129,7 +128,6 @@ inline std::string to_string(DatabaseKind kind) {
   }
   return "unknown";
 }
-}  // namespace std
 
 inline DatabaseKind database_kind_from_string(std::string const &ans) {
   if (ans == "canonic")
@@ -157,8 +155,7 @@ inline BankCheckDecision bank_check_decision_from_string(std::string const &ans)
 // computed dual description into the bank for later reuse.
 enum class BankSaveDecision { yes, no };
 
-namespace std {
-inline std::string to_string(BankSaveDecision dec) {
+inline std::string bank_save_decision_to_string(BankSaveDecision dec) {
   switch (dec) {
   case BankSaveDecision::yes:
     return "yes";
@@ -167,7 +164,6 @@ inline std::string to_string(BankSaveDecision dec) {
   }
   return "unknown";
 }
-}  // namespace std
 
 inline BankSaveDecision bank_save_decision_from_string(std::string const &ans) {
   if (ans == "yes")
@@ -1147,7 +1143,8 @@ void vectface_update_method(vectface &vfo, TbasicBank &bb,
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow
      << "\n";
-  os << "RDD: vectface_update_method bb.canonic_method=" << std::to_string(bb.canonic_method) << "\n";
+  os << "RDD: vectface_update_method bb.canonic_method="
+     << canonic_strategy_to_string(bb.canonic_method) << "\n";
 #endif
   for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
     Face fo = vfo[i_orbit];
@@ -1245,7 +1242,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     os << "|RDD: determine_action_database|=" << time << "\n";
 #endif
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: action=" << std::to_string(action) << "\n";
+    os << "RDD: action=" << database_action_to_string(action) << "\n";
 #endif
     auto f_recompute = [&](CanonicStrategy const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
@@ -1272,7 +1269,8 @@ Kernel_DUALDESC_AdjacencyDecomposition(
       os << "|RDD: method update|=" << time << "\n";
 #endif
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-      os << "RDD: bb.canonic_method=" << std::to_string(bb.canonic_method) << "\n";
+      os << "RDD: bb.canonic_method="
+         << canonic_strategy_to_string(bb.canonic_method) << "\n";
 #endif
       RPL.DirectAppendDatabase(std::move(vfo));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
@@ -1291,7 +1289,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     if (action == DatabaseAction::recompute_and_shuffle) {
       CanonicStrategy method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-      os << "Before f_recompute, method=" << std::to_string(method)
+      os << "Before f_recompute, method=" << canonic_strategy_to_string(method)
          << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
       return f_recompute(method);
@@ -1312,7 +1310,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
       }
     }
     std::cerr << "Failed to find a matching entry for action="
-              << std::to_string(action) << "\n";
+              << database_action_to_string(action) << "\n";
     throw TerminalException{1};
   };
   set_up();
@@ -1489,7 +1487,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     DatabaseKind database_kind =
         database_kind_from_string(dual_desc_heuristic_evaluation(AllArr.ChosenDatabase, info));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: ChosenDatabase = " << std::to_string(database_kind)
+    os << "RDD: ChosenDatabase = " << database_kind_to_string(database_kind)
        << "\n";
 #endif
     if (database_kind == DatabaseKind::canonic) {
@@ -1529,7 +1527,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       bank_save_decision_from_string(dual_desc_heuristic_evaluation(AllArr.BankSave, info));
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: elapsed_seconds=" << s(start)
-     << " bank_save=" << std::to_string(bank_save_decision)
+     << " bank_save=" << bank_save_decision_to_string(bank_save_decision)
      << " NeedSplit=" << NeedSplit << "\n";
 #endif
   if (bank_save_decision == BankSaveDecision::yes) {

@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     const MyMatrix<T> &ScalMat = ep.second;
     //    std::cerr << "CoxMat=\n";
     //    WriteMatrix(std::cerr, CoxMat);
-    std::string symb = std::to_string(CoxMat);
+    std::string symb = coxeter_dynkin_matrix_to_string(CoxMat);
     auto prt = [&](std::ostream &os) -> void {
       os << "return rec(CoxMat:=";
       WriteMatrixGAP(os, CoxMat);

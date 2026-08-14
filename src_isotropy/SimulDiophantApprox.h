@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "ClassicLLL.h"
+#include <format>
 #include <string>
 #include <utility>
 // clang-format on
@@ -36,8 +37,8 @@ std::string GapStringDiophantineApprox(DiophantResult<Tint> const &Res) {
   for (int i = 0; i < n; i++) {
     if (i > 0)
       strO += ", ";
-    strO += std::to_string(Res.Numerators(i)) + "/" +
-            std::to_string(Res.Denominator);
+    strO += std::format("{}", Res.Numerators(i)) + "/" +
+            std::format("{}", Res.Denominator);
   }
   strO += " ]";
   return strO;

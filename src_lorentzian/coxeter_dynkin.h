@@ -6,6 +6,7 @@
 #include "GRAPH_GraphicalBasic.h"
 #include "GRAPH_GraphicalFunctions.h"
 #include <algorithm>
+#include <format>
 #include <limits>
 #include <map>
 #include <set>
@@ -76,8 +77,8 @@ template <typename T> int GetNrVertices(IrrCoxDyn<T> const &cd) {
   return dim;
 }
 
-namespace std {
-template <typename T> std::string to_string(IrrCoxDyn<T> const &cd) {
+template <typename T>
+std::string irr_cox_dyn_to_string(IrrCoxDyn<T> const &cd) {
   std::string type = cd.type;
   if (type == "A" || type == "B" || type == "C" || type == "D" || type == "E" ||
       type == "F" || type == "G" || type == "H")
@@ -85,7 +86,7 @@ template <typename T> std::string to_string(IrrCoxDyn<T> const &cd) {
   if (type == "I") {
     if (cd.param == practical_infinity<T>())
       return "I_2(infinity)";
-    return std::string("I_2(") + std::to_string(cd.param) + ")";
+    return std::string("I_2(") + std::format("{}", cd.param) + ")";
   }
   if (type == "tildeA" || type == "tildeB" || type == "tildeC" ||
       type == "tildeD" || type == "tildeE" || type == "tildeF" ||
@@ -101,7 +102,6 @@ template <typename T> std::string to_string(IrrCoxDyn<T> const &cd) {
   std::cerr << "Failed to matching entry. Maybe bug or non-conforming input\n";
   throw TerminalException{1};
 }
-}  // namespace std
 
 template <typename T> IrrCoxDyn<T> string_to_IrrCoxDyn(std::string const &s) {
   std::string s_work = s;
@@ -144,7 +144,7 @@ template <typename T> IrrCoxDyn<T> string_to_IrrCoxDyn(std::string const &s) {
     throw TerminalException{1};
   };
   IrrCoxDyn<T> cd = recognize();
-  std::string s_map = std::to_string(cd);
+  std::string s_map = irr_cox_dyn_to_string(cd);
   if (s_map != s) {
     std::cerr << "Initial string in input is s=" << s << "\n";
     std::cerr << "Found matching to be type=" << cd.type << " dim=" << cd.dim
@@ -1714,7 +1714,7 @@ RecognizeSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       IrrCoxDyn<T> cd = *opt;
       l_cd.push_back(cd);
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-      std::cerr << "symb=" << std::to_string(cd) << "\n";
+      std::cerr << "symb=" << irr_cox_dyn_to_string(cd) << "\n";
 #endif
     } else {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
@@ -1754,16 +1754,15 @@ MyMatrix<T> string_to_coxdyn_matrix(std::string const &str) {
   return Mret;
 }
 
-namespace std {
 template <typename T>
-std::string to_string(MyMatrix<T> const &M) {
+std::string coxeter_dynkin_matrix_to_string(MyMatrix<T> const &M) {
   std::optional<std::vector<IrrCoxDyn<T>>> opt =
       RecognizeSphericalEuclideanDiagram(M);
   if (opt) {
     const std::vector<IrrCoxDyn<T>> &l_irr = *opt;
     std::vector<std::string> l_str;
     for (auto &icd : l_irr)
-      l_str.push_back(std::to_string(icd));
+      l_str.push_back(irr_cox_dyn_to_string(icd));
     std::sort(l_str.begin(), l_str.end());
     //
     std::string str = l_str[0];
@@ -1774,11 +1773,11 @@ std::string to_string(MyMatrix<T> const &M) {
   std::cerr << "M=\n";
   WriteMatrix(std::cerr, M);
   std::cerr
-      << "The Coxeter-Dynkin recognition failed so std::to_string(MyMatrix) "
+      << "The Coxeter-Dynkin recognition failed so "
+         "coxeter_dynkin_matrix_to_string "
          "cannot work\n";
   throw TerminalException{1};
 }
-}  // namespace std
 
 template <typename T>
 MyMatrix<T> ExtendMatrix(MyMatrix<T> const &M, MyVector<T> const &V) {
@@ -2167,7 +2166,8 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
   WriteMatrix(std::cerr, ScalMat);
   std::cerr << "CoxMat=\n";
   WriteMatrix(std::cerr, CoxMat);
-  std::cerr << "Symbol of M=" << std::to_string(CoxMat) << "\n";
+  std::cerr << "Symbol of M=" << coxeter_dynkin_matrix_to_string(CoxMat)
+            << "\n";
 #endif
   int dim = G.rows();
   int n_root = l_root.size();
@@ -2193,7 +2193,7 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
         CoxMatExp(n_root, i) = eV(i);
       }
       CoxMatExp(n_root, n_root) = 2;
-      std::string symb = std::to_string(CoxMatExp);
+      std::string symb = coxeter_dynkin_matrix_to_string(CoxMatExp);
       std::cerr << "V=" << StringVectorGAP(eV) << " symb=" << symb << "\n";
     };
     for (auto &eV : s_vect)

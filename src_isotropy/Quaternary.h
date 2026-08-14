@@ -216,7 +216,7 @@ bool determine_solvability_dim4(MyVector<T> const &a,
 #endif
     Padic<T> prod12_B = Padic_from_integer(prod12_A, p, 3);
 #ifdef DEBUG_QUATERNARY
-    os << "QUAD: prod12_B=" << std::to_string(prod12_B) << "\n";
+    os << "QUAD: prod12_B=" << prod12_B << "\n";
 #endif
     T prod34_A = -a3 * a4;
 #ifdef DEBUG_QUATERNARY
@@ -224,15 +224,15 @@ bool determine_solvability_dim4(MyVector<T> const &a,
 #endif
     Padic<T> prod34_B = Padic_from_integer(prod34_A, p, 3);
 #ifdef DEBUG_QUATERNARY
-    os << "QUAD: prod34_B=" << std::to_string(prod34_B) << "\n";
+    os << "QUAD: prod34_B=" << prod34_B << "\n";
 #endif
     Padic<T> prod34inv = Padic_inverse(prod34_B, p);
 #ifdef DEBUG_QUATERNARY
-    os << "QUAD: prod34inv=" << std::to_string(prod34inv) << "\n";
+    os << "QUAD: prod34inv=" << prod34inv << "\n";
 #endif
     Padic<T> prod12_34inv = Padic_product(prod12_B, prod34inv, p);
 #ifdef DEBUG_QUATERNARY
-    os << "QUAD: prod12_34inv=" << std::to_string(prod12_34inv) << "\n";
+    os << "QUAD: prod12_34inv=" << prod12_34inv << "\n";
 #endif
     bool test = Padic_is_square(prod12_34inv, p);
 #ifdef DEBUG_QUATERNARY
