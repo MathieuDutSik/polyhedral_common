@@ -7,9 +7,6 @@
 #include "POLY_DualDesc_double_description.h"
 #include "POLY_DualDesc_lrslib.h"
 #include "MAT_MatrixInt.h"
-#ifndef WASM_PLATFORM
-#include "POLY_DirectDualDesc_External.h"
-#endif
 #include "POLY_DualDesc_primal_dual.h"
 #include "POLY_DualDesc_beneath_and_beyond.h"
 #include "POLY_DualDesc_normaliz.h"
@@ -82,7 +79,6 @@ enum class DualDescProgram {
   pd_lrs,
   beneath_beyond,
   normaliz,
-  normaliz_ext,
 };
 
 // The string encoding of the program, used for logging and error messages and
@@ -102,8 +98,6 @@ inline std::string to_string(DualDescProgram prog) {
     return "beneath_beyond";
   case DualDescProgram::normaliz:
     return "normaliz";
-  case DualDescProgram::normaliz_ext:
-    return "normaliz_ext";
   }
   return "unknown";
 }
@@ -125,8 +119,6 @@ dual_desc_program_from_string_opt(std::string const &prog) {
     return DualDescProgram::beneath_beyond;
   if (prog == "normaliz")
     return DualDescProgram::normaliz;
-  if (prog == "normaliz_ext")
-    return DualDescProgram::normaliz_ext;
   return {};
 }
 
@@ -163,13 +155,6 @@ template <typename T> bool is_method_supported(DualDescProgram prog) {
     // The native Normaliz port runs in ring arithmetic (FM combination,
     // gcd reduction, division-free rank tests), field or ring case.
     return true;
-  case DualDescProgram::normaliz_ext:
-    // The external programs are available only for rational types.
-#ifndef WASM_PLATFORM
-    return is_implementation_of_Q<T>::value;
-#else
-    return false;
-#endif
   }
   return false;
 }
@@ -230,15 +215,6 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     // Native Normaliz port, full-dimensional pointed cone,
     // applicable to the field or ring case
     return POLY_DualDescription_NormalizIncidence(EXT, os);
-  case DualDescProgram::normaliz_ext:
-    // The external programs are available only for rational types
-#ifndef WASM_PLATFORM
-    if constexpr (is_implementation_of_Q<T>::value) {
-      if (prog == DualDescProgram::normaliz_ext)
-        return DualDescExternalProgramIncidence(EXT, "normaliz", os);
-    }
-#endif
-    break;
   }
   terminate_direct_dual_desc("DirectFacetComputationIncidence", prog);
 }
@@ -279,15 +255,6 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     // Native Normaliz port, full-dimensional pointed cone,
     // applicable to the field or ring case
     return POLY_DualDescription_NormalizInequalities(EXT, os);
-  case DualDescProgram::normaliz_ext:
-    // The external programs are available only for rational types
-#ifndef WASM_PLATFORM
-    if constexpr (is_implementation_of_Q<T>::value) {
-      if (prog == DualDescProgram::normaliz_ext)
-        return DualDescExternalProgramIneq(EXT, "normaliz", os);
-    }
-#endif
-    break;
   }
   terminate_direct_dual_desc("DirectFacetComputationInequalities", prog);
 }
@@ -328,15 +295,6 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     // Native Normaliz port, full-dimensional pointed cone,
     // applicable to the field or ring case
     return POLY_DualDescription_NormalizFaceIneq(EXT, f_process, os);
-  case DualDescProgram::normaliz_ext:
-    // The external programs are available only for rational types
-#ifndef WASM_PLATFORM
-    if constexpr (is_implementation_of_Q<T>::value) {
-      if (prog == DualDescProgram::normaliz_ext)
-        return DualDescExternalProgramFaceIneq(EXT, "normaliz", f_process, os);
-    }
-#endif
-    break;
   }
   terminate_direct_dual_desc("DirectFacetComputationFaceIneq", prog);
 }

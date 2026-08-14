@@ -420,8 +420,6 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 //   this is transparent to callers.
 // * "normaliz": the native port of the Normaliz primal algorithm
 //   (Fourier-Motzkin with pyramid decomposition, fields and rings)
-// * "normaliz_ext": the external program normaliz (only for types
-//   implementing Q)
 template <typename T>
 TheHeuristic<T> StandardHeuristicDualDescriptionProgram() {
   std::vector<std::string> ListString = {"1", "1 incidence < 50 cdd", "cdd"};

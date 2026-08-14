@@ -79,6 +79,23 @@
 
 namespace normaliz_dd {
 
+// The machine-integer type used for the fast attempt over a field input, as
+// in the lrs backend: it defaults to the exact-detection TryCarryInt64;
+// define POLY_NORMALIZ_TRY_SIMD to use the conservative, SIMD-friendly
+// TrySimdInt64 instead (for A/B testing the two deferred-overflow flavours).
+#ifdef POLY_NORMALIZ_TRY_SIMD
+using NmzTryInt = TrySimdInt64;
+#else
+using NmzTryInt = TryCarryInt64;
+#endif
+
+#ifdef NMZ_COEFF_STATS
+// Maximum absolute facet coefficient seen across the whole run (all kernel
+// levels), for calibrating the bound-discipline arithmetic. Reset by the
+// top-level driver.
+inline int64_t nmz_stat_max_abs_coeff = 0;
+#endif
+
 // The recursion bound for pyramid decomposition: pyramids are built when
 // nr_neg*nr_pos - nr_neg_simp*nr_pos_simp >= dim * SuppHypRecursionFactor
 // (times arith_cost_factor for non-machine arithmetic). Constants from
@@ -182,6 +199,26 @@ template <typename Tint> struct NmzKernel {
     hyp.BornAt = born_at;
     hyp.Ident = HypCounter;
     HypCounter++;
+#ifdef NMZ_COEFF_STATS
+    // Measurement hook for the bound-discipline design: every persisted
+    // facet passes through here at creation, right after gcd reduction, so
+    // this maximum is exactly the H of the safety conditions
+    // dim*G*H < 2^63 (scalar product) and 2*(dim*G*H)*H < 2^63 (FM combo).
+    if constexpr (uses_deferred_overflow<Tint>::value ||
+                  std::is_fundamental<Tint>::value) {
+      for (size_t k = 0; k < dim; k++) {
+        int64_t v;
+        if constexpr (uses_deferred_overflow<Tint>::value)
+          v = hyp.Hyp(k).get_const_val();
+        else
+          v = static_cast<int64_t>(hyp.Hyp(k));
+        if (v < 0)
+          v = -v;
+        if (v > nmz_stat_max_abs_coeff)
+          nmz_stat_max_abs_coeff = v;
+      }
+    }
+#endif
   }
 
   void set_simplicial(NmzFacet<Tint> &hyp) {
@@ -1029,6 +1066,9 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
                                Ffacet f_facet) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
+#ifdef NMZ_COEFF_STATS
+  nmz_stat_max_abs_coeff = 0;
+#endif
 #ifdef TIMINGS_NORMALIZ_DUAL_DESC
   MicrosecondTime time;
 #endif
@@ -1083,6 +1123,9 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
   os << "NMZ: |EXT|=" << nbRow << "/" << nbCol
      << " |facets|=" << n_facet << " time=" << time << "\n";
 #endif
+#ifdef NMZ_COEFF_STATS
+  os << "NMZ: max_abs_coeff=" << nmz_stat_max_abs_coeff << "\n";
+#endif
 }
 
 } // namespace normaliz_dd
@@ -1130,13 +1173,13 @@ void NormalizDualDesc_process(MyMatrix<T> const &EXT, std::ostream &os,
     }
     if constexpr (use_try_int64<Tring>::value) {
       try {
-        MyMatrix<TryInt64> EXTtry = ConvertMatrixToTryInt64<TryInt64>(EXTring);
-        std::vector<std::pair<MyVector<TryInt64>, Face>> buffer;
+        MyMatrix<normaliz_dd::NmzTryInt> EXTtry = ConvertMatrixToTryInt64<normaliz_dd::NmzTryInt>(EXTring);
+        std::vector<std::pair<MyVector<normaliz_dd::NmzTryInt>, Face>> buffer;
         normaliz_dd::NormalizDualDesc_Kernel_f(
-            EXTtry, os, [&buffer](MyVector<TryInt64> &&normal, Face &&incd) {
+            EXTtry, os, [&buffer](MyVector<normaliz_dd::NmzTryInt> &&normal, Face &&incd) {
               buffer.emplace_back(std::move(normal), std::move(incd));
             });
-        terminate_in_arithmetic_error<TryInt64>();
+        terminate_in_arithmetic_error<normaliz_dd::NmzTryInt>();
         for (auto &entry : buffer)
           f_facet(std::move(entry.first), std::move(entry.second));
         return;
