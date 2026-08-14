@@ -32,6 +32,66 @@ void check(bool test, std::string const &context) {
   }
 }
 
+/*
+  Enumerate the periodic iso-Delaunay domains and check the defining
+  properties: the Gram matrix of each domain strictly interior to the
+  domain's inequality system, the tessellation of each domain the Delaunay
+  tessellation of the point set at that matrix, the orbits pairwise
+  inequivalent, and the number of orbits equal to the expected value.
+ */
+void run_case(LinSpaceMatrix<T> const &LinSpa, PeriodicPointSet<Tint> const &pps,
+              size_t expected_nb, std::string const &name, std::ostream &os) {
+  PolyHeuristicSerial<Tint_grp> AllArr =
+      AllStandardHeuristicSerial<T, Tint_grp>(LinSpa.n + 1, os);
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+  std::optional<MyMatrix<T>> CommonGramMat;
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data{LinSpa, std::move(rddo),
+                                               CommonGramMat};
+  PeriodicDataIsoDelaunayDomainsFunc<T, Tint, Tgroup> data_func{
+      std::move(data), pps};
+  using Tobj = typename PeriodicDataIsoDelaunayDomainsFunc<T, Tint,
+                                                           Tgroup>::Tobj;
+  auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
+    return false;
+  };
+  auto opt = EnumerateAndStore_Serial(data_func, f_incorrect, 0);
+  check(opt.has_value(), "the enumeration terminated");
+  auto const &l_ent = *opt;
+  size_t n_orbit = l_ent.size();
+  std::cerr << name << ": |orbits of periodic iso-Delaunay domains|="
+            << n_orbit << "\n";
+  check(n_orbit == expected_nb, "the number of orbits is the expected one");
+  for (auto &eEnt : l_ent) {
+    Tobj const &x = eEnt.x;
+    MyMatrix<T> const &GramMat = x.DT_gram.GramMat;
+    std::vector<FullAdjInfo<T>> ListIneq =
+        ComputeListIneqFromTesselationIneq<T, Tgroup>(x.DT_gram.DT);
+    MyVector<T> g_vec =
+        LINSPA_GetVectorOfMatrixExpression(data_func.data.LinSpa, GramMat);
+    std::cerr << "   |ineq|=" << ListIneq.size()
+              << " |cells|=" << x.DT_gram.DT.l_dels.size()
+              << " |adj|=" << eEnt.ListAdj.size() << "\n";
+    for (auto &eRec : ListIneq) {
+      check(eRec.eIneq.dot(g_vec) > 0,
+            "the Gram matrix is strictly interior to its domain");
+    }
+    check(IsPeriodicDelaunayTesselation<T, Tint, Tgroup>(
+              x.DT_gram.DT, GramMat, pps, os),
+          "the tessellation of the domain is the Delaunay tessellation");
+  }
+  for (size_t i = 0; i < n_orbit; i++) {
+    for (size_t j = i + 1; j < n_orbit; j++) {
+      std::optional<MyMatrix<T>> opt_equiv =
+          LINSPA_TestEquivalenceGramMatrix_SHV_Periodic<T, Tint, Tgroup>(
+              data_func.data.LinSpa, pps, l_ent[i].x.DT_gram.GramMat,
+              l_ent[j].x.DT_gram.GramMat, l_ent[i].x.DT_gram.SHV_T,
+              l_ent[j].x.DT_gram.SHV_T, CommonGramMat, os);
+      check(!opt_equiv.has_value(),
+            "the domains of different orbits are inequivalent");
+    }
+  }
+}
+
 int main() {
   HumanTime time;
   try {
@@ -44,58 +104,42 @@ int main() {
     Cosets(1, 1) = 0;
     PeriodicPointSet<Tint> pps = PeriodicPointSetFromRational<Tint>(Cosets);
     LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(n);
-    PolyHeuristicSerial<Tint_grp> AllArr =
-        AllStandardHeuristicSerial<T, Tint_grp>(n + 1, os);
-    RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-    std::optional<MyMatrix<T>> CommonGramMat;
-    DataIsoDelaunayDomains<T, Tint, Tgroup> data{LinSpa, std::move(rddo),
-                                                 CommonGramMat};
-    PeriodicDataIsoDelaunayDomainsFunc<T, Tint, Tgroup> data_func{
-        std::move(data), pps};
-    using Tobj = typename PeriodicDataIsoDelaunayDomainsFunc<T, Tint,
-                                                             Tgroup>::Tobj;
-    auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
-      return false;
-    };
-    auto opt = EnumerateAndStore_Serial(data_func, f_incorrect, 0);
-    check(opt.has_value(), "the enumeration terminated");
-    auto const &l_ent = *opt;
-    size_t n_orbit = l_ent.size();
-    std::cerr << "|orbits of periodic iso-Delaunay domains|=" << n_orbit
-              << "\n";
-    check(n_orbit > 0, "the enumeration found something");
-    for (auto &eEnt : l_ent) {
-      Tobj const &x = eEnt.x;
-      MyMatrix<T> const &GramMat = x.DT_gram.GramMat;
-      // The Gram matrix is strictly interior to its own domain.
-      std::vector<FullAdjInfo<T>> ListIneq =
-          ComputeListIneqFromTesselationIneq<T, Tgroup>(x.DT_gram.DT);
-      MyVector<T> g_vec =
-          LINSPA_GetVectorOfMatrixExpression(data_func.data.LinSpa, GramMat);
-      std::cerr << "   |ineq|=" << ListIneq.size()
-                << " |cells|=" << x.DT_gram.DT.l_dels.size()
-                << " |adj|=" << eEnt.ListAdj.size() << "\n";
-      for (auto &eRec : ListIneq) {
-        check(eRec.eIneq.dot(g_vec) > 0,
-              "the Gram matrix is strictly interior to its domain");
-      }
-      // The tessellation is the Delaunay tessellation of the point set.
-      check(IsPeriodicDelaunayTesselation<T, Tint, Tgroup>(
-                x.DT_gram.DT, GramMat, pps, os),
-            "the tessellation of the domain is the Delaunay tessellation");
-    }
-    // The domains of different orbits are pairwise inequivalent.
-    for (size_t i = 0; i < n_orbit; i++) {
-      for (size_t j = i + 1; j < n_orbit; j++) {
-        std::optional<MyMatrix<T>> opt_equiv =
-            LINSPA_TestEquivalenceGramMatrix_SHV_Periodic<T, Tint, Tgroup>(
-                data_func.data.LinSpa, pps, l_ent[i].x.DT_gram.GramMat,
-                l_ent[j].x.DT_gram.GramMat, l_ent[i].x.DT_gram.SHV_T,
-                l_ent[j].x.DT_gram.SHV_T, CommonGramMat, os);
-        check(!opt_equiv.has_value(),
-              "the domains of different orbits are inequivalent");
+    run_case(LinSpa, pps, 1, "Z2+{0,(1/3,0)} full space", os);
+    //
+    // A4 + {0, c} in the dimension-2 T-space of the first subgroup with a
+    // 2-dimensional space of invariant forms (a 5-cycle; the selection
+    // procedure is in the CI notes). The expected count 2 is validated by
+    // the property checks; the GAP oracle currently diverges on this case.
+    MyMatrix<T> GramA4(4, 4);
+    std::vector<std::vector<int>> gram_a4{
+        {2,-1,0,0},{-1,2,-1,0},{0,-1,2,-1},{0,0,-1,2}};
+    std::vector<std::vector<int>> b1_a4{
+        {2,-1,1,-2},{-1,0,-1,1},{1,-1,2,0},{-2,1,0,0}};
+    std::vector<std::vector<int>> h_a4{
+        {0,0,1,0},{0,-1,-1,0},{0,1,1,1},{-1,-1,-1,-1}};
+    MyMatrix<T> B1(4, 4), Hgen(4, 4);
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 4; j++) {
+        GramA4(i, j) = gram_a4[i][j];
+        B1(i, j) = b1_a4[i][j];
+        Hgen(i, j) = h_a4[i][j];
       }
     }
+    std::vector<MyMatrix<T>> ListMatA4{B1, GramA4};
+    LinSpaceMatrix<T> LinSpaA4 =
+        BuildLinSpaceMatrix<T, Tint, Tgroup>(ListMatA4, os);
+    // The known-good small group handed to the kernels has to preserve
+    // the cosets; the subgroup of the selection does, the full pointwise
+    // stabilizer might not.
+    LinSpaA4.PtStabGens = {Hgen};
+    MyMatrix<T> CosetsA4(2, 4);
+    for (int j = 0; j < 4; j++) {
+      CosetsA4(0, j) = 0;
+      CosetsA4(1, j) = T(4 - j) / T(5);
+    }
+    PeriodicPointSet<Tint> ppsA4 =
+        PeriodicPointSetFromRational<Tint>(CosetsA4);
+    run_case(LinSpaA4, ppsA4, 2, "A4+{0,c} dim-2 space", os);
     std::cerr << "Normal termination of TEST_PeriodicIsoDelaunay\n";
   } catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of TEST_PeriodicIsoDelaunay\n";
