@@ -958,13 +958,23 @@ MyMatrix<T> FindTransformation_vect(MyMatrix<T> const &EXT1,
   return FindTransformation_f(EXT1, EXT2, f);
 }
 
+/*
+  Whether every generator of the group is realized by a linear
+  transformation of the polytope. That is a geometric question, so it is
+  decided over the overlying field even when the vertices are stored over
+  a ring: a projection (as when a column is dropped) makes the realizing
+  matrix rational even for a transformation that is integral on the
+  unprojected coordinates.
+ */
 template <typename T, typename Tgroup>
 bool IsSymmetryGroupOfPolytope(MyMatrix<T> const &EXT, Tgroup const &GRP) {
   using Telt = typename Tgroup::Telt;
-  MyMatrix<T> EXTred = ColumnReduction(EXT);
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> EXT_f = UniversalMatrixConversion<Tfield, T>(EXT);
+  MyMatrix<Tfield> EXTred = ColumnReduction(EXT_f);
   std::vector<Telt> ListGen = GRP.GeneratorsOfGroup();
   for (auto const &eGen : ListGen) {
-    std::optional<MyMatrix<T>> opt =
+    std::optional<MyMatrix<Tfield>> opt =
         FindTransformationGeneral(EXTred, EXTred, eGen);
     if (!opt)
       return false;
