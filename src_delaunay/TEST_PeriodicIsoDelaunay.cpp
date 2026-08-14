@@ -140,6 +140,26 @@ int main() {
     PeriodicPointSet<Tint> ppsA4 =
         PeriodicPointSetFromRational<Tint>(CosetsA4);
     run_case(LinSpaA4, ppsA4, 2, "A4+{0,c} dim-2 space", os);
+    // The two other point sets of the A4 family, in the same T-space:
+    // all of Aut(A4) is coset-adequate for each of them, so the same
+    // subgroup selection applies.
+    MyMatrix<T> Cosets2c(2, 4);
+    MyMatrix<T> CosetsC2c(3, 4);
+    for (int j = 0; j < 4; j++) {
+      T c_j = T(4 - j) / T(5);
+      T c2_j = T(2 * (4 - j) % 5) / T(5);
+      Cosets2c(0, j) = 0;
+      Cosets2c(1, j) = c2_j;
+      CosetsC2c(0, j) = 0;
+      CosetsC2c(1, j) = c_j;
+      CosetsC2c(2, j) = c2_j;
+    }
+    PeriodicPointSet<Tint> pps2c =
+        PeriodicPointSetFromRational<Tint>(Cosets2c);
+    PeriodicPointSet<Tint> ppsC2c =
+        PeriodicPointSetFromRational<Tint>(CosetsC2c);
+    run_case(LinSpaA4, pps2c, 2, "A4+{0,2c} dim-2 space", os);
+    run_case(LinSpaA4, ppsC2c, 3, "A4+{0,c,2c} dim-2 space", os);
     std::cerr << "Normal termination of TEST_PeriodicIsoDelaunay\n";
   } catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of TEST_PeriodicIsoDelaunay\n";
