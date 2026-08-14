@@ -8,6 +8,7 @@
 #include "MPI_functionality.h"
 #include "Balinski_basic.h"
 #include <chrono>
+#include <format>
 #include <limits>
 #include <string>
 #include <thread>
@@ -312,7 +313,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     DatabaseAction action = RPL.determine_action_database(ansChoiceCanonic);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
     os << "|determine_action_database|=" << time
-       << " action=" << database_action_to_string(action) << "\n";
+       << " action=" << std::format("{}", action) << "\n";
 #endif
     auto f_recompute = [&](CanonicStrategy const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
@@ -349,7 +350,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
     if (action == DatabaseAction::recompute_and_shuffle) {
       CanonicStrategy method = bb.convert_string_method(ansChoiceCanonic);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
-      os << "Before f_recompute, method=" << canonic_strategy_to_string(method)
+      os << "Before f_recompute, method=" << std::format("{}", method)
          << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
       return f_recompute(method);
@@ -379,7 +380,7 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
       }
     }
     std::cerr << "Failed to find a matching entry for action="
-              << database_action_to_string(action) << "\n";
+              << std::format("{}", action) << "\n";
     throw TerminalException{1};
   };
   set_up();

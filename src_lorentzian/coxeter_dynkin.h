@@ -78,30 +78,37 @@ template <typename T> int GetNrVertices(IrrCoxDyn<T> const &cd) {
 }
 
 template <typename T>
-std::string irr_cox_dyn_to_string(IrrCoxDyn<T> const &cd) {
-  std::string type = cd.type;
-  if (type == "A" || type == "B" || type == "C" || type == "D" || type == "E" ||
-      type == "F" || type == "G" || type == "H")
-    return cd.type + "_{" + std::to_string(cd.dim) + "}";
-  if (type == "I") {
-    if (cd.param == practical_infinity<T>())
-      return "I_2(infinity)";
-    return std::string("I_2(") + std::format("{}", cd.param) + ")";
+struct std::formatter<IrrCoxDyn<T>> : std::formatter<std::string> {
+  static std::string name(IrrCoxDyn<T> const &cd) {
+    std::string type = cd.type;
+    if (type == "A" || type == "B" || type == "C" || type == "D" ||
+        type == "E" || type == "F" || type == "G" || type == "H")
+      return cd.type + "_{" + std::to_string(cd.dim) + "}";
+    if (type == "I") {
+      if (cd.param == practical_infinity<T>())
+        return "I_2(infinity)";
+      return std::string("I_2(") + std::format("{}", cd.param) + ")";
+    }
+    if (type == "tildeA" || type == "tildeB" || type == "tildeC" ||
+        type == "tildeD" || type == "tildeE" || type == "tildeF" ||
+        type == "tildeG") {
+      std::string type_red = type.substr(5, 1);
+      return std::string("\\tilde{") + type_red + "_{" +
+             std::to_string(cd.dim) + "}}";
+    }
+    if (type == "tildeI")
+      return std::string("\\tilde{I_{1}(infinity)}");
+    std::cerr << "cd  type=" << cd.type << " dim=" << cd.dim
+              << " param=" << cd.param << "\n";
+    std::cerr
+        << "Failed to matching entry. Maybe bug or non-conforming input\n";
+    throw TerminalException{1};
   }
-  if (type == "tildeA" || type == "tildeB" || type == "tildeC" ||
-      type == "tildeD" || type == "tildeE" || type == "tildeF" ||
-      type == "tildeG") {
-    std::string type_red = type.substr(5, 1);
-    return std::string("\\tilde{") + type_red + "_{" + std::to_string(cd.dim) +
-           "}}";
+  template <typename FormatContext>
+  auto format(IrrCoxDyn<T> const &cd, FormatContext &ctx) const {
+    return std::formatter<std::string>::format(name(cd), ctx);
   }
-  if (type == "tildeI")
-    return std::string("\\tilde{I_{1}(infinity)}");
-  std::cerr << "cd  type=" << cd.type << " dim=" << cd.dim
-            << " param=" << cd.param << "\n";
-  std::cerr << "Failed to matching entry. Maybe bug or non-conforming input\n";
-  throw TerminalException{1};
-}
+};
 
 template <typename T> IrrCoxDyn<T> string_to_IrrCoxDyn(std::string const &s) {
   std::string s_work = s;
@@ -144,7 +151,7 @@ template <typename T> IrrCoxDyn<T> string_to_IrrCoxDyn(std::string const &s) {
     throw TerminalException{1};
   };
   IrrCoxDyn<T> cd = recognize();
-  std::string s_map = irr_cox_dyn_to_string(cd);
+  std::string s_map = std::format("{}", cd);
   if (s_map != s) {
     std::cerr << "Initial string in input is s=" << s << "\n";
     std::cerr << "Found matching to be type=" << cd.type << " dim=" << cd.dim
@@ -1714,7 +1721,7 @@ RecognizeSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       IrrCoxDyn<T> cd = *opt;
       l_cd.push_back(cd);
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
-      std::cerr << "symb=" << irr_cox_dyn_to_string(cd) << "\n";
+      std::cerr << "symb=" << std::format("{}", cd) << "\n";
 #endif
     } else {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
@@ -1762,7 +1769,7 @@ std::string coxeter_dynkin_matrix_to_string(MyMatrix<T> const &M) {
     const std::vector<IrrCoxDyn<T>> &l_irr = *opt;
     std::vector<std::string> l_str;
     for (auto &icd : l_irr)
-      l_str.push_back(irr_cox_dyn_to_string(icd));
+      l_str.push_back(std::format("{}", icd));
     std::sort(l_str.begin(), l_str.end());
     //
     std::string str = l_str[0];

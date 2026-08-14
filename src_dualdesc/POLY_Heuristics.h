@@ -7,9 +7,11 @@
 #include "Heuristic_ThompsonSampling.h"
 #include "Namelist.h"
 #include <array>
+#include <format>
 #include <limits>
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 // clang-format on
 
@@ -69,37 +71,51 @@ inline OrbitSplitField parse_heuristic_field(std::string const &name,
   throw TerminalException{1};
 }
 
-inline std::string field_to_string(PolytopeField f) {
-  switch (f) {
-  case PolytopeField::groupsize:
-    return "groupsize";
-  case PolytopeField::incidence:
-    return "incidence";
-  case PolytopeField::rank:
-    return "rank";
-  case PolytopeField::delta:
-    return "delta";
-  case PolytopeField::level:
-    return "level";
-  case PolytopeField::time:
-    return "time";
+template <>
+struct std::formatter<PolytopeField> : std::formatter<std::string_view> {
+  static constexpr std::string_view name(PolytopeField f) {
+    switch (f) {
+    case PolytopeField::groupsize:
+      return "groupsize";
+    case PolytopeField::incidence:
+      return "incidence";
+    case PolytopeField::rank:
+      return "rank";
+    case PolytopeField::delta:
+      return "delta";
+    case PolytopeField::level:
+      return "level";
+    case PolytopeField::time:
+      return "time";
+    }
+    return "unknown";
   }
-  return "unknown";
-}
+  template <typename FormatContext>
+  auto format(PolytopeField f, FormatContext &ctx) const {
+    return std::formatter<std::string_view>::format(name(f), ctx);
+  }
+};
 
-inline std::string field_to_string(OrbitSplitField f) {
-  switch (f) {
-  case OrbitSplitField::groupsize_big:
-    return "groupsize_big";
-  case OrbitSplitField::groupsize_sma:
-    return "groupsize_sma";
-  case OrbitSplitField::index:
-    return "index";
-  case OrbitSplitField::n_orbit:
-    return "n_orbit";
+template <>
+struct std::formatter<OrbitSplitField> : std::formatter<std::string_view> {
+  static constexpr std::string_view name(OrbitSplitField f) {
+    switch (f) {
+    case OrbitSplitField::groupsize_big:
+      return "groupsize_big";
+    case OrbitSplitField::groupsize_sma:
+      return "groupsize_sma";
+    case OrbitSplitField::index:
+      return "index";
+    case OrbitSplitField::n_orbit:
+      return "n_orbit";
+    }
+    return "unknown";
   }
-  return "unknown";
-}
+  template <typename FormatContext>
+  auto format(OrbitSplitField f, FormatContext &ctx) const {
+    return std::formatter<std::string_view>::format(name(f), ctx);
+  }
+};
 
 // --- The input structs, one per heuristic input kind ---
 // The group sizes stay full precision, the combinatorial quantities are plain
@@ -136,7 +152,7 @@ template <typename TintGroup> struct PolytopeInputInfo {
   std::map<std::string, TintGroup> named_map() const {
     std::map<std::string, TintGroup> m;
     for (PolytopeField f : polytope_all_fields)
-      m[field_to_string(f)] = get_field(f);
+      m[std::format("{}", f)] = get_field(f);
     return m;
   }
 };
@@ -250,7 +266,7 @@ std::ostream &operator<<(std::ostream &os,
         heu.tests[i];
     os << "   i=" << i << "/" << len;
     for (auto const &eSingCond : eFullCond.conditions)
-      os << " (" << field_to_string(eSingCond.field) << " "
+      os << " (" << std::format("{}", eSingCond.field) << " "
          << static_cast<int>(eSingCond.op) << " " << eSingCond.value << ")";
     os << " => " << eFullCond.result << "\n";
   }

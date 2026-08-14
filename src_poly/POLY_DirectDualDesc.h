@@ -12,9 +12,11 @@
 #include "POLY_DualDesc_normaliz.h"
 #include "SmallPolytopes.h"
 #include <algorithm>
+#include <format>
 #include <optional>
 #include <utility>
 #include <string>
+#include <string_view>
 #include <vector>
 // clang-format on
 
@@ -83,23 +85,30 @@ enum class DualDescProgram {
 
 // The string encoding of the program, used for logging and error messages and
 // for writing the value back into the string-based heuristic machinery.
-inline std::string dual_desc_program_to_string(DualDescProgram prog) {
-  switch (prog) {
-  case DualDescProgram::cdd:
-    return "cdd";
-  case DualDescProgram::small_polytopes:
-    return "small_polytopes";
-  case DualDescProgram::lrs:
-    return "lrs";
-  case DualDescProgram::pd_lrs:
-    return "pd_lrs";
-  case DualDescProgram::beneath_beyond:
-    return "beneath_beyond";
-  case DualDescProgram::normaliz:
-    return "normaliz";
+template <>
+struct std::formatter<DualDescProgram> : std::formatter<std::string_view> {
+  static constexpr std::string_view name(DualDescProgram prog) {
+    switch (prog) {
+    case DualDescProgram::cdd:
+      return "cdd";
+    case DualDescProgram::small_polytopes:
+      return "small_polytopes";
+    case DualDescProgram::lrs:
+      return "lrs";
+    case DualDescProgram::pd_lrs:
+      return "pd_lrs";
+    case DualDescProgram::beneath_beyond:
+      return "beneath_beyond";
+    case DualDescProgram::normaliz:
+      return "normaliz";
+    }
+    return "unknown";
   }
-  return "unknown";
-}
+  template <typename FormatContext>
+  auto format(DualDescProgram prog, FormatContext &ctx) const {
+    return std::formatter<std::string_view>::format(name(prog), ctx);
+  }
+};
 
 // Parses the string form of the program. Returns nullopt if the string is not
 // a known dual description program (e.g. "fullrankfacetset" handled elsewhere).
@@ -171,7 +180,7 @@ DualDescProgram ResolveSupportedProgram(DualDescProgram prog,
   if (is_method_supported<T>(prog))
     return prog;
 #ifdef DEBUG_DUAL_DESC
-  os << "DDD: program " << dual_desc_program_to_string(prog)
+  os << "DDD: program " << std::format("{}", prog)
      << " is not available for the arithmetic, substituting cdd\n";
 #endif
   return DualDescProgram::cdd;
@@ -181,7 +190,7 @@ DualDescProgram ResolveSupportedProgram(DualDescProgram prog,
 terminate_direct_dual_desc(std::string const &context, DualDescProgram prog) {
   std::cerr << "DDD: ERROR in " << context
             << ": no available handler for program "
-            << dual_desc_program_to_string(prog) << "\n";
+            << std::format("{}", prog) << "\n";
   throw TerminalException{1};
 }
 
@@ -191,7 +200,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
                                          std::ostream &os) {
 #ifdef DEBUG_DUAL_DESC
   os << "DDD: DirectFacetComputationIncidence, prog="
-     << dual_desc_program_to_string(prog) << "\n";
+     << std::format("{}", prog) << "\n";
 #endif
   switch (prog) {
   case DualDescProgram::cdd:
@@ -231,7 +240,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
                                                std::ostream &os) {
 #ifdef DEBUG_DUAL_DESC
   os << "DDD: DirectFacetComputationInequalities, prog="
-     << dual_desc_program_to_string(prog) << "\n";
+     << std::format("{}", prog) << "\n";
 #endif
   switch (prog) {
   case DualDescProgram::cdd:
@@ -271,7 +280,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
                                     std::ostream &os) {
 #ifdef DEBUG_DUAL_DESC
   os << "DDD: DirectFacetComputationFaceIneq, prog="
-     << dual_desc_program_to_string(prog) << "\n";
+     << std::format("{}", prog) << "\n";
 #endif
   switch (prog) {
   case DualDescProgram::cdd:
@@ -332,7 +341,7 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 #ifdef KEY_VALUE_DUAL_DESC
   os << "DDD: KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_"
      << EXT.cols() << "_" << GRP.size() << "_"
-     << dual_desc_program_to_string(prog) << "_" << ListIncd.size() << "_"
+     << std::format("{}", prog) << "_" << ListIncd.size() << "_"
      << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
 #endif
   return TheOutput;
@@ -382,7 +391,7 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 #ifdef KEY_VALUE_DUAL_DESC
   os << "DDD: KEY=(DirectFacetIneqOrbitComputation_" << EXT.rows() << "_"
      << EXT.cols() << "_" << GRP.size() << "_"
-     << dual_desc_program_to_string(prog) << "_" << ListReturn.size() << "_"
+     << std::format("{}", prog) << "_" << ListReturn.size() << "_"
      << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
 #endif
   return TheOutput;

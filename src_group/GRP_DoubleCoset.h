@@ -8,8 +8,10 @@
 #include "hopscotch_set.h"
 #include "robin_set.h"
 #include "sparse_set.h"
+#include <format>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -710,31 +712,38 @@ enum class DoubleCosetMethod {
   guess
 };
 
-inline std::string double_coset_method_to_string(DoubleCosetMethod method) {
-  switch (method) {
-  case DoubleCosetMethod::repr:
-    return "repr";
-  case DoubleCosetMethod::canonic:
-    return "canonic";
-  case DoubleCosetMethod::canonic_initial_triv:
-    return "canonic_initial_triv";
-  case DoubleCosetMethod::exhaustive_std:
-    return "exhaustive_std";
-  case DoubleCosetMethod::exhaustive_sparse:
-    return "exhaustive_sparse";
-  case DoubleCosetMethod::exhaustive_robin:
-    return "exhaustive_robin";
-  case DoubleCosetMethod::exhaustive_hopscotch:
-    return "exhaustive_hopscotch";
-  case DoubleCosetMethod::single_cosets:
-    return "single_cosets";
-  case DoubleCosetMethod::canonic_initial_triv_exhaustive_limit:
-    return "canonic_initial_triv_exhaustive_limit";
-  case DoubleCosetMethod::guess:
-    return "guess";
+template <>
+struct std::formatter<DoubleCosetMethod> : std::formatter<std::string_view> {
+  static constexpr std::string_view name(DoubleCosetMethod method) {
+    switch (method) {
+    case DoubleCosetMethod::repr:
+      return "repr";
+    case DoubleCosetMethod::canonic:
+      return "canonic";
+    case DoubleCosetMethod::canonic_initial_triv:
+      return "canonic_initial_triv";
+    case DoubleCosetMethod::exhaustive_std:
+      return "exhaustive_std";
+    case DoubleCosetMethod::exhaustive_sparse:
+      return "exhaustive_sparse";
+    case DoubleCosetMethod::exhaustive_robin:
+      return "exhaustive_robin";
+    case DoubleCosetMethod::exhaustive_hopscotch:
+      return "exhaustive_hopscotch";
+    case DoubleCosetMethod::single_cosets:
+      return "single_cosets";
+    case DoubleCosetMethod::canonic_initial_triv_exhaustive_limit:
+      return "canonic_initial_triv_exhaustive_limit";
+    case DoubleCosetMethod::guess:
+      return "guess";
+    }
+    return "unknown";
   }
-  return "unknown";
-}
+  template <typename FormatContext>
+  auto format(DoubleCosetMethod method, FormatContext &ctx) const {
+    return std::formatter<std::string_view>::format(name(method), ctx);
+  }
+};
 
 // The parsed method plus, for canonic_initial_triv_exhaustive_limit, its numeric
 // threshold. The string is parsed once, at the OrbitSplittingListOrbit_spec
@@ -787,7 +796,7 @@ vectface OrbitSplittingListOrbitKernel_spec(
 #ifdef DEBUG_DOUBLE_COSET
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
      << " |vf|=" << ListFaceOrbitsize.size()
-     << " method=" << double_coset_method_to_string(spec.kind) << "\n";
+     << " method=" << std::format("{}", spec.kind) << "\n";
 #endif
 #ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, ListFaceOrbitsize);
@@ -924,7 +933,7 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
       if (duration > smallest_time) {
 #ifdef DEBUG_DOUBLE_COSET
         os << "duration already larger, no need to continue for method="
-           << double_coset_method_to_string(the_method) << "\n";
+           << std::format("{}", the_method) << "\n";
 #endif
         return true;
       }

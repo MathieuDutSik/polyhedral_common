@@ -5,6 +5,9 @@
 // clang-format off
 #include "GRP_DoubleCoset.h"
 #include "POLY_Fundamental.h"
+#include <format>
+#include <string>
+#include <string_view>
 // clang-format on
 
 
@@ -57,40 +60,54 @@ enum class CanonicStrategy {
 inline constexpr CanonicStrategy CANONIC_STRATEGY__DEFAULT =
     CanonicStrategy::canonical_image;
 
-inline std::string canonic_strategy_to_string(CanonicStrategy strategy) {
-  switch (strategy) {
-  case CanonicStrategy::canonical_image:
-    return "canonical_image";
-  case CanonicStrategy::store:
-    return "store";
-  case CanonicStrategy::initial_triv:
-    return "initial_triv";
-  case CanonicStrategy::initial_triv_limited1:
-    return "initial_triv_limited1";
-  case CanonicStrategy::unset:
-    return "unset";
-  case CanonicStrategy::miss:
-    return "miss";
+template <>
+struct std::formatter<CanonicStrategy> : std::formatter<std::string_view> {
+  static constexpr std::string_view name(CanonicStrategy strategy) {
+    switch (strategy) {
+    case CanonicStrategy::canonical_image:
+      return "canonical_image";
+    case CanonicStrategy::store:
+      return "store";
+    case CanonicStrategy::initial_triv:
+      return "initial_triv";
+    case CanonicStrategy::initial_triv_limited1:
+      return "initial_triv_limited1";
+    case CanonicStrategy::unset:
+      return "unset";
+    case CanonicStrategy::miss:
+      return "miss";
+    }
+    return "unknown";
   }
-  return "unknown";
-}
+  template <typename FormatContext>
+  auto format(CanonicStrategy strategy, FormatContext &ctx) const {
+    return std::formatter<std::string_view>::format(name(strategy), ctx);
+  }
+};
 
 // The action to take on the on-disk orbit database when resuming a run: load it
 // as-is, guess whether the stored canonicalization still matches, or recompute
 // and reshuffle it under the current canonicalization.
 enum class DatabaseAction { simple_load, guess, recompute_and_shuffle };
 
-inline std::string database_action_to_string(DatabaseAction action) {
-  switch (action) {
-  case DatabaseAction::simple_load:
-    return "simple_load";
-  case DatabaseAction::guess:
-    return "guess";
-  case DatabaseAction::recompute_and_shuffle:
-    return "recompute_and_shuffle";
+template <>
+struct std::formatter<DatabaseAction> : std::formatter<std::string_view> {
+  static constexpr std::string_view name(DatabaseAction action) {
+    switch (action) {
+    case DatabaseAction::simple_load:
+      return "simple_load";
+    case DatabaseAction::guess:
+      return "guess";
+    case DatabaseAction::recompute_and_shuffle:
+      return "recompute_and_shuffle";
+    }
+    return "unknown";
   }
-  return "unknown";
-}
+  template <typename FormatContext>
+  auto format(DatabaseAction action, FormatContext &ctx) const {
+    return std::formatter<std::string_view>::format(name(action), ctx);
+  }
+};
 
 template <typename Tgroup_impl> struct TripleStore {
   using Tgroup = Tgroup_impl;
@@ -250,7 +267,7 @@ Face CanonicalImageDualDesc(CanonicStrategy const &method_choice, Tgroup const &
 #endif
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "RDD: CAN_LIM: Beginning of CanonicalImageDualDesc method_choice="
-     << canonic_strategy_to_string(method_choice) << "\n";
+     << std::format("{}", method_choice) << "\n";
   WriteGroup(os, GRP);
   os << "RDD: f=" << StringFace(f) << "\n";
 #endif
@@ -289,7 +306,7 @@ Face CanonicalImageDualDesc(CanonicStrategy const &method_choice, Tgroup const &
     }
   }
   std::cerr << "Error in CanonicalImageDualDesc, no method found\n";
-  std::cerr << "method_choice=" << canonic_strategy_to_string(method_choice)
+  std::cerr << "method_choice=" << std::format("{}", method_choice)
             << "\n";
   throw TerminalException{1};
 }
@@ -391,7 +408,7 @@ Face CanonicalImageGeneralDualDesc(
 #ifdef DEBUG_CANONICAL_LIMITED
   os << "RDD: CAN_LIM: Beginning of CanonicalImageGeneralDualDesc "
         "method_choice="
-     << canonic_strategy_to_string(method_choice) << "\n";
+     << std::format("{}", method_choice) << "\n";
   WriteGroup(os, GRP);
   os << "RDD: CAN_LIM: f=" << StringFace(f) << "\n";
 #endif
@@ -430,7 +447,7 @@ Face CanonicalImageGeneralDualDesc(
     }
   }
   std::cerr << "Error in CanonicalImageOrbitSizeDualDesc, no method found\n";
-  std::cerr << "method_choice=" << canonic_strategy_to_string(method_choice)
+  std::cerr << "method_choice=" << std::format("{}", method_choice)
             << "\n";
   throw TerminalException{1};
 }
