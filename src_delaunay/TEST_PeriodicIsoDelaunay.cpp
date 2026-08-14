@@ -160,6 +160,45 @@ int main() {
         PeriodicPointSetFromRational<Tint>(CosetsC2c);
     run_case(LinSpaA4, pps2c, 2, "A4+{0,2c} dim-2 space", os);
     run_case(LinSpaA4, ppsC2c, 3, "A4+{0,c,2c} dim-2 space", os);
+    //
+    // HE6 = E6 + {0, c6} in the dimension-2 T-space of the first subgroup
+    // of Aut(E6) with a 2-dimensional space of invariant forms (order 18,
+    // index 516 of the 1503 conjugacy classes). The basis of invariant
+    // forms is not integrally saturated as computed, so it is saturated
+    // first, as the Raw T-space input does with IntegralSaturation = T.
+    auto fill = [](MyMatrix<T> &M, std::vector<std::vector<int>> const &v)
+        -> void {
+      for (size_t i = 0; i < v.size(); i++) {
+        for (size_t j = 0; j < v[i].size(); j++) {
+          M(i, j) = v[i][j];
+        }
+      }
+    };
+    MyMatrix<T> E1(6, 6), E2(6, 6), G1(6, 6), G2(6, 6), G3(6, 6);
+    fill(E1, {{4,-1,-1,0,2,0},{-1,4,-2,0,-2,0},{-1,-2,4,-3,1,0},
+              {0,0,-3,6,-3,0},{2,-2,1,-3,4,0},{0,0,0,0,0,0}});
+    fill(E2, {{0,-1,1,0,-2,0},{-1,0,0,0,2,0},{1,0,0,1,-1,-2},
+              {0,0,1,-2,1,0},{-2,2,-1,1,0,0},{0,0,-2,0,0,4}});
+    fill(G1, {{0,1,1,1,0,0},{0,0,1,0,0,1},{0,0,0,1,1,0},
+              {-1,-1,-2,-2,-1,-1},{1,1,1,1,0,1},{0,-1,-1,-1,-1,-1}});
+    fill(G2, {{0,0,0,-1,-1,0},{0,0,0,0,1,0},{1,1,1,1,0,0},
+              {-1,-1,0,0,0,0},{0,1,0,0,0,0},{0,0,0,0,0,1}});
+    fill(G3, {{-1,-2,-2,-1,-1,-1},{0,0,0,0,1,0},{1,1,1,1,0,0},
+              {-1,-1,-2,-2,-1,-1},{0,1,2,2,1,1},{0,0,0,0,0,1}});
+    std::vector<MyMatrix<T>> ListMatE6 =
+        IntegralSaturationSpace<T>({E1, E2}, os);
+    LinSpaceMatrix<T> LinSpaE6 =
+        BuildLinSpaceMatrix<T, Tint, Tgroup>(ListMatE6, os);
+    LinSpaE6.PtStabGens = {G1, G2, G3};
+    MyMatrix<T> CosetsE6(2, 6);
+    std::vector<int> c6num{1, 2, 0, 1, 2, 0};
+    for (int j = 0; j < 6; j++) {
+      CosetsE6(0, j) = 0;
+      CosetsE6(1, j) = T(c6num[j]) / T(3);
+    }
+    PeriodicPointSet<Tint> ppsE6 =
+        PeriodicPointSetFromRational<Tint>(CosetsE6);
+    run_case(LinSpaE6, ppsE6, 3, "HE6 dim-2 space", os);
     std::cerr << "Normal termination of TEST_PeriodicIsoDelaunay\n";
   } catch (TerminalException const &e) {
     std::cerr << "Erroneous termination of TEST_PeriodicIsoDelaunay\n";
