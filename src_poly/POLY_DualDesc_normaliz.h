@@ -1148,17 +1148,39 @@ MyVector<T> NormalizNormalConvert(MyVector<Tw> &&normal) {
   }
 }
 
+// Attempts the kernel on machine integers (TryInt64). On success the
+// buffered facets are replayed to f_facet and true is returned; on
+// overflow nothing has been emitted and false is returned, so the caller
+// falls back to the exact ring without partial results.
+template <typename Tring, typename Ffacet>
+bool NormalizDualDesc_try_int64(MyMatrix<Tring> const &EXTring,
+                                std::ostream &os, Ffacet f_facet) {
+  try {
+    MyMatrix<normaliz_dd::NmzTryInt> EXTtry = ConvertMatrixToTryInt64<normaliz_dd::NmzTryInt>(EXTring);
+    std::vector<std::pair<MyVector<normaliz_dd::NmzTryInt>, Face>> buffer;
+    normaliz_dd::NormalizDualDesc_Kernel_f(
+        EXTtry, os, [&buffer](MyVector<normaliz_dd::NmzTryInt> &&normal, Face &&incd) {
+          buffer.emplace_back(std::move(normal), std::move(incd));
+        });
+    terminate_in_arithmetic_error<normaliz_dd::NmzTryInt>();
+    for (auto &entry : buffer)
+      f_facet(std::move(entry.first), std::move(entry.second));
+    return true;
+  } catch (TryIntException const &) {
+    return false;
+  }
+}
+
 // Runs the kernel and hands every facet to the caller as
 // f_facet(MyVector<Tw>&& normal, Face&& incd), where Tw is the arithmetic
 // the kernel ran on (T itself, its underlying integer ring, or TryInt64):
 // the callers convert the normal with NormalizNormalConvert -- or ignore it,
 // so the incidence-only entry point never converts a normal at all. As in
 // the beneath-and-beyond wrapper the arithmetic is division-free, so for a
-// field input the whole computation runs on the underlying integer ring,
-// attempting machine integers (TryInt64) first and falling back to the
-// exact ring on overflow. The TryInt64 attempt is buffered and replayed to
-// f_facet only after the overflow check has passed, so a fallback never
-// emits partial results.
+// field input the whole computation runs on the underlying integer ring.
+// Both the field case (after scaling to the ring) and the plain ring case
+// attempt machine integers (TryInt64) first and fall back to the exact
+// ring on overflow.
 template <typename T, typename Ffacet>
 void NormalizDualDesc_process(MyMatrix<T> const &EXT, std::ostream &os,
                               Ffacet f_facet) {
@@ -1172,22 +1194,15 @@ void NormalizDualDesc_process(MyMatrix<T> const &EXT, std::ostream &os,
       AssignMatrixRow(EXTring, iRow, UniversalVectorConversion<Tring, T>(eRow));
     }
     if constexpr (use_try_int64<Tring>::value) {
-      try {
-        MyMatrix<normaliz_dd::NmzTryInt> EXTtry = ConvertMatrixToTryInt64<normaliz_dd::NmzTryInt>(EXTring);
-        std::vector<std::pair<MyVector<normaliz_dd::NmzTryInt>, Face>> buffer;
-        normaliz_dd::NormalizDualDesc_Kernel_f(
-            EXTtry, os, [&buffer](MyVector<normaliz_dd::NmzTryInt> &&normal, Face &&incd) {
-              buffer.emplace_back(std::move(normal), std::move(incd));
-            });
-        terminate_in_arithmetic_error<normaliz_dd::NmzTryInt>();
-        for (auto &entry : buffer)
-          f_facet(std::move(entry.first), std::move(entry.second));
+      if (NormalizDualDesc_try_int64(EXTring, os, f_facet))
         return;
-      } catch (TryIntException const &) {
-      }
     }
     normaliz_dd::NormalizDualDesc_Kernel_f(EXTring, os, f_facet);
   } else {
+    if constexpr (use_try_int64<T>::value) {
+      if (NormalizDualDesc_try_int64(EXT, os, f_facet))
+        return;
+    }
     normaliz_dd::NormalizDualDesc_Kernel_f(EXT, os, f_facet);
   }
 }
