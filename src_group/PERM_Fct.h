@@ -155,17 +155,23 @@ inline MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
   owns its copy of EXT, so callers may hand in converted temporaries.
  */
 template <typename T> struct RepresentVertexPermutationPreComput {
-  static_assert(is_ring_field<T>::value,
-                "RepresentVertexPermutationPreComput");
   MyMatrix<T> EXT;
   std::vector<int> ListRowSelect;
-  MyMatrix<T> M1inv;
+  // The basis submatrix M1 is inverted through its adjugate and
+  // determinant, M1^{-1} = M1adj / M1det, so that the precompute also
+  // works over a ring (where M1^{-1} itself is not representable):
+  // represent() divides the product M1adj * M2 entrywise by M1det, which
+  // is exact whenever the permutation is realized by a matrix over T.
+  MyMatrix<T> M1adj;
+  T M1det;
   RepresentVertexPermutationPreComput(MyMatrix<T> EXT_inp)
       : EXT(std::move(EXT_inp)) {
-    SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT);
+    SelectionRowCol<T> eSelect = TMat_SelectRowColRing(EXT);
     ListRowSelect = eSelect.ListRowSelect;
     MyMatrix<T> M1 = SelectRow(EXT, ListRowSelect);
-    M1inv = Inverse(M1);
+    std::pair<MyMatrix<T>, T> pair = AdjugateDeterminant(M1);
+    M1adj = std::move(pair.first);
+    M1det = std::move(pair.second);
   }
   template <typename Telt> MyMatrix<T> represent(Telt const &ePerm) const {
     size_t nbRow_s = ListRowSelect.size();
@@ -174,7 +180,23 @@ template <typename T> struct RepresentVertexPermutationPreComput {
       ListRowSelectImg[iRow] = ePerm.at(ListRowSelect[iRow]);
     }
     MyMatrix<T> M2 = SelectRow(EXT, ListRowSelectImg);
-    MyMatrix<T> RetMat = M1inv * M2;
+    MyMatrix<T> RetMat = M1adj * M2;
+    int n_ret_row = RetMat.rows();
+    int n_ret_col = RetMat.cols();
+    for (int iRow = 0; iRow < n_ret_row; iRow++) {
+      for (int iCol = 0; iCol < n_ret_col; iCol++) {
+        T quot = RetMat(iRow, iCol) / M1det;
+#ifdef SANITY_CHECK_PERM_FCT
+        if (quot * M1det != RetMat(iRow, iCol)) {
+          std::cerr << "PERM: RepresentVertexPermutationPreComput: the "
+                       "represented matrix is not defined over T (the "
+                       "determinant does not divide the product)\n";
+          throw TerminalException{1};
+        }
+#endif
+        RetMat(iRow, iCol) = quot;
+      }
+    }
 #ifdef SANITY_CHECK_PERM_FCT
     int nbRow = EXT.rows();
     int nbCol = EXT.cols();
