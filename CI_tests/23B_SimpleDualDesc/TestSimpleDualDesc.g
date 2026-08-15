@@ -2,18 +2,16 @@ Read("../common.g");
 Read("../access_points.g");
 Print("Beginning TestSimpleDualDesc\n");
 
-l_arith1:=["mpq_class", "cpp_rational", "mpq_rational"];
-l_arith2:=["mpq_class", "cpp_rational", "mpq_rational"];
-l_arith3:=["mpq_class"];
 # The integer ring arithmetic exercises the full ring computation
 # (BB / LRS / DD / pd_lrs work over rings).
 l_arith4:=["mpq_class", "mpz_class"];
 
 
-TestSimpleDD:=function(EXT, command, n_fac)
-    local dim, l_arith, arith, options, choice, FAC, eFAC, ListScal, ListIncd;
+# The list of arithmetics comes from the example file, so each example
+# controls which combinations of method and arithmetic it exercises.
+TestSimpleDD:=function(EXT, command, n_fac, l_arith)
+    local dim, arith, options, choice, FAC, eFAC, ListScal, ListIncd;
     dim:=Length(EXT[1]);
-    l_arith:=l_arith4;
     for arith in l_arith
     do
         options:=rec(print_info:=true, arith:=arith);
@@ -63,7 +61,7 @@ do
     do
         command:=eRec.commands[i_command];
         Print("   i_command=", i_command, " command=", command, "\n");
-        test:=TestSimpleDD(eRec.EXT, command, eRec.n_fac);
+        test:=TestSimpleDD(eRec.EXT, command, eRec.n_fac, eRec.ariths);
         if test=false then
             n_error:=n_error + 1;
         fi;
