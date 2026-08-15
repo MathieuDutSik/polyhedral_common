@@ -1148,26 +1148,49 @@ MyVector<T> NormalizNormalConvert(MyVector<Tw> &&normal) {
   }
 }
 
-// Attempts the kernel on machine integers (TryInt64). On success the
-// buffered facets are replayed to f_facet and true is returned; on
-// overflow nothing has been emitted and false is returned, so the caller
-// falls back to the exact ring without partial results.
+// Runs the kernel on a ring matrix, attempting machine integers
+// (TryInt64) first. The f_facet streaming interface cannot retract an
+// emitted facet, which is in tension with a try-and-fallback scheme: a
+// facet streamed before an overflow would be emitted again by the rerun.
+// This is resolved without buffering by validating before every
+// emission: the deferred overflow flag is checked
+// (terminate_in_arithmetic_error) right before each call to f_facet, so
+// every facet handed out was computed from exact values, and n_emitted
+// counts them. The kernel is deterministic for identical values (the
+// rows are sorted on entry and all branching is on value comparisons),
+// so on overflow the exact-ring rerun produces the same facet sequence
+// and simply skips the first n_emitted entries instead of emitting them
+// twice.
 template <typename Tring, typename Ffacet>
-bool NormalizDualDesc_try_int64(MyMatrix<Tring> const &EXTring,
-                                std::ostream &os, Ffacet f_facet) {
-  try {
-    MyMatrix<normaliz_dd::NmzTryInt> EXTtry = ConvertMatrixToTryInt64<normaliz_dd::NmzTryInt>(EXTring);
-    std::vector<std::pair<MyVector<normaliz_dd::NmzTryInt>, Face>> buffer;
+void NormalizDualDesc_ring(MyMatrix<Tring> const &EXTring, std::ostream &os,
+                           Ffacet f_facet) {
+  if constexpr (use_try_int64<Tring>::value) {
+    size_t n_emitted = 0;
+    try {
+      MyMatrix<normaliz_dd::NmzTryInt> EXTtry =
+          ConvertMatrixToTryInt64<normaliz_dd::NmzTryInt>(EXTring);
+      normaliz_dd::NormalizDualDesc_Kernel_f(
+          EXTtry, os,
+          [&](MyVector<normaliz_dd::NmzTryInt> &&normal, Face &&incd) {
+            terminate_in_arithmetic_error<normaliz_dd::NmzTryInt>();
+            f_facet(std::move(normal), std::move(incd));
+            n_emitted++;
+          });
+      // The tail after the last emission can also overflow: the check
+      // makes the enumeration itself trustworthy, not just the values.
+      terminate_in_arithmetic_error<normaliz_dd::NmzTryInt>();
+      return;
+    } catch (TryIntException const &) {
+    }
+    size_t idx = 0;
     normaliz_dd::NormalizDualDesc_Kernel_f(
-        EXTtry, os, [&buffer](MyVector<normaliz_dd::NmzTryInt> &&normal, Face &&incd) {
-          buffer.emplace_back(std::move(normal), std::move(incd));
+        EXTring, os, [&](MyVector<Tring> &&normal, Face &&incd) {
+          if (idx >= n_emitted)
+            f_facet(std::move(normal), std::move(incd));
+          idx++;
         });
-    terminate_in_arithmetic_error<normaliz_dd::NmzTryInt>();
-    for (auto &entry : buffer)
-      f_facet(std::move(entry.first), std::move(entry.second));
-    return true;
-  } catch (TryIntException const &) {
-    return false;
+  } else {
+    normaliz_dd::NormalizDualDesc_Kernel_f(EXTring, os, f_facet);
   }
 }
 
@@ -1193,17 +1216,9 @@ void NormalizDualDesc_process(MyMatrix<T> const &EXT, std::ostream &os,
       MyVector<T> eRow = NonUniqueScaleToIntegerVector(GetMatrixRow(EXT, iRow));
       AssignMatrixRow(EXTring, iRow, UniversalVectorConversion<Tring, T>(eRow));
     }
-    if constexpr (use_try_int64<Tring>::value) {
-      if (NormalizDualDesc_try_int64(EXTring, os, f_facet))
-        return;
-    }
-    normaliz_dd::NormalizDualDesc_Kernel_f(EXTring, os, f_facet);
+    NormalizDualDesc_ring(EXTring, os, f_facet);
   } else {
-    if constexpr (use_try_int64<T>::value) {
-      if (NormalizDualDesc_try_int64(EXT, os, f_facet))
-        return;
-    }
-    normaliz_dd::NormalizDualDesc_Kernel_f(EXT, os, f_facet);
+    NormalizDualDesc_ring(EXT, os, f_facet);
   }
 }
 
