@@ -3,6 +3,7 @@
 #define SRC_LORENTZIAN_VINBERG_H_
 
 // clang-format off
+#include "Basic_external_program.h"
 #include "Shvec_exact.h"
 #include "Indefinite_LLL.h"
 #include "Namelist.h"
@@ -1572,7 +1573,7 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
   auto f_print = [&](std::ostream &os_out) -> void {
     Print_DataReflectionGroup(data, OutFormat, os_out);
   };
-  print_stderr_stdout_file(FileOut, f_print);
+  FILE_PrintStderrStdoutFile(FileOut, f_print);
 }
 
 // clang-format off
