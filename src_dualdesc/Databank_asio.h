@@ -10,6 +10,15 @@
 #include <vector>
 // clang-format on
 
+// On Windows boost/asio.hpp pulls in windows.h, whose CreateDirectory macro
+// (expanding to CreateDirectoryA) would hijack the CreateDirectory helper of
+// Basic_file.h at every call site parsed after this header.
+#ifdef _WIN32
+#ifdef CreateDirectory
+#undef CreateDirectory
+#endif
+#endif
+
 template <typename T> T read_data(boost::asio::ip::tcp::socket &socket) {
   boost::asio::streambuf buf;
   boost::asio::read_until(socket, buf, "\n");
