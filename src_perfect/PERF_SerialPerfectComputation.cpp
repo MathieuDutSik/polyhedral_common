@@ -16,7 +16,7 @@ FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration(LinSpaceMat
   if (CacheFile == "none") {
     return get_full_complex_enumeration_kernel<T,Tint,Tgroup>(LinSpa, pco, os);
   }
-  if (IsExistingFile(CacheFile)) {
+  if (FILE_IsExistingFile(CacheFile)) {
     FullComplexEnumeration<T, Tint, Tgroup> fce = read_fce_from_file<T,Tint,Tgroup>(CacheFile);
     if (is_correct_fce(fce, LinSpa, pco)) {
       return fce;

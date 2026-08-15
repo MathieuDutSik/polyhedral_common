@@ -469,7 +469,7 @@ public:
     Tint ord2 = eStabB.size();
     std::string eFile = "GrpAndSubA_" + std::to_string(ord1) + "_" +
                         std::to_string(ord2) + "_-_";
-    std::string fFile = FindAvailableFileFromPrefix(eFile);
+    std::string fFile = FILE_FindAvailableFileFromPrefix(eFile);
     std::ofstream os(fFile);
     WriteGroup(os, eStabB);
     WriteGroup(os, GRP);
@@ -517,7 +517,7 @@ public:
     Tint ord2 = eStabB.size();
     std::string eFile = "GrpAndSubB_" + std::to_string(ord1) + "_" +
                         std::to_string(ord2) + "_-_";
-    std::string fFile = FindAvailableFileFromPrefix(eFile);
+    std::string fFile = FILE_FindAvailableFileFromPrefix(eFile);
     std::ofstream os(fFile);
     WriteGroup(os, eStabB);
     WriteGroup(os, GRP);
@@ -1038,7 +1038,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   int n_col = df.FF.EXT_face.cols();
   std::string Prefix = "EXTface_" + std::to_string(n_row)
     + "_" + std::to_string(n_col) + "_";
-  std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+  std::string FileOut = FILE_FindAvailableFileFromPrefix(Prefix);
   WriteMatrixFile(FileOut, df.FF.EXT_face);
 #endif
   SplittingDecision split_decision = splitting_decision_from_string(
@@ -1876,7 +1876,7 @@ void OutputFacets_file(const MyMatrix<T> &EXT, Tgroup const &GRP,
   auto f_print = [&](std::ostream &os_out) -> void {
     OutputFacets_stream(EXT, TheOutput, os_out, OutFormat, os);
   };
-  print_stderr_stdout_file(OutFile, f_print);
+  FILE_PrintStderrStdoutFile(OutFile, f_print);
 }
 
 template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
@@ -1912,7 +1912,7 @@ MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull,
                              [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.get_block("DATA");
   std::string EXTfile = BlockDATA.get_string("EXTfile");
-  IsExistingFileDie(EXTfile);
+  FILE_IsExistingFileDie(EXTfile);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: EXTfile=" << EXTfile << "\n";
 #endif
@@ -1932,7 +1932,7 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull,
                         [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.get_block("DATA");
   std::string GRPfile = BlockDATA.get_string("GRPfile");
-  IsExistingFileDie(GRPfile);
+  FILE_IsExistingFileDie(GRPfile);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: GRPfile=" << GRPfile << "\n";
 #endif

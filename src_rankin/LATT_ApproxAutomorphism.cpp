@@ -52,7 +52,7 @@ void compute_approx_automorphism_kernel(std::string const &eFile,
               << "\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(OutFile, prt);
+  FILE_PrintStderrStdoutFile(OutFile, prt);
 }
 
 void compute_approx_automorphism(std::string const &arithmetic,

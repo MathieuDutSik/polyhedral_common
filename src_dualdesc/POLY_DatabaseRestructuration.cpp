@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
       std::string eDir = DatabaseO;
       if (NprocO > 1)
         update_path_using_nproc_iproc(eDir, NprocO, iProc);
-      CreateDirectory(eDir);
+      FILE_CreateDirectory(eDir);
       std::string eFileFN = eDir + dbnameO + ".nb";
       std::string eFileFB = eDir + dbnameO + ".fb";
       std::string eFileFF = eDir + dbnameO + ".ff";
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
       List_FB[iProc] = new FileBool(eFileFB);
       List_FF[iProc] = new FileFace(eFileFF, delta);
       WriteMatrixFile(OFileEXT, EXT);
-      CopyOperation(eFileMethod, OFileMethod);
+      FILE_CopyOperation(eFileMethod, OFileMethod);
     }
     //
     // Now reading process by process and remapping via hash.

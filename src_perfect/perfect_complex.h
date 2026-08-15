@@ -733,7 +733,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     Tfull_triple pair = get_spanning_list_triple(pctdi.l_perfect, t, os);
     std::vector<MyMatrix<Tint>> l_matr = pair.second;
     std::string Prefix = "FinitenessMatrixGroupTest_" + std::to_string(l_matr.size()) + "_n" + std::to_string(n) + "_";
-    std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+    std::string FileOut = FILE_FindAvailableFileFromPrefix(Prefix);
     bool write_test_case = false;
     if (write_test_case) {
       bool is_finite = test_finiteness_group<T,Tint>(l_matr, os);

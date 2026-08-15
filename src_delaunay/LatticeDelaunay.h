@@ -1108,7 +1108,7 @@ get_delaunay_tessellation_serial(DataLattice<T, Tint, Tgroup> &data,
   if (CacheFile == "none") {
     return compute();
   }
-  if (IsExistingFile(CacheFile)) {
+  if (FILE_IsExistingFile(CacheFile)) {
     return read_delaunay_from_file<T, Tgroup>(CacheFile);
   }
   DelaunayTesselation<T, Tgroup> DT = compute();
@@ -1150,7 +1150,7 @@ get_data_lattice(FullNamelist const &eFull,
   //
   std::string SVRfile = BlockDATA.get_string("SVRfile");
   auto get_SVR = [&]() -> MyMatrix<T> {
-    if (IsExistingFile(SVRfile)) {
+    if (FILE_IsExistingFile(SVRfile)) {
       return ReadMatrixFile<T>(SVRfile);
     }
     int n = GramMat.rows();

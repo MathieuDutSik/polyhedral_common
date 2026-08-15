@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileOut, call_SV);
+    FILE_PrintStderrStdoutFile(FileOut, call_SV);
     std::cerr << "Normal termination of LATT_near\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_near\n";

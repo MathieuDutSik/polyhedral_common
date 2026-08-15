@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(OutFile, f);
+    FILE_PrintStderrStdoutFile(OutFile, f);
     std::cerr << "Normal termination of LATT_ComputeShortestOrbitsBasis\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_ComputeShortestOrbitsBasis\n";

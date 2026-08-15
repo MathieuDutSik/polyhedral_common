@@ -34,7 +34,7 @@ void process_A(FullNamelist const &eFull, int max_s, int n_try,
   int dimEXT = LinSpa.n + 1;
   //
   std::string Prefix = BlockSYSTEM.get_string("Prefix");
-  CreateDirectory(Prefix);
+  FILE_CreateDirectory(Prefix);
   //
   std::string FileDualDesc = BlockDATA.get_string("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =

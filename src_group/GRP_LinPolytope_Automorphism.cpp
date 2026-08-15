@@ -80,7 +80,7 @@ void full_process_B(std::string const &arith, std::string const &eFile,
       get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {
     std::string const &FileAlgebraicField = *opt_realalgebraic;
-    if (!IsExistingFile(FileAlgebraicField)) {
+    if (!FILE_IsExistingFile(FileAlgebraicField)) {
       std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                 << " is missing\n";
       throw TerminalException{1};
@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os_out) {
       full_process_B<Tgroup>(arith, FileEXT, OutFormat, os_out);
     };
-    print_stderr_stdout_file(FileGRP, f);
+    FILE_PrintStderrStdoutFile(FileGRP, f);
     std::cerr << "Normal termination of GRP_LinPolytope_Automorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Automorphism\n";

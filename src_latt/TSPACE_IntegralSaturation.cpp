@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find a matching entry for arith\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(OutFile, f);
+    FILE_PrintStderrStdoutFile(OutFile, f);
     //
     std::cerr << "Normal termination of TSPACE_IntegralSaturation\n";
   } catch (TerminalException const &e) {

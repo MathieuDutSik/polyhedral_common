@@ -396,7 +396,7 @@ void PrintDoubleCosetCasesTestProblem(
   std::string strN = std::to_string(static_cast<int>(BigGRP.n_act()));
   std::string Prefix = "DoubleCoset_n" + strN + "_big" + strSizeBig + "_sma" +
                        strSizeSma + "_vf" + strLen + "_idx";
-  std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+  std::string FileOut = FILE_FindAvailableFileFromPrefix(Prefix);
   std::ofstream os(FileOut);
   WriteGroup(os, BigGRP);
   WriteGroup(os, SmaGRP);
@@ -428,7 +428,7 @@ void PrintAllRawDoubleCosetEntries(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     std::string strSizeU = std::to_string(eStab.size());
     std::string Prefix =
         "RawDoubleCoset_" + strSizeG + "_" + strSizeU + "_" + strSizeV + "_-_";
-    std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+    std::string FileOut = FILE_FindAvailableFileFromPrefix(Prefix);
     std::ofstream os(FileOut);
     WriteGroup(os, BigGRP);
     WriteGroup(os, eStab);

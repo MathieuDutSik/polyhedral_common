@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     //
-    print_stderr_stdout_file(OutFile, f_print);
+    FILE_PrintStderrStdoutFile(OutFile, f_print);
     //
     std::cerr << "Normal completion of the program\n";
   } catch (TerminalException const &e) {

@@ -44,7 +44,7 @@ void process_C(std::string const &FileMatrix, std::string const &OutFormat,
   auto f = [&](std::ostream &os_out) -> void {
     WriteGenerators(l_gen, OutFormat, os_out);
   };
-  print_stderr_stdout_file(FileOut, f);
+  FILE_PrintStderrStdoutFile(FileOut, f);
 }
 
 int main(int argc, char *argv[]) {

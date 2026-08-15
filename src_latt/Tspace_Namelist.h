@@ -89,7 +89,7 @@ FullNamelist NAMELIST_GetOneTSPACE() {
 
 template <typename T>
 LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
-  if (!IsExistingFile(eFile)) {
+  if (!FILE_IsExistingFile(eFile)) {
     std::cerr << "Error in ReadLinSpaceFile\n";
     std::cerr << "eFile=" << eFile << " does not appear to exist\n";
     throw TerminalException{1};

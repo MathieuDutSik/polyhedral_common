@@ -83,7 +83,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream &os) {
   auto f_print = [&](std::ostream &os_out) -> void {
     OutputFaces_stream(TheOutput, os_out, OutFormat);
   };
-  print_stderr_stdout_file(OutFile, f_print);
+  FILE_PrintStderrStdoutFile(OutFile, f_print);
   //
   SingleBlock const &BlockGROUP = eFull.get_block("GROUP");
   bool ComputeAutGroup = BlockGROUP.get_bool("ComputeAutGroup");
@@ -135,7 +135,7 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
       get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {
     std::string const &FileAlgebraicField = *opt_realalgebraic;
-    if (!IsExistingFile(FileAlgebraicField)) {
+    if (!FILE_IsExistingFile(FileAlgebraicField)) {
       std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                 << " is missing\n";
       throw TerminalException{1};

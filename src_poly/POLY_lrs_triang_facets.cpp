@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
       if (opt_realalgebraic) {
         using T_rat = mpq_class;
         std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!IsExistingFile(FileAlgebraicField)) {
+        if (!FILE_IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
           throw TerminalException{1};
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
                    "Qsqrt2, RealAlgebraic\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileO, call_lrs);
+    FILE_PrintStderrStdoutFile(FileO, call_lrs);
     std::cerr << "Normal termination of POLY_lrs_triang_facets\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_lrs_triang_facets\n";

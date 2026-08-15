@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "No matching format in print_mat. Allowed options: GAP, CPP\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileO, print_mat);
+    FILE_PrintStderrStdoutFile(FileO, print_mat);
     std::cerr << "Normal termination of VectFamily_Reduction\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in VectFamily_Reduction\n";

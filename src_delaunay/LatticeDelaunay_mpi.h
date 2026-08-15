@@ -116,7 +116,7 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
   bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
   std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
   if (STORAGE_Saving) {
-    CreateDirectory(STORAGE_Prefix);
+    FILE_CreateDirectory(STORAGE_Prefix);
   }
   //
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
@@ -156,7 +156,7 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
       WriteFamilyDelaunay_Mpi<T, Tint, Tgroup>(comm, GramMat, OutFormat, os_out,
                                                pair.second, os);
     };
-    print_stderr_stdout_file(OutFile, f);
+    FILE_PrintStderrStdoutFile(OutFile, f);
   } else {
     os << "MPI_DEL_ENUM: The enumeration did not finish\n";
   }

@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_CanonicalizeSymplectic: No matching OutFormat\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileO, f);
+    FILE_PrintStderrStdoutFile(FileO, f);
     std::cerr << "Normal termination of LATT_canonicalizeSymplectic\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_canonicalizeSymplectic\n";

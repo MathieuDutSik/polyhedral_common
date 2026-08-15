@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find a matching entry\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileO, print_info);
+    FILE_PrintStderrStdoutFile(FileO, print_info);
     std::cerr << "Normal termination of GRP_LinPolytope_Isomorphism_GramMat\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Isomorphism_GramMat\n";

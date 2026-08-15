@@ -42,7 +42,7 @@ void process(std::string const &MatFile,
     std::cerr << "Allowed choices: GAP, CPP\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(OutFile, f_print);
+  FILE_PrintStderrStdoutFile(OutFile, f_print);
 }
 
 int main(int argc, char *argv[]) {

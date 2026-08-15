@@ -543,7 +543,7 @@ PVoronoi<T, Tint> ReadEntryCPP_PVoronoi(std::istream &is) {
 
 template <typename T, typename Tint>
 PVoronoi<T, Tint> ReadEntryCPP_PVoronoi_File(std::string const& file_name) {
-  if (!IsExistingFile(file_name)) {
+  if (!FILE_IsExistingFile(file_name)) {
     std::cerr << "Error in ReadMatrixFile\n";
     std::cerr << "file_name=" << file_name << " does not appear to exist\n";
     throw TerminalException{1};

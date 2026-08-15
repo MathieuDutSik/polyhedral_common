@@ -47,12 +47,12 @@ int main(int argc, char *argv[]) {
     while (true) {
       std::string eFileLog = PrefixLog + std::to_string(iProc);
       std::cerr << "eFileLog=" << eFileLog << "\n";
-      if (!(IsExistingFile(eFileLog))) {
+      if (!(FILE_IsExistingFile(eFileLog))) {
         break;
       }
       std::cerr << "File exists, processing it\n";
       //
-      std::vector<std::string> ListLines = ReadFullFile(eFileLog);
+      std::vector<std::string> ListLines = FILE_ReadFullFile(eFileLog);
       std::vector<std::string> LStrParse;
       int nbLine = ListLines.size();
       for (int iLine = 0; iLine < nbLine; iLine++) {

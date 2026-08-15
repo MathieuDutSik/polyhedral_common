@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "OutFormat does not match anything\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileO, f);
+    FILE_PrintStderrStdoutFile(FileO, f);
     std::cerr << "Normal termination of LATT_canonicalizeMultiple\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_canonicalizeMultiple\n";

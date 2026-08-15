@@ -26,7 +26,7 @@ void process_B(std::string const &MatFile,
     AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
     DataLattice<T, Tint, Tgroup> eData =
     GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, std::cerr);
-    if (!IsExistingFile(VFile)) {
+    if (!FILE_IsExistingFile(VFile)) {
       return initial_p_polytope<T,Tint>(eData);
     }
     MyVector<T> eV = ReadVectorFile<T>(VFile);
@@ -58,7 +58,7 @@ void process_B(std::string const &MatFile,
     std::cerr << "Allowed choices: GAP, CPP, boost\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(OutFile, f_print);
+  FILE_PrintStderrStdoutFile(OutFile, f_print);
 }
 
 void process_A(std::string const &arithmetic, std::string const &MatFile, std::string const &VFile,

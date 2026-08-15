@@ -43,11 +43,11 @@ int main() {
   using Tint = int64_t;
   std::string eFileI = "ctype_dim6.nc";
   std::string eFileO = "ctype_invariant6.nc";
-  if (!IsExistingFile(eFileI)) {
+  if (!FILE_IsExistingFile(eFileI)) {
     std::cerr << "FileI=" << eFileI << " is missing\n";
     throw TerminalException{1};
   }
-  if (IsExistingFile(eFileO)) {
+  if (FILE_IsExistingFile(eFileO)) {
     std::cerr << "FileO=" << eFileO << " should be missing\n";
     throw TerminalException{1};
   }

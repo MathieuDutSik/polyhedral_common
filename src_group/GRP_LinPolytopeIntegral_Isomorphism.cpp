@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
           << "Failed to find a matching type for arith. Allowed = mpz_class\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileOut, process_B);
+    FILE_PrintStderrStdoutFile(FileOut, process_B);
     std::cerr << "Normal termination of GRP_LinPolytopeIntegral_Isomorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytopeIntegral_Isomorphism\n";

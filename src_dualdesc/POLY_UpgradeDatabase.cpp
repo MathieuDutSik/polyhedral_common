@@ -32,10 +32,10 @@ int main(int argc, char *argv[]) {
     std::string eFileOrbitSize = ThePrefix + ".orbitsize";
     std::string eFileNB = ThePrefix + ".nb";
     std::string eFileFF = ThePrefix + ".ff";
-    IsExistingFileDie(eFileEXT);
-    IsExistingFileDie(eFileGRP);
-    IsExistingFileDie(eFileNB);
-    IsExistingFileDie(eFileFF);
+    FILE_IsExistingFileDie(eFileEXT);
+    FILE_IsExistingFileDie(eFileGRP);
+    FILE_IsExistingFileDie(eFileNB);
+    FILE_IsExistingFileDie(eFileFF);
     //
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFileEXT);
     size_t n_row = EXT.rows();
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
     std::ofstream os_orbitsize(eFileOrbitSize);
     os_orbitsize << ListPossOrbsize;
     //
-    RemoveFileIfExist(eFileFF);
+    FILE_RemoveFileIfExist(eFileFF);
     FileFace ff(eFileFF, delta);
     ff.direct_write(vfo.serial_get_std_vector_uint8_t());
     std::cerr << "Normal termination of POLY_UpgradeDatabase\n";

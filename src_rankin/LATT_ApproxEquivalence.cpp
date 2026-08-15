@@ -51,7 +51,7 @@ void compute_approx_equivalence_kernel(std::string const &eFile1,
               << "\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(OutFile, prt);
+  FILE_PrintStderrStdoutFile(OutFile, prt);
 }
 
 void compute_approx_equivalence(std::string const &arithmetic,

@@ -40,7 +40,7 @@ void process_inner1(std::string const &FileO, std::string const &OutFormat,
     std::cerr << "Failed to find a matching OutFormat=" << OutFormat << "\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(FileO, f_print);
+  FILE_PrintStderrStdoutFile(FileO, f_print);
 }
 
 template <typename Tfield, typename Twork, typename Tinput, typename Tgroup>

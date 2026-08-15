@@ -177,7 +177,7 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
   auto f = [&](std::ostream &os_out) -> void {
     WriteDelaunayTesselation(OutFormat, os_out, GramMat, DT);
   };
-  print_stderr_stdout_file(OutFile, f);
+  FILE_PrintStderrStdoutFile(OutFile, f);
   //
   // Additional computations on the tesselation (the QUERIES block). Each one is
   // skipped when its file entry is "null".

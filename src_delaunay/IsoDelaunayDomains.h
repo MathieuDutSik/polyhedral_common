@@ -3215,7 +3215,7 @@ void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
          << " n_min=" << n_min << " pos=" << pos << "\n";
       Work = result.l_adj[ListIdx[pos]].DT_gram;
       if (curr_count <= max_s) {
-        std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+        std::string FileOut = FILE_FindAvailableFileFromPrefix(Prefix);
         WriteMatrixFile(FileOut, Work.GramMat);
         os << "ISODEL: LookForFullRankRayDomain, wrote candidate Gram matrix "
               "to "

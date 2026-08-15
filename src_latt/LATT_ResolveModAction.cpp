@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     auto f=[&](std::ostream& os_out) -> void {
       return process(arith, list_matrix_file, mod_val_string, OutFormat, os_out);
     };
-    print_stderr_stdout_file(OutFile, f);
+    FILE_PrintStderrStdoutFile(OutFile, f);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Something wrong happened in the computation\n";

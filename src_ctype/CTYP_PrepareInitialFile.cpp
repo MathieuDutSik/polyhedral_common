@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
     // Inserting data if it a text file
     //
     if (posNature == 0) {
-      if (!IsExistingFile(InputFile)) {
+      if (!FILE_IsExistingFile(InputFile)) {
         std::cerr << "The file InputFile=" << InputFile << " is missing\n";
         throw TerminalException{1};
       }
@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
     if (posNature == 1) {
       for (size_t iProcI = 0; iProcI < NprocInput; iProcI++) {
         std::string FileI = PrefixInput + std::to_string(iProcI) + ".nc";
-        if (!IsExistingFile(FileI)) {
+        if (!FILE_IsExistingFile(FileI)) {
           std::cerr << "The file FileI=" << FileI << " is missing\n";
           throw TerminalException{1};
         }

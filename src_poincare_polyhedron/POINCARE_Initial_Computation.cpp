@@ -29,7 +29,7 @@ void Process_rec_option(RecOption const &rec_option, std::ostream &os) {
       get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {
     std::string const &FileAlgebraicField = *opt_realalgebraic;
-    if (!IsExistingFile(FileAlgebraicField)) {
+    if (!FILE_IsExistingFile(FileAlgebraicField)) {
       std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                 << " is missing\n";
       throw TerminalException{1};

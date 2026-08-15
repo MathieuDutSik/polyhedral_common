@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
                    "mpz_class / mpq_rational / cpp_rational / mpz_int / cpp_int\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileOut, f);
+    FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of GRP_MatrixGroupSimplification\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_MatrixGroupSimplification\n";

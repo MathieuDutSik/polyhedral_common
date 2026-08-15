@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
         os_out << ");\n";
       }
     };
-    print_stderr_stdout_file(FileO, f_process);
+    FILE_PrintStderrStdoutFile(FileO, f_process);
     std::cerr << "Normal completion of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in CP_CopositiveListCone\n";

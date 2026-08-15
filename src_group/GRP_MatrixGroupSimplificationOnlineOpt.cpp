@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find a matching arith\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileOut, f);
+    FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr
         << "Normal termination of GRP_MatrixGroupSimplificationOnlineOpt\n";
   } catch (TerminalException const &e) {

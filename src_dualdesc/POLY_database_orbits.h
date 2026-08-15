@@ -55,7 +55,7 @@ public:
 #ifdef TRACK_DATABASE
       os << "Running the save system\n";
 #endif
-      if (!IsExistingFile(eFileMethod)) {
+      if (!FILE_IsExistingFile(eFileMethod)) {
 #ifdef TRACK_DATABASE
         os << "The file does not exists\n";
 #endif
@@ -76,15 +76,15 @@ public:
     }
   }
   void remove_database_files() const {
-    RemoveFileIfExist(eFileNB);
-    RemoveFileIfExist(eFileFB);
-    RemoveFileIfExist(eFileFF);
-    RemoveFileIfExist(eFileEXT);
-    RemoveFileIfExist(eFileGRP);
-    RemoveFileIfExist(eFileMethod);
+    FILE_RemoveFileIfExist(eFileNB);
+    FILE_RemoveFileIfExist(eFileFB);
+    FILE_RemoveFileIfExist(eFileFF);
+    FILE_RemoveFileIfExist(eFileEXT);
+    FILE_RemoveFileIfExist(eFileGRP);
+    FILE_RemoveFileIfExist(eFileMethod);
   }
   bool is_database_present() const {
-    if (IsExistingFile(eFileEXT) == false) {
+    if (FILE_IsExistingFile(eFileEXT) == false) {
       return false;
     }
     // verify that EXT file is same as bb.EXT

@@ -2082,7 +2082,7 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
   os << "EDGE: Beginning of get_initial_vertex\n";
 #endif
   if (OptionInitialVertex == "FileVertexRoots") {
-    if (!IsExistingFile(FileInitialVertex)) {
+    if (!FILE_IsExistingFile(FileInitialVertex)) {
       std::cerr << "EDGE: The file FileInitialVertex=" << FileInitialVertex
                 << " is missing\n";
       throw TerminalException{1};
@@ -2213,7 +2213,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
     auto f_print = [&](std::ostream &os_out) -> void {
       PrintResultEdgewalk(G, re, os_out, OutFormat, ComputeAllSimpleRoots, os);
     };
-    print_stderr_stdout_file(FileOut, f_print);
+    FILE_PrintStderrStdoutFile(FileOut, f_print);
   };
   //
   std::string OptionInitialVertex = BlockPROC.get_string("OptionInitialVertex");
@@ -2280,7 +2280,7 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
       throw TerminalException{1};
     };
     std::string FileOut = BlockPROC.get_string("FileOut");
-    print_stderr_stdout_file(FileOut, print_result_isomorphism);
+    FILE_PrintStderrStdoutFile(FileOut, print_result_isomorphism);
   };
   //
   std::string OptionNorms = "all";

@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileO, print_result);
+    FILE_PrintStderrStdoutFile(FileO, print_result);
     std::cerr << "Normal termination of LATT_IndefiniteReductionPermSign\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_IndefiniteReductionPermSign, runtime=" << time

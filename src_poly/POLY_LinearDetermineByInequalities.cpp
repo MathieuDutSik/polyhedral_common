@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
       if (opt_realalgebraic) {
         using T_rat = mpq_class;
         std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!IsExistingFile(FileAlgebraicField)) {
+        if (!FILE_IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
           throw TerminalException{1};
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileSPA, f);
+    FILE_PrintStderrStdoutFile(FileSPA, f);
     //
     std::cerr << "Normal termination of POLY_LinearDetermineByInequalities\n";
   } catch (TerminalException const &e) {

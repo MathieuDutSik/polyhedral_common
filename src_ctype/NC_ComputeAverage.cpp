@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
     //
     // Now reading the
     //
-    if (!IsExistingFile(FileName)) {
+    if (!FILE_IsExistingFile(FileName)) {
       std::cerr << "FileName=" << FileName << " is missing\n";
       throw TerminalException{1};
     }

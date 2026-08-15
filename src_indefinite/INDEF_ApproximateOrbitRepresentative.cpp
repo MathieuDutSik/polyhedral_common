@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(OutFile, f);
+    FILE_PrintStderrStdoutFile(OutFile, f);
     //
     std::cerr << "Normal termination of INDEF_ApproximateOrbitRepresentative\n";
   } catch (TerminalException const &e) {

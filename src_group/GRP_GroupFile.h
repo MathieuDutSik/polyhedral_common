@@ -3,8 +3,8 @@
 #define SRC_GROUP_GRP_GROUPFILE_H_
 
 // File-system glue for reading and writing groups: the functions that
-// existed in GRP_GroupFct.h but pulled in Basic_file.h (IsExistingFile,
-// FindAvailableFileFromPrefix, print_stderr_stdout_file).  Stream-based
+// existed in GRP_GroupFct.h but pulled in Basic_file.h (FILE_IsExistingFile,
+// FILE_FindAvailableFileFromPrefix, FILE_PrintStderrStdoutFile).  Stream-based
 // counterparts (ReadGroup, WriteGroup, WriteGroupGAP, ...) remain in
 // GRP_GroupFct.h so that translation units that only manipulate groups
 // in memory do not have to drag in the file-system header.
@@ -17,7 +17,7 @@
 // clang-format on
 
 template <typename Tgroup> Tgroup ReadGroupFile(std::string const &file_name) {
-  if (!IsExistingFile(file_name)) {
+  if (!FILE_IsExistingFile(file_name)) {
     std::cerr << "Error in ReadGroupFile\n";
     std::cerr << "file_name=" << file_name << " does not appear to exist\n";
     throw TerminalException{1};
@@ -31,7 +31,7 @@ void PrintRepresentativeAction_OnSets_GRP_f1_f2(Tgroup const &GRP,
                                                 Face const &f1,
                                                 Face const &f2) {
   std::string prefix = "RepresentativeAction_OnSets_GRP_f1_f2_idx";
-  std::string FileOut = FindAvailableFileFromPrefix(prefix);
+  std::string FileOut = FILE_FindAvailableFileFromPrefix(prefix);
   std::ofstream os(FileOut);
   WriteGroup(os, GRP);
   auto f_print = [&](Face const &f) -> void {
@@ -70,7 +70,7 @@ void WriteGroupFormat(std::string const &FileGroup,
         << "Failed to find a matching entry. Allowed types are GAP and CPP\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(FileGroup, f_print);
+  FILE_PrintStderrStdoutFile(FileGroup, f_print);
 }
 
 // clang-format off

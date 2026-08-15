@@ -43,7 +43,7 @@ void process(std::string const& FileFac, std::string const& method, std::string 
     std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(OutFile, f_print);
+  FILE_PrintStderrStdoutFile(OutFile, f_print);
 }
 
 

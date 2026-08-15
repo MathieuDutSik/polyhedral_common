@@ -66,7 +66,7 @@ void process_C(std::string const &FileMatrix1, std::string const &FileMatrix2,
   auto f = [&](std::ostream &os_out) -> void {
     WriteEquivalence(opt, OutFormat, os_out);
   };
-  print_stderr_stdout_file(FileOut, f);
+  FILE_PrintStderrStdoutFile(FileOut, f);
 }
 
 int main(int argc, char *argv[]) {

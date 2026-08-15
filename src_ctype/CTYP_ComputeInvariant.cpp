@@ -43,11 +43,11 @@ int main(int argc, char *argv[]) {
   std::string PrefixO = argv[2];
   std::string eFileI = PrefixI + std::to_string(irank) + ".nc";
   std::string eFileO = PrefixO + std::to_string(irank) + ".nc";
-  if (!IsExistingFile(eFileI)) {
+  if (!FILE_IsExistingFile(eFileI)) {
     std::cerr << "FileI=" << eFileI << " is missing\n";
     throw TerminalException{1};
   }
-  if (IsExistingFile(eFileO)) {
+  if (FILE_IsExistingFile(eFileO)) {
     std::cerr << "FileO=" << eFileO << " should be missing\n";
     throw TerminalException{1};
   }

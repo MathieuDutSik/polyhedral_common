@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(OutFile, prt);
+    FILE_PrintStderrStdoutFile(OutFile, prt);
     std::cerr << "Normal termination of LATT_Isomorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_Isomorphism\n";

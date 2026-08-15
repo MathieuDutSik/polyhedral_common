@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
           get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {
         std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!IsExistingFile(FileAlgebraicField)) {
+        if (!FILE_IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
           throw TerminalException{1};
@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(eFileO, call_lp);
+    FILE_PrintStderrStdoutFile(eFileO, call_lp);
     std::cerr << "Normal termination of POLY_cdd_LinearProgramming\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_cdd_LinearProgramming\n";

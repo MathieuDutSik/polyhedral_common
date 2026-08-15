@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     Tint MaxCoeff = 0;
     while (true) {
       std::string eFile = Prefix + std::to_string(iProc) + ".nc";
-      if (!IsExistingFile(eFile)) {
+      if (!FILE_IsExistingFile(eFile)) {
         std::cerr << "File=" << eFile << " is missing\n";
         throw TerminalException{1};
       }

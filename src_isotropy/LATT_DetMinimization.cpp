@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
                    "rational\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileO, f);
+    FILE_PrintStderrStdoutFile(FileO, f);
     std::cerr << "Normal termination of LATT_DetMinimization\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_DetMinimization\n";

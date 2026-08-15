@@ -9,7 +9,7 @@
 // .heu file (SetHeuristic) or thread the values from blocks BANK/DATA/METHOD
 // into a PolyHeuristicSerial (UpdateHeuristicSerial_eFull). They live in
 // their own header so callers that only need the in-memory heuristic types
-// from POLY_Heuristics.h don't have to drag in IsExistingFileDie / ifstream.
+// from POLY_Heuristics.h don't have to drag in FILE_IsExistingFileDie / ifstream.
 
 // clang-format off
 #include "Basic_file.h"
@@ -29,7 +29,7 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
 #ifdef DEBUG_HEURISTICS
     os << "NamelistEntFile for heuristic=" << NamelistEntFile << "\n";
 #endif
-    IsExistingFileDie(NamelistEntFile);
+    FILE_IsExistingFileDie(NamelistEntFile);
     std::ifstream is(NamelistEntFile);
     try {
       eHeu = ReadHeuristic<TintGroup>(is);
@@ -54,7 +54,7 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
 #ifdef DEBUG_HEURISTICS
     os << "NamelistEntFile for heuristic=" << NamelistEntFile << "\n";
 #endif
-    IsExistingFileDie(NamelistEntFile);
+    FILE_IsExistingFileDie(NamelistEntFile);
     std::ifstream is(NamelistEntFile);
     try {
       eHeu =

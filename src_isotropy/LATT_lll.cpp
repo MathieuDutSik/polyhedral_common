@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
                    "gmp, safe, gmp_boost, multi_boost\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileO, f);
+    FILE_PrintStderrStdoutFile(FileO, f);
     std::cerr << "Normal termination of LATT_lll\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_lll\n";

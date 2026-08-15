@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Allowed choices: CPP, GAP\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(OutFile, f);
+    FILE_PrintStderrStdoutFile(OutFile, f);
     std::cerr << "Normal termination of LATT_ConvertTspace\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_ConvertTspace\n";

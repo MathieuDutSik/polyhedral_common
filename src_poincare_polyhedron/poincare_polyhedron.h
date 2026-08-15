@@ -91,7 +91,7 @@ template <typename T> struct DataPoincare {
 template <typename T>
 DataPoincare<T> ReadDataPoincare(std::string const &FileI,
                                  int const &n_expand) {
-  IsExistingFileDie(FileI);
+  FILE_IsExistingFileDie(FileI);
   std::ifstream is(FileI);
   MyVector<T> x = ReadVector<T>(is);
   int n = x.size();

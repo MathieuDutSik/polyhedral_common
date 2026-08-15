@@ -671,14 +671,14 @@ void Reset_Directories(boost::mpi::communicator &comm,
     if (i_rank < n_proc - 1 ||
         AllArr.bank_parallelization_method != BankParallelizationMethod::bank_mpi) {
       update_path_using_nproc_iproc(str_ref, n_proc, i_rank);
-      CreateDirectory(str_ref);
+      FILE_CreateDirectory(str_ref);
     }
   };
   if (AllArr.BANK_Saving) {
     if (AllArr.bank_parallelization_method == BankParallelizationMethod::serial)
       update_string(AllArr.BANK_Prefix);
     else
-      CreateDirectory(AllArr.BANK_Prefix);
+      FILE_CreateDirectory(AllArr.BANK_Prefix);
   }
   if (AllArr.DD_Saving) {
     update_string(AllArr.DD_Prefix);

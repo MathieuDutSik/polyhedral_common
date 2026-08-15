@@ -17,11 +17,11 @@ int main(int argc, char *argv[]) {
     std::string eFileNC = Prefix + ".nc";
     std::string eFileFB = Prefix + ".fb";
     std::string eFileFF = Prefix + ".ff";
-    if (!IsExistingFile(eFileNC)) {
+    if (!FILE_IsExistingFile(eFileNC)) {
       std::cerr << "The file eFileNC=" << eFileNC << " should be present\n";
       throw TerminalException{1};
     }
-    if (IsExistingFile(eFileFB) || IsExistingFile(eFileFF)) {
+    if (FILE_IsExistingFile(eFileFB) || FILE_IsExistingFile(eFileFF)) {
       std::cerr << "The file eFileFB=" << eFileFB << " should be absent\n";
       std::cerr << "The file eFileFF=" << eFileFF << " should be absent\n";
       throw TerminalException{1};
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
       ListOrb.push_back(eEnt);
     }
     dataFile.close();
-    RemoveFileIfExist(eFileNC);
+    FILE_RemoveFileIfExist(eFileNC);
     //
     std::map<Tidx, int> LFact = GRP.factor_size();
     size_t n_factor = 1;

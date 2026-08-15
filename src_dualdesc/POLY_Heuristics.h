@@ -683,7 +683,7 @@ void SetThompsonSampling(FullNamelist const &eFull,
 #ifdef DEBUG_HEURISTICS
     os << "NamelistEntFile for Thompson sampling=" << NamelistEntFile << "\n";
 #endif
-    IsExistingFileDie(NamelistEntFile);
+    FILE_IsExistingFileDie(NamelistEntFile);
     try {
       FullNamelist eFullN = NAMELIST_ThompsonSamplingRuntime();
       NAMELIST_ReadNamelistFile(NamelistEntFile, eFullN);

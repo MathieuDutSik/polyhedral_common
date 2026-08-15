@@ -127,7 +127,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
   auto f_save = [&](std::vector<MyVector<Tint>> const &TotalList) -> void {
     std::string FileSave =
-        FindAvailableFileFromPrefix("LORENTZ_FindPositiveVectors");
+        FILE_FindAvailableFileFromPrefix("LORENTZ_FindPositiveVectors");
     MyMatrix<Tint> TotalListB = MatrixFromVectorFamily(TotalList);
     std::ofstream osf(FileSave);
     osf << "return rec(LorMat:=" << StringMatrixGAP(LorMat)

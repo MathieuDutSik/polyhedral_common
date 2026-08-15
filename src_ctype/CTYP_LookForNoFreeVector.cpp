@@ -74,7 +74,7 @@ void GetLocalFreenessMinimum(int const &dim, int const &max_s,
                 << " pos=" << pos << "\n";
       TheCtypeArr = ListAdj[ListIdx[pos]];
       if (curr_nb_free <= max_s) {
-        std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+        std::string FileOut = FILE_FindAvailableFileFromPrefix(Prefix);
         WriteMatrixFile(FileOut, TheCtypeArr.eMat);
       }
       if (curr_nb_free == 0) {

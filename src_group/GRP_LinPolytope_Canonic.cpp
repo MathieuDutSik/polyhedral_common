@@ -26,7 +26,7 @@ void process(std::string const& FileExt, std::string const& OutFormat, std::stri
       std::cerr << "GRP_LinPolytope_Canonic: No matching entry for OutFormat=" << OutFormat << "\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(OutFile, f_print);
+    FILE_PrintStderrStdoutFile(OutFile, f_print);
 }
 
 

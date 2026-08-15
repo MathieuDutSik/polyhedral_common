@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os_out) -> void {
       write_result(opt, OutFormat, os_out);
     };
-    print_stderr_stdout_file(FileOut, f);
+    FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of TSPACE_Equivalence\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TSPACE_Equivalence\n";

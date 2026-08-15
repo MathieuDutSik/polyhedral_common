@@ -29,7 +29,7 @@ void PartialEnum_FullRead(std::string const &prefix, std::string const &suffix,
   std::string FileDatabase = prefix + "database" + suffix;
   bool is_database_present = false;
   if (Saving) {
-    is_database_present = IsExistingFile(FileNb);
+    is_database_present = FILE_IsExistingFile(FileNb);
   }
   if (is_database_present) {
     size_t n_orbit = FileNumber_Read(FileNb);

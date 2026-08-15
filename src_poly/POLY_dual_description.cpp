@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
       if (opt_realalgebraic) {
         using T_rat = mpq_class;
         std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!IsExistingFile(FileAlgebraicField)) {
+        if (!FILE_IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
           throw TerminalException{1};
@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(eFileO, dual_desc);
+    FILE_PrintStderrStdoutFile(eFileO, dual_desc);
     std::cerr << "Normal termination of POLY_dual_description\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_dual_description\n";

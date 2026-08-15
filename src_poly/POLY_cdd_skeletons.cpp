@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
       if (opt_realalgebraic) {
         using T_rat = mpq_class;
         std::string const &FileAlgebraicField = *opt_realalgebraic;
-        if (!IsExistingFile(FileAlgebraicField)) {
+        if (!FILE_IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
           throw TerminalException{1};
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(OutFile, f);
+    FILE_PrintStderrStdoutFile(OutFile, f);
     //
     std::cerr << "Normal termination of POLY_cdd_skeletons\n";
   } catch (TerminalException const &e) {

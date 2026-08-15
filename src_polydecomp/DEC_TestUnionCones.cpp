@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
       }
     };
     //
-    print_stderr_stdout_file(FileO, do_print);
+    FILE_PrintStderrStdoutFile(FileO, do_print);
     std::cerr << "Normal termination of DEC_TestUnionCones\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in DEC_TestUnionCones\n";

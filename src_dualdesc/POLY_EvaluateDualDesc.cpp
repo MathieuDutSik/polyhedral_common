@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     vectface vf(n_ext);
     //
     {
-      std::vector<std::string> ListLines = ReadFullFile(FileListOrbit);
+      std::vector<std::string> ListLines = FILE_ReadFullFile(FileListOrbit);
       int n_orbit = ParseScalar<int>(ListLines[0]);
       std::cerr << "n_orbit=" << n_orbit << "\n";
       int pos = 0;

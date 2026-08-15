@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
       if (opt_realalgebraic) {
         using T_rat = mpq_class;
         std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!IsExistingFile(FileAlgebraicField)) {
+        if (!FILE_IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
           throw TerminalException{1};

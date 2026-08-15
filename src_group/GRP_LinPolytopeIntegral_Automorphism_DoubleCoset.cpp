@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "arith=" << arith << " allowed = mpz_class\n";
       throw TerminalException{1};
     };
-    print_stderr_stdout_file(FileOut, process_B);
+    FILE_PrintStderrStdoutFile(FileOut, process_B);
     std::cerr << "Normal termination of "
                  "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset\n";
   } catch (TerminalException const &e) {

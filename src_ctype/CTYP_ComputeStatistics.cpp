@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
   size_t irank = 0;
   while (true) {
     std::string eFile = Prefix + std::to_string(irank) + ".nc";
-    if (!IsExistingFile(eFile)) {
+    if (!FILE_IsExistingFile(eFile)) {
       std::cerr << "eFile=" << eFile << " is missing\n";
       break;
     }

@@ -47,7 +47,7 @@ void test_realizability(std::string const& FileSHV, std::string const& OutFormat
     std::cerr << "Allowed OutFormat are GAP, TXT\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(OutFile, f_out);
+  FILE_PrintStderrStdoutFile(OutFile, f_out);
 }
 
 

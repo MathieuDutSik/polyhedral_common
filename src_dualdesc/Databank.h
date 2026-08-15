@@ -100,7 +100,7 @@ void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> &ListEnt,
     while (true) {
       auto Prefix = SavingPrefix + "DualDesc" + std::to_string(iOrbit);
       std::string eFileBank = Prefix + ".ext";
-      if (!IsExistingFile(eFileBank))
+      if (!FILE_IsExistingFile(eFileBank))
         break;
 #ifdef DEBUG_DATABANK
       os << "Read iOrbit=" << iOrbit << " Prefix=" << Prefix << "\n";

@@ -28,7 +28,7 @@ void process_B(size_t const &n_iter, std::string const &MatFile,
     std::cerr << "Allowed choices: GAP\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(OutFile, f_print);
+  FILE_PrintStderrStdoutFile(OutFile, f_print);
 }
 
 void process_A(std::string const &arithmetic, size_t const &n_iter,

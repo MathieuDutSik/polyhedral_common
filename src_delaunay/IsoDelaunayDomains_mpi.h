@@ -30,7 +30,7 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
   bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
   std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
   if (STORAGE_Saving) {
-    CreateDirectory(STORAGE_Prefix);
+    FILE_CreateDirectory(STORAGE_Prefix);
   }
   //
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
@@ -72,7 +72,7 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
         throw TerminalException{1};
       }
     };
-    print_stderr_stdout_file(OutFile, f_print);
+    FILE_PrintStderrStdoutFile(OutFile, f_print);
   }
 }
 

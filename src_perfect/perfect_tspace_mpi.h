@@ -34,7 +34,7 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
   bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
   std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
   if (STORAGE_Saving) {
-    CreateDirectory(STORAGE_Prefix);
+    FILE_CreateDirectory(STORAGE_Prefix);
   }
   //
   SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
@@ -95,7 +95,7 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
         throw TerminalException{1};
       }
     };
-    print_stderr_stdout_file(OutFile, f_print);
+    FILE_PrintStderrStdoutFile(OutFile, f_print);
   } else {
 #ifdef DEBUG_PERFECT_TSPACE_MPI
     os << "PERFTSPACEMPI: No output being done\n";

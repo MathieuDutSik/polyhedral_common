@@ -54,7 +54,7 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
     std::cerr << "Failed to find a matching entry\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(eFileO, print_result);
+  FILE_PrintStderrStdoutFile(eFileO, print_result);
 }
 
 void process_B(std::string const &eFileI, std::string const &eFileO,
@@ -87,7 +87,7 @@ void process_B(std::string const &eFileI, std::string const &eFileO,
   if (opt_realalgebraic) {
     using T_rat = mpq_class;
     std::string FileAlgebraicField = *opt_realalgebraic;
-    if (!IsExistingFile(FileAlgebraicField)) {
+    if (!FILE_IsExistingFile(FileAlgebraicField)) {
       std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                 << " is missing\n";
       throw TerminalException{1};

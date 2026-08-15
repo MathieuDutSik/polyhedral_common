@@ -46,7 +46,7 @@ void write_matrix_group(std::vector<MyMatrix<T>> const &list_mat,
   int dim = list_mat[0].rows();
   std::string Prefix =
       "MatrixGroup_" + context + "_dim" + std::to_string(dim) + "_idx";
-  std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+  std::string FileOut = FILE_FindAvailableFileFromPrefix(Prefix);
   WriteListMatrixFile(FileOut, list_mat);
 }
 

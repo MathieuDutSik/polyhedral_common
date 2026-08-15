@@ -243,7 +243,7 @@ void process_C(FullNamelist const &eFull) {
     std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
     throw TerminalException{1};
   };
-  print_stderr_stdout_file(OutFile, f);
+  FILE_PrintStderrStdoutFile(OutFile, f);
 }
 
 int main(int argc, char *argv[]) {
