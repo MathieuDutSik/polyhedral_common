@@ -1870,74 +1870,100 @@ std::pair<MyMatrix<T>, int> FirstColumnZeroCond(MyMatrix<T> const &M) {
   return {M, 0};
 }
 
-// Incidence-only dual description. lrs works for both fields and rings; the
-// field-vs-ring choice is made here (not by the callers). When T is a field,
-// the enumeration is run over its underlying ring (integer arithmetic), which
-// is exact and faster; when T is already a ring, lrs runs directly on it.
+// Convert one output coefficient of the kernel arithmetic Tw back to T:
+// the identity, TryInt64 or underlying-ring case.
+template <typename T, typename Tw> inline T lrs_output_convert(Tw const &val) {
+  if constexpr (std::is_same_v<Tw, T>) {
+    return val;
+  } else if constexpr (is_try_int<Tw>::value) {
+    return ConvertFromTryInt64<T>(val);
+  } else {
+    return UniversalScalarConversion<T, Tw>(val);
+  }
+}
+
+// Runs the enumeration on a ring matrix, attempting machine integers
+// (TryInt64) first with the same emission discipline as
+// NormalizDualDesc_ring (POLY_DualDesc_normaliz.h): the deferred overflow
+// flag is checked (terminate_in_arithmetic_error) right before every call
+// to f_facet, so every facet handed out was computed from exact values,
+// and n_emitted counts them. The reverse search is deterministic for
+// identical values, so on overflow the exact-ring rerun emits the same
+// facet sequence and simply skips the first n_emitted entries instead of
+// recomputing and re-emitting them.
+template <typename Tring, typename Ffacet>
+void Kernel_DualDescription_ring(MyMatrix<Tring> const &EXTring,
+                                 Ffacet f_facet) {
+  if constexpr (use_try_int64<Tring>::value) {
+    size_t n_emitted = 0;
+    try {
+      MyMatrix<LrsTryInt> EXTtry = ConvertMatrixToTryInt64<LrsTryInt>(EXTring);
+      auto f_try = [&](lrs_dic<LrsTryInt> *P, lrs_dat<LrsTryInt> *Q,
+                       int const &col, LrsTryInt *out) -> void {
+        terminate_in_arithmetic_error<LrsTryInt>();
+        f_facet(P, Q, col, out);
+        n_emitted++;
+      };
+      Kernel_DualDescription(EXTtry, f_try);
+      // The tail after the last emission can also overflow: the check
+      // makes the enumeration itself trustworthy, not just the values.
+      terminate_in_arithmetic_error<LrsTryInt>();
+      return;
+    } catch (TryIntException const &) {
+    }
+    size_t idx = 0;
+    auto f_skip = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
+                      Tring *out) -> void {
+      if (idx >= n_emitted)
+        f_facet(P, Q, col, out);
+      idx++;
+    };
+    Kernel_DualDescription(EXTring, f_skip);
+  } else {
+    Kernel_DualDescription(EXTring, f_facet);
+  }
+}
+
+// The field-vs-ring dispatch, made here (not by the callers): when T is a
+// field the enumeration runs over its underlying ring (integer
+// arithmetic), which is exact and faster; a ring T runs directly. f_facet
+// is generic over the kernel arithmetic Tw, called as
+// f_facet(lrs_dic<Tw>*, lrs_dat<Tw>*, col, Tw *out) with Tw one of
+// LrsTryInt, the underlying ring, or T itself.
+template <typename T, typename Ffacet>
+void Kernel_DualDescription_process(MyMatrix<T> const &EXTwork,
+                                    Ffacet f_facet) {
+  if constexpr (is_ring_field<T>::value) {
+    using Tring = typename underlying_ring<T>::ring_type;
+    int nbRow = EXTwork.rows();
+    int nbCol = EXTwork.cols();
+    MyMatrix<Tring> EXTring(nbRow, nbCol);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      MyVector<T> eRow =
+          NonUniqueScaleToIntegerVector(GetMatrixRow(EXTwork, iRow));
+      AssignMatrixRow(EXTring, iRow, UniversalVectorConversion<Tring, T>(eRow));
+    }
+    Kernel_DualDescription_ring(EXTring, f_facet);
+  } else {
+    Kernel_DualDescription_ring(EXTwork, f_facet);
+  }
+}
+
+// The three public entry points shape the same facet stream into their
+// results: incidence only, inequalities only, or both. The incidence-only
+// form never converts an output coefficient and the inequality-only form
+// never fills a Face.
 template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
   size_t nbRow = EXTwork.rows();
   vectface ListIncd(nbRow);
   Face face(nbRow);
-  if constexpr (is_ring_field<T>::value) {
-    using Tring = typename underlying_ring<T>::ring_type;
-    size_t nbCol = EXTwork.cols();
-    MyMatrix<Tring> EXTring(nbRow, nbCol);
-    for (size_t iRow = 0; iRow < nbRow; iRow++) {
-      MyVector<T> eRow1 = GetMatrixRow(EXTwork, iRow);
-      MyVector<T> eRow2 = NonUniqueScaleToIntegerVector(eRow1);
-      MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
-      AssignMatrixRow(EXTring, iRow, eRow3);
-    }
-    // Attempt over TryInt64 first: machine-integer pivoting with the deferred
-    // overflow checks in pivot(). On overflow the partial output is discarded
-    // and the enumeration reruns over the exact ring.
-    if constexpr (use_try_int64<Tring>::value) {
-      try {
-        MyMatrix<LrsTryInt> EXTtry = ConvertMatrixToTryInt64<LrsTryInt>(EXTring);
-        auto f_facet_try = [&](lrs_dic<LrsTryInt> *P, lrs_dat<LrsTryInt> *Q,
-                               int const &col,
-                               [[maybe_unused]] LrsTryInt *out) -> void {
-          set_face(P, Q, col, face);
-          ListIncd.push_back(face);
-        };
-        Kernel_DualDescription(EXTtry, f_facet_try);
-        terminate_in_arithmetic_error<LrsTryInt>();
-        return ListIncd;
-      } catch (TryIntException const &) {
-        ListIncd = vectface(nbRow);
-      }
-    }
-    auto f_facet = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
-                       [[maybe_unused]] Tring *out) -> void {
-      set_face(P, Q, col, face);
-      ListIncd.push_back(face);
-    };
-    Kernel_DualDescription(EXTring, f_facet);
-  } else {
-    if constexpr (use_try_int64<T>::value) {
-      try {
-        MyMatrix<LrsTryInt> EXTtry = ConvertMatrixToTryInt64<LrsTryInt>(EXTwork);
-        auto f_facet_try = [&](lrs_dic<LrsTryInt> *P, lrs_dat<LrsTryInt> *Q,
-                               int const &col,
-                               [[maybe_unused]] LrsTryInt *out) -> void {
-          set_face(P, Q, col, face);
-          ListIncd.push_back(face);
-        };
-        Kernel_DualDescription(EXTtry, f_facet_try);
-        terminate_in_arithmetic_error<LrsTryInt>();
-        return ListIncd;
-      } catch (TryIntException const &) {
-        ListIncd = vectface(nbRow);
-      }
-    }
-    auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
-                       [[maybe_unused]] T *out) -> void {
-      set_face(P, Q, col, face);
-      ListIncd.push_back(face);
-    };
-    Kernel_DualDescription(EXTwork, f_facet);
-  }
+  auto f_facet = [&](auto *P, auto *Q, int const &col,
+                     [[maybe_unused]] auto *out) -> void {
+    set_face(P, Q, col, face);
+    ListIncd.push_back(face);
+  };
+  Kernel_DualDescription_process(EXTwork, f_facet);
   return ListIncd;
 }
 
@@ -1945,114 +1971,35 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   std::pair<MyMatrix<T>, int> pair = FirstColumnZeroCond(EXT);
   MyMatrix<T> const &EXTwork = pair.first;
   int shift = pair.second;
-  int nbCol = EXTwork.cols();
-  int nbRow = EXTwork.rows();
-  int nbColRed = nbCol - shift;
+  int nbColRed = EXTwork.cols() - shift;
   std::vector<MyVector<T>> ListVect;
   MyVector<T> V(nbColRed);
-  if constexpr (is_ring_field<T>::value) {
-    using Tring = typename underlying_ring<T>::ring_type;
-    MyMatrix<Tring> EXTring(nbRow, nbCol);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      MyVector<T> eRow1 = GetMatrixRow(EXTwork, iRow);
-      MyVector<T> eRow2 = NonUniqueScaleToIntegerVector(eRow1);
-      MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
-      AssignMatrixRow(EXTring, iRow, eRow3);
-    }
-    // Attempt over TryInt64 first, as in DualDescription_incd.
-    if constexpr (use_try_int64<Tring>::value) {
-      try {
-        MyMatrix<LrsTryInt> EXTtry = ConvertMatrixToTryInt64<LrsTryInt>(EXTring);
-        auto f_facet_try = [&]([[maybe_unused]] lrs_dic<LrsTryInt> *P,
-                               [[maybe_unused]] lrs_dat<LrsTryInt> *Q,
-                               [[maybe_unused]] int const &col,
-                               LrsTryInt *out) -> void {
-          for (int i = 0; i < nbColRed; i++)
-            V(i) = ConvertFromTryInt64<T>(out[i + shift]);
-          ListVect.push_back(V);
-        };
-        Kernel_DualDescription(EXTtry, f_facet_try);
-        terminate_in_arithmetic_error<LrsTryInt>();
-        return MatrixFromVectorFamily(ListVect);
-      } catch (TryIntException const &) {
-        ListVect.clear();
-      }
-    }
-    auto f_facet = [&]([[maybe_unused]] lrs_dic<Tring> *P,
-                       [[maybe_unused]] lrs_dat<Tring> *Q,
-                       [[maybe_unused]] int const &col, Tring *out) -> void {
-      for (int i = 0; i < nbColRed; i++)
-        V(i) = UniversalScalarConversion<T,Tring>(out[i + shift]);
-      ListVect.push_back(V);
-    };
-    Kernel_DualDescription(EXTring, f_facet);
-  } else {
-    if constexpr (use_try_int64<T>::value) {
-      try {
-        MyMatrix<LrsTryInt> EXTtry = ConvertMatrixToTryInt64<LrsTryInt>(EXTwork);
-        auto f_facet_try = [&]([[maybe_unused]] lrs_dic<LrsTryInt> *P,
-                               [[maybe_unused]] lrs_dat<LrsTryInt> *Q,
-                               [[maybe_unused]] int const &col,
-                               LrsTryInt *out) -> void {
-          for (int i = 0; i < nbColRed; i++)
-            V(i) = ConvertFromTryInt64<T>(out[i + shift]);
-          ListVect.push_back(V);
-        };
-        Kernel_DualDescription(EXTtry, f_facet_try);
-        terminate_in_arithmetic_error<LrsTryInt>();
-        return MatrixFromVectorFamily(ListVect);
-      } catch (TryIntException const &) {
-        ListVect.clear();
-      }
-    }
-    auto f_facet = [&]([[maybe_unused]] lrs_dic<T> *P,
-                       [[maybe_unused]] lrs_dat<T> *Q,
-                       [[maybe_unused]] int const &col, T *out) -> void {
-      for (int i = 0; i < nbColRed; i++)
-        V(i) = out[i + shift];
-      ListVect.push_back(V);
-    };
-    Kernel_DualDescription(EXTwork, f_facet);
-  }
+  auto f_facet = [&]([[maybe_unused]] auto *P, [[maybe_unused]] auto *Q,
+                     [[maybe_unused]] int const &col, auto *out) -> void {
+    for (int i = 0; i < nbColRed; i++)
+      V(i) = lrs_output_convert<T>(out[i + shift]);
+    ListVect.push_back(V);
+  };
+  Kernel_DualDescription_process(EXTwork, f_facet);
   return MatrixFromVectorFamily(ListVect);
 }
 
+// The pair handed to f_process is reused across facets.
 template <typename T, typename Fprocess>
 void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
   std::pair<MyMatrix<T>, int> ePair = FirstColumnZeroCond(EXT);
   MyMatrix<T> const &EXTwork = ePair.first;
   int shift = ePair.second;
-  int nbCol = EXTwork.cols();
   int nbRow = EXTwork.rows();
-  int nbColRed = nbCol - shift;
+  int nbColRed = EXTwork.cols() - shift;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
-  if constexpr (is_ring_field<T>::value) {
-    using Tring = typename underlying_ring<T>::ring_type;
-    MyMatrix<Tring> EXTring(nbRow, nbCol);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      MyVector<T> eRow1 = GetMatrixRow(EXTwork, iRow);
-      MyVector<T> eRow2 = NonUniqueScaleToIntegerVector(eRow1);
-      MyVector<Tring> eRow3 = UniversalVectorConversion<Tring, T>(eRow2);
-      AssignMatrixRow(EXTring, iRow, eRow3);
-    }
-    auto f_facet = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
-                       Tring *out) -> void {
-      for (int i = 0; i < nbColRed; i++)
-        pair.second(i) = UniversalScalarConversion<T,Tring>(out[i + shift]);
-      set_face(P, Q, col, pair.first);
-      f_process(pair);
-    };
-    Kernel_DualDescription(EXTring, f_facet);
-  } else {
-    auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
-                       T *out) -> void {
-      for (int i = 0; i < nbColRed; i++)
-        pair.second(i) = out[i + shift];
-      set_face(P, Q, col, pair.first);
-      f_process(pair);
-    };
-    Kernel_DualDescription(EXTwork, f_facet);
-  }
+  auto f_facet = [&](auto *P, auto *Q, int const &col, auto *out) -> void {
+    for (int i = 0; i < nbColRed; i++)
+      pair.second(i) = lrs_output_convert<T>(out[i + shift]);
+    set_face(P, Q, col, pair.first);
+    f_process(pair);
+  };
+  Kernel_DualDescription_process(EXTwork, f_facet);
 }
 
 template <typename T>
