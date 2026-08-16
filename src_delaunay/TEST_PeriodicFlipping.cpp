@@ -40,10 +40,10 @@ void check(bool test, std::string const &context) {
   iso-Delaunay machinery consumes. The short vectors of the two forms used
   below are the four unit vectors, which is why they are hardcoded here.
  */
-DelaunayTesselationIneq<T, Tgroup>
+DelaunayTesselationIneq<Tring, Tgroup>
 GetTesselation(MyMatrix<T> const &GramMat, PeriodicPointSet<Tring> const &pps,
-               std::vector<std::vector<T>> const &ListGram, size_t &n_orbit,
-               std::ostream &os) {
+               std::vector<std::vector<Tring>> const &ListGramRing,
+               size_t &n_orbit, std::ostream &os) {
   int n = GramMat.rows();
   MyMatrix<T> SHV(4, n);
   SHV(0, 0) = 1;  SHV(0, 1) = 0;
@@ -63,8 +63,7 @@ GetTesselation(MyMatrix<T> const &GramMat, PeriodicPointSet<Tring> const &pps,
   auto opt = EnumerateAndStore_Serial(data_func, f_incorrect, 0);
   check(opt.has_value(), "the enumeration terminated");
   n_orbit = opt->size();
-  return BuildPeriodicDelaunayTesselationIneq<T, Tring, Tgroup>(*opt, pps,
-                                                                ListGram, os);
+  return BuildPeriodicDelaunayTesselationIneq(*opt, pps, ListGramRing, os);
 }
 
 int main() {
@@ -93,6 +92,7 @@ int main() {
       }
     }
     int dimSpace = ListMat.size();
+    std::vector<std::vector<Tring>> ListGramRing = GetListGramRing(ListGram);
     auto get_matrix = [&](MyVector<T> const &V) -> MyMatrix<T> {
       MyMatrix<T> eMat = ZeroMatrix<T>(n, n);
       for (int u = 0; u < dimSpace; u++) {
@@ -107,16 +107,16 @@ int main() {
     Gvec(2) = 1;
     MyMatrix<T> GramMat = get_matrix(Gvec);
     size_t n_orbit = 0;
-    DelaunayTesselationIneq<T, Tgroup> DTI =
-        GetTesselation(GramMat, pps, ListGram, n_orbit, os);
+    DelaunayTesselationIneq<Tring, Tgroup> DTI =
+        GetTesselation(GramMat, pps, ListGramRing, n_orbit, os);
     std::cerr << "|orbits|=" << n_orbit << "\n";
     check(IsPeriodicDelaunayTesselation<T, Tring, Tgroup>(DTI, GramMat, pps, os),
           "the tessellation of the form is its Delaunay tessellation");
     // The defining inequalities of the iso-Delaunay domain, whose
     // irredundant ones are the walls.
-    std::vector<FullAdjInfo<T>> ListIneq =
-        ComputeListIneqFromTesselationIneq<T, Tgroup>(DTI);
-    MyMatrix<T> FAC = GetFACineq(ListIneq);
+    std::vector<FullAdjInfo<Tring>> ListIneq =
+        ComputeListIneqFromTesselationIneq(DTI);
+    MyMatrix<T> FAC = UniversalMatrixConversion<T, Tring>(GetFACineq(ListIneq));
     std::vector<int> ListIrred = get_non_redundant_indices(FAC, os);
     MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
     std::cerr << "|FAC|=" << FAC.rows() << " |FACred|=" << FACred.rows()
@@ -130,7 +130,6 @@ int main() {
     }
     PolyHeuristicSerial<Tint_grp> AllArr =
         AllStandardHeuristicSerial<T, Tint_grp>(n + 1, os);
-    RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
     size_t n_flip = 0;
     for (int i_irred = 0; i_irred < FACred.rows(); i_irred++) {
       // A point of the relative interior of the wall, then a form beyond
@@ -147,9 +146,11 @@ int main() {
         std::cerr << "   wall " << i_irred << ": not flippable\n";
         continue;
       }
-      FullAdjInfo<T> const &eRecIneq = ListIneq[ListIrred[i_irred]];
-      DelaunayTesselationIneq<T, Tgroup> DTIadj = FlippingLtype<T, Tgroup>(
-          DTI, GramMat, eRecIneq.ListAdjInfo, ListGram, rddo);
+      FullAdjInfo<Tring> const &eRecIneq = ListIneq[ListIrred[i_irred]];
+      MyMatrix<Tring> InteriorRing =
+          RemoveFractionMatrixPlusCoeffRing(GramMat).TheMat;
+      DelaunayTesselationIneq<Tring, Tgroup> DTIadj = FlippingLtype(
+          DTI, InteriorRing, eRecIneq.ListAdjInfo, ListGramRing, AllArr, os);
       // The flipped tessellation is the Delaunay tessellation of the point
       // set beyond the wall, and the original one is not: the flip really
       // crossed the wall.
@@ -158,8 +159,8 @@ int main() {
       check(!IsPeriodicDelaunayTesselation<T, Tring, Tgroup>(DTI, BeyondMat, pps, os),
             "the tessellation before the flip is not the one beyond the wall");
       size_t n_orbit_dir = 0;
-      DelaunayTesselationIneq<T, Tgroup> DTIdir =
-          GetTesselation(BeyondMat, pps, ListGram, n_orbit_dir, os);
+      DelaunayTesselationIneq<Tring, Tgroup> DTIdir =
+          GetTesselation(BeyondMat, pps, ListGramRing, n_orbit_dir, os);
       std::cerr << "   wall " << i_irred << ": |flipped|=" << DTIadj.l_dels.size()
                 << " |direct|=" << n_orbit_dir << "\n";
       check(DTIadj.l_dels.size() == n_orbit_dir,
@@ -187,19 +188,19 @@ int main() {
     // computes the walls of the domain it lands in and crosses one of
     // those, checking at every step that the tessellation is the Delaunay
     // tessellation of the point set for the form reached.
-    DelaunayTesselationIneq<T, Tgroup> DTIcur = DTI;
+    DelaunayTesselationIneq<Tring, Tgroup> DTIcur = DTI;
     MyVector<T> Gcur = Gvec;
     size_t n_step = 0;
     for (int i_step = 0; i_step < 6; i_step++) {
       MyMatrix<T> GcurMat = get_matrix(Gcur);
-      std::vector<FullAdjInfo<T>> ListIneqCur =
-          ComputeListIneqFromTesselationIneq<T, Tgroup>(DTIcur);
-      MyMatrix<T> FACcur = GetFACineq(ListIneqCur);
+      std::vector<FullAdjInfo<Tring>> ListIneqCur =
+          ComputeListIneqFromTesselationIneq(DTIcur);
+      MyMatrix<T> FACcur = UniversalMatrixConversion<T, Tring>(GetFACineq(ListIneqCur));
       std::vector<int> IrredCur = get_non_redundant_indices(FACcur, os);
       MyMatrix<T> FACredCur = SelectRow(FACcur, IrredCur);
       // The walls are taken in turn, so that the walk does not bounce
       // between the same two domains.
-      std::optional<std::pair<MyVector<T>, FullAdjInfo<T>>> opt_wall;
+      std::optional<std::pair<MyVector<T>, FullAdjInfo<Tring>>> opt_wall;
       int n_wall = FACredCur.rows();
       for (int u = 0; u < n_wall; u++) {
         int i_wall = (i_step + u) % n_wall;
@@ -207,7 +208,7 @@ int main() {
         MyVector<T> Beyond = WallPt + (WallPt - Gcur) / T(100);
         if (IsPositiveDefinite(get_matrix(WallPt), os) &&
             IsPositiveDefinite(get_matrix(Beyond), os)) {
-          opt_wall = std::pair<MyVector<T>, FullAdjInfo<T>>{
+          opt_wall = std::pair<MyVector<T>, FullAdjInfo<Tring>>{
               Beyond, ListIneqCur[IrredCur[i_wall]]};
           break;
         }
@@ -219,12 +220,15 @@ int main() {
       }
       MyVector<T> const &Beyond = opt_wall->first;
       MyMatrix<T> BeyondMat = get_matrix(Beyond);
-      DelaunayTesselationIneq<T, Tgroup> DTInew = FlippingLtype<T, Tgroup>(
-          DTIcur, GcurMat, opt_wall->second.ListAdjInfo, ListGram, rddo);
+      MyMatrix<Tring> InteriorRingCur =
+          RemoveFractionMatrixPlusCoeffRing(GcurMat).TheMat;
+      DelaunayTesselationIneq<Tring, Tgroup> DTInew =
+          FlippingLtype(DTIcur, InteriorRingCur, opt_wall->second.ListAdjInfo,
+                        ListGramRing, AllArr, os);
       check(IsPeriodicDelaunayTesselation<T, Tring, Tgroup>(DTInew, BeyondMat, pps, os),
             "the tessellation reached by the walk is a Delaunay tessellation");
       size_t n_orbit_dir = 0;
-      GetTesselation(BeyondMat, pps, ListGram, n_orbit_dir, os);
+      GetTesselation(BeyondMat, pps, ListGramRing, n_orbit_dir, os);
       check(DTInew.l_dels.size() == n_orbit_dir,
             "the walk agrees with the direct enumeration");
       std::cerr << "   step " << i_step << ": |walls|=" << n_wall

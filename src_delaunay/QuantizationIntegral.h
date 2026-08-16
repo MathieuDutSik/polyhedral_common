@@ -1194,13 +1194,15 @@ ConvertTesselationScalar(DelaunayTesselation<Tin, Tgroup> const &DT) {
 // whole integral over jet<T, N> and return the second-moment matrix as jets.
 template <typename T, int N, typename Tint, typename Tgroup>
 MyMatrix<jet<T, N>>
-QuantizationSecMomentMatJet(DelaunayTesselation<T, Tgroup> const &DT_base,
+QuantizationSecMomentMatJet(DelaunayTesselation<Tint, Tgroup> const &DT_base,
                             MyMatrix<T> const &SHV_base,
                             MyMatrix<jet<T, N>> const &GramMat_jet, int n,
                             T const &t0, std::ostream &os) {
   using Tj = jet<T, N>;
+  DelaunayTesselation<T, Tgroup> DT_T =
+      ConvertTesselationScalar<T, Tint, Tgroup>(DT_base);
   DelaunayTesselation<Tj, Tgroup> DT_jet =
-      ConvertTesselationScalar<Tj, T, Tgroup>(DT_base);
+      ConvertTesselationScalar<Tj, T, Tgroup>(DT_T);
   MyMatrix<Tj> SHV_jet = UniversalMatrixConversion<Tj, T>(SHV_base);
   // t0: the interior point of the iso-Delaunay segment at which the leaf
   // triangulation is evaluated (see direct_integral). Tscal of jet<T,N> is T.

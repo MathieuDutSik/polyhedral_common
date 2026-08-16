@@ -304,7 +304,7 @@ template <typename T, typename Tint, typename Tgroup>
 FullLtypeComplexEnumeration<T>
 get_full_ltype_complex_enumeration_from_ltot(
     std::vector<DatabaseEntry_Serial<IsoDelaunayDomain_Obj<T, Tint, Tgroup>,
-                                     IsoDelaunayDomain_AdjO<T, Tint>>> const
+                                     IsoDelaunayDomain_AdjO<Tint>>> const
         &l_tot,
     LinSpaceMatrix<T> const &LinSpa, LtypeComplexOptions const &opts,
     std::ostream &os) {
@@ -330,15 +330,16 @@ get_full_ltype_complex_enumeration_from_ltot(
   };
   for (size_t i_top = 0; i_top < l_tot.size(); i_top++) {
     auto const &eCell = l_tot[i_top];
-    std::vector<FullAdjInfo<T>> ListIneq_all =
-        ComputeListIneqFromTesselationIneq<T, Tgroup>(eCell.x.DT_gram.DT);
-    MyMatrix<T> FAC_full = GetFACineq(ListIneq_all);
+    std::vector<FullAdjInfo<Tint>> ListIneq_all =
+        ComputeListIneqFromTesselationIneq(eCell.x.DT_gram.DT);
+    MyMatrix<T> FAC_full =
+        UniversalMatrixConversion<T, Tint>(GetFACineq(ListIneq_all));
     MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC_full);
     std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
     int nbIrred = ListIrred.size();
     MyMatrix<T> FAC(nbIrred, dimSpace);
     for (int i = 0; i < nbIrred; i++) {
-      AssignMatrixRow(FAC, i, ListIneq_all[ListIrred[i]].eIneq);
+      AssignMatrixRow(FAC, i, GetMatrixRow(FAC_full, ListIrred[i]));
     }
     MyMatrix<T> EXT_top = DirectDualDescription_mat(FAC, os);
     bool added = try_add(EXT_top);

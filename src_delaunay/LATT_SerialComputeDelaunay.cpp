@@ -166,9 +166,13 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
   //
   std::string CacheFile = BlockDATA.get_string("CacheFile");
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
-  DelaunayTesselation<T, Tgroup> DT =
+  DelaunayTesselation<Tint, Tgroup> DT =
       get_delaunay_tessellation_serial<T, Tint, Tgroup>(
           data, CacheFile, max_runtime_second, os);
+  // Field-type view of the tessellation for the queries doing rational
+  // geometry on it (quantization, isotropy, free vectors, rigidity).
+  DelaunayTesselation<T, Tgroup> DT_T =
+      ConvertTesselationScalar<T, Tint, Tgroup>(DT);
   //
   // Write the tesselation in the requested format.
   //
@@ -185,7 +189,7 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
   std::string FileQuantization = BlockQUERIES.get_string("FileQuantization");
   if (FileQuantization != "null") {
     QuantizationResult<T> qres =
-        ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT, os);
+        ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT_T, os);
     std::ofstream os_out(FileQuantization);
     os_out << "return ";
     WriteQuantizationGAP(os_out, qres);
@@ -197,21 +201,21 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
   std::string FileIsotropy = BlockQUERIES.get_string("FileIsotropy");
   if (FileIsotropy != "null") {
     IsotropyResult<T> ires =
-        ComputeIsotropy<T, Tint, Tgroup>(data, DT, GramMat, os);
+        ComputeIsotropy<T, Tint, Tgroup>(data, DT_T, GramMat, os);
     std::ofstream os_out(FileIsotropy);
     WriteIsotropyGAP(os_out, ires);
   }
   std::string FileFreeVectors = BlockQUERIES.get_string("FileFreeVectors");
   if (FileFreeVectors != "null") {
     FreeVectorsResult<Tint> fres =
-        compute_free_vectors<T, Tint, Tgroup>(GramMat, DT, os);
+        compute_free_vectors<T, Tint, Tgroup>(GramMat, DT_T, os);
     std::ofstream os_out(FileFreeVectors);
     WriteFreeVectorsGAP(os_out, fres);
   }
   std::string FileRigidityDegree = BlockQUERIES.get_string("FileRigidityDegree");
   if (FileRigidityDegree != "null") {
     int rigidity =
-        ComputeRigidityDegreeLattice<T, Tint, Tgroup>(GramMat, DT, os);
+        ComputeRigidityDegreeLattice<T, Tint, Tgroup>(GramMat, DT_T, os);
     std::ofstream os_out(FileRigidityDegree);
     os_out << "return " << rigidity << ";\n";
   }
@@ -227,7 +231,7 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     int n = GramMat.rows();
     int sym_dim = (n * (n + 1)) / 2;
     int rigidity =
-        ComputeRigidityDegreeLattice<T, Tint, Tgroup>(GramMat, DT, os);
+        ComputeRigidityDegreeLattice<T, Tint, Tgroup>(GramMat, DT_T, os);
     if (rigidity != sym_dim) {
       std::cerr << "LATT_SerialComputeDelaunay: FileIsoDelaunayDomain "
                    "requires rigidity == n*(n+1)/2 = "
@@ -243,8 +247,10 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     // The rigidity check above guarantees the tesselation is generic over the
     // full canonical space, so its Voronoi inequalities are well defined.
     LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(n);
-    DelaunayTesselationIneq<T, Tgroup> DTI =
-        BuildDelaunayTesselationIneq<T, Tgroup>(DT, LinSpa.ListLineMat, os);
+    std::vector<std::vector<Tint>> ListGramRing =
+        GetListGramRing(LinSpa.ListLineMat);
+    DelaunayTesselationIneq<Tint, Tgroup> DTI =
+        BuildDelaunayTesselationIneq(DT, ListGramRing, os);
     IsoDelaunayDomain<T, Tint, Tgroup> x_iso{DTI, GramMat, SHV_T};
     std::ofstream ofs(FileIsoDelaunayDomain);
     boost::archive::text_oarchive oa(ofs);

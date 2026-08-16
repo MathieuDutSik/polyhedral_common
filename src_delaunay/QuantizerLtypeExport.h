@@ -176,7 +176,7 @@ MyMatrix<T> LiftToHomog(MyMatrix<T> const &g) {
 //      the resulting matrix is one member of star(0, 𝓓).
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>>
-EnumerateStarOf0(DelaunayTesselationIneq<T, Tgroup> const &DT,
+EnumerateStarOf0(DelaunayTesselationIneq<Tint, Tgroup> const &DT,
                  LinSpaceMatrix<T> const &LinSpa,
                  MyMatrix<T> const &Q0, std::ostream &os) {
   std::optional<MyMatrix<T>> CommonGramMat;
@@ -195,9 +195,8 @@ EnumerateStarOf0(DelaunayTesselationIneq<T, Tgroup> const &DT,
   std::vector<MyMatrix<T>> shape_reps;
   // The tessellation stores its vertices over the ring, the shapes below
   // being handled over the field.
-  using Tring = typename underlying_ring<T>::ring_type;
   for (auto const &entry : DT.l_dels) {
-    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(entry.EXT);
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(entry.EXT);
     auto k0 = CanonicalKeyModZn(EXT_T);
     if (seen_shapes.insert(k0).second) {
       shape_reps.push_back(std::move(EXT_T));
@@ -465,8 +464,8 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
                              std::ostream &os) {
   int n = LinSpa.n;
 
-  std::vector<FullAdjInfo<T>> facets_raw =
-      ComputeListIneqFromTesselationIneq<T, Tgroup>(IDD.DT);
+  std::vector<FullAdjInfo<Tint>> facets_raw =
+      ComputeListIneqFromTesselationIneq(IDD.DT);
   os << "QuantExport: ComputeDefiningIneq returned " << facets_raw.size()
      << " orbit rep(s) of inequalities\n";
 
@@ -494,8 +493,8 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
   std::set<std::vector<T>> facet_seen;
   std::vector<MyVector<T>> facets_all;
   std::queue<MyVector<T>> ineq_bfs;
-  for (FullAdjInfo<T> const &fai : facets_raw) {
-    MyVector<T> v0 = RemoveFractionVector(fai.eIneq);
+  for (FullAdjInfo<Tint> const &fai : facets_raw) {
+    MyVector<T> v0 = UniversalVectorConversion<T, Tint>(fai.eIneq);
     if (facet_seen.insert(to_key(v0)).second) {
       ineq_bfs.push(v0);
       facets_all.push_back(v0);

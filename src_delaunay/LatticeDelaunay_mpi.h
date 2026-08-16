@@ -39,7 +39,7 @@ void WriteFamilyDelaunay_Mpi(
     int i_proc_out = 0;
     std::vector<Tout> l_ent = my_mpi_gather(comm, ListDel, i_proc_out);
     if (i_proc_out == i_rank) {
-      DelaunayTesselation<T, Tgroup> DT =
+      DelaunayTesselation<Tint, Tgroup> DT =
           DelaunayTesselation_From_DatabaseEntries_Serial<T, Tint, Tgroup>(
               l_ent);
       check_delaunay_tessellation(DT, os);
@@ -51,7 +51,7 @@ void WriteFamilyDelaunay_Mpi(
     int i_proc_out = 0;
     std::vector<Tout> l_ent = my_mpi_gather(comm, ListDel, i_proc_out);
     if (i_proc_out == i_rank) {
-      DelaunayTesselation<T, Tgroup> DT =
+      DelaunayTesselation<Tint, Tgroup> DT =
           DelaunayTesselation_From_DatabaseEntries_Serial<T, Tint, Tgroup>(
               l_ent);
       os_out << "return ";
@@ -72,7 +72,7 @@ void WriteFamilyDelaunay_Mpi(
   if (OutFormat == "GAP_Covering") {
     T max_radius(0);
     for (auto &eDel : ListDel) {
-      MyMatrix<T> const &EXT = eDel.x.EXT;
+      MyMatrix<T> EXT = UniversalMatrixConversion<T, Tint>(eDel.x.EXT);
       CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
       T SquareRadius = cp.SquareRadius;
       if (SquareRadius > max_radius) {

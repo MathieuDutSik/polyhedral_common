@@ -64,15 +64,16 @@ void run_case(LinSpaceMatrix<T> const &LinSpa, PeriodicPointSet<Tint> const &pps
   for (auto &eEnt : l_ent) {
     Tobj const &x = eEnt.x;
     MyMatrix<T> const &GramMat = x.DT_gram.GramMat;
-    std::vector<FullAdjInfo<T>> ListIneq =
-        ComputeListIneqFromTesselationIneq<T, Tgroup>(x.DT_gram.DT);
+    std::vector<FullAdjInfo<Tint>> ListIneq =
+        ComputeListIneqFromTesselationIneq(x.DT_gram.DT);
     MyVector<T> g_vec =
         LINSPA_GetVectorOfMatrixExpression(data_func.data.LinSpa, GramMat);
     std::cerr << "   |ineq|=" << ListIneq.size()
               << " |cells|=" << x.DT_gram.DT.l_dels.size()
               << " |adj|=" << eEnt.ListAdj.size() << "\n";
     for (auto &eRec : ListIneq) {
-      check(eRec.eIneq.dot(g_vec) > 0,
+      MyVector<T> eIneq_T = UniversalVectorConversion<T, Tint>(eRec.eIneq);
+      check(eIneq_T.dot(g_vec) > 0,
             "the Gram matrix is strictly interior to its domain");
     }
     check(IsPeriodicDelaunayTesselation<T, Tint, Tgroup>(

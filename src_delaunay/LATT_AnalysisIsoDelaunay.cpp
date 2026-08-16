@@ -85,14 +85,14 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
   // (1) build the full inequality set,
   // (2) eliminate redundancy with get_non_redundant_indices.
   HumanTime t1;
-  std::vector<FullAdjInfo<T>> ListIneq =
-      ComputeListIneqFromTesselationIneq<T, Tgroup>(x.DT);
+  std::vector<FullAdjInfo<Tint>> ListIneq =
+      ComputeListIneqFromTesselationIneq(x.DT);
   int n_ineq = ListIneq.size();
   os << "ANA: ComputeDefiningIneqIsoDelaunayDomain done n_ineq=" << n_ineq
      << " |elapsed|=" << t1 << "\n";
   //
   HumanTime t2;
-  MyMatrix<T> FAC = GetFACineq(ListIneq);
+  MyMatrix<T> FAC = UniversalMatrixConversion<T, Tint>(GetFACineq(ListIneq));
   std::vector<int> ListIrred = get_non_redundant_indices(FAC, os);
   int n_irred = ListIrred.size();
   MyMatrix<T> FACred = SelectRow(FAC, ListIrred);

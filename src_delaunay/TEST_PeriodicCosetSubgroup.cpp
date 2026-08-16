@@ -277,9 +277,9 @@ int main() {
           ListGram.push_back(GetLineVector(eMat));
         }
       }
-      DelaunayTesselationIneq<T, Tgroup> DTI =
-          BuildPeriodicDelaunayTesselationIneq<T, Tring, Tgroup>(
-              *opt, pps, ListGram, os);
+      std::vector<std::vector<Tring>> ListGramRing = GetListGramRing(ListGram);
+      DelaunayTesselationIneq<Tring, Tgroup> DTI =
+          BuildPeriodicDelaunayTesselationIneq(*opt, pps, ListGramRing, os);
       check(DTI.l_dels.size() == opt->size(),
             "the tessellation has the orbits of the enumeration");
       // Consistency: across each adjacency the image of the neighbour

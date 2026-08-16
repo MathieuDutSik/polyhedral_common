@@ -1013,23 +1013,22 @@ struct PeriodicDataDelaunayFunc {
   tessellation are not defined. BuildVoronoiIneqPreComputeChecked says so
   when the sanity checks are on.
  */
-template <typename T, typename Tring, typename Tgroup>
-DelaunayTesselationIneq<T, Tgroup>
+template <typename Tring, typename Tgroup>
+DelaunayTesselationIneq<Tring, Tgroup>
 BuildPeriodicDelaunayTesselationIneq(
     std::vector<DatabaseEntry_Serial<PeriodicDelaunay_Obj<Tring, Tgroup>,
                                      PeriodicDelaunay_AdjO<Tring>>> const
         &l_ent,
     [[maybe_unused]] PeriodicPointSet<Tring> const &pps,
-    std::vector<std::vector<T>> const &ListGram, std::ostream &os) {
-  std::vector<std::vector<Tring>> ListGramRing = GetListGramRing(ListGram);
+    std::vector<std::vector<Tring>> const &ListGramRing, std::ostream &os) {
   int n_del = l_ent.size();
-  std::vector<Delaunay_EntryIneq<T, Tgroup>> l_dels(n_del);
+  std::vector<Delaunay_EntryIneq<Tring, Tgroup>> l_dels(n_del);
   for (int i_del = 0; i_del < n_del; i_del++) {
     MyMatrix<Tring> const &EXT = l_ent[i_del].x.EXT;
     VoronoiInequalityPreComput<Tring> vipc =
         BuildVoronoiIneqPreComputeChecked<Tring>(EXT, ListGramRing, os);
     ContainerMatrix<Tring> cont(EXT);
-    std::vector<Delaunay_AdjIneqO<T>> ListAdj;
+    std::vector<Delaunay_AdjIneqO<Tring>> ListAdj;
     for (auto &eAdj : l_ent[i_del].ListAdj) {
       MyVector<Tring> eIneq =
           ComputeDelaunayAdjIneq(vipc, cont, l_ent[eAdj.iOrb].x.EXT,
@@ -1050,10 +1049,10 @@ BuildPeriodicDelaunayTesselationIneq(
   what the tests confront the flipping and the domain enumeration with.
  */
 template <typename T, typename Tring, typename Tgroup>
-bool IsPeriodicDelaunayTesselation(DelaunayTesselationIneq<T, Tgroup> const &DTI,
-                                   MyMatrix<T> const &GramMat,
-                                   PeriodicPointSet<Tring> const &pps,
-                                   std::ostream &os) {
+bool IsPeriodicDelaunayTesselation(
+    DelaunayTesselationIneq<Tring, Tgroup> const &DTI,
+    MyMatrix<T> const &GramMat, PeriodicPointSet<Tring> const &pps,
+    std::ostream &os) {
   int n = GramMat.rows();
   PeriodicCVPSolver<T, Tring> psolver(GramMat, pps, os);
   for (auto &eDel : DTI.l_dels) {
@@ -1100,8 +1099,10 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialPeriodicIsoDelaunayDomain(
   // The tessellation of the point set at the form, or nothing if a cell
   // induces an equality: the form is then on a wall and another one has
   // to be drawn.
+  std::vector<std::vector<Tint>> ListGramRing =
+      GetListGramRing(data.LinSpa.ListLineMat);
   auto test_matrix = [&](MyMatrix<T> const &GramMat)
-      -> std::optional<DelaunayTesselationIneq<T, Tgroup>> {
+      -> std::optional<DelaunayTesselationIneq<Tint, Tgroup>> {
     bool test =
         IsSymmetryGroupCorrect<T, Tint, Tgroup>(GramMat, data.LinSpa, os);
     if (!test) {
@@ -1118,15 +1119,15 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialPeriodicIsoDelaunayDomain(
                                                  AllArr, os);
     PeriodicDataDelaunayFunc<T, Tint, Tgroup> data_func{data_per};
     auto f_incorrect = [&](PeriodicDelaunay_Obj<Tint, Tgroup> const &x) -> bool {
-      MyMatrix<T> EXT_T = PeriodicUnscaledVertices<T, Tint>(x.EXT, pps.N);
-      return IsDelaunayPolytopeInducingEqualities(EXT_T, data.LinSpa, os);
+      // The scaled frame multiplies the Voronoi regulators by a positive
+      // factor, which the zero test does not see.
+      return IsDelaunayPolytopeInducingEqualities(x.EXT, ListGramRing, os);
     };
     auto opt = EnumerateAndStore_Serial(data_func, f_incorrect, 0);
     if (!opt) {
       return {};
     }
-    return BuildPeriodicDelaunayTesselationIneq<T, Tint, Tgroup>(
-        *opt, pps, data.LinSpa.ListLineMat, os);
+    return BuildPeriodicDelaunayTesselationIneq(*opt, pps, ListGramRing, os);
   };
   size_t n_iter = 0;
   int N = 2;
@@ -1134,10 +1135,10 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialPeriodicIsoDelaunayDomain(
     MyMatrix<T> GramMat =
         GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(data.LinSpa,
                                                                    N, os);
-    std::optional<DelaunayTesselationIneq<T, Tgroup>> opt =
+    std::optional<DelaunayTesselationIneq<Tint, Tgroup>> opt =
         test_matrix(GramMat);
     if (opt) {
-      MyMatrix<T> M = GetInteriorGramMatrix<T, Tgroup>(data.LinSpa, *opt, os);
+      MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, *opt, os);
       MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
       MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
       return {std::move(*opt), std::move(M), std::move(SHV_T)};
@@ -1153,7 +1154,7 @@ struct PeriodicDataIsoDelaunayDomainsFunc {
   PeriodicPointSet<Tint> pps;
   using Tobj = IsoDelaunayDomain_Obj<T, Tint, Tgroup>;
   using TadjI = IsoDelaunayDomain_AdjI<T, Tint, Tgroup>;
-  using TadjO = IsoDelaunayDomain_AdjO<T, Tint>;
+  using TadjO = IsoDelaunayDomain_AdjO<Tint>;
   std::ostream &get_os() { return data.rddo.os; }
   // The coset-adequate stabilizer of the Gram matrix, as the matrix
   // generators the wall kernels consume.

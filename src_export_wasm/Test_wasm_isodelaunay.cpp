@@ -36,7 +36,7 @@ int main() {
 
   DataIsoDelaunayDomains<T, Tint, Tgroup> data{
     LinSpa, std::move(rddo), CommonGramMat};
-  DelaunayTesselation<T, Tgroup> initial =
+  DelaunayTesselation<Tint, Tgroup> initial =
       GetInitialGenericDelaunayTesselation<T, Tint, Tgroup>(data);
   std::cerr << "Test_wasm_isodelaunay: |initial cells|="
             << initial.l_dels.size() << " OK\n";

@@ -101,7 +101,7 @@ LinSpaceMatrix<T> build_qh_tspace(MyMatrix<T> const &Q, MyMatrix<T> const &H,
 // A non-null result therefore certifies that GramMat is generic and that
 // TestGram shares its Delaunay tesselation.
 template <typename T, typename Tint, typename Tgroup>
-std::optional<DelaunayTesselation<T, Tgroup>>
+std::optional<DelaunayTesselation<Tint, Tgroup>>
 delaunay_for_gram(MyMatrix<T> const &GramMat, LinSpaceMatrix<T> const &LinSpa,
                   MyMatrix<T> const &TestGram, std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
@@ -111,26 +111,24 @@ delaunay_for_gram(MyMatrix<T> const &GramMat, LinSpaceMatrix<T> const &LinSpa,
   DataLattice<T, Tint, Tgroup> data =
       GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
   data.CommonGramMat = TestGram;
-  auto f_incorrect = [&](Delaunay_Obj<T, Tgroup> const &x) -> bool {
-    return IsDelaunayPolytopeInducingEqualities(x.EXT, LinSpa, os);
+  std::vector<std::vector<Tint>> ListGramRing =
+      GetListGramRing(LinSpa.ListLineMat);
+  auto f_incorrect = [&](Delaunay_Obj<Tint, Tgroup> const &x) -> bool {
+    return IsDelaunayPolytopeInducingEqualities(x.EXT, ListGramRing, os);
   };
   int max_runtime_second = 0;
   return EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(
       data, f_incorrect, max_runtime_second);
 }
 
-template <typename T, typename Tgroup> struct IsoDelaunaySegment {
+template <typename T> struct IsoDelaunaySegment {
   // Valid range of t: the segment [0, tmax) (open at tmax, which is the wall).
   T tmax;
   // Whether tmax is a genuine exit of the iso-Delaunay domain (bounded=true) or
   // the ray stays in the domain for all t >= 0 (bounded=false, tmax then a safe
   // interior value).
   bool bounded;
-  // The Delaunay combinatorics, constant on the open segment.
-  DelaunayTesselation<T, Tgroup> DT;
-  // The defining inequalities of the iso-Delaunay domain (T-space coordinates).
-  std::vector<FullAdjInfo<T>> ListIneq;
-  // The interior form Q + t_probe H whose combinatorics is DT.
+  // The interior form Q + t_probe H on which the segment was pinned.
   MyMatrix<T> ProbeGram;
 };
 
@@ -140,7 +138,7 @@ template <typename T, typename Tgroup> struct IsoDelaunaySegment {
 // valid interior probe Q + t H is found, the exact exit point tmax is computed
 // from the domain's defining inequalities.
 template <typename T, typename Tint, typename Tgroup>
-IsoDelaunaySegment<T, Tgroup>
+IsoDelaunaySegment<T>
 find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
                           MyMatrix<T> const &H, T const &t_init,
                           std::ostream &os) {
@@ -178,7 +176,7 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
     // Enumerate the Delaunay tesselation of the probe G = Q + t H, aborting if
     // Q is not acceptable for some cell, i.e. the segment [Q, Q + t H] leaves
     // the iso-Delaunay domain. A nullopt therefore means "halve and retry".
-    std::optional<DelaunayTesselation<T, Tgroup>> opt_DT =
+    std::optional<DelaunayTesselation<Tint, Tgroup>> opt_DT =
         delaunay_for_gram<T, Tint, Tgroup>(G, LinSpa, Q, os);
     if (!opt_DT) {
 #ifdef DEBUG_QUANTIZATION_DEFORMATION
@@ -187,10 +185,11 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
       t /= two;
       continue;
     }
-    DelaunayTesselation<T, Tgroup> DT = *opt_DT;
-    std::vector<FullAdjInfo<T>> ListIneq =
-        ComputeDefiningIneqIsoDelaunayDomain<T, Tgroup>(DT, LinSpa.ListLineMat,
-                                                        os);
+    DelaunayTesselation<Tint, Tgroup> DT = *opt_DT;
+    std::vector<std::vector<Tint>> ListGramRing =
+        GetListGramRing(LinSpa.ListLineMat);
+    std::vector<FullAdjInfo<Tint>> ListIneq =
+        ComputeDefiningIneqIsoDelaunayDomain(DT, ListGramRing, os);
     MyVector<T> c_probe = cQ + t * cH;
     // Orient every (non-trivial) defining inequality so that the probe, which is
     // strictly interior to its own iso-Delaunay domain by construction,
@@ -205,15 +204,16 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
                      "every entry of ListIneq must be a non-zero wall\n";
         throw TerminalException{1};
       }
-      T s = dotprod(fai.eIneq, c_probe);
+      MyVector<T> eIneq_T = UniversalVectorConversion<T, Tint>(fai.eIneq);
+      T s = dotprod(eIneq_T, c_probe);
       if (s == 0) {
         probe_generic = false;
         break;
       }
       if (s > 0) {
-        oriented.push_back(fai.eIneq);
+        oriented.push_back(eIneq_T);
       } else {
-        oriented.push_back(-fai.eIneq);
+        oriented.push_back(-eIneq_T);
       }
     }
     if (!probe_generic) {
@@ -255,7 +255,7 @@ find_iso_delaunay_segment(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Q,
     if (!bounded) {
       tmax = t;
     }
-    return IsoDelaunaySegment<T, Tgroup>{tmax, bounded, DT, ListIneq, G};
+    return IsoDelaunaySegment<T>{tmax, bounded, G};
   }
 }
 
@@ -296,14 +296,16 @@ QuantizationResult<T> quant_at_gram(MyMatrix<T> const &GramMat,
 #ifdef TIMINGS_QUANTIZATION_DEFORMATION
   MicrosecondTime time_qag;
 #endif
-  DelaunayTesselation<T, Tgroup> DT =
+  DelaunayTesselation<Tint, Tgroup> DT =
       get_delaunay_tessellation_serial<T, Tint, Tgroup>(data, "none", 0, os);
 #ifdef TIMINGS_QUANTIZATION_DEFORMATION
   os << "QDEF_TIMING: quant_at_gram Delaunay orbits=" << DT.l_dels.size()
      << " tessellation took " << time_qag << "\n";
 #endif
+  DelaunayTesselation<T, Tgroup> DT_T =
+      ConvertTesselationScalar<T, Tint, Tgroup>(DT);
   QuantizationResult<T> res =
-      ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT, os);
+      ComputeQuantizationIntegral<T, Tint, Tgroup>(data, DT_T, os);
 #ifdef TIMINGS_QUANTIZATION_DEFORMATION
   os << "QDEF_TIMING: quant_at_gram (Delaunay+integral) total took " << time_qag
      << "\n";
@@ -438,7 +440,7 @@ DeformationDerivatives<T> compute_deformation_derivatives(MyMatrix<T> const &Q,
       compute_qh_symmetry_gens<T, Tint, Tgroup>(Q, H, os);
   LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, H, gens_T, os);
   T t_init(1);
-  IsoDelaunaySegment<T, Tgroup> seg =
+  IsoDelaunaySegment<T> seg =
       find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, H, t_init, os);
   // The numerator of SecMoment(t) has degree at most 2n (it is n + 1 for a
   // full-rank direction, and lower for lower-rank H), so max_degree = 2n and the
@@ -560,7 +562,7 @@ MyMatrix<T> compute_moment_derivative(MyMatrix<T> const &Q,
   std::vector<MyMatrix<T>> gens_T =
       compute_qh_symmetry_gens<T, Tint, Tgroup>(Q, B, os);
   LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, B, gens_T, os);
-  IsoDelaunaySegment<T, Tgroup> seg =
+  IsoDelaunaySegment<T> seg =
       find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, B, T(1), os);
   // Each entry M_ij(t) has numerator degree at most 2n (it is n + rank(B) in
   // general, so 2n at full rank; B is rank one here, giving n + 1), so
@@ -641,7 +643,7 @@ MyMatrix<T> compute_moment_derivative_jet(MyMatrix<T> const &Q,
   std::vector<MyMatrix<T>> gens_T =
       compute_qh_symmetry_gens<T, Tint, Tgroup>(Q, B, os);
   LinSpaceMatrix<T> LinSpa = build_qh_tspace<T, Tint, Tgroup>(Q, B, gens_T, os);
-  IsoDelaunaySegment<T, Tgroup> seg =
+  IsoDelaunaySegment<T> seg =
       find_iso_delaunay_segment<T, Tint, Tgroup>(LinSpa, Q, B, T(1), os);
   MyMatrix<T> Gram_t0 = Q + (seg.tmax / T(2)) * B;
   int dimEXT = n + 1;
@@ -649,7 +651,7 @@ MyMatrix<T> compute_moment_derivative_jet(MyMatrix<T> const &Q,
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   DataLattice<T, Tint, Tgroup> data =
       GetDataLattice<T, Tint, Tgroup>(Gram_t0, AllArr, os);
-  DelaunayTesselation<T, Tgroup> DT =
+  DelaunayTesselation<Tint, Tgroup> DT =
       get_delaunay_tessellation_serial<T, Tint, Tgroup>(data, "none", 0, os);
   MyMatrix<Tint> SHV_i = ExtractInvariantVectorFamilyZbasis<T, Tint>(Q, os);
   MyMatrix<T> SHV = UniversalMatrixConversion<T, Tint>(SHV_i);
