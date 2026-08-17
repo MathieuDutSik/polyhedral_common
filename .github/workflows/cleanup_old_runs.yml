@@ -1,0 +1,59 @@
+name: Cleanup of workflow runs older than 3 months
+
+on:
+  # First day of each month, at 06:00 so as not to overlap with ci_01
+  # (this is maintenance, not a test workflow, hence no ci_NN day slot).
+  schedule:
+    - cron: "0 6 1 * *"
+  # Manually triggered
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete workflow runs older than 3 months
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const cutoff = new Date();
+            cutoff.setMonth(cutoff.getMonth() - 3);
+            const cutoffStr = cutoff.toISOString();
+            core.info(`Deleting workflow runs created before ${cutoffStr}`);
+            let deleted = 0;
+            // Deleting shifts pagination, so always re-fetch the first page
+            // until the filtered list is empty.
+            while (true) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+                created: `<${cutoffStr}`,
+              });
+              if (data.workflow_runs.length === 0) {
+                break;
+              }
+              let deletedThisRound = 0;
+              for (const run of data.workflow_runs) {
+                try {
+                  await github.rest.actions.deleteWorkflowRun({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    run_id: run.id,
+                  });
+                  deleted += 1;
+                  deletedThisRound += 1;
+                } catch (e) {
+                  core.warning(`Failed to delete run ${run.id} (${run.name}): ${e.message}`);
+                }
+              }
+              if (deletedThisRound === 0) {
+                core.warning("No run of the page could be deleted, stopping to avoid looping forever");
+                break;
+              }
+            }
+            core.info(`Deleted ${deleted} workflow runs`);
