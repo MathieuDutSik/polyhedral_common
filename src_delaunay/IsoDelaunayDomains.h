@@ -11,6 +11,7 @@
 #include "LatticeDelaunay.h"
 #include "Tspace_General.h"
 #include "SystemNamelist.h"
+#include <format>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -143,7 +144,8 @@ size_t ComputeInvariantDelaunayTessellation(
   std::string str_ord_grp = "ISODEL: map_ord_grp =";
   for (auto &kv : map_ord_grp) {
     str_ord_grp +=
-        " [" + std::to_string(kv.first) + "," + std::to_string(kv.second) + "]";
+        " [" + std::format("{}", kv.first) + "," + std::to_string(kv.second) +
+        "]";
   }
   os << str_vert << "\n";
   os << str_ord_grp << "\n";
@@ -2546,7 +2548,8 @@ size_t ComputeInvariantIsoDelaunayDomain(
   std::string str_ord_grp = "ISODEL: map_ord_grp =";
   for (auto &kv : map_ord_grp) {
     str_ord_grp +=
-        " [" + std::to_string(kv.first) + "," + std::to_string(kv.second) + "]";
+        " [" + std::format("{}", kv.first) + "," + std::to_string(kv.second) +
+        "]";
   }
   os << str_vert << "\n";
   os << str_ord_grp << "\n";
