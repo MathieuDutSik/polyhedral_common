@@ -1454,6 +1454,37 @@ vectface DUALDESC_AdjacencyDecomposition(
 #endif
   CheckTermination<Tgroup>(AllArr);
   int nbRow = EXT.rows();
+  // A polytope that the Splitting heuristic does not want to decompose is
+  // computed right here and now. Without this the caller pays the whole
+  // adjacency decomposition machinery -- the bank lookup with its graph
+  // canonicalization, the database of orbits canonicalizing every face,
+  // the stabilizer chains -- even for a simplex, which costs milliseconds
+  // where the direct dual description costs microseconds. The recursive
+  // calls are unaffected: they only reach this point after
+  // DUALDESC_AdjacencyDecomposition_and_insert decided to split, and that
+  // decision is taken on the same quantities, so it is taken again here.
+  SplittingDecision entry_split_decision = splitting_decision_from_string(
+      dual_desc_heuristic_evaluation(AllArr.Splitting, info));
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "RDD: entry_split_decision="
+     << (entry_split_decision == SplittingDecision::split ? "split" : "nosplit")
+     << " |EXT|=" << nbRow << " / " << EXT.cols() << "\n";
+#endif
+  if (entry_split_decision == SplittingDecision::nosplit) {
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+    MicrosecondTime time_direct;
+#endif
+    std::string ansProg =
+        AllArr.DualDescriptionProgram.get_eval(info.named_map());
+    DualDescProgram prog =
+        ResolveSupportedProgram<T>(dual_desc_program_from_string(ansProg), os);
+    vectface TheOutput = DirectFacetOrbitComputation(EXT, GRP, prog, os);
+    AllArr.DualDescriptionProgram.pop(os);
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+    os << "|RDD: entry_direct nbRow=" << nbRow << "|=" << time_direct << "\n";
+#endif
+    return TheOutput;
+  }
   LazyWMat<T, Tidx_value> lwm(EXT, os);
   // The canonicalization of the polytope is expensive (graph canonicalization).
   // It is needed both for the bank lookup and for the bank insertion, so we
