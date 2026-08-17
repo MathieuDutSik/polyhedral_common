@@ -24,7 +24,9 @@ void process_B(std::string const &MatFile, std::string const &OutFormat,
   DataLattice<T, Tint, Tgroup> eData =
       GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, std::cerr);
 
-  T sqr_dist = compute_square_robust_covering_radius(eData);
+  std::vector<PVoronoi<T, Tint>> l_ppoly = compute_all_p_polytopes(eData);
+  T sqr_dist =
+      square_robust_covering_radius_from_ppoly(l_ppoly, GramMat, std::cerr);
 
   T det = DeterminantMat(GramMat);
   int dim = GramMat.rows();
@@ -36,8 +38,23 @@ void process_B(std::string const &MatFile, std::string const &OutFormat,
       osf << ";\n";
       return;
     }
+    if (OutFormat == "GAP_extend") {
+      // The covering result together with the P-polytopes. Each PVoronoi record
+      // carries its generalized polytope in its "gp" field.
+      osf << "return rec(cov:=";
+      osf << to_stringGAP(rc);
+      osf << ", l_ppoly:=[";
+      for (size_t i = 0; i < l_ppoly.size(); i++) {
+        if (i > 0) {
+          osf << ",\n";
+        }
+        WriteEntryGAP(osf, l_ppoly[i]);
+      }
+      osf << "]);\n";
+      return;
+    }
     std::cerr << "Failed to find a matching entry for OutFormat\n";
-    std::cerr << "Allowed choices: GAP\n";
+    std::cerr << "Allowed choices: GAP, GAP_extend\n";
     throw TerminalException{1};
   };
   FILE_PrintStderrStdoutFile(OutFile, f_print);
@@ -81,7 +98,7 @@ int main(int argc, char *argv[]) {
                    "Tint = boost::multiprecision::mpz_int\n";
       std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, "
                    "Tint = boost::multiprecision::cpp_int\n";
-      std::cerr << "OutFormat: GAP\n";
+      std::cerr << "OutFormat: GAP, GAP_extend\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }

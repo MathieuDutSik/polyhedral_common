@@ -2077,12 +2077,13 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   return l_pv;
 }
 
-template <typename T, typename Tint, typename Tgroup>
-T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
-  std::vector<PVoronoi<T, Tint>> l_ppoly =
-      compute_all_p_polytopes(eData);
+// The squared robust covering radius is the largest, over all P-polytope
+// orbits, squared distance from the vertex v_long to a vertex of the cell.
+template <typename T, typename Tint>
+T square_robust_covering_radius_from_ppoly(
+    std::vector<PVoronoi<T, Tint>> const &l_ppoly, MyMatrix<T> const &G,
+    [[maybe_unused]] std::ostream &os) {
   T max_sqr_radius(0);
-  MyMatrix<T> const &G = eData.solver.GramMat;
   int dim = G.rows();
   MyVector<T> diff(dim);
   std::optional<MyVector<T>> best_vector;
@@ -2102,16 +2103,20 @@ T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
     }
   }
 #ifdef DEBUG_ROBUST_VERTEX_ENUM
-  std::ostream &os = eData.rddo.os;
-  os << "ROBUST: After kernel_l1_p_polytope_part\n";
   if (best_vector) {
-    MyVector<T> const& V = *best_vector;
-    os << "ROBUST: compute_square_robust_covering_radius, best_vector=" << StringVectorGAP(V) << "\n";
+    os << "ROBUST: square_robust_covering_radius, best_vector=" << StringVectorGAP(*best_vector) << "\n";
   } else {
-    os << "ROBUST: compute_square_robust_covering_radius, no best_vector\n";
+    os << "ROBUST: square_robust_covering_radius, no best_vector\n";
   }
 #endif
   return max_sqr_radius;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
+  std::vector<PVoronoi<T, Tint>> l_ppoly = compute_all_p_polytopes(eData);
+  return square_robust_covering_radius_from_ppoly(l_ppoly, eData.solver.GramMat,
+                                                  eData.rddo.os);
 }
 
 template <typename T, typename Tint>
