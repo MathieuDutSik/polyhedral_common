@@ -311,8 +311,15 @@ dual_desc_heuristic_evaluation(DualDescHeuristic<TintGroup> const &heu,
 // * "nosplit": Call directly the classical adjacency decomposition.
 // * "split": Call the Adjacency decomposition method on the polytope
 //    or face considered.
+// The first rule guards against the recursive decomposition being entered on
+// polytopes that have almost as few vertices as their rank: there the direct
+// dual description costs microseconds while one level of the decomposition
+// costs milliseconds (its database of orbits canonicalizes every face). It
+// comes first because the group of such a polytope is often large, and the
+// group-size rule below would otherwise send a simplex into the recursion.
 template <typename T> TheHeuristic<T> StandardHeuristicSplitting() {
-  std::vector<std::string> ListString = {"4",
+  std::vector<std::string> ListString = {"5",
+                                         "1 delta < 20 nosplit",
                                          "2 groupsize > 5000 level < 3 split",
                                          "1 incidence < 40 nosplit",
                                          "1 level > 1 nosplit",
@@ -432,9 +439,25 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 //   this is transparent to callers.
 // * "normaliz": the native port of the Normaliz primal algorithm
 //   (Fourier-Motzkin with pyramid decomposition, fields and rings)
+// The defaults come from a measurement over the 7066 polytopes that one
+// enumeration of iso-Delaunay domains sends to the dual description (ring
+// arithmetic, rank 8 to 10, "delta" = incidence - rank from 0 to 138). Mean
+// time per polytope, in microseconds:
+//
+//   delta      0     3     8    20    48    96   118
+//   lrs        3     7    47   432  2480 84392 247911
+//   normaliz   6    11    60    71   105   857   3506
+//   cdd      194   210   343   434   651  3133   6643
+//   bb        36    61   271   367   657  6201  30096
+//
+// So lrs is unbeatable while the polytope is close to a simplex (it is
+// then almost pure pivoting) and collapses as soon as the polytope has
+// many more vertices than its rank, where normaliz is one to two orders of
+// magnitude ahead. cdd never wins on this family. The crossover sits
+// around delta = 20.
 template <typename T>
 TheHeuristic<T> StandardHeuristicDualDescriptionProgram() {
-  std::vector<std::string> ListString = {"1", "1 incidence < 50 cdd", "cdd"};
+  std::vector<std::string> ListString = {"1", "1 delta < 20 lrs", "normaliz"};
   return HeuristicFromListString<T>(ListString);
 }
 

@@ -3233,6 +3233,9 @@ struct DataIsoDelaunayDomainsFunc {
   }
   size_t f_hash(size_t const &seed, Tobj const &x) {
     std::ostream &os = data.rddo.os;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_hash;
+#endif
     int method = 2;
     if (method == 1) {
       // That method does not seem to work very well
@@ -3243,8 +3246,13 @@ struct DataIsoDelaunayDomainsFunc {
           data, seed, x.DT_gram.DT, os);
     }
     if (method == 2) {
-      return LINSPA_Invariant_SHV<T>(seed, data.LinSpa, x.DT_gram.GramMat,
-                                     x.DT_gram.SHV_T, data.CommonGramMat, os);
+      size_t hash =
+          LINSPA_Invariant_SHV<T>(seed, data.LinSpa, x.DT_gram.GramMat,
+                                  x.DT_gram.SHV_T, data.CommonGramMat, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      os << "|ISODEL: f_hash|=" << time_hash << "\n";
+#endif
+      return hash;
     }
     std::cerr << "No valid method for computing the hash\n";
     throw TerminalException{1};
@@ -3254,10 +3262,20 @@ struct DataIsoDelaunayDomainsFunc {
     data.rddo.os
         << "ISODEL: f_repr, before LINSPA_TestEquivalenceGramMatrix_SHV\n";
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_repr;
+#endif
     std::optional<MyMatrix<T>> opt =
         LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
             data.LinSpa, x.DT_gram.GramMat, y.DT_gram.GramMat, x.DT_gram.SHV_T,
             y.DT_gram.SHV_T, data.CommonGramMat, data.rddo.os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    // The outcome is logged with the time: an invariant that separates well
+    // makes almost every call return an equivalence, a weak one wastes the
+    // (expensive) test on pairs that are not equivalent.
+    data.rddo.os << "|ISODEL: f_repr equiv=" << opt.has_value()
+                 << "|=" << time_repr << "\n";
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     data.rddo.os
         << "ISODEL: f_repr, after LINSPA_TestEquivalenceGramMatrix_SHV\n";

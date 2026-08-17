@@ -49,6 +49,10 @@
 #define TIMINGS_RECURSIVE_DUAL_DESC
 #endif
 
+#ifdef KEY_VALUE
+#define KEY_VALUE_RECURSIVE_DUAL_DESC
+#endif
+
 #ifdef DEBUG
 // #define DEBUG_CANONICAL_LIMITED
 #define DEBUG_RECURSIVE_DUAL_DESC
@@ -1043,6 +1047,19 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
   SplittingDecision split_decision = splitting_decision_from_string(
       dual_desc_heuristic_evaluation(AllArr.Splitting, info));
+#ifdef KEY_VALUE_RECURSIVE_DUAL_DESC
+  // The decision taken by the Splitting heuristic, with the quantities it
+  // was taken on. Aggregating those lines over a run tells whether the
+  // recursive decomposition is entered on polytopes that do not deserve it.
+  MicrosecondTime time_adm_entry;
+  auto f_key_value_entry = [&]() -> void {
+    os << "RDD: KEY=(SplitDecision_" << info.level << "_" << info.incidence
+       << "_" << info.rank << "_" << info.groupsize << "_"
+       << (split_decision == SplittingDecision::split ? "split" : "nosplit")
+       << ") VALUE=("
+       << time_adm_entry << ")\n";
+  };
+#endif
   if (split_decision == SplittingDecision::nosplit) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_complete;
@@ -1119,6 +1136,9 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: DualDesc+flip+insertion|=" << time_complete << "\n";
 #endif
+#ifdef KEY_VALUE_RECURSIVE_DUAL_DESC
+    f_key_value_entry();
+#endif
   } else {
     vectface TheOutput =
         f_dd(TheBank, df.FF.EXT_face, df.Stab, info, AllArr, ePrefix, os);
@@ -1147,6 +1167,9 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     }
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: outputtime|=" << time_full << "\n";
+#endif
+#ifdef KEY_VALUE_RECURSIVE_DUAL_DESC
+    f_key_value_entry();
 #endif
   }
 }
@@ -1448,7 +1471,13 @@ vectface DUALDESC_AdjacencyDecomposition(
   //
   BankCheckDecision bank_check_decision = bank_check_decision_from_string(
       dual_desc_heuristic_evaluation(AllArr.CheckDatabaseBank, info));
-  if (bank_check_decision == BankCheckDecision::yes) {
+  // An empty bank can hold no answer, and the query is not free: it needs
+  // the canonicalization of the polytope, which is a graph canonicalization
+  // costing as much as a small dual description. The BankSave heuristic
+  // only stores computations that took a long time, so on a workload made
+  // of many cheap dual descriptions the bank stays empty forever and every
+  // check is pure loss.
+  if (bank_check_decision == BankCheckDecision::yes && !TheBank.empty()) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_bankcheck;
 #endif
