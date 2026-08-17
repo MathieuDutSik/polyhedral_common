@@ -385,6 +385,12 @@ std::vector<MyMatrix<Tint>> get_parall_stabilizer(DataLattice<T, Tint, Tgroup> &
     MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
     l_gens.emplace_back(std::move(P));
   }
+  if (l_gens.empty()) {
+    // Trivial stabilizer: keep the identity so the generator list is never
+    // empty (downstream get_group_elements needs at least one matrix to know
+    // the dimension of the group it is generating).
+    l_gens.push_back(IdentityMat<Tint>(EXTparallTot.cols()));
+  }
   return l_gens;
 }
 
@@ -429,6 +435,12 @@ std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup
     MyMatrix<T> P_T = RepresentVertexPermutation(EXT_T, EXT_T, eGen);
     MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
     l_gens.emplace_back(std::move(P));
+  }
+  if (l_gens.empty()) {
+    // Trivial stabilizer: keep the identity so the generator list is never
+    // empty (downstream get_group_elements needs at least one matrix to know
+    // the dimension of the group it is generating).
+    l_gens.push_back(IdentityMat<Tint>(EXT_T.cols()));
   }
 #ifdef DEBUG_P_VORONOI_STAB_EQUIV
   os << "ROBUST: get_p_voronoi_stabilizer |G|=" << pair.second.size() << "\n";
