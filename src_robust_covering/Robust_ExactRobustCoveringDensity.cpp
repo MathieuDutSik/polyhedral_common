@@ -7,6 +7,7 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "enum_robust_covering.h"
+#include "pyvista_json.h"
 // clang-format on
 
 template <typename T, typename Tint>
@@ -53,8 +54,16 @@ void process_B(std::string const &MatFile, std::string const &OutFormat,
       osf << "]);\n";
       return;
     }
+    if (OutFormat == "PyVista_json") {
+      if (dim != 3) {
+        std::cerr << "The PyVista_json output is only for dimension 3\n";
+        throw TerminalException{1};
+      }
+      write_pyvista_json(osf, l_ppoly, GramMat, std::cerr);
+      return;
+    }
     std::cerr << "Failed to find a matching entry for OutFormat\n";
-    std::cerr << "Allowed choices: GAP, GAP_extend\n";
+    std::cerr << "Allowed choices: GAP, GAP_extend, PyVista_json\n";
     throw TerminalException{1};
   };
   FILE_PrintStderrStdoutFile(OutFile, f_print);
@@ -98,7 +107,7 @@ int main(int argc, char *argv[]) {
                    "Tint = boost::multiprecision::mpz_int\n";
       std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, "
                    "Tint = boost::multiprecision::cpp_int\n";
-      std::cerr << "OutFormat: GAP, GAP_extend\n";
+      std::cerr << "OutFormat: GAP, GAP_extend, PyVista_json\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }
