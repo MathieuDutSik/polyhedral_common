@@ -29,6 +29,8 @@ jobs:
         with:
           submodules: recursive
 
+      - uses: ./.github/actions/install-boost
+
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
