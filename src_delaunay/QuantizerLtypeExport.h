@@ -463,6 +463,9 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
                              std::string const &output_path,
                              std::ostream &os) {
   int n = LinSpa.n;
+  // The domain stores its interior Gram matrix over the ring; the export is
+  // over the field of the T-space.
+  MyMatrix<T> Q0 = UniversalMatrixConversion<T, Tint>(IDD.GramMat);
 
   std::vector<FullAdjInfo<Tint>> facets_raw =
       ComputeListIneqFromTesselationIneq(IDD.DT);
@@ -474,8 +477,7 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
   // row vs column action). Then dedup and filter redundant.
   std::optional<MyMatrix<T>> CommonGramMat;
   std::vector<MyMatrix<T>> autL_gens_for_ineq =
-      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, IDD.GramMat,
-                                                CommonGramMat, os);
+      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, Q0, CommonGramMat, os);
   os << "QuantExport: Aut(L) has " << autL_gens_for_ineq.size()
      << " generator(s) for inequality expansion\n";
   std::vector<MyMatrix<T>> tspace_action;
@@ -532,12 +534,12 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
   os << "QuantExport: irredundant cone facets = " << facets.size() << "\n";
 
   std::vector<MyMatrix<T>> star =
-      EnumerateStarOf0<T, Tint, Tgroup>(IDD.DT, LinSpa, IDD.GramMat, os);
+      EnumerateStarOf0<T, Tint, Tgroup>(IDD.DT, LinSpa, Q0, os);
   int N = static_cast<int>(star.size());
 
   MyMatrix<T> EXT_DV(N, n + 1);
   for (int i = 0; i < N; i++) {
-    MyVector<T> c = CircumcenterUnder<T>(star[i], IDD.GramMat);
+    MyVector<T> c = CircumcenterUnder<T>(star[i], Q0);
     EXT_DV(i, 0) = T(1);
     for (int k = 0; k < n; k++) {
       EXT_DV(i, k + 1) = c(k);
@@ -654,12 +656,12 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
   out << "  ],\n";
 
   out << "  \"test_point_Q\": [";
-  for (int r = 0; r < IDD.GramMat.rows(); r++) {
+  for (int r = 0; r < Q0.rows(); r++) {
     if (r > 0) out << ", ";
     out << "[";
-    for (int c = 0; c < IDD.GramMat.cols(); c++) {
+    for (int c = 0; c < Q0.cols(); c++) {
       if (c > 0) out << ", ";
-      WriteRationalJSON(out, IDD.GramMat(r, c));
+      WriteRationalJSON(out, Q0(r, c));
     }
     out << "]";
   }

@@ -119,6 +119,9 @@ template <typename Tkey, typename Tval> struct DataBankAsioClient {
     send_data_atomic<TripleNKV<Tkey, Tval>>(
         endpoint, {'i', std::move(eKey), std::move(eVal)});
   }
+  // The content lives in the server process, and any client may have
+  // inserted into it, so emptiness cannot be established here.
+  bool known_empty() const { return false; }
   Tval GetDualDesc(const Tkey &eKey) const {
     boost::asio::io_context io_context;
     boost::asio::ip::tcp::socket socket(io_context);

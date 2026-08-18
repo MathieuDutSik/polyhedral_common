@@ -34,8 +34,12 @@ int main() {
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
   std::optional<MyMatrix<T>> CommonGramMat;
 
+  LinSpaceMatrix<Tint> LinSpaRing = LINSPA_GetRingVersion(LinSpa);
+  std::optional<MyMatrix<Tint>> CommonGramMatRing =
+      GetCommonGramMatRing<Tint, T>(CommonGramMat);
   DataIsoDelaunayDomains<T, Tint, Tgroup> data{
-    LinSpa, std::move(rddo), CommonGramMat};
+    LinSpa, std::move(LinSpaRing), std::move(rddo), CommonGramMat,
+    CommonGramMatRing};
   DelaunayTesselation<Tint, Tgroup> initial =
       GetInitialGenericDelaunayTesselation<T, Tint, Tgroup>(data);
   std::cerr << "Test_wasm_isodelaunay: |initial cells|="

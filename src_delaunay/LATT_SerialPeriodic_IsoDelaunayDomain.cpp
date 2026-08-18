@@ -65,8 +65,12 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
                                                          std::cerr);
   std::optional<MyMatrix<T>> CommonGramMat;
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
-  DataIsoDelaunayDomains<T, Tint, Tgroup> data{std::move(LinSpa),
-                                               std::move(rddo), CommonGramMat};
+  LinSpaceMatrix<Tint> LinSpaRing = LINSPA_GetRingVersion(LinSpa);
+  std::optional<MyMatrix<Tint>> CommonGramMatRing =
+      GetCommonGramMatRing<Tint, T>(CommonGramMat);
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data{
+      std::move(LinSpa), std::move(LinSpaRing), std::move(rddo), CommonGramMat,
+      CommonGramMatRing};
 
   using Tdata = PeriodicDataIsoDelaunayDomainsFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data), std::move(pps)};

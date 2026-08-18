@@ -43,6 +43,36 @@ MyMatrix<T> GetOrthogonalProjectorMatrix(MyMatrix<T> const &eG,
 }
 
 /*
+  The member of the family attached to a preserved subspace. The projector
+  inverts a basis, so it is rational even for an integral Gram matrix. Over a
+  ring it is therefore computed on the overlying field and the primitive
+  integral matrix proportional to the result is returned.
+
+  That rescaling is harmless for the three uses of the family. For the
+  invariant and the stabilizer, a permutation preserves the rescaled member
+  exactly when it preserves the original one. For the equivalence, the first
+  member of the family is the Gram matrix itself, which is carried exactly:
+  a transformation matching the families maps eG1 to eG2, hence maps the
+  projector of one to the projector of the other, so the two rescalings
+  agree and nothing can be matched that was not matched before.
+ */
+template <typename T>
+MyMatrix<T> GetSubspaceDiscMatrix(MyMatrix<T> const &eG,
+                                  MyMatrix<T> const &subspace) {
+  if constexpr (is_ring_field<T>::value) {
+    MyMatrix<T> ProjMat = GetOrthogonalProjectorMatrix(eG, subspace);
+    return ProjMat * eG;
+  } else {
+    using Tfield = typename overlying_field<T>::field_type;
+    MyMatrix<Tfield> eG_F = UniversalMatrixConversion<Tfield, T>(eG);
+    MyMatrix<Tfield> subspace_F = UniversalMatrixConversion<Tfield, T>(subspace);
+    MyMatrix<Tfield> ProjMat = GetOrthogonalProjectorMatrix(eG_F, subspace_F);
+    MyMatrix<Tfield> prod = ProjMat * eG_F;
+    return RemoveFractionMatrixPlusCoeffRing(prod).TheMat;
+  }
+}
+
+/*
   Computes the set of matrices to be used for the product preservation
  */
 template <typename T>
@@ -56,19 +86,21 @@ GetFamilyDiscMatrices(MyMatrix<T> const &eG,
     ListDisc.emplace_back(std::move(prod));
   }
   for (auto &subspace : ListSubspace) {
-    MyMatrix<T> ProjMat = GetOrthogonalProjectorMatrix(eG, subspace);
-    MyMatrix<T> prod = ProjMat * eG;
-    ListDisc.emplace_back(std::move(prod));
+    ListDisc.emplace_back(GetSubspaceDiscMatrix(eG, subspace));
   }
   return ListDisc;
 }
 
 template <typename T>
 bool is_stab_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &LinSpa) {
+  // The membership of the image in the space is a rational question even for
+  // an integral space, so the solution comes back over the overlying field
+  // (which is T itself when T is already a field).
+  using Tfield = typename overlying_field<T>::field_type;
   for (auto &eMatSp : LinSpa.ListMat) {
     MyMatrix<T> eMatSpImg = Pmat * eMatSp * Pmat.transpose();
     MyVector<T> eMatSpImg_V = SymmetricMatrixToVector(eMatSpImg);
-    std::optional<MyVector<T>> opt =
+    std::optional<MyVector<Tfield>> opt =
 	SolutionMat(LinSpa.ListMatAsBigMat, eMatSpImg_V);
     if (!opt) {
       return false;
@@ -302,7 +334,7 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
                              Fextra const &f_extra, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using Tfield = T;
+  using Tfield = typename overlying_field<T>::field_type;
   int n_row = SHV_T.rows();
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer_SHV n_row=" << n_row << "\n";

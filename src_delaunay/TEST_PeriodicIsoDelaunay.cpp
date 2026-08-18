@@ -45,8 +45,12 @@ void run_case(LinSpaceMatrix<T> const &LinSpa, PeriodicPointSet<Tint> const &pps
       AllStandardHeuristicSerial<T, Tint_grp>(LinSpa.n + 1, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   std::optional<MyMatrix<T>> CommonGramMat;
-  DataIsoDelaunayDomains<T, Tint, Tgroup> data{LinSpa, std::move(rddo),
-                                               CommonGramMat};
+  LinSpaceMatrix<Tint> LinSpaRing = LINSPA_GetRingVersion(LinSpa);
+  std::optional<MyMatrix<Tint>> CommonGramMatRing =
+      GetCommonGramMatRing<Tint, T>(CommonGramMat);
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data{
+      LinSpa, std::move(LinSpaRing), std::move(rddo), CommonGramMat,
+      CommonGramMatRing};
   PeriodicDataIsoDelaunayDomainsFunc<T, Tint, Tgroup> data_func{
       std::move(data), pps};
   using Tobj = typename PeriodicDataIsoDelaunayDomainsFunc<T, Tint,
@@ -63,7 +67,9 @@ void run_case(LinSpaceMatrix<T> const &LinSpa, PeriodicPointSet<Tint> const &pps
   check(n_orbit == expected_nb, "the number of orbits is the expected one");
   for (auto &eEnt : l_ent) {
     Tobj const &x = eEnt.x;
-    MyMatrix<T> const &GramMat = x.DT_gram.GramMat;
+    // The domain stores its interior Gram matrix over the ring; a positive
+    // scaling changes neither the strict interiority nor the tessellation.
+    MyMatrix<T> GramMat = UniversalMatrixConversion<T, Tint>(x.DT_gram.GramMat);
     std::vector<FullAdjInfo<Tint>> ListIneq =
         ComputeListIneqFromTesselationIneq(x.DT_gram.DT);
     MyVector<T> g_vec =
@@ -82,11 +88,11 @@ void run_case(LinSpaceMatrix<T> const &LinSpa, PeriodicPointSet<Tint> const &pps
   }
   for (size_t i = 0; i < n_orbit; i++) {
     for (size_t j = i + 1; j < n_orbit; j++) {
-      std::optional<MyMatrix<T>> opt_equiv =
-          LINSPA_TestEquivalenceGramMatrix_SHV_Periodic<T, Tint, Tgroup>(
-              data_func.data.LinSpa, pps, l_ent[i].x.DT_gram.GramMat,
-              l_ent[j].x.DT_gram.GramMat, l_ent[i].x.DT_gram.SHV_T,
-              l_ent[j].x.DT_gram.SHV_T, CommonGramMat, os);
+      std::optional<MyMatrix<Tint>> opt_equiv =
+          LINSPA_TestEquivalenceGramMatrix_SHV_Periodic<Tint, Tint, Tgroup>(
+              data_func.data.LinSpaRing, pps, l_ent[i].x.DT_gram.GramMat,
+              l_ent[j].x.DT_gram.GramMat, l_ent[i].x.DT_gram.SHV,
+              l_ent[j].x.DT_gram.SHV, data_func.data.CommonGramMatRing, os);
       check(!opt_equiv.has_value(),
             "the domains of different orbits are inequivalent");
     }

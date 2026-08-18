@@ -1508,7 +1508,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   // only stores computations that took a long time, so on a workload made
   // of many cheap dual descriptions the bank stays empty forever and every
   // check is pure loss.
-  if (bank_check_decision == BankCheckDecision::yes && !TheBank.empty()) {
+  if (bank_check_decision == BankCheckDecision::yes && !TheBank.known_empty()) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_bankcheck;
 #endif

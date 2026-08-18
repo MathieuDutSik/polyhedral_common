@@ -31,6 +31,9 @@ public:
     PairKV<Tkey, Tval> pair{std::move(eKey), std::move(eVal)};
     comm.send(dest_iproc, tag_mpi_bank_insert, pair);
   }
+  // The content lives in the server rank, and any rank may have inserted
+  // into it, so emptiness cannot be established here.
+  bool known_empty() const { return false; }
   Tval GetDualDesc(const Tkey &eKey) const {
     comm.send(dest_iproc, tag_mpi_bank_request, eKey);
     Tval val;

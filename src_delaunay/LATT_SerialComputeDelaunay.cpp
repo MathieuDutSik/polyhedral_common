@@ -238,12 +238,13 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
                 << sym_dim << " but rigidity=" << rigidity << "\n";
       throw TerminalException{1};
     }
-    // Compute SHV_T (full-rank invariant family), then bundle DT + GramMat
-    // + SHV_T as an IsoDelaunayDomain and write it via boost::serialization
+    // Compute SHV (full-rank invariant family), then bundle DT + GramMat
+    // + SHV as an IsoDelaunayDomain and write it via boost::serialization
     // (text_oarchive — same format used by SerializeMatrix and friends).
     MyMatrix<Tint> SHV =
         ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
-    MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+    MyMatrix<Tint> GramMat_ring =
+        RemoveFractionMatrixPlusCoeffRing(GramMat).TheMat;
     // The rigidity check above guarantees the tesselation is generic over the
     // full canonical space, so its Voronoi inequalities are well defined.
     LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(n);
@@ -251,7 +252,7 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
         GetListGramRing(LinSpa.ListLineMat);
     DelaunayTesselationIneq<Tint, Tgroup> DTI =
         BuildDelaunayTesselationIneq(DT, ListGramRing, os);
-    IsoDelaunayDomain<T, Tint, Tgroup> x_iso{DTI, GramMat, SHV_T};
+    IsoDelaunayDomain<T, Tint, Tgroup> x_iso{DTI, GramMat_ring, SHV};
     std::ofstream ofs(FileIsoDelaunayDomain);
     boost::archive::text_oarchive oa(ofs);
     oa << x_iso;

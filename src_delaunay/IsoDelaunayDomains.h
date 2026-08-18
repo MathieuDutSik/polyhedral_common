@@ -48,12 +48,31 @@ template <typename T, typename Tint, typename Tgroup>
 struct DataIsoDelaunayDomains {
   // The Linear space of matrices
   LinSpaceMatrix<T> LinSpa;
+  // The same space over the ring, built once. The stabilizer, the
+  // equivalence and the invariant of a Gram matrix are computed from it:
+  // their inner loop is the pairwise scalar products of an integral vector
+  // family, which costs far less over the ring.
+  LinSpaceMatrix<Tint> LinSpaRing;
   // The database of dual descriptions.
   RecordDualDescOperation<T, Tgroup> rddo;
   // The matrices common to all the IsoDelaunay domains if one is chosen
   // to be common.
   std::optional<MyMatrix<T>> CommonGramMat;
+  // The same over the ring, for the stabilizer / equivalence / invariant.
+  // Those read it as the condition P G P^T = G, which a positive scaling of
+  // G leaves unchanged.
+  std::optional<MyMatrix<Tint>> CommonGramMatRing;
 };
+
+// The primitive integral representative of an imposed common Gram matrix.
+template <typename Tint, typename T>
+std::optional<MyMatrix<Tint>>
+GetCommonGramMatRing(std::optional<MyMatrix<T>> const &CommonGramMat) {
+  if (!CommonGramMat) {
+    return {};
+  }
+  return RemoveFractionMatrixPlusCoeffRing(*CommonGramMat).TheMat;
+}
 
 /*
   Code for the L-type domains.
@@ -2414,10 +2433,17 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   return FullNamelist(ListBlock);
 }
 
+/*
+  An iso-Delaunay domain is a cone, so its interior point is only defined up
+  to a positive factor: the primitive integral representative is taken, which
+  makes the stabilizer, the equivalence and the invariant of the domain run
+  over the ring. SHV is the invariant vector family of that Gram matrix, which
+  is integral as well.
+ */
 template <typename T, typename Tint, typename Tgroup> struct IsoDelaunayDomain {
   DelaunayTesselationIneq<Tint, Tgroup> DT;
-  MyMatrix<T> GramMat;
-  MyMatrix<T> SHV_T;
+  MyMatrix<Tint> GramMat;
+  MyMatrix<Tint> SHV;
 };
 
 template <typename T, typename Tint, typename Tgroup>
@@ -2576,8 +2602,8 @@ GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
       BuildDelaunayTesselationIneq(DT, ListGramRing, os);
   MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, DTI, os);
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  return {std::move(DTI), std::move(M), std::move(SHV_T)};
+  MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
+  return {std::move(DTI), std::move(M_ring), std::move(SHV)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -2628,10 +2654,9 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
   MyMatrix<T> FAC =
       UniversalMatrixConversion<T, Tint>(GetFACineq(ent.ListIneqRed));
   int nbIneq = FAC.rows();
-  MyMatrix<T> const &SHV_T = ent.DT_gram.SHV_T;
   os_out << ", n_ineq_red:=" << nbIneq;
   os_out << ", det:=" << DeterminantMat(ent.DT_gram.GramMat);
-  os_out << ", n_shv:=" << SHV_T.rows();
+  os_out << ", n_shv:=" << ent.DT_gram.SHV.rows();
   //
   MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
   int n_row = EXT.rows();
@@ -2771,6 +2796,21 @@ int CountNonFullRankRays(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 }
 
 /*
+  The stabilizer of the domain's Gram matrix in the T-space, computed over the
+  ring from the invariant vector family already carried by x.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>>
+get_stabilizer_gens(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+                    DataIsoDelaunayDomains<T, Tint, Tgroup> const &data,
+                    std::ostream &os) {
+  Result_ComputeStabilizer_SHV<Tint, Tgroup> result =
+      LINSPA_ComputeStabilizer_SHV<Tint, Tgroup>(
+          data.LinSpaRing, x.GramMat, x.SHV, data.CommonGramMatRing, os);
+  return result.get_list_matrix(x.SHV, x.GramMat, data.LinSpaRing, os);
+}
+
+/*
   Combinatorial pre-computation of the adjacencies: everything except the
   expensive per-facet FlippingLtype. See PreResultDelaunayAdj.
 
@@ -2783,7 +2823,7 @@ template <typename T, typename Tint, typename Tgroup>
 PreResultDelaunayAdj<T, Tint, Tgroup>
 get_pre_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
                             DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
-                            std::vector<MyMatrix<T>> const &ListGenTot) {
+                            std::vector<MyMatrix<Tint>> const &ListGenTot) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::ostream &os = data.rddo.os;
@@ -2861,7 +2901,10 @@ get_pre_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   // The permutations of the facets induced by the stabilizer generators.
   std::vector<Telt> ListPermGens;
   for (auto &eGenTot : ListGenTot) {
-    MyMatrix<T> MatSpace = matrix_in_t_space(eGenTot, data.LinSpa);
+    // The generators are integral, but their expression in the basis of the
+    // T-space is rational in general, so the action is computed over T.
+    MyMatrix<T> eGenTot_T = UniversalMatrixConversion<T, Tint>(eGenTot);
+    MyMatrix<T> MatSpace = matrix_in_t_space(eGenTot_T, data.LinSpa);
     std::vector<Tidx> l_pos(nbIrred);
     for (size_t i = 0; i < nbIrred; i++) {
       MyVector<T> const &eV = l_ineq[i];
@@ -2950,9 +2993,7 @@ get_pre_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   MicrosecondTime time_f_adj;
 #endif
-  std::vector<MyMatrix<T>> ListGenTot =
-    LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat,
-                                              data.CommonGramMat, os);
+  std::vector<MyMatrix<Tint>> ListGenTot = get_stabilizer_gens(x, data, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: f_adj, LINSPA_ComputeStabilizer|=" << time_f_adj << "\n";
 #endif
@@ -2979,10 +3020,8 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   // The flipping runs entirely over the ring: the interior element enters
   // only through the lifting heights, for which a positive fraction-free
   // rescaling changes nothing.
-  MyMatrix<Tint> InteriorRing =
-      RemoveFractionMatrixPlusCoeffRing(x.GramMat).TheMat;
   DelaunayTesselationIneq<Tint, Tgroup> DTIadj =
-    FlippingLtype(x.DT, InteriorRing, eRecIneq.ListAdjInfo, ListGramRing,
+    FlippingLtype(x.DT, x.GramMat, eRecIneq.ListAdjInfo, ListGramRing,
                   data.rddo.AllArr, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: s_adj, FlippingLtype|=" << time_s_adj << "\n";
@@ -3036,7 +3075,7 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
       UniversalMatrixConversion<T, Tint>(GetFACineq(ListIneqAdj));
   MyMatrix<T> M = get_interior_gram_matrix_lp(data.LinSpa, FACadj, os);
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+  MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
 #endif
@@ -3044,7 +3083,7 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   os << "ISODEL: After GetInteriorGramMatrix\n";
 #endif
   IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{
-    std::move(DTIadj), std::move(M), std::move(SHV_T)};
+    std::move(DTIadj), std::move(M_ring), std::move(SHV)};
   return {eRecIneq.eIneq, std::move(IsoDelAdj)};
 }
 
@@ -3057,7 +3096,7 @@ template <typename T, typename Tint, typename Tgroup>
 ResultDelaunayAdj<T, Tint, Tgroup>
 get_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
                         DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
-                        std::vector<MyMatrix<T>> const &ListGenTot) {
+                        std::vector<MyMatrix<Tint>> const &ListGenTot) {
   PreResultDelaunayAdj<T, Tint, Tgroup> pre =
     get_pre_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot);
   std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
@@ -3073,9 +3112,8 @@ template <typename T, typename Tint, typename Tgroup>
 ResultDelaunayAdj<T, Tint, Tgroup>
 get_result_delaunay_adj(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
                         DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
-  std::vector<MyMatrix<T>> ListGenTot =
-    LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat,
-                                              data.CommonGramMat, data.rddo.os);
+  std::vector<MyMatrix<Tint>> ListGenTot =
+      get_stabilizer_gens(x, data, data.rddo.os);
   return get_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot);
 }
 
@@ -3245,8 +3283,8 @@ struct DataIsoDelaunayDomainsFunc {
     }
     if (method == 2) {
       size_t hash =
-          LINSPA_Invariant_SHV<T>(seed, data.LinSpa, x.DT_gram.GramMat,
-                                  x.DT_gram.SHV_T, data.CommonGramMat, os);
+          LINSPA_Invariant_SHV<Tint>(seed, data.LinSpaRing, x.DT_gram.GramMat,
+                                     x.DT_gram.SHV, data.CommonGramMatRing, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
       os << "|ISODEL: f_hash|=" << time_hash << "\n";
 #endif
@@ -3263,10 +3301,11 @@ struct DataIsoDelaunayDomainsFunc {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
     MicrosecondTime time_repr;
 #endif
-    std::optional<MyMatrix<T>> opt =
-        LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
-            data.LinSpa, x.DT_gram.GramMat, y.DT_gram.GramMat, x.DT_gram.SHV_T,
-            y.DT_gram.SHV_T, data.CommonGramMat, data.rddo.os);
+    std::optional<MyMatrix<Tint>> opt =
+        LINSPA_TestEquivalenceGramMatrix_SHV<Tint, Tgroup>(
+            data.LinSpaRing, x.DT_gram.GramMat, y.DT_gram.GramMat,
+            x.DT_gram.SHV, y.DT_gram.SHV, data.CommonGramMatRing,
+            data.rddo.os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
     // The outcome is logged with the time: an invariant that separates well
     // makes almost every call return an equivalence, a weak one wastes the
@@ -3281,9 +3320,7 @@ struct DataIsoDelaunayDomainsFunc {
     if (!opt) {
       return {};
     }
-    MyMatrix<T> const &eBigMat_T = *opt;
-    MyMatrix<Tint> eBigMat = UniversalMatrixConversion<Tint, T>(eBigMat_T);
-    TadjO ret{y.V, eBigMat};
+    TadjO ret{y.V, *opt};
     return ret;
   }
   std::pair<Tobj, TadjO> f_spann(TadjI const &x) {
@@ -3342,8 +3379,12 @@ get_data_isodelaunay_domains(FullNamelist const &eFull,
   os << "We have rddo\n";
 #endif
   //
-  DataIsoDelaunayDomains<T, Tint, Tgroup> data{LinSpa, std::move(rddo),
-                                               CommonGramMat};
+  LinSpaceMatrix<Tint> LinSpaRing = LINSPA_GetRingVersion(LinSpa);
+  std::optional<MyMatrix<Tint>> CommonGramMatRing =
+      GetCommonGramMatRing<Tint, T>(CommonGramMat);
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data{
+      LinSpa, std::move(LinSpaRing), std::move(rddo), CommonGramMat,
+      CommonGramMatRing};
   return data;
 }
 

@@ -151,10 +151,11 @@ public:
     }
     ListEnt.emplace(std::move(eKey), std::move(eVal));
   }
-  // Whether anything has been stored at all. Querying the bank costs a
+  // Whether the bank is known to hold nothing at all. Querying it costs a
   // graph canonicalization of the polytope, which is pure loss when there
-  // is nothing to find: the caller checks this first.
-  bool empty() const { return ListEnt.empty(); }
+  // is nothing to find: the caller checks this first. The remote banks
+  // cannot answer this locally and so always report false.
+  bool known_empty() const { return ListEnt.empty(); }
   const Tval &GetDualDesc(const Tkey &eKey) const {
 #ifdef DEBUG_DATABANK
     os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";

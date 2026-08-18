@@ -1140,8 +1140,8 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialPeriodicIsoDelaunayDomain(
     if (opt) {
       MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, *opt, os);
       MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
-      MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-      return {std::move(*opt), std::move(M), std::move(SHV_T)};
+      MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
+      return {std::move(*opt), std::move(M_ring), std::move(SHV)};
     }
     n_iter += 1;
     N += n_iter;
@@ -1158,13 +1158,13 @@ struct PeriodicDataIsoDelaunayDomainsFunc {
   std::ostream &get_os() { return data.rddo.os; }
   // The coset-adequate stabilizer of the Gram matrix, as the matrix
   // generators the wall kernels consume.
-  std::vector<MyMatrix<T>> get_stab_gens(MyMatrix<T> const &eMat,
-                                         MyMatrix<T> const &SHV_T) {
+  std::vector<MyMatrix<Tint>> get_stab_gens(MyMatrix<Tint> const &eMat,
+                                            MyMatrix<Tint> const &SHV) {
     std::ostream &os = data.rddo.os;
-    Result_ComputeStabilizer_SHV<T, Tgroup> result =
-        LINSPA_ComputeStabilizer_SHV_Periodic<T, Tint, Tgroup>(
-            data.LinSpa, pps, eMat, SHV_T, data.CommonGramMat, os);
-    return result.get_list_matrix(SHV_T, eMat, data.LinSpa, os);
+    Result_ComputeStabilizer_SHV<Tint, Tgroup> result =
+        LINSPA_ComputeStabilizer_SHV_Periodic<Tint, Tint, Tgroup>(
+            data.LinSpaRing, pps, eMat, SHV, data.CommonGramMatRing, os);
+    return result.get_list_matrix(SHV, eMat, data.LinSpaRing, os);
   }
   Tobj f_init() {
     IsoDelaunayDomain<T, Tint, Tgroup> IsoDel =
@@ -1175,21 +1175,20 @@ struct PeriodicDataIsoDelaunayDomainsFunc {
   size_t f_hash(size_t const &seed, Tobj const &x) {
     // The point set is the same for every domain of the enumeration, so
     // the lattice invariant separates the domains just as well.
-    return LINSPA_Invariant_SHV<T>(seed, data.LinSpa, x.DT_gram.GramMat,
-                                   x.DT_gram.SHV_T, data.CommonGramMat,
-                                   data.rddo.os);
+    return LINSPA_Invariant_SHV<Tint>(seed, data.LinSpaRing, x.DT_gram.GramMat,
+                                      x.DT_gram.SHV, data.CommonGramMatRing,
+                                      data.rddo.os);
   }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
-    std::optional<MyMatrix<T>> opt =
-        LINSPA_TestEquivalenceGramMatrix_SHV_Periodic<T, Tint, Tgroup>(
-            data.LinSpa, pps, x.DT_gram.GramMat, y.DT_gram.GramMat,
-            x.DT_gram.SHV_T, y.DT_gram.SHV_T, data.CommonGramMat,
+    std::optional<MyMatrix<Tint>> opt =
+        LINSPA_TestEquivalenceGramMatrix_SHV_Periodic<Tint, Tint, Tgroup>(
+            data.LinSpaRing, pps, x.DT_gram.GramMat, y.DT_gram.GramMat,
+            x.DT_gram.SHV, y.DT_gram.SHV, data.CommonGramMatRing,
             data.rddo.os);
     if (!opt) {
       return {};
     }
-    MyMatrix<Tint> eBigMat = UniversalMatrixConversion<Tint, T>(*opt);
-    TadjO ret{y.V, eBigMat};
+    TadjO ret{y.V, *opt};
     return ret;
   }
   std::pair<Tobj, TadjO> f_spann(TadjI const &x) {
@@ -1201,8 +1200,7 @@ struct PeriodicDataIsoDelaunayDomainsFunc {
   }
   std::optional<std::vector<TadjI>> f_adj(Tobj &x_in) {
     IsoDelaunayDomain<T, Tint, Tgroup> const &x = x_in.DT_gram;
-    std::vector<MyMatrix<T>> ListGenTot =
-        get_stab_gens(x.GramMat, x.SHV_T);
+    std::vector<MyMatrix<Tint>> ListGenTot = get_stab_gens(x.GramMat, x.SHV);
     ResultDelaunayAdj<T, Tint, Tgroup> result =
         get_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot);
     x_in.ListIneqRed = result.ListIneqRed;

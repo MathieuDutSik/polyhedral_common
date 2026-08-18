@@ -248,6 +248,51 @@ MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const &ListMat) {
 
 
 /*
+  The T-space over the underlying ring, for the stabilizer, the equivalence
+  and the invariant of a Gram matrix. Their inner loop is the pairwise scalar
+  products of an integral vector family, which costs far less over the ring
+  than over the field, where every product renormalizes a fraction.
+
+  Those three computations read the basis (ListMat, and ListMatAsBigMat for
+  the membership test), the commuting matrices, the preserved subspaces and
+  the point stabilizer. All of them are integral: the basis is required to be
+  integrally saturated and the others are given by integral matrices. The
+  members left out are the ones that are genuinely rational (SuperMat, the
+  pairwise scalar information) or unused here, and the field version of the
+  space remains the reference for them.
+ */
+template <typename T>
+LinSpaceMatrix<typename underlying_ring<T>::ring_type>
+LINSPA_GetRingVersion(LinSpaceMatrix<T> const &LinSpa) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  auto f_list = [](std::vector<MyMatrix<T>> const &l)
+      -> std::vector<MyMatrix<Tring>> {
+    std::vector<MyMatrix<Tring>> l_ret;
+    l_ret.reserve(l.size());
+    for (auto &eMat : l) {
+      l_ret.push_back(UniversalMatrixConversion<Tring, T>(eMat));
+    }
+    return l_ret;
+  };
+  std::vector<MyMatrix<Tring>> ListMat = f_list(LinSpa.ListMat);
+  std::vector<std::vector<Tring>> ListLineMat;
+  for (auto &eMat : ListMat) {
+    ListLineMat.push_back(GetLineVector(eMat));
+  }
+  LinSpaceMatrix<Tring> LinSpaRing;
+  LinSpaRing.n = LinSpa.n;
+  LinSpaRing.isBravais = LinSpa.isBravais;
+  LinSpaRing.ListMatAsBigMat = GetListMatAsBigMat(ListMat);
+  LinSpaRing.ListMat = std::move(ListMat);
+  LinSpaRing.ListLineMat = std::move(ListLineMat);
+  LinSpaRing.ListComm = f_list(LinSpa.ListComm);
+  LinSpaRing.ListSubspaces = f_list(LinSpa.ListSubspaces);
+  LinSpaRing.PtStabGens = f_list(LinSpa.PtStabGens);
+  LinSpaRing.is_self_dual = LinSpa.is_self_dual;
+  return LinSpaRing;
+}
+
+/*
   This information is used for self-duality but also for
   representing evaluation functions in a matrix space.
  */
