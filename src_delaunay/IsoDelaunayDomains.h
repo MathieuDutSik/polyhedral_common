@@ -1420,19 +1420,16 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #endif
     std::vector<Tidx> Linc;
     Face Linc_face(nVert);
-    std::vector<MyVector<Tring>> EXT_list;
     for (int iVert = 0; iVert < nVert; iVert++) {
       if (get_incd_status(iVert, eFac)) {
         Linc.push_back(iVert);
         Linc_face[iVert] = 1;
-        EXT_list.push_back(ListVertices[iVert]);
       }
     }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: FRING: FuncInsertFacet, step 2 |EXT_list|="
-       << EXT_list.size() << "\n";
+    os << "ISODEL: FRING: FuncInsertFacet, step 2 |Linc|=" << Linc.size()
+       << "\n";
 #endif
-    MyMatrix<Tring> EXT = MatrixFromVectorFamily(EXT_list);
     int nOrb = ListOrbitFacet.size();
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertFacet, step 2.1 nOrb=" << nOrb << "\n";
@@ -1491,6 +1488,7 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
     int iDelaunayOrigin = -1;
     std::vector<Delaunay_AdjO<Tring>> ListAdj;
     MyMatrix<Tring> eMatUnused; // That matrix should never be used
+    MyMatrix<Tring> EXT = SelectRow(TotalListVerticesRed, Linc_face);
     RepartEntry<Tring, Tgroup> re{EXT,     TheStab,   Position, iDelaunayOrigin,
                                   ListAdj, eMatUnused};
     RepartEntryProv rep{eFac, Linc, Linc_face};
