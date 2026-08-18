@@ -1,0 +1,11 @@
+name: 'Install Boost'
+description: 'Install Boost headers and the compiled serialization library via apt, at BOOST_INCDIR / BOOST_LINK (which must be set in the calling workflow''s env).'
+runs:
+  using: 'composite'
+  steps:
+    - name: apt-get install libboost-dev libboost-serialization-dev
+      shell: bash
+      run: |
+        set -e
+        sudo apt-get update
+        sudo apt-get install -y libboost-dev libboost-serialization-dev
