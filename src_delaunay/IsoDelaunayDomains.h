@@ -937,6 +937,19 @@ template <typename Tint, typename Tgroup> struct RepartEntry {
   int iDelaunayOrigin;
   std::vector<Delaunay_AdjO<Tint>> ListAdj;
   MyMatrix<Tint> eBigMat;
+  // Cache of the inverse of eBigMat, filled at most once by get_bigmat_inv
+  // and read through it only. The transformations are unimodular, so the
+  // inverse stays over the ring. The adjacency loop of FlippingLtype needs
+  // it once per adjacency while it depends only on the cell. The entry stays
+  // an aggregate (it is brace-initialized without this field), so the cache
+  // is a mutable member rather than a private one.
+  mutable std::optional<MyMatrix<Tint>> eBigMatInv;
+  MyMatrix<Tint> const &get_bigmat_inv() const {
+    if (!eBigMatInv) {
+      eBigMatInv = Inverse(eBigMat);
+    }
+    return *eBigMatInv;
+  }
 };
 
 template <typename T>
@@ -998,7 +1011,10 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
   MicrosecondTime time_fring_full;
   int64_t time_fring_group = 0, time_fring_stab = 0, time_fring_dualdesc = 0,
           time_fring_flip = 0, time_fring_insert_facet = 0,
-          time_fring_onsets = 0, time_fring_reprvert = 0;
+          time_fring_onsets = 0, time_fring_reprvert = 0,
+          time_fring_centers = 0, time_fring_vertmat = 0,
+          time_fring_kernel = 0, time_fring_ext2 = 0, time_fring_frame = 0,
+          time_fring_lev = 0;
 #endif
   int n = InteriorElement.rows();
   std::vector<std::vector<Tidx>> ListPermGenList;
@@ -1303,6 +1319,9 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FRING: before insert\n";
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time_c;
+#endif
   TypeOrbitCenterMin TheRec{static_cast<int>(eIdx), IdentityMat<Tring>(n + 1)};
   FuncInsertCenter(TheRec);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -1343,6 +1362,10 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
   // it before the facet-orbit code below (FuncInsertFacet, Stabilizer_OnSets)
   // starts reading it.
   ensure_group_updated();
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  time_fring_centers += time_c.eval_int64();
+  MicrosecondTime time_vm;
+#endif
   // second part, the convex decomposition
   int nVert = ListVertices.size();
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -1376,6 +1399,9 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
   // TotalListVerticesRed is fixed from here on and FuncInsertFacet represents
   // many permutations of it, so the basis inversion is done once.
   RepresentVertexPermutationPreComput<Tring> precomp_tlvr(TotalListVerticesRed);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  time_fring_vertmat += time_vm.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FRING: we have TotalListVertices\n";
   os << "ISODEL: FRING: TotalListVertices=\n";
@@ -1413,6 +1439,9 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
   };
   std::vector<RepartEntry<Tring, Tgroup>> ListOrbitFacet;
   std::vector<RepartEntryProv> ListOrbitFacet_prov;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time_kv;
+#endif
   SubsetRankOneSolver<Tring> solver(TotalListVertices);
   for (auto &eRec : ListOrbitCenter) {
     Face Linc_face = VectorToFace(eRec.Linc, nVert);
@@ -1424,11 +1453,14 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
     MyMatrix<Tring> const &eBigMat = eRec.eBigMat;
     MyMatrix<Tring> const &EXT = eRec.EXT;
     RepartEntry<Tring, Tgroup> re{EXT,     TheStab, Position, iDelaunayOrigin,
-                                  ListAdj, eBigMat};
+                                  ListAdj, eBigMat, {}};
     RepartEntryProv rep{eFac, eRec.Linc, Linc_face};
     ListOrbitFacet.push_back(re);
     ListOrbitFacet_prov.push_back(rep);
   }
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  time_fring_kernel += time_kv.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FRING: we have ListOrbitFacet\n";
 #endif
@@ -1508,8 +1540,8 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
     std::vector<Delaunay_AdjO<Tring>> ListAdj;
     MyMatrix<Tring> eMatUnused; // That matrix should never be used
     MyMatrix<Tring> EXT = SelectRow(TotalListVerticesRed, Linc_face);
-    RepartEntry<Tring, Tgroup> re{EXT,     TheStab,   Position, iDelaunayOrigin,
-                                  ListAdj, eMatUnused};
+    RepartEntry<Tring, Tgroup> re{EXT,     TheStab,    Position, iDelaunayOrigin,
+                                  ListAdj, eMatUnused, {}};
     RepartEntryProv rep{eFac, Linc, Linc_face};
     ListOrbitFacet.push_back(re);
     ListOrbitFacet_prov.push_back(rep);
@@ -1560,10 +1592,14 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
       std::vector<Delaunay_AdjO<Tring>> ListAdj;
       // Depending on the nature of the facet (low, barrel, top), the idx_drop
       // can very much vary. We cannot set it to
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      MicrosecondTime time_e2;
+#endif
       int idx_drop = get_idx_drop(ListOrbitFacet_prov[iOrb].eFac);
       MyMatrix<Tring> EXT2 =
           SelectRowDropColumnFace(TotalListVertices, Linc_face, idx_drop);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      time_fring_ext2 += time_e2.eval_int64();
       MicrosecondTime time_d;
 #endif
       vectface vf = DualDescriptionRecordFullDim(EXT2, TheStabFace, rddo_ring);
@@ -1577,8 +1613,14 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
       CheckFacetInequality(TotalListVertices, Linc_face,
                            "FuncInsertFace TotalListVertices Linc_face");
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      MicrosecondTime time_fr;
+#endif
       FlippingFramework<Tring> frame(TotalListVertices, Linc_face, os);
       SubsetRankOneSolver<Tring> solver_tlv(TotalListVertices);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+      time_fring_frame += time_fr.eval_int64();
+#endif
       for (auto &eFace : vf) {
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
         CheckFacetInequality(EXT2, eFace, "FuncInsertFace EXT2 eFace");
@@ -1617,6 +1659,9 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: FRING: We have eAdj\n";
 #endif
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        MicrosecondTime time_lev;
+#endif
         size_t nVert = ListOrbitFacet_prov[iOrb].Linc.size();
         Face LEV(nVert);
         for (size_t iInc = 0; iInc < nVert; iInc++) {
@@ -1625,6 +1670,9 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
             LEV[iInc] = 1;
           }
         }
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+        time_fring_lev += time_lev.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: FRING: We have |LEV|=" << LEV.size() << " / "
            << LEV.count() << "\n";
@@ -1648,6 +1696,12 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
   os << "|ISODEL: FRING: insert_facet_onsets|=" << time_fring_onsets << "\n";
   os << "|ISODEL: FRING: insert_facet_reprvert|=" << time_fring_reprvert
      << "\n";
+  os << "|ISODEL: FRING: centers|=" << time_fring_centers << "\n";
+  os << "|ISODEL: FRING: vertex_matrix|=" << time_fring_vertmat << "\n";
+  os << "|ISODEL: FRING: kernel_vectors|=" << time_fring_kernel << "\n";
+  os << "|ISODEL: FRING: select_ext2|=" << time_fring_ext2 << "\n";
+  os << "|ISODEL: FRING: frame_setup|=" << time_fring_frame << "\n";
+  os << "|ISODEL: FRING: lev|=" << time_fring_lev << "\n";
   os << "|ISODEL: FRING: full|=" << time_fring_full << "\n";
 #endif
   return {ListOrbitFacet, eIso};
@@ -1672,7 +1726,12 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   MicrosecondTime time_flt_full;
   int64_t time_flt_repart = 0, time_flt_onsets = 0, time_flt_bigmat = 0,
-          time_flt_vipc = 0, time_flt_ineq = 0;
+          time_flt_vipc = 0, time_flt_ineq = 0, time_flt_setup = 0,
+          time_flt_symbols = 0, time_flt_adjacencies = 0,
+          time_flt_matching = 0, time_flt_matching_old = 0,
+          time_flt_transport = 0, time_flt_symbolpos = 0,
+          time_flt_chain = 0;
+  MicrosecondTime time_su;
 #endif
   using Tgr = GraphListAdj;
   using Telt = typename Tgroup::Telt;
@@ -1728,6 +1787,9 @@ FlippingLtype(
   std::vector<int> vect_iInfo(n_dels, -1);
   std::vector<int> vect_lower_iFacet(n_dels, -1);
   int iInfo = 0;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  time_flt_setup += time_su.eval_int64();
+#endif
   for (auto &eConn : ListGroupMelt) {
     size_t eIdx = eConn[0];
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
@@ -1795,6 +1857,14 @@ FlippingLtype(
   }
   auto get_matching_listinfo = [&](int const &iInfo, int const &iFacet,
                                    Face const &eInc) -> MatchedFacet {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_gm;
+    struct AccumOnExit {
+      MicrosecondTime &t;
+      int64_t &acc;
+      ~AccumOnExit() { acc += t.eval_int64(); }
+    } accum_gm{time_gm, time_flt_matching};
+#endif
     MyMatrix<Tring> const &EXT = ListInfo[iInfo][iFacet].EXT;
     Tgroup const &TheStab = ListInfo[iInfo][iFacet].TheStab;
     int dim = InteriorElement.rows();
@@ -1897,6 +1967,14 @@ FlippingLtype(
   };
   auto get_matching_old_tessel = [&](int const &iDelaunayOld,
                                      Face const &eInc) -> MatchedFacet {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_go;
+    struct AccumOnExit {
+      MicrosecondTime &t;
+      int64_t &acc;
+      ~AccumOnExit() { acc += t.eval_int64(); }
+    } accum_go{time_go, time_flt_matching_old};
+#endif
     MyMatrix<Tring> const &EXT = ListOrbitDelaunay.l_dels[iDelaunayOld].EXT;
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
     CheckFacetInequality(EXT, eInc, "get_matching_old_tessel EXT eInc");
@@ -1946,8 +2024,11 @@ FlippingLtype(
         << "ISO_EDGE: FLT: Failed to find an entry in get_lower_adjacency\n";
     throw TerminalException{1};
   };
-  auto get_face_m_m = [](MyMatrix<Tring> const &M1,
-                         MyMatrix<Tring> const &M2) -> Face {
+  auto get_face_m_m = [&](MyMatrix<Tring> const &M1,
+                          MyMatrix<Tring> const &M2) -> Face {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_tr;
+#endif
     int nVert1 = M1.rows();
     int nVert2 = M2.rows();
     Face f2(nVert2);
@@ -1958,10 +2039,16 @@ FlippingLtype(
       size_t pos2 = unfold_opt(opt, "Error in get_face_m_m");
       f2[pos2] = 1;
     }
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    time_flt_transport += time_tr.eval_int64();
+#endif
     return f2;
   };
-  auto get_face_msub_m = [](MyMatrix<Tring> const &M1, Face const &f1,
-                            MyMatrix<Tring> const &M2) -> Face {
+  auto get_face_msub_m = [&](MyMatrix<Tring> const &M1, Face const &f1,
+                             MyMatrix<Tring> const &M2) -> Face {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_tr;
+#endif
     int nVert1 = M1.rows();
     int nVert2 = M2.rows();
     Face f2(nVert2);
@@ -1974,6 +2061,9 @@ FlippingLtype(
         f2[pos2] = 1;
       }
     }
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    time_flt_transport += time_tr.eval_int64();
+#endif
     return f2;
   };
   int n_info = ListInfo.size();
@@ -1987,6 +2077,14 @@ FlippingLtype(
   std::vector<DelaunaySymb> NewListOrbitDelaunay;
   auto get_symbol_position =
       [&](DelaunaySymb const &ds) -> std::optional<size_t> {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    MicrosecondTime time_sp;
+    struct AccumOnExit {
+      MicrosecondTime &t;
+      int64_t &acc;
+      ~AccumOnExit() { acc += t.eval_int64(); }
+    } accum_sp{time_sp, time_flt_symbolpos};
+#endif
     if (ds.Position == Position_old) {
       for (size_t i = 0; i < NewListOrbitDelaunay.size(); i++) {
         if (NewListOrbitDelaunay[i].Position == Position_old) {
@@ -2009,6 +2107,9 @@ FlippingLtype(
     return {};
   };
   std::vector<Delaunay_EntryIneq<Tring, Tgroup>> l_dels;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time_sy;
+#endif
   for (auto &eConn : ListGroupUnMelt) {
     if (eConn.size() > 1) {
       std::cerr << "Error of connected component computation\n";
@@ -2092,6 +2193,10 @@ FlippingLtype(
   };
 #endif
   int n_del_ret = l_dels.size();
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  time_flt_symbols += time_sy.eval_int64();
+  MicrosecondTime time_ad;
+#endif
   for (int iOrb = 0; iOrb < n_del_ret; iOrb++) {
     DelaunaySymb ds = NewListOrbitDelaunay[iOrb];
     std::vector<Delaunay_AdjIneqO<Tring>> ListAdj;
@@ -2156,7 +2261,6 @@ FlippingLtype(
           int iInfo = vect_iInfo[iDelaunayOld];
           int iFacet = vect_lower_iFacet[iDelaunayOld];
           RepartEntry<Tring, Tgroup> const &eFacet = ListInfo[iInfo][iFacet];
-          MyMatrix<Tring> const &BigMat2 = eFacet.eBigMat;
           MyMatrix<Tring> ImageEXT =
               ListOrbitDelaunay.l_dels[iDelaunayOld].EXT * eAdj.eBigMat;
           Face Linc = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunay].EXT,
@@ -2180,8 +2284,14 @@ FlippingLtype(
              << " iInfo=" << iInfo << " iOrbFound=" << iOrbFound << "\n";
 #endif
           int Pos = unfold_opt(optN, "Failed to find entry for Case 2");
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          MicrosecondTime time_ch1;
+#endif
           MyMatrix<Tring> BigMat1 = RecMatch.adj.eBigMat * RecMatch.eBigMat *
-                                    Inverse(BigMat2) * eAdj.eBigMat;
+                                    eFacet.get_bigmat_inv() * eAdj.eBigMat;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          time_flt_chain += time_ch1.eval_int64();
+#endif
           // Case 2: this orbit is unmelted but its neighbour was melted into
           // a new polytope, so the shared facet's inequality must be
           // recomputed against the new neighbour.
@@ -2240,10 +2350,16 @@ FlippingLtype(
           MatchedFacet match3 = get_matching_listinfo(jInfo, iFacet2, LLinc3);
           Delaunay_AdjO<Tring> const &TheFoundAdj3 = match3.adj;
           MyMatrix<Tring> const &TheMat3 = match3.eBigMat;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          MicrosecondTime time_ch2;
+#endif
           MyMatrix<Tring> BigMat1 =
               TheFoundAdj3.eBigMat * TheMat3 *
-              Inverse(ListInfo[jInfo][iFacet2].eBigMat) * eMat3 * TheMat2 *
+              ListInfo[jInfo][iFacet2].get_bigmat_inv() * eMat3 * TheMat2 *
               ListInfo[iInfo][kFacet].eBigMat * eMat2 * eMat1;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+          time_flt_chain += time_ch2.eval_int64();
+#endif
           MyMatrix<Tring> EXT7 =
               ListInfo[jInfo][TheFoundAdj3.iOrb].EXT * BigMat1;
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
@@ -2338,11 +2454,17 @@ FlippingLtype(
             DelaunaySymb dss{Position_new, -1, jInfo, TheFoundAdj2.iOrb};
             std::optional<size_t> opt = get_symbol_position(dss);
             int Pos = unfold_opt(opt, "Case 5");
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+            MicrosecondTime time_ch3;
+#endif
             MyMatrix<Tring> BigMat1 =
                 TheFoundAdj2.eBigMat * TheMat2 *
-                Inverse(ListInfo[jInfo][iFacet2].eBigMat) *
+                ListInfo[jInfo][iFacet2].get_bigmat_inv() *
                 TheFoundAdj1.eBigMat * TheMat1 *
                 ListInfo[iInfo][jFacet].eBigMat * eAdj.eBigMat;
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+            time_flt_chain += time_ch3.eval_int64();
+#endif
             ensure_vipc_cont();
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
             MicrosecondTime time_i;
@@ -2386,6 +2508,9 @@ FlippingLtype(
     }
     l_dels[iOrb].ListAdj = ListAdj;
   }
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  time_flt_adjacencies += time_ad.eval_int64();
+#endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FLT: Exiting\n";
 #endif
@@ -2395,6 +2520,14 @@ FlippingLtype(
   os << "|ISODEL: FLT: represent_vertex_perm|=" << time_flt_bigmat << "\n";
   os << "|ISODEL: FLT: voronoi_precompute|=" << time_flt_vipc << "\n";
   os << "|ISODEL: FLT: adj_inequality|=" << time_flt_ineq << "\n";
+  os << "|ISODEL: FLT: setup|=" << time_flt_setup << "\n";
+  os << "|ISODEL: FLT: symbols|=" << time_flt_symbols << "\n";
+  os << "|ISODEL: FLT: adjacencies|=" << time_flt_adjacencies << "\n";
+  os << "|ISODEL: FLT: get_matching|=" << time_flt_matching << "\n";
+  os << "|ISODEL: FLT: get_matching_old|=" << time_flt_matching_old << "\n";
+  os << "|ISODEL: FLT: symbol_position|=" << time_flt_symbolpos << "\n";
+  os << "|ISODEL: FLT: bigmat_chain|=" << time_flt_chain << "\n";
+  os << "|ISODEL: FLT: face_transport|=" << time_flt_transport << "\n";
   os << "|ISODEL: FLT: full|=" << time_flt_full << "\n";
 #endif
   return {std::move(l_dels)};
@@ -3074,10 +3207,13 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   MyMatrix<T> FACadj =
       UniversalMatrixConversion<T, Tint>(GetFACineq(ListIneqAdj));
   MyMatrix<T> M = get_interior_gram_matrix_lp(data.LinSpa, FACadj, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
+#endif
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
   MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-  os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
+  os << "|ISODEL: s_adj, shv_extract|=" << time_s_adj << "\n";
 #endif
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: After GetInteriorGramMatrix\n";

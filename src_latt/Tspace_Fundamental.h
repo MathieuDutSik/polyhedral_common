@@ -26,6 +26,10 @@
 #define SANITY_CHECK_TSPACE_FUNCTIONS
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_TSPACE_FUNCTIONS
+#endif
+
 /*
   By a T-space, we mean a vector space which intersect the cone of positive
   definite matrices. We are interested here only on those positive definite

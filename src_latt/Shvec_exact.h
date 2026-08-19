@@ -199,6 +199,98 @@ Tint Infinitesimal_Ceil(T const &a, T const &b) {
   return eReturn;
 }
 
+/*
+  The two bounds of the enumeration in fraction-free form. The admissible
+  range of a coordinate n is |den * n + B| <= sqrt(K) with den > 0 and
+  K >= 0, which is the division-free rewriting of
+  Infinitesimal_Ceil(K/den^2, -B/den) <= n <= Infinitesimal_Floor(...):
+  no quotient is formed, only products and comparisons.
+
+  Bound_Floor returns the largest n with den * n + B <= sqrt(K). The double
+  computation only seeds the search; the exact predicate then walks to the
+  right answer, as in Infinitesimal_Floor.
+ */
+template <typename T, typename Tint>
+Tint Bound_Floor(T const &K, T const &B, T const &den) {
+#ifdef SANITY_CHECK_SHVEC
+  if (K < 0 || den <= 0) {
+    std::cerr << "SHVEC: Bound_Floor, K=" << K << " den=" << den
+              << " but K >= 0 and den > 0 are required\n";
+    throw TerminalException{1};
+  }
+#endif
+  double K_doubl = UniversalScalarConversion<double, T>(K);
+  double B_doubl = UniversalScalarConversion<double, T>(B);
+  double den_doubl = UniversalScalarConversion<double, T>(den);
+  double alpha = (sqrt(K_doubl) - B_doubl) / den_doubl;
+  Tint eReturn = static_cast<Tint>(lround(floor(alpha)));
+  auto f = [&](Tint const &n) -> bool {
+    T val = den * UniversalScalarConversion<T, Tint>(n) + B;
+    if (val <= 0) {
+      return true;
+    }
+    return val * val <= K;
+  };
+  bool test1 = f(eReturn);
+  bool test2 = f(eReturn + 1);
+  while (true) {
+    if (test1 && !test2) {
+      break;
+    }
+    if (!test1) {
+      test2 = test1;
+      test1 = f(eReturn - 1);
+      eReturn--;
+    } else {
+      test1 = test2;
+      test2 = f(eReturn + 2);
+      eReturn++;
+    }
+  }
+  return eReturn;
+}
+
+// Smallest n with den * n + B >= -sqrt(K). Same contract as Bound_Floor.
+template <typename T, typename Tint>
+Tint Bound_Ceil(T const &K, T const &B, T const &den) {
+#ifdef SANITY_CHECK_SHVEC
+  if (K < 0 || den <= 0) {
+    std::cerr << "SHVEC: Bound_Ceil, K=" << K << " den=" << den
+              << " but K >= 0 and den > 0 are required\n";
+    throw TerminalException{1};
+  }
+#endif
+  double K_doubl = UniversalScalarConversion<double, T>(K);
+  double B_doubl = UniversalScalarConversion<double, T>(B);
+  double den_doubl = UniversalScalarConversion<double, T>(den);
+  double alpha = (-sqrt(K_doubl) - B_doubl) / den_doubl;
+  Tint eReturn = static_cast<Tint>(lround(ceil(alpha)));
+  auto f = [&](Tint const &n) -> bool {
+    T val = den * UniversalScalarConversion<T, Tint>(n) + B;
+    if (val >= 0) {
+      return true;
+    }
+    return val * val <= K;
+  };
+  bool test1 = f(eReturn - 1);
+  bool test2 = f(eReturn);
+  while (true) {
+    if (!test1 && test2) {
+      break;
+    }
+    if (test1) {
+      test2 = test1;
+      test1 = f(eReturn - 2);
+      eReturn--;
+    } else {
+      test1 = test2;
+      test2 = f(eReturn + 1);
+      eReturn++;
+    }
+  }
+  return eReturn;
+}
+
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
 bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
                           bool const &central, const T &bound, Finsert f_insert,
@@ -207,8 +299,11 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
   int i, j;
   int dim = request.dim;
   MyVector<Tint> Upper(dim);
-  MyVector<T> Trem(dim);
-  MyVector<T> U(dim);
+  // Fraction-free state, see the derivation above the Bareiss loop below.
+  // Ttil(i) = d(i) * (the remaining norm budget at level i) and
+  // Bvec(i) = d(i) * C(i) + sum_{j>i} N(i,j) * (x(j) + C(j)).
+  MyVector<T> Ttil(dim);
+  MyVector<T> Bvec(dim);
   MyVector<Tint> x(dim);
   auto is_x_zero = [&]() -> bool {
     for (int u = 0; u < dim; u++) {
@@ -230,19 +325,46 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
     std::cerr << "\n";
   }
 #endif
-  MyMatrix<T> q = request.gram_matrix;
+  /*
+    Fraction-free replacement of the Cholesky-style normalization. Writing
+    d(i) for the leading principal minor of size i+1 of the Gram matrix and
+    N(i,j) for the Bareiss entry after i elimination steps, the coefficients
+    of the classical decomposition are q(i,i) = d(i)/d(i-1) and
+    q(i,j) = N(i,j)/d(i). Keeping d and N instead of q removes every
+    quotient from the enumeration: the only division left is the Bareiss
+    one, which is exact over any integral domain.
+   */
+  MyMatrix<T> N = request.gram_matrix;
+  MyVector<T> d(dim);
+  T prev(1);
   for (i = 0; i < dim; i++) {
-    for (j = i + 1; j < dim; j++) {
-      q(i, j) = q(i, j) / q(i, i);
-      q(j, i) = q(j, i) / q(i, i);
+    d(i) = N(i, i);
+#ifdef SANITY_CHECK_SHVEC
+    if (d(i) <= 0) {
+      std::cerr << "SHVEC: leading principal minor " << i << " is " << d(i)
+                << ", the Gram matrix is not positive definite\n";
+      throw TerminalException{1};
     }
-    for (int i2 = i + 1; i2 < dim; i2++)
-      for (int j2 = i + 1; j2 < dim; j2++)
-        q(i2, j2) -= q(i, i) * q(i, i2) * q(i, j2);
+#endif
+    for (int i2 = i + 1; i2 < dim; i2++) {
+      for (int j2 = i + 1; j2 < dim; j2++) {
+        T val = N(i2, j2) * N(i, i) - N(i2, i) * N(i, j2);
+        T quot = val / prev; // exact division guaranteed by Bareiss's theorem
+#ifdef SANITY_CHECK_SHVEC
+        if (quot * prev != val) {
+          std::cerr << "SHVEC: non-exact Bareiss division, T is not an "
+                       "integral domain\n";
+          throw TerminalException{1};
+        }
+#endif
+        N(i2, j2) = quot;
+      }
+    }
+    prev = N(i, i);
 #ifdef DEBUG_SHVEC_MATRIX
-    std::cerr << "SHVEC: diag q=" << q(i, i) << "\n";
+    std::cerr << "SHVEC: d=" << d(i) << "\n";
     for (int j = i + 1; j < dim; j++)
-      std::cerr << "   j=" << j << " q=" << q(i, j) << "\n";
+      std::cerr << "   j=" << j << " N=" << N(i, j) << "\n";
 #endif
   }
   bool needs_new_bound = true;
@@ -250,20 +372,25 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
   if (bound < 0) {
     return true;
   }
-  Trem(i) = bound;
-  U(i) = 0;
+  Ttil(i) = d(i) * bound;
+  Bvec(i) = d(i) * C(i);
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: Before while loop\n";
 #endif
 #ifdef DEBUG_SHVEC_VECTOR
   size_t n_vector = 0;
 #endif
-  T eQuot, eSum, hVal, eNorm;
+  T Kval, Hval, eNorm;
   while (true) {
     if (needs_new_bound) {
-      eQuot = Trem(i) / q(i, i);
-      eSum = -U(i) - C(i);
-      f_set_bound(eQuot, eSum, q, x, i, Upper(i), x(i));
+      // The admissible range is |d(i) * x(i) + Bvec(i)| <= sqrt(Kval) with
+      // Kval = d(i-1) * Ttil(i), which is the fraction-free form of the
+      // classical q(i,i) * (x(i) + C(i) + U(i))^2 <= Trem(i).
+      Kval = Ttil(i);
+      if (i > 0) {
+        Kval *= d(i - 1);
+      }
+      f_set_bound(Kval, Bvec(i), d(i), x, i, Upper(i), x(i));
       x_T(i) = UniversalScalarConversion<T, Tint>(x(i));
       needs_new_bound = false;
     } else {
@@ -280,8 +407,18 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
             return true;
           }
         }
-        hVal = x_T(0) + C(0) + U(0);
-        eNorm = bound - Trem(0) + q(0, 0) * hVal * hVal;
+        Hval = d(0) * x_T(0) + Bvec(0);
+        // bound - Trem(-1), the exact norm; the division is exact because
+        // Trem(-1) = bound - Q(x + C) is a value of the original form.
+        T num = Ttil(0) - Hval * Hval;
+        T quot = num / d(0);
+#ifdef SANITY_CHECK_SHVEC
+        if (quot * d(0) != num) {
+          std::cerr << "SHVEC: non-exact division in the norm evaluation\n";
+          throw TerminalException{1};
+        }
+#endif
+        eNorm = bound - quot;
 #ifdef SANITY_CHECK_SHVEC
         T norm(0);
         for (int i2 = 0; i2 < dim; i2++)
@@ -320,12 +457,24 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
           return false;
         }
       } else {
+        Hval = d(i) * x_T(i) + Bvec(i);
         i--;
-        U(i) = 0;
+        Bvec(i) = d(i) * C(i);
         for (j = i + 1; j < dim; j++)
-          U(i) += q(i, j) * (x_T(j) + C(j));
-        hVal = x_T(i + 1) + C(i + 1) + U(i + 1);
-        Trem(i) = Trem(i + 1) - q(i + 1, i + 1) * hVal * hVal;
+          Bvec(i) += N(i, j) * (x_T(j) + C(j));
+        // Ttil(i) = (d(i) * Ttil(i+1) - Hval^2) / d(i+1), the fraction-free
+        // form of Trem(i) = Trem(i+1) - q(i+1,i+1) * hVal^2. The division is
+        // exact: d(i) * Trem(i) is a value of the Schur complement of the
+        // leading block, which Bareiss keeps over the ring.
+        T num = d(i) * Ttil(i + 1) - Hval * Hval;
+        T quot = num / d(i + 1);
+#ifdef SANITY_CHECK_SHVEC
+        if (quot * d(i + 1) != num) {
+          std::cerr << "SHVEC: non-exact division in the remainder update\n";
+          throw TerminalException{1};
+        }
+#endif
+        Ttil(i) = quot;
         needs_new_bound = true;
       }
     } else {
@@ -403,12 +552,11 @@ bool computeIt_polytope(const FullGramInfo<T> &request,
 #ifdef DEBUG_SHVEC_EXACT_POLYTOPE
   std::cerr << "Beginning of computeIt_polytope\n";
 #endif
-  auto f_set_bound = [&](const T &eQuot, const T &eSum,
-                         [[maybe_unused]] const MyMatrix<T> &q,
+  auto f_set_bound = [&](const T &K, const T &B, const T &den,
                          const MyVector<Tint> &x, const int &i, Tint &upper,
                          Tint &lower) -> void {
-    upper = Infinitesimal_Floor<T, Tint>(eQuot, eSum);
-    lower = Infinitesimal_Ceil<T, Tint>(eQuot, eSum);
+    upper = Bound_Floor<T, Tint>(K, B, den);
+    lower = Bound_Ceil<T, Tint>(K, B, den);
     int len = 2 + i;
     MyMatrix<T> FACwork(n_rows, len);
     for (int i_row = 0; i_row < n_rows; i_row++) {
@@ -465,12 +613,12 @@ template <typename T, typename Tint, typename Finsert>
   requires(is_ring_field<T>::value)
 inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
                       bool const &central, const T &bound, Finsert f_insert) {
-  auto f_set_bound =
-      [&](const T &eQuot, const T &eSum, [[maybe_unused]] const MyMatrix<T> &q,
-          [[maybe_unused]] const MyVector<Tint> &x,
-          [[maybe_unused]] const int &i, Tint &upper, Tint &lower) -> void {
-    upper = Infinitesimal_Floor<T, Tint>(eQuot, eSum);
-    lower = Infinitesimal_Ceil<T, Tint>(eQuot, eSum);
+  auto f_set_bound = [&](const T &K, const T &B, const T &den,
+                         [[maybe_unused]] const MyVector<Tint> &x,
+                         [[maybe_unused]] const int &i, Tint &upper,
+                         Tint &lower) -> void {
+    upper = Bound_Floor<T, Tint>(K, B, den);
+    lower = Bound_Ceil<T, Tint>(K, B, den);
   };
   return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(
       request, coset, central, bound, f_insert, f_set_bound);
@@ -481,13 +629,12 @@ template <typename T, typename Tint, typename Finsert>
 inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
                       bool const &central, const T &bound, Finsert f_insert) {
   using Tfield = typename overlying_field<T>::field_type;
-  auto f_set_bound = [&](const Tfield &eQuot, const Tfield &eSum,
-                         [[maybe_unused]] const MyMatrix<Tfield> &q,
+  auto f_set_bound = [&](const Tfield &K, const Tfield &B, const Tfield &den,
                          [[maybe_unused]] const MyVector<Tint> &x,
                          [[maybe_unused]] const int &i, Tint &upper,
                          Tint &lower) -> void {
-    upper = Infinitesimal_Floor<Tfield, Tint>(eQuot, eSum);
-    lower = Infinitesimal_Ceil<Tfield, Tint>(eQuot, eSum);
+    upper = Bound_Floor<Tfield, Tint>(K, B, den);
+    lower = Bound_Ceil<Tfield, Tint>(K, B, den);
   };
   return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(
       request, coset, central, bound, f_insert, f_set_bound);

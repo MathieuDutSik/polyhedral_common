@@ -339,6 +339,9 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer_SHV n_row=" << n_row << "\n";
 #endif
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  MicrosecondTime time_st;
+#endif
   std::vector<T> Vdiag(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat =
       GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
@@ -349,9 +352,15 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
     ListMat.push_back(*CommonGramMat);
   }
 
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  os << "|TSPACE: Stab, disc_matrices|=" << time_st << "\n";
+#endif
   std::vector<std::vector<Tidx>> ListGen =
       GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
                                                               Vdiag, os);
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  os << "|TSPACE: Stab, listmat_vdiag_automorphism|=" << time_st << "\n";
+#endif
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer_SHV |ListGen|=" << ListGen.size()
      << "\n";
@@ -374,6 +383,10 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
     return ListTransMat;
   };
   std::optional<std::vector<MyMatrix<T>>> opt = get_generators();
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  os << "|TSPACE: Stab, direct_generators ok=" << opt.has_value()
+     << "|=" << time_st << "\n";
+#endif
   if (opt) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: LINSPA_ComputeStabilizer_SHV success of the direct "
@@ -412,6 +425,9 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
                                                                                                  LGenPerm_sma,
                                                                                                  LGenPerm_big,
                                                                                                  f_correct, os);
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  os << "|TSPACE: Stab, coset_search|=" << time_st << "\n";
+#endif
   return get_from_perms_and_group<T, Tgroup>(pair);
 }
 
@@ -513,11 +529,17 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
     return {};
   }
   int n_row = SHV1_T.rows();
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  MicrosecondTime time_eq;
+#endif
   std::vector<T> Vdiag1(n_row, T(0)), Vdiag2(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat1 =
       GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspaces);
   std::vector<MyMatrix<T>> ListMat2 =
       GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  os << "|TSPACE: Equiv, disc_matrices|=" << time_eq << "\n";
+#endif
   // When a common Gram matrix is imposed on all the domains, the equivalence
   // has to preserve it. Adding it identically to both lists forces the
   // matching permutation (and thus the recovered transformation) to satisfy
@@ -535,6 +557,10 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
   std::optional<std::vector<Tidx>> opt1 =
       TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(
           SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  os << "|TSPACE: Equiv, listmat_vdiag found=" << opt1.has_value()
+     << "|=" << time_eq << "\n";
+#endif
   if (!opt1) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: Equiv, Exiting here at opt1\n";
@@ -550,6 +576,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
   std::optional<MyMatrix<T>> opt2 =
       FindTransformationGeneral(SHV2_T, SHV1_T, eltInv);
   MyMatrix<T> OneEquiv = unfold_opt(opt2, "Failed to get transformation");
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  os << "|TSPACE: Equiv, find_transformation|=" << time_eq << "\n";
+#endif
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   if (!IsIntegralMatrix(OneEquiv)) {
     std::cerr << "TSPACE: Equiv, The matrix TransMat should be integral\n";
@@ -569,7 +598,12 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
     }
   }
 #endif
-  if (is_stab_space(OneEquiv, LinSpa) && f_extra(OneEquiv)) {
+  bool direct_ok = is_stab_space(OneEquiv, LinSpa) && f_extra(OneEquiv);
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  os << "|TSPACE: Equiv, is_stab_space ok=" << direct_ok << "|=" << time_eq
+     << "\n";
+#endif
+  if (direct_ok) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: Equiv, Direct approach success, no need to go further\n";
 #endif
@@ -615,6 +649,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
                                                                                                                              f_get_out,
                                                                                                                              f_is_ok,
                                                                                                                              os);
+#ifdef TIMINGS_TSPACE_FUNCTIONS
+  os << "|TSPACE: Equiv, coset_search|=" << time_eq << "\n";
+#endif
 #ifdef SANITY_CHECK_EXTENSIVE_TSPACE_FUNCTIONS
   if (result) {
     MyMatrix<T> const& eMat_T = *result;
