@@ -72,7 +72,7 @@ size_t GroupOrderByClosure(std::vector<MyMatrix<T>> const &ListGen, int n) {
 size_t StabilizerOrder(LinSpaceMatrix<T> const &LinSpa,
                        std::optional<PeriodicPointSet<Tring>> const &opt_pps,
                        MyMatrix<T> const &eMat, std::ostream &os) {
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   std::optional<MyMatrix<T>> CommonGramMat;
   auto get_result = [&]() -> Result_ComputeStabilizer_SHV<T, Tgroup> {
@@ -94,8 +94,8 @@ Equivalence(LinSpaceMatrix<T> const &LinSpa,
             std::optional<PeriodicPointSet<Tring>> const &opt_pps,
             MyMatrix<T> const &eMat1, MyMatrix<T> const &eMat2,
             std::ostream &os) {
-  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
-  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
+  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat1, os);
+  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat2, os);
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
   std::optional<MyMatrix<T>> CommonGramMat;

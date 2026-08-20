@@ -42,6 +42,7 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
+#define SANITY_CHECK_POLYTOPE_EQUI_STAB_INT
 #endif
 
 template <typename Tint, typename Tgroup>
@@ -623,6 +624,221 @@ MyMatrix<T> LinPolytopeIntegralWMat_Canonic(
   std::cerr << "The code is incomplete\n";
   throw TerminalException{1};
   return ep.first;
+}
+
+/*
+  The matrices returned by the subspace machinery are integral by
+  construction but live over the field: bring them back over the ring, a
+  failure being a programming error rather than a data case.
+ */
+template <typename T, typename Tfield>
+MyMatrix<T> RingRepresentationOfIntegralMatrix(MyMatrix<Tfield> const &M) {
+  std::optional<MyMatrix<T>> opt = UniversalMatrixConversionCheck<T, Tfield>(M);
+  if (!opt) {
+    std::cerr << "PES: the matrix of the integral machinery should be "
+                 "representable over the ring\n";
+    throw TerminalException{1};
+  }
+  return *opt;
+}
+
+/*
+  Whether the transformation is integral. Over a ring, representability is
+  integrality, so the empty optional of the solve already decided; over a
+  field the entries have to be tested.
+ */
+template <typename T>
+bool IsIntegralTransformation(std::optional<MyMatrix<T>> const &opt) {
+  if (!opt) {
+    return false;
+  }
+  if constexpr (is_ring_field<T>::value) {
+    return IsIntegralMatrix(*opt);
+  } else {
+    return true;
+  }
+}
+
+/*
+  The equivalence of two configurations as an integral matrix: the
+  permutation-level TestEquivalence_ListMat_Vdiag followed by the
+  integrality work. Three outcomes:
+  * No permutation-level equivalence: no equivalence at all.
+  * The transformation of the found permutation is integral: it is
+    returned directly.
+  * The transformation is rational: the coset (symmetries of the second
+    configuration) * equivalence is searched for an integral element with
+    the subspace machinery, a field computation, exactly as
+    ArithmeticEquivalenceMultiple_inner does.
+  The returned matrix P satisfies P * M1 * P^T = M2 for every pair of
+  matrices of the two configurations.
+ */
+template <typename T, typename Tgroup>
+std::optional<MyMatrix<T>> TestIntEquivalence_ListMat_Vdiag(
+    MyMatrix<T> const &SHV1_T, std::vector<MyMatrix<T>> const &ListMat1,
+    std::vector<T> const &Vdiag1, MyMatrix<T> const &SHV2_T,
+    std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2,
+    std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+  MicrosecondTime time;
+#endif
+  auto check_result = [&]([[maybe_unused]] MyMatrix<T> const &P) -> void {
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB_INT
+    for (size_t i_mat = 0; i_mat < ListMat1.size(); i_mat++) {
+      MyMatrix<T> eProd = P * ListMat1[i_mat] * P.transpose();
+      if (eProd != ListMat2[i_mat]) {
+        std::cerr << "PES: TestIntEquivalence, the returned matrix does not "
+                     "map ListMat1[i_mat] to ListMat2[i_mat] for i_mat="
+                  << i_mat << "\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+  };
+  std::optional<std::vector<Tidx>> opt1 =
+      TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(
+          SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+  os << "|PES: TestIntEquivalence, listmat_vdiag n_row=" << SHV1_T.rows()
+     << " n_mat=" << ListMat1.size() << " dim=" << SHV1_T.cols()
+     << " found=" << opt1.has_value() << "|=" << time << "\n";
+#endif
+  if (!opt1) {
+    return {};
+  }
+  Telt eltEquiv(*opt1);
+  Telt eltInv = Inverse(eltEquiv);
+  std::optional<MyMatrix<T>> opt2 =
+      FindTransformationGeneral(SHV2_T, SHV1_T, eltInv);
+  if (IsIntegralTransformation(opt2)) {
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+    os << "|PES: TestIntEquivalence, direct|=" << time << "\n";
+#endif
+    check_result(*opt2);
+    return opt2;
+  }
+  // The transformation of the found permutation is rational. The subspace
+  // machinery is a field computation: convert at this boundary, which is
+  // only crossed when a rational transformation has actually been detected.
+  MyMatrix<Tfield> SHV1_f = UniversalMatrixConversion<Tfield, T>(SHV1_T);
+  MyMatrix<Tfield> SHV2_f = UniversalMatrixConversion<Tfield, T>(SHV2_T);
+  std::vector<std::vector<Tidx>> ListGen2 =
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(
+          SHV2_T, ListMat2, Vdiag2, os);
+  std::vector<MyMatrix<Tfield>> ListMatrGens2;
+  for (auto &eList2 : ListGen2) {
+    Telt ePerm2(eList2);
+    std::optional<MyMatrix<Tfield>> opt_f =
+        FindTransformationGeneral(SHV2_f, SHV2_f, ePerm2);
+    MyMatrix<Tfield> eMatrGen2 =
+        unfold_opt(opt_f, "the field solve should succeed");
+    ListMatrGens2.emplace_back(std::move(eMatrGen2));
+  }
+  std::optional<MyMatrix<Tfield>> opt3 =
+      LinPolytopeIntegral_Isomorphism_Subspaces<Tfield, Tgroup>(
+          SHV1_f, SHV2_f, ListMatrGens2, eltEquiv, os);
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+  os << "|PES: TestIntEquivalence, subspaces found=" << opt3.has_value()
+     << "|=" << time << "\n";
+#endif
+  if (!opt3) {
+    return {};
+  }
+  MyMatrix<Tfield> EquivInt_f = Inverse(*opt3);
+  MyMatrix<T> EquivInt = RingRepresentationOfIntegralMatrix<T, Tfield>(EquivInt_f);
+  check_result(EquivInt);
+  return EquivInt;
+}
+
+/*
+  Generators of the integral automorphism group of a configuration: the
+  permutation-level GetListGenAutomorphism_ListMat_Vdiag followed by the
+  integrality work. If every generator is integral the whole group is (a
+  product of integral matrices preserving a finite full-rank family is
+  integral with integral inverse) and the generators are returned directly;
+  otherwise the integral subgroup is extracted with the subspace machinery,
+  a field computation.
+ */
+template <typename T, typename Tgroup>
+std::vector<MyMatrix<T>> GetIntAutomorphism_ListMat_Vdiag(
+    MyMatrix<T> const &SHV_T, std::vector<MyMatrix<T>> const &ListMat,
+    std::vector<T> const &Vdiag, std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+  MicrosecondTime time;
+#endif
+  auto check_result =
+      [&]([[maybe_unused]] std::vector<MyMatrix<T>> const &LGen) -> void {
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB_INT
+    for (auto &eGen : LGen) {
+      for (auto &eMat : ListMat) {
+        MyMatrix<T> eProd = eGen * eMat * eGen.transpose();
+        if (eProd != eMat) {
+          std::cerr << "PES: GetIntAutomorphism, a generator does not "
+                       "preserve the configuration matrices\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+#endif
+  };
+  std::vector<std::vector<Tidx>> ListGen =
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
+                                                              Vdiag, os);
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+  os << "|PES: GetIntAutomorphism, listmat_vdiag n_row=" << SHV_T.rows()
+     << " n_mat=" << ListMat.size() << " dim=" << SHV_T.cols()
+     << "|=" << time << "\n";
+#endif
+  bool all_gens_integral = true;
+  std::vector<MyMatrix<T>> ListTransMat;
+  for (auto &eGen : ListGen) {
+    Telt elt(eGen);
+    std::optional<MyMatrix<T>> opt =
+        FindTransformationGeneral(SHV_T, SHV_T, elt);
+    if (IsIntegralTransformation(opt)) {
+      ListTransMat.push_back(*opt);
+    } else {
+      all_gens_integral = false;
+      break;
+    }
+  }
+  if (all_gens_integral) {
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+    os << "|PES: GetIntAutomorphism, direct|=" << time << "\n";
+#endif
+    check_result(ListTransMat);
+    return ListTransMat;
+  }
+  // A rational generator: the integral subgroup is a strict subgroup and the
+  // subspace machinery extracts it over the field.
+  MyMatrix<Tfield> SHV_f = UniversalMatrixConversion<Tfield, T>(SHV_T);
+  std::vector<MyMatrix<Tfield>> ListMatrGens;
+  for (auto &eGen : ListGen) {
+    Telt elt(eGen);
+    std::optional<MyMatrix<Tfield>> opt_f =
+        FindTransformationGeneral(SHV_f, SHV_f, elt);
+    MyMatrix<Tfield> eMatrGen =
+        unfold_opt(opt_f, "the field solve should succeed");
+    ListMatrGens.emplace_back(std::move(eMatrGen));
+  }
+  RetMI_S<Tfield, Tgroup> ret =
+      LinPolytopeIntegral_Automorphism_Subspaces<Tfield, Tgroup>(ListMatrGens,
+                                                                 SHV_f, os);
+  std::vector<MyMatrix<T>> ListGenInt;
+  for (auto &eGen_f : ret.LGen) {
+    ListGenInt.push_back(RingRepresentationOfIntegralMatrix<T, Tfield>(eGen_f));
+  }
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+  os << "|PES: GetIntAutomorphism, subspaces|=" << time << "\n";
+#endif
+  check_result(ListGenInt);
+  return ListGenInt;
 }
 
 // clang-format off

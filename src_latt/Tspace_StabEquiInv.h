@@ -110,34 +110,45 @@ bool is_stab_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &LinSpa) {
 }
 
 
+/*
+  The matrix realizing a permutation of the vector family. With a family
+  spanning the lattice over Z the matrix is integral and the solve always
+  succeeds over the ring; with a full-rank family the matrix can be
+  rational, in which case the ring solve reports it as non-representable
+  and the empty optional is returned. The caller decides whether that is a
+  rejected candidate or a reason to go to the integral machinery.
+ */
 template <typename T, typename Telt>
-MyMatrix<T> get_mat_from_shv_perm(Telt const &elt, MyMatrix<T> const &SHV_T,
-                                  [[maybe_unused]] MyMatrix<T> const &eMat) {
+std::optional<MyMatrix<T>>
+get_mat_from_shv_perm(Telt const &elt, MyMatrix<T> const &SHV_T,
+                      [[maybe_unused]] MyMatrix<T> const &eMat) {
   std::optional<MyMatrix<T>> opt = FindTransformationGeneral(SHV_T, SHV_T, elt);
-  MyMatrix<T> Pmat = unfold_opt(opt, "Failed to get transformation");
-#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
-  if (!IsIntegralMatrix(Pmat)) {
-    std::cerr << "TSPACE: The matrix TransMat should be integral\n";
-    throw TerminalException{1};
+  if (!opt) {
+    return {};
   }
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+  MyMatrix<T> const &Pmat = *opt;
   MyMatrix<T> eMatImg = Pmat * eMat * Pmat.transpose();
   if (eMatImg != eMat) {
     std::cerr << "TSPACE: The matrix TransMat does not preserve eMat\n";
     throw TerminalException{1};
   }
 #endif
-  return Pmat;
+  return opt;
 }
 
 template <typename T, typename Telt>
 std::optional<MyMatrix<T>>
 is_corr_and_solve(Telt const &elt, MyMatrix<T> const &SHV_T,
                   MyMatrix<T> const &eMat, LinSpaceMatrix<T> const &LinSpa) {
-  MyMatrix<T> Pmat = get_mat_from_shv_perm(elt, SHV_T, eMat);
-  if (!is_stab_space(Pmat, LinSpa)) {
+  std::optional<MyMatrix<T>> opt = get_mat_from_shv_perm(elt, SHV_T, eMat);
+  if (!opt) {
     return {};
   }
-  return Pmat;
+  if (!is_stab_space(*opt, LinSpa)) {
+    return {};
+  }
+  return opt;
 }
 
 
@@ -333,8 +344,6 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
                              std::optional<MyMatrix<T>> const &CommonGramMat,
                              Fextra const &f_extra, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  using Tfield = typename overlying_field<T>::field_type;
   int n_row = SHV_T.rows();
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer_SHV n_row=" << n_row << "\n";
@@ -355,68 +364,47 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
 #ifdef TIMINGS_TSPACE_FUNCTIONS
   os << "|TSPACE: Stab, disc_matrices|=" << time_st << "\n";
 #endif
-  std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
-                                                              Vdiag, os);
-#ifdef TIMINGS_TSPACE_FUNCTIONS
-  os << "|TSPACE: Stab, listmat_vdiag_automorphism n_row=" << n_row
-     << " n_mat=" << ListMat.size() << " dim=" << SHV_T.cols()
-     << "|=" << time_st << "\n";
-#endif
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: LINSPA_ComputeStabilizer_SHV |ListGen|=" << ListGen.size()
-     << "\n";
-#endif
   //
-  // Try the direct strategy and hopes to be lucky
+  // The generators of the integral symmetry group of the configuration.
+  // The direct strategy: when all of them satisfy the T-space and f_extra
+  // conditions, the integral group is the answer, since the conditions are
+  // subgroup-defining.
   //
-  auto get_generators = [&]() -> std::optional<std::vector<MyMatrix<T>>> {
-    std::vector<MyMatrix<T>> ListTransMat;
-    for (auto &eGen : ListGen) {
-      Telt elt(eGen);
-      std::optional<MyMatrix<T>> opt =
-          is_corr_and_solve(elt, SHV_T, eMat, LinSpa);
-      if (opt && f_extra(*opt)) {
-        ListTransMat.push_back(*opt);
-      } else {
-        return {};
-      }
+  std::vector<MyMatrix<T>> LGenInt = GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(
+      SHV_T, ListMat, Vdiag, os);
+  bool all_gens_ok = true;
+  for (auto &eGen : LGenInt) {
+    if (!is_stab_space(eGen, LinSpa) || !f_extra(eGen)) {
+      all_gens_ok = false;
+      break;
     }
-    return ListTransMat;
-  };
-  std::optional<std::vector<MyMatrix<T>>> opt = get_generators();
+  }
 #ifdef TIMINGS_TSPACE_FUNCTIONS
-  os << "|TSPACE: Stab, direct_generators ok=" << opt.has_value()
+  os << "|TSPACE: Stab, int_automorphism ok=" << all_gens_ok
      << "|=" << time_st << "\n";
 #endif
-  if (opt) {
+  if (all_gens_ok) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: LINSPA_ComputeStabilizer_SHV success of the direct "
           "approach\n";
 #endif
-    return get_from_gens<T, Tgroup>(*opt);
+    return get_from_gens<T, Tgroup>(LGenInt);
   }
   //
   // The direct approach failed, let us use the pt-wise-stab and the cosets for
-  // resolving that.
+  // resolving that. Everything in the search is integral: the big group is
+  // the integral symmetry group and the pt-wise stabilizer is inside it.
   //
-  // The group of symmetry preserving ListMat and SHV could in fact not
-  // preserve the T-space. But at the very least, the full symmetry group
-  // is a subgroup of this one.
-  std::vector<Telt> LGenPerm_big;
-  for (auto &eList : ListGen) {
-    Telt ePerm(eList);
-    LGenPerm_big.emplace_back(std::move(ePerm));
-  }
   PermutationBuilder<T, Telt> builder(SHV_T);
-  // The group elements that preserve the whole T-space, will preserve
-  // the matrix considered here. And so it is a subgroup of the full group.
+  std::vector<Telt> LGenPerm_big;
+  for (auto &eGen : LGenInt) {
+    LGenPerm_big.push_back(builder.get_permutation(eGen, os));
+  }
   std::vector<Telt> LGenPerm_sma;
   for (auto &eGen : LinSpa.PtStabGens) {
     Telt ePerm = builder.get_permutation(eGen, os);
     LGenPerm_sma.emplace_back(std::move(ePerm));
   }
-
   auto f_correct=[&](Telt const& x) -> bool {
     std::optional<MyMatrix<T>> opt =
       is_corr_and_solve(x, SHV_T, eMat, LinSpa);
@@ -452,7 +440,7 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
                          MyMatrix<T> const &eMat,
                          std::optional<MyMatrix<T>> const &CommonGramMat,
                          std::ostream &os) {
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   Result_ComputeStabilizer_SHV<T, Tgroup> result =
       LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T,
@@ -485,7 +473,7 @@ size_t LINSPA_Invariant_SHV(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
 template <typename T, typename Tint>
 size_t LINSPA_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
                         MyMatrix<T> const &eMat, std::ostream &os) {
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   std::optional<MyMatrix<T>> CommonGramMat;
   return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, CommonGramMat, os);
@@ -511,9 +499,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
     MyMatrix<T> const &SHV2_T,
     std::optional<MyMatrix<T>> const &CommonGramMat, Fextra const &f_extra,
     std::ostream &os) {
-  using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   int nbCol = SHV1_T.cols();
   int rnk1 = RankMat(SHV1_T);
@@ -556,52 +542,39 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
   os << "TSPACE: Equiv, |ListMat1|=" << ListMat1.size()
      << " |ListMat2|=" << ListMat2.size() << "\n";
 #endif
-  std::optional<std::vector<Tidx>> opt1 =
-      TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(
+  std::optional<MyMatrix<T>> optEquivInt =
+      TestIntEquivalence_ListMat_Vdiag<T, Tgroup>(
           SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
 #ifdef TIMINGS_TSPACE_FUNCTIONS
-  os << "|TSPACE: Equiv, listmat_vdiag n_row=" << n_row
+  os << "|TSPACE: Equiv, int_equivalence n_row=" << n_row
      << " n_mat=" << ListMat1.size() << " dim=" << SHV1_T.cols()
-     << " found=" << opt1.has_value() << "|=" << time_eq << "\n";
+     << " found=" << optEquivInt.has_value() << "|=" << time_eq << "\n";
 #endif
-  if (!opt1) {
-#ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: Equiv, Exiting here at opt1\n";
-#endif
+  if (!optEquivInt) {
     return {};
   }
-  //
-  // Building one equivalence that should preserve the basics and which we can
-  // work on.
-  //
-  Telt eltEquiv(*opt1);
-  Telt eltInv = Inverse(eltEquiv);
-  std::optional<MyMatrix<T>> opt2 =
-      FindTransformationGeneral(SHV2_T, SHV1_T, eltInv);
-  MyMatrix<T> OneEquiv = unfold_opt(opt2, "Failed to get transformation");
-#ifdef TIMINGS_TSPACE_FUNCTIONS
-  os << "|TSPACE: Equiv, find_transformation|=" << time_eq << "\n";
-#endif
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
-  if (!IsIntegralMatrix(OneEquiv)) {
-    std::cerr << "TSPACE: Equiv, The matrix TransMat should be integral\n";
-    throw TerminalException{1};
-  }
-  MyMatrix<T> eMat1_img = OneEquiv * eMat1 * OneEquiv.transpose();
-  if (eMat1_img != eMat2) {
-    std::cerr << "TSPACE: Equiv, The matrix TransMat does not preserve eMat\n";
-    throw TerminalException{1};
-  }
-  if (CommonGramMat) {
-    MyMatrix<T> CommonImg =
-        OneEquiv * (*CommonGramMat) * OneEquiv.transpose();
-    if (CommonImg != *CommonGramMat) {
-      std::cerr << "TSPACE: Equiv, TransMat does not preserve CommonGramMat\n";
+  {
+    MyMatrix<T> const &EquivInt = *optEquivInt;
+    MyMatrix<T> eMat1_img = EquivInt * eMat1 * EquivInt.transpose();
+    if (eMat1_img != eMat2) {
+      std::cerr << "TSPACE: Equiv, the matrix does not map eMat1 to eMat2\n";
       throw TerminalException{1};
+    }
+    if (CommonGramMat) {
+      MyMatrix<T> CommonImg = EquivInt * (*CommonGramMat) * EquivInt.transpose();
+      if (CommonImg != *CommonGramMat) {
+        std::cerr << "TSPACE: Equiv, the matrix does not preserve "
+                     "CommonGramMat\n";
+        throw TerminalException{1};
+      }
     }
   }
 #endif
-  bool direct_ok = is_stab_space(OneEquiv, LinSpa) && f_extra(OneEquiv);
+  auto f_is_ok = [&](MyMatrix<T> const &x) -> bool {
+    return is_stab_space(x, LinSpa) && f_extra(x);
+  };
+  bool direct_ok = f_is_ok(*optEquivInt);
 #ifdef TIMINGS_TSPACE_FUNCTIONS
   os << "|TSPACE: Equiv, is_stab_space ok=" << direct_ok << "|=" << time_eq
      << "\n";
@@ -610,28 +583,25 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: Equiv, Direct approach success, no need to go further\n";
 #endif
-    return OneEquiv;
+    return *optEquivInt;
   }
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: Equiv, Direct approach failure, computing stabilizer and "
         "iterating\n";
 #endif
   //
-  // The direct approach failed, let us use the pt-wise-stab and the cosets for
-  // resolving that.
+  // The direct approach failed, let us use the pt-wise-stab and the cosets
+  // for resolving that. The big group is the integral symmetry group of the
+  // first configuration: composing the integral equivalence with an integral
+  // symmetry enumerates exactly the integral equivalences.
   //
-  std::vector<std::vector<Tidx>> ListGen1 =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV1_T, ListMat1,
-                                                              Vdiag1, os);
-  // The group of symmetry preserving ListMat and SHV could in fact not
-  // preserve the T-space. But at the very least, the full symmetry group
-  // is a subgroup of this one.
-  std::vector<Telt> LGenPerm_big;
-  for (auto &eList1 : ListGen1) {
-    Telt ePerm1(eList1);
-    LGenPerm_big.push_back(ePerm1);
-  }
+  std::vector<MyMatrix<T>> LGenInt = GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(
+      SHV1_T, ListMat1, Vdiag1, os);
   PermutationBuilder<T, Telt> builder1(SHV1_T);
+  std::vector<Telt> LGenPerm_big;
+  for (auto &eGen : LGenInt) {
+    LGenPerm_big.push_back(builder1.get_permutation(eGen, os));
+  }
   // The group elements that preserve the whole T-space, will preserve
   // the matrix considered here. And so it is a subgroup of the full group.
   std::vector<Telt> LGenPerm_sma;
@@ -640,15 +610,14 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
     LGenPerm_sma.push_back(ePerm);
   }
   auto f_get_out=[&](Telt const& x) -> MyMatrix<T> {
-    return get_mat_from_shv_perm(x, SHV1_T, eMat1);
-  };
-  auto f_is_ok=[&](MyMatrix<T> const& x) -> bool {
-    return is_stab_space(x, LinSpa) && f_extra(x);
+    std::optional<MyMatrix<T>> opt_mat =
+        get_mat_from_shv_perm(x, SHV1_T, eMat1);
+    return unfold_opt(opt_mat, "the coset representative should be integral");
   };
   std::optional<MyMatrix<T>> result = get_intermediate_equivalence<MyMatrix<T>,Tgroup,decltype(f_get_out),decltype(f_is_ok)>(n_row,
                                                                                                                              LGenPerm_sma,
                                                                                                                              LGenPerm_big,
-                                                                                                                             OneEquiv,
+                                                                                                                             *optEquivInt,
                                                                                                                              f_get_out,
                                                                                                                              f_is_ok,
                                                                                                                              os);
@@ -676,11 +645,16 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
       }
     }
   } else {
+    // Exhaustive check over the integral group anchored at the integral
+    // equivalence: those products are exactly the integral equivalences.
     Tgroup FullGRP1(LGenPerm_big, n_row);
     for (auto &elt : FullGRP1) {
-      MyMatrix<T> eMatr = get_mat_from_shv_perm(elt, SHV1_T, eMat1);
-      MyMatrix<T> eProd_T = OneEquiv * eMatr;
-      if (is_stab_space(eProd_T, LinSpa) && f_extra(eProd_T)) {
+      std::optional<MyMatrix<T>> opt_mat =
+          get_mat_from_shv_perm(elt, SHV1_T, eMat1);
+      MyMatrix<T> eMatr =
+          unfold_opt(opt_mat, "the integral group element should solve");
+      MyMatrix<T> eProd_T = *optEquivInt * eMatr;
+      if (f_is_ok(eProd_T)) {
         std::cerr << "TSPACE: We found an equivalence when we do not expect any\n";
         throw TerminalException{1};
       }
@@ -709,8 +683,8 @@ std::optional<MyMatrix<Tint>>
 LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
                                  MyMatrix<T> const &eMat1,
                                  MyMatrix<T> const &eMat2, std::ostream &os) {
-  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
-  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
+  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat1, os);
+  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat2, os);
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
   std::optional<MyMatrix<T>> CommonGramMat;

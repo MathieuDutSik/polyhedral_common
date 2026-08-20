@@ -1141,7 +1141,7 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialPeriodicIsoDelaunayDomain(
       MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, *opt, os);
       MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
       MyMatrix<Tint> SHV =
-          ExtractInvariantVectorFamilyZbasis<Tint, Tint>(M_ring, os);
+          ExtractInvariantVectorFamilyFullRank<Tint, Tint>(M_ring, os);
       return {std::move(*opt), std::move(M_ring), std::move(SHV)};
     }
     n_iter += 1;
