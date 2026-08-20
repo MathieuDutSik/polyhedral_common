@@ -242,56 +242,13 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
     std::vector<MyMatrix<T>> const &ListMat, MyMatrix<Tint> const &SHV,
     std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  using TintGroup = typename Tgroup::Tint;
-  using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
-
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV_T.rows();
   std::vector<T> Vdiag(n_row, T(0));
-
-  std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV_T, ListMat, Vdiag,
-                                                         os);
-  bool all_matrices_integral = true;
-  std::vector<MyMatrix<T>> ListGenRet_T;
-  for (auto &eList : ListGen) {
-    std::optional<MyMatrix<T>> opt =
-        FindMatrixTransformationTest(SHV_T, SHV_T, eList);
-    if (!opt) {
-      std::cerr << "LSEC: Failed to find the matrix\n";
-      throw TerminalException{1};
-    }
-    MyMatrix<T> const &M_T = *opt;
-    if (all_matrices_integral) {
-      if (!IsIntegralMatrix(M_T)) {
-        all_matrices_integral = false;
-      }
-    }
-    ListGenRet_T.push_back(M_T);
-  }
+  std::vector<MyMatrix<T>> LGen =
+      GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(SHV_T, ListMat, Vdiag, os);
   std::vector<MyMatrix<Tint>> ListGenRet;
-  if (all_matrices_integral) {
-    for (auto &M_T : ListGenRet_T) {
-      MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
-      ListGenRet.push_back(M);
-    }
-    return ListGenRet;
-  }
-  //
-  // Not integral, computing the integral stabilizer
-  //
-  Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(SHV_T);
-  RetMI_S<T, Tgroup> ret =
-    LinPolytopeIntegral_Automorphism_Subspaces<T, Tgroup>(ListGenRet_T, SHV_T, os);
-  for (auto &M_T : ret.LGen) {
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-    if (!IsIntegralMatrix(M_T)) {
-      std::cerr << "LSEC: Bug: The matrix should be integral\n";
-      throw TerminalException{1};
-    }
-#endif
+  for (auto &M_T : LGen) {
     MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
     ListGenRet.push_back(M);
   }
@@ -339,97 +296,21 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple_inner(
     std::vector<MyMatrix<T>> const &ListMat1, MyMatrix<Tint> const &SHV1,
     std::vector<MyMatrix<T>> const &ListMat2, MyMatrix<Tint> const &SHV2,
     std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  MicrosecondTime time;
-#endif
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  auto f_check_mat=[&](MyMatrix<T> const& mat) -> void {
-    for (size_t i = 0; i < ListMat1.size(); i++) {
-      MyMatrix<T> eMat1 = ListMat1[i];
-      MyMatrix<T> eMat2 = ListMat2[i];
-      MyMatrix<T> eProd = mat * eMat1 * mat.transpose();
-      if (eProd != eMat2) {
-        std::cerr << "LSEC: Inconsistency error in the code\n";
-        throw TerminalException{1};
-      }
-    }
-  };
-#endif
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: |SHV1|=" << SHV1.rows() << " |SHV2|=" << SHV2.rows() << "\n";
 #endif
-
   if (SHV1.rows() != SHV2.rows())
     return {};
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "LSEC: After the test\n";
-#endif
-
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: SHV1_T / SHV2_T|=" << time << "\n";
-#endif
-
   int n_rows = SHV1_T.rows();
   std::vector<T> Vdiag(n_rows, T(0));
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "LSEC: Before the TestEquivalence_ListMat_Vdiag\n";
-#endif
-  std::optional<std::vector<Tidx>> opt1 =
-      TestEquivalence_ListMat_Vdiag<T, T, Tidx>(SHV2_T, ListMat2, Vdiag,
-                                                SHV1_T, ListMat1, Vdiag, os);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: TestEquivalence_ListMat_Vdiag|=" << time << "\n";
-#endif
-
-  if (!opt1)
-    return {};
-  std::optional<MyMatrix<T>> opt2 =
-      FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt1);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: FindMatrixTransformationTest|=" << time << "\n";
-#endif
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  if (!opt2) {
-    std::cerr << "LSEC: We have a matrix bug\n";
-    throw TerminalException{1};
-  }
-#endif
-  MyMatrix<T> const &MA_T = *opt2;
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  f_check_mat(MA_T);
-#endif
-  if (IsIntegralMatrix(MA_T)) {
-    // Early termination
-    MyMatrix<Tint> MA = UniversalMatrixConversion<Tint, T>(MA_T);
-    return MA;
-  }
-  std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV2_T, ListMat2, Vdiag, os);
-  std::vector<MyMatrix<T>> ListMatrGens2;
-  for (auto & eGen: ListGen) {
-    Telt elt(eGen);
-    MyMatrix<T> eMatrGen2 = FindTransformation(SHV2_T, SHV2_T, elt);
-    ListMatrGens2.emplace_back(std::move(eMatrGen2));
-  }
-  Telt eEquiv(*opt1);
-  Telt eEquivInv = Inverse(eEquiv);
-  std::optional<MyMatrix<T>> opt3 = LinPolytopeIntegral_Isomorphism_Subspaces<T,Tgroup>(SHV1_T, SHV2_T, ListMatrGens2, eEquivInv, os);
-  if (!opt3) {
+  std::optional<MyMatrix<T>> opt = TestIntEquivalence_ListMat_Vdiag<T, Tgroup>(
+      SHV1_T, ListMat1, Vdiag, SHV2_T, ListMat2, Vdiag, os);
+  if (!opt) {
     return {};
   }
-  MyMatrix<T> MB_T = Inverse(*opt3);
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  if (!IsIntegralMatrix(MB_T)) {
-    std::cerr << "LSEC: Matrix should be integral\n";
-    throw TerminalException{1};
-  }
-  f_check_mat(MB_T);
-#endif
-  MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(MB_T);
+  MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(*opt);
   return M;
 }
 
