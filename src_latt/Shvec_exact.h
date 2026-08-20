@@ -62,6 +62,42 @@ ReductionMod1vector(MyVector<T> const &V) {
   return {std::move(v_Tint), std::move(v_T)};
 }
 
+/*
+  Scalar conversion that also covers the native integer types used by the
+  fast enumeration path, for which no TYPE_CONVERSION pair needs to exist.
+ */
+template <typename Tto, typename Tfrom>
+inline Tto shvec_scalar_convert(Tfrom const &x) {
+  if constexpr (std::is_same_v<Tto, Tfrom>) {
+    return x;
+  } else if constexpr (std::is_arithmetic_v<Tto> &&
+                       std::is_arithmetic_v<Tfrom>) {
+    return static_cast<Tto>(x);
+  } else {
+    return UniversalScalarConversion<Tto, Tfrom>(x);
+  }
+}
+
+/*
+  Whether the native-integer fast path can be attempted for the type: the
+  preparation needs the denominators, the conversions to and from int64_t
+  and the exact square root. The detection is by capability, so a type
+  lacking one of them (an algebraic field for example) silently keeps the
+  exact path.
+ */
+template <typename T, typename = void>
+struct shvec_has_fast_path : std::false_type {};
+template <typename T>
+struct shvec_has_fast_path<
+    T, std::void_t<
+           decltype(TYPE_CONVERSION(std::declval<stc<T> const &>(),
+                                    std::declval<int64_t &>())),
+           decltype(TYPE_CONVERSION(std::declval<stc<int64_t> const &>(),
+                                    std::declval<T &>())),
+           decltype(GetDenominator(std::declval<T const &>())),
+           decltype(GcdPair(std::declval<T const &>(),
+                            std::declval<T const &>()))>> : std::true_type {};
+
 // We return floor(sqrt(A) + epsilon + B)
 template <typename T> int Infinitesimal_Floor_V1(T const &a, T const &b) {
   double epsilon = 0.000000001;
@@ -219,13 +255,13 @@ Tint Bound_Floor(T const &K, T const &B, T const &den) {
     throw TerminalException{1};
   }
 #endif
-  double K_doubl = UniversalScalarConversion<double, T>(K);
-  double B_doubl = UniversalScalarConversion<double, T>(B);
-  double den_doubl = UniversalScalarConversion<double, T>(den);
+  double K_doubl = shvec_scalar_convert<double, T>(K);
+  double B_doubl = shvec_scalar_convert<double, T>(B);
+  double den_doubl = shvec_scalar_convert<double, T>(den);
   double alpha = (sqrt(K_doubl) - B_doubl) / den_doubl;
   Tint eReturn = static_cast<Tint>(lround(floor(alpha)));
   auto f = [&](Tint const &n) -> bool {
-    T val = den * UniversalScalarConversion<T, Tint>(n) + B;
+    T val = den * shvec_scalar_convert<T, Tint>(n) + B;
     if (val <= 0) {
       return true;
     }
@@ -260,13 +296,13 @@ Tint Bound_Ceil(T const &K, T const &B, T const &den) {
     throw TerminalException{1};
   }
 #endif
-  double K_doubl = UniversalScalarConversion<double, T>(K);
-  double B_doubl = UniversalScalarConversion<double, T>(B);
-  double den_doubl = UniversalScalarConversion<double, T>(den);
+  double K_doubl = shvec_scalar_convert<double, T>(K);
+  double B_doubl = shvec_scalar_convert<double, T>(B);
+  double den_doubl = shvec_scalar_convert<double, T>(den);
   double alpha = (-sqrt(K_doubl) - B_doubl) / den_doubl;
   Tint eReturn = static_cast<Tint>(lround(ceil(alpha)));
   auto f = [&](Tint const &n) -> bool {
-    T val = den * UniversalScalarConversion<T, Tint>(n) + B;
+    T val = den * shvec_scalar_convert<T, Tint>(n) + B;
     if (val >= 0) {
       return true;
     }
@@ -291,8 +327,17 @@ Tint Bound_Ceil(T const &K, T const &B, T const &den) {
   return eReturn;
 }
 
+/*
+  The coset is passed as integral numerators Cnum with the common denominator
+  cden: the true coset is Cnum / cden and the bound argument is the scaled
+  cden^2 * bound. All state below is scaled accordingly (x enters through
+  x_S = cden * x), which keeps the whole enumeration free of fractions even
+  for a fractional coset. With cden = 1 the recursion is literally the
+  unscaled one. The norm handed to f_insert is the scaled cden^2 * norm.
+ */
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
+bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
+                          MyVector<T> const &Cnum, T const &cden,
                           bool const &central, const T &bound, Finsert f_insert,
                           Fsetbound f_set_bound) {
   // T may be a ring: the enumeration is fraction-free, the only divisions
@@ -301,8 +346,8 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
   int dim = request.dim;
   MyVector<Tint> Upper(dim);
   // Fraction-free state, see the derivation above the Bareiss loop below.
-  // Ttil(i) = d(i) * (the remaining norm budget at level i) and
-  // Bvec(i) = d(i) * C(i) + sum_{j>i} N(i,j) * (x(j) + C(j)).
+  // Ttil(i) = d(i) * (the remaining scaled norm budget at level i) and
+  // Bvec(i) = d(i) * Cnum(i) + sum_{j>i} N(i,j) * (x_S(j) + Cnum(j)).
   MyVector<T> Ttil(dim);
   MyVector<T> Bvec(dim);
   MyVector<Tint> x(dim);
@@ -314,7 +359,7 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
     }
     return true;
   };
-  MyVector<T> x_T(dim);
+  MyVector<T> x_S(dim);
 #if defined SANITY_CHECK_SHVEC || defined DEBUG_SHVEC
   const MyMatrix<T> &g = request.gram_matrix;
 #endif
@@ -368,13 +413,19 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
       std::cerr << "   j=" << j << " N=" << N(i, j) << "\n";
 #endif
   }
+  // The coefficient of x(i) in the scaled offset d(i) * x_S(i) + Bvec(i),
+  // handed to f_set_bound.
+  MyVector<T> den(dim);
+  for (i = 0; i < dim; i++) {
+    den(i) = d(i) * cden;
+  }
   bool needs_new_bound = true;
   i = dim - 1;
   if (bound < 0) {
     return true;
   }
   Ttil(i) = d(i) * bound;
-  Bvec(i) = d(i) * C(i);
+  Bvec(i) = d(i) * Cnum(i);
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: Before while loop\n";
 #endif
@@ -391,12 +442,12 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
       if (i > 0) {
         Kval *= d(i - 1);
       }
-      f_set_bound(Kval, Bvec(i), d(i), x, i, Upper(i), x(i));
-      x_T(i) = UniversalScalarConversion<T, Tint>(x(i));
+      f_set_bound(Kval, Bvec(i), den(i), x, i, Upper(i), x(i));
+      x_S(i) = cden * shvec_scalar_convert<T, Tint>(x(i));
       needs_new_bound = false;
     } else {
       x(i) += 1;
-      x_T(i) += 1;
+      x_S(i) += cden;
     }
     if (x(i) <= Upper(i)) {
       if (i == 0) {
@@ -408,7 +459,7 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
             return true;
           }
         }
-        Hval = d(0) * x_T(0) + Bvec(0);
+        Hval = d(0) * x_S(0) + Bvec(0);
         // bound - Trem(-1), the exact norm; the division is exact because
         // Trem(-1) = bound - Q(x + C) is a value of the original form.
         T num = Ttil(0) - Hval * Hval;
@@ -424,7 +475,7 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
         T norm(0);
         for (int i2 = 0; i2 < dim; i2++)
           for (int j2 = 0; j2 < dim; j2++)
-            norm += g(i2, j2) * (x_T(i2) + C(i2)) * (x_T(j2) + C(j2));
+            norm += g(i2, j2) * (x_S(i2) + Cnum(i2)) * (x_S(j2) + Cnum(j2));
         if (norm != eNorm) {
           std::cerr << "Norm inconsistency\n";
           std::cerr << "norm=" << norm << "\n";
@@ -458,11 +509,11 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
           return false;
         }
       } else {
-        Hval = d(i) * x_T(i) + Bvec(i);
+        Hval = d(i) * x_S(i) + Bvec(i);
         i--;
-        Bvec(i) = d(i) * C(i);
+        Bvec(i) = d(i) * Cnum(i);
         for (j = i + 1; j < dim; j++)
-          Bvec(i) += N(i, j) * (x_T(j) + C(j));
+          Bvec(i) += N(i, j) * (x_S(j) + Cnum(j));
         // Ttil(i) = (d(i) * Ttil(i+1) - Hval^2) / d(i+1), the fraction-free
         // form of Trem(i) = Trem(i+1) - q(i+1,i+1) * hVal^2. The division is
         // exact: d(i) * Trem(i) is a value of the Schur complement of the
@@ -497,8 +548,9 @@ inline bool computeIt_Gen(const FullGramInfo<T> &request,
                           MyVector<T> const &coset, bool const &central,
                           const T &bound, Finsert f_insert,
                           Fsetbound f_set_bound) {
+  T cden(1);
   return computeIt_Gen_Kernel<T, Tint, Finsert, Fsetbound>(
-      request, coset, central, bound, f_insert, f_set_bound);
+      request, coset, cden, central, bound, f_insert, f_set_bound);
 }
 
 template <typename T, typename Tint, typename Finsert>
@@ -580,9 +632,293 @@ bool computeIt_polytope(const FullGramInfo<T> &request,
       request, coset, central, bound, f_insert, f_set_bound);
 }
 
+/*
+  The part of the fast-path preparation that depends only on the Gram
+  matrix: the denominator clearing, the Bareiss data and the largest
+  intermediate its computation forms. A CVPSolver computes it once and
+  reuses it across all its enumerations, since the preparation would
+  otherwise dominate the many small per-shell calls.
+ */
+template <typename T> struct ShvecFastPrep {
+  bool usable;
+  T D;
+  MyMatrix<T> Gscal;
+  MyVector<T> d;
+  MyMatrix<T> Nmat;
+  T maxBareiss;
+};
+
+template <typename T>
+ShvecFastPrep<T> ComputeShvecFastPrep(MyMatrix<T> const &gram) {
+  int dim = gram.rows();
+  T D(1);
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      D = LCMpair(D, GetDenominator(gram(i, j)));
+    }
+  }
+  MyMatrix<T> Gscal(dim, dim);
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      Gscal(i, j) = D * gram(i, j);
+    }
+  }
+  T M(0);
+  auto upd = [&](T const &v) -> void {
+    T a = T_abs(v);
+    if (a > M) {
+      M = a;
+    }
+  };
+  // Bareiss with tracking of every intermediate product.
+  MyMatrix<T> N = Gscal;
+  MyVector<T> d(dim);
+  T prev(1);
+  for (int i = 0; i < dim; i++) {
+    d(i) = N(i, i);
+    if (d(i) <= 0) {
+      return {false, D, Gscal, d, N, M};
+    }
+    upd(d(i));
+    for (int i2 = i + 1; i2 < dim; i2++) {
+      for (int j2 = i + 1; j2 < dim; j2++) {
+        T prod1 = N(i2, j2) * N(i, i);
+        T prod2 = N(i2, i) * N(i, j2);
+        upd(prod1);
+        upd(prod2);
+        T val = prod1 - prod2;
+        upd(val);
+        T quot = val / prev;
+        upd(quot);
+        N(i2, j2) = quot;
+      }
+    }
+    prev = N(i, i);
+  }
+  return {true, std::move(D), std::move(Gscal), std::move(d), std::move(N),
+          std::move(M)};
+}
+
+/*
+  A priori magnitude bound of every quantity the scaled fraction-free
+  enumeration forms: the Bareiss data and its intermediates, the state
+  Ttil / Bvec / Hval, the products of the range tests including the seeding
+  slack of Bound_Floor / Bound_Ceil, and the norm recomputation of the
+  sanity block. All of it is simple linear algebra evaluated in exact
+  arithmetic, so the bounding itself cannot overflow.
+ */
+template <typename T>
+T shvec_fast_master_bound(ShvecFastPrep<T> const &prep, MyVector<T> const &Cnum,
+                          T const &cden, T const &bound_scal) {
+  int dim = prep.Gscal.rows();
+  MyVector<T> const &d = prep.d;
+  MyMatrix<T> const &N = prep.Nmat;
+  T M = prep.maxBareiss;
+  auto upd = [&](T const &v) -> void {
+    T a = T_abs(v);
+    if (a > M) {
+      M = a;
+    }
+  };
+  // The two searches below produce BOUNDS, so overshooting by a factor of
+  // two is harmless: galloping keeps them logarithmic and robust for any
+  // magnitude, where a double-seeded search would overflow its seed on the
+  // values met before the fits-test has rejected them.
+  // Some s with sqrt(v) <= s <= 2 * sqrt(v) + 2.
+  auto isqrt_ceil = [&](T const &v) -> T {
+    T s(1);
+    while (s * s < v) {
+      s += s;
+    }
+    return s;
+  };
+  // Some t with a / b <= t <= 2 * a / b + 2, for a >= 0, b > 0.
+  auto ceil_quotient = [&](T const &a, T const &b) -> T {
+    T t(1);
+    while (t * b < a) {
+      t += t;
+    }
+    return t;
+  };
+  // Backward coordinate bounds: Ytot(i) bounds |x_S(i) + Cnum(i)| on any
+  // in-range branch, from d(i) * (x_S + Cnum)(i) = Hval(i) - sum_j N(i,j)
+  // * (x_S + Cnum)(j) and |Hval(i)| <= sqrt(d(i-1) * d(i) * bound_scal).
+  MyVector<T> Ytot(dim);
+  for (int i = dim - 1; i >= 0; i--) {
+    T dm1 = (i > 0) ? d(i - 1) : T(1);
+    T K = dm1 * d(i) * bound_scal;
+    upd(K);
+    T acc = isqrt_ceil(K);
+    for (int j = i + 1; j < dim; j++) {
+      acc += T_abs(N(i, j)) * Ytot(j);
+    }
+    Ytot(i) = ceil_quotient(acc, d(i));
+    upd(Ytot(i));
+  }
+  // The runtime magnitudes of the enumeration itself.
+  MyVector<T> HMax(dim);
+  for (int i = 0; i < dim; i++) {
+    T aCnum = T_abs(Cnum(i));
+    T BvMax = d(i) * aCnum;
+    for (int j = i + 1; j < dim; j++) {
+      BvMax += T_abs(N(i, j)) * Ytot(j);
+    }
+    upd(BvMax);
+    HMax(i) = d(i) * (Ytot(i) + aCnum) + BvMax;
+    upd(HMax(i));
+    // The double-seeded search of Bound_Floor / Bound_Ceil can probe a
+    // bounded number of steps beyond the true range before correcting.
+    T probe = HMax(i) + d(i) * cden * T(4096);
+    upd(probe * probe);
+    upd(d(i) * bound_scal);
+  }
+  for (int i = 0; i + 1 < dim; i++) {
+    upd(d(i) * d(i + 1) * bound_scal + HMax(i + 1) * HMax(i + 1));
+  }
+  // The norm recomputation of the SANITY_CHECK_SHVEC block.
+  T maxG(0), maxY(0);
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      T a = T_abs(prep.Gscal(i, j));
+      if (a > maxG) {
+        maxG = a;
+      }
+    }
+    T y = Ytot(i) + T_abs(Cnum(i));
+    if (y > maxY) {
+      maxY = y;
+    }
+  }
+  upd(maxG * maxY * maxY * T(dim) * T(dim));
+  return M;
+}
+
+/*
+  The enumeration at a native integer type. The caller has already proven
+  through shvec_fast_master_bound that every intermediate fits; the empty
+  return means the type is too small and a wider one (or the exact path)
+  has to be taken.
+ */
+template <typename Tfast, typename T, typename Tint, typename Finsert>
+std::optional<bool>
+computeIt_try_fast(MyMatrix<T> const &Gscal, MyVector<T> const &Cnum,
+                   T const &cden, T const &bound_scal, T const &scal,
+                   bool const &central, T const &Mbound, Finsert f_insert) {
+  int64_t limit =
+      (sizeof(Tfast) == 4) ? (int64_t(1) << 29) : (int64_t(1) << 61);
+  if (Mbound >= shvec_scalar_convert<T, int64_t>(limit)) {
+    return {};
+  }
+  int dim = Gscal.rows();
+  MyMatrix<Tfast> G_fast(dim, dim);
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      G_fast(i, j) = shvec_scalar_convert<Tfast, T>(Gscal(i, j));
+    }
+  }
+  FullGramInfo<Tfast> request_fast{dim, std::move(G_fast)};
+  MyVector<Tfast> Cnum_fast(dim);
+  for (int i = 0; i < dim; i++) {
+    Cnum_fast(i) = shvec_scalar_convert<Tfast, T>(Cnum(i));
+  }
+  Tfast cden_fast = shvec_scalar_convert<Tfast, T>(cden);
+  Tfast bound_fast = shvec_scalar_convert<Tfast, T>(bound_scal);
+  bool descale = (scal != T(1));
+  auto f_insert_fast = [&](MyVector<Tfast> const &x,
+                           Tfast const &norm_s) -> bool {
+    int n = x.size();
+    MyVector<Tint> x_ret(n);
+    for (int u = 0; u < n; u++) {
+      x_ret(u) = shvec_scalar_convert<Tint, Tfast>(x(u));
+    }
+    T norm = shvec_scalar_convert<T, Tfast>(norm_s);
+    if (descale) {
+      norm = norm / scal;
+    }
+    return f_insert(x_ret, norm);
+  };
+  auto f_set_bound = [&](const Tfast &K, const Tfast &B, const Tfast &den,
+                         [[maybe_unused]] const MyVector<Tfast> &x,
+                         [[maybe_unused]] const int &i, Tfast &upper,
+                         Tfast &lower) -> void {
+    upper = Bound_Floor<Tfast, Tfast>(K, B, den);
+    lower = Bound_Ceil<Tfast, Tfast>(K, B, den);
+  };
+  bool res =
+      computeIt_Gen_Kernel<Tfast, Tfast, decltype(f_insert_fast),
+                           decltype(f_set_bound)>(
+          request_fast, Cnum_fast, cden_fast, central, bound_fast,
+          f_insert_fast, f_set_bound);
+  return res;
+}
+
+/*
+  The main enumeration entry: attempts the native-integer fast path and
+  falls back on the exact one. The optional prep pointer lets a caller
+  amortize the Gram-only preparation across many enumerations of the same
+  matrix, which is what CVPSolver does; without it the preparation is
+  computed for the call.
+ */
 template <typename T, typename Tint, typename Finsert>
 inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
-                      bool const &central, const T &bound, Finsert f_insert) {
+                      bool const &central, const T &bound, Finsert f_insert,
+                      ShvecFastPrep<T> const *prep_ptr = nullptr) {
+  if constexpr (shvec_has_fast_path<T>::value) {
+    if (bound >= 0) {
+      int dim = request.dim;
+      std::optional<ShvecFastPrep<T>> prep_local;
+      ShvecFastPrep<T> const *prep = prep_ptr;
+      if (!prep) {
+        prep_local = ComputeShvecFastPrep(request.gram_matrix);
+        prep = &*prep_local;
+      }
+      if (prep->usable) {
+        T cden(1);
+        for (int i = 0; i < dim; i++) {
+          cden = LCMpair(cden, GetDenominator(coset(i)));
+        }
+        T scal = prep->D * cden * cden;
+        T bprod = scal * bound;
+        // A bound too large for the double seeding cannot fit anyway.
+        if (shvec_scalar_convert<double, T>(bprod) < 1.0e18) {
+          // Largest integer-valued bound below bprod: flooring to the norm
+          // grid changes no enumerated vector.
+          T bden = GetDenominator(bprod);
+          T bound_scal = bprod;
+          if (bden != T(1)) {
+            double b_d = shvec_scalar_convert<double, T>(bprod);
+            T t = shvec_scalar_convert<T, int64_t>(static_cast<int64_t>(b_d));
+            while (t > bprod) {
+              t -= 1;
+            }
+            while (t + 1 <= bprod) {
+              t += 1;
+            }
+            bound_scal = t;
+          }
+          MyVector<T> Cnum(dim);
+          for (int i = 0; i < dim; i++) {
+            Cnum(i) = cden * coset(i);
+          }
+          T Mbound = shvec_fast_master_bound(*prep, Cnum, cden, bound_scal);
+          std::optional<bool> opt32 =
+              computeIt_try_fast<int32_t, T, Tint, Finsert>(
+                  prep->Gscal, Cnum, cden, bound_scal, scal, central, Mbound,
+                  f_insert);
+          if (opt32) {
+            return *opt32;
+          }
+          std::optional<bool> opt64 =
+              computeIt_try_fast<int64_t, T, Tint, Finsert>(
+                  prep->Gscal, Cnum, cden, bound_scal, scal, central, Mbound,
+                  f_insert);
+          if (opt64) {
+            return *opt64;
+          }
+        }
+      }
+    }
+  }
   auto f_set_bound = [&](const T &K, const T &B, const T &den,
                          [[maybe_unused]] const MyVector<Tint> &x,
                          [[maybe_unused]] const int &i, Tint &upper,
@@ -619,7 +955,8 @@ T get_initial_minimum(const FullGramInfo<T> &request, MyVector<T> const &C,
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request,
                                       MyVector<T> const &coset,
-                                      bool const &central) {
+                                      bool const &central,
+                                      ShvecFastPrep<T> const *prep = nullptr) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: compute_minimum, begin\n";
 #endif
@@ -643,7 +980,7 @@ T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request,
       }
     };
     bool result = computeIt<T, Tint, decltype(f_insert)>(
-        request, coset, central, minimum, f_insert);
+        request, coset, central, minimum, f_insert, prep);
     if (result) {
       break;
     }
@@ -654,7 +991,8 @@ T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request,
 template <typename T, typename Tint>
 T_shvec_info<T, Tint>
 compute_minimum_limit(const FullGramInfo<T> &request, MyVector<T> const &coset,
-                      bool const &central, std::optional<size_t> const &limit) {
+                      bool const &central, std::optional<size_t> const &limit,
+                      ShvecFastPrep<T> const *prep = nullptr) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: compute_minimum_limit, begin\n";
 #endif
@@ -686,7 +1024,7 @@ compute_minimum_limit(const FullGramInfo<T> &request, MyVector<T> const &coset,
       }
     };
     bool result = computeIt<T, Tint, decltype(f_insert)>(
-        request, coset, central, minimum, f_insert);
+        request, coset, central, minimum, f_insert, prep);
     if (result) {
       break;
     }
@@ -736,6 +1074,9 @@ private:
   LLLreduction<T, Tint> eRec;
   MyMatrix<T> Q_T;
   FullGramInfo<T> request;
+  // The Gram-only part of the fast-path preparation, computed once and
+  // shared by every enumeration of this solver.
+  std::optional<ShvecFastPrep<T>> fast_prep;
 
 public:
   CVPSolver(MyMatrix<T> const &_GramMat, std::ostream &_os)
@@ -744,6 +1085,15 @@ public:
     MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
     Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
     request = FullGramInfo<T>{dim, eRec.GramMatRed};
+    if constexpr (shvec_has_fast_path<T>::value) {
+      fast_prep = ComputeShvecFastPrep(eRec.GramMatRed);
+    }
+  }
+  ShvecFastPrep<T> const *get_prep() const {
+    if (fast_prep) {
+      return &*fast_prep;
+    }
+    return nullptr;
   }
   T comp_norm_vect(MyVector<Tint> const &x) const {
     MyVector<T> eDiff(dim);
@@ -835,7 +1185,7 @@ public:
     MyVector<T> const &coset = ePair.second;
     bool central = false;
     T_shvec_info<T, Tint> info =
-        compute_minimum<T, Tint>(request, coset, central);
+        compute_minimum<T, Tint>(request, coset, central, get_prep());
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
@@ -870,7 +1220,8 @@ public:
     MyVector<T> const &coset = ePair.second;
     bool central = false;
     T_shvec_info<T, Tint> info =
-        compute_minimum_limit<T, Tint>(request, coset, central, limit);
+        compute_minimum_limit<T, Tint>(request, coset, central, limit,
+                                       get_prep());
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
@@ -893,7 +1244,7 @@ public:
     MyVector<T> coset = ZeroVector<T>(dim);
     bool central = true;
     T_shvec_info<T, Tint> info =
-        compute_minimum<T, Tint>(request, coset, central);
+        compute_minimum<T, Tint>(request, coset, central, get_prep());
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
@@ -933,7 +1284,8 @@ public:
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central,
-                                                 TheNorm, f_insert);
+                                                 TheNorm, f_insert,
+                                                 get_prep());
   }
   std::vector<MyVector<Tint>> fixed_dist_vectors(MyVector<T> const &eV,
                                                  T const &TheNorm) const {
@@ -962,7 +1314,8 @@ public:
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central,
-                                                 TheNorm, f_insert);
+                                                 TheNorm, f_insert,
+                                                 get_prep());
     return ListVect;
   }
   std::vector<MyVector<Tint>> at_most_dist_vectors(MyVector<T> const &eV,
@@ -986,7 +1339,8 @@ public:
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central,
-                                                 MaxNorm, f_insert);
+                                                 MaxNorm, f_insert,
+                                                 get_prep());
     return ListVect;
   }
   resultCVP<T, Tint>
@@ -1059,7 +1413,8 @@ public:
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central,
-                                                 MaxNorm, f_insert);
+                                                 MaxNorm, f_insert,
+                                                 get_prep());
     return ListVect;
   }
 };
