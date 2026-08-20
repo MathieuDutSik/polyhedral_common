@@ -57,13 +57,21 @@ template <typename T> T GetSmallestIncrement(MyMatrix<T> const &eMat) {
   std::vector<T> ListVal;
   int n = eMat.rows();
   T eGcd = eMat(0, 0);
-  for (int i = 1; i < n; i++)
+  for (int i = 1; i < n; i++) {
     eGcd = GcdPair(eGcd, eMat(i, i));
-  for (int i = 0; i < n; i++)
+    if (eGcd = T(1)) {
+      return eGcd;
+    }
+  }
+  for (int i = 0; i < n; i++) {
     for (int j = i + 1; j < n; j++) {
       T val = 2 * eMat(i, j);
       eGcd = GcdPair(eGcd, val);
+      if (eGcd = T(1)) {
+        return eGcd;
+      }
     }
+  }
   return eGcd;
 }
 
