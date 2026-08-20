@@ -237,7 +237,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat,
     }
   }
   LLLreduction<Tmat, Tint> res = {std::move(gram), std::move(H)};
-#ifdef DEBUG_CLASSIC_LLL
+#ifdef SANITY_CHECK_CLASSIC_LLL
   CheckLLLreduction(res, GramMat);
 #endif
   return res;
@@ -255,14 +255,32 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat,
 template <typename Tmat, typename Tint>
 LLLreduction<Tmat, Tint> LLLreducedBasisDual(MyMatrix<Tmat> const &GramMat,
                                              std::ostream &os) {
-  MyMatrix<Tmat> Ginv = Inverse(GramMat);
-  LLLreduction<Tmat, Tint> LLLrec = LLLreducedBasis<Tmat, Tint>(Ginv, os);
-  MyMatrix<Tmat> const &Gred = LLLrec.GramMatRed;
+  // The dual form is reduced through the adjugate rather than the inverse:
+  // adj(G) = det(G) G^{-1} with det(G) > 0 for a positive definite G, so the
+  // adjugate is a positive multiple of G^{-1} and LLL, being invariant under
+  // a positive scaling of the form, returns the same transformation P. This
+  // keeps the whole computation over the ring.
+  std::pair<MyMatrix<Tmat>, Tmat> pair = AdjugateDeterminant(GramMat);
+#ifdef SANITY_CHECK_CLASSIC_LLL
+  if (pair.second <= 0) {
+    std::cerr << "LLL: LLLreducedBasisDual expects a positive definite form, "
+                 "but the determinant is "
+              << pair.second << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  LLLreduction<Tmat, Tint> LLLrec =
+      LLLreducedBasis<Tmat, Tint>(pair.first, os);
   MyMatrix<Tint> const &P = LLLrec.Pmat;
-  MyMatrix<Tmat> GredInv = Inverse(Gred);
-  MyMatrix<Tint> Q = TransposedMat(Inverse(P));
+  // P is unimodular, so its inverse is integral, and the reduced form is
+  // obtained from it directly: (P^-1)^T G P^-1, with no inversion of a Gram
+  // matrix anywhere.
+  MyMatrix<Tint> Pinv = Inverse(P);
+  MyMatrix<Tmat> Pinv_T = UniversalMatrixConversion<Tmat, Tint>(Pinv);
+  MyMatrix<Tmat> GredInv = Pinv_T.transpose() * GramMat * Pinv_T;
+  MyMatrix<Tint> Q = TransposedMat(Pinv);
   LLLreduction<Tmat, Tint> res = {std::move(GredInv), std::move(Q)};
-#ifdef DEBUG
+#ifdef SANITY_CHECK_CLASSIC_LLL
   CheckLLLreduction(res, GramMat);
 #endif
   return res;

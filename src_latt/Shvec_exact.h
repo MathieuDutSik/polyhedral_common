@@ -295,7 +295,8 @@ template <typename T, typename Tint, typename Finsert, typename Fsetbound>
 bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
                           bool const &central, const T &bound, Finsert f_insert,
                           Fsetbound f_set_bound) {
-  static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  // T may be a ring: the enumeration is fraction-free, the only divisions
+  // being the exact Bareiss ones.
   int i, j;
   int dim = request.dim;
   MyVector<Tint> Upper(dim);
@@ -486,48 +487,18 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
   }
 }
 
+/*
+  The enumeration runs in T itself, ring or field alike: computeIt_Gen_Kernel
+  forms no quotient, so a ring input no longer has to be lifted to the
+  overlying field.
+ */
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-  requires(is_ring_field<T>::value)
 inline bool computeIt_Gen(const FullGramInfo<T> &request,
                           MyVector<T> const &coset, bool const &central,
                           const T &bound, Finsert f_insert,
                           Fsetbound f_set_bound) {
-#ifdef DEBUG_SHVEC
-  std::cerr << "SHVEC: computeIt (field case)\n";
-#endif
   return computeIt_Gen_Kernel<T, Tint, Finsert, Fsetbound>(
       request, coset, central, bound, f_insert, f_set_bound);
-}
-
-template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-  requires(!is_ring_field<T>::value)
-inline bool computeIt_Gen(const FullGramInfo<T> &request,
-                          MyVector<T> const &coset, bool const &central,
-                          const T &bound, Finsert f_insert,
-                          Fsetbound f_set_bound) {
-#ifdef DEBUG_SHVEC
-  std::cerr << "SHVEC: computeIt (ring case)\n";
-#endif
-  using Tfield = typename overlying_field<T>::field_type;
-  //
-  Tfield bound_field = UniversalScalarConversion<Tfield, T>(bound);
-  FullGramInfo<Tfield> request_field{
-      request.dim, UniversalMatrixConversion<Tfield, T>(request.gram_matrix)};
-  MyVector<Tfield> coset_field = UniversalVectorConversion<Tfield, T>(coset);
-  //
-  auto f_insert_field = [&](const MyVector<Tint> &V,
-                            const Tfield &min_Tfield) -> bool {
-    T min_T = UniversalScalarConversion<T, Tfield>(min_Tfield);
-    return f_insert(V, min_T);
-  };
-  bool retVal =
-      computeIt_Gen_Kernel<Tfield, Tint, decltype(f_insert_field), Fsetbound>(
-          request_field, coset_field, central, bound_field, f_insert_field,
-          f_set_bound);
-#ifdef DEBUG_SHVEC
-  std::cerr << "SHVEC: computeIt (ring case) exit\n";
-#endif
-  return retVal;
 }
 
 template <typename T, typename Tint, typename Finsert>
@@ -610,7 +581,6 @@ bool computeIt_polytope(const FullGramInfo<T> &request,
 }
 
 template <typename T, typename Tint, typename Finsert>
-  requires(is_ring_field<T>::value)
 inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
                       bool const &central, const T &bound, Finsert f_insert) {
   auto f_set_bound = [&](const T &K, const T &B, const T &den,
@@ -619,22 +589,6 @@ inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
                          Tint &lower) -> void {
     upper = Bound_Floor<T, Tint>(K, B, den);
     lower = Bound_Ceil<T, Tint>(K, B, den);
-  };
-  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(
-      request, coset, central, bound, f_insert, f_set_bound);
-}
-
-template <typename T, typename Tint, typename Finsert>
-  requires(!is_ring_field<T>::value)
-inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
-                      bool const &central, const T &bound, Finsert f_insert) {
-  using Tfield = typename overlying_field<T>::field_type;
-  auto f_set_bound = [&](const Tfield &K, const Tfield &B, const Tfield &den,
-                         [[maybe_unused]] const MyVector<Tint> &x,
-                         [[maybe_unused]] const int &i, Tint &upper,
-                         Tint &lower) -> void {
-    upper = Bound_Floor<Tfield, Tint>(K, B, den);
-    lower = Bound_Ceil<Tfield, Tint>(K, B, den);
   };
   return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(
       request, coset, central, bound, f_insert, f_set_bound);

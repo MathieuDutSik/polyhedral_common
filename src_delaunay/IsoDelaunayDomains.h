@@ -2734,8 +2734,9 @@ GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
   DelaunayTesselationIneq<Tint, Tgroup> DTI =
       BuildDelaunayTesselationIneq(DT, ListGramRing, os);
   MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, DTI, os);
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
   MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
+  MyMatrix<Tint> SHV =
+      ExtractInvariantVectorFamilyZbasis<Tint, Tint>(M_ring, os);
   return {std::move(DTI), std::move(M_ring), std::move(SHV)};
 }
 
@@ -3210,8 +3211,11 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
 #endif
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
+  // The invariant vector family of M and of a positive rescaling of M is the
+  // same, so the extraction runs over the ring.
   MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
+  MyMatrix<Tint> SHV =
+      ExtractInvariantVectorFamilyZbasis<Tint, Tint>(M_ring, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: s_adj, shv_extract|=" << time_s_adj << "\n";
 #endif

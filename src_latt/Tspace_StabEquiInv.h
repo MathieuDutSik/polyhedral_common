@@ -359,7 +359,9 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
       GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
                                                               Vdiag, os);
 #ifdef TIMINGS_TSPACE_FUNCTIONS
-  os << "|TSPACE: Stab, listmat_vdiag_automorphism|=" << time_st << "\n";
+  os << "|TSPACE: Stab, listmat_vdiag_automorphism n_row=" << n_row
+     << " n_mat=" << ListMat.size() << " dim=" << SHV_T.cols()
+     << "|=" << time_st << "\n";
 #endif
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer_SHV |ListGen|=" << ListGen.size()
@@ -558,8 +560,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
       TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(
           SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
 #ifdef TIMINGS_TSPACE_FUNCTIONS
-  os << "|TSPACE: Equiv, listmat_vdiag found=" << opt1.has_value()
-     << "|=" << time_eq << "\n";
+  os << "|TSPACE: Equiv, listmat_vdiag n_row=" << n_row
+     << " n_mat=" << ListMat1.size() << " dim=" << SHV1_T.cols()
+     << " found=" << opt1.has_value() << "|=" << time_eq << "\n";
 #endif
   if (!opt1) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
