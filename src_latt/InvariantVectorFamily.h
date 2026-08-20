@@ -54,22 +54,19 @@ T GetMaxNorm(MyMatrix<T> const &eMat, std::ostream &os) {
 }
 
 template <typename T> T GetSmallestIncrement(MyMatrix<T> const &eMat) {
-  std::vector<T> ListVal;
   int n = eMat.rows();
   T eGcd = eMat(0, 0);
+  // No early exit at eGcd = 1: over the rationals the gcd can decrease
+  // below 1 (gcd(1, 2/3) = 1/3), so 1 is not a stopping point. A rational
+  // Gram matrix does occur, e.g. the realizability matrices of the
+  // short-vector configurations.
   for (int i = 1; i < n; i++) {
     eGcd = GcdPair(eGcd, eMat(i, i));
-    if (eGcd == T(1)) {
-      return eGcd;
-    }
   }
   for (int i = 0; i < n; i++) {
     for (int j = i + 1; j < n; j++) {
       T val = 2 * eMat(i, j);
       eGcd = GcdPair(eGcd, val);
-      if (eGcd == T(1)) {
-        return eGcd;
-      }
     }
   }
   return eGcd;

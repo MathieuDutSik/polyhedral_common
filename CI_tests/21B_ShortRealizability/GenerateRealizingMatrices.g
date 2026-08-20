@@ -4,7 +4,7 @@ Read("../access_points.g");
 ListSHV:=ReadAsFunction("ListSHV_n10_rnk10")();
 
 get_mat:=function(SHV)
-    local TmpDir, FileIn, FileOut, eProg, TheCommand, eRec;
+    local eRec;
     eRec:=test_shortest_realizability(SHV);
     if is_error(eRec) then
         return false;
@@ -12,8 +12,6 @@ get_mat:=function(SHV)
     if eRec.realizable=false then
         return false;
     fi;
-    RemoveFile(FileIn);
-    RemoveFile(FileOut);
     return eRec.matrix;
 end;
 
@@ -28,7 +26,7 @@ generate_examples:=function()
         Print("Before get_mat at idx=", idx, " det=", DeterminantMat(eSHV), "\n");
         Print("eSHV=\n");
         PrintArray(eSHV);
-        eMat:=test_shortest_realizability(eSHV);
+        eMat:=get_mat(eSHV);
         if eMat=false then
             Print("eSHV=\n");
             PrintArray(eSHV);
