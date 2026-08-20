@@ -1148,15 +1148,6 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertGenerator, step 1\n";
 #endif
-    // The identity contributes nothing and its permutation is already in the
-    // group, so the vertex scan of get_v_positions would be pure loss. It does
-    // occur: the generators arrive as products BigMatI * eBigMat * BigMatR,
-    // and permutalib's SmallGeneratingSet can itself return the identity (its
-    // RandomElement draws a word of length random() % 100, so an empty word
-    // shows up).
-    if (IsIdentity(eMat)) {
-      return;
-    }
     std::optional<std::vector<Tidx>> opt = get_v_positions(eMat);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertGenerator, step 2\n";
@@ -1288,7 +1279,9 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: FuncInsertCenter, step 5, B\n";
 #endif
-      FuncInsertGenerator(eGen);
+      if (!IsIdentity(eGen)) {
+        FuncInsertGenerator(eGen);
+      }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: FuncInsertCenter, step 5, C\n";
 #endif
@@ -1296,19 +1289,21 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: FuncInsertCenter, step 6, A\n";
 #endif
-      MyMatrix<Tring> const &BigMatR = TheRec.eBigMat;
-      MyMatrix<Tring> BigMatI = Inverse(BigMatR);
       MyMatrix<Tring> const &EXT =
           ListOrbitDelaunay.l_dels[TheRec.iDelaunay].EXT;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: FuncInsertCenter, step 6, B\n";
 #endif
-      RepresentVertexPermutationPreComput<Tring> precomp_ext(EXT);
-      for (auto &ePermGen : ListOrbitDelaunay.l_dels[TheRec.iDelaunay]
-                                .GRP.SmallGeneratingSet()) {
-        MyMatrix<Tring> eBigMat = precomp_ext.represent(ePermGen);
-        MyMatrix<Tring> eBigMat_new = BigMatI * eBigMat * BigMatR;
-        FuncInsertGenerator(eBigMat_new);
+      std::vector<Telt> LGens = ListOrbitDelaunay.l_dels[TheRec.iDelaunay].GRP.SmallGeneratingSet();
+      if (!LGens.empty()) {
+        MyMatrix<Tring> const &BigMatR = TheRec.eBigMat;
+        MyMatrix<Tring> BigMatI = Inverse(BigMatR);
+        RepresentVertexPermutationPreComput<Tring> precomp_ext(EXT);
+        for (auto &ePermGen : LGens) {
+          MyMatrix<Tring> eBigMat = precomp_ext.represent(ePermGen);
+          MyMatrix<Tring> eBigMat_new = BigMatI * eBigMat * BigMatR;
+          FuncInsertGenerator(eBigMat_new);
+        }
       }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: FuncInsertCenter, step 6, C\n";
@@ -1873,11 +1868,7 @@ FlippingLtype(
                                    Face const &eInc) -> MatchedFacet {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
     MicrosecondTime time_gm;
-    struct AccumOnExit {
-      MicrosecondTime &t;
-      int64_t &acc;
-      ~AccumOnExit() { acc += t.eval_int64(); }
-    } accum_gm{time_gm, time_flt_matching};
+    AccumOnExit<MicrosecondTime> accum_gm(time_gm, time_flt_matching);
 #endif
     MyMatrix<Tring> const &EXT = ListInfo[iInfo][iFacet].EXT;
     Tgroup const &TheStab = ListInfo[iInfo][iFacet].TheStab;
@@ -1983,11 +1974,7 @@ FlippingLtype(
                                      Face const &eInc) -> MatchedFacet {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
     MicrosecondTime time_go;
-    struct AccumOnExit {
-      MicrosecondTime &t;
-      int64_t &acc;
-      ~AccumOnExit() { acc += t.eval_int64(); }
-    } accum_go{time_go, time_flt_matching_old};
+    AccumOnExit<MicrosecondTime> accum_go(time_go, time_flt_matching_old);
 #endif
     MyMatrix<Tring> const &EXT = ListOrbitDelaunay.l_dels[iDelaunayOld].EXT;
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
@@ -2093,11 +2080,7 @@ FlippingLtype(
       [&](DelaunaySymb const &ds) -> std::optional<size_t> {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
     MicrosecondTime time_sp;
-    struct AccumOnExit {
-      MicrosecondTime &t;
-      int64_t &acc;
-      ~AccumOnExit() { acc += t.eval_int64(); }
-    } accum_sp{time_sp, time_flt_symbolpos};
+    AccumOnExit<MicrosecondTime> accum_sp(time_sp, time_flt_symbolpos);
 #endif
     if (ds.Position == Position_old) {
       for (size_t i = 0; i < NewListOrbitDelaunay.size(); i++) {
