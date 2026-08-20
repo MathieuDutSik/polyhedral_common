@@ -1128,7 +1128,10 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #endif
     for (size_t i = 0; i < len; i++) {
       MyVector<Tring> eVimg = eMat.transpose() * ListVertices[i];
-      if (!ListVertices_rev.contains(eVimg)) {
+      // One lookup, not a contains() followed by an at() on the same key.
+      typename std::unordered_map<MyVector<Tring>, size_t>::const_iterator iter =
+          ListVertices_rev.find(eVimg);
+      if (iter == ListVertices_rev.end()) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: FRING: get_v_positions, i=" << i
            << " eV=" << StringVector(ListVertices[i])
@@ -1136,8 +1139,7 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #endif
         return {};
       }
-      size_t pos = ListVertices_rev.at(eVimg);
-      Tidx pos_idx = static_cast<Tidx>(pos - 1);
+      Tidx pos_idx = static_cast<Tidx>(iter->second - 1);
       v_ret[i] = pos_idx;
     }
     return v_ret;
@@ -1146,6 +1148,15 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertGenerator, step 1\n";
 #endif
+    // The identity contributes nothing and its permutation is already in the
+    // group, so the vertex scan of get_v_positions would be pure loss. It does
+    // occur: the generators arrive as products BigMatI * eBigMat * BigMatR,
+    // and permutalib's SmallGeneratingSet can itself return the identity (its
+    // RandomElement draws a word of length random() % 100, so an empty word
+    // shows up).
+    if (IsIdentity(eMat)) {
+      return;
+    }
     std::optional<std::vector<Tidx>> opt = get_v_positions(eMat);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertGenerator, step 2\n";
@@ -1170,10 +1181,13 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
         Face f_att(nVert);
         size_t miss_val = std::numeric_limits<size_t>::max();
         auto get_idx = [&](MyVector<Tring> const &eVert) -> size_t {
-          if (!ListVertices_rev.contains(eVert)) {
+          typename std::unordered_map<MyVector<Tring>,
+                                      size_t>::const_iterator iter =
+              ListVertices_rev.find(eVert);
+          if (iter == ListVertices_rev.end()) {
             return miss_val;
           }
-          size_t u = ListVertices_rev.at(eVert) - 1;
+          size_t u = iter->second - 1;
           if (u >= nVert) {
             return miss_val;
           }
@@ -1704,7 +1718,7 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
   os << "|ISODEL: FRING: lev|=" << time_fring_lev << "\n";
   os << "|ISODEL: FRING: full|=" << time_fring_full << "\n";
 #endif
-  return {ListOrbitFacet, eIso};
+  return {std::move(ListOrbitFacet), std::move(eIso)};
 }
 
 /*
@@ -1956,7 +1970,7 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_flt_bigmat += time_b.eval_int64();
 #endif
-        return {eAdj, eBigMat};
+        return {eAdj, std::move(eBigMat)};
       }
     }
     std::cerr << "ISO_EDGE: FLT: iInfo=" << iInfo << " iFacet=" << iFacet
@@ -2002,7 +2016,7 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_flt_bigmat += time_b.eval_int64();
 #endif
-        return {{eAdj.eInc, eAdj.eBigMat, eAdj.iOrb}, eBigMat};
+        return {{eAdj.eInc, eAdj.eBigMat, eAdj.iOrb}, std::move(eBigMat)};
       }
     }
     std::cerr << "ISO_EDGE: FLT: iDelaunayOld=" << iDelaunayOld

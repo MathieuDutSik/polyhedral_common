@@ -59,7 +59,7 @@ template <typename T> T GetSmallestIncrement(MyMatrix<T> const &eMat) {
   T eGcd = eMat(0, 0);
   for (int i = 1; i < n; i++) {
     eGcd = GcdPair(eGcd, eMat(i, i));
-    if (eGcd = T(1)) {
+    if (eGcd == T(1)) {
       return eGcd;
     }
   }
@@ -67,7 +67,7 @@ template <typename T> T GetSmallestIncrement(MyMatrix<T> const &eMat) {
     for (int j = i + 1; j < n; j++) {
       T val = 2 * eMat(i, j);
       eGcd = GcdPair(eGcd, val);
-      if (eGcd = T(1)) {
+      if (eGcd == T(1)) {
         return eGcd;
       }
     }
@@ -289,8 +289,21 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyHalf(MyMatrix<T> const &GramMat,
       throw TerminalException{1};
     }
     std::vector<MyVector<Tint>> ListVect = solver.fixed_norm_vectors(norm);
-    MyMatrix<Tint> SHV_f = MatrixFromVectorFamilyDim(n, ListVect);
-    MyMatrix<Tint> SHVtest = Concatenate(SHVret, SHV_f);
+    // The shell is written straight into the concatenation: the intermediate
+    // matrix of the new vectors was only ever fed to Concatenate.
+    int n_prev = SHVret.rows();
+    int n_new = ListVect.size();
+    MyMatrix<Tint> SHVtest(n_prev + n_new, n);
+    for (int i_row = 0; i_row < n_prev; i_row++) {
+      for (int i_col = 0; i_col < n; i_col++) {
+        SHVtest(i_row, i_col) = SHVret(i_row, i_col);
+      }
+    }
+    for (int i_row = 0; i_row < n_new; i_row++) {
+      for (int i_col = 0; i_col < n; i_col++) {
+        SHVtest(n_prev + i_row, i_col) = ListVect[i_row](i_col);
+      }
+    }
     FundInvariantVectorFamily<Tint> fi_test = f_invariant(SHVtest);
     if (fi_ret < fi_test) {
       SHVret = SHVtest;
