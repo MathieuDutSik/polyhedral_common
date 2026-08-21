@@ -35,9 +35,62 @@
 #define TIMINGS_SHVEC
 #endif
 
+/*
+  The Gram matrix together with its Bareiss decomposition: d(i) the leading
+  principal minors and Nmat(i,j) the elimination entries, related to the
+  classical Cholesky coefficients by q(i,i) = d(i)/d(i-1) and
+  q(i,j) = Nmat(i,j)/d(i). The enumeration reads them but never changes
+  them, so they are a property of the matrix rather than of the call: a
+  solver enumerating many shells of one matrix computes them once.
+ */
 template <typename T> struct FullGramInfo {
   int dim;
   MyMatrix<T> gram_matrix;
+  MyVector<T> d;
+  MyMatrix<T> Nmat;
+  FullGramInfo() : dim(0) {}
+  /*
+    Fraction-free replacement of the Cholesky-style normalization. Keeping d
+    and Nmat instead of q removes every quotient from the enumeration: the
+    only division here is the Bareiss one, exact over any integral domain.
+    The decomposition is a constructor rather than a free function so that
+    an instance without it cannot be built by mistake.
+   */
+  FullGramInfo(MyMatrix<T> const &gram)
+      : dim(gram.rows()), gram_matrix(gram), d(gram.rows()), Nmat(gram) {
+    T prev(1);
+    for (int i = 0; i < dim; i++) {
+      d(i) = Nmat(i, i);
+#ifdef SANITY_CHECK_SHVEC
+      if (d(i) <= 0) {
+        std::cerr << "SHVEC: leading principal minor " << i << " is " << d(i)
+                  << ", the Gram matrix is not positive definite\n";
+        throw TerminalException{1};
+      }
+#endif
+      for (int i2 = i + 1; i2 < dim; i2++) {
+        for (int j2 = i + 1; j2 < dim; j2++) {
+          T val = Nmat(i2, j2) * Nmat(i, i) - Nmat(i2, i) * Nmat(i, j2);
+          // exact division guaranteed by Bareiss's theorem
+          T quot = val / prev;
+#ifdef SANITY_CHECK_SHVEC
+          if (quot * prev != val) {
+            std::cerr << "SHVEC: non-exact Bareiss division, T is not an "
+                         "integral domain\n";
+            throw TerminalException{1};
+          }
+#endif
+          Nmat(i2, j2) = quot;
+        }
+      }
+      prev = Nmat(i, i);
+    }
+  }
+  // For the native-integer path, whose decomposition is converted from an
+  // exact one already computed rather than recomputed.
+  FullGramInfo(MyMatrix<T> _gram, MyVector<T> _d, MyMatrix<T> _Nmat)
+      : dim(_gram.rows()), gram_matrix(std::move(_gram)), d(std::move(_d)),
+        Nmat(std::move(_Nmat)) {}
 };
 
 template <typename T, typename Tint> struct T_shvec_info {
@@ -355,48 +408,16 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
     std::cerr << "\n";
   }
 #endif
-  /*
-    Fraction-free replacement of the Cholesky-style normalization. Writing
-    d(i) for the leading principal minor of size i+1 of the Gram matrix and
-    N(i,j) for the Bareiss entry after i elimination steps, the coefficients
-    of the classical decomposition are q(i,i) = d(i)/d(i-1) and
-    q(i,j) = N(i,j)/d(i). Keeping d and N instead of q removes every
-    quotient from the enumeration: the only division left is the Bareiss
-    one, which is exact over any integral domain.
-   */
-  MyMatrix<T> N = request.gram_matrix;
-  MyVector<T> d(dim);
-  T prev(1);
-  for (i = 0; i < dim; i++) {
-    d(i) = N(i, i);
-#ifdef SANITY_CHECK_SHVEC
-    if (d(i) <= 0) {
-      std::cerr << "SHVEC: leading principal minor " << i << " is " << d(i)
-                << ", the Gram matrix is not positive definite\n";
-      throw TerminalException{1};
-    }
-#endif
-    for (int i2 = i + 1; i2 < dim; i2++) {
-      for (int j2 = i + 1; j2 < dim; j2++) {
-        T val = N(i2, j2) * N(i, i) - N(i2, i) * N(i, j2);
-        T quot = val / prev; // exact division guaranteed by Bareiss's theorem
-#ifdef SANITY_CHECK_SHVEC
-        if (quot * prev != val) {
-          std::cerr << "SHVEC: non-exact Bareiss division, T is not an "
-                       "integral domain\n";
-          throw TerminalException{1};
-        }
-#endif
-        N(i2, j2) = quot;
-      }
-    }
-    prev = N(i, i);
+  // The Bareiss decomposition travels with the matrix, see FullGramInfo.
+  MyVector<T> const &d = request.d;
+  MyMatrix<T> const &N = request.Nmat;
 #ifdef DEBUG_SHVEC_MATRIX
+  for (i = 0; i < dim; i++) {
     std::cerr << "SHVEC: d=" << d(i) << "\n";
     for (int j = i + 1; j < dim; j++)
       std::cerr << "   j=" << j << " N=" << N(i, j) << "\n";
-#endif
   }
+#endif
   // The coefficient of x(i) in the scaled offset d(i) * x_S(i) + Bvec(i),
   // handed to f_set_bound.
   MyVector<T> den(dim);
@@ -416,7 +437,9 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
 #ifdef DEBUG_SHVEC_VECTOR
   size_t n_vector = 0;
 #endif
-  T Kval, Hval, eNorm;
+  // Declared once: a fresh T inside the loop means an allocation and a
+  // release per iteration for the multiprecision instantiations.
+  T Kval, Hval, eNorm, num, quot;
   while (true) {
     if (needs_new_bound) {
       // The admissible range is |d(i) * x(i) + Bvec(i)| <= sqrt(Kval) with
@@ -446,8 +469,8 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
         Hval = d(0) * x_S(0) + Bvec(0);
         // bound - Trem(-1), the exact norm; the division is exact because
         // Trem(-1) = bound - Q(x + C) is a value of the original form.
-        T num = Ttil(0) - Hval * Hval;
-        T quot = num / d(0);
+        num = Ttil(0) - Hval * Hval;
+        quot = num / d(0);
 #ifdef SANITY_CHECK_SHVEC
         if (quot * d(0) != num) {
           std::cerr << "SHVEC: non-exact division in the norm evaluation\n";
@@ -502,8 +525,8 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
         // form of Trem(i) = Trem(i+1) - q(i+1,i+1) * hVal^2. The division is
         // exact: d(i) * Trem(i) is a value of the Schur complement of the
         // leading block, which Bareiss keeps over the ring.
-        T num = d(i) * Ttil(i + 1) - Hval * Hval;
-        T quot = num / d(i + 1);
+        num = d(i) * Ttil(i + 1) - Hval * Hval;
+        quot = num / d(i + 1);
 #ifdef SANITY_CHECK_SHVEC
         if (quot * d(i + 1) != num) {
           std::cerr << "SHVEC: non-exact division in the remainder update\n";
@@ -795,17 +818,25 @@ bool shvec_fast_fits(T const &Mbound) {
   intermediate fits the type.
  */
 template <typename Tfast, typename T, typename Tint, typename Finsert>
-bool computeIt_fast(MyMatrix<T> const &Gscal, MyVector<T> const &Cnum,
+bool computeIt_fast(ShvecFastPrep<T> const &prep, MyVector<T> const &Cnum,
                     T const &cden, T const &bound_scal, T const &scal,
                     bool const &central, Finsert f_insert) {
+  MyMatrix<T> const &Gscal = prep.Gscal;
   int dim = Gscal.rows();
   MyMatrix<Tfast> G_fast(dim, dim);
+  MyMatrix<Tfast> N_fast(dim, dim);
+  MyVector<Tfast> d_fast(dim);
+  // The Bareiss data is the preparation's, converted: recomputing it at the
+  // native type would repeat work already done exactly.
   for (int i = 0; i < dim; i++) {
+    d_fast(i) = UniversalScalarConversion<Tfast, T>(prep.d(i));
     for (int j = 0; j < dim; j++) {
       G_fast(i, j) = UniversalScalarConversion<Tfast, T>(Gscal(i, j));
+      N_fast(i, j) = UniversalScalarConversion<Tfast, T>(prep.Nmat(i, j));
     }
   }
-  FullGramInfo<Tfast> request_fast{dim, std::move(G_fast)};
+  FullGramInfo<Tfast> request_fast(std::move(G_fast), std::move(d_fast),
+                                   std::move(N_fast));
   MyVector<Tfast> Cnum_fast(dim);
   for (int i = 0; i < dim; i++) {
     Cnum_fast(i) = UniversalScalarConversion<Tfast, T>(Cnum(i));
@@ -886,11 +917,11 @@ inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
           T Mbound = shvec_fast_master_bound(*prep, Cnum, cden, bound_scal);
           if (shvec_fast_fits<int32_t, T>(Mbound)) {
             return computeIt_fast<int32_t, T, Tint, Finsert>(
-                prep->Gscal, Cnum, cden, bound_scal, scal, central, f_insert);
+                *prep, Cnum, cden, bound_scal, scal, central, f_insert);
           }
           if (shvec_fast_fits<int64_t, T>(Mbound)) {
             return computeIt_fast<int64_t, T, Tint, Finsert>(
-                prep->Gscal, Cnum, cden, bound_scal, scal, central, f_insert);
+                *prep, Cnum, cden, bound_scal, scal, central, f_insert);
           }
         }
       }
@@ -1061,7 +1092,7 @@ public:
         eRec(LLLreducedBasisDual<T, Tint>(GramMat, os)) {
     MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
     Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
-    request = FullGramInfo<T>{dim, eRec.GramMatRed};
+    request = FullGramInfo<T>(eRec.GramMatRed);
     if constexpr (shvec_has_fast_path<T>::value) {
       fast_prep = ComputeShvecFastPrep(eRec.GramMatRed);
     }
