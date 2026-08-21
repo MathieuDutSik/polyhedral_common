@@ -63,22 +63,6 @@ ReductionMod1vector(MyVector<T> const &V) {
 }
 
 /*
-  Scalar conversion that also covers the native integer types used by the
-  fast enumeration path, for which no TYPE_CONVERSION pair needs to exist.
- */
-template <typename Tto, typename Tfrom>
-inline Tto shvec_scalar_convert(Tfrom const &x) {
-  if constexpr (std::is_same_v<Tto, Tfrom>) {
-    return x;
-  } else if constexpr (std::is_arithmetic_v<Tto> &&
-                       std::is_arithmetic_v<Tfrom>) {
-    return static_cast<Tto>(x);
-  } else {
-    return UniversalScalarConversion<Tto, Tfrom>(x);
-  }
-}
-
-/*
   Whether the native-integer fast path can be attempted for the type: the
   preparation needs the denominators, the conversions to and from int64_t
   and the exact square root. The detection is by capability, so a type
@@ -255,13 +239,13 @@ Tint Bound_Floor(T const &K, T const &B, T const &den) {
     throw TerminalException{1};
   }
 #endif
-  double K_doubl = shvec_scalar_convert<double, T>(K);
-  double B_doubl = shvec_scalar_convert<double, T>(B);
-  double den_doubl = shvec_scalar_convert<double, T>(den);
+  double K_doubl = UniversalScalarConversion<double, T>(K);
+  double B_doubl = UniversalScalarConversion<double, T>(B);
+  double den_doubl = UniversalScalarConversion<double, T>(den);
   double alpha = (sqrt(K_doubl) - B_doubl) / den_doubl;
   Tint eReturn = static_cast<Tint>(lround(floor(alpha)));
   auto f = [&](Tint const &n) -> bool {
-    T val = den * shvec_scalar_convert<T, Tint>(n) + B;
+    T val = den * UniversalScalarConversion<T, Tint>(n) + B;
     if (val <= 0) {
       return true;
     }
@@ -296,13 +280,13 @@ Tint Bound_Ceil(T const &K, T const &B, T const &den) {
     throw TerminalException{1};
   }
 #endif
-  double K_doubl = shvec_scalar_convert<double, T>(K);
-  double B_doubl = shvec_scalar_convert<double, T>(B);
-  double den_doubl = shvec_scalar_convert<double, T>(den);
+  double K_doubl = UniversalScalarConversion<double, T>(K);
+  double B_doubl = UniversalScalarConversion<double, T>(B);
+  double den_doubl = UniversalScalarConversion<double, T>(den);
   double alpha = (-sqrt(K_doubl) - B_doubl) / den_doubl;
   Tint eReturn = static_cast<Tint>(lround(ceil(alpha)));
   auto f = [&](Tint const &n) -> bool {
-    T val = den * shvec_scalar_convert<T, Tint>(n) + B;
+    T val = den * UniversalScalarConversion<T, Tint>(n) + B;
     if (val >= 0) {
       return true;
     }
@@ -443,7 +427,7 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
         Kval *= d(i - 1);
       }
       f_set_bound(Kval, Bvec(i), den(i), x, i, Upper(i), x(i));
-      x_S(i) = cden * shvec_scalar_convert<T, Tint>(x(i));
+      x_S(i) = cden * UniversalScalarConversion<T, Tint>(x(i));
       needs_new_bound = false;
     } else {
       x(i) += 1;
@@ -794,44 +778,49 @@ T shvec_fast_master_bound(ShvecFastPrep<T> const &prep, MyVector<T> const &Cnum,
 }
 
 /*
-  The enumeration at a native integer type. The caller has already proven
-  through shvec_fast_master_bound that every intermediate fits; the empty
-  return means the type is too small and a wider one (or the exact path)
-  has to be taken.
+  Whether every intermediate magnitude of the enumeration fits the native
+  type. For int32 the products are computed in the 32-bit int of the integer
+  promotion, so the limit is 2^29 with margin; for int64 it is 2^61.
  */
-template <typename Tfast, typename T, typename Tint, typename Finsert>
-std::optional<bool>
-computeIt_try_fast(MyMatrix<T> const &Gscal, MyVector<T> const &Cnum,
-                   T const &cden, T const &bound_scal, T const &scal,
-                   bool const &central, T const &Mbound, Finsert f_insert) {
+template <typename Tfast, typename T>
+bool shvec_fast_fits(T const &Mbound) {
   int64_t limit =
       (sizeof(Tfast) == 4) ? (int64_t(1) << 29) : (int64_t(1) << 61);
-  if (Mbound >= shvec_scalar_convert<T, int64_t>(limit)) {
-    return {};
-  }
+  return Mbound < UniversalScalarConversion<T, int64_t>(limit);
+}
+
+/*
+  The enumeration at a native integer type. The caller has already proven
+  through shvec_fast_master_bound and shvec_fast_fits that every
+  intermediate fits the type.
+ */
+template <typename Tfast, typename T, typename Tint, typename Finsert>
+bool computeIt_fast(MyMatrix<T> const &Gscal, MyVector<T> const &Cnum,
+                    T const &cden, T const &bound_scal, T const &scal,
+                    bool const &central, Finsert f_insert) {
   int dim = Gscal.rows();
   MyMatrix<Tfast> G_fast(dim, dim);
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      G_fast(i, j) = shvec_scalar_convert<Tfast, T>(Gscal(i, j));
+      G_fast(i, j) = UniversalScalarConversion<Tfast, T>(Gscal(i, j));
     }
   }
   FullGramInfo<Tfast> request_fast{dim, std::move(G_fast)};
   MyVector<Tfast> Cnum_fast(dim);
   for (int i = 0; i < dim; i++) {
-    Cnum_fast(i) = shvec_scalar_convert<Tfast, T>(Cnum(i));
+    Cnum_fast(i) = UniversalScalarConversion<Tfast, T>(Cnum(i));
   }
-  Tfast cden_fast = shvec_scalar_convert<Tfast, T>(cden);
-  Tfast bound_fast = shvec_scalar_convert<Tfast, T>(bound_scal);
+  Tfast cden_fast = UniversalScalarConversion<Tfast, T>(cden);
+  Tfast bound_fast = UniversalScalarConversion<Tfast, T>(bound_scal);
   bool descale = (scal != T(1));
   auto f_insert_fast = [&](MyVector<Tfast> const &x,
                            Tfast const &norm_s) -> bool {
     int n = x.size();
     MyVector<Tint> x_ret(n);
     for (int u = 0; u < n; u++) {
-      x_ret(u) = shvec_scalar_convert<Tint, Tfast>(x(u));
+      x_ret(u) = UniversalScalarConversion<Tint, Tfast>(x(u));
     }
-    T norm = shvec_scalar_convert<T, Tfast>(norm_s);
+    T norm = UniversalScalarConversion<T, Tfast>(norm_s);
     if (descale) {
       norm = norm / scal;
     }
@@ -844,12 +833,10 @@ computeIt_try_fast(MyMatrix<T> const &Gscal, MyVector<T> const &Cnum,
     upper = Bound_Floor<Tfast, Tfast>(K, B, den);
     lower = Bound_Ceil<Tfast, Tfast>(K, B, den);
   };
-  bool res =
-      computeIt_Gen_Kernel<Tfast, Tfast, decltype(f_insert_fast),
-                           decltype(f_set_bound)>(
-          request_fast, Cnum_fast, cden_fast, central, bound_fast,
-          f_insert_fast, f_set_bound);
-  return res;
+  return computeIt_Gen_Kernel<Tfast, Tfast, decltype(f_insert_fast),
+                              decltype(f_set_bound)>(
+      request_fast, Cnum_fast, cden_fast, central, bound_fast, f_insert_fast,
+      f_set_bound);
 }
 
 /*
@@ -879,41 +866,31 @@ inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
         }
         T scal = prep->D * cden * cden;
         T bprod = scal * bound;
-        // A bound too large for the double seeding cannot fit anyway.
-        if (shvec_scalar_convert<double, T>(bprod) < 1.0e18) {
+        // Early exit on a hopeless bound: the master bound dominates the
+        // scaled bound (M >= d(dim-1) * bound_scal >= bound_scal), so a
+        // scaled bound at or beyond 2^61 (~2.3e18) can never pass the int64
+        // fits-test. The double image is compared against 1.0e18, whose
+        // margin absorbs the rounding of the conversion.
+        if (UniversalScalarConversion<double, T>(bprod) < 1.0e18) {
           // Largest integer-valued bound below bprod: flooring to the norm
-          // grid changes no enumerated vector.
-          T bden = GetDenominator(bprod);
+          // grid changes no enumerated vector. Over a ring the value is
+          // already integral.
           T bound_scal = bprod;
-          if (bden != T(1)) {
-            double b_d = shvec_scalar_convert<double, T>(bprod);
-            T t = shvec_scalar_convert<T, int64_t>(static_cast<int64_t>(b_d));
-            while (t > bprod) {
-              t -= 1;
-            }
-            while (t + 1 <= bprod) {
-              t += 1;
-            }
-            bound_scal = t;
+          if constexpr (is_ring_field<T>::value) {
+            bound_scal = UniversalFloorScalarInteger<T, T>(bprod);
           }
           MyVector<T> Cnum(dim);
           for (int i = 0; i < dim; i++) {
             Cnum(i) = cden * coset(i);
           }
           T Mbound = shvec_fast_master_bound(*prep, Cnum, cden, bound_scal);
-          std::optional<bool> opt32 =
-              computeIt_try_fast<int32_t, T, Tint, Finsert>(
-                  prep->Gscal, Cnum, cden, bound_scal, scal, central, Mbound,
-                  f_insert);
-          if (opt32) {
-            return *opt32;
+          if (shvec_fast_fits<int32_t, T>(Mbound)) {
+            return computeIt_fast<int32_t, T, Tint, Finsert>(
+                prep->Gscal, Cnum, cden, bound_scal, scal, central, f_insert);
           }
-          std::optional<bool> opt64 =
-              computeIt_try_fast<int64_t, T, Tint, Finsert>(
-                  prep->Gscal, Cnum, cden, bound_scal, scal, central, Mbound,
-                  f_insert);
-          if (opt64) {
-            return *opt64;
+          if (shvec_fast_fits<int64_t, T>(Mbound)) {
+            return computeIt_fast<int64_t, T, Tint, Finsert>(
+                prep->Gscal, Cnum, cden, bound_scal, scal, central, f_insert);
           }
         }
       }
