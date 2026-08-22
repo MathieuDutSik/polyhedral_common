@@ -36,6 +36,23 @@
 #endif
 
 /*
+  The native-integer enumeration (int32_t / int64_t when a priori bounds
+  certify that every intermediate fits) is OPT-IN: define ENABLE_SHVEC_FAST_PATH
+  to use it. It makes the enumeration itself about twice as fast, but each
+  computeIt call first pays a preparation whose cost scales with the matrix
+  rather than with the number of vectors enumerated: the coset denominator
+  scan, the master bound, and the conversion of the Gram matrix and of its
+  Bareiss data to the native type. On the small shells of the iso-Delaunay
+  work (dimension <= 10, 10 to 500 vectors) that preparation costs more than
+  the enumeration saves: measured +1.1% to +4.5% on the five T-space cases,
+  worst on the smallest shells. The path is correct and fully tested; it is
+  the size regime that does not suit it. See TODO.md.
+ */
+#ifdef ENABLE_SHVEC_FAST_PATH
+#define SHVEC_FAST_PATH
+#endif
+
+/*
   The Gram matrix together with its Bareiss decomposition: d(i) the leading
   principal minors and Nmat(i,j) the elimination entries, related to the
   classical Cholesky coefficients by q(i,i) = d(i)/d(i-1) and
@@ -124,6 +141,7 @@ ReductionMod1vector(MyVector<T> const &V) {
  */
 template <typename T, typename = void>
 struct shvec_has_fast_path : std::false_type {};
+#ifdef SHVEC_FAST_PATH
 template <typename T>
 struct shvec_has_fast_path<
     T, std::void_t<
@@ -134,154 +152,16 @@ struct shvec_has_fast_path<
            decltype(GetDenominator(std::declval<T const &>())),
            decltype(GcdPair(std::declval<T const &>(),
                             std::declval<T const &>()))>> : std::true_type {};
-
-// We return floor(sqrt(A) + epsilon + B)
-template <typename T> int Infinitesimal_Floor_V1(T const &a, T const &b) {
-  double epsilon = 0.000000001;
-#ifdef SANITY_CHECK_SHVEC
-  if (a < 0) {
-    std::cerr << "Error in Infinitesimal_Floor_V1\n";
-    std::cerr << "calling with a<0 which gives NAN with sqrt\n";
-    std::cerr << "a=" << a << "\n";
-    throw TerminalException{1};
-  }
 #endif
-  double a_doubl = UniversalScalarConversion<double, T>(a);
-  double b_doubl = UniversalScalarConversion<double, T>(b);
-  double alpha = sqrt(a_doubl) + epsilon + b_doubl;
-  double eD1 = floor(alpha);
-  long int eD2 = lround(eD1);
-  int eD3 = eD2;
-  return eD3;
-}
-
-template <typename T> int Infinitesimal_Ceil_V1(T const &a, T const &b) {
-  double epsilon = 0.000000001;
-#ifdef SANITY_CHECK_SHVEC
-  if (a < 0) {
-    std::cerr << "Error in Infinitesimal_Ceil_V1\n";
-    std::cerr << "calling with a<0 which gives NAN with sqrt\n";
-    std::cerr << "a=" << a << "\n";
-    throw TerminalException{1};
-  }
-#endif
-  double a_doubl = UniversalScalarConversion<double, T>(a);
-  double b_doubl = UniversalScalarConversion<double, T>(b);
-  double alpha = -sqrt(a_doubl) - epsilon + b_doubl;
-  double eD1 = ceil(alpha);
-  long int eD2 = lround(eD1);
-  int eD3 = eD2;
-  return eD3;
-}
-
-// We return floor(sqrt(a) + b)
-// n=floor(sqrt(a) + b) is equivalent to
-// n<= sqrt(a) + b < n+1
-// And so to n - b <= sqrt(a) (and opposite for n+1)
-// And so to (n-b)^2 <= a
-template <typename T, typename Tint>
-Tint Infinitesimal_Floor(T const &a, T const &b) {
-#ifdef SANITY_CHECK_SHVEC
-  if (a < 0) {
-    std::cerr << "Error in Infinitesimal_Floor\n";
-    std::cerr << "calling with a<0 which gives NAN with sqrt\n";
-    std::cerr << "a=" << a << "\n";
-    throw TerminalException{1};
-  }
-#endif
-  double a_doubl = UniversalScalarConversion<double, T>(a);
-  double b_doubl = UniversalScalarConversion<double, T>(b);
-  double alpha = sqrt(a_doubl) + b_doubl;
-  double eD1 = floor(alpha);
-  long int eD2 = lround(eD1);
-  Tint eReturn = eD2;
-  auto f = [&](Tint const &x) -> bool {
-    T eDiff = UniversalScalarConversion<T, Tint>(x) - b;
-    if (eDiff <= 0)
-      return true;
-    if (eDiff * eDiff <= a)
-      return true;
-    return false;
-  };
-  bool test1 = f(eReturn);
-  bool test2 = f(eReturn + 1);
-  while (true) {
-    if (test1 && !test2) {
-      break;
-    }
-    if (!test1) {
-      test2 = test1;
-      test1 = f(eReturn - 1);
-      eReturn--;
-    }
-    if (test2) {
-      test1 = test2;
-      test2 = f(eReturn + 2);
-      eReturn++;
-    }
-  }
-  return eReturn;
-}
-
-// We return floor(sqrt(a) + b)
-// n=ceil(-sqrt(a) + b) is equivalent to
-// n-1 < -sqrt(a) + b <= n
-// And so to -sqrt(a) <= n - b  (and opposite for n-1)
-// And so to (n-b)^2 <= a (and opposite for n-1)
-template <typename T, typename Tint>
-Tint Infinitesimal_Ceil(T const &a, T const &b) {
-#ifdef SANITY_CHECK_SHVEC
-  if (a < 0) {
-    std::cerr << "Error in Infinitesimal_Ceil\n";
-    std::cerr << "calling with a<0 which gives NAN with sqrt\n";
-    std::cerr << "a=" << a << "\n";
-    throw TerminalException{1};
-  }
-#endif
-  double a_doubl = UniversalScalarConversion<double, T>(a);
-  double b_doubl = UniversalScalarConversion<double, T>(b);
-  double alpha = -sqrt(a_doubl) + b_doubl;
-  double eD1 = ceil(alpha);
-  long int eD2 = lround(eD1);
-  Tint eReturn = eD2;
-  auto f = [&](Tint const &x) -> bool {
-    T eDiff = UniversalScalarConversion<T, Tint>(x) - b;
-    if (eDiff >= 0)
-      return true;
-    if (eDiff * eDiff <= a)
-      return true;
-    return false;
-  };
-  bool test1 = f(eReturn - 1);
-  bool test2 = f(eReturn);
-  while (true) {
-    if (!test1 && test2) {
-      break;
-    }
-    if (test1) {
-      test2 = test1;
-      test1 = f(eReturn - 2);
-      eReturn--;
-    }
-    if (!test2) {
-      test1 = test2;
-      test2 = f(eReturn + 1);
-      eReturn++;
-    }
-  }
-  return eReturn;
-}
 
 /*
   The two bounds of the enumeration in fraction-free form. The admissible
   range of a coordinate n is |den * n + B| <= sqrt(K) with den > 0 and
-  K >= 0, which is the division-free rewriting of
-  Infinitesimal_Ceil(K/den^2, -B/den) <= n <= Infinitesimal_Floor(...):
-  no quotient is formed, only products and comparisons.
+  K >= 0: no quotient is formed, only products and comparisons.
 
   Bound_Floor returns the largest n with den * n + B <= sqrt(K). The double
-  computation only seeds the search; the exact predicate then walks to the
-  right answer, as in Infinitesimal_Floor.
+  computation only seeds the search, the exact predicate then walks to the
+  right answer.
  */
 template <typename T, typename Tint>
 Tint Bound_Floor(T const &K, T const &B, T const &den) {
@@ -684,7 +564,8 @@ ShvecFastPrep<T> ComputeShvecFastPrep(MyMatrix<T> const &gram) {
   for (int i = 0; i < dim; i++) {
     d(i) = N(i, i);
     if (d(i) <= 0) {
-      return {false, D, Gscal, d, N, M};
+      return {false, std::move(D), std::move(Gscal), std::move(d),
+              std::move(N), std::move(M)};
     }
     upd(d(i));
     for (int i2 = i + 1; i2 < dim; i2++) {
@@ -993,7 +874,7 @@ T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request,
       break;
     }
   }
-  return {short_vectors, minimum};
+  return {std::move(short_vectors), std::move(minimum)};
 }
 
 template <typename T, typename Tint>
@@ -1037,7 +918,7 @@ compute_minimum_limit(const FullGramInfo<T> &request, MyVector<T> const &coset,
       break;
     }
   }
-  return {short_vectors, minimum};
+  return {std::move(short_vectors), std::move(minimum)};
 }
 
 template <typename Tint> struct ResultShortest {
@@ -1069,7 +950,7 @@ compute_test_shortest(const FullGramInfo<T> &request, MyVector<T> const &coset,
   };
   (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central, bound,
                                                f_insert);
-  return {shortest, better_vector};
+  return {std::move(shortest), std::move(better_vector)};
 }
 
 template <typename T, typename Tint> struct CVPSolver {
@@ -1160,7 +1041,7 @@ public:
       }
 #endif
     }
-    return {shortest, {}};
+    return {std::move(shortest), {}};
   }
   // Differences between points of the point set, spanning the space,
   // used to seed the search for a Delaunay polytope: they are the moves
@@ -1172,10 +1053,10 @@ public:
     for (int i = 0; i < dim; i++) {
       MyVector<T> V1 = ZeroVector<T>(dim);
       V1(i) = 1;
-      ret.push_back(V1);
+      ret.emplace_back(std::move(V1));
       MyVector<T> V2 = ZeroVector<T>(dim);
       V2(i) = -1;
-      ret.push_back(V2);
+      ret.emplace_back(std::move(V2));
     }
     return ret;
   }
@@ -1185,7 +1066,7 @@ public:
       MyMatrix<Tint> ListVect(1, dim);
       for (int i = 0; i < dim; i++)
         ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
-      return {TheNorm, ListVect};
+      return {std::move(TheNorm), std::move(ListVect)};
     }
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
@@ -1220,7 +1101,7 @@ public:
       MyMatrix<Tint> ListVect(1, dim);
       for (int i = 0; i < dim; i++)
         ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
-      return {TheNorm, ListVect};
+      return {std::move(TheNorm), std::move(ListVect)};
     }
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
@@ -1399,7 +1280,7 @@ public:
         for (auto &fV : list_above) {
           f_insert(fV);
         }
-        return {above_norm, ListVect};
+        return {std::move(above_norm), std::move(ListVect)};
       }
       eff_norm = eff_norm * factor;
     }
@@ -1476,15 +1357,6 @@ std::vector<MyVector<Tint>> computeLevel_GramMat(MyMatrix<T> const &GramMat,
     short_vectors.push_back(V);
   }
   return short_vectors;
-}
-
-template <typename T, typename Tint>
-MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm,
-                             std::ostream &os) {
-  CVPSolver<T, Tint> solver(GramMat, os);
-  std::vector<MyVector<Tint>> ListVect = solver.at_most_norm_vectors(MaxNorm);
-  int dim = GramMat.rows();
-  return MatrixFromVectorFamilyDim(dim, ListVect);
 }
 
 template <typename T, typename Tint>

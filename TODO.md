@@ -145,6 +145,63 @@ below are the rigorous ways to close the gap.
   To be pursued after the precondition-gated int64 mode exists, since it
   reuses the same bound bookkeeping.
 
+## Shortest-vector enumeration: the native-integer fast path (disabled)
+
+`src_latt/Shvec_exact.h` carries a complete int32_t / int64_t enumeration
+path, currently OPT-IN behind `ENABLE_SHVEC_FAST_PATH` and therefore off.
+It is correct and fully tested; it is disabled because it does not suit the
+size regime of our current workloads, not because it is doubtful.
+
+What it does: `computeIt` clears the denominators of the Gram matrix (factor
+`D`) and of the coset (`cden`), computes a priori bounds on every quantity the
+enumeration will form (Bareiss data and its intermediates, the state
+Ttil / Bvec / Hval, the range-test products, the sanity-block norm), and if
+that master bound is below 2^29 / 2^61 runs the SAME kernel instantiated at
+int32_t / int64_t, else falls back to exact arithmetic. The kernel is
+fraction-free (Bareiss `d` and `Nmat` instead of Cholesky quotients) and takes
+a coset denominator so a fractional coset stays integral.
+
+Measured (2026-08-21/22, interleaved A/B/C, 2 reps, counts identical):
+
+| case        | ref   | nofast | final | structural | fast path |
+|-------------|-------|--------|-------|------------|-----------|
+| Coxeter9_5  | 33.01 | 32.83  | 33.25 | -0.5%      | +1.3%     |
+| B_i67       | 14.53 | 14.28  | 14.54 | -1.7%      | +1.8%     |
+| B_i29       | 13.95 | 13.82  | 13.97 | -0.9%      | +1.1%     |
+| imag d=-23  |  5.00 |  4.89  |  5.11 | -2.2%      | +4.5%     |
+| imag d=-19  |  2.91 |  2.87  |  2.94 | -1.4%      | +2.4%     |
+
+Enumeration alone IS about 2x faster in native integers (E8 micro-benchmark:
+2.0x at 624 vectors, 1.9x at 14k, tapering to 1.1x at 920k where the
+per-vector int64 -> mpz output conversion dominates). But every `computeIt`
+call pays a preparation that scales with the MATRIX, not with the number of
+vectors: coset denominator scan, `Cnum`, the master-bound backward recursion,
+and converting the Gram matrix and Bareiss data to the native type. On shells
+of 10 to 500 vectors that exceeds the win -- note the regression is worst
+exactly on the case with the smallest shells (imag d=-23, n_row median 10).
+
+Perspectives, in order of expected payoff:
+
+1. **Hoist the per-call preparation into `CVPSolver`, as was done for the
+   Gram-only part (`ShvecFastPrep`).** Across a `fixed_norm_vectors` sweep the
+   coset is fixed and only the bound changes, so `Cnum`, the native-type
+   conversions and part of the master bound could be computed once per solver.
+   This attacks the actual cause and could plausibly turn +1.3% into a small
+   negative. Uncertain payoff, real work.
+2. **Enable it for the large-lattice tools.** The 2x regime is real; nothing
+   in the iso-Delaunay work reaches it, but `LATT_*` on higher-dimensional
+   lattices (dim 16+ canonicalization, `LATT_ComputeShortestOrbits`) should.
+   Measure there before choosing a default; the switch is one macro.
+3. **A size predicate** choosing the path per call. Only worth it if 1 fails,
+   since a good predicate needs the shell size, which is not known in advance.
+
+What was kept from the effort because it is an unconditional win (measured
+-0.5% to -2.2%, same sign on all five cases): the Bareiss decomposition moved
+into `FullGramInfo` (computed once per matrix instead of once per `computeIt`
+call -- it is 12-14% of a small enumeration: 4.1 / 10.9 / 30.5 us against
+shells of 25.0 / 72.4 / 230.2 us for A4 / A6 / A9), the loop-scope hoisting of
+`num` / `quot`, and the removal of the superseded `Infinitesimal_*` helpers.
+
 ## Method-selection reference (for the heuristics)
 
 On CI_tests/23B_SimpleDualDesc: cdd is fastest; lrs is far behind on the
