@@ -1342,21 +1342,14 @@ FindAtMostDistVectors(const MyMatrix<T> &GramMat, const MyVector<T> &eV,
   return solver.at_most_dist_vectors(eV, norm);
 }
 
-// Returns half the vector below a specific bound.
+// Returns the nonzero vectors of norm at most the bound, up to sign
+// (the central enumeration returns one vector per antipodal pair).
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> computeLevel_GramMat(MyMatrix<T> const &GramMat,
                                                  T const &bound,
                                                  std::ostream &os) {
   CVPSolver<T, Tint> solver(GramMat, os);
-  std::vector<MyVector<Tint>> full_list = solver.at_most_norm_vectors(bound);
-  int n_vect = full_list.size() / 2;
-  std::vector<MyVector<Tint>> short_vectors;
-  for (int i_vect = 0; i_vect < n_vect; i_vect++) {
-    int pos = 2 * i_vect;
-    MyVector<Tint> V = full_list[pos];
-    short_vectors.push_back(V);
-  }
-  return short_vectors;
+  return solver.at_most_norm_vectors(bound);
 }
 
 template <typename T, typename Tint>

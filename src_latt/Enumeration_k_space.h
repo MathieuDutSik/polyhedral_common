@@ -1,24 +1,36 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_RANKIN_ENUMERATION_K_SPACE_H_
-#define SRC_RANKIN_ENUMERATION_K_SPACE_H_
+#ifndef SRC_LATT_ENUMERATION_K_SPACE_H_
+#define SRC_LATT_ENUMERATION_K_SPACE_H_
 
 // clang-format off
 #include "MAT_MatrixInt.h"
 #include "Shvec_exact.h"
+#include "LatticeStabEquiCan.h"
 #include <utility>
 #include <unordered_set>
 #include <vector>
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_RANKIN
+#define DEBUG_ENUMERATION_K_SPACE
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_ENUMERATION_K_SPACE
 #endif
 
 // Returns the Hermite constant at the n-th power.
-// That is the mmaximum of min(A)^n / det(A)
+// That is the maximum of min(A)^n / det(A)
 // --
 // So we would have min(A)^n / det(A) <= H(n)
 // which gets us min(A)^n <= H(n) det(A)
+// --
+// The constants are known exactly up to n=8 and for n=9.
+// The case n=9 follows from the enumeration of the perfect
+// lattices in dimension 9 which gives gamma_9 = 2 and so
+// H(9) = 2^9 = 512.
+// For higher n, we use the bound H(n) <= (4/3)^(n(n-1)/2)
+// obtained from Hermite's inequality.
 template <typename T> T GetUpperBoundHermitePower(int n) {
   if (n == 1) {
     return T(1);
@@ -43,6 +55,9 @@ template <typename T> T GetUpperBoundHermitePower(int n) {
   }
   if (n == 8) {
     return T(256);
+  }
+  if (n == 9) {
+    return T(512);
   }
   int h = n * (n - 1) / 2;
   T base = T(4) / T(3);
@@ -80,8 +95,7 @@ MyMatrix<T> GetOrthogonalProjector(MyMatrix<T> const &TheGramMat,
 
   MyMatrix<T> TheProj =
       TheSubBasis_T.transpose() * eGramInv * TheSubBasis_T * TheGramMat;
-#ifdef DEBUG_RANKIN
-  MyMatrix<T> TheProjSqr = TheProj * TheProj;
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
   if (TheProj * TheProj != TheProj) {
     std::cerr << "The matrix is not a projector\n";
     throw TerminalException{1};
@@ -97,24 +111,19 @@ MyMatrix<T> GetOrthogonalProjector(MyMatrix<T> const &TheGramMat,
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, MyMatrix<Tint>>
 GetOrthogonalProjector_dim1(MyMatrix<T> const &TheGramMat,
-                            MyVector<Tint> const &eVect, std::ostream &os) {
-  os << "RNK: GetOrthogonalProjector_dim1, step 1\n";
+                            MyVector<Tint> const &eVect,
+                            [[maybe_unused]] std::ostream &os) {
   int n = TheGramMat.rows();
-  os << "RNK: GetOrthogonalProjector_dim1, step 2 n=" << n << "\n";
   MyMatrix<Tint> eVect_M = MatrixFromVector(eVect);
-  os << "RNK: GetOrthogonalProjector_dim1, step 3\n";
   MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
-  os << "RNK: GetOrthogonalProjector_dim1, step 4 eVect_T="
-     << StringVector(eVect_T) << "\n";
   MyVector<T> eVect_T_TheGramMat = eVect_T.transpose() * TheGramMat;
-  os << "RNK: GetOrthogonalProjector_dim1, step 5 eVect_T_GramMat="
-     << StringVector(eVect_T_TheGramMat) << "\n";
   T rNorm = eVect_T_TheGramMat.dot(eVect_T);
-  os << "RNK: GetOrthogonalProjector_dim1, step 6 rNorm=" << rNorm << "\n";
+#ifdef DEBUG_ENUMERATION_K_SPACE
+  os << "ENUM_K_SPACE: GetOrthogonalProjector_dim1 n=" << n
+     << " rNorm=" << rNorm << "\n";
+#endif
   MyMatrix<Tint> TheCompl = SubspaceCompletionInt(eVect_M, n);
-  os << "RNK: GetOrthogonalProjector_dim1, step 7\n";
   MyMatrix<T> TheProj(n - 1, n);
-  os << "RNK: GetOrthogonalProjector_dim1, step 8\n";
   for (int i = 0; i < n - 1; i++) {
     MyVector<Tint> fVect = GetMatrixRow(TheCompl, i);
     MyVector<T> fVect_T = UniversalVectorConversion<T, Tint>(fVect);
@@ -122,28 +131,25 @@ GetOrthogonalProjector_dim1(MyMatrix<T> const &TheGramMat,
     MyVector<T> rVect = fVect_T - eVect_T * scal;
     AssignMatrixRow(TheProj, i, rVect);
   }
-  os << "RNK: GetOrthogonalProjector_dim1, step 9\n";
   return {TheProj, TheCompl};
 }
 
 template <typename T, typename Tint>
 T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const &TheGramMat, int k,
                                      std::ostream &os) {
-  os << "RNK: UpperBoundRankinMinimalDeterminant k=" << k << "\n";
   Tshortest<T, Tint> RecMin = T_ShortestVector<T, Tint>(TheGramMat, os);
   T rNorm = RecMin.min;
-  os << "RNK: UpperBoundRankinMinimalDeterminant rNorm=" << rNorm << "\n";
+#ifdef DEBUG_ENUMERATION_K_SPACE
+  os << "ENUM_K_SPACE: UpperBoundRankinMinimalDeterminant k=" << k
+     << " rNorm=" << rNorm << "\n";
+#endif
   if (k == 1) {
     return rNorm;
   }
   MyVector<Tint> eVect = GetMatrixRow(RecMin.SHV, 0);
-  os << "RNK: UpperBoundRankinMinimalDeterminant eVect=" << StringVector(eVect)
-     << "\n";
   MyMatrix<T> TheProj =
       GetOrthogonalProjector_dim1(TheGramMat, eVect, os).first;
-  os << "RNK: UpperBoundRankinMinimalDeterminant TheProj\n";
   MyMatrix<T> ReducedGramMat = TheProj * TheGramMat * TheProj.transpose();
-  os << "RNK: UpperBoundRankinMinimalDeterminant ReducedGramMat\n";
   T upper =
       UpperBoundRankinMinimalDeterminant<T, Tint>(ReducedGramMat, k - 1, os);
   return rNorm * upper;
@@ -198,6 +204,14 @@ T MaxKBound(T const &C, int const &k, MyMatrix<T> const &M) {
   }
 }
 
+// A k-dimensional sublattice is represented by its row Hermite Normal
+// Form which provides a canonical representative and so makes the
+// set based computations possible.
+template <typename Tint>
+MyMatrix<Tint> CanonicalizeSublatticeBasis(MyMatrix<Tint> const &M) {
+  return ComputeRowHermiteNormalForm_second(M);
+}
+
 template <typename T, typename Tint> struct VectorProjection {
   MyMatrix<T> TheProj;
   MyMatrix<Tint> TheCompl;
@@ -210,7 +224,6 @@ template <typename T, typename Tint>
 VectorProjection<T, Tint> GetVectorProjection(MyMatrix<T> const &TheGramMat,
                                               MyVector<Tint> const &eV,
                                               std::ostream &os) {
-  os << "RNK: Beginning of GetVectorProjection\n";
   if (TheGramMat.rows() != eV.size()) {
     std::cerr << "|TheGramMat|=" << TheGramMat.rows() << " |eV|=" << eV.size()
               << "\n";
@@ -231,18 +244,23 @@ VectorProjection<T, Tint> GetVectorProjection(MyMatrix<T> const &TheGramMat,
 
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtendSublattice(VectorProjection<T, Tint> const &vp,
-                                MyMatrix<Tint> const &eLatt, std::ostream &os) {
+                                MyMatrix<Tint> const &eLatt,
+                                [[maybe_unused]] std::ostream &os) {
   MyMatrix<Tint> ePart = eLatt * vp.TheCompl;
   MyMatrix<Tint> fLatt = ConcatenateMatVec(ePart, vp.eV);
-  os << "RNK: ExtendSublattice, fLatt=\n";
-  WriteMatrix(os, fLatt);
   MyMatrix<Tint> gLatt = ComputeRowHermiteNormalForm_second(fLatt);
-  os << "RNK: ExtendSublattice, gLatt=\n";
+#ifdef DEBUG_ENUMERATION_K_SPACE
+  os << "ENUM_K_SPACE: ExtendSublattice, gLatt=\n";
   WriteMatrix(os, gLatt);
+#endif
   return gLatt;
 }
 
-// The function that returns the Rankin k-minimum.
+// The function that returns the k-dimensional subspaces of determinant at
+// most MaxDet. A subspace is represented by the saturated sublattice
+// L cap V which is encoded by its row Hermite Normal Form. The saturation
+// forces us to consider only primitive vectors in the enumeration: any
+// saturated sublattice has its minimal vector primitive in the full lattice.
 // It should work both for floating point types and exact types.
 // If the threshold need to be used, then that should be in the MaxDet.
 template <typename T, typename Tint>
@@ -254,8 +272,10 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
         computeLevel_GramMat<T, Tint>(A, bound, os);
     std::vector<MyMatrix<Tint>> RetList;
     for (auto &eV : short_vectors) {
-      MyMatrix<Tint> M = MatrixFromVector(eV);
-      RetList.push_back(M);
+      if (IsVectorPrimitive(eV)) {
+        MyMatrix<Tint> M = MatrixFromVector(eV);
+        RetList.push_back(CanonicalizeSublatticeBasis(M));
+      }
     }
     return RetList;
   }
@@ -268,13 +288,16 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
   std::vector<MyVector<Tint>> short_vectors =
       computeLevel_GramMat<T, Tint>(A, bound, os);
   for (auto &eV : short_vectors) {
+    if (!IsVectorPrimitive(eV)) {
+      continue;
+    }
     VectorProjection<T, Tint> vp = GetVectorProjection(A, eV, os);
     T TheAskDet = MaxDet / vp.rNorm;
     std::vector<MyMatrix<Tint>> SpecEnum =
         Rankin_k_level<T, Tint>(vp.ReducedGramMat, k - 1, TheAskDet, os);
     for (auto &eLatt : SpecEnum) {
       MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt, os);
-#ifdef DEBUG_RANKIN
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
       MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
       MyMatrix<T> eProdMat = gLatt_T * A * gLatt_T.transpose();
       T eDet = DeterminantMat(eProdMat);
@@ -305,15 +328,21 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
   if (k == 1) {
     T bound = UpperBoundRankinMinimalDeterminant<T, Tint>(A, 1, os);
     T bound_search = bound * (1 + tol);
-    os << "RNK: k=" << k << " bound=" << bound
+#ifdef DEBUG_ENUMERATION_K_SPACE
+    os << "ENUM_K_SPACE: k=" << k << " bound=" << bound
        << " bound_search=" << bound_search << "\n";
+#endif
     std::vector<MyVector<Tint>> short_vectors =
         computeLevel_GramMat<T, Tint>(A, bound_search, os);
-    os << "RNK: |short_vectors|=" << short_vectors.size() << "\n";
+#ifdef DEBUG_ENUMERATION_K_SPACE
+    os << "ENUM_K_SPACE: |short_vectors|=" << short_vectors.size() << "\n";
+#endif
     std::vector<MyMatrix<Tint>> RetList;
     for (auto &eV : short_vectors) {
-      MyMatrix<Tint> M = MatrixFromVector(eV);
-      RetList.push_back(M);
+      if (IsVectorPrimitive(eV)) {
+        MyMatrix<Tint> M = MatrixFromVector(eV);
+        RetList.push_back(CanonicalizeSublatticeBasis(M));
+      }
     }
     return {bound, RetList};
   }
@@ -324,63 +353,165 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
     MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
     MyMatrix<T> eProdMat = gLatt_T * A * gLatt_T.transpose();
     T eDet = DeterminantMat(eProdMat);
-    os << "RNK: f_insert eDet=" << eDet << "\n";
     if (set_subspaces.empty()) {
       DetMin = eDet;
-      os << "RNK: Now DetMin=" << DetMin << " Case 1\n";
       set_subspaces.insert(gLatt);
     } else {
       if (eDet < DetMin * (1 - tol)) {
         set_subspaces.clear();
         DetMin = eDet;
-        os << "RNK: Now DetMin=" << DetMin << " Case 2\n";
         set_subspaces.insert(gLatt);
       } else {
         if (eDet <= DetMin * (1 + tol)) {
           set_subspaces.insert(gLatt);
-          os << "RNK: Now |set_subspaces|=" << set_subspaces.size() << "\n";
         }
       }
     }
+#ifdef DEBUG_ENUMERATION_K_SPACE
+    os << "ENUM_K_SPACE: f_insert eDet=" << eDet << " DetMin=" << DetMin
+       << " |set_subspaces|=" << set_subspaces.size() << "\n";
+#endif
   };
   // We are now using the Hermite constant to get a bound on the minimum
   // That is we have min(A)^k <= H(n) * MaxDet
-  os << "RNK: Rankin_k_minimum, step 1\n";
   T MaxDet = UpperBoundRankinMinimalDeterminant<T, Tint>(A, k, os);
-  os << "RNK: Rankin_k_minimum, step 2 MaxDet=" << MaxDet << "\n";
-  os << "RNK: Rankin_k_minimum, k=" << k
-     << " HermitePower=" << GetUpperBoundHermitePower<T>(k) << "\n";
   T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
-  os << "RNK: Rankin_k_minimum, step 3 upper=" << upper << "\n";
   T bound = MaxKBound(upper, k, A);
-  os << "RNK: Rankin_k_minimum, step 4 bound=" << bound << "\n";
+#ifdef DEBUG_ENUMERATION_K_SPACE
+  os << "ENUM_K_SPACE: Rankin_k_minimum, k=" << k << " MaxDet=" << MaxDet
+     << " upper=" << upper << " bound=" << bound << "\n";
+#endif
   std::vector<MyVector<Tint>> short_vectors =
       computeLevel_GramMat<T, Tint>(A, bound, os);
-  os << "RNK: Rankin_k_minimum, step 5\n";
   for (auto &eV : short_vectors) {
-    os << "RNK: eV, step 1\n";
+    if (!IsVectorPrimitive(eV)) {
+      continue;
+    }
     VectorProjection<T, Tint> vp = GetVectorProjection(A, eV, os);
-    os << "RNK: eV, step 2\n";
     T TheAskDet = MaxDet / vp.rNorm;
-    os << "RNK: eV, step 3\n";
     std::vector<MyMatrix<Tint>> SpecEnum =
         Rankin_k_level<T, Tint>(vp.ReducedGramMat, k - 1, TheAskDet, os);
-    os << "RNK: eV, step 4\n";
     for (auto &eLatt : SpecEnum) {
       MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt, os);
       f_insert(gLatt);
     }
-    os << "RNK: eV, step 5\n";
   }
-  os << "RNK: Rankin_k_minimum, step 6\n";
   std::vector<MyMatrix<Tint>> vec_subspaces;
   for (auto &mat : set_subspaces) {
     vec_subspaces.push_back(mat);
   }
-  os << "RNK: Rankin_k_minimum, step 7\n";
   return {DetMin, vec_subspaces};
 }
 
+//
+// The orbit enumeration code.
+// This is a translation of parts of SublatticeEnumeration.g
+//
+
+// Computes the orbit of the sublattice eLatt under the group
+// generated by ListGen (acting on the right).
+// This is a translation of ComputeOrbitSublattice.
+template <typename Tint>
+std::vector<MyMatrix<Tint>>
+OrbitSublattice(std::vector<MyMatrix<Tint>> const &ListGen,
+                MyMatrix<Tint> const &eLatt) {
+  std::unordered_set<MyMatrix<Tint>> set_latt;
+  std::vector<MyMatrix<Tint>> l_latt;
+  auto f_insert = [&](MyMatrix<Tint> const &fLatt) -> void {
+    if (set_latt.count(fLatt) == 1)
+      return;
+    set_latt.insert(fLatt);
+    l_latt.push_back(fLatt);
+  };
+  f_insert(CanonicalizeSublatticeBasis(eLatt));
+  size_t pos = 0;
+  while (pos < l_latt.size()) {
+    MyMatrix<Tint> wLatt = l_latt[pos];
+    pos++;
+    for (auto &eGen : ListGen) {
+      MyMatrix<Tint> eImgLatt = wLatt * eGen;
+      MyMatrix<Tint> fLatt = CanonicalizeSublatticeBasis(eImgLatt);
+      f_insert(fLatt);
+    }
+  }
+  return l_latt;
+}
+
+template <typename Tint> struct SublatticeOrbit {
+  MyMatrix<Tint> representative;
+  size_t orbit_size;
+};
+
+// Splits a list of sublattices (assumed closed under the group
+// generated by ListGen) into orbits.
+template <typename Tint>
+std::vector<SublatticeOrbit<Tint>>
+OrbitSplittingSublattices(std::vector<MyMatrix<Tint>> const &l_latt,
+                          std::vector<MyMatrix<Tint>> const &ListGen) {
+  std::unordered_set<MyMatrix<Tint>> set_remain;
+  for (auto &eLatt : l_latt) {
+    set_remain.insert(CanonicalizeSublatticeBasis(eLatt));
+  }
+  std::vector<SublatticeOrbit<Tint>> l_orbit;
+  while (!set_remain.empty()) {
+    MyMatrix<Tint> eLatt = *set_remain.begin();
+    std::vector<MyMatrix<Tint>> orbit = OrbitSublattice(ListGen, eLatt);
+    for (auto &fLatt : orbit) {
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
+      if (set_remain.count(fLatt) != 1) {
+        std::cerr << "The list of sublattices is not invariant under the "
+                     "group\n";
+        throw TerminalException{1};
+      }
+#endif
+      set_remain.erase(fLatt);
+    }
+    l_orbit.push_back({std::move(eLatt), orbit.size()});
+  }
+  return l_orbit;
+}
+
+// Enumerates the orbits of k-dimensional sublattices of determinant
+// at most MaxDet under the automorphism group of the Gram matrix.
+template <typename T, typename Tint, typename Tgroup>
+std::vector<SublatticeOrbit<Tint>>
+Rankin_k_level_orbits(MyMatrix<T> const &A, int const &k, T const &MaxDet,
+                      std::ostream &os) {
+  std::vector<MyMatrix<Tint>> l_latt = Rankin_k_level<T, Tint>(A, k, MaxDet, os);
+  std::vector<MyMatrix<Tint>> ListGen =
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(A, os);
+#ifdef DEBUG_ENUMERATION_K_SPACE
+  os << "ENUM_K_SPACE: Rankin_k_level_orbits |l_latt|=" << l_latt.size()
+     << " |ListGen|=" << ListGen.size() << "\n";
+#endif
+  return OrbitSplittingSublattices(l_latt, ListGen);
+}
+
+template <typename T, typename Tint> struct ResultKRankinMinOrbits {
+  T min;
+  std::vector<SublatticeOrbit<Tint>> l_orbits;
+};
+
+// Computes the Rankin k-minimum and the orbits of the k-dimensional
+// sublattices realizing it under the automorphism group of the
+// Gram matrix. Only for exact arithmetic types.
+template <typename T, typename Tint, typename Tgroup>
+ResultKRankinMinOrbits<T, Tint>
+Rankin_k_minimum_orbits(MyMatrix<T> const &A, int const &k, std::ostream &os) {
+  T tol(0);
+  ResultKRankinMin<T, Tint> result = Rankin_k_minimum<T, Tint>(A, k, tol, os);
+  std::vector<MyMatrix<Tint>> ListGen =
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(A, os);
+#ifdef DEBUG_ENUMERATION_K_SPACE
+  os << "ENUM_K_SPACE: Rankin_k_minimum_orbits min=" << result.min
+     << " |l_spaces|=" << result.l_spaces.size()
+     << " |ListGen|=" << ListGen.size() << "\n";
+#endif
+  std::vector<SublatticeOrbit<Tint>> l_orbits =
+      OrbitSplittingSublattices(result.l_spaces, ListGen);
+  return {std::move(result.min), std::move(l_orbits)};
+}
+
 // clang-format off
-#endif  // SRC_RANKIN_ENUMERATION_K_SPACE_H_
+#endif  // SRC_LATT_ENUMERATION_K_SPACE_H_
 // clang-format on
