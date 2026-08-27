@@ -423,6 +423,43 @@ TestStronglySemiEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
     }
   }
 #endif
+  // Divisibility pre-filter for integral vector families: pairing the
+  // relation A^{-1} = mu sum_{v in S} v v^T with A gives
+  // n = mu |S| min, so mu = n / (min |S|) with n <= |S| <= mh (the
+  // lower bound because the rank n matrix A^{-1} is a sum of |S| rank
+  // one terms). The matrix A^{-1}/mu = sum_{v in S} v v^T is then a
+  // sum of integer matrices, hence integral: the sizes |S| for which
+  // (min |S| / n) A^{-1} is not integral are impossible, and when no
+  // size in [n, mh] survives the form is not strongly semi-eutactic.
+  {
+    bool is_integral = true;
+    for (int v = 0; v < mh && is_integral; v++)
+      for (int i = 0; i < n && is_integral; i++)
+        if (!IsInteger(ListVectHalf[v](i)))
+          is_integral = false;
+    if (is_integral) {
+      T n_T = UniversalScalarConversion<T, int>(n);
+      T lcm_den(1);
+      for (int i = 0; i < n; i++)
+        for (int j = 0; j <= i; j++) {
+          T den = GetDenominator(eGramInv(i, j) * min_norm / n_T);
+          lcm_den = LCMpair(lcm_den, den);
+        }
+      bool has_size = false;
+      for (int siz = n; siz <= mh && !has_size; siz++) {
+        T siz_T = UniversalScalarConversion<T, int>(siz);
+        if (IsInteger(siz_T / lcm_den))
+          has_size = true;
+      }
+      if (!has_size) {
+#ifdef DEBUG_STRONGLY_SEMI_EUTACTIC
+        os << "SSE: divisibility obstruction, lcm_den=" << lcm_den
+           << " has no multiple in [" << n << "," << mh << "]\n";
+#endif
+        return {true, {}, 0};
+      }
+    }
+  }
   StronglySemiEutacticSearch<T> search(ListVectHalf, map_input_row, *opt_part,
                                        Kern, min_norm, n, n_row, max_node, os);
   StronglySemiEutacticResult<T> result = search.Run();
