@@ -68,18 +68,21 @@ template <typename T> T GetUpperBoundHermitePower(int n) {
 }
 
 /*
-  orthogonal projector means self adjoint.
-  that is that we have
-  <x, p(y)> = < p(x), y>
-  We have the scalar product <x,y> = X G Y^t
-  and so we get
-  <p(x), y> = XP G Y^T
-  <x, p(y)> = XG P^T Y
-  so we have PG = G P^T
+  Returns the matrix P of the orthogonal projection onto the span of
+  TheSubBasis. With B = TheSubBasis and G = TheGramMat we set
+  P = B^T (B G B^T)^{-1} B G
+  which acts on column vectors; a row vector x projects as x P^T,
+  which fixes the row span of B and maps to it. This is the transpose
+  of the matrix built by __GetOrthogonalProjector in
+  SublatticeEnumeration.g (whose rows are the images of the basis
+  vectors, acting on row vectors as x M).
   ---
-  See the code of __GetOrthogonalProjector in
-  SublatticeEnumeration.g
-  Though the single formula needs to be checked.
+  An orthogonal projector is self adjoint, that is
+  <p(x), y> = <x, p(y)>
+  With the scalar product <x,y> = x G y^T and p(x) = x P^T we get
+  <p(x), y> = x P^T G y^T
+  <x, p(y)> = x G P y^T
+  so the condition is P^T G = G P, that is G P is symmetric.
 */
 template <typename T, typename Tint>
 MyMatrix<T> GetOrthogonalProjector(MyMatrix<T> const &TheGramMat,
@@ -100,7 +103,7 @@ MyMatrix<T> GetOrthogonalProjector(MyMatrix<T> const &TheGramMat,
     std::cerr << "The matrix is not a projector\n";
     throw TerminalException{1};
   }
-  if (TheProj * TheGramMat != TheGramMat * TheProj) {
+  if (TheProj.transpose() * TheGramMat != TheGramMat * TheProj) {
     std::cerr << "The obtained projector is not self adjoint\n";
     throw TerminalException{1};
   }

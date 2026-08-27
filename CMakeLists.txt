@@ -419,6 +419,7 @@ set(
   GRP_MatrixGroupSimplification
   GRP_MatrixGroupSimplificationOnline
   GRP_MatrixGroupSimplificationOnlineOpt
+  GRP_TestFinitenessSimp
 )
 foreach(target IN LISTS GROUP_PROGRAMS)
   add_polyhedral_binary(
@@ -520,6 +521,8 @@ set(
   GRP_TestFiniteness
   LATT_ResolveModAction
   LATT_ComputeGroupModAction
+  LATT_RankinMinimum
+  LATT_RankinSublattices
 )
 foreach(target IN LISTS LATT_PROGRAMS)
   add_polyhedral_binary(
@@ -536,8 +539,14 @@ set(
   LATT_SerialPeriodic_IsoDelaunayDomain
   LATT_SerialPeriodicDelaunay
   LATT_SerialComputeDelaunay
+  LATT_SerialComputeIminimum
   LATT_AnalysisIsoDelaunay
   LATT_LookForFullRankRayDomain
+  TEST_PeriodicCVP
+  TEST_PeriodicCosetSubgroup
+  TEST_PeriodicFlipping
+  TEST_PeriodicTspaceStabEqui
+  TEST_PeriodicIsoDelaunay
 )
 foreach(target IN LISTS DELAUNAY_PROGRAMS)
   add_polyhedral_binary(
@@ -699,17 +708,32 @@ foreach(target IN LISTS POLYDECOMP_PROGRAMS)
   )
 endforeach()
 
-add_polyhedral_binary(
+set(
+  POLYGEN_PROGRAMS
   PolyGen_Difference
-  "${CMAKE_SOURCE_DIR}/src_polygen/PolyGen_Difference.cpp"
-  polyhedral_polygen_support
+  PolyGen_vertices
 )
+foreach(target IN LISTS POLYGEN_PROGRAMS)
+  add_polyhedral_binary(
+    ${target}
+    "${CMAKE_SOURCE_DIR}/src_polygen/${target}.cpp"
+    polyhedral_polygen_support
+  )
+endforeach()
 
-add_polyhedral_binary(
+set(
+  RANKIN_PROGRAMS
   RANKIN_Compute_k_min
-  "${CMAKE_SOURCE_DIR}/src_rankin/RANKIN_Compute_k_min.cpp"
-  polyhedral_rankin_support
+  LATT_ApproxAutomorphism
+  LATT_ApproxEquivalence
 )
+foreach(target IN LISTS RANKIN_PROGRAMS)
+  add_polyhedral_binary(
+    ${target}
+    "${CMAKE_SOURCE_DIR}/src_rankin/${target}.cpp"
+    polyhedral_rankin_support
+  )
+endforeach()
 
 add_polyhedral_binary(
   POINCARE_Initial_Computation
@@ -724,6 +748,7 @@ set(
   Robust_GetPVoronoi
   Robust_PVoronoi_Stabilizer
   Robust_ExactRobustCoveringDensity
+  Test_SoftBoundaryStore
 )
 foreach(target IN LISTS ROBUST_PROGRAMS)
   add_polyhedral_binary(

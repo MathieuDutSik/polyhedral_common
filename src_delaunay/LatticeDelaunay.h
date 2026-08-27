@@ -938,6 +938,22 @@ DelaunayTesselation_From_DatabaseEntries_Serial(
   return {l_dels};
 }
 
+// The maximum of the squared circumradius over the cells of the Delaunay
+// tesselation. This is the squared covering radius of the lattice.
+template <typename T, typename Tint, typename Tgroup>
+T MaximumCircumradiusSquared(MyMatrix<T> const &GramMat,
+                             DelaunayTesselation<Tint, Tgroup> const &DT) {
+  T TheCovSqr(0);
+  for (auto &eDel : DT.l_dels) {
+    MyMatrix<T> EXT = UniversalMatrixConversion<T, Tint>(eDel.EXT);
+    CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
+    if (cp.SquareRadius > TheCovSqr) {
+      TheCovSqr = cp.SquareRadius;
+    }
+  }
+  return TheCovSqr;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 void WriteDelaunayTesselation(std::string const &OutFormat,
                               std::ostream &os_out, MyMatrix<T> const &GramMat,
@@ -955,15 +971,7 @@ void WriteDelaunayTesselation(std::string const &OutFormat,
     return WriteEntryPYTHON(os_out, DT);
   }
   if (OutFormat == "GAP_Covering") {
-    T TheCovSqr(0);
-    for (auto &eDel : DT.l_dels) {
-      MyMatrix<T> EXT = UniversalMatrixConversion<T, Tint>(eDel.EXT);
-      CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
-      T SquareRadius = cp.SquareRadius;
-      if (SquareRadius > TheCovSqr) {
-        TheCovSqr = SquareRadius;
-      }
-    }
+    T TheCovSqr = MaximumCircumradiusSquared<T, Tint, Tgroup>(GramMat, DT);
     T TheDet = DeterminantMat(GramMat);
     int TheDim = GramMat.rows();
     ResultCov<T> x =
@@ -1194,6 +1202,25 @@ get_data_lattice(FullNamelist const &eFull,
       choice_initial,
       RecordDualDescOperation<T, Tgroup>(AllArr, os)};
   return data;
+}
+
+// Computes the squared covering radius of a positive definite Gram matrix
+// by enumerating the Delaunay tesselation (with the standard heuristics)
+// and taking the maximum of the squared circumradius over the cells.
+// The Gram matrix does not need to be integral.
+template <typename T, typename Tint, typename Tgroup>
+T ComputeCoveringRadiusSquared(MyMatrix<T> const &GramMat, std::ostream &os) {
+  using TintGroup = typename Tgroup::Tint;
+  int dimEXT = GramMat.rows() + 1;
+  PolyHeuristicSerial<TintGroup> AllArr =
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+  DataLattice<T, Tint, Tgroup> data =
+      GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
+  int max_runtime_second = 0;
+  DelaunayTesselation<Tint, Tgroup> DT =
+      get_delaunay_tessellation_serial<T, Tint, Tgroup>(
+          data, "none", max_runtime_second, os);
+  return MaximumCircumradiusSquared<T, Tint, Tgroup>(GramMat, DT);
 }
 
 // clang-format off
