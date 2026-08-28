@@ -6,8 +6,14 @@
 #include "MAT_MatrixInt.h"
 #include "Shvec_exact.h"
 #include "LatticeStabEquiCan.h"
-#include <utility>
+#include <algorithm>
+#include <map>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 // clang-format on
 
@@ -475,19 +481,501 @@ OrbitSplittingSublattices(std::vector<MyMatrix<Tint>> const &l_latt,
 }
 
 // Enumerates the orbits of k-dimensional sublattices of determinant
-// at most MaxDet under the automorphism group of the Gram matrix.
+// at most MaxDet under the automorphism group of the Gram matrix,
+// by generating the full set of sublattices and splitting it into
+// orbits. Simple and reliable, but the full set can be much larger
+// than the set of orbits; used as the reference implementation for
+// checking the orbit-wise enumeration below.
 template <typename T, typename Tint, typename Tgroup>
 std::vector<SublatticeOrbit<Tint>>
-Rankin_k_level_orbits(MyMatrix<T> const &A, int const &k, T const &MaxDet,
-                      std::ostream &os) {
+Rankin_k_level_orbits_setbased(MyMatrix<T> const &A, int const &k,
+                               T const &MaxDet, std::ostream &os) {
   std::vector<MyMatrix<Tint>> l_latt = Rankin_k_level<T, Tint>(A, k, MaxDet, os);
   std::vector<MyMatrix<Tint>> ListGen =
       ArithmeticAutomorphismGroup<T, Tint, Tgroup>(A, os);
 #ifdef DEBUG_ENUMERATION_K_SPACE
-  os << "ENUM_K_SPACE: Rankin_k_level_orbits |l_latt|=" << l_latt.size()
-     << " |ListGen|=" << ListGen.size() << "\n";
+  os << "ENUM_K_SPACE: Rankin_k_level_orbits_setbased |l_latt|="
+     << l_latt.size() << " |ListGen|=" << ListGen.size() << "\n";
 #endif
   return OrbitSplittingSublattices(l_latt, ListGen);
+}
+
+//
+// Orbit-wise enumeration.
+// Instead of generating the full set of subspaces and then reducing by
+// the group, we enumerate the orbits of the (k-1)-dimensional subspaces
+// and for each representative X extend by the orbits, under the
+// stabilizer of X, of the primitive short vectors of the projection of
+// the lattice on the orthogonal complement of X. The candidates
+// obtained are then reduced by equivalence. This mirrors the strategy
+// of DoSpecificEnumeration in SublatticeEnumeration.g.
+//
+// The stabilizer of a subspace X and the equivalence of two subspaces
+// are computed on a colored vector configuration: an invariant
+// Z-spanning family W of L (color 0) together with the invariant
+// family of the sublattice L cap X embedded into L (color 1), handled
+// by the ListMat_Vdiag machinery. Any isometric color preserving
+// permutation of the configuration lifts to an integral matrix (W
+// spans L over Z) preserving the span of the color 1 vectors, that is
+// stabilizing X; and conversely.
+//
+
+template <typename T, typename Tint> struct SublatticeStabEquiData {
+  MyMatrix<T> GramMat;
+  std::vector<MyMatrix<T>> ListMat;
+  MyMatrix<Tint> W;
+  MyMatrix<T> W_T;
+};
+
+template <typename T, typename Tint>
+SublatticeStabEquiData<T, Tint>
+GetSublatticeStabEquiData(MyMatrix<T> const &GramMat, std::ostream &os) {
+  MyMatrix<Tint> W = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
+  MyMatrix<T> W_T = UniversalMatrixConversion<T, Tint>(W);
+  std::vector<MyMatrix<T>> ListMat{GramMat};
+  return {GramMat, std::move(ListMat), std::move(W), std::move(W_T)};
+}
+
+template <typename T, typename Tint> struct SublatticeConfiguration {
+  MyMatrix<Tint> X;
+  T det;
+  // The rows of W followed by the rows of invar(X); colors 0 and 1.
+  MyMatrix<T> conf;
+  std::vector<T> Vdiag;
+  // The sorted norms of the rows of invar(X), a cheap invariant used
+  // to avoid expensive equivalence tests.
+  std::vector<T> invar_norms;
+};
+
+template <typename T, typename Tint>
+SublatticeConfiguration<T, Tint>
+BuildSublatticeConfiguration(SublatticeStabEquiData<T, Tint> const &data,
+                             MyMatrix<Tint> const &X, std::ostream &os) {
+  int n = data.GramMat.rows();
+  MyMatrix<T> X_T = UniversalMatrixConversion<T, Tint>(X);
+  MyMatrix<T> eGram = X_T * data.GramMat * X_T.transpose();
+  T det = DeterminantMat(eGram);
+  MyMatrix<Tint> SHV_X = ExtractInvariantVectorFamilyZbasis<T, Tint>(eGram, os);
+  MyMatrix<Tint> invar = SHV_X * X;
+  MyMatrix<T> invar_T = UniversalMatrixConversion<T, Tint>(invar);
+  int n_w = data.W.rows();
+  int n_i = invar.rows();
+  MyMatrix<T> conf(n_w + n_i, n);
+  std::vector<T> Vdiag(n_w + n_i);
+  for (int i = 0; i < n_w; i++) {
+    conf.row(i) = data.W_T.row(i);
+    Vdiag[i] = T(0);
+  }
+  std::vector<T> invar_norms(n_i);
+  for (int i = 0; i < n_i; i++) {
+    conf.row(n_w + i) = invar_T.row(i);
+    Vdiag[n_w + i] = T(1);
+    MyVector<T> eV = GetMatrixRow(invar_T, i);
+    invar_norms[i] = eV.dot(data.GramMat * eV);
+  }
+  std::sort(invar_norms.begin(), invar_norms.end());
+  return {X, std::move(det), std::move(conf), std::move(Vdiag),
+          std::move(invar_norms)};
+}
+
+// The generators of the stabilizer of the subspace of sc in the
+// automorphism group of the Gram matrix.
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>>
+SublatticeStabilizerGenerators(SublatticeStabEquiData<T, Tint> const &data,
+                               SublatticeConfiguration<T, Tint> const &sc,
+                               std::ostream &os) {
+  std::vector<MyMatrix<T>> LGen = GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(
+      sc.conf, data.ListMat, sc.Vdiag, os);
+  std::vector<MyMatrix<Tint>> LGenRet;
+  for (auto &g_T : LGen) {
+    MyMatrix<Tint> g = UniversalMatrixConversion<Tint, T>(g_T);
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
+    MyMatrix<Tint> Ximg = sc.X * g;
+    if (CanonicalizeSublatticeBasis(Ximg) != sc.X) {
+      std::cerr << "SublatticeStabilizerGenerators: a generator does not "
+                   "stabilize the subspace\n";
+      throw TerminalException{1};
+    }
+#endif
+    LGenRet.push_back(g);
+  }
+  return LGenRet;
+}
+
+// Returns, if it exists, an integral matrix P preserving the Gram
+// matrix with X1 P = X2 as sublattices.
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+SublatticeTestEquivalence(SublatticeStabEquiData<T, Tint> const &data,
+                          SublatticeConfiguration<T, Tint> const &sc1,
+                          SublatticeConfiguration<T, Tint> const &sc2,
+                          std::ostream &os) {
+  if (sc1.det != sc2.det) {
+    return {};
+  }
+  if (sc1.invar_norms != sc2.invar_norms) {
+    return {};
+  }
+  // TestIntEquivalence_ListMat_Vdiag(A, ..., B, ...) returns a matrix
+  // mapping the rows of the configuration B onto the rows of the
+  // configuration A, so the arguments are swapped to obtain X1 -> X2.
+  std::optional<MyMatrix<T>> opt = TestIntEquivalence_ListMat_Vdiag<T, Tgroup>(
+      sc2.conf, data.ListMat, sc2.Vdiag, sc1.conf, data.ListMat, sc1.Vdiag, os);
+  if (!opt) {
+    return {};
+  }
+  MyMatrix<Tint> P = UniversalMatrixConversion<Tint, T>(*opt);
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
+  MyMatrix<Tint> Ximg = sc1.X * P;
+  if (CanonicalizeSublatticeBasis(Ximg) != sc2.X) {
+    std::cerr << "SublatticeTestEquivalence: the matrix does not map the "
+                 "first subspace to the second\n";
+    throw TerminalException{1};
+  }
+#endif
+  return P;
+}
+
+// The order of the matrix group generated by LGen from its faithful
+// permutation action on the rows of the invariant family W.
+template <typename Tint, typename Tgroup>
+typename Tgroup::Tint
+MatrixGroupOrderOnFamily(std::vector<MyMatrix<Tint>> const &LGen,
+                         MyMatrix<Tint> const &W) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  int n_row = W.rows();
+  std::unordered_map<MyVector<Tint>, Tidx> map_row;
+  for (int i = 0; i < n_row; i++) {
+    MyVector<Tint> eV = GetMatrixRow(W, i);
+    map_row[eV] = static_cast<Tidx>(i);
+  }
+  std::vector<Telt> ListPermGens;
+  for (auto &g : LGen) {
+    MyMatrix<Tint> g_tr = g.transpose();
+    std::vector<Tidx> eList(n_row);
+    for (int i = 0; i < n_row; i++) {
+      MyVector<Tint> eV = GetMatrixRow(W, i);
+      MyVector<Tint> fV = g_tr * eV;
+      auto iter = map_row.find(fV);
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
+      if (iter == map_row.end()) {
+        std::cerr << "MatrixGroupOrderOnFamily: the family is not invariant "
+                     "under the group\n";
+        throw TerminalException{1};
+      }
+#endif
+      eList[i] = iter->second;
+    }
+    ListPermGens.push_back(Telt(eList));
+  }
+  Tgroup grp(ListPermGens, n_row);
+  return grp.size();
+}
+
+template <typename Tgroup>
+size_t GroupIndexAsSizeT(typename Tgroup::Tint const &ord_big,
+                         typename Tgroup::Tint const &ord_small) {
+  typename Tgroup::Tint quot = ord_big / ord_small;
+  std::stringstream ss;
+  ss << quot;
+  size_t val;
+  std::stringstream(ss.str()) >> val;
+  return val;
+}
+
+template <typename T, typename Tint> struct SubspaceProjection {
+  MyMatrix<Tint> TheCompl;
+  MyMatrix<T> RedGram;
+  MyMatrix<T> Full_T;
+  MyMatrix<T> FullInv_T;
+};
+
+// The projection of the lattice on the orthogonal complement of the
+// span of X, together with the completion data needed for lifting
+// vectors and transporting the stabilizer.
+template <typename T, typename Tint>
+SubspaceProjection<T, Tint>
+GetSubspaceProjection(MyMatrix<T> const &GramMat, MyMatrix<Tint> const &X) {
+  int n = GramMat.rows();
+  MyMatrix<Tint> TheCompl = SubspaceCompletionInt(X, n);
+  MyMatrix<T> TheCompl_T = UniversalMatrixConversion<T, Tint>(TheCompl);
+  MyMatrix<T> TheProj = GetOrthogonalProjector(GramMat, X);
+  MyMatrix<T> ProjCompl = TheCompl_T - TheCompl_T * TheProj.transpose();
+  MyMatrix<T> RedGram = ProjCompl * GramMat * ProjCompl.transpose();
+  MyMatrix<Tint> Full = Concatenate(X, TheCompl);
+  MyMatrix<T> Full_T = UniversalMatrixConversion<T, Tint>(Full);
+  MyMatrix<T> FullInv_T = Inverse(Full_T);
+  return {std::move(TheCompl), std::move(RedGram), std::move(Full_T),
+          std::move(FullInv_T)};
+}
+
+// The action induced on the projected lattice, in the coordinates of
+// the projected completion basis, by a matrix g stabilizing the
+// subspace: the bottom right block of the conjugated matrix.
+template <typename T, typename Tint>
+MyMatrix<Tint>
+InducedProjectedAction(SubspaceProjection<T, Tint> const &sp, int const &dim_x,
+                       MyMatrix<Tint> const &g) {
+  int n = sp.Full_T.rows();
+  int m = n - dim_x;
+  MyMatrix<T> g_T = UniversalMatrixConversion<T, Tint>(g);
+  MyMatrix<T> N_T = sp.Full_T * g_T * sp.FullInv_T;
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
+  if (!IsIntegralMatrix(N_T)) {
+    std::cerr << "InducedProjectedAction: the conjugated matrix should be "
+                 "integral\n";
+    throw TerminalException{1};
+  }
+  for (int i = 0; i < dim_x; i++) {
+    for (int j = 0; j < m; j++) {
+      if (N_T(i, dim_x + j) != T(0)) {
+        std::cerr << "InducedProjectedAction: the matrix does not stabilize "
+                     "the subspace\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
+  MyMatrix<Tint> gp(m, m);
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < m; j++) {
+      gp(i, j) = UniversalScalarConversion<Tint, T>(N_T(dim_x + i, dim_x + j));
+    }
+  }
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
+  MyMatrix<T> gp_T = UniversalMatrixConversion<T, Tint>(gp);
+  if (gp_T * sp.RedGram * gp_T.transpose() != sp.RedGram) {
+    std::cerr << "InducedProjectedAction: the induced action does not "
+                 "preserve the projected Gram matrix\n";
+    throw TerminalException{1};
+  }
+#endif
+  return gp;
+}
+
+// An upper bound for R^{1/k}, computed by exact bisection so that no
+// floating point is involved. The bound is within a factor 2^{-20} of
+// the true root, which is only a matter of speed, not of correctness.
+template <typename T> T UpperKthRootBound(T const &R, int const &k) {
+  if (R <= T(0)) {
+    return T(0);
+  }
+  auto pow_ge = [&](T const &x) -> bool {
+    T p(1);
+    for (int i = 0; i < k; i++) {
+      p *= x;
+    }
+    return p >= R;
+  };
+  T lo(0);
+  T hi(1);
+  while (!pow_ge(hi)) {
+    lo = hi;
+    hi *= T(2);
+  }
+  for (int iter = 0; iter < 20; iter++) {
+    T mid = (lo + hi) / T(2);
+    if (pow_ge(mid)) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+  return hi;
+}
+
+template <typename Tint> struct SublatticeRepInfo {
+  MyMatrix<Tint> X;
+  std::vector<MyMatrix<Tint>> stab_gens;
+};
+
+// The recursive kernel of the orbit-wise enumeration: the orbit
+// representatives of the k-dimensional primitive sublattices of
+// determinant at most MaxDet, together with generators of their
+// stabilizers.
+// Completeness of the recursion: a k-dimensional sublattice Y with
+// det(Y) <= M contains a (k-1)-dimensional sublattice X (which can be
+// saturated, only decreasing the determinant) with a bounded
+// determinant, in two ways:
+// * By the Minkowski and Hadamard inequalities, the span of vectors
+//   realizing the first k-1 successive minima has
+//   det(X) <= prod_{j<k} lambda_j(Y)^2
+//   <= gamma_k^k det(Y) / lambda_k(Y)^2 <= gamma_k^k M / min(A).
+// * By the Rankin inequality and the Rankin duality
+//   gamma_{k,k-1} = gamma_{k,1} = gamma_k, we have
+//   det(X)^k <= gamma_k^k det(Y)^{k-1} <= gamma_k^k M^{k-1}.
+// The minimum of the two bounds is used; the Rankin bound makes the
+// bounds shrink along the recursion instead of growing.
+template <typename T, typename Tint, typename Tgroup>
+std::vector<SublatticeRepInfo<Tint>>
+Rankin_k_level_repinfo(SublatticeStabEquiData<T, Tint> const &data,
+                       std::vector<MyMatrix<Tint>> const &l_autgen,
+                       T const &minA, int const &k, T const &MaxDet,
+                       std::ostream &os) {
+  MyMatrix<T> const &A = data.GramMat;
+  auto get_reps = [&]() -> std::vector<MyMatrix<Tint>> {
+    if (k == 1) {
+      // The full orbit of vectors has to be enumerated and reduced by
+      // the group; this cannot be avoided.
+      std::vector<MyVector<Tint>> short_vectors =
+          computeLevel_GramMat<T, Tint>(A, MaxDet, os);
+      std::vector<MyMatrix<Tint>> l_latt;
+      for (auto &eV : short_vectors) {
+        if (IsVectorPrimitive(eV)) {
+          MyMatrix<Tint> M = MatrixFromVector(eV);
+          l_latt.push_back(CanonicalizeSublatticeBasis(M));
+        }
+      }
+      std::vector<SublatticeOrbit<Tint>> l_orb =
+          OrbitSplittingSublattices(l_latt, l_autgen);
+      std::vector<MyMatrix<Tint>> reps;
+      for (auto &e_orb : l_orb) {
+        reps.push_back(e_orb.representative);
+      }
+      return reps;
+    }
+    T HermPow = GetUpperBoundHermitePower<T>(k);
+    T MprevA = HermPow * MaxDet / minA;
+    T Mpow(1);
+    for (int i = 0; i < k - 1; i++) {
+      Mpow *= MaxDet;
+    }
+    T MprevB = UpperKthRootBound<T>(HermPow * Mpow, k);
+    T Mprev = (MprevA < MprevB) ? MprevA : MprevB;
+    std::vector<SublatticeRepInfo<Tint>> l_prev =
+        Rankin_k_level_repinfo<T, Tint, Tgroup>(data, l_autgen, minA, k - 1,
+                                                Mprev, os);
+#ifdef DEBUG_ENUMERATION_K_SPACE
+    os << "ENUM_K_SPACE: repinfo k=" << k << " MaxDet=" << MaxDet
+       << " Mprev=" << Mprev << " |l_prev|=" << l_prev.size() << "\n";
+#endif
+    std::map<std::pair<T, std::vector<T>>, std::vector<size_t>> map_cand;
+    std::vector<SublatticeConfiguration<T, Tint>> accepted;
+    std::vector<MyMatrix<Tint>> reps;
+    auto f_insert = [&](MyMatrix<Tint> const &Y) -> void {
+      SublatticeConfiguration<T, Tint> sc =
+          BuildSublatticeConfiguration(data, Y, os);
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
+      if (sc.det > MaxDet) {
+        std::cerr << "Rankin_k_level_repinfo: a candidate exceeds MaxDet\n";
+        throw TerminalException{1};
+      }
+#endif
+      std::pair<T, std::vector<T>> key{sc.det, sc.invar_norms};
+      std::vector<size_t> &l_idx = map_cand[key];
+      for (auto &idx : l_idx) {
+        std::optional<MyMatrix<Tint>> opt =
+            SublatticeTestEquivalence<T, Tint, Tgroup>(data, sc, accepted[idx],
+                                                       os);
+        if (opt) {
+          return;
+        }
+      }
+      l_idx.push_back(accepted.size());
+      reps.push_back(Y);
+      accepted.push_back(std::move(sc));
+    };
+    for (auto &rep : l_prev) {
+      SubspaceProjection<T, Tint> sp = GetSubspaceProjection(A, rep.X);
+      MyMatrix<T> X_T = UniversalMatrixConversion<T, Tint>(rep.X);
+      T detX = DeterminantMat(MyMatrix<T>(X_T * A * X_T.transpose()));
+      T bound = MaxDet / detX;
+      std::vector<MyMatrix<Tint>> l_gp;
+      for (auto &g : rep.stab_gens) {
+        l_gp.push_back(InducedProjectedAction(sp, k - 1, g));
+      }
+      std::vector<MyVector<Tint>> l_w =
+          computeLevel_GramMat<T, Tint>(sp.RedGram, bound, os);
+      std::vector<MyMatrix<Tint>> l_wmat;
+      for (auto &w : l_w) {
+        if (IsVectorPrimitive(w)) {
+          MyMatrix<Tint> M = MatrixFromVector(w);
+          l_wmat.push_back(CanonicalizeSublatticeBasis(M));
+        }
+      }
+      std::vector<SublatticeOrbit<Tint>> l_worb =
+          OrbitSplittingSublattices(l_wmat, l_gp);
+#ifdef DEBUG_ENUMERATION_K_SPACE
+      os << "ENUM_K_SPACE: repinfo k=" << k << " detX=" << detX
+         << " |l_wmat|=" << l_wmat.size() << " |l_worb|=" << l_worb.size()
+         << "\n";
+#endif
+      for (auto &e_worb : l_worb) {
+        MyVector<Tint> w = GetMatrixRow(e_worb.representative, 0);
+        MyVector<Tint> wC = sp.TheCompl.transpose() * w;
+        MyMatrix<Tint> Ymat = ConcatenateMatVec(rep.X, wC);
+        MyMatrix<Tint> Y = CanonicalizeSublatticeBasis(Ymat);
+        f_insert(Y);
+      }
+    }
+    return reps;
+  };
+  std::vector<MyMatrix<Tint>> reps = get_reps();
+  std::vector<SublatticeRepInfo<Tint>> result;
+  for (auto &X : reps) {
+    SublatticeConfiguration<T, Tint> sc =
+        BuildSublatticeConfiguration(data, X, os);
+    std::vector<MyMatrix<Tint>> stab_gens =
+        SublatticeStabilizerGenerators<T, Tint, Tgroup>(data, sc, os);
+    result.push_back({X, std::move(stab_gens)});
+  }
+  return result;
+}
+
+// Enumerates the orbits of k-dimensional primitive sublattices of
+// determinant at most MaxDet under the automorphism group of the Gram
+// matrix, working orbit-wise throughout. The orbit sizes are obtained
+// as index of the stabilizer in the automorphism group.
+template <typename T, typename Tint, typename Tgroup>
+std::vector<SublatticeOrbit<Tint>>
+Rankin_k_level_orbits(MyMatrix<T> const &A, int const &k, T const &MaxDet,
+                      std::ostream &os) {
+  using Tgint = typename Tgroup::Tint;
+  SublatticeStabEquiData<T, Tint> data =
+      GetSublatticeStabEquiData<T, Tint>(A, os);
+  std::vector<MyMatrix<Tint>> l_autgen =
+      ArithmeticAutomorphismGroupMultiple_inner<T, Tint, Tgroup>(data.ListMat,
+                                                                 data.W, os);
+  Tgint aut_order = MatrixGroupOrderOnFamily<Tint, Tgroup>(l_autgen, data.W);
+  T minA = T_ShortestVector<T, Tint>(A, os).min;
+  std::vector<SublatticeRepInfo<Tint>> l_rep =
+      Rankin_k_level_repinfo<T, Tint, Tgroup>(data, l_autgen, minA, k, MaxDet,
+                                              os);
+  std::vector<SublatticeOrbit<Tint>> l_orbit;
+  for (auto &rep : l_rep) {
+    Tgint stab_order =
+        MatrixGroupOrderOnFamily<Tint, Tgroup>(rep.stab_gens, data.W);
+    size_t orbit_size = GroupIndexAsSizeT<Tgroup>(aut_order, stab_order);
+    l_orbit.push_back({rep.X, orbit_size});
+  }
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
+  // Full cross-validation against the set-based enumeration.
+  std::vector<SublatticeOrbit<Tint>> l_orbit_ref =
+      Rankin_k_level_orbits_setbased<T, Tint, Tgroup>(A, k, MaxDet, os);
+  auto get_signature = [&](std::vector<SublatticeOrbit<Tint>> const &l_orb)
+      -> std::vector<std::pair<T, size_t>> {
+    std::vector<std::pair<T, size_t>> l_sign;
+    for (auto &e_orb : l_orb) {
+      MyMatrix<T> Y_T =
+          UniversalMatrixConversion<T, Tint>(e_orb.representative);
+      T det = DeterminantMat(MyMatrix<T>(Y_T * A * Y_T.transpose()));
+      l_sign.push_back({det, e_orb.orbit_size});
+    }
+    std::sort(l_sign.begin(), l_sign.end());
+    return l_sign;
+  };
+  if (get_signature(l_orbit) != get_signature(l_orbit_ref)) {
+    std::cerr << "Rankin_k_level_orbits: the orbit-wise enumeration does not "
+                 "match the set-based one\n";
+    std::cerr << "k=" << k << " MaxDet=" << MaxDet
+              << " |l_orbit|=" << l_orbit.size()
+              << " |l_orbit_ref|=" << l_orbit_ref.size() << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  return l_orbit;
 }
 
 template <typename T, typename Tint> struct ResultKRankinMinOrbits {
@@ -497,22 +985,46 @@ template <typename T, typename Tint> struct ResultKRankinMinOrbits {
 
 // Computes the Rankin k-minimum and the orbits of the k-dimensional
 // sublattices realizing it under the automorphism group of the
-// Gram matrix. Only for exact arithmetic types.
+// Gram matrix, working orbit-wise: all the orbits below the upper
+// bound for the minimum are enumerated and the ones of minimal
+// determinant are retained. Only for exact arithmetic types.
 template <typename T, typename Tint, typename Tgroup>
 ResultKRankinMinOrbits<T, Tint>
 Rankin_k_minimum_orbits(MyMatrix<T> const &A, int const &k, std::ostream &os) {
-  T tol(0);
-  ResultKRankinMin<T, Tint> result = Rankin_k_minimum<T, Tint>(A, k, tol, os);
-  std::vector<MyMatrix<Tint>> ListGen =
-      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(A, os);
+  T MaxDet = UpperBoundRankinMinimalDeterminant<T, Tint>(A, k, os);
+  std::vector<SublatticeOrbit<Tint>> l_orbit =
+      Rankin_k_level_orbits<T, Tint, Tgroup>(A, k, MaxDet, os);
+  if (l_orbit.empty()) {
+    std::cerr << "Rankin_k_minimum_orbits: the upper bound should be "
+                 "attained by some sublattice\n";
+    throw TerminalException{1};
+  }
+  auto get_det = [&](MyMatrix<Tint> const &Y) -> T {
+    MyMatrix<T> Y_T = UniversalMatrixConversion<T, Tint>(Y);
+    return DeterminantMat(MyMatrix<T>(Y_T * A * Y_T.transpose()));
+  };
+  std::vector<T> l_det;
+  T min = get_det(l_orbit[0].representative);
+  l_det.push_back(min);
+  for (size_t u = 1; u < l_orbit.size(); u++) {
+    T det = get_det(l_orbit[u].representative);
+    if (det < min) {
+      min = det;
+    }
+    l_det.push_back(det);
+  }
+  std::vector<SublatticeOrbit<Tint>> l_orbits_min;
+  for (size_t u = 0; u < l_orbit.size(); u++) {
+    if (l_det[u] == min) {
+      l_orbits_min.push_back(l_orbit[u]);
+    }
+  }
 #ifdef DEBUG_ENUMERATION_K_SPACE
-  os << "ENUM_K_SPACE: Rankin_k_minimum_orbits min=" << result.min
-     << " |l_spaces|=" << result.l_spaces.size()
-     << " |ListGen|=" << ListGen.size() << "\n";
+  os << "ENUM_K_SPACE: Rankin_k_minimum_orbits min=" << min
+     << " |l_orbit|=" << l_orbit.size()
+     << " |l_orbits_min|=" << l_orbits_min.size() << "\n";
 #endif
-  std::vector<SublatticeOrbit<Tint>> l_orbits =
-      OrbitSplittingSublattices(result.l_spaces, ListGen);
-  return {std::move(result.min), std::move(l_orbits)};
+  return {std::move(min), std::move(l_orbits_min)};
 }
 
 // clang-format off
