@@ -1,0 +1,11 @@
+name: 'Install MPI'
+description: 'Install OpenMPI (providing mpi.h and the ompi pkg-config file) and the Boost.MPI library, as needed by the MPI targets and by MPI_LINK_CPP (which must be set in the calling workflow''s env).'
+runs:
+  using: 'composite'
+  steps:
+    - name: apt-get install libopenmpi-dev libboost-mpi-dev
+      shell: bash
+      run: |
+        set -e
+        sudo apt-get update
+        sudo apt-get install -y libopenmpi-dev libboost-mpi-dev
