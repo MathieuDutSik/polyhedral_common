@@ -25,6 +25,12 @@
 #define SANITY_CHECK_ENUMERATION_K_SPACE
 #endif
 
+// The extensive checks re-run the full set-based enumeration in order
+// to cross-validate the orbit-wise one, which multiplies the runtime
+// by a large factor. They are therefore never enabled by the blanket
+// SANITY_CHECK; define SANITY_CHECK_ENUMERATION_K_SPACE_EXTENSIVE
+// explicitly to run them.
+
 // Returns the Hermite constant at the n-th power.
 // That is the maximum of min(A)^n / det(A)
 // --
@@ -950,8 +956,12 @@ Rankin_k_level_orbits(MyMatrix<T> const &A, int const &k, T const &MaxDet,
     size_t orbit_size = GroupIndexAsSizeT<Tgroup>(aut_order, stab_order);
     l_orbit.push_back({rep.X, orbit_size});
   }
-#ifdef SANITY_CHECK_ENUMERATION_K_SPACE
-  // Full cross-validation against the set-based enumeration.
+#ifdef SANITY_CHECK_ENUMERATION_K_SPACE_EXTENSIVE
+  // Full cross-validation against the set-based enumeration. This can
+  // be much slower than the enumeration being checked, so announce it.
+  std::cerr << "ENUM_K_SPACE: entering the extensive sanity check: "
+               "set-based cross-validation of the orbit-wise enumeration "
+               "for k=" << k << " MaxDet=" << MaxDet << ". This is slow.\n";
   std::vector<SublatticeOrbit<Tint>> l_orbit_ref =
       Rankin_k_level_orbits_setbased<T, Tint, Tgroup>(A, k, MaxDet, os);
   auto get_signature = [&](std::vector<SublatticeOrbit<Tint>> const &l_orb)

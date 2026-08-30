@@ -540,6 +540,7 @@ set(
   LATT_SerialPeriodicDelaunay
   LATT_SerialComputeDelaunay
   LATT_SerialComputeIminimum
+  LATT_SerialComputeIminimumGiD
   LATT_AnalysisIsoDelaunay
   LATT_LookForFullRankRayDomain
   TEST_PeriodicCVP

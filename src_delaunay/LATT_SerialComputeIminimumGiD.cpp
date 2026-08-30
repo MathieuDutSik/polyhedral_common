@@ -3,18 +3,13 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
-#include "LatticeDelaunay.h"
-#include "Enumeration_k_space.h"
+#include "Iminimum.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on
 
 #ifdef DEBUG
 #define DEBUG_SERIAL_COMPUTE_IMINIMUM
-#endif
-
-#ifdef SANITY_CHECK
-#define SANITY_CHECK_SERIAL_COMPUTE_IMINIMUM
 #endif
 
 /*
@@ -30,39 +25,11 @@
   ---
   This program enumerates the orbits of the i-dimensional sublattices
   L_i of determinant at most max_det and computes for each the covering
-  radius of the projected lattice. The hope is that by going high
-  enough in the determinant, the maximum of those covering radii gives
-  the i-covering radius. No proof of that so far.
+  radius of the projected lattice, that is the profile g_i(d) of the
+  maxima per determinant d <= max_det. The maximum of those covering
+  radii is a lower bound for the i-minimum which is certified by
+  LATT_SerialComputeIminimum.
  */
-
-// The Gram matrix of the projection of the lattice onto the orthogonal
-// complement of the span of SubBasis. SubBasis must be saturated so that
-// its completion to a basis of Z^n projects to a basis of the projected
-// lattice.
-template <typename T, typename Tint>
-MyMatrix<T> GetProjectedGramMatrix(MyMatrix<T> const &GramMat,
-                                   MyMatrix<Tint> const &SubBasis) {
-  int n = GramMat.rows();
-  MyMatrix<Tint> TheCompl = SubspaceCompletionInt(SubBasis, n);
-  MyMatrix<T> TheCompl_T = UniversalMatrixConversion<T, Tint>(TheCompl);
-  MyMatrix<T> TheProj = GetOrthogonalProjector(GramMat, SubBasis);
-  // For a row vector x the projection onto span(SubBasis) is x P^T,
-  // so the projection onto the orthogonal complement is x (I - P^T).
-  MyMatrix<T> ProjCompl = TheCompl_T - TheCompl_T * TheProj.transpose();
-  MyMatrix<T> RedGram = ProjCompl * GramMat * ProjCompl.transpose();
-#ifdef SANITY_CHECK_SERIAL_COMPUTE_IMINIMUM
-  MyMatrix<T> SubBasis_T = UniversalMatrixConversion<T, Tint>(SubBasis);
-  MyMatrix<T> eGram = SubBasis_T * GramMat * SubBasis_T.transpose();
-  T det_prod = DeterminantMat(RedGram) * DeterminantMat(eGram);
-  T det_gram = DeterminantMat(GramMat);
-  if (det_prod != det_gram) {
-    std::cerr << "GetProjectedGramMatrix: det(RedGram) * det(eGram) = "
-              << det_prod << " but det(GramMat) = " << det_gram << "\n";
-    throw TerminalException{1};
-  }
-#endif
-  return RedGram;
-}
 
 template <typename T> struct IminimumEntry {
   T TheDet;
@@ -145,10 +112,10 @@ int main(int argc, char *argv[]) {
     if (argc != 5 && argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_SerialComputeIminimum [arith] [i] [max_det] "
+      std::cerr << "LATT_SerialComputeIminimumGiD [arith] [i] [max_det] "
                    "[FileGram]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_SerialComputeIminimum [arith] [i] [max_det] "
+      std::cerr << "LATT_SerialComputeIminimumGiD [arith] [i] [max_det] "
                    "[FileGram] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "arith: gmp, gmp_boost, multi_boost\n";
@@ -202,9 +169,9 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
-    std::cerr << "Normal termination of LATT_SerialComputeIminimum\n";
+    std::cerr << "Normal termination of LATT_SerialComputeIminimumGiD\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_SerialComputeIminimum\n";
+    std::cerr << "Error in LATT_SerialComputeIminimumGiD\n";
     exit(e.eVal);
   }
   runtime(time);
