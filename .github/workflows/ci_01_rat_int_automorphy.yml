@@ -18,7 +18,7 @@ on:
   # Disabled right now, when a push is made on master.
 jobs:
   build-linux:
-    timeout-minutes: 240  # 4 hours, the three former sections in one job
+    timeout-minutes: 60  # the healthy suite is under a minute, the build about 7
     runs-on: ubuntu-latest
     env:
       GMP_INCDIR: /usr/include
@@ -57,7 +57,10 @@ jobs:
       - name: Test rational and integral automorphy
         run: |
           cd CI_tests/01_RatIntAutomorphy
-          ../../gap.sh < ProcessExamples.g
+          # Bounded: GRP_LinPolytopeIntegral_Automorphism_DoubleCoset currently
+          # hangs on some simplices, and without this the job only stops on the
+          # job timeout, hours later. A healthy run takes well under a minute.
+          timeout 1800 ../../gap.sh < ProcessExamples.g || echo "gap.sh timed out or exited non-zero" >&2
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1
