@@ -1,19 +1,24 @@
-name: CI(02B) of Rational Automorphism groups
+name: CI(01) of Rational and Integral Automorphism groups
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
 # on: release
 
+# This unifies the former CI(01) of Matrix Double Cosets, CI(02A) of
+# Integral Automorphism groups and CI(02B) of Rational Automorphism
+# groups, which all ran the same family of examples through the same
+# GAP driver.
+
 on:
   # One time per month
   schedule:
-    - cron: "0 0 2 2,4,6,8,10,12 *"
+    - cron: "0 0 1 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
 jobs:
   build-linux:
-    timeout-minutes: 120  # 2 hours
+    timeout-minutes: 240  # 4 hours, the three former sections in one job
     runs-on: ubuntu-latest
     env:
       GMP_INCDIR: /usr/include
@@ -42,15 +47,18 @@ jobs:
       - name: Compiling the test programs.
         run: |
           cd src_group && make -f Makefile_rational_automorphy && cd ..
+          cd src_group && make -f Makefile_integral_automorphy && cd ..
+          cd src_group && make -f Makefile_double_cosets && cd ..
+          pwd
           echo "After compilation of group code"
 
-      - name: Test automorphy
+      - name: Test rational and integral automorphy
         run: |
-          cd CI_tests/02B_RationalAutomorphy
+          cd CI_tests/01_RatIntAutomorphy
           ../../gap.sh < ProcessExamples.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1
           fi
           cd ../..
-          echo "After automorphy tests"
+          echo "After rational and integral automorphy tests"

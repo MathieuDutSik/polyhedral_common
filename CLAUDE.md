@@ -79,8 +79,8 @@ If a near-fit exists but isn't quite right, prefer extending or templatizing it 
 1. **Each CI workflow runs at most once per day.** All triggers are `schedule: cron:` based; pushes do not trigger CI. (Workflows can also be fired by hand via `workflow_dispatch`.)
 2. **The numeric index in the filename is the day of the month the workflow runs.** A file named `ci_NN_<slug>.yml` (or `ci_NNA_<slug>.yml` / `ci_NNB_<slug>.yml`) fires on day `NN`. For example `ci_14_schedule_full_sweep.yml` runs on the 14th: `cron: "0 0 14 * *"`.
 3. **`A` / `B` suffix splits the day across alternating months.** When two workflows share a day, the `A` variant runs in odd months and `B` in even months:
-   - `ci_02A_int_automorphy.yml`     → `cron: "0 0 2 1,3,5,7,9,11 *"` (Jan, Mar, May, Jul, Sep, Nov)
-   - `ci_02B_rat_automorphy.yml`     → `cron: "0 0 2 2,4,6,8,10,12 *"` (Feb, Apr, Jun, Aug, Oct, Dec)
+   - `ci_04A_latt_aut_isom_can.yml` → `cron: "0 0 4 1,3,5,7,9,11 *"` (Jan, Mar, May, Jul, Sep, Nov)
+   - `ci_04B_cmake.yml`             → `cron: "0 0 4 2,4,6,8,10,12 *"` (Feb, Apr, Jun, Aug, Oct, Dec)
 
    So an `A` workflow fires every two months; same for `B`; together they cover every month, alternating.
 

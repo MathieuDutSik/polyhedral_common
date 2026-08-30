@@ -21,7 +21,6 @@ matrices.
 intersection of polyhedral cones.
 * `Copositivity`: This is for checking the copositivity code.
 * `DirectVolumePolytope`: computation of the volume of polytopes.
-* `DoubleCosets`: Computation of double cosets (unfinished).
 * `EnumLatticeDelaunays`: Enumeration of Delaunay polytopes of lattices.
 * `EquiStabDatabase`: Memoization of equivalence and stabilizers.
 * `EquivDualDesc`: Equivariant computation of dual description.
@@ -31,11 +30,13 @@ which is invariant under transformation.
 * `GroupSkeleton`: Computing the automorphism group by using the skeleton.
 * `Indefinite_Stab_Equi`: Finding automorphism group and equivalence of Lorentzian
 matrices.
-* `IntegralAutomorphy`: Computed the integral automorphism group of a
-configuration of vectors.
 * `IntegralPoints`: Compute the integral points of some polytope.
 * `Isotropic`: Testing existence of isotropic in quadrtaic forms and computing them
 if proven to exist.
+* `RatIntAutomorphy`: Rational and integral automorphism groups of a
+configuration of vectors, the associated isomorphism and canonical form
+codes, and the decomposition of the rational group into double cosets of
+the integral one.
 * `RedundantCtype5`: We test 3 methods for reducing by redundancy.
 * `Reflective`: This is for using the edgewalk algorithm of Allcock for
 building the polyheral cone.

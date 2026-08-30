@@ -1,4 +1,4 @@
-PROGRAM		= GRP_LinPolytopeIntegral_Automorphism GRP_LinPolytope_Automorphism GRP_LinPolytopeIntegral_Automorphism_DoubleCoset
+PROGRAM		= GRP_LinPolytopeIntegral_Automorphism GRP_LinPolytope_Automorphism GRP_LinPolytopeIntegral_Automorphism_DoubleCoset GRP_LinearSpace_Stabilizer_DoubleCoset
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
