@@ -46,16 +46,18 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Compiling the test programs.
         run: |
-          cd src_group && make -f Makefile_rational_automorphy && cd ..
-          cd src_group && make -f Makefile_integral_automorphy && cd ..
-          cd src_group && make -f Makefile_double_cosets && cd ..
-          pwd
+          # One standalone command per build: "cd src_group && make ... && cd .."
+          # would hide a failing make, since errexit ignores a command that is
+          # not the last one of an && list.
+          make -C src_group -f Makefile_rational_automorphy
+          make -C src_group -f Makefile_integral_automorphy
+          make -C src_group -f Makefile_double_cosets
           echo "After compilation of group code"
 
       - name: Test rational and integral automorphy
         run: |
           cd CI_tests/01_RatIntAutomorphy
-          ../../gap.sh < ProcessExamples.g
+          ../../gap.sh --quitonbreak < ProcessExamples.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1
