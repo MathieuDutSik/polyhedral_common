@@ -202,6 +202,16 @@ template <typename T, typename Tint, typename Tgroup> struct IminimumBound {
   IminimumChainConf<T> top_conf;
   // The exceptions, as canonicalized sublattices of the full lattice.
   std::unordered_set<MyMatrix<Tint>> exceptions;
+  // Cache of the calls in dimension at most i + 2. Those calls use no
+  // automorphism reduction, so their results do not depend on the
+  // chain and can be replayed; they are also by far the most numerous
+  // calls of the recursion.
+  struct CachedSmall {
+    T target;
+    IminimumBoundResult<Tint> result;
+    std::vector<MyMatrix<Tint>> excs;
+  };
+  std::unordered_map<MyMatrix<Tint>, std::vector<CachedSmall>> cache_small;
   // Safety bound on the total number of traps processed.
   size_t n_trap = 0;
   size_t max_trap;
@@ -287,7 +297,8 @@ template <typename T, typename Tint, typename Tgroup> struct IminimumBound {
   // leading to S and depth is the length of that chain.
   IminimumBoundResult<Tint> bound_rec(MyMatrix<Tint> const &S, T const &target,
                                       IminimumChainConf<T> const &prefix,
-                                      int const &depth) {
+                                      int const &depth,
+                                      std::vector<MyMatrix<Tint>> *p_exc) {
     int r = S.rows();
     IminimumBoundResult<Tint> result;
     if (r <= i || aborted) {
@@ -297,6 +308,48 @@ template <typename T, typename Tint, typename Tgroup> struct IminimumBound {
       result.fails.push_back(IminimumFailTuple<Tint>{});
       return result;
     }
+    bool cacheable = (r <= i + 2);
+    if (cacheable) {
+      // A cached result for a smaller target is a stronger statement
+      // and can be replayed: its extra exceptions and failures are
+      // conservative. The largest dominated target is the closest
+      // fit.
+      auto iter = cache_small.find(S);
+      if (iter != cache_small.end()) {
+        CachedSmall *best = nullptr;
+        for (auto &cc : iter->second) {
+          // An entry with failures is only replayed on the exact
+          // target, so that its failure constraints do not spam the
+          // caller with unneeded joins.
+          bool usable = cc.result.fails.empty() ? (cc.target <= target)
+                                                : (cc.target == target);
+          if (usable) {
+            if (!best || cc.target > best->target) {
+              best = &cc;
+            }
+          }
+        }
+        if (best) {
+          for (auto &eX : best->excs) {
+            exceptions.insert(eX);
+            if (p_exc) {
+              p_exc->push_back(eX);
+            }
+          }
+          return best->result;
+        }
+      }
+    }
+    std::vector<MyMatrix<Tint>> local_excs;
+    auto insert_exception = [&](MyMatrix<Tint> const &Xfull) -> void {
+      exceptions.insert(Xfull);
+      if (cacheable) {
+        local_excs.push_back(Xfull);
+      }
+      if (p_exc) {
+        p_exc->push_back(Xfull);
+      }
+    };
     MyMatrix<T> S_T = UniversalMatrixConversion<T, Tint>(S);
     MyMatrix<T> G_S = S_T * GramMat * S_T.transpose();
     if (r == i + 1) {
@@ -313,9 +366,10 @@ template <typename T, typename Tint, typename Tgroup> struct IminimumBound {
         if (T(4) * target * det_X < detS) {
           MyMatrix<Tint> Xfull = CanonicalizeSublatticeBasis(
               MyMatrix<Tint>(X * S));
-          exceptions.insert(Xfull);
+          insert_exception(Xfull);
         }
       }
+      cache_small[S].push_back({target, result, local_excs});
       return result;
     }
     int m = r - i;
@@ -341,9 +395,11 @@ template <typename T, typename Tint, typename Tgroup> struct IminimumBound {
     std::unordered_set<MyMatrix<Tint>> seen;
     // The generators of the stabilizer of the chain, computed once:
     // each processed trap has its whole orbit marked as seen, so the
-    // equivalent traps are skipped by the plain lookup below.
+    // equivalent traps are skipped by the plain lookup below. The
+    // small calls forgo the reduction, which is what makes them
+    // cacheable, and their few traps do not need it anyway.
     std::vector<MyMatrix<Tint>> l_dgen;
-    if (!work.empty()) {
+    if (!cacheable && !work.empty()) {
       l_dgen = chain_stab_dual_gens(prefix, S, S_T);
     }
     T eColor(depth + 1);
@@ -388,17 +444,18 @@ template <typename T, typename Tint, typename Tgroup> struct IminimumBound {
       MyMatrix<Tint> K = CanonicalizeSublatticeBasis(NullspaceIntTrMat(Ys));
       MyMatrix<Tint> Ssub = CanonicalizeSublatticeBasis(
           MyMatrix<Tint>(K * S));
+      std::vector<MyMatrix<Tint>> *p_sub_exc =
+          cacheable ? &local_excs : nullptr;
       IminimumBoundResult<Tint> sub;
-      if (r - kW > i + 1) {
-        // The sub call will process its own traps, which needs the
-        // extended chain configuration.
+      if (r - kW > i + 2) {
+        // The sub call will run the automorphism reduction on its own
+        // traps, which needs the extended chain configuration.
         IminimumChainConf<T> child_conf =
             extend_chain_conf(prefix, Ssub, eColor);
-        sub = bound_rec(Ssub, sub_target, child_conf, depth + 1);
+        sub = bound_rec(Ssub, sub_target, child_conf, depth + 1, p_sub_exc);
       } else {
-        // Base case or trivial call: the chain configuration is not
-        // used.
-        sub = bound_rec(Ssub, sub_target, prefix, depth + 1);
+        // Small or base call: the chain configuration is not used.
+        sub = bound_rec(Ssub, sub_target, prefix, depth + 1, p_sub_exc);
       }
       if (sub.fails.empty()) {
         continue;
@@ -424,6 +481,9 @@ template <typename T, typename Tint, typename Tgroup> struct IminimumBound {
           work.push_back(newtup);
         }
       }
+    }
+    if (cacheable && !aborted) {
+      cache_small[S].push_back({target, result, local_excs});
     }
     return result;
   }
@@ -535,7 +595,7 @@ ComputeIminimumCertified(MyMatrix<T> const &GramMat, int const &i,
     IminimumBound<T, Tint, Tgroup> bnd(GramMat, i, max_trap, os);
     MyMatrix<Tint> S_top = IdentityMat<Tint>(n);
     IminimumBoundResult<Tint> res =
-        bnd.bound_rec(S_top, R2, bnd.top_conf, 0);
+        bnd.bound_rec(S_top, R2, bnd.top_conf, 0, nullptr);
 #ifdef DEBUG_IMINIMUM
     os << "IMINIMUM: BOUND |fails|=" << res.fails.size()
        << " |exceptions|=" << bnd.exceptions.size()
