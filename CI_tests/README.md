@@ -27,7 +27,7 @@ intersection of polyhedral cones.
 * `FindPositiveVectors`: Finding positive vectors of indefinite forms.
 * `GeometricallyUnique`: Finding interior point in polytope defined by facets,
 which is invariant under transformation.
-* `GroupSkeleton`: Computing the automorphism group by using the skeleton.
+* `facelatticegen`: Computing the automorphism group by using the skeleton.
 * `Indefinite_Stab_Equi`: Finding automorphism group and equivalence of Lorentzian
 matrices.
 * `IntegralPoints`: Compute the integral points of some polytope.
