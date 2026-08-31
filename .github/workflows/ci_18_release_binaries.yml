@@ -30,6 +30,14 @@ jobs:
       GMP_PATH: /home/runner/work/opt/gmp-6.2.1
       GMP_INCDIR: /home/runner/work/opt/gmp-6.2.1/include
       GMP_CXX_LINK: "/home/runner/work/opt/gmp-6.2.1/lib/libgmpxx.a /home/runner/work/opt/gmp-6.2.1/lib/libgmp.a"
+      # Makefile_latt_can_aut_iso references the bliss variables although it is
+      # built without -DUSE_BLISS, so it uses Traces and needs no bliss symbol.
+      # LIBBLISS_INCDIR must still be non empty, otherwise "-I$(LIBBLISS_INCDIR)"
+      # expands to a bare -I that swallows the following flag. LIBBLISS_LINK is
+      # left empty on purpose: these are static release binaries and must not
+      # gain a dynamic dependency on libbliss.
+      LIBBLISS_INCDIR: /usr/include
+      LIBBLISS_LINK: ""
 
     steps:
       - uses: actions/checkout@v7
@@ -52,22 +60,19 @@ jobs:
           ( cd gmp-6.2.1 && ./configure --enable-shared=no --enable-static=yes --enable-cxx --prefix=$GMP_PATH && make && make install )
           echo "After gmp-6.2.1 compilation"
 
-          make -C src_lorentzian -f Makefile_target
+          make -C src_lorentzian -f Makefile_Allcock_edgewalk
           strip src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk
           echo "After compilation of LORENTZ_FundDomain_AllcockEdgewalk"
 
-          make -C src_latt -f Makefile_target
-          strip src_latt/sv_exact src_latt/LATT_canonicalize
-          echo "After compilation of sv_exact and LATT_canonicalize"
+          make -C src_latt -f Makefile_latt_can_aut_iso LATT_Canonicalize
+          strip src_latt/LATT_Canonicalize
+          echo "After compilation of LATT_Canonicalize"
 
       - name: Make zip of LORENTZ_FundDomain_AllcockEdgewalk
         run: zip -j LORENTZ_FundDomain_AllcockEdgewalk-linux.zip src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk
 
-      - name: Make zip of sv_exact
-        run: zip -j sv_exact-linux.zip src_latt/sv_exact
-
-      - name: Make zip of LATT_canonicalize
-        run: zip -j LATT_canonicalize-linux.zip src_latt/LATT_canonicalize
+      - name: Make zip of LATT_Canonicalize
+        run: zip -j LATT_Canonicalize-linux.zip src_latt/LATT_Canonicalize
 
       - name: Upload LORENTZ_FundDomain_AllcockEdgewalk to release
         uses: svenstaro/upload-release-action@v2
@@ -78,20 +83,11 @@ jobs:
           tag: ${{ github.ref }}
           overwrite: true
 
-      - name: Upload sv_exact to release
+      - name: Upload LATT_Canonicalize to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: sv_exact-linux.zip
-          asset_name: sv_exact-linux-FINAL.zip
-          tag: ${{ github.ref }}
-          overwrite: true
-
-      - name: Upload LATT_canonicalize to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: LATT_canonicalize-linux.zip
-          asset_name: LATT_canonicalize-linux-FINAL.zip
+          file: LATT_Canonicalize-linux.zip
+          asset_name: LATT_Canonicalize-linux-FINAL.zip
           tag: ${{ github.ref }}
           overwrite: true

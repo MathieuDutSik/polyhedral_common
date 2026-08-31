@@ -34,7 +34,6 @@ problems in Geometry of Numbers:
 
 The relevant programs are:
   * **LATT_near** It allows to do those operations using LLL.
-  * **sv_exact** the same with different APIs.
 
 The algorithm used in this work is the one by
   * Fincke, U. and Pohst, M., Improved methods for calculating vectors of short length in a lattice, including a complexity analysis, Mathematics of Computation, 44, 1985, 463--471
@@ -59,9 +58,9 @@ For a positive definite quadratic form, we want to find the canonical form of a 
 useful for enumeration purposes.
 
 Programs:
-  * **LATT_canonicalize** Canonicalize a positive definite form
-  * **LATT_canonicalizeMultiple** Canonicalize several positive forms with the first one being positive definite.
-  * **LATT_canonicalizeSymplectic** Finding the canonical form with the equivalence being a symplectic matrix.
+  * **LATT_Canonicalize** Canonicalize a positive definite form
+  * **LATT_CanonicalizeMultiple** Canonicalize several positive forms with the first one being positive definite.
+  * **LATT_CanonicalizeSymplectic** Finding the canonical form with the equivalence being a symplectic matrix.
 
 Reference:
   * Mathieu Dutour Sikirić, Anna Haensch, John Voight, Wessel Van Woerden, A canonical form for positive definite matrices, [preprint at arxiv:2004.14022](https://arxiv.org/abs/2004.14022), Proceedings of the Fourteenth Algorithmic Number Theory Symposium (ANTS-XIV), edited by Steven Galbraith, Open Book Series 4, Mathematical Sciences Publishers, Berkeley, 2020.

@@ -1,3 +1,14 @@
+# The CI drivers are fed to GAP on stdin. On an error GAP enters the break
+# loop and then consumes the remaining lines of the driver as break loop
+# input, so execution still reaches CI_Write_Ok, the CI_CONCLUSION file gets
+# written and the CI job passes although the test never ran. Terminate on any
+# error instead. This is armed here so that every driver reading common.g gets
+# it, before any of its own code runs.
+OnBreak:=function()
+    Print("A GAP error occurred, aborting the test\n");
+    ForceQuitGap(1);
+end;
+
 starts_with:=function(big_str, small_str)
     local len_sma, len_big, red_str;
     len_sma:=Length(small_str);

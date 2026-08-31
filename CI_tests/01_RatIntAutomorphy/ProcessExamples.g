@@ -1,12 +1,3 @@
-# A GAP error enters the break loop, and since this file is fed to GAP on
-# stdin the remaining lines are then consumed as break loop input, so
-# execution still reaches CI_Write_Ok and the CI job passes although
-# nothing ran. Make any error terminate GAP instead.
-OnBreak:=function()
-    Print("A GAP error occurred, aborting the test\n");
-    ForceQuitGap(1);
-end;
-
 Read("../common.g");
 Read("../access_points.g");
 
