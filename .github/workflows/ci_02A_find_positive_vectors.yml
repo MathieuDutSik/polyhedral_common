@@ -1,13 +1,16 @@
-name: CI(09A) of Isotropic vector code.
+name: CI(02A) of the search for positive vectors of indefinite forms
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
 # on: release
 
+# Formerly the second driver of CI(09A), now a section of its own so that
+# a failure names the code it comes from. The B slot of day 2 is free.
+
 on:
   # One time per month
   schedule:
-    - cron: "0 0 9 1,3,5,7,9,11 *"
+    - cron: "0 0 2 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -39,16 +42,16 @@ jobs:
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
-      - name: Test isotropic code
+      - name: Test the search for positive vectors
         run: |
           make -C src_isotropy
           echo "After compilation of isotropy code"
 
-          cd CI_tests/09A_Isotropic
-          ../../gap.sh < TestIsotropic.g
+          cd CI_tests/02A_FindPositiveVectors
+          ../../gap.sh < FindPositiveVector.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1
           fi
           cd ../..
-          echo "After test of isotropy code on examples"
+          echo "After the search for positive vectors"
