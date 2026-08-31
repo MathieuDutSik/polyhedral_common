@@ -1,4 +1,4 @@
-name: CI(15) of Linear programming
+name: CI(15) of Linear programming and LinearDetermineByInequalities
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -39,20 +39,25 @@ jobs:
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
-      - name: Test linear programming
+      - name: Test linear programming and linear determination
         run: |
           make -C src_poly -f Makefile_linear_programming
+          # Makefile_linear_programming builds POLY_cdd_LinearProgramming and
+          # POLY_LinearDetermineByInequalities, so it covers both drivers. The
+          # former section 32_LinearDetermineByInequalities is folded in here.
           echo "After compilation of linear programming code"
 
           cd CI_tests/15_LinearProgramming
           ../../gap.sh < TestLinearProgramming.g
           if [ ! -f "CI_CONCLUSION" ]; then
-            echo "The gap test code has not created the expected file" >&2
+            echo "TestLinearProgramming.g has not created the expected file" >&2
             exit 1
           fi
+          # Each driver calls CI_Decision_Reset first, so this second check
+          # cannot be satisfied by the file the previous one left behind.
           ../../gap.sh < TestLinearDetermine.g
           if [ ! -f "CI_CONCLUSION" ]; then
-            echo "The gap test code has not created the expected file" >&2
+            echo "TestLinearDetermine.g has not created the expected file" >&2
             exit 1
           fi
           cd ../..
