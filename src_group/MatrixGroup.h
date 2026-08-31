@@ -1771,6 +1771,16 @@ IterativeSimplificationDoubleCoset(
     }
     return norm;
   };
+  // The groups GRP_U, GRP_V and cos_perm live on the permutation domain built
+  // by MatrixIntegral_MapMatrix, which for a helper with a determining ext is
+  // the concatenation of the nbRow rows of EXTfaithful with the orbit. The raw
+  // f_get_perm only returns the orbit part, so it must be mapped the same way
+  // before being combined with elements of GRP_U / GRP_V.
+  auto f_get_perm_dom = [&](MyMatrix<T> const &eMatr) -> Telt {
+    return MatrixIntegral_MapMatrix<
+        T, Telt, Thelper, std::function<Telt(MyMatrix<T> const &)>>(
+        helper, f_get_perm, eMatr, os);
+  };
   Telt id = GRP_U.get_identity();
   auto get_result_reduction = [&](Telt const &x_u, Telt const &x_v) -> Tresult {
     Telt cos_perm_cand = x_u * cos_perm * x_v;
@@ -1787,14 +1797,14 @@ IterativeSimplificationDoubleCoset(
   Telt elt_v = id;
   Tresult res_work = get_result_reduction(elt_u, elt_v);
   auto get_final = [&]() -> ResultSimplificationDoubleCosets<T, Telt> {
-    Telt udv_u_img = f_get_perm(res_work.first.udv.u_red);
-    Telt udv_v_img = f_get_perm(res_work.first.udv.v_red);
+    Telt udv_u_img = f_get_perm_dom(res_work.first.udv.u_red);
+    Telt udv_v_img = f_get_perm_dom(res_work.first.udv.v_red);
     Telt elt_u_ret = udv_u_img * elt_u;
     Telt elt_v_ret = elt_v * udv_v_img;
     Telt cos_perm_ret = elt_u_ret * cos_perm * elt_v_ret;
     MyMatrix<T> const &cos_matr = res_work.first.udv.d_cos_red;
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-    if (f_get_perm(cos_matr) != cos_perm_ret) {
+    if (f_get_perm_dom(cos_matr) != cos_perm_ret) {
       std::cerr << "MATGRP: cos_matr is not as we expect\n";
       throw TerminalException{1};
     }
