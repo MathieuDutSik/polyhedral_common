@@ -20,26 +20,21 @@ jobs:
 
     steps:
       - name: Checkout polyhedral common
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           path: polyhedral_common
 
       - name: Checkout basic common cpp
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           repository: MathieuDutSik/basic_common_cpp
           path: basic_common_cpp
 
       - name: Checkout permutalib
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           repository: MathieuDutSik/permutalib
           path: permutalib
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
 
       - name: list contents of reportery
         run: |

@@ -27,7 +27,7 @@ jobs:
         run: ./scripts/remove_directories_from_linting.sh
 
       - name: Lint Full Code Base weekly
-        uses: github/super-linter@v4
+        uses: github/super-linter@v7
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: master

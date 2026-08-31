@@ -26,13 +26,9 @@ jobs:
       MPI_LINK_CPP: "-lboost_mpi"
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
       - name: Install Dependencies
         run: |
           sudo apt-get update

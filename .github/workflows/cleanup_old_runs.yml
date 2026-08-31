@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Delete workflow runs older than 3 months
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const cutoff = new Date();
