@@ -308,9 +308,36 @@ TestCase_LinPolytopeIntegral_Automorphy_DoubleCoset:=function(EXT)
     return TestDoubleCosetPermDecomposition(GRP_rat.GAPperm, GRP_U, GRP_V.GAPperm, RecResult.DoubleCosetsPerm);
 end;
 
+# Scale a rational matrix to a primitive integral one, the GAP counterpart of
+# RemoveFractionMatrix of src_matrix. Scaling a lattice basis by a rational
+# does not change the stabilizer of the lattice.
+RemoveFractionMatrix:=function(M)
+    local den, eLine, eVal, N, g;
+    den:=1;
+    for eLine in M
+    do
+        for eVal in eLine
+        do
+            den:=Lcm(den, DenominatorRat(eVal));
+        od;
+    od;
+    N:=den * M;
+    g:=0;
+    for eLine in N
+    do
+        for eVal in eLine
+        do
+            g:=Gcd(g, eVal);
+        od;
+    od;
+    if g > 1 then
+        N:=N / g;
+    fi;
+    return N;
+end;
+
 TestCase_LinearSpace_Stabilizer_DoubleCoset:=function(EXT)
-    local dim, eRecGrp, GRP_rat, TheSpace, GRP_V, GRP_U, RecResult, DoubleCosetsPerm;
-    dim:=Length(EXT[1]);
+    local eRecGrp, GRP_rat, GRP_V, eBasis, InvBasis, ListMatrGens, V_gens, LattToStab, GRP_U, RecResult, DoubleCosetsPerm, f_perm;
     Print("Begin TestCase_LinearSpace_Stabilizer_DoubleCoset, Det(BaseIntMat(EXT))=", DeterminantMat(BaseIntMat(EXT)), "\n");
     eRecGrp:=GetRationalAndIntegralGroups(EXT);
     if eRecGrp=fail then
@@ -318,14 +345,32 @@ TestCase_LinearSpace_Stabilizer_DoubleCoset:=function(EXT)
     fi;
     GRP_rat:=eRecGrp.GRP_rat;
     GRP_V:=eRecGrp.GRP_V;
-    TheSpace:=IdentityMat(dim);
-    RecResult:=get_linear_space_stabilizer_double_cosets(GRP_rat.GAPmatr, TheSpace, GRP_V.GAPmatr);
+    # The C++ side requires an integral matrix group: see
+    # LinPolytopeIntegral_Automorphism_Subspaces in src_group/MatrixGroup.h,
+    # which conjugates the group into the Z-basis of the configuration and
+    # then stabilizes RemoveFractionMatrix(Inverse(eBasis)). Handing over the
+    # rational group together with the identity space instead makes
+    # LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel convert non integral
+    # generators to integers and abort on a ConversionError.
+    eBasis:=BaseIntMat(EXT);
+    InvBasis:=Inverse(eBasis);
+    ListMatrGens:=List(GRP_rat.GAPmatr, x->eBasis * x * InvBasis);
+    V_gens:=List(GRP_V.GAPmatr, x->eBasis * x * InvBasis);
+    LattToStab:=RemoveFractionMatrix(InvBasis);
+    RecResult:=get_linear_space_stabilizer_double_cosets(ListMatrGens, LattToStab, V_gens);
     if is_error(RecResult) then
         return false;
     fi;
     Print("We have RecResult\n");
-    DoubleCosetsPerm:=List(RecResult.ListCos, xMat->PermList(List(EXT, xVert->Position(EXT, xVert*xMat))));
-    GRP_U:=Group(List(GeneratorsOfGroup(RecResult.GRPmatr), xMat->PermList(List(EXT, xVert->Position(EXT, xVert*xMat)))));
+    # The result is expressed in the Z-basis, conjugate it back before letting
+    # it act on the vertices of EXT.
+    f_perm:=function(xMat)
+        local yMat;
+        yMat:=InvBasis * xMat * eBasis;
+        return PermList(List(EXT, xVert->Position(EXT, xVert*yMat)));
+    end;
+    DoubleCosetsPerm:=List(RecResult.ListCos, f_perm);
+    GRP_U:=Group(List(GeneratorsOfGroup(RecResult.GRPmatr), f_perm));
     return TestDoubleCosetPermDecomposition(GRP_rat.GAPperm, GRP_U, GRP_V.GAPperm, DoubleCosetsPerm);
 end;
 
