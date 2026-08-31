@@ -21,9 +21,15 @@ template <typename T, typename Telt> struct DataGAP {
   // permutation
   Telt permutation;
   // group, list: List of entries, which applies for group as well.
+  // record: the values of the entries, ListRecKey[i] naming ListEnt[i].
   std::vector<DataGAP<T, Telt>> ListEnt;
-  // record: The entries of record
-  std::vector<std::pair<std::string, DataGAP<T, Telt>>> ListRec;
+  // record: the names of the entries, parallel to ListEnt.
+  // This used to be a std::vector<std::pair<std::string, DataGAP>>, which is
+  // ill formed: std::vector may be instantiated over an incomplete element
+  // type, but std::pair may not, and DataGAP is still incomplete here. Only
+  // libstdc++ diagnoses it, in a type trait on the pair and in the pointer
+  // arithmetic of the vector, which is what the conformance check reports.
+  std::vector<std::string> ListRecKey;
 };
 
 std::vector<std::string> ParseStringByComma(std::string const &estr) {
@@ -118,15 +124,16 @@ DataGAP<T, Telt> ParseGAPString(std::string const &full_str) {
     }
     std::vector<std::string> LStr =
         ParseStringByComma(full_str.substr(4, n_char - 5));
-    std::vector<std::pair<std::string, DataGAP<T, Telt>>> LVal;
+    std::vector<DataGAP<T, Telt>> LVal;
+    std::vector<std::string> LKey;
     for (auto &estr : LStr) {
       size_t pos = estr.find(":=");
       std::string name = std::string(estr.substr(0, pos));
       std::string sstr = estr.substr(pos + 2, estr.size() - 2 - pos);
-      DataGAP<T, Telt> eEnt = ParseGAPString<T, Telt>(sstr);
-      LVal.push_back({name, eEnt});
+      LKey.push_back(name);
+      LVal.push_back(ParseGAPString<T, Telt>(sstr));
     }
-    return {GapObjectNature::record, {}, {}, {}, {}, LVal};
+    return {GapObjectNature::record, {}, {}, {}, LVal, LKey};
   }
   // Case 3: the permutation case
   if (full_str.substr(0, 1) == "(") {

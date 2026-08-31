@@ -18,11 +18,11 @@ EquivariantDualDescription<T, Tgroup> ConvertGAPread_EquivDualDesc(
   }
   int pos_EXT = -1;
   int pos_GRP = -1;
-  int n_pos = dataEXT.ListRec.size();
+  int n_pos = dataEXT.ListRecKey.size();
   for (int pos = 0; pos < n_pos; pos++) {
-    if (dataEXT.ListRec[pos].first == "EXT")
+    if (dataEXT.ListRecKey[pos] == "EXT")
       pos_EXT = pos;
-    if (dataEXT.ListRec[pos].first == "Group")
+    if (dataEXT.ListRecKey[pos] == "Group")
       pos_GRP = pos;
   }
   if (pos_EXT == -1) {
@@ -34,10 +34,10 @@ EquivariantDualDescription<T, Tgroup> ConvertGAPread_EquivDualDesc(
     throw TerminalException{1};
   }
   MyMatrix<T> EXT =
-      datagap::ConvertGAPread_MyMatrixT(dataEXT.ListRec[pos_EXT].second);
+      datagap::ConvertGAPread_MyMatrixT(dataEXT.ListEnt[pos_EXT]);
   int n_rows = EXT.rows();
   Tgroup GRP = datagap::ConvertGAPread_PermutationGroup<T, Tgroup>(
-      dataEXT.ListRec[pos_GRP].second, n_rows);
+      dataEXT.ListEnt[pos_GRP], n_rows);
   //
   vectface ListFace = ConvertGAPread_ListFace(dataFAC, n_rows);
   //
