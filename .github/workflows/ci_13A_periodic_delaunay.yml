@@ -51,7 +51,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test the periodic Delaunay and iso-Delaunay computations
         run: |
-          cd src_delaunay && make -f Makefile_periodic && cd ..
+          make -C src_delaunay -f Makefile_periodic
           echo "After compilation of the periodic tests and driver"
 
           cd CI_tests/13A_PeriodicDelaunay

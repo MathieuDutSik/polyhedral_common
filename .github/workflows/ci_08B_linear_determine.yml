@@ -41,7 +41,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test LinearDetermineByInequalities
         run: |
-          cd src_poly && make -f Makefile_linear_determine && cd ..
+          make -C src_poly -f Makefile_linear_determine
           echo "After compilation of POLY_LinearDetermineByInequalities"
 
           cd CI_tests/32_LinearDetermineByInequalities

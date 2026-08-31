@@ -42,7 +42,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test dual description of WythoffH4
         run: |
-          cd src_dualdesc && make -f Makefile_serial_dualdesc && cd ..
+          make -C src_dualdesc -f Makefile_serial_dualdesc
           echo "After compilation of Dual description code"
 
           cd CI_tests/28A_WythoffH4

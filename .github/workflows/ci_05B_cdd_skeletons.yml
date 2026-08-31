@@ -41,7 +41,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test CDD skeletons
         run: |
-          cd src_poly && make -f Makefile_cdd_skeletons && cd ..
+          make -C src_poly -f Makefile_cdd_skeletons
           echo "After compilation of POLY_cdd_skeletons"
 
           cd CI_tests/31_CddSkeletons

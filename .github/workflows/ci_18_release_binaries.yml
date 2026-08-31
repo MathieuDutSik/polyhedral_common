@@ -47,13 +47,17 @@ jobs:
           # wget --no-check-certificate https://gmplib.org/download/gmp/gmp-6.2.1.tar.bz2
           wget https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.bz2
           tar -vxjf gmp-6.2.1.tar.bz2
-          cd gmp-6.2.1 && ./configure --enable-shared=no --enable-static=yes --enable-cxx --prefix=$GMP_PATH && make && make install && cd ..
+          # A subshell, so that a failure of any step still fails the job:
+          # errexit skips a command that is not the last of an && list.
+          ( cd gmp-6.2.1 && ./configure --enable-shared=no --enable-static=yes --enable-cxx --prefix=$GMP_PATH && make && make install )
           echo "After gmp-6.2.1 compilation"
 
-          cd src_lorentzian && make -f Makefile_target && strip LORENTZ_FundDomain_AllcockEdgewalk && cd ..
+          make -C src_lorentzian -f Makefile_target
+          strip src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk
           echo "After compilation of LORENTZ_FundDomain_AllcockEdgewalk"
 
-          cd src_latt && make -f Makefile_target && strip sv_exact LATT_canonicalize && cd ..
+          make -C src_latt -f Makefile_target
+          strip src_latt/sv_exact src_latt/LATT_canonicalize
           echo "After compilation of sv_exact and LATT_canonicalize"
 
       - name: Make zip of LORENTZ_FundDomain_AllcockEdgewalk

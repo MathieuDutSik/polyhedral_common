@@ -44,8 +44,8 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test enumeration of perfect cones in Lorentzian lattices
         run: |
-          cd src_lorentzian && make -f Makefile_perfect_lorentzian && cd ..
-          cd src_lorentzian && make -f Makefile_stab_equi && cd ..
+          make -C src_lorentzian -f Makefile_perfect_lorentzian
+          make -C src_lorentzian -f Makefile_stab_equi
           pwd
           echo "After compilation of LORENTZ_MPI_PerfectLorentzian and stab/equi"
 

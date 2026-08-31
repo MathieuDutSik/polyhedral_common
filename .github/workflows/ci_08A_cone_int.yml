@@ -43,7 +43,7 @@ jobs:
 
       - name: Test cone intersections
         run: |
-          cd src_polydecomp && make -f Makefile_cone_int && cd ..
+          make -C src_polydecomp -f Makefile_cone_int
           pwd
           echo "After compilation of Cone intersection test code"
 

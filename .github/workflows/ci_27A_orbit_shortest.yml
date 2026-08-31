@@ -39,7 +39,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test enumeration of orbits of shortest vectors
         run: |
-          cd src_latt && make -f Makefile_orbit_shortest && cd ..
+          make -C src_latt -f Makefile_orbit_shortest
           pwd
           echo "After compilation of enumeration of orbits of shortest vectors"
 

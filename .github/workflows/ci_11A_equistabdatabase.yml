@@ -41,7 +41,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test equi-stab database code
         run: |
-          cd src_latt && make -f Makefile_equistabdatabase && cd ..
+          make -C src_latt -f Makefile_equistabdatabase
           echo "After compilation of equi-stab database code"
 
           cd CI_tests/11A_EquiStabDatabase

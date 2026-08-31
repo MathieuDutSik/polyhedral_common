@@ -41,7 +41,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test copositivity software
         run: |
-          cd src_polygen && make && cd ..
+          make -C src_polygen
           echo "After compilation of generalized polytopes code"
 
           cd CI_tests/12B_GenPolytopes

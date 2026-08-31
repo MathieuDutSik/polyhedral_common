@@ -38,7 +38,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test the serial Delaunay computations
         run: |
-          cd src_delaunay && make -f Makefile_serial_delaunay LATT_SerialComputeDelaunay && cd ..
+          make -C src_delaunay -f Makefile_serial_delaunay LATT_SerialComputeDelaunay
           echo "After compilation of LATT_SerialComputeDelaunay"
 
           cd CI_tests/29_SerialDelaunayQueries

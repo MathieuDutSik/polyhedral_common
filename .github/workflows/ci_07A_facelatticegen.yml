@@ -37,7 +37,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test face lattice code
         run: |
-          cd src_dualdesc && make -f Makefile_facelatticegen && cd ..
+          make -C src_dualdesc -f Makefile_facelatticegen
           pwd
           echo "After compilation of face lattice gen"
 

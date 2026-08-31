@@ -7,7 +7,7 @@ name: CI(26B) of test of group finiteness
 on:
   # One time per month
   schedule:
-    - cron: "0 0 26 2,4,6,7,10,12 *"
+    - cron: "0 0 26 2,4,6,8,10,12 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -42,7 +42,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Running the Matrix group finiteness test
         run: |
-          cd src_latt && make -f Makefile_grp_finiteness && cd ..
+          make -C src_latt -f Makefile_grp_finiteness
           pwd
           echo "After compilation of GRP_TestFiniteness"
 

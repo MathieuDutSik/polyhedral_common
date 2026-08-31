@@ -41,7 +41,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test linear programming
         run: |
-          cd src_poly && make -f Makefile_linear_programming && cd ..
+          make -C src_poly -f Makefile_linear_programming
           echo "After compilation of linear programming code"
 
           cd CI_tests/15_LinearProgramming

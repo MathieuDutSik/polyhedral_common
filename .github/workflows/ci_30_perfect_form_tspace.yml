@@ -44,7 +44,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test enumeration of perfect forms in T-spaces
         run: |
-          cd src_perfect && make -f Makefile_perfectenum && cd ..
+          make -C src_perfect -f Makefile_perfectenum
           pwd
           echo "After compilation of PERF_SerialEnumeratePerfectCones"
 

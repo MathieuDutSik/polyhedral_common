@@ -37,7 +37,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test geometrically unique point
         run: |
-          cd src_latt && make -f Makefile_vector_set && cd ..
+          make -C src_latt -f Makefile_vector_set
           pwd
           echo "After compilation of generation of vector sets"
 

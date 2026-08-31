@@ -46,7 +46,7 @@ jobs:
 
       - name: Test dual description using symmetries
         run: |
-          cd src_dualdesc && make -f Makefile_serial_dualdesc && cd ..
+          make -C src_dualdesc -f Makefile_serial_dualdesc
           echo "After compilation of dual desc code"
 
           cd CI_tests/16_EquivDualDesc

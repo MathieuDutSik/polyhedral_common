@@ -41,12 +41,13 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test canonicalization
         run: |
-          cd src_latt && make -f Makefile_latt_can_aut_iso && cd ..
+          make -C src_latt -f Makefile_latt_can_aut_iso
           pwd
           echo "After compilation of lattice code"
 
           # Running the test
-          cd CI_tests/04A_LattAutIsomCan && ../../gap.sh < AllTests.g
+          cd CI_tests/04A_LattAutIsomCan
+          ../../gap.sh < AllTests.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1

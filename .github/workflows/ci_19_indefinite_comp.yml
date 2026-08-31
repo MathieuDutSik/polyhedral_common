@@ -37,7 +37,7 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test of indefinite forms
         run: |
-          cd src_indefinite && make -f Makefile_indef_ci && cd ..
+          make -C src_indefinite -f Makefile_indef_ci
           echo "After compilation of indefinite codes"
 
           # Running the test

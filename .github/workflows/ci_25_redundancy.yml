@@ -40,11 +40,11 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test redundant code.
         run: |
-          cd src_group && make -f Makefile_aut_group && cd ..
+          make -C src_group -f Makefile_aut_group
           pwd
           echo "After compilation of LinPolytope of automorphism"
 
-          cd src_poly && make -f Makefile_redundancy && cd ..
+          make -C src_poly -f Makefile_redundancy
           pwd
           echo "After compilation of redundancy code"
 
