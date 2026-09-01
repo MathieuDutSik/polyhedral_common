@@ -50,7 +50,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `26B_Matrix_group_finiteness` -- `ci_26B_finite_groups`: Test of group finiteness.
 * `27A_OrbitShortestVector` -- `ci_27A_orbit_shortest`: Orbit of shortest vectors.
 * `28A_WythoffH4` -- `ci_28A_wythoff_H4`: This is for computing the dual description of the facets of the orbit of `x W(H4)` for x a random vector (there are 4 orbits).
-* `28B_LorentzianPerf` -- `ci_28B_perfect_lorentzian`: Enumeration of perfect lorentzian cones.
+* `28B_LorentzianPerfStabEqui` -- `ci_28B_perfect_lorentzian`: Enumeration of perfect lorentzian cones, and stabilizer/equivalence of the resulting forms.
 * `29_SerialDelaunayQueries` -- `ci_29_serial_delaunay_queries`: Serial Delaunay computations.
 * `30_PerfectFormTspace` -- `ci_30_perfect_form_tspace`: Perfect Forms in T-spaces.
 

@@ -49,7 +49,7 @@ jobs:
           pwd
           echo "After compilation of LORENTZ_MPI_PerfectLorentzian and stab/equi"
 
-          cd CI_tests/28B_LorentzianPerf
+          cd CI_tests/28B_LorentzianPerfStabEqui
           ../../gap.sh < TestPerfLorentzian.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
