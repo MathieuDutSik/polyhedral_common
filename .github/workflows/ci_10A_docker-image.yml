@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # The checkout is only here to provide the Dockerfile: that file has no
+    # COPY and no ADD, it clones polyhedral_common itself with --recursive,
+    # so the build context is unused and submodules are not needed here.
     - uses: actions/checkout@v7
 
     - name: Log in to the GitHub Container Registry
