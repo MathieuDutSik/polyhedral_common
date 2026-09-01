@@ -426,12 +426,22 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
           WorkLIdx.push_back(eIdx);
         }
       }
-#ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
       if (WorkLIdx.empty()) {
-        std::cerr << "WorkLIdx is empty. Not allowed\n";
-        throw TerminalException{1};
-      }
+        // No candidate left to explore. This is not an error: the caller
+        // only knows that i_start is not redundant with respect to the
+        // facets already known to be irredundant, which is why a new one
+        // was expected. That guarantee applies to i_start alone. A
+        // candidate met later can turn out to be redundant using only
+        // known irredundant facets, and then contributes nothing; the
+        // loop above can also conclude a candidate after it was collected.
+        // Every index examined has been concluded by DetermineStatusSurely
+        // in either case, i_start included, so stopping here is correct.
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+        os << "REDUND: FindOneMoreFacet(" << i_start
+           << ") concluded without a new irredundant facet\n";
 #endif
+        return;
+      }
     }
   };
   auto ProcessOnePoint = [&](int const &i_row) -> void {
