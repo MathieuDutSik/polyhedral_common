@@ -1,0 +1,60 @@
+name: CI(02B) of polytopes over real algebraic fields
+
+# https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
+# model taken from https://github.com/mockersf/kmanb/releases
+# on: release
+
+# The regular N-gons of CI_tests/02B_RealAlgebraicPolytope/RegularNgons are
+# given over Q(sin(2*pi/N)), so both the automorphism group and the dual
+# description run on the real algebraic arithmetic rather than the rational
+# one, which is what this section is for.
+
+on:
+  # One time per month
+  schedule:
+    - cron: "0 0 2 2,4,6,8,10,12 *"
+  # Manually triggered
+  workflow_dispatch:
+  # Disabled right now, when a push is made on master.
+jobs:
+  build-linux:
+    timeout-minutes: 120  # 2 hours
+    runs-on: ubuntu-latest
+    env:
+      GMP_INCDIR: /usr/include
+      GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
+      BOOST_INCDIR: "/usr/include"
+      BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
+      EIGEN_PATH: /home/runner/work/opt/eigen
+      NAUTY_PATH: /home/runner/work/opt/nauty
+      NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
+      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
+      LIBBLISS_PATH: /home/runner/opt/libbliss
+      LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
+      LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/install-boost
+
+      - uses: ./.github/actions/install-nauty
+      - uses: ./.github/actions/install-bliss
+      - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-gap
+      - name: Test the regular N-gons over their real algebraic fields
+        run: |
+          make -C src_group -f Makefile_aut_group
+          make -C src_poly -f Makefile_simple_dual_desc
+          echo "After compilation of the automorphism and dual description code"
+
+          cd CI_tests/02B_RealAlgebraicPolytope
+          ../../gap.sh < TestRegularNgons.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "TestRegularNgons.g has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the regular N-gon tests"
