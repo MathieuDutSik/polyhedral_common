@@ -56,9 +56,9 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 
 Directories under CI_tests that no workflow drives. They hold data or
 past work rather than a runnable test, and are kept on purpose:
+(only directories tracked by git are listed; an empty directory left in a
+working tree is not part of the repository)
 
-* `13_LorentzianStabEqui`
-* `15_FindPositiveVectors`
 * `24B_BrandhortLattices`
 * `DoubleCosets`
 * `Rankin`
