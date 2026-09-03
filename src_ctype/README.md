@@ -8,7 +8,7 @@ Enumeration of iso-edge domains
 -------------------------------
 
 The program **CTYP_MPI_Enumeration_c** is used for enumerating
-the iso-edge domains in dimension six. The result was *55083358*
+the iso-edge domains in dimension six. The result was *55083357*
 types. It was done in 20 processors in one week of computation.
 The result is written in netCDF files.
 
