@@ -26,6 +26,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `06A_GeometricallyUnique` -- `ci_06A_geometrically_unique`: Finding interior point in polytope defined by facets, which is invariant under transformation.
 * `06B_CharacteristicVectorSet` -- `ci_06B_characteristic_vector_set`: Generation of characteristic vector sets.
 * `07A_facelatticegen` -- `ci_07A_facelatticegen`: Computing the automorphism group by using the skeleton.
+* `07B_StronglySemiEutactic` -- `ci_07B_strongly_semi_eutactic`: Determination of whether a positive definite quadratic form is strongly semi-eutactic, on the 34 strongly semi-eutactic perfect forms of dimension 9 and on lattices that are not strongly semi-eutactic.
 * `08_ConeIntersection` -- `ci_08A_cone_int`: This is checking different methods for computing the intersection of polyhedral cones.
 * `09A_Isotropic` -- `ci_09A_isotropic`: Testing existence of isotropic in quadrtaic forms and computing them if proven to exist.
 * `09B_PerfectContractingHomotopy` -- `ci_09B_contracting_homotopy`: For contracting homotopy computations.

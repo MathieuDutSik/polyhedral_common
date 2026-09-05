@@ -1619,6 +1619,96 @@ end;
 
 
 
+# IsStronglySemiEutactic reports on stderr only, so the result is
+# recovered by reading the log. The returned record has the fields
+# min, n_shv, n_node, resolved, is_sse and, when a certificate was
+# found, mu, siz and subset (row indices in the shortest vector
+# matrix used by the program).
+test_strongly_semi_eutactic:=function(arg)
+    local GramMat, options, arith, max_node, print_info, TmpDir, FileI, FileE, eProg, TheCommand, lines, line, rest, LStr, U, is_normal, runtime_str;
+    GramMat:=arg[1];
+    arith:="gmp";
+    max_node:=0;
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.max_node) then
+            max_node:=options.max_node;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, GramMat);
+    eProg:=GetBinaryFilename("IsStronglySemiEutactic");
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI);
+    if max_node > 0 then
+        TheCommand:=Concatenation(TheCommand, " ", String(max_node));
+    fi;
+    TheCommand:=Concatenation(TheCommand, " 2> ", FileE);
+    Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  n=", Length(GramMat), " arith=", arith, " command=IsStronglySemiEutactic runtime=", runtime_str, "\n");
+    fi;
+    if IsExistingFile(FileE)=false then
+        return "program failure: IsStronglySemiEutactic did not write any log";
+    fi;
+    U:=rec(min:=fail, n_shv:=fail, n_node:=fail, resolved:=fail, is_sse:=fail);
+    is_normal:=false;
+    lines:=ReadTextFile(FileE);
+    for line in lines
+    do
+        if starts_with(line, "min=")<>fail then
+            LStr:=SplitString(line, " ");
+            U.min:=Rat(starts_with(LStr[1], "min="));
+            U.n_shv:=Int(starts_with(LStr[2], "|SHV|="));
+        fi;
+        rest:=starts_with(line, "n_node=");
+        if rest<>fail then
+            U.n_node:=Int(rest);
+        fi;
+        if starts_with(line, "The determination is UNRESOLVED")<>fail then
+            U.resolved:=false;
+        fi;
+        if starts_with(line, "The matrix is not strongly semi-eutactic")<>fail then
+            U.resolved:=true;
+            U.is_sse:=false;
+        elif starts_with(line, "The matrix is strongly semi-eutactic")<>fail then
+            U.resolved:=true;
+            U.is_sse:=true;
+        fi;
+        if starts_with(line, "mu=")<>fail then
+            LStr:=SplitString(line, " ");
+            U.mu:=Rat(starts_with(LStr[1], "mu="));
+            U.siz:=Int(starts_with(LStr[2], "|S|="));
+        fi;
+        rest:=starts_with(line, "S={");
+        if rest<>fail then
+            U.subset:=List(Filtered(SplitString(rest{[1..Length(rest)-1]}, ","), x->Length(x)>0), Int);
+        fi;
+        if starts_with(line, "Normal termination of the program")<>fail then
+            is_normal:=true;
+        fi;
+    od;
+    RemoveFile(FileI);
+    RemoveFile(FileE);
+    if is_normal=false then
+        return "program failure: IsStronglySemiEutactic did not terminate normally";
+    fi;
+    if U.resolved=fail then
+        return "program failure: IsStronglySemiEutactic did not report any conclusion";
+    fi;
+    return U;
+end;
+
+
 test_copositivity:=function(arg)
     local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
     eMat:=arg[1];
