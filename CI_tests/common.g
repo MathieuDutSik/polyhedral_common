@@ -274,6 +274,36 @@ OutputStreamMatrix:=function(os, m)
     od;
 end;
 
+# The vector format of ReadVectorFile on the C++ side: the number of
+# entries, then the entries. The whole file is split on the blanks, so
+# the entries can be spread over any number of lines.
+ReadVectorFile:=function(eFile)
+    local LStr, nbRow, TheVect, i;
+    if IsExistingFile(eFile)=false then
+        Print("Failing to read the file eFile=", eFile, "\n");
+        Error("The ReadVectorFile operation did fail");
+    fi;
+    LStr:=Filtered(SplitString(StringFile(eFile), " \n\t\r"), x->Length(x)>0);
+    nbRow:=Int(LStr[1]);
+    if nbRow=fail or Length(LStr) <> nbRow + 1 then
+        Print("eFile=", eFile, " has ", Length(LStr)-1, " entries\n");
+        Error("The vector file is inconsistent with its declared length");
+    fi;
+    TheVect:=[];
+    for i in [1..nbRow]
+    do
+        Add(TheVect, Rat(LStr[i+1]));
+    od;
+    return TheVect;
+end;
+
+WriteVectorFile:=function(eFile, V)
+    local output;
+    output:=OutputTextFile(eFile, true);
+    WriteVector(output, V);
+    CloseStream(output);
+end;
+
 ReadMatrixFile:=function(eFile)
     local is, TheMat;
     if IsExistingFile(eFile)=false then

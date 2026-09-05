@@ -54,9 +54,64 @@ The solution lists are believed to be complete, that being the point of
 the instances, but completeness was not re-established independently
 here -- it is what the new code is meant to confirm.
 
-Still to do
+Status of the enumeration program
+---------------------------------
+
+`src_latt/LATT_ZeroOneSolutions`, built by
+`make -C src_latt -f Makefile_zero_one`, enumerates the solutions with
+the branch and bound of `src_latt/zero_one_solution.h`:
+
+    cd CI_tests/08B_AllZeroOneSolutions
+    ../../src_latt/LATT_ZeroOneSolutions gmp Problem1.matrix Problem1.rhs ZeroOne out
+
+* **Problem1 is solved**: the 56 solutions, complete, in 68 s and
+  5328493 nodes, the output being the same set as `Problem1.solutions`.
+  The reference solver took 6 min 38 s on it.
+* **Problem2 is not solved by that method.** Its rows are of the form
+  "a sum of about ten small coefficients equals 10", so the bound
+  propagation has too much slack to prune and the search tree does not
+  close. It is the harder instance for a combinatorial search even
+  though the reference solver, which is lattice based, does it in
+  3.94 s.
+
+What was measured on Problem2, for whoever picks this up:
+
+* Bound propagation alone reaches 300000 nodes without a solution.
+* The exact linear programming relaxation is cheap at the root
+  (0.7 s for the 778 x 277 program) but its bounds are loose: it only
+  gives 44 <= sum_j x_j <= 64, where the solutions have 50 ones.
+* Adding the 112 rows of an LLL reduced basis of the row lattice of
+  `[A|b]` as extra constraints (coefficients then at most 7) does not
+  close the tree either.
+* The lattice formulation works and is the promising direction, but
+  the enumeration is the obstacle. With `x0` an integral solution and
+  `K` a basis of the kernel, `x` is 0/1 exactly when
+  `|| 2x - 1 ||^2 <= n`, so the solutions are the lattice points of a
+  ball and the count of points equals the count of solutions. The
+  kernel has dimension 164, LLL brings its Gram from 10^37 down to
+  norms 10 to 74 in 2.5 s, and Babai round-off brings the centre from
+  a squared norm of 10^711 down to 2420. But the exact Fincke-Pohst of
+  `CVPSolver` does not finish in dimension 164 even at a fifth of the
+  radius. Closing this needs the stronger pruning of a dedicated
+  solvediophant style enumeration.
+
+The CI test
 -----------
 
-The GAP driver, the access point and the workflow `ci_08B_...` come
-with the enumeration program. Day 8 is free for an even month schedule,
-`ci_08A_cone_int` already running in odd months.
+    cd CI_tests/08B_AllZeroOneSolutions
+    ../../gap.sh < TestZeroOneSolutions.g
+
+driven by `.github/workflows/ci_08B_zero_one_solutions.yml`, on day 8
+of the even months, `ci_08A_cone_int` holding the odd ones. It runs
+seven small cases under the three arithmetics `gmp`, `gmp_boost` and
+`multi_boost`, then the node budget, then Problem1. The whole test is
+a little over a minute, almost all of it Problem1.
+
+The small cases are checked against a brute force enumeration of the
+2^n vectors done in GAP, so their expected answer does not come from
+the program under test. For every case, small or not, each returned
+vector is checked to be 0/1 and to satisfy `A x = b`, and the set of
+returned solutions is compared with the expected one. Problem1 is
+compared against `Problem1.solutions`.
+
+Problem2 is not part of the test, for the reason below.

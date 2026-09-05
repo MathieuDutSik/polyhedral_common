@@ -1624,6 +1624,97 @@ end;
 # min, n_shv, n_node, resolved, is_sse and, when a certificate was
 # found, mu, siz and subset (row indices in the shortest vector
 # matrix used by the program).
+# Enumeration of the x in {0,1}^n with A x = b. The solutions are read
+# from the GAP formatted output file, the statistics from the log. The
+# returned record has the fields solutions, n_solution, n_node and
+# resolved, the last one being false when the node budget was hit, in
+# which case the list of solutions is possibly incomplete.
+get_zero_one_solutions:=function(arg)
+    local A, b, options, arith, max_node, lp_max_depth, print_info, TmpDir, FileA, FileB, FileO, FileE, eProg, TheCommand, U, lines, line, rest, LStr, is_normal, runtime_str;
+    A:=arg[1];
+    b:=arg[2];
+    arith:="gmp";
+    max_node:=0;
+    lp_max_depth:=fail;
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.max_node) then
+            max_node:=options.max_node;
+        fi;
+        if IsBound(options.lp_max_depth) then
+            lp_max_depth:=options.lp_max_depth;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileA:=Filename(TmpDir, "Test.matrix");
+    FileB:=Filename(TmpDir, "Test.rhs");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileA, A);
+    WriteVectorFile(FileB, b);
+    eProg:=GetBinaryFilename("LATT_ZeroOneSolutions");
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileA, " ", FileB, " GAP ", FileO);
+    if max_node > 0 or lp_max_depth <> fail then
+        # The two are positional, so a budget has to be passed along
+        # with the depth. The default stands for "no budget".
+        if max_node = 0 then
+            max_node:=1000000000000;
+        fi;
+        TheCommand:=Concatenation(TheCommand, " ", String(max_node));
+        if lp_max_depth <> fail then
+            TheCommand:=Concatenation(TheCommand, " ", String(lp_max_depth));
+        fi;
+    fi;
+    TheCommand:=Concatenation(TheCommand, " 2> ", FileE);
+    Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  A=", Length(A), "x", Length(A[1]), " arith=", arith, " command=LATT_ZeroOneSolutions runtime=", runtime_str, "\n");
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: LATT_ZeroOneSolutions did not return anything, likely crash";
+    fi;
+    U:=rec(solutions:=ReadAsFunction(FileO)(), n_node:=fail, n_solution:=fail, resolved:=fail);
+    is_normal:=false;
+    lines:=ReadTextFile(FileE);
+    for line in lines
+    do
+        if starts_with(line, "n_node=")<>fail then
+            LStr:=SplitString(line, " ");
+            U.n_node:=Int(starts_with(LStr[1], "n_node="));
+            U.n_solution:=Int(starts_with(LStr[2], "n_solution="));
+        fi;
+        if starts_with(line, "The enumeration is UNRESOLVED")<>fail then
+            U.resolved:=false;
+        fi;
+        if starts_with(line, "The enumeration is complete")<>fail then
+            U.resolved:=true;
+        fi;
+        if starts_with(line, "Normal termination of LATT_ZeroOneSolutions")<>fail then
+            is_normal:=true;
+        fi;
+    od;
+    RemoveFile(FileA);
+    RemoveFile(FileB);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    if is_normal=false then
+        return "program failure: LATT_ZeroOneSolutions did not terminate normally";
+    fi;
+    if U.resolved=fail then
+        return "program failure: LATT_ZeroOneSolutions did not report a conclusion";
+    fi;
+    return U;
+end;
+
+
 test_strongly_semi_eutactic:=function(arg)
     local GramMat, options, arith, max_node, print_info, TmpDir, FileI, FileE, eProg, TheCommand, lines, line, rest, LStr, U, is_normal, runtime_str;
     GramMat:=arg[1];
