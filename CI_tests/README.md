@@ -27,7 +27,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `06B_CharacteristicVectorSet` -- `ci_06B_characteristic_vector_set`: Generation of characteristic vector sets.
 * `07A_facelatticegen` -- `ci_07A_facelatticegen`: Computing the automorphism group by using the skeleton.
 * `07B_StronglySemiEutactic` -- `ci_07B_strongly_semi_eutactic`: Determination of whether a positive definite quadratic form is strongly semi-eutactic, on the 34 strongly semi-eutactic perfect forms of dimension 9 and on lattices that are not strongly semi-eutactic.
-* `08_ConeIntersection` -- `ci_08A_cone_int`: This is checking different methods for computing the intersection of polyhedral cones.
+* `08A_ConeIntersection` -- `ci_08A_cone_int`: This is checking different methods for computing the intersection of polyhedral cones.
 * `09A_Isotropic` -- `ci_09A_isotropic`: Testing existence of isotropic in quadrtaic forms and computing them if proven to exist.
 * `09B_PerfectContractingHomotopy` -- `ci_09B_contracting_homotopy`: For contracting homotopy computations.
 * `11A_EquiStabDatabase` -- `ci_11A_equistabdatabase`: Memoization of equivalence and stabilizers.
@@ -56,10 +56,14 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `30_PerfectFormTspace` -- `ci_30_perfect_form_tspace`: Perfect Forms in T-spaces.
 
 Directories under CI_tests that no workflow drives. They hold data or
-past work rather than a runnable test, and are kept on purpose:
+past work rather than a runnable test, or data staged for a test whose
+code is not written yet, and are kept on purpose:
 (only directories tracked by git are listed; an empty directory left in a
 working tree is not part of the repository)
 
+* `08B_AllZeroOneSolutions` -- the two reference instances of the
+  enumeration of all 0/1 solutions of `A x = b`, with their solutions.
+  The driver and the workflow come with the enumeration program.
 * `24B_BrandhortLattices`
 * `DoubleCosets`
 * `Rankin`
