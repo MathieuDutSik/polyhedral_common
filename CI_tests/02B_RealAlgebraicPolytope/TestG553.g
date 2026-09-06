@@ -17,9 +17,11 @@ Read("../common.g");
 #     the algorithm happens to pick.
 #
 #   * POLY_dual_description, the direct dual description ignoring the
-#     symmetry, which returns the number of facets. It must agree with the
-#     total that the orbits account for, computed here by expanding them
-#     under the group.
+#     symmetry, run by each of its methods, which returns the number of
+#     facets. It must agree with the total that the orbits account for,
+#     computed here by expanding them under the group. The methods run the
+#     computation over the underlying ring of the field, each with its own
+#     kernel, so they are worth exercising separately.
 #
 # The two agreeing pins down the facet count without any hardcoded number:
 # the reference file provides the orbits, the group file provides their sizes.
@@ -81,28 +83,38 @@ GetNbFacetFromOrbits:=function()
 end;
 
 # The direct dual description, without the symmetry, checked against that
-# total.
+# total. lrs is left out: it is correct here but takes minutes on this cone,
+# where the other methods take about a second.
+ListMethod:=["bb", "cdd", "normaliz"];
+
 TestDirectDualDesc:=function(nb_facet_expected)
-    local eProg, FileOut, TheCommand, nbFacet;
+    local eProg, eMethod, FileOut, TheCommand, nbFacet, result;
     eProg:=GetBinaryFilename("POLY_dual_description");
-    FileOut:=Filename(DirectoryTemporary(), "G553.fac");
-    RemoveFileIfExist(FileOut);
-    TheCommand:=Concatenation("(cd ", prefix, " && ", eProg,
-                              " RealAlgebraic=FileDesc5 bb Number G553.ext ",
-                              FileOut, ")");
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("POLY_dual_description created no output\n");
-        return false;
-    fi;
-    nbFacet:=ParseNbFacet(FileOut);
-    RemoveFile(FileOut);
-    Print("|FAC|=", nbFacet, " expected=", nb_facet_expected, "\n");
-    if nbFacet<>nb_facet_expected then
-        Print("The direct dual description disagrees with the orbits\n");
-        return false;
-    fi;
-    return true;
+    result:=true;
+    for eMethod in ListMethod
+    do
+        FileOut:=Filename(DirectoryTemporary(), "G553.fac");
+        RemoveFileIfExist(FileOut);
+        TheCommand:=Concatenation("(cd ", prefix, " && ", eProg,
+                                  " RealAlgebraic=FileDesc5 ", eMethod,
+                                  " Number G553.ext ", FileOut, ")");
+        Exec(TheCommand);
+        if IsExistingFile(FileOut)=false then
+            Print("method=", eMethod, " created no output\n");
+            result:=false;
+            continue;
+        fi;
+        nbFacet:=ParseNbFacet(FileOut);
+        RemoveFile(FileOut);
+        Print("method=", eMethod, " |FAC|=", nbFacet, " expected=",
+              nb_facet_expected, "\n");
+        if nbFacet<>nb_facet_expected then
+            Print("method=", eMethod,
+                  " disagrees with the orbits\n");
+            result:=false;
+        fi;
+    od;
+    return result;
 end;
 
 #
