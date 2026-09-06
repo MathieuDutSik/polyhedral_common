@@ -491,6 +491,7 @@ set(
   LATT_ZeroOneSolutions
   MILP_SystemSymmetry
   MILP_AffineSymmetry
+  MILP_ZeroOneLattice
 )
 foreach(target IN LISTS MILP_PROGRAMS)
   add_polyhedral_binary(

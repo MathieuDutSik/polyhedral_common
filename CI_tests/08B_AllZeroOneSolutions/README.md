@@ -83,17 +83,33 @@ What was measured on Problem2, for whoever picks this up:
 * Adding the 112 rows of an LLL reduced basis of the row lattice of
   `[A|b]` as extra constraints (coefficients then at most 7) does not
   close the tree either.
-* The lattice formulation works and is the promising direction, but
-  the enumeration is the obstacle. With `x0` an integral solution and
-  `K` a basis of the kernel, `x` is 0/1 exactly when
-  `|| 2x - 1 ||^2 <= n`, so the solutions are the lattice points of a
-  ball and the count of points equals the count of solutions. The
-  kernel has dimension 164, LLL brings its Gram from 10^37 down to
-  norms 10 to 74 in 2.5 s, and Babai round-off brings the centre from
-  a squared norm of 10^711 down to 2420. But the exact Fincke-Pohst of
-  `CVPSolver` does not finish in dimension 164 even at a fifth of the
-  radius. Closing this needs the stronger pruning of a dedicated
-  solvediophant style enumeration.
+* The lattice formulation was carried out, and it is now settled that
+  it does not work either, for a reason that no amount of basis
+  reduction can repair. `MILP_ZeroOneLattice` builds the lattice
+  ker_Z([A | -b]) with the form Q(z,s) = ||2z - s 1||^2 + s^2, for
+  which the 0/1 solutions are exactly the vectors of norm n+1 with
+  s = +-1. That formulation is the good one: homogenizing removes the
+  coset, so there is no Hermite normal form of a particular solution
+  with 700 digits and no rational centre with a huge denominator, and
+  the dimension is n+1-rank rather than n+1. Everything up to the
+  enumeration is fast, 16 s for the kernel and 1 s for the LLL, and
+  the reduction is decent, the Gram-Schmidt profile lying between 7.3
+  and 108 against a radius of 277.
+  But the solutions have norm 277 while the shortest vectors of the
+  lattice have norm about 40, so the enumeration is not a search for
+  short vectors, it is a search through a dense region seven times the
+  minimum. The widest level of the Fincke-Pohst tree then holds about
+  10^23 nodes and, what settles the matter, about 10^17 even for a
+  perfectly flat profile of the same determinant, which is the best
+  any reduction, BKZ included, could ever produce. Problem1 is worse
+  still, 10^105 and 10^104, its kernel having dimension 395.
+  So an unpruned lattice enumeration is out for both instances, and
+  implementing BKZ would not change that. What solvediophant does
+  beyond this has to be a pruned enumeration, which trades
+  completeness for speed, or an enumeration carrying the 0/1
+  constraints of the original coordinates and not only the norm bound.
+  `MILP_ZeroOneLattice ... profile` reports these numbers for any
+  instance, and is the thing to run before attempting the enumeration.
 
 The CI test
 -----------
