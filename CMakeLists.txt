@@ -559,11 +559,6 @@ set(
   LATT_SerialComputeIminimumGiD
   LATT_AnalysisIsoDelaunay
   LATT_LookForFullRankRayDomain
-  TEST_PeriodicCVP
-  TEST_PeriodicCosetSubgroup
-  TEST_PeriodicFlipping
-  TEST_PeriodicTspaceStabEqui
-  TEST_PeriodicIsoDelaunay
 )
 foreach(target IN LISTS DELAUNAY_PROGRAMS)
   add_polyhedral_binary(
