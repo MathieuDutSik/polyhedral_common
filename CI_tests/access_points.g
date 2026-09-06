@@ -653,6 +653,7 @@ get_interior_point:=function(arg)
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Interior.in");
     FileO:=Filename(TmpDir, "Interior.out");
+    FileE:=Filename(TmpDir, "Interior.err");
     WriteMatrixFile(FileI, FAC);
     eProg:=GetBinaryFilename("POLY_GeometricallyUniqueInteriorPoint");
     TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
@@ -1721,7 +1722,7 @@ end;
 # and 1 per solution, the statistics from the log. The returned record
 # has the fields solutions, n_solution, n_node and resolved.
 get_zero_one_lattice_solutions:=function(arg)
-    local A, b, options, max_node, print_info, TmpDir, FileA, FileB, FileO, FileE, eProg, TheCommand, U, lines, line, LStr, sol, i, is_normal, runtime_str;
+    local A, b, options, max_node, print_info, TmpDir, FileA, FileB, FileO, FileE, eProg, TheCommand, U, line, LStr, sol, is_normal, runtime_str;
     A:=arg[1];
     b:=arg[2];
     max_node:=0;
