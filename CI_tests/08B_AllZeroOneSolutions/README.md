@@ -134,15 +134,28 @@ The CI test
 
 driven by `.github/workflows/ci_08B_zero_one_solutions.yml`, on day 8
 of the even months, `ci_08A_cone_int` holding the odd ones. It runs
-seven small cases under the three arithmetics `gmp`, `gmp_boost` and
-`multi_boost`, then the node budget, then Problem1. The whole test is
-a little over a minute, almost all of it Problem1.
+
+* seven small cases under the three arithmetics of the branch and
+  bound, and the same seven through the lattice enumeration, which is
+  an independent implementation;
+* the node budget, which has to stop the branch and bound on Problem1;
+* Problem1 by the branch and bound, 5328493 nodes;
+* Problem1 by the lattice, 181278175 nodes;
+* Problem2 by the lattice, 2284675431 nodes. It is out of reach of the
+  branch and bound.
+
+About seven minutes, five of them Problem2.
 
 The small cases are checked against a brute force enumeration of the
-2^n vectors done in GAP, so their expected answer does not come from
-the program under test. For every case, small or not, each returned
-vector is checked to be 0/1 and to satisfy `A x = b`, and the set of
-returned solutions is compared with the expected one. Problem1 is
-compared against `Problem1.solutions`.
+2^n vectors done in GAP, so their expected answer comes neither from
+the branch and bound nor from the lattice. For every case, each
+returned vector is checked to be 0/1 and to satisfy `A x = b`, and the
+set of returned solutions is compared with the expected one. Problem1
+and Problem2 are compared against their recorded solutions, and
+Problem1 being solved by both methods is a cross-check between two
+independent implementations.
 
-Problem2 is not part of the test, for the reason below.
+The node counts above are not asserted, only the solution sets are:
+the lattice enumeration works in double precision, so its node counts
+depend on the machine while its answers do not.
+

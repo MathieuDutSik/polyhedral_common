@@ -1715,6 +1715,80 @@ get_zero_one_solutions:=function(arg)
 end;
 
 
+# The same enumeration, by the pruned lattice search of
+# MILP_ZeroOneLattice rather than by the branch and bound. The
+# solutions are read from the output file, one line of characters 0
+# and 1 per solution, the statistics from the log. The returned record
+# has the fields solutions, n_solution, n_node and resolved.
+get_zero_one_lattice_solutions:=function(arg)
+    local A, b, options, max_node, print_info, TmpDir, FileA, FileB, FileO, FileE, eProg, TheCommand, U, lines, line, LStr, sol, i, is_normal, runtime_str;
+    A:=arg[1];
+    b:=arg[2];
+    max_node:=0;
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.max_node) then
+            max_node:=options.max_node;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileA:=Filename(TmpDir, "Test.matrix");
+    FileB:=Filename(TmpDir, "Test.rhs");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileA, A);
+    WriteVectorFile(FileB, b);
+    eProg:=GetBinaryFilename("MILP_ZeroOneLattice");
+    TheCommand:=Concatenation(eProg, " ", FileA, " ", FileB, " solve ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  A=", Length(A), "x", Length(A[1]), " command=MILP_ZeroOneLattice runtime=", runtime_str, "\n");
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: MILP_ZeroOneLattice did not return anything, likely crash";
+    fi;
+    U:=rec(solutions:=[], n_node:=fail, n_solution:=fail, resolved:=true);
+    for line in ReadTextFile(FileO)
+    do
+        if Length(line) > 0 then
+            sol:=List([1..Length(line)], i->Int(line{[i]}));
+            Add(U.solutions, sol);
+        fi;
+    od;
+    is_normal:=false;
+    for line in ReadTextFile(FileE)
+    do
+        if starts_with(line, "n_node=")<>fail then
+            LStr:=SplitString(line, " ");
+            U.n_node:=Int(starts_with(LStr[1], "n_node="));
+            U.n_solution:=Int(starts_with(LStr[2], "n_solution="));
+        fi;
+        if starts_with(line, "The enumeration is UNRESOLVED")<>fail then
+            U.resolved:=false;
+        fi;
+        if starts_with(line, "Normal termination of MILP_ZeroOneLattice")<>fail then
+            is_normal:=true;
+        fi;
+    od;
+    RemoveFile(FileA);
+    RemoveFile(FileB);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    if is_normal=false then
+        return "program failure: MILP_ZeroOneLattice did not terminate normally";
+    fi;
+    if U.n_node=fail then
+        return "program failure: MILP_ZeroOneLattice did not report its statistics";
+    fi;
+    return U;
+end;
+
+
 test_strongly_semi_eutactic:=function(arg)
     local GramMat, options, arith, max_node, print_info, TmpDir, FileI, FileE, eProg, TheCommand, lines, line, rest, LStr, U, is_normal, runtime_str;
     GramMat:=arg[1];

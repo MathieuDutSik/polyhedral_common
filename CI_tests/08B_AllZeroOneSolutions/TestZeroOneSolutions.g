@@ -101,9 +101,10 @@ TestSmallCase:=function(eCase, arith)
     return true;
 end;
 
-# The instance Problem1 of the section, whose solutions are the
-# recorded ones. Problem2 is left out: the branch and bound does not
-# close its search tree, see README.md.
+# The instance Problem1 of the section by the branch and bound, whose
+# solutions are the recorded ones. Problem2 is left out here: the
+# branch and bound does not close its search tree, see README.md. It
+# is covered below by the lattice enumeration.
 TestProblem1:=function()
     local A, b, ListExpected, eResult;
     A:=ReadMatrixFile("Problem1.matrix");
@@ -145,6 +146,55 @@ TestNodeBudget:=function()
     return true;
 end;
 
+# The same small cases through the pruned lattice enumeration of
+# MILP_ZeroOneLattice, which is an independent implementation: it must
+# agree with the brute force too.
+TestSmallCaseLattice:=function(eCase)
+    local eResult, ListExpected;
+    eResult:=get_zero_one_lattice_solutions(eCase.A, eCase.b, rec(print_info:=true));
+    if is_error(eResult) then
+        return false;
+    fi;
+    if eResult.resolved <> true then
+        Print("The lattice enumeration did not resolve\n");
+        return false;
+    fi;
+    ListExpected:=BruteForceZeroOne(eCase.A, eCase.b);
+    if CheckSolutions(eCase.A, eCase.b, eResult, ListExpected) = false then
+        return false;
+    fi;
+    Print("  lattice: ", eResult.n_solution, " solutions, matching the brute force, n_node=",
+          eResult.n_node, "\n");
+    return true;
+end;
+
+# Problem1 and Problem2 of the section, by the lattice enumeration.
+# Problem2 is out of reach of the branch and bound, its rows being sums
+# of about ten small coefficients equal to 10, so the bound propagation
+# has too much slack; the lattice does it in about five minutes.
+TestProblemLattice:=function(idx)
+    local A, b, ListExpected, eResult;
+    A:=ReadMatrixFile(Concatenation("Problem", String(idx), ".matrix"));
+    b:=ReadVectorFile(Concatenation("Problem", String(idx), ".rhs"));
+    ListExpected:=ReadMatrixFile(Concatenation("Problem", String(idx), ".solutions"));
+    Print("Problem", idx, ": A is ", Length(A), "x", Length(A[1]), " with ",
+          Length(ListExpected), " recorded solutions\n");
+    eResult:=get_zero_one_lattice_solutions(A, b, rec(print_info:=true));
+    if is_error(eResult) then
+        return false;
+    fi;
+    if eResult.resolved <> true then
+        Print("The lattice enumeration of Problem", idx, " did not resolve\n");
+        return false;
+    fi;
+    if CheckSolutions(A, b, eResult, ListExpected) = false then
+        return false;
+    fi;
+    Print("  ", eResult.n_solution, " solutions, matching Problem", idx,
+          ".solutions, n_node=", eResult.n_node, "\n");
+    return true;
+end;
+
 ListCases:=[];
 # One row, all the subsets of a given size
 Add(ListCases, rec(name:="choose_2_of_4", A:=[[1,1,1,1]], b:=[2], n_solution:=6));
@@ -178,13 +228,25 @@ FullTest:=function()
                 return false;
             fi;
         od;
+        if TestSmallCaseLattice(eCase) = false then
+            Print("Failure of the lattice enumeration for name=", eCase.name, "\n");
+            return false;
+        fi;
     od;
     Print("Now the node budget\n");
     if TestNodeBudget() = false then
         return false;
     fi;
-    Print("Now Problem1\n");
+    Print("Now Problem1 by the branch and bound\n");
     if TestProblem1() = false then
+        return false;
+    fi;
+    Print("Now Problem1 by the lattice\n");
+    if TestProblemLattice(1) = false then
+        return false;
+    fi;
+    Print("Now Problem2 by the lattice\n");
+    if TestProblemLattice(2) = false then
         return false;
     fi;
     return true;
