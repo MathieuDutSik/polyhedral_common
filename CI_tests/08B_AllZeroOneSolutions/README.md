@@ -67,99 +67,64 @@ the branch and bound of `src_milp/zero_one_solution.h`:
 * **Problem1 is solved**: the 56 solutions, complete, in 68 s and
   5328493 nodes, the output being the same set as `Problem1.solutions`.
   The reference solver took 6 min 38 s on it.
-* **Problem2 is not solved by that method.** Its rows are of the form
-  "a sum of about ten small coefficients equals 10", so the bound
-  propagation has too much slack to prune and the search tree does not
-  close. It is the harder instance for a combinatorial search even
-  though the reference solver, which is lattice based, does it in
-  3.94 s.
+* **Problem2 is solved by the lattice method**, in 4 min 57 s and
+  2284675431 nodes, the 6 solutions being the recorded ones. The
+  branch and bound of `zero_one_solution.h` does not close its tree,
+  its rows being sums of about ten small coefficients equal to 10, so
+  the bound propagation has too much slack. Problem1 too is solved by
+  the lattice, in 59 s and 181278175 nodes.
 
-What was measured on Problem2, for whoever picks this up:
+What it took, and what did not work
+-----------------------------------
 
-* Bound propagation alone reaches 300000 nodes without a solution.
-* The exact linear programming relaxation is cheap at the root
-  (0.7 s for the 778 x 277 program) but its bounds are loose: it only
-  gives 44 <= sum_j x_j <= 64, where the solutions have 50 ones.
-* Adding the 112 rows of an LLL reduced basis of the row lattice of
-  `[A|b]` as extra constraints (coefficients then at most 7) does not
-  close the tree either.
-* The lattice formulation was carried out, and it is now settled that
-  it does not work either, for a reason that no amount of basis
-  reduction can repair. `MILP_ZeroOneLattice` builds the lattice
-  ker_Z([A | -b]) with the form Q(z,s) = ||2z - s 1||^2 + s^2, for
-  which the 0/1 solutions are exactly the vectors of norm n+1 with
-  s = +-1. That formulation is the good one: homogenizing removes the
-  coset, so there is no Hermite normal form of a particular solution
-  with 700 digits and no rational centre with a huge denominator, and
-  the dimension is n+1-rank rather than n+1. Everything up to the
-  enumeration is fast, 16 s for the kernel and 1 s for the LLL, and
-  the reduction is decent, the Gram-Schmidt profile lying between 7.3
-  and 108 against a radius of 277.
-  But the solutions have norm 277 while the shortest vectors of the
-  lattice have norm about 40, so the enumeration is not a search for
-  short vectors, it is a search through a dense region seven times the
-  minimum. The widest level of the Fincke-Pohst tree then holds about
-  10^23 nodes and, what settles the matter, about 10^17 even for a
-  perfectly flat profile of the same determinant, which is the best
-  any reduction, BKZ included, could ever produce. Problem1 is worse
-  still, 10^105 and 10^104, its kernel having dimension 395.
-  So an unpruned lattice enumeration is out for both instances, and
-  implementing BKZ would not change that.
-  `MILP_ZeroOneLattice ... profile` reports these numbers for any
-  instance, and is the thing to run before attempting the enumeration.
+The lattice is `ker_Z([A | -b])` with `Q(z,s) = ||2z - s 1||^2 + s^2`,
+built by `MILP_ZeroOneLattice`; the 0/1 solutions are exactly its
+vectors of norm n+1 with s = +-1. Homogenizing is what removes the
+coset, so there is no Hermite normal form of a particular solution
+with 700 digits and no rational centre with a huge denominator.
 
-What solvediophant does instead
--------------------------------
+What did not work was enumerating that lattice by norm alone. The
+solutions have norm 277 where the lattice minimum is about 40, so it
+is not a short vector search but a search through a dense region seven
+times the minimum: the widest level of a plain Fincke-Pohst holds
+about 10^23 nodes, and about 10^17 even for a perfectly flat profile
+of the same determinant, which is the best any reduction could give.
+BKZ was therefore not worth writing, and `... profile` reports those
+numbers for any instance.
 
-Reading the source of A. Wassermann's solvediophant settles what the
-missing ingredient is, and it is not a better basis.
+What works is not enumerating a ball at all. A solution has *every*
+ambient coordinate equal to +-1, far stronger than having norm n+1,
+and `zero_one_enum.h` carries that into the tree, after the enumeration
+of A. Wassermann's solvediophant:
 
-Its lattice is the same one: basis vector i carries c * A[.][i] on the
-constraint block, 2 on its own coordinate of the y block and nothing
-else, and the last basis vector carries c * b, then 1 on every
-coordinate of the y block and 1 on a last coordinate. A combination
-(z, s) is then (c(A z + s b), 2z + s, s), so s = -1 and A z = b give a
-vector all of whose entries are +-1, of norm n+1. The differences with
-what is done here are that c is 2^40 rather than the minimum, and that
-the kernel is never computed: a floating point LLL on the full basis
-finds it, where our exact LLL on that basis does not terminate.
+* Determined coordinates. With `first_nonzero[l]` the least j with
+  B[j][l] nonzero, every vector of the span of b_0, ..., b_{i-1} has
+  its l-th coordinate zero for i = first_nonzero[l], so the projection
+  P_i v already has the final value of the coordinate l: it is settled
+  at level i and must be +-1 there. Half of the 277 coordinates are
+  settled by level 50 of 165, and only 10 wait until the last level.
+* Hoelder. P_i being an orthogonal projection,
+  cs_i = ||P_i v||^2 = <P_i v, v> <= ||v||_infinity ||P_i v||_1, so
+  cs_i <= ||w_i||_1 holds along every solution. On Problem2 this fires
+  1663318138 times against 58828807 for the coordinates, so it carries
+  most of the load.
+* Dual bounds, |t_i| <= min(||d_i||_1, sqrt(Fd) ||d_i||_2). Cheap, but
+  measured on these instances they alone leave 10^224 and 10^354
+  candidates, so they are a complement and not a lever.
 
-The decisive difference is the enumeration. It never enumerates a
-ball. A solution has *every* ambient coordinate equal to +-Fq, which
-is far stronger than having norm n+1, and three prunings in enum.c
-carry that:
+The ball of radius sqrt(n+1) exceeds the cube [-1,1]^{n+1} by about
+10^86 in dimension 277, which is the whole distance between the 10^17
+above and what the search actually costs.
 
-* `prune_only_zeros`. The array `first_nonzero[l]` holds the first
-  basis vector having a nonzero entry in the ambient coordinate l, so
-  the coordinate l becomes fully determined once the enumeration
-  descends to that level. The moment it does, |w[l]| is required to be
-  exactly Fq. This is the box constraint applied coordinate by
-  coordinate, as early as each one can be applied.
-* Hoelder, `node->cs > Fqeps * norm1`. Since every coordinate of the
-  target is bounded by Fq, its squared 2-norm is at most Fq times its
-  1-norm, and that is tested at every node.
-* Dual bounds, `init_dualbounds`. Each coefficient of the enumeration
-  is t_i = <v, d_i> with d_i the dual basis, so |t_i| is at most the
-  minimum of Fq ||d_i||_1 and sqrt(Fd) ||d_i||_2. Measured on our two
-  instances these alone leave 10^224 and 10^354 coefficient vectors,
-  so they are a cheap complement and not the main lever; the first
-  two are.
-
-The ball of radius sqrt(n+1) is larger than the cube [-1,1]^{n+1} by a
-factor of about 10^86 in dimension 277, which is where the 10^17 above
-comes from and why it is not the number solvediophant faces.
-
-Consequences for the code here. `zero_one_lattice.h` already keeps the
-basis in ambient coordinates, which is what these prunings need, but
-it enumerates through `computeLevel_GramMat`, which only ever sees the
-Gram matrix and therefore cannot express them. Carrying them requires
-our own Schnorr-Euchner enumeration over the ambient basis. Worth
-noting too, solvediophant reduces in three LLL passes of increasing
-delta, offers BKZ and progressive BKZ, has a limited discrepancy
-search besides the depth first one, and preprocesses by removing
-zero-forced variables and by testing the reachability of each right
-hand side modulo the gcd of its row, that last one being propagation
-we do not have.
+The Gram-Schmidt and the tests are in double precision, as in
+solvediophant, with a tolerance eps; every vector reaching the bottom
+is verified exactly in integers, so a reported solution is certain
+while completeness holds up to that tolerance. Beware that the
+solutions have squared norm exactly equal to the bound, so the
+accumulated norm lands on it and rounding pushes it barely over: the
+early return on a negative remaining radius needs the same tolerance
+as the pruning test, or solutions are silently lost. That was the one
+real bug, and it cost 8 of the 56 solutions of a random test case.
 
 The CI test
 -----------

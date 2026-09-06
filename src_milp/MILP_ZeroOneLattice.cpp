@@ -36,6 +36,28 @@ void process_zero_one_lattice(std::string const &FileMatrix,
     FILE_PrintStderrStdoutFile(FileOut, f_print);
     return;
   }
+  if (choice == "solve") {
+    ZeroOneEnumOptions opt;
+    std::pair<ZeroOneEnumResult, std::vector<Face>> pair =
+        SolveZeroOneByLattice<T, Tint>(lattice, opt, std::cerr);
+    ZeroOneEnumResult const &res = pair.first;
+    std::cerr << "n_node=" << res.n_node << " n_solution=" << pair.second.size()
+              << " prune_hoelder=" << res.n_prune_hoelder
+              << " prune_only_zeros=" << res.n_prune_only_zeros << "\n";
+    if (!res.resolved)
+      std::cerr << "The enumeration is UNRESOLVED, the node budget was "
+                << "exhausted\n";
+    int n_col = A.cols();
+    auto f_print = [&](std::ostream &os) -> void {
+      for (auto &sol : pair.second) {
+        for (int j = 0; j < n_col; j++)
+          os << static_cast<int>(sol[j]);
+        os << "\n";
+      }
+    };
+    FILE_PrintStderrStdoutFile(FileOut, f_print);
+    return;
+  }
   if (choice == "enumerate") {
     std::vector<Face> ListSol =
         EnumerateZeroOneByLattice<T, Tint>(lattice, std::cerr);
@@ -78,7 +100,7 @@ int main(int argc, char *argv[]) {
                    "ReadMatrixFile\n";
       std::cerr << "FileRHS    : the vector b, in the format of "
                    "ReadVectorFile\n";
-      std::cerr << "choice     : profile or enumerate\n";
+      std::cerr << "choice     : profile, enumerate or solve\n";
       std::cerr << "             profile stops after the reduction and "
                    "reports the\n";
       std::cerr << "             Gram-Schmidt profile and the estimated "
@@ -88,9 +110,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "             for the basis at hand and for a perfectly "
                    "flat one,\n";
       std::cerr << "             which no reduction can beat\n";
-      std::cerr << "             enumerate runs the enumeration, which is "
-                   "only worth\n";
-      std::cerr << "             trying when the profile says so\n";
+      std::cerr << "             enumerate runs the plain enumeration of the "
+                   "ball,\n";
+      std::cerr << "             which is only worth trying when the profile "
+                   "says so\n";
+      std::cerr << "             solve runs the pruned enumeration, which "
+                   "carries the\n";
+      std::cerr << "             conditions on the coordinates and not only "
+                   "the norm\n";
       std::cerr << "FileOut    : the output file, or stdout or stderr\n";
       return -1;
     }

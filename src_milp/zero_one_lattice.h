@@ -6,6 +6,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "Shvec_exact.h"
+#include "zero_one_enum.h"
 #include <cmath>
 #include <utility>
 #include <vector>
@@ -285,6 +286,51 @@ std::vector<Face> EnumerateZeroOneByLattice(ZeroOneLattice<T, Tint> const &lat,
      << " vectors of the kernel discarded\n";
 #endif
   return ListSol;
+}
+
+// The basis in ambient coordinates: the row i of Kred is a (z, s) of
+// the kernel, whose ambient image is (2z - s 1_n, s). Every coordinate
+// of a solution is then +-1, which is what the enumeration of
+// zero_one_enum.h needs and what the Gram matrix alone cannot express.
+template <typename T, typename Tint>
+MyMatrix<Tint> ZeroOneAmbientBasis(ZeroOneLattice<T, Tint> const &lat) {
+  int n = lat.n_col;
+  int d = lat.dim;
+  MyMatrix<Tint> B(d, n + 1);
+  for (int i = 0; i < d; i++) {
+    Tint s = lat.Kred(i, n);
+    for (int j = 0; j < n; j++)
+      B(i, j) = 2 * lat.Kred(i, j) - s;
+    B(i, n) = s;
+  }
+  return B;
+}
+
+// The solutions, by the pruned enumeration over the ambient basis.
+// Each solution shows up twice, as v and -v, the representative kept
+// being the one whose last coordinate, that is s, equals 1.
+template <typename T, typename Tint>
+std::pair<ZeroOneEnumResult, std::vector<Face>>
+SolveZeroOneByLattice(ZeroOneLattice<T, Tint> const &lat,
+                      ZeroOneEnumOptions const &opt, std::ostream &os) {
+  std::vector<Face> ListSol;
+  int n = lat.n_col;
+  if (lat.dim == 0)
+    return {{true, 0, 0, 0, 0, 0}, ListSol};
+  MyMatrix<Tint> B = ZeroOneAmbientBasis(lat);
+  auto f = [&](MyVector<Tint> const &v) -> void {
+    if (v(n) != 1)
+      return;
+    Face sol(n);
+    for (int j = 0; j < n; j++) {
+      // v_j = 2 x_j - 1, so x_j = (v_j + 1) / 2
+      if (v(j) == 1)
+        sol[j] = 1;
+    }
+    ListSol.push_back(std::move(sol));
+  };
+  ZeroOneEnumResult result = EnumeratePlusMinusVectors(B, opt, f, os);
+  return {result, std::move(ListSol)};
 }
 
 // clang-format off
