@@ -104,12 +104,62 @@ What was measured on Problem2, for whoever picks this up:
   any reduction, BKZ included, could ever produce. Problem1 is worse
   still, 10^105 and 10^104, its kernel having dimension 395.
   So an unpruned lattice enumeration is out for both instances, and
-  implementing BKZ would not change that. What solvediophant does
-  beyond this has to be a pruned enumeration, which trades
-  completeness for speed, or an enumeration carrying the 0/1
-  constraints of the original coordinates and not only the norm bound.
+  implementing BKZ would not change that.
   `MILP_ZeroOneLattice ... profile` reports these numbers for any
   instance, and is the thing to run before attempting the enumeration.
+
+What solvediophant does instead
+-------------------------------
+
+Reading the source of A. Wassermann's solvediophant settles what the
+missing ingredient is, and it is not a better basis.
+
+Its lattice is the same one: basis vector i carries c * A[.][i] on the
+constraint block, 2 on its own coordinate of the y block and nothing
+else, and the last basis vector carries c * b, then 1 on every
+coordinate of the y block and 1 on a last coordinate. A combination
+(z, s) is then (c(A z + s b), 2z + s, s), so s = -1 and A z = b give a
+vector all of whose entries are +-1, of norm n+1. The differences with
+what is done here are that c is 2^40 rather than the minimum, and that
+the kernel is never computed: a floating point LLL on the full basis
+finds it, where our exact LLL on that basis does not terminate.
+
+The decisive difference is the enumeration. It never enumerates a
+ball. A solution has *every* ambient coordinate equal to +-Fq, which
+is far stronger than having norm n+1, and three prunings in enum.c
+carry that:
+
+* `prune_only_zeros`. The array `first_nonzero[l]` holds the first
+  basis vector having a nonzero entry in the ambient coordinate l, so
+  the coordinate l becomes fully determined once the enumeration
+  descends to that level. The moment it does, |w[l]| is required to be
+  exactly Fq. This is the box constraint applied coordinate by
+  coordinate, as early as each one can be applied.
+* Hoelder, `node->cs > Fqeps * norm1`. Since every coordinate of the
+  target is bounded by Fq, its squared 2-norm is at most Fq times its
+  1-norm, and that is tested at every node.
+* Dual bounds, `init_dualbounds`. Each coefficient of the enumeration
+  is t_i = <v, d_i> with d_i the dual basis, so |t_i| is at most the
+  minimum of Fq ||d_i||_1 and sqrt(Fd) ||d_i||_2. Measured on our two
+  instances these alone leave 10^224 and 10^354 coefficient vectors,
+  so they are a cheap complement and not the main lever; the first
+  two are.
+
+The ball of radius sqrt(n+1) is larger than the cube [-1,1]^{n+1} by a
+factor of about 10^86 in dimension 277, which is where the 10^17 above
+comes from and why it is not the number solvediophant faces.
+
+Consequences for the code here. `zero_one_lattice.h` already keeps the
+basis in ambient coordinates, which is what these prunings need, but
+it enumerates through `computeLevel_GramMat`, which only ever sees the
+Gram matrix and therefore cannot express them. Carrying them requires
+our own Schnorr-Euchner enumeration over the ambient basis. Worth
+noting too, solvediophant reduces in three LLL passes of increasing
+delta, offers BKZ and progressive BKZ, has a limited discrepancy
+search besides the depth first one, and preprocesses by removing
+zero-forced variables and by testing the reachability of each right
+hand side modulo the gcd of its row, that last one being propagation
+we do not have.
 
 The CI test
 -----------
