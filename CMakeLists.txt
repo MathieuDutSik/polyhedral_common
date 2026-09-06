@@ -147,6 +147,7 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src_indefinite"
     "${CMAKE_SOURCE_DIR}/src_isotropy"
     "${CMAKE_SOURCE_DIR}/src_latt"
+    "${CMAKE_SOURCE_DIR}/src_milp"
     "${CMAKE_SOURCE_DIR}/src_lorentzian"
     "${CMAKE_SOURCE_DIR}/src_perfect"
     "${CMAKE_SOURCE_DIR}/src_poincare_polyhedron"
@@ -482,6 +483,18 @@ foreach(target IN LISTS PERFECT_PROGRAMS)
     ${target}
     "${CMAKE_SOURCE_DIR}/src_perfect/${target}.cpp"
     polyhedral_perfect_support
+  )
+endforeach()
+
+set(
+  MILP_PROGRAMS
+  LATT_ZeroOneSolutions
+)
+foreach(target IN LISTS MILP_PROGRAMS)
+  add_polyhedral_binary(
+    ${target}
+    "${CMAKE_SOURCE_DIR}/src_milp/${target}.cpp"
+    polyhedral_poly_support
   )
 endforeach()
 

@@ -57,12 +57,12 @@ here -- it is what the new code is meant to confirm.
 Status of the enumeration program
 ---------------------------------
 
-`src_latt/LATT_ZeroOneSolutions`, built by
-`make -C src_latt -f Makefile_zero_one`, enumerates the solutions with
-the branch and bound of `src_latt/zero_one_solution.h`:
+`src_milp/LATT_ZeroOneSolutions`, built by `make -C src_milp`,
+enumerates the solutions with
+the branch and bound of `src_milp/zero_one_solution.h`:
 
     cd CI_tests/08B_AllZeroOneSolutions
-    ../../src_latt/LATT_ZeroOneSolutions gmp Problem1.matrix Problem1.rhs ZeroOne out
+    ../../src_milp/LATT_ZeroOneSolutions gmp Problem1.matrix Problem1.rhs ZeroOne out
 
 * **Problem1 is solved**: the 56 solutions, complete, in 68 s and
   5328493 nodes, the output being the same set as `Problem1.solutions`.

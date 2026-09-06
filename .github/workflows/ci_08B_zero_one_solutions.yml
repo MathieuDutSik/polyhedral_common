@@ -42,7 +42,7 @@ jobs:
 
       - name: Test the enumeration of the 0/1 solutions
         run: |
-          make -C src_latt -f Makefile_zero_one
+          make -C src_milp
           pwd
           echo "After compilation of LATT_ZeroOneSolutions"
 

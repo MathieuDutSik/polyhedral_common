@@ -146,6 +146,8 @@ src_latt/LATT_*
 src_latt/TSPACE_*
 src_latt/GRP_TestFiniteness
 src_latt/TEST_EquiStabFamily
+src_milp/LATT_*
+src_milp/MILP_*
 src_lorentzian/LORENTZ_*
 src_lorentzian/COXDYN_*
 src_lorentzian/LATT_GetIntegralMatricesPossibleOrders
