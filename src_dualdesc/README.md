@@ -31,21 +31,19 @@ staying facets.
 The difficulty is one of size before it is one of algorithm. The number
 of facets of a cone with `n` generators in dimension `d` can grow like
 `n^{floor(d/2)}`, the bound of McMullen's upper bound theorem, and the
-cones that arise in the classification problems below routinely have
-generators in the thousands and facets in numbers that no machine will
-ever list. Worse, the difficulty is not merely the output: no algorithm
-is known whose running time is polynomial in the size of the input and
-of the output taken together, and for general unbounded polyhedra the
-associated decision problem is NP-hard. Degeneracy, meaning extreme
-rays lying on many more facets than the dimension requires, is what
-makes the classical methods suffer, and degeneracy is exactly what the
+cones that arise below have facets in numbers that no machine will ever
+list. The difficulty is not merely that of writing the output: counting
+the vertices of the Voronoi cell of a lattice given by a basis is
+already a #P-hard problem [6]. What makes the classical methods suffer
+in practice is degeneracy, meaning extreme rays lying on many more
+facets than the dimension requires, and degeneracy is exactly what the
 cones coming from lattices and from combinatorial optimization have.
 
 The classical methods answer the question directly: Fourier-Motzkin
 elimination, the double description method of Motzkin, Raiffa, Thompson
-and Thrall, the reverse search of Avis and Fukuda, and the methods based
-on triangulations. Each of them is excellent in its own range and each
-of them stops well before the problems of interest here.
+and Thrall [A], the reverse search of Avis and Fukuda [B], and the
+methods based on triangulations. Each is excellent in its own range,
+and each stops well before the problems of interest here.
 
 
 Symmetry
@@ -54,31 +52,38 @@ Symmetry
 What breaks the deadlock is that the cones one actually wants to
 describe are highly symmetric. A finite group `G` of linear
 transformations preserving the cone permutes its extreme rays and
-permutes its facets, and the natural question is then not the list of
-facets but the list of *orbits* of facets. That list can be smaller by
-many orders of magnitude, and it is usually the mathematically
-meaningful object: for a cut polytope or a hypermetric cone, two facets
-in the same orbit are the same inequality written in different
-coordinates.
+permutes its facets, and the natural question becomes not the list of
+facets but the list of *orbits* of facets. The gain is not a constant
+factor. The contact polytope of the Leech lattice has
 
-Working with orbits requires being able to decide when two faces are
-equivalent under `G`, and, better, to attach to each face a canonical
-representative so that equality of representatives decides equivalence.
-Both the computation of the symmetry group of a polyhedron and the
-canonical form of the objects involved are questions in their own
-right; they are treated in [1] and, for the positive definite matrices
-that index many of these cones, in [2].
+    1197362269604214277200 facets, falling into 232 orbits [7]
+
+and the hypermetric cone on eight vertices has 298592 facets in 86
+orbits and 242695427 extreme rays in 9003 orbits [8]. In such a range
+the orbit list is the only description that can be written down, and it
+is also the mathematically meaningful one: two facets in the same orbit
+are the same inequality written in different coordinates.
+
+Working with orbits requires deciding when two faces are equivalent
+under `G` and, better, attaching to each face a canonical representative
+so that equality of representatives decides equivalence. It also
+requires knowing `G` in the first place, which is a question of its own:
+the symmetry groups of a polyhedron preserving its linear, projective or
+combinatorial structure are studied in [3], where the computation of the
+linear one is reduced to a graph automorphism problem.
 
 
 The adjacency decomposition method
 ----------------------------------
 
 The method that makes the symmetric problems tractable is the adjacency
-decomposition. It rests on a simple geometric observation: a ridge, that
-is a face of codimension two, is contained in exactly two facets. The
-facets of the cone therefore form a graph, in which two facets are
-adjacent when they share a ridge, and one may hope to explore that graph
-instead of enumerating its vertices from scratch.
+decomposition, developed for combinatorial polytopes by Christof and
+Reinelt [C] and treated together with the other symmetry-exploiting
+conversion techniques in the survey [1]. It rests on a simple geometric
+observation: a ridge, that is a face of codimension two, is contained in
+exactly two facets. The facets of the cone therefore form a graph, in
+which two facets are adjacent when they share a ridge, and one may
+explore that graph instead of enumerating its vertices from scratch.
 
 The exploration goes as follows. One facet is found, by linear
 programming or by any direct method. That facet is itself a polyhedral
@@ -86,8 +91,8 @@ cone of one dimension less, and its own facets are precisely the ridges
 lying on it; finding them is again a dual description problem, in a
 smaller dimension and with the smaller group that stabilizes the facet.
 Across each of those ridges there is exactly one other facet of the
-original cone, and it is obtained by a flip. The facets so produced are
-sorted into orbits under `G`, the new orbits are put on a queue, and the
+original cone, obtained by a flip. The facets so produced are sorted
+into orbits under `G`, the new orbits are put on a queue, and the
 process repeats until no new orbit appears.
 
 Two things make this work. The first is that the recursion is genuine:
@@ -100,15 +105,18 @@ is met again and again in the course of the computation; recognizing it
 by its canonical form and remembering the answer turns an exponential
 amount of repeated work into a lookup.
 
-The method appears in [3] and its use for the extreme Delaunay polytopes
-in [4]. The treatment of the symmetry it needs is that of [1].
+The same idea of moving from one object to an adjacent one, applied to
+the extreme rays of the hypermetric cone rather than to the facets of a
+cone, is what produces new extreme Delaunay polytopes from known ones
+[4]. The algorithms as they were assembled for a classification of real
+size are described in [2].
 
 
 Why the exploration is complete
 -------------------------------
 
 The correctness of the adjacency decomposition rests on the connectivity
-of the ridge graph. This is Balinski's theorem [B]: the graph of a
+of the ridge graph. This is Balinski's theorem [D]: the graph of a
 `d`-dimensional polytope is `d`-connected. Applied to the dual polytope
 it says that the graph whose vertices are the facets and whose edges are
 the ridges is connected, indeed `d`-connected, so an exploration that
@@ -122,7 +130,7 @@ a subspace, then removing them cannot disconnect the ridge graph, and
 the `d`-connectivity forces the partial list to be complete. That
 argument admits refinements by linear programming and by a rank
 computation on the undone rays, and it can itself be applied recursively
-to the faces. The technique, and its use to reach the facets of cut
+to the faces. The technique, and its use to settle the facets of cut
 polytopes over highly symmetric graphs, is described in [5].
 
 
@@ -140,179 +148,111 @@ from a point outside the cone, which gives a usable, if incomplete,
 description.
 
 
-Where this is used
-------------------
+What has been reached this way
+------------------------------
 
-The dual description of symmetric cones is not an end in itself. It is
-the computational engine behind a number of classification results, and
-the list gives a fair idea of the sizes involved.
+* The contact polytope of the Leech lattice, the convex hull of its
+  196560 shortest vectors: its 1197362269604214277200 facets classified
+  into 232 orbits [7].
 
-* Lattices and quadratic forms. The classification of the eight
-  dimensional perfect forms [6] rests on the description of the cones
-  attached to the perfect forms; the generalization of Voronoi's
-  reduction theory of [7] and the complete classification of the five
-  dimensional Dirichlet-Voronoi polyhedra of translational lattices [8]
-  are of the same nature, as is the classification of six dimensional
-  iso-edge domains [9] and the general framework for them [10]. The
-  Voronoi cells themselves, their complexity and their computation, are
-  treated in [11], and the contact polytope of the Leech lattice, a
-  polytope on 196560 vertices, in [12].
+* The hypermetric cone on seven vertices [9], then on eight vertices
+  [8], the latter with 298592 facets in 86 orbits and 242695427 extreme
+  rays in 9003 orbits.
 
-* Delaunay polytopes. The six dimensional Delaunay polytopes [13], the
-  infinite series of extreme ones [14], the perfect Delaunay polytopes
-  in low dimension [15], the seven dimensional perfect Delaunay polytopes
-  [16], the rank of a Delaunay polytope [17] and the Delaunay polytopes
-  derived from the Leech lattice [18] all lean on the same machinery.
+* The 10916 perfect lattices of dimension 8 [2], a classification that
+  rests entirely on exploiting symmetry in the polyhedral computations.
 
-* Metric and hypermetric geometry. The hypermetric cone on seven
-  vertices [19] and on eight vertices [20], its decomposition into
-  L-domains [21], the hypermetric cone and polytope on graphs [22], the
-  cut polytopes over highly symmetric graphs [5] and their
-  generalizations [23]. The general setting is that of [24].
+* The facets of the cut polytopes over highly symmetric graphs with 15
+  to 30 edges [5], where the Balinski-based criterion above is what
+  allows the enumerations to be certified complete.
 
-* Parallelohedra and tilings. The Voronoi conjecture for combinatorially
-  Voronoi parallelohedra [25], the sum of a parallelotope and a zonotope
-  [26], zonotopes and parallelotopes [27], the periodic triangulations of
-  `Z^n` [28] and the Voronoi polytopes for polyhedral norms [29].
+* The Dirichlet-Voronoi polyhedra and Delaunay subdivisions of the
+  five-dimensional lattices: 110244 affine types and 181394 contraction
+  types, obtained from the secondary cones and checked against three
+  independent implementations [10].
 
-* Further afield: the colouring of the Voronoi tessellation of lattices
-  [30], the smoothness and singularities of the perfect form
-  compactification of `A_g` [31], the Voronoi complexes in higher
-  dimensions and the cohomology of `GL_N(Z)` [32], and rational
-  copositive factorization [33].
+* The vertices of Voronoi cells of lattices in dimensions up to about
+  12, for which the symmetric algorithm of [6] is what makes a #P-hard
+  counting problem practical.
 
 
 References
 ----------
 
-The papers below are those of M. Dutour Sikirić and coauthors; the
-complete and current list, with the links, is at
+The complete and current publication list, with links, is at
 
     https://mathieudutsik.github.io/Publications/index.html
 
-[B] M. L. Balinski, *On the graph structure of convex polyhedra in
-n-space*, Pacific Journal of Mathematics **11** (1961) 431–434.
+### On the method
 
-[1] D. Bremner, M. Dutour Sikirić, D. V. Pasechnik, T. Rehn,
-A. Schürmann, *Computing symmetry groups of polyhedra*, LMS Journal of
-Computation and Mathematics **17-1** (2014) 565–581.
-
-[2] M. Dutour Sikirić, A. Haensch, J. Voight, W. van Woerden, *A
-canonical form for positive definite matrices*, Proceedings of the
-Fourteenth Algorithmic Number Theory Symposium (ANTS-XIV), Open Book
-Series 4, Mathematical Sciences Publishers, 2020.
-
-[3] D. Bremner, M. Dutour Sikirić, A. Schürmann, *Polyhedral
+[1] D. Bremner, M. Dutour Sikirić, A. Schürmann, *Polyhedral
 representation conversion up to symmetries*, CRM Proceedings **48**
-(2009) 45–72.
+(2009) 45–72, arXiv:math/0702239. A survey of the conversion techniques
+that exploit symmetry: the decomposition methods reducing the problem to
+lower-dimensional subproblems, an incremental method generalizing
+Fourier-Motzkin elimination, and the use of pivots.
+
+[2] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *Classification of
+eight-dimensional perfect forms*, Electronic Research Announcements of
+the American Mathematical Society **13** (2007) 21–32,
+arXiv:math/0609388. Describes the algorithms that made the
+classification possible.
+
+[3] D. Bremner, M. Dutour Sikirić, D. V. Pasechnik, T. Rehn,
+A. Schürmann, *Computing symmetry groups of polyhedra*, LMS Journal of
+Computation and Mathematics **17-1** (2014) 565–581, arXiv:1210.0206.
+The linear, projective and combinatorial symmetry groups, and the
+reduction of the linear one to graph automorphism.
 
 [4] M. Dutour, *Adjacency method for extreme Delaunay polytopes*,
-Voronoi's Impact on Modern Science, Book 3 (2005) 94–101.
+Voronoi's Impact on Modern Science, Book 3 (2005) 94–101,
+arXiv:math/0401004. Adjacency in the hypermetric cone, used to pass from
+known extreme Delaunay polytopes to new ones.
 
 [5] M. Deza, M. Dutour Sikirić, *Enumeration of the facets of cut
 polytopes over some highly symmetric graphs*, International Transactions
-in Operational Research **23-5** (2016) 853–860.
+in Operational Research **23-5** (2016) 853–860, arXiv:1501.05407. The
+source of the Balinski-based termination criterion used above.
 
-[6] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *Classification of
-eight-dimensional perfect forms*, Electronic Research Announcements of
-the American Mathematical Society **13** (2007) 21–32.
+[6] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *Complexity and
+algorithms for computing Voronoi cells of lattices*, Mathematics of
+Computation **78** (2009) 1713–1731, arXiv:0804.0036. The #P-hardness of
+counting the vertices, and an algorithm suited to highly symmetric
+lattices.
 
-[7] A. Schürmann, M. Dutour Sikirić, F. Vallentin, *A generalization of
-Voronoi's reduction theory and its application*, Duke Mathematical
-Journal **142** (2008) 127–164.
+### Computations carried out with it
 
-[8] M. Dutour Sikirić, A. Garber, A. Schürmann, C. Waldmann, *The
+[7] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *The contact polytope
+of the Leech lattice*, Discrete and Computational Geometry **44** (2010)
+904–911, arXiv:0906.1427.
+
+[8] M. Deza, M. Dutour Sikirić, *The hypermetric cone on eight vertices
+and some generalizations*, Journal of Symbolic Computation **88** (2018)
+67–84, arXiv:1503.04554.
+
+[9] M. Deza, M. Dutour Sikirić, *The hypermetric cone on seven
+vertices*, Experimental Mathematics **12** (2004) 433–440,
+arXiv:math/0108177.
+
+[10] M. Dutour Sikirić, A. Garber, A. Schürmann, C. Waldmann, *The
 complete classification of five-dimensional Dirichlet-Voronoi polyhedra
 of translational lattices*, Acta Crystallographica A **72** (2016)
-673–683.
+673–683, arXiv:1507.00238.
 
-[9] M. Dutour Sikirić, W. van Woerden, *Complete classification of
-six-dimensional iso-edge domains*, Acta Crystallographica A **81** (2025)
-9–15.
+### Classical background
 
-[10] M. Dutour Sikirić, M. Kummer, *Iso-edge domains*, Expositiones
-Mathematicae **40-2** (2022) 302–314.
+[A] T. S. Motzkin, H. Raiffa, G. L. Thompson, R. M. Thrall, *The double
+description method*, in Contributions to the Theory of Games II, Annals
+of Mathematics Studies **28**, Princeton University Press (1953) 51–73.
 
-[11] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *Complexity and
-algorithms for computing Voronoi cells of lattices*, Mathematics of
-Computation **78** (2009) 1713–1731.
+[B] D. Avis, K. Fukuda, *A pivoting algorithm for convex hulls and
+vertex enumeration of arrangements and polyhedra*, Discrete and
+Computational Geometry **8** (1992) 295–313.
 
-[12] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *The contact polytope
-of the Leech lattice*, Discrete and Computational Geometry **44** (2010)
-904–911.
+[C] T. Christof, G. Reinelt, *Decomposition and parallelization
+techniques for enumerating the facets of combinatorial polytopes*,
+International Journal of Computational Geometry and Applications **11**
+(2001) 423–437.
 
-[13] M. Dutour, *The six-dimensional Delaunay polytopes*, European
-Journal of Combinatorics **25** (2004) 535–548.
-
-[14] M. Dutour, *Infinite series of extreme Delaunay polytopes*, European
-Journal of Combinatorics **26** (2005) 129–132.
-
-[15] M. Dutour Sikirić, R. Erdahl, K. Rybnikov, *Perfect Delaunay
-polytopes in low dimensions*, Integers **7** (2007) A39.
-
-[16] M. Dutour Sikirić, *The seven dimensional perfect Delaunay polytopes
-and Delaunay simplices*, Canadian Journal of Mathematics **69** (2017)
-1143–1168.
-
-[17] M. Dutour Sikirić, V. Grishukhin, *How to compute the rank of a
-Delaunay polytope*, European Journal of Combinatorics **28** (2007)
-762–773.
-
-[18] M. Dutour Sikirić, K. Rybnikov, *Delaunay polytopes derived from the
-Leech lattice*, Journal de Théorie des Nombres de Bordeaux **26-1** (2014)
-85–101.
-
-[19] M. Deza, M. Dutour Sikirić, *The hypermetric cone on seven
-vertices*, Experimental Mathematics **12** (2004) 433–440.
-
-[20] M. Deza, M. Dutour Sikirić, *The hypermetric cone on eight vertices
-and some generalizations*, Journal of Symbolic Computation **88** (2018)
-67–84.
-
-[21] M. Dutour Sikirić, V. Grishukhin, *The decomposition of the
-hypermetric cone into L-domains*, European Journal of Combinatorics **30**
-(2009) 853–865.
-
-[22] M. Dutour Sikirić, *The hypermetric cone and polytope on graphs*,
-Chebyshevskii Sbornik **20-2** (2019) 160–168.
-
-[23] M. Deza, M. Dutour Sikirić, *Generalized cut and metric polytopes of
-graphs and simplicial complexes*, Optimization Letters **14** (2020)
-273–289.
-
-[24] M. Deza, M. Dutour Sikirić, E. Deza, *Generalizations of finite
-metrics and cuts*, World Scientific, 2016.
-
-[25] M. Dutour Sikirić, A. Garber, A. Magazinov, *On the Voronoi
-conjecture for combinatorially Voronoi parallelohedra*, SIAM Journal on
-Discrete Mathematics **34-4** (2020) 2481–2501.
-
-[26] M. Dutour Sikirić, V. Grishukhin, A. Magazinov, *On the sum of a
-parallelotope and a zonotope*, European Journal of Combinatorics **42**
-(2014) 49–73.
-
-[27] M. Dutour Sikirić, V. Grishukhin, *Zonotopes and parallelotopes*,
-Southeast Asian Bulletin of Mathematics **41-2** (2017) 197–207.
-
-[28] M. Dutour Sikirić, A. Garber, *Periodic triangulations of `Z^n`*,
-Electronic Journal of Combinatorics **27** (2020) P2.36.
-
-[29] M. Deza, M. Dutour Sikirić, *Voronoi polytopes for polyhedral norms
-on lattices*, Discrete Applied Mathematics **197** (2015) 42–52.
-
-[30] M. Dutour Sikirić, D. Madore, P. Moustrou, F. Vallentin, *Coloring
-the Voronoi tessellation of lattices*, Journal of the London Mathematical
-Society **104-2** (2021) 1135–1171.
-
-[31] M. Dutour Sikirić, K. Hulek, A. Schürmann, *Smoothness and
-singularities of the perfect form compactification of `A_g`*, Algebraic
-Geometry **2-5** (2015) 642–653.
-
-[32] M. Dutour Sikirić, P. Elbaz-Vincent, A. Kupers, J. Martinet,
-*Voronoi complexes in higher dimensions, cohomology of `GL_N(Z)` for
-`N >= 8` and the triviality of `K_8(Z)`*, Journal of the Institute of
-Mathematics of Jussieu.
-
-[33] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *A simplex algorithm
-for rational CP-factorization*, Mathematical Programming **187** (2020)
-25–45.
+[D] M. L. Balinski, *On the graph structure of convex polyhedra in
+n-space*, Pacific Journal of Mathematics **11** (1961) 431–434.
