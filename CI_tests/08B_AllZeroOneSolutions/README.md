@@ -143,8 +143,10 @@ of the even months, `ci_08A_cone_int` holding the odd ones. It runs
 * Problem1 by the lattice, 181278175 nodes;
 * Problem2 by the lattice, 2284675431 nodes. It is out of reach of the
   branch and bound.
+* the two symmetry groups of every case, by `MILP_SystemSymmetry` and
+  `MILP_AffineSymmetry`.
 
-About seven minutes, five of them Problem2.
+About seven and a half minutes, five of them Problem2.
 
 The small cases are checked against a brute force enumeration of the
 2^n vectors done in GAP, so their expected answer comes neither from
@@ -158,4 +160,19 @@ independent implementations.
 The node counts above are not asserted, only the solution sets are:
 the lattice enumeration works in double precision, so its node counts
 depend on the machine while its answers do not.
+
+The symmetry part checks, for each case, that the order the program
+reports is the one GAP recomputes from the generators, and that G_mat
+is contained in G_aff. For a degree of at most 7 both groups are
+compared with a brute force over Sym(n) done in GAP, the multiset of
+the rows deciding G_mat and the row reduced echelon form of [A | -b]
+deciding G_aff. Two of the small cases have |G_mat| = 1 while
+|G_aff| = 2, so the containment being strict is exercised and not
+merely asserted.
+
+For Problem1 and Problem2 the orders are the recorded
+474989023199232 = 2^44 3^3 and 6, and the recorded solutions are
+checked to be a union of orbits. That last one is worth more than it
+looks: the symmetry code and the enumeration are independent, so
+their agreement is a real cross-check rather than a tautology.
 

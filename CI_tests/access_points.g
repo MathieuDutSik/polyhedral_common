@@ -1789,6 +1789,125 @@ get_zero_one_lattice_solutions:=function(arg)
 end;
 
 
+# G_mat, the group of the permutations of the columns of A for which
+# some permutation of the rows leaves A and b unchanged. ColColour is
+# optional and asks for the subgroup preserving a colouring of the
+# columns, a partial assignment for instance. The returned record has
+# the group itself and the order the program reported, which GAP
+# recomputing gives a cross-check.
+get_system_symmetry:=function(arg)
+    local A, b, options, ColColour, print_info, TmpDir, FileA, FileB, FileC, FileO, FileE, eProg, TheCommand, U, line, is_normal, size_reported, runtime_str;
+    A:=arg[1];
+    b:=arg[2];
+    ColColour:=fail;
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.ColColour) then
+            ColColour:=options.ColColour;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileA:=Filename(TmpDir, "Test.matrix");
+    FileB:=Filename(TmpDir, "Test.rhs");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileA, A);
+    WriteVectorFile(FileB, b);
+    FileC:="none";
+    if ColColour <> fail then
+        FileC:=Filename(TmpDir, "Test.colour");
+        WriteVectorFile(FileC, ColColour);
+    fi;
+    eProg:=GetBinaryFilename("MILP_SystemSymmetry");
+    TheCommand:=Concatenation(eProg, " ", FileA, " ", FileB, " ", FileC, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  A=", Length(A), "x", Length(A[1]), " command=MILP_SystemSymmetry runtime=", runtime_str, "\n");
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: MILP_SystemSymmetry did not return anything, likely crash";
+    fi;
+    size_reported:=fail;
+    is_normal:=false;
+    for line in ReadTextFile(FileE)
+    do
+        if starts_with(line, "|G_mat|=")<>fail then
+            size_reported:=Int(starts_with(line, "|G_mat|="));
+        fi;
+        if starts_with(line, "Normal termination of MILP_SystemSymmetry")<>fail then
+            is_normal:=true;
+        fi;
+    od;
+    U:=rec(group:=ReadAsFunction(FileO)(), size_reported:=size_reported);
+    RemoveFile(FileA);
+    RemoveFile(FileB);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    if is_normal=false then
+        return "program failure: MILP_SystemSymmetry did not terminate normally";
+    fi;
+    return U;
+end;
+
+# G_aff, the group of the permutations of the coordinates preserving
+# the affine subspace {x : A x = b}. It contains G_mat, and unlike it
+# does not depend on the rows that were written down.
+get_affine_symmetry:=function(arg)
+    local A, b, options, print_info, TmpDir, FileA, FileB, FileO, FileE, eProg, TheCommand, U, line, is_normal, size_reported, runtime_str;
+    A:=arg[1];
+    b:=arg[2];
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileA:=Filename(TmpDir, "Test.matrix");
+    FileB:=Filename(TmpDir, "Test.rhs");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileA, A);
+    WriteVectorFile(FileB, b);
+    eProg:=GetBinaryFilename("MILP_AffineSymmetry");
+    TheCommand:=Concatenation(eProg, " ", FileA, " ", FileB, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  A=", Length(A), "x", Length(A[1]), " command=MILP_AffineSymmetry runtime=", runtime_str, "\n");
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: MILP_AffineSymmetry did not return anything, likely crash";
+    fi;
+    size_reported:=fail;
+    is_normal:=false;
+    for line in ReadTextFile(FileE)
+    do
+        if starts_with(line, "|G_aff|=")<>fail then
+            size_reported:=Int(starts_with(line, "|G_aff|="));
+        fi;
+        if starts_with(line, "Normal termination of MILP_AffineSymmetry")<>fail then
+            is_normal:=true;
+        fi;
+    od;
+    U:=rec(group:=ReadAsFunction(FileO)(), size_reported:=size_reported);
+    RemoveFile(FileA);
+    RemoveFile(FileB);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    if is_normal=false then
+        return "program failure: MILP_AffineSymmetry did not terminate normally";
+    fi;
+    return U;
+end;
+
+
 test_strongly_semi_eutactic:=function(arg)
     local GramMat, options, arith, max_node, print_info, TmpDir, FileI, FileE, eProg, TheCommand, lines, line, rest, LStr, U, is_normal, runtime_str;
     GramMat:=arg[1];

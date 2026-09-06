@@ -195,6 +195,148 @@ TestProblemLattice:=function(idx)
     return true;
 end;
 
+# G_mat by brute force over Sym(n): the permutations of the columns
+# for which the multiset of the rows, right hand side included, is
+# unchanged. Only for the small cases.
+BruteForceSystemSymmetry:=function(A, b)
+    local n, m, ref, ListPerm, g, cur, i;
+    n:=Length(A[1]);
+    m:=Length(A);
+    ref:=SortedList(List([1..m], i->[A[i], b[i]]));
+    ListPerm:=[];
+    for g in SymmetricGroup(n)
+    do
+        cur:=SortedList(List([1..m], i->[Permuted(A[i], g), b[i]]));
+        if cur = ref then
+            Add(ListPerm, g);
+        fi;
+    od;
+    return Group(ListPerm);
+end;
+
+# G_aff by brute force: the permutations of the columns preserving the
+# row space of [A | -b], which the row reduced echelon form decides.
+BruteForceAffineSymmetry:=function(A, b)
+    local n, m, ref, ListPerm, g, cur, i;
+    n:=Length(A[1]);
+    m:=Length(A);
+    ref:=TriangulizedMat(List([1..m], i->Concatenation(A[i], [-b[i]])));
+    ListPerm:=[];
+    for g in SymmetricGroup(n)
+    do
+        cur:=TriangulizedMat(List([1..m], i->Concatenation(Permuted(A[i], g), [-b[i]])));
+        if cur = ref then
+            Add(ListPerm, g);
+        fi;
+    od;
+    return Group(ListPerm);
+end;
+
+# The two groups of a case. G_mat is contained in G_aff always, G_mat
+# depending on the rows that were written down and G_aff not. For a
+# small enough case both are compared with the brute force above.
+MAX_DEGREE_BRUTE_FORCE_SYMMETRY:=7;
+
+TestSymmetry:=function(A, b, name)
+    local n, resMat, resAff, Gmat, Gaff, gen, Gmat_bf, Gaff_bf;
+    n:=Length(A[1]);
+    resMat:=get_system_symmetry(A, b, rec(print_info:=true));
+    if is_error(resMat) then
+        return false;
+    fi;
+    resAff:=get_affine_symmetry(A, b, rec(print_info:=true));
+    if is_error(resAff) then
+        return false;
+    fi;
+    Gmat:=resMat.group;
+    Gaff:=resAff.group;
+    # The order that the program reports has to be the one GAP finds
+    if Size(Gmat) <> resMat.size_reported then
+        Print("For ", name, " MILP_SystemSymmetry reports the order ",
+              resMat.size_reported, " but GAP finds ", Size(Gmat), "\n");
+        return false;
+    fi;
+    if Size(Gaff) <> resAff.size_reported then
+        Print("For ", name, " MILP_AffineSymmetry reports the order ",
+              resAff.size_reported, " but GAP finds ", Size(Gaff), "\n");
+        return false;
+    fi;
+    # G_mat is a subgroup of G_aff
+    for gen in GeneratorsOfGroup(Gmat)
+    do
+        if not gen in Gaff then
+            Print("For ", name, " a generator of G_mat is not in G_aff\n");
+            return false;
+        fi;
+    od;
+    if n <= MAX_DEGREE_BRUTE_FORCE_SYMMETRY then
+        Gmat_bf:=BruteForceSystemSymmetry(A, b);
+        Gaff_bf:=BruteForceAffineSymmetry(A, b);
+        if Size(Gmat) <> Size(Gmat_bf) then
+            Print("For ", name, " |G_mat|=", Size(Gmat),
+                  " but the brute force finds ", Size(Gmat_bf), "\n");
+            return false;
+        fi;
+        if Size(Gaff) <> Size(Gaff_bf) then
+            Print("For ", name, " |G_aff|=", Size(Gaff),
+                  " but the brute force finds ", Size(Gaff_bf), "\n");
+            return false;
+        fi;
+        Print("  |G_mat|=", Size(Gmat), " |G_aff|=", Size(Gaff),
+              ", both matching the brute force\n");
+    else
+        Print("  |G_mat|=", Size(Gmat), " |G_aff|=", Size(Gaff),
+              ", G_mat contained in G_aff\n");
+    fi;
+    return true;
+end;
+
+# The groups of Problem1 and Problem2, and the check that the recorded
+# solutions are a union of orbits: the group and the enumeration are
+# independent pieces of code, so their agreement is worth something.
+TestProblemSymmetry:=function(idx, size_expected)
+    local A, b, sols, sets, resMat, resAff, Gmat, Gaff, s, g, img;
+    A:=ReadMatrixFile(Concatenation("Problem", String(idx), ".matrix"));
+    b:=ReadVectorFile(Concatenation("Problem", String(idx), ".rhs"));
+    resMat:=get_system_symmetry(A, b, rec(print_info:=true));
+    if is_error(resMat) then
+        return false;
+    fi;
+    resAff:=get_affine_symmetry(A, b, rec(print_info:=true));
+    if is_error(resAff) then
+        return false;
+    fi;
+    Gmat:=resMat.group;
+    Gaff:=resAff.group;
+    if resMat.size_reported <> size_expected then
+        Print("Problem", idx, ": |G_mat|=", resMat.size_reported,
+              " but the expected order is ", size_expected, "\n");
+        return false;
+    fi;
+    if resAff.size_reported <> size_expected then
+        Print("Problem", idx, ": |G_aff|=", resAff.size_reported,
+              " but the expected order is ", size_expected, "\n");
+        return false;
+    fi;
+    sols:=ReadMatrixFile(Concatenation("Problem", String(idx), ".solutions"));
+    sets:=Set(List(sols, r->Filtered([1..Length(r)], j->r[j]=1)));
+    for s in sets
+    do
+        for g in Concatenation(GeneratorsOfGroup(Gmat), GeneratorsOfGroup(Gaff))
+        do
+            img:=OnSets(s, g);
+            if not img in sets then
+                Print("Problem", idx, ": the recorded solutions are not stable ",
+                      "under the group\n");
+                return false;
+            fi;
+        od;
+    od;
+    Print("  |G_mat|=|G_aff|=", size_expected,
+          ", and the ", Length(sets), " recorded solutions are a union of orbits\n");
+    return true;
+end;
+
 ListCases:=[];
 # One row, all the subsets of a given size
 Add(ListCases, rec(name:="choose_2_of_4", A:=[[1,1,1,1]], b:=[2], n_solution:=6));
@@ -247,6 +389,23 @@ FullTest:=function()
     fi;
     Print("Now Problem2 by the lattice\n");
     if TestProblemLattice(2) = false then
+        return false;
+    fi;
+    Print("Now the symmetry groups of the small cases\n");
+    iCase:=0;
+    for eCase in ListCases
+    do
+        iCase:=iCase + 1;
+        Print("iCase=", iCase, " / ", Length(ListCases), " name=", eCase.name, "\n");
+        if TestSymmetry(eCase.A, eCase.b, eCase.name) = false then
+            return false;
+        fi;
+    od;
+    Print("Now the symmetry groups of Problem1 and Problem2\n");
+    if TestProblemSymmetry(1, 474989023199232) = false then
+        return false;
+    fi;
+    if TestProblemSymmetry(2, 6) = false then
         return false;
     fi;
     return true;
