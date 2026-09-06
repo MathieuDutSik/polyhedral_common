@@ -2,16 +2,18 @@ import os
 
 # Generate the real algebraic field description file used for the type input
 # "RealAlgebraic=FileDesc5" in polyhedral_common. The generator field element is
-#   x = sin(2*pi/5)
+#   x = 2*sin(2*pi/5)
 # whose minimal polynomial is
-#   64 x^4 - 80 x^2 + 20 = 0
-# (l_coeff below lists the coefficients in ascending degree order).
+#   x^4 - 5 x^2 + 5 = 0
+# (l_coeff below lists the coefficients in ascending degree order). The
+# generator is 2*sin(2*pi/5) and not sin(2*pi/5) so that the minimal polynomial
+# is monic, that is so that x is an algebraic integer.
 #
 # The regular 5-gon (Regular5gon) is written in terms of this x using:
-#   sin(2pi/5) = x
-#   cos(2pi/5) = 2x^2 - 3/2
-#   sin(4pi/5) = 4x^3 - 3x
-#   cos(4pi/5) = 1 - 2x^2
+#   sin(2pi/5) = x/2
+#   cos(2pi/5) = x^2/2 - 3/2
+#   sin(4pi/5) = x^3/2 - 3x/2
+#   cos(4pi/5) = 1 - x^2/2
 #
 # The description file contains:
 #   * the degree of the minimal polynomial
@@ -88,8 +90,8 @@ def create_real_algebraic_input(val, l_coeff, FileName):
     f.close()
 
 
-# x = sin(2*pi/5), minimal polynomial 64 x^4 - 80 x^2 + 20 = 0.
-val = sin(2*pi/5)
-l_coeff = [20, 0, -80, 0, 64]
+# x = 2*sin(2*pi/5), minimal polynomial x^4 - 5 x^2 + 5 = 0.
+val = 2*sin(2*pi/5)
+l_coeff = [5, 0, -5, 0, 1]
 FileName = "FileDesc5"
 create_real_algebraic_input(val, l_coeff, FileName)

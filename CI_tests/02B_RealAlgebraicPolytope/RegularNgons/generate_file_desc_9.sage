@@ -2,20 +2,22 @@ import os
 
 # Generate the real algebraic field description file used for the type input
 # "RealAlgebraic=FileDesc9" in polyhedral_common. The generator field element is
-#   x = sin(2*pi/9)
+#   x = 2*sin(2*pi/9)
 # whose minimal polynomial is
-#   64 x^6 - 96 x^4 + 36 x^2 - 3 = 0
-# (l_coeff below lists the coefficients in ascending degree order).
+#   x^6 - 6 x^4 + 9 x^2 - 3 = 0
+# (l_coeff below lists the coefficients in ascending degree order). The
+# generator is 2*sin(2*pi/9) and not sin(2*pi/9) so that the minimal polynomial
+# is monic, that is so that x is an algebraic integer.
 #
 # The regular 9-gon (Regular9gon) is written in terms of this x using:
-#   sin(2pi/9) = x
-#   cos(2pi/9) = -8x^4 + 10x^2 - 2
-#   sin(4pi/9) = -16x^5 + 20x^3 - 4x
-#   cos(4pi/9) = 1 - 2x^2
-#   sin(6pi/9) = 3x - 4x^3            (= sqrt(3)/2)
+#   sin(2pi/9) = x/2
+#   cos(2pi/9) = -x^4/2 + 5x^2/2 - 2
+#   sin(4pi/9) = -x^5/2 + 5x^3/2 - 2x
+#   cos(4pi/9) = 1 - x^2/2
+#   sin(6pi/9) = 3x/2 - x^3/2         (= sqrt(3)/2)
 #   cos(6pi/9) = -1/2
-#   sin(8pi/9) = -16x^5 + 20x^3 - 5x
-#   cos(8pi/9) = 8x^4 - 8x^2 + 1
+#   sin(8pi/9) = -x^5/2 + 5x^3/2 - 5x/2
+#   cos(8pi/9) = x^4/2 - 2x^2 + 1
 #
 # The description file contains:
 #   * the degree of the minimal polynomial
@@ -92,8 +94,8 @@ def create_real_algebraic_input(val, l_coeff, FileName):
     f.close()
 
 
-# x = sin(2*pi/9), minimal polynomial 64 x^6 - 96 x^4 + 36 x^2 - 3 = 0.
-val = sin(2*pi/9)
-l_coeff = [-3, 0, 36, 0, -96, 0, 64]
+# x = 2*sin(2*pi/9), minimal polynomial x^6 - 6 x^4 + 9 x^2 - 3 = 0.
+val = 2*sin(2*pi/9)
+l_coeff = [-3, 0, 9, 0, -6, 0, 1]
 FileName = "FileDesc9"
 create_real_algebraic_input(val, l_coeff, FileName)
