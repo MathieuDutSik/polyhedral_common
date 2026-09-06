@@ -383,6 +383,42 @@ WriteGroupFile:=function(eFile, n, GRP)
 end;
 
 
+# The inverse of WriteGroupFile: the file holds "n n_gen" and then one line
+# per generator with the n images, numbered from 0.
+ReadGroupFile:=function(eFile)
+    local ListLines, LStr, n, n_gen, ListGen, i_gen, eList;
+    ListLines:=ReadTextFile(eFile);
+    LStr:=Filtered(SplitString(ListLines[1], " "), x->Length(x)>0);
+    n:=Int(LStr[1]);
+    n_gen:=Int(LStr[2]);
+    ListGen:=[];
+    for i_gen in [1..n_gen]
+    do
+        eList:=List(Filtered(SplitString(ListLines[1+i_gen], " "), x->Length(x)>0), x->Int(x)+1);
+        if Length(eList)<>n then
+            Print("The generator ", i_gen, " has ", Length(eList), " images instead of ", n, "\n");
+            Error("Incorrect group file");
+        fi;
+        Add(ListGen, PermList(eList));
+    od;
+    return Group(ListGen);
+end;
+
+# Read back the "|FAC|=<k>" that the Number output format of
+# POLY_dual_description writes.
+ParseNbFacet:=function(FileName)
+    local ListLines, eLine, eSplit;
+    ListLines:=ReadTextFile(FileName);
+    for eLine in ListLines
+    do
+        eSplit:=SplitString(eLine, "=");
+        if Length(eSplit)=2 then
+            return Int(eSplit[2]);
+        fi;
+    od;
+    return fail;
+end;
+
 WriteVector:=function(output, V)
     local eVal;
     AppendTo(output, Length(V), "\n");

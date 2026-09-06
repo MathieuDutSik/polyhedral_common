@@ -2,7 +2,8 @@ Read("../common.g");
 
 # The regular N-gon has vertices (cos(2*pi*k/N), sin(2*pi*k/N)), which for
 # these N are real algebraic numbers, so the polytope lives over the field
-# Q(x) with x = sin(2*pi/N). RegularNgons/FileDesc<N> describes that field
+# Q(x) with x = 2*sin(2*pi/N), an algebraic integer.
+# RegularNgons/FileDesc<N> describes that field
 # and RegularNgons/Regular<N>gon holds the vertices over it. Both the
 # automorphism group and the dual description therefore exercise the real
 # algebraic arithmetic rather than the rational one.
@@ -58,20 +59,6 @@ TestAutomorphismNgon:=function(n)
         return false;
     fi;
     return true;
-end;
-
-# Read back the "|FAC|=<k>" that the Number output format writes.
-ParseNbFacet:=function(FileName)
-    local ListLines, eLine, eSplit;
-    ListLines:=ReadTextFile(FileName);
-    for eLine in ListLines
-    do
-        eSplit:=SplitString(eLine, "=");
-        if Length(eSplit)=2 then
-            return Int(eSplit[2]);
-        fi;
-    od;
-    return fail;
 end;
 
 # The N-gon has N facets. Every method must agree on that.

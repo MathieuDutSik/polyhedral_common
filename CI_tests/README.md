@@ -18,7 +18,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 
 * `01_RatIntAutomorphy` -- `ci_01_rat_int_automorphy`: Rational and integral automorphism groups of a configuration of vectors, the associated isomorphism and canonical form codes, and the decomposition of the rational group into double cosets of the integral one.
 * `02A_FindPositiveVectors` -- `ci_02A_find_positive_vectors`: Finding positive vectors of indefinite forms.
-* `02B_RealAlgebraicPolytope` -- `ci_02B_real_algebraic_polytope`: Automorphism group and dual description, by bb, cdd, lrs and normaliz, of the regular N-gons over the real algebraic field Q(sin(2*pi/N)).
+* `02B_RealAlgebraicPolytope` -- `ci_02B_real_algebraic_polytope`: Automorphism group and dual description, by bb, cdd, lrs and normaliz, of the regular N-gons over the real algebraic field Q(2*sin(2*pi/N)); and the dual description of G553, a 7-dimensional cone on 150 generators over Q(2*sin(2*pi/5)) with a symmetry group, where the recursive dual description using the symmetry and the direct one ignoring it are checked against each other.
 * `03_Tspaces_IsoDelaunay` -- `ci_03_enum_isodelaunay`: Enumeration of isoDelaunay domains.
 * `04A_LattAutIsomCan` -- `ci_04A_latt_aut_isom_can`: Lattice automorphism isomorphism and canonicalization.
 * `05A_DirectVolumePolytope` -- `ci_05A_direct_volume`: Computation of the volume of polytopes.

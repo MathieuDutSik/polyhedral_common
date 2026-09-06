@@ -5,7 +5,7 @@ name: CI(02B) of polytopes over real algebraic fields
 # on: release
 
 # The regular N-gons of CI_tests/02B_RealAlgebraicPolytope/RegularNgons are
-# given over Q(sin(2*pi/N)), so both the automorphism group and the dual
+# given over Q(2*sin(2*pi/N)), so both the automorphism group and the dual
 # description run on the real algebraic arithmetic rather than the rational
 # one, which is what this section is for.
 
@@ -58,3 +58,20 @@ jobs:
           fi
           cd ../..
           echo "After the regular N-gon tests"
+
+      # G553 is the real-size case: a 7-dimensional cone on 150 generators over
+      # the field, with a symmetry group. The recursive dual description using
+      # the symmetry and the direct one ignoring it must agree on the facets.
+      - name: Test the dual description of G553
+        run: |
+          make -C src_dualdesc -f Makefile_serial_dualdesc
+          echo "After compilation of the serial dual description code"
+
+          cd CI_tests/02B_RealAlgebraicPolytope
+          ../../gap.sh < TestG553.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "TestG553.g has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the G553 dual description test"

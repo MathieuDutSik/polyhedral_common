@@ -2,7 +2,7 @@
  NumericalType = "RealAlgebraic=FileDesc5"
  EXTfile = "G553.ext"
  GRPfile = "G553.grp"
- OutFile = "orbits_G553"
+ OutFile = "orbits"
  OutFormat = "GAP"
  DeterministicRuntime = F
  max_runtime = 1800
