@@ -489,12 +489,14 @@ endforeach()
 set(
   MILP_PROGRAMS
   LATT_ZeroOneSolutions
+  MILP_SystemSymmetry
+  MILP_AffineSymmetry
 )
 foreach(target IN LISTS MILP_PROGRAMS)
   add_polyhedral_binary(
     ${target}
     "${CMAKE_SOURCE_DIR}/src_milp/${target}.cpp"
-    polyhedral_poly_support
+    polyhedral_group_support
   )
 endforeach()
 

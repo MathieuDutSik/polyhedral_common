@@ -1,4 +1,4 @@
-PROGRAM		= LATT_ZeroOneSolutions
+PROGRAM		= LATT_ZeroOneSolutions MILP_SystemSymmetry MILP_AffineSymmetry
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
