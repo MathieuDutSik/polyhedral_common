@@ -271,6 +271,7 @@ write_rec_nml := function(FileNml, dim, OutFile, FileCosets, budget)
     AppendTo(os, "&SEARCH\n");
     AppendTo(os, " RecordToBeat = \"auto\"\n");
     AppendTo(os, " n_walk_steps = 5\n");
+    AppendTo(os, " max_gram_entry = 1000000\n");
     AppendTo(os, "/\n");
     AppendTo(os, "&TSPACE\n");
     AppendTo(os, " TypeTspace = \"Classic\"\n");
@@ -310,6 +311,16 @@ test_record_search := function(expected_best, expected_record)
     fi;
     if eRec.has_best <> true then
         Print("  FOUND ERROR: the search optimized no domain at all\n");
+        return false;
+    fi;
+    # A walk that drifts into skewed representatives loses most of its
+    # evaluations; the restart guard is what keeps that at zero.
+    Print("  n_domain_evaluated=", eRec.n_domain_evaluated,
+          " n_domain_failed=", eRec.n_domain_failed,
+          " n_restart=", eRec.n_restart, "\n");
+    if eRec.n_domain_failed > eRec.n_domain_evaluated then
+        Print("  FOUND ERROR: most domains could not be optimized, the walk ",
+              "has drifted into skewed representatives\n");
         return false;
     fi;
     # The walk has to reach the minimum over the 6 domains, which the full

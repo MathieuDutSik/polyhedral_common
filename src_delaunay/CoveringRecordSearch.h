@@ -167,8 +167,12 @@ GetDomainCoveringOptimum(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   std::optional<MyVector<double>> opt_start =
       covering_maxdet::GetStartingPoint<T, double>(cd, cd_f, os);
   if (!opt_start) {
+    os << "COVERING_RECORD: the domain that could not be optimized has a Gram "
+          "matrix of largest entry "
+       << x.GramMat.cwiseAbs().maxCoeff() << "\n";
     return {};
   }
+
   covering_maxdet::MaxdetOptions<double> opts =
       covering_maxdet::GetDefaultMaxdetOptions<double>();
   covering_maxdet::MaxdetResult<double> res =
@@ -180,6 +184,18 @@ GetDomainCoveringOptimum(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
     return {};
   }
   return res;
+}
+
+/*
+  How skewed a representative is: the largest entry of its Gram matrix. The
+  domains of a point set have bounded coordinates, so a value far above what
+  a fresh domain shows is the drift of the walk rather than a property of
+  the domain.
+ */
+template <typename T, typename Tint, typename Tgroup>
+double GetDomainSkew(IsoDelaunayDomain<T, Tint, Tgroup> const &x) {
+  Tint val = x.GramMat.cwiseAbs().maxCoeff();
+  return UniversalScalarConversion<double, Tint>(val);
 }
 
 // ---------------------------------------------------------------------------
@@ -194,6 +210,10 @@ struct RecordSearchOptions {
   int n_walk_steps;
   // The wall-clock budget in seconds; 0 means no limit.
   int max_runtime_second;
+  // The walk is restarted from a fresh domain once the Gram matrix of the
+  // current one has an entry above this; 0 disables the guard. See the
+  // comment on the drift in LookForRecordCovering.
+  double max_gram_entry;
   // The directory where the Gram matrix of every improvement is written.
   // Empty writes nothing.
   std::string Prefix;
@@ -215,6 +235,7 @@ template <typename Tint> struct RecordSearchResult {
   std::string message;
   int n_iter = 0;
   int n_walk = 0;
+  int n_restart = 0;
   int n_domain_evaluated = 0;
   int n_domain_failed = 0;
   int runtime_second = 0;
@@ -263,15 +284,41 @@ RandomWalkStab(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 /*
   The walk itself. See the header comment for the strategy; f_stab_gens
   supplies the generators of the stabilizer of the object being walked on
-  (the periodic subgroup for a periodic point set).
+  (the periodic subgroup for a periodic point set), and f_restart a fresh
+  starting domain.
+
+  --- The drift, and why f_restart is needed ---
+
+  A flip re-expresses the tessellation in the same lattice basis, and
+  nothing brings it back. Composing thousands of them makes the coordinates
+  grow without bound: on Z^3 + {0, (1/2,1/2,1/2), (3/4,3/4,3/4)}, whose 46
+  domains have Gram matrices of largest entry at most 108, a twenty minute
+  walk was reaching representatives of largest entry 1e15, with a median of
+  1e12. Those are the same domains seen in ever more skewed coordinates: the
+  covering optimum is unchanged, being an invariant, but the forms interior
+  to them become so anisotropic that the optimization cannot be carried out
+  in double, and 95% of the evaluations of that run were lost that way.
+
+  The enumeration does not suffer from this because it maps every domain it
+  reaches to a canonical representative; a walk has no such step. Nor can
+  the representative simply be reduced here: a unimodular reduction of the
+  form would move the cosets with it, giving a different point set unless it
+  is taken in the subgroup preserving the one at hand.
+
+  So the walk restarts instead. Once the current domain is more skewed than
+  max_gram_entry, or once its optimization fails, it is dropped for a fresh
+  domain from f_restart, whose coordinates are small by construction. The
+  best found so far is kept across restarts, so nothing is lost but the
+  position.
  */
-template <typename T, typename Tint, typename Tgroup, typename Fstab>
+template <typename T, typename Tint, typename Tgroup, typename Fstab,
+          typename Frestart>
 RecordSearchResult<Tint>
 LookForRecordCovering(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
                       IsoDelaunayDomain<T, Tint, Tgroup> const &start,
                       LinSpaceMatrix<T> const &LinSpa, T const &point_density,
-                      Fstab f_stab_gens, RecordSearchOptions const &opts,
-                      std::ostream &os) {
+                      Fstab f_stab_gens, Frestart f_restart,
+                      RecordSearchOptions const &opts, std::ostream &os) {
   SingletonTime time_start;
   RecordSearchResult<Tint> res;
   // Below this relative gain an improvement is the noise of the numerical
@@ -337,16 +384,40 @@ LookForRecordCovering(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
   };
   //
   IsoDelaunayDomain<T, Tint, Tgroup> Work = start;
+  double curr = 0;
+  // Move to a fresh domain and take its value, the escape from a drifted or
+  // unusable position. Returns false when even a fresh domain cannot be
+  // optimized, which stops the walk.
+  auto restart = [&]() -> bool {
+    res.n_restart++;
+    for (int i_try = 0; i_try < 10; i_try++) {
+      Work = f_restart();
+      std::optional<covering_maxdet::MaxdetResult<double>> opt =
+          evaluate(Work);
+      if (opt) {
+        register_domain(Work, *opt);
+        curr = opt->cov_density;
+        return true;
+      }
+    }
+    return false;
+  };
+  auto is_drifted = [&](IsoDelaunayDomain<T, Tint, Tgroup> const &y) -> bool {
+    return opts.max_gram_entry > 0 && GetDomainSkew(y) > opts.max_gram_entry;
+  };
   std::optional<covering_maxdet::MaxdetResult<double>> opt_curr =
       evaluate(Work);
   if (!opt_curr) {
-    return finish("the covering optimization failed on the starting domain");
+    if (!restart()) {
+      return finish("no domain could be optimized, even after restarting");
+    }
+  } else {
+    register_domain(Work, *opt_curr);
+    curr = opt_curr->cov_density;
   }
-  register_domain(Work, *opt_curr);
   if (res.found_record) {
     return finish("the starting domain already beats the record");
   }
-  double curr = opt_curr->cov_density;
   while (true) {
     if (out_of_time()) {
       return finish("the runtime budget ran out");
@@ -403,22 +474,38 @@ LookForRecordCovering(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
       Work = RandomWalkStab<T, Tint, Tgroup, Fstab>(Work, data, f_stab_gens,
                                                     opts.n_walk_steps, os);
       res.n_walk++;
-      std::optional<covering_maxdet::MaxdetResult<double>> opt = evaluate(Work);
-      if (!opt) {
-        // The walk landed on a domain that cannot be optimized. Rather than
-        // give up, keep walking from it on the next iteration with the
-        // current value untouched.
-        continue;
+      if (is_drifted(Work)) {
+        if (!restart()) {
+          return finish("no domain could be optimized, even after restarting");
+        }
+      } else {
+        std::optional<covering_maxdet::MaxdetResult<double>> opt =
+            evaluate(Work);
+        if (!opt) {
+          // Not usable, and staying would only walk deeper into the same
+          // region, so start again from a fresh domain.
+          if (!restart()) {
+            return finish(
+                "no domain could be optimized, even after restarting");
+          }
+        } else {
+          register_domain(Work, *opt);
+          curr = opt->cov_density;
+        }
       }
-      register_domain(Work, *opt);
       if (res.found_record) {
         return finish("a domain beating the record was found");
       }
-      curr = opt->cov_density;
     } else {
       size_t pos = random() % ListIdx.size();
       Work = result.l_adj[ListIdx[pos]].DT_gram;
       curr = the_min;
+      if (is_drifted(Work) && !restart()) {
+        return finish("no domain could be optimized, even after restarting");
+      }
+      if (res.found_record) {
+        return finish("a domain beating the record was found");
+      }
     }
   }
 }
@@ -447,6 +534,7 @@ void WriteRecordSearchGAP(std::string const &FileName,
   os_out << ", message:=\"" << res.message << "\"";
   os_out << ", n_iter:=" << res.n_iter;
   os_out << ", n_walk:=" << res.n_walk;
+  os_out << ", n_restart:=" << res.n_restart;
   os_out << ", n_domain_evaluated:=" << res.n_domain_evaluated;
   os_out << ", n_domain_failed:=" << res.n_domain_failed;
   os_out << ", runtime_second:=" << res.runtime_second;

@@ -872,21 +872,25 @@ FeasibilityMargins<T> GetFeasibilityMargins(CoveringData<T> const &cd,
   handle, and it is distinguished from a broken construction, which is a
   programming error and still throws.
 
-  What is observed in practice is not a small margin -- the margins can be
-  perfectly healthy, of the order of 1e-2 -- but a huge dynamic range. The
-  interior point the linear program returns can be a very anisotropic form,
-  with diagonal entries spanning 1e7 to 1e15 on the same domain, and the
-  circumradius blocks of the different orbits then live at scales too far
-  apart for a double to hold at once: the block of an orbit whose simplex is
-  short in that metric loses its positive definiteness while the block
-  setting the scale is fine.
+  What is observed is not a small margin -- the margins can be perfectly
+  healthy, of the order of 1e-2 -- but a huge dynamic range. The interior
+  point the linear program returns is then a very anisotropic form, with
+  diagonal entries spanning 1e7 to 1e15 on the same domain, and the
+  circumradius blocks of the different orbits live at scales too far apart
+  for a double to hold at once: the block of an orbit whose simplex is short
+  in that metric loses its positive definiteness while the block setting the
+  scale is fine.
 
-  The scaling by 1 / (2 max_sq) cannot help with this, being exactly scale
-  invariant: R^2(cQ) = c R^2(Q), so Q / (2 R^2(Q)) does not depend on the
-  size of Q, only on its shape. Fixing it needs the shape changed, that is a
-  reduction of the form by a unimodular transformation carried through the
-  vertices and the inequalities of the domain, or a floating point type with
-  more range than a double.
+  The scaling by 1 / (2 max_sq) cannot help, being exactly scale invariant:
+  R^2(cQ) = c R^2(Q), so Q / (2 R^2(Q)) does not depend on the size of Q,
+  only on its shape.
+
+  Such a form is not what a domain of a point set looks like; it is what a
+  badly chosen representative of one looks like. The domains themselves have
+  bounded coordinates, and the anisotropy comes from a caller that reached
+  the domain by composing many flips without ever reducing -- see the drift
+  discussed in CoveringRecordSearch.h, which the walk there handles by
+  restarting rather than by carrying on.
  */
 template <typename T, typename Tfloat>
 std::optional<MyVector<Tfloat>>

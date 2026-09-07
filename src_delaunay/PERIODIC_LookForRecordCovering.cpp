@@ -152,14 +152,22 @@ void process_A(FullNamelist const &eFull) {
   } else {
     Prefix = "";
   }
+  double max_gram_entry = BlockSEARCH.get_double("max_gram_entry");
   covering_record::RecordSearchOptions opts{record, n_walk_steps,
-                                            max_runtime_second, Prefix};
-  IsoDelaunayDomain<T, Tint, Tgroup> start =
-      GetInitialPeriodicIsoDelaunayDomain(data, pps);
+                                            max_runtime_second, max_gram_entry,
+                                            Prefix};
+  // A fresh domain, which the walk falls back on when it has drifted into
+  // coordinates too skewed to optimize; see LookForRecordCovering.
+  auto f_restart = [&]() -> Tdom {
+    return GetInitialPeriodicIsoDelaunayDomain(data, pps);
+  };
+  IsoDelaunayDomain<T, Tint, Tgroup> start = f_restart();
   covering_record::RecordSearchResult<Tint> res =
       covering_record::LookForRecordCovering<T, Tint, Tgroup,
-                                             decltype(f_stab_gens)>(
-          data, start, LinSpaCopy, point_density, f_stab_gens, opts, os);
+                                             decltype(f_stab_gens),
+                                             decltype(f_restart)>(
+          data, start, LinSpaCopy, point_density, f_stab_gens, f_restart, opts,
+          os);
   //
   covering_record::WriteRecordSearchGAP(OutFile, res, record);
   os << "PERIODIC_RECORD: " << res.message << "\n";
@@ -218,9 +226,16 @@ FullNamelist NAMELIST_GetStandard_PERIODIC_RECORD_COVERING() {
     ListStringValues["RecordToBeat"] = "auto";
     // The number of random adjacency jumps taken to leave a local minimum.
     ListIntValues["n_walk_steps"] = 20;
+    std::map<std::string, double> ListDoubleValues;
+    // The walk restarts from a fresh domain once the Gram matrix of the
+    // current one has an entry above this. Flipping never brings the
+    // coordinates back down, so a long walk drifts into representatives too
+    // skewed to optimize in floating point; 0 disables the guard.
+    ListDoubleValues["max_gram_entry"] = 1000000;
     SingleBlock BlockSEARCH;
     BlockSEARCH.setListStringValues(ListStringValues);
     BlockSEARCH.setListIntValues(ListIntValues);
+    BlockSEARCH.setListDoubleValues(ListDoubleValues);
     ListBlock["SEARCH"] = BlockSEARCH;
   }
   // TSPACE

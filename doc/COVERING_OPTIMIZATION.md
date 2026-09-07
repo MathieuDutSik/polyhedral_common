@@ -248,27 +248,35 @@ It stops on the first record and otherwise reports the best density of every
 configuration it tried. Exit status 1 means "swept everything, found no
 record", which is the normal outcome, not a failure.
 
-### When the walk cannot evaluate what it visits
+### The drift of the walk
 
-`n_domain_failed` in the result record counts the domains whose optimization
-could not even start. It is zero on most configurations and can be almost
-everything on some: `Z^3 + {0, (1/2,1/2,1/2), (3/4,3/4,3/4)}` lost 17052 of
-17853 evaluations in a 20-minute run.
+A flip re-expresses the tessellation in the same lattice basis, and nothing
+brings it back, so a long walk drifts into ever more skewed representatives
+of the domains it visits. On `Z^3 + {0, (1/2,1/2,1/2), (3/4,3/4,3/4)}`,
+whose 46 domains have Gram matrices of largest entry at most 108, a
+twenty-minute walk was reaching representatives of largest entry 1e15, with
+a median of 1e12. Those are the same domains in worse coordinates — the
+covering optimum is an invariant and does not change — but the forms
+interior to them become anisotropic enough that the optimization cannot be
+carried out in double, and 95% of the evaluations of that run were lost.
 
-The cause is not a small feasibility margin — those stay healthy, around
-1e-2 — but a huge dynamic range. The form interior to a domain can be so
-anisotropic, with diagonal entries spanning 1e7 to 1e15, that the
-circumradius blocks of the different orbits sit at scales a double cannot
-hold at once, and the block of an orbit whose simplex is short in that
-metric loses its positive definiteness. Rescaling does not help: the
-starting point is exactly scale invariant, `R^2(cQ) = c R^2(Q)`. Fixing it
-needs the *shape* changed — a unimodular reduction of the form carried
-through the vertices and the inequalities of the domain — or a floating
-point type with more range than a double.
+The enumeration never sees this, mapping every domain it reaches to a
+canonical representative; a walk has no such step. Nor can the
+representative simply be reduced: a unimodular reduction of the form moves
+the cosets with it and would give a different point set, unless taken in the
+subgroup preserving the one at hand.
 
-**A result with a large `n_domain_failed` is the best over a small part of
-what the walk visited**, so it says much less than the same number with a
-zero there. The sweep script prints both.
+So the walk restarts. `max_gram_entry` in the `SEARCH` block (default 1e6)
+is the largest Gram entry tolerated; above it, or when an optimization
+fails, the current domain is dropped for a fresh one, whose coordinates are
+small by construction. The best found so far is kept across restarts, so
+only the position is lost. On the configuration above this takes the
+evaluations lost from 95% to none, and the walk then reaches the same
+2.0881700162 that enumerating all 46 domains gives.
+
+`n_domain_failed` and `n_restart` in the result record are what to watch: a
+run with a large `n_domain_failed` reports the best over a small part of
+what it visited, and the sweep script prints both.
 
 ### What a record would and would not prove
 
