@@ -121,6 +121,11 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
           pairwise_scalar_info, is_self_dual};
 }
 
+/*
+  The counterpart of ReadLinSpaceFile, whose reads this has to match one for
+  one: SuperMat, ListMat, ListComm, ListSubspaces, PtStabGens, then the
+  spanning and outer elements and the pairwise scalar invariant.
+ */
 template <typename T>
 void WriteLinSpace(std::ostream &os, LinSpaceMatrix<T> const &LinSpa) {
   WriteMatrix(os, LinSpa.SuperMat);
@@ -128,6 +133,9 @@ void WriteLinSpace(std::ostream &os, LinSpaceMatrix<T> const &LinSpa) {
   WriteListMatrix(os, LinSpa.ListComm);
   WriteListMatrix(os, LinSpa.ListSubspaces);
   WriteListMatrix(os, LinSpa.PtStabGens);
+  WriteListMatrix(os, LinSpa.l_spanning_elements);
+  WriteListMatrix(os, LinSpa.l_outer_elements);
+  WriteMatrix(os, LinSpa.pairwise_scalar_info.PairwiseScalarInv);
 }
 
 template <typename T>

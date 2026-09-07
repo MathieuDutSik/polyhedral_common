@@ -1,0 +1,264 @@
+Read("../common.g");
+Print("Beginning Test covering density optimization over iso-Delaunay domains\n");
+
+prog_enum := GetBinaryFilename("LATT_SerialLattice_IsoDelaunayDomain");
+prog_per := GetBinaryFilename("LATT_SerialPeriodic_IsoDelaunayDomain");
+prog_ana := GetBinaryFilename("LATT_AnalysisIsoDelaunay");
+
+TmpDir := DirectoryTemporary();
+tmp := function(name)
+    return Filename(TmpDir, name);
+end;
+
+# The namelist enumerating the iso-Delaunay domains of the classic GL_dim(Z)
+# T-space, dumping each of them as a boost archive DomPrefix<i>.
+write_enum_nml := function(FileNml, dim, OutFile, DomPrefix)
+    local os;
+    RemoveFileIfExist(FileNml);
+    os := OutputTextFile(FileNml, true);
+    # GAP's line wrapping would break the long temp-dir paths in two.
+    SetPrintFormattingStatus(os, false);
+    AppendTo(os, "&SYSTEM\n");
+    AppendTo(os, " max_runtime_second = 0\n");
+    AppendTo(os, " ApplyStdUnitbuf = T\n");
+    AppendTo(os, " Saving = F\n");
+    AppendTo(os, " Prefix = \"/irrelevant/\"\n");
+    AppendTo(os, " OutFile = \"", OutFile, "\"\n");
+    AppendTo(os, " OutFormat = \"NumberGAP\"\n");
+    AppendTo(os, "/\n");
+    AppendTo(os, "&DATA\n");
+    AppendTo(os, " arithmetic = \"gmp\"\n");
+    AppendTo(os, " FileDualDescription = \"unset\"\n");
+    AppendTo(os, " CommonGramMat = \"unset\"\n");
+    AppendTo(os, " PrefixIsoDelaunayDomains = \"", DomPrefix, "\"\n");
+    AppendTo(os, " CVPmethod = \"SVexact\"\n");
+    AppendTo(os, "/\n");
+    AppendTo(os, "&TSPACE\n");
+    AppendTo(os, " TypeTspace = \"Classic\"\n");
+    AppendTo(os, " ClassicDim = ", dim, "\n");
+    AppendTo(os, "/\n");
+    CloseStream(os);
+end;
+
+# The same for a periodic point set: the cosets are read from FileCosets, and
+# the T-space actually used is written out for the analysis to consume.
+write_per_nml := function(FileNml, dim, OutFile, DomPrefix, FileCosets,
+                          FileLinSpa)
+    local os;
+    RemoveFileIfExist(FileNml);
+    os := OutputTextFile(FileNml, true);
+    SetPrintFormattingStatus(os, false);
+    AppendTo(os, "&SYSTEM\n");
+    AppendTo(os, " max_runtime_second = 0\n");
+    AppendTo(os, " ApplyStdUnitbuf = T\n");
+    AppendTo(os, " Saving = F\n");
+    AppendTo(os, " Prefix = \"/irrelevant/\"\n");
+    AppendTo(os, " OutFile = \"", OutFile, "\"\n");
+    AppendTo(os, " OutFormat = \"NumberGAP\"\n");
+    AppendTo(os, "/\n");
+    AppendTo(os, "&DATA\n");
+    AppendTo(os, " arithmetic = \"gmp\"\n");
+    AppendTo(os, " FileDualDescription = \"unset\"\n");
+    AppendTo(os, " FileCosets = \"", FileCosets, "\"\n");
+    AppendTo(os, " PrefixIsoDelaunayDomains = \"", DomPrefix, "\"\n");
+    AppendTo(os, " FileLinSpaceOut = \"", FileLinSpa, "\"\n");
+    AppendTo(os, "/\n");
+    AppendTo(os, "&TSPACE\n");
+    AppendTo(os, " TypeTspace = \"Classic\"\n");
+    AppendTo(os, " ClassicDim = ", dim, "\n");
+    AppendTo(os, "/\n");
+    CloseStream(os);
+end;
+
+# The namelist optimizing the covering density over one domain. FileLinSpa and
+# FileCosets are "null" for a lattice domain.
+write_ana_nml := function(FileNml, FileDom, OutFile, FileCov, FileLinSpa,
+                          FileCosets)
+    local os;
+    RemoveFileIfExist(FileNml);
+    os := OutputTextFile(FileNml, true);
+    SetPrintFormattingStatus(os, false);
+    AppendTo(os, "&SYSTEM\n");
+    AppendTo(os, " OutFile = \"", OutFile, "\"\n");
+    AppendTo(os, "/\n");
+    AppendTo(os, "&DATA\n");
+    AppendTo(os, " arithmetic = \"gmp\"\n");
+    AppendTo(os, " FileIsoDelaunay = \"", FileDom, "\"\n");
+    AppendTo(os, " FileLinSpace = \"", FileLinSpa, "\"\n");
+    AppendTo(os, " FileCosets = \"", FileCosets, "\"\n");
+    AppendTo(os, "/\n");
+    AppendTo(os, "&QUERIES\n");
+    AppendTo(os, " FileCoveringOptimum = \"", FileCov, "\"\n");
+    AppendTo(os, "/\n");
+    CloseStream(os);
+end;
+
+read_nb := function(FileOut)
+    if IsExistingFile(FileOut) = false then
+        return fail;
+    fi;
+    return ReadAsFunction(FileOut)().nb;
+end;
+
+# The covering optima of every domain DomPrefix<i>, i in [0, nb-1].
+optimize_all := function(nb, DomPrefix, FileLinSpa, FileCosets)
+    local ListRec, i, FileNml, FileOut, FileCov, eRec;
+    ListRec := [];
+    for i in [0 .. nb - 1] do
+        FileNml := tmp(Concatenation("ana", String(i), ".nml"));
+        FileOut := tmp(Concatenation("ana", String(i), ".out"));
+        FileCov := tmp(Concatenation("cov", String(i), ".g"));
+        RemoveFileIfExist(FileCov);
+        write_ana_nml(FileNml, Concatenation(DomPrefix, String(i)), FileOut,
+                      FileCov, FileLinSpa, FileCosets);
+        Exec(Concatenation(prog_ana, " ", FileNml));
+        if IsExistingFile(FileCov) = false then
+            Print("  FOUND ERROR: no covering optimum written for domain ", i,
+                  "\n");
+            return fail;
+        fi;
+        eRec := ReadAsFunction(FileCov)();
+        if eRec.success <> true then
+            Print("  FOUND ERROR: domain ", i, " did not converge: ",
+                  eRec.message, "\n");
+            return fail;
+        fi;
+        Add(ListRec, eRec);
+    od;
+    return ListRec;
+end;
+
+# The optimum is normalized to covering radius 1, and the density is the
+# quantity the whole computation is about, so both are checked.
+check_radius_one := function(ListRec)
+    local eRec;
+    for eRec in ListRec do
+        if AbsoluteValue(eRec.covering_radius_sq - 1.0) > 1.0e-6 then
+            Print("  FOUND ERROR: covering_radius_sq=",
+                  eRec.covering_radius_sq, " is not 1 at the optimum\n");
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
+# ---------------------------------------------------------------------------
+# The lattice case, against the classical optima.
+#
+# dim 3: the single domain gives A_3^*, of density 5 pi sqrt(5) / 24.
+# dim 4: the best of the 3 domains is A_4^*.
+# dim 5: the best of the 222 domains is A_5^*.
+# ---------------------------------------------------------------------------
+
+tol := 1.0e-7;
+
+test_lattice_dim := function(eCase)
+    local FileNml, FileOut, DomPrefix, nb, ListRec, densities, best;
+    Print("Lattice dimension ", eCase.dim, "\n");
+    FileNml := tmp("enum.nml");
+    FileOut := tmp("enum.out");
+    DomPrefix := Filename(TmpDir, Concatenation("dom", String(eCase.dim), "_"));
+    RemoveFileIfExist(FileOut);
+    write_enum_nml(FileNml, eCase.dim, FileOut, DomPrefix);
+    Exec(Concatenation(prog_enum, " ", FileNml));
+    nb := read_nb(FileOut);
+    Print("  nb_domains=", nb, " (expected ", eCase.nb_domains, ")\n");
+    if nb <> eCase.nb_domains then
+        Print("  FOUND ERROR: wrong number of iso-Delaunay domains\n");
+        return false;
+    fi;
+    ListRec := optimize_all(nb, DomPrefix, "null", "null");
+    if ListRec = fail then
+        return false;
+    fi;
+    if check_radius_one(ListRec) = false then
+        return false;
+    fi;
+    densities := List(ListRec, x -> x.covering_density);
+    best := Minimum(densities);
+    Print("  best_density=", best, " (expected ", eCase.best_density, ")\n");
+    if AbsoluteValue(best - eCase.best_density) > tol then
+        Print("  FOUND ERROR: wrong optimal covering density\n");
+        return false;
+    fi;
+    return true;
+end;
+
+# ---------------------------------------------------------------------------
+# The periodic case: Z^3 + {0, (1/3,1/3,1/3)}.
+#
+# The value of the best periodic covering here is not a published constant, so
+# what is checked is what is known independently: the covering radius is 1 at
+# every optimum, the point density factor is 2 / 3^3, and no domain beats
+# A_3^*, the best lattice covering of dimension 3 (conjecturally the best
+# covering of dimension 3 altogether).
+# ---------------------------------------------------------------------------
+
+test_periodic := function()
+    local FileNml, FileOut, FileCosets, FileLinSpa, DomPrefix, nb, ListRec,
+          eRec, best;
+    Print("Periodic point set Z^3 + {0, (1/3,1/3,1/3)}\n");
+    FileCosets := tmp("cosets.txt");
+    RemoveFileIfExist(FileCosets);
+    WriteMatrixFile(FileCosets, [[0, 0, 0], [1/3, 1/3, 1/3]]);
+    FileNml := tmp("per.nml");
+    FileOut := tmp("per.out");
+    FileLinSpa := tmp("linspa.txt");
+    DomPrefix := Filename(TmpDir, "perdom_");
+    RemoveFileIfExist(FileOut);
+    write_per_nml(FileNml, 3, FileOut, DomPrefix, FileCosets, FileLinSpa);
+    Exec(Concatenation(prog_per, " ", FileNml));
+    nb := read_nb(FileOut);
+    Print("  nb_domains=", nb, "\n");
+    if nb = fail or nb < 1 then
+        Print("  FOUND ERROR: the periodic enumeration produced no domain\n");
+        return false;
+    fi;
+    ListRec := optimize_all(nb, DomPrefix, FileLinSpa, FileCosets);
+    if ListRec = fail then
+        return false;
+    fi;
+    if check_radius_one(ListRec) = false then
+        return false;
+    fi;
+    for eRec in ListRec do
+        if AbsoluteValue(eRec.point_density - 2.0 / 27.0) > 1.0e-12 then
+            Print("  FOUND ERROR: point_density=", eRec.point_density,
+                  " instead of 2/27\n");
+            return false;
+        fi;
+    od;
+    best := Minimum(List(ListRec, x -> x.covering_density));
+    Print("  best_density=", best, " (A_3^* is 1.4635030689668)\n");
+    if best < 1.4635030689668 - tol then
+        Print("  FOUND ERROR: a periodic covering of dimension 3 beating ",
+              "A_3^*, which contradicts the lattice optimum\n");
+        return false;
+    fi;
+    return true;
+end;
+
+ListCases := [
+    rec(dim := 3, nb_domains := 1, best_density := 1.4635030689668180),
+    rec(dim := 4, nb_domains := 3, best_density := 1.7655285081493524),
+    rec(dim := 5, nb_domains := 222, best_density := 2.1242859089916246),
+];
+
+n_error := 0;
+for eCase in ListCases do
+    if test_lattice_dim(eCase) = false then
+        n_error := n_error + 1;
+    fi;
+od;
+if test_periodic() = false then
+    n_error := n_error + 1;
+fi;
+Print("n_error=", n_error, "\n");
+
+CI_Decision_Reset();
+if n_error > 0 then
+    Print("Error case\n");
+else
+    Print("Normal case\n");
+    CI_Write_Ok();
+fi;

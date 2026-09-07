@@ -19,7 +19,7 @@ The program are in several independent subdirectory. The software of each
 directory can be compiled independently of the others:
   * *src_group*: for computting the groups of a polytope.
   * *src_poly*: for polyhedral computations.
-  * *src_delaunay*: for computing Delaunay polytopes and space of Delaunay tesselations.
+  * *src_delaunay*: for computing Delaunay polytopes and space of Delaunay tesselations. Also optimizes the sphere covering density over those spaces, for lattices and for periodic point sets, see [doc/COVERING_OPTIMIZATION.md](doc/COVERING_OPTIMIZATION.md).
   * *src_dualdesc*: for computing dual description on serial computers.
   * *src_copos*: for copositivity / strict copositivity functionalities.
   * *src_short*: for short vector related computations.

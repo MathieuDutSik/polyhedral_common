@@ -1224,6 +1224,14 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERIODIC_IsoDelaunayDomains() {
     // The file with the rational coset matrix of the periodic point set:
     // one coset per row, the zero coset included.
     ListStringValues["FileCosets"] = "unset";
+    // Prefix under which every enumerated domain is dumped as a boost
+    // text-archive of an IsoDelaunayDomain, the format that
+    // LATT_AnalysisIsoDelaunay reads. "unset" (the default) skips the dump.
+    ListStringValues["PrefixIsoDelaunayDomains"] = "unset";
+    // The file to which the T-space actually used is written, in the format
+    // that LATT_AnalysisIsoDelaunay's FileLinSpace and TypeTspace = "File"
+    // read. "unset" (the default) skips the writing.
+    ListStringValues["FileLinSpaceOut"] = "unset";
     SingleBlock BlockDATA;
     BlockDATA.setListStringValues(ListStringValues);
     ListBlock["DATA"] = BlockDATA;

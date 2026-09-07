@@ -1,0 +1,54 @@
+name: CI(27B) of covering density optimization over iso-Delaunay domains
+
+on:
+  # Every two months, alternating with ci_27A which takes the odd months.
+  schedule:
+    - cron: "0 0 27 2,4,6,8,10,12 *"
+  # Manually triggered
+  workflow_dispatch:
+  # Disabled right now, when a push is made on master.
+jobs:
+  build-linux:
+    timeout-minutes: 120  # 2 hours
+    runs-on: ubuntu-latest
+    env:
+      GMP_INCDIR: /usr/include
+      GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
+      BOOST_INCDIR: "/usr/include"
+      BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
+      EIGEN_PATH: /home/runner/work/opt/eigen
+      NAUTY_PATH: /home/runner/work/opt/nauty
+      NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
+      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
+      LIBBLISS_PATH: /home/runner/opt/libbliss
+      LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
+      LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/install-boost
+
+      - uses: ./.github/actions/install-nauty
+      - uses: ./.github/actions/install-bliss
+      - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-gap
+      - name: Test covering density optimization over iso-Delaunay domains
+        run: |
+          make -C src_delaunay -f Makefile_tspace_isodelaunay
+          pwd
+          echo "After compilation of LATT_SerialLattice_IsoDelaunayDomain and LATT_AnalysisIsoDelaunay"
+
+          make -C src_delaunay -f Makefile_periodic
+          pwd
+          echo "After compilation of LATT_SerialPeriodic_IsoDelaunayDomain"
+
+          cd CI_tests/27B_CoveringMaxdet
+          ../../gap.sh < TestCoveringMaxdet.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
