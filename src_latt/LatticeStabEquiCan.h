@@ -77,6 +77,10 @@
 #define TIMINGS_LATTICE_STAB_EQUI_CAN
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_LATTICE_STAB_EQUI_CAN
+#endif
+
 template <typename T, typename Tint> struct Canonic_PosDef {
   MyMatrix<Tint> Basis;
   MyMatrix<Tint> SHV;
@@ -212,6 +216,73 @@ MyMatrix<Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &List
   os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
   return ComputeCanonicalForm_inner<T, Tint>(ListMat, SHV, os);
+}
+
+/*
+  Canonical form computed from a full rank invariant vector family that does
+  not necessarily span the full lattice Z^n. The vectors are canonically
+  reordered from the weight matrix exactly as in ComputeCanonicalForm; the
+  ambiguity left by the reordering is the full group of rational
+  transformations preserving the family, and the position of the ambient
+  lattice Z^n relative to the lattice spanned by the family is canonicalized
+  under that finite group by LinPolytopeIntegral_Canonicalization_Subspaces.
+
+  The returned matrix B belongs to GL_n(Z) and B * inpMat * B^T is the
+  canonical form. The canonical forms of this function and of
+  ComputeCanonicalForm are both canonical but differ in general: reductions
+  computed with one method can only be compared with reductions computed by
+  the same method.
+ */
+template <typename T, typename Tint, typename Tgroup>
+MyMatrix<Tint> ComputeCanonicalFormFullRank(MyMatrix<T> const &inpMat,
+                                            std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(inpMat, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: ExtractInvariantVectorFamilyFullRank|=" << time << "\n";
+#endif
+  std::vector<MyMatrix<T>> ListMat{inpMat};
+  MyMatrix<Tint> SHVcan = CanonicallyReorder_SHV<T, Tint>(ListMat, SHV, os);
+  MyMatrix<Tint> SHVord = TransposedMat(SHVcan);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: CanonicallyReorder_SHV|=" << time << "\n";
+#endif
+  MyMatrix<T> SHVord_T = UniversalMatrixConversion<T, Tint>(SHVord);
+  int n_row = SHVord_T.rows();
+  std::vector<T> Vdiag(n_row, T(0));
+  std::vector<std::vector<Tidx>> ListGen =
+      GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHVord_T, ListMat,
+                                                         Vdiag, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: GetListGenAutomorphism_ListMat_Vdiag|=" << time << "\n";
+#endif
+  std::vector<MyMatrix<T>> ListMatrGens;
+  for (auto &eList : ListGen) {
+    Telt ePerm(eList);
+    std::optional<MyMatrix<T>> opt =
+        FindTransformationGeneral(SHVord_T, SHVord_T, ePerm);
+    MyMatrix<T> eMatrGen =
+        unfold_opt(opt, "the transformation of the family should exist");
+    ListMatrGens.emplace_back(std::move(eMatrGen));
+  }
+  MyMatrix<T> B_T = LinPolytopeIntegral_Canonicalization_Subspaces<T, Tgroup>(
+      ListMatrGens, SHVord_T, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: LinPolytopeIntegral_Canonicalization_Subspaces|=" << time
+     << "\n";
+#endif
+#ifdef SANITY_CHECK_LATTICE_STAB_EQUI_CAN
+  MyMatrix<T> eProd = B_T * inpMat * B_T.transpose();
+  if (!IsSymmetricMatrix(eProd)) {
+    std::cerr << "LSEC: the canonical form should be symmetric\n";
+    throw TerminalException{1};
+  }
+#endif
+  return UniversalMatrixConversion<Tint, T>(B_T);
 }
 
 template <typename T, typename Tint>
