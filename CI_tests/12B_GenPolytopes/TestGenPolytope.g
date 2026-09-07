@@ -7,7 +7,9 @@ Test_difference:=function(EXT)
     GRP:=get_grp_automorphy(EXT).GAPperm;
     triang1:=get_triangulation_of_polytope(EXT);
     eElt:=Random(GRP);
-    triang2:=List(triang1, x->OnSets(x, eElt));
+    # A simplex is a set of vertices, but the triangulation comes out in
+    # the order lrs produced it, which OnSets does not accept.
+    triang2:=List(triang1, x->OnSets(Set(x), eElt));
     get_gen_polytope:=function(the_triang)
         local ListEXT, trig;
         ListEXT:=[];

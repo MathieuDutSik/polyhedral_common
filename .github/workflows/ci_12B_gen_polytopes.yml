@@ -42,6 +42,8 @@ jobs:
       - name: Test copositivity software
         run: |
           make -C src_polygen
+          make -C src_group -f Makefile_aut_group
+          make -C src_poly -f Makefile_triangulation
           echo "After compilation of generalized polytopes code"
 
           cd CI_tests/12B_GenPolytopes

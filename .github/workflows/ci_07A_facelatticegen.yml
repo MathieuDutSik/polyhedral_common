@@ -38,6 +38,7 @@ jobs:
       - name: Test face lattice code
         run: |
           make -C src_dualdesc -f Makefile_facelatticegen
+          make -C src_group -f Makefile_aut_group
           pwd
           echo "After compilation of face lattice gen"
 
