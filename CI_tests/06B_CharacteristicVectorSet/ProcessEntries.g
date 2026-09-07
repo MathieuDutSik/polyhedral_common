@@ -3,18 +3,36 @@ Read("../access_points.g");
 Print("Beginning TestDelaunayEnumeration\n");
 
 
+# The methods that claim to return a characteristic vector set in the sense
+# of Definition 1.2.1 of "A canonical form for positive definite matrices",
+# that is a family generating Z^n. The other methods return families that
+# are only required to be of full rank.
+ListMethodSpanning:=["spanning", "cv"];
+
 TestGeneration:=function(matrix, method)
-    local U;
+    local U, n, divs;
     U:=get_fullrank_invariant_family(matrix, method);
     if is_error(U) then
         return false;
     fi;
     Print("|U|=", Length(U), "\n");
+    n:=Length(matrix);
+    if RankMat(U) <> n then
+        Print("    The family is not of full rank\n");
+        return false;
+    fi;
+    if Position(ListMethodSpanning, method) <> fail then
+        divs:=ElementaryDivisorsMat(U);
+        if Length(divs) <> n or Filtered(divs, x->x<>1) <> [] then
+            Print("    The family does not generate Z^n, divisors=", divs, "\n");
+            return false;
+        fi;
+    fi;
     return true;
 end;
 
 ListRec:=ReadAsFunction("ListCases")();;
-ListMethod:=["shortest", "relevant_voronoi", "filtered_relevant_voronoi", "fullrank", "spanning"];
+ListMethod:=["shortest", "relevant_voronoi", "filtered_relevant_voronoi", "fullrank", "spanning", "cv"];
 
 
 FullTest:=function()
