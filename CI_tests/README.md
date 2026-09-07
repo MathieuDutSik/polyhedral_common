@@ -36,7 +36,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `12A_Copositivity` -- `ci_12A_copos`: This is for checking the copositivity code.
 * `12B_GenPolytopes` -- `ci_12B_gen_polytopes`: Generalized Polytopes.
 * `13A_PeriodicDelaunay` -- `ci_13A_periodic_delaunay`: The periodic Delaunay and iso-Delaunay computations.
-* `15_LinearProgramming` -- `ci_15_linear_programming`: Linear programming and LinearDetermineByInequalities.
+* `15_LinearProgramming` -- `ci_15_linear_programming`: Linear programming and LinearDetermineByInequalities, over the rational types from GAP driven data files and, through src_poly/Test_SimplexRealAlgebraic, over a real algebraic field whose underlying ring is neither a field nor a euclidean domain.
 * `16_EquivDualDesc` -- `ci_16_equiv_dual_desc`: Equivariant computation of dual description.
 * `17_Laminations` -- `ci_17_two_laminations`: Computation of two laminations.
 * `19_IndefiniteComp` -- `ci_19_indefinite_comp`: Computation of indefinite forms.

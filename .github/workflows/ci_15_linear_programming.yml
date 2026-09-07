@@ -45,7 +45,15 @@ jobs:
           # Makefile_linear_programming builds POLY_cdd_LinearProgramming and
           # POLY_LinearDetermineByInequalities, so it covers both drivers. The
           # former section 32_LinearDetermineByInequalities is folded in here.
+          # It also builds Test_SimplexRealAlgebraic, run below.
           echo "After compilation of linear programming code"
+
+          # The simplex over a real algebraic field, whose underlying ring is
+          # neither a field nor a euclidean domain. The GAP driven cases below
+          # cannot cover it: their inequalities and the GAP output format carry
+          # rationals only.
+          ./src_poly/Test_SimplexRealAlgebraic
+          echo "After the real algebraic simplex test"
 
           cd CI_tests/15_LinearProgramming
           ../../gap.sh < TestLinearProgramming.g
