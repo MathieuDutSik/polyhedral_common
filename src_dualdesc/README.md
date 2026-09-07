@@ -34,7 +34,7 @@ of facets of a cone with `n` generators in dimension `d` can grow like
 cones that arise below have facets in numbers that no machine will ever
 list. The difficulty is not merely that of writing the output: counting
 the vertices of the Voronoi cell of a lattice given by a basis is
-already a #P-hard problem [6]. What makes the classical methods suffer
+already a #P-hard problem [5]. What makes the classical methods suffer
 in practice is degeneracy, meaning extreme rays lying on many more
 facets than the dimension requires, and degeneracy is exactly what the
 cones coming from lattices and from combinatorial optimization have.
@@ -56,13 +56,14 @@ permutes its facets, and the natural question becomes not the list of
 facets but the list of *orbits* of facets. The gain is not a constant
 factor. The contact polytope of the Leech lattice has
 
-    1197362269604214277200 facets, falling into 232 orbits [7]
+    1197362269604214277200 facets, falling into 232 orbits [6]
 
-and the hypermetric cone on eight vertices has 298592 facets in 86
-orbits and 242695427 extreme rays in 9003 orbits [8]. In such a range
-the orbit list is the only description that can be written down, and it
-is also the mathematically meaningful one: two facets in the same orbit
-are the same inequality written in different coordinates.
+and the Birkhoff polytope of the Coxeter group `H4`, the convex hull of
+its 14400 elements taken as matrices, has its facets in 1063 orbits [7].
+In such a range the orbit list is the only description that can be
+written down, and it is also the mathematically meaningful one: two
+facets in the same orbit are the same inequality written in different
+coordinates.
 
 Working with orbits requires deciding when two faces are equivalent
 under `G` and, better, attaching to each face a canonical representative
@@ -105,11 +106,8 @@ is met again and again in the course of the computation; recognizing it
 by its canonical form and remembering the answer turns an exponential
 amount of repeated work into a lookup.
 
-The same idea of moving from one object to an adjacent one, applied to
-the extreme rays of the hypermetric cone rather than to the facets of a
-cone, is what produces new extreme Delaunay polytopes from known ones
-[4]. The algorithms as they were assembled for a classification of real
-size are described in [2].
+The algorithms as they were assembled for a classification of real size
+are described in [2].
 
 
 Why the exploration is complete
@@ -131,7 +129,7 @@ the `d`-connectivity forces the partial list to be complete. That
 argument admits refinements by linear programming and by a rank
 computation on the undone rays, and it can itself be applied recursively
 to the faces. The technique, and its use to settle the facets of cut
-polytopes over highly symmetric graphs, is described in [5].
+polytopes over highly symmetric graphs, is described in [4].
 
 
 Face lattices and sampling
@@ -153,26 +151,25 @@ What has been reached this way
 
 * The contact polytope of the Leech lattice, the convex hull of its
   196560 shortest vectors: its 1197362269604214277200 facets classified
-  into 232 orbits [7].
+  into 232 orbits [6].
 
-* The hypermetric cone on seven vertices [9], then on eight vertices
-  [8], the latter with 298592 facets in 86 orbits and 242695427 extreme
-  rays in 9003 orbits.
+* The Birkhoff polytopes of the Coxeter groups `F4` and `H4`, that is
+  the convex hulls of their elements taken as matrices [7]. The answer
+  is 2 orbits of facets for `F4`, which contradicts what had been
+  published, and 1063 orbits for `H4`, which disproves a conjecture. The
+  point is worth making: these computations are not only expensive, they
+  are also the kind of thing about which the literature can be wrong
+  until someone carries them out.
 
 * The 10916 perfect lattices of dimension 8 [2], a classification that
   rests entirely on exploiting symmetry in the polyhedral computations.
 
 * The facets of the cut polytopes over highly symmetric graphs with 15
-  to 30 edges [5], where the Balinski-based criterion above is what
+  to 30 edges [4], where the Balinski-based criterion above is what
   allows the enumerations to be certified complete.
 
-* The Dirichlet-Voronoi polyhedra and Delaunay subdivisions of the
-  five-dimensional lattices: 110244 affine types and 181394 contraction
-  types, obtained from the secondary cones and checked against three
-  independent implementations [10].
-
 * The vertices of Voronoi cells of lattices in dimensions up to about
-  12, for which the symmetric algorithm of [6] is what makes a #P-hard
+  12, for which the symmetric algorithm of [5] is what makes a #P-hard
   counting problem practical.
 
 
@@ -204,17 +201,12 @@ Computation and Mathematics **17-1** (2014) 565–581, arXiv:1210.0206.
 The linear, projective and combinatorial symmetry groups, and the
 reduction of the linear one to graph automorphism.
 
-[4] M. Dutour, *Adjacency method for extreme Delaunay polytopes*,
-Voronoi's Impact on Modern Science, Book 3 (2005) 94–101,
-arXiv:math/0401004. Adjacency in the hypermetric cone, used to pass from
-known extreme Delaunay polytopes to new ones.
-
-[5] M. Deza, M. Dutour Sikirić, *Enumeration of the facets of cut
+[4] M. Deza, M. Dutour Sikirić, *Enumeration of the facets of cut
 polytopes over some highly symmetric graphs*, International Transactions
 in Operational Research **23-5** (2016) 853–860, arXiv:1501.05407. The
 source of the Balinski-based termination criterion used above.
 
-[6] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *Complexity and
+[5] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *Complexity and
 algorithms for computing Voronoi cells of lattices*, Mathematics of
 Computation **78** (2009) 1713–1731, arXiv:0804.0036. The #P-hardness of
 counting the vertices, and an algorithm suited to highly symmetric
@@ -222,22 +214,13 @@ lattices.
 
 ### Computations carried out with it
 
-[7] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *The contact polytope
+[6] M. Dutour Sikirić, A. Schürmann, F. Vallentin, *The contact polytope
 of the Leech lattice*, Discrete and Computational Geometry **44** (2010)
 904–911, arXiv:0906.1427.
 
-[8] M. Deza, M. Dutour Sikirić, *The hypermetric cone on eight vertices
-and some generalizations*, Journal of Symbolic Computation **88** (2018)
-67–84, arXiv:1503.04554.
-
-[9] M. Deza, M. Dutour Sikirić, *The hypermetric cone on seven
-vertices*, Experimental Mathematics **12** (2004) 433–440,
-arXiv:math/0108177.
-
-[10] M. Dutour Sikirić, A. Garber, A. Schürmann, C. Waldmann, *The
-complete classification of five-dimensional Dirichlet-Voronoi polyhedra
-of translational lattices*, Acta Crystallographica A **72** (2016)
-673–683, arXiv:1507.00238.
+[7] M. Dutour Sikirić, *The Birkhoff polytope of the groups `F4` and
+`H4`*, Proceedings of the 4th Croatian Combinatorial Days, edited by
+T. Došlić, S. Majstorović and L. Podrug (2023) 21–26, arXiv:2212.08452.
 
 ### Classical background
 
