@@ -161,8 +161,17 @@ What has been reached this way
   are also the kind of thing about which the literature can be wrong
   until someone carries them out.
 
-* The 10916 perfect lattices of dimension 8 [2], a classification that
-  rests entirely on exploiting symmetry in the polyhedral computations.
+* The perfect lattices, by Voronoi's algorithm of 1908, which passes
+  from one perfect form to its neighbours across the facets of its
+  Voronoi domain and therefore needs a dual description at every step.
+  The 10916 of dimension 8 [2], a classification that rests entirely on
+  exploiting symmetry in the polyhedral computations, and then the
+  2237251040 of dimension 9 [8]. The latter settles the lattice packing
+  problem in that dimension: the laminated lattice `Lambda_9` is the
+  densest, the Hermite constant `gamma_9` equals 2, and the possible
+  kissing numbers are exactly `2 * {1, ..., 91, 99, 120, ..., 129, 136}`.
+  An enumeration of that size is the strongest argument there is for the
+  machinery described above.
 
 * The facets of the cut polytopes over highly symmetric graphs with 15
   to 30 edges [4], where the Balinski-based criterion above is what
@@ -221,6 +230,10 @@ of the Leech lattice*, Discrete and Computational Geometry **44** (2010)
 [7] M. Dutour Sikirić, *The Birkhoff polytope of the groups `F4` and
 `H4`*, Proceedings of the 4th Croatian Combinatorial Days, edited by
 T. Došlić, S. Majstorović and L. Podrug (2023) 21–26, arXiv:2212.08452.
+
+[8] M. Dutour Sikirić, W. van Woerden, *The lattice packing problem in
+dimension 9 by Voronoi's algorithm*, preprint arXiv:2508.20719, data at
+Zenodo, record 15707640.
 
 ### Classical background
 
