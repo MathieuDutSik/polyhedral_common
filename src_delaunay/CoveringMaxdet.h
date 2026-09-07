@@ -489,7 +489,15 @@ template <typename Tfloat> MaxdetOptions<Tfloat> GetDefaultMaxdetOptions() {
 }
 
 template <typename Tfloat> struct MaxdetResult {
+  // Whether the solve reached the requested tolerance.
   bool success = false;
+  // Whether the returned point is a strictly feasible point of the domain,
+  // which is a weaker and more useful statement: the barrier method never
+  // leaves the feasible set, so cov_density is then a covering density the
+  // point set really attains, an upper bound on the optimum of the domain
+  // and hence on the covering density of the point set. A solve that ran
+  // out of iterations still delivers that.
+  bool has_point = false;
   std::string message;
   // The optimizer in T-space coordinates and the Gram matrix it defines.
   MyVector<Tfloat> x;
@@ -690,6 +698,7 @@ MaxdetResult<Tfloat> GetResultFromPoint(CoveringData<Tfloat> const &cd,
     return res;
   }
   res.success = true;
+  res.has_point = true;
   res.obj = -ci.logdet;
   res.det = std::exp(ci.logdet);
   res.cov_radius_sq = MaxSquaredCircumRadius(cd, res.Q);
@@ -769,36 +778,95 @@ MaxdetResult<Tfloat> SolveCoveringMaxdet(CoveringData<Tfloat> const &cd,
 }
 
 /*
+  The exact margins of a point of the T-space: how far it is inside the
+  L-type cone and how far every squared circumradius is below 1. Both are
+  positive exactly when the point is strictly feasible.
+
+  Kept exact and reported because a domain can be so thin that the margins,
+  while positive, are below what a double can resolve. That is a property of
+  the domain, not a bug, and the caller has to be able to tell the two
+  apart.
+ */
+template <typename T> struct FeasibilityMargins {
+  // min over the facets of a . x, and the facet attaining it.
+  T cone_margin;
+  // 1 - max over the orbits of the squared circumradius.
+  T radius_margin;
+};
+
+template <typename T>
+FeasibilityMargins<T> GetFeasibilityMargins(CoveringData<T> const &cd,
+                                            MyVector<T> const &x) {
+  T cone_margin(0);
+  bool is_first = true;
+  int n_ineq = cd.Alin.rows();
+  for (int i_ineq = 0; i_ineq < n_ineq; i_ineq++) {
+    T sum(0);
+    for (int u = 0; u < cd.dim; u++) {
+      sum += cd.Alin(i_ineq, u) * x(u);
+    }
+    if (is_first || sum < cone_margin) {
+      cone_margin = sum;
+      is_first = false;
+    }
+  }
+  MyMatrix<T> Q = GetGramMatrix(cd, x);
+  T radius_margin = T(1) - MaxSquaredCircumRadius(cd, Q);
+  return {cone_margin, radius_margin};
+}
+
+/*
   A strictly feasible starting point: an interior point of the L-type cone,
   scaled down until every circumradius is strictly below 1. The scaling is
   legitimate because Q -> Q / s divides every squared circumradius by s while
   leaving the cone conditions untouched, both being homogeneous in Q.
+
+  Returns nothing when the point, strictly feasible in exact arithmetic, is
+  no longer so once converted to floating point. That happens on a domain
+  thin enough for its margins to fall below what the floating point type
+  resolves, and it is a normal outcome the caller has to handle: the domain
+  is simply not optimizable at this precision. It is distinguished from a
+  broken construction, which is a programming error and still throws.
  */
 template <typename T, typename Tfloat>
-MyVector<Tfloat>
-GetStartingPoint(CoveringData<T> const &cd,
-                 [[maybe_unused]] CoveringData<Tfloat> const &cd_f,
+std::optional<MyVector<Tfloat>>
+GetStartingPoint(CoveringData<T> const &cd, CoveringData<Tfloat> const &cd_f,
                  std::ostream &os) {
   MyVector<T> x0 = GetGeometricallyUniqueInteriorPoint(cd.Alin, os);
   MyMatrix<T> Q0 = GetGramMatrix(cd, x0);
   T max_sq = MaxSquaredCircumRadius(cd, Q0);
-  // s = 2 max_sq brings the largest squared circumradius to 1/2.
+  // s = 2 max_sq brings the largest squared circumradius to 1/2. Note that
+  // this scaling cannot be followed by a normalization of the coordinates:
+  // mu(Q) <= 1 is precisely the constraint that is not scale invariant, so
+  // rescaling x afterwards would move the circumradii back out of range.
+  // The coordinates need none anyway, s growing with x0 by homogeneity.
   T s = T(2) * max_sq;
   MyVector<T> x_scaled = x0 / s;
+  FeasibilityMargins<T> margins = GetFeasibilityMargins(cd, x_scaled);
+  // The exact construction has to be strictly feasible; that it is not is a
+  // programming error rather than a property of the input.
+  if (margins.cone_margin <= 0 || margins.radius_margin <= 0) {
+    std::cerr << "COVERING_MAXDET: GetStartingPoint: the scaled interior point "
+                 "is not strictly feasible in exact arithmetic, which "
+                 "contradicts the construction. cone_margin="
+              << margins.cone_margin
+              << " radius_margin=" << margins.radius_margin << "\n";
+    throw TerminalException{1};
+  }
   MyVector<Tfloat> x_ret(cd.dim);
   for (int u = 0; u < cd.dim; u++) {
     x_ret(u) = UniversalScalarConversion<Tfloat, T>(x_scaled(u));
   }
-#ifdef SANITY_CHECK_COVERING_MAXDET
   MaxdetSystem<Tfloat> sys = GetMaxdetSystem(cd_f);
   std::optional<Tfloat> opt = BarrierValue(sys, x_ret, Tfloat(1));
   if (!opt) {
-    std::cerr << "COVERING_MAXDET: GetStartingPoint: the scaled interior point "
-                 "is not strictly feasible, which contradicts the "
-                 "construction\n";
-    throw TerminalException{1};
+    os << "COVERING_MAXDET: GetStartingPoint: the starting point is strictly "
+          "feasible exactly, with cone_margin="
+       << margins.cone_margin << " and radius_margin=" << margins.radius_margin
+       << ", but not after conversion to floating point. The domain is too "
+          "thin to be optimized at this precision\n";
+    return {};
   }
-#endif
   return x_ret;
 }
 
@@ -818,6 +886,7 @@ void WriteCoveringOptimumGAP(std::string const &FileName,
   // decimal point and is read back as a float rather than as an integer.
   os_out << std::setprecision(17) << std::showpoint;
   os_out << "return rec(success:=" << (res.success ? "true" : "false");
+  os_out << ", has_point:=" << (res.has_point ? "true" : "false");
   os_out << ", message:=\"" << res.message << "\"";
   os_out << ", covering_density:=" << res.cov_density;
   os_out << ", point_density:=" << res.point_density;

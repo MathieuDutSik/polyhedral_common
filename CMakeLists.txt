@@ -559,6 +559,8 @@ set(
   LATT_SerialComputeIminimumGiD
   LATT_AnalysisIsoDelaunay
   LATT_LookForFullRankRayDomain
+  PERIODIC_LookForRecordCovering
+  PERIODIC_RandomCosets
 )
 foreach(target IN LISTS DELAUNAY_PROGRAMS)
   add_polyhedral_binary(

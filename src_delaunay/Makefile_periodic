@@ -1,4 +1,4 @@
-PROGRAM		= LATT_SerialPeriodic_IsoDelaunayDomain LATT_SerialPeriodicDelaunay
+PROGRAM		= LATT_SerialPeriodic_IsoDelaunayDomain LATT_SerialPeriodicDelaunay PERIODIC_LookForRecordCovering PERIODIC_RandomCosets
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

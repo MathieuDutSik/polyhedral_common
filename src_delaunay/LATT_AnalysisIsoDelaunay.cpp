@@ -243,18 +243,28 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
         x, LinSpa, FACred, point_density, os);
     covering_maxdet::CoveringData<Tfloat> cd_f =
         covering_maxdet::ConvertCoveringData<Tfloat, T>(cd);
-    MyVector<Tfloat> x_start =
+    std::optional<MyVector<Tfloat>> opt_start =
         covering_maxdet::GetStartingPoint<T, Tfloat>(cd, cd_f, os);
-    covering_maxdet::MaxdetOptions<Tfloat> opts =
-        covering_maxdet::GetDefaultMaxdetOptions<Tfloat>();
-    covering_maxdet::MaxdetResult<Tfloat> res =
-        covering_maxdet::SolveCoveringMaxdet(cd_f, x_start, opts, os);
+    covering_maxdet::MaxdetResult<Tfloat> res;
+    if (opt_start) {
+      covering_maxdet::MaxdetOptions<Tfloat> opts =
+          covering_maxdet::GetDefaultMaxdetOptions<Tfloat>();
+      res = covering_maxdet::SolveCoveringMaxdet(cd_f, *opt_start, opts, os);
+    } else {
+      // The domain is strictly feasible exactly but not in floating point,
+      // which GetStartingPoint has already explained on os. Reported as a
+      // failed optimization rather than as an error.
+      res.success = false;
+      res.has_point = false;
+      res.message = "the domain is too thin to be optimized in floating point";
+    }
     os << "ANA: covering optimization done success=" << res.success
        << " message=" << res.message << " |elapsed|=" << t4 << "\n";
     covering_maxdet::WriteCoveringOptimumGAP(FileCoveringOptimum, res);
     std::streamsize prec = os_out.precision();
     os_out << std::setprecision(17);
     os_out << "covering_success=" << res.success << "\n";
+    os_out << "covering_has_point=" << res.has_point << "\n";
     os_out << "covering_density=" << res.cov_density << "\n";
     os_out << "covering_radius_sq=" << res.cov_radius_sq << "\n";
     os_out << "covering_gap_bound=" << res.gap_bound << "\n";

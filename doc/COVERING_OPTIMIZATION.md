@@ -173,8 +173,95 @@ Two constraints narrow which coset structures can be given:
   opposites, `{0, (1/3,0,0), (2/3,0,0), (0,1/3,0), (0,2/3,0)}`, restores the
   symmetry.
 
+## Searching for a record periodic covering
+
+Enumerating every domain answers the question outright, and that is what the
+two workflows above do. It only scales as far as the domain count does: 222
+in dimension 5 for a lattice, but far more for a periodic point set, and the
+count grows with the dimension and with the coset structure. Beyond that,
+the search has to walk instead of enumerate.
+
+`PERIODIC_LookForRecordCovering` does the walk. Given a coset configuration
+it descends on the per-domain covering optimum — moving to the best adjacent
+domain, jumping randomly out of local minima — until a domain beats a record
+or the runtime budget runs out. It is the strategy of
+`LATT_LookForFullRankRayDomain`, which is how the dimension 6 record
+covering was found.
+
+```
+&SYSTEM
+ max_runtime_second = 7200
+ Prefix = "/path/hits/"
+ OutFile = "/path/result.g"
+/
+&DATA
+ arithmetic = "gmp"
+ FileDualDescription = "unset"
+ FileCosets = "/path/cosets.txt"
+/
+&SEARCH
+ RecordToBeat = "auto"
+ n_walk_steps = 20
+/
+&TSPACE
+ TypeTspace = "Classic"
+ ClassicDim = 5
+/
+```
+
+`RecordToBeat = "auto"` takes the least dense known lattice covering of the
+dimension: `A_n^*` up to dimension 5, from its closed form
+`kappa_n sqrt(n+1) (n(n+2)/(12(n+1)))^{n/2}`, and the `L^c_n` of Table 2 of
+the reference from dimension 6 on — in particular Vallentin's `L^c_6` at
+2.464801 in dimension 6. Any other value can be given explicitly.
+
+`OutFile` is a GAP record with `found_record`, `best_density`, the Gram
+matrix attaining it, and the counters of the walk. The Gram matrix of every
+improvement is also written under `Prefix` as it is found, so a run that is
+killed still leaves its best find behind.
+
+**Not finding a record is the expected outcome.** In dimensions 3 to 5 the
+best covering is conjectured to be the lattice one, so the program reports
+the best density it saw and terminates normally. Running out of budget,
+landing on a domain with no flippable wall, and a domain too thin to be
+optimized in floating point are all reported rather than thrown.
+
+`max_runtime_second` is honoured at the granularity of one step of the walk,
+and a step computes every domain adjacent to the current one before anything
+can be checked. In a dimension where a domain has many walls the budget can
+therefore be overrun by the cost of one such step, so it bounds the search
+loosely rather than exactly.
+
+### Sweeping over configurations
+
+The coset structure is an input, so a search is a sweep over configurations.
+`PERIODIC_RandomCosets` draws a random admissible one — checking with the
+enumeration's own predicates that the cosets are not a group modulo `Z^d`
+and that `-I` preserves the point set — and
+`scripts/periodic_covering_sweep.sh` loops the two:
+
+```sh
+scripts/periodic_covering_sweep.sh -n 5 -o /tmp/sweep5 -k 20 -t 600
+```
+
+It stops on the first record and otherwise reports the best density of every
+configuration it tried. Exit status 1 means "swept everything, found no
+record", which is the normal outcome, not a failure.
+
+### What a record would and would not prove
+
+The optimization is numerical, so a density that lands within a few units of
+the last digit of the record proves nothing, all the more so from dimension
+6 on where the record itself is a rounded decimal. A hit has to be confirmed
+by rounding the reported Gram matrix to a rational one and re-checking it
+exactly, which `MaxSquaredCircumRadius` and `IsInCone` are type-generic for.
+
+Note also that a walk that fails proves nothing at all: it visited some
+domains, not every one.
+
 ## Testing
 
 `CI_tests/27B_CoveringMaxdet` runs the whole pipeline in dimensions 3, 4 and 5
-for lattices and on `Z^3 + {0, (1/3,1/3,1/3)}` for the periodic case; see its
-`README.md`.
+for lattices and on `Z^3 + {0, (1/3,1/3,1/3)}` for the periodic case, and
+checks that the random-walk search recovers on that same point set the
+optimum the full enumeration gives; see its `README.md`.

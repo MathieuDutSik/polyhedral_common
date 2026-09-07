@@ -46,6 +46,20 @@ constants, so what is checked is what is known independently:
 * no domain beats `A_3^*`, the best lattice covering of dimension 3 and
   conjecturally the best covering of dimension 3 altogether.
 
+**The random-walk record search.** `PERIODIC_LookForRecordCovering` is run on
+that same point set, where the enumeration above has just established the
+answer independently. Three things are checked:
+
+* the record it computes for itself from `RecordToBeat = "auto"` is
+  `Theta(A_3^*)`, its closed form having to agree with the value the
+  dimension 3 enumeration produced;
+* it claims no record — a periodic point set of dimension 3 beating the
+  lattice optimum would be a bug, not a discovery;
+* the walk reaches the minimum over the 6 domains, that is the same
+  1.856151 the enumeration found. This is what tests the descent: the walk
+  visits domains by flipping, never by enumerating, and still has to land on
+  the best one.
+
 ## Reference
 
 Mathieu Dutour Sikirić, Achill Schürmann, Frank Vallentin, *A generalization of

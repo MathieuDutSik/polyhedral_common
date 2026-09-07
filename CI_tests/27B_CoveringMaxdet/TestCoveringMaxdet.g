@@ -4,6 +4,7 @@ Print("Beginning Test covering density optimization over iso-Delaunay domains\n"
 prog_enum := GetBinaryFilename("LATT_SerialLattice_IsoDelaunayDomain");
 prog_per := GetBinaryFilename("LATT_SerialPeriodic_IsoDelaunayDomain");
 prog_ana := GetBinaryFilename("LATT_AnalysisIsoDelaunay");
+prog_rec := GetBinaryFilename("PERIODIC_LookForRecordCovering");
 
 TmpDir := DirectoryTemporary();
 tmp := function(name)
@@ -238,6 +239,90 @@ test_periodic := function()
     return true;
 end;
 
+# ---------------------------------------------------------------------------
+# The random-walk record search, on the point set whose answer the full
+# enumeration above gives.
+#
+# The walk descends on the per-domain covering optimum and jumps out of local
+# minima; over the 6 domains of Z^3 + {0, (1/3,1/3,1/3)} it has to recover
+# the same 1.856151 the enumeration found, and it must not claim a record,
+# A_3^* being out of reach for that point set.
+#
+# It also checks the record the program computes for itself: "auto" takes
+# Theta(A_3^*) from its closed form, which has to be the value the
+# enumeration of dimension 3 produced.
+# ---------------------------------------------------------------------------
+
+write_rec_nml := function(FileNml, dim, OutFile, FileCosets, budget)
+    local os;
+    RemoveFileIfExist(FileNml);
+    os := OutputTextFile(FileNml, true);
+    SetPrintFormattingStatus(os, false);
+    AppendTo(os, "&SYSTEM\n");
+    AppendTo(os, " max_runtime_second = ", budget, "\n");
+    AppendTo(os, " ApplyStdUnitbuf = T\n");
+    AppendTo(os, " OutFile = \"", OutFile, "\"\n");
+    AppendTo(os, "/\n");
+    AppendTo(os, "&DATA\n");
+    AppendTo(os, " arithmetic = \"gmp\"\n");
+    AppendTo(os, " FileDualDescription = \"unset\"\n");
+    AppendTo(os, " FileCosets = \"", FileCosets, "\"\n");
+    AppendTo(os, "/\n");
+    AppendTo(os, "&SEARCH\n");
+    AppendTo(os, " RecordToBeat = \"auto\"\n");
+    AppendTo(os, " n_walk_steps = 5\n");
+    AppendTo(os, "/\n");
+    AppendTo(os, "&TSPACE\n");
+    AppendTo(os, " TypeTspace = \"Classic\"\n");
+    AppendTo(os, " ClassicDim = ", dim, "\n");
+    AppendTo(os, "/\n");
+    CloseStream(os);
+end;
+
+test_record_search := function(expected_best, expected_record)
+    local FileCosets, FileNml, FileOut, eRec;
+    Print("Record search on Z^3 + {0, (1/3,1/3,1/3)}\n");
+    FileCosets := tmp("rec_cosets.txt");
+    RemoveFileIfExist(FileCosets);
+    WriteMatrixFile(FileCosets, [[0, 0, 0], [1/3, 1/3, 1/3]]);
+    FileNml := tmp("rec.nml");
+    FileOut := tmp("rec.g");
+    RemoveFileIfExist(FileOut);
+    write_rec_nml(FileNml, 3, FileOut, FileCosets, 30);
+    Exec(Concatenation(prog_rec, " ", FileNml));
+    if IsExistingFile(FileOut) = false then
+        Print("  FOUND ERROR: the record search wrote no result\n");
+        return false;
+    fi;
+    eRec := ReadAsFunction(FileOut)();
+    Print("  message=", eRec.message, "\n");
+    # "auto" has to reproduce the A_3^* value the enumeration computed.
+    Print("  record=", eRec.record, " (expected ", expected_record, ")\n");
+    if AbsoluteValue(eRec.record - expected_record) > 1.0e-9 then
+        Print("  FOUND ERROR: the automatic record is not Theta(A_3^*)\n");
+        return false;
+    fi;
+    # A periodic point set of dimension 3 cannot beat the lattice optimum,
+    # so a claimed record here is a bug, not a discovery.
+    if eRec.found_record <> false then
+        Print("  FOUND ERROR: a record was claimed in dimension 3\n");
+        return false;
+    fi;
+    if eRec.has_best <> true then
+        Print("  FOUND ERROR: the search optimized no domain at all\n");
+        return false;
+    fi;
+    # The walk has to reach the minimum over the 6 domains, which the full
+    # enumeration gives independently.
+    Print("  best_density=", eRec.best_density, " (expected ", expected_best,
+          ")\n");
+    if AbsoluteValue(eRec.best_density - expected_best) > 1.0e-6 then
+        Print("  FOUND ERROR: the walk did not reach the known optimum\n");
+        return false;
+    fi;
+    return true;
+end;
+
 ListCases := [
     rec(dim := 3, nb_domains := 1, best_density := 1.4635030689668180),
     rec(dim := 4, nb_domains := 3, best_density := 1.7655285081493524),
@@ -251,6 +336,9 @@ for eCase in ListCases do
     fi;
 od;
 if test_periodic() = false then
+    n_error := n_error + 1;
+fi;
+if test_record_search(1.856151125516228, 1.4635030689668180) = false then
     n_error := n_error + 1;
 fi;
 Print("n_error=", n_error, "\n");
