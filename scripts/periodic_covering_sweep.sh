@@ -82,15 +82,29 @@ MARR=($MLIST)
 
 found=1
 for ((i = 0; i < COUNT; i++)); do
-  N=${NARR[$((RANDOM % ${#NARR[@]}))]}
-  M=${MARR[$((RANDOM % ${#MARR[@]}))]}
-  tag="cfg${i}_N${N}_m${M}"
-  cosets="$OUTDIR/$tag.cosets"
-  # A given (N, m) may admit no admissible configuration at all, which is
-  # not a failure of the sweep.
-  if ! "$GEN" "$DIM" "$N" "$M" 500 "$cosets" > "$OUTDIR/$tag.gen.log" 2>&1; then
-    echo "$tag: no admissible coset configuration" | tee -a "$SUMMARY"
-    continue
+  # A given (N, m) may admit no admissible configuration at all -- with
+  # N = 2 and two cosets every set is a group modulo Z^d, and so is every
+  # three-coset set with N = 3 -- which is not a failure of the sweep. Such a
+  # draw is retried with another (N, m) rather than spending one of the
+  # COUNT searches on it.
+  tag=""
+  cosets=""
+  for ((retry = 0; retry < 10; retry++)); do
+    N=${NARR[$((RANDOM % ${#NARR[@]}))]}
+    M=${MARR[$((RANDOM % ${#MARR[@]}))]}
+    tag="cfg${i}_N${N}_m${M}"
+    cosets="$OUTDIR/$tag.cosets"
+    if "$GEN" "$DIM" "$N" "$M" 500 "$cosets" > "$OUTDIR/$tag.gen.log" 2>&1; then
+      break
+    fi
+    echo "$tag: no admissible coset configuration, drawing another" \
+      | tee -a "$SUMMARY"
+    tag=""
+  done
+  if [ -z "$tag" ]; then
+    echo "no admissible configuration for any (N, m) of the pools" \
+      | tee -a "$SUMMARY"
+    break
   fi
   nml="$OUTDIR/$tag.nml"
   out="$OUTDIR/$tag.result.g"
@@ -119,7 +133,9 @@ EOF
     echo "$tag: the search failed, see $OUTDIR/$tag.search.log" | tee -a "$SUMMARY"
     continue
   fi
-  line=$(grep -o 'found_record:=[a-z]*\|best_density:=[0-9.e+-]*' "$out" | tr '\n' ' ')
+  # n_domain_failed matters as much as the density: a run where most domains
+  # could not be optimized reports the best of a small part of what it saw.
+  line=$(grep -o 'found_record:=[a-z]*\|best_density:=[0-9.e+-]*\|n_domain_evaluated:=[0-9]*\|n_domain_failed:=[0-9]*' "$out" | tr '\n' ' ')
   echo "$tag: $line" | tee -a "$SUMMARY"
   if grep -q 'found_record:=true' "$out"; then
     echo "RECORD FOUND with $cosets, see $out" | tee -a "$SUMMARY"

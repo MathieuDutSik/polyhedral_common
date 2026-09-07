@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iomanip>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -560,6 +561,50 @@ std::optional<Tfloat> BarrierValue(MaxdetSystem<Tfloat> const &sys,
 }
 
 /*
+  Which of the conditions of BarrierValue a point fails, as a sentence. Used
+  to report why a point that is strictly feasible in exact arithmetic is no
+  longer so once converted: the answer says whether the Gram matrix, one of
+  the circumradius blocks or one of the facets is what the conversion lost,
+  which are three quite different things.
+ */
+template <typename Tfloat>
+std::string DescribeInfeasibility(MaxdetSystem<Tfloat> const &sys,
+                                  MyVector<Tfloat> const &x) {
+  MyMatrix<Tfloat> Q = EvalLinear(sys.ListA, x);
+  CholeskyInfo<Tfloat> ci_Q = GetCholeskyInfo(Q, false);
+  if (!ci_Q.is_pd) {
+    return "the Gram matrix is not positive definite, of smallest diagonal "
+           "entry " +
+           std::to_string(Q.diagonal().minCoeff()) + " and largest " +
+           std::to_string(Q.diagonal().maxCoeff());
+  }
+  int n_block = sys.ListLmi.size();
+  for (int j = 0; j < n_block; j++) {
+    MyMatrix<Tfloat> F = EvalAffine(sys.ListLmi[j], x);
+    CholeskyInfo<Tfloat> ci_F = GetCholeskyInfo(F, false);
+    if (!ci_F.is_pd) {
+      std::ostringstream os_str;
+      os_str << "the circumradius block of orbit " << j
+             << " is not positive definite; its largest entry is "
+             << F.cwiseAbs().maxCoeff()
+             << " and the Gram matrix has diagonal entries between "
+             << Q.diagonal().minCoeff() << " and " << Q.diagonal().maxCoeff();
+      return os_str.str();
+    }
+  }
+  int n_ineq = sys.Alin.rows();
+  for (int i_ineq = 0; i_ineq < n_ineq; i_ineq++) {
+    Tfloat s = sys.Alin.row(i_ineq).dot(x);
+    if (!(s > 0)) {
+      return "facet " + std::to_string(i_ineq) + " evaluates to " +
+             std::to_string(s) + ", of largest coefficient " +
+             std::to_string(sys.Alin.row(i_ineq).cwiseAbs().maxCoeff());
+    }
+  }
+  return "no condition fails on re-examination, which should not happen";
+}
+
+/*
   The value, gradient and Hessian of the same barrier at a strictly feasible
   x. The caller has already checked feasibility through BarrierValue.
  */
@@ -822,11 +867,26 @@ FeasibilityMargins<T> GetFeasibilityMargins(CoveringData<T> const &cd,
   leaving the cone conditions untouched, both being homogeneous in Q.
 
   Returns nothing when the point, strictly feasible in exact arithmetic, is
-  no longer so once converted to floating point. That happens on a domain
-  thin enough for its margins to fall below what the floating point type
-  resolves, and it is a normal outcome the caller has to handle: the domain
-  is simply not optimizable at this precision. It is distinguished from a
-  broken construction, which is a programming error and still throws.
+  no longer so once converted to floating point, DescribeInfeasibility
+  saying which condition was lost. It is a normal outcome the caller has to
+  handle, and it is distinguished from a broken construction, which is a
+  programming error and still throws.
+
+  What is observed in practice is not a small margin -- the margins can be
+  perfectly healthy, of the order of 1e-2 -- but a huge dynamic range. The
+  interior point the linear program returns can be a very anisotropic form,
+  with diagonal entries spanning 1e7 to 1e15 on the same domain, and the
+  circumradius blocks of the different orbits then live at scales too far
+  apart for a double to hold at once: the block of an orbit whose simplex is
+  short in that metric loses its positive definiteness while the block
+  setting the scale is fine.
+
+  The scaling by 1 / (2 max_sq) cannot help with this, being exactly scale
+  invariant: R^2(cQ) = c R^2(Q), so Q / (2 R^2(Q)) does not depend on the
+  size of Q, only on its shape. Fixing it needs the shape changed, that is a
+  reduction of the form by a unimodular transformation carried through the
+  vertices and the inequalities of the domain, or a floating point type with
+  more range than a double.
  */
 template <typename T, typename Tfloat>
 std::optional<MyVector<Tfloat>>
@@ -863,8 +923,9 @@ GetStartingPoint(CoveringData<T> const &cd, CoveringData<Tfloat> const &cd_f,
     os << "COVERING_MAXDET: GetStartingPoint: the starting point is strictly "
           "feasible exactly, with cone_margin="
        << margins.cone_margin << " and radius_margin=" << margins.radius_margin
-       << ", but not after conversion to floating point. The domain is too "
-          "thin to be optimized at this precision\n";
+       << ", but not after conversion to floating point: "
+       << DescribeInfeasibility(sys, x_ret)
+       << ". The domain cannot be optimized at this precision\n";
     return {};
   }
   return x_ret;

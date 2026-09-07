@@ -248,6 +248,28 @@ It stops on the first record and otherwise reports the best density of every
 configuration it tried. Exit status 1 means "swept everything, found no
 record", which is the normal outcome, not a failure.
 
+### When the walk cannot evaluate what it visits
+
+`n_domain_failed` in the result record counts the domains whose optimization
+could not even start. It is zero on most configurations and can be almost
+everything on some: `Z^3 + {0, (1/2,1/2,1/2), (3/4,3/4,3/4)}` lost 17052 of
+17853 evaluations in a 20-minute run.
+
+The cause is not a small feasibility margin — those stay healthy, around
+1e-2 — but a huge dynamic range. The form interior to a domain can be so
+anisotropic, with diagonal entries spanning 1e7 to 1e15, that the
+circumradius blocks of the different orbits sit at scales a double cannot
+hold at once, and the block of an orbit whose simplex is short in that
+metric loses its positive definiteness. Rescaling does not help: the
+starting point is exactly scale invariant, `R^2(cQ) = c R^2(Q)`. Fixing it
+needs the *shape* changed — a unimodular reduction of the form carried
+through the vertices and the inequalities of the domain — or a floating
+point type with more range than a double.
+
+**A result with a large `n_domain_failed` is the best over a small part of
+what the walk visited**, so it says much less than the same number with a
+zero there. The sweep script prints both.
+
 ### What a record would and would not prove
 
 The optimization is numerical, so a density that lands within a few units of

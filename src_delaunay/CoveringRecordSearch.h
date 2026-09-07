@@ -135,9 +135,17 @@ inline std::optional<double> GetKnownLatticeCoveringRecord(int n) {
   attains and therefore an upper bound on the optimum of the domain. That is
   what the walk compares and what a record claim rests on, so throwing those
   away would both waste the work and risk discarding the very domain that
-  holds a record. Only a domain that yields no feasible point at all -- too
-  thin for floating point -- is dropped, and the caller treats that as "this
-  domain is not usable" rather than as an error.
+  holds a record. Only a domain that yields no feasible point at all is
+  dropped, and the caller treats that as "this domain is not usable" rather
+  than as an error.
+
+  How often that happens depends sharply on the point set: it is zero on
+  most configurations and 95% on some, when the forms interior to the
+  domains are anisotropic enough that a double cannot hold the circumradius
+  blocks of the different orbits at once (see GetStartingPoint). The count
+  is reported as n_domain_failed, and a result carrying a large one is the
+  best over a small part of what the walk visited rather than over all of
+  it.
  */
 template <typename T, typename Tint, typename Tgroup>
 std::optional<covering_maxdet::MaxdetResult<double>>
