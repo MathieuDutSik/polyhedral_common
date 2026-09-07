@@ -47,7 +47,8 @@ void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
     prime = ChooseNeighborPrime<T>(spec.det);
   }
   GenusEnumerationResult<T> result =
-      GenusEnumeration<T, Tint, Tgroup>(ListSeed, TotalMass, prime, std::cerr);
+      GenusEnumeration<T, Tint, Tgroup>(ListSeed, TotalMass, prime,
+                                        spec.method, std::cerr);
   WriteGenusEnumerationResult(os, result, OutFormat, prime);
 }
 
@@ -68,6 +69,16 @@ int main(int argc, char *argv[]) {
       std::cerr << "                     rank <n>\n";
       std::cerr << "                     det <determinant>\n";
       std::cerr << "                     prime <p>     (optional, 0 = auto)\n";
+      std::cerr << "                     method <name> (optional, one of\n";
+      std::cerr << "                                   fullrank, cv, auto.\n";
+      std::cerr << "                                   fullrank takes the\n";
+      std::cerr << "                                   shells until they are\n";
+      std::cerr << "                                   of full rank, cv takes\n";
+      std::cerr << "                                   the characteristic\n";
+      std::cerr << "                                   vector set V_cv, auto\n";
+      std::cerr << "                                   takes the smaller of\n";
+      std::cerr << "                                   the two and is the\n";
+      std::cerr << "                                   default)\n";
       std::cerr << "Lattice (input) : one or more Gram matrices, in the\n";
       std::cerr << "                  ListMatrix format. One seed per SPINOR\n";
       std::cerr << "                  genus is needed: the p-neighbour graph\n";

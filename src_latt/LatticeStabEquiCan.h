@@ -131,7 +131,7 @@ MyMatrix<Tint> CanonicallyReorder_SHV(std::vector<MyMatrix<T>> const &ListMat,
   //
   std::vector<int> CanonicOrd =
     GetCanonicalizationVector_Kernel<std::vector<T>, Tgr, int>(WMat, os);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CNA
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
   //
@@ -198,6 +198,45 @@ MyMatrix<Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat, std::ostream &os)
   return ComputeCanonicalForm_inner(ListMat, SHV, os);
 }
 
+/*
+  Canonical form from a family already known to span Z^n. The Hermite normal
+  form of the canonically reordered family is then a canonical basis, so none
+  of the subspace work of ComputeCanonicalFormFullRank_family is needed.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint> ComputeCanonicalFormSpanning_family(MyMatrix<T> const &inpMat,
+                                                   MyMatrix<Tint> const &SHV,
+                                                   std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat{inpMat};
+  return ComputeCanonicalForm_inner<T, Tint>(ListMat, SHV, os);
+}
+
+/*
+  Canonical form computed from the characteristic vector set V_cv of Section
+  2.2 of "A canonical form for positive definite matrices". V_cv spans Z^n,
+  so this takes the same cheap route as ComputeCanonicalForm: the Hermite
+  normal form of the canonically reordered family, with no need for the
+  subspace canonicalization that ComputeCanonicalFormFullRank has to do.
+  What it buys over ComputeCanonicalForm is the size of the family, since
+  V_cv asks for closest vectors to a few points rather than for whole shells.
+
+  Its canonical form is not the same as that of ComputeCanonicalForm or of
+  ComputeCanonicalFormFullRank, the family being different; reductions from
+  the three must never be compared with each other.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint> ComputeCanonicalFormCV(MyMatrix<T> const &inpMat,
+                                      std::ostream &os) {
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> SHV = CharacteristicVectorSetCV<T, Tint>(inpMat, false, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: CharacteristicVectorSetCV|=" << time << "\n";
+#endif
+  return ComputeCanonicalFormSpanning_family<T, Tint>(inpMat, SHV, os);
+}
+
 template <typename T, typename Tint>
 MyMatrix<Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
                                             std::ostream &os) {
@@ -234,16 +273,13 @@ MyMatrix<Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &List
   the same method.
  */
 template <typename T, typename Tint, typename Tgroup>
-MyMatrix<Tint> ComputeCanonicalFormFullRank(MyMatrix<T> const &inpMat,
-                                            std::ostream &os) {
+MyMatrix<Tint> ComputeCanonicalFormFullRank_family(MyMatrix<T> const &inpMat,
+                                                   MyMatrix<Tint> const &SHV,
+                                                   std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
-#endif
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(inpMat, os);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ExtractInvariantVectorFamilyFullRank|=" << time << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMat{inpMat};
   MyMatrix<Tint> SHVcan = CanonicallyReorder_SHV<T, Tint>(ListMat, SHV, os);
@@ -283,6 +319,19 @@ MyMatrix<Tint> ComputeCanonicalFormFullRank(MyMatrix<T> const &inpMat,
   }
 #endif
   return UniversalMatrixConversion<Tint, T>(B_T);
+}
+
+template <typename T, typename Tint, typename Tgroup>
+MyMatrix<Tint> ComputeCanonicalFormFullRank(MyMatrix<T> const &inpMat,
+                                            std::ostream &os) {
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(inpMat, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: ExtractInvariantVectorFamilyFullRank|=" << time << "\n";
+#endif
+  return ComputeCanonicalFormFullRank_family<T, Tint, Tgroup>(inpMat, SHV, os);
 }
 
 template <typename T, typename Tint>

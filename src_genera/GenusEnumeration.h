@@ -69,6 +69,9 @@ template <typename T> struct GenusSpec {
   int rank;
   T det;
   int prime;
+  // The invariant vector family used for the canonical form and for the
+  // automorphisms. See GenusInvariantVectorFamily.
+  std::string method;
 };
 
 // The accumulated result of an enumeration.
@@ -377,6 +380,83 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
   derived from a single invariant vector family, since extracting it is the
   expensive part and computing them separately would do it twice.
  */
+/*
+  The invariant vector family the enumeration works from, together with
+  whether it spans Z^n. Three choices:
+
+  --- "fullrank": ExtractInvariantVectorFamilyFullRank, the shells of the
+      lattice taken until they reach full rank. Cheap when the successive
+      minima are close together, catastrophic when they are not, since a
+      shell has to be taken whole: on TestData/SlowCanonic/slow_canonic_2 it
+      returns 16942 vectors, 16816 of them in the single shell of norm 14,
+      and the canonicalization then does not terminate in an hour.
+  --- "cv": the characteristic vector set V_cv of Section 2.2 of "A canonical
+      form for positive definite matrices". Asks for closest vectors to a few
+      points instead of for whole shells, so it does not care how far apart
+      the minima are (238 vectors on slow_canonic_2), but it pays 2^k CVP
+      calls when the minimal vectors span a sublattice of index 2^k
+      (8516 vectors on slow_canonic_1, against 2358 for fullrank).
+  --- "auto": both, keeping the smaller. Neither is uniformly better and
+      building a family costs a fraction of a percent of what is done with
+      it -- measured on slow_canonic_1, 0.05 s and 0.66 s to build, against
+      7.3 s and 111.3 s for the weight matrix alone -- so the cheapest way
+      to avoid the bad case of either is to build both and throw one away.
+
+  The choice made by "auto" depends only on the isometry class, both family
+  sizes being invariants, so the canonical forms it produces remain
+  comparable across the enumeration.
+ */
+template <typename T, typename Tint> struct GenusVectorFamily {
+  MyMatrix<Tint> SHV;
+  // Whether SHV generates Z^n and not merely a finite index subgroup. It
+  // decides which canonicalization applies, the cheap Hermite one or the one
+  // that has to place Z^n relative to the span of the family.
+  bool spans_lattice;
+};
+
+template <typename T, typename Tint>
+GenusVectorFamily<T, Tint>
+GenusInvariantVectorFamily(MyMatrix<T> const &GramMat,
+                           std::string const &method, std::ostream &os) {
+#ifdef TIMINGS_GENUS_ENUMERATION
+  MicrosecondTime time;
+#endif
+  auto f_fullrank = [&]() -> GenusVectorFamily<T, Tint> {
+    return {ExtractInvariantVectorFamilyFullRank<T, Tint>(GramMat, os), false};
+  };
+  auto f_cv = [&]() -> GenusVectorFamily<T, Tint> {
+    return {CharacteristicVectorSetCV<T, Tint>(GramMat, false, os), true};
+  };
+  auto f_get = [&]() -> GenusVectorFamily<T, Tint> {
+    if (method == "fullrank") {
+      return f_fullrank();
+    }
+    if (method == "cv") {
+      return f_cv();
+    }
+    if (method == "auto") {
+      GenusVectorFamily<T, Tint> fam_cv = f_cv();
+      GenusVectorFamily<T, Tint> fam_fr = f_fullrank();
+      if (fam_cv.SHV.rows() <= fam_fr.SHV.rows()) {
+        return fam_cv;
+      }
+      return fam_fr;
+    }
+    std::cerr << "GENUS: unknown invariant vector family method " << method
+              << ", allowed are fullrank, cv and auto\n";
+    throw TerminalException{1};
+  };
+  GenusVectorFamily<T, Tint> fam = f_get();
+#ifdef TIMINGS_GENUS_ENUMERATION
+  os << "|GENUS: GenusInvariantVectorFamily|=" << time << "\n";
+#endif
+#ifdef DEBUG_GENUS_ENUMERATION
+  os << "GENUS: family of " << fam.SHV.rows() << " vectors, spanning="
+     << fam.spans_lattice << "\n";
+#endif
+  return fam;
+}
+
 template <typename T, typename Tint, typename Tgroup> struct LatticeAutInfo {
   T order;
   std::vector<MyMatrix<Tint>> ListGenMat;
@@ -384,7 +464,8 @@ template <typename T, typename Tint, typename Tgroup> struct LatticeAutInfo {
 
 template <typename T, typename Tint, typename Tgroup>
 LatticeAutInfo<T, Tint, Tgroup>
-GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::ostream &os) {
+GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::string const &method,
+                  std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
 #ifdef TIMINGS_GENUS_ENUMERATION
@@ -405,7 +486,8 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::ostream &os) {
     generators, for which the family only has to be full rank -- a form
     preserving map fixing a full rank family pointwise is the identity.
    */
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(GramMat, os);
+  MyMatrix<Tint> SHV =
+      GenusInvariantVectorFamily<T, Tint>(GramMat, method, os).SHV;
 #ifdef DEBUG_GENUS_ENUMERATION
   // The size of this family governs the cost of everything downstream, so it
   // is worth seeing when a lattice is expensive and why. Two things blow it
@@ -470,19 +552,35 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::ostream &os) {
 /*
   The canonical Gram matrix, used as the key of the dictionary of classes.
 
-  Uses ComputeCanonicalFormFullRank, which works from the full rank invariant
-  vector family rather than from one spanning Z^n. That distinction is what
-  makes the canonical form usable here at all: on these lattices the Z-basis
-  family has 24702 members against 2358 for the full rank one, and the
-  canonical labelling of a graph on 24702 vertices did not terminate in 110 s
-  and exhausted memory inside nauty.
+  With method "fullrank" this is ComputeCanonicalFormFullRank, which works
+  from the full rank invariant vector family rather than from one spanning
+  Z^n. That distinction is what makes the canonical form usable at all on
+  some lattices: the Z-basis family of slow_canonic_1 has 24702 members
+  against 2358 for the full rank one, and the canonical labelling of a graph
+  on 24702 vertices did not terminate in 110 s and exhausted memory inside
+  nauty. The price is the subspace canonicalization needed to place Z^n
+  relative to the lattice the family spans.
 
-  Its canonical form differs from that of ComputeCanonicalForm, so the two must
-  never be mixed. Everything below uses this one.
+  With method "cv" this is ComputeCanonicalFormCV, which spans Z^n and so
+  skips that subspace step entirely.
+
+  The two canonical forms differ, as does that of ComputeCanonicalForm, so
+  they must never be mixed within one enumeration.
  */
 template <typename T, typename Tint, typename Tgroup>
-MyMatrix<T> GenusCanonicalGram(MyMatrix<T> const &GramMat, std::ostream &os) {
-  MyMatrix<Tint> B = ComputeCanonicalFormFullRank<T, Tint, Tgroup>(GramMat, os);
+MyMatrix<T> GenusCanonicalGram(MyMatrix<T> const &GramMat,
+                               std::string const &method, std::ostream &os) {
+  GenusVectorFamily<T, Tint> fam =
+      GenusInvariantVectorFamily<T, Tint>(GramMat, method, os);
+  auto get_basis = [&]() -> MyMatrix<Tint> {
+    if (fam.spans_lattice) {
+      // The cheap Hermite route, no subspace canonicalization needed.
+      return ComputeCanonicalFormSpanning_family<T, Tint>(GramMat, fam.SHV, os);
+    }
+    return ComputeCanonicalFormFullRank_family<T, Tint, Tgroup>(GramMat,
+                                                                fam.SHV, os);
+  };
+  MyMatrix<Tint> B = get_basis();
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   return B_T * GramMat * B_T.transpose();
 }
@@ -583,7 +681,7 @@ template <typename T> int ChooseNeighborPrime(T const &det) {
 template <typename T, typename Tint, typename Tgroup>
 GenusEnumerationResult<T>
 GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed, T const &TotalMass,
-                 int prime, std::ostream &os) {
+                 int prime, std::string const &method, std::ostream &os) {
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_total;
 #endif
@@ -605,13 +703,14 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed, T const &TotalMass,
   std::vector<LatticeAutInfo<T, Tint, Tgroup>> ListAutInfo;
 
   auto f_insert = [&](MyMatrix<T> const &GramMat) -> bool {
-    MyMatrix<T> GramCan = GenusCanonicalGram<T, Tint, Tgroup>(GramMat, os);
+    MyMatrix<T> GramCan =
+        GenusCanonicalGram<T, Tint, Tgroup>(GramMat, method, os);
     if (MapCanonic.count(GramCan) == 1) {
       return false;
     }
     MapCanonic[GramCan] = result.ListGram.size();
     LatticeAutInfo<T, Tint, Tgroup> info =
-        GetLatticeAutInfo<T, Tint, Tgroup>(GramCan, os);
+        GetLatticeAutInfo<T, Tint, Tgroup>(GramCan, method, os);
     result.ListGram.push_back(GramCan);
     result.ListAutOrder.push_back(info.order);
     result.accumulated_mass += T(1) / info.order;
@@ -648,7 +747,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed, T const &TotalMass,
     os << "GENUS: lattice " << pos << " has " << ListRepr.size()
        << " orbits of projective points\n";
 #endif
-    size_t i_orbit = 0;
+    [[maybe_unused]] size_t i_orbit = 0;
     for (auto &eLine : ListRepr) {
       i_orbit++;
 #ifdef DEBUG_GENUS_ENUMERATION
@@ -703,6 +802,7 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
   spec.rank = -1;
   spec.det = T(0);
   spec.prime = 0;
+  spec.method = "auto";
   std::string key;
   while (is >> key) {
     if (key == "rank") {
@@ -711,9 +811,11 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
       is >> spec.det;
     } else if (key == "prime") {
       is >> spec.prime;
+    } else if (key == "method") {
+      is >> spec.method;
     } else {
       std::cerr << "GENUS: unrecognised key \"" << key << "\" in "
-                << file_name << ". Allowed: rank, det, prime\n";
+                << file_name << ". Allowed: rank, det, prime, method\n";
       throw TerminalException{1};
     }
   }
@@ -725,6 +827,12 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
   if (spec.det <= T(0)) {
     std::cerr << "GENUS: the determinant is missing or not positive in "
               << file_name << "\n";
+    throw TerminalException{1};
+  }
+  if (spec.method != "fullrank" && spec.method != "cv" &&
+      spec.method != "auto") {
+    std::cerr << "GENUS: the method in " << file_name << " is \""
+              << spec.method << "\", allowed are fullrank, cv and auto\n";
     throw TerminalException{1};
   }
   return spec;
