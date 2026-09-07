@@ -143,6 +143,7 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src_delaunay"
     "${CMAKE_SOURCE_DIR}/src_dualdesc"
     "${CMAKE_SOURCE_DIR}/src_enum_schemes"
+    "${CMAKE_SOURCE_DIR}/src_genera"
     "${CMAKE_SOURCE_DIR}/src_group"
     "${CMAKE_SOURCE_DIR}/src_indefinite"
     "${CMAKE_SOURCE_DIR}/src_isotropy"
@@ -544,6 +545,22 @@ foreach(target IN LISTS LATT_PROGRAMS)
   add_polyhedral_binary(
     ${target}
     "${CMAKE_SOURCE_DIR}/src_latt/${target}.cpp"
+    polyhedral_latt_support
+  )
+endforeach()
+
+# src_genera: enumeration of a genus of even positive definite lattices by
+# Kneser p-neighbours. It builds on the src_latt headers (canonical form,
+# automorphism group, invariant vector families), so it reuses the same
+# support interface.
+set(
+  GENERA_PROGRAMS
+  GENUS_Enumerate
+)
+foreach(target IN LISTS GENERA_PROGRAMS)
+  add_polyhedral_binary(
+    ${target}
+    "${CMAKE_SOURCE_DIR}/src_genera/${target}.cpp"
     polyhedral_latt_support
   )
 endforeach()

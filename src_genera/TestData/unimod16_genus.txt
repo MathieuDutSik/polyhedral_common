@@ -1,0 +1,3 @@
+rank 16
+det 1
+prime 0

@@ -1,0 +1,3 @@
+rank 8
+det 25
+prime 0
