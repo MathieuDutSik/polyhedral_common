@@ -91,10 +91,38 @@ template <typename T, typename Tint> struct Canonic_PosDef {
 // The canonic form
 //
 
-template <typename T, typename Tint>
-MyMatrix<Tint> CanonicallyReorder_SHV(std::vector<MyMatrix<T>> const &ListMat,
-                                      MyMatrix<Tint> const &SHV,
-                                      std::ostream &os) {
+/*
+  Whether every matrix of the configuration has integral entries, and the
+  conversion that follows. The weight matrices below are built out of the
+  scalar products v A w only, so an integral configuration lets them be built
+  over the ring instead of over the field.
+ */
+template <typename T>
+bool IsIntegralListMat(std::vector<MyMatrix<T>> const &ListMat) {
+  for (auto &eMat : ListMat) {
+    if (!IsIntegralMatrix(eMat)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <typename T, typename Tring>
+std::vector<MyMatrix<Tring>>
+ConvertListMatToRing(std::vector<MyMatrix<T>> const &ListMat) {
+  std::vector<MyMatrix<Tring>> ListMatRet;
+  ListMatRet.reserve(ListMat.size());
+  for (auto &eMat : ListMat) {
+    ListMatRet.push_back(UniversalMatrixConversion<Tring, T>(eMat));
+  }
+  return ListMatRet;
+}
+
+template <typename Tval, typename Tint>
+MyMatrix<Tint>
+CanonicallyReorder_SHV_kernel(std::vector<MyMatrix<Tval>> const &ListMat,
+                              MyMatrix<Tint> const &SHV, std::ostream &os) {
+  using T = Tval;
   using Tgr = GraphListAdj;
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: Begining of ComputeCanonicalForm\n";
@@ -151,6 +179,21 @@ MyMatrix<Tint> CanonicallyReorder_SHV(std::vector<MyMatrix<T>> const &ListMat,
   return SHVcan;
 }
 
+// Over the ring rather than over the field when the configuration allows it,
+// see CanonicallyReorder_SHV_AbsTrick for why that leaves the answer alone.
+template <typename T, typename Tint>
+MyMatrix<Tint> CanonicallyReorder_SHV(std::vector<MyMatrix<T>> const &ListMat,
+                                      MyMatrix<Tint> const &SHV,
+                                      std::ostream &os) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  if (IsIntegralListMat(ListMat)) {
+    std::vector<MyMatrix<Tring>> ListMat_ring =
+        ConvertListMatToRing<T, Tring>(ListMat);
+    return CanonicallyReorder_SHV_kernel<Tring, Tint>(ListMat_ring, SHV, os);
+  }
+  return CanonicallyReorder_SHV_kernel<T, Tint>(ListMat, SHV, os);
+}
+
 template<typename Tint>
 MyMatrix<Tint> get_canonicalization_matrix(MyMatrix<Tint> const& SHVcan, [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
@@ -205,10 +248,11 @@ MyMatrix<Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> const &ListMa
   its canonical sign. It spans the same lattice as the whole family, so the
   Hermite normal form built from it is the same.
  */
-template <typename T, typename Tint>
-std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick(
-    std::vector<MyMatrix<T>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
+template <typename Tval, typename Tint>
+std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick_kernel(
+    std::vector<MyMatrix<Tval>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
     std::ostream &os) {
+  using T = Tval;
   using Tgr = GraphListAdj;
   using Tidx = uint32_t;
   using Tidx_value = int16_t;
@@ -262,6 +306,37 @@ std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick(
 }
 
 /*
+  The same, over the ring rather than over the field whenever the matrices
+  allow it.
+
+  The entries of the weight matrix are the scalar products v A w, which are
+  integers as soon as A is one, and the weights are only ever compared with
+  one another, an order that is the same in the ring as in the field. So the
+  graph, its canonical ordering and the reordered family are unchanged.
+
+  What changes is the price. Over Q every one of the O(|V|^2 n^2) products
+  and sums normalizes its result by a gcd, and a profile of a rank-14
+  determinant-351 genus has __gmpq_mul, __gmpq_set_z, __gmpz_gcd and
+  __gmpn_gcd_11 at the top, with the weight matrix construction taking half
+  of the canonicalization. T is a field here only because ComputeCanonicalForm
+  needs one for the basis it returns, not because the scalar products need
+  one.
+ */
+template <typename T, typename Tint>
+std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick(
+    std::vector<MyMatrix<T>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
+    std::ostream &os) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  if (IsIntegralListMat(ListMat)) {
+    std::vector<MyMatrix<Tring>> ListMat_ring =
+        ConvertListMatToRing<T, Tring>(ListMat);
+    return CanonicallyReorder_SHV_AbsTrick_kernel<Tring, Tint>(ListMat_ring,
+                                                               SHVhalf, os);
+  }
+  return CanonicallyReorder_SHV_AbsTrick_kernel<T, Tint>(ListMat, SHVhalf, os);
+}
+
+/*
   Permutation generators of the automorphism group of an antipodal family,
   through the absolute trick: the graph is built on the pairs, which is a
   quarter of the vertices, and each of its generators is lifted to a signed
@@ -275,11 +350,12 @@ std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick(
   not connected enough to determine the lift; the caller then computes the
   automorphisms from the whole family as before.
  */
-template <typename T, typename Tint, typename Tgroup>
+template <typename Tval, typename Tint, typename Tgroup>
 std::optional<std::vector<std::vector<typename Tgroup::Telt::Tidx>>>
-GetListGenAutomorphism_AbsTrick(std::vector<MyMatrix<T>> const &ListMat,
-                                MyMatrix<Tint> const &SHVhalf,
-                                std::ostream &os) {
+GetListGenAutomorphism_AbsTrick_kernel(
+    std::vector<MyMatrix<Tval>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
+    std::ostream &os) {
+  using T = Tval;
   using Tgr = GraphListAdj;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -308,6 +384,25 @@ GetListGenAutomorphism_AbsTrick(std::vector<MyMatrix<T>> const &ListMat,
   }
 #endif
   return opt;
+}
+
+// Over the ring rather than over the field when the configuration allows it,
+// see CanonicallyReorder_SHV_AbsTrick. The generators are permutations, so
+// they do not depend on which of the two the weights were computed in.
+template <typename T, typename Tint, typename Tgroup>
+std::optional<std::vector<std::vector<typename Tgroup::Telt::Tidx>>>
+GetListGenAutomorphism_AbsTrick(std::vector<MyMatrix<T>> const &ListMat,
+                                MyMatrix<Tint> const &SHVhalf,
+                                std::ostream &os) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  if (IsIntegralListMat(ListMat)) {
+    std::vector<MyMatrix<Tring>> ListMat_ring =
+        ConvertListMatToRing<T, Tring>(ListMat);
+    return GetListGenAutomorphism_AbsTrick_kernel<Tring, Tint, Tgroup>(
+        ListMat_ring, SHVhalf, os);
+  }
+  return GetListGenAutomorphism_AbsTrick_kernel<T, Tint, Tgroup>(ListMat,
+                                                                 SHVhalf, os);
 }
 
 /*
