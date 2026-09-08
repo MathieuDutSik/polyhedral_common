@@ -36,17 +36,25 @@ void process(std::string choice, std::string MatFile,
       return ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, std::cerr);
     }
     if (choice == "wr_cv") {
-      return CharacteristicVectorSetWellRoundedCV<T, Tint>(GramMat, std::cerr);
+      return CharacteristicVectorSetWellRoundedCV<T, Tint>(GramMat, true,
+                                                           std::cerr);
     }
     if (choice == "cv") {
-      return CharacteristicVectorSetCV<T, Tint>(GramMat, false, std::cerr);
+      return CharacteristicVectorSetCV<T, Tint>(GramMat, true, false,
+                                                std::cerr);
+    }
+    if (choice == "cv_fullrank") {
+      return CharacteristicVectorSetCV<T, Tint>(GramMat, false, false,
+                                                std::cerr);
     }
     if (choice == "cv_paper") {
-      return CharacteristicVectorSetCV<T, Tint>(GramMat, true, std::cerr);
+      return CharacteristicVectorSetCV<T, Tint>(GramMat, true, true,
+                                                std::cerr);
     }
     std::cerr << "Failed to find a matching entry for choice\n";
     std::cerr << "Possible choices: shortest, relevant_voronoi, "
-                 "filtered_relevant_voronoi, fullrank, spanning, wr_cv, cv, cv_paper\n";
+                 "filtered_relevant_voronoi, fullrank, spanning, wr_cv, cv, "
+                 "cv_fullrank, cv_paper\n";
     throw TerminalException{1};
   };
   MyMatrix<Tint> M = f();

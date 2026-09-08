@@ -32,7 +32,7 @@ TestGeneration:=function(matrix, method)
 end;
 
 ListRec:=ReadAsFunction("ListCases")();;
-ListMethod:=["shortest", "relevant_voronoi", "filtered_relevant_voronoi", "fullrank", "spanning", "cv"];
+ListMethod:=["shortest", "relevant_voronoi", "filtered_relevant_voronoi", "fullrank", "spanning", "cv", "cv_fullrank"];
 
 
 FullTest:=function()

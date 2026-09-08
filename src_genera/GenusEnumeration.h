@@ -382,30 +382,68 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
  */
 /*
   The invariant vector family the enumeration works from, together with
-  whether it spans Z^n. Three choices:
+  whether it spans Z^n.
+
+  Spanning Z^n is not required. The canonicalization handles a family that
+  merely has full rank, by canonicalizing the position of Z^n relative to the
+  span of the family under the group preserving it, and a smaller family is
+  worth much more than the cheaper Hermite route that a spanning family
+  allows: the weight matrix is quadratic in the size of the family and the
+  canonical labelling of the graph is worse than quadratic, while the extra
+  subspace step is not. So the choices below are ordered by size, not by
+  whether they span.
 
   --- "fullrank": ExtractInvariantVectorFamilyFullRank, the shells of the
       lattice taken until they reach full rank. Cheap when the successive
       minima are close together, catastrophic when they are not, since a
       shell has to be taken whole: on TestData/SlowCanonic/slow_canonic_2 it
-      returns 16942 vectors, 16816 of them in the single shell of norm 14,
-      and the canonicalization then does not terminate in an hour.
-  --- "cv": the characteristic vector set V_cv of Section 2.2 of "A canonical
-      form for positive definite matrices". Asks for closest vectors to a few
-      points instead of for whole shells, so it does not care how far apart
-      the minima are (238 vectors on slow_canonic_2), but it pays 2^k CVP
-      calls when the minimal vectors span a sublattice of index 2^k
-      (8516 vectors on slow_canonic_1, against 2358 for fullrank).
-  --- "auto": both, keeping the smaller. Neither is uniformly better and
-      building a family costs a fraction of a percent of what is done with
-      it -- measured on slow_canonic_1, 0.05 s and 0.66 s to build, against
-      7.3 s and 111.3 s for the weight matrix alone -- so the cheapest way
-      to avoid the bad case of either is to build both and throw one away.
+      returns 16942 vectors, 16816 of them in the single shell of norm 14.
+  --- "cv_fullrank": the characteristic vector set V_cv of Section 2.2 of "A
+      canonical form for positive definite matrices", with the coset unions
+      of (2.2.5) dropped so that it stops at full rank. Asks for closest
+      vectors to a few points rather than for whole shells, so it does not
+      care how far apart the minima are, and it avoids the 2^k closest-vector
+      computations that the spanning version pays when the minimal vectors
+      span a sublattice of index 2^k. 238 and 324 vectors on the two
+      SlowCanonic lattices, against 16942 and 2358 for the shells.
+  --- "cv": the same but built so as to span Z^n, so 2^k times more expensive
+      in the bad case, 8516 vectors on slow_canonic_1. Kept because the
+      property is what Definition 1.2.1 asks for, not because it is the fast
+      choice here. Note that "cv_fullrank" usually spans anyway: the two
+      differ only when the minimal vectors fail to generate the lattice.
+  --- "auto": both full rank families, keeping the smaller. Building a family
+      costs a fraction of a percent of what is done with it -- measured on
+      slow_canonic_1, 0.05 s and 1.23 s to build against 7.3 s and more for
+      the weight matrix alone -- so the cheapest way to avoid the bad case of
+      either is to build both and throw one away.
 
   The choice made by "auto" depends only on the isometry class, both family
   sizes being invariants, so the canonical forms it produces remain
   comparable across the enumeration.
  */
+/*
+  Whether the family generates Z^n and not merely a finite index subgroup.
+  This has to be measured rather than assumed: a family built without asking
+  for it often spans anyway, and every family that does can take the cheap
+  Hermite canonicalization instead of the subspace one. Dropping the coset
+  unions of V_cv, for instance, changes nothing at all on a lattice whose
+  minimal vectors already span, and on the determinant-243 genus that is
+  almost every class.
+
+  The test is a Z-basis of the span followed by its determinant, which costs
+  nothing next to the weight matrix it saves.
+ */
+template <typename Tint>
+bool GenusFamilySpansLattice(MyMatrix<Tint> const &SHV) {
+  int n = SHV.cols();
+  if (RankMat(SHV) != n) {
+    return false;
+  }
+  MyMatrix<Tint> Basis = GetZbasis(SHV);
+  Tint det = DeterminantMat(Basis);
+  return T_abs(det) == Tint(1);
+}
+
 template <typename T, typename Tint> struct GenusVectorFamily {
   MyMatrix<Tint> SHV;
   // Whether SHV generates Z^n and not merely a finite index subgroup. It
@@ -421,21 +459,31 @@ GenusInvariantVectorFamily(MyMatrix<T> const &GramMat,
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time;
 #endif
+  auto f_wrap = [&](MyMatrix<Tint> &&SHV) -> GenusVectorFamily<T, Tint> {
+    bool spans = GenusFamilySpansLattice<Tint>(SHV);
+    return {std::move(SHV), spans};
+  };
   auto f_fullrank = [&]() -> GenusVectorFamily<T, Tint> {
-    return {ExtractInvariantVectorFamilyFullRank<T, Tint>(GramMat, os), false};
+    return f_wrap(ExtractInvariantVectorFamilyFullRank<T, Tint>(GramMat, os));
+  };
+  auto f_cv_fullrank = [&]() -> GenusVectorFamily<T, Tint> {
+    return f_wrap(CharacteristicVectorSetCV<T, Tint>(GramMat, false, false, os));
   };
   auto f_cv = [&]() -> GenusVectorFamily<T, Tint> {
-    return {CharacteristicVectorSetCV<T, Tint>(GramMat, false, os), true};
+    return f_wrap(CharacteristicVectorSetCV<T, Tint>(GramMat, true, false, os));
   };
   auto f_get = [&]() -> GenusVectorFamily<T, Tint> {
     if (method == "fullrank") {
       return f_fullrank();
     }
+    if (method == "cv_fullrank") {
+      return f_cv_fullrank();
+    }
     if (method == "cv") {
       return f_cv();
     }
     if (method == "auto") {
-      GenusVectorFamily<T, Tint> fam_cv = f_cv();
+      GenusVectorFamily<T, Tint> fam_cv = f_cv_fullrank();
       GenusVectorFamily<T, Tint> fam_fr = f_fullrank();
       if (fam_cv.SHV.rows() <= fam_fr.SHV.rows()) {
         return fam_cv;
@@ -443,7 +491,7 @@ GenusInvariantVectorFamily(MyMatrix<T> const &GramMat,
       return fam_fr;
     }
     std::cerr << "GENUS: unknown invariant vector family method " << method
-              << ", allowed are fullrank, cv and auto\n";
+              << ", allowed are fullrank, cv_fullrank, cv and auto\n";
     throw TerminalException{1};
   };
   GenusVectorFamily<T, Tint> fam = f_get();
@@ -830,9 +878,10 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
     throw TerminalException{1};
   }
   if (spec.method != "fullrank" && spec.method != "cv" &&
-      spec.method != "auto") {
+      spec.method != "cv_fullrank" && spec.method != "auto") {
     std::cerr << "GENUS: the method in " << file_name << " is \""
-              << spec.method << "\", allowed are fullrank, cv and auto\n";
+              << spec.method
+              << "\", allowed are fullrank, cv_fullrank, cv and auto\n";
     throw TerminalException{1};
   }
   return spec;
