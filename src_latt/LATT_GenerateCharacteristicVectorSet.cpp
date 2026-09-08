@@ -37,13 +37,15 @@ void process(std::string choice, std::string MatFile,
     }
     if (choice == "wr_cv") {
       return CharacteristicVectorSetWellRoundedCV<T, Tint>(GramMat, true,
-                                                           std::cerr);
+                                                           false, std::cerr);
     }
     if (choice == "cv") {
-      return CharacteristicVectorSetCV<T, Tint>(GramMat, true, std::cerr);
+      return CharacteristicVectorSetCV<T, Tint>(GramMat, true, false,
+                                                std::cerr);
     }
     if (choice == "cv_fullrank") {
-      return CharacteristicVectorSetCV<T, Tint>(GramMat, false, std::cerr);
+      return CharacteristicVectorSetCV<T, Tint>(GramMat, false, false,
+                                                std::cerr);
     }
     std::cerr << "Failed to find a matching entry for choice\n";
     std::cerr << "Possible choices: shortest, relevant_voronoi, "

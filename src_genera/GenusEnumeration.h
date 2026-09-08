@@ -405,7 +405,9 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::ostream &os) {
     -- a form preserving map fixing a full rank family pointwise is the
     identity.
    */
-  MyMatrix<Tint> SHV = GetCanonicVectorFamily<T, Tint>(GramMat, os).SHV;
+  // Both signs are needed: the order is read off the permutations the
+  // integral generators induce on the family.
+  MyMatrix<Tint> SHV = GetCanonicVectorFamily<T, Tint>(GramMat, os).get_full();
 #ifdef DEBUG_GENUS_ENUMERATION
   // The size of this family governs the cost of everything downstream, so it
   // is worth seeing when a lattice is expensive and why. Two things blow it

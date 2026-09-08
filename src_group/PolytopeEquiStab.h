@@ -1623,6 +1623,140 @@ template <typename T, typename Tidx_value> struct WeightMatrixAbs {
   does, and fall back when the test fails. The entries whose weight is the
   zero vector carry no sign information, which is what positionZero marks.
  */
+/*
+  The two steps that every user of the absolute trick has to perform once the
+  weight matrix has been canonicalized.
+
+  The graph is built from |v.M.w| and does not see the signs, so it can carry
+  automorphisms that do not lift to the signed configuration, and the signs
+  themselves have to be recovered by propagation. Both can fail, and a caller
+  that cannot conclude has to fall back on the whole family rather than
+  return something that is not canonical.
+ */
+
+/*
+  Whether a generator of the automorphism group of the absolute graph lifts
+  to a map of the signed configuration: propagate a sign from the first row
+  and check the propagation never contradicts itself. In V, 0 is unassigned,
+  1 and 3 are positive, 2 and 4 negative, and 3 and 4 mark a treated row.
+ */
+template <typename T, typename Tidx, typename Tidx_value>
+bool AbsTrick_TestLiftGenerator(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+                                std::vector<Tidx> const &eGen, size_t nbRow) {
+  std::vector<uint8_t> V(nbRow, 0);
+  V[0] = 1;
+  while (true) {
+    bool IsFinished = true;
+    for (size_t i = 0; i < nbRow; i++) {
+      uint8_t val = V[i];
+      if (val < 3 && val != 0) {
+        IsFinished = false;
+        V[i] = val + 2;
+        size_t iImg = eGen[i];
+        for (size_t j = 0; j < nbRow; j++) {
+          size_t jImg = eGen[j];
+          Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
+          if (pos != WMatAbs.positionZero) {
+            size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
+            size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
+            bool ChgSign = WMatAbs.ArrSigns[idx1] ^ WMatAbs.ArrSigns[idx2];
+            uint8_t valJ;
+            if ((ChgSign && val == 1) || (!ChgSign && val == 2)) {
+              valJ = 2;
+            } else {
+              valJ = 1;
+            }
+            if (V[j] == 0) {
+              V[j] = valJ;
+            } else {
+              if ((valJ % 2) != (V[j] % 2)) {
+                return false;
+              }
+            }
+          }
+        }
+      }
+    }
+    if (IsFinished) {
+      break;
+    }
+  }
+  return true;
+}
+
+template <typename T, typename Tidx, typename Tidx_value>
+bool AbsTrick_TestLiftGenerators(
+    WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+    std::vector<std::vector<Tidx>> const &ListGen, size_t nbRow) {
+  for (auto &eGen : ListGen) {
+    if (!AbsTrick_TestLiftGenerator<T, Tidx, Tidx_value>(WMatAbs, eGen,
+                                                         nbRow)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/*
+  The sign of each row, indexed by its CANONICAL position, propagated along
+  the entries whose weight is not the zero one, those being the only ones
+  that relate two signs. Everything is scanned in canonical order, so the
+  answer depends only on the configuration and not on the order the rows
+  happened to arrive.
+
+  Only the entries away from positionZero carry sign information, so the
+  propagation can fail to reach every row: on an orthogonal sum every off
+  diagonal scalar product vanishes and nothing is related to anything,
+  diag(1, 4, 9) being the smallest example. The remaining signs are then not
+  determined, and this returns nothing rather than picking them from the
+  arbitrary representatives.
+
+  Only relative signs matter, the first canonical row being pinned to +1.
+ */
+template <typename T, typename Tidx, typename Tidx_value>
+std::optional<std::vector<int>>
+AbsTrick_GetSigns(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+                  std::vector<Tidx> const &CanonicOrd, size_t nbRow) {
+  std::vector<int> ListSigns(nbRow, 0);
+  ListSigns[0] = 1;
+  auto SetSign = [&](size_t const &i_row) -> bool {
+    size_t i_row_orig = CanonicOrd[i_row];
+    for (size_t k_row = 0; k_row < nbRow; k_row++) {
+      if (k_row != i_row && ListSigns[k_row] != 0) {
+        size_t k_row_orig = CanonicOrd[k_row];
+        if (WMatAbs.WMat.GetValue(i_row_orig, k_row_orig) !=
+            WMatAbs.positionZero) {
+          size_t idx = weightmatrix_idx<true>(nbRow, i_row_orig, k_row_orig);
+          bool ChgSign = WMatAbs.ArrSigns[idx];
+          int ValSign = 1 - 2 * static_cast<int>(ChgSign);
+          ListSigns[i_row] = ValSign * ListSigns[k_row];
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  while (true) {
+    int nbUndone = 0;
+    int nbAssigned = 0;
+    for (size_t i_row = 0; i_row < nbRow; i_row++) {
+      if (ListSigns[i_row] == 0) {
+        nbUndone++;
+        if (SetSign(i_row)) {
+          nbAssigned++;
+        }
+      }
+    }
+    if (nbUndone == 0) {
+      break;
+    }
+    if (nbAssigned == 0) {
+      return {};
+    }
+  }
+  return ListSigns;
+}
+
 template <typename T, typename Tint, typename Tidx_value>
 WeightMatrixAbs<std::vector<T>, Tidx_value>
 T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV(
@@ -1938,68 +2072,13 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   os << "|PES: GetGroupCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
 
-  // We check if the Generating vector eGen can be mapped from the absolute
-  // graph to the original one.
-  auto TestExistSignVector =
-      [&](std::vector<unsigned int> const &eGen) -> bool {
-    /* We map a vector v_i to another v_j with sign +-1
-       V[i] = 0 for unassigned
-              1 for positive sign
-              2 for negative sign
-              3 for positive sign and treated
-              4 for negative sign and treated
-     */
-    std::vector<uint8_t> V(nbRow, 0);
-    V[0] = 1;
-    while (true) {
-      bool IsFinished = true;
-      for (size_t i = 0; i < nbRow; i++) {
-        uint8_t val = V[i];
-        if (val < 3 && val != 0) {
-          IsFinished = false;
-          V[i] = val + 2;
-          size_t iImg = eGen[i];
-          for (size_t j = 0; j < nbRow; j++) {
-            size_t jImg = eGen[j];
-            Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
-            if (pos != WMatAbs.positionZero) {
-              size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
-              size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
-              bool ChgSign1 = WMatAbs.ArrSigns[idx1];
-              bool ChgSign2 = WMatAbs.ArrSigns[idx2];
-              // ChgSign is true if ChgSign1 != ChgSign2
-              bool ChgSign = ChgSign1 ^ ChgSign2;
-              uint8_t valJ;
-              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
-                valJ = 2;
-              else
-                valJ = 1;
-              if (V[j] == 0) {
-                V[j] = valJ;
-              } else {
-                if ((valJ % 2) != (V[j] % 2)) {
-                  return false;
-                }
-              }
-            }
-          }
-        }
-      }
-      if (IsFinished)
-        break;
-    }
-    return true;
-  };
-  auto IsCorrectListGen = [&]() -> bool {
-    for (auto &eGen : ePair.second) {
-      bool test = TestExistSignVector(eGen);
-      if (!test)
-        return false;
-    }
-    return true;
-  };
-  if (!IsCorrectListGen())
+  // A generator of the absolute graph need not lift to the signed
+  // configuration; when one does not, the trick cannot conclude.
+  if (!AbsTrick_TestLiftGenerators<Tint, Tidx, Tidx_value>(WMatAbs,
+                                                           ePair.second,
+                                                           nbRow)) {
     return {};
+  }
   //
   std::vector<Tidx> const &CanonicOrd = ePair.first;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
@@ -2008,43 +2087,13 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
 
   size_t n_cols = EXT.cols();
   MyMatrix<Tint> EXTreord(nbRow, n_cols);
-  std::vector<int> ListSigns(nbRow, 0);
-  ListSigns[0] = 1;
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
-  std::string strAssign;
-  os << "PES: positionZero=" << WMatAbs.positionZero << "\n";
-#endif
-  auto SetSign = [&](size_t const &i_row) -> void {
-    int i_row_orig = CanonicOrd[i_row];
-    for (size_t k_row = 0; k_row < nbRow; k_row++) {
-      if (k_row != i_row && ListSigns[k_row] != 0) {
-        int k_row_orig = CanonicOrd[k_row];
-        if (WMatAbs.WMat.GetValue(i_row_orig, k_row_orig) !=
-            WMatAbs.positionZero) {
-          size_t idx = weightmatrix_idx<true>(nbRow, i_row_orig, k_row_orig);
-          bool ChgSign = WMatAbs.ArrSigns[idx];
-          int ValSign = 1 - 2 * static_cast<int>(ChgSign);
-          int RetSign = ValSign * ListSigns[k_row];
-          ListSigns[i_row] = RetSign;
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
-          strAssign += " (" + std::to_string(i_row) + " / " +
-                       std::to_string(k_row) + ")";
-#endif
-          return;
-        }
-      }
-    }
-  };
-  while (true) {
-    int nbUndone = 0;
-    for (size_t i_row = 0; i_row < nbRow; i_row++)
-      if (ListSigns[i_row] == 0) {
-        nbUndone++;
-        SetSign(i_row);
-      }
-    if (nbUndone == 0)
-      break;
+  std::optional<std::vector<int>> opt_signs =
+      AbsTrick_GetSigns<Tint, Tidx, Tidx_value>(WMatAbs, CanonicOrd, nbRow);
+  if (!opt_signs) {
+    // The signs are not determined by the graph, see AbsTrick_GetSigns.
+    return {};
   }
+  std::vector<int> const &ListSigns = *opt_signs;
 #ifdef DEBUG_POLYTOPE_EQUI_STAB_REMOVED
   // We have some crash due to this with the MD5 so, let us
   // outcomment it now.
