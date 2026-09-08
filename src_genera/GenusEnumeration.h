@@ -438,17 +438,8 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::ostream &os) {
     their negatives after. When the trick declines, the automorphisms are
     computed from the whole family as before.
    */
-  std::vector<MyMatrix<T>> LGen_T = [&]() -> std::vector<MyMatrix<T>> {
-    std::optional<std::vector<std::vector<Tidx>>> opt =
-        GetListGenAutomorphism_AbsTrick<T, Tint, Tgroup>(ListMat, fam.SHVhalf,
-                                                         os);
-    if (opt) {
-      return GetIntAutomorphism_FromPermGens<T, Tgroup>(SHV_T, ListMat, *opt,
-                                                        os);
-    }
-    return GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(SHV_T, ListMat, Vdiag,
-                                                       os);
-  }();
+  std::vector<MyMatrix<T>> LGen_T =
+      GetIntAutomorphism_Family<T, Tint, Tgroup>(ListMat, fam, SHV_T, os);
   LatticeAutInfo<T, Tint, Tgroup> info;
   for (auto &M_T : LGen_T) {
     info.ListGenMat.push_back(UniversalMatrixConversion<Tint, T>(M_T));

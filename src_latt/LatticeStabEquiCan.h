@@ -478,6 +478,30 @@ MyMatrix<Tint> ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::os
 // Automorphism code
 //
 
+/*
+  The integral automorphisms of the configuration, read off the graph on the
+  antipodal pairs when the absolute trick concludes and off the whole family
+  otherwise. SHV_T has to be the family in the order CanonicVectorFamily
+  gives it, the representatives followed by their negatives, since that is
+  what the lifted generators index.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<T>>
+GetIntAutomorphism_Family(std::vector<MyMatrix<T>> const &ListMat,
+                          CanonicVectorFamily<Tint> const &fam,
+                          MyMatrix<T> const &SHV_T, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  std::optional<std::vector<std::vector<Tidx>>> opt =
+      GetListGenAutomorphism_AbsTrick<T, Tint, Tgroup>(ListMat, fam.SHVhalf,
+                                                       os);
+  if (opt) {
+    return GetIntAutomorphism_FromPermGens<T, Tgroup>(SHV_T, ListMat, *opt, os);
+  }
+  std::vector<T> Vdiag(SHV_T.rows(), T(0));
+  return GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(SHV_T, ListMat, Vdiag, os);
+}
+
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
     std::vector<MyMatrix<T>> const &ListMat, MyMatrix<Tint> const &SHV,
@@ -511,13 +535,22 @@ ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
-  MyMatrix<Tint> SHV =
-      ExtractInvariantVectorFamilyFullRank<T, Tint>(ListMat[0], os);
+  // The smaller of the two families rather than the shells, and the
+  // automorphisms off the antipodal pairs when the trick concludes.
+  CanonicVectorFamily<Tint> fam =
+      GetCanonicVectorFamily<T, Tint>(ListMat[0], os);
+  MyMatrix<Tint> SHV = fam.get_full();
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ExtractInvariantVectorFamilyFullRank|=" << time << "\n";
+  os << "|LSEC: GetCanonicVectorFamily|=" << time << "\n";
 #endif
-  return ArithmeticAutomorphismGroupMultiple_inner<T, Tint, Tgroup>(ListMat,
-                                                                    SHV, os);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+  std::vector<MyMatrix<T>> LGen =
+      GetIntAutomorphism_Family<T, Tint, Tgroup>(ListMat, fam, SHV_T, os);
+  std::vector<MyMatrix<Tint>> ListGenRet;
+  for (auto &M_T : LGen) {
+    ListGenRet.push_back(UniversalMatrixConversion<Tint, T>(M_T));
+  }
+  return ListGenRet;
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -571,15 +604,21 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
+  /*
+    The smaller of the two families on each side. The rule picking it depends
+    only on the isometry class, both candidate sizes being invariants, so two
+    isometric lattices pick corresponding families and the comparison below
+    of the two sizes cannot reject an equivalence that exists.
+   */
   MyMatrix<Tint> SHV1 =
-      ExtractInvariantVectorFamilyFullRank<T, Tint>(ListMat1[0], os);
+      GetCanonicVectorFamily<T, Tint>(ListMat1[0], os).get_full();
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ExtractInvariantVectorFamilyFullRank1|=" << time << "\n";
+  os << "|LSEC: GetCanonicVectorFamily1|=" << time << "\n";
 #endif
   MyMatrix<Tint> SHV2 =
-      ExtractInvariantVectorFamilyFullRank<T, Tint>(ListMat2[0], os);
+      GetCanonicVectorFamily<T, Tint>(ListMat2[0], os).get_full();
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ExtractInvariantVectorFamilyFullRank2|=" << time << "\n";
+  os << "|LSEC: GetCanonicVectorFamily2|=" << time << "\n";
 #endif
   return ArithmeticEquivalenceMultiple_inner<T,Tint,Tgroup>(ListMat1, SHV1, ListMat2, SHV2, os);
 }
