@@ -268,49 +268,91 @@ bool operator<(FundInvariantVectorFamily<Tint> const &x,
 // return convention. Callers that only need one representative per pair
 // (e.g. to feed conversion_and_duplication themselves later) should call
 // this directly instead of duplicating then immediately halving again.
+/*
+  The shell based family, built one shell at a time so that its cost can be
+  measured and compared with that of another construction while it runs.
+
+  A shell has to be taken whole, so the family grows in jumps that can be
+  enormous: on a genus of determinant 351 and rank 14 it reaches 76448 pairs
+  where V_cv gives 1576. Which of the two is the cheaper is not known in
+  advance -- V_cv pays 2^k closest-vector computations when the minimal
+  vectors span a sublattice of index 2^k -- so neither may be run to the end
+  before the other is looked at.
+ */
+template <typename T, typename Tint, typename Ffinal, typename Finvariant>
+struct ShellFamilyBuilder {
+  ShellFamilyBuilder(MyMatrix<T> const &GramMat, Ffinal f_final,
+                     Finvariant f_invariant, std::ostream &os)
+      : f_final_(f_final), f_invariant_(f_invariant), n_(GramMat.rows()),
+        incr_(GetSmallestIncrement(GramMat)),
+        max_norm_(GetMaxNorm<T, Tint>(GramMat, os)), norm_(incr_),
+        SHVret_(0, GramMat.rows()),
+        fi_ret_(TrivFundamentalInvariant<Tint>()), solver_(GramMat, os),
+        done_(false) {}
+
+  // Add the next shell. After it the family may be final, see is_done.
+  void one_shell(std::ostream &os) {
+    if (done_) {
+      return;
+    }
+    if (norm_ > max_norm_) {
+      std::cerr << "IVF: failed to find a relevant vector configuration\n";
+      throw TerminalException{1};
+    }
+    std::vector<MyVector<Tint>> ListVect = solver_.fixed_norm_vectors(norm_);
+    int n_prev = SHVret_.rows();
+    int n_new = ListVect.size();
+    MyMatrix<Tint> SHVtest(n_prev + n_new, n_);
+    for (int i_row = 0; i_row < n_prev; i_row++) {
+      for (int i_col = 0; i_col < n_; i_col++) {
+        SHVtest(i_row, i_col) = SHVret_(i_row, i_col);
+      }
+    }
+    for (int i_row = 0; i_row < n_new; i_row++) {
+      for (int i_col = 0; i_col < n_; i_col++) {
+        SHVtest(n_prev + i_row, i_col) = ListVect[i_row](i_col);
+      }
+    }
+    FundInvariantVectorFamily<Tint> fi_test = f_invariant_(SHVtest);
+    if (fi_ret_ < fi_test) {
+      SHVret_ = SHVtest;
+      fi_ret_ = fi_test;
+      if (f_final_(SHVret_, fi_ret_)) {
+        done_ = true;
+      }
+    }
+    norm_ += incr_;
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+    os << "IVF: shell up to norm " << norm_ << ", " << SHVret_.rows()
+       << " vectors, done=" << done_ << "\n";
+#endif
+  }
+  bool is_done() const { return done_; }
+  size_t size() const { return static_cast<size_t>(SHVret_.rows()); }
+  MyMatrix<Tint> const &get() const { return SHVret_; }
+
+private:
+  Ffinal f_final_;
+  Finvariant f_invariant_;
+  int n_;
+  T incr_, max_norm_, norm_;
+  MyMatrix<Tint> SHVret_;
+  FundInvariantVectorFamily<Tint> fi_ret_;
+  CVPSolver<T, Tint> solver_;
+  bool done_;
+};
+
 template <typename T, typename Tint, typename Ffinal, typename Finvariant>
 MyMatrix<Tint> ExtractInvariantVectorFamilyHalf(MyMatrix<T> const &GramMat,
                                                 Ffinal f_final,
                                                 Finvariant f_invariant,
                                                 std::ostream &os) {
-  int n = GramMat.rows();
-  T incr = GetSmallestIncrement(GramMat);
-  T MaxNorm = GetMaxNorm<T, Tint>(GramMat, os);
-  T norm = incr;
-  MyMatrix<Tint> SHVret(0, n);
-  FundInvariantVectorFamily<Tint> fi_ret = TrivFundamentalInvariant<Tint>();
-  CVPSolver<T, Tint> solver(GramMat, os);
-  while (true) {
-    if (norm > MaxNorm) {
-      std::cerr << "Failed to find a relevant vector configuration\n";
-      throw TerminalException{1};
-    }
-    std::vector<MyVector<Tint>> ListVect = solver.fixed_norm_vectors(norm);
-    // The shell is written straight into the concatenation: the intermediate
-    // matrix of the new vectors was only ever fed to Concatenate.
-    int n_prev = SHVret.rows();
-    int n_new = ListVect.size();
-    MyMatrix<Tint> SHVtest(n_prev + n_new, n);
-    for (int i_row = 0; i_row < n_prev; i_row++) {
-      for (int i_col = 0; i_col < n; i_col++) {
-        SHVtest(i_row, i_col) = SHVret(i_row, i_col);
-      }
-    }
-    for (int i_row = 0; i_row < n_new; i_row++) {
-      for (int i_col = 0; i_col < n; i_col++) {
-        SHVtest(n_prev + i_row, i_col) = ListVect[i_row](i_col);
-      }
-    }
-    FundInvariantVectorFamily<Tint> fi_test = f_invariant(SHVtest);
-    if (fi_ret < fi_test) {
-      SHVret = SHVtest;
-      fi_ret = fi_test;
-      if (f_final(SHVret, fi_ret)) {
-        return SHVret;
-      }
-    }
-    norm += incr;
+  ShellFamilyBuilder<T, Tint, Ffinal, Finvariant> builder(GramMat, f_final,
+                                                          f_invariant, os);
+  while (!builder.is_done()) {
+    builder.one_shell(os);
   }
+  return builder.get();
 }
 
 template <typename T, typename Tint, typename Ffinal, typename Finvariant>
@@ -701,6 +743,7 @@ template <typename Tint> struct CharVectSet_Accumulator {
       insert(GetMatrixRow(M, i_row));
     }
   }
+  size_t size() const { return TheSet.size(); }
   MyMatrix<Tint> get_matrix(int const &n) const {
     MyMatrix<Tint> M(TheSet.size(), n);
     int pos = 0;
@@ -715,6 +758,40 @@ template <typename Tint> struct CharVectSet_Accumulator {
 };
 
 /*
+  The two ways the V_cv construction can be cut short when it is raced
+  against the shells. Nothing is returned in either case. A zero means no
+  limit.
+
+  budget_ns is a time limit, used only to decide which of the two
+  constructions to advance next. It must never decide WHICH family is kept:
+  the canonical form depends on the family, so a choice made on timing would
+  give two isometric lattices different canonical forms from one run to the
+  next, and the genus enumeration would count them as distinct classes and
+  overshoot its mass.
+
+  size_bound is what the choice is made on. It is a property of the lattice,
+  so a decision taken with it is the same in every run.
+
+  The construction is restarted rather than resumed when the budget grows.
+  That wastes at most the work of the previous, shorter, attempt, so the
+  total stays within twice what the winning attempt costs.
+ */
+struct CharVectSet_Budget {
+  int64_t budget_ns;
+  size_t size_bound;
+  NanosecondTime time;
+  CharVectSet_Budget() : budget_ns(0), size_bound(0), time() {}
+  CharVectSet_Budget(int64_t const &ns, size_t const &sz)
+      : budget_ns(ns), size_bound(sz), time() {}
+  bool expired() const {
+    return budget_ns > 0 && time.const_eval_int64() > budget_ns;
+  }
+  bool too_big(size_t const &siz) const {
+    return size_bound > 0 && siz > size_bound;
+  }
+};
+
+/*
   V_wr-cv(A) of (2.2.5), for a well-rounded A.
 
   With spanning = false only Min(A) is returned. That is enough to be of full
@@ -724,10 +801,11 @@ template <typename Tint> struct CharVectSet_Accumulator {
   then generates L_min instead of Z^n.
  */
 template <typename T, typename Tint>
-MyMatrix<Tint>
+std::optional<MyMatrix<Tint>>
 CharacteristicVectorSetWellRoundedCV(MyMatrix<T> const &GramMat,
                                      bool const &spanning,
                                      bool const &antipodal_half,
+                                     CharVectSet_Budget const &budget,
                                      std::ostream &os) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
@@ -769,6 +847,11 @@ CharacteristicVectorSetWellRoundedCV(MyMatrix<T> const &GramMat,
 #endif
   CVPSolver<T, Tint> solver(GramB, os);
   for (auto &eClass : ListClasses) {
+    // One closest-vector computation per coset, and there are
+    // [Z^n : L_min] of them, so this is where the limits have to be honoured.
+    if (budget.expired() || budget.too_big(acc.size())) {
+      return {};
+    }
     MyVector<T> eClass_T = UniversalVectorConversion<T, Tint>(eClass);
     MyVector<T> eClassB = BinvTr * eClass_T;
     resultCVP<T, Tint> res = solver.nearest_vectors(eClassB);
@@ -794,9 +877,10 @@ CharacteristicVectorSetWellRoundedCV(MyMatrix<T> const &GramMat,
   minimal vectors.
  */
 template <typename T, typename Tint>
-MyMatrix<Tint> CharacteristicVectorSetCV(MyMatrix<T> const &GramMat,
-                                         bool const &spanning,
+std::optional<MyMatrix<Tint>>
+CharacteristicVectorSetCV(MyMatrix<T> const &GramMat, bool const &spanning,
                                          bool const &antipodal_half,
+                                         CharVectSet_Budget const &budget,
                                          std::ostream &os) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
@@ -809,8 +893,8 @@ MyMatrix<Tint> CharacteristicVectorSetCV(MyMatrix<T> const &GramMat,
 #endif
   if (r == n) {
     // A is well-rounded, the recursion stops.
-    return CharacteristicVectorSetWellRoundedCV<T, Tint>(GramMat, spanning,
-                                                         antipodal_half, os);
+    return CharacteristicVectorSetWellRoundedCV<T, Tint>(
+        GramMat, spanning, antipodal_half, budget, os);
   }
   CharVectSet_Accumulator<Tint> acc;
   acc.antipodal_half = antipodal_half;
@@ -818,10 +902,14 @@ MyMatrix<Tint> CharacteristicVectorSetCV(MyMatrix<T> const &GramMat,
   MyMatrix<Tint> B1 = IntegralSpaceSaturation(GetZbasis(SHV));
   MyMatrix<T> B1_T = UniversalMatrixConversion<T, Tint>(B1);
   MyMatrix<T> Gram1 = B1_T * GramMat * B1_T.transpose();
-  MyMatrix<Tint> Vwr = CharacteristicVectorSetWellRoundedCV<T, Tint>(
-      Gram1, spanning, antipodal_half, os);
+  std::optional<MyMatrix<Tint>> opt_wr =
+      CharacteristicVectorSetWellRoundedCV<T, Tint>(Gram1, spanning,
+                                                    antipodal_half, budget, os);
+  if (!opt_wr) {
+    return {};
+  }
   // B_1 V_wr-cv(A_1), that is the rows y of Vwr sent to y B_1.
-  acc.insert_rows(Vwr * B1);
+  acc.insert_rows((*opt_wr) * B1);
   // C completes B_1 to a Z-basis of Z^n, and B_2 = proj(C) is a basis of
   // L_2 = proj(Z^n) since proj has kernel L_1 on Z^n, L_1 being saturated.
   MyMatrix<Tint> C = SubspaceCompletionInt(B1, n);
@@ -847,8 +935,12 @@ MyMatrix<Tint> CharacteristicVectorSetCV(MyMatrix<T> const &GramMat,
     closest vectors to -v are the negatives of those to v, so the two
     contribute the same set once the signs are normalized.
    */
-  MyMatrix<Tint> V2 =
-      CharacteristicVectorSetCV<T, Tint>(Gram2, spanning, antipodal_half, os);
+  std::optional<MyMatrix<Tint>> opt_V2 = CharacteristicVectorSetCV<T, Tint>(
+      Gram2, spanning, antipodal_half, budget, os);
+  if (!opt_V2) {
+    return {};
+  }
+  MyMatrix<Tint> const &V2 = *opt_V2;
   CVPSolver<T, Tint> solver(GramMat, os);
   CVPSolver<T, Tint> solver1(Gram1, os);
   // Projection of Z^n onto L_2 written in the B_2 coordinates, that is
@@ -863,6 +955,10 @@ MyMatrix<Tint> CharacteristicVectorSetCV(MyMatrix<T> const &GramMat,
     FullBasis.row(r + i) = C.row(i);
   }
   for (int i_row = 0; i_row < V2.rows(); i_row++) {
+    // Two closest-vector computations per element of V2.
+    if (budget.expired() || budget.too_big(acc.size())) {
+      return {};
+    }
     MyVector<Tint> y = GetMatrixRow(V2, i_row);
     MyVector<T> y_T = UniversalVectorConversion<T, Tint>(y);
     // v = y B_2 in R^n.
@@ -980,38 +1076,96 @@ CanonicVectorFamily<Tint> get_canonic_vector_family(MyMatrix<Tint> &&SHVhalf) {
 }
 
 /*
-  The smaller of the two families, both stopped at full rank. Spanning Z^n is
-  not required of them: the canonicalization only has to place Z^n relative
-  to the span of the family, under the group preserving it, and a family
-  built to span can be far larger, 8516 against 324 vectors on
-  slow_canonic_1.
+  The smaller of the two families, both stopped at full rank, found by
+  running them against each other rather than by building either to the end.
+
+  Neither may be built blindly. The shells grow in jumps, a shell having to
+  be taken whole, and reach 76448 pairs on a genus of determinant 351 and
+  rank 14 where V_cv gives 1576. But V_cv is not the cheap one either: on the
+  lattices of that same genus it takes 3.0 s against 1.0 s for the shells,
+  and it pays 2^k closest-vector computations when the minimal vectors span a
+  sublattice of index 2^k. Which is cheaper is a property of the lattice and
+  is not known in advance.
+
+  So the two are interleaved, as test_finiteness_group of
+  src_latt/FiniteMatrixGroupTest.h interleaves its two methods: one shell is
+  added, the time it took is handed to V_cv as a budget, and so on until one
+  of them finishes. Then the other is continued with the SIZE of the winner
+  as a bound, and abandoned if it passes it.
+
+  The timing decides only which construction to advance next. The answer is
+  always "the smaller family, V_cv on a tie", which depends on the lattice
+  alone. That distinction matters: the canonical form depends on which family
+  is used, so a choice made on timing would give two isometric lattices
+  different canonical forms from one run to the next, and the genus
+  enumeration would count them as distinct classes and never reach its mass.
  */
 template <typename T, typename Tint>
 CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
                                                  std::ostream &os) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
-  MicrosecondTime time;
+  MicrosecondTime time_tot;
 #endif
   const bool antipodal_half = true;
-  MyMatrix<Tint> SHV_shell =
-      ExtractInvariantVectorFamilyFullRankHalf<T, Tint>(GramMat, os);
-  MyMatrix<Tint> SHV_cv =
-      CharacteristicVectorSetCV<T, Tint>(GramMat, false, antipodal_half, os);
-#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
-  os << "IVF: family choice, shells " << SHV_shell.rows() << " against V_cv "
-     << SHV_cv.rows() << " (pairs)\n";
-#endif
-  auto f_ret = [&]() -> CanonicVectorFamily<Tint> {
-    if (SHV_cv.rows() <= SHV_shell.rows()) {
-      return get_canonic_vector_family<Tint>(std::move(SHV_cv));
-    }
-    return get_canonic_vector_family<Tint>(std::move(SHV_shell));
+  int n = GramMat.rows();
+  auto f_final = [&]([[maybe_unused]] MyMatrix<Tint> const &M,
+                     FundInvariantVectorFamily<Tint> const &fi) -> bool {
+    return fi.rank == n;
   };
-  CanonicVectorFamily<Tint> fam = f_ret();
-#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
-  os << "|IVF: GetCanonicVectorFamily|=" << time << "\n";
+  auto f_invariant =
+      [&](MyMatrix<Tint> const &M) -> FundInvariantVectorFamily<Tint> {
+    return ComputeRankInvariant(M, os);
+  };
+  auto f_cv = [&](int64_t const &ns,
+                  size_t const &sz) -> std::optional<MyMatrix<Tint>> {
+    CharVectSet_Budget budget(ns, sz);
+    return CharacteristicVectorSetCV<T, Tint>(GramMat, false, antipodal_half,
+                                              budget, os);
+  };
+  auto f_ret = [&](MyMatrix<Tint> &&SHV,
+                   [[maybe_unused]] const char *who) -> CanonicVectorFamily<Tint> {
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+    os << "IVF: keeping " << who << ", " << SHV.rows() << " pairs\n";
 #endif
-  return fam;
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+    os << "|IVF: GetCanonicVectorFamily|=" << time_tot << "\n";
+#endif
+    return get_canonic_vector_family<Tint>(std::move(SHV));
+  };
+  ShellFamilyBuilder<T, Tint, decltype(f_final), decltype(f_invariant)> shells(
+      GramMat, f_final, f_invariant, os);
+  int64_t shell_ns = 0;
+  while (true) {
+    NanosecondTime time_shell;
+    shells.one_shell(os);
+    shell_ns += time_shell.const_eval_int64();
+    if (shells.is_done()) {
+      // The shells won the race. V_cv is kept only if it is smaller, and it
+      // is bounded by their size so that a hopeless attempt is cut short.
+      std::optional<MyMatrix<Tint>> opt = f_cv(0, shells.size());
+      if (opt && static_cast<size_t>(opt->rows()) <= shells.size()) {
+        return f_ret(std::move(*opt), "V_cv");
+      }
+      MyMatrix<Tint> SHV_shell = shells.get();
+      return f_ret(std::move(SHV_shell), "the shells");
+    }
+    // V_cv is given the time the shells have spent so far. It is restarted
+    // rather than resumed, which wastes at most the previous attempt.
+    std::optional<MyMatrix<Tint>> opt = f_cv(shell_ns, 0);
+    if (opt) {
+      // V_cv won the race. The shells are kept only if they are smaller, and
+      // they are abandoned as soon as they pass its size.
+      size_t cv_size = opt->rows();
+      while (!shells.is_done() && shells.size() <= cv_size) {
+        shells.one_shell(os);
+      }
+      if (shells.is_done() && shells.size() < cv_size) {
+        MyMatrix<Tint> SHV_shell = shells.get();
+        return f_ret(std::move(SHV_shell), "the shells");
+      }
+      return f_ret(std::move(*opt), "V_cv");
+    }
+  }
 }
 
 // clang-format off

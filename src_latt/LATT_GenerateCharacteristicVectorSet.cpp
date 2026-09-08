@@ -35,17 +35,21 @@ void process(std::string choice, std::string MatFile,
     if (choice == "spanning") {
       return ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, std::cerr);
     }
+    // No limit here: the command line asks for the set itself, not for the
+    // cheaper of two families, so the construction always runs to the end.
+    CharVectSet_Budget budget;
     if (choice == "wr_cv") {
-      return CharacteristicVectorSetWellRoundedCV<T, Tint>(GramMat, true,
-                                                           false, std::cerr);
+      return *CharacteristicVectorSetWellRoundedCV<T, Tint>(GramMat, true,
+                                                            false, budget,
+                                                            std::cerr);
     }
     if (choice == "cv") {
-      return CharacteristicVectorSetCV<T, Tint>(GramMat, true, false,
-                                                std::cerr);
+      return *CharacteristicVectorSetCV<T, Tint>(GramMat, true, false, budget,
+                                                 std::cerr);
     }
     if (choice == "cv_fullrank") {
-      return CharacteristicVectorSetCV<T, Tint>(GramMat, false, false,
-                                                std::cerr);
+      return *CharacteristicVectorSetCV<T, Tint>(GramMat, false, false, budget,
+                                                 std::cerr);
     }
     std::cerr << "Failed to find a matching entry for choice\n";
     std::cerr << "Possible choices: shortest, relevant_voronoi, "
