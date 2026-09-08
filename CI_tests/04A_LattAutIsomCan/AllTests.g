@@ -233,12 +233,141 @@ test_all_isoms:=function()
 end;
 
 
+# Lattices whose automorphism group order is known, so that the tests above
+# are not only comparing the code with itself. Checking that the order is
+# invariant under conjugation catches an order that varies; it does not catch
+# one that is systematically wrong, and a family of full rank that does not
+# span the lattice did once give an order too large by a factor two.
+#
+# 2 (n+1)! for A_n, 2^n n! for Z^n and for D_n with n >= 5, 1152 for D_4
+# where triality adds a factor 3, and the Weyl group orders for E_6, E_7 and
+# E_8. The orthogonal lattice diag(1, 4, 9) has only the sign changes.
+get_An:=function(n)
+    local M, i;
+    M:=NullMat(n, n);
+    for i in [1..n]
+    do
+        M[i][i]:=2;
+        if i < n then
+            M[i][i+1]:=-1;
+            M[i+1][i]:=-1;
+        fi;
+    od;
+    return M;
+end;
+
+get_Dn:=function(n)
+    local M, i;
+    M:=NullMat(n, n);
+    for i in [1..n]
+    do
+        M[i][i]:=2;
+    od;
+    for i in [1..n-2]
+    do
+        M[i][i+1]:=-1;
+        M[i+1][i]:=-1;
+    od;
+    M[n-2][n]:=-1;
+    M[n][n-2]:=-1;
+    return M;
+end;
+
+get_En:=function(n)
+    local M, i;
+    M:=NullMat(n, n);
+    for i in [1..n]
+    do
+        M[i][i]:=2;
+    od;
+    for i in [1..n-2]
+    do
+        M[i][i+1]:=-1;
+        M[i+1][i]:=-1;
+    od;
+    M[3][n]:=-1;
+    M[n][3]:=-1;
+    return M;
+end;
+
+ListKnownOrder:=[
+  rec(name:="A2", eG:=get_An(2), ord:=12),
+  rec(name:="A3", eG:=get_An(3), ord:=48),
+  rec(name:="A4", eG:=get_An(4), ord:=240),
+  rec(name:="A5", eG:=get_An(5), ord:=1440),
+  rec(name:="D4", eG:=get_Dn(4), ord:=1152),
+  rec(name:="D5", eG:=get_Dn(5), ord:=3840),
+  rec(name:="E6", eG:=get_En(6), ord:=103680),
+  rec(name:="E7", eG:=get_En(7), ord:=2903040),
+  rec(name:="E8", eG:=get_En(8), ord:=696729600),
+  rec(name:="Z2", eG:=IdentityMat(2), ord:=8),
+  rec(name:="Z3", eG:=IdentityMat(3), ord:=48),
+  rec(name:="Z4", eG:=IdentityMat(4), ord:=384),
+  rec(name:="diag149", eG:=DiagonalMat([1,4,9]), ord:=8)];
+
+test_known_orders:=function()
+    local n_error, eRec, GRPperm, ord;
+    n_error:=0;
+    for eRec in ListKnownOrder
+    do
+        GRPperm:=get_latt_automorphism_perm_group(eRec.eG);
+        if GRPperm=fail then
+            Print("test_known_orders, ", eRec.name, ": no group\n");
+            n_error:=n_error+1;
+        else
+            ord:=Order(GRPperm);
+            Print("  ", eRec.name, " |Aut|=", ord, " expected=", eRec.ord, "\n");
+            if ord <> eRec.ord then
+                Print("test_known_orders, ", eRec.name, ": wrong order\n");
+                n_error:=n_error+1;
+            fi;
+        fi;
+    od;
+    Print("n_error_known_order=", n_error, "\n");
+    return n_error;
+end;
+
+# Lattices of the same dimension that are not isometric. Testing only that a
+# lattice is isomorphic to its own conjugates cannot catch a test that
+# answers yes too often.
+ListNonIsomorphic:=[
+  rec(name1:="A2", eG1:=get_An(2), name2:="Z2", eG2:=IdentityMat(2)),
+  rec(name1:="A3", eG1:=get_An(3), name2:="Z3", eG2:=IdentityMat(3)),
+  rec(name1:="Z3", eG1:=IdentityMat(3), name2:="diag149", eG2:=DiagonalMat([1,4,9])),
+  rec(name1:="D4", eG1:=get_Dn(4), name2:="Z4", eG2:=IdentityMat(4)),
+  rec(name1:="D4", eG1:=get_Dn(4), name2:="A4", eG2:=get_An(4)),
+  rec(name1:="D5", eG1:=get_Dn(5), name2:="A5", eG2:=get_An(5))];
+
+test_non_isomorphic:=function()
+    local n_error, eRec, test_iso;
+    n_error:=0;
+    for eRec in ListNonIsomorphic
+    do
+        test_iso:=get_latt_isomorphism_test(eRec.eG1, eRec.eG2);
+        Print("  ", eRec.name1, " against ", eRec.name2, " iso=", test_iso, "\n");
+        if test_iso=fail then
+            Print("test_non_isomorphic: program failure\n");
+            n_error:=n_error+1;
+        else
+            if test_iso<>false then
+                Print("test_non_isomorphic: not isometric but found isomorphic\n");
+                n_error:=n_error+1;
+            fi;
+        fi;
+    od;
+    Print("n_error_non_isomorphic=", n_error, "\n");
+    return n_error;
+end;
+
+
 test_all:=function()
     local n_error;
     n_error:=0;
     n_error:=n_error + test_all_cans();
     n_error:=n_error + test_all_automs();
-#    n_error:=n_error + test_all_isoms();
+    n_error:=n_error + test_all_isoms();
+    n_error:=n_error + test_known_orders();
+    n_error:=n_error + test_non_isomorphic();
     return n_error;
 end;
 

@@ -696,6 +696,7 @@ get_latt_isomorphism_test:=function(arg)
     #
     eProg:=GetBinaryFilename("LATT_Isomorphism");
     TheCommand:=Concatenation(eProg, " ", FileIn1, " ", FileIn2, " GAP ", FileOut, " 2> ", FileErr);
+    Exec(TheCommand);
     if print_info then
         runtime_str:=extract_runtime_from_log(FileErr);
         Print("  eMat1=", Length(eMat1), "x", Length(eMat1[1]), " eMat2=", Length(eMat2), "x", Length(eMat2[1]), " command=LATT_Isomorphism runtime=", runtime_str, "\n");

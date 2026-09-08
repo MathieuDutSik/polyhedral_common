@@ -68,7 +68,8 @@ eG:=[ [ 16, -8, -8, -8, -8, -8, 8, -8, -8, 8, 0 ],
 [ -8, 10, -2, 10, -4, 10, 2, 20, 2, -2, -4 ],
 [ -8, 9, 7, 9, 6, -1, -9, 2, 19, -7, -2 ],
 [ 8, -9, 1, -1, -6, -11, 5, -2, -7, 19, 2 ],
-[ 0, -6, 6, -6, 4, -2, -2, -4, -2, 2, 12 ] ], n_del:=153)# Lattices for which the formula (2.2.6) of PAP_CanonicalForm, taken
+[ 0, -6, 6, -6, 4, -2, -2, -4, -2, 2, 12 ] ], n_del:=153),
+# Lattices for which the formula (2.2.6) of PAP_CanonicalForm, taken
 # verbatim, returns a family generating only a subgroup of index 2.
 # See the header of src_latt/InvariantVectorFamily.h.
 rec(name:="cv_counterexample_3_5", eG:=[ [ 4, 0, 0, 2 ],
