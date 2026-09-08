@@ -772,6 +772,22 @@ template <typename Tint> struct CharVectSet_Accumulator {
   size_bound is what the choice is made on. It is a property of the lattice,
   so a decision taken with it is the same in every run.
 
+  The bound is checked against the accumulator of every level of the
+  recursion, not only the outermost one, and it has to abort exactly when
+  the final size of the outermost one would pass it, or the two ways of
+  entering the race would not agree. They do, because the size of a level
+  never exceeds the size of the level above it:
+
+  - the level above inserts every row of the V_wr-cv it received, and B_1 is
+    injective, so distinct pairs stay distinct;
+  - it inserts, for each row y of the V_cv of the level below, the vectors
+    of the coset of xLift, whose coordinates along C are exactly y, so
+    distinct rows again give distinct vectors.
+
+  An accumulator only grows, so a level passing the bound at any moment has
+  a final size past it, hence so has the outermost one; and conversely an
+  outermost size within the bound keeps every level within it.
+
   The construction is restarted rather than resumed when the budget grows.
   That wastes at most the work of the previous, shorter, attempt, so the
   total stays within twice what the winning attempt costs.
