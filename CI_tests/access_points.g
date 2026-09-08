@@ -380,18 +380,14 @@ get_saturated_space:=function(arg)
 end;
 
 get_latt_canonical_form:=function(arg)
-    local eMat, options, arith, method, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
     eMat:=arg[1];
     arith:="gmp";
-    method:="zbasis";
     print_info:=false;
     if Length(arg) >= 2 then
         options:=arg[2];
         if IsBound(options.arith) then
             arith:=options.arith;
-        fi;
-        if IsBound(options.method) then
-            method:=options.method;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -404,11 +400,11 @@ get_latt_canonical_form:=function(arg)
     WriteMatrixFile(FileI, eMat);
     #
     eProg:=GetBinaryFilename("LATT_Canonicalize");
-    TheCommand:=Concatenation(eProg, " ", arith, " ", method, " ", FileI, " GAP_full ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP_full ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if print_info then
         runtime_str:=extract_runtime_from_log(FileE);
-        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " arith=", arith, " method=", method, " command=LATT_Canonicalize runtime=", runtime_str, "\n");
+        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " arith=", arith, " command=LATT_Canonicalize runtime=", runtime_str, "\n");
     fi;
     if IsExistingFile(FileO)=false then
         return "program failure: The LATT_Canonicalize has failed";

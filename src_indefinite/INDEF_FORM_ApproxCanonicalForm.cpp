@@ -5,6 +5,8 @@
 #else
 # include "NumberTheory.h"
 #endif
+#include "Group.h"
+#include "Permutation.h"
 #include "IndefApproxCanonical.h"
 // clang-format on
 
@@ -35,6 +37,10 @@ int main(int argc, char *argv[]) {
     using T = mpq_class;
     using Tint = mpz_class;
 #endif
+    using Tidx = uint32_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using TintGroup = mpz_class;
+    using Tgroup = permutalib::Group<Telt, TintGroup>;
     std::string FileI = argv[1];
     std::string OutFormat = "GAP";
     std::string FileO = "stderr";
@@ -48,7 +54,7 @@ int main(int argc, char *argv[]) {
     //
     auto print_result = [&](std::ostream &os) -> void {
       ResultReduction<T, Tint> ResRed =
-          ApproxCanonicalIndefiniteForm<T, Tint>(M, std::cerr);
+          ApproxCanonicalIndefiniteForm<T, Tint, Tgroup>(M, std::cerr);
       MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(ResRed.B);
       MyMatrix<T> M_Control = B_T * M * B_T.transpose();
       if (T_abs(DeterminantMat(B_T)) != 1) {

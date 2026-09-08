@@ -90,17 +90,17 @@ get_random_conjugate:=function(eMat)
 end;
 
 
-test_canonicalization_function:=function(eMat, method)
+test_canonicalization_function:=function(eMat)
     local TheCan, iter, eMat_B, TheCan_B;
-    TheCan:=get_latt_canonical_form(eMat, rec(method:=method));
+    TheCan:=get_latt_canonical_form(eMat);
     if is_error(TheCan) then
         return fail;
     fi;
     for iter in [1..10]
     do
-        Print("  |eMat|=", Length(eMat), " method=", method, " iter=", iter, "\n");
+        Print("  |eMat|=", Length(eMat), " iter=", iter, "\n");
         eMat_B:=get_random_conjugate(eMat);
-        TheCan_B:=get_latt_canonical_form(eMat_B, rec(method:=method));
+        TheCan_B:=get_latt_canonical_form(eMat_B);
         if is_error(TheCan_B) then
             return fail;
         fi;
@@ -113,20 +113,20 @@ test_canonicalization_function:=function(eMat, method)
 end;
 
 
-test_all_cans:=function(method)
+test_all_cans:=function()
     local n_error_can, nMat, iMat, eMat, test;
     n_error_can:=0;
     nMat:=Length(ListMat);
     for iMat in [1..nMat]
     do
         eMat:=ListMat[iMat];
-        Print("         iMat=", iMat, "/", nMat, " |eMat|=", Length(eMat), " method=", method, " n_error_can=", n_error_can, "\n");
-        test:=test_canonicalization_function(eMat, method);
+        Print("         iMat=", iMat, "/", nMat, " |eMat|=", Length(eMat), " n_error_can=", n_error_can, "\n");
+        test:=test_canonicalization_function(eMat);
         if test=fail then
             n_error_can:=n_error_can+1;
         fi;
     od;
-    Print("method=", method, " n_error_can=", n_error_can, "\n");
+    Print("n_error_can=", n_error_can, "\n");
     return n_error_can;
 end;
 
@@ -236,8 +236,7 @@ end;
 test_all:=function()
     local n_error;
     n_error:=0;
-    n_error:=n_error + test_all_cans("fullrank");
-#    n_error:=n_error + test_all_cans("zbasis");
+    n_error:=n_error + test_all_cans();
     n_error:=n_error + test_all_automs();
 #    n_error:=n_error + test_all_isoms();
     return n_error;

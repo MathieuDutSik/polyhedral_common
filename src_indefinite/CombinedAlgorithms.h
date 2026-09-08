@@ -1124,7 +1124,7 @@ private:
       return {eGen};
     }
     ResultReduction<T, Tint> ResRed =
-        ApproxCanonicalIndefiniteForm<T, Tint>(Qmat, os);
+        ApproxCanonicalIndefiniteForm<T, Tint, Tgroup>(Qmat, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: ApproxCanonicalIndefiniteForm(ResRed)|=" << time << "\n";
 #endif
@@ -1226,12 +1226,12 @@ private:
       }
     }
     ResultReduction<T, Tint> res1 =
-        ApproxCanonicalIndefiniteForm<T, Tint>(Qmat1, os);
+        ApproxCanonicalIndefiniteForm<T, Tint, Tgroup>(Qmat1, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: ApproxCanonicalIndefiniteForm(Qmat1)|=" << time << "\n";
 #endif
     ResultReduction<T, Tint> res2 =
-        ApproxCanonicalIndefiniteForm<T, Tint>(Qmat2, os);
+        ApproxCanonicalIndefiniteForm<T, Tint, Tgroup>(Qmat2, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: ApproxCanonicalIndefiniteForm(Qmat2)|=" << time << "\n";
 #endif

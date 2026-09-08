@@ -10,7 +10,7 @@
 // clang-format on
 
 template <typename T, typename Tint>
-void ComputeCanonical(std::string const &FileI, std::string const &method,
+void ComputeCanonical(std::string const &FileI,
                       std::string const &OutFormat, std::ostream &os) {
   MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
   if (!IsSymmetricMatrix(eMat) || !IsPositiveDefinite(eMat, std::cerr)) {
@@ -18,24 +18,11 @@ void ComputeCanonical(std::string const &FileI, std::string const &method,
               << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
-  auto get_basis = [&]() -> MyMatrix<Tint> {
-    if (method == "spanning") {
-      // Restricted to a family generating Z^n. Only useful for reproducing
-      // the reductions of callers that have no permutation group type.
-      return ComputeCanonicalFormSpanning<T, Tint>(eMat, std::cerr);
-    }
-    if (method == "default") {
-      using Tidx = uint32_t;
-      using Telt = permutalib::SingleSidedPerm<Tidx>;
-      using TintGroup = mpz_class;
-      using Tgroup = permutalib::Group<Telt, TintGroup>;
-      return ComputeCanonicalForm<T, Tint, Tgroup>(eMat, std::cerr);
-    }
-    std::cerr << "LATT_Canonicalize: The method " << method
-              << " is not among the supported ones: default, spanning\n";
-    throw TerminalException{1};
-  };
-  MyMatrix<Tint> B = get_basis();
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using TintGroup = mpz_class;
+  using Tgroup = permutalib::Group<Telt, TintGroup>;
+  MyMatrix<Tint> B = ComputeCanonicalForm<T, Tint, Tgroup>(eMat, std::cerr);
   MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
   MyMatrix<T> eMat_red = B_T * eMat * B_T.transpose();
   if (OutFormat == "CPP") {
@@ -69,67 +56,41 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc < 3 || argc > 6) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "LATT_Canonicalize [arith] [GramI]\n";
       std::cerr << "    or\n";
       std::cerr << "LATT_Canonicalize [arith] [GramI] [OutFormat] [OutFile]\n";
-      std::cerr << "    or\n";
-      std::cerr << "LATT_Canonicalize [arith] [method] [GramI]\n";
-      std::cerr << "    or\n";
-      std::cerr << "LATT_Canonicalize [arith] [method] [GramI] [OutFormat] "
-                   "[OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "method: default picks the smaller invariant vector "
-                   "family and adapts the\n";
-      std::cerr << "        canonicalization to it; spanning restricts to a "
-                   "family generating\n";
-      std::cerr << "        Z^n, which is what callers without a permutation "
-                   "group type get\n";
       std::cerr << "GramI (input) : The gram matrix on input\n";
       std::cerr << "OutFile: The filename of the data in output\n";
       return -1;
     }
     std::string arith = argv[1];
-    std::string method = "default";
-    std::string FileI;
+    std::string FileI = argv[2];
     std::string OutFormat = "CPP";
     std::string OutFile = "stderr";
-    if (argc == 3) {
-      FileI = argv[2];
-    }
-    if (argc == 4) {
-      method = argv[2];
-      FileI = argv[3];
-    }
     if (argc == 5) {
-      FileI = argv[2];
       OutFormat = argv[3];
       OutFile = argv[4];
-    }
-    if (argc == 6) {
-      method = argv[2];
-      FileI = argv[3];
-      OutFormat = argv[4];
-      OutFile = argv[5];
     }
     //
     auto f = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return ComputeCanonical<T, Tint>(FileI, method, OutFormat, os);
+        return ComputeCanonical<T, Tint>(FileI, OutFormat, os);
       }
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
         using Tint = boost::multiprecision::mpz_int;
-        return ComputeCanonical<T, Tint>(FileI, method, OutFormat, os);
+        return ComputeCanonical<T, Tint>(FileI, OutFormat, os);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
-        return ComputeCanonical<T, Tint>(FileI, method, OutFormat, os);
+        return ComputeCanonical<T, Tint>(FileI, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith\n";
       throw TerminalException{1};

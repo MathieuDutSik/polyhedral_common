@@ -276,7 +276,7 @@ order_blocks_by_signature(MyMatrix<T> const &M,
   return {Bret, Mret};
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 ResultReduction<T, Tint> get_individual_reduction(MyMatrix<T> const &M,
                                                   std::ostream &os) {
   int n = M.rows();
@@ -311,9 +311,7 @@ ResultReduction<T, Tint> get_individual_reduction(MyMatrix<T> const &M,
     };
     std::pair<int, MyMatrix<T>> pair = get_posdef();
     MyMatrix<T> const &Mpos = pair.second;
-    // No permutation group type is available on this code path, so the
-    // canonicalization is restricted to a family generating Z^n.
-    MyMatrix<Tint> B = ComputeCanonicalFormSpanning<T, Tint>(Mpos, os);
+    MyMatrix<Tint> B = ComputeCanonicalForm<T, Tint, Tgroup>(Mpos, os);
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
     MyMatrix<T> Mred = T(pair.first) * (B_T * Mpos * B_T.transpose());
 #ifdef DEBUG_INDEX_APPROX_CANONICAL
@@ -329,7 +327,7 @@ ResultReduction<T, Tint> get_individual_reduction(MyMatrix<T> const &M,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 ResultReduction<T, Tint> apply_reduction_on_blocks(MyMatrix<T> const &M,
                                                    std::ostream &os) {
   int n = M.rows();
@@ -347,7 +345,7 @@ ResultReduction<T, Tint> apply_reduction_on_blocks(MyMatrix<T> const &M,
       }
     }
     ResultReduction<T, Tint> res =
-        get_individual_reduction<T, Tint>(M_block, os);
+        get_individual_reduction<T, Tint, Tgroup>(M_block, os);
     for (int i = 0; i < len; i++) {
       for (int j = 0; j < len; j++) {
         int i_big = eConn[i];
@@ -372,12 +370,12 @@ ResultReduction<T, Tint> apply_reduction_on_blocks(MyMatrix<T> const &M,
   This code attempts to find a canonical form for a form.
   We only require the input matrix to be symmetric.
  */
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 ResultReduction<T, Tint> ApproxCanonicalIndefiniteForm(MyMatrix<T> const &M,
                                                        std::ostream &os) {
   ResultReduction<T, Tint> RRI_A = IndefiniteReduction<T, Tint>(M, os);
   ResultReduction<T, Tint> RRI_B =
-      apply_reduction_on_blocks<T, Tint>(RRI_A.Mred, os);
+      apply_reduction_on_blocks<T, Tint, Tgroup>(RRI_A.Mred, os);
   ResultReduction<T, Tint> RRI_C =
       order_blocks_by_signature<T, Tint>(RRI_B.Mred, os);
   MyMatrix<Tint> B = RRI_C.B * RRI_B.B * RRI_A.B;

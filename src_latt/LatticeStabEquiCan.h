@@ -194,21 +194,7 @@ ComputeCanonicalFormSpanning_family(std::vector<MyMatrix<T>> const &ListMat,
   return ComputeCanonicalForm_inner<T, Tint>(ListMat, SHV, os);
 }
 
-/*
-  Canonical form from the best family that spans Z^n, for callers that have
-  no permutation group type to hand and so cannot take the full rank route.
-  ComputeCanonicalForm is the better choice wherever a Tgroup is available.
- */
-template <typename T, typename Tint>
-MyMatrix<Tint> ComputeCanonicalFormSpanning(MyMatrix<T> const &inpMat,
-                                            std::ostream &os) {
-  CanonicVectorFamily<Tint> fam =
-      GetCanonicVectorFamilySpanning<T, Tint>(inpMat, os);
-  std::vector<MyMatrix<T>> ListMat{inpMat};
-  return ComputeCanonicalFormSpanning_family<T, Tint>(ListMat, fam.SHV, os);
-}
-
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 MyMatrix<Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
                                             std::ostream &os) {
   //
@@ -221,12 +207,11 @@ MyMatrix<Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &List
   MicrosecondTime time;
 #endif
   MyMatrix<T> const &inpMat = ListMat[0];
-  CanonicVectorFamily<Tint> fam =
-      GetCanonicVectorFamilySpanning<T, Tint>(inpMat, os);
+  CanonicVectorFamily<Tint> fam = GetCanonicVectorFamily<T, Tint>(inpMat, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: GetCanonicVectorFamilySpanning|=" << time << "\n";
+  os << "|LSEC: GetCanonicVectorFamily|=" << time << "\n";
 #endif
-  return ComputeCanonicalFormSpanning_family<T, Tint>(ListMat, fam.SHV, os);
+  return ComputeCanonicalForm_family<T, Tint, Tgroup>(ListMat, fam, os);
 }
 
 /*
@@ -254,7 +239,7 @@ ComputeCanonicalFormFullRank_family(std::vector<MyMatrix<T>> const &ListMat,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
-  MyMatrix<T> const &inpMat = ListMat[0];
+  [[maybe_unused]] MyMatrix<T> const &inpMat = ListMat[0];
   MyMatrix<Tint> SHVcan = CanonicallyReorder_SHV<T, Tint>(ListMat, SHV, os);
   MyMatrix<Tint> SHVord = TransposedMat(SHVcan);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
@@ -315,9 +300,13 @@ ComputeCanonicalForm_family(std::vector<MyMatrix<T>> const &ListMat,
   The canonical form. Works from the smaller of the two full rank families
   and takes whichever of the two canonicalizations that family allows.
 
+  T has to be a field: a family that does not span Z^n is canonicalized
+  through LinPolytopeIntegral_Canonicalization_Subspaces, which divides.
+  Instantiating with a ring such as mpz_class fails on a static assertion.
+
   Different families give different canonical forms, so a reduction computed
   here may only be compared with another computed here, never with one from
-  ComputeCanonicalFormSpanning or ComputeCanonicalFormSymplectic.
+  ComputeCanonicalFormSymplectic.
  */
 template <typename T, typename Tint, typename Tgroup>
 MyMatrix<Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,

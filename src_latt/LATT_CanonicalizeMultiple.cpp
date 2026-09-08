@@ -1,6 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "Group.h"
+#include "Permutation.h"
 #include "LatticeStabEquiCan.h"
 // clang-format on
 
@@ -22,8 +24,16 @@ int main(int argc, char *argv[]) {
       std::cerr << "OutFile: The filename of the data in output\n";
       return -1;
     }
-    using T = mpz_class;
+    // A field is required: the canonicalization of a family that does not
+    // span Z^n goes through LinPolytopeIntegral_Canonicalization_Subspaces,
+    // which divides. Integral input is unaffected, mpq_class prints an
+    // integer as an integer.
+    using T = mpq_class;
     using Tint = mpz_class;
+    using Tidx = uint32_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using TintGroup = mpz_class;
+    using Tgroup = permutalib::Group<Telt, TintGroup>;
     std::string FileI = argv[1];
     std::string OutFormat = "GAP";
     std::string FileO = "stderr";
@@ -33,7 +43,8 @@ int main(int argc, char *argv[]) {
     }
     //
     std::vector<MyMatrix<T>> ListMatrix = ReadListMatrixFile<T>(FileI);
-    MyMatrix<Tint> B = ComputeCanonicalFormMultiple<T, Tint>(ListMatrix, std::cerr);
+    MyMatrix<Tint> B =
+        ComputeCanonicalFormMultiple<T, Tint, Tgroup>(ListMatrix, std::cerr);
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
     MyMatrix<T> Mat_red = B_T * ListMatrix[0] * B_T.transpose();
     //
