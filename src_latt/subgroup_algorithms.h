@@ -17,7 +17,8 @@ std::pair<std::vector<typename Tgroup::Telt>, Tgroup> get_intermediate_group(typ
                                                                              Fcorrect f_correct,
                                                                              [[maybe_unused]] std::ostream& os) {
   using Telt = typename Tgroup::Telt;
-  using LeftCosets = typename Tgroup::LeftCosets;
+  using Tidx_label = typename Tgroup::Tidx_label;
+  using Tint = typename Tgroup::Tint;
   std::vector<Telt> LGenSma_work = LGenSma;
   Tgroup GRPbig(LGenBig, n_act);
   Tgroup GRPsma(LGenSma_work, n_act);
@@ -31,26 +32,26 @@ std::pair<std::vector<typename Tgroup::Telt>, Tgroup> get_intermediate_group(typ
   }
 #endif
   auto try_upgrade = [&]() -> std::optional<Telt> {
-    // We can use either the left or right cosets.
-    // This is because the right thing to use is the double cosets.
-    // However, we do not have the formalism for having iterator
-    // over the double cosets. We build all of them.
+    // The double cosets GRPsma g GRPsma are the right object here.
+    // f_correct is invariant under multiplication by GRPsma on either
+    // side, so it is constant on such a double coset and one
+    // representative per double coset suffices. There are far fewer of
+    // them than of left cosets, the index of GRPsma in GRPbig being
+    // typically large.
     //
-    // For the left/right cosets we have efficient iterators
-    // and that is why we use them here. We cannot afford at all
-    // to enumerate all the double cosets because we will have
-    // some scenario where GRPbig is indeed very big, GRPsub very small and
-    // that would mean enumerating all the elements of the group.
-    //
-    // Left  transversals are g H
-    // Right transversals are H g
-    LeftCosets rc = GRPbig.left_cosets(GRPsma);
-    for (auto &eCosReprPerm : rc) {
+    // The iteration is lazy: the search stops at the first suitable
+    // element, and enumerating all the double cosets is exactly what has
+    // to be avoided, GRPbig being possibly very big and GRPsma small.
+    permutalib::InnerDoubleCosetComputer<Telt, Tidx_label, Tint> dcc(
+        GRPbig.stab_chain(), GRPsma.stab_chain());
+    auto iter = dcc.begin_elt(GRPsma.stab_chain());
+    auto iter_end = dcc.end_elt();
+    while (iter != iter_end) {
+      Telt const &eCosReprPerm = *iter;
       bool test = f_correct(eCosReprPerm);
       if (test) {
-        // We have this problem that the first cosets is not necessarily the one
-        // of GRPsub and that the coset of the GRPsub is also not necessarily
-        // the identity.
+        // The double coset of GRPsma is not necessarily the first one and
+        // its representative is not necessarily the identity.
         if (!GRPsma.isin(eCosReprPerm)) {
 #ifdef DEBUG_SUBGROUP_ALGORITHM
           os << "SUBA: get_intermediate_group Finding a new eCosReprPerm\n";
@@ -58,6 +59,7 @@ std::pair<std::vector<typename Tgroup::Telt>, Tgroup> get_intermediate_group(typ
           return eCosReprPerm;
         }
       }
+      ++iter;
     }
     return {};
   };
