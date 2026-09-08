@@ -278,6 +278,28 @@ evaluations lost from 95% to none, and the walk then reaches the same
 run with a large `n_domain_failed` reports the best over a small part of
 what it visited, and the sweep script prints both.
 
+### Two traps that turn a search into a wrong answer
+
+**A time-capped enumeration is partial, and used to say so only in a debug
+build.** `EnumerateAndStore_Serial` returns the same thing whether it
+finished or ran out of time, and nothing in the returned database
+distinguishes the two, so a truncated run reports its partial orbit count as
+if it were the total. It now warns unconditionally, in every build. Either
+read that warning or run enumerations with `max_runtime_second = 0`.
+
+**`srand` does not seed `random()` outside glibc.** The walks, the tie
+breaking and `PERIODIC_RandomCosets` all draw from `random()`, whose state
+on the BSD derived platforms is separate from `rand()`'s and was left at its
+default -- so every run replayed one fixed sequence, the "random" coset
+draws returned the same configuration every time, and repeated searches
+explored the same trajectory. The programs now call `srandom` beside
+`srand`. The shared helper `srand_random_set` of
+`basic_common_cpp/src_basic/Basic_random.h` has the same defect and should
+be fixed upstream. `PERIODIC_RandomCosets` also takes an optional explicit
+seed, which is what a script drawing several configurations in a row needs:
+the default seed is the clock plus the pid, and two calls in the same second
+are close enough that `rand()` returns the same first values.
+
 ### What a record would and would not prove
 
 The optimization is numerical, so a density that lands within a few units of

@@ -375,10 +375,18 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
       return true;
     }
     if (max_time_second > 0 && si(start) > max_time_second) {
-#ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: returning true (valid partial result) due to si(start) > "
-            "max_time_second > 0\n";
-#endif
+      // Not a diagnostic: the caller gets the same "success" it gets from a
+      // finished run, and nothing in the returned database says otherwise,
+      // so a partial result is indistinguishable from a complete one. Left
+      // silent it turns a truncated enumeration into a wrong answer -- a
+      // count reported as the number of orbits, a minimum reported as the
+      // minimum. Hence it is said unconditionally, in every build.
+      os << "ADJ_SCH: WARNING the enumeration stopped on max_runtime_second="
+         << max_time_second << " with " << notdone.size()
+         << " object(s) still to treat out of " << n_obj
+         << " found. The result is PARTIAL: it is a subset of the orbits, not "
+            "all of them. Re-run with max_runtime_second = 0 for a complete "
+            "enumeration.\n";
       return true;
     }
 #ifdef TIMINGS_ADJACENCY_SCHEME

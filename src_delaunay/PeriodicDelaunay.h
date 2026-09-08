@@ -1080,11 +1080,70 @@ bool IsPeriodicDelaunayTesselation(
   point-set-preserving equivalence. The walls and the flips themselves are
   the shared kernels of IsoDelaunayDomains.h.
  */
+/*
+  The iso-Delaunay domain of the point set at a given form, or nothing when
+  the form is not usable: either it carries a symmetry the T-space does not
+  account for, or it sits on a wall, a cell of its tessellation inducing an
+  equality. Both mean the domain the form would define is not the
+  full-dimensional one the enumeration and the walks work with.
+
+  Split out of GetInitialPeriodicIsoDelaunayDomain so that a caller who has
+  a form in mind -- a good lattice to start a search near, rather than a
+  random one -- can reach the domain around it.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::optional<IsoDelaunayDomain<T, Tint, Tgroup>>
+GetPeriodicIsoDelaunayDomainFromGram(
+    DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+    PeriodicPointSet<Tint> const &pps, MyMatrix<T> const &GramMat) {
+  using TintGroup = typename Tgroup::Tint;
+  std::ostream &os = data.rddo.os;
+  std::vector<std::vector<Tint>> ListGramRing =
+      GetListGramRing(data.LinSpa.ListLineMat);
+  bool test = IsSymmetryGroupCorrect<T, Tint, Tgroup>(GramMat, data.LinSpa, os);
+  if (!test) {
+    return {};
+  }
+  MyMatrix<Tint> SHV_start =
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV_start);
+  MyMatrix<Tint> Graver = GetGraverBasis<T, Tint>(GramMat);
+  int dimEXT = GramMat.rows() + 1;
+  PolyHeuristicSerial<TintGroup> AllArr =
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+  PeriodicDataDelaunay<T, Tint, Tgroup> data_per =
+      GetPeriodicDataDelaunay<T, Tint, Tgroup>(GramMat, pps, SHV_T, Graver,
+                                               AllArr, os);
+  PeriodicDataDelaunayFunc<T, Tint, Tgroup> data_func{data_per};
+  auto f_incorrect = [&](PeriodicDelaunay_Obj<Tint, Tgroup> const &x) -> bool {
+    // The scaled frame multiplies the Voronoi regulators by a positive
+    // factor, which the zero test does not see.
+    return IsDelaunayPolytopeInducingEqualities(x.EXT, ListGramRing, os);
+  };
+  auto opt = EnumerateAndStore_Serial(data_func, f_incorrect, 0);
+  if (!opt) {
+    return {};
+  }
+  DelaunayTesselationIneq<Tint, Tgroup> DTI =
+      BuildPeriodicDelaunayTesselationIneq(*opt, pps, ListGramRing, os);
+  MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, DTI, os);
+  MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
+  MyMatrix<Tint> SHV =
+      ExtractInvariantVectorFamilyFullRank<Tint, Tint>(M_ring, os);
+  IsoDelaunayDomain<T, Tint, Tgroup> ret{std::move(DTI), std::move(M_ring),
+                                         std::move(SHV)};
+  return ret;
+}
+
+/*
+  A domain of the point set, from a random form. The form has to be free of
+  symmetry the T-space does not account for, which a random one of growing
+  size eventually is.
+ */
 template <typename T, typename Tint, typename Tgroup>
 IsoDelaunayDomain<T, Tint, Tgroup> GetInitialPeriodicIsoDelaunayDomain(
     DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
     PeriodicPointSet<Tint> const &pps) {
-  using TintGroup = typename Tgroup::Tint;
   std::ostream &os = data.rddo.os;
   if (!is_integrally_saturated_matrix_space(data.LinSpa.ListMat)) {
     std::cerr << "PERIODIC_DELAUNAY: The space should be integral and fully "
@@ -1096,57 +1155,59 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialPeriodicIsoDelaunayDomain(
                  "periodic iso-Delaunay domains\n";
     throw TerminalException{1};
   }
-  // The tessellation of the point set at the form, or nothing if a cell
-  // induces an equality: the form is then on a wall and another one has
-  // to be drawn.
-  std::vector<std::vector<Tint>> ListGramRing =
-      GetListGramRing(data.LinSpa.ListLineMat);
-  auto test_matrix = [&](MyMatrix<T> const &GramMat)
-      -> std::optional<DelaunayTesselationIneq<Tint, Tgroup>> {
-    bool test =
-        IsSymmetryGroupCorrect<T, Tint, Tgroup>(GramMat, data.LinSpa, os);
-    if (!test) {
-      return {};
-    }
-    MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
-    MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-    MyMatrix<Tint> Graver = GetGraverBasis<T, Tint>(GramMat);
-    int dimEXT = GramMat.rows() + 1;
-    PolyHeuristicSerial<TintGroup> AllArr =
-        AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
-    PeriodicDataDelaunay<T, Tint, Tgroup> data_per =
-        GetPeriodicDataDelaunay<T, Tint, Tgroup>(GramMat, pps, SHV_T, Graver,
-                                                 AllArr, os);
-    PeriodicDataDelaunayFunc<T, Tint, Tgroup> data_func{data_per};
-    auto f_incorrect = [&](PeriodicDelaunay_Obj<Tint, Tgroup> const &x) -> bool {
-      // The scaled frame multiplies the Voronoi regulators by a positive
-      // factor, which the zero test does not see.
-      return IsDelaunayPolytopeInducingEqualities(x.EXT, ListGramRing, os);
-    };
-    auto opt = EnumerateAndStore_Serial(data_func, f_incorrect, 0);
-    if (!opt) {
-      return {};
-    }
-    return BuildPeriodicDelaunayTesselationIneq(*opt, pps, ListGramRing, os);
-  };
   size_t n_iter = 0;
   int N = 2;
   while (true) {
     MyMatrix<T> GramMat =
         GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(data.LinSpa,
                                                                    N, os);
-    std::optional<DelaunayTesselationIneq<Tint, Tgroup>> opt =
-        test_matrix(GramMat);
+    std::optional<IsoDelaunayDomain<T, Tint, Tgroup>> opt =
+        GetPeriodicIsoDelaunayDomainFromGram(data, pps, GramMat);
     if (opt) {
-      MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, *opt, os);
-      MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
-      MyMatrix<Tint> SHV =
-          ExtractInvariantVectorFamilyFullRank<Tint, Tint>(M_ring, os);
-      return {std::move(*opt), std::move(M_ring), std::move(SHV)};
+      return *opt;
     }
     n_iter += 1;
     N += n_iter;
   }
+}
+
+/*
+  A domain near a prescribed form. The form itself is typically too
+  symmetric to define a full-dimensional domain -- a good lattice such as
+  A_n^* always is -- so it is perturbed by a random integral symmetric
+  matrix over the denominator scale, which leaves it in the neighbourhood
+  while making it generic. Larger scale means closer.
+ */
+template <typename T, typename Tint, typename Tgroup>
+IsoDelaunayDomain<T, Tint, Tgroup> GetPeriodicIsoDelaunayDomainNearGram(
+    DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+    PeriodicPointSet<Tint> const &pps, MyMatrix<T> const &GramMat,
+    int const &scale, int const &n_attempt) {
+  std::ostream &os = data.rddo.os;
+  int n = GramMat.rows();
+  for (int i_attempt = 0; i_attempt < n_attempt; i_attempt++) {
+    MyMatrix<T> Pert = T(scale) * GramMat;
+    for (int i = 0; i < n; i++) {
+      for (int j = i; j < n; j++) {
+        T val = T(random() % 3) - T(1);
+        Pert(i, j) += val;
+        if (i != j) {
+          Pert(j, i) += val;
+        }
+      }
+    }
+    if (!IsPositiveDefinite(Pert, os)) {
+      continue;
+    }
+    std::optional<IsoDelaunayDomain<T, Tint, Tgroup>> opt =
+        GetPeriodicIsoDelaunayDomainFromGram(data, pps, Pert);
+    if (opt) {
+      return *opt;
+    }
+  }
+  os << "PERIODIC_DELAUNAY: no domain found near the prescribed form in "
+     << n_attempt << " attempts, falling back on a random one\n";
+  return GetInitialPeriodicIsoDelaunayDomain(data, pps);
 }
 
 template <typename T, typename Tint, typename Tgroup>

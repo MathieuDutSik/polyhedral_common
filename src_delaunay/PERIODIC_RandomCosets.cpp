@@ -107,11 +107,13 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 6) {
+    if (argc != 6 && argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "PERIODIC_RandomCosets [n] [N] [n_coset] [n_attempt] "
                    "[FileOut]\n";
+      std::cerr << "PERIODIC_RandomCosets [n] [N] [n_coset] [n_attempt] "
+                   "[FileOut] [seed]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
       std::cerr << "n         : the dimension\n";
@@ -121,11 +123,25 @@ int main(int argc, char *argv[]) {
       std::cerr << "n_attempt : how many draws to make before giving up\n";
       std::cerr << "FileOut   : the coset matrix, in the format the "
                    "FileCosets entries read\n";
+      std::cerr << "seed      : optional, the random seed. Without it the "
+                   "seed is drawn from the clock and the pid, which two "
+                   "calls made in the same second only barely separate: "
+                   "rand() started from such neighbouring seeds returns the "
+                   "same first values, so a script drawing several "
+                   "configurations in a row gets the same one every time. "
+                   "Pass distinct seeds to actually sample.\n";
       return -1;
     }
-    unsigned seed = get_random_seed();
+    unsigned seed = argc == 7 ? static_cast<unsigned>(ParseScalar<int>(argv[6]))
+                              : get_random_seed();
     std::cerr << "seed=" << seed << "\n";
+    // srand seeds rand(); the random walks and the coset draws below use
+    // random(), which on the BSD derived platforms has its own state and is
+    // left at its default -- so without srandom every run replays the same
+    // "random" sequence. On glibc the two are aliases, which is why a Linux
+    // CI never shows it. Seeding both keeps either platform honest.
     srand(seed);
+    srandom(seed);
     int n = ParseScalar<int>(argv[1]);
     int N = ParseScalar<int>(argv[2]);
     int n_coset = ParseScalar<int>(argv[3]);

@@ -108,7 +108,13 @@ int main(int argc, char *argv[]) {
     }
     unsigned seed = get_random_seed();
     std::cerr << "seed=" << seed << "\n";
+    // srand seeds rand(); the random walks and the coset draws below use
+    // random(), which on the BSD derived platforms has its own state and is
+    // left at its default -- so without srandom every run replays the same
+    // "random" sequence. On glibc the two are aliases, which is why a Linux
+    // CI never shows it. Seeding both keeps either platform honest.
     srand(seed);
+    srandom(seed);
     std::string eFileName = argv[1];
     int n_try = ParseScalar<int>(argv[2]);
     int max_s = ParseScalar<int>(argv[3]);

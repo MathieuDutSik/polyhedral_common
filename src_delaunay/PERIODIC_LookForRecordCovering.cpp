@@ -158,7 +158,36 @@ void process_A(FullNamelist const &eFull) {
                                             Prefix};
   // A fresh domain, which the walk falls back on when it has drifted into
   // coordinates too skewed to optimize; see LookForRecordCovering.
+  //
+  // With FileStartGram set, that fresh domain is one near the prescribed
+  // form rather than a random one. It matters: from a random form the walk
+  // spends most of its budget descending from densities far above anything
+  // competitive, whereas the neighbourhood of a good lattice is where a
+  // periodic set has a chance of beating it.
+  std::string FileStartGram = BlockDATA.get_string("FileStartGram");
+  int start_scale = BlockSEARCH.get_int("start_scale");
+  std::optional<MyMatrix<T>> opt_start_gram;
+  if (FileStartGram != "unset") {
+    MyMatrix<T> StartGram = ReadMatrixFile<T>(FileStartGram);
+    if (StartGram.rows() != n || StartGram.cols() != n) {
+      std::cerr << "PERIODIC_LookForRecordCovering: the starting Gram matrix "
+                   "is of size "
+                << StartGram.rows() << " x " << StartGram.cols()
+                << " while the T-space is of dimension " << n << "\n";
+      throw TerminalException{1};
+    }
+    if (!IsPositiveDefinite(StartGram, os)) {
+      std::cerr << "PERIODIC_LookForRecordCovering: the starting Gram matrix "
+                   "is not positive definite\n";
+      throw TerminalException{1};
+    }
+    opt_start_gram = StartGram;
+  }
   auto f_restart = [&]() -> Tdom {
+    if (opt_start_gram) {
+      return GetPeriodicIsoDelaunayDomainNearGram(data, pps, *opt_start_gram,
+                                                  start_scale, 100);
+    }
     return GetInitialPeriodicIsoDelaunayDomain(data, pps);
   };
   IsoDelaunayDomain<T, Tint, Tgroup> start = f_restart();
@@ -212,6 +241,9 @@ FullNamelist NAMELIST_GetStandard_PERIODIC_RECORD_COVERING() {
     // The file with the rational coset matrix of the periodic point set:
     // one coset per row, the zero coset included.
     ListStringValues["FileCosets"] = "unset";
+    // A Gram matrix to search near, typically the best lattice covering of
+    // the dimension. "unset" (the default) starts from a random form.
+    ListStringValues["FileStartGram"] = "unset";
     SingleBlock BlockDATA;
     BlockDATA.setListStringValues(ListStringValues);
     ListBlock["DATA"] = BlockDATA;
@@ -226,6 +258,10 @@ FullNamelist NAMELIST_GetStandard_PERIODIC_RECORD_COVERING() {
     ListStringValues["RecordToBeat"] = "auto";
     // The number of random adjacency jumps taken to leave a local minimum.
     ListIntValues["n_walk_steps"] = 20;
+    // How closely FileStartGram is approached: the form is multiplied by
+    // this before a random perturbation of size one is added, so a larger
+    // value lands nearer to it. Only used with FileStartGram.
+    ListIntValues["start_scale"] = 1000;
     std::map<std::string, double> ListDoubleValues;
     // The walk restarts from a fresh domain once the Gram matrix of the
     // current one has an entry above this. Flipping never brings the
@@ -258,7 +294,13 @@ int main(int argc, char *argv[]) {
     }
     unsigned seed = get_random_seed();
     std::cerr << "seed=" << seed << "\n";
+    // srand seeds rand(); the random walks and the coset draws below use
+    // random(), which on the BSD derived platforms has its own state and is
+    // left at its default -- so without srandom every run replays the same
+    // "random" sequence. On glibc the two are aliases, which is why a Linux
+    // CI never shows it. Seeding both keeps either platform honest.
     srand(seed);
+    srandom(seed);
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     process_C(eFull);
