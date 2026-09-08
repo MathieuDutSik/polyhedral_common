@@ -1603,6 +1603,116 @@ template <typename T, typename Tidx_value> struct WeightMatrixAbs {
   WeightMatrix<true, T, Tidx_value> WMat;
 };
 
+/*
+  The absolute trick for a family of vectors closed under v -> -v and a list
+  of SYMMETRIC matrices, the family being given by one representative per
+  antipodal pair.
+
+  Replacing v by -v negates every scalar product v.M.w at once, so the vector
+  of scalar products is defined up to a global sign. Normalizing that sign,
+  here by making the first nonzero entry positive and recording whether the
+  entry had to be flipped, gives a weight that does not depend on which
+  representative of the pair was picked. The graph is then built on the pairs
+  rather than on the vectors, which is half the rows, so a quarter of the
+  weight matrix entries and a quarter of the graph vertices on top of what
+  the symmetry of the matrices already saves.
+
+  What is lost is that the graph no longer sees the signs, so it can have
+  automorphisms that do not lift to the signed configuration. The caller has
+  to test for that, as LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick
+  does, and fall back when the test fails. The entries whose weight is the
+  zero vector carry no sign information, which is what positionZero marks.
+ */
+template <typename T, typename Tint, typename Tidx_value>
+WeightMatrixAbs<std::vector<T>, Tidx_value>
+T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV(
+    std::vector<MyMatrix<T>> const &ListMat, MyMatrix<Tint> const &SHV,
+    std::ostream &os) {
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+  for (auto &eMat : ListMat) {
+    if (!IsSymmetricMatrix(eMat)) {
+      std::cerr << "PES: T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV "
+                << "requires symmetric matrices\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  size_t nbPair = SHV.rows();
+  size_t n = SHV.cols();
+  size_t nbMat = ListMat.size();
+  size_t n_ent = (nbPair * (nbPair + 1)) / 2;
+  std::vector<Tidx_value> INP_TheMat(n_ent);
+  Face ArrSigns(n_ent);
+  std::vector<std::vector<T>> INP_ListWeight;
+  std::map<std::vector<T>, Tidx_value> ValueMap;
+  Tidx_value idxWeight = 0;
+  Tidx_value miss_val = std::numeric_limits<Tidx_value>::max();
+  Tidx_value positionZero = miss_val;
+  auto set_entry = [&](size_t iRow, size_t jRow, Tidx_value pos,
+                       bool eChg) -> void {
+    size_t idx = weightmatrix_idx<true>(nbPair, iRow, jRow);
+    INP_TheMat[idx] = pos;
+    ArrSigns[idx] = eChg;
+  };
+  std::vector<MyVector<T>> ListV(nbMat);
+  std::vector<T> ListScal(nbMat);
+  for (size_t iPair = 0; iPair < nbPair; iPair++) {
+    for (size_t iMat = 0; iMat < nbMat; iMat++) {
+      MyVector<T> V(n);
+      for (size_t i = 0; i < n; i++) {
+        T eVal(0);
+        for (size_t j = 0; j < n; j++) {
+          eVal += ListMat[iMat](j, i) * SHV(iPair, j);
+        }
+        V(i) = eVal;
+      }
+      ListV[iMat] = V;
+    }
+    for (size_t jPair = 0; jPair <= iPair; jPair++) {
+      for (size_t iMat = 0; iMat < nbMat; iMat++) {
+        T eScal(0);
+        for (size_t i = 0; i < n; i++) {
+          eScal += ListV[iMat](i) * SHV(jPair, i);
+        }
+        ListScal[iMat] = eScal;
+      }
+      // Normalize the global sign on the first nonzero entry.
+      bool ChgSign = false;
+      bool is_zero = true;
+      for (size_t iMat = 0; iMat < nbMat; iMat++) {
+        if (ListScal[iMat] != 0) {
+          is_zero = false;
+          if (ListScal[iMat] < 0) {
+            ChgSign = true;
+          }
+          break;
+        }
+      }
+      if (ChgSign) {
+        for (size_t iMat = 0; iMat < nbMat; iMat++) {
+          ListScal[iMat] = -ListScal[iMat];
+        }
+      }
+      Tidx_value &value = ValueMap[ListScal];
+      if (value == 0) {
+        if (positionZero == miss_val && is_zero) {
+          positionZero = idxWeight;
+        }
+        idxWeight++;
+        value = idxWeight;
+        INP_ListWeight.push_back(ListScal);
+      }
+      Tidx_value pos = value - 1;
+      set_entry(iPair, jPair, pos, ChgSign);
+    }
+  }
+  bool weight_ordered = false;
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat(
+      nbPair, INP_TheMat, INP_ListWeight, weight_ordered, os);
+  positionZero = WMat.ReorderingSetWeight_specificPosition(positionZero);
+  return {positionZero, std::move(ArrSigns), std::move(WMat)};
+}
+
 template <typename T, typename Tidx_value>
 WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(
     MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qmat, std::ostream &os) {

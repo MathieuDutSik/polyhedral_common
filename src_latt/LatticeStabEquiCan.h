@@ -188,6 +188,220 @@ MyMatrix<Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> const &ListMa
 }
 
 /*
+  One vector per antipodal pair, chosen by making the first nonzero
+  coordinate positive. The family has to be closed under v -> -v, which the
+  invariant vector families are.
+ */
+template <typename Tint>
+MyMatrix<Tint> AntipodalHalfFamily(MyMatrix<Tint> const &SHV) {
+  int nbRow = SHV.rows();
+  int n = SHV.cols();
+  std::vector<int> ListIdx;
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    for (int i = 0; i < n; i++) {
+      if (SHV(iRow, i) != 0) {
+        if (SHV(iRow, i) > 0) {
+          ListIdx.push_back(iRow);
+        }
+        break;
+      }
+    }
+  }
+  int nbPair = ListIdx.size();
+  MyMatrix<Tint> SHVhalf(nbPair, n);
+  for (int iPair = 0; iPair < nbPair; iPair++) {
+    for (int i = 0; i < n; i++) {
+      SHVhalf(iPair, i) = SHV(ListIdx[iPair], i);
+    }
+  }
+#ifdef SANITY_CHECK_LATTICE_STAB_EQUI_CAN
+  if (2 * nbPair != nbRow) {
+    std::cerr << "LSEC: AntipodalHalfFamily got " << nbRow << " vectors and "
+              << nbPair << " pairs, so the family is not antipodal\n";
+    throw TerminalException{1};
+  }
+#endif
+  return SHVhalf;
+}
+
+/*
+  The canonical reordering obtained from the absolute trick: the graph is
+  built on the antipodal pairs rather than on the vectors, which is a quarter
+  of the vertices, and the sign of each vector is recovered afterwards.
+
+  The graph does not see the signs, so it can have automorphisms that do not
+  lift to the signed configuration. When one does not lift the trick cannot
+  conclude and this returns nothing, the caller falling back to the reordering
+  on the whole family. Whether the lift exists depends only on the
+  configuration, so two isometric lattices always take the same branch and
+  their canonical forms remain comparable, which is what the deduplication
+  needs.
+
+  The returned matrix has the chosen representative of each pair as a column,
+  in canonical order and with its canonical sign. It spans the same lattice
+  as the whole family, so the Hermite normal form built from it is the same.
+ */
+template <typename T, typename Tint>
+std::optional<MyMatrix<Tint>>
+CanonicallyReorder_SHV_Antipodal(std::vector<MyMatrix<T>> const &ListMat,
+                                 MyMatrix<Tint> const &SHV, std::ostream &os) {
+  using Tgr = GraphListAdj;
+  using Tidx = uint32_t;
+  using Tidx_value = int16_t;
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> SHVhalf = AntipodalHalfFamily<Tint>(SHV);
+  size_t nbPair = SHVhalf.rows();
+  int n = SHVhalf.cols();
+  WeightMatrixAbs<std::vector<T>, Tidx_value> WMatAbs =
+      T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV<T, Tint, Tidx_value>(
+          ListMat, SHVhalf, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: WMatAbs|=" << time << "\n";
+#endif
+  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair =
+      GetGroupCanonicalizationVector_Kernel<std::vector<T>, Tgr, Tidx,
+                                            Tidx_value, true>(WMatAbs.WMat, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: GetGroupCanonicalizationVector_Kernel|=" << time << "\n";
+#endif
+  /*
+    Whether a generator of the automorphism group of the graph lifts to a
+    signed map of the configuration: propagate a sign from the first pair and
+    check that the propagation never contradicts itself. Entries whose weight
+    is the zero vector are skipped, they constrain nothing.
+   */
+  auto TestExistSignVector = [&](std::vector<Tidx> const &eGen) -> bool {
+    std::vector<uint8_t> V(nbPair, 0);
+    V[0] = 1;
+    while (true) {
+      bool IsFinished = true;
+      for (size_t i = 0; i < nbPair; i++) {
+        uint8_t val = V[i];
+        if (val < 3 && val != 0) {
+          IsFinished = false;
+          V[i] = val + 2;
+          size_t iImg = eGen[i];
+          for (size_t j = 0; j < nbPair; j++) {
+            size_t jImg = eGen[j];
+            Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
+            if (pos != WMatAbs.positionZero) {
+              size_t idx1 = weightmatrix_idx<true>(nbPair, i, j);
+              size_t idx2 = weightmatrix_idx<true>(nbPair, iImg, jImg);
+              bool ChgSign = WMatAbs.ArrSigns[idx1] ^ WMatAbs.ArrSigns[idx2];
+              uint8_t valJ;
+              if ((ChgSign && val == 1) || (!ChgSign && val == 2)) {
+                valJ = 2;
+              } else {
+                valJ = 1;
+              }
+              if (V[j] == 0) {
+                V[j] = valJ;
+              } else {
+                if ((valJ % 2) != (V[j] % 2)) {
+                  return false;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (IsFinished) {
+        break;
+      }
+    }
+    return true;
+  };
+  for (auto &eGen : ePair.second) {
+    if (!TestExistSignVector(eGen)) {
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+      os << "LSEC: the absolute trick does not conclude, falling back\n";
+#endif
+      return {};
+    }
+  }
+  std::vector<Tidx> const &CanonicOrd = ePair.first;
+  /*
+    The sign of each pair, propagated along the entries that carry sign
+    information, in the canonical order so that the result is canonical.
+   */
+  /*
+    The sign of each pair, propagated along the entries that carry sign
+    information. Everything here is scanned in CANONICAL order, never in the
+    order the vectors happened to arrive: the sign given to a pair is read
+    off the first already signed pair, and "first" has to mean first
+    canonically, otherwise the answer depends on the arbitrary labelling of
+    the input and the result is not a canonical form. E8 is the smallest
+    example where scanning natively goes wrong.
+
+    Only the relative signs matter. Flipping every sign at once replaces the
+    family by its image under -I, which is a lattice automorphism, and the
+    Hermite normal form is unchanged by it; so pinning the first canonical
+    pair to +1 costs nothing.
+   */
+  std::vector<int> ListSigns(nbPair, 0);
+  ListSigns[CanonicOrd[0]] = 1;
+  while (true) {
+    bool assigned_any = false;
+    bool remaining = false;
+    for (size_t p = 0; p < nbPair; p++) {
+      size_t j_row = CanonicOrd[p];
+      if (ListSigns[j_row] != 0) {
+        continue;
+      }
+      remaining = true;
+      for (size_t q = 0; q < nbPair; q++) {
+        size_t k_row = CanonicOrd[q];
+        if (ListSigns[k_row] == 0) {
+          continue;
+        }
+        Tidx_value pos = WMatAbs.WMat.GetValue(j_row, k_row);
+        if (pos != WMatAbs.positionZero) {
+          size_t idx = weightmatrix_idx<true>(nbPair, j_row, k_row);
+          bool ChgSign = WMatAbs.ArrSigns[idx];
+          ListSigns[j_row] = ChgSign ? -ListSigns[k_row] : ListSigns[k_row];
+          assigned_any = true;
+          break;
+        }
+      }
+    }
+    if (!remaining) {
+      break;
+    }
+    if (!assigned_any) {
+      /*
+        Only the entries whose weight is not the zero vector carry sign
+        information, and here they do not connect the pairs left to the ones
+        already signed. That happens as soon as the lattice is an orthogonal
+        sum, diag(1, 4, 9) being the smallest example, where every off
+        diagonal scalar product vanishes. The signs of the remaining pairs
+        are then not determined, and taking them from the representatives we
+        happened to pick would not be canonical, so the trick does not
+        conclude.
+       */
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+      os << "LSEC: the sign propagation does not reach every pair, falling "
+         << "back\n";
+#endif
+      return {};
+    }
+  }
+  MyMatrix<Tint> SHVcan(n, nbPair);
+  for (size_t iPair = 0; iPair < nbPair; iPair++) {
+    size_t jPair = CanonicOrd[iPair];
+    Tint eSign = ListSigns[jPair];
+    for (int i = 0; i < n; i++) {
+      SHVcan(i, iPair) = eSign * SHVhalf(jPair, i);
+    }
+  }
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: CanonicallyReorder_SHV_Antipodal|=" << time << "\n";
+#endif
+  return SHVcan;
+}
+
+/*
   Canonical basis from a family that generates Z^n. The Hermite normal form
   of the canonically reordered family is then already a canonical basis.
  */
@@ -196,6 +410,14 @@ MyMatrix<Tint>
 ComputeCanonicalFormSpanning_family(std::vector<MyMatrix<T>> const &ListMat,
                                     MyMatrix<Tint> const &SHV,
                                     std::ostream &os) {
+  // The family is antipodal, so the graph can be built on the pairs. That is
+  // a quarter of the vertices; when the signs cannot be recovered from it we
+  // fall back to the reordering on the whole family.
+  std::optional<MyMatrix<Tint>> opt =
+      CanonicallyReorder_SHV_Antipodal<T, Tint>(ListMat, SHV, os);
+  if (opt) {
+    return get_canonicallization_matrix(*opt, os);
+  }
   return ComputeCanonicalForm_inner<T, Tint>(ListMat, SHV, os);
 }
 
