@@ -618,11 +618,13 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
       and proj(f) has norm N - k.  For N - k < k the origin is strictly
       closer to v = proj(f) than every point of f + L_1, so CV(A, v) = {0}
       and the formula of the paper returns a family generating a subgroup
-      of index 2.  Measured: A(3,5), A(8,11) and A(8,15) all give index 2.
-      We therefore add, for each v, the closest vectors *within the coset
-      determined by v*, which is the set the generation argument actually
-      needs.  This is canonical for the same reason CV is, the coset being
-      read off from v.  Both sets are kept so that no information is lost.
+      of index 2; A(3,5), A(8,11) and A(8,15) are worked out in
+      results/charvect_cv.md of the strongly perfect lattices notes, where
+      the measurement is recorded.  We therefore add, for each v, the
+      closest vectors *within the coset determined by v*, which is the set
+      the generation argument actually needs.  This is canonical for the
+      same reason CV is, the coset being read off from v.  Both sets are
+      kept so that no information is lost.
 
   Everything is in the row convention: vectors are rows, a basis matrix B
   has the basis vectors as rows, and the Gram matrix of the sublattice
@@ -750,15 +752,10 @@ CharacteristicVectorSetWellRoundedCV(MyMatrix<T> const &GramMat,
 /*
   V_cv(A) of (2.2.6).  Recursive over the successive saturated spans of the
   minimal vectors.
-
-  With strict_paper = true the formula of the paper is used verbatim, which
-  is only there so that the deviation described in the header comment can be
-  measured.  Production code should use strict_paper = false.
  */
 template <typename T, typename Tint>
 MyMatrix<Tint> CharacteristicVectorSetCV(MyMatrix<T> const &GramMat,
                                          bool const &spanning,
-                                         bool const &strict_paper,
                                          std::ostream &os) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
@@ -803,7 +800,7 @@ MyMatrix<Tint> CharacteristicVectorSetCV(MyMatrix<T> const &GramMat,
   // rational entries are kept as they are, no rescaling is needed for
   // correctness.
   MyMatrix<Tint> V2 =
-      CharacteristicVectorSetCV<T, Tint>(Gram2, spanning, strict_paper, os);
+      CharacteristicVectorSetCV<T, Tint>(Gram2, spanning, os);
   CVPSolver<T, Tint> solver(GramMat, os);
   CVPSolver<T, Tint> solver1(Gram1, os);
   // Projection of Z^n onto L_2 written in the B_2 coordinates, that is
@@ -824,10 +821,6 @@ MyMatrix<Tint> CharacteristicVectorSetCV(MyMatrix<T> const &GramMat,
     MyVector<T> v = B2.transpose() * y_T;
     resultCVP<T, Tint> res = solver.nearest_vectors(v);
     acc.insert_rows(res.ListVect);
-    if (strict_paper) {
-      // (2.2.6) exactly as written in the paper.
-      continue;
-    }
     // The closest vectors of the L_1-coset of v itself.  See the header
     // comment: CV(A, v) alone can miss that coset.
     MyVector<Tint> x0(n);

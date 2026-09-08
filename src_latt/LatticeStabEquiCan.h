@@ -231,7 +231,7 @@ MyMatrix<Tint> ComputeCanonicalFormCV(MyMatrix<T> const &inpMat,
   MicrosecondTime time;
 #endif
   MyMatrix<Tint> SHV =
-      CharacteristicVectorSetCV<T, Tint>(inpMat, true, false, os);
+      CharacteristicVectorSetCV<T, Tint>(inpMat, true, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: CharacteristicVectorSetCV|=" << time << "\n";
 #endif

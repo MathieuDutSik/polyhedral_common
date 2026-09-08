@@ -467,10 +467,10 @@ GenusInvariantVectorFamily(MyMatrix<T> const &GramMat,
     return f_wrap(ExtractInvariantVectorFamilyFullRank<T, Tint>(GramMat, os));
   };
   auto f_cv_fullrank = [&]() -> GenusVectorFamily<T, Tint> {
-    return f_wrap(CharacteristicVectorSetCV<T, Tint>(GramMat, false, false, os));
+    return f_wrap(CharacteristicVectorSetCV<T, Tint>(GramMat, false, os));
   };
   auto f_cv = [&]() -> GenusVectorFamily<T, Tint> {
-    return f_wrap(CharacteristicVectorSetCV<T, Tint>(GramMat, true, false, os));
+    return f_wrap(CharacteristicVectorSetCV<T, Tint>(GramMat, true, os));
   };
   auto f_get = [&]() -> GenusVectorFamily<T, Tint> {
     if (method == "fullrank") {
