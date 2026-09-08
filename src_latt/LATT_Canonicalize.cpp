@@ -19,18 +19,20 @@ void ComputeCanonical(std::string const &FileI, std::string const &method,
     throw TerminalException{1};
   }
   auto get_basis = [&]() -> MyMatrix<Tint> {
-    if (method == "zbasis") {
-      return ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
+    if (method == "spanning") {
+      // Restricted to a family generating Z^n. Only useful for reproducing
+      // the reductions of callers that have no permutation group type.
+      return ComputeCanonicalFormSpanning<T, Tint>(eMat, std::cerr);
     }
-    if (method == "fullrank") {
+    if (method == "default") {
       using Tidx = uint32_t;
       using Telt = permutalib::SingleSidedPerm<Tidx>;
       using TintGroup = mpz_class;
       using Tgroup = permutalib::Group<Telt, TintGroup>;
-      return ComputeCanonicalFormFullRank<T, Tint, Tgroup>(eMat, std::cerr);
+      return ComputeCanonicalForm<T, Tint, Tgroup>(eMat, std::cerr);
     }
     std::cerr << "LATT_Canonicalize: The method " << method
-              << " is not among the supported ones: zbasis, fullrank\n";
+              << " is not among the supported ones: default, spanning\n";
     throw TerminalException{1};
   };
   MyMatrix<Tint> B = get_basis();
@@ -79,14 +81,18 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_Canonicalize [arith] [method] [GramI] [OutFormat] "
                    "[OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "method: zbasis (default) uses a vector family spanning "
-                   "Z^n, fullrank a full rank one\n";
+      std::cerr << "method: default picks the smaller invariant vector "
+                   "family and adapts the\n";
+      std::cerr << "        canonicalization to it; spanning restricts to a "
+                   "family generating\n";
+      std::cerr << "        Z^n, which is what callers without a permutation "
+                   "group type get\n";
       std::cerr << "GramI (input) : The gram matrix on input\n";
       std::cerr << "OutFile: The filename of the data in output\n";
       return -1;
     }
     std::string arith = argv[1];
-    std::string method = "zbasis";
+    std::string method = "default";
     std::string FileI;
     std::string OutFormat = "CPP";
     std::string OutFile = "stderr";

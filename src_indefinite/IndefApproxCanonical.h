@@ -311,7 +311,9 @@ ResultReduction<T, Tint> get_individual_reduction(MyMatrix<T> const &M,
     };
     std::pair<int, MyMatrix<T>> pair = get_posdef();
     MyMatrix<T> const &Mpos = pair.second;
-    MyMatrix<Tint> B = ComputeCanonicalForm<T, Tint>(Mpos, os);
+    // No permutation group type is available on this code path, so the
+    // canonicalization is restricted to a family generating Z^n.
+    MyMatrix<Tint> B = ComputeCanonicalFormSpanning<T, Tint>(Mpos, os);
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
     MyMatrix<T> Mred = T(pair.first) * (B_T * Mpos * B_T.transpose());
 #ifdef DEBUG_INDEX_APPROX_CANONICAL

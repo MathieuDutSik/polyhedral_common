@@ -853,6 +853,129 @@ MyMatrix<Tint> CharacteristicVectorSetCV(MyMatrix<T> const &GramMat,
   return RetMat;
 }
 
+/*
+  The invariant vector family a canonicalization works from, together with
+  whether it generates Z^n.
+
+  Which family is best is not decidable in advance. The shell based
+  ExtractInvariantVectorFamily is cheap when the successive minima are close
+  together and catastrophic when they are not, a whole shell having to be
+  taken at once: 16942 vectors on TestData/SlowCanonic/slow_canonic_2, 16816
+  of them in the single shell of norm 14. V_cv does not care how far apart
+  the minima are but pays 2^k closest-vector computations when the minimal
+  vectors span a sublattice of index 2^k. Neither dominates: on
+  slow_canonic_1 the shells give 2358 vectors against 8516 for the spanning
+  V_cv, on slow_canonic_2 it is 16942 against 238.
+
+  Building a family costs a fraction of a percent of what is done with it,
+  the weight matrix being quadratic in its size and the canonical labelling
+  worse than quadratic, so the cheapest way to avoid the bad case of either
+  is to build both and keep the smaller. Both sizes are invariants of the
+  isometry class, so the choice is itself canonical and the canonical forms
+  obtained from it remain comparable.
+ */
+template <typename Tint> struct CanonicVectorFamily {
+  MyMatrix<Tint> SHV;
+  // Measured by FamilySpansLattice, never inferred from how SHV was built:
+  // a family built without asking to span usually spans anyway, and every
+  // family that does can take the cheap canonicalization.
+  bool spans_lattice;
+};
+
+/*
+  Whether the rows of SHV generate Z^n rather than a finite index subgroup.
+  A Z-basis of the span followed by its determinant, which costs nothing
+  next to what the answer saves.
+ */
+template <typename Tint>
+bool FamilySpansLattice(MyMatrix<Tint> const &SHV) {
+  int n = SHV.cols();
+  if (RankMat(SHV) != n) {
+    return false;
+  }
+  MyMatrix<Tint> Basis = GetZbasis(SHV);
+  Tint det = DeterminantMat(Basis);
+  return T_abs(det) == Tint(1);
+}
+
+template <typename Tint>
+CanonicVectorFamily<Tint> get_canonic_vector_family(MyMatrix<Tint> &&SHV) {
+  bool spans = FamilySpansLattice<Tint>(SHV);
+  return {std::move(SHV), spans};
+}
+
+/*
+  The smaller of the two families that stop at full rank. This is the one to
+  use whenever the consumer can work from a family of full rank, which is
+  the case for the canonicalization: it only has to place Z^n relative to
+  the span of the family, under the group preserving it.
+ */
+template <typename T, typename Tint>
+CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
+                                                 std::ostream &os) {
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> SHV_shell =
+      ExtractInvariantVectorFamilyFullRank<T, Tint>(GramMat, os);
+  MyMatrix<Tint> SHV_cv =
+      CharacteristicVectorSetCV<T, Tint>(GramMat, false, os);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: family choice, shells " << SHV_shell.rows() << " against V_cv "
+     << SHV_cv.rows() << "\n";
+#endif
+  auto f_ret = [&]() -> CanonicVectorFamily<Tint> {
+    if (SHV_cv.rows() <= SHV_shell.rows()) {
+      return get_canonic_vector_family<Tint>(std::move(SHV_cv));
+    }
+    return get_canonic_vector_family<Tint>(std::move(SHV_shell));
+  };
+  CanonicVectorFamily<Tint> fam = f_ret();
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  os << "|IVF: GetCanonicVectorFamily|=" << time << "\n";
+#endif
+  return fam;
+}
+
+/*
+  The smaller of the two families that are built to span Z^n. For consumers
+  that have no way of handling a family of full rank only. It is never
+  smaller than GetCanonicVectorFamily and can be far larger, 8516 against
+  324 on slow_canonic_1.
+ */
+template <typename T, typename Tint>
+CanonicVectorFamily<Tint>
+GetCanonicVectorFamilySpanning(MyMatrix<T> const &GramMat, std::ostream &os) {
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> SHV_shell =
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
+  MyMatrix<Tint> SHV_cv = CharacteristicVectorSetCV<T, Tint>(GramMat, true, os);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: spanning family choice, shells " << SHV_shell.rows()
+     << " against V_cv " << SHV_cv.rows() << "\n";
+#endif
+  auto f_ret = [&]() -> CanonicVectorFamily<Tint> {
+    if (SHV_cv.rows() <= SHV_shell.rows()) {
+      return get_canonic_vector_family<Tint>(std::move(SHV_cv));
+    }
+    return get_canonic_vector_family<Tint>(std::move(SHV_shell));
+  };
+  CanonicVectorFamily<Tint> fam = f_ret();
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+  if (!fam.spans_lattice) {
+    std::cerr << "IVF: GetCanonicVectorFamilySpanning returned a family that "
+              << "does not span Z^n\n";
+    throw TerminalException{1};
+  }
+#endif
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  os << "|IVF: GetCanonicVectorFamilySpanning|=" << time << "\n";
+#endif
+  return fam;
+}
+
 // clang-format off
 #endif  // SRC_LATT_INVARIANTVECTORFAMILY_H_
 // clang-format on
