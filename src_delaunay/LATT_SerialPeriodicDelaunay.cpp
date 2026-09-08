@@ -96,6 +96,30 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
     os_out << "return rec(nb:=" << l_ent.size() << ");\n";
     return;
   }
+  /*
+    The vertices themselves. SummaryGAP reports how many there are but not
+    where, which is not enough to recompute anything from the tessellation:
+    the circumradius of a cell, and so the covering radius of the point set
+    at this form, needs the coordinates. The lattice side has had such an
+    output all along; this is its periodic counterpart.
+
+    The coordinates are the scaled ones the periodic Delone geometry works
+    in, that is the numerators over the coset denominator, with the leading
+    homogeneous 1 kept.
+   */
+  if (OutFormat == "ObjectGAP") {
+    os_out << "return rec(nb:=" << l_ent.size() << ", ListEXT:=[";
+    bool IsFirstEXT = true;
+    for (auto &eEnt : l_ent) {
+      if (!IsFirstEXT) {
+        os_out << ",\n";
+      }
+      IsFirstEXT = false;
+      os_out << StringMatrixGAP(eEnt.x.EXT);
+    }
+    os_out << "]);\n";
+    return;
+  }
   if (OutFormat == "SummaryGAP") {
     os_out << "return rec(nb:=" << l_ent.size() << ", ListRec:=[";
     bool IsFirst = true;
@@ -112,7 +136,7 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
   }
   std::cerr << "LATT_SerialPeriodicDelaunay: Unsupported OutFormat="
             << OutFormat << "\n";
-  std::cerr << "Supported: NumberGAP, SummaryGAP\n";
+  std::cerr << "Supported: NumberGAP, SummaryGAP, ObjectGAP\n";
   throw TerminalException{1};
 }
 
