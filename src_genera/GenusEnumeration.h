@@ -407,7 +407,8 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::ostream &os) {
    */
   // Both signs are needed: the order is read off the permutations the
   // integral generators induce on the family.
-  MyMatrix<Tint> SHV = GetCanonicVectorFamily<T, Tint>(GramMat, os).get_full();
+  CanonicVectorFamily<Tint> fam = GetCanonicVectorFamily<T, Tint>(GramMat, os);
+  MyMatrix<Tint> SHV = fam.get_full();
 #ifdef DEBUG_GENUS_ENUMERATION
   // The size of this family governs the cost of everything downstream, so it
   // is worth seeing when a lattice is expensive and why. Two things blow it
@@ -430,8 +431,24 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::ostream &os) {
     order is recovered from the permutation they induce on SHV, which is a
     lookup per row.
    */
-  std::vector<MyMatrix<T>> LGen_T =
-      GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(SHV_T, ListMat, Vdiag, os);
+  /*
+    The family is antipodal, so the automorphisms can be read off a graph on
+    the pairs, which is a quarter of the vertices. The lifted generators act
+    on SHV in the order get_full gives it, the representatives first and
+    their negatives after. When the trick declines, the automorphisms are
+    computed from the whole family as before.
+   */
+  std::vector<MyMatrix<T>> LGen_T = [&]() -> std::vector<MyMatrix<T>> {
+    std::optional<std::vector<std::vector<Tidx>>> opt =
+        GetListGenAutomorphism_AbsTrick<T, Tint, Tgroup>(ListMat, fam.SHVhalf,
+                                                         os);
+    if (opt) {
+      return GetIntAutomorphism_FromPermGens<T, Tgroup>(SHV_T, ListMat, *opt,
+                                                        os);
+    }
+    return GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(SHV_T, ListMat, Vdiag,
+                                                       os);
+  }();
   LatticeAutInfo<T, Tint, Tgroup> info;
   for (auto &M_T : LGen_T) {
     info.ListGenMat.push_back(UniversalMatrixConversion<Tint, T>(M_T));

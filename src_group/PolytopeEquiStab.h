@@ -1635,16 +1635,34 @@ template <typename T, typename Tidx_value> struct WeightMatrixAbs {
  */
 
 /*
-  Whether a generator of the automorphism group of the absolute graph lifts
-  to a map of the signed configuration: propagate a sign from the first row
-  and check the propagation never contradicts itself. In V, 0 is unassigned,
-  1 and 3 are positive, 2 and 4 negative, and 3 and 4 mark a treated row.
+  The lift of a generator of the automorphism group of the absolute graph to
+  a signed permutation of the whole family, the vectors being indexed with
+  [0, nbRow) for the chosen representatives and [nbRow, 2 nbRow) for their
+  negatives. Nothing when the generator does not lift, which happens because
+  the absolute graph does not see the signs and can carry more automorphisms
+  than the signed configuration.
+
+  A sign is propagated from the first row and the propagation is checked
+  never to contradict itself. In V, 0 is unassigned, 1 and 3 are positive, 2
+  and 4 negative, and 3 and 4 mark a treated row.
  */
 template <typename T, typename Tidx, typename Tidx_value>
-bool AbsTrick_TestLiftGenerator(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
-                                std::vector<Tidx> const &eGen, size_t nbRow) {
+std::optional<std::vector<Tidx>>
+AbsTrick_LiftGenerator(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+                       std::vector<Tidx> const &eGen, size_t nbRow) {
   std::vector<uint8_t> V(nbRow, 0);
-  V[0] = 1;
+  std::vector<Tidx> eGenRet(2 * nbRow, 0);
+  auto setSign = [&](size_t const &idx, uint8_t const &val) -> void {
+    if (val == 1) {
+      eGenRet[idx] = eGen[idx];
+      eGenRet[idx + nbRow] = eGen[idx] + nbRow;
+    } else {
+      eGenRet[idx] = eGen[idx] + nbRow;
+      eGenRet[idx + nbRow] = eGen[idx];
+    }
+    V[idx] = val;
+  };
+  setSign(0, 1);
   while (true) {
     bool IsFinished = true;
     for (size_t i = 0; i < nbRow; i++) {
@@ -1667,10 +1685,10 @@ bool AbsTrick_TestLiftGenerator(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
               valJ = 1;
             }
             if (V[j] == 0) {
-              V[j] = valJ;
+              setSign(j, valJ);
             } else {
               if ((valJ % 2) != (V[j] % 2)) {
-                return false;
+                return {};
               }
             }
           }
@@ -1681,16 +1699,56 @@ bool AbsTrick_TestLiftGenerator(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
       break;
     }
   }
-  return true;
+  /*
+    A row the propagation never reached has no determined image sign, and
+    eGenRet would carry a hole there rather than a permutation. That happens
+    when the entries carrying sign information do not connect the family, an
+    orthogonal sum being the standard case, so the lift is declined.
+   */
+  for (size_t i = 0; i < nbRow; i++) {
+    if (V[i] == 0) {
+      return {};
+    }
+  }
+  return eGenRet;
 }
 
+/*
+  The lifts of all the generators, together with the map v -> -v which is
+  always an automorphism of an antipodal family. Nothing as soon as one
+  generator does not lift: the ones that do form a subgroup whose generators
+  are not available here, so the trick cannot conclude.
+ */
+template <typename T, typename Tidx, typename Tidx_value>
+std::optional<std::vector<std::vector<Tidx>>>
+AbsTrick_LiftGenerators(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+                        std::vector<std::vector<Tidx>> const &ListGen,
+                        size_t nbRow) {
+  std::vector<std::vector<Tidx>> ListGenRet;
+  for (auto &eGen : ListGen) {
+    std::optional<std::vector<Tidx>> opt =
+        AbsTrick_LiftGenerator<T, Tidx, Tidx_value>(WMatAbs, eGen, nbRow);
+    if (!opt) {
+      return {};
+    }
+    ListGenRet.push_back(*opt);
+  }
+  std::vector<Tidx> AntipodalGen(2 * nbRow, 0);
+  for (size_t iRow = 0; iRow < nbRow; iRow++) {
+    AntipodalGen[iRow] = iRow + nbRow;
+    AntipodalGen[nbRow + iRow] = iRow;
+  }
+  ListGenRet.push_back(AntipodalGen);
+  return ListGenRet;
+}
+
+// Whether every generator lifts, for the callers that only need to know.
 template <typename T, typename Tidx, typename Tidx_value>
 bool AbsTrick_TestLiftGenerators(
     WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
     std::vector<std::vector<Tidx>> const &ListGen, size_t nbRow) {
   for (auto &eGen : ListGen) {
-    if (!AbsTrick_TestLiftGenerator<T, Tidx, Tidx_value>(WMatAbs, eGen,
-                                                         nbRow)) {
+    if (!AbsTrick_LiftGenerator<T, Tidx, Tidx_value>(WMatAbs, eGen, nbRow)) {
       return false;
     }
   }

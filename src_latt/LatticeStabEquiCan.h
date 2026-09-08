@@ -262,6 +262,55 @@ std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick(
 }
 
 /*
+  Permutation generators of the automorphism group of an antipodal family,
+  through the absolute trick: the graph is built on the pairs, which is a
+  quarter of the vertices, and each of its generators is lifted to a signed
+  permutation of the whole family.
+
+  The generators returned act on the family ordered as
+  CanonicVectorFamily::get_full gives it, the representatives first and their
+  negatives after. The map v -> -v is among them.
+
+  Nothing when a generator of the graph does not lift, or when the signs are
+  not connected enough to determine the lift; the caller then computes the
+  automorphisms from the whole family as before.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::optional<std::vector<std::vector<typename Tgroup::Telt::Tidx>>>
+GetListGenAutomorphism_AbsTrick(std::vector<MyMatrix<T>> const &ListMat,
+                                MyMatrix<Tint> const &SHVhalf,
+                                std::ostream &os) {
+  using Tgr = GraphListAdj;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tidx_value = int16_t;
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
+  size_t nbPair = SHVhalf.rows();
+  WeightMatrixAbs<std::vector<T>, Tidx_value> WMatAbs =
+      T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV<T, Tint, Tidx_value>(
+          ListMat, SHVhalf, os);
+  std::vector<std::vector<Tidx>> ListGen =
+      GetStabilizerWeightMatrix_Kernel<std::vector<T>, Tgr, Tidx, Tidx_value,
+                                       true>(WMatAbs.WMat, os);
+  std::optional<std::vector<std::vector<Tidx>>> opt =
+      AbsTrick_LiftGenerators<std::vector<T>, Tidx, Tidx_value>(WMatAbs,
+                                                                ListGen,
+                                                                nbPair);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: GetListGenAutomorphism_AbsTrick|=" << time << "\n";
+#endif
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+  if (!opt) {
+    os << "LSEC: the absolute trick does not lift the automorphisms, falling "
+       << "back\n";
+  }
+#endif
+  return opt;
+}
+
+/*
   Canonical basis from a family that generates Z^n. The Hermite normal form
   of the canonically reordered family is then already a canonical basis.
  */

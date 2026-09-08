@@ -306,92 +306,22 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value(
   os << "|PES: GetStabilizerWeightMatrix_Kernel|=" << time << "\n";
 #endif
 
-  // We check if the Generating vector eGen can be mapped from the absolute
-  // graph to the original one.
-  std::vector<std::vector<unsigned int>> ListGenRet;
-  auto TestExistSignVector =
-      [&](std::vector<unsigned int> const &eGen) -> bool {
-    /* We map a vector v_i to another v_j with sign +-1
-       V[i] = 0 for unassigned
-              1 for positive sign
-              2 for negative sign
-              3 for positive sign and treated
-              4 for negative sign and treated
-     */
-    std::vector<uint8_t> V(nbRow, 0);
-    std::vector<unsigned int> eGenRet(2 * nbRow, 0);
-    auto setSign = [&](int const &idx, uint8_t const &val) -> void {
-      if (val == 1) {
-        eGenRet[idx] = eGen[idx];
-        eGenRet[idx + nbRow] = eGen[idx] + nbRow;
-      } else {
-        eGenRet[idx] = eGen[idx] + nbRow;
-        eGenRet[idx + nbRow] = eGen[idx];
-      }
-      V[idx] = val;
-    };
-    setSign(0, 1);
-    while (true) {
-      bool IsFinished = true;
-      for (size_t i = 0; i < nbRow; i++) {
-        uint8_t val = V[i];
-        if (val < 3 && val != 0) {
-          IsFinished = false;
-          V[i] = val + 2;
-          size_t iImg = eGen[i];
-          for (size_t j = 0; j < nbRow; j++) {
-            size_t jImg = eGen[j];
-            Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
-            if (pos != WMatAbs.positionZero) {
-              size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
-              size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
-              bool ChgSign1 = WMatAbs.ArrSigns[idx1];
-              bool ChgSign2 = WMatAbs.ArrSigns[idx2];
-              // ChgSign is true if ChgSign1 != ChgSign2
-              bool ChgSign = ChgSign1 ^ ChgSign2;
-              uint8_t valJ;
-              if ((ChgSign && val == 1) || (!ChgSign && val == 2))
-                valJ = 2;
-              else
-                valJ = 1;
-              if (V[j] == 0) {
-                setSign(j, valJ);
-              } else {
-                if ((valJ % 2) != (V[j] % 2)) {
-                  return false;
-                }
-              }
-            }
-          }
-        }
-      }
-      if (IsFinished)
-        break;
-    }
-    ListGenRet.push_back(eGenRet);
-    return true;
-  };
-  auto IsCorrectListGen = [&]() -> bool {
-    for (auto &eGen : ListGen) {
-      bool test = TestExistSignVector(eGen);
-      if (!test)
-        return false;
-    }
-    return true;
-  };
-  if (!IsCorrectListGen())
+  // Lift the generators of the absolute graph to signed permutations of the
+  // whole family, declining when one of them does not lift. The map v -> -v
+  // is added by the helper.
+  std::optional<std::vector<std::vector<Tidx>>> opt =
+      AbsTrick_LiftGenerators<Tint, Tidx, Tidx_value>(WMatAbs, ListGen, nbRow);
+  if (!opt) {
     return {};
+  }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: Check Generators|=" << time << "\n";
 #endif
-  //
-  std::vector<unsigned int> AntipodalGen(2 * nbRow, 0);
-  for (size_t iRow = 0; iRow < nbRow; iRow++) {
-    AntipodalGen[iRow] = iRow + nbRow;
-    AntipodalGen[nbRow + iRow] = iRow;
+  std::vector<std::vector<unsigned int>> ListGenRet;
+  for (auto &eGen : *opt) {
+    ListGenRet.push_back(
+        std::vector<unsigned int>(eGen.begin(), eGen.end()));
   }
-  ListGenRet.push_back(AntipodalGen);
-  //
   return ListGenRet;
 }
 
@@ -762,13 +692,21 @@ std::optional<MyMatrix<T>> TestIntEquivalence_ListMat_Vdiag(
   otherwise the integral subgroup is extracted with the subspace machinery,
   a field computation.
  */
+/*
+  The integral automorphisms, from permutation generators of the automorphism
+  group of the configuration already computed. Separated so that a caller
+  that obtained the permutations another way, for instance through the
+  absolute trick on an antipodal family, does not have to compute them again.
+ */
 template <typename T, typename Tgroup>
-std::vector<MyMatrix<T>> GetIntAutomorphism_ListMat_Vdiag(
+std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
     MyMatrix<T> const &SHV_T, std::vector<MyMatrix<T>> const &ListMat,
-    std::vector<T> const &Vdiag, std::ostream &os) {
+    std::vector<std::vector<typename Tgroup::Telt::Tidx>> const &ListGen,
+    std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  (void)sizeof(Tidx);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   MicrosecondTime time;
 #endif
@@ -787,14 +725,6 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_ListMat_Vdiag(
     }
 #endif
   };
-  std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
-                                                              Vdiag, os);
-#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "|PES: GetIntAutomorphism, listmat_vdiag n_row=" << SHV_T.rows()
-     << " n_mat=" << ListMat.size() << " dim=" << SHV_T.cols()
-     << "|=" << time << "\n";
-#endif
   bool all_gens_integral = true;
   std::vector<MyMatrix<T>> ListTransMat;
   for (auto &eGen : ListGen) {
@@ -839,6 +769,28 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_ListMat_Vdiag(
 #endif
   check_result(ListGenInt);
   return ListGenInt;
+}
+
+template <typename T, typename Tgroup>
+std::vector<MyMatrix<T>> GetIntAutomorphism_ListMat_Vdiag(
+    MyMatrix<T> const &SHV_T, std::vector<MyMatrix<T>> const &ListMat,
+    std::vector<T> const &Vdiag, std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+  MicrosecondTime time;
+#endif
+  std::vector<std::vector<Tidx>> ListGen =
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
+                                                              Vdiag, os);
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+  os << "|PES: GetIntAutomorphism, listmat_vdiag n_row=" << SHV_T.rows()
+     << " n_mat=" << ListMat.size() << " dim=" << SHV_T.cols()
+     << "|=" << time << "\n";
+#endif
+  return GetIntAutomorphism_FromPermGens<T, Tgroup>(SHV_T, ListMat, ListGen,
+                                                    os);
 }
 
 // clang-format off

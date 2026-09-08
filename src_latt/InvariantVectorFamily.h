@@ -936,7 +936,24 @@ template <typename Tint> struct CanonicVectorFamily {
   // every family that does can take the cheap canonicalization. The half
   // family spans what the whole one does, -v being in the span of v.
   bool spans_lattice;
-  MyMatrix<Tint> get_full() const { return matrix_duplication(SHVhalf); }
+  /*
+    The whole family, the chosen representatives first and their negatives
+    after, in the same order. That is the indexing the generators lifted by
+    AbsTrick_LiftGenerators use, [0, nbPair) for +v and [nbPair, 2 nbPair)
+    for -v, so the two agree without a translation table.
+   */
+  MyMatrix<Tint> get_full() const {
+    int nbPair = SHVhalf.rows();
+    int n = SHVhalf.cols();
+    MyMatrix<Tint> SHV(2 * nbPair, n);
+    for (int iPair = 0; iPair < nbPair; iPair++) {
+      for (int i = 0; i < n; i++) {
+        SHV(iPair, i) = SHVhalf(iPair, i);
+        SHV(nbPair + iPair, i) = -SHVhalf(iPair, i);
+      }
+    }
+    return SHV;
+  }
   int n_pair() const { return SHVhalf.rows(); }
 };
 
