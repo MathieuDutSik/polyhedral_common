@@ -2013,11 +2013,32 @@ std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(
 // Several asymmetric matrices
 //
 
-// The matrices in ListMat do not have to be symmetric.
-template <typename T, typename Tint, typename Tidx_value>
-WeightMatrix<false, std::vector<T>, Tidx_value>
+/*
+  With is_symm = false the matrices in ListMat do not have to be symmetric.
+
+  With is_symm = true they do, and the caller has to know it: the weight
+  matrix then keeps only the lower triangle, and the graph handed to nauty
+  has nbRow + 2 vertices instead of 2 nbRow + 1. That is half the entries
+  and half the vertices, so a quarter of the edges, and the edges are what
+  the canonical labelling is bounded by. A Gram matrix is symmetric, so
+  everything canonicalizing a lattice belongs on that side.
+ */
+template <bool is_symm, typename T, typename Tint, typename Tidx_value>
+WeightMatrix<is_symm, std::vector<T>, Tidx_value>
 T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
                                 MyMatrix<Tint> const &SHV, std::ostream &os) {
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+  if (is_symm) {
+    for (auto &eMat : ListMat) {
+      if (!IsSymmetricMatrix(eMat)) {
+        std::cerr << "PES: T_TranslateToMatrix_ListMat_SHV was asked for a "
+                  << "symmetric weight matrix but a matrix of ListMat is not "
+                  << "symmetric\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
   size_t nbRow = SHV.rows();
   size_t n = SHV.cols();
   size_t nbMat = ListMat.size();
@@ -2044,7 +2065,7 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
     }
     return ListScal;
   };
-  return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
+  return WeightMatrix<is_symm, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
 }
 
 template <bool is_symmetric, typename T, typename Tidx_value>

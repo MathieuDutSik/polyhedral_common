@@ -117,8 +117,13 @@ MyMatrix<Tint> CanonicallyReorder_SHV(std::vector<MyMatrix<T>> const &ListMat,
   // Computing the scalar product matrix
   //
   using Tidx_value = int16_t;
-  WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
-      T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV, os);
+  // The matrices are Gram matrices, so the weight matrix is symmetric. That
+  // halves its entries and halves the number of vertices of the graph, which
+  // is a quarter of the edges, and the edges are what nauty is bounded by.
+  const bool is_symm = true;
+  WeightMatrix<is_symm, std::vector<T>, Tidx_value> WMat =
+      T_TranslateToMatrix_ListMat_SHV<is_symm, T, Tint, Tidx_value>(ListMat,
+                                                                    SHV, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: WMat|=" << time << "\n";
 #endif
