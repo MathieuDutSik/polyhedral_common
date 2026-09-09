@@ -8,20 +8,29 @@ position `c`. Unlike the exact iso-Delaunay machinery of `src_delaunay/`,
 the price of being numerical rather than exact.
 
 * `evaluator.py` — covering density via a genuine periodic Delaunay
-  triangulation (scipy/qhull) in the metric `Q`. The enumeration box is
-  LLL-reduced and grows automatically when a cell touches its shell, since a
-  too-small box makes qhull fill the star with spurious cells whose
-  circumradii over-estimate the covering radius (`rng=2` sufficed for a
-  well-reduced form, `rng=3` was needed for walk optima; the growth is
-  iterative and releases the previous triangulation — a recursive version
-  cost 14 GB per process). Validated: it reproduces the certified
-  2.160060765053 to 12 digits.
+  triangulation (scipy/qhull) in the metric `Q`, for any number of cosets
+  `m`. The point cloud is the Q-ball `|x|_Q <= R` enumerated through an
+  LLL-reduced basis, and every kept cell is required to have its whole
+  circumsphere inside the ball (`|center|_Q + radius <= R`), which makes it
+  provably a Delone cell of the full periodic set; if a star cell fails the
+  test, `R` grows. Earlier versions enumerated a hypercube in the reduced
+  basis, which both wastes a factor ~50 in volume in dimension 5 and never
+  stabilizes for skewed bases where genuine cells reach the shell along
+  near-cancelling combinations. Cells are anchored on any lattice-0 vertex,
+  not only coset-0 ones — the set is not translation-symmetric by a coset,
+  so cells whose vertices all lie in nonzero cosets are genuine classes.
+  Validated: reproduces the certified m=2 value 2.160060765053 to 12 digits
+  and the exact C++ value 2.3765773479972 of an m=3 configuration digit for
+  digit.
 * `descend.py` — outer loop of (re-tessellate, SLSQP on
   `(cholesky(Q), c)` with the cell list fixed), the constraints being the
   squared circumradii of all translation classes of cells. Each round's
   result is verified against a fresh tessellation, so a stale cell list
   cannot produce a fake improvement.
 * `multistart.py` — random restarts of the descent.
+
+* `m3_campaign.py` — the m=3 exploration: seeded at the m=3 flip-walk
+  optimum, at the m=2 optimum plus a random third coset, and at random.
 
 Requires `numpy` and `scipy` (`python3 -m venv venv && venv/bin/pip install
 numpy scipy`). Everything is specific to dimension 5 through the constant
@@ -48,3 +57,9 @@ the rational denominators genuinely were the binding constraint. About a
 hundred random multistarts landed only in shallower basins (2.5–2.7).
 No configuration below 2.160060765053 was found; the record to beat is
 `Theta(A_5^*) = 2.124285909`.
+
+For `m = 3` the continuum campaign found the attractor 2.3398 below the
+flip-walk value 2.3766, and — pointedly — seeding at the m=2 optimum plus a
+random third coset always stalls near `1.5 x 2.16006`: the third point's
+density factor is never recovered, there being no deep hole to spend it on
+in a configuration whose cell orbits are all near-binding.
