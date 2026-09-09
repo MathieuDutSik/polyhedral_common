@@ -128,6 +128,19 @@ void process(std::string const &FileListGram, std::ostream &os) {
                 << "\n";
       n_error++;
     }
+    // (1b) The same with the searched basis forced to come from the
+    // family rows, exercising the general-basis path (shortest-row
+    // selection, and the leaf integrality checks when that basis spans
+    // a proper sublattice).
+    PleskenSouvignierAutomResult<Tint> res_forced =
+        PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, os, -1, true);
+    mpz_class order_forced =
+        PleskenSouvignierGroupOrder<mpz_class>(res_forced.ListOrbitSize);
+    if (order_forced != order_ref) {
+      std::cerr << "TEST_PS: ERROR, the forced-family-basis order "
+                << order_forced << " disagrees on matrix " << i << "\n";
+      n_error++;
+    }
     // (2) isometry against a transformed copy. The automorphisms of the
     // second configuration are the U-conjugates of those of the first,
     // which also exercises the orbit pruning of the search.

@@ -85,7 +85,8 @@ ps_convert_integral_listmat(std::vector<MyMatrix<T>> const &ListMat) {
 template <typename T, typename Tint>
 PleskenSouvignierAutomResult<Tint>
 PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
-                                     std::ostream &os) {
+                                     std::ostream &os, int depth = -1,
+                                     bool force_family_basis = false) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -109,8 +110,8 @@ PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   os << "|PS: LatticeAutomorphism, preparation|=" << time << "\n";
 #endif
-  PleskenSouvignierAutomResult<Tint> result =
-      PleskenSouvignierAutomorphism<Tint>(ListMatRed, SHVhalf, os);
+  PleskenSouvignierAutomResult<Tint> result = PleskenSouvignierAutomorphism<
+      Tint>(ListMatRed, SHVhalf, os, depth, force_family_basis);
   // g_red preserves P M P^T, so P^{-1} g_red P preserves M, and it is
   // integral, P being unimodular.
   for (auto &eGen : result.ListGen) {

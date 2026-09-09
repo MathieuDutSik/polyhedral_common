@@ -5,6 +5,7 @@
 // clang-format off
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
+#include <algorithm>
 #include <limits>
 #include <optional>
 #include <unordered_map>
@@ -63,30 +64,43 @@
       stabilizer of a basis trivial, which the order computation uses.
   (2) The set {±v} is invariant under the group being computed. Any set
       of the form {v : v M v^T <= bound for the matrices M} is.
-  (3) S contains the standard basis e_1, ..., e_n. The searched basis is
-      the standard basis, so its images under any automorphism must be in
-      S; this also makes every matrix built from a complete assignment
-      integral by construction. The set {v : v ListMat[0] v^T <= max_i
-      ListMat[0](i,i)} of the paper satisfies this, and an LLL-reduced
-      Gram matrix keeps it small. Building that set requires a short
-      vector enumeration, which lives in src_latt; see
-      src_latt/LatticePleskenSouvignier.h for the wrappers that produce
-      it, LLL-reduce, and transport the answers back.
+  (3) S has full rank. It does not have to contain the standard basis
+      and does not even have to span Z^n.
+
+  The searched basis is drawn from the FAMILY: the standard basis when S
+  contains it (the vector set of the paper, {v : v ListMat[0] v^T <=
+  max_i ListMat[0](i,i)}, always does, and an LLL-reduced Gram matrix
+  keeps it small -- see src_latt/LatticePleskenSouvignier.h for the
+  wrappers), and otherwise n independent rows of S, shortest first. The
+  images of the basis under any automorphism are in S because S itself
+  is, which is what the search needs.
 
   A complete assignment of images v_1, ..., v_n in S with
-  (v_i, v_j)_M = M(i, j) for every M defines the matrix g with rows
-  g_i = v_i; the products against the full-rank standard basis force
+  (v_i, v_j)_M = (b_i, b_j)_M for every M defines the matrix
+  g = B^{-1} V; the products against the full-rank basis force
   g M g^T = M globally, and |det g| = 1 follows from ListMat[0] being
-  definite, so g is in GL_n(Z) with no further test. The search prunes
-  with the fingerprint of the paper (Section 4): the basis is reordered
-  so that the number of candidate images per level is minimal, and a
-  partial assignment is abandoned unless the number of candidates at the
-  next level is EXACTLY the fingerprint value, an automorphism mapping
-  candidate sets bijectively. The automorphism group is assembled level
-  by level along the stabilizer chain of the basis (Section 8), with the
-  orbits of the already-found group pruning the candidates, and Schreier
-  elements harvested from the orbit computations (ps_stab) supplementing
-  the generators found by backtracking.
+  definite. When the basis spans Z^n (index 1, always the case for the
+  standard basis) g is integral by construction and no test is needed;
+  when it only spans a finite index sublattice, the leaf checks that
+  B^{-1} V is integral and discards the rational solutions. That is the
+  price of a general family: a family spanning a proper sublattice L'
+  finds exactly Aut(Z^n, ListMat) all the same -- every integral
+  automorphism preserves the invariant S, hence L', hence appears; the
+  rational isometries of L' that do not preserve Z^n are the discarded
+  leaves, and when they vastly outnumber the integral ones the subspace
+  machinery of MatrixGroup.h (compute the rational group once, cut it to
+  the integral subgroup) is the better tool.
+
+  The search prunes with the fingerprint of the paper (Section 4): the
+  basis is reordered so that the number of candidate images per level is
+  minimal, and a partial assignment is abandoned unless the number of
+  candidates at the next level is EXACTLY the fingerprint value, an
+  automorphism mapping candidate sets bijectively. The automorphism
+  group is assembled level by level along the stabilizer chain of the
+  basis (Section 8), with the orbits of the already-found group pruning
+  the candidates, and Schreier elements harvested from the orbit
+  computations (ps_stab) supplementing the generators found by
+  backtracking.
 
   The vector sums of Section 5 are implemented with a depth parameter,
   defaulting to n/10 rounded as in Hecke; without them the fingerprint
@@ -219,9 +233,26 @@ template <typename Tint> struct PleskenSouvignierContext {
   PleskenSouvignierVectorSet<Tint> VS;
   std::vector<MyMatrix<Tint>> W;
   MyMatrix<Tint> Lengths;
+  /*
+    The searched basis, as rows of the family: bas holds the family row
+    indices before the fingerprint reordering, Fmat[iMat] their pairwise
+    products, so that the chain-position-i basis vector is row
+    bas[per[i]] and its products are Fmat[iMat](per[i], per[k]). For the
+    standard basis Fmat[iMat] is ListMat[iMat] itself.
+
+    Badj and Bden describe the inverse of the position-ordered basis
+    matrix B (row i = V.row(bas[per[i]])): B^{-1} = Badj / Bden with
+    Badj integral and Bden = |det B|, so a leaf matrix is
+    (Badj * A) / Bden with an exact-division check; Bden == 1 is the
+    unimodular case where every leaf is integral.
+   */
+  std::vector<int> bas;
+  std::vector<MyMatrix<Tint>> Fmat;
+  MyMatrix<Tint> Badj;
+  Tint Bden;
   // The basis order per and the fingerprint diagonal (candidate count
   // per level under the identity prefix); std_basis[i] is the signed
-  // index of e_{per[i]} in the family.
+  // index of the chain-position-i basis vector in the family.
   std::vector<int> per;
   std::vector<int> fp_diagonal;
   std::vector<int> std_basis;
@@ -282,11 +313,23 @@ int ps_operate(PleskenSouvignierContext<Tint> const &ctx, int s,
   return im;
 }
 
+// The scalar product of family rows j0 and k0 for the iMat-th form.
+template <typename Tint>
+Tint ps_scal_rows(PleskenSouvignierContext<Tint> const &ctx, int j0, int k0,
+                  int iMat) {
+  int n = ctx.n();
+  Tint sum(0);
+  for (int i = 0; i < n; i++) {
+    sum += ctx.VS.V(j0, i) * ctx.W[iMat](k0, i);
+  }
+  return sum;
+}
+
 /*
   The count of the paper's fingerprint: the number of signed vectors
-  whose norms match those of e_J and whose products with the first I
-  basis vectors e_{per[0]}, ..., e_{per[I-1]} match those of e_J. Both
-  products are single matrix entries here, the basis being standard.
+  whose norms match those of the basis vector of list index J and whose
+  products with the first I chain-position basis vectors match those of
+  that basis vector, both read off Fmat.
  */
 template <typename Tint>
 int ps_possible(PleskenSouvignierContext<Tint> const &ctx, int I, int J) {
@@ -296,7 +339,7 @@ int ps_possible(PleskenSouvignierContext<Tint> const &ctx, int I, int J) {
   for (int j = 0; j < m; j++) {
     bool good_length = true;
     for (int iMat = 0; iMat < nbMat; iMat++) {
-      if (ctx.Lengths(j, iMat) != ctx.ListMat[iMat](J, J)) {
+      if (ctx.Lengths(j, iMat) != ctx.Fmat[iMat](J, J)) {
         good_length = false;
         break;
       }
@@ -308,8 +351,8 @@ int ps_possible(PleskenSouvignierContext<Tint> const &ctx, int I, int J) {
     bool okm = true;
     for (int iMat = 0; iMat < nbMat && (okp || okm); iMat++) {
       for (int k = 0; k < I; k++) {
-        Tint const &sc = ctx.W[iMat](j, ctx.per[k]);
-        Tint const &target = ctx.ListMat[iMat](J, ctx.per[k]);
+        Tint sc = ps_scal_rows(ctx, j, ctx.bas[ctx.per[k]], iMat);
+        Tint const &target = ctx.Fmat[iMat](J, ctx.per[k]);
         if (sc != target) {
           okp = false;
         }
@@ -365,6 +408,125 @@ void ps_fingerprint(PleskenSouvignierContext<Tint> &ctx) {
   }
 }
 
+/*
+  The searched basis, as family row indices: the standard basis when the
+  family contains it entirely -- it spans Z^n, so every leaf is integral
+  by construction -- and otherwise n independent rows taken shortest
+  first, short basis vectors having few candidate images.
+  force_family_basis skips the standard-basis shortcut; the tests use it
+  to exercise the general path on families that do contain it.
+ */
+template <typename Tint>
+std::vector<int> ps_select_basis(PleskenSouvignierContext<Tint> const &ctx,
+                                 bool force_family_basis) {
+  using Tfield = typename overlying_field<Tint>::field_type;
+  int n = ctx.n();
+  int m = ctx.VS.m;
+  int nbMat = ctx.ListMat.size();
+  if (!force_family_basis) {
+    std::vector<int> bas(n);
+    bool has_std = true;
+    for (int i = 0; i < n && has_std; i++) {
+      MyVector<Tint> e = ZeroVector<Tint>(n);
+      e(i) = 1;
+      auto iter = ctx.VS.Map.find(e);
+      if (iter == ctx.VS.Map.end()) {
+        has_std = false;
+      } else {
+        bas[i] = iter->second;
+      }
+    }
+    if (has_std) {
+      return bas;
+    }
+  }
+  std::vector<int> order(m);
+  for (int j = 0; j < m; j++) {
+    order[j] = j;
+  }
+  std::stable_sort(order.begin(), order.end(), [&](int a, int b) -> bool {
+    for (int iMat = 0; iMat < nbMat; iMat++) {
+      if (ctx.Lengths(a, iMat) != ctx.Lengths(b, iMat)) {
+        return ctx.Lengths(a, iMat) < ctx.Lengths(b, iMat);
+      }
+    }
+    return a < b;
+  });
+  RankTool<Tfield> tool(n);
+  std::vector<int> bas;
+  MyVector<Tfield> Vf(n);
+  for (int idx = 0; idx < m && static_cast<int>(bas.size()) < n; idx++) {
+    int j = order[idx];
+    for (int i = 0; i < n; i++) {
+      Vf(i) = UniversalScalarConversion<Tfield, Tint>(ctx.VS.V(j, i));
+    }
+    int rank_prev = tool.get_rank();
+    tool.insert_if_indep(Vf);
+    if (tool.get_rank() != rank_prev) {
+      bas.push_back(j);
+    }
+  }
+  if (static_cast<int>(bas.size()) != n) {
+    std::cerr << "PS: the vector family does not have full rank\n";
+    throw TerminalException{1};
+  }
+  /*
+    The greedy basis can span a proper sublattice even when the family
+    contains unimodular subsets, and every unit of index multiplies the
+    rational leaves the search has to discard. A swap descent on |det|
+    fixes that: by Cramer, replacing row i by the vector w changes the
+    determinant to sum_k w(k) * adj(k, i), a dot product against the
+    adjugate, so a full scan over (row, position) is cheap and |det|
+    strictly decreases at each accepted swap.
+   */
+  auto get_matrix = [&]() -> MyMatrix<Tint> {
+    MyMatrix<Tint> B(n, n);
+    for (int i = 0; i < n; i++) {
+      for (int k = 0; k < n; k++) {
+        B(i, k) = ctx.VS.V(bas[i], k);
+      }
+    }
+    return B;
+  };
+  auto get_adjugate = [&](MyMatrix<Tint> const &B,
+                          Tint const &det) -> MyMatrix<Tint> {
+    MyMatrix<Tfield> B_f = UniversalMatrixConversion<Tfield, Tint>(B);
+    MyMatrix<Tfield> adj_f =
+        UniversalScalarConversion<Tfield, Tint>(det) * Inverse(B_f);
+    std::optional<MyMatrix<Tint>> opt =
+        UniversalMatrixConversionCheck<Tint, Tfield>(adj_f);
+    return unfold_opt(opt, "the adjugate is integral");
+  };
+  MyMatrix<Tint> B = get_matrix();
+  Tint det = DeterminantMat(B);
+  Tint abs_det = T_abs(det);
+  while (abs_det > 1) {
+    MyMatrix<Tint> adj = get_adjugate(B, det);
+    bool improved = false;
+    for (int idx = 0; idx < m && !improved; idx++) {
+      int j = order[idx];
+      for (int i = 0; i < n && !improved; i++) {
+        Tint det_new(0);
+        for (int k = 0; k < n; k++) {
+          det_new += ctx.VS.V(j, k) * adj(k, i);
+        }
+        Tint abs_new = T_abs(det_new);
+        if (abs_new != 0 && abs_new < abs_det) {
+          bas[i] = j;
+          improved = true;
+        }
+      }
+    }
+    if (!improved) {
+      break;
+    }
+    B = get_matrix();
+    det = DeterminantMat(B);
+    abs_det = T_abs(det);
+  }
+  return bas;
+}
+
 // Sign-normalizes the vector in place so that its first non-zero entry
 // is positive; returns the sign applied, 0 for the zero vector.
 template <typename Tint> int ps_normalize_sign(MyVector<Tint> &v) {
@@ -409,7 +571,7 @@ void ps_init_vector_sums(PleskenSouvignierContext<Tint> &ctx, int depth) {
       int pos = 0;
       for (int iMat = 0; iMat < nbMat; iMat++) {
         for (int k = I - dep; k < I; k++) {
-          tup(pos) = ctx.W[iMat](j, ctx.per[k]);
+          tup(pos) = ps_scal_rows(ctx, j, ctx.bas[ctx.per[k]], iMat);
           pos++;
         }
       }
@@ -524,6 +686,7 @@ PleskenSouvignierContext<Tint>
 PleskenSouvignierBuildContext(std::vector<MyMatrix<Tint>> const &ListMat,
                               MyMatrix<Tint> const &SHVhalf,
                               bool with_fingerprint, int depth,
+                              bool force_family_basis,
                               [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
@@ -564,21 +727,51 @@ PleskenSouvignierBuildContext(std::vector<MyMatrix<Tint>> const &ListMat,
   // -Id preserves every symmetric form and every antipodal family.
   ctx.g[0].push_back(-IdentityMat<Tint>(n));
   if (with_fingerprint) {
+    ctx.bas = ps_select_basis(ctx, force_family_basis);
+    ctx.Fmat.clear();
+    for (int iMat = 0; iMat < nbMat; iMat++) {
+      MyMatrix<Tint> F(n, n);
+      for (int a = 0; a < n; a++) {
+        for (int b = 0; b < n; b++) {
+          F(a, b) = ps_scal_rows(ctx, ctx.bas[a], ctx.bas[b], iMat);
+        }
+      }
+      ctx.Fmat.push_back(F);
+    }
     ps_fingerprint(ctx);
     ctx.std_basis.resize(n);
     for (int i = 0; i < n; i++) {
-      MyVector<Tint> e = ZeroVector<Tint>(n);
-      e(ctx.per[i]) = 1;
-      int k = ctx.VS.find_point(e);
-      if (k == 0) {
-        std::cerr << "PS: the vector family does not contain the standard "
-                  << "basis vector e_" << ctx.per[i] << ". The family must "
-                  << "contain e_1, ..., e_n; the set of vectors of norm at "
-                  << "most max_i M(i,i) does\n";
-        throw TerminalException{1};
-      }
-      ctx.std_basis[i] = k;
+      // The basis vectors are family rows, which are stored as the
+      // sign-normalized representatives: their signed index is positive.
+      ctx.std_basis[i] = ctx.bas[ctx.per[i]] + 1;
     }
+    // The inverse data of the position-ordered basis matrix, through
+    // the adjugate so that the leaves stay in integer arithmetic.
+    MyMatrix<Tint> B(n, n);
+    for (int i = 0; i < n; i++) {
+      for (int k = 0; k < n; k++) {
+        B(i, k) = ctx.VS.V(ctx.bas[ctx.per[i]], k);
+      }
+    }
+    Tint det = DeterminantMat(B);
+    using Tfield = typename overlying_field<Tint>::field_type;
+    MyMatrix<Tfield> B_f = UniversalMatrixConversion<Tfield, Tint>(B);
+    MyMatrix<Tfield> Badj_f =
+        UniversalScalarConversion<Tfield, Tint>(det) * Inverse(B_f);
+    std::optional<MyMatrix<Tint>> optAdj =
+        UniversalMatrixConversionCheck<Tint, Tfield>(Badj_f);
+    ctx.Badj = unfold_opt(optAdj, "the adjugate of the basis is integral");
+    if (det < 0) {
+      det = -det;
+      ctx.Badj = -ctx.Badj;
+    }
+    ctx.Bden = det;
+#ifdef DEBUG_PLESKEN_SOUVIGNIER
+    if (ctx.Bden != 1) {
+      os << "PS: the searched basis spans a sublattice of index " << ctx.Bden
+         << ", rational leaves will be discarded\n";
+    }
+#endif
     if (depth == -1) {
       // Hecke's default round(n / 10): 1 from dimension 5 up, 2 from 15.
       depth = (n + 5) / 10;
@@ -623,7 +816,7 @@ bool ps_cand(PleskenSouvignierContext<Tint> const &Ci,
     bool okp = true;
     bool okm = true;
     for (int iMat = 0; iMat < nbMat; iMat++) {
-      if (Co.Lengths(j, iMat) != Ci.ListMat[iMat](Ci.per[I], Ci.per[I])) {
+      if (Co.Lengths(j, iMat) != Ci.Fmat[iMat](Ci.per[I], Ci.per[I])) {
         okp = false;
         okm = false;
         break;
@@ -639,7 +832,7 @@ bool ps_cand(PleskenSouvignierContext<Tint> const &Ci,
         if (xk < 0) {
           sc = -sc;
         }
-        Tint const &tgt = Ci.ListMat[iMat](Ci.per[I], Ci.per[k]);
+        Tint const &tgt = Ci.Fmat[iMat](Ci.per[I], Ci.per[k]);
         if (sc != tgt) {
           okp = false;
         }
@@ -670,23 +863,51 @@ bool ps_cand(PleskenSouvignierContext<Tint> const &Ci,
   return static_cast<int>(candidates.size()) == target;
 }
 
-// The matrix of a complete assignment: row per[i] is the vector of
-// signed index x[i]. Integral by construction, and in GL_n(Z) whenever
-// the products matched (see the header comment).
+/*
+  The matrix of a complete assignment: the solution X of B * X = A, with
+  B the position-ordered basis and A the stacked images, computed as
+  (Badj * A) / Bden in integer arithmetic. Nothing when X is not
+  integral, which only happens when the basis spans a proper sublattice
+  and the assignment is a rational solution to be discarded.
+ */
 template <typename Tint>
-MyMatrix<Tint> ps_matgen(PleskenSouvignierContext<Tint> const &Ci,
-                         PleskenSouvignierContext<Tint> const &Co,
-                         std::vector<int> const &x) {
+std::optional<MyMatrix<Tint>>
+ps_matgen_opt(PleskenSouvignierContext<Tint> const &Ci,
+              PleskenSouvignierContext<Tint> const &Co,
+              std::vector<int> const &x) {
   int n = Ci.n();
-  MyMatrix<Tint> X(n, n);
+  MyMatrix<Tint> A(n, n);
   for (int i = 0; i < n; i++) {
     int xi = x[i];
     int row = (xi > 0 ? xi : -xi) - 1;
     for (int k = 0; k < n; k++) {
-      X(Ci.per[i], k) = (xi > 0) ? Co.VS.V(row, k) : -Co.VS.V(row, k);
+      A(i, k) = (xi > 0) ? Co.VS.V(row, k) : -Co.VS.V(row, k);
+    }
+  }
+  MyMatrix<Tint> num = Ci.Badj * A;
+  if (Ci.Bden == 1) {
+    return num;
+  }
+  MyMatrix<Tint> X(n, n);
+  for (int i = 0; i < n; i++) {
+    for (int k = 0; k < n; k++) {
+      if (ResInt(num(i, k), Ci.Bden) != 0) {
+        return {};
+      }
+      X(i, k) = QuoInt(num(i, k), Ci.Bden);
     }
   }
   return X;
+}
+
+// The same for the callers whose assignment comes from established
+// automorphisms, where a rational solution is a programming error.
+template <typename Tint>
+MyMatrix<Tint> ps_matgen(PleskenSouvignierContext<Tint> const &Ci,
+                         PleskenSouvignierContext<Tint> const &Co,
+                         std::vector<int> const &x) {
+  std::optional<MyMatrix<Tint>> opt = ps_matgen_opt(Ci, Co, x);
+  return unfold_opt(opt, "the assignment should give an integral matrix");
 }
 
 // The orbit of a set of signed points under a list of matrices.
@@ -938,7 +1159,13 @@ bool ps_aut_extend(PleskenSouvignierContext<Tint> const &ctx, int step,
   for (auto &c : cand_step) {
     x[step] = c;
     if (step == n - 1) {
-      return true;
+      // A complete product-matching assignment; with a unimodular basis
+      // it is integral by construction, otherwise the rational
+      // solutions are discarded here.
+      if (ctx.Bden == 1 || ps_matgen_opt(ctx, ctx, x).has_value()) {
+        return true;
+      }
+      continue;
     }
     std::vector<int> cand_next;
     if (ps_cand(ctx, ctx, step + 1, x, cand_next)) {
@@ -1011,7 +1238,7 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
           found = ps_aut_extend(ctx, step + 1, x, cand_next);
         }
       } else {
-        found = true;
+        found = (ctx.Bden == 1) || ps_matgen_opt(ctx, ctx, x).has_value();
       }
       if (!found) {
         std::vector<int> oc = ps_orbit(ctx, {im}, H);
@@ -1067,9 +1294,10 @@ template <typename Tint>
 PleskenSouvignierAutomResult<Tint>
 PleskenSouvignierAutomorphism(std::vector<MyMatrix<Tint>> const &ListMat,
                               MyMatrix<Tint> const &SHVhalf, std::ostream &os,
-                              int depth = -1) {
-  PleskenSouvignierContext<Tint> ctx =
-      PleskenSouvignierBuildContext(ListMat, SHVhalf, true, depth, os);
+                              int depth = -1,
+                              bool force_family_basis = false) {
+  PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
+      ListMat, SHVhalf, true, depth, force_family_basis, os);
   ps_auto(ctx, os);
   PleskenSouvignierAutomResult<Tint> result;
   for (int i = 0; i < ctx.n(); i++) {
@@ -1177,13 +1405,16 @@ bool ps_iso_extend(PleskenSouvignierContext<Tint> const &Ci,
     int im = cand_step[0];
     x[step] = im;
     if (step == n - 1) {
-      return true;
-    }
-    std::vector<int> cand_next;
-    if (ps_cand(Ci, Co, step + 1, x, cand_next)) {
-      std::vector<MyMatrix<Tint>> Hnext = ps_isostab(Co, im, H);
-      if (ps_iso_extend(Ci, Co, step + 1, x, cand_next, Hnext)) {
+      if (Ci.Bden == 1 || ps_matgen_opt(Ci, Co, x).has_value()) {
         return true;
+      }
+    } else {
+      std::vector<int> cand_next;
+      if (ps_cand(Ci, Co, step + 1, x, cand_next)) {
+        std::vector<MyMatrix<Tint>> Hnext = ps_isostab(Co, im, H);
+        if (ps_iso_extend(Ci, Co, step + 1, x, cand_next, Hnext)) {
+          return true;
+        }
       }
     }
     std::vector<int> oc = ps_orbit(Co, {im}, H);
@@ -1209,7 +1440,8 @@ PleskenSouvignierIsometry(std::vector<MyMatrix<Tint>> const &ListMat1,
                           std::vector<MyMatrix<Tint>> const &ListMat2,
                           MyMatrix<Tint> const &SHVhalf2,
                           std::vector<MyMatrix<Tint>> const &ListGenAut2,
-                          std::ostream &os, int depth = -1) {
+                          std::ostream &os, int depth = -1,
+                          bool force_family_basis = false) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -1219,10 +1451,10 @@ PleskenSouvignierIsometry(std::vector<MyMatrix<Tint>> const &ListMat1,
   if (SHVhalf1.rows() != SHVhalf2.rows()) {
     return {};
   }
-  PleskenSouvignierContext<Tint> Ci =
-      PleskenSouvignierBuildContext(ListMat1, SHVhalf1, true, depth, os);
-  PleskenSouvignierContext<Tint> Co =
-      PleskenSouvignierBuildContext(ListMat2, SHVhalf2, false, 0, os);
+  PleskenSouvignierContext<Tint> Ci = PleskenSouvignierBuildContext(
+      ListMat1, SHVhalf1, true, depth, force_family_basis, os);
+  PleskenSouvignierContext<Tint> Co = PleskenSouvignierBuildContext(
+      ListMat2, SHVhalf2, false, 0, false, os);
   int n = Ci.n();
   std::vector<int> x(n, 0);
   std::vector<int> cand0;
