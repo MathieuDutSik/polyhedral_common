@@ -45,6 +45,109 @@
 #define SANITY_CHECK_POLYTOPE_EQUI_STAB_INT
 #endif
 
+/*
+  Whether the whole configuration, the vectors, the matrices and the diagonal,
+  has integral entries, and the conversions that follow.
+
+  The weight matrix of a configuration is built out of the scalar products
+  v A w and of the diagonal, so an integral configuration lets it be built
+  over the ring rather than over the field. The weights are only ever compared
+  with one another, an order that is the same in both, so the permutations
+  found are the same. What differs is that a rational multiplication
+  normalizes its result by a gcd and a ring one does not.
+ */
+template <typename T>
+bool IsIntegralConfiguration(MyMatrix<T> const &SHV_T,
+                             std::vector<MyMatrix<T>> const &ListMat,
+                             std::vector<T> const &Vdiag) {
+  if (!IsIntegralMatrix(SHV_T)) {
+    return false;
+  }
+  for (auto &eMat : ListMat) {
+    if (!IsIntegralMatrix(eMat)) {
+      return false;
+    }
+  }
+  for (auto &eVal : Vdiag) {
+    if (!IsInteger(eVal)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <typename Tring, typename T>
+std::vector<MyMatrix<Tring>>
+ConvertListMatToRing_PES(std::vector<MyMatrix<T>> const &ListMat) {
+  std::vector<MyMatrix<Tring>> ListMatRet;
+  ListMatRet.reserve(ListMat.size());
+  for (auto &eMat : ListMat) {
+    ListMatRet.push_back(UniversalMatrixConversion<Tring, T>(eMat));
+  }
+  return ListMatRet;
+}
+
+template <typename Tring, typename T>
+std::vector<Tring> ConvertVdiagToRing(std::vector<T> const &Vdiag) {
+  std::vector<Tring> VdiagRet;
+  VdiagRet.reserve(Vdiag.size());
+  for (auto &eVal : Vdiag) {
+    VdiagRet.push_back(UniversalScalarConversion<Tring, T>(eVal));
+  }
+  return VdiagRet;
+}
+
+/*
+  The permutation sending one configuration to the other, over the ring when
+  both allow it. Only a permutation is returned, so the arithmetic it was
+  found with does not reach the caller.
+ */
+template <typename T, typename Tfield, typename Tidx>
+std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_ring(
+    MyMatrix<T> const &SHV1_T, std::vector<MyMatrix<T>> const &ListMat1,
+    std::vector<T> const &Vdiag1, MyMatrix<T> const &SHV2_T,
+    std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2,
+    std::ostream &os) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  if constexpr (!std::is_same_v<T, Tring>) {
+    if (IsIntegralConfiguration(SHV1_T, ListMat1, Vdiag1) &&
+        IsIntegralConfiguration(SHV2_T, ListMat2, Vdiag2)) {
+      return TestEquivalence_ListMat_Vdiag<Tring, Tfield, Tidx>(
+          UniversalMatrixConversion<Tring, T>(SHV1_T),
+          ConvertListMatToRing_PES<Tring, T>(ListMat1),
+          ConvertVdiagToRing<Tring, T>(Vdiag1),
+          UniversalMatrixConversion<Tring, T>(SHV2_T),
+          ConvertListMatToRing_PES<Tring, T>(ListMat2),
+          ConvertVdiagToRing<Tring, T>(Vdiag2), os);
+    }
+  }
+  return TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(
+      SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
+}
+
+/*
+  The permutation generators of the automorphism group of a configuration,
+  over the ring when the configuration allows it. Only permutations are
+  returned, so the arithmetic they were found with does not reach the caller.
+ */
+template <typename T, typename Tfield, typename Tgroup>
+std::vector<std::vector<typename Tgroup::Telt::Tidx>>
+GetListGenAutomorphism_ListMat_Vdiag_ring(
+    MyMatrix<T> const &SHV_T, std::vector<MyMatrix<T>> const &ListMat,
+    std::vector<T> const &Vdiag, std::ostream &os) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  if constexpr (!std::is_same_v<T, Tring>) {
+    if (IsIntegralConfiguration(SHV_T, ListMat, Vdiag)) {
+      return GetListGenAutomorphism_ListMat_Vdiag<Tring, Tfield, Tgroup>(
+          UniversalMatrixConversion<Tring, T>(SHV_T),
+          ConvertListMatToRing_PES<Tring, T>(ListMat),
+          ConvertVdiagToRing<Tring, T>(Vdiag), os);
+    }
+  }
+  return GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
+                                                                 Vdiag, os);
+}
+
 template <typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
@@ -629,7 +732,7 @@ std::optional<MyMatrix<T>> TestIntEquivalence_ListMat_Vdiag(
 #endif
   };
   std::optional<std::vector<Tidx>> opt1 =
-      TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(
+      TestEquivalence_ListMat_Vdiag_ring<T, Tfield, Tidx>(
           SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: TestIntEquivalence, listmat_vdiag n_row=" << SHV1_T.rows()
@@ -656,7 +759,7 @@ std::optional<MyMatrix<T>> TestIntEquivalence_ListMat_Vdiag(
   MyMatrix<Tfield> SHV1_f = UniversalMatrixConversion<Tfield, T>(SHV1_T);
   MyMatrix<Tfield> SHV2_f = UniversalMatrixConversion<Tfield, T>(SHV2_T);
   std::vector<std::vector<Tidx>> ListGen2 =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(
+      GetListGenAutomorphism_ListMat_Vdiag_ring<T, Tfield, Tgroup>(
           SHV2_T, ListMat2, Vdiag2, os);
   std::vector<MyMatrix<Tfield>> ListMatrGens2;
   for (auto &eList2 : ListGen2) {
@@ -782,8 +885,8 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_ListMat_Vdiag(
   MicrosecondTime time;
 #endif
   std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
-                                                              Vdiag, os);
+      GetListGenAutomorphism_ListMat_Vdiag_ring<T, Tfield, Tgroup>(
+          SHV_T, ListMat, Vdiag, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: GetIntAutomorphism, listmat_vdiag n_row=" << SHV_T.rows()
      << " n_mat=" << ListMat.size() << " dim=" << SHV_T.cols()

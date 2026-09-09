@@ -186,10 +186,12 @@ MyMatrix<Tint> CanonicallyReorder_SHV(std::vector<MyMatrix<T>> const &ListMat,
                                       MyMatrix<Tint> const &SHV,
                                       std::ostream &os) {
   using Tring = typename underlying_ring<T>::ring_type;
-  if (IsIntegralListMat(ListMat)) {
-    std::vector<MyMatrix<Tring>> ListMat_ring =
-        ConvertListMatToRing<T, Tring>(ListMat);
-    return CanonicallyReorder_SHV_kernel<Tring, Tint>(ListMat_ring, SHV, os);
+  if constexpr (!std::is_same_v<T, Tring>) {
+    if (IsIntegralListMat(ListMat)) {
+      std::vector<MyMatrix<Tring>> ListMat_ring =
+          ConvertListMatToRing<T, Tring>(ListMat);
+      return CanonicallyReorder_SHV_kernel<Tring, Tint>(ListMat_ring, SHV, os);
+    }
   }
   return CanonicallyReorder_SHV_kernel<T, Tint>(ListMat, SHV, os);
 }
@@ -327,11 +329,13 @@ std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick(
     std::vector<MyMatrix<T>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
     std::ostream &os) {
   using Tring = typename underlying_ring<T>::ring_type;
-  if (IsIntegralListMat(ListMat)) {
-    std::vector<MyMatrix<Tring>> ListMat_ring =
-        ConvertListMatToRing<T, Tring>(ListMat);
-    return CanonicallyReorder_SHV_AbsTrick_kernel<Tring, Tint>(ListMat_ring,
-                                                               SHVhalf, os);
+  if constexpr (!std::is_same_v<T, Tring>) {
+    if (IsIntegralListMat(ListMat)) {
+      std::vector<MyMatrix<Tring>> ListMat_ring =
+          ConvertListMatToRing<T, Tring>(ListMat);
+      return CanonicallyReorder_SHV_AbsTrick_kernel<Tring, Tint>(ListMat_ring,
+                                                                 SHVhalf, os);
+    }
   }
   return CanonicallyReorder_SHV_AbsTrick_kernel<T, Tint>(ListMat, SHVhalf, os);
 }
@@ -395,11 +399,13 @@ GetListGenAutomorphism_AbsTrick(std::vector<MyMatrix<T>> const &ListMat,
                                 MyMatrix<Tint> const &SHVhalf,
                                 std::ostream &os) {
   using Tring = typename underlying_ring<T>::ring_type;
-  if (IsIntegralListMat(ListMat)) {
-    std::vector<MyMatrix<Tring>> ListMat_ring =
-        ConvertListMatToRing<T, Tring>(ListMat);
-    return GetListGenAutomorphism_AbsTrick_kernel<Tring, Tint, Tgroup>(
-        ListMat_ring, SHVhalf, os);
+  if constexpr (!std::is_same_v<T, Tring>) {
+    if (IsIntegralListMat(ListMat)) {
+      std::vector<MyMatrix<Tring>> ListMat_ring =
+          ConvertListMatToRing<T, Tring>(ListMat);
+      return GetListGenAutomorphism_AbsTrick_kernel<Tring, Tint, Tgroup>(
+          ListMat_ring, SHVhalf, os);
+    }
   }
   return GetListGenAutomorphism_AbsTrick_kernel<T, Tint, Tgroup>(ListMat,
                                                                  SHVhalf, os);
