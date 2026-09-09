@@ -311,6 +311,58 @@ exactly, which `MaxSquaredCircumRadius` and `IsInCone` are type-generic for.
 Note also that a walk that fails proves nothing at all: it visited some
 domains, not every one.
 
+## What has been searched in dimension 5
+
+Recorded so the search is not repeated from scratch. All of it is for
+periodic point sets `Z^5 + {c_1, ..., c_m}` over the classic `GL_5(Z)`
+T-space, against the record `Theta(A_5^*) = 2.1242859090`.
+
+The best found is **2.160060765053**, for `Z^5 + {0, (3/4,1/4,1/2,1/4,0)}` —
+1.684% above the record, so **no record was found**. The optimum is
+algebraic: every entry of the optimal form lies in `Q(sqrt2)`,
+
+```
+(9+2V)/80   (-9+6V)/80   0        V/10        9/80
+(-9+6V)/80  (27+18V)/80  -9/80    3V/10      -9/80          V = sqrt2
+0           -9/80        9/40     9/80        9/80
+V/10        3V/10        9/80    (9+16V)/40   0
+9/80        -9/80        9/80     0           9/40
+```
+
+and the exact density there agrees with the numerical walk to 4e-16.
+Replacing `sqrt2` by the convergent `3363/2378` and clearing denominators
+gives an integral form whose tessellation was checked in exact arithmetic:
+two orbits of 5-simplices, squared circumradii `113097681/1189` and
+`110813083/1189`, `det Q = 176394205620236639052`, point density `1/512`,
+density `2.160060765053`.
+
+For `m = 2` the family is one equivalence class per denominator `N` (see
+above), so the table below is the whole of it:
+
+| N | 3 | 4 | 5 | 6 | 7 | 8 |
+| - | - | - | - | - | - | - |
+| best | 2.691 | **2.16006** | 2.507 | 2.200 | 3.23 | 3.35 |
+
+The last two entries had 40 minutes each and are starved rather than
+measured: `N=5` fell from 2.676 to 2.507 and `N=6` from 2.282 to 2.200 once
+the run length was matched to the `N^5` size of the coset space. Larger `N`
+with run length scaled accordingly is the one direction left untested, and
+is where an irrational optimal translation would show up.
+
+For `m >= 3`, a screen of 136 configurations was monotone and much worse:
+3.16, 3.18, 3.73, 4.61, 4.17, 5.10 for `m = 3..8`.
+
+### Why the picture looks like that
+
+`A_5^*` has **exactly one orbit** of Delone cells, of exact squared
+circumradius `35/12`, which reproduces 2.124286. Every hole is equally
+deep, so there is no shallow cell on which to spend extra points. A
+periodic set with `m` points per fundamental cell multiplies the density by
+`m` and so needs `mu` to fall by `m^(1/5)`; killing a few of the 120 equally
+deep holes per lattice point does not come close. That one fact predicts
+the whole table, and it is the reason to expect no periodic covering of
+dimension 5 to beat `A_5^*`.
+
 ## Testing
 
 `CI_tests/27B_CoveringMaxdet` runs the whole pipeline in dimensions 3, 4 and 5
