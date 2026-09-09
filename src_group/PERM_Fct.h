@@ -808,6 +808,221 @@ bool CheckListGenerators(std::vector<std::vector<unsigned int>> const &ListGen,
   return true;
 }
 
+/*
+  Solver for the matrices realizing permutations of one fixed family.
+
+  FindTransformationGeneral pays, on every call, a row selection over the
+  whole family and the inversion of the selected submatrix. Both depend
+  only on EXT1, so a loop calling it once per generator of a group redoes
+  them identically each time; with the vector families of thousands of
+  rows used by the lattice code that preparation dominates the actual
+  n x n solve by orders of magnitude. This structure computes it once,
+  and each solve is then the extraction of the n image rows and one
+  n x n product.
+
+  The realizing matrix of a permutation is unique once the family has
+  full rank (it is pinned on the selected basis), so the answers do not
+  depend on the selected rows and agree with FindTransformationGeneral.
+
+  The row selection is incremental and stops as soon as the rank is
+  full, which the full elimination of TMat_SelectRowCol does not: on a
+  family sorted by norm the independent rows are among the first ones
+  and the remaining thousands of rows need not be looked at. It is done
+  over the overlying field even for a ring: row independence is a
+  question over the fraction field.
+
+  Three entry points, differing in what they verify:
+  * solve_general: the exact semantics of FindTransformationGeneral,
+    with the full check that the permutation is realized on every row.
+    For callers that genuinely test realizability.
+  * solve_notcheck: no realizability check. The empty optional means
+    only that the matrix is not representable over the ring T. For the
+    permutations that realize by construction: an automorphism of a
+    weight matrix containing the scalar products with an invertible
+    matrix is realized, a permutation preserving the scalar products
+    with a full rank family being realized by exactly one linear map.
+  * solve_field: as solve_notcheck but over the overlying field, for
+    the callers that continue with the subspace machinery when a ring
+    representation does not exist.
+
+  EXT1 is held by reference. The solver is meant to be a loop-local
+  object: it must not outlive the family it was built on.
+ */
+template <typename T> struct FindTransformationSolver {
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<T> const &EXT1;
+  std::vector<int> ListRowSelect;
+  // The inverse of the selected submatrix, over the field: over a ring
+  // it need not be representable even when every transformation is.
+  MyMatrix<Tfield> eMat1inv;
+  bool full_rank;
+  FindTransformationSolver(MyMatrix<T> const &EXT1) : EXT1(EXT1) {
+    int nbRow = EXT1.rows();
+    int nbCol = EXT1.cols();
+    RankTool<Tfield> tool(nbCol);
+    MyVector<Tfield> V(nbCol);
+    for (int iRow = 0; iRow < nbRow && tool.get_rank() < nbCol; iRow++) {
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        V(iCol) = UniversalScalarConversion<Tfield, T>(EXT1(iRow, iCol));
+      }
+      int rank_prev = tool.get_rank();
+      tool.insert_if_indep(V);
+      if (tool.get_rank() != rank_prev) {
+        ListRowSelect.push_back(iRow);
+      }
+    }
+    full_rank = ListRowSelect.size() == static_cast<size_t>(nbCol);
+    if (full_rank) {
+      MyMatrix<Tfield> eMat1(nbCol, nbCol);
+      for (int iRow = 0; iRow < nbCol; iRow++) {
+        int iRow1 = ListRowSelect[iRow];
+        for (int iCol = 0; iCol < nbCol; iCol++) {
+          eMat1(iRow, iCol) =
+              UniversalScalarConversion<Tfield, T>(EXT1(iRow1, iCol));
+        }
+      }
+      eMat1inv = Inverse(eMat1);
+    }
+  }
+  // The solve itself, with no verification of any kind: used by the
+  // checked and the trusted entry points alike, so it must not throw on
+  // a permutation that is not realized.
+  template <typename F>
+  std::optional<MyMatrix<Tfield>> solve_field_raw_f(MyMatrix<T> const &EXT2,
+                                                    F f) const {
+    if (!full_rank) {
+      return {};
+    }
+    int nbCol = EXT1.cols();
+    MyMatrix<Tfield> eMat2(nbCol, nbCol);
+    for (int iRow = 0; iRow < nbCol; iRow++) {
+      int iRow2 = f(ListRowSelect[iRow]);
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        eMat2(iRow, iCol) =
+            UniversalScalarConversion<Tfield, T>(EXT2(iRow2, iCol));
+      }
+    }
+    return eMat1inv * eMat2;
+  }
+  // Whether RetMat maps every row iRow of EXT1 to the row f(iRow) of
+  // EXT2. This is what FindTransformationGeneral tests on every call;
+  // the trusted entries run it only under SANITY_CHECK since their
+  // permutations realize by construction.
+  template <typename F>
+  bool is_realizing_f(MyMatrix<T> const &EXT2, F f,
+                      MyMatrix<T> const &RetMat) const {
+    MyMatrix<T> CheckMat = EXT1 * RetMat;
+    int nbRow = EXT1.rows();
+    int nbCol = EXT1.cols();
+    for (int iRow1 = 0; iRow1 < nbRow; iRow1++) {
+      int iRow2 = f(iRow1);
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        if (CheckMat(iRow1, iCol) != EXT2(iRow2, iCol)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+#ifdef SANITY_CHECK_PERM_FCT
+  template <typename F>
+  void check_realizing_field_f(MyMatrix<T> const &EXT2, F f,
+                               MyMatrix<Tfield> const &RetMat) const {
+    MyMatrix<Tfield> EXT1_f = UniversalMatrixConversion<Tfield, T>(EXT1);
+    MyMatrix<Tfield> EXT2_f = UniversalMatrixConversion<Tfield, T>(EXT2);
+    MyMatrix<Tfield> CheckMat = EXT1_f * RetMat;
+    int nbRow = EXT1.rows();
+    int nbCol = EXT1.cols();
+    for (int iRow1 = 0; iRow1 < nbRow; iRow1++) {
+      int iRow2 = f(iRow1);
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        if (CheckMat(iRow1, iCol) != EXT2_f(iRow2, iCol)) {
+          std::cerr << "PERM: FindTransformationSolver was trusted with a "
+                       "permutation that is not realized on the family\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+  }
+#endif
+  template <typename F>
+  std::optional<MyMatrix<Tfield>> solve_field_f(MyMatrix<T> const &EXT2,
+                                                F f) const {
+    std::optional<MyMatrix<Tfield>> opt = solve_field_raw_f(EXT2, f);
+#ifdef SANITY_CHECK_PERM_FCT
+    if (opt) {
+      check_realizing_field_f(EXT2, f, *opt);
+    }
+#endif
+    return opt;
+  }
+  template <typename F>
+  std::optional<MyMatrix<T>> solve_notcheck_f(MyMatrix<T> const &EXT2,
+                                              F f) const {
+    std::optional<MyMatrix<Tfield>> opt_f = solve_field_f(EXT2, f);
+    if (!opt_f) {
+      return {};
+    }
+    if constexpr (std::is_same_v<T, Tfield>) {
+      return *opt_f;
+    } else {
+      return UniversalMatrixConversionCheck<T, Tfield>(*opt_f);
+    }
+  }
+  template <typename F>
+  std::optional<MyMatrix<T>> solve_general_f(MyMatrix<T> const &EXT2,
+                                             F f) const {
+    std::optional<MyMatrix<Tfield>> opt_f = solve_field_raw_f(EXT2, f);
+    if (!opt_f) {
+      return {};
+    }
+    std::optional<MyMatrix<T>> opt = [&]() -> std::optional<MyMatrix<T>> {
+      if constexpr (std::is_same_v<T, Tfield>) {
+        return *opt_f;
+      } else {
+        return UniversalMatrixConversionCheck<T, Tfield>(*opt_f);
+      }
+    }();
+    if (!opt) {
+      return {};
+    }
+    if (!is_realizing_f(EXT2, f, *opt)) {
+      return {};
+    }
+    return opt;
+  }
+  template <typename Telt>
+  std::optional<MyMatrix<Tfield>> solve_field(MyMatrix<T> const &EXT2,
+                                              Telt const &ePerm) const {
+    auto f = [&](int iRow) -> int { return ePerm.at(iRow); };
+    return solve_field_f(EXT2, f);
+  }
+  template <typename Telt>
+  std::optional<MyMatrix<T>> solve_notcheck(MyMatrix<T> const &EXT2,
+                                            Telt const &ePerm) const {
+    auto f = [&](int iRow) -> int { return ePerm.at(iRow); };
+    return solve_notcheck_f(EXT2, f);
+  }
+  template <typename Tidx>
+  std::optional<MyMatrix<T>> solve_notcheck_vect(MyMatrix<T> const &EXT2,
+                                                 std::vector<Tidx> const &v) const {
+    auto f = [&](int iRow) -> int { return v[iRow]; };
+    return solve_notcheck_f(EXT2, f);
+  }
+  template <typename Telt>
+  std::optional<MyMatrix<T>> solve_general(MyMatrix<T> const &EXT2,
+                                           Telt const &ePerm) const {
+    auto f = [&](int iRow) -> int { return ePerm.at(iRow); };
+    return solve_general_f(EXT2, f);
+  }
+  template <typename Telt>
+  MyMatrix<T> find_transformation(MyMatrix<T> const &EXT2,
+                                  Telt const &ePerm) const {
+    std::optional<MyMatrix<T>> opt = solve_notcheck(EXT2, ePerm);
+    return unfold_opt(opt, "the transformation should be representable");
+  }
+};
+
 template <typename T, typename F>
 std::optional<MyMatrix<T>> FindTransformationGeneral_f(MyMatrix<T> const &EXT1,
                                                        MyMatrix<T> const &EXT2,
@@ -816,58 +1031,8 @@ std::optional<MyMatrix<T>> FindTransformationGeneral_f(MyMatrix<T> const &EXT1,
     return {};
   if (EXT1.rows() != EXT2.rows())
     return {};
-  int nbCol = EXT1.cols();
-  int nbRow = EXT1.rows();
-  // The row selection is by Gauss elimination over a field and by the
-  // division-free machinery over a ring, where the elimination is not
-  // available.
-  auto get_row_select = [&]() -> std::vector<int> {
-    if constexpr (is_ring_field<T>::value) {
-      SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
-      return eSelect.ListRowSelect;
-    } else {
-      return SelectIndependentRows(EXT1);
-    }
-  };
-  std::vector<int> ListRowSelect = get_row_select();
-  int eRank = ListRowSelect.size();
-  if (eRank != nbCol)
-    return {};
-  MyMatrix<T> eMat1(nbCol, nbCol);
-  MyMatrix<T> eMat2(nbCol, nbCol);
-  for (int iRow = 0; iRow < nbCol; iRow++) {
-    int iRow1 = ListRowSelect[iRow];
-    int iRow2 = f(iRow1);
-    eMat1.row(iRow) = EXT1.row(iRow1);
-    eMat2.row(iRow) = EXT2.row(iRow2);
-  }
-  // Over a ring the inverse of the selected submatrix need not be
-  // representable even when the transformation itself is: solve over the
-  // field and keep the result only if it lies in the ring.
-  auto get_ret_mat = [&]() -> std::optional<MyMatrix<T>> {
-    if constexpr (is_ring_field<T>::value) {
-      MyMatrix<T> eMat1inv = Inverse(eMat1);
-      return eMat1inv * eMat2;
-    } else {
-      using Tfield = typename overlying_field<T>::field_type;
-      MyMatrix<Tfield> eMat1_f = UniversalMatrixConversion<Tfield, T>(eMat1);
-      MyMatrix<Tfield> eMat2_f = UniversalMatrixConversion<Tfield, T>(eMat2);
-      MyMatrix<Tfield> RetMat_f = Inverse(eMat1_f) * eMat2_f;
-      return UniversalMatrixConversionCheck<T, Tfield>(RetMat_f);
-    }
-  };
-  std::optional<MyMatrix<T>> opt_ret = get_ret_mat();
-  if (!opt_ret)
-    return {};
-  MyMatrix<T> const &RetMat = *opt_ret;
-  MyMatrix<T> CheckMat = EXT1 * RetMat;
-  for (int iRow1 = 0; iRow1 < nbRow; iRow1++) {
-    int iRow2 = f(iRow1);
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      if (CheckMat(iRow1, iCol) != EXT2(iRow2, iCol))
-        return {};
-  }
-  return RetMat;
+  FindTransformationSolver<T> solver(EXT1);
+  return solver.solve_general_f(EXT2, f);
 }
 
 template <typename T, typename Telt>
@@ -995,9 +1160,11 @@ bool IsSymmetryGroupOfPolytope(MyMatrix<T> const &EXT, Tgroup const &GRP) {
   MyMatrix<Tfield> EXT_f = UniversalMatrixConversion<Tfield, T>(EXT);
   MyMatrix<Tfield> EXTred = ColumnReduction(EXT_f);
   std::vector<Telt> ListGen = GRP.GeneratorsOfGroup();
+  // The realizability of each generator is the question here, so the
+  // checked solve; the solver still pays the row selection only once.
+  FindTransformationSolver<Tfield> solver(EXTred);
   for (auto const &eGen : ListGen) {
-    std::optional<MyMatrix<Tfield>> opt =
-        FindTransformationGeneral(EXTred, EXTred, eGen);
+    std::optional<MyMatrix<Tfield>> opt = solver.solve_general(EXTred, eGen);
     if (!opt)
       return false;
   }

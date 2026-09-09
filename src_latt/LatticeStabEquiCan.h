@@ -496,10 +496,14 @@ ComputeCanonicalFormFullRank_family(std::vector<MyMatrix<T>> const &ListMat,
   // the field. Everything before it, and the answer after it, are integral.
   MyMatrix<Tfield> SHVord_F = UniversalMatrixConversion<Tfield, T>(SHVord_T);
   std::vector<MyMatrix<Tfield>> ListMatrGens;
+  // The generators permute a family containing the scalar products with
+  // the invertible ListMat[0], so they are realized by construction and
+  // the unchecked solve applies. The solver pays the row selection once
+  // for the whole loop instead of once per generator.
+  FindTransformationSolver<Tfield> solver(SHVord_F);
   for (auto &eList : ListGen) {
-    Telt ePerm(eList);
     std::optional<MyMatrix<Tfield>> opt =
-        FindTransformationGeneral(SHVord_F, SHVord_F, ePerm);
+        solver.solve_notcheck_vect(SHVord_F, eList);
     MyMatrix<Tfield> eMatrGen =
         unfold_opt(opt, "the transformation of the family should exist");
     ListMatrGens.emplace_back(std::move(eMatrGen));

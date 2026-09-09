@@ -117,12 +117,19 @@ bool is_stab_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &LinSpa) {
   rational, in which case the ring solve reports it as non-representable
   and the empty optional is returned. The caller decides whether that is a
   rejected candidate or a reason to go to the integral machinery.
+
+  The solver is passed in rather than the family: these are called once
+  per element of coset searches, and the row selection over the family,
+  which depends on the family alone, would otherwise be redone every
+  time. The permutations come from the integral machinery on the family,
+  so they are realized by construction and the unchecked solve applies.
  */
 template <typename T, typename Telt>
 std::optional<MyMatrix<T>>
-get_mat_from_shv_perm(Telt const &elt, MyMatrix<T> const &SHV_T,
+get_mat_from_shv_perm(Telt const &elt,
+                      FindTransformationSolver<T> const &solver,
                       [[maybe_unused]] MyMatrix<T> const &eMat) {
-  std::optional<MyMatrix<T>> opt = FindTransformationGeneral(SHV_T, SHV_T, elt);
+  std::optional<MyMatrix<T>> opt = solver.solve_notcheck(solver.EXT1, elt);
   if (!opt) {
     return {};
   }
@@ -139,9 +146,9 @@ get_mat_from_shv_perm(Telt const &elt, MyMatrix<T> const &SHV_T,
 
 template <typename T, typename Telt>
 std::optional<MyMatrix<T>>
-is_corr_and_solve(Telt const &elt, MyMatrix<T> const &SHV_T,
+is_corr_and_solve(Telt const &elt, FindTransformationSolver<T> const &solver,
                   MyMatrix<T> const &eMat, LinSpaceMatrix<T> const &LinSpa) {
-  std::optional<MyMatrix<T>> opt = get_mat_from_shv_perm(elt, SHV_T, eMat);
+  std::optional<MyMatrix<T>> opt = get_mat_from_shv_perm(elt, solver, eMat);
   if (!opt) {
     return {};
   }
@@ -262,9 +269,10 @@ template <typename T, typename Tgroup> struct Result_ComputeStabilizer_SHV {
     if (perms_and_group) {
       std::vector<MyMatrix<T>> LGenGlobStab_matr;
       std::vector<Telt> const &LGenGlobStab_perm = perms_and_group->first;
+      FindTransformationSolver<T> solver(SHV_T);
       for (auto &eGen : LGenGlobStab_perm) {
         std::optional<MyMatrix<T>> opt =
-            is_corr_and_solve(eGen, SHV_T, eMat, LinSpa);
+            is_corr_and_solve(eGen, solver, eMat, LinSpa);
         MyMatrix<T> eGenMatr = unfold_opt(opt, "Failed to unfold");
         LGenGlobStab_matr.push_back(eGenMatr);
       }
@@ -405,9 +413,12 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
     Telt ePerm = builder.get_permutation(eGen, os);
     LGenPerm_sma.emplace_back(std::move(ePerm));
   }
+  // The coset search calls f_correct once per candidate element: the row
+  // selection over the family is paid once here, not once per candidate.
+  FindTransformationSolver<T> solver(SHV_T);
   auto f_correct=[&](Telt const& x) -> bool {
     std::optional<MyMatrix<T>> opt =
-      is_corr_and_solve(x, SHV_T, eMat, LinSpa);
+      is_corr_and_solve(x, solver, eMat, LinSpa);
     return opt.has_value() && f_extra(*opt);
   };
 
@@ -609,9 +620,12 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
     Telt ePerm = builder1.get_permutation(eGen, os);
     LGenPerm_sma.push_back(ePerm);
   }
+  // The coset search calls f_get_out once per candidate element: the row
+  // selection over the family is paid once here, not once per candidate.
+  FindTransformationSolver<T> solver1(SHV1_T);
   auto f_get_out=[&](Telt const& x) -> MyMatrix<T> {
     std::optional<MyMatrix<T>> opt_mat =
-        get_mat_from_shv_perm(x, SHV1_T, eMat1);
+        get_mat_from_shv_perm(x, solver1, eMat1);
     return unfold_opt(opt_mat, "the coset representative should be integral");
   };
   std::optional<MyMatrix<T>> result = get_intermediate_equivalence<MyMatrix<T>,Tgroup,decltype(f_get_out),decltype(f_is_ok)>(n_row,
@@ -650,7 +664,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
     Tgroup FullGRP1(LGenPerm_big, n_row);
     for (auto &elt : FullGRP1) {
       std::optional<MyMatrix<T>> opt_mat =
-          get_mat_from_shv_perm(elt, SHV1_T, eMat1);
+          get_mat_from_shv_perm(elt, solver1, eMat1);
       MyMatrix<T> eMatr =
           unfold_opt(opt_mat, "the integral group element should solve");
       MyMatrix<T> eProd_T = *optEquivInt * eMatr;

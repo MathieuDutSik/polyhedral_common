@@ -425,9 +425,12 @@ bool IsSymmetryGroupCorrect(MyMatrix<T> const &GramMat,
   std::vector<std::vector<Tidx>> ListGen =
       GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
                                                               Vdiag, os);
+  // The generators preserve the scalar products with GramMat, so they
+  // are realized by construction: the unchecked solve, with the row
+  // selection paid once for the loop.
+  FindTransformationSolver<T> solver(SHV_T);
   for (auto &eList : ListGen) {
-    std::optional<MyMatrix<T>> opt =
-        FindTransformationGeneral_vect(SHV_T, SHV_T, eList);
+    std::optional<MyMatrix<T>> opt = solver.solve_notcheck_vect(SHV_T, eList);
     if (!opt) {
       std::cerr << "TSPACE: Failed to find the matrix\n";
       throw TerminalException{1};

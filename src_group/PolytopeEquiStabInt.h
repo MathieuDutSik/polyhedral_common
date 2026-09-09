@@ -762,10 +762,12 @@ std::optional<MyMatrix<T>> TestIntEquivalence_ListMat_Vdiag(
       GetListGenAutomorphism_ListMat_Vdiag_ring<T, Tfield, Tgroup>(
           SHV2_T, ListMat2, Vdiag2, os);
   std::vector<MyMatrix<Tfield>> ListMatrGens2;
+  // Automorphisms of the configuration, realized by construction: the
+  // unchecked solve, with the row selection paid once for the loop.
+  FindTransformationSolver<T> solver2(SHV2_T);
   for (auto &eList2 : ListGen2) {
-    Telt ePerm2(eList2);
-    std::optional<MyMatrix<Tfield>> opt_f =
-        FindTransformationGeneral(SHV2_f, SHV2_f, ePerm2);
+    auto f = [&](int iRow) -> int { return eList2[iRow]; };
+    std::optional<MyMatrix<Tfield>> opt_f = solver2.solve_field_f(SHV2_T, f);
     MyMatrix<Tfield> eMatrGen2 =
         unfold_opt(opt_f, "the field solve should succeed");
     ListMatrGens2.emplace_back(std::move(eMatrGen2));
@@ -828,12 +830,15 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
     }
 #endif
   };
+  // The generators permute the family and preserve its scalar products,
+  // so they are realized by construction and the unchecked solves apply.
+  // The solver pays the row selection over the whole family once for
+  // both loops instead of once per generator.
+  FindTransformationSolver<T> solver(SHV_T);
   bool all_gens_integral = true;
   std::vector<MyMatrix<T>> ListTransMat;
   for (auto &eGen : ListGen) {
-    Telt elt(eGen);
-    std::optional<MyMatrix<T>> opt =
-        FindTransformationGeneral(SHV_T, SHV_T, elt);
+    std::optional<MyMatrix<T>> opt = solver.solve_notcheck_vect(SHV_T, eGen);
     if (IsIntegralTransformation(opt)) {
       ListTransMat.push_back(*opt);
     } else {
@@ -853,9 +858,8 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
   MyMatrix<Tfield> SHV_f = UniversalMatrixConversion<Tfield, T>(SHV_T);
   std::vector<MyMatrix<Tfield>> ListMatrGens;
   for (auto &eGen : ListGen) {
-    Telt elt(eGen);
-    std::optional<MyMatrix<Tfield>> opt_f =
-        FindTransformationGeneral(SHV_f, SHV_f, elt);
+    auto f = [&](int iRow) -> int { return eGen[iRow]; };
+    std::optional<MyMatrix<Tfield>> opt_f = solver.solve_field_f(SHV_T, f);
     MyMatrix<Tfield> eMatrGen =
         unfold_opt(opt_f, "the field solve should succeed");
     ListMatrGens.emplace_back(std::move(eMatrGen));

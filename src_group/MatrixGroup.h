@@ -3544,9 +3544,10 @@ Tgroup LinPolytopeIntegral_Stabilizer_LGen(MyMatrix<T> const &EXT_T,
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
   std::vector<MyMatrix<T>> ListMatrGen;
+  // One row selection for the whole loop instead of one per generator.
+  FindTransformationSolver<T> solver(EXT_T);
   for (auto &eGen : LGen) {
-    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
-    ListMatrGen.push_back(eMat);
+    ListMatrGen.push_back(solver.find_transformation(EXT_T, eGen));
   }
   using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
   Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXT_T);
@@ -3580,9 +3581,10 @@ LinPolytopeIntegral_Stabilizer_RightCoset_LGen(MyMatrix<T> const &EXT_T,
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
   std::vector<MyMatrix<T>> ListMatrGen;
+  // One row selection for the whole loop instead of one per generator.
+  FindTransformationSolver<T> solver(EXT_T);
   for (auto &eGen : LGen) {
-    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
-    ListMatrGen.push_back(eMat);
+    ListMatrGen.push_back(solver.find_transformation(EXT_T, eGen));
   }
   using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
   Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXT_T);
@@ -3625,15 +3627,15 @@ LinPolytopeIntegral_Stabilizer_DoubleCoset(MyMatrix<T> const &EXT_T,
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
+  // One row selection for the two loops instead of one per generator.
+  FindTransformationSolver<T> solver(EXT_T);
   std::vector<MyMatrix<T>> ListMatrGenFull;
   for (auto &eGen : GRPfull.SmallGeneratingSet()) {
-    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
-    ListMatrGenFull.push_back(eMat);
+    ListMatrGenFull.push_back(solver.find_transformation(EXT_T, eGen));
   }
   std::vector<MyMatrix<T>> ListMatrGenV;
   for (auto &eGen : GrpV.SmallGeneratingSet()) {
-    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
-    ListMatrGenV.push_back(eMat);
+    ListMatrGenV.push_back(solver.find_transformation(EXT_T, eGen));
   }
   using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
   Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXT_T);
@@ -3669,15 +3671,15 @@ LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer(
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
+  // One row selection for the two loops instead of one per generator.
+  FindTransformationSolver<T> solver(EXT_T);
   std::vector<MyMatrix<T>> ListMatrGenFull;
   for (auto &eGen : GRPfull.SmallGeneratingSet()) {
-    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
-    ListMatrGenFull.push_back(eMat);
+    ListMatrGenFull.push_back(solver.find_transformation(EXT_T, eGen));
   }
   std::vector<MyMatrix<T>> ListMatrGenV;
   for (auto &eGen : GrpV.SmallGeneratingSet()) {
-    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
-    ListMatrGenV.push_back(eMat);
+    ListMatrGenV.push_back(solver.find_transformation(EXT_T, eGen));
   }
   using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
   Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXT_T);
@@ -3806,10 +3808,11 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism(
   using Telt = typename Tgroup::Telt;
   std::vector<MyMatrix<T>> ListMatrGens;
   std::vector<Telt> LGen = GRP1.SmallGeneratingSet();
+  // One row selection for the whole loop instead of one per generator.
+  FindTransformationSolver<T> solver(EXT2_T);
   for (auto &eGen : LGen) {
     Telt ePermGen = (~ePerm) * eGen * ePerm;
-    MyMatrix<T> eMatr = FindTransformation(EXT2_T, EXT2_T, ePermGen);
-    ListMatrGens.push_back(eMatr);
+    ListMatrGens.push_back(solver.find_transformation(EXT2_T, ePermGen));
   }
   return LinPolytopeIntegral_Isomorphism_Subspaces<T, Tgroup>(
       EXT1_T, EXT2_T, ListMatrGens, ePerm, os);
