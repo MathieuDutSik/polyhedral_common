@@ -23,7 +23,9 @@ void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
     std::cerr << "GENUS_Enumerate: no seed lattice in " << FileLattice << "\n";
     throw TerminalException{1};
   }
-  T TotalMass = ReadMassFile<T>(FileMass);
+  // A fraction, unlike the Gram matrices.
+  using Tmass = typename overlying_field<T>::field_type;
+  Tmass TotalMass = ReadMassFile<Tmass>(FileMass);
   for (auto &eSeed : ListSeed) {
     if (!IsSymmetricMatrix(eSeed) || !IsPositiveDefinite(eSeed, std::cerr)) {
       std::cerr << "GENUS_Enumerate: a seed Gram matrix in " << FileLattice
@@ -86,10 +88,10 @@ int main(int argc, char *argv[]) {
       return -1;
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-    using T = boost::multiprecision::mpq_rational;
+    using T = boost::multiprecision::mpz_int;
     using Tint = boost::multiprecision::mpz_int;
 #else
-    using T = mpq_class;
+    using T = mpz_class;
     using Tint = mpz_class;
 #endif
     using Tidx = uint32_t;

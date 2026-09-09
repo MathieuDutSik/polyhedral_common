@@ -473,6 +473,7 @@ ComputeCanonicalFormFullRank_family(std::vector<MyMatrix<T>> const &ListMat,
                                     std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  using Tfield = typename overlying_field<T>::field_type;
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
@@ -486,34 +487,40 @@ ComputeCanonicalFormFullRank_family(std::vector<MyMatrix<T>> const &ListMat,
   int n_row = SHVord_T.rows();
   std::vector<T> Vdiag(n_row, T(0));
   std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHVord_T, ListMat,
-                                                         Vdiag, os);
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHVord_T, ListMat,
+                                                              Vdiag, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetListGenAutomorphism_ListMat_Vdiag|=" << time << "\n";
 #endif
-  std::vector<MyMatrix<T>> ListMatrGens;
+  // The subspace canonicalization divides, so from here on the work is over
+  // the field. Everything before it, and the answer after it, are integral.
+  MyMatrix<Tfield> SHVord_F = UniversalMatrixConversion<Tfield, T>(SHVord_T);
+  std::vector<MyMatrix<Tfield>> ListMatrGens;
   for (auto &eList : ListGen) {
     Telt ePerm(eList);
-    std::optional<MyMatrix<T>> opt =
-        FindTransformationGeneral(SHVord_T, SHVord_T, ePerm);
-    MyMatrix<T> eMatrGen =
+    std::optional<MyMatrix<Tfield>> opt =
+        FindTransformationGeneral(SHVord_F, SHVord_F, ePerm);
+    MyMatrix<Tfield> eMatrGen =
         unfold_opt(opt, "the transformation of the family should exist");
     ListMatrGens.emplace_back(std::move(eMatrGen));
   }
-  MyMatrix<T> B_T = LinPolytopeIntegral_Canonicalization_Subspaces<T, Tgroup>(
-      ListMatrGens, SHVord_T, os);
+  MyMatrix<Tfield> B_F =
+      LinPolytopeIntegral_Canonicalization_Subspaces<Tfield, Tgroup>(
+          ListMatrGens, SHVord_F, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: LinPolytopeIntegral_Canonicalization_Subspaces|=" << time
      << "\n";
 #endif
+  MyMatrix<Tint> B = UniversalMatrixConversion<Tint, Tfield>(B_F);
 #ifdef SANITY_CHECK_LATTICE_STAB_EQUI_CAN
+  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   MyMatrix<T> eProd = B_T * inpMat * B_T.transpose();
   if (!IsSymmetricMatrix(eProd)) {
     std::cerr << "LSEC: the canonical form should be symmetric\n";
     throw TerminalException{1};
   }
 #endif
-  return UniversalMatrixConversion<Tint, T>(B_T);
+  return B;
 }
 
 /*
@@ -539,9 +546,11 @@ ComputeCanonicalForm_family(std::vector<MyMatrix<T>> const &ListMat,
   The canonical form. Works from the smaller of the two full rank families
   and takes whichever of the two canonicalizations that family allows.
 
-  T has to be a field: a family that does not span Z^n is canonicalized
-  through LinPolytopeIntegral_Canonicalization_Subspaces, which divides.
-  Instantiating with a ring such as mpz_class fails on a static assertion.
+  T may be a ring: a family that does not span Z^n is canonicalized through
+  LinPolytopeIntegral_Canonicalization_Subspaces, which divides, but that is
+  the only step that does and it is done over overlying_field<T>::field_type
+  on its own. The scalar products, which are where the time goes, stay in the
+  ring.
 
   Different families give different canonical forms, so a reduction computed
   here may only be compared with another computed here, never with one from

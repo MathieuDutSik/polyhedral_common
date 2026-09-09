@@ -71,12 +71,20 @@ template <typename T> struct GenusSpec {
   int prime;
 };
 
-// The accumulated result of an enumeration.
+/*
+  The accumulated result of an enumeration.
+
+  The Gram matrices and the group orders are integers, the mass is not: it is
+  a sum of 1 / |Aut(L)| and the target is read as a fraction. So the two do
+  not share a type, and the mass is carried over overlying_field<T>, which is
+  T itself when T is already a field.
+ */
 template <typename T> struct GenusEnumerationResult {
+  using Tmass = typename overlying_field<T>::field_type;
   std::vector<MyMatrix<T>> ListGram;
   std::vector<T> ListAutOrder;
-  T accumulated_mass;
-  T target_mass;
+  Tmass accumulated_mass;
+  Tmass target_mass;
   bool complete;
 };
 
@@ -342,8 +350,7 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
   for (int i = 0; i < n; i++) {
     T two(2);
-    T q = GramN(i, i) / two;
-    if (!IsInteger(q)) {
+    if (ResInt(GramN(i, i), two) != T(0)) {
       std::cerr << "GENUS: the neighbour lattice is not even at " << i << "\n";
       throw TerminalException{1};
     }
@@ -572,8 +579,10 @@ template <typename T> int ChooseNeighborPrime(T const &det) {
   std::vector<int> ListPrime{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37};
   for (auto &p : ListPrime) {
     T p_T(p);
-    T quot = det / p_T;
-    if (!IsInteger(quot)) {
+    // Divisibility, not an exact division: over a ring "det / p" truncates
+    // and would say that every prime divides the determinant. ResInt is
+    // defined over both.
+    if (ResInt(det, p_T) != T(0)) {
       return p;
     }
   }
@@ -589,15 +598,17 @@ template <typename T> int ChooseNeighborPrime(T const &det) {
  */
 template <typename T, typename Tint, typename Tgroup>
 GenusEnumerationResult<T>
-GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed, T const &TotalMass,
+GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
+                 typename overlying_field<T>::field_type const &TotalMass,
                  int prime, std::ostream &os) {
+  using Tmass = typename overlying_field<T>::field_type;
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_total;
 #endif
   int n = ListSeed[0].rows();
   GenusEnumerationResult<T> result;
   result.target_mass = TotalMass;
-  result.accumulated_mass = T(0);
+  result.accumulated_mass = Tmass(0);
   result.complete = false;
   // The classes are held in canonical form, so recognising an already known
   // one is a dictionary lookup rather than a comparison against every class
@@ -621,7 +632,8 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed, T const &TotalMass,
         GetLatticeAutInfo<T, Tint, Tgroup>(GramCan, os);
     result.ListGram.push_back(GramCan);
     result.ListAutOrder.push_back(info.order);
-    result.accumulated_mass += T(1) / info.order;
+    result.accumulated_mass +=
+        Tmass(1) / UniversalScalarConversion<Tmass, T>(info.order);
     ListGramWork.push_back(GramCan);
     ListAutInfo.push_back(info);
 #ifdef DEBUG_GENUS_ENUMERATION
@@ -737,22 +749,23 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
   return spec;
 }
 
-// The mass, as "num den" or as a single integer.
-template <typename T> T ReadMassFile(std::string const &file_name) {
+// The mass, as "num den" or as a single integer. A fraction, so it is read
+// over the field and not over the ring the Gram matrices live in.
+template <typename Tmass> Tmass ReadMassFile(std::string const &file_name) {
   if (!FILE_IsExistingFile(file_name)) {
     std::cerr << "GENUS: the file " << file_name << " does not exist\n";
     throw TerminalException{1};
   }
   std::ifstream is(file_name);
-  T num, den;
+  Tmass num, den;
   if (!(is >> num)) {
     std::cerr << "GENUS: failed to read the mass from " << file_name << "\n";
     throw TerminalException{1};
   }
   if (!(is >> den)) {
-    den = T(1);
+    den = Tmass(1);
   }
-  if (den == T(0)) {
+  if (den == Tmass(0)) {
     std::cerr << "GENUS: the denominator of the mass is zero in " << file_name
               << "\n";
     throw TerminalException{1};

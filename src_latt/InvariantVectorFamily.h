@@ -1116,9 +1116,11 @@ CanonicVectorFamily<Tint> get_canonic_vector_family(MyMatrix<Tint> &&SHVhalf) {
   different canonical forms from one run to the next, and the genus
   enumeration would count them as distinct classes and never reach its mass.
  */
-template <typename T, typename Tint>
-CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
-                                                 std::ostream &os) {
+template <typename Tfield, typename Tint>
+CanonicVectorFamily<Tint>
+GetCanonicVectorFamily_kernel(MyMatrix<Tfield> const &GramMat,
+                              std::ostream &os) {
+  using T = Tfield;
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time_tot;
 #endif
@@ -1181,6 +1183,32 @@ CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
       }
       return f_ret(std::move(*opt), "V_cv");
     }
+  }
+}
+
+/*
+  The same for a caller whose Gram matrix is integral.
+
+  The construction has to be done over a field whatever the caller holds:
+  V_cv projects onto the orthogonal of the span of the minimal vectors, and
+  that projection inverts the Gram matrix of that span. Over a ring the two
+  inversions in CharacteristicVectorSetCV and
+  CharacteristicVectorSetWellRoundedCV would divide with truncation and
+  return a family that is not the one asked for, silently, and only on the
+  lattices whose minimal vectors do not have full rank.
+
+  The family itself is integral, so nothing rational reaches the caller, and
+  the canonicalization built on it can be done over the ring.
+ */
+template <typename T, typename Tint>
+CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
+                                                 std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  if constexpr (std::is_same_v<T, Tfield>) {
+    return GetCanonicVectorFamily_kernel<T, Tint>(GramMat, os);
+  } else {
+    MyMatrix<Tfield> GramMat_F = UniversalMatrixConversion<Tfield, T>(GramMat);
+    return GetCanonicVectorFamily_kernel<Tfield, Tint>(GramMat_F, os);
   }
 }
 
