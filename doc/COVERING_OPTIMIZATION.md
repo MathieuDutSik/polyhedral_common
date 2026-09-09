@@ -363,6 +363,31 @@ deep holes per lattice point does not come close. That one fact predicts
 the whole table, and it is the reason to expect no periodic covering of
 dimension 5 to beat `A_5^*`.
 
+### The continuum: freeing the coset position
+
+The searches above fix the cosets and walk over forms. The complementary
+question — perturb `c` continuously and descend jointly in `(Q, c)` — is
+answered by the numerical tooling of `PythonScript/joint_covering/` (see its
+README for the method and the caveats). What it established:
+
+* The certified 2.160060765053 configuration is a **local optimum of the
+  full continuum problem**: 576 of its 864 translation classes of Delone
+  cells are simultaneously active, and no joint direction improves it. The
+  optimal coset is exactly `(3/4,1/4,1/2,1/4,0)` even though nothing
+  constrains it to be rational.
+* Freeing `c` at the other families' walk optima descends genuinely — the
+  N=5 values drop by 0.2–0.27, so there the denominators were binding — but
+  the descents drain into a small set of continuum basins (2.2411, 2.3149,
+  ...), and the deepest reachable one is again 2.160060765053: the N=6 walk
+  optimum at 2.1997 flows exactly there, with `c` moving 0.25 through
+  irrational positions.
+* Random multistarts of the joint descent land only in shallower basins
+  (2.5–2.7): the deep attractors have small basins from generic forms.
+
+Together with the per-family walks, this is strong evidence that
+2.160060765053 is the optimum of the whole 2-point periodic family in
+dimension 5 — still 1.684% above `Theta(A_5^*)`.
+
 ## Testing
 
 `CI_tests/27B_CoveringMaxdet` runs the whole pipeline in dimensions 3, 4 and 5
