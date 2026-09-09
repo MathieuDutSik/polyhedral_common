@@ -74,15 +74,17 @@ template <typename T> struct GenusSpec {
 /*
   The accumulated result of an enumeration.
 
-  The Gram matrices and the group orders are integers, the mass is not: it is
-  a sum of 1 / |Aut(L)| and the target is read as a fraction. So the two do
-  not share a type, and the mass is carried over overlying_field<T>, which is
-  T itself when T is already a field.
+  Three different kinds of number meet here and none of them is the others.
+  The Gram matrices are over T. The group orders are counts, so they are of
+  the integer type the group itself counts with, Tgroup::Tint, and not of the
+  type the matrices happen to have. The mass is a sum of 1 / |Aut(L)| and its
+  target is read as a fraction, so it lives in the field over the orders.
  */
-template <typename T> struct GenusEnumerationResult {
-  using Tmass = typename overlying_field<T>::field_type;
+template <typename T, typename Tgroup> struct GenusEnumerationResult {
+  using TintGroup = typename Tgroup::Tint;
+  using Tmass = typename overlying_field<TintGroup>::field_type;
   std::vector<MyMatrix<T>> ListGram;
-  std::vector<T> ListAutOrder;
+  std::vector<TintGroup> ListAutOrder;
   Tmass accumulated_mass;
   Tmass target_mass;
   bool complete;
@@ -384,8 +386,9 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
   derived from a single invariant vector family, since extracting it is the
   expensive part and computing them separately would do it twice.
  */
+// The order is a count, so it is of the type the group counts with.
 template <typename T, typename Tint, typename Tgroup> struct LatticeAutInfo {
-  T order;
+  typename Tgroup::Tint order;
   std::vector<MyMatrix<Tint>> ListGenMat;
 };
 
@@ -476,8 +479,7 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::ostream &os) {
     ListPermGens.push_back(Telt(ePerm));
   }
   Tgroup grp(ListPermGens, n_row);
-  auto siz = grp.size();
-  info.order = UniversalScalarConversion<T, decltype(siz)>(siz);
+  info.order = grp.size();
 #ifdef TIMINGS_GENUS_ENUMERATION
   os << "|GENUS: GetLatticeAutInfo|=" << time << "\n";
 #endif
@@ -597,16 +599,18 @@ template <typename T> int ChooseNeighborPrime(T const &det) {
   reaches the target.
  */
 template <typename T, typename Tint, typename Tgroup>
-GenusEnumerationResult<T>
+GenusEnumerationResult<T, Tgroup>
 GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
-                 typename overlying_field<T>::field_type const &TotalMass,
+                 typename GenusEnumerationResult<T, Tgroup>::Tmass const
+                     &TotalMass,
                  int prime, std::ostream &os) {
-  using Tmass = typename overlying_field<T>::field_type;
+  using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
+  using TintGroup = typename Tgroup::Tint;
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_total;
 #endif
   int n = ListSeed[0].rows();
-  GenusEnumerationResult<T> result;
+  GenusEnumerationResult<T, Tgroup> result;
   result.target_mass = TotalMass;
   result.accumulated_mass = Tmass(0);
   result.complete = false;
@@ -633,7 +637,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
     result.ListGram.push_back(GramCan);
     result.ListAutOrder.push_back(info.order);
     result.accumulated_mass +=
-        Tmass(1) / UniversalScalarConversion<Tmass, T>(info.order);
+        Tmass(1) / UniversalScalarConversion<Tmass, TintGroup>(info.order);
     ListGramWork.push_back(GramCan);
     ListAutInfo.push_back(info);
 #ifdef DEBUG_GENUS_ENUMERATION
@@ -773,10 +777,10 @@ template <typename Tmass> Tmass ReadMassFile(std::string const &file_name) {
   return num / den;
 }
 
-template <typename T>
-void WriteGenusEnumerationResult(std::ostream &os,
-                                 GenusEnumerationResult<T> const &result,
-                                 std::string const &OutFormat, int prime) {
+template <typename T, typename Tgroup>
+void WriteGenusEnumerationResult(
+    std::ostream &os, GenusEnumerationResult<T, Tgroup> const &result,
+    std::string const &OutFormat, int prime) {
   if (OutFormat == "Summary") {
     os << "prime = " << prime << "\n";
     os << "class number = " << result.ListGram.size() << "\n";

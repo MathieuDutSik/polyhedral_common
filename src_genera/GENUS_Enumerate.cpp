@@ -23,8 +23,9 @@ void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
     std::cerr << "GENUS_Enumerate: no seed lattice in " << FileLattice << "\n";
     throw TerminalException{1};
   }
-  // A fraction, unlike the Gram matrices.
-  using Tmass = typename overlying_field<T>::field_type;
+  // A sum of 1 / |Aut(L)|, so a fraction over the type the groups count
+  // with, which has nothing to do with the type of the Gram matrices.
+  using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
   Tmass TotalMass = ReadMassFile<Tmass>(FileMass);
   for (auto &eSeed : ListSeed) {
     if (!IsSymmetricMatrix(eSeed) || !IsPositiveDefinite(eSeed, std::cerr)) {
@@ -48,7 +49,7 @@ void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
   if (prime == 0) {
     prime = ChooseNeighborPrime<T>(spec.det);
   }
-  GenusEnumerationResult<T> result =
+  GenusEnumerationResult<T, Tgroup> result =
       GenusEnumeration<T, Tint, Tgroup>(ListSeed, TotalMass, prime, std::cerr);
   WriteGenusEnumerationResult(os, result, OutFormat, prime);
 }
