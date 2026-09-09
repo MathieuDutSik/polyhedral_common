@@ -650,38 +650,51 @@ GetCanonicalInformation_Triple(
     std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-  std::vector<TintGroup> ListPossOrbSize =
-      ListOrbitFaceOrbitsize.ListPossOrbsize;
-  bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
+  size_t n = ListOrbitFaceOrbitsize.n;
   size_t delta = ListOrbitFaceOrbitsize.vfo.get_n();
   Telt ePerm = ~eTriple.perm;
-  Telt ePermExt = trivial_extension(ePerm, delta);
-  vectface ListFaceO(delta);
+  // What is stored in the bank is relative to eTriple.GRP, the full
+  // automorphism group of the canonical form. The computation that produced
+  // ListOrbitFaceOrbitsize ran under TheGRPrelevant, which is a subgroup of it.
+  // When the two coincide the orbits are already the right ones and only the
+  // relabelling to the canonical form is needed. When TheGRPrelevant is a
+  // strict subgroup, several of the orbits at hand are parts of a single orbit
+  // of eTriple.GRP and have to be merged.
+  bool NeedRemapOrbit = eTriple.GRP.size() != TheGRPrelevant.size();
   if (!NeedRemapOrbit) {
-    // We needed to compute the full group, but it turned out to be the same
-    // as the input group.
-    ListFaceO = ImageVectface(ListOrbitFaceOrbitsize.vfo, ePermExt, delta);
-  } else {
-    // The full group is bigger than the input group. So we need to reduce.
-    // The used method for canonicalization does not matter, so everything
-    // is correct.
-    size_t size = ListOrbitFaceOrbitsize.size();
-    CanonicStrategy can_method =
-        GetCanonicalizationMethodRandom(eTriple.EXT, TheGRPrelevant, size, os);
-    UNORD_SET<Face> SetFace;
-    Face eFaceImg(delta);
-    Tgroup GRPext = trivial_extension_group(eTriple.GRP, delta);
-    for (auto &eFace : ListOrbitFaceOrbitsize.vfo) {
-      OnFace_inplace(eFaceImg, eFace, ePermExt);
-      Face eIncCan = CanonicalImageDualDesc(can_method, GRPext, eFaceImg, os);
-      SetFace.insert(eIncCan);
-    }
-    for (auto &eInc : SetFace) {
-      ListFaceO.push_back(eInc);
-    }
+    Telt ePermExt = trivial_extension(ePerm, delta);
+    vectface ListFaceO =
+        ImageVectface(ListOrbitFaceOrbitsize.vfo, ePermExt, delta);
+    std::vector<TintGroup> ListPossOrbSize =
+        ListOrbitFaceOrbitsize.ListPossOrbsize;
+    TripleStore<Tgroup> ePair{eTriple.GRP, std::move(ListPossOrbSize),
+                              std::move(ListFaceO)};
+    return {std::move(eTriple.EXT), std::move(ePair)};
   }
-  TripleStore<Tgroup> ePair{eTriple.GRP, std::move(ListPossOrbSize),
-                            std::move(ListFaceO)};
+  // The merging is done on the faces alone. The orbit sizes carried by the
+  // input faces, and the ListPossOrbsize they index into, are the ones of
+  // TheGRPrelevant and say nothing about the orbits of eTriple.GRP, so they are
+  // dropped here and recomputed from eTriple.GRP once the merging is done.
+  // Keeping them would store, under the name of the full group, orbit sizes
+  // that are those of a subgroup.
+  size_t size = ListOrbitFaceOrbitsize.size();
+  CanonicStrategy can_method =
+      GetCanonicalizationMethodRandom(eTriple.EXT, eTriple.GRP, size, os);
+  UNORD_SET<Face> SetFace;
+  Face eFaceImg(n);
+  for (size_t i_orbit = 0; i_orbit < size; i_orbit++) {
+    Face eFace = ListOrbitFaceOrbitsize.GetPair(i_orbit).first;
+    OnFace_inplace(eFaceImg, eFace, ePerm);
+    Face eIncCan = CanonicalImageDualDesc(can_method, eTriple.GRP, eFaceImg, os);
+    SetFace.insert(eIncCan);
+  }
+  vectface ListFaceRed(n);
+  for (auto &eInc : SetFace) {
+    ListFaceRed.push_back(eInc);
+  }
+  FaceOrbitsizeTableContainer<TintGroup> fotc(ListFaceRed, eTriple.GRP);
+  TripleStore<Tgroup> ePair{eTriple.GRP, std::move(fotc.ListPossOrbsize),
+                            std::move(fotc.vfo)};
   return {std::move(eTriple.EXT), std::move(ePair)};
 }
 
