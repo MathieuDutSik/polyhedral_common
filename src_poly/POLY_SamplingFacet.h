@@ -321,7 +321,7 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
         if (ListStrB.size() == 2 && ListStrB[0] == "upperlimit")
           std::istringstream(ListStrB[1]) >> upperlimit;
       }
-      return lrs::DualDescription_incd_limited(EXT, upperlimit);
+      return rev_search::DualDescription_incd_limited(EXT, upperlimit);
     }
     if (ansOpt == "specific") {
       Face f = get_face();

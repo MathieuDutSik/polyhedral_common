@@ -5,7 +5,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "POLY_LinearProgramming.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "The rank is incorrect\n";
       throw TerminalException{1};
     }
-    vectface vf = lrs::DualDescription_incd(EXT);
+    vectface vf = rev_search::DualDescription_incd(EXT);
     std::cerr << "|vf|=" << vf.size() << "\n";
     int n_p = 0;
     int n_m = 0;

@@ -5,7 +5,7 @@
 // clang-format off
 #include "POLY_LinearProgramming.h"
 #include "POLY_Fundamental.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 #include <set>
 #include <vector>
 #include <utility>
@@ -111,7 +111,7 @@ template <typename T>
 MyMatrix<T> POLY_DualDescription_PrimalDualInequalities(MyMatrix<T> const &FAC,
                                                         std::ostream &os) {
   auto f_dual = [&](MyMatrix<T> const &FACin) -> vectface {
-    return lrs::DualDescription_incd(FACin);
+    return rev_search::DualDescription_incd(FACin);
   };
   return POLY_DualDescription_PrimalDual_Kernel(FAC, f_dual, os);
 }

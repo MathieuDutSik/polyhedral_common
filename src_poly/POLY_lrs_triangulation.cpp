@@ -5,14 +5,14 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 // clang-format on
 
 template <typename T>
 void process(std::string const &eFileI, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  std::vector<std::vector<int>> vf = lrs::GetTriangulation(EXT);
+  std::vector<std::vector<int>> vf = rev_search::GetTriangulation(EXT);
   if (OutFormat == "Volume") {
     T sum_det(0);
     for (auto &trig : vf) {
@@ -36,7 +36,7 @@ void process(std::string const &eFileI, std::string const &OutFormat,
     return;
   }
   if (OutFormat == "Trigs" || OutFormat == "GAP") {
-    os_out << "return " << lrs::StringTriangulationGAP(vf) << ";\n";
+    os_out << "return " << rev_search::StringTriangulationGAP(vf) << ";\n";
     return;
   }
   if (OutFormat == "GAPtrig_det") {

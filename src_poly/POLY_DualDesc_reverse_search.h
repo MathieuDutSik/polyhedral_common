@@ -25,9 +25,9 @@
 #define SANITY_CHECK_REVERSE_SEARCH
 #endif
 
-// A rewrite of the lrs dual description backend (POLY_DualDesc_lrslib.h),
-// which is a line-by-line translation of David Avis' lrslib. The algorithm
-// is the one of
+// The lrs dual description backend: a from-scratch rewrite of the earlier
+// line-by-line translation of David Avis' lrslib (POLY_DualDesc_lrslib.h,
+// now removed). The algorithm is the one of
 //  * D. Avis, K. Fukuda, "A pivoting algorithm for convex hulls and vertex
 //    enumeration of arrangements and polyhedra", Discrete Comput. Geom. 8
 //    (1992) 295-313.
@@ -52,7 +52,7 @@
 // every pivot, the only vertex is the apex (skipped), and every facet
 // comes out as a ray.
 //
-// What is different from the old translation:
+// What was changed over the old translation:
 //  * flat contiguous tableau instead of a row-pointer array, std::vector
 //    ownership throughout, no linked-list dictionary cache;
 //  * backtracking through a stack of saved dictionaries -- one slot per
@@ -60,8 +60,9 @@
 //    backtrack (the old code cached only the last 10 dictionaries and
 //    re-pivoted below that); beyond a depth cap the parent is recomputed
 //    by a forward pivot as in the paper, which needs no stored data;
-//  * the volume / triangulation entry points are not duplicated here, they
-//    remain in the lrs namespace.
+//  * the enumeration kernels are instances of one generic driver
+//    (run_search) with optional per-dictionary and per-output callbacks,
+//    which also serves the triangulation and volume entry points.
 //
 // The machine-integer fast path is the same as in the other backends: on a
 // field input the kernel runs over the underlying ring, and first over
@@ -111,12 +112,18 @@ template <typename T> struct Dictionary {
   int d;   // current number of decision columns
   int depth;
   bool lexflag;
+  // Cumulative product of the signs of the pivot elements. Combined with
+  // det (kept positive) it recovers the signed determinant of the current
+  // basis in cobasis order, up to a fixed initial-basis sign that callers
+  // calibrate once (see GetTriangulationDet_f).
+  int det_sign;
   T det;   // positive determinant of the current basis
   std::vector<T> Adata;      // (m+1) * (d+1)
   std::vector<int> B, Row;   // size m+1
   std::vector<int> C, Col;   // size d+1
 
-  Dictionary(int _m, int _d) : m(_m), d(_d), depth(0), lexflag(true), det(1) {
+  Dictionary(int _m, int _d)
+      : m(_m), d(_d), depth(0), lexflag(true), det_sign(1), det(1) {
     Adata.assign(static_cast<size_t>(m + 1) * (d + 1), T(0));
     B.resize(m + 1);
     Row.resize(m + 1);
@@ -161,6 +168,7 @@ template <typename T> struct SavedState {
   std::vector<T> Adata;
   std::vector<int> B, Row, C, Col;
   T det;
+  int det_sign;
   int i, j;
   bool used = false;
 };
@@ -174,6 +182,7 @@ template <typename T> void pivot(Dictionary<T> &dict, int bas, int cob) {
   int const d = dict.d;
   int const m = dict.m;
   T const Ars = dict.A(r, s);
+  dict.det_sign *= sign_int(Ars);
   // The Bareiss divisor is the previous determinant carrying the sign of
   // the pivot element; the new determinant is |Ars|.
   T const Ndet = (Ars > 0) ? dict.det : -dict.det;
@@ -686,6 +695,7 @@ template <typename T> struct DictStack {
     sl.C = dict.C;
     sl.Col = dict.Col;
     sl.det = dict.det;
+    sl.det_sign = dict.det_sign;
     sl.i = i;
     sl.j = j;
     sl.used = true;
@@ -703,6 +713,7 @@ template <typename T> struct DictStack {
     dict.C.swap(sl.C);
     dict.Col.swap(sl.Col);
     dict.det = sl.det;
+    dict.det_sign = sl.det_sign;
     *i = sl.i;
     *j = sl.j;
     return true;
@@ -752,11 +763,22 @@ bool next_basis(Dictionary<T> &dict, Problem &prob, DictStack<T> &stack,
   return false;
 }
 
-// Run the full enumeration on EXT, calling f(dict, prob, col, output) for
-// every output (vertex or ray) except the very first one, which is the
-// basic solution of the root dictionary (the apex for homogeneous input).
-template <typename T, typename F>
-void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
+// Marker types for run_search: no per-dictionary callback, no output
+// extraction.
+struct NoNode {};
+struct NoOutput {};
+
+// The generic search driver. f_node(dict, prob) -> bool is called once
+// per dictionary of the tree, root included, before the outputs of that
+// dictionary; returning false stops the search. f_output(dict, prob, col,
+// out) -> bool is called for every output (vertex or ray) except the very
+// first one, which is the basic solution of the root dictionary (the apex
+// for homogeneous input); returning false stops the search. Passing
+// NoNode{} / NoOutput{} removes the corresponding work entirely -- in
+// particular NoOutput skips the per-dictionary output scan, which the
+// triangulation-only kernels rely on.
+template <typename T, typename Fnode, typename Foutput>
+void run_search(MyMatrix<T> const &EXT, Fnode f_node, Foutput f_output) {
   int const nbRow = EXT.rows();
   int const nbCol = EXT.cols();
   int const m = nbRow;
@@ -785,20 +807,302 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   }
   std::vector<T> output(prob.n + 1);
   DictStack<T> stack;
-  bool is_first = true;
-  bool backtrack = false;
+  [[maybe_unused]] bool is_first = true;
   while (true) {
-    for (int col = 0; col <= dict.d; col++) {
-      if (get_solution(dict, prob, output.data(), col)) {
-        if (!is_first)
-          f(dict, prob, col, output.data());
-        is_first = false;
-      }
+    if constexpr (!std::is_same_v<Fnode, NoNode>) {
+      if (!f_node(dict, prob))
+        break;
     }
-    if (!next_basis(dict, prob, stack, backtrack))
+    if constexpr (!std::is_same_v<Foutput, NoOutput>) {
+      bool stop = false;
+      for (int col = 0; col <= dict.d; col++) {
+        if (get_solution(dict, prob, output.data(), col)) {
+          if (!is_first) {
+            if (!f_output(dict, prob, col, output.data())) {
+              stop = true;
+              break;
+            }
+          }
+          is_first = false;
+        }
+      }
+      if (stop)
+        break;
+    }
+    if (!next_basis(dict, prob, stack, false))
       break;
-    backtrack = false;
   }
+}
+
+// Run the full enumeration on EXT, calling f(dict, prob, col, output) for
+// every output (vertex or ray) except the very first one, which is the
+// basic solution of the root dictionary (the apex for homogeneous input).
+template <typename T, typename F>
+void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
+  auto f_output = [&](Dictionary<T> &dict, Problem &prob, int const &col,
+                      T *out) -> bool {
+    f(dict, prob, col, out);
+    return true;
+  };
+  run_search(EXT, NoNode{}, f_output);
+}
+
+// Same with a bool-returning callback: returning false stops the search.
+template <typename T, typename F>
+void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
+  run_search(EXT, NoNode{}, f);
+}
+
+// ----------------------------------------------------------------------
+// Triangulation and volume. Every dictionary of the reverse search tree
+// carries a full-rank cobasis of input rows; visiting them all yields the
+// lrs (placing) triangulation of the cone.
+// ----------------------------------------------------------------------
+
+// The cobasis of the current dictionary as 0-based input row indices, in
+// the order the search maintains them.
+template <typename T>
+void get_cobasis(Dictionary<T> const &dict, Problem const &prob,
+                 std::vector<int> &esimp) {
+  esimp.clear();
+  for (int i = 0; i < dict.d; i++) {
+    int const idx = prob.inequality[dict.C[i] - prob.lastdv] - 1;
+#ifdef SANITY_CHECK_REVERSE_SEARCH
+    if (idx >= prob.m) {
+      std::cerr << "RS: the index idx should be < m\n";
+      throw TerminalException{1};
+    }
+#endif
+    esimp.push_back(idx);
+  }
+}
+
+// Visit every dictionary, calling f_trig(dict, prob) -> bool; returning
+// false stops. No output extraction is performed.
+template <typename T, typename Ftrig>
+void Kernel_Simplices_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig) {
+  run_search(EXT, f_trig, NoOutput{});
+}
+
+// Working-type core for GetTriangulationDet_f: for each simplex calls
+// f(esimp, mag, comb_sign) with esimp the cobasis rows, mag = dict.det
+// the nonnegative determinant magnitude, and comb_sign the combinatorial
+// orientation dict.det_sign * (parity of the physical column order).
+template <typename Twork, typename F>
+void GetTriangulationDet_core(MyMatrix<Twork> const &EXTwork, F f) {
+  std::vector<int> esimp;
+  auto f_trig = [&](Dictionary<Twork> &dict, Problem &prob) -> bool {
+    get_cobasis(dict, prob, esimp);
+    int col_parity = 1;
+    for (int i = 0; i < dict.d; i++)
+      for (int j = i + 1; j < dict.d; j++)
+        if (dict.Col[i] > dict.Col[j])
+          col_parity = -col_parity;
+    int comb_sign = dict.det_sign * col_parity;
+    f(esimp, dict.det, comb_sign);
+    return true;
+  };
+  MyMatrix<Twork> EXText = AddFirstZeroColumn(EXTwork);
+  Kernel_Simplices_cond(EXText, f_trig);
+}
+
+// Core triangulation enumerator: for each simplex of the triangulation of
+// EXT calls f_trig_det(trig, det) with det the SIGNED determinant of
+// SelectRow(EXT, trig). The magnitude is dict.det (free); the sign is
+// comb_sign times a per-enumeration calibration constant fixed by one
+// DeterminantMat call at the first simplex. On a field input the kernel
+// runs on the underlying ring with the per-row scales divided back out of
+// the magnitude; the scales are positive so the orientation machinery is
+// untouched.
+template <typename T, typename Ftrig_det>
+void GetTriangulationDet_f(MyMatrix<T> const &EXT, Ftrig_det f_trig_det) {
+  if constexpr (is_ring_field<T>::value && !std::is_floating_point_v<T>) {
+    using Tring = typename underlying_ring<T>::ring_type;
+    int const nbRow = EXT.rows();
+    int const nbCol = EXT.cols();
+    MyMatrix<Tring> EXTring(nbRow, nbCol);
+    std::vector<T> scale(nbRow); // per-row cleared denominator, positive
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      FractionVector<T> fr =
+          NonUniqueScaleToIntegerVectorPlusCoeff(GetMatrixRow(EXT, iRow));
+      scale[iRow] = fr.TheMult;
+      AssignMatrixRow(EXTring, iRow,
+                      UniversalVectorConversion<Tring, T>(fr.TheVect));
+    }
+    int sign_calibration = 0;
+    auto f = [&](std::vector<int> const &esimp, Tring const &mag_ring,
+                 int comb_sign) -> void {
+      T denom(1);
+      for (int idx : esimp)
+        denom *= scale[idx];
+      T det;
+      if (sign_calibration == 0) {
+        det = DeterminantMat(SelectRow(EXT, esimp));
+#ifdef SANITY_CHECK_REVERSE_SEARCH
+        if (T_abs(det) * denom !=
+            UniversalScalarConversion<T, Tring>(mag_ring)) {
+          std::cerr << "RS: |det|*denom=" << T_abs(det) * denom
+                    << " det(ring)=" << mag_ring
+                    << " but they should be equal\n";
+          throw TerminalException{1};
+        }
+#endif
+        int true_sign = (det > 0) ? 1 : -1;
+        sign_calibration = true_sign * comb_sign;
+      } else {
+        T mag = UniversalScalarConversion<T, Tring>(mag_ring) / denom;
+        det = (sign_calibration * comb_sign < 0) ? -mag : mag;
+      }
+      f_trig_det(esimp, det);
+    };
+    GetTriangulationDet_core<Tring>(EXTring, f);
+  } else {
+    int sign_calibration = 0;
+    auto f = [&](std::vector<int> const &esimp, T const &mag,
+                 int comb_sign) -> void {
+      T det;
+      if (sign_calibration == 0) {
+        det = DeterminantMat(SelectRow(EXT, esimp));
+#ifdef SANITY_CHECK_REVERSE_SEARCH
+        if (T_abs(det) != mag) {
+          std::cerr << "RS: det(EXTtrig)=" << det << " dict.det=" << mag
+                    << " but their absolute values should be equal\n";
+          throw TerminalException{1};
+        }
+#endif
+        int true_sign = (det > 0) ? 1 : -1;
+        sign_calibration = true_sign * comb_sign;
+      } else {
+        det = mag;
+        if (sign_calibration * comb_sign < 0)
+          det = -det;
+      }
+      f_trig_det(esimp, det);
+    };
+    GetTriangulationDet_core<T>(EXT, f);
+  }
+}
+
+// Triangulation with, for each simplex, the SIGNED determinant of its
+// vertex matrix SelectRow(EXT, trig).
+template <typename T>
+std::vector<std::pair<std::vector<int>, T>>
+GetTriangulationDet(MyMatrix<T> const &EXT) {
+  std::vector<std::pair<std::vector<int>, T>> l_trig;
+  auto f_trig_det = [&](std::vector<int> const &trig, T const &det) -> void {
+#ifdef SANITY_CHECK_REVERSE_SEARCH
+    MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
+    T det_check = DeterminantMat(EXTtrig);
+    if (det_check != det) {
+      std::cerr << "RS: GetTriangulationDet signed-determinant mismatch: "
+                << "recovered=" << det << " actual=" << det_check << "\n";
+      throw TerminalException{1};
+    }
+#endif
+    l_trig.push_back({trig, det});
+  };
+  GetTriangulationDet_f<T>(EXT, f_trig_det);
+  return l_trig;
+}
+
+// Each simplex is the list of its vertex indices (0-based rows of EXT) in
+// the order the kernel emits them; consumers needing a canonical order
+// sort locally.
+template <typename T>
+std::vector<std::vector<int>> GetTriangulation(MyMatrix<T> const &EXT) {
+  std::vector<std::vector<int>> l_trig;
+  auto f_trig_det = [&](std::vector<int> const &trig,
+                        [[maybe_unused]] T const &det) -> void {
+    l_trig.push_back(trig);
+  };
+  GetTriangulationDet_f<T>(EXT, f_trig_det);
+  return l_trig;
+}
+
+// The triangulation and the facets in one enumeration.
+template <typename T>
+std::pair<std::vector<std::vector<int>>, vectface>
+GetTriangulationFacet(MyMatrix<T> const &EXT) {
+  int const nbRow = EXT.rows();
+  std::vector<std::vector<int>> l_trig;
+  vectface vf_facet(nbRow);
+  Face facet(nbRow);
+  std::vector<int> esimp;
+  auto f_trig = [&](Dictionary<T> &dict, Problem &prob) -> bool {
+    get_cobasis(dict, prob, esimp);
+#ifdef SANITY_CHECK_REVERSE_SEARCH
+    MyMatrix<T> Mtrig = SelectRow(EXT, esimp);
+    int rnk = RankMat(Mtrig);
+    if (rnk != EXT.cols()) {
+      std::cerr << "RS: Mtrig should have maximal rank\n";
+      throw TerminalException{1};
+    }
+    T det = T_abs(DeterminantMat(Mtrig));
+    if (det != dict.det) {
+      std::cerr << "RS: Mtrig should have coherent determinants\n";
+      throw TerminalException{1};
+    }
+#endif
+    l_trig.push_back(esimp);
+    return true;
+  };
+  auto f_facet = [&](Dictionary<T> &dict, Problem &prob, int const &col,
+                     [[maybe_unused]] T *out) -> bool {
+    set_face(dict, prob, col, facet);
+    vf_facet.push_back(facet);
+    return true;
+  };
+  MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
+  run_search(EXText, f_trig, f_facet);
+  return {std::move(l_trig), std::move(vf_facet)};
+}
+
+// GAP-format string of a triangulation, 1-indexed.
+inline std::string
+StringTriangulationGAP(std::vector<std::vector<int>> const &l_trig) {
+  std::string ret = "[";
+  for (size_t i = 0; i < l_trig.size(); i++) {
+    if (i > 0)
+      ret += ",";
+    ret += "[";
+    for (size_t j = 0; j < l_trig[i].size(); j++) {
+      if (j > 0)
+        ret += ",";
+      ret += std::to_string(l_trig[i][j] + 1);
+    }
+    ret += "]";
+  }
+  ret += "]";
+  return ret;
+}
+
+// The volume of a polytope given by its vertices (first coordinate 1):
+// the sum of the simplex determinant magnitudes over the triangulation,
+// divided by dim factorial.
+template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
+  T sum_det(0);
+  auto f_trig = [&](Dictionary<T> &dict,
+                    [[maybe_unused]] Problem &prob) -> bool {
+    sum_det += dict.det;
+#ifdef SANITY_CHECK_REVERSE_SEARCH
+    std::vector<int> esimp;
+    get_cobasis(dict, prob, esimp);
+    MyMatrix<T> Mtrig = SelectRow(EXT, esimp);
+    T det = T_abs(DeterminantMat(Mtrig));
+    if (det != dict.det) {
+      std::cerr << "RS: incoherence in the determinants det and dict.det\n";
+      throw TerminalException{1};
+    }
+#endif
+    return true;
+  };
+  MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
+  Kernel_Simplices_cond(EXText, f_trig);
+  int const dim = EXT.cols() - 1;
+  T det_to_vol(1);
+  for (int u = 1; u <= dim; u++)
+    det_to_vol *= T(u);
+  return sum_det / det_to_vol;
 }
 
 template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
@@ -932,6 +1236,25 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
     f_process(pair);
   };
   Kernel_DualDescription_process(EXTwork, f_facet);
+}
+
+template <typename T>
+vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
+                                      int const &UpperLimit) {
+  MyMatrix<T> EXTwork = FirstColumnZero(EXT);
+  size_t const nbRow = EXTwork.rows();
+  vectface ListIncd(nbRow);
+  int nbFound = 0;
+  Face face(nbRow);
+  auto f_facet = [&](Dictionary<T> &dict, Problem &prob, int const &col,
+                     [[maybe_unused]] T *out) -> bool {
+    set_face(dict, prob, col, face);
+    ListIncd.push_back(face);
+    nbFound++;
+    return nbFound != UpperLimit;
+  };
+  Kernel_DualDescription_cond(EXTwork, f_facet);
+  return ListIncd;
 }
 
 // clang-format off

@@ -1528,7 +1528,7 @@ SIMPLEX_LinearProgramming_scaled(MyMatrix<T> const &ListIneq,
 
 /*
   The reduction to the underlying ring, following the design of
-  POLY_DualDesc_lrslib.h: when T is a field (and not a floating point type), the
+  POLY_DualDesc_reverse_search.h: when T is a field (and not a floating point type), the
   rows and the objective are scaled once to ring elements, the whole
   computation runs in the ring Tring = underlying_ring<T>::ring_type
   through the scaled solver, and the solution is scaled back to T at the
@@ -2082,7 +2082,7 @@ template <typename T> struct ClarksonRedundancyReductionBlock {
 // ascending list of indices of the nonredundant rows.
 //
 // The reduction to the underlying ring, following the design of
-// POLY_DualDesc_lrslib.h: for a field T the rows are scaled once to ring elements
+// POLY_DualDesc_reverse_search.h: for a field T the rows are scaled once to ring elements
 // (the redundancy status of a row is invariant under positive row scaling,
 // so no unscaling of the output is needed) and the whole computation --
 // interior point, redundancy LPs, ray shooting -- runs over the ring
