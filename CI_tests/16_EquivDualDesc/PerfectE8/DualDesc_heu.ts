@@ -29,7 +29,7 @@
 
 
 &THOMPSON_PRIOR
-  ListAnswer = "small_polytopes", "rs_cdd", "normaliz"
-  ListDescription = "small_polytopes:distriTriv", "rs:distri1 cdd:distri1", "normaliz:distriTriv"
+  ListAnswer = "small_polytopes", "lrs_cdd", "normaliz"
+  ListDescription = "small_polytopes:distriTriv", "lrs:distri1 cdd:distri1", "normaliz:distriTriv"
   ListName = "state_small", "state_opts", "state_normaliz"
 /

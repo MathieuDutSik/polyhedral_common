@@ -453,11 +453,17 @@ template <typename T> TheHeuristic<T> StandardHeuristicBankSave() {
 // So lrs is unbeatable while the polytope is close to a simplex (it is
 // then almost pure pivoting) and collapses as soon as the polytope has
 // many more vertices than its rank, where normaliz is one to two orders of
-// magnitude ahead. cdd never wins on this family. The crossover sits
-// around delta = 20.
+// magnitude ahead. cdd never wins on this family.
+//
+// The same measurement on the facets of the perfect domain of E8 (rank 35,
+// delta 7 to 40, up to 13 million facets) gives the same picture with a
+// sharper crossover: equal within noise up to delta 15, normaliz 1.4x to
+// 3.4x ahead from delta 16 on (104s vs 226s at delta 17, 1050s vs more
+// than an hour at delta 23), and cdd collapsing above delta 15. Hence the
+// hinge at delta 16.
 template <typename T>
 TheHeuristic<T> StandardHeuristicDualDescriptionProgram() {
-  std::vector<std::string> ListString = {"1", "1 delta < 20 lrs", "normaliz"};
+  std::vector<std::string> ListString = {"1", "1 delta < 16 lrs", "normaliz"};
   return HeuristicFromListString<T>(ListString);
 }
 
@@ -655,10 +661,15 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
                                          " ListDescription = \"0.0\"",
                                          "/"};
   //
+  // The prior encodes the measured hinge (see
+  // StandardHeuristicDualDescriptionProgram): above delta 16 normaliz is
+  // forced, below the sampler chooses between lrs, cdd and normaliz.
   std::vector<std::string> lstr_thompson_prior{"&THOMPSON_PRIOR"};
-  std::string s1 = " ListAnswer = \"cdd\", \"lrs\"";
-  std::string s2 = " ListName = \"only_cdd\", \"only_lrs\"";
-  std::string s3 = " ListDescription = \"cdd:distri1\", \"lrs:distri1\"";
+  std::string s1 = " ListAnswer = \"cdd\", \"lrs\", \"normaliz\"";
+  std::string s2 =
+      " ListName = \"only_cdd\", \"only_lrs\", \"only_normaliz\"";
+  std::string s3 = " ListDescription = \"cdd:distri1\", \"lrs:distri1\", "
+                   "\"normaliz:distri1\"";
   lstr_thompson_prior.push_back(s1);
   lstr_thompson_prior.push_back(s2);
   lstr_thompson_prior.push_back(s3);
@@ -670,8 +681,8 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   //
   std::vector<std::string> lstr_heuristic_prior = {
       "&HEURISTIC_PRIOR", " DefaultPrior = \"noprior:10\"",
-      " ListFullCond = \"delta > 30\""};
-  lstr_heuristic_prior.push_back(" ListConclusion = \"only_cdd\"");
+      " ListFullCond = \"delta > 16\""};
+  lstr_heuristic_prior.push_back(" ListConclusion = \"only_normaliz\"");
   lstr_heuristic_prior.push_back("/");
   //
   std::vector<std::string> lstr_io = {"&IO",
