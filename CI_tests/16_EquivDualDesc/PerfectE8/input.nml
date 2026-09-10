@@ -15,6 +15,7 @@
  BankSaveHeuristicFile           = "Bank.heu"
  CheckDatabaseBankFile           = "CheckBank.heu"
  OrbitSplitTechniqueFile         = "OrbitSplit.heu"
+ ChoiceCanonicalizationFile      = "ChoiceCanon.heu"
 /
 
 &METHOD

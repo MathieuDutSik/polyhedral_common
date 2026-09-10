@@ -13,7 +13,9 @@ python3 ../GeneratePerfectCone.py E8 PerfectE8.ext
 
 This is the computation the recursive adjacency decomposition method was
 originally built for: the dual description has 25075566937584 facets in 83092
-orbits. It is a long run, so the entry is commented out in `TestCases.g`.
+orbits. It is a long run, so the entry is commented out in `TestCases.g`. With
+the heuristics below the run finishes; the last nine orbits, the ones the
+thresholds are really about, take about six hours on their own.
 
 * `input.nml` is the entry used by `TestCases.g`, saving disabled.
 * `PerfectE8_saving.nml` has `Saving = T` for both the polyhedral database and
@@ -54,13 +56,36 @@ mpq_class <prog> CPP`), measured on facets actually met in the run:
 
 Hence:
 
-* `Split.heu` keeps `delta <= 17` for the direct dual description and sends
-  everything above it into the recursive adjacency decomposition. Using `delta`
-  rather than `incidence` makes the rule scale free: the same rule applies at
-  every level of the recursion, where the rank drops. Getting this threshold
-  wrong is expensive in one direction only: at `delta <= 11` the incidence 47
-  to 50 facets went to the recursion and cost about half an hour each, against
-  the second or so of the table above, an 8x loss on the tail of the run.
+* `Split.heu` decides on `delta` *and* on the size of the stabilizer. `delta`
+  rather than `incidence` makes the rule scale free, since the same rule then
+  applies at every level of the recursion, where the rank drops. But `delta`
+  alone is not enough, and getting the rule wrong is expensive in both
+  directions:
+
+  - Too eager to split. At `delta <= 11` the incidence 47 to 50 facets went to
+    the recursion and cost about half an hour each, against the second or so of
+    the table above: an 8x loss on the tail of the run.
+  - Too eager to compute directly. The stabilizer is what the recursion trades
+    on, since it divides the number of ridges that have to be flipped. The nine
+    facet orbits that are left at the end of the run are
+
+    | orbit | incidence | delta | stabilizer |
+    |-------|-----------|-------|------------|
+    | 170   | 54 | 19 | 24 |
+    | 749   | 54 | 19 | 120 |
+    | 1010  | 54 | 19 | 216 |
+    | 236   | 57 | 22 | 48 |
+    | 152   | 58 | 23 | 240 |
+    | 5292  | 60 | 25 | 7200 |
+    | 216   | 66 | 31 | 2304 |
+    | 552   | 70 | 35 | 5040 |
+    | 229   | 75 | 40 | 23040 |
+
+    and orbit 5292 has a stabilizer of 7200, so its ridge work is divided by
+    7200 by the recursion. Sent to a direct lrs instead it ran for more than two
+    hours without finishing, while a standalone lrs on the incidence 57 one,
+    of stabilizer 48, takes 1555 seconds. A rule on `delta` alone puts those two
+    on the same side, which is wrong.
 * Above `delta = 15` the table stops being monotone in the incidence: the
   incidence 51 and 52 facets are harder for cdd than the incidence 54 one, and
   cdd does not finish on them at all while lrs does, three times faster.
