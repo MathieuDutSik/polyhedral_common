@@ -1,5 +1,5 @@
 &HEURISTIC_PRIOR
-  DefaultPrior = "state_lrs"
+  DefaultPrior = "state_normaliz"
   ListConclusion = "state_small", "state_opts"
   ListFullCond = "delta <= 1", "delta < 16"
 /
@@ -14,8 +14,8 @@
 
 
 &KEY_COMPRESSION
-  ListDescription = "superfine"
-  ListKey = "delta"
+  ListDescription = "superfine", "0-1,2-infinity"
+  ListKey = "incidence", "delta"
 /
 
 
@@ -29,7 +29,7 @@
 
 
 &THOMPSON_PRIOR
-  ListAnswer = "small_polytopes", "lrs_cdd", "lrs"
-  ListDescription = "small_polytopes:distriTriv", "lrs:distri1 cdd:distri1", "lrs:distriTriv"
-  ListName = "state_small", "state_opts", "state_lrs"
+  ListAnswer = "small_polytopes", "rs_cdd", "normaliz"
+  ListDescription = "small_polytopes:distriTriv", "rs:distri1 cdd:distri1", "normaliz:distriTriv"
+  ListName = "state_small", "state_opts", "state_normaliz"
 /
