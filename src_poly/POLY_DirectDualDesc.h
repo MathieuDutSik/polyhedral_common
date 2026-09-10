@@ -6,6 +6,7 @@
 #include "Basic_string.h"
 #include "POLY_DualDesc_double_description.h"
 #include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_DualDesc_primal_dual.h"
 #include "POLY_DualDesc_beneath_and_beyond.h"
@@ -78,6 +79,7 @@ enum class DualDescProgram {
   cdd,
   small_polytopes,
   lrs,
+  reverse_search,
   pd_lrs,
   beneath_beyond,
   normaliz,
@@ -95,6 +97,8 @@ struct std::formatter<DualDescProgram> : std::formatter<std::string_view> {
       return "small_polytopes";
     case DualDescProgram::lrs:
       return "lrs";
+    case DualDescProgram::reverse_search:
+      return "rs";
     case DualDescProgram::pd_lrs:
       return "pd_lrs";
     case DualDescProgram::beneath_beyond:
@@ -120,6 +124,8 @@ dual_desc_program_from_string_opt(std::string const &prog) {
     return DualDescProgram::small_polytopes;
   if (prog == "lrs")
     return DualDescProgram::lrs;
+  if (prog == "rs" || prog == "reverse_search")
+    return DualDescProgram::reverse_search;
   if (prog == "pd_lrs")
     return DualDescProgram::pd_lrs;
   if (prog == "beneath_beyond" || prog == "bb")
@@ -145,6 +151,8 @@ template <typename T> bool is_method_supported(DualDescProgram prog) {
   case DualDescProgram::cdd:
     // Served by the double description method, which runs division-free.
   case DualDescProgram::lrs:
+  case DualDescProgram::reverse_search:
+    // The rewrite of the lrs backend, same arithmetic coverage.
   case DualDescProgram::beneath_beyond:
     // Beneath-and-beyond runs in ring arithmetic; the one nullspace (the
     // initial simplicial cone) is taken over the overlying field.
@@ -211,6 +219,8 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     return SmallPolytope_Incidence(EXT, os);
   case DualDescProgram::lrs:
     return lrs::DualDescription_incd(EXT);
+  case DualDescProgram::reverse_search:
+    return rev_search::DualDescription_incd(EXT);
   case DualDescProgram::pd_lrs:
     // The polytopization routes through the overlying field
     return POLY_DualDescription_PrimalDualIncidence(EXT, os);
@@ -251,6 +261,8 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     return SmallPolytope_Ineq(EXT, os);
   case DualDescProgram::lrs:
     return lrs::DualDescription(EXT);
+  case DualDescProgram::reverse_search:
+    return rev_search::DualDescription(EXT);
   case DualDescProgram::pd_lrs:
     // The polytopization routes through the overlying field
     return POLY_DualDescription_PrimalDualInequalities(EXT, os);
@@ -291,6 +303,8 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     return SmallPolytope_FaceIneq(EXT, f_process, os);
   case DualDescProgram::lrs:
     return lrs::DualDescriptionFaceIneq(EXT, f_process);
+  case DualDescProgram::reverse_search:
+    return rev_search::DualDescriptionFaceIneq(EXT, f_process);
   case DualDescProgram::pd_lrs:
     // The polytopization routes through the overlying field
     return POLY_DualDescription_PrimalDualFaceIneq(EXT, f_process, os);
