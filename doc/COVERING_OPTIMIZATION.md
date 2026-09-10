@@ -356,12 +356,20 @@ For `m >= 3`, a screen of 136 configurations was monotone and much worse:
 
 `A_5^*` has **exactly one orbit** of Delone cells, of exact squared
 circumradius `35/12`, which reproduces 2.124286. Every hole is equally
-deep, so there is no shallow cell on which to spend extra points. A
-periodic set with `m` points per fundamental cell multiplies the density by
-`m` and so needs `mu` to fall by `m^(1/5)`; killing a few of the 120 equally
-deep holes per lattice point does not come close. That one fact predicts
-the whole table, and it is the reason to expect no periodic covering of
-dimension 5 to beat `A_5^*`.
+deep, so a *local* move gains nothing: a periodic set with `m` points per
+fundamental cell multiplies the density by `m` and so needs `mu` to fall by
+`m^(1/5)`, and killing a few of the 120 equally deep holes per lattice
+point does not come close. That explains the monotone table and the
+stalls of the seeded descents.
+
+It is a local argument, not a global obstruction. An optimal covering can
+perfectly well have only a subset of its Delone cells at the covering
+radius -- the dimension 6 record `L^c_6` does, and beats the balanced
+`A_6^*` -- and indeed the best periodic configuration found here, at
+2.160060765053, is a local optimum of the continuum problem with one of
+its two orbits slack at 0.98. What supports "no periodic covering of
+dimension 5 beats `A_5^*`" is therefore only the accumulated search
+evidence, all of it converging to 2.160060765053 with nothing below.
 
 ### The continuum: freeing the coset position
 

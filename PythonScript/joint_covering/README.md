@@ -61,5 +61,7 @@ No configuration below 2.160060765053 was found; the record to beat is
 For `m = 3` the continuum campaign found the attractor 2.3398 below the
 flip-walk value 2.3766, and — pointedly — seeding at the m=2 optimum plus a
 random third coset always stalls near `1.5 x 2.16006`: the third point's
-density factor is never recovered, there being no deep hole to spend it on
-in a configuration whose cell orbits are all near-binding.
+density factor is never recovered locally. Note this is a statement about
+the descents, not a principle -- an optimal covering can have cells below
+the covering radius (the dimension 6 record `L^c_6` does), and the
+2.160060765053 optimum itself has one slack orbit.
