@@ -281,13 +281,7 @@ public:
        stuff can happen.
      */
     if (SavingTrigger && NeedToFlush) {
-      // The destructor also runs during the stack unwinding of the
-      // max_runtime RuntimeException; a throwing flush would then terminate
-      // the process and lose the database, so failures are swallowed.
-      try {
-        flush();
-      } catch (...) {
-      }
+      flush();
     }
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RDD: Clean closing of the DatabaseOrbits\n";
