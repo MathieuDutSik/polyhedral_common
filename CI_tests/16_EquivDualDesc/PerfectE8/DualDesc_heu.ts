@@ -1,7 +1,7 @@
 &HEURISTIC_PRIOR
   DefaultPrior = "state_normaliz"
-  ListConclusion = "state_small", "state_normaliz", "state_lrs"
-  ListFullCond = "delta <= 1", "incidence > 44", "delta < 16"
+  ListConclusion = "state_normaliz", "state_lrs"
+  ListFullCond = "incidence > 44", "delta < 16"
 /
 
 
@@ -29,7 +29,7 @@
 
 
 &THOMPSON_PRIOR
-  ListAnswer = "small_polytopes", "lrs", "normaliz"
-  ListDescription = "small_polytopes:distriTriv", "lrs:distriTriv", "normaliz:distriTriv"
-  ListName = "state_small", "state_lrs", "state_normaliz"
+  ListAnswer = "lrs", "normaliz"
+  ListDescription = "lrs:distriTriv", "normaliz:distriTriv"
+  ListName = "state_lrs", "state_normaliz"
 /
