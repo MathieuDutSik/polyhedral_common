@@ -852,11 +852,11 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
   os << "DualDescProg=" << Vtot.DualDescProg << "\n";
 #endif
   if (Vtot.DualDescProg == "lrs_iterate") {
-    MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
+    MyMatrix<Tint> FACwork = rev_search::FirstColumnZero(FAC);
     bool IsFirst = true;
     MyVector<Tint> V(n_col);
-    auto f = [&]([[maybe_unused]] lrs::lrs_dic<Tint> *P,
-                 [[maybe_unused]] lrs::lrs_dat<Tint> *Q,
+    auto f = [&]([[maybe_unused]] rev_search::Dictionary<Tint> &dict,
+                 [[maybe_unused]] rev_search::Problem &prob,
                  [[maybe_unused]] int const &col, Tint *out) -> bool {
       if (!IsFirst) {
 #ifdef TIMINGS_VINBERG
@@ -873,7 +873,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
       IsFirst = false;
       return true;
     };
-    lrs::Kernel_DualDescription_cond(FACwork, f);
+    rev_search::Kernel_DualDescription_cond(FACwork, f);
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
     vectface ListIncd =
@@ -925,11 +925,11 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
 #endif
   std::unordered_map<T, int> map;
   if (Vtot.DualDescProg == "lrs_iterate") {
-    MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
+    MyMatrix<Tint> FACwork = rev_search::FirstColumnZero(FAC);
     bool IsFirst = true;
     MyVector<Tint> V(n_col);
-    auto f = [&]([[maybe_unused]] lrs::lrs_dic<Tint> *P,
-                 [[maybe_unused]] lrs::lrs_dat<Tint> *Q,
+    auto f = [&]([[maybe_unused]] rev_search::Dictionary<Tint> &dict,
+                 [[maybe_unused]] rev_search::Problem &prob,
                  [[maybe_unused]] int const &col, Tint *out) -> bool {
       if (!IsFirst) {
 #ifdef TIMINGS_VINBERG
@@ -947,7 +947,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
       IsFirst = false;
       return true;
     };
-    lrs::Kernel_DualDescription_cond(FACwork, f);
+    rev_search::Kernel_DualDescription_cond(FACwork, f);
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
     vectface ListIncd =
