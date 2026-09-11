@@ -16,7 +16,6 @@
 // clang-format off
 #include "POLY_database_orbits_common.h"
 #include "Basic_file.h"
-#include "Timings.h"
 #include "basic_datafile.h"
 #include <string>
 // clang-format on
@@ -36,7 +35,6 @@ public:
 private:
   std::string eFileEXT, eFileGRP, eFileNB, eFileFB, eFileFF, eFileMethod;
   bool SavingTrigger;
-  SingletonTime last_flush;
 
 public:
   // method encodes the algorithm used for the database and essentially applies
@@ -275,18 +273,6 @@ public:
       fb.direct_write(V_status);
     }
     print_status();
-  }
-  // Completing an orbit is the natural checkpoint: flush the database when
-  // more than five minutes have passed since the last one. The on-disk state
-  // is then at most five minutes stale, so a kill, a crash or a power loss
-  // costs at most that -- previously the only flush was the destructor's, so
-  // anything that bypassed stack unwinding lost the entire run segment.
-  void FuncPutOrbitAsDone(size_t const &i_orb) {
-    Base::FuncPutOrbitAsDone(i_orb);
-    if (SavingTrigger && si(last_flush) > 300) {
-      flush();
-      last_flush = SingletonTime();
-    }
   }
   ~DatabaseOrbits() {
     /* TRICK 5: The destructor does NOT destroy the database! This is because it
