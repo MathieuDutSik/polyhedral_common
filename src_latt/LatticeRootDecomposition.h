@@ -171,6 +171,88 @@ CanonicalComponentGrams(RootDecomposition<T, Tint> const &dec,
   return {canon(dec.RootGram), canon(dec.PerpGram)};
 }
 
+/*
+  The decomposed characteristic vector family of L: the roots (a
+  characteristic family for the root sublattice R) together with a
+  characteristic full-rank family of the complement R^perp, lifted from
+  the coordinates of R^perp into those of L. The family is invariant
+  under Aut(L) --- the roots are, and R^perp with its characteristic
+  vectors is canonically determined --- and of full rank, but spans only
+  R (+) R^perp, i.e. it has index glue_index in L.
+
+  The point is conditioning and size: for a lattice whose successive
+  minima are spread out, the monolithic characteristic family of L climbs
+  to high norms, whereas the complement R^perp, being root free and of
+  smaller rank, has a small well-conditioned characteristic family of its
+  own. On TestData/SlowCanonic this is the difference between a graph the
+  canonical labelling can handle and one it cannot.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint>
+DecomposedCharacteristicFamily(MyMatrix<T> const &GramMat,
+                               RootDecomposition<T, Tint> const &dec,
+                               std::ostream &os) {
+  int n = GramMat.rows();
+  // The roots, in the coordinates of L.
+  MyMatrix<Tint> Roots = T_ShortVector_fixed<T, Tint>(GramMat, T(2), os);
+  // The characteristic family of R^perp, lifted to L: a vector u in the
+  // basis PerpBasis becomes u * PerpBasis in the coordinates of L.
+  std::vector<MyVector<Tint>> family;
+  for (int i = 0; i < Roots.rows(); i++) {
+    family.push_back(GetMatrixRow(Roots, i));
+  }
+  if (dec.PerpBasis.rows() > 0) {
+    CanonicVectorFamily<Tint> perpFam =
+        GetCanonicVectorFamily<T, Tint>(dec.PerpGram, os);
+    MyMatrix<Tint> perpFull = perpFam.get_full();
+    for (int i = 0; i < perpFull.rows(); i++) {
+      MyVector<Tint> u = GetMatrixRow(perpFull, i);
+      MyVector<Tint> uL = dec.PerpBasis.transpose() * u;
+      family.push_back(uL);
+    }
+  }
+  return MatrixFromVectorFamilyDim(n, family);
+}
+
+/*
+  The canonical form of L assembled along the root decomposition: build
+  the decomposed characteristic family and hand it to the full-rank
+  canonical form of LatticeStabEquiCan.h, which canonically orders the
+  family (steps 1 and 2, the two components) and canonicalizes the
+  position of L relative to the sublattice it spans (step 3, the glue,
+  through LinPolytopeIntegral_Canonicalization_Subspaces of
+  src_group/MatrixGroup.h).
+
+  The returned matrix B lies in GL_n(Z) and B * GramMat * B^T is the
+  canonical Gram. As for every characteristic-set canonical form, the
+  value depends on the family, so this canonical form may only be
+  compared with another produced by this same function, never with
+  ComputeCanonicalForm.
+ */
+template <typename T, typename Tint, typename Tgroup>
+MyMatrix<Tint>
+ComputeCanonicalFormRootDecomposed(MyMatrix<T> const &GramMat,
+                                   std::ostream &os) {
+  RootDecomposition<T, Tint> dec =
+      ComputeRootDecomposition<T, Tint, Tgroup>(GramMat, os);
+  if (dec.n_roots == 0) {
+    // Root free: no decomposition to exploit, fall back to the monolithic
+    // characteristic-set canonical form.
+    return ComputeCanonicalForm<T, Tint, Tgroup>(GramMat, os);
+  }
+  MyMatrix<Tint> family =
+      DecomposedCharacteristicFamily<T, Tint>(GramMat, dec, os);
+#ifdef SANITY_CHECK_LATTICE_ROOT_DECOMPOSITION
+  if (RankMat(family) != GramMat.rows()) {
+    std::cerr << "ROOTDEC: the decomposed family is not of full rank\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<MyMatrix<T>> ListMat{GramMat};
+  return ComputeCanonicalFormFullRank_family<T, Tint, Tgroup>(ListMat, family,
+                                                              os);
+}
+
 // clang-format off
 #endif  // SRC_LATT_LATTICEROOTDECOMPOSITION_H_
 // clang-format on
