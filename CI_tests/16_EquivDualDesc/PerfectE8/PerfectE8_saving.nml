@@ -3,7 +3,7 @@
  GRPfile = "PerfectE8.grp"
  OutFile = "orbits"
  DeterministicRuntime = T
- max_runtime = 1800
+ max_runtime = 7200
  AdvancedTerminationCriterion = T
 /
 

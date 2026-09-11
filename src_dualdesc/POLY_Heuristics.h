@@ -675,14 +675,20 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   lstr_thompson_prior.push_back(s3);
   lstr_thompson_prior.push_back("/");
   //
-  std::vector<std::string> lstr_key = {"&KEY_COMPRESSION",
-                                       " ListKey = \"delta\"",
-                                       " ListDescription = \"superfine\"", "/"};
+  std::vector<std::string> lstr_key = {
+      "&KEY_COMPRESSION", " ListKey = \"delta\", \"incidence\"",
+      " ListDescription = \"superfine\", \"0-44,45-infinity\"", "/"};
   //
+  // Above delta 16 normaliz is forced (the measured hinge); the incidence
+  // guard covers the deeper recursion levels, where the rank is lower and
+  // delta < 16 no longer implies a small output: a sampler draw of cdd on a
+  // subpolytope with millions of facets costs an hour where normaliz takes
+  // minutes.
   std::vector<std::string> lstr_heuristic_prior = {
       "&HEURISTIC_PRIOR", " DefaultPrior = \"noprior:10\"",
-      " ListFullCond = \"delta > 16\""};
-  lstr_heuristic_prior.push_back(" ListConclusion = \"only_normaliz\"");
+      " ListFullCond = \"delta > 16\", \"incidence > 44\""};
+  lstr_heuristic_prior.push_back(
+      " ListConclusion = \"only_normaliz\", \"only_normaliz\"");
   lstr_heuristic_prior.push_back("/");
   //
   std::vector<std::string> lstr_io = {"&IO",

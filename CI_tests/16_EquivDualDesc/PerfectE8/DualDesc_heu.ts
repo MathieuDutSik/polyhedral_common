@@ -1,7 +1,7 @@
 &HEURISTIC_PRIOR
   DefaultPrior = "state_normaliz"
-  ListConclusion = "state_small", "state_opts"
-  ListFullCond = "delta <= 1", "delta < 16"
+  ListConclusion = "state_small", "state_normaliz", "state_opts"
+  ListFullCond = "delta <= 1", "incidence > 44", "delta < 16"
 /
 
 
