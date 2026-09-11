@@ -396,6 +396,30 @@ Together with the per-family walks, this is strong evidence that
 2.160060765053 is the optimum of the whole 2-point periodic family in
 dimension 5 — still 1.684% above `Theta(A_5^*)`.
 
+### The double-precision C++ search tool
+
+`src_delaunay/PERIODIC_JointCoveringSearch` (built by
+`Makefile_joint_double`, requiring Eigen and qhull) is the fast successor
+of the Python prototype: covering density evaluation, joint local descent
+on `(Q, C)` and multistart, entirely in double precision, for any dimension
+and any number of cosets. The tessellation is qhull's Delaunay of the
+Q-ball of points enumerated through an LLL-reduced basis, each retained
+cell certified by its circumsphere lying inside the ball; the optimization
+minimizes the smooth surrogate
+`(n/2) log softmax_beta(R^2_S) - (1/2) log det Q` by L-BFGS with analytic
+gradients (finite-difference-checked to 6e-9), annealing beta and
+re-tessellating between stages, every stage verified against a fresh
+tessellation and the input configuration held as the first incumbent so a
+descent can never return something worse than its seed.
+
+Validated digit for digit against the exact values 2.1600607650528 (m=2)
+and 2.3765773479972 (m=3). Measured scale: a random 10-coset configuration
+in dimension 5 has ~1800 cell classes, evaluates in 7 seconds and descends
+at about 28 seconds per round with 60 free variables — the regime of rich
+structures that the exact machinery and the Python prototype could not
+reach. Candidates found by this tool are numerical and must be re-verified
+by the exact pipeline.
+
 ## Testing
 
 `CI_tests/27B_CoveringMaxdet` runs the whole pipeline in dimensions 3, 4 and 5

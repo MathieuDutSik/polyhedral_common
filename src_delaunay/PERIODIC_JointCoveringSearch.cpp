@@ -1,0 +1,136 @@
+// Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// clang-format off
+#include "JointCoveringDouble.h"
+#include <iostream>
+// clang-format on
+
+/*
+  Search tool for periodic sphere coverings in double precision: covering
+  density evaluation, joint local descent on (Q, C), and multistart, for
+  any dimension and any number of cosets. See JointCoveringDouble.h for
+  the method; candidates found here are to be re-verified by the exact
+  machinery.
+
+  Configuration files: a header "n m", then the n rows of Q, then the m
+  rows of the cosets (the first being zero).
+ */
+
+using namespace joint_covering_double;
+
+int main(int argc, char *argv[]) {
+  try {
+    if (argc < 2) {
+      std::cerr << "PERIODIC_JointCoveringSearch [mode] ...\n";
+      std::cerr << "\n";
+      std::cerr << "modes:\n";
+      std::cerr << "  evaluate [config]\n";
+      std::cerr << "      covering density, covering radius and cell-class "
+                   "count of the configuration\n";
+      std::cerr << "  descend [config] [out_config] [rounds]\n";
+      std::cerr << "      joint local descent from the configuration; the "
+                   "best found is written to out_config\n";
+      std::cerr << "  multistart [n] [m] [count] [out_config] [seed]\n";
+      std::cerr << "      repeated descents from random configurations, "
+                   "keeping the best in out_config\n";
+      return -1;
+    }
+    std::string mode = argv[1];
+    if (mode == "evaluate" && argc == 3) {
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      DensityResult dr = CoveringDensity(conf);
+      std::cout << "n=" << conf.n << " m=" << conf.m
+                << " classes=" << dr.cells.size() << "\n";
+      std::cout << "mu2=" << dr.mu2 << "\n";
+      printf("theta=%.13f\n", dr.theta);
+      return 0;
+    }
+    if (mode == "gradcheck" && argc == 3) {
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      DensityResult dr = CoveringDensity(conf);
+      Packing pk{conf.n, conf.m, conf.n * (conf.n + 1) / 2};
+      Eigen::LLT<MatrixXd> llt(conf.Q);
+      MatrixXd Lo = llt.matrixL();
+      VectorXd x = Pack(pk, Lo, conf.C);
+      VectorXd g;
+      double beta = 300.0;
+      double F0 = ObjectiveGradient(pk, dr.cells, beta, x, g);
+      double eps = 1e-6;
+      double worst = 0;
+      for (int k = 0; k < x.size(); k++) {
+        VectorXd xp = x, xm = x, gd;
+        xp(k) += eps;
+        xm(k) -= eps;
+        double fd = (ObjectiveGradient(pk, dr.cells, beta, xp, gd) -
+                     ObjectiveGradient(pk, dr.cells, beta, xm, gd)) /
+                    (2 * eps);
+        double err = std::abs(fd - g(k)) / std::max(1.0, std::abs(fd));
+        worst = std::max(worst, err);
+      }
+      printf("F=%.12f dim=%d worst relative gradient error=%.3e\n", F0,
+             int(x.size()), worst);
+      return 0;
+    }
+    if (mode == "descend" && (argc == 4 || argc == 5)) {
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      int rounds = argc == 5 ? atoi(argv[4]) : 15;
+      DescendResult res = Descend(conf, rounds, std::cerr, true);
+      if (!res.success) {
+        std::cerr << "the descent could not evaluate any configuration\n";
+        return 1;
+      }
+      printf("theta=%.13f\n", res.theta);
+      WriteConfigFile(argv[3], res.conf);
+      return 0;
+    }
+    if (mode == "multistart" && (argc == 6 || argc == 7)) {
+      int n = atoi(argv[2]);
+      int m = atoi(argv[3]);
+      int count = atoi(argv[4]);
+      unsigned seed = argc == 7 ? unsigned(atol(argv[6])) : 1u;
+      std::mt19937_64 gen(seed);
+      std::normal_distribution<double> gauss(0.0, 1.0);
+      std::uniform_real_distribution<double> unif(0.0, 1.0);
+      double best = 1e30;
+      for (int st = 0; st < count; st++) {
+        PeriodicConfig conf;
+        conf.n = n;
+        conf.m = m;
+        Eigen::MatrixXd A(n, n);
+        for (int i = 0; i < n; i++) {
+          for (int j = 0; j < n; j++) {
+            A(i, j) = gauss(gen);
+          }
+        }
+        conf.Q = A * A.transpose() +
+                 0.05 * Eigen::MatrixXd::Identity(n, n);
+        conf.C.resize(m, n);
+        conf.C.row(0).setZero();
+        for (int t = 1; t < m; t++) {
+          for (int j = 0; j < n; j++) {
+            conf.C(t, j) = unif(gen);
+          }
+        }
+        DescendResult res = Descend(conf, 15, std::cerr, false);
+        if (res.success) {
+          printf("start %d: theta=%.13f%s\n", st, res.theta,
+                 res.theta < best ? "  *" : "");
+          fflush(stdout);
+          if (res.theta < best) {
+            best = res.theta;
+            WriteConfigFile(argv[5], res.conf);
+          }
+        } else {
+          printf("start %d: failed\n", st);
+          fflush(stdout);
+        }
+      }
+      printf("best=%.13f\n", best);
+      return 0;
+    }
+    std::cerr << "unrecognized arguments; run without arguments for usage\n";
+    return -1;
+  } catch (std::exception const &e) {
+    std::cerr << "Error in PERIODIC_JointCoveringSearch: " << e.what() << "\n";
+    return 1;
+  }
+}
