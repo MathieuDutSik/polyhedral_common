@@ -13,9 +13,11 @@ python3 ../GeneratePerfectCone.py E8 PerfectE8.ext
 
 This is the computation the recursive adjacency decomposition method was
 originally built for: the dual description has 25075566937584 facets in 83092
-orbits. It is a long run, so the entry is commented out in `TestCases.g`. With
-the heuristics below the run finishes; the last nine orbits, the ones the
-thresholds are really about, take about six hours on their own.
+orbits. With the heuristics below it runs from scratch in **2h17m** on one
+core; the entry stays commented out in `TestCases.g` all the same. The shape
+of the run is: everything found in the first half hour, 83091 of the 83092
+orbits done within two hours, and the last twenty minutes spent on the single
+orbit 229, of incidence 75 and stabilizer 23040.
 
 * `input.nml` is the entry used by `TestCases.g`, saving disabled.
 * `PerfectE8_saving.nml` has `Saving = T` for both the polyhedral database and
@@ -89,9 +91,15 @@ Hence:
 * Above `delta = 15` the table stops being monotone in the incidence: the
   incidence 51 and 52 facets are harder for cdd than the incidence 54 one, and
   cdd does not finish on them at all while lrs does, three times faster.
-  `DualDesc_heu.ts` therefore defaults to lrs, lets the Thompson sampler pick
-  between lrs and cdd for `delta` between 2 and 15, where the two trade places,
-  and sends `delta <= 1` (simplices and near simplices) to `small_polytopes`.
+  `DualDesc_heu.ts` therefore uses two programs and no sampling: lrs below
+  `delta = 16`, normaliz above it, and normaliz whenever the incidence exceeds
+  44 whatever the delta. That last guard matters because the hinge was measured
+  at rank 35, and deeper in the recursion the rank has dropped so `delta` alone
+  understates the size of the output. Leaving cdd in the sampler as a third
+  option cost a factor of five on the whole run: the sampler state is not
+  persisted across the checkpoint restarts, so cdd was re-explored on giant
+  subpolytopes every time, taking 17 of the 45 direct dual descriptions above
+  200000 facets at 2x to 10x the normaliz time.
 * `Bank.heu` / `CheckBank.heu` bank and query at `delta >= 12`, that is the
   subpolytopes that are expensive enough to be worth a canonical form lookup.
 * `InitFacet.heu` uses `lp_cdd_min` so the enumeration starts on a facet of
