@@ -1,6 +1,6 @@
 &HEURISTIC_PRIOR
   DefaultPrior = "state_normaliz"
-  ListConclusion = "state_small", "state_normaliz", "state_opts"
+  ListConclusion = "state_small", "state_normaliz", "state_lrs"
   ListFullCond = "delta <= 1", "incidence > 44", "delta < 16"
 /
 
@@ -20,16 +20,16 @@
 
 
 &PROBABILITY_DISTRIBUTIONS
-  ListNmax = 25, 1
-  ListNstart = 2, 1
-  ListDescription = "0.0", "0.0"
-  ListName = "distri1", "distriTriv"
-  ListNature = "dirac", "dirac"
+  ListNmax = 1
+  ListNstart = 1
+  ListDescription = "0.0"
+  ListName = "distriTriv"
+  ListNature = "dirac"
 /
 
 
 &THOMPSON_PRIOR
-  ListAnswer = "small_polytopes", "lrs_cdd", "normaliz"
-  ListDescription = "small_polytopes:distriTriv", "lrs:distri1 cdd:distri1", "normaliz:distriTriv"
-  ListName = "state_small", "state_opts", "state_normaliz"
+  ListAnswer = "small_polytopes", "lrs", "normaliz"
+  ListDescription = "small_polytopes:distriTriv", "lrs:distriTriv", "normaliz:distriTriv"
+  ListName = "state_small", "state_lrs", "state_normaliz"
 /

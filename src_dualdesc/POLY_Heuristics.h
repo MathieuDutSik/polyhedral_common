@@ -661,15 +661,15 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
                                          " ListDescription = \"0.0\"",
                                          "/"};
   //
-  // The prior encodes the measured hinge (see
-  // StandardHeuristicDualDescriptionProgram): above delta 16 normaliz is
-  // forced, below the sampler chooses between lrs, cdd and normaliz.
+  // Two programs only, on the measured hinge (see
+  // StandardHeuristicDualDescriptionProgram): lrs below delta 16, normaliz
+  // above, with the incidence guard for the deeper recursion levels where
+  // the rank has dropped and delta alone understates the output size.
   std::vector<std::string> lstr_thompson_prior{"&THOMPSON_PRIOR"};
-  std::string s1 = " ListAnswer = \"cdd\", \"lrs\", \"normaliz\"";
-  std::string s2 =
-      " ListName = \"only_cdd\", \"only_lrs\", \"only_normaliz\"";
-  std::string s3 = " ListDescription = \"cdd:distri1\", \"lrs:distri1\", "
-                   "\"normaliz:distri1\"";
+  std::string s1 = " ListAnswer = \"lrs\", \"normaliz\"";
+  std::string s2 = " ListName = \"only_lrs\", \"only_normaliz\"";
+  std::string s3 =
+      " ListDescription = \"lrs:distri1\", \"normaliz:distri1\"";
   lstr_thompson_prior.push_back(s1);
   lstr_thompson_prior.push_back(s2);
   lstr_thompson_prior.push_back(s3);
@@ -679,13 +679,8 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
       "&KEY_COMPRESSION", " ListKey = \"delta\", \"incidence\"",
       " ListDescription = \"superfine\", \"0-44,45-infinity\"", "/"};
   //
-  // Above delta 16 normaliz is forced (the measured hinge); the incidence
-  // guard covers the deeper recursion levels, where the rank is lower and
-  // delta < 16 no longer implies a small output: a sampler draw of cdd on a
-  // subpolytope with millions of facets costs an hour where normaliz takes
-  // minutes.
   std::vector<std::string> lstr_heuristic_prior = {
-      "&HEURISTIC_PRIOR", " DefaultPrior = \"noprior:10\"",
+      "&HEURISTIC_PRIOR", " DefaultPrior = \"only_lrs\"",
       " ListFullCond = \"delta > 16\", \"incidence > 44\""};
   lstr_heuristic_prior.push_back(
       " ListConclusion = \"only_normaliz\", \"only_normaliz\"");
