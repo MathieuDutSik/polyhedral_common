@@ -94,6 +94,9 @@ using NmzTryInt = TryCarryInt64;
 // levels), for calibrating the bound-discipline arithmetic. Reset by the
 // top-level driver.
 inline int64_t nmz_stat_max_abs_coeff = 0;
+inline int64_t nmz_stat_rank_calls = 0;
+inline int64_t nmz_stat_rank_rows = 0;
+inline int64_t nmz_stat_rank_pivots = 0;
 #endif
 
 // The recursion bound for pyramid decomposition: pyramids are built when
@@ -355,6 +358,10 @@ template <typename Tint> struct NmzKernel {
   // arithmetic is left untouched for the outer terminate check.
   std::optional<bool> rank_face_at_least(Face const &f, size_t target) {
     size_t nb_row = f.count();
+#ifdef NMZ_COEFF_STATS
+    nmz_stat_rank_calls++;
+    nmz_stat_rank_rows += nb_row;
+#endif
     if (nb_row < target)
       return false;
     if (rank_ws.rows() == 0)
@@ -383,6 +390,9 @@ template <typename Tint> struct NmzKernel {
         col++;
         continue;
       }
+#ifdef NMZ_COEFF_STATS
+      nmz_stat_rank_pivots++;
+#endif
       if (piv != rank)
         for (size_t u = col; u < dim; u++)
           std::swap(rank_ws(rank, u), rank_ws(piv, u));
@@ -984,14 +994,75 @@ template <typename Tint> struct NmzKernel {
     evaluate_large_rec_pyramids(new_generator);
   }
 
+  // Next generator to insert. The plain rule is the input order, which the
+  // driver has sorted lexicographically. Under NMZ_ADAPTIVE_ORDER it is
+  // instead one of the cutoff rules of cddlib: the candidate cutting off
+  // the fewest (1) or the most (2) of the current facets, or the two
+  // alternating (3). The decision reads only the signs of scalar products,
+  // which are unchanged by a change of basis, so unlike the lexicographic
+  // order of the rows it is an invariant of the configuration. Scoring
+  // every candidate costs (remaining * |Facets|) scalar products against
+  // the single |Facets| of the plain rule, so it is applied only while the
+  // facet list is below NMZ_ADAPTIVE_LIMIT -- which is where the insertion
+  // order does its damage, the early and middle steps.
+  size_t select_next_generator([[maybe_unused]] size_t step,
+                               std::vector<uint8_t> const &handled) {
+    size_t first = nr_gen;
+    for (size_t i = 0; i < nr_gen; i++) {
+      if (!handled[i]) {
+        first = i;
+        break;
+      }
+    }
+#ifdef NMZ_ADAPTIVE_ORDER
+#ifndef NMZ_ADAPTIVE_LIMIT
+#define NMZ_ADAPTIVE_LIMIT 200000
+#endif
+    if (first == nr_gen || Facets.size() > NMZ_ADAPTIVE_LIMIT)
+      return first;
+    bool want_max = (NMZ_ADAPTIVE_ORDER == 2) ||
+                    (NMZ_ADAPTIVE_ORDER == 3 && (step % 2) == 1);
+    size_t best = first;
+    size_t best_cut = want_max ? 0 : std::numeric_limits<size_t>::max();
+    bool found = false;
+    for (size_t i = 0; i < nr_gen; i++) {
+      if (handled[i])
+        continue;
+      size_t cut = 0;
+      for (auto &facet : Facets)
+        if (v_scal(facet.Hyp, i) < 0)
+          cut++;
+      if (cut == 0)
+        continue;
+      if (!found || (want_max ? cut > best_cut : cut < best_cut)) {
+        found = true;
+        best = i;
+        best_cut = cut;
+      }
+    }
+    return found ? best : first;
+#else
+    return first;
+#endif
+  }
+
   // build_cone: the incremental main loop.
   void build_cone() {
     size_t RecBoundSuppHyp =
         dim * nmz_SuppHypRecursionFactor * nmz_arith_cost_factor<Tint>();
     find_and_evaluate_start_simplex();
-    for (size_t i = 0; i < nr_gen; ++i) {
+    // A generator is handled once it has been considered, whether or not it
+    // ended up inserted: one already inside the cone stays inside as the
+    // cone only grows, so skipping it is safe in any order.
+    std::vector<uint8_t> handled(nr_gen, 0);
+    for (size_t i = 0; i < nr_gen; i++)
       if (in_triang[i])
-        continue;
+        handled[i] = 1;
+    for (size_t step = 0;; step++) {
+      size_t i = select_next_generator(step, handled);
+      if (i == nr_gen)
+        break;
+      handled[i] = 1;
       terminate_in_arithmetic_error<Tint>();
       old_nr_supp_hyps = Facets.size();
       bool is_new_generator = false;
@@ -1068,6 +1139,9 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
   int nbCol = EXT.cols();
 #ifdef NMZ_COEFF_STATS
   nmz_stat_max_abs_coeff = 0;
+  nmz_stat_rank_calls = 0;
+  nmz_stat_rank_rows = 0;
+  nmz_stat_rank_pivots = 0;
 #endif
 #ifdef TIMINGS_NORMALIZ_DUAL_DESC
   MicrosecondTime time;
@@ -1082,6 +1156,7 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
   std::vector<int> perm(nbRow);
   for (int i = 0; i < nbRow; i++)
     perm[i] = i;
+#ifndef NMZ_ORDER_KEEP_INPUT
   std::sort(perm.begin(), perm.end(), [&](int a, int b) -> bool {
     for (int k = 0; k < nbCol; k++) {
       if (EXT(a, k) < EXT(b, k))
@@ -1091,6 +1166,7 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
     }
     return a < b;
   });
+#endif
   MyMatrix<Tint> EXTsort(nbRow, nbCol);
   for (int i = 0; i < nbRow; i++)
     for (int k = 0; k < nbCol; k++)
@@ -1124,7 +1200,10 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
      << " |facets|=" << n_facet << " time=" << time << "\n";
 #endif
 #ifdef NMZ_COEFF_STATS
-  os << "NMZ: max_abs_coeff=" << nmz_stat_max_abs_coeff << "\n";
+  os << "NMZ: max_abs_coeff=" << nmz_stat_max_abs_coeff
+     << " rank_calls=" << nmz_stat_rank_calls
+     << " rank_rows=" << nmz_stat_rank_rows
+     << " rank_pivots=" << nmz_stat_rank_pivots << "\n";
 #endif
 }
 
