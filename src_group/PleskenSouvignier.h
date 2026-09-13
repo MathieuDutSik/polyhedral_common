@@ -413,17 +413,14 @@ void ps_fingerprint(PleskenSouvignierContext<Tint> &ctx) {
   family contains it entirely -- it spans Z^n, so every leaf is integral
   by construction -- and otherwise n independent rows taken shortest
   first, short basis vectors having few candidate images.
-  force_family_basis skips the standard-basis shortcut; the tests use it
-  to exercise the general path on families that do contain it.
  */
 template <typename Tint>
-std::vector<int> ps_select_basis(PleskenSouvignierContext<Tint> const &ctx,
-                                 bool force_family_basis) {
+std::vector<int> ps_select_basis(PleskenSouvignierContext<Tint> const &ctx) {
   using Tfield = typename overlying_field<Tint>::field_type;
   int n = ctx.n();
   int m = ctx.VS.m;
   int nbMat = ctx.ListMat.size();
-  if (!force_family_basis) {
+  {
     std::vector<int> bas(n);
     bool has_std = true;
     for (int i = 0; i < n && has_std; i++) {
@@ -679,7 +676,6 @@ PleskenSouvignierContext<Tint>
 PleskenSouvignierBuildContext(std::vector<MyMatrix<Tint>> const &ListMat,
                               MyMatrix<Tint> const &SHVhalf,
                               bool with_fingerprint, int depth,
-                              bool force_family_basis,
                               [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
@@ -720,7 +716,7 @@ PleskenSouvignierBuildContext(std::vector<MyMatrix<Tint>> const &ListMat,
   // -Id preserves every symmetric form and every antipodal family.
   ctx.g[0].push_back(-IdentityMat<Tint>(n));
   if (with_fingerprint) {
-    ctx.bas = ps_select_basis(ctx, force_family_basis);
+    ctx.bas = ps_select_basis(ctx);
     ctx.Fmat.clear();
     for (int iMat = 0; iMat < nbMat; iMat++) {
       MyMatrix<Tint> F(n, n);
@@ -1285,10 +1281,9 @@ template <typename Tint>
 PleskenSouvignierAutomResult<Tint>
 PleskenSouvignierAutomorphism(std::vector<MyMatrix<Tint>> const &ListMat,
                               MyMatrix<Tint> const &SHVhalf, std::ostream &os,
-                              int depth = -1,
-                              bool force_family_basis = false) {
+                              int depth = -1) {
   PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
-      ListMat, SHVhalf, true, depth, force_family_basis, os);
+      ListMat, SHVhalf, true, depth, os);
   ps_auto(ctx, os);
   PleskenSouvignierAutomResult<Tint> result;
   for (int i = 0; i < ctx.n(); i++) {
@@ -1431,8 +1426,7 @@ PleskenSouvignierIsometry(std::vector<MyMatrix<Tint>> const &ListMat1,
                           std::vector<MyMatrix<Tint>> const &ListMat2,
                           MyMatrix<Tint> const &SHVhalf2,
                           std::vector<MyMatrix<Tint>> const &ListGenAut2,
-                          std::ostream &os, int depth = -1,
-                          bool force_family_basis = false) {
+                          std::ostream &os, int depth = -1) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -1443,9 +1437,9 @@ PleskenSouvignierIsometry(std::vector<MyMatrix<Tint>> const &ListMat1,
     return {};
   }
   PleskenSouvignierContext<Tint> Ci = PleskenSouvignierBuildContext(
-      ListMat1, SHVhalf1, true, depth, force_family_basis, os);
+      ListMat1, SHVhalf1, true, depth, os);
   PleskenSouvignierContext<Tint> Co = PleskenSouvignierBuildContext(
-      ListMat2, SHVhalf2, false, 0, false, os);
+      ListMat2, SHVhalf2, false, 0, os);
   int n = Ci.n();
   std::vector<int> x(n, 0);
   std::vector<int> cand0;
