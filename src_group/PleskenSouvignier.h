@@ -488,20 +488,13 @@ std::vector<int> ps_select_basis(PleskenSouvignierContext<Tint> const &ctx,
     }
     return B;
   };
-  auto get_adjugate = [&](MyMatrix<Tint> const &B,
-                          Tint const &det) -> MyMatrix<Tint> {
-    MyMatrix<Tfield> B_f = UniversalMatrixConversion<Tfield, Tint>(B);
-    MyMatrix<Tfield> adj_f =
-        UniversalScalarConversion<Tfield, Tint>(det) * Inverse(B_f);
-    std::optional<MyMatrix<Tint>> opt =
-        UniversalMatrixConversionCheck<Tint, Tfield>(adj_f);
-    return unfold_opt(opt, "the adjugate is integral");
-  };
+  // The adjugate and determinant together, fraction free (adj = det B^{-1}),
+  // instead of a field inverse scaled by a separately computed determinant.
   MyMatrix<Tint> B = get_matrix();
-  Tint det = DeterminantMat(B);
-  Tint abs_det = T_abs(det);
+  std::pair<MyMatrix<Tint>, Tint> adjdet = AdjugateDeterminant(B);
+  Tint abs_det = T_abs(adjdet.second);
   while (abs_det > 1) {
-    MyMatrix<Tint> adj = get_adjugate(B, det);
+    MyMatrix<Tint> const &adj = adjdet.first;
     bool improved = false;
     for (int idx = 0; idx < m && !improved; idx++) {
       int j = order[idx];
@@ -521,8 +514,8 @@ std::vector<int> ps_select_basis(PleskenSouvignierContext<Tint> const &ctx,
       break;
     }
     B = get_matrix();
-    det = DeterminantMat(B);
-    abs_det = T_abs(det);
+    adjdet = AdjugateDeterminant(B);
+    abs_det = T_abs(adjdet.second);
   }
   return bas;
 }
@@ -753,14 +746,12 @@ PleskenSouvignierBuildContext(std::vector<MyMatrix<Tint>> const &ListMat,
         B(i, k) = ctx.VS.V(ctx.bas[ctx.per[i]], k);
       }
     }
-    Tint det = DeterminantMat(B);
-    using Tfield = typename overlying_field<Tint>::field_type;
-    MyMatrix<Tfield> B_f = UniversalMatrixConversion<Tfield, Tint>(B);
-    MyMatrix<Tfield> Badj_f =
-        UniversalScalarConversion<Tfield, Tint>(det) * Inverse(B_f);
-    std::optional<MyMatrix<Tint>> optAdj =
-        UniversalMatrixConversionCheck<Tint, Tfield>(Badj_f);
-    ctx.Badj = unfold_opt(optAdj, "the adjugate of the basis is integral");
+    // The adjugate and determinant of the basis, fraction free
+    // (adj = det B^{-1}), so the leaves stay in integer arithmetic with
+    // B^{-1} = Badj / Bden and Bden > 0.
+    std::pair<MyMatrix<Tint>, Tint> adjdet = AdjugateDeterminant(B);
+    ctx.Badj = std::move(adjdet.first);
+    Tint det = adjdet.second;
     if (det < 0) {
       det = -det;
       ctx.Badj = -ctx.Badj;
