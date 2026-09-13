@@ -1,4 +1,5 @@
 &DATA
+ NumericalType = "integer"
  EXTfile = "PerfectE8.ext"
  GRPfile = "PerfectE8.grp"
  OutFile = "orbits"

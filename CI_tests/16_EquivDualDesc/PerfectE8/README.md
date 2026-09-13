@@ -14,10 +14,19 @@ python3 ../GeneratePerfectCone.py E8 PerfectE8.ext
 This is the computation the recursive adjacency decomposition method was
 originally built for: the dual description has 25075566937584 facets in 83092
 orbits. With the heuristics below it runs from scratch in **2h17m** on one
-core; the entry stays commented out in `TestCases.g` all the same. The shape
-of the run is: everything found in the first half hour, 83091 of the 83092
-orbits done within two hours, and the last twenty minutes spent on the single
-orbit 229, of incidence 75 and stabilizer 23040.
+core. It is **not part of the CI**: the entry stays commented out in
+`TestCases.g`, next to CUT_K8 and CUT_K55, and is meant to be run by hand.
+The shape of the run is: everything found in the first half hour, 83091 of the
+83092 orbits done within two hours, and the last twenty minutes spent on the
+single orbit 229, of incidence 75 and stabilizer 23040.
+
+`NumericalType = "integer"` is set. It makes no difference to the result (same
+83092 orbits, identical as a set) and none to the speed either: 2h23m against
+the 2h17m of `rational`, one run each, which is inside what this machine
+resolves. The reason is that the kernels already run on integers in the
+rational setting -- both the reverse search and the normaliz port scale each
+row into the underlying ring once and then work over TryInt64 -- so the
+setting only removes the per-subproblem conversion in the surrounding layer.
 
 * `input.nml` is the entry used by `TestCases.g`, saving disabled.
 * `PerfectE8_saving.nml` has `Saving = T` for both the polyhedral database and
