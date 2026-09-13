@@ -448,8 +448,14 @@ MyMatrix<T> GenusCanonicalGram(MyMatrix<T> const &GramMat, std::ostream &os) {
   // with spread minima. Measured 45x faster on the determinant-351
   // genus. Every class of the enumeration uses this same function, so
   // the deduplication stays consistent.
+#ifdef TIMINGS_GENUS_ENUMERATION
+  MicrosecondTime time_can;
+#endif
   MyMatrix<Tint> B = ComputeCanonicalFormRootDecomposed<T, Tint, Tgroup>(
       GramMat, os);
+#ifdef TIMINGS_GENUS_ENUMERATION
+  os << "|GENUS: GenusCanonicalGram|=" << time_can << "\n";
+#endif
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   return B_T * GramMat * B_T.transpose();
 }
