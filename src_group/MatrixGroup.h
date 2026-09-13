@@ -2965,42 +2965,88 @@ LinearSpace_Canonicalize_Kernel(std::vector<MyMatrix<T>> const &ListGen,
   return {std::move(SpaceCan), std::move(gMap)};
 }
 
+// Exact entrywise division of a ring matrix by a scalar known to divide every
+// entry. The sanity check guards against a logic error in the caller.
+template <typename T>
+MyMatrix<T> MatrixExactScalarDivision(MyMatrix<T> const &M, T const &d) {
+  int nr = M.rows(), nc = M.cols();
+  MyMatrix<T> R(nr, nc);
+  for (int i = 0; i < nr; i++)
+    for (int j = 0; j < nc; j++) {
+      T q = M(i, j) / d;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+      if (q * d != M(i, j)) {
+        std::cerr << "MATGRP: non-exact scalar division of a matrix\n";
+        throw TerminalException{1};
+      }
+#endif
+      R(i, j) = q;
+    }
+  return R;
+}
+
+/*
+  The change to a Z-basis of the full-rank sublattice L spanned by the rows of
+  an integral configuration, done fraction free. Many of the integral matrix
+  group algorithms express their data in such a basis, conjugate the group into
+  it, work there, and conjugate back; carrying eBasis^{-1} = adjB / detB as a
+  numerator and a determinant keeps all of that over the ring instead of the
+  field. The configuration and every result stay integral by construction, so
+  the divisions are exact.
+ */
+template <typename T> struct SublatticeBasisChange {
+  MyMatrix<T> eBasis; // a Z-basis of the spanned lattice L (integral)
+  MyMatrix<T> adjB;   // the adjugate of eBasis, so eBasis^{-1} = adjB / detB
+  T detB;
+  MyMatrix<T> EXTbas;     // the configuration in the basis: EXT * eBasis^{-1}
+  MyMatrix<T> LattToStab; // the ambient lattice as rows: RemoveFraction(eBasis^{-1})
+  SublatticeBasisChange(MyMatrix<T> const &EXT) {
+    eBasis = GetZbasis(EXT);
+    std::pair<MyMatrix<T>, T> pr = AdjugateDeterminant(eBasis);
+    adjB = std::move(pr.first);
+    detB = std::move(pr.second);
+    // The products are materialized before the division: the exact-division
+    // helper is a template and cannot deduce T through an expression argument.
+    MyMatrix<T> prodEXT = EXT * adjB;
+    EXTbas = MatrixExactScalarDivision(prodEXT, detB);
+    // eBasis^{-1} = adjB / detB has the same rational direction as adjB, so its
+    // primitive integer form (which is what RemoveFractionMatrix returns) is
+    // that of adjB; the discarded scale is what the field version cleared.
+    LattToStab = RemoveFractionMatrix(adjB);
+  }
+  // Conjugate a rational generator eGen = num / den into the basis:
+  // eBasis eGen eBasis^{-1} = eBasis num adjB / (den detB), integral.
+  MyMatrix<T> conjugate_in(MyMatrix<T> const &num, T const &den) const {
+    MyMatrix<T> prod = (eBasis * num) * adjB;
+    T denom = den * detB;
+    return MatrixExactScalarDivision(prod, denom);
+  }
+  // Conjugate an integral generator back out of the basis:
+  // eBasis^{-1} eGen eBasis = adjB eGen eBasis / detB, integral.
+  MyMatrix<T> conjugate_out(MyMatrix<T> const &eGen) const {
+    MyMatrix<T> prod = (adjB * eGen) * eBasis;
+    return MatrixExactScalarDivision(prod, detB);
+  }
+};
+
 template <typename T, typename Tgroup>
 RetMI_S<T, Tgroup> LinPolytopeIntegral_Automorphism_Subspaces(
-    std::vector<MyMatrix<T>> const &ListMatr, MyMatrix<T> const &EXTfaithful,
-    std::ostream &os) {
+    std::vector<std::pair<MyMatrix<T>, T>> const &ListMatrScaled,
+    MyMatrix<T> const &EXTfaithful, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-  MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
-  MyMatrix<T> InvBasis = Inverse(eBasis);
-  MyMatrix<T> EXTbas = EXTfaithful * InvBasis;
+  SublatticeBasisChange<T> bc(EXTfaithful);
   std::vector<MyMatrix<T>> ListMatrGens;
-  for (auto &eGen : ListMatr) {
-    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrGens.emplace_back(std::move(NewGen));
+  for (auto &eScaled : ListMatrScaled) {
+    ListMatrGens.push_back(bc.conjugate_in(eScaled.first, eScaled.second));
   }
   FiniteMatrixGroupHelper<T, Telt, TintGroup> helper =
-      ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas);
-  MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
-
+      ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(bc.EXTbas);
   RetMI_S<T, Tgroup> ret =
-      LinearSpace_Stabilizer<T, Tgroup>(ListMatrGens, helper, LattToStab, os);
+      LinearSpace_Stabilizer<T, Tgroup>(ListMatrGens, helper, bc.LattToStab, os);
   std::vector<MyMatrix<T>> ListMatrGensB;
   for (auto &eGen : ret.LGen) {
-    MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrGensB.push_back(NewGen);
+    ListMatrGensB.push_back(bc.conjugate_out(eGen));
   }
   return {ret.index, ListMatrGensB};
 }
@@ -3132,114 +3178,72 @@ MyMatrix<T> LinPolytopeIntegral_Canonicalization_Subspaces(
 
 template <typename T, typename Tgroup>
 Stab_RightCoset<T> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
-    std::vector<MyMatrix<T>> const &ListMatr, MyMatrix<T> const &EXTfaithful,
-    std::ostream &os) {
+    std::vector<std::pair<MyMatrix<T>, T>> const &ListMatrScaled,
+    MyMatrix<T> const &EXTfaithful, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-  MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
-  MyMatrix<T> InvBasis = Inverse(eBasis);
-  MyMatrix<T> EXTbas = EXTfaithful * InvBasis;
+  SublatticeBasisChange<T> bc(EXTfaithful);
   std::vector<MyMatrix<T>> ListMatrGens;
-  for (auto &eGen : ListMatr) {
-    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrGens.emplace_back(std::move(NewGen));
+  for (auto &eScaled : ListMatrScaled) {
+    ListMatrGens.push_back(bc.conjugate_in(eScaled.first, eScaled.second));
   }
   FiniteMatrixGroupHelper<T, Telt, TintGroup> helper =
-      ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas);
-  MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
+      ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(bc.EXTbas);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
         "before LinearSpace_Stabilizer_RightCoset\n";
 #endif
   Stab_RightCoset<T> pair = LinearSpace_Stabilizer_RightCoset<T, Tgroup>(
-      ListMatrGens, helper, LattToStab, os);
+      ListMatrGens, helper, bc.LattToStab, os);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, after "
         "LinearSpace_Stabilizer_RightCoset\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrGensB;
   for (auto &eGen : pair.list_gen) {
-    MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrGensB.emplace_back(std::move(NewGen));
+    ListMatrGensB.push_back(bc.conjugate_out(eGen));
   }
-  pair.coset_desc.conjugate(eBasis);
+  pair.coset_desc.conjugate(bc.eBasis);
   return {std::move(ListMatrGensB), pair.coset_desc};
 }
 
 template <typename T, typename Tgroup>
 std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
 LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces(
-    std::vector<MyMatrix<T>> const &ListMatrFull,
-    std::vector<MyMatrix<T>> const &ListMatrV, MyMatrix<T> const &EXTfaithful,
-    std::ostream &os) {
+    std::vector<std::pair<MyMatrix<T>, T>> const &ListMatrFullScaled,
+    std::vector<std::pair<MyMatrix<T>, T>> const &ListMatrVScaled,
+    MyMatrix<T> const &EXTfaithful, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-  MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
-  MyMatrix<T> InvBasis = Inverse(eBasis);
-  MyMatrix<T> EXTbas = EXTfaithful * InvBasis;
+  SublatticeBasisChange<T> bc(EXTfaithful);
   std::vector<MyMatrix<T>> ListMatrFullGens;
-  for (auto &eGen : ListMatrFull) {
-    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrFullGens.emplace_back(std::move(NewGen));
+  for (auto &eScaled : ListMatrFullScaled) {
+    ListMatrFullGens.push_back(bc.conjugate_in(eScaled.first, eScaled.second));
   }
   std::vector<MyMatrix<T>> ListMatrVGens;
-  for (auto &eGen : ListMatrV) {
-    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrVGens.emplace_back(std::move(NewGen));
+  for (auto &eScaled : ListMatrVScaled) {
+    ListMatrVGens.push_back(bc.conjugate_in(eScaled.first, eScaled.second));
   }
   FiniteMatrixGroupHelper<T, Telt, TintGroup> helper =
-      ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas);
-  MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
+      ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(bc.EXTbas);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MATGRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
-        "before LinearSpace_Stabilizer_RightCoset\n";
+  os << "MATGRP: LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces, "
+        "before LinearSpace_Stabilizer_DoubleCoset\n";
 #endif
   std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
       LinearSpace_Stabilizer_DoubleCoset<T, Tgroup>(
-          ListMatrFullGens, helper, LattToStab, ListMatrVGens, os);
+          ListMatrFullGens, helper, bc.LattToStab, ListMatrVGens, os);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces, after "
         "LinearSpace_Stabilizer_DoubleCoset\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrStabGens;
   for (auto &eGen : pair.first) {
-    MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrStabGens.emplace_back(std::move(NewGen));
+    ListMatrStabGens.push_back(bc.conjugate_out(eGen));
   }
   std::vector<MyMatrix<T>> ListDoubleCosets;
   for (auto &eCos : pair.second) {
-    MyMatrix<T> NewCos = InvBasis * eCos * eBasis;
-    ListDoubleCosets.emplace_back(std::move(NewCos));
+    ListDoubleCosets.push_back(bc.conjugate_out(eCos));
   }
   return {std::move(ListMatrStabGens), std::move(ListDoubleCosets)};
 }
@@ -3247,68 +3251,43 @@ LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces(
 template <typename T, typename Tgroup>
 std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>>
 LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer_Subspaces(
-    std::vector<MyMatrix<T>> const &ListMatrFull,
-    std::vector<MyMatrix<T>> const &ListMatrV, MyMatrix<T> const &EXTfaithful,
-    std::ostream &os) {
+    std::vector<std::pair<MyMatrix<T>, T>> const &ListMatrFullScaled,
+    std::vector<std::pair<MyMatrix<T>, T>> const &ListMatrVScaled,
+    MyMatrix<T> const &EXTfaithful, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-  MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
-  MyMatrix<T> InvBasis = Inverse(eBasis);
-  MyMatrix<T> EXTbas = EXTfaithful * InvBasis;
+  SublatticeBasisChange<T> bc(EXTfaithful);
   std::vector<MyMatrix<T>> ListMatrFullGens;
-  for (auto &eGen : ListMatrFull) {
-    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrFullGens.emplace_back(std::move(NewGen));
+  for (auto &eScaled : ListMatrFullScaled) {
+    ListMatrFullGens.push_back(bc.conjugate_in(eScaled.first, eScaled.second));
   }
   std::vector<MyMatrix<T>> ListMatrVGens;
-  for (auto &eGen : ListMatrV) {
-    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrVGens.emplace_back(std::move(NewGen));
+  for (auto &eScaled : ListMatrVScaled) {
+    ListMatrVGens.push_back(bc.conjugate_in(eScaled.first, eScaled.second));
   }
   FiniteMatrixGroupHelper<T, Telt, TintGroup> helper =
-      ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas);
-  MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
+      ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(bc.EXTbas);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MATGRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
-        "before LinearSpace_Stabilizer_RightCoset\n";
+  os << "MATGRP: LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer_"
+        "Subspaces, before LinearSpace_Stabilizer_DoubleCosetStabilizer\n";
 #endif
   std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>> pair =
       LinearSpace_Stabilizer_DoubleCosetStabilizer<T, Tgroup>(
-          ListMatrFullGens, helper, LattToStab, ListMatrVGens, os);
+          ListMatrFullGens, helper, bc.LattToStab, ListMatrVGens, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MATGRP: LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces, after "
-        "LinearSpace_Stabilizer_DoubleCoset\n";
+  os << "MATGRP: LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer_"
+        "Subspaces, after LinearSpace_Stabilizer_DoubleCosetStabilizer\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrStabGens;
   for (auto &eGen : pair.first) {
-    MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-#endif
-    ListMatrStabGens.emplace_back(std::move(NewGen));
+    ListMatrStabGens.push_back(bc.conjugate_out(eGen));
   }
   std::vector<DoubleCosetEntry<T>> ListDoubleCosetStabilizer;
   for (auto &dcs : pair.second) {
-    MyMatrix<T> NewCos = InvBasis * dcs.cos * eBasis;
+    MyMatrix<T> NewCos = bc.conjugate_out(dcs.cos);
     std::vector<MyMatrix<T>> new_stab_gens;
     for (auto &eGen : dcs.stab_gens) {
-      MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
-      new_stab_gens.emplace_back(std::move(NewGen));
+      new_stab_gens.push_back(bc.conjugate_out(eGen));
     }
     DoubleCosetEntry<T> new_dcs{std::move(NewCos), std::move(new_stab_gens)};
     ListDoubleCosetStabilizer.emplace_back(std::move(new_dcs));
@@ -3578,11 +3557,12 @@ Tgroup LinPolytopeIntegral_Stabilizer_LGen(MyMatrix<T> const &EXT_T,
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
-  std::vector<MyMatrix<T>> ListMatrGen;
-  // One row selection for the whole loop instead of one per generator.
-  FindTransformationSolver<T> solver(EXT_T);
+  std::vector<std::pair<MyMatrix<T>, T>> ListMatrGen;
+  // One row selection and adjugate for the whole loop; each generator is then
+  // realized in scaled form (numerator over the ring, scalar denominator).
+  RepresentVertexPermutationPreComput<T> solver(EXT_T);
   for (auto &eGen : LGen) {
-    ListMatrGen.push_back(solver.find_transformation(EXT_T, eGen));
+    ListMatrGen.push_back(solver.represent_scaled(eGen));
   }
   using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
   Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXT_T);
@@ -3615,11 +3595,12 @@ LinPolytopeIntegral_Stabilizer_RightCoset_LGen(MyMatrix<T> const &EXT_T,
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
-  std::vector<MyMatrix<T>> ListMatrGen;
-  // One row selection for the whole loop instead of one per generator.
-  FindTransformationSolver<T> solver(EXT_T);
+  std::vector<std::pair<MyMatrix<T>, T>> ListMatrGen;
+  // One row selection and adjugate for the whole loop; each generator is then
+  // realized in scaled form (numerator over the ring, scalar denominator).
+  RepresentVertexPermutationPreComput<T> solver(EXT_T);
   for (auto &eGen : LGen) {
-    ListMatrGen.push_back(solver.find_transformation(EXT_T, eGen));
+    ListMatrGen.push_back(solver.represent_scaled(eGen));
   }
   using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
   Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXT_T);
@@ -3662,15 +3643,16 @@ LinPolytopeIntegral_Stabilizer_DoubleCoset(MyMatrix<T> const &EXT_T,
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
-  // One row selection for the two loops instead of one per generator.
-  FindTransformationSolver<T> solver(EXT_T);
-  std::vector<MyMatrix<T>> ListMatrGenFull;
+  // One row selection and adjugate for the two loops; each generator is then
+  // realized in scaled form (numerator over the ring, scalar denominator).
+  RepresentVertexPermutationPreComput<T> solver(EXT_T);
+  std::vector<std::pair<MyMatrix<T>, T>> ListMatrGenFull;
   for (auto &eGen : GRPfull.SmallGeneratingSet()) {
-    ListMatrGenFull.push_back(solver.find_transformation(EXT_T, eGen));
+    ListMatrGenFull.push_back(solver.represent_scaled(eGen));
   }
-  std::vector<MyMatrix<T>> ListMatrGenV;
+  std::vector<std::pair<MyMatrix<T>, T>> ListMatrGenV;
   for (auto &eGen : GrpV.SmallGeneratingSet()) {
-    ListMatrGenV.push_back(solver.find_transformation(EXT_T, eGen));
+    ListMatrGenV.push_back(solver.represent_scaled(eGen));
   }
   using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
   Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXT_T);
@@ -3706,15 +3688,16 @@ LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer(
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
-  // One row selection for the two loops instead of one per generator.
-  FindTransformationSolver<T> solver(EXT_T);
-  std::vector<MyMatrix<T>> ListMatrGenFull;
+  // One row selection and adjugate for the two loops; each generator is then
+  // realized in scaled form (numerator over the ring, scalar denominator).
+  RepresentVertexPermutationPreComput<T> solver(EXT_T);
+  std::vector<std::pair<MyMatrix<T>, T>> ListMatrGenFull;
   for (auto &eGen : GRPfull.SmallGeneratingSet()) {
-    ListMatrGenFull.push_back(solver.find_transformation(EXT_T, eGen));
+    ListMatrGenFull.push_back(solver.represent_scaled(eGen));
   }
-  std::vector<MyMatrix<T>> ListMatrGenV;
+  std::vector<std::pair<MyMatrix<T>, T>> ListMatrGenV;
   for (auto &eGen : GrpV.SmallGeneratingSet()) {
-    ListMatrGenV.push_back(solver.find_transformation(EXT_T, eGen));
+    ListMatrGenV.push_back(solver.represent_scaled(eGen));
   }
   using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
   Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXT_T);

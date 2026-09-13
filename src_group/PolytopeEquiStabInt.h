@@ -856,13 +856,16 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
   // A rational generator: the integral subgroup is a strict subgroup and the
   // subspace machinery extracts it over the field.
   MyMatrix<Tfield> SHV_f = UniversalMatrixConversion<Tfield, T>(SHV_T);
-  std::vector<MyMatrix<Tfield>> ListMatrGens;
+  // The subspace automorphism takes its generators in scaled form (numerator,
+  // denominator). Over the field the field-solved matrix is the numerator with
+  // denominator one; the ring arithmetic inside is then exact by construction.
+  std::vector<std::pair<MyMatrix<Tfield>, Tfield>> ListMatrGens;
   for (auto &eGen : ListGen) {
     auto f = [&](int iRow) -> int { return eGen[iRow]; };
     std::optional<MyMatrix<Tfield>> opt_f = solver.solve_field_f(SHV_T, f);
     MyMatrix<Tfield> eMatrGen =
         unfold_opt(opt_f, "the field solve should succeed");
-    ListMatrGens.emplace_back(std::move(eMatrGen));
+    ListMatrGens.push_back({std::move(eMatrGen), Tfield(1)});
   }
   RetMI_S<Tfield, Tgroup> ret =
       LinPolytopeIntegral_Automorphism_Subspaces<Tfield, Tgroup>(ListMatrGens,

@@ -474,11 +474,13 @@ FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP,
   os << "Subspace1_proj=\n";
   WriteMatrix(os, Subspace1_proj);
 #endif
-  std::vector<MyMatrix<T>> LGen1_B;
+  std::vector<std::pair<MyMatrix<T>, T>> LGen1_B;
   for (auto &eGen : GRP.GeneratorsOfGroup()) {
     MyMatrix<T> eGen_M =
         RepresentVertexPermutation(Subspace1_proj, Subspace1_proj, eGen);
-    LGen1_B.push_back(eGen_M);
+    // The subspace automorphism takes generators in scaled form (numerator,
+    // denominator); here the numerator is eGen_M and the denominator is one.
+    LGen1_B.push_back({std::move(eGen_M), T(1)});
   }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   os << "We have LGen1_B\n";
