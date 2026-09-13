@@ -31,3 +31,7 @@ $(PROGRAM): 	$(OBJECTS)
 clean:;
 	rm -f *.o
 	rm -f $(PROGRAM)
+
+# header dependency: the program is a thin driver over this header, so a
+# header edit must force a rebuild (make does not scan includes on its own).
+$(OBJECTS): JointCoveringDouble.h

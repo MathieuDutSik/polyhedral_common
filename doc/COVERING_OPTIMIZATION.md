@@ -413,12 +413,46 @@ tessellation and the input configuration held as the first incumbent so a
 descent can never return something worse than its seed.
 
 Validated digit for digit against the exact values 2.1600607650528 (m=2)
-and 2.3765773479972 (m=3). Measured scale: a random 10-coset configuration
-in dimension 5 has ~1800 cell classes, evaluates in 7 seconds and descends
-at about 28 seconds per round with 60 free variables — the regime of rich
-structures that the exact machinery and the Python prototype could not
-reach. Candidates found by this tool are numerical and must be re-verified
-by the exact pipeline.
+and 2.3765773479972 (m=3). Candidates found by this tool are numerical and
+must be re-verified by the exact pipeline.
+
+**Two descent engines.** The original `descend`/`multistart` use a soft-max
+surrogate minimized by L-BFGS with analytic gradients. The faster
+`descend-alt`/`multistart-alt` exploit the block structure of the problem
+directly, following the observation that
+
+* fixing the cosets `c`, the constraint `r(Delta_i)^2 <= h` is an LMI linear
+  in `(Q, h)` (Delone-Dolbilin-Ryshkov-Stogrin), so the `Q`-block is an exact
+  convex SDP;
+* fixing `Q`, minimizing `max_i r(Delta_i)^2(c)` is a smooth minimax whose
+  nonconvexity is confined to `c`.
+
+`descend-alt` alternates an interior-point `Q`-step (the exact per-`(c,T)`
+optimum, `QStep`, gradient-checked to 1e-7 and holding at the certified
+optimum) with a `c`-step (`CStepMinimax`: steepest descent for the maximum,
+the direction being the min-norm element of the active gradients' convex
+hull found by Frank-Wolfe, with an Armijo line search on the true maximum),
+re-tessellating once per round. It removes the beta-annealing of the
+soft-max engine entirely and, from a well-rounded seed, converges in ~10
+rounds at a few seconds each.
+
+**The real bottleneck is the tessellation, not the optimizer.** A Delaunay
+tessellation of a well-rounded `(Q,c)` costs a few seconds, but an
+anisotropic form or near-cocircular cosets send the qhull-plus-ball-growth
+loop into tens of seconds or worse. Both engines pay this, and it dominates
+the run time. The mitigations in place -- LLL-reduced enumeration, an
+anisotropy guard on the `Q`-step output (condition number `< 300`), a
+per-tessellation deadline and a per-descent wall-clock budget -- keep the
+search robust (no infinite stalls) but do not remove the cost; a genuinely
+fast search would need incremental Delaunay updates or a covering-radius
+evaluation that avoids a full tessellation. `multistart-alt` seeds from
+well-rounded forms (`Q = R^T R`, `R = I + small`), where covering-optimal
+forms live and tessellations stay cheap.
+
+Both engines confirm, as expected, that random multistart lands in the
+shallow basins (2.5-3.8 for `m=2`) and only rarely reaches the deep 2.16006
+basin: the difficulty is the basin structure, which no change of optimizer
+removes.
 
 ## Testing
 

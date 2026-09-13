@@ -6,6 +6,7 @@
 #include <Eigen/Dense>
 #include <libqhull_r/qhull_ra.h>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <map>
@@ -152,11 +153,22 @@ inline void CircumcenterRadius2(MatrixXd const &P, MatrixXd const &Q,
   Throws std::runtime_error when the ball never stabilizes.
  */
 inline std::vector<CellClass> DelaunayCellClasses(PeriodicConfig const &conf,
-                                                  int max_iter = 8,
-                                                  double growth = 1.35) {
+                                                  int max_iter = 6,
+                                                  double growth = 1.3) {
   int n = conf.n;
   int m = conf.m;
   MatrixXd const &Q = conf.Q;
+  // A non positive definite form has no covering geometry and would send the
+  // ball-growth loop below into an unbounded spin; reject it at once. Eigen's
+  // LLT can accept a mildly indefinite matrix, so the smallest eigenvalue is
+  // tested directly.
+  {
+    Eigen::SelfAdjointEigenSolver<MatrixXd> esg(Q, Eigen::EigenvaluesOnly);
+    if (esg.eigenvalues()(0) <= 1e-12 * esg.eigenvalues()(n - 1)) {
+      throw std::runtime_error(
+          "DelaunayCellClasses: Q is not positive definite");
+    }
+  }
   MatrixXi U = LLLReduceDouble(Q);
   MatrixXd Ud = U.cast<double>();
   MatrixXd Qr = Ud * Q * Ud.transpose();
@@ -167,7 +179,15 @@ inline std::vector<CellClass> DelaunayCellClasses(PeriodicConfig const &conf,
   double R = 2.5 * mu_bound;
   Eigen::LLT<MatrixXd> llt(Q);
   MatrixXd L = llt.matrixL();
+  // wall-clock deadline: a pathological (Q, c) -- near-cocircular cosets --
+  // makes the joggled qhull and the ball-emptiness certificate thrash. Rather
+  // than stall the whole search, such a configuration is abandoned.
+  auto t_start = std::chrono::steady_clock::now();
   for (int iter = 0; iter < max_iter; iter++) {
+    if (std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - t_start).count() > 20) {
+      throw std::runtime_error("DelaunayCellClasses: tessellation deadline");
+    }
     // enumerate the points of Q-norm <= R through the reduced basis
     int B0 = int(std::ceil(R / sig_min)) + 1;
     std::vector<VectorXi> lats;
@@ -345,6 +365,275 @@ inline DensityResult CoveringDensity(PeriodicConfig const &conf) {
   double theta = conf.m * VolumeUnitBall(conf.n) *
                  std::pow(mu2, 0.5 * conf.n) / std::sqrt(det);
   return {theta, mu2, std::move(cells)};
+}
+
+// ---------------------------------------------------------------------------
+// The Q-step: exact convex SDP at fixed cosets
+// ---------------------------------------------------------------------------
+//
+// With the cosets and the cell list fixed, the vertices are fixed, so
+// r(Delta)^2 <= 1 is an LMI linear in Q (Delone-Dolbilin-Ryshkov-Stogrin;
+// see CoveringMaxdet.h): the block
+//
+//   BR_i(Q) = [ 4                diag(G_i)^T ]  >= 0,   G_i = V_i Q V_i^T,
+//             [ diag(G_i)        G_i         ]
+//
+// with V_i the n x n matrix of edge vectors of simplex i. Minimizing
+// -log det Q under these blocks is a determinant maximization problem,
+// convex in Q; its optimum is the least dense form whose covering radius is
+// at most 1 for this coset configuration. We solve it by a path-following
+// barrier, mirroring the exact solver of CoveringMaxdet.h in double.
+//
+// Q is parametrized by its n(n+1)/2 independent entries in the basis A_u
+// (E_kk on the diagonal, E_kl + E_lk off it), Q = sum_u x_u A_u.
+
+// The symmetric basis: index pairs (k <= l).
+inline std::vector<std::pair<int,int>> SymBasis(int n) {
+  std::vector<std::pair<int,int>> b;
+  for (int k = 0; k < n; k++) {
+    for (int l = k; l < n; l++) {
+      b.emplace_back(k, l);
+    }
+  }
+  return b;
+}
+
+inline MatrixXd QFromX(int n, std::vector<std::pair<int,int>> const &basis,
+                       VectorXd const &x) {
+  MatrixXd Q = MatrixXd::Zero(n, n);
+  for (size_t u = 0; u < basis.size(); u++) {
+    int k = basis[u].first, l = basis[u].second;
+    Q(k, l) += x(u);
+    if (k != l) {
+      Q(l, k) += x(u);
+    }
+  }
+  return Q;
+}
+
+// The n x n edge matrices V_i (rows v_1 - v_0, ..., v_n - v_0) of the cells.
+inline std::vector<MatrixXd> EdgeMatrices(std::vector<CellClass> const &cells,
+                                          MatrixXd const &C) {
+  int n = C.cols();
+  std::vector<MatrixXd> Vs;
+  Vs.reserve(cells.size());
+  for (auto &cl : cells) {
+    MatrixXd P = CellPositions(cl, C);
+    MatrixXd V(n, n);
+    for (int k = 0; k < n; k++) {
+      V.row(k) = P.row(k + 1) - P.row(0);
+    }
+    Vs.push_back(std::move(V));
+  }
+  return Vs;
+}
+
+// Embed an n x n symmetric block M as the (n+1) x (n+1) circumradius block
+// with border diag(M) and the given corner value.
+inline MatrixXd EmbedBR(MatrixXd const &M, double corner) {
+  int n = M.rows();
+  MatrixXd F = MatrixXd::Zero(n + 1, n + 1);
+  F(0, 0) = corner;
+  for (int i = 0; i < n; i++) {
+    F(0, i + 1) = M(i, i);
+    F(i + 1, 0) = M(i, i);
+    for (int j = 0; j < n; j++) {
+      F(i + 1, j + 1) = M(i, j);
+    }
+  }
+  return F;
+}
+
+struct QStepData {
+  int n;
+  int dim;
+  std::vector<std::pair<int,int>> basis;
+  std::vector<MatrixXd> Vs;           // edge matrices, per cell
+  // per cell, per basis index u: the n x n matrix V_i A_u V_i^T
+  std::vector<std::vector<MatrixXd>> Muc;
+  double nu;                          // barrier parameter
+};
+
+inline QStepData BuildQStepData(std::vector<CellClass> const &cells,
+                                MatrixXd const &C) {
+  int n = C.cols();
+  QStepData qd;
+  qd.n = n;
+  qd.basis = SymBasis(n);
+  qd.dim = qd.basis.size();
+  qd.Vs = EdgeMatrices(cells, C);
+  int n_cell = qd.Vs.size();
+  qd.Muc.resize(n_cell);
+  for (int i = 0; i < n_cell; i++) {
+    MatrixXd const &V = qd.Vs[i];
+    qd.Muc[i].resize(qd.dim);
+    for (int u = 0; u < qd.dim; u++) {
+      int k = qd.basis[u].first, l = qd.basis[u].second;
+      // V A_u V^T = V(:,k) V(:,l)^T + (k!=l) V(:,l) V(:,k)^T
+      MatrixXd Vk = V.col(k);
+      MatrixXd Vl = V.col(l);
+      MatrixXd M = Vk * Vl.transpose();
+      if (k != l) {
+        M += Vl * Vk.transpose();
+      }
+      qd.Muc[i][u] = std::move(M);
+    }
+  }
+  qd.nu = double(n) + double(n_cell) * double(n + 1);
+  return qd;
+}
+
+// value / gradient / Hessian of the weighted barrier
+//   phi_t(x) = -(1 + 1/t) log det Q - (1/t) sum_i log det BR_i(Q)
+// returns false when x is not strictly feasible.
+inline bool QStepBarrier(QStepData const &qd, VectorXd const &x, double t,
+                         double &val, VectorXd *grad, MatrixXd *hess) {
+  int n = qd.n, d = qd.dim;
+  double wbar = 1.0 / t;
+  MatrixXd Q = QFromX(n, qd.basis, x);
+  Eigen::LLT<MatrixXd> lltQ(Q);
+  if (lltQ.info() != Eigen::Success) {
+    return false;
+  }
+  double logdetQ = 2.0 * lltQ.matrixLLT().diagonal().array().abs().log().sum();
+  MatrixXd Qinv = lltQ.solve(MatrixXd::Identity(n, n));
+  val = -(1.0 + wbar) * logdetQ;
+  if (grad) {
+    grad->setZero(d);
+  }
+  if (hess) {
+    hess->setZero(d, d);
+  }
+  // objective term
+  if (grad || hess) {
+    std::vector<MatrixXd> WQ(d);
+    for (int u = 0; u < d; u++) {
+      int k = qd.basis[u].first, l = qd.basis[u].second;
+      MatrixXd Au = MatrixXd::Zero(n, n);
+      Au(k, l) = 1;
+      if (k != l) {
+        Au(l, k) = 1;
+      }
+      WQ[u] = Qinv * Au;
+    }
+    double w = 1.0 + wbar;
+    for (int u = 0; u < d; u++) {
+      if (grad) {
+        (*grad)(u) -= w * WQ[u].trace();
+      }
+      if (hess) {
+        for (int v = u; v < d; v++) {
+          double val2 = w * (WQ[u].array() * WQ[v].transpose().array()).sum();
+          (*hess)(u, v) += val2;
+          if (v > u) {
+            (*hess)(v, u) += val2;
+          }
+        }
+      }
+    }
+  }
+  // barrier blocks
+  int n_cell = qd.Vs.size();
+  for (int i = 0; i < n_cell; i++) {
+    MatrixXd G = qd.Vs[i] * Q * qd.Vs[i].transpose();
+    MatrixXd F = EmbedBR(G, 4.0);
+    Eigen::LLT<MatrixXd> lltF(F);
+    if (lltF.info() != Eigen::Success) {
+      return false;
+    }
+    double logdetF = 2.0 * lltF.matrixLLT().diagonal().array().abs().log().sum();
+    val -= wbar * logdetF;
+    if (grad || hess) {
+      MatrixXd Finv = lltF.solve(MatrixXd::Identity(n + 1, n + 1));
+      std::vector<MatrixXd> WF(d);
+      for (int u = 0; u < d; u++) {
+        WF[u] = Finv * EmbedBR(qd.Muc[i][u], 0.0);
+      }
+      for (int u = 0; u < d; u++) {
+        if (grad) {
+          (*grad)(u) -= wbar * WF[u].trace();
+        }
+        if (hess) {
+          for (int v = u; v < d; v++) {
+            double val2 =
+                wbar * (WF[u].array() * WF[v].transpose().array()).sum();
+            (*hess)(u, v) += val2;
+            if (v > u) {
+              (*hess)(v, u) += val2;
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
+// Solve the Q-step SDP: returns the optimizer Q (normalized so that the
+// covering radius squared is 1), from a strictly feasible start Q_init.
+inline MatrixXd QStep(std::vector<CellClass> const &cells, MatrixXd const &C,
+                      MatrixXd const &Q_init, int max_outer = 60,
+                      double tol_gap = 1e-9, double mu = 15.0) {
+  QStepData qd = BuildQStepData(cells, C);
+  int n = qd.n, d = qd.dim;
+  // strictly feasible start: scale Q so max circumradius^2 < 1
+  double maxR2 = 0;
+  for (auto &V : qd.Vs) {
+    MatrixXd G = V * Q_init * V.transpose();
+    VectorXd q = G.diagonal();
+    double R2 = 0.25 * q.dot(G.ldlt().solve(q));
+    maxR2 = std::max(maxR2, R2);
+  }
+  MatrixXd Q = Q_init / (2.0 * maxR2);
+  VectorXd x(d);
+  for (int u = 0; u < d; u++) {
+    x(u) = Q(qd.basis[u].first, qd.basis[u].second);
+  }
+  double t = 1.0;
+  VectorXd grad(d);
+  MatrixXd hess(d, d);
+  double val;
+  for (int outer = 0; outer < max_outer; outer++) {
+    if (qd.nu / t < tol_gap) {
+      break;
+    }
+    for (int nit = 0; nit < 100; nit++) {
+      if (!QStepBarrier(qd, x, t, val, &grad, &hess)) {
+        break;
+      }
+      Eigen::LDLT<MatrixXd> ldlt(hess);
+      VectorXd step = ldlt.solve(-grad);
+      double dec2 = -grad.dot(step);
+      if (!(dec2 > 0) || dec2 / 2 < 1e-13) {
+        break;
+      }
+      double s = 1.0;
+      bool ok = false;
+      for (int bt = 0; bt < 60; bt++) {
+        double vnew;
+        if (QStepBarrier(qd, x + s * step, t, vnew, nullptr, nullptr) &&
+            vnew <= val + 0.01 * s * grad.dot(step)) {
+          x += s * step;
+          ok = true;
+          break;
+        }
+        s *= 0.5;
+      }
+      if (!ok) {
+        break;
+      }
+    }
+    t *= mu;
+  }
+  Q = QFromX(n, qd.basis, x);
+  // renormalize so max circumradius^2 = 1
+  double mR2 = 0;
+  for (auto &V : qd.Vs) {
+    MatrixXd G = V * Q * V.transpose();
+    VectorXd q = G.diagonal();
+    mR2 = std::max(mR2, 0.25 * q.dot(G.ldlt().solve(q)));
+  }
+  return Q / mR2;
 }
 
 // ---------------------------------------------------------------------------
@@ -570,6 +859,148 @@ void LBFGS(Fobj f, VectorXd &x, int max_iter, double gtol,
 }
 
 // ---------------------------------------------------------------------------
+// The c-step: trust-region SLP on the coset minimax
+// ---------------------------------------------------------------------------
+//
+// With Q and the cell list fixed, minimize max_i r(Delta_i)^2 over the
+// cosets C by sequential linear programming. At the current C each active
+// simplex contributes r_i^2 and its gradient dr_i^2/dC (analytic, the coset
+// chain of ObjectiveGradient); the step solves the tiny LP
+//
+//   min_{dc, u}  u   s.t.  r_i^2 + g_i . dc <= u,   |dc|_inf <= rho,
+//
+// over the simplices within a band of the current maximum, then C += dc,
+// with a trust radius rho grown on success and shrunk on failure. This is
+// the "inequality matching" of the minimax: the binding simplices are the
+// active LP rows. The LP is solved by its dual with a projected subgradient,
+// which suffices at this size (5(m-1)+1 variables) and needs no external
+// solver.
+
+// r_i^2 and its gradient in the free cosets C_1..C_{m-1}, packed row-major.
+inline void CellR2Grad(CellClass const &cl, MatrixXd const &Q, MatrixXd const &C,
+                       double &R2, VectorXd &g) {
+  int n = Q.rows();
+  int m = C.rows();
+  MatrixXd P = CellPositions(cl, C);
+  MatrixXd V(n, n);
+  for (int k = 0; k < n; k++) {
+    V.row(k) = P.row(k + 1) - P.row(0);
+  }
+  MatrixXd G = V * Q * V.transpose();
+  VectorXd q = G.diagonal();
+  Eigen::LDLT<MatrixXd> ldlt(G);
+  VectorXd a = ldlt.solve(q);
+  R2 = 0.25 * q.dot(a);
+  // dR2/dV = 2 W V Q, W = (2 diag(a) - a a^T)/4
+  MatrixXd W = -0.25 * (a * a.transpose());
+  W.diagonal() += 0.5 * a;
+  MatrixXd gV = 2.0 * (W * V * Q);      // rows = d/d(edge_k)
+  VectorXd rowsum = gV.colwise().sum();
+  g = VectorXd::Zero(n * (m - 1));
+  for (int k = 0; k <= n; k++) {
+    int t = cl.cos(k);
+    if (t == 0) {
+      continue;
+    }
+    int base = (t - 1) * n;
+    if (k == 0) {
+      for (int j = 0; j < n; j++) {
+        g(base + j) -= rowsum(j);
+      }
+    } else {
+      for (int j = 0; j < n; j++) {
+        g(base + j) += gV(k - 1, j);
+      }
+    }
+  }
+}
+
+// One c-step: minimize max_i r_i^2 over the cosets at fixed Q, by steepest
+// descent for the maximum. The descent direction is the negative of the
+// min-norm element of the convex hull of the active gradients (the correct
+// steepest-descent direction for a minimax, found by Frank-Wolfe), and the
+// step is chosen by Armijo backtracking on the true maximum. Returns the
+// new maximum r^2.
+inline double CStepMinimax(std::vector<CellClass> const &cells,
+                           MatrixXd const &Q, MatrixXd &C, int iters = 20) {
+  int n = Q.cols();
+  int m = C.rows();
+  int dc_dim = n * (m - 1);
+  int n_cell = cells.size();
+  double cur_max = -1;
+  for (int it = 0; it < iters; it++) {
+    std::vector<double> R2(n_cell);
+    std::vector<VectorXd> g(n_cell);
+    double mx = -1;
+    for (int i = 0; i < n_cell; i++) {
+      CellR2Grad(cells[i], Q, C, R2[i], g[i]);
+      mx = std::max(mx, R2[i]);
+    }
+    cur_max = mx;
+    std::vector<int> act;
+    for (int i = 0; i < n_cell; i++) {
+      if (R2[i] > mx - 0.02 * mx - 1e-12) {
+        act.push_back(i);
+      }
+    }
+    // min-norm element of conv{ g_i : i active } by Frank-Wolfe
+    VectorXd d = g[act[0]];
+    for (int k = 0; k < 80; k++) {
+      int jmin = act[0];
+      double best = d.dot(g[act[0]]);
+      for (int idx : act) {
+        double val = d.dot(g[idx]);
+        if (val < best) {
+          best = val;
+          jmin = idx;
+        }
+      }
+      double gamma = 2.0 / (k + 2.0);
+      d = (1.0 - gamma) * d + gamma * g[jmin];
+    }
+    double dn = d.norm();
+    if (dn < 1e-10) {
+      break;   // stationary: 0 is in the hull of active gradients
+    }
+    VectorXd dir = -d / dn;
+    // Armijo line search on the true maximum
+    double step = 0.25;
+    bool moved = false;
+    for (int bt = 0; bt < 40; bt++) {
+      MatrixXd Ctrial = C;
+      for (int t = 1; t < m; t++) {
+        for (int j = 0; j < n; j++) {
+          Ctrial(t, j) += step * dir((t - 1) * n + j);
+        }
+      }
+      double mx_new = -1;
+      for (int i = 0; i < n_cell; i++) {
+        MatrixXd P = CellPositions(cells[i], Ctrial);
+        MatrixXd V(n, n);
+        for (int k = 0; k < n; k++) {
+          V.row(k) = P.row(k + 1) - P.row(0);
+        }
+        MatrixXd G = V * Q * V.transpose();
+        VectorXd q = G.diagonal();
+        mx_new = std::max(mx_new, 0.25 * q.dot(G.ldlt().solve(q)));
+      }
+      if (mx_new < mx - 1e-4 * step * dn) {
+        C = Ctrial;
+        cur_max = mx_new;
+        moved = true;
+        break;
+      }
+      step *= 0.5;
+    }
+    if (!moved) {
+      break;
+    }
+    (void)dc_dim;
+  }
+  return cur_max;
+}
+
+// ---------------------------------------------------------------------------
 // The descent
 // ---------------------------------------------------------------------------
 
@@ -579,6 +1010,79 @@ struct DescendResult {
   PeriodicConfig conf;
   int n_retessellations = 0;
 };
+
+// Alternating block descent: exact SDP Q-step, trust-region SLP c-step,
+// re-tessellating between outer rounds. This is the fast successor of the
+// soft-max L-BFGS Descend below; it exploits the convexity of the problem
+// in Q and treats the coset minimax by its active set.
+inline DescendResult DescendAlt(PeriodicConfig conf, int rounds,
+                                std::ostream &os, bool verbose = false,
+                                int deadline_sec = 120) {
+  DescendResult best;
+  int stall = 0;
+  auto t0 = std::chrono::steady_clock::now();
+  for (int it = 0; it < rounds; it++) {
+    if (std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - t0).count() > deadline_sec) {
+      return best;
+    }
+    // one tessellation per round: it both scores the current config and
+    // supplies the cell list for this round's Q-step and c-step. The next
+    // round's tessellation verifies the move just made.
+    DensityResult dr;
+    try {
+      dr = CoveringDensity(conf);
+    } catch (std::runtime_error &e) {
+      return best;
+    }
+    if (verbose) {
+      os << "  round " << it << ": theta = " << dr.theta << "\n";
+    }
+    if (!best.success || dr.theta < best.theta - 1e-11) {
+      best.success = true;
+      best.theta = dr.theta;
+      best.conf = conf;
+      stall = 0;
+    } else {
+      stall++;
+      if (stall >= 3) {
+        return best;
+      }
+    }
+    best.n_retessellations = it + 1;
+    // Q-step: exact SDP optimum for the current cosets and cell list
+    MatrixXd Qnew;
+    try {
+      Qnew = QStep(dr.cells, conf.C, conf.Q);
+    } catch (std::runtime_error &e) {
+      return best;
+    }
+    // guard: a bad cell list can give an anisotropic SDP optimum whose
+    // tessellation would explode. If the new form is too skewed, keep the
+    // best so far and stop rather than crawl.
+    {
+      Eigen::SelfAdjointEigenSolver<MatrixXd> es(Qnew, Eigen::EigenvaluesOnly);
+      double cond = es.eigenvalues()(conf.n - 1) / es.eigenvalues()(0);
+      if (!(cond < 300.0)) {
+        return best;
+      }
+    }
+    conf.Q = Qnew;
+    // c-step: minimize the covering radius over the cosets at this Q
+    CStepMinimax(dr.cells, conf.Q, conf.C);
+    conf.C.row(0).setZero();
+  }
+  // final scoring after the last move
+  try {
+    DensityResult dr = CoveringDensity(conf);
+    if (dr.theta < best.theta - 1e-11) {
+      best.theta = dr.theta;
+      best.conf = conf;
+    }
+  } catch (std::runtime_error &e) {
+  }
+  return best;
+}
 
 inline DescendResult Descend(PeriodicConfig conf, int rounds, std::ostream &os,
                              bool verbose = false) {

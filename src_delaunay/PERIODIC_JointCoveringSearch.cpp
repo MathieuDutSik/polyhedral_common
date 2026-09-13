@@ -29,7 +29,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "  descend [config] [out_config] [rounds]\n";
       std::cerr << "      joint local descent from the configuration; the "
                    "best found is written to out_config\n";
-      std::cerr << "  multistart [n] [m] [count] [out_config] [seed]\n";
+      std::cerr << "  multistart [n] [m] [count] [out_config] [seed] [rounds]\n";
+      std::cerr << "  multistart-alt [n] [m] [count] [out_config] [seed]\n";
+      std::cerr << "      alternating SDP/minimax descent from well-rounded "
+                   "seeds (fast)\n";
       std::cerr << "      repeated descents from random configurations, "
                    "keeping the best in out_config\n";
       return -1;
@@ -42,6 +45,41 @@ int main(int argc, char *argv[]) {
                 << " classes=" << dr.cells.size() << "\n";
       std::cout << "mu2=" << dr.mu2 << "\n";
       printf("theta=%.13f\n", dr.theta);
+      return 0;
+    }
+    if (mode == "qstepcheck" && argc == 3) {
+      // gradient check of the Q-step barrier, then a full Q-step: verify it
+      // improves (or holds) the covering density at fixed cosets.
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      DensityResult dr = CoveringDensity(conf);
+      QStepData qd = BuildQStepData(dr.cells, conf.C);
+      VectorXd x(qd.dim);
+      for (int u = 0; u < qd.dim; u++) {
+        x(u) = conf.Q(qd.basis[u].first, qd.basis[u].second);
+      }
+      double val;
+      VectorXd g;
+      MatrixXd H;
+      QStepBarrier(qd, x, 100.0, val, &g, &H);
+      double eps = 1e-6, worst = 0;
+      for (int u = 0; u < qd.dim; u++) {
+        VectorXd xp = x, xm = x;
+        xp(u) += eps;
+        xm(u) -= eps;
+        double vp, vm;
+        QStepBarrier(qd, xp, 100.0, vp, nullptr, nullptr);
+        QStepBarrier(qd, xm, 100.0, vm, nullptr, nullptr);
+        double fd = (vp - vm) / (2 * eps);
+        worst = std::max(worst, std::abs(fd - g(u)) /
+                                    std::max(1.0, std::abs(fd)));
+      }
+      printf("worst relative gradient error = %.3e\n", worst);
+      MatrixXd Qopt = QStep(dr.cells, conf.C, conf.Q);
+      PeriodicConfig c2 = conf;
+      c2.Q = Qopt;
+      DensityResult d2 = CoveringDensity(c2);
+      printf("density before Q-step = %.12f\n", dr.theta);
+      printf("density after  Q-step = %.12f\n", d2.theta);
       return 0;
     }
     if (mode == "gradcheck" && argc == 3) {
@@ -70,6 +108,18 @@ int main(int argc, char *argv[]) {
              int(x.size()), worst);
       return 0;
     }
+    if (mode == "descend-alt" && (argc == 4 || argc == 5)) {
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      int rounds = argc == 5 ? atoi(argv[4]) : 20;
+      DescendResult res = DescendAlt(conf, rounds, std::cerr, true);
+      if (!res.success) {
+        std::cerr << "the descent could not evaluate any configuration\n";
+        return 1;
+      }
+      printf("theta=%.13f\n", res.theta);
+      WriteConfigFile(argv[3], res.conf);
+      return 0;
+    }
     if (mode == "descend" && (argc == 4 || argc == 5)) {
       PeriodicConfig conf = ReadConfigFile(argv[2]);
       int rounds = argc == 5 ? atoi(argv[4]) : 15;
@@ -82,11 +132,59 @@ int main(int argc, char *argv[]) {
       WriteConfigFile(argv[3], res.conf);
       return 0;
     }
-    if (mode == "multistart" && (argc == 6 || argc == 7)) {
+    if (mode == "multistart-alt" && (argc == 6 || argc == 7)) {
       int n = atoi(argv[2]);
       int m = atoi(argv[3]);
       int count = atoi(argv[4]);
       unsigned seed = argc == 7 ? unsigned(atol(argv[6])) : 1u;
+      std::mt19937_64 gen(seed);
+      std::normal_distribution<double> gauss(0.0, 1.0);
+      std::uniform_real_distribution<double> unif(0.0, 1.0);
+      double best = 1e30;
+      for (int st = 0; st < count; st++) {
+        PeriodicConfig conf;
+        conf.n = n;
+        conf.m = m;
+        // well-rounded seed: R = I + small gaussian, Q = R^T R near the
+        // identity, so the tessellation stays cheap and the descent starts
+        // in the region where covering-optimal (well-rounded) forms live
+        Eigen::MatrixXd R = Eigen::MatrixXd::Identity(n, n);
+        for (int i = 0; i < n; i++) {
+          for (int j = 0; j < n; j++) {
+            R(i, j) += 0.25 * gauss(gen);
+          }
+        }
+        conf.Q = R.transpose() * R;
+        conf.C.resize(m, n);
+        conf.C.row(0).setZero();
+        for (int t = 1; t < m; t++) {
+          for (int j = 0; j < n; j++) {
+            conf.C(t, j) = unif(gen);
+          }
+        }
+        DescendResult res = DescendAlt(conf, 25, std::cerr, false);
+        if (res.success) {
+          printf("start %d: theta=%.13f%s\n", st, res.theta,
+                 res.theta < best ? "  *" : "");
+          fflush(stdout);
+          if (res.theta < best) {
+            best = res.theta;
+            WriteConfigFile(argv[5], res.conf);
+          }
+        } else {
+          printf("start %d: failed\n", st);
+          fflush(stdout);
+        }
+      }
+      printf("best=%.13f\n", best);
+      return 0;
+    }
+    if (mode == "multistart" && (argc >= 6 && argc <= 8)) {
+      int n = atoi(argv[2]);
+      int m = atoi(argv[3]);
+      int count = atoi(argv[4]);
+      unsigned seed = argc >= 7 ? unsigned(atol(argv[6])) : 1u;
+      int rounds = argc == 8 ? atoi(argv[7]) : 15;
       std::mt19937_64 gen(seed);
       std::normal_distribution<double> gauss(0.0, 1.0);
       std::uniform_real_distribution<double> unif(0.0, 1.0);
@@ -110,7 +208,7 @@ int main(int argc, char *argv[]) {
             conf.C(t, j) = unif(gen);
           }
         }
-        DescendResult res = Descend(conf, 15, std::cerr, false);
+        DescendResult res = Descend(conf, rounds, std::cerr, false);
         if (res.success) {
           printf("start %d: theta=%.13f%s\n", st, res.theta,
                  res.theta < best ? "  *" : "");
