@@ -3010,8 +3010,9 @@ RetMI_S<T, Tgroup> LinPolytopeIntegral_Automorphism_Subspaces(
   configuration EXTfaithful spans a full rank sublattice L of Z^n of possibly
   nontrivial index. The rows of EXTfaithful must be canonically ordered (the
   ordering is the caller's canonicalization of the abstract configuration)
-  and ListMatr must generate the full group of rational transformations
-  permuting the rows of EXTfaithful.
+  and ListMatrScaled must generate the full group of rational transformations
+  permuting the rows of EXTfaithful, each given in scaled form as a pair
+  (numerator over the ring, scalar denominator).
 
   The construction: with X the coordinates of the rows in an arbitrary basis
   of L, the unimodular U of the row Hermite normal form of X^T turns X into
@@ -3029,61 +3030,95 @@ RetMI_S<T, Tgroup> LinPolytopeIntegral_Automorphism_Subspaces(
  */
 template <typename T, typename Tgroup>
 MyMatrix<T> LinPolytopeIntegral_Canonicalization_Subspaces(
-    std::vector<MyMatrix<T>> const &ListMatr, MyMatrix<T> const &EXTfaithful,
-    std::ostream &os) {
-  static_assert(is_ring_field<T>::value,
-                "LinPolytopeIntegral_Canonicalization_Subspaces requires a "
-                "field type");
+    std::vector<std::pair<MyMatrix<T>, T>> const &ListMatrScaled,
+    MyMatrix<T> const &EXTfaithful, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-  using Tring = typename underlying_ring<T>::ring_type;
+  // Fully ring based: T is a ring, EXTfaithful is integral, and each
+  // automorphism generator is supplied in scaled form (a numerator over the
+  // ring and a scalar denominator) since the generators are rational but not
+  // integral. Every inverse is taken through AdjugateDeterminant and every
+  // division is exact, so no field arithmetic occurs anywhere.
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: Beginning of LinPolytopeIntegral_Canonicalization_Subspaces\n";
 #endif
-  MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
-  MyMatrix<T> InvBasis = Inverse(eBasis);
-  MyMatrix<T> Xcoord = EXTfaithful * InvBasis;
-  std::optional<MyMatrix<Tring>> optX =
-      UniversalMatrixConversionCheck<Tring, T>(Xcoord);
-  if (!optX) {
-    std::cerr << "MATGRP: the coordinates of the configuration in a basis of "
-                 "the spanned lattice should be integral\n";
-    throw TerminalException{1};
-  }
-  MyMatrix<Tring> U_ring =
-      ComputeRowHermiteNormalForm_first(TransposedMat(*optX));
-  MyMatrix<T> Utr = TransposedMat(UniversalMatrixConversion<T, Tring>(U_ring));
-  // The canonical coordinates of the configuration: XL = EXT * Inverse(BLcan)
-  MyMatrix<T> BLcan = Inverse(Utr) * eBasis;
-  MyMatrix<T> InvBLcan = Inverse(BLcan);
-  MyMatrix<T> XL = Xcoord * Utr;
-  // The group expressed in the canonical coordinates of L
-  std::vector<MyMatrix<T>> ListMatrL;
-  for (auto &eGen : ListMatr) {
-    MyMatrix<T> NewGen = BLcan * eGen * InvBLcan;
+  // The content (gcd of the entries, made positive) of a ring matrix.
+  auto content_of = [](MyMatrix<T> const &M) -> T {
+    T g(0);
+    int nr = M.rows(), nc = M.cols();
+    for (int a = 0; a < nr; a++)
+      for (int b = 0; b < nc; b++)
+        g = GcdPair(g, M(a, b));
+    g = T_abs(g);
+    if (g == 0)
+      g = T(1);
+    return g;
+  };
+  // Divide every entry of M by d, which must divide it (the callers know the
+  // quotient is integral; the sanity check guards against a logic error).
+  auto exact_div = [&]([[maybe_unused]] std::string const &ctx,
+                       MyMatrix<T> const &M, T const &d) -> MyMatrix<T> {
+    int nr = M.rows(), nc = M.cols();
+    MyMatrix<T> R(nr, nc);
+    for (int a = 0; a < nr; a++)
+      for (int b = 0; b < nc; b++) {
+        T q = M(a, b) / d;
 #ifdef SANITY_CHECK_MATRIX_GROUP
-    if (!IsIntegralMatrix(NewGen)) {
-      std::cerr << "MATGRP: the generators expressed in a basis of the "
-                   "spanned lattice should be integral\n";
-      throw TerminalException{1};
-    }
+        if (q * d != M(a, b)) {
+          std::cerr << "MATGRP: non-exact division (" << ctx
+                    << ") in LinPolytopeIntegral_Canonicalization_Subspaces\n";
+          throw TerminalException{1};
+        }
 #endif
+        R(a, b) = q;
+      }
+    return R;
+  };
+  MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
+  // Xcoord = EXTfaithful * eBasis^{-1}, integral, via the adjugate.
+  std::pair<MyMatrix<T>, T> adjB = AdjugateDeterminant(eBasis);
+  MyMatrix<T> Xcoord =
+      exact_div("Xcoord", EXTfaithful * adjB.first, adjB.second);
+  MyMatrix<T> U = ComputeRowHermiteNormalForm_first(TransposedMat(Xcoord));
+  MyMatrix<T> Utr = TransposedMat(U);
+  // BLcan = Utr^{-1} * eBasis; Utr is unimodular so the division is by +-1.
+  std::pair<MyMatrix<T>, T> adjU = AdjugateDeterminant(Utr);
+  MyMatrix<T> BLcan = exact_div("BLcan", adjU.first * eBasis, adjU.second);
+  // BLcan^{-1} = adjL / detL, kept in this split form.
+  std::pair<MyMatrix<T>, T> adjL = AdjugateDeterminant(BLcan);
+  MyMatrix<T> XL = Xcoord * Utr;
+  // The group in the canonical coordinates of L: BLcan eGen BLcan^{-1}. Each
+  // eGen is supplied as num / den, so this is BLcan num adjL / (den detL),
+  // integral.
+  std::vector<MyMatrix<T>> ListMatrL;
+  for (auto &eScaled : ListMatrScaled) {
+    MyMatrix<T> const &num = eScaled.first;
+    T const &den = eScaled.second;
+    MyMatrix<T> NewGen =
+        exact_div("gen", (BLcan * num) * adjL.first, den * adjL.second);
     ListMatrL.emplace_back(std::move(NewGen));
   }
   FiniteMatrixGroupHelper<T, Telt, TintGroup> helper =
       ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(XL);
-  // The ambient lattice Z^n as a superlattice of L, scaled to a sublattice
-  FractionMatrix<T> fr = RemoveFractionMatrixPlusCoeff(InvBLcan);
+  // The ambient lattice Z^n as a superlattice of L, scaled to a sublattice.
+  // With InvBLcan = adjL / detL, RemoveFractionMatrixPlusCoeff(InvBLcan) has
+  // TheMat = sign(detL) adjL / content(adjL) (primitive) and
+  // TheMult = |detL| / content(adjL); both are reproduced here over the ring.
+  T cont = content_of(adjL.first);
+  T detL = adjL.second;
+  T absDetL = T_abs(detL);
+  T sgn = (detL < T(0)) ? T(-1) : T(1);
+  MyMatrix<T> TheMat = exact_div("TheMat", sgn * adjL.first, cont);
   ResultSpaceCanonicalization<T> res =
-      LinearSpace_Canonicalize_Kernel<T, Tgroup>(ListMatrL, helper, fr.TheMat,
-                                                 os);
-  MyMatrix<T> BM = (T(1) / fr.TheMult) * res.SpaceCan;
-  MyMatrix<T> Bret = BM * Inverse(res.gMap) * BLcan;
+      LinearSpace_Canonicalize_Kernel<T, Tgroup>(ListMatrL, helper, TheMat, os);
+  // Bret = (1 / TheMult) SpaceCan gMap^{-1} BLcan
+  //      = content(adjL) SpaceCan gMap^{-1} BLcan / |detL|, integral. gMap is
+  // unimodular so its inverse is a division by +-1.
+  std::pair<MyMatrix<T>, T> adjG = AdjugateDeterminant(res.gMap);
+  MyMatrix<T> gMapInv = exact_div("gMapInv", adjG.first, adjG.second);
+  MyMatrix<T> numer = cont * (res.SpaceCan * gMapInv * BLcan);
+  MyMatrix<T> Bret = exact_div("Bret", numer, absDetL);
 #ifdef SANITY_CHECK_MATRIX_GROUP
-  if (!IsIntegralMatrix(Bret)) {
-    std::cerr << "MATGRP: the canonicalization basis should be integral\n";
-    throw TerminalException{1};
-  }
   if (T_abs(DeterminantMat(Bret)) != T(1)) {
     std::cerr << "MATGRP: the canonicalization basis should be unimodular\n";
     throw TerminalException{1};

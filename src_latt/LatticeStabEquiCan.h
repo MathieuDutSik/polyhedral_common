@@ -492,30 +492,25 @@ ComputeCanonicalFormFullRank_family(std::vector<MyMatrix<T>> const &ListMat,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetListGenAutomorphism_ListMat_Vdiag|=" << time << "\n";
 #endif
-  // The subspace canonicalization divides, so from here on the work is over
-  // the field. Everything before it, and the answer after it, are integral.
-  MyMatrix<Tfield> SHVord_F = UniversalMatrixConversion<Tfield, T>(SHVord_T);
-  std::vector<MyMatrix<Tfield>> ListMatrGens;
-  // The generators permute a family containing the scalar products with
-  // the invertible ListMat[0], so they are realized by construction and
-  // the unchecked solve applies. The solver pays the row selection once
-  // for the whole loop instead of once per generator.
-  FindTransformationSolver<Tfield> solver(SHVord_F);
+  // The generators are rational (they permute the configuration but are not
+  // integral on the ambient lattice). They are realized over the ring in
+  // scaled form --- a numerator matrix and a scalar denominator --- through
+  // the adjugate precompute, so the subspace canonicalization then runs
+  // entirely over the ring with no field arithmetic. The precompute pays the
+  // row selection and the adjugate of the basis submatrix once for the whole
+  // loop; each generator is then a single matrix product.
+  RepresentVertexPermutationPreComput<Tint> solver(SHVord);
+  std::vector<std::pair<MyMatrix<Tint>, Tint>> ListMatrScaled;
   for (auto &eList : ListGen) {
-    std::optional<MyMatrix<Tfield>> opt =
-        solver.solve_notcheck_vect(SHVord_F, eList);
-    MyMatrix<Tfield> eMatrGen =
-        unfold_opt(opt, "the transformation of the family should exist");
-    ListMatrGens.emplace_back(std::move(eMatrGen));
+    ListMatrScaled.push_back(solver.represent_scaled(eList));
   }
-  MyMatrix<Tfield> B_F =
-      LinPolytopeIntegral_Canonicalization_Subspaces<Tfield, Tgroup>(
-          ListMatrGens, SHVord_F, os);
+  MyMatrix<Tint> B =
+      LinPolytopeIntegral_Canonicalization_Subspaces<Tint, Tgroup>(
+          ListMatrScaled, SHVord, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: LinPolytopeIntegral_Canonicalization_Subspaces|=" << time
      << "\n";
 #endif
-  MyMatrix<Tint> B = UniversalMatrixConversion<Tint, Tfield>(B_F);
 #ifdef SANITY_CHECK_LATTICE_STAB_EQUI_CAN
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   MyMatrix<T> eProd = B_T * inpMat * B_T.transpose();

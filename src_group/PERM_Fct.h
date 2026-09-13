@@ -216,6 +216,22 @@ template <typename T> struct RepresentVertexPermutationPreComput {
 #endif
     return RetMat;
   }
+  // The scaled, fraction-free form of represent(): returns the pair
+  // (M1adj * M2, M1det) with represent(ePerm) == (M1adj * M2) / M1det. A ring
+  // caller carries the rational transformation as an integer numerator and a
+  // scalar denominator, so no field arithmetic is ever needed. The numerator
+  // is not reduced against the denominator; that is the caller's concern and
+  // does not affect the value of the quotient.
+  template <typename Telt>
+  std::pair<MyMatrix<T>, T> represent_scaled(Telt const &ePerm) const {
+    size_t nbRow_s = ListRowSelect.size();
+    std::vector<int> ListRowSelectImg(nbRow_s);
+    for (size_t iRow = 0; iRow < nbRow_s; iRow++) {
+      ListRowSelectImg[iRow] = ePerm.at(ListRowSelect[iRow]);
+    }
+    MyMatrix<T> M2 = SelectRow(EXT, ListRowSelectImg);
+    return {M1adj * M2, M1det};
+  }
 };
 
 template <typename T, typename Tidx>
