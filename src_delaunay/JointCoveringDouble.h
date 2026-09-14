@@ -473,6 +473,89 @@ inline DensityResult CoveringDensity(PeriodicConfig const &conf,
 }
 
 // ---------------------------------------------------------------------------
+// A small dense LP solver (primal simplex)
+// ---------------------------------------------------------------------------
+//
+// Solves   min c . x   s.t.  A x <= b,  x >= 0,   assuming b >= 0 so that the
+// all-slack basis is feasible and no phase 1 is needed. Dantzig entering rule
+// with a Bland fallback after too many iterations to defeat cycling. Returned
+// status: 0 optimal, 1 unbounded, 2 iteration limit.
+struct LPResult {
+  int status;
+  VectorXd x;
+  double obj;
+};
+
+inline LPResult SimplexMin(VectorXd const &c, MatrixXd const &A,
+                           VectorXd const &b) {
+  int m = A.rows();
+  int nstruct = A.cols();
+  int ntot = nstruct + m;                 // structural + slacks
+  MatrixXd T = MatrixXd::Zero(m + 1, ntot + 1);
+  T.topLeftCorner(m, nstruct) = A;
+  for (int i = 0; i < m; i++) {
+    T(i, nstruct + i) = 1.0;
+    T(i, ntot) = b(i);
+  }
+  T.block(m, 0, 1, nstruct) = c.transpose();
+  std::vector<int> basis(m);
+  for (int i = 0; i < m; i++) basis[i] = nstruct + i;
+  int maxit = 20000;
+  bool bland = false;
+  for (int iter = 0; iter < maxit; iter++) {
+    // entering column: most negative reduced cost (Dantzig), or first (Bland)
+    int enter = -1;
+    double best = -1e-9;
+    for (int j = 0; j < ntot; j++) {
+      double rc = T(m, j);
+      if (rc < -1e-9) {
+        if (bland) { enter = j; break; }
+        if (rc < best) { best = rc; enter = j; }
+      }
+    }
+    if (enter < 0) {
+      VectorXd x = VectorXd::Zero(nstruct);
+      for (int i = 0; i < m; i++)
+        if (basis[i] < nstruct) x(basis[i]) = T(i, ntot);
+      return {0, x, T(m, ntot) * -1.0};   // obj row holds -z at RHS
+    }
+    // ratio test
+    int leave = -1;
+    double bestratio = 1e30;
+    for (int i = 0; i < m; i++) {
+      double a = T(i, enter);
+      if (a > 1e-12) {
+        double ratio = T(i, ntot) / a;
+        if (ratio < bestratio - 1e-12 ||
+            (bland && ratio < bestratio + 1e-12 &&
+             (leave < 0 || basis[i] < basis[leave]))) {
+          bestratio = ratio;
+          leave = i;
+        }
+      }
+    }
+    if (leave < 0) {
+      return {1, VectorXd::Zero(nstruct), -1e30};   // unbounded
+    }
+    // pivot on (leave, enter)
+    double piv = T(leave, enter);
+    T.row(leave) /= piv;
+    for (int i = 0; i <= m; i++) {
+      if (i != leave) {
+        double f = T(i, enter);
+        if (std::abs(f) > 1e-15) T.row(i) -= f * T.row(leave);
+      }
+    }
+    basis[leave] = enter;
+    if (iter == maxit / 2) bland = true;
+  }
+  VectorXd x = VectorXd::Zero(nstruct);
+  for (int i = 0; i < m; i++)
+    if (basis[i] < nstruct) x(basis[i]) = T(i, ntot);
+  return {2, x, T(m, ntot) * -1.0};
+}
+
+// ---------------------------------------------------------------------------
 // The Q-step: exact convex SDP at fixed cosets
 // ---------------------------------------------------------------------------
 //
@@ -1114,6 +1197,9 @@ struct DescendResult {
   double theta = 0;
   PeriodicConfig conf;
   int n_retessellations = 0;
+  bool rigid = false;        // stopped because no first-order descent direction
+  double stationarity = 0;   // best per-unit-box logTheta descent rate at the end
+  int n_active = 0;          // number of binding Delaunay orbits at the end
 };
 
 // A correct c-step: minimize the TRUE covering radius over the cosets at
@@ -1262,6 +1348,238 @@ inline void JointGrad(std::vector<CellClass> const &cells, MatrixXd const &Q,
       }
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// The LP direction step in joint (Q, c) space
+// ---------------------------------------------------------------------------
+//
+// At the current point the covering density is
+//
+//   log Theta = const + (n/2) log mu^2 - (1/2) log det Q,   mu^2 = max_i r_i^2,
+//
+// a non-smooth function because of the max. The steepest feasible descent
+// direction is the solution of the linear program
+//
+//   minimize   (n/2)/mu^2 * s  -  (1/2) gdet . d
+//   over       (d in R^dim, s in R)
+//   subject to g_i . d <= s        for every ACTIVE orbit i (r_i^2 ~ mu^2)
+//              -rho <= d_k <= rho   (a box / trust region),
+//
+// where g_i = grad r_i^2 and gdet = grad log det Q, both in the joint
+// coordinates (Q sym-basis entries, then the coset entries). s plays the role
+// of d(mu^2): minimizing it under g_i . d <= s drives it to max_i g_i . d, the
+// first-order change of the covering radius. d = 0, s = 0 is always feasible
+// with objective 0, so the LP optimum is <= 0; a strictly negative value is a
+// descent direction and a value of 0 certifies first-order stationarity
+// (a jammed, rigid configuration). The objective is positively homogeneous in
+// rho, so predicted / rho is a scale-free descent rate.
+//
+// Free variables are split x = x^+ - x^- for the non-negative SimplexMin, and
+// the box is imposed as the per-part bounds x^+ <= rho, x^- <= rho.
+struct DirLPResult {
+  VectorXd d;         // joint direction, length dim
+  double predicted;   // LP optimum: linearized change of log Theta (<= 0)
+  int n_active;
+  int status;         // from SimplexMin
+};
+
+inline DirLPResult DirectionLP(std::vector<double> const &R2,
+                               std::vector<VectorXd> const &grad,
+                               VectorXd const &gdet, double mu2, int n,
+                               double rho, double act_tol = 0.02) {
+  int dim = gdet.size();
+  int n_cell = R2.size();
+  std::vector<int> act;
+  for (int i = 0; i < n_cell; i++) {
+    if (R2[i] > mu2 - act_tol * mu2 - 1e-12) {
+      act.push_back(i);
+    }
+  }
+  int na = act.size();
+  // variables: dp[dim], dn[dim], sp, sn      -> nvar = 2*dim + 2
+  int nvar = 2 * dim + 2;
+  int idx_sp = 2 * dim, idx_sn = 2 * dim + 1;
+  // an upper bound on |g_i . d| over the box, to keep sp, sn finite
+  double Sbnd = 0;
+  for (int i : act) {
+    double l1 = 0;
+    for (int k = 0; k < dim; k++) l1 += std::abs(grad[i](k));
+    Sbnd = std::max(Sbnd, rho * l1);
+  }
+  Sbnd = std::max(Sbnd, 1e-6) * 1.5;
+  int ncon = na + 2 * dim + 2;
+  MatrixXd A = MatrixXd::Zero(ncon, nvar);
+  VectorXd b = VectorXd::Zero(ncon);
+  int row = 0;
+  for (int i : act) {
+    for (int k = 0; k < dim; k++) {
+      A(row, k) = grad[i](k);          // dp_k
+      A(row, dim + k) = -grad[i](k);   // dn_k
+    }
+    A(row, idx_sp) = -1.0;
+    A(row, idx_sn) = 1.0;
+    b(row) = 0.0;
+    row++;
+  }
+  for (int k = 0; k < 2 * dim; k++) {
+    A(row, k) = 1.0;
+    b(row) = rho;
+    row++;
+  }
+  A(row, idx_sp) = 1.0; b(row) = Sbnd; row++;
+  A(row, idx_sn) = 1.0; b(row) = Sbnd; row++;
+  double coef = 0.5 * n / mu2;
+  VectorXd c = VectorXd::Zero(nvar);
+  for (int k = 0; k < dim; k++) {
+    c(k) = -0.5 * gdet(k);        // dp_k
+    c(dim + k) = 0.5 * gdet(k);   // dn_k
+  }
+  c(idx_sp) = coef;
+  c(idx_sn) = -coef;
+  LPResult lp = SimplexMin(c, A, b);
+  VectorXd d = VectorXd::Zero(dim);
+  if (lp.status == 0 || lp.status == 2) {
+    for (int k = 0; k < dim; k++) d(k) = lp.x(k) - lp.x(dim + k);
+  }
+  // Do NOT trust the simplex's reported objective: this LP is massively
+  // degenerate (every active row has right-hand side 0) and the dense tableau
+  // accumulates roundoff, so the returned basic point can be infeasible by a
+  // hair -- its internal s can sit just below max_i g_i . d, making the
+  // reported objective spuriously negative on the same order as the true
+  // descent. Recompute the direction's genuine first-order effect on log Theta
+  // from the returned d, using the true active radii. If it is not actually a
+  // descent (obj >= 0), report a non-negative predicted value: the point is
+  // first-order stationary to the precision the LP can resolve.
+  double s_real = 0.0;
+  bool any = false;
+  for (int i : act) {
+    double gd = grad[i].dot(d);
+    if (!any || gd > s_real) { s_real = gd; any = true; }
+  }
+  double coef2 = 0.5 * n / mu2;
+  double predicted = any ? coef2 * s_real - 0.5 * gdet.dot(d) : 0.0;
+  if (predicted > 0.0) predicted = 0.0;   // roundoff ascent: treat as stationary
+  return {d, predicted, na, lp.status};
+}
+
+// Joint (Q, c) descent driven by the LP direction. Line search on the true
+// log Theta with incremental re-tessellation; a trust radius rho that grows on
+// a full step and shrinks on a failed one. Stops -- and reports the point as
+// rigid -- when the scale-free descent rate -predicted/rho falls below a
+// tolerance: no direction in (Q, c) space lowers the density to first order.
+inline DescendResult JointDescentLP(PeriodicConfig conf, int iters,
+                                    std::ostream &os, bool verbose = false,
+                                    int deadline_sec = 300) {
+  int n = conf.n, m = conf.m;
+  auto basis = SymBasis(n);
+  int dQ = basis.size();
+  int dc = n * (m - 1);
+  int dim = dQ + dc;
+  DescendResult best;
+  auto t0 = std::chrono::steady_clock::now();
+  double rho = 0.05;
+  double rho_min = 1e-7, rho_max = 1.0;
+  double stat_tol = 1e-7;
+  int n_full = 0, n_reuse = 0;
+  std::vector<CellClass> cells;
+  try {
+    cells = DelaunayCellClasses(conf);
+  } catch (std::runtime_error &e) {
+    return best;
+  }
+  for (int it = 0; it < iters; it++) {
+    if (std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - t0).count() > deadline_sec) {
+      break;
+    }
+    std::vector<double> R2;
+    std::vector<VectorXd> g;
+    JointGrad(cells, conf.Q, conf.C, basis, R2, g);
+    double mu2 = *std::max_element(R2.begin(), R2.end());
+    double det = conf.Q.determinant();
+    double cur_theta =
+        m * VolumeUnitBall(n) * std::pow(mu2, 0.5 * n) / std::sqrt(det);
+    if (!best.success || cur_theta < best.theta - 1e-12) {
+      best.success = true;
+      best.theta = cur_theta;
+      best.conf = conf;
+    }
+    best.n_retessellations = it + 1;
+    // gdet in the joint coordinates (c-part is zero)
+    VectorXd gdet = VectorXd::Zero(dim);
+    MatrixXd Qinv = conf.Q.inverse();
+    for (int u = 0; u < dQ; u++) {
+      int k = basis[u].first, l = basis[u].second;
+      gdet(u) = (k == l) ? Qinv(k, k) : 2.0 * Qinv(k, l);
+    }
+    DirLPResult lp = DirectionLP(R2, g, gdet, mu2, n, rho);
+    bool lp_ok = (lp.status == 0);
+    // rate = predicted logTheta descent per unit box; scale-free in rho. Only
+    // meaningful for an optimal LP -- a bad status must NOT read as rate 0.
+    double rate = lp_ok ? -lp.predicted / rho : -1.0;
+    if (rate >= 0) best.stationarity = rate;
+    best.n_active = lp.n_active;
+    if (verbose) {
+      os << "  iter " << it << ": theta = " << cur_theta << " rho = " << rho
+         << " rate = " << rate << " active = " << lp.n_active << " ["
+         << "tess full=" << n_full << " reuse=" << n_reuse << "]\n";
+    }
+    // First-order stationarity: the linearized model finds no descent.
+    if (lp_ok && rate < stat_tol) {
+      best.rigid = true;
+      break;
+    }
+    double dnorm = lp.d.norm();
+    if (lp_ok && dnorm < 1e-14) {
+      best.rigid = true;
+      break;
+    }
+    // line search along lp.d on the true log Theta (via Theta), Armijo
+    double predicted_theta = cur_theta * (-lp.predicted);   // >= 0
+    double step = 1.0;
+    bool moved = false;
+    for (int bt = 0; bt < 40; bt++) {
+      PeriodicConfig trial = conf;
+      for (int u = 0; u < dQ; u++) {
+        int k = basis[u].first, l = basis[u].second;
+        trial.Q(k, l) += step * lp.d(u);
+        if (k != l) trial.Q(l, k) = trial.Q(k, l);
+      }
+      for (int t = 1; t < m; t++)
+        for (int j = 0; j < n; j++)
+          trial.C(t, j) += step * lp.d(dQ + (t - 1) * n + j);
+      Eigen::LLT<MatrixXd> llt(trial.Q);
+      if (llt.info() != Eigen::Success) { step *= 0.5; continue; }
+      std::vector<CellClass> trial_cells = cells;
+      double th;
+      try {
+        DensityResult dr =
+            CoveringDensityReuse(trial, trial_cells, n_full, n_reuse);
+        th = dr.theta;
+      } catch (std::runtime_error &e) { step *= 0.5; continue; }
+      if (th < cur_theta - 1e-4 * step * predicted_theta) {
+        conf = trial;
+        cells = trial_cells;
+        moved = true;
+        break;
+      }
+      step *= 0.5;
+    }
+    if (moved) {
+      if (step > 0.999) rho = std::min(rho * 1.6, rho_max);
+    } else {
+      // No descent in the current trust region: shrink it and retry. If it has
+      // become negligible the descent has stalled -- but that is NOT by itself
+      // rigidity. Rigidity is decided only by the linearized first-order test
+      // above (rate < stat_tol, i.e. 0 lies in the cone of active gradients);
+      // a stall at a positive rate is a shallow non-smooth kink the descent
+      // could not cross, and best.stationarity reports the rate it reached.
+      rho *= 0.5;
+      if (rho < rho_min) break;
+    }
+  }
+  return best;
 }
 
 inline DescendResult JointDescent(PeriodicConfig conf, int iters,
