@@ -2,6 +2,9 @@
 // clang-format off
 #include "JointCoveringDouble.h"
 #include <iostream>
+#include <csignal>
+#include <sys/wait.h>
+#include <unistd.h>
 // clang-format on
 
 /*
@@ -333,6 +336,11 @@ int main(int argc, char *argv[]) {
       // Optional wall-clock budget (seconds): when given, run starts until the
       // budget is exhausted rather than a fixed count.
       double max_seconds = argc == 8 ? atof(argv[7]) : 0.0;
+      // Hard per-start wall-clock cap. Each start runs in a forked child so a
+      // start whose tessellation sends qhull into a multi-hour convex-hull
+      // grind (a single uninterruptible qh_new_qhull call, seen on degenerate
+      // near-cospherical clouds) can be SIGKILLed and the CPU reclaimed.
+      double start_budget = 300.0;
       // The lattice record to beat in this dimension (best lattice covering).
       double record = 0.0;
       if (n == 3) record = 1.4635030689668180;
@@ -366,36 +374,92 @@ int main(int argc, char *argv[]) {
         for (int t = 1; t < m; t++)
           for (int j = 0; j < n; j++)
             conf.C(t, j) = unif(gen);
-        DescendResult a = Descend(conf, 15, std::cerr, false);
-        if (!a.success) {
+        // Run this start in a child process with a hard time cap. The child
+        // does the whole descent, writes its result and configuration to temp
+        // files, and _exit()s; the parent waits at most start_budget seconds
+        // and SIGKILLs a child that overruns. Only one child runs at a time.
+        std::string tmpstat = std::string(argv[5]) + ".child.stat";
+        std::string tmpconf = std::string(argv[5]) + ".child.conf";
+        ::remove(tmpstat.c_str());
+        pid_t pid = fork();
+        if (pid == 0) {
+          DescendResult a = Descend(conf, 15, std::cerr, false);
+          DescendResult res = a;
+          if (a.success) {
+            DescendResult b = JointDescentLP(a.conf, 200, std::cerr, false, 90);
+            if (b.success && b.theta <= a.theta) res = b;
+          }
+          FILE *cf = fopen(tmpstat.c_str(), "w");
+          if (cf) {
+            if (res.success) {
+              fprintf(cf, "OK %.15g %d %d %.6e\n", res.theta,
+                      res.rigid ? 1 : 0, res.n_active, res.stationarity);
+              fclose(cf);
+              WriteConfigFile(tmpconf, res.conf);
+            } else {
+              fprintf(cf, "FAIL\n");
+              fclose(cf);
+            }
+          }
+          _exit(0);
+        }
+        auto ct0 = std::chrono::steady_clock::now();
+        bool finished = false;
+        while (true) {
+          int status;
+          if (waitpid(pid, &status, WNOHANG) == pid) { finished = true; break; }
+          double el = std::chrono::duration_cast<std::chrono::duration<double>>(
+                          std::chrono::steady_clock::now() - ct0).count();
+          if (el > start_budget) break;
+          usleep(200000);
+        }
+        if (!finished) {
+          kill(pid, SIGKILL);
+          int status;
+          waitpid(pid, &status, 0);
+          printf("start %d: TIMEOUT killed after %.0fs\n", st, start_budget);
+          fflush(stdout);
+          continue;
+        }
+        FILE *rf = fopen(tmpstat.c_str(), "r");
+        char tag[16] = {0};
+        if (!rf || fscanf(rf, "%15s", tag) != 1 ||
+            std::string(tag) != "OK") {
+          if (rf) fclose(rf);
           printf("start %d: failed\n", st);
           fflush(stdout);
           continue;
         }
-        // finish on the non-smooth ridge and certify rigidity
-        DescendResult res = JointDescentLP(a.conf, 200, std::cerr, false, 90);
-        if (!res.success || res.theta > a.theta) res = a;
-        if (res.rigid) {
+        double th = 0, stt = 0;
+        int rg = 0, ac = 0;
+        if (fscanf(rf, "%lf %d %d %lf", &th, &rg, &ac, &stt) != 4) {
+          fclose(rf);
+          printf("start %d: parse error\n", st);
+          fflush(stdout);
+          continue;
+        }
+        fclose(rf);
+        PeriodicConfig rescfg = ReadConfigFile(tmpconf);
+        if (rg) {
           n_rigid++;
           char fn[4096];
           snprintf(fn, sizeof(fn), "%s.rigid.%d", argv[5], n_rigid);
-          WriteConfigFile(fn, res.conf);
+          WriteConfigFile(fn, rescfg);
         }
-        bool beats = record > 0.0 && res.theta < record - 1e-9;
+        bool beats = record > 0.0 && th < record - 1e-9;
         if (beats) {
           n_record++;
           char fn[4096];
           snprintf(fn, sizeof(fn), "%s.record.%d", argv[5], n_record);
-          WriteConfigFile(fn, res.conf);
+          WriteConfigFile(fn, rescfg);
         }
         printf("start %d: theta=%.13f rigid=%d active=%d rate=%.2e%s%s\n", st,
-               res.theta, res.rigid ? 1 : 0, res.n_active, res.stationarity,
-               res.theta < best ? "  *" : "",
+               th, rg, ac, stt, th < best ? "  *" : "",
                beats ? "  <<< BEATS RECORD" : "");
         fflush(stdout);
-        if (res.theta < best) {
-          best = res.theta;
-          WriteConfigFile(argv[5], res.conf);
+        if (th < best) {
+          best = th;
+          WriteConfigFile(argv[5], rescfg);
         }
       }
       printf("best=%.13f rigid_count=%d record_beats=%d (record=%.13f)\n", best,

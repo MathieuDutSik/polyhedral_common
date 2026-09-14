@@ -220,6 +220,10 @@ inline std::vector<CellClass> DelaunayCellClasses(PeriodicConfig const &conf,
       b(pos)++;
     }
     int n_pts = lats.size();
+#ifdef DEBUG_JOINT_TESSELLATION
+    fprintf(stderr, "JOINT_TESSELLATION: iter=%d B0=%d n_pts=%d\n", iter, B0,
+            n_pts);
+#endif
     // qhull Delaunay of the transformed cloud
     qhT qh_qh;
     qhT *qh = &qh_qh;
