@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "      L-BFGS then LP finish: the recommended optimizer; "
                    "reports rigidity of the limit\n";
       std::cerr << "  multistart-lp [n] [m] [count] [out_config] [seed] "
-                   "[rounds]\n";
+                   "[max_seconds]\n";
       std::cerr << "      LP-direction descents from random seeds, reporting "
                    "the rigid configurations found\n";
       std::cerr << "      alternating SDP/minimax descent from well-rounded "
@@ -325,17 +325,34 @@ int main(int argc, char *argv[]) {
       WriteConfigFile(argv[3], r.conf);
       return 0;
     }
-    if (mode == "multistart-lp" && (argc == 6 || argc == 7)) {
+    if (mode == "multistart-lp" && (argc >= 6 && argc <= 8)) {
       int n = atoi(argv[2]);
       int m = atoi(argv[3]);
       int count = atoi(argv[4]);
-      unsigned seed = argc == 7 ? unsigned(atol(argv[6])) : 1u;
+      unsigned seed = argc >= 7 ? unsigned(atol(argv[6])) : 1u;
+      // Optional wall-clock budget (seconds): when given, run starts until the
+      // budget is exhausted rather than a fixed count.
+      double max_seconds = argc == 8 ? atof(argv[7]) : 0.0;
+      // The lattice record to beat in this dimension (best lattice covering).
+      double record = 0.0;
+      if (n == 3) record = 1.4635030689668180;
+      if (n == 4) record = 1.7655285081493524;
+      if (n == 5) record = 2.1242859089916246;
       std::mt19937_64 gen(seed);
       std::normal_distribution<double> gauss(0.0, 1.0);
       std::uniform_real_distribution<double> unif(0.0, 1.0);
       double best = 1e30;
       int n_rigid = 0;
-      for (int st = 0; st < count; st++) {
+      int n_record = 0;
+      auto t_start = std::chrono::steady_clock::now();
+      for (int st = 0;; st++) {
+        double elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(
+                             std::chrono::steady_clock::now() - t_start).count();
+        if (max_seconds > 0.0) {
+          if (elapsed >= max_seconds) break;
+        } else {
+          if (st >= count) break;
+        }
         PeriodicConfig conf;
         conf.n = n;
         conf.m = m;
@@ -364,16 +381,25 @@ int main(int argc, char *argv[]) {
           snprintf(fn, sizeof(fn), "%s.rigid.%d", argv[5], n_rigid);
           WriteConfigFile(fn, res.conf);
         }
-        printf("start %d: theta=%.13f rigid=%d active=%d rate=%.2e%s\n", st,
+        bool beats = record > 0.0 && res.theta < record - 1e-9;
+        if (beats) {
+          n_record++;
+          char fn[4096];
+          snprintf(fn, sizeof(fn), "%s.record.%d", argv[5], n_record);
+          WriteConfigFile(fn, res.conf);
+        }
+        printf("start %d: theta=%.13f rigid=%d active=%d rate=%.2e%s%s\n", st,
                res.theta, res.rigid ? 1 : 0, res.n_active, res.stationarity,
-               res.theta < best ? "  *" : "");
+               res.theta < best ? "  *" : "",
+               beats ? "  <<< BEATS RECORD" : "");
         fflush(stdout);
         if (res.theta < best) {
           best = res.theta;
           WriteConfigFile(argv[5], res.conf);
         }
       }
-      printf("best=%.13f rigid_count=%d/%d\n", best, n_rigid, count);
+      printf("best=%.13f rigid_count=%d record_beats=%d (record=%.13f)\n", best,
+             n_rigid, n_record, record);
       return 0;
     }
     std::cerr << "unrecognized arguments; run without arguments for usage\n";
