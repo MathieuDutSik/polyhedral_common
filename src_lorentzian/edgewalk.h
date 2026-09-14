@@ -1171,7 +1171,7 @@ FundDomainVertex_FullInfo<T, Tint, Tgroup> gen_fund_domain_fund_info(
     mapV["size"] = vert.MatRoot.rows();
     std::string choice = HeuristicEvaluation(mapV, HeuristicIdealStabEquiv);
     if (choice == "orbmin") {
-      vectface vf = lrs::DualDescription_incd(FACred);
+      vectface vf = rev_search::DualDescription_incd(FACred);
       vectface vf_min = OrbitSplittingSet_GetMinimalOrbit(vf, erec.GRP1);
       for (auto &eFAC : vf_min) {
         AdjacencyDirection<Tint> ad = GetAdjacencyDirection(erec.MatRoot, eFAC);
@@ -1538,7 +1538,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
 #endif
     MyMatrix<T> FAC = UniversalMatrixConversion<T, Tint>(theVert.MatRoot);
     MyMatrix<T> FACred = ColumnReduction(FAC);
-    vectface vf = lrs::DualDescription_incd(FACred);
+    vectface vf = rev_search::DualDescription_incd(FACred);
     vectface vf_orb = OrbitSplittingSet(vf, vertFull.GRP1_integral);
 #ifdef TIMINGS
     os << "|EDGE: vf_orb|=" << time << "\n";

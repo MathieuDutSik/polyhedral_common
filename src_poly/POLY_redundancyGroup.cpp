@@ -8,7 +8,7 @@
 #include "GRP_GroupFct.h"
 #include "GRP_GroupFile.h"
 #include "Group.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 #include "POLY_RedundancyElimination.h"
 #include "Permutation.h"
 // clang-format on
@@ -20,7 +20,7 @@ void process(std::string const &FileEXT, std::string const &FileGRP,
   std::cerr << "process: start\n";
   MyMatrix<T> preEXT = ReadMatrixFile<T>(FileEXT);
   std::cerr << "process: We have preEXT\n";
-  MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
+  MyMatrix<T> EXT = rev_search::FirstColumnZeroCond(preEXT).first;
   std::cerr << "process: We have EXT\n";
   size_t nbRow = EXT.rows();
   Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);

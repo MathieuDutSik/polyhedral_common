@@ -5,7 +5,7 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 // clang-format on
 
 template <typename T>
@@ -13,9 +13,9 @@ void process(std::string const &eFileI, std::string const &OutFormat,
              std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   std::pair<std::vector<std::vector<int>>, vectface> pair =
-      lrs::GetTriangulationFacet(EXT);
+      rev_search::GetTriangulationFacet(EXT);
   if (OutFormat == "TrigFacets") {
-    os << "return rec(trigs:=" << lrs::StringTriangulationGAP(pair.first)
+    os << "return rec(trigs:=" << rev_search::StringTriangulationGAP(pair.first)
        << ", facets:=" << StringVectfaceGAP(pair.second) << ");\n";
     return;
   }

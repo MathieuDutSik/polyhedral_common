@@ -954,14 +954,14 @@ void BeneathBeyond_TriangulationDet_core(MyMatrix<Twork> const &EXTwork,
 // where
 //  * simplex is the sorted list of its nbCol vertex row indices, and
 //  * det is the SIGNED determinant of SelectRow(EXT, simplex), in type T.
-// This is the callback analogue of lrs::GetTriangulationDet_f: the caller's
+// This is the callback analogue of rev_search::GetTriangulationDet_f: the caller's
 // consumer never has to hold the full simplex list. Note, however, that unlike
 // lrs' reverse search the *producer* still keeps the growing triangulation as
 // working state (needed to recompute the boundary at each step), so this bounds
 // the consumer's memory, not the producer's -- see the discussion in
-// POLY_DualDesc_lrslib.h on why beneath-and-beyond is not a bounded-memory tree search.
+// POLY_DualDesc_reverse_search.h on why beneath-and-beyond is not a bounded-memory tree search.
 //
-// Ring/field split (same idiom as lrs::DualDescription): the enumeration uses
+// Ring/field split (same idiom as rev_search::DualDescription): the enumeration uses
 // only ring operations, so when T is a field each ray is scaled to an integer
 // vector and the whole placing triangulation runs on the underlying ring
 // (typically ~3x faster). The determinant then needs the care the field version
@@ -1006,7 +1006,7 @@ void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
 
 // Placing triangulation with, for each simplex, the SIGNED determinant of its
 // vertex matrix SelectRow(EXT, simplex) -- the same (simplex, det) format as
-// lrs::GetTriangulationDet, so the two are interchangeable. Thin wrapper that
+// rev_search::GetTriangulationDet, so the two are interchangeable. Thin wrapper that
 // collects the streamed simplices into a vector.
 template <typename T>
 std::vector<std::pair<std::vector<int>, T>>
@@ -1021,7 +1021,7 @@ POLY_DualDescription_BeneathBeyondTriangulationDet(MyMatrix<T> const &EXT,
 }
 
 // Placing triangulation as a bare list of simplices, each the sorted list of
-// its nbCol vertex row indices (same format as lrs::GetTriangulation). Thin
+// its nbCol vertex row indices (same format as rev_search::GetTriangulation). Thin
 // wrapper that collects the streamed simplices, dropping the determinants.
 template <typename T>
 std::vector<std::vector<int>>

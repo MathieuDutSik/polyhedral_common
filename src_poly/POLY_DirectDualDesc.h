@@ -5,7 +5,7 @@
 // clang-format off
 #include "Basic_string.h"
 #include "POLY_DualDesc_double_description.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_DualDesc_primal_dual.h"
 #include "POLY_DualDesc_beneath_and_beyond.h"
@@ -118,7 +118,7 @@ dual_desc_program_from_string_opt(std::string const &prog) {
     return DualDescProgram::cdd;
   if (prog == "small_polytopes")
     return DualDescProgram::small_polytopes;
-  if (prog == "lrs")
+  if (prog == "lrs" || prog == "rs" || prog == "reverse_search")
     return DualDescProgram::lrs;
   if (prog == "pd_lrs")
     return DualDescProgram::pd_lrs;
@@ -210,7 +210,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     // Small polytopes have special solutions, field or ring case
     return SmallPolytope_Incidence(EXT, os);
   case DualDescProgram::lrs:
-    return lrs::DualDescription_incd(EXT);
+    return rev_search::DualDescription_incd(EXT);
   case DualDescProgram::pd_lrs:
     // The polytopization routes through the overlying field
     return POLY_DualDescription_PrimalDualIncidence(EXT, os);
@@ -250,7 +250,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     // Small polytopes have special solutions, field or ring case
     return SmallPolytope_Ineq(EXT, os);
   case DualDescProgram::lrs:
-    return lrs::DualDescription(EXT);
+    return rev_search::DualDescription(EXT);
   case DualDescProgram::pd_lrs:
     // The polytopization routes through the overlying field
     return POLY_DualDescription_PrimalDualInequalities(EXT, os);
@@ -290,7 +290,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     // Small polytopes have special solutions, field or ring case
     return SmallPolytope_FaceIneq(EXT, f_process, os);
   case DualDescProgram::lrs:
-    return lrs::DualDescriptionFaceIneq(EXT, f_process);
+    return rev_search::DualDescriptionFaceIneq(EXT, f_process);
   case DualDescProgram::pd_lrs:
     // The polytopization routes through the overlying field
     return POLY_DualDescription_PrimalDualFaceIneq(EXT, f_process, os);

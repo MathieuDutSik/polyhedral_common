@@ -39,7 +39,7 @@
 #define SRC_DELAUNAY_QUANTIZERLTYPEEXPORT_H_
 
 #include "IsoDelaunayDomains.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 #include <fstream>
 #include <map>
 #include <queue>
@@ -546,7 +546,7 @@ void WriteQuantizerLtypeJSON(IsoDelaunayDomain<T, Tint, Tgroup> const &IDD,
     }
   }
 
-  std::vector<std::vector<int>> trig = lrs::GetTriangulation(EXT_DV);
+  std::vector<std::vector<int>> trig = rev_search::GetTriangulation(EXT_DV);
   os << "QuantExport: DV(0) triangulated into " << trig.size() << " n-simplices\n";
 
   std::vector<std::vector<int>> boundary = ExtractBoundarySimplices(trig, os);

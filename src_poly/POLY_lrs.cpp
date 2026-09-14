@@ -5,7 +5,7 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 // clang-format on
 
 template <typename T>
@@ -21,7 +21,7 @@ void process(std::string const &eFileI, std::string const &choice,
     }
   };
   MyMatrix<T> EXT_pre = read_file();
-  std::pair<MyMatrix<T>, int> pair = lrs::FirstColumnZeroCond(EXT_pre);
+  std::pair<MyMatrix<T>, int> pair = rev_search::FirstColumnZeroCond(EXT_pre);
   MyMatrix<T> const &EXT = pair.first;
   int shift = pair.second;
   int nbRow = EXT.rows();
@@ -32,15 +32,15 @@ void process(std::string const &eFileI, std::string const &choice,
     os << "begin\n";
     os << "****** " << nbCol << " rational\n";
     size_t nVertices = 0;
-    auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
-                      [[maybe_unused]] lrs::lrs_dat<T> *Q,
+    auto fPrint = [&]([[maybe_unused]] rev_search::Dictionary<T> &dict,
+                      [[maybe_unused]] rev_search::Problem &prob,
                       [[maybe_unused]] int const &col, T *out) -> void {
       for (int iCol = 0; iCol < nbCol; iCol++)
         os << " " << out[iCol];
       os << "\n";
       nVertices++;
     };
-    lrs::Kernel_DualDescription(EXT, fPrint);
+    rev_search::Kernel_DualDescription(EXT, fPrint);
     os << "end\n";
     os << "*Total: nvertices=" << nVertices << "\n";
     return;
@@ -48,8 +48,8 @@ void process(std::string const &eFileI, std::string const &choice,
   if (choice == "GAP") {
     os << "return [";
     bool IsFirst = true;
-    auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
-                      [[maybe_unused]] lrs::lrs_dat<T> *Q,
+    auto fPrint = [&]([[maybe_unused]] rev_search::Dictionary<T> &dict,
+                      [[maybe_unused]] rev_search::Problem &prob,
                       [[maybe_unused]] int const &col, T *out) -> void {
       if (!IsFirst)
         os << ",\n";
@@ -62,14 +62,14 @@ void process(std::string const &eFileI, std::string const &choice,
       os << "]";
       IsFirst = false;
     };
-    lrs::Kernel_DualDescription(EXT, fPrint);
+    rev_search::Kernel_DualDescription(EXT, fPrint);
     os << "];\n";
   }
   if (choice == "vertex_incidence") {
     std::vector<size_t> VertexIncd(nbRow, 0);
     T eScal;
-    auto fUpdateIncd = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
-                           [[maybe_unused]] lrs::lrs_dat<T> *Q,
+    auto fUpdateIncd = [&]([[maybe_unused]] rev_search::Dictionary<T> &dict,
+                           [[maybe_unused]] rev_search::Problem &prob,
                            [[maybe_unused]] int const &col, T *out) -> void {
       for (int iRow = 0; iRow < nbRow; iRow++) {
         eScal = 0;
@@ -79,7 +79,7 @@ void process(std::string const &eFileI, std::string const &choice,
           VertexIncd[iRow] += 1;
       }
     };
-    lrs::Kernel_DualDescription(EXT, fUpdateIncd);
+    rev_search::Kernel_DualDescription(EXT, fUpdateIncd);
     os << "VertexIncd=[";
     for (int iRow = 0; iRow < nbRow; iRow++) {
       if (iRow > 0)
@@ -91,18 +91,18 @@ void process(std::string const &eFileI, std::string const &choice,
   }
   if (choice == "number_facet") {
     size_t nFacets = 0;
-    auto fIncrement = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
-                          [[maybe_unused]] lrs::lrs_dat<T> *Q,
+    auto fIncrement = [&]([[maybe_unused]] rev_search::Dictionary<T> &dict,
+                          [[maybe_unused]] rev_search::Problem &prob,
                           [[maybe_unused]] int const &col,
                           [[maybe_unused]] T *out) -> void { nFacets++; };
-    lrs::Kernel_DualDescription(EXT, fIncrement);
+    rev_search::Kernel_DualDescription(EXT, fIncrement);
     os << "nFacets=" << nFacets << "\n";
     return;
   }
   if (choice == "qhull_incidence") {
     T eScal;
-    auto fPrintIncd = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
-                          [[maybe_unused]] lrs::lrs_dat<T> *Q,
+    auto fPrintIncd = [&]([[maybe_unused]] rev_search::Dictionary<T> &dict,
+                          [[maybe_unused]] rev_search::Problem &prob,
                           [[maybe_unused]] int const &col, T *out) -> void {
       bool IsFirst = true;
       for (int iRow = 0; iRow < nbRow; iRow++) {
@@ -118,15 +118,15 @@ void process(std::string const &eFileI, std::string const &choice,
       }
       os << "\n";
     };
-    lrs::Kernel_DualDescription(EXT, fPrintIncd);
+    rev_search::Kernel_DualDescription(EXT, fPrintIncd);
     return;
   }
   if (choice == "structure_vertex_facets") {
     std::vector<std::vector<size_t>> VertexIncd(nbRow);
     std::vector<Face> ListFace;
     size_t idx_facet = 0;
-    auto f_insert = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
-                        [[maybe_unused]] lrs::lrs_dat<T> *Q,
+    auto f_insert = [&]([[maybe_unused]] rev_search::Dictionary<T> &dict,
+                        [[maybe_unused]] rev_search::Problem &prob,
                         [[maybe_unused]] int const &col, T *out) -> void {
       std::cerr << "idx_facet=" << idx_facet << "\n";
       std::vector<size_t> eIncd;
@@ -143,7 +143,7 @@ void process(std::string const &eFileI, std::string const &choice,
       ListFace.push_back(f);
       idx_facet++;
     };
-    lrs::Kernel_DualDescription(EXT, f_insert);
+    rev_search::Kernel_DualDescription(EXT, f_insert);
     for (int iRow = 0; iRow < nbRow; iRow++) {
       os << "iRow=" << iRow << " |Contained Facet|=" << VertexIncd[iRow].size()
          << "\n";

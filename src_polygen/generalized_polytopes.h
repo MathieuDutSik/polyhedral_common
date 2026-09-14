@@ -478,7 +478,7 @@ template<typename T>
 T volume_gp(GeneralizedPolytope<T> const& gp,  [[maybe_unused]] std::ostream& os) {
   T volume(0);
   for (auto & sp: gp.polytopes) {
-    T vol = lrs::Kernel_VolumePolytope(sp.EXT);
+    T vol = rev_search::Kernel_VolumePolytope(sp.EXT);
     volume += vol;
   }
   return volume;

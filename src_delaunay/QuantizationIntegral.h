@@ -5,7 +5,7 @@
 // clang-format off
 #include "LatticeDelaunay.h"
 #include "POLY_Fundamental.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 #include "InvariantVectorFamily.h"
 #include "MatrixGroupAverage.h"
 #include "jet_number.h"
@@ -34,7 +34,7 @@
 //    RepresentativeAction_OnSets, OrbitFace, OrbitSplittingSet).
 //  * the permutation -> affine matrix homomorphism (RepresentVertexPermutation,
 //    the GAP PhiPermMat).
-//  * triangulation for the direct integral (lrs::GetTriangulation).
+//  * triangulation for the direct integral (rev_search::GetTriangulation).
 
 #ifdef DEBUG
 #define DEBUG_QUANTIZATION_INTEGRAL
@@ -591,7 +591,7 @@ struct QuantizationComputer {
     // its SIGNED determinant there (detT0). lrs produces the determinant
     // essentially for free, so this replaces a per-simplex DeterminantMat.
     std::vector<std::pair<std::vector<int>, Tscal>> trig =
-        lrs::GetTriangulationDet(EXTinBasis_t0);
+        rev_search::GetTriangulationDet(EXTinBasis_t0);
     // The covariance of the uniform distribution on a simplex with n+1 vertices
     // is (1/((n+1)(n+2))) sum_u (v_u - c)(v_u - c)^T; Tnp1 = n+1 is also the
     // barycenter divisor (vertex count). These are the linear factors (n+1),

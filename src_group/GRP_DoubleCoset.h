@@ -880,6 +880,30 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
                                       std::string const &method_split,
                                       std::ostream &os) {
   using Tint = typename Tgroup::Tint;
+#ifdef DEBUG_DOUBLE_COSET_DUMP
+  // Writes the (BigGRP, SmaGRP, list of orbits) triple in the format read by
+  // GRP_RuntimeOrbitSplitting. An orbit splitting that turns out to dominate a
+  // long run can then be replayed and benchmarked across methods from the
+  // command line, instead of only being observable inside the run.
+  //
+  // Define the macro to the index above which a splitting is dumped, e.g.
+  // -DDEBUG_DOUBLE_COSET_DUMP=1000000. Splittings of small index are the
+  // common case and are never the ones that dominate a run.
+  if (BigGRP.size() >= Tint(DEBUG_DOUBLE_COSET_DUMP) * SmaGRP.size()) {
+    std::string FileDump = FILE_FindAvailableFileFromPrefix("DoubleCoset_");
+    std::ofstream os_dump(FileDump);
+    WriteGroup(os_dump, BigGRP);
+    WriteGroup(os_dump, SmaGRP);
+    size_t n_orbit = ListFaceOrbitsize.size();
+    vectface vf_dump(BigGRP.n_act());
+    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++)
+      vf_dump.push_back(ListFaceOrbitsize.GetPair(i_orbit).first);
+    WriteListFace(os_dump, vf_dump);
+    os << "DCOS: dumped |BigGRP|=" << BigGRP.size()
+       << " |SmaGRP|=" << SmaGRP.size() << " |vf|=" << n_orbit
+       << " method_split=" << method_split << " to " << FileDump << "\n";
+  }
+#endif
   auto f_direct = [&](DoubleCosetMethodSpec<Tint> const &the_spec) -> vectface {
     auto f_terminal = [&]() -> bool { return false; };
     return OrbitSplittingListOrbitKernel_spec(BigGRP, SmaGRP, ListFaceOrbitsize,

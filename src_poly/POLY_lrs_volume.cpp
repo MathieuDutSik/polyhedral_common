@@ -5,14 +5,14 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryBoostCppInt.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 // clang-format on
 
 template <typename T>
 void process(std::string const &eFileI, std::string const &OutFormat,
              std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  T volume = lrs::Kernel_VolumePolytope(EXT);
+  T volume = rev_search::Kernel_VolumePolytope(EXT);
   if (OutFormat == "Direct") {
     os << "volume=" << volume << "\n";
     return;

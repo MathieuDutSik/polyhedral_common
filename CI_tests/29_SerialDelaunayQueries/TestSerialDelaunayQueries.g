@@ -19,10 +19,13 @@ Print("Beginning TestSerialDelaunayQueries\n");
 # they all exercise LATT_SerialComputeDelaunay.
 
 # Shared driver: writes the Gram matrix, assembles the namelist with the caller's
-# &QUERIES body, and runs LATT_SerialComputeDelaunay. Returns nothing; the caller
-# reads whatever output file its query was told to produce.
-RunSerialDelaunay:=function(TmpDir, FileG, eG, queriesBody)
-    local FileN, FileE, strOut, eProg, TheCommand;
+# &QUERIES body, and runs LATT_SerialComputeDelaunay. The Gram file is internal
+# to the driver: it is written in TmpDir and removed on the way out, the caller
+# having no use for it. Returns nothing; the caller reads whatever output file
+# its query was told to produce.
+RunSerialDelaunay:=function(TmpDir, eG, queriesBody)
+    local FileG, FileN, FileE, strOut, eProg, TheCommand;
+    FileG:=Filename(TmpDir, "Gram.in");
     FileN:=Filename(TmpDir, "Query.nml");
     FileE:=Filename(TmpDir, "Query.err");
     WriteMatrixFile(FileG, eG);
@@ -47,6 +50,7 @@ RunSerialDelaunay:=function(TmpDir, FileG, eG, queriesBody)
     TheCommand:=Concatenation(eProg, " ", FileN, " 2> ", FileE);
     Exec(TheCommand);
     RemoveFile(FileN);
+    RemoveFile(FileG);
 end;
 
 # --------------------------------------------------------------------------- #
@@ -57,20 +61,18 @@ end;
 #   SecMoment(t) = (15/28 + 5/6 t + 1/9 t^2) / (1 + 4/3 t)
 #   SecMoment(0)=15/28, SecMoment'(0)=5/42, SecMoment''(0)=-2/21
 TestDeformation:=function(eRec)
-    local TmpDir, FileQ, FileH, FileO, queriesBody, U, is_correct;
+    local TmpDir, FileH, FileO, queriesBody, U, is_correct;
     TmpDir:=DirectoryTemporary();
-    FileQ:=Filename(TmpDir, "Q.in");
     FileH:=Filename(TmpDir, "H.in");
     FileO:=Concatenation(FileH, ".output");
     WriteMatrixFile(FileH, eRec.H);
     queriesBody:=Concatenation(" FileDeformation = \"", FileH, "\"\n");
-    RunSerialDelaunay(TmpDir, FileQ, eRec.Q, queriesBody);
+    RunSerialDelaunay(TmpDir, eRec.Q, queriesBody);
     if IsExistingFile(FileO)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
     U:=ReadAsFunction(FileO)();
-    RemoveFile(FileQ);
     RemoveFile(FileH);
     RemoveFile(FileO);
     is_correct:=U.SecMoment0=eRec.SecMoment0
@@ -99,18 +101,16 @@ rec(name:="E6_e1",
 # Free vectors of a lattice (FileFreeVectors). We test a few lattices for which
 # the answer is known/stable.
 TestFreeVectors:=function(eRec)
-    local TmpDir, FileG, FileO, queriesBody, U, obtained, is_correct;
+    local TmpDir, FileO, queriesBody, U, obtained, is_correct;
     TmpDir:=DirectoryTemporary();
-    FileG:=Filename(TmpDir, "Gram.in");
     FileO:=Filename(TmpDir, "FreeVect.out");
     queriesBody:=Concatenation(" FileFreeVectors = \"", FileO, "\"\n");
-    RunSerialDelaunay(TmpDir, FileG, eRec.eG, queriesBody);
+    RunSerialDelaunay(TmpDir, eRec.eG, queriesBody);
     if IsExistingFile(FileO)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
     U:=ReadAsFunction(FileO)();
-    RemoveFile(FileG);
     RemoveFile(FileO);
     # Stable signature: [nbRelevantVector, sorted [SubspaceDim,OrbitSize,nMatched]].
     obtained:=rec(nbRelevantVector:=U.nbRelevantVector,
@@ -150,18 +150,16 @@ rec(name:="E6",
 # independent scalar deformation reproduces the Hessian prediction on a held-out
 # direction).
 TestHessian:=function(eRec)
-    local TmpDir, FileG, FileO, queriesBody, U, obtained, is_correct;
+    local TmpDir, FileO, queriesBody, U, obtained, is_correct;
     TmpDir:=DirectoryTemporary();
-    FileG:=Filename(TmpDir, "Gram.in");
     FileO:=Filename(TmpDir, "Hessian.out");
     queriesBody:=Concatenation(" FileHessian = \"", FileO, "\"\n");
-    RunSerialDelaunay(TmpDir, FileG, eRec.eG, queriesBody);
+    RunSerialDelaunay(TmpDir, eRec.eG, queriesBody);
     if IsExistingFile(FileO)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
     U:=ReadAsFunction(FileO)();
-    RemoveFile(FileG);
     RemoveFile(FileO);
     obtained:=rec(nbPlus:=U.signature.nbPlus, nbMinus:=U.signature.nbMinus,
                   nbZero:=U.signature.nbZero);
@@ -192,18 +190,16 @@ rec(name:="E6",
 # Rigidity degree of a lattice (FileRigidityDegree). Mirrors GAP's
 # MyPolyhedral/lib/LatticeDelaunays.g::GetRigidityDegree.
 TestRigidity:=function(eRec)
-    local TmpDir, FileG, FileO, queriesBody, obtained, is_correct;
+    local TmpDir, FileO, queriesBody, obtained, is_correct;
     TmpDir:=DirectoryTemporary();
-    FileG:=Filename(TmpDir, "Gram.in");
     FileO:=Filename(TmpDir, "Rigid.out");
     queriesBody:=Concatenation(" FileRigidityDegree = \"", FileO, "\"\n");
-    RunSerialDelaunay(TmpDir, FileG, eRec.eG, queriesBody);
+    RunSerialDelaunay(TmpDir, eRec.eG, queriesBody);
     if IsExistingFile(FileO)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
     obtained:=ReadAsFunction(FileO)();
-    RemoveFile(FileG);
     RemoveFile(FileO);
     is_correct:=obtained=eRec.rigidity;
     Print("name=", eRec.name, " obtained=", obtained,
@@ -238,18 +234,16 @@ rec(name:="E6",
 # Lambda the average of the diagonal of GramMat*M, must be the zero matrix. We
 # check the boolean and its internal consistency with the defect matrix.
 TestIsotropy:=function(eRec)
-    local TmpDir, FileG, FileO, queriesBody, U, n, defect_is_zero, is_correct;
+    local TmpDir, FileO, queriesBody, U, n, defect_is_zero, is_correct;
     TmpDir:=DirectoryTemporary();
-    FileG:=Filename(TmpDir, "Gram.in");
     FileO:=Filename(TmpDir, "Isotropy.out");
     queriesBody:=Concatenation(" FileIsotropy = \"", FileO, "\"\n");
-    RunSerialDelaunay(TmpDir, FileG, eRec.eG, queriesBody);
+    RunSerialDelaunay(TmpDir, eRec.eG, queriesBody);
     if IsExistingFile(FileO)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
     U:=ReadAsFunction(FileO)();
-    RemoveFile(FileG);
     RemoveFile(FileO);
     n:=Length(eRec.eG);
     # The boolean must agree with the defect being exactly zero, and with the

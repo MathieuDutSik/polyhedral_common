@@ -202,6 +202,84 @@ call -- it is 12-14% of a small enumeration: 4.1 / 10.9 / 30.5 us against
 shells of 25.0 / 72.4 / 230.2 us for A4 / A6 / A9), the loop-scope hoisting of
 `num` / `quot`, and the removal of the superseded `Infinitesimal_*` helpers.
 
+## Insertion order of the incremental methods (measured 2026-09, Perf(E8))
+
+The dual description of a cone does not depend on the basis: if `B = A X` with
+`X` invertible then the face lattice is the same. The work of the incremental
+methods does depend on it, because the insertion order is the lexicographic
+order of the rows, which is not a linear invariant. Feeding Perf(E8) in a
+reduced basis (max entry 36 -> 2) made the whole run 4% SLOWER instead of
+faster, and that is the tip of a larger effect.
+
+Everything below is measured on the facets of the perfect domain of E8 (rank
+35, up to 13M facets) with the `rank_face_at_least` call counter, which is
+deterministic: it is immune to machine load, so variants can be compared
+without timing noise and without repetitions. The counter and the two hooks
+used are in `POLY_DualDesc_normaliz.h`, all default-off: `NMZ_COEFF_STATS`
+(counters), `NMZ_ORDER_KEEP_INPUT` (skip the internal lexicographic sort and
+take the caller's row order), `NMZ_ADAPTIVE_ORDER=1|2|3` (cddlib's
+min/max/mix cutoff rules, applied while the facet list is below
+`NMZ_ADAPTIVE_LIMIT`).
+
+What is established:
+
+* **The work is a function of the insertion permutation alone.** Random
+  permutations with the same seed give bit-identical counts on two different
+  coordinate systems. Coordinates reach the algorithm through exactly one
+  channel, the order the lexicographic sort induces.
+* **Coefficient size is not the lever, at least once inside machine
+  integers.** With the permutation held fixed, the reduced and unreduced forms
+  of the same facet run in 163.6s and 162.8s: no difference. Both are in
+  TryInt64, where a multiplication costs the same for operands 2 and 25.
+  Reduction pays only when it changes the arithmetic width class (mpz limbs,
+  or keeping a computation inside int64 that would otherwise overflow), not
+  when it merely makes small numbers smaller.
+* **The basis-induced spread is large.** Same cone, 7 bases (generated,
+  reduced, 5 random unimodular), same lex order: 7.53M to 13.71M rank calls,
+  a factor 1.82, for identical output. Correlation between maximum coefficient
+  and work: 0.13, i.e. none. The best basis has entries up to 41, the reduced
+  one with entries at most 2 sits in the slow half.
+* **The spread across orderings is larger still**, up to 39x between the best
+  and the worst of the tried orders on one facet.
+
+What was tried and does NOT work:
+
+* **A static invariant order.** Sorting the rows by an invariant profile of
+  `M = A (A^T A)^-1 A^T` (invariant since `M(AX) = M(A)`) does deliver exact
+  invariance -- the same count to the digit in both bases -- but it is 2.3x
+  slower than lex. On a configuration with many symmetries most rows share a
+  profile and the key degenerates into ties broken by index.
+* **The cddlib cutoff rules.** Over 8 facets, wall clock with the rule's own
+  cost included: mincut 0.88 of lex but 3 wins against 4 losses, maxcut 1.07,
+  mixcut 1.16. The mincut aggregate rests on a single case (und_47_829,
+  276504 -> 25893 rank calls) and it loses by 4x elsewhere. They are also NOT
+  invariant: mincut gives 4.58M and 8.36M on the two bases of the same cone,
+  because ties in the cutoff count are broken by index and the start simplex
+  still comes from the lexicographically sorted rows. Adaptivity alone does
+  not buy invariance.
+* **revlex** is 0.72 of lex in aggregate over 15 facets and wins 9 times out
+  of 15, but loses by 3.15x in the worst case. Not enough to switch the
+  default, and note that Fukuda-Prodon recommend lex, not revlex; cddlib
+  offers LexMin and LexMax as separate options, which is what one does when
+  neither dominates.
+
+Where to go next:
+
+1. An invariant order that is also good. Invariance requires the order, the
+   tie-break AND the start simplex to be invariant; the canonical form of
+   `CanonicalizationPolytopePair` provides all three but costs a graph
+   canonicalization. Worth measuring on a family with fewer symmetries, where
+   the profile key does not degenerate.
+2. Widen the corpus before concluding anything. Everything here is facets of
+   one cone, unusually symmetric. The same measurements on the cut / metric /
+   TSP families may well rank the orders differently.
+3. The same question applies to `POLY_DualDesc_double_description.h`, which
+   uses the lexicographic-minimum order and takes its initial basis as the
+   first d independent rows in that order: both move under a change of basis.
+   The reverse search is immune by construction, its order being on variable
+   indices and not on coordinate values, which the measurements confirm (1.00
+   ratio between the two bases).
+
 ## Method-selection reference (for the heuristics)
 
 On CI_tests/23B_SimpleDualDesc: cdd is fastest; lrs is far behind on the

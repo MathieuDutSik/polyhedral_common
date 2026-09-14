@@ -1,0 +1,30 @@
+&DATA
+ NumericalType = "integer"
+ EXTfile = "PerfectE8.ext"
+ GRPfile = "PerfectE8.grp"
+ OutFile = "orbits"
+ DeterministicRuntime = T
+ max_runtime = -1
+ AdvancedTerminationCriterion = T
+/
+
+&HEURISTIC
+ SplittingHeuristicFile          = "Split.heu"
+ AdditionalSymmetryHeuristicFile = "AddSymm.heu"
+ DualDescriptionThompsonFile     = "DualDesc_heu.ts"
+ MethodInitialFacetSetFile       = "InitFacet.heu"
+ BankSaveHeuristicFile           = "Bank.heu"
+ CheckDatabaseBankFile           = "CheckBank.heu"
+ OrbitSplitTechniqueFile         = "OrbitSplit.heu"
+ ChoiceCanonicalizationFile      = "ChoiceCanon.heu"
+/
+
+&METHOD
+ Saving = F
+ Prefix = "./Saving_Polyhedral/"
+/
+
+&BANK
+ Prefix = "./Saving_Bank/"
+ Saving = F
+/

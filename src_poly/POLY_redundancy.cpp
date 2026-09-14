@@ -5,7 +5,7 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
-#include "POLY_DualDesc_lrslib.h"
+#include "POLY_DualDesc_reverse_search.h"
 #include "POLY_RedundancyElimination.h"
 // clang-format on
 
@@ -14,7 +14,7 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
                std::string const &method, std::string const &OutFormat,
                std::ostream &os) {
   MyMatrix<T> preEXT = ReadMatrixFile<T>(eFileI);
-  MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
+  MyMatrix<T> EXT = rev_search::FirstColumnZeroCond(preEXT).first;
   auto get_list_irred = [&]() -> std::vector<int> {
     if (method == "Clarkson") {
       return SIMPLEX_RedundancyReductionClarkson(EXT, os);
