@@ -268,8 +268,24 @@ template <typename Tint> struct PleskenSouvignierContext {
   // I = 1, ..., n - 1.
   int depth;
   std::vector<PleskenSouvignierVectorSumLevel<Tint>> vs_data;
+  // Adaptive-depth instrumentation. node_count is the number of backtrack
+  // nodes in the CURRENT top-level subtree (the exploration rooted at one
+  // candidate image of a basis vector); it is reset per subtree, and when
+  // node_budget is nonzero and it is exceeded the search aborts
+  // (PSBudgetExceeded) so the caller can raise the depth. Budgeting per
+  // subtree rather than in total is what separates a depth-starved
+  // explosion (one giant subtree) from a legitimately large group (many
+  // small subtrees, e.g. Leech). total_nodes accumulates across subtrees
+  // for diagnostics only.
+  mutable size_t node_count = 0;
+  mutable size_t total_nodes = 0;
+  size_t node_budget = 0;
   int n() const { return VS.n; }
 };
+
+// Thrown by the backtrack when the node budget is exceeded, signalling the
+// caller to retry the search at a higher vector-sum depth.
+struct PSBudgetExceeded {};
 
 // The scalar product of the row of signed index s with row k0 (0-based)
 // for the iMat-th form.
@@ -541,7 +557,8 @@ template <typename Tint> int ps_normalize_sign(MyVector<Tint> &v) {
 // tuples come straight out of the W tables, the products with a basis
 // vector being single entries.
 template <typename Tint>
-void ps_init_vector_sums(PleskenSouvignierContext<Tint> &ctx, int depth) {
+void ps_init_vector_sums(PleskenSouvignierContext<Tint> &ctx, int depth,
+                         [[maybe_unused]] std::ostream &os) {
   ctx.depth = depth;
   if (depth == 0) {
     return;
@@ -549,6 +566,10 @@ void ps_init_vector_sums(PleskenSouvignierContext<Tint> &ctx, int depth) {
   int n = ctx.n();
   int m = ctx.VS.m;
   int nbMat = ctx.ListMat.size();
+  // Rebuild from scratch: on a depth escalation this is called a second
+  // time, and the per-level tuple maps and sums must not retain the
+  // previous depth's data.
+  ctx.vs_data.clear();
   ctx.vs_data.resize(n);
   for (int I = 1; I < n; I++) {
     PleskenSouvignierVectorSumLevel<Tint> &lev = ctx.vs_data[I];
@@ -593,6 +614,25 @@ void ps_init_vector_sums(PleskenSouvignierContext<Tint> &ctx, int depth) {
             EvaluationQuadForm(ctx.ListMat[iMat], sums[idx]);
       }
     }
+#ifdef DEBUG_PLESKEN_SOUVIGNIER
+    {
+      // The rank of the lattice spanned by the vector sums measures the
+      // discriminating power of the depth-dep invariant at this level;
+      // AUTO's guidance is to raise depth until this reaches full rank n.
+      int rk = 0;
+      if (n_tuple > 0) {
+        MyMatrix<Tint> SM(n_tuple, n);
+        for (int idx = 0; idx < n_tuple; idx++) {
+          for (int i = 0; i < n; i++) {
+            SM(idx, i) = sums[idx](i);
+          }
+        }
+        rk = RankMat(SM);
+      }
+      os << "PS vsrank: level " << I << " dep " << dep << " n_tuple "
+         << n_tuple << " rank " << rk << " / " << n << "\n";
+    }
+#endif
   }
 }
 
@@ -763,7 +803,7 @@ PleskenSouvignierBuildContext(std::vector<MyMatrix<Tint>> const &ListMat,
       // Hecke's default round(n / 10): 1 from dimension 5 up, 2 from 15.
       depth = (n + 5) / 10;
     }
-    ps_init_vector_sums(ctx, depth);
+    ps_init_vector_sums(ctx, depth, os);
   }
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   os << "|PS: BuildContext|=" << time << "\n";
@@ -1144,6 +1184,11 @@ bool ps_aut_extend(PleskenSouvignierContext<Tint> const &ctx, int step,
                    std::vector<int> &x, std::vector<int> const &cand_step) {
   int n = ctx.n();
   for (auto &c : cand_step) {
+    ctx.node_count++;
+    ctx.total_nodes++;
+    if (ctx.node_budget != 0 && ctx.node_count > ctx.node_budget) {
+      throw PSBudgetExceeded{};
+    }
     x[step] = c;
     if (step == n - 1) {
       // A complete product-matching assignment; with a unimodular basis
@@ -1218,6 +1263,10 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
       for (int i = step + 1; i < n; i++) {
         x[i] = 0;
       }
+      // The budget is per top-level subtree: reset before exploring this
+      // candidate so that a legitimately large group (many small subtrees)
+      // is not mistaken for a depth-starved explosion (one huge subtree).
+      ctx.node_count = 0;
       bool found = false;
       if (step < n - 1) {
         std::vector<int> cand_next;
@@ -1252,6 +1301,9 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
       ps_stab(ctx, step, os);
     }
   }
+#ifdef DEBUG_PLESKEN_SOUVIGNIER
+  os << "PS: auto nodes=" << ctx.total_nodes << " depth=" << ctx.depth << "\n";
+#endif
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   os << "|PS: auto|=" << time << "\n";
 #endif
@@ -1266,6 +1318,10 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
 template <typename Tint> struct PleskenSouvignierAutomResult {
   std::vector<MyMatrix<Tint>> ListGen;
   std::vector<int> ListOrbitSize;
+  // The vector-sum depth the adaptive search settled on and the number of
+  // backtrack nodes it visited (diagnostics for tuning the depth rule).
+  int depth_used = 0;
+  size_t nodes_used = 0;
 };
 
 template <typename Tord>
@@ -1277,14 +1333,62 @@ Tord PleskenSouvignierGroupOrder(std::vector<int> const &ListOrbitSize) {
   return order;
 }
 
+// Resets the stabilizer-chain data to the initial state (only -Id known),
+// so that the search can be rerun at a higher vector-sum depth.
+template <typename Tint>
+void ps_reset_group(PleskenSouvignierContext<Tint> &ctx) {
+  int n = ctx.n();
+  ctx.g.assign(n, {});
+  ctx.nsg.assign(n, 0);
+  ctx.orders.assign(n, 1);
+  ctx.g[0].push_back(-IdentityMat<Tint>(n));
+}
+
+// The backtrack node budget above which the adaptive depth is raised.
+// A depth-appropriate search visits a few hundred nodes at most (the
+// largest healthy count observed on the d351 genus was ~160); a
+// depth-starved one visits 10^4 to 10^7. A tight cap just above the
+// healthy regime both separates the two and minimises the work wasted on
+// the doomed low-depth attempt before escalating -- which matters on a
+// large vector family, where every node scans the whole family. Only
+// consulted when the depth is chosen automatically (depth == -1).
+static const size_t PS_NODE_BUDGET = 500;
+
+// The highest vector-sum depth the adaptive escalation will reach. Beyond
+// it the tuple maps grow costly for little pruning gain, and a search that
+// still overruns the budget is not depth-starved but genuinely large, so
+// the last attempt runs to completion unbudgeted rather than escalating
+// into ever-larger vector-sum data.
+static const int PS_MAX_ADAPTIVE_DEPTH = 8;
+
 template <typename Tint>
 PleskenSouvignierAutomResult<Tint>
 PleskenSouvignierAutomorphism(std::vector<MyMatrix<Tint>> const &ListMat,
                               MyMatrix<Tint> const &SHVhalf, std::ostream &os,
                               int depth = -1) {
+  bool adaptive = (depth == -1);
   PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
       ListMat, SHVhalf, true, depth, os);
-  ps_auto(ctx, os);
+  int d = ctx.depth;
+  while (true) {
+    // Once the cap is reached the search runs unbudgeted, so it always
+    // terminates rather than escalating without bound.
+    bool budgeted = adaptive && d < PS_MAX_ADAPTIVE_DEPTH;
+    ctx.node_count = 0;
+    ctx.total_nodes = 0;
+    ctx.node_budget = budgeted ? PS_NODE_BUDGET : 0;
+    try {
+      ps_auto(ctx, os);
+      break;
+    } catch (PSBudgetExceeded const &) {
+      d++;
+      ps_reset_group(ctx);
+      ps_init_vector_sums(ctx, d, os);
+#ifdef DEBUG_PLESKEN_SOUVIGNIER
+      os << "PS: auto node budget exceeded, raising depth to " << d << "\n";
+#endif
+    }
+  }
   PleskenSouvignierAutomResult<Tint> result;
   for (int i = 0; i < ctx.n(); i++) {
     for (int j = ctx.nsg[i]; j < static_cast<int>(ctx.g[i].size()); j++) {
@@ -1292,6 +1396,8 @@ PleskenSouvignierAutomorphism(std::vector<MyMatrix<Tint>> const &ListMat,
     }
   }
   result.ListOrbitSize = ctx.orders;
+  result.depth_used = ctx.depth;
+  result.nodes_used = ctx.total_nodes;
 #ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
   for (auto &eGen : result.ListGen) {
     for (auto &eMat : ListMat) {
@@ -1389,6 +1495,16 @@ bool ps_iso_extend(PleskenSouvignierContext<Tint> const &Ci,
   int m = Co.VS.m;
   while (!cand_step.empty()) {
     int im = cand_step[0];
+    // The budget is per top-level subtree (see ps_auto): reset at the root
+    // of each one so a large target group is not read as an explosion.
+    if (step == 0) {
+      Ci.node_count = 0;
+    }
+    Ci.node_count++;
+    Ci.total_nodes++;
+    if (Ci.node_budget != 0 && Ci.node_count > Ci.node_budget) {
+      throw PSBudgetExceeded{};
+    }
     x[step] = im;
     if (step == n - 1) {
       if (Ci.Bden == 1 || ps_matgen_opt(Ci, Co, x).has_value()) {
@@ -1436,19 +1552,41 @@ PleskenSouvignierIsometry(std::vector<MyMatrix<Tint>> const &ListMat1,
   if (SHVhalf1.rows() != SHVhalf2.rows()) {
     return {};
   }
+  bool adaptive = (depth == -1);
   PleskenSouvignierContext<Tint> Ci = PleskenSouvignierBuildContext(
       ListMat1, SHVhalf1, true, depth, os);
   PleskenSouvignierContext<Tint> Co = PleskenSouvignierBuildContext(
       ListMat2, SHVhalf2, false, 0, os);
   int n = Ci.n();
   std::vector<int> x(n, 0);
-  std::vector<int> cand0;
-  if (!ps_cand(Ci, Co, 0, x, cand0)) {
+  std::vector<int> cand0_base;
+  // The level-0 candidates use only the fingerprint, not the vector sums,
+  // so they are independent of the depth and computed once.
+  if (!ps_cand(Ci, Co, 0, x, cand0_base)) {
     return {};
   }
   std::vector<MyMatrix<Tint>> H = ListGenAut2;
   H.push_back(-IdentityMat<Tint>(n));
-  bool found = ps_iso_extend(Ci, Co, 0, x, cand0, H);
+  int d = Ci.depth;
+  bool found = false;
+  while (true) {
+    bool budgeted = adaptive && d < PS_MAX_ADAPTIVE_DEPTH;
+    Ci.node_count = 0;
+    Ci.total_nodes = 0;
+    Ci.node_budget = budgeted ? PS_NODE_BUDGET : 0;
+    std::fill(x.begin(), x.end(), 0);
+    std::vector<int> cand0 = cand0_base;
+    try {
+      found = ps_iso_extend(Ci, Co, 0, x, cand0, H);
+      break;
+    } catch (PSBudgetExceeded const &) {
+      d++;
+      ps_init_vector_sums(Ci, d, os);
+#ifdef DEBUG_PLESKEN_SOUVIGNIER
+      os << "PS: isometry node budget exceeded, raising depth to " << d << "\n";
+#endif
+    }
+  }
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   os << "|PS: isometry found=" << found << "|=" << time << "\n";
 #endif

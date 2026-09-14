@@ -4,6 +4,7 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "InvariantVectorFamily.h"
+#include "LatticePleskenSouvignier.h"
 // clang-format on
 
 template <typename T, typename Tint>
@@ -16,10 +17,21 @@ void process(std::string choice, std::string MatFile,
               << MatFile << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
+  // Whether the returned family is closed under v -> -v. The "half"
+  // families hold one vector per antipodal pair and so are not, which the
+  // antipodality sanity check below must skip. Only read under SANITY_CHECK.
+  [[maybe_unused]] bool is_antipodal = true;
   auto f = [&]() -> MyMatrix<Tint> {
     if (choice == "shortest") {
       Tshortest<T, Tint> rec = T_ShortestVector<T, Tint>(GramMat, std::cerr);
       return rec.SHV;
+    }
+    if (choice == "iterated_shortest") {
+      return IteratedShortestVectorFamily<T, Tint>(GramMat, std::cerr);
+    }
+    if (choice == "iterated_shortest_half") {
+      is_antipodal = false;
+      return IteratedShortestVectorFamilyHalf<T, Tint>(GramMat, std::cerr);
     }
     if (choice == "relevant_voronoi") {
       return ComputeVoronoiRelevantVector<T, Tint>(GramMat, std::cerr);
@@ -51,27 +63,109 @@ void process(std::string choice, std::string MatFile,
       return *CharacteristicVectorSetCV<T, Tint>(GramMat, false, false, budget,
                                                  std::cerr);
     }
+    // The canonical vector family used by the graph-based canonicalization
+    // (small even on the root-rich classes), whole and halved.
+    if (choice == "canonic") {
+      return GetCanonicVectorFamily<T, Tint>(GramMat, std::cerr).get_full();
+    }
+    if (choice == "canonic_half") {
+      is_antipodal = false;
+      return GetCanonicVectorFamily<T, Tint>(GramMat, std::cerr).SHVhalf;
+    }
+    // The Plesken-Souvignier norm-ball family: the vectors of norm at most
+    // the largest diagonal entry of the LLL-reduced Gram, expressed in the
+    // original basis. This is the family the PS engine searches, and it
+    // explodes on the classes whose reduced diagonal has one large entry.
+    if (choice == "plesken_souvignier" || choice == "ps_normball") {
+      LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(GramMat, std::cerr);
+      T bound = PleskenSouvignierBound(rec.GramMatRed);
+      MyMatrix<Tint> half =
+          PleskenSouvignierVectorFamily<T, Tint>(rec.GramMatRed, bound,
+                                                 std::cerr);
+      int n_pair = half.rows();
+      int dim = half.cols();
+      MyMatrix<Tint> res(2 * n_pair, dim);
+      for (int i = 0; i < n_pair; i++) {
+        MyVector<Tint> V = GetMatrixRow(half, i);
+        MyVector<Tint> Vorig = rec.Pmat.transpose() * V;
+        for (int k = 0; k < dim; k++) {
+          res(i, k) = Vorig(k);
+          res(n_pair + i, k) = -Vorig(k);
+        }
+      }
+      return res;
+    }
+    // The half (one per antipodal pair) versions of the full-rank and
+    // spanning invariant families.
+    if (choice == "fullrank_half") {
+      is_antipodal = false;
+      return ExtractInvariantVectorFamilyFullRankHalf<T, Tint>(GramMat,
+                                                               std::cerr);
+    }
+    if (choice == "spanning_half") {
+      is_antipodal = false;
+      return ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(GramMat,
+                                                             std::cerr);
+    }
     std::cerr << "Failed to find a matching entry for choice\n";
-    std::cerr << "Possible choices: shortest, relevant_voronoi, "
-                 "filtered_relevant_voronoi, fullrank, spanning, wr_cv, cv, "
-                 "cv_fullrank\n";
+    std::cerr << "Possible choices: shortest, iterated_shortest, "
+                 "iterated_shortest_half, relevant_voronoi, "
+                 "filtered_relevant_voronoi, fullrank, fullrank_half, "
+                 "spanning, spanning_half, wr_cv, cv, cv_fullrank, canonic, "
+                 "canonic_half, plesken_souvignier\n";
     throw TerminalException{1};
   };
   MyMatrix<Tint> M = f();
 #ifdef SANITY_CHECK
-  check_antipodality_mymatrix(M);
+  if (is_antipodal) {
+    check_antipodality_mymatrix(M);
+  }
 #endif
   auto f_print = [&](std::ostream &osf) -> void {
-    if (OutFormat == "norms") {
+    if (OutFormat == "structure") {
       int n_vect = M.rows();
       int n = GramMat.cols();
-      std::cerr << "|M|=" << n_vect << " / " << n << "\n";
+      int rank = RankMat(M);
+      // Antipodality: whether the family is closed under v -> -v.
+      bool antipodal = true;
+      {
+        std::unordered_set<MyVector<Tint>> Sset;
+        for (int i_vect = 0; i_vect < n_vect; i_vect++) {
+          Sset.insert(GetMatrixRow(M, i_vect));
+        }
+        for (int i_vect = 0; i_vect < n_vect; i_vect++) {
+          MyVector<Tint> negv = -GetMatrixRow(M, i_vect);
+          if (Sset.find(negv) == Sset.end()) {
+            antipodal = false;
+            break;
+          }
+        }
+      }
+      // Index of L = <rows of M> in its saturation (L (x) R) cap Z^n. With
+      // B a Z-basis of L and Bsat one of the saturation, B = C Bsat for an
+      // integer C, and the index is |det C| = |det(B Bsat^T)| /
+      // det(Bsat Bsat^T). Works whatever the rank: for a full-rank family
+      // the saturation is Z^n and this is the index of L in Z^n.
+      Tint saturation_index(1);
+      if (n_vect > 0) {
+        MyMatrix<Tint> B = GetZbasis(M);
+        MyMatrix<Tint> Bsat = IntegralSpaceSaturation(B);
+        MyMatrix<Tint> Prod1 = B * Bsat.transpose();
+        MyMatrix<Tint> Prod2 = Bsat * Bsat.transpose();
+        Tint num = T_abs(DeterminantMatBareiss(Prod1));
+        Tint den = DeterminantMatBareiss(Prod2);
+        saturation_index = num / den;
+      }
       std::map<T, size_t> map;
       for (int i_vect = 0; i_vect < n_vect; i_vect++) {
         MyVector<Tint> V = GetMatrixRow(M, i_vect);
         T norm = EvaluationQuadForm<T, Tint>(GramMat, V);
         map[norm] += 1;
       }
+      osf << "|M| = " << n_vect << " / " << n << "\n";
+      osf << "rank = " << rank << "\n";
+      osf << "antipodal = " << (antipodal ? "true" : "false") << "\n";
+      osf << "saturation_index = " << saturation_index << "\n";
       osf << "norms =";
       for (auto &[norm, multiplicity] : map) {
         osf << " [" << norm << " : " << multiplicity << " ]";
@@ -89,7 +183,7 @@ void process(std::string choice, std::string MatFile,
       return WriteMatrix(osf, M);
     }
     std::cerr << "Failed to find a matching entry for OutFormat\n";
-    std::cerr << "Allowed choices: norms, GAP, CPP\n";
+    std::cerr << "Allowed choices: structure, GAP, CPP\n";
     throw TerminalException{1};
   };
   FILE_PrintStderrStdoutFile(OutFile, f_print);
@@ -107,16 +201,18 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_GenerateCharacteristicVectorSet [arith] choice [MatFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "[arith]: gmp, gmp_boost, multi_boost\n";
-      std::cerr << "choice: shortest, relevant_voronoi, "
-                   "filtered_relevant_voronoi, fullrank, spanning\n";
-      std::cerr << "OutFormat: norms, GAP, CPP\n";
+      std::cerr << "choice: shortest, iterated_shortest, iterated_shortest_half, relevant_voronoi, "
+                   "filtered_relevant_voronoi, fullrank, fullrank_half, "
+                   "spanning, spanning_half, wr_cv, cv, cv_fullrank, canonic, "
+                   "canonic_half, plesken_souvignier\n";
+      std::cerr << "OutFormat: structure, GAP, CPP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }
     std::string arith = argv[1];
     std::string choice = argv[2];
     std::string MatFile = argv[3];
-    std::string OutFormat = "norms";
+    std::string OutFormat = "structure";
     std::string OutFile = "stderr";
     if (argc == 6) {
       OutFormat = argv[4];

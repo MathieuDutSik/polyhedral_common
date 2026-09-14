@@ -475,6 +475,77 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
   return matrix_duplication(ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(eMat, os));
 }
 
+/*
+  The iterated-shortest vector family, one vector per antipodal pair: the
+  shortest vectors of the lattice, and, when they are not of full rank, the
+  same construction applied to the integral orthogonal complement of their
+  span, lifted back to L and concatenated. The result is of full rank but
+  need not span L: it is the direct sum of the shortest-vector families of
+  an orthogonal tower of sublattices, which has finite index in L. Unlike
+  the norm-ball or the well-rounded families it never enumerates a shell
+  above the minimum, so it stays small even when one lattice direction is
+  far longer than the others -- which is exactly the case that makes the
+  norm-ball family explode. A full-rank but not necessarily Z-spanning
+  family, which is all the Plesken-Souvignier engine requires.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint> IteratedShortestVectorFamilyHalf(MyMatrix<T> const &GramMat,
+                                                std::ostream &os) {
+  int n = GramMat.rows();
+  Tshortest<T, Tint> rec = T_ShortestVector<T, Tint>(GramMat, os);
+  MyMatrix<Tint> const &SHV = rec.SHV;
+  int r = RankMat(SHV);
+  // One representative per +/-v pair of the shortest vectors.
+  std::unordered_set<MyVector<Tint>> seen;
+  std::vector<MyVector<Tint>> half_rows;
+  for (int i = 0; i < SHV.rows(); i++) {
+    MyVector<Tint> c = SignCanonicalizeVector(GetMatrixRow(SHV, i));
+    if (seen.insert(c).second) {
+      half_rows.push_back(c);
+    }
+  }
+  MyMatrix<Tint> SHVhalf = MatrixFromVectorFamilyDim(n, half_rows);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: iterated_shortest_half n=" << n << " |SHVhalf|="
+     << SHVhalf.rows() << " r=" << r << "\n";
+#endif
+  if (r == n) {
+    return SHVhalf;
+  }
+  // The integral orthogonal complement of the span of the shortest vectors,
+  // as a Z-basis (rows) in the coordinates of L: the x of L with <x, s> = 0
+  // for every shortest vector s, i.e. x (G B^T) = 0 over Z.
+  MyMatrix<Tint> B = GetZbasis(SHV);
+  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
+  MyMatrix<T> Prod_T = GramMat * B_T.transpose();
+  MyMatrix<Tint> Prod = UniversalMatrixConversion<Tint, T>(Prod_T);
+  MyMatrix<Tint> Perp = NullspaceIntMat(Prod);
+  MyMatrix<T> Perp_T = UniversalMatrixConversion<T, Tint>(Perp);
+  MyMatrix<T> PerpGram = Perp_T * GramMat * Perp_T.transpose();
+  // Recurse on the complement, then lift: a row w in Perp coordinates is
+  // the vector w * Perp of L. The lift keeps one representative per pair,
+  // and the two blocks lie in orthogonal subspaces, so the concatenation
+  // is still one vector per antipodal pair.
+  MyMatrix<Tint> PerpFamHalf =
+      IteratedShortestVectorFamilyHalf<T, Tint>(PerpGram, os);
+  MyMatrix<Tint> PerpFamHalf_L = PerpFamHalf * Perp;
+  MyMatrix<Tint> result = Concatenate(SHVhalf, PerpFamHalf_L);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+  if (RankMat(result) != n) {
+    std::cerr << "IVF: iterated_shortest did not reach full rank\n";
+    throw TerminalException{1};
+  }
+#endif
+  return result;
+}
+
+// The full (both signs) iterated-shortest family.
+template <typename T, typename Tint>
+MyMatrix<Tint> IteratedShortestVectorFamily(MyMatrix<T> const &GramMat,
+                                            std::ostream &os) {
+  return matrix_duplication(IteratedShortestVectorFamilyHalf<T, Tint>(GramMat, os));
+}
+
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(
     MyMatrix<T> const &eMat, std::vector<MyMatrix<Tint>> const &ListMatr,
