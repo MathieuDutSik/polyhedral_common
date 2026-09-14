@@ -108,6 +108,27 @@ int main(int argc, char *argv[]) {
              int(x.size()), worst);
       return 0;
     }
+    if (mode == "joint" && (argc == 4 || argc == 5)) {
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      int rounds = argc == 5 ? atoi(argv[4]) : 60;
+      DescendResult res = JointDescent(conf, rounds, std::cerr, true);
+      if (!res.success) { std::cerr << "no config evaluated\n"; return 1; }
+      printf("theta=%.13f\n", res.theta);
+      WriteConfigFile(argv[3], res.conf);
+      return 0;
+    }
+    if (mode == "descend-alt2" && (argc == 4 || argc == 5)) {
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      int rounds = argc == 5 ? atoi(argv[4]) : 30;
+      DescendResult res = DescendAlt2(conf, rounds, std::cerr, true);
+      if (!res.success) {
+        std::cerr << "the descent could not evaluate any configuration\n";
+        return 1;
+      }
+      printf("theta=%.13f\n", res.theta);
+      WriteConfigFile(argv[3], res.conf);
+      return 0;
+    }
     if (mode == "descend-alt" && (argc == 4 || argc == 5)) {
       PeriodicConfig conf = ReadConfigFile(argv[2]);
       int rounds = argc == 5 ? atoi(argv[4]) : 20;

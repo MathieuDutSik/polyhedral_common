@@ -454,6 +454,33 @@ shallow basins (2.5-3.8 for `m=2`) and only rarely reaches the deep 2.16006
 basin: the difficulty is the basin structure, which no change of optimizer
 removes.
 
+**On the optimizer.** Two structured alternatives were tried and both are
+regressions against the soft-max L-BFGS: an alternation (exact SDP `Q`-step +
+a coset step) and a joint first-order minimax step. The alternation jams --
+alternating minimization stalls at non-stationary points of a non-smooth
+objective, and the covering radius `max_i r_i^2` is non-smooth, so a joint
+descent direction that must move `Q` and `c` together is invisible to it
+(demonstrated: it stalls at 2.2435 where L-BFGS reaches 2.2301 and escapes
+its stall point). The joint first-order step avoids the jam in principle but
+loses to L-BFGS in practice, because L-BFGS's quasi-Newton curvature handles
+the very different scales of the `Q` and `c` variables automatically while a
+plain steepest-descent does not. The conclusion is that the soft-max L-BFGS
+was already the right method -- joint, smooth, quasi-Newton -- and the effort
+belongs on the tessellation, not the optimizer.
+
+**Incremental re-tessellation.** The dominant cost is the Delaunay
+tessellation, and most of it is wasted: after a small `(Q,c)` move the
+previous cell list is usually still the Delaunay triangulation. `TryReuseCells`
+checks this cheaply -- no simplex degenerated, and no point of the set lies
+strictly inside any simplex's circumsphere (the empty-sphere property, which
+a flip would violate) -- and reuses the cells when it holds, falling back to
+a full qhull recompute only when a flip actually occurred. It is exact (the
+reused list is genuinely the Delaunay triangulation) and gives bit-identical
+results; on an anisotropic seed where tessellation is expensive it cut a
+descent from 375 s to 151 s (2.5x), reusing 5 of 12 tessellations, and it
+helps most exactly where the tessellation is slowest. It is wired into the
+L-BFGS `descend`/`multistart`.
+
 ## Testing
 
 `CI_tests/27B_CoveringMaxdet` runs the whole pipeline in dimensions 3, 4 and 5

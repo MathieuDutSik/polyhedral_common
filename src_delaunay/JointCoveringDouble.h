@@ -351,8 +351,113 @@ struct DensityResult {
   std::vector<CellClass> cells;
 };
 
-inline DensityResult CoveringDensity(PeriodicConfig const &conf) {
-  std::vector<CellClass> cells = DelaunayCellClasses(conf);
+inline DensityResult CoveringDensity(PeriodicConfig const &conf, int max_rng);
+
+// Incremental re-tessellation. After a small (Q, c) move, the previous cell
+// list is still THE Delaunay triangulation iff no simplex degenerated and no
+// point of the set lies strictly inside any simplex's circumsphere (the
+// empty-sphere property; a flip would violate it). Both are cheap given the
+// previous cells, so when the check passes we skip the qhull recompute and
+// only re-read the circumradii. Returns nullopt (caller does a full
+// recompute) when the check fails or the enumeration ball is too small to
+// certify emptiness.
+inline std::optional<DensityResult>
+TryReuseCells(PeriodicConfig const &conf,
+              std::vector<CellClass> const &prev) {
+  if (prev.empty()) {
+    return std::nullopt;
+  }
+  int n = conf.n, m = conf.m;
+  MatrixXd const &Q = conf.Q;
+  {
+    Eigen::SelfAdjointEigenSolver<MatrixXd> esg(Q, Eigen::EigenvaluesOnly);
+    if (esg.eigenvalues()(0) <= 1e-12 * esg.eigenvalues()(n - 1)) {
+      return std::nullopt;
+    }
+  }
+  // circumcenters, radii and the covering radius on the previous cells
+  std::vector<VectorXd> centers(prev.size());
+  std::vector<double> R2s(prev.size());
+  double mu2 = 0, Rmax = 0;
+  for (size_t i = 0; i < prev.size(); i++) {
+    MatrixXd P = CellPositions(prev[i], conf.C);
+    MatrixXd V(n, n);
+    for (int k = 0; k < n; k++) {
+      V.row(k) = P.row(k + 1) - P.row(0);
+    }
+    if (std::abs(V.determinant()) < 1e-9) {
+      return std::nullopt;   // a simplex degenerated: combinatorics changed
+    }
+    VectorXd center;
+    double R2;
+    CircumcenterRadius2(P, Q, center, R2);
+    centers[i] = center;
+    R2s[i] = R2;
+    mu2 = std::max(mu2, R2);
+    double reach = std::sqrt(center.dot(Q * center)) + std::sqrt(std::max(R2, 0.0));
+    Rmax = std::max(Rmax, reach);
+  }
+  // enumerate the points that could lie inside any circumsphere: the Q-ball
+  // of radius Rmax, through the LLL-reduced basis
+  MatrixXi U = LLLReduceDouble(Q);
+  MatrixXd Ud = U.cast<double>();
+  MatrixXd Qr = Ud * Q * Ud.transpose();
+  Eigen::SelfAdjointEigenSolver<MatrixXd> es(Qr);
+  double sig_min = std::sqrt(std::max(es.eigenvalues()(0), 1e-14));
+  int B0 = int(std::ceil(Rmax / sig_min)) + 1;
+  std::vector<VectorXd> pts;
+  VectorXi b = VectorXi::Constant(n, -B0);
+  while (true) {
+    VectorXi a = U.transpose() * b;
+    VectorXd af = a.cast<double>();
+    for (int t = 0; t < m; t++) {
+      VectorXd x = af + conf.C.row(t).transpose();
+      if (x.dot(Q * x) <= Rmax * Rmax + 1e-9) {
+        pts.push_back(x);
+      }
+    }
+    int pos = 0;
+    while (pos < n && b(pos) == B0) { b(pos) = -B0; pos++; }
+    if (pos == n) break;
+    b(pos)++;
+  }
+  // empty-sphere test: no point strictly inside any circumsphere
+  for (size_t i = 0; i < prev.size(); i++) {
+    double R2 = R2s[i];
+    VectorXd const &z = centers[i];
+    double thresh = R2 * (1.0 - 1e-9);
+    for (auto &p : pts) {
+      VectorXd d = p - z;
+      if (d.dot(Q * d) < thresh) {
+        return std::nullopt;   // a point is inside: a flip occurred
+      }
+    }
+  }
+  double det = Q.determinant();
+  double theta = m * VolumeUnitBall(n) * std::pow(mu2, 0.5 * n) / std::sqrt(det);
+  return DensityResult{theta, mu2, prev};
+}
+
+// Covering density with incremental reuse: try the previous cell list first,
+// fall back to a full tessellation. Updates prev to the cells actually used.
+inline DensityResult CoveringDensityReuse(PeriodicConfig const &conf,
+                                          std::vector<CellClass> &prev,
+                                          int &n_full, int &n_reuse,
+                                          int max_rng = 6) {
+  std::optional<DensityResult> r = TryReuseCells(conf, prev);
+  if (r) {
+    n_reuse++;
+    return *r;
+  }
+  n_full++;
+  DensityResult dr = CoveringDensity(conf, max_rng);
+  prev = dr.cells;
+  return dr;
+}
+
+inline DensityResult CoveringDensity(PeriodicConfig const &conf,
+                                     int max_rng = 6) {
+  std::vector<CellClass> cells = DelaunayCellClasses(conf, max_rng);
   double mu2 = 0;
   for (auto &cl : cells) {
     MatrixXd P = CellPositions(cl, conf.C);
@@ -1011,10 +1116,318 @@ struct DescendResult {
   int n_retessellations = 0;
 };
 
+// A correct c-step: minimize the TRUE covering radius over the cosets at
+// fixed Q, re-tessellating as the cosets move. The frozen-cell-list c-step
+// (CStepMinimax) stalls at a spurious point because moving the cosets
+// changes which simplices are Delaunay, so a minimum of the max over a stale
+// cell list is not a minimum of the true covering radius. Here the descent
+// direction is the min-norm element of the active gradients' convex hull on
+// the current tessellation, and the line search re-tessellates at each trial
+// and compares the true maximum -- so the walk follows the true objective,
+// through the tessellation changes, to a genuine coset optimum.
+inline double CStepTrue(PeriodicConfig &conf, int iters, int &n_tess) {
+  int n = conf.n, m = conf.m;
+  double cur = -1;
+  for (int it = 0; it < iters; it++) {
+    std::vector<CellClass> cells;
+    try {
+      cells = DelaunayCellClasses(conf);
+    } catch (std::runtime_error &e) {
+      return cur;
+    }
+    n_tess++;
+    int n_cell = cells.size();
+    std::vector<double> R2(n_cell);
+    std::vector<VectorXd> g(n_cell);
+    double mx = -1;
+    for (int i = 0; i < n_cell; i++) {
+      CellR2Grad(cells[i], conf.Q, conf.C, R2[i], g[i]);
+      mx = std::max(mx, R2[i]);
+    }
+    cur = mx;
+    std::vector<int> act;
+    for (int i = 0; i < n_cell; i++) {
+      if (R2[i] > mx - 0.02 * mx - 1e-12) {
+        act.push_back(i);
+      }
+    }
+    VectorXd d = g[act[0]];
+    for (int k = 0; k < 80; k++) {
+      int jm = act[0];
+      double best = d.dot(g[act[0]]);
+      for (int idx : act) {
+        double v = d.dot(g[idx]);
+        if (v < best) {
+          best = v;
+          jm = idx;
+        }
+      }
+      double gamma = 2.0 / (k + 2.0);
+      d = (1.0 - gamma) * d + gamma * g[jm];
+    }
+    double dn = d.norm();
+    if (dn < 1e-9) {
+      break;   // stationary for the true minimax
+    }
+    VectorXd dir = -d / dn;
+    double step = 0.25;
+    bool moved = false;
+    for (int bt = 0; bt < 40; bt++) {
+      PeriodicConfig trial = conf;
+      for (int t = 1; t < m; t++) {
+        for (int j = 0; j < n; j++) {
+          trial.C(t, j) += step * dir((t - 1) * n + j);
+        }
+      }
+      double mxt;
+      try {
+        DensityResult dr = CoveringDensity(trial);
+        mxt = dr.mu2;
+        n_tess++;
+      } catch (std::runtime_error &e) {
+        step *= 0.5;
+        continue;
+      }
+      if (mxt < mx - 1e-4 * step * dn) {
+        conf.C = trial.C;
+        cur = mxt;
+        moved = true;
+        break;
+      }
+      step *= 0.5;
+    }
+    if (!moved) {
+      break;
+    }
+  }
+  return cur;
+}
+
 // Alternating block descent: exact SDP Q-step, trust-region SLP c-step,
 // re-tessellating between outer rounds. This is the fast successor of the
 // soft-max L-BFGS Descend below; it exploits the convexity of the problem
 // in Q and treats the coset minimax by its active set.
+// Joint non-smooth descent on log Theta = (n/2) log(max_i r_i^2) - (1/2)
+// log det Q, over (Q, c) together. Alternating minimization jams on this
+// non-smooth minimax; a joint step does not. The steepest-descent direction
+// is the negative of the min-norm element of the subdifferential
+//   (n/2)/mu^2 * conv{ grad r_i^2 : i active } - (1/2) [ Q^{-1} ; 0 ],
+// found by Frank-Wolfe over the shifted active gradients, with an Armijo
+// line search on the true log Theta (re-tessellating each trial).
+//
+// Joint variable layout: the n(n+1)/2 symmetric entries of Q (E_kk and, for
+// k<l, the pair scaled by 2 since Q_kl = Q_lk), then the m-1 free cosets.
+inline void JointGrad(std::vector<CellClass> const &cells, MatrixXd const &Q,
+                      MatrixXd const &C,
+                      std::vector<std::pair<int,int>> const &basis,
+                      std::vector<double> &R2, std::vector<VectorXd> &grad) {
+  int n = Q.rows();
+  int m = C.rows();
+  int dQ = basis.size();
+  int dc = n * (m - 1);
+  int dim = dQ + dc;
+  int n_cell = cells.size();
+  R2.assign(n_cell, 0.0);
+  grad.assign(n_cell, VectorXd::Zero(dim));
+  for (int i = 0; i < n_cell; i++) {
+    MatrixXd P = CellPositions(cells[i], C);
+    MatrixXd V(n, n);
+    for (int k = 0; k < n; k++) {
+      V.row(k) = P.row(k + 1) - P.row(0);
+    }
+    MatrixXd G = V * Q * V.transpose();
+    VectorXd q = G.diagonal();
+    Eigen::LDLT<MatrixXd> ldlt(G);
+    VectorXd a = ldlt.solve(q);
+    R2[i] = 0.25 * q.dot(a);
+    MatrixXd W = -0.25 * (a * a.transpose());
+    W.diagonal() += 0.5 * a;
+    // dR2/dQ = V^T W V (symmetric); contract to the sym basis
+    MatrixXd dRdQ = V.transpose() * W * V;
+    for (int u = 0; u < dQ; u++) {
+      int k = basis[u].first, l = basis[u].second;
+      grad[i](u) = (k == l) ? dRdQ(k, k) : 2.0 * dRdQ(k, l);
+    }
+    // dR2/dc
+    MatrixXd gV = 2.0 * (W * V * Q);
+    VectorXd rowsum = gV.colwise().sum();
+    for (int k = 0; k <= n; k++) {
+      int t = cells[i].cos(k);
+      if (t == 0) continue;
+      int base = dQ + (t - 1) * n;
+      if (k == 0) {
+        for (int j = 0; j < n; j++) grad[i](base + j) -= rowsum(j);
+      } else {
+        for (int j = 0; j < n; j++) grad[i](base + j) += gV(k - 1, j);
+      }
+    }
+  }
+}
+
+inline DescendResult JointDescent(PeriodicConfig conf, int iters,
+                                  std::ostream &os, bool verbose = false,
+                                  int deadline_sec = 300) {
+  int n = conf.n, m = conf.m;
+  auto basis = SymBasis(n);
+  int dQ = basis.size();
+  int dc = n * (m - 1);
+  int dim = dQ + dc;
+  DescendResult best;
+  auto t0 = std::chrono::steady_clock::now();
+  double cur_theta = 1e30;
+  for (int it = 0; it < iters; it++) {
+    if (std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - t0).count() > deadline_sec) {
+      break;
+    }
+    std::vector<CellClass> cells;
+    try {
+      cells = DelaunayCellClasses(conf);
+    } catch (std::runtime_error &e) {
+      return best;
+    }
+    std::vector<double> R2;
+    std::vector<VectorXd> g;
+    JointGrad(cells, conf.Q, conf.C, basis, R2, g);
+    double mu2 = *std::max_element(R2.begin(), R2.end());
+    double det = conf.Q.determinant();
+    cur_theta = m * VolumeUnitBall(n) * std::pow(mu2, 0.5 * n) / std::sqrt(det);
+    if (verbose) {
+      os << "  iter " << it << ": theta = " << cur_theta << "\n";
+    }
+    if (!best.success || cur_theta < best.theta - 1e-12) {
+      best.success = true;
+      best.theta = cur_theta;
+      best.conf = conf;
+    }
+    best.n_retessellations = it + 1;
+    // subdifferential points p_i = (n/2)/mu2 * g_i - (1/2) gdet
+    VectorXd gdet = VectorXd::Zero(dim);
+    MatrixXd Qinv = conf.Q.inverse();
+    for (int u = 0; u < dQ; u++) {
+      int k = basis[u].first, l = basis[u].second;
+      gdet(u) = (k == l) ? Qinv(k, k) : 2.0 * Qinv(k, l);
+    }
+    std::vector<int> act;
+    for (int i = 0; i < (int)cells.size(); i++) {
+      if (R2[i] > mu2 - 0.02 * mu2 - 1e-12) act.push_back(i);
+    }
+    double coef = 0.5 * n / mu2;
+    auto pt = [&](int i) -> VectorXd { return coef * g[i] - 0.5 * gdet; };
+    // Frank-Wolfe for the min-norm element of conv{ pt(i) : i active }
+    VectorXd d = pt(act[0]);
+    for (int k = 0; k < 100; k++) {
+      int jm = act[0];
+      double best_ip = d.dot(pt(act[0]));
+      for (int idx : act) {
+        double v = d.dot(pt(idx));
+        if (v < best_ip) { best_ip = v; jm = idx; }
+      }
+      double gamma = 2.0 / (k + 2.0);
+      d = (1.0 - gamma) * d + gamma * pt(jm);
+    }
+    double dn = d.norm();
+    if (dn < 1e-9) break;   // joint stationary
+    VectorXd dir = -d / dn;
+    // Armijo on the true log Theta
+    double step = 0.1;
+    bool moved = false;
+    for (int bt = 0; bt < 45; bt++) {
+      PeriodicConfig trial = conf;
+      for (int u = 0; u < dQ; u++) {
+        int k = basis[u].first, l = basis[u].second;
+        trial.Q(k, l) += step * dir(u);
+        if (k != l) trial.Q(l, k) = trial.Q(k, l);
+      }
+      for (int t = 1; t < m; t++)
+        for (int j = 0; j < n; j++)
+          trial.C(t, j) += step * dir(dQ + (t - 1) * n + j);
+      Eigen::LLT<MatrixXd> llt(trial.Q);
+      if (llt.info() != Eigen::Success) { step *= 0.5; continue; }
+      double th;
+      try {
+        DensityResult dr = CoveringDensity(trial);
+        th = dr.theta;
+      } catch (std::runtime_error &e) { step *= 0.5; continue; }
+      if (th < cur_theta - 1e-4 * step * dn) {
+        conf = trial;
+        moved = true;
+        break;
+      }
+      step *= 0.5;
+    }
+    if (!moved) break;
+  }
+  return best;
+}
+
+// Corrected alternating descent: exact SDP Q-step, then the TRUE-objective
+// c-step (CStepTrue, which re-tessellates as the cosets move). This is the
+// version that actually reaches joint local minima; DescendAlt below, with
+// its frozen-cell-list c-step, stalls at spurious points.
+inline DescendResult DescendAlt2(PeriodicConfig conf, int rounds,
+                                 std::ostream &os, bool verbose = false,
+                                 int deadline_sec = 300) {
+  DescendResult best;
+  int stall = 0;
+  int n_tess = 0;
+  auto t0 = std::chrono::steady_clock::now();
+  for (int it = 0; it < rounds; it++) {
+    if (std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - t0).count() > deadline_sec) {
+      break;
+    }
+    DensityResult dr;
+    try {
+      dr = CoveringDensity(conf);
+    } catch (std::runtime_error &e) {
+      return best;
+    }
+    if (verbose) {
+      os << "  round " << it << ": theta = " << dr.theta
+         << " (n_tess=" << n_tess << ")\n";
+    }
+    if (!best.success || dr.theta < best.theta - 1e-11) {
+      best.success = true;
+      best.theta = dr.theta;
+      best.conf = conf;
+      stall = 0;
+    } else {
+      stall++;
+      if (stall >= 2) {
+        break;
+      }
+    }
+    best.n_retessellations = it + 1;
+    // exact SDP optimum for the current cosets
+    MatrixXd Qnew;
+    try {
+      Qnew = QStep(dr.cells, conf.C, conf.Q);
+    } catch (std::runtime_error &e) {
+      return best;
+    }
+    {
+      Eigen::SelfAdjointEigenSolver<MatrixXd> es(Qnew, Eigen::EigenvaluesOnly);
+      if (!(es.eigenvalues()(conf.n - 1) / es.eigenvalues()(0) < 300.0)) {
+        return best;
+      }
+    }
+    conf.Q = Qnew;
+    // true-objective c-step, re-tessellating as the cosets move
+    CStepTrue(conf, 30, n_tess);
+    conf.C.row(0).setZero();
+  }
+  try {
+    DensityResult dr = CoveringDensity(conf);
+    if (dr.theta < best.theta - 1e-11) {
+      best.theta = dr.theta;
+      best.conf = conf;
+    }
+  } catch (std::runtime_error &e) {
+  }
+  return best;
+}
+
 inline DescendResult DescendAlt(PeriodicConfig conf, int rounds,
                                 std::ostream &os, bool verbose = false,
                                 int deadline_sec = 120) {
@@ -1089,10 +1502,12 @@ inline DescendResult Descend(PeriodicConfig conf, int rounds, std::ostream &os,
   Packing pk{conf.n, conf.m, conf.n * (conf.n + 1) / 2};
   DescendResult best;
   int stall = 0;
+  std::vector<CellClass> reuse_cells;
+  int n_full = 0, n_reuse = 0;
   for (int it = 0; it < rounds; it++) {
     DensityResult dr;
     try {
-      dr = CoveringDensity(conf);
+      dr = CoveringDensityReuse(conf, reuse_cells, n_full, n_reuse);
     } catch (std::runtime_error &e) {
       return best;
     }
@@ -1126,13 +1541,14 @@ inline DescendResult Descend(PeriodicConfig conf, int rounds, std::ostream &os,
     conf.C.row(0).setZero();
     DensityResult ver;
     try {
-      ver = CoveringDensity(conf);
+      ver = CoveringDensityReuse(conf, reuse_cells, n_full, n_reuse);
     } catch (std::runtime_error &e) {
       return best;
     }
     best.n_retessellations = it + 1;
     if (verbose) {
-      os << "  round " << it << ": verified theta = " << ver.theta << "\n";
+      os << "  [tess full=" << n_full << " reuse=" << n_reuse
+         << "] round " << it << ": verified theta = " << ver.theta << "\n";
     }
     if (!best.success || ver.theta < best.theta - 1e-11) {
       best.success = true;
