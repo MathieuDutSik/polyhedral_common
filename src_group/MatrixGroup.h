@@ -2957,10 +2957,22 @@ ResultSpaceCanonicalization<T> LinearSpace_Canonicalize_KernelRing(
     os << "MATGRP: LinearSpace_Canonicalize_KernelRing, LFact=" << LFact
        << " siz=" << siz << "\n";
 #endif
+    // Prime by prime, as in the stabilizer and equivalence drivers: within a
+    // prime go through p, p^2, ..., p^e; at a new prime reset to a bare prime
+    // rather than carrying the product of the primes already handled. Each
+    // step canonicalizes inside the residual group returned by the previous
+    // one, which already fixes the coprime part modulo it, so working modulo
+    // the bare prime power yields the same canonical form as modulo the full
+    // product -- only with a smaller modulus and orbit.
+    T p_prev(0);
+    T TheMod(1);
     for (int i = 1; i <= siz; i++) {
-      T TheMod(1);
-      for (int j = 0; j < i; j++) {
-        TheMod *= eList[j];
+      T p = eList[i - 1];
+      if (p == p_prev) {
+        TheMod *= p;
+      } else {
+        TheMod = p;
+        p_prev = p;
       }
       std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>> pair =
           LinearSpace_ModCanonicalize<T, Tgroup, Thelper>(
