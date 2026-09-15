@@ -1332,6 +1332,12 @@ LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const &ListMatr,
     return LinearSpace_ModStabilizer_Tmod<T, uint32_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, f_stab, os);
   }
+  T lim_u64 = (T(std::numeric_limits<uint32_t>::max()) + T(1)) *
+              (T(std::numeric_limits<uint32_t>::max()) + T(1));
+  if (max_size < lim_u64) {
+    return LinearSpace_ModStabilizer_Tmod<T, uint64_t, Tgroup, Thelper>(
+        ListMatr, helper, TheSpace, TheMod, f_stab, os);
+  }
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
                "objectively\n";
   throw TerminalException{1};
@@ -2525,6 +2531,12 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(
     return LinearSpace_ModEquivalence_Tmod<T, uint32_t, Tgroup, Thelper>(
         ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, os);
   }
+  T lim_u64 = (T(std::numeric_limits<uint32_t>::max()) + T(1)) *
+              (T(std::numeric_limits<uint32_t>::max()) + T(1));
+  if (max_size < lim_u64) {
+    return LinearSpace_ModEquivalence_Tmod<T, uint64_t, Tgroup, Thelper>(
+        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, os);
+  }
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
                "objectively\n";
   throw TerminalException{1};
@@ -2866,6 +2878,12 @@ LinearSpace_ModCanonicalize(std::vector<MyMatrix<T>> const &ListMatr,
   }
   if (max_size < T(std::numeric_limits<uint32_t>::max())) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint32_t, Tgroup, Thelper>(
+        ListMatr, helper, TheSpace, TheMod, os);
+  }
+  T lim_u64 = (T(std::numeric_limits<uint32_t>::max()) + T(1)) *
+              (T(std::numeric_limits<uint32_t>::max()) + T(1));
+  if (max_size < lim_u64) {
+    return LinearSpace_ModCanonicalize_Tmod<T, uint64_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, os);
   }
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
