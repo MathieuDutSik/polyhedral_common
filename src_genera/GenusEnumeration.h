@@ -8,6 +8,7 @@
 #include "LatticeStabEquiCan.h"
 #include "LatticeRootDecomposition.h"
 #include "LatticeAutomorphismVinberg.h"
+#include "LatticePleskenSouvignier.h"
 #include "InvariantVectorFamily.h"
 #include "ClassicLLL.h"
 #include "Positivity.h"
@@ -382,6 +383,23 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
   return rec.GramMatRed;
 }
 
+// The scheme by which classes are told apart and their automorphism groups
+// computed.
+//
+//   CanonicalForm      -- a canonical Gram matrix per neighbour, recognising
+//                         a known class by a dictionary lookup; automorphism
+//                         groups by the Vinberg decomposition.
+//   PleskenSouvignier  -- scheme A of the isomorphism strategy of Hecke.jl:
+//                         neighbours bucketed by a cheap isometry invariant
+//                         and, within a bucket, told apart by the
+//                         Plesken-Souvignier isometry test on the Z-spanning
+//                         family; automorphism groups by the same engine.
+//   MatrixGroup        -- scheme B: same bucketing, but the isometry and the
+//                         automorphism group come from the MatrixGroup
+//                         algorithm on the full-rank (not Z-spanning)
+//                         iterated-shortest family.
+enum class GenusScheme { CanonicalForm, PleskenSouvignier, MatrixGroup };
+
 /*
   The automorphism data of one lattice: the order, needed for the mass, and
   matrix generators, needed to cut the projective points into orbits. Both are
@@ -396,32 +414,56 @@ template <typename T, typename Tint, typename Tgroup> struct LatticeAutInfo {
 
 template <typename T, typename Tint, typename Tgroup>
 LatticeAutInfo<T, Tint, Tgroup>
-GetLatticeAutInfo(MyMatrix<T> const &GramMat, std::ostream &os) {
+GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusScheme scheme,
+                  std::ostream &os) {
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time;
 #endif
-  /*
-    The automorphism group through the Vinberg decomposition Aut(L) =
-    W(R) rtimes Aut(L, rho): the Weyl group W(R) of the root system is not
-    enumerated, its order is read off the Dynkin type and its generators
-    are the reflections in the simple roots; only the small residual
-    Aut(L, rho) is searched. On the determinant-243 genus this is 7x
-    faster than the automorphism group on the full characteristic family,
-    the gain scaling with |W(R)|. The order and the generators are exactly
-    what the enumeration needs -- the order for the mass, the generators
-    for the orbits of projective points -- and the generators (simple-root
-    reflections and the residual) generate the full Aut(L).
-   */
-  VinbergAutom<Tint> vin =
-      ComputeAutomorphismVinberg<T, Tint, Tgroup>(GramMat, os);
   LatticeAutInfo<T, Tint, Tgroup> info;
-  info.order =
-      UniversalScalarConversion<typename Tgroup::Tint, mpz_class>(vin.order);
-  info.ListGenMat = vin.ListGen;
+  if (scheme == GenusScheme::CanonicalForm) {
+    /*
+      The automorphism group through the Vinberg decomposition Aut(L) =
+      W(R) rtimes Aut(L, rho): the Weyl group W(R) of the root system is not
+      enumerated, its order is read off the Dynkin type and its generators
+      are the reflections in the simple roots; only the small residual
+      Aut(L, rho) is searched. The order and the generators are exactly
+      what the enumeration needs -- the order for the mass, the generators
+      for the orbits of projective points.
+     */
+    VinbergAutom<Tint> vin =
+        ComputeAutomorphismVinberg<T, Tint, Tgroup>(GramMat, os);
+    info.order =
+        UniversalScalarConversion<typename Tgroup::Tint, mpz_class>(vin.order);
+    info.ListGenMat = vin.ListGen;
 #ifdef DEBUG_GENUS_ENUMERATION
-  os << "GENUS: |Aut|=" << vin.order << " = |W(R)|=" << vin.weyl_order
-     << " x residual=" << vin.residual_order << ", " << info.ListGenMat.size()
-     << " generators\n";
+    os << "GENUS: |Aut|=" << vin.order << " = |W(R)|=" << vin.weyl_order
+       << " x residual=" << vin.residual_order << ", " << info.ListGenMat.size()
+       << " generators\n";
+#endif
+  } else if (scheme == GenusScheme::PleskenSouvignier) {
+    // Scheme A: the Plesken-Souvignier engine on the Z-spanning family. The
+    // order is the product of the stabilizer-chain orbit lengths.
+    std::vector<MyMatrix<T>> ListMat{GramMat};
+    PleskenSouvignierAutomResult<Tint> res =
+        PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, os);
+    info.order = UniversalScalarConversion<typename Tgroup::Tint, mpz_class>(
+        PleskenSouvignierGroupOrder<mpz_class>(res.ListOrbitSize));
+    info.ListGenMat = res.ListGen;
+  } else {
+    // Scheme B: the MatrixGroup algorithm on the full-rank family. The order
+    // is read off the permutation action of the generators on an invariant
+    // family.
+    info.ListGenMat =
+        IteratedShortestAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
+    MyMatrix<Tint> fam = root_iterated_shortest<T, Tint>(GramMat, os);
+    info.order = UniversalScalarConversion<typename Tgroup::Tint, mpz_class>(
+        OrderFromGens<Tint, Tgroup>(fam, info.ListGenMat));
+  }
+#ifdef DEBUG_GENUS_ENUMERATION
+  if (scheme != GenusScheme::CanonicalForm) {
+    os << "GENUS: |Aut|=" << info.order << ", " << info.ListGenMat.size()
+       << " generators\n";
+  }
 #endif
 #ifdef TIMINGS_GENUS_ENUMERATION
   os << "|GENUS: GetLatticeAutInfo|=" << time << "\n";
@@ -551,16 +593,36 @@ template <typename T> int ChooseNeighborPrime(T const &det) {
 }
 
 /*
+  A cheap isometry invariant: the multiset of norms of the iterated-shortest
+  vector family. It is an invariant of the lattice and, unlike a theta
+  series, cheap to build even on the root-rich classes where the norm-ball
+  explodes. Two lattices with different invariants are certainly not
+  isometric, so only the equal-invariant ones need the isometry test.
+ */
+template <typename T, typename Tint>
+std::map<T, int> GenusIsoInvariant(MyMatrix<T> const &GramMat,
+                                   std::ostream &os) {
+  MyMatrix<Tint> SHV = IteratedShortestVectorFamilyHalf<T, Tint>(GramMat, os);
+  std::map<T, int> inv;
+  for (int i = 0; i < SHV.rows(); i++) {
+    MyVector<Tint> v = GetMatrixRow(SHV, i);
+    inv[EvaluationQuadForm<T, Tint>(GramMat, v)]++;
+  }
+  return inv;
+}
+
+/*
   The enumeration itself. Starts from the seed lattices, forms p-neighbours,
-  keeps the new ones by canonical form, and stops when the accumulated mass
-  reaches the target.
+  keeps the new ones (recognised either by canonical form or by the
+  isomorphism strategy), and stops when the accumulated mass reaches the
+  target.
  */
 template <typename T, typename Tint, typename Tgroup>
 GenusEnumerationResult<T, Tgroup>
 GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                  typename GenusEnumerationResult<T, Tgroup>::Tmass const
                      &TotalMass,
-                 int prime, std::ostream &os) {
+                 int prime, GenusScheme scheme, std::ostream &os) {
   using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
   using TintGroup = typename Tgroup::Tint;
 #ifdef TIMINGS_GENUS_ENUMERATION
@@ -575,32 +637,76 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
   // one is a dictionary lookup rather than a comparison against every class
   // found so far. That is the whole point of canonicalising: the pairwise
   // scheme is quadratic in the class number.
+  // CanonicalForm strategy: classes held by canonical Gram, so a known one
+  // is a dictionary lookup. Isomorphism strategy: classes bucketed by the
+  // cheap invariant, a bucket holding the indices of the classes with that
+  // invariant.
   std::map<MyMatrix<T>, size_t> MapCanonic;
+  std::map<std::map<T, int>, std::vector<size_t>> MapInvariant;
   std::vector<MyMatrix<T>> ListGramWork;
   // The automorphism data is kept alongside: it is the expensive part, it is
   // needed twice (the order for the mass, the generators for the orbits of
   // projective points), and recomputing it in the neighbour loop doubles the
-  // cost of the whole enumeration.
+  // cost of the whole enumeration. The generators also prune the isometry
+  // test of the isomorphism strategy.
   std::vector<LatticeAutInfo<T, Tint, Tgroup>> ListAutInfo;
 
-  auto f_insert = [&](MyMatrix<T> const &GramMat) -> bool {
-    MyMatrix<T> GramCan = GenusCanonicalGram<T, Tint, Tgroup>(GramMat, os);
-    if (MapCanonic.count(GramCan) == 1) {
-      return false;
-    }
-    MapCanonic[GramCan] = result.ListGram.size();
-    LatticeAutInfo<T, Tint, Tgroup> info =
-        GetLatticeAutInfo<T, Tint, Tgroup>(GramCan, os);
-    result.ListGram.push_back(GramCan);
+  // Records a new class and its automorphism data; returns its index.
+  auto f_add = [&](MyMatrix<T> const &StoreGram,
+                   LatticeAutInfo<T, Tint, Tgroup> const &info) -> size_t {
+    size_t idx = result.ListGram.size();
+    result.ListGram.push_back(StoreGram);
     result.ListAutOrder.push_back(info.order);
     result.accumulated_mass +=
         Tmass(1) / UniversalScalarConversion<Tmass, TintGroup>(info.order);
-    ListGramWork.push_back(GramCan);
+    ListGramWork.push_back(StoreGram);
     ListAutInfo.push_back(info);
 #ifdef DEBUG_GENUS_ENUMERATION
     os << "GENUS: class " << result.ListGram.size() << ", |Aut|=" << info.order
        << ", mass " << result.accumulated_mass << " / " << TotalMass << "\n";
 #endif
+    return idx;
+  };
+
+  auto f_insert = [&](MyMatrix<T> const &GramMat) -> bool {
+    if (scheme == GenusScheme::CanonicalForm) {
+      MyMatrix<T> GramCan = GenusCanonicalGram<T, Tint, Tgroup>(GramMat, os);
+      if (MapCanonic.count(GramCan) == 1) {
+        return false;
+      }
+      LatticeAutInfo<T, Tint, Tgroup> info =
+          GetLatticeAutInfo<T, Tint, Tgroup>(GramCan, scheme, os);
+      MapCanonic[GramCan] = f_add(GramCan, info);
+      return true;
+    }
+    // Isomorphism schemes: bucket by the cheap invariant, then run the
+    // isometry test of the chosen engine against the same-invariant classes.
+    std::map<T, int> inv = GenusIsoInvariant<T, Tint>(GramMat, os);
+    std::vector<size_t> &bucket = MapInvariant[inv];
+    for (size_t idx : bucket) {
+      bool isamorphic;
+      if (scheme == GenusScheme::PleskenSouvignier) {
+        // Scheme A: the Plesken-Souvignier isometry test on the Z-spanning
+        // family, passing the known class's automorphism generators to prune
+        // the search.
+        std::vector<MyMatrix<T>> LM1{GramMat};
+        std::vector<MyMatrix<T>> LM2{result.ListGram[idx]};
+        isamorphic = PleskenSouvignierLatticeIsometry<T, Tint>(
+                         LM1, LM2, ListAutInfo[idx].ListGenMat, os)
+                         .has_value();
+      } else {
+        // Scheme B: the MatrixGroup isometry test on the full-rank family.
+        isamorphic = IteratedShortestEquivalence<T, Tint, Tgroup>(
+                         GramMat, result.ListGram[idx], os)
+                         .has_value();
+      }
+      if (isamorphic) {
+        return false;
+      }
+    }
+    LatticeAutInfo<T, Tint, Tgroup> info =
+        GetLatticeAutInfo<T, Tint, Tgroup>(GramMat, scheme, os);
+    bucket.push_back(f_add(GramMat, info));
     return true;
   };
 

@@ -879,14 +879,20 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
 }
 
 // The Z-spanning characteristic vector family as a matrix, deduplicated.
-// use_roots selects the root variant (see get_shv_block).
+// use_roots selects the root variant (see get_shv_block). The recursion
+// forms orthogonal projections and solves linear systems, so it runs over
+// the overlying field even when the Gram matrix is given over a ring (as in
+// the genus enumeration, where T is the integers); the vectors it returns
+// are integral regardless.
 template <typename T, typename Tint>
 MyMatrix<Tint> inner_span_iterated_shortest_gen(MyMatrix<T> const &GramMat,
                                                 bool use_roots,
                                                 std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
   int n = GramMat.rows();
+  MyMatrix<Tfield> GramMat_F = UniversalMatrixConversion<Tfield, T>(GramMat);
   std::vector<MyVector<Tint>> cvL =
-      inner_span_iterated_shortest_rec<T, Tint>(GramMat, use_roots, os);
+      inner_span_iterated_shortest_rec<Tfield, Tint>(GramMat_F, use_roots, os);
   std::unordered_set<MyVector<Tint>> seen;
   std::vector<MyVector<Tint>> rows;
   for (auto &v : cvL) {

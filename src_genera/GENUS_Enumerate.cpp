@@ -16,7 +16,7 @@
 template <typename T, typename Tint, typename Tgroup>
 void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
                   std::string const &FileMass, std::string const &OutFormat,
-                  std::ostream &os) {
+                  GenusScheme scheme, std::ostream &os) {
   GenusSpec<T> spec = ReadGenusSpecFile<T>(FileGenus);
   std::vector<MyMatrix<T>> ListSeed = ReadListMatrixFile<T>(FileLattice);
   if (ListSeed.empty()) {
@@ -50,7 +50,8 @@ void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
     prime = ChooseNeighborPrime<T>(spec.det);
   }
   GenusEnumerationResult<T, Tgroup> result =
-      GenusEnumeration<T, Tint, Tgroup>(ListSeed, TotalMass, prime, std::cerr);
+      GenusEnumeration<T, Tint, Tgroup>(ListSeed, TotalMass, prime, scheme,
+                                        std::cerr);
   WriteGenusEnumerationResult(os, result, OutFormat, prime);
 }
 
@@ -58,13 +59,20 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 5 && argc != 7) {
+    if (argc != 5 && argc != 7 && argc != 8) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "GENUS_Enumerate [arith] [Genus] [Lattice] [Mass]\n";
       std::cerr << "    or\n";
       std::cerr << "GENUS_Enumerate [arith] [Genus] [Lattice] [Mass] "
                 << "[OutFormat] [OutFile]\n";
+      std::cerr << "    or\n";
+      std::cerr << "GENUS_Enumerate [arith] [Genus] [Lattice] [Mass] "
+                << "[OutFormat] [OutFile] [Strategy]\n";
+      std::cerr << "\n";
+      std::cerr << "Strategy (optional): canonical (default), schemeA / ps "
+                << "(Plesken-Souvignier isomorphism), or schemeB / matrixgroup "
+                << "(MatrixGroup isomorphism)\n";
       std::cerr << "\n";
       std::cerr << "Genus   (input) : the description of the genus, as the\n";
       std::cerr << "                  key/value lines\n";
@@ -106,14 +114,28 @@ int main(int argc, char *argv[]) {
     std::string FileMass = argv[4];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
-    if (argc == 7) {
+    if (argc >= 7) {
       OutFormat = argv[5];
       OutFile = argv[6];
+    }
+    GenusScheme scheme = GenusScheme::CanonicalForm;
+    if (argc == 8) {
+      std::string s = argv[7];
+      if (s == "schemeA" || s == "ps" || s == "pleskensouvignier" ||
+          s == "isomorphism" || s == "iso") {
+        scheme = GenusScheme::PleskenSouvignier;
+      } else if (s == "schemeB" || s == "matrixgroup" || s == "matgrp") {
+        scheme = GenusScheme::MatrixGroup;
+      } else if (s != "canonical") {
+        std::cerr << "Strategy must be 'canonical', 'schemeA'/'ps', or "
+                  << "'schemeB'/'matrixgroup', got " << s << "\n";
+        throw TerminalException{1};
+      }
     }
     auto f = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         return ProcessGenus<T, Tint, Tgroup>(FileGenus, FileLattice, FileMass,
-                                             OutFormat, os);
+                                             OutFormat, scheme, os);
       }
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
