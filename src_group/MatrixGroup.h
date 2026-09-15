@@ -2964,6 +2964,13 @@ ResultSpaceCanonicalization<T> LinearSpace_Canonicalize_KernelRing(
     // one, which already fixes the coprime part modulo it, so working modulo
     // the bare prime power yields the same canonical form as modulo the full
     // product -- only with a smaller modulus and orbit.
+    // NB: canonicalization cannot use the mod-p layer reduction. Unlike the
+    // stabilizer (whose output, a subgroup, is conjugation covariant), the
+    // canonical form is an orbit invariant VALUE, and canonicalizing in the
+    // input-dependent basis of S_b = SpaceWork + p^{k-1} Z^n makes it
+    // basis-dependent, breaking the "isometric inputs give the same canonical
+    // form" contract (the det-25 genus loops forever as a result). So here we
+    // keep the bare prime power p^k as the modulus.
     T p_prev(0);
     T TheMod(1);
     for (int i = 1; i <= siz; i++) {
