@@ -601,6 +601,7 @@ set(
   LATT_GetIntegralMatricesPossibleOrders
   LORENTZ_PERF_Automorphism
   LORENTZ_PERF_Isomorphism
+  LORENTZ_Serial_PerfectLorentzian
   LORENTZ_ReflectiveEdgewalk
 )
 foreach(target IN LISTS LORENTZIAN_PROGRAMS)

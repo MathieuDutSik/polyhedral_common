@@ -29,7 +29,7 @@ GetNumberPerfectLorentzian:=function(eRec, choice)
     LorMat:= - eRec.M;
     WriteMatrixFile(FileIn, LorMat);
     #
-    eProg:=GetBinaryFilename("LORENTZ_MPI_PerfectLorentzian");
+    eProg:=GetBinaryFilename("LORENTZ_Serial_PerfectLorentzian");
     TheCommand:=Concatenation(eProg, " ", FileNml);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
