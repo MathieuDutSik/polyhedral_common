@@ -1370,11 +1370,25 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
   os << "MATGRP: LinearSpace_StabilizerGen_Kernel LFact=" << LFact
      << " siz=" << siz << "\n";
 #endif
+  // Refine one prime power at a time. eList is sorted, so equal primes are
+  // consecutive; within a prime we go through its powers p, p^2, ..., p^e,
+  // and at a new prime the modulus is reset to that bare prime rather than
+  // carrying the product of the primes already handled. Stabilizing modulo
+  // each p^{e_p} is, by the CRT, the same as stabilizing modulo their product
+  // LFact, and the successive stabilizers form a descending chain of groups,
+  // so the result is their intersection with no separate intersection step.
+  // Keeping the modulus a bare prime power avoids inflating both the orbit
+  // and the modular arithmetic with the already-stabilized coprime part.
   std::vector<MyMatrix<T>> ListGenRet = ListGen;
+  T p_prev(0);
+  T TheMod(1);
   for (int i = 1; i <= siz; i++) {
-    T TheMod(1);
-    for (int j = 0; j < i; j++) {
-      TheMod *= eList[j];
+    T p = eList[i - 1];
+    if (p == p_prev) {
+      TheMod *= p;
+    } else {
+      TheMod = p;
+      p_prev = p;
     }
     ListGenRet = LinearSpace_ModStabilizer<T, Tgroup, Thelper, Fstab>(
         ListGenRet, helper, TheSpace, TheMod, f_stab, os);
@@ -2567,12 +2581,21 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence_KernelRing(
   int siz = eList.size();
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
   MyMatrix<T> eElt = IdentityMat<T>(n);
+  // As in the stabilizer, refine one prime power at a time (p, p^2, ..., p^e
+  // within a prime, reset to a bare prime at the next), never a cross-prime
+  // product. eList is sorted so equal primes are consecutive.
+  T p_prev(0);
+  T TheMod(1);
   for (int i = 1; i <= siz; i++) {
     if (IsEquivalence(eElt))
       return eElt;
-    T TheMod(1);
-    for (int j = 0; j < i; j++)
-      TheMod *= eList[j];
+    T p = eList[i - 1];
+    if (p == p_prev) {
+      TheMod *= p;
+    } else {
+      TheMod = p;
+      p_prev = p;
+    }
     MyMatrix<T> TheSpace1Img = TheSpace1 * eElt;
     bool NeedStabilizer = true;
     if (i == siz)
