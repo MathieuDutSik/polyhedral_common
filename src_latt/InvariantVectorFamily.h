@@ -476,6 +476,42 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
 }
 
 /*
+  The base block of one level of an iterated construction, both signs. With
+  use_roots it is the set of roots -- the vectors of norm 2 -- when the
+  lattice has any, and the shortest vectors otherwise; without it, always the
+  shortest vectors. The two agree on an even lattice of minimum 2, where the
+  shortest vectors are exactly the roots; they differ only when the minimum
+  is below 2, in which case the root variant skips the sub-root vectors and
+  starts the tower from the root sublattice, matching the root decomposition
+  of LatticeRootDecomposition.h. The set is always closed under v -> -v.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint> get_shv_block(MyMatrix<T> const &GramMat, bool use_roots,
+                             std::ostream &os) {
+  int n = GramMat.rows();
+  if (use_roots) {
+    MyMatrix<Tint> roots = T_ShortVector_fixed<T, Tint>(GramMat, T(2), os);
+    if (roots.rows() > 0) {
+      // Symmetrise to both signs, whatever the enumerator's convention.
+      std::unordered_set<MyVector<Tint>> seen;
+      std::vector<MyVector<Tint>> rows;
+      for (int i = 0; i < roots.rows(); i++) {
+        MyVector<Tint> v = GetMatrixRow(roots, i);
+        if (seen.insert(v).second) {
+          rows.push_back(v);
+        }
+        MyVector<Tint> mv = -v;
+        if (seen.insert(mv).second) {
+          rows.push_back(mv);
+        }
+      }
+      return MatrixFromVectorFamilyDim(n, rows);
+    }
+  }
+  return T_ShortestVector<T, Tint>(GramMat, os).SHV;
+}
+
+/*
   The iterated-shortest vector family, one vector per antipodal pair: the
   shortest vectors of the lattice, and, when they are not of full rank, the
   same construction applied to the integral orthogonal complement of their
@@ -487,13 +523,16 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
   far longer than the others -- which is exactly the case that makes the
   norm-ball family explode. A full-rank but not necessarily Z-spanning
   family, which is all the Plesken-Souvignier engine requires.
+
+  With use_roots the tower starts from the roots rather than the shortest
+  vectors (see get_shv_block); this is the "root_iterated_shortest" family.
  */
 template <typename T, typename Tint>
-MyMatrix<Tint> IteratedShortestVectorFamilyHalf(MyMatrix<T> const &GramMat,
-                                                std::ostream &os) {
+MyMatrix<Tint> IteratedShortestVectorFamilyHalf_gen(MyMatrix<T> const &GramMat,
+                                                    bool use_roots,
+                                                    std::ostream &os) {
   int n = GramMat.rows();
-  Tshortest<T, Tint> rec = T_ShortestVector<T, Tint>(GramMat, os);
-  MyMatrix<Tint> const &SHV = rec.SHV;
+  MyMatrix<Tint> SHV = get_shv_block<T, Tint>(GramMat, use_roots, os);
   int r = RankMat(SHV);
   // One representative per +/-v pair of the shortest vectors.
   std::unordered_set<MyVector<Tint>> seen;
@@ -527,7 +566,7 @@ MyMatrix<Tint> IteratedShortestVectorFamilyHalf(MyMatrix<T> const &GramMat,
   // and the two blocks lie in orthogonal subspaces, so the concatenation
   // is still one vector per antipodal pair.
   MyMatrix<Tint> PerpFamHalf =
-      IteratedShortestVectorFamilyHalf<T, Tint>(PerpGram, os);
+      IteratedShortestVectorFamilyHalf_gen<T, Tint>(PerpGram, use_roots, os);
   MyMatrix<Tint> PerpFamHalf_L = PerpFamHalf * Perp;
   MyMatrix<Tint> result = Concatenate(SHVhalf, PerpFamHalf_L);
 #ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
@@ -539,11 +578,341 @@ MyMatrix<Tint> IteratedShortestVectorFamilyHalf(MyMatrix<T> const &GramMat,
   return result;
 }
 
+// The iterated-shortest family, one vector per antipodal pair.
+template <typename T, typename Tint>
+MyMatrix<Tint> IteratedShortestVectorFamilyHalf(MyMatrix<T> const &GramMat,
+                                                std::ostream &os) {
+  return IteratedShortestVectorFamilyHalf_gen<T, Tint>(GramMat, false, os);
+}
+
+// The root-iterated-shortest family (roots first, then the iterated-shortest
+// tower on the orthogonal complement), one vector per antipodal pair.
+template <typename T, typename Tint>
+MyMatrix<Tint>
+RootIteratedShortestVectorFamilyHalf(MyMatrix<T> const &GramMat,
+                                     std::ostream &os) {
+  return IteratedShortestVectorFamilyHalf_gen<T, Tint>(GramMat, true, os);
+}
+
+// The full (both signs) root-iterated-shortest family.
+template <typename T, typename Tint>
+MyMatrix<Tint> root_iterated_shortest(MyMatrix<T> const &GramMat,
+                                      std::ostream &os) {
+  return matrix_duplication(
+      RootIteratedShortestVectorFamilyHalf<T, Tint>(GramMat, os));
+}
+
 // The full (both signs) iterated-shortest family.
 template <typename T, typename Tint>
 MyMatrix<Tint> IteratedShortestVectorFamily(MyMatrix<T> const &GramMat,
                                             std::ostream &os) {
   return matrix_duplication(IteratedShortestVectorFamilyHalf<T, Tint>(GramMat, os));
+}
+
+/*
+  Complete a full-rank vector family to a Z-spanning one, generically -- it
+  does not matter how the family was built. The family spans a finite-index
+  sublattice K = <V> of L = Z^n; for every nonzero coset of Z^n / K this
+  adds ALL its minimal-norm representatives (a closest-vector problem per
+  coset: the representatives are the alpha - k for k a closest point of K to
+  the coset rep alpha). Adding every minimal representative, not one, keeps
+  the result an invariant of the lattice -- an isometry permutes the cosets
+  and preserves norms, so it maps a coset minimum-set onto a coset
+  minimum-set, but not a single chosen representative onto a chosen one.
+
+  This is the saturation completion of Hecke's characteristic vectors
+  (_characteristic_vectors) specialised to an already-full-rank family: the
+  saturation of a full-rank sublattice is the whole lattice, so there is no
+  recursion, only the one completion over Z^n / K. The result Z-spans, so a
+  searched basis drawn from it is unimodular and the Plesken-Souvignier
+  backtrack has no rational leaves.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint> ivf_z_spanning(MyMatrix<T> const &GramMat,
+                              MyMatrix<Tint> const &V, std::ostream &os) {
+  int n = GramMat.rows();
+  MyMatrix<Tint> B0 = GetZbasis(V);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+  if (B0.rows() != n) {
+    std::cerr << "IVF: ivf_z_spanning requires a full-rank family\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::unordered_set<MyVector<Tint>> present;
+  std::vector<MyVector<Tint>> rows;
+  for (int i = 0; i < V.rows(); i++) {
+    MyVector<Tint> v = GetMatrixRow(V, i);
+    if (present.insert(v).second) {
+      rows.push_back(v);
+    }
+  }
+  // K = <V> already equals Z^n: nothing to complete.
+  if (T_abs(DeterminantMatBareiss(B0)) == Tint(1)) {
+    return MatrixFromVectorFamilyDim(n, rows);
+  }
+  // A reduced basis of K. The closest-vector problems are on the form that
+  // K carries in its own basis, and a skewed basis (which GetZbasis of the
+  // iterated-shortest family typically is) makes them very slow -- so
+  // LLL-reduce it first, as Hecke does before its coset CVPs.
+  MyMatrix<T> B0_T = UniversalMatrixConversion<T, Tint>(B0);
+  MyMatrix<T> G_K0 = B0_T * GramMat * B0_T.transpose();
+  LLLreduction<T, Tint> lll = LLLreducedBasis<T, Tint>(G_K0, os);
+  MyMatrix<Tint> B = lll.Pmat * B0;
+  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
+  MyMatrix<T> Binv = Inverse(B_T);
+  MyMatrix<T> G_K = lll.GramMatRed;
+  CVPSolver<T, Tint> solver(G_K, os);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  MicrosecondTime time_tc;
+#endif
+  std::vector<MyVector<Tint>> cosets = ComputeTranslationClasses<Tint, Tint>(B);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: ivf_z_spanning index " << cosets.size() << " translation classes "
+     << "in " << time_tc << "\n";
+  MicrosecondTime time_cvp;
+#endif
+  for (auto &alpha : cosets) {
+    if (IsZeroVector(alpha)) {
+      continue;
+    }
+    // alpha in the coordinates of the basis B: a = alpha B^{-1}.
+    MyVector<T> a(n);
+    for (int j = 0; j < n; j++) {
+      T s(0);
+      for (int i = 0; i < n; i++) {
+        s += UniversalScalarConversion<T, Tint>(alpha(i)) * Binv(i, j);
+      }
+      a(j) = s;
+    }
+    resultCVP<T, Tint> cvp = solver.nearest_vectors(a);
+    for (int r = 0; r < cvp.ListVect.rows(); r++) {
+      MyVector<Tint> c = GetMatrixRow(cvp.ListVect, r);
+      // w = alpha - c B, a vector of Z^n minimal in the coset alpha + K.
+      MyVector<Tint> w(n);
+      for (int k = 0; k < n; k++) {
+        Tint s = alpha(k);
+        for (int i = 0; i < n; i++) {
+          s -= c(i) * B(i, k);
+        }
+        w(k) = s;
+      }
+      if (present.insert(w).second) {
+        rows.push_back(w);
+      }
+    }
+  }
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: ivf_z_spanning " << (cosets.size() - 1) << " CVPs in " << time_cvp
+     << ", family " << V.rows() << " -> " << rows.size() << "\n";
+#endif
+  return MatrixFromVectorFamilyDim(n, rows);
+}
+
+/*
+  The Z-spanning characteristic vector family of a Gram matrix, the port of
+  Hecke's _characteristic_vectors (following Sikiric-Haensch-Voight-van
+  Woerden). It returns the full set (both signs) of vectors in the
+  coordinates of L = Z^n. Unlike the generic ivf_z_spanning, which completes
+  an already-flat full-rank family in one shot and pays for a closest vector
+  problem on the whole mixed-scale sublattice, this builds the family through
+  the same orthogonal recursion as the iterated-shortest family, so every
+  closest vector problem lives on the shortest-vector sublattice S1 or its
+  saturation P1 -- lattices whose vectors are all near the minimum, hence
+  well conditioned -- and never on a lattice mixing a long direction with the
+  short ones. That is what keeps the completion tractable where the one-shot
+  completion explodes.
+
+  At each level, with SHV the base block (get_shv_block: the shortest vectors,
+  or the roots when use_roots is set), S1 = <SHV> and P1 its saturation in
+  Z^n:
+   - the block vectors are characteristic vectors;
+   - for every non-zero coset of P1 / S1, the minimal vectors of that coset
+     (a closest vector problem in S1) are characteristic vectors -- this
+     completes the span of S1 up to its saturation P1;
+   - if S1 is not of full rank, we recurse on the PROJECTION L2 of Z^n onto
+     the orthogonal complement of P1 (not the integral intersection, which
+     would drop the glue between the blocks). A characteristic vector a of L2
+     that lifts integrally into Z^n is one directly; otherwise its minimal
+     integral lifts are a + (minimal P1-glue), a closest vector problem in P1.
+  The result Z-spans L. With use_roots this is the Z-spanning
+  root-iterated-shortest family (Hecke's _reduced_characteristic_vectors).
+ */
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>>
+inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
+                                 std::ostream &os) {
+  int n = G.rows();
+  MyMatrix<Tint> SHV = get_shv_block<T, Tint>(G, use_roots, os);
+  int r = RankMat(SHV);
+  std::vector<MyVector<Tint>> cvL;
+  for (int i = 0; i < SHV.rows(); i++) {
+    cvL.push_back(GetMatrixRow(SHV, i));
+  }
+  // S1 = <SHV>, P1 = saturation of S1 in Z^n, both as row bases in Z^n.
+  MyMatrix<Tint> S1 = GetZbasis(SHV);
+  MyMatrix<Tint> P1 = IntegralSpaceSaturation(S1);
+  // C: the coordinates of S1 in P1, i.e. the integer matrix with S1 = C P1.
+  // |det C| = [P1 : S1] is the index whose cosets the completion runs over.
+  MyMatrix<Tint> C(r, r);
+  for (int i = 0; i < r; i++) {
+    MyVector<Tint> s = GetMatrixRow(S1, i);
+    std::optional<MyVector<Tint>> opt = SolutionIntMat(P1, s);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+    if (!opt) {
+      std::cerr << "IVF: inner_span, a shortest-vector basis vector is not in "
+                << "the saturation\n";
+      throw TerminalException{1};
+    }
+#endif
+    for (int j = 0; j < r; j++) {
+      C(i, j) = (*opt)(j);
+    }
+  }
+  MyMatrix<T> S1_T = UniversalMatrixConversion<T, Tint>(S1);
+  // Saturation completion S1 -> P1: only needed when S1 is a proper
+  // sublattice of its saturation.
+  if (T_abs(DeterminantMatBareiss(C)) != Tint(1)) {
+    MyMatrix<T> G_S1 = S1_T * G * S1_T.transpose();
+    CVPSolver<T, Tint> solverS1(G_S1, os);
+    std::vector<MyVector<Tint>> cosets =
+        ComputeTranslationClasses<Tint, Tint>(C);
+    for (auto &cr : cosets) {
+      if (IsZeroVector(cr)) {
+        continue;
+      }
+      // p = cr P1, a representative of the coset in Z^n, and a_S1 its
+      // coordinates in the basis of S1 (rational, since p is not in S1).
+      MyVector<Tint> p = P1.transpose() * cr;
+      MyVector<T> p_T = UniversalVectorConversion<T, Tint>(p);
+      std::optional<MyVector<T>> a_opt = SolutionMat(S1_T, p_T);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+      if (!a_opt) {
+        std::cerr << "IVF: inner_span, a coset rep is not in the span of S1\n";
+        throw TerminalException{1};
+      }
+#endif
+      resultCVP<T, Tint> cvp = solverS1.nearest_vectors(*a_opt);
+      for (int rr = 0; rr < cvp.ListVect.rows(); rr++) {
+        MyVector<Tint> j = GetMatrixRow(cvp.ListVect, rr);
+        // w = p - j S1, a minimal vector of the coset p + S1 in Z^n.
+        MyVector<Tint> w = p - S1.transpose() * j;
+        cvL.push_back(w);
+      }
+    }
+  }
+  if (r == n) {
+    return cvL;
+  }
+  // The G-orthogonal projection onto the span of P1 and its complement:
+  // pr1 = G P1^T (P1 G P1^T)^{-1} P1, proj2 = I - pr1.
+  MyMatrix<T> P1_T = UniversalMatrixConversion<T, Tint>(P1);
+  MyMatrix<T> GP1t = G * P1_T.transpose();
+  MyMatrix<T> P1GP1t = P1_T * GP1t;
+  MyMatrix<T> P1GP1t_inv = Inverse(P1GP1t);
+  MyMatrix<T> pr1 = GP1t * P1GP1t_inv * P1_T;
+  MyMatrix<T> proj2 = IdentityMat<T>(n) - pr1;
+  // L2 = projection of Z^n onto the complement, as a rational row basis:
+  // clear denominators, take an integer Z-basis, divide back.
+  FractionMatrix<T> fr = RemoveFractionMatrixPlusCoeff(proj2);
+  MyMatrix<Tint> proj2_scaled = UniversalMatrixConversion<Tint, T>(fr.TheMat);
+  MyMatrix<Tint> B2int = GetZbasis(proj2_scaled);
+  MyMatrix<T> L2basis = UniversalMatrixConversion<T, Tint>(B2int) / fr.TheMult;
+  MyMatrix<T> G_L2 = L2basis * G * L2basis.transpose();
+  // P_Z: coordinates of proj2(e_i) in the basis of L2, an integer n x (n-r)
+  // matrix mapping x in Z^n to its projection in L2 coordinates.
+  int nc = L2basis.rows();
+  MyMatrix<Tint> P_Z(n, nc);
+  for (int i = 0; i < n; i++) {
+    MyVector<T> row = GetMatrixRow(proj2, i);
+    std::optional<MyVector<T>> opt = SolutionMat(L2basis, row);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+    if (!opt || !IsIntegralVector(*opt)) {
+      std::cerr << "IVF: inner_span, a projection is not in the projection "
+                << "lattice\n";
+      throw TerminalException{1};
+    }
+#endif
+    for (int j = 0; j < nc; j++) {
+      P_Z(i, j) = UniversalScalarConversion<Tint, T>((*opt)(j));
+    }
+  }
+  CVPSolver<T, Tint> solverP1(P1GP1t, os);
+  std::vector<MyVector<Tint>> rec2 =
+      inner_span_iterated_shortest_rec<T, Tint>(G_L2, use_roots, os);
+  for (auto &a : rec2) {
+    MyVector<T> a_T = UniversalVectorConversion<T, Tint>(a);
+    MyVector<T> aL = L2basis.transpose() * a_T;
+    if (IsIntegralVector(aL)) {
+      // The lift already lies in Z^n: it is a characteristic vector as is.
+      cvL.push_back(UniversalVectorConversion<Tint, T>(aL));
+      continue;
+    }
+    // vL: an actual element of Z^n projecting to a; its minimal-norm coset
+    // representatives modulo P1 are the lifts we add.
+    std::optional<MyVector<Tint>> vL_opt = SolutionIntMat(P_Z, a);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+    if (!vL_opt) {
+      std::cerr << "IVF: inner_span, no integral preimage of a projection "
+                << "characteristic vector\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyVector<Tint> const &vL = *vL_opt;
+    MyVector<T> vL_T = UniversalVectorConversion<T, Tint>(vL);
+    MyVector<T> w_amb = pr1.transpose() * vL_T;
+    std::optional<MyVector<T>> w_opt = SolutionMat(P1_T, w_amb);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+    if (!w_opt) {
+      std::cerr << "IVF: inner_span, the P1 part is not in the span of P1\n";
+      throw TerminalException{1};
+    }
+#endif
+    resultCVP<T, Tint> cvp = solverP1.nearest_vectors(*w_opt);
+    for (int rr = 0; rr < cvp.ListVect.rows(); rr++) {
+      MyVector<Tint> jp = GetMatrixRow(cvp.ListVect, rr);
+      // vL - jp P1, a minimal integral lift of a into Z^n.
+      MyVector<Tint> glue = vL - P1.transpose() * jp;
+      cvL.push_back(glue);
+    }
+  }
+  return cvL;
+}
+
+// The Z-spanning characteristic vector family as a matrix, deduplicated.
+// use_roots selects the root variant (see get_shv_block).
+template <typename T, typename Tint>
+MyMatrix<Tint> inner_span_iterated_shortest_gen(MyMatrix<T> const &GramMat,
+                                                bool use_roots,
+                                                std::ostream &os) {
+  int n = GramMat.rows();
+  std::vector<MyVector<Tint>> cvL =
+      inner_span_iterated_shortest_rec<T, Tint>(GramMat, use_roots, os);
+  std::unordered_set<MyVector<Tint>> seen;
+  std::vector<MyVector<Tint>> rows;
+  for (auto &v : cvL) {
+    if (seen.insert(v).second) {
+      rows.push_back(v);
+    }
+  }
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: inner_span_iterated_shortest use_roots=" << use_roots << " n=" << n
+     << " |raw|=" << cvL.size() << " |dedup|=" << rows.size() << "\n";
+#endif
+  return MatrixFromVectorFamilyDim(n, rows);
+}
+
+// The Z-spanning iterated-shortest characteristic vector family.
+template <typename T, typename Tint>
+MyMatrix<Tint> inner_span_iterated_shortest(MyMatrix<T> const &GramMat,
+                                            std::ostream &os) {
+  return inner_span_iterated_shortest_gen<T, Tint>(GramMat, false, os);
+}
+
+// The Z-spanning root-iterated-shortest characteristic vector family.
+template <typename T, typename Tint>
+MyMatrix<Tint> inner_span_root_iterated_shortest(MyMatrix<T> const &GramMat,
+                                                 std::ostream &os) {
+  return inner_span_iterated_shortest_gen<T, Tint>(GramMat, true, os);
 }
 
 template <typename T, typename Tint>

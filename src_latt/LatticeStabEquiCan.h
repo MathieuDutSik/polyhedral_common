@@ -741,6 +741,63 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalence(MyMatrix<T> const &inpMat1,
   return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2, os);
 }
 
+//
+// The full-rank-family scheme: build a full-rank (not necessarily
+// Z-spanning) iterated-shortest family and hand it to the MatrixGroup
+// algorithm. The family need not span L because that algorithm reconstructs
+// each automorphism over Q from its action on the full-rank family and keeps
+// it only if it lands in GL_n(Z); a Z-spanning family is not required, unlike
+// the Plesken-Souvignier backtrack of LatticePleskenSouvignier.h. The root
+// variant is used for a single form, the plain iterated-shortest tower for
+// several forms at once.
+//
+
+template <typename T, typename Tint>
+MyMatrix<Tint>
+IteratedShortestSchemeFamily(std::vector<MyMatrix<T>> const &ListMat,
+                             std::ostream &os) {
+  if (ListMat.size() == 1) {
+    return root_iterated_shortest<T, Tint>(ListMat[0], os);
+  }
+  return IteratedShortestVectorFamily<T, Tint>(ListMat[0], os);
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>>
+IteratedShortestAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
+                                          std::ostream &os) {
+  MyMatrix<Tint> SHV = IteratedShortestSchemeFamily<T, Tint>(ListMat, os);
+  return ArithmeticAutomorphismGroupMultiple_inner<T, Tint, Tgroup>(ListMat, SHV,
+                                                                    os);
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>>
+IteratedShortestAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat{inpMat};
+  return IteratedShortestAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> IteratedShortestEquivalenceMultiple(
+    std::vector<MyMatrix<T>> const &ListMat1,
+    std::vector<MyMatrix<T>> const &ListMat2, std::ostream &os) {
+  MyMatrix<Tint> SHV1 = IteratedShortestSchemeFamily<T, Tint>(ListMat1, os);
+  MyMatrix<Tint> SHV2 = IteratedShortestSchemeFamily<T, Tint>(ListMat2, os);
+  return ArithmeticEquivalenceMultiple_inner<T, Tint, Tgroup>(ListMat1, SHV1,
+                                                              ListMat2, SHV2, os);
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+IteratedShortestEquivalence(MyMatrix<T> const &inpMat1,
+                            MyMatrix<T> const &inpMat2, std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat1{inpMat1};
+  std::vector<MyMatrix<T>> ListMat2{inpMat2};
+  return IteratedShortestEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
+                                                              os);
+}
+
 // clang-format off
 #endif  // SRC_LATT_MATRIXCANONICALFORM_H_
 // clang-format on

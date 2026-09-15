@@ -33,6 +33,27 @@ void process(std::string choice, std::string MatFile,
       is_antipodal = false;
       return IteratedShortestVectorFamilyHalf<T, Tint>(GramMat, std::cerr);
     }
+    // The iterated-shortest family completed to a Z-spanning one by the
+    // generic saturation completion ivf_z_spanning.
+    if (choice == "span_iterated_shortest") {
+      MyMatrix<Tint> V =
+          IteratedShortestVectorFamily<T, Tint>(GramMat, std::cerr);
+      return ivf_z_spanning<T, Tint>(GramMat, V, std::cerr);
+    }
+    // The Z-spanning characteristic vector family built through the
+    // orthogonal recursion (Hecke's _characteristic_vectors), keeping every
+    // closest vector problem on the shortest-vector sublattice.
+    if (choice == "inner_span_iterated_shortest") {
+      return inner_span_iterated_shortest<T, Tint>(GramMat, std::cerr);
+    }
+    // The root variants: the tower starts from the roots (norm-2 vectors)
+    // rather than the shortest vectors. Full-rank and its Z-spanning form.
+    if (choice == "root_iterated_shortest") {
+      return root_iterated_shortest<T, Tint>(GramMat, std::cerr);
+    }
+    if (choice == "inner_span_root_iterated_shortest") {
+      return inner_span_root_iterated_shortest<T, Tint>(GramMat, std::cerr);
+    }
     if (choice == "relevant_voronoi") {
       return ComputeVoronoiRelevantVector<T, Tint>(GramMat, std::cerr);
     }
@@ -109,7 +130,7 @@ void process(std::string choice, std::string MatFile,
     }
     std::cerr << "Failed to find a matching entry for choice\n";
     std::cerr << "Possible choices: shortest, iterated_shortest, "
-                 "iterated_shortest_half, relevant_voronoi, "
+                 "iterated_shortest_half, span_iterated_shortest, inner_span_iterated_shortest, root_iterated_shortest, inner_span_root_iterated_shortest, relevant_voronoi, "
                  "filtered_relevant_voronoi, fullrank, fullrank_half, "
                  "spanning, spanning_half, wr_cv, cv, cv_fullrank, canonic, "
                  "canonic_half, plesken_souvignier\n";
@@ -201,7 +222,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_GenerateCharacteristicVectorSet [arith] choice [MatFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "[arith]: gmp, gmp_boost, multi_boost\n";
-      std::cerr << "choice: shortest, iterated_shortest, iterated_shortest_half, relevant_voronoi, "
+      std::cerr << "choice: shortest, iterated_shortest, iterated_shortest_half, span_iterated_shortest, relevant_voronoi, "
                    "filtered_relevant_voronoi, fullrank, fullrank_half, "
                    "spanning, spanning_half, wr_cv, cv, cv_fullrank, canonic, "
                    "canonic_half, plesken_souvignier\n";

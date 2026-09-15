@@ -6,7 +6,9 @@
 #include "PleskenSouvignier.h"
 #include "Shvec_exact.h"
 #include "ClassicLLL.h"
+#include "InvariantVectorFamily.h"
 #include <optional>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -58,6 +60,35 @@ template <typename T> T PleskenSouvignierBound(MyMatrix<T> const &GramMat) {
 }
 
 /*
+  The Z-spanning characteristic vector family fed to the Plesken-Souvignier
+  backtrack, one vector per antipodal pair. A Z-spanning family is what the
+  engine needs to work reliably: a searched basis drawn from it is unimodular,
+  so the backtrack has no rational leaves. The construction is intrinsic (no
+  norm bound), hence an isometry invariant, so the two sides of an isometry
+  test build corresponding families independently. The root variant is used
+  for a single form, where the norm-2 roots are a meaningful block; for
+  several forms at once, where "root" is not a notion of the pair, the plain
+  shortest-vector tower is used instead.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint> PleskenSouvignierZspanFamilyHalf(MyMatrix<T> const &GramMat,
+                                                bool single, std::ostream &os) {
+  int n = GramMat.rows();
+  MyMatrix<Tint> full =
+      single ? inner_span_root_iterated_shortest<T, Tint>(GramMat, os)
+             : inner_span_iterated_shortest<T, Tint>(GramMat, os);
+  std::unordered_set<MyVector<Tint>> seen;
+  std::vector<MyVector<Tint>> rows;
+  for (int i = 0; i < full.rows(); i++) {
+    MyVector<Tint> c = SignCanonicalizeVector(GetMatrixRow(full, i));
+    if (seen.insert(c).second) {
+      rows.push_back(c);
+    }
+  }
+  return MatrixFromVectorFamilyDim(n, rows);
+}
+
+/*
   The automorphism group of the configuration: generators over the ring
   in the ORIGINAL basis, satisfying g * M * g^T = M for every matrix of
   ListMat, and the orbit lengths along the stabilizer chain whose
@@ -81,12 +112,12 @@ PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
   for (auto &eMat : ListMatInt) {
     ListMatRed.push_back(Pmat * eMat * Pmat.transpose());
   }
-  T bound = PleskenSouvignierBound(rec.GramMatRed);
+  bool single = (ListMat.size() == 1);
   MyMatrix<Tint> SHVhalf =
-      PleskenSouvignierVectorFamily<T, Tint>(rec.GramMatRed, bound, os);
+      PleskenSouvignierZspanFamilyHalf<T, Tint>(rec.GramMatRed, single, os);
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
-  os << "PS: automorphism, bound " << bound << ", " << SHVhalf.rows()
-     << " antipodal pairs\n";
+  os << "PS: automorphism, Z-spanning family (single=" << single << "), "
+     << SHVhalf.rows() << " antipodal pairs\n";
 #endif
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   os << "|PS: LatticeAutomorphism, preparation|=" << time << "\n";
@@ -149,14 +180,14 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierLatticeIsometry(
   for (auto &eMat : ListMatInt2) {
     ListMatRed2.push_back(Pmat2 * eMat * Pmat2.transpose());
   }
-  T bound = PleskenSouvignierBound(rec1.GramMatRed);
+  bool single = (ListMat1.size() == 1);
   MyMatrix<Tint> SHVhalf1 =
-      PleskenSouvignierVectorFamily<T, Tint>(rec1.GramMatRed, bound, os);
+      PleskenSouvignierZspanFamilyHalf<T, Tint>(rec1.GramMatRed, single, os);
   MyMatrix<Tint> SHVhalf2 =
-      PleskenSouvignierVectorFamily<T, Tint>(rec2.GramMatRed, bound, os);
+      PleskenSouvignierZspanFamilyHalf<T, Tint>(rec2.GramMatRed, single, os);
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
-  os << "PS: isometry, bound " << bound << ", pairs " << SHVhalf1.rows()
-     << " / " << SHVhalf2.rows() << "\n";
+  os << "PS: isometry, Z-spanning families (single=" << single << "), pairs "
+     << SHVhalf1.rows() << " / " << SHVhalf2.rows() << "\n";
 #endif
   MyMatrix<Tint> Pmat2Inv = Inverse(Pmat2);
 #ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
