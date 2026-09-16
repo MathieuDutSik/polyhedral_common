@@ -45,7 +45,17 @@ int main(int argc, char *argv[]) {
                    "reports rigidity of the limit\n";
       std::cerr << "  multistart-lp [n] [m] [count] [out_config] [seed] "
                    "[max_seconds]\n";
-      std::cerr << "  basinhop [config] [out_config] [max_seconds] [seed]\n";
+      std::cerr << "  basinhop [config] [out_config] [max_seconds] [seed] "
+                   "[collect_below]\n";
+      std::cerr << "  evaluate-pc [config]\n";
+      std::cerr << "      packing-covering ratio gamma = 2 sqrt(mu^2 / "
+                   "lambda^2) of the configuration\n";
+      std::cerr << "  descend-pc [config] [out_config] [rounds]\n";
+      std::cerr << "  basinhop-pc [config] [out_config] [max_seconds] "
+                   "[seed]\n";
+      std::cerr << "      the same searches for the packing-covering ratio; "
+                   "records: gamma_4 = 1.3625 (Ho_4), gamma_5 = 1.44946 "
+                   "(Ho_5), lattice-optimal, non-lattice open\n";
       std::cerr << "  addcoset [config] [out_config]\n";
       std::cerr << "      grow m -> m+1 by adding a coset at the deepest hole "
                    "(structured seeding for a richer coset set)\n";
@@ -473,7 +483,7 @@ int main(int argc, char *argv[]) {
              n_rigid, n_record, record);
       return 0;
     }
-    if (mode == "basinhop" && (argc == 5 || argc == 6)) {
+    if (mode == "basinhop" && (argc >= 5 && argc <= 7)) {
       // Basin hopping: a random walk in the space of local minima. Each hop
       // applies a cheap geometric kick (a coset moved to the deepest hole, or
       // a single-coset jitter), re-relaxes, and accepts by Metropolis with a
@@ -483,7 +493,22 @@ int main(int argc, char *argv[]) {
       // never wedge the walk in an uninterruptible qhull call.
       PeriodicConfig seed_conf = ReadConfigFile(argv[2]);
       double max_seconds = atof(argv[4]);
-      unsigned seed = argc == 6 ? unsigned(atol(argv[5])) : 1u;
+      unsigned seed = argc >= 6 ? unsigned(atol(argv[5])) : 1u;
+      // Collect every distinct local optimum below this threshold into a
+      // catalog; after the walk the best entries are re-polished by the full
+      // L-BFGS descent and certified, so the run returns the remarkable
+      // configurations it met, not only the single best.
+      double collect_below = argc == 7 ? atof(argv[6]) : 0.0;
+      std::vector<std::pair<double, PeriodicConfig>> catalog;
+      auto collect = [&](double th, PeriodicConfig const &c) {
+        if (collect_below <= 0.0 || th >= collect_below) return;
+        for (auto &e : catalog)
+          if (std::abs(e.first - th) < 1e-6) return;
+        catalog.emplace_back(th, c);
+        std::sort(catalog.begin(), catalog.end(),
+                  [](auto const &a, auto const &b) { return a.first < b.first; });
+        if (catalog.size() > 40) catalog.pop_back();
+      };
       int n = seed_conf.n, m = seed_conf.m;
       // cap the search-time point cloud: good configurations of m cosets need
       // ~1500*m points, so 4000*m rejects the ball-growth blow-ups (a bad kick
@@ -569,6 +594,7 @@ int main(int argc, char *argv[]) {
       }
       PeriodicConfig bestc = curc;
       double bestth = curth;
+      collect(curth, curc);
       WriteConfigFile(argv[3], bestc);
       printf("init: theta=%.13f\n", curth);
       fflush(stdout);
@@ -609,6 +635,7 @@ int main(int argc, char *argv[]) {
           fflush(stdout);
           continue;
         }
+        collect(candth, candc);
         double dth = candth - curth;
         bool acc = (dth < 0.0) || (unif(rng) < std::exp(-dth / T));
         if (acc) { curc = candc; curth = candth; n_acc++; }
@@ -632,6 +659,95 @@ int main(int argc, char *argv[]) {
       printf("best=%.13f accept_rate=%.2f (record=%.13f)\n", bestth,
              n_hop ? double(n_acc) / n_hop : 0.0, record);
       WriteConfigFile(argv[3], bestc);
+      // Post-polish: the cheap-relax catalog values are ~0.2% off the true
+      // optima, so re-descend the best entries with the full L-BFGS (forked,
+      // capped) and certify each limit with the LP. These are the remarkable
+      // configurations the run returns.
+      int n_polish = std::min<int>(catalog.size(), 8);
+      if (n_polish > 0) printf("--- catalog (%d entries, polishing %d) ---\n",
+                               (int)catalog.size(), n_polish);
+      for (int kx = 0; kx < n_polish; kx++) {
+        ::remove(tmpstat.c_str());
+        pid_t pid = fork();
+        if (pid == 0) {
+          DescendResult r = Descend(catalog[kx].second, 12, std::cerr, false);
+          FILE *f = fopen(tmpstat.c_str(), "w");
+          if (f) {
+            if (r.success) {
+              fprintf(f, "OK %.15g\n", r.theta);
+              fclose(f);
+              WriteConfigFile(tmpconf, r.conf);
+            } else {
+              fprintf(f, "FAIL\n");
+              fclose(f);
+            }
+          }
+          _exit(0);
+        }
+        auto ct0 = std::chrono::steady_clock::now();
+        bool fin = false;
+        while (true) {
+          int status;
+          if (waitpid(pid, &status, WNOHANG) == pid) { fin = true; break; }
+          double el = std::chrono::duration_cast<std::chrono::duration<double>>(
+                          std::chrono::steady_clock::now() - ct0).count();
+          if (el > 200.0) break;
+          usleep(200000);
+        }
+        if (!fin) {
+          kill(pid, SIGKILL);
+          int status;
+          waitpid(pid, &status, 0);
+          printf("catalog %d: theta~%.7f polish TIMEOUT\n", kx,
+                 catalog[kx].first);
+          fflush(stdout);
+          continue;
+        }
+        FILE *f = fopen(tmpstat.c_str(), "r");
+        char tag[16] = {0};
+        double th = 0;
+        if (!f || fscanf(f, "%15s %lf", tag, &th) != 2 ||
+            std::string(tag) != "OK") {
+          if (f) fclose(f);
+          printf("catalog %d: theta~%.7f polish failed\n", kx,
+                 catalog[kx].first);
+          fflush(stdout);
+          continue;
+        }
+        fclose(f);
+        PeriodicConfig pc2 = ReadConfigFile(tmpconf);
+        // certify (inline: one tessellation, JointGrad, the small-box LP)
+        int rg = -1, act = -1;
+        double rate = -1;
+        try {
+          DensityResult drx = CoveringDensity(pc2);
+          auto basis = SymBasis(pc2.n);
+          int dQx = basis.size();
+          int dimx = dQx + pc2.n * (pc2.m - 1);
+          std::vector<double> R2x;
+          std::vector<Eigen::VectorXd> gx;
+          JointGrad(drx.cells, pc2.Q, pc2.C, basis, R2x, gx);
+          double mu2x = *std::max_element(R2x.begin(), R2x.end());
+          Eigen::VectorXd gdet = Eigen::VectorXd::Zero(dimx);
+          Eigen::MatrixXd Qinv = pc2.Q.inverse();
+          for (int u2 = 0; u2 < dQx; u2++) {
+            int kk = basis[u2].first, ll = basis[u2].second;
+            gdet(u2) = (kk == ll) ? Qinv(kk, kk) : 2.0 * Qinv(kk, ll);
+          }
+          double rho_cert = 1e-3;
+          DirLPResult lp = DirectionLP(R2x, gx, gdet, mu2x, pc2.n, rho_cert);
+          rate = -lp.predicted / rho_cert;
+          act = lp.n_active;
+          rg = (lp.status == 0 && rate < 1e-7) ? 1 : 0;
+        } catch (std::runtime_error &e) {
+        }
+        char fn[4096];
+        snprintf(fn, sizeof(fn), "%s.opt.%d", argv[3], kx);
+        WriteConfigFile(fn, pc2);
+        printf("catalog %d: theta=%.13f rigid=%d active=%d rate=%.2e -> %s\n",
+               kx, th, rg, act, rate, fn);
+        fflush(stdout);
+      }
       return 0;
     }
     if (mode == "addcoset" && argc == 4) {
@@ -656,6 +772,177 @@ int main(int argc, char *argv[]) {
         nc.C(m, j) = (z(j) - std::floor(z(j))) + 0.02 * gauss(rng);
       WriteConfigFile(argv[3], nc);
       printf("added coset at deepest hole: m=%d -> m=%d\n", m, m + 1);
+      return 0;
+    }
+    if (mode == "evaluate-pc" && argc == 3) {
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      PCResult pc = PackingCovering(conf);
+      std::cout << "n=" << conf.n << " m=" << conf.m
+                << " classes=" << pc.cells.size() << "\n";
+      printf("mu2=%.13f lambda2=%.13f\n", pc.mu2, pc.lambda2);
+      printf("gamma=%.13f\n", pc.gamma);
+      return 0;
+    }
+    if (mode == "descend-pc" && (argc == 4 || argc == 5)) {
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      int rounds = argc == 5 ? atoi(argv[4]) : 15;
+      DescendResult res = DescendPC(conf, rounds, std::cerr, true);
+      if (!res.success) {
+        std::cerr << "the descent could not evaluate any configuration\n";
+        return 1;
+      }
+      printf("gamma=%.13f\n", res.theta);
+      WriteConfigFile(argv[3], res.conf);
+      return 0;
+    }
+    if (mode == "basinhop-pc" && (argc == 5 || argc == 6)) {
+      // Basin hopping on the packing-covering ratio gamma. Same walk as
+      // basinhop, with DescendPC as the (forked, time-capped) relaxation.
+      PeriodicConfig seed_conf = ReadConfigFile(argv[2]);
+      double max_seconds = atof(argv[4]);
+      unsigned seed = argc == 6 ? unsigned(atol(argv[5])) : 1u;
+      int n = seed_conf.n, m = seed_conf.m;
+      SearchMaxPts() = 4000 * m;
+      // best LATTICE packing-covering values: gamma_3 (A_3^*, optimal even
+      // among non-lattices by Boeroeczky), gamma_4 (Ho_4), gamma_5 (Ho_5).
+      // For n = 4, 5 the non-lattice problem is open: below the record is a
+      // genuine discovery.
+      double record = 0.0;
+      if (n == 3) record = 1.2909944487358056;
+      if (n == 4) record = 1.3625004774085323;
+      if (n == 5) record = 1.4494561268494583;
+      std::mt19937_64 rng(seed);
+      std::uniform_real_distribution<double> unif(0.0, 1.0);
+      std::normal_distribution<double> gauss(0.0, 1.0);
+      double start_budget = 150.0;
+      std::string tmpstat = std::string(argv[3]) + ".child.stat";
+      std::string tmpconf = std::string(argv[3]) + ".child.conf";
+      auto relax_forked = [&](PeriodicConfig const &c, PeriodicConfig &out,
+                              double &gam) -> bool {
+        ::remove(tmpstat.c_str());
+        pid_t pid = fork();
+        if (pid == 0) {
+          DescendResult r = DescendPC(c, 6, std::cerr, false);
+          FILE *f = fopen(tmpstat.c_str(), "w");
+          if (f) {
+            if (r.success) {
+              fprintf(f, "OK %.15g\n", r.theta);
+              fclose(f);
+              WriteConfigFile(tmpconf, r.conf);
+            } else {
+              fprintf(f, "FAIL\n");
+              fclose(f);
+            }
+          }
+          _exit(0);
+        }
+        auto ct0 = std::chrono::steady_clock::now();
+        bool fin = false;
+        while (true) {
+          int status;
+          if (waitpid(pid, &status, WNOHANG) == pid) { fin = true; break; }
+          double el = std::chrono::duration_cast<std::chrono::duration<double>>(
+                          std::chrono::steady_clock::now() - ct0).count();
+          if (el > start_budget) break;
+          usleep(200000);
+        }
+        if (!fin) {
+          kill(pid, SIGKILL);
+          int status;
+          waitpid(pid, &status, 0);
+          return false;
+        }
+        FILE *f = fopen(tmpstat.c_str(), "r");
+        char tag[16] = {0};
+        if (!f || fscanf(f, "%15s", tag) != 1 || std::string(tag) != "OK") {
+          if (f) fclose(f);
+          return false;
+        }
+        if (fscanf(f, "%lf", &gam) != 1) { fclose(f); return false; }
+        fclose(f);
+        out = ReadConfigFile(tmpconf);
+        return true;
+      };
+      PeriodicConfig curc;
+      double curg;
+      bool init_ok = false;
+      for (int attempt = 0; attempt < 8 && !init_ok; attempt++) {
+        PeriodicConfig s2 = seed_conf;
+        if (attempt > 0) {
+          for (int t = 1; t < m; t++)
+            for (int j = 0; j < n; j++)
+              s2.C(t, j) += 0.10 * gauss(rng);
+        }
+        init_ok = relax_forked(s2, curc, curg);
+        if (!init_ok)
+          printf("init attempt %d failed, retrying with a jittered seed\n",
+                 attempt);
+        fflush(stdout);
+      }
+      if (!init_ok) {
+        std::cerr << "basinhop-pc: initial relaxation failed after retries\n";
+        return 1;
+      }
+      PeriodicConfig bestc = curc;
+      double bestg = curg;
+      WriteConfigFile(argv[3], bestc);
+      printf("init: gamma=%.13f\n", curg);
+      fflush(stdout);
+      double T = 0.04 * curg, Tmin = 1e-4;
+      auto t0 = std::chrono::steady_clock::now();
+      int n_acc = 0, n_hop = 0;
+      for (int hop = 0;; hop++) {
+        double el = std::chrono::duration_cast<std::chrono::duration<double>>(
+                        std::chrono::steady_clock::now() - t0).count();
+        if (el > max_seconds) break;
+        PeriodicConfig trial = curc;
+        std::vector<CellClass> cells;
+        try {
+          cells = DelaunayCellClasses(trial);
+        } catch (std::runtime_error &e) {
+          continue;
+        }
+        int t = (m > 2) ? 1 + int(rng() % (m - 1)) : 1;
+        double u = unif(rng);
+        if (u < 0.15) {
+          Eigen::VectorXd z = DeepestHole(cells, trial.Q, trial.C);
+          for (int j = 0; j < n; j++)
+            trial.C(t, j) = (z(j) - std::floor(z(j))) + 0.05 * gauss(rng);
+        } else {
+          double sigma = (u < 0.6) ? 0.06 : 0.12;
+          for (int j = 0; j < n; j++) trial.C(t, j) += sigma * gauss(rng);
+        }
+        PeriodicConfig candc;
+        double candg;
+        n_hop++;
+        if (!relax_forked(trial, candc, candg)) {
+          printf("hop %d: relax timeout/fail\n", hop);
+          fflush(stdout);
+          continue;
+        }
+        double dg = candg - curg;
+        bool acc = (dg < 0.0) || (unif(rng) < std::exp(-dg / T));
+        if (acc) { curc = candc; curg = candg; n_acc++; }
+        bool rec = record > 0.0 && candg < record - 1e-9;
+        if (candg < bestg - 1e-12) {
+          bestg = candg;
+          bestc = candc;
+          WriteConfigFile(argv[3], bestc);
+          if (rec) {
+            char fn[4096];
+            snprintf(fn, sizeof(fn), "%s.record", argv[3]);
+            WriteConfigFile(fn, bestc);
+          }
+        }
+        printf("hop %d: gamma=%.13f %s cur=%.13f best=%.13f T=%.4f%s\n", hop,
+               candg, acc ? "acc" : "rej", curg, bestg, T,
+               rec ? "  <<< BEATS RECORD" : "");
+        fflush(stdout);
+        T = std::max(Tmin, T * 0.995);
+      }
+      printf("best=%.13f accept_rate=%.2f (record=%.13f)\n", bestg,
+             n_hop ? double(n_acc) / n_hop : 0.0, record);
+      WriteConfigFile(argv[3], bestc);
       return 0;
     }
     std::cerr << "unrecognized arguments; run without arguments for usage\n";

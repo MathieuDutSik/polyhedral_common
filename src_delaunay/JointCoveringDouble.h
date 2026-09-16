@@ -1981,6 +1981,350 @@ inline DescendResult Descend(PeriodicConfig conf, int rounds, std::ostream &os,
 }
 
 // ---------------------------------------------------------------------------
+// The packing-covering problem
+// ---------------------------------------------------------------------------
+//
+// gamma(X) = mu(X) / rho(X), the covering radius over the packing radius
+// (rho = half the minimal distance), the quantity of the simultaneous
+// packing-covering problem (Schuermann-Vallentin Section 4; also the Delone
+// (r,R)-system density of Ryshkov and the "close packing" gap of L. Fejes
+// Toth). Scale invariant. Optimal LATTICE values: gamma_3 = sqrt(5/3) at
+// A_3^*, gamma_4 ~ 1.362500 and gamma_5 ~ 1.449456 at the Horvath lattices
+// Ho_4, Ho_5 -- the non-lattice problem is open for d = 4, 5, so a periodic
+// set below these would be a genuine record (in d = 3 Boeroeczky proved the
+// general optimality of A_3^*, so nothing below sqrt(5/3) exists).
+//
+// The minimal distance of the periodic set is
+//   lambda^2 = min |v + c_t - c_s|_Q^2   over v in Z^n, cosets t, s,
+// the zero vector excluded. The vectors within a factor of the minimum are
+// the analogue of the shortest vectors; the objective for the descent is the
+// scale-free  log softmax_beta(R^2) - log softmin_beta(s^2).
+
+struct ShortPair {
+  VectorXi v;   // integer part
+  int t, s;     // coset indices; the vector is v + C.row(t) - C.row(s)
+};
+
+// All pair vectors with |w|^2_Q <= bound (ordered pairs: each geometric pair
+// appears twice, a uniform doubling that leaves every gradient direction
+// unchanged). Throws when the enumeration box is degenerate-large.
+inline std::vector<ShortPair> ShortPairVectors(MatrixXd const &Q,
+                                               MatrixXd const &C,
+                                               double bound) {
+  int n = Q.rows();
+  int m = C.rows();
+  MatrixXi U = LLLReduceDouble(Q);
+  MatrixXd Ud = U.cast<double>();
+  MatrixXd Qr = Ud * Q * Ud.transpose();
+  Eigen::SelfAdjointEigenSolver<MatrixXd> es(Qr);
+  double sig_min = std::sqrt(std::max(es.eigenvalues()(0), 1e-14));
+  double R = std::sqrt(bound);
+  int B0 = int(std::ceil((R + 2.0) / sig_min)) + 1;
+  double box_total = std::pow(2.0 * B0 + 1.0, n) * m * m;
+  if (box_total > 4e7) {
+    throw std::runtime_error("ShortPairVectors: enumeration box too large");
+  }
+  // Nothing constrains the cosets to a fundamental domain, so the coset
+  // differences are first reduced into [-1/2, 1/2)^n coordinate-wise (an
+  // exact operation, v running over all of Z^n); the reducing integer shift
+  // is folded into the stored integer part so that v + c_t - c_s computed
+  // downstream from the stored data is exactly the enumerated vector. A
+  // zero-centered box would otherwise miss every cross-coset vector once a
+  // descent drifts the cosets far from the origin -- which reports a pure-
+  // lattice lambda and lets two collapsed cosets double the density for free.
+  std::vector<ShortPair> pairs;
+  MatrixXi shift(m, m * n);   // shift for pair (t,s) packed row-wise
+  MatrixXd dred(m, m * n);
+  for (int t = 0; t < m; t++) {
+    for (int s2 = 0; s2 < m; s2++) {
+      for (int i = 0; i < n; i++) {
+        double di = C(t, i) - C(s2, i);
+        double r = std::round(di);
+        shift(t, s2 * n + i) = -int(r);
+        dred(t, s2 * n + i) = di - r;
+      }
+    }
+  }
+  VectorXi b = VectorXi::Constant(n, -B0);
+  while (true) {
+    VectorXi a = U.transpose() * b;
+    VectorXd af = a.cast<double>();
+    for (int t = 0; t < m; t++) {
+      for (int s2 = 0; s2 < m; s2++) {
+        VectorXd w(n);
+        for (int i = 0; i < n; i++) {
+          w(i) = af(i) + dred(t, s2 * n + i);
+        }
+        double nrm2 = w.dot(Q * w);
+        // only the trivial pair (same coset, zero vector) is excluded: a
+        // near-zero distance between DIFFERENT cosets is a genuine collision
+        // and must dominate the minimum, else collapsing two cosets would
+        // double the density for free
+        if (nrm2 <= bound && !(t == s2 && nrm2 <= 1e-12)) {
+          VectorXi vst = a;
+          for (int i = 0; i < n; i++) {
+            vst(i) += shift(t, s2 * n + i);
+          }
+          pairs.push_back({vst, t, s2});
+        }
+      }
+    }
+    int pos = 0;
+    while (pos < n && b(pos) == B0) { b(pos) = -B0; pos++; }
+    if (pos == n) break;
+    b(pos)++;
+  }
+  return pairs;
+}
+
+// lambda^2 of the periodic set: a coarse first pass gives an upper bound, a
+// bounded enumeration makes it exact.
+inline double PackingMin2(MatrixXd const &Q, MatrixXd const &C) {
+  int n = Q.rows();
+  int m = C.rows();
+  MatrixXi U = LLLReduceDouble(Q);
+  double ub = 1e30;
+  int B = 2;
+  VectorXi b = VectorXi::Constant(n, -B);
+  while (true) {
+    VectorXi a = U.transpose() * b;
+    VectorXd af = a.cast<double>();
+    for (int t = 0; t < m; t++) {
+      for (int s2 = 0; s2 < m; s2++) {
+        VectorXd w(n);
+        for (int i = 0; i < n; i++) {
+          double di = C(t, i) - C(s2, i);
+          w(i) = af(i) + (di - std::round(di));
+        }
+        double nrm2 = w.dot(Q * w);
+        if (!(t == s2 && nrm2 <= 1e-12)) ub = std::min(ub, nrm2);
+      }
+    }
+    int pos = 0;
+    while (pos < n && b(pos) == B) { b(pos) = -B; pos++; }
+    if (pos == n) break;
+    b(pos)++;
+  }
+  std::vector<ShortPair> pr = ShortPairVectors(Q, C, ub * 1.0000001);
+  double mn = 1e30;
+  for (auto const &p : pr) {
+    VectorXd w = p.v.cast<double>() + C.row(p.t).transpose() -
+                 C.row(p.s).transpose();
+    mn = std::min(mn, w.dot(Q * w));
+  }
+  return mn;
+}
+
+struct PCResult {
+  double gamma;    // 2 sqrt(mu^2 / lambda^2)
+  double mu2;
+  double lambda2;
+  std::vector<CellClass> cells;
+};
+
+inline PCResult PackingCovering(PeriodicConfig const &conf, int max_rng = 6) {
+  DensityResult dr = CoveringDensity(conf, max_rng);
+  double l2 = PackingMin2(conf.Q, conf.C);
+  double gamma = 2.0 * std::sqrt(dr.mu2 / l2);
+  return {gamma, dr.mu2, l2, std::move(dr.cells)};
+}
+
+// F(x) = log smax_beta(R^2) - log smin_beta(s^2) and its gradient: the
+// smooth surrogate of log gamma^2 (up to the constant log 4) at frozen
+// Delaunay cells and frozen short-pair list. Same packed coordinates
+// x = (Cholesky L, cosets) as ObjectiveGradient.
+inline double ObjectiveGradientPC(Packing const &pk,
+                                  std::vector<CellClass> const &cells,
+                                  std::vector<ShortPair> const &shorts,
+                                  double beta, VectorXd const &x,
+                                  VectorXd &grad) {
+  int n = pk.n;
+  MatrixXd Lo, C;
+  Unpack(pk, x, Lo, C);
+  MatrixXd Q = Lo * Lo.transpose();
+  int n_cell = cells.size();
+  std::vector<double> R2(n_cell);
+  std::vector<MatrixXd> Wc(n_cell), Vc(n_cell);
+  double maxR2 = -1;
+  for (int s = 0; s < n_cell; s++) {
+    MatrixXd P = CellPositions(cells[s], C);
+    MatrixXd V(n, n);
+    for (int k = 0; k < n; k++) {
+      V.row(k) = P.row(k + 1) - P.row(0);
+    }
+    MatrixXd G = V * Q * V.transpose();
+    VectorXd q = G.diagonal();
+    VectorXd a = G.ldlt().solve(q);
+    R2[s] = 0.25 * q.dot(a);
+    MatrixXd W = -0.25 * (a * a.transpose());
+    W.diagonal() += 0.5 * a;
+    Wc[s] = std::move(W);
+    Vc[s] = std::move(V);
+    maxR2 = std::max(maxR2, R2[s]);
+  }
+  double Z = 0;
+  std::vector<double> w(n_cell);
+  for (int s = 0; s < n_cell; s++) {
+    w[s] = std::exp(beta * (R2[s] - maxR2));
+    Z += w[s];
+  }
+  double smax = maxR2 + std::log(Z) / beta;
+  for (int s = 0; s < n_cell; s++) w[s] /= Z;
+  // soft minimum of the pair norms
+  int n_sh = shorts.size();
+  std::vector<double> S2(n_sh);
+  std::vector<VectorXd> Wv(n_sh);
+  double minS2 = 1e30;
+  for (int j = 0; j < n_sh; j++) {
+    VectorXd wv = shorts[j].v.cast<double>() + C.row(shorts[j].t).transpose() -
+                  C.row(shorts[j].s).transpose();
+    S2[j] = wv.dot(Q * wv);
+    Wv[j] = std::move(wv);
+    minS2 = std::min(minS2, S2[j]);
+  }
+  double Zm = 0;
+  std::vector<double> vw(n_sh);
+  for (int j = 0; j < n_sh; j++) {
+    vw[j] = std::exp(-beta * (S2[j] - minS2));
+    Zm += vw[j];
+  }
+  double smin = minS2 - std::log(Zm) / beta;
+  for (int j = 0; j < n_sh; j++) vw[j] /= Zm;
+  double F = std::log(smax) - std::log(std::max(smin, 1e-300));
+  // gradient: covering part
+  double c_out = 1.0 / smax;
+  MatrixXd dFdQ = MatrixXd::Zero(n, n);
+  MatrixXd dFdC = MatrixXd::Zero(pk.m, n);
+  for (int s = 0; s < n_cell; s++) {
+    double cw = c_out * w[s];
+    if (cw < 1e-16) continue;
+    MatrixXd const &V = Vc[s];
+    MatrixXd const &W = Wc[s];
+    dFdQ += cw * (V.transpose() * W * V);
+    MatrixXd gV = 2.0 * (W * V * Q);
+    VectorXd rowsum = gV.colwise().sum();
+    for (int k = 0; k <= n; k++) {
+      int t = cells[s].cos(k);
+      if (t == 0) continue;
+      if (k == 0) dFdC.row(t) -= cw * rowsum.transpose();
+      else dFdC.row(t) += cw * gV.row(k - 1);
+    }
+  }
+  // gradient: packing part (subtracted): d s^2/dQ = w w^T, d s^2/dc_t = 2 Q w
+  double c_in = 1.0 / std::max(smin, 1e-300);
+  for (int j = 0; j < n_sh; j++) {
+    double cw = c_in * vw[j];
+    if (cw < 1e-16) continue;
+    VectorXd const &wv = Wv[j];
+    dFdQ -= cw * (wv * wv.transpose());
+    if (shorts[j].t != shorts[j].s) {
+      VectorXd qw = 2.0 * (Q * wv);
+      dFdC.row(shorts[j].t) -= cw * qw.transpose();
+      dFdC.row(shorts[j].s) += cw * qw.transpose();
+    }
+  }
+  dFdQ = 0.5 * (dFdQ + dFdQ.transpose());
+  MatrixXd gL = 2.0 * dFdQ * Lo;
+  grad.resize(pk.dim());
+  int pos = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j <= i; j++) {
+      grad(pos++) = gL(i, j);
+    }
+  }
+  for (int t = 1; t < pk.m; t++) {
+    for (int j = 0; j < n; j++) {
+      grad(pos++) = dFdC(t, j);
+    }
+  }
+  return F;
+}
+
+// Joint descent of gamma: tessellate and enumerate the short pairs, minimize
+// the smooth surrogate by staged-beta L-BFGS on the frozen structures,
+// verify on the true gamma, repeat. The scale is renormalized to lambda^2 = 1
+// at each round (the objective is scale free, so the parametrization would
+// otherwise drift). DescendResult.theta carries gamma.
+inline DescendResult DescendPC(PeriodicConfig conf, int rounds,
+                               std::ostream &os, bool verbose = false) {
+  Packing pk{conf.n, conf.m, conf.n * (conf.n + 1) / 2};
+  DescendResult best;
+  int stall = 0;
+  for (int it = 0; it < rounds; it++) {
+    PCResult pc;
+    try {
+      pc = PackingCovering(conf);
+    } catch (std::runtime_error &e) {
+      return best;
+    }
+    if (!best.success || pc.gamma < best.theta - 1e-11) {
+      best.success = true;
+      best.theta = pc.gamma;
+      best.conf = conf;
+    }
+    conf.Q /= pc.lambda2;
+    std::vector<ShortPair> shorts;
+    try {
+      shorts = ShortPairVectors(conf.Q, conf.C, 1.8);
+    } catch (std::runtime_error &e) {
+      return best;
+    }
+    Eigen::LLT<MatrixXd> llt(conf.Q);
+    if (llt.info() != Eigen::Success) {
+      return best;
+    }
+    MatrixXd Lo = llt.matrixL();
+    VectorXd x = Pack(pk, Lo, conf.C);
+    double beta = 200.0;
+    for (int stage = 0; stage < 6; stage++) {
+      auto f = [&](VectorXd const &xv, VectorXd &g) -> double {
+        return ObjectiveGradientPC(pk, pc.cells, shorts, beta, xv, g);
+      };
+      LBFGS(f, x, 150, 1e-10, os);
+      beta *= 5.0;
+      // the objective is scale free with no determinant anchor, so the
+      // parametrization drifts in scale during the descent; pin tr Q = n
+      // between the beta stages (F is unchanged by the rescaling)
+      {
+        MatrixXd Lo2, C2;
+        Unpack(pk, x, Lo2, C2);
+        double tr = (Lo2 * Lo2.transpose()).trace();
+        if (tr > 1e-300) {
+          Lo2 *= std::sqrt(double(pk.n) / tr);
+          x = Pack(pk, Lo2, C2);
+        }
+      }
+    }
+    MatrixXd C_new;
+    Unpack(pk, x, Lo, C_new);
+    conf.Q = Lo * Lo.transpose();
+    conf.C = C_new;
+    conf.C.row(0).setZero();
+    PCResult ver;
+    try {
+      ver = PackingCovering(conf);
+    } catch (std::runtime_error &e) {
+      return best;
+    }
+    best.n_retessellations = it + 1;
+    if (verbose) {
+      os << "  round " << it << ": verified gamma = " << ver.gamma
+         << " (mu2=" << ver.mu2 << " lambda2=" << ver.lambda2 << ")\n";
+    }
+    if (ver.gamma < best.theta - 1e-11) {
+      best.success = true;
+      best.theta = ver.gamma;
+      best.conf = conf;
+      stall = 0;
+    } else {
+      stall++;
+      if (stall >= 2) return best;
+    }
+  }
+  return best;
+}
+
+// ---------------------------------------------------------------------------
 // Configuration file I/O
 // ---------------------------------------------------------------------------
 
