@@ -355,6 +355,29 @@ struct DensityResult {
   std::vector<CellClass> cells;
 };
 
+// The deepest hole of the current tessellation: the circumcenter (in point-set
+// coordinates) of the Delaunay cell of largest circumradius -- i.e. the point
+// worst covered, where the covering radius is attained. Placing a coset there
+// is the covering-specific basin-hopping move: it kills the worst hole and, by
+// adding a point at a circumcenter, changes the Delaunay combinatorics.
+inline VectorXd DeepestHole(std::vector<CellClass> const &cells,
+                            MatrixXd const &Q, MatrixXd const &C) {
+  int n = Q.rows();
+  double best = -1.0;
+  VectorXd z = VectorXd::Zero(n);
+  for (auto const &cl : cells) {
+    MatrixXd P = CellPositions(cl, C);
+    VectorXd center;
+    double R2;
+    CircumcenterRadius2(P, Q, center, R2);
+    if (R2 > best) {
+      best = R2;
+      z = center;
+    }
+  }
+  return z;
+}
+
 inline DensityResult CoveringDensity(PeriodicConfig const &conf, int max_rng);
 
 // Incremental re-tessellation. After a small (Q, c) move, the previous cell
@@ -1352,6 +1375,60 @@ inline void JointGrad(std::vector<CellClass> const &cells, MatrixXd const &Q,
       }
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// A cheap relaxation: no L-BFGS, no LP
+// ---------------------------------------------------------------------------
+//
+// One sweep = tessellate, take the convex covering-optimal Q for the current
+// Delaunay combinatorics (QStep, the "SDP over the iso-Delaunay domain"), then
+// a few frozen-cell minimax steps on the cosets (CStepMinimax). Each sweep is
+// a couple of seconds, versus ~90 s for a full L-BFGS descent, so it is the
+// relaxation used inside basin hopping where many cheap relaxations beat a few
+// expensive ones. It is a local relaxation only -- the coset steps freeze the
+// cell list and QStep assumes fixed combinatorics -- but the outer basin
+// hopping supplies the exploration, and the best theta actually seen (across
+// re-tessellations) is what is returned.
+inline DescendResult RelaxCheap(PeriodicConfig conf, int sweeps,
+                                int deadline_sec = 90) {
+  DescendResult best;
+  std::vector<CellClass> reuse;
+  int nf = 0, nr = 0;
+  auto t0 = std::chrono::steady_clock::now();
+  for (int s = 0; s < sweeps; s++) {
+    if (std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - t0).count() > deadline_sec) {
+      break;
+    }
+    DensityResult dr;
+    try {
+      dr = CoveringDensityReuse(conf, reuse, nf, nr);
+    } catch (std::runtime_error &e) {
+      return best;
+    }
+    if (!best.success || dr.theta < best.theta) {
+      best.success = true;
+      best.theta = dr.theta;
+      best.conf = conf;
+    }
+    try {
+      conf.Q = QStep(dr.cells, conf.C, conf.Q);
+    } catch (std::runtime_error &e) {
+      // keep the previous Q if the barrier solve fails
+    }
+    CStepMinimax(dr.cells, conf.Q, conf.C, 12);
+  }
+  try {
+    DensityResult dr = CoveringDensity(conf);
+    if (!best.success || dr.theta < best.theta) {
+      best.success = true;
+      best.theta = dr.theta;
+      best.conf = conf;
+    }
+  } catch (std::runtime_error &e) {
+  }
+  return best;
 }
 
 // ---------------------------------------------------------------------------
