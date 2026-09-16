@@ -46,6 +46,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "  multistart-lp [n] [m] [count] [out_config] [seed] "
                    "[max_seconds]\n";
       std::cerr << "  basinhop [config] [out_config] [max_seconds] [seed]\n";
+      std::cerr << "  addcoset [config] [out_config]\n";
+      std::cerr << "      grow m -> m+1 by adding a coset at the deepest hole "
+                   "(structured seeding for a richer coset set)\n";
       std::cerr << "      basin hopping from the seed configuration: cheap "
                    "deep-hole / jitter kicks, forked relaxation, Metropolis "
                    "with cooling; writes the best (and any record) found\n";
@@ -482,6 +485,10 @@ int main(int argc, char *argv[]) {
       double max_seconds = atof(argv[4]);
       unsigned seed = argc == 6 ? unsigned(atol(argv[5])) : 1u;
       int n = seed_conf.n, m = seed_conf.m;
+      // cap the search-time point cloud: good configurations of m cosets need
+      // ~1500*m points, so 4000*m rejects the ball-growth blow-ups (a bad kick
+      // fails fast) while leaving healthy configurations untouched
+      SearchMaxPts() = 4000 * m;
       double record = 0.0;
       if (n == 3) record = 1.4635030689668180;
       if (n == 4) record = 1.7655285081493524;
@@ -489,7 +496,7 @@ int main(int argc, char *argv[]) {
       std::mt19937_64 rng(seed);
       std::uniform_real_distribution<double> unif(0.0, 1.0);
       std::normal_distribution<double> gauss(0.0, 1.0);
-      double start_budget = 70.0;
+      double start_budget = 120.0;
       std::string tmpstat = std::string(argv[3]) + ".child.stat";
       std::string tmpconf = std::string(argv[3]) + ".child.conf";
       auto relax_forked = [&](PeriodicConfig const &c, PeriodicConfig &out,
@@ -540,8 +547,24 @@ int main(int argc, char *argv[]) {
       };
       PeriodicConfig curc;
       double curth;
-      if (!relax_forked(seed_conf, curc, curth)) {
-        std::cerr << "basinhop: initial relaxation failed\n";
+      bool init_ok = false;
+      for (int attempt = 0; attempt < 8 && !init_ok; attempt++) {
+        PeriodicConfig s2 = seed_conf;
+        if (attempt > 0) {
+          // the seed relaxed badly (an expensive/degenerate first tessellation);
+          // jitter the cosets to escape it before giving up
+          for (int t = 1; t < m; t++)
+            for (int j = 0; j < n; j++)
+              s2.C(t, j) += 0.10 * gauss(rng);
+        }
+        init_ok = relax_forked(s2, curc, curth);
+        if (!init_ok)
+          printf("init attempt %d failed, retrying with a jittered seed\n",
+                 attempt);
+        fflush(stdout);
+      }
+      if (!init_ok) {
+        std::cerr << "basinhop: initial relaxation failed after retries\n";
         return 1;
       }
       PeriodicConfig bestc = curc;
@@ -609,6 +632,30 @@ int main(int argc, char *argv[]) {
       printf("best=%.13f accept_rate=%.2f (record=%.13f)\n", bestth,
              n_hop ? double(n_acc) / n_hop : 0.0, record);
       WriteConfigFile(argv[3], bestc);
+      return 0;
+    }
+    if (mode == "addcoset" && argc == 4) {
+      // Structured growth m -> m+1: add one coset at the deepest hole (the
+      // worst-covered point) of the input configuration, with a small jitter
+      // to stay off the exactly-cospherical locus. Placing a point where the
+      // covering radius is attained is the natural way to seed a richer coset
+      // set from a good one, instead of a random start.
+      PeriodicConfig conf = ReadConfigFile(argv[2]);
+      int n = conf.n, m = conf.m;
+      DensityResult dr = CoveringDensity(conf);
+      Eigen::VectorXd z = DeepestHole(dr.cells, conf.Q, conf.C);
+      std::mt19937_64 rng(1234567);
+      std::normal_distribution<double> gauss(0.0, 1.0);
+      PeriodicConfig nc;
+      nc.n = n;
+      nc.m = m + 1;
+      nc.Q = conf.Q;
+      nc.C.resize(m + 1, n);
+      nc.C.topRows(m) = conf.C;
+      for (int j = 0; j < n; j++)
+        nc.C(m, j) = (z(j) - std::floor(z(j))) + 0.02 * gauss(rng);
+      WriteConfigFile(argv[3], nc);
+      printf("added coset at deepest hole: m=%d -> m=%d\n", m, m + 1);
       return 0;
     }
     std::cerr << "unrecognized arguments; run without arguments for usage\n";

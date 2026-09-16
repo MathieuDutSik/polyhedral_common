@@ -56,6 +56,19 @@
 
 namespace joint_covering_double {
 
+// A search-time cap on the enumerated Delaunay point cloud. A large-covering
+// (bad) configuration makes the empty-sphere ball grow and the cloud explode
+// to tens of thousands of points, so a single tessellation costs ~20 s -- fine
+// once, ruinous inside a basin-hopping walk that rejects such configurations
+// anyway. When the cloud exceeds this cap the tessellation is abandoned
+// (thrown), so a bad kick fails in seconds instead of being fully tessellated.
+// Default is effectively unlimited, so exact evaluation and verification are
+// unaffected; the search sets it (scaled by the number of cosets).
+inline int &SearchMaxPts() {
+  static int v = 1000000000;
+  return v;
+}
+
 using Eigen::MatrixXd;
 using Eigen::MatrixXi;
 using Eigen::VectorXd;
@@ -224,6 +237,9 @@ inline std::vector<CellClass> DelaunayCellClasses(PeriodicConfig const &conf,
     fprintf(stderr, "JOINT_TESSELLATION: iter=%d B0=%d n_pts=%d\n", iter, B0,
             n_pts);
 #endif
+    if (n_pts > SearchMaxPts()) {
+      throw std::runtime_error("DelaunayCellClasses: point cloud over cap");
+    }
     // qhull Delaunay of the transformed cloud
     qhT qh_qh;
     qhT *qh = &qh_qh;
