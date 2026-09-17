@@ -814,9 +814,9 @@ int main(int argc, char *argv[]) {
       // For n = 4, 5 the non-lattice problem is open: below the record is a
       // genuine discovery.
       double record = 0.0;
-      if (n == 3) record = 1.2909944487358056;
-      if (n == 4) record = 1.3625004774085323;
-      if (n == 5) record = 1.4494561268494583;
+      if (n == 3) record = 1.2909944487358056;   // sqrt(5/3), A_3^*
+      if (n == 4) record = 1.3625;               // Ho_4 (6 digits published)
+      if (n == 5) record = 1.4494568681327882;   // sqrt(3/2 + sqrt(13)/6), Ho_5
       std::mt19937_64 rng(seed);
       std::uniform_real_distribution<double> unif(0.0, 1.0);
       std::normal_distribution<double> gauss(0.0, 1.0);
