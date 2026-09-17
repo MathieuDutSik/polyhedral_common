@@ -574,6 +574,11 @@ int main(int argc, char *argv[]) {
       double curth;
       bool init_ok = false;
       for (int attempt = 0; attempt < 8 && !init_ok; attempt++) {
+        // a random seed may need a larger enumeration ball than a healthy
+        // configuration just to be evaluated once: raise the cloud cap
+        // progressively during the init attempts (the fork watchdog still
+        // bounds the cost), then restore the tight cap for the walk
+        SearchMaxPts() = 4000 * m * (1 + attempt);
         PeriodicConfig s2 = seed_conf;
         if (attempt > 0) {
           // the seed relaxed badly (an expensive/degenerate first tessellation);
@@ -592,6 +597,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "basinhop: initial relaxation failed after retries\n";
         return 1;
       }
+      SearchMaxPts() = 4000 * m;
       PeriodicConfig bestc = curc;
       double bestth = curth;
       collect(curth, curc);
@@ -867,6 +873,11 @@ int main(int argc, char *argv[]) {
       double curg;
       bool init_ok = false;
       for (int attempt = 0; attempt < 8 && !init_ok; attempt++) {
+        // a random seed may need a larger enumeration ball than a healthy
+        // configuration just to be evaluated once: raise the cloud cap
+        // progressively during the init attempts (the fork watchdog still
+        // bounds the cost), then restore the tight cap for the walk
+        SearchMaxPts() = 4000 * m * (1 + attempt);
         PeriodicConfig s2 = seed_conf;
         if (attempt > 0) {
           for (int t = 1; t < m; t++)
@@ -883,6 +894,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "basinhop-pc: initial relaxation failed after retries\n";
         return 1;
       }
+      SearchMaxPts() = 4000 * m;
       PeriodicConfig bestc = curc;
       double bestg = curg;
       WriteConfigFile(argv[3], bestc);
