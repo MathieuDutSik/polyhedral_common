@@ -1,19 +1,21 @@
-name: CI(18) release binaries
+name: release binaries (manual only)
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
 # on: release
 
+# Disabled: no automatic trigger at all, the workflow only runs when started by
+# hand. It used to run on day 18 of every month, but publishing binaries on a
+# schedule is not worth a two hour job, and the monthly upload polluted the
+# repository: it used tag: ${{ github.ref }}, so each run created a
+# refs/tags/master next to refs/heads/master and made every "master" refname
+# ambiguous. That tag has been deleted; the tag selection below is now safe, so
+# a manual run cannot bring the problem back.
+#
+# Day 18 is free for another workflow, see the naming scheme in CLAUDE.md.
 on:
-  # One time per month
-  schedule:
-    - cron: "0 0 18 * *"
-  # Manually triggered
+  # Manually triggered, and nothing else.
   workflow_dispatch:
-  # Disabled right now, when a push is made on master.
-#  push:
-#    branches:
-#    - master
 jobs:
   build-linux:
     timeout-minutes: 120  # 2 hours
