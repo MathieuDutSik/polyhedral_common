@@ -697,7 +697,7 @@ int main(int argc, char *argv[]) {
           if (waitpid(pid, &status, WNOHANG) == pid) { fin = true; break; }
           double el = std::chrono::duration_cast<std::chrono::duration<double>>(
                           std::chrono::steady_clock::now() - ct0).count();
-          if (el > 200.0) break;
+          if (el > 420.0) break;
           usleep(200000);
         }
         if (!fin) {
@@ -801,12 +801,26 @@ int main(int argc, char *argv[]) {
       WriteConfigFile(argv[3], res.conf);
       return 0;
     }
-    if (mode == "basinhop-pc" && (argc == 5 || argc == 6)) {
+    if (mode == "basinhop-pc" && (argc >= 5 && argc <= 7)) {
       // Basin hopping on the packing-covering ratio gamma. Same walk as
       // basinhop, with DescendPC as the (forked, time-capped) relaxation.
       PeriodicConfig seed_conf = ReadConfigFile(argv[2]);
       double max_seconds = atof(argv[4]);
-      unsigned seed = argc == 6 ? unsigned(atol(argv[5])) : 1u;
+      unsigned seed = argc >= 6 ? unsigned(atol(argv[5])) : 1u;
+      // collect every distinct local optimum below this threshold; after the
+      // walk the best entries are re-polished by a deeper DescendPC and
+      // reported with their active counts -- the remarkable configurations
+      double collect_below = argc == 7 ? atof(argv[6]) : 0.0;
+      std::vector<std::pair<double, PeriodicConfig>> catalog;
+      auto collect = [&](double gm, PeriodicConfig const &c) {
+        if (collect_below <= 0.0 || gm >= collect_below) return;
+        for (auto &e : catalog)
+          if (std::abs(e.first - gm) < 1e-7) return;
+        catalog.emplace_back(gm, c);
+        std::sort(catalog.begin(), catalog.end(),
+                  [](auto const &a, auto const &b) { return a.first < b.first; });
+        if (catalog.size() > 40) catalog.pop_back();
+      };
       int n = seed_conf.n, m = seed_conf.m;
       SearchMaxPts() = 4000 * m;
       // best LATTICE packing-covering values: gamma_3 (A_3^*, optimal even
@@ -815,7 +829,7 @@ int main(int argc, char *argv[]) {
       // genuine discovery.
       double record = 0.0;
       if (n == 3) record = 1.2909944487358056;   // sqrt(5/3), A_3^*
-      if (n == 4) record = 1.3625;               // Ho_4 (6 digits published)
+      if (n == 4) record = 1.3625000772664266;   // sqrt(8 sqrt3 - 12), Ho_4
       if (n == 5) record = 1.4494568681327882;   // sqrt(3/2 + sqrt(13)/6), Ho_5
       std::mt19937_64 rng(seed);
       std::uniform_real_distribution<double> unif(0.0, 1.0);
@@ -897,6 +911,7 @@ int main(int argc, char *argv[]) {
       SearchMaxPts() = 4000 * m;
       PeriodicConfig bestc = curc;
       double bestg = curg;
+      collect(curg, curc);
       WriteConfigFile(argv[3], bestc);
       printf("init: gamma=%.13f\n", curg);
       fflush(stdout);
@@ -932,6 +947,7 @@ int main(int argc, char *argv[]) {
           fflush(stdout);
           continue;
         }
+        collect(candg, candc);
         double dg = candg - curg;
         bool acc = (dg < 0.0) || (unif(rng) < std::exp(-dg / T));
         if (acc) { curc = candc; curg = candg; n_acc++; }
@@ -955,6 +971,86 @@ int main(int argc, char *argv[]) {
       printf("best=%.13f accept_rate=%.2f (record=%.13f)\n", bestg,
              n_hop ? double(n_acc) / n_hop : 0.0, record);
       WriteConfigFile(argv[3], bestc);
+      // Post-polish: re-descend the best catalog entries with a deeper
+      // DescendPC and report the active counts (Delaunay orbits attaining the
+      // covering radius, pair vectors attaining the minimal distance), the
+      // data that identifies a remarkable configuration.
+      int n_polish = std::min<int>(catalog.size(), 8);
+      if (n_polish > 0) printf("--- catalog (%d entries, polishing %d) ---\n",
+                               (int)catalog.size(), n_polish);
+      for (int kx = 0; kx < n_polish; kx++) {
+        ::remove(tmpstat.c_str());
+        pid_t pid = fork();
+        if (pid == 0) {
+          DescendResult r = DescendPC(catalog[kx].second, 15, std::cerr, false);
+          FILE *f = fopen(tmpstat.c_str(), "w");
+          if (f) {
+            if (r.success) {
+              fprintf(f, "OK %.15g\n", r.theta);
+              fclose(f);
+              WriteConfigFile(tmpconf, r.conf);
+            } else {
+              fprintf(f, "FAIL\n");
+              fclose(f);
+            }
+          }
+          _exit(0);
+        }
+        auto ct0 = std::chrono::steady_clock::now();
+        bool fin = false;
+        while (true) {
+          int status;
+          if (waitpid(pid, &status, WNOHANG) == pid) { fin = true; break; }
+          double el = std::chrono::duration_cast<std::chrono::duration<double>>(
+                          std::chrono::steady_clock::now() - ct0).count();
+          if (el > 600.0) break;
+          usleep(200000);
+        }
+        if (!fin) {
+          kill(pid, SIGKILL);
+          int status;
+          waitpid(pid, &status, 0);
+          printf("catalog %d: gamma~%.7f polish TIMEOUT\n", kx,
+                 catalog[kx].first);
+          fflush(stdout);
+          continue;
+        }
+        FILE *f = fopen(tmpstat.c_str(), "r");
+        char tag[16] = {0};
+        double gm = 0;
+        if (!f || fscanf(f, "%15s %lf", tag, &gm) != 2 ||
+            std::string(tag) != "OK") {
+          if (f) fclose(f);
+          printf("catalog %d: gamma~%.7f polish failed\n", kx,
+                 catalog[kx].first);
+          fflush(stdout);
+          continue;
+        }
+        fclose(f);
+        PeriodicConfig pc2 = ReadConfigFile(tmpconf);
+        int amu = -1, alam = -1;
+        int n_orb = -1;
+        try {
+          PCResult fr = PackingCovering(pc2);
+          n_orb = fr.cells.size();
+          amu = 0;
+          for (auto const &cl : fr.cells) {
+            Eigen::MatrixXd P = CellPositions(cl, pc2.C);
+            Eigen::VectorXd ctr;
+            double R2;
+            CircumcenterRadius2(P, pc2.Q, ctr, R2);
+            if (R2 > fr.mu2 * (1 - 1e-7)) amu++;
+          }
+          alam = ShortPairVectors(pc2.Q, pc2.C, fr.lambda2 * (1 + 1e-7)).size();
+        } catch (std::runtime_error &e) {
+        }
+        char fn[4096];
+        snprintf(fn, sizeof(fn), "%s.opt.%d", argv[3], kx);
+        WriteConfigFile(fn, pc2);
+        printf("catalog %d: gamma=%.13f mu-active=%d/%d lambda-active=%d -> %s\n",
+               kx, gm, amu, n_orb, alam, fn);
+        fflush(stdout);
+      }
       return 0;
     }
     std::cerr << "unrecognized arguments; run without arguments for usage\n";

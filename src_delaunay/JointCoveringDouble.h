@@ -165,6 +165,33 @@ inline void CircumcenterRadius2(MatrixXd const &P, MatrixXd const &Q,
   All translation classes of Delaunay cells of the periodic set at (Q, C).
   Throws std::runtime_error when the ball never stabilizes.
  */
+inline MatrixXd CellPositions(CellClass const &cl, MatrixXd const &C);
+
+// The Delaunay cells tile space, so summing the coordinate volume of one cell
+// per translation class covers exactly one fundamental domain of Z^n: the sum
+// must be 1. This is a COMPLETENESS certificate, and it is independent of the
+// emptiness certificate -- a too small enumeration ball yields a list of cells
+// that are all genuinely empty but do not cover, which underestimates the
+// covering radius and can push the density below 1 (geometrically impossible).
+inline double TessellationVolumeSum(std::vector<CellClass> const &cells,
+                                    MatrixXd const &C) {
+  int n = C.cols();
+  double nfact = 1.0;
+  for (int k = 2; k <= n; k++) {
+    nfact *= k;
+  }
+  double vsum = 0.0;
+  MatrixXd V(n, n);
+  for (auto const &cl : cells) {
+    MatrixXd P = CellPositions(cl, C);
+    for (int k = 0; k < n; k++) {
+      V.row(k) = P.row(k + 1) - P.row(0);
+    }
+    vsum += std::abs(V.determinant()) / nfact;
+  }
+  return vsum;
+}
+
 inline std::vector<CellClass> DelaunayCellClasses(PeriodicConfig const &conf,
                                                   int max_iter = 6,
                                                   double growth = 1.3) {
@@ -341,7 +368,11 @@ inline std::vector<CellClass> DelaunayCellClasses(PeriodicConfig const &conf,
       for (auto &kv : classes) {
         ret.push_back(kv.second);
       }
-      return ret;
+      // accept only a tessellation that also COVERS (see
+      // TessellationVolumeSum); otherwise grow the ball and retry
+      if (std::abs(TessellationVolumeSum(ret, conf.C) - 1.0) < 1e-6) {
+        return ret;
+      }
     }
     R *= growth;
   }
@@ -475,6 +506,11 @@ TryReuseCells(PeriodicConfig const &conf,
         return std::nullopt;   // a point is inside: a flip occurred
       }
     }
+  }
+  // the reused list must still COVER: emptiness alone does not imply it, and
+  // reusing an incomplete list perpetuates an underestimated covering radius
+  if (std::abs(TessellationVolumeSum(prev, conf.C) - 1.0) > 1e-6) {
+    return std::nullopt;
   }
   double det = Q.determinant();
   double theta = m * VolumeUnitBall(n) * std::pow(mu2, 0.5 * n) / std::sqrt(det);
