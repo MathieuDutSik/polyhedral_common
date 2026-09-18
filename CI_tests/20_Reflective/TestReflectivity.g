@@ -82,7 +82,7 @@ GeneratePoincareInput:=function(ListRecInput)
     iPoincare:=0;
     for eRec in ListRecInput
     do
-        U:=GetReflectivityInformation(eRec);
+        U:=GetReflectivityInformation(eRec.LorMat);
         ListVertNorm:=List(U.ListVertices, x->x.norm);
         isCocompact:=Maximum(ListVertNorm) < 0;
         n:=Length(eRec.LorMat);
@@ -116,7 +116,7 @@ GenerateFamilyDomains:=function(ListRecInput)
     for iRec in [1..nRec]
     do
         eRec:=ListRecInput[iRec];
-        U:=GetReflectivityInformation(eRec);
+        U:=GetReflectivityInformation(eRec.LorMat);
         dim:=Length(eRec.LorMat);
         n_simple:=Length(U.ListSimpleRoots);
         Print("iRec=", iRec, " / ", nRec, " dim=", dim, " n_simple=", n_simple, "\n");

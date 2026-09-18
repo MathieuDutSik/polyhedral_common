@@ -640,9 +640,11 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
       }
     }
     //
-    FullGramInfo<T> request;
-    request.dim = dim - 1; // Because GramMatRed is one dimension lower.
-    request.gram_matrix = RecLLL.GramMatRed;
+    // GramMatRed is one dimension lower than Vtot.G. The constructor also
+    // computes the Bareiss data (d, Nmat) that the enumeration reads; the
+    // former field-by-field assignment left them empty and the enumeration
+    // indexed into an empty vector.
+    FullGramInfo<T> request(RecLLL.GramMatRed);
     MyVector<T> const &coset = eV_img;
     bool central = false;
     //
