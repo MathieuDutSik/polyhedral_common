@@ -981,13 +981,131 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
   return ListGen;
 }
 
+/*
+  Layer coordinates for refining a chain of lattices
+     L_k = TheSpace + p^k Z^n
+  one bare prime at a time instead of working modulo the prime power p^k.
+
+  At the k-th power (k >= 2) the group generators already stabilize
+  L_{k-1}. Writing B for the row Hermite normal form basis of L_{k-1},
+  every element g of the group acts on L_{k-1} and its matrix in the
+  basis B is the integral conjugate B g B^{-1}. Since
+     p L_{k-1} \subset L_k \subset L_{k-1},
+  the lattice L_k written in the basis B is an integral lattice M with
+     p Z^n \subset M \subset Z^n,
+  and stabilizing (or matching, or canonicalizing) L_k under g is
+  stabilizing M modulo the bare prime p under B g B^{-1}. The orbits of
+  vectors then live in (Z/p)^n instead of (Z/p^k)^n, which shrinks both
+  the orbit sizes and the modular arithmetic.
+
+  The helper side (EXTfaithful action, pre-images) always works with the
+  original-coordinates matrices; only the modular-orbit side goes through
+  conj(). conj() is only ever applied to elements of the group generated
+  by the current generator list (products, pre-images, conjugated coset
+  representatives), which all stabilize L_{k-1}, so the conjugate is
+  integral; a non-integral conjugate signals a broken invariant and is a
+  hard error.
+
+  The trivial layer (first power of each prime, B = identity) leaves all
+  matrices untouched and reproduces the direct modulo-p computation.
+
+  For the canonicalization the basis B must be an invariant of the orbit
+  of the input space for the canonical form to be well defined; this is
+  the case because B is the Hermite normal form basis of the lattice
+  L_{k-1} canonicalized by the previous steps.
+ */
+template <typename T> struct ModLayer {
+  bool trivial;
+  MyMatrix<T> B;
+  std::optional<RecSolutionIntMat<T>> solver;
+  MyMatrix<T> conj(MyMatrix<T> const &eGen) const {
+    if (trivial) {
+      return eGen;
+    }
+    MyMatrix<T> prod = B * eGen;
+    std::optional<MyMatrix<T>> opt = solver->get_solution_m(prod);
+    if (!opt) {
+      std::cerr << "MATGRP: ModLayer::conj, the matrix does not stabilize "
+                   "the previous-layer lattice so the conjugate is not "
+                   "integral\n";
+      throw TerminalException{1};
+    }
+    return *opt;
+  }
+  std::vector<MyMatrix<T>> conj_list(std::vector<MyMatrix<T>> const &l) const {
+    if (trivial) {
+      return l;
+    }
+    std::vector<MyMatrix<T>> l_conj;
+    l_conj.reserve(l.size());
+    for (auto &eGen : l) {
+      l_conj.push_back(conj(eGen));
+    }
+    return l_conj;
+  }
+};
+
+template <typename T> ModLayer<T> TrivialModLayer() {
+  return {true, MyMatrix<T>(), {}};
+}
+
+// The Hermite normal form basis of the lattice spanned by the rows of
+// Space and TheMod Z^n. The basis is an invariant of that lattice.
+template <typename T>
+MyMatrix<T> LayerBasis(MyMatrix<T> const &Space, T const &TheMod) {
+  int n = Space.cols();
+  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
+  MyMatrix<T> Cat = Concatenate(Space, ModSpace);
+  MyMatrix<T> H = ComputeRowHermiteNormalForm_second(Cat);
+  MyMatrix<T> B(n, n);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      B(i, j) = H(i, j);
+    }
+  }
+  return B;
+}
+
+// The layer of the previously stabilized lattice Space + pkm1 Z^n.
+template <typename T>
+ModLayer<T> GetModLayer(MyMatrix<T> const &Space, T const &pkm1) {
+  MyMatrix<T> B = LayerBasis(Space, pkm1);
+  RecSolutionIntMat<T> solver(B);
+  return {false, std::move(B), std::move(solver)};
+}
+
+// The lattice Space + pk Z^n written in the basis of the layer: an
+// integral lattice M with p Z^n \subset M \subset Z^n, again in Hermite
+// normal form so it is an invariant of the input lattice.
+template <typename T>
+MyMatrix<T> ExpressLatticeInLayer(ModLayer<T> const &layer,
+                                  MyMatrix<T> const &Space, T const &pk) {
+  int n = Space.cols();
+  MyMatrix<T> ModSpace = pk * IdentityMat<T>(n);
+  MyMatrix<T> Cat = Concatenate(Space, ModSpace);
+  std::optional<MyMatrix<T>> opt = layer.solver->get_solution_m(Cat);
+  if (!opt) {
+    std::cerr << "MATGRP: ExpressLatticeInLayer, the lattice is not "
+                 "contained in the previous-layer lattice\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> H = ComputeRowHermiteNormalForm_second(*opt);
+  MyMatrix<T> M(n, n);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      M(i, j) = H(i, j);
+    }
+  }
+  return M;
+}
+
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
   requires(!has_determining_ext<Thelper>::value)
 inline std::optional<std::vector<MyVector<Tmod>>>
-FindingSmallOrbit([[maybe_unused]] std::vector<MyMatrix<T>> const &ListMatrGen,
+FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
                   [[maybe_unused]] MyMatrix<T> const &TheSpace, T const &TheMod,
-                  MyVector<T> const &x, [[maybe_unused]] Thelper const &helper,
-                  std::ostream &os) {
+                  MyVector<T> const &x, ModLayer<T> const &layer,
+                  [[maybe_unused]] Thelper const &helper, std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: FindingSmallOrbit (!has), start\n";
 #endif
@@ -999,8 +1117,9 @@ FindingSmallOrbit([[maybe_unused]] std::vector<MyMatrix<T>> const &ListMatrGen,
     MyVector<Tmod> eVect = eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod_mod);
   };
+  std::vector<MyMatrix<T>> ListMatrGenOrb = layer.conj_list(ListMatrGen);
   std::vector<MyMatrix<Tmod>> ListMatrGenMod =
-      ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrGen, TheMod);
+      ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrGenOrb, TheMod);
   return OrbitComputation(ListMatrGenMod, x_mod, f_prod, os);
 }
 
@@ -1009,8 +1128,8 @@ template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 inline std::optional<std::vector<MyVector<Tmod>>>
 FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
                   MyMatrix<T> const &TheSpace, T const &TheMod,
-                  MyVector<T> const &a, Thelper const &helper,
-                  std::ostream &os) {
+                  MyVector<T> const &a, ModLayer<T> const &layer,
+                  Thelper const &helper, std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: FindingSmallOrbit(has), start\n";
 #endif
@@ -1022,8 +1141,9 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: FindingSmallOrbit, n_limit=" << n_limit << "\n";
 #endif
+  std::vector<MyMatrix<T>> ListMatrGenOrb = layer.conj_list(ListMatrGen);
   std::vector<MyMatrix<Tmod>> ListMatrGenMod =
-      ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrGen, TheMod);
+      ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrGenOrb, TheMod);
   auto test_adequateness =
       [&](MyVector<T> const &x) -> std::optional<std::vector<MyVector<Tmod>>> {
     MyVector<Tmod> x_mod = ModuloReductionVector<T, Tmod>(x, TheMod);
@@ -1045,7 +1165,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
   MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
   RecSolutionIntMat<T> eCan(TheSpaceMod);
   auto IsStabilized = [&](MyVector<T> const &V) -> bool {
-    for (auto &eMatrGen : ListMatrGen) {
+    for (auto &eMatrGen : ListMatrGenOrb) {
       MyVector<T> Vimg = eMatrGen.transpose() * V;
       bool test = eCan.has_solution_v(Vimg);
       if (!test) {
@@ -1111,7 +1231,8 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
       MyMatrix<T> eMat = pre_imager.pre_image_elt(eGen, os);
       LMatr.emplace_back(std::move(eMat));
     }
-    MyMatrix<T> InvBasis = ComputeBasisInvariantSpace(LMatr, TheSpace, TheMod);
+    MyMatrix<T> InvBasis =
+        ComputeBasisInvariantSpace(layer.conj_list(LMatr), TheSpace, TheMod);
     std::optional<std::vector<MyVector<Tmod>>> opt = try_basis(InvBasis);
     if (opt) {
       return *opt;
@@ -1148,14 +1269,19 @@ FindingSmallOrbit(ListMatrGen, TheSpace, TheMod, a, helper, os); if (!opt) {
 }
 */
 
-// The space must be defining a finite index subgroup of T^n
+// The space must be defining a finite index subgroup of T^n.
+// TheSpace and TheMod are in the coordinates of the layer: for the
+// trivial layer they are the original space and the prime power; for a
+// nontrivial layer TheSpace is the expression of the refined lattice in
+// the basis of the previously stabilized one and TheMod the bare prime.
 template <typename T, typename Tmod, typename Tgroup, typename Thelper,
           typename Fstab>
 std::vector<MyMatrix<T>>
 LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
                                Thelper const &helper,
                                MyMatrix<T> const &TheSpace, T const &TheMod,
-                               Fstab f_stab, std::ostream &os) {
+                               ModLayer<T> const &layer, Fstab f_stab,
+                               std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n = helper.n;
@@ -1215,7 +1341,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   auto IsNotStabilizing = [&](std::vector<MyMatrix<T>> const &ListMatrInp)
       -> std::optional<MyVector<T>> {
     for (auto &eGen : ListMatrInp) {
-      MyMatrix<T> TheSpace_img = TheSpace * eGen;
+      MyMatrix<T> TheSpace_img = TheSpace * layer.conj(eGen);
       for (int i = 0; i < n; i++) {
         MyVector<T> eVectG = GetMatrixRow(TheSpace_img, i);
         bool test = eCan.has_solution_v(eVectG);
@@ -1253,7 +1379,8 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     const MyVector<T> &V = *opt;
     std::optional<std::vector<MyVector<Tmod>>> opt_fso =
         FindingSmallOrbit<T, Tmod, Tgroup, Thelper>(ListMatrRet, TheSpace,
-                                                    TheMod, V, helper, os);
+                                                    TheMod, V, layer, helper,
+                                                    os);
 #ifdef TIMINGS_MATRIX_GROUP
     os << "|MATGRP: FindingSmallOrbit|=" << time << "\n";
 #endif
@@ -1270,7 +1397,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
     std::function<Telt(MyMatrix<T> const &)> f_get_perm =
         [&](MyMatrix<T> const &eGen) -> Telt {
-      return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
+      return get_permutation_from_orbit(layer.conj(eGen), O, TheMod, ePermS);
     };
     int nbRow = helper.nbRow();
     Face eFace_pre = GetFace<T, Tmod>(O, TheSpaceMod);
@@ -1318,25 +1445,26 @@ template <typename T, typename Tgroup, typename Thelper, typename Fstab>
 std::vector<MyMatrix<T>>
 LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const &ListMatr,
                           Thelper const &helper, MyMatrix<T> const &TheSpace,
-                          T const &TheMod, Fstab f_stab, std::ostream &os) {
+                          T const &TheMod, ModLayer<T> const &layer,
+                          Fstab f_stab, std::ostream &os) {
   T max_size = (TheMod - 1) * (TheMod - 1) * TheSpace.rows();
   if (max_size < T(std::numeric_limits<uint8_t>::max())) {
     return LinearSpace_ModStabilizer_Tmod<T, uint8_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, f_stab, os);
+        ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
   }
   if (max_size < T(std::numeric_limits<uint16_t>::max())) {
     return LinearSpace_ModStabilizer_Tmod<T, uint16_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, f_stab, os);
+        ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
   }
   if (max_size < T(std::numeric_limits<uint32_t>::max())) {
     return LinearSpace_ModStabilizer_Tmod<T, uint32_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, f_stab, os);
+        ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
   }
   T lim_u64 = (T(std::numeric_limits<uint32_t>::max()) + T(1)) *
               (T(std::numeric_limits<uint32_t>::max()) + T(1));
   if (max_size < lim_u64) {
     return LinearSpace_ModStabilizer_Tmod<T, uint64_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, f_stab, os);
+        ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
   }
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
                "objectively\n";
@@ -1377,21 +1505,35 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
   // each p^{e_p} is, by the CRT, the same as stabilizing modulo their product
   // LFact, and the successive stabilizers form a descending chain of groups,
   // so the result is their intersection with no separate intersection step.
-  // Keeping the modulus a bare prime power avoids inflating both the orbit
-  // and the modular arithmetic with the already-stabilized coprime part.
+  // From the second power of a prime onwards the computation moves to the
+  // layer coordinates (see ModLayer): the group stabilizes
+  // L_{k-1} = TheSpace + p^{k-1} Z^n, and stabilizing
+  // L_k = TheSpace + p^k Z^n is stabilizing, modulo the bare prime p, the
+  // expression of L_k in the basis of L_{k-1}. The orbits are therefore
+  // always orbits of vectors modulo p, never modulo p^k.
   std::vector<MyMatrix<T>> ListGenRet = ListGen;
   T p_prev(0);
-  T TheMod(1);
+  T pk(1);
   for (int i = 1; i <= siz; i++) {
     T p = eList[i - 1];
-    if (p == p_prev) {
-      TheMod *= p;
-    } else {
-      TheMod = p;
+    bool first_power = (p != p_prev);
+    if (first_power) {
+      pk = p;
       p_prev = p;
+    } else {
+      pk *= p;
     }
-    ListGenRet = LinearSpace_ModStabilizer<T, Tgroup, Thelper, Fstab>(
-        ListGenRet, helper, TheSpace, TheMod, f_stab, os);
+    if (first_power) {
+      ModLayer<T> layer = TrivialModLayer<T>();
+      ListGenRet = LinearSpace_ModStabilizer<T, Tgroup, Thelper, Fstab>(
+          ListGenRet, helper, TheSpace, p, layer, f_stab, os);
+    } else {
+      T pkm1 = pk / p;
+      ModLayer<T> layer = GetModLayer(TheSpace, pkm1);
+      MyMatrix<T> SpaceLayer = ExpressLatticeInLayer(layer, TheSpace, pk);
+      ListGenRet = LinearSpace_ModStabilizer<T, Tgroup, Thelper, Fstab>(
+          ListGenRet, helper, SpaceLayer, p, layer, f_stab, os);
+    }
     if (IsStabilizing(ListGenRet)) {
       return ListGenRet;
     }
@@ -2310,7 +2452,8 @@ template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
     bool const &NeedStabilizer, MyMatrix<T> const &TheSpace1,
-    MyMatrix<T> const &TheSpace2, T const &TheMod, std::ostream &os) {
+    MyMatrix<T> const &TheSpace2, T const &TheMod, ModLayer<T> const &layer,
+    std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n = TheSpace1.rows();
@@ -2343,7 +2486,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
   RecSolutionIntMat<T> eCan(TheSpace2Mod);
   auto IsEquiv =
       [&](MyMatrix<T> const &eEquiv) -> std::optional<MyVector<Tmod>> {
-    MyMatrix<T> TheSpace1img = TheSpace1 * eEquiv;
+    MyMatrix<T> TheSpace1img = TheSpace1 * layer.conj(eEquiv);
     for (int i = 0; i < n; i++) {
       MyVector<T> eVect = GetMatrixRow(TheSpace1img, i);
       bool test = eCan.has_solution_v(eVect);
@@ -2358,7 +2501,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     if (!NeedStabilizer)
       return {};
     for (auto &eGen : ListGen) {
-      MyMatrix<T> TheSpace2img = TheSpace2 * eGen;
+      MyMatrix<T> TheSpace2img = TheSpace2 * layer.conj(eGen);
       for (int i = 0; i < n; i++) {
         MyVector<T> eVect = GetMatrixRow(TheSpace2img, i);
         bool test = eCan.has_solution_v(eVect);
@@ -2383,7 +2526,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     if (test1) {
       MyVector<Tmod> const &V = *test1;
       std::vector<MyMatrix<Tmod>> ListMatrRetMod =
-          ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
+          ModuloReductionStdVectorMatrix<T, Tmod>(layer.conj_list(ListMatrRet),
+                                                  TheMod);
       std::vector<MyVector<Tmod>> O =
           OrbitComputation(ListMatrRetMod, V, TheAction, os);
 #ifdef DEBUG_MATRIX_GROUP
@@ -2392,10 +2536,10 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
       std::function<Telt(MyMatrix<T> const &)> f_get_perm =
           [&](MyMatrix<T> const &eGen) -> Telt {
-        return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
+        return get_permutation_from_orbit(layer.conj(eGen), O, TheMod, ePermS);
       };
       int nbRow = helper.nbRow();
-      MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
+      MyMatrix<T> TheSpace1work = TheSpace1 * layer.conj(eElt);
       MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
       Face eFace1_pre = GetFace<T, Tmod>(O, TheSpace1workMod);
       Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
@@ -2481,7 +2625,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     } else {
       MyVector<Tmod> const &V = *test2;
       std::vector<MyMatrix<Tmod>> ListMatrRetMod =
-          ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
+          ModuloReductionStdVectorMatrix<T, Tmod>(layer.conj_list(ListMatrRet),
+                                                  TheMod);
       std::vector<MyVector<Tmod>> O =
           OrbitComputation(ListMatrRetMod, V, TheAction, os);
 #ifdef DEBUG_MATRIX_GROUP
@@ -2490,7 +2635,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
       std::function<Telt(MyMatrix<T> const &)> f_get_perm =
           [&](MyMatrix<T> const &eGen) -> Telt {
-        return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
+        return get_permutation_from_orbit(layer.conj(eGen), O, TheMod, ePermS);
       };
       int nbRow = helper.nbRow();
       Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
@@ -2531,25 +2676,30 @@ template <typename T, typename Tgroup, typename Thelper>
 std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(
     std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
     bool const &NeedStabilizer, MyMatrix<T> const &TheSpace1,
-    MyMatrix<T> const &TheSpace2, T const &TheMod, std::ostream &os) {
+    MyMatrix<T> const &TheSpace2, T const &TheMod, ModLayer<T> const &layer,
+    std::ostream &os) {
   T max_size = (TheMod - 1) * (TheMod - 1) * TheSpace1.rows();
   if (max_size < T(std::numeric_limits<uint8_t>::max())) {
     return LinearSpace_ModEquivalence_Tmod<T, uint8_t, Tgroup, Thelper>(
-        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, os);
+        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
+        os);
   }
   if (max_size < T(std::numeric_limits<uint16_t>::max())) {
     return LinearSpace_ModEquivalence_Tmod<T, uint16_t, Tgroup, Thelper>(
-        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, os);
+        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
+        os);
   }
   if (max_size < T(std::numeric_limits<uint32_t>::max())) {
     return LinearSpace_ModEquivalence_Tmod<T, uint32_t, Tgroup, Thelper>(
-        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, os);
+        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
+        os);
   }
   T lim_u64 = (T(std::numeric_limits<uint32_t>::max()) + T(1)) *
               (T(std::numeric_limits<uint32_t>::max()) + T(1));
   if (max_size < lim_u64) {
     return LinearSpace_ModEquivalence_Tmod<T, uint64_t, Tgroup, Thelper>(
-        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, os);
+        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
+        os);
   }
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
                "objectively\n";
@@ -2584,26 +2734,45 @@ std::optional<MyMatrix<T>> LinearSpace_Equivalence_KernelRing(
   // As in the stabilizer, refine one prime power at a time (p, p^2, ..., p^e
   // within a prime, reset to a bare prime at the next), never a cross-prime
   // product. eList is sorted so equal primes are consecutive.
+  // From the second power of a prime onwards the computation moves to the
+  // layer coordinates (see ModLayer): the previous step matched the two
+  // spaces modulo p^{k-1}, so TheSpace1 * eElt + p^{k-1} Z^n and
+  // TheSpace2 + p^{k-1} Z^n are the same lattice L_{k-1}, the group
+  // stabilizes it, and matching modulo p^k is matching the expressions of
+  // the two refined lattices in the basis of L_{k-1} modulo the bare
+  // prime p.
   T p_prev(0);
-  T TheMod(1);
+  T pk(1);
   for (int i = 1; i <= siz; i++) {
     if (IsEquivalence(eElt))
       return eElt;
     T p = eList[i - 1];
-    if (p == p_prev) {
-      TheMod *= p;
-    } else {
-      TheMod = p;
+    bool first_power = (p != p_prev);
+    if (first_power) {
+      pk = p;
       p_prev = p;
+    } else {
+      pk *= p;
     }
     MyMatrix<T> TheSpace1Img = TheSpace1 * eElt;
     bool NeedStabilizer = true;
     if (i == siz)
       NeedStabilizer = false;
-    std::optional<ResultTestModEquivalence<T>> opt =
-        LinearSpace_ModEquivalence<T, Tgroup, Thelper>(
-            ListMatrWork, helper, NeedStabilizer, TheSpace1Img, TheSpace2,
-            TheMod, os);
+    std::optional<ResultTestModEquivalence<T>> opt;
+    if (first_power) {
+      ModLayer<T> layer = TrivialModLayer<T>();
+      opt = LinearSpace_ModEquivalence<T, Tgroup, Thelper>(
+          ListMatrWork, helper, NeedStabilizer, TheSpace1Img, TheSpace2, p,
+          layer, os);
+    } else {
+      T pkm1 = pk / p;
+      ModLayer<T> layer = GetModLayer(TheSpace2, pkm1);
+      MyMatrix<T> Space1Layer = ExpressLatticeInLayer(layer, TheSpace1Img, pk);
+      MyMatrix<T> Space2Layer = ExpressLatticeInLayer(layer, TheSpace2, pk);
+      opt = LinearSpace_ModEquivalence<T, Tgroup, Thelper>(
+          ListMatrWork, helper, NeedStabilizer, Space1Layer, Space2Layer, p,
+          layer, os);
+    }
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence failed so we exit here\n";
@@ -2718,13 +2887,21 @@ template <typename T> struct ResultSpaceCanonicalization {
   Returns the pair (gStep, ListGenStab) with gStep an element of the group
   such that TheSpace * gStep is canonical modulo TheMod and ListGenStab
   generators of the full stabilizer of the canonicalized space modulo TheMod.
+
+  As in the stabilizer, TheSpace and TheMod are in the coordinates of the
+  layer and the group elements act on the residues through layer.conj().
+  The returned gStep and ListGenStab are in the original coordinates. For
+  the canonical form to be well defined the layer basis must be an
+  invariant of the orbit of the input space; the drivers guarantee this by
+  taking the Hermite normal form basis of the lattice canonicalized by the
+  previous steps.
  */
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>
 LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
                                  Thelper const &helper,
                                  MyMatrix<T> const &TheSpace, T const &TheMod,
-                                 std::ostream &os) {
+                                 ModLayer<T> const &layer, std::ostream &os) {
   static_assert(has_determining_ext<Thelper>::value,
                 "LinearSpace_ModCanonicalize_Tmod requires a helper with a "
                 "faithful EXT action");
@@ -2774,7 +2951,8 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   // The domain of the action: the union of the orbits of the residues.
   std::vector<MyMatrix<Tmod>> ListMatrMod;
   for (auto &eGen : ListMatr) {
-    ListMatrMod.push_back(ModuloReductionMatrix<T, Tmod>(eGen, TheMod));
+    ListMatrMod.push_back(
+        ModuloReductionMatrix<T, Tmod>(layer.conj(eGen), TheMod));
   }
   std::unordered_set<MyVector<Tmod>> SetOrbit;
   std::vector<MyVector<Tmod>> O;
@@ -2812,7 +2990,7 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
   std::function<Telt(MyMatrix<T> const &)> f_get_perm =
       [&](MyMatrix<T> const &eGen) -> Telt {
-    return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
+    return get_permutation_from_orbit(layer.conj(eGen), O, TheMod, ePermS);
   };
   std::vector<Telt> ListPermGens =
       MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper,
@@ -2861,10 +3039,10 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     ListGenStab.push_back(pre_imager.pre_image_elt(eGen, os));
   }
 #ifdef SANITY_CHECK_MATRIX_GROUP
-  MyMatrix<T> TheSpaceCan = TheSpace * gStep;
+  MyMatrix<T> TheSpaceCan = TheSpace * layer.conj(gStep);
   RecSolutionIntMat<T> eCanSpaceCanMod(Concatenate(TheSpaceCan, ModSpace));
   auto is_preserving_mod = [&](MyMatrix<T> const &eElt) -> bool {
-    MyMatrix<T> Space_img = TheSpaceCan * eElt;
+    MyMatrix<T> Space_img = TheSpaceCan * layer.conj(eElt);
     for (int i = 0; i < n; i++) {
       MyVector<T> eVect = GetMatrixRow(Space_img, i);
       if (!eCanSpaceCanMod.has_solution_v(eVect)) {
@@ -2889,25 +3067,26 @@ template <typename T, typename Tgroup, typename Thelper>
 std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>
 LinearSpace_ModCanonicalize(std::vector<MyMatrix<T>> const &ListMatr,
                             Thelper const &helper, MyMatrix<T> const &TheSpace,
-                            T const &TheMod, std::ostream &os) {
+                            T const &TheMod, ModLayer<T> const &layer,
+                            std::ostream &os) {
   T max_size = (TheMod - 1) * (TheMod - 1) * TheSpace.rows();
   if (max_size < T(std::numeric_limits<uint8_t>::max())) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint8_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, os);
+        ListMatr, helper, TheSpace, TheMod, layer, os);
   }
   if (max_size < T(std::numeric_limits<uint16_t>::max())) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint16_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, os);
+        ListMatr, helper, TheSpace, TheMod, layer, os);
   }
   if (max_size < T(std::numeric_limits<uint32_t>::max())) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint32_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, os);
+        ListMatr, helper, TheSpace, TheMod, layer, os);
   }
   T lim_u64 = (T(std::numeric_limits<uint32_t>::max()) + T(1)) *
               (T(std::numeric_limits<uint32_t>::max()) + T(1));
   if (max_size < lim_u64) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint64_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, os);
+        ListMatr, helper, TheSpace, TheMod, layer, os);
   }
   std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
                "objectively\n";
@@ -2961,29 +3140,43 @@ ResultSpaceCanonicalization<T> LinearSpace_Canonicalize_KernelRing(
     // prime go through p, p^2, ..., p^e; at a new prime reset to a bare prime
     // rather than carrying the product of the primes already handled. Each
     // step canonicalizes inside the residual group returned by the previous
-    // one, which already fixes the coprime part modulo it, so working modulo
-    // the bare prime power yields the same canonical form as modulo the full
-    // product -- only with a smaller modulus and orbit.
-    // NB: canonicalization cannot use the mod-p layer reduction. Unlike the
-    // stabilizer (whose output, a subgroup, is conjugation covariant), the
-    // canonical form is an orbit invariant VALUE, and canonicalizing in the
-    // input-dependent basis of S_b = SpaceWork + p^{k-1} Z^n makes it
-    // basis-dependent, breaking the "isometric inputs give the same canonical
-    // form" contract (the det-25 genus loops forever as a result). So here we
-    // keep the bare prime power p^k as the modulus.
+    // one, which already fixes the coprime part modulo it.
+    // From the second power of a prime onwards the computation moves to the
+    // layer coordinates (see ModLayer). The canonical form is an orbit
+    // invariant VALUE, so the layer basis must itself be an invariant of
+    // the orbit of the input space: this holds because it is the Hermite
+    // normal form basis of SpaceWork + p^{k-1} Z^n, which the previous
+    // step made canonical (an input-dependent basis here would make the
+    // canonical form basis-dependent and break the "isometric inputs give
+    // the same canonical form" contract). Within the layer the residues,
+    // the domain of the action and the canonicalized face are then all
+    // determined by the previous canonical lattice, the group and the
+    // orbit of the input space, so the composed canonical form is again
+    // an orbit invariant.
     T p_prev(0);
-    T TheMod(1);
+    T pk(1);
     for (int i = 1; i <= siz; i++) {
       T p = eList[i - 1];
-      if (p == p_prev) {
-        TheMod *= p;
-      } else {
-        TheMod = p;
+      bool first_power = (p != p_prev);
+      if (first_power) {
+        pk = p;
         p_prev = p;
+      } else {
+        pk *= p;
       }
-      std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>> pair =
-          LinearSpace_ModCanonicalize<T, Tgroup, Thelper>(
-              ListGenWork, helper, SpaceWork, TheMod, os);
+      std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>> pair = [&]() {
+        if (first_power) {
+          ModLayer<T> layer = TrivialModLayer<T>();
+          return LinearSpace_ModCanonicalize<T, Tgroup, Thelper>(
+              ListGenWork, helper, SpaceWork, p, layer, os);
+        } else {
+          T pkm1 = pk / p;
+          ModLayer<T> layer = GetModLayer(SpaceWork, pkm1);
+          MyMatrix<T> SpaceLayer = ExpressLatticeInLayer(layer, SpaceWork, pk);
+          return LinearSpace_ModCanonicalize<T, Tgroup, Thelper>(
+              ListGenWork, helper, SpaceLayer, p, layer, os);
+        }
+      }();
       SpaceWork = SpaceWork * pair.first;
       gMap = gMap * pair.first;
       ListGenWork = pair.second;
