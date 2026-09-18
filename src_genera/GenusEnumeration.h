@@ -650,6 +650,13 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
   // cost of the whole enumeration. The generators also prune the isometry
   // test of the isomorphism strategy.
   std::vector<LatticeAutInfo<T, Tint, Tgroup>> ListAutInfo;
+  // Diagnostic counters for the discriminating power of the cheap isometry
+  // invariant: how many isometry tests are run, and how many return a match.
+  // tests_per_positive close to 1 means the invariant is almost perfect (a
+  // duplicate is found with a single test); larger means the buckets carry
+  // non-isometric collisions that cost extra tests.
+  [[maybe_unused]] size_t n_iso_test = 0;
+  [[maybe_unused]] size_t n_iso_positive = 0;
 
   // Records a new class and its automorphism data; returns its index.
   auto f_add = [&](MyMatrix<T> const &StoreGram,
@@ -700,7 +707,16 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                          GramMat, result.ListGram[idx], os)
                          .has_value();
       }
+      n_iso_test++;
       if (isamorphic) {
+        n_iso_positive++;
+#ifdef DEBUG_GENUS_ISO_STATS
+        if (n_iso_positive % 100 == 0) {
+          os << "GENUS_ISO: tests=" << n_iso_test
+             << " positive=" << n_iso_positive << " ratio="
+             << (double(n_iso_test) / double(n_iso_positive)) << "\n";
+        }
+#endif
         return false;
       }
     }
@@ -755,6 +771,12 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
     }
   }
   result.complete = (result.accumulated_mass == TotalMass);
+#ifdef DEBUG_GENUS_ISO_STATS
+  os << "GENUS_ISO: FINAL isometry_tests=" << n_iso_test
+     << " positive=" << n_iso_positive << " tests_per_positive="
+     << (n_iso_positive > 0 ? double(n_iso_test) / double(n_iso_positive) : 0.0)
+     << "\n";
+#endif
 #ifdef TIMINGS_GENUS_ENUMERATION
   os << "|GENUS: GenusEnumeration|=" << time_total << "\n";
 #endif
