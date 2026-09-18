@@ -450,6 +450,12 @@ private:
 public:
   std::function<Telt(const MyMatrix<T> &)> f_get_perm;
   Face face;
+  // The mapped permutations of the generators the object was built from, in
+  // their order. The constructor has to compute them to refine the
+  // partition, so keeping them spares the caller a second evaluation of
+  // f_get_perm over the same generators, which is the expensive part: it
+  // reduces every generator modulo the prime and walks the whole orbit.
+  std::vector<Telt> mapped_gens;
 
 private:
   PartitionStorage<Telt> partition;
@@ -471,6 +477,12 @@ public:
     }
     partition.RefinePartitionByListElt(list_gens);
     face = partition.map_face(face_inp);
+    // After the refinement, so that the mapping is the final one, the same
+    // that f_get_perm below applies.
+    mapped_gens.reserve(list_gens.size());
+    for (auto &egen : list_gens) {
+      mapped_gens.push_back(partition.map_permutation(egen));
+    }
     f_get_perm = [f_get_perm_inp, this](MyMatrix<T> const &eMat) -> Telt {
       Telt g = f_get_perm_inp(eMat);
       return partition.map_permutation(g);
@@ -481,16 +493,28 @@ public:
   }
 };
 
-template <typename T, typename Telt, typename Thelper, typename Fgetperm>
+/*
+  The permutation on the full domain induced by eMatr: for a helper with a
+  determining ext, the concatenation of the action on the nbRow rows of
+  EXTfaithful with the action on the orbit; otherwise the orbit action
+  alone.
+
+  The orbit permutation is an argument rather than a callback, so a caller
+  that already holds it does not pay for it a second time. That is the
+  common case: PartitionReduction computes the orbit permutation of every
+  generator to refine its partition, and the permutation group is then
+  built from the very same generator list.
+ */
+template <typename T, typename Telt, typename Thelper>
   requires(has_determining_ext<Thelper>::value)
-inline Telt MatrixIntegral_MapMatrix(Thelper const &helper, Fgetperm f_get_perm,
+inline Telt MatrixIntegral_MapMatrix(Thelper const &helper,
+                                     Telt const &ePermOrbit,
                                      MyMatrix<T> const &eMatr, std::ostream &os) {
   using Tidx = typename Telt::Tidx;
   int nbRow = helper.EXTfaithful.rows();
   Tidx nbRow_tidx = nbRow;
   Telt ePermGen =
       GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os);
-  Telt ePermOrbit = f_get_perm(eMatr);
   Tidx Osiz = ePermOrbit.size();
   Tidx siz = nbRow_tidx + Osiz;
   std::vector<Tidx> v(siz);
@@ -504,12 +528,13 @@ inline Telt MatrixIntegral_MapMatrix(Thelper const &helper, Fgetperm f_get_perm,
   return Telt(std::move(v));
 }
 
-template <typename T, typename Telt, typename Thelper, typename Fgetperm>
+template <typename T, typename Telt, typename Thelper>
   requires(!has_determining_ext<Thelper>::value)
 inline Telt MatrixIntegral_MapMatrix([[maybe_unused]] Thelper const &helper,
-                                     Fgetperm f_get_perm, MyMatrix<T> const &eMatr,
+                                     Telt const &ePermOrbit,
+                                     [[maybe_unused]] MyMatrix<T> const &eMatr,
                                      [[maybe_unused]] std::ostream &os) {
-  return f_get_perm(eMatr);
+  return ePermOrbit;
 }
 
 template <typename T, typename Telt, typename Thelper, typename Fgetperm>
@@ -527,12 +552,52 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
 #endif
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
     MyMatrix<T> const &eMatrGen = ListMatrGens[iGen];
-    Telt eNewPerm = MatrixIntegral_MapMatrix<T, Telt, Thelper, Fgetperm>(
-        helper, f_get_perm, eMatrGen, os);
+    Telt eNewPerm = MatrixIntegral_MapMatrix<T, Telt, Thelper>(
+        helper, f_get_perm(eMatrGen), eMatrGen, os);
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MATGRP: MatrixIntegral_GeneratePermutationGroupA|=" << time << "\n";
+#endif
+  return ListPermGenProv;
+}
+
+/*
+  As above, for a caller that already holds the orbit permutations of the
+  generators, in the order of ListMatrGens.
+ */
+template <typename T, typename Telt, typename Thelper>
+std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA_OrbitPerms(
+    std::vector<MyMatrix<T>> const &ListMatrGens, Thelper const &helper,
+    std::vector<Telt> const &ListPermOrbit, std::ostream &os) {
+#ifdef TIMINGS_MATRIX_GROUP
+  MicrosecondTime time;
+#endif
+  size_t nbGen = ListMatrGens.size();
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  if (ListPermOrbit.size() != nbGen) {
+    std::cerr << "MATGRP: MatrixIntegral_GeneratePermutationGroupA_OrbitPerms, "
+                 "|ListMatrGens|="
+              << nbGen << " but |ListPermOrbit|=" << ListPermOrbit.size()
+              << ", the orbit permutations must match the generators\n";
+    throw TerminalException{1};
+  }
+#endif
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MATGRP: MatrixIntegral_GeneratePermutationGroupA_OrbitPerms, "
+        "Processing nbGen="
+     << nbGen << " generators\n";
+#endif
+  std::vector<Telt> ListPermGenProv;
+  ListPermGenProv.reserve(nbGen);
+  for (size_t iGen = 0; iGen < nbGen; iGen++) {
+    Telt eNewPerm = MatrixIntegral_MapMatrix<T, Telt, Thelper>(
+        helper, ListPermOrbit[iGen], ListMatrGens[iGen], os);
+    ListPermGenProv.emplace_back(std::move(eNewPerm));
+  }
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MATGRP: MatrixIntegral_GeneratePermutationGroupA_OrbitPerms|=" << time
+     << "\n";
 #endif
   return ListPermGenProv;
 }
@@ -1404,9 +1469,8 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace_pre, os);
     Face eFace = TranslateFace(nbRow, pr.face);
     std::vector<Telt> ListPermGens =
-        MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper,
-                                                 decltype(f_get_perm)>(
-            ListMatrRet, helper, pr.f_get_perm, os);
+        MatrixIntegral_GeneratePermutationGroupA_OrbitPerms<T, Telt, Thelper>(
+            ListMatrRet, helper, pr.mapped_gens, os);
     Tidx siz_act = eFace.size();
     Tgroup GRPwork(ListPermGens, siz_act);
     //
@@ -1817,8 +1881,8 @@ void TestPreImageSubgroup(
     }
   }
   auto f_map_matr = [&](MyMatrix<T> const &eMatr) -> Telt {
-    return MatrixIntegral_MapMatrix<T, Telt, Thelper, decltype(f_get_perm)>(
-        helper, f_get_perm, eMatr, os);
+    return MatrixIntegral_MapMatrix<T, Telt, Thelper>(
+        helper, f_get_perm(eMatr), eMatr, os);
   };
   size_t n_gen = ListPermGen.size();
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
@@ -1939,9 +2003,8 @@ IterativeSimplificationDoubleCoset(
   // f_get_perm only returns the orbit part, so it must be mapped the same way
   // before being combined with elements of GRP_U / GRP_V.
   auto f_get_perm_dom = [&](MyMatrix<T> const &eMatr) -> Telt {
-    return MatrixIntegral_MapMatrix<
-        T, Telt, Thelper, std::function<Telt(MyMatrix<T> const &)>>(
-        helper, f_get_perm, eMatr, os);
+    return MatrixIntegral_MapMatrix<T, Telt, Thelper>(
+        helper, f_get_perm(eMatr), eMatr, os);
   };
   Telt id = GRP_U.get_identity();
   auto get_result_reduction = [&](Telt const &x_u, Telt const &x_v) -> Tresult {
@@ -2569,9 +2632,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
          << eFace2.size() << " / " << eFace2.count() << "\n";
 #endif
       std::vector<Telt> ListPermGens =
-          MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper,
-                                                   decltype(f_get_perm)>(
-              ListMatrRet, helper, pr.f_get_perm, os);
+          MatrixIntegral_GeneratePermutationGroupA_OrbitPerms<T, Telt, Thelper>(
+              ListMatrRet, helper, pr.mapped_gens, os);
       size_t siz_act = eFace1.size();
       Tgroup GRPperm(ListPermGens, siz_act);
 #ifdef SANITY_CHECK_MATRIX_GROUP
@@ -2645,9 +2707,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       os << "MATGRP: We have eFace2\n";
 #endif
       std::vector<Telt> ListPermGens =
-          MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper,
-                                                   decltype(f_get_perm)>(
-              ListMatrRet, helper, pr.f_get_perm, os);
+          MatrixIntegral_GeneratePermutationGroupA_OrbitPerms<T, Telt, Thelper>(
+              ListMatrRet, helper, pr.mapped_gens, os);
       size_t siz_act = eFace2.size();
       Tgroup GRPperm(ListPermGens, siz_act);
 #ifdef DEBUG_MATRIX_GROUP
