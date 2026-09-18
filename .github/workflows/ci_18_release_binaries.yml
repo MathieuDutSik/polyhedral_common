@@ -18,6 +18,9 @@ jobs:
   build-linux:
     timeout-minutes: 120  # 2 hours
     runs-on: ubuntu-latest
+    permissions:
+      # Needed to create / refresh the rolling prerelease and its tag.
+      contents: write
     env:
       BOOST_INCDIR: "/usr/include"
       BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
@@ -48,6 +51,38 @@ jobs:
 
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-eigen
+
+      # The release tag must never be a branch name: uploading with
+      # tag: ${{ github.ref }} on a scheduled run created a refs/tags/master
+      # alongside refs/heads/master, which makes every "master" refname
+      # ambiguous for anyone cloning the repository. Scheduled and manual runs
+      # publish to a fixed rolling tag instead; a run started from a real tag
+      # (workflow_dispatch on refs/tags/vXXXX) publishes to that tag.
+      - name: Resolve the release tag
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            {
+              echo "RELEASE_TAG=${{ github.ref_name }}"
+              echo "RELEASE_NAME=${{ github.ref_name }}"
+              echo "ROLLING=false"
+            } >> "$GITHUB_ENV"
+          else
+            {
+              echo "RELEASE_TAG=continuous-build"
+              echo "RELEASE_NAME=Continuous build of ${{ github.ref_name }}"
+              echo "ROLLING=true"
+            } >> "$GITHUB_ENV"
+          fi
+
+      # upload-release-action ignores target_commit when the tag already
+      # exists, so the rolling tag would stay pinned to the commit of its first
+      # run. Drop the old prerelease and its tag so the new one is recreated at
+      # the commit that was actually built. Never touches a version tag.
+      - name: Drop the previous rolling prerelease
+        if: env.ROLLING == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete "$RELEASE_TAG" --cleanup-tag --yes || true
 
       - name: Build and release
         run: |
@@ -80,7 +115,12 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: LORENTZ_FundDomain_AllcockEdgewalk-linux.zip
           asset_name: LORENTZ_FundDomain_AllcockEdgewalk-linux-FINAL.zip
-          tag: ${{ github.ref }}
+          tag: ${{ env.RELEASE_TAG }}
+          release_name: ${{ env.RELEASE_NAME }}
+          body: "Statically linked Linux binaries built from ${{ github.ref_name }} at ${{ github.sha }}."
+          target_commit: ${{ github.sha }}
+          prerelease: ${{ env.ROLLING }}
+          make_latest: ${{ env.ROLLING != 'true' }}
           overwrite: true
 
       - name: Upload LATT_Canonicalize to release
@@ -89,5 +129,10 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: LATT_Canonicalize-linux.zip
           asset_name: LATT_Canonicalize-linux-FINAL.zip
-          tag: ${{ github.ref }}
+          tag: ${{ env.RELEASE_TAG }}
+          release_name: ${{ env.RELEASE_NAME }}
+          body: "Statically linked Linux binaries built from ${{ github.ref_name }} at ${{ github.sha }}."
+          target_commit: ${{ github.sha }}
+          prerelease: ${{ env.ROLLING }}
+          make_latest: ${{ env.ROLLING != 'true' }}
           overwrite: true
