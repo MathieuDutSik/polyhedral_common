@@ -777,38 +777,73 @@ inline std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(
   return opt2;
 }
 
+/*
+  The permutation induced on an orbit of vectors modulo TheMod by a matrix
+  of the group.
+
+  The orbit is fixed while the matrices vary, so the position of a vector in
+  it is read from a map built once. The previous formulation recovered that
+  position by sorting the images of each matrix and composing with the
+  sorting permutation of the orbit, which cost |O| log|O| comparisons of
+  vectors of length n for every matrix, plus the two compositions, where a
+  lookup is one hash; it also had to carry the orbit's sorting permutation
+  alongside the orbit everywhere.
+
+  The permutation is unchanged. With g the sorting permutation of the orbit
+  and h that of the images, the old result g o h^{-1} sends the position k
+  to the position of the image of O[k], since sorting the images and sorting
+  the orbit produce the same sequence, the orbit being invariant. That is
+  what is built directly here, and what MatrixIntegral_MapMatrix consumes.
+ */
 template <typename T, typename Tmod, typename Telt>
-Telt get_permutation_from_orbit(MyMatrix<T> const &eGen,
-                                std::vector<MyVector<Tmod>> const &O,
-                                T const &TheMod, Telt const &ePermS) {
+struct OrbitPermutationMap {
+private:
   using Tidx = typename Telt::Tidx;
-  Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
-  size_t Osiz = O.size();
-  std::vector<MyVector<Tmod>> ListImage(Osiz);
-  MyMatrix<Tmod> eGenMod = ModuloReductionMatrix<T, Tmod>(eGen, TheMod);
-  for (size_t iV = 0; iV < Osiz; iV++) {
-    MyVector<Tmod> eVect = eGenMod.transpose() * O[iV];
-    ListImage[iV] = VectorMod(eVect, TheMod_mod);
+  std::vector<MyVector<Tmod>> const &O;
+  T TheMod;
+  Tmod TheMod_mod;
+  std::unordered_map<MyVector<Tmod>, Tidx> index_of;
+
+public:
+  OrbitPermutationMap(std::vector<MyVector<Tmod>> const &_O, T const &_TheMod)
+      : O(_O), TheMod(_TheMod),
+        TheMod_mod(UniversalScalarConversion<Tmod, T>(_TheMod)) {
+    size_t Osiz = O.size();
+    index_of.reserve(Osiz);
+    for (size_t iV = 0; iV < Osiz; iV++) {
+      index_of[O[iV]] = static_cast<Tidx>(iV);
+    }
   }
-  Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
-  Telt ePermBinv = ~ePermB;
-  // By the construction and above check we have
-  // V1reord[i] = V1[g1.at(i)]
-  // V2reord[i] = V2[g2.at(i)]
-  // We have V1reord = V2reord which gets us
-  // V2[i] = V1[g1 * g2^{-1}(i)]
-  Telt ePermGen = ePermBinv * ePermS;
-  return ePermGen;
-}
+  Telt get_permutation(MyMatrix<T> const &eGen) const {
+    size_t Osiz = O.size();
+    MyMatrix<Tmod> eGenMod = ModuloReductionMatrix<T, Tmod>(eGen, TheMod);
+    std::vector<Tidx> V(Osiz);
+    for (size_t iV = 0; iV < Osiz; iV++) {
+      MyVector<Tmod> eVect = eGenMod.transpose() * O[iV];
+      MyVector<Tmod> eVectRed = VectorMod(eVect, TheMod_mod);
+      auto iter = index_of.find(eVectRed);
+      // Not gated: reading a missing entry would be undefined behaviour,
+      // and the orbit being invariant under the group is what makes the
+      // permutation exist at all.
+      if (iter == index_of.end()) {
+        std::cerr << "MATGRP: OrbitPermutationMap, the image of an orbit "
+                     "element is outside the orbit, so the family handed in "
+                     "is not invariant under the group\n";
+        throw TerminalException{1};
+      }
+      V[iV] = iter->second;
+    }
+    return Telt(std::move(V));
+  }
+};
 
 template <typename T, typename Tmod, typename Telt, typename Thelper>
 std::vector<Telt> MatrixIntegral_GeneratePermutationGroup(
     std::vector<MyMatrix<T>> const &ListMatrGens, Thelper const &helper,
     std::vector<MyVector<Tmod>> const &O, T const &TheMod, std::ostream &os) {
-  using Tidx = typename Telt::Tidx;
-  Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
+  OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
   auto f_get_perm = [&](MyMatrix<T> const &eGen) -> Telt {
-    return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
+    return orbit_map.get_permutation(eGen);
   };
   return MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper,
                                                   decltype(f_get_perm)>(
@@ -1477,10 +1512,10 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: LinearSpace_ModStabilizer_Tmod, |O|=" << O.size() << "\n";
 #endif
-    Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
+    OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
     std::function<Telt(MyMatrix<T> const &)> f_get_perm =
         [&](MyMatrix<T> const &eGen) -> Telt {
-      return get_permutation_from_orbit(layer.conj(eGen), O, TheMod, ePermS);
+      return orbit_map.get_permutation(layer.conj(eGen));
     };
     int nbRow = helper.nbRow();
     Face eFace_pre = GetFace<T, Tmod>(O, TheSpaceMod);
@@ -2542,7 +2577,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     MyMatrix<T> const &TheSpace2, T const &TheMod, ModLayer<T> const &layer,
     std::ostream &os) {
   using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   int n = TheSpace1.rows();
 #ifdef DEBUG_MATRIX_GROUP
   os << "------------------------------------------------------\n";
@@ -2620,10 +2654,10 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |O|=" << O.size() << "\n";
 #endif
-      Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
+      OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
       std::function<Telt(MyMatrix<T> const &)> f_get_perm =
           [&](MyMatrix<T> const &eGen) -> Telt {
-        return get_permutation_from_orbit(layer.conj(eGen), O, TheMod, ePermS);
+        return orbit_map.get_permutation(layer.conj(eGen));
       };
       int nbRow = helper.nbRow();
       MyMatrix<T> TheSpace1work = TheSpace1 * layer.conj(eElt);
@@ -2724,10 +2758,10 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: |O|=" << O.size() << "\n";
 #endif
-      Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
+      OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
       std::function<Telt(MyMatrix<T> const &)> f_get_perm =
           [&](MyMatrix<T> const &eGen) -> Telt {
-        return get_permutation_from_orbit(layer.conj(eGen), O, TheMod, ePermS);
+        return orbit_map.get_permutation(layer.conj(eGen));
       };
       int nbRow = helper.nbRow();
       Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
@@ -3084,10 +3118,10 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   }
   Face eFace_O = GetFace<T, Tmod>(O, TheSpaceMod);
   Face eFace = TranslateFace(nbRow, eFace_O);
-  Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
+  OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
   std::function<Telt(MyMatrix<T> const &)> f_get_perm =
       [&](MyMatrix<T> const &eGen) -> Telt {
-    return get_permutation_from_orbit(layer.conj(eGen), O, TheMod, ePermS);
+    return orbit_map.get_permutation(layer.conj(eGen));
   };
   std::vector<Telt> ListPermGens =
       MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper,
