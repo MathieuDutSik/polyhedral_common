@@ -678,21 +678,14 @@ inline RetMI_S<T, Tgroup> MatrixIntegral_Stabilizer(
   os << "MATGRP: MatrixIntegral_Stabilizer(has), comp(LGen1)="
      << compute_complexity_listmat(LGen1) << "\n";
 #endif
-  std::vector<MyMatrix<T>> LGen2 =
-      ExhaustiveReductionComplexityGroupMatrix<T>(LGen1, os);
-#ifdef SANITY_CHECK_MATRIX_GROUP
-  CheckGroupEquality<T, Tgroup>(LGen1, LGen2, os);
-#endif
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MATGRP: MatrixIntegral_Stabilizer(has), comp(LGen2)="
-     << compute_complexity_listmat(LGen2) << "\n";
-#endif
-#ifdef TIMINGS_MATRIX_GROUP
-  os << "|MATGRP: MatrixIntegral_Stabilizer(has), "
-        "ExhaustiveReductionComplexityGroupMatrix|="
-     << time << "\n";
-#endif
-  return {index, LGen2};
+  // The generators are returned as the pre-image produced them. Every
+  // caller simplifies the result right away, so simplifying here as well
+  // ran the same exhaustive search twice for each iteration, the second
+  // pass on an already simplified set: the debug trace of the stabilizer
+  // loop shows it never improving the complexity. The !has_determining_ext
+  // overload has always returned its generators unsimplified, so the two
+  // now agree on what they promise.
+  return {index, LGen1};
 }
 
 // We have a finite set on which the group is acting. Therefore, we can apply
@@ -1517,7 +1510,13 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     os << "MATGRP: LinearSpace_ModStabilizer_Tmod(C), comp(ListMatrRet)="
        << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    std::vector<MyMatrix<T>> ListMatrPreRed = ListMatrRet;
+#endif
     ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    CheckGroupEquality<T, Tgroup>(ListMatrPreRed, ListMatrRet, os);
+#endif
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: LinearSpace_ModStabilizer_Tmod(D), comp(ListMatrRet)="
        << compute_complexity_listmat(ListMatrRet) << "\n";
@@ -2704,7 +2703,13 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod(C), comp(ListMatrRet)="
          << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
+#ifdef SANITY_CHECK_MATRIX_GROUP
+      std::vector<MyMatrix<T>> ListMatrPreRed = ListMatrRet;
+#endif
       ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+      CheckGroupEquality<T, Tgroup>(ListMatrPreRed, ListMatrRet, os);
+#endif
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod(D), comp(ListMatrRet)="
          << compute_complexity_listmat(ListMatrRet) << "\n";
@@ -2749,7 +2754,13 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod(E), comp(ListMatrRet)="
          << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
+#ifdef SANITY_CHECK_MATRIX_GROUP
+      std::vector<MyMatrix<T>> ListMatrPreRed = ListMatrRet;
+#endif
       ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+      CheckGroupEquality<T, Tgroup>(ListMatrPreRed, ListMatrRet, os);
+#endif
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod(F), comp(ListMatrRet)="
          << compute_complexity_listmat(ListMatrRet) << "\n";
