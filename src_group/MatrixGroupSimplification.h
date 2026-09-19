@@ -1065,9 +1065,9 @@ ExhaustiveReductionComplexityKernelInner_V2(
   double n_get_best_candidate_d = static_cast<double>(n_get_best_candidate);
   double avg_cost_best = delta_d / n_get_best_candidate_d;
   os << "|SIMP: ExhaustiveReductionComplexityKernel, "
-        "avg(f_get_best_candidate)|="
+        "avg(f_get_best_candidate)(ns)|="
      << avg_cost_best << "\n";
-  os << "|SIMP: ExhaustiveReductionComplexityKernel|=" << delta << "\n";
+  os << "|SIMP: ExhaustiveReductionComplexityKernel(ns)|=" << delta << "\n";
 #endif
   return vect;
 }
@@ -1446,7 +1446,7 @@ ExhaustiveReductionComplexityKernel_V1(
   double n_get_best_candidate_d = static_cast<double>(n_get_best_candidate);
   double avg_cost_best = delta_d / n_get_best_candidate_d;
   os << "|SIMP: ExhaustiveReductionComplexityKernel, "
-        "avg(f_get_best_candidate)|="
+        "avg(f_get_best_candidate)(ns)|="
      << avg_cost_best << "\n";
 #endif
   return new_list_gens;

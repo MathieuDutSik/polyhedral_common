@@ -847,7 +847,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
       FAC(i_root, i_col) = e_gv(i_col);
   }
   std::optional<MyVector<Tint>> opt;
-#ifdef TIMINGS_VINBERG
+#ifdef DEBUG_VINBERG
   size_t n_iter = 0;
 #endif
 #ifdef DEBUG_VINBERG
@@ -861,7 +861,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
                  [[maybe_unused]] rev_search::Problem &prob,
                  [[maybe_unused]] int const &col, Tint *out) -> bool {
       if (!IsFirst) {
-#ifdef TIMINGS_VINBERG
+#ifdef DEBUG_VINBERG
         n_iter++;
 #endif
         for (size_t i_col = 0; i_col < n_col; i_col++)
@@ -883,7 +883,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     auto look_for_vector = [&]() -> void {
       SubsetRankOneSolver<T> solver(FAC_T);
       for (auto &eFace : ListIncd) {
-#ifdef TIMINGS_VINBERG
+#ifdef DEBUG_VINBERG
         n_iter++;
 #endif
         MyVector<T> V = solver.GetPositiveKernelVector(eFace);
@@ -922,7 +922,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
       FAC(i_root, i_col) = e_gv(i_col);
   }
   bool IsFiniteCovolume = true;
-#ifdef TIMINGS_VINBERG
+#ifdef DEBUG_VINBERG
   size_t n_iter = 0;
 #endif
   std::unordered_map<T, int> map;
@@ -934,7 +934,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
                  [[maybe_unused]] rev_search::Problem &prob,
                  [[maybe_unused]] int const &col, Tint *out) -> bool {
       if (!IsFirst) {
-#ifdef TIMINGS_VINBERG
+#ifdef DEBUG_VINBERG
         n_iter++;
 #endif
         for (size_t i_col = 0; i_col < n_col; i_col++)
@@ -957,7 +957,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     auto look_for_vector = [&]() -> void {
       SubsetRankOneSolver<T> solver(FAC_T);
       for (auto &eFace : ListIncd) {
-#ifdef TIMINGS_VINBERG
+#ifdef DEBUG_VINBERG
         n_iter++;
 #endif
         MyVector<T> V = solver.GetPositiveKernelVector(eFace);

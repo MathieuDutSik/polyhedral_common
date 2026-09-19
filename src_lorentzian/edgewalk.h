@@ -33,6 +33,10 @@
 #define DEBUG_ENUM_PROCESS
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_EDGEWALK
+#endif
+
 #ifdef DISABLE_DEBUG_EDGEWALK
 #undef DEBUG_EDGEWALK
 #endif
@@ -323,7 +327,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
                            [[maybe_unused]] std::ostream &os) {
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   MicrosecondTime time;
 #endif
   std::vector<MyVector<Tint>> const &l_ui = eReq.l_ui;
@@ -350,7 +354,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   bool only_spherical = false;
   std::vector<Possible_Extension<T>> l_extension =
       ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: ComputePossibleExtensions|=" << time << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK
@@ -375,7 +379,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   os << "EDGE: DetermineRootsCuspidalCase : |l_candidates|="
      << l_candidates.size() << "\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: l_candidates|=" << time << "\n";
 #endif
   /* std::sort is sorting from the highest to the smallest
@@ -395,7 +399,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
               }
               return x.e_norm < y.e_norm;
             });
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: sort|=" << time << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK
@@ -429,7 +433,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   os << "EDGE: DetermineRootsCuspidalCase, exiting |l_ui_ret|="
      << l_ui_ret.size() << "\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: l_ui_ret|=" << time << "\n";
 #endif
   return l_ui_ret;
@@ -439,13 +443,13 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(
     CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     CuspidalRequest<T, Tint> const &eReq, std::ostream &os) {
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   MicrosecondTime time;
 #endif
   MyMatrix<T> const &G = si.G;
   CuspidalRequest_FullInfo<T, Tint> eReq_full =
       gen_cuspidal_request_full_info(G, eReq, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: gen_cuspidal_request_full_info|=" << time << "\n";
 #endif
   size_t len = cusp_bank.l_request.size();
@@ -471,14 +475,14 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(
         os << "EDGE: DetermineRootsCuspidalCase_Memoized, find some "
               "isomorphism\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
         os << "|EDGE: query(succ)|=" << time << "\n";
 #endif
         return l_ui_ret;
       }
     }
   }
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: query(fail)|=" << time << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK
@@ -489,7 +493,7 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(
       DetermineRootsCuspidalCase(si, eReq, os);
   cusp_bank.l_request.emplace_back(std::move(eReq_full));
   cusp_bank.l_answer.push_back(l_ui_ret);
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: l_ui_ret|=" << time << "\n";
 #endif
   return l_ui_ret;
@@ -552,7 +556,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
                   std::ostream &os) {
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   MicrosecondTime time;
 #endif
   const std::vector<MyVector<Tint>> &l_ui = ad.l_ui;
@@ -674,7 +678,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #ifdef DEBUG_EDGEWALK
   os << "EDGE: r0=" << StringVectorGAP(r0) << "\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: paperwork|=" << time << "\n";
 #endif
   //
@@ -688,7 +692,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   os << "EDGE: EdgewalkProcedure : |l_extension|=" << l_extension.size()
      << "\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: l_extension|=" << time << "\n";
 #endif
 
@@ -747,7 +751,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     return r0_work;
   };
   auto get_sing_comp_anisotropic = [&](T const &e_norm) -> SingCompAnisotropic {
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     MicrosecondTime timeA;
 #endif
 #ifdef DEBUG_EDGEWALK
@@ -834,13 +838,13 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #ifdef DEBUG_EDGEWALK
     os << "EDGE: |l_vect3|=" << l_vect3.size() << "\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     os << "|EDGE: get_sing_comp_anisotropic|=" << timeA << "\n";
 #endif
     return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, l_vect3};
   };
   auto get_sing_comp_isotropic = [&](T const &e_norm) -> SingCompIsotropic {
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     MicrosecondTime timeB;
 #endif
 #ifdef DEBUG_EDGEWALK
@@ -856,7 +860,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
       throw TerminalException{1};
     }
     MyMatrix<T> Factor_GP_LN = *opt_factor;
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     os << "|EDGE: get_sing_comp_isotropic|=" << timeB << "\n";
 #endif
     return {Latt, Basis_ProjP_LN, GP_LN, Factor_GP_LN, r0_work, {}};
@@ -1061,7 +1065,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
       }
     }
   }
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: l_candidates|=" << time << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK
@@ -1077,7 +1081,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   // So, no candidates were found. We need to find isotropic vectors.
   const MyMatrix<T> Gred = Pplane * G * Pplane.transpose();
   std::vector<MyVector<T>> BasisIsotrop = GetBasisIsotropicVectors(Gred);
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: Factor_opt|=" << time << "\n";
 #endif
   // We want a vector inside of the cone (there are two: C and -C)
@@ -1118,7 +1122,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   }
   const MyVector<T> &k_new = l_gens[0];
   CuspidalRequest<T, Tint> eReq{l_ui, k_new, k};
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: CuspidalRequest|=" << time << "\n";
 #endif
   std::vector<MyVector<Tint>> l_roots_ret =
@@ -1150,7 +1154,7 @@ FundDomainVertex_FullInfo<T, Tint, Tgroup> gen_fund_domain_fund_info(
     FundDomainVertex<T, Tint> const &vert,
     TheHeuristic<Tint> const &HeuristicIdealStabEquiv, std::ostream &os) {
   MyMatrix<T> const &G = si.G;
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   MicrosecondTime time;
 #endif
   //
@@ -1187,7 +1191,7 @@ FundDomainVertex_FullInfo<T, Tint, Tgroup> gen_fund_domain_fund_info(
   }
   ret_type<T, Tint, Tgroup> frec =
       get_canonicalized_record<T, Tint, Tgroup>(ic.ListMat, ic.map_v);
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
   os << "|EDGE: gen_fund_domain_fund_info|=" << time << "\n";
 #endif
   return get_full_info(vert, frec, method);
@@ -1435,7 +1439,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
 #endif
   auto func_insert_vertex =
       [&](FundDomainVertex_FullInfo<T, Tint, Tgroup> &vertFull1) -> bool {
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     MicrosecondTime time;
 #endif
     auto iter = l_orbit_vertices.begin();
@@ -1449,7 +1453,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
 #ifdef DEBUG_ENUM_PROCESS
           os << "EDGE: Find some isomorphism\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
           os << "|EDGE: func_insert_vertex(find iso)|=" << time << "\n";
 #endif
           bool test = f_isom(UniversalMatrixConversion<Tint, T>(*equiv_opt));
@@ -1470,7 +1474,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
       }
       iter++;
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     os << "|EDGE: func_insert_vertex(no iso)|=" << time << "\n";
 #endif
 #ifdef DEBUG_ENUM_PROCESS
@@ -1502,7 +1506,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     }
     vertFull1.GRP1_integral =
         Tgroup(LGenIntegral, vertFull1.vert.MatRoot.rows());
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     os << "|EDGE: Automorphism|=" << time << "\n";
 #endif
     bool test = f_vertex(vertFull1);
@@ -1517,7 +1521,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
 #ifdef DEBUG_ENUM_PROCESS
     os << "EDGE: Exiting the func_insert_vertex\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     os << "|EDGE: func_insert_vertex(end)|=" << time << "\n";
 #endif
     return false;
@@ -1528,7 +1532,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
   // problem.
   auto insert_adjacent_vertices =
       [&](FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull) -> bool {
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     MicrosecondTime time;
 #endif
     const FundDomainVertex<T, Tint> &theVert = vertFull.vert;
@@ -1540,7 +1544,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     MyMatrix<T> FACred = ColumnReduction(FAC);
     vectface vf = rev_search::DualDescription_incd(FACred);
     vectface vf_orb = OrbitSplittingSet(vf, vertFull.GRP1_integral);
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     os << "|EDGE: vf_orb|=" << time << "\n";
 #endif
     //
@@ -1585,7 +1589,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
         return true;
       }
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_EDGEWALK
     os << "|EDGE: process vf_orb|=" << time << "\n";
 #endif
 #ifdef DEBUG_ENUM_PROCESS
