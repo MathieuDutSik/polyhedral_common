@@ -447,16 +447,14 @@ inline Telt GetPermutationForFiniteMatrixGroup(Thelper const &helper,
   answer with one matrix vector product per orbit element, against an
   integral solve per element when the question was asked over Z.
  */
-template <typename T, typename Tmod>
-Face GetFace(std::vector<MyVector<Tmod>> const &O, MyMatrix<T> const &TheSpace,
-             T const &TheMod) {
+template <typename Tmod>
+Face GetFace(std::vector<MyVector<Tmod>> const &O,
+             MyMatrix<Tmod> const &TheSpaceMod, Tmod const &TheMod_mod) {
   size_t Osiz = O.size();
   Face eFace(Osiz);
-  RecSolutionMatMod<T> eCan(TheSpace, TheMod);
+  RecSolutionMatMod<Tmod> eCan(TheSpaceMod, TheMod_mod);
   for (size_t iO = 0; iO < Osiz; iO++) {
-    MyVector<T> const &eVect = UniversalVectorConversion<T, Tmod>(O[iO]);
-    bool test = eCan.has_solution_v(eVect);
-    if (test) {
+    if (eCan.has_solution_v(O[iO])) {
       eFace[iO] = 1;
     }
   }
@@ -1299,11 +1297,14 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
     throw TerminalException{1};
   }
 #endif
-  RecSolutionMatMod<T> eCan(TheSpace, TheMod);
+  MyMatrix<Tmod> TheSpace_mod = ModuloReductionMatrix<T, Tmod>(TheSpace, TheMod);
+  Tmod TheMod_mod_sol = UniversalScalarConversion<Tmod, T>(TheMod);
+  RecSolutionMatMod<Tmod> eCan(TheSpace_mod, TheMod_mod_sol);
   auto IsStabilized = [&](MyVector<T> const &V) -> bool {
     for (auto &eMatrGen : ListMatrGenOrb) {
       MyVector<T> Vimg = eMatrGen.transpose() * V;
-      bool test = eCan.has_solution_v(Vimg);
+      bool test = eCan.has_solution_v(
+          ModuloReductionVector<T, Tmod>(Vimg, TheMod));
       if (!test) {
         return false;
       }
@@ -1482,14 +1483,17 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     throw TerminalException{1};
   }
 #endif
-  RecSolutionMatMod<T> eCan(TheSpace, TheMod);
+  MyMatrix<Tmod> TheSpace_mod = ModuloReductionMatrix<T, Tmod>(TheSpace, TheMod);
+  Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
+  RecSolutionMatMod<Tmod> eCan(TheSpace_mod, TheMod_mod);
   auto IsNotStabilizing = [&](std::vector<MyMatrix<T>> const &ListMatrInp)
       -> std::optional<MyVector<T>> {
     for (auto &eGen : ListMatrInp) {
       MyMatrix<T> TheSpace_img = TheSpace * layer.conj(eGen);
       for (int i = 0; i < n; i++) {
         MyVector<T> eVectG = GetMatrixRow(TheSpace_img, i);
-        bool test = eCan.has_solution_v(eVectG);
+        bool test = eCan.has_solution_v(
+            ModuloReductionVector<T, Tmod>(eVectG, TheMod));
         if (!test) {
           return GetMatrixRow(TheSpace, i);
         }
@@ -1545,7 +1549,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       return orbit_map.get_permutation(layer.conj(eGen));
     };
     int nbRow = helper.nbRow();
-    Face eFace_pre = GetFace<T, Tmod>(O, TheSpace, TheMod);
+    Face eFace_pre = GetFace<Tmod>(O, TheSpace_mod, TheMod_mod);
     PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace_pre, os);
     Face eFace = TranslateFace(nbRow, pr.face);
     std::vector<Telt> ListPermGens =
@@ -2640,15 +2644,19 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     throw TerminalException{1};
   }
 #endif
-  RecSolutionMatMod<T> eCan(TheSpace2, TheMod);
+  MyMatrix<Tmod> TheSpace2_mod =
+      ModuloReductionMatrix<T, Tmod>(TheSpace2, TheMod);
+  RecSolutionMatMod<Tmod> eCan(TheSpace2_mod, TheMod_mod);
   auto IsEquiv =
       [&](MyMatrix<T> const &eEquiv) -> std::optional<MyVector<Tmod>> {
     MyMatrix<T> TheSpace1img = TheSpace1 * layer.conj(eEquiv);
     for (int i = 0; i < n; i++) {
       MyVector<T> eVect = GetMatrixRow(TheSpace1img, i);
-      bool test = eCan.has_solution_v(eVect);
-      if (!test) {
-        return ModuloReductionVector<T, Tmod>(eVect, TheMod);
+      // The residue is what the test reads and what the caller wants back
+      // as the witness, so it is formed once.
+      MyVector<Tmod> eVect_mod = ModuloReductionVector<T, Tmod>(eVect, TheMod);
+      if (!eCan.has_solution_v(eVect_mod)) {
+        return eVect_mod;
       }
     }
     return {};
@@ -2661,9 +2669,10 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       MyMatrix<T> TheSpace2img = TheSpace2 * layer.conj(eGen);
       for (int i = 0; i < n; i++) {
         MyVector<T> eVect = GetMatrixRow(TheSpace2img, i);
-        bool test = eCan.has_solution_v(eVect);
-        if (!test) {
-          return ModuloReductionVector<T, Tmod>(eVect, TheMod);
+        MyVector<Tmod> eVect_mod =
+            ModuloReductionVector<T, Tmod>(eVect, TheMod);
+        if (!eCan.has_solution_v(eVect_mod)) {
+          return eVect_mod;
         }
       }
     }
@@ -2697,8 +2706,10 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       };
       int nbRow = helper.nbRow();
       MyMatrix<T> TheSpace1work = TheSpace1 * layer.conj(eElt);
-      Face eFace1_pre = GetFace<T, Tmod>(O, TheSpace1work, TheMod);
-      Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2, TheMod);
+      MyMatrix<Tmod> TheSpace1work_mod =
+          ModuloReductionMatrix<T, Tmod>(TheSpace1work, TheMod);
+      Face eFace1_pre = GetFace<Tmod>(O, TheSpace1work_mod, TheMod_mod);
+      Face eFace2_pre = GetFace<Tmod>(O, TheSpace2_mod, TheMod_mod);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace1_pre|="
          << eFace1_pre.size() << " / " << eFace1_pre.count() << "\n";
@@ -2799,7 +2810,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         return orbit_map.get_permutation(layer.conj(eGen));
       };
       int nbRow = helper.nbRow();
-      Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2, TheMod);
+      Face eFace2_pre = GetFace<Tmod>(O, TheSpace2_mod, TheMod_mod);
       PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace2_pre, os);
       Face eFace2 = TranslateFace(nbRow, pr.face);
 #ifdef DEBUG_MATRIX_GROUP
@@ -3161,7 +3172,7 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
               << siz_tot << " overflows the permutation index type\n";
     throw TerminalException{1};
   }
-  Face eFace_O = GetFace<T, Tmod>(O, TheSpace, TheMod);
+  Face eFace_O = GetFace<Tmod>(O, TheSpace_mod, TheMod_mod);
   Face eFace = TranslateFace(nbRow, eFace_O);
   OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
   std::function<Telt(MyMatrix<T> const &)> f_get_perm =
@@ -3216,12 +3227,15 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   }
 #ifdef SANITY_CHECK_MATRIX_GROUP
   MyMatrix<T> TheSpaceCan = TheSpace * layer.conj(gStep);
-  RecSolutionMatMod<T> eCanSpaceCanMod(TheSpaceCan, TheMod);
+  MyMatrix<Tmod> TheSpaceCan_mod =
+      ModuloReductionMatrix<T, Tmod>(TheSpaceCan, TheMod);
+  RecSolutionMatMod<Tmod> eCanSpaceCanMod(TheSpaceCan_mod, TheMod_mod);
   auto is_preserving_mod = [&](MyMatrix<T> const &eElt) -> bool {
     MyMatrix<T> Space_img = TheSpaceCan * layer.conj(eElt);
     for (int i = 0; i < n; i++) {
       MyVector<T> eVect = GetMatrixRow(Space_img, i);
-      if (!eCanSpaceCanMod.has_solution_v(eVect)) {
+      if (!eCanSpaceCanMod.has_solution_v(
+              ModuloReductionVector<T, Tmod>(eVect, TheMod))) {
         return false;
       }
     }
