@@ -438,12 +438,21 @@ inline Telt GetPermutationForFiniteMatrixGroup(Thelper const &helper,
   return Telt(std::move(V));
 }
 
+/*
+  Which vectors of the orbit lie in TheSpace + TheMod Z^n.
+
+  Belonging to that lattice depends only on the residue, so it is
+  belonging to the row space of TheSpace over Z/TheMod. TheMod is a prime
+  at every call the drivers make, which is what lets RecSolutionMatMod
+  answer with one matrix vector product per orbit element, against an
+  integral solve per element when the question was asked over Z.
+ */
 template <typename T, typename Tmod>
-Face GetFace(std::vector<MyVector<Tmod>> const &O,
-             MyMatrix<T> const &TheSpace) {
+Face GetFace(std::vector<MyVector<Tmod>> const &O, MyMatrix<T> const &TheSpace,
+             T const &TheMod) {
   size_t Osiz = O.size();
   Face eFace(Osiz);
-  RecSolutionIntMat<T> eCan(TheSpace);
+  RecSolutionMatMod<T> eCan(TheSpace, TheMod);
   for (size_t iO = 0; iO < Osiz; iO++) {
     MyVector<T> const &eVect = UniversalVectorConversion<T, Tmod>(O[iO]);
     bool test = eCan.has_solution_v(eVect);
@@ -1279,9 +1288,18 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
     return OrbitComputation_limit(ListMatrGenMod, x_mod, f_prod, f_terminate,
                                   os);
   };
-  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
-  MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
-  RecSolutionIntMat<T> eCan(TheSpaceMod);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  // The membership tests below read the residues as a vector space over
+  // Z/TheMod, which needs TheMod prime. The drivers refine one bare prime
+  // at a time, so this holds, but nothing in the signature says so.
+  if (!IsPrime(TheMod)) {
+    std::cerr << "MATGRP: FindingSmallOrbit, TheMod=" << TheMod
+              << " is not prime, so the residues do not form a vector "
+                 "space and the membership tests are invalid\n";
+    throw TerminalException{1};
+  }
+#endif
+  RecSolutionMatMod<T> eCan(TheSpace, TheMod);
   auto IsStabilized = [&](MyVector<T> const &V) -> bool {
     for (auto &eMatrGen : ListMatrGenOrb) {
       MyVector<T> Vimg = eMatrGen.transpose() * V;
@@ -1410,8 +1428,6 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   os << "MATGRP: LinearSpace_ModStabilizer_Tmod, TheMod=" << TheMod
      << "  n=" << n << " TotSize=" << TotSize << "\n";
 #endif
-  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
-  MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
   // This is the part of the enumeration where we have problems.
   // We have too many vectors to consider which sinks the algorithm.
   // The difficulty of the work is that we have to deal with globally
@@ -1455,7 +1471,18 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   //    ---ListMatr1, TheSpace1, MatrEquiv
   // We could look at the quotient. (Z_d)^n / TheSpace and look for point
   // stabilizers Maybe we can translate to classes easily and
-  RecSolutionIntMat<T> eCan(TheSpaceMod);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  // The membership tests below read the residues as a vector space over
+  // Z/TheMod, which needs TheMod prime. The drivers refine one bare prime
+  // at a time, so this holds, but nothing in the signature says so.
+  if (!IsPrime(TheMod)) {
+    std::cerr << "MATGRP: LinearSpace_ModStabilizer_Tmod, TheMod=" << TheMod
+              << " is not prime, so the residues do not form a vector "
+                 "space and the membership tests are invalid\n";
+    throw TerminalException{1};
+  }
+#endif
+  RecSolutionMatMod<T> eCan(TheSpace, TheMod);
   auto IsNotStabilizing = [&](std::vector<MyMatrix<T>> const &ListMatrInp)
       -> std::optional<MyVector<T>> {
     for (auto &eGen : ListMatrInp) {
@@ -1518,7 +1545,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       return orbit_map.get_permutation(layer.conj(eGen));
     };
     int nbRow = helper.nbRow();
-    Face eFace_pre = GetFace<T, Tmod>(O, TheSpaceMod);
+    Face eFace_pre = GetFace<T, Tmod>(O, TheSpace, TheMod);
     PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace_pre, os);
     Face eFace = TranslateFace(nbRow, pr.face);
     std::vector<Telt> ListPermGens =
@@ -2585,8 +2612,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
   os << "MATGRP: det(TheSpace1)=" << DeterminantMat(TheSpace1)
      << " det(TheSpace2)=" << DeterminantMat(TheSpace2) << "\n";
 #endif
-  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
-  MyMatrix<T> TheSpace2Mod = Concatenate(TheSpace2, ModSpace);
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: LinearSpace_ModEquivalence_Tmod(A), comp(ListMatrRet)="
@@ -2604,7 +2629,18 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     MyVector<Tmod> eVect = eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod_mod);
   };
-  RecSolutionIntMat<T> eCan(TheSpace2Mod);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  // The membership tests below read the residues as a vector space over
+  // Z/TheMod, which needs TheMod prime. The drivers refine one bare prime
+  // at a time, so this holds, but nothing in the signature says so.
+  if (!IsPrime(TheMod)) {
+    std::cerr << "MATGRP: LinearSpace_ModEquivalence_Tmod, TheMod=" << TheMod
+              << " is not prime, so the residues do not form a vector "
+                 "space and the membership tests are invalid\n";
+    throw TerminalException{1};
+  }
+#endif
+  RecSolutionMatMod<T> eCan(TheSpace2, TheMod);
   auto IsEquiv =
       [&](MyMatrix<T> const &eEquiv) -> std::optional<MyVector<Tmod>> {
     MyMatrix<T> TheSpace1img = TheSpace1 * layer.conj(eEquiv);
@@ -2661,9 +2697,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       };
       int nbRow = helper.nbRow();
       MyMatrix<T> TheSpace1work = TheSpace1 * layer.conj(eElt);
-      MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
-      Face eFace1_pre = GetFace<T, Tmod>(O, TheSpace1workMod);
-      Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
+      Face eFace1_pre = GetFace<T, Tmod>(O, TheSpace1work, TheMod);
+      Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2, TheMod);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace1_pre|="
          << eFace1_pre.size() << " / " << eFace1_pre.count() << "\n";
@@ -2764,7 +2799,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         return orbit_map.get_permutation(layer.conj(eGen));
       };
       int nbRow = helper.nbRow();
-      Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
+      Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2, TheMod);
       PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace2_pre, os);
       Face eFace2 = TranslateFace(nbRow, pr.face);
 #ifdef DEBUG_MATRIX_GROUP
@@ -3041,8 +3076,18 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   using PreImager = typename Thelper::PreImager;
   int n = helper.n;
   Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
-  MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
-  MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  // The membership tests below read the residues as a vector space over
+  // Z/TheMod, which needs TheMod prime. The drivers refine one bare prime
+  // at a time, so this holds, but nothing in the signature says so.
+  if (!IsPrime(TheMod)) {
+    std::cerr << "MATGRP: LinearSpace_ModCanonicalize_Tmod, TheMod=" << TheMod
+              << " is not prime, so the residues do not form a vector "
+                 "space and the membership tests are invalid\n";
+    throw TerminalException{1};
+  }
+#endif
+
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: LinearSpace_ModCanonicalize_Tmod, TheMod=" << TheMod
      << " n=" << n << "\n";
@@ -3116,7 +3161,7 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
               << siz_tot << " overflows the permutation index type\n";
     throw TerminalException{1};
   }
-  Face eFace_O = GetFace<T, Tmod>(O, TheSpaceMod);
+  Face eFace_O = GetFace<T, Tmod>(O, TheSpace, TheMod);
   Face eFace = TranslateFace(nbRow, eFace_O);
   OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
   std::function<Telt(MyMatrix<T> const &)> f_get_perm =
@@ -3171,7 +3216,7 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   }
 #ifdef SANITY_CHECK_MATRIX_GROUP
   MyMatrix<T> TheSpaceCan = TheSpace * layer.conj(gStep);
-  RecSolutionIntMat<T> eCanSpaceCanMod(Concatenate(TheSpaceCan, ModSpace));
+  RecSolutionMatMod<T> eCanSpaceCanMod(TheSpaceCan, TheMod);
   auto is_preserving_mod = [&](MyMatrix<T> const &eElt) -> bool {
     MyMatrix<T> Space_img = TheSpaceCan * layer.conj(eElt);
     for (int i = 0; i < n; i++) {
