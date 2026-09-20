@@ -1610,12 +1610,12 @@ LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const &ListMatr,
     return LinearSpace_ModStabilizer_Tmod<T, uint16_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
   }
-  if (max_size < T(std::numeric_limits<uint32_t>::max())) {
+  if (max_size < T(static_cast<long>(std::numeric_limits<uint32_t>::max()))) {
     return LinearSpace_ModStabilizer_Tmod<T, uint32_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
   }
-  T lim_u64 = (T(std::numeric_limits<uint32_t>::max()) + T(1)) *
-              (T(std::numeric_limits<uint32_t>::max()) + T(1));
+  T const u32max = T(static_cast<long>(std::numeric_limits<uint32_t>::max()));
+  T lim_u64 = (u32max + T(1)) * (u32max + T(1));
   if (max_size < lim_u64) {
     return LinearSpace_ModStabilizer_Tmod<T, uint64_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
@@ -2866,13 +2866,13 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(
         ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
         os);
   }
-  if (max_size < T(std::numeric_limits<uint32_t>::max())) {
+  if (max_size < T(static_cast<long>(std::numeric_limits<uint32_t>::max()))) {
     return LinearSpace_ModEquivalence_Tmod<T, uint32_t, Tgroup, Thelper>(
         ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
         os);
   }
-  T lim_u64 = (T(std::numeric_limits<uint32_t>::max()) + T(1)) *
-              (T(std::numeric_limits<uint32_t>::max()) + T(1));
+  T const u32max = T(static_cast<long>(std::numeric_limits<uint32_t>::max()));
+  T lim_u64 = (u32max + T(1)) * (u32max + T(1));
   if (max_size < lim_u64) {
     return LinearSpace_ModEquivalence_Tmod<T, uint64_t, Tgroup, Thelper>(
         ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
@@ -3268,12 +3268,12 @@ LinearSpace_ModCanonicalize(std::vector<MyMatrix<T>> const &ListMatr,
     return LinearSpace_ModCanonicalize_Tmod<T, uint16_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, os);
   }
-  if (max_size < T(std::numeric_limits<uint32_t>::max())) {
+  if (max_size < T(static_cast<long>(std::numeric_limits<uint32_t>::max()))) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint32_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, os);
   }
-  T lim_u64 = (T(std::numeric_limits<uint32_t>::max()) + T(1)) *
-              (T(std::numeric_limits<uint32_t>::max()) + T(1));
+  T const u32max = T(static_cast<long>(std::numeric_limits<uint32_t>::max()));
+  T lim_u64 = (u32max + T(1)) * (u32max + T(1));
   if (max_size < lim_u64) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint64_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, os);

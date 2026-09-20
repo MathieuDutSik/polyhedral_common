@@ -5,6 +5,9 @@
 #else
 # include "NumberTheory.h"
 #endif
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "GenusEnumeration.h"
@@ -96,13 +99,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "  Summary : the class number and the mass check only\n";
       return -1;
     }
-#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-    using T = boost::multiprecision::mpz_int;
-    using Tint = boost::multiprecision::mpz_int;
-#else
-    using T = mpz_class;
-    using Tint = mpz_class;
-#endif
+    // The group orders are counted in TintGroup and the mass lives in
+    // overlying_field<TintGroup>. Both are unrelated to the arithmetic of
+    // the lattice coordinates, so Tgroup is fixed once here while the
+    // coordinate types T / Tint are chosen per arithmetic below.
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using TintGroup = mpz_class;
@@ -134,12 +134,32 @@ int main(int argc, char *argv[]) {
     }
     auto f = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+        using T = boost::multiprecision::mpz_int;
+        using Tint = boost::multiprecision::mpz_int;
+#else
+        using T = mpz_class;
+        using Tint = mpz_class;
+#endif
         return ProcessGenus<T, Tint, Tgroup>(FileGenus, FileLattice, FileMass,
                                              OutFormat, scheme, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpz_class;
+        using Tint = fmpz_class;
+        return ProcessGenus<T, Tint, Tgroup>(FileGenus, FileLattice, FileMass,
+                                             OutFormat, scheme, os);
+      }
+#endif
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
-      std::cerr << "Allowed values: gmp\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: gmp, flint\n";
+#else
+      std::cerr << "Allowed values: gmp (build with ENABLE_FLINT_SUPPORT=1 "
+                << "for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
