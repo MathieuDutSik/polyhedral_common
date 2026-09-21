@@ -42,7 +42,11 @@ a little worse than the optimum below, and still under `gamma_5`.
 
 The optimum is an isolated solution of its active-constraint system -- 48 of
 the 240 Delaunay orbits attain `mu`, 10 orbits of inter-point vectors attain
-`lambda` -- so it is a single point and its coordinates are algebraic. With
+`lambda` -- so it is a single point and its coordinates are algebraic.
+It is also symmetric: `A_0` has 192 integral isometries, 96 of which extend to
+`X`, and they permute the 240 translation classes of simplices in 6 orbits.
+The rounding to `10^5` keeps only 4 of the 96, which is why the run below
+reports 60 orbits and not 6. With
 `lambda^2 = 1`,
 
     X = Z^5 + {0, c},   c = (1/2, x, -1/2, 1/2, 1/2)
