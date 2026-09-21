@@ -9,6 +9,8 @@
 #include "IsoDelaunayDomains.h"
 #include "LatticeDelaunay.h"
 #include "Shvec_exact.h"
+#include <map>
+#include <optional>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -301,83 +303,189 @@ PeriodicAffineExtension(PeriodicPointSet<Tring> const &pps,
   preserves it exactly when the induced permutation of the classes maps the
   cosets onto the cosets. Shared by the subgroup computation and by the
   equivalence.
+
+  The action is carried by the orbit of the cosets under the transformations
+  at hand, not by the whole of (Z / D)^n. The two give the same answer --
+  the question is only whether the cosets go to the cosets, and the orbit is
+  invariant and contains them -- but their sizes are not comparable: the
+  orbit has at most (number of transformations) x (number of cosets)
+  elements, while (Z / D)^n has D^n, which overflows the permutation index
+  type as soon as the cosets have a fine denominator. A point set whose
+  coset is an approximation to several digits, which is what an extremal
+  configuration of the covering or packing-covering problem has to be
+  described by, is out of reach on the D^n count and immediate on the orbit
+  count.
  */
 template <typename Tring> struct PeriodicClassAction {
   PeriodicPointSet<Tring> const &pps;
   int n;
-  size_t N_s;
+  int n_coset;
+  // The classes of the orbit, as representatives in [0, N)^n, with the
+  // cosets first so that the coset face is the initial segment.
+  std::vector<MyVector<Tring>> classes;
+  std::map<std::vector<Tring>, size_t> index_of;
   size_t n_class;
-  PeriodicClassAction(PeriodicPointSet<Tring> const &_pps)
-      : pps(_pps), n(_pps.cosets_num.cols()),
-        N_s(UniversalScalarConversion<size_t, Tring>(_pps.N)), n_class(1) {
+
+  std::vector<Tring> key(MyVector<Tring> const &u) const {
+    std::vector<Tring> ret(n);
     for (int i = 0; i < n; i++) {
-      n_class *= N_s;
+      ret[i] = ResInt(u(i), pps.N);
     }
+    return ret;
   }
-  // The classes are indexed in the mixed radix order.
+  // The class of u, which has to be one of the orbit.
   size_t index(MyVector<Tring> const &u) const {
-    size_t idx = 0;
-    for (int i = n - 1; i >= 0; i--) {
-      Tring res = ResInt(u(i), pps.N);
-      idx = idx * N_s + UniversalScalarConversion<size_t, Tring>(res);
+    typename std::map<std::vector<Tring>, size_t>::const_iterator iter =
+        index_of.find(key(u));
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+    if (iter == index_of.end()) {
+      std::cerr << "PERIODIC_DELAUNAY: PeriodicClassAction: the class is "
+                   "outside the orbit the action was built on\n";
+      throw TerminalException{1};
     }
-    return idx;
+#endif
+    return iter->second;
   }
-  MyVector<Tring> get_vector(size_t idx) const {
-    MyVector<Tring> u(n);
+  std::optional<size_t> index_opt(MyVector<Tring> const &u) const {
+    typename std::map<std::vector<Tring>, size_t>::const_iterator iter =
+        index_of.find(key(u));
+    if (iter == index_of.end()) {
+      return {};
+    }
+    return iter->second;
+  }
+  // The image of a class by an integral affine transformation, reduced.
+  MyVector<Tring> apply(PeriodicAffineParts<Tring> const &parts,
+                        MyVector<Tring> const &u) const {
+    MyMatrix<Tring> const &A = parts.A;
+    MyVector<Tring> const &w = parts.w;
+    MyVector<Tring> img(n);
+    for (int j = 0; j < n; j++) {
+      Tring eSum = w(j);
+      for (int i = 0; i < n; i++) {
+        AddMul(eSum, u(i), A(i, j));
+      }
+      img(j) = ResInt(eSum, pps.N);
+    }
+    return img;
+  }
+  bool insert(MyVector<Tring> const &u) {
+    std::vector<Tring> k = key(u);
+    if (index_of.count(k) > 0) {
+      return false;
+    }
+    index_of[k] = classes.size();
+    MyVector<Tring> red(n);
     for (int i = 0; i < n; i++) {
-      u(i) = UniversalScalarConversion<Tring, size_t>(idx % N_s);
-      idx /= N_s;
+      red(i) = k[i];
     }
-    return u;
+    classes.push_back(red);
+    return true;
   }
-  // The permutation of the classes induced by a transformation, defined
-  // as soon as it is one of the point set.
+  /*
+    The orbit of the cosets under the transformations. The semigroup they
+    generate is the group they generate, the group being finite, so closing
+    under the transformations themselves is enough and their inverses are
+    not needed.
+   */
+  template <typename T>
+  PeriodicClassAction(PeriodicPointSet<Tring> const &_pps,
+                      std::vector<MyMatrix<T>> const &l_trans)
+      : pps(_pps), n(_pps.cosets_num.cols()),
+        n_coset(_pps.cosets_num.rows()) {
+    std::vector<PeriodicAffineParts<Tring>> l_parts;
+    for (auto &M : l_trans) {
+      std::optional<PeriodicAffineParts<Tring>> opt =
+          GetPeriodicAffineParts<Tring, T>(M);
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+      // The action on the classes is defined for the integral affine
+      // transformations only, so the group has to be restricted to those
+      // before being handed over.
+      if (!opt) {
+        std::cerr << "PERIODIC_DELAUNAY: PeriodicClassAction: the matrix is "
+                     "not integral, so it is not a transformation of the "
+                     "set\n";
+        throw TerminalException{1};
+      }
+      Tring det = DeterminantMat(opt->A);
+      if (det != 1 && det != -1) {
+        std::cerr << "PERIODIC_DELAUNAY: PeriodicClassAction: the linear part "
+                     "is not unimodular\n";
+        throw TerminalException{1};
+      }
+#endif
+      l_parts.push_back(*opt);
+    }
+    for (int k = 0; k < n_coset; k++) {
+      insert(GetMatrixRow(pps.cosets_num, k));
+    }
+    size_t pos = 0;
+    while (pos < classes.size()) {
+      MyVector<Tring> u = classes[pos];
+      for (auto &parts : l_parts) {
+        insert(apply(parts, u));
+      }
+      pos++;
+    }
+    n_class = classes.size();
+  }
+  // The permutation of the orbit induced by a transformation. It is one of
+  // those the orbit was closed under, so the images stay in the orbit.
   template <typename T>
   std::vector<size_t> permutation(MyMatrix<T> const &M) const {
     std::optional<PeriodicAffineParts<Tring>> opt_parts =
         GetPeriodicAffineParts<Tring, T>(M);
 #ifdef SANITY_CHECK_PERIODIC_DELAUNAY
-    // The action on the classes is defined for the transformations of the
-    // point set only, so the group has to be restricted to those before
-    // being handed over.
     if (!opt_parts) {
       std::cerr << "PERIODIC_DELAUNAY: PeriodicClassAction: the matrix is not "
                    "integral, so it is not a transformation of the set\n";
       throw TerminalException{1};
     }
-    Tring det = DeterminantMat(opt_parts->A);
-    if (det != 1 && det != -1) {
-      std::cerr << "PERIODIC_DELAUNAY: PeriodicClassAction: the linear part "
-                   "is not unimodular\n";
-      throw TerminalException{1};
-    }
 #endif
-    MyMatrix<Tring> const &A = opt_parts->A;
-    MyVector<Tring> const &w = opt_parts->w;
     std::vector<size_t> ret(n_class);
     for (size_t i_class = 0; i_class < n_class; i_class++) {
-      MyVector<Tring> u = get_vector(i_class);
-      MyVector<Tring> img(n);
-      for (int j = 0; j < n; j++) {
-        Tring eSum = w(j);
-        for (int i = 0; i < n; i++) {
-          AddMul(eSum, u(i), A(i, j));
-        }
-        img(j) = eSum;
-      }
-      ret[i_class] = index(img);
+      ret[i_class] = index(apply(*opt_parts, classes[i_class]));
     }
     return ret;
   }
   // The classes that are cosets, over an index space where the classes
-  // start at shift.
+  // start at shift. They were inserted first, so they are the initial
+  // segment of the orbit.
   Face coset_face(size_t shift, size_t n_tot) const {
     Face f(n_tot);
-    int n_coset = pps.cosets_num.rows();
     for (int k = 0; k < n_coset; k++) {
-      MyVector<Tring> u = GetMatrixRow(pps.cosets_num, k);
-      f[shift + index(u)] = 1;
+      f[shift + k] = 1;
+    }
+    return f;
+  }
+  /*
+    The classes of the orbit that M sends to a coset. M is any
+    transformation, not one the orbit was closed under, so its images are
+    not in the orbit in general and only the test of being a coset is made.
+
+    The full preimage of the cosets has as many elements as the cosets, M
+    being a bijection of the classes. So a face smaller than that means
+    part of the preimage falls outside the orbit, and then no element of
+    the group -- which preserves the orbit -- can carry the cosets onto it.
+   */
+  template <typename T>
+  Face preimage_coset_face(MyMatrix<T> const &M, size_t shift,
+                           size_t n_tot) const {
+    std::optional<PeriodicAffineParts<Tring>> opt_parts =
+        GetPeriodicAffineParts<Tring, T>(M);
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+    if (!opt_parts) {
+      std::cerr << "PERIODIC_DELAUNAY: PeriodicClassAction: the matrix is not "
+                   "integral, so it is not a transformation of the set\n";
+      throw TerminalException{1};
+    }
+#endif
+    Face f(n_tot);
+    for (size_t i_class = 0; i_class < n_class; i_class++) {
+      std::optional<size_t> opt = index_opt(apply(*opt_parts, classes[i_class]));
+      if (opt && *opt < static_cast<size_t>(n_coset)) {
+        f[shift + i_class] = 1;
+      }
     }
     return f;
   }
@@ -411,8 +519,8 @@ BuildPeriodicUnionGroup(PeriodicClassAction<Tring> const &act,
   size_t n_tot = n_vert + act.n_class;
 #ifdef SANITY_CHECK_PERIODIC_DELAUNAY
   if (n_tot > static_cast<size_t>(std::numeric_limits<Tidx>::max())) {
-    std::cerr << "PERIODIC_DELAUNAY: BuildPeriodicUnionGroup: the N^n classes "
-                 "overflow the permutation index type (n_class="
+    std::cerr << "PERIODIC_DELAUNAY: BuildPeriodicUnionGroup: the orbit of "
+                 "the cosets overflows the permutation index type (n_class="
               << act.n_class << ")\n";
     throw TerminalException{1};
   }
@@ -446,7 +554,11 @@ template <typename Tring, typename Tgroup, typename Fget_trans>
 Tgroup PeriodicCosetPreservingSubgroup(PeriodicPointSet<Tring> const &pps,
                                        Tgroup const &GRP, Fget_trans f_trans,
                                        [[maybe_unused]] std::ostream &os) {
-  PeriodicClassAction<Tring> act(pps);
+  std::vector<decltype(f_trans(GRP.SmallGeneratingSet()[0]))> l_trans;
+  for (auto &eGen : GRP.SmallGeneratingSet()) {
+    l_trans.push_back(f_trans(eGen));
+  }
+  PeriodicClassAction<Tring> act(pps, l_trans);
   PeriodicUnionGroup<Tring, Tgroup> pug =
       BuildPeriodicUnionGroup<Tring, Tgroup, Fget_trans>(act, GRP, f_trans);
   Tgroup GRPstab = pug.GRPbig.Stabilizer_OnSets(pug.f_coset);
@@ -692,22 +804,26 @@ PeriodicDelaunay_TestEquivalence(MyMatrix<T> const &GramMat,
   // The other isometries of the pair are the h * m0, so the point set is
   // preserved by one of them exactly when some h sends the cosets to their
   // preimage by m0.
-  PeriodicClassAction<Tring> act(pps);
   Tgroup GRPisom1 = PeriodicDelaunayIsometryGroup<T, Tgroup, Tidx_value>(data1, os);
   auto f_trans1 = [&](Telt const &eElt) -> MyMatrix<T> {
     return PeriodicTransformFromPerm<T, Telt, Tidx_value>(data1, data1, eElt);
   };
+  std::vector<MyMatrix<T>> l_trans1;
+  for (auto &eGen : GRPisom1.SmallGeneratingSet()) {
+    l_trans1.push_back(f_trans1(eGen));
+  }
+  PeriodicClassAction<Tring> act(pps, l_trans1);
   PeriodicUnionGroup<Tring, Tgroup> pug =
       BuildPeriodicUnionGroup<Tring, Tgroup, decltype(f_trans1)>(act, GRPisom1,
                                                                  f_trans1);
   size_t n_vert = GRPisom1.n_act();
   size_t n_tot = n_vert + act.n_class;
-  std::vector<size_t> cperm_m0 = act.permutation(m0);
-  Face f_target(n_tot);
-  for (size_t i_class = 0; i_class < act.n_class; i_class++) {
-    if (pug.f_coset[n_vert + cperm_m0[i_class]] == 1) {
-      f_target[n_vert + i_class] = 1;
-    }
+  Face f_target = act.preimage_coset_face(m0, n_vert, n_tot);
+  // Part of the preimage of the cosets lies outside the orbit, which the
+  // group preserves, so no element of it can carry the cosets onto the
+  // preimage.
+  if (f_target.count() != static_cast<size_t>(pps.cosets_num.rows())) {
+    return {};
   }
   std::optional<Telt> opt =
       pug.GRPbig.RepresentativeAction_OnSets(pug.f_coset, f_target);
@@ -1300,6 +1416,122 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERIODIC_IsoDelaunayDomains() {
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   return FullNamelist(ListBlock);
+}
+
+/*
+  The squared minimal distance of a periodic point set, that is the square
+  of twice its packing radius.
+
+  In the scaled frame the set is N Z^n + {c_k} with the c_k integral, so a
+  difference of two distinct points is N z + (c_l - c_k). Two cases, and
+  both are exact lattice computations of Shvec_exact.h:
+  --- k = l: the differences are the nonzero vectors of N Z^n and the
+  minimum is N^2 times the minimum of the form.
+  --- k != l: the coset difference is nonzero modulo N, so no choice of z
+  cancels it and the zero vector never arises; the minimum is N^2 times the
+  squared distance from -(c_l - c_k)/N to Z^n, a closest-vector problem.
+
+  The result is in the scaled frame as well, so it is N^2 times the squared
+  minimal distance of the point set itself. The caller either divides by
+  N^2 or forms a scale-free ratio, in which the factor cancels.
+ */
+template <typename T, typename Tring>
+T PeriodicSquareMinimalDistanceScaled(MyMatrix<T> const &GramMat,
+                                      PeriodicPointSet<Tring> const &pps,
+                                      std::ostream &os) {
+  int n = GramMat.rows();
+  int n_coset = pps.cosets_num.rows();
+  T N_T = UniversalScalarConversion<T, Tring>(pps.N);
+  T N_sqr = N_T * N_T;
+  Tshortest<T, Tring> rec_shv = T_ShortestVector<T, Tring>(GramMat, os);
+  T min_norm = N_sqr * rec_shv.min;
+  if (n_coset > 1) {
+    CVPSolver<T, Tring> solver(GramMat, os);
+    for (int k = 0; k < n_coset; k++) {
+      for (int l = k + 1; l < n_coset; l++) {
+        MyVector<T> eV(n);
+        for (int i = 0; i < n; i++) {
+          Tring diff = pps.cosets_num(l, i) - pps.cosets_num(k, i);
+          eV(i) = -UniversalScalarConversion<T, Tring>(diff) / N_T;
+        }
+        resultCVP<T, Tring> res = solver.nearest_vectors(eV);
+        T cand = N_sqr * res.TheNorm;
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+        if (cand <= 0) {
+          std::cerr << "PERIODIC_DELAUNAY: PeriodicSquareMinimalDistanceScaled:"
+                       " two distinct cosets are at distance zero, so they are"
+                       " the same coset\n";
+          throw TerminalException{1};
+        }
+#endif
+        if (cand < min_norm) {
+          min_norm = cand;
+        }
+      }
+    }
+  }
+  return min_norm;
+}
+
+/*
+  The packing-covering quantities of a periodic point set at a form.
+
+  The covering radius mu is the largest circumradius of a Delaunay cell,
+  the packing radius rho is half the minimal distance, and the
+  packing-covering constant is their ratio
+
+      gamma = mu / rho = 2 mu / lambda ,   lambda the minimal distance.
+
+  It is what Schuermann-Vallentin minimise over lattices; for a lattice it
+  is at least 1 and the best value is known in small dimension. Everything
+  here is exact: the squares are field elements and gamma^2 = 4 mu^2 /
+  lambda^2, in which the N^2 of the scaled frame cancels, so gamma^2 is the
+  constant of the point set itself and not of a scaled copy. The radii
+  themselves are square roots and are reported as squares.
+ */
+template <typename T> struct PeriodicPackingCovering {
+  T SquareCoveringRadius;
+  T SquareMinimalDistance;
+  T SquarePackingRadius;
+  T SquarePackingCoveringConstant;
+};
+
+/*
+  The circumradius is constant on an orbit of cells, so the maximum over
+  the orbit representatives that the enumeration returns is the maximum
+  over all the cells.
+ */
+template <typename T, typename Tring>
+PeriodicPackingCovering<T>
+GetPeriodicPackingCovering(MyMatrix<T> const &GramMat,
+                           PeriodicPointSet<Tring> const &pps,
+                           std::vector<MyMatrix<Tring>> const &ListEXT,
+                           std::ostream &os) {
+#ifdef SANITY_CHECK_PERIODIC_DELAUNAY
+  if (ListEXT.size() == 0) {
+    std::cerr << "PERIODIC_DELAUNAY: GetPeriodicPackingCovering: the list of "
+                 "cells is empty, so there is no covering radius\n";
+    throw TerminalException{1};
+  }
+#endif
+  T N_T = UniversalScalarConversion<T, Tring>(pps.N);
+  T N_sqr = N_T * N_T;
+  bool IsFirst = true;
+  T max_rad(0);
+  for (auto &EXT : ListEXT) {
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tring>(EXT);
+    CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
+    if (IsFirst || cp.SquareRadius > max_rad) {
+      max_rad = cp.SquareRadius;
+    }
+    IsFirst = false;
+  }
+  T lambda_sqr = PeriodicSquareMinimalDistanceScaled<T, Tring>(GramMat, pps, os);
+  // Back from the scaled frame to the point set itself.
+  T mu_sqr = max_rad / N_sqr;
+  T lam_sqr = lambda_sqr / N_sqr;
+  T rho_sqr = lam_sqr / 4;
+  return {mu_sqr, lam_sqr, rho_sqr, mu_sqr / rho_sqr};
 }
 
 // clang-format off
