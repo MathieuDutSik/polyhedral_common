@@ -390,6 +390,57 @@ LLLreduction<T, Tint> DeepLLLreducedGeneral(MyMatrix<T> const &GramMat,
 }
 
 /*
+  Tests that a Gram matrix is LLL reduced for the given delta: size reduced and
+  satisfying the Lovasz condition, and nothing more.
+
+  This is NOT IsDeepLLLreduced at depth 1. The admissible set at depth 1 is
+  {0, k-1}, which adds the deep condition at i = 0, that is
+  delta |b_1^*|^2 <= |b_k|^2 for every k. A deep reduced basis satisfies it but
+  an LLL reduced one need not: LLL is perfectly content to leave b_3 shorter
+  than b_1. Using the depth-1 test as a test for LLL reducedness therefore
+  rejects legitimate bases, and did.
+ */
+template <typename T>
+bool IsLLLreduced(MyMatrix<T> const &GramMat, int const &delta_num,
+                  int const &delta_den, std::ostream &os) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  int n = GramMat.rows();
+  if (n <= 1) {
+    return true;
+  }
+  MyMatrix<Tring> gram =
+      UniversalMatrixConversion<Tring, T>(RemoveFractionMatrix(GramMat));
+  MyMatrix<Tring> lambda = ZeroMatrix<Tring>(n, n);
+  std::vector<Tring> d(n + 1, Tring(0));
+  DeepLLL_IntegralGSO(gram, lambda, d, 0);
+  Tring const two(2);
+  Tring const num(delta_num);
+  Tring const den(delta_den);
+  for (int k = 1; k < n; k++) {
+    for (int j = 0; j < k; j++) {
+      if (two * T_abs(lambda(k, j)) > d[j + 1]) {
+        os << "DEEPLLL: not size reduced, 2|lambda(" << k << "," << j
+           << ")|=" << two * T_abs(lambda(k, j)) << " exceeds d=" << d[j + 1]
+           << "\n";
+        return false;
+      }
+    }
+    // The Lovasz condition delta |b_{k-1}^*|^2 <= |pi_{k-1}(b_k)|^2 reads
+    // num d(k) <= den S_{k-1}, the common factor d(k-1) cancelling.
+    Tring S = gram(k, k);
+    for (int i = 0; i + 1 < k; i++) {
+      S = (S * d[i + 1] - lambda(k, i) * lambda(k, i)) / d[i];
+    }
+    if (den * S < num * d[k]) {
+      os << "DEEPLLL: the Lovasz condition fails at k=" << k << ", " << den
+         << "*" << S << " < " << num << "*" << d[k] << "\n";
+      return false;
+    }
+  }
+  return true;
+}
+
+/*
   Tests that a Gram matrix is deep LLL reduced for the given delta and depth:
   size reduced, and satisfying the deep condition at every admissible pair.
   Recomputes the integral Gram-Schmidt data from scratch, so it is an
