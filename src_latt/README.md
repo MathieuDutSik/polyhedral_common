@@ -119,6 +119,10 @@ Programs:
   * **TEST_ReductionBenchmark** `[dim] [n_iter] [seed]`, comparing the
     available reducers over the families Zn, An, Dn, E8 and a low-symmetry
     random family, at three strengths of destruction.
+  * **TEST_DeepLLL** `[dim] [n_iter] [seed]`, validating the Schnorr-Euchner
+    deep insertion of `src_isotropy/DeepLLL.h`. Its decisive check is that the
+    output really satisfies the deep condition, the Gram-Schmidt data being
+    recomputed from scratch by a routine sharing no state with the descent.
   * **TEST_SeysenReduction** `[dim] [n_iter] [seed]`, validating the Seysen
     reduction of `src_isotropy/SeysenReduction.h` on the same instances. Its
     decisive check is that the output is a local minimum of Seysen's measure,

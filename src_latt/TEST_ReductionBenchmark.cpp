@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "LatticeReductionBench.h"
+#include "DeepLLL.h"
 // clang-format on
 
 /*
@@ -51,6 +52,12 @@ void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
                     }});
   l_algo.push_back({"LLLdual", [](MyMatrix<T> const &G, std::ostream &os_i) {
                       return LLLreducedBasisDual<T, Tint>(G, os_i);
+                    }});
+  l_algo.push_back({"Deep", [](MyMatrix<T> const &G, std::ostream &os_i) {
+                      return DeepLLLreducedBasis<T, Tint>(G, os_i);
+                    }});
+  l_algo.push_back({"Deep5", [](MyMatrix<T> const &G, std::ostream &os_i) {
+                      return DeepLLLreducedBasisDepth<T, Tint>(G, 5, os_i);
                     }});
   l_algo.push_back({"Seysen", [](MyMatrix<T> const &G, std::ostream &os_i) {
                       return SeysenReducedBasis<T, Tint>(G, os_i);

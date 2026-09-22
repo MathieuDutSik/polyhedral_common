@@ -250,7 +250,7 @@ LLLreduction<T, Tint> SeysenReducedBasisKernel(MyMatrix<T> const &GramMat,
     RowAddMul(P, i, lambda_int, j);
   };
   //
-  size_t n_move = 0;
+  [[maybe_unused]] size_t n_move = 0;
   [[maybe_unused]] size_t n_sweep = 0;
   while (true) {
     bool did_move = false;
