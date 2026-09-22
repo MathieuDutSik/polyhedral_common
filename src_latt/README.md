@@ -103,3 +103,32 @@ Program:
 
 References:
   * Achill Schürmann, Mathieu Dutour Sikirić, Frank Vallentin, A generalization of Voronoi's reduction theory and its application, [preprint at arxiv:math/0601084](https://arxiv.org/abs/math/0601084), Duke Mathematical Journal 142 (2008) 127--164
+
+
+Lattice reduction benchmark
+---------------------------
+
+A harness for comparing basis-reduction algorithms on the hidden-good-basis
+experiment: a lattice is presented by a Gram matrix known to be good, a random
+unimodular matrix destroys that presentation, and the algorithm sees only the
+destroyed one. It is kept separate from the reducers themselves so that a
+disappointing experiment can be attributed to the representation, the
+objective, the move set or the search strategy rather than to all four at once.
+
+Program:
+  * **TEST_ReductionBenchmark** `[dim] [n_iter] [seed]`, comparing the
+    available reducers over the families Zn, An, Dn, E8 and a low-symmetry
+    random family, at three strengths of destruction.
+
+The two questions the harness keeps apart are *recovery*, whether the original
+presentation is found back up to signed permutation, and *reduction*, whether
+the output is at least as good as the hidden presentation. Only the second is
+the lattice-reduction problem; recovery is strictly stronger and is not
+geometrically meaningful, since every signed permutation of a good basis is
+equally good.
+
+Everything is measured on the Gram side in exact arithmetic. The orthogonal
+factor of the Iwasawa decomposition never appears, being killed by
+`G = B B^T`, and the remaining Iwasawa data is read off the Bareiss
+decomposition that `FullGramInfo` in `Shvec_exact.h` already computes, through
+`a_i^2 = d(i)/d(i-1)` and `mu_{i,j} = Nmat(i,j)/d(i)`.
