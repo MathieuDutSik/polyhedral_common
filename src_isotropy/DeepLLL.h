@@ -113,38 +113,51 @@
 /*
   The integral Gram-Schmidt data of an integral Gram matrix: d(i) for
   i = 0, ..., n with d(0) = 1 and d(i) the leading principal minor of order i,
-  and lambda(i,j) = d(j+1) mu(j,i) for j < i. Recomputed from row i_start
-  onwards, the earlier rows being taken as already correct, which is what an
-  insertion at position i_start leaves valid.
+  and lambda(i,j) = d(j+1) mu(j,i) for j < i.
+
+  DeepLLL_IntegralGSO_Row computes ONE row, assuming the rows before it
+  correct. That is the form the descent wants, and the reason is that the
+  descent at index k never looks above row k: the deep test reads lambda(k,i)
+  and d(i) for i <= k only. Recomputing rows k, ..., n-1 at every step, which
+  is the obvious thing to do and what this did at first, therefore spends
+  O(n^3) per step on data that will be recomputed again before it is read,
+  and makes a sweep O(n^4) where O(n^3) suffices.
  */
+template <typename Tring>
+void DeepLLL_IntegralGSO_Row(MyMatrix<Tring> const &gram,
+                             MyMatrix<Tring> &lambda, std::vector<Tring> &d,
+                             int const &i) {
+  d[0] = Tring(1);
+  for (int j = 0; j <= i; j++) {
+    Tring u = gram(i, j);
+    for (int k = 0; k < j; k++) {
+      Tring num = d[k + 1] * u - lambda(i, k) * lambda(j, k);
+      Tring quot = num / d[k];
+#ifdef SANITY_CHECK_DEEP_LLL
+      if (quot * d[k] != num) {
+        std::cerr << "DEEPLLL: non-exact division in the integral "
+                     "Gram-Schmidt, the input is not an integral form over "
+                     "an integral domain\n";
+        throw TerminalException{1};
+      }
+#endif
+      u = quot;
+    }
+    if (j < i) {
+      lambda(i, j) = u;
+    } else {
+      d[i + 1] = u;
+    }
+  }
+}
+
 template <typename Tring>
 void DeepLLL_IntegralGSO(MyMatrix<Tring> const &gram,
                          MyMatrix<Tring> &lambda, std::vector<Tring> &d,
                          int const &i_start) {
   int n = gram.rows();
-  d[0] = Tring(1);
   for (int i = i_start; i < n; i++) {
-    for (int j = 0; j <= i; j++) {
-      Tring u = gram(i, j);
-      for (int k = 0; k < j; k++) {
-        Tring num = d[k + 1] * u - lambda(i, k) * lambda(j, k);
-        Tring quot = num / d[k];
-#ifdef SANITY_CHECK_DEEP_LLL
-        if (quot * d[k] != num) {
-          std::cerr << "DEEPLLL: non-exact division in the integral "
-                       "Gram-Schmidt, the input is not an integral form over "
-                       "an integral domain\n";
-          throw TerminalException{1};
-        }
-#endif
-        u = quot;
-      }
-      if (j < i) {
-        lambda(i, j) = u;
-      } else {
-        d[i + 1] = u;
-      }
-    }
+    DeepLLL_IntegralGSO_Row(gram, lambda, d, i);
   }
 }
 
@@ -214,7 +227,18 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepthDelta(MyMatrix<T> const &GramMat,
   MyMatrix<Tint> H = IdentityMat<Tint>(n);
   MyMatrix<Tring> lambda = ZeroMatrix<Tring>(n, n);
   std::vector<Tring> d(n + 1, Tring(0));
-  DeepLLL_IntegralGSO(gram, lambda, d, 0);
+  // Rows 0, ..., n_valid-1 of the Gram-Schmidt data are correct, together with
+  // d(0), ..., d(n_valid). Rows are brought up only as the descent reaches
+  // them, and invalidated only as far down as a move actually reaches.
+  int n_valid = 0;
+  auto f_ensure = [&](int const &r) -> void {
+    for (int rr = n_valid; rr <= r; rr++) {
+      DeepLLL_IntegralGSO_Row(gram, lambda, d, rr);
+    }
+    if (r + 1 > n_valid) {
+      n_valid = r + 1;
+    }
+  };
   Tring const two(2);
   Tring const num(delta_num);
   Tring const den(delta_den);
@@ -287,10 +311,16 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepthDelta(MyMatrix<T> const &GramMat,
   [[maybe_unused]] size_t n_deep = 0;
   int k = 1;
   while (k < n) {
+    f_ensure(k);
     for (int j = k - 1; j >= 0; j--) {
       f_reduce(k, j);
     }
-    DeepLLL_IntegralGSO(gram, lambda, d, k);
+    // Size reduction of row k leaves that row's data correct, f_reduce
+    // updating lambda(k,.) by the same transvection and d being untouched, the
+    // flag being unchanged. Rows above k read gram(.,k), which did change.
+    if (n_valid > k + 1) {
+      n_valid = k + 1;
+    }
     // S runs through d(i) |pi_i(b_k)|^2 as i increases: the Gram determinant
     // of (b_0, ..., b_{i-1}, b_k), an integer, at the cost of one
     // multiplication and one exact division per step.
@@ -320,7 +350,9 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepthDelta(MyMatrix<T> const &GramMat,
     }
     if (i_found >= 0) {
       f_insert(k, i_found);
-      DeepLLL_IntegralGSO(gram, lambda, d, i_found);
+      if (n_valid > i_found) {
+        n_valid = i_found;
+      }
       n_insert++;
       if (i_found < k - 1) {
         n_deep++;
