@@ -28,6 +28,38 @@
 #include <map>
 // clang-format on
 
+/*
+  The scalar type of this file.
+
+  MatrixGroup works on lattices over Z. Its T is the type of the coordinates,
+  which is Z itself or its field of fractions Q, and never an algebraic
+  extension of either. What is computed here is integral: Hermite normal
+  forms, the factorization of the index of a sublattice into the primes to
+  refine modulo, reductions modulo an integer. Those are the algorithms of Z,
+  and over Z[sqrt(d)] or an order of a real algebraic field they are not
+  available -- neither ring is euclidean for most d.
+
+  Keeping T on Z or Q also removes an ambiguity that would otherwise have to
+  be settled at every site of the file: underlying_ring<T>, which names a ring
+  to run without denominators over, and underlying_z_ring<T>, which names the
+  rational integers inside T, are the same type exactly when T has rational
+  scalars. Under this rule they cannot disagree here.
+
+  A caller whose quadratic form takes its values in an algebraic field reaches
+  this file through the configuration rather than through the form: the short
+  vectors of the form are integral, the permutations of them are realized by
+  rational linear algebra, and the field stays on the other side of that
+  boundary.
+ */
+template <typename T>
+inline constexpr bool matrix_group_scalar_ok =
+    is_implementation_of_Z<T>::value || is_implementation_of_Q<T>::value;
+
+#define MATRIX_GROUP_ASSERT_SCALAR(T)                                          \
+  static_assert(matrix_group_scalar_ok<T>,                                     \
+                "MatrixGroup works over Z or Q. A form over an algebraic "     \
+                "field reaches it through the integral configuration.")
+
 #ifdef DEBUG
 #define DEBUG_MATRIX_GROUP
 #define DEBUG_DOUBLE_COSET_ENUM
@@ -2489,7 +2521,10 @@ RetMI_S<T, Tgroup>
 LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
                        Thelper const &helper, MyMatrix<T> const &TheSpace,
                        std::ostream &os) {
+  MATRIX_GROUP_ASSERT_SCALAR(T);
   using Tint = typename underlying_ring<T>::ring_type;
+  static_assert(is_implementation_of_Z<Tint>::value,
+                "the basis transformation of the reduction is integral");
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
       LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
   std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
@@ -2517,7 +2552,10 @@ template <typename T, typename Tgroup, typename Thelper>
 Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(
     std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::ostream &os) {
+  MATRIX_GROUP_ASSERT_SCALAR(T);
   using Tint = typename underlying_ring<T>::ring_type;
+  static_assert(is_implementation_of_Z<Tint>::value,
+                "the basis transformation of the reduction is integral");
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
       LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
   std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
@@ -2553,7 +2591,10 @@ LinearSpace_Stabilizer_DoubleCoset(std::vector<MyMatrix<T>> const &ListMatr,
                                    MyMatrix<T> const &TheSpace,
                                    std::vector<MyMatrix<T>> const &V_gens,
                                    std::ostream &os) {
+  MATRIX_GROUP_ASSERT_SCALAR(T);
   using Tint = typename underlying_ring<T>::ring_type;
+  static_assert(is_implementation_of_Z<Tint>::value,
+                "the basis transformation of the reduction is integral");
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
       LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
   std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
@@ -3054,7 +3095,10 @@ std::optional<MyMatrix<T>>
 LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
                         Thelper const &helper, MyMatrix<T> const &InSpace1,
                         MyMatrix<T> const &InSpace2, std::ostream &os) {
+  MATRIX_GROUP_ASSERT_SCALAR(T);
   using Tint = typename underlying_ring<T>::ring_type;
+  static_assert(is_implementation_of_Z<Tint>::value,
+                "the basis transformation of the reduction is integral");
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
       LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
   std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
@@ -3502,6 +3546,7 @@ template <typename T, typename Tgroup>
 RetMI_S<T, Tgroup> LinPolytopeIntegral_Automorphism_Subspaces(
     std::vector<std::pair<MyMatrix<T>, T>> const &ListMatrScaled,
     MyMatrix<T> const &EXTfaithful, std::ostream &os) {
+  MATRIX_GROUP_ASSERT_SCALAR(T);
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   SublatticeBasisChange<T> bc(EXTfaithful);
@@ -3547,6 +3592,7 @@ template <typename T, typename Tgroup>
 MyMatrix<T> LinPolytopeIntegral_Canonicalization_Subspaces(
     std::vector<std::pair<MyMatrix<T>, T>> const &ListMatrScaled,
     MyMatrix<T> const &EXTfaithful, std::ostream &os) {
+  MATRIX_GROUP_ASSERT_SCALAR(T);
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   // Fully ring based: T is a ring, EXTfaithful is integral, and each
@@ -4202,6 +4248,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
     MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T,
     std::vector<MyMatrix<T>> const &ListMatrGens2,
     typename Tgroup::Telt const &eEquiv, std::ostream &os) {
+  MATRIX_GROUP_ASSERT_SCALAR(T);
 #ifdef TIMINGS_MATRIX_GROUP
   MicrosecondTime time;
 #endif
