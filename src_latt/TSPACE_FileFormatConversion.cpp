@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Tspace_General.h"
 #include "Group.h"
 #include "Permutation.h"
@@ -58,6 +61,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "  gmp         : mpq_class / mpz_class (default choice)\n";
       std::cerr << "  gmp_boost   : the boost bindings to the gmp types\n";
       std::cerr << "  multi_boost : the boost multiprecision types\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "  flint       : fmpq_class / fmpz_class\n";
+#endif
       return -1;
     }
     //
@@ -86,9 +92,23 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return ConvertTspace<T, Tint>(TspaceNamelistFile, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return ConvertTspace<T, Tint>(TspaceNamelistFile, OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
-      std::cerr << "Available possibilities: gmp, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Available possibilities: gmp, gmp_boost, "
+                << "multi_boost, flint\n";
+#else
+      std::cerr << "Available possibilities: gmp, gmp_boost, "
+                << "multi_boost (build with ENABLE_FLINT_SUPPORT=1 "
+                << "for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, f);

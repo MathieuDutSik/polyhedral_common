@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
@@ -83,6 +86,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "  gmp         : mpq_class / mpz_class (default choice)\n";
       std::cerr << "  gmp_boost   : the boost bindings to the gmp types\n";
       std::cerr << "  multi_boost : the boost multiprecision types\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "  flint       : fmpq_class / fmpz_class\n";
+#endif
       std::cerr << "OutFormat values:\n";
       std::cerr << "  GAP   : the equivalence matrix or false, GAP readable\n";
       std::cerr << "  Oscar : the equivalence matrix in the Oscar format\n";
@@ -117,9 +123,24 @@ int main(int argc, char *argv[]) {
         return ComputeIsomorphism<T, Tint>(FileListMat1, FileListMat2,
                                            OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return ComputeIsomorphism<T, Tint>(FileListMat1, FileListMat2,
+                                           OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
-      std::cerr << "Available possibilities: gmp, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Available possibilities: gmp, gmp_boost, "
+                << "multi_boost, flint\n";
+#else
+      std::cerr << "Available possibilities: gmp, gmp_boost, "
+                << "multi_boost (build with ENABLE_FLINT_SUPPORT=1 "
+                << "for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, prt);
