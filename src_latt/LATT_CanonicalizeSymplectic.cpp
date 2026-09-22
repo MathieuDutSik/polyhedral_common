@@ -1,63 +1,93 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "LatticeStabEquiCan.h"
 // clang-format on
+
+template <typename T, typename Tint>
+void ComputeCanonicalSymplectic(std::string const &FileI,
+                                std::string const &OutFormat,
+                                std::ostream &os) {
+  MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
+  MyMatrix<Tint> B = ComputeCanonicalFormSymplectic<T, Tint>(eMat, std::cerr);
+  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
+  MyMatrix<T> eMat_red = B_T * eMat * B_T.transpose();
+  if (OutFormat == "CPP") {
+    WriteMatrix(os, eMat_red);
+    return;
+  }
+  if (OutFormat == "GAP") {
+    os << "return rec(Basis:=";
+    WriteMatrixGAP(os, B);
+    os << ", eG:=";
+    WriteMatrixGAP(os, eMat_red);
+    os << ");\n";
+    return;
+  }
+  std::cerr << "LATT_CanonicalizeSymplectic: No matching OutFormat\n";
+  throw TerminalException{1};
+}
 
 int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 2 && argc != 4) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_canonicalizeSymplectic [GramI] [OutFormat] [OutFile]\n";
+      std::cerr << "LATT_CanonicalizeSymplectic [arith] [GramI] [OutFormat] "
+                   "[OutFile]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_canonicalizeSymplectic [GramI]\n";
+      std::cerr << "LATT_CanonicalizeSymplectic [arith] [GramI]\n";
       std::cerr << "\n";
-      std::cerr << "If opt=1 then only the matrix is in output.\n";
-      std::cerr << "If opt=2 then the basis, list of vectors and matrix is in "
-                   "GAP formatted output\n";
       std::cerr << "GramI (input) : The gram matrix on input\n";
       std::cerr << "OutFile: The filename of the data in output\n";
+      std::cerr << "\n";
+      std::cerr << "arith values:\n";
+      std::cerr << "  gmp         : mpq_class / mpz_class (default choice)\n";
+      std::cerr << "  gmp_boost   : the boost bindings to the gmp types\n";
+      std::cerr << "  multi_boost : the boost multiprecision types\n";
+      std::cerr << "OutFormat values:\n";
+      std::cerr << "  CPP : only the reduced matrix is in output\n";
+      std::cerr << "  GAP : the basis and the reduced matrix in GAP format\n";
       return -1;
     }
-    using T = mpq_class;
-    using Tint = mpz_class;
-    //
-    std::string FileI = argv[1];
+    std::string arith = argv[1];
+    std::string FileI = argv[2];
     std::string OutFormat = "GAP";
     std::string FileO = "stderr";
-    if (argc == 4) {
-      OutFormat = argv[2];
-      FileO = argv[3];
+    if (argc == 5) {
+      OutFormat = argv[3];
+      FileO = argv[4];
     }
     //
-    MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
-    MyMatrix<Tint> B = ComputeCanonicalFormSymplectic<T, Tint>(eMat, std::cerr);
-    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
-    MyMatrix<T> eMat_red = B_T * eMat * B_T.transpose();
-    //
-    auto f=[&](std::ostream& os_out) -> void {
-      if (OutFormat == "CPP") {
-        WriteMatrix(os_out, eMat_red);
-        return;
+    auto f = [&](std::ostream &os_out) -> void {
+      if (arith == "gmp") {
+        using T = mpq_class;
+        using Tint = mpz_class;
+        return ComputeCanonicalSymplectic<T, Tint>(FileI, OutFormat, os_out);
       }
-      if (OutFormat == "GAP") {
-        os_out << "return rec(Basis:=";
-        WriteMatrixGAP(os_out, B);
-        os_out << ", eG:=";
-        WriteMatrixGAP(os_out, eMat_red);
-        os_out << ");\n";
-        return;
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return ComputeCanonicalSymplectic<T, Tint>(FileI, OutFormat, os_out);
       }
-      std::cerr << "LATT_CanonicalizeSymplectic: No matching OutFormat\n";
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
+        return ComputeCanonicalSymplectic<T, Tint>(FileI, OutFormat, os_out);
+      }
+      std::cerr << "Failed to find a matching entry for arith=" << arith
+                << "\n";
+      std::cerr << "Available possibilities: gmp, gmp_boost, multi_boost\n";
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileO, f);
-    std::cerr << "Normal termination of LATT_canonicalizeSymplectic\n";
+    std::cerr << "Normal termination of LATT_CanonicalizeSymplectic\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_canonicalizeSymplectic\n";
+    std::cerr << "Error in LATT_CanonicalizeSymplectic\n";
     exit(e.eVal);
   }
   runtime(time);

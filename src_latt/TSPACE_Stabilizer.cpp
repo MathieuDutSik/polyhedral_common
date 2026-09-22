@@ -1,5 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "Tspace_General.h"
 #include "Permutation.h"
@@ -30,42 +32,77 @@ void write_group(std::vector<MyMatrix<T>> const &LGen,
   throw TerminalException{1};
 }
 
+template <typename T, typename Tint>
+void ComputeStabilizer(std::string const &FileTspace,
+                       std::string const &FileGram,
+                       std::string const &OutFormat, std::ostream &os) {
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using Tint_grp = mpz_class;
+  using Tgroup = permutalib::Group<Telt, Tint_grp>;
+  LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace, std::cerr);
+  MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
+  std::optional<MyMatrix<T>> CommonGramMat;
+  std::vector<MyMatrix<T>> ListGen =
+      LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, CommonGramMat,
+                                                std::cerr);
+  write_group(ListGen, OutFormat, os);
+}
+
 int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    using T = mpq_class;
-    using Tint = mpz_class;
-    using Tidx = uint32_t;
-    using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tint_grp = mpz_class;
-    using Tgroup = permutalib::Group<Telt, Tint_grp>;
-    if (argc != 3 && argc != 5) {
+    if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "TSPACE_Stabilizer [FileTspace] [FileGram]\n";
+      std::cerr << "TSPACE_Stabilizer [arith] [FileTspace] [FileGram]\n";
       std::cerr << "or\n";
-      std::cerr << "TSPACE_Stabilizer [FileTspace] [FileGram] [OutFormat] "
-                   "[FileOut]\n";
+      std::cerr << "TSPACE_Stabilizer [arith] [FileTspace] [FileGram] "
+                   "[OutFormat] [FileOut]\n";
+      std::cerr << "\n";
+      std::cerr << "arith values:\n";
+      std::cerr << "  gmp         : mpq_class / mpz_class (default choice)\n";
+      std::cerr << "  gmp_boost   : the boost bindings to the gmp types\n";
+      std::cerr << "  multi_boost : the boost multiprecision types\n";
+      std::cerr << "OutFormat values:\n";
+      std::cerr << "  count : the number of generators only (default)\n";
+      std::cerr << "  GAP   : the group generators, GAP readable\n";
       return -1;
     }
-    std::string FileTspace = argv[1];
-    std::string FileGram = argv[2];
+    std::string arith = argv[1];
+    std::string FileTspace = argv[2];
+    std::string FileGram = argv[3];
     std::string OutFormat = "count";
     std::string FileOut = "stderr";
-    if (argc == 5) {
-      OutFormat = argv[3];
-      FileOut = argv[4];
+    if (argc == 6) {
+      OutFormat = argv[4];
+      FileOut = argv[5];
     }
     //
-    LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace, std::cerr);
-    MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
-    std::optional<MyMatrix<T>> CommonGramMat;
-    std::vector<MyMatrix<T>> ListGen =
-        LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, CommonGramMat,
-                                                  std::cerr);
     auto f = [&](std::ostream &os_out) -> void {
-      write_group(ListGen, OutFormat, os_out);
+      if (arith == "gmp") {
+        using T = mpq_class;
+        using Tint = mpz_class;
+        return ComputeStabilizer<T, Tint>(FileTspace, FileGram, OutFormat,
+                                          os_out);
+      }
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return ComputeStabilizer<T, Tint>(FileTspace, FileGram, OutFormat,
+                                          os_out);
+      }
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
+        return ComputeStabilizer<T, Tint>(FileTspace, FileGram, OutFormat,
+                                          os_out);
+      }
+      std::cerr << "Failed to find a matching entry for arith=" << arith
+                << "\n";
+      std::cerr << "Available possibilities: gmp, gmp_boost, multi_boost\n";
+      throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of TSPACE_Stabilizer\n";

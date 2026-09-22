@@ -417,11 +417,15 @@ get_latt_canonical_form:=function(arg)
 end;
 
 get_latt_automorphism_group:=function(arg)
-    local eMat, options, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
     eMat:=arg[1];
+    arith:="gmp";
     print_info:=false;
     if Length(arg) >= 2 then
         options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
         fi;
@@ -433,11 +437,11 @@ get_latt_automorphism_group:=function(arg)
     WriteListMatrixFile(FileI, [eMat]);
     #
     eProg:=GetBinaryFilename("LATT_Automorphism");
-    TheCommand:=Concatenation(eProg, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if print_info then
         runtime_str:=extract_runtime_from_log(FileE);
-        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " command=LATT_Automorphism runtime=", runtime_str, "\n");
+        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " arith=", arith, " command=LATT_Automorphism runtime=", runtime_str, "\n");
     fi;
     if IsExistingFile(FileO)=false then
         Print("get_latt_automorphism_group, no return file\n");
@@ -676,12 +680,16 @@ end;
 
 
 get_latt_isomorphism_test:=function(arg)
-    local eMat1, eMat2, options, print_info, TmpDir, FileIn1, FileIn2, FileOut, FileErr, eProg, TheCommand, U, runtime_str;
+    local eMat1, eMat2, options, arith, print_info, TmpDir, FileIn1, FileIn2, FileOut, FileErr, eProg, TheCommand, U, runtime_str;
     eMat1:=arg[1];
     eMat2:=arg[2];
+    arith:="gmp";
     print_info:=false;
     if Length(arg) >= 3 then
         options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
         fi;
@@ -695,11 +703,11 @@ get_latt_isomorphism_test:=function(arg)
     WriteListMatrixFile(FileIn2, [eMat2]);
     #
     eProg:=GetBinaryFilename("LATT_Isomorphism");
-    TheCommand:=Concatenation(eProg, " ", FileIn1, " ", FileIn2, " GAP ", FileOut, " 2> ", FileErr);
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileIn1, " ", FileIn2, " GAP ", FileOut, " 2> ", FileErr);
     Exec(TheCommand);
     if print_info then
         runtime_str:=extract_runtime_from_log(FileErr);
-        Print("  eMat1=", Length(eMat1), "x", Length(eMat1[1]), " eMat2=", Length(eMat2), "x", Length(eMat2[1]), " command=LATT_Isomorphism runtime=", runtime_str, "\n");
+        Print("  eMat1=", Length(eMat1), "x", Length(eMat1[1]), " eMat2=", Length(eMat2), "x", Length(eMat2[1]), " arith=", arith, " command=LATT_Isomorphism runtime=", runtime_str, "\n");
     fi;
     if IsExistingFile(FileOut)=false then
         return "program failure: LATT_Isomorphism failed to create a file";
@@ -2372,8 +2380,16 @@ PERFCOMP_list_number_orbit:=function(arg)
 end;
 
 
-get_rec_tspace:=function(desc)
-    local TmpDir, FileN, FileO, FileE, binary, output, cmd, tspace;
+get_rec_tspace:=function(arg)
+    local desc, options, arith, TmpDir, FileN, FileO, FileE, binary, output, cmd, tspace;
+    desc:=arg[1];
+    arith:="gmp";
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+    fi;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
     FileO:=Filename(TmpDir, "PerfComp.out");
@@ -2384,7 +2400,7 @@ get_rec_tspace:=function(desc)
     CloseStream(output);
 
     binary:=GetBinaryFilename("TSPACE_FileFormatConversion");
-    cmd:=Concatenation(binary, " ", FileN, " GAP ", FileO, " 2> ", FileE);
+    cmd:=Concatenation(binary, " ", arith, " ", FileN, " GAP ", FileO, " 2> ", FileE);
     Exec(cmd);
 
     if IsExistingFile(FileO)=false then

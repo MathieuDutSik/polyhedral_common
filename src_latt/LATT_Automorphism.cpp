@@ -1,10 +1,8 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-# include "NumberTheoryBoostGmpInt.h"
-#else
-# include "NumberTheory.h"
-#endif
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheory.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
@@ -12,16 +10,83 @@
 #include "SignatureSymmetric.h"
 // clang-format on
 
+template <typename T, typename Tint>
+void ComputeAutomorphism(std::string const &FileListMat,
+                         std::string const &OutFormat, std::ostream &os) {
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using TintGroup = mpz_class;
+  using Tgroup = permutalib::Group<Telt, TintGroup>;
+  std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
+  if (ListMat.empty()) {
+    std::cerr << "LATT_Automorphism: The input matrix list in " << FileListMat
+              << " is empty\n";
+    throw TerminalException{1};
+  }
+  if (!IsSymmetricMatrix(ListMat[0]) ||
+      !IsPositiveDefinite(ListMat[0], std::cerr)) {
+    std::cerr << "LATT_Automorphism: The first input Gram matrix in "
+              << FileListMat << " is not symmetric positive definite\n";
+    throw TerminalException{1};
+  }
+  if (OutFormat == "GAP_order") {
+    // Lightweight path: compute a full-rank invariant short-vector
+    // family, take the permutation action of the lattice automorphism
+    // group on it, and report just the group order. Matches what
+    // ArithmeticAutomorphismGroupMultiple_inner computes internally
+    // before lifting permutations back to matrices, but skips the
+    // (sometimes expensive) integral matrix recovery step.
+    MyMatrix<Tint> SHV =
+        ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], std::cerr);
+    MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+    int n_row = SHV_T.rows();
+    std::vector<T> Vdiag(n_row, T(0));
+    std::vector<std::vector<Tidx>> ListPerm =
+        GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV_T, ListMat,
+                                                           Vdiag, std::cerr);
+    std::vector<Telt> ListPermGens;
+    for (auto &eList : ListPerm) {
+      ListPermGens.push_back(Telt(eList));
+    }
+    Tgroup grp(ListPermGens, n_row);
+    os << "return " << grp.size() << ";\n";
+    return;
+  }
+  std::vector<MyMatrix<Tint>> ListGen =
+      ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, std::cerr);
+  if (OutFormat == "GAP") {
+    os << "return ";
+    WriteListMatrixGAP(os, ListGen);
+    os << ";\n";
+    return;
+  }
+  if (OutFormat == "Oscar") {
+    os << ListGen.size() << "\n";
+    for (auto &eMat : ListGen) {
+      WriteMatrix(os, eMat);
+    }
+    return;
+  }
+  std::cerr << "Failed to find a matching type for OutFormat=" << OutFormat
+            << "\n";
+  throw TerminalException{1};
+}
+
 int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 2 && argc != 4) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_Automorphism [ListMat] [OutFormat] [OutFile]\n";
+      std::cerr << "LATT_Automorphism [arith] [ListMat] [OutFormat] [OutFile]\n";
       std::cerr << "    or\n";
-      std::cerr << "LATT_Automorphism [ListMat]\n";
+      std::cerr << "LATT_Automorphism [arith] [ListMat]\n";
+      std::cerr << "\n";
+      std::cerr << "arith values:\n";
+      std::cerr << "  gmp         : mpq_class / mpz_class (default choice)\n";
+      std::cerr << "  gmp_boost   : the boost bindings to the gmp types\n";
+      std::cerr << "  multi_boost : the boost multiprecision types\n";
       std::cerr << "OutFormat values:\n";
       std::cerr << "  GAP       : ListGen returned as a GAP-readable list of\n";
       std::cerr << "              integral matrix generators (default)\n";
@@ -32,80 +97,34 @@ int main(int argc, char *argv[]) {
       std::cerr << "              lift, much cheaper)\n";
       return -1;
     }
-#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-    using T = boost::multiprecision::mpq_rational;
-    using Tint = boost::multiprecision::mpz_int;
-#else
-    using T = mpq_class;
-    using Tint = mpz_class;
-#endif
-    using Tidx = uint32_t;
-    using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using TintGroup = mpz_class;
-    using Tgroup = permutalib::Group<Telt, TintGroup>;
-    //
-    std::string FileListMat = argv[1];
+    std::string arith = argv[1];
+    std::string FileListMat = argv[2];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
-    if (argc == 4) {
-      OutFormat = argv[2];
-      OutFile = argv[3];
+    if (argc == 5) {
+      OutFormat = argv[3];
+      OutFile = argv[4];
     }
-    std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
-    if (ListMat.empty()) {
-      std::cerr << "LATT_Automorphism: The input matrix list in " << FileListMat
-                << " is empty\n";
-      throw TerminalException{1};
-    }
-    if (!IsSymmetricMatrix(ListMat[0]) ||
-        !IsPositiveDefinite(ListMat[0], std::cerr)) {
-      std::cerr << "LATT_Automorphism: The first input Gram matrix in "
-                << FileListMat << " is not symmetric positive definite\n";
-      throw TerminalException{1};
-    }
-
+    //
     auto prt = [&](std::ostream &os) -> void {
-      if (OutFormat == "GAP_order") {
-        // Lightweight path: compute a full-rank invariant short-vector
-        // family, take the permutation action of the lattice automorphism
-        // group on it, and report just the group order. Matches what
-        // ArithmeticAutomorphismGroupMultiple_inner computes internally
-        // before lifting permutations back to matrices, but skips the
-        // (sometimes expensive) integral matrix recovery step.
-        MyMatrix<Tint> SHV =
-            ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], std::cerr);
-        MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-        int n_row = SHV_T.rows();
-        std::vector<T> Vdiag(n_row, T(0));
-        std::vector<std::vector<Tidx>> ListPerm =
-            GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(
-                SHV_T, ListMat, Vdiag, std::cerr);
-        std::vector<Telt> ListPermGens;
-        for (auto &eList : ListPerm) {
-          ListPermGens.push_back(Telt(eList));
-        }
-        Tgroup grp(ListPermGens, n_row);
-        os << "return " << grp.size() << ";\n";
-        return;
+      if (arith == "gmp") {
+        using T = mpq_class;
+        using Tint = mpz_class;
+        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
       }
-      std::vector<MyMatrix<Tint>> ListGen =
-          ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
-                                                                std::cerr);
-      if (OutFormat == "GAP") {
-        os << "return ";
-        WriteListMatrixGAP(os, ListGen);
-        os << ";\n";
-        return;
+      if (arith == "gmp_boost") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpz_int;
+        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
       }
-      if (OutFormat == "Oscar") {
-        os << ListGen.size() << "\n";
-        for (auto &eMat : ListGen) {
-          WriteMatrix(os, eMat);
-        }
-        return;
+      if (arith == "multi_boost") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_int;
+        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
       }
-      std::cerr << "Failed to find a matching type for OutFormat=" << OutFormat
+      std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
+      std::cerr << "Available possibilities: gmp, gmp_boost, multi_boost\n";
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, prt);
