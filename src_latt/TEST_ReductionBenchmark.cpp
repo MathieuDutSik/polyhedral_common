@@ -3,6 +3,7 @@
 #include "NumberTheory.h"
 #include "LatticeReductionBench.h"
 #include "BKZ.h"
+#include "SlideReduction.h"
 #include "DeepLLL.h"
 // clang-format on
 
@@ -68,6 +69,12 @@ void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
                     }});
   l_algo.push_back({"BKZ12", [](MyMatrix<T> const &G, std::ostream &os_i) {
                       return BKZreducedBasis<T, Tint>(G, 12, os_i);
+                    }});
+  l_algo.push_back({"Slide4", [](MyMatrix<T> const &G, std::ostream &os_i) {
+                      return SlideReducedBasisAuto<T, Tint>(G, 4, os_i);
+                    }});
+  l_algo.push_back({"Slide8", [](MyMatrix<T> const &G, std::ostream &os_i) {
+                      return SlideReducedBasisAuto<T, Tint>(G, 8, os_i);
                     }});
   l_algo.push_back({"Seysen", [](MyMatrix<T> const &G, std::ostream &os_i) {
                       return SeysenReducedBasis<T, Tint>(G, os_i);

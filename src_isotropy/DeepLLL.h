@@ -162,6 +162,54 @@ void DeepLLL_IntegralGSO(MyMatrix<Tring> const &gram,
 }
 
 /*
+  Size-reduce a Gram matrix in place, so that |mu_{j,k}| <= 1/2 for j < k, and
+  carry the transformation. Size reduction changes no Gram-Schmidt norm at all,
+  since it only adds to b_k multiples of earlier vectors; every condition
+  stated in terms of the b_i^* -- the Lovasz condition, the deep condition, the
+  block conditions of BKZ and of slide reduction -- is therefore untouched by
+  it. That is what makes it safe to apply after any block transformation, and
+  it is the reason a block reduction should use this rather than a full LLL,
+  which would be free to swap across the block boundaries it has just
+  established.
+ */
+template <typename Tring, typename Tint>
+void IntegralSizeReduce(MyMatrix<Tring> &gram, MyMatrix<Tint> &H) {
+  int n = gram.rows();
+  if (n <= 1) {
+    return;
+  }
+  MyMatrix<Tring> lambda = ZeroMatrix<Tring>(n, n);
+  std::vector<Tring> d(n + 1, Tring(0));
+  Tring const two(2);
+  DeepLLL_IntegralGSO_Row(gram, lambda, d, 0);
+  for (int k = 1; k < n; k++) {
+    // Row k is recomputed here because the reduction of the earlier rows
+    // changed the columns it reads.
+    DeepLLL_IntegralGSO_Row(gram, lambda, d, k);
+    for (int j = k - 1; j >= 0; j--) {
+      Tring abs_lam = T_abs(lambda(k, j));
+      if (two * abs_lam <= d[j + 1]) {
+        continue;
+      }
+      Tring quo_num = d[j + 1] - two * lambda(k, j);
+      Tring quo_den = two * d[j + 1];
+      Tring q = -QuoInt(quo_num, quo_den);
+      if (q == 0) {
+        continue;
+      }
+      RowSubMul(gram, k, q, j);
+      ColSubMul(gram, k, q, j);
+      Tint q_int = UniversalScalarConversion<Tint, Tring>(q);
+      RowSubMul(H, k, q_int, j);
+      for (int l = 0; l < j; l++) {
+        lambda(k, l) -= q * lambda(j, l);
+      }
+      lambda(k, j) -= q * d[j + 1];
+    }
+  }
+}
+
+/*
   Is the position i admissible as an insertion target for index k?
 
   With depth <= 0 every position is, which is deep insertion as Schnorr and

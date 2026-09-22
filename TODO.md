@@ -280,6 +280,27 @@ Where to go next:
    indices and not on coordinate values, which the measurements confirm (1.00
    ratio between the two bases).
 
+## Minkowski reduction (not implemented)
+
+Recorded because the obstacle usually quoted for it does not apply here.
+Minkowski reduction asks that each b_i be a shortest lattice vector among
+those v for which (b_1, ..., b_{i-1}, v) extends to a basis of L, which for v
+written in the current basis is the condition gcd(c_i, ..., c_n) = 1. That is
+a finite computation IN ANY DIMENSION, and the existing shortest-vector
+enumerator performs it: enumerate in increasing norm and take the first
+candidate whose tail coefficients are coprime.
+
+What is known only up to dimension 7 (Tammela) is the explicit finite system
+of inequalities cutting out the Minkowski fundamental domain in the cone of
+positive definite forms. That is a statement about the domain, not about
+reducing a given form, and it does not restrict the computation above.
+
+Worth having because Minkowski reduction is the natural notion for the
+perfect-form, Ctype and T-space work, where the dimensions are small and
+exactness matters more than speed. The cost is a full-lattice enumeration per
+index rather than a projected-block one, so it is much more expensive than BKZ
+or slide reduction and belongs where the dimension is small.
+
 ## LLL seeding of the shortest-vector enumerator (NOT attempted)
 
 `CVPSolver` (`src_latt/Shvec_exact.h:973`) seeds the Fincke-Pohst enumeration

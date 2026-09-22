@@ -119,6 +119,10 @@ Programs:
   * **TEST_ReductionBenchmark** `[dim] [n_iter] [seed]`, comparing the
     available reducers over the families Zn, An, Dn, E8 and a low-symmetry
     random family, at three strengths of destruction.
+  * **TEST_SlideReduction** `[dim] [n_iter] [seed]`, validating the slide
+    reduction of `SlideReduction.h`. It rebuilds every block from the output
+    and re-tests both families of conditions, the dual half -- which goes
+    through the reversed dual and back -- being the part worth testing hardest.
   * **TEST_BKZ** `[dim] [n_iter] [seed]`, validating the BKZ reduction of
     `BKZ.h`. Its decisive check is that every `b_j^*` really is a shortest
     vector of its block, the projected blocks being rebuilt from the output and
@@ -205,3 +209,52 @@ and raise `beta` only on evidence.
 Entry points: **BKZreducedBasis** (`delta = 99/100`, no tour cap),
 **BKZreducedBasisDelta** (explicit `delta` and tour cap, for an early abort),
 and **IsBKZreduced**.
+
+
+Slide reduction
+---------------
+
+`SlideReduction.h` implements the Gama-Nguyen slide reduction. BKZ enforces one
+family of conditions on overlapping blocks and pays for it with a number of
+tours that has no known polynomial bound. Slide reduction enforces **two**
+families on blocks that do **not** overlap, and buys back the polynomial bound.
+With `n = p k`, and indices 0-based:
+
+* **primal**, for `i = 0..p-1`: the projected block on `[ik, ik+k-1]` is
+  HKZ-reduced, which for a block of rank `k` is BKZ at block size `k`;
+* **dual**, for `i = 0..p-2`: the projected block on `[ik+1, (i+1)k]` -- the
+  same tiling shifted right by one -- has its **last** Gram-Schmidt norm
+  `|b*_{(i+1)k}|` as large as possible.
+
+The primal blocks tile the basis; the dual blocks are the same tiling shifted
+by one, so each straddles exactly one primal boundary. That is the whole
+design. A primal step rearranges vectors inside one block and so changes no
+`D_{ik}`. A dual step on `[ik+1, (i+1)k]` raises `|b*_{(i+1)k}|` at fixed block
+determinant, so it lowers the earlier norms in that block and strictly
+decreases `D_{(i+1)k}`, touching no other boundary. Hence
+
+```
+Pi = prod_{i=1}^{p-1} D_{ik}
+```
+
+is a positive integer untouched by primal steps and strictly decreased by every
+dual step: **the number of dual steps is polynomially bounded**, as in the LLL
+analysis, where for BKZ no bound on the number of tours is known. The quality
+bound is also slightly better than BKZ's at the same block size, the exponent
+being `(n-k)/(2(k-1))` against `(n-1)/(2(k-1))`.
+
+Two implementation points. The reduction interleaved after each step is a
+**size** reduction (`IntegralSizeReduce` in `DeepLLL.h`) and not a full LLL:
+size reduction changes no Gram-Schmidt norm, so it cannot disturb a block
+condition just established, whereas LLL is free to swap across a boundary and
+undo the work. And the dual step goes through the **reversed dual**: if the
+block has Gram matrix `G` and `J` is the reversal, the reversed dual basis has
+Gram matrix `J G^-1 J`, its first Gram-Schmidt norm is the reciprocal of the
+block's last, and a transformation `U` of the reversed dual corresponds to
+`J U^-T J` of the block. So maximising the last norm is finding a shortest
+vector of `J adj(G) J` and putting it first -- the same enumeration the primal
+step uses, and integral since the adjugate clears the denominators.
+
+Entry points: **SlideReducedBasis** (explicit `k`, which must divide `n`),
+**SlideReducedBasisAuto** (largest admissible `k` not exceeding a bound, via
+**SlideBlockSize**), **SlideReducedBasisDelta**, and **IsSlideReduced**.

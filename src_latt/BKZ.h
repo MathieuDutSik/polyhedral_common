@@ -119,6 +119,87 @@ void BKZ_BareissStep(MyMatrix<Tring> &work, int const &j, Tring &prev) {
   that it lands at position j; the rest of the block is whatever completes it,
   the following LLL pass being what tidies that up.
  */
+/*
+  The scaled projected block Gram matrix of the indices j, ..., j+m-1, that is
+  d_j times the Gram matrix of pi_j(b_j), ..., pi_j(b_{j+m-1}). Obtained by
+  running the fraction-free elimination for j steps and reading the trailing
+  block; see the head of this file. A caller sweeping j upwards should instead
+  keep one working matrix and call BKZ_BareissStep, which is what the descent
+  does; this form is for a caller that needs one block in isolation.
+ */
+template <typename Tring>
+MyMatrix<Tring> BKZ_ProjectedBlockGram(MyMatrix<Tring> const &gram,
+                                       int const &j, int const &m) {
+  MyMatrix<Tring> work = gram;
+  Tring prev(1);
+  for (int i = 0; i < j; i++) {
+    BKZ_BareissStep(work, i, prev);
+  }
+  MyMatrix<Tring> blk(m, m);
+  for (int a = 0; a < m; a++) {
+    for (int b = 0; b < m; b++) {
+      blk(a, b) = work(j + a, j + b);
+    }
+  }
+  return blk;
+}
+
+/*
+  A unimodular matrix whose first row is the primitive vector z.
+  ComplementToBasis returns c_1, ..., c_{m-1} with (c_1, ..., c_{m-1}, z) a
+  basis; putting z first only changes the determinant by a sign.
+ */
+template <typename Tint>
+MyMatrix<Tint> BKZ_UnimodularWithFirstRow(MyVector<Tint> const &z) {
+  int m = z.size();
+#ifdef SANITY_CHECK_BKZ
+  if (!IsVectorPrimitive(z)) {
+    std::cerr << "BKZ: BKZ_UnimodularWithFirstRow needs a primitive vector\n";
+    throw TerminalException{1};
+  }
+#endif
+  MyMatrix<Tint> compl_mat = ComplementToBasis(z);
+  MyMatrix<Tint> U(m, m);
+  for (int c = 0; c < m; c++) {
+    U(0, c) = z(c);
+  }
+  for (int r = 0; r + 1 < m; r++) {
+    for (int c = 0; c < m; c++) {
+      U(r + 1, c) = compl_mat(r, c);
+    }
+  }
+#ifdef SANITY_CHECK_BKZ
+  Tint det_U = DeterminantMat(U);
+  if (det_U != 1 && det_U != -1) {
+    std::cerr << "BKZ: BKZ_UnimodularWithFirstRow produced a non-unimodular "
+                 "matrix, det="
+              << det_U << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  return U;
+}
+
+/*
+  Apply an m x m unimodular transformation to the block starting at j, on the
+  Gram matrix and on the accumulated transformation together.
+ */
+template <typename Tring, typename Tint>
+void BKZ_ApplyBlockTransformation(MyMatrix<Tring> &gram, MyMatrix<Tint> &H,
+                                  MyMatrix<Tint> const &U_blk, int const &j) {
+  int n = gram.rows();
+  int m = U_blk.rows();
+  MyMatrix<Tint> U = IdentityMat<Tint>(n);
+  for (int a = 0; a < m; a++) {
+    for (int b = 0; b < m; b++) {
+      U(j + a, j + b) = U_blk(a, b);
+    }
+  }
+  MyMatrix<Tring> U_r = UniversalMatrixConversion<Tring, Tint>(U);
+  gram = U_r * gram * U_r.transpose();
+  H = U * H;
+}
+
 template <typename Tint>
 MyMatrix<Tint> BKZ_InsertionMatrix(MyVector<Tint> const &z, int const &n,
                                    int const &j, int const &k) {
@@ -135,14 +216,11 @@ MyMatrix<Tint> BKZ_InsertionMatrix(MyVector<Tint> const &z, int const &n,
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<Tint> compl_mat = ComplementToBasis(z);
+  MyMatrix<Tint> U_blk = BKZ_UnimodularWithFirstRow(z);
   MyMatrix<Tint> U = IdentityMat<Tint>(n);
-  for (int c = 0; c < m; c++) {
-    U(j, j + c) = z(c);
-  }
-  for (int r = 0; r < m - 1; r++) {
-    for (int c = 0; c < m; c++) {
-      U(j + 1 + r, j + c) = compl_mat(r, c);
+  for (int a = 0; a < m; a++) {
+    for (int b = 0; b < m; b++) {
+      U(j + a, j + b) = U_blk(a, b);
     }
   }
 #ifdef SANITY_CHECK_BKZ
