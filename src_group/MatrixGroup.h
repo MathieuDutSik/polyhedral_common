@@ -1595,34 +1595,74 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   return ListMatrRet;
 }
 
+/*
+  The width of the residue type of a modular layer. The largest value a scalar
+  product of reduced entries can reach is (TheMod - 1)^2 * nbRow, and the type
+  has to hold it.
+
+  Both that value and the bounds it is compared against are built by
+  arithmetic in T rather than by converting a wide C++ integer, because
+  neither shortcut is available on every T:
+
+  --- (TheMod - 1) * (TheMod - 1) is not a T on the types that carry a lazy
+      product proxy (QuadProd for QuadField, RealRingProd for RealField). The
+      proxy has no operator against the Eigen index that rows() returns, so
+      the square is materialized into a named T first.
+  --- T(static_cast<long>(...)) picks the narrowing int constructor on those
+      same types, since long to int is a standard conversion and long to the
+      base type is a user defined one. The uint32 bound does not fit in an
+      int, so it would have been silently truncated. 2^32 is built here as
+      65536 * 65536 instead, which is exact for every T.
+ */
+enum class ModLayerWidth { u8, u16, u32, u64 };
+
+template <typename T>
+ModLayerWidth GetModLayerWidth(T const &TheMod, int nbRow) {
+  T mod_m1 = TheMod - 1;
+  T sq = mod_m1 * mod_m1;
+  T n_row(nbRow);
+  T max_size = sq * n_row;
+  T two16(65536);
+  T two32 = two16 * two16;
+  T two64 = two32 * two32;
+  if (max_size < T(std::numeric_limits<uint8_t>::max())) {
+    return ModLayerWidth::u8;
+  }
+  if (max_size < T(std::numeric_limits<uint16_t>::max())) {
+    return ModLayerWidth::u16;
+  }
+  if (max_size < two32 - T(1)) {
+    return ModLayerWidth::u32;
+  }
+  if (max_size < two64) {
+    return ModLayerWidth::u64;
+  }
+  std::cerr << "MATGRP: Failed to find a matching arithmetic type. Quite "
+               "unlikely objectively\n";
+  throw TerminalException{1};
+}
+
 template <typename T, typename Tgroup, typename Thelper, typename Fstab>
 std::vector<MyMatrix<T>>
 LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const &ListMatr,
                           Thelper const &helper, MyMatrix<T> const &TheSpace,
                           T const &TheMod, ModLayer<T> const &layer,
                           Fstab f_stab, std::ostream &os) {
-  T max_size = (TheMod - 1) * (TheMod - 1) * TheSpace.rows();
-  if (max_size < T(std::numeric_limits<uint8_t>::max())) {
+  ModLayerWidth width = GetModLayerWidth(TheMod, TheSpace.rows());
+  if (width == ModLayerWidth::u8) {
     return LinearSpace_ModStabilizer_Tmod<T, uint8_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
   }
-  if (max_size < T(std::numeric_limits<uint16_t>::max())) {
+  if (width == ModLayerWidth::u16) {
     return LinearSpace_ModStabilizer_Tmod<T, uint16_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
   }
-  if (max_size < T(static_cast<long>(std::numeric_limits<uint32_t>::max()))) {
+  if (width == ModLayerWidth::u32) {
     return LinearSpace_ModStabilizer_Tmod<T, uint32_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
   }
-  T const u32max = T(static_cast<long>(std::numeric_limits<uint32_t>::max()));
-  T lim_u64 = (u32max + T(1)) * (u32max + T(1));
-  if (max_size < lim_u64) {
-    return LinearSpace_ModStabilizer_Tmod<T, uint64_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
-  }
-  std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
-               "objectively\n";
-  throw TerminalException{1};
+  return LinearSpace_ModStabilizer_Tmod<T, uint64_t, Tgroup, Thelper>(
+      ListMatr, helper, TheSpace, TheMod, layer, f_stab, os);
 }
 
 template <typename T, typename Tgroup, typename Thelper, typename Fstab>
@@ -2855,32 +2895,25 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(
     bool const &NeedStabilizer, MyMatrix<T> const &TheSpace1,
     MyMatrix<T> const &TheSpace2, T const &TheMod, ModLayer<T> const &layer,
     std::ostream &os) {
-  T max_size = (TheMod - 1) * (TheMod - 1) * TheSpace1.rows();
-  if (max_size < T(std::numeric_limits<uint8_t>::max())) {
+  ModLayerWidth width = GetModLayerWidth(TheMod, TheSpace1.rows());
+  if (width == ModLayerWidth::u8) {
     return LinearSpace_ModEquivalence_Tmod<T, uint8_t, Tgroup, Thelper>(
         ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
         os);
   }
-  if (max_size < T(std::numeric_limits<uint16_t>::max())) {
+  if (width == ModLayerWidth::u16) {
     return LinearSpace_ModEquivalence_Tmod<T, uint16_t, Tgroup, Thelper>(
         ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
         os);
   }
-  if (max_size < T(static_cast<long>(std::numeric_limits<uint32_t>::max()))) {
+  if (width == ModLayerWidth::u32) {
     return LinearSpace_ModEquivalence_Tmod<T, uint32_t, Tgroup, Thelper>(
         ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
         os);
   }
-  T const u32max = T(static_cast<long>(std::numeric_limits<uint32_t>::max()));
-  T lim_u64 = (u32max + T(1)) * (u32max + T(1));
-  if (max_size < lim_u64) {
-    return LinearSpace_ModEquivalence_Tmod<T, uint64_t, Tgroup, Thelper>(
-        ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
-        os);
-  }
-  std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
-               "objectively\n";
-  throw TerminalException{1};
+  return LinearSpace_ModEquivalence_Tmod<T, uint64_t, Tgroup, Thelper>(
+      ListMatr, helper, NeedStabilizer, TheSpace1, TheSpace2, TheMod, layer,
+      os);
 }
 
 template <typename T, typename Tgroup, typename Thelper>
@@ -3259,28 +3292,21 @@ LinearSpace_ModCanonicalize(std::vector<MyMatrix<T>> const &ListMatr,
                             Thelper const &helper, MyMatrix<T> const &TheSpace,
                             T const &TheMod, ModLayer<T> const &layer,
                             std::ostream &os) {
-  T max_size = (TheMod - 1) * (TheMod - 1) * TheSpace.rows();
-  if (max_size < T(std::numeric_limits<uint8_t>::max())) {
+  ModLayerWidth width = GetModLayerWidth(TheMod, TheSpace.rows());
+  if (width == ModLayerWidth::u8) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint8_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, os);
   }
-  if (max_size < T(std::numeric_limits<uint16_t>::max())) {
+  if (width == ModLayerWidth::u16) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint16_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, os);
   }
-  if (max_size < T(static_cast<long>(std::numeric_limits<uint32_t>::max()))) {
+  if (width == ModLayerWidth::u32) {
     return LinearSpace_ModCanonicalize_Tmod<T, uint32_t, Tgroup, Thelper>(
         ListMatr, helper, TheSpace, TheMod, layer, os);
   }
-  T const u32max = T(static_cast<long>(std::numeric_limits<uint32_t>::max()));
-  T lim_u64 = (u32max + T(1)) * (u32max + T(1));
-  if (max_size < lim_u64) {
-    return LinearSpace_ModCanonicalize_Tmod<T, uint64_t, Tgroup, Thelper>(
-        ListMatr, helper, TheSpace, TheMod, layer, os);
-  }
-  std::cerr << "Failed to find a matching arithmetic type. Quite unlikely "
-               "objectively\n";
-  throw TerminalException{1};
+  return LinearSpace_ModCanonicalize_Tmod<T, uint64_t, Tgroup, Thelper>(
+      ListMatr, helper, TheSpace, TheMod, layer, os);
 }
 
 /*
