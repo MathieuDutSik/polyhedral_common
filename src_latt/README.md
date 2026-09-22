@@ -186,15 +186,21 @@ relative to LLL, with total time over the 30 cases:
 | method | potential vs LLL | time | failures |
 |---|---|---|---|
 | LLL | 1.00x | 60 ms | 3/30 |
-| deep insertion | 1.92x | 1008 ms | 1/30 |
-| BKZ-4 | 1.43x | 146 ms | 2/30 |
-| BKZ-8 | **2.06x** | 340 ms | 2/30 |
-| BKZ-12 | 2.01x | 658 ms | 1/30 |
+| deep insertion | 1.92x | 108 ms | 1/30 |
+| BKZ-4 | 1.43x | 147 ms | 2/30 |
+| BKZ-8 | **2.06x** | 337 ms | 2/30 |
+| BKZ-12 | 2.01x | 657 ms | 1/30 |
 
-So BKZ-8 beats deep insertion on quality at a third of its cost, and BKZ-12
-buys nothing over BKZ-8 at twice the price: on these instances the dial has
-already saturated by `beta = 8`. At dimension 8 every block size gives the same
-answer as deep insertion, the root lattices being recovered by LLL already.
+BKZ-12 buys nothing over BKZ-8 at twice the price: on these instances the dial
+has already saturated by `beta = 8`. At dimension 8 every block size gives the
+same answer as deep insertion, the root lattices being recovered by LLL
+already.
+
+Note that deep insertion is the better cost-quality point here, at 1.92x for
+108 ms against BKZ-8's 2.06x for 337 ms. That is a recent inversion: before the
+incremental Gram-Schmidt update deep insertion took 1008 ms and BKZ dominated
+it outright. Use BKZ-8 when the extra quality is worth three times the time,
+and raise `beta` only on evidence.
 
 Entry points: **BKZreducedBasis** (`delta = 99/100`, no tour cap),
 **BKZreducedBasisDelta** (explicit `delta` and tour cap, for an early abort),
