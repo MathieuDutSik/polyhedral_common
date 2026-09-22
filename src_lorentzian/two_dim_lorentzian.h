@@ -35,15 +35,33 @@
 
 template <typename T, typename Tint>
 T eval_quad(const MyMatrix<T> &G, const MyVector<Tint> &v) {
-  return v(0) * v(0) * G(0, 0) + 2 * G(0, 1) * v(0) * v(1) +
-         v(1) * v(1) * G(1, 1);
+  // The squares and the cross term are formed in Tint and converted before
+  // meeting the T entries of G: the arithmetics whose operator* returns a
+  // deferred product have no mixed Tint-product-times-T overload, and the
+  // proxy is named as a Tint first so the conversion sees a concrete type.
+  Tint p00 = v(0) * v(0);
+  Tint p01 = v(0) * v(1);
+  Tint p11 = v(1) * v(1);
+  T v00 = UniversalScalarConversion<T, Tint>(p00);
+  T v01 = UniversalScalarConversion<T, Tint>(p01);
+  T v11 = UniversalScalarConversion<T, Tint>(p11);
+  return v00 * G(0, 0) + 2 * G(0, 1) * v01 + v11 * G(1, 1);
 }
 
 template <typename T, typename Tint>
 T eval_scal(const MyMatrix<T> &G, const MyVector<Tint> &v1,
             const MyVector<Tint> &v2) {
-  return v1(0) * v2(0) * G(0, 0) + G(0, 1) * (v1(0) * v2(1) + v1(1) * v2(0)) +
-         v1(1) * v2(1) * G(1, 1);
+  // Same reason as eval_quad: the Tint products are named before crossing
+  // into T.
+  Tint p00 = v1(0) * v2(0);
+  Tint p01 = v1(0) * v2(1);
+  Tint p10 = v1(1) * v2(0);
+  Tint p11 = v1(1) * v2(1);
+  T q00 = UniversalScalarConversion<T, Tint>(p00);
+  T q11 = UniversalScalarConversion<T, Tint>(p11);
+  Tint p_cross = p01 + p10;
+  T q_cross = UniversalScalarConversion<T, Tint>(p_cross);
+  return q00 * G(0, 0) + G(0, 1) * q_cross + q11 * G(1, 1);
 }
 
 template <typename Tint>

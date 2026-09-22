@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "lorentzian_perfect_mpi.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -35,10 +38,22 @@ void process_A(boost::mpi::communicator &comm, FullNamelist const &eFull) {
     using Tint = boost::multiprecision::cpp_int;
     return process_C<T, Tint>(comm, eFull);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return process_C<T, Tint>(comm, eFull);
+  }
+#endif
   std::cerr << "LORENTZ_MPI_PerfectLorentzian: Failed to find a matching "
                "type for arithmetic="
             << arithmetic << "\n";
-  std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+  std::cerr << "Available types: gmp, gmp_boost, multi_boost, flint\n";
+#else
+  std::cerr << "Available types: gmp, gmp_boost, multi_boost (build "
+            << "with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
   throw TerminalException{1};
 }
 

@@ -247,7 +247,8 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
   Tint eVal(1);
   while (true) {
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
-    T scal_expe1 = eVal * TheRec.gcd;
+    Tint scal_expe1_int = eVal * TheRec.gcd;
+    T scal_expe1 = UniversalScalarConversion<T, Tint>(scal_expe1_int);
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 1 eVal=" << eVal
        << " scal_expe=" << scal_expe1 << " MaxScal=" << MaxScal
        << " iter_findpos=" << iter_findpos << "\n";
@@ -279,7 +280,11 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 7 eSol="
        << StringVector(eSol) << "\n";
 #endif
-    T eSquareDist = eVal * eVal * eSquareDist_basic;
+    // eVal is a Tint: squaring it in Tint keeps the fused multiply of the
+    // arithmetics that have one, and only the result crosses into T.
+    Tint eVal_sqr = eVal * eVal;
+    T eSquareDist =
+        UniversalScalarConversion<T, Tint>(eVal_sqr) * eSquareDist_basic;
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 8 eSquareDist="
        << eSquareDist << " det(GramMat)=" << DeterminantMat(GramMat) << "\n";
@@ -302,7 +307,8 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
       MyVector<T> eSolC_T = UniversalVectorConversion<T, Tint>(eSolC);
       MyVector<T> eSolA_T = UniversalVectorConversion<T, Tint>(eSolA);
       T scal = eSolC_T.dot(eVect_LorMat);
-      T scal_expe2 = eVal * TheRec.gcd;
+      Tint scal_expe2_int = eVal * TheRec.gcd;
+      T scal_expe2 = UniversalScalarConversion<T, Tint>(scal_expe2_int);
       if (scal != scal_expe2) {
         std::cerr << "LORPERF: scal=" << scal << " scal_expe2=" << scal_expe2
                   << "\n";
@@ -362,7 +368,8 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
     }
     eVal += 1;
     if (MaxScal > 0) {
-      T scal = eVal * TheRec.gcd;
+      Tint scal_int = eVal * TheRec.gcd;
+      T scal = UniversalScalarConversion<T, Tint>(scal_int);
       if (scal > MaxScal) {
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
         os << "LORPERF: LORENTZ_FindPositiveVectors: doing a break scal="

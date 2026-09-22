@@ -2113,7 +2113,11 @@ ComputeCoxeterMatrix(MyMatrix<T> const &G,
         return {T(2), scal12};
       T scal11 = get_scal(i, i);
       T scal22 = get_scal(j, j);
-      T quot = (scal12 * scal12) / (scal11 * scal22);
+      // Named rather than divided in place: the arithmetics whose operator*
+      // returns a deferred product cannot divide one product by another.
+      T num = scal12 * scal12;
+      T den = scal11 * scal22;
+      T quot = num / den;
       if (quot == cossqr_val3)
         return {T(3), scal12};
       if (quot == cossqr_val4)

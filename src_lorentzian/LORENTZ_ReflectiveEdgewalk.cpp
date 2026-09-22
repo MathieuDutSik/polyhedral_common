@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
         return process<T, Tint>(MatFile, OutFormat, os_out);
       }
       std::cerr << "Failed to find matching entry for arith=" << arith << "\n";
+      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost\n";
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
