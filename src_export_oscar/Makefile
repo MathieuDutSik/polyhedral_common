@@ -20,6 +20,17 @@ CTOTAL          = -std=c++20 $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(BOOST_LINK) $(NAUTY_LINK)
 
+# Optional flint arithmetic: build with `make ENABLE_FLINT_SUPPORT=1`.
+# FLINT_INCDIR / FLINT_LINK can be set in the environment; the defaults
+# assume flint is installed next to gmp. The sources here are symlinks into
+# the other directories, so they already carry their flint branches.
+ifeq ($(ENABLE_FLINT_SUPPORT),1)
+FLINT_INCDIR	?= $(GMP_INCDIR)
+FLINT_LINK	?= -lflint
+CTOTAL		+= -DENABLE_FLINT_SUPPORT -I$(FLINT_INCDIR)
+LIBS		+= $(FLINT_LINK)
+endif
+
 %.o: %.cpp
 	@echo
 	@echo compile $<
