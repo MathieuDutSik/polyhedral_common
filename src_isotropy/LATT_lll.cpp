@@ -4,6 +4,9 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "ClassicLLL.h"
 // clang-format on
 
@@ -42,8 +45,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "LATT_lll arithmetic [FileI]\n";
       std::cerr << "\n";
+#ifdef ENABLE_FLINT_SUPPORT
       std::cerr << "arithmetic : The arithmetic, e.g. gmp, gmp_boost, "
-                   "multi_boost\n";
+                   "multi_boost, flint\n";
+#else
+      std::cerr << "arithmetic : The arithmetic, e.g. gmp, gmp_boost, "
+                   "multi_boost (build with ENABLE_FLINT_SUPPORT=1 "
+                   "for flint)\n";
+#endif
       std::cerr << "FileI      : The Gram matrix on input\n";
       std::cerr << "OutFormat  : Possible values:\n";
       std::cerr << "             GAP   : the reduced Gram matrix and the "
@@ -83,8 +92,20 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(FileI, OutFormat, os);
       }
-      std::cerr << "Failed to find a matching type for arith. Possibilities: "
-                   "gmp, safe, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T, Tint>(FileI, OutFormat, os);
+      }
+#endif
+      std::cerr << "Failed to find a matching type for arith\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Possibilities: gmp, gmp_boost, multi_boost, flint\n";
+#else
+      std::cerr << "Possibilities: gmp, gmp_boost, multi_boost "
+                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileO, f);

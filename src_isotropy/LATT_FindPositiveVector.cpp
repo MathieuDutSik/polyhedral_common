@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryGmp.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "NumberTheoryCommon.h"
 #include "Positivity.h"
 // clang-format on
@@ -53,7 +56,13 @@ int main(int argc, char *argv[]) {
       std::cerr
           << "LATT_FindPositiveVector [arith] [FileI] [CritNorm] [StrictIneq]\n";
       std::cerr << "\n";
-      std::cerr << "Possibilities for arith: gmp, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Possibilities for arith: gmp, gmp_boost, multi_boost, "
+                << "flint\n";
+#else
+      std::cerr << "Possibilities for arith: gmp, gmp_boost, multi_boost "
+                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -86,7 +95,21 @@ int main(int argc, char *argv[]) {
         return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
                                 os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
+                                os);
+      }
+#endif
       std::cerr << "Failed to find matching type for arith\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Possibilities: gmp, gmp_boost, multi_boost, flint\n";
+#else
+      std::cerr << "Possibilities: gmp, gmp_boost, multi_boost "
+                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileO, f);

@@ -4,6 +4,9 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "DeterminantMinimization.h"
 // clang-format on
 
@@ -53,6 +56,12 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return process<T>(FileI, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        return process<T>(FileI, OutFormat, os);
+      }
+#endif
       /*
       */
 
@@ -70,8 +79,13 @@ int main(int argc, char *argv[]) {
       }
       */
 
-      std::cerr << "Failed to find matching type for arith. Possibilities: "
-                   "rational\n";
+      std::cerr << "Failed to find matching type for arith.\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Possibilities: rational, flint\n";
+#else
+      std::cerr << "Possibilities: rational (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileO, f);
