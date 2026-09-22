@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "rational.h"
 #include "Group.h"
 #include "Permutation.h"
@@ -78,6 +81,14 @@ void compute_approx_automorphism(std::string const &arithmetic,
     return compute_approx_automorphism_kernel<T, Tint>(eFile, strTol, OutFormat,
                                                        OutFile);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return compute_approx_automorphism_kernel<T, Tint>(eFile, strTol, OutFormat,
+                                                       OutFile);
+  }
+#endif
   std::cerr << "Failed to find a matching arithmetic=" << arithmetic << "\n";
   throw TerminalException{1};
 }

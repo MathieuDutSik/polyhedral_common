@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "rational.h"
 #include "Enumeration_k_space.h"
 // clang-format on
@@ -39,6 +42,13 @@ void compute_k_min(std::string const &arithmetic, int const &k,
     using Tint = boost::multiprecision::cpp_int;
     return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
+  }
+#endif
   if (arithmetic == "double") {
     using T = double;
     using Tint = int64_t;
