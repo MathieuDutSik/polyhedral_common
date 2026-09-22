@@ -4,6 +4,9 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "CombinedAlgorithms.h"
 #include "Group.h"
 #include "Permutation.h"
@@ -14,7 +17,10 @@ void process(std::string const &MatFile, std::string const &OutFormat,
              std::ostream &os_out) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
-  using TintGroup = Tint;
+  // The group order is counted in TintGroup, which is unrelated to the
+  // arithmetic of the coordinates: fixing it to mpz_class keeps the
+  // permutation group out of whichever arithmetic Tint happens to be.
+  using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
@@ -80,7 +86,23 @@ int main(int argc, char *argv[]) {
         return process<T, Tint>(MatFile, OutFormat, os);
       }
 #endif
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T, Tint>(MatFile, OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find matching type for arith\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: gmp, flint (and, with "
+                << "ENABLE_ALL_NUMERICAL_TYPES, gmp_boost and "
+                << "multi_boost)\n";
+#else
+      std::cerr << "Allowed values: gmp (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for flint; with "
+                << "ENABLE_ALL_NUMERICAL_TYPES for the boost ones)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
