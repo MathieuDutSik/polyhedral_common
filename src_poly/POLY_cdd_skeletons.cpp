@@ -5,6 +5,9 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "GRAPH_GraphicalFunctions.h"
 #include "POLY_DualDesc_double_description.h"
 // clang-format on
@@ -144,6 +147,12 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(FileEXT, OutFormat, os_out, std::cerr);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return process<T>(FileEXT, OutFormat, os_out, std::cerr);
+      }
+#endif
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return process<T>(FileEXT, OutFormat, os_out, std::cerr);

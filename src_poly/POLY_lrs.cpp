@@ -5,6 +5,9 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "POLY_DualDesc_reverse_search.h"
 // clang-format on
 
@@ -229,6 +232,12 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_int;
         return process<T>(eFileI, choice, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpz_class") {
+        using T = fmpz_class;
+        return process<T>(eFileI, choice, os);
+      }
+#endif
       if (arith == "mpq_class") {
         using T = mpq_class;
         return process<T>(eFileI, choice, os);
@@ -241,6 +250,12 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(eFileI, choice, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return process<T>(eFileI, choice, os);
+      }
+#endif
       if (arith == "double") {
         using T = double;
         return process<T>(eFileI, choice, os);

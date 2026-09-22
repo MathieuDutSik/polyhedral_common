@@ -3,6 +3,9 @@
 #include "NumberTheory.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Laminations.h"
 // clang-format on
 
@@ -93,6 +96,12 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(opt, FileM, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return process<T>(opt, FileM, OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
       throw TerminalException{1};

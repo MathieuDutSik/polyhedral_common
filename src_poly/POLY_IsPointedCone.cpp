@@ -5,6 +5,9 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "POLY_LinearProgramming.h"
 // clang-format on
 
@@ -60,6 +63,12 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(eFileI, os_out, std::cerr);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return process<T>(eFileI, os_out, std::cerr);
+      }
+#endif
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;

@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "POLY_PolytopeInt.h"
 // clang-format on
 
@@ -85,7 +88,21 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<T,Tint>(FileFac, method, OutFormat, OutFile);
       }
-      std::cerr << "Failed to find a matching arithmetic for arith=" << arith << "\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T,Tint>(FileFac, method, OutFormat, OutFile);
+      }
+#endif
+      std::cerr << "Failed to find a matching arithmetic for arith="
+                << arith << "\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost, flint\n";
+#else
+      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost "
+                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     f();

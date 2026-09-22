@@ -5,6 +5,9 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "GRP_GroupFct.h"
 #include "GRP_GroupFile.h"
 #include "Group.h"
@@ -152,6 +155,13 @@ int main(int argc, char *argv[]) {
         return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
                                   std::cerr);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
+                                  std::cerr);
+      }
+#endif
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;

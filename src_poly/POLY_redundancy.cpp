@@ -5,6 +5,9 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "POLY_DualDesc_reverse_search.h"
 #include "POLY_RedundancyElimination.h"
 // clang-format on
@@ -72,6 +75,12 @@ void process_B(std::string const &eFileI, std::string const &eFileO,
     using T = boost::multiprecision::cpp_rational;
     return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arith == "fmpq_class") {
+    using T = fmpq_class;
+    return process_A<T>(eFileI, eFileO, method, OutFormat, os);
+  }
+#endif
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
