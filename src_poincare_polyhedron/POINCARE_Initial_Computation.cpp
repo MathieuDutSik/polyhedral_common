@@ -3,6 +3,9 @@
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "poincare_polyhedron.h"
 #include "Group.h"
 #include "Permutation.h"
@@ -15,6 +18,12 @@ void Process_rec_option(RecOption const &rec_option, std::ostream &os) {
     using T = mpq_class;
     return full_process_type<T, Tgroup>(rec_option, os);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arith == "flint") {
+    using T = fmpq_class;
+    return full_process_type<T, Tgroup>(rec_option, os);
+  }
+#endif
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
