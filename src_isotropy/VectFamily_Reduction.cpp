@@ -5,6 +5,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "ClassicLLL.h"
+#include "VectFamilyReduction.h"
 #include "norms.h"
 // clang-format on
 
@@ -21,8 +22,35 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << " ------- method --------\n";
       std::cerr << "Possible values for method\n";
-      std::cerr << "direct : apply the direct LLL method\n";
-      std::cerr << "dual   : apply the dual LLL method\n";
+      std::cerr << "direct      : the direct LLL method\n";
+      std::cerr << "dual        : the dual LLL method, through the "
+                   "adjugate\n";
+      std::cerr << "seysen      : Seysen reduction, minimising\n";
+      std::cerr << "              sum_i |b_i|^2 |dual b_i|^2. This treats "
+                   "all\n";
+      std::cerr << "              the coordinates symmetrically and is the "
+                   "one\n";
+      std::cerr << "              to try first here: the consumer of the "
+                   "output\n";
+      std::cerr << "              pays for every coefficient, not for the "
+                   "shortest\n";
+      std::cerr << "              vector, which is what LLL optimises\n";
+      std::cerr << "seysen_best : Seysen with the best move of each sweep, "
+                   "slower\n";
+      std::cerr << "seysen_lll  : Seysen and LLL alternated\n";
+      std::cerr << "deep        : Schnorr-Euchner deep insertion, "
+                   "unrestricted\n";
+      std::cerr << "deep5       : deep insertion at depth 5\n";
+      std::cerr << "deep10      : deep insertion at depth 10\n";
+      std::cerr << "best        : run all of the above and keep whichever "
+                   "minimises\n";
+      std::cerr << "              the facet coefficient estimate, the input "
+                   "being\n";
+      std::cerr << "              among the candidates so the result is "
+                   "never\n";
+      std::cerr << "              worse than it. Recommended unless the cost "
+                   "of\n";
+      std::cerr << "              the reduction itself matters\n";
       std::cerr << "\n";
       std::cerr << " ------- OutFormat --------\n";
       std::cerr << "Possible values for OutFormat\n";
@@ -63,19 +91,20 @@ int main(int argc, char *argv[]) {
     };
     std::cerr << "Original complexity measures\n";
     matrix_measure(M);
-    std::pair<MyMatrix<T>, MyMatrix<T>> pair =
-        ReduceVectorFamily(M, method, std::cerr);
+    VectFamilyReductionResult<T> res =
+        ReduceVectorFamilyGeneral(M, method, std::cerr);
     std::cerr << "Output complexity measures\n";
-    matrix_measure(pair.first);
+    matrix_measure(res.Mred);
+    std::cerr << "method_used=" << res.method << "\n";
     auto print_mat = [&](std::ostream &os_out) -> void {
       if (OutFormat == "GAP") {
         os_out << "return ";
-        WriteMatrixGAP(os_out, pair.first);
+        WriteMatrixGAP(os_out, res.Mred);
         os_out << ";\n";
         return;
       }
       if (OutFormat == "CPP") {
-        return WriteMatrix(os_out, pair.first);
+        return WriteMatrix(os_out, res.Mred);
       }
       std::cerr << "No matching format in print_mat. Allowed options: GAP, "
                 << "CPP\n";

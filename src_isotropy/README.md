@@ -136,3 +136,46 @@ Reference:
   * Claus-Peter Schnorr, M. Euchner, Lattice basis reduction: improved
     practical algorithms and solving subset sum problems, Mathematical
     Programming 66 (1994) 181--199.
+
+Reduction of a vector family
+----------------------------
+
+`VectFamilyReduction.h`, and the program **VectFamily_Reduction**, reduce a
+family of vectors: a change of coordinates in the ambient space making the
+coefficients of the family small. This is what is applied to an `EXT` matrix
+before a dual description, and it is a different problem from reducing a
+lattice basis.
+
+The difference decides which reducer to use. What the consumer of the output
+pays for is the size of every coefficient, and for the dual description the
+relevant quantity is `sqr_estimate_facet_coefficients` of `norms.h`, the
+Hadamard bound on the facet coefficients that will be produced. That depends
+on all the vectors symmetrically, so a reduction aiming at one short vector,
+which is what LLL does, is optimising the wrong thing here. Seysen's measure
+is a much closer match, and deep insertion sometimes wins instead. Which of
+them wins is not predictable from the input:
+
+| instance | size | `direct` | best single | winner |
+|---|---|---|---|---|
+| ContactE8 | 240 x 9 | 1.46e8 | 1.00e8 | seysen |
+| Perfect E7 | 63 x 28 | 2.43e24 | 1.41e24 | deep |
+| ER35 | 35 x 8 | 6.0e4 | 6.0e4, lower L1 | seysen_lll |
+| CUT_7 | 64 x 22 | 9.07e22 | 9.07e22 | direct |
+| 24cell | 24 x 5 | 81 | 81 | all tie |
+
+So the useful method is **`best`**: run all the candidates and keep whichever
+actually minimises the estimate, with the unreduced input among the candidates
+so that the result is never worse than what was handed in. It costs three to
+eighteen times a single reduction, which is tens to hundreds of milliseconds
+on the instances above and negligible against the dual description that
+follows.
+
+Note that `dual` is consistently the worst of them on this measure, by one to
+five orders of magnitude, which is worth knowing since it is one of the two
+methods the program originally offered.
+
+The underlying dispatch is `ReduceVectorFamilyGeneral`, returning the reduced
+family, the change of coordinates, the method that won and its measured
+quality. `ReduceVectorFamilyKernel` of `ClassicLLL.h` takes the Gram-matrix
+reducer as a functor, so a new reducer is added by naming it in
+`ReduceVectorFamilySingle` and nowhere else.

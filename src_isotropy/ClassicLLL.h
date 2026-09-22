@@ -332,37 +332,72 @@ LLLbasis<T, Tint> LLLbasisReductionGeneral(MyMatrix<T> const &Latt,
   return {LattRed, pair.Pmat};
 }
 
+/*
+  The Gram matrix of the COLUMNS of a family of vectors, that is M^T M. The
+  reduction of a vector family is a change of coordinates in the ambient
+  space, so it is this Gram matrix and not M M^T that is reduced.
+ */
+template <typename T> MyMatrix<T> GetVectFamilyGram(MyMatrix<T> const &M) {
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  MyMatrix<T> TheGram = ZeroMatrix<T>(nbCol, nbCol);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    for (int iCol = 0; iCol < nbCol; iCol++) {
+      for (int jCol = 0; jCol < nbCol; jCol++) {
+        TheGram(iCol, jCol) += M(iRow, iCol) * M(iRow, jCol);
+      }
+    }
+  }
+  return TheGram;
+}
+
+/*
+  The reduction of a vector family, given any reduction of its column Gram
+  matrix. f_reduce takes that Gram matrix and an output stream and returns an
+  LLLreduction; taking it as an argument rather than a method name keeps this
+  function free of any dependency on the reducers themselves, so that a header
+  including this one can supply its own without a circular include.
+ */
+template <typename T, typename Freduce>
+std::pair<MyMatrix<T>, MyMatrix<T>>
+ReduceVectorFamilyKernel(MyMatrix<T> const &M, Freduce f_reduce,
+                         [[maybe_unused]] std::ostream &os) {
+  using Tint = typename underlying_ring<T>::ring_type;
+  MyMatrix<T> TheGram = GetVectFamilyGram(M);
+  LLLreduction<T, Tint> res = f_reduce(TheGram, os);
+  MyMatrix<Tint> Pmat = TransposedMat(res.Pmat);
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
+  MyMatrix<T> Mred = M * Pmat_T;
+#ifdef SANITY_CHECK_CLASSIC_LLL
+  if (GetVectFamilyGram(Mred) != res.GramMatRed) {
+    std::cerr << "LLL: Matrix error somewhere\n";
+    throw TerminalException{1};
+  }
+  // The change of coordinates must be invertible over the integers, or the
+  // output describes a different object from the input and every consumer of
+  // it is silently wrong. The reducers guarantee it individually; it is
+  // checked here because this is where their result is transposed and applied.
+  T det_P = DeterminantMat(Pmat_T);
+  if (det_P != 1 && det_P != -1) {
+    std::cerr << "LLL: the change of coordinates of the vector family is not "
+                 "unimodular, det="
+              << det_P << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  return {std::move(Mred), std::move(Pmat_T)};
+}
+
 template <typename T>
 std::pair<MyMatrix<T>, MyMatrix<T>>
 ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method,
                    std::ostream &os) {
   using Tint = typename underlying_ring<T>::ring_type;
-  int nbRow = M.rows();
-  int nbCol = M.cols();
-  auto GetGram = [&](MyMatrix<T> const &VectFamily) {
-    MyMatrix<T> TheGram = ZeroMatrix<T>(nbCol, nbCol);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      for (int iCol = 0; iCol < nbCol; iCol++) {
-        for (int jCol = 0; jCol < nbCol; jCol++) {
-          TheGram(iCol, jCol) +=
-              VectFamily(iRow, iCol) * VectFamily(iRow, jCol);
-        }
-      }
-    }
-    return TheGram;
+  auto f_reduce = [&](MyMatrix<T> const &G,
+                      std::ostream &os_i) -> LLLreduction<T, Tint> {
+    return LLLreducedGeneral<T, Tint>(G, method, os_i);
   };
-  MyMatrix<T> TheGram = GetGram(M);
-  LLLreduction<T, Tint> res = LLLreducedGeneral<T, Tint>(TheGram, method, os);
-  MyMatrix<Tint> Pmat = TransposedMat(res.Pmat);
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> Mred = M * Pmat_T;
-#ifdef SANITY_CHECK_CLASSIC_LLL
-  if (GetGram(Mred) != res.GramMatRed) {
-    std::cerr << "LLL: Matrix error somewhere\n";
-    throw TerminalException{1};
-  }
-#endif
-  return {std::move(Mred), std::move(Pmat_T)};
+  return ReduceVectorFamilyKernel(M, f_reduce, os);
 }
 
 /*
