@@ -428,12 +428,19 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M,
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
     os << "ILLL: eval: i=" << i << " j=" << j << " c=" << c << "\n";
 #endif
+    // The coefficient is a Tint while Mwork lives in T. Converting it once
+    // keeps every product below inside T: the arithmetics whose operator*
+    // returns a deferred product (flint) have no mixed Tint-times-T overload,
+    // and the square needs a named T as well since a product of two deferred
+    // products is not itself multipliable.
+    T c_T = UniversalScalarConversion<T, Tint>(c);
+    T c_sqr = c_T * c_T;
     //
     T delta_off(0);
     for (int k = 0; k < n; k++) {
       if (k != i) {
         T val1 = T_abs(Mwork(i, k));
-        T val2 = T_abs(T(Mwork(i, k) + c * Mwork(j, k)));
+        T val2 = T_abs(T(Mwork(i, k) + c_T * Mwork(j, k)));
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
         os << "ILLL: eval, off: k=" << k << " val1=" << val1 << " val2=" << val2
            << "\n";
@@ -442,7 +449,8 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M,
       }
     }
     T val1 = T_abs(Mwork(i, i));
-    T val2 = T_abs(T(Mwork(i, i) + 2 * c * Mwork(j, i) + c * c * Mwork(j, j)));
+    T val2 =
+        T_abs(T(Mwork(i, i) + 2 * c_T * Mwork(j, i) + c_sqr * Mwork(j, j)));
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
     os << "ILLL: eval, diag, val1=" << val1 << " val2=" << val2 << "\n";
 #endif

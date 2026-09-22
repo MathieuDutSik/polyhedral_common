@@ -4,6 +4,9 @@
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
 #include "NumberTheorySafeInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "LatticePleskenSouvignier.h"
 #include "Positivity.h"
 // clang-format on
@@ -102,6 +105,10 @@ int main(int argc, char *argv[]) {
                 << "[GramFile2] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "arith: gmp for T=mpq, Tint=mpz\n";
+      std::cerr << "       safe for the overflow-checked machine integers\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "       flint for T=fmpq, Tint=fmpz\n";
+#endif
       std::cerr << "aut: the automorphism group generators and order\n";
       std::cerr << "iso: an isometry P with P * M1 * P^T = M2, or fail\n";
       std::cerr << "OutFormat: GAP (default) or CPP\n";
@@ -141,7 +148,23 @@ int main(int argc, char *argv[]) {
         }
         return process_isometry<T, Tint>(FileGram1, FileGram2, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        if (mode == "aut") {
+          return process_automorphism<T, Tint>(FileGram1, OutFormat, os);
+        }
+        return process_isometry<T, Tint>(FileGram1, FileGram2, OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find a matching entry for arith\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: gmp, safe, flint\n";
+#else
+      std::cerr << "Allowed values: gmp, safe (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, f);

@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Tspace_ListMatSaturation.h"
 // clang-format on
 
@@ -55,7 +58,20 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return IntegralSaturation<T>(FileI, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return IntegralSaturation<T>(FileI, OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find a matching entry for arith\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: mpq_class, mpq_rational, cpp_rational, "
+                << "fmpq_class\n";
+#else
+      std::cerr << "Allowed values: mpq_class, mpq_rational, cpp_rational "
+                << "(build with ENABLE_FLINT_SUPPORT=1 for fmpq_class)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, f);

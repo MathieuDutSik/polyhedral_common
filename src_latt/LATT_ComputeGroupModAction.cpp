@@ -4,6 +4,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "Zp_action.h"
@@ -59,7 +62,19 @@ void process(std::string const &arith,
     using T = boost::multiprecision::cpp_int;
     return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arith == "fmpz_class") {
+    using T = fmpz_class;
+    return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
+  }
+#endif
   std::cerr << "Failed to find a matching entry for arith\n";
+#ifdef ENABLE_FLINT_SUPPORT
+  std::cerr << "Allowed values: mpz_class, mpz_int, cpp_int, fmpz_class\n";
+#else
+  std::cerr << "Allowed values: mpz_class, mpz_int, cpp_int (build with "
+            << "ENABLE_FLINT_SUPPORT=1 for fmpz_class)\n";
+#endif
   throw TerminalException{1};
 }
 
@@ -75,7 +90,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_ComputeGroupModAction [arith] [list_matrix_file] [mod_val]\n";
       std::cerr << "\n";
       std::cerr << "    where\n";
-      std::cerr << "arith: mpz_class, mpz_int, cpp_int\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "arith: mpz_class, mpz_int, cpp_int, fmpz_class\n";
+#else
+      std::cerr << "arith: mpz_class, mpz_int, cpp_int (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for fmpz_class)\n";
+#endif
       std::cerr << "list_matrix_file: The input matrix file\n";
       std::cerr << "mod_val: The modulo considered\n";
       std::cerr << "OutFormat: GAP or simple (optional, default: simple)\n";

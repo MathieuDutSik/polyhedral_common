@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "InvariantVectorFamily.h"
 #include "LatticePleskenSouvignier.h"
 // clang-format on
@@ -221,7 +224,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "       or\n";
       std::cerr << "LATT_GenerateCharacteristicVectorSet [arith] choice [MatFile]\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "[arith]: gmp, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "[arith]: gmp, gmp_boost, multi_boost, flint\n";
+#else
+      std::cerr << "[arith]: gmp, gmp_boost, multi_boost (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       std::cerr << "choice: shortest, iterated_shortest, iterated_shortest_half, span_iterated_shortest, relevant_voronoi, "
                    "filtered_relevant_voronoi, fullrank, fullrank_half, "
                    "spanning, spanning_half, wr_cv, cv, cv_fullrank, canonic, "
@@ -255,7 +263,20 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<T,Tint>(choice, MatFile, OutFormat, OutFile);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T,Tint>(choice, MatFile, OutFormat, OutFile);
+      }
+#endif
       std::cerr << "process_A failure: No matching entry for arith\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost, flint\n";
+#else
+      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     f();

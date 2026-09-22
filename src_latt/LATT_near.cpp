@@ -10,6 +10,9 @@
 #else
 # include "NumberTheory.h"
 #endif
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
 #include "Shvec_exact.h"
@@ -103,11 +106,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "rational  : rational arithmetic on input\n";
-      std::cerr << "Qsqrt2    : arithmetic over the field Q(sqrt(2))\n";
-      std::cerr << "Qsqrt5    : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a";
-      std::cerr << "  field whose description is in FileDesc\n";
+      std::cerr << "gmp         : T=mpq_class, Tint=mpz_class\n";
+      std::cerr << "gmp_boost   : the boost bindings over gmp\n";
+      std::cerr << "multi_boost : the boost multiprecision integers\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "flint       : T=fmpq_class, Tint=fmpz_class\n";
+#endif
       std::cerr << "\n";
       std::cerr << "        --- choice ---\n";
       std::cerr << "\n";
@@ -147,10 +151,22 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(choice, FileGram, FileVect, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T, Tint>(choice, FileGram, FileVect, OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
-      std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
-                   "RealAlgebraic\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Available possibilities: gmp, gmp_boost, multi_boost, "
+                << "flint\n";
+#else
+      std::cerr << "Available possibilities: gmp, gmp_boost, multi_boost "
+                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileOut, call_SV);

@@ -2,6 +2,9 @@
 // clang-format off
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "EquiStabMemoization.h"
@@ -187,7 +190,20 @@ int main(int argc, char *argv[]) {
         using Tint = mpz_class;
         return process<T, Tint>(ListMatFile, OutFormat, os_out);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T, Tint>(ListMatFile, OutFormat, os_out);
+      }
+#endif
       std::cerr << "Failed to find matching type for arith\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: rational, flint\n";
+#else
+      std::cerr << "Allowed values: rational (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileOut, f);
