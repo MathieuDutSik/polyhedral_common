@@ -119,12 +119,15 @@ bool SlideDualStep(MyMatrix<Tring> &gram, MyMatrix<Tint> &H, int const &j,
 #endif
   // The reversed dual Gram matrix, scaled by det(blk), which changes no
   // shortest vector.
-  MyMatrix<Tring> rdual(m, m);
+  MyMatrix<Tring> rdual_raw(m, m);
   for (int a = 0; a < m; a++) {
     for (int b = 0; b < m; b++) {
-      rdual(a, b) = pair.first(m - 1 - a, m - 1 - b);
+      rdual_raw(a, b) = pair.first(m - 1 - a, m - 1 - b);
     }
   }
+  // Again the content is divided out; the adjugate has raised whatever scale
+  // the block carried to the power m - 1.
+  MyMatrix<Tring> rdual = RemoveFractionMatrix(rdual_raw);
   MyMatrix<T> rdual_T = UniversalMatrixConversion<T, Tring>(rdual);
   Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(rdual_T, os);
   Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);
@@ -230,6 +233,32 @@ LLLreduction<T, Tint> SlideReducedBasisDelta(MyMatrix<T> const &GramMat,
         break;
       }
     }
+#ifdef DEBUG_SLIDE
+    {
+      // diagnostic: the potential must strictly decrease on every dual step
+      MyMatrix<Tring> w = gram;
+      Tring pv(1);
+      Tring pot(1);
+      size_t nbits = 0;
+      for (int i2 = 0; i2 + 1 < n; i2++) {
+        if (i2 > 0 && i2 % k == 0) {
+          pot *= w(i2, i2);
+        }
+        BKZ_BareissStep(w, i2, pv);
+      }
+      for (int a = 0; a < n; a++) {
+        for (int b = 0; b < n; b++) {
+          Tring v = T_abs(gram(a, b));
+          size_t nb = 0;
+          Tring two_r(2);
+          while (v > 0) { v = QuoInt(v, two_r); nb++; }
+          if (nb > nbits) nbits = nb;
+        }
+      }
+      os << "SLIDE: iter primal=" << n_primal << " dual=" << n_dual
+         << " max_gram_bits=" << nbits << "\n";
+    }
+#endif
     if (!did_dual) {
       break;
     }
@@ -306,12 +335,13 @@ bool IsSlideReduced(MyMatrix<T> const &GramMat, int const &k,
   for (int i = 0; i + 1 < p; i++) {
     MyMatrix<Tring> blk = BKZ_ProjectedBlockGram(gram, i * k + 1, k);
     std::pair<MyMatrix<Tring>, Tring> pair = AdjugateDeterminant(blk);
-    MyMatrix<Tring> rdual(k, k);
+    MyMatrix<Tring> rdual_raw(k, k);
     for (int a = 0; a < k; a++) {
       for (int b = 0; b < k; b++) {
-        rdual(a, b) = pair.first(k - 1 - a, k - 1 - b);
+        rdual_raw(a, b) = pair.first(k - 1 - a, k - 1 - b);
       }
     }
+    MyMatrix<Tring> rdual = RemoveFractionMatrix(rdual_raw);
     MyMatrix<T> rdual_T = UniversalMatrixConversion<T, Tring>(rdual);
     Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(rdual_T, os);
     Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);

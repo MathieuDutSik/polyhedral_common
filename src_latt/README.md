@@ -258,3 +258,41 @@ step uses, and integral since the adjugate clears the denominators.
 Entry points: **SlideReducedBasis** (explicit `k`, which must divide `n`),
 **SlideReducedBasisAuto** (largest admissible `k` not exceeding a bound, via
 **SlideBlockSize**), **SlideReducedBasisDelta**, and **IsSlideReduced**.
+
+### Divide out the block content
+
+A trap worth recording, because it cost a factor of more than ten thousand
+before it was found. The projected block carries the factor `d_j`, the leading
+minor of order `j`, which grows like a minor of the whole Gram matrix. Every
+use of the block is invariant under a positive rescaling, so the factor looks
+harmless. It is not: the dual step takes the adjugate of the block, raising the
+factor to the power `k-1`, and the enumerator reduces internally through the
+dual, raising it again. A `d_j` of twenty digits becomes entries of hundreds of
+digits and the enumeration crawls. On one dimension-20 instance slide reduction
+at `k = 5` had not finished after 300 seconds; dividing the content out of the
+block brought it to 28 ms, with the Gram matrix entries themselves never
+exceeding four bits throughout.
+
+`BKZ_ProjectedBlockGram` therefore divides the content out, and BKZ's own loop
+does the same, carrying the removed factor into the comparison so that the two
+sides stay on one scale.
+
+### Measured, dimension 20, 30 cases
+
+| method | potential vs LLL | geo defect^2 | time | failures |
+|---|---|---|---|---|
+| LLL | 1.00x | 6650 | 60 ms | 3/30 |
+| deep insertion | 1.92x | 6284 | 106 ms | 1/30 |
+| BKZ-4 | 1.43x | 6227 | 146 ms | 2/30 |
+| BKZ-8 | 2.06x | 6365 | 337 ms | 2/30 |
+| BKZ-12 | 2.01x | 6320 | 655 ms | 1/30 |
+| slide, k=4 | 1.69x | 6384 | 172 ms | 2/30 |
+| slide, k=5 | 1.81x | 6320 | 212 ms | 1/30 |
+| Seysen+LLL | 1.02x | **6170** | 192 ms | 1/30 |
+
+Slide reduction at `k = 5` sits between BKZ-4 and BKZ-8 on the potential and
+below both on time per unit of quality, and matches BKZ-12's failure count at a
+third of its cost. Its real argument is not in this table, though: it is the
+polynomial bound on the number of dual steps, which BKZ has no analogue of and
+which is what one wants when the dimension grows past where a table like this
+can be produced.

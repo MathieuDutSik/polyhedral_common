@@ -141,7 +141,15 @@ MyMatrix<Tring> BKZ_ProjectedBlockGram(MyMatrix<Tring> const &gram,
       blk(a, b) = work(j + a, j + b);
     }
   }
-  return blk;
+  // The content is divided out. The block carries the factor d_j, which grows
+  // like a minor of the whole Gram matrix, and every use of the block -- a
+  // shortest vector, a comparison of two of its own entries -- is invariant
+  // under a positive rescaling. Leaving the factor in is not merely wasteful:
+  // a caller that takes the adjugate of the block raises it to the power
+  // m - 1, and an enumerator that internally reduces through the dual raises
+  // it again, so a d_j of twenty digits becomes entries of hundreds of digits
+  // and the enumeration slows by orders of magnitude.
+  return RemoveFractionMatrix(blk);
 }
 
 /*
@@ -303,18 +311,35 @@ LLLreduction<T, Tint> BKZreducedBasisDelta(MyMatrix<T> const &GramMat,
         k = n - 1;
       }
       int m = k - j + 1;
-      // The scaled projected block Gram matrix, read off the trailing block.
-      MyMatrix<T> Gblock(m, m);
+      // The projected block Gram matrix, read off the trailing block, with its
+      // content divided out. Stripping the content matters: the block carries
+      // the factor d_j, the enumerator reduces internally through the dual and
+      // so takes an adjugate, and the factor is raised to the power m - 1 on
+      // the way. Left in, it turns twenty-digit entries into entries of
+      // hundreds of digits and the enumeration crawls. The factor removed is
+      // recovered as content and carried in the comparison below.
+      MyMatrix<Tring> Gblock_r(m, m);
       for (int a = 0; a < m; a++) {
         for (int b = 0; b < m; b++) {
-          Gblock(a, b) = UniversalScalarConversion<T, Tring>(work(j + a, j + b));
+          Gblock_r(a, b) = work(j + a, j + b);
         }
       }
+      MyMatrix<Tring> Gblock_red = RemoveFractionMatrix(Gblock_r);
+      Tring content = Gblock_r(0, 0) / Gblock_red(0, 0);
+#ifdef SANITY_CHECK_BKZ
+      if (content * Gblock_red(0, 0) != Gblock_r(0, 0) || content <= 0) {
+        std::cerr << "BKZ: the block content " << content
+                  << " does not divide the block evenly\n";
+        throw TerminalException{1};
+      }
+#endif
+      MyMatrix<T> Gblock = UniversalMatrixConversion<T, Tring>(Gblock_red);
       Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(Gblock, os);
       Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);
-      // The same scaling d_j applies to the enumerated norm and to
-      // work(j,j) = d_j |b_j^*|^2, so it cancels from the comparison.
-      if (den * min_r < num * work(j, j)) {
+      // work(j,j) = d_j |b_j^*|^2 and the enumerated norm is content times
+      // d_j |v|^2, so multiplying the latter back by the content puts the two
+      // on the same scale.
+      if (den * min_r * content < num * work(j, j)) {
         MyVector<Tint> z = GetMatrixRow(shv.SHV, 0);
         MyMatrix<Tint> U = BKZ_InsertionMatrix(z, n, j, k);
         MyMatrix<Tring> U_r = UniversalMatrixConversion<Tring, Tint>(U);
@@ -403,15 +428,18 @@ bool IsBKZreduced(MyMatrix<T> const &GramMat, int const &beta,
       k = n - 1;
     }
     int m = k - j + 1;
-    MyMatrix<T> Gblock(m, m);
+    MyMatrix<Tring> Gblock_r(m, m);
     for (int a = 0; a < m; a++) {
       for (int b = 0; b < m; b++) {
-        Gblock(a, b) = UniversalScalarConversion<T, Tring>(work(j + a, j + b));
+        Gblock_r(a, b) = work(j + a, j + b);
       }
     }
+    MyMatrix<Tring> Gblock_red = RemoveFractionMatrix(Gblock_r);
+    Tring content = Gblock_r(0, 0) / Gblock_red(0, 0);
+    MyMatrix<T> Gblock = UniversalMatrixConversion<T, Tring>(Gblock_red);
     Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(Gblock, os);
     Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);
-    if (den * min_r < num * work(j, j)) {
+    if (den * min_r * content < num * work(j, j)) {
       os << "BKZ: the block condition fails at j=" << j << ", the block has a "
          << "vector of scaled norm " << min_r << " against " << work(j, j)
          << " for b_j^*\n";
