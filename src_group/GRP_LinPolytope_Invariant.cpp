@@ -2,6 +2,9 @@
 // clang-format off
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "PolytopeEquiStab.h"
 // clang-format on
 
@@ -69,7 +72,20 @@ int main(int argc, char *argv[]) {
         using Tfield = T;
         return process<T, Tfield>(FileExt, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tfield = T;
+        return process<T, Tfield>(FileExt, OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find a matching arith\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: rational, mpq_rational, flint\n";
+#else
+      std::cerr << "Allowed values: rational, mpq_rational (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileOut, f);

@@ -9,6 +9,9 @@
 #endif
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Permutation.h"
 #include "PolytopeEquiStab.h"
 // clang-format on
@@ -49,6 +52,12 @@ void full_process_B(std::string const &arith, std::string const &eFileEXT,
     using T = Trat;
     return full_process_A<T, Tgroup>(eFileEXT, eFileGram, OutFormat, os);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arith == "flint") {
+    using T = fmpq_class;
+    return full_process_A<T, Tgroup>(eFileEXT, eFileGram, OutFormat, os);
+  }
+#endif
   if (arith == "Qsqrt5") {
     using T = QuadField<Trat, 5>;
     return full_process_A<T, Tgroup>(eFileEXT, eFileGram, OutFormat, os);
@@ -73,6 +82,14 @@ void full_process_B(std::string const &arith, std::string const &eFileEXT,
     return full_process_A<T, Tgroup>(eFileEXT, eFileGram, OutFormat, os);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
+#ifdef ENABLE_FLINT_SUPPORT
+  std::cerr << "Allowed values: rational, Qsqrt5, Qsqrt2, "
+            << "RealAlgebraic=file, flint\n";
+#else
+  std::cerr << "Allowed values: rational, Qsqrt5, Qsqrt2, "
+            << "RealAlgebraic=file (build with "
+            << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
   throw TerminalException{1};
 }
 

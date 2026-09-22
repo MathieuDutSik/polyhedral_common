@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "PolytopeEquiStab.h"
 // clang-format on
 
@@ -70,7 +73,21 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(FileExt, OutFormat, OutFile);
       }
-      std::cerr << "GRP_LinPolytope_Canonic: No matching entry for arith=" << arith << "\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return process<T>(FileExt, OutFormat, OutFile);
+      }
+#endif
+      std::cerr << "GRP_LinPolytope_Canonic: No matching entry for arith="
+                << arith << "\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: mpq_class, mpq_rational, cpp_rational, "
+                << "fmpq_class\n";
+#else
+      std::cerr << "Allowed values: mpq_class, mpq_rational, cpp_rational "
+                << "(build with ENABLE_FLINT_SUPPORT=1 for fmpq_class)\n";
+#endif
       throw TerminalException{1};
     };
     f_work();

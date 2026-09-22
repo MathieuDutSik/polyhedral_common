@@ -2,6 +2,9 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryQuadField.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "GRP_GroupFct.h"
 #include "PolytopeEquiStab.h"
 // clang-format on
@@ -87,12 +90,26 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return process<T>(FileExt1, FileExt2, OutFormat, FileO);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        return process<T>(FileExt1, FileExt2, OutFormat, FileO);
+      }
+#endif
       if (arith == "Qsqrt3") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 3>;
         return process<T>(FileExt1, FileExt2, OutFormat, FileO);
       }
       std::cerr << "Failed to find a matching arithmetic\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: rational, Qsqrt3, Qsqrt5, Qsqrt2, "
+                << "RealAlgebraic=file, flint\n";
+#else
+      std::cerr << "Allowed values: rational, Qsqrt3, Qsqrt5, Qsqrt2, "
+                << "RealAlgebraic=file (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     f();

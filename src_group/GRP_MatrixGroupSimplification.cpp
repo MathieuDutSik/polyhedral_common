@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "MatrixGroupSimplification.h"
 // clang-format on
 
@@ -86,8 +89,25 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_int;
         return process<T>(FileMatrGroup, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+      if (arith == "fmpz_class") {
+        using T = fmpz_class;
+        return process<T>(FileMatrGroup, OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find a matching arith. Allowed is mpq_class / "
-                   "mpz_class / mpq_rational / cpp_rational / mpz_int / cpp_int\n";
+                   "mpz_class / mpq_rational / cpp_rational / mpz_int / "
+                   "cpp_int\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "                  or fmpq_class / fmpz_class\n";
+#else
+      std::cerr << "                  (build with ENABLE_FLINT_SUPPORT=1 "
+                   "for fmpq_class / fmpz_class)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileOut, f);

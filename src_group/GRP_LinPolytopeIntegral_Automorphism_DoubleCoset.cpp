@@ -1,6 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "GRP_GroupFct.h"
 #include "GRP_GroupFile.h"
 #include "Group.h"
@@ -14,7 +17,11 @@ void process_A(std::string const &FileExt, std::string const &FileGrpV,
                std::string const &OutFormat, std::ostream &os_out) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
-  using Tgroup = permutalib::Group<Telt, Tint>;
+  // The group order is counted in TintGroup, which is unrelated to the
+  // arithmetic of the coordinates: fixing it to mpz_class keeps the
+  // permutation group out of whichever arithmetic Tint happens to be.
+  using TintGroup = mpz_class;
+  using Tgroup = permutalib::Group<Telt, TintGroup>;
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(FileExt);
   MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield, Tint>(EXT);
@@ -111,8 +118,21 @@ int main(int argc, char *argv[]) {
         using Tint = mpz_class;
         return process_A<Tint>(FileExt, FileGrpV, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpz_class") {
+        using Tint = fmpz_class;
+        return process_A<Tint>(FileExt, FileGrpV, OutFormat, os);
+      }
+#endif
       std::cerr << "Failed to find a matching type for arith\n";
-      std::cerr << "arith=" << arith << " allowed = mpz_class\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "arith=" << arith
+                << " allowed = mpz_class, fmpz_class\n";
+#else
+      std::cerr << "arith=" << arith
+                << " allowed = mpz_class (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for fmpz_class)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileOut, process_B);
