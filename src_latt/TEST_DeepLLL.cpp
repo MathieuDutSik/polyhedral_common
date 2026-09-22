@@ -40,7 +40,7 @@ void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
   std::vector<int> l_nops{10, 40, 160};
   std::vector<std::pair<std::string, int>> l_method{
       {"full", 0}, {"depth5", 5}, {"depth10", 10}};
-  T const delta = T(99) / T(100);
+  int const delta_num = 99, delta_den = 100;
   int n_case = 0, n_error = 0;
   int n_shorter = 0, n_longer = 0;
   for (auto &name : l_name) {
@@ -79,7 +79,8 @@ void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
           //
           // The output really is deep reduced at the depth it was asked for.
           //
-          if (!IsDeepLLLreduced(res.GramMatRed, method.second, delta, os)) {
+          if (!IsDeepLLLreduced(res.GramMatRed, method.second, delta_num,
+                                delta_den, os)) {
             std::cerr << "DEEPLLL TEST: " << tag
                       << ": the output is not deep reduced\n";
             n_error++;
@@ -89,7 +90,7 @@ void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
           // the case i = k-1 of the deep one. Checked at depth 0, which is
           // what "LLL reduced" means here.
           //
-          if (!IsDeepLLLreduced(res.GramMatRed, 1, delta, os)) {
+          if (!IsDeepLLLreduced(res.GramMatRed, 1, delta_num, delta_den, os)) {
             std::cerr << "DEEPLLL TEST: " << tag
                       << ": the output fails the Lovasz condition, which the "
                          "deep condition contains\n";

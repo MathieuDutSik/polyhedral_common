@@ -5,6 +5,7 @@
 #include "ClassicLLL.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
+#include "QuoIntFcts.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,14 +28,13 @@
 #endif
 
 /*
-  Schnorr-Euchner deep insertion.
+  Schnorr-Euchner deep insertion, fraction free.
 
   LLL keeps a basis size reduced and enforces one inequality per index, the
-  Lovasz condition relating b_k to its immediate predecessor. When the
-  condition fails the two are swapped. The whole of the discovery is thus
-  carried out one adjacent transposition at a time, and a vector that
-  geometrically belongs near the front of the basis has to travel there by a
-  sequence of them.
+  Lovasz condition relating b_k to its immediate predecessor; when it fails the
+  two are swapped. The whole of the discovery is thus carried out one adjacent
+  transposition at a time, and a vector that geometrically belongs near the
+  front of the basis has to travel there by a sequence of them.
 
   Deep insertion replaces the adjacent swap by a move of unbounded length.
   Write pi_i for the orthogonal projection onto the complement of
@@ -44,17 +44,8 @@
       delta |b_i^*|^2 <= |pi_i(b_k)|^2   for every i < k,
 
   of which the Lovasz condition is the single case i = k-1. When it fails at
-  some i, b_k is removed from its position and inserted at position i, the
-  vectors b_i, ..., b_{k-1} shifting up by one:
-
-      (b_1, ..., b_{i-1}, b_k, b_i, ..., b_{k-1}, b_{k+1}, ...).
-
-  The test costs nothing extra. Running i upwards from 1 and maintaining
-
-      c_1 = |b_k|^2,   c_{i+1} = c_i - mu_{i,k}^2 |b_i^*|^2,
-
-  gives c_i = |pi_i(b_k)|^2 at each step, so the whole scan is O(n) on data
-  the size reduction has already produced.
+  some i, b_k is removed and inserted at position i, the vectors b_i, ...,
+  b_{k-1} shifting up by one.
 
   TERMINATION IS A DIFFERENT ARGUMENT FROM LLL'S, and the difference is worth
   stating because it is easy to assume otherwise. Let D_j be the leading
@@ -65,52 +56,95 @@
       untouched;
     * leaves D_k, ..., D_n unchanged, the first k vectors being permuted among
       themselves and so spanning the same sublattice;
-    * strictly decreases D_i, since the new i-th Gram-Schmidt norm is
-      c_i < delta |b_i^*|^2, so D_i' < delta D_i;
+    * strictly decreases D_i, the new i-th Gram-Schmidt norm being
+      |pi_i(b_k)|^2 < delta |b_i^*|^2;
     * says nothing whatever about D_j for i < j < k, which may increase.
 
-  For an adjacent swap, i = k-1, the third and fourth points leave no gap and
-  the product prod_j D_j strictly decreases: that is the classical LLL
-  potential argument. For a genuine deep insertion, k - i >= 2, the product
-  may rise, and the potential argument fails. What survives is that the vector
-  (D_1, ..., D_{n-1}) strictly decreases in the lexicographic order. On an
-  integral form these are positive integers, and the lexicographic order on
-  tuples of positive integers is well founded: D_1 is non-increasing so it is
-  eventually constant, after which every insertion has i >= 2 and D_2 is
-  non-increasing, and so on. Hence the algorithm terminates. The bound this
-  argument gives is exponential rather than polynomial, and indeed no
-  polynomial bound on the number of deep insertions is known; this is the
-  price of the larger move, and it is why the depth of the insertion is
-  usually restricted in practice.
+  For an adjacent swap, i = k-1, the fourth point is vacuous and the product
+  prod_j D_j strictly decreases: that is the classical LLL potential argument.
+  For a genuine deep insertion, k - i >= 2, the product may rise and the
+  argument fails. What survives is that (D_1, ..., D_{n-1}) strictly decreases
+  in the LEXICOGRAPHIC order, which over the positive integers is well founded:
+  D_1 is non-increasing so eventually constant, after which every insertion has
+  i >= 2 and D_2 is non-increasing, and so on. Hence termination. The bound is
+  exponential rather than polynomial, and indeed no polynomial bound on the
+  number of deep insertions is known; this is the price of the larger move and
+  the reason the depth is usually restricted.
+
+  THE ARITHMETIC IS INTEGRAL THROUGHOUT. The obvious implementation keeps the
+  mu_{j,k} as rationals, and then pays for it: the numerators and denominators
+  grow with the minors of the Gram matrix, and the data has to be recomputed
+  after every insertion. Instead we keep de Weger's integral form,
+
+      d_i = D_i  (with d_0 = 1),     lambda_{i,j} = d_j mu_{j,i},
+
+  both integral, from which mu_{j,i} = lambda_{i,j}/d_j and
+  |b_i^*|^2 = d_i/d_{i-1}. Three things then become integer operations.
+
+    * The Gram-Schmidt data itself, by the Bareiss-type recursion of
+      DeepLLL_IntegralGSO below, whose divisions are exact.
+
+    * The projected norms. Setting S_i = d_{i-1} |pi_i(b_k)|^2, one has
+      S_1 = |b_k|^2 and
+
+          S_{i+1} = (S_i d_i - lambda_{k,i}^2) / d_{i-1},
+
+      an exact division. S_i is not an artefact of the algebra: it is the Gram
+      determinant of (b_1, ..., b_{i-1}, b_k), which is why it is a positive
+      integer and why the division comes out even.
+
+    * The deep test. With delta = num/den,
+
+          |pi_i(b_k)|^2 < delta |b_i^*|^2   <=>   den S_i < num d_i,
+
+      the denominators cancelling. So the condition that drives the whole
+      algorithm is a comparison of two integers.
+
+  Size reduction is integral for the same reason: |mu_{j,k}| <= 1/2 reads
+  2|lambda_{k,j}| <= d_j, and the rounded quotient is
+  floor((2 lambda_{k,j} + d_j) / (2 d_j)).
 
   Reference: C. P. Schnorr, M. Euchner, Lattice basis reduction: improved
   practical algorithms and solving subset sum problems, Math. Programming 66
-  (1994) 181--199.
+  (1994) 181--199. The integral Gram-Schmidt is de Weger's, as presented in
+  Cohen, A Course in Computational Algebraic Number Theory, Algorithm 2.6.7.
  */
 
 /*
-  The Gram-Schmidt data of a Gram matrix: B(i) = |b_i^*|^2 and mu(i,j) for
-  j < i. Recomputed from row i_start onwards, the earlier rows being taken as
-  already correct, which is what an insertion at position i_start leaves
-  valid.
+  The integral Gram-Schmidt data of an integral Gram matrix: d(i) for
+  i = 0, ..., n with d(0) = 1 and d(i) the leading principal minor of order i,
+  and lambda(i,j) = d(j+1) mu(j,i) for j < i. Recomputed from row i_start
+  onwards, the earlier rows being taken as already correct, which is what an
+  insertion at position i_start leaves valid.
  */
-template <typename Tfield>
-void DeepLLL_UpdateGSO(MyMatrix<Tfield> const &gram, MyMatrix<Tfield> &mu,
-                       MyVector<Tfield> &B, int const &i_start) {
+template <typename Tring>
+void DeepLLL_IntegralGSO(MyMatrix<Tring> const &gram,
+                         MyMatrix<Tring> &lambda, std::vector<Tring> &d,
+                         int const &i_start) {
   int n = gram.rows();
-  for (int r = i_start; r < n; r++) {
-    for (int j = 0; j < r; j++) {
-      Tfield sum = gram(r, j);
-      for (int l = 0; l < j; l++) {
-        sum -= mu(r, l) * mu(j, l) * B(l);
+  d[0] = Tring(1);
+  for (int i = i_start; i < n; i++) {
+    for (int j = 0; j <= i; j++) {
+      Tring u = gram(i, j);
+      for (int k = 0; k < j; k++) {
+        Tring num = d[k + 1] * u - lambda(i, k) * lambda(j, k);
+        Tring quot = num / d[k];
+#ifdef SANITY_CHECK_DEEP_LLL
+        if (quot * d[k] != num) {
+          std::cerr << "DEEPLLL: non-exact division in the integral "
+                       "Gram-Schmidt, the input is not an integral form over "
+                       "an integral domain\n";
+          throw TerminalException{1};
+        }
+#endif
+        u = quot;
       }
-      mu(r, j) = sum / B(j);
+      if (j < i) {
+        lambda(i, j) = u;
+      } else {
+        d[i + 1] = u;
+      }
     }
-    Tfield sum = gram(r, r);
-    for (int l = 0; l < r; l++) {
-      sum -= mu(r, l) * mu(r, l) * B(l);
-    }
-    B(r) = sum;
   }
 }
 
@@ -119,10 +153,12 @@ void DeepLLL_UpdateGSO(MyMatrix<Tfield> const &gram, MyMatrix<Tfield> &mu,
 
   With depth <= 0 every position is, which is deep insertion as Schnorr and
   Euchner state it. With depth > 0 only the first depth positions and the last
-  depth positions before k are tried. That restriction is what makes the
-  method usable in higher dimension: the unrestricted version has no
-  polynomial bound on its number of insertions, and the positions in the
-  middle are empirically the ones that pay least.
+  depth positions before k are tried. The tail positions include i = k-1, the
+  LLL swap, so the restricted algorithm still produces an LLL reduced basis for
+  every depth >= 1. That restriction is what makes the method usable in higher
+  dimension, the unrestricted version having no polynomial bound on its number
+  of insertions, and the middle positions being the ones that discard the most
+  work when they fire.
  */
 inline bool DeepLLL_AdmissiblePosition(int const &i, int const &k,
                                        int const &depth) {
@@ -133,11 +169,13 @@ inline bool DeepLLL_AdmissiblePosition(int const &i, int const &k,
 }
 
 template <typename T, typename Tint>
-LLLreduction<T, Tint> DeepLLLreducedBasisDepth(MyMatrix<T> const &GramMat,
-                                               int const &depth,
-                                               [[maybe_unused]]
-                                               std::ostream &os) {
-  using Tfield = typename overlying_field<T>::field_type;
+LLLreduction<T, Tint> DeepLLLreducedBasisDepthDelta(MyMatrix<T> const &GramMat,
+                                                    int const &depth,
+                                                    int const &delta_num,
+                                                    int const &delta_den,
+                                                    [[maybe_unused]]
+                                                    std::ostream &os) {
+  using Tring = typename underlying_ring<T>::ring_type;
   int n = GramMat.rows();
 #ifdef SANITY_CHECK_DEEP_LLL
   if (n != GramMat.cols()) {
@@ -146,6 +184,11 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepth(MyMatrix<T> const &GramMat,
   }
   if (!IsSymmetricMatrix(GramMat)) {
     std::cerr << "DEEPLLL: The Gram matrix should be symmetric\n";
+    throw TerminalException{1};
+  }
+  if (delta_num <= 0 || delta_den <= 0 || delta_num >= delta_den) {
+    std::cerr << "DEEPLLL: delta must lie strictly between 0 and 1, got "
+              << delta_num << "/" << delta_den << "\n";
     throw TerminalException{1};
   }
 #endif
@@ -162,41 +205,57 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepth(MyMatrix<T> const &GramMat,
 #ifdef TIMINGS_DEEP_LLL
   MicrosecondTime time;
 #endif
-  // The same delta as the classic reduction of this package, so that the two
-  // are compared on equal terms and the deep condition is a strict
-  // strengthening of the Lovasz one rather than a different trade-off.
-  Tfield const delta = Tfield(99) / Tfield(100);
-  Tfield const half = Tfield(1) / Tfield(2);
-  MyMatrix<Tfield> gram = UniversalMatrixConversion<Tfield, T>(GramMat);
+  // Both conditions of the algorithm are invariant under a positive rescaling
+  // of the form, so the descent may be run on an integral rescaling and the
+  // transformation it finds is the same. That is what puts the whole
+  // computation over the integers.
+  MyMatrix<Tring> gram =
+      UniversalMatrixConversion<Tring, T>(RemoveFractionMatrix(GramMat));
   MyMatrix<Tint> H = IdentityMat<Tint>(n);
-  MyMatrix<Tfield> mu = ZeroMatrix<Tfield>(n, n);
-  MyVector<Tfield> B(n);
-  DeepLLL_UpdateGSO(gram, mu, B, 0);
+  MyMatrix<Tring> lambda = ZeroMatrix<Tring>(n, n);
+  std::vector<Tring> d(n + 1, Tring(0));
+  DeepLLL_IntegralGSO(gram, lambda, d, 0);
+  Tring const two(2);
+  Tring const num(delta_num);
+  Tring const den(delta_den);
   //
-  // b_k <- b_k - q b_j on the Gram matrix. The row operation is applied to
-  // the whole matrix first and the column operation second, reading the
-  // already updated entries: that is exactly U gram U^T for U = I - q E_kj,
-  // the diagonal entry picking up the -2q gram(k,j) + q^2 gram(j,j) it should.
+  // b_k <- b_k - q b_j on the Gram matrix. The row operation is applied to the
+  // whole matrix first and the column operation second, reading the already
+  // updated entries: that is exactly U gram U^T for U = I - q E_kj, the
+  // diagonal entry picking up the -2q gram(k,j) + q^2 gram(j,j) it should.
+  // The minors d are untouched, size reduction not changing the flag.
   //
   auto f_reduce = [&](int const &k, int const &j) -> void {
-    if (mu(k, j) <= half && mu(k, j) >= -half) {
+    Tring abs_lam = T_abs(lambda(k, j));
+    if (two * abs_lam <= d[j + 1]) {
       return;
     }
-    Tint q = UniversalNearestScalarInteger<Tint, Tfield>(mu(k, j));
-    Tfield q_F = UniversalScalarConversion<Tfield, Tint>(q);
-    RowSubMul(gram, k, q_F, j);
-    ColSubMul(gram, k, q_F, j);
-    RowSubMul(H, k, q, j);
-    for (int l = 0; l < j; l++) {
-      mu(k, l) -= q_F * mu(j, l);
+    // The nearest integer to mu = lambda/d, with ties resolved DOWNWARDS so
+    // as to agree with NearestInteger of the package, which the classic
+    // reduction uses: q = ceil(mu - 1/2) = -floor((d - 2 lambda) / (2 d)).
+    // Rounding ties the other way is just as correct -- both leave
+    // |mu| <= 1/2 -- but would give a different, equally reduced, basis, and
+    // the two reductions should not disagree on so small a thing.
+    Tring quo_num = d[j + 1] - two * lambda(k, j);
+    Tring quo_den = two * d[j + 1];
+    Tring q = -QuoInt(quo_num, quo_den);
+    if (q == 0) {
+      return;
     }
-    mu(k, j) -= q_F;
+    RowSubMul(gram, k, q, j);
+    ColSubMul(gram, k, q, j);
+    Tint q_int = UniversalScalarConversion<Tint, Tring>(q);
+    RowSubMul(H, k, q_int, j);
+    for (int l = 0; l < j; l++) {
+      lambda(k, l) -= q * lambda(j, l);
+    }
+    lambda(k, j) -= q * d[j + 1];
   };
   //
   // Moving index k to position i, the entries in between shifting up. Done as
-  // an explicit permutation of the Gram matrix and of the transformation:
-  // an in-place rotation of a symmetric matrix is easy to get subtly wrong,
-  // and this is not the inner loop.
+  // an explicit permutation of the Gram matrix and of the transformation: an
+  // in-place rotation of a symmetric matrix is easy to get subtly wrong, and
+  // this is not the inner loop.
   //
   auto f_insert = [&](int const &k, int const &i) -> void {
     std::vector<int> perm(n);
@@ -210,7 +269,7 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepth(MyMatrix<T> const &GramMat,
     for (int a = k + 1; a < n; a++) {
       perm[a] = a;
     }
-    MyMatrix<Tfield> gram_new(n, n);
+    MyMatrix<Tring> gram_new(n, n);
     MyMatrix<Tint> H_new(n, n);
     for (int a = 0; a < n; a++) {
       for (int b = 0; b < n; b++) {
@@ -231,21 +290,37 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepth(MyMatrix<T> const &GramMat,
     for (int j = k - 1; j >= 0; j--) {
       f_reduce(k, j);
     }
-    DeepLLL_UpdateGSO(gram, mu, B, k);
-    // c runs through |pi_i(b_k)|^2 as i increases, at the cost of one
-    // multiplication per step.
-    Tfield c = gram(k, k);
+    DeepLLL_IntegralGSO(gram, lambda, d, k);
+    // S runs through d(i) |pi_i(b_k)|^2 as i increases: the Gram determinant
+    // of (b_0, ..., b_{i-1}, b_k), an integer, at the cost of one
+    // multiplication and one exact division per step.
+    Tring S = gram(k, k);
     int i_found = -1;
     for (int i = 0; i < k; i++) {
-      if (DeepLLL_AdmissiblePosition(i, k, depth) && c < delta * B(i)) {
+      if (DeepLLL_AdmissiblePosition(i, k, depth) && den * S < num * d[i + 1]) {
         i_found = i;
         break;
       }
-      c -= mu(k, i) * mu(k, i) * B(i);
+      Tring next = S * d[i + 1] - lambda(k, i) * lambda(k, i);
+      Tring quot = next / d[i];
+#ifdef SANITY_CHECK_DEEP_LLL
+      if (quot * d[i] != next) {
+        std::cerr << "DEEPLLL: non-exact division in the projected norm "
+                     "recursion\n";
+        throw TerminalException{1};
+      }
+      if (quot <= 0) {
+        std::cerr << "DEEPLLL: the projected norm " << quot
+                  << " is not positive, which a positive definite form "
+                     "forbids\n";
+        throw TerminalException{1};
+      }
+#endif
+      S = quot;
     }
     if (i_found >= 0) {
       f_insert(k, i_found);
-      DeepLLL_UpdateGSO(gram, mu, B, i_found);
+      DeepLLL_IntegralGSO(gram, lambda, d, i_found);
       n_insert++;
       if (i_found < k - 1) {
         n_deep++;
@@ -258,7 +333,8 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepth(MyMatrix<T> const &GramMat,
     }
   }
 #ifdef DEBUG_DEEP_LLL
-  os << "DEEPLLL: n=" << n << " depth=" << depth << " insertions=" << n_insert
+  os << "DEEPLLL: n=" << n << " depth=" << depth << " delta=" << delta_num
+     << "/" << delta_den << " insertions=" << n_insert
      << " of which genuinely deep=" << n_deep << "\n";
 #endif
   MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(H);
@@ -268,14 +344,26 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepth(MyMatrix<T> const &GramMat,
   CheckLLLreduction(res, GramMat);
 #endif
 #ifdef TIMINGS_DEEP_LLL
-  os << "DEEPLLL: DeepLLLreducedBasisDepth took " << time << "\n";
+  os << "DEEPLLL: DeepLLLreducedBasisDepthDelta took " << time << "\n";
 #endif
   return res;
 }
 
 /*
-  Deep insertion without restriction on the position, which is the algorithm
-  as Schnorr and Euchner state it.
+  The same delta as the classic reduction of this package, so that the two are
+  compared on equal terms and the deep condition is a strict strengthening of
+  the Lovasz one rather than a different trade-off.
+ */
+template <typename T, typename Tint>
+LLLreduction<T, Tint> DeepLLLreducedBasisDepth(MyMatrix<T> const &GramMat,
+                                               int const &depth,
+                                               std::ostream &os) {
+  return DeepLLLreducedBasisDepthDelta<T, Tint>(GramMat, depth, 99, 100, os);
+}
+
+/*
+  Deep insertion without restriction on the position, which is the algorithm as
+  Schnorr and Euchner state it.
  */
 template <typename T, typename Tint>
 LLLreduction<T, Tint> DeepLLLreducedBasis(MyMatrix<T> const &GramMat,
@@ -304,40 +392,46 @@ LLLreduction<T, Tint> DeepLLLreducedGeneral(MyMatrix<T> const &GramMat,
 /*
   Tests that a Gram matrix is deep LLL reduced for the given delta and depth:
   size reduced, and satisfying the deep condition at every admissible pair.
-  Used by the test program, and available to a caller who has obtained a basis
-  by other means and wants to know whether it is already reduced.
+  Recomputes the integral Gram-Schmidt data from scratch, so it is an
+  independent check of a descent and not a restatement of it. Also available to
+  a caller who has obtained a basis by other means and wants to know whether it
+  is already reduced.
  */
 template <typename T>
 bool IsDeepLLLreduced(MyMatrix<T> const &GramMat, int const &depth,
-                      T const &delta, std::ostream &os) {
-  using Tfield = typename overlying_field<T>::field_type;
+                      int const &delta_num, int const &delta_den,
+                      std::ostream &os) {
+  using Tring = typename underlying_ring<T>::ring_type;
   int n = GramMat.rows();
   if (n <= 1) {
     return true;
   }
-  Tfield delta_F = UniversalScalarConversion<Tfield, T>(delta);
-  Tfield half = Tfield(1) / Tfield(2);
-  MyMatrix<Tfield> gram = UniversalMatrixConversion<Tfield, T>(GramMat);
-  MyMatrix<Tfield> mu = ZeroMatrix<Tfield>(n, n);
-  MyVector<Tfield> B(n);
-  DeepLLL_UpdateGSO(gram, mu, B, 0);
+  MyMatrix<Tring> gram =
+      UniversalMatrixConversion<Tring, T>(RemoveFractionMatrix(GramMat));
+  MyMatrix<Tring> lambda = ZeroMatrix<Tring>(n, n);
+  std::vector<Tring> d(n + 1, Tring(0));
+  DeepLLL_IntegralGSO(gram, lambda, d, 0);
+  Tring const two(2);
+  Tring const num(delta_num);
+  Tring const den(delta_den);
   for (int k = 1; k < n; k++) {
     for (int j = 0; j < k; j++) {
-      if (mu(k, j) > half || mu(k, j) < -half) {
-        os << "DEEPLLL: not size reduced, mu(" << k << "," << j
-           << ")=" << mu(k, j) << "\n";
+      if (two * T_abs(lambda(k, j)) > d[j + 1]) {
+        os << "DEEPLLL: not size reduced, 2|lambda(" << k << "," << j
+           << ")|=" << two * T_abs(lambda(k, j)) << " exceeds d=" << d[j + 1]
+           << "\n";
         return false;
       }
     }
-    Tfield c = gram(k, k);
+    Tring S = gram(k, k);
     for (int i = 0; i < k; i++) {
-      if (DeepLLL_AdmissiblePosition(i, k, depth) && c < delta_F * B(i)) {
+      if (DeepLLL_AdmissiblePosition(i, k, depth) && den * S < num * d[i + 1]) {
         os << "DEEPLLL: the deep condition fails at k=" << k << " i=" << i
-           << ", |pi_i(b_k)|^2=" << c << " against delta |b_i^*|^2="
-           << delta_F * B(i) << "\n";
+           << ", " << den << "*" << S << " < " << num << "*" << d[i + 1]
+           << "\n";
         return false;
       }
-      c -= mu(k, i) * mu(k, i) * B(i);
+      S = (S * d[i + 1] - lambda(k, i) * lambda(k, i)) / d[i];
     }
   }
   return true;

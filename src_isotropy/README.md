@@ -104,6 +104,24 @@ c_1 = |b_k|^2,   c_{i+1} = c_i - mu_{i,k}^2 |b_i^*|^2
 gives `c_i = |pi_i(b_k)|^2` at each step, on data the size reduction has
 already produced.
 
+The arithmetic is **integral throughout**. Keeping the `mu` as rationals costs
+dearly: numerators and denominators grow with the minors, and the data is
+recomputed after every insertion. Instead we keep de Weger's integral form,
+`d_i = D_i` and `lambda_{i,j} = d_j mu_{j,i}`. Three things become integer
+operations: the Gram-Schmidt data itself, by a Bareiss-type recursion with
+exact divisions; the projected norms, through `S_i = d_{i-1} |pi_i(b_k)|^2`
+with `S_{i+1} = (S_i d_i - lambda_{k,i}^2) / d_{i-1}`, exact because `S_i` is
+the Gram determinant of `(b_1, ..., b_{i-1}, b_k)`; and the deep test itself,
+which with `delta = num/den` reads
+
+```
+|pi_i(b_k)|^2 < delta |b_i^*|^2    <=>    den * S_i < num * d_i,
+```
+
+a comparison of two integers. This is worth 4.6x: at dimension 20 the
+benchmark run goes from 4.67 s to 1.01 s, with output bit-identical to the
+rational implementation on all 75 cases of the benchmark.
+
 Termination is **not** the LLL potential argument, and the difference is worth
 knowing. Writing `D_j` for the leading principal minor of order `j`, an
 insertion at `i` from `k` leaves `D_1..D_{i-1}` and `D_k..D_n` unchanged and
@@ -121,16 +139,20 @@ Entry points, returning the same `LLLreduction` pair as the other reducers:
   * **DeepLLLreducedBasisDepth** with a depth parameter `d`, trying only the
     positions `i < d` and `i >= k - d`. The tail positions include `i = k-1`,
     so the output is LLL reduced for every `d >= 1`.
+  * **DeepLLLreducedBasisDepthDelta** additionally takes `delta` as a pair of
+    integers; the others use 99/100, the value this package uses for LLL.
   * **IsDeepLLLreduced** tests a Gram matrix for the property, recomputing the
-    Gram-Schmidt data from scratch.
+    integral Gram-Schmidt data from scratch.
 
 Validated by **TEST_DeepLLL** in `src_latt`. Cost, on the benchmark there: at
 dimension 8 deep insertion changes almost nothing, the root lattices being
 already recovered by LLL; at dimension 20 it halves the LLL potential and cuts
 the number of cases failing to reach the hidden presentation from 3 in 30 to
-1, at about seventy times LLL's time. That cost is the exact rational
-Gram-Schmidt recomputation after each insertion, not the search, and is where
-a faster version would have to start.
+1, at about sixteen times LLL's time, down from seventy before the arithmetic
+was made fraction free. What remains is the recomputation of the integral
+Gram-Schmidt data after each insertion, which is where a further speedup would
+have to start: it is recomputed from the insertion point down, and an
+incremental update of the rows that actually move would avoid most of it.
 
 Reference:
   * Claus-Peter Schnorr, M. Euchner, Lattice basis reduction: improved

@@ -280,6 +280,33 @@ Where to go next:
    indices and not on coordinate values, which the measurements confirm (1.00
    ratio between the two bases).
 
+## LLL seeding of the shortest-vector enumerator (NOT attempted)
+
+`CVPSolver` (`src_latt/Shvec_exact.h:973`) seeds the Fincke-Pohst enumeration
+with `LLLreducedBasisDual`. Sixteen files depend on that enumerator: the
+Delaunay codes, root systems, invariant vector families, Vinberg, Lorentzian
+perfect forms, robust covering, Rankin. It is the workhorse.
+
+On the reduction benchmark (`src_latt/TEST_ReductionBenchmark`) the dual
+variant is the WORST of the available reductions: quality reached in 28 of 45
+cases against 44 for direct LLL, geometric-mean squared orthogonality defect
+34.07 against 21.30, and on vector families one to five orders of magnitude
+worse on the facet-coefficient estimate. The comment in `ClassicLLL.h` says
+the two "should work just as well"; on these measures they do not.
+
+That is NOT sufficient reason to change it, and it has deliberately not been
+changed. Enumeration cost depends on the SHAPE of the Gram-Schmidt profile,
+not on the orthogonality defect, and reducing through the dual can give a
+better profile for the enumeration tree while being a worse reduction by every
+measure applied above. The dual seeding may well be deliberate and right.
+
+If revisited, the experiment is: instrument `computeIt` with a node counter,
+then run the existing shell computations seeded by direct / dual / seysen /
+deep and compare NODE COUNTS, not defects. Only that settles it. Note the
+general warning that applies here: a past attempt at reduced arithmetic in
+this area produced a performance regression, so any change must be measured
+end to end on real workloads before being adopted.
+
 ## EXT reduction before dual description (measured 2026-09-22)
 
 `POLY_RecursiveDualDesc.h:2117` and `:2191` call
