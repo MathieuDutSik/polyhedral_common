@@ -19,12 +19,16 @@ SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV,
   int nbVect = eSHV.cols();
   using Tfield = typename overlying_field<Tint>::field_type;
   auto GetGram = [&](MyMatrix<Tint> const &uSHV) -> MyMatrix<Tfield> {
-    MyMatrix<Tfield> TheGram = ZeroMatrix<Tfield>(n, n);
+    // The terms are products of Tint entries, so the sum is accumulated in
+    // Tint and converted once at the end rather than term by term. That also
+    // keeps the accumulation on the fused multiply-add of the arithmetics
+    // that have one, whose deferred product has no Tfield += overload.
+    MyMatrix<Tint> GramInt = ZeroMatrix<Tint>(n, n);
     for (int iVect = 0; iVect < nbVect; iVect++)
       for (int i = 0; i < n; i++)
         for (int j = 0; j < n; j++)
-          TheGram(i, j) += uSHV(iVect, i) * uSHV(iVect, j);
-    return TheGram;
+          GramInt(i, j) += uSHV(iVect, i) * uSHV(iVect, j);
+    return UniversalMatrixConversion<Tfield, Tint>(GramInt);
   };
   MyMatrix<Tfield> TheGram = GetGram(eSHV);
   LLLreduction<Tfield, Tint> res = LLLreducedBasis<Tfield, Tint>(TheGram, os);
