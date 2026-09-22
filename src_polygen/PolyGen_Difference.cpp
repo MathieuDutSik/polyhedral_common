@@ -4,6 +4,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "generalized_polytopes.h"
 // clang-format on
 
@@ -95,6 +98,12 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
+      }
+#endif
       std::cerr << "Error for the template parameter arith=" << arith << "\n";
       throw TerminalException{1};
     };
