@@ -6,6 +6,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "enum_robust_covering.h"
 // clang-format on
 
@@ -89,6 +92,13 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arithmetic == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
+      }
+#endif
       std::cerr << "failure: No matching entry for arithmetic\n";
       throw TerminalException{1};
     };
