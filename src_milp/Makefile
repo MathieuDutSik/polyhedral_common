@@ -16,6 +16,16 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -isystem $(EIG
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(COPTIONS)
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(NAUTY_LINK)
 
+# Optional flint arithmetic: build with `make ENABLE_FLINT_SUPPORT=1`.
+# FLINT_INCDIR / FLINT_LINK can be set in the environment; the defaults
+# assume flint is installed next to gmp.
+ifeq ($(ENABLE_FLINT_SUPPORT),1)
+FLINT_INCDIR	?= $(GMP_INCDIR)
+FLINT_LINK	?= -lflint
+CTOTAL		+= -DENABLE_FLINT_SUPPORT -I$(FLINT_INCDIR)
+LIBS		+= $(FLINT_LINK)
+endif
+
 %.o: %.cpp
 	@echo
 	@echo compile $<

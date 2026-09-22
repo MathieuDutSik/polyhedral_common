@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "zero_one_solution.h"
 // clang-format on
 
@@ -105,6 +108,13 @@ void process_arithmetic(std::string const &arithmetic,
     return process_zero_one_solutions<T>(FileMatrix, FileRHS, OutFormat,
                                          FileOut, options);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpz_class;
+    return process_zero_one_solutions<T>(FileMatrix, FileRHS, OutFormat,
+                                         FileOut, options);
+  }
+#endif
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
 }
