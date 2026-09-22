@@ -280,6 +280,48 @@ Where to go next:
    indices and not on coordinate values, which the measurements confirm (1.00
    ratio between the two bases).
 
+## EXT reduction before dual description (measured 2026-09-22)
+
+`POLY_RecursiveDualDesc.h:2117` and `:2191` call
+`ReduceVectorFamily(EXTred, "direct", os)`, that is classic LLL on the Gram
+matrix of the columns. `src_isotropy/VectFamilyReduction.h` now offers seysen,
+seysen_best, seysen_lll, deep, deep5, deep10 and `best`, the last running all
+of them plus the unreduced input and keeping whichever minimises
+`sqr_estimate_facet_coefficients` (the Hadamard bound on the facet
+coefficients the dual description will produce). Switching those two call
+sites to `best` is a one-line change each; it is NOT done, pending an
+end-to-end measurement.
+
+Why it is not obvious. The coefficient-size gains over `direct` are real but
+modest and instance-dependent, and no single method wins:
+
+| instance   | size    | direct  | best single      | winner     |
+|------------|---------|---------|------------------|------------|
+| ContactE8  | 240x9   | 1.46e8  | 1.00e8           | seysen     |
+| Perfect E7 | 63x28   | 2.43e24 | 1.41e24          | deep       |
+| ER35       | 35x8    | 6.0e4   | 6.0e4, L1 112->105 | seysen_lll |
+| CUT_7      | 64x22   | 9.07e22 | 9.07e22          | direct     |
+| 24cell     | 24x5    | 81      | 81               | all tie    |
+
+So 2 of 5 gain, 3 tie, and `best` can never lose since the input is among its
+candidates. Cost of `best` is 3x to 18x one reduction, 30 to 370 ms on these,
+negligible against the dual description itself.
+
+What is missing is the only number that settles it: the effect on dual
+description RUNTIME, not on the coefficient-size proxy. Measure on the
+benchmark corpus below, CUT_K8 (~90 s) and PerfectE7 being the cases with
+enough runtime for a difference to show. Two outcomes are possible and both
+are informative: the facet estimate predicts runtime, in which case switch and
+keep the estimate as the selection criterion everywhere; or it does not, in
+which case the estimate is the wrong proxy and the selection criterion inside
+`ReduceVectorFamilyBest` should be revisited before anything is switched.
+
+Also recorded while measuring: `dual` is consistently the WORST of the methods
+on this criterion, by one to five orders of magnitude, and it is one of the two
+methods `VectFamily_Reduction` originally offered. Nothing currently calls it
+in the dual-description path, but `SublatticeBasisReductionKernel` alternates
+it with `direct`, which is worth revisiting on the same evidence.
+
 ## Method-selection reference (for the heuristics)
 
 On CI_tests/23B_SimpleDualDesc: cdd is fastest; lrs is far behind on the
