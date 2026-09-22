@@ -706,22 +706,35 @@ bool IsIntegralTransformation(std::optional<MyMatrix<T>> const &opt) {
   The returned matrix P satisfies P * M1 * P^T = M2 for every pair of
   matrices of the two configurations.
  */
-template <typename T, typename Tgroup>
-std::optional<MyMatrix<T>> TestIntEquivalence_ListMat_Vdiag(
-    MyMatrix<T> const &SHV1_T, std::vector<MyMatrix<T>> const &ListMat1,
-    std::vector<T> const &Vdiag1, MyMatrix<T> const &SHV2_T,
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> TestIntEquivalence_ListMat_Vdiag(
+    MyMatrix<Tint> const &SHV1, std::vector<MyMatrix<T>> const &ListMat1,
+    std::vector<T> const &Vdiag1, MyMatrix<Tint> const &SHV2,
     std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2,
     std::ostream &os) {
-  using Tfield = typename overlying_field<T>::field_type;
+  static_assert(is_implementation_of_Z<Tint>::value ||
+                    is_implementation_of_Q<Tint>::value,
+                "Tint is the type of the configuration, which is the "
+                "coordinates of lattice vectors: Z, or Q for a caller whose "
+                "configuration carries denominators. Never the type of the "
+                "Gram matrices, which is T and may be an algebraic field.");
+  // Two halves, two types, as in GetIntAutomorphism_ListMat_Vdiag: the
+  // permutation comes from the scalar products and is found over T, the type
+  // of the Gram matrices; the transformation realizing it solves a linear
+  // system whose data is the integral family, so it is rational and is found
+  // over the field of fractions of Tint.
+  using Tfield = typename overlying_field<Tint>::field_type;
+  using Tfield_mat = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   MicrosecondTime time;
 #endif
-  auto check_result = [&]([[maybe_unused]] MyMatrix<T> const &P) -> void {
+  auto check_result = [&]([[maybe_unused]] MyMatrix<Tint> const &P) -> void {
 #ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB_INT
+    MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(P);
     for (size_t i_mat = 0; i_mat < ListMat1.size(); i_mat++) {
-      MyMatrix<T> eProd = P * ListMat1[i_mat] * P.transpose();
+      MyMatrix<T> eProd = P_T * ListMat1[i_mat] * P_T.transpose();
       if (eProd != ListMat2[i_mat]) {
         std::cerr << "PES: TestIntEquivalence, the returned matrix does not "
                      "map ListMat1[i_mat] to ListMat2[i_mat] for i_mat="
@@ -731,43 +744,46 @@ std::optional<MyMatrix<T>> TestIntEquivalence_ListMat_Vdiag(
     }
 #endif
   };
+  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
+  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
   std::optional<std::vector<Tidx>> opt1 =
-      TestEquivalence_ListMat_Vdiag_ring<T, Tfield, Tidx>(
+      TestEquivalence_ListMat_Vdiag_ring<T, Tfield_mat, Tidx>(
           SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "|PES: TestIntEquivalence, listmat_vdiag n_row=" << SHV1_T.rows()
-     << " n_mat=" << ListMat1.size() << " dim=" << SHV1_T.cols()
+  os << "|PES: TestIntEquivalence, listmat_vdiag n_row=" << SHV1.rows()
+     << " n_mat=" << ListMat1.size() << " dim=" << SHV1.cols()
      << " found=" << opt1.has_value() << "|=" << time << "\n";
 #endif
   if (!opt1) {
     return {};
   }
+  MyMatrix<Tfield> SHV1_f = UniversalMatrixConversion<Tfield, Tint>(SHV1);
+  MyMatrix<Tfield> SHV2_f = UniversalMatrixConversion<Tfield, Tint>(SHV2);
   Telt eltEquiv(*opt1);
   Telt eltInv = Inverse(eltEquiv);
-  std::optional<MyMatrix<T>> opt2 =
-      FindTransformationGeneral(SHV2_T, SHV1_T, eltInv);
+  std::optional<MyMatrix<Tfield>> opt2 =
+      FindTransformationGeneral(SHV2_f, SHV1_f, eltInv);
   if (IsIntegralTransformation(opt2)) {
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
     os << "|PES: TestIntEquivalence, direct|=" << time << "\n";
 #endif
-    check_result(*opt2);
-    return opt2;
+    MyMatrix<Tint> P = RingRepresentationOfIntegralMatrix<Tint, Tfield>(*opt2);
+    check_result(P);
+    return P;
   }
-  // The transformation of the found permutation is rational. The subspace
-  // machinery is a field computation: convert at this boundary, which is
-  // only crossed when a rational transformation has actually been detected.
-  MyMatrix<Tfield> SHV1_f = UniversalMatrixConversion<Tfield, T>(SHV1_T);
-  MyMatrix<Tfield> SHV2_f = UniversalMatrixConversion<Tfield, T>(SHV2_T);
+  // The transformation of the found permutation is rational, so the integral
+  // equivalences form a strict subset of the coset and the subspace machinery
+  // is what selects one.
   std::vector<std::vector<Tidx>> ListGen2 =
-      GetListGenAutomorphism_ListMat_Vdiag_ring<T, Tfield, Tgroup>(
+      GetListGenAutomorphism_ListMat_Vdiag_ring<T, Tfield_mat, Tgroup>(
           SHV2_T, ListMat2, Vdiag2, os);
   std::vector<MyMatrix<Tfield>> ListMatrGens2;
   // Automorphisms of the configuration, realized by construction: the
   // unchecked solve, with the row selection paid once for the loop.
-  FindTransformationSolver<T> solver2(SHV2_T);
+  FindTransformationSolver<Tfield> solver2(SHV2_f);
   for (auto &eList2 : ListGen2) {
     auto f = [&](int iRow) -> int { return eList2[iRow]; };
-    std::optional<MyMatrix<Tfield>> opt_f = solver2.solve_field_f(SHV2_T, f);
+    std::optional<MyMatrix<Tfield>> opt_f = solver2.solve_field_f(SHV2_f, f);
     MyMatrix<Tfield> eMatrGen2 =
         unfold_opt(opt_f, "the field solve should succeed");
     ListMatrGens2.emplace_back(std::move(eMatrGen2));
@@ -783,7 +799,8 @@ std::optional<MyMatrix<T>> TestIntEquivalence_ListMat_Vdiag(
     return {};
   }
   MyMatrix<Tfield> EquivInt_f = Inverse(*opt3);
-  MyMatrix<T> EquivInt = RingRepresentationOfIntegralMatrix<T, Tfield>(EquivInt_f);
+  MyMatrix<Tint> EquivInt =
+      RingRepresentationOfIntegralMatrix<Tint, Tfield>(EquivInt_f);
   check_result(EquivInt);
   return EquivInt;
 }
@@ -803,12 +820,24 @@ std::optional<MyMatrix<T>> TestIntEquivalence_ListMat_Vdiag(
   that obtained the permutations another way, for instance through the
   absolute trick on an antipodal family, does not have to compute them again.
  */
-template <typename T, typename Tgroup>
-std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
-    MyMatrix<T> const &SHV_T, std::vector<MyMatrix<T>> const &ListMat,
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>> GetIntAutomorphism_FromPermGens(
+    MyMatrix<Tint> const &SHV,
+    [[maybe_unused]] std::vector<MyMatrix<T>> const &ListMat,
     std::vector<std::vector<typename Tgroup::Telt::Tidx>> const &ListGen,
     std::ostream &os) {
-  using Tfield = typename overlying_field<T>::field_type;
+  static_assert(is_implementation_of_Z<Tint>::value ||
+                    is_implementation_of_Q<Tint>::value,
+                "Tint is the type of the configuration, which is the "
+                "coordinates of lattice vectors: Z, or Q for a caller whose "
+                "configuration carries denominators. Never the type of the "
+                "Gram matrices, which is T and may be an algebraic field.");
+  // The lift is rational whatever T is. It solves SHV * M = SHV permuted, a
+  // linear system whose data is the integral family, so its solution lies in
+  // the field of fractions of Tint and not in T. The Gram matrices are what
+  // produced the permutations, in the caller; here they are only read by the
+  // sanity check.
+  using Tfield = typename overlying_field<Tint>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   (void)sizeof(Tidx);
@@ -816,11 +845,12 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
   MicrosecondTime time;
 #endif
   auto check_result =
-      [&]([[maybe_unused]] std::vector<MyMatrix<T>> const &LGen) -> void {
+      [&]([[maybe_unused]] std::vector<MyMatrix<Tint>> const &LGen) -> void {
 #ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB_INT
     for (auto &eGen : LGen) {
+      MyMatrix<T> eGen_T = UniversalMatrixConversion<T, Tint>(eGen);
       for (auto &eMat : ListMat) {
-        MyMatrix<T> eProd = eGen * eMat * eGen.transpose();
+        MyMatrix<T> eProd = eGen_T * eMat * eGen_T.transpose();
         if (eProd != eMat) {
           std::cerr << "PES: GetIntAutomorphism, a generator does not "
                        "preserve the configuration matrices\n";
@@ -830,17 +860,20 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
     }
 #endif
   };
+  MyMatrix<Tfield> SHV_f = UniversalMatrixConversion<Tfield, Tint>(SHV);
   // The generators permute the family and preserve its scalar products,
   // so they are realized by construction and the unchecked solves apply.
   // The solver pays the row selection over the whole family once for
   // both loops instead of once per generator.
-  FindTransformationSolver<T> solver(SHV_T);
+  FindTransformationSolver<Tfield> solver(SHV_f);
   bool all_gens_integral = true;
-  std::vector<MyMatrix<T>> ListTransMat;
+  std::vector<MyMatrix<Tint>> ListTransMat;
   for (auto &eGen : ListGen) {
-    std::optional<MyMatrix<T>> opt = solver.solve_notcheck_vect(SHV_T, eGen);
+    std::optional<MyMatrix<Tfield>> opt =
+        solver.solve_notcheck_vect(SHV_f, eGen);
     if (IsIntegralTransformation(opt)) {
-      ListTransMat.push_back(*opt);
+      ListTransMat.push_back(
+          RingRepresentationOfIntegralMatrix<Tint, Tfield>(*opt));
     } else {
       all_gens_integral = false;
       break;
@@ -854,15 +887,15 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
     return ListTransMat;
   }
   // A rational generator: the integral subgroup is a strict subgroup and the
-  // subspace machinery extracts it over the field.
-  MyMatrix<Tfield> SHV_f = UniversalMatrixConversion<Tfield, T>(SHV_T);
+  // subspace machinery extracts it.
+  //
   // The subspace automorphism takes its generators in scaled form (numerator,
-  // denominator). Over the field the field-solved matrix is the numerator with
-  // denominator one; the ring arithmetic inside is then exact by construction.
+  // denominator). The field-solved matrix is the numerator with denominator
+  // one; the ring arithmetic inside is then exact by construction.
   std::vector<std::pair<MyMatrix<Tfield>, Tfield>> ListMatrGens;
   for (auto &eGen : ListGen) {
     auto f = [&](int iRow) -> int { return eGen[iRow]; };
-    std::optional<MyMatrix<Tfield>> opt_f = solver.solve_field_f(SHV_T, f);
+    std::optional<MyMatrix<Tfield>> opt_f = solver.solve_field_f(SHV_f, f);
     MyMatrix<Tfield> eMatrGen =
         unfold_opt(opt_f, "the field solve should succeed");
     ListMatrGens.push_back({std::move(eMatrGen), Tfield(1)});
@@ -870,9 +903,10 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
   RetMI_S<Tfield, Tgroup> ret =
       LinPolytopeIntegral_Automorphism_Subspaces<Tfield, Tgroup>(ListMatrGens,
                                                                  SHV_f, os);
-  std::vector<MyMatrix<T>> ListGenInt;
+  std::vector<MyMatrix<Tint>> ListGenInt;
   for (auto &eGen_f : ret.LGen) {
-    ListGenInt.push_back(RingRepresentationOfIntegralMatrix<T, Tfield>(eGen_f));
+    ListGenInt.push_back(
+        RingRepresentationOfIntegralMatrix<Tint, Tfield>(eGen_f));
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: GetIntAutomorphism, subspaces|=" << time << "\n";
@@ -881,26 +915,38 @@ std::vector<MyMatrix<T>> GetIntAutomorphism_FromPermGens(
   return ListGenInt;
 }
 
-template <typename T, typename Tgroup>
-std::vector<MyMatrix<T>> GetIntAutomorphism_ListMat_Vdiag(
-    MyMatrix<T> const &SHV_T, std::vector<MyMatrix<T>> const &ListMat,
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>> GetIntAutomorphism_ListMat_Vdiag(
+    MyMatrix<Tint> const &SHV, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
+  static_assert(is_implementation_of_Z<Tint>::value ||
+                    is_implementation_of_Q<Tint>::value,
+                "Tint is the type of the configuration, which is the "
+                "coordinates of lattice vectors: Z, or Q for a caller whose "
+                "configuration carries denominators. Never the type of the "
+                "Gram matrices, which is T and may be an algebraic field.");
+  // The two halves of the computation and the two types they run over. The
+  // permutations come from the scalar products, so that half is over T, the
+  // type of the Gram matrices, and the family is read there as a family over
+  // T. The lift of those permutations to matrices is rational and is done by
+  // GetIntAutomorphism_FromPermGens over the field of fractions of Tint.
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   MicrosecondTime time;
 #endif
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   std::vector<std::vector<Tidx>> ListGen =
       GetListGenAutomorphism_ListMat_Vdiag_ring<T, Tfield, Tgroup>(
           SHV_T, ListMat, Vdiag, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "|PES: GetIntAutomorphism, listmat_vdiag n_row=" << SHV_T.rows()
-     << " n_mat=" << ListMat.size() << " dim=" << SHV_T.cols()
+  os << "|PES: GetIntAutomorphism, listmat_vdiag n_row=" << SHV.rows()
+     << " n_mat=" << ListMat.size() << " dim=" << SHV.cols()
      << "|=" << time << "\n";
 #endif
-  return GetIntAutomorphism_FromPermGens<T, Tgroup>(SHV_T, ListMat, ListGen,
-                                                    os);
+  return GetIntAutomorphism_FromPermGens<T, Tint, Tgroup>(SHV, ListMat,
+                                                          ListGen, os);
 }
 
 // clang-format off

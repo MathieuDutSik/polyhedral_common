@@ -378,8 +378,11 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
   // conditions, the integral group is the answer, since the conditions are
   // subgroup-defining.
   //
-  std::vector<MyMatrix<T>> LGenInt = GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(
-      SHV_T, ListMat, Vdiag, os);
+  // The configuration and the Gram matrices are over the same rational type
+  // here, so the configuration type is T itself.
+  std::vector<MyMatrix<T>> LGenInt =
+      GetIntAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV_T, ListMat, Vdiag,
+                                                     os);
   bool all_gens_ok = true;
   for (auto &eGen : LGenInt) {
     if (!is_stab_space(eGen, LinSpa) || !f_extra(eGen)) {
@@ -554,7 +557,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
      << " |ListMat2|=" << ListMat2.size() << "\n";
 #endif
   std::optional<MyMatrix<T>> optEquivInt =
-      TestIntEquivalence_ListMat_Vdiag<T, Tgroup>(
+      TestIntEquivalence_ListMat_Vdiag<T, T, Tgroup>(
           SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
 #ifdef TIMINGS_TSPACE_FUNCTIONS
   os << "|TSPACE: Equiv, int_equivalence n_row=" << n_row
@@ -606,8 +609,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
   // first configuration: composing the integral equivalence with an integral
   // symmetry enumerates exactly the integral equivalences.
   //
-  std::vector<MyMatrix<T>> LGenInt = GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(
-      SHV1_T, ListMat1, Vdiag1, os);
+  std::vector<MyMatrix<T>> LGenInt =
+      GetIntAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV1_T, ListMat1, Vdiag1,
+                                                     os);
   PermutationBuilder<T, Telt> builder1(SHV1_T);
   std::vector<Telt> LGenPerm_big;
   for (auto &eGen : LGenInt) {

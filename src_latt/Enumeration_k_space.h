@@ -530,23 +530,22 @@ template <typename T, typename Tint> struct SublatticeStabEquiData {
   MyMatrix<T> GramMat;
   std::vector<MyMatrix<T>> ListMat;
   MyMatrix<Tint> W;
-  MyMatrix<T> W_T;
 };
 
 template <typename T, typename Tint>
 SublatticeStabEquiData<T, Tint>
 GetSublatticeStabEquiData(MyMatrix<T> const &GramMat, std::ostream &os) {
   MyMatrix<Tint> W = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
-  MyMatrix<T> W_T = UniversalMatrixConversion<T, Tint>(W);
   std::vector<MyMatrix<T>> ListMat{GramMat};
-  return {GramMat, std::move(ListMat), std::move(W), std::move(W_T)};
+  return {GramMat, std::move(ListMat), std::move(W)};
 }
 
 template <typename T, typename Tint> struct SublatticeConfiguration {
   MyMatrix<Tint> X;
   T det;
-  // The rows of W followed by the rows of invar(X); colors 0 and 1.
-  MyMatrix<T> conf;
+  // The rows of W followed by the rows of invar(X); colors 0 and 1. Both are
+  // families of lattice vectors, so the configuration is integral.
+  MyMatrix<Tint> conf;
   std::vector<T> Vdiag;
   // The sorted norms of the rows of invar(X), a cheap invariant used
   // to avoid expensive equivalence tests.
@@ -566,15 +565,15 @@ BuildSublatticeConfiguration(SublatticeStabEquiData<T, Tint> const &data,
   MyMatrix<T> invar_T = UniversalMatrixConversion<T, Tint>(invar);
   int n_w = data.W.rows();
   int n_i = invar.rows();
-  MyMatrix<T> conf(n_w + n_i, n);
+  MyMatrix<Tint> conf(n_w + n_i, n);
   std::vector<T> Vdiag(n_w + n_i);
   for (int i = 0; i < n_w; i++) {
-    conf.row(i) = data.W_T.row(i);
+    conf.row(i) = data.W.row(i);
     Vdiag[i] = T(0);
   }
   std::vector<T> invar_norms(n_i);
   for (int i = 0; i < n_i; i++) {
-    conf.row(n_w + i) = invar_T.row(i);
+    conf.row(n_w + i) = invar.row(i);
     Vdiag[n_w + i] = T(1);
     MyVector<T> eV = GetMatrixRow(invar_T, i);
     invar_norms[i] = eV.dot(data.GramMat * eV);
@@ -591,11 +590,11 @@ std::vector<MyMatrix<Tint>>
 SublatticeStabilizerGenerators(SublatticeStabEquiData<T, Tint> const &data,
                                SublatticeConfiguration<T, Tint> const &sc,
                                std::ostream &os) {
-  std::vector<MyMatrix<T>> LGen = GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(
-      sc.conf, data.ListMat, sc.Vdiag, os);
+  std::vector<MyMatrix<Tint>> LGen =
+      GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(sc.conf, data.ListMat,
+                                                        sc.Vdiag, os);
   std::vector<MyMatrix<Tint>> LGenRet;
-  for (auto &g_T : LGen) {
-    MyMatrix<Tint> g = UniversalMatrixConversion<Tint, T>(g_T);
+  for (auto &g : LGen) {
 #ifdef SANITY_CHECK_ENUMERATION_K_SPACE
     MyMatrix<Tint> Ximg = sc.X * g;
     if (CanonicalizeSublatticeBasis(Ximg) != sc.X) {
@@ -626,12 +625,14 @@ SublatticeTestEquivalence(SublatticeStabEquiData<T, Tint> const &data,
   // TestIntEquivalence_ListMat_Vdiag(A, ..., B, ...) returns a matrix
   // mapping the rows of the configuration B onto the rows of the
   // configuration A, so the arguments are swapped to obtain X1 -> X2.
-  std::optional<MyMatrix<T>> opt = TestIntEquivalence_ListMat_Vdiag<T, Tgroup>(
-      sc2.conf, data.ListMat, sc2.Vdiag, sc1.conf, data.ListMat, sc1.Vdiag, os);
+  std::optional<MyMatrix<Tint>> opt =
+      TestIntEquivalence_ListMat_Vdiag<T, Tint, Tgroup>(
+          sc2.conf, data.ListMat, sc2.Vdiag, sc1.conf, data.ListMat,
+          sc1.Vdiag, os);
   if (!opt) {
     return {};
   }
-  MyMatrix<Tint> P = UniversalMatrixConversion<Tint, T>(*opt);
+  MyMatrix<Tint> P = *opt;
 #ifdef SANITY_CHECK_ENUMERATION_K_SPACE
   MyMatrix<Tint> Ximg = sc1.X * P;
   if (CanonicalizeSublatticeBasis(Ximg) != sc2.X) {

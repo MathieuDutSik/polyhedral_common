@@ -590,42 +590,37 @@ MyMatrix<Tint> ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::os
 /*
   The integral automorphisms of the configuration, read off the graph on the
   antipodal pairs when the absolute trick concludes and off the whole family
-  otherwise. SHV_T has to be the family in the order CanonicVectorFamily
-  gives it, the representatives followed by their negatives, since that is
-  what the lifted generators index.
+  otherwise. SHV has to be the family in the order CanonicVectorFamily gives
+  it, the representatives followed by their negatives, since that is what the
+  lifted generators index.
  */
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<T>>
+std::vector<MyMatrix<Tint>>
 GetIntAutomorphism_Family(std::vector<MyMatrix<T>> const &ListMat,
                           CanonicVectorFamily<Tint> const &fam,
-                          MyMatrix<T> const &SHV_T, std::ostream &os) {
+                          MyMatrix<Tint> const &SHV, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::optional<std::vector<std::vector<Tidx>>> opt =
       GetListGenAutomorphism_AbsTrick<T, Tint, Tgroup>(ListMat, fam.SHVhalf,
                                                        os);
   if (opt) {
-    return GetIntAutomorphism_FromPermGens<T, Tgroup>(SHV_T, ListMat, *opt, os);
+    return GetIntAutomorphism_FromPermGens<T, Tint, Tgroup>(SHV, ListMat, *opt,
+                                                            os);
   }
-  std::vector<T> Vdiag(SHV_T.rows(), T(0));
-  return GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(SHV_T, ListMat, Vdiag, os);
+  std::vector<T> Vdiag(SHV.rows(), T(0));
+  return GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(SHV, ListMat, Vdiag,
+                                                           os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
     std::vector<MyMatrix<T>> const &ListMat, MyMatrix<Tint> const &SHV,
     std::ostream &os) {
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  int n_row = SHV_T.rows();
+  int n_row = SHV.rows();
   std::vector<T> Vdiag(n_row, T(0));
-  std::vector<MyMatrix<T>> LGen =
-      GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(SHV_T, ListMat, Vdiag, os);
-  std::vector<MyMatrix<Tint>> ListGenRet;
-  for (auto &M_T : LGen) {
-    MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
-    ListGenRet.push_back(M);
-  }
-  return ListGenRet;
+  return GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(SHV, ListMat, Vdiag,
+                                                           os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -652,14 +647,7 @@ ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetCanonicVectorFamily|=" << time << "\n";
 #endif
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  std::vector<MyMatrix<T>> LGen =
-      GetIntAutomorphism_Family<T, Tint, Tgroup>(ListMat, fam, SHV_T, os);
-  std::vector<MyMatrix<Tint>> ListGenRet;
-  for (auto &M_T : LGen) {
-    ListGenRet.push_back(UniversalMatrixConversion<Tint, T>(M_T));
-  }
-  return ListGenRet;
+  return GetIntAutomorphism_Family<T, Tint, Tgroup>(ListMat, fam, SHV, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -683,17 +671,10 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple_inner(
 #endif
   if (SHV1.rows() != SHV2.rows())
     return {};
-  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
-  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
-  int n_rows = SHV1_T.rows();
+  int n_rows = SHV1.rows();
   std::vector<T> Vdiag(n_rows, T(0));
-  std::optional<MyMatrix<T>> opt = TestIntEquivalence_ListMat_Vdiag<T, Tgroup>(
-      SHV1_T, ListMat1, Vdiag, SHV2_T, ListMat2, Vdiag, os);
-  if (!opt) {
-    return {};
-  }
-  MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(*opt);
-  return M;
+  return TestIntEquivalence_ListMat_Vdiag<T, Tint, Tgroup>(
+      SHV1, ListMat1, Vdiag, SHV2, ListMat2, Vdiag, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>

@@ -153,16 +153,12 @@ VinbergAutom<Tint> ComputeAutomorphismVinberg(MyMatrix<T> const &GramMat,
   RootDecomposition<T, Tint> dec =
       ComputeRootDecomposition<T, Tint, Tgroup>(GramMat, os);
   MyMatrix<Tint> SHV = ResidualFamily<T, Tint>(rs, dec, os);
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   std::vector<T> Vdiag(SHV.rows(), T(0));
   std::vector<MyMatrix<T>> ListMat{GramMat};
   // The automorphisms of the residual family = Aut(L, rho).
-  std::vector<MyMatrix<T>> resGen_T =
-      GetIntAutomorphism_ListMat_Vdiag<T, Tgroup>(SHV_T, ListMat, Vdiag, os);
-  std::vector<MyMatrix<Tint>> resGen;
-  for (auto &g : resGen_T) {
-    resGen.push_back(UniversalMatrixConversion<Tint, T>(g));
-  }
+  std::vector<MyMatrix<Tint>> resGen =
+      GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(SHV, ListMat, Vdiag,
+                                                        os);
   res.residual_order = OrderFromGens<Tint, Tgroup>(SHV, resGen);
   res.order = res.weyl_order * res.residual_order;
   // Generators of Aut(L): the simple-root reflections (generating W(R))
