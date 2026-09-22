@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "LatticeDelaunay.h"
 #include "IsoDelaunayDomains.h"
 #include "Rigidity.h"
@@ -353,10 +356,22 @@ void process_C(FullNamelist const &eFull) {
     return process_B<T, Tint>(eFull);
   }
 #endif
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return process_B<T, Tint>(eFull);
+  }
+#endif
   std::cerr << "LATT_SerialComputeDelaunay: Failed to find a matching type for "
                "arithmetic="
             << arithmetic << "\n";
-  std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+  std::cerr << "Available types: gmp, gmp_boost, multi_boost, flint\n";
+#else
+  std::cerr << "Available types: gmp, gmp_boost, multi_boost (build with "
+            << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
   throw TerminalException{1};
 }
 

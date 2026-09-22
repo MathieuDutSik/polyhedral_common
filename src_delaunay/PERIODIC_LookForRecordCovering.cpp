@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "CoveringRecordSearch.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -222,10 +225,22 @@ void process_C(FullNamelist const &eFull) {
     using Tint = mpz_class;
     return process_A<T, Tint>(eFull);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return process_A<T, Tint>(eFull);
+  }
+#endif
   std::cerr << "PERIODIC_LookForRecordCovering: Failed to find a matching "
                "type for arithmetic="
             << arithmetic << "\n";
-  std::cerr << "Available types: gmp\n";
+#ifdef ENABLE_FLINT_SUPPORT
+  std::cerr << "Available types: gmp, flint\n";
+#else
+  std::cerr << "Available types: gmp (build with "
+            << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
   throw TerminalException{1};
 }
 

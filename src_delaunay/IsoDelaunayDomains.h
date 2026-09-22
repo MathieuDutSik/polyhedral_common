@@ -892,7 +892,10 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
       MyVector<T> eIneq_T = UniversalVectorConversion<T, Tint>(eRec.eIneq);
       T s_g = eIneq_T.dot(*g_vec);
       T s_c = eIneq_T.dot(c_vec);
-      if (s_g * s_c < 0) {
+      // Named rather than compared in place: the arithmetics whose operator*
+      // returns a deferred product have no comparison against an int for it.
+      T prod = s_g * s_c;
+      if (prod < 0) {
         return false;
       }
     }

@@ -1,6 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "PeriodicDelaunay.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -188,6 +191,15 @@ void process_C(FullNamelist const &eFull) {
     using T = mpq_class;
     return process_A<T, Tint>(eFull);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    // Tint is fixed to mpz_class above, so the flint branch names its own:
+    // mixing the two arithmetics in one instantiation does not compile.
+    using Tint_flint = fmpz_class;
+    return process_A<T, Tint_flint>(eFull);
+  }
+#endif
   /*
     Only the rationals, for now. Both an algebraic form and, more
     importantly, an algebraic coset are out of reach, and for different
@@ -214,7 +226,12 @@ void process_C(FullNamelist const &eFull) {
   std::cerr << "LATT_SerialPeriodicDelaunay: Failed to find a matching type "
                "for arithmetic="
             << arithmetic << "\n";
-  std::cerr << "Available types: gmp\n";
+#ifdef ENABLE_FLINT_SUPPORT
+  std::cerr << "Available types: gmp, flint\n";
+#else
+  std::cerr << "Available types: gmp (build with "
+            << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
   throw TerminalException{1};
 }
 

@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "IsoDelaunayDomains.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -71,10 +74,22 @@ void process_C(FullNamelist const &eFull, int max_s, int n_try,
     using Tint = boost::multiprecision::cpp_int;
     return process_A<T, Tint>(eFull, max_s, n_try, n_walk_steps, max_iter);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return process_A<T, Tint>(eFull, max_s, n_try, n_walk_steps, max_iter);
+  }
+#endif
   std::cerr << "LATT_LookForFullRankRayDomain: Failed to find a matching "
                "entry for arithmetic="
             << arithmetic << "\n";
-  std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+  std::cerr << "Available types: gmp, gmp_boost, multi_boost, flint\n";
+#else
+  std::cerr << "Available types: gmp, gmp_boost, multi_boost (build with "
+            << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
   throw TerminalException{1};
 }
 
