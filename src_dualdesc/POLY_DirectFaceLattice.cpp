@@ -5,6 +5,9 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Group.h"
 #include "POLY_Kskeletton.h"
 #include "GRP_GroupFile.h"
@@ -74,6 +77,13 @@ int main(int argc, char *argv[]) {
         return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
                                                   OutFormat, os_out);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
+                                                  OutFormat, os_out);
+      }
+#endif
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;

@@ -6,6 +6,9 @@
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "POLY_RecursiveDualDesc.h"
 #include "GRP_GroupFile.h"
 #include "Permutation.h"
@@ -72,6 +75,12 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
+      }
+#endif
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);

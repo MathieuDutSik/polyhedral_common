@@ -9,6 +9,9 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "POLY_Fundamental.h"
 #include "POLY_DirectDualDesc.h"
 #include "GRP_DoubleCoset.h"
@@ -123,6 +126,12 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return process<T, Tgroup>(eFileI, eFileG, command, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "fmpq_class") {
+        using T = fmpq_class;
+        return process<T, Tgroup>(eFileI, eFileG, command, OutFormat, os);
+      }
+#endif
       if (arith == "Qsqrt5") {
         using T = QuadField<Trat, 5>;
         return process<T, Tgroup>(eFileI, eFileG, command, OutFormat, os);

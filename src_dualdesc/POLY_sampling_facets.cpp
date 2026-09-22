@@ -7,6 +7,9 @@
 #endif
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "POLY_SamplingFacet.h"
 #include "POLY_RecursiveDualDesc.h"
 // clang-format on
@@ -98,6 +101,12 @@ int main(int argc, char *argv[]) {
         using T = Trat;
         return process<T>(eFileI, command, OutFormat, os);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        return process<T>(eFileI, command, OutFormat, os);
+      }
+#endif
       if (arith == "Qsqrt5") {
         using T = QuadField<Trat, 5>;
         return process<T>(eFileI, command, OutFormat, os);

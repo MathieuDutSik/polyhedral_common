@@ -5,6 +5,9 @@
 #include "NumberTheoryQuadField.h"
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "GRP_GroupFile.h"
 #include "Group.h"
 #include "POLY_Kskeletton.h"
@@ -121,6 +124,12 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
     using T = boost::multiprecision::cpp_rational;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arith == "fmpq_class") {
+    using T = fmpq_class;
+    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
+  }
+#endif
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
