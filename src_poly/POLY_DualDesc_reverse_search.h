@@ -939,9 +939,11 @@ void GetTriangulationDet_f(MyMatrix<T> const &EXT, Ftrig_det f_trig_det) {
       if (sign_calibration == 0) {
         det = DeterminantMat(SelectRow(EXT, esimp));
 #ifdef SANITY_CHECK_REVERSE_SEARCH
-        if (T_abs(det) * denom !=
-            UniversalScalarConversion<T, Tring>(mag_ring)) {
-          std::cerr << "RS: |det|*denom=" << T_abs(det) * denom
+        // Named rather than recomputed in the message: the arithmetics whose
+        // operator* returns a deferred product have no operator<< for it.
+        T abs_det_denom = T_abs(det) * denom;
+        if (abs_det_denom != UniversalScalarConversion<T, Tring>(mag_ring)) {
+          std::cerr << "RS: |det|*denom=" << abs_det_denom
                     << " det(ring)=" << mag_ring
                     << " but they should be equal\n";
           throw TerminalException{1};

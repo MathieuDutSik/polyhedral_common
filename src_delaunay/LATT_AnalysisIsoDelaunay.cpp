@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "IsoDelaunayDomains.h"
 #include "PeriodicStructures.h"
 #include "CoveringMaxdet.h"
@@ -346,10 +349,22 @@ void process_C(FullNamelist const &eFull) {
       return process<T, Tint>(eFull, os_out);
     }
 #endif
+#ifdef ENABLE_FLINT_SUPPORT
+    if (arith == "flint") {
+      using T = fmpq_class;
+      using Tint = fmpz_class;
+      return process<T, Tint>(eFull, os_out);
+    }
+#endif
     std::cerr << "LATT_AnalysisIsoDelaunay: Failed to find a matching type for "
                  "arithmetic="
               << arith << "\n";
-    std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+    std::cerr << "Available types: gmp, gmp_boost, multi_boost, flint\n";
+#else
+    std::cerr << "Available types: gmp, gmp_boost, multi_boost "
+              << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
     throw TerminalException{1};
   };
   FILE_PrintStderrStdoutFile(OutFile, f);
