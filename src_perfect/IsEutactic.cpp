@@ -5,6 +5,9 @@
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "eutacticity.h"
 // clang-format on
 
@@ -41,6 +44,13 @@ void compute_eutacticity(std::string const &arithmetic,
     using Tint = boost::multiprecision::cpp_int;
     return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
+  }
+#endif
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
 }

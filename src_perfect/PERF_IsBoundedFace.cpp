@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "perfect_complex.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -103,6 +106,13 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<T,Tint,Tgroup>(eFull);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arithmetic == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T,Tint,Tgroup>(eFull);
+      }
+#endif
       std::cerr << "Failed to find a matching entry for arithmetic=" << arithmetic << "\n";
       throw TerminalException{1};
     };

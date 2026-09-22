@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "perfect_tspace_mpi.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -35,6 +38,13 @@ void process_A(boost::mpi::communicator &comm, FullNamelist const &eFull) {
     using Tint = boost::multiprecision::cpp_int;
     return process_C<T, Tint>(comm, eFull);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return process_C<T, Tint>(comm, eFull);
+  }
+#endif
   std::cerr
       << "PERF_MPI_EnumeratePerfectCones: Failed to find matching type for "
       << "arithmetic=" << arithmetic << "\n";

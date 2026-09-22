@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "perfect_complex.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -357,6 +360,13 @@ void process_D(FullNamelist const &eFull) {
     using Tint = boost::multiprecision::cpp_int;
     return process_B<T, Tint>(eFull);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return process_B<T, Tint>(eFull);
+  }
+#endif
   std::cerr
       << "PERF_SerialEnumeratePerfectCones: Failed to find a matching type for "
          "arithmetic="

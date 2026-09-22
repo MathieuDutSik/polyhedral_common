@@ -3,6 +3,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Shvec_exact.h"
 #include "strongly_semi_eutactic.h"
 // clang-format on
@@ -60,6 +63,13 @@ void test_strongly_semi_eutactic(std::string const &arithmetic,
     using Tint = boost::multiprecision::cpp_int;
     return test_strongly_semi_eutactic_kernel<T, Tint>(eFile, max_node);
   }
+#ifdef ENABLE_FLINT_SUPPORT
+  if (arithmetic == "flint") {
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+    return test_strongly_semi_eutactic_kernel<T, Tint>(eFile, max_node);
+  }
+#endif
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
 }
