@@ -1890,6 +1890,12 @@ T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV(
     INP_TheMat[idx] = pos;
     ArrSigns[idx] = eChg;
   };
+  // The family over T. The two products below mix a Gram entry with a vector
+  // entry, and there is no operator between T and Tint for a T that is not a
+  // plain rational. Converting here rather than in the loops costs one
+  // nbPair x n conversion instead of one per entry of the weight matrix,
+  // which is quadratic in nbPair.
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   std::vector<MyVector<T>> ListV(nbMat);
   std::vector<T> ListScal(nbMat);
   for (size_t iPair = 0; iPair < nbPair; iPair++) {
@@ -1898,7 +1904,7 @@ T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV(
       for (size_t i = 0; i < n; i++) {
         T eVal(0);
         for (size_t j = 0; j < n; j++) {
-          eVal += ListMat[iMat](j, i) * SHV(iPair, j);
+          eVal += ListMat[iMat](j, i) * SHV_T(iPair, j);
         }
         V(i) = eVal;
       }
@@ -1908,7 +1914,7 @@ T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV(
       for (size_t iMat = 0; iMat < nbMat; iMat++) {
         T eScal(0);
         for (size_t i = 0; i < n; i++) {
-          eScal += ListV[iMat](i) * SHV(jPair, i);
+          eScal += ListV[iMat](i) * SHV_T(jPair, i);
         }
         ListScal[iMat] = eScal;
       }
@@ -2303,6 +2309,10 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
   size_t nbRow = SHV.rows();
   size_t n = SHV.cols();
   size_t nbMat = ListMat.size();
+  // The family over T, for the same reason as in the antipodal variant above:
+  // the products mix a Gram entry with a vector entry, and the conversion is
+  // paid once for the family rather than once per entry of the weight matrix.
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   std::vector<MyVector<T>> ListV(nbMat);
   auto f1 = [&](size_t iRow) -> void {
     for (size_t iMat = 0; iMat < nbMat; iMat++) {
@@ -2310,7 +2320,7 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
       for (size_t i = 0; i < n; i++) {
         T eVal(0);
         for (size_t j = 0; j < n; j++)
-          eVal += ListMat[iMat](j, i) * SHV(iRow, j);
+          eVal += ListMat[iMat](j, i) * SHV_T(iRow, j);
         V(i) = eVal;
       }
       ListV[iMat] = V;
@@ -2321,7 +2331,7 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
     for (size_t iMat = 0; iMat < nbMat; iMat++) {
       T eScal(0);
       for (size_t i = 0; i < n; i++)
-        eScal += ListV[iMat](i) * SHV(iCol, i);
+        eScal += ListV[iMat](i) * SHV_T(iCol, i);
       ListScal[iMat] = eScal;
     }
     return ListScal;
