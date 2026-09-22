@@ -7,6 +7,7 @@
 #include "MAT_MatrixDeterminant.h"
 #include "MAT_MatrixInt.h"
 #include "QuoIntFcts.h"
+#include "SeysenReduction.h"
 #include "Shvec_exact.h"
 #include <cmath>
 #include <limits>
@@ -72,6 +73,11 @@
   hermite_pow_n = G_11^n / det G is the n-th power of the squared Hermite
   factor, kept in that form so that it stays in the ring.
 
+  seysen is Seysen's measure sum_i G_ii (G^-1)_ii, at least n with equality
+  exactly for an orthogonal basis. None of the other measures implies it: it
+  is the only one here that sees the reciprocal lattice, so a basis can be
+  good by the orthogonality defect and bad by this one.
+
   max_coeff and total_bits measure the size of the integers in the reduced
   form. In a package doing exact arithmetic downstream this is not a cosmetic
   quantity: it is the cost of everything that reads the matrix afterwards.
@@ -86,6 +92,7 @@ template <typename T> struct ReductionQuality {
   T orth_defect_sq;
   T lll_potential;
   T hermite_pow_n;
+  T seysen;
   T max_coeff;
   size_t total_bits;
   double log_orth_defect;
@@ -153,6 +160,7 @@ ReductionQuality<T> ComputeReductionQuality(MyMatrix<T> const &GramMat) {
     hermite_pow_n *= min_diag;
   }
   hermite_pow_n /= det;
+  T seysen = SeysenMeasure(GramMat);
   T max_coeff(0);
   size_t total_bits = 0;
   for (int i = 0; i < n; i++) {
@@ -191,6 +199,7 @@ ReductionQuality<T> ComputeReductionQuality(MyMatrix<T> const &GramMat) {
   return {std::move(orth_defect_sq),
           std::move(lll_potential),
           std::move(hermite_pow_n),
+          std::move(seysen),
           std::move(max_coeff),
           total_bits,
           log_orth_defect,
@@ -500,7 +509,8 @@ void PrintReductionQuality(std::ostream &os, std::string const &label,
                            ReductionQuality<T> const &q) {
   os << "  " << label << ": defect^2=" << q.orth_defect_sq
      << " log(defect)=" << q.log_orth_defect << " pot=" << q.lll_potential
-     << " maxcoeff=" << q.max_coeff << " bits=" << q.total_bits
+     << " seysen=" << q.seysen << " maxcoeff=" << q.max_coeff
+     << " bits=" << q.total_bits
      << " E_A=" << q.log_E_A << " E_N=" << q.log_E_N << "\n";
 }
 

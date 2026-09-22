@@ -115,10 +115,15 @@ destroyed one. It is kept separate from the reducers themselves so that a
 disappointing experiment can be attributed to the representation, the
 objective, the move set or the search strategy rather than to all four at once.
 
-Program:
+Programs:
   * **TEST_ReductionBenchmark** `[dim] [n_iter] [seed]`, comparing the
     available reducers over the families Zn, An, Dn, E8 and a low-symmetry
     random family, at three strengths of destruction.
+  * **TEST_SeysenReduction** `[dim] [n_iter] [seed]`, validating the Seysen
+    reduction of `src_isotropy/SeysenReduction.h` on the same instances. Its
+    decisive check is that the output is a local minimum of Seysen's measure,
+    established by trying every transvection with a small coefficient rather
+    than by trusting the closed form for the optimal one.
 
 The two questions the harness keeps apart are *recovery*, whether the original
 presentation is found back up to signed permutation, and *reduction*, whether

@@ -144,6 +144,7 @@ src_latt/TSPACE_*
 src_latt/GRP_TestFiniteness
 src_latt/TEST_EquiStabFamily
 src_latt/TEST_ReductionBenchmark
+src_latt/TEST_SeysenReduction
 src_milp/LATT_*
 src_milp/MILP_*
 src_lorentzian/LORENTZ_*
