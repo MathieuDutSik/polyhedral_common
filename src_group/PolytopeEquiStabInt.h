@@ -721,9 +721,16 @@ std::optional<MyMatrix<Tint>> TestIntEquivalence_ListMat_Vdiag(
   // Two halves, two types, as in GetIntAutomorphism_ListMat_Vdiag: the
   // permutation comes from the scalar products and is found over T, the type
   // of the Gram matrices; the transformation realizing it solves a linear
-  // system whose data is the integral family, so it is rational and is found
-  // over the field of fractions of Tint.
-  using Tfield = typename overlying_field<Tint>::field_type;
+  // system whose data is the configuration, so it is rational.
+  // The lift runs in the fraction field of the rational integers of T:
+  // mpq_class for mpq_class, and equally for Q(sqrt(d)) or a real algebraic
+  // field, where the extension is left behind. Not the fraction field of
+  // Tint. Tint only has to hold the integral result, and a caller is free to
+  // pick a narrow type for it -- src_short uses int -- which would be far too
+  // small to solve the linear system in, and carries no field at all worth
+  // the name: overlying_field<int> is Rational<int>.
+  using Tfield = typename overlying_field<
+      typename underlying_z_ring<T>::ring_type>::field_type;
   using Tfield_mat = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -833,11 +840,18 @@ std::vector<MyMatrix<Tint>> GetIntAutomorphism_FromPermGens(
                 "configuration carries denominators. Never the type of the "
                 "Gram matrices, which is T and may be an algebraic field.");
   // The lift is rational whatever T is. It solves SHV * M = SHV permuted, a
-  // linear system whose data is the integral family, so its solution lies in
-  // the field of fractions of Tint and not in T. The Gram matrices are what
-  // produced the permutations, in the caller; here they are only read by the
-  // sanity check.
-  using Tfield = typename overlying_field<Tint>::field_type;
+  // linear system whose data is the configuration, so its solution does not
+  // lie in T. The Gram matrices are what produced the permutations, in the
+  // caller; here they are only read by the sanity check.
+  // The lift runs in the fraction field of the rational integers of T:
+  // mpq_class for mpq_class, and equally for Q(sqrt(d)) or a real algebraic
+  // field, where the extension is left behind. Not the fraction field of
+  // Tint. Tint only has to hold the integral result, and a caller is free to
+  // pick a narrow type for it -- src_short uses int -- which would be far too
+  // small to solve the linear system in, and carries no field at all worth
+  // the name: overlying_field<int> is Rational<int>.
+  using Tfield = typename overlying_field<
+      typename underlying_z_ring<T>::ring_type>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   (void)sizeof(Tidx);

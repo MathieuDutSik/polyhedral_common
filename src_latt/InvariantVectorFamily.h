@@ -343,7 +343,7 @@ struct ShellFamilyBuilder {
         exhausted_(false) {}
 
   // Add the next shell. After it the family may be final, see is_done.
-  void one_shell(std::ostream &os) {
+  void one_shell([[maybe_unused]] std::ostream &os) {
     if (done_) {
       return;
     }
