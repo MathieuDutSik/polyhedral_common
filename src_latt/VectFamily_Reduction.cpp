@@ -38,19 +38,20 @@ choice here, and in measurement the winner varies by instance.
                not depending on the order pairs are visited in
   seysen_lll   Seysen and LLL alternated while the measure improves
   deep         Schnorr-Euchner deep insertion, unrestricted depth
-  deep5        deep insertion restricted to depth 5
-  deep10       deep insertion restricted to depth 10
-  bkz4         BKZ at block size 4
-  bkz8         BKZ at block size 8
-  bkz12        BKZ at block size 12
-  slide4       Gama-Nguyen slide reduction, block size at most 4
-  slide8       slide reduction, block size at most 8
-  best         run all of the above and keep whichever actually minimises the
-               facet coefficient estimate. The unreduced input is among the
-               candidates, so the result is never worse than what was handed
-               in. Recommended unless the cost of the reduction itself
-               matters: it is a small multiple of one reduction, and that is
-               nothing against the dual description that follows
+  deep-<d>     the same, with the insertion depth restricted to d
+  bkz-<b>      BKZ at block size b
+  slide-<k>    Gama-Nguyen slide reduction, block size at most k. The block
+               size has to divide the dimension, so k is an upper bound and
+               the largest divisor not exceeding it is used
+  best         run a representative selection of the above and keep whichever
+               actually minimises the facet coefficient estimate. The
+               unreduced input is among the candidates, so the result is never
+               worse than what was handed in. Recommended unless the cost of
+               the reduction itself matters: it is a small multiple of one
+               reduction, and that is nothing against the dual description
+               that follows. The selection is direct, dual, seysen,
+               seysen_best, seysen_lll, deep, deep-5, deep-10, bkz-4, bkz-8,
+               bkz-12, slide-4, slide-8
 
  ------- OutFormat --------
 

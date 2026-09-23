@@ -177,16 +177,9 @@ ReduceVectorFamilyGeneral(MyMatrix<T> const &M, std::string const &method,
   if (method == "best") {
     return ReduceVectorFamilyBest(M, os);
   }
-  std::vector<std::string> l_method = VectFamilyReductionSingleMethods();
-  if (std::find(l_method.begin(), l_method.end(), method) == l_method.end()) {
-    std::cerr << "VECT_FAMILY_REDUCTION: unknown method " << method
-              << ". Allowed are:";
-    for (auto &meth : VectFamilyReductionMethods()) {
-      std::cerr << " " << meth;
-    }
-    std::cerr << "\n";
-    throw TerminalException{1};
-  }
+  // No check against a fixed list here: the parametrised methods make the set
+  // of valid names infinite, and LatticeReducedGeneral rejects what it cannot
+  // parse with a message naming the shapes it accepts.
   std::pair<MyMatrix<T>, MyMatrix<T>> pair =
       ReduceVectorFamilySingle(M, method, os);
   VectFamilyQuality<T> quality = ComputeVectFamilyQuality(pair.first);

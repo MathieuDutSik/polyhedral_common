@@ -3,11 +3,13 @@
 #define SRC_LATT_LATTICEREDUCTION_H_
 // clang-format off
 #include "BKZ.h"
+#include "Basic_string.h"
 #include "ClassicLLL.h"
 #include "DeepLLL.h"
 #include "MAT_Matrix.h"
 #include "SeysenReduction.h"
 #include "SlideReduction.h"
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,10 +48,97 @@
   size, and the quality they buy improves slowly. Above block size eight the
   gains observed in this package were negligible.
  */
+/*
+  The three block-like reductions take a parameter and are named "deep-<d>",
+  "bkz-<b>" and "slide-<k>" for any admissible value: the parameter is parsed
+  from the name rather than being one of a fixed handful of spellings. Bare
+  "deep" is deep insertion without restriction on the depth, which is the
+  algorithm as Schnorr and Euchner state it; "deep-<d>" restricts it.
+
+  The list below is not the set of accepted methods, which is infinite. It is
+  the set of candidates that "best" tries, chosen to span the useful range
+  without costing more than it is worth. A caller wanting a value outside it
+  names the method.
+ */
 inline std::vector<std::string> LatticeReductionSingleMethods() {
-  return {"direct", "dual",   "seysen", "seysen_best", "seysen_lll",
-          "deep",   "deep5",  "deep10", "bkz4",        "bkz8",
-          "bkz12",  "slide4", "slide8"};
+  return {"direct", "dual",    "seysen",  "seysen_best", "seysen_lll",
+          "deep",   "deep-5",  "deep-10", "bkz-4",       "bkz-8",
+          "bkz-12", "slide-4", "slide-8"};
+}
+
+/*
+  A strictly parsed non-negative integer: digits only, non-empty, and short
+  enough that the conversion cannot overflow. Anything else yields nothing,
+  and the caller reports the whole name as unknown rather than silently
+  accepting a parameter it did not mean; std::stoi on its own would take
+  "8junk" for 8.
+ */
+inline std::optional<int> LatticeReduction_ParseInteger(std::string const &str) {
+  if (str.empty() || str.size() > 9) {
+    return {};
+  }
+  for (auto &c : str) {
+    if (c < '0' || c > '9') {
+      return {};
+    }
+  }
+  return StringToInt(str);
+}
+
+/*
+  The parameter of a method named "<prefix>-<value>", or nothing if the name
+  does not have that shape.
+ */
+inline std::optional<int>
+LatticeReduction_PrefixedParameter(std::string const &method,
+                                   std::string const &prefix) {
+  std::optional<std::string> tail = get_postfix(method, prefix + "-");
+  if (!tail) {
+    return {};
+  }
+  return LatticeReduction_ParseInteger(*tail);
+}
+
+/*
+  The parameter must be at least min_value. This is a check on USER INPUT and
+  so is unconditional: it is not a programming invariant and must not be
+  compiled out with the sanity checks.
+ */
+inline void LatticeReduction_CheckParameter(std::string const &method,
+                                            int const &value,
+                                            int const &min_value) {
+  if (value < min_value) {
+    std::cerr << "LATTICE_REDUCTION: the method " << method
+              << " asks for a parameter of " << value
+              << ", but the smallest meaningful value is " << min_value
+              << "\n";
+    throw TerminalException{1};
+  }
+}
+
+/*
+  The message for a name that matched nothing. The old spellings without the
+  hyphen were in use, so a name of that shape gets told what it should be
+  rather than just being rejected.
+ */
+inline void LatticeReduction_UnknownMethod(std::string const &method) {
+  std::cerr << "LATTICE_REDUCTION: unknown method " << method << "\n";
+  for (auto &prefix : {"deep", "bkz", "slide"}) {
+    std::optional<std::string> tail = get_postfix(method, prefix);
+    if (tail && LatticeReduction_ParseInteger(*tail)) {
+      std::cerr << "  did you mean " << prefix << "-" << *tail
+                << "? The parameter is separated by a hyphen.\n";
+    }
+  }
+  std::cerr << "  the methods without a parameter are:";
+  for (auto &meth : {"direct", "dual", "seysen", "seysen_best", "seysen_lll",
+                     "deep", "best"}) {
+    std::cerr << " " << meth;
+  }
+  std::cerr << "\n";
+  std::cerr << "  the methods with one are: deep-<depth>, bkz-<blocksize>, "
+               "slide-<blocksize>\n";
+  throw TerminalException{1};
 }
 
 template <typename T, typename Tint>
@@ -74,34 +163,31 @@ LLLreduction<T, Tint> LatticeReducedGeneral(MyMatrix<T> const &GramMat,
   if (method == "deep") {
     return DeepLLLreducedBasis<T, Tint>(GramMat, os);
   }
-  if (method == "deep5") {
-    return DeepLLLreducedBasisDepth<T, Tint>(GramMat, 5, os);
+  // A depth of zero would mean no restriction, which is what bare "deep"
+  // already provides, so the smallest meaningful restriction is one.
+  std::optional<int> depth = LatticeReduction_PrefixedParameter(method, "deep");
+  if (depth) {
+    LatticeReduction_CheckParameter(method, *depth, 1);
+    return DeepLLLreducedBasisDepth<T, Tint>(GramMat, *depth, os);
   }
-  if (method == "deep10") {
-    return DeepLLLreducedBasisDepth<T, Tint>(GramMat, 10, os);
+  // A block of size one carries no condition; BKZ at two is LLL.
+  std::optional<int> beta = LatticeReduction_PrefixedParameter(method, "bkz");
+  if (beta) {
+    LatticeReduction_CheckParameter(method, *beta, 2);
+    return BKZreducedBasis<T, Tint>(GramMat, *beta, os);
   }
-  if (method == "bkz4") {
-    return BKZreducedBasis<T, Tint>(GramMat, 4, os);
+  // The value is an upper bound: slide reduction needs the block size to
+  // divide the dimension, and SlideBlockSize takes the largest divisor that
+  // does not exceed it.
+  std::optional<int> k_max =
+      LatticeReduction_PrefixedParameter(method, "slide");
+  if (k_max) {
+    LatticeReduction_CheckParameter(method, *k_max, 2);
+    return SlideReducedBasisAuto<T, Tint>(GramMat, *k_max, os);
   }
-  if (method == "bkz8") {
-    return BKZreducedBasis<T, Tint>(GramMat, 8, os);
-  }
-  if (method == "bkz12") {
-    return BKZreducedBasis<T, Tint>(GramMat, 12, os);
-  }
-  if (method == "slide4") {
-    return SlideReducedBasisAuto<T, Tint>(GramMat, 4, os);
-  }
-  if (method == "slide8") {
-    return SlideReducedBasisAuto<T, Tint>(GramMat, 8, os);
-  }
-  std::cerr << "LATTICE_REDUCTION: unknown method " << method
-            << ". Allowed are:";
-  for (auto &meth : LatticeReductionSingleMethods()) {
-    std::cerr << " " << meth;
-  }
-  std::cerr << " best\n";
-  throw TerminalException{1};
+  LatticeReduction_UnknownMethod(method);
+  // Not reached; LatticeReduction_UnknownMethod always throws.
+  return LLLnoreduction<T, Tint>(GramMat);
 }
 
 /*

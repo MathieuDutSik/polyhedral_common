@@ -49,17 +49,17 @@ unimodular transformation that produced it.
   seysen_lll   Seysen and LLL alternated while the measure improves
   deep         Schnorr-Euchner deep insertion: LLL's move set widened from
                the adjacent swap to an insertion at any earlier position
-  deep5        deep insertion restricted to depth 5
-  deep10       deep insertion restricted to depth 10
-  bkz4         BKZ at block size 4
-  bkz8         BKZ at block size 8
-  bkz12        BKZ at block size 12
-  slide4       Gama-Nguyen slide reduction, block size at most 4
-  slide8       slide reduction, block size at most 8
-  best         run all of the above and keep whichever minimises the squared
-               orthogonality defect prod_i G_ii / det G, ties broken by the
-               sum of absolute entries. The input is among the candidates, so
-               the result is never worse than it
+  deep-<d>     the same, with the insertion depth restricted to d
+  bkz-<b>      BKZ at block size b
+  slide-<k>    Gama-Nguyen slide reduction, block size at most k. The block
+               size has to divide the dimension, so k is an upper bound and
+               the largest divisor not exceeding it is used
+  best         run a representative selection of the above and keep whichever
+               minimises the squared orthogonality defect prod_i G_ii / det G,
+               ties broken by the sum of absolute entries. The input is among
+               the candidates, so the result is never worse than it. The
+               selection is direct, dual, seysen, seysen_best, seysen_lll,
+               deep, deep-5, deep-10, bkz-4, bkz-8, bkz-12, slide-4, slide-8
 
 The block methods bkz and slide ask at each index for a shortest vector of a
 projected block, so they cost more than the rest, superexponentially in the

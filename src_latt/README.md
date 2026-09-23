@@ -22,8 +22,9 @@ The relevant program is:
     positive definite quadratic form, returning the reduced form and the
     unimodular transformation. Every reduction in the package is available as
     a method -- `direct`, `dual`, `seysen`, `seysen_best`, `seysen_lll`,
-    `deep`, `deep5`, `deep10`, `bkz4`, `bkz8`, `bkz12`, `slide4`, `slide8` --
-    together with `best`, which runs them all and keeps whichever minimises
+    `deep`, and the parametrised `deep-<d>`, `bkz-<b>`, `slide-<k>` for any
+    admissible value -- together with `best`, which runs a representative
+    selection of them and keeps whichever minimises
     the orthogonality defect, ties broken by the size of the integers. The
     single dispatch over them is `LatticeReduction.h`, which is also what
     `VectFamilyReduction.h` calls, so a new reduction is named in one place.
@@ -343,11 +344,15 @@ Note that `dual` is consistently the worst of them on this measure, by one to
 five orders of magnitude, which is worth knowing since it is one of the two
 methods the program originally offered.
 
-All thirteen single methods are available: `direct`, `dual`, `seysen`,
-`seysen_best`, `seysen_lll`, `deep`, `deep5`, `deep10`, `bkz4`, `bkz8`,
-`bkz12`, `slide4`, `slide8`, plus `best`. Running all thirteen costs 57 ms on
-ContactE8 (240 x 9), 102 ms on CUT_7 (64 x 22) and 492 ms on CUT_K8
-(128 x 29), which is nothing against the dual description that follows.
+Every method is available: `direct`, `dual`, `seysen`, `seysen_best`,
+`seysen_lll`, `deep`, the parametrised `deep-<d>`, `bkz-<b>` and `slide-<k>`
+for any admissible value, and `best`. The parameter is parsed from the name,
+so the set of accepted methods is not a fixed handful; `best` tries the
+thirteen-way selection `direct`, `dual`, `seysen`, `seysen_best`,
+`seysen_lll`, `deep`, `deep-5`, `deep-10`, `bkz-4`, `bkz-8`, `bkz-12`,
+`slide-4`, `slide-8`, which costs 57 ms on ContactE8 (240 x 9), 102 ms on
+CUT_7 (64 x 22) and 492 ms on CUT_K8 (128 x 29) -- nothing against the dual
+description that follows.
 
 Adding BKZ and slide reduction did not change any winner on the corpus above:
 `deep` still wins Perfect E7, at 1.41e24 against BKZ-12's 2.02e24 and BKZ-4's

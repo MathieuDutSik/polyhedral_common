@@ -333,7 +333,8 @@ end to end on real workloads before being adopted.
 `POLY_RecursiveDualDesc.h:2117` and `:2191` call
 `ReduceVectorFamily(EXTred, "direct", os)`, that is classic LLL on the Gram
 matrix of the columns. `src_latt/VectFamilyReduction.h` now offers seysen, bkz, slide,
-seysen_best, seysen_lll, deep, deep5, deep10 and `best`, the last running all
+seysen_best, seysen_lll, deep, deep-<d>, bkz-<b>, slide-<k> and `best`, the
+last running a selection of all
 of them plus the unreduced input and keeping whichever minimises
 `sqr_estimate_facet_coefficients` (the Hadamard bound on the facet
 coefficients the dual description will produce). Switching those two call
