@@ -6,6 +6,8 @@
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
+#include "NumberTheoryRealField.h"
+#include "NumberTheoryQuadField.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
@@ -98,6 +100,12 @@ int main(int argc, char *argv[]) {
 #ifdef ENABLE_FLINT_SUPPORT
       std::cerr << "  flint       : fmpq_class / fmpz_class\n";
 #endif
+      std::cerr << "  Qsqrt2      : the form over the field Q(sqrt(2))\n";
+      std::cerr << "  Qsqrt5      : the form over the field Q(sqrt(5))\n";
+      std::cerr << "  RealAlgebraic=FileDesc : the form over the real\n";
+      std::cerr << "              algebraic field described in FileDesc\n";
+      std::cerr << "              (the lattice is Z^n in every case, so the\n";
+      std::cerr << "              automorphisms are integral matrices)\n";
       std::cerr << "OutFormat values:\n";
       std::cerr << "  GAP       : ListGen returned as a GAP-readable list of\n";
       std::cerr << "              integral matrix generators (default)\n";
@@ -143,6 +151,34 @@ int main(int argc, char *argv[]) {
         return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
       }
 #endif
+      // The lattice is Z^n whatever field the form takes its values in, so
+      // Tint stays mpz_class: only the Gram matrices leave the rationals.
+      if (arith == "Qsqrt2") {
+        using T = QuadField<mpq_class, 2>;
+        using Tint = mpz_class;
+        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+      }
+      if (arith == "Qsqrt5") {
+        using T = QuadField<mpq_class, 5>;
+        using Tint = mpz_class;
+        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+      }
+      std::optional<std::string> opt_realalgebraic =
+          get_postfix(arith, "RealAlgebraic=");
+      if (opt_realalgebraic) {
+        std::string const &FileAlgebraicField = *opt_realalgebraic;
+        if (!FILE_IsExistingFile(FileAlgebraicField)) {
+          std::cerr << "LATT_Automorphism: FileAlgebraicField="
+                    << FileAlgebraicField << " is missing\n";
+          throw TerminalException{1};
+        }
+        HelperClassRealField<mpq_class> hcrf(FileAlgebraicField);
+        int const idx_real_algebraic_field = 1;
+        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
+        using T = RealField<idx_real_algebraic_field>;
+        using Tint = mpz_class;
+        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+      }
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
@@ -150,12 +186,14 @@ int main(int argc, char *argv[]) {
 #ifdef ENABLE_BOOST_TYPES
       std::cerr << ", gmp_boost, multi_boost";
 #endif
-      std::cerr << ", flint\n";
+      std::cerr << ", flint";
+      std::cerr << ", Qsqrt2, Qsqrt5, RealAlgebraic=FileDesc\n";
 #else
       std::cerr << "Available possibilities: gmp";
 #ifdef ENABLE_BOOST_TYPES
       std::cerr << ", gmp_boost, multi_boost";
 #endif
+      std::cerr << ", Qsqrt2, Qsqrt5, RealAlgebraic=FileDesc";
       std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
