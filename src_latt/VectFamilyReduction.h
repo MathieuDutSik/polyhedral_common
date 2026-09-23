@@ -1,11 +1,13 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_ISOTROPY_VECTFAMILYREDUCTION_H_
-#define SRC_ISOTROPY_VECTFAMILYREDUCTION_H_
+#ifndef SRC_LATT_VECTFAMILYREDUCTION_H_
+#define SRC_LATT_VECTFAMILYREDUCTION_H_
 // clang-format off
+#include "BKZ.h"
 #include "ClassicLLL.h"
 #include "DeepLLL.h"
 #include "MAT_Matrix.h"
 #include "SeysenReduction.h"
+#include "SlideReduction.h"
 #include "norms.h"
 #include <string>
 #include <utility>
@@ -48,6 +50,12 @@
   itself being among the candidates so that the result is never worse than
   what was handed in. The cost is a small multiple of one reduction and is
   negligible against a dual description.
+
+  This header sits in src_latt and not beside the other reducers in
+  src_isotropy because it uses all of them, and BKZ and slide reduction need
+  the shortest-vector enumerator of Shvec_exact.h. The directory dependency
+  runs src_latt -> src_isotropy; a consumer of everything belongs at the top of
+  that stack.
  */
 
 /*
@@ -76,8 +84,9 @@ VectFamilyQuality<T> ComputeVectFamilyQuality(MyMatrix<T> const &M) {
   handled separately, being a search over these.
  */
 inline std::vector<std::string> VectFamilyReductionSingleMethods() {
-  return {"direct",  "dual",  "seysen",  "seysen_best",
-          "seysen_lll", "deep", "deep5", "deep10"};
+  return {"direct", "dual",   "seysen", "seysen_best", "seysen_lll",
+          "deep",   "deep5",  "deep10", "bkz4",        "bkz8",
+          "bkz12",  "slide4", "slide8"};
 }
 
 inline std::vector<std::string> VectFamilyReductionMethods() {
@@ -116,6 +125,21 @@ ReduceVectorFamilySingle(MyMatrix<T> const &M, std::string const &method,
     }
     if (method == "deep10") {
       return DeepLLLreducedBasisDepth<T, Tint>(G, 10, os_i);
+    }
+    if (method == "bkz4") {
+      return BKZreducedBasis<T, Tint>(G, 4, os_i);
+    }
+    if (method == "bkz8") {
+      return BKZreducedBasis<T, Tint>(G, 8, os_i);
+    }
+    if (method == "bkz12") {
+      return BKZreducedBasis<T, Tint>(G, 12, os_i);
+    }
+    if (method == "slide4") {
+      return SlideReducedBasisAuto<T, Tint>(G, 4, os_i);
+    }
+    if (method == "slide8") {
+      return SlideReducedBasisAuto<T, Tint>(G, 8, os_i);
     }
     std::cerr << "VECT_FAMILY_REDUCTION: unknown method " << method << "\n";
     throw TerminalException{1};
@@ -216,5 +240,5 @@ ReduceVectorFamilyGeneral(MyMatrix<T> const &M, std::string const &method,
 }
 
 // clang-format off
-#endif  // SRC_ISOTROPY_VECTFAMILYREDUCTION_H_
+#endif  // SRC_LATT_VECTFAMILYREDUCTION_H_
 // clang-format on

@@ -296,3 +296,59 @@ third of its cost. Its real argument is not in this table, though: it is the
 polynomial bound on the number of dual steps, which BKZ has no analogue of and
 which is what one wants when the dimension grows past where a table like this
 can be produced.
+
+Reduction of a vector family
+----------------------------
+
+`VectFamilyReduction.h`, and the program **VectFamily_Reduction**, reduce a
+family of vectors: a change of coordinates in the ambient space making the
+coefficients of the family small. This is what is applied to an `EXT` matrix
+before a dual description, and it is a different problem from reducing a
+lattice basis.
+
+The difference decides which reducer to use. What the consumer of the output
+pays for is the size of every coefficient, and for the dual description the
+relevant quantity is `sqr_estimate_facet_coefficients` of `norms.h`, the
+Hadamard bound on the facet coefficients that will be produced. That depends
+on all the vectors symmetrically, so a reduction aiming at one short vector,
+which is what LLL does, is optimising the wrong thing here. Seysen's measure
+is a much closer match, and deep insertion sometimes wins instead. Which of
+them wins is not predictable from the input:
+
+| instance | size | `direct` | best single | winner |
+|---|---|---|---|---|
+| ContactE8 | 240 x 9 | 1.46e8 | 1.00e8 | seysen |
+| Perfect E7 | 63 x 28 | 2.43e24 | 1.41e24 | deep |
+| ER35 | 35 x 8 | 6.0e4 | 6.0e4, L1 112 -> 105 | seysen_lll |
+| CUT_7 | 64 x 22 | 9.07e22 | 9.07e22 | direct |
+| CUT_K8 | 128 x 29 | 1.29e34 | 1.29e34, lower L1 | direct |
+| 24cell | 24 x 5 | 81 | 81 | all tie |
+
+So the useful method is **`best`**: run all the candidates and keep whichever
+actually minimises the estimate, with the unreduced input among the candidates
+so that the result is never worse than what was handed in. It costs three to
+eighteen times a single reduction, which is tens to hundreds of milliseconds
+on the instances above and negligible against the dual description that
+follows.
+
+Note that `dual` is consistently the worst of them on this measure, by one to
+five orders of magnitude, which is worth knowing since it is one of the two
+methods the program originally offered.
+
+All thirteen single methods are available: `direct`, `dual`, `seysen`,
+`seysen_best`, `seysen_lll`, `deep`, `deep5`, `deep10`, `bkz4`, `bkz8`,
+`bkz12`, `slide4`, `slide8`, plus `best`. Running all thirteen costs 57 ms on
+ContactE8 (240 x 9), 102 ms on CUT_7 (64 x 22) and 492 ms on CUT_K8
+(128 x 29), which is nothing against the dual description that follows.
+
+Adding BKZ and slide reduction did not change any winner on the corpus above:
+`deep` still wins Perfect E7, at 1.41e24 against BKZ-12's 2.02e24 and BKZ-4's
+2.06e24, and the block methods tie everywhere else. They are in the candidate
+list because the winner varies by instance and there is no cost to having
+more candidates, not because they have been observed to win here.
+
+The underlying dispatch is `ReduceVectorFamilyGeneral`, returning the reduced
+family, the change of coordinates, the method that won and its measured
+quality. `ReduceVectorFamilyKernel` of `ClassicLLL.h` takes the Gram-matrix
+reducer as a functor, so a new reducer is added by naming it in
+`ReduceVectorFamilySingle` and nowhere else.

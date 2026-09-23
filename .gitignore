@@ -138,7 +138,6 @@ src_group/TEST_WeightMatrixLimited
 src_indefinite/INDEF_*
 src_isotropy/LATT_*
 src_isotropy/CheckPositiveSemiDefinite
-src_isotropy/VectFamily_Reduction
 src_latt/LATT_*
 src_latt/TSPACE_*
 src_latt/GRP_TestFiniteness
@@ -148,6 +147,7 @@ src_latt/TEST_SeysenReduction
 src_latt/TEST_DeepLLL
 src_latt/TEST_BKZ
 src_latt/TEST_SlideReduction
+src_latt/VectFamily_Reduction
 src_milp/LATT_*
 src_milp/MILP_*
 src_lorentzian/LORENTZ_*

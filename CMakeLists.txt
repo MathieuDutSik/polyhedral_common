@@ -611,7 +611,6 @@ set(
   LATT_lll
   CheckPositiveSemiDefinite
   LATT_DiophantApprox
-  VectFamily_Reduction
 )
 foreach(target IN LISTS ISOTROPY_PROGRAMS)
   add_polyhedral_binary(
@@ -688,6 +687,7 @@ set(
   LATT_ComputeGroupModAction
   LATT_RankinMinimum
   LATT_RankinSublattices
+  VectFamily_Reduction
 )
 foreach(target IN LISTS LATT_PROGRAMS)
   add_polyhedral_binary(
