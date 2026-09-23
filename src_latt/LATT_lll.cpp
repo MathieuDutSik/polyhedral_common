@@ -50,6 +50,12 @@ unimodular transformation that produced it.
   deep         Schnorr-Euchner deep insertion: LLL's move set widened from
                the adjacent swap to an insertion at any earlier position
   deep-<d>     the same, with the insertion depth restricted to d
+  minkowski    Minkowski reduction: at each index the shortest vector of the
+               WHOLE lattice among those extending the previous ones to a
+               basis. The strongest of the classical notions, and the only one
+               here that makes |b_1| the true minimum of the lattice. Its cost
+               is exponential in the dimension and inherently so, which is why
+               it is not among the candidates that best tries
   bkz-<b>      BKZ at block size b
   slide-<k>    Gama-Nguyen slide reduction, block size at most k. The block
                size has to divide the dimension, so k is an upper bound and
@@ -59,7 +65,8 @@ unimodular transformation that produced it.
                ties broken by the sum of absolute entries. The input is among
                the candidates, so the result is never worse than it. The
                selection is direct, dual, seysen, seysen_best, seysen_lll,
-               deep, deep-5, deep-10, bkz-4, bkz-8, bkz-12, slide-4, slide-8
+               deep, deep-5, deep-10, bkz-4, bkz-8, bkz-12, slide-4, slide-8.
+               minkowski is deliberately excluded, its cost being exponential
 
 The block methods bkz and slide ask at each index for a shortest vector of a
 projected block, so they cost more than the rest, superexponentially in the

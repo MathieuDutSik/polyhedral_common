@@ -22,8 +22,9 @@ The relevant program is:
     positive definite quadratic form, returning the reduced form and the
     unimodular transformation. Every reduction in the package is available as
     a method -- `direct`, `dual`, `seysen`, `seysen_best`, `seysen_lll`,
-    `deep`, and the parametrised `deep-<d>`, `bkz-<b>`, `slide-<k>` for any
-    admissible value -- together with `best`, which runs a representative
+    `deep`, `minkowski`, and the parametrised `deep-<d>`, `bkz-<b>`,
+    `slide-<k>` for any admissible value -- together with `best`, which runs a
+    representative
     selection of them and keeps whichever minimises
     the orthogonality defect, ties broken by the size of the integers. The
     single dispatch over them is `LatticeReduction.h`, which is also what
@@ -128,6 +129,11 @@ Programs:
   * **TEST_ReductionBenchmark** `[dim] [n_iter] [seed]`, comparing the
     available reducers over the families Zn, An, Dn, E8 and a low-symmetry
     random family, at three strengths of destruction.
+  * **TEST_MinkowskiReduction** `[dim] [n_iter] [seed]`, validating the
+    Minkowski reduction of `MinkowskiReduction.h`. It redoes the enumeration
+    from the output and asks at every index whether an admissible vector is
+    shorter, and separately checks that `|b_1|^2` equals the true minimum of
+    the lattice, computed by the enumerator on its own.
   * **TEST_SlideReduction** `[dim] [n_iter] [seed]`, validating the slide
     reduction of `SlideReduction.h`. It rebuilds every block from the output
     and re-tests both families of conditions, the dual half -- which goes
@@ -365,3 +371,52 @@ family, the change of coordinates, the method that won and its measured
 quality. `ReduceVectorFamilyKernel` of `ClassicLLL.h` takes the Gram-matrix
 reducer as a functor, so a new reducer is added by naming it in
 `ReduceVectorFamilySingle` and nowhere else.
+
+
+Minkowski reduction
+-------------------
+
+`MinkowskiReduction.h`. A basis is Minkowski reduced when, for every `i`,
+`b_i` is a **shortest** vector among those `v` for which
+`(b_1, ..., b_{i-1}, v)` extends to a basis of the lattice. It is the
+strongest of the classical notions: LLL, deep insertion and BKZ each ask for
+a local or blockwise optimality, this asks at every index for the true optimum
+over the whole lattice subject only to keeping the previous vectors. In
+particular `|b_1|` is the minimum of the lattice, which none of the others
+guarantees.
+
+**The condition is decidable in any dimension.** The restriction to dimension
+seven often quoted in connection with Minkowski reduction is a different
+statement: the explicit finite system of inequalities cutting out the
+Minkowski fundamental domain in the cone of forms is known only to dimension
+seven (Tammela). Reducing a *given* form asks nothing of that domain.
+
+In coordinates, writing `v = sum_j c_j b_j` in the current basis, the
+extendability condition is
+
+```
+gcd(c_i, c_{i+1}, ..., c_n) = 1,
+```
+
+because the quotient of the lattice by the span of `b_1, ..., b_{i-1}` is free
+on the images of `b_i, ..., b_n` and the pair extends to a basis exactly when
+the image of `v` is primitive there. Note that `c_1, ..., c_{i-1}` do not
+enter.
+
+**One forward pass suffices**, and there is no termination argument to make.
+The set of admissible `v` at index `i` depends only on the lattice and on
+`b_1, ..., b_{i-1}`; a later step changes `b_j` for `j > i` and nothing before
+it, so it cannot disturb a condition already established. The algorithm is `n`
+enumerations, each of the lattice points of norm at most `|b_i|^2`, done by
+`computeLevel_GramMat` of `Shvec_exact.h`.
+
+The cost is exponential in the dimension and inherently so, the last index
+being the expensive one. Measured on the benchmark instances: dimensions 5 to
+12 under two seconds, dimension 14 in five, dimension 16 in ten. The basis is
+LLL reduced first, which is not needed for correctness but decides the cost,
+the enumeration bound at index `i` being `|b_i|^2`.
+
+It is available to `LATT_lll` and `VectFamily_Reduction` as the method
+`minkowski`, and is deliberately **not** among the candidates that `best`
+tries: a search including it would be unusable at the sizes where the others
+are routine.

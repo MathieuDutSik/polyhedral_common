@@ -7,6 +7,7 @@
 #include "ClassicLLL.h"
 #include "DeepLLL.h"
 #include "MAT_Matrix.h"
+#include "MinkowskiReduction.h"
 #include "SeysenReduction.h"
 #include "SlideReduction.h"
 #include <optional>
@@ -44,6 +45,13 @@
       non-overlapping blocks, which buys a polynomial bound on the number of
       steps that BKZ has no analogue of.
 
+    * minkowski is the strongest of the classical notions, asking at each
+      index for a shortest vector of the WHOLE lattice among those extending
+      the previous ones to a basis. Its cost is exponential in the dimension
+      and inherently so, which is why it is available by name but is NOT among
+      the candidates that "best" tries: a search including it would be
+      unusable at the sizes where the others are routine.
+
   The block methods cost more than the rest, superexponentially in the block
   size, and the quality they buy improves slowly. Above block size eight the
   gains observed in this package were negligible.
@@ -57,8 +65,8 @@
 
   The list below is not the set of accepted methods, which is infinite. It is
   the set of candidates that "best" tries, chosen to span the useful range
-  without costing more than it is worth. A caller wanting a value outside it
-  names the method.
+  without costing more than it is worth. A caller wanting a value outside it,
+  or wanting minkowski, names the method.
  */
 inline std::vector<std::string> LatticeReductionSingleMethods() {
   return {"direct", "dual",    "seysen",  "seysen_best", "seysen_lll",
@@ -132,7 +140,7 @@ inline void LatticeReduction_UnknownMethod(std::string const &method) {
   }
   std::cerr << "  the methods without a parameter are:";
   for (auto &meth : {"direct", "dual", "seysen", "seysen_best", "seysen_lll",
-                     "deep", "best"}) {
+                     "deep", "minkowski", "best"}) {
     std::cerr << " " << meth;
   }
   std::cerr << "\n";
@@ -162,6 +170,9 @@ LLLreduction<T, Tint> LatticeReducedGeneral(MyMatrix<T> const &GramMat,
   }
   if (method == "deep") {
     return DeepLLLreducedBasis<T, Tint>(GramMat, os);
+  }
+  if (method == "minkowski") {
+    return MinkowskiReducedBasis<T, Tint>(GramMat, os);
   }
   // A depth of zero would mean no restriction, which is what bare "deep"
   // already provides, so the smallest meaningful restriction is one.

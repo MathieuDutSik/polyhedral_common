@@ -147,6 +147,7 @@ src_latt/TEST_SeysenReduction
 src_latt/TEST_DeepLLL
 src_latt/TEST_BKZ
 src_latt/TEST_SlideReduction
+src_latt/TEST_MinkowskiReduction
 src_latt/VectFamily_Reduction
 src_latt/LATT_lll
 src_milp/LATT_*

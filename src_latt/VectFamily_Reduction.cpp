@@ -39,6 +39,10 @@ choice here, and in measurement the winner varies by instance.
   seysen_lll   Seysen and LLL alternated while the measure improves
   deep         Schnorr-Euchner deep insertion, unrestricted depth
   deep-<d>     the same, with the insertion depth restricted to d
+  minkowski    Minkowski reduction: at each index the shortest vector of the
+               whole lattice among those extending the previous ones to a
+               basis. The strongest of the classical notions; cost exponential
+               in the dimension, so not among the candidates that best tries
   bkz-<b>      BKZ at block size b
   slide-<k>    Gama-Nguyen slide reduction, block size at most k. The block
                size has to divide the dimension, so k is an upper bound and
@@ -51,7 +55,8 @@ choice here, and in measurement the winner varies by instance.
                reduction, and that is nothing against the dual description
                that follows. The selection is direct, dual, seysen,
                seysen_best, seysen_lll, deep, deep-5, deep-10, bkz-4, bkz-8,
-               bkz-12, slide-4, slide-8
+               bkz-12, slide-4, slide-8; minkowski is excluded, its cost being
+               exponential
 
  ------- OutFormat --------
 
