@@ -54,6 +54,136 @@ endif()
 
 pkg_check_modules(GMPXX REQUIRED IMPORTED_TARGET gmpxx)
 find_library(GMP_LIBRARY NAMES gmp REQUIRED)
+
+# Optional flint arithmetic: the fmpz_class / fmpq_class of
+# basic_common_cpp/src_number/NumberTheoryFlint.h, selected at run time by the
+# "flint" (or fmpz_class / fmpq_class) entry of the programs' arith argument,
+# and the matrix backend of src_matrix/MAT_MatrixFlint.h reached through the
+# src_matrix headers. This is the counterpart of the
+# `make ENABLE_FLINT_SUPPORT=1` of the Makefiles, and mirrors the block of
+# basic_common_cpp/CMakeLists.txt so both projects answer to the same setting.
+#
+# ENABLE_FLINT_SUPPORT drives the search: AUTO, the default, uses flint when it
+# is found and builds without it otherwise; OFF ignores it even when installed;
+# anything else, including the `1` that the Makefiles take, requires it and
+# fails the configuration when it is missing.
+set(
+  ENABLE_FLINT_SUPPORT "AUTO"
+  CACHE STRING
+  "Flint arithmetic: AUTO (use when found), ON (require), OFF (ignore)"
+)
+set_property(CACHE ENABLE_FLINT_SUPPORT PROPERTY STRINGS AUTO ON OFF)
+
+string(TOUPPER "${ENABLE_FLINT_SUPPORT}" FLINT_REQUEST)
+if(FLINT_REQUEST STREQUAL "AUTO")
+  set(FLINT_WANTED TRUE)
+  set(FLINT_REQUIRED FALSE)
+elseif(FLINT_REQUEST MATCHES "^(OFF|0|NO|FALSE|N|IGNORE|NOTFOUND)$")
+  set(FLINT_WANTED FALSE)
+  set(FLINT_REQUIRED FALSE)
+else()
+  set(FLINT_WANTED TRUE)
+  set(FLINT_REQUIRED TRUE)
+endif()
+
+set(FLINT_USABLE FALSE)
+if(FLINT_WANTED)
+  # flint 3 ships a pkg-config file; older installations and some
+  # distributions do not, hence the search by hand as a fallback.
+  pkg_check_modules(FLINT IMPORTED_TARGET flint)
+  if(FLINT_FOUND)
+    set(FLINT_PROBE_INCLUDES "${FLINT_INCLUDE_DIRS}")
+    set(FLINT_PROBE_LIBRARIES "${FLINT_LDFLAGS}")
+    set(FLINT_ORIGIN "pkg-config, version ${FLINT_VERSION}")
+  else()
+    find_path(FLINT_INCLUDE_DIR NAMES flint/fmpz.h)
+    find_library(FLINT_LIBRARY NAMES flint)
+    if(FLINT_INCLUDE_DIR AND FLINT_LIBRARY)
+      set(FLINT_PROBE_INCLUDES "${FLINT_INCLUDE_DIR}")
+      set(FLINT_PROBE_LIBRARIES "${FLINT_LIBRARY}" "${GMP_LIBRARY}")
+      set(FLINT_ORIGIN "${FLINT_LIBRARY}")
+    endif()
+  endif()
+
+  # Being installed is not the same as being usable: the entry accessors and
+  # the normal form routines below are what the two headers call, and they are
+  # the parts that moved between the flint versions. A flint too old to compile
+  # them is treated as absent rather than allowed to break the build later. The
+  # outcome is cached as FLINT_COMPILES, so a flint installed after a
+  # configuration that did not find one is picked up only once that entry is
+  # removed from the cache.
+  if(DEFINED FLINT_PROBE_INCLUDES)
+    include(CheckCXXSourceCompiles)
+    set(CMAKE_REQUIRED_INCLUDES ${FLINT_PROBE_INCLUDES})
+    set(CMAKE_REQUIRED_LIBRARIES ${FLINT_PROBE_LIBRARIES})
+    check_cxx_source_compiles(
+      "
+      #include <flint/fmpz.h>
+      #include <flint/fmpq.h>
+      #include <flint/fmpz_mat.h>
+      #include <flint/fmpq_mat.h>
+      int main() {
+        fmpz_t a;
+        fmpz_init(a);
+        fmpz_set_si(a, 3);
+        fmpz_mat_t m, h;
+        fmpz_mat_init(m, 2, 2);
+        fmpz_mat_init(h, 2, 2);
+        fmpz_set(fmpz_mat_entry(m, 0, 0), a);
+        fmpz_mat_hnf(h, m);
+        fmpz_mat_snf(h, m);
+        fmpz_mat_clear(h);
+        fmpz_mat_clear(m);
+        fmpq_mat_t q;
+        fmpq_mat_init(q, 2, 2);
+        fmpq_mat_rref(q, q);
+        fmpq_mat_clear(q);
+        fmpz_clear(a);
+        return 0;
+      }
+      "
+      FLINT_COMPILES
+    )
+    unset(CMAKE_REQUIRED_INCLUDES)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+    if(FLINT_COMPILES)
+      set(FLINT_USABLE TRUE)
+    endif()
+  endif()
+endif()
+
+# Always defined so polyhedral_common can link it unconditionally; it carries
+# the ENABLE_FLINT_SUPPORT define and the library only when flint is usable,
+# and is an empty interface otherwise.
+add_library(polyhedral_flint INTERFACE)
+if(FLINT_USABLE)
+  target_compile_definitions(polyhedral_flint INTERFACE ENABLE_FLINT_SUPPORT)
+  if(FLINT_FOUND)
+    target_link_libraries(polyhedral_flint INTERFACE PkgConfig::FLINT)
+  else()
+    target_include_directories(polyhedral_flint INTERFACE "${FLINT_INCLUDE_DIR}")
+    target_link_libraries(polyhedral_flint INTERFACE "${FLINT_LIBRARY}")
+  endif()
+  message(STATUS "flint found (${FLINT_ORIGIN}); building with ENABLE_FLINT_SUPPORT")
+elseif(FLINT_REQUIRED)
+  if(DEFINED FLINT_PROBE_INCLUDES)
+    message(FATAL_ERROR
+      "ENABLE_FLINT_SUPPORT=${ENABLE_FLINT_SUPPORT} was asked for but the "
+      "flint found at ${FLINT_ORIGIN} does not compile the routines used by "
+      "src_number/NumberTheoryFlint.h and src_matrix/MAT_MatrixFlint.h. "
+      "See CMakeFiles/CMakeError.log for the compiler output.")
+  else()
+    message(FATAL_ERROR
+      "ENABLE_FLINT_SUPPORT=${ENABLE_FLINT_SUPPORT} was asked for but flint "
+      "was not found. Install it, or set ENABLE_FLINT_SUPPORT=OFF to build "
+      "without it.")
+  endif()
+elseif(FLINT_WANTED)
+  message(STATUS "flint not usable; building without the flint arithmetic")
+else()
+  message(STATUS "flint disabled by ENABLE_FLINT_SUPPORT=${ENABLE_FLINT_SUPPORT}")
+endif()
+
 find_path(
   NETCDF_INCLUDE_DIR
   NAMES netcdf
@@ -168,6 +298,7 @@ target_link_libraries(
     Threads::Threads
     PkgConfig::GMPXX
     "${GMP_LIBRARY}"
+    polyhedral_flint
 )
 if(WIN32)
   # Boost.Asio (pulled in transitively, e.g. via Boost serialization / the
