@@ -10,7 +10,8 @@
 #include "SHORT_Realizability.h"
 #include "rational.h"
 
-template<typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void test_realizability(std::string const& FileSHV, std::string const& OutFormat, std::string const& OutFile) {
   using Tidx = uint16_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -112,26 +113,22 @@ int main(int argc, char *argv[]) {
     auto f_treat=[&]() -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return test_realizability<T,Tint>(FileSHV, OutFormat, OutFile);
+        return test_realizability<T>(FileSHV, OutFormat, OutFile);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return test_realizability<T,Tint>(FileSHV, OutFormat, OutFile);
+        return test_realizability<T>(FileSHV, OutFormat, OutFile);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return test_realizability<T,Tint>(FileSHV, OutFormat, OutFile);
+        return test_realizability<T>(FileSHV, OutFormat, OutFile);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return test_realizability<T,Tint>(FileSHV, OutFormat, OutFile);
+        return test_realizability<T>(FileSHV, OutFormat, OutFile);
       }
 #endif
       std::cerr << "SHORT_TestRealizability: failed to find a matching "

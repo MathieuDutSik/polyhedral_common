@@ -35,7 +35,8 @@ void WriteEquivalence(std::optional<MyMatrix<Tint>> const &opt,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process_C(std::string const &FileMatrix1, std::string const &FileMatrix2,
                std::string const &OutFormat, std::string const &FileOut) {
   using Tidx = uint32_t;
@@ -93,8 +94,7 @@ int main(int argc, char *argv[]) {
       FileOut = argv[4];
     }
     using T = mpq_class;
-    using Tint = mpz_class;
-    process_C<T, Tint>(FileMatrix1, FileMatrix2, OutFormat, FileOut);
+    process_C<T>(FileMatrix1, FileMatrix2, OutFormat, FileOut);
     std::cerr << "Normal termination of LORENTZ_PERF_Isomorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_PERF_Isomorphism\n";

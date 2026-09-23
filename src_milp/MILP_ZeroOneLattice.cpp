@@ -4,7 +4,8 @@
 #include "zero_one_lattice.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process_zero_one_lattice(std::string const &FileMatrix,
                               std::string const &FileRHS,
                               std::string const &choice,
@@ -122,12 +123,11 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     using T = mpq_class;
-    using Tint = mpz_class;
     std::string FileMatrix = argv[1];
     std::string FileRHS = argv[2];
     std::string choice = argv[3];
     std::string FileOut = argv[4];
-    process_zero_one_lattice<T, Tint>(FileMatrix, FileRHS, choice, FileOut);
+    process_zero_one_lattice<T>(FileMatrix, FileRHS, choice, FileOut);
     std::cerr << "Normal termination of MILP_ZeroOneLattice\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in MILP_ZeroOneLattice\n";

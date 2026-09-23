@@ -12,7 +12,8 @@
 #include "SignatureSymmetric.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void ComputeIsomorphism(std::string const &FileListMat1,
                         std::string const &FileListMat2,
                         std::string const &OutFormat, std::ostream &os) {
@@ -111,29 +112,25 @@ int main(int argc, char *argv[]) {
     auto prt = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return ComputeIsomorphism<T, Tint>(FileListMat1, FileListMat2,
+        return ComputeIsomorphism<T>(FileListMat1, FileListMat2,
                                            OutFormat, os);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return ComputeIsomorphism<T, Tint>(FileListMat1, FileListMat2,
+        return ComputeIsomorphism<T>(FileListMat1, FileListMat2,
                                            OutFormat, os);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return ComputeIsomorphism<T, Tint>(FileListMat1, FileListMat2,
+        return ComputeIsomorphism<T>(FileListMat1, FileListMat2,
                                            OutFormat, os);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return ComputeIsomorphism<T, Tint>(FileListMat1, FileListMat2,
+        return ComputeIsomorphism<T>(FileListMat1, FileListMat2,
                                            OutFormat, os);
       }
 #endif

@@ -38,7 +38,8 @@
   exhausting its attempts rather than looping.
  */
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(int n, int N, int n_coset, int n_attempt,
              std::string const &FileOut) {
   // The cosets are drawn as integral numerators over the common denominator
@@ -153,8 +154,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     }
     using T = mpq_class;
-    using Tint = mpz_class;
-    process<T, Tint>(n, N, n_coset, n_attempt, FileOut);
+    process<T>(n, N, n_coset, n_attempt, FileOut);
     //
     std::cerr << "Normal termination of PERIODIC_RandomCosets\n";
   } catch (TerminalException const &e) {

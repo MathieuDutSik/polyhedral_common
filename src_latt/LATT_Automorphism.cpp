@@ -15,7 +15,8 @@
 #include "SignatureSymmetric.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void ComputeAutomorphism(std::string const &FileListMat,
                          std::string const &OutFormat, std::ostream &os) {
   using Tidx = uint32_t;
@@ -129,39 +130,33 @@ int main(int argc, char *argv[]) {
     auto prt = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
 #endif
       // The lattice is Z^n whatever field the form takes its values in, so
       // Tint stays mpz_class: only the Gram matrices leave the rationals.
       if (arith == "Qsqrt2") {
         using T = QuadField<mpq_class, 2>;
-        using Tint = mpz_class;
-        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
       if (arith == "Qsqrt5") {
         using T = QuadField<mpq_class, 5>;
-        using Tint = mpz_class;
-        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -176,8 +171,7 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        using Tint = mpz_class;
-        return ComputeAutomorphism<T, Tint>(FileListMat, OutFormat, os);
+        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";

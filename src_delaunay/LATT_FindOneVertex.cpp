@@ -9,7 +9,8 @@
 #include "LatticeDelaunay.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(std::string const &FileM, std::string const &OutFormat,
              std::ostream &os) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileM);
@@ -50,26 +51,22 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return process<T, Tint>(FileM, OutFormat, os);
+        return process<T>(FileM, OutFormat, os);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return process<T, Tint>(FileM, OutFormat, os);
+        return process<T>(FileM, OutFormat, os);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return process<T, Tint>(FileM, OutFormat, os);
+        return process<T>(FileM, OutFormat, os);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return process<T, Tint>(FileM, OutFormat, os);
+        return process<T>(FileM, OutFormat, os);
       }
 #endif
       std::cerr << "Failed to find a matching entry for arith=" << arith

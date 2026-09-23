@@ -11,7 +11,8 @@
 #include "Positivity.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process_automorphism(std::string const &FileGram,
                           std::string const &OutFormat, std::ostream &os) {
   MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
@@ -49,7 +50,8 @@ void process_automorphism(std::string const &FileGram,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process_isometry(std::string const &FileGram1,
                       std::string const &FileGram2,
                       std::string const &OutFormat, std::ostream &os) {
@@ -132,30 +134,27 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
         if (mode == "aut") {
-          return process_automorphism<T, Tint>(FileGram1, OutFormat, os);
+          return process_automorphism<T>(FileGram1, OutFormat, os);
         }
-        return process_isometry<T, Tint>(FileGram1, FileGram2, OutFormat, os);
+        return process_isometry<T>(FileGram1, FileGram2, OutFormat, os);
       }
       if (arith == "safe") {
         // Machine integers with overflow detection: an overflow throws
         // instead of corrupting, so a caller can fall back to gmp.
         using T = Rational<SafeInt64>;
-        using Tint = SafeInt64;
         if (mode == "aut") {
-          return process_automorphism<T, Tint>(FileGram1, OutFormat, os);
+          return process_automorphism<T>(FileGram1, OutFormat, os);
         }
-        return process_isometry<T, Tint>(FileGram1, FileGram2, OutFormat, os);
+        return process_isometry<T>(FileGram1, FileGram2, OutFormat, os);
       }
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
         if (mode == "aut") {
-          return process_automorphism<T, Tint>(FileGram1, OutFormat, os);
+          return process_automorphism<T>(FileGram1, OutFormat, os);
         }
-        return process_isometry<T, Tint>(FileGram1, FileGram2, OutFormat, os);
+        return process_isometry<T>(FileGram1, FileGram2, OutFormat, os);
       }
 #endif
       std::cerr << "Failed to find a matching entry for arith\n";

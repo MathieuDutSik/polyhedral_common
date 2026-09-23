@@ -14,7 +14,8 @@
 #include <unordered_set>
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(std::string const &ListMatFile, std::string const &OutFormat,
              std::ostream &os_out) {
   using Tidx = uint32_t;
@@ -187,14 +188,12 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os_out) -> void {
       if (arith == "rational") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return process<T, Tint>(ListMatFile, OutFormat, os_out);
+        return process<T>(ListMatFile, OutFormat, os_out);
       }
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return process<T, Tint>(ListMatFile, OutFormat, os_out);
+        return process<T>(ListMatFile, OutFormat, os_out);
       }
 #endif
       std::cerr << "Failed to find matching type for arith\n";

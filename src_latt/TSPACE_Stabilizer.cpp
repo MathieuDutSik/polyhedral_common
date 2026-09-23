@@ -35,7 +35,8 @@ void write_group(std::vector<MyMatrix<T>> const &LGen,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void ComputeStabilizer(std::string const &FileTspace,
                        std::string const &FileGram,
                        std::string const &OutFormat, std::ostream &os) {
@@ -93,29 +94,25 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os_out) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return ComputeStabilizer<T, Tint>(FileTspace, FileGram, OutFormat,
+        return ComputeStabilizer<T>(FileTspace, FileGram, OutFormat,
                                           os_out);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return ComputeStabilizer<T, Tint>(FileTspace, FileGram, OutFormat,
+        return ComputeStabilizer<T>(FileTspace, FileGram, OutFormat,
                                           os_out);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return ComputeStabilizer<T, Tint>(FileTspace, FileGram, OutFormat,
+        return ComputeStabilizer<T>(FileTspace, FileGram, OutFormat,
                                           os_out);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return ComputeStabilizer<T, Tint>(FileTspace, FileGram, OutFormat,
+        return ComputeStabilizer<T>(FileTspace, FileGram, OutFormat,
                                           os_out);
       }
 #endif

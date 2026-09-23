@@ -12,7 +12,8 @@
 #include "enum_robust_covering.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(std::string const &MatFile,
              std::string const &PVoronoiFile,
              std::string const &OutFormat,
@@ -91,26 +92,22 @@ int main(int argc, char *argv[]) {
     auto f=[&]() -> void {
       if (arithmetic == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
+        return process<T>(MatFile, PVoronoiFile, OutFormat, OutFile);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arithmetic == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
+        return process<T>(MatFile, PVoronoiFile, OutFormat, OutFile);
       }
       if (arithmetic == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
+        return process<T>(MatFile, PVoronoiFile, OutFormat, OutFile);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arithmetic == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
+        return process<T>(MatFile, PVoronoiFile, OutFormat, OutFile);
       }
 #endif
       std::cerr << "failure: No matching entry for arithmetic\n";

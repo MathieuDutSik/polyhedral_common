@@ -33,7 +33,8 @@
     TEST_DeepLLL [dim] [n_iter] [seed]
  */
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
   std::mt19937_64 rng(seed);
   std::vector<std::string> l_name{"Zn", "An", "Dn", "E8", "random"};
@@ -146,8 +147,7 @@ int main(int argc, char *argv[]) {
       seed = std::stoul(argv[3]);
     }
     using T = mpq_class;
-    using Tint = mpz_class;
-    process<T, Tint>(dim, n_iter, seed, std::cerr);
+    process<T>(dim, n_iter, seed, std::cerr);
     std::cerr << "Normal termination of TEST_DeepLLL\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TEST_DeepLLL\n";

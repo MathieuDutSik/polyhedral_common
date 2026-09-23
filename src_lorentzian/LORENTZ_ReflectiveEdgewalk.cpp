@@ -12,7 +12,8 @@
 #include "edgewalk.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(std::string const &MatFile, std::string const &OutFormat,
              std::ostream &os_out) {
   using Tidx = uint32_t;
@@ -54,26 +55,22 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os_out) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return process<T, Tint>(MatFile, OutFormat, os_out);
+        return process<T>(MatFile, OutFormat, os_out);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return process<T, Tint>(MatFile, OutFormat, os_out);
+        return process<T>(MatFile, OutFormat, os_out);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return process<T, Tint>(MatFile, OutFormat, os_out);
+        return process<T>(MatFile, OutFormat, os_out);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return process<T, Tint>(MatFile, OutFormat, os_out);
+        return process<T>(MatFile, OutFormat, os_out);
       }
 #endif
       std::cerr << "Failed to find matching entry for arith=" << arith << "\n";

@@ -10,7 +10,8 @@
 #include "LatticePleskenSouvignier.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(std::string choice, std::string MatFile,
              std::string const &OutFormat, std::string const &OutFile) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
@@ -259,26 +260,22 @@ int main(int argc, char *argv[]) {
     auto f=[&]() -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return process<T,Tint>(choice, MatFile, OutFormat, OutFile);
+        return process<T>(choice, MatFile, OutFormat, OutFile);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return process<T,Tint>(choice, MatFile, OutFormat, OutFile);
+        return process<T>(choice, MatFile, OutFormat, OutFile);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return process<T,Tint>(choice, MatFile, OutFormat, OutFile);
+        return process<T>(choice, MatFile, OutFormat, OutFile);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return process<T,Tint>(choice, MatFile, OutFormat, OutFile);
+        return process<T>(choice, MatFile, OutFormat, OutFile);
       }
 #endif
       std::cerr << "process_A failure: No matching entry for arith\n";

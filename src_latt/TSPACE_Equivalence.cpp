@@ -34,7 +34,8 @@ void write_result(std::optional<MyMatrix<T>> const &opt,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void ComputeEquivalence(std::string const &FileTspace,
                         std::string const &FileGram1,
                         std::string const &FileGram2,
@@ -95,29 +96,25 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os_out) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return ComputeEquivalence<T, Tint>(FileTspace, FileGram1, FileGram2,
+        return ComputeEquivalence<T>(FileTspace, FileGram1, FileGram2,
                                            OutFormat, os_out);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return ComputeEquivalence<T, Tint>(FileTspace, FileGram1, FileGram2,
+        return ComputeEquivalence<T>(FileTspace, FileGram1, FileGram2,
                                            OutFormat, os_out);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return ComputeEquivalence<T, Tint>(FileTspace, FileGram1, FileGram2,
+        return ComputeEquivalence<T>(FileTspace, FileGram1, FileGram2,
                                            OutFormat, os_out);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return ComputeEquivalence<T, Tint>(FileTspace, FileGram1, FileGram2,
+        return ComputeEquivalence<T>(FileTspace, FileGram1, FileGram2,
                                            OutFormat, os_out);
       }
 #endif

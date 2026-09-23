@@ -7,7 +7,8 @@
 #include "LatticeRootDecomposition.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(std::string const &FileListGram, std::ostream &os) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -42,8 +43,7 @@ int main(int argc, char *argv[]) {
     }
     std::string FileListGram = argv[1];
     using T = mpq_class;
-    using Tint = mpz_class;
-    process<T, Tint>(FileListGram, std::cerr);
+    process<T>(FileListGram, std::cerr);
     std::cerr << "Normal termination of TIME_CanonicalCompare\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TIME_CanonicalCompare\n";

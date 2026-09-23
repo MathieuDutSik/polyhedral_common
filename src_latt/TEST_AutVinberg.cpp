@@ -12,7 +12,8 @@
   method: the order must match, and every returned generator must
   preserve the form. Times both to show the speedup.
  */
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(std::string const &FileListGram, std::ostream &os) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -74,8 +75,7 @@ int main(int argc, char *argv[]) {
     }
     std::string FileListGram = argv[1];
     using T = mpq_class;
-    using Tint = mpz_class;
-    process<T, Tint>(FileListGram, std::cerr);
+    process<T>(FileListGram, std::cerr);
     std::cerr << "Normal termination of TEST_AutVinberg\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TEST_AutVinberg\n";

@@ -9,7 +9,8 @@
 #include "Copositivity.h"
 // clang-format on
 
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void compute(std::string const &FileI, std::string const &strMaxNorm,
              std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
@@ -63,26 +64,22 @@ int main(int argc, char *argv[]) {
     auto f_print = [&](std::ostream &os_out) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
-        using Tint = mpz_class;
-        return compute<T, Tint>(FileI, strMaxNorm, OutFormat, os_out);
+        return compute<T>(FileI, strMaxNorm, OutFormat, os_out);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return compute<T, Tint>(FileI, strMaxNorm, OutFormat, os_out);
+        return compute<T>(FileI, strMaxNorm, OutFormat, os_out);
       }
       if (arith == "multi_boost") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return compute<T, Tint>(FileI, strMaxNorm, OutFormat, os_out);
+        return compute<T>(FileI, strMaxNorm, OutFormat, os_out);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;
-        using Tint = fmpz_class;
-        return compute<T, Tint>(FileI, strMaxNorm, OutFormat, os_out);
+        return compute<T>(FileI, strMaxNorm, OutFormat, os_out);
       }
 #endif
       std::cerr << "Failed to find a matching entry for arith=" << arith

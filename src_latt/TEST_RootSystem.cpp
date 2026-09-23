@@ -15,7 +15,8 @@
   graph method): the Weyl group is a subgroup of Aut(L), so this must
   hold, and it is a strong test of the recognition.
  */
-template <typename T, typename Tint>
+template <typename T,
+          typename Tint = typename underlying_z_ring<T>::ring_type>
 void process(std::string const &FileListGram, std::ostream &os) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -83,8 +84,7 @@ int main(int argc, char *argv[]) {
     }
     std::string FileListGram = argv[1];
     using T = mpq_class;
-    using Tint = mpz_class;
-    process<T, Tint>(FileListGram, std::cerr);
+    process<T>(FileListGram, std::cerr);
     std::cerr << "Normal termination of TEST_RootSystem\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TEST_RootSystem\n";
