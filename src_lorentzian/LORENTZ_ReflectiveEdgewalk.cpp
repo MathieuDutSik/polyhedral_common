@@ -4,6 +4,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "edgewalk.h"
@@ -14,7 +17,10 @@ void process(std::string const &MatFile, std::string const &OutFormat,
              std::ostream &os_out) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
-  using TintGroup = Tint;
+  // The group order is counted in TintGroup, which is unrelated to the
+  // arithmetic of the coordinates: fixing it to mpz_class keeps the
+  // permutation group out of whichever arithmetic Tint happens to be.
+  using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
   MyMatrix<T> LorMat = ReadMatrixFile<T>(MatFile);
   //
@@ -61,8 +67,21 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(MatFile, OutFormat, os_out);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        using Tint = fmpz_class;
+        return process<T, Tint>(MatFile, OutFormat, os_out);
+      }
+#endif
       std::cerr << "Failed to find matching entry for arith=" << arith << "\n";
-      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost, "
+                << "flint\n";
+#else
+      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost "
+                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, f);

@@ -1131,28 +1131,35 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   return {RemoveFractionVector(k_new), MatrixFromVectorFamily(l_roots_ret)};
 }
 
-template <typename Tint> TheHeuristic<Tint> GetHeuristicIdealStabEquiv() {
+// The heuristics below weigh group orders and cardinalities, never a lattice
+// coordinate, so they are counted in the group integer type TintGroup rather
+// than in the coordinate type. Keeping them in the coordinate type forced a
+// conversion of the group order into it, which only exists when the two
+// happen to be the same type.
+template <typename TintGroup>
+TheHeuristic<TintGroup> GetHeuristicIdealStabEquiv() {
   // Allowed returned values: "linalg", "orbmin"
   // Allowed input values "groupsize", "size"
   std::vector<std::string> ListString = {
       "1", "1 groupsize > 500000 size > 100 linalg", "linalg"};
-  return HeuristicFromListString<Tint>(ListString);
+  return HeuristicFromListString<TintGroup>(ListString);
 }
 
-template <typename Tint>
-TheHeuristic<Tint> GetHeuristicTryTerminateDualDescription() {
+template <typename TintGroup>
+TheHeuristic<TintGroup> GetHeuristicTryTerminateDualDescription() {
   // Allowed returned values: "trydualdesc", "notry"
   // Allowed input values: "increase_treat_nothingnew"
   std::vector<std::string> ListString = {
       "1", "1 increase_treat_nothingnew > 10 notry", "notry"};
-  return HeuristicFromListString<Tint>(ListString);
+  return HeuristicFromListString<TintGroup>(ListString);
 }
 
 template <typename T, typename Tint, typename Tgroup>
 FundDomainVertex_FullInfo<T, Tint, Tgroup> gen_fund_domain_fund_info(
     CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     FundDomainVertex<T, Tint> const &vert,
-    TheHeuristic<Tint> const &HeuristicIdealStabEquiv, std::ostream &os) {
+    TheHeuristic<typename Tgroup::Tint> const &HeuristicIdealStabEquiv,
+    std::ostream &os) {
   MyMatrix<T> const &G = si.G;
 #ifdef TIMINGS_EDGEWALK
   MicrosecondTime time;
@@ -1169,10 +1176,11 @@ FundDomainVertex_FullInfo<T, Tint, Tgroup> gen_fund_domain_fund_info(
     // Add new vertices
     MyMatrix<T> FAC = UniversalMatrixConversion<T, Tint>(erec.MatRoot);
     MyMatrix<T> FACred = ColumnReduction(FAC);
-    std::map<std::string, Tint> mapV;
-    mapV["groupsize"] = UniversalScalarConversion<Tint, typename Tgroup::Tint>(
-        erec.GRP1.size());
-    mapV["size"] = vert.MatRoot.rows();
+    using TintGroup = typename Tgroup::Tint;
+    std::map<std::string, TintGroup> mapV;
+    mapV["groupsize"] = erec.GRP1.size();
+    mapV["size"] = UniversalScalarConversion<TintGroup, int>(
+        vert.MatRoot.rows());
     std::string choice = HeuristicEvaluation(mapV, HeuristicIdealStabEquiv);
     if (choice == "orbmin") {
       vectface vf = rev_search::DualDescription_incd(FACred);
@@ -1424,7 +1432,8 @@ template <typename T, typename Tint, typename Tgroup, typename Fvertex,
 void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     SublattInfos<T> const &si, FundDomainVertex<T, Tint> const &eVert,
     Fvertex f_vertex, Fisom f_isom, Fincrease f_increase_nbdone,
-    TheHeuristic<Tint> const &HeuristicIdealStabEquiv, std::ostream &os) {
+    TheHeuristic<typename Tgroup::Tint> const &HeuristicIdealStabEquiv,
+    std::ostream &os) {
   MyMatrix<T> const &G = si.G;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -1668,8 +1677,9 @@ template <typename T, typename Tint, typename Tgroup>
 ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
     SublattInfos<T> const &si, FundDomainVertex<T, Tint> const &eVert,
     bool const &EarlyTerminationIfNotReflective,
-    TheHeuristic<Tint> const &HeuristicIdealStabEquiv,
-    TheHeuristic<Tint> const &HeuristicTryTerminateDualDescription,
+    TheHeuristic<typename Tgroup::Tint> const &HeuristicIdealStabEquiv,
+    TheHeuristic<typename Tgroup::Tint> const
+        &HeuristicTryTerminateDualDescription,
     std::ostream &os) {
   MyMatrix<T> const &G = si.G;
   int dimEXT = G.rows() + 1;
@@ -1727,9 +1737,10 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
     return false;
   };
   auto f_maybe_terminate = [&]() -> bool {
-    std::map<std::string, Tint> mapV;
+    using TintGroup = typename Tgroup::Tint;
+    std::map<std::string, TintGroup> mapV;
     mapV["increase_treat_nothingnew"] =
-        UniversalScalarConversion<Tint, int>(nonew_nbdone);
+        UniversalScalarConversion<TintGroup, int>(nonew_nbdone);
     std::string choice =
         HeuristicEvaluation(mapV, HeuristicTryTerminateDualDescription);
     if (choice == "") {
@@ -1786,7 +1797,8 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(
     SublattInfos<T> const &si1, MyMatrix<T> const &G2,
     FundDomainVertex<T, Tint> const &eVert1,
     FundDomainVertex<T, Tint> const &eVert2,
-    TheHeuristic<Tint> const &HeuristicIdealStabEquiv, std::ostream &os) {
+    TheHeuristic<typename Tgroup::Tint> const &HeuristicIdealStabEquiv,
+    std::ostream &os) {
   CuspidalBank<T, Tint> cusp_bank;
   std::optional<MyMatrix<Tint>> answer;
   //
@@ -2145,10 +2157,10 @@ ResultEdgewalk<T, Tint> StandardEdgewalkAnalysis(MyMatrix<T> const &G,
   std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
   SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms, os);
   //
-  TheHeuristic<Tint> HeuristicIdealStabEquiv =
-      GetHeuristicIdealStabEquiv<Tint>();
-  TheHeuristic<Tint> HeuristicTryTerminateDualDescription =
-      GetHeuristicTryTerminateDualDescription<Tint>();
+  TheHeuristic<typename Tgroup::Tint> HeuristicIdealStabEquiv =
+      GetHeuristicIdealStabEquiv<typename Tgroup::Tint>();
+  TheHeuristic<typename Tgroup::Tint> HeuristicTryTerminateDualDescription =
+      GetHeuristicTryTerminateDualDescription<typename Tgroup::Tint>();
   std::string OptionInitialVertex = "isotropic_vinberg";
   std::string FileInitialVertex = "/irrelevant";
   try {
@@ -2195,14 +2207,14 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
   //
   std::string FileHeuristicIdealStabEquiv =
       BlockPROC.get_string("FileHeuristicIdealStabEquiv");
-  TheHeuristic<Tint> HeuristicIdealStabEquiv =
-      GetHeuristicIdealStabEquiv<Tint>();
+  TheHeuristic<typename Tgroup::Tint> HeuristicIdealStabEquiv =
+      GetHeuristicIdealStabEquiv<typename Tgroup::Tint>();
   ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
   //
   std::string FileHeuristicTryTerminateDualDescription =
       BlockPROC.get_string("FileHeuristicTryTerminateDualDescription");
-  TheHeuristic<Tint> HeuristicTryTerminateDualDescription =
-      GetHeuristicTryTerminateDualDescription<Tint>();
+  TheHeuristic<typename Tgroup::Tint> HeuristicTryTerminateDualDescription =
+      GetHeuristicTryTerminateDualDescription<typename Tgroup::Tint>();
   ReadHeuristicFileCond(FileHeuristicTryTerminateDualDescription,
                         HeuristicTryTerminateDualDescription);
   //
@@ -2262,8 +2274,8 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
   TestLorentzianity(G2, os);
   std::string FileHeuristicIdealStabEquiv =
       BlockPROC.get_string("FileHeuristicIdealStabEquiv");
-  TheHeuristic<Tint> HeuristicIdealStabEquiv =
-      GetHeuristicIdealStabEquiv<Tint>();
+  TheHeuristic<typename Tgroup::Tint> HeuristicIdealStabEquiv =
+      GetHeuristicIdealStabEquiv<typename Tgroup::Tint>();
   ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
   //
   auto print_result = [&](std::optional<MyMatrix<Tint>> const &opt) -> void {
