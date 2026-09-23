@@ -1,5 +1,21 @@
 # CLAUDE.md
 
+## Work on `master`, never on a branch
+
+All work goes on `master` directly, in this repository and in the
+`basic_common_cpp` and `permutalib` submodules alike. Do not create a branch,
+and do not offer to: there is no review-then-merge step here, and a branch
+only puts the work somewhere the next clone will not see it.
+
+This is deliberate rather than an oversight. Several clones of `master` are
+worked on at once, and it stays workable because the work is on different
+parts of the code. When two do touch the same file, the fix is to pull and
+merge, not to have branched.
+
+It overrides the usual assistant default of branching before committing to the
+default branch. It does not change when to commit: commit when asked, not
+otherwise.
+
 ## `basic_common_cpp/` and `permutalib/` are git submodules — do not edit in place
 
 Both `basic_common_cpp/` and `permutalib/` inside this repo are git submodules of their respective upstream projects. Any edit made directly to a file under either directory will be silently overwritten the next time the submodule is updated and will not propagate to the upstream.
