@@ -145,6 +145,7 @@ int main(int argc, char *argv[]) {
         return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
                                   std::cerr);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
@@ -155,6 +156,7 @@ int main(int argc, char *argv[]) {
         return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
                                   std::cerr);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "fmpq_class") {
         using T = fmpq_class;

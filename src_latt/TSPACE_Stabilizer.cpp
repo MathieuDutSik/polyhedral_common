@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
         return ComputeStabilizer<T, Tint>(FileTspace, FileGram, OutFormat,
                                           os_out);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
         using Tint = boost::multiprecision::mpz_int;
@@ -105,6 +106,7 @@ int main(int argc, char *argv[]) {
         return ComputeStabilizer<T, Tint>(FileTspace, FileGram, OutFormat,
                                           os_out);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;

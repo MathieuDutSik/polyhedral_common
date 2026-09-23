@@ -67,6 +67,7 @@ void process_B(std::string const &eFileI, std::string const &eFileO,
     using T = mpq_class;
     return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }
+#ifdef ENABLE_BOOST_TYPES
   if (arith == "mpq_rational") {
     using T = boost::multiprecision::mpq_rational;
     return process_A<T>(eFileI, eFileO, method, OutFormat, os);
@@ -75,6 +76,7 @@ void process_B(std::string const &eFileI, std::string const &eFileO,
     using T = boost::multiprecision::cpp_rational;
     return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   if (arith == "fmpq_class") {
     using T = fmpq_class;

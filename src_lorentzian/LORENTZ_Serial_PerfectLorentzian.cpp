@@ -28,6 +28,7 @@ void process_A(FullNamelist const &eFull) {
     using Tint = mpz_class;
     return process_B<T, Tint>(eFull);
   }
+#ifdef ENABLE_BOOST_TYPES
   if (arithmetic == "gmp_boost") {
     using T = boost::multiprecision::mpq_rational;
     using Tint = boost::multiprecision::mpz_int;
@@ -38,6 +39,7 @@ void process_A(FullNamelist const &eFull) {
     using Tint = boost::multiprecision::cpp_int;
     return process_B<T, Tint>(eFull);
   }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   if (arithmetic == "flint") {
     using T = fmpq_class;

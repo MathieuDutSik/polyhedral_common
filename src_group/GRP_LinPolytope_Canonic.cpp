@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return process<T>(FileExt, OutFormat, OutFile);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return process<T>(FileExt, OutFormat, OutFile);
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(FileExt, OutFormat, OutFile);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "fmpq_class") {
         using T = fmpq_class;

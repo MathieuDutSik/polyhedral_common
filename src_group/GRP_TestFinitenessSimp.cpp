@@ -58,6 +58,7 @@ int main(int argc, char *argv[]) {
         using Tint = mpz_class;
         return process<Tint>(FileListMat, OutFormat, OutFile);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using Tint = boost::multiprecision::mpz_int;
         return process<Tint>(FileListMat, OutFormat, OutFile);
@@ -66,6 +67,7 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<Tint>(FileListMat, OutFormat, OutFile);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using Tint = fmpz_class;

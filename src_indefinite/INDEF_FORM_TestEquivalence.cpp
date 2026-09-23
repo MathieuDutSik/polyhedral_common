@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
         using Tint = mpz_class;
         return process<T, Tint>(File1, File2, OutFormat, os);
       }
-#ifdef ENABLE_ALL_NUMERICAL_TYPES
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
         using Tint = boost::multiprecision::mpz_int;
@@ -106,12 +106,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find matching type for arith\n";
 #ifdef ENABLE_FLINT_SUPPORT
       std::cerr << "Allowed values: gmp, flint (and, with "
-                << "ENABLE_ALL_NUMERICAL_TYPES, gmp_boost and "
+                << "ENABLE_BOOST_TYPES, gmp_boost and "
                 << "multi_boost)\n";
 #else
       std::cerr << "Allowed values: gmp (build with "
                 << "ENABLE_FLINT_SUPPORT=1 for flint; with "
-                << "ENABLE_ALL_NUMERICAL_TYPES for the boost ones)\n";
+                << "ENABLE_BOOST_TYPES for the boost ones)\n";
 #endif
       throw TerminalException{1};
     };

@@ -67,11 +67,13 @@ int main(int argc, char *argv[]) {
         using Tfield = T;
         return process<T, Tfield>(FileExt, OutFormat, os);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         using Tfield = T;
         return process<T, Tfield>(FileExt, OutFormat, os);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;

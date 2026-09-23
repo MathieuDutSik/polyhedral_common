@@ -83,17 +83,21 @@ int main(int argc, char *argv[]) {
       */
 
       /*
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(FileI, OutFormat, os);
       }
+#endif
       */
 
       /*
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return process<T>(FileI, OutFormat, os);
       }
+#endif
       */
 
       std::cerr << "Failed to find matching type for arith.\n";

@@ -50,6 +50,16 @@ CTOTAL		+= -DENABLE_FLINT_SUPPORT -I$(FLINT_INCDIR)
 LIBS		+= $(FLINT_LINK)
 endif
 
+# Optional boost multiprecision arithmetics (the gmp_boost / multi_boost
+# entries, and the mpq_rational / cpp_rational / mpz_int / cpp_int ones where
+# the arithmetics are named by type). They duplicate what gmp already does and
+# exist as a consistency check, so they are not compiled by default: build with
+# `make ENABLE_BOOST_TYPES=1` to get them. Boost.Multiprecision is header only,
+# so this only adds a define.
+ifeq ($(ENABLE_BOOST_TYPES),1)
+CTOTAL		+= -DENABLE_BOOST_TYPES
+endif
+
 %.o: %.cpp
 	@echo
 	@echo compile $<

@@ -111,6 +111,7 @@ int main(int argc, char *argv[]) {
         return ComputeIsomorphism<T, Tint>(FileListMat1, FileListMat2,
                                            OutFormat, os);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
         using Tint = boost::multiprecision::mpz_int;
@@ -123,6 +124,7 @@ int main(int argc, char *argv[]) {
         return ComputeIsomorphism<T, Tint>(FileListMat1, FileListMat2,
                                            OutFormat, os);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;

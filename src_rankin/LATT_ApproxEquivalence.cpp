@@ -69,6 +69,7 @@ void compute_approx_equivalence(std::string const &arithmetic,
     return compute_approx_equivalence_kernel<T, Tint>(eFile1, eFile2, strTol,
                                                       OutFormat, OutFile);
   }
+#ifdef ENABLE_BOOST_TYPES
   if (arithmetic == "gmp_boost") {
     using T = boost::multiprecision::mpq_rational;
     using Tint = boost::multiprecision::mpz_int;
@@ -81,6 +82,7 @@ void compute_approx_equivalence(std::string const &arithmetic,
     return compute_approx_equivalence_kernel<T, Tint>(eFile1, eFile2, strTol,
                                                       OutFormat, OutFile);
   }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   if (arithmetic == "flint") {
     using T = fmpq_class;

@@ -82,6 +82,7 @@ int main(int argc, char *argv[]) {
         using Tint = mpz_class;
         return ConvertTspace<T, Tint>(TspaceNamelistFile, OutFormat, os);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
         using Tint = boost::multiprecision::mpz_int;
@@ -92,6 +93,7 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return ConvertTspace<T, Tint>(TspaceNamelistFile, OutFormat, os);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpq_class;

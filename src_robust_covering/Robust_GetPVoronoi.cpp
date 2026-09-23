@@ -71,6 +71,7 @@ void process_A(std::string const &arithmetic, std::string const &MatFile, std::s
     using Tint = mpz_class;
     return process_B<T, Tint>(MatFile, VFile, OutFormat, OutFile);
   }
+#ifdef ENABLE_BOOST_TYPES
   if (arithmetic == "gmp_boost") {
     using T = boost::multiprecision::mpq_rational;
     using Tint = boost::multiprecision::mpz_int;
@@ -81,6 +82,7 @@ void process_A(std::string const &arithmetic, std::string const &MatFile, std::s
     using Tint = boost::multiprecision::cpp_int;
     return process_B<T, Tint>(MatFile, VFile, OutFormat, OutFile);
   }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   if (arithmetic == "flint") {
     using T = fmpq_class;

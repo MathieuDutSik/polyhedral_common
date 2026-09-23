@@ -67,6 +67,7 @@ int main(int argc, char *argv[]) {
         return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
                                                   OutFormat, os_out);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
@@ -77,6 +78,7 @@ int main(int argc, char *argv[]) {
         return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch,
                                                   OutFormat, os_out);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "fmpq_class") {
         using T = fmpq_class;

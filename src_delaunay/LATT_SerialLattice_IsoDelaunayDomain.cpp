@@ -124,7 +124,7 @@ void process_C(FullNamelist const &eFull) {
     using Tint = mpz_class;
     return process_A<T, Tint>(eFull);
   }
-#ifdef ENABLE_ALL_NUMERICAL_TYPES
+#ifdef ENABLE_BOOST_TYPES
   if (arithmetic == "gmp_boost") {
     using T = boost::multiprecision::mpq_rational;
     using Tint = boost::multiprecision::mpz_int;

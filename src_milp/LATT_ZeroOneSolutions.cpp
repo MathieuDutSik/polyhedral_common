@@ -98,6 +98,7 @@ void process_arithmetic(std::string const &arithmetic,
     return process_zero_one_solutions<T>(FileMatrix, FileRHS, OutFormat,
                                          FileOut, options);
   }
+#ifdef ENABLE_BOOST_TYPES
   if (arithmetic == "gmp_boost") {
     using T = boost::multiprecision::mpz_int;
     return process_zero_one_solutions<T>(FileMatrix, FileRHS, OutFormat,
@@ -108,6 +109,7 @@ void process_arithmetic(std::string const &arithmetic,
     return process_zero_one_solutions<T>(FileMatrix, FileRHS, OutFormat,
                                          FileOut, options);
   }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   if (arithmetic == "flint") {
     using T = fmpz_class;

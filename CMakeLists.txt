@@ -184,6 +184,22 @@ else()
   message(STATUS "flint disabled by ENABLE_FLINT_SUPPORT=${ENABLE_FLINT_SUPPORT}")
 endif()
 
+# Optional boost multiprecision arithmetics: the gmp_boost / multi_boost
+# entries of the programs' arith argument, and the mpq_rational / cpp_rational
+# / mpz_int / cpp_int ones where the arithmetics are named by type. They
+# duplicate what gmp already computes and are kept as a consistency check, so
+# they are off by default rather than paid for on every build; the counterpart
+# of the `make ENABLE_BOOST_TYPES=1` of the Makefiles. Boost.Multiprecision is
+# header only, so this only adds a define.
+option(ENABLE_BOOST_TYPES "Build the boost multiprecision arithmetics (consistency check)" OFF)
+add_library(polyhedral_boost_types INTERFACE)
+if(ENABLE_BOOST_TYPES)
+  target_compile_definitions(polyhedral_boost_types INTERFACE ENABLE_BOOST_TYPES)
+  message(STATUS "boost multiprecision arithmetics enabled")
+else()
+  message(STATUS "boost multiprecision arithmetics disabled (ENABLE_BOOST_TYPES=OFF)")
+endif()
+
 find_path(
   NETCDF_INCLUDE_DIR
   NAMES netcdf
@@ -299,6 +315,7 @@ target_link_libraries(
     PkgConfig::GMPXX
     "${GMP_LIBRARY}"
     polyhedral_flint
+    polyhedral_boost_types
 )
 if(WIN32)
   # Boost.Asio (pulled in transitively, e.g. via Boost serialization / the

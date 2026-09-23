@@ -54,6 +54,7 @@ void process(std::string const &arith,
     using T = mpz_class;
     return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
   }
+#ifdef ENABLE_BOOST_TYPES
   if (arith == "mpz_int") {
     using T = boost::multiprecision::mpz_int;
     return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
@@ -62,6 +63,7 @@ void process(std::string const &arith,
     using T = boost::multiprecision::cpp_int;
     return compute_grp_size<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
   }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   if (arith == "fmpz_class") {
     using T = fmpz_class;

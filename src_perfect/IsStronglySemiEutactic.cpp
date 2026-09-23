@@ -53,6 +53,7 @@ void test_strongly_semi_eutactic(std::string const &arithmetic,
     using Tint = mpz_class;
     return test_strongly_semi_eutactic_kernel<T, Tint>(eFile, max_node);
   }
+#ifdef ENABLE_BOOST_TYPES
   if (arithmetic == "gmp_boost") {
     using T = boost::multiprecision::mpq_rational;
     using Tint = boost::multiprecision::mpz_int;
@@ -63,6 +64,7 @@ void test_strongly_semi_eutactic(std::string const &arithmetic,
     using Tint = boost::multiprecision::cpp_int;
     return test_strongly_semi_eutactic_kernel<T, Tint>(eFile, max_node);
   }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   if (arithmetic == "flint") {
     using T = fmpq_class;

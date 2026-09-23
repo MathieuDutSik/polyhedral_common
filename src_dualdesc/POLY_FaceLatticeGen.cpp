@@ -116,6 +116,7 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
     using T = mpq_class;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
   }
+#ifdef ENABLE_BOOST_TYPES
   if (arith == "mpq_rational") {
     using T = boost::multiprecision::mpq_rational;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
@@ -124,6 +125,7 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
     using T = boost::multiprecision::cpp_rational;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
   }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   if (arith == "fmpq_class") {
     using T = fmpq_class;

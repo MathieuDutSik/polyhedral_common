@@ -82,6 +82,7 @@ int main(int argc, char *argv[]) {
         using Tint = mpz_class;
         return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arithmetic == "gmp_boost") {
         using T = boost::multiprecision::mpq_rational;
         using Tint = boost::multiprecision::mpz_int;
@@ -92,6 +93,7 @@ int main(int argc, char *argv[]) {
         using Tint = boost::multiprecision::cpp_int;
         return process<T, Tint>(MatFile, PVoronoiFile, OutFormat, OutFile);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arithmetic == "flint") {
         using T = fmpq_class;

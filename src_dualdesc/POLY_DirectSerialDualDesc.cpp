@@ -71,20 +71,24 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "fmpq_class") {
         using T = fmpq_class;
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
       }
 #endif
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
       }
+#endif
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;

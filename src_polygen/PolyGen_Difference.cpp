@@ -90,6 +90,7 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
@@ -98,6 +99,7 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "fmpq_class") {
         using T = fmpq_class;

@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
       }
     }
     auto f = [&](std::ostream &os) -> void {
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "gmp") {
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
         using T = boost::multiprecision::mpz_int;
@@ -144,6 +145,7 @@ int main(int argc, char *argv[]) {
         return ProcessGenus<T, Tint, Tgroup>(FileGenus, FileLattice, FileMass,
                                              OutFormat, scheme, os);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "flint") {
         using T = fmpz_class;

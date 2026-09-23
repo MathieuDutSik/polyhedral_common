@@ -50,6 +50,7 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return IntegralSaturation<T>(FileI, OutFormat, os);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return IntegralSaturation<T>(FileI, OutFormat, os);
@@ -58,6 +59,7 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::cpp_rational;
         return IntegralSaturation<T>(FileI, OutFormat, os);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "fmpq_class") {
         using T = fmpq_class;

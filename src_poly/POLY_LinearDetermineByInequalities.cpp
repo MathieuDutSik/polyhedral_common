@@ -89,20 +89,24 @@ int main(int argc, char *argv[]) {
     }
 
     auto f = [&](std::ostream &os_out) -> void {
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "fmpq_class") {
         using T = fmpq_class;
         return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
 #endif
+#ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
+#endif
       if (arith == "mpq_class") {
         using T = mpq_class;
         return process<T>(FileFAC, OutFormat, os_out, std::cerr);

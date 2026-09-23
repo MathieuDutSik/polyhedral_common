@@ -32,6 +32,7 @@ void compute_k_min(std::string const &arithmetic, int const &k,
     using Tint = mpz_class;
     return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
   }
+#ifdef ENABLE_BOOST_TYPES
   if (arithmetic == "gmp_boost") {
     using T = boost::multiprecision::mpq_rational;
     using Tint = boost::multiprecision::mpz_int;
@@ -42,6 +43,7 @@ void compute_k_min(std::string const &arithmetic, int const &k,
     using Tint = boost::multiprecision::cpp_int;
     return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
   }
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   if (arithmetic == "flint") {
     using T = fmpq_class;
