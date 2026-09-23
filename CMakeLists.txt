@@ -608,7 +608,6 @@ set(
   LATT_FindIsotropic
   LATT_TestIsotropic
   LATT_FindPositiveVector
-  LATT_lll
   CheckPositiveSemiDefinite
   LATT_DiophantApprox
 )
@@ -687,6 +686,7 @@ set(
   LATT_ComputeGroupModAction
   LATT_RankinMinimum
   LATT_RankinSublattices
+  LATT_lll
   VectFamily_Reduction
 )
 foreach(target IN LISTS LATT_PROGRAMS)

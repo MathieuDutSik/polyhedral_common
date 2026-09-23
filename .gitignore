@@ -148,6 +148,7 @@ src_latt/TEST_DeepLLL
 src_latt/TEST_BKZ
 src_latt/TEST_SlideReduction
 src_latt/VectFamily_Reduction
+src_latt/LATT_lll
 src_milp/LATT_*
 src_milp/MILP_*
 src_lorentzian/LORENTZ_*

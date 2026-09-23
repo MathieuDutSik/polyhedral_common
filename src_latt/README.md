@@ -18,7 +18,15 @@ The LLL algorithm allow to reduce a quadratic form into one with smaller
 coefficients.
 
 The relevant program is:
-  * **LATT_lll** This is for computing the LLL of a positive definite quadratic form.
+  * **LATT_lll** `[arith] [method] [FileI] [OutFormat] [FileO]` reduces a
+    positive definite quadratic form, returning the reduced form and the
+    unimodular transformation. Every reduction in the package is available as
+    a method -- `direct`, `dual`, `seysen`, `seysen_best`, `seysen_lll`,
+    `deep`, `deep5`, `deep10`, `bkz4`, `bkz8`, `bkz12`, `slide4`, `slide8` --
+    together with `best`, which runs them all and keeps whichever minimises
+    the orthogonality defect, ties broken by the size of the integers. The
+    single dispatch over them is `LatticeReduction.h`, which is also what
+    `VectFamilyReduction.h` calls, so a new reduction is named in one place.
 
 Reference:
   * [LLL basis reduction algorithm](https://en.wikipedia.org/wiki/Lenstra%E2%80%93Lenstra%E2%80%93Lov%C3%A1sz_lattice_basis_reduction_algorithm)
