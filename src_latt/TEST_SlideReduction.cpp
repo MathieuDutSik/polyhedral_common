@@ -25,9 +25,9 @@
     TEST_SlideReduction [dim] [n_iter] [seed]
  */
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   std::mt19937_64 rng(seed);
   std::vector<std::string> l_name{"Zn", "An", "Dn", "E8", "random"};
   std::vector<int> l_nops{10, 40, 160};

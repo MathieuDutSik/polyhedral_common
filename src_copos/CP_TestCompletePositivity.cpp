@@ -9,10 +9,10 @@
 #include "StrictPositivity.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void compute(std::string const &FileI, std::string const &OutFormat,
              std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
   //
   MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());

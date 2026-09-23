@@ -12,11 +12,11 @@
 #include "Permutation.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const &QFile, std::string const &PlaneFile,
              std::string const &choice, std::string const &OutFormat,
              std::ostream &os_out) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   // The group order is counted in TintGroup, which is unrelated to the

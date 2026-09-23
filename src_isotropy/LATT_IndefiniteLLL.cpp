@@ -10,10 +10,10 @@
 #include "Indefinite_LLL.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const &FileI, std::string const &OutFormat,
              std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> M = ReadMatrixFile<T>(FileI);
 
   ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(M, std::cerr);

@@ -94,9 +94,9 @@ MyMatrix<T> get_test_unimodular(int n) {
   return U * L * D;
 }
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const &FileListGram, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;

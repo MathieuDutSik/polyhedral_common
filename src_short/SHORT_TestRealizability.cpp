@@ -10,9 +10,9 @@
 #include "SHORT_Realizability.h"
 #include "rational.h"
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void test_realizability(std::string const& FileSHV, std::string const& OutFormat, std::string const& OutFile) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint16_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;

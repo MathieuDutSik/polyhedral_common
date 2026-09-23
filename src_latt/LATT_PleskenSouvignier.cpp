@@ -11,10 +11,10 @@
 #include "Positivity.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process_automorphism(std::string const &FileGram,
                           std::string const &OutFormat, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
   if (!IsSymmetricMatrix(eMat) || !IsPositiveDefinite(eMat, std::cerr)) {
     std::cerr << "LATT_PleskenSouvignier: The input Gram matrix in "
@@ -50,11 +50,11 @@ void process_automorphism(std::string const &FileGram,
   throw TerminalException{1};
 }
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process_isometry(std::string const &FileGram1,
                       std::string const &FileGram2,
                       std::string const &OutFormat, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> eMat1 = ReadMatrixFile<T>(FileGram1);
   MyMatrix<T> eMat2 = ReadMatrixFile<T>(FileGram2);
   for (auto &eMat : {eMat1, eMat2}) {

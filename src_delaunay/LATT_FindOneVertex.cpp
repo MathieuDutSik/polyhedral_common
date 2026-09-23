@@ -9,10 +9,10 @@
 #include "LatticeDelaunay.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const &FileM, std::string const &OutFormat,
              std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileM);
   HumanTime time_total;
   CVPSolver<T, Tint> solver(GramMat, std::cerr);

@@ -34,12 +34,12 @@ void write_result(std::optional<MyMatrix<T>> const &opt,
   throw TerminalException{1};
 }
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void ComputeEquivalence(std::string const &FileTspace,
                         std::string const &FileGram1,
                         std::string const &FileGram2,
                         std::string const &OutFormat, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint_grp = mpz_class;

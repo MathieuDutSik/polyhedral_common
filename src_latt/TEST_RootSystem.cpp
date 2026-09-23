@@ -15,9 +15,9 @@
   graph method): the Weyl group is a subgroup of Aut(L), so this must
   hold, and it is a strong test of the recognition.
  */
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const &FileListGram, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;

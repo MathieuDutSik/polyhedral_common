@@ -9,10 +9,10 @@
 #include "Copositivity.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void compute(std::string const &FileI, std::string const &strMaxNorm,
              std::string const &OutFormat, std::ostream &os_out) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
   T MaxNorm = ParseScalar<T>(strMaxNorm);
   //

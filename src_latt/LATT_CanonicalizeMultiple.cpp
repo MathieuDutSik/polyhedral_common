@@ -11,10 +11,10 @@
 #include "LatticeStabEquiCan.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void ComputeCanonicalMultiple(std::string const &FileI,
                               std::string const &OutFormat, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;

@@ -9,11 +9,11 @@
 #include "LatticeStabEquiCan.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void ComputeCanonicalSymplectic(std::string const &FileI,
                                 std::string const &OutFormat,
                                 std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
   MyMatrix<Tint> B = ComputeCanonicalFormSymplectic<T, Tint>(eMat, std::cerr);
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);

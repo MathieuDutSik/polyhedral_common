@@ -9,9 +9,9 @@
 #include "FiniteMatrixGroupTest.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const& FileListMat, std::string const& OutFormat, std::string const& OutFile) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   std::vector<MyMatrix<Tint>> ListMat = ReadListMatrixFile<Tint>(FileListMat);
 
   bool is_finite = test_finiteness_group<T,Tint>(ListMat, std::cerr);

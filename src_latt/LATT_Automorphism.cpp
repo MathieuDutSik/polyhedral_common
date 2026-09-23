@@ -15,10 +15,10 @@
 #include "SignatureSymmetric.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void ComputeAutomorphism(std::string const &FileListMat,
                          std::string const &OutFormat, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;

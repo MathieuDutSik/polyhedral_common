@@ -9,9 +9,9 @@
 #include "POLY_PolytopeInt.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const& FileFac, std::string const& method, std::string const& OutFormat, std::string const& OutFile) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> FAC = ReadMatrixFile<T>(FileFac);
   int n_col = FAC.cols();
 

@@ -22,10 +22,10 @@ void WriteGenerators(std::vector<MyMatrix<Tint>> const &l_gen,
   throw TerminalException{1};
 }
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process_C(std::string const &FileMatrix, std::string const &OutFormat,
                std::string const &FileOut) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint_grp = mpz_class;

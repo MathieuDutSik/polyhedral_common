@@ -19,11 +19,11 @@
 #include "SignatureSymmetric.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const &choice, std::string const &FileGram,
              std::string const &FileVect, std::string const &OutFormat,
              std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileGram);
   if (!IsSymmetricMatrix(GramMat) ||
       !IsPositiveDefinite(GramMat, std::cerr)) {

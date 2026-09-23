@@ -113,10 +113,10 @@ static void PrintMeasures(std::string const &label, MyMatrix<T> const &G) {
   std::cerr << "  Linf norm          : " << Linfinity_norm_mat(G) << "\n";
 }
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const &FileI, std::string const &method,
              std::string const &OutFormat, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileI);
   std::cerr << "input: dimension " << GramMat.rows() << ", method=" << method
             << "\n";

@@ -12,10 +12,10 @@
 #include "SignatureSymmetric.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void ComputeCanonical(std::string const &FileI,
                       std::string const &OutFormat, std::ostream &os) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
   if (!IsSymmetricMatrix(eMat) || !IsPositiveDefinite(eMat, std::cerr)) {
     std::cerr << "LATT_Canonicalize: The input Gram matrix in " << FileI

@@ -10,10 +10,10 @@
 #include "LatticePleskenSouvignier.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string choice, std::string MatFile,
              std::string const &OutFormat, std::string const &OutFile) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
   if (!IsSymmetricMatrix(GramMat) ||
       !IsPositiveDefinite(GramMat, std::cerr)) {

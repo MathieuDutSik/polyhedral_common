@@ -4,12 +4,12 @@
 #include "zero_one_lattice.h"
 // clang-format on
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process_zero_one_lattice(std::string const &FileMatrix,
                               std::string const &FileRHS,
                               std::string const &choice,
                               std::string const &FileOut) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> A = ReadMatrixFile<T>(FileMatrix);
   MyVector<T> b = ReadVectorFile<T>(FileRHS);
   if (A.rows() != b.size()) {

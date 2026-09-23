@@ -38,10 +38,10 @@
   exhausting its attempts rather than looping.
  */
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(int n, int N, int n_coset, int n_attempt,
              std::string const &FileOut) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   // The cosets are drawn as integral numerators over the common denominator
   // N, which is the representation PeriodicPointSet uses.
   for (int i_attempt = 0; i_attempt < n_attempt; i_attempt++) {

@@ -27,11 +27,11 @@ bool ParseBoolean(std::string const &strI) {
   throw TerminalException{1};
 }
 
-template <typename T,
-          typename Tint = typename underlying_z_ring<T>::ring_type>
+template <typename T>
 void process(std::string const &FileI, std::string const &strCritNorm,
              std::string const &strStrictIneq, std::string const &OutFormat,
              std::ostream &os_out) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> M = ReadMatrixFile<T>(FileI);
   T CritNorm = ParseScalar<T>(strCritNorm);
   bool StrictIneq = ParseBoolean(strStrictIneq);
