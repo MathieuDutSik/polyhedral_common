@@ -51,17 +51,33 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "SHORT_AutomorphismGroup [arith] [FileSHV]\n";
       std::cerr << "or\n";
-      std::cerr << "SHORT_AutomorphismGroup [arith] [FileSHV] [OutFormat] [OutFile]\n";
+      std::cerr << "SHORT_AutomorphismGroup [arith] [FileSHV] [OutFormat] "
+                << "[OutFile]\n";
       std::cerr << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "[arith]        : The arithmetic being used: gmp, gmp_boost, multi_boost or flint\n";
+      std::cerr << "[arith]        : The arithmetic being used: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " or flint\n";
 #else
-      std::cerr << "[arith]        : The arithmetic being used: gmp, gmp_boost, or multi_boost\n";
-      std::cerr << "                 (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "[arith]        : The arithmetic being used: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, or multi_boost";
+#endif
+      std::cerr << "\n";
+      std::cerr << "                 (build with ENABLE_FLINT_SUPPORT=1 for "
+                << "flint)\n";
 #endif
       std::cerr << "  gmp         : T = mpq_class, Tint = mpz_class\n";
-      std::cerr << "  gmp_boost   : T = boost::multiprecision::mpq_rational, Tint = boost::multiprecision::mpz_int\n";
-      std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, Tint = boost::multiprecision::cpp_int\n";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << "  gmp_boost   : T = boost::multiprecision::mpq_rational, "
+                << "Tint = boost::multiprecision::mpz_int\n";
+#endif
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, "
+                << "Tint = boost::multiprecision::cpp_int\n";
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       std::cerr << "  flint       : T = fmpq_class, Tint = fmpz_class\n";
 #endif
@@ -101,12 +117,20 @@ int main(int argc, char *argv[]) {
         return automorphism_group<T,Tint>(FileSHV, OutFormat, OutFile);
       }
 #endif
-      std::cerr << "SHORT_AutomorphismGroup: failed to find a matching arithmetic\n";
+      std::cerr << "SHORT_AutomorphismGroup: failed to find a matching "
+                << "arithmetic\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost, flint\n";
+      std::cerr << "Allowed values: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost "
-                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "Allowed values: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     };

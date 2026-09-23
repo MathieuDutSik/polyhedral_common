@@ -37,10 +37,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
       std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "mpq_rational : rational arithmetic over "
                    "boost::multiprecision::mpq_rational\n";
+#endif
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "cpp_rational : rational arithmetic over "
                    "boost::multiprecision::cpp_rational\n";
+#endif
       std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
       std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
       std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a "

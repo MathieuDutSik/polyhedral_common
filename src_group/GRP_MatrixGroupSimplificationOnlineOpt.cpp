@@ -130,14 +130,18 @@ int main(int argc, char *argv[]) {
 #endif
       std::cerr << "Failed to find a matching arith\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed is mpq_class / mpz_class / mpq_rational / "
-                   "cpp_rational / mpz_int / cpp_int / fmpq_class / "
-                   "fmpz_class\n";
+      std::cerr << "Allowed is mpq_class / mpz_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << " / mpq_rational / cpp_rational / mpz_int / cpp_int";
+#endif
+      std::cerr << " / fmpq_class / fmpz_class\n";
 #else
-      std::cerr << "Allowed is mpq_class / mpz_class / mpq_rational / "
-                   "cpp_rational / mpz_int / cpp_int (build with "
-                   "ENABLE_FLINT_SUPPORT=1 for fmpq_class / "
-                   "fmpz_class)\n";
+      std::cerr << "Allowed is mpq_class / mpz_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << " / mpq_rational / cpp_rational / mpz_int / cpp_int";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for fmpq_class / "
+                << "fmpz_class)\n";
 #endif
       throw TerminalException{1};
     };

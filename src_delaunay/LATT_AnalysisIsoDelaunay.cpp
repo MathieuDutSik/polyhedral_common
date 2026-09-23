@@ -360,10 +360,17 @@ void process_C(FullNamelist const &eFull) {
                  "arithmetic="
               << arith << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-    std::cerr << "Available types: gmp, gmp_boost, multi_boost, flint\n";
+    std::cerr << "Available types: gmp";
+#ifdef ENABLE_BOOST_TYPES
+    std::cerr << ", gmp_boost, multi_boost";
+#endif
+    std::cerr << ", flint\n";
 #else
-    std::cerr << "Available types: gmp, gmp_boost, multi_boost "
-              << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+    std::cerr << "Available types: gmp";
+#ifdef ENABLE_BOOST_TYPES
+    std::cerr << ", gmp_boost, multi_boost";
+#endif
+    std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
     throw TerminalException{1};
   };

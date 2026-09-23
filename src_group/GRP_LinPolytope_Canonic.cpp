@@ -41,7 +41,8 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytope_Canonic [arith] [EXTIN] [OutFormat] [OutFile]\n";
+      std::cerr << "GRP_LinPolytope_Canonic [arith] [EXTIN] [OutFormat] "
+                << "[OutFile]\n";
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytope_Canonic [arith] [EXTIN]\n";
       std::cerr << "\n";
@@ -84,11 +85,17 @@ int main(int argc, char *argv[]) {
       std::cerr << "GRP_LinPolytope_Canonic: No matching entry for arith="
                 << arith << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: mpq_class, mpq_rational, cpp_rational, "
-                << "fmpq_class\n";
+      std::cerr << "Allowed values: mpq_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", mpq_rational, cpp_rational";
+#endif
+      std::cerr << ", fmpq_class\n";
 #else
-      std::cerr << "Allowed values: mpq_class, mpq_rational, cpp_rational "
-                << "(build with ENABLE_FLINT_SUPPORT=1 for fmpq_class)\n";
+      std::cerr << "Allowed values: mpq_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", mpq_rational, cpp_rational";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for fmpq_class)\n";
 #endif
       throw TerminalException{1};
     };

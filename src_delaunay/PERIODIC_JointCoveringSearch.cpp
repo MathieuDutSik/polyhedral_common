@@ -32,7 +32,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  descend [config] [out_config] [rounds]\n";
       std::cerr << "      joint local descent from the configuration; the "
                    "best found is written to out_config\n";
-      std::cerr << "  multistart [n] [m] [count] [out_config] [seed] [rounds]\n";
+      std::cerr << "  multistart [n] [m] [count] [out_config] [seed] "
+                << "[rounds]\n";
       std::cerr << "  multistart-alt [n] [m] [count] [out_config] [seed]\n";
       std::cerr << "  certify [config]\n";
       std::cerr << "      LP rigidity certificate at the configuration: is it "

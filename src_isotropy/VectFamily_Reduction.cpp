@@ -77,7 +77,8 @@ int main(int argc, char *argv[]) {
       if (OutFormat == "CPP") {
         return WriteMatrix(os_out, pair.first);
       }
-      std::cerr << "No matching format in print_mat. Allowed options: GAP, CPP\n";
+      std::cerr << "No matching format in print_mat. Allowed options: GAP, "
+                << "CPP\n";
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileO, print_mat);

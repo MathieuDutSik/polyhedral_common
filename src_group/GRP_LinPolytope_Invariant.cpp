@@ -83,10 +83,17 @@ int main(int argc, char *argv[]) {
 #endif
       std::cerr << "Failed to find a matching arith\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: rational, mpq_rational, flint\n";
+      std::cerr << "Allowed values: rational";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", mpq_rational";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Allowed values: rational, mpq_rational (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "Allowed values: rational";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", mpq_rational";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     };

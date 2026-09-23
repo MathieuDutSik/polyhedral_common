@@ -47,7 +47,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "GRP_MatrixGroupSimplification [Arith] [FileMatrGroup]\n";
       std::cerr << "\n";
-      std::cerr << "Arith         : mpq_class / mpz_class / mpq_rational / cpp_rational / mpz_int / cpp_int\n";
+      std::cerr << "Arith         : mpq_class / mpz_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << " / mpq_rational / cpp_rational / mpz_int / cpp_int";
+#endif
+      std::cerr << "\n";
       std::cerr << "FileMatrGroup : The file containing the list of matrices\n";
       std::cerr << "OutFormat     : Optional parameter GAP / CPP\n";
       std::cerr
@@ -102,8 +106,11 @@ int main(int argc, char *argv[]) {
       }
 #endif
       std::cerr << "Failed to find a matching arith. Allowed is mpq_class / "
-                   "mpz_class / mpq_rational / cpp_rational / mpz_int / "
-                   "cpp_int\n";
+                << "mpz_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << " / mpq_rational / cpp_rational / mpz_int / cpp_int";
+#endif
+      std::cerr << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
       std::cerr << "                  or fmpq_class / fmpz_class\n";
 #else

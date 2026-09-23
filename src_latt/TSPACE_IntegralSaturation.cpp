@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "TSPACE_IntegralSaturation [arith] [ListGram]\n";
       std::cerr << "    or\n";
-      std::cerr << "TSPACE_IntegralSaturation [arith] [ListGram] [OutFormat] [OutFile]\n";
+      std::cerr << "TSPACE_IntegralSaturation [arith] [ListGram] [OutFormat] "
+                << "[OutFile]\n";
       return -1;
     }
     std::string arith = argv[1];
@@ -68,11 +69,17 @@ int main(int argc, char *argv[]) {
 #endif
       std::cerr << "Failed to find a matching entry for arith\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: mpq_class, mpq_rational, cpp_rational, "
-                << "fmpq_class\n";
+      std::cerr << "Allowed values: mpq_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", mpq_rational, cpp_rational";
+#endif
+      std::cerr << ", fmpq_class\n";
 #else
-      std::cerr << "Allowed values: mpq_class, mpq_rational, cpp_rational "
-                << "(build with ENABLE_FLINT_SUPPORT=1 for fmpq_class)\n";
+      std::cerr << "Allowed values: mpq_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", mpq_rational, cpp_rational";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for fmpq_class)\n";
 #endif
       throw TerminalException{1};
     };

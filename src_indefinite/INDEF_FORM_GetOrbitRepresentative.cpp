@@ -106,9 +106,15 @@ int main(int argc, char *argv[]) {
 #endif
       std::cerr << "Failed to find matching type for arith\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp, flint (and, with "
-                << "ENABLE_BOOST_TYPES, gmp_boost and "
-                << "multi_boost)\n";
+      std::cerr << "Allowed values: gmp, flint (and, with ENABLE_BOOST_TYPES";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost";
+#endif
+      std::cerr << " and ";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << "multi_boost";
+#endif
+      std::cerr << ")\n";
 #else
       std::cerr << "Allowed values: gmp (build with "
                 << "ENABLE_FLINT_SUPPORT=1 for flint; with "

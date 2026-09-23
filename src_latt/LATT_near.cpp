@@ -107,8 +107,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
       std::cerr << "gmp         : T=mpq_class, Tint=mpz_class\n";
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "gmp_boost   : the boost bindings over gmp\n";
+#endif
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "multi_boost : the boost multiprecision integers\n";
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       std::cerr << "flint       : T=fmpq_class, Tint=fmpz_class\n";
 #endif
@@ -163,11 +167,17 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Available possibilities: gmp, gmp_boost, multi_boost, "
-                << "flint\n";
+      std::cerr << "Available possibilities: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Available possibilities: gmp, gmp_boost, multi_boost "
-                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "Available possibilities: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     };

@@ -17,7 +17,8 @@ int main() {
        1, 0;
   std::optional<MyVector<cpp_rational>> opt = FindIsotropic(Q, std::cerr);
   if (!opt) {
-    std::cerr << "Test_wasm_isotropy: FindIsotropic returned none on [[0,1],[1,0]]\n";
+    std::cerr << "Test_wasm_isotropy: FindIsotropic returned none on "
+              << "[[0,1],[1,0]]\n";
     return 1;
   }
   std::cerr << "Test_wasm_isotropy: OK\n";

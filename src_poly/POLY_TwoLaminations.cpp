@@ -67,7 +67,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "POLY_TwoLaminations [arith] [opt] [FileM] [OutFormat] "
                    "[OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "arith: mpq_class, mpq_rational, cpp_rational\n";
+      std::cerr << "arith: mpq_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", mpq_rational, cpp_rational";
+#endif
+      std::cerr << "\n";
       std::cerr << "opt: one or all\n";
       std::cerr << "FileM: File of the matrix\n";
       return -1;

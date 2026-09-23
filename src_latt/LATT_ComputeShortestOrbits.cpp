@@ -47,10 +47,17 @@ int main(int argc, char *argv[]) {
                    "[OutFormat] [OutFille]\n";
       std::cerr << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "arith: gmp, gmp_boost, multi_boost, flint\n";
+      std::cerr << "arith: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "arith: gmp, gmp_boost, multi_boost (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "arith: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       std::cerr << "FileM: The Gram matrix on input\n";
       return -1;
@@ -97,10 +104,17 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost, flint\n";
+      std::cerr << "Allowed values: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "Allowed values: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     };

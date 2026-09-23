@@ -133,7 +133,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "It enumerates all the x in {0,1}^n with A x = b\n";
       std::cerr << "\n";
-      std::cerr << "arithmetic  : gmp, gmp_boost, multi_boost\n";
+      std::cerr << "arithmetic  : gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << "\n";
       std::cerr << "FileMatrix  : the matrix A, in the format of "
                    "ReadMatrixFile\n";
       std::cerr << "FileRHS     : the vector b, in the format of "

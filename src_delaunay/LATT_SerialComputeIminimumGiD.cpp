@@ -122,10 +122,17 @@ int main(int argc, char *argv[]) {
                    "[FileGram] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "arith: gmp, gmp_boost, multi_boost, flint\n";
+      std::cerr << "arith: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "arith: gmp, gmp_boost, multi_boost (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "arith: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       std::cerr << "i: The dimension of the sublattices being considered\n";
       std::cerr << "max_det: The maximum determinant of the i-dimensional\n";
@@ -185,10 +192,17 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost, flint\n";
+      std::cerr << "Allowed values: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost "
-                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "Allowed values: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     };

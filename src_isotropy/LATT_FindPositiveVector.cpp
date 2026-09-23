@@ -57,11 +57,17 @@ int main(int argc, char *argv[]) {
           << "LATT_FindPositiveVector [arith] [FileI] [CritNorm] [StrictIneq]\n";
       std::cerr << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Possibilities for arith: gmp, gmp_boost, multi_boost, "
-                << "flint\n";
+      std::cerr << "Possibilities for arith: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Possibilities for arith: gmp, gmp_boost, multi_boost "
-                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "Possibilities for arith: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     }
@@ -107,10 +113,17 @@ int main(int argc, char *argv[]) {
 #endif
       std::cerr << "Failed to find matching type for arith\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Possibilities: gmp, gmp_boost, multi_boost, flint\n";
+      std::cerr << "Possibilities: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Possibilities: gmp, gmp_boost, multi_boost "
-                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "Possibilities: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     };

@@ -82,14 +82,19 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_Automorphism [arith] [ListMat] [OutFormat] [OutFile]\n";
+      std::cerr << "LATT_Automorphism [arith] [ListMat] [OutFormat] "
+                << "[OutFile]\n";
       std::cerr << "    or\n";
       std::cerr << "LATT_Automorphism [arith] [ListMat]\n";
       std::cerr << "\n";
       std::cerr << "arith values:\n";
       std::cerr << "  gmp         : mpq_class / mpz_class (default choice)\n";
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "  gmp_boost   : the boost bindings to the gmp types\n";
+#endif
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "  multi_boost : the boost multiprecision types\n";
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
       std::cerr << "  flint       : fmpq_class / fmpz_class\n";
 #endif
@@ -97,7 +102,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  GAP       : ListGen returned as a GAP-readable list of\n";
       std::cerr << "              integral matrix generators (default)\n";
       std::cerr << "  Oscar     : ListGen returned in the Oscar format\n";
-      std::cerr << "  GAP_order : the order |Aut(GramMat)| only, computed via\n";
+      std::cerr << "  GAP_order : the order |Aut(GramMat)| only, computed "
+                << "via\n";
       std::cerr << "              the permutation action on a full-rank\n";
       std::cerr << "              invariant vector family (skips the matrix\n";
       std::cerr << "              lift, much cheaper)\n";
@@ -140,12 +146,17 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Available possibilities: gmp, gmp_boost, "
-                << "multi_boost, flint\n";
+      std::cerr << "Available possibilities: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Available possibilities: gmp, gmp_boost, "
-                << "multi_boost (build with ENABLE_FLINT_SUPPORT=1 "
-                << "for flint)\n";
+      std::cerr << "Available possibilities: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     };

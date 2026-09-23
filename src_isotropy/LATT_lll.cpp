@@ -46,12 +46,17 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_lll arithmetic [FileI]\n";
       std::cerr << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "arithmetic : The arithmetic, e.g. gmp, gmp_boost, "
-                   "multi_boost, flint\n";
+      std::cerr << "arithmetic : The arithmetic, e.g. gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "arithmetic : The arithmetic, e.g. gmp, gmp_boost, "
-                   "multi_boost (build with ENABLE_FLINT_SUPPORT=1 "
-                   "for flint)\n";
+      std::cerr << "arithmetic : The arithmetic, e.g. gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       std::cerr << "FileI      : The Gram matrix on input\n";
       std::cerr << "OutFormat  : Possible values:\n";
@@ -103,10 +108,17 @@ int main(int argc, char *argv[]) {
 #endif
       std::cerr << "Failed to find a matching type for arith\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Possibilities: gmp, gmp_boost, multi_boost, flint\n";
+      std::cerr << "Possibilities: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Possibilities: gmp, gmp_boost, multi_boost "
-                << "(build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "Possibilities: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     };

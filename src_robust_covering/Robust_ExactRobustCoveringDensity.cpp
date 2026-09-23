@@ -109,16 +109,25 @@ int main(int argc, char *argv[]) {
     if (argc != 5 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Robust_ExactRobustCoveringDensity [arith] [MatFile] [OutFormat] [OutFile]\n";
+      std::cerr << "Robust_ExactRobustCoveringDensity [arith] [MatFile] "
+                << "[OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
       std::cerr << "Robust_ExactRobustCoveringDensity [arith] [MatFile]\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic: gmp, gmp_boost, multi_boost\n";
+      std::cerr << "arithmetic: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << "\n";
       std::cerr << "  gmp         : T = mpq_class, Tint = mpz_class\n";
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "  gmp_boost   : T = boost::multiprecision::mpq_rational, "
                    "Tint = boost::multiprecision::mpz_int\n";
+#endif
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, "
                    "Tint = boost::multiprecision::cpp_int\n";
+#endif
       std::cerr << "OutFormat: GAP, GAP_extend, PyVista_json\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;

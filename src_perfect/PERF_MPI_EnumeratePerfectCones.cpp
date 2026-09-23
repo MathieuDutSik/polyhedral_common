@@ -50,7 +50,11 @@ void process_A(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   std::cerr
       << "PERF_MPI_EnumeratePerfectCones: Failed to find matching type for "
       << "arithmetic=" << arithmetic << "\n";
-  std::cerr << "Available types: gmp, gmp_boost, multi_boost\n";
+  std::cerr << "Available types: gmp";
+#ifdef ENABLE_BOOST_TYPES
+  std::cerr << ", gmp_boost, multi_boost";
+#endif
+  std::cerr << "\n";
   throw TerminalException{1};
 }
 

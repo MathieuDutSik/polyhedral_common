@@ -220,15 +220,24 @@ int main(int argc, char *argv[]) {
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_GenerateCharacteristicVectorSet [arith] choice [MatFile] [OutFormat] [OutFile]\n";
+      std::cerr << "LATT_GenerateCharacteristicVectorSet [arith] choice "
+                << "[MatFile] [OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
-      std::cerr << "LATT_GenerateCharacteristicVectorSet [arith] choice [MatFile]\n";
+      std::cerr << "LATT_GenerateCharacteristicVectorSet [arith] choice "
+                << "[MatFile]\n";
       std::cerr << "allowed choices:\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "[arith]: gmp, gmp_boost, multi_boost, flint\n";
+      std::cerr << "[arith]: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "[arith]: gmp, gmp_boost, multi_boost (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "[arith]: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       std::cerr << "choice: shortest, iterated_shortest, iterated_shortest_half, span_iterated_shortest, relevant_voronoi, "
                    "filtered_relevant_voronoi, fullrank, fullrank_half, "
@@ -274,10 +283,17 @@ int main(int argc, char *argv[]) {
 #endif
       std::cerr << "process_A failure: No matching entry for arith\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost, flint\n";
+      std::cerr << "Allowed values: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << ", flint\n";
 #else
-      std::cerr << "Allowed values: gmp, gmp_boost, multi_boost (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+      std::cerr << "Allowed values: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};
     };

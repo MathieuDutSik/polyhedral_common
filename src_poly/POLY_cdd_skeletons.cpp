@@ -99,10 +99,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "     ------- arith -------\n";
       std::cerr << "\n";
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "cpp_rational           : rational arithmetic based on "
                    "boost header library\n";
+#endif
+#ifdef ENABLE_BOOST_TYPES
       std::cerr << "mpq_rational           : rational arithmetic based on "
                    "boost mpq data type\n";
+#endif
       std::cerr << "mpq_class              : rational arithmetic over GMP "
                    "mpq_class\n";
       std::cerr

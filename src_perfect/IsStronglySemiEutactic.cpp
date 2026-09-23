@@ -85,7 +85,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "IsStronglySemiEutactic [arithmetic] [inputMat] "
                    "[max_node]\n";
       std::cerr << "\n";
-      std::cerr << "arithmetic: gmp, gmp_boost, multi_boost\n";
+      std::cerr << "arithmetic: gmp";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", gmp_boost, multi_boost";
+#endif
+      std::cerr << "\n";
       std::cerr << "max_node (optional): the node budget of the search, "
                    "default 1000000\n";
       return -1;

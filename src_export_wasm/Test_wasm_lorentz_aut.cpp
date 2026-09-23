@@ -35,7 +35,8 @@ int main() {
     MyMatrix<T> eGen_T = UniversalMatrixConversion<T, Tint>(eGen);
     MyMatrix<T> prod = eGen_T * LorMat * eGen_T.transpose();
     if (prod != LorMat) {
-      std::cerr << "Test_wasm_lorentz_aut: generator does not preserve LorMat\n";
+      std::cerr << "Test_wasm_lorentz_aut: generator does not preserve "
+                << "LorMat\n";
       return 1;
     }
   }

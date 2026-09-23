@@ -19,7 +19,8 @@ void compute_grp_size(std::string const &list_matrix_file,
                       std::ostream &os_out) {
   std::vector<MyMatrix<T>> l_gens = ReadListMatrixFile<T>(list_matrix_file);
   if (l_gens.size() == 0) {
-    std::cerr << "LATT_ComputeGroupModAction error: list_matrix_file has zero matrices\n";
+    std::cerr << "LATT_ComputeGroupModAction error: list_matrix_file has zero "
+              << "matrices\n";
     throw TerminalException{1};
   }
   int dim = l_gens[0].rows();
@@ -72,10 +73,17 @@ void process(std::string const &arith,
 #endif
   std::cerr << "Failed to find a matching entry for arith\n";
 #ifdef ENABLE_FLINT_SUPPORT
-  std::cerr << "Allowed values: mpz_class, mpz_int, cpp_int, fmpz_class\n";
+  std::cerr << "Allowed values: mpz_class";
+#ifdef ENABLE_BOOST_TYPES
+  std::cerr << ", mpz_int, cpp_int";
+#endif
+  std::cerr << ", fmpz_class\n";
 #else
-  std::cerr << "Allowed values: mpz_class, mpz_int, cpp_int (build with "
-            << "ENABLE_FLINT_SUPPORT=1 for fmpz_class)\n";
+  std::cerr << "Allowed values: mpz_class";
+#ifdef ENABLE_BOOST_TYPES
+  std::cerr << ", mpz_int, cpp_int";
+#endif
+  std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for fmpz_class)\n";
 #endif
   throw TerminalException{1};
 }
@@ -89,14 +97,22 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_ComputeGroupModAction [arith] [list_matrix_file] [mod_val] "
                    "[OutFormat] [OutFile]\n";
       std::cerr << "    or\n";
-      std::cerr << "LATT_ComputeGroupModAction [arith] [list_matrix_file] [mod_val]\n";
+      std::cerr << "LATT_ComputeGroupModAction [arith] [list_matrix_file] "
+                << "[mod_val]\n";
       std::cerr << "\n";
       std::cerr << "    where\n";
 #ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "arith: mpz_class, mpz_int, cpp_int, fmpz_class\n";
+      std::cerr << "arith: mpz_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", mpz_int, cpp_int";
+#endif
+      std::cerr << ", fmpz_class\n";
 #else
-      std::cerr << "arith: mpz_class, mpz_int, cpp_int (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for fmpz_class)\n";
+      std::cerr << "arith: mpz_class";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << ", mpz_int, cpp_int";
+#endif
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for fmpz_class)\n";
 #endif
       std::cerr << "list_matrix_file: The input matrix file\n";
       std::cerr << "mod_val: The modulo considered\n";

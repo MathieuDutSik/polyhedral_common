@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return Process<T>(eFull);
       }
+#ifdef ENABLE_BOOST_TYPES
       if (NumericalType == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
         return Process<T>(eFull);
@@ -72,6 +73,7 @@ int main(int argc, char *argv[]) {
         using T = boost::multiprecision::mpq_rational;
         return Process<T>(eFull);
       }
+#endif
       if (NumericalType == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;

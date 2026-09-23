@@ -66,7 +66,8 @@ int main(int argc, char *argv[]) {
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "PolyGen_difference arith [ListEXT1] [ListEXT2] [OutFormat] [OutFile]\n";
+      std::cerr << "PolyGen_difference arith [ListEXT1] [ListEXT2] "
+                << "[OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
       std::cerr << "PolyGen_difference arith [ListEXT1] [ListEXT2]\n";
       std::cerr << "\n";
