@@ -464,6 +464,31 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     BlockQUERIES.setListIntValues(ListIntValues);
     ListBlock["QUERIES"] = BlockQUERIES;
   }
+  // HECKE
+  {
+    std::map<std::string, std::string> ListStringValues;
+    std::map<std::string, int> ListIntValues;
+    std::map<std::string, bool> ListBoolValues;
+    // The rational matrix x of the double coset Gamma x Gamma
+    ListStringValues["FileHeckeMatrix"] = "null";
+    // The action of x on the cell complex (step A), GAP readable
+    ListStringValues["FileHeckeChainMap"] = "null";
+    // The Hecke matrices on the homology of the quotient by the finite
+    // index subgroup (step B), GAP readable
+    ListStringValues["FileHeckeHomology"] = "null";
+    // The finite index subgroup: Full, Principal, Gamma0, Gamma1
+    ListStringValues["SubgroupType"] = "Full";
+    ListIntValues["SubgroupLevel"] = 1;
+    // Whether the homology is that of the well rounded complex (the
+    // cohomology of the subgroup) or of the full complex with the cells
+    // at infinity
+    ListBoolValues["OnlyWellRoundedHomology"] = true;
+    SingleBlock BlockHECKE;
+    BlockHECKE.setListStringValues(ListStringValues);
+    BlockHECKE.setListIntValues(ListIntValues);
+    BlockHECKE.setListBoolValues(ListBoolValues);
+    ListBlock["HECKE"] = BlockHECKE;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

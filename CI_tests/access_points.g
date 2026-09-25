@@ -2453,6 +2453,47 @@ PERFCOMP_dimension:=function(desc, ListVect)
 end;
 
 
+# The Hecke operator of the double coset Gamma x Gamma for x = HeckeMatrix
+# (a rational matrix) and Gamma the finite index subgroup of the given
+# type ("Full", "Principal", "Gamma0", "Gamma1") and level. The record
+# returned has the action on the homology of the quotient by Gamma, level
+# by level (well rounded cells only if only_well_rounded_homology is true).
+PERFCOMP_hecke_operators:=function(desc, HeckeMatrix, SubgroupType, SubgroupLevel, only_well_rounded_homology)
+    local TmpDir, FileN, FileM, FileO, FileE, output, binary, cmd, TheResult;
+    TmpDir:=DirectoryTemporary();
+    FileN:=Filename(TmpDir, "PerfComp.nml");
+    FileM:=Filename(TmpDir, "PerfComp.hecke");
+    FileO:=Filename(TmpDir, "PerfComp.out");
+    FileE:=Filename(TmpDir, "PerfComp.err");
+    WriteMatrixFile(FileM, HeckeMatrix);
+    #
+    output:=OutputTextFile(FileN, true);
+    __PERFCOMP_Write_t_space(output, desc);
+    AppendTo(output, "&HECKE\n");
+    AppendTo(output, " FileHeckeMatrix = \"", FileM, "\"\n");
+    AppendTo(output, " FileHeckeHomology = \"", FileO, "\"\n");
+    AppendTo(output, " SubgroupType = \"", SubgroupType, "\"\n");
+    AppendTo(output, " SubgroupLevel = ", SubgroupLevel, "\n");
+    AppendTo(output, " OnlyWellRoundedHomology = ", FORTRAN_logical(only_well_rounded_homology), "\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
+    #
+    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
+    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
+    Exec(cmd);
+    #
+    if IsExistingFile(FileO)=false then
+        Error("The output file is not existing. That qualifies as a fail");
+    fi;
+    TheResult:=ReadAsFunction(FileO)();
+    RemoveFile(FileN);
+    RemoveFile(FileM);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return TheResult;
+end;
+
+
 
 PERFCOMP_is_face:=function(desc, ListVect)
     return __PERFCOMP_face_query(desc, ListVect, "FileIsFace");

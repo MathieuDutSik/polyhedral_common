@@ -52,3 +52,14 @@ jobs:
             exit 1
           fi
           cd ../..
+
+      - name: Test Hecke operators on the homology of the perfect form complex
+        run: |
+          cd CI_tests/09B_PerfectContractingHomotopy
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestHeckeOperators.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..

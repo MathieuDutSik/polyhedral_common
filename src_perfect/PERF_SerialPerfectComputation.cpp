@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "perfect_complex.h"
+#include "hecke_operators.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on
@@ -332,6 +333,37 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     return chain_simplification(index, chain, fce, os);
   };
   f_chain_oper("FileChainSimplification", f_simp);
+  /*
+    The Hecke operators
+   */
+  SingleBlock const &BlockHECKE = eFull.get_block("HECKE");
+  std::string FileHeckeMatrix = BlockHECKE.get_string("FileHeckeMatrix");
+  if (FileHeckeMatrix != "null") {
+    MyMatrix<T> x = ReadMatrixFile<T>(FileHeckeMatrix);
+    // Step A: the action on the cell complex
+    HeckeChainMap<T, Tint> hcm = compute_hecke_chain_map(fce, x, os);
+    std::string FileHeckeChainMap = BlockHECKE.get_string("FileHeckeChainMap");
+    if (FileHeckeChainMap != "null") {
+      std::ofstream os_out(FileHeckeChainMap);
+      os_out << "return ";
+      WriteHeckeChainMapGAP(os_out, hcm);
+      os_out << ";\n";
+    }
+    // Step B: the action on the homology of the quotient by the subgroup
+    std::string FileHeckeHomology = BlockHECKE.get_string("FileHeckeHomology");
+    if (FileHeckeHomology != "null") {
+      std::string SubgroupType = BlockHECKE.get_string("SubgroupType");
+      int SubgroupLevel = BlockHECKE.get_int("SubgroupLevel");
+      bool OnlyWellRoundedHomology = BlockHECKE.get_bool("OnlyWellRoundedHomology");
+      FiniteIndexSubgroup<Tint> gamma{SubgroupType, Tint(SubgroupLevel), LinSpa.n};
+      HeckeHomologyResult<T> result =
+          compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, os);
+      std::ofstream os_out(FileHeckeHomology);
+      os_out << "return ";
+      WriteHeckeHomologyResultGAP(os_out, result);
+      os_out << ";\n";
+    }
+  }
 }
 
 template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {

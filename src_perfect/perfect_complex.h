@@ -6,6 +6,7 @@
 #include "perfect_tspace.h"
 #include "triples.h"
 #include "GampMatlab.h"
+#include "SparseExactSolver.h"
 #include "FiniteMatrixGroupTest.h"
 #include "MatrixGroupNest.h"
 #include "MatrixGroupSimplification.h"
@@ -13,6 +14,7 @@
 #include "boost_serialization.h"
 #include <boost/dynamic_bitset/serialization.hpp>
 #include <fstream>
+#include <functional>
 // clang-format on
 
 #ifdef SANITY_CHECK
@@ -140,6 +142,28 @@ struct PerfectFormInfoForComplex {
     std::vector<std::pair<Face, Telt>> res = OrbitFacesRepresentatives(GRP_ext, set1);
     auto ret = orbit_cache.emplace(set1, std::move(res));
     return ret.first->second;
+  }
+  // l_sing_adj holds one facet per orbit under GRP_ext. The full list of
+  // facets with the adjacent cones is obtained by applying the group: if
+  // EXT_j eMat is the neighbor across the facet f and g maps f to f' then
+  // EXT_j eMat g is the neighbor across f'. It is memoized since it is
+  // needed by every walk through the complex.
+  mutable std::optional<std::vector<sing_adj<Tint>>> full_adj_cache{};
+  std::vector<sing_adj<Tint>> const& full_adjacencies(std::ostream& os) const {
+    if (full_adj_cache) {
+      return *full_adj_cache;
+    }
+    std::vector<sing_adj<Tint>> l_full;
+    for (auto & adj: l_sing_adj) {
+      std::vector<std::pair<Face, Telt>> const& l_orbit = orbit_representatives(adj.f_ext);
+      for (auto & pair: l_orbit) {
+        MyMatrix<Tint> eMat = adj.eMat * find_matrix(pair.second, os);
+        sing_adj<Tint> adj_full{adj.jCone, pair.first, std::move(eMat)};
+        l_full.emplace_back(std::move(adj_full));
+      }
+    }
+    full_adj_cache = std::move(l_full);
+    return *full_adj_cache;
   }
 };
 
@@ -1325,11 +1349,16 @@ template<typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> get_reduced_generators_fce(
     FullComplexEnumeration<T, Tint, Tgroup> const& fce, std::ostream& os) {
   std::vector<MyMatrix<Tint>> list_gen;
-  // Equivalences from top-dimensional cones.
+  // Stabilizers of the top-dimensional cones and the adjacency
+  // elements mapping a cone to its neighbors. Together they generate
+  // the group since the complex is connected.
   for (auto &cone : fce.pctdi.l_perfect) {
     for (auto &ePerm : cone.GRP_ext.GeneratorsOfGroup()) {
       MyMatrix<Tint> eMatr = cone.find_matrix(ePerm, os);
       list_gen.push_back(eMatr);
+    }
+    for (auto &adj : cone.l_sing_adj) {
+      list_gen.push_back(adj.eMat);
     }
   }
   // Stabilizer generators from faces.
@@ -1845,7 +1874,7 @@ struct TopPerfectCone {
   Here we try to solve the equation in a specific set of top dimensional cells.
  */
 template<typename T, typename Tint, typename Tgroup>
-std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_specified(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::ostream& os) {
+std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_specified(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os) {
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: contracting_homotopy_specified, step 1, index=" << index << "\n";
 #endif
@@ -1863,12 +1892,18 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
     for (auto & face1: fce.l_topdims[i_perfect].ll_faces[index-1]) {
       int iOrb = face1.iOrb;
       MyMatrix<Tint> M = face1.M * top.M;
-      cb1.f_insert(iOrb, M);
+      MyMatrix<Tint> EXT = fce.levels[index-1].l_faces[iOrb].EXT * M;
+      if (f_filter(EXT)) {
+        cb1.f_insert(iOrb, M);
+      }
     }
     for (auto & face2: fce.l_topdims[i_perfect].ll_faces[index]) {
       int iOrb = face2.iOrb;
       MyMatrix<Tint> M = face2.M * top.M;
-      cb2.f_insert(iOrb, M);
+      MyMatrix<Tint> EXT = fce.levels[index].l_faces[iOrb].EXT * M;
+      if (f_filter(EXT)) {
+        cb2.f_insert(iOrb, M);
+      }
     }
   }
 #ifdef DEBUG_PERFECT_COMPLEX
@@ -1912,7 +1947,19 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
 #endif
   MySparseMatrix<T> SpMat(nbRow, nbCol);
   SpMat.setFromTriplets(tripletList.begin(), tripletList.end());
-  std::optional<MyVector<T>> opt = AMP_SolutionSparseSystem(SpMat, Bvect, os);
+  // The system is solved exactly: dense for the small ones, by sparse
+  // elimination otherwise. The floating point L1 solver
+  // (AMP_SolutionSparseSystem) would give sparser solutions but it can
+  // miss a solution or fail to converge on the larger systems.
+  size_t n_ent = static_cast<size_t>(nbRow) * static_cast<size_t>(nbCol);
+  size_t max_ent_dense = 40000;
+  std::optional<MyVector<T>> opt;
+  if (n_ent <= max_ent_dense) {
+    MyMatrix<T> Mdense = MyMatrixFromSparseMatrix(SpMat);
+    opt = SolutionMat(Mdense, Bvect);
+  } else {
+    opt = SparseSolutionMat_Exact(SpMat, Bvect, os);
+  }
   if (!opt) {
     return {};
   }
@@ -1942,7 +1989,7 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os) {
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: contracting_homotopy_kernel, step 1\n";
 #endif
@@ -1967,11 +2014,15 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& in
   os << "PERFCOMP: contracting_homotopy_kernel, step 2 |l_top|=" << l_top.size() << "\n";
 #endif
   size_t start = 0;
+  // The covering grows exponentially with the flowering, so a runaway
+  // search (for a chain which is not a boundary in the filtered complex)
+  // is stopped rather than exhausting the memory.
+  size_t max_top = 100000;
   while(true) {
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: contracting_homotopy_kernel, start=" << start << "\n";
 #endif
-    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = contracting_homotopy_specified(index, chain, fce, l_top, os);
+    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = contracting_homotopy_specified(index, chain, fce, l_top, f_filter, os);
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: contracting_homotopy_kernel, we have opt\n";
 #endif
@@ -1979,9 +2030,14 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& in
       return *opt;
     }
     size_t len = l_top.size();
+    if (len > max_top) {
+      std::cerr << "PERFCOMP: contracting_homotopy_kernel, no solution found with " << len << " covering cones\n";
+      throw TerminalException{1};
+    }
     for (size_t u=start; u<len; u++) {
       int i_perfect = l_top[u].i_perfect;
-      for (auto & sing_adj: fce.pctdi.l_perfect[i_perfect].l_sing_adj) {
+      // All the neighbors are needed, not just one per orbit of facets.
+      for (auto & sing_adj: fce.pctdi.l_perfect[i_perfect].full_adjacencies(os)) {
         int j_perfect = sing_adj.jCone;
         MyMatrix<Tint> M = sing_adj.eMat * l_top[u].M;
         TopPerfectCone<Tint> tpc{j_perfect, M};
@@ -1996,23 +2052,29 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& in
 /*
   We want to solve d(x) = chain.
   Necessary condition is d(chain) = 0
+  The solution is searched among the cells accepted by f_filter (which
+  must accept the cells of the chain and be closed under taking faces,
+  e.g. the cells whose vectors lie in a given subspace).
  */
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os) {
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: contracting_homotopy, step 1\n";
 #endif
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-  std::vector<PerfectFaceEntry<T, Tint>> chain3 = chain_boundary(index, chain, fce, os);
-  if (!chain3.empty()) {
-    std::cerr << "PERFCOMP: The chain should have a zero boundary\n";
-    throw TerminalException{1};
+  // At the last level (the vertices) there is no boundary to check.
+  if (index < static_cast<int>(fce.boundaries.size())) {
+    std::vector<PerfectFaceEntry<T, Tint>> chain3 = chain_boundary(index, chain, fce, os);
+    if (!chain3.empty()) {
+      std::cerr << "PERFCOMP: The chain should have a zero boundary\n";
+      throw TerminalException{1};
+    }
   }
 #endif
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: contracting_homotopy, step 2\n";
 #endif
-  std::vector<PerfectFaceEntry<T, Tint>> x = contracting_homotopy_kernel(index, chain, fce, os);
+  std::vector<PerfectFaceEntry<T, Tint>> x = contracting_homotopy_kernel(index, chain, fce, f_filter, os);
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: contracting_homotopy, step 3 |x|=" << x.size() << "\n";
 #endif
@@ -2027,6 +2089,14 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(int const& index, st
   os << "PERFCOMP: contracting_homotopy, step 4\n";
 #endif
   return x;
+}
+
+template<typename T, typename Tint, typename Tgroup>
+std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+  std::function<bool(MyMatrix<Tint> const&)> f_filter = [](MyMatrix<Tint> const&) -> bool {
+    return true;
+  };
+  return contracting_homotopy(index, chain, fce, f_filter, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>

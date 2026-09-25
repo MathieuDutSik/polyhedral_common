@@ -33,3 +33,29 @@ be done from the Tspace equivalence code. That part is clear.
   ---
 
 
+
+
+Hecke operators
+===============
+
+`hecke_operators.h` computes the Hecke operators on the homology of the
+quotient of the perfect form complex by a finite index subgroup. It is
+driven by the `&HECKE` block of `PERF_SerialPerfectComputation`:
+
+* `FileHeckeMatrix`: the rational matrix x of the double coset Gamma x Gamma
+  (it must preserve the T-space).
+* `FileHeckeChainMap`: output of step A, the chains representing the images
+  of the cells under the cosets of G x G.
+* `FileHeckeHomology`: output of step B, the Hecke matrices on the homology
+  of the quotient by the subgroup, level by level, in a basis of harmonic
+  representatives.
+* `SubgroupType` / `SubgroupLevel`: `Full`, `Principal`, `Gamma0` (last row
+  congruent to (0,...,0,*)) or `Gamma1` (last row congruent to (0,...,0,1)).
+* `OnlyWellRoundedHomology`: restrict to the well rounded cells, which
+  gives the cohomology of the subgroup by duality; otherwise the homology of
+  the full complex with its cells at infinity.
+
+The complex must be computed with `OnlyWellRounded = F`, `ComputeBoundary = T`
+and `ComputeContractingHomotopy = T`: the construction starts from the
+vertices (mapped to vertices) and goes up by contracting homotopies.
+The GAP access point is `PERFCOMP_hecke_operators` in `CI_tests/access_points.g`.
