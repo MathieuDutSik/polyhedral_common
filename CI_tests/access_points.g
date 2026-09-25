@@ -2458,8 +2458,21 @@ end;
 # type ("Full", "Principal", "Gamma0", "Gamma1") and level. The record
 # returned has the action on the homology of the quotient by Gamma, level
 # by level (well rounded cells only if only_well_rounded_homology is true).
-PERFCOMP_hecke_operators:=function(desc, HeckeMatrix, SubgroupType, SubgroupLevel, only_well_rounded_homology)
-    local TmpDir, FileN, FileM, FileO, FileE, output, binary, cmd, TheResult;
+# The optional sixth argument is the method: "Dual" (default, induction
+# from the perfect cones in the well rounded complex) or "Vertex"
+# (induction from the vertices in the full complex, required when
+# only_well_rounded_homology is false).
+PERFCOMP_hecke_operators:=function(arg)
+    local desc, HeckeMatrix, SubgroupType, SubgroupLevel, only_well_rounded_homology, HeckeMethod, TmpDir, FileN, FileM, FileO, FileE, output, binary, cmd, TheResult;
+    desc:=arg[1];
+    HeckeMatrix:=arg[2];
+    SubgroupType:=arg[3];
+    SubgroupLevel:=arg[4];
+    only_well_rounded_homology:=arg[5];
+    HeckeMethod:="Dual";
+    if Length(arg) >= 6 then
+        HeckeMethod:=arg[6];
+    fi;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
     FileM:=Filename(TmpDir, "PerfComp.hecke");
@@ -2475,6 +2488,7 @@ PERFCOMP_hecke_operators:=function(desc, HeckeMatrix, SubgroupType, SubgroupLeve
     AppendTo(output, " SubgroupType = \"", SubgroupType, "\"\n");
     AppendTo(output, " SubgroupLevel = ", SubgroupLevel, "\n");
     AppendTo(output, " OnlyWellRoundedHomology = ", FORTRAN_logical(only_well_rounded_homology), "\n");
+    AppendTo(output, " HeckeMethod = \"", HeckeMethod, "\"\n");
     AppendTo(output, "/\n");
     CloseStream(output);
     #

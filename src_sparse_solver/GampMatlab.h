@@ -557,7 +557,8 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
 
 
 MyVector<double> AMP_SolutionSparseSystem_d(MySparseMatrix<double> const &SpMat_d,
-                                            MyVector<double> const &Bvect_d, [[maybe_unused]] std::ostream& os) {
+                                            MyVector<double> const &Bvect_d, int const& maxit,
+                                            [[maybe_unused]] std::ostream& os) {
   RecSparse<double> eRecSparse = AMP_linear_operators(SpMat_d);
   //
   RecOptSparse<double> eRecOpt;
@@ -571,14 +572,20 @@ MyVector<double> AMP_SolutionSparseSystem_d(MySparseMatrix<double> const &SpMat_
   eRecOpt.gamma = 0;
   eRecOpt.nonneg = false;
   eRecOpt.nonorth = true;
-  eRecOpt.print = true;
+  eRecOpt.print = false;
   eRecOpt.UseWeight = false;
   eRecOpt.basis = false;
   eRecOpt.stepfreq = 1;
-  eRecOpt.maxit = 99999;
+  eRecOpt.maxit = maxit;
   eRecOpt.xs = -1;
   OutSolver<double> eRecOut = AMP_yall1(eRecSparse, Bvect_d, eRecOpt);
   return eRecOut.x;
+}
+
+MyVector<double> AMP_SolutionSparseSystem_d(MySparseMatrix<double> const &SpMat_d,
+                                            MyVector<double> const &Bvect_d, std::ostream& os) {
+  int maxit = 99999;
+  return AMP_SolutionSparseSystem_d(SpMat_d, Bvect_d, maxit, os);
 }
 
 

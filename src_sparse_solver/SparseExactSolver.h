@@ -192,6 +192,146 @@ SparseSolutionMat_Exact(MySparseMatrix<T> const &A, MyVector<T> const &b,
   return x;
 }
 
+/*
+  Consistency of x A = b tested by elimination modulo a prime. An
+  inconsistency modulo p implies the inconsistency over the rationals;
+  a consistency modulo p implies the rational one except with
+  probability about 1/p. The arithmetic is on machine words, so the
+  fill-in costs nothing like the rational elimination.
+ */
+inline int64_t residue_mod_p(mpq_class const &x, int64_t const &p) {
+  int64_t num = mpz_fdiv_ui(x.get_num_mpz_t(), p);
+  int64_t den = mpz_fdiv_ui(x.get_den_mpz_t(), p);
+  // The inverse of den by Fermat
+  int64_t res = 1, base = den, e = p - 2;
+  while (e > 0) {
+    if (e & 1) {
+      res = (res * base) % p;
+    }
+    base = (base * base) % p;
+    e >>= 1;
+  }
+  return (num * res) % p;
+}
+
+template <typename T>
+int64_t residue_mod_p(T const &x, int64_t const &p) {
+  mpq_class x_q = UniversalScalarConversion<mpq_class, T>(x);
+  return residue_mod_p(x_q, p);
+}
+
+template <typename T>
+bool SparseSystemConsistent_Mod(MySparseMatrix<T> const &A, MyVector<T> const &b,
+                                [[maybe_unused]] std::ostream &os) {
+  int64_t const p = 2147483647;
+  auto inv_mod = [&](int64_t a) -> int64_t {
+    int64_t res = 1, base = ((a % p) + p) % p, e = p - 2;
+    while (e > 0) {
+      if (e & 1) {
+        res = (res * base) % p;
+      }
+      base = (base * base) % p;
+      e >>= 1;
+    }
+    return res;
+  };
+  int n_unknown = A.rows();
+  int n_eq = A.cols();
+  std::vector<std::unordered_map<int, int64_t>> eq(n_eq);
+  std::vector<int64_t> rhs(n_eq);
+  for (int j = 0; j < n_eq; j++) {
+    rhs[j] = residue_mod_p(b(j), p);
+  }
+  for (int k = 0; k < A.outerSize(); ++k) {
+    for (typename MySparseMatrix<T>::InnerIterator it(A, k); it; ++it) {
+      int64_t val = residue_mod_p(it.value(), p);
+      int64_t &ref = eq[it.col()][it.row()];
+      ref = (ref + val) % p;
+    }
+  }
+  std::vector<std::unordered_set<int>> occ(n_unknown);
+  for (int j = 0; j < n_eq; j++) {
+    for (auto it = eq[j].begin(); it != eq[j].end();) {
+      if (it->second == 0) {
+        it = eq[j].erase(it);
+      } else {
+        occ[it->first].insert(j);
+        ++it;
+      }
+    }
+  }
+  std::vector<uint8_t> active(n_eq, 1);
+  int n_active = n_eq;
+  while (n_active > 0) {
+    int e = -1;
+    size_t siz_best = 0;
+    for (int j = 0; j < n_eq; j++) {
+      if (active[j] == 1) {
+        size_t siz = eq[j].size();
+        if (e == -1 || siz < siz_best) {
+          e = j;
+          siz_best = siz;
+          if (siz == 0) {
+            break;
+          }
+        }
+      }
+    }
+    if (eq[e].empty()) {
+      if (rhs[e] != 0) {
+        return false;
+      }
+      active[e] = 0;
+      n_active -= 1;
+      continue;
+    }
+    int u = -1;
+    size_t occ_best = 0;
+    for (auto &kv : eq[e]) {
+      size_t n_occ = occ[kv.first].size();
+      if (u == -1 || n_occ < occ_best) {
+        u = kv.first;
+        occ_best = n_occ;
+      }
+    }
+    int64_t pv_inv = inv_mod(eq[e][u]);
+    std::vector<int> l_f(occ[u].begin(), occ[u].end());
+    for (auto &f : l_f) {
+      if (f == e) {
+        continue;
+      }
+      int64_t factor = (eq[f][u] * pv_inv) % p;
+      for (auto &kv : eq[e]) {
+        int i = kv.first;
+        if (i == u) {
+          continue;
+        }
+        int64_t sub = (factor * kv.second) % p;
+        auto iter = eq[f].find(i);
+        if (iter == eq[f].end()) {
+          eq[f][i] = (p - sub) % p;
+          occ[i].insert(f);
+        } else {
+          iter->second = ((iter->second - sub) % p + p) % p;
+          if (iter->second == 0) {
+            eq[f].erase(iter);
+            occ[i].erase(f);
+          }
+        }
+      }
+      eq[f].erase(u);
+      occ[u].erase(f);
+      rhs[f] = ((rhs[f] - (factor * rhs[e]) % p) % p + p) % p;
+    }
+    for (auto &kv : eq[e]) {
+      occ[kv.first].erase(e);
+    }
+    active[e] = 0;
+    n_active -= 1;
+  }
+  return true;
+}
+
 // clang-format off
 #endif  // SRC_SPARSE_SOLVER_SPARSEEXACTSOLVER_H_
 // clang-format on

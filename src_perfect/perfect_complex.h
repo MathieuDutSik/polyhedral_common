@@ -1829,6 +1829,21 @@ public:
   std::vector<PerfectFace<Tint>> const& get_faces() const {
     return faces;
   }
+  // The position and sign if the cell is present, nothing otherwise.
+  std::optional<std::pair<size_t, int>> find_position(int const& iOrb, MyMatrix<Tint> const& M) const {
+    FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[index].l_faces[iOrb];
+    MyMatrix<Tint> EXT2 = face.EXT * M;
+    MyMatrix<Tint> EXT3 = tot_set(EXT2);
+    auto iter = map_ext_set.find(EXT3);
+    if (iter == map_ext_set.end()) {
+      return {};
+    }
+    size_t idx = iter->second;
+    MyMatrix<Tint> t = faces[idx - 1].M * Inverse(M);
+    int sign = get_face_orientation(face.EXT, fce.pctdi.LinSpa.ListMat, face.or_info, t);
+    std::pair<size_t, int> pair{idx - 1, sign};
+    return pair;
+  }
   std::pair<size_t, int> get_position(int const& iOrb, MyMatrix<Tint> const& M) const {
     FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[index].l_faces[iOrb];
     MyMatrix<Tint> const& EXT1 = face.EXT;
@@ -1947,21 +1962,119 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
 #endif
   MySparseMatrix<T> SpMat(nbRow, nbCol);
   SpMat.setFromTriplets(tripletList.begin(), tripletList.end());
-  // The system is solved exactly: dense for the small ones, by sparse
-  // elimination otherwise. The floating point L1 solver
-  // (AMP_SolutionSparseSystem) would give sparser solutions but it can
-  // miss a solution or fail to converge on the larger systems.
-  size_t n_ent = static_cast<size_t>(nbRow) * static_cast<size_t>(nbCol);
-  size_t max_ent_dense = 40000;
+  auto count_nz=[](MyVector<T> const& v) -> int {
+    int n_nz = 0;
+    for (int i=0; i<v.size(); i++) {
+      if (v(i) != 0) {
+        n_nz += 1;
+      }
+    }
+    return n_nz;
+  };
+  // The sparsity of the solution matters a lot: the chains found here are
+  // the right hand sides of the next level and the coverings they need
+  // grow with their support. Three cases:
+  // (1) At the vertex level, a right hand side v1 - v2 is solved by a
+  //     shortest path of edges (BFS in the covering).
+  // (2) Otherwise the system is solved exactly, densely for the small
+  //     ones and by sparse elimination otherwise, which also settles the
+  //     consistency.
+  // (3) A consistent system of moderate size is then passed to the L1
+  //     solver (floating point, then exact solve on the support found)
+  //     and its solution is kept if it has a smaller support.
+  int n_levels = fce.levels.size();
   std::optional<MyVector<T>> opt;
-  if (n_ent <= max_ent_dense) {
-    MyMatrix<T> Mdense = MyMatrixFromSparseMatrix(SpMat);
-    opt = SolutionMat(Mdense, Bvect);
+  if (index == n_levels - 1 && chain.size() == 2 && chain[0].value + chain[1].value == 0 && T_abs(chain[0].value) == 1) {
+    // The vertices of the edges and the adjacency
+    std::vector<std::vector<std::pair<int,int>>> adj(nbCol);
+    std::vector<std::vector<int>> edge_vert(nbRow);
+    for (auto & t: tripletList) {
+      edge_vert[t.row()].push_back(t.col());
+    }
+    for (int i1=0; i1<nbRow; i1++) {
+      std::vector<int> const& lv = edge_vert[i1];
+      if (lv.size() == 2 && lv[0] != lv[1]) {
+        adj[lv[0]].push_back({lv[1], i1});
+        adj[lv[1]].push_back({lv[0], i1});
+      }
+    }
+    int v_start = cb2.get_position(chain[0].iOrb, chain[0].M).first;
+    int v_end = cb2.get_position(chain[1].iOrb, chain[1].M).first;
+    std::vector<int> prev_edge(nbCol, -1), prev_vert(nbCol, -1);
+    std::vector<uint8_t> visited(nbCol, 0);
+    std::vector<int> queue{v_start};
+    visited[v_start] = 1;
+    size_t pos = 0;
+    while (pos < queue.size() && !visited[v_end]) {
+      int v = queue[pos];
+      pos += 1;
+      for (auto & e: adj[v]) {
+        if (!visited[e.first]) {
+          visited[e.first] = 1;
+          prev_edge[e.first] = e.second;
+          prev_vert[e.first] = v;
+          queue.push_back(e.first);
+        }
+      }
+    }
+    if (visited[v_end]) {
+      std::vector<int> l_edge;
+      int v = v_end;
+      while (v != v_start) {
+        l_edge.push_back(prev_edge[v]);
+        v = prev_vert[v];
+      }
+      // The signs are obtained by solving the (tiny) system on the path.
+      MyMatrix<T> Mpath = ZeroMatrix<T>(l_edge.size(), nbCol);
+      for (auto & t: tripletList) {
+        for (size_t u=0; u<l_edge.size(); u++) {
+          if (t.row() == l_edge[u]) {
+            Mpath(u, t.col()) += t.value();
+          }
+        }
+      }
+      std::optional<MyVector<T>> opt_path = SolutionMat(Mpath, Bvect);
+      if (opt_path) {
+        MyVector<T> sol = ZeroVector<T>(nbRow);
+        for (size_t u=0; u<l_edge.size(); u++) {
+          sol(l_edge[u]) = (*opt_path)(u);
+        }
+        opt = sol;
+#ifdef DEBUG_PERFECT_COMPLEX
+        os << "PERFCOMP: contracting_homotopy_specified, shortest path of length " << l_edge.size() << "\n";
+#endif
+      }
+    }
+    if (!opt) {
+      // No path in the covering: more cones are needed.
+      return {};
+    }
   } else {
-    opt = SparseSolutionMat_Exact(SpMat, Bvect, os);
-  }
-  if (!opt) {
-    return {};
+    size_t n_ent = static_cast<size_t>(nbRow) * static_cast<size_t>(nbCol);
+    size_t max_ent_dense = 40000;
+    if (n_ent <= max_ent_dense) {
+      MyMatrix<T> Mdense = MyMatrixFromSparseMatrix(SpMat);
+      opt = SolutionMat(Mdense, Bvect);
+    } else {
+      opt = SparseSolutionMat_Exact(SpMat, Bvect, os);
+    }
+    if (!opt) {
+      return {};
+    }
+    size_t max_row_l1 = 50000;
+    int n_nz_exact = count_nz(*opt);
+    if (static_cast<size_t>(nbRow) <= max_row_l1 && n_nz_exact > 1) {
+      std::optional<MyVector<T>> opt_l1 = AMP_SolutionSparseSystem(SpMat, Bvect, os);
+      if (opt_l1) {
+        int n_nz_l1 = count_nz(*opt_l1);
+#ifdef DEBUG_PERFECT_COMPLEX
+        os << "PERFCOMP: contracting_homotopy_specified, n_nz exact=" << n_nz_exact << " L1=" << n_nz_l1 << "\n";
+#endif
+        if (n_nz_l1 < n_nz_exact) {
+          opt = opt_l1;
+        }
+      }
+    }
   }
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: contracting_homotopy_specified, step 7\n";

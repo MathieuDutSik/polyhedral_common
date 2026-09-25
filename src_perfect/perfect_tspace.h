@@ -478,6 +478,11 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListStringValues["FileHeckeHomology"] = "null";
     // The finite index subgroup: Full, Principal, Gamma0, Gamma1
     ListStringValues["SubgroupType"] = "Full";
+    // The construction of the chain map: "Dual" (induction from the
+    // perfect cones in the well rounded complex) or "Vertex" (induction
+    // from the vertices in the full complex, needed for the homology of
+    // the full complex)
+    ListStringValues["HeckeMethod"] = "Dual";
     ListIntValues["SubgroupLevel"] = 1;
     // Whether the homology is that of the well rounded complex (the
     // cohomology of the subgroup) or of the full complex with the cells

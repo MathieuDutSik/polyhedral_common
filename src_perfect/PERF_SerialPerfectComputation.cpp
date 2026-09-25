@@ -341,7 +341,14 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   if (FileHeckeMatrix != "null") {
     MyMatrix<T> x = ReadMatrixFile<T>(FileHeckeMatrix);
     // Step A: the action on the cell complex
-    HeckeChainMap<T, Tint> hcm = compute_hecke_chain_map(fce, x, os);
+    std::string HeckeMethod = BlockHECKE.get_string("HeckeMethod");
+    bool dual = (HeckeMethod == "Dual");
+    if (!dual && HeckeMethod != "Vertex") {
+      std::cerr << "HeckeMethod should be Dual or Vertex\n";
+      throw TerminalException{1};
+    }
+    HeckeChainMap<T, Tint> hcm = dual ? compute_hecke_chain_map_dual(fce, x, os)
+                                      : compute_hecke_chain_map(fce, x, os);
     std::string FileHeckeChainMap = BlockHECKE.get_string("FileHeckeChainMap");
     if (FileHeckeChainMap != "null") {
       std::ofstream os_out(FileHeckeChainMap);
@@ -355,9 +362,13 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       std::string SubgroupType = BlockHECKE.get_string("SubgroupType");
       int SubgroupLevel = BlockHECKE.get_int("SubgroupLevel");
       bool OnlyWellRoundedHomology = BlockHECKE.get_bool("OnlyWellRoundedHomology");
+      if (dual && !OnlyWellRoundedHomology) {
+        std::cerr << "The Dual method only gives the homology of the well rounded complex\n";
+        throw TerminalException{1};
+      }
       FiniteIndexSubgroup<Tint> gamma{SubgroupType, Tint(SubgroupLevel), LinSpa.n};
       HeckeHomologyResult<T> result =
-          compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, os);
+          compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, dual, os);
       std::ofstream os_out(FileHeckeHomology);
       os_out << "return ";
       WriteHeckeHomologyResultGAP(os_out, result);

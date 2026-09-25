@@ -5,6 +5,7 @@
 // clang-format off
 #include "perfect_complex.h"
 #include <functional>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -470,7 +471,7 @@ chain_vector_family(int const &index,
   span is everything then no filtering.
  */
 template <typename T, typename Tint, typename Tgroup>
-std::function<bool(MyMatrix<Tint> const &)>
+std::pair<std::function<bool(MyMatrix<Tint> const &)>, bool>
 get_subspace_filter(int const &index,
                     std::vector<PerfectFaceEntry<T, Tint>> const &chain,
                     FullComplexEnumeration<T, Tint, Tgroup> const &fce,
@@ -503,16 +504,18 @@ get_subspace_filter(int const &index,
   os << "HECKE: get_subspace_filter |V|=" << V.rows() << " rnk=" << rnk << " n=" << n << "\n";
 #endif
   if (rnk == n) {
-    return [](MyMatrix<Tint> const &) -> bool { return true; };
+    std::function<bool(MyMatrix<Tint> const &)> f_all = [](MyMatrix<Tint> const &) -> bool { return true; };
+    return {f_all, false};
   }
   // The rows e of Equa satisfy V e = 0.
   MyMatrix<T> Equa = NullspaceTrMat(V);
   MyMatrix<T> EquaT = Equa.transpose();
-  return [EquaT](MyMatrix<Tint> const &EXT) -> bool {
+  std::function<bool(MyMatrix<Tint> const &)> f_sub = [EquaT](MyMatrix<Tint> const &EXT) -> bool {
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
     MyMatrix<T> prod = EXT_T * EquaT;
     return IsZeroMatrix(prod);
   };
+  return {f_sub, true};
 }
 
 //
@@ -736,6 +739,47 @@ public:
     throw TerminalException{1};
   }
   /*
+    The smallest face of the complex whose relative interior contains the
+    barycenter of the rays of the rational vectors of W: the walk gives a
+    cone containing it, the tight facets of the cone cut out the face.
+   */
+  FceFaceSearch<Tint> search_face_containing(MyMatrix<T> const &W) const {
+    TopPerfectCone<Tint> tpc = find_containing_cone_T(W);
+    int i_cone = tpc.i_perfect;
+    MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(tpc.M);
+    MyMatrix<T> Minv = Inverse(M_T);
+    std::vector<T> weights(W.rows(), T(1));
+    MyVector<T> p = get_coords(W * Minv, weights);
+    std::vector<sing_adj<Tint>> const &l_adj = fce.pctdi.l_perfect[i_cone].full_adjacencies(os);
+    std::vector<MyVector<T>> const &l_fct = ll_facet_fct[i_cone];
+    int n_row = fce.pctdi.l_perfect[i_cone].EXT.rows();
+    Face f_ext(n_row);
+    f_ext.set();
+    for (size_t i_f = 0; i_f < l_fct.size(); i_f++) {
+      T val = ScalarProduct(l_fct[i_f], p);
+      if (val == 0) {
+        f_ext &= l_adj[i_f].f_ext;
+      }
+    }
+    triple<Tint> t{static_cast<size_t>(i_cone), f_ext, tpc.M};
+    triple<Tint> t_can = canonicalize_triple(fce.pctdi.l_perfect, t, os);
+    MyMatrix<Tint> EXT_face = SelectRow(fce.pctdi.l_perfect[i_cone].EXT, f_ext);
+    std::vector<MyMatrix<T>> const &ListMat = fce.pctdi.LinSpa.ListMat;
+    int n_mat = ListMat.size();
+    MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(ListMat, EXT_face);
+    int index = n_mat - RankMat(ScalMat);
+    int n_orb = fce.levels[index].l_faces.size();
+    for (int iOrb = 0; iOrb < n_orb; iOrb++) {
+      std::vector<triple<Tint>> const &l_triple = fce.levels[index].l_faces[iOrb].l_triple;
+      std::optional<MyMatrix<Tint>> opt = test_triple_in_listtriple(fce.pctdi.l_perfect, l_triple, t_can, os);
+      if (opt) {
+        return {index, iOrb, *opt};
+      }
+    }
+    std::cerr << "HECKE: Failed to find the face among the orbits of level " << index << "\n";
+    throw TerminalException{1};
+  }
+  /*
     The position of a cell in the complex, by walking to a cone
     containing it.
    */
@@ -950,7 +994,8 @@ std::vector<PerfectFaceEntry<T, Tint>> average_chain_coset_stabilizer(
   if (n_elt == 1) {
     return chain;
   }
-  T inv_size = T(1) / T(n_elt);
+  int n_elt_i = n_elt;
+  T inv_size = T(1) / T(n_elt_i);
   ChainBuilder<T, Tint, Tgroup> cb(index, fce, os);
   for (size_t i_elt = 0; i_elt < n_elt; i_elt++) {
     MyMatrix<Tint> Minv = Inverse(l_elt[i_elt].second);
@@ -1149,9 +1194,9 @@ compute_hecke_chain_map(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
             get_hecke_boundary_image(index, iOrb, j, fce, cosets, images[index + 1], os);
         std::vector<PerfectFaceEntry<T, Tint>> sol;
         if (!rhs.empty()) {
-          std::function<bool(MyMatrix<Tint> const &)> f_filter =
+          std::pair<std::function<bool(MyMatrix<Tint> const &)>, bool> pair_filter =
               get_subspace_filter(index + 1, rhs, fce, os);
-          sol = contracting_homotopy(index + 1, rhs, fce, f_filter, os);
+          sol = contracting_homotopy(index + 1, rhs, fce, pair_filter.first, os);
         }
         CosetOrbit<Tint> co = get_coset_orbit(j, face.l_gens, act, n_coset, n);
         std::vector<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>> l_schreier =
@@ -1242,6 +1287,705 @@ void WriteHeckeChainMapGAP(std::ostream &os_out, HeckeChainMap<T, Tint> const &h
     os_out << "]";
   }
   os_out << "])";
+}
+
+//
+// The dual construction: induction from the perfect cones
+//
+
+/*
+  The induction from the vertices goes through the cells at infinity,
+  whose stabilizers are infinite and whose stars are infinite; this is
+  what makes the coverings explode for GL_4(Z) and GL_3(O_K). The dual
+  construction runs the induction in the other direction, on the well
+  rounded cells only: the images of the perfect cones (the vertices of
+  the well rounded retract W) are found by the walk to the image of the
+  barycenter; a facet (an edge of W, between two cones) is mapped to a
+  path of adjacent cones; a cell of codimension k is mapped to a chain
+  of cells of codimension k whose "coboundary" (the signed sum of the
+  cells of codimension k-1 containing it) equals the image of its own
+  coboundary. The chain complex is the transposed one, the cellular chain
+  complex of W, and everything in it is finite. The harmonic
+  representatives of the homology are the same as for the original
+  complex, so step B applies unchanged.
+ */
+
+// The sign of the determinant of the action Q -> M Q M^T on the T-space.
+template <typename T>
+int tspace_orientation_sign(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &M) {
+  int n_mat = LinSpa.ListMat.size();
+  MyMatrix<T> A(n_mat, n_mat);
+  for (int k = 0; k < n_mat; k++) {
+    MyMatrix<T> Qimg = M * LinSpa.ListMat[k] * M.transpose();
+    MyVector<T> V = SymmetricMatrixToVector(Qimg);
+    std::optional<MyVector<T>> opt = SolutionMat(LinSpa.ListMatAsBigMat, V);
+    if (!opt) {
+      std::cerr << "HECKE: The matrix does not preserve the T-space\n";
+      throw TerminalException{1};
+    }
+    for (int l = 0; l < n_mat; l++) {
+      A(k, l) = (*opt)(l);
+    }
+  }
+  T det = DeterminantMat(A);
+  if (det > 0) {
+    return 1;
+  }
+  if (det < 0) {
+    return -1;
+  }
+  std::cerr << "HECKE: The action on the T-space is degenerate\n";
+  throw TerminalException{1};
+}
+
+/*
+  The cofaces of the representative cells, with the sign of the cell in
+  the boundary of the coface, cached per orbit. Only for well rounded
+  cells (finite stabilizers).
+ */
+template <typename T, typename Tint, typename Tgroup> struct UpperFaceCache {
+  FullComplexEnumeration<T, Tint, Tgroup> const &fce;
+  std::ostream &os;
+  // cofaces[index][iOrb] : (coface (jOrb, P) at level index-1, sign)
+  std::map<std::pair<int, int>, std::vector<std::pair<PerfectFace<Tint>, int>>> cofaces;
+  // stars[index][iOrb] : the perfect cones containing the representative
+  std::map<std::pair<int, int>, std::vector<PerfectFace<Tint>>> stars;
+  UpperFaceCache(FullComplexEnumeration<T, Tint, Tgroup> const &_fce, std::ostream &_os)
+      : fce(_fce), os(_os) {}
+  std::vector<std::pair<PerfectFace<Tint>, int>> const &get_cofaces(int const &index, int const &iOrb) {
+    std::pair<int, int> key{index, iOrb};
+    auto iter = cofaces.find(key);
+    if (iter != cofaces.end()) {
+      return iter->second;
+    }
+    std::vector<MyMatrix<T>> const &ListMat = fce.pctdi.LinSpa.ListMat;
+    FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[index].l_faces[iOrb];
+    MyMatrix<Tint> key_cell = tot_set(face.EXT);
+    std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> pair =
+        get_all_upper_faces(fce, index, iOrb, os);
+    std::vector<std::pair<PerfectFace<Tint>, int>> l_ret;
+    for (auto &pf : pair.second) {
+      // The sign of F_iOrb in d(F_jOrb P)
+      int sign_tot = 0;
+      int n_match = 0;
+      for (auto &e : fce.boundaries[index - 1].ll_bound[pf.iOrb].l_bound) {
+        if (e.iOrb == iOrb) {
+          MyMatrix<Tint> Mcell = e.M * pf.M;
+          MyMatrix<Tint> EXT_prod = face.EXT * Mcell;
+          MyMatrix<Tint> EXT2 = tot_set(EXT_prod);
+          if (EXT2 == key_cell) {
+            MyMatrix<Tint> t = Inverse(Mcell);
+            int sign = get_face_orientation(face.EXT, ListMat, face.or_info, t);
+            sign_tot += e.sign * sign;
+            n_match += 1;
+          }
+        }
+      }
+      if (n_match != 1) {
+        std::cerr << "HECKE: The cell should appear exactly once in the boundary of its coface, n_match=" << n_match << "\n";
+        throw TerminalException{1};
+      }
+      l_ret.emplace_back(pf, sign_tot);
+    }
+    auto ret = cofaces.emplace(key, std::move(l_ret));
+    return ret.first->second;
+  }
+  std::vector<PerfectFace<Tint>> const &get_star(int const &index, int const &iOrb) {
+    std::pair<int, int> key{index, iOrb};
+    auto iter = stars.find(key);
+    if (iter != stars.end()) {
+      return iter->second;
+    }
+    std::vector<PerfectFace<Tint>> l_star;
+    if (index == 0) {
+      int n = fce.pctdi.LinSpa.n;
+      l_star.push_back({iOrb, IdentityMat<Tint>(n)});
+    } else {
+      std::unordered_set<MyMatrix<Tint>> set_key;
+      for (auto &pair : get_cofaces(index, iOrb)) {
+        std::vector<PerfectFace<Tint>> const &l_up = get_star(index - 1, pair.first.iOrb);
+        // A copy: l_up is a reference into the map that the recursive
+        // calls may not invalidate (std::map), but we keep it simple.
+        std::vector<PerfectFace<Tint>> l_up_copy = l_up;
+        for (auto &pf : l_up_copy) {
+          MyMatrix<Tint> M = pf.M * pair.first.M;
+          MyMatrix<Tint> EXT_cone = fce.levels[0].l_faces[pf.iOrb].EXT * M;
+          MyMatrix<Tint> key_cone = tot_set(EXT_cone);
+          if (set_key.insert(key_cone).second) {
+            l_star.push_back({pf.iOrb, M});
+          }
+        }
+      }
+    }
+    auto ret = stars.emplace(key, std::move(l_star));
+    return ret.first->second;
+  }
+};
+
+// The coboundary of a chain: the signed sum of the cofaces.
+template <typename T, typename Tint, typename Tgroup>
+std::vector<PerfectFaceEntry<T, Tint>>
+chain_coboundary(int const &index, std::vector<PerfectFaceEntry<T, Tint>> const &chain,
+                 UpperFaceCache<T, Tint, Tgroup> &ufc, std::ostream &os) {
+  FullComplexEnumeration<T, Tint, Tgroup> const &fce = ufc.fce;
+  ChainBuilder<T, Tint, Tgroup> cb(index - 1, fce, os);
+  for (auto &fe : chain) {
+    for (auto &pair : ufc.get_cofaces(index, fe.iOrb)) {
+      T value = fe.value * T(pair.second);
+      MyMatrix<Tint> M = pair.first.M * fe.M;
+      cb.f_insert(value, pair.first.iOrb, M);
+    }
+  }
+  return cb.get_faces();
+}
+
+/*
+  The L1 solution of x A = b in floating point, sparsified by a few
+  rounds of reweighting (weights 1/(|x_i| + eps)).
+ */
+inline MyVector<double> l1_solution_reweighted(MySparseMatrix<double> const &SpMat_d,
+                                               MyVector<double> const &Bvect_d, int const &maxit,
+                                               int const &n_round, [[maybe_unused]] std::ostream &os) {
+  RecSparse<double> rec = AMP_linear_operators(SpMat_d);
+  RecOptSparse<double> opt;
+  opt.delta = 0;
+  opt.mu = 0;
+  opt.nu = 0;
+  opt.eps = 2.2204e-16;
+  opt.rho = 0;
+  opt.tol = 1e-10;
+  opt.gamma = 0;
+  opt.nonneg = false;
+  opt.nonorth = true;
+  opt.print = false;
+  opt.UseWeight = false;
+  opt.basis = false;
+  opt.stepfreq = 1;
+  opt.maxit = maxit;
+  opt.xs = -1;
+  MyVector<double> x = AMP_yall1(rec, Bvect_d, opt).x;
+  int n = x.size();
+  for (int i_round = 0; i_round < n_round; i_round++) {
+    double max_abs = 0;
+    for (int i = 0; i < n; i++) {
+      max_abs = std::max(max_abs, std::abs(x(i)));
+    }
+    double eps = 1e-3 * max_abs + 1e-12;
+    for (int i = 0; i < n; i++) {
+      rec.weights(i) = 1.0 / (std::abs(x(i)) + eps);
+    }
+    x = AMP_yall1(rec, Bvect_d, opt).x;
+  }
+  return x;
+}
+
+/*
+  Solution of x A = b for the sparse matrix given by its triplets.
+  When is_graph is set (the facet level), the rows with two entries are
+  the edges of a graph on the columns and b is a 0-chain of zero sum:
+  the solution is built as a flow, by shortest paths from the positive
+  nodes to the nearest negative nodes, each path being solved exactly.
+  Otherwise the consistency is tested modulo a prime, the L1 solver in
+  floating point gives a sparse approximate solution which is solved
+  exactly on its support (enlarged if needed), and the exact rational
+  elimination is the last resort.
+ */
+template <typename T>
+std::optional<MyVector<T>>
+solve_chain_system(std::vector<Eigen::Triplet<T>> const &tripletList, int const &nbRow,
+                   int const &nbCol, MyVector<T> const &Bvect, bool const &is_graph,
+                   std::ostream &os) {
+  [[maybe_unused]] auto count_nz = [](MyVector<T> const &v) -> int {
+    int n_nz = 0;
+    for (int i = 0; i < v.size(); i++) {
+      if (v(i) != 0) {
+        n_nz += 1;
+      }
+    }
+    return n_nz;
+  };
+  MySparseMatrix<T> SpMat(nbRow, nbCol);
+  SpMat.setFromTriplets(tripletList.begin(), tripletList.end());
+  if (is_graph) {
+    std::vector<std::vector<std::pair<int, int>>> adj(nbCol);
+    std::vector<std::vector<int>> row_cols(nbRow);
+    for (auto &t : tripletList) {
+      row_cols[t.row()].push_back(t.col());
+    }
+    for (int i1 = 0; i1 < nbRow; i1++) {
+      std::vector<int> const &lv = row_cols[i1];
+      if (lv.size() == 2 && lv[0] != lv[1]) {
+        adj[lv[0]].push_back({lv[1], i1});
+        adj[lv[1]].push_back({lv[0], i1});
+      }
+    }
+    MyVector<T> resid = Bvect;
+    MyVector<T> sol = ZeroVector<T>(nbRow);
+    [[maybe_unused]] size_t n_path = 0;
+    while (true) {
+      // The node of largest residual, moved to the nearest node with a
+      // nonzero residual. The signs along the path are whatever the
+      // orientations give; the path system is solved exactly.
+      int v_start = -1;
+      for (int v = 0; v < nbCol; v++) {
+        if (resid(v) != 0) {
+          if (v_start == -1 || T_abs(resid(v)) > T_abs(resid(v_start))) {
+            v_start = v;
+          }
+        }
+      }
+      if (v_start == -1) {
+        break;
+      }
+      std::vector<int> prev_edge(nbCol, -1), prev_vert(nbCol, -1);
+      std::vector<uint8_t> visited(nbCol, 0);
+      std::vector<int> queue{v_start};
+      visited[v_start] = 1;
+      size_t pos = 0;
+      int v_end = -1;
+      while (pos < queue.size() && v_end == -1) {
+        int v = queue[pos];
+        pos += 1;
+        for (auto &e : adj[v]) {
+          if (!visited[e.first]) {
+            visited[e.first] = 1;
+            prev_edge[e.first] = e.second;
+            prev_vert[e.first] = v;
+            queue.push_back(e.first);
+            if (resid(e.first) != 0) {
+              v_end = e.first;
+              break;
+            }
+          }
+        }
+      }
+      if (v_end == -1) {
+        return {};
+      }
+      std::vector<int> l_edge;
+      std::vector<int> l_node;
+      int v = v_end;
+      while (v != v_start) {
+        l_edge.push_back(prev_edge[v]);
+        v = prev_vert[v];
+        l_node.push_back(v);
+      }
+      // l_node holds the nodes of the path except v_end: the equations.
+      std::unordered_map<int, int> map_edge, map_node;
+      for (size_t u = 0; u < l_edge.size(); u++) {
+        map_edge[l_edge[u]] = u;
+        map_node[l_node[u]] = u;
+      }
+      MyMatrix<T> Mpath = ZeroMatrix<T>(l_edge.size(), l_node.size());
+      for (auto &t : tripletList) {
+        auto iter = map_edge.find(t.row());
+        if (iter != map_edge.end()) {
+          auto iter2 = map_node.find(t.col());
+          if (iter2 != map_node.end()) {
+            Mpath(iter->second, iter2->second) += t.value();
+          }
+        }
+      }
+      MyVector<T> target = ZeroVector<T>(l_node.size());
+      target(map_node[v_start]) = resid(v_start);
+      std::optional<MyVector<T>> opt_path = SolutionMat(Mpath, target);
+      if (!opt_path) {
+        std::cerr << "HECKE: The path system should be solvable\n";
+        throw TerminalException{1};
+      }
+      for (size_t u = 0; u < l_edge.size(); u++) {
+        sol(l_edge[u]) += (*opt_path)(u);
+      }
+      // Update of the residual with the full columns
+      for (auto &t : tripletList) {
+        auto iter = map_edge.find(t.row());
+        if (iter != map_edge.end()) {
+          resid(t.col()) -= (*opt_path)(iter->second) * t.value();
+        }
+      }
+      n_path += 1;
+    }
+    // The residual is now zero.
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: solve_chain_system, flow with " << n_path << " paths, n_nz=" << count_nz(sol) << "\n";
+#endif
+    return sol;
+  }
+  // The eliminations (modular for the consistency, rational as the last
+  // resort) fill in and are reserved to the systems of moderate size;
+  // the large ones rely on the L1 solver alone.
+  size_t n_ent = static_cast<size_t>(nbRow) * static_cast<size_t>(nbCol);
+  size_t max_ent_elimination = 4000000;
+  size_t max_ent_dense_resolve = 250000;
+  bool small = (n_ent <= max_ent_elimination);
+  if (small && !SparseSystemConsistent_Mod(SpMat, Bvect, os)) {
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol << " inconsistent (mod p)\n";
+#endif
+    return {};
+  }
+  // The L1 solution and the exact solution on its support
+  MySparseMatrix<double> SpMat_d = UniversalSparseMatrixConversion<double, T>(SpMat);
+  MyVector<double> Bvect_d = UniversalVectorConversion<double, T>(Bvect);
+  int maxit = small ? 99999 : 20000;
+  MyVector<double> x_out = l1_solution_reweighted(SpMat_d, Bvect_d, maxit, 2, os);
+  // The exact solve on the support: the rows of the support and the
+  // columns they touch (the other columns must have a zero right hand
+  // side), which is a small dense system when the support is small.
+  std::vector<std::vector<std::pair<int, T>>> row_entries(nbRow);
+  for (auto &t : tripletList) {
+    row_entries[t.row()].emplace_back(t.col(), t.value());
+  }
+  std::vector<double> l_thr{1e-4, 1e-6, 1e-8, 1e-12};
+  for (auto &thr : l_thr) {
+    std::vector<int> l_rows;
+    for (int i_row = 0; i_row < nbRow; i_row++) {
+      if (std::abs(x_out(i_row)) > thr) {
+        l_rows.push_back(i_row);
+      }
+    }
+    std::vector<int> col_index(nbCol, -1);
+    std::vector<int> l_cols;
+    for (auto &i_row : l_rows) {
+      for (auto &pair : row_entries[i_row]) {
+        if (col_index[pair.first] == -1) {
+          col_index[pair.first] = l_cols.size();
+          l_cols.push_back(pair.first);
+        }
+      }
+    }
+    bool is_ok = true;
+    for (int j = 0; j < nbCol; j++) {
+      if (col_index[j] == -1 && Bvect(j) != 0) {
+        is_ok = false;
+      }
+    }
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: solve_chain_system thr=" << thr << " support=" << l_rows.size()
+       << " touched columns=" << l_cols.size() << " is_ok=" << is_ok << "\n";
+#endif
+    if (!is_ok) {
+      continue;
+    }
+    MyVector<T> Bred(l_cols.size());
+    for (size_t v = 0; v < l_cols.size(); v++) {
+      Bred(v) = Bvect(l_cols[v]);
+    }
+    std::optional<MyVector<T>> opt_red;
+    if (l_rows.size() * l_cols.size() <= max_ent_dense_resolve) {
+      MyMatrix<T> Mred = ZeroMatrix<T>(l_rows.size(), l_cols.size());
+      for (size_t u = 0; u < l_rows.size(); u++) {
+        for (auto &pair : row_entries[l_rows[u]]) {
+          Mred(u, col_index[pair.first]) += pair.second;
+        }
+      }
+      opt_red = SolutionMat(Mred, Bred);
+    } else {
+      // The reduced system is sparse: the sparse elimination applies.
+      std::vector<Eigen::Triplet<T>> trip_red;
+      for (size_t u = 0; u < l_rows.size(); u++) {
+        for (auto &pair : row_entries[l_rows[u]]) {
+          trip_red.emplace_back(u, col_index[pair.first], pair.second);
+        }
+      }
+      MySparseMatrix<T> SpRed(l_rows.size(), l_cols.size());
+      SpRed.setFromTriplets(trip_red.begin(), trip_red.end());
+      opt_red = SparseSolutionMat_Exact(SpRed, Bred, os);
+    }
+    if (opt_red) {
+      MyVector<T> sol = ZeroVector<T>(nbRow);
+      for (size_t u = 0; u < l_rows.size(); u++) {
+        sol(l_rows[u]) = (*opt_red)(u);
+      }
+#ifdef DEBUG_HECKE_OPERATORS
+      os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol
+         << " L1 support=" << l_rows.size() << " thr=" << thr << " n_nz=" << count_nz(sol) << "\n";
+#endif
+      return sol;
+    }
+    if (static_cast<int>(l_rows.size()) == nbRow) {
+      break;
+    }
+  }
+  if (!small) {
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol << " L1 failed on a large system\n";
+#endif
+    return {};
+  }
+#ifdef DEBUG_HECKE_OPERATORS
+  os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol << " exact elimination fallback\n";
+#endif
+  return SparseSolutionMat_Exact(SpMat, Bvect, os);
+}
+
+/*
+  The dual contracting homotopy: given a chain b of level k-1 (which must
+  be a coboundary), find a chain c of level k with coboundary(c) = b.
+  The unknowns are well rounded cells of level k, the equations all
+  their cofaces (of level k-1), so that a solution supported on the
+  unknowns has exactly the prescribed coboundary. The unknowns grow in
+  rings around b: the faces of the cells of b first, then the cells
+  sharing a coface with a current unknown, and so on. This keeps the
+  systems small when the solution is local, which is the case for the
+  images of small cells.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::vector<PerfectFaceEntry<T, Tint>>
+dual_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const &rhs,
+                          UpperFaceCache<T, Tint, Tgroup> &ufc, std::ostream &os) {
+  FullComplexEnumeration<T, Tint, Tgroup> const &fce = ufc.fce;
+  ComplexBuilder<T, Tint, Tgroup> cb_k(k, fce, os);
+  auto insert_faces_of = [&](int const &iOrb_up, MyMatrix<Tint> const &M_up) -> void {
+    // The level k faces of the level k-1 cell (iOrb_up, M_up)
+    for (auto &e : fce.boundaries[k - 1].ll_bound[iOrb_up].l_bound) {
+      if (fce.levels[k].l_faces[e.iOrb].is_well_rounded) {
+        MyMatrix<Tint> M = e.M * M_up;
+        cb_k.f_insert(e.iOrb, M);
+      }
+    }
+  };
+  for (auto &fe : rhs) {
+    insert_faces_of(fe.iOrb, fe.M);
+  }
+  size_t start = 0;
+  size_t max_ring = 12;
+  for (size_t ring = 0; ring < max_ring; ring++) {
+    std::vector<PerfectFace<Tint>> faces_k = cb_k.get_faces();
+    ComplexBuilder<T, Tint, Tgroup> cb_km1(k - 1, fce, os);
+    using T2 = Eigen::Triplet<T>;
+    std::vector<T2> tripletList;
+    int nbRow = faces_k.size();
+    for (int u = 0; u < nbRow; u++) {
+      PerfectFace<Tint> const &F = faces_k[u];
+      for (auto &pair : ufc.get_cofaces(k, F.iOrb)) {
+        MyMatrix<Tint> M = pair.first.M * F.M;
+        cb_km1.f_insert(pair.first.iOrb, M);
+        std::pair<size_t, int> p = cb_km1.get_position(pair.first.iOrb, M);
+        T value = T(pair.second * p.second);
+        tripletList.emplace_back(u, p.first, value);
+      }
+    }
+    int nbCol = cb_km1.get_faces().size();
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: dual_contracting_homotopy k=" << k << " ring=" << ring
+       << " unknowns=" << nbRow << " equations=" << nbCol << "\n";
+#endif
+    MyVector<T> Bvect = ZeroVector<T>(nbCol);
+    bool rhs_present = true;
+    for (auto &fe : rhs) {
+      std::optional<std::pair<size_t, int>> opt_p = cb_km1.find_position(fe.iOrb, fe.M);
+      if (!opt_p) {
+        rhs_present = false;
+        break;
+      }
+      Bvect(opt_p->first) += T(opt_p->second) * fe.value;
+    }
+    std::optional<MyVector<T>> opt;
+    bool is_graph = (k == 1);
+    if (rhs_present) {
+      opt = solve_chain_system(tripletList, nbRow, nbCol, Bvect, is_graph, os);
+    }
+    if (opt) {
+      std::vector<PerfectFaceEntry<T, Tint>> chain_ret;
+      for (int u = 0; u < nbRow; u++) {
+        T val = (*opt)(u);
+        if (val != 0) {
+          PerfectFace<Tint> const &face = faces_k[u];
+          chain_ret.push_back({face.iOrb, val, face.M});
+        }
+      }
+      return chain_ret;
+    }
+    // The next ring: the cells sharing a coface with a current unknown.
+    size_t len = faces_k.size();
+    for (size_t u = start; u < len; u++) {
+      PerfectFace<Tint> const &F = faces_k[u];
+      for (auto &pair : ufc.get_cofaces(k, F.iOrb)) {
+        MyMatrix<Tint> M = pair.first.M * F.M;
+        insert_faces_of(pair.first.iOrb, M);
+      }
+    }
+    start = len;
+    if (cb_k.get_faces().size() == len) {
+      break;
+    }
+  }
+  std::cerr << "HECKE: dual_contracting_homotopy, no solution found in " << max_ring << " rings\n";
+  throw TerminalException{1};
+}
+
+/*
+  The image of a perfect cone C under y: a cone whose closure contains
+  the image of the barycenter of C, found by the walk. When the point
+  lies on a lower face the choice is not canonical; the equivariance is
+  restored afterwards by the averaging over the coset stabilizer and the
+  propagation along its orbit, as for the other levels. The sign is the
+  orientation sign of y and of the matrix of the cone.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::vector<PerfectFaceEntry<T, Tint>>
+get_cone_image(int const &iOrb, MyMatrix<T> const &y,
+               FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+               ConeWalker<T, Tint, Tgroup> const &walker, int const &eps_y,
+               [[maybe_unused]] std::ostream &os) {
+  LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
+  MyMatrix<Tint> const &EXT = fce.levels[0].l_faces[iOrb].EXT;
+  MyMatrix<T> W = UniversalMatrixConversion<T, Tint>(EXT) * y;
+  TopPerfectCone<Tint> tpc = walker.find_containing_cone_T(W);
+  MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(tpc.M);
+  int eps_M = tspace_orientation_sign(LinSpa, M_T);
+  PerfectFaceEntry<T, Tint> fe{tpc.i_perfect, T(eps_y * eps_M), tpc.M};
+  return {fe};
+}
+
+// The right hand side coboundary(F) mapped by y_j, from the images of
+// the level index-1.
+template <typename T, typename Tint, typename Tgroup>
+std::vector<PerfectFaceEntry<T, Tint>> get_hecke_coboundary_image(
+    int const &index, int const &iOrb, int const &j,
+    FullComplexEnumeration<T, Tint, Tgroup> const &fce, HeckeCosets<T> const &cosets,
+    std::vector<std::vector<std::vector<PerfectFaceEntry<T, Tint>>>> const &images_prev,
+    UpperFaceCache<T, Tint, Tgroup> &ufc, std::ostream &os) {
+  ChainBuilder<T, Tint, Tgroup> cb(index - 1, fce, os);
+  MyMatrix<T> const &y = cosets.l_coset[j];
+  for (auto &pair : ufc.get_cofaces(index, iOrb)) {
+    MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(pair.first.M);
+    MyMatrix<T> z = M_T * y;
+    std::pair<int, MyMatrix<T>> dec = cosets.decompose(z);
+    MyMatrix<Tint> M_conj = UniversalMatrixConversion<Tint, T>(dec.second);
+    T e_sign = T(pair.second);
+    for (auto &fe : images_prev[pair.first.iOrb][dec.first]) {
+      T value = fe.value * e_sign;
+      MyMatrix<Tint> M = fe.M * M_conj;
+      cb.f_insert(value, fe.iOrb, M);
+    }
+  }
+  return cb.get_faces();
+}
+
+template <typename T, typename Tint, typename Tgroup>
+HeckeChainMap<T, Tint>
+compute_hecke_chain_map_dual(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+                             MyMatrix<T> const &x, std::ostream &os) {
+  LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
+  int n = LinSpa.n;
+  PerfectComplexOptions const &pco = fce.pctdi.pco;
+  if (!pco.compute_boundary || !pco.compute_contracting_homotopy) {
+    std::cerr << "HECKE: The dual method requires ComputeBoundary = T and ComputeContractingHomotopy = T\n";
+    throw TerminalException{1};
+  }
+  if (!is_stab_space(x, LinSpa)) {
+    std::cerr << "HECKE: The matrix x should preserve the T-space\n";
+    throw TerminalException{1};
+  }
+#ifdef TIMINGS_HECKE_OPERATORS
+  MicrosecondTime time;
+#endif
+  std::vector<MyMatrix<Tint>> l_gens_G = get_ambient_group_generators(fce, os);
+  std::function<bool(MyMatrix<T> const &)> f_member =
+      [&LinSpa](MyMatrix<T> const &g) -> bool {
+    return is_in_ambient_group(LinSpa, g);
+  };
+  HeckeCosets<T> cosets = enumerate_hecke_cosets<T, Tint>(x, l_gens_G, f_member, os);
+  size_t n_coset = cosets.size();
+#ifdef TIMINGS_HECKE_OPERATORS
+  os << "|HECKE: enumerate_hecke_cosets|=" << time << "\n";
+#endif
+  int n_levels = fce.levels.size();
+  std::vector<std::vector<std::vector<std::vector<PerfectFaceEntry<T, Tint>>>>> images(n_levels);
+  UpperFaceCache<T, Tint, Tgroup> ufc(fce, os);
+  ConeWalker<T, Tint, Tgroup> walker(fce, os);
+  auto is_wr = [&](int const &index, int const &iOrb) -> bool {
+    return fce.levels[index].l_faces[iOrb].is_well_rounded;
+  };
+  for (int index = 0; index < n_levels; index++) {
+    int n_orb = fce.levels[index].l_faces.size();
+    images[index] = std::vector<std::vector<std::vector<PerfectFaceEntry<T, Tint>>>>(
+        n_orb, std::vector<std::vector<PerfectFaceEntry<T, Tint>>>(n_coset));
+    for (int iOrb = 0; iOrb < n_orb; iOrb++) {
+      if (!is_wr(index, iOrb)) {
+        continue;
+      }
+      FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[index].l_faces[iOrb];
+      std::vector<std::vector<std::pair<int, MyMatrix<Tint>>>> act =
+          get_stab_coset_action(face.l_gens, cosets);
+      std::vector<int> status(n_coset, 0);
+      for (size_t j = 0; j < n_coset; j++) {
+        if (status[j] == 1) {
+          continue;
+        }
+#ifdef DEBUG_HECKE_OPERATORS
+        os << "HECKE: dual index=" << index << " iOrb=" << iOrb << "/" << n_orb
+           << " j=" << j << "/" << n_coset << "\n";
+#endif
+        std::vector<PerfectFaceEntry<T, Tint>> rhs;
+        std::vector<PerfectFaceEntry<T, Tint>> sol;
+        if (index == 0) {
+          int eps_y = tspace_orientation_sign(LinSpa, cosets.l_coset[j]);
+          sol = get_cone_image(iOrb, cosets.l_coset[j], fce, walker, eps_y, os);
+        } else {
+          rhs = get_hecke_coboundary_image(index, iOrb, j, fce, cosets, images[index - 1], ufc, os);
+          if (!rhs.empty()) {
+            sol = dual_contracting_homotopy(index, rhs, ufc, os);
+          }
+        }
+        CosetOrbit<Tint> co = get_coset_orbit(j, face.l_gens, act, n_coset, n);
+        std::vector<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>> l_schreier =
+            get_coset_stabilizer_schreier(co, face.l_gens, act, n);
+#ifdef SANITY_CHECK_HECKE_OPERATORS
+        if (index > 0 && !is_chain_coset_stabilizer_invariant(index, iOrb, index - 1, rhs, l_schreier, fce, os)) {
+          std::cerr << "HECKE: dual, the right hand side should be invariant under the coset stabilizer\n";
+          throw TerminalException{1};
+        }
+#endif
+        std::vector<PerfectFaceEntry<T, Tint>> sol_avg =
+            average_chain_coset_stabilizer(index, iOrb, sol, l_schreier, fce, os);
+#ifdef SANITY_CHECK_HECKE_OPERATORS
+        {
+          if (index > 0) {
+            std::vector<PerfectFaceEntry<T, Tint>> cob = chain_coboundary(index, sol_avg, ufc, os);
+            if (!is_equal_chain(cob, rhs, index - 1, fce, os)) {
+              std::cerr << "HECKE: dual, the averaged chain is not a solution\n";
+              throw TerminalException{1};
+            }
+          }
+          if (!is_chain_coset_stabilizer_invariant(index, iOrb, index, sol_avg, l_schreier, fce, os)) {
+            std::cerr << "HECKE: dual, the averaged chain should be invariant\n";
+            throw TerminalException{1};
+          }
+        }
+#endif
+        size_t n_orbit = co.l_orbit.size();
+        for (size_t pos = 0; pos < n_orbit; pos++) {
+          int j2 = co.l_orbit[pos];
+          int sign = get_face_orientation(face.EXT, LinSpa.ListMat, face.or_info, co.transversal[pos]);
+          MyMatrix<Tint> Minv = Inverse(co.transversal_conj[pos]);
+          images[index][iOrb][j2] = chain_right_multiply(sol_avg, T(sign), Minv);
+          status[j2] = 1;
+        }
+      }
+#ifdef SANITY_CHECK_HECKE_OPERATORS
+      for (size_t j = 0; j < n_coset && index > 0; j++) {
+        std::vector<PerfectFaceEntry<T, Tint>> rhs =
+            get_hecke_coboundary_image(index, iOrb, j, fce, cosets, images[index - 1], ufc, os);
+        std::vector<PerfectFaceEntry<T, Tint>> cob = chain_coboundary(index, images[index][iOrb][j], ufc, os);
+        if (!is_equal_chain(cob, rhs, index - 1, fce, os)) {
+          std::cerr << "HECKE: dual, the chain map property fails at index=" << index
+                    << " iOrb=" << iOrb << " j=" << j << "\n";
+          throw TerminalException{1};
+        }
+      }
+#endif
+    }
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: dual level " << index << " n_orb=" << n_orb << " done\n";
+#endif
+#ifdef TIMINGS_HECKE_OPERATORS
+    os << "|HECKE: dual level " << index << "|=" << time << "\n";
+#endif
+  }
+  return {x, std::move(cosets), std::move(images)};
 }
 
 //
@@ -1526,7 +2270,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
     FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     HeckeChainMap<T, Tint> const &hcm,
     FiniteIndexSubgroup<Tint> const &gamma, bool const &only_well_rounded,
-    std::ostream &os) {
+    [[maybe_unused]] bool const &dual, std::ostream &os) {
   LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
   int n = LinSpa.n;
 #ifdef TIMINGS_HECKE_OPERATORS
@@ -1593,20 +2337,36 @@ HeckeHomologyResult<T> compute_hecke_homology(
           hecke_matrix(i_hom, j_hom) = proj(j_hom);
         }
 #ifdef SANITY_CHECK_HECKE_OPERATORS
-        if (index < n_levels - 1) {
+        // With the dual construction the chain map commutes with the
+        // transposed differential: the cycles and boundaries are those
+        // of the transposed complex.
+        if (!dual && index < n_levels - 1) {
           MyVector<T> wD = gc.boundary[index].transpose() * w;
           if (!IsZeroVector(wD)) {
             std::cerr << "HECKE: The image of a cycle should be a cycle, index=" << index << "\n";
             throw TerminalException{1};
           }
         }
-        MyVector<T> diff = w - harmonic.transpose() * proj;
-        if (!IsZeroVector(diff)) {
-          if (index == 0) {
-            std::cerr << "HECKE: The difference should be zero at index 0\n";
+        if (dual && index > 0) {
+          MyVector<T> wD = gc.boundary[index - 1] * w;
+          if (!IsZeroVector(wD)) {
+            std::cerr << "HECKE: The image of a dual cycle should be a dual cycle, index=" << index << "\n";
             throw TerminalException{1};
           }
-          std::optional<MyVector<T>> opt = SolutionMat(gc.boundary[index - 1], diff);
+        }
+        MyVector<T> diff = w - harmonic.transpose() * proj;
+        if (!IsZeroVector(diff)) {
+          std::optional<MyVector<T>> opt;
+          if (!dual) {
+            if (index > 0) {
+              opt = SolutionMat(gc.boundary[index - 1], diff);
+            }
+          } else {
+            if (index < n_levels - 1) {
+              MyMatrix<T> DT = gc.boundary[index].transpose();
+              opt = SolutionMat(DT, diff);
+            }
+          }
           if (!opt) {
             std::cerr << "HECKE: The difference should be a boundary, index=" << index << "\n";
             throw TerminalException{1};
