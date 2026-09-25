@@ -1,13 +1,13 @@
-name: CI(03) of Enumeration of isoDelaunay domains
+name: CI(03A) of Enumeration of isoDelaunay domains
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
 # on: release
 
 on:
-  # One time per month
+  # Odd months (the B slot of day 3 is the k-covering workflow)
   schedule:
-    - cron: "0 0 3 * *"
+    - cron: "0 0 3 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.

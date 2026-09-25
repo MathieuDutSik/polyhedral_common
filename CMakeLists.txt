@@ -288,6 +288,7 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src_ctype"
     "${CMAKE_SOURCE_DIR}/src_delaunay"
     "${CMAKE_SOURCE_DIR}/src_dualdesc"
+    "${CMAKE_SOURCE_DIR}/src_k_coverings"
     "${CMAKE_SOURCE_DIR}/src_enum_schemes"
     "${CMAKE_SOURCE_DIR}/src_genera"
     "${CMAKE_SOURCE_DIR}/src_group"
@@ -731,6 +732,19 @@ foreach(target IN LISTS DELAUNAY_PROGRAMS)
   add_polyhedral_binary(
     ${target}
     "${CMAKE_SOURCE_DIR}/src_delaunay/${target}.cpp"
+    polyhedral_delaunay_support
+  )
+endforeach()
+
+set(
+  K_COVERING_PROGRAMS
+  LATT_SerialComputeKDelaunay
+  LATT_SerialLattice_IsoKDelaunayDomain
+)
+foreach(target IN LISTS K_COVERING_PROGRAMS)
+  add_polyhedral_binary(
+    ${target}
+    "${CMAKE_SOURCE_DIR}/src_k_coverings/${target}.cpp"
     polyhedral_delaunay_support
   )
 endforeach()

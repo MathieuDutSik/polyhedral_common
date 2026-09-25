@@ -3,12 +3,21 @@
 #define SRC_K_COVERING_K_COVERINGS_H_
 
 // clang-format off
-#include "Shvec_exact.h"
-#include "LatticeDelaunay.h"
+#include "IsoKDelaunayDomains.h"
 // clang-format on
 
-
 /*
+  Notes on the k-coverings. The theory sketched below is implemented in:
+  * LatticeKDelaunay.h: the order-k Delaunay tiling of a lattice (tiles
+    (P_-, P_0), initial tile, adjacent tile by a sweep of spheres,
+    enumeration up to the affine isometries, k-covering radius).
+  * IsoKDelaunayDomains.h: the (L,k)-types (the cone of a generic tiling,
+    its enumeration by wall crossing, the k-covering optimization by
+    determinant maximization).
+  and in the programs LATT_SerialComputeKDelaunay and
+  LATT_SerialLattice_IsoKDelaunayDomain. The manuscript
+  Paper_k_covering/Manuscript/L_k_types.tex has the proofs.
+  ---
   Given a lattice L, and an integer k, the k-covering radius r
   is such that for each x in R^n, there are k points of L in
   the sphere of center x and radius r.
