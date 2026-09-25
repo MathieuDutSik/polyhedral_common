@@ -36,6 +36,7 @@ Works in Progress:
   * *src_single_delaunay*: About computing space for a single Delaunay.
   * *src_poincare_polyhedron*: Applying the Poincare Polyhedron Theorem to some tiling spaces.
   * *src_robust_covering*: Finding robust covering density.
+  * *src_polynorm*: packing and covering of Z^n by the translates of a polytope, that is the packing and covering radius of a polyhedral norm, using the integral symmetries of the polytope.
   * *src_k_coverings*: Finding k-coverings of lattices.
 
 

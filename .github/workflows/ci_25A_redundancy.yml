@@ -1,11 +1,11 @@
-name: CI(25) of Redundancy tests
+name: CI(25A) of Redundancy tests
 
 # on: release
 
 on:
-  # One time per month
+  # One time every two months
   schedule:
-    - cron: "0 0 25 * *"
+    - cron: "0 0 25 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.

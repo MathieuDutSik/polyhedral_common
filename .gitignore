@@ -139,6 +139,7 @@ src_indefinite/INDEF_*
 src_isotropy/LATT_*
 src_isotropy/CheckPositiveSemiDefinite
 src_latt/LATT_*
+src_polynorm/POLYNORM_*
 src_latt/TSPACE_*
 src_latt/GRP_TestFiniteness
 src_latt/TEST_EquiStabFamily
