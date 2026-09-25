@@ -39,19 +39,20 @@ example the square `[-1/2, 1/2]^2`:
 ```
 
 Repeated rows and rows that are not vertices are dropped. The polytope
-must be full dimensional. The arithmetic is `mpq_class`, so every result
-is exact.
+must be full dimensional. The arithmetic `arith` is `gmp` (`mpq_class`)
+or, when built with `make ENABLE_FLINT_SUPPORT=1`, `flint` (`fmpq_class`,
+faster); every result is exact.
 
-  * **POLYNORM_Packing** `[FileEXT] [OutFormat] [OutFile]` returns the
+  * **POLYNORM_Packing** `[arith] [FileEXT] [OutFormat] [OutFile]` returns the
     packing scalar `alpha` and the contact vectors, the lattice vectors `z`
     for which `alpha P` and `alpha P + z` touch.
-  * **POLYNORM_Covering** `[FileEXT] [OutFormat] [OutFile]` returns the
+  * **POLYNORM_Covering** `[arith] [FileEXT] [OutFormat] [OutFile]` returns the
     covering radius `mu`, a last covered point `p` (in the coordinates of
     the input) and the lattice points on the boundary of the empty translate
     `p - mu P` together with the facets of `P` they touch. This translate is
     the analogue of a Delaunay polytope: its interior is lattice free and
     the lattice points on its boundary pin it.
-  * **POLYNORM_TestCovering** `[FileEXT] [alpha] [mu] [max_brute_force]`
+  * **POLYNORM_TestCovering** `[arith] [FileEXT] [alpha] [mu] [max_brute_force]`
     runs both computations, compares them with the expected values (or
     `none`) and, when the enumeration has at most `max_brute_force`
     systems, with the brute force algorithm of the paper above.

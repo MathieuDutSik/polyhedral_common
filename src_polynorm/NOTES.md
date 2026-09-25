@@ -122,6 +122,24 @@ the 5-dimensional cross polytope (`m = 32`, `|G| = 3840`, 798 nodes and
 form. A random 3-dimensional polytope with 12 vertices and trivial group
 takes 0.5 s (128 nodes).
 
+## Arithmetic: gmp against flint
+
+The drivers take `gmp` (`mpq_class`) or, with `make ENABLE_FLINT_SUPPORT=1`,
+`flint` (`fmpq_class`). Same results everywhere; the non-debug timings of
+`POLYNORM_TestCovering` (Apple M-series):
+
+| case                         | gmp     | flint  |
+|------------------------------|---------|--------|
+| random 3D, 12 vertices       | 0.51 s  | 0.10 s |
+| cross polytope, dimension 4  | 0.94 s  | 0.27 s |
+| 24-cell                      | 0.84 s  | 0.29 s |
+| cube, dimension 5            | 0.50 s  | 0.14 s |
+| cross polytope, dimension 5  | 36.0 s  | 9.8 s  |
+| brute force, 3D cube, 4M systems | 7.8 s | 2.4 s |
+
+So flint is the arithmetic to use; gmp stays the default of the CI test
+since the runners do not install flint.
+
 ## Known issues / future work
 
 * **Repeated vertices hang the upstream automorphism code.** With two
@@ -140,9 +158,9 @@ takes 0.5 s (128 nodes).
   coordinate cross polytope and cube are fitted. Fitting the images of
   these under a reduced basis of `Z^n` (LLL with respect to a quadratic
   form adapted to `P`) would help for elongated polytopes.
-* **Other arithmetics.** Only `mpq_class` is wired in the drivers; the
-  headers are templated on `T` and `Tint` and the other rational types of
-  the package should just work.
+* **Other arithmetics.** `mpq_class` and `fmpq_class` are wired in the
+  drivers; the headers are templated on `T` and `Tint` and the other
+  rational types of the package should just work.
 * **Lattices other than `Z^n`** are handled by a change of basis by the
   caller; a `[FileLattice]` argument would be a convenience.
 * **Non-lattice (periodic) point sets** are not handled.

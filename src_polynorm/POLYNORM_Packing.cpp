@@ -1,6 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "PolyNorm_Packing.h"
@@ -56,13 +59,18 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 2 && argc != 4) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLYNORM_Packing [FileEXT] [OutFormat] [OutFile]\n";
+      std::cerr << "POLYNORM_Packing [arith] [FileEXT] [OutFormat] [OutFile]\n";
       std::cerr << "    or\n";
-      std::cerr << "POLYNORM_Packing [FileEXT]\n";
+      std::cerr << "POLYNORM_Packing [arith] [FileEXT]\n";
       std::cerr << "\n";
+      std::cerr << "arith values:\n";
+      std::cerr << "  gmp   : mpq_class / mpz_class\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "  flint : fmpq_class / fmpz_class\n";
+#endif
       std::cerr << "FileEXT   : the vertices of the polytope, one per row\n";
       std::cerr << "            in homogeneous coordinates (1, v)\n";
       std::cerr << "OutFormat : text (default) or GAP\n";
@@ -73,16 +81,35 @@ int main(int argc, char *argv[]) {
       std::cerr << "lattice vectors z for which alpha P and alpha P + z touch\n";
       return -1;
     }
-    std::string FileEXT = argv[1];
+    std::string arith = argv[1];
+    std::string FileEXT = argv[2];
     std::string OutFormat = "text";
     std::string OutFile = "stderr";
-    if (argc == 4) {
-      OutFormat = argv[2];
-      OutFile = argv[3];
+    if (argc == 5) {
+      OutFormat = argv[3];
+      OutFile = argv[4];
     }
     auto prt = [&](std::ostream &os_out) -> void {
-      using T = mpq_class;
-      return ComputePacking<T>(FileEXT, OutFormat, os_out);
+      if (arith == "gmp") {
+        using T = mpq_class;
+        return ComputePacking<T>(FileEXT, OutFormat, os_out);
+      }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (arith == "flint") {
+        using T = fmpq_class;
+        return ComputePacking<T>(FileEXT, OutFormat, os_out);
+      }
+#endif
+      std::cerr << "Failed to find a matching entry for arith=" << arith
+                << "\n";
+      std::cerr << "Available possibilities: gmp";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << ", flint";
+#else
+      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)";
+#endif
+      std::cerr << "\n";
+      throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(OutFile, prt);
     std::cerr << "Normal termination of POLYNORM_Packing\n";

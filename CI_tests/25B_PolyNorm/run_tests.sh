@@ -16,7 +16,7 @@ while read -r file alpha mu max_bf; do
     ''|\#*) continue ;;
   esac
   echo "=== $file (alpha=$alpha mu=$mu)"
-  if ! $PROG "$file" "$alpha" "$mu" "$max_bf" > "$file.log" 2>&1; then
+  if ! $PROG gmp "$file" "$alpha" "$mu" "$max_bf" > "$file.log" 2>&1; then
     echo "Failure on $file" >&2
     tail -20 "$file.log" >&2
     exit 1

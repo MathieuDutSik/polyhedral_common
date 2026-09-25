@@ -1,6 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "PolyNorm_Packing.h"
@@ -79,15 +82,20 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 2 && argc != 4 && argc != 5) {
+    if (argc != 3 && argc != 5 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLYNORM_TestCovering [FileEXT]\n";
+      std::cerr << "POLYNORM_TestCovering [arith] [FileEXT]\n";
       std::cerr << "    or\n";
-      std::cerr << "POLYNORM_TestCovering [FileEXT] [alpha] [mu]\n";
+      std::cerr << "POLYNORM_TestCovering [arith] [FileEXT] [alpha] [mu]\n";
       std::cerr << "    or\n";
-      std::cerr << "POLYNORM_TestCovering [FileEXT] [alpha] [mu] "
+      std::cerr << "POLYNORM_TestCovering [arith] [FileEXT] [alpha] [mu] "
                 << "[max_brute_force]\n";
+      std::cerr << "\n";
+      std::cerr << "arith   : gmp";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << " or flint";
+#endif
       std::cerr << "\n";
       std::cerr << "FileEXT : the vertices in homogeneous coordinates\n";
       std::cerr << "alpha   : the expected packing scalar, or none\n";
@@ -97,26 +105,41 @@ int main(int argc, char *argv[]) {
       std::cerr << "          (default 2000000)\n";
       return -1;
     }
-    using T = mpq_class;
-    std::string FileEXT = argv[1];
-    std::optional<T> alpha_expected;
-    std::optional<T> mu_expected;
+    std::string arith = argv[1];
+    std::string FileEXT = argv[2];
+    std::string s_alpha = "none";
+    std::string s_mu = "none";
     size_t max_brute_force = 2000000;
-    if (argc >= 4) {
-      std::string s_alpha = argv[2];
-      std::string s_mu = argv[3];
+    if (argc >= 5) {
+      s_alpha = argv[3];
+      s_mu = argv[4];
+    }
+    if (argc == 6) {
+      max_brute_force = ParseScalar<size_t>(argv[5]);
+    }
+    auto run = [&]<typename T>() -> void {
+      std::optional<T> alpha_expected;
+      std::optional<T> mu_expected;
       if (s_alpha != "none") {
         alpha_expected = ParseScalar<T>(s_alpha);
       }
       if (s_mu != "none") {
         mu_expected = ParseScalar<T>(s_mu);
       }
+      TestPolytope<T>(FileEXT, alpha_expected, mu_expected, max_brute_force,
+                      std::cerr);
+    };
+    if (arith == "gmp") {
+      run.template operator()<mpq_class>();
+#ifdef ENABLE_FLINT_SUPPORT
+    } else if (arith == "flint") {
+      run.template operator()<fmpq_class>();
+#endif
+    } else {
+      std::cerr << "Failed to find a matching entry for arith=" << arith
+                << "\n";
+      throw TerminalException{1};
     }
-    if (argc == 5) {
-      max_brute_force = ParseScalar<size_t>(argv[4]);
-    }
-    TestPolytope<T>(FileEXT, alpha_expected, mu_expected, max_brute_force,
-                    std::cerr);
     std::cerr << "Normal termination of POLYNORM_TestCovering\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLYNORM_TestCovering\n";

@@ -357,7 +357,7 @@ struct PolyNormCoveringSolver {
         }
         k = f.find_next(k);
       }
-      cent /= T(f.count());
+      cent /= T(int(f.count()));
       for (int i1 = 0; i1 < m; i1++) {
         T scal(0);
         for (int j = 0; j < n; j++) {
