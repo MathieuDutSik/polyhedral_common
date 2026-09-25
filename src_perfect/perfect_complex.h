@@ -2130,7 +2130,7 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& in
   // The covering grows exponentially with the flowering, so a runaway
   // search (for a chain which is not a boundary in the filtered complex)
   // is stopped rather than exhausting the memory.
-  size_t max_top = 100000;
+  size_t max_top = 20000;
   while(true) {
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: contracting_homotopy_kernel, start=" << start << "\n";

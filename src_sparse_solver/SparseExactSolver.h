@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "MAT_SparseMatrix.h"
+#include <limits>
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
@@ -19,6 +20,13 @@
 #define SANITY_CHECK_SPARSE_EXACT_SOLVER
 #endif
 
+enum class SparseSolveStatus { Solved, Inconsistent, Aborted };
+
+template <typename T> struct SparseSolveResult {
+  SparseSolveStatus status;
+  MyVector<T> sol;
+};
+
 /*
   Exact solution of the sparse system x A = b, that is
     sum_i x_i A(i, .) = b,
@@ -31,9 +39,10 @@
   system has no solution.
  */
 template <typename T>
-std::optional<MyVector<T>>
-SparseSolutionMat_Exact(MySparseMatrix<T> const &A, MyVector<T> const &b,
-                        [[maybe_unused]] std::ostream &os) {
+SparseSolveResult<T>
+SparseSolutionMat_Exact_Budget(MySparseMatrix<T> const &A, MyVector<T> const &b,
+                               size_t const &max_entries, [[maybe_unused]] std::ostream &os) {
+  MyVector<T> empty;
   int n_unknown = A.rows();
   int n_eq = A.cols();
   std::vector<std::unordered_map<int, T>> eq(n_eq);
@@ -60,10 +69,20 @@ SparseSolutionMat_Exact(MySparseMatrix<T> const &A, MyVector<T> const &b,
       }
     }
   }
+  size_t n_entries = 0;
+  for (int j = 0; j < n_eq; j++) {
+    n_entries += eq[j].size();
+  }
   std::vector<uint8_t> active(n_eq, 1);
   int n_active = n_eq;
   std::vector<std::pair<int, int>> l_pivot;
   while (n_active > 0) {
+    if (n_entries > max_entries) {
+#ifdef DEBUG_SPARSE_EXACT_SOLVER
+      os << "SPARSEEXACT: aborted, fill-in beyond " << max_entries << " entries\n";
+#endif
+      return {SparseSolveStatus::Aborted, empty};
+    }
     // The sparsest active equation.
     int e_best = -1;
     size_t siz_best = 0;
@@ -85,7 +104,7 @@ SparseSolutionMat_Exact(MySparseMatrix<T> const &A, MyVector<T> const &b,
 #ifdef DEBUG_SPARSE_EXACT_SOLVER
         os << "SPARSEEXACT: inconsistent system, n_pivot=" << l_pivot.size() << "\n";
 #endif
-        return {};
+        return {SparseSolveStatus::Inconsistent, empty};
       }
       active[e] = 0;
       n_active -= 1;
@@ -132,16 +151,19 @@ SparseSolutionMat_Exact(MySparseMatrix<T> const &A, MyVector<T> const &b,
           T val = -factor * kv.second;
           eq[f][i] = val;
           occ[i].insert(f);
+          n_entries += 1;
         } else {
           iter->second -= factor * kv.second;
           if (iter->second == 0) {
             eq[f].erase(iter);
             occ[i].erase(f);
+            n_entries -= 1;
           }
         }
       }
       eq[f].erase(u);
       occ[u].erase(f);
+      n_entries -= 1;
       rhs[f] -= factor * rhs[e];
     }
     // The pivot equation leaves the active set.
@@ -189,7 +211,19 @@ SparseSolutionMat_Exact(MySparseMatrix<T> const &A, MyVector<T> const &b,
   os << "SPARSEEXACT: n_unknown=" << n_unknown << " n_eq=" << n_eq
      << " n_pivot=" << l_pivot.size() << " n_nz(x)=" << n_nz << "\n";
 #endif
-  return x;
+  return {SparseSolveStatus::Solved, x};
+}
+
+template <typename T>
+std::optional<MyVector<T>>
+SparseSolutionMat_Exact(MySparseMatrix<T> const &A, MyVector<T> const &b,
+                        std::ostream &os) {
+  size_t max_entries = std::numeric_limits<size_t>::max();
+  SparseSolveResult<T> res = SparseSolutionMat_Exact_Budget(A, b, max_entries, os);
+  if (res.status == SparseSolveStatus::Solved) {
+    return res.sol;
+  }
+  return {};
 }
 
 /*
@@ -221,8 +255,9 @@ int64_t residue_mod_p(T const &x, int64_t const &p) {
 }
 
 template <typename T>
-bool SparseSystemConsistent_Mod(MySparseMatrix<T> const &A, MyVector<T> const &b,
-                                [[maybe_unused]] std::ostream &os) {
+SparseSolveStatus SparseSystemConsistent_Mod_Budget(MySparseMatrix<T> const &A, MyVector<T> const &b,
+                                                    size_t const &max_entries,
+                                                    [[maybe_unused]] std::ostream &os) {
   int64_t const p = 2147483647;
   auto inv_mod = [&](int64_t a) -> int64_t {
     int64_t res = 1, base = ((a % p) + p) % p, e = p - 2;
@@ -260,9 +295,16 @@ bool SparseSystemConsistent_Mod(MySparseMatrix<T> const &A, MyVector<T> const &b
       }
     }
   }
+  size_t n_entries = 0;
+  for (int j = 0; j < n_eq; j++) {
+    n_entries += eq[j].size();
+  }
   std::vector<uint8_t> active(n_eq, 1);
   int n_active = n_eq;
   while (n_active > 0) {
+    if (n_entries > max_entries) {
+      return SparseSolveStatus::Aborted;
+    }
     int e = -1;
     size_t siz_best = 0;
     for (int j = 0; j < n_eq; j++) {
@@ -279,7 +321,7 @@ bool SparseSystemConsistent_Mod(MySparseMatrix<T> const &A, MyVector<T> const &b
     }
     if (eq[e].empty()) {
       if (rhs[e] != 0) {
-        return false;
+        return SparseSolveStatus::Inconsistent;
       }
       active[e] = 0;
       n_active -= 1;
@@ -311,16 +353,19 @@ bool SparseSystemConsistent_Mod(MySparseMatrix<T> const &A, MyVector<T> const &b
         if (iter == eq[f].end()) {
           eq[f][i] = (p - sub) % p;
           occ[i].insert(f);
+          n_entries += 1;
         } else {
           iter->second = ((iter->second - sub) % p + p) % p;
           if (iter->second == 0) {
             eq[f].erase(iter);
             occ[i].erase(f);
+            n_entries -= 1;
           }
         }
       }
       eq[f].erase(u);
       occ[u].erase(f);
+      n_entries -= 1;
       rhs[f] = ((rhs[f] - (factor * rhs[e]) % p) % p + p) % p;
     }
     for (auto &kv : eq[e]) {
@@ -329,7 +374,14 @@ bool SparseSystemConsistent_Mod(MySparseMatrix<T> const &A, MyVector<T> const &b
     active[e] = 0;
     n_active -= 1;
   }
-  return true;
+  return SparseSolveStatus::Solved;
+}
+
+template <typename T>
+bool SparseSystemConsistent_Mod(MySparseMatrix<T> const &A, MyVector<T> const &b,
+                                std::ostream &os) {
+  size_t max_entries = std::numeric_limits<size_t>::max();
+  return SparseSystemConsistent_Mod_Budget(A, b, max_entries, os) != SparseSolveStatus::Inconsistent;
 }
 
 // clang-format off

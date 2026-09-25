@@ -6,6 +6,7 @@
 #include "perfect_complex.h"
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -77,6 +78,33 @@
   matrices are expressed in a basis of harmonic representatives of the
   homology.
  */
+
+/*
+  A clean failure: a method exhausted its budget (memory, iterations,
+  cells). It is caught by the driver, which reports it and stops,
+  instead of letting the memory or the time grow without bound.
+ */
+struct HeckeFailure {
+  std::string message;
+};
+
+// The budgets of the methods. They bound the memory and the running time
+// of every step; exceeding one of them is a clean failure.
+struct HeckeBudget {
+  size_t max_cosets = 2000000;          // cosets of G / Gamma
+  size_t max_hecke_cosets = 1000000;    // cosets of a Hecke double coset
+  size_t max_closure = 1000000;         // elements of a finite closure
+  size_t max_walk_steps = 1000000;      // steps of a walk through the cones
+  size_t max_peel_moves = 20000;        // moves of the peeling solver
+  size_t max_chain = 50000;             // cells of a chain in the peeling
+  size_t max_unknowns = 60000;          // unknowns of a linear system
+  size_t max_rings = 12;                // rings of unknowns
+  size_t max_entries_modular = 6000000; // fill-in of the modular elimination
+  size_t max_entries_exact = 3000000;   // fill-in of the rational elimination
+  size_t max_nnz_modular = 400000;      // nonzeros for trying the modular test
+  int max_yall1_iter = 20000;           // iterations of the L1 solver
+  int n_reweight = 1;                   // reweighting rounds of the L1 solver
+};
 
 //
 // The ambient group G of the T-space and its generators
@@ -303,7 +331,11 @@ enumerate_cosets_gamma(FiniteIndexSubgroup<Tint> const &gamma,
   };
   f_insert(IdentityMat<Tint>(n));
   size_t pos = 0;
+  HeckeBudget budget;
   while (pos < ct.l_coset.size()) {
+    if (ct.l_coset.size() > budget.max_cosets) {
+      throw HeckeFailure{"enumerate_cosets_gamma: more than " + std::to_string(budget.max_cosets) + " cosets (is the index finite?)"};
+    }
     // The vector may be reallocated by f_insert, so we copy.
     MyMatrix<Tint> g = ct.l_coset[pos];
     for (auto &s : l_gens) {
@@ -412,7 +444,11 @@ enumerate_hecke_cosets(MyMatrix<T> const &x,
   };
   f_insert(x);
   size_t pos = 0;
+  HeckeBudget budget;
   while (pos < hc.l_coset.size()) {
+    if (hc.l_coset.size() > budget.max_hecke_cosets) {
+      throw HeckeFailure{"enumerate_hecke_cosets: more than " + std::to_string(budget.max_hecke_cosets) + " cosets"};
+    }
     MyMatrix<T> y = hc.l_coset[pos];
     for (auto &s : l_gens) {
       MyMatrix<T> s_T = UniversalMatrixConversion<T, Tint>(s);
@@ -620,8 +656,7 @@ public:
     while (true) {
       n_attempt += 1;
       if (n_attempt > 20) {
-        std::cerr << "HECKE: The walk towards the cell failed to terminate\n";
-        throw TerminalException{1};
+        throw HeckeFailure{"find_containing_cone: the walk cycled in 20 attempts"};
       }
       std::vector<T> weights_q(Q0.rows());
       for (int i_row = 0; i_row < Q0.rows(); i_row++) {
@@ -632,7 +667,11 @@ public:
       MyMatrix<Tint> M = IdentityMat<Tint>(n);
       std::unordered_set<MyMatrix<Tint>> set_visited;
       bool cycle = false;
+      HeckeBudget budget;
       while (true) {
+        if (set_visited.size() > budget.max_walk_steps) {
+          throw HeckeFailure{"find_containing_cone: walk longer than " + std::to_string(budget.max_walk_steps) + " steps"};
+        }
         MyMatrix<Tint> EXT_cone = fce.pctdi.l_perfect[i_cone].EXT * M;
         MyMatrix<Tint> key = tot_set(EXT_cone);
         if (!set_visited.insert(key).second) {
@@ -978,7 +1017,11 @@ std::vector<PerfectFaceEntry<T, Tint>> average_chain_coset_stabilizer(
   };
   f_insert(id, id);
   size_t pos = 0;
+  HeckeBudget budget;
   while (pos < l_elt.size()) {
+    if (l_elt.size() > budget.max_closure) {
+      throw HeckeFailure{"average_chain_coset_stabilizer: closure larger than " + std::to_string(budget.max_closure)};
+    }
     for (auto &pair : l_schreier) {
       MyMatrix<Tint> h = l_elt[pos].first * pair.first;
       MyMatrix<Tint> h_conj = l_elt[pos].second * pair.second;
@@ -1463,7 +1506,27 @@ inline MyVector<double> l1_solution_reweighted(MySparseMatrix<double> const &SpM
   opt.stepfreq = 1;
   opt.maxit = maxit;
   opt.xs = -1;
-  MyVector<double> x = AMP_yall1(rec, Bvect_d, opt).x;
+  [[maybe_unused]] auto count_above = [](MyVector<double> const &v, double thr) -> int {
+    int n_nz = 0;
+    for (int i = 0; i < v.size(); i++) {
+      if (std::abs(v(i)) > thr) {
+        n_nz += 1;
+      }
+    }
+    return n_nz;
+  };
+#ifdef TIMINGS_HECKE_OPERATORS
+  MicrosecondTime time;
+#endif
+  OutSolver<double> out = AMP_yall1(rec, Bvect_d, opt);
+  MyVector<double> x = out.x;
+#ifdef DEBUG_HECKE_OPERATORS
+  os << "HECKE: yall1 round 0 iter=" << out.iter << " " << out.exit
+     << " support(1e-4)=" << count_above(x, 1e-4) << "\n";
+#endif
+#ifdef TIMINGS_HECKE_OPERATORS
+  os << "|HECKE: yall1 round 0|=" << time << "\n";
+#endif
   int n = x.size();
   for (int i_round = 0; i_round < n_round; i_round++) {
     double max_abs = 0;
@@ -1474,7 +1537,15 @@ inline MyVector<double> l1_solution_reweighted(MySparseMatrix<double> const &SpM
     for (int i = 0; i < n; i++) {
       rec.weights(i) = 1.0 / (std::abs(x(i)) + eps);
     }
-    x = AMP_yall1(rec, Bvect_d, opt).x;
+    out = AMP_yall1(rec, Bvect_d, opt);
+    x = out.x;
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: yall1 round " << (i_round + 1) << " iter=" << out.iter << " " << out.exit
+       << " support(1e-4)=" << count_above(x, 1e-4) << "\n";
+#endif
+#ifdef TIMINGS_HECKE_OPERATORS
+    os << "|HECKE: yall1 round " << (i_round + 1) << "|=" << time << "\n";
+#endif
   }
   return x;
 }
@@ -1482,19 +1553,22 @@ inline MyVector<double> l1_solution_reweighted(MySparseMatrix<double> const &SpM
 /*
   Solution of x A = b for the sparse matrix given by its triplets.
   When is_graph is set (the facet level), the rows with two entries are
-  the edges of a graph on the columns and b is a 0-chain of zero sum:
-  the solution is built as a flow, by shortest paths from the positive
-  nodes to the nearest negative nodes, each path being solved exactly.
-  Otherwise the consistency is tested modulo a prime, the L1 solver in
+  the edges of a graph on the columns and b is a 0-chain: the solution
+  is built as a flow, by shortest paths between the nodes with nonzero
+  residual, each path being solved exactly. Otherwise the consistency is
+  tested modulo a prime when the system is small enough, the L1 solver in
   floating point gives a sparse approximate solution which is solved
-  exactly on its support (enlarged if needed), and the exact rational
-  elimination is the last resort.
+  exactly on its support and the columns it touches, and the exact
+  rational elimination is the last resort for the small systems. Every
+  step is bounded by the budget; the status says whether the system was
+  solved, is inconsistent, or could not be decided within the budget.
  */
 template <typename T>
-std::optional<MyVector<T>>
+SparseSolveResult<T>
 solve_chain_system(std::vector<Eigen::Triplet<T>> const &tripletList, int const &nbRow,
                    int const &nbCol, MyVector<T> const &Bvect, bool const &is_graph,
-                   std::ostream &os) {
+                   HeckeBudget const &budget, std::ostream &os) {
+  MyVector<T> empty;
   [[maybe_unused]] auto count_nz = [](MyVector<T> const &v) -> int {
     int n_nz = 0;
     for (int i = 0; i < v.size(); i++) {
@@ -1506,6 +1580,13 @@ solve_chain_system(std::vector<Eigen::Triplet<T>> const &tripletList, int const 
   };
   MySparseMatrix<T> SpMat(nbRow, nbCol);
   SpMat.setFromTriplets(tripletList.begin(), tripletList.end());
+#ifdef DEBUG_HECKE_OPERATORS
+  os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol
+     << " nnz=" << tripletList.size() << " is_graph=" << is_graph << "\n";
+#endif
+#ifdef TIMINGS_HECKE_OPERATORS
+  MicrosecondTime time_solve;
+#endif
   if (is_graph) {
     std::vector<std::vector<std::pair<int, int>>> adj(nbCol);
     std::vector<std::vector<int>> row_cols(nbRow);
@@ -1521,11 +1602,12 @@ solve_chain_system(std::vector<Eigen::Triplet<T>> const &tripletList, int const 
     }
     MyVector<T> resid = Bvect;
     MyVector<T> sol = ZeroVector<T>(nbRow);
-    [[maybe_unused]] size_t n_path = 0;
+    size_t n_path = 0;
     while (true) {
-      // The node of largest residual, moved to the nearest node with a
-      // nonzero residual. The signs along the path are whatever the
-      // orientations give; the path system is solved exactly.
+      if (n_path > static_cast<size_t>(nbCol)) {
+        // Each path zeroes one node, so this cannot happen.
+        return {SparseSolveStatus::Aborted, empty};
+      }
       int v_start = -1;
       for (int v = 0; v < nbCol; v++) {
         if (resid(v) != 0) {
@@ -1560,7 +1642,7 @@ solve_chain_system(std::vector<Eigen::Triplet<T>> const &tripletList, int const 
         }
       }
       if (v_end == -1) {
-        return {};
+        return {SparseSolveStatus::Inconsistent, empty};
       }
       std::vector<int> l_edge;
       std::vector<int> l_node;
@@ -1570,7 +1652,6 @@ solve_chain_system(std::vector<Eigen::Triplet<T>> const &tripletList, int const 
         v = prev_vert[v];
         l_node.push_back(v);
       }
-      // l_node holds the nodes of the path except v_end: the equations.
       std::unordered_map<int, int> map_edge, map_node;
       for (size_t u = 0; u < l_edge.size(); u++) {
         map_edge[l_edge[u]] = u;
@@ -1590,13 +1671,11 @@ solve_chain_system(std::vector<Eigen::Triplet<T>> const &tripletList, int const 
       target(map_node[v_start]) = resid(v_start);
       std::optional<MyVector<T>> opt_path = SolutionMat(Mpath, target);
       if (!opt_path) {
-        std::cerr << "HECKE: The path system should be solvable\n";
-        throw TerminalException{1};
+        return {SparseSolveStatus::Aborted, empty};
       }
       for (size_t u = 0; u < l_edge.size(); u++) {
         sol(l_edge[u]) += (*opt_path)(u);
       }
-      // Update of the residual with the full columns
       for (auto &t : tripletList) {
         auto iter = map_edge.find(t.row());
         if (iter != map_edge.end()) {
@@ -1605,38 +1684,32 @@ solve_chain_system(std::vector<Eigen::Triplet<T>> const &tripletList, int const 
       }
       n_path += 1;
     }
-    // The residual is now zero.
 #ifdef DEBUG_HECKE_OPERATORS
     os << "HECKE: solve_chain_system, flow with " << n_path << " paths, n_nz=" << count_nz(sol) << "\n";
 #endif
-    return sol;
+    return {SparseSolveStatus::Solved, sol};
   }
-  // The eliminations (modular for the consistency, rational as the last
-  // resort) fill in and are reserved to the systems of moderate size;
-  // the large ones rely on the L1 solver alone.
-  size_t n_ent = static_cast<size_t>(nbRow) * static_cast<size_t>(nbCol);
-  size_t max_ent_elimination = 4000000;
-  size_t max_ent_dense_resolve = 250000;
-  bool small = (n_ent <= max_ent_elimination);
-  if (small && !SparseSystemConsistent_Mod(SpMat, Bvect, os)) {
+  bool small = (tripletList.size() <= budget.max_nnz_modular);
+  bool known_consistent = false;
+  if (small) {
+    SparseSolveStatus status = SparseSystemConsistent_Mod_Budget(SpMat, Bvect, budget.max_entries_modular, os);
+    if (status == SparseSolveStatus::Inconsistent) {
 #ifdef DEBUG_HECKE_OPERATORS
-    os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol << " inconsistent (mod p)\n";
+      os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol << " inconsistent (mod p)\n";
 #endif
-    return {};
+      return {SparseSolveStatus::Inconsistent, empty};
+    }
+    known_consistent = (status == SparseSolveStatus::Solved);
   }
   // The L1 solution and the exact solution on its support
   MySparseMatrix<double> SpMat_d = UniversalSparseMatrixConversion<double, T>(SpMat);
   MyVector<double> Bvect_d = UniversalVectorConversion<double, T>(Bvect);
-  int maxit = small ? 99999 : 20000;
-  MyVector<double> x_out = l1_solution_reweighted(SpMat_d, Bvect_d, maxit, 2, os);
-  // The exact solve on the support: the rows of the support and the
-  // columns they touch (the other columns must have a zero right hand
-  // side), which is a small dense system when the support is small.
+  MyVector<double> x_out = l1_solution_reweighted(SpMat_d, Bvect_d, budget.max_yall1_iter, budget.n_reweight, os);
   std::vector<std::vector<std::pair<int, T>>> row_entries(nbRow);
   for (auto &t : tripletList) {
     row_entries[t.row()].emplace_back(t.col(), t.value());
   }
-  std::vector<double> l_thr{1e-4, 1e-6, 1e-8, 1e-12};
+  std::vector<double> l_thr{1e-4, 1e-6, 1e-8};
   for (auto &thr : l_thr) {
     std::vector<int> l_rows;
     for (int i_row = 0; i_row < nbRow; i_row++) {
@@ -1671,73 +1744,308 @@ solve_chain_system(std::vector<Eigen::Triplet<T>> const &tripletList, int const 
     for (size_t v = 0; v < l_cols.size(); v++) {
       Bred(v) = Bvect(l_cols[v]);
     }
-    std::optional<MyVector<T>> opt_red;
-    if (l_rows.size() * l_cols.size() <= max_ent_dense_resolve) {
-      MyMatrix<T> Mred = ZeroMatrix<T>(l_rows.size(), l_cols.size());
-      for (size_t u = 0; u < l_rows.size(); u++) {
-        for (auto &pair : row_entries[l_rows[u]]) {
-          Mred(u, col_index[pair.first]) += pair.second;
-        }
+    std::vector<Eigen::Triplet<T>> trip_red;
+    for (size_t u = 0; u < l_rows.size(); u++) {
+      for (auto &pair : row_entries[l_rows[u]]) {
+        trip_red.emplace_back(u, col_index[pair.first], pair.second);
       }
-      opt_red = SolutionMat(Mred, Bred);
-    } else {
-      // The reduced system is sparse: the sparse elimination applies.
-      std::vector<Eigen::Triplet<T>> trip_red;
-      for (size_t u = 0; u < l_rows.size(); u++) {
-        for (auto &pair : row_entries[l_rows[u]]) {
-          trip_red.emplace_back(u, col_index[pair.first], pair.second);
-        }
-      }
-      MySparseMatrix<T> SpRed(l_rows.size(), l_cols.size());
-      SpRed.setFromTriplets(trip_red.begin(), trip_red.end());
-      opt_red = SparseSolutionMat_Exact(SpRed, Bred, os);
     }
-    if (opt_red) {
+    MySparseMatrix<T> SpRed(l_rows.size(), l_cols.size());
+    SpRed.setFromTriplets(trip_red.begin(), trip_red.end());
+#ifdef TIMINGS_HECKE_OPERATORS
+    MicrosecondTime time_exact;
+#endif
+    SparseSolveResult<T> res_red = SparseSolutionMat_Exact_Budget(SpRed, Bred, budget.max_entries_exact, os);
+#ifdef TIMINGS_HECKE_OPERATORS
+    os << "|HECKE: exact solve on support " << l_rows.size() << " x " << l_cols.size()
+       << " status=" << static_cast<int>(res_red.status) << "|=" << time_exact << "\n";
+#endif
+    if (res_red.status == SparseSolveStatus::Solved) {
       MyVector<T> sol = ZeroVector<T>(nbRow);
       for (size_t u = 0; u < l_rows.size(); u++) {
-        sol(l_rows[u]) = (*opt_red)(u);
+        sol(l_rows[u]) = res_red.sol(u);
       }
 #ifdef DEBUG_HECKE_OPERATORS
       os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol
          << " L1 support=" << l_rows.size() << " thr=" << thr << " n_nz=" << count_nz(sol) << "\n";
 #endif
-      return sol;
+#ifdef TIMINGS_HECKE_OPERATORS
+      os << "|HECKE: solve_chain_system total|=" << time_solve << "\n";
+#endif
+      return {SparseSolveStatus::Solved, sol};
     }
     if (static_cast<int>(l_rows.size()) == nbRow) {
       break;
     }
   }
-  if (!small) {
+  if (known_consistent) {
+    // Consistent but the L1 support does not carry a solution: the
+    // rational elimination, within its budget.
 #ifdef DEBUG_HECKE_OPERATORS
-    os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol << " L1 failed on a large system\n";
+    os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol << " exact elimination fallback\n";
 #endif
-    return {};
+    return SparseSolutionMat_Exact_Budget(SpMat, Bvect, budget.max_entries_exact, os);
   }
 #ifdef DEBUG_HECKE_OPERATORS
-  os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol << " exact elimination fallback\n";
+  os << "HECKE: solve_chain_system nbRow=" << nbRow << " nbCol=" << nbCol << " undecided within the budget\n";
 #endif
-  return SparseSolutionMat_Exact(SpMat, Bvect, os);
+  return {SparseSolveStatus::Aborted, empty};
+}
+
+/*
+  The generic potential used by the peeling: a positive definite form of
+  the T-space, the Gram matrix of the first perfect form slightly
+  perturbed (so that the vectors of a cell have distinct heights).
+ */
+template <typename T, typename Tint, typename Tgroup>
+MyMatrix<T> get_peeling_potential(FullComplexEnumeration<T, Tint, Tgroup> const &fce, std::ostream &os) {
+  MyMatrix<T> Q0 = fce.pctdi.l_perfect[0].gram;
+  std::vector<MyMatrix<T>> const &ListMat = fce.pctdi.LinSpa.ListMat;
+  uint64_t seed = 987654321;
+  auto next_random = [&]() -> int {
+    seed = seed * 6364136223846793005ULL + 1442695040888963407ULL;
+    return static_cast<int>((seed >> 33) % 11) - 5;
+  };
+  for (int i_try = 0; i_try < 20; i_try++) {
+    MyMatrix<T> Q = Q0;
+    T scale = T(1) / T(1000 * (i_try + 1));
+    for (auto &M : ListMat) {
+      int r = next_random();
+      Q += (scale * T(r)) * M;
+    }
+    if (IsPositiveDefinite(Q, os)) {
+      return Q;
+    }
+  }
+  return Q0;
+}
+
+/*
+  The peeling solver: the chain c (level k-1) is reduced by repeatedly
+  taking its highest cell G (for the potential, the largest height of a
+  vector of G) and subtracting the multiple of the coboundary of a level
+  k face E of G that cancels G; the face is the one that gives the
+  lexicographically smallest (maximal height, number of cells at that
+  height, number of cells). Each accepted move decreases this objective,
+  so the chain is pushed towards the low cells until it vanishes; the
+  accumulated faces form the filling. The move fails cleanly when no
+  face improves the objective or when a budget is exceeded.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::optional<std::vector<PerfectFaceEntry<T, Tint>>>
+peel_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const &rhs,
+                          UpperFaceCache<T, Tint, Tgroup> &ufc, MyMatrix<T> const &Q0,
+                          HeckeBudget const &budget, std::ostream &os) {
+  FullComplexEnumeration<T, Tint, Tgroup> const &fce = ufc.fce;
+  std::vector<MyMatrix<T>> const &ListMat = fce.pctdi.LinSpa.ListMat;
+  auto cell_height = [&](int const &index, int const &iOrb, MyMatrix<Tint> const &M) -> T {
+    MyMatrix<Tint> EXT = fce.levels[index].l_faces[iOrb].EXT * M;
+    T h(0);
+    for (int i_row = 0; i_row < EXT.rows(); i_row++) {
+      MyVector<Tint> V = GetMatrixRow(EXT, i_row);
+      T val = EvaluationQuadForm<T, Tint>(Q0, V);
+      if (i_row == 0 || val > h) {
+        h = val;
+      }
+    }
+    return h;
+  };
+  struct Objective {
+    T max_height;
+    size_t n_top;
+    size_t n_cell;
+    bool operator<(Objective const &o) const {
+      if (max_height != o.max_height) {
+        return max_height < o.max_height;
+      }
+      if (n_top != o.n_top) {
+        return n_top < o.n_top;
+      }
+      return n_cell < o.n_cell;
+    }
+  };
+  // The coefficient of the cell (iOrb, M) in a chain.
+  auto coefficient_of = [&](std::vector<PerfectFaceEntry<T, Tint>> const &c, int const &index,
+                            int const &iOrb, MyMatrix<Tint> const &M) -> T {
+    FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[index].l_faces[iOrb];
+    MyMatrix<Tint> EXT_M = face.EXT * M;
+    MyMatrix<Tint> key = tot_set(EXT_M);
+    for (auto &fe : c) {
+      if (fe.iOrb == iOrb) {
+        MyMatrix<Tint> EXT_fe = face.EXT * fe.M;
+        MyMatrix<Tint> key_fe = tot_set(EXT_fe);
+        if (key_fe == key) {
+          MyMatrix<Tint> t = fe.M * Inverse(M);
+          int sign = get_face_orientation(face.EXT, ListMat, face.or_info, t);
+          return fe.value * T(sign);
+        }
+      }
+    }
+    return T(0);
+  };
+  std::vector<PerfectFaceEntry<T, Tint>> c = rhs;
+  std::vector<PerfectFaceEntry<T, Tint>> filling;
+  // The heights of the cells of c, the multiset of heights and the map
+  // from the cells (as sets of vectors) to their position, refreshed
+  // after each accepted move so that the candidates are evaluated
+  // incrementally.
+  std::vector<T> h_c;
+  std::multiset<T> heights;
+  std::unordered_map<MyMatrix<Tint>, size_t> map_c;
+  auto refresh = [&]() -> void {
+    h_c.clear();
+    heights.clear();
+    map_c.clear();
+    for (size_t i = 0; i < c.size(); i++) {
+      T h = cell_height(k - 1, c[i].iOrb, c[i].M);
+      h_c.push_back(h);
+      heights.insert(h);
+      MyMatrix<Tint> EXT_c = fce.levels[k - 1].l_faces[c[i].iOrb].EXT * c[i].M;
+      map_c[tot_set(EXT_c)] = i;
+    }
+  };
+  auto get_top = [&]() -> int {
+    int i_top = -1;
+    for (size_t i = 0; i < c.size(); i++) {
+      if (i_top == -1 || h_c[i] > h_c[i_top]) {
+        i_top = i;
+      }
+    }
+    return i_top;
+  };
+  auto objective_of_heights = [&](std::multiset<T> const &hs) -> Objective {
+    if (hs.empty()) {
+      return Objective{T(0), 0, 0};
+    }
+    T top = *hs.rbegin();
+    return Objective{top, hs.count(top), hs.size()};
+  };
+  refresh();
+  Objective obj = objective_of_heights(heights);
+  size_t n_move = 0;
+  while (!c.empty()) {
+    if (n_move >= budget.max_peel_moves) {
+#ifdef DEBUG_HECKE_OPERATORS
+      os << "HECKE: peel, budget of moves exhausted, |c|=" << c.size() << "\n";
+#endif
+      return {};
+    }
+#ifdef DEBUG_HECKE_OPERATORS
+    if (n_move % 100 == 0 && n_move > 0) {
+      os << "HECKE: peel, move " << n_move << " |c|=" << c.size() << " max_height=" << obj.max_height << "\n";
+    }
+#endif
+    int i_top = get_top();
+    PerfectFaceEntry<T, Tint> const G = c[i_top];
+    std::optional<Objective> best_obj;
+    std::vector<PerfectFaceEntry<T, Tint>> best_cob;
+    PerfectFaceEntry<T, Tint> best_E{0, T(0), G.M};
+    for (auto &e : fce.boundaries[k - 1].ll_bound[G.iOrb].l_bound) {
+      if (!fce.levels[k].l_faces[e.iOrb].is_well_rounded) {
+        continue;
+      }
+      MyMatrix<Tint> Mface = e.M * G.M;
+      std::vector<PerfectFaceEntry<T, Tint>> chain_E{{e.iOrb, T(1), Mface}};
+      std::vector<PerfectFaceEntry<T, Tint>> cob = chain_coboundary(k, chain_E, ufc, os);
+      T s_G = coefficient_of(cob, k - 1, G.iOrb, G.M);
+      if (s_G == 0) {
+        continue;
+      }
+      T eps = G.value / s_G;
+      // The heights after the move: G disappears, the touched cells of c
+      // may vanish, the other cofaces of E appear.
+      std::multiset<T> hs = heights;
+      hs.erase(hs.find(h_c[i_top]));
+      for (auto &fe : cob) {
+        FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[k - 1].l_faces[fe.iOrb];
+        MyMatrix<Tint> EXT_fe = face.EXT * fe.M;
+        MyMatrix<Tint> key = tot_set(EXT_fe);
+        auto iter = map_c.find(key);
+        if (iter != map_c.end()) {
+          size_t idx = iter->second;
+          if (static_cast<int>(idx) == i_top) {
+            continue;
+          }
+          MyMatrix<Tint> t = c[idx].M * Inverse(fe.M);
+          int sign = get_face_orientation(face.EXT, ListMat, face.or_info, t);
+          T new_coef = c[idx].value - eps * fe.value * T(sign);
+          if (new_coef == 0) {
+            hs.erase(hs.find(h_c[idx]));
+          }
+        } else {
+          T h = cell_height(k - 1, fe.iOrb, fe.M);
+          hs.insert(h);
+        }
+      }
+      Objective obj_new = objective_of_heights(hs);
+      if (!best_obj || obj_new < *best_obj) {
+        best_obj = obj_new;
+        best_cob = cob;
+        best_E = PerfectFaceEntry<T, Tint>{e.iOrb, eps, Mface};
+      }
+    }
+    if (!best_obj || !(*best_obj < obj)) {
+#ifdef DEBUG_HECKE_OPERATORS
+      os << "HECKE: peel, no improving move at move " << n_move << " |c|=" << c.size()
+         << " max_height=" << obj.max_height << " n_top=" << obj.n_top << "\n";
+#endif
+      return {};
+    }
+    ChainBuilder<T, Tint, Tgroup> cb(k - 1, fce, os);
+    for (auto &fe : c) {
+      cb.f_insert(fe.value, fe.iOrb, fe.M);
+    }
+    for (auto &fe : best_cob) {
+      cb.f_insert(-best_E.value * fe.value, fe.iOrb, fe.M);
+    }
+    c = cb.get_faces();
+    if (c.size() > budget.max_chain) {
+#ifdef DEBUG_HECKE_OPERATORS
+      os << "HECKE: peel, chain larger than the budget\n";
+#endif
+      return {};
+    }
+    filling.push_back(best_E);
+    refresh();
+    obj = objective_of_heights(heights);
+    n_move += 1;
+  }
+  // The filling, with the duplicates merged
+  ChainBuilder<T, Tint, Tgroup> cb(k, fce, os);
+  for (auto &fe : filling) {
+    cb.f_insert(fe.value, fe.iOrb, fe.M);
+  }
+  std::vector<PerfectFaceEntry<T, Tint>> sol = cb.get_faces();
+#ifdef DEBUG_HECKE_OPERATORS
+  os << "HECKE: peel, solved in " << n_move << " moves, |sol|=" << sol.size() << "\n";
+#endif
+  return sol;
 }
 
 /*
   The dual contracting homotopy: given a chain b of level k-1 (which must
   be a coboundary), find a chain c of level k with coboundary(c) = b.
-  The unknowns are well rounded cells of level k, the equations all
-  their cofaces (of level k-1), so that a solution supported on the
-  unknowns has exactly the prescribed coboundary. The unknowns grow in
-  rings around b: the faces of the cells of b first, then the cells
-  sharing a coface with a current unknown, and so on. This keeps the
-  systems small when the solution is local, which is the case for the
-  images of small cells.
+  The methods are tried in turn: the peeling, then the linear systems on
+  the rings of unknowns around b (the faces of its cells first, then the
+  cells sharing a coface with a current unknown, and so on) with all the
+  cofaces of the unknowns as equations. Each method has its budget and
+  the failure is reported cleanly (empty optional).
  */
 template <typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>>
+std::optional<std::vector<PerfectFaceEntry<T, Tint>>>
 dual_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const &rhs,
-                          UpperFaceCache<T, Tint, Tgroup> &ufc, std::ostream &os) {
+                          UpperFaceCache<T, Tint, Tgroup> &ufc, MyMatrix<T> const &Q0,
+                          HeckeBudget const &budget, std::ostream &os) {
   FullComplexEnumeration<T, Tint, Tgroup> const &fce = ufc.fce;
+  if (k > 1) {
+    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt_peel =
+        peel_contracting_homotopy(k, rhs, ufc, Q0, budget, os);
+    if (opt_peel) {
+      return opt_peel;
+    }
+  }
   ComplexBuilder<T, Tint, Tgroup> cb_k(k, fce, os);
   auto insert_faces_of = [&](int const &iOrb_up, MyMatrix<Tint> const &M_up) -> void {
-    // The level k faces of the level k-1 cell (iOrb_up, M_up)
     for (auto &e : fce.boundaries[k - 1].ll_bound[iOrb_up].l_bound) {
       if (fce.levels[k].l_faces[e.iOrb].is_well_rounded) {
         MyMatrix<Tint> M = e.M * M_up;
@@ -1749,9 +2057,15 @@ dual_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, Tint>> c
     insert_faces_of(fe.iOrb, fe.M);
   }
   size_t start = 0;
-  size_t max_ring = 12;
-  for (size_t ring = 0; ring < max_ring; ring++) {
+  for (size_t ring = 0; ring < budget.max_rings; ring++) {
     std::vector<PerfectFace<Tint>> faces_k = cb_k.get_faces();
+    if (faces_k.size() > budget.max_unknowns) {
+#ifdef DEBUG_HECKE_OPERATORS
+      os << "HECKE: dual_contracting_homotopy k=" << k << " ring=" << ring
+         << " unknowns=" << faces_k.size() << " beyond the budget\n";
+#endif
+      return {};
+    }
     ComplexBuilder<T, Tint, Tgroup> cb_km1(k - 1, fce, os);
     using T2 = Eigen::Triplet<T>;
     std::vector<T2> tripletList;
@@ -1781,21 +2095,20 @@ dual_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, Tint>> c
       }
       Bvect(opt_p->first) += T(opt_p->second) * fe.value;
     }
-    std::optional<MyVector<T>> opt;
     bool is_graph = (k == 1);
     if (rhs_present) {
-      opt = solve_chain_system(tripletList, nbRow, nbCol, Bvect, is_graph, os);
-    }
-    if (opt) {
-      std::vector<PerfectFaceEntry<T, Tint>> chain_ret;
-      for (int u = 0; u < nbRow; u++) {
-        T val = (*opt)(u);
-        if (val != 0) {
-          PerfectFace<Tint> const &face = faces_k[u];
-          chain_ret.push_back({face.iOrb, val, face.M});
+      SparseSolveResult<T> res = solve_chain_system(tripletList, nbRow, nbCol, Bvect, is_graph, budget, os);
+      if (res.status == SparseSolveStatus::Solved) {
+        std::vector<PerfectFaceEntry<T, Tint>> chain_ret;
+        for (int u = 0; u < nbRow; u++) {
+          T val = res.sol(u);
+          if (val != 0) {
+            PerfectFace<Tint> const &face = faces_k[u];
+            chain_ret.push_back({face.iOrb, val, face.M});
+          }
         }
+        return chain_ret;
       }
-      return chain_ret;
     }
     // The next ring: the cells sharing a coface with a current unknown.
     size_t len = faces_k.size();
@@ -1805,14 +2118,19 @@ dual_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, Tint>> c
         MyMatrix<Tint> M = pair.first.M * F.M;
         insert_faces_of(pair.first.iOrb, M);
       }
+      if (cb_k.get_faces().size() > budget.max_unknowns) {
+        break;
+      }
     }
     start = len;
     if (cb_k.get_faces().size() == len) {
       break;
     }
   }
-  std::cerr << "HECKE: dual_contracting_homotopy, no solution found in " << max_ring << " rings\n";
-  throw TerminalException{1};
+#ifdef DEBUG_HECKE_OPERATORS
+  os << "HECKE: dual_contracting_homotopy k=" << k << " no filling found within the budgets\n";
+#endif
+  return {};
 }
 
 /*
@@ -1896,6 +2214,8 @@ compute_hecke_chain_map_dual(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   std::vector<std::vector<std::vector<std::vector<PerfectFaceEntry<T, Tint>>>>> images(n_levels);
   UpperFaceCache<T, Tint, Tgroup> ufc(fce, os);
   ConeWalker<T, Tint, Tgroup> walker(fce, os);
+  HeckeBudget budget;
+  MyMatrix<T> Q0 = get_peeling_potential(fce, os);
   auto is_wr = [&](int const &index, int const &iOrb) -> bool {
     return fce.levels[index].l_faces[iOrb].is_well_rounded;
   };
@@ -1927,7 +2247,14 @@ compute_hecke_chain_map_dual(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
         } else {
           rhs = get_hecke_coboundary_image(index, iOrb, j, fce, cosets, images[index - 1], ufc, os);
           if (!rhs.empty()) {
-            sol = dual_contracting_homotopy(index, rhs, ufc, os);
+            std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt_sol =
+                dual_contracting_homotopy(index, rhs, ufc, Q0, budget, os);
+            if (!opt_sol) {
+              throw HeckeFailure{"no filling found for the cell of level " + std::to_string(index) +
+                                 " orbit " + std::to_string(iOrb) + " coset " + std::to_string(j) +
+                                 " (right hand side of " + std::to_string(rhs.size()) + " cells)"};
+            }
+            sol = *opt_sol;
           }
         }
         CosetOrbit<Tint> co = get_coset_orbit(j, face.l_gens, act, n_coset, n);

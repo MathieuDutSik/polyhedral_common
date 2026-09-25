@@ -347,8 +347,26 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       std::cerr << "HeckeMethod should be Dual or Vertex\n";
       throw TerminalException{1};
     }
-    HeckeChainMap<T, Tint> hcm = dual ? compute_hecke_chain_map_dual(fce, x, os)
-                                      : compute_hecke_chain_map(fce, x, os);
+    // A clean failure (budget exhausted) is reported in the output files
+    // and the program stops with an error code.
+    auto report_failure = [&](std::string const &message) -> void {
+      std::cerr << "HECKE: clean failure: " << message << "\n";
+      for (std::string const &key : {std::string("FileHeckeChainMap"), std::string("FileHeckeHomology")}) {
+        std::string file = BlockHECKE.get_string(key);
+        if (file != "null") {
+          std::ofstream os_out(file);
+          os_out << "return rec(status:=\"failure\", message:=\"" << message << "\");\n";
+        }
+      }
+      throw TerminalException{1};
+    };
+    HeckeChainMap<T, Tint> hcm;
+    try {
+      hcm = dual ? compute_hecke_chain_map_dual(fce, x, os)
+                 : compute_hecke_chain_map(fce, x, os);
+    } catch (HeckeFailure const &e) {
+      report_failure(e.message);
+    }
     std::string FileHeckeChainMap = BlockHECKE.get_string("FileHeckeChainMap");
     if (FileHeckeChainMap != "null") {
       std::ofstream os_out(FileHeckeChainMap);
@@ -367,8 +385,12 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         throw TerminalException{1};
       }
       FiniteIndexSubgroup<Tint> gamma{SubgroupType, Tint(SubgroupLevel), LinSpa.n};
-      HeckeHomologyResult<T> result =
-          compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, dual, os);
+      HeckeHomologyResult<T> result;
+      try {
+        result = compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, dual, os);
+      } catch (HeckeFailure const &e) {
+        report_failure(e.message);
+      }
       std::ofstream os_out(FileHeckeHomology);
       os_out << "return ";
       WriteHeckeHomologyResultGAP(os_out, result);
