@@ -43,19 +43,21 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
       get_data_iso_k_delaunay_domains<T, Tint, Tgroup>(eFull, AllArr,
                                                        std::cerr);
   int k = data.k;
-  using Tdata = DataIsoKDelaunayDomainsFunc<T, Tint, Tgroup>;
-  Tdata data_func{std::move(data)};
-  using Tobj = typename Tdata::Tobj;
-  using TadjO = typename Tdata::TadjO;
+  std::string FileCoveringOptimum = BlockDATA.get_string("FileCoveringOptimum");
+  if (FileCoveringOptimum != "null") {
+    data.ComputeCovering = true;
+  }
+  using Tobj = IsoKDelaunayDomain_Obj<T, Tint, Tgroup>;
+  using TadjO = IsoKDelaunayDomain_AdjO<Tint>;
   using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
-  auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
-    return false;
-  };
-  std::optional<std::vector<Tout>> opt_l_tot =
-      EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
-          data_func, f_incorrect, max_runtime_second);
+  // The enumeration runs to completion: max_runtime_second is not used, an
+  // external limit has to stop it.
+  if (max_runtime_second > 0) {
+    std::cerr << "LATT_SerialLattice_IsoKDelaunayDomain: max_runtime_second is "
+                 "ignored by the enumeration of the (L,k)-types\n";
+  }
   std::vector<Tout> l_tot =
-      unfold_opt(opt_l_tot, "EnumerateAndStore_Serial (iso-k-Delaunay)");
+      EnumerateIsoKDelaunayDomains<T, Tint, Tgroup>(data, std::cerr);
   //
   std::string PrefixIsoKDel =
       BlockDATA.get_string("PrefixIsoKDelaunayDomains");
@@ -64,11 +66,12 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
       std::string FileName = PrefixIsoKDel + std::to_string(i);
       std::ofstream ofs(FileName);
       boost::archive::text_oarchive oa(ofs);
-      oa << l_tot[i].x.dom;
+      IsoKDelaunayDomain<T, Tint, Tgroup> dom =
+          ExpandDomain<T, Tint, Tgroup>(l_tot[i].x.dom);
+      oa << dom;
     }
   }
   //
-  std::string FileCoveringOptimum = BlockDATA.get_string("FileCoveringOptimum");
   if (FileCoveringOptimum != "null") {
     std::ofstream os_out(FileCoveringOptimum);
     os_out << "return [";
@@ -76,9 +79,15 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
       if (i > 0) {
         os_out << ",\n";
       }
-      covering_maxdet::MaxdetResult<double> res =
-          OptimizeKCovering<T, Tint, Tgroup>(l_tot[i].x.dom, LinSpa, std::cerr);
-      WriteKCoveringOptimumRecordGAP(os_out, k, res);
+      // Computed by f_adj on every processed domain; a domain that was found
+      // but not processed (a time limit) has no optimum.
+      if (!l_tot[i].x.cov_opt) {
+        std::cerr << "LATT_SerialLattice_IsoKDelaunayDomain: domain " << i
+                  << " has no covering optimum, the enumeration was "
+                     "incomplete\n";
+        throw TerminalException{1};
+      }
+      WriteKCoveringOptimumRecordGAP(os_out, k, *l_tot[i].x.cov_opt);
     }
     os_out << "];\n";
   }
@@ -98,8 +107,7 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
   }
   //
   std::ofstream os_out(OutFile);
-  bool result =
-      WriteFamilyObjects(data_func.data, OutFormat, os_out, l_tot, std::cerr);
+  bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
   if (result) {
     std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
               << "\n";

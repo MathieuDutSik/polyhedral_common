@@ -826,12 +826,19 @@ template <typename Tint> struct KDelaunay_AdjO {
   Face eInc;
   MyMatrix<Tint> eBigMat;
   int iOrb;
+  // The canonical inequality of the wall of the (L,k)-domain crossed by this
+  // adjacency (family (a) of IsoKDelaunayDomains.h); empty until filled by
+  // FillKDelaunayInequalities.
+  MyVector<Tint> eIneq;
 };
 
 template <typename Tint, typename Tgroup> struct KDelaunay_Entry {
   KDelaunayTile<Tint> tile;
   Tgroup GRP;
   std::vector<KDelaunay_AdjO<Tint>> ListAdj;
+  // For each row of tile.INT, the canonical inequality of the wall where the
+  // point leaves the sphere (family (b)); empty until filled.
+  std::vector<MyVector<Tint>> ListIntIneq;
 };
 
 template <typename Tint, typename Tgroup> struct KDelaunayTesselation {
@@ -846,6 +853,7 @@ inline void serialize(Archive &ar, KDelaunay_AdjO<Tint> &eRec,
   ar &make_nvp("eInc", eRec.eInc);
   ar &make_nvp("eBigMat", eRec.eBigMat);
   ar &make_nvp("iOrb", eRec.iOrb);
+  ar &make_nvp("eIneq", eRec.eIneq);
 }
 template <class Archive, typename Tint, typename Tgroup>
 inline void serialize(Archive &ar, KDelaunay_Entry<Tint, Tgroup> &eRec,
@@ -853,6 +861,7 @@ inline void serialize(Archive &ar, KDelaunay_Entry<Tint, Tgroup> &eRec,
   ar &make_nvp("tile", eRec.tile);
   ar &make_nvp("GRP", eRec.GRP);
   ar &make_nvp("ListAdj", eRec.ListAdj);
+  ar &make_nvp("ListIntIneq", eRec.ListIntIneq);
 }
 template <class Archive, typename Tint, typename Tgroup>
 inline void serialize(Archive &ar, KDelaunayTesselation<Tint, Tgroup> &eRec,
@@ -991,9 +1000,9 @@ KDelaunayTesselation_From_DatabaseEntries_Serial(
   for (auto &eEnt : l_ent) {
     std::vector<KDelaunay_AdjO<Tint>> ListAdj;
     for (auto &eAdj : eEnt.ListAdj) {
-      ListAdj.push_back({eAdj.x.eInc, eAdj.x.eBigMat, eAdj.iOrb});
+      ListAdj.push_back({eAdj.x.eInc, eAdj.x.eBigMat, eAdj.iOrb, {}});
     }
-    l_tiles.push_back({eEnt.x.tile, eEnt.x.GRP, std::move(ListAdj)});
+    l_tiles.push_back({eEnt.x.tile, eEnt.x.GRP, std::move(ListAdj), {}});
   }
   return {k, std::move(l_tiles)};
 }

@@ -105,7 +105,7 @@ end;
 
 # --------------------------------------------------------------------------- #
 # Phase 2: the (L,k)-types of the space of all forms of dimension n.
-RunIsoKDelaunay:=function(TmpDir, n, k, FileCov)
+RunIsoKDelaunay:=function(TmpDir, n, k, FileCov, FlipMethod)
     local FileN, FileO, FileE, strOut, eProg, TheCommand;
     FileN:=Filename(TmpDir, "IsoKDel.nml");
     FileO:=Filename(TmpDir, "IsoKDel.out");
@@ -120,6 +120,7 @@ RunIsoKDelaunay:=function(TmpDir, n, k, FileCov)
     strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
     strOut:=Concatenation(strOut, " k = ", String(k), "\n");
     strOut:=Concatenation(strOut, " FileCoveringOptimum = \"", FileCov, "\"\n");
+    strOut:=Concatenation(strOut, " FlipMethod = \"", FlipMethod, "\"\n");
     strOut:=Concatenation(strOut, "/\n\n");
     strOut:=Concatenation(strOut, "&TSPACE\n");
     strOut:=Concatenation(strOut, " TypeTspace = \"Classic\"\n");
@@ -138,7 +139,7 @@ TestEnumeration:=function(eRec)
     local TmpDir, FileCov, FileO, U, ListCov, eCov, best, tol;
     TmpDir:=DirectoryTemporary();
     FileCov:=Filename(TmpDir, "IsoKDel.cov");
-    FileO:=RunIsoKDelaunay(TmpDir, eRec.n, eRec.k, FileCov);
+    FileO:=RunIsoKDelaunay(TmpDir, eRec.n, eRec.k, FileCov, eRec.FlipMethod);
     if IsExistingFile(FileO)=false or IsExistingFile(FileCov)=false then
         Print("The output files are not existing. That qualifies as a fail\n");
         return false;
@@ -174,13 +175,20 @@ end;
 
 # The stored values. In the plane the optima are the thinnest k-fold lattice
 # coverings of Blundon: 4 pi / sqrt(27) = 2 x (2 pi / sqrt(27)) for k = 2 and
-# 25 pi / 18 (the square lattice) for k = 4. The dimension 3 case is the
-# longest one (a few minutes).
+# 25 pi / 18 (the square lattice) for k = 4. The flip across a wall is the
+# incremental one by default; the recompute method (the tiling of a form
+# beyond the wall computed from scratch) is exercised on two small cases as
+# a cross-check of the incremental flip. The dimension 3, k = 3 case is the
+# longest one (about half a minute).
 ListRecEnumeration:=function()
-    return [rec(name:="dim2_k2", n:=2, k:=2, n_dom:=1, best_density:=1.2091995762740997),
-            rec(name:="dim2_k3", n:=2, k:=3, n_dom:=3, best_density:=1.1452093073591294),
-            rec(name:="dim2_k4", n:=2, k:=4, n_dom:=9, best_density:=1.0908307829719477),
-            rec(name:="dim3_k2", n:=3, k:=2, n_dom:=8, best_density:=1.3921133441560509)];
+    return [rec(name:="dim2_k2", n:=2, k:=2, n_dom:=1, best_density:=1.2091995762740997, FlipMethod:="incremental"),
+            rec(name:="dim2_k3", n:=2, k:=3, n_dom:=3, best_density:=1.1452093073591294, FlipMethod:="incremental"),
+            rec(name:="dim2_k4", n:=2, k:=4, n_dom:=9, best_density:=1.0908307829719477, FlipMethod:="incremental"),
+            rec(name:="dim2_k4_recompute", n:=2, k:=4, n_dom:=9, best_density:=1.0908307829719477, FlipMethod:="recompute"),
+            rec(name:="dim2_k5", n:=2, k:=5, n_dom:=30, best_density:=1.0856323777599972, FlipMethod:="incremental"),
+            rec(name:="dim3_k2", n:=3, k:=2, n_dom:=8, best_density:=1.3921133441560509, FlipMethod:="incremental"),
+            rec(name:="dim3_k2_recompute", n:=3, k:=2, n_dom:=8, best_density:=1.3921133441560509, FlipMethod:="recompute"),
+            rec(name:="dim3_k3", n:=3, k:=3, n_dom:=945, best_density:=1.3748578837260208, FlipMethod:="incremental")];
 end;
 
 # --------------------------------------------------------------------------- #
