@@ -294,7 +294,17 @@ ComputeGenericKDelaunayTesselation(
   DataLattice<T, Tint, Tgroup> data =
       GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
   auto f_incorrect = [&](KDelaunay_Obj<Tint, Tgroup> const &x) -> bool {
-    return IsDelaunayPolytopeInducingEqualities(x.tile.EXT, ListGramRing, os);
+    bool test = IsDelaunayPolytopeInducingEqualities(x.tile.EXT, ListGramRing, os);
+#ifdef DEBUG_ISO_K_DELAUNAY
+    if (test) {
+      os << "ISO_K_DELAUNAY: non-generic tile |INT|=" << x.tile.INT.rows()
+         << " |EXT|=" << x.tile.EXT.rows() << " EXT=\n";
+      WriteMatrix(os, x.tile.EXT);
+      os << "ISO_K_DELAUNAY: INT=\n";
+      WriteMatrix(os, x.tile.INT);
+    }
+#endif
+    return test;
   };
   int max_runtime_second = 0;
   return EnumerationKDelaunayTiles<T, Tint, Tgroup, decltype(f_incorrect)>(
@@ -306,11 +316,36 @@ ComputeGenericKDelaunayTesselation(
 template <typename T, typename Tint, typename Tgroup>
 IsoKDelaunayDomain<T, Tint, Tgroup>
 BuildIsoKDelaunayDomain(KDelaunayTesselation<Tint, Tgroup> const &DT,
+                        [[maybe_unused]] MyMatrix<T> const &GramMat,
                         LinSpaceMatrix<T> const &LinSpa,
                         std::vector<std::vector<Tint>> const &ListGramRing,
                         std::ostream &os) {
   MyMatrix<Tint> ListIneq =
       ComputeIsoKDelaunayInequalities<T, Tint, Tgroup>(DT, ListGramRing, os);
+#ifdef SANITY_CHECK_ISO_K_DELAUNAY
+  // The generating form is interior to its own domain: every inequality is
+  // strictly positive at it.
+  {
+    MyVector<T> c_vec = LINSPA_GetVectorOfMatrixExpression(LinSpa, GramMat);
+    int n_ineq = ListIneq.rows();
+    int dimSpace = ListIneq.cols();
+    for (int i_ineq = 0; i_ineq < n_ineq; i_ineq++) {
+      T val(0);
+      for (int u = 0; u < dimSpace; u++) {
+        AddMul(val, UniversalScalarConversion<T, Tint>(ListIneq(i_ineq, u)),
+               c_vec(u));
+      }
+      if (val <= 0) {
+        std::cerr << "ISO_K_DELAUNAY: SANITY_CHECK failed: the inequality "
+                  << StringVectorGAP(GetMatrixRow(ListIneq, i_ineq))
+                  << " has value " << val << " at the generating form\n";
+        std::cerr << "ISO_K_DELAUNAY: GramMat=\n";
+        WriteMatrix(std::cerr, GramMat);
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
   MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(ListIneq);
   MyMatrix<T> M = get_interior_gram_matrix_lp(LinSpa, FAC_T, os);
   MyMatrix<Tint> M_ring = RemoveFractionMatrixPlusCoeffRing(M).TheMat;
@@ -335,8 +370,13 @@ GetInitialIsoKDelaunayDomain(DataIsoKDelaunayDomains<T, Tint, Tgroup> &data) {
                  "span it\n";
     throw TerminalException{1};
   }
-  int N = 2;
-  size_t n_iter = 0;
+  // The order-k tiling of a form has many more tiles than its Delaunay
+  // tessellation, and an integer form with small entries almost always has
+  // an accidentally co-spherical tile in dimension 4 and above. The
+  // coefficient bound therefore grows geometrically over the attempts, a
+  // failed attempt being detected at the first non-generic tile.
+  int N = 16;
+  [[maybe_unused]] size_t n_iter = 0;
   while (true) {
     MyMatrix<T> GramMat =
         GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(LinSpa, N, os);
@@ -349,11 +389,11 @@ GetInitialIsoKDelaunayDomain(DataIsoKDelaunayDomains<T, Tint, Tgroup> &data) {
         ComputeGenericKDelaunayTesselation<T, Tint, Tgroup>(
             GramMat, data.k, data.ListGramRing, data.data.rddo.AllArr, os);
     if (opt) {
-      return BuildIsoKDelaunayDomain<T, Tint, Tgroup>(*opt, LinSpa,
+      return BuildIsoKDelaunayDomain<T, Tint, Tgroup>(*opt, GramMat, LinSpa,
                                                       data.ListGramRing, os);
     }
     n_iter += 1;
-    N += n_iter;
+    N *= 3;
   }
 }
 
@@ -361,8 +401,15 @@ GetInitialIsoKDelaunayDomain(DataIsoKDelaunayDomains<T, Tint, Tgroup> &data) {
   The domain across the facet of the domain x whose interior point (in
   T-space coordinates) is TestPt and whose inequality is eIneq: the tiling
   is recomputed at TestPt - eps eIneq + eps^2 r with r a random integral
-  vector, eps being halved until the form is positive definite, generic,
-  and its domain contains TestPt in its closure.
+  vector, and accepted when the form is positive definite, generic in the
+  T-space and TestPt lies in the closure of its domain (exactly one wall was
+  crossed). The initial step is a fraction of the size of TestPt. When the
+  domain found does not contain TestPt, its violated inequalities V tell
+  where the segment from TestPt to the trial point left the adjacent
+  domain: the crossing parameter t = V.TestPt / (V.TestPt - V.trial) is in
+  (0, 1] and the next step is half the smallest crossing. No symmetry test
+  is done on the trial form: the tiling of any generic form of the adjacent
+  domain gives its inequalities, whatever the automorphisms of the form.
  */
 template <typename T, typename Tint, typename Tgroup>
 IsoKDelaunayDomain<T, Tint, Tgroup>
@@ -371,60 +418,86 @@ FlipIsoKDelaunayDomain(DataIsoKDelaunayDomains<T, Tint, Tgroup> &data,
   std::ostream &os = data.data.rddo.os;
   LinSpaceMatrix<T> const &LinSpa = data.data.LinSpa;
   int dimSpace = LinSpa.ListMat.size();
-  T eps(1);
-  size_t n_iter = 0;
+  T norm_pt(0), norm_ineq(0);
+  for (int u = 0; u < dimSpace; u++) {
+    norm_pt += T_abs(TestPt(u));
+    norm_ineq += T_abs(eIneq(u));
+  }
+  T eps = norm_pt / (T(8) * norm_ineq);
+  [[maybe_unused]] size_t n_iter = 0;
   while (true) {
 #ifdef DEBUG_ISO_K_DELAUNAY
     os << "ISO_K_DELAUNAY: FlipIsoKDelaunayDomain n_iter=" << n_iter
-       << " eps=" << eps << "\n";
+       << " eps=" << eps << " TestPt=" << StringVectorGAP(TestPt)
+       << " eIneq=" << StringVectorGAP(eIneq) << "\n";
 #endif
     n_iter += 1;
     MyVector<T> rnd = FuncRandomDirection<T>(dimSpace, 2);
     MyVector<T> cand = TestPt - eps * eIneq + eps * eps * rnd;
     T scal = eIneq.dot(cand);
     if (scal >= 0) {
+#ifdef DEBUG_ISO_K_DELAUNAY
+      os << "ISO_K_DELAUNAY: FlipIsoKDelaunayDomain: wrong side, halving\n";
+#endif
       eps /= 2;
       continue;
     }
     MyMatrix<T> GramMat = LINSPA_GetMatrixInTspace(LinSpa, cand);
     if (!IsPositiveDefinite(GramMat, os)) {
+#ifdef DEBUG_ISO_K_DELAUNAY
+      os << "ISO_K_DELAUNAY: FlipIsoKDelaunayDomain: not positive definite, halving\n";
+#endif
       eps /= 2;
       continue;
     }
-    if (!IsSymmetryGroupCorrect<T, Tint, Tgroup>(GramMat, LinSpa, os)) {
-      eps /= 2;
-      continue;
-    }
+#ifdef DEBUG_ISO_K_DELAUNAY
+    MicrosecondTime time_flip;
+#endif
     std::optional<KDelaunayTesselation<Tint, Tgroup>> opt =
         ComputeGenericKDelaunayTesselation<T, Tint, Tgroup>(
             GramMat, data.k, data.ListGramRing, data.data.rddo.AllArr, os);
+#ifdef DEBUG_ISO_K_DELAUNAY
+    os << "|ISO_K_DELAUNAY: FlipIsoKDelaunayDomain: tiling|=" << time_flip
+       << " n_tile=" << (opt ? opt->l_tiles.size() : 0) << "\n";
+#endif
     if (!opt) {
+#ifdef DEBUG_ISO_K_DELAUNAY
+      os << "ISO_K_DELAUNAY: FlipIsoKDelaunayDomain: non-generic tiling, halving\n";
+#endif
       eps /= 2;
       continue;
     }
     IsoKDelaunayDomain<T, Tint, Tgroup> dom = BuildIsoKDelaunayDomain<T, Tint, Tgroup>(
-        *opt, LinSpa, data.ListGramRing, os);
+        *opt, GramMat, LinSpa, data.ListGramRing, os);
     // TestPt has to be in the closure of the new domain, otherwise the step
-    // went too far and crossed more than one wall.
+    // went too far and crossed more than one wall: the violated
+    // inequalities bound the admissible step.
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(dom.ListIneq);
     int n_ineq = FAC_T.rows();
-    bool contained = true;
+    std::optional<T> t_min;
     for (int i_ineq = 0; i_ineq < n_ineq; i_ineq++) {
-      T val(0);
+      T val_pt(0), val_cand(0);
       for (int u = 0; u < dimSpace; u++) {
-        AddMul(val, FAC_T(i_ineq, u), TestPt(u));
+        AddMul(val_pt, FAC_T(i_ineq, u), TestPt(u));
+        AddMul(val_cand, FAC_T(i_ineq, u), cand(u));
       }
-      if (val < 0) {
-        contained = false;
-        break;
+      if (val_pt < 0) {
+        T t = val_pt / (val_pt - val_cand);
+#ifdef DEBUG_ISO_K_DELAUNAY
+        os << "ISO_K_DELAUNAY: violated V=" << StringVectorGAP(GetMatrixRow(FAC_T, i_ineq))
+           << " val_pt=" << val_pt << " val_cand=" << val_cand << " t=" << t << "\n";
+#endif
+        if (!t_min || t < *t_min) {
+          t_min = t;
+        }
       }
     }
-    if (!contained) {
+    if (t_min) {
 #ifdef DEBUG_ISO_K_DELAUNAY
       os << "ISO_K_DELAUNAY: FlipIsoKDelaunayDomain: the facet point is not in "
-            "the closure of the new domain, halving eps\n";
+            "the closure of the new domain, crossing at t=" << *t_min << "\n";
 #endif
-      eps /= 2;
+      eps = eps * (*t_min) / 2;
       continue;
     }
     return dom;
@@ -660,16 +733,53 @@ get_result_iso_k_delaunay_adj(IsoKDelaunayDomain<T, Tint, Tgroup> const &x,
   os << "ISO_K_DELAUNAY: f_adj: |GRPperm|=" << GRPperm.size()
      << " |l_idx|=" << l_idx.size() << "\n";
 #endif
+  // The extreme rays of the cone: the interior point of a facet used for the
+  // flip is the sum of its rays, each normalized, which is as far from the
+  // boundary of the positive definite cone as the facet allows. The
+  // geometrically unique interior point of the facet, an LP by-product, is
+  // often positive definite only by a hair, and a step across the wall from
+  // it has to be tiny, which makes the trial tiling large and slow.
+  MyMatrix<T> EXTrays = DirectDualDescription_mat(FACred_T, os);
+  int n_ray = EXTrays.rows();
+  int dimSpace = LinSpa.ListMat.size();
+#ifdef DEBUG_ISO_K_DELAUNAY
+  os << "ISO_K_DELAUNAY: f_adj: n_ray=" << n_ray << "\n";
+#endif
+  auto get_facet_point = [&](size_t i) -> MyVector<T> {
+    MyVector<T> sum = ZeroVector<T>(dimSpace);
+    for (int i_ray = 0; i_ray < n_ray; i_ray++) {
+      T scal(0);
+      T norm(0);
+      for (int u = 0; u < dimSpace; u++) {
+        AddMul(scal, FACred_T(i, u), EXTrays(i_ray, u));
+        norm += T_abs(EXTrays(i_ray, u));
+      }
+      if (scal == 0) {
+        for (int u = 0; u < dimSpace; u++) {
+          sum(u) += EXTrays(i_ray, u) / norm;
+        }
+      }
+    }
+    return sum;
+  };
   std::vector<IsoKDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
   for (auto &i : l_idx) {
-    MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred_T, i, os);
+    MyVector<T> TestPt = get_facet_point(i);
     MyMatrix<T> TestMat = LINSPA_GetMatrixInTspace(LinSpa, TestPt);
     if (!IsPositiveDefinite(TestMat, os)) {
+      // The sum of the rays of the facet is not positive definite. When the
+      // rays are all positive semidefinite this says the facet lies on the
+      // boundary of the positive definite cone; the LP interior point of the
+      // facet settles the remaining cases.
+      TestPt = GetSpaceInteriorPointFacet(FACred_T, i, os);
+      TestMat = LINSPA_GetMatrixInTspace(LinSpa, TestPt);
+      if (!IsPositiveDefinite(TestMat, os)) {
 #ifdef DEBUG_ISO_K_DELAUNAY
-      os << "ISO_K_DELAUNAY: f_adj: facet i=" << i
-         << " is on the boundary of the positive definite cone\n";
+        os << "ISO_K_DELAUNAY: f_adj: facet i=" << i
+           << " is on the boundary of the positive definite cone\n";
 #endif
-      continue;
+        continue;
+      }
     }
     MyVector<Tint> eIneq = GetMatrixRow(FACred, i);
     IsoKDelaunayDomain<T, Tint, Tgroup> dom =
@@ -743,6 +853,10 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoKDelaunayDomains() {
     // domain by the determinant maximization of CoveringMaxdet.h and the
     // results are written to that file as a GAP list.
     ListStringValues["FileCoveringOptimum"] = "null";
+    // When set, the extreme rays of each enumerated domain are computed and
+    // the ones of full rank (positive definite forms) are written to that
+    // file as a GAP list, together with the rank distribution of all rays.
+    ListStringValues["FileFullRankRays"] = "null";
     std::map<std::string, int> ListIntValues;
     ListIntValues["k"] = 2;
     SingleBlock BlockDATA;
@@ -776,6 +890,55 @@ get_data_iso_k_delaunay_domains(FullNamelist const &eFull,
   std::vector<std::vector<Tint>> ListGramRing =
       GetListGramRing(data.LinSpa.ListLineMat);
   return {std::move(data), k, std::move(ListGramRing)};
+}
+
+/*
+  The extreme rays of a domain, from the irredundant inequalities filled by
+  f_adj, as forms of the T-space. The rays of full rank are the positive
+  definite forms among them; the rank distribution of all the rays is
+  reported alongside.
+ */
+template <typename T, typename Tint, typename Tgroup>
+void WriteFullRankRaysGAP(std::ostream &os_out,
+                          IsoKDelaunayDomain_Obj<T, Tint, Tgroup> const &ent,
+                          LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
+  int dimSpace = LinSpa.ListMat.size();
+  int n = LinSpa.n;
+  MyMatrix<T> FAC = UniversalMatrixConversion<T, Tint>(ent.ListIneqRed);
+  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
+  int n_row = EXT.rows();
+  std::map<int, size_t> map_rank;
+  std::vector<MyMatrix<Tint>> l_full;
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
+    for (int u = 0; u < dimSpace; u++) {
+      MatAddMul(RayMat, EXT(i_row, u), LinSpa.ListMat[u]);
+    }
+    int rnk = RankMat(RayMat);
+    map_rank[rnk] += 1;
+    if (rnk == n) {
+      l_full.push_back(RemoveFractionMatrixPlusCoeffRing(RayMat).TheMat);
+    }
+  }
+  os_out << "rec(n_ray:=" << n_row << ", ListRank:=[";
+  bool IsFirst = true;
+  for (auto &kv : map_rank) {
+    if (!IsFirst) {
+      os_out << ",";
+    }
+    IsFirst = false;
+    os_out << "[" << kv.first << "," << kv.second << "]";
+  }
+  os_out << "], n_full_rank:=" << l_full.size() << ", ListFullRankRay:=[";
+  IsFirst = true;
+  for (auto &M : l_full) {
+    if (!IsFirst) {
+      os_out << ",\n";
+    }
+    IsFirst = false;
+    os_out << StringMatrixGAP(M);
+  }
+  os_out << "])";
 }
 
 /*

@@ -381,7 +381,8 @@ FindAdjacentKDelaunayTile(CVPSolver<T, Tint> const &solver,
                           MyMatrix<T> const &Qinv,
                           KDelaunayTile<Tint> const &tile,
                           KDelaunayTileGeometry<T> const &geom,
-                          MyVector<T> const &ell_hom, int const &k,
+                          MyVector<T> const &ell_hom,
+                          [[maybe_unused]] int const &k,
                           [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_K_DELAUNAY
   MicrosecondTime time;

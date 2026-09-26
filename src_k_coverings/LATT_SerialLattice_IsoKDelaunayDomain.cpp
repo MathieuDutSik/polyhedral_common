@@ -83,6 +83,20 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
     os_out << "];\n";
   }
   //
+  std::string FileFullRankRays = BlockDATA.get_string("FileFullRankRays");
+  if (FileFullRankRays != "null") {
+    std::ofstream os_out(FileFullRankRays);
+    os_out << "return [";
+    for (size_t i = 0; i < l_tot.size(); i++) {
+      if (i > 0) {
+        os_out << ",\n";
+      }
+      WriteFullRankRaysGAP<T, Tint, Tgroup>(os_out, l_tot[i].x, LinSpa,
+                                           std::cerr);
+    }
+    os_out << "];\n";
+  }
+  //
   std::ofstream os_out(OutFile);
   bool result =
       WriteFamilyObjects(data_func.data, OutFormat, os_out, l_tot, std::cerr);

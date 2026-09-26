@@ -123,7 +123,8 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
       throw TerminalException{1};
     }
     IsoKDelaunayDomain<T, Tint, Tgroup> dom =
-        BuildIsoKDelaunayDomain<T, Tint, Tgroup>(DT, LinSpa, ListGramRing, os);
+        BuildIsoKDelaunayDomain<T, Tint, Tgroup>(DT, GramMat, LinSpa,
+                                                 ListGramRing, os);
     if (FileIsoKDelaunayDomain != "null") {
       std::ofstream ofs(FileIsoKDelaunayDomain);
       boost::archive::text_oarchive oa(ofs);
