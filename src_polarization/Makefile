@@ -11,6 +11,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 CC		= g++ -std=c++20 -Wall -Wextra -g -O2
 
 NOLINKFLAG 	= -c
+CDEPS           = -MMD -MP
 OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_number -I../src -I../src_matrix -I../src_basic -I../src_comb
@@ -22,7 +23,7 @@ LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK)
 %.o: %.cpp
 	@echo
 	@echo compile $<
-	$(CC) $(OUTPUTFLAG) $@ $(CLOCAL) $(CFLAGS) $(NOLINKFLAG) $<
+	$(CC) $(OUTPUTFLAG) $@ $(CLOCAL) $(CFLAGS) $(CDEPS) $(NOLINKFLAG) $<
 
 all:	$(PROGRAM)
 
@@ -33,4 +34,9 @@ $(PROGRAM): 	$(OBJECTS)
 
 clean:;
 	rm -f *.o
+	rm -f *.d
 	rm -f $(PROGRAM)
+
+# The header dependencies, written by the compiler as it compiles (-MMD),
+# so that a change to a header rebuilds the objects that include it.
+-include $(OBJECTS:.o=.d)

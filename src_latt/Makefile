@@ -13,6 +13,7 @@ CC		= g++ -std=c++20 -Wall -Wextra -g -O3
 #CC		= g++ -std=c++20 -Wall -Wextra -g -O2 -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c
+CDEPS           = -MMD -MP
 OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_graph -I../src_comb -I../src_group -I../src_poly -I../permutalib/src -I../src_lorentzian -I../src_dualdesc -I../src_isotropy -I../src_short -I../src_enum_schemes -I.
@@ -49,7 +50,7 @@ endif
 %.o: %.cpp
 	@echo
 	@echo compile $<
-	$(CC) $(OUTPUTFLAG) $@ $(CTOTAL) $(NOLINKFLAG) $<
+	$(CC) $(OUTPUTFLAG) $@ $(CTOTAL) $(CDEPS) $(NOLINKFLAG) $<
 
 all:	$(PROGRAM)
 
@@ -60,4 +61,9 @@ $(PROGRAM): 	$(OBJECTS)
 
 clean:;
 	rm -f *.o
+	rm -f *.d
 	rm -f $(PROGRAM)
+
+# The header dependencies, written by the compiler as it compiles (-MMD),
+# so that a change to a header rebuilds the objects that include it.
+-include $(OBJECTS:.o=.d)

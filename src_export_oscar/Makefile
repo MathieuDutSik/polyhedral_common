@@ -6,6 +6,7 @@ PROGRAM		= GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Isomorphism 
 OBJECTS		= $(PROGRAM:%=%.o)
 
 NOLINKFLAG 	= -c
+CDEPS           = -MMD -MP
 OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_poly -I../src_isotropy -I../src_lorentzian -I../permutalib/src -I../src_short -I../src_copos -I../src_perfect -I../src_dualdesc -I.
@@ -44,7 +45,7 @@ endif
 %.o: %.cpp
 	@echo
 	@echo compile $<
-	$(CXX) $(OUTPUTFLAG) $@ $(CTOTAL) $(NOLINKFLAG) $<
+	$(CXX) $(OUTPUTFLAG) $@ $(CTOTAL) $(CDEPS) $(NOLINKFLAG) $<
 
 all:	$(PROGRAM)
 
@@ -55,4 +56,9 @@ $(PROGRAM): 	$(OBJECTS)
 
 clean:;
 	rm -f *.o
+	rm -f *.d
 	rm -f $(PROGRAM)
+
+# The header dependencies, written by the compiler as it compiles (-MMD),
+# so that a change to a header rebuilds the objects that include it.
+-include $(OBJECTS:.o=.d)
