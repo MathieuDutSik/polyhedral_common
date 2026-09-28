@@ -300,61 +300,6 @@ LLLreduction<T, Tint> SlideReducedBasisAuto(MyMatrix<T> const &GramMat,
   return SlideReducedBasis<T, Tint>(GramMat, SlideBlockSize(n, k_max), os);
 }
 
-/*
-  Tests both families of conditions, rebuilding every block from the matrix.
- */
-template <typename T, typename Tint>
-bool IsSlideReduced(MyMatrix<T> const &GramMat, int const &k,
-                    int const &delta_num, int const &delta_den,
-                    std::ostream &os) {
-  using Tring = typename underlying_ring<T>::ring_type;
-  int n = GramMat.rows();
-  if (n <= 1) {
-    return true;
-  }
-  if (n % k != 0) {
-    os << "SLIDE: the block size does not divide the dimension\n";
-    return false;
-  }
-  int p = n / k;
-  MyMatrix<Tring> gram =
-      UniversalMatrixConversion<Tring, T>(RemoveFractionMatrix(GramMat));
-  Tring const num(delta_num);
-  Tring const den(delta_den);
-  // Primal: every disjoint block HKZ-reduced, which for a rank-k block is BKZ
-  // at block size k.
-  for (int i = 0; i < p; i++) {
-    MyMatrix<Tring> blk = BKZ_ProjectedBlockGram(gram, i * k, k);
-    MyMatrix<T> blk_T = UniversalMatrixConversion<T, Tring>(blk);
-    if (!IsBKZreduced<T, Tint>(blk_T, k, delta_num, delta_den, os)) {
-      os << "SLIDE: the primal block " << i << " is not HKZ reduced\n";
-      return false;
-    }
-  }
-  // Dual: every shifted block has its last Gram-Schmidt norm maximal.
-  for (int i = 0; i + 1 < p; i++) {
-    MyMatrix<Tring> blk = BKZ_ProjectedBlockGram(gram, i * k + 1, k);
-    std::pair<MyMatrix<Tring>, Tring> pair = AdjugateDeterminant(blk);
-    MyMatrix<Tring> rdual_raw(k, k);
-    for (int a = 0; a < k; a++) {
-      for (int b = 0; b < k; b++) {
-        rdual_raw(a, b) = pair.first(k - 1 - a, k - 1 - b);
-      }
-    }
-    MyMatrix<Tring> rdual = RemoveFractionMatrix(rdual_raw);
-    MyMatrix<T> rdual_T = UniversalMatrixConversion<T, Tring>(rdual);
-    Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(rdual_T, os);
-    Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);
-    if (den * min_r < num * rdual(0, 0)) {
-      os << "SLIDE: the dual condition fails at boundary " << (i + 1)
-         << ", the reversed dual has a vector of scaled norm " << min_r
-         << " against " << rdual(0, 0) << "\n";
-      return false;
-    }
-  }
-  return true;
-}
-
 // clang-format off
 #endif  // SRC_LATT_SLIDEREDUCTION_H_
 // clang-format on

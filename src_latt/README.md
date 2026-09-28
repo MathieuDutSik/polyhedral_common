@@ -18,7 +18,7 @@ The LLL algorithm allow to reduce a quadratic form into one with smaller
 coefficients.
 
 The relevant program is:
-  * **LATT_lll** `[arith] [method] [FileI] [OutFormat] [FileO]` reduces a
+  * **LATT_Reduction** `[arith] [method] [FileI] [OutFormat] [FileO]` reduces a
     positive definite quadratic form, returning the reduced form and the
     unimodular transformation. Every reduction in the package is available as
     a method -- `direct`, `dual`, `seysen`, `seysen_best`, `seysen_lll`,
@@ -129,13 +129,8 @@ Programs:
   * **TEST_ReductionBenchmark** `[dim] [n_iter] [seed]`, comparing the
     available reducers over the families Zn, An, Dn, E8 and a low-symmetry
     random family, at three strengths of destruction.
-  * **TEST_MinkowskiReduction** `[dim] [n_iter] [seed]`, validating the
-    Minkowski reduction of `MinkowskiReduction.h`. It redoes the enumeration
-    from the output and asks at every index whether an admissible vector is
-    shorter, and separately checks that `|b_1|^2` equals the true minimum of
-    the lattice, computed by the enumerator on its own.
 
-The reductions offered by `LATT_lll` -- LLL, Seysen, deep insertion, BKZ,
+The reductions offered by `LATT_Reduction` -- LLL, Seysen, deep insertion, BKZ,
 slide, Minkowski and the best-of search -- are validated by the CI section
 `16B_GramReductions`, which checks from GAP, sharing no code with the
 reducers, that each output satisfies the condition its method claims.
@@ -208,8 +203,8 @@ it outright. Use BKZ-8 when the extra quality is worth three times the time,
 and raise `beta` only on evidence.
 
 Entry points: **BKZreducedBasis** (`delta = 99/100`, no tour cap),
-**BKZreducedBasisDelta** (explicit `delta` and tour cap, for an early abort),
-and **IsBKZreduced**.
+and **BKZreducedBasisDelta** (explicit `delta` and tour cap, for an early
+abort).
 
 
 Slide reduction
@@ -258,7 +253,7 @@ step uses, and integral since the adjugate clears the denominators.
 
 Entry points: **SlideReducedBasis** (explicit `k`, which must divide `n`),
 **SlideReducedBasisAuto** (largest admissible `k` not exceeding a bound, via
-**SlideBlockSize**), **SlideReducedBasisDelta**, and **IsSlideReduced**.
+**SlideBlockSize**) and **SlideReducedBasisDelta**.
 
 ### Divide out the block content
 
@@ -402,7 +397,7 @@ being the expensive one. Measured on the benchmark instances: dimensions 5 to
 LLL reduced first, which is not needed for correctness but decides the cost,
 the enumeration bound at index `i` being `|b_i|^2`.
 
-It is available to `LATT_lll` and `VectFamily_Reduction` as the method
+It is available to `LATT_Reduction` and `VectFamily_Reduction` as the method
 `minkowski`, and is deliberately **not** among the candidates that `best`
 tries: a search including it would be unusable at the sizes where the others
 are routine.

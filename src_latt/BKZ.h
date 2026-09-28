@@ -396,60 +396,6 @@ LLLreduction<T, Tint> BKZreducedBasis(MyMatrix<T> const &GramMat,
   return BKZreducedBasisDelta<T, Tint>(GramMat, beta, 99, 100, 0, os);
 }
 
-/*
-  Tests that a Gram matrix is BKZ-beta reduced: LLL reduced, and with every
-  b_j^* a shortest vector of its block up to the slack delta. Recomputes
-  everything from the matrix, so it is an independent check of a descent and
-  not a restatement of it.
- */
-template <typename T, typename Tint>
-bool IsBKZreduced(MyMatrix<T> const &GramMat, int const &beta,
-                  int const &delta_num, int const &delta_den,
-                  std::ostream &os) {
-  using Tring = typename underlying_ring<T>::ring_type;
-  int n = GramMat.rows();
-  if (n <= 1) {
-    return true;
-  }
-  // LLL reducedness only: the deep condition at i = 0 is a strictly stronger
-  // demand that BKZ at small block size does not make.
-  if (!IsLLLreduced(GramMat, delta_num, delta_den, os)) {
-    os << "BKZ: the basis is not even LLL reduced\n";
-    return false;
-  }
-  MyMatrix<Tring> work =
-      UniversalMatrixConversion<Tring, T>(RemoveFractionMatrix(GramMat));
-  Tring prev(1);
-  Tring const num(delta_num);
-  Tring const den(delta_den);
-  for (int j = 0; j + 1 < n; j++) {
-    int k = j + beta - 1;
-    if (k > n - 1) {
-      k = n - 1;
-    }
-    int m = k - j + 1;
-    MyMatrix<Tring> Gblock_r(m, m);
-    for (int a = 0; a < m; a++) {
-      for (int b = 0; b < m; b++) {
-        Gblock_r(a, b) = work(j + a, j + b);
-      }
-    }
-    MyMatrix<Tring> Gblock_red = RemoveFractionMatrix(Gblock_r);
-    Tring content = Gblock_r(0, 0) / Gblock_red(0, 0);
-    MyMatrix<T> Gblock = UniversalMatrixConversion<T, Tring>(Gblock_red);
-    Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(Gblock, os);
-    Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);
-    if (den * min_r * content < num * work(j, j)) {
-      os << "BKZ: the block condition fails at j=" << j << ", the block has a "
-         << "vector of scaled norm " << min_r << " against " << work(j, j)
-         << " for b_j^*\n";
-      return false;
-    }
-    BKZ_BareissStep(work, j, prev);
-  }
-  return true;
-}
-
 // clang-format off
 #endif  // SRC_LATT_BKZ_H_
 // clang-format on

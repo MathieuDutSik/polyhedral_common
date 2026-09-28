@@ -38,7 +38,7 @@ jobs:
       - name: Test the reductions of Gram matrices
         run: |
           make -C src_latt -f Makefile_gram_reductions
-          echo "After compilation of LATT_lll"
+          echo "After compilation of LATT_Reduction"
 
           cd CI_tests/16B_GramReductions
           ../../gap.sh < TestReductions.g

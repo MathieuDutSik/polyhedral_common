@@ -227,37 +227,6 @@ LLLreduction<T, Tint> MinkowskiReducedBasis(MyMatrix<T> const &GramMat,
   return res;
 }
 
-/*
-  Tests the condition directly: at every index, no admissible vector is
-  strictly shorter than the one in place. The enumeration is redone from the
-  matrix, so this checks the result rather than the descent that produced it.
- */
-template <typename T, typename Tint>
-bool IsMinkowskiReduced(MyMatrix<T> const &GramMat, std::ostream &os) {
-  int n = GramMat.rows();
-  if (n <= 1) {
-    return true;
-  }
-  for (int i = 0; i < n; i++) {
-    T bound = GramMat(i, i);
-    std::vector<MyVector<Tint>> cands =
-        computeLevel_GramMat<T, Tint>(GramMat, bound, os);
-    for (auto &z : cands) {
-      if (!Minkowski_IsAdmissible(z, i)) {
-        continue;
-      }
-      T norm = EvaluationQuadForm<T, Tint>(GramMat, z);
-      if (norm < bound) {
-        os << "MINKOWSKI: at index " << i << " the vector in place has norm "
-           << bound << " but an admissible vector of norm " << norm
-           << " exists\n";
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 // clang-format off
 #endif  // SRC_LATT_MINKOWSKIREDUCTION_H_
 // clang-format on

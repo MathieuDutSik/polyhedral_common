@@ -2,7 +2,7 @@ Read("../common.g");
 Read("../access_points.g");
 Print("Beginning TestReductions\n");
 
-# The reductions of LATT_lll are run on scrambled presentations of lattices
+# The reductions of LATT_Reduction are run on scrambled presentations of lattices
 # whose good basis is known. For every run two things are checked here, in
 # GAP and without sharing any code with the C++ side:
 #   * the transformation is integral, unimodular and produces the returned

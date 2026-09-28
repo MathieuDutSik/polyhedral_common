@@ -146,8 +146,6 @@ Entry points, returning the same `LLLreduction` pair as the other reducers:
     so the output is LLL reduced for every `d >= 1`.
   * **DeepLLLreducedBasisDepthDelta** additionally takes `delta` as a pair of
     integers; the others use 99/100, the value this package uses for LLL.
-  * **IsDeepLLLreduced** tests a Gram matrix for the property, recomputing the
-    integral Gram-Schmidt data from scratch.
 
 Validated by the CI section `16B_GramReductions`, which checks the deep
 condition from GAP. Cost, on the benchmark of `src_latt`: at

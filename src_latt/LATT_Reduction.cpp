@@ -12,9 +12,9 @@
 
 static void PrintUsage() {
   std::cerr << R"(
-LATT_lll [arith] [method] [FileI] [OutFormat] [FileO]
+LATT_Reduction [arith] [method] [FileI] [OutFormat] [FileO]
 or
-LATT_lll [arith] [method] [FileI]
+LATT_Reduction [arith] [method] [FileI]
 
 Reduces a positive definite Gram matrix, returning the reduced form and the
 unimodular transformation that produced it.
@@ -203,9 +203,9 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileO, f);
-    std::cerr << "Normal termination of LATT_lll\n";
+    std::cerr << "Normal termination of LATT_Reduction\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_lll\n";
+    std::cerr << "Error in LATT_Reduction\n";
     exit(e.eVal);
   }
   runtime(time);
