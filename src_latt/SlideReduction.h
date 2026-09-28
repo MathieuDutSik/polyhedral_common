@@ -85,17 +85,15 @@
  */
 
 /*
-  The largest block size not exceeding k_max that divides n, at least 2. Slide
-  reduction is stated for n a multiple of the block size and this is the
-  practical way to honour that without changing the algorithm.
+  Slide reduction is defined for a block size k >= 2 dividing the dimension n.
+  A form of dimension at most one is reduced whatever the block size.
+
+  The block size is never adjusted to fit: a basis returned as slide reduced
+  at block size k is slide reduced at block size k, and a k that does not
+  divide n is an error rather than an invitation to run something else.
  */
-inline int SlideBlockSize(int const &n, int const &k_max) {
-  for (int k = (k_max < n ? k_max : n); k >= 2; k--) {
-    if (n % k == 0) {
-      return k;
-    }
-  }
-  return n;
+inline bool SlideIsApplicable(int const &n, int const &k) {
+  return n <= 1 || (k >= 2 && n % k == 0);
 }
 
 /*
@@ -180,11 +178,16 @@ LLLreduction<T, Tint> SlideReducedBasisDelta(MyMatrix<T> const &GramMat,
   if (n <= 1) {
     return {GramMat, IdentityMat<Tint>(n)};
   }
-  if (k < 2 || n % k != 0) {
+  if (!SlideIsApplicable(n, k)) {
     std::cerr << "SLIDE: the block size must be at least 2 and divide the "
                  "dimension, but k="
-              << k << " and n=" << n
-              << ". SlideBlockSize gives the largest admissible value.\n";
+              << k << " and n=" << n << ". The admissible block sizes are:";
+    for (int k_div = 2; k_div <= n; k_div++) {
+      if (n % k_div == 0) {
+        std::cerr << " " << k_div;
+      }
+    }
+    std::cerr << "\n";
     throw TerminalException{1};
   }
 #ifdef SANITY_CHECK_SLIDE
@@ -284,20 +287,6 @@ template <typename T, typename Tint>
 LLLreduction<T, Tint> SlideReducedBasis(MyMatrix<T> const &GramMat,
                                         int const &k, std::ostream &os) {
   return SlideReducedBasisDelta<T, Tint>(GramMat, k, 99, 100, os);
-}
-
-/*
-  Slide reduction at the largest admissible block size not exceeding k_max.
- */
-template <typename T, typename Tint>
-LLLreduction<T, Tint> SlideReducedBasisAuto(MyMatrix<T> const &GramMat,
-                                            int const &k_max,
-                                            std::ostream &os) {
-  int n = GramMat.rows();
-  if (n <= 1) {
-    return {GramMat, IdentityMat<Tint>(n)};
-  }
-  return SlideReducedBasis<T, Tint>(GramMat, SlideBlockSize(n, k_max), os);
 }
 
 // clang-format off

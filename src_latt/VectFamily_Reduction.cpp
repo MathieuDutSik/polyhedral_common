@@ -44,9 +44,8 @@ choice here, and in measurement the winner varies by instance.
                basis. The strongest of the classical notions; cost exponential
                in the dimension, so not among the candidates that best tries
   bkz-<b>      BKZ at block size b
-  slide-<k>    Gama-Nguyen slide reduction, block size at most k. The block
-               size has to divide the dimension, so k is an upper bound and
-               the largest divisor not exceeding it is used
+  slide-<k>    Gama-Nguyen slide reduction at block size k, which must
+               divide the dimension
   best         run a representative selection of the above and keep whichever
                actually minimises the facet coefficient estimate. The
                unreduced input is among the candidates, so the result is never
@@ -55,8 +54,9 @@ choice here, and in measurement the winner varies by instance.
                reduction, and that is nothing against the dual description
                that follows. The selection is direct, dual, seysen,
                seysen_best, seysen_lll, deep, deep-5, deep-10, bkz-4, bkz-8,
-               bkz-12, slide-4, slide-8; minkowski is excluded, its cost being
-               exponential
+               bkz-12, slide-4, slide-8, the slide ones only when their block
+               size divides the dimension; minkowski is excluded, its cost
+               being exponential
 
  ------- OutFormat --------
 

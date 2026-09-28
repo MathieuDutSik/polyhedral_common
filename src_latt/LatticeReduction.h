@@ -65,7 +65,8 @@
 
   The list below is not the set of accepted methods, which is infinite. It is
   the set of candidates that "best" tries, chosen to span the useful range
-  without costing more than it is worth. A caller wanting a value outside it,
+  without costing more than it is worth. A slide candidate whose block size
+  does not divide the dimension is skipped. A caller wanting a value outside it,
   or wanting minkowski, names the method.
  */
 inline std::vector<std::string> LatticeReductionSingleMethods() {
@@ -149,6 +150,21 @@ inline void LatticeReduction_UnknownMethod(std::string const &method) {
   throw TerminalException{1};
 }
 
+/*
+  Whether a method is defined in dimension n. Only slide reduction carries a
+  restriction, its block size having to divide n. The best-of searches use
+  this to leave out a candidate that does not apply, rather than run
+  something other than what its name says.
+ */
+inline bool LatticeReductionIsApplicable(std::string const &method,
+                                         int const &n) {
+  std::optional<int> k = LatticeReduction_PrefixedParameter(method, "slide");
+  if (k) {
+    return SlideIsApplicable(n, *k);
+  }
+  return true;
+}
+
 template <typename T, typename Tint>
 LLLreduction<T, Tint> LatticeReducedGeneral(MyMatrix<T> const &GramMat,
                                             std::string const &method,
@@ -187,14 +203,12 @@ LLLreduction<T, Tint> LatticeReducedGeneral(MyMatrix<T> const &GramMat,
     LatticeReduction_CheckParameter(method, *beta, 2);
     return BKZreducedBasis<T, Tint>(GramMat, *beta, os);
   }
-  // The value is an upper bound: slide reduction needs the block size to
-  // divide the dimension, and SlideBlockSize takes the largest divisor that
-  // does not exceed it.
-  std::optional<int> k_max =
-      LatticeReduction_PrefixedParameter(method, "slide");
-  if (k_max) {
-    LatticeReduction_CheckParameter(method, *k_max, 2);
-    return SlideReducedBasisAuto<T, Tint>(GramMat, *k_max, os);
+  // The block size is exactly k, which must divide the dimension; a k that
+  // does not is rejected with the list of those that do.
+  std::optional<int> k = LatticeReduction_PrefixedParameter(method, "slide");
+  if (k) {
+    LatticeReduction_CheckParameter(method, *k, 2);
+    return SlideReducedBasis<T, Tint>(GramMat, *k, os);
   }
   LatticeReduction_UnknownMethod(method);
   // Not reached; LatticeReduction_UnknownMethod always throws.
@@ -265,6 +279,9 @@ LatticeReducedBest(MyMatrix<T> const &GramMat, std::ostream &os) {
       GramMat, IdentityMat<Tint>(GramMat.rows()), "none",
       ComputeLatticeReductionQuality(GramMat)};
   for (auto &method : LatticeReductionSingleMethods()) {
+    if (!LatticeReductionIsApplicable(method, GramMat.rows())) {
+      continue;
+    }
     LLLreduction<T, Tint> red =
         LatticeReducedGeneral<T, Tint>(GramMat, method, os);
     LatticeReductionQuality<T> quality =

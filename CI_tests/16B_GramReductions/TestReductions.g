@@ -242,32 +242,27 @@ check_bkz:=function(G, beta)
     return true;
 end;
 
-# The block size slide reduction actually uses: the largest divisor of n not
-# exceeding k_max, as SlideBlockSize computes it.
-get_slide_block_size:=function(n, k_max)
-    local k;
-    for k in Reversed([2..Minimum(k_max, n)])
-    do
-        if n mod k = 0 then
-            return k;
-        fi;
-    od;
-    return n;
+# Slide reduction is defined for a block size k >= 2 dividing n; a form of
+# dimension at most one is reduced whatever k.
+is_slide_applicable:=function(n, k)
+    return n <= 1 or (k >= 2 and n mod k = 0);
 end;
 
 # Primal: every block [ik+1, (i+1)k] is HKZ reduced. Dual: every shifted
 # block [ik+2, (i+1)k+1] has its last Gram-Schmidt norm maximal up to delta,
 # that is the dual of the block has no vector shorter, up to delta, than the
 # last vector of the dual basis, whose norm is 1/|b_last^*|^2.
-check_slide:=function(G, k_max)
-    local gs, n, k, p, i, j, test, Gblock, Gdual, m;
+check_slide:=function(G, k)
+    local gs, n, p, i, j, test, Gblock, Gdual, m;
     test:=check_size_reduced(G);
     if test<>true then
         return test;
     fi;
     gs:=get_gram_schmidt(G);
     n:=Length(G);
-    k:=get_slide_block_size(n, k_max);
+    if n <= 1 then
+        return true;
+    fi;
     p:=n / k;
     for i in [0..p-1]
     do
@@ -374,10 +369,31 @@ end;
 
 ListMethod:=["direct", "dual", "seysen", "seysen_best", "seysen_lll",
              "deep", "deep-3", "bkz-2", "bkz-4", "bkz-8",
-             "slide-2", "slide-4", "minkowski", "best"];
+             "slide-2", "slide-3", "slide-4", "minkowski", "best"];
+
+# The block size of a slide method, or fail for another method.
+get_slide_parameter:=function(method)
+    local rest;
+    rest:=starts_with(method, "slide-");
+    if rest=fail then
+        return fail;
+    fi;
+    return Int(rest);
+end;
 
 test_reduction:=function(eMat, method)
-    local res, Pmat, test, input_defect, direct;
+    local res, Pmat, test, input_defect, direct, k;
+    # A slide method whose block size does not divide the dimension is not
+    # defined, and must be rejected rather than replaced by something else.
+    k:=get_slide_parameter(method);
+    if k<>fail and is_slide_applicable(Length(eMat), k)=false then
+        res:=get_lattice_reduction(eMat, method);
+        if is_error(res)=false then
+            Print("  method=", method, " should have been rejected in dimension ", Length(eMat), "\n");
+            return false;
+        fi;
+        return true;
+    fi;
     res:=get_lattice_reduction(eMat, method);
     if is_error(res) then
         return false;
@@ -426,6 +442,11 @@ test_reduction:=function(eMat, method)
             Print("  method=best returned the unknown method ", res.method, "\n");
             return false;
         fi;
+        k:=get_slide_parameter(res.method);
+        if k<>fail and is_slide_applicable(Length(eMat), k)=false then
+            Print("  method=best returned ", res.method, " which does not apply in dimension ", Length(eMat), "\n");
+            return false;
+        fi;
     fi;
     return true;
 end;
@@ -454,7 +475,9 @@ rs:=RandomSource(IsMersenneTwister, 16);
 ListCase:=[];
 Add(ListCase, rec(name:="dim1", G:=[[5]]));
 Add(ListCase, rec(name:="Z5", G:=get_gram_Zn(5)));
-for eName in ["A4", "A7", "D4", "D6", "E6", "E7", "E8"]
+# A11 has no block size below 11 dividing its dimension, so every slide
+# method of the list must be rejected on it.
+for eName in ["A4", "A7", "D4", "D6", "E6", "E7", "E8", "A11"]
 do
     Add(ListCase, rec(name:=eName, G:=ClassicalSporadicLattices(eName)));
 od;

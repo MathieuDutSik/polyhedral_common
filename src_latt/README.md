@@ -251,9 +251,11 @@ block's last, and a transformation `U` of the reversed dual corresponds to
 vector of `J adj(G) J` and putting it first -- the same enumeration the primal
 step uses, and integral since the adjugate clears the denominators.
 
-Entry points: **SlideReducedBasis** (explicit `k`, which must divide `n`),
-**SlideReducedBasisAuto** (largest admissible `k` not exceeding a bound, via
-**SlideBlockSize**) and **SlideReducedBasisDelta**.
+Entry points: **SlideReducedBasis** (block size `k`, which must divide `n`),
+**SlideReducedBasisDelta** (explicit `delta`) and **SlideIsApplicable**. The
+block size is never adjusted to fit the dimension: `slide-<k>` with a `k` not
+dividing `n` is rejected, with the list of those that do, and `best` skips
+the slide candidates that do not apply.
 
 ### Divide out the block content
 
@@ -337,7 +339,8 @@ for any admissible value, and `best`. The parameter is parsed from the name,
 so the set of accepted methods is not a fixed handful; `best` tries the
 thirteen-way selection `direct`, `dual`, `seysen`, `seysen_best`,
 `seysen_lll`, `deep`, `deep-5`, `deep-10`, `bkz-4`, `bkz-8`, `bkz-12`,
-`slide-4`, `slide-8`, which costs 57 ms on ContactE8 (240 x 9), 102 ms on
+`slide-4`, `slide-8` (the slide ones when their block size divides the
+dimension), which costs 57 ms on ContactE8 (240 x 9), 102 ms on
 CUT_7 (64 x 22) and 492 ms on CUT_K8 (128 x 29) -- nothing against the dual
 description that follows.
 

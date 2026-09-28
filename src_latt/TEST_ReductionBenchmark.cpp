@@ -72,10 +72,10 @@ void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
                       return BKZreducedBasis<T, Tint>(G, 12, os_i);
                     }});
   l_algo.push_back({"Slide4", [](MyMatrix<T> const &G, std::ostream &os_i) {
-                      return SlideReducedBasisAuto<T, Tint>(G, 4, os_i);
+                      return SlideReducedBasis<T, Tint>(G, 4, os_i);
                     }});
   l_algo.push_back({"Slide8", [](MyMatrix<T> const &G, std::ostream &os_i) {
-                      return SlideReducedBasisAuto<T, Tint>(G, 8, os_i);
+                      return SlideReducedBasis<T, Tint>(G, 8, os_i);
                     }});
   l_algo.push_back({"Seysen", [](MyMatrix<T> const &G, std::ostream &os_i) {
                       return SeysenReducedBasis<T, Tint>(G, os_i);
@@ -88,7 +88,11 @@ void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
                     }});
   //
   int n_case = 0;
-  std::map<std::string, int> n_recovered, n_good_quality;
+  // Slide reduction is defined only for a block size dividing the dimension,
+  // so those two are run on fewer cases than the others and each algorithm
+  // keeps its own count.
+  std::map<std::string, int> slide_block{{"Slide4", 4}, {"Slide8", 8}};
+  std::map<std::string, int> n_run, n_recovered, n_good_quality;
   std::map<std::string, double> total_ms;
   for (auto &name : l_name) {
     int n_use = (name == "E8") ? 8 : dim;
@@ -104,6 +108,12 @@ void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
            << " iter=" << i_iter << "\n";
         PrintReductionQuality(os, "hidden", q_good);
         for (auto &algo : l_algo) {
+          auto iter = slide_block.find(algo.first);
+          if (iter != slide_block.end() &&
+              !SlideIsApplicable(inst.n, iter->second)) {
+            continue;
+          }
+          n_run[algo.first]++;
           ReductionOutcome<T> out = RunOneReduction<T, Tint>(
               inst, algo.first, algo.second, os);
           std::string label = algo.first;
@@ -126,8 +136,10 @@ void process(int dim, int n_iter, unsigned long seed, std::ostream &os) {
   os << "\nREDUCTION_BENCH: summary over " << n_case << " cases\n";
   for (auto &algo : l_algo) {
     os << "  " << algo.first << ": recovered=" << n_recovered[algo.first]
-       << "/" << n_case << " quality_ok=" << n_good_quality[algo.first] << "/"
-       << n_case << " total_time=" << total_ms[algo.first] << " ms\n";
+       << "/" << n_run[algo.first]
+       << " quality_ok=" << n_good_quality[algo.first] << "/"
+       << n_run[algo.first] << " total_time=" << total_ms[algo.first]
+       << " ms\n";
   }
   //
   // The one assertion of the harness. Everything above is measurement, to be

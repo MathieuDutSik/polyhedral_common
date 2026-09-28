@@ -147,6 +147,9 @@ ReduceVectorFamilyBest(MyMatrix<T> const &M, std::ostream &os) {
   VectFamilyReductionResult<T> best{M, Pmat_id, "none",
                                     ComputeVectFamilyQuality(M)};
   for (auto &method : VectFamilyReductionSingleMethods()) {
+    if (!LatticeReductionIsApplicable(method, M.cols())) {
+      continue;
+    }
     std::pair<MyMatrix<T>, MyMatrix<T>> pair =
         ReduceVectorFamilySingle(M, method, os);
     VectFamilyQuality<T> quality = ComputeVectFamilyQuality(pair.first);
