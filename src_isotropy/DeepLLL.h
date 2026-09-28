@@ -6,7 +6,6 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "QuoIntFcts.h"
-#include <string>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -441,24 +440,6 @@ template <typename T, typename Tint>
 LLLreduction<T, Tint> DeepLLLreducedBasis(MyMatrix<T> const &GramMat,
                                           std::ostream &os) {
   return DeepLLLreducedBasisDepth<T, Tint>(GramMat, 0, os);
-}
-
-template <typename T, typename Tint>
-LLLreduction<T, Tint> DeepLLLreducedGeneral(MyMatrix<T> const &GramMat,
-                                            std::string const &method,
-                                            std::ostream &os) {
-  if (method == "full") {
-    return DeepLLLreducedBasisDepth<T, Tint>(GramMat, 0, os);
-  }
-  if (method == "depth5") {
-    return DeepLLLreducedBasisDepth<T, Tint>(GramMat, 5, os);
-  }
-  if (method == "depth10") {
-    return DeepLLLreducedBasisDepth<T, Tint>(GramMat, 10, os);
-  }
-  std::cerr << "DEEPLLL: No matching method for " << method
-            << ", allowed are full, depth5, depth10\n";
-  throw TerminalException{1};
 }
 
 /*

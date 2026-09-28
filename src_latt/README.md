@@ -134,25 +134,11 @@ Programs:
     from the output and asks at every index whether an admissible vector is
     shorter, and separately checks that `|b_1|^2` equals the true minimum of
     the lattice, computed by the enumerator on its own.
-  * **TEST_SlideReduction** `[dim] [n_iter] [seed]`, validating the slide
-    reduction of `SlideReduction.h`. It rebuilds every block from the output
-    and re-tests both families of conditions, the dual half -- which goes
-    through the reversed dual and back -- being the part worth testing hardest.
-  * **TEST_BKZ** `[dim] [n_iter] [seed]`, validating the BKZ reduction of
-    `BKZ.h`. Its decisive check is that every `b_j^*` really is a shortest
-    vector of its block, the projected blocks being rebuilt from the output and
-    re-enumerated by a routine sharing no state with the descent. It also
-    checks that a BKZ-beta reduced basis passes the test at every smaller block
-    size, which the definition implies and an implementation can break.
-  * **TEST_DeepLLL** `[dim] [n_iter] [seed]`, validating the Schnorr-Euchner
-    deep insertion of `src_isotropy/DeepLLL.h`. Its decisive check is that the
-    output really satisfies the deep condition, the Gram-Schmidt data being
-    recomputed from scratch by a routine sharing no state with the descent.
-  * **TEST_SeysenReduction** `[dim] [n_iter] [seed]`, validating the Seysen
-    reduction of `src_isotropy/SeysenReduction.h` on the same instances. Its
-    decisive check is that the output is a local minimum of Seysen's measure,
-    established by trying every transvection with a small coefficient rather
-    than by trusting the closed form for the optimal one.
+
+The reductions offered by `LATT_lll` -- LLL, Seysen, deep insertion, BKZ,
+slide, Minkowski and the best-of search -- are validated by the CI section
+`16B_GramReductions`, which checks from GAP, sharing no code with the
+reducers, that each output satisfies the condition its method claims.
 
 The two questions the harness keeps apart are *recovery*, whether the original
 presentation is found back up to signed permutation, and *reduction*, whether

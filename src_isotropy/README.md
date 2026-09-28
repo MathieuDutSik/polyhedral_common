@@ -74,9 +74,9 @@ and therefore interchangeable with them:
   * **SeysenMeasure** and **SeysenIntegralPotential** expose the measure
     itself.
 
-Validated by **TEST_SeysenReduction** in `src_latt`, which checks among other
-things that the output really is a local minimum, by trying every transvection
-with a small coefficient. That is a test of the closed form for `lambda`
+Validated by the CI section `16B_GramReductions`, which checks from GAP that
+the output really is a local minimum, by trying every transvection with
+coefficient plus or minus one. That is a test of the closed form for `lambda`
 rather than a restatement of it.
 
 Reference:
@@ -149,7 +149,8 @@ Entry points, returning the same `LLLreduction` pair as the other reducers:
   * **IsDeepLLLreduced** tests a Gram matrix for the property, recomputing the
     integral Gram-Schmidt data from scratch.
 
-Validated by **TEST_DeepLLL** in `src_latt`. Cost, on the benchmark there: at
+Validated by the CI section `16B_GramReductions`, which checks the deep
+condition from GAP. Cost, on the benchmark of `src_latt`: at
 dimension 8 deep insertion changes almost nothing, the root lattices being
 already recovered by LLL; at dimension 20 it halves the LLL potential and cuts
 the number of cases failing to reach the hidden presentation from 3 in 30 to

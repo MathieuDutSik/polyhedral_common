@@ -7,7 +7,6 @@
 #include "MAT_MatrixInt.h"
 #include "MAT_MatrixInverse.h"
 #include "QuoIntFcts.h"
-#include <string>
 #include <utility>
 // clang-format on
 
@@ -380,24 +379,6 @@ LLLreduction<T, Tint> SeysenLLLreducedBasis(MyMatrix<T> const &GramMat,
   CheckLLLreduction(res, GramMat);
 #endif
   return res;
-}
-
-template <typename T, typename Tint>
-LLLreduction<T, Tint> SeysenReducedGeneral(MyMatrix<T> const &GramMat,
-                                           std::string const &method,
-                                           std::ostream &os) {
-  if (method == "first") {
-    return SeysenReducedBasis<T, Tint>(GramMat, os);
-  }
-  if (method == "best") {
-    return SeysenReducedBasisBest<T, Tint>(GramMat, os);
-  }
-  if (method == "seysen_lll") {
-    return SeysenLLLreducedBasis<T, Tint>(GramMat, os);
-  }
-  std::cerr << "SEYSEN: No matching method for " << method
-            << ", allowed are first, best, seysen_lll\n";
-  throw TerminalException{1};
 }
 
 // clang-format off
