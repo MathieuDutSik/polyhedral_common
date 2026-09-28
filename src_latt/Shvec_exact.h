@@ -7,6 +7,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_LinearProgramming.h"
+#include <cmath>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -159,10 +160,87 @@ struct shvec_has_fast_path<
   range of a coordinate n is |den * n + B| <= sqrt(K) with den > 0 and
   K >= 0: no quotient is formed, only products and comparisons.
 
-  Bound_Floor returns the largest n with den * n + B <= sqrt(K). The double
-  computation only seeds the search, the exact predicate then walks to the
-  right answer.
+  Bound_Floor returns the largest n with den * n + B <= sqrt(K), Bound_Ceil
+  the smallest n with den * n + B >= -sqrt(K). A double computation seeds
+  the search and the exact predicate then walks to the right answer, which
+  from a correct seed takes two evaluations.
+
+  The seed is formed from the mantissas and exponents of K, B and den, not
+  from their conversions to double. The fraction-free quantities grow like
+  the entries of the Gram matrix to the power 2 dim: a block of dimension 4
+  with entries of 39 digits gives K near 10^310, beyond the range of a
+  double, although the seed itself, a coordinate range, is small. Converted
+  directly, K became infinite, the seed LONG_MAX, and the walk from there to
+  the answer one step at a time never ended.
+
+  The multiprecision types provide that through T_frexp of basic_common_cpp.
+  Whenever the seed is not finite or too large to be exact, the answer is
+  found instead by a doubling search from zero followed by bisection, a
+  logarithmic number of exact evaluations.
  */
+
+// The double value of (sign * sqrt(K) - B) / den. For a native arithmetic
+// type the magnitudes are bounded far below the range of a double and the
+// direct form is exact enough and cheapest. For any other type it is formed
+// from mantissas and exponents (T_frexp), so that it stays finite whenever
+// the result is, however large K, B and den are.
+template <typename T>
+double Shvec_BoundSeed(T const &K, T const &B, T const &den,
+                       double const &sign) {
+  if constexpr (std::is_arithmetic_v<T>) {
+    double K_doubl = static_cast<double>(K);
+    double B_doubl = static_cast<double>(B);
+    double den_doubl = static_cast<double>(den);
+    return (sign * std::sqrt(K_doubl) - B_doubl) / den_doubl;
+  } else {
+    long e_K, e_B, e_den;
+    double m_K = T_frexp(K, e_K);
+    double m_B = T_frexp(B, e_B);
+    double m_den = T_frexp(den, e_den);
+    // sqrt(m_K 2^e_K) = sqrt(m_K 2^(e_K - 2 h)) 2^h with h = floor(e_K / 2).
+    long h_K = (e_K >= 0) ? e_K / 2 : -((1 - e_K) / 2);
+    double s_K = std::sqrt(std::ldexp(m_K, static_cast<int>(e_K - 2 * h_K)));
+    double num = sign * std::ldexp(s_K, static_cast<int>(h_K - e_den)) -
+                 std::ldexp(m_B, static_cast<int>(e_B - e_den));
+    return num / m_den;
+  }
+}
+
+// A seed is used only when the double represents it exactly as an integer.
+inline bool Shvec_SeedIsUsable(double const &alpha) {
+  return std::isfinite(alpha) && std::abs(alpha) < 4503599627370496.0;
+}
+
+// The largest n with f(n) true, for f true up to some integer and false
+// beyond it: a doubling search from zero, then bisection.
+template <typename Tint, typename F> Tint Shvec_LastTrue(F f) {
+  Tint lo(0), hi(0), step(1);
+  if (f(lo)) {
+    hi = step;
+    while (f(hi)) {
+      lo = hi;
+      step *= 2;
+      hi = step;
+    }
+  } else {
+    lo = -step;
+    while (!f(lo)) {
+      hi = lo;
+      step *= 2;
+      lo = -step;
+    }
+  }
+  while (hi - lo > 1) {
+    Tint mid = lo + (hi - lo) / 2;
+    if (f(mid)) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+}
+
 template <typename T, typename Tint>
 Tint Bound_Floor(T const &K, T const &B, T const &den) {
 #ifdef SANITY_CHECK_SHVEC
@@ -172,11 +250,6 @@ Tint Bound_Floor(T const &K, T const &B, T const &den) {
     throw TerminalException{1};
   }
 #endif
-  double K_doubl = UniversalScalarConversion<double, T>(K);
-  double B_doubl = UniversalScalarConversion<double, T>(B);
-  double den_doubl = UniversalScalarConversion<double, T>(den);
-  double alpha = (sqrt(K_doubl) - B_doubl) / den_doubl;
-  Tint eReturn = static_cast<Tint>(lround(floor(alpha)));
   auto f = [&](Tint const &n) -> bool {
     T val = den * UniversalScalarConversion<T, Tint>(n) + B;
     if (val <= 0) {
@@ -184,6 +257,11 @@ Tint Bound_Floor(T const &K, T const &B, T const &den) {
     }
     return val * val <= K;
   };
+  double alpha = Shvec_BoundSeed(K, B, den, 1.0);
+  if (!Shvec_SeedIsUsable(alpha)) {
+    return Shvec_LastTrue<Tint>(f);
+  }
+  Tint eReturn = static_cast<Tint>(lround(floor(alpha)));
   bool test1 = f(eReturn);
   bool test2 = f(eReturn + 1);
   while (true) {
@@ -203,7 +281,6 @@ Tint Bound_Floor(T const &K, T const &B, T const &den) {
   return eReturn;
 }
 
-// Smallest n with den * n + B >= -sqrt(K). Same contract as Bound_Floor.
 template <typename T, typename Tint>
 Tint Bound_Ceil(T const &K, T const &B, T const &den) {
 #ifdef SANITY_CHECK_SHVEC
@@ -213,11 +290,6 @@ Tint Bound_Ceil(T const &K, T const &B, T const &den) {
     throw TerminalException{1};
   }
 #endif
-  double K_doubl = UniversalScalarConversion<double, T>(K);
-  double B_doubl = UniversalScalarConversion<double, T>(B);
-  double den_doubl = UniversalScalarConversion<double, T>(den);
-  double alpha = (-sqrt(K_doubl) - B_doubl) / den_doubl;
-  Tint eReturn = static_cast<Tint>(lround(ceil(alpha)));
   auto f = [&](Tint const &n) -> bool {
     T val = den * UniversalScalarConversion<T, Tint>(n) + B;
     if (val >= 0) {
@@ -225,6 +297,13 @@ Tint Bound_Ceil(T const &K, T const &B, T const &den) {
     }
     return val * val <= K;
   };
+  double alpha = Shvec_BoundSeed(K, B, den, -1.0);
+  if (!Shvec_SeedIsUsable(alpha)) {
+    // f is false up to the answer and true from it on.
+    auto f_not = [&](Tint const &n) -> bool { return !f(n); };
+    return Shvec_LastTrue<Tint>(f_not) + 1;
+  }
+  Tint eReturn = static_cast<Tint>(lround(ceil(alpha)));
   bool test1 = f(eReturn - 1);
   bool test2 = f(eReturn);
   while (true) {

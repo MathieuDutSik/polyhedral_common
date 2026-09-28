@@ -45,6 +45,22 @@ get_gram_random:=function(rs, n)
     od;
 end;
 
+# G = R R^T with R integral with entries in [-spread, spread]: far from any
+# good basis, so that the projected blocks of BKZ and slide reduction carry
+# integers of dozens of digits. On such a form of dimension 16 the
+# enumeration used to overflow a double in the seeding of its bounds and
+# then never returned.
+get_gram_random_wide:=function(rs, n, spread)
+    local R;
+    while true
+    do
+        R:=List([1..n], i->List([1..n], j->Random(rs, [-spread..spread])));
+        if DeterminantMat(R)<>0 then
+            return R * TransposedMat(R);
+        fi;
+    od;
+end;
+
 # A random element of GL_n(Z), as a product of transvections, swaps and sign
 # changes. n_ops says how far the good presentation is pushed away.
 get_random_unimodular:=function(rs, n, n_ops)
@@ -483,6 +499,7 @@ do
 od;
 Add(ListCase, rec(name:="random6", G:=get_gram_random(rs, 6)));
 Add(ListCase, rec(name:="random9", G:=get_gram_random(rs, 9)));
+Add(ListCase, rec(name:="wide16", G:=get_gram_random_wide(rs, 16, 10)));
 
 ListInstance:=[];
 for eCase in ListCase
