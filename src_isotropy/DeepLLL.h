@@ -162,6 +162,50 @@ void DeepLLL_IntegralGSO(MyMatrix<Tring> const &gram,
 }
 
 /*
+  One size-reduction step, b_k <- b_k - q b_j, with q the nearest integer to
+  mu_{j,k} = lambda(k,j) / d(j+1). Updates the Gram matrix, the accumulated
+  transformation and row k of lambda; d is untouched, size reduction not
+  changing the flag.
+
+  The row operation is applied to the whole matrix first and the column
+  operation second, reading the already updated entries: that is exactly
+  U gram U^T for U = I - q E_kj, the diagonal entry picking up the
+  -2q gram(k,j) + q^2 gram(j,j) it should.
+
+  Ties are resolved DOWNWARDS so as to agree with NearestInteger of the
+  package, which the classic reduction uses:
+  q = ceil(mu - 1/2) = -floor((d - 2 lambda) / (2 d)). Rounding ties the other
+  way is just as correct -- both leave |mu| <= 1/2 -- but would give a
+  different, equally reduced, basis, and the two reductions should not
+  disagree on so small a thing.
+ */
+template <typename Tring, typename Tint>
+void DeepLLL_SizeReduceStep(MyMatrix<Tring> &gram, MyMatrix<Tint> &H,
+                            MyMatrix<Tring> &lambda,
+                            std::vector<Tring> const &d, int const &k,
+                            int const &j) {
+  Tring const two(2);
+  Tring abs_lam = T_abs(lambda(k, j));
+  if (two * abs_lam <= d[j + 1]) {
+    return;
+  }
+  Tring quo_num = d[j + 1] - two * lambda(k, j);
+  Tring quo_den = two * d[j + 1];
+  Tring q = -QuoInt(quo_num, quo_den);
+  if (q == 0) {
+    return;
+  }
+  RowSubMul(gram, k, q, j);
+  ColSubMul(gram, k, q, j);
+  Tint q_int = UniversalScalarConversion<Tint, Tring>(q);
+  RowSubMul(H, k, q_int, j);
+  for (int l = 0; l < j; l++) {
+    lambda(k, l) -= q * lambda(j, l);
+  }
+  lambda(k, j) -= q * d[j + 1];
+}
+
+/*
   Size-reduce a Gram matrix in place, so that |mu_{j,k}| <= 1/2 for j < k, and
   carry the transformation. Size reduction changes no Gram-Schmidt norm at all,
   since it only adds to b_k multiples of earlier vectors; every condition
@@ -180,31 +224,13 @@ void IntegralSizeReduce(MyMatrix<Tring> &gram, MyMatrix<Tint> &H) {
   }
   MyMatrix<Tring> lambda = ZeroMatrix<Tring>(n, n);
   std::vector<Tring> d(n + 1, Tring(0));
-  Tring const two(2);
   DeepLLL_IntegralGSO_Row(gram, lambda, d, 0);
   for (int k = 1; k < n; k++) {
     // Row k is recomputed here because the reduction of the earlier rows
     // changed the columns it reads.
     DeepLLL_IntegralGSO_Row(gram, lambda, d, k);
     for (int j = k - 1; j >= 0; j--) {
-      Tring abs_lam = T_abs(lambda(k, j));
-      if (two * abs_lam <= d[j + 1]) {
-        continue;
-      }
-      Tring quo_num = d[j + 1] - two * lambda(k, j);
-      Tring quo_den = two * d[j + 1];
-      Tring q = -QuoInt(quo_num, quo_den);
-      if (q == 0) {
-        continue;
-      }
-      RowSubMul(gram, k, q, j);
-      ColSubMul(gram, k, q, j);
-      Tint q_int = UniversalScalarConversion<Tint, Tring>(q);
-      RowSubMul(H, k, q_int, j);
-      for (int l = 0; l < j; l++) {
-        lambda(k, l) -= q * lambda(j, l);
-      }
-      lambda(k, j) -= q * d[j + 1];
+      DeepLLL_SizeReduceStep(gram, H, lambda, d, k, j);
     }
   }
 }
@@ -287,42 +313,8 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepthDelta(MyMatrix<T> const &GramMat,
       n_valid = r + 1;
     }
   };
-  Tring const two(2);
   Tring const num(delta_num);
   Tring const den(delta_den);
-  //
-  // b_k <- b_k - q b_j on the Gram matrix. The row operation is applied to the
-  // whole matrix first and the column operation second, reading the already
-  // updated entries: that is exactly U gram U^T for U = I - q E_kj, the
-  // diagonal entry picking up the -2q gram(k,j) + q^2 gram(j,j) it should.
-  // The minors d are untouched, size reduction not changing the flag.
-  //
-  auto f_reduce = [&](int const &k, int const &j) -> void {
-    Tring abs_lam = T_abs(lambda(k, j));
-    if (two * abs_lam <= d[j + 1]) {
-      return;
-    }
-    // The nearest integer to mu = lambda/d, with ties resolved DOWNWARDS so
-    // as to agree with NearestInteger of the package, which the classic
-    // reduction uses: q = ceil(mu - 1/2) = -floor((d - 2 lambda) / (2 d)).
-    // Rounding ties the other way is just as correct -- both leave
-    // |mu| <= 1/2 -- but would give a different, equally reduced, basis, and
-    // the two reductions should not disagree on so small a thing.
-    Tring quo_num = d[j + 1] - two * lambda(k, j);
-    Tring quo_den = two * d[j + 1];
-    Tring q = -QuoInt(quo_num, quo_den);
-    if (q == 0) {
-      return;
-    }
-    RowSubMul(gram, k, q, j);
-    ColSubMul(gram, k, q, j);
-    Tint q_int = UniversalScalarConversion<Tint, Tring>(q);
-    RowSubMul(H, k, q_int, j);
-    for (int l = 0; l < j; l++) {
-      lambda(k, l) -= q * lambda(j, l);
-    }
-    lambda(k, j) -= q * d[j + 1];
-  };
   //
   // Moving index k to position i, the entries in between shifting up. Done as
   // an explicit permutation of the Gram matrix and of the transformation: an
@@ -361,9 +353,9 @@ LLLreduction<T, Tint> DeepLLLreducedBasisDepthDelta(MyMatrix<T> const &GramMat,
   while (k < n) {
     f_ensure(k);
     for (int j = k - 1; j >= 0; j--) {
-      f_reduce(k, j);
+      DeepLLL_SizeReduceStep(gram, H, lambda, d, k, j);
     }
-    // Size reduction of row k leaves that row's data correct, f_reduce
+    // Size reduction of row k leaves that row's data correct, the step
     // updating lambda(k,.) by the same transvection and d being untouched, the
     // flag being unchanged. Rows above k read gram(.,k), which did change.
     if (n_valid > k + 1) {

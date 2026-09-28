@@ -1,4 +1,4 @@
-name: CI(16) of dual description using symmetries
+name: CI(16B) of the reductions of Gram matrices
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -10,7 +10,7 @@ name: CI(16) of dual description using symmetries
 on:
   # One time per month
   schedule:
-    - cron: "0 0 16 * *"
+    - cron: "0 0 16 2,4,6,8,10,12 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -43,16 +43,16 @@ jobs:
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
 
-      - name: Test dual description using symmetries
+      - name: Test the reductions of Gram matrices
         run: |
-          make -C src_dualdesc -f Makefile_serial_dualdesc
-          echo "After compilation of dual desc code"
+          make -C src_latt LATT_lll
+          echo "After compilation of LATT_lll"
 
-          cd CI_tests/16_EquivDualDesc
-          ../../gap.sh < TestCases.g
+          cd CI_tests/16B_GramReductions
+          ../../gap.sh < TestReductions.g
           if [ ! -f "CI_CONCLUSION" ]; then
-            echo "gap test code has not finished correctly" >&2
+            echo "The gap test code has not created the expected file" >&2
             exit 1
           fi
           cd ../..
-          echo "We are in test directory"
+          echo "After test of the Gram matrix reductions"

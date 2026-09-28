@@ -454,6 +454,48 @@ get_latt_automorphism_group:=function(arg)
     return U;
 end;
 
+# Reduction of a positive definite Gram matrix by LATT_lll. Returns the
+# record rec(GramMat, Pmat, method) with Pmat * eMat * TransposedMat(Pmat)
+# = GramMat. A rejected method name or a crash leaves the output file empty,
+# since LATT_lll opens it before running, so emptiness is the failure test.
+get_lattice_reduction:=function(arg)
+    local eMat, method, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
+    eMat:=arg[1];
+    method:=arg[2];
+    arith:="gmp";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Red.in");
+    FileO:=Filename(TmpDir, "Red.out");
+    FileE:=Filename(TmpDir, "Red.err");
+    WriteMatrixFile(FileI, eMat);
+    #
+    eProg:=GetBinaryFilename("LATT_lll");
+    TheCommand:=Concatenation(eProg, " ", arith, " ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  eMat=", Length(eMat), "x", Length(eMat[1]), " arith=", arith, " method=", method, " command=LATT_lll runtime=", runtime_str, "\n");
+    fi;
+    if IsExistingFile(FileO)=false or Length(StringFile(FileO))=0 then
+        return "program failure: LATT_lll has failed";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
 get_fullrank_invariant_family:=function(arg)
     local eG, method, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, U, runtime_str;
     eG:=arg[1];
