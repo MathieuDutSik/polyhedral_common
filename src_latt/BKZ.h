@@ -7,6 +7,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "Shvec_exact.h"
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -245,9 +246,26 @@ MyMatrix<Tint> BKZ_InsertionMatrix(MyVector<Tint> const &z, int const &n,
 /*
   BKZ-beta with the slack delta = delta_num / delta_den.
 
-  max_tour caps the number of tours; 0 means no cap. An early abort costs
-  little quality in practice, most of the gain arriving in the first few tours,
-  and it is the standard guard against the absence of a polynomial bound.
+  A tour runs over the blocks until the first insertion; the next tour starts
+  again from the first block that can have changed. max_tour caps the number
+  of tours, so of insertions, not of full sweeps; 0 means no cap. An early
+  abort costs little quality in practice, most of the gain arriving in the
+  first few insertions, and it is the standard guard against the absence of a
+  polynomial bound.
+
+  WHICH BLOCKS A TOUR SKIPS. The block at j reads only b_0, ..., b_k with
+  k = j + beta - 1: its projected Gram matrix is read off the Bareiss
+  elimination of those vectors. If none of them changed since the block
+  passed, its data is the same up to the global scale of the form, which the
+  content removal takes out, so the enumeration returns the same vector and
+  the block passes again. After an insertion at j and the LLL pass that
+  follows, with c the first vector either of them changed, the blocks before
+  c - beta + 1 are in that position: they passed earlier and nothing they
+  read has moved. The next tour carries out their elimination steps, which
+  the later blocks need, and skips their enumeration. The first block it
+  enumerates is the one a tour from the start would first find different, so
+  the result is the same, basis for basis, as restarting from the first
+  block; only the enumerations that could not change anything are saved.
  */
 template <typename T, typename Tint>
 LLLreduction<T, Tint> BKZreducedBasisDelta(MyMatrix<T> const &GramMat,
@@ -300,50 +318,84 @@ LLLreduction<T, Tint> BKZreducedBasisDelta(MyMatrix<T> const &GramMat,
   Tring const num(delta_num);
   Tring const den(delta_den);
   [[maybe_unused]] size_t n_insert = 0;
+  [[maybe_unused]] size_t n_skipped = 0;
   int n_tour = 0;
+  // The first block whose enumeration a tour has to carry out, see the head
+  // of this function.
+  int j_start = 0;
+  //
+  // The block at j of the current elimination: its last index k and, when
+  // b_j^* is not shortest up to delta, the coefficient vector of a shorter
+  // vector of the block.
+  //
+  struct BlockTest {
+    int k;
+    std::optional<MyVector<Tint>> z;
+  };
+  auto f_test_block = [&](MyMatrix<Tring> const &work,
+                          int const &j) -> BlockTest {
+    int k = j + beta - 1;
+    if (k > n - 1) {
+      k = n - 1;
+    }
+    int m = k - j + 1;
+    // The projected block Gram matrix, read off the trailing block, with its
+    // content divided out. Stripping the content matters: the block carries
+    // the factor d_j, the enumerator reduces internally through the dual and
+    // so takes an adjugate, and the factor is raised to the power m - 1 on
+    // the way. Left in, it turns twenty-digit entries into entries of
+    // hundreds of digits and the enumeration crawls. The factor removed is
+    // recovered as content and carried in the comparison below.
+    MyMatrix<Tring> Gblock_r(m, m);
+    for (int a = 0; a < m; a++) {
+      for (int b = 0; b < m; b++) {
+        Gblock_r(a, b) = work(j + a, j + b);
+      }
+    }
+    MyMatrix<Tring> Gblock_red = RemoveFractionMatrix(Gblock_r);
+    Tring content = Gblock_r(0, 0) / Gblock_red(0, 0);
+#ifdef SANITY_CHECK_BKZ
+    if (content * Gblock_red(0, 0) != Gblock_r(0, 0) || content <= 0) {
+      std::cerr << "BKZ: the block content " << content
+                << " does not divide the block evenly\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyMatrix<T> Gblock = UniversalMatrixConversion<T, Tring>(Gblock_red);
+    Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(Gblock, os);
+    Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);
+    // work(j,j) = d_j |b_j^*|^2 and the enumerated norm is content times
+    // d_j |v|^2, so multiplying the latter back by the content puts the two
+    // on the same scale.
+    if (den * min_r * content < num * work(j, j)) {
+      return {k, GetMatrixRow(shv.SHV, 0)};
+    }
+    return {k, {}};
+  };
   while (true) {
     bool did_insert = false;
     MyMatrix<Tring> work = gram;
     Tring prev(1);
-    for (int j = 0; j + 1 < n; j++) {
-      int k = j + beta - 1;
-      if (k > n - 1) {
-        k = n - 1;
-      }
-      int m = k - j + 1;
-      // The projected block Gram matrix, read off the trailing block, with its
-      // content divided out. Stripping the content matters: the block carries
-      // the factor d_j, the enumerator reduces internally through the dual and
-      // so takes an adjugate, and the factor is raised to the power m - 1 on
-      // the way. Left in, it turns twenty-digit entries into entries of
-      // hundreds of digits and the enumeration crawls. The factor removed is
-      // recovered as content and carried in the comparison below.
-      MyMatrix<Tring> Gblock_r(m, m);
-      for (int a = 0; a < m; a++) {
-        for (int b = 0; b < m; b++) {
-          Gblock_r(a, b) = work(j + a, j + b);
-        }
-      }
-      MyMatrix<Tring> Gblock_red = RemoveFractionMatrix(Gblock_r);
-      Tring content = Gblock_r(0, 0) / Gblock_red(0, 0);
+    for (int j = 0; j < j_start; j++) {
 #ifdef SANITY_CHECK_BKZ
-      if (content * Gblock_red(0, 0) != Gblock_r(0, 0) || content <= 0) {
-        std::cerr << "BKZ: the block content " << content
-                  << " does not divide the block evenly\n";
+      if (f_test_block(work, j).z) {
+        std::cerr << "BKZ: the block at j=" << j << " was skipped as unchanged "
+                  << "since it passed, but it does not pass\n";
         throw TerminalException{1};
       }
 #endif
-      MyMatrix<T> Gblock = UniversalMatrixConversion<T, Tring>(Gblock_red);
-      Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(Gblock, os);
-      Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);
-      // work(j,j) = d_j |b_j^*|^2 and the enumerated norm is content times
-      // d_j |v|^2, so multiplying the latter back by the content puts the two
-      // on the same scale.
-      if (den * min_r * content < num * work(j, j)) {
-        MyVector<Tint> z = GetMatrixRow(shv.SHV, 0);
+      BKZ_BareissStep(work, j, prev);
+      n_skipped++;
+    }
+    for (int j = j_start; j + 1 < n; j++) {
+      BlockTest test = f_test_block(work, j);
+      if (test.z) {
+        int k = test.k;
+        MyVector<Tint> const &z = *test.z;
         MyMatrix<Tint> U = BKZ_InsertionMatrix(z, n, j, k);
         MyMatrix<Tring> U_r = UniversalMatrixConversion<Tring, Tint>(U);
         gram = U_r * gram * U_r.transpose();
+        MyMatrix<Tint> H_orig = H;
         H = U * H;
         // Restore the reduction: the inserted vector is generally not size
         // reduced against its predecessors, and the rest of the block is
@@ -352,7 +404,15 @@ LLLreduction<T, Tint> BKZreducedBasisDelta(MyMatrix<T> const &GramMat,
         LLLreduction<T, Tint> step = LLLreducedBasis<T, Tint>(gram_T, os);
         gram = UniversalMatrixConversion<Tring, T>(
             RemoveFractionMatrix(step.GramMatRed));
-        H = step.Pmat * H;
+        MyMatrix<Tint> H_new = step.Pmat * H;
+        // c, the first vector the insertion or the LLL pass changed; the
+        // insertion changes b_j, so c <= j.
+        int c = 0;
+        while (c < j && H_new.row(c) == H_orig.row(c)) {
+          c++;
+        }
+        j_start = c - beta + 1 > 0 ? c - beta + 1 : 0;
+        H = std::move(H_new);
         n_insert++;
         did_insert = true;
         break;
@@ -372,7 +432,8 @@ LLLreduction<T, Tint> BKZreducedBasisDelta(MyMatrix<T> const &GramMat,
   }
 #ifdef DEBUG_BKZ
   os << "BKZ: n=" << n << " beta=" << beta << " tours=" << n_tour
-     << " insertions=" << n_insert << "\n";
+     << " insertions=" << n_insert << " skipped enumerations=" << n_skipped
+     << "\n";
 #endif
   MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(H);
   MyMatrix<T> GramMatRed = P_T * GramMat * P_T.transpose();
