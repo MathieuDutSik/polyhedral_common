@@ -1,0 +1,1187 @@
+// Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+#ifndef SRC_IGUSA_IGUSA_H_
+#define SRC_IGUSA_IGUSA_H_
+
+// clang-format off
+#include "PerfectForm.h"
+#include "POLY_AdjacencyScheme.h"
+#include "Tspace_Namelist.h"
+#include "Positivity.h"
+#include "integer_linear_programming.h"
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+// clang-format on
+
+#ifdef DEBUG
+#define DEBUG_IGUSA
+#endif
+
+#ifdef DISABLE_DEBUG_IGUSA
+#undef DEBUG_IGUSA
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_IGUSA
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_IGUSA
+#endif
+
+/*
+  The Igusa polyhedron of a T-space.
+
+  Let T be a T-space of symmetric n x n matrices and L the lattice of the
+  matrices X of T that are integral valued, that is with X[v] in Z for all
+  v in Z^n (integral diagonal and half-integral off-diagonal entries).
+  The Igusa polyhedron is
+
+      P = conv(I)   with   I = { X in L : X positive definite }.
+
+  For T the full space of symmetric matrices this is the central cone of
+  Igusa. P is contained in the Ryshkov polyhedron { X : X[v] >= 1 } and has
+  the same recession cone, the positive semidefinite matrices of T.
+  The code enumerates the vertices of P up to the arithmetic group of the
+  T-space, and for each vertex A its local cone
+
+      C_A = cone{ X - A : X in I } = cone{ D in L : A + D positive definite }
+
+  with its extreme rays (the edges of P at A) and facets (the facets of P
+  containing A).
+
+  An extreme ray D, taken primitive in L, gives the edge [A, A + t D] with
+  t the largest integer such that A + t D is positive definite. If D is
+  positive semidefinite the edge is infinite; otherwise A + t D is the
+  neighboring vertex.
+
+  The minimization of a linear function over I is the basic tool. It is
+  done by cutting planes: a linear program over finitely many inequalities
+  X[v] >= 1, refined until the optimum is in the Ryshkov polyhedron, then
+  an integer program over L whose solution is refined until it is positive
+  definite. The inequalities X[v] >= 1 are valid on all of I, so they are
+  kept in a pool shared by all the computations.
+
+  The local cone at a vertex A is computed in the following way:
+  --- Candidate rays are the D in L with A + D positive definite and
+      tr((A^{-1} D)^2) <= NormBound. They are closed under the stabilizer of
+      A and reduced to the extreme ones by linear programming.
+  --- Random facets of the cone of candidates are obtained by linear
+      programming and checked by integer programming: a facet f is valid
+      for C_A iff min_{X in I} f(X) = f(A). A violating X gives a new ray.
+      This repeats until NbCleanRound consecutive rounds of NbRandomFacet
+      facets find no violation.
+  --- Only then the dual description, which is the expensive part, is
+      computed, and each of its orbits of facets is checked. With the
+      rays found in the previous step it is normally correct at the first
+      attempt. If not, the new rays are inserted and the process repeats.
+ */
+
+template <typename T> struct IgusaParameters {
+  // Candidate rays D with tr((A^{-1} D)^2) <= NormBound
+  int NormBound;
+  // Number of random facets tested per round
+  int NbRandomFacet;
+  // Number of consecutive rounds without violation before the dual
+  // description is computed
+  int NbCleanRound;
+  // The integer programming method: default, scip, exact_bb
+  std::string IlpMethod;
+};
+
+template <typename T, typename Tint> struct IgusaSpace {
+  LinSpaceMatrix<T> LinSpa;
+  int n;
+  int dim;
+  // A Z-basis of the lattice L of integral valued matrices of the T-space
+  std::vector<MyMatrix<T>> ListMatInt;
+  // For computing the coordinates in ListMatInt of a matrix of the T-space
+  std::vector<int> ListColSel;
+  MyMatrix<T> InvSel;
+  // The Gram matrix of the trace form on ListMatInt
+  MyMatrix<T> TraceGram;
+  IgusaParameters<T> params;
+  // The pool of the vectors v of the cuts X[v] >= 1 valid on I
+  std::vector<MyVector<Tint>> ListCutVect;
+  std::set<MyVector<Tint>> SetCutVect;
+  MyMatrix<T> ListCutIneq;
+};
+
+// The coordinates in which the integral valued forms are the integral
+// vectors: the diagonal entries and twice the off-diagonal ones.
+template <typename T>
+MyMatrix<T> igusa_double_off_diagonal(MyMatrix<T> const &M, T const &scal) {
+  int n = M.rows();
+  MyMatrix<T> Mret = M;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (i != j) {
+        Mret(i, j) = scal * M(i, j);
+      }
+    }
+  }
+  return Mret;
+}
+
+template <typename T>
+std::vector<MyMatrix<T>>
+igusa_integral_valued_basis(std::vector<MyMatrix<T>> const &ListMat,
+                            std::ostream &os) {
+  int n_mat = ListMat.size();
+  int n = ListMat[0].rows();
+  int sym_dim = n * (n + 1) / 2;
+  std::vector<MyMatrix<T>> ListMatRet;
+  if (n_mat == sym_dim) {
+    for (int i = 0; i < n; i++) {
+      for (int j = i; j < n; j++) {
+        MyMatrix<T> M = ZeroMatrix<T>(n, n);
+        if (i == j) {
+          M(i, i) = T(1);
+        } else {
+          M(i, j) = T(1) / T(2);
+          M(j, i) = T(1) / T(2);
+        }
+        ListMatRet.push_back(M);
+      }
+    }
+    return ListMatRet;
+  }
+  std::vector<MyMatrix<T>> ListMatDouble;
+  for (auto &eMat : ListMat) {
+    ListMatDouble.push_back(igusa_double_off_diagonal<T>(eMat, T(2)));
+  }
+  std::vector<MyMatrix<T>> ListMatDoubleSat =
+      IntegralSaturationSpace(ListMatDouble, os);
+  for (auto &eMat : ListMatDoubleSat) {
+    ListMatRet.push_back(igusa_double_off_diagonal<T>(eMat, T(1) / T(2)));
+  }
+  return ListMatRet;
+}
+
+template <typename T, typename Tint>
+IgusaSpace<T, Tint> build_igusa_space(LinSpaceMatrix<T> const &LinSpa,
+                                      IgusaParameters<T> const &params,
+                                      std::ostream &os) {
+  int n = LinSpa.n;
+  std::vector<MyMatrix<T>> ListMatInt =
+      igusa_integral_valued_basis(LinSpa.ListMat, os);
+  int dim = ListMatInt.size();
+  int sym_dim = n * (n + 1) / 2;
+  MyMatrix<T> BigMat(dim, sym_dim);
+  for (int i = 0; i < dim; i++) {
+    MyVector<T> V = SymmetricMatrixToVector(ListMatInt[i]);
+    AssignMatrixRow(BigMat, i, V);
+  }
+  SelectionRowCol<T> eSelect = TMat_SelectRowCol(BigMat);
+  if (static_cast<int>(eSelect.TheRank) != dim) {
+    std::cerr << "IGUSA: The basis of the integral valued forms is not free\n";
+    throw TerminalException{1};
+  }
+  std::vector<int> ListColSel = eSelect.ListColSelect;
+  MyMatrix<T> SelMat = SelectColumn(BigMat, ListColSel);
+  MyMatrix<T> InvSel = Inverse(SelMat);
+  MyMatrix<T> TraceGram(dim, dim);
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      TraceGram(i, j) = frobenius_inner(ListMatInt[i], ListMatInt[j]);
+    }
+  }
+#ifdef DEBUG_IGUSA
+  os << "IGUSA: build_igusa_space, n=" << n << " dim=" << dim << "\n";
+#endif
+  MyMatrix<T> ListCutIneq(0, dim + 1);
+  return {LinSpa,     n,         dim,    std::move(ListMatInt),
+          ListColSel, InvSel,    TraceGram, params,
+          {},         {},        ListCutIneq};
+}
+
+template <typename T, typename Tint>
+MyVector<T> igusa_coordinates(IgusaSpace<T, Tint> const &space,
+                              MyMatrix<T> const &M) {
+  MyVector<T> V = SymmetricMatrixToVector(M);
+  int dim = space.dim;
+  MyVector<T> Vsel(dim);
+  for (int i = 0; i < dim; i++) {
+    Vsel(i) = V(space.ListColSel[i]);
+  }
+  MyVector<T> x = space.InvSel.transpose() * Vsel;
+#ifdef SANITY_CHECK_IGUSA
+  MyMatrix<T> Mrec = GetMatrixFromBasis(space.ListMatInt, x);
+  if (Mrec != M) {
+    std::cerr << "IGUSA: The matrix is not in the T-space\n";
+    throw TerminalException{1};
+  }
+#endif
+  return x;
+}
+
+template <typename T, typename Tint>
+MyVector<Tint> igusa_integral_coordinates(IgusaSpace<T, Tint> const &space,
+                                          MyMatrix<T> const &M) {
+  MyVector<T> x = igusa_coordinates(space, M);
+  if (!IsIntegralVector(x)) {
+    std::cerr << "IGUSA: The matrix is not integral valued\n";
+    throw TerminalException{1};
+  }
+  return UniversalVectorConversion<Tint, T>(x);
+}
+
+template <typename T, typename Tint>
+MyMatrix<T> igusa_matrix(IgusaSpace<T, Tint> const &space,
+                         MyVector<T> const &x) {
+  return GetMatrixFromBasis(space.ListMatInt, x);
+}
+
+template <typename T, typename Tint>
+MyMatrix<T> igusa_matrix_int(IgusaSpace<T, Tint> const &space,
+                             MyVector<Tint> const &x) {
+  MyVector<T> x_T = UniversalVectorConversion<T, Tint>(x);
+  return GetMatrixFromBasis(space.ListMatInt, x_T);
+}
+
+// Insert the cut X[v] >= 1 in the pool. Returns false if already present.
+template <typename T, typename Tint>
+bool igusa_insert_cut(IgusaSpace<T, Tint> &space, MyVector<Tint> const &v) {
+  MyVector<Tint> v_can = CanonicalizeVectorToInvertible(v);
+  if (space.SetCutVect.count(v_can) > 0) {
+    return false;
+  }
+  space.SetCutVect.insert(v_can);
+  space.ListCutVect.push_back(v_can);
+  int dim = space.dim;
+  int n_row = space.ListCutIneq.rows();
+  MyMatrix<T> NewIneq(n_row + 1, dim + 1);
+  for (int i = 0; i < n_row; i++) {
+    for (int j = 0; j <= dim; j++) {
+      NewIneq(i, j) = space.ListCutIneq(i, j);
+    }
+  }
+  NewIneq(n_row, 0) = T(-1);
+  for (int j = 0; j < dim; j++) {
+    NewIneq(n_row, j + 1) =
+        EvaluationQuadForm<T, Tint>(space.ListMatInt[j], v_can);
+  }
+  space.ListCutIneq = NewIneq;
+  return true;
+}
+
+// The cuts from the vectors of norm at most 1 of a positive definite X,
+// and whether there was any vector of norm less than 1.
+template <typename T, typename Tint>
+bool igusa_insert_short_vector_cuts(IgusaSpace<T, Tint> &space,
+                                    MyMatrix<T> const &X, std::ostream &os) {
+  std::vector<MyVector<Tint>> l_v =
+      computeLevel_GramMat<T, Tint>(X, T(1), os);
+  bool has_short = false;
+  for (auto &v : l_v) {
+    if (EvaluationQuadForm<T, Tint>(X, v) < 1) {
+      has_short = true;
+    }
+    (void)igusa_insert_cut(space, v);
+  }
+  return has_short;
+}
+
+/*
+  For X not positive semidefinite (or not positive definite if MaxNorm > 0),
+  an integral vector v with X[v] < MaxNorm, for MaxNorm = 0 or 1.
+  The rational vectors w with X[w] <= 0 of the diagonalization give one
+  exactly once their denominators are cleared, but it can be long. So
+  we first look for a short one among the roundings of the multiples of
+  the w, with a bounded number of multiples, since for an almost
+  degenerate X the unbounded search can take arbitrarily long.
+ */
+template <typename T, typename Tint>
+MyVector<Tint> igusa_non_positive_vector(MyMatrix<T> const &X,
+                                         T const &MaxNorm, std::ostream &os) {
+  std::vector<MyVector<T>> ListNeg = GetSetNegativeOrZeroVector(X, os);
+  std::optional<int> max_mult = 100;
+  std::optional<MyVector<Tint>> opt = GetShortVectorSpecifiedBounded<T, Tint>(
+      X, ListNeg, MaxNorm, max_mult, os);
+  if (opt) {
+    return *opt;
+  }
+  for (auto &w : ListNeg) {
+    MyVector<Tint> v =
+        UniversalVectorConversion<Tint, T>(RemoveFractionVector(w));
+    if (EvaluationQuadForm<T, Tint>(X, v) < MaxNorm) {
+      return v;
+    }
+  }
+  std::cerr << "IGUSA: Failed to find a vector of norm below MaxNorm="
+            << MaxNorm << "\n";
+  throw TerminalException{1};
+}
+
+// For X not positive definite, the cut from a vector v with X[v] < 1.
+template <typename T, typename Tint>
+void igusa_insert_non_positive_cut(IgusaSpace<T, Tint> &space,
+                                   MyMatrix<T> const &X, std::ostream &os) {
+  MyVector<Tint> v = igusa_non_positive_vector<T, Tint>(X, T(1), os);
+  if (!igusa_insert_cut(space, v)) {
+    std::cerr << "IGUSA: The cut from the non-positive matrix was already "
+                 "present\n";
+    throw TerminalException{1};
+  }
+}
+
+template <typename T> struct IgusaMinimum {
+  MyVector<T> x;
+  T value;
+};
+
+/*
+  Minimize the function f(x) = f(0) + sum_j f(j) x_j over the x in Z^dim
+  such that X = sum_j x_j ListMatInt[j] is positive definite, subject to
+  the inequalities ListExtraIneq.(1,x) >= 0 and the equalities
+  ListEqua.(1,x) = 0. Returns none if there is no such x.
+  ---
+  The function f has to be positive on the nonzero positive semidefinite
+  matrices of the T-space. Then the part of P where f is below any given
+  value is bounded, which is what makes the cutting planes terminate and
+  keeps the integer solutions of moderate size. Minimizing a function
+  that vanishes on some positive semidefinite direction instead gives
+  unbounded sets of optimal solutions of the integer programs, far away
+  and almost degenerate.
+ */
+template <typename T, typename Tint>
+std::optional<IgusaMinimum<T>>
+igusa_integral_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
+                            MyMatrix<T> const &ListExtraIneq,
+                            MyMatrix<T> const &ListEqua, std::ostream &os) {
+#ifdef TIMINGS_IGUSA
+  MicrosecondTime time;
+#endif
+  int dim = space.dim;
+  // The inequalities, without the equalities that go separately to the
+  // integer program.
+  auto get_cut_ineq = [&]() -> MyMatrix<T> {
+    int n_cut = space.ListCutIneq.rows();
+    int n_extra = ListExtraIneq.rows();
+    MyMatrix<T> M(n_cut + n_extra, dim + 1);
+    for (int i = 0; i < n_cut; i++) {
+      for (int j = 0; j <= dim; j++) {
+        M(i, j) = space.ListCutIneq(i, j);
+      }
+    }
+    for (int i = 0; i < n_extra; i++) {
+      for (int j = 0; j <= dim; j++) {
+        M(n_cut + i, j) = ListExtraIneq(i, j);
+      }
+    }
+    return M;
+  };
+  auto get_ineq = [&]() -> MyMatrix<T> {
+    MyMatrix<T> Mcut = get_cut_ineq();
+    int n_row = Mcut.rows();
+    int n_equa = ListEqua.rows();
+    MyMatrix<T> M(n_row + 2 * n_equa, dim + 1);
+    for (int i = 0; i < n_row; i++) {
+      for (int j = 0; j <= dim; j++) {
+        M(i, j) = Mcut(i, j);
+      }
+    }
+    for (int i = 0; i < n_equa; i++) {
+      for (int j = 0; j <= dim; j++) {
+        M(n_row + 2 * i, j) = ListEqua(i, j);
+        M(n_row + 2 * i + 1, j) = -ListEqua(i, j);
+      }
+    }
+    return M;
+  };
+  // The linear programming phase
+#ifdef DEBUG_IGUSA
+  size_t iter_lp = 0;
+#endif
+  MyVector<T> x_lp;
+  while (true) {
+#ifdef DEBUG_IGUSA
+    iter_lp++;
+#endif
+    MyMatrix<T> M = get_ineq();
+    LpSolution<T> eSol = SIMPLEX_LinearProgramming(M, f, os);
+    if (!eSol.DirectSolution) {
+#ifdef DEBUG_IGUSA
+      os << "IGUSA: igusa_integral_minimization, LP infeasible at iter_lp="
+         << iter_lp << "\n";
+#endif
+      return {};
+    }
+    if (!eSol.DualSolution) {
+      // Unbounded: the direct solution is a ray d. Since f is positive on
+      // the nonzero positive semidefinite matrices and f(d) < 0, D is not
+      // positive semidefinite and there is a v with D[v] < 0.
+      MyVector<T> ray = *eSol.DirectSolution;
+      MyMatrix<T> D = igusa_matrix(space, ray);
+      MyVector<Tint> v = igusa_non_positive_vector<T, Tint>(D, T(0), os);
+      if (!igusa_insert_cut(space, v)) {
+        std::cerr << "IGUSA: The cut for the ray was already present\n";
+        throw TerminalException{1};
+      }
+      continue;
+    }
+    x_lp = *eSol.DirectSolution;
+    MyMatrix<T> X = igusa_matrix(space, x_lp);
+    if (!IsPositiveDefinite(X, os)) {
+      igusa_insert_non_positive_cut(space, X, os);
+      continue;
+    }
+    if (igusa_insert_short_vector_cuts(space, X, os)) {
+      continue;
+    }
+    break;
+  }
+#ifdef DEBUG_IGUSA
+  os << "IGUSA: igusa_integral_minimization, LP phase done iter_lp=" << iter_lp
+     << " |cuts|=" << space.ListCutIneq.rows() << "\n";
+#endif
+  if (IsIntegralVector(x_lp)) {
+#ifdef TIMINGS_IGUSA
+    os << "|IGUSA: igusa_integral_minimization(LP)|=" << time << "\n";
+#endif
+    T value = ILP_EvaluateRow(f, x_lp);
+    return IgusaMinimum<T>{x_lp, value};
+  }
+  // The integer programming phase
+#ifdef DEBUG_IGUSA
+  size_t iter_ilp = 0;
+#endif
+  while (true) {
+#ifdef DEBUG_IGUSA
+    iter_ilp++;
+#endif
+    MyMatrix<T> Mineq = get_cut_ineq();
+    IlpSolution<T> sol = ILP_IntegerLinearProgramming(
+        Mineq, ListEqua, f, space.params.IlpMethod, os);
+    if (sol.status == IlpStatus::Infeasible) {
+#ifdef DEBUG_IGUSA
+      os << "IGUSA: igusa_integral_minimization, ILP infeasible at iter_ilp="
+         << iter_ilp << "\n";
+#endif
+#ifdef TIMINGS_IGUSA
+      os << "|IGUSA: igusa_integral_minimization(ILP)|=" << time << "\n";
+#endif
+      return {};
+    }
+    if (sol.status == IlpStatus::Unbounded) {
+      std::cerr << "IGUSA: The integer program should not be unbounded\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> X = igusa_matrix(space, sol.solution);
+    if (IsPositiveDefinite(X, os)) {
+#ifdef DEBUG_IGUSA
+      os << "IGUSA: igusa_integral_minimization, ILP done iter_ilp="
+         << iter_ilp << " value=" << sol.OptimalValue << "\n";
+#endif
+#ifdef TIMINGS_IGUSA
+      os << "|IGUSA: igusa_integral_minimization(ILP)|=" << time << "\n";
+#endif
+      return IgusaMinimum<T>{sol.solution, sol.OptimalValue};
+    }
+    igusa_insert_non_positive_cut(space, X, os);
+  }
+}
+
+// A starting set of cuts: X[v] >= 1 for v = e_i and e_i +- e_j.
+template <typename T, typename Tint>
+void igusa_insert_initial_cuts(IgusaSpace<T, Tint> &space) {
+  int n = space.n;
+  for (int i = 0; i < n; i++) {
+    MyVector<Tint> v = ZeroVector<Tint>(n);
+    v(i) = 1;
+    (void)igusa_insert_cut(space, v);
+    for (int j = i + 1; j < n; j++) {
+      MyVector<Tint> w1 = v;
+      w1(j) = 1;
+      (void)igusa_insert_cut(space, w1);
+      MyVector<Tint> w2 = v;
+      w2(j) = -1;
+      (void)igusa_insert_cut(space, w2);
+    }
+  }
+}
+
+/*
+  A vertex of P as the lexicographic minimum over I of
+  (tr(SuperMat X), x_1, ..., x_dim). The function tr(SuperMat X) is positive
+  on the nonzero positive semidefinite matrices so the face of P where it is
+  minimal is a polytope and the lexicographic minimum is a vertex.
+ */
+template <typename T, typename Tint>
+MyMatrix<T> igusa_initial_vertex(IgusaSpace<T, Tint> &space, std::ostream &os) {
+  int dim = space.dim;
+  MyVector<T> f = ZeroVector<T>(dim + 1);
+  for (int j = 0; j < dim; j++) {
+    f(j + 1) = frobenius_inner(space.LinSpa.SuperMat, space.ListMatInt[j]);
+  }
+  std::vector<MyVector<T>> l_equa;
+  auto get_equa = [&]() -> MyMatrix<T> {
+    return MatrixFromVectorFamilyDim(dim + 1, l_equa);
+  };
+  MyMatrix<T> ListExtraIneq(0, dim + 1);
+  MyVector<T> x;
+  // After the first step, the coordinates are minimized on the face where
+  // tr(SuperMat X) is minimal, which is bounded.
+  for (int k = 0; k <= dim; k++) {
+    std::optional<IgusaMinimum<T>> opt =
+        igusa_integral_minimization(space, f, ListExtraIneq, get_equa(), os);
+    IgusaMinimum<T> result =
+        unfold_opt(opt, "The lexicographic minimization should succeed");
+    x = result.x;
+    MyVector<T> equa = f;
+    equa(0) -= result.value;
+    l_equa.push_back(equa);
+    if (k < dim) {
+      f = ZeroVector<T>(dim + 1);
+      f(k + 1) = T(1);
+    }
+  }
+  MyMatrix<T> A = igusa_matrix(space, x);
+#ifdef DEBUG_IGUSA
+  os << "IGUSA: igusa_initial_vertex, A=\n";
+  WriteMatrix(os, A);
+#endif
+  return A;
+}
+
+/*
+  The action of the elements g of the stabilizer on the coordinates:
+  g ListMatInt[i] g^T = sum_j M(i,j) ListMatInt[j], so the matrix of
+  coordinates x is mapped to M^T x.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint> igusa_coordinate_action(IgusaSpace<T, Tint> const &space,
+                                       MyMatrix<Tint> const &g) {
+  int dim = space.dim;
+  MyMatrix<T> g_T = UniversalMatrixConversion<T, Tint>(g);
+  MyMatrix<Tint> M(dim, dim);
+  for (int i = 0; i < dim; i++) {
+    MyMatrix<T> eImg = g_T * space.ListMatInt[i] * g_T.transpose();
+    MyVector<Tint> x = igusa_integral_coordinates(space, eImg);
+    AssignMatrixRow(M, i, x);
+  }
+  return M.transpose();
+}
+
+template <typename T> struct IgusaFacet {
+  // The facet functional f in the dual coordinates: f.D >= 0 on C_A
+  MyVector<T> f;
+  // The matrix F of the T-space with tr(F D) = f.D
+  MyMatrix<T> F;
+};
+
+template <typename T, typename Tint, typename Tgroup> struct IgusaLocalCone {
+  // The extreme rays of C_A, primitive in L, in coordinates.
+  MyMatrix<Tint> EXT;
+  // The permutation action of the stabilizer on the rays
+  Tgroup GRP;
+  // Representatives of the orbits of rays
+  std::vector<int> ListRayRepr;
+  // Representatives of the orbits of facets
+  std::vector<IgusaFacet<T>> ListFacetRepr;
+  // The number of dual descriptions computed, 1 when the rays found before
+  // the first one were all the rays.
+  int nb_dual_description;
+};
+
+template <typename T, typename Tint>
+IgusaFacet<T> igusa_get_facet(IgusaSpace<T, Tint> const &space,
+                              MyVector<T> const &f) {
+  MyVector<T> y = Inverse(space.TraceGram) * f;
+  MyMatrix<T> F = RemoveFractionMatrix(igusa_matrix(space, y));
+  return {f, F};
+}
+
+/*
+  Returns, if the facet f of the cone of the rays found so far is not a
+  facet of C_A, a primitive ray of C_A on which f is negative.
+  ---
+  The facet is valid iff there is no X in I with f(X) < f(A), that is
+  with f(X) <= f(A) - 1 once f is made integral. The function minimized
+  over those X is s(X) = tr(A^{-1} X), which is positive on the nonzero
+  positive semidefinite matrices (see igusa_integral_minimization). The
+  violating X returned is thus the closest to A for s, which is typically
+  a neighbor of A.
+ */
+template <typename T, typename Tint>
+std::optional<MyVector<Tint>>
+igusa_test_facet(IgusaSpace<T, Tint> &space, MyVector<Tint> const &a,
+                 MyVector<T> const &s, MyVector<T> const &f_in,
+                 std::ostream &os) {
+  int dim = space.dim;
+  MyVector<T> f_int = RemoveFractionVector(f_in);
+  T val_a(0);
+  for (int j = 0; j < dim; j++) {
+    val_a += f_int(j) * UniversalScalarConversion<T, Tint>(a(j));
+  }
+  // The inequality f(A) - 1 - f(X) >= 0
+  MyMatrix<T> ListExtraIneq(1, dim + 1);
+  ListExtraIneq(0, 0) = val_a - T(1);
+  for (int j = 0; j < dim; j++) {
+    ListExtraIneq(0, j + 1) = -f_int(j);
+  }
+  MyMatrix<T> ListEqua(0, dim + 1);
+  std::optional<IgusaMinimum<T>> opt =
+      igusa_integral_minimization(space, s, ListExtraIneq, ListEqua, os);
+  if (!opt) {
+    return {};
+  }
+  MyVector<Tint> x = UniversalVectorConversion<Tint, T>(opt->x);
+  MyVector<Tint> diff = x - a;
+  return RemoveFractionVector(diff);
+}
+
+template <typename T, typename Tint, typename Tgroup>
+IgusaLocalCone<T, Tint, Tgroup>
+igusa_local_cone(IgusaSpace<T, Tint> &space, MyMatrix<T> const &A,
+                 std::vector<MyMatrix<Tint>> const &ListGen,
+                 std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+#ifdef TIMINGS_IGUSA
+  MicrosecondTime time;
+#endif
+  int dim = space.dim;
+  MyVector<Tint> a = igusa_integral_coordinates(space, A);
+  std::vector<MyMatrix<Tint>> ListGenCoord;
+  for (auto &g : ListGen) {
+    ListGenCoord.push_back(igusa_coordinate_action(space, g));
+  }
+  (void)igusa_insert_short_vector_cuts(space, A, os);
+  MyMatrix<T> Ainv = Inverse(A);
+  // The function s(X) = tr(A^{-1} X) used for testing the facets
+  MyVector<T> s = ZeroVector<T>(dim + 1);
+  for (int j = 0; j < dim; j++) {
+    s(j + 1) = frobenius_inner(Ainv, space.ListMatInt[j]);
+  }
+  //
+  // The set of candidate rays, closed under the stabilizer.
+  //
+  std::vector<MyVector<Tint>> ListRay;
+  std::map<MyVector<Tint>, int> MapRay;
+  auto insert_orbit = [&](MyVector<Tint> const &x) -> void {
+    if (MapRay.count(x) > 0) {
+      return;
+    }
+    std::vector<MyVector<Tint>> l_new{x};
+    MapRay[x] = ListRay.size();
+    ListRay.push_back(x);
+    size_t pos = 0;
+    while (pos < l_new.size()) {
+      MyVector<Tint> y = l_new[pos];
+      pos++;
+      for (auto &M : ListGenCoord) {
+        MyVector<Tint> z = M * y;
+        if (MapRay.count(z) == 0) {
+          MapRay[z] = ListRay.size();
+          ListRay.push_back(z);
+          l_new.push_back(z);
+        }
+      }
+    }
+  };
+  auto is_candidate = [&](MyVector<Tint> const &x) -> bool {
+    MyMatrix<T> X = A + igusa_matrix_int(space, x);
+    return IsPositiveDefinite(X, os);
+  };
+  //
+  // The candidates from the norm QA(D) = tr((A^{-1} D)^2) = sum lambda_i^2
+  // with lambda_i the eigenvalues of A^{-1} D. The condition for D to be a
+  // candidate is lambda_i > -1.
+  //
+  MyMatrix<T> QA(dim, dim);
+  {
+    std::vector<MyMatrix<T>> ListProd;
+    for (int i = 0; i < dim; i++) {
+      ListProd.push_back(Ainv * space.ListMatInt[i]);
+    }
+    for (int i = 0; i < dim; i++) {
+      for (int j = 0; j < dim; j++) {
+        // tr(P_i P_j) for the non-symmetric P_i = A^{-1} ListMatInt[i]
+        MyMatrix<T> ProdTr = ListProd[j].transpose();
+        QA(i, j) = frobenius_inner(ListProd[i], ProdTr);
+      }
+    }
+  }
+  auto enumerate_candidates = [&](T const &bound) -> void {
+    std::vector<MyVector<Tint>> l_x =
+        computeLevel_GramMat<T, Tint>(QA, bound, os);
+    for (auto &x : l_x) {
+      for (int sign = -1; sign <= 1; sign += 2) {
+        MyVector<Tint> y = RemoveFractionVector(MyVector<Tint>(Tint(sign) * x));
+        if (is_candidate(y)) {
+          insert_orbit(y);
+        }
+      }
+    }
+#ifdef DEBUG_IGUSA
+    os << "IGUSA: enumerate_candidates, bound=" << bound
+       << " |l_x|=" << l_x.size() << " |ListRay|=" << ListRay.size() << "\n";
+#endif
+  };
+  // Since A is a vertex, there is no D with |lambda_i| < 1 for all i, so
+  // no candidate for a bound below 1. The bound is doubled until the
+  // candidates span the space.
+  T current_bound(space.params.NormBound);
+  while (true) {
+    enumerate_candidates(current_bound);
+    if (!ListRay.empty()) {
+      MyMatrix<Tint> EXT = MatrixFromVectorFamilyDim(dim, ListRay);
+      if (RankMat(EXT) == dim) {
+        break;
+      }
+    }
+    current_bound *= 2;
+  }
+  // The neighbors found so far give the scale of the norms of the rays.
+  // All the candidates up to the largest norm of the extreme rays are
+  // inserted. This is what finds the orbits of rays that the random
+  // facets miss, before the dual description is computed. Returns true
+  // if the bound was raised.
+  auto norm_closure = [&]() -> bool {
+    T max_norm(0);
+    for (auto &x : ListRay) {
+      MyVector<T> x_T = UniversalVectorConversion<T, Tint>(x);
+      T norm = EvaluationQuadForm<T, T>(QA, x_T);
+      if (norm > max_norm) {
+        max_norm = norm;
+      }
+    }
+    if (max_norm <= current_bound) {
+      return false;
+    }
+    current_bound = max_norm;
+    enumerate_candidates(current_bound);
+    return true;
+  };
+  auto insert_new_ray = [&](MyVector<Tint> const &x) -> void {
+#ifdef SANITY_CHECK_IGUSA
+    if (!is_candidate(x)) {
+      std::cerr << "IGUSA: The new ray should be a candidate\n";
+      throw TerminalException{1};
+    }
+#endif
+    insert_orbit(x);
+  };
+  //
+  // The permutation group, the orbits and the redundancy elimination
+  //
+  auto get_perm_group = [&](std::vector<MyVector<Tint>> const &l_ray,
+                            std::map<MyVector<Tint>, int> const &map_ray)
+      -> Tgroup {
+    int n_ray = l_ray.size();
+    std::vector<Telt> l_gens;
+    for (auto &M : ListGenCoord) {
+      std::vector<Tidx> eList(n_ray);
+      for (int i = 0; i < n_ray; i++) {
+        MyVector<Tint> z = M * l_ray[i];
+        auto iter = map_ray.find(z);
+        if (iter == map_ray.end()) {
+          std::cerr << "IGUSA: The set of rays is not invariant\n";
+          throw TerminalException{1};
+        }
+        eList[i] = iter->second;
+      }
+      l_gens.push_back(Telt(eList));
+    }
+    return Tgroup(l_gens, n_ray);
+  };
+  auto get_orbit_index = [&](Tgroup const &GRP, int n_ray) -> std::vector<int> {
+    std::vector<int> orbit(n_ray, -1);
+    std::vector<Telt> l_gens = GRP.GeneratorsOfGroup();
+    int i_orb = 0;
+    for (int i = 0; i < n_ray; i++) {
+      if (orbit[i] == -1) {
+        std::vector<int> l_pos{i};
+        orbit[i] = i_orb;
+        size_t pos = 0;
+        while (pos < l_pos.size()) {
+          int j = l_pos[pos];
+          pos++;
+          for (auto &elt : l_gens) {
+            int k = elt.at(j);
+            if (orbit[k] == -1) {
+              orbit[k] = i_orb;
+              l_pos.push_back(k);
+            }
+          }
+        }
+        i_orb++;
+      }
+    }
+    return orbit;
+  };
+  // Replace ListRay by its extreme rays
+  auto reduce_rays = [&]() -> void {
+    int n_ray = ListRay.size();
+    Tgroup GRP = get_perm_group(ListRay, MapRay);
+    std::vector<int> BlockBelong = get_orbit_index(GRP, n_ray);
+    MyMatrix<Tint> EXT = MatrixFromVectorFamilyDim(dim, ListRay);
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
+    MyMatrix<T> ListIneq(n_ray, dim + 1);
+    for (int i = 0; i < n_ray; i++) {
+      ListIneq(i, 0) = T(0);
+      for (int j = 0; j < dim; j++) {
+        ListIneq(i, j + 1) = EXT_T(i, j);
+      }
+    }
+    std::vector<int> l_idx =
+        SIMPLEX_RedundancyReductionClarksonBlocks(ListIneq, BlockBelong, os);
+    std::vector<MyVector<Tint>> NewListRay;
+    std::map<MyVector<Tint>, int> NewMapRay;
+    for (auto &idx : l_idx) {
+      NewMapRay[ListRay[idx]] = NewListRay.size();
+      NewListRay.push_back(ListRay[idx]);
+    }
+#ifdef DEBUG_IGUSA
+    os << "IGUSA: reduce_rays, " << n_ray << " -> " << NewListRay.size()
+       << "\n";
+#endif
+    ListRay = NewListRay;
+    MapRay = NewMapRay;
+  };
+  auto get_ext_t = [&]() -> MyMatrix<T> {
+    MyMatrix<Tint> EXT = MatrixFromVectorFamilyDim(dim, ListRay);
+    return UniversalMatrixConversion<T, Tint>(EXT);
+  };
+  // Test a facet, and insert the violating ray. Returns true if valid.
+  auto test_facet = [&](MyVector<T> const &f) -> bool {
+    std::optional<MyVector<Tint>> opt = igusa_test_facet(space, a, s, f, os);
+    if (!opt) {
+      return true;
+    }
+    insert_new_ray(*opt);
+    return false;
+  };
+  int nb_dual_description = 0;
+  while (true) {
+    //
+    // The cheap phase with random facets
+    //
+    int n_clean_round = 0;
+    while (true) {
+      if (n_clean_round >= space.params.NbCleanRound) {
+        reduce_rays();
+        if (!norm_closure()) {
+          break;
+        }
+        n_clean_round = 0;
+      }
+      reduce_rays();
+      MyMatrix<T> EXT_T = get_ext_t();
+      vectface vf = FindVertices(EXT_T, space.params.NbRandomFacet, os);
+      SubsetRankOneSolver<T> solver(EXT_T);
+      bool is_clean = true;
+      for (auto &face : vf) {
+        MyVector<T> f = solver.GetPositiveKernelVector(face);
+        if (!test_facet(f)) {
+          is_clean = false;
+        }
+      }
+#ifdef DEBUG_IGUSA
+      os << "IGUSA: random facets, |ListRay|=" << ListRay.size()
+         << " is_clean=" << is_clean << "\n";
+#endif
+      if (is_clean) {
+        n_clean_round++;
+      } else {
+        n_clean_round = 0;
+      }
+    }
+    //
+    // The dual description and the check of all the facets
+    //
+    reduce_rays();
+    MyMatrix<T> EXT_T = get_ext_t();
+    Tgroup GRP = get_perm_group(ListRay, MapRay);
+#ifdef TIMINGS_IGUSA
+    MicrosecondTime time_dd;
+#endif
+    vectface vf = DualDescriptionStandard<T, Tgroup>(EXT_T, GRP, os);
+    nb_dual_description++;
+#ifdef TIMINGS_IGUSA
+    os << "|IGUSA: DualDescriptionStandard|=" << time_dd << "\n";
+#endif
+#ifdef DEBUG_IGUSA
+    os << "IGUSA: |EXT|=" << ListRay.size() << " |GRP|=" << GRP.size()
+       << " |vf|=" << vf.size() << "\n";
+#endif
+    SubsetRankOneSolver<T> solver(EXT_T);
+    std::vector<IgusaFacet<T>> ListFacetRepr;
+    bool is_correct = true;
+    for (auto &face : vf) {
+      MyVector<T> f = solver.GetPositiveKernelVector(face);
+      if (!test_facet(f)) {
+        is_correct = false;
+      }
+      ListFacetRepr.push_back(igusa_get_facet(space, f));
+    }
+    if (is_correct) {
+      MyMatrix<Tint> EXT = MatrixFromVectorFamilyDim(dim, ListRay);
+      int n_ray = ListRay.size();
+      std::vector<int> orbit = get_orbit_index(GRP, n_ray);
+      std::vector<int> ListRayRepr;
+      int i_orb_next = 0;
+      for (int i = 0; i < n_ray; i++) {
+        if (orbit[i] == i_orb_next) {
+          ListRayRepr.push_back(i);
+          i_orb_next++;
+        }
+      }
+#ifdef TIMINGS_IGUSA
+      os << "|IGUSA: igusa_local_cone|=" << time << "\n";
+#endif
+      return {EXT, GRP, ListRayRepr, ListFacetRepr, nb_dual_description};
+    }
+#ifdef DEBUG_IGUSA
+    os << "IGUSA: The dual description found some violating facets, redoing\n";
+#endif
+  }
+}
+
+/*
+  The edge [A, A + t D] for a primitive ray D of C_A: t is the largest
+  integer with A + t D positive definite, or none if D is positive
+  semidefinite (infinite edge).
+ */
+template <typename T, typename Tint>
+std::optional<Tint> igusa_edge_length(IgusaSpace<T, Tint> const &space,
+                                      MyMatrix<T> const &A,
+                                      MyVector<Tint> const &x,
+                                      std::ostream &os) {
+  MyMatrix<T> D = igusa_matrix_int(space, x);
+  if (IsPositiveSemiDefinite(D, os)) {
+    return {};
+  }
+  auto is_pd = [&](Tint const &t) -> bool {
+    MyMatrix<T> M = A + UniversalScalarConversion<T, Tint>(t) * D;
+    return IsPositiveDefinite(M, os);
+  };
+  // t_low is positive definite, t_upp is not
+  Tint t_low(1);
+  Tint t_upp(2);
+  while (is_pd(t_upp)) {
+    t_low = t_upp;
+    t_upp *= 2;
+  }
+  while (t_upp - t_low > 1) {
+    Tint t_mid = (t_low + t_upp) / 2;
+    if (is_pd(t_mid)) {
+      t_low = t_mid;
+    } else {
+      t_upp = t_mid;
+    }
+  }
+  return t_low;
+}
+
+/*
+  The enumeration of the vertices of P up to equivalence
+ */
+
+template <typename T, typename Tint, typename Tgroup> struct IgusaVertex {
+  MyMatrix<T> Gram;
+  TshortestPerfect<T, Tint> tsp;
+  // Filled by f_adj
+  std::vector<MyMatrix<Tint>> GRP_matr;
+  typename Tgroup::Tint stab_size;
+  MyMatrix<Tint> EXT;
+  std::vector<IgusaFacet<T>> ListFacetRepr;
+  // The infinite edges up to the stabilizer, as matrices
+  std::vector<MyMatrix<T>> ListInfiniteRay;
+  int nb_dual_description;
+};
+
+template <typename T, typename Tint> struct IgusaVertex_AdjI {
+  MyMatrix<T> Gram;
+  TshortestPerfect<T, Tint> tsp;
+  // The direction of the edge
+  MyMatrix<T> Direction;
+};
+
+template <typename T, typename Tint> struct IgusaVertex_AdjO {
+  MyMatrix<T> Direction;
+  MyMatrix<Tint> eBigMat;
+};
+
+template <typename T, typename Tint, typename Tgroup> struct DataIgusaFunc {
+  IgusaSpace<T, Tint> space;
+  std::ostream &os;
+  using Tobj = IgusaVertex<T, Tint, Tgroup>;
+  using TadjI = IgusaVertex_AdjI<T, Tint>;
+  using TadjO = IgusaVertex_AdjO<T, Tint>;
+  std::ostream &get_os() { return os; }
+
+  Tobj make_vertex(MyMatrix<T> const &Gram) {
+    Tshortest<T, Tint> rec_shv = T_ShortestVectorHalf<T, Tint>(Gram, os);
+    TshortestPerfect<T, Tint> tsp =
+        build_tshortest_perfect<T, Tint>(Gram, rec_shv, os);
+    return {Gram, std::move(tsp), {}, 0, {}, {}, {}, 0};
+  }
+
+  Tobj f_init() {
+    igusa_insert_initial_cuts(space);
+    MyMatrix<T> A = igusa_initial_vertex(space, os);
+    return make_vertex(A);
+  }
+
+  size_t f_hash(size_t const &seed, Tobj const &x) {
+    return SimplePerfect_Invariant<T, Tint>(seed, space.LinSpa, x.Gram, x.tsp,
+                                            os);
+  }
+
+  std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
+    std::optional<MyMatrix<Tint>> opt =
+        SimplePerfect_TestEquivalence<T, Tint, Tgroup>(
+            space.LinSpa, x.Gram, y.Gram, x.tsp, y.tsp, os);
+    if (!opt) {
+      return {};
+    }
+    TadjO ret{y.Direction, *opt};
+    return ret;
+  }
+
+  std::pair<Tobj, TadjO> f_spann(TadjI const &y) {
+    Tobj x{y.Gram, y.tsp, {}, 0, {}, {}, {}, 0};
+    TadjO ret{y.Direction, IdentityMat<Tint>(space.n)};
+    return {x, ret};
+  }
+
+  std::optional<std::vector<TadjI>> f_adj(Tobj &x) {
+    std::pair<Tgroup, std::vector<MyMatrix<Tint>>> pair =
+        SimplePerfect_Stabilizer<T, Tint, Tgroup>(space.LinSpa, x.Gram, x.tsp,
+                                                  os);
+    x.stab_size = pair.first.size();
+    x.GRP_matr = pair.second;
+    IgusaLocalCone<T, Tint, Tgroup> cone =
+        igusa_local_cone<T, Tint, Tgroup>(space, x.Gram, x.GRP_matr, os);
+    x.EXT = cone.EXT;
+    x.ListFacetRepr = cone.ListFacetRepr;
+    x.nb_dual_description = cone.nb_dual_description;
+    std::vector<TadjI> ListAdj;
+    for (auto &i_ray : cone.ListRayRepr) {
+      MyVector<Tint> ray = GetMatrixRow(cone.EXT, i_ray);
+      MyMatrix<T> D = igusa_matrix_int(space, ray);
+      std::optional<Tint> opt = igusa_edge_length(space, x.Gram, ray, os);
+      if (!opt) {
+        x.ListInfiniteRay.push_back(D);
+        continue;
+      }
+      MyMatrix<T> Direction = UniversalScalarConversion<T, Tint>(*opt) * D;
+      MyMatrix<T> B = x.Gram + Direction;
+      Tobj y = make_vertex(B);
+      ListAdj.push_back({B, y.tsp, Direction});
+    }
+#ifdef DEBUG_IGUSA
+    os << "IGUSA: f_adj, |EXT|=" << x.EXT.rows()
+       << " |ListRayRepr|=" << cone.ListRayRepr.size()
+       << " |ListAdj|=" << ListAdj.size()
+       << " |ListInfiniteRay|=" << x.ListInfiniteRay.size()
+       << " |ListFacetRepr|=" << x.ListFacetRepr.size() << "\n";
+#endif
+    return ListAdj;
+  }
+
+  Tobj f_adji_obj(TadjI const &x) {
+    return {x.Gram, x.tsp, {}, 0, {}, {}, {}, 0};
+  }
+};
+
+template <typename T, typename Tint, typename Tgroup>
+void WriteEntryGAP(std::ostream &os_out,
+                   IgusaVertex<T, Tint, Tgroup> const &obj) {
+  os_out << "rec(Gram:=";
+  WriteMatrixGAP(os_out, obj.Gram);
+  os_out << ", GRPsize:=" << obj.stab_size;
+  os_out << ", nbRay:=" << obj.EXT.rows();
+  os_out << ", nbDualDescription:=" << obj.nb_dual_description;
+  os_out << ", ListFacet:=[";
+  bool is_first = true;
+  for (auto &facet : obj.ListFacetRepr) {
+    if (!is_first) {
+      os_out << ",";
+    }
+    is_first = false;
+    WriteMatrixGAP(os_out, facet.F);
+  }
+  os_out << "], ListInfiniteRay:=";
+  WriteListMatrixGAP(os_out, obj.ListInfiniteRay);
+  os_out << ")";
+}
+
+template <typename T, typename Tint>
+void WriteEntryGAP(std::ostream &os_out,
+                   IgusaVertex_AdjO<T, Tint> const &adj) {
+  os_out << "rec(Direction:=";
+  WriteMatrixGAP(os_out, adj.Direction);
+  os_out << ", eBigMat:=";
+  WriteMatrixGAP(os_out, adj.eBigMat);
+  os_out << ")";
+}
+
+template <typename T, typename Tint, typename Tgroup>
+void WriteEntryPYTHON(std::ostream &os_out,
+                      IgusaVertex<T, Tint, Tgroup> const &obj) {
+  os_out << "{\"Gram\":" << StringMatrixPYTHON(obj.Gram);
+  os_out << ", \"GRPsize\":" << obj.stab_size;
+  os_out << ", \"nbRay\":" << obj.EXT.rows();
+  os_out << ", \"nbDualDescription\":" << obj.nb_dual_description;
+  os_out << ", \"ListFacet\":[";
+  bool is_first = true;
+  for (auto &facet : obj.ListFacetRepr) {
+    if (!is_first) {
+      os_out << ",";
+    }
+    is_first = false;
+    os_out << StringMatrixPYTHON(facet.F);
+  }
+  os_out << "], \"ListInfiniteRay\":[";
+  is_first = true;
+  for (auto &M : obj.ListInfiniteRay) {
+    if (!is_first) {
+      os_out << ",";
+    }
+    is_first = false;
+    os_out << StringMatrixPYTHON(M);
+  }
+  os_out << "]}";
+}
+
+template <typename T, typename Tint>
+void WriteEntryPYTHON(std::ostream &os_out,
+                      IgusaVertex_AdjO<T, Tint> const &adj) {
+  os_out << "{\"Direction\":" << StringMatrixPYTHON(adj.Direction);
+  os_out << ", \"eBigMat\":" << StringMatrixPYTHON(adj.eBigMat) << "}";
+}
+
+inline FullNamelist NAMELIST_GetStandard_ENUMERATE_IGUSA_TSPACE() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  {
+    std::map<std::string, std::string> ListStringValues;
+    std::map<std::string, int> ListIntValues;
+    ListStringValues["arithmetic"] = "gmp";
+    ListStringValues["IlpMethod"] = "default";
+    ListStringValues["OutFormat"] = "GAP";
+    ListStringValues["OutFile"] = "stderr";
+    ListIntValues["NormBound"] = 2;
+    ListIntValues["NbRandomFacet"] = 10;
+    ListIntValues["NbCleanRound"] = 2;
+    ListIntValues["max_runtime_second"] = 0;
+    SingleBlock BlockDATA;
+    BlockDATA.setListStringValues(ListStringValues);
+    BlockDATA.setListIntValues(ListIntValues);
+    ListBlock["DATA"] = BlockDATA;
+  }
+  // TSPACE
+  ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
+  // Merging all data
+  return FullNamelist(ListBlock);
+}
+
+// clang-format off
+#endif  // SRC_IGUSA_IGUSA_H_
+// clang-format on
