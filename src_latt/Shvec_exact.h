@@ -956,50 +956,6 @@ T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request,
   return {std::move(short_vectors), std::move(minimum)};
 }
 
-template <typename T, typename Tint>
-T_shvec_info<T, Tint>
-compute_minimum_limit(const FullGramInfo<T> &request, MyVector<T> const &coset,
-                      bool const &central, std::optional<size_t> const &limit,
-                      ShvecFastPrep<T> const *prep = nullptr) {
-#ifdef DEBUG_SHVEC
-  std::cerr << "SHVEC: compute_minimum_limit, begin\n";
-#endif
-  std::vector<MyVector<Tint>> short_vectors;
-  T minimum = get_initial_minimum(request, coset, central);
-  while (true) {
-#ifdef DEBUG_SHVEC
-    std::cerr
-        << "SHVEC: Before computeIt (in compute_minimum_limit while loop)\n";
-#endif
-    size_t n_iter = 0;
-    auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
-      if (min == minimum) {
-        short_vectors.push_back(V);
-        if (central) {
-          short_vectors.push_back(-V);
-        }
-        if (limit) {
-          size_t const &limit_val = *limit;
-          if (limit_val <= n_iter) {
-            return false;
-          }
-        }
-        return true;
-      } else {
-        short_vectors.clear();
-        minimum = min;
-        return false;
-      }
-    };
-    bool result = computeIt<T, Tint, decltype(f_insert)>(
-        request, coset, central, minimum, f_insert, prep);
-    if (result) {
-      break;
-    }
-  }
-  return {std::move(short_vectors), std::move(minimum)};
-}
-
 template <typename Tint> struct ResultShortest {
   std::vector<MyVector<Tint>> shortest;
   std::optional<MyVector<Tint>> better_vector;
@@ -1154,42 +1110,6 @@ public:
     bool central = false;
     T_shvec_info<T, Tint> info =
         compute_minimum<T, Tint>(request, coset, central, get_prep());
-    T TheNorm = info.minimum;
-    int nbVect = info.short_vectors.size();
-    MyMatrix<Tint> ListClos(nbVect, dim);
-    for (int iVect = 0; iVect < nbVect; iVect++) {
-      MyVector<Tint> x =
-          eRec.Pmat.transpose() * (info.short_vectors[iVect] - ePair.first);
-#ifdef SANITY_CHECK_SHVEC
-      if (TheNorm != comp_norm_diff(x, eV)) {
-        std::cerr << "Inconsistecy error in the norms\n";
-        throw TerminalException{1};
-      }
-#endif
-      for (int i = 0; i < dim; i++) {
-        ListClos(iVect, i) = x(i);
-      }
-    }
-    return {TheNorm, std::move(ListClos)};
-  }
-  resultCVP<T, Tint>
-  nearest_vectors_limit(MyVector<T> const &eV,
-                        std::optional<size_t> const &limit) const {
-    if (IsIntegralVector(eV)) {
-      T TheNorm(0);
-      MyMatrix<Tint> ListVect(1, dim);
-      for (int i = 0; i < dim; i++)
-        ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
-      return {std::move(TheNorm), std::move(ListVect)};
-    }
-    MyVector<T> cosetRed = -Q_T.transpose() * eV;
-    std::pair<MyVector<Tint>, MyVector<T>> ePair =
-        ReductionMod1vector<T, Tint>(cosetRed);
-    MyVector<T> const &coset = ePair.second;
-    bool central = false;
-    T_shvec_info<T, Tint> info =
-        compute_minimum_limit<T, Tint>(request, coset, central, limit,
-                                       get_prep());
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
