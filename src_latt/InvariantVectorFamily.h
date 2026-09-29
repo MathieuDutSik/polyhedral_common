@@ -358,14 +358,15 @@ struct ShellFamilyBuilder {
         throw TerminalException{1};
       }
     } else {
-      // The ball of radius max_norm_ has full rank whatever the lattice: the
+      // A ball of radius at least max_norm_ contains a full basis: the
       // vectors of the reduced basis are in it, their norms being the
-      // diagonal entries max_norm_ is the largest of. So it is the radius to
-      // stop at, and the step is clamped to it rather than allowed to run
-      // past. Over the rationals the step divides every achievable norm, the
-      // last one below max_norm_ is reached exactly, and no clamping arises.
+      // diagonal entries max_norm_ is the largest of. So the first such ball
+      // is the last one to try. The radius is not clamped to max_norm_
+      // though: max_norm_ depends on the reduced basis, hence on the input
+      // basis, while the multiples of the lattice minimum do not. Clamping
+      // would make the family, and the canonical form built on it, depend on
+      // the basis whenever it becomes final only at that last radius.
       if (radius >= max_norm_) {
-        radius = max_norm_;
         exhausted_ = true;
       }
     }
