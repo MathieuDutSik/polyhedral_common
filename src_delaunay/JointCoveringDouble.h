@@ -143,21 +143,53 @@ inline MatrixXi LLLReduceDouble(MatrixXd const &Q, double delta = 0.75) {
 // The tessellation
 // ---------------------------------------------------------------------------
 
+// The edge matrix of the simplex with vertex rows P: rows v_1 - v_0, ...,
+// v_n - v_0.
+inline MatrixXd EdgeMatrix(MatrixXd const &P) {
+  int n = P.cols();
+  MatrixXd V(n, n);
+  for (int k = 0; k < n; k++) {
+    V.row(k) = P.row(k + 1) - P.row(0);
+  }
+  return V;
+}
+
+/*
+  Squared circumradius, in the metric Q, of the simplex with edge matrix V.
+  With G = V Q V^T and q = diag(G) it is R^2 = q.a / 4 for a = G^{-1} q, and
+  a is returned too: the circumcenter and every derivative of R^2 are
+  expressed through it.
+ */
+inline double Circumradius2(MatrixXd const &V, MatrixXd const &Q,
+                            VectorXd &a) {
+  MatrixXd G = V * Q * V.transpose();
+  VectorXd q = G.diagonal();
+  a = G.ldlt().solve(q);
+  return 0.25 * q.dot(a);
+}
+
+inline double Circumradius2(MatrixXd const &V, MatrixXd const &Q) {
+  VectorXd a;
+  return Circumradius2(V, Q, a);
+}
+
+// The W of dR^2 = tr(W dG), namely W = (2 diag(a) - a a^T) / 4, for the a of
+// Circumradius2.
+inline MatrixXd Circumradius2Weight(VectorXd const &a) {
+  MatrixXd W = -0.25 * (a * a.transpose());
+  W.diagonal() += 0.5 * a;
+  return W;
+}
+
 /*
   Circumcenter (in the coordinates of the point set) and squared
   circumradius, in the metric Q, of the simplex with vertex rows P.
  */
 inline void CircumcenterRadius2(MatrixXd const &P, MatrixXd const &Q,
                                 VectorXd &center, double &R2) {
-  int n = Q.rows();
-  MatrixXd V(n, n);
-  for (int k = 0; k < n; k++) {
-    V.row(k) = P.row(k + 1) - P.row(0);
-  }
-  MatrixXd G = V * Q * V.transpose();
-  VectorXd q = G.diagonal();
-  VectorXd a = G.ldlt().solve(q);
-  R2 = 0.25 * q.dot(a);
+  MatrixXd V = EdgeMatrix(P);
+  VectorXd a;
+  R2 = Circumradius2(V, Q, a);
   center = P.row(0).transpose() + 0.5 * V.transpose() * a;
 }
 
@@ -166,6 +198,33 @@ inline void CircumcenterRadius2(MatrixXd const &P, MatrixXd const &Q,
   Throws std::runtime_error when the ball never stabilizes.
  */
 inline MatrixXd CellPositions(CellClass const &cl, MatrixXd const &C);
+
+/*
+  Adds coef * dR^2/dC to dC, an m x n matrix whose rows are the cosets, for
+  the cell cl of edge matrix V and weight W (Circumradius2Weight). With
+  dR^2/dV = 2 W V Q, vertex k >= 1 gets row k-1 and vertex 0 minus the sum of
+  the rows. Coset 0 is fixed at the origin and gets nothing.
+ */
+inline void AddCircumradius2CosetGradient(CellClass const &cl,
+                                          MatrixXd const &V,
+                                          MatrixXd const &W,
+                                          MatrixXd const &Q, double coef,
+                                          MatrixXd &dC) {
+  int n = V.rows();
+  MatrixXd gV = 2.0 * (W * V * Q);
+  VectorXd rowsum = gV.colwise().sum();
+  for (int k = 0; k <= n; k++) {
+    int t = cl.cos(k);
+    if (t == 0) {
+      continue;
+    }
+    if (k == 0) {
+      dC.row(t) -= coef * rowsum.transpose();
+    } else {
+      dC.row(t) += coef * gV.row(k - 1);
+    }
+  }
+}
 
 // The Delaunay cells tile space, so summing the coordinate volume of one cell
 // per translation class covers exactly one fundamental domain of Z^n: the sum
@@ -181,12 +240,8 @@ inline double TessellationVolumeSum(std::vector<CellClass> const &cells,
     nfact *= k;
   }
   double vsum = 0.0;
-  MatrixXd V(n, n);
   for (auto const &cl : cells) {
-    MatrixXd P = CellPositions(cl, C);
-    for (int k = 0; k < n; k++) {
-      V.row(k) = P.row(k + 1) - P.row(0);
-    }
+    MatrixXd V = EdgeMatrix(CellPositions(cl, C));
     vsum += std::abs(V.determinant()) / nfact;
   }
   return vsum;
@@ -307,10 +362,7 @@ inline std::vector<CellClass> DelaunayCellClasses(PeriodicConfig const &conf,
           continue;
         }
         // joggle slivers: flat pieces of a split cocircular cell
-        MatrixXd V(n, n);
-        for (int k = 0; k < n; k++) {
-          V.row(k) = P.row(k + 1) - P.row(0);
-        }
+        MatrixXd V = EdgeMatrix(P);
         if (std::abs(V.determinant()) < 1e-9) {
           continue;
         }
@@ -455,10 +507,7 @@ TryReuseCells(PeriodicConfig const &conf,
   double mu2 = 0, Rmax = 0;
   for (size_t i = 0; i < prev.size(); i++) {
     MatrixXd P = CellPositions(prev[i], conf.C);
-    MatrixXd V(n, n);
-    for (int k = 0; k < n; k++) {
-      V.row(k) = P.row(k + 1) - P.row(0);
-    }
+    MatrixXd V = EdgeMatrix(P);
     if (std::abs(V.determinant()) < 1e-9) {
       return std::nullopt;   // a simplex degenerated: combinatorics changed
     }
@@ -681,16 +730,10 @@ inline MatrixXd QFromX(int n, std::vector<std::pair<int,int>> const &basis,
 // The n x n edge matrices V_i (rows v_1 - v_0, ..., v_n - v_0) of the cells.
 inline std::vector<MatrixXd> EdgeMatrices(std::vector<CellClass> const &cells,
                                           MatrixXd const &C) {
-  int n = C.cols();
   std::vector<MatrixXd> Vs;
   Vs.reserve(cells.size());
   for (auto &cl : cells) {
-    MatrixXd P = CellPositions(cl, C);
-    MatrixXd V(n, n);
-    for (int k = 0; k < n; k++) {
-      V.row(k) = P.row(k + 1) - P.row(0);
-    }
-    Vs.push_back(std::move(V));
+    Vs.push_back(EdgeMatrix(CellPositions(cl, C)));
   }
   return Vs;
 }
@@ -846,10 +889,7 @@ inline MatrixXd QStep(std::vector<CellClass> const &cells, MatrixXd const &C,
   // strictly feasible start: scale Q so max circumradius^2 < 1
   double maxR2 = 0;
   for (auto &V : qd.Vs) {
-    MatrixXd G = V * Q_init * V.transpose();
-    VectorXd q = G.diagonal();
-    double R2 = 0.25 * q.dot(G.ldlt().solve(q));
-    maxR2 = std::max(maxR2, R2);
+    maxR2 = std::max(maxR2, Circumradius2(V, Q_init));
   }
   MatrixXd Q = Q_init / (2.0 * maxR2);
   VectorXd x(d);
@@ -896,9 +936,7 @@ inline MatrixXd QStep(std::vector<CellClass> const &cells, MatrixXd const &C,
   // renormalize so max circumradius^2 = 1
   double mR2 = 0;
   for (auto &V : qd.Vs) {
-    MatrixXd G = V * Q * V.transpose();
-    VectorXd q = G.diagonal();
-    mR2 = std::max(mR2, 0.25 * q.dot(G.ldlt().solve(q)));
+    mR2 = std::max(mR2, Circumradius2(V, Q));
   }
   return Q / mR2;
 }
@@ -954,11 +992,98 @@ inline VectorXd Pack(Packing const &pk, MatrixXd const &Lo, MatrixXd const &C) {
 }
 
 /*
-  F(x) = (n/2) log smax_beta(R^2_S) - (1/2) log det Q and its gradient.
-  The R^2 derivative in the Gram matrix G of the edge vectors is
+  The soft maximum smax_beta of the squared circumradii of the cells,
+     smax = max R^2 + log(sum_S exp(beta (R^2_S - max R^2))) / beta,
+  kept together with what its gradient needs. The R^2 derivative in the Gram
+  matrix G of the edge vectors is
      dR^2 = tr(W dG),   W = (2 diag(a) - a a^T)/4,   a = G^{-1} q,
-  which chains to Q through G = V Q V^T, to the cosets through the vertex
-  positions, and to L through Q = L L^T.
+  which chains to Q through G = V Q V^T and to the cosets through the vertex
+  positions.
+
+  The value comes first and the gradient is added afterwards, scaled by a
+  coefficient, since that coefficient depends on the value in every
+  objective built on it.
+ */
+struct SoftMaxCellRadii {
+  double value;
+  std::vector<double> w;   // the weights of the cells, summing to 1
+  std::vector<MatrixXd> Vc, Wc;
+
+  SoftMaxCellRadii(std::vector<CellClass> const &cells, MatrixXd const &Q,
+                   MatrixXd const &C, double beta) {
+    int n_cell = cells.size();
+    std::vector<double> R2(n_cell);
+    Vc.resize(n_cell);
+    Wc.resize(n_cell);
+    double maxR2 = -1;
+    for (int s = 0; s < n_cell; s++) {
+      Vc[s] = EdgeMatrix(CellPositions(cells[s], C));
+      VectorXd a;
+      R2[s] = Circumradius2(Vc[s], Q, a);
+      Wc[s] = Circumradius2Weight(a);
+      maxR2 = std::max(maxR2, R2[s]);
+    }
+    double Z = 0;
+    w.resize(n_cell);
+    for (int s = 0; s < n_cell; s++) {
+      w[s] = std::exp(beta * (R2[s] - maxR2));
+      Z += w[s];
+    }
+    value = maxR2 + std::log(Z) / beta;
+    for (int s = 0; s < n_cell; s++) {
+      w[s] /= Z;
+    }
+  }
+
+  // Adds coef * d(value)/dQ to dQ and coef * d(value)/dC to dC. Cells whose
+  // share of it is below 1e-16 in absolute value are skipped.
+  void add_gradient(std::vector<CellClass> const &cells, MatrixXd const &Q,
+                    double coef, MatrixXd &dQ, MatrixXd &dC) const {
+    int n_cell = cells.size();
+    for (int s = 0; s < n_cell; s++) {
+      double cw = coef * w[s];
+      if (std::abs(cw) < 1e-16) {
+        continue;
+      }
+      MatrixXd const &V = Vc[s];
+      MatrixXd const &W = Wc[s];
+      dQ += cw * (V.transpose() * W * V);
+      AddCircumradius2CosetGradient(cells[s], V, W, Q, cw, dC);
+    }
+  }
+};
+
+// log det Q for Q = Lo Lo^T.
+inline double LogDetCholesky(MatrixXd const &Lo) {
+  double logdet = 0;
+  for (int i = 0; i < Lo.rows(); i++) {
+    logdet += 2 * std::log(std::abs(Lo(i, i)) + 1e-300);
+  }
+  return logdet;
+}
+
+/*
+  The gradient in the packed chart (Cholesky factor L, cosets) of an F whose
+  derivatives in Q and in the cosets are dFdQ and dFdC, plus
+  logdet_coef * log det Q. It chains to L through Q = L L^T:
+  dQ = dL L^T + L dL^T gives grad_L = 2 dFdQ L on the lower triangle, and
+  log det Q = 2 sum_i log L_ii.
+ */
+inline VectorXd ChainToPacked(Packing const &pk, MatrixXd const &Lo,
+                              MatrixXd const &dFdQ, MatrixXd const &dFdC,
+                              double logdet_coef) {
+  MatrixXd dFdQ_sym = 0.5 * (dFdQ + dFdQ.transpose());
+  MatrixXd gL = 2.0 * dFdQ_sym * Lo;
+  if (logdet_coef != 0) {
+    for (int i = 0; i < pk.n; i++) {
+      gL(i, i) += 2.0 * logdet_coef / Lo(i, i);
+    }
+  }
+  return Pack(pk, gL, dFdC);
+}
+
+/*
+  F(x) = (n/2) log smax_beta(R^2_S) - (1/2) log det Q and its gradient.
  */
 inline double ObjectiveGradient(Packing const &pk,
                                 std::vector<CellClass> const &cells,
@@ -968,87 +1093,12 @@ inline double ObjectiveGradient(Packing const &pk,
   MatrixXd Lo, C;
   Unpack(pk, x, Lo, C);
   MatrixXd Q = Lo * Lo.transpose();
-  int n_cell = cells.size();
-  std::vector<double> R2(n_cell);
-  std::vector<MatrixXd> Wc(n_cell), Vc(n_cell);
-  double maxR2 = -1;
-  for (int s = 0; s < n_cell; s++) {
-    MatrixXd P = CellPositions(cells[s], C);
-    MatrixXd V(n, n);
-    for (int k = 0; k < n; k++) {
-      V.row(k) = P.row(k + 1) - P.row(0);
-    }
-    MatrixXd G = V * Q * V.transpose();
-    VectorXd q = G.diagonal();
-    VectorXd a = G.ldlt().solve(q);
-    R2[s] = 0.25 * q.dot(a);
-    MatrixXd W = -0.25 * (a * a.transpose());
-    W.diagonal() += 0.5 * a;
-    Wc[s] = std::move(W);
-    Vc[s] = std::move(V);
-    maxR2 = std::max(maxR2, R2[s]);
-  }
-  // soft maximum and its weights
-  double Z = 0;
-  std::vector<double> w(n_cell);
-  for (int s = 0; s < n_cell; s++) {
-    w[s] = std::exp(beta * (R2[s] - maxR2));
-    Z += w[s];
-  }
-  double smax = maxR2 + std::log(Z) / beta;
-  for (int s = 0; s < n_cell; s++) {
-    w[s] /= Z;
-  }
-  double logdet = 0;
-  for (int i = 0; i < n; i++) {
-    logdet += 2 * std::log(std::abs(Lo(i, i)) + 1e-300);
-  }
-  double F = 0.5 * n * std::log(smax) - 0.5 * logdet;
-  // gradient assembly
-  double c_out = 0.5 * n / smax;
+  SoftMaxCellRadii smax(cells, Q, C, beta);
+  double F = 0.5 * n * std::log(smax.value) - 0.5 * LogDetCholesky(Lo);
   MatrixXd dFdQ = MatrixXd::Zero(n, n);
   MatrixXd dFdC = MatrixXd::Zero(pk.m, n);
-  for (int s = 0; s < n_cell; s++) {
-    double cw = c_out * w[s];
-    if (cw < 1e-16) {
-      continue;
-    }
-    MatrixXd const &V = Vc[s];
-    MatrixXd const &W = Wc[s];
-    dFdQ += cw * (V.transpose() * W * V);
-    // dR^2/dV = 2 W V Q ; vertex j>=1 gets row j-1, vertex 0 minus the sum
-    MatrixXd gV = 2.0 * (W * V * Q);
-    VectorXd rowsum = gV.colwise().sum();
-    for (int k = 0; k <= n; k++) {
-      int t = cells[s].cos(k);
-      if (t == 0) {
-        continue;
-      }
-      if (k == 0) {
-        dFdC.row(t) -= cw * rowsum.transpose();
-      } else {
-        dFdC.row(t) += cw * gV.row(k - 1);
-      }
-    }
-  }
-  dFdQ = 0.5 * (dFdQ + dFdQ.transpose());
-  // chain to L: dQ = dL L^T + L dL^T  ->  grad_L = 2 dFdQ L (lower triangle)
-  MatrixXd gL = 2.0 * dFdQ * Lo;
-  for (int i = 0; i < n; i++) {
-    gL(i, i) -= 1.0 / Lo(i, i);
-  }
-  grad.resize(pk.dim());
-  int pos = 0;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j <= i; j++) {
-      grad(pos++) = gL(i, j);
-    }
-  }
-  for (int t = 1; t < pk.m; t++) {
-    for (int j = 0; j < n; j++) {
-      grad(pos++) = dFdC(t, j);
-    }
-  }
+  smax.add_gradient(cells, Q, 0.5 * n / smax.value, dFdQ, dFdC);
+  grad = ChainToPacked(pk, Lo, dFdQ, dFdC, -0.5);
   return F;
 }
 
@@ -1148,36 +1198,15 @@ inline void CellR2Grad(CellClass const &cl, MatrixXd const &Q, MatrixXd const &C
                        double &R2, VectorXd &g) {
   int n = Q.rows();
   int m = C.rows();
-  MatrixXd P = CellPositions(cl, C);
-  MatrixXd V(n, n);
-  for (int k = 0; k < n; k++) {
-    V.row(k) = P.row(k + 1) - P.row(0);
-  }
-  MatrixXd G = V * Q * V.transpose();
-  VectorXd q = G.diagonal();
-  Eigen::LDLT<MatrixXd> ldlt(G);
-  VectorXd a = ldlt.solve(q);
-  R2 = 0.25 * q.dot(a);
-  // dR2/dV = 2 W V Q, W = (2 diag(a) - a a^T)/4
-  MatrixXd W = -0.25 * (a * a.transpose());
-  W.diagonal() += 0.5 * a;
-  MatrixXd gV = 2.0 * (W * V * Q);      // rows = d/d(edge_k)
-  VectorXd rowsum = gV.colwise().sum();
-  g = VectorXd::Zero(n * (m - 1));
-  for (int k = 0; k <= n; k++) {
-    int t = cl.cos(k);
-    if (t == 0) {
-      continue;
-    }
-    int base = (t - 1) * n;
-    if (k == 0) {
-      for (int j = 0; j < n; j++) {
-        g(base + j) -= rowsum(j);
-      }
-    } else {
-      for (int j = 0; j < n; j++) {
-        g(base + j) += gV(k - 1, j);
-      }
+  MatrixXd V = EdgeMatrix(CellPositions(cl, C));
+  VectorXd a;
+  R2 = Circumradius2(V, Q, a);
+  MatrixXd dC = MatrixXd::Zero(m, n);
+  AddCircumradius2CosetGradient(cl, V, Circumradius2Weight(a), Q, 1.0, dC);
+  g.resize(n * (m - 1));
+  for (int t = 1; t < m; t++) {
+    for (int j = 0; j < n; j++) {
+      g((t - 1) * n + j) = dC(t, j);
     }
   }
 }
@@ -1242,14 +1271,8 @@ inline double CStepMinimax(std::vector<CellClass> const &cells,
       }
       double mx_new = -1;
       for (int i = 0; i < n_cell; i++) {
-        MatrixXd P = CellPositions(cells[i], Ctrial);
-        MatrixXd V(n, n);
-        for (int k = 0; k < n; k++) {
-          V.row(k) = P.row(k + 1) - P.row(0);
-        }
-        MatrixXd G = V * Q * V.transpose();
-        VectorXd q = G.diagonal();
-        mx_new = std::max(mx_new, 0.25 * q.dot(G.ldlt().solve(q)));
+        MatrixXd V = EdgeMatrix(CellPositions(cells[i], Ctrial));
+        mx_new = std::max(mx_new, Circumradius2(V, Q));
       }
       if (mx_new < mx - 1e-4 * step * dn) {
         C = Ctrial;
@@ -1395,18 +1418,10 @@ inline void JointGrad(std::vector<CellClass> const &cells, MatrixXd const &Q,
   R2.assign(n_cell, 0.0);
   grad.assign(n_cell, VectorXd::Zero(dim));
   for (int i = 0; i < n_cell; i++) {
-    MatrixXd P = CellPositions(cells[i], C);
-    MatrixXd V(n, n);
-    for (int k = 0; k < n; k++) {
-      V.row(k) = P.row(k + 1) - P.row(0);
-    }
-    MatrixXd G = V * Q * V.transpose();
-    VectorXd q = G.diagonal();
-    Eigen::LDLT<MatrixXd> ldlt(G);
-    VectorXd a = ldlt.solve(q);
-    R2[i] = 0.25 * q.dot(a);
-    MatrixXd W = -0.25 * (a * a.transpose());
-    W.diagonal() += 0.5 * a;
+    MatrixXd V = EdgeMatrix(CellPositions(cells[i], C));
+    VectorXd a;
+    R2[i] = Circumradius2(V, Q, a);
+    MatrixXd W = Circumradius2Weight(a);
     // dR2/dQ = V^T W V (symmetric); contract to the sym basis
     MatrixXd dRdQ = V.transpose() * W * V;
     for (int u = 0; u < dQ; u++) {
@@ -1414,16 +1429,11 @@ inline void JointGrad(std::vector<CellClass> const &cells, MatrixXd const &Q,
       grad[i](u) = (k == l) ? dRdQ(k, k) : 2.0 * dRdQ(k, l);
     }
     // dR2/dc
-    MatrixXd gV = 2.0 * (W * V * Q);
-    VectorXd rowsum = gV.colwise().sum();
-    for (int k = 0; k <= n; k++) {
-      int t = cells[i].cos(k);
-      if (t == 0) continue;
-      int base = dQ + (t - 1) * n;
-      if (k == 0) {
-        for (int j = 0; j < n; j++) grad[i](base + j) -= rowsum(j);
-      } else {
-        for (int j = 0; j < n; j++) grad[i](base + j) += gV(k - 1, j);
+    MatrixXd dC = MatrixXd::Zero(m, n);
+    AddCircumradius2CosetGradient(cells[i], V, W, Q, 1.0, dC);
+    for (int t = 1; t < m; t++) {
+      for (int j = 0; j < n; j++) {
+        grad[i](dQ + (t - 1) * n + j) = dC(t, j);
       }
     }
   }
@@ -2165,6 +2175,64 @@ inline PCResult PackingCovering(PeriodicConfig const &conf, int max_rng = 6) {
   return {gamma, dr.mu2, l2, std::move(dr.cells)};
 }
 
+/*
+  The soft minimum smin_beta of the squared norms s^2 = w^T Q w of the short
+  pairs, w = v + C_t - C_s, kept together with what its gradient needs:
+  d s^2/dQ = w w^T and d s^2/dC_t = -d s^2/dC_s = 2 Q w. As for
+  SoftMaxCellRadii, the gradient is added afterwards, scaled.
+ */
+struct SoftMinPairNorms {
+  double value;
+  std::vector<double> w;   // the weights of the pairs, summing to 1
+  std::vector<VectorXd> Wv;
+
+  SoftMinPairNorms(std::vector<ShortPair> const &shorts, MatrixXd const &Q,
+                   MatrixXd const &C, double beta) {
+    int n_sh = shorts.size();
+    std::vector<double> S2(n_sh);
+    Wv.resize(n_sh);
+    double minS2 = 1e30;
+    for (int j = 0; j < n_sh; j++) {
+      VectorXd wv = shorts[j].v.cast<double>() +
+                    C.row(shorts[j].t).transpose() -
+                    C.row(shorts[j].s).transpose();
+      S2[j] = wv.dot(Q * wv);
+      Wv[j] = std::move(wv);
+      minS2 = std::min(minS2, S2[j]);
+    }
+    double Zm = 0;
+    w.resize(n_sh);
+    for (int j = 0; j < n_sh; j++) {
+      w[j] = std::exp(-beta * (S2[j] - minS2));
+      Zm += w[j];
+    }
+    value = minS2 - std::log(Zm) / beta;
+    for (int j = 0; j < n_sh; j++) {
+      w[j] /= Zm;
+    }
+  }
+
+  // Adds coef * d(value)/dQ to dQ and coef * d(value)/dC to dC. Pairs whose
+  // share of it is below 1e-16 in absolute value are skipped.
+  void add_gradient(std::vector<ShortPair> const &shorts, MatrixXd const &Q,
+                    double coef, MatrixXd &dQ, MatrixXd &dC) const {
+    int n_sh = shorts.size();
+    for (int j = 0; j < n_sh; j++) {
+      double cw = coef * w[j];
+      if (std::abs(cw) < 1e-16) {
+        continue;
+      }
+      VectorXd const &wv = Wv[j];
+      dQ += cw * (wv * wv.transpose());
+      if (shorts[j].t != shorts[j].s) {
+        VectorXd qw = 2.0 * (Q * wv);
+        dC.row(shorts[j].t) += cw * qw.transpose();
+        dC.row(shorts[j].s) -= cw * qw.transpose();
+      }
+    }
+  }
+};
+
 // F(x) = log smax_beta(R^2) - log smin_beta(s^2) and its gradient: the
 // smooth surrogate of log gamma^2 (up to the constant log 4) at frozen
 // Delaunay cells and frozen short-pair list. Same packed coordinates
@@ -2178,101 +2246,15 @@ inline double ObjectiveGradientPC(Packing const &pk,
   MatrixXd Lo, C;
   Unpack(pk, x, Lo, C);
   MatrixXd Q = Lo * Lo.transpose();
-  int n_cell = cells.size();
-  std::vector<double> R2(n_cell);
-  std::vector<MatrixXd> Wc(n_cell), Vc(n_cell);
-  double maxR2 = -1;
-  for (int s = 0; s < n_cell; s++) {
-    MatrixXd P = CellPositions(cells[s], C);
-    MatrixXd V(n, n);
-    for (int k = 0; k < n; k++) {
-      V.row(k) = P.row(k + 1) - P.row(0);
-    }
-    MatrixXd G = V * Q * V.transpose();
-    VectorXd q = G.diagonal();
-    VectorXd a = G.ldlt().solve(q);
-    R2[s] = 0.25 * q.dot(a);
-    MatrixXd W = -0.25 * (a * a.transpose());
-    W.diagonal() += 0.5 * a;
-    Wc[s] = std::move(W);
-    Vc[s] = std::move(V);
-    maxR2 = std::max(maxR2, R2[s]);
-  }
-  double Z = 0;
-  std::vector<double> w(n_cell);
-  for (int s = 0; s < n_cell; s++) {
-    w[s] = std::exp(beta * (R2[s] - maxR2));
-    Z += w[s];
-  }
-  double smax = maxR2 + std::log(Z) / beta;
-  for (int s = 0; s < n_cell; s++) w[s] /= Z;
-  // soft minimum of the pair norms
-  int n_sh = shorts.size();
-  std::vector<double> S2(n_sh);
-  std::vector<VectorXd> Wv(n_sh);
-  double minS2 = 1e30;
-  for (int j = 0; j < n_sh; j++) {
-    VectorXd wv = shorts[j].v.cast<double>() + C.row(shorts[j].t).transpose() -
-                  C.row(shorts[j].s).transpose();
-    S2[j] = wv.dot(Q * wv);
-    Wv[j] = std::move(wv);
-    minS2 = std::min(minS2, S2[j]);
-  }
-  double Zm = 0;
-  std::vector<double> vw(n_sh);
-  for (int j = 0; j < n_sh; j++) {
-    vw[j] = std::exp(-beta * (S2[j] - minS2));
-    Zm += vw[j];
-  }
-  double smin = minS2 - std::log(Zm) / beta;
-  for (int j = 0; j < n_sh; j++) vw[j] /= Zm;
-  double F = std::log(smax) - std::log(std::max(smin, 1e-300));
-  // gradient: covering part
-  double c_out = 1.0 / smax;
+  SoftMaxCellRadii smax(cells, Q, C, beta);
+  SoftMinPairNorms smin(shorts, Q, C, beta);
+  double F = std::log(smax.value) - std::log(std::max(smin.value, 1e-300));
   MatrixXd dFdQ = MatrixXd::Zero(n, n);
   MatrixXd dFdC = MatrixXd::Zero(pk.m, n);
-  for (int s = 0; s < n_cell; s++) {
-    double cw = c_out * w[s];
-    if (cw < 1e-16) continue;
-    MatrixXd const &V = Vc[s];
-    MatrixXd const &W = Wc[s];
-    dFdQ += cw * (V.transpose() * W * V);
-    MatrixXd gV = 2.0 * (W * V * Q);
-    VectorXd rowsum = gV.colwise().sum();
-    for (int k = 0; k <= n; k++) {
-      int t = cells[s].cos(k);
-      if (t == 0) continue;
-      if (k == 0) dFdC.row(t) -= cw * rowsum.transpose();
-      else dFdC.row(t) += cw * gV.row(k - 1);
-    }
-  }
-  // gradient: packing part (subtracted): d s^2/dQ = w w^T, d s^2/dc_t = 2 Q w
-  double c_in = 1.0 / std::max(smin, 1e-300);
-  for (int j = 0; j < n_sh; j++) {
-    double cw = c_in * vw[j];
-    if (cw < 1e-16) continue;
-    VectorXd const &wv = Wv[j];
-    dFdQ -= cw * (wv * wv.transpose());
-    if (shorts[j].t != shorts[j].s) {
-      VectorXd qw = 2.0 * (Q * wv);
-      dFdC.row(shorts[j].t) -= cw * qw.transpose();
-      dFdC.row(shorts[j].s) += cw * qw.transpose();
-    }
-  }
-  dFdQ = 0.5 * (dFdQ + dFdQ.transpose());
-  MatrixXd gL = 2.0 * dFdQ * Lo;
-  grad.resize(pk.dim());
-  int pos = 0;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j <= i; j++) {
-      grad(pos++) = gL(i, j);
-    }
-  }
-  for (int t = 1; t < pk.m; t++) {
-    for (int j = 0; j < n; j++) {
-      grad(pos++) = dFdC(t, j);
-    }
-  }
+  smax.add_gradient(cells, Q, 1.0 / smax.value, dFdQ, dFdC);
+  smin.add_gradient(shorts, Q, -1.0 / std::max(smin.value, 1e-300), dFdQ,
+                    dFdC);
+  grad = ChainToPacked(pk, Lo, dFdQ, dFdC, 0);
   return F;
 }
 

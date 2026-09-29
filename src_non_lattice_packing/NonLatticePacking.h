@@ -94,61 +94,14 @@ inline double ObjectiveGradientPacking(Packing const &pk,
   MatrixXd Lo, C;
   Unpack(pk, x, Lo, C);
   MatrixXd Q = Lo * Lo.transpose();
-  int n_sh = shorts.size();
-  std::vector<double> S2(n_sh);
-  std::vector<VectorXd> Wv(n_sh);
-  double minS2 = 1e30;
-  for (int j = 0; j < n_sh; j++) {
-    VectorXd wv = shorts[j].v.cast<double>() + C.row(shorts[j].t).transpose() -
-                  C.row(shorts[j].s).transpose();
-    S2[j] = wv.dot(Q * wv);
-    Wv[j] = std::move(wv);
-    minS2 = std::min(minS2, S2[j]);
-  }
-  double Zm = 0;
-  std::vector<double> vw(n_sh);
-  for (int j = 0; j < n_sh; j++) {
-    vw[j] = std::exp(-beta * (S2[j] - minS2));
-    Zm += vw[j];
-  }
-  double smin = minS2 - std::log(Zm) / beta;
-  for (int j = 0; j < n_sh; j++) vw[j] /= Zm;
-  double logdet = 0;
-  for (int i = 0; i < n; i++) {
-    logdet += 2 * std::log(std::abs(Lo(i, i)) + 1e-300);
-  }
-  double F = -0.5 * n * std::log(std::max(smin, 1e-300)) + 0.5 * logdet;
+  SoftMinPairNorms smin(shorts, Q, C, beta);
+  double F = -0.5 * n * std::log(std::max(smin.value, 1e-300)) +
+             0.5 * LogDetCholesky(Lo);
   MatrixXd dFdQ = MatrixXd::Zero(n, n);
   MatrixXd dFdC = MatrixXd::Zero(pk.m, n);
-  double c_in = 0.5 * n / std::max(smin, 1e-300);
-  for (int j = 0; j < n_sh; j++) {
-    double cw = c_in * vw[j];
-    if (cw < 1e-16) continue;
-    VectorXd const &wv = Wv[j];
-    dFdQ -= cw * (wv * wv.transpose());
-    if (shorts[j].t != shorts[j].s) {
-      VectorXd qw = 2.0 * (Q * wv);
-      dFdC.row(shorts[j].t) -= cw * qw.transpose();
-      dFdC.row(shorts[j].s) += cw * qw.transpose();
-    }
-  }
-  dFdQ = 0.5 * (dFdQ + dFdQ.transpose());
-  MatrixXd gL = 2.0 * dFdQ * Lo;
-  for (int i = 0; i < n; i++) {
-    gL(i, i) += 1.0 / Lo(i, i);   // + (1/2) log det part
-  }
-  grad.resize(pk.dim());
-  int pos = 0;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j <= i; j++) {
-      grad(pos++) = gL(i, j);
-    }
-  }
-  for (int t = 1; t < pk.m; t++) {
-    for (int j = 0; j < n; j++) {
-      grad(pos++) = dFdC(t, j);
-    }
-  }
+  smin.add_gradient(shorts, Q, -0.5 * n / std::max(smin.value, 1e-300), dFdQ,
+                    dFdC);
+  grad = ChainToPacked(pk, Lo, dFdQ, dFdC, 0.5);
   return F;
 }
 
