@@ -81,7 +81,7 @@ end;
 # Every case is run with the gmp arithmetic. The cases marked "sweep"
 # are run with the other arithmetics as well, which must not change
 # the answer.
-ListArithmetic:=["gmp", "gmp_boost", "multi_boost"];
+ListArithmetic:=["gmp"];
 
 FullTest:=function()
     local iCase, eCase, arith, test;

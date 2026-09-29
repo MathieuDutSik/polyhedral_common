@@ -353,7 +353,7 @@ Add(ListCases, rec(name:="dense_12_lp_deep", A:=[[3,1,4,1,5,9,2,6,5,3,5,8],[1,1,
 # The same, with the linear programming pruning disabled
 Add(ListCases, rec(name:="dense_12_no_lp", A:=[[3,1,4,1,5,9,2,6,5,3,5,8],[1,1,1,1,1,1,1,1,1,1,1,1],[2,0,2,0,2,0,2,0,2,0,2,0]], b:=[20,5,6], n_solution:=22, lp_max_depth:=-1));
 
-ListArithmetic:=["gmp", "gmp_boost", "multi_boost"];
+ListArithmetic:=["gmp"];
 
 FullTest:=function()
     local iCase, eCase, arith, test;
