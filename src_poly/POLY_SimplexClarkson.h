@@ -1210,20 +1210,38 @@ FractionFreeSolveSquare(MyMatrix<T> W, MyVector<T> rhs) {
   return std::pair<MyVector<T>, T>(std::move(xnum), prev);
 }
 
-// Given a candidate optimal basis (a set of n_x row indices), reconstruct
-// the exact vertex and the exact dual multipliers by two fraction-free
-// linear solves and check the full optimality certificate: the vertex is
-// feasible for all rows, the multipliers are nonpositive and supported on
-// the basis, and the primal and dual objective values agree. By weak
-// duality a success is a complete proof of optimality. Any failure returns
-// an empty optional. The feasibility scan is done on denominator-cleared
-// values so that for integral input it is pure integer arithmetic.
+/*
+  The optimality certificate of a candidate optimal basis (a set of n_x row
+  indices), up to the comparison of the primal and dual values, which the
+  two callers below do each in their own way.
+
+  The vertex and the dual multipliers are reconstructed by two fraction-free
+  linear solves, as numerators over a common denominator made positive, and
+  the certificate is checked: the vertex is feasible for all rows and the
+  multipliers are nonpositive and supported on the basis. With the equality
+  of the primal and dual objective values, weak duality makes a success a
+  complete proof of optimality. Any failure returns an empty optional. The
+  checks are done on denominator-cleared values, so that for integral input
+  they are pure integer arithmetic.
+
+  Making a denominator positive negates it together with its numerators,
+  which is exact even in floating point: every quotient and every sign test
+  is the same as with the denominator of the solve.
+ */
+template <typename T> struct BasisCertificate {
+  MyVector<T> xnum;   // the vertex is xnum / den
+  T den;              // > 0
+  T primalNum;        // the primal value is primalNum / den
+  MyVector<T> pdnum;  // the multiplier of the row rows[j] is -pdnum(j) / dden
+  T dden;             // > 0
+  T dualNum;          // the dual value is ToBeMinimized(0) - dualNum / dden
+};
+
 template <typename T>
-std::optional<LpSolution<T>>
-SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
-                     MyVector<T> const &ToBeMinimized,
-                     std::vector<int> const &rows,
-                     [[maybe_unused]] std::ostream &os) {
+std::optional<BasisCertificate<T>>
+SIMPLEX_CertifyBasisKernel(MyMatrix<T> const &ListIneq,
+                           MyVector<T> const &ToBeMinimized,
+                           std::vector<int> const &rows) {
   int m = ListIneq.rows();
   int n_x = ListIneq.cols() - 1;
   if (static_cast<int>(rows.size()) != n_x) {
@@ -1250,11 +1268,16 @@ SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
   if (!optX) {
     return {};
   }
-  MyVector<T> const &xnum = optX->first;
-  T const &den = optX->second;
-  bool den_pos = den > 0;
+  MyVector<T> xnum = std::move(optX->first);
+  T den = std::move(optX->second);
+  if (den < 0) {
+    den = -den;
+    for (int k = 0; k < n_x; k++) {
+      xnum(k) = -xnum(k);
+    }
+  }
   // Feasibility of the vertex: den * f_i(x) = b_i * den + a_i . xnum must
-  // have the sign of den. The basis rows are tight by construction.
+  // be nonnegative. The basis rows are tight by construction.
   for (int i = 0; i < m; i++) {
     if (in_basis[i]) {
       continue;
@@ -1263,7 +1286,7 @@ SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
     for (int k = 0; k < n_x; k++) {
       AddMul(eSum, ListIneq(i, k + 1), xnum(k));
     }
-    if (den_pos ? (eSum < 0) : (eSum > 0)) {
+    if (eSum < 0) {
       return {};
     }
   }
@@ -1271,7 +1294,6 @@ SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
   for (int k = 0; k < n_x; k++) {
     AddMul(primalNum, ToBeMinimized(k + 1), xnum(k));
   }
-  T primalValue = primalNum / den;
   // The dual multipliers: pd with sum_j pd_j a_{r_j} = c_red, that is
   // M^T pd = c_red. Then lambda_{r_j} = -pd_j must be nonpositive.
   MyMatrix<T> MT(n_x, n_x);
@@ -1290,111 +1312,8 @@ SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
   if (!optP) {
     return {};
   }
-  MyVector<T> const &pdnum = optP->first;
-  T const &dden = optP->second;
-  bool dden_pos = dden > 0;
-  T dualNum(0);
-  for (int j = 0; j < n_x; j++) {
-    if (dden_pos ? (pdnum(j) < 0) : (pdnum(j) > 0)) {
-      return {};
-    }
-    AddMul(dualNum, pdnum(j), ListIneq(rows[j], 0));
-  }
-  T dualValue = ToBeMinimized(0) - dualNum / dden;
-  if (dualValue != primalValue) {
-    return {};
-  }
-  MyVector<T> x(n_x);
-  for (int k = 0; k < n_x; k++) {
-    x(k) = xnum(k) / den;
-  }
-  MyVector<T> DualSolution = ZeroVector<T>(m);
-  for (int j = 0; j < n_x; j++) {
-    DualSolution(rows[j]) = -pdnum(j) / dden;
-  }
-  LpSolution<T> sol;
-  sol.OptimalValue = primalValue;
-  sol.DirectSolution = x;
-  sol.DualSolution = DualSolution;
-  return sol;
-}
-
-// The scaled variant of SIMPLEX_CertifyBasis for the ring case. The same
-// two fraction-free solves and the same optimality certificate, with all
-// the checks done on denominator-cleared quantities so that no division
-// (other than the exact ones inside the Bareiss elimination) occurs.
-template <typename T>
-std::optional<LpSolutionScaled<T>>
-SIMPLEX_CertifyBasisScaled(MyMatrix<T> const &ListIneq,
-                           MyVector<T> const &ToBeMinimized,
-                           std::vector<int> const &rows,
-                           [[maybe_unused]] std::ostream &os) {
-  int m = ListIneq.rows();
-  int n_x = ListIneq.cols() - 1;
-  if (static_cast<int>(rows.size()) != n_x) {
-    return {};
-  }
-  MyMatrix<T> M(n_x, n_x);
-  MyVector<T> rhs(n_x);
-  std::vector<uint8_t> in_basis(m, 0);
-  for (int j = 0; j < n_x; j++) {
-    int r = rows[j];
-    if (r < 0 || r >= m) {
-      return {};
-    }
-    in_basis[r] = 1;
-    rhs(j) = -ListIneq(r, 0);
-    for (int i = 0; i < n_x; i++) {
-      M(j, i) = ListIneq(r, i + 1);
-    }
-  }
-  std::optional<std::pair<MyVector<T>, T>> optX =
-      FractionFreeSolveSquare(M, rhs);
-  if (!optX) {
-    return {};
-  }
-  MyVector<T> xnum = optX->first;
-  T den = optX->second;
-  if (den < 0) {
-    den = -den;
-    for (int k = 0; k < n_x; k++) {
-      xnum(k) = -xnum(k);
-    }
-  }
-  for (int i = 0; i < m; i++) {
-    if (in_basis[i]) {
-      continue;
-    }
-    T eSum = ListIneq(i, 0) * den;
-    for (int k = 0; k < n_x; k++) {
-      AddMul(eSum, ListIneq(i, k + 1), xnum(k));
-    }
-    if (eSum < 0) {
-      return {};
-    }
-  }
-  T primalNum = ToBeMinimized(0) * den;
-  for (int k = 0; k < n_x; k++) {
-    AddMul(primalNum, ToBeMinimized(k + 1), xnum(k));
-  }
-  MyMatrix<T> MT(n_x, n_x);
-  MyVector<T> rhs2(n_x);
-  for (int j = 0; j < n_x; j++) {
-    int r = rows[j];
-    for (int i = 0; i < n_x; i++) {
-      MT(i, j) = ListIneq(r, i + 1);
-    }
-  }
-  for (int i = 0; i < n_x; i++) {
-    rhs2(i) = ToBeMinimized(i + 1);
-  }
-  std::optional<std::pair<MyVector<T>, T>> optP =
-      FractionFreeSolveSquare(MT, rhs2);
-  if (!optP) {
-    return {};
-  }
-  MyVector<T> pdnum = optP->first;
-  T dden = optP->second;
+  MyVector<T> pdnum = std::move(optP->first);
+  T dden = std::move(optP->second);
   if (dden < 0) {
     dden = -dden;
     for (int j = 0; j < n_x; j++) {
@@ -1408,20 +1327,79 @@ SIMPLEX_CertifyBasisScaled(MyMatrix<T> const &ListIneq,
     }
     AddMul(dualNum, pdnum(j), ListIneq(rows[j], 0));
   }
+  return BasisCertificate<T>{std::move(xnum),  std::move(den),
+                             std::move(primalNum), std::move(pdnum),
+                             std::move(dden),  std::move(dualNum)};
+}
+
+// The certificate over a field: the values are compared as quotients and
+// the solution is returned divided out.
+template <typename T>
+std::optional<LpSolution<T>>
+SIMPLEX_CertifyBasis(MyMatrix<T> const &ListIneq,
+                     MyVector<T> const &ToBeMinimized,
+                     std::vector<int> const &rows,
+                     [[maybe_unused]] std::ostream &os) {
+  std::optional<BasisCertificate<T>> opt =
+      SIMPLEX_CertifyBasisKernel(ListIneq, ToBeMinimized, rows);
+  if (!opt) {
+    return {};
+  }
+  BasisCertificate<T> const &cert = *opt;
+  int m = ListIneq.rows();
+  int n_x = ListIneq.cols() - 1;
+  T primalValue = cert.primalNum / cert.den;
+  T dualValue = ToBeMinimized(0) - cert.dualNum / cert.dden;
+  if (dualValue != primalValue) {
+    return {};
+  }
+  MyVector<T> x(n_x);
+  for (int k = 0; k < n_x; k++) {
+    x(k) = cert.xnum(k) / cert.den;
+  }
+  MyVector<T> DualSolution = ZeroVector<T>(m);
+  for (int j = 0; j < n_x; j++) {
+    DualSolution(rows[j]) = -cert.pdnum(j) / cert.dden;
+  }
+  LpSolution<T> sol;
+  sol.OptimalValue = primalValue;
+  sol.DirectSolution = x;
+  sol.DualSolution = DualSolution;
+  return sol;
+}
+
+// The certificate for the ring case: the values are compared
+// cross-multiplied, so that no division occurs (other than the exact ones
+// inside the Bareiss elimination), and the solution is returned scaled.
+template <typename T>
+std::optional<LpSolutionScaled<T>>
+SIMPLEX_CertifyBasisScaled(MyMatrix<T> const &ListIneq,
+                           MyVector<T> const &ToBeMinimized,
+                           std::vector<int> const &rows,
+                           [[maybe_unused]] std::ostream &os) {
+  std::optional<BasisCertificate<T>> opt =
+      SIMPLEX_CertifyBasisKernel(ListIneq, ToBeMinimized, rows);
+  if (!opt) {
+    return {};
+  }
+  BasisCertificate<T> &cert = *opt;
+  int m = ListIneq.rows();
+  int n_x = ListIneq.cols() - 1;
   // Value equality primalNum / den == ToBeMinimized(0) - dualNum / dden,
   // cross-multiplied since both denominators are positive.
-  if (primalNum * dden != (ToBeMinimized(0) * dden - dualNum) * den) {
+  if (cert.primalNum * cert.dden !=
+      (ToBeMinimized(0) * cert.dden - cert.dualNum) * cert.den) {
     return {};
   }
   MyVector<T> dualnum_full = ZeroVector<T>(m);
   for (int j = 0; j < n_x; j++) {
-    dualnum_full(rows[j]) = -pdnum(j);
+    dualnum_full(rows[j]) = -cert.pdnum(j);
   }
   LpSolutionScaled<T> sol;
-  sol.OptimalValueNum = primalNum;
-  sol.OptimalValueDen = den;
-  sol.DirectSolution = VectorNumDen<T>{xnum, den};
-  sol.DualSolution = VectorNumDen<T>{dualnum_full, dden};
+  sol.OptimalValueNum = std::move(cert.primalNum);
+  sol.OptimalValueDen = cert.den;
+  sol.DirectSolution = VectorNumDen<T>{std::move(cert.xnum), cert.den};
+  sol.DualSolution = VectorNumDen<T>{dualnum_full, cert.dden};
   return sol;
 }
 
