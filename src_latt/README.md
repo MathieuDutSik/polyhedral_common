@@ -48,6 +48,62 @@ The relevant programs are:
 The algorithm used in this work is the one by
   * Fincke, U. and Pohst, M., Improved methods for calculating vectors of short length in a lattice, including a complexity analysis, Mathematics of Computation, 44, 1985, 463--471
 
+Sieving
+-------
+
+`Shvec_sieve.h` implements the Gauss sieve of Micciancio and Voulgaris, next
+to the enumeration of `Shvec_exact.h`. Enumeration walks a tree of partial
+coordinates and costs `2^O(n log n)`. A sieve instead keeps a list of lattice
+vectors that is **pairwise reduced**, meaning `2|<v,w>| <= min(|v|^2, |w|^2)`
+for any two of them, and makes new samples shorter by subtracting list
+vectors from them. Heuristically this costs `2^(0.52 n)`.
+
+The sieve is **exact**. The Gram matrix is scaled to an integral one, and
+every vector carries its integral coordinates, `G x` and its norm. A reduction
+is done only when it makes the norm strictly smaller, and the integral norm
+can only decrease finitely often, so a reduction loop is impossible. The
+double-precision speed of the usual sieves comes back through a **certified
+filter**. Each pair is first tested in double precision, together with a bound
+on the rounding error of that test, and the exact test runs only when the
+double one cannot exclude a reduction. The filter never skips a real
+reduction. New vectors are drawn by Klein's randomized nearest plane on the
+LLL reduced basis.
+
+What the sieve returns is a heuristic answer: its shortest vector is a genuine
+lattice vector with an exact norm, but nothing proves it is a shortest one.
+Entry points:
+  * **GaussSieve** returns the final list, by increasing norm, with the seed,
+    the collision limits and an optional early-exit `target_norm` in
+    `SieveOptions`.
+  * **T_ShortestVectorSieve** is certified. The sieve's norm is the bound
+    for the enumeration of `Shvec_exact.h`, and the minimal vectors are kept
+    from what that enumeration returns. The output is the same as
+    `T_ShortestVector`'s, pairs `v, -v` included.
+
+**TEST_ShvecSieve** `[dim] [n_iter] [seed]` checks the certified sieve
+against `T_ShortestVector` on the benchmark families. It stops at the first
+difference in the minimum or in the set of minimal vectors. Measured with seed
+3, one instance per family, in a release build:
+
+| instance | minimum | enumeration | sieve alone | sieve + certification |
+|---|---|---|---|---|
+| Z40 | 1 | 15 ms | 12 ms | 27 ms |
+| A40 | 2 | 91 ms | 284 ms | 386 ms |
+| D40 | 2 | 166 ms | 428 ms | 597 ms |
+| random, n=40 | 20 | 260.6 s | 0.46 s | 49.4 s |
+
+On the root lattices LLL already finds the minimum, the enumeration is cheap,
+and the sieve is only overhead. The random lattice shows where the sieve
+helps. The sieve alone found the minimum in half a second. The certified run
+is five times faster than the plain enumeration, because the enumeration
+starts at the right bound. `T_ShortestVector` starts from the smallest
+diagonal entry and restarts every time it finds a shorter vector. The sieve
+alone found the minimum on every instance tested up to dimension 40, but that
+is an observation, not a guarantee.
+
+Reference:
+  * D. Micciancio, P. Voulgaris, Faster exponential time algorithms for the shortest vector problem, SODA 2010, 1468--1480.
+
 Stabilizer/Equivalence of positive definite quadratic form
 ----------------------------------------------------------
 

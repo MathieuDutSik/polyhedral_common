@@ -146,6 +146,7 @@ src_latt/TSPACE_*
 src_latt/GRP_TestFiniteness
 src_latt/TEST_EquiStabFamily
 src_latt/TEST_ReductionBenchmark
+src_latt/TEST_ShvecSieve
 src_latt/VectFamily_Reduction
 src_latt/LATT_Reduction
 src_milp/LATT_*
