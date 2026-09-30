@@ -57,7 +57,7 @@ From the bottom up. Each layer may use anything below it.
   │  Domain solvers (the "record problem" applications)                    │
   │  src_perfect  src_delaunay  src_lorentzian  src_indefinite             │
   │  src_ctype    src_copos      (+ WIP: src_rankin, src_robust_covering,  │
-  │                               src_k_coverings, src_single_delaunay,    │
+  │                               src_k_coverings, src_erdahl,             │
   │                               src_poincare_polyhedron)                 │
   ├──────────────────────────────────────────────────────────────────────┤
   │  Enumeration backbone:  src_enum_schemes   src_dualdesc                │
@@ -134,7 +134,8 @@ Note they also build on *each other*: `src_lorentzian`, `src_ctype`, and
 * **`src_indefinite`** — reduction of indefinite forms (LLL-based, isotropic).
 * **`src_ctype`** — C-types (used to enumerate all C-types in dimension 6).
 * **`src_copos`** — copositivity and strict copositivity.
-* **Work in progress:** `src_rankin` (Rankin constants), `src_single_delaunay`,
+* **Work in progress:** `src_rankin` (Rankin constants), `src_erdahl` (Delaunay
+  polyhedra and the Erdahl cone, relative to a space of functions),
   `src_poincare_polyhedron` (Poincaré polyhedron theorem for tilings),
   `src_robust_covering` (robust covering density), `src_k_coverings`.
 
