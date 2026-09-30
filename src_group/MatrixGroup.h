@@ -295,6 +295,23 @@ struct has_determining_ext<
 
 //
 
+// The rows of EXT and the map from a row to its index, the last index
+// winning for a repeated row: what GetPermutationForFiniteMatrixGroup reads
+// the action of a matrix from.
+template <typename T>
+std::pair<std::vector<MyVector<T>>, std::unordered_map<MyVector<T>, int>>
+BuildRowMap(MyMatrix<T> const &EXT) {
+  std::vector<MyVector<T>> ListV;
+  std::unordered_map<MyVector<T>, int> MapV;
+  int len = EXT.rows();
+  for (int i = 0; i < len; i++) {
+    MyVector<T> eV = GetMatrixRow(EXT, i);
+    MapV[eV] = i;
+    ListV.emplace_back(std::move(eV));
+  }
+  return {std::move(ListV), std::move(MapV)};
+}
+
 template <typename T, typename Telt, typename TintGroup>
 GeneralMatrixGroupHelper<T, Telt, TintGroup>
 TransformHelper(GeneralMatrixGroupHelper<T, Telt, TintGroup> const &helper,
@@ -318,14 +335,7 @@ FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup> TransformHelper(
   MyMatrix<T> G_new = Pmat * helper.G * Pmat.transpose();
   MyMatrix<T> EXTfaithful_new = helper.EXTfaithful * PmatInv;
   MyVector<T> Visotrop_new = PmatInv.transpose() * helper.Visotrop;
-  std::vector<MyVector<T>> ListV_new;
-  std::unordered_map<MyVector<T>, int> MapV_new;
-  int len = EXTfaithful_new.rows();
-  for (int i = 0; i < len; i++) {
-    MyVector<T> eV = GetMatrixRow(EXTfaithful_new, i);
-    MapV_new[eV] = i;
-    ListV_new.emplace_back(std::move(eV));
-  }
+  auto [ListV_new, MapV_new] = BuildRowMap(EXTfaithful_new);
   return {helper.n,
           std::move(G_new),
           std::move(EXTfaithful_new),
@@ -350,14 +360,7 @@ ToInteger(FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup> const &helper) {
   MyVector<T> Visotrop2 = RemoveFractionVector(helper.Visotrop);
   MyVector<Tint> Visotrop3 = UniversalVectorConversion<Tint, T>(Visotrop2);
   //
-  std::vector<MyVector<Tint>> ListV;
-  std::unordered_map<MyVector<Tint>, int> MapV;
-  int len = EXTfaithful3.rows();
-  for (int i = 0; i < len; i++) {
-    MyVector<Tint> eV = GetMatrixRow(EXTfaithful3, i);
-    MapV[eV] = i;
-    ListV.emplace_back(std::move(eV));
-  }
+  auto [ListV, MapV] = BuildRowMap(EXTfaithful3);
   return {helper.n,
           std::move(G3),
           std::move(EXTfaithful3),
@@ -372,14 +375,7 @@ TransformHelper(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper,
                 MyMatrix<T> const &Pmat) {
   MyMatrix<T> PmatInv = Inverse(Pmat);
   MyMatrix<T> EXTfaithful_new = helper.EXTfaithful * PmatInv;
-  std::vector<MyVector<T>> ListV_new;
-  std::unordered_map<MyVector<T>, int> MapV_new;
-  int len = EXTfaithful_new.rows();
-  for (int i = 0; i < len; i++) {
-    MyVector<T> eV = GetMatrixRow(EXTfaithful_new, i);
-    ListV_new.push_back(eV);
-    MapV_new[eV] = i;
-  }
+  auto [ListV_new, MapV_new] = BuildRowMap(EXTfaithful_new);
   return {helper.n, std::move(EXTfaithful_new), std::move(ListV_new),
           std::move(MapV_new)};
 }
@@ -393,14 +389,7 @@ ToInteger(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper) {
   MyMatrix<Tint> EXTfaithful3 =
       UniversalMatrixConversion<Tint, T>(EXTfaithful2);
   //
-  std::vector<MyVector<Tint>> ListV;
-  std::unordered_map<MyVector<Tint>, int> MapV;
-  int len = EXTfaithful3.rows();
-  for (int i = 0; i < len; i++) {
-    MyVector<Tint> eV = GetMatrixRow(EXTfaithful3, i);
-    MapV[eV] = i;
-    ListV.emplace_back(std::move(eV));
-  }
+  auto [ListV, MapV] = BuildRowMap(EXTfaithful3);
   return {helper.n, std::move(EXTfaithful3), std::move(ListV), std::move(MapV)};
 }
 
@@ -427,13 +416,7 @@ ToInteger(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper) {
 template <typename T, typename Telt, typename TintGroup>
 FiniteMatrixGroupHelper<T, Telt, TintGroup>
 ComputeFiniteMatrixGroupHelper(MyMatrix<T> const &EXT) {
-  std::vector<MyVector<T>> ListV;
-  std::unordered_map<MyVector<T>, int> MapV;
-  for (int i = 0; i < EXT.rows(); i++) {
-    MyVector<T> V = GetMatrixRow(EXT, i);
-    ListV.push_back(V);
-    MapV[V] = i;
-  }
+  auto [ListV, MapV] = BuildRowMap(EXT);
   int n_col = EXT.cols();
   return {n_col, EXT, std::move(ListV), std::move(MapV)};
 }
@@ -443,13 +426,7 @@ FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup>
 ComputeFiniteIsotropicMatrixGroupHelper(MyMatrix<T> const &G,
                                         MyMatrix<T> const &EXT,
                                         MyVector<T> const &Visotrop) {
-  std::vector<MyVector<T>> ListV;
-  std::unordered_map<MyVector<T>, int> MapV;
-  for (int i = 0; i < EXT.rows(); i++) {
-    MyVector<T> V = GetMatrixRow(EXT, i);
-    ListV.push_back(V);
-    MapV[V] = i;
-  }
+  auto [ListV, MapV] = BuildRowMap(EXT);
   int n_col = EXT.cols();
   return {n_col, G, EXT, Visotrop, std::move(ListV), std::move(MapV)};
 }
@@ -2516,32 +2493,79 @@ LinearSpace_Stabilizer_DoubleCoset_Kernel(
   return {std::move(pair.first), std::move(l_dcs)};
 }
 
-template <typename T, typename Tgroup, typename Thelper>
-RetMI_S<T, Tgroup>
-LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
-                       Thelper const &helper, MyMatrix<T> const &TheSpace,
-                       std::ostream &os) {
+/*
+  The frame shared by the LinearSpace_* functions below. The generators are
+  conjugated by the basis change Pmat of an LLL reduction
+  (LLLMatrixGroupReduction), the kernel works in that basis, and its results
+  are conjugated back.
+
+  A matrix g acting on row vectors becomes Pmat g Pmat^{-1} (to_reduced), a
+  space S becomes S Pmat^{-1}, of which a reduced basis is taken
+  (reduce_space), and a result h of the kernel becomes Pmat^{-1} h Pmat
+  (to_original).
+ */
+template <typename T, typename Thelper> struct LLLReducedFrame {
+  std::vector<MyMatrix<T>> ListMatr;
+  MyMatrix<T> Pmat_T;
+  MyMatrix<T> PmatInv_T;
+  Thelper helper;
+  MyMatrix<T> reduce_space(MyMatrix<T> const &TheSpace,
+                           std::ostream &os) const {
+    MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
+    return SublatticeBasisReduction(TheSpace_B, os);
+  }
+  MyMatrix<T> to_reduced(MyMatrix<T> const &eMatr) const {
+    return Pmat_T * eMatr * PmatInv_T;
+  }
+  MyMatrix<T> to_original(MyMatrix<T> const &eMatr) const {
+    return PmatInv_T * eMatr * Pmat_T;
+  }
+  std::vector<MyMatrix<T>>
+  to_reduced(std::vector<MyMatrix<T>> const &l_matr) const {
+    std::vector<MyMatrix<T>> l_ret;
+    for (auto &eMatr : l_matr) {
+      l_ret.emplace_back(to_reduced(eMatr));
+    }
+    return l_ret;
+  }
+  std::vector<MyMatrix<T>>
+  to_original(std::vector<MyMatrix<T>> const &l_matr) const {
+    std::vector<MyMatrix<T>> l_ret;
+    for (auto &eMatr : l_matr) {
+      l_ret.emplace_back(to_original(eMatr));
+    }
+    return l_ret;
+  }
+};
+
+template <typename T, typename Thelper>
+LLLReducedFrame<T, Thelper>
+GetLLLReducedFrame(std::vector<MyMatrix<T>> const &ListMatr,
+                   Thelper const &helper, std::ostream &os) {
   MATRIX_GROUP_ASSERT_SCALAR(T);
   using Tint = typename underlying_ring<T>::ring_type;
   static_assert(is_implementation_of_Z<Tint>::value,
                 "the basis transformation of the reduction is integral");
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
       LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
-  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
-  MyMatrix<Tint> const &Pmat = pair.second;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(pair.second);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B, os);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
+  return {std::move(pair.first), std::move(Pmat_T), std::move(PmatInv_T),
+          std::move(helper_new)};
+}
+
+template <typename T, typename Tgroup, typename Thelper>
+RetMI_S<T, Tgroup>
+LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
+                       Thelper const &helper, MyMatrix<T> const &TheSpace,
+                       std::ostream &os) {
+  LLLReducedFrame<T, Thelper> frame =
+      GetLLLReducedFrame<T, Thelper>(ListMatr, helper, os);
+  MyMatrix<T> TheSpace_C = frame.reduce_space(TheSpace, os);
   RetMI_S<T, Tgroup> ret = LinearSpace_Stabilizer_Kernel<T, Tgroup, Thelper>(
-      ListMatrNew, helper_new, TheSpace_C, os);
-  std::vector<MyMatrix<T>> const &ListMatr_B = ret.LGen;
-  std::vector<MyMatrix<T>> ListMatr_C;
-  for (auto &eMatr_B : ListMatr_B) {
-    MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
-    ListMatr_C.push_back(eMatr_C);
-  }
+      frame.ListMatr, frame.helper, TheSpace_C, os);
+  std::vector<MyMatrix<T>> ListMatr_C = frame.to_original(ret.LGen);
   if (ListMatr_C.empty()) {
     ListMatr_C.push_back(IdentityMat<T>(helper.n));
   }
@@ -2552,32 +2576,18 @@ template <typename T, typename Tgroup, typename Thelper>
 Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(
     std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::ostream &os) {
-  MATRIX_GROUP_ASSERT_SCALAR(T);
-  using Tint = typename underlying_ring<T>::ring_type;
-  static_assert(is_implementation_of_Z<Tint>::value,
-                "the basis transformation of the reduction is integral");
-  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
-  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
-  MyMatrix<Tint> const &Pmat = pair.second;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B, os);
-  Thelper helper_new = TransformHelper(helper, Pmat_T);
+  LLLReducedFrame<T, Thelper> frame =
+      GetLLLReducedFrame<T, Thelper>(ListMatr, helper, os);
+  MyMatrix<T> TheSpace_C = frame.reduce_space(TheSpace, os);
   Stab_RightCoset<T> pairB =
       LinearSpace_Stabilizer_RightCoset_Kernel<T, Tgroup, Thelper>(
-          ListMatrNew, helper_new, TheSpace_C, os);
-  std::vector<MyMatrix<T>> ListMatr_C;
-  for (auto &eMatr_B : pairB.list_gen) {
-    MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
-    ListMatr_C.push_back(eMatr_C);
-  }
+          frame.ListMatr, frame.helper, TheSpace_C, os);
+  std::vector<MyMatrix<T>> ListMatr_C = frame.to_original(pairB.list_gen);
   if (ListMatr_C.empty()) {
     ListMatr_C.push_back(IdentityMat<T>(helper.n));
   }
   CosetDescription<T> coset = pairB.coset_desc;
-  coset.conjugate(Pmat_T);
+  coset.conjugate(frame.Pmat_T);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: Returning from LinearSpace_Stabilizer_RightCoset\n";
 #endif
@@ -2591,39 +2601,14 @@ LinearSpace_Stabilizer_DoubleCoset(std::vector<MyMatrix<T>> const &ListMatr,
                                    MyMatrix<T> const &TheSpace,
                                    std::vector<MyMatrix<T>> const &V_gens,
                                    std::ostream &os) {
-  MATRIX_GROUP_ASSERT_SCALAR(T);
-  using Tint = typename underlying_ring<T>::ring_type;
-  static_assert(is_implementation_of_Z<Tint>::value,
-                "the basis transformation of the reduction is integral");
-  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
-  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
-  MyMatrix<Tint> const &Pmat = pair.second;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B, os);
-  Thelper helper_new = TransformHelper(helper, Pmat_T);
-  std::vector<MyMatrix<T>> V_gens_B;
-  for (auto &eMatr_B : V_gens) {
-    MyMatrix<T> eMatr_C = Pmat_T * eMatr_B * PmatInv_T;
-    V_gens_B.emplace_back(std::move(eMatr_C));
-  }
+  LLLReducedFrame<T, Thelper> frame =
+      GetLLLReducedFrame<T, Thelper>(ListMatr, helper, os);
+  MyMatrix<T> TheSpace_C = frame.reduce_space(TheSpace, os);
+  std::vector<MyMatrix<T>> V_gens_B = frame.to_reduced(V_gens);
   std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pairB =
       LinearSpace_Stabilizer_DoubleCoset_Kernel<T, Tgroup, Thelper>(
-          ListMatrNew, helper_new, TheSpace_C, V_gens_B, os);
-  auto convert =
-      [&](std::vector<MyMatrix<T>> const &l_mat) -> std::vector<MyMatrix<T>> {
-    std::vector<MyMatrix<T>> l_mat_tr;
-    for (auto &eMatr_B : l_mat) {
-      MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
-      l_mat_tr.emplace_back(std::move(eMatr_C));
-    }
-    return l_mat_tr;
-  };
-  std::vector<MyMatrix<T>> l_gen_C = convert(pairB.first);
-  std::vector<MyMatrix<T>> l_cos_C = convert(pairB.second);
-  return {std::move(l_gen_C), std::move(l_cos_C)};
+          frame.ListMatr, frame.helper, TheSpace_C, V_gens_B, os);
+  return {frame.to_original(pairB.first), frame.to_original(pairB.second)};
 }
 
 template <typename T, typename Tgroup, typename Thelper>
@@ -2632,42 +2617,20 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer(
     std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const &V_gens,
     std::ostream &os) {
-  using Tint = typename underlying_ring<T>::ring_type;
-  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
-  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
-  MyMatrix<Tint> const &Pmat = pair.second;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B, os);
-  Thelper helper_new = TransformHelper(helper, Pmat_T);
-  std::vector<MyMatrix<T>> V_gens_B;
-  for (auto &eMatr_B : V_gens) {
-    MyMatrix<T> eMatr_C = Pmat_T * eMatr_B * PmatInv_T;
-    V_gens_B.emplace_back(std::move(eMatr_C));
-  }
+  LLLReducedFrame<T, Thelper> frame =
+      GetLLLReducedFrame<T, Thelper>(ListMatr, helper, os);
+  MyMatrix<T> TheSpace_C = frame.reduce_space(TheSpace, os);
+  std::vector<MyMatrix<T>> V_gens_B = frame.to_reduced(V_gens);
   std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>> pairB =
       LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel<T, Tgroup, Thelper>(
-          ListMatrNew, helper_new, TheSpace_C, V_gens_B, os);
-  auto convert =
-      [&](std::vector<MyMatrix<T>> const &l_mat) -> std::vector<MyMatrix<T>> {
-    std::vector<MyMatrix<T>> l_mat_tr;
-    for (auto &eMatr_B : l_mat) {
-      MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
-      l_mat_tr.emplace_back(std::move(eMatr_C));
-    }
-    return l_mat_tr;
-  };
-  std::vector<MyMatrix<T>> l_gen_C = convert(pairB.first);
+          frame.ListMatr, frame.helper, TheSpace_C, V_gens_B, os);
   std::vector<DoubleCosetEntry<T>> l_dcs_C;
   for (auto &dcs : pairB.second) {
-    MyMatrix<T> cos_C = PmatInv_T * dcs.cos * Pmat_T;
-    std::vector<MyMatrix<T>> stab_gens_C = convert(dcs.stab_gens);
-    DoubleCosetEntry<T> dcs_C{std::move(cos_C), std::move(stab_gens_C)};
+    DoubleCosetEntry<T> dcs_C{frame.to_original(dcs.cos),
+                              frame.to_original(dcs.stab_gens)};
     l_dcs_C.emplace_back(std::move(dcs_C));
   }
-  return {std::move(l_gen_C), std::move(l_dcs_C)};
+  return {frame.to_original(pairB.first), std::move(l_dcs_C)};
 }
 
 template <typename T>
@@ -3095,28 +3058,16 @@ std::optional<MyMatrix<T>>
 LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
                         Thelper const &helper, MyMatrix<T> const &InSpace1,
                         MyMatrix<T> const &InSpace2, std::ostream &os) {
-  MATRIX_GROUP_ASSERT_SCALAR(T);
-  using Tint = typename underlying_ring<T>::ring_type;
-  static_assert(is_implementation_of_Z<Tint>::value,
-                "the basis transformation of the reduction is integral");
-  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
-  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
-  MyMatrix<Tint> const &Pmat = pair.second;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyMatrix<T> InSpace1_B = InSpace1 * PmatInv_T;
-  MyMatrix<T> InSpace2_B = InSpace2 * PmatInv_T;
-  MyMatrix<T> InSpace1_C = SublatticeBasisReduction(InSpace1_B, os);
-  MyMatrix<T> InSpace2_C = SublatticeBasisReduction(InSpace2_B, os);
-  Thelper helper_new = TransformHelper(helper, Pmat_T);
+  LLLReducedFrame<T, Thelper> frame =
+      GetLLLReducedFrame<T, Thelper>(ListMatr, helper, os);
+  MyMatrix<T> InSpace1_C = frame.reduce_space(InSpace1, os);
+  MyMatrix<T> InSpace2_C = frame.reduce_space(InSpace2, os);
   std::optional<MyMatrix<T>> opt =
       LinearSpace_Equivalence_Kernel<T, Tgroup, Thelper>(
-          ListMatrNew, helper_new, InSpace1_C, InSpace2_C, os);
+          frame.ListMatr, frame.helper, InSpace1_C, InSpace2_C, os);
   if (!opt)
     return {};
-  MyMatrix<T> RetMat = PmatInv_T * (*opt) * Pmat_T;
-  return RetMat;
+  return frame.to_original(*opt);
 }
 
 template <typename T> struct ResultSpaceCanonicalization {
