@@ -260,6 +260,31 @@ template <typename Tint> struct NmzKernel {
     NewHyps.emplace_back(std::move(NewFacet));
   }
 
+  // AdjugateDeterminant on machine integers. Its fraction-free elimination
+  // can overflow (the intermediate products are of the order of the square
+  // of the minors), and the wrapped values then typically make the matrix
+  // look singular, which AdjugateDeterminant reports by throwing a
+  // TerminalException. That has to be reported as the overflow it is, as a
+  // TryIntException, so that NormalizDualDesc_ring falls back to the exact
+  // ring instead of aborting the run.
+  std::pair<MyMatrix<Tint>, Tint>
+  adjugate_determinant_checked(MyMatrix<Tint> const &S) {
+    if constexpr (uses_deferred_overflow<Tint>::value) {
+      try {
+        return AdjugateDeterminant(S);
+      } catch (TerminalException const &) {
+#ifdef DEBUG_NORMALIZ_DUAL_DESC
+        std::cerr << "NMZ: AdjugateDeterminant failed, is_correct="
+                  << is_correct << "\n";
+#endif
+        terminate_in_arithmetic_error<Tint>();
+        throw;
+      }
+    } else {
+      return AdjugateDeterminant(S);
+    }
+  }
+
   // All dim facet normals of the simplicial cone spanned by the local
   // generators key (|key| == dim, linearly independent) at once: with S the
   // generator submatrix, S * adj(S) = det(S) * Id, so column j of the
@@ -275,7 +300,7 @@ template <typename Tint> struct NmzKernel {
       for (size_t u = 0; u < dim; u++)
         S(k, u) = TopGen(row, u);
     }
-    std::pair<MyMatrix<Tint>, Tint> pair = AdjugateDeterminant(S);
+    std::pair<MyMatrix<Tint>, Tint> pair = adjugate_determinant_checked(S);
     std::vector<MyVector<Tint>> normals;
     normals.reserve(dim);
     for (size_t j = 0; j < dim; j++) {
