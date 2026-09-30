@@ -78,44 +78,6 @@ size_t GetRationalInvariant(std::vector<MyMatrix<T>> const &ListGen) {
   return std::hash<T>()(prod);
 }
 
-template <typename T, typename Thelper>
-T L1normMatrixGroup(Thelper const &helper,
-                    std::vector<MyMatrix<T>> const &ListMatr) {
-  int n = helper.n;
-  T sum(0);
-  for (auto &eMat : ListMatr) {
-    for (int i = 0; i < n; i++)
-      for (int j = 0; j < n; j++)
-        sum += T_abs(eMat(i, j));
-  }
-  return sum;
-}
-
-template <typename T, typename Tint, typename Thelper>
-std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>>
-LLLMatrixGroupReduction(Thelper const &helper,
-                        std::vector<MyMatrix<T>> const &ListMatr,
-                        std::ostream &os) {
-  int n = helper.n;
-  MyMatrix<T> PosDefMat = IdentityMat<T>(n);
-  for (auto &eMat : ListMatr) {
-    if (!IsIdentity(eMat)) {
-      MyMatrix<T> eProd = eMat * eMat.transpose();
-      PosDefMat += eProd;
-    }
-  }
-  LLLreduction<T, Tint> pair = LLLreducedBasis<T, Tint>(PosDefMat, os);
-  MyMatrix<Tint> const &Pmat = pair.Pmat;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  std::vector<MyMatrix<T>> ListMatrNew;
-  for (auto &eMat : ListMatr) {
-    MyMatrix<T> eMatNew = Pmat_T * eMat * PmatInv_T;
-    ListMatrNew.emplace_back(std::move(eMatNew));
-  }
-  return {std::move(ListMatrNew), Pmat};
-}
-
 template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
 #ifdef SANITY_CHECK_MATRIX_GROUP_BASIC
   T TheDet = T_abs(DeterminantMat(TheSpace));
