@@ -128,12 +128,17 @@ ClassifyComponent(std::vector<int> const &nodes,
   }
   // degrees within the component
   int deg3 = -1;
-  int n_deg3 = 0, n_deg1 = 0;
+  int n_deg3 = 0;
+#ifdef SANITY_CHECK_LATTICE_ROOT_SYSTEM
+  int n_deg1 = 0;
+#endif
   for (int v : nodes) {
     int d = adj[v].size();
+#ifdef SANITY_CHECK_LATTICE_ROOT_SYSTEM
     if (d == 1) {
       n_deg1++;
     }
+#endif
     if (d == 3) {
       n_deg3++;
       deg3 = v;
@@ -145,7 +150,15 @@ ClassifyComponent(std::vector<int> const &nodes,
     }
   }
   if (n_deg3 == 0) {
-    // a path: A_k
+    // a path: A_k. All degrees 2 would be a cycle, the affine diagram of
+    // A_{k-1}, which the root system of a definite lattice cannot have.
+#ifdef SANITY_CHECK_LATTICE_ROOT_SYSTEM
+    if (n_deg1 != 2) {
+      std::cerr << "ROOTSYS: a component with no node of degree 3 has "
+                << n_deg1 << " ends, so it is not a path\n";
+      throw TerminalException{1};
+    }
+#endif
     return {'A', k};
   }
   if (n_deg3 == 1) {

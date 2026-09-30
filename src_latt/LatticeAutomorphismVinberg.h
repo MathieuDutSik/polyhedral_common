@@ -134,7 +134,6 @@ mpz_class OrderFromGens(MyMatrix<Tint> const &SHV,
 template <typename T, typename Tint, typename Tgroup>
 VinbergAutom<Tint> ComputeAutomorphismVinberg(MyMatrix<T> const &GramMat,
                                               std::ostream &os) {
-  int n = GramMat.rows();
   VinbergAutom<Tint> res;
   RootSystemData<Tint> rs = ComputeRootSystem<T, Tint>(GramMat, os);
   if (rs.n_roots == 0) {
