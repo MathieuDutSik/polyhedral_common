@@ -566,11 +566,48 @@ MyMatrix<Tint> igusa_coordinate_action(IgusaSpace<T, Tint> const &space,
   return M.transpose();
 }
 
+// The orbit index of each point under a permutation group
+template <typename Tgroup>
+std::vector<int> igusa_orbit_index(Tgroup const &GRP, int n_pt) {
+  using Telt = typename Tgroup::Telt;
+  std::vector<int> orbit(n_pt, -1);
+  std::vector<Telt> l_gens = GRP.GeneratorsOfGroup();
+  int i_orb = 0;
+  for (int i = 0; i < n_pt; i++) {
+    if (orbit[i] == -1) {
+      std::vector<int> l_pos{i};
+      orbit[i] = i_orb;
+      size_t pos = 0;
+      while (pos < l_pos.size()) {
+        int j = l_pos[pos];
+        pos++;
+        for (auto &elt : l_gens) {
+          int k = elt.at(j);
+          if (orbit[k] == -1) {
+            orbit[k] = i_orb;
+            l_pos.push_back(k);
+          }
+        }
+      }
+      i_orb++;
+    }
+  }
+  return orbit;
+}
+
+/*
+  A facet of the local cone C_A, which is also a facet of P:
+  the inequality tr(F X) >= rhs on P, with equality at A.
+ */
 template <typename T> struct IgusaFacet {
   // The facet functional f in the dual coordinates: f.D >= 0 on C_A
   MyVector<T> f;
-  // The matrix F of the T-space with tr(F D) = f.D
+  // The matrix F of the T-space with tr(F D) = f.D, primitive
   MyMatrix<T> F;
+  // The value tr(F A)
+  T rhs;
+  // The incidence on the extreme rays of C_A
+  Face incd;
 };
 
 template <typename T, typename Tint, typename Tgroup> struct IgusaLocalCone {
@@ -589,10 +626,18 @@ template <typename T, typename Tint, typename Tgroup> struct IgusaLocalCone {
 
 template <typename T, typename Tint>
 IgusaFacet<T> igusa_get_facet(IgusaSpace<T, Tint> const &space,
-                              MyVector<T> const &f) {
+                              MyMatrix<T> const &A, MyVector<T> const &f,
+                              Face const &incd) {
   MyVector<T> y = Inverse(space.TraceGram) * f;
   MyMatrix<T> F = RemoveFractionMatrix(igusa_matrix(space, y));
-  return {f, F};
+  T rhs = frobenius_inner(F, A);
+  // f is nonnegative on the positive semidefinite cone and nonzero, so
+  // it is positive on A. This fixes the sign of the rescaling.
+  if (rhs < 0) {
+    F = -F;
+    rhs = -rhs;
+  }
+  return {f, F, rhs, incd};
 }
 
 /*
@@ -789,36 +834,11 @@ igusa_local_cone(IgusaSpace<T, Tint> &space, MyMatrix<T> const &A,
     }
     return Tgroup(l_gens, n_ray);
   };
-  auto get_orbit_index = [&](Tgroup const &GRP, int n_ray) -> std::vector<int> {
-    std::vector<int> orbit(n_ray, -1);
-    std::vector<Telt> l_gens = GRP.GeneratorsOfGroup();
-    int i_orb = 0;
-    for (int i = 0; i < n_ray; i++) {
-      if (orbit[i] == -1) {
-        std::vector<int> l_pos{i};
-        orbit[i] = i_orb;
-        size_t pos = 0;
-        while (pos < l_pos.size()) {
-          int j = l_pos[pos];
-          pos++;
-          for (auto &elt : l_gens) {
-            int k = elt.at(j);
-            if (orbit[k] == -1) {
-              orbit[k] = i_orb;
-              l_pos.push_back(k);
-            }
-          }
-        }
-        i_orb++;
-      }
-    }
-    return orbit;
-  };
   // Replace ListRay by its extreme rays
   auto reduce_rays = [&]() -> void {
     int n_ray = ListRay.size();
     Tgroup GRP = get_perm_group(ListRay, MapRay);
-    std::vector<int> BlockBelong = get_orbit_index(GRP, n_ray);
+    std::vector<int> BlockBelong = igusa_orbit_index(GRP, n_ray);
     MyMatrix<Tint> EXT = MatrixFromVectorFamilyDim(dim, ListRay);
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
     MyMatrix<T> ListIneq(n_ray, dim + 1);
@@ -917,12 +937,12 @@ igusa_local_cone(IgusaSpace<T, Tint> &space, MyMatrix<T> const &A,
       if (!test_facet(f)) {
         is_correct = false;
       }
-      ListFacetRepr.push_back(igusa_get_facet(space, f));
+      ListFacetRepr.push_back(igusa_get_facet(space, A, f, face));
     }
     if (is_correct) {
       MyMatrix<Tint> EXT = MatrixFromVectorFamilyDim(dim, ListRay);
       int n_ray = ListRay.size();
-      std::vector<int> orbit = get_orbit_index(GRP, n_ray);
+      std::vector<int> orbit = igusa_orbit_index(GRP, n_ray);
       std::vector<int> ListRayRepr;
       int i_orb_next = 0;
       for (int i = 0; i < n_ray; i++) {
@@ -989,6 +1009,8 @@ template <typename T, typename Tint, typename Tgroup> struct IgusaVertex {
   std::vector<MyMatrix<Tint>> GRP_matr;
   typename Tgroup::Tint stab_size;
   MyMatrix<Tint> EXT;
+  // The action of the stabilizer on the rows of EXT
+  Tgroup GRP;
   std::vector<IgusaFacet<T>> ListFacetRepr;
   // The infinite edges up to the stabilizer, as matrices
   std::vector<MyMatrix<T>> ListInfiniteRay;
@@ -1019,7 +1041,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataIgusaFunc {
     Tshortest<T, Tint> rec_shv = T_ShortestVectorHalf<T, Tint>(Gram, os);
     TshortestPerfect<T, Tint> tsp =
         build_tshortest_perfect<T, Tint>(Gram, rec_shv, os);
-    return {Gram, std::move(tsp), {}, 0, {}, {}, {}, 0};
+    return {Gram, std::move(tsp), {}, 0, {}, {}, {}, {}, 0};
   }
 
   Tobj f_init() {
@@ -1045,7 +1067,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataIgusaFunc {
   }
 
   std::pair<Tobj, TadjO> f_spann(TadjI const &y) {
-    Tobj x{y.Gram, y.tsp, {}, 0, {}, {}, {}, 0};
+    Tobj x{y.Gram, y.tsp, {}, 0, {}, {}, {}, {}, 0};
     TadjO ret{y.Direction, IdentityMat<Tint>(space.n)};
     return {x, ret};
   }
@@ -1059,6 +1081,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataIgusaFunc {
     IgusaLocalCone<T, Tint, Tgroup> cone =
         igusa_local_cone<T, Tint, Tgroup>(space, x.Gram, x.GRP_matr, os);
     x.EXT = cone.EXT;
+    x.GRP = cone.GRP;
     x.ListFacetRepr = cone.ListFacetRepr;
     x.nb_dual_description = cone.nb_dual_description;
     std::vector<TadjI> ListAdj;
@@ -1086,7 +1109,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataIgusaFunc {
   }
 
   Tobj f_adji_obj(TadjI const &x) {
-    return {x.Gram, x.tsp, {}, 0, {}, {}, {}, 0};
+    return {x.Gram, x.tsp, {}, 0, {}, {}, {}, {}, 0};
   }
 };
 
@@ -1105,7 +1128,9 @@ void WriteEntryGAP(std::ostream &os_out,
       os_out << ",";
     }
     is_first = false;
+    os_out << "rec(F:=";
     WriteMatrixGAP(os_out, facet.F);
+    os_out << ", rhs:=" << facet.rhs << ")";
   }
   os_out << "], ListInfiniteRay:=";
   WriteListMatrixGAP(os_out, obj.ListInfiniteRay);
@@ -1136,7 +1161,8 @@ void WriteEntryPYTHON(std::ostream &os_out,
       os_out << ",";
     }
     is_first = false;
-    os_out << StringMatrixPYTHON(facet.F);
+    os_out << "{\"F\":" << StringMatrixPYTHON(facet.F)
+           << ", \"rhs\":\"" << facet.rhs << "\"}";
   }
   os_out << "], \"ListInfiniteRay\":[";
   is_first = true;
@@ -1155,6 +1181,192 @@ void WriteEntryPYTHON(std::ostream &os_out,
                       IgusaVertex_AdjO<T, Tint> const &adj) {
   os_out << "{\"Direction\":" << StringMatrixPYTHON(adj.Direction);
   os_out << ", \"eBigMat\":" << StringMatrixPYTHON(adj.eBigMat) << "}";
+}
+
+/*
+  The orbits of facets of P. A facet of P appears at each of its vertices
+  as a facet of the local cone, so the same orbit can appear at several
+  vertex representatives, or several times at one representative (with
+  different Stab(A)-orbits). Moving along an edge [A, B] contained in the
+  facet and mapping B to its representative identifies the facet with a
+  facet at the representative of B. Since the graph of the vertices of a
+  facet is connected, the union-find over those moves gives the orbits.
+ */
+template <typename T> struct IgusaFacetOrbit {
+  MyMatrix<T> F;
+  T rhs;
+  int rank;
+  // The (vertex, facet) representatives in the orbit
+  std::vector<std::pair<int, int>> l_repr;
+};
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<IgusaFacetOrbit<T>> igusa_facet_orbits(
+    DataIgusaFunc<T, Tint, Tgroup> &data,
+    std::vector<IgusaVertex<T, Tint, Tgroup>> const &l_vert) {
+  std::ostream &os = data.os;
+  IgusaSpace<T, Tint> const &space = data.space;
+  int n_vert = l_vert.size();
+  std::vector<int> l_shift(n_vert + 1, 0);
+  for (int i = 0; i < n_vert; i++) {
+    l_shift[i + 1] = l_shift[i] + l_vert[i].ListFacetRepr.size();
+  }
+  int n_pair = l_shift[n_vert];
+  std::vector<int> parent(n_pair);
+  for (int i = 0; i < n_pair; i++) {
+    parent[i] = i;
+  }
+  auto find = [&](int i) -> int {
+    while (parent[i] != i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  };
+  std::vector<size_t> l_hash;
+  size_t seed = 1234;
+  for (auto &v : l_vert) {
+    l_hash.push_back(data.f_hash(seed, v));
+  }
+  std::vector<std::vector<Face>> l_can;
+  for (auto &v : l_vert) {
+    std::vector<Face> l_face;
+    for (auto &facet : v.ListFacetRepr) {
+      l_face.push_back(v.GRP.CanonicalImage(facet.incd));
+    }
+    l_can.push_back(l_face);
+  }
+  for (int i_vert = 0; i_vert < n_vert; i_vert++) {
+    IgusaVertex<T, Tint, Tgroup> const &v = l_vert[i_vert];
+    int n_ray = v.EXT.rows();
+    int n_facet = v.ListFacetRepr.size();
+    for (int i_facet = 0; i_facet < n_facet; i_facet++) {
+      IgusaFacet<T> const &facet = v.ListFacetRepr[i_facet];
+      // One ray for each orbit of the stabilizer of the facet
+      Tgroup GRPfacet = v.GRP.Stabilizer_OnSets(facet.incd);
+      std::vector<int> orbit = igusa_orbit_index(GRPfacet, n_ray);
+      std::set<int> set_orbit_done;
+      for (int i_ray = 0; i_ray < n_ray; i_ray++) {
+        if (facet.incd[i_ray] == 0 || set_orbit_done.count(orbit[i_ray]) > 0) {
+          continue;
+        }
+        set_orbit_done.insert(orbit[i_ray]);
+        MyVector<Tint> ray = GetMatrixRow(v.EXT, i_ray);
+        std::optional<Tint> opt = igusa_edge_length(space, v.Gram, ray, os);
+        if (!opt) {
+          continue;
+        }
+        MyMatrix<T> B = v.Gram + UniversalScalarConversion<T, Tint>(*opt) *
+                                     igusa_matrix_int(space, ray);
+        IgusaVertex<T, Tint, Tgroup> vB = data.make_vertex(B);
+        size_t hashB = data.f_hash(seed, vB);
+        bool is_found = false;
+        for (int j_vert = 0; j_vert < n_vert; j_vert++) {
+          if (l_hash[j_vert] != hashB) {
+            continue;
+          }
+          IgusaVertex<T, Tint, Tgroup> const &w = l_vert[j_vert];
+          std::optional<MyMatrix<Tint>> optP =
+              SimplePerfect_TestEquivalence<T, Tint, Tgroup>(
+                  space.LinSpa, B, w.Gram, vB.tsp, w.tsp, os);
+          if (!optP) {
+            continue;
+          }
+          is_found = true;
+          // P B P^T = w.Gram, so f'(X) = f(P^{-1} X P^{-T})
+          MyMatrix<Tint> Pinv = Inverse(*optP);
+          MyMatrix<Tint> M = igusa_coordinate_action(space, Pinv);
+          MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(M);
+          MyVector<T> f_img = M_T.transpose() * facet.f;
+          int n_ray_w = w.EXT.rows();
+          Face incd(n_ray_w);
+          for (int j_ray = 0; j_ray < n_ray_w; j_ray++) {
+            MyVector<T> ray_w =
+                UniversalVectorConversion<T, Tint>(GetMatrixRow(w.EXT, j_ray));
+            T scal = f_img.dot(ray_w);
+#ifdef SANITY_CHECK_IGUSA
+            if (scal < 0) {
+              std::cerr << "IGUSA: The mapped facet should be valid\n";
+              throw TerminalException{1};
+            }
+#endif
+            if (scal == 0) {
+              incd[j_ray] = 1;
+            }
+          }
+          Face can = w.GRP.CanonicalImage(incd);
+          int j_facet = -1;
+          for (size_t u = 0; u < l_can[j_vert].size(); u++) {
+            if (l_can[j_vert][u] == can) {
+              j_facet = u;
+            }
+          }
+          if (j_facet == -1) {
+            std::cerr << "IGUSA: Failed to find the mapped facet\n";
+            throw TerminalException{1};
+          }
+          int a = find(l_shift[i_vert] + i_facet);
+          int b = find(l_shift[j_vert] + j_facet);
+          parent[a] = b;
+          break;
+        }
+        if (!is_found) {
+          std::cerr << "IGUSA: Failed to find the neighbor among the "
+                       "vertices\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+  }
+  std::map<int, int> map_orbit;
+  std::vector<IgusaFacetOrbit<T>> l_orbit;
+  for (int i_vert = 0; i_vert < n_vert; i_vert++) {
+    int n_facet = l_vert[i_vert].ListFacetRepr.size();
+    for (int i_facet = 0; i_facet < n_facet; i_facet++) {
+      int root = find(l_shift[i_vert] + i_facet);
+      if (map_orbit.count(root) == 0) {
+        IgusaFacet<T> const &facet = l_vert[i_vert].ListFacetRepr[i_facet];
+        map_orbit[root] = l_orbit.size();
+        int rank = RankMat(facet.F);
+        l_orbit.push_back({facet.F, facet.rhs, rank, {}});
+      }
+      l_orbit[map_orbit[root]].l_repr.push_back({i_vert, i_facet});
+    }
+  }
+  return l_orbit;
+}
+
+template <typename T>
+void WriteEntryGAP(std::ostream &os_out, IgusaFacetOrbit<T> const &orb) {
+  os_out << "rec(F:=";
+  WriteMatrixGAP(os_out, orb.F);
+  os_out << ", rhs:=" << orb.rhs << ", rank:=" << orb.rank
+         << ", ListVertexFacet:=[";
+  bool is_first = true;
+  for (auto &pair : orb.l_repr) {
+    if (!is_first) {
+      os_out << ",";
+    }
+    is_first = false;
+    os_out << "[" << (pair.first + 1) << "," << (pair.second + 1) << "]";
+  }
+  os_out << "])";
+}
+
+template <typename T>
+void WriteEntryPYTHON(std::ostream &os_out, IgusaFacetOrbit<T> const &orb) {
+  os_out << "{\"F\":" << StringMatrixPYTHON(orb.F) << ", \"rhs\":\""
+         << orb.rhs << "\", \"rank\":" << orb.rank
+         << ", \"ListVertexFacet\":[";
+  bool is_first = true;
+  for (auto &pair : orb.l_repr) {
+    if (!is_first) {
+      os_out << ",";
+    }
+    is_first = false;
+    os_out << "[" << pair.first << "," << pair.second << "]";
+  }
+  os_out << "]}";
 }
 
 inline FullNamelist NAMELIST_GetStandard_ENUMERATE_IGUSA_TSPACE() {

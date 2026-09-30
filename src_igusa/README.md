@@ -9,9 +9,11 @@ is a T-space version of `Tspace_Igusa.g` of the MyPolyhedral GAP package.
 
 `IGUSA_EnumerateVertices` enumerates the vertices of P up to the arithmetic
 group of the T-space, and for each vertex A gives its stabilizer, its edges
-(neighbors and infinite edges) and its facets. The T-space is given by the
-standard `&TSPACE` block (Classic, ImagQuad for the Gaussian and Eisenstein
-integers, InvGroup, Raw, File).
+(neighbors and infinite edges) and its facets. It also gives the orbits of
+facets of P, as inequalities tr(F X) >= rhs. The facets X[v] >= 1 are
+those with F of rank 1, the other ones are specific to P. The T-space is
+given by the standard `&TSPACE` block (Classic, ImagQuad for the Gaussian
+and Eisenstein integers, InvGroup, Raw, File).
 
 The method
 ----------
@@ -48,13 +50,13 @@ Namelist
 
 ```
 &DATA
- arithmetic = "gmp"
+ arithmetic = "flint"    ! gmp, or flint (faster) with ENABLE_FLINT_SUPPORT
  IlpMethod = "default"   ! default, scip, exact_bb
  OutFormat = "GAP"       ! GAP, PYTHON
  OutFile = "result.g"    ! or stderr, stdout
  NormBound = 2           ! initial bound for the candidate rays
  NbRandomFacet = 10      ! random facets tested per round
- NbCleanRound = 2        ! rounds without violation before the dual description
+ NbCleanRound = 2        ! clean rounds before the dual description
 /
 
 &TSPACE
@@ -69,13 +71,24 @@ Namelist
 /
 ```
 
+Output
+------
+
+`rec(ListVertex:=[...], ListFacetOrbit:=[...])`. Each vertex has its Gram
+matrix, the order of its stabilizer, its number of extreme rays, the number
+of dual descriptions done, its facets up to the stabilizer as
+`rec(F, rhs)` and its infinite edges, and the neighbors with the matrix
+mapping them to their representative. Each orbit of facets has F, rhs, the
+rank of F and the list of [vertex, facet] pairs where it appears.
+
 Integer programming
 -------------------
 
 The integer programs use SCIP when compiled with it
 (`make ENABLE_SCIP_SUPPORT=1`, or the `ENABLE_SCIP_SUPPORT` CMake option)
 and otherwise an exact branch and bound, see
-`src_milp/integer_linear_programming.h`. SCIP works in floating point: the
-problems are passed with integral coefficients and the solutions are checked
-exactly. With `SANITY_CHECK` each SCIP result is compared with the exact
-branch and bound.
+`src_milp/integer_linear_programming.h`. The SCIP specific code is in
+`src_milp/scip_support.h`, included under `#ifdef ENABLE_SCIP_SUPPORT`.
+SCIP works in floating point: the problems are passed with integral
+coefficients and the solutions are checked exactly. With `SANITY_CHECK`
+each SCIP result is compared with the exact branch and bound.
