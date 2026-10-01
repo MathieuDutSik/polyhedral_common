@@ -446,10 +446,12 @@ template <typename T, typename Tint>
 DelaunayPolyhedron<T, Tint>
 erdahl_sub_polyhedron_of_face(ErdahlFunctionSpace<T> const &W,
                               DelaunayPolyhedron<T, Tint> const &D,
-                              Face const &eFace, std::ostream &os) {
+                              Face const &eFace,
+                              ErdahlCanonicalHint<Tint> const *hint,
+                              std::ostream &os) {
   MyMatrix<T> G = erdahl_function_of_face(W, D, eFace);
   DelaunayPolyhedron<T, Tint> Dsub =
-      erdahl_polyhedron_extension<T, Tint>(W, G, D, true, os);
+      erdahl_polyhedron_extension<T, Tint>(W, G, D, true, hint, os);
 #ifdef SANITY_CHECK_ERDAHL_POLYTOPE
   if (Dsub.EXT.rows() != static_cast<int>(eFace.count()) || Dsub.L.rows() > 0) {
     std::cerr << "ERDAHL: the zero set is not the face\n";

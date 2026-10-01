@@ -334,7 +334,8 @@ erdahl_flip(ErdahlFunctionSpace<T> const &W,
      << " |l_cand|=" << l_cand.size() << "|=" << time_total << "\n";
 #endif
   DelaunayPolyhedron<T, Tint> D2p =
-      erdahl_polyhedron_extension<T, Tint>(W, G, D3, compute_function, os);
+      erdahl_polyhedron_extension<T, Tint>(W, G, D3, compute_function,
+                                           nullptr, os);
 #ifdef TIMINGS_ERDAHL_FLIP
   os << "|ERDAHL: flip, zero set and canonical function, d3=" << D3.L.rows()
      << " |EXT(D2')|=" << D2p.EXT.rows() << "|=" << time_total << "\n";

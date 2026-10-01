@@ -64,9 +64,10 @@ void erdahl_check_supported_space(ErdahlFunctionSpace<T> const &W) {
   throw TerminalException{1};
 }
 
-// Whether e -> e g maps Y onto Y.
+// Whether e -> e g maps Y onto Y, ab being the adapted basis of Y.
 template <typename T, typename Tint>
 bool erdahl_transformation_preserves(DelaunayPolyhedron<T, Tint> const &Y,
+                                     ErdahlAdaptedBasis<Tint> const &ab,
                                      MyMatrix<Tint> const &g) {
   int n = erdahl_dimension(Y);
   for (int i = 0; i < Y.L.rows(); i++) {
@@ -80,7 +81,6 @@ bool erdahl_transformation_preserves(DelaunayPolyhedron<T, Tint> const &Y,
       return false;
     }
   }
-  ErdahlAdaptedBasis<Tint> ab = erdahl_adapted_basis(Y);
   for (int i = 0; i < Y.EXT.rows(); i++) {
     MyVector<Tint> e = GetMatrixRow(Y.EXT, i);
     MyVector<Tint> img = g.transpose() * e;
@@ -89,6 +89,12 @@ bool erdahl_transformation_preserves(DelaunayPolyhedron<T, Tint> const &Y,
     }
   }
   return true;
+}
+
+template <typename T, typename Tint>
+bool erdahl_transformation_preserves(DelaunayPolyhedron<T, Tint> const &Y,
+                                     MyMatrix<Tint> const &g) {
+  return erdahl_transformation_preserves(Y, erdahl_adapted_basis(Y), g);
 }
 
 // The image g(S) = { e g : e in S }, whose function is F o g^{-1}.
@@ -135,10 +141,61 @@ template <typename T, typename Tint> struct ErdahlChainConfig {
   std::vector<MyMatrix<T>> ListMat;
 };
 
+/*
+  The data of a super polyhedron Y used by the chain configurations, the
+  same for all the polyhedra X it contains: it is computed once by the
+  callers testing many X against the same supers.
+ */
+template <typename T, typename Tint> struct ErdahlSuperData {
+  DelaunayPolyhedron<T, Tint> Y;
+  ErdahlAdaptedBasis<Tint> abY;
+  // The discriminant matrix of Y in its adapted coordinates.
+  MyMatrix<T> MY;
+  // The first p_Y + 1 columns of the inverse of the adapted basis of Y.
+  MyMatrix<T> InvY_red;
+};
+
+template <typename T, typename Tint>
+ErdahlSuperData<T, Tint> erdahl_super_data(DelaunayPolyhedron<T, Tint> const &Y) {
+  ErdahlAdaptedBasis<Tint> abY = erdahl_adapted_basis(Y);
+  int np1 = abY.n + 1;
+  MyMatrix<Tint> EXTredY = erdahl_reduced_ext(Y, abY);
+  MyMatrix<T> MY = erdahl_discriminant_matrix<T, Tint>(EXTredY);
+  MyMatrix<T> InvY_T = UniversalMatrixConversion<T, Tint>(abY.AffBasisInv);
+  MyMatrix<T> InvY_red(np1, abY.p + 1);
+  for (int i = 0; i < np1; i++) {
+    for (int j = 0; j <= abY.p; j++) {
+      InvY_red(i, j) = InvY_T(i, j);
+    }
+  }
+  return {Y, abY, MY, InvY_red};
+}
+
+template <typename T, typename Tint>
+std::vector<ErdahlSuperData<T, Tint>>
+erdahl_list_super_data(std::vector<DelaunayPolyhedron<T, Tint>> const &supers) {
+  std::vector<ErdahlSuperData<T, Tint>> l_sd;
+  for (auto &Y : supers) {
+    l_sd.push_back(erdahl_super_data(Y));
+  }
+  return l_sd;
+}
+
+template <typename T, typename Tint>
+bool erdahl_preserves_all(std::vector<ErdahlSuperData<T, Tint>> const &l_sd,
+                          MyMatrix<Tint> const &g) {
+  for (auto &sd : l_sd) {
+    if (!erdahl_transformation_preserves(sd.Y, sd.abY, g)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 template <typename T, typename Tint>
 ErdahlChainConfig<T, Tint>
 erdahl_chain_config(DelaunayPolyhedron<T, Tint> const &X,
-                    std::vector<DelaunayPolyhedron<T, Tint>> const &supers) {
+                    std::vector<ErdahlSuperData<T, Tint>> const &l_sd) {
   ErdahlAdaptedBasis<Tint> ab = erdahl_adapted_basis(X);
   MyMatrix<Tint> EXTred = erdahl_reduced_ext(X, ab);
   std::vector<MyMatrix<T>> ListMat{erdahl_discriminant_matrix<T, Tint>(EXTred)};
@@ -150,21 +207,18 @@ erdahl_chain_config(DelaunayPolyhedron<T, Tint> const &X,
       topX(i, j) = AffBasis_T(i, j);
     }
   }
-  for (auto &Y : supers) {
-    ErdahlAdaptedBasis<Tint> abY = erdahl_adapted_basis(Y);
-    MyMatrix<Tint> EXTredY = erdahl_reduced_ext(Y, abY);
-    MyMatrix<T> MY = erdahl_discriminant_matrix<T, Tint>(EXTredY);
-    MyMatrix<T> InvY_T = UniversalMatrixConversion<T, Tint>(abY.AffBasisInv);
-    MyMatrix<T> InvY_red(np1, abY.p + 1);
-    for (int i = 0; i < np1; i++) {
-      for (int j = 0; j <= abY.p; j++) {
-        InvY_red(i, j) = InvY_T(i, j);
-      }
-    }
-    MyMatrix<T> S = topX * InvY_red;
-    ListMat.push_back(S * MY * S.transpose());
+  for (auto &sd : l_sd) {
+    MyMatrix<T> S = topX * sd.InvY_red;
+    ListMat.push_back(S * sd.MY * S.transpose());
   }
   return {ab, EXTred, ListMat};
+}
+
+template <typename T, typename Tint>
+ErdahlChainConfig<T, Tint>
+erdahl_chain_config(DelaunayPolyhedron<T, Tint> const &X,
+                    std::vector<DelaunayPolyhedron<T, Tint>> const &supers) {
+  return erdahl_chain_config(X, erdahl_list_super_data(supers));
 }
 
 /*
@@ -178,17 +232,15 @@ erdahl_chain_config(DelaunayPolyhedron<T, Tint> const &X,
   almost only run on actually equivalent polyhedra.
  */
 template <typename T, typename Tint>
-size_t erdahl_invariant_hash(DelaunayPolyhedron<T, Tint> const &X,
-                             std::vector<DelaunayPolyhedron<T, Tint>> const &supers,
+size_t erdahl_invariant_hash(ErdahlChainConfig<T, Tint> const &cfg,
                              std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
-  ErdahlChainConfig<T, Tint> cfg = erdahl_chain_config(X, supers);
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(cfg.EXTred);
   int n_ext = EXT_T.rows();
   std::vector<T> Vdiag(n_ext, T(0));
   std::vector<uint32_t> ord = Canonicalization_ListMat_Vdiag<T, Tfield, uint32_t>(
       EXT_T, cfg.ListMat, Vdiag, THRESHOLD_USE_SUBSET_SCHEME_CANONIC, os);
-  std::vector<T> l_val{T(X.L.rows()), T(n_ext)};
+  std::vector<T> l_val{T(cfg.ab.d), T(n_ext)};
   for (auto &M : cfg.ListMat) {
     for (int i = 0; i < n_ext; i++) {
       MyVector<T> Vi = GetMatrixRow(EXT_T, ord[i]);
@@ -200,6 +252,13 @@ size_t erdahl_invariant_hash(DelaunayPolyhedron<T, Tint> const &X,
     }
   }
   return std::hash<std::vector<T>>()(l_val);
+}
+
+template <typename T, typename Tint>
+size_t erdahl_invariant_hash(DelaunayPolyhedron<T, Tint> const &X,
+                             std::vector<DelaunayPolyhedron<T, Tint>> const &supers,
+                             std::ostream &os) {
+  return erdahl_invariant_hash(erdahl_chain_config(X, supers), os);
 }
 
 // The lift of the reduced transformation h from X1 to X2 (same d).
@@ -432,15 +491,15 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 erdahl_equivalence(ErdahlFunctionSpace<T> const &W,
                    DelaunayPolyhedron<T, Tint> const &X1,
+                   ErdahlChainConfig<T, Tint> const &cfg1,
                    DelaunayPolyhedron<T, Tint> const &X2,
-                   std::vector<DelaunayPolyhedron<T, Tint>> const &supers,
+                   ErdahlChainConfig<T, Tint> const &cfg2,
+                   std::vector<ErdahlSuperData<T, Tint>> const &l_sd,
                    std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   if (X1.L.rows() != X2.L.rows() || X1.EXT.rows() != X2.EXT.rows()) {
     return {};
   }
-  ErdahlChainConfig<T, Tint> cfg1 = erdahl_chain_config(X1, supers);
-  ErdahlChainConfig<T, Tint> cfg2 = erdahl_chain_config(X2, supers);
   int n_ext = cfg1.EXTred.rows();
   std::vector<T> Vdiag(n_ext, T(0));
   std::optional<MyMatrix<Tint>> opt =
@@ -464,7 +523,7 @@ erdahl_equivalence(ErdahlFunctionSpace<T> const &W,
       std::cerr << "ERDAHL: the equivalence does not map X1 to X2\n";
       throw TerminalException{1};
     }
-    if (!erdahl_preserves_all(supers, gc)) {
+    if (!erdahl_preserves_all(l_sd, gc)) {
       std::cerr << "ERDAHL: the equivalence does not preserve the supers\n";
       throw TerminalException{1};
     }
@@ -472,7 +531,7 @@ erdahl_equivalence(ErdahlFunctionSpace<T> const &W,
     return gc;
   };
   MyMatrix<Tint> g = erdahl_lift(h, cfg1.ab, cfg2.ab);
-  if (erdahl_preserves_all(supers, g)) {
+  if (erdahl_preserves_all(l_sd, g)) {
     return finalize(g);
   }
   // The scalar products are preserved but not the super polyhedra: search
@@ -484,11 +543,27 @@ erdahl_equivalence(ErdahlFunctionSpace<T> const &W,
     MyMatrix<T> k_T = FindTransformation(EXTred2_T, EXTred2_T, elt);
     MyMatrix<Tint> k = UniversalMatrixConversion<Tint, T>(k_T);
     MyMatrix<Tint> gk = erdahl_lift(MyMatrix<Tint>(h * k), cfg1.ab, cfg2.ab);
-    if (erdahl_preserves_all(supers, gk)) {
+    if (erdahl_preserves_all(l_sd, gk)) {
       return finalize(gk);
     }
   }
   return {};
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+erdahl_equivalence(ErdahlFunctionSpace<T> const &W,
+                   DelaunayPolyhedron<T, Tint> const &X1,
+                   DelaunayPolyhedron<T, Tint> const &X2,
+                   std::vector<DelaunayPolyhedron<T, Tint>> const &supers,
+                   std::ostream &os) {
+  if (X1.L.rows() != X2.L.rows() || X1.EXT.rows() != X2.EXT.rows()) {
+    return {};
+  }
+  std::vector<ErdahlSuperData<T, Tint>> l_sd = erdahl_list_super_data(supers);
+  ErdahlChainConfig<T, Tint> cfg1 = erdahl_chain_config(X1, l_sd);
+  ErdahlChainConfig<T, Tint> cfg2 = erdahl_chain_config(X2, l_sd);
+  return erdahl_equivalence<T, Tint, Tgroup>(W, X1, cfg1, X2, cfg2, l_sd, os);
 }
 
 // clang-format off

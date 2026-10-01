@@ -177,7 +177,7 @@ void test_polytopes(TestCounter &tc, std::ostream &os) {
     tc.check(test, "square: one orbit of triangles");
     for (auto &eFace : sub.l_face) {
       DelaunayPolyhedron<T, Tint> Dsub =
-          erdahl_sub_polyhedron_of_face(W, D, eFace, os);
+          erdahl_sub_polyhedron_of_face<T, Tint>(W, D, eFace, nullptr, os);
       tc.check(erdahl_perfection_rank(W, Dsub) == 3 &&
                    erdahl_is_subset(Dsub, D),
                "square: the triangle has rank 3");
@@ -209,7 +209,7 @@ void test_polytopes(TestCounter &tc, std::ostream &os) {
       Tgroup stab = grp.grp.Stabilizer_OnSets(eFace);
       sum += grp.grp.size() / stab.size();
       DelaunayPolyhedron<T, Tint> Dsub =
-          erdahl_sub_polyhedron_of_face(W, D, eFace, os);
+          erdahl_sub_polyhedron_of_face<T, Tint>(W, D, eFace, nullptr, os);
       tc.check(erdahl_perfection_rank(W, Dsub) == 4,
                "cube: the sub-polyhedron has rank 4");
     }
@@ -236,7 +236,7 @@ void test_polytopes(TestCounter &tc, std::ostream &os) {
     tc.check(test, "centered cube: one orbit of 6-vertex sub-polytopes");
     for (auto &eFace : sub.l_face) {
       DelaunayPolyhedron<T, Tint> Dsub =
-          erdahl_sub_polyhedron_of_face(W, D, eFace, os);
+          erdahl_sub_polyhedron_of_face<T, Tint>(W, D, eFace, nullptr, os);
       tc.check(erdahl_perfection_rank(W, Dsub) == 4 &&
                    erdahl_is_in_space(W, Dsub.F),
                "centered cube: the sub-polytope has rank 4 and is centered");

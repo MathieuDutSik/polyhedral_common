@@ -689,6 +689,141 @@ ErdahlLatticeSet<Tint> erdahl_zero_set_on_set(MyMatrix<T> const &G,
 }
 
 /*
+  The points x_i + x_j - x_k outside of EXT + L, for x_i, x_j, x_k among the
+  representatives and their translates by the basis of L, as in the GAP
+  function ExtendByTriangleIneq: the vertices of the adjacent Delaunay
+  polytopes are typically among them. The points are given on machine
+  integers; the empty optional means that the coordinates are too large.
+ */
+template <typename Tint>
+std::optional<std::vector<std::vector<int64_t>>>
+erdahl_triangle_pool(ErdahlLatticeSet<Tint> const &ls) {
+  using Tpt = std::vector<int64_t>;
+  int np1 = ls.EXT.cols();
+  int n = np1 - 1;
+  int64_t const coord_max = int64_t(1) << 20;
+  Tint b = UniversalScalarConversion<Tint, int64_t>(coord_max);
+  auto to_pt = [&](MyVector<Tint> const &e) -> std::optional<Tpt> {
+    Tpt pt(np1);
+    for (int a = 0; a < np1; a++) {
+      if (!(e(a) < b && e(a) > -b)) {
+        return {};
+      }
+      pt[a] = UniversalScalarConversion<int64_t, Tint>(e(a));
+    }
+    return pt;
+  };
+  ErdahlAdaptedBasis<Tint> ab = erdahl_adapted_basis(ls.L, n);
+  std::vector<std::vector<int64_t>> Ainv(np1, std::vector<int64_t>(np1));
+  std::vector<std::vector<int64_t>> Aff(np1, std::vector<int64_t>(np1));
+  for (int a = 0; a < np1; a++) {
+    for (int c = 0; c < np1; c++) {
+      if (!(ab.AffBasisInv(a, c) < b && ab.AffBasisInv(a, c) > -b) ||
+          !(ab.AffBasis(a, c) < b && ab.AffBasis(a, c) > -b)) {
+        return {};
+      }
+      Ainv[a][c] = UniversalScalarConversion<int64_t, Tint>(ab.AffBasisInv(a, c));
+      Aff[a][c] = UniversalScalarConversion<int64_t, Tint>(ab.AffBasis(a, c));
+    }
+  }
+  std::unordered_set<Tpt> set_ext;
+  std::vector<Tpt> l_vert;
+  for (int i_ext = 0; i_ext < ls.EXT.rows(); i_ext++) {
+    MyVector<Tint> e = GetMatrixRow(ls.EXT, i_ext);
+    std::optional<Tpt> opt = to_pt(e);
+    if (!opt) {
+      return {};
+    }
+    set_ext.insert(*opt);
+    l_vert.push_back(*opt);
+    for (int j = 0; j < ls.L.rows(); j++) {
+      Tpt f = *opt;
+      for (int k = 0; k < n; k++) {
+        f[1 + k] += UniversalScalarConversion<int64_t, Tint>(ls.L(j, k));
+      }
+      l_vert.push_back(f);
+    }
+  }
+  int p_ab = ab.p;
+  bool is_polytope = ls.L.rows() == 0;
+  auto is_in_set = [&](Tpt const &pt) -> bool {
+    if (is_polytope) {
+      return set_ext.count(pt) > 0;
+    }
+    Tpt u(np1, 0);
+    for (int c = 0; c <= p_ab; c++) {
+      int64_t sum = 0;
+      for (int a = 0; a < np1; a++) {
+        sum += pt[a] * Ainv[a][c];
+      }
+      u[c] = sum;
+    }
+    Tpt img(np1, 0);
+    for (int c = 0; c < np1; c++) {
+      int64_t sum = 0;
+      for (int a = 0; a <= p_ab; a++) {
+        sum += u[a] * Aff[a][c];
+      }
+      img[c] = sum;
+    }
+    return set_ext.count(img) > 0;
+  };
+  // The differences first, deduplicated, then the translates, then the
+  // membership test, once per candidate.
+  std::unordered_set<Tpt> set_diff;
+  for (auto &vj : l_vert) {
+    for (auto &vk : l_vert) {
+      if (vj != vk) {
+        Tpt delta(np1);
+        for (int a = 0; a < np1; a++) {
+          delta[a] = vj[a] - vk[a];
+        }
+        set_diff.insert(delta);
+      }
+    }
+  }
+  std::unordered_set<Tpt> set_cand;
+  for (auto &vi : l_vert) {
+    for (auto &delta : set_diff) {
+      Tpt f(np1);
+      for (int a = 0; a < np1; a++) {
+        f[a] = vi[a] + delta[a];
+      }
+      set_cand.insert(f);
+    }
+  }
+  std::vector<Tpt> l_pool;
+  for (auto &f : set_cand) {
+    if (!is_in_set(f)) {
+      l_pool.push_back(f);
+    }
+  }
+  // A deterministic order.
+  std::sort(l_pool.begin(), l_pool.end());
+  return l_pool;
+}
+
+/*
+  What the canonical function of a sub-polyhedron F of a Delaunay polyhedron
+  D can reuse from D: the pool of D (which contains the pool of F, since
+  the points of F are points of D, and lies outside of D hence of F) and
+  the points of D, which are relevant constraints for F.
+ */
+template <typename Tint> struct ErdahlCanonicalHint {
+  std::vector<MyVector<Tint>> extra_points;
+  std::optional<std::vector<std::vector<int64_t>>> pool;
+};
+
+template <typename Tint>
+ErdahlCanonicalHint<Tint> erdahl_canonical_hint(ErdahlLatticeSet<Tint> const &ls) {
+  std::vector<MyVector<Tint>> extra_points;
+  for (int i = 0; i < ls.EXT.rows(); i++) {
+    extra_points.push_back(GetMatrixRow(ls.EXT, i));
+  }
+  return {extra_points, erdahl_triangle_pool(ls)};
+}
+
+/*
   A function of Erdahl(n) cap W whose zero set is exactly the lattice set
   EXT + L (which has to be a Delaunay polyhedron relative to W), with small
   coefficients. This is the analogue of the GAP function
@@ -712,6 +847,7 @@ ErdahlLatticeSet<Tint> erdahl_zero_set_on_set(MyMatrix<T> const &G,
 template <typename T, typename Tint>
 MyMatrix<T> erdahl_canonical_function(ErdahlFunctionSpace<T> const &W,
                                       ErdahlLatticeSet<Tint> const &ls_in,
+                                      ErdahlCanonicalHint<Tint> const *hint,
                                       std::ostream &os) {
 #ifdef TIMINGS_ERDAHL_POLYHEDRON
   MicrosecondTime time;
@@ -869,8 +1005,29 @@ MyMatrix<T> erdahl_canonical_function(ErdahlFunctionSpace<T> const &W,
   std::vector<MyVector<Tint>> l_S;
   // The evaluation rows of the points of S, computed once.
   std::vector<MyVector<T>> l_S_eval;
-  std::vector<MyVector<Tint>> l_pool;
-  std::vector<MyVector<T>> l_pool_eval;
+  // The pool, with the evaluation rows on machine integers (only used when
+  // the basis is on machine integers).
+  std::vector<Tpt> l_pool;
+  std::vector<std::vector<int64_t>> l_pool_eval;
+  auto eval_row_i64 = [&](Tpt const &pt) -> std::vector<int64_t> {
+    std::vector<int64_t> V(r);
+    for (int i = 0; i < r; i++) {
+      std::vector<int64_t> const &B = basis_i64[i];
+      int64_t sum = 0;
+      for (int a = 0; a < np1; a++) {
+        if (pt[a] == 0) {
+          continue;
+        }
+        int64_t part = 0;
+        for (int b = 0; b < np1; b++) {
+          part += B[a * np1 + b] * pt[b];
+        }
+        sum += part * pt[a];
+      }
+      V[i] = sum;
+    }
+    return V;
+  };
   auto insert = [&](MyVector<Tint> const &e) -> void {
     // Directions (0, v) are never in the set.
     if (e(0) != 0 && is_in_set(e)) {
@@ -900,65 +1057,30 @@ MyMatrix<T> erdahl_canonical_function(ErdahlFunctionSpace<T> const &W,
       }
     }
   }
-  {
-    std::vector<Tpt> l_vert;
-    bool pool_fast = basis_ab_fast;
-    for (int i_ext = 0; i_ext < ls.EXT.rows() && pool_fast; i_ext++) {
-      MyVector<Tint> e = GetMatrixRow(ls.EXT, i_ext);
-      std::vector<MyVector<Tint>> l_e{e};
-      for (int j = 0; j < ls.L.rows(); j++) {
-        MyVector<Tint> f = e;
-        for (int k = 0; k < n; k++) {
-          f(1 + k) += ls.L(j, k);
-        }
-        l_e.push_back(f);
-      }
-      for (auto &f : l_e) {
-        std::optional<Tpt> opt = to_pt(f);
-        if (!opt) {
-          pool_fast = false;
-          break;
-        }
-        l_vert.push_back(*opt);
-      }
+  if (hint) {
+    for (auto &e : hint->extra_points) {
+      insert(e);
     }
-    // Without machine integers the pool is skipped: the cuts from the zero
-    // sets alone also converge, only more slowly.
-    if (pool_fast) {
-      // The differences first, deduplicated, then the translates, then the
-      // membership test, once per candidate.
-      std::unordered_set<Tpt> set_diff;
-      for (auto &vj : l_vert) {
-        for (auto &vk : l_vert) {
-          if (vj != vk) {
-            Tpt delta(np1);
-            for (int a = 0; a < np1; a++) {
-              delta[a] = vj[a] - vk[a];
-            }
-            set_diff.insert(delta);
+  }
+  {
+    // The pool: the one of the super polyhedron if given, else its own.
+    // Without machine integers it is skipped: the cuts from the zero sets
+    // alone also converge, only more slowly.
+    std::optional<std::vector<Tpt>> opt_pool =
+        hint ? hint->pool : erdahl_triangle_pool(ls);
+    if (opt_pool && basis_fast && np1 <= 16) {
+      for (auto &f : *opt_pool) {
+        bool ok = true;
+        for (int a = 0; a < np1; a++) {
+          if (f[a] >= coord_max || f[a] <= -coord_max) {
+            ok = false;
           }
         }
-      }
-      std::unordered_set<Tpt> set_cand;
-      for (auto &vi : l_vert) {
-        for (auto &delta : set_diff) {
-          Tpt f(np1);
-          for (int a = 0; a < np1; a++) {
-            f[a] = vi[a] + delta[a];
-          }
-          set_cand.insert(f);
-        }
-      }
-      for (auto &f : set_cand) {
-        if (is_in_set_pt(f)) {
+        if (!ok) {
           continue;
         }
-        MyVector<Tint> fv = to_vec(f);
-        if (set_S.count(fv) > 0) {
-          continue;
-        }
-        l_pool_eval.push_back(eval_row(fv));
-        l_pool.push_back(fv);
+        l_pool_eval.push_back(eval_row_i64(f));
+        l_pool.push_back(f);
       }
     }
   }
@@ -1010,10 +1132,31 @@ MyMatrix<T> erdahl_canonical_function(ErdahlFunctionSpace<T> const &W,
     MyMatrix<T> F = RemoveFractionMatrix(get_function(*eSol.DirectSolution));
     {
       // The violated constraints of the pool, the most violated first.
+      // The values are filtered in floating point: only those within the
+      // rounding tolerance of the threshold 1 are computed exactly.
       MyVector<T> const &c = *eSol.DirectSolution;
+      std::vector<double> c_d(r);
+      for (int i = 0; i < r; i++) {
+        c_d[i] = UniversalScalarConversion<double, T>(c(i));
+      }
       std::vector<std::pair<T, size_t>> l_viol;
       for (size_t i_pool = 0; i_pool < l_pool.size(); i_pool++) {
-        T val = c.dot(l_pool_eval[i_pool]);
+        std::vector<int64_t> const &ev = l_pool_eval[i_pool];
+        double val_d = 0;
+        double mag = 0;
+        for (int i = 0; i < r; i++) {
+          double term = c_d[i] * static_cast<double>(ev[i]);
+          val_d += term;
+          mag += std::abs(term);
+        }
+        double tol = 1e-9 * (1 + mag);
+        if (val_d > 1 + tol) {
+          continue;
+        }
+        T val(0);
+        for (int i = 0; i < r; i++) {
+          val += c(i) * UniversalScalarConversion<T, int64_t>(ev[i]);
+        }
         if (val < 1) {
           l_viol.push_back({val, i_pool});
         }
@@ -1022,7 +1165,7 @@ MyMatrix<T> erdahl_canonical_function(ErdahlFunctionSpace<T> const &W,
         std::sort(l_viol.begin(), l_viol.end());
         size_t n_add = std::min(l_viol.size(), static_cast<size_t>(4 * r));
         for (size_t u = 0; u < n_add; u++) {
-          insert(l_pool[l_viol[u].second]);
+          insert(to_vec(l_pool[l_viol[u].second]));
         }
         continue;
       }
@@ -1118,7 +1261,9 @@ DelaunayPolyhedron<T, Tint>
 erdahl_polyhedron_extension(ErdahlFunctionSpace<T> const &W,
                             MyMatrix<T> const &G,
                             DelaunayPolyhedron<T, Tint> const &D3,
-                            bool compute_function, std::ostream &os) {
+                            bool compute_function,
+                            ErdahlCanonicalHint<Tint> const *hint,
+                            std::ostream &os) {
   ErdahlLatticeSet<Tint> zs =
       erdahl_zero_set_on_set(G, erdahl_lattice_set(D3), os);
   if (!erdahl_is_full_dimensional(zs)) {
@@ -1129,7 +1274,7 @@ erdahl_polyhedron_extension(ErdahlFunctionSpace<T> const &W,
   if (!compute_function) {
     return {can.EXT, can.L, MyMatrix<T>(0, 0)};
   }
-  MyMatrix<T> F = erdahl_canonical_function(W, can, os);
+  MyMatrix<T> F = erdahl_canonical_function(W, can, hint, os);
   return {can.EXT, can.L, F};
 }
 
@@ -1138,7 +1283,8 @@ template <typename T, typename Tint>
 void erdahl_ensure_function(ErdahlFunctionSpace<T> const &W,
                             DelaunayPolyhedron<T, Tint> &D, std::ostream &os) {
   if (D.F.rows() == 0) {
-    D.F = erdahl_canonical_function(W, erdahl_lattice_set(D), os);
+    D.F = erdahl_canonical_function<T, Tint>(W, erdahl_lattice_set(D),
+                                             nullptr, os);
   }
 }
 

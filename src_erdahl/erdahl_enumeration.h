@@ -137,7 +137,8 @@ erdahl_initial_sub_polyhedron(ErdahlFunctionSpace<T> const &W,
                    "expected degeneracy rank or perfection rank\n";
       throw TerminalException{1};
     }
-    Dinit.F = erdahl_canonical_function(W, erdahl_lattice_set(Dinit), os);
+    Dinit.F = erdahl_canonical_function<T, Tint>(
+        W, erdahl_lattice_set(Dinit), nullptr, os);
     return Dinit;
   };
   for (int bound = 1; bound < 10; bound++) {
@@ -186,8 +187,11 @@ erdahl_sub_delaunay_polytope(ErdahlFunctionSpace<T> const &W,
   ErdahlSubPolyhedraPolytope<Tint> sub =
       erdahl_sub_polyhedra_polytope<T, Tint, Tgroup>(W, D, FileDualDesc, os);
   std::vector<DelaunayPolyhedron<T, Tint>> l_sub;
+  // The pool and the vertices of D, shared by the canonical functions of
+  // all its sub-polyhedra.
+  ErdahlCanonicalHint<Tint> hint = erdahl_canonical_hint(erdahl_lattice_set(D));
   for (auto &eFace : sub.l_face) {
-    l_sub.push_back(erdahl_sub_polyhedron_of_face(W, D, eFace, os));
+    l_sub.push_back(erdahl_sub_polyhedron_of_face(W, D, eFace, &hint, os));
   }
   return l_sub;
 }
@@ -236,16 +240,35 @@ erdahl_orbit_splitting(ErdahlFunctionSpace<T> const &W,
   }
   std::vector<DelaunayPolyhedron<T, Tint>> supers{Dp, D};
   std::vector<DelaunayPolyhedron<T, Tint>> l_ret;
+#ifdef TIMINGS_ERDAHL_ENUMERATION
+  // The quality of the hash invariant: equivalence tests run after a hash
+  // match, and those that fail.
+  size_t n_test = 0, n_fail = 0;
+#endif
+  // The data of the super polyhedra and the configuration of each candidate
+  // are computed once, for the hash and for the equivalence tests.
+  std::vector<ErdahlSuperData<T, Tint>> l_sd = erdahl_list_super_data(supers);
   for (auto &S : l_orbit) {
     std::vector<DelaunayPolyhedron<T, Tint>> l_part;
+    std::vector<ErdahlChainConfig<T, Tint>> l_part_cfg;
     std::unordered_map<size_t, std::vector<size_t>> map_hash;
     for (auto &g : l_g) {
       DelaunayPolyhedron<T, Tint> Simg = erdahl_apply_transformation(S, g);
-      size_t hash = erdahl_invariant_hash(Simg, supers, os);
+      ErdahlChainConfig<T, Tint> cfg = erdahl_chain_config(Simg, l_sd);
+      size_t hash = erdahl_invariant_hash(cfg, os);
       bool is_new = true;
       for (auto &idx : map_hash[hash]) {
-        if (erdahl_equivalence<T, Tint, Tgroup>(W, l_part[idx], Simg, supers,
-                                                 os)) {
+        bool test = erdahl_equivalence<T, Tint, Tgroup>(W, l_part[idx],
+                                                         l_part_cfg[idx], Simg,
+                                                         cfg, l_sd, os)
+                        .has_value();
+#ifdef TIMINGS_ERDAHL_ENUMERATION
+        n_test++;
+        if (!test) {
+          n_fail++;
+        }
+#endif
+        if (test) {
           is_new = false;
           break;
         }
@@ -253,6 +276,7 @@ erdahl_orbit_splitting(ErdahlFunctionSpace<T> const &W,
       if (is_new) {
         map_hash[hash].push_back(l_part.size());
         l_part.push_back(Simg);
+        l_part_cfg.push_back(cfg);
       }
     }
     for (auto &Snew : l_part) {
@@ -266,7 +290,8 @@ erdahl_orbit_splitting(ErdahlFunctionSpace<T> const &W,
 #ifdef TIMINGS_ERDAHL_ENUMERATION
   os << "|ERDAHL: orbit splitting |G|/|H|=" << G.grp.size() / H.grp.size()
      << " |l_orbit|=" << l_orbit.size() << " |l_ret|=" << l_ret.size()
-     << "|=" << time << "\n";
+     << " |coset reps|=" << l_g.size() << " n_test=" << n_test
+     << " n_fail=" << n_fail << "|=" << time << "\n";
 #endif
   return l_ret;
 }
@@ -289,6 +314,11 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
     if (entry.hash == hash_D) {
       std::optional<MyMatrix<Tint>> opt =
           erdahl_equivalence<T, Tint, Tgroup>(W, entry.D, D, {}, os);
+#ifdef TIMINGS_ERDAHL_ENUMERATION
+      if (!opt) {
+        os << "|ERDAHL: bank, hash match but not equivalent|=0\n";
+      }
+#endif
       if (opt) {
         std::vector<DelaunayPolyhedron<T, Tint>> l_sub;
         for (auto &S : entry.l_sub) {
@@ -316,11 +346,13 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
     struct Entry {
       DelaunayPolyhedron<T, Tint> Dp;
       bool done;
+      ErdahlChainConfig<T, Tint> cfg;
     };
     std::vector<Entry> l_entry;
     // The entries by erdahl_invariant_hash relative to D.
     std::unordered_map<size_t, std::vector<size_t>> map_hash;
     std::vector<DelaunayPolyhedron<T, Tint>> supers{D};
+    std::vector<ErdahlSuperData<T, Tint>> l_sd = erdahl_list_super_data(supers);
     auto insert = [&](DelaunayPolyhedron<T, Tint> Dnew) -> void {
 #ifdef SANITY_CHECK_ERDAHL_ENUMERATION
       if (!erdahl_is_subset(Dnew, D)) {
@@ -332,13 +364,15 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
       MicrosecondTime time_insert;
       size_t n_test = 0;
 #endif
-      size_t hash = erdahl_invariant_hash(Dnew, supers, os);
+      ErdahlChainConfig<T, Tint> cfg = erdahl_chain_config(Dnew, l_sd);
+      size_t hash = erdahl_invariant_hash(cfg, os);
       for (auto &idx : map_hash[hash]) {
 #ifdef TIMINGS_ERDAHL_ENUMERATION
         n_test++;
 #endif
-        if (erdahl_equivalence<T, Tint, Tgroup>(W, l_entry[idx].Dp, Dnew,
-                                                 supers, os)) {
+        if (erdahl_equivalence<T, Tint, Tgroup>(W, l_entry[idx].Dp,
+                                                 l_entry[idx].cfg, Dnew, cfg,
+                                                 l_sd, os)) {
 #ifdef TIMINGS_ERDAHL_ENUMERATION
           os << "|ERDAHL: insert, old, n_test=" << n_test
              << "|=" << time_insert << "\n";
@@ -352,7 +386,7 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
 #endif
       erdahl_ensure_function(W, Dnew, os);
       map_hash[hash].push_back(l_entry.size());
-      l_entry.push_back({Dnew, false});
+      l_entry.push_back({Dnew, false, cfg});
 #ifdef DEBUG_ERDAHL_ENUMERATION
       os << "ERDAHL: n=" << erdahl_dimension(D) << " d=" << d
          << " new orbit, |EXT|=" << Dnew.EXT.rows()
