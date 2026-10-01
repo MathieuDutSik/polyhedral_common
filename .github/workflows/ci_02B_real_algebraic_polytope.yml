@@ -7,7 +7,9 @@ name: CI(02B) of polytopes over real algebraic fields
 # The regular N-gons of CI_tests/02B_RealAlgebraicPolytope/RegularNgons are
 # given over Q(2*sin(2*pi/N)), so both the automorphism group and the dual
 # description run on the real algebraic arithmetic rather than the rational
-# one, which is what this section is for.
+# one, which is what this section is for. The programs are built with
+# ENABLE_FLINT_SUPPORT, so the fields run on the flint integers and rationals,
+# the faster and intended configuration.
 
 on:
   # One time per month
@@ -32,6 +34,9 @@ jobs:
       LIBBLISS_PATH: /home/runner/opt/libbliss
       LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
       LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+      FLINT_PATH: /home/runner/opt/flint
+      FLINT_INCDIR: /home/runner/opt/flint/include
+      FLINT_LINK: "-L/home/runner/opt/flint/lib -lflint -Wl,-rpath,/home/runner/opt/flint/lib"
 
     steps:
       - uses: actions/checkout@v7
@@ -44,10 +49,11 @@ jobs:
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
       - uses: ./.github/actions/install-gap
+      - uses: ./.github/actions/install-flint
       - name: Test the regular N-gons over their real algebraic fields
         run: |
-          make -C src_group -f Makefile_aut_group
-          make -C src_poly -f Makefile_simple_dual_desc
+          make -C src_group -f Makefile_aut_group ENABLE_FLINT_SUPPORT=1
+          make -C src_poly -f Makefile_simple_dual_desc ENABLE_FLINT_SUPPORT=1
           echo "After compilation of the automorphism and dual description code"
 
           cd CI_tests/02B_RealAlgebraicPolytope
@@ -64,7 +70,7 @@ jobs:
       # the symmetry and the direct one ignoring it must agree on the facets.
       - name: Test the dual description of G553
         run: |
-          make -C src_dualdesc -f Makefile_serial_dualdesc
+          make -C src_dualdesc -f Makefile_serial_dualdesc ENABLE_FLINT_SUPPORT=1
           echo "After compilation of the serial dual description code"
 
           cd CI_tests/02B_RealAlgebraicPolytope

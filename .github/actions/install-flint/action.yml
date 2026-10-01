@@ -1,0 +1,28 @@
+name: 'Install flint'
+description: 'Build flint from its release source and install it at $FLINT_PATH (which must be set in the calling workflow''s env). A build with ENABLE_FLINT_SUPPORT=1 then takes FLINT_INCDIR=$FLINT_PATH/include and FLINT_LINK pointing to $FLINT_PATH/lib.'
+inputs:
+  version:
+    description: 'flint version to install. The release used in development rather than the older one of the distribution.'
+    required: false
+    default: '3.6.0'
+runs:
+  using: 'composite'
+  steps:
+    - name: Build flint ${{ inputs.version }}
+      shell: bash
+      run: |
+        set -e
+        if [ -z "$FLINT_PATH" ]; then
+          echo "FLINT_PATH must be set in the calling workflow's env block" >&2
+          exit 1
+        fi
+        sudo apt-get install -y libmpfr-dev
+        VERSION="${{ inputs.version }}"
+        wget -q "https://github.com/flintlib/flint/releases/download/v${VERSION}/flint-${VERSION}.tar.gz"
+        tar -xzf "flint-${VERSION}.tar.gz"
+        cd "flint-${VERSION}"
+        ./configure --prefix="$FLINT_PATH" --disable-static
+        make -j"$(nproc)"
+        make install
+        cd ..
+        rm -rf "flint-${VERSION}" "flint-${VERSION}.tar.gz"
