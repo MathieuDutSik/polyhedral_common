@@ -2,33 +2,39 @@ PROGRAM		= ERDAHL_SelfTest ERDAHL_EnumeratePerfect
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-CC		= g++ -std=c++20 -Wall -Wextra -g -O3
+CC		= g++ -std=c++20 -Wall -Wextra -O3
 
 NOLINKFLAG 	= -c
+CDEPS           = -MMD -MP
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_graph -I../src_comb -I../src_group -I../src_poly -I../permutalib/src -I../src_lorentzian -I../src_dualdesc -I../src_isotropy -I../src_short -I../src_enum_schemes -I../src_latt -I../src_polydecomp -I../src_delaunay -I.
-CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -isystem $(EIGEN_PATH) $(NAUTY_INCLUDE) $(shell pkg-config --cflags ompi)
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_graph -I../src_comb -I../src_group -I../src_poly -I../permutalib/src -I../src_lorentzian -I../src_dualdesc -I../src_isotropy -I../src_short -I../src_latt -I.
+CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -isystem $(EIGEN_PATH) $(NAUTY_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
 CDEFS           = -DGMP_POOL $(CHOICE_COMPILATION)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(NAUTY_LINK) $(shell pkg-config --libs ompi) $(MPI_LINK_CPP)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(NAUTY_LINK) $(BOOST_LINK)
 
 %.o: %.cpp
 	@echo
 	@echo compile $<
-	$(CC) $(OUTPUTFLAG) $@ $(CTOTAL) $(NOLINKFLAG) $<
+	$(CC) $(OUTPUTFLAG) $@ $(CTOTAL) $(CDEPS) $(NOLINKFLAG) $<
 
 all:	$(PROGRAM)
 
 $(PROGRAM): 	$(OBJECTS)
 		@echo
 		@echo link $@
-		$(CC) $(DEBUGFLAG) $@.o $(LIBS) -o $@
+		$(CC) $@.o $(LIBS) -o $@
 
 clean:;
 	rm -f *.o
+	rm -f *.d
 	rm -f $(PROGRAM)
+
+# The header dependencies, written by the compiler as it compiles (-MMD),
+# so that a change to a header rebuilds the objects that include it.
+-include $(OBJECTS:.o=.d)

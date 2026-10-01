@@ -1,0 +1,57 @@
+name: CI(17B) of the enumeration of perfect Delaunay polyhedra in the Erdahl cone
+
+on:
+  # Day 17 of the even months (17A runs in the odd months)
+  schedule:
+    - cron: "0 0 17 2,4,6,8,10,12 *"
+  # Manually triggered
+  workflow_dispatch:
+  # Disabled right now, when a push is made on master.
+
+# The two enumerations run as two parallel jobs, each within the 2 hours
+# budget: the perfect Delaunay polyhedra of dimension 7, and the centrally
+# symmetric ones of dimension 8.
+jobs:
+  build-linux:
+    timeout-minutes: 120  # 2 hours
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [TestErdahl_full7, TestErdahl_centered8]
+    env:
+      GMP_INCDIR: /usr/include
+      GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
+      BOOST_INCDIR: "/usr/include"
+      BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
+      EIGEN_PATH: /home/runner/work/opt/eigen
+      NAUTY_PATH: /home/runner/work/opt/nauty
+      NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
+      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
+      LIBBLISS_PATH: /home/runner/opt/libbliss
+      LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
+      LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/install-boost
+      - uses: ./.github/actions/install-nauty
+      - uses: ./.github/actions/install-bliss
+      - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-gap
+      - name: Enumeration of perfect Delaunay polyhedra (${{ matrix.test }})
+        run: |
+          make -C src_erdahl ERDAHL_EnumeratePerfect
+          echo "After compilation of ERDAHL_EnumeratePerfect"
+
+          cd CI_tests/17B_Erdahl
+          ../../gap.sh < ${{ matrix.test }}.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the enumeration of perfect Delaunay polyhedra"

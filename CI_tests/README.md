@@ -40,7 +40,8 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `15B_GenusEnumeration` -- `ci_15B_genus_enumeration`: Enumeration of a genus of lattices by Kneser p-neighbours, the class number and the Smith-Minkowski-Siegel mass being checked against Hecke; and a negative case with an unreachable mass, where the enumeration must report itself incomplete rather than loop or claim completeness, since every result of the program rests on that certificate.
 * `16A_EquivDualDesc` -- `ci_16A_equiv_dual_desc`: Equivariant computation of dual description.
 * `16B_GramReductions` -- `ci_16B_gram_reductions`: The reductions of positive definite Gram matrices offered by LATT_Reduction (LLL, Seysen, deep insertion, BKZ, slide, Minkowski and the best-of search), run on scrambled root lattices; the transformation is checked to be unimodular and to produce the returned form, and the condition each method claims is checked independently in GAP.
-* `17_Laminations` -- `ci_17_two_laminations`: Computation of two laminations.
+* `17A_Laminations` -- `ci_17A_two_laminations`: Computation of two laminations.
+* `17B_Erdahl` -- `ci_17B_erdahl`: Enumeration of the perfect Delaunay polyhedra with src_erdahl: the 4 of the full space in dimension 7 and the 3 centrally symmetric ones (functions of center e_1/2) in dimension 8, with the CUT_8 dual description heuristics of `16A_EquivDualDesc/CUT_K8`.
 * `19_IndefiniteComp` -- `ci_19_indefinite_comp`: Computation of indefinite forms.
 * `20_Reflective` -- `ci_20_reflective`: This is for using the edgewalk algorithm of Allcock for building the polyheral cone.
 * `21A_SamplingFacets` -- `ci_21_sampling_facets`: Sampling facets of polytopes.
