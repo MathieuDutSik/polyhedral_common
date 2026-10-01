@@ -1360,6 +1360,64 @@ FindingSmallOrbit(ListMatrGen, TheSpace, TheMod, a, helper, os); if (!opt) {
 }
 */
 
+/*
+  The permutation action of the generators ListMatr on an orbit O of vectors
+  modulo TheMod, the generators being read through the layer. Built in one
+  go, as the modular stabilizer and equivalence algorithms use it:
+  --- the orbit map and f_get_perm, the permutation of a generator;
+  --- the face of Space_mod on the orbit, reduced by PartitionReduction and
+      translated past the nbRow rows of the helper (face);
+  --- the permutations of the generators (ListPermGens) and their group
+      (GRP) on that domain.
+  The object is neither copyable nor movable: f_get_perm refers to
+  orbit_map, and pr.f_get_perm to pr itself.
+ */
+template <typename T, typename Tmod, typename Tgroup>
+struct OrbitPermutationAction {
+  using Telt = typename Tgroup::Telt;
+  OrbitPermutationMap<T, Tmod, Telt> orbit_map;
+  std::function<Telt(MyMatrix<T> const &)> f_get_perm;
+  PartitionReduction<T, Telt> pr;
+  Face face;
+  std::vector<Telt> ListPermGens;
+  Tgroup GRP;
+
+  template <typename Thelper>
+  OrbitPermutationAction(std::vector<MyVector<Tmod>> const &O,
+                         T const &TheMod, ModLayer<T> const &layer,
+                         std::vector<MyMatrix<T>> const &ListMatr,
+                         Thelper const &helper,
+                         MyMatrix<Tmod> const &Space_mod,
+                         Tmod const &TheMod_mod, std::ostream &os)
+      : orbit_map(O, TheMod),
+        f_get_perm([this, &layer](MyMatrix<T> const &eGen) -> Telt {
+          return orbit_map.get_permutation(layer.conj(eGen));
+        }),
+        pr(ListMatr, f_get_perm, GetFace<Tmod>(O, Space_mod, TheMod_mod), os),
+        face(TranslateFace(helper.nbRow(), pr.face)),
+        ListPermGens(
+            MatrixIntegral_GeneratePermutationGroupA_OrbitPerms<T, Telt,
+                                                                Thelper>(
+                ListMatr, helper, pr.mapped_gens, os)),
+        GRP(ListPermGens, face.size()) {}
+  OrbitPermutationAction(OrbitPermutationAction const &) = delete;
+  OrbitPermutationAction &operator=(OrbitPermutationAction const &) = delete;
+};
+
+// The generators with a reduced complexity, checked under
+// SANITY_CHECK_MATRIX_GROUP to generate the same group.
+template <typename T, typename Tgroup>
+std::vector<MyMatrix<T>>
+ReduceGeneratorsChecked(std::vector<MyMatrix<T>> const &ListMatr,
+                        std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMatrRed =
+      ExhaustiveReductionComplexityGroupMatrix(ListMatr, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  CheckGroupEquality<T, Tgroup>(ListMatr, ListMatrRed, os);
+#endif
+  return ListMatrRed;
+}
+
 // The space must be defining a finite index subgroup of T^n.
 // TheSpace and TheMod are in the coordinates of the layer: for the
 // trivial layer they are the original space and the prime power; for a
@@ -1373,8 +1431,6 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
                                MyMatrix<T> const &TheSpace, T const &TheMod,
                                ModLayer<T> const &layer, Fstab f_stab,
                                std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   int n = helper.n;
 #ifdef DEBUG_MATRIX_GROUP
   T TotSize(1);
@@ -1497,20 +1553,8 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: LinearSpace_ModStabilizer_Tmod, |O|=" << O.size() << "\n";
 #endif
-    OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
-    std::function<Telt(MyMatrix<T> const &)> f_get_perm =
-        [&](MyMatrix<T> const &eGen) -> Telt {
-      return orbit_map.get_permutation(layer.conj(eGen));
-    };
-    int nbRow = helper.nbRow();
-    Face eFace_pre = GetFace<Tmod>(O, TheSpace_mod, TheMod_mod);
-    PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace_pre, os);
-    Face eFace = TranslateFace(nbRow, pr.face);
-    std::vector<Telt> ListPermGens =
-        MatrixIntegral_GeneratePermutationGroupA_OrbitPerms<T, Telt, Thelper>(
-            ListMatrRet, helper, pr.mapped_gens, os);
-    Tidx siz_act = eFace.size();
-    Tgroup GRPwork(ListPermGens, siz_act);
+    OrbitPermutationAction<T, Tmod, Tgroup> act(
+        O, TheMod, layer, ListMatrRet, helper, TheSpace_mod, TheMod_mod, os);
     //
     // As it turns out, the eFace tend to be disjoint accross different
     // embeddings. That does not seem to be guaranteed by theoretical reasons.
@@ -1521,22 +1565,16 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     //
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: LinearSpace_ModStabilizer_Tmod TheMod=" << TheMod
-       << " |O|=" << O.size() << " |GRPwork|=" << GRPwork.size()
-       << " |eFace|=" << eFace.count() << "\n";
+       << " |O|=" << O.size() << " |GRPwork|=" << act.GRP.size()
+       << " |eFace|=" << act.face.count() << "\n";
 #endif
-    ListMatrRet =
-        f_stab(ListPermGens, GRPwork, eFace, pr.f_get_perm, ListMatrRet);
+    ListMatrRet = f_stab(act.ListPermGens, act.GRP, act.face, act.pr.f_get_perm,
+                         ListMatrRet);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: LinearSpace_ModStabilizer_Tmod(C), comp(ListMatrRet)="
        << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    std::vector<MyMatrix<T>> ListMatrPreRed = ListMatrRet;
-#endif
-    ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    CheckGroupEquality<T, Tgroup>(ListMatrPreRed, ListMatrRet, os);
-#endif
+    ListMatrRet = ReduceGeneratorsChecked<T, Tgroup>(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: LinearSpace_ModStabilizer_Tmod(D), comp(ListMatrRet)="
        << compute_complexity_listmat(ListMatrRet) << "\n";
@@ -2607,30 +2645,22 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |O|=" << O.size() << "\n";
 #endif
-      OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
-      std::function<Telt(MyMatrix<T> const &)> f_get_perm =
-          [&](MyMatrix<T> const &eGen) -> Telt {
-        return orbit_map.get_permutation(layer.conj(eGen));
-      };
       int nbRow = helper.nbRow();
       MyMatrix<T> TheSpace1work = TheSpace1 * layer.conj(eElt);
       MyMatrix<Tmod> TheSpace1work_mod =
           ModuloReductionMatrix<T, Tmod>(TheSpace1work, TheMod);
-      Face eFace1_pre = GetFace<Tmod>(O, TheSpace1work_mod, TheMod_mod);
+      OrbitPermutationAction<T, Tmod, Tgroup> act(O, TheMod, layer, ListMatrRet,
+                                                  helper, TheSpace1work_mod,
+                                                  TheMod_mod, os);
+      Face const &eFace1 = act.face;
       Face eFace2_pre = GetFace<Tmod>(O, TheSpace2_mod, TheMod_mod);
-#ifdef DEBUG_MATRIX_GROUP
-      os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace1_pre|="
-         << eFace1_pre.size() << " / " << eFace1_pre.count() << "\n";
-      os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace2_pre|="
-         << eFace2_pre.size() << " / " << eFace2_pre.count() << "\n";
-#endif
-      PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace1_pre, os);
-      Face eFace1 = TranslateFace(nbRow, pr.face);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace1|="
          << eFace1.size() << " / " << eFace1.count() << "\n";
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace2_pre|="
+         << eFace2_pre.size() << " / " << eFace2_pre.count() << "\n";
 #endif
-      std::optional<Face> opt_face2 = pr.map_face_opt(eFace2_pre);
+      std::optional<Face> opt_face2 = act.pr.map_face_opt(eFace2_pre);
       if (!opt_face2) {
 #ifdef DEBUG_MATRIX_GROUP
         os << "MATGRP: Exit as no eFace2 does not map correctly to the "
@@ -2643,11 +2673,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace2|="
          << eFace2.size() << " / " << eFace2.count() << "\n";
 #endif
-      std::vector<Telt> ListPermGens =
-          MatrixIntegral_GeneratePermutationGroupA_OrbitPerms<T, Telt, Thelper>(
-              ListMatrRet, helper, pr.mapped_gens, os);
-      size_t siz_act = eFace1.size();
-      Tgroup GRPperm(ListPermGens, siz_act);
+      std::vector<Telt> const &ListPermGens = act.ListPermGens;
+      Tgroup const &GRPperm = act.GRP;
 #ifdef SANITY_CHECK_MATRIX_GROUP
       if (eFace1.none() && eFace2.none()) {
         std::cerr << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = "
@@ -2684,20 +2711,14 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         }
       }
       RetMI_S<T, Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(
-          ListPermGens, ListMatrRet, pr.f_get_perm, GRPperm, helper, eFace2,
-          os);
+          ListPermGens, ListMatrRet, act.pr.f_get_perm, GRPperm, helper,
+          eFace2, os);
       ListMatrRet = ret.LGen;
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod(C), comp(ListMatrRet)="
          << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
-#ifdef SANITY_CHECK_MATRIX_GROUP
-      std::vector<MyMatrix<T>> ListMatrPreRed = ListMatrRet;
-#endif
-      ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
-#ifdef SANITY_CHECK_MATRIX_GROUP
-      CheckGroupEquality<T, Tgroup>(ListMatrPreRed, ListMatrRet, os);
-#endif
+      ListMatrRet = ReduceGeneratorsChecked<T, Tgroup>(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod(D), comp(ListMatrRet)="
          << compute_complexity_listmat(ListMatrRet) << "\n";
@@ -2712,43 +2733,22 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: |O|=" << O.size() << "\n";
 #endif
-      OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
-      std::function<Telt(MyMatrix<T> const &)> f_get_perm =
-          [&](MyMatrix<T> const &eGen) -> Telt {
-        return orbit_map.get_permutation(layer.conj(eGen));
-      };
-      int nbRow = helper.nbRow();
-      Face eFace2_pre = GetFace<Tmod>(O, TheSpace2_mod, TheMod_mod);
-      PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace2_pre, os);
-      Face eFace2 = TranslateFace(nbRow, pr.face);
-#ifdef DEBUG_MATRIX_GROUP
-      os << "MATGRP: We have eFace2\n";
-#endif
-      std::vector<Telt> ListPermGens =
-          MatrixIntegral_GeneratePermutationGroupA_OrbitPerms<T, Telt, Thelper>(
-              ListMatrRet, helper, pr.mapped_gens, os);
-      size_t siz_act = eFace2.size();
-      Tgroup GRPperm(ListPermGens, siz_act);
+      OrbitPermutationAction<T, Tmod, Tgroup> act(
+          O, TheMod, layer, ListMatrRet, helper, TheSpace2_mod, TheMod_mod, os);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
-         << " |GRPperm|=" << GRPperm.size() << " |eFace2|=" << eFace2.count()
+         << " |GRPperm|=" << act.GRP.size() << " |eFace2|=" << act.face.count()
          << "\n";
 #endif
       RetMI_S<T, Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(
-          ListPermGens, ListMatrRet, pr.f_get_perm, GRPperm, helper, eFace2,
-          os);
+          act.ListPermGens, ListMatrRet, act.pr.f_get_perm, act.GRP, helper,
+          act.face, os);
       ListMatrRet = ret.LGen;
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod(E), comp(ListMatrRet)="
          << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
-#ifdef SANITY_CHECK_MATRIX_GROUP
-      std::vector<MyMatrix<T>> ListMatrPreRed = ListMatrRet;
-#endif
-      ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
-#ifdef SANITY_CHECK_MATRIX_GROUP
-      CheckGroupEquality<T, Tgroup>(ListMatrPreRed, ListMatrRet, os);
-#endif
+      ListMatrRet = ReduceGeneratorsChecked<T, Tgroup>(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: LinearSpace_ModEquivalence_Tmod(F), comp(ListMatrRet)="
          << compute_complexity_listmat(ListMatrRet) << "\n";
