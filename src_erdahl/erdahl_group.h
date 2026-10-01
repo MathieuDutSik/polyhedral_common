@@ -167,6 +167,41 @@ erdahl_chain_config(DelaunayPolyhedron<T, Tint> const &X,
   return {ab, EXTred, ListMat};
 }
 
+/*
+  An invariant of X under the transformations preserving the super
+  polyhedra: the hash of the matrices of scalar products of the chain
+  configuration, with the rows put in the canonical order of
+  Canonicalization_ListMat_Vdiag. Equivalent polyhedra (for
+  erdahl_equivalence with the same supers) have the same invariant, and
+  equal invariants mean equivalence up to a rational transformation
+  preserving the scalar products, so the integral equivalence test is
+  almost only run on actually equivalent polyhedra.
+ */
+template <typename T, typename Tint>
+size_t erdahl_invariant_hash(DelaunayPolyhedron<T, Tint> const &X,
+                             std::vector<DelaunayPolyhedron<T, Tint>> const &supers,
+                             std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  ErdahlChainConfig<T, Tint> cfg = erdahl_chain_config(X, supers);
+  MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(cfg.EXTred);
+  int n_ext = EXT_T.rows();
+  std::vector<T> Vdiag(n_ext, T(0));
+  std::vector<uint32_t> ord = Canonicalization_ListMat_Vdiag<T, Tfield, uint32_t>(
+      EXT_T, cfg.ListMat, Vdiag, THRESHOLD_USE_SUBSET_SCHEME_CANONIC, os);
+  std::vector<T> l_val{T(X.L.rows()), T(n_ext)};
+  for (auto &M : cfg.ListMat) {
+    for (int i = 0; i < n_ext; i++) {
+      MyVector<T> Vi = GetMatrixRow(EXT_T, ord[i]);
+      MyVector<T> MVi = M * Vi;
+      for (int j = i; j < n_ext; j++) {
+        MyVector<T> Vj = GetMatrixRow(EXT_T, ord[j]);
+        l_val.push_back(MVi.dot(Vj));
+      }
+    }
+  }
+  return std::hash<std::vector<T>>()(l_val);
+}
+
 // The lift of the reduced transformation h from X1 to X2 (same d).
 template <typename Tint>
 MyMatrix<Tint> erdahl_lift(MyMatrix<Tint> const &h,

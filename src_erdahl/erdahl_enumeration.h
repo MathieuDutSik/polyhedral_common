@@ -6,6 +6,7 @@
 #include "erdahl_flip.h"
 #include "erdahl_group.h"
 #include <set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -55,6 +56,8 @@
 
 template <typename T, typename Tint> struct ErdahlBankEntry {
   DelaunayPolyhedron<T, Tint> D;
+  // erdahl_invariant_hash of D without supers.
+  size_t hash;
   std::vector<DelaunayPolyhedron<T, Tint>> l_sub;
 };
 
@@ -65,7 +68,7 @@ template <typename T, typename Tint> struct ErdahlBank {
 };
 
 template <typename T, typename Tint>
-std::pair<int, int> erdahl_invariant(DelaunayPolyhedron<T, Tint> const &D) {
+std::pair<int, int> erdahl_size_key(DelaunayPolyhedron<T, Tint> const &D) {
   return {static_cast<int>(D.L.rows()), static_cast<int>(D.EXT.rows())};
 }
 
@@ -235,18 +238,20 @@ erdahl_orbit_splitting(ErdahlFunctionSpace<T> const &W,
   std::vector<DelaunayPolyhedron<T, Tint>> l_ret;
   for (auto &S : l_orbit) {
     std::vector<DelaunayPolyhedron<T, Tint>> l_part;
+    std::unordered_map<size_t, std::vector<size_t>> map_hash;
     for (auto &g : l_g) {
       DelaunayPolyhedron<T, Tint> Simg = erdahl_apply_transformation(S, g);
+      size_t hash = erdahl_invariant_hash(Simg, supers, os);
       bool is_new = true;
-      for (auto &Sold : l_part) {
-        if (erdahl_invariant(Sold) == erdahl_invariant(Simg)) {
-          if (erdahl_equivalence<T, Tint, Tgroup>(W, Sold, Simg, supers, os)) {
-            is_new = false;
-            break;
-          }
+      for (auto &idx : map_hash[hash]) {
+        if (erdahl_equivalence<T, Tint, Tgroup>(W, l_part[idx], Simg, supers,
+                                                 os)) {
+          is_new = false;
+          break;
         }
       }
       if (is_new) {
+        map_hash[hash].push_back(l_part.size());
         l_part.push_back(Simg);
       }
     }
@@ -279,8 +284,9 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
   MicrosecondTime time;
 #endif
   // The bank.
+  size_t hash_D = erdahl_invariant_hash<T, Tint>(D, {}, os);
   for (auto &entry : bank.l_entry) {
-    if (erdahl_invariant(entry.D) == erdahl_invariant(D)) {
+    if (entry.hash == hash_D) {
       std::optional<MyMatrix<Tint>> opt =
           erdahl_equivalence<T, Tint, Tgroup>(W, entry.D, D, {}, os);
       if (opt) {
@@ -312,6 +318,8 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
       bool done;
     };
     std::vector<Entry> l_entry;
+    // The entries by erdahl_invariant_hash relative to D.
+    std::unordered_map<size_t, std::vector<size_t>> map_hash;
     std::vector<DelaunayPolyhedron<T, Tint>> supers{D};
     auto insert = [&](DelaunayPolyhedron<T, Tint> Dnew) -> void {
 #ifdef SANITY_CHECK_ERDAHL_ENUMERATION
@@ -324,19 +332,18 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
       MicrosecondTime time_insert;
       size_t n_test = 0;
 #endif
-      for (auto &entry : l_entry) {
-        if (erdahl_invariant(entry.Dp) == erdahl_invariant(Dnew)) {
+      size_t hash = erdahl_invariant_hash(Dnew, supers, os);
+      for (auto &idx : map_hash[hash]) {
 #ifdef TIMINGS_ERDAHL_ENUMERATION
-          n_test++;
+        n_test++;
 #endif
-          if (erdahl_equivalence<T, Tint, Tgroup>(W, entry.Dp, Dnew, supers,
-                                                   os)) {
+        if (erdahl_equivalence<T, Tint, Tgroup>(W, l_entry[idx].Dp, Dnew,
+                                                 supers, os)) {
 #ifdef TIMINGS_ERDAHL_ENUMERATION
-            os << "|ERDAHL: insert, old, n_test=" << n_test
-               << "|=" << time_insert << "\n";
+          os << "|ERDAHL: insert, old, n_test=" << n_test
+             << "|=" << time_insert << "\n";
 #endif
-            return;
-          }
+          return;
         }
       }
 #ifdef TIMINGS_ERDAHL_ENUMERATION
@@ -344,6 +351,7 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
          << "\n";
 #endif
       erdahl_ensure_function(W, Dnew, os);
+      map_hash[hash].push_back(l_entry.size());
       l_entry.push_back({Dnew, false});
 #ifdef DEBUG_ERDAHL_ENUMERATION
       os << "ERDAHL: n=" << erdahl_dimension(D) << " d=" << d
@@ -360,8 +368,8 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
           if (i_sel == -1) {
             i_sel = i;
           } else {
-            std::pair<int, int> inv_sel = erdahl_invariant(l_entry[i_sel].Dp);
-            if (erdahl_invariant(entry.Dp) < inv_sel) {
+            std::pair<int, int> inv_sel = erdahl_size_key(l_entry[i_sel].Dp);
+            if (erdahl_size_key(entry.Dp) < inv_sel) {
               i_sel = i;
             }
           }
@@ -391,7 +399,7 @@ erdahl_sub_delaunay(ErdahlFunctionSpace<T> const &W,
      << " |EXT|=" << D.EXT.rows() << " n_orbit=" << l_sub.size()
      << "|=" << time_total << "\n";
 #endif
-  bank.l_entry.push_back({D, l_sub});
+  bank.l_entry.push_back({D, hash_D, l_sub});
   return l_sub;
 }
 
