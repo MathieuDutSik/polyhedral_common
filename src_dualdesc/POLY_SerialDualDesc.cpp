@@ -75,17 +75,17 @@ int main(int argc, char *argv[]) {
       }
 #endif
       if (NumericalType == "Qsqrt5") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 5>;
         return Process<T>(eFull);
       }
       if (NumericalType == "Qsqrt3") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 3>;
         return Process<T>(eFull);
       }
       if (NumericalType == "Qsqrt2") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 2>;
         return Process<T>(eFull);
       }

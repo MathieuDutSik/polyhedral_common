@@ -81,12 +81,12 @@ int main(int argc, char *argv[]) {
       }
 #endif
       if (arith == "Qsqrt5") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 5>;
         return process<T>(eFileI, os_out, std::cerr);
       }
       if (arith == "Qsqrt2") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 2>;
         return process<T>(eFileI, os_out, std::cerr);
       }

@@ -59,11 +59,11 @@ void full_process_B(std::string const &arith, std::string const &eFileEXT,
   }
 #endif
   if (arith == "Qsqrt5") {
-    using T = QuadField<Trat, 5>;
+    using T = QuadField<Trat_quad_field, 5>;
     return full_process_A<T, Tgroup>(eFileEXT, eFileGram, OutFormat, os);
   }
   if (arith == "Qsqrt2") {
-    using T = QuadField<Trat, 2>;
+    using T = QuadField<Trat_quad_field, 2>;
     return full_process_A<T, Tgroup>(eFileEXT, eFileGram, OutFormat, os);
   }
   std::optional<std::string> opt_realalgebraic =

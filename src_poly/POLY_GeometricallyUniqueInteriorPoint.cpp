@@ -113,12 +113,12 @@ int main(int argc, char *argv[]) {
         return process<T>(FileFAC, OutFormat, os_out);
       }
       if (arith == "Qsqrt5") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 5>;
         return process<T>(FileFAC, OutFormat, os_out);
       }
       if (arith == "Qsqrt2") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 2>;
         return process<T>(FileFAC, OutFormat, os_out);
       }

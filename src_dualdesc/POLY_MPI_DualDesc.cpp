@@ -76,12 +76,12 @@ int main(int argc, char *argv[]) {
         return Process_eFull_select_type<T>(world, eFull);
       }
       if (NumericalType == "Qsqrt5") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 5>;
         return Process_eFull_select_type<T>(world, eFull);
       }
       if (NumericalType == "Qsqrt2") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 2>;
         return Process_eFull_select_type<T>(world, eFull);
       }

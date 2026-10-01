@@ -84,12 +84,12 @@ void process_B(std::string const &eFileI, std::string const &eFileO,
   }
 #endif
   if (arith == "Qsqrt5") {
-    using Trat = mpq_class;
+    using Trat = Trat_quad_field;
     using T = QuadField<Trat, 5>;
     return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }
   if (arith == "Qsqrt2") {
-    using Trat = mpq_class;
+    using Trat = Trat_quad_field;
     using T = QuadField<Trat, 2>;
     return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }

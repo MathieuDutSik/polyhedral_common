@@ -139,11 +139,11 @@ int main(int argc, char *argv[]) {
       }
 #endif
       if (arith == "Qsqrt5") {
-        using T = QuadField<Trat, 5>;
+        using T = QuadField<Trat_quad_field, 5>;
         return process<T, Tgroup>(eFileI, eFileG, command, OutFormat, os);
       }
       if (arith == "Qsqrt2") {
-        using T = QuadField<Trat, 2>;
+        using T = QuadField<Trat_quad_field, 2>;
         return process<T, Tgroup>(eFileI, eFileG, command, OutFormat, os);
       }
       std::optional<std::string> opt_realalgebraic =

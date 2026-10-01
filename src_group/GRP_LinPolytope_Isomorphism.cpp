@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
       }
 #endif
       if (arith == "Qsqrt3") {
-        using Trat = mpq_class;
+        using Trat = Trat_quad_field;
         using T = QuadField<Trat, 3>;
         return process<T>(FileExt1, FileExt2, OutFormat, FileO);
       }

@@ -151,11 +151,11 @@ int main(int argc, char *argv[]) {
       // The lattice is Z^n whatever field the form takes its values in, so
       // Tint stays mpz_class: only the Gram matrices leave the rationals.
       if (arith == "Qsqrt2") {
-        using T = QuadField<mpq_class, 2>;
+        using T = QuadField<Trat_quad_field, 2>;
         return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
       if (arith == "Qsqrt5") {
-        using T = QuadField<mpq_class, 5>;
+        using T = QuadField<Trat_quad_field, 5>;
         return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
       std::optional<std::string> opt_realalgebraic =
