@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
                     << FileAlgebraicField << " is missing\n";
           throw TerminalException{1};
         }
-        HelperClassRealField<mpq_class> hcrf(FileAlgebraicField);
+        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;

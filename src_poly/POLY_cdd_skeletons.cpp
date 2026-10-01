@@ -182,14 +182,13 @@ int main(int argc, char *argv[]) {
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {
-        using T_rat = mpq_class;
         std::string const &FileAlgebraicField = *opt_realalgebraic;
         if (!FILE_IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
           throw TerminalException{1};
         }
-        HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
+        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;

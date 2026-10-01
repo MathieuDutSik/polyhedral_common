@@ -43,8 +43,7 @@ void Process_rec_option(RecOption const &rec_option, std::ostream &os) {
                 << " is missing\n";
       throw TerminalException{1};
     }
-    using T_rat = mpq_class;
-    HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
+    HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;

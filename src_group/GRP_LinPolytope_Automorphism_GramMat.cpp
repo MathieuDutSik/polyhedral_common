@@ -75,7 +75,7 @@ void full_process_B(std::string const &arith, std::string const &eFileEXT,
                 << " is missing\n";
       throw TerminalException{1};
     }
-    HelperClassRealField<Trat> hcrf(FileAlgebraicField);
+    HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;

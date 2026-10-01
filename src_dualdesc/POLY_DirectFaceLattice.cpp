@@ -107,8 +107,7 @@ int main(int argc, char *argv[]) {
                     << " is missing\n";
           throw TerminalException{1};
         }
-        using T_rat = mpq_class;
-        HelperClassRealField<T_rat> hcrf(FileAlgebraicField);
+        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;

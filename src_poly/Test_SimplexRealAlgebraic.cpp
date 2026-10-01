@@ -42,7 +42,8 @@ static void check(bool test, std::string const &name) {
 
 // The element c0 + c1 x + c2 x^2 of the field.
 static T Elt(int c0, int c1, int c2) {
-  std::vector<mpq_class> V{mpq_class(c0), mpq_class(c1), mpq_class(c2)};
+  std::vector<Trat_real_field> V{Trat_real_field(c0), Trat_real_field(c1),
+                                 Trat_real_field(c2)};
   return T(V);
 }
 
@@ -134,7 +135,7 @@ int main() {
                    "levels\n";
       throw TerminalException{1};
     }
-    HelperClassRealField<mpq_class> hcrf(eFile);
+    HelperClassRealField<Trat_real_field> hcrf(eFile);
     insert_helper_real_algebraic_field(idx_field, hcrf);
     check(hcrf.is_monic(), "the minimal polynomial is monic");
     std::cerr << "STEP 1: the field is registered, degree " << hcrf.deg << "\n";
