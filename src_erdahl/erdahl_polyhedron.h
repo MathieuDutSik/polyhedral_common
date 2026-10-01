@@ -8,6 +8,8 @@
 #include "Positivity.h"
 #include "Shvec_exact.h"
 #include "POLY_LinearProgramming.h"
+#include <cstdint>
+#include <optional>
 #include <unordered_set>
 #include <algorithm>
 #include <string>
@@ -726,25 +728,148 @@ MyMatrix<T> erdahl_canonical_function(ErdahlFunctionSpace<T> const &W,
     std::cerr << "ERDAHL: no function of W vanishes on the set\n";
     throw TerminalException{1};
   }
+  /*
+    The bookkeeping (evaluations of the basis at the points, membership in
+    D, generation of the pool) is done on machine integers: the points are
+    near D and the basis of Space_W(D) is integral with small coefficients.
+    It is checked that no overflow can occur, and the exact arithmetic is
+    used otherwise. The linear programs and the zero sets are exact.
+   */
+  using Tpt = std::vector<int64_t>;
   ErdahlAdaptedBasis<Tint> ab = erdahl_adapted_basis(ls.L, n);
-  std::unordered_set<MyVector<Tint>> set_ext;
-  for (int i = 0; i < ls.EXT.rows(); i++) {
-    set_ext.insert(GetMatrixRow(ls.EXT, i));
-  }
-  // For a polytope the representatives are the points themselves.
-  bool is_polytope = ls.L.rows() == 0;
-  auto is_in_set = [&](MyVector<Tint> const &e) -> bool {
-    if (is_polytope) {
-      return set_ext.count(e) > 0;
+  int64_t const coord_max = int64_t(1) << 20;
+  int64_t const coeff_max = int64_t(1) << 18;
+  auto fits = [&](Tint const &x, int64_t bound) -> bool {
+    Tint b = UniversalScalarConversion<Tint, int64_t>(bound);
+    return x < b && x > -b;
+  };
+  // The basis as int64 matrices if possible.
+  bool basis_fast = true;
+  std::vector<std::vector<int64_t>> basis_i64(r, std::vector<int64_t>(np1 * np1));
+  for (int i = 0; i < r && basis_fast; i++) {
+    for (int a = 0; a < np1 && basis_fast; a++) {
+      for (int b = 0; b < np1; b++) {
+        T const &val = basis[i](a, b);
+        if (!IsInteger(val)) {
+          basis_fast = false;
+          break;
+        }
+        Tint val_i = UniversalScalarConversion<Tint, T>(val);
+        if (!fits(val_i, coeff_max)) {
+          basis_fast = false;
+          break;
+        }
+        basis_i64[i][a * np1 + b] = UniversalScalarConversion<int64_t, Tint>(val_i);
+      }
     }
-    return set_ext.count(erdahl_canonical_representative(ab, e)) > 0;
+  }
+  auto to_pt = [&](MyVector<Tint> const &e) -> std::optional<Tpt> {
+    Tpt pt(np1);
+    for (int a = 0; a < np1; a++) {
+      if (!fits(e(a), coord_max)) {
+        return {};
+      }
+      pt[a] = UniversalScalarConversion<int64_t, Tint>(e(a));
+    }
+    return pt;
+  };
+  auto to_vec = [&](Tpt const &pt) -> MyVector<Tint> {
+    MyVector<Tint> e(np1);
+    for (int a = 0; a < np1; a++) {
+      e(a) = UniversalScalarConversion<Tint, int64_t>(pt[a]);
+    }
+    return e;
+  };
+  // The evaluation row (f_i(e))_i, with |f_i(e)| < coeff_max (n+1)^2
+  // coord_max^2 < 2^63 when both bounds hold.
+  auto eval_row = [&](MyVector<Tint> const &e) -> MyVector<T> {
+    MyVector<T> V(r);
+    std::optional<Tpt> opt = to_pt(e);
+    if (basis_fast && opt && np1 <= 16) {
+      Tpt const &pt = *opt;
+      for (int i = 0; i < r; i++) {
+        std::vector<int64_t> const &B = basis_i64[i];
+        int64_t sum = 0;
+        for (int a = 0; a < np1; a++) {
+          if (pt[a] == 0) {
+            continue;
+          }
+          int64_t part = 0;
+          for (int b = 0; b < np1; b++) {
+            part += B[a * np1 + b] * pt[b];
+          }
+          sum += part * pt[a];
+        }
+        V(i) = UniversalScalarConversion<T, int64_t>(sum);
+      }
+      return V;
+    }
+    for (int i = 0; i < r; i++) {
+      V(i) = EvaluationQuadForm<T, Tint>(basis[i], e);
+    }
+    return V;
+  };
+  // Membership in D, on machine integers.
+  MyMatrix<Tint> const &Ainv = ab.AffBasisInv;
+  MyMatrix<Tint> const &Aff = ab.AffBasis;
+  bool basis_ab_fast = true;
+  for (int a = 0; a < np1; a++) {
+    for (int b = 0; b < np1; b++) {
+      if (!fits(Ainv(a, b), coeff_max) || !fits(Aff(a, b), coeff_max)) {
+        basis_ab_fast = false;
+      }
+    }
+  }
+  std::unordered_set<Tpt> set_ext;
+  std::unordered_set<MyVector<Tint>> set_ext_vec;
+  for (int i = 0; i < ls.EXT.rows(); i++) {
+    MyVector<Tint> e = GetMatrixRow(ls.EXT, i);
+    set_ext_vec.insert(e);
+    std::optional<Tpt> opt = to_pt(e);
+    if (opt) {
+      set_ext.insert(*opt);
+    }
+  }
+  int p_ab = ab.p;
+  bool is_polytope = ls.L.rows() == 0;
+  auto is_in_set_pt = [&](Tpt const &pt) -> bool {
+    if (is_polytope) {
+      return set_ext.count(pt) > 0;
+    }
+    // u = pt Ainv with the L coordinates zeroed, then u Aff.
+    Tpt u(np1, 0);
+    for (int b = 0; b <= p_ab; b++) {
+      int64_t sum = 0;
+      for (int a = 0; a < np1; a++) {
+        sum += pt[a] * UniversalScalarConversion<int64_t, Tint>(Ainv(a, b));
+      }
+      u[b] = sum;
+    }
+    Tpt img(np1, 0);
+    for (int b = 0; b < np1; b++) {
+      int64_t sum = 0;
+      for (int a = 0; a <= p_ab; a++) {
+        sum += u[a] * UniversalScalarConversion<int64_t, Tint>(Aff(a, b));
+      }
+      img[b] = sum;
+    }
+    return set_ext.count(img) > 0;
+  };
+  auto is_in_set = [&](MyVector<Tint> const &e) -> bool {
+    std::optional<Tpt> opt = to_pt(e);
+    if (opt && basis_ab_fast) {
+      return is_in_set_pt(*opt);
+    }
+    if (is_polytope) {
+      return set_ext_vec.count(e) > 0;
+    }
+    return set_ext_vec.count(erdahl_canonical_representative(ab, e)) > 0;
   };
   std::unordered_set<MyVector<Tint>> set_S;
   std::vector<MyVector<Tint>> l_S;
-  std::unordered_set<MyVector<Tint>> set_pool;
+  // The evaluation rows of the points of S, computed once.
+  std::vector<MyVector<T>> l_S_eval;
   std::vector<MyVector<Tint>> l_pool;
-  // The evaluations of the basis of Space_W(D) at the pool points, computed
-  // once: a violation test is then a scalar product of length r.
   std::vector<MyVector<T>> l_pool_eval;
   auto insert = [&](MyVector<Tint> const &e) -> void {
     // Directions (0, v) are never in the set.
@@ -756,6 +881,7 @@ MyMatrix<T> erdahl_canonical_function(ErdahlFunctionSpace<T> const &W,
     }
     set_S.insert(e);
     l_S.push_back(e);
+    l_S_eval.push_back(eval_row(e));
   };
   // The initial points: the neighbors e +- e_i of the representatives. The
   // points x_i + x_j - x_k for representatives x_i, x_j, x_k (translated by
@@ -775,43 +901,64 @@ MyMatrix<T> erdahl_canonical_function(ErdahlFunctionSpace<T> const &W,
     }
   }
   {
-    std::vector<MyVector<Tint>> l_vert;
-    for (int i_ext = 0; i_ext < ls.EXT.rows(); i_ext++) {
+    std::vector<Tpt> l_vert;
+    bool pool_fast = basis_ab_fast;
+    for (int i_ext = 0; i_ext < ls.EXT.rows() && pool_fast; i_ext++) {
       MyVector<Tint> e = GetMatrixRow(ls.EXT, i_ext);
-      l_vert.push_back(e);
+      std::vector<MyVector<Tint>> l_e{e};
       for (int j = 0; j < ls.L.rows(); j++) {
         MyVector<Tint> f = e;
         for (int k = 0; k < n; k++) {
           f(1 + k) += ls.L(j, k);
         }
-        l_vert.push_back(f);
+        l_e.push_back(f);
+      }
+      for (auto &f : l_e) {
+        std::optional<Tpt> opt = to_pt(f);
+        if (!opt) {
+          pool_fast = false;
+          break;
+        }
+        l_vert.push_back(*opt);
       }
     }
-    // The differences first, deduplicated, then the translates, then the
-    // membership test, which is the costly part, once per candidate.
-    std::unordered_set<MyVector<Tint>> set_diff;
-    for (auto &vj : l_vert) {
-      for (auto &vk : l_vert) {
-        if (vj != vk) {
-          set_diff.insert(vj - vk);
+    // Without machine integers the pool is skipped: the cuts from the zero
+    // sets alone also converge, only more slowly.
+    if (pool_fast) {
+      // The differences first, deduplicated, then the translates, then the
+      // membership test, once per candidate.
+      std::unordered_set<Tpt> set_diff;
+      for (auto &vj : l_vert) {
+        for (auto &vk : l_vert) {
+          if (vj != vk) {
+            Tpt delta(np1);
+            for (int a = 0; a < np1; a++) {
+              delta[a] = vj[a] - vk[a];
+            }
+            set_diff.insert(delta);
+          }
         }
       }
-    }
-    std::unordered_set<MyVector<Tint>> set_cand;
-    for (auto &vi : l_vert) {
-      for (auto &delta : set_diff) {
-        set_cand.insert(vi + delta);
-      }
-    }
-    for (auto &f : set_cand) {
-      if (set_S.count(f) == 0 && !is_in_set(f)) {
-        set_pool.insert(f);
-        l_pool.push_back(f);
-        MyVector<T> ev(r);
-        for (int i = 0; i < r; i++) {
-          ev(i) = EvaluationQuadForm<T, Tint>(basis[i], f);
+      std::unordered_set<Tpt> set_cand;
+      for (auto &vi : l_vert) {
+        for (auto &delta : set_diff) {
+          Tpt f(np1);
+          for (int a = 0; a < np1; a++) {
+            f[a] = vi[a] + delta[a];
+          }
+          set_cand.insert(f);
         }
-        l_pool_eval.push_back(ev);
+      }
+      for (auto &f : set_cand) {
+        if (is_in_set_pt(f)) {
+          continue;
+        }
+        MyVector<Tint> fv = to_vec(f);
+        if (set_S.count(fv) > 0) {
+          continue;
+        }
+        l_pool_eval.push_back(eval_row(fv));
+        l_pool.push_back(fv);
       }
     }
   }
@@ -841,7 +988,7 @@ MyMatrix<T> erdahl_canonical_function(ErdahlFunctionSpace<T> const &W,
     for (int i_S = 0; i_S < n_S; i_S++) {
       ListIneq(i_S, 0) = -1;
       for (int i = 0; i < r; i++) {
-        T val = EvaluationQuadForm<T, Tint>(basis[i], l_S[i_S]);
+        T const &val = l_S_eval[i_S](i);
         ListIneq(i_S, 1 + i) = val;
         if (static_cast<size_t>(i_S) < n_objective) {
           ToBeMinimized(1 + i) += val;
