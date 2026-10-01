@@ -86,8 +86,12 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   AllArr.OutFile = OutFile;
   //
   bool DeterministicRuntime = BlockDATA.get_bool("DeterministicRuntime");
+  AllArr.DeterministicRuntime = DeterministicRuntime;
   if (!DeterministicRuntime) {
     unsigned seed = get_random_seed();
+    set_random_seed(seed);
+    // For the rand() and random() draws not yet moved to the portable
+    // generator of Basic_random.h.
     srand(seed);
   }
   //

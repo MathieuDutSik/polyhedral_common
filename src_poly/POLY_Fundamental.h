@@ -677,7 +677,7 @@ MyVector<T> random_interior_pt(MyMatrix<T> const& M,
   int n_col = M.cols();
   MyVector<T> V = ZeroVector<T>(n_col);
   for (int i_row=0; i_row<n_row; i_row++) {
-    int val = 1 + random() % N;
+    int val = random_int(1, N);
     sum_val += val;
 #ifdef DEBUG_POLY_FUNDAMENTAL
     os << "POLY: random_interior_pt i_row=" << i_row << " val=" << val << " N=" << N << "\n";

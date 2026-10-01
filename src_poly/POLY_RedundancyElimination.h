@@ -256,7 +256,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
   MyVector<T> eVect(n_cols);
   auto SetRandomVector = [&]() -> void {
     for (int i_col = 0; i_col < n_cols; i_col++) {
-      int val = -N + random() % (2 * N + 1);
+      int val = random_int(-N, N);
       eVect(i_col) = val;
     }
   };

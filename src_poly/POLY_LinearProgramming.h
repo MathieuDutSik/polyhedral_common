@@ -240,8 +240,8 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
 #endif
   while (true) {
     for (int iCol = 1; iCol < nbCol; iCol++) {
-      int a = random();
-      int b = random();
+      int a = random_int();
+      int b = random_int();
       T eVal(a - b);
       eVect(iCol) = eVal;
     }

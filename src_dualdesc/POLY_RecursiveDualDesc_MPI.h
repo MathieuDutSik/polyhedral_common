@@ -716,7 +716,13 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
   PolyHeuristicSerial<TintGroup> AllArr =
       Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, os);
-  srand(time(NULL) + 12345 * i_rank);
+  // Each process its own sequence, the seed offset by the rank. With
+  // DeterministicRuntime the base seed is fixed, so that a run is
+  // reproducible for a given number of processes.
+  uint64_t seed = AllArr.DeterministicRuntime ? 0 : get_random_seed();
+  seed += 12345 * static_cast<uint64_t>(i_rank);
+  set_random_seed(seed);
+  srand(static_cast<unsigned>(seed));
   Reset_Directories(comm, AllArr);
   size_t n_rows = EXTred.rows();
   if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi && n_proc < 2) {

@@ -374,7 +374,7 @@ struct empty_message_management {
   empty_message_management(boost::mpi::communicator &comm, size_t const &MaxFly,
                            int const &tag)
       : comm(comm), rsl(comm.size(), MaxFly), tag(tag) {
-    int expected_value_pre = random();
+    int expected_value_pre = random_int();
     expected_value = boost::mpi::all_reduce(comm, expected_value_pre,
                                             boost::mpi::minimum<int>());
   }
