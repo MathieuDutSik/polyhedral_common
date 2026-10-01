@@ -691,24 +691,40 @@ std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat,
         throw TerminalException{1};
       }
 #endif
-      T eMax = fVect.maxCoeff();
+      // Normalize by the largest absolute value: the largest entry can be
+      // zero when no entry is positive. The sign does not matter for the
+      // quadratic form.
+      T eMax(0);
+      for (int j = 0; j < n; j++) {
+        T eAbs = T_abs(fVect(j));
+        if (eAbs > eMax) {
+          eMax = eAbs;
+        }
+      }
       MyVector<T> gVect = fVect / eMax;
       TheSet.push_back(gVect);
     }
   return TheSet;
 }
 
+/*
+  The rounding of a multiple k w, for w in ListVect and k = 1, 2, ..., whose
+  norm for M is below MaxNorm. If max_mult is set, only the k <= max_mult
+  are tried and none is returned if they all fail.
+ */
 template <typename T, typename Tint>
-MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const &M,
-                                       std::vector<MyVector<T>> const &ListVect,
-                                       T const &MaxNorm,
-                                       [[maybe_unused]] std::ostream &os) {
+std::optional<MyVector<Tint>>
+GetShortVectorSpecifiedBounded(MyMatrix<T> const &M,
+                               std::vector<MyVector<T>> const &ListVect,
+                               T const &MaxNorm,
+                               std::optional<int> const &max_mult,
+                               [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
-  os << "POS: GetShortVectorSpecified: beginning\n";
+  os << "POS: GetShortVectorSpecifiedBounded: beginning\n";
 #endif
   int n = M.rows();
   Tint eMult(1);
-  while (true) {
+  while (!max_mult || eMult <= *max_mult) {
     for (auto &eVect : ListVect) {
       MyVector<Tint> V(n);
       for (int i = 0; i < n; i++) {
@@ -723,6 +739,17 @@ MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const &M,
     }
     eMult++;
   }
+  return {};
+}
+
+template <typename T, typename Tint>
+MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const &M,
+                                       std::vector<MyVector<T>> const &ListVect,
+                                       T const &MaxNorm, std::ostream &os) {
+  std::optional<int> max_mult;
+  std::optional<MyVector<Tint>> opt = GetShortVectorSpecifiedBounded<T, Tint>(
+      M, ListVect, MaxNorm, max_mult, os);
+  return unfold_opt(opt, "The unbounded search always ends");
 }
 
 template <typename T, typename Tint>

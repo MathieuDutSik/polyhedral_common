@@ -184,6 +184,66 @@ else()
   message(STATUS "flint disabled by ENABLE_FLINT_SUPPORT=${ENABLE_FLINT_SUPPORT}")
 endif()
 
+# Optional SCIP integer programming: the "scip" method of
+# src_milp/integer_linear_programming.h, used by src_igusa. This is the
+# counterpart of the `make ENABLE_SCIP_SUPPORT=1` of the Makefiles. Without
+# it the integer programs are solved by the exact branch and bound of the
+# same header, which is much slower.
+#
+# ENABLE_SCIP_SUPPORT drives the search as ENABLE_FLINT_SUPPORT does: AUTO,
+# the default, uses SCIP when it is found and builds without it otherwise;
+# OFF ignores it even when installed; anything else, including the `1` that
+# the Makefiles take, requires it and fails the configuration when it is
+# missing.
+set(
+  ENABLE_SCIP_SUPPORT "AUTO"
+  CACHE STRING
+  "SCIP integer programming: AUTO (use when found), ON (require), OFF (ignore)"
+)
+set_property(CACHE ENABLE_SCIP_SUPPORT PROPERTY STRINGS AUTO ON OFF)
+
+string(TOUPPER "${ENABLE_SCIP_SUPPORT}" SCIP_REQUEST)
+if(SCIP_REQUEST STREQUAL "AUTO")
+  set(SCIP_WANTED TRUE)
+  set(SCIP_REQUIRED FALSE)
+elseif(SCIP_REQUEST MATCHES "^(OFF|0|NO|FALSE|N|IGNORE|NOTFOUND)$")
+  set(SCIP_WANTED FALSE)
+  set(SCIP_REQUIRED FALSE)
+else()
+  set(SCIP_WANTED TRUE)
+  set(SCIP_REQUIRED TRUE)
+endif()
+
+set(SCIP_USABLE FALSE)
+if(SCIP_WANTED)
+  # SCIP installs a CMake package configuration (scip-config.cmake).
+  find_package(SCIP CONFIG QUIET)
+  if(SCIP_FOUND)
+    set(SCIP_USABLE TRUE)
+  endif()
+endif()
+
+# Always defined so that the targets can link it unconditionally; it carries
+# the ENABLE_SCIP_SUPPORT define and the library only when SCIP is usable,
+# and is an empty interface otherwise.
+add_library(polyhedral_scip INTERFACE)
+if(SCIP_USABLE)
+  target_compile_definitions(polyhedral_scip INTERFACE ENABLE_SCIP_SUPPORT)
+  target_include_directories(polyhedral_scip INTERFACE ${SCIP_INCLUDE_DIRS})
+  target_link_libraries(polyhedral_scip INTERFACE ${SCIP_LIBRARIES})
+  message(STATUS "SCIP found (version ${SCIP_VERSION}); building with ENABLE_SCIP_SUPPORT")
+elseif(SCIP_REQUIRED)
+  message(FATAL_ERROR
+    "ENABLE_SCIP_SUPPORT=${ENABLE_SCIP_SUPPORT} was asked for but SCIP was "
+    "not found. Install it (and set SCIP_DIR to the directory of "
+    "scip-config.cmake if needed), or set ENABLE_SCIP_SUPPORT=OFF to build "
+    "without it.")
+elseif(SCIP_WANTED)
+  message(STATUS "SCIP not found; the integer programs use the exact branch and bound")
+else()
+  message(STATUS "SCIP disabled by ENABLE_SCIP_SUPPORT=${ENABLE_SCIP_SUPPORT}")
+endif()
+
 # Optional boost multiprecision arithmetics: the gmp_boost / multi_boost
 # entries of the programs' arith argument, and the mpq_rational / cpp_rational
 # / mpz_int / cpp_int ones where the arithmetics are named by type. They
@@ -292,6 +352,7 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src_enum_schemes"
     "${CMAKE_SOURCE_DIR}/src_genera"
     "${CMAKE_SOURCE_DIR}/src_group"
+    "${CMAKE_SOURCE_DIR}/src_igusa"
     "${CMAKE_SOURCE_DIR}/src_indefinite"
     "${CMAKE_SOURCE_DIR}/src_isotropy"
     "${CMAKE_SOURCE_DIR}/src_latt"
@@ -399,6 +460,14 @@ target_link_libraries(
   INTERFACE
     polyhedral_group_support
     polyhedral_mpi_support
+)
+
+add_library(polyhedral_igusa_support INTERFACE)
+target_link_libraries(
+  polyhedral_igusa_support
+  INTERFACE
+    polyhedral_group_support
+    polyhedral_scip
 )
 
 add_library(polyhedral_short_support INTERFACE)
@@ -631,6 +700,18 @@ foreach(target IN LISTS PERFECT_PROGRAMS)
     ${target}
     "${CMAKE_SOURCE_DIR}/src_perfect/${target}.cpp"
     polyhedral_perfect_support
+  )
+endforeach()
+
+set(
+  IGUSA_PROGRAMS
+  IGUSA_EnumerateVertices
+)
+foreach(target IN LISTS IGUSA_PROGRAMS)
+  add_polyhedral_binary(
+    ${target}
+    "${CMAKE_SOURCE_DIR}/src_igusa/${target}.cpp"
+    polyhedral_igusa_support
   )
 endforeach()
 
