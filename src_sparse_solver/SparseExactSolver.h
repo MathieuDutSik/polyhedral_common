@@ -233,11 +233,9 @@ SparseSolutionMat_Exact(MySparseMatrix<T> const &A, MyVector<T> const &b,
   probability about 1/p. The arithmetic is on machine words, so the
   fill-in costs nothing like the rational elimination.
  */
-inline int64_t residue_mod_p(mpq_class const &x, int64_t const &p) {
-  int64_t num = mpz_fdiv_ui(x.get_num_mpz_t(), p);
-  int64_t den = mpz_fdiv_ui(x.get_den_mpz_t(), p);
-  // The inverse of den by Fermat
-  int64_t res = 1, base = den, e = p - 2;
+// The inverse of a modulo the prime p < 2^31, by Fermat.
+inline int64_t inverse_mod_p(int64_t const &a, int64_t const &p) {
+  int64_t res = 1, base = ((a % p) + p) % p, e = p - 2;
   while (e > 0) {
     if (e & 1) {
       res = (res * base) % p;
@@ -245,13 +243,28 @@ inline int64_t residue_mod_p(mpq_class const &x, int64_t const &p) {
     base = (base * base) % p;
     e >>= 1;
   }
-  return (num * res) % p;
+  return res;
 }
 
+#ifndef WASM_PLATFORM
+// With GMP, the residues of the numerator and the denominator are taken
+// without forming any integer.
+inline int64_t residue_mod_p(mpq_class const &x, int64_t const &p) {
+  int64_t num = mpz_fdiv_ui(x.get_num_mpz_t(), p);
+  int64_t den = mpz_fdiv_ui(x.get_den_mpz_t(), p);
+  return (num * inverse_mod_p(den, p)) % p;
+}
+#endif
+
+// Any other rational type, from the residues of its numerator and its
+// denominator in its own integer type.
 template <typename T>
 int64_t residue_mod_p(T const &x, int64_t const &p) {
-  mpq_class x_q = UniversalScalarConversion<mpq_class, T>(x);
-  return residue_mod_p(x_q, p);
+  using Tz = decltype(GetNumerator_z(x));
+  Tz p_z = UniversalScalarConversion<Tz, int64_t>(p);
+  int64_t num = UniversalScalarConversion<int64_t, Tz>(ResInt(GetNumerator_z(x), p_z));
+  int64_t den = UniversalScalarConversion<int64_t, Tz>(ResInt(GetDenominator_z(x), p_z));
+  return (num * inverse_mod_p(den, p)) % p;
 }
 
 template <typename T>
@@ -259,17 +272,6 @@ SparseSolveStatus SparseSystemConsistent_Mod_Budget(MySparseMatrix<T> const &A, 
                                                     size_t const &max_entries,
                                                     [[maybe_unused]] std::ostream &os) {
   int64_t const p = 2147483647;
-  auto inv_mod = [&](int64_t a) -> int64_t {
-    int64_t res = 1, base = ((a % p) + p) % p, e = p - 2;
-    while (e > 0) {
-      if (e & 1) {
-        res = (res * base) % p;
-      }
-      base = (base * base) % p;
-      e >>= 1;
-    }
-    return res;
-  };
   int n_unknown = A.rows();
   int n_eq = A.cols();
   std::vector<std::unordered_map<int, int64_t>> eq(n_eq);
@@ -336,7 +338,7 @@ SparseSolveStatus SparseSystemConsistent_Mod_Budget(MySparseMatrix<T> const &A, 
         occ_best = n_occ;
       }
     }
-    int64_t pv_inv = inv_mod(eq[e][u]);
+    int64_t pv_inv = inverse_mod_p(eq[e][u], p);
     std::vector<int> l_f(occ[u].begin(), occ[u].end());
     for (auto &f : l_f) {
       if (f == e) {
