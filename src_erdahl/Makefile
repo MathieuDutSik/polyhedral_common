@@ -1,4 +1,4 @@
-PROGRAM		= ERDAHL_SelfTest ERDAHL_EnumeratePerfect
+PROGRAM		= ERDAHL_SelfTest ERDAHL_EnumeratePerfect ERDAHL_CutInequalities
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
