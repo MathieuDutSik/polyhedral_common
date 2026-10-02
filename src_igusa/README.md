@@ -26,6 +26,8 @@ pool shared by the whole enumeration.
 For a vertex A the local cone C_A = cone{ D in L : A + D positive definite }
 is computed as follows:
 
+* Known edges: the reverse of the edges by which A was reached from the
+  vertices already processed. They can have any norm.
 * Candidate rays: the D with A + D positive definite and
   tr((A^{-1} D)^2) <= bound, the bound being doubled until they span the
   space.
@@ -35,7 +37,9 @@ is computed as follows:
   positive on the positive semidefinite matrices, so the integer programs
   stay bounded.
 * Norm closure: all the candidates up to the largest norm of the extreme
-  rays found are added.
+  rays found are added, unless the estimated number of lattice vectors is
+  above `MaxNormEnumeration`. That number grows like the bound to the
+  power dim(T)/2: for n = 6 at the vertex E6 it was 5 10^7.
 * Only then the dual description is computed and all its orbits of facets
   are checked. With the previous steps, the list of rays is normally correct
   at that point, so a single dual description is done. The number done is
@@ -57,6 +61,10 @@ Namelist
  NormBound = 2           ! initial bound for the candidate rays
  NbRandomFacet = 10      ! random facets tested per round
  NbCleanRound = 2        ! clean rounds before the dual description
+ NormClosure = T         ! insert the candidates up to the largest norm
+ MaxNormEnumeration = 1000000  ! skip the norm closure above that
+ FileVertex = "unset"    ! if set, only the local cone of that vertex
+ CompareDualSide = F     ! with FileVertex, time facets -> rays as well
 /
 
 &TSPACE
@@ -70,6 +78,36 @@ Namelist
  RealImagProd = 1        ! 1, 1 for the Eisenstein integers
 /
 ```
+
+Options for the analysis and for the large cases
+------------------------------------------------
+
+All in the `&DATA` block:
+
+* `FileVertex`: only the local cone of that vertex. The output is the
+  vertex and one neighbor per orbit of edges. With `VertexTest = T`, only
+  test whether the form is a vertex: tr(A^{-1} X) is minimized over I and
+  the face where it is minimal is checked to be a point, with random
+  directions or, with `VertexTestRigorous = T`, the coordinate functions
+  (a proof with `IlpMethod = "exact_bb"`).
+* `FileKnownEdges`: known edges at `FileVertex` (list of matrices B - A).
+  The rays of known edges are certified extreme, so the redundancy
+  elimination only tests the other ones.
+* `FileInitialVertex`: start the enumeration from that vertex.
+* `FileInstancePrefix`: write each dual description instance (rays, group
+  in polyhedral_common and GAP formats, and one neighbor per orbit of rays
+  with its determinant, minimum and number of minimal vectors).
+  `StopBeforeDualDescription = T` stops after writing an instance with at
+  least `StopMinRays` rays.
+* `NbSampleFacet`: check that many random facets before the dual
+  description; `LogNewRays = T` writes the neighbor type of each new ray.
+* `OrbitClosure = F`: do not store the orbits of the candidates and of the
+  new rays (for the large stabilizers, dimension 9 and more).
+* `MaxEnumerationBound`, `MaxNormEnumeration`: limits on the enumeration of
+  the candidates by norm.
+* `FileDualDescription`: heuristics of the dual description, as for
+  `POLY_SerialDualDesc`. By default the standard ones, without the bank and
+  the additional symmetries above 10000 vertices.
 
 Output
 ------

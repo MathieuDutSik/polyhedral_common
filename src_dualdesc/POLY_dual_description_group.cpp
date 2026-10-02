@@ -73,6 +73,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
       std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "fmpq_class : rational arithmetic over FLINT fmpq_class\n";
+#endif
 #ifdef ENABLE_BOOST_TYPES
       std::cerr << "mpq_rational : rational arithmetic over "
                    "boost::multiprecision::mpq_rational\n";
@@ -164,7 +167,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
       std::cerr << "Available possibilities: mpq_class, Qsqrt5, Qsqrt2, "
-                   "RealAlgebraic\n";
+                   "RealAlgebraic";
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << ", fmpq_class";
+#endif
+      std::cerr << "\n";
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(eFileO, call_dualdesc);
