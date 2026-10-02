@@ -56,6 +56,18 @@ faster); every result is exact.
     runs both computations, compares them with the expected values (or
     `none`) and, when the enumeration has at most `max_brute_force`
     systems, with the brute force algorithm of the paper above.
+  * **POLYNORM_OptimalLattice** `[arith] [FileEXT] [problem] [n_start] [seed] [FileStart] [OutFile]`
+    searches the lattice `L` giving the densest lattice packing
+    (`problem=packing`) or the thinnest lattice covering
+    (`problem=covering`) of `R^n` by translates of `P`, from `n_start`
+    random lattices (and the basis in `FileStart`, or `none`). Each result
+    is polished to an exact rational lattice when possible and its local
+    optimality is then certified exactly. In dimension 2 the packing problem
+    is also solved exactly and globally. See "Optimal lattices" below.
+  * **POLYNORM_LatticeCertify** `[arith] [FileEXT] [FileLattice] [OutFile]`
+    returns the packing and covering densities of `P` for the lattice whose
+    basis is the rows of `FileLattice`, and whether that lattice is an
+    exactly certified strict local optimum of each problem.
 
 `OutFormat` is `text` (default) or `GAP`, and `OutFile` is a file name or
 `stderr` / `stdout`.
@@ -111,6 +123,34 @@ only runs for small cases.
 
 See `NOTES.md` for the design discussion and the open issues.
 
+Optimal lattices
+----------------
+
+`POLYNORM_OptimalLattice` looks for the lattice `L = Z^n W` (basis vectors
+the rows of `W`) of densest packing `vol(P) / det L` (with `P + L` a
+packing) or of thinnest covering (with `P + L = R^n`):
+
+  * the constraints are linear in `W`: `z W d_j^T >= 1` for a contact `z`
+    and a facet `d_j` of `P - P`, and for covering the radius of a hole
+    pinned by `n+1` pairs is `<G_S, W>`, linear in `W`;
+  * a trust region sequential linear programming method on `W`, with every
+    trial lattice evaluated exactly by the packing and covering code, and
+    a pattern search fallback;
+  * the result is polished to the exact critical point of `det` on the
+    active constraints and certified exactly: Karush-Kuhn-Tucker
+    multipliers, and second order positivity on the critical cone
+    (copositivity on its extreme rays);
+  * in dimension 2 the packing problem is solved exactly and globally from
+    Minkowski's characterization of critical lattices.
+
+This finds and certifies the known optima: Fary's triangle (packing 2/3,
+covering 3/2), Sriamorn's quadrilaterals, the Betke-Henk values for the
+tetrahedron (18/49), octahedron (18/19), cuboctahedron (45/49) and
+truncated tetrahedron (207/304), the octahedron covering 9/8 of Lian and
+Xue and the tetrahedron covering 125/63 (best known). Global optimality is not proved beyond dimension 2 (except for
+tilings). See `NOTES.md`, section "Optimal lattices", for the method, the
+validation table and the limits.
+
 Files
 -----
 
@@ -120,4 +160,7 @@ Files
   * `PolyNorm_Packing.h`: the packing scalar and the contact vectors.
   * `PolyNorm_Covering.h`: the upper bounds, the branch and bound and the
     brute force.
+  * `PolyNorm_LatticeOpt.h`: the search of optimal lattices, the polishing
+    to exact critical points and the certificates of local optimality.
+  * `PolyNorm_Packing2D.h`: the exact densest lattice packing of a polygon.
   * The CI test is `CI_tests/25B_PolyNorm/run_tests.sh`.

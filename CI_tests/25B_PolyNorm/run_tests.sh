@@ -42,4 +42,74 @@ cross4.ext 1/2 2 2000000
 simplex4.ext 1 4 2000000
 cell24.ext 1/2 1 2000000
 LIST
+
+# Optimal lattices. The densest lattice packings of the tetrahedron (18/49,
+# Hoylman) and of the octahedron (18/19, Minkowski), as given by Betke and
+# Henk, and the thinnest lattice covering of the octahedron (9/8 with the
+# body-centered cubic lattice, Lian and Xue) are evaluated directly, and
+# must be certified strict local optima.
+PROG_CERT=../../src_polynorm/POLYNORM_LatticeCertify
+PROG_OPT=../../src_polynorm/POLYNORM_OptimalLattice
+for prog in "$PROG_CERT" "$PROG_OPT"; do
+  if [ ! -x "$prog" ]; then
+    echo "The program $prog is missing" >&2
+    exit 1
+  fi
+done
+check_line() {
+  # $1 log file, $2 the expected line (fixed string)
+  if ! grep -qF -- "$2" "$1"; then
+    echo "Failure: expected the line '$2' in $1" >&2
+    cat "$1" >&2
+    exit 1
+  fi
+}
+echo "=== certification of known optimal lattices"
+$PROG_CERT gmp tetra_betke_henk.ext tetra_betke_henk.lat stdout > cert_tetra.log 2>/dev/null
+check_line cert_tetra.log "Packing: alpha=1 density=18/49"
+check_line cert_tetra.log "certified_local_optimum=1 (strict local optimum on every branch)"
+$PROG_CERT gmp octa3.ext octa3_betke_henk.lat stdout > cert_octa.log 2>/dev/null
+check_line cert_octa.log "Packing: alpha=1 density=18/19"
+check_line cert_octa.log "certified_local_optimum=1 (strict local optimum on every branch)"
+$PROG_CERT gmp octa3.ext octa3_bcc.lat stdout > cert_bcc.log 2>/dev/null
+check_line cert_bcc.log "Covering: mu=3/2 density=9/8"
+check_line cert_bcc.log "certified_local_optimum=1 (strict local optimum)"
+echo "TEST certification: OK"
+
+# The search from a few random starts (the generator is portable, so the
+# seed fixes the run) must find the known optimum exactly, polished and
+# certified. Columns: file, problem, number of starts, density.
+while read -r file problem nstart dens; do
+  case "$file" in
+    ''|\#*) continue ;;
+  esac
+  echo "=== $file $problem (density=$dens)"
+  log="opt_${file%.ext}_$problem.log"
+  if ! $PROG_OPT gmp "$file" "$problem" "$nstart" 1 none stdout > "$log" 2>/dev/null; then
+    echo "Failure of POLYNORM_OptimalLattice on $file $problem" >&2
+    exit 1
+  fi
+  best=$(sed -n '/^Best lattice/,$p' "$log")
+  if ! echo "$best" | grep -qF "exact=$dens"; then
+    echo "Failure on $file $problem: the best density is not $dens" >&2
+    cat "$log" >&2
+    exit 1
+  fi
+  if ! echo "$best" | grep -qF "certified_local_optimum=1"; then
+    echo "Failure on $file $problem: the optimum is not certified" >&2
+    cat "$log" >&2
+    exit 1
+  fi
+  echo "TEST $file $problem: OK"
+done <<'LIST'
+# Dimension 2: Fary (triangle), Sriamorn (quadrilateral). The packing
+# problem is also solved by the exact algorithm.
+triangle.ext packing 2 2/3
+asym2d.ext packing 2 3/4
+triangle.ext covering 2 3/2
+asym2d.ext covering 2 4/3
+# Dimension 3: Betke and Henk.
+simplex3.ext packing 3 18/49
+octa3.ext packing 3 18/19
+LIST
 echo "All tests passed" > CI_CONCLUSION

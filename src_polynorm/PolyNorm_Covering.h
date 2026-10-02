@@ -320,6 +320,13 @@ struct PolyNormCoveringSolver {
   size_t n_lp;
   size_t n_skip_canonical;
   size_t n_canonical;
+  // When set, the search does not stop at the covering radius: every node
+  // whose bound is at least collect_ratio times the incumbent is explored
+  // and every solved node (a point p with f(p) equal to the bound of its
+  // node) is recorded in ListSolved. These are the near-deepest holes that
+  // the lattice optimization of PolyNorm_LatticeOpt.h needs.
+  std::optional<T> collect_ratio;
+  std::vector<std::pair<MyVector<T>, T>> ListSolved;
   // The orbit of each facet under the symmetry group, for the invariants.
   std::vector<int> facet_orbit;
   // The relative position of two facets, facet_pos(i, i') = ell_i(c_i')
@@ -531,6 +538,16 @@ struct PolyNormCoveringSolver {
     return V;
   }
 
+  // Whether a node of bound mu_star cannot contain a point of interest:
+  // one beating the incumbent, or in the collecting mode one within the
+  // ratio of it.
+  bool IsPruned(T const &mu_star) const {
+    if (collect_ratio) {
+      return mu_star < *collect_ratio * mu_best;
+    }
+    return mu_star <= mu_best;
+  }
+
   // Whether the node is new, that is not equivalent to a processed one.
   // Records it when it is. The equivalence is tested only against the
   // nodes with the same invariant.
@@ -559,7 +576,7 @@ struct PolyNormCoveringSolver {
     os << "POLYNORM_COVERING: node " << n_node << " |C|=" << C.size()
        << " mu*=" << mu_star << " mu_best=" << mu_best << "\n";
 #endif
-    if (mu_star <= mu_best) {
+    if (IsPruned(mu_star)) {
       return;
     }
     std::pair<T, MyVector<Tint>> pair = EvaluateF(p_star, mu_star);
@@ -573,6 +590,9 @@ struct PolyNormCoveringSolver {
     }
     if (f_val == mu_star) {
       // The bound is attained: the node is solved.
+      if (collect_ratio) {
+        ListSolved.push_back({p_star, mu_star});
+      }
       return;
     }
     // Branching on the most violated lattice point.
@@ -596,7 +616,7 @@ struct PolyNormCoveringSolver {
       if (!opt) {
         continue;
       }
-      if (opt->second <= mu_best) {
+      if (IsPruned(opt->second)) {
         continue;
       }
       ListChild.push_back({std::move(Cnew), std::move(opt->first),
