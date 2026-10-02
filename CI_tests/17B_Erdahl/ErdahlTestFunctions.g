@@ -3,11 +3,31 @@ Read("../common.g");
 # Runs ERDAHL_EnumeratePerfect and compares the perfect Delaunay polyhedra
 # found with the expected ones, given by their number of vertex
 # representatives and the rank of their isotropy lattice.
+# eRec has the fields n, space ("full" or "centered"), FileCenter (for
+# "centered"), method ("recursive" or "polytopes") and expected.
 TestErdahl:=function(eRec)
-    local FileOut, eProg, TheCommand, answer, ListSignature, ePerf, eEXT;
+    local FileNml, FileOut, eProg, output, TheCommand, answer, ListSignature, ePerf, eEXT, FileCenter;
+    FileNml:=Filename(DirectoryTemporary(), "Test.nml");
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
+    if IsBound(eRec.FileCenter) then
+        FileCenter:=eRec.FileCenter;
+    else
+        FileCenter:="unset";
+    fi;
+    output:=OutputTextFile(FileNml, true);
+    SetPrintFormattingStatus(output, false);
+    AppendTo(output, "&DATA\n");
+    AppendTo(output, " n = ", eRec.n, "\n");
+    AppendTo(output, " space = \"", eRec.space, "\"\n");
+    AppendTo(output, " FileCenter = \"", FileCenter, "\"\n");
+    AppendTo(output, " method = \"", eRec.method, "\"\n");
+    AppendTo(output, " FileStart = \"auto\"\n");
+    AppendTo(output, " FileDualDesc = \"DualDescHeuristics.nml\"\n");
+    AppendTo(output, " OutFile = \"", FileOut, "\"\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
     eProg:=GetBinaryFilename("ERDAHL_EnumeratePerfect");
-    TheCommand:=Concatenation(eProg, " ", String(eRec.n), " ", eRec.space_args, " ", FileOut, " DualDescHeuristics.nml");
+    TheCommand:=Concatenation(eProg, " ", FileNml);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
@@ -16,6 +36,7 @@ TestErdahl:=function(eRec)
     fi;
     answer:=ReadAsFunction(FileOut)();
     RemoveFile(FileOut);
+    RemoveFile(FileNml);
     for ePerf in answer
     do
         for eEXT in ePerf.EXT

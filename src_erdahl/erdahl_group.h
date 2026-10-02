@@ -287,6 +287,16 @@ bool erdahl_preserves_all(std::vector<DelaunayPolyhedron<T, Tint>> const &supers
   return true;
 }
 
+// A unimodular matrix whose first row is the primitive vector V.
+template <typename Tint>
+MyMatrix<Tint> erdahl_unimodular_with_first_row(MyVector<Tint> const &V) {
+  int d = V.size();
+  MyMatrix<Tint> M1(1, d);
+  AssignMatrixRow(M1, 0, V);
+  MyMatrix<Tint> Compl = SubspaceCompletionInt(M1, d);
+  return Concatenate(M1, Compl);
+}
+
 /*
   A transformation g mapping X1 onto X2 (and preserving the super
   polyhedra) is changed into a g a with a in Aff(X2) that preserves W.
@@ -373,14 +383,8 @@ MyMatrix<Tint> erdahl_correct_for_space(ErdahlFunctionSpace<T> const &W,
       std::cerr << "ERDAHL: the center should not be a lattice point\n";
       throw TerminalException{1};
     }
-    auto unimodular_with_first_row = [&](MyVector<Tint> const &V) -> MyMatrix<Tint> {
-      MyMatrix<Tint> M1(1, d);
-      AssignMatrixRow(M1, 0, V);
-      MyMatrix<Tint> Compl = SubspaceCompletionInt(M1, d);
-      return Concatenate(M1, Compl);
-    };
-    MyMatrix<Tint> Mu = unimodular_with_first_row(u);
-    MyMatrix<Tint> Mv = unimodular_with_first_row(v);
+    MyMatrix<Tint> Mu = erdahl_unimodular_with_first_row(u);
+    MyMatrix<Tint> Mv = erdahl_unimodular_with_first_row(v);
     A = Inverse(Mu) * Mv;
     MyMatrix<T> A_T = UniversalMatrixConversion<T, Tint>(A);
     MyVector<T> qzA = A_T.transpose() * qz;

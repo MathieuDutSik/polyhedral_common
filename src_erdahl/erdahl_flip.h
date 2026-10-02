@@ -5,6 +5,7 @@
 // clang-format off
 #include "erdahl_polyhedron.h"
 #include <cmath>
+#include <optional>
 #include <vector>
 // clang-format on
 
@@ -57,12 +58,12 @@
  */
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
-erdahl_flip_initial_points(DelaunayPolyhedron<T, Tint> const &D2,
+erdahl_flip_initial_points(MyMatrix<T> const &F2,
                            DelaunayPolyhedron<T, Tint> const &D3) {
   std::vector<MyVector<Tint>> l_pt;
   int n = erdahl_dimension(D3);
   auto insert = [&](MyVector<Tint> const &e) -> void {
-    if (EvaluationQuadForm<T, Tint>(D2.F, e) > 0) {
+    if (EvaluationQuadForm<T, Tint>(F2, e) > 0) {
       l_pt.push_back(e);
     }
   };
@@ -209,6 +210,122 @@ MyMatrix<T> erdahl_quad_on_lattice(MyMatrix<T> const &F,
 }
 
 /*
+  The function G = F1 - lambda F2 with lambda the minimum of F1(v) / F2(v)
+  over the points v of D3 with F2(v) > 0, for F1 >= 0 on D3: G >= 0 on D3
+  and G vanishes on the points realizing the minimum. The minimum is
+  computed from the candidates l_cand (points of D3 with F2 > 0), improved
+  by the cuts found by closest vector problems on the cosets of D3 and the
+  rational eigen-directions of the pencil on L(D3). The empty optional
+  means that no candidate with F2 > 0 was provided.
+ */
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+erdahl_minimal_ratio_function(MyMatrix<T> const &F1, MyMatrix<T> const &F2,
+                              DelaunayPolyhedron<T, Tint> const &D3,
+                              std::vector<MyVector<Tint>> l_cand,
+                              std::ostream &os) {
+#ifdef TIMINGS_ERDAHL_FLIP
+  MicrosecondTime time_total;
+  size_t n_iter = 0;
+#endif
+  ErdahlLatticeSet<Tint> ls3 = erdahl_lattice_set(D3);
+  /*
+    The candidates for the minimum ratio: points of D3 (rows (1, x)) with
+    F2 > 0 and directions of L(D3) (rows (0, v)) with Quad(F2)[v] > 0,
+    whose ratio is the limit of the ratio along the direction.
+   */
+  MyMatrix<T> Q1L = erdahl_quad_on_lattice(F1, D3.L);
+  MyMatrix<T> Q2L = erdahl_quad_on_lattice(F2, D3.L);
+  ErdahlPencilBound<T, Tint> pb = erdahl_pencil_bound<T, Tint>(Q1L, Q2L, os);
+  for (auto &v : pb.directions) {
+    MyVector<Tint> vn = D3.L.transpose() * v;
+    l_cand.push_back(erdahl_direction_row(vn));
+  }
+  auto is_psd = [&](T const &lambda) -> bool {
+    return IsPositiveSemiDefinite(MyMatrix<T>(Q1L - lambda * Q2L), os);
+  };
+  auto get_lambda = [&]() -> std::optional<T> {
+    std::optional<T> opt;
+    for (auto &e : l_cand) {
+      T val2 = EvaluationQuadForm<T, Tint>(F2, e);
+      if (val2 <= 0) {
+        continue;
+      }
+      T ratio = EvaluationQuadForm<T, Tint>(F1, e) / val2;
+      if (!opt || ratio < *opt) {
+        opt = ratio;
+      }
+    }
+    return opt;
+  };
+  if (!get_lambda()) {
+    // No candidate with F2 > 0: the caller is responsible for providing
+    // one, and gives up on this F2 otherwise.
+    return {};
+  }
+  MyMatrix<T> G;
+  while (true) {
+#ifdef TIMINGS_ERDAHL_FLIP
+    n_iter++;
+#endif
+    T lambda = *get_lambda();
+    if (!is_psd(lambda)) {
+      /*
+        lambda > lambda_psd, which is then irrational: otherwise its
+        directions are candidates. So the answer is < lambda_psd, and a
+        point of ratio below lambda_psd is searched with the functions
+        g = F1 - mu F2 for mu < lambda_psd, which are bounded below on the
+        cosets of D3. The interval [mu_lo, mu_hi] brackets lambda_psd.
+       */
+      T mu_lo(0);
+      T mu_hi = lambda;
+      bool found = false;
+      while (!found) {
+        T mu = (mu_lo + mu_hi) / 2;
+        if (!is_psd(mu)) {
+          mu_hi = mu;
+          continue;
+        }
+        MyMatrix<T> Gmu = F1 - mu * F2;
+        std::vector<MyVector<Tint>> l_neg =
+            erdahl_negative_points_on_set(Gmu, ls3, os);
+        if (l_neg.empty()) {
+          mu_lo = mu;
+        } else {
+          for (auto &e : l_neg) {
+            l_cand.push_back(e);
+          }
+          found = true;
+        }
+      }
+#ifdef DEBUG_ERDAHL_FLIP
+      os << "ERDAHL: flip, irrational bound handled, new lambda="
+         << *get_lambda() << "\n";
+#endif
+      continue;
+    }
+    G = F1 - lambda * F2;
+    std::vector<MyVector<Tint>> l_neg =
+        erdahl_negative_points_on_set(G, ls3, os);
+#ifdef DEBUG_ERDAHL_FLIP
+    os << "ERDAHL: flip, lambda=" << lambda << " |l_cand|=" << l_cand.size()
+       << " |l_neg|=" << l_neg.size() << "\n";
+#endif
+    if (l_neg.empty()) {
+      break;
+    }
+    for (auto &e : l_neg) {
+      l_cand.push_back(e);
+    }
+  }
+#ifdef TIMINGS_ERDAHL_FLIP
+  os << "|ERDAHL: flip, ratio iterations n_iter=" << n_iter
+     << " |l_cand|=" << l_cand.size() << "|=" << time_total << "\n";
+#endif
+  return G;
+}
+
+/*
   With compute_function = false the function of the result is left empty,
   to be computed by erdahl_ensure_function if the result is kept.
  */
@@ -235,104 +352,15 @@ erdahl_flip(ErdahlFunctionSpace<T> const &W,
 #endif
 #ifdef TIMINGS_ERDAHL_FLIP
   MicrosecondTime time_total;
-  size_t n_iter = 0;
 #endif
-  ErdahlLatticeSet<Tint> ls3 = erdahl_lattice_set(D3);
-  /*
-    The candidates for the minimum ratio: points of D3 (rows (1, x)) with
-    f2 > 0 and directions of L(D3) (rows (0, v)) with Quad(f2)[v] > 0,
-    whose ratio is the limit of the ratio along the direction.
-   */
-  std::vector<MyVector<Tint>> l_cand = erdahl_flip_initial_points(D2, D3);
-  MyMatrix<T> Q1L = erdahl_quad_on_lattice(D1.F, D3.L);
-  MyMatrix<T> Q2L = erdahl_quad_on_lattice(D2.F, D3.L);
-  ErdahlPencilBound<T, Tint> pb = erdahl_pencil_bound<T, Tint>(Q1L, Q2L, os);
-  for (auto &v : pb.directions) {
-    MyVector<Tint> vn = D3.L.transpose() * v;
-    l_cand.push_back(erdahl_direction_row(vn));
+  std::optional<MyMatrix<T>> opt_G = erdahl_minimal_ratio_function<T, Tint>(
+      D1.F, D2.F, D3, erdahl_flip_initial_points(D2.F, D3), os);
+  if (!opt_G) {
+    std::cerr << "ERDAHL: the function of D2 should be positive somewhere on "
+                 "D3\n";
+    throw TerminalException{1};
   }
-  auto is_psd = [&](T const &lambda) -> bool {
-    return IsPositiveSemiDefinite(MyMatrix<T>(Q1L - lambda * Q2L), os);
-  };
-  auto get_lambda = [&]() -> T {
-    bool is_first = true;
-    T lambda(0);
-    for (auto &e : l_cand) {
-      T val2 = EvaluationQuadForm<T, Tint>(D2.F, e);
-      if (val2 <= 0) {
-        continue;
-      }
-      T ratio = EvaluationQuadForm<T, Tint>(D1.F, e) / val2;
-      if (is_first || ratio < lambda) {
-        lambda = ratio;
-        is_first = false;
-      }
-    }
-    if (is_first) {
-      std::cerr << "ERDAHL: no candidate with f2 > 0 in the flip\n";
-      throw TerminalException{1};
-    }
-    return lambda;
-  };
-  MyMatrix<T> G;
-  while (true) {
-#ifdef TIMINGS_ERDAHL_FLIP
-    n_iter++;
-#endif
-    T lambda = get_lambda();
-    if (!is_psd(lambda)) {
-      /*
-        lambda > lambda_psd, which is then irrational: otherwise its
-        directions are candidates. So the answer is < lambda_psd, and a
-        point of ratio below lambda_psd is searched with the functions
-        g = f1 - mu f2 for mu < lambda_psd, which are bounded below on the
-        cosets of D3. The interval [mu_lo, mu_hi] brackets lambda_psd.
-       */
-      T mu_lo(0);
-      T mu_hi = lambda;
-      bool found = false;
-      while (!found) {
-        T mu = (mu_lo + mu_hi) / 2;
-        if (!is_psd(mu)) {
-          mu_hi = mu;
-          continue;
-        }
-        MyMatrix<T> Gmu = D1.F - mu * D2.F;
-        std::vector<MyVector<Tint>> l_neg =
-            erdahl_negative_points_on_set(Gmu, ls3, os);
-        if (l_neg.empty()) {
-          mu_lo = mu;
-        } else {
-          for (auto &e : l_neg) {
-            l_cand.push_back(e);
-          }
-          found = true;
-        }
-      }
-#ifdef DEBUG_ERDAHL_FLIP
-      os << "ERDAHL: flip, irrational bound handled, new lambda="
-         << get_lambda() << "\n";
-#endif
-      continue;
-    }
-    G = D1.F - lambda * D2.F;
-    std::vector<MyVector<Tint>> l_neg =
-        erdahl_negative_points_on_set(G, ls3, os);
-#ifdef DEBUG_ERDAHL_FLIP
-    os << "ERDAHL: flip, lambda=" << lambda << " |l_cand|=" << l_cand.size()
-       << " |l_neg|=" << l_neg.size() << "\n";
-#endif
-    if (l_neg.empty()) {
-      break;
-    }
-    for (auto &e : l_neg) {
-      l_cand.push_back(e);
-    }
-  }
-#ifdef TIMINGS_ERDAHL_FLIP
-  os << "|ERDAHL: flip, ratio iterations n_iter=" << n_iter
-     << " |l_cand|=" << l_cand.size() << "|=" << time_total << "\n";
-#endif
+  MyMatrix<T> const &G = *opt_G;
   DelaunayPolyhedron<T, Tint> D2p =
       erdahl_polyhedron_extension<T, Tint>(W, G, D3, compute_function,
                                            nullptr, os);

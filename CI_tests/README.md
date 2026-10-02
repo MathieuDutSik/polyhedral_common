@@ -41,7 +41,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `16A_EquivDualDesc` -- `ci_16A_equiv_dual_desc`: Equivariant computation of dual description.
 * `16B_GramReductions` -- `ci_16B_gram_reductions`: The reductions of positive definite Gram matrices offered by LATT_Reduction (LLL, Seysen, deep insertion, BKZ, slide, Minkowski and the best-of search), run on scrambled root lattices; the transformation is checked to be unimodular and to produce the returned form, and the condition each method claims is checked independently in GAP.
 * `17A_Laminations` -- `ci_17A_two_laminations`: Computation of two laminations.
-* `17B_Erdahl` -- `ci_17B_erdahl`: Enumeration of the perfect Delaunay polyhedra with src_erdahl: the 4 of the full space in dimension 7 and the 3 centrally symmetric ones (functions of center e_1/2) in dimension 8, with the CUT_8 dual description heuristics of `16A_EquivDualDesc/CUT_K8`.
+* `17B_Erdahl` -- `ci_17B_erdahl`: Enumeration of the perfect Delaunay polyhedra with src_erdahl: the 4 of the full space in dimension 7 and the 3 centrally symmetric ones (functions of center e_1/2) in dimension 8, with the CUT_8 dual description heuristics of `16A_EquivDualDesc/CUT_K8`; and the perfect Delaunay polytopes only (method `polytopes`, from the Erdahl-Rybnikov polytope and its symmetrization) in the same two cases.
 * `19_IndefiniteComp` -- `ci_19_indefinite_comp`: Computation of indefinite forms.
 * `20_Reflective` -- `ci_20_reflective`: This is for using the edgewalk algorithm of Allcock for building the polyheral cone.
 * `21A_SamplingFacets` -- `ci_21_sampling_facets`: Sampling facets of polytopes.
