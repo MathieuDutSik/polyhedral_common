@@ -20,7 +20,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `02A_FindPositiveVectors` -- `ci_02A_find_positive_vectors`: Finding positive vectors of indefinite forms.
 * `02B_RealAlgebraicPolytope` -- `ci_02B_real_algebraic_polytope`: Automorphism group and dual description, by bb, cdd, lrs and normaliz, of the regular N-gons over the real algebraic field Q(2*sin(2*pi/N)); and the dual description of G553, a 7-dimensional cone on 150 generators over Q(2*sin(2*pi/5)) with a symmetry group, where the recursive dual description using the symmetry and the direct one ignoring it are checked against each other.
 * `03_Tspaces_IsoDelaunay` -- `ci_03_enum_isodelaunay`: Enumeration of isoDelaunay domains.
-* `04A_LattAutIsomCan` -- `ci_04A_latt_aut_isom_can`: Lattice automorphism isomorphism and canonicalization.
+* `04A_LattAutIsomCan` -- `ci_04A_latt_aut_isom_can`: Lattice automorphism isomorphism and canonicalization, on the classical lattices and on the well rounded lattices of dimension 10 realized from their shortest vectors.
 * `05A_DirectVolumePolytope` -- `ci_05A_direct_volume`: Computation of the volume of polytopes.
 * `05B_CddSkeletons` -- `ci_05B_cdd_skeletons`: CDD skeletons (DualDescriptionAdjacencies).
 * `06A_GeometricallyUnique` -- `ci_06A_geometrically_unique`: Finding interior point in polytope defined by facets, which is invariant under transformation.
@@ -43,8 +43,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `17_Laminations` -- `ci_17_two_laminations`: Computation of two laminations.
 * `19_IndefiniteComp` -- `ci_19_indefinite_comp`: Computation of indefinite forms.
 * `20_Reflective` -- `ci_20_reflective`: This is for using the edgewalk algorithm of Allcock for building the polyheral cone.
-* `21A_SamplingFacets` -- `ci_21A_sampling_facets`: Sampling facets of polytopes.
-* `21B_ShortRealizability` -- `ci_21B_shortest_realizability`: Sampling facets of polytopes.
+* `21A_SamplingFacets` -- `ci_21_sampling_facets`: Sampling facets of polytopes.
 * `22_CommonG_IsoDelaunay` -- `ci_22_commong_isodelaunay`: CommonGramMat iso-Delaunay (rigid lattices and stars).
 * `23A_IntegralPoints` -- `ci_23A_integral_points`: Compute the integral points of some polytope.
 * `23B_SimpleDualDesc` -- `ci_23B_simple_dual_desc`: This is for the code for computing the dual description of polyhedral cones.

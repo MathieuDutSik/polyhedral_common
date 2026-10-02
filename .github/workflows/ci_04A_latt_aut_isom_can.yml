@@ -42,6 +42,7 @@ jobs:
       - name: Test canonicalization
         run: |
           make -C src_latt -f Makefile_latt_can_aut_iso
+          make -C src_short -f Makefile_realizability
           pwd
           echo "After compilation of lattice code"
 

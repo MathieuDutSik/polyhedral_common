@@ -66,12 +66,26 @@ if GlueLattices then
     Add(ListMat, get_glue_lattice_gram(10, 2, [[1,1,1,1,1,0,0,0,0,0],[0,0,0,0,0,1,1,1,1,1]]));
 fi;
 
+# Well rounded lattices of dimension 10: each family of shortest vectors in
+# ListSHV_n10_rnk10 has to be realizable, and the Gram matrix realizing it is
+# then tested with the others.
+n_error_realizability:=0;
 if WellRoundedDim10 then
-    FileSave:="../21B_ShortRealizability/ListGram_n10_rnk10";
-    if IsExistingFile(FileSave) then
-        ListGram:=ReadAsFunction(FileSave)();
-        Append(ListMat, ListGram);
-    fi;
+    ListSHV:=ReadAsFunction("ListSHV_n10_rnk10")();
+    for iSHV in [1..Length(ListSHV)]
+    do
+        eRec:=test_shortest_realizability(ListSHV[iSHV]);
+        if is_error(eRec) then
+            Print("Realizability, iSHV=", iSHV, ": program failure\n");
+            n_error_realizability:=n_error_realizability+1;
+        elif eRec.realizable=false then
+            Print("Realizability, iSHV=", iSHV, ": not realizable\n");
+            n_error_realizability:=n_error_realizability+1;
+        else
+            Add(ListMat, eRec.matrix);
+        fi;
+    od;
+    Print("n_error_realizability=", n_error_realizability, "\n");
 fi;
 
 
@@ -362,7 +376,7 @@ end;
 
 test_all:=function()
     local n_error;
-    n_error:=0;
+    n_error:=n_error_realizability;
     n_error:=n_error + test_all_cans();
     n_error:=n_error + test_all_automs();
     n_error:=n_error + test_all_isoms();

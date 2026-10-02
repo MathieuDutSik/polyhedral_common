@@ -1,9 +1,9 @@
-name: CI(21A) of Sampling facets of polytopes
+name: CI(21) of Sampling facets of polytopes
 
 on:
   # One time per month
   schedule:
-    - cron: "0 0 21 1,3,5,7,9,11 *"
+    - cron: "0 0 21 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
