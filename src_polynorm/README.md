@@ -64,6 +64,13 @@ faster); every result is exact.
     is polished to an exact rational lattice when possible and its local
     optimality is then certified exactly. In dimension 2 the packing problem
     is also solved exactly and globally. See "Optimal lattices" below.
+  * **POLYNORM_BetkeHenk** `[arith] [FileEXT] [OutFile] [n_thread]` computes
+    the densest lattice packing of a 3-polytope globally, by the algorithm
+    of Betke and Henk (Minkowski's test sets, enumeration of facet choices,
+    critical points of `det` on the resulting affine spaces). `arith` is
+    `gmp`, `Qsqrt2`, `Qsqrt5` or `RealAlgebraic=File`, so that polytopes
+    with irrational coordinates are handled exactly. It reproduces their
+    table of the Platonic and Archimedean solids; see `NOTES.md`.
   * **POLYNORM_LatticeCertify** `[arith] [FileEXT] [FileLattice] [OutFile]`
     returns the packing and covering densities of `P` for the lattice whose
     basis is the rows of `FileLattice`, and whether that lattice is an
@@ -147,8 +154,9 @@ This finds and certifies the known optima: Fary's triangle (packing 2/3,
 covering 3/2), Sriamorn's quadrilaterals, the Betke-Henk values for the
 tetrahedron (18/49), octahedron (18/19), cuboctahedron (45/49) and
 truncated tetrahedron (207/304), the octahedron covering 9/8 of Lian and
-Xue and the tetrahedron covering 125/63 (best known). Global optimality is not proved beyond dimension 2 (except for
-tilings). See `NOTES.md`, section "Optimal lattices", for the method, the
+Xue and the tetrahedron covering 125/63 (best known). Global optimality is not proved by this search beyond dimension 2
+(except for tilings); in dimension 3, `POLYNORM_BetkeHenk` gives the
+global optimum of the packing problem. See `NOTES.md`, section "Optimal lattices", for the method, the
 validation table and the limits.
 
 Files
@@ -163,4 +171,6 @@ Files
   * `PolyNorm_LatticeOpt.h`: the search of optimal lattices, the polishing
     to exact critical points and the certificates of local optimality.
   * `PolyNorm_Packing2D.h`: the exact densest lattice packing of a polygon.
+  * `PolyNorm_BetkeHenk.h`: the densest lattice packing of a 3-polytope by
+    the algorithm of Betke and Henk.
   * The CI test is `CI_tests/25B_PolyNorm/run_tests.sh`.

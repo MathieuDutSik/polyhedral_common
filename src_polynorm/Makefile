@@ -1,5 +1,6 @@
 PROGRAM		= POLYNORM_Packing POLYNORM_Covering POLYNORM_TestCovering \
-		  POLYNORM_OptimalLattice POLYNORM_LatticeCertify
+		  POLYNORM_OptimalLattice POLYNORM_LatticeCertify \
+		  POLYNORM_BetkeHenk
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -50,7 +51,7 @@ clean:;
 # The programs are thin drivers over the headers, so a header edit must
 # force a rebuild.
 $(OBJECTS): PolyNorm_Basic.h PolyNorm_Packing.h PolyNorm_Covering.h \
-	    PolyNorm_LatticeOpt.h PolyNorm_Packing2D.h
+	    PolyNorm_LatticeOpt.h PolyNorm_Packing2D.h PolyNorm_BetkeHenk.h
 
 # The header dependencies, written by the compiler as it compiles (-MMD),
 # so that a change to a header rebuilds the objects that include it.

@@ -382,3 +382,147 @@ The covering landscape is much more rugged than the packing one.
 * The cost is dominated, for covering, by the exact covering radius at
   each trial point (a few hundred evaluations per start). The `flint`
   arithmetic is about three times faster.
+
+# The algorithm of Betke and Henk (PolyNorm_BetkeHenk.h)
+
+`POLYNORM_BetkeHenk [arith] [FileEXT] [OutFile] [n_thread]` computes the
+densest lattice packing of a 3-polytope, globally, by the algorithm of
+Betke and Henk (arXiv:math/9909172), over the rationals (`gmp`), the fields
+`Qsqrt2`, `Qsqrt5`, or any real algebraic field (`RealAlgebraic=File`).
+
+## The algorithm
+
+Minkowski's theorem (Theorem 2.1 of the paper): some critical lattice of
+`D = P - P` has a basis `W` with a test set of 6 or 7 lattice points on the
+boundary of `D` (`U^1`, `U^2` or `U^3 = U^2 + (1,1,1)`), and `W` is a local
+minimum of `|det|` on the affine space `S_H` of the bases putting the test
+points on the supporting hyperplanes `H_i` of their facets, in one of four
+cases (case IV replaces `H_6` by a hyperplane built from the normals). So:
+
+* enumerate the choices of a facet for each test vector. The additive
+  relations among the test vectors (`u_6 = u_1 + u_2`, ...) require
+  `(F_a + F_b) cap F_c` nonempty: a box filter, then an exact linear
+  program, memoized (the sets `G` of the paper). The symmetry group of `D`
+  fixes the facet of the first vector up to its orbits, and the
+  permutations of the basis that preserve the case order the orbits.
+  Partial assignments are checked by exact linear programs after the 5th
+  and 6th vectors. A point lies in a facet when it lies on its hyperplane
+  and satisfies the inequalities of the edge-neighbors of the facet only,
+  which keeps the linear programs small;
+* for each feasible choice, the affine space `S_H` (dimension 2 or 3),
+  `det` on it as an exact cubic polynomial, and its critical points: the
+  gradient is 2 or 3 quadratic equations, solved by a total degree
+  homotopy (at most 8 paths), tracked in projective coordinates with a
+  random chart so that the paths whose solution goes to infinity stay
+  bounded. Betke and Henk use resultants with a long case analysis
+  instead;
+* every real critical point with its test points in `D` is a candidate,
+  and the smallest admissible one (checked by enumerating the short
+  lattice vectors) is the critical lattice. The density is
+  `vol(P) / Delta(D)`.
+
+Two degenerate situations are treated, so that the candidate set is
+complete:
+
+* case IV with `v_1, v_2, v_3, v_6` in a plane: the normal of the
+  replaced hyperplane is not unique. The critical lattice is then a local
+  minimum on the smaller space where `u_6 W` lies in the affine hull of the
+  face `G` of `D` exposed by that normal, an edge or a vertex of `F_6`; all
+  of them are enumerated;
+* singular critical points, lying on a positive dimensional component on
+  which `det` is constant (Lemma 4.2 of the paper): the component's
+  directions are computed from the Jacobian and the quadratic terms, and a
+  point of the component with its test points in `D` is searched. When the
+  point found is not admissible, cases I and II are discarded by the
+  remark after Lemma 4.9 of the paper, and in cases III and IV a test set
+  on the boundary already implies admissibility (Lemma 2.3).
+
+The program reports whether every candidate of smaller determinant than
+the result is resolved, and how many homotopy paths stopped before
+`t = 1`: in the endgame (`t > 0.9`), which happens for the many singular
+endpoints (multiple roots, positive dimensional components, points at
+infinity) and is harmless since Newton's method refines the endpoint, or
+in the middle of a path, which has probability zero with the random
+`gamma` and would make a critical point possibly missing. When it happens
+the system is solved again with another `gamma` (up to four), which
+removed every such stop on the examples (a single `gamma` left between 1
+and 29 of them on the solids with irrational coordinates). In the second
+half of a path the corrector accepts a tolerance of `1e-8` instead of
+`1e-11`: near a singular endpoint Newton's method only converges linearly,
+and on the snub cube the strict tolerance stopped some paths around
+`t = 0.8` for every `gamma`. A path can then end at a non-real point of a
+positive dimensional component; since the components that matter (those
+containing a local extremum) are real affine subspaces (Lemma 4.2), the
+real part of such an endpoint is kept when it is a root. This more than
+doubles the number of real critical points found (a superset, every
+candidate being checked) and makes the result independent of where on a
+component the paths land.
+
+The homotopy works in double precision on systems computed exactly, so
+their scaling matters: the kernel vectors parametrizing `S_H` come out of
+the exact linear algebra scaled to integers and can be huge. They are
+rescaled by powers of 2 (exact in every field) to the size of the
+particular solution, and each gradient equation is divided by its largest
+coefficient. This reduced the endgame stops by a factor 25 to 450 and
+removed the last stops in the middle of paths (on the snub
+dodecahedron). On all the
+examples below every candidate is resolved and no path stopped in the
+middle.
+
+The enumeration runs on several threads (`n_thread`): the prefixes of
+depth 2 (facets of the first two test vectors) are claimed dynamically
+from a shared counter, each thread with its own memoized linear programs.
+The program uses the thread-local GMP pool.
+
+## Exactness
+
+The polytope, the pruning, the affine spaces and the polynomial `det` are
+exact over the field. The homotopy and the admissibility checks are in
+double precision, so the critical determinant is a floating point number
+(12 digits printed) and the conclusion holds up to that tolerance. The
+exact value can then be obtained from the winning facet choice, as Betke
+and Henk did with Maple, or from `POLYNORM_LatticeCertify` when it is
+rational.
+
+## The Platonic and Archimedean solids
+
+(*) The paper prints 0.78769996 for the snub cube, but its own exact
+expression `1/2 + y/6 + 2 y^2/3` with `y^3 + y^2 + y = 1` evaluates to
+0.78767999713 (`y = 0.543689012692`), which is the value computed here: the
+printed decimal has two digits exchanged.
+
+(**) For the snub dodecahedron the paper prints 0.788640117, with the
+critical lattice `2 D_3` and density `vol(P_sd) / 16` for its scaling
+(pentagons in the facet planes of `(1 + tau) P_d`). Computing that volume
+from the coordinates gives 0.78864011879602, the value found here: the
+printed last digit is off by two.
+
+Exact coordinates: rational, in `Q(sqrt 2)`, `Q(sqrt 5)`, or for the snub
+cube in `Q(t)` with `t^3 = t^2 + t + 1`, and for the snub dodecahedron in
+`Q(xi)` with `xi^3 - 2 xi = phi`, of degree 6. All agree with the table of
+Betke and Henk to the 9 digits they print, except for two misprints in
+the paper, where their exact expressions agree with the values found here
+((*) and (**)). On every solid all candidates of smaller determinant are
+resolved and no homotopy path stopped in the middle. Times: release build,
+Apple M-series, 14 threads.
+
+| solid | facets of `D` | density | Betke and Henk | time |
+|---|---|---|---|---|
+| tetrahedron | 14 | 0.367346938776 | 18/49 | 17 s |
+| cube | 6 | 1 | 1 | 0.6 s |
+| octahedron | 8 | 0.947368421053 | 18/19 | 2.5 s |
+| dodecahedron | 12 | 0.904508497187 | (2 + tau)/4 | 22 s |
+| icosahedron | 20 | 0.836357445380 | 0.836357445 | 31 s |
+| truncated tetrahedron | 14 | 0.680921052632 | 207/304 | 3.3 s |
+| cuboctahedron | 14 | 0.918367346939 | 45/49 | 17 s |
+| truncated cube | 14 | 0.973747687989 | 9/(5 + 3 sqrt 2) | 7.8 s |
+| truncated octahedron | 14 | 1 | 1 | 1.9 s |
+| rhombicuboctahedron | 26 | 0.875805665990 | (16 sqrt 2 - 20)/3 | 9.5 s |
+| truncated cuboctahedron | 26 | 0.849373251725 | 0.849373252 | 12 s |
+| icosidodecahedron | 32 | 0.864720371016 | (14 + 17 tau)/48 | 117 s |
+| truncated dodecahedron | 32 | 0.897787626396 | 0.897787626 | 40 s |
+| truncated icosahedron | 32 | 0.784987775923 | 0.7849877759 | 7.2 s |
+| rhombicosidodecahedron | 62 | 0.804708487231 | 0.804708487 | 24 s |
+| truncated icosidodecahedron | 62 | 0.827213595500 | 0.827213595 | 34 s |
+| snub cube | 74 | 0.787679997130 | 1/2 + y/6 + 2y^2/3, y^3 + y^2 + y = 1 (*) | 249 s |
+| snub dodecahedron | 182 | 0.788640118796 | vol(P)/16 (**) | 2080 s |

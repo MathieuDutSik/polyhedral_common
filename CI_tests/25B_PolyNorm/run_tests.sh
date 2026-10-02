@@ -112,4 +112,32 @@ asym2d.ext covering 2 4/3
 simplex3.ext packing 3 18/49
 octa3.ext packing 3 18/19
 LIST
+
+# The algorithm of Betke and Henk: densest lattice packings of 3-polytopes,
+# over the rationals and the fields Q(sqrt 2), Q(sqrt 5), against the
+# values of their paper. Columns: arith, file, density (12 digits).
+PROG_BH=../../src_polynorm/POLYNORM_BetkeHenk
+if [ ! -x "$PROG_BH" ]; then
+  echo "The program $PROG_BH is missing" >&2
+  exit 1
+fi
+while read -r arith file dens; do
+  case "$arith" in
+    ''|\#*) continue ;;
+  esac
+  echo "=== Betke-Henk $file ($arith, density $dens)"
+  log="bh_${file%.ext}.log"
+  if ! $PROG_BH "$arith" "$file" stdout 4 > "$log" 2>/dev/null; then
+    echo "Failure of POLYNORM_BetkeHenk on $file" >&2
+    exit 1
+  fi
+  check_line "$log" "Densest lattice packing density ~ $dens"
+  check_line "$log" "Every candidate of smaller determinant is resolved"
+  echo "TEST Betke-Henk $file: OK"
+done <<'LIST'
+# Octahedron 18/19, truncated cube 9/(5 + 3 sqrt 2), dodecahedron (2 + tau)/4.
+gmp octa3.ext 0.947368421053
+Qsqrt2 truncated_cube_qsqrt2.ext 0.973747687989
+Qsqrt5 dodecahedron_qsqrt5.ext 0.904508497187
+LIST
 echo "All tests passed" > CI_CONCLUSION
