@@ -110,6 +110,29 @@ Notes:
 * This is the most convenient native build method if you want a single build
   directory and standard CMake tooling.
 
+Build type: without a `CMAKE_BUILD_TYPE`, CMake compiles without
+optimization (`-O0`). That is deliberate: the build is fast, which is what is
+wanted for checking that the code compiles. The resulting programs are several
+times slower, though, so for timings and long computations configure the build
+in release mode (`-O3 -DNDEBUG`):
+
+```sh
+mkdir -p build_release
+cd build_release
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make -j
+```
+
+An existing build directory can be switched with
+`cmake -DCMAKE_BUILD_TYPE=Release ..` followed by `make -j`, which rebuilds
+everything.
+
+The GAP drivers of `CI_tests` (`GetBinaryFilename` in `CI_tests/common.g`)
+use the most recently built binary found in the source tree, whether it comes
+from a Makefile or from a CMake build directory inside it. After building
+`build/` in the default mode, its unoptimized binaries are the newest and the
+tests use them; keep that in mind when timing the tests.
+
 Method 3: Legacy Makefiles
 --------------------------
 
