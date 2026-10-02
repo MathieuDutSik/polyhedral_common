@@ -195,16 +195,15 @@ template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
   for (int i = 0; i < n; i++)
     LPos[i] = i;
   for (int iter = 0; iter < 4 * n; iter++) {
-    int i = random() % n;
-    int j = random() % n;
+    int i = random_int(0, n - 1);
+    int j = random_int(0, n - 1);
     if (i != j) {
       std::swap(LPos[i], LPos[j]);
     }
   }
   std::vector<int> LDiag(n);
   for (int i = 0; i < n; i++) {
-    int val = random() % 2;
-    LDiag[i] = -1 + 2 * val;
+    LDiag[i] = random_bool() ? 1 : -1;
   }
   MyMatrix<Tint> Unit = ZeroMatrix<Tint>(n, n);
   for (int i = 0; i < n; i++) {
@@ -379,8 +378,8 @@ template <typename T> T get_l1_norm(MyMatrix<T> const &U) {
 
 void f_random_transpose(std::vector<int> &V) {
   int n = V.size();
-  int i = random() % n;
-  int j = random() % n;
+  int i = random_int(0, n - 1);
+  int j = random_int(0, n - 1);
   if (i != j) {
     int k = V[i];
     V[i] = V[j];

@@ -1195,7 +1195,7 @@ GetMissing_TypeI_Gen2(StepEnum<T> const &se, DataFAC<T> const &datafac,
         os << "Case 2, failed to find a new position\n";
         return {3, {}};
       }
-      size_t pos = rand() % len;
+      size_t pos = random_index(len);
       return {2, l_cand[pos]};
     } else {
       os << "  SolMatNonNeg : no solution found\n";
@@ -1205,8 +1205,8 @@ GetMissing_TypeI_Gen2(StepEnum<T> const &se, DataFAC<T> const &datafac,
   auto f_random_move = [&](ResultOptim const &ro) -> ResultOptim {
     ResultOptim ro_new = ro;
     while (true) {
-      int sign = 2 * (rand() % 2) - 1;
-      size_t i_mat = rand() % n_mat;
+      int sign = random_bool() ? 1 : -1;
+      int i_mat = random_int(0, n_mat - 1);
       int pos = sign * (i_mat + 1);
       ro_new = f_increment(ro_new, pos);
       if (!l_new_point.contains(ro_new.the_x)) {

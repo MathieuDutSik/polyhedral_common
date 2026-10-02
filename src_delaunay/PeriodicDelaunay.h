@@ -1305,7 +1305,7 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetPeriodicIsoDelaunayDomainNearGram(
     MyMatrix<T> Pert = T(scale) * GramMat;
     for (int i = 0; i < n; i++) {
       for (int j = i; j < n; j++) {
-        T val = T(random() % 3) - T(1);
+        T val = T(random_int(-1, 1));
         Pert(i, j) += val;
         if (i != j) {
           Pert(j, i) += val;

@@ -288,10 +288,9 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
   auto get_random_vect = [&]() -> MyVector<T> {
     MyVector<T> w(dimSpace);
     int spr = 1000;
-    int tot_spr = 2 * spr + 1;
     while (true) {
       for (int i = 0; i < dimSpace; i++)
-        w(i) = random() % tot_spr - spr;
+        w(i) = random_int(-spr, spr);
 #ifdef DEBUG_LORENTZIAN_LINALG
       os << "LORLIN: get_random_vect. Trying w=" << StringVectorGAP(w) << "\n";
 #endif

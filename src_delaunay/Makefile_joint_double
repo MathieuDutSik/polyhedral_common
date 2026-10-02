@@ -11,7 +11,7 @@ OUTPUTFLAG 	= -o
 QHULL_INCDIR ?= /opt/homebrew/include
 QHULL_LINK   ?= -L/opt/homebrew/lib -lqhullstatic_r
 
-CFLAGS 		= -I$(QHULL_INCDIR) -isystem $(EIGEN_PATH)
+CFLAGS 		= -I../src_basic -I$(QHULL_INCDIR) -isystem $(EIGEN_PATH)
 
 CTOTAL          = $(CFLAGS)
 

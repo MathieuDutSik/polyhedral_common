@@ -252,7 +252,7 @@ template <typename T> bool check_orth(RecSparse<T> const &eRecSparse) {
   int n = eRecSparse.n;
   MyVector<T> s1(n);
   for (int i = 0; i < n; i++) {
-    int eVal = random() % 100;
+    int eVal = random_int(0, 99);
     T eValT = eVal;
     s1(i) = eValT;
   }

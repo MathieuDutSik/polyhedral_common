@@ -657,8 +657,7 @@ template <typename T> MyVector<T> get_random_vector(int denom, int dim) {
   eV(0) = T(1);
   T denom_T(denom);
   for (int i = 0; i < dim; i++) {
-    int val1 = random();
-    int val = val1 % denom;
+    int val = random_int(0, denom - 1);
     T val_T(val);
     T quot = val_T / denom_T;
     eV(i + 1) = quot;
@@ -685,7 +684,7 @@ T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
     }
   };
   for (size_t iter = 0; iter < n_iter; iter++) {
-    int denom = random() % 1000000 + 1;
+    int denom = random_int(1, 1000000);
     MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "PARALL: Before compute_robust_closest eV=" << StringVectorGAP(eV)

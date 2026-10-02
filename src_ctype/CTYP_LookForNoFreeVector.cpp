@@ -18,7 +18,7 @@ TypeCtypeExch<T> RandomWalk(TypeCtypeExch<T> const &eMat) {
         CTYP_Kernel_GetAdjacentCanonicCtypes<T, Tidx>(WorkT, canonicalize,
                                                       std::cerr);
     int n_adj = ListAdj.size();
-    int pos = random() % n_adj;
+    int pos = random_int(0, n_adj - 1);
     WorkT = ListAdj[pos];
   }
   return WorkT;
@@ -68,7 +68,7 @@ void GetLocalFreenessMinimum(int const &dim, int const &max_s,
         }
       }
       int n_min = ListIdx.size();
-      int pos = random() % n_min;
+      int pos = random_int(0, n_min - 1);
       std::cerr << "iter1=" << iter1 << " iter2=" << iter2
                 << " curr_nb_free=" << curr_nb_free << " n_min=" << n_min
                 << " pos=" << pos << "\n";
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
     }
     unsigned seed = get_random_seed();
     std::cerr << "seed=" << seed << "\n";
-    srand(seed);
+    set_random_seed(seed);
     int dim = ParseScalar<size_t>(argv[1]);
     size_t n_try = ParseScalar<size_t>(argv[2]);
     int max_s = ParseScalar<size_t>(argv[3]);

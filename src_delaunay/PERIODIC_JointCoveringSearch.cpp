@@ -1,5 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "Basic_random.h"
 #include "JointCoveringDouble.h"
 #include <iostream>
 #include <csignal>
@@ -193,8 +194,6 @@ int main(int argc, char *argv[]) {
       int count = atoi(argv[4]);
       unsigned seed = argc == 7 ? unsigned(atol(argv[6])) : 1u;
       std::mt19937_64 gen(seed);
-      std::normal_distribution<double> gauss(0.0, 1.0);
-      std::uniform_real_distribution<double> unif(0.0, 1.0);
       double best = 1e30;
       for (int st = 0; st < count; st++) {
         PeriodicConfig conf;
@@ -206,7 +205,7 @@ int main(int argc, char *argv[]) {
         Eigen::MatrixXd R = Eigen::MatrixXd::Identity(n, n);
         for (int i = 0; i < n; i++) {
           for (int j = 0; j < n; j++) {
-            R(i, j) += 0.25 * gauss(gen);
+            R(i, j) += 0.25 * random_normal(gen);
           }
         }
         conf.Q = R.transpose() * R;
@@ -214,7 +213,7 @@ int main(int argc, char *argv[]) {
         conf.C.row(0).setZero();
         for (int t = 1; t < m; t++) {
           for (int j = 0; j < n; j++) {
-            conf.C(t, j) = unif(gen);
+            conf.C(t, j) = random_unit(gen);
           }
         }
         DescendResult res = DescendAlt(conf, 25, std::cerr, false);
@@ -241,8 +240,6 @@ int main(int argc, char *argv[]) {
       unsigned seed = argc >= 7 ? unsigned(atol(argv[6])) : 1u;
       int rounds = argc == 8 ? atoi(argv[7]) : 15;
       std::mt19937_64 gen(seed);
-      std::normal_distribution<double> gauss(0.0, 1.0);
-      std::uniform_real_distribution<double> unif(0.0, 1.0);
       double best = 1e30;
       for (int st = 0; st < count; st++) {
         PeriodicConfig conf;
@@ -251,7 +248,7 @@ int main(int argc, char *argv[]) {
         Eigen::MatrixXd A(n, n);
         for (int i = 0; i < n; i++) {
           for (int j = 0; j < n; j++) {
-            A(i, j) = gauss(gen);
+            A(i, j) = random_normal(gen);
           }
         }
         conf.Q = A * A.transpose() +
@@ -260,7 +257,7 @@ int main(int argc, char *argv[]) {
         conf.C.row(0).setZero();
         for (int t = 1; t < m; t++) {
           for (int j = 0; j < n; j++) {
-            conf.C(t, j) = unif(gen);
+            conf.C(t, j) = random_unit(gen);
           }
         }
         DescendResult res = Descend(conf, rounds, std::cerr, false);
@@ -365,8 +362,6 @@ int main(int argc, char *argv[]) {
       if (n == 4) record = 1.7655285081493524;
       if (n == 5) record = 2.1242859089916246;
       std::mt19937_64 gen(seed);
-      std::normal_distribution<double> gauss(0.0, 1.0);
-      std::uniform_real_distribution<double> unif(0.0, 1.0);
       double best = 1e30;
       int n_rigid = 0;
       int n_record = 0;
@@ -385,13 +380,13 @@ int main(int argc, char *argv[]) {
         Eigen::MatrixXd R = Eigen::MatrixXd::Identity(n, n);
         for (int i = 0; i < n; i++)
           for (int j = 0; j < n; j++)
-            R(i, j) += 0.25 * gauss(gen);
+            R(i, j) += 0.25 * random_normal(gen);
         conf.Q = R.transpose() * R;
         conf.C.resize(m, n);
         conf.C.row(0).setZero();
         for (int t = 1; t < m; t++)
           for (int j = 0; j < n; j++)
-            conf.C(t, j) = unif(gen);
+            conf.C(t, j) = random_unit(gen);
         // Run this start in a child process with a hard time cap. The child
         // does the whole descent, writes its result and configuration to temp
         // files, and _exit()s; the parent waits at most start_budget seconds
@@ -520,8 +515,6 @@ int main(int argc, char *argv[]) {
       if (n == 4) record = 1.7655285081493524;
       if (n == 5) record = 2.1242859089916246;
       std::mt19937_64 rng(seed);
-      std::uniform_real_distribution<double> unif(0.0, 1.0);
-      std::normal_distribution<double> gauss(0.0, 1.0);
       double start_budget = 120.0;
       std::string tmpstat = std::string(argv[3]) + ".child.stat";
       std::string tmpconf = std::string(argv[3]) + ".child.conf";
@@ -586,7 +579,7 @@ int main(int argc, char *argv[]) {
           // jitter the cosets to escape it before giving up
           for (int t = 1; t < m; t++)
             for (int j = 0; j < n; j++)
-              s2.C(t, j) += 0.10 * gauss(rng);
+              s2.C(t, j) += 0.10 * random_normal(rng);
         }
         init_ok = relax_forked(s2, curc, curth);
         if (!init_ok)
@@ -620,19 +613,19 @@ int main(int argc, char *argv[]) {
           continue;
         }
         int t = (m > 2) ? 1 + int(rng() % (m - 1)) : 1;
-        double u = unif(rng);
+        double u = random_unit(rng);
         if (u < 0.15) {
           // occasional deep-hole placement -- a big, combinatorics-changing
           // jump; a sizeable jitter keeps it off the exactly-cospherical
           // locus (which would make the child tessellation very slow)
           Eigen::VectorXd z = DeepestHole(cells, trial.Q, trial.C);
           for (int j = 0; j < n; j++)
-            trial.C(t, j) = (z(j) - std::floor(z(j))) + 0.05 * gauss(rng);
+            trial.C(t, j) = (z(j) - std::floor(z(j))) + 0.05 * random_normal(rng);
         } else {
           // small local single-coset jitter -- keeps the configuration near a
           // good one so its tessellation stays cheap and hops stay frequent
           double sigma = (u < 0.6) ? 0.06 : 0.12;
-          for (int j = 0; j < n; j++) trial.C(t, j) += sigma * gauss(rng);
+          for (int j = 0; j < n; j++) trial.C(t, j) += sigma * random_normal(rng);
         }
         PeriodicConfig candc;
         double candth;
@@ -644,7 +637,7 @@ int main(int argc, char *argv[]) {
         }
         collect(candth, candc);
         double dth = candth - curth;
-        bool acc = (dth < 0.0) || (unif(rng) < std::exp(-dth / T));
+        bool acc = (dth < 0.0) || (random_unit(rng) < std::exp(-dth / T));
         if (acc) { curc = candc; curth = candth; n_acc++; }
         bool rec = record > 0.0 && candth < record - 1e-9;
         if (candth < bestth - 1e-12) {
@@ -768,7 +761,6 @@ int main(int argc, char *argv[]) {
       DensityResult dr = CoveringDensity(conf);
       Eigen::VectorXd z = DeepestHole(dr.cells, conf.Q, conf.C);
       std::mt19937_64 rng(1234567);
-      std::normal_distribution<double> gauss(0.0, 1.0);
       PeriodicConfig nc;
       nc.n = n;
       nc.m = m + 1;
@@ -776,7 +768,7 @@ int main(int argc, char *argv[]) {
       nc.C.resize(m + 1, n);
       nc.C.topRows(m) = conf.C;
       for (int j = 0; j < n; j++)
-        nc.C(m, j) = (z(j) - std::floor(z(j))) + 0.02 * gauss(rng);
+        nc.C(m, j) = (z(j) - std::floor(z(j))) + 0.02 * random_normal(rng);
       WriteConfigFile(argv[3], nc);
       printf("added coset at deepest hole: m=%d -> m=%d\n", m, m + 1);
       return 0;
@@ -833,8 +825,6 @@ int main(int argc, char *argv[]) {
       if (n == 4) record = 1.3625000772664266;   // sqrt(8 sqrt3 - 12), Ho_4
       if (n == 5) record = 1.4494568681327882;   // sqrt(3/2 + sqrt(13)/6), Ho_5
       std::mt19937_64 rng(seed);
-      std::uniform_real_distribution<double> unif(0.0, 1.0);
-      std::normal_distribution<double> gauss(0.0, 1.0);
       double start_budget = 150.0;
       std::string tmpstat = std::string(argv[3]) + ".child.stat";
       std::string tmpconf = std::string(argv[3]) + ".child.conf";
@@ -897,7 +887,7 @@ int main(int argc, char *argv[]) {
         if (attempt > 0) {
           for (int t = 1; t < m; t++)
             for (int j = 0; j < n; j++)
-              s2.C(t, j) += 0.10 * gauss(rng);
+              s2.C(t, j) += 0.10 * random_normal(rng);
         }
         init_ok = relax_forked(s2, curc, curg);
         if (!init_ok)
@@ -931,14 +921,14 @@ int main(int argc, char *argv[]) {
           continue;
         }
         int t = (m > 2) ? 1 + int(rng() % (m - 1)) : 1;
-        double u = unif(rng);
+        double u = random_unit(rng);
         if (u < 0.15) {
           Eigen::VectorXd z = DeepestHole(cells, trial.Q, trial.C);
           for (int j = 0; j < n; j++)
-            trial.C(t, j) = (z(j) - std::floor(z(j))) + 0.05 * gauss(rng);
+            trial.C(t, j) = (z(j) - std::floor(z(j))) + 0.05 * random_normal(rng);
         } else {
           double sigma = (u < 0.6) ? 0.06 : 0.12;
-          for (int j = 0; j < n; j++) trial.C(t, j) += sigma * gauss(rng);
+          for (int j = 0; j < n; j++) trial.C(t, j) += sigma * random_normal(rng);
         }
         PeriodicConfig candc;
         double candg;
@@ -950,7 +940,7 @@ int main(int argc, char *argv[]) {
         }
         collect(candg, candc);
         double dg = candg - curg;
-        bool acc = (dg < 0.0) || (unif(rng) < std::exp(-dg / T));
+        bool acc = (dg < 0.0) || (random_unit(rng) < std::exp(-dg / T));
         if (acc) { curc = candc; curg = candg; n_acc++; }
         bool rec = record > 0.0 && candg < record - 1e-9;
         if (candg < bestg - 1e-12) {

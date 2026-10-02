@@ -2141,7 +2141,7 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &G, size_t n_iter,
 
   std::vector<MyVector<Tint>> l_excluded_max;
   for (size_t iter = 0; iter < n_iter; iter++) {
-    int denom = random() % 1000000 + 1;
+    int denom = random_int(1, 1000000);
     MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef PRINT_ENUM_P_POLYTOPES
     os << "ROBUST: robust vertex iter=" << iter << "/" << n_iter << "\n";

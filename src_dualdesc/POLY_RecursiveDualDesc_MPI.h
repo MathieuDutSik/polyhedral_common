@@ -722,7 +722,6 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   uint64_t seed = AllArr.DeterministicRuntime ? 0 : get_random_seed();
   seed += 12345 * static_cast<uint64_t>(i_rank);
   set_random_seed(seed);
-  srand(static_cast<unsigned>(seed));
   Reset_Directories(comm, AllArr);
   size_t n_rows = EXTred.rows();
   if (AllArr.bank_parallelization_method == BankParallelizationMethod::bank_mpi && n_proc < 2) {

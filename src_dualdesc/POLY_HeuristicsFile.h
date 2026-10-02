@@ -90,9 +90,6 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   if (!DeterministicRuntime) {
     unsigned seed = get_random_seed();
     set_random_seed(seed);
-    // For the rand() and random() draws not yet moved to the portable
-    // generator of Basic_random.h.
-    srand(seed);
   }
   //
   std::string OutFormat = BlockDATA.get_string("OutFormat");

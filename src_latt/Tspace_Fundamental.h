@@ -401,7 +401,7 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa,
   int n = LinSpa.n;
   MyMatrix<T> TheMat = ZeroMatrix<T>(n, n);
   for (auto &eMat : LinSpa.ListMat) {
-    int coef = random() % (2 * N + 1) - N;
+    int coef = random_int(-N, N);
     MatAddMul(TheMat, T(coef), eMat);
   }
   while (true) {

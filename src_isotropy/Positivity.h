@@ -534,11 +534,8 @@ MyVector<Tint> GetShortIntegralVector(MyMatrix<T> const &M, T const &CritNorm,
 
 template <typename Tint>
 MyMatrix<Tint> GetRandomMatrixPerturbation(int const &n) {
-  int choice = rand() % 2;
-  auto get_rnd_sign = []() -> int {
-    int pos = rand() % 2;
-    return 2 * pos - 1;
-  };
+  int choice = random_int(0, 1);
+  auto get_rnd_sign = []() -> int { return random_bool() ? 1 : -1; };
   if (choice == 0) {
     std::vector<int> ePerm = RandomPermutation<int>(n);
     MyMatrix<Tint> eMat = ZeroMatrix<Tint>(n, n);
@@ -550,8 +547,8 @@ MyMatrix<Tint> GetRandomMatrixPerturbation(int const &n) {
   }
   if (choice == 1) {
     MyMatrix<Tint> eMat = IdentityMat<Tint>(n);
-    int i = rand() % n;
-    int j = rand() % n;
+    int i = random_int(0, n - 1);
+    int j = random_int(0, n - 1);
     eMat(i, j) = get_rnd_sign();
     return eMat;
   }

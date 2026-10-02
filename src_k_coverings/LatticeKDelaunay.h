@@ -776,8 +776,7 @@ KDelaunayTile<Tint> FindInitialKDelaunayTile(CVPSolver<T, Tint> const &solver,
     int denom = 101 + 2 * N;
     MyVector<T> x0(n);
     for (int u = 0; u < n; u++) {
-      int num = random() % (2 * denom + 1);
-      x0(u) = T(num - denom) / T(denom);
+      x0(u) = T(random_int(-denom, denom)) / T(denom);
     }
     MyVector<T> TheRandomDirection = FuncRandomDirection<T>(n + 1, N);
     std::optional<KDelaunayTile<Tint>> opt =

@@ -51,7 +51,7 @@ void process(int n, int N, int n_coset, int n_attempt,
     while (static_cast<int>(set_coset.size()) < n_coset) {
       MyVector<Tint> eV(n);
       for (int i = 0; i < n; i++) {
-        eV(i) = Tint(random() % N);
+        eV(i) = Tint(random_int(0, N - 1));
       }
       set_coset.insert(eV);
     }
@@ -125,24 +125,16 @@ int main(int argc, char *argv[]) {
       std::cerr << "FileOut   : the coset matrix, in the format the "
                    "FileCosets entries read\n";
       std::cerr << "seed      : optional, the random seed. Without it the "
-                   "seed is drawn from the clock and the pid, which two "
-                   "calls made in the same second only barely separate: "
-                   "rand() started from such neighbouring seeds returns the "
-                   "same first values, so a script drawing several "
-                   "configurations in a row gets the same one every time. "
-                   "Pass distinct seeds to actually sample.\n";
+                   "seed is drawn from the clock and the pid. A given seed "
+                   "gives the same configuration on every platform.\n";
       return -1;
     }
     unsigned seed = argc == 7 ? static_cast<unsigned>(ParseScalar<int>(argv[6]))
                               : get_random_seed();
     std::cerr << "seed=" << seed << "\n";
-    // srand seeds rand(); the random walks and the coset draws below use
-    // random(), which on the BSD derived platforms has its own state and is
-    // left at its default -- so without srandom every run replays the same
-    // "random" sequence. On glibc the two are aliases, which is why a Linux
-    // CI never shows it. Seeding both keeps either platform honest.
-    srand(seed);
-    srandom(seed);
+    // The seed of the portable generator, which every draw below uses: the
+    // same seed gives the same run on every platform.
+    set_random_seed(seed);
     int n = ParseScalar<int>(argv[1]);
     int N = ParseScalar<int>(argv[2]);
     int n_coset = ParseScalar<int>(argv[3]);

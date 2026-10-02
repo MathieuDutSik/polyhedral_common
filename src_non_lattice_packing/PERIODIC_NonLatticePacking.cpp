@@ -1,5 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
+#include "Basic_random.h"
 #include "NonLatticePacking.h"
 #include <iostream>
 // clang-format on
@@ -79,8 +80,6 @@ int main(int argc, char *argv[]) {
       unsigned seed = argc >= 7 ? unsigned(atol(argv[6])) : 1u;
       int rounds = argc == 8 ? atoi(argv[7]) : 12;
       std::mt19937_64 gen(seed);
-      std::normal_distribution<double> gauss(0.0, 1.0);
-      std::uniform_real_distribution<double> unif(0.0, 1.0);
       double best = -1;
       for (int st = 0; st < count; st++) {
         PeriodicConfig conf;
@@ -89,13 +88,13 @@ int main(int argc, char *argv[]) {
         Eigen::MatrixXd R = Eigen::MatrixXd::Identity(n, n);
         for (int i = 0; i < n; i++)
           for (int j = 0; j < n; j++)
-            R(i, j) += 0.25 * gauss(gen);
+            R(i, j) += 0.25 * random_normal(gen);
         conf.Q = R.transpose() * R;
         conf.C.resize(m, n);
         conf.C.row(0).setZero();
         for (int t = 1; t < m; t++)
           for (int j = 0; j < n; j++)
-            conf.C(t, j) = unif(gen);
+            conf.C(t, j) = random_unit(gen);
         DescendResult res = DescendPacking(conf, rounds, std::cerr, false);
         if (res.success) {
           printf("start %d: phi=%.13f%s\n", st, res.theta,

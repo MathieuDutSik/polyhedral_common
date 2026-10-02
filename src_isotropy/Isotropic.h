@@ -71,28 +71,6 @@ template <typename T> MyMatrix<T> GetAnMatrix(int const &k, int const &n) {
   return M;
 }
 
-template <typename T> T random_T(T const &q) {
-  size_t val1 = random();
-  T val2 = UniversalScalarConversion<T, size_t>(val1);
-  return ResInt(val2, q);
-}
-
-template <typename T>
-MyMatrix<T> GetSmithEntry(std::map<T, size_t> const &map, int const &n) {
-  MyMatrix<T> M = IdentityMat<T>(n);
-  for (auto &kv : map) {
-    int pos = random() % n;
-    M(pos, pos) *= kv.first;
-  }
-  for (int i = 0; i < n; i++) {
-    for (int j = i + 1; j < n; j++) {
-      T val = T_min(M(i, i), M(j, j));
-      M(i, j) = random_T(val);
-    }
-  }
-  return M;
-}
-
 template <typename T>
 std::optional<MyVector<T>>
 get_isotropic_easy_method(MyMatrix<T> const &Q,

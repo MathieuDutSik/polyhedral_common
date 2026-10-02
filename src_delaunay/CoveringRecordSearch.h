@@ -275,7 +275,7 @@ RandomWalkStab(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 #endif
       break;
     }
-    size_t pos = random() % n_adj;
+    size_t pos = random_index(n_adj);
     Work = get_adjacent(Work, data, pre.ListIneqRed[l_flippable[pos]]).DT_gram;
   }
   return Work;
@@ -497,7 +497,7 @@ LookForRecordCovering(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
         return finish("a domain beating the record was found");
       }
     } else {
-      size_t pos = random() % ListIdx.size();
+      size_t pos = random_index(ListIdx.size());
       Work = result.l_adj[ListIdx[pos]].DT_gram;
       curr = the_min;
       if (is_drifted(Work) && !restart()) {

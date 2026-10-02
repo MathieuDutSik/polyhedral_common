@@ -3286,7 +3286,7 @@ RandomWalkIsoDelaunay(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
          << iter << ", stopping early\n";
       break;
     }
-    int pos = random() % n_adj;
+    int pos = random_int(0, n_adj - 1);
     Work = get_adjacent(Work, data, pre.ListIneqRed[l_flippable[pos]]).DT_gram;
   }
   return Work;
@@ -3373,7 +3373,7 @@ void LookForFullRankRayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
         }
       }
       int n_min = ListIdx.size();
-      int pos = random() % n_min;
+      int pos = random_int(0, n_min - 1);
       os << "ISODEL: LookForFullRankRayDomain, iter1=" << iter1
          << " iter2=" << iter2 << " curr_count=" << curr_count
          << " n_min=" << n_min << " pos=" << pos << "\n";

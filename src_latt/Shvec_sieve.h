@@ -3,6 +3,7 @@
 #define SRC_LATT_SHVEC_SIEVE_H_
 
 // clang-format off
+#include "Basic_random.h"
 #include "ClassicLLL.h"
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
@@ -230,11 +231,10 @@ struct SieveSampler {
   MyMatrix<double> mu;
   std::vector<double> sigma;
   std::mt19937_64 rng;
-  std::normal_distribution<double> gauss;
 
   template <typename Tring>
   SieveSampler(MyMatrix<Tring> const &G, unsigned long seed)
-      : n(G.rows()), mu(n, n), sigma(n), rng(seed), gauss(0.0, 1.0) {
+      : n(G.rows()), mu(n, n), sigma(n), rng(seed) {
     std::vector<double> r(n);
     for (int j = 0; j < n; j++) {
       for (int i = 0; i <= j; i++) {
@@ -271,7 +271,7 @@ struct SieveSampler {
         for (int j = i + 1; j < n; j++) {
           center -= mu(j, i) * xd[j];
         }
-        xd[i] = std::round(center + sigma[i] * gauss(rng));
+        xd[i] = std::round(center + sigma[i] * random_normal(rng));
         if (xd[i] != 0) {
           is_zero = false;
         }

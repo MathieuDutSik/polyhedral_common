@@ -2,6 +2,7 @@
 #ifndef SRC_LATT_LATTICEREDUCTIONBENCH_H_
 #define SRC_LATT_LATTICEREDUCTIONBENCH_H_
 // clang-format off
+#include "Basic_random.h"
 #include "ClassicLLL.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixDeterminant.h"
@@ -285,14 +286,13 @@ template <typename T>
 MyMatrix<T> GoodGramRandomWellRounded(int n, int spread,
                                       std::mt19937_64 &rng) {
   using Tint = typename underlying_ring<T>::ring_type;
-  std::uniform_int_distribution<int> distr(-spread, spread);
   int const max_draw = 1000;
   for (int i_draw = 0; i_draw < max_draw; i_draw++) {
     MyMatrix<T> R = IdentityMat<T>(n);
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         if (i != j) {
-          R(i, j) = distr(rng);
+          R(i, j) = random_int(rng, -spread, spread);
         }
       }
     }
@@ -342,19 +342,16 @@ MyMatrix<T> GoodGramByName(std::string const &name, int n,
 template <typename Tint>
 MyMatrix<Tint> RandomUnimodular(int n, int n_ops, std::mt19937_64 &rng) {
   MyMatrix<Tint> U = IdentityMat<Tint>(n);
-  std::uniform_int_distribution<int> distr_idx(0, n - 1);
-  std::uniform_int_distribution<int> distr_coef(-2, 2);
-  std::uniform_int_distribution<int> distr_kind(0, 9);
   for (int i_op = 0; i_op < n_ops; i_op++) {
-    int kind = distr_kind(rng);
+    int kind = random_int(rng, 0, 9);
     if (kind < 8) {
       // A transvection, the generator that actually makes the basis bad.
-      int i = distr_idx(rng);
-      int j = distr_idx(rng);
+      int i = random_int(rng, 0, n - 1);
+      int j = random_int(rng, 0, n - 1);
       if (i == j) {
         continue;
       }
-      Tint coef = distr_coef(rng);
+      Tint coef = random_int(rng, -2, 2);
       if (coef == 0) {
         coef = 1;
       }
@@ -362,8 +359,8 @@ MyMatrix<Tint> RandomUnimodular(int n, int n_ops, std::mt19937_64 &rng) {
         U(i, k) += coef * U(j, k);
       }
     } else if (kind == 8) {
-      int i = distr_idx(rng);
-      int j = distr_idx(rng);
+      int i = random_int(rng, 0, n - 1);
+      int j = random_int(rng, 0, n - 1);
       if (i == j) {
         continue;
       }
@@ -371,7 +368,7 @@ MyMatrix<Tint> RandomUnimodular(int n, int n_ops, std::mt19937_64 &rng) {
         std::swap(U(i, k), U(j, k));
       }
     } else {
-      int i = distr_idx(rng);
+      int i = random_int(rng, 0, n - 1);
       for (int k = 0; k < n; k++) {
         U(i, k) = -U(i, k);
       }
