@@ -9,6 +9,7 @@
 #include "Temp_common.h"
 #include "Timings.h"
 #include "hash_functions.h"
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -115,6 +116,17 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
                  "group file (return Group([...]);) cannot be read here.\n";
     throw TerminalException{1};
   }
+  // The values are checked as int before the narrowing to Tidx, which
+  // would otherwise wrap around silently.
+  if (n_i < 0 || nbGen < 0 ||
+      static_cast<size_t>(n_i) >
+          static_cast<size_t>(std::numeric_limits<Tidx>::max())) {
+    std::cerr << "ReadGroup operation failed: n=" << n_i
+              << " nbGen=" << nbGen << " but the permutations hold at most "
+              << static_cast<size_t>(std::numeric_limits<Tidx>::max())
+              << " points\n";
+    throw TerminalException{1};
+  }
   Tidx n = Tidx(n_i);
   std::vector<Telt> ListGen;
   for (int iGen = 0; iGen < nbGen; iGen++) {
@@ -128,17 +140,14 @@ template <typename Tgroup> Tgroup ReadGroup(std::istream &is) {
                   << iGen << " i=" << i << "\n";
         throw TerminalException{1};
       }
-      Tidx eVal = Tidx(eVal_i);
-      if (eVal >= n) {
+      if (eVal_i < 0 || eVal_i >= n_i) {
         std::cerr << "n=" << n_i << " nbGen=" << nbGen << "\n";
         std::cerr << "Error in ReadGroup function at i=" << i << "/" << n_i
-                  << "\n";
-        std::cerr << "Number of elements acted on n=" << n << " iGen=" << iGen
-                  << "/" << nbGen << "\n";
-        std::cerr << "But eVal=" << eVal << " eVal_i=" << eVal_i << "\n";
+                  << " iGen=" << iGen << "/" << nbGen << "\n";
+        std::cerr << "The image eVal_i=" << eVal_i << " is out of range\n";
         throw TerminalException{1};
       }
-      v[i] = eVal;
+      v[i] = Tidx(eVal_i);
     }
     ListGen.emplace_back(std::move(Telt(std::move(v))));
   }
