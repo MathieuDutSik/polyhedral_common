@@ -1184,7 +1184,7 @@ FundDomainVertex_FullInfo<T, Tint, Tgroup> gen_fund_domain_fund_info(
     std::string choice = HeuristicEvaluation(mapV, HeuristicIdealStabEquiv);
     if (choice == "orbmin") {
       vectface vf = rev_search::DualDescription_incd(FACred);
-      vectface vf_min = OrbitSplittingSet_GetMinimalOrbit(vf, erec.GRP1);
+      vectface vf_min = OrbitSplittingSet_GetMinimalOrbit(vf, erec.GRP1, os);
       for (auto &eFAC : vf_min) {
         AdjacencyDirection<Tint> ad = GetAdjacencyDirection(erec.MatRoot, eFAC);
         FundDomainVertex<T, Tint> fVert =

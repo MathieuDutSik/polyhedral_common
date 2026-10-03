@@ -890,20 +890,24 @@ vectface OrbitSplittingSet(vectface const &PreListTotal, Tgroup const &TheGRP) {
 
 template <typename Tgroup>
 vectface OrbitSplittingSet_GetMinimalOrbit(vectface const &PreListTotal,
-                                           Tgroup const &TheGRP) {
+                                           Tgroup const &TheGRP,
+                                           [[maybe_unused]] std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
   Tidx len = TheGRP.n_act();
   vectface TheReturn(len);
   Face TheMin;
   bool HasMin = false;
-  std::cerr << "OrbitSizes =";
+#ifdef DEBUG_GROUP
+  os << "GRPFCT: OrbitSplittingSet_GetMinimalOrbit, OrbitSizes =";
+#endif
   auto f = [&]([[maybe_unused]] Face const &eSet,
                std::unordered_set<Face> const &SingleOrbit) -> void {
-    //    std::cerr << "f : begin\n";
     vectface orbit(len);
     Face minF;
     bool IsFirst = true;
-    std::cerr << " " << SingleOrbit.size();
+#ifdef DEBUG_GROUP
+    os << " " << SingleOrbit.size();
+#endif
     for (auto &uSet : SingleOrbit) {
       orbit.push_back(uSet);
       if (IsFirst) {
@@ -914,7 +918,6 @@ vectface OrbitSplittingSet_GetMinimalOrbit(vectface const &PreListTotal,
           minF = uSet;
       }
     }
-    //    std::cerr << "f : orbit and minF built\n";
     // Now doing the comparison with existing data
     auto set_return = [&]() -> void {
       TheReturn = std::move(orbit);
@@ -934,10 +937,11 @@ vectface OrbitSplittingSet_GetMinimalOrbit(vectface const &PreListTotal,
         }
       }
     }
-    //    std::cerr << "f : end\n";
   };
   OrbitSplittingSet_Kernel(PreListTotal, TheGRP, f);
-  std::cerr << " -- ";
+#ifdef DEBUG_GROUP
+  os << "\n";
+#endif
   return TheReturn;
 }
 
