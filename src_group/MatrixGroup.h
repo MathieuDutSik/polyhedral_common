@@ -907,6 +907,13 @@ inline std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(
   Direct computation of orbits.
   First level of optional is for termination or not.
   Second level is for whether we find an equivalence or not.
+  ---
+  The lattices are L(A) = A + TheMod Z^n. The orbit of L(eSpace1) is built
+  with, for each element, a group element Repr with L(eSpace1) Repr = L(A).
+  An element equal to L(eSpace2) gives the equivalence Repr. Equality with
+  L(eSpace2) is tested by mutual inclusion since L(eSpace2) need not have the
+  index of L(eSpace1); within the orbit all indices agree and one inclusion
+  decides, as in DirectSpaceOrbit_Stabilizer.
  */
 template <typename T, typename Fterminate>
 std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(
@@ -915,42 +922,64 @@ std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(
     [[maybe_unused]] std::ostream &os) {
   int n = eSpace1.rows();
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
+  MyMatrix<T> eSpace2Mod = Concatenate(eSpace2, ModSpace);
+  RecSolutionIntMat<T> eCan2(eSpace2Mod);
+  auto is_equal_space2 = [&](MyMatrix<T> const &eSpace,
+                             RecSolutionIntMat<T> const &eCan) -> bool {
+    return eCan.is_containing_m(eSpace2) && eCan2.is_containing_m(eSpace);
+  };
   // Here Tpair is <Space,Repr>
   using Tpair = std::pair<MyMatrix<T>, MyMatrix<T>>;
   std::vector<Tpair> ListPair;
   ListPair.push_back({eSpace1, IdentityMat<T>(n)});
-  if (f_terminate(eSpace1))
+  if (f_terminate(eSpace1)) {
     return {};
+  }
+  {
+    MyMatrix<T> eSpaceMod = Concatenate(eSpace1, ModSpace);
+    RecSolutionIntMat<T> eCan(eSpaceMod);
+    if (is_equal_space2(eSpace1, eCan)) {
+      std::optional<MyMatrix<T>> opt = IdentityMat<T>(n);
+      return opt;
+    }
+  }
   size_t start = 0;
   while (true) {
     size_t len = ListPair.size();
-    if (start == len)
+    if (start == len) {
       break;
+    }
     for (size_t idx = start; idx < len; idx++) {
-      Tpair const &ePair = ListPair[idx];
+      Tpair ePair = ListPair[idx]; // Copy is needed since ListPair is extended
       for (auto &eMatrGen : ListMatrGen) {
         MyMatrix<T> eSpaceImg = ePair.first * eMatrGen;
-        MyMatrix<T> eReprImg = ePair.second * eMatrGen;
-        //
-        MyMatrix<T> eSpaceMod = Concatenate(ePair.first, ModSpace);
+        MyMatrix<T> eSpaceMod = Concatenate(eSpaceImg, ModSpace);
         RecSolutionIntMat<T> eCan(eSpaceMod);
-        if (eCan.is_containing_m(eSpace2)) {
+        auto need_insert = [&]() -> bool {
+          for (auto &fPair : ListPair) {
+            if (eCan.is_containing_m(fPair.first)) {
+              return false;
+            }
+          }
+          return true;
+        };
+        if (!need_insert()) {
+          continue;
+        }
+        MyMatrix<T> eReprImg = ePair.second * eMatrGen;
+        if (is_equal_space2(eSpaceImg, eCan)) {
           std::optional<MyMatrix<T>> opt = eReprImg;
           return opt;
         }
-        auto fInsert = [&](Tpair const &ePair) -> bool {
-          for (auto &fPair : ListPair)
-            if (eCan.is_containing_m(fPair.first))
-              return false;
-          ListPair.push_back(ePair);
-          return f_terminate(ePair.first);
-        };
-        if (fInsert(eSpaceImg))
+        if (f_terminate(eSpaceImg)) {
           return {};
+        }
+        ListPair.push_back({std::move(eSpaceImg), std::move(eReprImg)});
       }
     }
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MATGRP: start=" << start << " len=" << len << "\n";
+    os << "MATGRP: DirectSpaceOrbit_Equivalence, start=" << start
+       << " len=" << len << "\n";
 #endif
     start = len;
   }
