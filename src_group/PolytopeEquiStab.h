@@ -2202,28 +2202,6 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
     return {};
   }
   std::vector<int> const &ListSigns = *opt_signs;
-#ifdef DEBUG_POLYTOPE_EQUI_STAB_REMOVED
-  // We have some crash due to this with the MD5 so, let us
-  // outcomment it now.
-  size_t eHash2 = MD5_hash_T<size_t>(strAssign);
-  os << "PES: strAssign=" << strAssign << "\n";
-  os << "PES: eHash2=" << eHash2 << "\n";
-  std::string strWMat;
-  for (size_t i_row = 0; i_row < nbRow; i_row++) {
-    int i_rowC = CanonicOrd[i_row];
-    for (size_t j_row = 0; j_row < nbRow; j_row++) {
-      int j_rowC = CanonicOrd[j_row];
-      Tidx_value pos = WMatAbs.WMat.GetValue(i_rowC, j_rowC);
-      strWMat += " " + std::to_string(pos);
-    }
-  }
-  for (auto &eVal : WMatAbs.WMat.GetWeight()) {
-    strWMat += " " + std::to_string(eVal);
-  }
-  os << "PES: strWMat=" << strWMat << "\n";
-  size_t eHash3 = MD5_hash_T<size_t>(strWMat);
-  os << "PES: eHash3=" << eHash3 << "\n";
-#endif
   for (size_t i_row = 0; i_row < nbRow; i_row++) {
     int j_row = CanonicOrd[i_row];
     int eSign = ListSigns[i_row];

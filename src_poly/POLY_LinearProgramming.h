@@ -234,10 +234,6 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
 #ifdef DEBUG_FIND_SINGLE_VERTEX
   size_t n_iter = 0;
 #endif
-#ifdef DEBUG_FIND_SINGLE_VERTEX_DISABLE
-  os << "LP: Kernel_FindSingleVertex, EXT=\n";
-  WriteMatrix(os, EXT);
-#endif
   while (true) {
     for (int iCol = 1; iCol < nbCol; iCol++) {
       int a = random_int();

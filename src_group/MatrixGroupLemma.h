@@ -81,9 +81,6 @@ PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const &ListMatr,
   os << "MATGRPBAS: PreImageSubgroupOneStep, comp(ListMatr2)="
      << compute_complexity_listmat(ListMatr2) << "\n";
 #endif
-#ifdef SANITY_CHECK_MATRIX_GROUP_LEMMA_DISABLE
-  CheckGroupEquality<T, Tgroup>(ListMatr1, ListMatr2, os);
-#endif
   return ListMatr2;
 }
 

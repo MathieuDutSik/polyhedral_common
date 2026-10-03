@@ -1081,51 +1081,9 @@ ExhaustiveReductionComplexityKernel_V2(
   if (ListM.size() <= 1) {
     return ListM;
   }
-#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION_DISABLE
-  auto f_total_comp =
-      [&](std::vector<TcombPair<Ttype, Tnorm>> const &ListM) -> Tnorm {
-    Tnorm Tcomp(0);
-    for (auto &eM : ListM) {
-      Tcomp += f_complexity(eM.pair.first);
-    }
-    return Tcomp;
-  };
-  Tnorm curr_total_comp = f_total_comp(ListM);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-  os << "SIMP: total_complexity(start)=" << curr_total_comp << "\n";
-#endif
-  std::vector<TcombPair<Ttype, Tnorm>> ListMwork = ListM;
-  size_t n_iter = 0;
-  while (true) {
-    std::optional<std::vector<TcombPair<Ttype, Tnorm>>> opt =
-        ExhaustiveReductionComplexityKernelInner_V2<Ttype, Tnorm, Fcomplexity,
-                                                    Fproduct>(
-            ListMwork, f_complexity, f_product, f_check, os);
-    if (!opt) {
-      return {};
-    }
-    ListMwork = *opt;
-    Tnorm new_total_comp = f_total_comp(ListMwork);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    os << "SIMP: new_total_comp=" << new_total_comp
-       << " curr_total_comp=" << curr_total_comp << "\n";
-#endif
-    if (new_total_comp == curr_total_comp) {
-      return ListMwork;
-    }
-    if (n_iter == 1) {
-      std::cerr
-          << "SIMP: The second call did not improve and that is unexpected\n";
-      throw TerminalException{1};
-    }
-    curr_total_comp = new_total_comp;
-    n_iter += 1;
-  }
-#else
   return ExhaustiveReductionComplexityKernelInner_V2<Ttype, Tnorm, Fcomplexity,
                                                      Fproduct>(
       ListM, f_complexity, f_product, f_check, os);
-#endif
 }
 
 template <typename Ttype, typename Tnorm, typename Fcomplexity,

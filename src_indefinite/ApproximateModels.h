@@ -363,10 +363,6 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
 #endif
     for (auto &eMatrGen : GRPmatr) {
       std::vector<Tidx> eList;
-#ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
-      std::vector<int> status(n_classes, 0);
-      size_t i_class = 0;
-#endif
       for (auto &eClassExt : ListClassesExt) {
 #ifdef DEBUG_APPROXIMATE_MODELS
         MyMatrix<T> eMatrGen_T = UniversalMatrixConversion<T, Tint>(eMatrGen);
@@ -379,17 +375,6 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
 #endif
         MyVector<Tint> x_eM = eMatrGen * eClassExt;
         Tidx pos = GetPositionNextGen(x_eM);
-#ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
-        os << "MODEL: SetListClassesOrbitwise, i_class=" << i_class
-           << " pos=" << static_cast<int>(pos) << "\n";
-        i_class += 1;
-        int &val = status[pos];
-        if (val == 1) {
-          std::cerr << "MODEL: The value has already been attained\n";
-          throw TerminalException{1};
-        }
-        val = 1;
-#endif
         eList.push_back(pos);
       }
       Telt ePerm(eList);
@@ -1342,23 +1327,6 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
      << DeterminantMat(er.Embed_T) << "\n";
   os << "MODEL: INDEF_FORM_GetApproximateModel, Embed_T=\n";
   WriteMatrix(os, er.Embed_T);
-#endif
-#ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
-  auto f_terminate = [&]([[maybe_unused]] MyMatrix<T> const &eSpace) -> bool {
-    return false;
-  };
-  T TheMod = LinearSpace_GetDivisor(er.Embed_T);
-  std::optional<std::vector<MyMatrix<T>>> opt =
-      DirectSpaceOrbit_Stabilizer<T, decltype(f_terminate)>(
-          ListGen_T, er.Embed_T, TheMod, f_terminate, os);
-  if (opt) {
-    std::vector<MyMatrix<T>> const &LGen = *opt;
-    os << "MODEL: INDEF_FORM_GetApproximateModel, |LGen|=" << LGen.size()
-       << "\n";
-  } else {
-    std::cerr << "The run did not return which is unexpected\n";
-    throw TerminalException{1};
-  }
 #endif
   std::vector<MyMatrix<Tint>> ListCoset =
       stab_right_coset.coset_desc.template expand<Tint>();

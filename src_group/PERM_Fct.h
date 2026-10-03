@@ -311,61 +311,12 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
       M2_field(iRow, iCol) = UniversalScalarConversion<Tfield, T>(V(iCol));
   }
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
-#ifdef DEBUG_PERM_FCT_DISABLE
-  std::cerr << "PERM: M1_field=\n";
-  WriteMatrix(std::cerr, M1_field);
-  std::cerr << "PERM: M1inv_field=\n";
-  WriteMatrix(std::cerr, M1inv_field);
-  std::cerr << "PERM: M2_field=\n";
-  WriteMatrix(std::cerr, M2_field);
-  std::cerr << "PERM: EqMat=\n";
-  WriteMatrix(std::cerr, EqMat);
-#endif
   // Now testing that we have EXT1 EqMat = EXT2
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     size_t iRowImg = eList[iRow];
-#ifdef DEBUG_PERM_FCT_DISABLE
-    std::cerr << "PERM: iRow=" << iRow << " iRowImg=" << iRowImg << "\n";
-#endif
     // We can have f1 = f2 which zould invalidate reference so copy is needed
     MyVector<T> V1 = f1(iRow);
     const MyVector<T> &V2 = f2(iRowImg);
-#ifdef DEBUG_PERM_FCT_DISABLE
-    std::cerr << "PERM: V1      =";
-    WriteVectorNoDim(std::cerr, V1);
-    std::cerr << "PERM: V2      =";
-    WriteVectorNoDim(std::cerr, V2);
-    //
-    MyVector<Tfield> V1_T = UniversalVectorConversion<Tfield, T>(V1);
-    std::cerr << "PERM: V1_T    =";
-    WriteVectorNoDim(std::cerr, V1_T);
-    //
-    MyVector<Tfield> V2_T = UniversalVectorConversion<Tfield, T>(V2);
-    std::cerr << "PERM: V2_T    =";
-    WriteVectorNoDim(std::cerr, V2_T);
-    //
-    MyVector<Tfield> V1_img = EqMat.transpose() * V1_T;
-    std::cerr << "PERM: V1_img  =";
-    WriteVectorNoDim(std::cerr, V1_img);
-    //
-    MyVector<Tfield> V1_expr = M1inv_field.transpose() * V1_T;
-    std::cerr << "PERM: V1_expr =";
-    WriteVectorNoDim(std::cerr, V1_expr);
-    //
-    MyVector<Tfield> V1_imgB = M2_field.transpose() * V1_expr;
-    std::cerr << "PERM: V1_imgB =";
-    WriteVectorNoDim(std::cerr, V1_imgB);
-    //
-    MyVector<Tfield> V1_imgC =
-        M2_field.transpose() * M1inv_field.transpose() * V1_T;
-    std::cerr << "PERM: V1_imgC =";
-    WriteVectorNoDim(std::cerr, V1_imgC);
-    //
-    MyMatrix<Tfield> eProd = M1inv_field * M2_field;
-    MyVector<Tfield> V1_imgD = eProd.transpose() * V1_T;
-    std::cerr << "PERM: V1_imgD =";
-    WriteVectorNoDim(std::cerr, V1_imgD);
-#endif
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       T val = -V2(iCol);
       Tfield eSum = UniversalScalarConversion<Tfield, T>(val);

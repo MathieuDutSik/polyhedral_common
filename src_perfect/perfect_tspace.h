@@ -174,12 +174,6 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
 #ifdef TIMINGS_PERFECT_TSPACE
   os << "|PERF_TSPACE: GetNakedPerfectCone_GRP|=" << time << "\n";
 #endif
-#ifdef DEBUG_PERFECT_TSPACE_DISABLE
-  os << "PERF_TSPACE: The ryshk.PerfDomEXT is the following\n";
-  WriteMatrix(os, ryshk.PerfDomEXT);
-  os << "PERF_TSPACE: RankMat(ryshk.PerfDomEXT)=" << RankMat(ryshk.PerfDomEXT)
-     << "\n";
-#endif
   std::vector<PerfectTspace_AdjI<T, Tint>> ListAdj;
 #ifdef DEBUG_PERFECT_TSPACE
   os << "PERF_TSPACE: |ryshk.PerfDomEXT|=" << ryshk.PerfDomEXT.cols() << " / "

@@ -157,47 +157,6 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible, Fshortest f_shortest,
   //
   // Initial checks of the input
   //
-#ifdef DEBUG_FLIP_DISABLE
-  os << "PERF: Kernel_Flipping_Perfect : SHVinformation=\n";
-  int nbSHV = rec_shv_in.SHV.rows();
-  int n = rec_shv_in.SHV.cols();
-  int nbZero_sumMat = 0;
-  std::vector<int> ListScal(nbSHV);
-  for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
-    MyVector<Tint> V = GetMatrixRow(rec_shv_in.SHV, iSHV);
-    T sumMatIn = EvaluationQuadForm(eMatIn, V);
-    T sumMatDir = EvaluationQuadForm(eMatDir, V);
-    int eVal = 1;
-    if (sumMatDir == 0) {
-      nbZero_sumMat++;
-      eVal = 0;
-    }
-    ListScal[iSHV] = eVal;
-    os << "PERF: iSHV=" << iSHV << " V=";
-    for (int i = 0; i < n; i++)
-      os << V(i) << " ";
-    os << "sumMatIn=" << sumMatIn << " sumMatDir=" << sumMatDir << "\n";
-  }
-  MyMatrix<Tint> SHVface(nbZero_sumMat, n);
-  int idx = 0;
-  for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
-    if (ListScal[iSHV] == 0) {
-      for (int i = 0; i < n; i++)
-        SHVface(idx, i) = rec_shv_in.SHV(iSHV, i);
-      idx++;
-    }
-  }
-  os << "PERF: SHVface=\n";
-  WriteMatrix(os, SHVface);
-  os << "PERF: nbZero_sumMat=" << nbZero_sumMat << "\n";
-  MyMatrix<T> ConeClassicalInput =
-      GetNakedPerfectConeClassical<T>(rec_shv_in.SHV);
-  os << "PERF: RankMat(ConeClassicalInput)=" << RankMat(ConeClassicalInput)
-     << "\n";
-  MyMatrix<T> ConeClassicalFace = GetNakedPerfectConeClassical<T>(SHVface);
-  os << "PERF: RankMat(ConeClassicalFace)=" << RankMat(ConeClassicalFace)
-     << "\n";
-#endif
   //
   // Running the algorithm
   // First loop where we find an interval where the solution may exist.
@@ -235,11 +194,6 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible, Fshortest f_shortest,
 #endif
 #ifdef DEBUG_FLIP
       n_shortest += 1;
-#endif
-#ifdef DEBUG_FLIP_DISABLE
-      os << "ITER: rec_shv_upp.min=" << rec_shv_upp.min << "\n";
-      os << "ITER: rec_shv_upp.SHV=\n";
-      WriteMatrix(os, rec_shv_upp.SHV);
 #endif
       if (rec_shv_upp.min == rec_shv_in.min) {
         // That kind of scheme is rather primitive.
@@ -298,18 +252,6 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible, Fshortest f_shortest,
     MyMatrix<T> Q_upp = eMatIn + bound_upp * eMatDir;
     Tshortest<T, Tint> const &rec_shv_low = memo_shortest.comp(Q_low);
     Tshortest<T, Tint> const &rec_shv_upp = memo_shortest.comp(Q_upp);
-#ifdef DEBUG_FLIP_DISABLE
-    os << "PERF: Kernel_Flipping_Perfect, case 4 SHV_low.min=" << rec_shv_low.min
-       << " SHV_upp.min=" << rec_shv_upp.min << "\n";
-    MyMatrix<T> ConeClassicalLow =
-        GetNakedPerfectConeClassical<T>(rec_shv_low.SHV);
-    os << "PERF: RankMat(ConeClassicalLow)=" << RankMat(ConeClassicalLow)
-       << "\n";
-    MyMatrix<T> ConeClassicalUpp =
-        GetNakedPerfectConeClassical<T>(rec_shv_upp.SHV);
-    os << "PERF: RankMat(ConeClassicalUpp)=" << RankMat(ConeClassicalUpp)
-       << "\n";
-#endif
     bool test1 = rec_shv_upp.min == rec_shv_in.min;
 #ifdef SANITY_CHECK_FLIP
     if (rec_shv_upp.min > rec_shv_in.min) {
@@ -319,11 +261,6 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible, Fshortest f_shortest,
     }
 #endif
     bool test2 = TestInclusionSHV(rec_shv_in.SHV, rec_shv_low.SHV);
-#ifdef DEBUG_FLIP_DISABLE
-    os << "PERF: rec_shv_upp.min = " << rec_shv_upp.min << "\n";
-    os << "PERF: rec_shv_in.min  = " << rec_shv_in.min << "\n";
-    os << "PERF: test1=" << test1 << " test2=" << test2 << "\n";
-#endif
     if (test1) {
 #ifdef DEBUG_FLIP
       os << "PERF: Q_upp=\n";
@@ -338,18 +275,6 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible, Fshortest f_shortest,
       return {std::move(Q_upp), std::move(rec_shv_upp)};
     }
     if (!test2 && test1) {
-#ifdef DEBUG_FLIP_DISABLE
-      os << "PERF: Qperf=\n";
-      WriteMatrix(os, eMatIn);
-      os << "PERF: Q_low=\n";
-      WriteMatrix(os, Q_low);
-      //
-      os << "PERF: rec_shv_in.SHV=\n";
-      WriteMatrix(os, rec_shv_in.SHV);
-      os << "PERF: rec_shv_low.SHV=\n";
-      WriteMatrix(os, rec_shv_low.SHV);
-      os << "PERF: Return Q_low\n";
-#endif
 #ifdef DEBUG_FLIP
       os << "PERF: Exit flip (return Q_low) iterLoop_second=" << iterLoop_second
          << " coeff=" << bound_low << "\n";
@@ -358,10 +283,6 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible, Fshortest f_shortest,
     }
     T TheGamma = get_mid_val(bound_low, bound_upp);
     MyMatrix<T> Q_gamma = eMatIn + TheGamma * eMatDir;
-#ifdef DEBUG_FLIP_DISABLE
-    os << "PERF: Q_gamma=\n";
-    WriteMatrix(os, Q_gamma);
-#endif
 #ifdef DEBUG_FLIP
     double TheGamma_d = UniversalScalarConversion<double, T>(TheGamma);
     os << "PERF: Kernel_Flipping_Perfect, gamma=" << TheGamma
@@ -370,14 +291,6 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible, Fshortest f_shortest,
        << " bound_low=" << bound_low << " bound_upp=" << bound_upp << "\n";
 #endif
     Tshortest<T, Tint> const &rec_shv_gamma = memo_shortest.comp(Q_gamma);
-#ifdef DEBUG_FLIP_DISABLE
-    os << "|rec_shv_gamma.SHV|=" << rec_shv_gamma.SHV.rows() << "\n";
-    WriteMatrix(os, rec_shv_gamma.SHV);
-    MyMatrix<T> ConeClassicalGamma =
-        GetNakedPerfectConeClassical<T>(rec_shv_gamma.SHV);
-    os << "PERF: RankMat(ConeClassicalGamma)=" << RankMat(ConeClassicalGamma)
-       << "\n";
-#endif
     if (rec_shv_gamma.min >= rec_shv_in.min) {
       bound_low = TheGamma;
     } else {

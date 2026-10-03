@@ -1749,19 +1749,7 @@ LORENTZ_GetOrbitRepresentative_Kernel(MyMatrix<T> const &LorMat, T const &X,
           if (iOrb != miss_val) {
             std::pair<size_t, size_t> pair{iOrbCone, iOrb};
             size_t iOrbFull = map_pair.at(pair);
-#ifdef DEBUG_LORENTZIAN_PERFECT_DISABLE
-            os << "LORPERF: LorMat=\n";
-            WriteMatrix(os, LorMat);
-            os << "LORPERF: eBigMatInv=\n";
-            WriteMatrix(os, eBigMatInv);
-            os << "LORPERF: eIdx=" << eIdx << " l_vert[eIdx]=\n";
-            WriteVector(os, l_vert[eIdx]);
-#endif
             MyVector<Tint> eV = eBigMatInv.transpose() * l_vert[eIdx];
-#ifdef DEBUG_LORENTZIAN_PERFECT_DISABLE
-            os << "LORPERF: eV=\n";
-            WriteVector(os, eV);
-#endif
             size_t pos = l_orbit[iOrbConeAdj].map_vert[eV];
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
             if (pos == 0) {
@@ -1772,11 +1760,6 @@ LORENTZ_GetOrbitRepresentative_Kernel(MyMatrix<T> const &LorMat, T const &X,
 #endif
             size_t uVert = pos - 1;
             size_t iOrbAdj = l_orbit[iOrbConeAdj].belonging[uVert];
-#ifdef DEBUG_LORENTZIAN_PERFECT_DISABLE
-            os << "LORPERF iOrbCone=" << iOrbCone << " iOrb=" << iOrb
-               << " iOrbConeAdj=" << iOrbConeAdj << " iOrbAdj=" << iOrbAdj
-               << "\n";
-#endif
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
             if (iOrbAdj == miss_val) {
               size_t n_vert = l_orbit[iOrbCone].belonging.size();

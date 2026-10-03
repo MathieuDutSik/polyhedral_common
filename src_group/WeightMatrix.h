@@ -1040,35 +1040,6 @@ inline void GetGraphFromWeightedMatrix_color_adj(
         f_adj(bVert, aVert);
       }
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
-#ifdef DEBUG_WEIGHT_MATRIX_DISABLE
-  os << "WEIGHT: The original matrix\n";
-  for (size_t iVert = 0; iVert < nbRow; iVert++) {
-    for (size_t jVert = 0; jVert < nbRow; jVert++) {
-      os << " " << WMat.GetValue(iVert, jVert);
-    }
-    os << "\n";
-  }
-  os << "WEIGHT: The mapped matrix\n";
-  auto get_effective_weight_index_gen = [&](size_t iVert,
-                                            size_t jVert) -> size_t {
-    if (iVert == jVert) {
-      return nbMult;
-    }
-    if (iVert < jVert) {
-      return get_effective_weight_index<Tidx_value, T, is_symm>(
-          nbWei, nbRow, iVert, jVert, WMat);
-    } else {
-      return get_effective_weight_index<Tidx_value, T, is_symm>(
-          nbWei, nbRow, jVert, iVert, WMat);
-    }
-  };
-  for (size_t iVert = 0; iVert < nbVert; iVert++) {
-    for (size_t jVert = 0; jVert < nbVert; jVert++) {
-      os << " " << get_effective_weight_index_gen(iVert, jVert);
-    }
-    os << "\n";
-  }
-#endif
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++)
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
       Tidx_value eVal = get_effective_weight_index<Tidx_value, T, is_symm>(

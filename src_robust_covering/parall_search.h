@@ -227,9 +227,6 @@ void kernel_enumerate_parallelepiped(Tlocator const &loc, int const &p,
    */
   auto span_part_solution =
       [&](PartSolution const &psol) -> std::vector<PartSolution> {
-#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-    os << "PARALL:   span_part_solution |pts|=" << psol.pts.size() << "\n";
-#endif
     std::vector<PartSolution> list_sol;
     int i_start = 0;
     if (!psol.l_dir.empty()) {
@@ -271,9 +268,6 @@ void kernel_enumerate_parallelepiped(Tlocator const &loc, int const &p,
     return {std::move(l_sol), choice};
   };
   std::vector<OneLevel> l_levels{get_initial()};
-#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-  os << "PARALL:   kernel_enumerate_parallelepiped, l_levels\n";
-#endif
   int i_level = 0;
   auto GoUpNextInTree = [&]() -> bool {
     while (true) {
@@ -289,29 +283,13 @@ void kernel_enumerate_parallelepiped(Tlocator const &loc, int const &p,
     }
   };
   auto NextInTree = [&]() -> bool {
-#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-    os << "PARALL:   NextInTree, i_level=" << i_level << "\n";
-#endif
     int choice = l_levels[i_level].choice;
-#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-    os << "PARALL:   NextInTree, choice=" << choice << "\n";
-#endif
     PartSolution const &psol = l_levels[i_level].l_sol[choice];
-#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-    os << "PARALL:   NextInTree, we have psol\n";
-#endif
     if (i_level == p) {
       f_insert(psol);
       return GoUpNextInTree();
     } else {
-#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-      os << "PARALL:   NextInTree, before span_part_solution\n";
-#endif
       std::vector<PartSolution> new_sols = span_part_solution(psol);
-#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-      os << "PARALL:   NextInTree, after span_part_solution |new_sols|="
-         << new_sols.size() << "\n";
-#endif
       if (new_sols.empty()) {
         return GoUpNextInTree();
       }

@@ -426,13 +426,6 @@ struct MapFullIneq {
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: get_list_ineq n_ineq=" << n_ineq << "\n";
 #endif
-#ifdef SANITY_CHECK_ENUM_P_POLYTOPES_DISABLE
-    bool test = no_duplicated_scalar_multiple(M);
-    if (!test) {
-      std::cerr << "ROBUST: The matrix M has duplication\n";
-      throw TerminalException{1};
-    }
-#endif
     return M;
   }
   IneqHES<T,Tint> get_description(int const& idx) const {

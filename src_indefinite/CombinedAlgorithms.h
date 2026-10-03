@@ -311,27 +311,15 @@ public:
   MyMatrix<T>
   LiftToFullAutomorphism(MyMatrix<Tint> const &eGenRed,
                          MyMatrix<T> const &HelpingSublattice) const {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
-    os << "COMB: LiftToFullAutomorphism, step 1\n";
-#endif
     MyMatrix<T> HelpingSublatticeInv = Inverse(HelpingSublattice);
     MyMatrix<T> Subspace1 = NSP_T * HelpingSublatticeInv;
     MyMatrix<T> eGenRed_T = UniversalMatrixConversion<T, Tint>(eGenRed);
     MyMatrix<T> Subspace2 = eGenRed_T * Subspace1;
     MyMatrix<T> QmatRed =
         HelpingSublattice * Qmat * HelpingSublattice.transpose();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
-    os << "COMB: LiftToFullAutomorphism, step 2\n";
-#endif
     LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(
         QmatRed, Subspace1, QmatRed, Subspace2, os);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
-    os << "COMB: LiftToFullAutomorphism, step 3\n";
-#endif
     MyMatrix<T> eGen1 = TheRec.get_one_transformation();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
-    os << "COMB: LiftToFullAutomorphism, step 4\n";
-#endif
     MyMatrix<T> eGen2 = HelpingSublatticeInv * eGen1 * HelpingSublattice;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     //    os << "COMB: HelpingSublattice=\n";
@@ -339,9 +327,6 @@ public:
     //    os << "COMB: |HelpingSublattice|=" <<
     //    DeterminantMat(HelpingSublattice) << "\n";
     check_generator(eGenRed, eGen2);
-#endif
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
-    os << "COMB: LiftToFullAutomorphism, step 5\n";
 #endif
     return eGen2;
   }
@@ -675,22 +660,12 @@ f_get_list_spaces(MyMatrix<Tint> const &ListVect, SeqDims const &sd,
                   [[maybe_unused]] std::ostream &os) {
   size_t n_case = sd.dims.size();
   int dim = ListVect.cols();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
-  os << "COMB: f_get_list_spaces, n_case=" << n_case << " dim=" << dim
-     << " n_rows=" << ListVect.rows() << "\n";
-  os << "COMB: f_get_list_spaces, ListVect=\n";
-  WriteMatrix(os, ListVect);
-#endif
   std::vector<MyMatrix<Tint>> ListSpaces;
   for (size_t i_case = 0; i_case < n_case; i_case++) {
     int sum_dim = 0;
     for (size_t u = 0; u <= i_case; u++) {
       sum_dim += sd.dims[u];
     }
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
-    os << "COMB: f_get_list_spaces, i_case=" << i_case << " sum_dim=" << sum_dim
-       << "\n";
-#endif
     MyMatrix<Tint> eSpace(sum_dim, dim);
     for (int u = 0; u < sum_dim; u++) {
       for (int iCol = 0; iCol < dim; iCol++) {

@@ -310,10 +310,6 @@ ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_
   int dim = sp.FAC.cols();
   MyVector<T> V = GetMatrixRow(sp.FAC, i_fac);
   MyMatrix<T> NSP = NullspaceMatSingleVectorExt(V);
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
-  os << "GP: get_convex_boundary, NSP=\n";
-  WriteMatrix(os, NSP);
-#endif
   int n_ext = sp.EXT.rows();
   std::vector<int> l_idx_facet = get_adjacent_facet_indices(sp, i_fac);
   Face f1 = sp.facets[i_fac];
@@ -432,19 +428,8 @@ MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {
 template <typename T>
 SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
                                            std::ostream &os) {
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
-  os << "GP: generate_single_polytope FACinput=\n";
-  WriteMatrix(os, FACinput);
-#endif
   std::vector<int> ListIrred = get_non_redundant_indices(FACinput, os);
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
-  os << "GP: generate_single_polytope |ListIrred|=" << ListIrred.size() << "\n";
-#endif
   MyMatrix<T> FAC = SelectRow(FACinput, ListIrred);
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
-  os << "GP: generate_single_polytope FAC=\n";
-  WriteMatrix(os, FAC);
-#endif
   MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
   return get_single_polytope(FAC, EXT);
 }
@@ -800,10 +785,6 @@ connected_components_decomposition(GeneralizedPolytope<T> const &gp,
       AllTrackInfo &rec = full_track[pair.first];
       if (rec.NSP.rows() == 0) {
         rec.NSP = NullspaceMatSingleVectorExt(eFAC);
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
-        os << "GP: connected_components_decomposition, rec.NSP=\n";
-        WriteMatrix(os, rec.NSP);
-#endif
       }
       MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i_poly], i_fac, rec.NSP);
       TrackInfo ti{i_poly, pair.second, FAC};
@@ -1198,16 +1179,7 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
                                    std::ostream &os) {
   int dim = gp.dim;
   std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
-  os << "GP:  find_generalized_polytope_boundary(fgpb) start\n";
-#endif
   for (size_t i = 0; i < gp.size(); i++) {
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
-    os << "GP: fgpb, polytope " << i << " EXT=\n";
-    WriteMatrix(os, gp.polytopes[i].EXT);
-    os << "GP:     FAC=\n";
-    WriteMatrix(os, gp.polytopes[i].FAC);
-#endif
     int n_fac = gp.polytopes[i].FAC.rows();
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       MyVector<T> eFAC = GetMatrixRow(gp.polytopes[i].FAC, i_fac);
@@ -1220,10 +1192,6 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
         rec.NSP = NullspaceMatSingleVectorExt(eFAC);
         rec.gp_plus.dim = dim - 1;
         rec.gp_minus.dim = dim - 1;
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
-        os << "GP: find_generalized_polytope_boundary, rec.NSP=\n";
-        WriteMatrix(os, rec.NSP);
-#endif
       }
       MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i], i_fac, rec.NSP);
 #ifdef DEBUG_GENERALIZED_POLYTOPE

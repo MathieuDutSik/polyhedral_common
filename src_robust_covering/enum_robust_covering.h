@@ -676,19 +676,10 @@ get_generic_robust_m(MyMatrix<Tint> const &M, MyMatrix<T> const &G,
     throw TerminalException{1};
   }
 #endif
-#ifdef DEBUG_GET_INEQ_P_POLYTOPES_DISABLE
-  os << "ROBUST:   ggrm, eV=" << StringVectorGAP(eV) << "\n";
-#endif
   for (int index = 0; index < n_ineq; index++) {
     MyVector<Tint> fV = GetMatrixRow(M, index);
     MyVector<T> diff = UniversalVectorConversion<T, Tint>(fV) - eV;
     T norm = EvaluationQuadForm(G, diff);
-#ifdef DEBUG_GET_INEQ_P_POLYTOPES_DISABLE
-    double norm_d = UniversalScalarConversion<double, T>(norm);
-    os << "ROBUST:   ggrm, index=" << index
-       << " fV=" << StringVector(fV) << " norm=" << norm << " norm_d=" << norm_d
-       << "\n";
-#endif
     if (index == 0) {
       max = norm;
       best_index = index;
@@ -709,11 +700,6 @@ get_generic_robust_m(MyMatrix<Tint> const &M, MyMatrix<T> const &G,
   if (n_att > 1) {
     is_correct = false;
   }
-#ifdef DEBUG_GET_INEQ_P_POLYTOPES_DISABLE
-  double max_d = UniversalScalarConversion<double, T>(max);
-  os << "ROBUST:   ggrm, best_index=" << best_index
-     << " max=" << max << " max_d=" << max_d << "\n";
-#endif
   GenericRobustM<Tint> robust_m{best_index, M};
   return {max, is_correct, robust_m};
 };
@@ -1025,9 +1011,6 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
         }
       }
     };
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-    os << "ROBUST:   kippp, pass 1 n_min_parall=" << n_min_parall << "\n";
-#endif
     for (size_t i=0; i<n_min_parall; i++) {
       MyMatrix<Tint> const &min_m = list_min_parallelepipeds[i];
       ExtendedGenericRobustM<T, Tint> ext_robust_m_min =
@@ -1044,11 +1027,6 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
         return true;
       }
       GenericRobustM<Tint> const &robust_m_min = ext_robust_m_min.robust_m;
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-      os << "ROBUST:   kippp, robust_m_min, index="
-         << robust_m_min.index << " M=\n";
-      WriteMatrix(os, robust_m_min.M);
-#endif
       insert_inner_ineqs_parallelepiped(robust_m_min, G, m_full_ineq, os);
       MyVector<Tint> v_long = ext_robust_m_min.robust_m.v_long();
       T val = compute_upper_bound_mat(G, min_m);
@@ -1068,9 +1046,6 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
       return true;
     }
     MyVector<Tint> v_short = *set_v_long.begin(); // It is the shortest for the other structures!
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-    os << "ROBUST:   kippp, pass 2\n";
-#endif
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, v_short="
        << StringVectorGAP(v_short)
@@ -1082,29 +1057,13 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
                         m_full_ineq,
                         os);
 
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-    os << "ROBUST:   kippp, pass 3, step 1\n";
-#endif
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-    size_t i_m = 0;
-    size_t n_other = tot_list_parallelepipeds.size() - set_matrix_min.size();
-#endif
     std::vector<GenericRobustM<Tint>> list_robust_m;
     for (auto &eM : tot_list_parallelepipeds) {
       if (!set_matrix_min.contains(eM)) {
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-        os << "ROBUST:   --------- " << i_m << "/" << n_other << " ------------\n";
-        i_m += 1;
-#endif
         T val = compute_upper_bound_mat(G, eM);
         f_update_upper_bound(val);
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
             get_generic_robust_m(eM, G, eV_red, os);
-#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-        os << "ROBUST:   kippp, ext_robust_m.robust_m, index="
-           << ext_robust_m.robust_m.index << " M=\n";
-        WriteMatrix(os, ext_robust_m.robust_m.M);
-#endif
         if (!ext_robust_m.is_correct) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
           os << "ROBUST:   kippp, is_correct=false by "

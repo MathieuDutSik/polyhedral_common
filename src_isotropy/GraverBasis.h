@@ -51,9 +51,6 @@ std::vector<MyVector<Tint>> GetGraverKbasis(int const &n, int const &k,
     MyMatrix<int> LVal = BuildSet(u, 2);
     int npow = LVal.rows();
     for (auto &vect : cont) {
-#ifdef DEBUG_GRAVER_BASIS_DISABLE
-      os << "GB: |vect|=" << vect.size() << "\n";
-#endif
       for (int ipow = 0; ipow < npow; ipow++) {
         MyVector<Tint> V = ZeroVector<Tint>(n);
         for (int pos = 0; pos < u; pos++) {

@@ -2301,10 +2301,6 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
     std::vector<MyMatrix<T>> eStab_matr =
         MatrixIntegral_PreImageSubgroup<T, Tgroup, Thelper>(
             ListPermGens, ListMatrGens, eStab_perm, helper, f_get_perm, os);
-#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM_DISABLE
-    TestPreImageSubgroup(helper, ListPermGens, ListMatrGens, f_get_perm,
-                         eStab_matr, eStab_perm, "eStab", os);
-#endif
     std::vector<MyMatrix<T>> eStab_matr_tot =
         Exhaust_get_total_generators(eStab_matr);
     DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab_perm);
@@ -2396,10 +2392,6 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
         std::vector<MyMatrix<T>> Stab_matr =
             MatrixIntegral_PreImageSubgroup<T, Tgroup, Thelper>(
                 Vperm_conj, Vmatr_conj, Stab_perm, helper, f_get_perm, os);
-#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM_DISABLE
-        TestPreImageSubgroup(helper, Vperm_conj, Vmatr_conj, f_get_perm,
-                             Stab_matr, Stab_perm, "Stab_perm", os);
-#endif
         std::vector<MyMatrix<T>> Stab_matr_conj;
         for (auto &eGen : Stab_matr) {
           MyMatrix<T> NewGen = cos_inv * eGen * entry.cos;
@@ -3818,12 +3810,6 @@ MatrixIntegral_DoubleCosets_General(int const &n,
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
-#ifdef DEBUG_MATRIX_GROUP_DISABLE
-  os << "MATGRP: MatrixIntegral_DoubleCosets_General, LGenG1=\n";
-  WriteListMatrix(os, LGenG1);
-  os << "MATGRP: MatrixIntegral_DoubleCosets_General, LGenV1=\n";
-  WriteListMatrix(os, LGenV1);
-#endif
   MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGenG1, os);
   MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
 #ifdef DEBUG_MATRIX_GROUP

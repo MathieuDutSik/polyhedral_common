@@ -38,11 +38,6 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
     Ttype pair{M, Minv};
 
     (void)online_kernel.insert_generator(pair);
-
-#ifdef TRACK_INFO_ONLINE_INSERTION_SIZES_DISABLE
-    std::cerr << "i_gen=" << i_gen;
-    online_kernel.print_invariants(std::cerr);
-#endif
   }
 
   // Extract the final reduced set
