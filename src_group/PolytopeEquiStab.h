@@ -54,6 +54,7 @@
 #endif
 
 #ifdef SANITY_CHECK
+#define SANITY_CHECK_POLYTOPE_EQUI_STAB
 #define SANITY_CHECK_THRESHOLD_SCHEME
 // #define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_STAB
 // #define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
@@ -383,6 +384,8 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
      << "\n";
   os << "PES: |GramMat2|=" << GramMat2.rows() << " / " << GramMat2.cols()
      << "\n";
+#endif
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
   if (nbRow != CanonicReord1.size()) {
     std::cerr << "PES: nbRow=" << nbRow
               << " |CanonicReord1|=" << CanonicReord1.size() << "\n";
@@ -397,7 +400,7 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
   }
 #endif
   for (size_t idx = 0; idx < nbRow; idx++) {
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
     size_t pos = static_cast<size_t>(CanonicReord1[idx]);
     if (pos >= nbRow) {
       std::cerr << "PES: pos=" << pos << " nbRow=" << nbRow << "\n";
@@ -1067,7 +1070,7 @@ DataMapping<Tidx> ExtendPartialAutomorphism(
     return {false, block_status, {}};
   }
   const MyMatrix<Tfield> &P = *test1;
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
   for (auto &eMat : ListMat) {
     MyMatrix<Tfield> eMat_F = UniversalMatrixConversion<Tfield, T>(eMat);
     MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
@@ -1308,12 +1311,6 @@ GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
     std::vector<T> const &Vdiag, std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
   using Treturn = std::vector<std::vector<Tidx>>;
-#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
-  for (!is_family_symmmetric(ListMat)) {
-    std::cerr << "PES: The matrices of ListMat are not symmetric\n";
-    throw TerminalException{1};
-  }
-#endif
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
@@ -1368,12 +1365,6 @@ template <typename T, typename Tfield, typename Tidx, typename Tidx_value>
 std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, size_t threshold, std::ostream &os) {
-#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
-  for (!is_family_symmmetric(ListMat)) {
-    std::cerr << "PES: The matrices of ListMat are not symmetric\n";
-    throw TerminalException{1};
-  }
-#endif
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif

@@ -29,6 +29,10 @@
 #undef DEBUG_DOUBLE_COSET
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_DOUBLE_COSET
+#endif
+
 static const size_t LIMIT_INITIAL_TRIV = 5000;
 
 template <typename Tgroup> struct FaceOrbitsizeGrpContainer {
@@ -59,7 +63,7 @@ vectface DoubleCosetDescription_Representation(
     typename Tgroup::Tint const &TotalSize, [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
-#ifdef DEBUG_DOUBLE_COSET
+#ifdef SANITY_CHECK_DOUBLE_COSET
   using Tidx = typename Telt::Tidx;
   Tidx n = eList.size();
   Telt id(n);
@@ -151,7 +155,7 @@ vectface DoubleCosetDescription_Canonic(
   using Tidx = typename Tgroup::Telt::Tidx;
   using Tint = typename Tgroup::Tint;
   Tidx n = eList.size();
-#ifdef DEBUG_DOUBLE_COSET
+#ifdef SANITY_CHECK_DOUBLE_COSET
   using Telt = typename Tgroup::Telt;
   Telt id(n);
   Tgroup TheGRP(BigGens, id);
@@ -201,7 +205,7 @@ vectface DoubleCosetDescription_Canonic(
   vectface ListListSet = get_list_list_set();
   std::unordered_set<Face> PartialOrbit = SetFace;
   while (true) {
-#ifdef DEBUG_DOUBLE_COSET
+#ifdef SANITY_CHECK_DOUBLE_COSET
     if (ListListSet.empty()) {
       std::cerr << "|ListListSet|=0 before the pop. It cannot work\n";
       throw TerminalException{1};
@@ -231,7 +235,7 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
   using Tidx = typename Tgroup::Telt::Tidx;
   using Tint = typename Tgroup::Tint;
   Tidx n = eList.size();
-#ifdef DEBUG_DOUBLE_COSET
+#ifdef SANITY_CHECK_DOUBLE_COSET
   using Telt = typename Tgroup::Telt;
   Telt id(n);
   Tgroup TheGRP(BigGens, id);
@@ -306,7 +310,7 @@ vectface DoubleCosetDescription_Exhaustive_T(
   using Tint = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
   Tidx n = eList.size();
-#ifdef DEBUG_DOUBLE_COSET
+#ifdef SANITY_CHECK_DOUBLE_COSET
   Telt id(n);
   Tgroup TheGRP(BigGens, id);
   Tint CheckSize = TheGRP.OrbitSize_OnSets(eList);
@@ -370,7 +374,7 @@ vectface DoubleCosetDescription_SingleCoset(
     OnFace_inplace(eFaceImg, eList, eCos);
     f_insert(eFaceImg);
   }
-#ifdef DEBUG_DOUBLE_COSET
+#ifdef SANITY_CHECK_DOUBLE_COSET
   using Tint = typename Tgroup::Tint;
   Tint GenSize = 0;
   for (auto &f : SetFace) {
@@ -628,7 +632,7 @@ vectface DoubleCosetDescription_DoubleCoset_Block(
       Face eSetRepr = OnFace(eSet, eCos);
       eListSma.push_back(eSetRepr);
     }
-#ifdef DEBUG_DOUBLE_COSET
+#ifdef SANITY_CHECK_DOUBLE_COSET
     Tint ord = BigGRP.size() / eStab.size();
     if (TotalSize != ord) {
       std::cerr << "We have TotalSize=" << TotalSize << " but ord=" << ord

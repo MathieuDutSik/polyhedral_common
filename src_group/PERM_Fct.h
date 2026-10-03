@@ -57,7 +57,7 @@ MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
                                               MyMatrix<T> const &EXT2,
                                               Telt const &ePerm) {
   static_assert(is_ring_field<T>::value, "RepresentVertexPermutation");
-#ifdef DEBUG_PERM_FCT
+#ifdef SANITY_CHECK_PERM_FCT
   if (EXT1.rows() != EXT2.rows() || EXT1.cols() != EXT2.cols()) {
     std::cerr << "PERM: EXT1 and EXT2 should be of the same size\n";
     throw TerminalException{1};
@@ -79,7 +79,7 @@ MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
   std::vector<int> ListRowSelectImg(nbRow_s);
   for (size_t iRow = 0; iRow < nbRow_s; iRow++) {
     int iRowImg = ePerm.at(ListRowSelect[iRow]);
-#ifdef DEBUG_PERM_FCT
+#ifdef SANITY_CHECK_PERM_FCT
     if (iRowImg >= EXT2.rows()) {
       std::cerr << "PERM: iRowImg is at a too high index\n";
       std::cerr << "PERM: iRowImg=" << iRowImg << " |EXT2|=" << EXT2.rows()
@@ -711,7 +711,7 @@ Telt GetPermutationOnVectors(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2) {
   Telt ePerm1 = Telt(SortingPerm<MyVector<T>, Tidx>(EXTrow1));
   Telt ePerm2 = Telt(SortingPerm<MyVector<T>, Tidx>(EXTrow2));
   Telt ePermRet = (~ePerm1) * ePerm2;
-#if defined DEBUG_PERM_FCT || defined SANITY_CHECK
+#ifdef SANITY_CHECK_PERM_FCT
   for (size_t iVect = 0; iVect < nbVect; iVect++) {
     size_t jVect = ePermRet.at(iVect);
     if (EXTrow2[jVect] != EXTrow1[iVect]) {
@@ -1044,7 +1044,7 @@ MyMatrix<T> FindTransformation_Kernel(MyMatrix<T> const &EXT1, MyMatrix<T> const
                                Telt const &ePerm) {
   static_assert(is_ring_field<T>::value,
                 "FindTransformation requires the ring to be a field");
-#ifdef DEBUG_PERM_FCT
+#ifdef SANITY_CHECK_PERM_FCT
   size_t sizPerm = ePerm.size();
   size_t sizEXT = EXT1.rows();
   if (sizPerm < sizEXT) {

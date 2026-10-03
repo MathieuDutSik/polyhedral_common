@@ -27,6 +27,10 @@
 #define TIMINGS_MATRIX_GROUP_SIMPLIFICATION
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
+#endif
+
 #ifdef TRACK_INFO
 #define TRACK_INFO_MATRIX_GROUP_SIMPLIFICATION
 #endif
@@ -881,7 +885,7 @@ ExhaustiveReductionComplexityKernelInner_V2(
   for (auto &[comb, blk_int] : map) {
     vect.push_back(comb);
   }
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
   auto check_map_vect = [&](std::string const &context) -> void {
     size_t index = 0;
     for (auto &[comb, blk_int] : map) {
@@ -986,7 +990,7 @@ ExhaustiveReductionComplexityKernelInner_V2(
     size_t pos = std::distance(map.begin(), iter);
     map.erase(iter);
     vect.erase(vect.begin() + pos);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::string context = "delete_entry_at_" + std::to_string(pos);
     check_map_vect(context);
 #endif
@@ -1014,7 +1018,7 @@ ExhaustiveReductionComplexityKernelInner_V2(
     auto iter = result.first;
     size_t pos = std::distance(map.begin(), iter);
     vect.insert(vect.begin() + pos, val);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::string context = "insert_entry_at_" + std::to_string(pos);
     check_map_vect(context);
 #endif

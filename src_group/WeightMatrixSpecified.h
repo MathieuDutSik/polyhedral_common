@@ -186,7 +186,7 @@ ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
          << " NewIdx=" << NewIdx << "\n";
 #endif
     }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
     const std::vector<T> &NewListWeight = rec_pair.first;
     for (size_t idx = 1; idx < idxWeight; idx++) {
       size_t idx1 = idx - 1;
@@ -498,7 +498,7 @@ std::vector<size_t> GetOrdering_ListIdx(const VertexPartition<Tidx> &VP) {
       ListIdx.begin(), ListIdx.end(), [&](int idx1, int idx2) -> bool {
         return VP.ListBlocks[idx1].size() < VP.ListBlocks[idx2].size();
       });
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   for (size_t iCase = 1; iCase < nbCase; iCase++) {
     size_t idx1 = ListIdx[iCase - 1];
     size_t idx2 = ListIdx[iCase];

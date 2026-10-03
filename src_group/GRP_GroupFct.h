@@ -620,7 +620,7 @@ std::vector<Tobj> OrbitSplittingGeneralized(
           Tobj fObj = TheAct(gObj, eGen);
           if (!SingleOrbit.contains(fObj) && !Additional.contains(fObj)) {
             if (!NewElts.contains(fObj)) {
-#ifdef DEBUG_GROUP
+#ifdef SANITY_CHECK_GROUP_FCT
               if (!ListTotal.contains(fObj)) {
                 std::cerr << "Orbit do not match, PANIC!!!\n";
                 throw TerminalException{1};
@@ -755,7 +755,7 @@ OrbitSplittingMap(std::vector<std::pair<Face, T>> &PreListTotal,
           OnFace_inplace(fSet, gSet, eGen);
           if (!SingleOrbit.contains(fSet) && !Additional.contains(fSet)) {
             if (!NewElts.contains(fSet)) {
-#ifdef DEBUG_GROUP
+#ifdef SANITY_CHECK_GROUP_FCT
               if (!ListTotal.contains(fSet)) {
                 std::cerr << "Orbit do not matched, PANIC!!!\n";
                 throw TerminalException{1};

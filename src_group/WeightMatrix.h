@@ -46,6 +46,10 @@
 #undef DEBUG_WEIGHT_MATRIX
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_WEIGHT_MATRIX
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_WEIGHT_MATRIX
 #endif
@@ -246,7 +250,7 @@ public:
   size_t rows(void) const { return nbRow; }
   size_t GetWeightSize(void) const { return ListWeight.size(); }
   Tidx_value GetValue(size_t const &iRow, size_t const &iCol) const {
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
     if (iRow >= nbRow || iCol >= nbRow) {
       std::cerr << "The GetValue is called with wrong iRow/iCol\n";
       throw TerminalException{1};
@@ -264,7 +268,7 @@ public:
   std::vector<T> const &GetWeight() const { return ListWeight; }
   void ReorderingOfWeights(std::vector<Tidx_value> const &gListRev) {
     size_t nbEnt = ListWeight.size();
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
     size_t siz = gListRev.size();
     if (nbEnt != siz) {
       std::cerr << "We should have nbEnt = siz\n";
@@ -301,7 +305,7 @@ public:
     }
     ReorderingOfWeights(g);
     weight_ordered = true;
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
     for (size_t iEnt = 1; iEnt < nbEnt; iEnt++) {
       if (ListWeight[iEnt - 1] >= ListWeight[iEnt]) {
         std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt
@@ -342,7 +346,7 @@ public:
     }
     ReorderingOfWeights(g);
     weight_ordered = true;
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
     for (size_t iEnt = 1; iEnt < nbEnt; iEnt++) {
       if (ListWeight[iEnt - 1] >= ListWeight[iEnt]) {
         std::cerr << "ERROR: The ListWeightB is not increasing at iEnt=" << iEnt
@@ -966,7 +970,7 @@ inline Tidx_value
 get_effective_weight_index(size_t nWei, size_t nbRow, size_t iVert,
                            size_t jVert,
                            WeightMatrix<is_symm, T, Tidx_value> const &WMat) {
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
   if (iVert >= jVert) {
     std::cerr << "iVert=" << iVert << " jVert=" << jVert << "\n";
     std::cerr << "But we should have iVert < jVert\n";
@@ -1200,7 +1204,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
   }
   std::vector<TidxIn> clR(nof_vertices);
   for (size_t i = 0; i < nof_vertices; i++) {
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
     if (cl[i] < 0 || cl[i] >= nof_vertices) {
       std::cerr << "We have cl[i]=" << cl[i]
                 << " but nof_vertices=" << nof_vertices << "\n";
@@ -1215,6 +1219,8 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
 #ifdef DEBUG_WEIGHT_MATRIX
   os << "WEIGHT: nbVert=" << nbVert << " hS=" << hS
      << " nof_vertices=" << nof_vertices << "\n";
+#endif
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
   if (hS * nbVert != nof_vertices) {
     std::cerr << "Error in the number of vertices\n";
     std::cerr << "hS=" << hS << " nbVert=" << nbVert
@@ -1229,7 +1235,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
     if (ListStatus[iCan] == 0) {
       TidxIn iNative = clR[iCan];
       TidxIn iVertNative = iNative % nbVert;
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
       if (posCanonic < 0 || posCanonic >= nbVert) {
         std::cerr << "posCanonic=" << posCanonic << " nbVert=" << nbVert
                   << "\n";
@@ -1240,7 +1246,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
       for (size_t iH = 0; iH < hS; iH++) {
         TidxIn uVertNative = iVertNative + nbVert * iH;
         TidxIn jCan = cl[uVertNative];
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
         if (ListStatus[jCan] == 1) {
           std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
           throw TerminalException{1};
@@ -1411,7 +1417,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(
   Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
   std::vector<std::vector<Tidx>> LGen =
       GetStabilizerWeightMatrix_Kernel_idxin<Tgr, Tidx>(eGR, nbRow, os);
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
   for (auto &eGen : LGen) {
     for (size_t i = 0; i < nbRow; i++) {
       for (size_t j = 0; j < nbRow; j++) {
@@ -1490,7 +1496,7 @@ GetCanonicalizationFromSymmetrized(std::vector<Tidx> const &CanonicOrdSymmRev) {
       for (int iH = 0; iH < 2; iH++) {
         int iEntNativeB = jEntNative + nbEnt * iH;
         int iEntCanB = CanonicOrdSymm[iEntNativeB];
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
         if (ListStatus[iEntCanB] == 1) {
           std::cerr << "Quite absurd, should not be 0 iH=" << iH << "\n";
           throw TerminalException{1};
@@ -1595,7 +1601,7 @@ bool RenormalizeWeightMatrix(
     gListRev[jFound - 1] = i;
   }
   WMat2.ReorderingOfWeights(gListRev);
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
   std::vector<T> const &ListWeight1 = WMatRef.GetWeight();
   std::vector<T> const &ListWeight2 = WMat2.GetWeight();
   for (size_t iEnt = 0; iEnt < nbEnt; iEnt++) {
