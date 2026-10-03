@@ -1552,6 +1552,15 @@ PleskenSouvignierIsometry(std::vector<MyMatrix<Tint>> const &ListMat1,
   if (SHVhalf1.rows() != SHVhalf2.rows()) {
     return {};
   }
+  // An isometry P has det P = +-1, so P M1 P^T = M2 forces equal
+  // determinants. Without this, families of equal size on lattices of
+  // different determinants could match through an integral P of |det| > 1,
+  // whose inverse is not integral.
+  for (size_t iMat = 0; iMat < ListMat1.size(); iMat++) {
+    if (DeterminantMat(ListMat1[iMat]) != DeterminantMat(ListMat2[iMat])) {
+      return {};
+    }
+  }
   bool adaptive = (depth == -1);
   PleskenSouvignierContext<Tint> Ci = PleskenSouvignierBuildContext(
       ListMat1, SHVhalf1, true, depth, os);
