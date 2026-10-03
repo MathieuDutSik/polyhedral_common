@@ -1006,7 +1006,7 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
   os_err << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
          << "\n";
 #endif
-  Tint nb_orbit_sma;
+  Tint nb_orbit_sma(0);
 #ifdef DEBUG_DOUBLE_COSET
   size_t pos = 0;
 #endif
