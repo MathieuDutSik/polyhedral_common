@@ -233,12 +233,14 @@ void WriteGroupGAP(std::ostream &os, Tgroup const &TheGRP) {
 // group combinatorial algorithms
 //
 
-void f_print(std::vector<int> const &V, std::string const &estr) {
-  std::cerr << estr << " =";
+#ifdef DEBUG_GROUP
+inline void f_print(std::vector<int> const &V, std::string const &estr) {
+  std::cerr << "GRPFCT: " << estr << " =";
   for (auto &val : V)
     std::cerr << " " << val;
   std::cerr << "\n";
 }
+#endif
 
 template <typename Tgroup>
 std::vector<int> OrbitIntersection(Tgroup const &TheGRP,
@@ -255,7 +257,9 @@ std::vector<int> OrbitIntersection(Tgroup const &TheGRP,
   };
   auto LGen = TheGRP.GeneratorsOfGroup();
   Tidx eSum = f_sum();
+#ifdef DEBUG_GROUP
   f_print(rList, "input(rList)");
+#endif
   while (true) {
     for (Tidx i = 0; i < n; i++) {
       if (rList[i] == 0) {
@@ -265,13 +269,17 @@ std::vector<int> OrbitIntersection(Tgroup const &TheGRP,
         }
       }
     }
+#ifdef DEBUG_GROUP
     f_print(rList, "iter(rList)");
+#endif
     Tidx eSumNew = f_sum();
     if (eSum == eSumNew)
       break;
     eSum = eSumNew;
   }
+#ifdef DEBUG_GROUP
   f_print(rList, "returning(rList)");
+#endif
   return rList;
 }
 
@@ -284,8 +292,10 @@ std::vector<int> OrbitUnion(Tgroup const &TheGRP,
   std::vector<int> gListB(n);
   for (Tidx i = 0; i < n; i++)
     gListB[i] = 1 - gList[i];
+#ifdef DEBUG_GROUP
   f_print(gList, "OrbitUnion(gList)");
   f_print(gListB, "OrbitUnion(gListB)");
+#endif
   std::vector<int> rListB = OrbitIntersection(TheGRP, gListB);
   for (Tidx i = 0; i < n; i++)
     rListB[i] = 1 - rListB[i];
