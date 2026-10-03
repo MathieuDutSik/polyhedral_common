@@ -764,12 +764,19 @@ std::optional<MyMatrix<Tint>> TestIntEquivalence_ListMat_Vdiag(
   if (!opt1) {
     return {};
   }
+  if (SHV1.cols() != SHV2.cols()) {
+    // Families in different dimensions are never equivalent.
+    return {};
+  }
   MyMatrix<Tfield> SHV1_f = UniversalMatrixConversion<Tfield, Tint>(SHV1);
   MyMatrix<Tfield> SHV2_f = UniversalMatrixConversion<Tfield, Tint>(SHV2);
   Telt eltEquiv(*opt1);
   Telt eltInv = Inverse(eltEquiv);
-  std::optional<MyMatrix<Tfield>> opt2 =
-      FindTransformationGeneral(SHV2_f, SHV1_f, eltInv);
+  // One solver on SHV2 for both the direct test and, when the
+  // transformation is rational, the generators of the symmetries of SHV2:
+  // its row selection is the expensive part.
+  FindTransformationSolver<Tfield> solver2(SHV2_f);
+  std::optional<MyMatrix<Tfield>> opt2 = solver2.solve_general(SHV1_f, eltInv);
   if (IsIntegralTransformation(opt2)) {
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
     os << "|PES: TestIntEquivalence, direct|=" << time << "\n";
@@ -786,8 +793,7 @@ std::optional<MyMatrix<Tint>> TestIntEquivalence_ListMat_Vdiag(
           SHV2_T, ListMat2, Vdiag2, os);
   std::vector<MyMatrix<Tfield>> ListMatrGens2;
   // Automorphisms of the configuration, realized by construction: the
-  // unchecked solve, with the row selection paid once for the loop.
-  FindTransformationSolver<Tfield> solver2(SHV2_f);
+  // unchecked solve.
   for (auto &eList2 : ListGen2) {
     auto f = [&](int iRow) -> int { return eList2[iRow]; };
     std::optional<MyMatrix<Tfield>> opt_f = solver2.solve_field_f(SHV2_f, f);
