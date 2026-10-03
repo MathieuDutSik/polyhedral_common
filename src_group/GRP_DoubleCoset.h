@@ -83,9 +83,15 @@ vectface DoubleCosetDescription_Representation(
   };
   Tint SizeGen = 0;
   std::vector<Local> ListLocal;
+  // WMat is the weight matrix of the orbits of SmaGRP on pairs, so eInv is
+  // constant on the SmaGRP-orbits of sets: different invariants mean
+  // different orbits, and the representative action is not needed.
   auto DoubleCosetInsertEntry = [&](Face const &testList) -> void {
     size_t eInv = GetLocalInvariantWeightMatrix(WMat, testList);
     for (auto const &fLocal : ListLocal) {
+      if (fLocal.eInv != eInv) {
+        continue;
+      }
       std::optional<Telt> test =
           SmaGRP.RepresentativeAction_OnSets(fLocal.eFace, testList);
       if (test)
@@ -117,11 +123,12 @@ vectface DoubleCosetDescription_Representation(
   if (SizeGen == TotalSize)
     return ListListSet;
   vectface PartialOrbit = std::move(ListListSet);
+  std::unordered_set<Face> SetPartialOrbit;
+  for (auto &fList : PartialOrbit) {
+    SetPartialOrbit.insert(fList);
+  }
   auto IsPresent = [&](Face const &testList) -> bool {
-    for (auto &fList : PartialOrbit)
-      if (fList == testList)
-        return true;
-    return false;
+    return SetPartialOrbit.contains(testList);
   };
   size_t pos_start = 0;
   while (true) {
@@ -130,6 +137,7 @@ vectface DoubleCosetDescription_Representation(
       for (auto &eGen : BigGens) {
         Face eNewList = OnFace(PartialOrbit[i_orb], eGen);
         if (!IsPresent(eNewList)) {
+          SetPartialOrbit.insert(eNewList);
           PartialOrbit.push_back(eNewList);
           DoubleCosetInsertEntry(eNewList);
           if (SizeGen == TotalSize) {
