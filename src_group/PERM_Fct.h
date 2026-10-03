@@ -312,17 +312,20 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
   }
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
   // Now testing that we have EXT1 EqMat = EXT2
+  MyVector<Tfield> V1_f(nbCol);
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     size_t iRowImg = eList[iRow];
-    // We can have f1 = f2 which zould invalidate reference so copy is needed
-    MyVector<T> V1 = f1(iRow);
+    // The row is converted once, before f2 is called: f1 and f2 can share
+    // their buffer, so the reference returned by f1 does not survive f2.
+    const MyVector<T> &V1 = f1(iRow);
+    for (size_t jRow = 0; jRow < nbCol; jRow++) {
+      V1_f(jRow) = UniversalScalarConversion<Tfield, T>(V1(jRow));
+    }
     const MyVector<T> &V2 = f2(iRowImg);
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
-      T val = -V2(iCol);
-      Tfield eSum = UniversalScalarConversion<Tfield, T>(val);
+      Tfield eSum = -UniversalScalarConversion<Tfield, T>(V2(iCol));
       for (size_t jRow = 0; jRow < nbCol; jRow++) {
-        Tfield val_B = UniversalScalarConversion<Tfield, T>(V1(jRow));
-        AddMul(eSum, EqMat(jRow, iCol), val_B);
+        AddMul(eSum, EqMat(jRow, iCol), V1_f(jRow));
       }
       if (eSum != 0) {
 #ifdef DEBUG_PERM_FCT
@@ -455,12 +458,17 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   // We are testing if EXT1 P = perm(EXT2)
   std::vector<Tidx> V(n_rows);
   Face f(n_rows);
+  // The row of EXT1 over the field, converted once per row rather than once
+  // per entry of the product.
+  MyVector<Tfield> Row_f(n_cols);
   for (size_t i_row = 0; i_row < n_rows; i_row++) {
+    for (size_t j_row = 0; j_row < n_cols; j_row++) {
+      Row_f(j_row) = UniversalScalarConversion<Tfield, T>(EXT1(i_row, j_row));
+    }
     for (size_t i_col = 0; i_col < n_cols; i_col++) {
       Tfield eSum1(0);
       for (size_t j_row = 0; j_row < n_cols; j_row++) {
-        Tfield val = UniversalScalarConversion<Tfield, T>(EXT1(i_row, j_row));
-        AddMul(eSum1, val, P(j_row, i_col));
+        AddMul(eSum1, Row_f(j_row), P(j_row, i_col));
       }
       std::optional<T> optA = UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!optA) {
@@ -622,12 +630,18 @@ bool CheckEquivalence(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
   size_t n_cols = EXT1.cols();
   //
   // We are testing if EXT1 P = perm(EXT2)
+  // The row of EXT1 over the field, converted once per row: the mixed
+  // product T * Tfield would convert the entry again for every column.
+  MyVector<Tfield> Row_f(n_cols);
   for (size_t i_row = 0; i_row < n_rows; i_row++) {
     size_t i_row_img = ListIdx[i_row];
+    for (size_t j = 0; j < n_cols; j++) {
+      Row_f(j) = UniversalScalarConversion<Tfield, T>(EXT1(i_row, j));
+    }
     for (size_t i_col = 0; i_col < n_cols; i_col++) {
       Tfield eSum1(0);
       for (size_t j = 0; j < n_cols; j++) {
-        eSum1 += EXT1(i_row, j) * P(j, i_col);
+        AddMul(eSum1, Row_f(j), P(j, i_col));
       }
       std::optional<T> opt = UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!opt) {
