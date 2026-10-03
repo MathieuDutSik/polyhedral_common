@@ -5,6 +5,7 @@
 // clang-format off
 #include "COMB_Combinatorics_buildset.h"
 #include <algorithm>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 // clang-format on
@@ -12,16 +13,13 @@
 // Computes the residue modulo N.
 // This is used for debugging and allows getting finite
 // groups that can test membership.
+// The dimension n is an argument so that an empty list of generators, the
+// trivial group, is handled.
 template <typename T, typename Tgroup>
 Tgroup GenerateGroupModuloAction(std::vector<MyMatrix<T>> const &ListM,
-                                 int const &N) {
+                                 int const &n, int const &N) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  if (ListM.empty()) {
-    std::cerr << "COMB: Not possible to work if zero vectors are available\n";
-    throw TerminalException{1};
-  }
-  int n = ListM[0].rows();
   MyMatrix<int> Mat_cos = BuildSet(n, N);
   std::vector<MyVector<int>> l_cos;
   std::unordered_map<MyVector<int>, size_t> map_cos;
@@ -65,11 +63,29 @@ Tgroup GenerateGroupModuloAction(std::vector<MyMatrix<T>> const &ListM,
   return Tgroup(ListPerm, n_act);
 }
 
+// The dimension of two lists of generators, either of which can be empty,
+// or nothing when both are.
+template <typename T>
+std::optional<int> GetDimensionListGens(std::vector<MyMatrix<T>> const &L1,
+                                        std::vector<MyMatrix<T>> const &L2) {
+  if (!L1.empty()) {
+    return L1[0].rows();
+  }
+  if (!L2.empty()) {
+    return L2[0].rows();
+  }
+  return {};
+}
+
 template <typename T, typename Tgroup>
 void CheckSubgroupInclusion(std::vector<MyMatrix<T>> const &ListGRP,
                             std::vector<MyMatrix<T>> const &ListSubGRP,
                             [[maybe_unused]] std::ostream &os) {
-  int n = ListGRP[0].rows();
+  std::optional<int> opt = GetDimensionListGens(ListGRP, ListSubGRP);
+  if (!opt) {
+    return;
+  }
+  int n = *opt;
   T limit(10000);
   for (int N = 2; N <= 20; N++) {
     T N_T = UniversalScalarConversion<T, int>(N);
@@ -77,8 +93,8 @@ void CheckSubgroupInclusion(std::vector<MyMatrix<T>> const &ListGRP,
     if (Npow > limit) {
       break;
     }
-    Tgroup GRP = GenerateGroupModuloAction<T, Tgroup>(ListGRP, N);
-    Tgroup SubGRP = GenerateGroupModuloAction<T, Tgroup>(ListSubGRP, N);
+    Tgroup GRP = GenerateGroupModuloAction<T, Tgroup>(ListGRP, n, N);
+    Tgroup SubGRP = GenerateGroupModuloAction<T, Tgroup>(ListSubGRP, n, N);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: N=" << N << " Npow=" << Npow << " |GRP|=" << GRP.size()
        << " |SubGRP|=" << SubGRP.size() << "\n";
@@ -95,10 +111,11 @@ template <typename T, typename Tgroup>
 void CheckGroupEquality(std::vector<MyMatrix<T>> const &ListGens1,
                         std::vector<MyMatrix<T>> const &ListGens2,
                         [[maybe_unused]] std::ostream &os) {
-  if (ListGens1.empty()) {
+  std::optional<int> opt = GetDimensionListGens(ListGens1, ListGens2);
+  if (!opt) {
     return;
   }
-  int n = ListGens1[0].rows();
+  int n = *opt;
   T limit(10000);
   for (int N = 2; N <= 20; N++) {
     T N_T = UniversalScalarConversion<T, int>(N);
@@ -106,8 +123,8 @@ void CheckGroupEquality(std::vector<MyMatrix<T>> const &ListGens1,
     if (Npow > limit) {
       break;
     }
-    Tgroup GRP1 = GenerateGroupModuloAction<T, Tgroup>(ListGens1, N);
-    Tgroup GRP2 = GenerateGroupModuloAction<T, Tgroup>(ListGens2, N);
+    Tgroup GRP1 = GenerateGroupModuloAction<T, Tgroup>(ListGens1, n, N);
+    Tgroup GRP2 = GenerateGroupModuloAction<T, Tgroup>(ListGens2, n, N);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: N=" << N << " Npow=" << Npow << " |GRP1|=" << GRP1.size()
        << " |GRP2|=" << GRP2.size() << "\n";
