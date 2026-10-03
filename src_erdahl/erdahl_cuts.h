@@ -18,6 +18,10 @@
 #define SANITY_CHECK_ERDAHL_CUTS
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_ERDAHL_CUTS
+#endif
+
 /*
   The cone of the Erdahl cuts.
 
@@ -286,6 +290,67 @@ template <typename T, typename Tint>
 ErdahlCutSeparation<T, Tint> erdahl_cut_separation(MyMatrix<T> const &F,
                                                    std::ostream &os) {
   int np1 = F.rows();
+  int n = np1 - 1;
+  /*
+    If f is invariant by the translations of a lattice L, f = f' o pi for
+    pi : Z^n -> Z^n / L, and F is separated from CUT_E(n) if and only if F'
+    is separated from CUT_E(n - dim L). Without this reduction the optimal
+    inequalities form a non polyhedral face (<M, F> does not see the
+    components of M along L): the cutting planes chase it one cut at a
+    time, towards nearly singular M for which the closest vector problems
+    become expensive. In the adapted basis A (rows (1, x) = (1, y) A) the
+    function is F_y = A F A^T = F' + 0, and M = A^T (M' + 0) A is valid
+    (h_M(v) = h_{M' + 0}(A v), A e_0 = e_0) with <M, F> = <M', F'>.
+   */
+  if (n > 0) {
+    MyMatrix<T> B(n, np1);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < np1; j++) {
+        B(i, j) = F(1 + i, j);
+      }
+    }
+    MyMatrix<Tint> L =
+        NullspaceIntMat(UniversalMatrixConversion<Tint, T>(RemoveFractionMatrix(B)));
+    if (L.rows() > 0) {
+      ErdahlAdaptedBasis<Tint> ab = erdahl_adapted_basis(L, n);
+      MyMatrix<T> A = UniversalMatrixConversion<T, Tint>(ab.AffBasis);
+      MyMatrix<T> F_y = A * F * A.transpose();
+      int pp1 = ab.p + 1;
+      MyMatrix<T> F_red(pp1, pp1);
+      for (int i = 0; i < pp1; i++) {
+        for (int j = 0; j < pp1; j++) {
+          F_red(i, j) = F_y(i, j);
+        }
+      }
+#ifdef DEBUG_ERDAHL_CUTS
+      os << "ERDAHL: cut separation, reduction by an isotropy lattice of "
+            "dimension "
+         << L.rows() << "\n";
+#endif
+      ErdahlCutSeparation<T, Tint> sep_red =
+          erdahl_cut_separation<T, Tint>(F_red, os);
+      MyMatrix<T> M_y = ZeroMatrix<T>(np1, np1);
+      for (int i = 0; i < pp1; i++) {
+        for (int j = 0; j < pp1; j++) {
+          M_y(i, j) = sep_red.M(i, j);
+        }
+      }
+      MyMatrix<T> M = A.transpose() * M_y * A;
+      auto res = erdahl_zero_set<T, Tint>(erdahl_cut_dual_function(M), os);
+      if (res.is_err()) {
+        std::cerr << "ERDAHL: the pulled back inequality should be valid\n";
+        throw TerminalException{1};
+      }
+#ifdef SANITY_CHECK_ERDAHL_CUTS
+      if (erdahl_cut_pairing(M, F) != erdahl_cut_pairing(sep_red.M, F_red)) {
+        std::cerr << "ERDAHL: the reduction should preserve the pairing\n";
+        throw TerminalException{1};
+      }
+#endif
+      return {erdahl_cut_pairing(M, F), M, res.get_ok(), sep_red.n_iter,
+              sep_red.n_constraint};
+    }
+  }
   int dim = (np1 * (np1 + 1)) / 2;
   std::vector<MyVector<T>> l_ineq;
   std::set<MyVector<Tint>> set_v;
@@ -379,14 +444,40 @@ ErdahlCutSeparation<T, Tint> erdahl_cut_separation(MyMatrix<T> const &F,
     for (int i = 0; i < dim; i++) {
       ToBeMinimized(1 + i) = prF(i);
     }
+#ifdef TIMINGS_ERDAHL_CUTS
+    MicrosecondTime time_lp;
+#endif
     LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
+#ifdef TIMINGS_ERDAHL_CUTS
+    os << "|ERDAHL: cut separation, LP iter=" << n_iter << " |ineq|=" << n_ineq
+       << "|=" << time_lp << "\n";
+#endif
     if (!eSol.DirectSolution) {
       std::cerr << "ERDAHL: the separation linear program should have an "
                    "optimal solution\n";
       throw TerminalException{1};
     }
     MyMatrix<T> M = erdahl_cut_symmetric_from_coordinates(*eSol.DirectSolution, np1);
+#ifdef TIMINGS_ERDAHL_CUTS
+    MicrosecondTime time_cvp;
+#endif
     auto res = erdahl_zero_set<T, Tint>(erdahl_cut_dual_function(M), os);
+#ifdef TIMINGS_ERDAHL_CUTS
+    {
+      // The size of the coefficients of M, in bits.
+      size_t max_num = 0;
+      size_t max_den = 0;
+      for (int i = 0; i < np1; i++) {
+        for (int j = 0; j < np1; j++) {
+          max_num = std::max(max_num, mpz_sizeinbase(M(i, j).get_num_mpz_t(), 2));
+          max_den = std::max(max_den, mpz_sizeinbase(M(i, j).get_den_mpz_t(), 2));
+        }
+      }
+      os << "|ERDAHL: cut separation, CVP iter=" << n_iter
+         << " valid=" << res.is_ok() << " bits(num)=" << max_num
+         << " bits(den)=" << max_den << "|=" << time_cvp << "\n";
+    }
+#endif
 #ifdef DEBUG_ERDAHL_CUTS
     os << "ERDAHL: cut separation, iter=" << n_iter << " |ineq|=" << n_ineq
        << " value=" << erdahl_cut_pairing(M, F)
