@@ -867,9 +867,10 @@ vectface OrbitSplittingListOrbitKernel_spec(
 
 /*
   Some information from the run of the test cases in CI_tests/DBL directory:
-  - The "double_cosets" seem to work best overall.
-  - Sometimes the "single_cosets" works better than "double_cosets" though
-  when it does, not by much.
+  - The "double_cosets" method (DoubleCosetDescription_DoubleCoset_Block)
+  seemed to work best overall, and "single_cosets" was sometimes better
+  though not by much. It has been disabled since commit 31c362df and
+  parse_double_coset_method no longer accepts it.
   - The "repr" is sometimes working faster than "canonic" though usually the
   "canonic" is faster.
   - The "canonic" and "canonic_initial_triv" seem to have similar performance.

@@ -18,8 +18,7 @@ int main(int argc, char *argv[]) {
                                            "exhaustive_sparse",
                                            "exhaustive_robin",
                                            "exhaustive_hopscotch",
-                                           "single_cosets",
-                                           "double_cosets"};
+                                           "single_cosets"};
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
