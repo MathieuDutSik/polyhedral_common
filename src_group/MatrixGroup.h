@@ -4132,8 +4132,8 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MATGRP: helper|=" << time << "\n";
 #endif
-  MyMatrix<T> eLatt1 = Inverse(eBasis1) * TheMatEquiv;
-  MyMatrix<T> eLatt2 = Inverse(eBasis2);
+  MyMatrix<T> eLatt1 = InvBasis1 * TheMatEquiv;
+  MyMatrix<T> const &eLatt2 = InvBasis2;
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MATGRP: eLattX|=" << time << "\n";
 #endif
