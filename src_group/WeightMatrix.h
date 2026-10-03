@@ -377,7 +377,7 @@ public:
         for (size_t j = i + 1; j < nbRow; j++) {
           size_t pos1 = weightmatrix_idx<false>(nbRow, i, j);
           size_t pos2 = weightmatrix_idx<false>(nbRow, j, i);
-          if (pos1 != pos2) {
+          if (TheMat[pos1] != TheMat[pos2]) {
             return false;
           }
         }
