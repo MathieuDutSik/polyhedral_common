@@ -1667,6 +1667,15 @@ WeightMatrixFromPairOrbits(Tgroup const &GRP, std::ostream &os) {
     std::pair<int, int> eStart = GetUnset();
     if (eStart.first == -1)
       break;
+    // The index miss_val marks the unassigned entries, so an orbit of that
+    // index would be read back as unassigned and assigned again.
+    if (static_cast<size_t>(iOrbit) >= static_cast<size_t>(miss_val)) {
+      std::cerr << "WEIGHT: WeightMatrixFromPairOrbits, the number of orbits "
+                   "on pairs exceeds "
+                << static_cast<size_t>(miss_val) - 1
+                << ", the capacity of Tidx_value, n_act=" << n << "\n";
+      throw TerminalException{1};
+    }
     ListWeight.push_back(iOrbit);
     std::vector<std::pair<int, int>> eList{eStart};
     while (true) {
