@@ -252,13 +252,14 @@ template <typename T> bool check_orth(RecSparse<T> const &eRecSparse) {
   int n = eRecSparse.n;
   MyVector<T> s1(n);
   for (int i = 0; i < n; i++) {
-    int eVal = random_int(0, 99);
+    // Nonzero entries, so that the norm of s1 is not zero.
+    int eVal = random_int(1, 100);
     T eValT = eVal;
     s1(i) = eValT;
   }
   MyVector<T> s2 = eRecSparse.A(eRecSparse.At(s1));
   T err = L2_Norm(s1 - s2) / L2_Norm(s1);
-  T tol = 1 / 100;
+  T tol = T(1) / T(100);
   if (err > tol)
     return false;
   return true;

@@ -6,6 +6,7 @@
 #include "MAT_SparseMatrix.h"
 #include <limits>
 #include <optional>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -227,11 +228,13 @@ SparseSolutionMat_Exact(MySparseMatrix<T> const &A, MyVector<T> const &b,
 }
 
 /*
-  Consistency of x A = b tested by elimination modulo a prime. An
-  inconsistency modulo p implies the inconsistency over the rationals;
-  a consistency modulo p implies the rational one except with
-  probability about 1/p. The arithmetic is on machine words, so the
-  fill-in costs nothing like the rational elimination.
+  Consistency of x A = b tested by elimination modulo a prime. When no
+  denominator of A and b is divisible by p, an inconsistency modulo p
+  implies the inconsistency over the rationals, and a consistency modulo p
+  implies the rational one except with probability about 1/p. When one is,
+  the reduction modulo p is not defined and the result is Aborted. The
+  arithmetic is on machine words, so the fill-in costs nothing like the
+  rational elimination.
  */
 // The inverse of a modulo the prime p < 2^31, by Fermat.
 inline int64_t inverse_mod_p(int64_t const &a, int64_t const &p) {
@@ -246,25 +249,37 @@ inline int64_t inverse_mod_p(int64_t const &a, int64_t const &p) {
   return res;
 }
 
+// num / den modulo p from the residues 0 <= num, den < p. Empty when p
+// divides the denominator, which has then no inverse.
+inline std::optional<int64_t> quotient_mod_p(int64_t const &num,
+                                             int64_t const &den,
+                                             int64_t const &p) {
+  if (den == 0) {
+    return {};
+  }
+  return (num * inverse_mod_p(den, p)) % p;
+}
+
 #ifndef WASM_PLATFORM
 // With GMP, the residues of the numerator and the denominator are taken
 // without forming any integer.
-inline int64_t residue_mod_p(mpq_class const &x, int64_t const &p) {
+inline std::optional<int64_t> residue_mod_p(mpq_class const &x,
+                                            int64_t const &p) {
   int64_t num = mpz_fdiv_ui(x.get_num_mpz_t(), p);
   int64_t den = mpz_fdiv_ui(x.get_den_mpz_t(), p);
-  return (num * inverse_mod_p(den, p)) % p;
+  return quotient_mod_p(num, den, p);
 }
 #endif
 
 // Any other rational type, from the residues of its numerator and its
 // denominator in its own integer type.
 template <typename T>
-int64_t residue_mod_p(T const &x, int64_t const &p) {
+std::optional<int64_t> residue_mod_p(T const &x, int64_t const &p) {
   using Tz = decltype(GetNumerator_z(x));
   Tz p_z = UniversalScalarConversion<Tz, int64_t>(p);
   int64_t num = UniversalScalarConversion<int64_t, Tz>(ResInt(GetNumerator_z(x), p_z));
   int64_t den = UniversalScalarConversion<int64_t, Tz>(ResInt(GetDenominator_z(x), p_z));
-  return (num * inverse_mod_p(den, p)) % p;
+  return quotient_mod_p(num, den, p);
 }
 
 template <typename T>
@@ -277,13 +292,20 @@ SparseSolveStatus SparseSystemConsistent_Mod_Budget(MySparseMatrix<T> const &A, 
   std::vector<std::unordered_map<int, int64_t>> eq(n_eq);
   std::vector<int64_t> rhs(n_eq);
   for (int j = 0; j < n_eq; j++) {
-    rhs[j] = residue_mod_p(b(j), p);
+    std::optional<int64_t> opt = residue_mod_p(b(j), p);
+    if (!opt) {
+      return SparseSolveStatus::Aborted;
+    }
+    rhs[j] = *opt;
   }
   for (int k = 0; k < A.outerSize(); ++k) {
     for (typename MySparseMatrix<T>::InnerIterator it(A, k); it; ++it) {
-      int64_t val = residue_mod_p(it.value(), p);
+      std::optional<int64_t> opt = residue_mod_p(it.value(), p);
+      if (!opt) {
+        return SparseSolveStatus::Aborted;
+      }
       int64_t &ref = eq[it.col()][it.row()];
-      ref = (ref + val) % p;
+      ref = (ref + *opt) % p;
     }
   }
   std::vector<std::unordered_set<int>> occ(n_unknown);
@@ -297,36 +319,25 @@ SparseSolveStatus SparseSystemConsistent_Mod_Budget(MySparseMatrix<T> const &A, 
       }
     }
   }
+  // The entries of the active equations: an eliminated equation is freed.
   size_t n_entries = 0;
+  // The active equations by (size, index), the first one being the sparsest
+  // of smallest index.
+  std::set<std::pair<size_t, int>> by_size;
   for (int j = 0; j < n_eq; j++) {
     n_entries += eq[j].size();
+    by_size.insert({eq[j].size(), j});
   }
-  std::vector<uint8_t> active(n_eq, 1);
-  int n_active = n_eq;
-  while (n_active > 0) {
+  while (!by_size.empty()) {
     if (n_entries > max_entries) {
       return SparseSolveStatus::Aborted;
     }
-    int e = -1;
-    size_t siz_best = 0;
-    for (int j = 0; j < n_eq; j++) {
-      if (active[j] == 1) {
-        size_t siz = eq[j].size();
-        if (e == -1 || siz < siz_best) {
-          e = j;
-          siz_best = siz;
-          if (siz == 0) {
-            break;
-          }
-        }
-      }
-    }
+    int e = by_size.begin()->second;
+    by_size.erase(by_size.begin());
     if (eq[e].empty()) {
       if (rhs[e] != 0) {
         return SparseSolveStatus::Inconsistent;
       }
-      active[e] = 0;
-      n_active -= 1;
       continue;
     }
     int u = -1;
@@ -344,6 +355,7 @@ SparseSolveStatus SparseSystemConsistent_Mod_Budget(MySparseMatrix<T> const &A, 
       if (f == e) {
         continue;
       }
+      by_size.erase({eq[f].size(), f});
       int64_t factor = (eq[f][u] * pv_inv) % p;
       for (auto &kv : eq[e]) {
         int i = kv.first;
@@ -369,12 +381,13 @@ SparseSolveStatus SparseSystemConsistent_Mod_Budget(MySparseMatrix<T> const &A, 
       occ[u].erase(f);
       n_entries -= 1;
       rhs[f] = ((rhs[f] - (factor * rhs[e]) % p) % p + p) % p;
+      by_size.insert({eq[f].size(), f});
     }
     for (auto &kv : eq[e]) {
       occ[kv.first].erase(e);
     }
-    active[e] = 0;
-    n_active -= 1;
+    n_entries -= eq[e].size();
+    std::unordered_map<int, int64_t>().swap(eq[e]);
   }
   return SparseSolveStatus::Solved;
 }
