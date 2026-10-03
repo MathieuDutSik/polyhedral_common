@@ -14,7 +14,8 @@ PROGRAM		= TEST_WeightMatrixLimited \
 		  GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer \
 		  GRP_MatrixGroupSimplification GRP_TestFinitenessSimp \
 		  GRP_MatrixGroupSimplificationOnline \
-		  GRP_MatrixGroupSimplificationOnlineOpt
+		  GRP_MatrixGroupSimplificationOnlineOpt \
+		  GRP_DirectMatrix_Stabilizer
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

@@ -66,6 +66,16 @@ template <bool is_symmetric> inline size_t weightmatrix_get_nb(size_t nbRow) {
   }
 }
 
+// The same with the symmetry known at runtime. It is also the largest
+// possible number of distinct weights, which the choice of Tidx_value has to
+// accommodate: a non-symmetric family can have one weight per ordered pair.
+inline size_t weightmatrix_get_nb(bool is_symmetric, size_t nbRow) {
+  if (is_symmetric) {
+    return weightmatrix_get_nb<true>(nbRow);
+  }
+  return weightmatrix_get_nb<false>(nbRow);
+}
+
 // We need to have nbRow as input for template reasons. But it is unused in the
 // symmetric case. So, pragma statement is needed to avoid a warning being
 // thrown.

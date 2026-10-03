@@ -637,7 +637,8 @@ std::vector<typename Tgroup::Telt> LinPolytope_Automorphism_GramMat_LGen(MyMatri
                                                                          MyMatrix<T> const &GramMat,
                                                                          std::ostream &os) {
   size_t nbRow = EXT.rows();
-  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  size_t max_poss_val =
+      weightmatrix_get_nb(IsSymmetricMatrix(GramMat), nbRow);
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, uint8_t>(
         EXT, GramMat, os);
@@ -752,7 +753,8 @@ LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT,
                                     MyMatrix<T> const &GramMat,
                                     size_t threshold, std::ostream &os) {
   size_t nbRow = EXT.rows();
-  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  size_t max_poss_val =
+      weightmatrix_get_nb(IsSymmetricMatrix(GramMat), nbRow);
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint8_t>(
         EXT, GramMat, threshold, os);
@@ -1283,7 +1285,8 @@ size_t GetInvariant_ListMat_Vdiag(size_t const &seed, MyMatrix<T> const &EXT,
                                   std::vector<T> const &Vdiag,
                                   std::ostream &os) {
   size_t nbRow = EXT.rows();
-  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  size_t max_poss_val =
+      weightmatrix_get_nb(is_family_symmmetric(ListMat), nbRow);
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint8_t>(
         seed, EXT, ListMat, Vdiag, os);
@@ -1336,7 +1339,8 @@ GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
                                      std::vector<T> const &Vdiag,
                                      std::ostream &os) {
   size_t nbRow = EXT.rows();
-  size_t max_val_poss = nbRow * nbRow / 2 + 1;
+  size_t max_val_poss =
+      weightmatrix_get_nb(is_family_symmmetric(ListMat), nbRow);
   if (max_val_poss < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tgroup,
                                                            uint8_t>(
@@ -1419,7 +1423,8 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, size_t threshold, std::ostream &os) {
   size_t nbRow = EXT.rows();
-  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  size_t max_poss_val =
+      weightmatrix_get_nb(is_family_symmmetric(ListMat), nbRow);
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint8_t>(
         EXT, ListMat, Vdiag, threshold, os);
@@ -1563,7 +1568,8 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
     return {};
   }
   size_t nbRow = EXT1.rows();
-  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  bool is_symm = is_family_symmmetric(ListMat1) && is_family_symmmetric(ListMat2);
+  size_t max_poss_val = weightmatrix_get_nb(is_symm, nbRow);
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "PES: max_poss_val=" << max_poss_val << "\n";
 #endif
@@ -2227,7 +2233,8 @@ template <typename Tint>
 std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(
     MyMatrix<Tint> const &EXT, MyMatrix<Tint> const &Qmat, std::ostream &os) {
   size_t nbRow = EXT.rows();
-  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  // The absolute weight matrix is symmetric.
+  size_t max_poss_val = weightmatrix_get_nb<true>(nbRow);
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<
         Tint, uint8_t>(EXT, Qmat, os);

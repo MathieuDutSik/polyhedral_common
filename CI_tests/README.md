@@ -16,7 +16,8 @@ for the CI tests and checking their correctness.
 List of CI tests. Each directory is driven by the workflow named next
 to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 
-* `01_RatIntAutomorphy` -- `ci_01_rat_int_automorphy`: Rational and integral automorphism groups of a configuration of vectors, the associated isomorphism and canonical form codes, and the decomposition of the rational group into double cosets of the integral one.
+* `01_RatIntAutomorphy` -- `ci_01A_rat_int_automorphy`: Rational and integral automorphism groups of a configuration of vectors, the associated isomorphism and canonical form codes, and the decomposition of the rational group into double cosets of the integral one.
+* `01B_NonSymmetricStabilizers` -- `ci_01B_direct_matrix_stabilizer`: The stabilizer of a matrix given directly, which need not be symmetric (GRP_DirectMatrix_Stabilizer: Paley tournaments, circulants with distinct values, matrices with all entries distinct, the Petersen graph), and the automorphism group of a configuration of vectors for a non-symmetric Gram matrix (GRP_LinPolytope_Automorphism_GramMat, including more than 1000 vectors, where the heuristic scheme runs). The group orders are known and each generator is checked in GAP.
 * `02A_FindPositiveVectors` -- `ci_02A_find_positive_vectors`: Finding positive vectors of indefinite forms.
 * `02B_RealAlgebraicPolytope` -- `ci_02B_real_algebraic_polytope`: Automorphism group and dual description, by bb, cdd, lrs and normaliz, of the regular N-gons over the real algebraic field Q(2*sin(2*pi/N)); and the dual description of G553, a 7-dimensional cone on 150 generators over Q(2*sin(2*pi/5)) with a symmetry group, where the recursive dual description using the symmetry and the direct one ignoring it are checked against each other.
 * `03_Tspaces_IsoDelaunay` -- `ci_03_enum_isodelaunay`: Enumeration of isoDelaunay domains.

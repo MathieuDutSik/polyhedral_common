@@ -1,7 +1,7 @@
 name: Cleanup of workflow runs older than 3 months
 
 on:
-  # First day of each month, at 06:00 so as not to overlap with ci_01
+  # First day of each month, at 06:00 so as not to overlap with ci_01A/ci_01B
   # (this is maintenance, not a test workflow, hence no ci_NN day slot).
   schedule:
     - cron: "0 6 1 * *"

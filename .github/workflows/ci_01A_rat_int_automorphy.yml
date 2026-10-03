@@ -1,4 +1,4 @@
-name: CI(01) of Rational and Integral Automorphism groups
+name: CI(01A) of Rational and Integral Automorphism groups
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -10,9 +10,9 @@ name: CI(01) of Rational and Integral Automorphism groups
 # GAP driver.
 
 on:
-  # One time per month
+  # Day 1 of the odd months; ci_01B takes the even months
   schedule:
-    - cron: "0 0 1 * *"
+    - cron: "0 0 1 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.

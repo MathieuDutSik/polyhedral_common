@@ -610,6 +610,7 @@ endforeach()
 set(
   GROUP_PROGRAMS
   TEST_WeightMatrixLimited
+  GRP_DirectMatrix_Stabilizer
   GRP_OrbitSplitting
   GRP_VectorSplitting
   GRP_LinearSpace_Equivalence
