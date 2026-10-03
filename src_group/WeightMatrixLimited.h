@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "GRP_GroupFct.h"
+#include <algorithm>
 #include <limits>
 #include <map>
 #include <unordered_map>
@@ -17,6 +18,10 @@
 
 #ifdef DISABLE_DEBUG_WEIGHT_MATRIX_LIMITED
 #undef DEBUG_WEIGHT_MATRIX_LIMITED
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_WEIGHT_MATRIX_LIMITED
 #endif
 
 template <bool is_symmetric_impl, typename T_impl> struct WeightMatrixLimited {
@@ -134,6 +139,7 @@ private:
     std::vector<Tpair> list_selected;
     auto iter = map_pair.cbegin();
     size_t sel_size = 0;
+    list_offdiag_pair_shift.clear();
     while (true) {
       if (iter == map_pair.cend())
         break;
@@ -141,6 +147,9 @@ private:
       size_t tot_siz = iter->first * (e_pair.size());
       if (sel_size + tot_siz > max_offdiag)
         break;
+      for (size_t i_pair = 0; i_pair < e_pair.size(); i_pair++) {
+        list_offdiag_pair_shift.push_back(sel_size + i_pair * iter->first);
+      }
       sel_size += tot_siz;
       list_selected.insert(list_selected.end(), e_pair.begin(), e_pair.end());
       iter++;
@@ -284,6 +293,9 @@ public:
       reorder_entries(list_part_weight, list_part_idx);
       for (auto &val : list_part_idx)
         list_offdiag_idx.push_back(shift_weight + val);
+      list_offdiag_weight.insert(list_offdiag_weight.end(),
+                                 list_part_weight.begin(),
+                                 list_part_weight.end());
       shift_weight += list_part_weight.size();
       n_offdiag_weight += list_part_weight.size();
     }
@@ -444,29 +456,35 @@ public:
       size_t jWeight = list_diag_idx[fVal];
       size_t pos = mat_select_pair[iWeight + nw_diag * jWeight];
       if (pos != std::numeric_limits<size_t>::max()) {
+        // The position of the pair in the block of the selected pair, in the
+        // order in which both constructors enumerate it: i over the class of
+        // iWeight then j over the class of jWeight for two classes; the upper
+        // triangle row by row (symmetric) or the rows without the diagonal
+        // (non-symmetric) within one class.
         size_t i = list_revdiag_elements[eVal];
         size_t j = list_revdiag_elements[fVal];
-        size_t siz1 = list_diag_sizes[iWeight];
-        size_t siz2 = list_diag_sizes[jWeight];
+        size_t siz = list_diag_sizes[jWeight];
         size_t pos_B;
         if (iWeight != jWeight) {
-          pos_B = i + siz1 * j;
+          pos_B = i * siz + j;
         } else {
           if constexpr (is_symmetric) {
-            if (i < j) {
-              pos_B = i * (i - 1) / 2 + j - 1;
-            } else {
-              pos_B = j * (j - 1) / 2 + i - 1;
-            }
+            size_t a = std::min(i, j);
+            size_t b = std::max(i, j);
+            pos_B = a * siz - a * (a + 1) / 2 + (b - a - 1);
           } else {
-            // false
-            pos_B = i + siz2 * j;
+            pos_B = i * (siz - 1) + (j < i ? j : j - 1);
           }
         }
-        size_t pos_C = list_offdiag_shifts[pos] + pos_B;
+        size_t pos_C = list_offdiag_pair_shift[pos] + pos_B;
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_LIMITED
         if (pos_C >= list_offdiag_idx.size()) {
+          std::cerr << "WML: pos_C=" << pos_C
+                    << " |list_offdiag_idx|=" << list_offdiag_idx.size()
+                    << "\n";
           throw TerminalException{1};
         }
+#endif
         size_t kWeight = list_offdiag_idx[pos_C];
         eInv[nw_diag + shift_index + kWeight]++;
       }
@@ -523,6 +541,9 @@ private:
   std::vector<size_t> list_revdiag_elements;
   //
   std::vector<size_t> mat_select_pair;
+  // For each selected pair of diagonal weights, the start of its block in
+  // list_offdiag_idx.
+  std::vector<size_t> list_offdiag_pair_shift;
   std::vector<T> list_offdiag_weight;
   std::vector<size_t> list_offdiag_idx;
   std::vector<size_t> list_offdiag_sizes;

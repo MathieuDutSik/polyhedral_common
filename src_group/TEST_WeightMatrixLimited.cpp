@@ -45,8 +45,10 @@ int main(int argc, char *argv[]) {
         size_t hash1 = WMatLimited.get_hash(eFace);
         for (int iter2 = 0; iter2 < n_iter2; iter2++) {
           std::cerr << "    iter2=" << iter2 << " / " << n_iter2 << "\n";
+          // The hash has to be invariant under the group.
           Telt eElt = GRP.rand();
-          size_t hash2 = WMatLimited.get_hash(eFace);
+          Face eFaceImg = OnFace(eFace, eElt);
+          size_t hash2 = WMatLimited.get_hash(eFaceImg);
           if (hash1 != hash2) {
             std::cerr << "hash1=" << hash1 << " hash2=" << hash2 << "\n";
             throw TerminalException{1};
