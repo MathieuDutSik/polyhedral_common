@@ -259,11 +259,14 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
       AddMul(eSum, V(iCol), TheEXT(jRow, iCol));
     return eSum;
   };
+  // The transposed weights: f1tr(i) then f2tr(j) gives the f1(j) then f2(i)
+  // value, so Qinput enters transposed. It only differs from f1 when Qinput
+  // is not symmetric.
   auto f1tr = [&](size_t iRow) -> void {
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
       T eSum(0);
       for (size_t jCol = 0; jCol < nbCol; jCol++)
-        AddMul(eSum, Qinput(iCol, jCol), TheEXT(iRow, jCol));
+        AddMul(eSum, Qinput(jCol, iCol), TheEXT(iRow, jCol));
       Vtr(iCol) = eSum;
     }
   };
