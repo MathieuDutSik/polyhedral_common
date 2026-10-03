@@ -78,30 +78,57 @@ size_t GetRationalInvariant(std::vector<MyMatrix<T>> const &ListGen) {
   return std::hash<T>()(prod);
 }
 
+/*
+  The smallest d > 0 with d Z^n contained in the lattice L spanned by the rows
+  of TheSpace, that is the exponent of the group Z^n / L. It is the largest
+  Smith invariant of TheSpace: the invariants form a divisibility chain and
+  Z^n / L is the product of the cyclic groups they define. Searching d = 1, 2,
+  ... directly costs one lattice membership test per value, so it is linear
+  in d, which reaches the index of L.
+ */
 template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
-#ifdef SANITY_CHECK_MATRIX_GROUP_BASIC
-  T TheDet = T_abs(DeterminantMat(TheSpace));
-#endif
-  T eDiv(1);
+  MyVector<T> ListInv = SmithNormalFormInvariant(TheSpace);
   int n = TheSpace.rows();
-  RecSolutionIntMat<T> eCan(TheSpace);
-  while (true) {
-    MyMatrix<T> M = eDiv * IdentityMat<T>(n);
-    bool test = eCan.is_containing_m(M);
-    if (test) {
-      return eDiv;
-    }
-#ifdef SANITY_CHECK_MATRIX_GROUP_BASIC
-    if (eDiv > TheDet) {
-      std::cerr << "eDiv=" << eDiv << " TheDet=" << TheDet << "\n";
-      std::cerr << "TheSpace=\n";
-      WriteMatrix(std::cerr, TheSpace);
-      std::cerr << "Clear error in LinearSpace_GetDivisor\n";
+  if (TheSpace.cols() != n || ListInv.size() != n) {
+    std::cerr << "MATGRPBAS: LinearSpace_GetDivisor, TheSpace should be a "
+                 "square matrix, |TheSpace|="
+              << TheSpace.rows() << " / " << TheSpace.cols() << "\n";
+    throw TerminalException{1};
+  }
+  T eDiv(1);
+  for (int i = 0; i < n; i++) {
+    T eVal = T_abs(ListInv(i));
+    if (eVal == 0) {
+      std::cerr << "MATGRPBAS: LinearSpace_GetDivisor, TheSpace is not of "
+                   "full rank, so no multiple of Z^n is contained in it\n";
       throw TerminalException{1};
     }
-#endif
-    eDiv += 1;
+    if (eVal > eDiv) {
+      eDiv = eVal;
+    }
   }
+#ifdef SANITY_CHECK_MATRIX_GROUP_BASIC
+  // The definition: eDiv Z^n is in the lattice, and no proper divisor of eDiv
+  // has that property.
+  RecSolutionIntMat<T> eCan(TheSpace);
+  auto is_contained = [&](T const &d) -> bool {
+    MyMatrix<T> M = d * IdentityMat<T>(n);
+    return eCan.is_containing_m(M);
+  };
+  if (!is_contained(eDiv)) {
+    std::cerr << "MATGRPBAS: LinearSpace_GetDivisor, eDiv=" << eDiv
+              << " but eDiv Z^n is not contained in TheSpace\n";
+    throw TerminalException{1};
+  }
+  for (auto &[prime, multiplicity] : FactorsIntMap(eDiv)) {
+    if (is_contained(eDiv / prime)) {
+      std::cerr << "MATGRPBAS: LinearSpace_GetDivisor, eDiv=" << eDiv
+                << " is not minimal, eDiv/" << prime << " also works\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return eDiv;
 }
 
 template <typename T>
