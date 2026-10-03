@@ -281,7 +281,7 @@ public:
                                                   std::ostream &_os)
       : inner(
             [](MyMatrix<Tfinite> const &M) -> Tfinite {
-              return get_ell1_complexity_measure(M);
+              return L1_norm_mat(M);
             },
             [](MyMatrix<Tfinite> const &x, MyMatrix<Tfinite> const &y)
                 -> MyMatrix<Tfinite> { return x * y; },
@@ -361,7 +361,7 @@ public:
   OnlineExhaustiveReductionComplexityMatrixInfinite(std::ostream &_os)
       : inner(
             [](MyMatrix<T> const &M) -> T {
-              return get_ell1_complexity_measure(M);
+              return L1_norm_mat(M);
             },
             [](MyMatrix<T> const &x, MyMatrix<T> const &y) -> MyMatrix<T> {
               return x * y;

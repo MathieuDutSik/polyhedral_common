@@ -39,23 +39,21 @@
 #define METHOD_COMPARISON_MATRIX_GROUP_SIMPLIFICATION
 #endif
 
+template <typename T> struct ComplexityMeasure {
+  T ell1;
+  T ellinfinity;
+};
+
+template <typename T>
+ComplexityMeasure<T> get_complexity_measure(MyMatrix<T> const &M) {
+  return {L1_norm_mat(M), Linfinity_norm_mat(M)};
+}
+
 template <typename T>
 std::string compute_complexity_matrix(MyMatrix<T> const &mat) {
-  int n = mat.rows();
-  T ell1(0);
-  T ellinfinity(0);
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      T val = mat(i, j);
-      T abs_val = T_abs(val);
-      ell1 += abs_val;
-      if (abs_val > ellinfinity) {
-        ellinfinity = abs_val;
-      }
-    }
-  }
-  return "(ell1=" + std::format("{}", ell1) +
-         ", ellinf=" + std::format("{}", ellinfinity) + ")";
+  ComplexityMeasure<T> cm = get_complexity_measure(mat);
+  return "(ell1=" + std::format("{}", cm.ell1) +
+         ", ellinf=" + std::format("{}", cm.ellinfinity) + ")";
 }
 
 template <typename T>
@@ -64,27 +62,13 @@ compute_complexity_listmat(std::vector<MyMatrix<T>> const &list_mat) {
   if (list_mat.empty()) {
     return "zero generators";
   }
-  int n = list_mat[0].rows();
   size_t n_mat = list_mat.size();
   T ell1_global(0);
   T ellinfinite_global(0);
   for (auto &e_mat : list_mat) {
-    T ell1(0);
-    T ellinfinity(0);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        T val = e_mat(i, j);
-        T abs_val = T_abs(val);
-        ell1 += abs_val;
-        if (abs_val > ellinfinity) {
-          ellinfinity = abs_val;
-        }
-      }
-    }
-    ell1_global += ell1;
-    if (ellinfinity > ellinfinite_global) {
-      ellinfinite_global = ellinfinity;
-    }
+    ComplexityMeasure<T> cm = get_complexity_measure(e_mat);
+    ell1_global += cm.ell1;
+    ellinfinite_global = T_max(ellinfinite_global, cm.ellinfinity);
   }
   return "(n_gen=" + std::to_string(n_mat) +
          ", ell1_global=" + std::format("{}", ell1_global) +
@@ -108,42 +92,6 @@ std::string compute_complexity_listseq(
   return "(n_seq=" + std::to_string(n_seq) +
          ", ell1_global=" + std::to_string(ell1_global) +
          ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
-}
-
-template <typename T> struct ComplexityMeasure {
-  T ell1;
-  T ellinfinity;
-};
-
-template <typename T>
-ComplexityMeasure<T> get_complexity_measure(MyMatrix<T> const &M) {
-  int n = M.rows();
-  T ell1(0);
-  T ellinfinity(0);
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      T val = M(i, j);
-      T abs_val = T_abs(val);
-      ell1 += abs_val;
-      if (abs_val > ellinfinity) {
-        ellinfinity = abs_val;
-      }
-    }
-  }
-  return {ell1, ellinfinity};
-}
-
-template <typename T> T get_ell1_complexity_measure(MyMatrix<T> const &M) {
-  int n = M.rows();
-  T ell1(0);
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      T val = M(i, j);
-      T abs_val = T_abs(val);
-      ell1 += abs_val;
-    }
-  }
-  return ell1;
 }
 
 void print_vector_val(std::vector<size_t> const &V, std::ostream &os) {
@@ -1508,7 +1456,7 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix_Generic(
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair,
     std::ostream &os) {
   auto f_complexity = [&](MyMatrix<T> const &M) -> T {
-    return get_ell1_complexity_measure(M);
+    return L1_norm_mat(M);
   };
   auto f_product = [&](MyMatrix<T> const &A,
                        MyMatrix<T> const &B) -> MyMatrix<T> { return A * B; };
@@ -1533,16 +1481,7 @@ T get_ellinfinity_norm(
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair) {
   T norm(0);
   auto f_process_mat = [&](MyMatrix<T> const &M) -> void {
-    int n_row = M.rows();
-    int n_col = M.cols();
-    for (int i_row = 0; i_row < n_row; i_row++) {
-      for (int i_col = 0; i_col < n_col; i_col++) {
-        T val = T_abs(M(i_row, i_col));
-        if (val > norm) {
-          norm = val;
-        }
-      }
-    }
+    norm = T_max(norm, Linfinity_norm_mat(M));
   };
   for (auto &ePair : ListPair) {
     f_process_mat(ePair.first);
@@ -1590,7 +1529,7 @@ ExhaustiveReductionComplexityGroupMatrix_Tfinite(
   Tfinite max_val_Tfinite =
       UniversalScalarConversion<Tfinite, int64_t>(max_val_int64);
   auto f_complexity = [&](MyMatrix<Tfinite> const &M) -> Tfinite {
-    return get_ell1_complexity_measure(M);
+    return L1_norm_mat(M);
   };
   auto f_product = [&](MyMatrix<Tfinite> const &A,
                        MyMatrix<Tfinite> const &B) -> MyMatrix<Tfinite> {
@@ -1705,7 +1644,7 @@ ExhaustiveReductionComplexityGroupMatrixPerm(
     std::ostream &os) {
   using Ttype = std::pair<MyMatrix<T>, Telt>;
   auto f_complexity = [&](Ttype const &pair) -> T {
-    return get_ell1_complexity_measure(pair.first);
+    return L1_norm_mat(pair.first);
   };
   auto f_invers = [](Ttype const &pair) -> Ttype {
     return {Inverse(pair.first), Inverse(pair.second)};
@@ -1760,14 +1699,7 @@ template <typename T>
 MyVector<T>
 ExhaustiveVectorSimplificationKernel(MyVector<T> const &V,
                                      std::vector<MyMatrix<T>> const &list_mat) {
-  int n = V.size();
-  auto f_norm = [&](MyVector<T> const &v) -> T {
-    T norm(0);
-    for (int i = 0; i < n; i++) {
-      norm += T_abs(v(i));
-    }
-    return norm;
-  };
+  auto f_norm = [](MyVector<T> const &v) -> T { return L1_norm_vect(v); };
   MyVector<T> V_work = V;
   T norm_work = f_norm(V);
   while (true) {
@@ -1824,16 +1756,7 @@ ExhaustiveVectorSimplifications(std::vector<MyVector<T>> const &list_V,
 template <typename T>
 MyMatrix<T> ExhaustiveMatrixRightCosetSimplificationKernel(
     MyMatrix<T> const &M, std::vector<MyMatrix<T>> const &list_mat) {
-  int n = M.rows();
-  auto f_norm = [&](MyMatrix<T> const &Hin) -> T {
-    T norm(0);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        norm += T_abs(Hin(i, j));
-      }
-    }
-    return norm;
-  };
+  auto f_norm = [](MyMatrix<T> const &Hin) -> T { return L1_norm_mat(Hin); };
   MyMatrix<T> M_work = M;
   T norm_work = f_norm(M);
   while (true) {
@@ -1856,16 +1779,7 @@ MyMatrix<T> ExhaustiveMatrixRightCosetSimplificationKernel(
 template <typename T>
 MyMatrix<T> ExhaustiveMatrixLeftCosetSimplificationKernel(
     MyMatrix<T> const &M, std::vector<MyMatrix<T>> const &list_mat) {
-  int n = M.rows();
-  auto f_norm = [&](MyMatrix<T> const &Hin) -> T {
-    T norm(0);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        norm += T_abs(Hin(i, j));
-      }
-    }
-    return norm;
-  };
+  auto f_norm = [](MyMatrix<T> const &Hin) -> T { return L1_norm_mat(Hin); };
   MyMatrix<T> M_work = M;
   T norm_work = f_norm(M);
   while (true) {
@@ -1931,16 +1845,7 @@ T get_ellinfinity_norm_double_coset(MyMatrix<T> const &d_cos,
                                     std::vector<MyMatrix<T>> const &v_gens) {
   T norm(0);
   auto f_process_mat = [&](MyMatrix<T> const &M) -> void {
-    int n_row = M.rows();
-    int n_col = M.cols();
-    for (int i_row = 0; i_row < n_row; i_row++) {
-      for (int i_col = 0; i_col < n_col; i_col++) {
-        T val = T_abs(M(i_row, i_col));
-        if (val > norm) {
-          norm = val;
-        }
-      }
-    }
+    norm = T_max(norm, Linfinity_norm_mat(M));
   };
   f_process_mat(d_cos);
   for (auto &eM : u_gens) {
@@ -1965,15 +1870,7 @@ ExhaustiveMatrixDoubleCosetSimplifications_Generic(
      << u_gens_tot.size() << " |v_gens_tot|=" << v_gens_tot.size() << "\n";
 #endif
   int n = d_cos.rows();
-  auto f_norm = [&](MyMatrix<T> const &Hin) -> T {
-    T norm(0);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        norm += T_abs(Hin(i, j));
-      }
-    }
-    return norm;
-  };
+  auto f_norm = [](MyMatrix<T> const &Hin) -> T { return L1_norm_mat(Hin); };
   MyMatrix<T> u_red = IdentityMat<T>(n);
   MyMatrix<T> v_red = IdentityMat<T>(n);
   MyMatrix<T> d_cos_work = d_cos;

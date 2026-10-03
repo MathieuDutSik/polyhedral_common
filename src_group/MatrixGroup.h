@@ -2139,15 +2139,7 @@ IterativeSimplificationDoubleCoset(
   using Tresult = std::pair<IntermediateState, T>;
   int n = helper.n;
   T absolute_minimum = UniversalScalarConversion<T, int>(n);
-  auto f_norm = [&](MyMatrix<T> const &H) -> T {
-    T norm(0);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        norm += T_abs(H(i, j));
-      }
-    }
-    return norm;
-  };
+  auto f_norm = [](MyMatrix<T> const &H) -> T { return L1_norm_mat(H); };
   // The groups GRP_U, GRP_V and cos_perm live on the permutation domain built
   // by MatrixIntegral_MapMatrix, which for a helper with a determining ext is
   // the concatenation of the nbRow rows of EXTfaithful with the orbit. The raw
