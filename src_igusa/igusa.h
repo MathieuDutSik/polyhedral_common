@@ -408,48 +408,47 @@ template <typename T> struct IgusaMinimum {
 };
 
 /*
-  Minimize the function f(x) = f(0) + sum_j f(j) x_j over the x in Z^dim
-  such that X = sum_j x_j ListMatInt[j] is positive definite, subject to
+  The inequalities of the cut pool followed by ListExtraIneq, as rows (1, x).
+ */
+template <typename T, typename Tint>
+MyMatrix<T> igusa_cut_inequalities(IgusaSpace<T, Tint> const &space,
+                                   MyMatrix<T> const &ListExtraIneq) {
+  int dim = space.dim;
+  int n_cut = space.ListCutIneq.rows();
+  int n_extra = ListExtraIneq.rows();
+  MyMatrix<T> M(n_cut + n_extra, dim + 1);
+  for (int i = 0; i < n_cut; i++) {
+    for (int j = 0; j <= dim; j++) {
+      M(i, j) = space.ListCutIneq(i, j);
+    }
+  }
+  for (int i = 0; i < n_extra; i++) {
+    for (int j = 0; j <= dim; j++) {
+      M(n_cut + i, j) = ListExtraIneq(i, j);
+    }
+  }
+  return M;
+}
+
+/*
+  Minimize f(x) = f(0) + sum_j f(j) x_j over the real x such that
+  X = sum_j x_j ListMatInt[j] satisfies X[v] >= 1 for all v in Z^n - {0},
   the inequalities ListExtraIneq.(1,x) >= 0 and the equalities
-  ListEqua.(1,x) = 0. Returns none if there is no such x.
-  ---
-  The function f has to be positive on the nonzero positive semidefinite
-  matrices of the T-space. Then the part of P where f is below any given
-  value is bounded, which is what makes the cutting planes terminate and
-  keeps the integer solutions of moderate size. Minimizing a function
-  that vanishes on some positive semidefinite direction instead gives
-  unbounded sets of optimal solutions of the integer programs, far away
-  and almost degenerate.
+  ListEqua.(1,x) = 0. Without extra constraints this is the minimum of f
+  over the Ryshkov polyhedron of the T-space. The cuts X[v] >= 1 needed are
+  added to the pool of the space. Returns none if infeasible. The function
+  f has to be bounded below on the feasible set, which holds if f is
+  positive on the nonzero positive semidefinite matrices of the T-space or
+  if the equalities bound the feasible set.
  */
 template <typename T, typename Tint>
 std::optional<IgusaMinimum<T>>
-igusa_integral_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
-                            MyMatrix<T> const &ListExtraIneq,
-                            MyMatrix<T> const &ListEqua, std::ostream &os) {
-#ifdef TIMINGS_IGUSA
-  MicrosecondTime time;
-#endif
+igusa_lp_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
+                      MyMatrix<T> const &ListExtraIneq,
+                      MyMatrix<T> const &ListEqua, std::ostream &os) {
   int dim = space.dim;
-  // The inequalities, without the equalities that go separately to the
-  // integer program.
-  auto get_cut_ineq = [&]() -> MyMatrix<T> {
-    int n_cut = space.ListCutIneq.rows();
-    int n_extra = ListExtraIneq.rows();
-    MyMatrix<T> M(n_cut + n_extra, dim + 1);
-    for (int i = 0; i < n_cut; i++) {
-      for (int j = 0; j <= dim; j++) {
-        M(i, j) = space.ListCutIneq(i, j);
-      }
-    }
-    for (int i = 0; i < n_extra; i++) {
-      for (int j = 0; j <= dim; j++) {
-        M(n_cut + i, j) = ListExtraIneq(i, j);
-      }
-    }
-    return M;
-  };
   auto get_ineq = [&]() -> MyMatrix<T> {
-    MyMatrix<T> Mcut = get_cut_ineq();
+    MyMatrix<T> Mcut = igusa_cut_inequalities(space, ListExtraIneq);
     int n_row = Mcut.rows();
     int n_equa = ListEqua.rows();
     MyMatrix<T> M(n_row + 2 * n_equa, dim + 1);
@@ -466,7 +465,6 @@ igusa_integral_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
     }
     return M;
   };
-  // The linear programming phase
 #ifdef DEBUG_IGUSA
   size_t iter_lp = 0;
 #endif
@@ -479,7 +477,7 @@ igusa_integral_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
     LpSolution<T> eSol = SIMPLEX_LinearProgramming(M, f, os);
     if (!eSol.DirectSolution) {
 #ifdef DEBUG_IGUSA
-      os << "IGUSA: igusa_integral_minimization, LP infeasible at iter_lp="
+      os << "IGUSA: igusa_lp_minimization, LP infeasible at iter_lp="
          << iter_lp << "\n";
 #endif
       return {};
@@ -509,15 +507,47 @@ igusa_integral_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
     break;
   }
 #ifdef DEBUG_IGUSA
-  os << "IGUSA: igusa_integral_minimization, LP phase done iter_lp=" << iter_lp
+  os << "IGUSA: igusa_lp_minimization, done iter_lp=" << iter_lp
      << " |cuts|=" << space.ListCutIneq.rows() << "\n";
 #endif
+  T value = ILP_EvaluateRow(f, x_lp);
+  return IgusaMinimum<T>{x_lp, value};
+}
+
+/*
+  Minimize the function f(x) = f(0) + sum_j f(j) x_j over the x in Z^dim
+  such that X = sum_j x_j ListMatInt[j] is positive definite, subject to
+  the inequalities ListExtraIneq.(1,x) >= 0 and the equalities
+  ListEqua.(1,x) = 0. Returns none if there is no such x.
+  ---
+  The function f has to be positive on the nonzero positive semidefinite
+  matrices of the T-space. Then the part of P where f is below any given
+  value is bounded, which is what makes the cutting planes terminate and
+  keeps the integer solutions of moderate size. Minimizing a function
+  that vanishes on some positive semidefinite direction instead gives
+  unbounded sets of optimal solutions of the integer programs, far away
+  and almost degenerate.
+ */
+template <typename T, typename Tint>
+std::optional<IgusaMinimum<T>>
+igusa_integral_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
+                            MyMatrix<T> const &ListExtraIneq,
+                            MyMatrix<T> const &ListEqua, std::ostream &os) {
+#ifdef TIMINGS_IGUSA
+  MicrosecondTime time;
+#endif
+  // The linear programming phase
+  std::optional<IgusaMinimum<T>> opt_lp =
+      igusa_lp_minimization(space, f, ListExtraIneq, ListEqua, os);
+  if (!opt_lp) {
+    return {};
+  }
+  MyVector<T> const &x_lp = opt_lp->x;
   if (IsIntegralVector(x_lp)) {
 #ifdef TIMINGS_IGUSA
     os << "|IGUSA: igusa_integral_minimization(LP)|=" << time << "\n";
 #endif
-    T value = ILP_EvaluateRow(f, x_lp);
-    return IgusaMinimum<T>{x_lp, value};
+    return opt_lp;
   }
   // The integer programming phase
 #ifdef DEBUG_IGUSA
@@ -527,7 +557,7 @@ igusa_integral_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
 #ifdef DEBUG_IGUSA
     iter_ilp++;
 #endif
-    MyMatrix<T> Mineq = get_cut_ineq();
+    MyMatrix<T> Mineq = igusa_cut_inequalities(space, ListExtraIneq);
     IlpSolution<T> sol = ILP_IntegerLinearProgramming(
         Mineq, ListEqua, f, space.params.IlpMethod, os);
     if (sol.status == IlpStatus::Infeasible) {

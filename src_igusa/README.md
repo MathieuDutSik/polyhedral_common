@@ -119,6 +119,48 @@ of dual descriptions done, its facets up to the stabilizer as
 mapping them to their representative. Each orbit of facets has F, rhs, the
 rank of F and the list of [vertex, facet] pairs where it appears.
 
+Facets directly: `IGUSA_FacetIncidence`
+---------------------------------------
+
+The vertex enumeration gets the facets of P as a side product of the local
+cones, which are very large at E6, E7, E8. `IGUSA_FacetIncidence` works on
+one facet tr(F X) >= c, with F positive definite (the facets with F only
+positive semidefinite, such as X[v] >= 1, have infinitely many incident
+points). It returns the incident points
+
+    Inc(F) = { X in I : tr(F X) = c },
+
+the integral points of the facet, by the theory of Voronoi:
+
+* The minimum of tr(F X) over the Ryshkov polyhedron {X : X[v] >= 1} is
+  attained at a perfect form P*, and the dual of the linear program gives
+  F = sum_v lambda_v v v^T, lambda_v >= 0, over the minimal vectors v of P*,
+  with sum lambda_v equal to that minimum. The cuts are seeded with the
+  short vectors of F^{-1}, near the minimal vectors of P*.
+* For X in Inc(F) the values m_v = X[v] are integers >= 1 with
+  sum lambda_v m_v = c. The slack c - min is small, so there are few such m.
+  Each m gives the affine subspace X[v] = m_v, which determines X when the
+  v of the support span the T-space; otherwise the integral points of the
+  face cut by these equalities are enumerated by splitting on the
+  coordinates with integer programs.
+* The minimum of tr(F X) over I is checked to be c (validity of the facet).
+
+```
+&DATA
+ arithmetic = "flint"
+ IlpMethod = "scip"
+ OutFile = "F5.out"       ! GAP record: F, rhs, RyshkovMin, slack,
+                          ! RyshkovMinimizer, rank, ListIncident
+ FileFacet = "F5.mat"     ! the matrix F
+ FacetRhs = "5"           ! c, a rational number
+/
+&TSPACE ... /
+```
+
+For the four full rank facets of conv(I_6) it takes less than 3 seconds
+each: the facets have 21 to 45 incident points, all of them vertices
+(copies of E6 and D6), against 14319 extreme rays for the local cone at E6.
+
 Integer programming
 -------------------
 
