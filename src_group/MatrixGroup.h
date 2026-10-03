@@ -2404,7 +2404,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
 #endif
         MyMatrix<T> new_cos = eCos * entry.cos;
         DoubleCosetEntry<T> new_de{std::move(new_cos),
-                                   std::move(Stab_matr_conj)};
+                                   std::move(Stab_matr_conj_red)};
         new_entries.emplace_back(std::move(new_de));
       }
     }
