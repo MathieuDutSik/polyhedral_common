@@ -148,7 +148,7 @@ public:
 #ifdef TIMINGS_WEIGHT_MATRIX
     MicrosecondTime time;
 #endif
-    TheMat.resize(nbRow * nbRow);
+    TheMat.resize(weightmatrix_get_nb<is_symmetric>(nbRow));
     std::unordered_map<T, Tidx_value> ValueMap;
     Tidx_value idxWeight = 0;
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
@@ -184,7 +184,7 @@ public:
 #ifdef TIMINGS_WEIGHT_MATRIX
     MicrosecondTime time;
 #endif
-    TheMat.resize(nbRow * nbRow);
+    TheMat.resize(weightmatrix_get_nb<is_symmetric>(nbRow));
     std::unordered_map<T, Tidx_value> ValueMap;
     Tidx_value idxWeight = 0;
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
