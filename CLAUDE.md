@@ -16,6 +16,16 @@ It overrides the usual assistant default of branching before committing to the
 default branch. It does not change when to commit: commit when asked, not
 otherwise.
 
+## Local runs: one process, at most 10G of memory
+
+By default local runs are one process running with a bound on memory usage of 10G.
+
+The machine is used for many other tasks and should not be blocked by one of
+them. So, unless asked otherwise: no parallel builds (`make -j`), no several
+programs or tests run side by side, no `mpirun` with more than one process,
+and a computation that would go over 10G is stopped or cut down to a smaller
+case rather than left to grow.
+
 ## `basic_common_cpp/` and `permutalib/` are git submodules — do not edit in place
 
 Both `basic_common_cpp/` and `permutalib/` inside this repo are git submodules of their respective upstream projects. Any edit made directly to a file under either directory will be silently overwritten the next time the submodule is updated and will not propagate to the upstream.
