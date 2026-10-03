@@ -2332,6 +2332,19 @@ GetWeightMatrix_ListComm(MyMatrix<T> const &TheEXT, MyMatrix<T> const &GramMat,
     MyMatrix<T> eProd = ListComm[iComm] * GramMat;
     ListProd.push_back(eProd);
   }
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+  // A symmetric weight matrix keeps only the lower triangle, which is only
+  // valid when every product is symmetric.
+  if constexpr (is_symmetric) {
+    for (auto &eProd : ListProd) {
+      if (!IsSymmetricMatrix(eProd)) {
+        std::cerr << "PES: GetWeightMatrix_ListComm was asked for a symmetric "
+                     "weight matrix but a product is not symmetric\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
   MyMatrix<T> M(nbComm + 1, nbCol);
   auto f1 = [&](size_t iRow) -> void {
     for (size_t iMat = 0; iMat <= nbComm; iMat++) {
@@ -2353,7 +2366,8 @@ GetWeightMatrix_ListComm(MyMatrix<T> const &TheEXT, MyMatrix<T> const &GramMat,
     }
     return eVectSum;
   };
-  return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
+  return WeightMatrix<is_symmetric, std::vector<T>, Tidx_value>(nbRow, f1, f2,
+                                                                os);
 }
 
 template <typename T, typename Tidx_value>
