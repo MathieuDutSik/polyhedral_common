@@ -613,51 +613,72 @@ vectface DecomposeOrbitPoint_KernelFull(const size_t &n,
   return DecomposeOrbitPoint_Kernel(LGen, eList);
 }
 
+/*
+  The splitting of a union of orbits into the orbits.
+  ListTotal holds the objects not yet reached and has to be a union of orbits;
+  it is emptied. For each orbit:
+  * f_seed(iter) returns the object at the iterator iter of ListTotal, the
+    first one of the orbit, and can take what else it needs from the entry
+    before the entry is erased.
+  * The orbit is generated breadth first: f_images(x, f_insert) calls
+    f_insert on the images of x by the generators. The objects to process are
+    kept in the empty list returned by f_new_list (a vectface for faces).
+  * f_orbit(seed, SingleOrbit) receives the seed and the orbit as a set of
+    type Tset.
+ */
+template <typename Tset, typename Tcont, typename Fnewlist, typename Fseed,
+          typename Fimages, typename Forbit>
+void OrbitSplitting_Kernel(Tcont &ListTotal, Fnewlist f_new_list,
+                           Fseed f_seed, Fimages f_images, Forbit f_orbit) {
+  while (true) {
+    auto iter = ListTotal.begin();
+    if (iter == ListTotal.end())
+      break;
+    auto eObj = f_seed(iter);
+    Tset SingleOrbit;
+    auto list = f_new_list();
+    auto f_insert = [&](auto const &x) -> void {
+      if (SingleOrbit.insert(x).second) {
+        [[maybe_unused]] size_t n_erase = ListTotal.erase(x);
+#ifdef SANITY_CHECK_GROUP_FCT
+        if (n_erase == 0) {
+          std::cerr << "GRPFCT: OrbitSplitting_Kernel, the list is not a "
+                       "union of orbits\n";
+          throw TerminalException{1};
+        }
+#endif
+        list.push_back(x);
+      }
+    };
+    f_insert(eObj);
+    for (size_t idx = 0; idx < list.size(); idx++) {
+      // A copy, as f_insert extends list.
+      auto x = list[idx];
+      f_images(x, f_insert);
+    }
+    f_orbit(eObj, SingleOrbit);
+  }
+}
+
 template <typename Tobj, typename Tgen>
 std::vector<Tobj> OrbitSplittingGeneralized(
     std::vector<Tobj> const &PreListTotal, std::vector<Tgen> const &ListGen,
     std::function<Tobj(Tobj const &, Tgen const &)> const &TheAct) {
   std::vector<Tobj> TheReturn;
-  std::unordered_set<Tobj> ListTotal;
-  for (auto eObj : PreListTotal) {
-    ListTotal.insert(eObj);
-  }
-  while (true) {
-    auto iter = ListTotal.begin();
-    if (iter == ListTotal.end())
-      break;
-    Tobj eObj = *iter;
-    TheReturn.push_back(eObj);
-    std::unordered_set<Tobj> Additional;
-    Additional.insert(eObj);
-    ListTotal.erase(eObj);
-    std::unordered_set<Tobj> SingleOrbit;
-    while (true) {
-      std::unordered_set<Tobj> NewElts;
-      for (auto const &gObj : Additional) {
-        for (auto const &eGen : ListGen) {
-          Tobj fObj = TheAct(gObj, eGen);
-          if (!SingleOrbit.contains(fObj) && !Additional.contains(fObj)) {
-            if (!NewElts.contains(fObj)) {
-#ifdef SANITY_CHECK_GROUP_FCT
-              if (!ListTotal.contains(fObj)) {
-                std::cerr << "Orbit do not match, PANIC!!!\n";
-                throw TerminalException{1};
-              }
-#endif
-              NewElts.insert(fObj);
-              ListTotal.erase(fObj);
-            }
-          }
-        }
-      }
-      for (auto &uSet : Additional)
-        SingleOrbit.insert(uSet);
-      if (NewElts.empty())
-        break;
-      Additional = std::move(NewElts);
+  std::unordered_set<Tobj> ListTotal(PreListTotal.begin(),
+                                     PreListTotal.end());
+  auto f_seed = [&](auto const &iter) -> Tobj { return *iter; };
+  auto f_images = [&](Tobj const &x, auto &f_insert) -> void {
+    for (auto const &eGen : ListGen) {
+      f_insert(TheAct(x, eGen));
     }
-  }
+  };
+  auto f_orbit = [&](Tobj const &eObj,
+                     [[maybe_unused]] std::unordered_set<Tobj> const
+                         &SingleOrbit) -> void { TheReturn.push_back(eObj); };
+  auto f_new_list = []() -> std::vector<Tobj> { return {}; };
+  OrbitSplitting_Kernel<std::unordered_set<Tobj>>(ListTotal, f_new_list,
+                                                  f_seed, f_images, f_orbit);
   return TheReturn;
 }
 
@@ -747,154 +768,69 @@ vectface OrbitFace(const Face &f, const std::vector<Telt> &LGen) {
   return vf;
 }
 
+// OrbitSplitting_Kernel for faces under a permutation group.
+template <typename Tset, typename Tgroup, typename Tcont, typename Fseed,
+          typename Forbit>
+void OrbitSplittingFace_Kernel(Tcont &ListTotal, Tgroup const &TheGRP,
+                               Fseed f_seed, Forbit f_orbit) {
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
+  size_t n = TheGRP.n_act();
+  Face fSet(n);
+  auto f_images = [&](Face const &f, auto &f_insert) -> void {
+    for (auto const &eGen : ListGen) {
+      OnFace_inplace(fSet, f, eGen);
+      f_insert(fSet);
+    }
+  };
+  auto f_new_list = [&]() -> vectface { return vectface(n); };
+  OrbitSplitting_Kernel<Tset>(ListTotal, f_new_list, f_seed, f_images,
+                              f_orbit);
+}
+
 template <typename Tgroup, typename T>
 std::vector<std::pair<Face, T>>
 OrbitSplittingMap(std::vector<std::pair<Face, T>> &PreListTotal,
                   Tgroup const &TheGRP) {
-  using Telt = typename Tgroup::Telt;
   std::unordered_map<Face, T> ListTotal;
   for (auto &ePair : PreListTotal)
     ListTotal[std::move(ePair.first)] = std::move(ePair.second);
   std::vector<std::pair<Face, T>> ListReturn;
-  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
-  Face fSet(TheGRP.n_act());
-  while (true) {
-    auto iter = ListTotal.begin();
-    if (iter == ListTotal.end())
-      break;
-    Face eSet = iter->first;
-    T val = std::move(iter->second);
-    std::unordered_set<Face> Additional{eSet};
-    ListTotal.erase(eSet);
-    std::unordered_set<Face> SingleOrbit;
-    while (true) {
-      std::unordered_set<Face> NewElts;
-      for (auto const &gSet : Additional) {
-        for (auto const &eGen : ListGen) {
-          OnFace_inplace(fSet, gSet, eGen);
-          if (!SingleOrbit.contains(fSet) && !Additional.contains(fSet)) {
-            if (!NewElts.contains(fSet)) {
-#ifdef SANITY_CHECK_GROUP_FCT
-              if (!ListTotal.contains(fSet)) {
-                std::cerr << "Orbit do not matched, PANIC!!!\n";
-                throw TerminalException{1};
-              }
-#endif
-              NewElts.insert(fSet);
-              ListTotal.erase(fSet);
-            }
-          }
-        }
-      }
-      for (auto &uSet : Additional)
-        SingleOrbit.insert(uSet);
-      if (NewElts.empty())
-        break;
-      Additional = std::move(NewElts);
-    }
-    ListReturn.push_back({std::move(eSet), std::move(val)});
-  }
+  // The value goes with the seed, before its entry is erased.
+  auto f_seed = [&](auto const &iter) -> Face {
+    ListReturn.push_back({iter->first, std::move(iter->second)});
+    return iter->first;
+  };
+  auto f_orbit =
+      []([[maybe_unused]] Face const &eSet,
+         [[maybe_unused]] std::unordered_set<Face> const &SingleOrbit)
+      -> void {};
+  OrbitSplittingFace_Kernel<std::unordered_set<Face>>(ListTotal, TheGRP,
+                                                      f_seed, f_orbit);
   return ListReturn;
 }
 
 template <typename Tgroup, typename T_hash_set>
 vectface OrbitSplittingSet_T(T_hash_set &ListTotal, Tgroup const &TheGRP) {
-  using Telt = typename Tgroup::Telt;
-  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
-  size_t n = TheGRP.n_act();
-  Face fSet(n);
-  vectface vf_ret(n);
-  while (true) {
-    auto iter = ListTotal.begin();
-    if (iter == ListTotal.end())
-      break;
-    Face eSet = *iter;
-    T_hash_set SingleOrbit;
-    vectface vf(n);
-    size_t total_len = 0;
-    auto f_insert = [&](Face const &f) -> void {
-      if (SingleOrbit.insert(f).second) {
-        ListTotal.erase(f);
-        vf.push_back(f);
-        total_len++;
-      }
-    };
-    f_insert(eSet);
-    size_t pos = 0;
-    while (true) {
-      if (pos == total_len) {
-        break;
-      }
-      size_t curr_len = total_len;
-      for (size_t idx = pos; idx < curr_len; idx++) {
-        Face f = vf[idx];
-        for (auto const &eGen : ListGen) {
-          OnFace_inplace(fSet, f, eGen);
-          f_insert(fSet);
-        }
-      }
-      pos = curr_len;
-    }
+  vectface vf_ret(TheGRP.n_act());
+  auto f_seed = [&](auto const &iter) -> Face { return *iter; };
+  auto f_orbit = [&](Face const &eSet,
+                     [[maybe_unused]] T_hash_set const &SingleOrbit) -> void {
     vf_ret.push_back(eSet);
-  }
+  };
+  OrbitSplittingFace_Kernel<T_hash_set>(ListTotal, TheGRP, f_seed, f_orbit);
   return vf_ret;
 }
 
 template <typename Tgroup, typename F>
 void OrbitSplittingSet_Kernel(vectface const &PreListTotal,
                               Tgroup const &TheGRP, F f) {
-  using Telt = typename Tgroup::Telt;
   std::unordered_set<Face> ListTotal;
   for (auto eFace : PreListTotal)
     ListTotal.insert(eFace);
-  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
-  Face fSet(TheGRP.n_act());
-  size_t n = PreListTotal.get_n();
-  //  size_t total_size = PreListTotal.size();
-  //  std::cerr << "|ListTotal|=" << ListTotal.size() << " |PreListTotal|=" <<
-  //  PreListTotal.size() << "\n"; size_t tot_sum = 0;
-  while (true) {
-    auto iter = ListTotal.begin();
-    if (iter == ListTotal.end())
-      break;
-    Face eSet = *iter;
-    std::unordered_set<Face> SingleOrbit;
-    vectface vf(n);
-    size_t total_len = 0;
-    auto f_insert = [&](Face const &f) -> void {
-      if (SingleOrbit.insert(f).second) {
-        ListTotal.erase(f);
-        vf.push_back(f);
-        //        std::cerr << "erasing f=" << f << "\n";
-        total_len++;
-      }
-    };
-    f_insert(eSet);
-    size_t pos = 0;
-    while (true) {
-      //      std::cerr << "pos=" << pos << " total_len=" << total_len << "\n";
-      if (pos == total_len) {
-        break;
-      }
-      size_t curr_len = total_len;
-      for (size_t idx = pos; idx < curr_len; idx++) {
-        Face f = vf[idx];
-        for (auto const &eGen : ListGen) {
-          OnFace_inplace(fSet, f, eGen);
-          //          std::cerr << "f=" << f << "\n";
-          //          std::cerr << "fSet=" << f << "\n";
-          f_insert(fSet);
-        }
-      }
-      pos = curr_len;
-    }
-    //    std::cerr << "   |SingleOrbit|=" << SingleOrbit.size() << "
-    //    |PreListTotal|=" << PreListTotal.size() << " |ListTotal|=" <<
-    //    ListTotal.size() << "\n"; tot_sum += SingleOrbit.size();
-    f(eSet, SingleOrbit);
-  }
-  //  std::cerr << "tot_sum=" << tot_sum << " total_size=" << total_size <<
-  //  "\n";
+  auto f_seed = [&](auto const &iter) -> Face { return *iter; };
+  OrbitSplittingFace_Kernel<std::unordered_set<Face>>(ListTotal, TheGRP,
+                                                      f_seed, f);
 }
 
 template <typename Tgroup>
