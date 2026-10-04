@@ -81,7 +81,7 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
   size_t n_case = 1;
 #endif
   std::vector<int> VectSiz;
-  for (auto eDesc : l_desc) {
+  for (auto &eDesc : l_desc) {
     size_t len = eDesc.l_pair.size();
 #ifdef DEBUG_FINITE_MATRIX_GROUP
     n_case *= len;

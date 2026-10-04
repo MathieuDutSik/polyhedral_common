@@ -4003,7 +4003,7 @@ LinPolytopeIntegral_Stabilizer_DoubleCoset(MyMatrix<T> const &EXT_T,
   }
   Tgroup GRPret(ListPermGens, nbVert);
   std::vector<Telt> DoubleCosets;
-  for (auto eMatr : pair.second) {
+  for (auto &eMatr : pair.second) {
     Telt eCos =
         GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os);
     DoubleCosets.emplace_back(std::move(eCos));
@@ -4049,7 +4049,7 @@ LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer(
   }
   Tgroup GRPret(ListPermGens, nbVert);
   std::vector<PairCosetStabGens<Telt>> DoubleCosetStabilizer;
-  for (auto eDCS : pair.second) {
+  for (auto &eDCS : pair.second) {
     Telt NewCos = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
         helper, eDCS.cos, os);
     std::vector<Telt> new_stab_gens;

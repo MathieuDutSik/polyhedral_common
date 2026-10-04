@@ -41,7 +41,7 @@ private:
   vectface vf;
 
 public:
-  FaceOrbitsizeGrpContainer(Tgroup _GRP, vectface &&_vf)
+  FaceOrbitsizeGrpContainer(Tgroup const &_GRP, vectface &&_vf)
       : GRP(_GRP), vf(std::move(_vf)) {}
   std::pair<Face, typename Tgroup::Tint> GetPair(size_t const &idx_orb) const {
     using Tint = typename Tgroup::Tint;
@@ -341,7 +341,7 @@ vectface DoubleCosetDescription_SingleCoset(
   vectface vf(n);
   Face eFaceImg(n);
   std::unordered_set<Face> SetFace;
-  auto f_insert = [&](Face NewF) -> void {
+  auto f_insert = [&](Face const &NewF) -> void {
     Face f_can = SmaGRP.OptCanonicalImage(NewF);
     if (SetFace.insert(f_can).second) {
       vf.push_back(f_can);
