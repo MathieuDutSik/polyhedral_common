@@ -2270,7 +2270,7 @@ simplify_span_de(Tgroup const &grp,
 template <typename T, typename Tgroup, typename Thelper>
 std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>>
 LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
-    std::vector<MyMatrix<T>> const l_gens, Thelper const &helper,
+    std::vector<MyMatrix<T>> const &l_gens, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const &Vmatr_gens,
     std::ostream &os) {
   using PreImager = typename Thelper::PreImager;
@@ -2448,7 +2448,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
 template <typename T, typename Tgroup, typename Thelper>
 std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>>
 LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
-    std::vector<MyMatrix<T>> const l_gens, Thelper const &helper,
+    std::vector<MyMatrix<T>> const &l_gens, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const &Vmatr_gens,
     std::ostream &os) {
   using Tint = typename Thelper::Tint;
@@ -2480,7 +2480,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 template <typename T, typename Tgroup, typename Thelper>
 std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
 LinearSpace_Stabilizer_DoubleCoset_Kernel(
-    std::vector<MyMatrix<T>> const l_gens, Thelper const &helper,
+    std::vector<MyMatrix<T>> const &l_gens, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const &Vmatr_gens,
     std::ostream &os) {
   std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>> pair =
