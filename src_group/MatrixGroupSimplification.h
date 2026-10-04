@@ -1699,30 +1699,44 @@ Exhaust_get_total_generators(std::vector<MyMatrix<T>> const &list_mat) {
 }
 
 /*
+  The greedy reduction shared by the vector, right coset and left coset
+  simplifications: x is replaced by f_act(x, mat) for the mat of list_mat
+  whenever this decreases f_norm, until no element of list_mat does.
+ */
+template <typename Tobj, typename T, typename Fact, typename Fnorm>
+Tobj ExhaustiveGreedySimplificationKernel(
+    Tobj const &x, std::vector<MyMatrix<T>> const &list_mat, Fact f_act,
+    Fnorm f_norm) {
+  Tobj x_work = x;
+  T norm_work = f_norm(x);
+  while (true) {
+    int n_succ = 0;
+    for (auto &mat : list_mat) {
+      Tobj x_cand = f_act(x_work, mat);
+      T norm_cand = f_norm(x_cand);
+      if (norm_cand < norm_work) {
+        x_work = x_cand;
+        norm_work = norm_cand;
+        n_succ += 1;
+      }
+    }
+    if (n_succ == 0) {
+      return x_work;
+    }
+  }
+}
+
+/*
   Apply a number of exhaustive tricks in order to reduce the size of the vector
  */
 template <typename T>
 MyVector<T>
 ExhaustiveVectorSimplificationKernel(MyVector<T> const &V,
                                      std::vector<MyMatrix<T>> const &list_mat) {
+  auto f_act = [](MyVector<T> const &v, MyMatrix<T> const &mat)
+      -> MyVector<T> { return mat.transpose() * v; };
   auto f_norm = [](MyVector<T> const &v) -> T { return L1_norm_vect(v); };
-  MyVector<T> V_work = V;
-  T norm_work = f_norm(V);
-  while (true) {
-    int n_succ = 0;
-    for (auto &mat : list_mat) {
-      MyVector<T> V_cand = mat.transpose() * V_work;
-      T norm_cand = f_norm(V_cand);
-      if (norm_cand < norm_work) {
-        V_work = V_cand;
-        norm_work = norm_cand;
-        n_succ += 1;
-      }
-    }
-    if (n_succ == 0) {
-      return V_work;
-    }
-  }
+  return ExhaustiveGreedySimplificationKernel(V, list_mat, f_act, f_norm);
 }
 
 template <typename T>
@@ -1762,47 +1776,19 @@ ExhaustiveVectorSimplifications(std::vector<MyVector<T>> const &list_V,
 template <typename T>
 MyMatrix<T> ExhaustiveMatrixRightCosetSimplificationKernel(
     MyMatrix<T> const &M, std::vector<MyMatrix<T>> const &list_mat) {
-  auto f_norm = [](MyMatrix<T> const &Hin) -> T { return L1_norm_mat(Hin); };
-  MyMatrix<T> M_work = M;
-  T norm_work = f_norm(M);
-  while (true) {
-    int n_succ = 0;
-    for (auto &mat : list_mat) {
-      MyMatrix<T> M_cand = M_work * mat;
-      T norm_cand = f_norm(M_cand);
-      if (norm_cand < norm_work) {
-        M_work = M_cand;
-        norm_work = norm_cand;
-        n_succ += 1;
-      }
-    }
-    if (n_succ == 0) {
-      return M_work;
-    }
-  }
+  auto f_act = [](MyMatrix<T> const &H, MyMatrix<T> const &mat)
+      -> MyMatrix<T> { return H * mat; };
+  auto f_norm = [](MyMatrix<T> const &H) -> T { return L1_norm_mat(H); };
+  return ExhaustiveGreedySimplificationKernel(M, list_mat, f_act, f_norm);
 }
 
 template <typename T>
 MyMatrix<T> ExhaustiveMatrixLeftCosetSimplificationKernel(
     MyMatrix<T> const &M, std::vector<MyMatrix<T>> const &list_mat) {
-  auto f_norm = [](MyMatrix<T> const &Hin) -> T { return L1_norm_mat(Hin); };
-  MyMatrix<T> M_work = M;
-  T norm_work = f_norm(M);
-  while (true) {
-    int n_succ = 0;
-    for (auto &mat : list_mat) {
-      MyMatrix<T> M_cand = mat * M_work;
-      T norm_cand = f_norm(M_cand);
-      if (norm_cand < norm_work) {
-        M_work = M_cand;
-        norm_work = norm_cand;
-        n_succ += 1;
-      }
-    }
-    if (n_succ == 0) {
-      return M_work;
-    }
-  }
+  auto f_act = [](MyMatrix<T> const &H, MyMatrix<T> const &mat)
+      -> MyMatrix<T> { return mat * H; };
+  auto f_norm = [](MyMatrix<T> const &H) -> T { return L1_norm_mat(H); };
+  return ExhaustiveGreedySimplificationKernel(M, list_mat, f_act, f_norm);
 }
 
 template <typename T>
