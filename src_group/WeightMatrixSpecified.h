@@ -1581,7 +1581,7 @@ GetGroupCanonicalization_KnownSignature(
     return GetGroupCanonicalization_KnownSignature_TidxC<TidxC, Tidx,
                                                          is_symm>(s, nbRow, os);
   };
-  return call_with_smallest_unsigned<1, ladder_max_bits_index>(
+  return call_with_smallest_unsigned(
       s.nbVert, "GetGroupCanonicalization_KnownSignature", f_dispatch);
 }
 

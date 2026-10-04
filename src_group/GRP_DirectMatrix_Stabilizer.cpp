@@ -42,7 +42,7 @@ std::vector<std::vector<Tidx>> DirectMatrix_Stabilizer(MyMatrix<T> const &M,
     return DirectMatrix_Stabilizer_Tidx_value<T, Tidx, Tidx_value>(M, is_symm,
                                                                  os);
   };
-  return call_with_smallest_unsigned<1, 32>(
+  return call_with_smallest_unsigned(
       max_poss_val, "DirectMatrix_Stabilizer", f_dispatch);
 }
 

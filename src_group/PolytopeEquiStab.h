@@ -462,7 +462,7 @@ GetSimpleWeightMatrix(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
   auto f_dispatch = [&]<typename Tidx>() {
     return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
   };
-  return call_with_smallest_unsigned<0, ladder_max_bits_index>(
+  return call_with_smallest_unsigned(
       n_rows, "GetSimpleWeightMatrix", f_dispatch);
 }
 
@@ -481,7 +481,7 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const &TheEXT,
   auto f_dispatch = [&]<typename Tidx>() {
     return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
   };
-  return call_with_smallest_unsigned<0, ladder_max_bits_index>(
+  return call_with_smallest_unsigned(
       n_rows, "GetWeightMatrix", f_dispatch);
 }
 
@@ -612,7 +612,7 @@ std::vector<typename Tgroup::Telt> LinPolytope_Automorphism_GramMat_LGen(MyMatri
     return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, Tidx_value>(
         EXT, GramMat, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_poss_val, "LinPolytope_Automorphism_GramMat_LGen", f_dispatch);
 }
 
@@ -716,7 +716,7 @@ LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT,
     return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, Tidx_value>(
         EXT, GramMat, threshold, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_poss_val, "LinPolytope_CanonicOrdering_GramMat", f_dispatch);
 }
 
@@ -763,7 +763,7 @@ MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const &EXT, size_t threshold,
   auto f_dispatch = [&]<typename Tidx>() {
     return LinPolytope_CanonicForm_Tidx<T, Tidx>(EXT, threshold, os);
   };
-  return call_with_smallest_unsigned<0, ladder_max_bits_index>(
+  return call_with_smallest_unsigned(
       n_rows, "LinPolytope_CanonicForm", f_dispatch);
 }
 
@@ -1228,7 +1228,7 @@ size_t GetInvariant_ListMat_Vdiag(size_t const &seed, MyMatrix<T> const &EXT,
     return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx_value>(
         seed, EXT, ListMat, Vdiag, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_poss_val, "GetInvariant_ListMat_Vdiag", f_dispatch);
 }
 
@@ -1271,7 +1271,7 @@ GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
                                                            Tidx_value>(
         EXT, ListMat, Vdiag, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_val_poss, "GetListGenAutomorphism_ListMat_Vdiag", f_dispatch);
 }
 
@@ -1339,7 +1339,7 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag(
     return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, Tidx_value>(
         EXT, ListMat, Vdiag, threshold, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_poss_val, "Canonicalization_ListMat_Vdiag", f_dispatch);
 }
 
@@ -1475,7 +1475,7 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
     return TestEquivalence_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, Tidx_value>(
         EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_poss_val, "TestEquivalence_ListMat_Vdiag", f_dispatch);
 }
 
@@ -2125,7 +2125,7 @@ std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(
     return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<
         Tint, Tidx_value>(EXT, Qmat, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_poss_val, "LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick", f_dispatch);
 }
 

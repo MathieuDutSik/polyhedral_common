@@ -370,7 +370,7 @@ LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT,
     return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint, Tidx_value>(
         EXT, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_poss_val, "LinPolytopeAntipodalIntegral_CanonicForm", f_dispatch);
 }
 
@@ -427,7 +427,7 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
     return LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value<
         Tint, Tidx_value>(EXT, Qmat, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_poss_val, "LinPolytopeAntipodalIntegral_Automorphism_AbsTrick", f_dispatch);
 }
 
@@ -478,7 +478,7 @@ LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const &EXT,
     return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint, Tidx_value>(
         EXT, os);
   };
-  return call_with_smallest_unsigned<1, 64>(
+  return call_with_smallest_unsigned(
       max_poss_val, "LinPolytopeAntipodalIntegral_Automorphism", f_dispatch);
 }
 
