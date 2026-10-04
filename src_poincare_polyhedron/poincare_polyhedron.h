@@ -1457,7 +1457,7 @@ void InsertAndCheckRedundancy(StepEnum<T> &se,
     std::string PrefixStepenum = PrefixSave + "STEPENUM_";
     SingleData_IncrementalWrite(PrefixStepenum, se);
   };
-  auto insert_generator = [&](std::vector<CombElt<T>> const f_list) -> bool {
+  auto insert_generator = [&](std::vector<CombElt<T>> const &f_list) -> bool {
     HumanTime time;
     bool test = se.InsertGenerators(f_list, os);
     if (test) {

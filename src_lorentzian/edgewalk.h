@@ -552,7 +552,7 @@ AdjacencyDirection<Tint> GetAdjacencyDirection(MyMatrix<Tint> const &MatRoot,
 template <typename T, typename Tint, typename Tgroup>
 FundDomainVertex<T, Tint>
 EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
-                  MyVector<T> const &k, AdjacencyDirection<Tint> const ad,
+                  MyVector<T> const &k, AdjacencyDirection<Tint> const &ad,
                   std::ostream &os) {
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
