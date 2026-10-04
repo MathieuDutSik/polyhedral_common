@@ -1577,27 +1577,12 @@ GetGroupCanonicalization_KnownSignature(
 #endif
   SimplifiedVertexColoredGraph s =
       GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, PairWMVS, os);
-  if (s.nbVert < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return GetGroupCanonicalization_KnownSignature_TidxC<uint8_t, Tidx,
+  auto f_dispatch = [&]<typename TidxC>() {
+    return GetGroupCanonicalization_KnownSignature_TidxC<TidxC, Tidx,
                                                          is_symm>(s, nbRow, os);
-  }
-  if (s.nbVert < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return GetGroupCanonicalization_KnownSignature_TidxC<uint16_t, Tidx,
-                                                         is_symm>(s, nbRow, os);
-  }
-  if (s.nbVert < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return GetGroupCanonicalization_KnownSignature_TidxC<uint32_t, Tidx,
-                                                         is_symm>(s, nbRow, os);
-  }
-#if !defined __APPLE__
-  if (s.nbVert < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return GetGroupCanonicalization_KnownSignature_TidxC<uint64_t, Tidx,
-                                                         is_symm>(s, nbRow, os);
-  }
-#endif
-  std::cerr << "Failed to find matching numeric in "
-               "GetGroupCanonicalization_KnownSignature\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, ladder_max_bits_index>(
+      s.nbVert, "GetGroupCanonicalization_KnownSignature", f_dispatch);
 }
 
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>

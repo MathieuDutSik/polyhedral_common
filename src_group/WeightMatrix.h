@@ -32,6 +32,7 @@
 #include "PERM_Fct.h"
 #include <limits>
 #include <map>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -75,6 +76,44 @@ inline size_t weightmatrix_get_nb(bool is_symmetric, size_t nbRow) {
   }
   return weightmatrix_get_nb<false>(nbRow);
 }
+
+/*
+  The choice of an unsigned integer type by size. f is a lambda template,
+  called as f.template operator()<U>() with U the smallest of uint8_t,
+  uint16_t, uint32_t and uint64_t such that n < max(U) - margin, and its
+  result is returned. The margin is 1 when the largest value is a marker,
+  such as the missing value of a Tidx_value. max_bits is 32 or 64, the
+  widest type tried. context names the caller in the error message.
+ */
+template <size_t margin, size_t max_bits, typename F>
+auto call_with_smallest_unsigned(size_t n, std::string const &context, F f) {
+  static_assert(max_bits == 32 || max_bits == 64);
+  if (n < size_t(std::numeric_limits<uint8_t>::max() - margin)) {
+    return f.template operator()<uint8_t>();
+  }
+  if (n < size_t(std::numeric_limits<uint16_t>::max() - margin)) {
+    return f.template operator()<uint16_t>();
+  }
+  if (n < size_t(std::numeric_limits<uint32_t>::max() - margin)) {
+    return f.template operator()<uint32_t>();
+  }
+  if constexpr (max_bits == 64) {
+    if (n < size_t(std::numeric_limits<uint64_t>::max() - margin)) {
+      return f.template operator()<uint64_t>();
+    }
+  }
+  std::cerr << context << ": no unsigned type of at most " << max_bits
+            << " bits for n=" << n << "\n";
+  throw TerminalException{1};
+}
+
+// The widest type for the index types (rows, graph vertices, permutation
+// domains): uint64_t is not used for them on macOS.
+#if defined __APPLE__
+inline constexpr size_t ladder_max_bits_index = 32;
+#else
+inline constexpr size_t ladder_max_bits_index = 64;
+#endif
 
 // We need to have nbRow as input for template reasons. But it is unused in the
 // symmetric case. So, pragma statement is needed to avoid a warning being
@@ -1308,31 +1347,12 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel(
 
   Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
   //
-  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max())) {
-    using TidxIn = uint8_t;
+  auto f_dispatch = [&]<typename TidxIn>() {
     return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn, is_symm>(
         nbRow, eGR, os);
-  }
-  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max())) {
-    using TidxIn = uint16_t;
-    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn, is_symm>(
-        nbRow, eGR, os);
-  }
-  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max())) {
-    using TidxIn = uint32_t;
-    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn, is_symm>(
-        nbRow, eGR, os);
-  }
-#if !defined __APPLE__
-  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max())) {
-    using TidxIn = uint64_t;
-    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn, is_symm>(
-        nbRow, eGR, os);
-  }
-#endif
-  std::cerr << "Failed to find matching numeric in "
-               "GetCanonicalizationVector_Kernel\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<0, ladder_max_bits_index>(
+      eGR.GetNbVert(), "GetCanonicalizationVector_Kernel", f_dispatch);
 }
 
 template <typename Tgr, typename Tidx, typename TidxC, bool is_symm>
@@ -1353,31 +1373,12 @@ std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Graph_Kernel(Tgr const &eGR, size_t const &nbRow,
                                             std::ostream &os) {
   //
-  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    using TidxC = uint8_t;
+  auto f_dispatch = [&]<typename TidxC>() {
     return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC,
                                                        is_symm>(nbRow, eGR, os);
-  }
-  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    using TidxC = uint16_t;
-    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC,
-                                                       is_symm>(nbRow, eGR, os);
-  }
-  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    using TidxC = uint32_t;
-    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC,
-                                                       is_symm>(nbRow, eGR, os);
-  }
-#if !defined __APPLE__
-  if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    using TidxC = uint64_t;
-    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC,
-                                                       is_symm>(nbRow, eGR, os);
-  }
-#endif
-  std::cerr << "Failed to find matching numeric in "
-               "GetGroupCanonicalizationVector_Kernel\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, ladder_max_bits_index>(
+      eGR.GetNbVert(), "GetGroupCanonicalizationVector_Graph_Kernel", f_dispatch);
 }
 
 // This function takes a matrix and returns the vector

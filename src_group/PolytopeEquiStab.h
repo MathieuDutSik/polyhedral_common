@@ -459,27 +459,11 @@ GetSimpleWeightMatrix(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
   };
   //
   size_t n_rows = TheEXT.rows();
-  if (n_rows < size_t(std::numeric_limits<uint8_t>::max())) {
-    using Tidx = uint8_t;
+  auto f_dispatch = [&]<typename Tidx>() {
     return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
-  }
-  if (n_rows < size_t(std::numeric_limits<uint16_t>::max())) {
-    using Tidx = uint16_t;
-    return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
-  }
-  if (n_rows < size_t(std::numeric_limits<uint32_t>::max())) {
-    using Tidx = uint32_t;
-    return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
-  }
-#if !defined __APPLE__
-  if (n_rows < size_t(std::numeric_limits<uint64_t>::max())) {
-    using Tidx = uint64_t;
-    return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
-  }
-#endif
-  std::cerr
-      << "PES: Failed to find matching numeric in GetSimpleWeightMatrix\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<0, ladder_max_bits_index>(
+      n_rows, "GetSimpleWeightMatrix", f_dispatch);
 }
 
 template <typename T, typename Tidx_value>
@@ -494,26 +478,11 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const &TheEXT,
   };
   //
   size_t n_rows = TheEXT.rows();
-  if (n_rows < size_t(std::numeric_limits<uint8_t>::max())) {
-    using Tidx = uint8_t;
+  auto f_dispatch = [&]<typename Tidx>() {
     return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
-  }
-  if (n_rows < size_t(std::numeric_limits<uint16_t>::max())) {
-    using Tidx = uint16_t;
-    return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
-  }
-  if (n_rows < size_t(std::numeric_limits<uint32_t>::max())) {
-    using Tidx = uint32_t;
-    return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
-  }
-#if !defined __APPLE__
-  if (n_rows < size_t(std::numeric_limits<uint64_t>::max())) {
-    using Tidx = uint64_t;
-    return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
-  }
-#endif
-  std::cerr << "PES: Failed to find matching numeric in GetWeightMatrix\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<0, ladder_max_bits_index>(
+      n_rows, "GetWeightMatrix", f_dispatch);
 }
 
 template <typename T>
@@ -639,24 +608,12 @@ std::vector<typename Tgroup::Telt> LinPolytope_Automorphism_GramMat_LGen(MyMatri
   size_t nbRow = EXT.rows();
   size_t max_poss_val =
       weightmatrix_get_nb(IsSymmetricMatrix(GramMat), nbRow);
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, uint8_t>(
+  auto f_dispatch = [&]<typename Tidx_value>() {
+    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, Tidx_value>(
         EXT, GramMat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, uint16_t>(
-        EXT, GramMat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, uint32_t>(
-        EXT, GramMat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, uint64_t>(
-        EXT, GramMat, os);
-  }
-  std::cerr << "PES: Failed to find a matching type\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_poss_val, "LinPolytope_Automorphism_GramMat_LGen", f_dispatch);
 }
 
 template <typename T, typename Tgroup>
@@ -755,24 +712,12 @@ LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT,
   size_t nbRow = EXT.rows();
   size_t max_poss_val =
       weightmatrix_get_nb(IsSymmetricMatrix(GramMat), nbRow);
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint8_t>(
+  auto f_dispatch = [&]<typename Tidx_value>() {
+    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, Tidx_value>(
         EXT, GramMat, threshold, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint16_t>(
-        EXT, GramMat, threshold, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint32_t>(
-        EXT, GramMat, threshold, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint64_t>(
-        EXT, GramMat, threshold, os);
-  }
-  std::cerr << "PES: Failed to find a match for Tidx_value\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_poss_val, "LinPolytope_CanonicOrdering_GramMat", f_dispatch);
 }
 
 template <typename T, typename Tidx>
@@ -815,19 +760,11 @@ template <typename T>
 MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const &EXT, size_t threshold,
                                     std::ostream &os) {
   size_t n_rows = EXT.rows();
-  if (n_rows < size_t(std::numeric_limits<uint8_t>::max()))
-    return LinPolytope_CanonicForm_Tidx<T, uint8_t>(EXT, threshold, os);
-  if (n_rows < size_t(std::numeric_limits<uint16_t>::max()))
-    return LinPolytope_CanonicForm_Tidx<T, uint16_t>(EXT, threshold, os);
-  if (n_rows < size_t(std::numeric_limits<uint32_t>::max()))
-    return LinPolytope_CanonicForm_Tidx<T, uint32_t>(EXT, threshold, os);
-#if !defined __APPLE__
-  if (n_rows < size_t(std::numeric_limits<uint64_t>::max()))
-    return LinPolytope_CanonicForm_Tidx<T, uint64_t>(EXT, threshold, os);
-#endif
-  std::cerr
-      << "PES: LinPolytope_CanonicForm : Failed to find matching numeric\n";
-  throw TerminalException{1};
+  auto f_dispatch = [&]<typename Tidx>() {
+    return LinPolytope_CanonicForm_Tidx<T, Tidx>(EXT, threshold, os);
+  };
+  return call_with_smallest_unsigned<0, ladder_max_bits_index>(
+      n_rows, "LinPolytope_CanonicForm", f_dispatch);
 }
 
 template <typename T>
@@ -1287,24 +1224,12 @@ size_t GetInvariant_ListMat_Vdiag(size_t const &seed, MyMatrix<T> const &EXT,
   size_t nbRow = EXT.rows();
   size_t max_poss_val =
       weightmatrix_get_nb(is_family_symmmetric(ListMat), nbRow);
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint8_t>(
+  auto f_dispatch = [&]<typename Tidx_value>() {
+    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx_value>(
         seed, EXT, ListMat, Vdiag, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint16_t>(
-        seed, EXT, ListMat, Vdiag, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint32_t>(
-        seed, EXT, ListMat, Vdiag, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint64_t>(
-        seed, EXT, ListMat, Vdiag, os);
-  }
-  std::cerr << "PES: Failed to find a matching type\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_poss_val, "GetInvariant_ListMat_Vdiag", f_dispatch);
 }
 
 template <typename T, typename Tfield, typename Tgroup, typename Tidx_value>
@@ -1341,28 +1266,13 @@ GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
   size_t nbRow = EXT.rows();
   size_t max_val_poss =
       weightmatrix_get_nb(is_family_symmmetric(ListMat), nbRow);
-  if (max_val_poss < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+  auto f_dispatch = [&]<typename Tidx_value>() {
     return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tgroup,
-                                                           uint8_t>(
+                                                           Tidx_value>(
         EXT, ListMat, Vdiag, os);
-  }
-  if (max_val_poss < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tgroup,
-                                                           uint16_t>(
-        EXT, ListMat, Vdiag, os);
-  }
-  if (max_val_poss < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tgroup,
-                                                           uint32_t>(
-        EXT, ListMat, Vdiag, os);
-  }
-  if (max_val_poss < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tgroup,
-                                                           uint64_t>(
-        EXT, ListMat, Vdiag, os);
-  }
-  std::cerr << "PES: Failed to find a matching Tidx_value\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_val_poss, "GetListGenAutomorphism_ListMat_Vdiag", f_dispatch);
 }
 
 template <typename T, typename Tfield, typename Tidx, typename Tidx_value>
@@ -1425,24 +1335,12 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag(
   size_t nbRow = EXT.rows();
   size_t max_poss_val =
       weightmatrix_get_nb(is_family_symmmetric(ListMat), nbRow);
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint8_t>(
+  auto f_dispatch = [&]<typename Tidx_value>() {
+    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, Tidx_value>(
         EXT, ListMat, Vdiag, threshold, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint16_t>(
-        EXT, ListMat, Vdiag, threshold, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint32_t>(
-        EXT, ListMat, Vdiag, threshold, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint64_t>(
-        EXT, ListMat, Vdiag, threshold, os);
-  }
-  std::cerr << "PES: No matching type for Tidx_value\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_poss_val, "Canonicalization_ListMat_Vdiag", f_dispatch);
 }
 
 template <typename T, typename Tfield, typename Tidx, typename Tidx_value>
@@ -1573,24 +1471,12 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "PES: max_poss_val=" << max_poss_val << "\n";
 #endif
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return TestEquivalence_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint8_t>(
+  auto f_dispatch = [&]<typename Tidx_value>() {
+    return TestEquivalence_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, Tidx_value>(
         EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return TestEquivalence_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint16_t>(
-        EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return TestEquivalence_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint32_t>(
-        EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return TestEquivalence_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint64_t>(
-        EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2, os);
-  }
-  std::cerr << "PES: Failed to find a match for Tidx_value\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_poss_val, "TestEquivalence_ListMat_Vdiag", f_dispatch);
 }
 
 //
@@ -2235,24 +2121,12 @@ std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(
   size_t nbRow = EXT.rows();
   // The absolute weight matrix is symmetric.
   size_t max_poss_val = weightmatrix_get_nb<true>(nbRow);
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+  auto f_dispatch = [&]<typename Tidx_value>() {
     return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<
-        Tint, uint8_t>(EXT, Qmat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<
-        Tint, uint16_t>(EXT, Qmat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<
-        Tint, uint32_t>(EXT, Qmat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<
-        Tint, uint64_t>(EXT, Qmat, os);
-  }
-  std::cerr << "PES: Failed to match for Tidx_value\n";
-  throw TerminalException{1};
+        Tint, Tidx_value>(EXT, Qmat, os);
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_poss_val, "LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick", f_dispatch);
 }
 
 //

@@ -38,21 +38,12 @@ std::vector<std::vector<Tidx>> DirectMatrix_Stabilizer(MyMatrix<T> const &M,
   bool is_symm = IsSymmetricMatrix(M);
   // A non-symmetric matrix can have one distinct value per entry.
   size_t max_poss_val = weightmatrix_get_nb(is_symm, n);
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return DirectMatrix_Stabilizer_Tidx_value<T, Tidx, uint8_t>(M, is_symm,
+  auto f_dispatch = [&]<typename Tidx_value>() {
+    return DirectMatrix_Stabilizer_Tidx_value<T, Tidx, Tidx_value>(M, is_symm,
                                                                  os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return DirectMatrix_Stabilizer_Tidx_value<T, Tidx, uint16_t>(M, is_symm,
-                                                                  os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return DirectMatrix_Stabilizer_Tidx_value<T, Tidx, uint32_t>(M, is_symm,
-                                                                  os);
-  }
-  std::cerr << "GRP_DirectMatrix_Stabilizer: no Tidx_value for n=" << n
-            << "\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, 32>(
+      max_poss_val, "DirectMatrix_Stabilizer", f_dispatch);
 }
 
 template <typename T, typename Tgroup>

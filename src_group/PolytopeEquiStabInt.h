@@ -366,24 +366,12 @@ LinPolytopeAntipodalIntegral_CanonicForm(MyMatrix<Tint> const &EXT,
                                          std::ostream &os) {
   size_t nbRow = EXT.rows();
   size_t max_poss_val = nbRow * nbRow;
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint, uint8_t>(
+  auto f_dispatch = [&]<typename Tidx_value>() {
+    return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint, Tidx_value>(
         EXT, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint, uint16_t>(
-        EXT, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint, uint32_t>(
-        EXT, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value<Tint, uint64_t>(
-        EXT, os);
-  }
-  std::cerr << "Failed to find a matching type for Tidx_value\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_poss_val, "LinPolytopeAntipodalIntegral_CanonicForm", f_dispatch);
 }
 
 template <typename Tint, typename Tidx_value>
@@ -435,24 +423,12 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick(MyMatrix<Tint> const &EXT,
                                                    std::ostream &os) {
   size_t nbRow = EXT.rows();
   size_t max_poss_val = nbRow * nbRow;
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+  auto f_dispatch = [&]<typename Tidx_value>() {
     return LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value<
-        Tint, uint8_t>(EXT, Qmat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value<
-        Tint, uint16_t>(EXT, Qmat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value<
-        Tint, uint32_t>(EXT, Qmat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value<
-        Tint, uint64_t>(EXT, Qmat, os);
-  }
-  std::cerr << "Failed to find a matching type for Tidx_value\n";
-  throw TerminalException{1};
+        Tint, Tidx_value>(EXT, Qmat, os);
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_poss_val, "LinPolytopeAntipodalIntegral_Automorphism_AbsTrick", f_dispatch);
 }
 
 template <typename Tint, typename Tidx_value>
@@ -498,24 +474,12 @@ LinPolytopeAntipodalIntegral_Automorphism(MyMatrix<Tint> const &EXT,
                                           std::ostream &os) {
   size_t nbRow = EXT.rows();
   size_t max_poss_val = nbRow * nbRow;
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint, uint8_t>(
+  auto f_dispatch = [&]<typename Tidx_value>() {
+    return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint, Tidx_value>(
         EXT, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint, uint16_t>(
-        EXT, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint, uint32_t>(
-        EXT, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return LinPolytopeAntipodalIntegral_Automorphism_Tidx_value<Tint, uint64_t>(
-        EXT, os);
-  }
-  std::cerr << "Failed to find a matching type for Tidx_value\n";
-  throw TerminalException{1};
+  };
+  return call_with_smallest_unsigned<1, 64>(
+      max_poss_val, "LinPolytopeAntipodalIntegral_Automorphism", f_dispatch);
 }
 
 template <typename T, typename Tgroup, typename Tval, typename Tidx_value>

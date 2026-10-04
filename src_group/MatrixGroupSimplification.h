@@ -1561,6 +1561,25 @@ inline std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrixInner(
 }
 
 /*
+  The fallback over the fixed-size signed types. f is a lambda template,
+  called as f.template operator()<Tint>() for int16_t, int32_t and then
+  int64_t; it returns an optional, empty when the computation does not fit
+  in Tint. The first non-empty result is returned, the empty optional if all
+  fail. int8_t is not tried: it has some compilation problems.
+ */
+template <typename F> auto try_with_fixed_size_signed(F f) {
+  auto opt16 = f.template operator()<int16_t>();
+  if (opt16) {
+    return opt16;
+  }
+  auto opt32 = f.template operator()<int32_t>();
+  if (opt32) {
+    return opt32;
+  }
+  return f.template operator()<int64_t>();
+}
+
+/*
   The reduction algorithm will decrease the L1 norm (and likely the related Linf
   norm). Therefore, it makes sense to go into faster algorithmic when possible.
   If that fails, we cleanly fail and use a slower algorithm.
@@ -1572,28 +1591,15 @@ inline std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrixInner(
     std::ostream &os) {
   // The maximum of the L1 norms of the matrices of ListPair.
   T max_val = get_ellinfinity_norm(ListPair);
-  // int8_t has some compilation problems.
-
-  // Trying int16_t
-  std::optional<std::vector<MyMatrix<T>>> opt2 =
-      ExhaustiveReductionComplexityGroupMatrix_Tfinite<T, int16_t>(ListPair,
-                                                                   max_val, os);
-  if (opt2) {
-    return *opt2;
-  }
-  // Trying int32_t
-  std::optional<std::vector<MyMatrix<T>>> opt3 =
-      ExhaustiveReductionComplexityGroupMatrix_Tfinite<T, int32_t>(ListPair,
-                                                                   max_val, os);
-  if (opt3) {
-    return *opt3;
-  }
-  // Trying int64_t
-  std::optional<std::vector<MyMatrix<T>>> opt4 =
-      ExhaustiveReductionComplexityGroupMatrix_Tfinite<T, int64_t>(ListPair,
-                                                                   max_val, os);
-  if (opt4) {
-    return *opt4;
+  auto f_finite = [&]<typename Tfinite>()
+      -> std::optional<std::vector<MyMatrix<T>>> {
+    return ExhaustiveReductionComplexityGroupMatrix_Tfinite<T, Tfinite>(
+        ListPair, max_val, os);
+  };
+  std::optional<std::vector<MyMatrix<T>>> opt =
+      try_with_fixed_size_signed(f_finite);
+  if (opt) {
+    return *opt;
   }
   // All fails, use the generic numeric
   return ExhaustiveReductionComplexityGroupMatrix_Generic(ListPair, os);
@@ -2135,28 +2141,15 @@ ExhaustiveMatrixDoubleCosetSimplificationsInner(
     std::vector<MyMatrix<T>> const &v_gens_tot, size_t const &max_iter,
     std::ostream &os) {
   T max_val = get_ellinfinity_norm_double_coset(d_cos, u_gens_tot, v_gens_tot);
-  // int8_t has some compilation problems.
-
-  // Trying int16_t
-  std::optional<DoubleCosetSimplification<T>> opt2 =
-      ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T, int16_t>(
-          d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
-  if (opt2) {
-    return *opt2;
-  }
-  // Trying int32_t
-  std::optional<DoubleCosetSimplification<T>> opt3 =
-      ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T, int32_t>(
-          d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
-  if (opt3) {
-    return *opt3;
-  }
-  // Trying int64_t
-  std::optional<DoubleCosetSimplification<T>> opt4 =
-      ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T, int64_t>(
-          d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
-  if (opt4) {
-    return *opt4;
+  auto f_finite = [&]<typename Tfinite>()
+      -> std::optional<DoubleCosetSimplification<T>> {
+    return ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T, Tfinite>(
+        d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
+  };
+  std::optional<DoubleCosetSimplification<T>> opt =
+      try_with_fixed_size_signed(f_finite);
+  if (opt) {
+    return *opt;
   }
   // All fails, use the generic numeric
   auto f_check = [&]([[maybe_unused]] MyMatrix<T> const &M) -> bool {
