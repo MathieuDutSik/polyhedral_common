@@ -428,6 +428,8 @@ Face TranslateFace(int const &nbRow, Face const &face) {
 }
 
 // The subsets can be grouped with a block decomposition
+// The object is neither copyable nor movable: f_get_perm refers to the
+// partition of the object itself, so a copy would keep using the original.
 //
 template <typename T, typename Telt> struct PartitionReduction {
 private:
@@ -474,6 +476,8 @@ public:
       return partition.map_permutation(g);
     };
   }
+  PartitionReduction(PartitionReduction const &) = delete;
+  PartitionReduction &operator=(PartitionReduction const &) = delete;
   std::optional<Face> map_face_opt(Face const &f) const {
     return partition.map_face_opt(f);
   }
