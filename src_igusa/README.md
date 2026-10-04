@@ -161,6 +161,46 @@ For the four full rank facets of conv(I_6) it takes less than 3 seconds
 each: the facets have 21 to 45 incident points, all of them vertices
 (copies of E6 and D6), against 14319 extreme rays for the local cone at E6.
 
+Facet centered enumeration: `IGUSA_FacetEnumeration`
+----------------------------------------------------
+
+A facet of rank r of conv(I_n) is the lift of a full rank facet of
+conv(I_r) on a primitive sublattice (lifting theorem of the paper), and the
+full rank facets are the bounded ones, with a finite incidence.
+`IGUSA_FacetEnumeration` (full space of symmetric matrices only) starts from
+full rank facets and processes:
+
+* full rank facets: Inc(F) (cached by orbit, transported by isometries),
+  the orbits of ridges under Aut(F) (dual description of conv Inc(F)), and
+  the adjacent facet along each ridge, by the Dinkelbach iteration started
+  just above the threshold where the functional becomes positive definite;
+  a neighbor of lower rank is recognized at the threshold and checked on
+  its image;
+* bounded ridges inside facets of lower rank, identified by the canonical
+  form of the pair (S^{-1}, G), S the sum of the incident forms: the other
+  ridge of G through each face of codimension 3 (a rotation inside the
+  hyperplane of G), and the facet on the other side of it.
+
+```
+&DATA
+ arithmetic = "flint"
+ IlpMethod = "scip"
+ OutFile = "fenum6.out"
+ FileInitialFacets = "init6.mat"   ! list of matrices F (ListMatrix format)
+ FileInitialRhs = "init6.rhs"      ! the right hand sides, one per line
+ MaxOrbit = 0                      ! 0: no limit on the processed objects
+/
+&TSPACE ... /
+```
+
+Status. For n = 5 it gives the unique full rank facet in 4 seconds. For
+n = 6, from F5 it finds F5, F14, F23 and 11 orbits of bounded ridges in
+facets of lower rank (about 13 hours), but not F11: from F11 the component
+is F11 and one ridge whose faces of codimension 3 all lead to unbounded
+ridges. The bounded faces are connected through vertices, not through faces
+of codimension 3, so the procedure has to be seeded with several facets or
+complemented, see the paper.
+
 Integer programming
 -------------------
 

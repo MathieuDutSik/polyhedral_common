@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "igusa.h"
+#include "ClassicLLL.h"
 #include <functional>
 #include <optional>
 #include <string>
@@ -127,6 +128,53 @@ igusa_face_integral_points(IgusaSpace<T, Tint> &space,
   return l_point;
 }
 
+/*
+  Before minimizing tr(F X), F positive definite, over the Ryshkov
+  polyhedron or over I: the minimizer has its minimal vectors among the
+  short vectors of F^{-1}, and seeding the cuts X[v] >= 1 with vectors that
+  are short for F^{-1} avoids a long sequence of cutting planes when F is
+  far from the identity. The vectors with F^{-1}[v] <= 3 min_i F^{-1}_ii are
+  used when their expected number is moderate; when F is badly conditioned
+  there can be very many, and the vectors w_i of an LLL reduced basis of
+  F^{-1} and the w_i +- w_j are used instead.
+ */
+template <typename T, typename Tint>
+void igusa_insert_seed_cuts(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
+                            std::ostream &os) {
+  MyMatrix<T> Finv = Inverse(F);
+  int n = Finv.rows();
+  T min_diag = Finv(0, 0);
+  for (int i = 1; i < n; i++) {
+    if (Finv(i, i) < min_diag) {
+      min_diag = Finv(i, i);
+    }
+  }
+  // The expected number of vectors of norm at most b = 3 min_diag is about
+  // vol(B_n) b^{n/2} / sqrt(det F^{-1}). Below 10^4 they are all inserted.
+  double b = 3 * UniversalScalarConversion<double, T>(min_diag);
+  double det = UniversalScalarConversion<double, T>(DeterminantMat(Finv));
+  double vol_ball = std::pow(M_PI, n / 2.0) / std::tgamma(n / 2.0 + 1);
+  double estimate = vol_ball * std::pow(b, n / 2.0) / std::sqrt(det);
+  if (estimate < 10000) {
+    for (auto &v : computeLevel_GramMat<T, Tint>(Finv, T(3) * min_diag, os)) {
+      (void)igusa_insert_cut(space, v);
+    }
+    return;
+  }
+  LLLreduction<T, Tint> lll = LLLreducedBasis<T, Tint>(Finv, os);
+  for (int i = 0; i < n; i++) {
+    MyVector<Tint> wi = GetMatrixRow(lll.Pmat, i);
+    (void)igusa_insert_cut(space, wi);
+    for (int j = i + 1; j < n; j++) {
+      MyVector<Tint> wj = GetMatrixRow(lll.Pmat, j);
+      MyVector<Tint> wp = wi + wj;
+      MyVector<Tint> wm = wi - wj;
+      (void)igusa_insert_cut(space, wp);
+      (void)igusa_insert_cut(space, wm);
+    }
+  }
+}
+
 template <typename T> struct IgusaFacetIncidence {
   MyMatrix<T> F;
   T rhs;
@@ -196,10 +244,19 @@ igusa_voronoi_weights(IgusaSpace<T, Tint> const &space, MyVector<T> const &f,
   return l_weight;
 }
 
+/*
+  With check_validity = false, the inequality tr(F X) >= rhs need not be
+  valid on I: the result is then the list of the X in I with tr(F X) = rhs,
+  which is what is needed for an inequality valid on a face of P only. The
+  equalities ExtraEqua.(1,x) = 0 (rows of length dim+1), for example the
+  equation of that face, restrict the points.
+ */
 template <typename T, typename Tint>
-IgusaFacetIncidence<T> igusa_facet_incidence(IgusaSpace<T, Tint> &space,
-                                             MyMatrix<T> const &F,
-                                             T const &rhs, std::ostream &os) {
+IgusaFacetIncidence<T>
+igusa_facet_incidence(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
+                      T const &rhs, std::ostream &os,
+                      bool check_validity = true,
+                      MyMatrix<T> const &ExtraEqua = MyMatrix<T>(0, 0)) {
   int dim = space.dim;
   if (!IsPositiveDefinite(F, os)) {
     std::cerr << "IGUSA_FACET: F has to be positive definite, the incidence "
@@ -209,32 +266,24 @@ IgusaFacetIncidence<T> igusa_facet_incidence(IgusaSpace<T, Tint> &space,
   MyVector<T> f = igusa_trace_function(space, F);
   MyMatrix<T> ListExtraIneq(0, dim + 1);
   MyMatrix<T> NoEqua(0, dim + 1);
-  // The minimizer over the Ryshkov polyhedron has its minimal vectors among
-  // the short vectors of F^{-1}: seeding the cuts with them avoids a long
-  // sequence of cutting planes when F is far from the identity.
-  MyMatrix<T> Finv = Inverse(F);
-  T min_diag = Finv(0, 0);
-  for (int i = 1; i < Finv.rows(); i++) {
-    if (Finv(i, i) < min_diag) {
-      min_diag = Finv(i, i);
-    }
-  }
-  for (auto &v : computeLevel_GramMat<T, Tint>(Finv, T(3) * min_diag, os)) {
-    (void)igusa_insert_cut(space, v);
-  }
+  igusa_insert_seed_cuts(space, F, os);
   std::optional<IgusaMinimum<T>> opt_lp =
       igusa_lp_minimization(space, f, ListExtraIneq, NoEqua, os);
   IgusaMinimum<T> res_lp =
       unfold_opt(opt_lp, "The minimum over the Ryshkov polyhedron");
   MyMatrix<T> Pstar = igusa_matrix(space, res_lp.x);
   // The validity of the facet: the minimum of tr(F X) over I is rhs
-  std::optional<IgusaMinimum<T>> opt_ilp =
-      igusa_integral_minimization(space, f, ListExtraIneq, NoEqua, os);
-  IgusaMinimum<T> res_ilp = unfold_opt(opt_ilp, "The minimum over I");
-  if (res_ilp.value != rhs) {
-    std::cerr << "IGUSA_FACET: the minimum of tr(F X) over I is "
-              << res_ilp.value << " and not rhs=" << rhs << "\n";
-    throw TerminalException{1};
+  T igusa_min = rhs;
+  if (check_validity) {
+    std::optional<IgusaMinimum<T>> opt_ilp =
+        igusa_integral_minimization(space, f, ListExtraIneq, NoEqua, os);
+    IgusaMinimum<T> res_ilp = unfold_opt(opt_ilp, "The minimum over I");
+    igusa_min = res_ilp.value;
+    if (res_ilp.value != rhs) {
+      std::cerr << "IGUSA_FACET: the minimum of tr(F X) over I is "
+                << res_ilp.value << " and not rhs=" << rhs << "\n";
+      throw TerminalException{1};
+    }
   }
   std::vector<std::pair<MyVector<Tint>, T>> l_weight =
       igusa_voronoi_weights(space, f, Pstar, os);
@@ -245,6 +294,10 @@ IgusaFacetIncidence<T> igusa_facet_incidence(IgusaSpace<T, Tint> &space,
      << " |support|=" << n_w << "\n";
 #endif
   if (slack < 0) {
+    if (!check_validity) {
+      // no X in I has tr(F X) = rhs
+      return {F, rhs, res_lp.value, Pstar, igusa_min, {}, 0, slack};
+    }
     std::cerr << "IGUSA_FACET: rhs is below the minimum over the Ryshkov "
                  "polyhedron, this is not a valid inequality\n";
     throw TerminalException{1};
@@ -263,9 +316,13 @@ IgusaFacetIncidence<T> igusa_facet_incidence(IgusaSpace<T, Tint> &space,
   std::vector<MyVector<T>> l_x;
   std::set<MyVector<T>> set_x;
   MyVector<T> m(n_w);
+#ifdef DEBUG_IGUSA_FACET
   size_t n_m = 0;
+#endif
   auto f_treat = [&]() -> void {
+#ifdef DEBUG_IGUSA_FACET
     n_m++;
+#endif
     MyMatrix<T> Equa(n_w + 1, dim + 1);
     for (int i = 0; i < n_w; i++) {
       Equa(i, 0) = -m(i);
@@ -277,11 +334,37 @@ IgusaFacetIncidence<T> igusa_facet_incidence(IgusaSpace<T, Tint> &space,
       Equa(n_w, j) = f(j);
     }
     Equa(n_w, 0) -= rhs;
+    if (ExtraEqua.rows() > 0) {
+      MyMatrix<T> EquaExt(n_w + 1 + ExtraEqua.rows(), dim + 1);
+      for (int i = 0; i <= n_w; i++) {
+        for (int j = 0; j <= dim; j++) {
+          EquaExt(i, j) = Equa(i, j);
+        }
+      }
+      for (int i = 0; i < ExtraEqua.rows(); i++) {
+        for (int j = 0; j <= dim; j++) {
+          EquaExt(n_w + 1 + i, j) = ExtraEqua(i, j);
+        }
+      }
+      Equa = EquaExt;
+    }
+    auto satisfies_extra = [&](MyVector<T> const &x) -> bool {
+      for (int i = 0; i < ExtraEqua.rows(); i++) {
+        T val = ExtraEqua(i, 0);
+        for (int j = 0; j < dim; j++) {
+          val += ExtraEqua(i, j + 1) * x(j);
+        }
+        if (val != 0) {
+          return false;
+        }
+      }
+      return true;
+    };
     std::vector<MyVector<T>> l_sol;
     if (rank_supp == dim) {
       // X is determined by the values m_v
       std::optional<MyVector<T>> opt = SolutionMat(EsuppT, m);
-      if (opt && IsIntegralVector(*opt) &&
+      if (opt && IsIntegralVector(*opt) && satisfies_extra(*opt) &&
           IsPositiveDefinite(igusa_matrix(space, *opt), os)) {
         l_sol.push_back(*opt);
       }
@@ -295,9 +378,37 @@ IgusaFacetIncidence<T> igusa_facet_incidence(IgusaSpace<T, Tint> &space,
       }
     }
   };
+  // When the slack is large compared with some weights, the search tree of
+  // the vectors m explodes (and with rational weights most branches never
+  // reach rem = 0). Above max_node nodes the Voronoi enumeration is
+  // abandoned and the integral points of the face tr(F X) = rhs (with the
+  // extra equalities) are enumerated directly by splitting on the
+  // coordinates.
+  size_t n_node = 0;
+  size_t const max_node = 1000000;
+  size_t n_costly = 0;
+  size_t const max_costly = 1000;
+  bool too_many = false;
   std::function<void(int, T const &)> f_rec = [&](int i, T const &rem) -> void {
+    if (too_many) {
+      return;
+    }
+    n_node++;
+    if (n_node > max_node) {
+      too_many = true;
+      return;
+    }
     if (i == n_w) {
       if (rem == 0) {
+        // each solution costs an enumeration when the support does not
+        // span: few of them are allowed
+        if (rank_supp < dim) {
+          n_costly++;
+          if (n_costly > max_costly) {
+            too_many = true;
+            return;
+          }
+        }
         f_treat();
       }
       return;
@@ -310,6 +421,22 @@ IgusaFacetIncidence<T> igusa_facet_incidence(IgusaSpace<T, Tint> &space,
     }
   };
   f_rec(0, slack);
+  if (too_many) {
+#ifdef DEBUG_IGUSA_FACET
+    os << "IGUSA_FACET: too many vectors m, splitting on the coordinates\n";
+#endif
+    MyMatrix<T> EquaAll(1 + ExtraEqua.rows(), dim + 1);
+    for (int j = 0; j <= dim; j++) {
+      EquaAll(0, j) = f(j);
+    }
+    EquaAll(0, 0) -= rhs;
+    for (int i = 0; i < ExtraEqua.rows(); i++) {
+      for (int j = 0; j <= dim; j++) {
+        EquaAll(1 + i, j) = ExtraEqua(i, j);
+      }
+    }
+    l_x = igusa_face_integral_points(space, EquaAll, os);
+  }
 #ifdef DEBUG_IGUSA_FACET
   os << "IGUSA_FACET: number of vectors m=" << n_m << " |Inc|=" << l_x.size()
      << " rank of the support=" << rank_supp << "\n";
@@ -326,7 +453,7 @@ IgusaFacetIncidence<T> igusa_facet_incidence(IgusaSpace<T, Tint> &space,
   int rank = l_x.empty() ? 0 : RankMat(AffPoints);
   return {F,     rhs,
           res_lp.value, Pstar,
-          res_ilp.value, std::move(l_incident),
+          igusa_min, std::move(l_incident),
           rank,  slack};
 }
 
