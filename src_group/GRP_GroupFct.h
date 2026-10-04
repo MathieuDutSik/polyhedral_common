@@ -901,7 +901,7 @@ vectface OrbitSplittingSet_GetMinimalOrbit(vectface const &PreListTotal,
 }
 
 // Test if f1 is a subset of f2
-bool is_subset(Face const &f1, Face const &f2) {
+inline bool is_subset(Face const &f1, Face const &f2) {
   boost::dynamic_bitset<>::size_type pos = f1.find_first();
   while (pos != boost::dynamic_bitset<>::npos) {
     if (f2[pos] == 0)

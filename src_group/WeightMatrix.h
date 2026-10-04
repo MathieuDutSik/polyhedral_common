@@ -579,7 +579,7 @@ struct hash<WeightMatrix<is_symmetric, T, Tidx_value>> {
 }  // namespace std
 // clang-format on
 
-std::pair<int, std::vector<size_t>> get_smallest_set(const Face &f) {
+inline std::pair<int, std::vector<size_t>> get_smallest_set(const Face &f) {
   size_t n = f.size();
   size_t nbVert = f.count();
   std::vector<size_t> eList;
@@ -798,7 +798,7 @@ WeightedMatrixFromMyMatrix(MyMatrix<T> const &M, std::ostream &os) {
 // The building of graph from weighted graph.
 //
 
-int GetNeededPower(int nb) {
+inline int GetNeededPower(int nb) {
   int h = 0;
   int eExpo = 1;
   while (true) {
@@ -809,7 +809,7 @@ int GetNeededPower(int nb) {
   }
 }
 
-Face GetAllBinaryExpressionsByWeight(size_t n, size_t n_ent) {
+inline Face GetAllBinaryExpressionsByWeight(size_t n, size_t n_ent) {
   Face f_total(n * n_ent);
   size_t pos = 0;
   for (size_t i = 0; i <= n; i++) {
@@ -857,7 +857,7 @@ Face GetAllBinaryExpressionsByWeight(size_t n, size_t n_ent) {
   K = 2 (K+1) K
 
  */
-int Pairs_GetNeededN(int nb_color) {
+inline int Pairs_GetNeededN(int nb_color) {
   int N = 1;
   while (true) {
     int res = N % 2;
@@ -879,7 +879,7 @@ int Pairs_GetNeededN(int nb_color) {
   }
 }
 
-std::vector<int> Pairs_GetListPair(int N, int nb_color) {
+inline std::vector<int> Pairs_GetListPair(int N, int nb_color) {
   if (N == 1)
     return {0, 0};
   int K = N / 2;

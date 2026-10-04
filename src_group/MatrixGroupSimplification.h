@@ -94,7 +94,7 @@ std::string compute_complexity_listseq(
          ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
 }
 
-void print_vector_val(std::vector<size_t> const &V, std::ostream &os) {
+inline void print_vector_val(std::vector<size_t> const &V, std::ostream &os) {
   os << "[";
   for (size_t u = 0; u < V.size(); u++) {
     if (u > 0) {
@@ -1621,7 +1621,7 @@ ExhaustiveReductionComplexityGroupMatrix(std::vector<MyMatrix<T>> const &ListM,
   return ExhaustiveReductionComplexityGroupMatrixInner<T>(ListPair, os);
 }
 
-std::vector<permutalib::SequenceType<false>>
+inline std::vector<permutalib::SequenceType<false>>
 ExhaustiveReductionComplexitySequences(
     std::vector<permutalib::SequenceType<false>> const &ListS,
     std::ostream &os) {

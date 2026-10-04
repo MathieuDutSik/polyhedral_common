@@ -415,7 +415,7 @@ Face GetFace(std::vector<MyVector<Tmod>> const &O,
   return eFace;
 }
 
-Face TranslateFace(int const &nbRow, Face const &face) {
+inline Face TranslateFace(int const &nbRow, Face const &face) {
   if (nbRow == 0) {
     return face;
   }
