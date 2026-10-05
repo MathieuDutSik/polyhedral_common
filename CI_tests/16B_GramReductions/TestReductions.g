@@ -10,7 +10,8 @@ Print("Beginning TestReductions\n");
 #   * the returned form satisfies the condition the method claims: the Lovasz
 #     condition, the deep condition, the BKZ block condition, the two families
 #     of slide reduction, Minkowski's condition, the local minimality of
-#     Seysen's measure, or for "best" that it is no worse than its input.
+#     Seysen's measure, for self-dual BKZ the block condition on every full
+#     block, or for "best" that it is no worse than its input.
 
 delta:=99/100;
 
@@ -258,6 +259,29 @@ check_bkz:=function(G, beta)
     return true;
 end;
 
+# Self-dual BKZ ends with forward tours to a fixed point, so every FULL block
+# [j, j+m-1], m = min(beta, n), satisfies the block condition of BKZ; the
+# shorter blocks at the end, which BKZ also covers, are not used. The result
+# is size reduced.
+check_sdbkz:=function(G, beta)
+    local gs, n, m, j, test;
+    test:=check_size_reduced(G);
+    if test<>true then
+        return test;
+    fi;
+    gs:=get_gram_schmidt(G);
+    n:=Length(G);
+    m:=Minimum(beta, n);
+    for j in [1..n-m+1]
+    do
+        test:=check_block_condition(G, gs, j, j + m - 1);
+        if test<>true then
+            return test;
+        fi;
+    od;
+    return true;
+end;
+
 # Slide reduction is defined for a block size k >= 2 dividing n; a form of
 # dimension at most one is reduced whatever k.
 is_slide_applicable:=function(n, k)
@@ -365,6 +389,10 @@ get_method_check:=function(method)
     if method="minkowski" then
         return check_minkowski;
     fi;
+    rest:=starts_with(method, "sdbkz-");
+    if rest<>fail then
+        return G->check_sdbkz(G, Int(rest));
+    fi;
     for prefix in ["deep-", "bkz-", "slide-"]
     do
         rest:=starts_with(method, prefix);
@@ -385,6 +413,7 @@ end;
 
 ListMethod:=["direct", "dual", "seysen", "seysen_best", "seysen_lll",
              "deep", "deep-3", "bkz-2", "bkz-4", "bkz-8",
+             "sdbkz-2", "sdbkz-4", "sdbkz-8",
              "slide-2", "slide-3", "slide-4", "minkowski", "best"];
 
 # The block size of a slide method, or fail for another method.
@@ -471,7 +500,8 @@ end;
 # The names the parser must reject: no hyphen, a parameter below the
 # meaningful minimum, a missing or malformed parameter, an unknown name.
 #
-ListRejected:=["bkz8", "deep5", "deep-0", "bkz-1", "slide-1", "bkz-", "bkz-4x", "bkz--4", "foo"];
+ListRejected:=["bkz8", "deep5", "deep-0", "bkz-1", "slide-1", "bkz-", "bkz-4x", "bkz--4",
+              "sdbkz8", "sdbkz-1", "foo"];
 
 test_rejected:=function(method)
     local res;

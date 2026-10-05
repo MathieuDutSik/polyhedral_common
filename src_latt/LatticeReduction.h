@@ -9,6 +9,7 @@
 #include "MAT_Matrix.h"
 #include "MinkowskiReduction.h"
 #include "SeysenReduction.h"
+#include "SelfDualBKZ.h"
 #include "SlideReduction.h"
 #include <optional>
 #include <string>
@@ -132,7 +133,7 @@ inline void LatticeReduction_CheckParameter(std::string const &method,
  */
 inline void LatticeReduction_UnknownMethod(std::string const &method) {
   std::cerr << "LATTICE_REDUCTION: unknown method " << method << "\n";
-  for (auto &prefix : {"deep", "bkz", "slide"}) {
+  for (auto &prefix : {"deep", "bkz", "sdbkz", "slide"}) {
     std::optional<std::string> tail = get_postfix(method, prefix);
     if (tail && LatticeReduction_ParseInteger(*tail)) {
       std::cerr << "  did you mean " << prefix << "-" << *tail
@@ -146,7 +147,7 @@ inline void LatticeReduction_UnknownMethod(std::string const &method) {
   }
   std::cerr << "\n";
   std::cerr << "  the methods with one are: deep-<depth>, bkz-<blocksize>, "
-               "slide-<blocksize>\n";
+               "sdbkz-<blocksize>, slide-<blocksize>\n";
   throw TerminalException{1};
 }
 
@@ -202,6 +203,13 @@ LLLreduction<T, Tint> LatticeReducedGeneral(MyMatrix<T> const &GramMat,
   if (beta) {
     LatticeReduction_CheckParameter(method, *beta, 2);
     return BKZreducedBasis<T, Tint>(GramMat, *beta, os);
+  }
+  // Self-dual BKZ, the block size being as for BKZ.
+  std::optional<int> beta_sd =
+      LatticeReduction_PrefixedParameter(method, "sdbkz");
+  if (beta_sd) {
+    LatticeReduction_CheckParameter(method, *beta_sd, 2);
+    return SelfDualBKZReducedBasis<T, Tint>(GramMat, *beta_sd, os);
   }
   // The block size is exactly k, which must divide the dimension; a k that
   // does not is rejected with the list of those that do.

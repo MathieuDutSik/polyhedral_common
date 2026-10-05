@@ -57,6 +57,9 @@ unimodular transformation that produced it.
                is exponential in the dimension and inherently so, which is why
                it is not among the candidates that best tries
   bkz-<b>      BKZ at block size b
+  sdbkz-<b>    Micciancio-Walter self-dual BKZ at block size b: BKZ's forward
+               tours alternated with backward tours making the last
+               Gram-Schmidt norm of each block maximal
   slide-<k>    Gama-Nguyen slide reduction at block size k, which must
                divide the dimension
   best         run a representative selection of the above and keep whichever
@@ -69,8 +72,8 @@ unimodular transformation that produced it.
                dimension. minkowski is deliberately excluded, its cost being
                exponential
 
-The block methods bkz and slide ask at each index for a shortest vector of a
-projected block, so they cost more than the rest, superexponentially in the
+The block methods bkz, sdbkz and slide ask at each index for a shortest vector
+of a projected block, so they cost more than the rest, superexponentially in the
 block size, and the quality they buy improves slowly; above block size eight
 the gains measured in this package were negligible. Slide reduction differs
 from BKZ in using two families of conditions on non-overlapping blocks, which
