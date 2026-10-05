@@ -201,6 +201,42 @@ ridges. The bounded faces are connected through vertices, not through faces
 of codimension 3, so the procedure has to be seeded with several facets or
 complemented, see the paper.
 
+Rigorous vertex test: `IGUSA_VertexTest`
+----------------------------------------
+
+For A in I, the inequalities X[v] >= 1 with A[v] = 1 are tight at A, so A
+is a vertex of P iff it is a vertex of the face P_A = P cap {X[v] = 1}, of
+small dimension k (0 for a perfect form). The integral points of P_A are
+A + D, D in a saturated lattice L_E of rank k with basis K; an integral N
+with K N^T = I gives the coordinates t = N D. The recession cone of P_A is
+{B^T M B : M positive semidefinite}, B the linear forms vanishing on the
+span of the v. The iteration keeps directions D = X - A of points of P_A
+and recession directions R:
+
+* a linear program looks for h with h(D) > 0 and h(R) > 0 (margin z,
+  h in a box). If none exists, A = sum lambda X_D + (positive semidefinite),
+  a convex combination certified exactly: A is not a vertex;
+* otherwise h is made positive definite on the recession cone, extended to
+  the whole space by a multiple of sum_v (X[v] - 1) so that the integer
+  programs are coercive, and minimized over P_A. A point below A, or
+  another point of the minimal face (found by minimizing and maximizing the
+  k coordinates), is added; if there is none, A is a vertex exposed by h.
+
+```
+&DATA
+ arithmetic = "flint"
+ IlpMethod = "scip"
+ OutFile = "vt9.out"        ! for each form: IsVertex, the functional or the
+                            ! convex combination
+ FileListForm = "list9.mat" ! the forms to test (ListMatrix format)
+/
+&TSPACE ... /
+```
+
+Times for n = 9 (one iteration each): E8+A1 2 s (face of dimension 8),
+E7+A2 13 s (14), E6+A3 6 min (18), D4+D5 19 min (20). D4+D4 (n = 8, face of
+dimension 16) is shown not to be a vertex in 18 iterations, 0.4 s.
+
 Integer programming
 -------------------
 
