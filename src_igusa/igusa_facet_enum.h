@@ -52,19 +52,6 @@
   incidence is infinite.
  */
 
-// The matrix G of the T-space with tr(G X) = sum_j g(j+1) x_j.
-template <typename T, typename Tint>
-MyMatrix<T> igusa_functional_matrix(IgusaSpace<T, Tint> const &space,
-                                    MyVector<T> const &g) {
-  int dim = space.dim;
-  MyVector<T> glin(dim);
-  for (int j = 0; j < dim; j++) {
-    glin(j) = g(j + 1);
-  }
-  MyVector<T> y = Inverse(space.TraceGram) * glin;
-  return igusa_matrix(space, y);
-}
-
 // Scale (F, rhs) by a positive factor so that F is integral with coprime
 // entries.
 template <typename T>

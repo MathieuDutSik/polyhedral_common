@@ -7,6 +7,7 @@
 #include "POLY_AdjacencyScheme.h"
 #include "Tspace_Namelist.h"
 #include "Positivity.h"
+#include "SignatureSymmetric.h"
 #include "integer_linear_programming.h"
 #include "GRP_GroupFile.h"
 #include <cmath>
@@ -316,6 +317,19 @@ MyMatrix<T> igusa_matrix_int(IgusaSpace<T, Tint> const &space,
   return GetMatrixFromBasis(space.ListMatInt, x_T);
 }
 
+// The matrix G of the T-space with tr(G X) = sum_j g(j+1) x_j.
+template <typename T, typename Tint>
+MyMatrix<T> igusa_functional_matrix(IgusaSpace<T, Tint> const &space,
+                                    MyVector<T> const &g) {
+  int dim = space.dim;
+  MyVector<T> glin(dim);
+  for (int j = 0; j < dim; j++) {
+    glin(j) = g(j + 1);
+  }
+  MyVector<T> y = Inverse(space.TraceGram) * glin;
+  return igusa_matrix(space, y);
+}
+
 // Insert the cut X[v] >= 1 in the pool. Returns false if already present.
 template <typename T, typename Tint>
 bool igusa_insert_cut(IgusaSpace<T, Tint> &space, MyVector<Tint> const &v) {
@@ -536,6 +550,18 @@ igusa_integral_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
 #ifdef TIMINGS_IGUSA
   MicrosecondTime time;
 #endif
+  // Without equalities bounding the feasible set, f has to be bounded below
+  // on I, that is its matrix has to be positive semidefinite: otherwise f
+  // decreases along a ray X + t w w^T, no cut X[v] >= 1 removes it and the
+  // cutting planes do not terminate. With equalities (a bounded face of P,
+  // as for the coordinate functions minimized on such a face) this is not
+  // required.
+  if (ListEqua.rows() == 0 &&
+      !IsPositiveSemiDefinite(igusa_functional_matrix(space, f), os)) {
+    std::cerr << "IGUSA: igusa_integral_minimization, the matrix of the "
+                 "function should be positive semidefinite\n";
+    throw TerminalException{1};
+  }
   // The linear programming phase
   std::optional<IgusaMinimum<T>> opt_lp =
       igusa_lp_minimization(space, f, ListExtraIneq, ListEqua, os);
