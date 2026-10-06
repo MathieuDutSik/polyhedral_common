@@ -65,6 +65,7 @@
 #include "GRAPH_Bindings.h"
 #include "WeightMatrix.h"
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <map>
 #include <optional>
@@ -1978,6 +1979,359 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
                                                               is_symm>(
           nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, nbRow, os);
   return {std::move(res.canonic), std::move(res.ListGen)};
+}
+
+// The largest graph built by GetStabilizerWeightMatrix_Individualization,
+// which is also the subset size above which the subset method for the
+// stabilizer gives way to it (see f_for_stab). TEST_GROUP_THRESHOLD lowers
+// it, so that the small cases of the tests go through the individualization.
+#ifdef TEST_GROUP_THRESHOLD
+static const size_t THRESHOLD_INDIVIDUALIZATION_STAB = 100;
+#else
+static const size_t THRESHOLD_INDIVIDUALIZATION_STAB = 5000;
+#endif
+
+/*
+  The stabilizer by orbit-stabilizer, for a large point set with a small
+  group: there the vertex partition can have a block so large that the subset
+  method needs the whole set (a regular action has a single block). A vertex
+  v0 of the largest block is individualized, its pairs getting a marker in
+  the weights ({w(i,j), [i = v0] + [j = v0]}, symmetric when w is), which
+  breaks the symmetry. The orbit of v0 is in its block, and the result is
+  G = <G_{v0}, an element mapping v0 to w for each w found in the orbit>, with
+  |G| = |v0^G| |G_{v0}|.
+
+  The extension of a map from a spanning subset to the whole set is f_lift
+  (Vsrc, Vdst): the permutation of the whole set induced by the linear map
+  sending the points Vsrc[i] to Vdst[i], when there is one. It must be exact:
+  an automorphism is determined by its restriction to a spanning subset, and
+  f_lift returns it from that restriction. The method relies on it to prove
+  that a candidate is not in the orbit, and a lift that fails when an
+  extension exists gives a group and an order that are too small. A caller
+  without such a lift must not call this function.
+
+  The marker is T(0), T(1) or T(2) in a second entry of the weight, so T only
+  needs three distinct values constructed from an int.
+
+  The stabilizer G_{v0} and the test of a candidate w come from one of two
+  methods, both relying on a spanning subset S0 containing v0 whose
+  individualized automorphisms all extend to the whole set:
+  then G_{v0} is the group of these extensions (an element fixing v0 being
+  determined by its restriction to S0), and an isomorphism between the
+  individualized subsets at v0 and at w extends if and only if an
+  automorphism maps v0 to w.
+  * Small subset: S(x) = U + {x}, U the vertices outside the block of v0,
+    when there are at most THRESHOLD_INDIVIDUALIZATION_STAB of them and S(v0)
+  has full rank. The automorphisms of the whole set preserve U, the isomorphism
+  is the one of the canonical forms of the small weighted structures S(v0) and
+  S(w), and each test costs a graph of |U| + 1 vertices.
+  * Canonical subset: the canonical ordering of the whole individualized
+    structure by the subset method, the isomorphism being the composition of
+    the canonical orderings at v0 and at w.
+
+  The test of a candidate w has three outcomes: an automorphism mapping v0 to
+  w is found, there is proven to be none, or the method cannot decide. The
+  last one happens with the canonical subset method when the subset at w is
+  above THRESHOLD_INDIVIDUALIZATION_STAB, and no value is then returned:
+  excluding w would undercount the orbit.
+
+  A candidate whose weights to the other blocks differ from the ones of v0 is
+  not in the orbit, and the candidates are taken one per orbit of the group
+  found so far: when w is not in the orbit of v0, neither is its orbit under a
+  subgroup. No value is returned when neither method applies within
+  THRESHOLD_INDIVIDUALIZATION_STAB.
+
+  THRESHOLD_INDIVIDUALIZATION_STAB bounds the size of the graphs built: the
+  small subset S0 and the subset of the canonical subset method. The cheap
+  invariant uses the blocks within that size as well, keeping its cost at
+  O(|Block| THRESHOLD_INDIVIDUALIZATION_STAB) per block used.
+ */
+// With the small subset method, G_{v0} also comes as its action on S0, which
+// is faithful (an element fixing v0 is determined by its restriction to the
+// spanning S0): ListGenStabS0 are the permutations of the positions in S0,
+// whose group has the order of G_{v0}. It is empty otherwise.
+template <typename Tidx> struct OrbitStabilizerGenerators {
+  std::vector<std::vector<Tidx>> ListGen;
+  std::vector<std::vector<Tidx>> ListGenStab;
+  size_t orbit_size;
+  std::vector<std::vector<Tidx>> ListGenStabS0;
+  size_t size_S0;
+};
+
+template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,
+          typename F1tr, typename F2tr, typename F3, typename F4, typename F5,
+          typename Flift>
+std::optional<OrbitStabilizerGenerators<Tidx>>
+GetStabilizerWeightMatrix_Individualization(size_t nbRow, F1 f1, F2 f2,
+                                            F1tr f1tr, F2tr f2tr, F3 f3, F4 f4,
+                                            F5 f5, Flift f_lift,
+                                            std::ostream &os) {
+  using Tperm = std::vector<Tidx>;
+  using Tw = std::vector<T>;
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
+  MicrosecondTime time;
+#endif
+  const bool canonically = false;
+  size_t max_globiter = 1000;
+  VertexPartition<Tidx> VP = ComputeVertexPartition<T, Tidx>(
+      nbRow, f1, f2, canonically, max_globiter, os);
+  size_t iBig = 0;
+  for (size_t iBlock = 1; iBlock < VP.ListBlocks.size(); iBlock++)
+    if (VP.ListBlocks[iBlock].size() > VP.ListBlocks[iBig].size())
+      iBig = iBlock;
+  std::vector<Tidx> const &Block = VP.ListBlocks[iBig];
+  Tidx v0 = Block[0];
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "WMS: Individualization, nbRow=" << nbRow << " |Block|=" << Block.size()
+     << " v0=" << v0 << "\n";
+#endif
+  // The individualized weight at x of the pair (i, j).
+  auto weight_at = [&](Tidx x, Tidx i, Tidx j) -> Tw {
+    f1(i);
+    return {f2(j), T(int(i == x) + int(j == x))};
+  };
+  // The method: the generators of G_{v0} and the test of a candidate.
+  std::vector<Tperm> ListGenStab;
+  std::vector<Tperm> ListGenStabS0;
+  size_t size_S0 = 0;
+  enum class TestResult { found, not_in_orbit, undecided };
+  struct CandidateTest {
+    TestResult result;
+    Tperm g;
+  };
+  std::function<CandidateTest(Tidx)> f_test;
+  //
+  // The small subset method.
+  std::vector<Tidx> U;
+  for (size_t iBlock = 0; iBlock < VP.ListBlocks.size(); iBlock++)
+    if (iBlock != iBig)
+      for (auto &x : VP.ListBlocks[iBlock])
+        U.push_back(x);
+  struct SmallCanonical {
+    std::vector<Tidx> L;
+    std::vector<Tidx> ord;
+    std::vector<Tperm> gens;
+    std::vector<Tw> canonic_weights;
+  };
+  auto small_canonical = [&](Tidx x) -> SmallCanonical {
+    std::vector<Tidx> L = U;
+    L.push_back(x);
+    size_t m = L.size();
+    size_t cur = 0;
+    auto g1 = [&](size_t i) -> void { cur = i; };
+    auto g2 = [&](size_t j) -> Tw { return weight_at(x, L[cur], L[j]); };
+    auto f_dispatch = [&]<typename Tidx_value>()
+        -> std::pair<std::vector<Tidx>, std::vector<Tperm>> {
+      WeightMatrix<is_symm, Tw, Tidx_value> WMat(m, g1, g2, os);
+      WMat.ReorderingSetWeight();
+      return GetGroupCanonicalizationVector_Kernel<Tw, GraphListAdj, Tidx,
+                                                   Tidx_value, is_symm>(WMat,
+                                                                        os);
+    };
+    std::pair<std::vector<Tidx>, std::vector<Tperm>> pair =
+        call_with_smallest_unsigned(weightmatrix_get_nb(is_symm, m),
+                                    "Individualization", f_dispatch);
+    std::vector<Tw> canonic_weights;
+    for (size_t k = 0; k < m; k++)
+      for (size_t l = 0; l < m; l++)
+        canonic_weights.push_back(
+            weight_at(x, L[pair.first[k]], L[pair.first[l]]));
+    return {std::move(L), std::move(pair.first), std::move(pair.second),
+            std::move(canonic_weights)};
+  };
+  std::vector<Tidx> S0_small = U;
+  S0_small.push_back(v0);
+  bool use_small =
+      S0_small.size() <= THRESHOLD_INDIVIDUALIZATION_STAB && f3(S0_small);
+  if (use_small) {
+    SmallCanonical sc0 = small_canonical(v0);
+    for (auto &eGen : sc0.gens) {
+      std::vector<Tidx> Vin;
+      for (size_t i = 0; i < sc0.L.size(); i++)
+        Vin.push_back(sc0.L[eGen[i]]);
+      std::optional<Tperm> opt = f_lift(sc0.L, Vin);
+      if (!opt) {
+        use_small = false;
+        break;
+      }
+      ListGenStab.push_back(*opt);
+    }
+    if (use_small) {
+      ListGenStabS0 = sc0.gens;
+      size_S0 = sc0.L.size();
+      f_test = [&, sc0](Tidx w) -> CandidateTest {
+        SmallCanonical sc = small_canonical(w);
+        // Different canonical forms: S(v0) and S(w) are not isomorphic.
+        if (sc.canonic_weights != sc0.canonic_weights)
+          return {TestResult::not_in_orbit, {}};
+        std::vector<Tidx> Vin(sc0.L.size());
+        for (size_t k = 0; k < sc0.L.size(); k++)
+          Vin[sc0.ord[k]] = sc.L[sc.ord[k]];
+        // The isomorphism differs from the restriction of an automorphism
+        // mapping v0 to w, if there is one, by an automorphism of S(v0), and
+        // all of those extend: when it does not extend, there is none.
+        std::optional<Tperm> opt = f_lift(sc0.L, Vin);
+        if (!opt || (*opt)[v0] != w)
+          return {TestResult::not_in_orbit, {}};
+        return {TestResult::found, std::move(*opt)};
+      };
+    } else {
+      ListGenStab.clear();
+    }
+  }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "WMS: Individualization, |U|=" << U.size() << " use_small=" << use_small
+     << "\n";
+#endif
+  //
+  // The canonical subset method.
+  auto canonical_at =
+      [&](Tidx x) -> std::optional<CanonicalizationSubset<Tidx>> {
+    size_t cur_i = 0;
+    size_t cur_itr = 0;
+    auto f1w = [&](size_t i) -> void {
+      cur_i = i;
+      f1(i);
+    };
+    auto f2w = [&](size_t j) -> Tw {
+      return {f2(j), T(int(cur_i == x) + int(j == x))};
+    };
+    auto f1trw = [&](size_t i) -> void {
+      cur_itr = i;
+      f1tr(i);
+    };
+    auto f2trw = [&](size_t j) -> Tw {
+      return {f2tr(j), T(int(cur_itr == x) + int(j == x))};
+    };
+    return GetGroupCanonicalizationVectorSubset_Heuristic_Limited<Tw, Tidx,
+                                                                  is_symm>(
+        nbRow, f1w, f2w, f1trw, f2trw, f3, f4, f5,
+        THRESHOLD_INDIVIDUALIZATION_STAB, os);
+  };
+  std::optional<CanonicalizationSubset<Tidx>> opt0;
+  if (!use_small) {
+    opt0 = canonical_at(v0);
+    if (!opt0)
+      return {};
+    ListGenStab = opt0->ListGen;
+    f_test = [&](Tidx w) -> CandidateTest {
+      std::optional<CanonicalizationSubset<Tidx>> optw = canonical_at(w);
+      if (!optw)
+        return {TestResult::undecided, {}};
+      Tperm const &c0 = opt0->canonic;
+      Tperm const &cw = optw->canonic;
+      // The subset of the subset method: full rank, and containing v0, whose
+      // block of size one is the first one taken.
+      std::vector<Tidx> const &S0 = opt0->Vsubset;
+      // When the structures at v0 and at w are isomorphic, pi is an
+      // isomorphism between them, that is an automorphism mapping v0 to w.
+      // Each failure below proves that they are not.
+      Tperm pi(nbRow);
+      for (size_t k = 0; k < nbRow; k++)
+        pi[c0[k]] = cw[k];
+      if (pi[v0] != w)
+        return {TestResult::not_in_orbit, {}};
+      for (auto &a : S0)
+        for (auto &b : S0)
+          if (weight_at(v0, a, b) != weight_at(w, pi[a], pi[b]))
+            return {TestResult::not_in_orbit, {}};
+      std::vector<Tidx> Vin;
+      for (auto &a : S0)
+        Vin.push_back(pi[a]);
+      std::optional<Tperm> opt = f_lift(S0, Vin);
+      if (!opt || (*opt)[v0] != w)
+        return {TestResult::not_in_orbit, {}};
+      return {TestResult::found, std::move(*opt)};
+    };
+  }
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
+  for (auto &eGen : ListGenStab) {
+    if (eGen[v0] != v0) {
+      std::cerr << "WMS: Individualization, a generator of the stabilizer "
+                   "moves v0\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  //
+  // The orbit of v0.
+  std::vector<Tperm> ListGen = ListGenStab;
+  auto orbit_of = [&](Tidx x) -> std::vector<Tidx> {
+    std::vector<Tidx> orbit{x};
+    Face in(nbRow);
+    in[x] = 1;
+    for (size_t pos = 0; pos < orbit.size(); pos++)
+      for (auto &eGen : ListGen) {
+        Tidx y = eGen[orbit[pos]];
+        if (in[y] == 0) {
+          in[y] = 1;
+          orbit.push_back(y);
+        }
+      }
+    return orbit;
+  };
+  // A cheap invariant of the orbit of v0: for each other block of at most
+  // THRESHOLD_INDIVIDUALIZATION_STAB vertices, the sorted weights from the
+  // vertex to it.
+  auto get_invariant = [&](Tidx x) -> std::vector<T> {
+    std::vector<T> inv;
+    f1(x);
+    for (size_t iBlock = 0; iBlock < VP.ListBlocks.size(); iBlock++) {
+      if (iBlock == iBig ||
+          VP.ListBlocks[iBlock].size() > THRESHOLD_INDIVIDUALIZATION_STAB)
+        continue;
+      size_t start = inv.size();
+      for (auto &b : VP.ListBlocks[iBlock])
+        inv.push_back(f2(b));
+      std::sort(inv.begin() + start, inv.end());
+    }
+    return inv;
+  };
+  std::vector<T> inv_v0 = get_invariant(v0);
+  Face in_orbit(nbRow);
+  Face excluded(nbRow);
+  for (auto &w : Block)
+    if (get_invariant(w) != inv_v0)
+      excluded[w] = 1;
+  auto set_orbit_v0 = [&]() -> void {
+    for (auto &x : orbit_of(v0))
+      in_orbit[x] = 1;
+  };
+  set_orbit_v0();
+  [[maybe_unused]] size_t n_test = 0;
+  for (auto &w : Block) {
+    if (in_orbit[w] == 1 || excluded[w] == 1)
+      continue;
+    n_test++;
+    CandidateTest test = f_test(w);
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    os << "WMS: Individualization, n_test=" << n_test << " w=" << w
+       << " result=" << static_cast<int>(test.result) << "\n";
+#endif
+    if (test.result == TestResult::undecided)
+      return {};
+    if (test.result == TestResult::found) {
+      ListGen.push_back(std::move(test.g));
+      set_orbit_v0();
+    } else {
+      for (auto &x : orbit_of(w))
+        excluded[x] = 1;
+    }
+  }
+  size_t orbit_size = in_orbit.count();
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
+  os << "|WMS: Individualization|=" << time
+     << " method=" << (use_small ? "small_subset" : "canonical_subset")
+     << " n_test=" << n_test << " orbit_size=" << orbit_size << "\n";
+#endif
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "WMS: Individualization, n_test=" << n_test
+     << " orbit_size=" << orbit_size << " |ListGenStab|=" << ListGenStab.size()
+     << " |ListGen|=" << ListGen.size() << "\n";
+#endif
+  return OrbitStabilizerGenerators<Tidx>{std::move(ListGen),
+                                         std::move(ListGenStab), orbit_size,
+                                         std::move(ListGenStabS0), size_S0};
 }
 
 // clang-format off

@@ -45,7 +45,8 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `17B_Erdahl` -- `ci_17B_erdahl`: Enumeration of the perfect Delaunay polyhedra with src_erdahl: the 4 of the full space in dimension 7 and the 3 centrally symmetric ones (functions of center e_1/2) in dimension 8, with the CUT_8 dual description heuristics of `16A_EquivDualDesc/CUT_K8`; and the perfect Delaunay polytopes only (method `polytopes`, from the Erdahl-Rybnikov polytope and its symmetrization) in the same two cases.
 * `19_IndefiniteComp` -- `ci_19_indefinite_comp`: Computation of indefinite forms.
 * `20_Reflective` -- `ci_20_reflective`: This is for using the edgewalk algorithm of Allcock for building the polyheral cone.
-* `21A_SamplingFacets` -- `ci_21_sampling_facets`: Sampling facets of polytopes.
+* `21A_SamplingFacets` -- `ci_21A_sampling_facets`: Sampling facets of polytopes.
+* `21B_GroupIndividualization` -- `ci_21B_group_individualization`: Automorphism group of point sets with a large block and a small group, through the orbit-stabilizer computation by individualization: the WythoffH4 polytope and orbits of B6 above the thresholds, and orbits of B4 and B5 with the lowered thresholds of `TEST_GROUP_THRESHOLD` and the sanity checks.
 * `22_CommonG_IsoDelaunay` -- `ci_22_commong_isodelaunay`: CommonGramMat iso-Delaunay (rigid lattices and stars).
 * `23A_IntegralPoints` -- `ci_23A_integral_points`: Compute the integral points of some polytope.
 * `23B_SimpleDualDesc` -- `ci_23B_simple_dual_desc`: This is for the code for computing the dual description of polyhedral cones.

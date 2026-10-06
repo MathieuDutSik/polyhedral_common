@@ -24,7 +24,9 @@
 #include "WeightMatrixLimited.h"
 #include "WeightMatrixSpecified.h"
 #include <limits>
+#include <optional>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -60,7 +62,14 @@
 // #define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
 #endif
 
+// TEST_GROUP_THRESHOLD lowers the threshold, so that the subset method is
+// exercised by the small cases of the tests (THRESHOLD_INDIVIDUALIZATION_STAB
+// is in WeightMatrixSpecified.h).
+#ifdef TEST_GROUP_THRESHOLD
+static const size_t THRESHOLD_USE_SUBSET_SCHEME_STAB = 100;
+#else
 static const size_t THRESHOLD_USE_SUBSET_SCHEME_STAB = 1000;
+#endif
 static const size_t THRESHOLD_USE_SUBSET_SCHEME_CANONIC = 1000;
 
 static const size_t THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC = 2;
@@ -500,37 +509,118 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
   return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
 }
 
+// The generators of a stabilizer with, when it is known, the order of the
+// group they generate.
+template <typename Tidx, typename Tint> struct StabGeneratorsOrder {
+  std::vector<std::vector<Tidx>> ListGen;
+  std::optional<Tint> order;
+};
+
+// The f_lift of a caller that has no exact extension from a spanning subset
+// to the whole set: the individualization is then not run, since it takes a
+// failed lift as a proof that two vertices are not in the same orbit (see
+// GetStabilizerWeightMatrix_Individualization).
+struct NoLift {};
+
+/*
+  The generators of the stabilizer of the weight matrix given by f1/f2.
+  Large sets go through the subset method, and when it would need a subset
+  above THRESHOLD_INDIVIDUALIZATION_STAB, through the orbit-stabilizer
+  computation by individualization, which also gives the order of the group
+  |v0^G| |G_{v0}|: that order is the one of a permutation group of the
+  points, computed from its action on them, and is returned. The
+  individualization needs an exact f_lift, and is not run when the caller
+  passes NoLift; when no value comes out, the subset method is run without
+  limit as before.
+ */
 template <typename Tvalue, typename Tgroup, typename Tidx_value, typename F1,
-          typename F2, typename F1tr, typename F2tr, typename F3, typename F4>
-std::vector<std::vector<typename Tgroup::Telt::Tidx>>
+          typename F2, typename F1tr, typename F2tr, typename F3, typename F4,
+          typename F5, typename Flift>
+StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>
 f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4,
-           bool is_symm, std::ostream &os) {
+           [[maybe_unused]] F5 f5, [[maybe_unused]] Flift f_lift, bool is_symm,
+           std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+  using Tret = StabGeneratorsOrder<Tidx, Tint>;
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "PES: f_for_stab: nbRow=" << nbRow
      << " threshold=" << THRESHOLD_USE_SUBSET_SCHEME_STAB << "\n";
 #endif
-  auto f_heuristic = [&]() -> std::vector<std::vector<Tidx>> {
+  auto f_heuristic_limited =
+      [&](size_t max_subset) -> std::optional<std::vector<std::vector<Tidx>>> {
     if (is_symm) {
-      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, true>(
-          nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
+      return GetStabilizerWeightMatrix_Heuristic_Limited<Tvalue, Tidx, true>(
+          nbRow, f1, f2, f1tr, f2tr, f3, f4, max_subset, os);
     } else {
-      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, false>(
-          nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
+      return GetStabilizerWeightMatrix_Heuristic_Limited<Tvalue, Tidx, false>(
+          nbRow, f1, f2, f1tr, f2tr, f3, f4, max_subset, os);
     }
   };
-  auto f_kernel = [&]() -> std::vector<std::vector<Tidx>> {
+  auto f_individualization =
+      [&]() -> std::optional<OrbitStabilizerGenerators<Tidx>> {
+    if constexpr (!std::is_same_v<Flift, NoLift>) {
+      if (is_symm) {
+        return GetStabilizerWeightMatrix_Individualization<Tvalue, Tidx,
+                                                           true>(
+            nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, f_lift, os);
+      } else {
+        return GetStabilizerWeightMatrix_Individualization<Tvalue, Tidx,
+                                                           false>(
+            nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, f_lift, os);
+      }
+    } else {
+      return {};
+    }
+  };
+  auto f_heuristic = [&]() -> Tret {
+    std::optional<std::vector<std::vector<Tidx>>> opt =
+        f_heuristic_limited(THRESHOLD_INDIVIDUALIZATION_STAB);
+    if (opt)
+      return {std::move(*opt), {}};
+    std::optional<OrbitStabilizerGenerators<Tidx>> opt_os =
+        f_individualization();
+    if (opt_os) {
+      // |G_{v0}| from its faithful action on the small S0 when available.
+      bool use_S0 = opt_os->size_S0 > 0;
+      std::vector<std::vector<Tidx>> const &ListGenStab =
+          use_S0 ? opt_os->ListGenStabS0 : opt_os->ListGenStab;
+      size_t n_act = use_S0 ? opt_os->size_S0 : nbRow;
+      std::vector<Telt> LGenStab;
+      for (auto &eList : ListGenStab)
+        LGenStab.emplace_back(Telt(eList));
+      Tgroup GRPstab(LGenStab, Telt(static_cast<Tidx>(n_act)));
+      Tint order = Tint(opt_os->orbit_size) * GRPstab.size();
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+      std::vector<Telt> LGen;
+      for (auto &eList : opt_os->ListGen)
+        LGen.emplace_back(Telt(eList));
+      Tgroup GRP(LGen, Telt(static_cast<Tidx>(nbRow)));
+      if (GRP.size() != order) {
+        std::cerr << "PES: f_for_stab, the order |v0^G| |G_{v0}|=" << order
+                  << " is not the one of the generated group " << GRP.size()
+                  << "\n";
+        throw TerminalException{1};
+      }
+#endif
+      return {std::move(opt_os->ListGen), order};
+    }
+    return {std::move(*f_heuristic_limited(nbRow)), {}};
+  };
+  auto f_kernel = [&]() -> Tret {
     if (is_symm) {
       WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
-      return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tidx_value,
-                                              true>(WMat, os);
+      return {GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tidx_value,
+                                               true>(WMat, os),
+              {}};
     } else {
       WeightMatrix<false, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
-      return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tidx_value,
-                                              false>(WMat, os);
+      return {GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tidx_value,
+                                               false>(WMat, os),
+              {}};
     }
   };
 #ifdef SANITY_CHECK_THRESHOLD_SCHEME
@@ -538,9 +628,9 @@ f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4,
   for (int i = 0; i < 2; i++) {
     auto iife = [&]() -> std::vector<std::vector<Tidx>> {
       if (i == 0) {
-        return f_heuristic();
+        return f_heuristic().ListGen;
       } else {
-        return f_kernel();
+        return f_kernel().ListGen;
       }
     };
     std::vector<std::vector<Tidx>> LGen1 = iife();
@@ -569,61 +659,103 @@ f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4,
 }
 
 template <typename T, typename Tgroup, typename Tidx_value>
-std::vector<typename Tgroup::Telt> LinPolytope_Automorphism_GramMat_LGen_Tidx_value(MyMatrix<T> const &EXT,
-                                                                                    MyMatrix<T> const &GramMat,
-                                                                                    std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
+StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>
+LinPolytope_Automorphism_GramMat_GensOrder_Tidx_value(
+    MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat, std::ostream &os) {
+  using Tidx = typename Tgroup::Telt::Tidx;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   HumanTime time;
 #endif
-  using Treturn = std::vector<std::vector<Tidx>>;
+  using Treturn = StabGeneratorsOrder<Tidx, typename Tgroup::Tint>;
+  using Tfield = typename overlying_field<T>::field_type;
+  // The permutation of the points induced by the linear map sending the
+  // points Vsrc[i] to Vdst[i], when it exists and permutes them. The
+  // container of the points is built once for the repeated tests.
+  ContainerMatrix<T> Cont(EXT);
+  auto f_lift =
+      [&](std::vector<Tidx> const &Vsrc,
+          std::vector<Tidx> const &Vdst) -> std::optional<std::vector<Tidx>> {
+    auto get_rows = [&](std::vector<Tidx> const &V) -> MyMatrix<Tfield> {
+      MyMatrix<Tfield> M(V.size(), EXT.cols());
+      for (size_t i = 0; i < V.size(); i++)
+        for (int iCol = 0; iCol < EXT.cols(); iCol++)
+          M(i, iCol) = UniversalScalarConversion<Tfield, T>(EXT(V[i], iCol));
+      return M;
+    };
+    MyMatrix<Tfield> EXT1 = get_rows(Vsrc);
+    MyMatrix<Tfield> EXT2 = get_rows(Vdst);
+    auto f_id = [](int i) -> int { return i; };
+    std::optional<MyMatrix<Tfield>> opt =
+        FindTransformationGeneral_f(EXT1, EXT2, f_id);
+    if (!opt)
+      return {};
+    return RepresentVertexPermutationTest_Cont<T, Tfield, Tidx>(EXT, Cont,
+                                                               *opt);
+  };
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3,
-               auto f4, [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
+               auto f4, auto f5, bool is_symm) -> Treturn {
     return f_for_stab<T, Tgroup, Tidx_value, decltype(f1), decltype(f2),
                       decltype(f1tr), decltype(f2tr), decltype(f3),
-                      decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, is_symm,
-                                    os);
+                      decltype(f4), decltype(f5), decltype(f_lift)>(
+        nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, f_lift, is_symm, os);
   };
-  Treturn ListGen =
+  Treturn gens_order =
       FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   os << "|PES: LinPolytope_Aut : FCT_EXT_Qinput|=" << time << "\n";
 #endif
-  std::vector<Telt> LGen;
-  for (auto &eList : ListGen) {
-    Telt elt(eList);
-    LGen.emplace_back(std::move(elt));
-  }
-#ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "|PES: LinPolytope_Aut : LGen|=" << time << "\n";
-#endif
-  return LGen;
+  return gens_order;
+}
+
+// The generators of the automorphism group, with its order when known (see
+// f_for_stab).
+template <typename T, typename Tgroup>
+StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>
+LinPolytope_Automorphism_GramMat_GensOrder(MyMatrix<T> const &EXT,
+                                           MyMatrix<T> const &GramMat,
+                                           std::ostream &os) {
+  size_t nbRow = EXT.rows();
+  size_t max_poss_val =
+      weightmatrix_get_nb(IsSymmetricMatrix(GramMat), nbRow);
+  auto f_dispatch = [&]<typename Tidx_value>() {
+    return LinPolytope_Automorphism_GramMat_GensOrder_Tidx_value<T, Tgroup,
+                                                                 Tidx_value>(
+        EXT, GramMat, os);
+  };
+  return call_with_smallest_unsigned(
+      max_poss_val, "LinPolytope_Automorphism_GramMat_GensOrder", f_dispatch);
 }
 
 template <typename T, typename Tgroup>
 std::vector<typename Tgroup::Telt> LinPolytope_Automorphism_GramMat_LGen(MyMatrix<T> const &EXT,
                                                                          MyMatrix<T> const &GramMat,
                                                                          std::ostream &os) {
-  size_t nbRow = EXT.rows();
-  size_t max_poss_val =
-      weightmatrix_get_nb(IsSymmetricMatrix(GramMat), nbRow);
-  auto f_dispatch = [&]<typename Tidx_value>() {
-    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, Tidx_value>(
-        EXT, GramMat, os);
-  };
-  return call_with_smallest_unsigned(
-      max_poss_val, "LinPolytope_Automorphism_GramMat_LGen", f_dispatch);
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> LGen;
+  for (auto &eList :
+       LinPolytope_Automorphism_GramMat_GensOrder<T, Tgroup>(EXT, GramMat, os)
+           .ListGen)
+    LGen.emplace_back(Telt(eList));
+  return LGen;
 }
 
+// With the order of the group known (individualization), its stabilizer
+// chain is built by the randomized construction, which stops at that order.
 template <typename T, typename Tgroup>
 Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT,
                                         MyMatrix<T> const &GramMat,
                                         std::ostream &os) {
   using Telt = typename Tgroup::Telt;
-  std::vector<Telt> LGen = LinPolytope_Automorphism_GramMat_LGen<T,Tgroup>(EXT, GramMat, os);
-  size_t nbRow = EXT.rows();
-  return Tgroup(LGen, nbRow);
+  using Tidx = typename Telt::Tidx;
+  StabGeneratorsOrder<Tidx, typename Tgroup::Tint> gens_order =
+      LinPolytope_Automorphism_GramMat_GensOrder<T, Tgroup>(EXT, GramMat, os);
+  std::vector<Telt> LGen;
+  for (auto &eList : gens_order.ListGen)
+    LGen.emplace_back(Telt(eList));
+  Telt id(static_cast<Tidx>(EXT.rows()));
+  if (gens_order.order)
+    return Tgroup(LGen, id, *gens_order.order);
+  return Tgroup(LGen, id);
 }
 
 
@@ -1244,10 +1376,14 @@ GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
 #endif
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3,
                auto f4, [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
+    // The weights are vectors, which are not individualized.
+    NoLift f_lift;
     return f_for_stab<std::vector<T>, Tgroup, Tidx_value, decltype(f1),
                       decltype(f2), decltype(f1tr), decltype(f2tr),
-                      decltype(f3), decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3,
-                                                  f4, is_symm, os);
+                      decltype(f3), decltype(f4), decltype(f5),
+                      decltype(f_lift)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5,
+                                        f_lift, is_symm, os)
+        .ListGen;
   };
   Treturn ListGen = FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(
       EXT, ListMat, Vdiag, f, os);

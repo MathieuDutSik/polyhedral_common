@@ -1,0 +1,65 @@
+name: CI(21B) of the automorphism group by individualization
+
+on:
+  # Every two months (even months)
+  schedule:
+    - cron: "0 0 21 2,4,6,8,10,12 *"
+  # Manually triggered
+  workflow_dispatch:
+  # Disabled right now, when a push is made on master.
+jobs:
+  build-linux:
+    timeout-minutes: 120  # 2 hours
+    runs-on: ubuntu-latest
+    env:
+      GMP_INCDIR: /usr/include
+      GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
+      BOOST_INCDIR: "/usr/include"
+      BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
+      EIGEN_PATH: /home/runner/work/opt/eigen
+      NAUTY_PATH: /home/runner/work/opt/nauty
+      NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
+      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
+      LIBBLISS_PATH: /home/runner/opt/libbliss
+      LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
+      LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/install-boost
+
+      - uses: ./.github/actions/install-nauty
+      - uses: ./.github/actions/install-bliss
+      - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-gap
+      - name: Test of the small cases with lowered thresholds and sanity checks
+        run: |
+          make -B -C src_group -f Makefile_aut_group GRP_LinPolytope_Automorphism CDEFS="-DGMP_POOL -DTIMINGS -DTEST_GROUP_THRESHOLD -DSANITY_CHECK_POLYTOPE_EQUI_STAB -DSANITY_CHECK_WEIGHT_MATRIX_SPECIFIED"
+          echo "After compilation with TEST_GROUP_THRESHOLD"
+
+          cd CI_tests/21B_GroupIndividualization
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestSmall.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the small cases"
+      - name: Test of the large cases with the default thresholds
+        run: |
+          make -B -C src_group -f Makefile_aut_group GRP_LinPolytope_Automorphism
+          echo "After compilation with the default thresholds"
+
+          cd CI_tests/21B_GroupIndividualization
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestLarge.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the large cases"
