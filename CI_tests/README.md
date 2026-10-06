@@ -31,7 +31,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `08A_ConeIntersection` -- `ci_08A_cone_int`: This is checking different methods for computing the intersection of polyhedral cones.
 * `08B_AllZeroOneSolutions` -- `ci_08B_zero_one_solutions`: Enumeration of all the 0/1 solutions of a linear system A x = b.
 * `09A_Isotropic` -- `ci_09A_isotropic`: Testing existence of isotropic in quadrtaic forms and computing them if proven to exist.
-* `09B_PerfectContractingHomotopy` -- `ci_09B_contracting_homotopy`: For contracting homotopy computations.
+* `09B_PerfectPreImage` -- `ci_09B_pre_image`: For the pre-images of cycles under the boundary.
 * `11A_EquiStabDatabase` -- `ci_11A_equistabdatabase`: Memoization of equivalence and stabilizers.
 * `11B_Robust_Covering` -- `ci_11B_robust_covering`: Robust covering density computations.
 * `12A_Copositivity` -- `ci_12A_copos`: This is for checking the copositivity code.

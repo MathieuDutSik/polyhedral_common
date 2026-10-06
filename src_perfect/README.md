@@ -56,6 +56,6 @@ driven by the `&HECKE` block of `PERF_SerialPerfectComputation`:
   the full complex with its cells at infinity.
 
 The complex must be computed with `OnlyWellRounded = F`, `ComputeBoundary = T`
-and `ComputeContractingHomotopy = T`: the construction starts from the
-vertices (mapped to vertices) and goes up by contracting homotopies.
+and `ComputePreImage = T`: the construction starts from the
+vertices (mapped to vertices) and goes up by pre-images under the boundary.
 The GAP access point is `PERFCOMP_hecke_operators` in `CI_tests/access_points.g`.

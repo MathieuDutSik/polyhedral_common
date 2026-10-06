@@ -1,4 +1,4 @@
-name: CI(09B) for contracting homotopy computations.
+name: CI(09B) for the pre-images of cycles under the boundary.
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -45,8 +45,8 @@ jobs:
           pwd
           echo "After compilation of PERF_SerialEnumeratePerfectCones"
 
-          cd CI_tests/09B_PerfectContractingHomotopy
-          ../../gap.sh < TestContractingHomotopy.g
+          cd CI_tests/09B_PerfectPreImage
+          ../../gap.sh < TestPreImage.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1
@@ -55,7 +55,7 @@ jobs:
 
       - name: Test Hecke operators on the homology of the perfect form complex
         run: |
-          cd CI_tests/09B_PerfectContractingHomotopy
+          cd CI_tests/09B_PerfectPreImage
           rm -f CI_CONCLUSION
           ../../gap.sh < TestHeckeOperators.g
           if [ ! -f "CI_CONCLUSION" ]; then

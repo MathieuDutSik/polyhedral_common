@@ -1,6 +1,6 @@
 Read("../common.g");
 Read("../access_points.g");
-Print("Beginning contracting homotopy tests\n");
+Print("Beginning pre-image tests\n");
 
 random_grp_element:=function(l_gens)
     local n_gen, n_prod, eMat, i;
@@ -91,7 +91,7 @@ test_series:=function(desc)
         Print("chain1_bnd should be of length 1\n");
         return false;
     fi;
-    chain1_bnd_ch:=PERFCOMP_chain_contracting_homotopy(desc, 1, chain1_bnd);
+    chain1_bnd_ch:=PERFCOMP_chain_pre_image(desc, 1, chain1_bnd);
     if Length(chain1_bnd_ch)<>1 then
         Print("chain1_bnd_ch is likely to be of length 1\n");
         return false;

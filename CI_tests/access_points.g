@@ -2360,7 +2360,7 @@ __PERFCOMP_Write_t_space:=function(arg)
     AppendTo(output, " arithmetic = \"", arithmetic, "\"\n");
     AppendTo(output, " OnlyWellRounded = ", FORTRAN_logical(desc.only_well_rounded), "\n");
     AppendTo(output, " ComputeBoundary = T\n");
-    AppendTo(output, " ComputeContractingHomotopy = T\n");
+    AppendTo(output, " ComputePreImage = T\n");
 #    AppendTo(output, " CacheFile = \"", desc.CacheFile, "\"\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
@@ -2756,8 +2756,8 @@ end;
 
 
 
-PERFCOMP_chain_contracting_homotopy:=function(desc, index, the_chain)
-    return __PERFCOMP_chain_query(desc, index, the_chain, "FileChainContractingHomotopy");
+PERFCOMP_chain_pre_image:=function(desc, index, the_chain)
+    return __PERFCOMP_chain_query(desc, index, the_chain, "FileChainPreImage");
 end;
 
 PERFCOMP_chain_boundary:=function(desc, index, the_chain)

@@ -43,8 +43,8 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   //
   bool compute_boundary = BlockDATA.get_bool("ComputeBoundary");
   bool only_well_rounded = BlockDATA.get_bool("OnlyWellRounded");
-  bool compute_contracting_homotopy = BlockDATA.get_bool("ComputeContractingHomotopy");
-  PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_contracting_homotopy};
+  bool compute_pre_image = BlockDATA.get_bool("ComputePreImage");
+  PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_pre_image};
   //
   std::string CacheFile = BlockDATA.get_string("CacheFile");
   FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration<T,Tint,Tgroup>(LinSpa, pco, CacheFile, os);
@@ -318,11 +318,11 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       os_out << "];\n";
     }
   };
-  // The contracting homotopy.
+  // The pre-image of a cycle under the boundary.
   std::function<Tchain(int,Tchain const&)> f_ch=[&](int index, Tchain const& chain) -> Tchain {
-    return contracting_homotopy(index, chain, fce, os);
+    return chain_pre_image(index, chain, fce, os);
   };
-  f_chain_oper("FileChainContractingHomotopy", f_ch);
+  f_chain_oper("FileChainPreImage", f_ch);
   // The chain boundary
   std::function<Tchain(int,Tchain const&)> f_bnd=[&](int index, Tchain const& chain) -> Tchain {
     return chain_boundary(index, chain, fce, os);

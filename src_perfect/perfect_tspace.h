@@ -422,7 +422,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListBoolValues["ComputeComplex"] = false;
     ListBoolValues["OnlyWellRounded"] = true;
     ListBoolValues["ComputeBoundary"] = false;
-    ListBoolValues["ComputeContractingHomotopy"] = false;
+    ListBoolValues["ComputePreImage"] = false;
     ListBoolValues["ReducingStabilizerSize"] = false;
     SingleBlock BlockDATA;
     BlockDATA.setListStringValues(ListStringValues);
@@ -447,7 +447,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListStringValues["FileCellUpperBoundary"] = "null";
     ListStringValues["FileListUpperBoundary"] = "null";
     ListStringValues["FileListLowerBoundary"] = "null";
-    ListStringValues["FileChainContractingHomotopy"] = "null";
+    ListStringValues["FileChainPreImage"] = "null";
     ListStringValues["FileChainBoundary"] = "null";
     ListStringValues["FileChainSimplification"] = "null";
     ListIntValues["IndexUpperBoundary"] = 0;

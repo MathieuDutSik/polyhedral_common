@@ -126,7 +126,7 @@ Here it is important to have {\bf only\_well\_rounded = false} since the cells E
 
 
 
-\subsection{Chain boundaries, contracting homotopy and simplification}
+\subsection{Chain boundaries, pre-images and simplification}
 
 A chain is expressed as a vector of entries for example
 
@@ -142,16 +142,16 @@ The length of the chain can be arbitrary large.
 \begin{verbatim}
 gap> chain2:=PERFCOMP_chain_simplification(desc, 2, chain1);
 gap> chain3:=PERFCOMP_chain_boundary(desc, 2, chain1);
-gap> chain4:=PERFCOMP_chain_contracting_homotopy(desc, 2, chain1);
+gap> chain4:=PERFCOMP_chain_pre_image(desc, 2, chain1);
 \end{verbatim}
 The meaning of those operations should be clear here. The simplification leaves the chain at the same index.
-The contracting homotopy returns a chain of one index lower. The boundary increases the index.
+The pre-image returns a chain of one index lower whose boundary is the given chain. The boundary increases the index.
 
 Here is a few ideas on how to use those functions:
 \begin{enumerate}
 \item If you want to test if a chain is zero, then you call the simplification. The chain will be zero if and only if the length is 0.
 \item You want to compute the boundary. First make sure that the dimension is higher than 1. Then use the above operation.
-\item You want to compute the contracting homotopy. You need to first compute the boundary which has to be zero, and then you can compute the contracting homotopy.
+\item You want to compute a pre-image of a chain under the boundary. You need to first compute its boundary, which has to be zero, and then you can compute the pre-image.
 \end{enumerate}
 
 

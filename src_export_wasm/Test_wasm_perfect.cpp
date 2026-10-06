@@ -31,7 +31,7 @@ int main() {
   LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(2);
   PerfectComplexOptions pco;
   pco.compute_boundary = false;
-  pco.compute_contracting_homotopy = false;
+  pco.compute_pre_image = false;
   pco.only_well_rounded = false;
   FullComplexEnumeration<T, Tint, Tgroup> fce =
       get_full_complex_enumeration_kernel<T, Tint, Tgroup>(LinSpa, pco,
