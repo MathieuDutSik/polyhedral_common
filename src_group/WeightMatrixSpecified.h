@@ -67,6 +67,7 @@
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <optional>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -1616,14 +1617,19 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
   ---Fproc1 : function processing the graph (and using traces for this)
   ---Fproc2 : function taking the output and returning the list of generators
   ---Fproc3 : function taking all of it and returning the output.
+  ---max_subset_size : The largest subset that is processed. When a larger
+  one would be needed, no value is returned (the graph of a subset of a
+  few thousand points is already too large to be built).
 */
 template <bool canonically, bool is_symm, typename T, typename Tidx,
           typename Tret1, typename Tret2, typename Tret3, typename F1,
           typename F2, typename F1tr, typename F2tr, typename F3, typename F4,
           typename Fproc1, typename Fproc2, typename Fproc3>
-Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
-                               F3 f3, F4 f4, Fproc1 fproc1, Fproc2 fproc2,
-                               Fproc3 fproc3, std::ostream &os) {
+std::optional<Tret3>
+BlockBreakdown_Heuristic_Limited(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
+                                 F2tr f2tr, F3 f3, F4 f4, Fproc1 fproc1,
+                                 Fproc2 fproc2, Fproc3 fproc3,
+                                 size_t max_subset_size, std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "BlockBreakdown_Heuristic : We have nbRow=" << nbRow
@@ -1692,6 +1698,14 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
       }
     }
     size_t nbRow_res = CurrentListIdx.size();
+    if (nbRow_res > max_subset_size) {
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+      os << "WMS: BlockBreakdown_Heuristic_Limited, the subset of size "
+         << nbRow_res << " is above max_subset_size=" << max_subset_size
+         << "\n";
+#endif
+      return {};
+    }
     //
     bool test_f3 = f3(CurrentListIdx);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
@@ -1781,11 +1795,27 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
   throw TerminalException{1};
 }
 
+template <bool canonically, bool is_symm, typename T, typename Tidx,
+          typename Tret1, typename Tret2, typename Tret3, typename F1,
+          typename F2, typename F1tr, typename F2tr, typename F3, typename F4,
+          typename Fproc1, typename Fproc2, typename Fproc3>
+Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
+                               F3 f3, F4 f4, Fproc1 fproc1, Fproc2 fproc2,
+                               Fproc3 fproc3, std::ostream &os) {
+  return *BlockBreakdown_Heuristic_Limited<canonically, is_symm, T, Tidx,
+                                           Tret1, Tret2, Tret3>(
+      nbRow, f1, f2, f1tr, f2tr, f3, f4, fproc1, fproc2, fproc3, nbRow, os);
+}
+
+// The subset method for the stabilizer, with no value when a subset larger
+// than max_subset_size would be needed.
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,
           typename F1tr, typename F2tr, typename F3, typename F4>
-std::vector<std::vector<Tidx>>
-GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
-                                    F2tr f2tr, F3 f3, F4 f4, std::ostream &os) {
+std::optional<std::vector<std::vector<Tidx>>>
+GetStabilizerWeightMatrix_Heuristic_Limited(size_t nbRow, F1 f1, F2 f2,
+                                            F1tr f1tr, F2tr f2tr, F3 f3, F4 f4,
+                                            size_t max_subset_size,
+                                            std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "GetStabilizerWeightMatrix_Heuristic : We have nbRow=" << nbRow
@@ -1852,9 +1882,19 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
     return LGenFinal;
   };
   const bool canonically = false;
-  return BlockBreakdown_Heuristic<canonically, is_symm, T, Tidx, Tret1, Tret2,
-                                  Tret3>(nbRow, f1, f2, f1tr, f2tr, f3, f4,
-                                         fproc1, fproc2, fproc3, os);
+  return BlockBreakdown_Heuristic_Limited<canonically, is_symm, T, Tidx, Tret1,
+                                          Tret2, Tret3>(
+      nbRow, f1, f2, f1tr, f2tr, f3, f4, fproc1, fproc2, fproc3,
+      max_subset_size, os);
+}
+
+template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,
+          typename F1tr, typename F2tr, typename F3, typename F4>
+std::vector<std::vector<Tidx>>
+GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
+                                    F2tr f2tr, F3 f3, F4 f4, std::ostream &os) {
+  return *GetStabilizerWeightMatrix_Heuristic_Limited<T, Tidx, is_symm>(
+      nbRow, f1, f2, f1tr, f2tr, f3, f4, nbRow, os);
 }
 
 /*
@@ -1867,12 +1907,22 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
      returning the big generators.
   ---F5    : The lifting of canonicalization from a subset to the full set.
 */
+// The canonical ordering, the generators of the stabilizer, and the subset
+// of the subset method (full rank, a union of blocks).
+template <typename Tidx> struct CanonicalizationSubset {
+  std::vector<Tidx> canonic;
+  std::vector<std::vector<Tidx>> ListGen;
+  std::vector<Tidx> Vsubset;
+};
+
+// The subset method for the canonical ordering and the stabilizer, with no
+// value when a subset larger than max_subset_size would be needed.
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,
           typename F1tr, typename F2tr, typename F3, typename F4, typename F5>
-std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
-GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
-                                         F2tr f2tr, F3 f3, F4 f4, F5 f5,
-                                         std::ostream &os) {
+std::optional<CanonicalizationSubset<Tidx>>
+GetGroupCanonicalizationVectorSubset_Heuristic_Limited(
+    size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4, F5 f5,
+    size_t max_subset_size, std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "GetGroupCanonicalizationVector_Heuristic : We have nbRow="
@@ -1885,7 +1935,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
 #endif
   using Tret1 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
   using Tret2 = std::vector<std::vector<Tidx>>;
-  using Tret3 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
+  using Tret3 = CanonicalizationSubset<Tidx>;
   auto fproc1 = [&](const PairWeightMatrixVertexSignatures<T> &PairWMVS_res,
                     auto f1_res, auto f2_res) -> Tret1 {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
@@ -1908,12 +1958,26 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
     os << "WMS: GetGroupCanonicalizationVector_Heuristic : |LGenFinal|="
        << LGenFinal.size() << "\n";
 #endif
-    return {f5(Vsubset, ePair.first), LGenFinal};
+    return {f5(Vsubset, ePair.first), LGenFinal, Vsubset};
   };
   const bool canonically = true;
-  return BlockBreakdown_Heuristic<canonically, is_symm, T, Tidx, Tret1, Tret2,
-                                  Tret3>(nbRow, f1, f2, f1tr, f2tr, f3, f4,
-                                         fproc1, fproc2, fproc3, os);
+  return BlockBreakdown_Heuristic_Limited<canonically, is_symm, T, Tidx, Tret1,
+                                          Tret2, Tret3>(
+      nbRow, f1, f2, f1tr, f2tr, f3, f4, fproc1, fproc2, fproc3,
+      max_subset_size, os);
+}
+
+template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,
+          typename F1tr, typename F2tr, typename F3, typename F4, typename F5>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
+GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
+                                         F2tr f2tr, F3 f3, F4 f4, F5 f5,
+                                         std::ostream &os) {
+  CanonicalizationSubset<Tidx> res =
+      *GetGroupCanonicalizationVectorSubset_Heuristic_Limited<T, Tidx,
+                                                              is_symm>(
+          nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, nbRow, os);
+  return {std::move(res.canonic), std::move(res.ListGen)};
 }
 
 // clang-format off
