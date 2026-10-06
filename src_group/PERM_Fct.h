@@ -425,35 +425,19 @@ bool IsSubsetFullRank(const MyMatrix<T> &EXT,
   return TheSol.TheRank == nbCol;
 }
 
+// The same with the container of the rows of EXT2 built by the caller, for
+// the repeated tests against the same EXT2.
 template <typename T, typename Tfield, typename Tidx>
 std::optional<std::vector<Tidx>>
-RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
-                               MyMatrix<Tfield> const &P) {
+RepresentVertexPermutationTest_Cont(MyMatrix<T> const &EXT1,
+                                    ContainerMatrix<T> &Cont,
+                                    MyMatrix<Tfield> const &P) {
 #ifdef TIMINGS_PERM_FCT
   MicrosecondTime time;
 #endif
   size_t n_rows = EXT1.rows();
   size_t n_cols = EXT1.cols();
-#ifdef SANITY_CHECK_PERM_FCT
-  size_t P_rows = P.rows();
-  size_t P_cols = P.cols();
-  if (P_rows != P_cols) {
-    std::cerr << "PERM: P should be rectangular\n";
-    throw TerminalException{1};
-  }
-  if (P_cols != n_cols) {
-    std::cerr << "PERM: P size does not match EXT1 size\n";
-    throw TerminalException{1};
-  }
-  size_t n_rows2 = EXT2.rows();
-  size_t n_cols2 = EXT2.cols();
-  if (n_rows != n_rows2 || n_cols != n_cols2) {
-    std::cerr << "PERM: EXT1 and EXT2 do not have the same size\n";
-    throw TerminalException{1};
-  }
-#endif
   MyVector<T> VectorContain(n_cols);
-  ContainerMatrix<T> Cont(EXT2);
   //
   // We are testing if EXT1 P = perm(EXT2)
   std::vector<Tidx> V(n_rows);
@@ -507,6 +491,34 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   std::cerr << "|PERM: RepresentVertexPermutationTest 3|=" << time << "\n";
 #endif
   return V;
+}
+
+template <typename T, typename Tfield, typename Tidx>
+std::optional<std::vector<Tidx>>
+RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
+                               MyMatrix<Tfield> const &P) {
+#ifdef SANITY_CHECK_PERM_FCT
+  size_t n_rows = EXT1.rows();
+  size_t n_cols = EXT1.cols();
+  size_t P_rows = P.rows();
+  size_t P_cols = P.cols();
+  if (P_rows != P_cols) {
+    std::cerr << "PERM: P should be rectangular\n";
+    throw TerminalException{1};
+  }
+  if (P_cols != n_cols) {
+    std::cerr << "PERM: P size does not match EXT1 size\n";
+    throw TerminalException{1};
+  }
+  size_t n_rows2 = EXT2.rows();
+  size_t n_cols2 = EXT2.cols();
+  if (n_rows != n_rows2 || n_cols != n_cols2) {
+    std::cerr << "PERM: EXT1 and EXT2 do not have the same size\n";
+    throw TerminalException{1};
+  }
+#endif
+  ContainerMatrix<T> Cont(EXT2);
+  return RepresentVertexPermutationTest_Cont<T, Tfield, Tidx>(EXT1, Cont, P);
 }
 
 template <typename Tidx> struct DataMapping {
