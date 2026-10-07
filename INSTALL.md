@@ -51,7 +51,17 @@ The project uses the following external libraries:
   variants.
 * FLINT: number-theoretic and arithmetic support in several subsystems.
 * netCDF C / C++: used by the C-type tools.
-* nauty / Traces: graph automorphism and canonical form computations.
+* nauty / Traces: graph automorphism and canonical form computations. The
+  code uses the branch `traces-grpsize-factors` of
+  https://github.com/MathieuDutSik/nauty, whose Traces gives the exact factors
+  of the order of the automorphism group (with another nauty the order is
+  not used and the groups are built without it). Build it with
+  `./configure --prefix=$NAUTY_PATH && make && make install`, then set
+  `NAUTY_INCLUDE="-I$NAUTY_PATH/include"` and
+  `NAUTY_LINK="$NAUTY_PATH/lib/libnauty.a"`. Give the library by its path
+  rather than `-L$NAUTY_PATH/lib -lnauty`: the other `-L` options (for GMP
+  or Boost) come first on the link line, and an older system nauty found
+  there would be linked against the headers of the branch.
 
 Optional library
 ----------------

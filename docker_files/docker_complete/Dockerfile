@@ -97,17 +97,19 @@ RUN git clone --depth 1 https://github.com/MathieuDutSik/bliss /GIT/bliss \
 ENV LIBBLISS_INCDIR="/GIT/bliss/src" \
     LIBBLISS_LINK="-L/GIT/bliss/build -lbliss -Wl,-rpath,/GIT/bliss/build"
 
-# nauty/traces from the vendored copy, installed into /opt/nauty; the build
-# directory is removed once installed.
+# nauty/traces from https://github.com/MathieuDutSik/nauty (branch
+# traces-grpsize-factors, whose Traces gives the exact factors of the group
+# order), installed into /opt/nauty; the source is removed once installed.
 ENV NAUTY_PATH="/opt/nauty" \
     NAUTY_INCLUDE="-I/opt/nauty/include" \
-    NAUTY_LINK="-L/opt/nauty/lib -lnauty_shared -Wl,-rpath,/opt/nauty/lib"
-RUN cmake -S /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty \
-          -B /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build \
-          -DCMAKE_INSTALL_PREFIX=/opt/nauty \
- && cmake --build /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build \
- && cmake --install /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build \
- && rm -rf /GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build
+    NAUTY_LINK="/opt/nauty/lib/libnauty.a"
+RUN git clone --depth 1 --branch traces-grpsize-factors \
+        https://github.com/MathieuDutSik/nauty /GIT/nauty \
+ && cd /GIT/nauty \
+ && ./configure --prefix=/opt/nauty \
+ && make \
+ && make install \
+ && rm -rf /GIT/nauty
 
 # ---------------------------------------------------------------------------
 # Compile everything, then expose the binaries on PATH for convenience.

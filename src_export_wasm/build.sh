@@ -18,7 +18,7 @@ cd "$(dirname "$0")"
 
 BOOST_INC="${BOOST_INC:-/opt/homebrew/opt/boost/include}"
 EIGEN_INC="${EIGEN_INC:-/opt/homebrew/include/eigen3}"
-NAUTY_TAG="${NAUTY_TAG:-2.9.3}"
+NAUTY_TAG="${NAUTY_TAG:-traces-grpsize-factors}"
 NAUTY_REPO="${NAUTY_REPO:-https://github.com/MathieuDutSik/nauty}"
 
 if [ ! -d "$BOOST_INC" ]; then

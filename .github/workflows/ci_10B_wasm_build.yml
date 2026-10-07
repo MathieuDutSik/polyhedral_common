@@ -54,7 +54,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: src_export_wasm/build/nauty-install
-          key: nauty-wasm-2.8.9-${{ runner.os }}
+          key: nauty-wasm-traces-grpsize-factors-${{ runner.os }}
 
       - name: Build and run Wasm smoke tests
         run: |

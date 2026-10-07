@@ -63,7 +63,7 @@ ENV NAUTY_INCLUDE "-I$NAUTY_PATH/include"
 ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty -Wl,-rpath,$NAUTY_PATH/lib"
 ENV CFLAGS "-g"
 RUN mkdir -p GIT
-RUN cd GIT && git clone https://github.com/MathieuDutSik/nauty
+RUN cd GIT && git clone --branch traces-grpsize-factors https://github.com/MathieuDutSik/nauty
 RUN cd GIT/nauty && ./configure --prefix=/opt/nauty
 RUN cd GIT/nauty && make && make install
 

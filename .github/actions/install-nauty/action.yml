@@ -1,17 +1,27 @@
 name: 'Install nauty'
-description: 'Build the vendored nauty (basic_common_cpp/ExternalLib/nauty) and install it to $NAUTY_PATH (which must be set in the calling workflow''s env). Requires cmake.'
+description: 'Build nauty from https://github.com/MathieuDutSik/nauty (branch traces-grpsize-factors, whose Traces gives the exact factors of the group order) and install it to $NAUTY_PATH (which must be set in the calling workflow''s env): the headers in $NAUTY_PATH/include, the static library $NAUTY_PATH/lib/libnauty.a.'
+inputs:
+  ref:
+    description: 'Branch or tag of https://github.com/MathieuDutSik/nauty.'
+    required: false
+    default: 'traces-grpsize-factors'
 runs:
   using: 'composite'
   steps:
-    - name: Build vendored nauty
+    - name: Build nauty ${{ inputs.ref }}
       shell: bash
+      env:
+        NAUTY_REF: ${{ inputs.ref }}
       run: |
         set -e
         if [ -z "$NAUTY_PATH" ]; then
           echo "NAUTY_PATH must be set in the calling workflow's env block" >&2
           exit 1
         fi
-        mkdir -p basic_common_cpp/ExternalLib/nauty/build
-        cd basic_common_cpp/ExternalLib/nauty/build
-        cmake -DCMAKE_INSTALL_PREFIX:PATH="$NAUTY_PATH" ..
-        make all install
+        SRC="$RUNNER_TEMP/nauty_src"
+        rm -rf "$SRC"
+        git clone --depth 1 --branch "$NAUTY_REF" https://github.com/MathieuDutSik/nauty "$SRC"
+        cd "$SRC"
+        ./configure --prefix="$NAUTY_PATH"
+        make -j"$(nproc)"
+        make install
