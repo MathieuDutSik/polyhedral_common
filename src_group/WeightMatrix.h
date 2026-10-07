@@ -32,6 +32,7 @@
 #include "PERM_Fct.h"
 #include <limits>
 #include <map>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -1393,17 +1394,24 @@ GetGroupCanonicalizationVector_Kernel(
 }
 
 template <typename Tgr, typename TidxIn>
-std::vector<std::vector<TidxIn>>
+GraphGeneratorsOrder<TidxIn>
 GetStabilizerWeightMatrix_Kernel_idxin(Tgr const &eGR, size_t nbRow,
                                        std::ostream &os) {
-  std::vector<std::vector<TidxIn>> ListGen =
-      GRAPH_GetListGenerators<Tgr, TidxIn>(eGR, nbRow, os);
-  return ListGen;
+  return GRAPH_GetListGeneratorsOrder<Tgr, TidxIn>(eGR, nbRow, os);
 }
 
+/*
+  The generators of the stabilizer of the weight matrix and, when the graph
+  program gives it, the order of the automorphism group of the graph as
+  exact factors (GraphGeneratorsOrder). The generators are the restrictions
+  of the graph automorphisms to the nbRow vertices of the matrix, so that
+  the group they generate is a quotient of the automorphism group of the
+  graph: its order divides the one of the graph, with equality when the
+  restriction is faithful.
+ */
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value,
           bool is_symm>
-std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(
+GraphGeneratorsOrder<Tidx> GetStabilizerWeightMatrix_KernelGraph(
     WeightMatrix<is_symm, T, Tidx_value> const &WMat, std::ostream &os) {
   size_t nbRow = WMat.rows();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
@@ -1414,10 +1422,10 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(
     throw TerminalException{1};
   }
   Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
-  std::vector<std::vector<Tidx>> LGen =
+  GraphGeneratorsOrder<Tidx> gens_order =
       GetStabilizerWeightMatrix_Kernel_idxin<Tgr, Tidx>(eGR, nbRow, os);
 #ifdef SANITY_CHECK_WEIGHT_MATRIX
-  for (auto &eGen : LGen) {
+  for (auto &eGen : gens_order.ListGen) {
     for (size_t i = 0; i < nbRow; i++) {
       for (size_t j = 0; j < nbRow; j++) {
         int iImg = eGen[i];
@@ -1432,21 +1440,65 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_Kernel(
     }
   }
 #endif
-  return LGen;
+  return gens_order;
+}
+
+/*
+  The generators of a stabilizer with, when it is known, the order of the
+  group they generate or a multiple of it. Tgroup(LGen, id, order) (see
+  GroupFromStabGeneratorsOrder) builds the stabilizer chain by the randomized
+  construction of permutalib, which stops when the chain reaches the order:
+  the chain is made of group elements, so that it reaches the order of the
+  group only when it is complete, and never reaches a strict multiple of it,
+  the chain being then completed exactly (only more slowly). A value below
+  the order of the group would give a wrong group.
+ */
+template <typename Tidx, typename Tint> struct StabGeneratorsOrder {
+  std::vector<std::vector<Tidx>> ListGen;
+  std::optional<Tint> order;
+};
+
+template <typename Tgroup>
+Tgroup GroupFromStabGeneratorsOrder(
+    StabGeneratorsOrder<typename Tgroup::Telt::Tidx,
+                        typename Tgroup::Tint> const &gens_order,
+    size_t nbRow) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  std::vector<Telt> LGen;
+  for (auto &eList : gens_order.ListGen)
+    LGen.emplace_back(Telt(eList));
+  Telt id(static_cast<Tidx>(nbRow));
+  if (gens_order.order)
+    return Tgroup(LGen, id, *gens_order.order);
+  return Tgroup(LGen, id);
+}
+
+// The generators of the stabilizer of the weight matrix with the order of
+// the automorphism group of the graph, a multiple of the order of the group
+// they generate (see GetStabilizerWeightMatrix_KernelGraph).
+template <typename T, typename Tgr, typename Tidx, typename Tint,
+          typename Tidx_value, bool is_symm>
+StabGeneratorsOrder<Tidx, Tint> GetStabilizerWeightMatrix_Kernel(
+    WeightMatrix<is_symm, T, Tidx_value> const &WMat, std::ostream &os) {
+  GraphGeneratorsOrder<Tidx> gens_order =
+      GetStabilizerWeightMatrix_KernelGraph<T, Tgr, Tidx, Tidx_value, is_symm>(
+          WMat, os);
+  if (gens_order.has_order)
+    return {std::move(gens_order.ListGen),
+            GetGraphGroupOrder<Tint>(gens_order)};
+  return {std::move(gens_order.ListGen), {}};
 }
 
 template <typename T, typename Tgr, typename Tgroup, typename Tidx_value>
 Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
                                  std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  std::vector<std::vector<Tidx>> ListGen =
-      GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value>(WMat, os);
-  size_t nbRow = WMat.rows();
-  std::vector<Telt> LGen;
-  for (auto &eList : ListGen)
-    LGen.emplace_back(std::move(Telt(eList)));
-  return Tgroup(LGen, nbRow);
+  using Tidx = typename Tgroup::Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+  StabGeneratorsOrder<Tidx, Tint> gens_order =
+      GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tint, Tidx_value>(WMat,
+                                                                      os);
+  return GroupFromStabGeneratorsOrder<Tgroup>(gens_order, WMat.rows());
 }
 
 template <typename T, typename Tgroup, typename Tidx_value>

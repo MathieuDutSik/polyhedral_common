@@ -391,8 +391,9 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value(
 
   using Tidx = uint32_t;
   std::vector<std::vector<Tidx>> ListGen =
-      GetStabilizerWeightMatrix_Kernel<Tint, Tgr, Tidx, Tidx_value>(
-          WMatAbs.WMat, os);
+      GetStabilizerWeightMatrix_KernelGraph<Tint, Tgr, Tidx, Tidx_value>(
+          WMatAbs.WMat, os)
+          .ListGen;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: GetStabilizerWeightMatrix_Kernel|=" << time << "\n";
 #endif
@@ -461,7 +462,9 @@ LinPolytopeAntipodalIntegral_Automorphism_Tidx_value(MyMatrix<Tint> const &EXT,
 #endif
 
   std::vector<std::vector<Tidx>> ListGen =
-      GetStabilizerWeightMatrix_Kernel<Tint, Tgr, Tidx, Tidx_value>(WMat, os);
+      GetStabilizerWeightMatrix_KernelGraph<Tint, Tgr, Tidx, Tidx_value>(WMat,
+                                                                         os)
+          .ListGen;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: GetStabilizerWeightMatrix_Kernel|=" << time << "\n";
 #endif

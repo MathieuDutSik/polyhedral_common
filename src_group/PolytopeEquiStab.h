@@ -509,13 +509,6 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
   return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
 }
 
-// The generators of a stabilizer with, when it is known, the order of the
-// group they generate.
-template <typename Tidx, typename Tint> struct StabGeneratorsOrder {
-  std::vector<std::vector<Tidx>> ListGen;
-  std::optional<Tint> order;
-};
-
 // The f_lift of a caller that has no exact extension from a spanning subset
 // to the whole set: the individualization is then not run, since it takes a
 // failed lift as a proof that two vertices are not in the same orbit (see
@@ -613,14 +606,12 @@ f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4,
   auto f_kernel = [&]() -> Tret {
     if (is_symm) {
       WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
-      return {GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tidx_value,
-                                               true>(WMat, os),
-              {}};
+      return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tint,
+                                              Tidx_value, true>(WMat, os);
     } else {
       WeightMatrix<false, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
-      return {GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tidx_value,
-                                               false>(WMat, os),
-              {}};
+      return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tint,
+                                              Tidx_value, false>(WMat, os);
     }
   };
 #ifdef SANITY_CHECK_THRESHOLD_SCHEME
@@ -745,17 +736,10 @@ template <typename T, typename Tgroup>
 Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT,
                                         MyMatrix<T> const &GramMat,
                                         std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
+  using Tidx = typename Tgroup::Telt::Tidx;
   StabGeneratorsOrder<Tidx, typename Tgroup::Tint> gens_order =
       LinPolytope_Automorphism_GramMat_GensOrder<T, Tgroup>(EXT, GramMat, os);
-  std::vector<Telt> LGen;
-  for (auto &eList : gens_order.ListGen)
-    LGen.emplace_back(Telt(eList));
-  Telt id(static_cast<Tidx>(EXT.rows()));
-  if (gens_order.order)
-    return Tgroup(LGen, id, *gens_order.order);
-  return Tgroup(LGen, id);
+  return GroupFromStabGeneratorsOrder<Tgroup>(gens_order, EXT.rows());
 }
 
 

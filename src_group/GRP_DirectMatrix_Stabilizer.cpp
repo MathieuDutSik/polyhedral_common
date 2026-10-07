@@ -14,33 +14,33 @@
   non-symmetric weight matrix and its graph on 2 n + 1 vertices, which is
   what this program exists to exercise.
  */
-template <typename T, typename Tidx, typename Tidx_value>
-std::vector<std::vector<Tidx>>
+template <typename T, typename Tidx, typename Tint, typename Tidx_value>
+StabGeneratorsOrder<Tidx, Tint>
 DirectMatrix_Stabilizer_Tidx_value(MyMatrix<T> const &M, bool is_symm,
                                    std::ostream &os) {
   using Tgr = GraphListAdj;
   if (is_symm) {
     WeightMatrix<true, T, Tidx_value> WMat =
         WeightedMatrixFromMyMatrix<true, T, Tidx_value>(M, os);
-    return GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value, true>(
-        WMat, os);
+    return GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tint, Tidx_value,
+                                            true>(WMat, os);
   }
   WeightMatrix<false, T, Tidx_value> WMat =
       WeightedMatrixFromMyMatrix<false, T, Tidx_value>(M, os);
-  return GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value, false>(
-      WMat, os);
+  return GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tint, Tidx_value,
+                                          false>(WMat, os);
 }
 
-template <typename T, typename Tidx>
-std::vector<std::vector<Tidx>> DirectMatrix_Stabilizer(MyMatrix<T> const &M,
-                                                       std::ostream &os) {
+template <typename T, typename Tidx, typename Tint>
+StabGeneratorsOrder<Tidx, Tint> DirectMatrix_Stabilizer(MyMatrix<T> const &M,
+                                                        std::ostream &os) {
   size_t n = M.rows();
   bool is_symm = IsSymmetricMatrix(M);
   // A non-symmetric matrix can have one distinct value per entry.
   size_t max_poss_val = weightmatrix_get_nb(is_symm, n);
   auto f_dispatch = [&]<typename Tidx_value>() {
-    return DirectMatrix_Stabilizer_Tidx_value<T, Tidx, Tidx_value>(M, is_symm,
-                                                                 os);
+    return DirectMatrix_Stabilizer_Tidx_value<T, Tidx, Tint, Tidx_value>(
+        M, is_symm, os);
   };
   return call_with_smallest_unsigned(
       max_poss_val, "DirectMatrix_Stabilizer", f_dispatch);
@@ -59,13 +59,9 @@ void process(std::string const &FileMat, std::string const &OutFormat,
     throw TerminalException{1};
   }
   size_t n = M.rows();
-  std::vector<std::vector<Tidx>> ListGen =
-      DirectMatrix_Stabilizer<T, Tidx>(M, std::cerr);
-  std::vector<Telt> LGen;
-  for (auto &eList : ListGen) {
-    LGen.push_back(Telt(eList));
-  }
-  Tgroup GRP(LGen, n);
+  StabGeneratorsOrder<Tidx, typename Tgroup::Tint> gens_order =
+      DirectMatrix_Stabilizer<T, Tidx, typename Tgroup::Tint>(M, std::cerr);
+  Tgroup GRP = GroupFromStabGeneratorsOrder<Tgroup>(gens_order, n);
   std::cerr << "n=" << n << " is_symmetric=" << IsSymmetricMatrix(M)
             << " |GRP|=" << GRP.size() << "\n";
   if (OutFormat == "GAP") {

@@ -372,8 +372,9 @@ GetListGenAutomorphism_AbsTrick_kernel(
       T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV<T, Tint, Tidx_value>(
           ListMat, SHVhalf, os);
   std::vector<std::vector<Tidx>> ListGen =
-      GetStabilizerWeightMatrix_Kernel<std::vector<T>, Tgr, Tidx, Tidx_value,
-                                       true>(WMatAbs.WMat, os);
+      GetStabilizerWeightMatrix_KernelGraph<std::vector<T>, Tgr, Tidx,
+                                            Tidx_value, true>(WMatAbs.WMat, os)
+          .ListGen;
   std::optional<std::vector<std::vector<Tidx>>> opt =
       AbsTrick_LiftGenerators<std::vector<T>, Tidx, Tidx_value>(WMatAbs,
                                                                 ListGen,
