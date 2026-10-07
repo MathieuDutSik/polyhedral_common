@@ -298,7 +298,7 @@ ExternalProject_Add(
   NautyDirectPackage
   PREFIX "${CMAKE_BINARY_DIR}/external"
   GIT_REPOSITORY https://github.com/MathieuDutSik/nauty
-  GIT_TAG 2.9.3
+  GIT_TAG traces-grpsize-factors
   UPDATE_DISCONNECTED TRUE
   CONFIGURE_COMMAND ./configure --prefix=${NAUTY_INSTALL_DIR}
   BUILD_IN_SOURCE 1
