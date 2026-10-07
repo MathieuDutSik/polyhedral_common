@@ -351,6 +351,79 @@ polynomial bound on the number of dual steps, which BKZ has no analogue of and
 which is what one wants when the dimension grows past where a table like this
 can be produced.
 
+Self-dual BKZ
+-------------
+
+`SelfDualBKZ.h` implements the self-dual BKZ of Micciancio and Walter. A
+**forward tour** is a BKZ tour: for each block `[j, j+beta-1]`, if the
+projected block has a vector shorter than `delta |b_j^*|`, a shortest one is
+inserted at `j`. A **backward tour** runs over the same blocks in reverse
+order and makes the **last** Gram-Schmidt norm of each block maximal, which is
+a shortest vector of the reversed dual `J adj(G) J` of the block: the dual
+step of slide reduction, applied to every overlapping block rather than to a
+fixed tiling. Only full blocks of size `beta` are used. Micciancio and Walter
+prove bounds comparable to slide reduction's and observe BKZ's practical
+behaviour; measured with fplll on the SVP challenge lattices of dimension 60,
+self-dual BKZ-20 reaches the profile of BKZ-30.
+
+Two implementation choices. After each insertion the **block alone** is LLL
+reduced, then the whole basis is size reduced; there is no global LLL, which
+in `BKZ.h` is what dominates the cost at small block sizes. Neither pass can
+undo the insertion: in a forward step the inserted vector is a shortest vector
+of the block, so no Lovasz swap moves it; in a backward step the last norm is
+maximal, so no swap can increase it. And all the projected blocks of a tour
+are read off **one** fraction-free elimination, `O(n^3)` per pass rather than
+`O(n^4)`.
+
+**Termination** is not the argument of BKZ: a forward insertion decreases
+`(D_1, ..., D_{n-1})` lexicographically, a backward step in the reverse
+lexicographic order, and no single order serves both. The computation is
+therefore in two phases. The self-dual rounds run while each strictly
+decreases the LLL potential `prod_i D_i`, a positive integer; the round that
+fails to is kept, the potential not being what the rounds improve. Then
+forward tours alone run until one makes no insertion, which terminates by the
+argument of BKZ. On return every full block satisfies the block condition of
+BKZ up to `delta`, which the CI section `16B_GramReductions` checks; the
+backward conditions are not certified after the final phase. On the lattices
+measured the self-dual rounds always ended by the potential, the later rounds
+still making insertions that cancel each other.
+
+The block test of the forward tour is `BKZ_ShorterInBlock` of `BKZ.h`, the
+same one BKZ uses, and the backward step is `SlideDualStepOnBlock` of
+`SlideReduction.h`, the same one slide reduction uses.
+
+Measured on the SVP challenge lattices of seed 0, time and slope of
+`log |b_i^*|` (closer to 0 is better), one process at a time on a machine
+running other jobs, so the times are within about 25%:
+
+| method | dim 40 | dim 60 | dim 80 |
+|---|---|---|---|
+| bkz-8 | 5.7 s, -0.0305 | 108 s, -0.0288 | 539 s, -0.0305 |
+| bkz-12 | 16 s | 158 s, -0.0292 | > 900 s |
+| bkz-20 | 44 s | > 900 s | > 900 s |
+| sdbkz-4 | 6.9 s, -0.0311 | 74 s, -0.0319 | 373 s, -0.0327 |
+| sdbkz-8 | 8.3 s, -0.0294 | 79 s, -0.0290 | 547 s, -0.0294 |
+| sdbkz-12 | 13.3 s, -0.0283 | 92 s, -0.0287 | 603 s, -0.0279 |
+| sdbkz-20 | 65 s, -0.0276 | 395 s, -0.0268 | > 900 s |
+
+At the same block size self-dual BKZ gives a profile as good as BKZ's or
+better, in comparable time at block size 8, and it reaches block sizes that
+BKZ of this package does not finish: `sdbkz-12` at dimension 80 in 603 s
+where `bkz-12` exceeds 900, and `sdbkz-20` at dimension 60 in 395 s where
+`bkz-20` exceeds 900. It does not make the package
+competitive with fplll, whose self-dual BKZ-20 takes 0.31 s at dimension 60
+for a slope of -0.0262: the enumeration oracle in exact arithmetic is
+still the cost.
+
+Entry points: **SelfDualBKZReducedBasis** (`delta = 99/100`, no cap on the
+rounds) and **SelfDualBKZReducedBasisDelta** (explicit `delta` and cap). The
+method name is `sdbkz-<b>`, for `LATT_Reduction` and `VectFamily_Reduction`
+alike; it is not among the candidates of `best`.
+
+Reference: D. Micciancio, M. Walter, Practical, predictable lattice basis
+reduction, EUROCRYPT 2016, LNCS 9665, 820--849.
+
+
 Reduction of a vector family
 ----------------------------
 

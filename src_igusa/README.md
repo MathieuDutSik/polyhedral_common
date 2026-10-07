@@ -26,6 +26,8 @@ pool shared by the whole enumeration.
 For a vertex A the local cone C_A = cone{ D in L : A + D positive definite }
 is computed as follows:
 
+* Known edges: the reverse of the edges by which A was reached from the
+  vertices already processed. They can have any norm.
 * Candidate rays: the D with A + D positive definite and
   tr((A^{-1} D)^2) <= bound, the bound being doubled until they span the
   space.
@@ -35,7 +37,9 @@ is computed as follows:
   positive on the positive semidefinite matrices, so the integer programs
   stay bounded.
 * Norm closure: all the candidates up to the largest norm of the extreme
-  rays found are added.
+  rays found are added, unless the estimated number of lattice vectors is
+  above `MaxNormEnumeration`. That number grows like the bound to the
+  power dim(T)/2: for n = 6 at the vertex E6 it was 5 10^7.
 * Only then the dual description is computed and all its orbits of facets
   are checked. With the previous steps, the list of rays is normally correct
   at that point, so a single dual description is done. The number done is
@@ -57,6 +61,10 @@ Namelist
  NormBound = 2           ! initial bound for the candidate rays
  NbRandomFacet = 10      ! random facets tested per round
  NbCleanRound = 2        ! clean rounds before the dual description
+ NormClosure = T         ! insert the candidates up to the largest norm
+ MaxNormEnumeration = 1000000  ! skip the norm closure above that
+ FileVertex = "unset"    ! if set, only the local cone of that vertex
+ CompareDualSide = F     ! with FileVertex, time facets -> rays as well
 /
 
 &TSPACE
@@ -71,6 +79,36 @@ Namelist
 /
 ```
 
+Options for the analysis and for the large cases
+------------------------------------------------
+
+All in the `&DATA` block:
+
+* `FileVertex`: only the local cone of that vertex. The output is the
+  vertex and one neighbor per orbit of edges. With `VertexTest = T`, only
+  test whether the form is a vertex: tr(A^{-1} X) is minimized over I and
+  the face where it is minimal is checked to be a point, with random
+  directions or, with `VertexTestRigorous = T`, the coordinate functions
+  (a proof with `IlpMethod = "exact_bb"`).
+* `FileKnownEdges`: known edges at `FileVertex` (list of matrices B - A).
+  The rays of known edges are certified extreme, so the redundancy
+  elimination only tests the other ones.
+* `FileInitialVertex`: start the enumeration from that vertex.
+* `FileInstancePrefix`: write each dual description instance (rays, group
+  in polyhedral_common and GAP formats, and one neighbor per orbit of rays
+  with its determinant, minimum and number of minimal vectors).
+  `StopBeforeDualDescription = T` stops after writing an instance with at
+  least `StopMinRays` rays.
+* `NbSampleFacet`: check that many random facets before the dual
+  description; `LogNewRays = T` writes the neighbor type of each new ray.
+* `OrbitClosure = F`: do not store the orbits of the candidates and of the
+  new rays (for the large stabilizers, dimension 9 and more).
+* `MaxEnumerationBound`, `MaxNormEnumeration`: limits on the enumeration of
+  the candidates by norm.
+* `FileDualDescription`: heuristics of the dual description, as for
+  `POLY_SerialDualDesc`. By default the standard ones, without the bank and
+  the additional symmetries above 10000 vertices.
+
 Output
 ------
 
@@ -80,6 +118,124 @@ of dual descriptions done, its facets up to the stabilizer as
 `rec(F, rhs)` and its infinite edges, and the neighbors with the matrix
 mapping them to their representative. Each orbit of facets has F, rhs, the
 rank of F and the list of [vertex, facet] pairs where it appears.
+
+Facets directly: `IGUSA_FacetIncidence`
+---------------------------------------
+
+The vertex enumeration gets the facets of P as a side product of the local
+cones, which are very large at E6, E7, E8. `IGUSA_FacetIncidence` works on
+one facet tr(F X) >= c, with F positive definite (the facets with F only
+positive semidefinite, such as X[v] >= 1, have infinitely many incident
+points). It returns the incident points
+
+    Inc(F) = { X in I : tr(F X) = c },
+
+the integral points of the facet, by the theory of Voronoi:
+
+* The minimum of tr(F X) over the Ryshkov polyhedron {X : X[v] >= 1} is
+  attained at a perfect form P*, and the dual of the linear program gives
+  F = sum_v lambda_v v v^T, lambda_v >= 0, over the minimal vectors v of P*,
+  with sum lambda_v equal to that minimum. The cuts are seeded with the
+  short vectors of F^{-1}, near the minimal vectors of P*.
+* For X in Inc(F) the values m_v = X[v] are integers >= 1 with
+  sum lambda_v m_v = c. The slack c - min is small, so there are few such m.
+  Each m gives the affine subspace X[v] = m_v, which determines X when the
+  v of the support span the T-space; otherwise the integral points of the
+  face cut by these equalities are enumerated by splitting on the
+  coordinates with integer programs.
+* The minimum of tr(F X) over I is checked to be c (validity of the facet).
+
+```
+&DATA
+ arithmetic = "flint"
+ IlpMethod = "scip"
+ OutFile = "F5.out"       ! GAP record: F, rhs, RyshkovMin, slack,
+                          ! RyshkovMinimizer, rank, ListIncident
+ FileFacet = "F5.mat"     ! the matrix F
+ FacetRhs = "5"           ! c, a rational number
+/
+&TSPACE ... /
+```
+
+For the four full rank facets of conv(I_6) it takes less than 3 seconds
+each: the facets have 21 to 45 incident points, all of them vertices
+(copies of E6 and D6), against 14319 extreme rays for the local cone at E6.
+
+Facet centered enumeration: `IGUSA_FacetEnumeration`
+----------------------------------------------------
+
+A facet of rank r of conv(I_n) is the lift of a full rank facet of
+conv(I_r) on a primitive sublattice (lifting theorem of the paper), and the
+full rank facets are the bounded ones, with a finite incidence.
+`IGUSA_FacetEnumeration` (full space of symmetric matrices only) starts from
+full rank facets and processes:
+
+* full rank facets: Inc(F) (cached by orbit, transported by isometries),
+  the orbits of ridges under Aut(F) (dual description of conv Inc(F)), and
+  the adjacent facet along each ridge, by the Dinkelbach iteration started
+  just above the threshold where the functional becomes positive definite;
+  a neighbor of lower rank is recognized at the threshold and checked on
+  its image;
+* bounded ridges inside facets of lower rank, identified by the canonical
+  form of the pair (S^{-1}, G), S the sum of the incident forms: the other
+  ridge of G through each face of codimension 3 (a rotation inside the
+  hyperplane of G), and the facet on the other side of it.
+
+```
+&DATA
+ arithmetic = "flint"
+ IlpMethod = "scip"
+ OutFile = "fenum6.out"
+ FileInitialFacets = "init6.mat"   ! list of matrices F (ListMatrix format)
+ FileInitialRhs = "init6.rhs"      ! the right hand sides, one per line
+ MaxOrbit = 0                      ! 0: no limit on the processed objects
+/
+&TSPACE ... /
+```
+
+Status. For n = 5 it gives the unique full rank facet in 4 seconds. For
+n = 6, from F5 it finds F5, F14, F23 and 11 orbits of bounded ridges in
+facets of lower rank (about 13 hours), but not F11: from F11 the component
+is F11 and one ridge whose faces of codimension 3 all lead to unbounded
+ridges. The bounded faces are connected through vertices, not through faces
+of codimension 3, so the procedure has to be seeded with several facets or
+complemented, see the paper.
+
+Rigorous vertex test: `IGUSA_VertexTest`
+----------------------------------------
+
+For A in I, the inequalities X[v] >= 1 with A[v] = 1 are tight at A, so A
+is a vertex of P iff it is a vertex of the face P_A = P cap {X[v] = 1}, of
+small dimension k (0 for a perfect form). The integral points of P_A are
+A + D, D in a saturated lattice L_E of rank k with basis K; an integral N
+with K N^T = I gives the coordinates t = N D. The recession cone of P_A is
+{B^T M B : M positive semidefinite}, B the linear forms vanishing on the
+span of the v. The iteration keeps directions D = X - A of points of P_A
+and recession directions R:
+
+* a linear program looks for h with h(D) > 0 and h(R) > 0 (margin z,
+  h in a box). If none exists, A = sum lambda X_D + (positive semidefinite),
+  a convex combination certified exactly: A is not a vertex;
+* otherwise h is made positive definite on the recession cone, extended to
+  the whole space by a multiple of sum_v (X[v] - 1) so that the integer
+  programs are coercive, and minimized over P_A. A point below A, or
+  another point of the minimal face (found by minimizing and maximizing the
+  k coordinates), is added; if there is none, A is a vertex exposed by h.
+
+```
+&DATA
+ arithmetic = "flint"
+ IlpMethod = "scip"
+ OutFile = "vt9.out"        ! for each form: IsVertex, the functional or the
+                            ! convex combination
+ FileListForm = "list9.mat" ! the forms to test (ListMatrix format)
+/
+&TSPACE ... /
+```
+
+Times for n = 9 (one iteration each): E8+A1 2 s (face of dimension 8),
+E7+A2 13 s (14), E6+A3 6 min (18), D4+D5 19 min (20). D4+D4 (n = 8, face of
+dimension 16) is shown not to be a vertex in 18 iterations, 0.4 s.
 
 Integer programming
 -------------------

@@ -707,6 +707,9 @@ endforeach()
 set(
   IGUSA_PROGRAMS
   IGUSA_EnumerateVertices
+  IGUSA_FacetIncidence
+  IGUSA_FacetEnumeration
+  IGUSA_VertexTest
 )
 foreach(target IN LISTS IGUSA_PROGRAMS)
   add_polyhedral_binary(

@@ -17,20 +17,96 @@ void process(FullNamelist const &eFull, std::ostream &os) {
   IgusaParameters<T> params{BlockDATA.get_int("NormBound"),
                             BlockDATA.get_int("NbRandomFacet"),
                             BlockDATA.get_int("NbCleanRound"),
-                            BlockDATA.get_string("IlpMethod")};
+                            BlockDATA.get_string("IlpMethod"),
+                            BlockDATA.get_bool("NormClosure"),
+                            BlockDATA.get_int("MaxNormEnumeration"),
+                            BlockDATA.get_string("FileInstancePrefix"),
+                            BlockDATA.get_bool("StopBeforeDualDescription"),
+                            BlockDATA.get_string("FileDualDescription"),
+                            BlockDATA.get_int("NbSampleFacet"),
+                            BlockDATA.get_int("StopMinRays"),
+                            BlockDATA.get_bool("OrbitClosure"),
+                            BlockDATA.get_int("MaxEnumerationBound"),
+                            BlockDATA.get_bool("LogNewRays")};
   IgusaSpace<T, Tint> space = build_igusa_space<T, Tint>(LinSpa, params, os);
   using Tdata = DataIgusaFunc<T, Tint, Tgroup>;
-  Tdata data{std::move(space), os};
+  Tdata data{std::move(space), os, {}, {}};
+  std::string FileInitialVertex = BlockDATA.get_string("FileInitialVertex");
+  if (FileInitialVertex != "unset") {
+    data.InitialVertex = ReadMatrixFile<T>(FileInitialVertex);
+  }
   using Tobj = typename Tdata::Tobj;
   using TadjO = typename Tdata::TadjO;
   using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
+  std::string OutFile = BlockDATA.get_string("OutFile");
+  auto f_output = [&](auto f_print) -> void {
+    if (OutFile == "stderr") {
+      return f_print(std::cerr);
+    }
+    if (OutFile == "stdout") {
+      return f_print(std::cout);
+    }
+    std::ofstream os_out(OutFile);
+    f_print(os_out);
+  };
+  // Only the local cone of a given vertex
+  std::string FileVertex = BlockDATA.get_string("FileVertex");
+  if (FileVertex != "unset") {
+    MyMatrix<T> A = ReadMatrixFile<T>(FileVertex);
+    igusa_insert_initial_cuts(data.space);
+    if (BlockDATA.get_bool("VertexTest")) {
+      bool rigorous = BlockDATA.get_bool("VertexTestRigorous");
+      bool is_vertex = igusa_vertex_test(data.space, A, 5, rigorous, os);
+      os << "IGUSA: VertexTest result=" << GAP_logical(is_vertex) << "\n";
+      return;
+    }
+    Tobj x = data.make_vertex(A);
+    std::string FileKnownEdges = BlockDATA.get_string("FileKnownEdges");
+    if (FileKnownEdges != "unset") {
+      data.MapKnownEdge[A] = ReadListMatrixFile<T>(FileKnownEdges);
+    }
+    std::optional<std::vector<typename Tdata::TadjI>> opt;
+    try {
+      opt = data.f_adj(x);
+    } catch (IgusaStopException const &) {
+      os << "IGUSA: stopped after writing the dual description instance\n";
+      return;
+    }
+    std::vector<typename Tdata::TadjI> l_adj =
+        unfold_opt(opt, "The local cone computation");
+    os << "IGUSA: |ListAdj|=" << l_adj.size() << "\n";
+    if (BlockDATA.get_bool("CompareDualSide")) {
+      (void)igusa_dual_side_description(x, os);
+    }
+    // The vertex, and one neighbor B = A + t D for each orbit of edges
+    f_output([&](std::ostream &os_out) -> void {
+      os_out << "return rec(Vertex:=";
+      WriteEntryGAP(os_out, x);
+      os_out << ",\nListNeighbor:=[";
+      bool is_first = true;
+      for (auto &adj : l_adj) {
+        if (!is_first) {
+          os_out << ",\n";
+        }
+        is_first = false;
+        WriteMatrixGAP(os_out, adj.Gram);
+      }
+      os_out << "]);\n";
+    });
+    return;
+  }
   auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
     return false;
   };
   int max_runtime_second = BlockDATA.get_int("max_runtime_second");
-  std::optional<std::vector<Tout>> opt_l_tot =
-      EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
-          data, f_incorrect, max_runtime_second);
+  std::optional<std::vector<Tout>> opt_l_tot;
+  try {
+    opt_l_tot = EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
+        data, f_incorrect, max_runtime_second);
+  } catch (IgusaStopException const &) {
+    os << "IGUSA: stopped after writing the dual description instance\n";
+    return;
+  }
   std::vector<Tout> l_tot =
       unfold_opt(opt_l_tot, "EnumerateAndStore_Serial (Igusa vertices)");
   os << "IGUSA: number of orbits of vertices=" << l_tot.size() << "\n";
@@ -44,7 +120,6 @@ void process(FullNamelist const &eFull, std::ostream &os) {
   os << "IGUSA: number of orbits of facets=" << l_facet_orbit.size() << "\n";
   //
   std::string OutFormat = BlockDATA.get_string("OutFormat");
-  std::string OutFile = BlockDATA.get_string("OutFile");
   auto f_print = [&](std::ostream &os_out) -> void {
     auto write_list = [&](auto const &l_ent, auto f_write) -> void {
       os_out << "[";
@@ -85,14 +160,7 @@ void process(FullNamelist const &eFull, std::ostream &os) {
     std::cerr << "IGUSA: Allowed formats: GAP, PYTHON\n";
     throw TerminalException{1};
   };
-  if (OutFile == "stderr") {
-    return f_print(std::cerr);
-  }
-  if (OutFile == "stdout") {
-    return f_print(std::cout);
-  }
-  std::ofstream os_out(OutFile);
-  f_print(os_out);
+  f_output(f_print);
 }
 
 int main(int argc, char *argv[]) {

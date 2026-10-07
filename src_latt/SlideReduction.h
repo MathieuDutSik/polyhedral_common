@@ -101,12 +101,17 @@ inline bool SlideIsApplicable(int const &n, int const &k) {
   Gram-Schmidt norm of that projected block maximal. Returns true when the
   block was changed, that is when the condition was violated by more than the
   slack delta.
+
+  blk is the projected block Gram matrix up to a positive scale, with its
+  content divided out (BKZ_ProjectedBlockGram); taking it as an argument lets a
+  caller that already has every block from one elimination, as self-dual BKZ
+  does, avoid recomputing it.
  */
 template <typename T, typename Tring, typename Tint>
-bool SlideDualStep(MyMatrix<Tring> &gram, MyMatrix<Tint> &H, int const &j,
-                   int const &m, Tring const &num, Tring const &den,
-                   std::ostream &os) {
-  MyMatrix<Tring> blk = BKZ_ProjectedBlockGram(gram, j, m);
+bool SlideDualStepOnBlock(MyMatrix<Tring> const &blk, MyMatrix<Tring> &gram,
+                          MyMatrix<Tint> &H, int const &j, int const &m,
+                          Tring const &num, Tring const &den,
+                          std::ostream &os) {
   std::pair<MyMatrix<Tring>, Tring> pair = AdjugateDeterminant(blk);
 #ifdef SANITY_CHECK_SLIDE
   if (pair.second <= 0) {
@@ -155,6 +160,14 @@ bool SlideDualStep(MyMatrix<Tring> &gram, MyMatrix<Tint> &H, int const &j,
 #endif
   BKZ_ApplyBlockTransformation(gram, H, V, j);
   return true;
+}
+
+template <typename T, typename Tring, typename Tint>
+bool SlideDualStep(MyMatrix<Tring> &gram, MyMatrix<Tint> &H, int const &j,
+                   int const &m, Tring const &num, Tring const &den,
+                   std::ostream &os) {
+  MyMatrix<Tring> blk = BKZ_ProjectedBlockGram(gram, j, m);
+  return SlideDualStepOnBlock<T, Tring, Tint>(blk, gram, H, j, m, num, den, os);
 }
 
 template <typename T, typename Tint>

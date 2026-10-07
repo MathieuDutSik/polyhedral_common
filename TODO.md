@@ -92,6 +92,34 @@ Bremner-Fukuda-Marzetta (primal-dual, DCG 20:333, 1998); Avis-Jordan (mplrs,
 MPC 2017; comparative results, arXiv:1510.02545); Behle-Eisenbrand (BDD 0/1,
 ALENEX 2007); Merino-Mutze (arXiv:2304.08567); Seidel (Handbook chap. 26).
 
+## Adjacency decomposition: order of the orbits and the Balinski criterion
+
+The undone orbits of facets are processed by increasing incidence
+(`FuncGetMinimalUndoneOrbit`, the map `CompleteList_SetUndone` is keyed by the
+incidence), and the computation stops when the number of undone facets is at
+most `CritSiz = rank - 2` (Balinski) or when the undone facets have a common
+vertex (`ComputeIntersectionUndone`). The order is chosen for cheapness, but
+it can prevent the Balinski stop and so cost a full extra dual description.
+
+Measured on the local cone of the Igusa polyhedron at E6 (14319 rays,
+dimension 21, group of order 51840, 7276 s with FLINT). Inside its facet A
+(X[v] >= 1, 8565 rays, rank 20, so `CritSiz = 18`) the two expensive orbits
+are the ridges A cap A':
+
+  |v.w| = 1 : 5409 rays, orbit of 20 facets, 4038 s (direct normaliz)
+  v.w = 0   : 4577 rays, orbit of 15 facets, 1361 s (direct normaliz)
+
+By increasing incidence the 4577 orbit is done first; then 20 facets remain,
+more than 18, and the 5409 orbit has to be done as well. Doing the 5409
+orbit first leaves 15 <= 18 undone facets and the Balinski criterion skips
+the 4577 orbit: 1361 s saved, 19% of the whole computation.
+
+Idea: when the orbits that remain are few and expensive, choose the next one
+so that the facets left undone fall under `CritSiz` (or have a common
+vertex), e.g. by orbit size, rather than always the smallest incidence. The
+instances are in `POLY_igusa/DualDesc_E6_local_cone/` (local cone, facet A
+and the two ridges).
+
 ## Integer arithmetic of the dual-description kernels (normaliz / lrs / bb / dd)
 
 Background: the kernels currently run their machine-integer fast path over the

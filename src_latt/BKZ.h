@@ -244,6 +244,45 @@ MyMatrix<Tint> BKZ_InsertionMatrix(MyVector<Tint> const &z, int const &n,
 }
 
 /*
+  The test of one block. Gblock_r is the scaled projected block Gram matrix as
+  the elimination leaves it, d_j times the Gram matrix of
+  pi_j(b_j), ..., pi_j(b_k). Returns the coefficient vector of a shortest
+  vector of the block when it is shorter than delta |b_j^*|, and nothing when
+  b_j^* passes. Self-dual BKZ makes the same test in its forward tours.
+
+  The content is divided out before the enumeration. Stripping it matters: the
+  block carries the factor d_j, the enumerator reduces internally through the
+  dual and so takes an adjugate, and the factor is raised to the power m - 1 on
+  the way. Left in, it turns twenty-digit entries into entries of hundreds of
+  digits and the enumeration crawls. The factor removed is recovered as content
+  and carried in the comparison.
+ */
+template <typename T, typename Tring, typename Tint>
+std::optional<MyVector<Tint>>
+BKZ_ShorterInBlock(MyMatrix<Tring> const &Gblock_r, Tring const &num,
+                   Tring const &den, std::ostream &os) {
+  MyMatrix<Tring> Gblock_red = RemoveFractionMatrix(Gblock_r);
+  Tring content = Gblock_r(0, 0) / Gblock_red(0, 0);
+#ifdef SANITY_CHECK_BKZ
+  if (content * Gblock_red(0, 0) != Gblock_r(0, 0) || content <= 0) {
+    std::cerr << "BKZ: the block content " << content
+              << " does not divide the block evenly\n";
+    throw TerminalException{1};
+  }
+#endif
+  MyMatrix<T> Gblock = UniversalMatrixConversion<T, Tring>(Gblock_red);
+  Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(Gblock, os);
+  Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);
+  // Gblock_r(0,0) = d_j |b_j^*|^2 and the enumerated norm is content times
+  // d_j |v|^2, so multiplying the latter back by the content puts the two on
+  // the same scale.
+  if (den * min_r * content < num * Gblock_r(0, 0)) {
+    return GetMatrixRow(shv.SHV, 0);
+  }
+  return {};
+}
+
+/*
   BKZ-beta with the slack delta = delta_num / delta_den.
 
   A tour runs over the blocks until the first insertion; the next tour starts
@@ -339,38 +378,13 @@ LLLreduction<T, Tint> BKZreducedBasisDelta(MyMatrix<T> const &GramMat,
       k = n - 1;
     }
     int m = k - j + 1;
-    // The projected block Gram matrix, read off the trailing block, with its
-    // content divided out. Stripping the content matters: the block carries
-    // the factor d_j, the enumerator reduces internally through the dual and
-    // so takes an adjugate, and the factor is raised to the power m - 1 on
-    // the way. Left in, it turns twenty-digit entries into entries of
-    // hundreds of digits and the enumeration crawls. The factor removed is
-    // recovered as content and carried in the comparison below.
     MyMatrix<Tring> Gblock_r(m, m);
     for (int a = 0; a < m; a++) {
       for (int b = 0; b < m; b++) {
         Gblock_r(a, b) = work(j + a, j + b);
       }
     }
-    MyMatrix<Tring> Gblock_red = RemoveFractionMatrix(Gblock_r);
-    Tring content = Gblock_r(0, 0) / Gblock_red(0, 0);
-#ifdef SANITY_CHECK_BKZ
-    if (content * Gblock_red(0, 0) != Gblock_r(0, 0) || content <= 0) {
-      std::cerr << "BKZ: the block content " << content
-                << " does not divide the block evenly\n";
-      throw TerminalException{1};
-    }
-#endif
-    MyMatrix<T> Gblock = UniversalMatrixConversion<T, Tring>(Gblock_red);
-    Tshortest<T, Tint> shv = T_ShortestVector<T, Tint>(Gblock, os);
-    Tring min_r = UniversalScalarConversion<Tring, T>(shv.min);
-    // work(j,j) = d_j |b_j^*|^2 and the enumerated norm is content times
-    // d_j |v|^2, so multiplying the latter back by the content puts the two
-    // on the same scale.
-    if (den * min_r * content < num * work(j, j)) {
-      return {k, GetMatrixRow(shv.SHV, 0)};
-    }
-    return {k, {}};
+    return {k, BKZ_ShorterInBlock<T, Tring, Tint>(Gblock_r, num, den, os)};
   };
   while (true) {
     bool did_insert = false;

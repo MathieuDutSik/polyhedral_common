@@ -1690,6 +1690,8 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
 The numerical type being used for the computation. Possible values:\n\
 rational: the rational type, what you want in 99.999\% of cases\n\
 integer: the integer ring, the whole computation runs division free\n\
+flint_rational, flint_integer: the same with the FLINT types (when compiled\n\
+with ENABLE_FLINT_SUPPORT), usually faster\n\
 Qsqrt5: coordinates in the field Q(sqrt(5))\n\
 Qsqrt2: coordinates in the field Q(sqrt(2))\n\
 RealAlgebraic=FileDesc: coordinate in the real algebraic field whose description\n\
@@ -1944,6 +1946,10 @@ std::string GetNumericalType(FullNamelist const &eFull) {
                                  "cpp_rational", "mpq_rational",
                                  "Qsqrt2",       "Qsqrt3",
                                  "Qsqrt5"};
+#ifdef ENABLE_FLINT_SUPPORT
+  Ltype.push_back("flint_integer");
+  Ltype.push_back("flint_rational");
+#endif
   // The real algebraic case carries the field description file as a postfix:
   // NumericalType = "RealAlgebraic=<FileAlgebraicField>".
   bool is_real_algebraic =

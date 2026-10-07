@@ -6,6 +6,9 @@
 #include "NumberTheoryGmp.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -64,6 +67,16 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return Process<T>(eFull);
       }
+#ifdef ENABLE_FLINT_SUPPORT
+      if (NumericalType == "flint_integer") {
+        using T = fmpz_class;
+        return Process<T>(eFull);
+      }
+      if (NumericalType == "flint_rational") {
+        using T = fmpq_class;
+        return Process<T>(eFull);
+      }
+#endif
 #ifdef ENABLE_BOOST_TYPES
       if (NumericalType == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;

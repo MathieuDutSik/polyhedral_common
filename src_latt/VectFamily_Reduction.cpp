@@ -44,6 +44,7 @@ choice here, and in measurement the winner varies by instance.
                basis. The strongest of the classical notions; cost exponential
                in the dimension, so not among the candidates that best tries
   bkz-<b>      BKZ at block size b
+  sdbkz-<b>    Micciancio-Walter self-dual BKZ at block size b
   slide-<k>    Gama-Nguyen slide reduction at block size k, which must
                divide the dimension
   best         run a representative selection of the above and keep whichever
