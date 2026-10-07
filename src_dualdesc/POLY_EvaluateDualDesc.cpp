@@ -5,7 +5,9 @@
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "Group.h"

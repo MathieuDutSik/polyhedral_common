@@ -1692,8 +1692,8 @@ rational: the rational type, what you want in 99.999\% of cases\n\
 integer: the integer ring, the whole computation runs division free\n\
 flint_rational, flint_integer: the same with the FLINT types (when compiled\n\
 with ENABLE_FLINT_SUPPORT), usually faster\n\
-Qsqrt5: coordinates in the field Q(sqrt(5))\n\
-Qsqrt2: coordinates in the field Q(sqrt(2))\n\
+Qsqrt5, Qsqrt2: coordinates in the field Q(sqrt(5)), Q(sqrt(2)) (when\n\
+compiled with QUADRATIC_FIELDS)\n\
 RealAlgebraic=FileDesc: coordinate in the real algebraic field whose description\n\
   is contained in the file FileDesc";
     ListStringValues_doc["EXTfile"] =
@@ -1942,10 +1942,13 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
 std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   std::string const &NumericalType = BlockDATA.get_string("NumericalType");
-  std::vector<std::string> Ltype{"integer",      "rational",
-                                 "cpp_rational", "mpq_rational",
-                                 "Qsqrt2",       "Qsqrt3",
-                                 "Qsqrt5"};
+  std::vector<std::string> Ltype{"integer", "rational", "cpp_rational",
+                                 "mpq_rational"};
+#ifdef QUADRATIC_FIELDS
+  Ltype.push_back("Qsqrt2");
+  Ltype.push_back("Qsqrt3");
+  Ltype.push_back("Qsqrt5");
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
   Ltype.push_back("flint_integer");
   Ltype.push_back("flint_rational");

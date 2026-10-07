@@ -8,7 +8,9 @@
 # include "NumberTheory.h"
 #endif
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
@@ -77,6 +79,7 @@ void full_process_B(std::string const &arith, std::string const &eFile,
     return full_process_A<T, Tgroup>(eFile, OutFormat, os);
   }
 #endif
+#ifdef QUADRATIC_FIELDS
   if (arith == "Qsqrt5") {
     using T = QuadField<Trat_quad_field, 5>;
     return full_process_A<T, Tgroup>(eFile, OutFormat, os);
@@ -85,6 +88,7 @@ void full_process_B(std::string const &arith, std::string const &eFile,
     using T = QuadField<Trat_quad_field, 2>;
     return full_process_A<T, Tgroup>(eFile, OutFormat, os);
   }
+#endif
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {
@@ -102,12 +106,23 @@ void full_process_B(std::string const &arith, std::string const &eFile,
   }
   std::cerr << "Failed to find a matching arithmetic\n";
 #ifdef ENABLE_FLINT_SUPPORT
+#ifdef QUADRATIC_FIELDS
   std::cerr << "Allowed values: rational, Qsqrt5, Qsqrt2, "
             << "RealAlgebraic=file, flint\n";
 #else
+  std::cerr << "Allowed values: rational, "
+            << "RealAlgebraic=file, flint\n";
+#endif
+#else
+#ifdef QUADRATIC_FIELDS
   std::cerr << "Allowed values: rational, Qsqrt5, Qsqrt2, "
             << "RealAlgebraic=file (build with "
             << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#else
+  std::cerr << "Allowed values: rational, "
+            << "RealAlgebraic=file (build with "
+            << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
 #endif
   throw TerminalException{1};
 }
@@ -133,9 +148,13 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "     that fails gracefully\n";
       std::cerr << "rational                : rational arithmetic on input\n";
+#ifdef QUADRATIC_FIELDS
       std::cerr << "Qsqrt2                  : arithmetic over the field\n";
+#endif
       std::cerr << "                          Q(sqrt(2))\n";
+#ifdef QUADRATIC_FIELDS
       std::cerr << "Qsqrt5                  : arithmetic over the field\n";
+#endif
       std::cerr << "                          Q(sqrt(5))\n";
       std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case\n";
       std::cerr << "          of a field whose description is in FileDesc\n";

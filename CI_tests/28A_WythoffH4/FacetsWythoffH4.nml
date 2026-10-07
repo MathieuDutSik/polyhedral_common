@@ -1,5 +1,5 @@
 &DATA
- NumericalType = "Qsqrt5"
+ NumericalType = "RealAlgebraic=FileDescSqrt5"
  EXTfile = "WythoffH4.ext"
  GRPfile = "WythoffH4.grp"
  OutFile = "ListOrbit"

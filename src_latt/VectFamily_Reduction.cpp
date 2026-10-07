@@ -3,7 +3,9 @@
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheorySafeInt.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #include "VectFamilyReduction.h"
 #include "norms.h"
 // clang-format on

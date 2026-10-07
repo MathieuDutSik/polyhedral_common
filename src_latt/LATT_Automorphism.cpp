@@ -7,7 +7,9 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
@@ -101,8 +103,12 @@ int main(int argc, char *argv[]) {
 #ifdef ENABLE_FLINT_SUPPORT
       std::cerr << "  flint       : fmpq_class / fmpz_class\n";
 #endif
+#ifdef QUADRATIC_FIELDS
       std::cerr << "  Qsqrt2      : the form over the field Q(sqrt(2))\n";
+#endif
+#ifdef QUADRATIC_FIELDS
       std::cerr << "  Qsqrt5      : the form over the field Q(sqrt(5))\n";
+#endif
       std::cerr << "  RealAlgebraic=FileDesc : the form over the real\n";
       std::cerr << "              algebraic field described in FileDesc\n";
       std::cerr << "              (the lattice is Z^n in every case, so the\n";
@@ -150,6 +156,7 @@ int main(int argc, char *argv[]) {
 #endif
       // The lattice is Z^n whatever field the form takes its values in, so
       // Tint stays mpz_class: only the Gram matrices leave the rationals.
+#ifdef QUADRATIC_FIELDS
       if (arith == "Qsqrt2") {
         using T = QuadField<Trat_quad_field, 2>;
         return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
@@ -158,6 +165,7 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat_quad_field, 5>;
         return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
       }
+#endif
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {
@@ -181,13 +189,21 @@ int main(int argc, char *argv[]) {
       std::cerr << ", gmp_boost, multi_boost";
 #endif
       std::cerr << ", flint";
+#ifdef QUADRATIC_FIELDS
       std::cerr << ", Qsqrt2, Qsqrt5, RealAlgebraic=FileDesc\n";
+#else
+      std::cerr << ", RealAlgebraic=FileDesc\n";
+#endif
 #else
       std::cerr << "Available possibilities: gmp";
 #ifdef ENABLE_BOOST_TYPES
       std::cerr << ", gmp_boost, multi_boost";
 #endif
+#ifdef QUADRATIC_FIELDS
       std::cerr << ", Qsqrt2, Qsqrt5, RealAlgebraic=FileDesc";
+#else
+      std::cerr << ", RealAlgebraic=FileDesc";
+#endif
       std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
 #endif
       throw TerminalException{1};

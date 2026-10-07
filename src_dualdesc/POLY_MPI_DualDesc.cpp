@@ -5,7 +5,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "POLY_RecursiveDualDesc_MPI.h"
@@ -75,6 +77,7 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return Process_eFull_select_type<T>(world, eFull);
       }
+#ifdef QUADRATIC_FIELDS
       if (NumericalType == "Qsqrt5") {
         using Trat = Trat_quad_field;
         using T = QuadField<Trat, 5>;
@@ -85,6 +88,7 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat, 2>;
         return Process_eFull_select_type<T>(world, eFull);
       }
+#endif
       std::optional<std::string> opt_realalgebraic =
           get_postfix(NumericalType, "RealAlgebraic=");
       if (opt_realalgebraic) {

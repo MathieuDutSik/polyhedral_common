@@ -70,8 +70,9 @@ CaseSmallSubset:=function(n, pt, c)
                           ListPts);
 end;
 
-# The WythoffH4 polytope (Qsqrt5 coordinates) of the test 28A, with its
-# group.
+# The WythoffH4 polytope of the test 28A, with its group. Its coordinates
+# are in Q(sqrt(5)), given as the real algebraic field of
+# 28A_WythoffH4/FileDescSqrt5.
 ReadGroupFile:=function(eFile)
     local ListLines, eHead, n, nGen, ListGen, i, eLine;
     ListLines:=Filtered(SplitString(StringFile(eFile), "\n"),
@@ -91,7 +92,7 @@ end;
 
 CaseWythoffH4:=function()
     return rec(name:="WythoffH4", FileEXT:="../28A_WythoffH4/WythoffH4.ext",
-               arith:="Qsqrt5",
+               arith:="RealAlgebraic=../28A_WythoffH4/FileDescSqrt5",
                GRPref:=ReadGroupFile("../28A_WythoffH4/WythoffH4.grp"));
 end;
 

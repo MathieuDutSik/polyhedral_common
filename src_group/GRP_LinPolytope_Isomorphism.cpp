@@ -1,7 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
@@ -96,19 +98,32 @@ int main(int argc, char *argv[]) {
         return process<T>(FileExt1, FileExt2, OutFormat, FileO);
       }
 #endif
+#ifdef QUADRATIC_FIELDS
       if (arith == "Qsqrt3") {
         using Trat = Trat_quad_field;
         using T = QuadField<Trat, 3>;
         return process<T>(FileExt1, FileExt2, OutFormat, FileO);
       }
+#endif
       std::cerr << "Failed to find a matching arithmetic\n";
 #ifdef ENABLE_FLINT_SUPPORT
+#ifdef QUADRATIC_FIELDS
       std::cerr << "Allowed values: rational, Qsqrt3, Qsqrt5, Qsqrt2, "
                 << "RealAlgebraic=file, flint\n";
 #else
+      std::cerr << "Allowed values: rational, "
+                << "RealAlgebraic=file, flint\n";
+#endif
+#else
+#ifdef QUADRATIC_FIELDS
       std::cerr << "Allowed values: rational, Qsqrt3, Qsqrt5, Qsqrt2, "
                 << "RealAlgebraic=file (build with "
                 << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#else
+      std::cerr << "Allowed values: rational, "
+                << "RealAlgebraic=file (build with "
+                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
+#endif
 #endif
       throw TerminalException{1};
     };

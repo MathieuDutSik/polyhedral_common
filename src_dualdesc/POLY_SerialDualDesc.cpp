@@ -5,7 +5,9 @@
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
@@ -87,6 +89,7 @@ int main(int argc, char *argv[]) {
         return Process<T>(eFull);
       }
 #endif
+#ifdef QUADRATIC_FIELDS
       if (NumericalType == "Qsqrt5") {
         using Trat = Trat_quad_field;
         using T = QuadField<Trat, 5>;
@@ -102,6 +105,7 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat, 2>;
         return Process<T>(eFull);
       }
+#endif
       std::optional<std::string> opt_realalgebraic =
           get_postfix(NumericalType, "RealAlgebraic=");
       if (opt_realalgebraic) {

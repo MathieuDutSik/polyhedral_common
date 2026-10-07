@@ -2,7 +2,9 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
@@ -24,6 +26,7 @@ void Process_rec_option(RecOption const &rec_option, std::ostream &os) {
     return full_process_type<T, Tgroup>(rec_option, os);
   }
 #endif
+#ifdef QUADRATIC_FIELDS
   if (arith == "Qsqrt5") {
     using Trat = Trat_quad_field;
     using T = QuadField<Trat, 5>;
@@ -34,6 +37,7 @@ void Process_rec_option(RecOption const &rec_option, std::ostream &os) {
     using T = QuadField<Trat, 2>;
     return full_process_type<T, Tgroup>(rec_option, os);
   }
+#endif
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {

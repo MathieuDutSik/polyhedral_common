@@ -14,7 +14,9 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #include "Shvec_exact.h"
 #include "SignatureSymmetric.h"
 // clang-format on

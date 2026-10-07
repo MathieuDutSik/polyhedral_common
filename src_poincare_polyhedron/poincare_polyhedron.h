@@ -1665,7 +1665,8 @@ The step enum current state";
 The input file of the computation";
     ListStringValues_doc["FileO"] = "The output file of the computation";
     ListStringValues_doc["Arithmetic"] = "Default: rational\n\
-Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
+Other possibilities are Qsqrt2, Qsqrt5 (when compiled with QUADRATIC_FIELDS)\n\
+and RealAlgebraic=FileDesc where FileDesc is the description";
     ListStringValues_doc["Approach"] = "IncrementallyAdd or FacetAdjacencies";
     ListStringValues_doc["MethodMissingI"] = "Default: Gen1\n\
 Method used for computing TypeI neighbors";

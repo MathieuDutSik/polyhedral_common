@@ -2,7 +2,9 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #ifdef ENABLE_FLINT_SUPPORT
@@ -56,10 +58,14 @@ int main(int argc, char *argv[]) {
 #endif
       std::cerr << "mpq_class              : rational arithmetic over GMP "
                    "mpq_class\n";
+#ifdef QUADRATIC_FIELDS
       std::cerr
           << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
+#endif
+#ifdef QUADRATIC_FIELDS
       std::cerr
           << "Qsqrt5                 : arithmetic over the field Q(sqrt(5))\n";
+#endif
       std::cerr
           << "RealAlgebraic=FileDesc : For the real algebraic case of a\n";
       std::cerr << "    field whose description is in FileDesc\n";
@@ -115,6 +121,7 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
+#ifdef QUADRATIC_FIELDS
       if (arith == "Qsqrt5") {
         using Trat = Trat_quad_field;
         using T = QuadField<Trat, 5>;
@@ -125,6 +132,7 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat, 2>;
         return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
+#endif
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
       if (opt_realalgebraic) {

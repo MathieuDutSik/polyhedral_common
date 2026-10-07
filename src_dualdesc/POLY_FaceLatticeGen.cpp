@@ -2,7 +2,9 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #ifdef ENABLE_FLINT_SUPPORT
@@ -132,6 +134,7 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
   }
 #endif
+#ifdef QUADRATIC_FIELDS
   if (arith == "Qsqrt5") {
     using Trat = Trat_quad_field;
     using T = QuadField<Trat, 5>;
@@ -142,6 +145,7 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
     using T = QuadField<Trat, 2>;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
   }
+#endif
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
   if (opt_realalgebraic) {

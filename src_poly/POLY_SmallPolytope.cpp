@@ -3,7 +3,9 @@
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheorySafeInt.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #include "POLY_LinearProgramming.h"
 #include "POLY_DualDesc_reverse_search.h"
 // clang-format on

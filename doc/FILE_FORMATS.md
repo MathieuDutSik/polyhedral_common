@@ -52,7 +52,10 @@ command line (the `arith` argument of most programs). In practice:
   `p/q` is accepted and normalised.
 * **Real-algebraic / quadratic fields** (`Qsqrt2`, `Qsqrt5`,
   `RealAlgebraic=...`): see the arithmetic-specific notes at the top of the
-  program's usage message; these types have their own token syntax.
+  program's usage message; these types have their own token syntax. The
+  quadratic fields `Qsqrt2`, `Qsqrt5` are only compiled with
+  `-DQUADRATIC_FIELDS`; otherwise use `RealAlgebraic=` with the description
+  of the field (e.g. `CI_tests/28A_WythoffH4/FileDescSqrt5` for Q(sqrt(5))).
 
 ### Example
 

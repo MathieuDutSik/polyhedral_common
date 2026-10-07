@@ -3,7 +3,9 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #include "NumberTheorySafeInt.h"
 #include "POLY_Fundamental.h"
 // clang-format on

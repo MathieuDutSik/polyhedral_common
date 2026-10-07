@@ -5,7 +5,9 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
 #include "NumberTheoryQuadField.h"
+#endif
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
@@ -89,6 +91,7 @@ int main(int argc, char *argv[]) {
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
       }
 #endif
+#ifdef QUADRATIC_FIELDS
       if (arith == "Qsqrt5") {
         using Trat = Trat_quad_field;
         using T = QuadField<Trat, 5>;
@@ -99,6 +102,7 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat, 2>;
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
       }
+#endif
       std::cerr << "Failed to find a matching type entry arith=" << arith
                 << "\n";
       throw TerminalException{1};
