@@ -1728,6 +1728,11 @@ TestEquivalenceWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat1,
 // on pairs.
 //
 
+// The orbits of the group on the ordered pairs (i, j), numbered in the
+// order of their first pair in the row-major order. Each pair is visited
+// once: the search for an unassigned pair only moves forward (an assigned
+// pair stays assigned), and a pair is assigned when it is put in the queue,
+// for O(n^2 |gens|) in total.
 template <typename Tgroup, typename Tidx_value>
 WeightMatrix<true, int, Tidx_value>
 WeightMatrixFromPairOrbits(Tgroup const &GRP, std::ostream &os) {
@@ -1738,49 +1743,48 @@ WeightMatrixFromPairOrbits(Tgroup const &GRP, std::ostream &os) {
   for (size_t i = 0; i < n; i++)
     for (size_t j = 0; j < n; j++)
       WMat.intDirectAssign(i, j, miss_val);
-  auto GetUnset = [&]() -> std::pair<int, int> {
-    for (size_t i = 0; i < n; i++)
-      for (size_t j = 0; j < n; j++) {
-        Tidx_value eVal = WMat.GetValue(i, j);
-        if (eVal == miss_val) {
-          return {i, j};
-        }
-      }
-    return {-1, -1};
+  // The pairs before pos in the row-major order are all assigned.
+  size_t pos = 0;
+  auto GetUnset = [&]() -> std::optional<std::pair<size_t, size_t>> {
+    while (pos < n * n) {
+      size_t i = pos / n;
+      size_t j = pos % n;
+      if (WMat.GetValue(i, j) == miss_val)
+        return std::make_pair(i, j);
+      pos++;
+    }
+    return {};
   };
-  int iOrbit = 0;
+  size_t iOrbit = 0;
   std::vector<int> ListWeight;
   std::vector<Telt> ListGen = GRP.GeneratorsOfGroup();
   while (true) {
-    std::pair<int, int> eStart = GetUnset();
-    if (eStart.first == -1)
+    std::optional<std::pair<size_t, size_t>> opt = GetUnset();
+    if (!opt)
       break;
     // The index miss_val marks the unassigned entries, so an orbit of that
     // index would be read back as unassigned and assigned again.
-    if (static_cast<size_t>(iOrbit) >= static_cast<size_t>(miss_val)) {
+    if (iOrbit >= static_cast<size_t>(miss_val)) {
       std::cerr << "WEIGHT: WeightMatrixFromPairOrbits, the number of orbits "
                    "on pairs exceeds "
                 << static_cast<size_t>(miss_val) - 1
                 << ", the capacity of Tidx_value, n_act=" << n << "\n";
       throw TerminalException{1};
     }
-    ListWeight.push_back(iOrbit);
-    std::vector<std::pair<int, int>> eList{eStart};
-    while (true) {
-      int nbPair = eList.size();
-      if (nbPair == 0)
-        break;
-      std::vector<std::pair<int, int>> fList;
+    Tidx_value val = static_cast<Tidx_value>(iOrbit);
+    ListWeight.push_back(static_cast<int>(iOrbit));
+    WMat.intDirectAssign(opt->first, opt->second, val);
+    std::vector<std::pair<size_t, size_t>> eList{*opt};
+    while (!eList.empty()) {
+      std::vector<std::pair<size_t, size_t>> fList;
       for (auto &ePair : eList) {
-        int i = ePair.first;
-        int j = ePair.second;
-        WMat.intDirectAssign(i, j, iOrbit);
         for (auto &eGen : ListGen) {
-          int iImg = OnPoints(i, eGen);
-          int jImg = OnPoints(j, eGen);
-          Tidx_value eVal1 = WMat.GetValue(iImg, jImg);
-          if (eVal1 == miss_val)
+          size_t iImg = OnPoints(ePair.first, eGen);
+          size_t jImg = OnPoints(ePair.second, eGen);
+          if (WMat.GetValue(iImg, jImg) == miss_val) {
+            WMat.intDirectAssign(iImg, jImg, val);
             fList.push_back({iImg, jImg});
+          }
         }
       }
       eList = std::move(fList);
