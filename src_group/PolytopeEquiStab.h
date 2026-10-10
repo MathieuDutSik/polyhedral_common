@@ -2213,18 +2213,6 @@ template <typename T> void SignRenormalizationMatrix(MyMatrix<T> &M) {
   }
 }
 
-template <typename T> MyMatrix<T> ExpandReducedMatrix(MyMatrix<T> const &M) {
-  size_t nbPair = M.rows();
-  size_t n = M.cols();
-  MyMatrix<T> Mret(2 * nbPair, n);
-  for (size_t iPair = 0; iPair < nbPair; iPair++)
-    for (size_t i = 0; i < n; i++) {
-      Mret(2 * iPair, i) = M(iPair, i);
-      Mret(2 * iPair + 1, i) = -M(iPair, i);
-    }
-  return Mret;
-}
-
 /*
   Consider the case of the A2 root system with vectors
   \pm (1,0), \pm (0,1), \pm (1,1).

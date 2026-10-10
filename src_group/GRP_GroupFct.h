@@ -461,61 +461,6 @@ ReducedGroupActionVect(Tgroup const &TheGRP,
   return ReducedGroupActionRa<Tgroup>(TheGRP, ra);
 }
 
-template <typename Tgroup>
-Tgroup ConjugateGroup(Tgroup const &TheGRP,
-                      typename Tgroup::Telt const &ePerm) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  Tidx n = TheGRP.n_act();
-  Telt ePermR = ~ePerm;
-  std::vector<Telt> ListGen;
-  for (auto &eGen : TheGRP.GeneratorsOfGroup()) {
-    std::vector<Tidx> v(n);
-    for (Tidx i = 0; i < n; i++) {
-      Tidx eVal1 = OnPoints(i, ePermR);
-      Tidx eVal2 = OnPoints(eVal1, eGen);
-      Tidx eVal3 = OnPoints(eVal2, ePerm);
-      v[i] = eVal3;
-    }
-    ListGen.emplace_back(std::move(Telt(std::move(v))));
-  }
-  return Tgroup(ListGen, n);
-}
-
-//
-// Some enumeration code
-//
-
-template <typename Tgroup>
-void GROUP_FuncInsertInSet(Tgroup const &TheGRP, Face const &eList,
-                           vectface &ListListSet) {
-  using Telt = typename Tgroup::Telt;
-  for (auto &fList : ListListSet) {
-    std::optional<Telt> test = TheGRP.RepresentativeAction_OnSets(eList, fList);
-    if (test)
-      return;
-  }
-  ListListSet.push_back(eList);
-}
-
-template <typename Tgroup>
-void GROUP_FuncInsertInSet_UseInv(Tgroup const &TheGRP, Face const &eList,
-                                  std::vector<int> const &eInv,
-                                  vectface &ListSet,
-                                  std::vector<std::vector<int>> &ListInv) {
-  using Telt = typename Tgroup::Telt;
-  size_t nb = ListSet.size();
-  for (size_t iList = 0; iList < nb; iList++)
-    if (eInv == ListInv[iList]) {
-      std::optional<Telt> test =
-          TheGRP.RepresentativeAction_OnSets(eList, ListSet[iList]);
-      if (test)
-        return;
-    }
-  ListSet.push_back(eList);
-  ListInv.push_back(eInv);
-}
-
 //
 // Some combinatorial algorithms using only the generators of the group.
 //

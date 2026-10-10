@@ -5,7 +5,6 @@
 // clang-format off
 #include "Timings.h"
 #include <algorithm>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -233,37 +232,6 @@ template <typename T> struct RepresentVertexPermutationPreComput {
     return {M1adj * M2, M1det};
   }
 };
-
-template <typename T, typename Tidx>
-std::optional<std::vector<Tidx>>
-FindPermutationalEquivalence(MyMatrix<T> const &M1, MyMatrix<T> const &M2) {
-  int n_rows = M1.rows();
-  if (n_rows != M2.rows()) {
-    return {};
-  }
-  Tidx n_rows_tidx = n_rows;
-  std::unordered_map<MyVector<T>, Tidx> map;
-  for (Tidx i = 0; i < n_rows_tidx; i++) {
-    MyVector<T> V = GetMatrixRow(M1, i);
-    map[V] = i + 1;
-  }
-  std::vector<Tidx> eList(n_rows);
-  std::vector<Tidx> LMatch(n_rows, 0);
-  for (Tidx i = 0; i < n_rows_tidx; i++) {
-    MyVector<T> V = GetMatrixRow(M2, i);
-    Tidx const &val = map[V];
-    if (val == 0)
-      return {};
-    eList[i] = val - 1;
-    LMatch[val - 1]++;
-  }
-  for (Tidx i = 0; i < n_rows_tidx; i++) {
-    if (LMatch[i] != 1) {
-      return {};
-    }
-  }
-  return eList;
-}
 
 template <typename T, typename Tfield, typename Tidx, typename F1, typename F2>
 std::optional<MyMatrix<Tfield>>
@@ -1120,14 +1088,6 @@ FindTransformationRing(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   MyMatrix<Tfield> EXT2_field = UniversalMatrixConversion<Tfield, T>(EXT2);
   MyMatrix<Tfield> M_field = FindTransformation(EXT1_field, EXT2_field, ePerm);
   return UniversalMatrixConversionCheck<T, Tfield>(M_field);
-}
-
-template <typename T, typename Tidx>
-std::optional<MyMatrix<T>>
-FindTransformationGeneral_vect(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
-                               std::vector<Tidx> const &v) {
-  auto f = [&](int iRow1) -> int { return v[iRow1]; };
-  return FindTransformationGeneral_f(EXT1, EXT2, f);
 }
 
 template <typename T, typename Tidx>
