@@ -546,7 +546,7 @@ f_for_stab_heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
   os << "PES: f_for_stab_heuristic: nbRow=" << nbRow << "\n";
 #endif
   auto f_heuristic_limited =
-      [&](size_t max_subset) -> std::optional<std::vector<std::vector<Tidx>>> {
+      [&](size_t max_subset) -> std::optional<GraphGeneratorsOrder<Tidx>> {
     if (is_symm) {
       return GetStabilizerWeightMatrix_Heuristic_Limited<Tvalue, Tidx, true>(
           nbRow, f1, f2, f1tr, f2tr, f3, f4, max_subset, os);
@@ -569,10 +569,35 @@ f_for_stab_heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
       return {};
     }
   };
-  std::optional<std::vector<std::vector<Tidx>>> opt =
+  // The generators of the subset method with, when known, the order of the
+  // graph of the subset, a multiple of the order of the group (see
+  // GetStabilizerWeightMatrix_Heuristic_Limited).
+  auto f_subset_result = [&](GraphGeneratorsOrder<Tidx> &&gens_order)
+      -> StabGeneratorsOrder<Tidx, Tint> {
+    std::optional<Tint> order;
+    if (gens_order.has_order)
+      order = GetGraphGroupOrder<Tint>(gens_order);
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+    if (order) {
+      std::vector<Telt> LGen;
+      for (auto &eList : gens_order.ListGen)
+        LGen.emplace_back(Telt(eList));
+      Tgroup GRP(LGen, Telt(static_cast<Tidx>(nbRow)));
+      if (*order % GRP.size() != 0) {
+        std::cerr << "PES: f_for_stab_heuristic, the order of the graph of the "
+                     "subset "
+                  << *order << " is not a multiple of the one of the group "
+                  << GRP.size() << "\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    return {std::move(gens_order.ListGen), order};
+  };
+  std::optional<GraphGeneratorsOrder<Tidx>> opt =
       f_heuristic_limited(THRESHOLD_INDIVIDUALIZATION_STAB);
   if (opt)
-    return {std::move(*opt), {}};
+    return f_subset_result(std::move(*opt));
   std::optional<OrbitStabilizerGenerators<Tidx>> opt_os = f_individualization();
   if (opt_os) {
     // |G_{v0}| from its faithful action on the small S0 when available.
@@ -599,7 +624,7 @@ f_for_stab_heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
 #endif
     return {std::move(opt_os->ListGen), order};
   }
-  return {std::move(*f_heuristic_limited(nbRow)), {}};
+  return f_subset_result(std::move(*f_heuristic_limited(nbRow)));
 }
 
 // The generators of the stabilizer of the weight matrix given by f1/f2 for
