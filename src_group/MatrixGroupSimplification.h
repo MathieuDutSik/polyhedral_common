@@ -7,7 +7,10 @@
 #include "MAT_Matrix.h"
 #include "PermutationElt.h"
 #include "Indefinite_LLL.h"
+#include <cmath>
+#include <cstdint>
 #include <format>
+#include <type_traits>
 // clang-format on
 
 #ifdef DEBUG
@@ -1490,6 +1493,35 @@ T get_ellinfinity_norm(
   return norm;
 }
 
+/*
+  The bound M on the entries of the n x n matrices kept by the reduction in
+  the fixed-size signed type Tfinite, so that nothing computed from them
+  overflows: the product of two of them has entries at most n M^2, and its
+  L1 norm (the complexity, computed before the product is checked) is at
+  most n^2 n M^2 = n^3 M^2. M is the largest integer with
+  10 n^3 M^2 <= max(Tfinite) - 5 (the factor 10 keeps a margin, a product
+  slightly above M being likely), computed exactly in integers.
+ */
+template <typename Tfinite> Tfinite get_max_entry_finite(size_t n) {
+  static_assert(std::is_integral_v<Tfinite> && std::is_signed_v<Tfinite>,
+                "Tfinite should be a fixed-size signed integer type");
+  static_assert(sizeof(Tfinite) <= sizeof(uint64_t),
+                "the bound is computed in uint64_t");
+  uint64_t max_poss = uint64_t(std::numeric_limits<Tfinite>::max()) - 5;
+  // 10 n^3 overflows uint64_t only for n above 10^6.
+  if (n == 0 || n > 1000000)
+    return 0;
+  uint64_t q = max_poss / (10 * uint64_t(n) * n * n);
+  // The integer square root of q, M^2 <= q < (M + 1)^2. As q < 2^63, M + 1
+  // is at most 2^32 and (M + 1)^2 fits in uint64_t.
+  uint64_t M = static_cast<uint64_t>(std::sqrt(static_cast<double>(q)));
+  while (M > 0 && M * M > q)
+    M--;
+  while ((M + 1) * (M + 1) <= q)
+    M++;
+  return static_cast<Tfinite>(M);
+}
+
 template <typename T, typename Tfinite>
 std::optional<std::vector<MyMatrix<T>>>
 ExhaustiveReductionComplexityGroupMatrix_Tfinite(
@@ -1502,14 +1534,21 @@ ExhaustiveReductionComplexityGroupMatrix_Tfinite(
   //
   // Doing basic comformity check
   //
-  int n = ListPair[0].first.rows();
-  Tfinite max_poss_Tfinite = std::numeric_limits<Tfinite>::max() - 5;
-  T max_poss_T = UniversalScalarConversion<T, Tfinite>(max_poss_Tfinite);
-  // Add a factor 10, since if it is on the border, it will likely create an
-  // element of slightly large l-infinity norm and thus we would have to rerun
-  // which this was expected all along.
-  T worst_case = max_val * max_val * n * 10;
-  if (worst_case > max_poss_T) {
+  size_t n = ListPair[0].first.rows();
+  // The entries of the kept matrices are at most max_val_Tfinite (see
+  // get_max_entry_finite), and so are the ones of the input.
+  Tfinite max_val_Tfinite = get_max_entry_finite<Tfinite>(n);
+  T max_val_T = UniversalScalarConversion<T, Tfinite>(max_val_Tfinite);
+  if (max_val > max_val_T) {
+    return {};
+  }
+  // The total complexity, the sum of the L1 norms of the kept matrices, is
+  // compared to stop the reduction: with at most k = |ListPair| kept matrices
+  // (a reduction does not increase their number), it is at most
+  // k n^2 max_val_Tfinite, which has to fit in Tfinite.
+  uint64_t max_poss = uint64_t(std::numeric_limits<Tfinite>::max()) - 5;
+  uint64_t k_n2 = uint64_t(ListPair.size()) * n * n;
+  if (uint64_t(max_val_Tfinite) > max_poss / k_n2) {
     return {};
   }
   std::vector<std::pair<MyMatrix<Tfinite>, MyMatrix<Tfinite>>> ListPair_Tfinite;
@@ -1519,15 +1558,6 @@ ExhaustiveReductionComplexityGroupMatrix_Tfinite(
     std::pair<MyMatrix<Tfinite>, MyMatrix<Tfinite>> pair{M1, M2};
     ListPair_Tfinite.push_back(pair);
   }
-  //
-  // Determine the upper bound
-  //
-  double max_poss_double =
-      UniversalScalarConversion<double, Tfinite>(max_poss_Tfinite);
-  double max_val_double = sqrt(max_poss_double / (10 * n));
-  int64_t max_val_int64 = static_cast<int64_t>(max_val_double);
-  Tfinite max_val_Tfinite =
-      UniversalScalarConversion<Tfinite, int64_t>(max_val_int64);
   auto f_complexity = [&](MyMatrix<Tfinite> const &M) -> Tfinite {
     return L1_norm_mat(M);
   };

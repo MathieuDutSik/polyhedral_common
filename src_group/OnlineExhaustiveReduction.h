@@ -492,17 +492,11 @@ public:
   OnlineHierarchicalMatrixReduction(int _n, std::ostream &_os)
       : n(_n), os(_os), current_level(0),
         kernel_T(OnlineExhaustiveReductionComplexityMatrixInfinite<T>(_os)) {
-    // Calculate upper bounds for each numeric type
-    double max_poss_16 =
-        static_cast<double>(std::numeric_limits<int16_t>::max());
-    double max_poss_32 =
-        static_cast<double>(std::numeric_limits<int32_t>::max());
-    double max_poss_64 =
-        static_cast<double>(std::numeric_limits<int64_t>::max());
-
-    int16_t max_val_16 = static_cast<int16_t>(sqrt(max_poss_16 / (10 * n)));
-    int32_t max_val_32 = static_cast<int32_t>(sqrt(max_poss_32 / (10 * n)));
-    int64_t max_val_64 = static_cast<int64_t>(sqrt(max_poss_64 / (10 * n)));
+    // The bounds on the entries for each numeric type, so that the products
+    // and their L1 norms do not overflow (see get_max_entry_finite).
+    int16_t max_val_16 = get_max_entry_finite<int16_t>(n);
+    int32_t max_val_32 = get_max_entry_finite<int32_t>(n);
+    int64_t max_val_64 = get_max_entry_finite<int64_t>(n);
 
 #ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
     os << "SIMP: Upper bounds: int16_t=" << max_val_16
