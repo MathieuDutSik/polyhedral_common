@@ -711,6 +711,7 @@ set(
   IGUSA_FacetEnumeration
   IGUSA_VertexTest
   IGUSA_FaceVertices
+  IGUSA_InitialFacet
 )
 foreach(target IN LISTS IGUSA_PROGRAMS)
   add_polyhedral_binary(

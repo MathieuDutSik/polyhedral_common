@@ -233,6 +233,33 @@ For the full rank facets of conv(I_6) it finds 25 E6 + 1 D6 (F14), 19 E6 +
 2 D6 (F23), 21 E6 (F11) and 45 E6 (F5), all the incident forms, in 2 to 30
 seconds, and 15 D5 for the facet of rank 5.
 
+An initial facet of a face: `IGUSA_InitialFacet`
+-----------------------------------------------
+
+For a face Phi of rank r < n, of the valid pair (F, b): w primitive modulo
+the lattice W of Phi (the first vector of a completion of a basis of W) and
+Psi_w = Phi cap {X[w] = 1}, the face of the pair (F + w w^T, b + 1), of rank
+r + 1. Its codimension in Phi is 1 + r - rank C(Phi0), C(Phi0) the integral
+c with Y^{-1}[c] < 4 for some Y in Phi0 (paper, Proposition
+PROP_initial_facet), so Psi_w is a facet iff C(Phi0) spans R^r. C is taken
+on the vertices of Phi0 (from IGUSA_FaceVertices), then on all its integral
+points if they do not span. A vector of the kernel of F instead of w need
+not work: X[w] = 1 can be impossible on Phi.
+
+```
+&DATA
+ arithmetic = "flint"
+ IlpMethod = "scip"
+ OutFile = "IF7_F11.out"      ! w, rank of C, certificate, codim, Fnew, bnew
+ FileFacet = "G7_F11.mat"     ! F (n x n) of rank r < n
+ FacetRhs = "11"
+ FileListVertex = "vert6.mat" ! vertex representatives of P_r
+/
+```
+
+For the six orbits of facets of rank r < 7 of conv(I_7) (ranks 1, 5 and 6)
+Psi_w is a facet, in at most 70 seconds.
+
 Rigorous vertex test: `IGUSA_VertexTest`
 ----------------------------------------
 

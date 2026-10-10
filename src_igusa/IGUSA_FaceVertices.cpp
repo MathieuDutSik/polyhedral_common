@@ -27,6 +27,7 @@ void process(FullNamelist const &eFull, std::ostream &os) {
   os << "IGUSA_FACE_VERTICES: rank=" << info.rank << " rhs=" << rhs
      << " slack=" << info.slack << " |support|=" << info.n_support
      << " n_node=" << info.n_node << " |vertices|=" << info.l_vertex.size()
+     << " dim(Phi0)=" << info.dim_face
      << " by representative:";
   for (auto &c : l_count) {
     os << " " << c;
@@ -69,7 +70,8 @@ void process(FullNamelist const &eFull, std::ostream &os) {
     os_out << ", F0:=";
     WriteMatrixGAP(os_out, info.F0);
     os_out << ", rhs:=" << rhs << ", RyshkovMin:=" << info.ryshkov_min
-           << ", slack:=" << info.slack << ", nbNode:=" << info.n_node
+           << ", slack:=" << info.slack << ", dimFace:=" << info.dim_face
+           << ", nbNode:=" << info.n_node
            << ", nbIncidence:=\"" << str_compare << "\", ListCount:=[";
     for (size_t i = 0; i < l_count.size(); i++) {
       os_out << (i > 0 ? "," : "") << l_count[i];

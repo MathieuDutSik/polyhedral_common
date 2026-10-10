@@ -60,9 +60,30 @@ template <typename T> struct IgusaFaceVertices {
   // The vertices of Phi0 (r x r) and the index of their representative
   std::vector<MyMatrix<T>> l_vertex;
   std::vector<size_t> l_type;
+  // The dimension of Phi0, the affine dimension of its vertices (-1 if none)
+  int dim_face;
   // The number of nodes of the backtracking
   size_t n_node;
 };
+
+// The affine dimension of a list of symmetric matrices, -1 if it is empty.
+template <typename T>
+int igusa_affine_dimension(std::vector<MyMatrix<T>> const &l_mat) {
+  if (l_mat.empty()) {
+    return -1;
+  }
+  int n = l_mat[0].rows();
+  int len = n * (n + 1) / 2;
+  MyMatrix<T> M(l_mat.size(), len + 1);
+  for (size_t i = 0; i < l_mat.size(); i++) {
+    MyVector<T> V = SymmetricMatrixToVector(l_mat[i]);
+    M(i, 0) = T(1);
+    for (int j = 0; j < len; j++) {
+      M(i, j + 1) = V(j);
+    }
+  }
+  return RankMat(M) - 1;
+}
 
 // The generators h of Aut(A) as maps x -> M x on the vectors, A[M x] = A[x].
 template <typename T, typename Tint, typename Tgroup>
@@ -382,6 +403,7 @@ igusa_face_vertices(IgusaParameters<T> const &params, MyMatrix<T> const &F,
     info.l_vertex.push_back(pair.first);
     info.l_type.push_back(pair.second);
   }
+  info.dim_face = igusa_affine_dimension(info.l_vertex);
   return info;
 }
 
