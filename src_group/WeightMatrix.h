@@ -30,6 +30,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "PERM_Fct.h"
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <optional>
@@ -858,7 +859,9 @@ inline Face GetAllBinaryExpressionsByWeight(size_t n, size_t n_ent) {
   K = 2 (K+1) K
 
  */
-inline int Pairs_GetNeededN(int nb_color) {
+// The power 2^nb_pair is computed in 64 bits: in int it overflows (undefined
+// behavior) from N = 8, that is above 2^24 colors.
+inline int Pairs_GetNeededN(size_t nb_color) {
   int N = 1;
   while (true) {
     int res = N % 2;
@@ -872,8 +875,10 @@ inline int Pairs_GetNeededN(int nb_color) {
       else
         nb_pair = 2 * (K + 1) * K;
     }
-    // Computes e_pow = 2^nb_pair
-    int e_pow = 1 << nb_pair;
+    // nb_pair >= 64 only for N >= 12, beyond any size_t number of colors.
+    if (nb_pair >= 64)
+      return N;
+    uint64_t e_pow = uint64_t(1) << nb_pair;
     if (e_pow >= nb_color)
       return N;
     N++;
@@ -1374,11 +1379,12 @@ GetGroupCanonicalizationVector_Graph_Kernel(Tgr const &eGR, size_t const &nbRow,
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
 //
+// The graph of the weight matrix for its canonicalization, the rows being
+// indexed by Tidx.
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value,
           bool is_symm>
-std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
-GetGroupCanonicalizationVector_Kernel(
-    WeightMatrix<is_symm, T, Tidx_value> const &WMat, std::ostream &os) {
+Tgr GetGraphCanonicalization(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
+                             std::ostream &os) {
   size_t nbRow = WMat.rows();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
@@ -1388,9 +1394,40 @@ GetGroupCanonicalizationVector_Kernel(
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
+  return GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
+}
+
+template <typename T, typename Tgr, typename Tidx, typename Tidx_value,
+          bool is_symm>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
+GetGroupCanonicalizationVector_Kernel(
+    WeightMatrix<is_symm, T, Tidx_value> const &WMat, std::ostream &os) {
+  Tgr eGR =
+      GetGraphCanonicalization<T, Tgr, Tidx, Tidx_value, is_symm>(WMat, os);
   return GetGroupCanonicalizationVector_Graph_Kernel<Tgr, Tidx, is_symm>(
-      eGR, nbRow, os);
+      eGR, WMat.rows(), os);
+}
+
+// The same with the index type TidxC of the vertices of the graph fixed by
+// the caller, rather than dispatched on their number: a caller instantiated
+// many times avoids instantiating the graph code for every index type. The
+// caller bounds the size of the graph; it is also checked here.
+template <typename T, typename Tgr, typename Tidx, typename TidxC,
+          typename Tidx_value, bool is_symm>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
+GetGroupCanonicalizationVector_Kernel_TidxC(
+    WeightMatrix<is_symm, T, Tidx_value> const &WMat, std::ostream &os) {
+  Tgr eGR =
+      GetGraphCanonicalization<T, Tgr, Tidx, Tidx_value, is_symm>(WMat, os);
+  size_t max_poss_vert = size_t(std::numeric_limits<TidxC>::max());
+  if (eGR.GetNbVert() >= max_poss_vert) {
+    std::cerr << "GetGroupCanonicalizationVector_Kernel_TidxC : the graph has "
+              << eGR.GetNbVert() << " vertices, too many for TidxC (max "
+              << max_poss_vert << ")\n";
+    throw TerminalException{1};
+  }
+  return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC, is_symm>(
+      WMat.rows(), eGR, os);
 }
 
 template <typename Tgr, typename TidxIn>

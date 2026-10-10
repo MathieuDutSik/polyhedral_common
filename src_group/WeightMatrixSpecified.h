@@ -2120,17 +2120,33 @@ GetStabilizerWeightMatrix_Individualization(size_t nbRow, F1 f1, F2 f2,
     size_t cur = 0;
     auto g1 = [&](size_t i) -> void { cur = i; };
     auto g2 = [&](size_t j) -> Tw { return weight_at(x, L[cur], L[j]); };
-    auto f_dispatch = [&]<typename Tidx_value>()
-        -> std::pair<std::vector<Tidx>, std::vector<Tperm>> {
-      WeightMatrix<is_symm, Tw, Tidx_value> WMat(m, g1, g2, os);
-      WMat.ReorderingSetWeight();
-      return GetGroupCanonicalizationVector_Kernel<Tw, GraphListAdj, Tidx,
-                                                   Tidx_value, is_symm>(WMat,
-                                                                        os);
-    };
+    // The index types of the weights (Tidx_value) and of the vertices of the
+    // graph (TidxC) are fixed rather than dispatched on their number, which
+    // would instantiate this graph code for every index type in each
+    // caller. S(x) has m <= THRESHOLD_INDIVIDUALIZATION_STAB vertices, so:
+    // * at most m^2 distinct weights,
+    // * nbMult <= m^2 + 3 effective weights, so that the graph has
+    //   hS = Pairs_GetNeededN(nbMult) <= 8 layers (8 layers give 2^32
+    //   colors),
+    // * at most (2 m + 1) hS vertices (2 m + 1 in the non-symmetric case).
+    using Tidx_value = uint32_t;
+    using TidxC = uint32_t;
+    constexpr size_t max_m = THRESHOLD_INDIVIDUALIZATION_STAB;
+    static_assert(max_m * max_m <
+                      size_t(std::numeric_limits<Tidx_value>::max()),
+                  "the weights of the small subset should fit in Tidx_value");
+    static_assert(max_m * max_m + 3 <= (size_t(1) << 32),
+                  "the graph of the small subset should have at most 8 layers");
+    static_assert((2 * max_m + 1) * 8 <
+                      size_t(std::numeric_limits<TidxC>::max()),
+                  "the vertices of the graph of the small subset should fit "
+                  "in TidxC");
+    WeightMatrix<is_symm, Tw, Tidx_value> WMat(m, g1, g2, os);
+    WMat.ReorderingSetWeight();
     std::pair<std::vector<Tidx>, std::vector<Tperm>> pair =
-        call_with_smallest_unsigned(weightmatrix_get_nb(is_symm, m),
-                                    "Individualization", f_dispatch);
+        GetGroupCanonicalizationVector_Kernel_TidxC<Tw, GraphListAdj, Tidx,
+                                                    TidxC, Tidx_value, is_symm>(
+            WMat, os);
     std::vector<Tw> canonic_weights;
     for (size_t k = 0; k < m; k++)
       for (size_t l = 0; l < m; l++)
