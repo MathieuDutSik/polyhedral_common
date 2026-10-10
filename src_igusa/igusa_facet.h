@@ -245,6 +245,37 @@ igusa_voronoi_weights(IgusaSpace<T, Tint> const &space, MyVector<T> const &f,
 }
 
 /*
+  The Voronoi data of a positive definite F: the minimum of tr(F X) over the
+  Ryshkov polyhedron, a minimizer P* and the weights lambda_v > 0 with
+  F = sum_v lambda_v v v^T over minimal vectors v of P*.
+ */
+template <typename T, typename Tint> struct IgusaVoronoiData {
+  MyVector<T> f;
+  T ryshkov_min;
+  MyMatrix<T> Pstar;
+  std::vector<std::pair<MyVector<Tint>, T>> l_weight;
+};
+
+template <typename T, typename Tint>
+IgusaVoronoiData<T, Tint> igusa_voronoi_data(IgusaSpace<T, Tint> &space,
+                                             MyMatrix<T> const &F,
+                                             std::ostream &os) {
+  int dim = space.dim;
+  MyVector<T> f = igusa_trace_function(space, F);
+  MyMatrix<T> ListExtraIneq(0, dim + 1);
+  MyMatrix<T> NoEqua(0, dim + 1);
+  igusa_insert_seed_cuts(space, F, os);
+  std::optional<IgusaMinimum<T>> opt_lp =
+      igusa_lp_minimization(space, f, ListExtraIneq, NoEqua, os);
+  IgusaMinimum<T> res_lp =
+      unfold_opt(opt_lp, "The minimum over the Ryshkov polyhedron");
+  MyMatrix<T> Pstar = igusa_matrix(space, res_lp.x);
+  std::vector<std::pair<MyVector<Tint>, T>> l_weight =
+      igusa_voronoi_weights(space, f, Pstar, os);
+  return {f, res_lp.value, Pstar, l_weight};
+}
+
+/*
   With check_validity = false, the inequality tr(F X) >= rhs need not be
   valid on I: the result is then the list of the X in I with tr(F X) = rhs,
   which is what is needed for an inequality valid on a face of P only. The
@@ -263,15 +294,11 @@ igusa_facet_incidence(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
                  "is infinite otherwise\n";
     throw TerminalException{1};
   }
-  MyVector<T> f = igusa_trace_function(space, F);
+  IgusaVoronoiData<T, Tint> vd = igusa_voronoi_data(space, F, os);
+  MyVector<T> const &f = vd.f;
   MyMatrix<T> ListExtraIneq(0, dim + 1);
   MyMatrix<T> NoEqua(0, dim + 1);
-  igusa_insert_seed_cuts(space, F, os);
-  std::optional<IgusaMinimum<T>> opt_lp =
-      igusa_lp_minimization(space, f, ListExtraIneq, NoEqua, os);
-  IgusaMinimum<T> res_lp =
-      unfold_opt(opt_lp, "The minimum over the Ryshkov polyhedron");
-  MyMatrix<T> Pstar = igusa_matrix(space, res_lp.x);
+  MyMatrix<T> const &Pstar = vd.Pstar;
   // The validity of the facet: the minimum of tr(F X) over I is rhs
   T igusa_min = rhs;
   if (check_validity) {
@@ -285,18 +312,17 @@ igusa_facet_incidence(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
       throw TerminalException{1};
     }
   }
-  std::vector<std::pair<MyVector<Tint>, T>> l_weight =
-      igusa_voronoi_weights(space, f, Pstar, os);
+  std::vector<std::pair<MyVector<Tint>, T>> const &l_weight = vd.l_weight;
   int n_w = l_weight.size();
-  T slack = rhs - res_lp.value;
+  T slack = rhs - vd.ryshkov_min;
 #ifdef DEBUG_IGUSA_FACET
-  os << "IGUSA_FACET: min over Ryshkov=" << res_lp.value << " slack=" << slack
+  os << "IGUSA_FACET: min over Ryshkov=" << vd.ryshkov_min << " slack=" << slack
      << " |support|=" << n_w << "\n";
 #endif
   if (slack < 0) {
     if (!check_validity) {
       // no X in I has tr(F X) = rhs
-      return {F, rhs, res_lp.value, Pstar, igusa_min, {}, 0, slack};
+      return {F, rhs, vd.ryshkov_min, Pstar, igusa_min, {}, 0, slack};
     }
     std::cerr << "IGUSA_FACET: rhs is below the minimum over the Ryshkov "
                  "polyhedron, this is not a valid inequality\n";
@@ -452,7 +478,7 @@ igusa_facet_incidence(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
   }
   int rank = l_x.empty() ? 0 : RankMat(AffPoints);
   return {F,     rhs,
-          res_lp.value, Pstar,
+          vd.ryshkov_min, Pstar,
           igusa_min, std::move(l_incident),
           rank,  slack};
 }

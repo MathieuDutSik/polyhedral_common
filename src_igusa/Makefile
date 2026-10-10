@@ -1,4 +1,4 @@
-PROGRAM		= IGUSA_EnumerateVertices IGUSA_FacetIncidence IGUSA_FacetEnumeration IGUSA_VertexTest
+PROGRAM		= IGUSA_EnumerateVertices IGUSA_FacetIncidence IGUSA_FacetEnumeration IGUSA_VertexTest IGUSA_FaceVertices
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -16,9 +16,13 @@ CDEFS           = -DGMP_POOL $(CHOICE_COMPILATION)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(NAUTY_LINK)
+# NAUTY_LINK first: the -L paths are searched in order for every -l, and
+# GMP_CXX_LINK and BOOST_LINK put -L/opt/homebrew/lib, which can hold another
+# nauty, before it ("nauty.c version mismatch" at run time).
+LIBS		= -lm $(NAUTY_LINK) $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK)
 
-# Optional flint arithmetic: build with `make ENABLE_FLINT_SUPPORT=1`.
+# Flint arithmetic, on by default: `make ENABLE_FLINT_SUPPORT=0` disables it.
+ENABLE_FLINT_SUPPORT ?= 1
 # FLINT_INCDIR / FLINT_LINK can be set in the environment; the defaults
 # assume flint is installed next to gmp.
 ifeq ($(ENABLE_FLINT_SUPPORT),1)
@@ -28,7 +32,9 @@ CTOTAL		+= -DENABLE_FLINT_SUPPORT -I$(FLINT_INCDIR)
 LIBS		+= $(FLINT_LINK)
 endif
 
-# Optional SCIP integer programming: build with `make ENABLE_SCIP_SUPPORT=1`.
+# SCIP integer programming, on by default: `make ENABLE_SCIP_SUPPORT=0`
+# disables it.
+ENABLE_SCIP_SUPPORT ?= 1
 # SCIP_INCDIR / SCIP_LINK can be set in the environment; the defaults
 # assume SCIP is installed next to gmp. Without it the integer programs are
 # solved by the exact branch and bound of src_milp/integer_linear_programming.h

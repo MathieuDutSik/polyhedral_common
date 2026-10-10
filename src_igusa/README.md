@@ -201,6 +201,38 @@ ridges. The bounded faces are connected through vertices, not through faces
 of codimension 3, so the procedure has to be seeded with several facets or
 complemented, see the paper.
 
+Vertices of a face: `IGUSA_FaceVertices`
+---------------------------------------
+
+For a valid inequality tr(F X) >= b, F positive semidefinite of rank r, the
+vertices of its face, from the list of the orbits of vertices of P_r. By the
+structure theorem of the faces (paper, section "The structure of the faces")
+F = B^T F0 B with F0 positive definite, and the face is the lift of the
+bounded face Phi0 = conv{Y in I_r : tr(F0 Y) = b}, whose vertices are vertices
+of P_r. With the weights F0 = sum lambda_v v v^T of the theory of Voronoi and
+the slack s, a form X = g A g^T, A a vertex representative, is on Phi0 iff
+the vectors x_v = g^T v satisfy sum lambda_v (A[x_v] - 1) = s. The x_v of r
+independent support vectors determine g, and they are found by a
+backtracking among the short vectors of A, each one taken up to the
+stabilizer in Aut(A) of the previous ones. No integer program is needed.
+
+```
+&DATA
+ arithmetic = "flint"
+ IlpMethod = "scip"
+ OutFile = "F14.out"          ! rank, B, F0, slack, counts, vertices of Phi0
+ FileFacet = "F14.mat"        ! the matrix F (n x n)
+ FacetRhs = "14"
+ FileListVertex = "vert6.mat" ! vertex representatives of P_r (ListMatrix)
+ CompareIncidence = T         ! F positive definite: compare with
+                              ! IGUSA_FacetIncidence
+/
+```
+
+For the full rank facets of conv(I_6) it finds 25 E6 + 1 D6 (F14), 19 E6 +
+2 D6 (F23), 21 E6 (F11) and 45 E6 (F5), all the incident forms, in 2 to 30
+seconds, and 15 D5 for the facet of rank 5.
+
 Rigorous vertex test: `IGUSA_VertexTest`
 ----------------------------------------
 

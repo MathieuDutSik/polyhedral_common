@@ -61,6 +61,31 @@ std::pair<MyMatrix<T>, T> igusa_normalize_facet(MyMatrix<T> const &F,
   return {fr.TheMat, fr.TheMult * rhs};
 }
 
+/*
+  For F positive semidefinite and rational: B, a basis (rows) of the
+  saturation W of the image of F, and F0 positive definite with
+  F = B^T F0 B. Then tr(F X) = tr(F0 B X B^T).
+ */
+template <typename T> struct IgusaImageFactorization {
+  MyMatrix<T> B;
+  MyMatrix<T> F0;
+};
+
+template <typename T>
+IgusaImageFactorization<T> igusa_image_factorization(MyMatrix<T> const &F) {
+  MyMatrix<T> B = IntegralSpaceSaturation(RowReduction(F));
+  MyMatrix<T> BBt = B * B.transpose();
+  MyMatrix<T> BBt_inv = Inverse(BBt);
+  MyMatrix<T> F0 = BBt_inv * B * F * B.transpose() * BBt_inv;
+#ifdef SANITY_CHECK_IGUSA_FACET_ENUM
+  if (B.transpose() * F0 * B != F) {
+    std::cerr << "IGUSA_FACET_ENUM: F is not B^T F0 B\n";
+    throw TerminalException{1};
+  }
+#endif
+  return {B, F0};
+}
+
 template <typename T> struct IgusaFacetType {
   int rank;
   T rhs;
@@ -73,17 +98,9 @@ template <typename T> struct IgusaFacetType {
 template <typename T, typename Tint, typename Tgroup>
 IgusaFacetType<T> igusa_facet_type(MyMatrix<T> const &F, T const &rhs,
                                    std::ostream &os) {
-  MyMatrix<T> B = IntegralSpaceSaturation(RowReduction(F));
-  int r = B.rows();
-  MyMatrix<T> BBt = B * B.transpose();
-  MyMatrix<T> BBt_inv = Inverse(BBt);
-  MyMatrix<T> F0 = BBt_inv * B * F * B.transpose() * BBt_inv;
-#ifdef SANITY_CHECK_IGUSA_FACET_ENUM
-  if (B.transpose() * F0 * B != F) {
-    std::cerr << "IGUSA_FACET_ENUM: F is not B^T F0 B\n";
-    throw TerminalException{1};
-  }
-#endif
+  IgusaImageFactorization<T> fact = igusa_image_factorization(F);
+  int r = fact.B.rows();
+  MyMatrix<T> const &F0 = fact.F0;
   std::pair<MyMatrix<T>, T> pair = igusa_normalize_facet(F0, rhs);
   // ComputeCanonicalForm gives the canonical basis B; the canonical form
   // is B F0 B^T
@@ -323,11 +340,10 @@ igusa_violating_point(IgusaSpace<T, Tint> &space, MyVector<T> const &h,
     return igusa_ray_violation(space, h, M, v, Ridge0);
   }
   // M positive semidefinite and singular: restrict to the image W of M.
-  MyMatrix<T> B = IntegralSpaceSaturation(RowReduction(M));
+  IgusaImageFactorization<T> fact = igusa_image_factorization(M);
+  MyMatrix<T> const &B = fact.B;
   int r = B.rows();
-  MyMatrix<T> BBt = B * B.transpose();
-  MyMatrix<T> BBt_inv = Inverse(BBt);
-  MyMatrix<T> M0 = BBt_inv * B * M * B.transpose() * BBt_inv;
+  MyMatrix<T> const &M0 = fact.F0;
   LinSpaceMatrix<T> LinSpa_r = ComputeCanonicalSpace<T>(r);
   IgusaSpace<T, Tint> space_r =
       build_igusa_space<T, Tint>(LinSpa_r, space.params, os);
