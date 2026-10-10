@@ -527,7 +527,9 @@ vectface DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(
   using T_hash_set = std::unordered_set<Face>;
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
   auto f_orbit = [&](Face const &eSet, Tint const &TotalSize) -> vectface {
-    if (n_limit <= TotalSize) {
+    // The exhaustive enumeration of the orbit for the small orbits, the
+    // canonic_initial_triv method for the large ones.
+    if (TotalSize < n_limit) {
       return DoubleCosetDescription_Exhaustive_T<Tgroup, T_hash_set>(
           BigGens, SmaGRP, eSet, TotalSize, os);
     } else {
