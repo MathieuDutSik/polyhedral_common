@@ -246,15 +246,6 @@ public:
     return vect;
   }
 
-  // Get total complexity
-  Tnorm get_total_complexity() const {
-    Tnorm total_complexity(0);
-    for (auto &kv : map) {
-      total_complexity += kv.first.norm;
-    }
-    return total_complexity;
-  }
-
   // Clear all generators
   void clear() {
     map.clear();
