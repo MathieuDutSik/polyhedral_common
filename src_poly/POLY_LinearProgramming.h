@@ -242,7 +242,7 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
       eVect(iCol) = eVal;
     }
     LpSolution<T> eSol = SIMPLEX_LinearProgramming(EXT, eVect, os);
-    MyVector<T> const &SolDir = *eSol.DirectSolution;
+    MyVector<T> const &SolDir = eSol.DirectSolution.value();
     T const &OptimalValue = eSol.OptimalValue;
 #ifdef DEBUG_FIND_SINGLE_VERTEX
     os << "LP: nbCol=" << nbCol << " |SolDir|=" << SolDir.size() << "\n";
@@ -1537,7 +1537,7 @@ bool TestCriterionNonDegenerate(
     LpSolution<T> const &eSol, [[maybe_unused]] std::ostream &os) {
   int n_row = ListIneq.rows();
   int n_col = ListIneq.cols();
-  MyVector<T> eSolDual = -*eSol.DualSolution;
+  MyVector<T> eSolDual = -eSol.DualSolution.value();
 #ifdef DEBUG_LINEAR_PROGRAM
   os << "LP: OptimalValue=" << eSol.OptimalValue << "\n";
   os << "LP: eSolDual=" << StringVectorGAP(eSolDual) << "\n";
@@ -1706,7 +1706,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
   }
 #endif
   if (pair.first.rows() == 1) {
-    MyVector<T> const &V = *eSol.DirectSolution;
+    MyVector<T> const &V = eSol.DirectSolution.value();
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
     os << "LP: GGUIP, returns a solution\n";
     os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size()
@@ -2142,7 +2142,7 @@ FindViolatedFacetInequality(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #endif
       return {};
     }
-    MyVector<T> const &DirectSolution = *eSol.DirectSolution;
+    MyVector<T> const &DirectSolution = eSol.DirectSolution.value();
     Face incFace(nbRow);
     std::vector<int> incident;
     for (int iRow = 0; iRow < nbRow; iRow++) {

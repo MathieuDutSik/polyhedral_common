@@ -113,7 +113,7 @@ bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
                                  [[maybe_unused]] std::ostream &os) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
-  MyVector<T> const &DualSolution = *eSol.DualSolution;
+  MyVector<T> const &DualSolution = eSol.DualSolution.value();
   MyVector<T> V(nbCol - 1);
   T objDual = eVect(0);
   for (int iCol = 0; iCol < nbCol - 1; iCol++) {
@@ -151,7 +151,7 @@ bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
 
 template <typename T>
 MyVector<T> GetDirectSolutionExt(LpSolution<T> const &eSol) {
-  MyVector<T> const &DirectSolution = *eSol.DirectSolution;
+  MyVector<T> const &DirectSolution = eSol.DirectSolution.value();
   int siz = DirectSolution.size();
   MyVector<T> V(siz + 1);
   V(0) = 1;

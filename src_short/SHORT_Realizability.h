@@ -346,7 +346,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
 #endif
         return not_realizable_family<T,Tint>();
       }
-      MyVector<T> const &eVectEmb = *eSol.DirectSolution;
+      MyVector<T> const &eVectEmb = eSol.DirectSolution.value();
       MyVector<T> rVect = GetDirectSolutionExt(eSol);
       MyMatrix<T> eMatSec = GetMatrixFromBasis(TheBasis, eVectEmb);
 #ifdef DEBUG_SHORTEST_CONFIG
