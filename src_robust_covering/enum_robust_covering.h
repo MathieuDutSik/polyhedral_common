@@ -1249,8 +1249,12 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
       eV_red(i) = eV(i + 1);
     }
     // Find the vertex farthest from v_long
-    MyVector<Tint> v_long = pvp1.robust_m_min.v_long();
-    MyMatrix<Tint> M1 = reorder_matrix(pvp1.robust_m_min.M);
+    MyVector<Tint> v_long = pvp1.v_long;
+    // M1 is only printed: the first of the minimal robust matrices, which
+    // are now a list (l_robust_m_min).
+    MyMatrix<Tint> M1;
+    if (!pvp1.l_robust_m_min.empty())
+      M1 = reorder_matrix(pvp1.l_robust_m_min[0].M);
     MyVector<T> v_long_T = UniversalVectorConversion<T, Tint>(v_long);
     std::cerr << "ROBUST: kernel_l1_p_polytope_part v_long=" << StringVectorGAP(v_long) << "\n";
     MyMatrix<T> EXT1 = reorder_matrix(pvp1.l_cb[0].sp.EXT);
@@ -2132,6 +2136,8 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &G, size_t n_iter,
 
 
 
+#if defined(DEBUG_ROBUST_VERTEX_ENUM) || defined(SANITY_CHECK_ROBUST_VERTEX_ENUM)
+  // best_vector is only printed and checked.
   if (best_vector) {
     MyVector<T> const& V_test = *best_vector;
 #ifdef DEBUG_ROBUST_VERTEX_ENUM
@@ -2147,6 +2153,7 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &G, size_t n_iter,
     }
 #endif
   }
+#endif
   return max_cov;
 }
 
