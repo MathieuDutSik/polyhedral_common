@@ -260,6 +260,24 @@ not work: X[w] = 1 can be impossible on Phi.
 For the six orbits of facets of rank r < 7 of conv(I_7) (ranks 1, 5 and 6)
 Psi_w is a facet, in at most 70 seconds.
 
+Recursive enumeration on the faces: `IGUSA_FaceEnumeration`
+----------------------------------------------------------
+
+The recursive adjacency decomposition on the faces of conv(I_n) (paper,
+sections "The structure of the faces" to "A scheme that does not work"):
+faces stored by a valid pair (F, b), keys by canonical forms of the
+barycenter of the vertices, the walk on the non vertical facets of a face
+started from Psi_w, the vertical ones from the polytope Phi0, and the flips
+with the exact threshold. The facets of lower rank of P_n are given
+(`FileLowerFacets`, `FileLowerRhs`) and only the bounded ridges inside
+them are flipped.
+
+Status: not usable as it is. Inside the facets X[v] >= 1 the recursion goes
+through the faces Diag_k = {X[e_1] = ... = X[e_k] = 1}; Diag_n has 11008
+vertices for n = 5 and about 6.5 10^5 for n = 6, and the run for n = 5 did
+not finish in 30 minutes. The scheme is usable for the facets of large rank
+(depth n - r of the recursion).
+
 Rigorous vertex test: `IGUSA_VertexTest`
 ----------------------------------------
 

@@ -1,4 +1,4 @@
-PROGRAM		= IGUSA_EnumerateVertices IGUSA_FacetIncidence IGUSA_FacetEnumeration IGUSA_VertexTest IGUSA_FaceVertices IGUSA_InitialFacet
+PROGRAM		= IGUSA_EnumerateVertices IGUSA_FacetIncidence IGUSA_FacetEnumeration IGUSA_VertexTest IGUSA_FaceVertices IGUSA_InitialFacet IGUSA_FaceEnumeration
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
