@@ -917,7 +917,7 @@ set(
   POLY_GetFullRankFacetSet
   POLY_GeometricallyUniqueInteriorPoint
   POLY_lrs_volume
-  POLY_lrs_triangulation
+  POLY_triangulation
   POLY_TwoLaminations
   POLY_lrs_triang_facets
 )

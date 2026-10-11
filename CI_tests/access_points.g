@@ -569,15 +569,21 @@ get_ext_volume:=function(arg)
     return the_volume;
 end;
 
+# The triangulation by POLY_triangulation; options.method is lrs (the
+# default) or beneath_beyond.
 get_triangulation_of_polytope:=function(arg)
-    local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, one_triangulation, runtime_str;
+    local EXT, options, arith, method, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, one_triangulation, runtime_str;
     EXT:=arg[1];
     arith:="mpq_class";
+    method:="lrs";
     print_info:=false;
     if Length(arg) >= 2 then
         options:=arg[2];
         if IsBound(options.arith) then
             arith:=options.arith;
+        fi;
+        if IsBound(options.method) then
+            method:=options.method;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -588,15 +594,15 @@ get_triangulation_of_polytope:=function(arg)
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
-    eProg:=GetBinaryFilename("POLY_lrs_triangulation");
-    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    eProg:=GetBinaryFilename("POLY_triangulation");
+    TheCommand:=Concatenation(eProg, " ", arith, " ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if print_info then
         runtime_str:=extract_runtime_from_log(FileE);
-        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " command=POLY_lrs_triangulation runtime=", runtime_str, "\n");
+        Print("  EXT=", Length(EXT), "x", Length(EXT[1]), " arith=", arith, " method=", method, " command=POLY_triangulation runtime=", runtime_str, "\n");
     fi;
     if IsExistingFile(FileO)=false then
-        return "program failure: POLY_lrs_volume should have created a file";
+        return "program failure: POLY_triangulation should have created a file";
     fi;
     one_triangulation:=ReadAsFunction(FileO)();
     RemoveFile(FileI);

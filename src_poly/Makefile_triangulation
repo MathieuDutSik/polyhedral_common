@@ -1,4 +1,4 @@
-PROGRAM		= POLY_lrs_triangulation
+PROGRAM		= POLY_triangulation
 
 SRCFILES	=
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
