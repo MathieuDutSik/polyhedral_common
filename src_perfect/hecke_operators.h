@@ -58,7 +58,7 @@
   the stabilizer of F, is a consistency requirement. Vertices are mapped
   to vertices (the primitive vector of v x). For higher cells the right
   hand side of (1) is computed from the lower level and Phi(F, y_j) is
-  obtained as a pre-image under the boundary. The solution is searched among
+  obtained by the partial contracting homotopy. The solution is searched among
   the cells whose vectors lie in the span of the vectors of the right
   hand side (this is what makes the construction respect the cells at
   infinity, and hence pass to the quotient Pi / Pi_infinity). Then the
@@ -1123,8 +1123,8 @@ void check_fce_for_hecke(FullComplexEnumeration<T, Tint, Tgroup> const &fce) {
     std::cerr << "HECKE: The Hecke operators require the boundary, please set ComputeBoundary = T\n";
     throw TerminalException{1};
   }
-  if (!pco.compute_pre_image) {
-    std::cerr << "HECKE: The Hecke operators require ComputePreImage = T\n";
+  if (!pco.compute_partial_contracting_homotopy) {
+    std::cerr << "HECKE: The Hecke operators require ComputePartialContractingHomotopy = T\n";
     throw TerminalException{1};
   }
   int n_levels = fce.levels.size();
@@ -1239,7 +1239,7 @@ compute_hecke_chain_map(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
         if (!rhs.empty()) {
           std::pair<std::function<bool(MyMatrix<Tint> const &)>, bool> pair_filter =
               get_subspace_filter(index + 1, rhs, fce, os);
-          sol = chain_pre_image(index + 1, rhs, fce, pair_filter.first, os);
+          sol = partial_contracting_homotopy(index + 1, rhs, fce, pair_filter.first, os);
         }
         CosetOrbit<Tint> co = get_coset_orbit(j, face.l_gens, act, n_coset, n);
         std::vector<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>> l_schreier =
@@ -1833,7 +1833,7 @@ MyMatrix<T> get_peeling_potential(FullComplexEnumeration<T, Tint, Tgroup> const 
  */
 template <typename T, typename Tint, typename Tgroup>
 std::optional<std::vector<PerfectFaceEntry<T, Tint>>>
-peel_chain_pre_image(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const &rhs,
+peel_partial_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const &rhs,
                           UpperFaceCache<T, Tint, Tgroup> &ufc, MyMatrix<T> const &Q0,
                           HeckeBudget const &budget, std::ostream &os) {
   FullComplexEnumeration<T, Tint, Tgroup> const &fce = ufc.fce;
@@ -2023,7 +2023,7 @@ peel_chain_pre_image(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const 
 }
 
 /*
-  The dual pre-image: given a chain b of level k-1 (which must
+  The dual partial contracting homotopy: given a chain b of level k-1 (which must
   be a coboundary), find a chain c of level k with coboundary(c) = b.
   The methods are tried in turn: the peeling, then the linear systems on
   the rings of unknowns around b (the faces of its cells first, then the
@@ -2033,13 +2033,13 @@ peel_chain_pre_image(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const 
  */
 template <typename T, typename Tint, typename Tgroup>
 std::optional<std::vector<PerfectFaceEntry<T, Tint>>>
-dual_chain_pre_image(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const &rhs,
+dual_partial_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const &rhs,
                           UpperFaceCache<T, Tint, Tgroup> &ufc, MyMatrix<T> const &Q0,
                           HeckeBudget const &budget, std::ostream &os) {
   FullComplexEnumeration<T, Tint, Tgroup> const &fce = ufc.fce;
   if (k > 1) {
     std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt_peel =
-        peel_chain_pre_image(k, rhs, ufc, Q0, budget, os);
+        peel_partial_contracting_homotopy(k, rhs, ufc, Q0, budget, os);
     if (opt_peel) {
       return opt_peel;
     }
@@ -2061,7 +2061,7 @@ dual_chain_pre_image(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const 
     std::vector<PerfectFace<Tint>> faces_k = cb_k.get_faces();
     if (faces_k.size() > budget.max_unknowns) {
 #ifdef DEBUG_HECKE_OPERATORS
-      os << "HECKE: dual_chain_pre_image k=" << k << " ring=" << ring
+      os << "HECKE: dual_partial_contracting_homotopy k=" << k << " ring=" << ring
          << " unknowns=" << faces_k.size() << " beyond the budget\n";
 #endif
       return {};
@@ -2082,7 +2082,7 @@ dual_chain_pre_image(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const 
     }
     int nbCol = cb_km1.get_faces().size();
 #ifdef DEBUG_HECKE_OPERATORS
-    os << "HECKE: dual_chain_pre_image k=" << k << " ring=" << ring
+    os << "HECKE: dual_partial_contracting_homotopy k=" << k << " ring=" << ring
        << " unknowns=" << nbRow << " equations=" << nbCol << "\n";
 #endif
     MyVector<T> Bvect = ZeroVector<T>(nbCol);
@@ -2128,7 +2128,7 @@ dual_chain_pre_image(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const 
     }
   }
 #ifdef DEBUG_HECKE_OPERATORS
-  os << "HECKE: dual_chain_pre_image k=" << k << " no filling found within the budgets\n";
+  os << "HECKE: dual_partial_contracting_homotopy k=" << k << " no filling found within the budgets\n";
 #endif
   return {};
 }
@@ -2189,8 +2189,8 @@ compute_hecke_chain_map_dual(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
   int n = LinSpa.n;
   PerfectComplexOptions const &pco = fce.pctdi.pco;
-  if (!pco.compute_boundary || !pco.compute_pre_image) {
-    std::cerr << "HECKE: The dual method requires ComputeBoundary = T and ComputePreImage = T\n";
+  if (!pco.compute_boundary || !pco.compute_partial_contracting_homotopy) {
+    std::cerr << "HECKE: The dual method requires ComputeBoundary = T and ComputePartialContractingHomotopy = T\n";
     throw TerminalException{1};
   }
   if (!is_stab_space(x, LinSpa)) {
@@ -2248,7 +2248,7 @@ compute_hecke_chain_map_dual(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
           rhs = get_hecke_coboundary_image(index, iOrb, j, fce, cosets, images[index - 1], ufc, os);
           if (!rhs.empty()) {
             std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt_sol =
-                dual_chain_pre_image(index, rhs, ufc, Q0, budget, os);
+                dual_partial_contracting_homotopy(index, rhs, ufc, Q0, budget, os);
             if (!opt_sol) {
               throw HeckeFailure{"no filling found for the cell of level " + std::to_string(index) +
                                  " orbit " + std::to_string(iOrb) + " coset " + std::to_string(j) +

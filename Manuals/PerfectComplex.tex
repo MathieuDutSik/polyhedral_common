@@ -126,7 +126,7 @@ Here it is important to have {\bf only\_well\_rounded = false} since the cells E
 
 
 
-\subsection{Chain boundaries, pre-images and simplification}
+\subsection{Chain boundaries, partial contracting homotopy and simplification}
 
 A chain is expressed as a vector of entries for example
 
@@ -142,16 +142,23 @@ The length of the chain can be arbitrary large.
 \begin{verbatim}
 gap> chain2:=PERFCOMP_chain_simplification(desc, 2, chain1);
 gap> chain3:=PERFCOMP_chain_boundary(desc, 2, chain1);
-gap> chain4:=PERFCOMP_chain_pre_image(desc, 2, chain1);
+gap> chain4:=PERFCOMP_chain_partial_contracting_homotopy(desc, 2, chain1);
 \end{verbatim}
 The meaning of those operations should be clear here. The simplification leaves the chain at the same index.
-The pre-image returns a chain of one index lower whose boundary is the given chain. The boundary increases the index.
+The partial contracting homotopy returns a chain of one index lower whose boundary is the given chain. The boundary increases the index.
+
+The complex is acyclic, so every cycle is a boundary. Two notions should be distinguished.
+\begin{itemize}
+\item A {\em contracting homotopy}, in the classical sense, is a $\ZZ$-linear map $h$ defined on all the chains with $dh + hd = 1 - \eta\epsilon$, where $\epsilon$ is the augmentation and $\eta$ maps $1$ to a base vertex.
+\item A {\em partial contracting homotopy} is defined only on the cycles: for a chain $c$ with $dc = 0$ it returns one chain $c'$ with $dc' = c$.
+\end{itemize}
+The function {\bf PERFCOMP\_chain\_partial\_contracting\_homotopy} computes the second one. It is not linear: the chain $c'$ is searched for each cycle $c$ (as small as possible), and two cycles are not filled consistently with their sum. At the level of the vertices, the condition $dc = 0$ is replaced by the condition that the sum of the coefficients of $c$ is zero.
 
 Here is a few ideas on how to use those functions:
 \begin{enumerate}
 \item If you want to test if a chain is zero, then you call the simplification. The chain will be zero if and only if the length is 0.
 \item You want to compute the boundary. First make sure that the dimension is higher than 1. Then use the above operation.
-\item You want to compute a pre-image of a chain under the boundary. You need to first compute its boundary, which has to be zero, and then you can compute the pre-image.
+\item You want to compute the partial contracting homotopy of a chain. You need to first compute its boundary, which has to be zero, and then you can compute the partial contracting homotopy.
 \end{enumerate}
 
 

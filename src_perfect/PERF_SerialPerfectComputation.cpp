@@ -45,9 +45,9 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   //
   bool compute_boundary = BlockDATA.get_bool("ComputeBoundary");
   bool only_well_rounded = BlockDATA.get_bool("OnlyWellRounded");
-  bool compute_pre_image = BlockDATA.get_bool("ComputePreImage");
+  bool compute_partial_contracting_homotopy = BlockDATA.get_bool("ComputePartialContractingHomotopy");
   bool compute_complex = BlockDATA.get_bool("ComputeComplex");
-  PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_pre_image, compute_complex};
+  PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_partial_contracting_homotopy, compute_complex};
   // With ComputeComplex = F only the perfect forms (level 0) are computed.
   // The options and queries that need the lower dimensional faces are
   // then rejected.
@@ -56,10 +56,10 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     if (compute_boundary) {
       l_err.push_back("DATA:ComputeBoundary");
     }
-    if (compute_pre_image) {
-      l_err.push_back("DATA:ComputePreImage");
+    if (compute_partial_contracting_homotopy) {
+      l_err.push_back("DATA:ComputePartialContractingHomotopy");
     }
-    for (std::string const& key : {"FileGroupGeneratorRelation", "FileFaceSearch", "FileCellLowerBoundary", "FileCellUpperBoundary", "FileListLowerBoundary", "FileChainPreImage", "FileChainBoundary", "FileChainSimplification"}) {
+    for (std::string const& key : {"FileGroupGeneratorRelation", "FileFaceSearch", "FileCellLowerBoundary", "FileCellUpperBoundary", "FileListLowerBoundary", "FileChainPartialContractingHomotopy", "FileChainBoundary", "FileChainSimplification"}) {
       if (BlockQUERIES.get_string(key) != "null") {
         l_err.push_back("QUERIES:" + key);
       }
@@ -358,11 +358,11 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       os_out << "];\n";
     }
   };
-  // The pre-image of a cycle under the boundary.
+  // The partial contracting homotopy: a chain whose boundary is the given cycle.
   std::function<Tchain(int,Tchain const&)> f_ch=[&](int index, Tchain const& chain) -> Tchain {
-    return chain_pre_image(index, chain, fce, os);
+    return partial_contracting_homotopy(index, chain, fce, os);
   };
-  f_chain_oper("FileChainPreImage", f_ch);
+  f_chain_oper("FileChainPartialContractingHomotopy", f_ch);
   // The chain boundary
   std::function<Tchain(int,Tchain const&)> f_bnd=[&](int index, Tchain const& chain) -> Tchain {
     return chain_boundary(index, chain, fce, os);
