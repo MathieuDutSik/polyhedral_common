@@ -401,8 +401,8 @@ ExtractBoundarySimplices(std::vector<std::vector<int>> const &trig,
   for (auto const &verts_in : trig) {
     // Sort the simplex here so that a facet obtained by dropping one vertex is
     // itself sorted and therefore compares equal (as the std::map key) across
-    // the two simplices sharing it. GetTriangulation does not canonicalize the
-    // vertex order, so this is where the ordering is imposed.
+    // the two simplices sharing it. DirectTriangulation returns sorted
+    // simplices, but the order is imposed here for any triangulation given.
     std::vector<int> verts = verts_in;
     std::sort(verts.begin(), verts.end());
     // Each (n-1)-facet of this n-simplex is obtained by dropping one vertex.

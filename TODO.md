@@ -413,3 +413,28 @@ namespace (the triangulation with facets now goes through
 `Tint` is used in `DecompositionEquiv<T, Tint>`, and `ComponentDecomposition`
 is given one template argument where it takes two. To be finished if the
 decomposition approach is taken up.
+
+## Dual description and triangulation dispatchers: rows that are not vertices
+
+The dispatchers (`POLY_DirectDualDesc.h`, `POLY_DirectTriangulation.h`)
+currently require every input row to be a vertex (an extreme ray), with no
+repetition. Outside that requirement the methods follow different
+conventions, measured 2026-10-11 on point sets with boundary points that are
+not vertices, interior points and repeated rows, against the definition of
+the incidence {r : f . r == 0} over all rows:
+
+| method          | non-vertex rows on a facet | repeated rows |
+|-----------------|----------------------------|---------------|
+| cdd, lrs, normaliz | included                | included      |
+| pd_lrs          | included                   | throws ("In dimension 2, the cone should have exactly two extreme rays") |
+| beneath_beyond  | left out (the DualGraph kernel carries only the extreme rays) | left out |
+| small_polytopes | (only for its special small cases) | |
+
+`DirectTriangulationFacet` inherits the difference: its lrs facets include
+the non-vertex rows, its beneath_beyond facets do not. The triangulations
+themselves agree (non-vertex rows are skipped by both methods).
+
+To decide: one convention for all the dispatchers (the full incidence of the
+definition, which cdd / lrs / normaliz already give, is the natural one),
+then fix beneath_beyond (recompute the incidences from the facet normals, or
+only for the rows the kernel skipped) and pd_lrs (repeated rows).

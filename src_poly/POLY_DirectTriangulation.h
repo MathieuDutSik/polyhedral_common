@@ -251,12 +251,7 @@ DirectTriangulationFacet(MyMatrix<T> const &EXT, TriangulationProgram prog,
       error_beneath_beyond_floating_point();
     } else {
       std::vector<std::vector<int>> l_trig = DirectTriangulation(EXT, prog, os);
-      // The incidences are recomputed from the normals: the beneath-and-beyond
-      // incidences contain only the extreme rays, while a row of EXT that is
-      // not a vertex may lie on a facet as well.
-      vectface vf(EXT.rows());
-      for (auto &facet : BeneathBeyond_run(EXT, os))
-        vf.push_back(beneath_beyond::facet_incidence(EXT, facet.normal));
+      vectface vf = POLY_DualDescription_BeneathBeyondIncidence(EXT, os);
       return {std::move(l_trig), std::move(vf)};
     }
   }

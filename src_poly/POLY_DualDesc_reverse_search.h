@@ -989,42 +989,6 @@ void GetTriangulationDet_f(MyMatrix<T> const &EXT, Ftrig_det f_trig_det) {
   }
 }
 
-// Triangulation with, for each simplex, the SIGNED determinant of its
-// vertex matrix SelectRow(EXT, trig).
-template <typename T>
-std::vector<std::pair<std::vector<int>, T>>
-GetTriangulationDet(MyMatrix<T> const &EXT) {
-  std::vector<std::pair<std::vector<int>, T>> l_trig;
-  auto f_trig_det = [&](std::vector<int> const &trig, T const &det) -> void {
-#ifdef SANITY_CHECK_REVERSE_SEARCH
-    MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
-    T det_check = DeterminantMat(EXTtrig);
-    if (det_check != det) {
-      std::cerr << "RS: GetTriangulationDet signed-determinant mismatch: "
-                << "recovered=" << det << " actual=" << det_check << "\n";
-      throw TerminalException{1};
-    }
-#endif
-    l_trig.push_back({trig, det});
-  };
-  GetTriangulationDet_f<T>(EXT, f_trig_det);
-  return l_trig;
-}
-
-// Each simplex is the list of its vertex indices (0-based rows of EXT) in
-// the order the kernel emits them; consumers needing a canonical order
-// sort locally.
-template <typename T>
-std::vector<std::vector<int>> GetTriangulation(MyMatrix<T> const &EXT) {
-  std::vector<std::vector<int>> l_trig;
-  auto f_trig_det = [&](std::vector<int> const &trig,
-                        [[maybe_unused]] T const &det) -> void {
-    l_trig.push_back(trig);
-  };
-  GetTriangulationDet_f<T>(EXT, f_trig_det);
-  return l_trig;
-}
-
 // The triangulation and the facets in one enumeration.
 template <typename T>
 std::pair<std::vector<std::vector<int>>, vectface>
@@ -1080,35 +1044,6 @@ StringTriangulationGAP(std::vector<std::vector<int>> const &l_trig) {
   }
   ret += "]";
   return ret;
-}
-
-// The volume of a polytope given by its vertices (first coordinate 1):
-// the sum of the simplex determinant magnitudes over the triangulation,
-// divided by dim factorial.
-template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
-  T sum_det(0);
-  auto f_trig = [&](Dictionary<T> &dict,
-                    [[maybe_unused]] Problem &prob) -> bool {
-    sum_det += dict.det;
-#ifdef SANITY_CHECK_REVERSE_SEARCH
-    std::vector<int> esimp;
-    get_cobasis(dict, prob, esimp);
-    MyMatrix<T> Mtrig = SelectRow(EXT, esimp);
-    T det = T_abs(DeterminantMat(Mtrig));
-    if (det != dict.det) {
-      std::cerr << "RS: incoherence in the determinants det and dict.det\n";
-      throw TerminalException{1};
-    }
-#endif
-    return true;
-  };
-  MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
-  Kernel_Simplices_cond(EXText, f_trig);
-  int const dim = EXT.cols() - 1;
-  T det_to_vol(1);
-  for (int u = 1; u <= dim; u++)
-    det_to_vol *= T(u);
-  return sum_det / det_to_vol;
 }
 
 template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {

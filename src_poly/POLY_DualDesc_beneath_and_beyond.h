@@ -1004,38 +1004,6 @@ void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
   }
 }
 
-// Placing triangulation with, for each simplex, the SIGNED determinant of its
-// vertex matrix SelectRow(EXT, simplex) -- the same (simplex, det) format as
-// rev_search::GetTriangulationDet, so the two are interchangeable. Thin wrapper that
-// collects the streamed simplices into a vector.
-template <typename T>
-std::vector<std::pair<std::vector<int>, T>>
-POLY_DualDescription_BeneathBeyondTriangulationDet(MyMatrix<T> const &EXT,
-                                                   std::ostream &os) {
-  std::vector<std::pair<std::vector<int>, T>> l_trig;
-  auto f_trig_det = [&](std::vector<int> const &trig, T const &det) -> void {
-    l_trig.push_back({trig, det});
-  };
-  POLY_DualDescription_BeneathBeyondTriangulationDet_f<T>(EXT, os, f_trig_det);
-  return l_trig;
-}
-
-// Placing triangulation as a bare list of simplices, each the sorted list of
-// its nbCol vertex row indices (same format as rev_search::GetTriangulation). Thin
-// wrapper that collects the streamed simplices, dropping the determinants.
-template <typename T>
-std::vector<std::vector<int>>
-POLY_DualDescription_BeneathBeyondTriangulation(MyMatrix<T> const &EXT,
-                                                std::ostream &os) {
-  std::vector<std::vector<int>> simplices;
-  auto f_trig_det = [&](std::vector<int> const &trig,
-                        [[maybe_unused]] T const &det) -> void {
-    simplices.push_back(trig);
-  };
-  POLY_DualDescription_BeneathBeyondTriangulationDet_f<T>(EXT, os, f_trig_det);
-  return simplices;
-}
-
 // clang-format off
 #endif  // SRC_POLY_POLY_DUALDESC_BENEATH_AND_BEYOND_H_
 // clang-format on
