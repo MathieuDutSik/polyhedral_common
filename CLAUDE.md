@@ -48,6 +48,8 @@ If unsure whether a path lives inside a submodule, `cat .gitmodules` lists them.
 
 Free-standing `std::cerr << ...`, `os << ...`, etc. that produce output unconditionally must not be added to the codebase. Every diagnostic line must live inside a named preprocessor gate, in one of three categories with different intents. The suffix is the **context** — usually the source-file area (`SHVEC`, `LATTICE_STAB_EQUI_CAN`, `TSPACE_FUNCTIONS`, …) — never a generic name like `DEBUG`.
 
+The rule is for the library code: the headers and the functions they define. The `main` program files (`.cpp` files with a `main`, such as `POLY_redundancyGroup.cpp`) are the calling code and may print unconditionally: usage text, progress lines, results and the termination message need no gate.
+
 ### `#ifdef DEBUG_<CONTEXT>`
 For development-time tracing. May print verbosely. **Must not abort, throw, or otherwise affect the execution path** when the macro is undefined or defined. Example:
 ```cpp
