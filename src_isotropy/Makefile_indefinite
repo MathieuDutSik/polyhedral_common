@@ -1,4 +1,4 @@
-PROGRAM		= IndefiniteReduction
+PROGRAM		= LATT_IndefiniteReduction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
