@@ -287,23 +287,6 @@ template <typename Tint> struct PleskenSouvignierContext {
 // caller to retry the search at a higher vector-sum depth.
 struct PSBudgetExceeded {};
 
-// The scalar product of the row of signed index s with row k0 (0-based)
-// for the iMat-th form.
-template <typename Tint>
-Tint ps_scal_signed(PleskenSouvignierContext<Tint> const &ctx, int s, int k0,
-                    int iMat) {
-  int j0 = (s > 0 ? s : -s) - 1;
-  int n = ctx.n();
-  Tint sum(0);
-  for (int i = 0; i < n; i++) {
-    sum += ctx.VS.V(j0, i) * ctx.W[iMat](k0, i);
-  }
-  if (s < 0) {
-    return -sum;
-  }
-  return sum;
-}
-
 // The image of the point of signed index s under the matrix A, as a
 // signed index. The family is required to be invariant, so a miss is an
 // input error, not a data case.

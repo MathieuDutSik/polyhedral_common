@@ -78,25 +78,6 @@ compute_complexity_listmat(std::vector<MyMatrix<T>> const &list_mat) {
          ", ellinfinity=" + std::format("{}", ellinfinite_global) + ")";
 }
 
-template <bool always_equal>
-std::string compute_complexity_listseq(
-    std::vector<permutalib::SequenceType<always_equal>> const &list_seq) {
-  size_t n_seq = list_seq.size();
-  size_t ell1_global = 0;
-  size_t ellinfinite_global = 0;
-  for (auto &seq : list_seq) {
-    std::vector<int64_t> const &ListIdx = seq.getVect();
-    size_t len = ListIdx.size();
-    ell1_global += len;
-    if (ellinfinite_global < len) {
-      ellinfinite_global = len;
-    }
-  }
-  return "(n_seq=" + std::to_string(n_seq) +
-         ", ell1_global=" + std::to_string(ell1_global) +
-         ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
-}
-
 inline void print_vector_val(std::vector<size_t> const &V, std::ostream &os) {
   os << "[";
   for (size_t u = 0; u < V.size(); u++) {

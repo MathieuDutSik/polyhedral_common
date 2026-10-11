@@ -417,15 +417,6 @@ OrbitComputationGen(std::vector<T1> const &ListGen, T2 const &a,
   return *opt;
 }
 
-/*
-template <typename T1, typename T2, typename Fprod>
-std::vector<T2> OrbitComputationSort(std::vector<T1> const &ListGen, T2 const
-&a, const Fprod &f_prod, std::ostream &os) { std::vector<T2> orb =
-OrbitComputation(ListGen, a, f_prod, os); std::sort(orb.begin(), orb.end());
-  return orb;
-}
-*/
-
 // clang-format off
 #endif  // SRC_GROUP_MATRIXGROUPBASIC_H_
 // clang-format on

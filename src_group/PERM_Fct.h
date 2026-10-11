@@ -730,21 +730,6 @@ Telt GetPermutationOnVectors(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2) {
   return ePermRet;
 }
 
-template <typename Tgroup>
-Tgroup GetGroupListGen(std::vector<std::vector<unsigned int>> const &ListGen,
-                       size_t const &nbVert) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  std::vector<Telt> generatorList;
-  std::vector<Tidx> gList(nbVert);
-  for (auto &eGen : ListGen) {
-    for (size_t iVert = 0; iVert < nbVert; iVert++)
-      gList[iVert] = eGen[iVert];
-    generatorList.push_back(Telt(gList));
-  }
-  return Tgroup(generatorList, nbVert);
-}
-
 template <typename Tgr>
 bool CheckListGenerators(std::vector<std::vector<unsigned int>> const &ListGen,
                          Tgr const &eGR) {

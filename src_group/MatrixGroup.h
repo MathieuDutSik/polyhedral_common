@@ -528,7 +528,7 @@ inline Telt MatrixIntegral_MapMatrix([[maybe_unused]] Thelper const &helper,
 }
 
 template <typename T, typename Telt, typename Thelper, typename Fgetperm>
-std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
+std::vector<Telt> MatrixIntegral_GeneratePermutationGroup(
     std::vector<MyMatrix<T>> const &ListMatrGens, Thelper const &helper,
     Fgetperm f_get_perm, std::ostream &os) {
 #ifdef TIMINGS_MATRIX_GROUP
@@ -537,7 +537,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MATGRP: MatrixIntegral_GeneratePermutationGroupA, Processing nbGen="
+  os << "MATGRP: MatrixIntegral_GeneratePermutationGroup, Processing nbGen="
      << nbGen << " generators\n";
 #endif
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
@@ -547,7 +547,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MATGRP: MatrixIntegral_GeneratePermutationGroupA|=" << time << "\n";
+  os << "|MATGRP: MatrixIntegral_GeneratePermutationGroup|=" << time << "\n";
 #endif
   return ListPermGenProv;
 }
@@ -557,7 +557,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
   generators, in the order of ListMatrGens.
  */
 template <typename T, typename Telt, typename Thelper>
-std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA_OrbitPerms(
+std::vector<Telt> MatrixIntegral_GeneratePermutationGroup_OrbitPerms(
     std::vector<MyMatrix<T>> const &ListMatrGens, Thelper const &helper,
     std::vector<Telt> const &ListPermOrbit, std::ostream &os) {
 #ifdef TIMINGS_MATRIX_GROUP
@@ -566,7 +566,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA_OrbitPerms(
   size_t nbGen = ListMatrGens.size();
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (ListPermOrbit.size() != nbGen) {
-    std::cerr << "MATGRP: MatrixIntegral_GeneratePermutationGroupA_OrbitPerms, "
+    std::cerr << "MATGRP: MatrixIntegral_GeneratePermutationGroup_OrbitPerms, "
                  "|ListMatrGens|="
               << nbGen << " but |ListPermOrbit|=" << ListPermOrbit.size()
               << ", the orbit permutations must match the generators\n";
@@ -574,7 +574,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA_OrbitPerms(
   }
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MATGRP: MatrixIntegral_GeneratePermutationGroupA_OrbitPerms, "
+  os << "MATGRP: MatrixIntegral_GeneratePermutationGroup_OrbitPerms, "
         "Processing nbGen="
      << nbGen << " generators\n";
 #endif
@@ -586,7 +586,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA_OrbitPerms(
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MATGRP: MatrixIntegral_GeneratePermutationGroupA_OrbitPerms|=" << time
+  os << "|MATGRP: MatrixIntegral_GeneratePermutationGroup_OrbitPerms|=" << time
      << "\n";
 #endif
   return ListPermGenProv;
@@ -801,19 +801,6 @@ public:
     return Telt(std::move(V));
   }
 };
-
-template <typename T, typename Tmod, typename Telt, typename Thelper>
-std::vector<Telt> MatrixIntegral_GeneratePermutationGroup(
-    std::vector<MyMatrix<T>> const &ListMatrGens, Thelper const &helper,
-    std::vector<MyVector<Tmod>> const &O, T const &TheMod, std::ostream &os) {
-  OrbitPermutationMap<T, Tmod, Telt> orbit_map(O, TheMod);
-  auto f_get_perm = [&](MyMatrix<T> const &eGen) -> Telt {
-    return orbit_map.get_permutation(eGen);
-  };
-  return MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper,
-                                                  decltype(f_get_perm)>(
-      ListMatrGens, helper, f_get_perm, os);
-}
 
 // We compute the stabilizer by applying the Schreier algorithm
 template <typename T, typename Tgroup, typename Thelper>
@@ -1375,25 +1362,6 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
 }
 
 /*
-  Does not compile for a mysterious reason.
-
-template <typename T, typename Tmod, typename Tgroup, typename Thelper>
-std::optional<std::vector<MyVector<Tmod>>>
-FindingSmallOrbitSort(std::vector<MyMatrix<T>> const &ListMatrGen,
-                      MyMatrix<T> const &TheSpace, T const &TheMod,
-                      MyVector<T> const &a, Thelper const &helper,
-                      std::ostream &os) {
-  std::optional<std::vector<MyVector<Tmod>>> opt =
-FindingSmallOrbit(ListMatrGen, TheSpace, TheMod, a, helper, os); if (!opt) {
-    return {};
-  }
-  std::vector<MyVector<Tmod>> V = *opt;
-  std::sort(V.begin(), V.end());
-  return V;
-}
-*/
-
-/*
   The permutation action of the generators ListMatr on an orbit O of vectors
   modulo TheMod, the generators being read through the layer. Built in one
   go, as the modular stabilizer and equivalence algorithms use it:
@@ -1429,7 +1397,7 @@ struct OrbitPermutationAction {
         pr(ListMatr, f_get_perm, GetFace<Tmod>(O, Space_mod, TheMod_mod), os),
         face(TranslateFace(helper.nbRow(), pr.face)),
         ListPermGens(
-            MatrixIntegral_GeneratePermutationGroupA_OrbitPerms<T, Telt,
+            MatrixIntegral_GeneratePermutationGroup_OrbitPerms<T, Telt,
                                                                 Thelper>(
                 ListMatr, helper, pr.mapped_gens, os)),
         GRP(ListPermGens, face.size()) {}
@@ -2345,7 +2313,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
 #ifdef DEBUG_DOUBLE_COSET_ENUM
       os << "MATGRP: We have Vmatr_conj\n";
 #endif
-      std::vector<Telt> Vperm_conj = MatrixIntegral_GeneratePermutationGroupA<
+      std::vector<Telt> Vperm_conj = MatrixIntegral_GeneratePermutationGroup<
           T, Telt, Thelper, std::function<Telt(MyMatrix<T> const &)>>(
           Vmatr_conj, helper, f_get_perm, os);
 #ifdef DEBUG_DOUBLE_COSET_ENUM
@@ -3083,10 +3051,8 @@ LinearSpace_ModCanonicalize_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       [&](MyMatrix<T> const &eGen) -> Telt {
     return orbit_map.get_permutation(layer.conj(eGen));
   };
-  std::vector<Telt> ListPermGens =
-      MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper,
-                                               decltype(f_get_perm)>(
-          ListMatr, helper, f_get_perm, os);
+  std::vector<Telt> ListPermGens = MatrixIntegral_GeneratePermutationGroup<
+      T, Telt, Thelper, decltype(f_get_perm)>(ListMatr, helper, f_get_perm, os);
   Tidx siz_tot_tidx = Tidx(siz_tot);
   Tgroup GRPwork(ListPermGens, siz_tot_tidx);
 #ifdef DEBUG_MATRIX_GROUP
