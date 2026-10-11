@@ -25,7 +25,7 @@ void process(std::string const &eFileI, std::string const &method,
     return;
   }
   if (OutFormat == "Trigs" || OutFormat == "GAP") {
-    os_out << "return " << rev_search::StringTriangulationGAP(l_trig) << ";\n";
+    os_out << "return " << StringTriangulationGAP(l_trig) << ";\n";
     return;
   }
   std::cerr << "Failed to find a matching output\n";

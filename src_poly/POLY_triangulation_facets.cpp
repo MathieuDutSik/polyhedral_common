@@ -22,7 +22,7 @@ void process(std::string const &eFileI, std::string const &method,
       DirectTriangulationFacet<T>(EXT, prog, std::cerr);
   if (OutFormat == "GAP" || OutFormat == "TrigFacets") {
     os_out << "return rec(trigs:="
-           << rev_search::StringTriangulationGAP(pair.first) << ", facets:=";
+           << StringTriangulationGAP(pair.first) << ", facets:=";
     VectVectInt_Gap_Print(os_out, pair.second);
     os_out << ");\n";
     return;

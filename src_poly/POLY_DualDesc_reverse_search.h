@@ -1027,25 +1027,6 @@ GetTriangulationFacet(MyMatrix<T> const &EXT) {
   return {std::move(l_trig), std::move(vf_facet)};
 }
 
-// GAP-format string of a triangulation, 1-indexed.
-inline std::string
-StringTriangulationGAP(std::vector<std::vector<int>> const &l_trig) {
-  std::string ret = "[";
-  for (size_t i = 0; i < l_trig.size(); i++) {
-    if (i > 0)
-      ret += ",";
-    ret += "[";
-    for (size_t j = 0; j < l_trig[i].size(); j++) {
-      if (j > 0)
-        ret += ",";
-      ret += std::to_string(l_trig[i][j] + 1);
-    }
-    ret += "]";
-  }
-  ret += "]";
-  return ret;
-}
-
 template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
   int const nbRow = M.rows();
   for (int iRow = 0; iRow < nbRow; iRow++)
