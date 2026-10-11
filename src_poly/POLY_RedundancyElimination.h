@@ -222,6 +222,16 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
   //
   // -1: Still unknown 0: redundant 1: irredundant
   std::vector<int> RedundancyStatus(n_rows, -1);
+  // A row that is a positive multiple of an earlier row is redundant, and
+  // only the first occurrence is kept. Left undecided, the copies tie in the
+  // hit and run, and FindOneMoreFacet would keep the last one.
+  std::unordered_map<MyVector<T>, int> map_first_row;
+  for (int i_row = 0; i_row < n_rows; i_row++) {
+    MyVector<T> V = ScalarCanonicalizationVector(GetMatrixRow(EXT, i_row));
+    if (!map_first_row.try_emplace(V, i_row).second) {
+      RedundancyStatus[i_row] = 0;
+    }
+  }
   std::vector<int> ListKnownIrred;
   int nbFoundIrred = 0;
   RankTool<T> tool(n_cols);
@@ -240,7 +250,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
   //
   MyVector<T> eVectInterior = GetSpaceInteriorPoint_Basic(EXT_work, os);
   MyVector<T> ListScalInterior = EXT_work * eVectInterior;
-#ifdef DEBUG_ELIMINATION_REDUNDANCY
+#ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
   for (int i_row = 0; i_row < n_rows; i_row++) {
     T eScal = ListScalInterior(i_row);
     if (eScal <= 0) {
@@ -280,6 +290,9 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
       int nbMatch = 0;
       int idxFound = -1;
       for (int i_row = 0; i_row < n_rows; i_row++) {
+        if (RedundancyStatus[i_row] == 0) {
+          continue;
+        }
         T eScalDir = ListScal(i_row) - h * ListScalInterior(i_row);
         T eScal = ListScalInterior(i_row);
         if (eScalDir < 0) {
@@ -631,7 +644,7 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
   return ListIrred;
 }
 
-bool is_equal_list_irred(std::vector<int> const& l1, std::vector<int> const& l2) {
+inline bool is_equal_list_irred(std::vector<int> const& l1, std::vector<int> const& l2) {
   size_t siz1 = l1.size();
   if (siz1 != l2.size()) {
     return false;
