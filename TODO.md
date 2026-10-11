@@ -393,3 +393,11 @@ scratch bench/ (regenerate from CI_tests + the session's python generator):
 Example3, rand01_10_40, and CI_tests/23B_SimpleDualDesc Example4-7. CUT_K8 is
 the ~90s gold-standard cdd case; lrs corpus is the _lrs_-marked SimpleDualDesc
 entries (Example6/7 overflow int64) plus ContactE8 and Example3.
+
+## src_polarization: abandoned
+
+`src_polarization` holds independent work that did not lead to anything
+useful. Its Makefile does not build (no GMP / Boost include path, and
+`PROGRAM` lists `test_hot` and `test_hot_param`, which have no source) and no
+CI builds it. It is left as is, not maintained: to be removed or reworked if
+the work is ever taken up again.
