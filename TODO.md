@@ -401,3 +401,15 @@ useful. Its Makefile does not build (no GMP / Boost include path, and
 `PROGRAM` lists `test_hot` and `test_hot_param`, which have no source) and no
 CI builds it. It is left as is, not maintained: to be removed or reworked if
 the work is ever taken up again.
+
+## src_enum_schemes/POLY_EquivariantDecomposition.h: unfinished
+
+The equivariant decomposition of a polytope into components
+(`get_full_decomposition` and the structures around it) is unfinished: no
+file includes the header, and its templates would not compile if they were
+instantiated. `GetTriangulationFacet` is called without its `rev_search::`
+namespace (the triangulation with facets now goes through
+`DirectTriangulationFacet` in `POLY_DirectTriangulation.h`), the undefined
+`Tint` is used in `DecompositionEquiv<T, Tint>`, and `ComponentDecomposition`
+is given one template argument where it takes two. To be finished if the
+decomposition approach is taken up.

@@ -10,7 +10,7 @@ PROGRAM		= POLY_CreateAffineBasis \
 		  POLY_dual_description \
 		  POLY_GetFullRankFacetSet  \
 		  POLY_GeometricallyUniqueInteriorPoint \
-		  POLY_lrs_volume POLY_triangulation POLY_TwoLaminations POLY_lrs_triang_facets
+		  POLY_volume POLY_triangulation POLY_triangulation_det POLY_TwoLaminations POLY_triangulation_facets
 
 SRCFILES	=
 

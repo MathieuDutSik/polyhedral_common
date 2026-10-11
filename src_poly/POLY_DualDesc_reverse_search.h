@@ -966,10 +966,14 @@ void GetTriangulationDet_f(MyMatrix<T> const &EXT, Ftrig_det f_trig_det) {
       if (sign_calibration == 0) {
         det = DeterminantMat(SelectRow(EXT, esimp));
 #ifdef SANITY_CHECK_REVERSE_SEARCH
-        if (T_abs(det) != mag) {
-          std::cerr << "RS: det(EXTtrig)=" << det << " dict.det=" << mag
-                    << " but their absolute values should be equal\n";
-          throw TerminalException{1};
+        // Exact arithmetic only: in floating point the two computations
+        // differ by rounding.
+        if constexpr (!std::is_floating_point_v<T>) {
+          if (T_abs(det) != mag) {
+            std::cerr << "RS: det(EXTtrig)=" << det << " dict.det=" << mag
+                      << " but their absolute values should be equal\n";
+            throw TerminalException{1};
+          }
         }
 #endif
         int true_sign = (det > 0) ? 1 : -1;

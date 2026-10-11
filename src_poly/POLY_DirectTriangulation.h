@@ -5,10 +5,12 @@
 // clang-format off
 #include "POLY_DualDesc_reverse_search.h"
 #include "POLY_DualDesc_beneath_and_beyond.h"
+#include <algorithm>
 #include <format>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -99,6 +101,15 @@ inline int sort_simplex_sign(std::vector<int> &simplex) {
   return sign;
 }
 
+// Beneath-and-beyond pivots and decides orientations by exact zero and sign
+// tests, so it needs exact arithmetic: with double the rounding residues are
+// taken as nonzero, and the row selection goes out of bounds.
+[[noreturn]] inline void error_beneath_beyond_floating_point() {
+  std::cerr << "TRIG: the beneath_beyond method requires an exact arithmetic, "
+               "use lrs for floating point\n";
+  throw TerminalException{1};
+}
+
 // The triangulation streamed: f_trig_det(simplex, det) is called for each
 // simplex, simplex the sorted indices of its vertices and det the signed
 // determinant of SelectRow(EXT, simplex).
@@ -115,13 +126,17 @@ void DirectTriangulationDet_f(MyMatrix<T> const &EXT,
     sorted = simplex;
     int sign = sort_simplex_sign(sorted);
 #ifdef SANITY_CHECK_DIRECT_TRIANGULATION
-    T det_check = DeterminantMat(SelectRow(EXT, sorted));
-    T det_sorted = (sign > 0) ? det : -det;
-    if (det_check != det_sorted) {
-      std::cerr << "TRIG: the determinant " << det_sorted
-                << " of the simplex is not the one of its vertices "
-                << det_check << ", prog=" << std::format("{}", prog) << "\n";
-      throw TerminalException{1};
+    // Exact arithmetic only: in floating point the two computations differ
+    // by rounding.
+    if constexpr (!std::is_floating_point_v<T>) {
+      T det_check = DeterminantMat(SelectRow(EXT, sorted));
+      T det_sorted = (sign > 0) ? det : -det;
+      if (det_check != det_sorted) {
+        std::cerr << "TRIG: the determinant " << det_sorted
+                  << " of the simplex is not the one of its vertices "
+                  << det_check << ", prog=" << std::format("{}", prog) << "\n";
+        throw TerminalException{1};
+      }
     }
 #endif
     if (sign > 0) {
@@ -136,7 +151,12 @@ void DirectTriangulationDet_f(MyMatrix<T> const &EXT,
     rev_search::GetTriangulationDet_f<T>(EXT, f_sorted);
     return;
   case TriangulationProgram::beneath_beyond:
-    POLY_DualDescription_BeneathBeyondTriangulationDet_f<T>(EXT, os, f_sorted);
+    if constexpr (std::is_floating_point_v<T>) {
+      error_beneath_beyond_floating_point();
+    } else {
+      POLY_DualDescription_BeneathBeyondTriangulationDet_f<T>(EXT, os,
+                                                              f_sorted);
+    }
     return;
   }
   std::cerr << "TRIG: ERROR in DirectTriangulationDet_f: no handler for "
@@ -183,6 +203,67 @@ std::vector<std::vector<int>> DirectTriangulation(MyMatrix<T> const &EXT,
                                                   std::ostream &os) {
   return DirectTriangulation<T>(EXT, triangulation_program_from_string(prog),
                                 os);
+}
+
+// The volume of a polytope given by its vertices (rows of EXT, first
+// coordinate 1): the sum of the absolute values of the determinants of the
+// simplices of a triangulation, divided by dim factorial. The value is in the
+// field of fractions of T, since the volume of a lattice polytope is in
+// general not an integer.
+template <typename T>
+typename overlying_field<T>::field_type
+DirectVolumePolytope(MyMatrix<T> const &EXT, TriangulationProgram prog,
+                     std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  T sum_det(0);
+  auto f_trig_det = [&]([[maybe_unused]] std::vector<int> const &simplex,
+                        T const &det) -> void { sum_det += T_abs(det); };
+  DirectTriangulationDet_f<T>(EXT, prog, os, f_trig_det);
+  int dim = EXT.cols() - 1;
+  Tfield fact(1);
+  for (int u = 2; u <= dim; u++)
+    fact *= Tfield(u);
+  return UniversalScalarConversion<Tfield, T>(sum_det) / fact;
+}
+
+// The triangulation (simplices as sorted vertex indices) together with the
+// facets, as incidences over the rows of EXT. Reverse search obtains both
+// from one enumeration. Beneath-and-beyond computes them in two runs: its
+// placing triangulation does not keep track of the facets.
+template <typename T>
+std::pair<std::vector<std::vector<int>>, vectface>
+DirectTriangulationFacet(MyMatrix<T> const &EXT, TriangulationProgram prog,
+                         std::ostream &os) {
+#ifdef DEBUG_DIRECT_TRIANGULATION
+  os << "TRIG: DirectTriangulationFacet, prog=" << std::format("{}", prog)
+     << " |EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
+#endif
+  switch (prog) {
+  case TriangulationProgram::lrs: {
+    std::pair<std::vector<std::vector<int>>, vectface> pair =
+        rev_search::GetTriangulationFacet(EXT);
+    for (auto &simplex : pair.first)
+      std::sort(simplex.begin(), simplex.end());
+    return pair;
+  }
+  case TriangulationProgram::beneath_beyond: {
+    if constexpr (std::is_floating_point_v<T>) {
+      error_beneath_beyond_floating_point();
+    } else {
+      std::vector<std::vector<int>> l_trig = DirectTriangulation(EXT, prog, os);
+      // The incidences are recomputed from the normals: the beneath-and-beyond
+      // incidences contain only the extreme rays, while a row of EXT that is
+      // not a vertex may lie on a facet as well.
+      vectface vf(EXT.rows());
+      for (auto &facet : BeneathBeyond_run(EXT, os))
+        vf.push_back(beneath_beyond::facet_incidence(EXT, facet.normal));
+      return {std::move(l_trig), std::move(vf)};
+    }
+  }
+  }
+  std::cerr << "TRIG: ERROR in DirectTriangulationFacet: no handler for "
+            << std::format("{}", prog) << "\n";
+  throw TerminalException{1};
 }
 
 // clang-format off

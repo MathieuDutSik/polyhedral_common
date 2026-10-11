@@ -5,7 +5,7 @@
 // clang-format off
 #include "LatticeDelaunay.h"
 #include "LatticeStabEquiCan.h"
-#include "POLY_DualDesc_reverse_search.h"
+#include "POLY_DirectTriangulation.h"
 #include <algorithm>
 #include <limits>
 #include <map>
@@ -1152,7 +1152,7 @@ CheckKDelaunayTesselationVolume(MyMatrix<T> const &GramMat,
   for (auto &eEnt : DT.l_tiles) {
     KDelaunayTileVertices<Tint> vert = GetKDelaunayTileVertices(eEnt.tile, k);
     MyMatrix<T> EXTsum_T = UniversalMatrixConversion<T, Tint>(vert.EXTsum);
-    T vol = rev_search::Kernel_VolumePolytope<T>(EXTsum_T);
+    T vol = DirectVolumePolytope<T>(EXTsum_T, TriangulationProgram::lrs, os);
     TintGroup order_stab = eEnt.GRP.size();
     TintGroup n_orbit = order_aut / order_stab;
     T n_orbit_T = UniversalScalarConversion<T, TintGroup>(n_orbit);

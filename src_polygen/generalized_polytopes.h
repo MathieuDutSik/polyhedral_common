@@ -7,6 +7,7 @@
 #include "GRAPH_GraphicalBasic.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_DirectDualDesc.h"
+#include "POLY_DirectTriangulation.h"
 #include "POLY_Fundamental.h"
 #include "POLY_RedundancyElimination.h"
 #include "boost_serialization.h"
@@ -460,10 +461,10 @@ template <typename T> struct GeneralizedPolytope {
 };
 
 template<typename T>
-T volume_gp(GeneralizedPolytope<T> const& gp,  [[maybe_unused]] std::ostream& os) {
+T volume_gp(GeneralizedPolytope<T> const& gp, std::ostream& os) {
   T volume(0);
   for (auto & sp: gp.polytopes) {
-    T vol = rev_search::Kernel_VolumePolytope(sp.EXT);
+    T vol = DirectVolumePolytope(sp.EXT, TriangulationProgram::lrs, os);
     volume += vol;
   }
   return volume;

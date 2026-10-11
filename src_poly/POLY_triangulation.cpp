@@ -13,57 +13,19 @@
 #include "POLY_DirectTriangulation.h"
 // clang-format on
 
-// The triangulation is streamed with the determinant of each simplex, so
-// that the volume and the GAPtrig_det output need no further determinant.
 template <typename T>
 void process(std::string const &eFileI, std::string const &method,
              std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   TriangulationProgram prog = triangulation_program_from_string(method);
-  std::vector<std::pair<std::vector<int>, T>> l_trig =
-      DirectTriangulationDet<T>(EXT, prog, std::cerr);
-  if (OutFormat == "Volume") {
-    T sum_det(0);
-    for (auto &[trig, det] : l_trig)
-      sum_det += T_abs(det);
-    int dim = EXT.cols() - 1;
-    T fact(1);
-    for (int u = 1; u <= dim; u++) {
-      fact *= u;
-    }
-    os_out << "sum_det=" << sum_det << " fact=" << fact << "\n";
-    T volume = sum_det / fact;
-    os_out << "volume=" << volume << "\n";
-    return;
-  }
+  std::vector<std::vector<int>> l_trig =
+      DirectTriangulation<T>(EXT, prog, std::cerr);
   if (OutFormat == "NbTrig") {
     os_out << "NbTrig=" << l_trig.size() << "\n";
     return;
   }
   if (OutFormat == "Trigs" || OutFormat == "GAP") {
-    std::vector<std::vector<int>> vf;
-    for (auto &[trig, det] : l_trig)
-      vf.push_back(trig);
-    os_out << "return " << rev_search::StringTriangulationGAP(vf) << ";\n";
-    return;
-  }
-  if (OutFormat == "GAPtrig_det") {
-    os_out << "return [";
-    bool is_first = true;
-    for (auto &[trig, det] : l_trig) {
-      if (!is_first) {
-        os_out << ",";
-      }
-      is_first = false;
-      os_out << "rec(LV:=[";
-      for (size_t i = 0; i < trig.size(); i++) {
-        if (i > 0)
-          os_out << ",";
-        os_out << (trig[i] + 1);
-      }
-      os_out << "], det:=" << T_abs(det) << ")";
-    }
-    os_out << "];\n";
+    os_out << "return " << rev_search::StringTriangulationGAP(l_trig) << ";\n";
     return;
   }
   std::cerr << "Failed to find a matching output\n";
@@ -86,8 +48,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "arith     : the chosen arithmetic\n";
       std::cerr << "method    : lrs (reverse search) or beneath_beyond\n";
       std::cerr << "DATAIN    : The polytope vertices\n";
-      std::cerr << "OutFormat : NbTrig (default), Volume, GAP (or Trigs) or "
-                   "GAPtrig_det\n";
+      std::cerr << "OutFormat : NbTrig (default) or GAP (or Trigs)\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";

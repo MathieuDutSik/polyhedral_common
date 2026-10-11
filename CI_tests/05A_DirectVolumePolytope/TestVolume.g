@@ -46,9 +46,9 @@ end;
 
 
 
-TestVolume:=function(eRec)
+TestVolume:=function(eRec, method)
     local the_volume;
-    the_volume:=get_ext_volume(eRec.EXT);
+    the_volume:=get_ext_volume(eRec.EXT, rec(method:=method));
     if is_error(the_volume) then
         return false;
     fi;
@@ -75,15 +75,18 @@ Add(ListRec, get_hypersimplex_case(6, 3));
 
 
 FullTest:=function()
-    local iRec, eRec, test;
+    local iRec, eRec, method, test;
     iRec:=0;
     for eRec in ListRec
     do
-        Print("iRec=", iRec, " / ", Length(ListRec), " name=", eRec.name, "\n");
-        test:=TestVolume(eRec);
-        if test=false then
-            return false;
-        fi;
+        for method in ["lrs", "beneath_beyond"]
+        do
+            Print("iRec=", iRec, " / ", Length(ListRec), " name=", eRec.name, " method=", method, "\n");
+            test:=TestVolume(eRec, method);
+            if test=false then
+                return false;
+            fi;
+        od;
         iRec:=iRec + 1;
     od;
     return true;

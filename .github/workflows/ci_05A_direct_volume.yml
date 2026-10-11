@@ -37,8 +37,8 @@ jobs:
       - uses: ./.github/actions/install-gap
       - name: Test of direct volume computation
         run: |
-          make -C src_poly -f Makefile_lrs_volume
-          echo "After compilation of lrs_volume program"
+          make -C src_poly -f Makefile_volume
+          echo "After compilation of volume program"
 
           # Running the test
           cd CI_tests/05A_DirectVolumePolytope

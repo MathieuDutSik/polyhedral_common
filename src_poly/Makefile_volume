@@ -1,4 +1,4 @@
-PROGRAM		= POLY_lrs_volume
+PROGRAM		= POLY_volume
 
 SRCFILES	=
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

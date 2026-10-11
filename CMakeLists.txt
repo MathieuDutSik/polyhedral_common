@@ -916,10 +916,11 @@ set(
   POLY_dual_description
   POLY_GetFullRankFacetSet
   POLY_GeometricallyUniqueInteriorPoint
-  POLY_lrs_volume
+  POLY_volume
   POLY_triangulation
+  POLY_triangulation_det
   POLY_TwoLaminations
-  POLY_lrs_triang_facets
+  POLY_triangulation_facets
 )
 foreach(target IN LISTS POLY_PROGRAMS)
   add_polyhedral_binary(

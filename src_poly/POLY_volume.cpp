@@ -10,18 +10,22 @@
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
-#include "POLY_DualDesc_reverse_search.h"
+#include "POLY_DirectTriangulation.h"
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileI, std::string const &OutFormat,
-             std::ostream &os) {
+void process(std::string const &eFileI, std::string const &method,
+             std::string const &OutFormat, std::ostream &os_out) {
+  using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  std::pair<std::vector<std::vector<int>>, vectface> pair =
-      rev_search::GetTriangulationFacet(EXT);
-  if (OutFormat == "TrigFacets") {
-    os << "return rec(trigs:=" << rev_search::StringTriangulationGAP(pair.first)
-       << ", facets:=" << StringVectfaceGAP(pair.second) << ");\n";
+  TriangulationProgram prog = triangulation_program_from_string(method);
+  Tfield volume = DirectVolumePolytope<T>(EXT, prog, std::cerr);
+  if (OutFormat == "Direct") {
+    os_out << "volume=" << volume << "\n";
+    return;
+  }
+  if (OutFormat == "GAP") {
+    os_out << "return " << volume << ";\n";
     return;
   }
   std::cerr << "Failed to find a matching output\n";
@@ -32,17 +36,19 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
-    if (argc != 3 && argc != 5) {
+    if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr
-          << "POLY_lrs_triang_facets arith [DATAIN] [OutFormat] [FileOut]\n";
+      std::cerr << "POLY_volume arith method [DATAIN] [OutFormat] "
+                   "[FileOut]\n";
       std::cerr << "\n";
-      std::cerr << "POLY_lrs_triang_facets arith [DATAIN]\n";
+      std::cerr << "POLY_volume arith method [DATAIN]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
-      std::cerr << "arith   : the chosen arithmetic\n";
-      std::cerr << "DATAIN  : The polytope vertices\n";
+      std::cerr << "arith     : the chosen arithmetic\n";
+      std::cerr << "method    : lrs (reverse search) or beneath_beyond\n";
+      std::cerr << "DATAIN    : The polytope vertices\n";
+      std::cerr << "OutFormat : Direct (default) or GAP\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
@@ -75,70 +81,69 @@ int main(int argc, char *argv[]) {
     }
     //
     std::string arith = argv[1];
-    std::string eFileI = argv[2];
-    std::string OutFormat = "NbTrig";
+    std::string method = argv[2];
+    std::string eFileI = argv[3];
+    std::string OutFormat = "Direct";
     std::string FileO = "stderr";
-    if (argc == 5) {
-      OutFormat = argv[3];
-      FileO = argv[4];
+    if (argc == 6) {
+      OutFormat = argv[4];
+      FileO = argv[5];
     }
-    auto call_lrs = [&](std::ostream &os) -> void {
-      /*
-      */
+    auto call_volume = [&](std::ostream &os) -> void {
       if (arith == "mpz_class") {
         using T = mpz_class;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "mpz_int") {
         using T = boost::multiprecision::mpz_int;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
       if (arith == "cpp_int") {
         using T = boost::multiprecision::cpp_int;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "fmpz_class") {
         using T = fmpz_class;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
 #endif
       if (arith == "mpq_class") {
         using T = mpq_class;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
 #ifdef ENABLE_BOOST_TYPES
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
 #endif
 #ifdef ENABLE_FLINT_SUPPORT
       if (arith == "fmpq_class") {
         using T = fmpq_class;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
 #endif
       if (arith == "double") {
         using T = double;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
 #ifdef QUADRATIC_FIELDS
       if (arith == "Qsqrt5") {
         using Trat = Trat_quad_field;
         using T = QuadField<Trat, 5>;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
       if (arith == "Qsqrt2") {
         using Trat = Trat_quad_field;
         using T = QuadField<Trat, 2>;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
 #endif
       std::optional<std::string> opt_realalgebraic =
@@ -154,7 +159,7 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFileI, OutFormat, os);
+        return process<T>(eFileI, method, OutFormat, os);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
@@ -167,10 +172,10 @@ int main(int argc, char *argv[]) {
 #endif
       throw TerminalException{1};
     };
-    FILE_PrintStderrStdoutFile(FileO, call_lrs);
-    std::cerr << "Normal termination of POLY_lrs_triang_facets\n";
+    FILE_PrintStderrStdoutFile(FileO, call_volume);
+    std::cerr << "Normal termination of POLY_volume\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POLY_lrs_triang_facets\n";
+    std::cerr << "Error in POLY_volume\n";
     exit(e.eVal);
   }
   runtime(time1);
