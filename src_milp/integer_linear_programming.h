@@ -191,6 +191,25 @@ IlpSolution<T> ILP_IntegerLinearProgramming(MyMatrix<T> const &ListIneq,
     if (method_eff == "exact_bb") {
       return ILP_ExactBranchAndBound(ListIneq, ListEqua, ToBeMinimized, os);
     }
+    if (method_eff == "scip_or_exact") {
+#ifdef ENABLE_SCIP_SUPPORT
+      // SCIP works with doubles: a problem whose coefficients do not convert
+      // exactly is solved by the exact branch and bound instead. With the
+      // method "scip" such a problem is an error: large coefficients are
+      // usually the sign that something went wrong upstream.
+      if (!ILP_ScipRepresentable(ListIneq, ListEqua, ToBeMinimized)) {
+#ifdef DEBUG_INTEGER_LINEAR_PROGRAMMING
+        os << "ILP: coefficients too large for SCIP, exact branch and bound\n";
+#endif
+        method_eff = "exact_bb";
+        return ILP_ExactBranchAndBound(ListIneq, ListEqua, ToBeMinimized, os);
+      }
+      method_eff = "scip";
+      return ILP_Scip(ListIneq, ListEqua, ToBeMinimized, os);
+#else
+      return ILP_ExactBranchAndBound(ListIneq, ListEqua, ToBeMinimized, os);
+#endif
+    }
     if (method_eff == "scip") {
 #ifdef ENABLE_SCIP_SUPPORT
       return ILP_Scip(ListIneq, ListEqua, ToBeMinimized, os);
@@ -201,7 +220,8 @@ IlpSolution<T> ILP_IntegerLinearProgramming(MyMatrix<T> const &ListIneq,
 #endif
     }
     std::cerr << "ILP: Unknown method=" << method << "\n";
-    std::cerr << "ILP: Allowed methods: default, scip, exact_bb\n";
+    std::cerr << "ILP: Allowed methods: default, scip, scip_or_exact, "
+                 "exact_bb\n";
     throw TerminalException{1};
   };
   IlpSolution<T> sol = get_solution();

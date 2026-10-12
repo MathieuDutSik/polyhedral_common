@@ -8,6 +8,8 @@
 #include "SignatureSymmetric.h"
 #include "Tspace_Generation.h"
 #include "fractions.h"
+#include <cstdio>
+#include <fstream>
 #include <map>
 #include <sstream>
 #include <string>
@@ -457,7 +459,10 @@ igusa_facet_flip(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
   for (int i = 0; i < 10; i++) {
     delta_min /= T(2);
   }
-  T s = thr.second + delta;
+  // The simplest rational above the threshold: thr.second comes from a
+  // bisection and has a denominator 2^40, which would make the coefficients
+  // of all the integer programs of the flip about 2^40 times larger.
+  T s = igusa_simplest_rational(thr.second, T(thr.second + delta));
   bool updated = false;
   MyMatrix<T> Equa(0, dim + 1);
   if (face.active) {
@@ -511,7 +516,7 @@ igusa_facet_flip(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
     }
     if (!updated && delta > delta_min) {
       delta /= T(2);
-      s = thr.second + delta;
+      s = igusa_simplest_rational(thr.second, T(thr.second + delta));
       continue;
     }
     if (!updated) {
@@ -686,11 +691,17 @@ template <typename T> struct IgusaFacetEnumResult {
     of P on the other side of R' (or the bounded ridge (R', Q) if that
     facet Q is of lower rank).
  */
+template <typename T>
+void WriteFacetOrbitsGAP(std::ostream &os_out,
+                         IgusaFacetEnumResult<T> const &result);
+
 template <typename T, typename Tint, typename Tgroup>
 IgusaFacetEnumResult<T>
 igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
                         std::vector<std::pair<MyMatrix<T>, T>> const &ListInit,
-                        int max_obj, std::ostream &os) {
+                        int max_obj, std::ostream &os,
+                        bool full_rank_only = false,
+                        std::string const &checkpoint_file = "") {
   int n = space.n;
   IgusaFacetEnumResult<T> result;
   std::vector<IgusaFacetOrbitEntry<T>> &l_orbit = result.l_facet;
@@ -710,11 +721,20 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
     entry.F = pair.first;
     entry.rhs = pair.second;
     entry.key = type.key;
+    // set when the facet is processed
+    entry.n_inc = -1;
+    entry.stab_size = "unset";
+    entry.n_ridge_orbit = -1;
     l_orbit.push_back(entry);
   };
   auto f_insert_ridge = [&](MyMatrix<T> const &G, T const &cG,
                             MyMatrix<T> const &H, T const &cH,
                             std::vector<MyMatrix<T>> const &l_inc) -> void {
+    // With full_rank_only the walk stays on the full rank facets: the
+    // bounded ridges inside the facets of lower rank are not processed.
+    if (full_rank_only) {
+      return;
+    }
     std::pair<MyMatrix<T>, T> pairG = igusa_normalize_facet(G, cG);
     std::string key =
         igusa_ridge_key<T, Tint, Tgroup>(pairG.first, l_inc, os);
@@ -746,6 +766,19 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
   for (auto &pair : ListInit) {
     f_insert(pair.first, pair.second);
   }
+  // The current list, rewritten after each processed object (through a
+  // temporary file, so that an interruption leaves a complete file).
+  auto write_checkpoint = [&]() -> void {
+    if (checkpoint_file.empty()) {
+      return;
+    }
+    std::string tmp = checkpoint_file + ".tmp";
+    {
+      std::ofstream os_out(tmp);
+      WriteFacetOrbitsGAP(os_out, result);
+    }
+    std::rename(tmp.c_str(), checkpoint_file.c_str());
+  };
   size_t pos_facet = 0, pos_ridge = 0;
   int n_obj = 0;
   while (pos_facet < l_orbit.size() || pos_ridge < l_ridge_obj.size()) {
@@ -769,10 +802,32 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
       l_orbit[pos_facet].n_inc = inc.l_incident.size();
       l_orbit[pos_facet].stab_size = os_size.str();
       l_orbit[pos_facet].n_ridge_orbit = l_ridge.size();
+      size_t i_ridge = 0;
       for (auto &ridge : l_ridge) {
         MyMatrix<T> Ridge0 = inc.l_incident[ridge.face.find_first()];
+#ifdef DEBUG_IGUSA_FACET_ENUM
+        os << "IGUSA_FACET_ENUM: facet " << pos_facet << " ridge " << i_ridge
+           << "/" << l_ridge.size() << " |ridge|=" << ridge.face.count()
+           << " flip\n";
+#endif
+        i_ridge++;
         IgusaFlipResult<T> flip =
             igusa_facet_flip(space, F, rhs, ridge.g, Ridge0, no_face, os);
+#ifdef DEBUG_IGUSA_FACET_ENUM
+        {
+          T max_coeff(0);
+          for (int a = 0; a < flip.F.rows(); a++) {
+            for (int b = 0; b < flip.F.cols(); b++) {
+              T val = T_abs(flip.F(a, b));
+              if (val > max_coeff) {
+                max_coeff = val;
+              }
+            }
+          }
+          os << "IGUSA_FACET_ENUM: flip result rank=" << RankMat(flip.F)
+             << " rhs=" << flip.rhs << " max coeff=" << max_coeff << "\n";
+        }
+#endif
         if (flip.degenerate) {
           std::cerr << "IGUSA_FACET_ENUM: degenerate flip of a facet\n";
           throw TerminalException{1};
@@ -798,6 +853,7 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
          << " |facets|=" << l_orbit.size() << " |ridges|=" << l_ridge_obj.size()
          << "\n";
       pos_facet++;
+      write_checkpoint();
       continue;
     }
     // A bounded ridge (R, G) inside the facet G of lower rank
@@ -896,6 +952,7 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
        << " unbounded=" << n_unbounded << " |facets|=" << l_orbit.size()
        << " |ridges|=" << l_ridge_obj.size() << "\n";
     pos_ridge++;
+    write_checkpoint();
   }
   return result;
 }
@@ -911,7 +968,17 @@ void WriteFacetOrbitsGAP(std::ostream &os_out,
     }
     os_out << "rec(F:=";
     WriteMatrixGAP(os_out, e.F);
-    os_out << ", rhs:=" << e.rhs << ", nInc:=" << e.n_inc
+    T max_coeff(0);
+    for (int a = 0; a < e.F.rows(); a++) {
+      for (int b = 0; b < e.F.cols(); b++) {
+        T val = T_abs(e.F(a, b));
+        if (val > max_coeff) {
+          max_coeff = val;
+        }
+      }
+    }
+    os_out << ", rhs:=" << e.rhs << ", rank:=" << RankMat(e.F)
+           << ", MaxCoeff:=" << max_coeff << ", nInc:=" << e.n_inc
            << ", StabSizeOnInc:=" << e.stab_size
            << ", nRidgeOrbit:=" << e.n_ridge_orbit << ", ListAdjacent:=[";
     for (size_t k = 0; k < e.l_adj_key.size(); k++) {
@@ -955,6 +1022,13 @@ inline FullNamelist NAMELIST_GetStandard_IGUSA_FACET_ENUMERATION() {
     // Stop after processing that many objects, facets of full rank and
     // bounded ridges in the facets of lower rank (0: no limit)
     ListIntValues["MaxOrbit"] = 0;
+    // Only the adjacencies between full rank facets: the bounded ridges in
+    // the facets of lower rank, the expensive part, are skipped. The result
+    // is then the component of the initial facets in that graph.
+    ListBoolValues["FullRankOnly"] = false;
+    // If set, the current list of orbits is written there after each
+    // processed object, in the format of OutFile
+    ListStringValues["CheckpointFile"] = "unset";
     SingleBlock BlockDATA;
     BlockDATA.setListStringValues(ListStringValues);
     BlockDATA.setListIntValues(ListIntValues);

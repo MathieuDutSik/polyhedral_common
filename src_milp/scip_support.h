@@ -60,6 +60,40 @@ std::vector<double> ILP_ScaledRowDouble(MyVector<T> const &row) {
   return ret;
 }
 
+// Whether every row, scaled to be integral, has coefficients that convert
+// exactly to doubles, so that ILP_Scip can take the problem.
+template <typename T> bool ILP_ScipRowRepresentable(MyVector<T> const &row) {
+  if (IsZeroVector(row)) {
+    return true;
+  }
+  MyVector<T> row_int = RemoveFractionVector(row);
+  double const max_exact = 9007199254740992.0; // 2^53
+  for (int j = 0; j < row.size(); j++) {
+    double val = UniversalScalarConversion<double, T>(row_int(j));
+    if (std::abs(val) >= max_exact) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <typename T>
+bool ILP_ScipRepresentable(MyMatrix<T> const &ListIneq,
+                           MyMatrix<T> const &ListEqua,
+                           MyVector<T> const &ToBeMinimized) {
+  for (int i = 0; i < ListIneq.rows(); i++) {
+    if (!ILP_ScipRowRepresentable(MyVector<T>(GetMatrixRow(ListIneq, i)))) {
+      return false;
+    }
+  }
+  for (int i = 0; i < ListEqua.rows(); i++) {
+    if (!ILP_ScipRowRepresentable(MyVector<T>(GetMatrixRow(ListEqua, i)))) {
+      return false;
+    }
+  }
+  return ILP_ScipRowRepresentable(ToBeMinimized);
+}
+
 template <typename T>
 IlpSolution<T> ILP_Scip(MyMatrix<T> const &ListIneq,
                         MyMatrix<T> const &ListEqua,

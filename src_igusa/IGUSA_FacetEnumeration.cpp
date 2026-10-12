@@ -34,8 +34,14 @@ void process(FullNamelist const &eFull, std::ostream &os) {
     ListInit.push_back({F, ParseScalar<T>(str)});
   }
   int max_orbit = BlockDATA.get_int("MaxOrbit");
+  bool full_rank_only = BlockDATA.get_bool("FullRankOnly");
+  std::string checkpoint_file = BlockDATA.get_string("CheckpointFile");
+  if (checkpoint_file == "unset") {
+    checkpoint_file = "";
+  }
   IgusaFacetEnumResult<T> l_orbit =
-      igusa_facet_enumeration<T, Tint, Tgroup>(space, ListInit, max_orbit, os);
+      igusa_facet_enumeration<T, Tint, Tgroup>(space, ListInit, max_orbit, os,
+                                               full_rank_only, checkpoint_file);
   os << "IGUSA_FACET_ENUM: number of orbits of full rank facets="
      << l_orbit.l_facet.size() << " of bounded ridges in facets of lower rank="
      << l_orbit.l_ridge.size() << "\n";
