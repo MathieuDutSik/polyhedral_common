@@ -42,15 +42,13 @@
 //  * the lex-min test (Proposition 3.4) so each vertex / ray is reported
 //    exactly once even on degenerate inputs.
 //
-// The formulation is the one of lrslib in H-mode: the rows of the input
-// matrix EXT are read as inequalities EXT(i,.) . (1, x) >= 0 over
-// x in R^{nbCol-1}, and the enumeration reports the vertices and extreme
-// rays of that polyhedron, which are the facets of the cone spanned by the
-// rows. The public entry points first prepend a zero column when column 0
-// is not already zero (FirstColumnZero), so in production the system is
-// homogeneous: the right-hand side column stays identically zero through
-// every pivot, the only vertex is the apex (skipped), and every facet
-// comes out as a ray.
+// The rows of the input matrix EXT span a cone, and the enumeration reports
+// its facets. In the terms of lrslib in H-mode, the rows are read as the
+// homogeneous inequalities EXT(i,.) . x >= 0: the tableau has a right-hand
+// side column of zeros in front of the EXT columns, which stays identically
+// zero through every pivot. The only vertex is the apex (skipped), and every
+// facet comes out as a ray, given to the callbacks by its EXT.cols()
+// coordinates.
 //
 // What was changed over the old translation:
 //  * flat contiguous tableau instead of a row-pointer array, std::vector
@@ -782,25 +780,21 @@ void run_search(MyMatrix<T> const &EXT, Fnode f_node, Foutput f_output) {
   int const nbRow = EXT.rows();
   int const nbCol = EXT.cols();
   int const m = nbRow;
-  int const d = nbCol - 1;
+  int const d = nbCol;
   Dictionary<T> dict(m, d);
   Problem prob;
   prob.m = m;
-  prob.n = nbCol;
-  prob.homogeneous = [&]() -> bool {
-    for (int iRow = 0; iRow < nbRow; iRow++)
-      if (EXT(iRow, 0) != 0)
-        return false;
-    return true;
-  }();
+  prob.n = nbCol + 1; // the right-hand side column, then the EXT columns
+  prob.homogeneous = true;
   prob.lastdv = d;
   prob.nredundcol = 0;
   prob.inequality.assign(m + 1, 0);
   prob.redundcol.assign(d + 1, 0);
   prob.minratio.assign(m + 1, 0);
+  // Column 0 of the tableau, the right-hand side, is left at zero.
   for (int iRow = 0; iRow < nbRow; iRow++)
     for (int j = 0; j < nbCol; j++)
-      dict.A(iRow + 1, j) = EXT(iRow, j);
+      dict.A(iRow + 1, j + 1) = EXT(iRow, j);
   if (!get_first_basis(dict, prob)) {
     std::cerr << "RS: failure in get_first_basis\n";
     throw TerminalException{1};
@@ -818,7 +812,8 @@ void run_search(MyMatrix<T> const &EXT, Fnode f_node, Foutput f_output) {
       for (int col = 0; col <= dict.d; col++) {
         if (get_solution(dict, prob, output.data(), col)) {
           if (!is_first) {
-            if (!f_output(dict, prob, col, output.data())) {
+            // output[0] is the right-hand side coordinate, zero for a ray.
+            if (!f_output(dict, prob, col, output.data() + 1)) {
               stop = true;
               break;
             }
@@ -902,8 +897,7 @@ void GetTriangulationDet_core(MyMatrix<Twork> const &EXTwork, F f) {
     f(esimp, dict.det, comb_sign);
     return true;
   };
-  MyMatrix<Twork> EXText = AddFirstZeroColumn(EXTwork);
-  Kernel_Simplices_cond(EXText, f_trig);
+  Kernel_Simplices_cond(EXTwork, f_trig);
 }
 
 // Core triangulation enumerator: for each simplex of the triangulation of
@@ -1022,17 +1016,8 @@ GetTriangulationFacet(MyMatrix<T> const &EXT) {
     vf_facet.push_back(facet);
     return true;
   };
-  MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
-  run_search(EXText, f_trig, f_facet);
+  run_search(EXT, f_trig, f_facet);
   return {std::move(l_trig), std::move(vf_facet)};
-}
-
-template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
-  int const nbRow = M.rows();
-  for (int iRow = 0; iRow < nbRow; iRow++)
-    if (M(iRow, 0) != 0)
-      return AddFirstZeroColumn(M);
-  return M;
 }
 
 template <typename T>
@@ -1111,8 +1096,7 @@ void Kernel_DualDescription_process(MyMatrix<T> const &EXTwork,
 }
 
 template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
-  MyMatrix<T> EXTwork = FirstColumnZero(EXT);
-  size_t const nbRow = EXTwork.rows();
+  size_t const nbRow = EXT.rows();
   vectface ListIncd(nbRow);
   Face face(nbRow);
   auto f_facet = [&](auto &dict, Problem &prob, int const &col,
@@ -1120,51 +1104,44 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
     set_face(dict, prob, col, face);
     ListIncd.push_back(face);
   };
-  Kernel_DualDescription_process(EXTwork, f_facet);
+  Kernel_DualDescription_process(EXT, f_facet);
   return ListIncd;
 }
 
 template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
-  std::pair<MyMatrix<T>, int> pair = FirstColumnZeroCond(EXT);
-  MyMatrix<T> const &EXTwork = pair.first;
-  int const shift = pair.second;
-  int const nbColRed = EXTwork.cols() - shift;
+  int const nbCol = EXT.cols();
   std::vector<MyVector<T>> ListVect;
-  MyVector<T> V(nbColRed);
+  MyVector<T> V(nbCol);
   auto f_facet = [&]([[maybe_unused]] auto &dict, [[maybe_unused]] Problem &prob,
                      [[maybe_unused]] int const &col, auto *out) -> void {
-    for (int i = 0; i < nbColRed; i++)
-      V(i) = rs_output_convert<T>(out[i + shift]);
+    for (int i = 0; i < nbCol; i++)
+      V(i) = rs_output_convert<T>(out[i]);
     ListVect.push_back(V);
   };
-  Kernel_DualDescription_process(EXTwork, f_facet);
+  Kernel_DualDescription_process(EXT, f_facet);
   return MatrixFromVectorFamily(ListVect);
 }
 
 // The pair handed to f_process is reused across facets.
 template <typename T, typename Fprocess>
 void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
-  std::pair<MyMatrix<T>, int> ePair = FirstColumnZeroCond(EXT);
-  MyMatrix<T> const &EXTwork = ePair.first;
-  int const shift = ePair.second;
-  int const nbRow = EXTwork.rows();
-  int const nbColRed = EXTwork.cols() - shift;
-  std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
+  int const nbRow = EXT.rows();
+  int const nbCol = EXT.cols();
+  std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbCol)};
   auto f_facet = [&](auto &dict, Problem &prob, int const &col,
                      auto *out) -> void {
-    for (int i = 0; i < nbColRed; i++)
-      pair.second(i) = rs_output_convert<T>(out[i + shift]);
+    for (int i = 0; i < nbCol; i++)
+      pair.second(i) = rs_output_convert<T>(out[i]);
     set_face(dict, prob, col, pair.first);
     f_process(pair);
   };
-  Kernel_DualDescription_process(EXTwork, f_facet);
+  Kernel_DualDescription_process(EXT, f_facet);
 }
 
 template <typename T>
 vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
                                       int const &UpperLimit) {
-  MyMatrix<T> EXTwork = FirstColumnZero(EXT);
-  size_t const nbRow = EXTwork.rows();
+  size_t const nbRow = EXT.rows();
   vectface ListIncd(nbRow);
   int nbFound = 0;
   Face face(nbRow);
@@ -1175,7 +1152,7 @@ vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
     nbFound++;
     return nbFound != UpperLimit;
   };
-  Kernel_DualDescription_cond(EXTwork, f_facet);
+  Kernel_DualDescription_cond(EXT, f_facet);
   return ListIncd;
 }
 

@@ -25,21 +25,20 @@ void process(std::string const &eFileI, std::string const &choice,
       return ReadMatrix<T>(is);
     }
   };
-  MyMatrix<T> EXT_pre = read_file();
-  std::pair<MyMatrix<T>, int> pair = rev_search::FirstColumnZeroCond(EXT_pre);
-  MyMatrix<T> const &EXT = pair.first;
-  int shift = pair.second;
+  MyMatrix<T> EXT = read_file();
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   //
   if (choice == "lrs") {
     os << "V-representation\n";
     os << "begin\n";
-    os << "****** " << nbCol << " rational\n";
+    // The facets are rays: lrs writes them with a leading zero.
+    os << "****** " << (nbCol + 1) << " rational\n";
     size_t nVertices = 0;
     auto fPrint = [&]([[maybe_unused]] rev_search::Dictionary<T> &dict,
                       [[maybe_unused]] rev_search::Problem &prob,
                       [[maybe_unused]] int const &col, T *out) -> void {
+      os << " 0";
       for (int iCol = 0; iCol < nbCol; iCol++)
         os << " " << out[iCol];
       os << "\n";
@@ -59,8 +58,8 @@ void process(std::string const &eFileI, std::string const &choice,
       if (!IsFirst)
         os << ",\n";
       os << "[";
-      for (int iCol = shift; iCol < nbCol; iCol++) {
-        if (iCol > shift)
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        if (iCol > 0)
           os << ",";
         os << out[iCol];
       }

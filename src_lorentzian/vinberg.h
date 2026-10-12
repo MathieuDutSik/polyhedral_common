@@ -854,7 +854,6 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
   os << "DualDescProg=" << Vtot.DualDescProg << "\n";
 #endif
   if (Vtot.DualDescProg == "lrs_iterate") {
-    MyMatrix<Tint> FACwork = rev_search::FirstColumnZero(FAC);
     bool IsFirst = true;
     MyVector<Tint> V(n_col);
     auto f = [&]([[maybe_unused]] rev_search::Dictionary<Tint> &dict,
@@ -865,7 +864,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
         n_iter++;
 #endif
         for (size_t i_col = 0; i_col < n_col; i_col++)
-          V(i_col) = out[i_col + 1];
+          V(i_col) = out[i_col];
         Tint scal = V.dot(Vtot.G * V);
         if (scal <= 0) {
           opt = V;
@@ -875,7 +874,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
       IsFirst = false;
       return true;
     };
-    rev_search::Kernel_DualDescription_cond(FACwork, f);
+    rev_search::Kernel_DualDescription_cond(FAC, f);
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
     vectface ListIncd =
@@ -927,7 +926,6 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
 #endif
   std::unordered_map<T, int> map;
   if (Vtot.DualDescProg == "lrs_iterate") {
-    MyMatrix<Tint> FACwork = rev_search::FirstColumnZero(FAC);
     bool IsFirst = true;
     MyVector<Tint> V(n_col);
     auto f = [&]([[maybe_unused]] rev_search::Dictionary<Tint> &dict,
@@ -938,7 +936,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
         n_iter++;
 #endif
         for (size_t i_col = 0; i_col < n_col; i_col++)
-          V(i_col) = out[i_col + 1];
+          V(i_col) = out[i_col];
         T norm = UniversalScalarConversion<T, Tint>(V.dot(Vtot.G * V));
         map[norm]++;
         if (norm > 0) {
@@ -949,7 +947,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
       IsFirst = false;
       return true;
     };
-    rev_search::Kernel_DualDescription_cond(FACwork, f);
+    rev_search::Kernel_DualDescription_cond(FAC, f);
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
     vectface ListIncd =
