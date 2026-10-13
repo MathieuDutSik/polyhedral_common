@@ -1,6 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "erdahl_polytope_enumeration.h"
 #include "Namelist.h"
 #include "Permutation.h"
@@ -174,8 +177,14 @@ int main(int argc, char *argv[]) {
     }
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
+    // The FLINT rationals and integers when available, being the faster.
+#ifdef ENABLE_FLINT_SUPPORT
+    using T = fmpq_class;
+    using Tint = fmpz_class;
+#else
     using T = mpq_class;
     using Tint = mpz_class;
+#endif
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint_grp = mpz_class;
