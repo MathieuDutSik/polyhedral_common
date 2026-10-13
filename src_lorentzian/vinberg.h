@@ -854,24 +854,21 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
   os << "DualDescProg=" << Vtot.DualDescProg << "\n";
 #endif
   if (Vtot.DualDescProg == "lrs_iterate") {
-    bool IsFirst = true;
     MyVector<Tint> V(n_col);
+    // Every facet is checked: the kernel does not report the apex.
     auto f = [&]([[maybe_unused]] rev_search::Dictionary<Tint> &dict,
                  [[maybe_unused]] rev_search::Problem &prob,
                  [[maybe_unused]] int const &col, Tint *out) -> bool {
-      if (!IsFirst) {
 #ifdef DEBUG_VINBERG
-        n_iter++;
+      n_iter++;
 #endif
-        for (size_t i_col = 0; i_col < n_col; i_col++)
-          V(i_col) = out[i_col];
-        Tint scal = V.dot(Vtot.G * V);
-        if (scal <= 0) {
-          opt = V;
-          return false;
-        }
+      for (size_t i_col = 0; i_col < n_col; i_col++)
+        V(i_col) = out[i_col];
+      Tint scal = V.dot(Vtot.G * V);
+      if (scal <= 0) {
+        opt = V;
+        return false;
       }
-      IsFirst = false;
       return true;
     };
     rev_search::Kernel_DualDescription_cond(FAC, f);
@@ -926,25 +923,22 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
 #endif
   std::unordered_map<T, int> map;
   if (Vtot.DualDescProg == "lrs_iterate") {
-    bool IsFirst = true;
     MyVector<Tint> V(n_col);
+    // Every facet is checked: the kernel does not report the apex.
     auto f = [&]([[maybe_unused]] rev_search::Dictionary<Tint> &dict,
                  [[maybe_unused]] rev_search::Problem &prob,
                  [[maybe_unused]] int const &col, Tint *out) -> bool {
-      if (!IsFirst) {
 #ifdef DEBUG_VINBERG
-        n_iter++;
+      n_iter++;
 #endif
-        for (size_t i_col = 0; i_col < n_col; i_col++)
-          V(i_col) = out[i_col];
-        T norm = UniversalScalarConversion<T, Tint>(V.dot(Vtot.G * V));
-        map[norm]++;
-        if (norm > 0) {
-          IsFiniteCovolume = false;
-          return false;
-        }
+      for (size_t i_col = 0; i_col < n_col; i_col++)
+        V(i_col) = out[i_col];
+      T norm = UniversalScalarConversion<T, Tint>(V.dot(Vtot.G * V));
+      map[norm]++;
+      if (norm > 0) {
+        IsFiniteCovolume = false;
+        return false;
       }
-      IsFirst = false;
       return true;
     };
     rev_search::Kernel_DualDescription_cond(FAC, f);
