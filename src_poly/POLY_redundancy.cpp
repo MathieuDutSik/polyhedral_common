@@ -10,7 +10,6 @@
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
-#include "POLY_DualDesc_reverse_search.h"
 #include "POLY_RedundancyElimination.h"
 // clang-format on
 
@@ -18,11 +17,10 @@ template <typename T>
 void process_A(std::string const &eFileI, std::string const &eFileO,
                std::string const &method, std::string const &OutFormat,
                std::ostream &os) {
-  MyMatrix<T> preEXT = ReadMatrixFile<T>(eFileI);
-  MyMatrix<T> EXT = rev_search::FirstColumnZeroCond(preEXT).first;
+  MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   auto get_list_irred = [&]() -> std::vector<int> {
     if (method == "Clarkson") {
-      return SIMPLEX_RedundancyReductionClarkson(EXT, os);
+      return SIMPLEX_RedundancyReductionClarksonExt(EXT, os);
     }
     if (method == "HitAndRun") {
       return EliminationByRedundance_HitAndRun(EXT, os);

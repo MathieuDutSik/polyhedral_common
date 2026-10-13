@@ -13,7 +13,6 @@
 #include "GRP_GroupFct.h"
 #include "GRP_GroupFile.h"
 #include "Group.h"
-#include "POLY_DualDesc_reverse_search.h"
 #include "POLY_RedundancyElimination.h"
 #include "Permutation.h"
 // clang-format on
@@ -23,9 +22,7 @@ void process(std::string const &FileEXT, std::string const &FileGRP,
              std::string const &method, std::string const &OutFormat,
              std::ostream &os_out, std::ostream &os) {
   std::cerr << "process: start\n";
-  MyMatrix<T> preEXT = ReadMatrixFile<T>(FileEXT);
-  std::cerr << "process: We have preEXT\n";
-  MyMatrix<T> EXT = rev_search::FirstColumnZeroCond(preEXT).first;
+  MyMatrix<T> EXT = ReadMatrixFile<T>(FileEXT);
   std::cerr << "process: We have EXT\n";
   size_t nbRow = EXT.rows();
   Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
@@ -49,7 +46,7 @@ void process(std::string const &FileEXT, std::string const &FileGRP,
           }
         }
       }
-      return SIMPLEX_RedundancyReductionClarksonBlocks(EXT, BlockBelong, os);
+      return SIMPLEX_RedundancyReductionClarksonBlocksExt(EXT, BlockBelong, os);
     }
     if (method == "Equivariant") {
       std::cerr << "process: before GetNonRedundant_Equivariant\n";

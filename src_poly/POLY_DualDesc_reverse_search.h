@@ -1020,15 +1020,6 @@ GetTriangulationFacet(MyMatrix<T> const &EXT) {
   return {std::move(l_trig), std::move(vf_facet)};
 }
 
-template <typename T>
-std::pair<MyMatrix<T>, int> FirstColumnZeroCond(MyMatrix<T> const &M) {
-  int const nbRow = M.rows();
-  for (int iRow = 0; iRow < nbRow; iRow++)
-    if (M(iRow, 0) != 0)
-      return {AddFirstZeroColumn(M), 1};
-  return {M, 0};
-}
-
 template <typename T, typename Tw> inline T rs_output_convert(Tw const &val) {
   if constexpr (std::is_same_v<Tw, T>) {
     return val;

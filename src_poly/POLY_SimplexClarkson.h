@@ -3,6 +3,7 @@
 #define SRC_POLY_POLY_SIMPLEXCLARKSON_H_
 
 // clang-format off
+#include "POLY_Fundamental.h"
 #include "POLY_LinearProgrammingFund.h"
 #include "MAT_NonUniqueRescale.h"
 #include <optional>
@@ -2134,22 +2135,23 @@ SIMPLEX_RedundancyReductionClarksonBlocks(MyMatrix<T> const &ListIneq,
   return ListIdx;
 }
 
-// Variant for the homogeneous cone setting: rows of FAC are inequalities
-// sum_j FAC(i,j) x_j >= 0.
+// Variants for the homogeneous cone setting: rows of FAC are inequalities
+// sum_j FAC(i,j) x_j >= 0. The LP functions take the constant coefficient in
+// the first column, which is zero here.
 template <typename T>
 std::vector<int>
 SIMPLEX_RedundancyReductionClarksonExt(MyMatrix<T> const &FAC,
                                        std::ostream &os) {
-  int m = FAC.rows();
-  int n = FAC.cols();
-  MyMatrix<T> ListIneq(m, n + 1);
-  for (int i = 0; i < m; i++) {
-    ListIneq(i, 0) = T(0);
-    for (int j = 0; j < n; j++) {
-      ListIneq(i, j + 1) = FAC(i, j);
-    }
-  }
-  return SIMPLEX_RedundancyReductionClarkson(ListIneq, os);
+  return SIMPLEX_RedundancyReductionClarkson(AddFirstZeroColumn(FAC), os);
+}
+
+template <typename T>
+std::vector<int>
+SIMPLEX_RedundancyReductionClarksonBlocksExt(
+    MyMatrix<T> const &FAC, std::vector<int> const &BlockBelong,
+    std::ostream &os) {
+  return SIMPLEX_RedundancyReductionClarksonBlocks(AddFirstZeroColumn(FAC),
+                                                   BlockBelong, os);
 }
 
 /*
