@@ -166,14 +166,20 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
   os << "REDUND: We have regCone\n";
 #endif
   MyMatrix<T> EXT_work = RegCone.EXT;
+  // The LP reads its first column as the constant coefficient of the
+  // inequalities, which for the rows of a cone C restricts the dual cone to
+  // its slice y_0 = 1. That slice represents the whole dual cone when e_0 is
+  // in the interior of C, which is the case in the coordinates of EXT_work:
+  // FacetizationCone maps the sum of the rows, an interior point of C, to
+  // e_0. The slice is then a bounded polytope, so the LP is bounded.
   // return true if it is redundant. False if irredundant
   // If true, also returns a list of indices showing up positively in the
   // decomposition
   auto GetRedundancyInfo =
       [&](std::vector<int> const &ListIRow,
           int const &iRow) -> std::pair<bool, std::vector<int>> {
-    MyMatrix<T> EXT_sel = SelectRow(EXT, ListIRow);
-    MyVector<T> eRow = GetMatrixRow(EXT, iRow);
+    MyMatrix<T> EXT_sel = SelectRow(EXT_work, ListIRow);
+    MyVector<T> eRow = GetMatrixRow(EXT_work, iRow);
 #ifdef PRINT_ELIMINATION_REDUNDANCY
     os << "-------------------\n";
     os << "H-representation\n";
