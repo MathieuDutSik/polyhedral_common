@@ -25,6 +25,8 @@
 #define SANITY_CHECK_SMALL_POLYTOPE
 #endif
 
+namespace small_polytopes {
+
 template <typename T> vectface Simplicial_Incidence(MyMatrix<T> const &EXT) {
   int n = EXT.cols();
   Face f_full(n);
@@ -108,9 +110,9 @@ vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
-vectface SmallPolytope_Incidence(MyMatrix<T> const &EXT, std::ostream &os) {
+vectface DualDescription_incd(MyMatrix<T> const &EXT, std::ostream &os) {
 #ifdef DEBUG_SMALL_POLYTOPE
-  os << "SmallPolytope_Incidence, begin\n";
+  os << "DualDescription_incd, begin\n";
 #endif
   int n_row = EXT.rows();
   int n_col = EXT.cols();
@@ -124,8 +126,8 @@ vectface SmallPolytope_Incidence(MyMatrix<T> const &EXT, std::ostream &os) {
 }
 
 template <typename T>
-MyMatrix<T> SmallPolytope_Ineq(MyMatrix<T> const &EXT, std::ostream &os) {
-  vectface vf = SmallPolytope_Incidence(EXT, os);
+MyMatrix<T> DualDescription(MyMatrix<T> const &EXT, std::ostream &os) {
+  vectface vf = DualDescription_incd(EXT, os);
   SubsetRankOneSolver<T> solver(EXT);
   // The near simplicial case has |V_p| * |V_m| + |V_z| facets, which can
   // exceed the number of rows.
@@ -142,14 +144,15 @@ MyMatrix<T> SmallPolytope_Ineq(MyMatrix<T> const &EXT, std::ostream &os) {
 }
 
 template <typename T, typename Fprocess>
-void SmallPolytope_FaceIneq(MyMatrix<T> const &EXT, Fprocess f_process,
-                            std::ostream &os) {
+void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process,
+                             std::ostream &os) {
   int n_row = EXT.rows();
   int n_col = EXT.cols();
 #ifdef DEBUG_SMALL_POLYTOPE
-  os << "SmallPolytope_FaceIneq, n_row=" << n_row << " n_col=" << n_col << "\n";
+  os << "DualDescriptionFaceIneq, n_row=" << n_row << " n_col=" << n_col
+     << "\n";
 #endif
-  vectface vf = SmallPolytope_Incidence(EXT, os);
+  vectface vf = DualDescription_incd(EXT, os);
   SubsetRankOneSolver<T> solver(EXT);
   std::pair<Face, MyVector<T>> pair{Face(n_row), MyVector<T>(n_col)};
   for (auto &eFace : vf) {
@@ -184,6 +187,8 @@ void SmallPolytope_FaceIneq(MyMatrix<T> const &EXT, Fprocess f_process,
     f_process(pair);
   }
 }
+
+} // namespace small_polytopes
 
 // clang-format off
 #endif  // SRC_POLY_SMALLPOLYTOPES_H_

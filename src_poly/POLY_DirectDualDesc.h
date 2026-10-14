@@ -208,7 +208,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     return double_desc::DualDescription_incd(EXT, os);
   case DualDescProgram::small_polytopes:
     // Small polytopes have special solutions, field or ring case
-    return SmallPolytope_Incidence(EXT, os);
+    return small_polytopes::DualDescription_incd(EXT, os);
   case DualDescProgram::lrs:
     return rev_search::DualDescription_incd(EXT);
   case DualDescProgram::pd_lrs:
@@ -248,7 +248,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     return double_desc::DualDescription(EXT, os);
   case DualDescProgram::small_polytopes:
     // Small polytopes have special solutions, field or ring case
-    return SmallPolytope_Ineq(EXT, os);
+    return small_polytopes::DualDescription(EXT, os);
   case DualDescProgram::lrs:
     return rev_search::DualDescription(EXT);
   case DualDescProgram::pd_lrs:
@@ -288,7 +288,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     return double_desc::DualDescriptionFaceIneq(EXT, f_process, os);
   case DualDescProgram::small_polytopes:
     // Small polytopes have special solutions, field or ring case
-    return SmallPolytope_FaceIneq(EXT, f_process, os);
+    return small_polytopes::DualDescriptionFaceIneq(EXT, f_process, os);
   case DualDescProgram::lrs:
     return rev_search::DualDescriptionFaceIneq(EXT, f_process);
   case DualDescProgram::pd_lrs:
