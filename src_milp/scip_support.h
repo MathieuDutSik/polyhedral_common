@@ -19,6 +19,7 @@
 #include "ilp_fundamental.h"
 #include "MAT_MatrixInt.h"
 #include <cmath>
+#include <optional>
 #include <string>
 #include <vector>
 // The SCIP headers are third party, their warnings are not ours to fix.
@@ -94,11 +95,16 @@ bool ILP_ScipRepresentable(MyMatrix<T> const &ListIneq,
   return ILP_ScipRowRepresentable(ToBeMinimized);
 }
 
+/*
+  SCIP accepts a point when each row is satisfied up to a tolerance that is
+  relative to the size of the row: with large coefficients the rounded
+  solution can violate a row. Returns none in that case.
+ */
 template <typename T>
-IlpSolution<T> ILP_Scip(MyMatrix<T> const &ListIneq,
-                        MyMatrix<T> const &ListEqua,
-                        MyVector<T> const &ToBeMinimized,
-                        [[maybe_unused]] std::ostream &os) {
+std::optional<IlpSolution<T>>
+ILP_ScipTry(MyMatrix<T> const &ListIneq, MyMatrix<T> const &ListEqua,
+            MyVector<T> const &ToBeMinimized,
+            [[maybe_unused]] std::ostream &os) {
   int n_col = ToBeMinimized.size();
   int d = n_col - 1;
   SCIP *scip = nullptr;
@@ -164,11 +170,11 @@ IlpSolution<T> ILP_Scip(MyMatrix<T> const &ListIneq,
   };
   if (status == SCIP_STATUS_INFEASIBLE) {
     clean();
-    return {IlpStatus::Infeasible, {}, T(0)};
+    return IlpSolution<T>{IlpStatus::Infeasible, {}, T(0)};
   }
   if (status == SCIP_STATUS_UNBOUNDED) {
     clean();
-    return {IlpStatus::Unbounded, {}, T(0)};
+    return IlpSolution<T>{IlpStatus::Unbounded, {}, T(0)};
   }
   if (status != SCIP_STATUS_OPTIMAL) {
     std::cerr << "ILP: SCIP returned the unexpected status "
@@ -187,11 +193,23 @@ IlpSolution<T> ILP_Scip(MyMatrix<T> const &ListIneq,
   }
   clean();
   if (!ILP_IsFeasible(ListIneq, ListEqua, x)) {
+    return {};
+  }
+  T value = ILP_EvaluateRow(ToBeMinimized, x);
+  return IlpSolution<T>{IlpStatus::Optimal, x, value};
+}
+
+template <typename T>
+IlpSolution<T> ILP_Scip(MyMatrix<T> const &ListIneq,
+                        MyMatrix<T> const &ListEqua,
+                        MyVector<T> const &ToBeMinimized, std::ostream &os) {
+  std::optional<IlpSolution<T>> opt =
+      ILP_ScipTry(ListIneq, ListEqua, ToBeMinimized, os);
+  if (!opt) {
     std::cerr << "ILP: The rounded SCIP solution is not feasible\n";
     throw TerminalException{1};
   }
-  T value = ILP_EvaluateRow(ToBeMinimized, x);
-  return {IlpStatus::Optimal, x, value};
+  return *opt;
 }
 
 // clang-format off

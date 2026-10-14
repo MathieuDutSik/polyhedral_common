@@ -10,10 +10,12 @@
 #include "SignatureSymmetric.h"
 #include "integer_linear_programming.h"
 #include "GRP_GroupFile.h"
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -488,7 +490,17 @@ igusa_lp_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
     iter_lp++;
 #endif
     MyMatrix<T> M = get_ineq();
+#ifdef TIMINGS_IGUSA
+    MicrosecondTime time_lp;
+#endif
     LpSolution<T> eSol = SIMPLEX_LinearProgramming(M, f, os);
+#ifdef TIMINGS_IGUSA
+    int64_t us_lp = time_lp.eval_int64();
+    if (us_lp > 1000000) {
+      os << "|IGUSA: igusa_lp_minimization LP solve, |rows|=" << M.rows()
+         << "|=" << us_lp << "\n";
+    }
+#endif
     if (!eSol.DirectSolution) {
 #ifdef DEBUG_IGUSA
       os << "IGUSA: igusa_lp_minimization, LP infeasible at iter_lp="
@@ -510,12 +522,36 @@ igusa_lp_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
       continue;
     }
     x_lp = *eSol.DirectSolution;
+#ifdef DEBUG_IGUSA
+    if (iter_lp % 50 == 0) {
+      size_t max_len = 0;
+      for (int j = 0; j < x_lp.size(); j++) {
+        std::ostringstream os_x;
+        os_x << x_lp(j);
+        max_len = std::max(max_len, os_x.str().size());
+      }
+      os << "IGUSA: igusa_lp_minimization, iter_lp=" << iter_lp
+         << " |cuts|=" << space.ListCutIneq.rows()
+         << " value=" << ILP_EvaluateRow(f, x_lp)
+         << " max digits of x_lp=" << max_len << "\n";
+    }
+#endif
     MyMatrix<T> X = igusa_matrix(space, x_lp);
     if (!IsPositiveDefinite(X, os)) {
       igusa_insert_non_positive_cut(space, X, os);
       continue;
     }
-    if (igusa_insert_short_vector_cuts(space, X, os)) {
+#ifdef TIMINGS_IGUSA
+    MicrosecondTime time_sv;
+#endif
+    bool has_short = igusa_insert_short_vector_cuts(space, X, os);
+#ifdef TIMINGS_IGUSA
+    int64_t us_sv = time_sv.eval_int64();
+    if (us_sv > 1000000) {
+      os << "|IGUSA: igusa_lp_minimization short vectors|=" << us_sv << "\n";
+    }
+#endif
+    if (has_short) {
       continue;
     }
     break;
@@ -616,6 +652,22 @@ igusa_integral_minimization(IgusaSpace<T, Tint> &space, MyVector<T> const &f,
 }
 
 // A starting set of cuts: X[v] >= 1 for v = e_i and e_i +- e_j.
+/*
+  The pool back to the initial cuts. The cuts are valid inequalities, so
+  removing some only weakens the relaxations: the results are the same, but
+  a pool that grows over a long run makes every linear program slower.
+ */
+template <typename T, typename Tint>
+void igusa_insert_initial_cuts(IgusaSpace<T, Tint> &space);
+
+template <typename T, typename Tint>
+void igusa_reset_cuts(IgusaSpace<T, Tint> &space) {
+  space.ListCutVect.clear();
+  space.SetCutVect.clear();
+  space.ListCutIneq = MyMatrix<T>(0, space.dim + 1);
+  igusa_insert_initial_cuts(space);
+}
+
 template <typename T, typename Tint>
 void igusa_insert_initial_cuts(IgusaSpace<T, Tint> &space) {
   int n = space.n;

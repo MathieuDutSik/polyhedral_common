@@ -174,8 +174,9 @@ full rank facets and processes:
   the orbits of ridges under Aut(F) (dual description of conv Inc(F)), and
   the adjacent facet along each ridge, by the Dinkelbach iteration started
   just above the threshold where the functional becomes positive definite;
-  a neighbor of lower rank is recognized at the threshold and checked on
-  its image;
+  the threshold itself is tested first: a neighbor of lower rank is
+  recognized there and checked on its image, of small rank, which avoids
+  the hard integer programs of the nearly singular functionals;
 * bounded ridges inside facets of lower rank, identified by the canonical
   form of the pair (S^{-1}, G), S the sum of the incident forms: the other
   ridge of G through each face of codimension 3 (a rotation inside the
@@ -189,9 +190,48 @@ full rank facets and processes:
  FileInitialFacets = "init6.mat"   ! list of matrices F (ListMatrix format)
  FileInitialRhs = "init6.rhs"      ! the right hand sides, one per line
  MaxOrbit = 0                      ! 0: no limit on the processed objects
+ FullRankOnly = T                  ! only the adjacencies of full rank facets
+ CheckpointFile = "fenum6_ckpt.g"  ! the list, rewritten after each object
+ NumberProcessedInit = 0           ! initial facets already processed
+ LowerRankCompleteUpTo = 0         ! see below (0: not used)
+ FileLowerRankFacets = "unset"     ! full rank facets of conv(I_r), r <= that
+ FileLowerRankRhs = "unset"
+ IncidenceDirectory = "unset"      ! incidences kept on disk, one file per orbit
 /
 &TSPACE ... /
 ```
+
+With `FullRankOnly = T` the bounded ridges inside the facets of lower rank
+are skipped: the result is the connected component of the initial facets
+in the adjacency graph of the full rank facets. A walk of that kind is
+resumed from its checkpoint by giving its list as initial facets, the
+facets with `done:=true` first, with `NumberProcessedInit` their number.
+The checkpoint is rewritten after each facet and, during the flips of a
+facet, at most once a minute, so that the facets found are not lost.
+The facet processed next is always the one of lowest incidence among
+those not done (the incidence is computed when a facet is inserted): the
+flips are as hard on all facets, while the dual description of conv Inc(F)
+grows quickly with the incidence, so that a facet whose dual description
+is out of reach comes last and does not stop the walk.
+
+A neighbor of rank r < n is the lift of a full rank facet of conv(I_r).
+Given the complete list of those for all r up to `LowerRankCompleteUpTo`
+(for n = 7: X[x] >= 1, the facet of conv(I_5) and the four of conv(I_6)),
+the candidate at the threshold is valid exactly when its orbit is in the
+list. This replaces the minimization over I_r, which is slow when the
+candidate is not valid (r = 6, a ridge of 52 points: no result after 30
+minutes, against 0.7 s for the whole flip with the list).
+
+With `IncidenceDirectory` the incidences are read from that directory at
+the start and each new one is written there as soon as it is computed (one
+file per orbit: F, (rhs) and the points, ListMatrix format), so that they
+are computed once over all the runs. Any list of points with the same
+convex hull as Inc(F) can be stored, for example the vertices of the face
+from IGUSA_FaceVertices. The flips insert the seed cuts of F and of the
+current functional before each minimization: without them, with the
+incidences read from disk and so an almost empty pool of cuts, the linear
+programs are unbounded and each step adds a single cut (thousands of exact
+linear programs for one flip).
 
 Status. For n = 5 it gives the unique full rank facet in 4 seconds. For
 n = 6, from F5 it finds F5, F14, F23 and 11 orbits of bounded ridges in

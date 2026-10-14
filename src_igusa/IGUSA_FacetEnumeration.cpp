@@ -4,7 +4,7 @@
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
-#include "igusa_facet_enum.h"
+#include "igusa_face_vertices.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on
@@ -39,9 +39,57 @@ void process(FullNamelist const &eFull, std::ostream &os) {
   if (checkpoint_file == "unset") {
     checkpoint_file = "";
   }
+  int n_processed_init = BlockDATA.get_int("NumberProcessedInit");
+  if (n_processed_init < 0) {
+    std::cerr << "NumberProcessedInit should be non-negative\n";
+    throw TerminalException{1};
+  }
+  std::string incidence_dir = BlockDATA.get_string("IncidenceDirectory");
+  if (incidence_dir == "unset") {
+    incidence_dir = "";
+  }
+  std::string file_vertex = BlockDATA.get_string("FileVertexRepresentatives");
+  IgusaIncidenceFunction<T> incidence_function;
+  std::vector<MyMatrix<T>> ListVertexRepr;
+  if (file_vertex != "unset") {
+    ListVertexRepr = ReadListMatrixFile<T>(file_vertex);
+    // the vertices of the face, back from the basis B of W: X0 = B X B^T
+    incidence_function = [&](MyMatrix<T> const &F,
+                             T const &rhs) -> std::vector<MyMatrix<T>> {
+      IgusaFaceVertices<T> info = igusa_face_vertices<T, Tint, Tgroup>(
+          params, F, rhs, ListVertexRepr, os);
+      if (info.rank != F.rows()) {
+        std::cerr << "IGUSA_FACET_ENUM: FileVertexRepresentatives is for "
+                     "the full rank facets\n";
+        throw TerminalException{1};
+      }
+      MyMatrix<T> Binv = Inverse(info.B);
+      std::vector<MyMatrix<T>> l_X;
+      for (auto &X0 : info.l_vertex) {
+        l_X.push_back(Binv * X0 * Binv.transpose());
+      }
+      return l_X;
+    };
+  }
+  int complete_up_to = BlockDATA.get_int("LowerRankCompleteUpTo");
+  std::vector<std::pair<MyMatrix<T>, T>> ListLowerRank;
+  if (complete_up_to > 0) {
+    std::vector<MyMatrix<T>> ListFL =
+        ReadListMatrixFile<T>(BlockDATA.get_string("FileLowerRankFacets"));
+    std::ifstream is_rhs_l(BlockDATA.get_string("FileLowerRankRhs"));
+    for (auto &F : ListFL) {
+      std::string str;
+      is_rhs_l >> str;
+      ListLowerRank.push_back({F, ParseScalar<T>(str)});
+    }
+  }
   IgusaFacetEnumResult<T> l_orbit =
       igusa_facet_enumeration<T, Tint, Tgroup>(space, ListInit, max_orbit, os,
-                                               full_rank_only, checkpoint_file);
+                                               full_rank_only, checkpoint_file,
+                                               n_processed_init,
+                                               ListLowerRank, complete_up_to,
+                                               incidence_dir,
+                                               incidence_function);
   os << "IGUSA_FACET_ENUM: number of orbits of full rank facets="
      << l_orbit.l_facet.size() << " of bounded ridges in facets of lower rank="
      << l_orbit.l_ridge.size() << "\n";

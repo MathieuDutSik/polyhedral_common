@@ -8,9 +8,15 @@
 #include "SignatureSymmetric.h"
 #include "Tspace_Generation.h"
 #include "fractions.h"
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
+#include <functional>
 #include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -23,6 +29,10 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_IGUSA_FACET_ENUM
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_IGUSA_FACET_ENUM
 #endif
 
 /*
@@ -341,11 +351,16 @@ igusa_violating_point(IgusaSpace<T, Tint> &space, MyVector<T> const &h,
     MyVector<Tint> v = igusa_non_positive_vector<T, Tint>(M, T(0), os);
     return igusa_ray_violation(space, h, M, v, Ridge0);
   }
-  // M positive semidefinite and singular: restrict to the image W of M.
+  // M positive semidefinite and singular: restrict to the image W of M, on
+  // an LLL reduced basis: M0' = P M0 P^T and B' = P^{-T} B. For a badly
+  // reduced M0 the minimum over I_r is at a form with large entries, and
+  // the cutting planes need many steps with large numbers.
   IgusaImageFactorization<T> fact = igusa_image_factorization(M);
-  MyMatrix<T> const &B = fact.B;
+  LLLreduction<T, Tint> lll = LLLreducedBasis<T, Tint>(fact.F0, os);
+  MyMatrix<T> P = UniversalMatrixConversion<T, Tint>(lll.Pmat);
+  MyMatrix<T> B = Inverse(P).transpose() * fact.B;
   int r = B.rows();
-  MyMatrix<T> const &M0 = fact.F0;
+  MyMatrix<T> const &M0 = lll.GramMatRed;
   LinSpaceMatrix<T> LinSpa_r = ComputeCanonicalSpace<T>(r);
   IgusaSpace<T, Tint> space_r =
       build_igusa_space<T, Tint>(LinSpa_r, space.params, os);
@@ -429,13 +444,20 @@ template <typename T> struct IgusaFlipResult {
   increased by the points X violating g + s f >= 0 (s := -g(X) / f(X)).
   If F is positive definite they are first looked for in the bounded region
   f <= K; otherwise g has to be positive definite, so that g + s f is.
+  The oracle, if given, decides whether a singular candidate tr(M X) >= c
+  at the threshold is valid on I (true, false, or none if it cannot tell).
  */
+template <typename T>
+using IgusaThresholdOracle =
+    std::function<std::optional<bool>(MyMatrix<T> const &, T const &)>;
+
 template <typename T, typename Tint>
 IgusaFlipResult<T>
 igusa_facet_flip(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
                  T const &rhs, MyVector<T> const &g,
                  MyMatrix<T> const &Ridge0,
-                 IgusaFaceRestriction<T> const &face, std::ostream &os) {
+                 IgusaFaceRestriction<T> const &face, std::ostream &os,
+                 IgusaThresholdOracle<T> const &oracle = {}) {
   int dim = space.dim;
   MyVector<T> f = igusa_trace_function(space, F);
   f(0) = -rhs;
@@ -462,7 +484,72 @@ igusa_facet_flip(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
   // The simplest rational above the threshold: thr.second comes from a
   // bisection and has a denominator 2^40, which would make the coefficients
   // of all the integer programs of the flip about 2^40 times larger.
+  // The result at the threshold a0, if g + a0 f is valid: then s* = a0 and
+  // the matrix of the result is singular (a lift of a facet of smaller
+  // rank). Only for a facet of P, where a0 is rational and found as the
+  // simplest rational of the interval.
+  auto flip_at_threshold = [&]() -> std::optional<IgusaFlipResult<T>> {
+    if (face.active) {
+      return {};
+    }
+    T q = igusa_simplest_rational(thr.first, thr.second);
+    MyVector<T> hq = g + q * f;
+    MyMatrix<T> Mq = igusa_functional_matrix(space, hq);
+    if (!IsPositiveSemiDefinite(Mq, os) || IsPositiveDefinite(Mq, os)) {
+      return {};
+    }
+    T rhs_q = -hq(0);
+    std::optional<bool> opt_valid;
+    if (oracle) {
+      opt_valid = oracle(Mq, rhs_q);
+    }
+#ifdef SANITY_CHECK_IGUSA_FACET_ENUM
+    if (opt_valid) {
+      bool valid_min =
+          !igusa_violating_point(space, hq, Ridge0, face, os).has_value();
+      if (valid_min != *opt_valid) {
+        std::cerr << "IGUSA_FACET_ENUM: the oracle and the minimization "
+                     "disagree at the threshold\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    if (!opt_valid) {
+      opt_valid = !igusa_violating_point(space, hq, Ridge0, face, os).has_value();
+    }
+    if (!*opt_valid) {
+      return {};
+    }
+    std::pair<MyMatrix<T>, T> pair = igusa_normalize_facet(Mq, rhs_q);
+#ifdef DEBUG_IGUSA_FACET_ENUM
+    os << "IGUSA_FACET_ENUM: flip at the threshold s=" << q << "\n";
+#endif
+    return IgusaFlipResult<T>{pair.first, pair.second, false};
+  };
+  // Tested as soon as no point violates at the first s (then s* <= s):
+  // otherwise s* = a0 is only reached after the halvings of delta, by
+  // integer programs that get harder as the functional gets closer to a
+  // singular one. Not before: when the result is of full rank, the test can
+  // be expensive (a minimization over I_r with r = n - 1) and is useless.
+  bool threshold_tested = false;
+  bool seeded_F = false;
   T s = igusa_simplest_rational(thr.second, T(thr.second + delta));
+#ifdef DEBUG_IGUSA_FACET_ENUM
+  {
+    auto max_digits = [](MyVector<T> const &v) -> size_t {
+      size_t len = 0;
+      for (int j = 0; j < v.size(); j++) {
+        std::ostringstream os_v;
+        os_v << v(j);
+        len = std::max(len, os_v.str().size());
+      }
+      return len;
+    };
+    os << "IGUSA_FACET_ENUM: flip start, max digits of g=" << max_digits(g)
+       << " of f=" << max_digits(f) << " threshold in [" << thr.first << ", "
+       << thr.second << "] s=" << s << "\n";
+  }
+#endif
   bool updated = false;
   MyMatrix<T> Equa(0, dim + 1);
   if (face.active) {
@@ -493,6 +580,19 @@ igusa_facet_flip(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
 #endif
     MyVector<T> h = g + s * f;
     if (F_pd) {
+      // The cuts of the pool have to make the linear programs bounded from
+      // the start: otherwise each unbounded ray gives one cut, and with an
+      // almost empty pool (incidences read from disk, no minimization done
+      // before) that takes thousands of exact linear programs. The seed
+      // cuts of F and of h (positive definite for s above the threshold).
+      if (!seeded_F) {
+        igusa_insert_seed_cuts(space, F, os);
+        seeded_F = true;
+      }
+      MyMatrix<T> Mh = igusa_functional_matrix(space, h);
+      if (IsPositiveDefinite(Mh, os)) {
+        igusa_insert_seed_cuts(space, Mh, os);
+      }
       // the bounded region f <= K
       MyMatrix<T> Ineq(1, dim + 1);
       Ineq(0, 0) = K - f(0);
@@ -514,6 +614,13 @@ igusa_facet_flip(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
       K *= T(2);
       continue;
     }
+    if (!updated && !threshold_tested) {
+      threshold_tested = true;
+      std::optional<IgusaFlipResult<T>> opt_thr = flip_at_threshold();
+      if (opt_thr) {
+        return *opt_thr;
+      }
+    }
     if (!updated && delta > delta_min) {
       delta /= T(2);
       s = igusa_simplest_rational(thr.second, T(thr.second + delta));
@@ -521,23 +628,10 @@ igusa_facet_flip(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
     }
     if (!updated) {
       // No point beyond the threshold: the result is at the threshold a0,
-      // with a singular matrix. For a facet of P, a0 is rational and found
-      // as the simplest rational of the interval, then checked.
+      // with a singular matrix (already tested above for a facet of P).
       T q = igusa_simplest_rational(thr.first, thr.second);
       MyVector<T> hq = g + q * f;
       MyMatrix<T> Mq = igusa_functional_matrix(space, hq);
-      bool is_singular_psd =
-          !face.active && IsPositiveSemiDefinite(Mq, os) &&
-          !IsPositiveDefinite(Mq, os);
-      if (is_singular_psd &&
-          !igusa_violating_point(space, hq, Ridge0, face, os)) {
-        T rhs_q = -hq(0);
-        std::pair<MyMatrix<T>, T> pair = igusa_normalize_facet(Mq, rhs_q);
-#ifdef DEBUG_IGUSA_FACET_ENUM
-        os << "IGUSA_FACET_ENUM: flip at the threshold s=" << q << "\n";
-#endif
-        return {pair.first, pair.second, false};
-      }
 #ifdef DEBUG_IGUSA_FACET_ENUM
       os << "IGUSA_FACET_ENUM: flip degenerate\n";
 #endif
@@ -560,6 +654,8 @@ template <typename T> struct IgusaFacetOrbitEntry {
   int n_inc;
   std::string stab_size;
   int n_ridge_orbit;
+  // all the flips of the facet are done
+  bool done;
   // for each orbit of ridges: the size of the ridge and the key and rank
   // of the adjacent facet
   std::vector<int> l_ridge_size;
@@ -628,8 +724,87 @@ igusa_ridge_stabilizer(MyMatrix<T> const &G,
   isometry instead of being recomputed: if h^T F h = F_rep, then
   X -> h X h^T maps Inc(F_rep) onto Inc(F).
  */
+/*
+  The incidences by orbit of facets. If dir is set, they are also kept on
+  disk, one file per orbit (the matrices F, (rhs) and the incident forms, in
+  the ListMatrix format), read at the start and written when computed, so
+  that they are computed once over all the runs. Any list of points of I
+  whose convex hull is conv Inc(F) can be stored there (for example the
+  vertices of the face): the ridges are the same.
+ */
+template <typename T> using IgusaIncidenceFunction =
+    std::function<std::vector<MyMatrix<T>>(MyMatrix<T> const &, T const &)>;
+
 template <typename T, typename Tint, typename Tgroup> struct IgusaIncidenceCache {
   std::map<std::string, std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> map;
+  std::string dir;
+  // If set, computes a list of points of I with convex hull conv Inc(F)
+  // (for example the vertices of the face) instead of igusa_facet_incidence
+  IgusaIncidenceFunction<T> compute;
+
+  static std::string file_name(std::string const &key) {
+    // FNV-1a, stable over the runs and the machines
+    uint64_t h = 14695981039346656037ULL;
+    for (unsigned char c : key) {
+      h ^= c;
+      h *= 1099511628211ULL;
+    }
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "inc_%016llx.txt",
+                  static_cast<unsigned long long>(h));
+    return buf;
+  }
+
+  void load(std::ostream &os) {
+    if (dir.empty()) {
+      return;
+    }
+    std::filesystem::create_directories(dir);
+    size_t n_read = 0;
+    for (auto const &entry : std::filesystem::directory_iterator(dir)) {
+      std::string path = entry.path().string();
+      std::string name = entry.path().filename().string();
+      if (name.rfind("inc_", 0) != 0 || entry.path().extension() != ".txt") {
+        continue;
+      }
+      std::vector<MyMatrix<T>> l_mat = ReadListMatrixFile<T>(path);
+      if (l_mat.size() < 2 || l_mat[1].rows() != 1 || l_mat[1].cols() != 1) {
+        std::cerr << "IGUSA_FACET_ENUM: wrong format of " << path << "\n";
+        throw TerminalException{1};
+      }
+      MyMatrix<T> const &F = l_mat[0];
+      T rhs = l_mat[1](0, 0);
+      std::vector<MyMatrix<T>> l_inc(l_mat.begin() + 2, l_mat.end());
+      for (auto &X : l_inc) {
+        if (frobenius_inner(F, X) != rhs) {
+          std::cerr << "IGUSA_FACET_ENUM: a stored point is not incident in "
+                    << path << "\n";
+          throw TerminalException{1};
+        }
+      }
+      IgusaFacetType<T> type = igusa_facet_type<T, Tint, Tgroup>(F, rhs, os);
+      map[type.key] = {F, l_inc};
+      n_read++;
+    }
+#ifdef DEBUG_IGUSA_FACET_ENUM
+    os << "IGUSA_FACET_ENUM: " << n_read << " incidences read from " << dir
+       << "\n";
+#endif
+  }
+
+  void store(std::string const &key, MyMatrix<T> const &F, T const &rhs,
+             std::vector<MyMatrix<T>> const &l_inc) {
+    if (dir.empty()) {
+      return;
+    }
+    std::vector<MyMatrix<T>> l_mat{F, MyMatrix<T>(1, 1)};
+    l_mat[1](0, 0) = rhs;
+    l_mat.insert(l_mat.end(), l_inc.begin(), l_inc.end());
+    std::string path = dir + "/" + file_name(key);
+    std::string tmp = path + ".tmp";
+    WriteListMatrixFile(tmp, l_mat);
+    std::rename(tmp.c_str(), path.c_str());
+  }
 
   std::vector<MyMatrix<T>> get(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
                                T const &rhs, std::ostream &os) {
@@ -638,9 +813,29 @@ template <typename T, typename Tint, typename Tgroup> struct IgusaIncidenceCache
         igusa_facet_type<T, Tint, Tgroup>(pair.first, pair.second, os);
     auto iter = map.find(type.key);
     if (iter == map.end()) {
-      IgusaFacetIncidence<T> inc =
-          igusa_facet_incidence(space, pair.first, pair.second, os);
+#ifdef TIMINGS_IGUSA_FACET_ENUM
+      MicrosecondTime time_inc;
+#endif
+      IgusaFacetIncidence<T> inc;
+      if (compute) {
+        inc.l_incident = compute(pair.first, pair.second);
+        for (auto &X : inc.l_incident) {
+          if (frobenius_inner(pair.first, X) != pair.second) {
+            std::cerr << "IGUSA_FACET_ENUM: a computed point is not "
+                         "incident\n";
+            throw TerminalException{1};
+          }
+        }
+      } else {
+        inc = igusa_facet_incidence(space, pair.first, pair.second, os);
+      }
       map[type.key] = {pair.first, inc.l_incident};
+      store(type.key, pair.first, pair.second, inc.l_incident);
+#ifdef TIMINGS_IGUSA_FACET_ENUM
+      os << "IGUSA_FACET_ENUM: incidence computed, rhs=" << pair.second
+         << " |Inc|=" << inc.l_incident.size() << " |cache|=" << map.size()
+         << " time=" << time_inc << "\n";
+#endif
       return inc.l_incident;
     }
     MyMatrix<T> const &Frep = iter->second.first;
@@ -681,7 +876,14 @@ template <typename T> struct IgusaFacetEnumResult {
 /*
   The adjacency decomposition on the full rank facets and on the bounded
   ridges inside the facets of lower rank, starting from ListInit, up to
-  max_obj processed objects (0: no limit).
+  max_obj processed objects (0: no limit). The first n_processed_init
+  orbits of ListInit are taken as already processed, to resume a walk with
+  full_rank_only from a checkpoint (whose list is in the processing order).
+  ListLowerRank: the orbits of full rank facets of conv(I_r), complete for
+  all r <= complete_up_to. A flip whose result is singular, of rank r, is
+  the lift of a full rank facet of conv(I_r) (lifting theorem), so for
+  r <= complete_up_to the candidate at the threshold is valid if and only
+  if its orbit is in the list, which replaces a minimization over I_r.
   * A full rank facet: Inc(F), the orbits of ridges, and the adjacent facet
     along each of them. A full rank one is inserted; along a ridge R with a
     facet G of lower rank, the bounded ridge (R, G) is inserted.
@@ -701,7 +903,14 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
                         std::vector<std::pair<MyMatrix<T>, T>> const &ListInit,
                         int max_obj, std::ostream &os,
                         bool full_rank_only = false,
-                        std::string const &checkpoint_file = "") {
+                        std::string const &checkpoint_file = "",
+                        size_t n_processed_init = 0,
+                        std::vector<std::pair<MyMatrix<T>, T>> const
+                            &ListLowerRank = {},
+                        int complete_up_to = 0,
+                        std::string const &incidence_dir = "",
+                        IgusaIncidenceFunction<T> const &incidence_function =
+                            {}) {
   int n = space.n;
   IgusaFacetEnumResult<T> result;
   std::vector<IgusaFacetOrbitEntry<T>> &l_orbit = result.l_facet;
@@ -710,6 +919,36 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
   std::map<std::string, int> map_ridge_key;
   IgusaFaceRestriction<T> no_face{false, {}, T(0)};
   IgusaIncidenceCache<T, Tint, Tgroup> cache;
+  cache.dir = incidence_dir;
+  cache.compute = incidence_function;
+  cache.load(os);
+  std::set<std::string> lower_rank_keys;
+  for (auto &pair : ListLowerRank) {
+    IgusaFacetType<T> type =
+        igusa_facet_type<T, Tint, Tgroup>(pair.first, pair.second, os);
+    if (type.rank > complete_up_to) {
+      std::cerr << "IGUSA_FACET_ENUM: a facet of rank " << type.rank
+                << " in the list of the facets of rank at most "
+                << complete_up_to << "\n";
+      throw TerminalException{1};
+    }
+    lower_rank_keys.insert(type.key);
+  }
+  IgusaThresholdOracle<T> oracle;
+  if (complete_up_to > 0) {
+    oracle = [&](MyMatrix<T> const &M, T const &c) -> std::optional<bool> {
+      IgusaFacetType<T> type = igusa_facet_type<T, Tint, Tgroup>(M, c, os);
+      if (type.rank > complete_up_to) {
+        return {};
+      }
+      bool valid = lower_rank_keys.count(type.key) > 0;
+#ifdef DEBUG_IGUSA_FACET_ENUM
+      os << "IGUSA_FACET_ENUM: oracle at the threshold, rank=" << type.rank
+         << " valid=" << valid << "\n";
+#endif
+      return valid;
+    };
+  }
   auto f_insert = [&](MyMatrix<T> const &F, T const &rhs) -> void {
     IgusaFacetType<T> type = igusa_facet_type<T, Tint, Tgroup>(F, rhs, os);
     if (type.rank < n || map_key.count(type.key) > 0) {
@@ -721,10 +960,13 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
     entry.F = pair.first;
     entry.rhs = pair.second;
     entry.key = type.key;
+    // The incidence decides the order of processing; it is kept in the
+    // cache for the processing.
+    entry.n_inc = cache.get(space, entry.F, entry.rhs, os).size();
     // set when the facet is processed
-    entry.n_inc = -1;
     entry.stab_size = "unset";
     entry.n_ridge_orbit = -1;
+    entry.done = false;
     l_orbit.push_back(entry);
   };
   auto f_insert_ridge = [&](MyMatrix<T> const &G, T const &cG,
@@ -766,12 +1008,15 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
   for (auto &pair : ListInit) {
     f_insert(pair.first, pair.second);
   }
-  // The current list, rewritten after each processed object (through a
-  // temporary file, so that an interruption leaves a complete file).
+  // The current list, rewritten after each processed object and, during
+  // the flips of a facet, at most once a minute (through a temporary file,
+  // so that an interruption leaves a complete file).
+  auto last_write = std::chrono::steady_clock::now();
   auto write_checkpoint = [&]() -> void {
     if (checkpoint_file.empty()) {
       return;
     }
+    last_write = std::chrono::steady_clock::now();
     std::string tmp = checkpoint_file + ".tmp";
     {
       std::ofstream os_out(tmp);
@@ -779,17 +1024,56 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
     }
     std::rename(tmp.c_str(), checkpoint_file.c_str());
   };
-  size_t pos_facet = 0, pos_ridge = 0;
+  if (n_processed_init > l_orbit.size()) {
+    std::cerr << "IGUSA_FACET_ENUM: n_processed_init=" << n_processed_init
+              << " is larger than the number of initial orbits "
+              << l_orbit.size() << "\n";
+    throw TerminalException{1};
+  }
+  for (size_t i = 0; i < n_processed_init; i++) {
+    l_orbit[i].done = true;
+  }
+  // The facet processed next is the one of lowest incidence that is not
+  // done: the flips are as hard on all facets, while the dual description
+  // of conv Inc(F) grows quickly with the incidence, so that a facet whose
+  // dual description is out of reach comes last and does not stop the
+  // others.
+  auto next_facet = [&]() -> std::optional<size_t> {
+    std::optional<size_t> best;
+    for (size_t i = 0; i < l_orbit.size(); i++) {
+      if (!l_orbit[i].done &&
+          (!best || l_orbit[i].n_inc < l_orbit[*best].n_inc)) {
+        best = i;
+      }
+    }
+    return best;
+  };
+  auto next_inc_string = [&]() -> std::string {
+    std::optional<size_t> opt = next_facet();
+    if (!opt) {
+      return "none";
+    }
+    return std::to_string(l_orbit[*opt].n_inc);
+  };
+  size_t pos_ridge = 0;
   int n_obj = 0;
-  while (pos_facet < l_orbit.size() || pos_ridge < l_ridge_obj.size()) {
+  while (true) {
+    std::optional<size_t> opt_facet = next_facet();
+    if (!opt_facet && pos_ridge >= l_ridge_obj.size()) {
+      break;
+    }
     if (max_obj > 0 && n_obj >= max_obj) {
       break;
     }
     n_obj++;
-    if (pos_facet < l_orbit.size()) {
-      // A full rank facet
-      MyMatrix<T> F = l_orbit[pos_facet].F;
-      T rhs = l_orbit[pos_facet].rhs;
+    if (opt_facet) {
+      // A full rank facet. The pool of cuts is restarted for each facet: the
+      // flips insert the seed cuts they need, and a pool growing over the
+      // whole run made the flips 25 times slower after 600 flips.
+      igusa_reset_cuts(space);
+      size_t i_facet = *opt_facet;
+      MyMatrix<T> F = l_orbit[i_facet].F;
+      T rhs = l_orbit[i_facet].rhs;
       IgusaFacetIncidence<T> inc;
       inc.l_incident = cache.get(space, F, rhs, os);
       std::vector<MyMatrix<Tint>> l_g =
@@ -799,20 +1083,27 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
           space, get_coords(inc.l_incident), l_g, GRP, os);
       std::ostringstream os_size;
       os_size << GRP.size();
-      l_orbit[pos_facet].n_inc = inc.l_incident.size();
-      l_orbit[pos_facet].stab_size = os_size.str();
-      l_orbit[pos_facet].n_ridge_orbit = l_ridge.size();
+      l_orbit[i_facet].stab_size = os_size.str();
+      l_orbit[i_facet].n_ridge_orbit = l_ridge.size();
+      write_checkpoint();
       size_t i_ridge = 0;
       for (auto &ridge : l_ridge) {
         MyMatrix<T> Ridge0 = inc.l_incident[ridge.face.find_first()];
 #ifdef DEBUG_IGUSA_FACET_ENUM
-        os << "IGUSA_FACET_ENUM: facet " << pos_facet << " ridge " << i_ridge
+        os << "IGUSA_FACET_ENUM: facet " << i_facet << " ridge " << i_ridge
            << "/" << l_ridge.size() << " |ridge|=" << ridge.face.count()
            << " flip\n";
 #endif
         i_ridge++;
+#ifdef TIMINGS_IGUSA_FACET_ENUM
+        MicrosecondTime time_flip;
+#endif
         IgusaFlipResult<T> flip =
-            igusa_facet_flip(space, F, rhs, ridge.g, Ridge0, no_face, os);
+            igusa_facet_flip(space, F, rhs, ridge.g, Ridge0, no_face, os,
+                             oracle);
+#ifdef TIMINGS_IGUSA_FACET_ENUM
+        os << "IGUSA_FACET_ENUM: |flip|=" << time_flip << "\n";
+#endif
 #ifdef DEBUG_IGUSA_FACET_ENUM
         {
           T max_coeff(0);
@@ -835,24 +1126,29 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
         std::pair<MyMatrix<T>, T> adj{flip.F, flip.rhs};
         IgusaFacetType<T> type =
             igusa_facet_type<T, Tint, Tgroup>(adj.first, adj.second, os);
-        l_orbit[pos_facet].l_ridge_size.push_back(ridge.face.count());
-        l_orbit[pos_facet].l_adj_key.push_back(type.key);
-        l_orbit[pos_facet].l_adj_rank.push_back(type.rank);
-        l_orbit[pos_facet].l_adj_rhs.push_back(type.rhs);
+        l_orbit[i_facet].l_ridge_size.push_back(ridge.face.count());
+        l_orbit[i_facet].l_adj_key.push_back(type.key);
+        l_orbit[i_facet].l_adj_rank.push_back(type.rank);
+        l_orbit[i_facet].l_adj_rhs.push_back(type.rhs);
         if (type.rank == n) {
           f_insert(adj.first, adj.second);
         } else {
           f_insert_ridge(adj.first, adj.second, F, rhs,
                          get_face(inc.l_incident, ridge.face));
         }
+        if (std::chrono::steady_clock::now() - last_write >
+            std::chrono::seconds(60)) {
+          write_checkpoint();
+        }
       }
-      os << "IGUSA_FACET_ENUM: facet " << pos_facet << " rhs=" << rhs
-         << " |Inc|=" << l_orbit[pos_facet].n_inc
-         << " |Stab on Inc|=" << l_orbit[pos_facet].stab_size
-         << " ridge orbits=" << l_orbit[pos_facet].n_ridge_orbit
+      l_orbit[i_facet].done = true;
+      os << "IGUSA_FACET_ENUM: facet " << i_facet << " rhs=" << rhs
+         << " |Inc|=" << l_orbit[i_facet].n_inc
+         << " |Stab on Inc|=" << l_orbit[i_facet].stab_size
+         << " ridge orbits=" << l_orbit[i_facet].n_ridge_orbit
          << " |facets|=" << l_orbit.size() << " |ridges|=" << l_ridge_obj.size()
-         << "\n";
-      pos_facet++;
+         << " |Inc| of the next=" << next_inc_string()
+         << " |cuts|=" << space.ListCutIneq.rows() << "\n";
       write_checkpoint();
       continue;
     }
@@ -980,7 +1276,8 @@ void WriteFacetOrbitsGAP(std::ostream &os_out,
     os_out << ", rhs:=" << e.rhs << ", rank:=" << RankMat(e.F)
            << ", MaxCoeff:=" << max_coeff << ", nInc:=" << e.n_inc
            << ", StabSizeOnInc:=" << e.stab_size
-           << ", nRidgeOrbit:=" << e.n_ridge_orbit << ", ListAdjacent:=[";
+           << ", nRidgeOrbit:=" << e.n_ridge_orbit
+           << ", done:=" << (e.done ? "true" : "false") << ", ListAdjacent:=[";
     for (size_t k = 0; k < e.l_adj_key.size(); k++) {
       if (k > 0) {
         os_out << ", ";
@@ -1022,6 +1319,23 @@ inline FullNamelist NAMELIST_GetStandard_IGUSA_FACET_ENUMERATION() {
     // Stop after processing that many objects, facets of full rank and
     // bounded ridges in the facets of lower rank (0: no limit)
     ListIntValues["MaxOrbit"] = 0;
+    // The first that many initial facets are taken as already processed,
+    // to resume a walk with FullRankOnly from the list of a CheckpointFile
+    ListIntValues["NumberProcessedInit"] = 0;
+    // The full rank facets of conv(I_r) for all r <= LowerRankCompleteUpTo
+    // (a list of matrices of various sizes and their right hand sides):
+    // the flips to a lift of one of them are decided by the list instead of
+    // a minimization over I_r (0: not used)
+    ListIntValues["LowerRankCompleteUpTo"] = 0;
+    ListStringValues["FileLowerRankFacets"] = "unset";
+    ListStringValues["FileLowerRankRhs"] = "unset";
+    // If set, the incidences of the facets are kept in that directory, one
+    // file per orbit, and reused over the runs
+    ListStringValues["IncidenceDirectory"] = "unset";
+    // If set, the representatives of the vertices of conv(I_n) (ListMatrix
+    // format): the incidences are then the vertices of the faces, by the
+    // vertex search of igusa_face_vertices, much faster
+    ListStringValues["FileVertexRepresentatives"] = "unset";
     // Only the adjacencies between full rank facets: the bounded ridges in
     // the facets of lower rank, the expensive part, are skipped. The result
     // is then the component of the initial facets in that graph.

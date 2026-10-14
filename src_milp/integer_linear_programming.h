@@ -204,8 +204,20 @@ IlpSolution<T> ILP_IntegerLinearProgramming(MyMatrix<T> const &ListIneq,
         method_eff = "exact_bb";
         return ILP_ExactBranchAndBound(ListIneq, ListEqua, ToBeMinimized, os);
       }
-      method_eff = "scip";
-      return ILP_Scip(ListIneq, ListEqua, ToBeMinimized, os);
+      std::optional<IlpSolution<T>> opt =
+          ILP_ScipTry(ListIneq, ListEqua, ToBeMinimized, os);
+      if (opt) {
+        method_eff = "scip";
+        return *opt;
+      }
+      // The rounded SCIP solution violates a row (the tolerances of SCIP
+      // are relative to the size of the rows).
+#ifdef DEBUG_INTEGER_LINEAR_PROGRAMMING
+      os << "ILP: rounded SCIP solution not feasible, exact branch and "
+            "bound\n";
+#endif
+      method_eff = "exact_bb";
+      return ILP_ExactBranchAndBound(ListIneq, ListEqua, ToBeMinimized, os);
 #else
       return ILP_ExactBranchAndBound(ListIneq, ListEqua, ToBeMinimized, os);
 #endif
