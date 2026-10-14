@@ -30,7 +30,7 @@
   --- lrs: the reverse search triangulation (rev_search::GetTriangulationDet_f),
       a lexicographic triangulation enumerated with bounded memory;
   --- beneath_beyond: the placing triangulation of the beneath-and-beyond
-      method (POLY_DualDescription_BeneathBeyondTriangulationDet_f).
+      method (beneath_beyond::GetTriangulationDet_f).
   The two methods give in general different triangulations of the same
   polytope. Each simplex is returned as the sorted list of the indices of its
   vertices (rows of EXT), with the signed determinant of
@@ -154,8 +154,7 @@ void DirectTriangulationDet_f(MyMatrix<T> const &EXT,
     if constexpr (std::is_floating_point_v<T>) {
       error_beneath_beyond_floating_point();
     } else {
-      POLY_DualDescription_BeneathBeyondTriangulationDet_f<T>(EXT, os,
-                                                              f_sorted);
+      beneath_beyond::GetTriangulationDet_f<T>(EXT, os, f_sorted);
     }
     return;
   }
@@ -271,7 +270,7 @@ DirectTriangulationFacet(MyMatrix<T> const &EXT, TriangulationProgram prog,
       error_beneath_beyond_floating_point();
     } else {
       std::vector<std::vector<int>> l_trig = DirectTriangulation(EXT, prog, os);
-      vectface vf = POLY_DualDescription_BeneathBeyondIncidence(EXT, os);
+      vectface vf = beneath_beyond::DualDescription_incd(EXT, os);
       return {std::move(l_trig), std::move(vf)};
     }
   }

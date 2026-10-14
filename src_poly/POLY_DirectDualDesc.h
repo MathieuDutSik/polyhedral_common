@@ -217,7 +217,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
   case DualDescProgram::beneath_beyond:
     // Native beneath-and-beyond, full-dimensional pointed cone,
     // applicable to the field or ring case
-    return POLY_DualDescription_BeneathBeyondIncidence(EXT, os);
+    return beneath_beyond::DualDescription_incd(EXT, os);
   case DualDescProgram::normaliz:
     // Native Normaliz port, full-dimensional pointed cone,
     // applicable to the field or ring case
@@ -257,7 +257,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   case DualDescProgram::beneath_beyond:
     // Native beneath-and-beyond, full-dimensional pointed cone,
     // applicable to the field or ring case
-    return POLY_DualDescription_BeneathBeyondInequalities(EXT, os);
+    return beneath_beyond::DualDescription(EXT, os);
   case DualDescProgram::normaliz:
     // Native Normaliz port, full-dimensional pointed cone,
     // applicable to the field or ring case
@@ -297,7 +297,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
   case DualDescProgram::beneath_beyond:
     // Native beneath-and-beyond, full-dimensional pointed cone,
     // applicable to the field or ring case
-    return POLY_DualDescription_BeneathBeyondFaceIneq(EXT, f_process, os);
+    return beneath_beyond::DualDescriptionFaceIneq(EXT, f_process, os);
   case DualDescProgram::normaliz:
     // Native Normaliz port, full-dimensional pointed cone,
     // applicable to the field or ring case

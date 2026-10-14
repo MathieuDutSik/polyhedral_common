@@ -97,12 +97,12 @@
 // non-simplicial facets (e.g. cut / metric polytopes) the true facet is
 // strictly larger than the seed. Deduplication is by this incidence Face.
 
+namespace beneath_beyond {
+
 template <typename T> struct BeneathBeyondFacet {
   MyVector<T> normal; // normal . row >= 0 on every row, == 0 on the incidence
   Face incd;          // incidence over all EXT rows
 };
-
-namespace beneath_beyond {
 
 // A row-set packed into 64-bit blocks. It exists because boost::dynamic_bitset
 // (our Face) offers no block access, so its operator& / operator&= / count()
@@ -281,8 +281,6 @@ bool face_rank_is(MyMatrix<T> const &EXT, Face const &f, int target) {
   return face_rank(EXT, f) == target;
 }
 
-} // namespace beneath_beyond
-
 // Core kernel: returns the facets (normal + full incidence) of the cone spanned
 // by the rows of EXT.
 template <typename T>
@@ -425,7 +423,6 @@ BeneathBeyond_Kernel(MyMatrix<T> const &EXT,
   return facets;
 }
 
-namespace beneath_beyond {
 // A facet node of the dual graph. `incd` is the incidence over the points
 // inserted so far, maintained incrementally (a new facet starts as ridge u {p},
 // an incident facet absorbs p), so no EXT scan is ever performed. Once every
@@ -705,7 +702,6 @@ BeneathBeyond_Kernel_DualGraph(MyMatrix<T> const &EXT,
 #endif
   return result;
 }
-} // namespace beneath_beyond
 
 // Runs the dual-graph kernel and returns facets with T-typed normals. The
 // beneath-and-beyond arithmetic uses no field division (the flip formula and the
@@ -767,8 +763,7 @@ BeneathBeyond_run(MyMatrix<T> const &EXT, std::ostream &os) {
 
 // Facet incidences, matching DirectFacetComputationIncidence.
 template <typename T>
-vectface POLY_DualDescription_BeneathBeyondIncidence(MyMatrix<T> const &EXT,
-                                                     std::ostream &os) {
+vectface DualDescription_incd(MyMatrix<T> const &EXT, std::ostream &os) {
   std::vector<BeneathBeyondFacet<T>> facets = BeneathBeyond_run(EXT, os);
   vectface vf(EXT.rows());
   for (auto &facet : facets)
@@ -778,8 +773,7 @@ vectface POLY_DualDescription_BeneathBeyondIncidence(MyMatrix<T> const &EXT,
 
 // Facet normals, matching DirectFacetComputationInequalities.
 template <typename T>
-MyMatrix<T> POLY_DualDescription_BeneathBeyondInequalities(MyMatrix<T> const &EXT,
-                                                           std::ostream &os) {
+MyMatrix<T> DualDescription(MyMatrix<T> const &EXT, std::ostream &os) {
   std::vector<BeneathBeyondFacet<T>> facets = BeneathBeyond_run(EXT, os);
   int n_facet = facets.size();
   int nbCol = EXT.cols();
@@ -791,9 +785,8 @@ MyMatrix<T> POLY_DualDescription_BeneathBeyondInequalities(MyMatrix<T> const &EX
 
 // (Face, inequality) pairs, matching DirectFacetComputationFaceIneq.
 template <typename T, typename Fprocess>
-void POLY_DualDescription_BeneathBeyondFaceIneq(MyMatrix<T> const &EXT,
-                                                Fprocess f_process,
-                                                std::ostream &os) {
+void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process,
+                             std::ostream &os) {
   std::vector<BeneathBeyondFacet<T>> facets = BeneathBeyond_run(EXT, os);
   for (auto &facet : facets) {
     std::pair<Face, MyVector<T>> pair{facet.incd, facet.normal};
@@ -971,8 +964,8 @@ void BeneathBeyond_TriangulationDet_core(MyMatrix<Twork> const &EXTwork,
 // the exact rational determinant. The scales are positive, so simplex identity
 // and orientation are untouched -- only the determinant magnitude is corrected.
 template <typename T, typename Ftrig_det>
-void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
-    MyMatrix<T> const &EXT, std::ostream &os, Ftrig_det f_trig_det) {
+void GetTriangulationDet_f(MyMatrix<T> const &EXT, std::ostream &os,
+                           Ftrig_det f_trig_det) {
   // The ring path applies to exact fields only; floating fields (double/float)
   // have no exact underlying ring and no denominators to clear, so they run
   // directly.
@@ -1003,6 +996,8 @@ void POLY_DualDescription_BeneathBeyondTriangulationDet_f(
     BeneathBeyond_TriangulationDet_core(EXT, os, f_trig_det);
   }
 }
+
+} // namespace beneath_beyond
 
 // clang-format off
 #endif  // SRC_POLY_POLY_DUALDESC_BENEATH_AND_BEYOND_H_
