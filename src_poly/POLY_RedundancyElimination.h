@@ -492,35 +492,6 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
   return ListKnownIrred;
 }
 
-template <typename T>
-MyMatrix<T> SelectColumnAddZero(MyMatrix<T> const &TheMat,
-                                std::vector<int> const &eList) {
-  size_t nbRow = TheMat.rows();
-  size_t nbColRed = eList.size();
-  MyMatrix<T> TheProv(nbRow, 1 + nbColRed);
-  for (size_t iRow = 0; iRow < nbRow; iRow++) {
-    TheProv(iRow, 0) = 0;
-  }
-  for (size_t iCol = 0; iCol < nbColRed; iCol++) {
-    size_t jCol = eList[iCol];
-    TheProv.col(1 + iCol) = TheMat.col(jCol);
-  }
-  return TheProv;
-}
-
-template <typename T>
-MyVector<T> SelectColumnVectorAddZero(MyVector<T> const &TheV,
-                                      std::vector<int> const &eList) {
-  int nbColRed = eList.size();
-  MyVector<T> TheProv(1 + nbColRed);
-  TheProv(0) = 0;
-  for (int iCol = 0; iCol < nbColRed; iCol++) {
-    int jCol = eList[iCol];
-    TheProv(1 + iCol) = TheV(jCol);
-  }
-  return TheProv;
-}
-
 template <typename T, typename Tgroup>
 std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
                                              const Tgroup &GRP,
@@ -617,8 +588,12 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
       bool test1 = IsVectorInSpace(eSelect, V);
       if (!test1)
         return false;
-      MyMatrix<T> M_sel = SelectColumnAddZero(M, eSelect.ListColSelect);
-      MyVector<T> V_sel = SelectColumnVectorAddZero(V, eSelect.ListColSelect);
+      // The selected coordinates, with the zero constant coefficient of
+      // the LP in front.
+      MyMatrix<T> M_sel =
+          AddFirstZeroColumn(SelectColumn(M, eSelect.ListColSelect));
+      MyVector<T> V_sel =
+          AddFirstZeroCoordinate(MyVector<T>(V(eSelect.ListColSelect)));
       LpSolution<T> eSol = SIMPLEX_LinearProgramming(M_sel, V_sel, os);
       if (!eSol.DualSolution || !eSol.DirectSolution) {
         return false;
@@ -677,7 +652,7 @@ std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& 
 #endif
   std::vector<int> list_irredA = SIMPLEX_RedundancyReductionClarksonExt(M, os);
 #ifdef SANITY_CHECK_EXTENSIVE_ELIMINATION_REDUNDANCY
-  MyMatrix<T> M_ext = AddZeroColumn(M);
+  MyMatrix<T> M_ext = AddFirstZeroColumn(M);
   std::vector<int> list_irredB = Kernel_GetNonRedundant_DualDesc(M_ext, os);
   if (!is_equal_list_irred(list_irredA, list_irredB)) {
     std::cerr << "REDUND: Both method return inconsistent results\n";

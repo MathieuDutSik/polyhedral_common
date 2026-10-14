@@ -656,6 +656,9 @@ MyMatrix<int> VectfaceAsMatrix(vectface const &vf) {
   return M;
 }
 
+// A zero first coordinate in front of every row: the homogeneous coordinates
+// of directions, or the rows of a cone as the input of an affine LP, whose
+// first column is the constant coefficient.
 template <typename T> MyMatrix<T> AddFirstZeroColumn(MyMatrix<T> const &M) {
   int nbRow = M.rows();
   int nbCol = M.cols();
@@ -666,6 +669,15 @@ template <typename T> MyMatrix<T> AddFirstZeroColumn(MyMatrix<T> const &M) {
       Mret(jRow, iCol + 1) = M(jRow, iCol);
   }
   return Mret;
+}
+
+template <typename T> MyVector<T> AddFirstZeroCoordinate(MyVector<T> const &V) {
+  int n = V.size();
+  MyVector<T> Vret(n + 1);
+  Vret(0) = 0;
+  for (int i = 0; i < n; i++)
+    Vret(i + 1) = V(i);
+  return Vret;
 }
 
 template<typename T>
@@ -759,18 +771,6 @@ MyMatrix<T> NullspaceMatSingleVectorExt(MyVector<T> const &V) {
     }
   }
   return NSP;
-}
-
-template <typename T> MyMatrix<T> AddZeroColumn(MyMatrix<T> const &M) {
-  int nbRow = M.rows();
-  int nbCol = M.cols();
-  MyMatrix<T> Mret(nbRow, nbCol + 1);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    Mret(iRow, 0) = 0;
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      Mret(iRow, 1 + iCol) = M(iRow, iCol);
-  }
-  return Mret;
 }
 
 template <typename T>

@@ -1180,30 +1180,17 @@ igusa_local_cone(IgusaSpace<T, Tint> &space, MyMatrix<T> const &A,
         continue;
       }
       // Rows: y.g >= 0 for the kept rays g != r, and 1 + y.r >= 0
-      int n_row = 0;
+      std::vector<int> l_other;
       for (int i = 0; i < n_ray; i++) {
         if (keep[i] && i != i_rep) {
-          n_row++;
+          l_other.push_back(i);
         }
       }
-      MyMatrix<T> ListIneq(n_row + 1, dim + 1);
-      int pos = 0;
-      for (int i = 0; i < n_ray; i++) {
-        if (keep[i] && i != i_rep) {
-          ListIneq(pos, 0) = T(0);
-          for (int j = 0; j < dim; j++) {
-            ListIneq(pos, j + 1) = EXT_T(i, j);
-          }
-          pos++;
-        }
-      }
-      MyVector<T> obj(dim + 1);
-      obj(0) = T(0);
-      ListIneq(n_row, 0) = T(1);
-      for (int j = 0; j < dim; j++) {
-        ListIneq(n_row, j + 1) = EXT_T(i_rep, j);
-        obj(j + 1) = EXT_T(i_rep, j);
-      }
+      MyVector<T> obj = AddFirstZeroCoordinate(GetMatrixRow(EXT_T, i_rep));
+      MyMatrix<T> CapRow = obj.transpose();
+      CapRow(0, 0) = T(1);
+      MyMatrix<T> ListIneq =
+          Concatenate(AddFirstZeroColumn(SelectRow(EXT_T, l_other)), CapRow);
       LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, obj, os);
       bool is_extreme = eSol.DirectSolution.has_value() &&
                         eSol.DualSolution.has_value() &&
@@ -1237,15 +1224,8 @@ igusa_local_cone(IgusaSpace<T, Tint> &space, MyMatrix<T> const &A,
       if (!SetCertified.empty()) {
         return get_nonredundant_certified(EXT_T, BlockBelong);
       }
-      MyMatrix<T> ListIneq(n_ray, dim + 1);
-      for (int i = 0; i < n_ray; i++) {
-        ListIneq(i, 0) = T(0);
-        for (int j = 0; j < dim; j++) {
-          ListIneq(i, j + 1) = EXT_T(i, j);
-        }
-      }
-      return SIMPLEX_RedundancyReductionClarksonBlocks(ListIneq, BlockBelong,
-                                                       os);
+      return SIMPLEX_RedundancyReductionClarksonBlocksExt(EXT_T, BlockBelong,
+                                                          os);
     };
     std::vector<int> l_idx = get_l_idx();
     std::vector<MyVector<Tint>> NewListRay;

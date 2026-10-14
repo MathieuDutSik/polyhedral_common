@@ -76,15 +76,15 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "ProcessAdjacent eF=" << StringFace(eF) << "\n";
 #endif
-    MyMatrix<T> ListInequalities(n_vect, n + 1);
+    MyMatrix<T> SignedV(n_vect, n);
     for (int i_vect = 0; i_vect < n_vect; i_vect++) {
       int eSign = -1;
       if (eF[i_vect])
         eSign = 1;
-      ListInequalities(i_vect, 0) = 0;
       for (int i = 0; i < n; i++)
-        ListInequalities(i_vect, i + 1) = eSign * ListV(i_vect, i);
+        SignedV(i_vect, i) = eSign * ListV(i_vect, i);
     }
+    MyMatrix<T> ListInequalities = AddFirstZeroColumn(SignedV);
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "ListInequalities=\n";
     WriteMatrix(std::cerr, ListInequalities);

@@ -707,18 +707,8 @@ template <typename T>
 std::optional<MyVector<T>>
 SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect, MyVector<T> const &eVect,
                           std::ostream &os) {
-  int nbVect = ListVect.rows();
-  int nbCol = ListVect.cols();
-  MyMatrix<T> ListIneq(nbVect, nbCol + 1);
-  MyVector<T> eIneq(nbCol + 1);
-  for (int iVect = 0; iVect < nbVect; iVect++) {
-    ListIneq(iVect, 0) = 0;
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      ListIneq(iVect, 1 + iCol) = ListVect(iVect, iCol);
-  }
-  eIneq(0) = 0;
-  for (int iCol = 0; iCol < nbCol; iCol++)
-    eIneq(1 + iCol) = eVect(iCol);
+  MyMatrix<T> ListIneq = AddFirstZeroColumn(ListVect);
+  MyVector<T> eIneq = AddFirstZeroCoordinate(eVect);
   //
   LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, eIneq, os);
   if (!eSol.DualSolution) {
@@ -738,17 +728,8 @@ SolutionMatNonnegativeComplete<T>
 GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
                                   MyVector<T> const &eVect, std::ostream &os) {
   int nbVect = ListVect.rows();
-  int nbCol = ListVect.cols();
-  MyMatrix<T> ListIneq(nbVect, nbCol + 1);
-  MyVector<T> eIneq(nbCol + 1);
-  for (int iVect = 0; iVect < nbVect; iVect++) {
-    ListIneq(iVect, 0) = 0;
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      ListIneq(iVect, 1 + iCol) = ListVect(iVect, iCol);
-  }
-  eIneq(0) = 0;
-  for (int iCol = 0; iCol < nbCol; iCol++)
-    eIneq(1 + iCol) = eVect(iCol);
+  MyMatrix<T> ListIneq = AddFirstZeroColumn(ListVect);
+  MyVector<T> eIneq = AddFirstZeroCoordinate(eVect);
   //
   LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, eIneq, os);
   auto GetSolNonnegative = [&]() -> std::optional<MyVector<T>> {
@@ -979,17 +960,14 @@ Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, std::ostream &os) {
     for (int j_fac = i_fac + 1; j_fac < n_fac; j_fac++)
       ListIdx.push_back(j_fac);
     int n_ineq = ListIdx.size();
-    MyMatrix<T> FAC_local(n_ineq, dim);
+    MyMatrix<T> FAC_local(n_ineq, dim - 1);
     for (int i_ineq = 0; i_ineq < n_ineq; i_ineq++) {
       int idx = ListIdx[i_ineq];
       MyVector<T> eFAC = GetMatrixRow(FAC, idx);
-      MyVector<T> eFACred = NSP * eFAC;
-      FAC_local(i_ineq, 0) = 0;
-      for (int i = 0; i < dim - 1; i++)
-        FAC_local(i_ineq, i + 1) = eFACred(i);
+      AssignMatrixRow(FAC_local, i_ineq, MyVector<T>(NSP * eFAC));
     }
     std::vector<int> ListIrred =
-        SIMPLEX_RedundancyReductionClarkson(FAC_local, os);
+        SIMPLEX_RedundancyReductionClarksonExt(FAC_local, os);
     for (auto &eIrred : ListIrred) {
       int pos = ListIdx[eIrred];
       f_adj[pos + i_fac * n_fac] = 1;
@@ -1010,21 +988,12 @@ template <typename T>
 std::optional<MyVector<T>>
 GetWitnessNotImplicitEquality(MyMatrix<T> const &FAC, int const &i0,
                               std::ostream &os) {
-  int nbRow = FAC.rows();
-  int nbCol = FAC.cols();
-  MyMatrix<T> ListIneq(nbRow + 1, 1 + nbCol);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    ListIneq(iRow, 0) = T(0);
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      ListIneq(iRow, 1 + iCol) = FAC(iRow, iCol);
-  }
-  ListIneq(nbRow, 0) = T(1);
-  for (int iCol = 0; iCol < nbCol; iCol++)
-    ListIneq(nbRow, 1 + iCol) = -FAC(i0, iCol);
-  MyVector<T> ToBeMinimized(1 + nbCol);
-  ToBeMinimized(0) = T(0);
-  for (int iCol = 0; iCol < nbCol; iCol++)
-    ToBeMinimized(1 + iCol) = -FAC(i0, iCol);
+  // The cone rows, with the cap 1 - f_{i0}(x) >= 0, and -f_{i0} minimized.
+  MyVector<T> f_i0 = GetMatrixRow(FAC, i0);
+  MyVector<T> ToBeMinimized = AddFirstZeroCoordinate(MyVector<T>(-f_i0));
+  MyMatrix<T> CapRow = ToBeMinimized.transpose();
+  CapRow(0, 0) = T(1);
+  MyMatrix<T> ListIneq = Concatenate(AddFirstZeroColumn(FAC), CapRow);
   LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
   if (!eSol.DirectSolution || !eSol.DualSolution) {
     std::cerr << "LP: The zero vector is feasible and the objective is "
@@ -2118,16 +2087,8 @@ FindViolatedFacetInequality(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   if constexpr (is_ring_field<T>::value) {
     int nbRow = EXT.rows();
     int nbCol = EXT.cols();
-    MyMatrix<T> EXT_ext(nbRow, nbCol + 1);
-    MyVector<T> ToMinimize(nbCol + 1);
-    for (int iRow = 0; iRow < nbRow; iRow++) {
-      EXT_ext(iRow, 0) = 0;
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        EXT_ext(iRow, iCol + 1) = EXT(iRow, iCol);
-    }
-    ToMinimize(0) = 0;
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      ToMinimize(iCol + 1) = eVect(iCol);
+    MyMatrix<T> EXT_ext = AddFirstZeroColumn(EXT);
+    MyVector<T> ToMinimize = AddFirstZeroCoordinate(eVect);
     LpSolution<T> eSol = SIMPLEX_LinearProgramming(EXT_ext, ToMinimize, os);
     if (eSol.DualSolution) {
       // The optimal case: the minimum of eVect . x over the cone is

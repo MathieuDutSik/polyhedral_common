@@ -521,7 +521,7 @@ public:
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
       throw TerminalException{1};
     }
-    MyMatrix<T> FACexp = AddZeroColumn(FAC);
+    MyMatrix<T> FACexp = AddFirstZeroColumn(FAC);
     //
     // Doing the redundancy computation
     //

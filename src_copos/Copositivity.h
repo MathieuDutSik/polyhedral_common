@@ -730,24 +730,21 @@ CopositivityTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const &eSymmMat,
   if (nbNSP == 0) {
     return {true, "on the surface ok", eVectZero};
   }
-  MyMatrix<T> FAC(nbCol + 1, nbNSP + 1);
-  for (int iCol = 0; iCol < nbCol; iCol++) {
-    FAC(iCol, 0) = T(0);
-    for (int iNSP = 0; iNSP < nbNSP; iNSP++) {
-      FAC(iCol, iNSP + 1) = NSP(iNSP, iCol);
-    }
-  }
-  MyVector<T> ToBeMinimized(nbNSP + 1);
-  ToBeMinimized(0) = 0;
-  FAC(nbCol, 0) = -1;
+  // The cone x . NSP >= 0, with the normalization sum(x . NSP) >= 1, and
+  // sum(x . NSP) minimized.
+  MyVector<T> RowSum(nbNSP);
   for (int iNSP = 0; iNSP < nbNSP; iNSP++) {
     T eSum(0);
     for (int iCol = 0; iCol < nbCol; iCol++) {
       eSum += NSP(iNSP, iCol);
     }
-    ToBeMinimized(iNSP + 1) = eSum;
-    FAC(nbCol, iNSP + 1) = eSum;
+    RowSum(iNSP) = eSum;
   }
+  MyVector<T> ToBeMinimized = AddFirstZeroCoordinate(RowSum);
+  MyMatrix<T> NormRow = ToBeMinimized.transpose();
+  NormRow(0, 0) = -1;
+  MyMatrix<T> FAC =
+      Concatenate(AddFirstZeroColumn(MyMatrix<T>(NSP.transpose())), NormRow);
   LpSolution<T> eSol = SIMPLEX_LinearProgramming(FAC, ToBeMinimized, os);
   if (!eSol.DirectSolution)
     return {true, "on the surface ok", eVectZero};

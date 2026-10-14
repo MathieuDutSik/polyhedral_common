@@ -23,6 +23,10 @@
 //#define PRINT_GET_ADJ
 // #define DEBUG_CRITERION_ELIMINATION
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_CTYPE
+#endif
+
 // The expression of the vectors is obtained from Section 5 of
 // Dutour Sikiric, Grishukhin, Zonotopes and Parallelotopes,
 // Southeast Asian Bulletin of Mathematics (2017) 41: 197–207
@@ -861,6 +865,30 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 
 #ifdef TIMINGS
   os << "|CTYP: ListInformations|=" << time << "\n";
+#endif
+  // The Clarkson methods take the first column of their input as the
+  // constant coefficient of affine inequalities, while ListInequalities are
+  // the homogeneous inequalities f(Q) >= 0 of the C-type cone, whose first
+  // coordinate is q_11. They thus work on the slice q_11 = 1 of the cone.
+  // This gives the right irredundant inequalities when q_11 >= 0 on the
+  // whole cone, which holds since the C-type domains lie in the positive
+  // definite cone. It relies on the diagonal coordinates coming first.
+#ifdef SANITY_CHECK_CTYPE
+  {
+    // q_11 >= 0 on the cone: minimizing q_11 over it is bounded.
+    MyMatrix<mpq_class> Ineq =
+        UniversalMatrixConversion<mpq_class, T>(ListInequalities);
+    MyVector<mpq_class> q11 = ZeroVector<mpq_class>(tot_dim);
+    q11(0) = 1;
+    LpSolution<mpq_class> eSol = SIMPLEX_LinearProgramming(
+        AddFirstZeroColumn(Ineq), AddFirstZeroCoordinate(q11), os);
+    if (!eSol.DualSolution) {
+      std::cerr << "CTYPE: q_11 takes negative values on the C-type cone, "
+                   "so the first coordinate cannot be read as the constant "
+                   "coefficient of the inequalities\n";
+      throw TerminalException{1};
+    }
+  }
 #endif
 #ifdef CTYP_CLARKSON_SIMPLEX
   // The exact Clarkson of POLY_SimplexClarkson.h. Measured on the n=6

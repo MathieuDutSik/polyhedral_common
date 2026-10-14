@@ -466,16 +466,9 @@ struct QuantizationComputer {
     // Gram-orthogonal complement, division-free.
     MyMatrix<T> Ncomp = NullspaceTrMat(SpaceBas);
     MyMatrix<T> NSP = Ncomp * GramMatInv;
-    int dimNSP = NSP.rows();
-    MyMatrix<T> TheBasis(1 + dimNSP, n + 1);
-    for (int i = 0; i < n + 1; i++)
-      TheBasis(0, i) = cp(i);
-    for (int iNSP = 0; iNSP < dimNSP; iNSP++) {
-      TheBasis(1 + iNSP, 0) = 0;
-      for (int i = 0; i < n; i++)
-        TheBasis(1 + iNSP, i + 1) = NSP(iNSP, i);
-    }
-    return TheBasis;
+    // The point cp, then the directions with their homogeneous coordinate 0.
+    MyMatrix<T> CpRow = cp.transpose();
+    return Concatenate(CpRow, AddFirstZeroColumn(NSP));
   }
 
   // -------- integral linear algebra helpers --------
