@@ -680,6 +680,18 @@ template <typename T> MyVector<T> AddFirstZeroCoordinate(MyVector<T> const &V) {
   return Vret;
 }
 
+// The incidence {r : V . EXT(r,.) == 0} of the linear form V over the rows.
+template <typename T>
+Face facet_incidence(MyMatrix<T> const &EXT, MyVector<T> const &V) {
+  int nbRow = EXT.rows();
+  MyVector<T> prod = EXT * V;
+  Face f(nbRow);
+  for (int iRow = 0; iRow < nbRow; iRow++)
+    if (prod(iRow) == 0)
+      f[iRow] = 1;
+  return f;
+}
+
 template<typename T>
 MyVector<T> random_interior_pt(MyMatrix<T> const& M,
                                int const& N,

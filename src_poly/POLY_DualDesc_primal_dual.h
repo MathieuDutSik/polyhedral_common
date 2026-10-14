@@ -119,20 +119,9 @@ MyMatrix<T> DualDescription(MyMatrix<T> const &FAC, std::ostream &os) {
 template <typename T>
 vectface DualDescription_incd(MyMatrix<T> const &FAC, std::ostream &os) {
   MyMatrix<T> EXT = DualDescription(FAC, os);
-  int dim = FAC.cols();
-  int nbRow = FAC.rows();
-  vectface vf(nbRow);
-  for (int i_ext = 0; i_ext < EXT.rows(); i_ext++) {
-    Face f(nbRow);
-    for (int i_row = 0; i_row < nbRow; i_row++) {
-      T sum(0);
-      for (int i = 0; i < dim; i++)
-        AddMul(sum, FAC(i_row, i), EXT(i_ext, i));
-      if (sum == 0)
-        f[i_row] = 1;
-    }
-    vf.push_back(f);
-  }
+  vectface vf(FAC.rows());
+  for (int i_ext = 0; i_ext < EXT.rows(); i_ext++)
+    vf.push_back(facet_incidence(FAC, MyVector<T>(GetMatrixRow(EXT, i_ext))));
 #ifdef DEBUG_PRIMAL_DUAL
   os << "|vf|=" << vf.size() << "\n";
 #endif
@@ -143,20 +132,9 @@ template <typename T, typename Fprocess>
 void DualDescriptionFaceIneq(MyMatrix<T> const &FAC, Fprocess f_process,
                              std::ostream &os) {
   MyMatrix<T> EXT = DualDescription(FAC, os);
-  int dim = FAC.cols();
-  int nbRow = FAC.rows();
-  vectface vf(nbRow);
   for (int i_ext = 0; i_ext < EXT.rows(); i_ext++) {
     MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
-    Face f(nbRow);
-    for (int i_row = 0; i_row < nbRow; i_row++) {
-      T sum(0);
-      for (int i = 0; i < dim; i++)
-        AddMul(sum, FAC(i_row, i), eEXT(i));
-      if (sum == 0)
-        f[i_row] = 1;
-    }
-    std::pair<Face, MyVector<T>> pair{f, eEXT};
+    std::pair<Face, MyVector<T>> pair{facet_incidence(FAC, eEXT), eEXT};
     f_process(pair);
   }
 }
