@@ -221,7 +221,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
   case DualDescProgram::normaliz:
     // Native Normaliz port, full-dimensional pointed cone,
     // applicable to the field or ring case
-    return POLY_DualDescription_NormalizIncidence(EXT, os);
+    return normaliz_dd::DualDescription_incd(EXT, os);
   }
   terminate_direct_dual_desc("DirectFacetComputationIncidence", prog);
 }
@@ -261,7 +261,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   case DualDescProgram::normaliz:
     // Native Normaliz port, full-dimensional pointed cone,
     // applicable to the field or ring case
-    return POLY_DualDescription_NormalizInequalities(EXT, os);
+    return normaliz_dd::DualDescription(EXT, os);
   }
   terminate_direct_dual_desc("DirectFacetComputationInequalities", prog);
 }
@@ -301,7 +301,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
   case DualDescProgram::normaliz:
     // Native Normaliz port, full-dimensional pointed cone,
     // applicable to the field or ring case
-    return POLY_DualDescription_NormalizFaceIneq(EXT, f_process, os);
+    return normaliz_dd::DualDescriptionFaceIneq(EXT, f_process, os);
   }
   terminate_direct_dual_desc("DirectFacetComputationFaceIneq", prog);
 }

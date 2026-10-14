@@ -1232,8 +1232,6 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
 #endif
 }
 
-} // namespace normaliz_dd
-
 // Convert a kernel-arithmetic normal back to T: identity for T itself,
 // unpacking for the TryInt64 machine integers, the universal conversion for
 // the underlying ring.
@@ -1329,8 +1327,7 @@ void NormalizDualDesc_process(MyMatrix<T> const &EXT, std::ostream &os,
 // Facet incidences, matching DirectFacetComputationIncidence. The normals
 // are dropped without ever being converted.
 template <typename T>
-vectface POLY_DualDescription_NormalizIncidence(MyMatrix<T> const &EXT,
-                                                std::ostream &os) {
+vectface DualDescription_incd(MyMatrix<T> const &EXT, std::ostream &os) {
   vectface vf(EXT.rows());
   NormalizDualDesc_process(
       EXT, os, [&vf]([[maybe_unused]] auto &&normal, Face &&incd) -> void {
@@ -1341,8 +1338,7 @@ vectface POLY_DualDescription_NormalizIncidence(MyMatrix<T> const &EXT,
 
 // Facet normals, matching DirectFacetComputationInequalities.
 template <typename T>
-MyMatrix<T> POLY_DualDescription_NormalizInequalities(MyMatrix<T> const &EXT,
-                                                      std::ostream &os) {
+MyMatrix<T> DualDescription(MyMatrix<T> const &EXT, std::ostream &os) {
   std::vector<MyVector<T>> ListVect;
   NormalizDualDesc_process(
       EXT, os,
@@ -1355,9 +1351,8 @@ MyMatrix<T> POLY_DualDescription_NormalizInequalities(MyMatrix<T> const &EXT,
 // (Face, inequality) pairs, matching DirectFacetComputationFaceIneq: each
 // facet is streamed straight into f_process.
 template <typename T, typename Fprocess>
-void POLY_DualDescription_NormalizFaceIneq(MyMatrix<T> const &EXT,
-                                           Fprocess f_process,
-                                           std::ostream &os) {
+void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process,
+                             std::ostream &os) {
   NormalizDualDesc_process(
       EXT, os, [&f_process](auto &&normal, Face &&incd) -> void {
         std::pair<Face, MyVector<T>> pair{
@@ -1365,6 +1360,8 @@ void POLY_DualDescription_NormalizFaceIneq(MyMatrix<T> const &EXT,
         f_process(pair);
       });
 }
+
+} // namespace normaliz_dd
 
 // clang-format off
 #endif  // SRC_POLY_POLY_DUALDESC_NORMALIZ_H_
