@@ -19,10 +19,11 @@
 #undef DEBUG_PRIMAL_DUAL
 #endif
 
+namespace primal_dual {
+
 template <typename T, typename Fdual>
-MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
-                                                   Fdual f_dual,
-                                                   std::ostream &os) {
+MyMatrix<T> Kernel_DualDescription(MyMatrix<T> const &FAC, Fdual f_dual,
+                                   std::ostream &os) {
   std::set<MyVector<T>> SetFAC;
   int n_rows_fac = FAC.rows();
   for (int i_row = 0; i_row < n_rows_fac; i_row++) {
@@ -108,18 +109,16 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
 }
 
 template <typename T>
-MyMatrix<T> POLY_DualDescription_PrimalDualInequalities(MyMatrix<T> const &FAC,
-                                                        std::ostream &os) {
+MyMatrix<T> DualDescription(MyMatrix<T> const &FAC, std::ostream &os) {
   auto f_dual = [&](MyMatrix<T> const &FACin) -> vectface {
     return rev_search::DualDescription_incd(FACin);
   };
-  return POLY_DualDescription_PrimalDual_Kernel(FAC, f_dual, os);
+  return Kernel_DualDescription(FAC, f_dual, os);
 }
 
 template <typename T>
-vectface POLY_DualDescription_PrimalDualIncidence(MyMatrix<T> const &FAC,
-                                                  std::ostream &os) {
-  MyMatrix<T> EXT = POLY_DualDescription_PrimalDualInequalities(FAC, os);
+vectface DualDescription_incd(MyMatrix<T> const &FAC, std::ostream &os) {
+  MyMatrix<T> EXT = DualDescription(FAC, os);
   int dim = FAC.cols();
   int nbRow = FAC.rows();
   vectface vf(nbRow);
@@ -141,10 +140,9 @@ vectface POLY_DualDescription_PrimalDualIncidence(MyMatrix<T> const &FAC,
 }
 
 template <typename T, typename Fprocess>
-void POLY_DualDescription_PrimalDualFaceIneq(MyMatrix<T> const &FAC,
-                                             Fprocess f_process,
-                                             std::ostream &os) {
-  MyMatrix<T> EXT = POLY_DualDescription_PrimalDualInequalities(FAC, os);
+void DualDescriptionFaceIneq(MyMatrix<T> const &FAC, Fprocess f_process,
+                             std::ostream &os) {
+  MyMatrix<T> EXT = DualDescription(FAC, os);
   int dim = FAC.cols();
   int nbRow = FAC.rows();
   vectface vf(nbRow);
@@ -162,6 +160,8 @@ void POLY_DualDescription_PrimalDualFaceIneq(MyMatrix<T> const &FAC,
     f_process(pair);
   }
 }
+
+} // namespace primal_dual
 
 // clang-format off
 #endif  // SRC_POLY_POLY_DUALDESC_PRIMAL_DUAL_H_

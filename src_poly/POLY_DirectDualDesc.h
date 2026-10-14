@@ -213,7 +213,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     return rev_search::DualDescription_incd(EXT);
   case DualDescProgram::pd_lrs:
     // The polytopization routes through the overlying field
-    return POLY_DualDescription_PrimalDualIncidence(EXT, os);
+    return primal_dual::DualDescription_incd(EXT, os);
   case DualDescProgram::beneath_beyond:
     // Native beneath-and-beyond, full-dimensional pointed cone,
     // applicable to the field or ring case
@@ -253,7 +253,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     return rev_search::DualDescription(EXT);
   case DualDescProgram::pd_lrs:
     // The polytopization routes through the overlying field
-    return POLY_DualDescription_PrimalDualInequalities(EXT, os);
+    return primal_dual::DualDescription(EXT, os);
   case DualDescProgram::beneath_beyond:
     // Native beneath-and-beyond, full-dimensional pointed cone,
     // applicable to the field or ring case
@@ -293,7 +293,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     return rev_search::DualDescriptionFaceIneq(EXT, f_process);
   case DualDescProgram::pd_lrs:
     // The polytopization routes through the overlying field
-    return POLY_DualDescription_PrimalDualFaceIneq(EXT, f_process, os);
+    return primal_dual::DualDescriptionFaceIneq(EXT, f_process, os);
   case DualDescProgram::beneath_beyond:
     // Native beneath-and-beyond, full-dimensional pointed cone,
     // applicable to the field or ring case
