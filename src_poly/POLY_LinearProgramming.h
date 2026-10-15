@@ -57,6 +57,7 @@
 #endif
 
 #ifdef SANITY_CHECK
+#define SANITY_CHECK_LINEAR_PROGRAM
 #define SANITY_CHECK_SEARCH_POSITIVE_RELATION
 #define SANITY_CHECK_FULL_RANK_FACET_SET
 #define SANITY_CHECK_FIND_SINGLE_VERTEX
@@ -844,69 +845,74 @@ std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
   return SolutionMatNonnegative_FailSafe(ListVect, eVect, os);
 }
 
-// We want
-// v = sum_i lambda_i v_i
-// with lambda_i > 0
-// Multiplying by a factor we get
-// mu v = sum_i lambda_i v_i
-// with lambda_i >= 1 and mu > 0
-// Define mu_i = lambda_i - 1.
-// We are then led to
-// mu v + sum_i mu_i (-v_i) = sum_i v_i
-
+/*
+  A solution of v = sum_i lambda_i v_i with all lambda_i > 0. The LP has
+  the variables (lambda_1, ..., lambda_n, delta) and maximizes delta
+  under sum_i lambda_i v_i = v (two inequalities per coordinate),
+  lambda_i >= delta and delta <= 1. It is infeasible exactly when v is
+  not in the span of the v_i, it is bounded by the cap on delta, and a
+  strictly positive solution exists exactly when the optimal delta is
+  positive. (Writing mu v = sum_i (1 + mu_i) v_i with mu, mu_i >= 0 instead
+  admits mu = 0 as soon as the v_i have a positive relation.)
+ */
 template <typename T>
 std::optional<MyVector<T>>
 SolutionMatStrictlyPositive(MyMatrix<T> const &ListVect,
                             MyVector<T> const &eVect, std::ostream &os) {
   int nbVect = ListVect.rows();
   int dim = ListVect.cols();
-  MyMatrix<T> ListVectNew(nbVect + 1, dim);
-  MyVector<T> eVectNew(dim);
+  int n_var = nbVect + 1; // the lambda_i, then delta
+  MyMatrix<T> ListIneq = ZeroMatrix<T>(2 * dim + nbVect + 1, 1 + n_var);
+  int pos = 0;
   for (int i = 0; i < dim; i++) {
-    ListVectNew(0, i) = eVect(i);
-    T eSum(0);
+    // sum_i lambda_i v_i(i) - v(i) >= 0 and its opposite
+    ListIneq(pos, 0) = -eVect(i);
+    ListIneq(pos + 1, 0) = eVect(i);
     for (int iVect = 0; iVect < nbVect; iVect++) {
-      ListVectNew(iVect + 1, i) = -ListVect(iVect, i);
-      eSum += ListVect(iVect, i);
+      ListIneq(pos, 1 + iVect) = ListVect(iVect, i);
+      ListIneq(pos + 1, 1 + iVect) = -ListVect(iVect, i);
     }
-    eVectNew(i) = eSum;
+    pos += 2;
   }
-  std::optional<MyVector<T>> opt =
-      SolutionMatNonnegative(ListVectNew, eVectNew, os);
-  if (!opt) {
+  for (int iVect = 0; iVect < nbVect; iVect++) {
+    // lambda_i - delta >= 0
+    ListIneq(pos, 1 + iVect) = 1;
+    ListIneq(pos, n_var) = -1;
+    pos++;
+  }
+  // 1 - delta >= 0
+  ListIneq(pos, 0) = 1;
+  ListIneq(pos, n_var) = -1;
+  MyVector<T> ToBeMinimized = ZeroVector<T>(1 + n_var);
+  ToBeMinimized(n_var) = -1;
+  LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
+  if (!eSol.DirectSolution || !eSol.DualSolution) {
+    // Infeasible: v is not in the span of the v_i.
     return {};
   }
-  MyVector<T> const &V = *opt;
-  T mu = V(0);
-  if (mu == 0) {
-    std::cerr << "LP: We should have mu > 0.\n";
-    throw TerminalException{1};
+  MyVector<T> const &V = *eSol.DirectSolution;
+  if (V(nbVect) <= 0) {
+    return {};
   }
-  T one(1);
-  MyVector<T> eSol(nbVect);
+  MyVector<T> eSol_lambda(nbVect);
+  for (int iVect = 0; iVect < nbVect; iVect++)
+    eSol_lambda(iVect) = V(iVect);
+#ifdef SANITY_CHECK_LINEAR_PROGRAM
+  MyVector<T> SumVect = ZeroVector<T>(dim);
   for (int iVect = 0; iVect < nbVect; iVect++) {
-    T mu_i = V(iVect + 1);
-    T lambda_i = (mu_i + one) / mu;
-#ifdef DEBUG_LINEAR_PROGRAM
-    if (lambda_i <= 0) {
+    if (eSol_lambda(iVect) <= 0) {
       std::cerr << "LP: We should have lambda_i > 0\n";
       throw TerminalException{1};
     }
-#endif
-    eSol(iVect) = lambda_i;
-  }
-#ifdef DEBUG_LINEAR_PROGRAM
-  MyVector<T> SumVect = ZeroVector<T>(dim);
-  for (int iVect = 0; iVect < nbVect; iVect++) {
     MyVector<T> eRow = GetMatrixRow(ListVect, iVect);
-    VecAddMul(SumVect, eSol(iVect), eRow);
+    VecAddMul(SumVect, eSol_lambda(iVect), eRow);
   }
   if (SumVect != eVect) {
-    std::cerr << "LP: eSol is not a solution of the system\n";
+    std::cerr << "LP: The solution is not a solution of the system\n";
     throw TerminalException{1};
   }
 #endif
-  return eSol;
+  return eSol_lambda;
 }
 
 template <typename T>
@@ -1956,7 +1962,7 @@ bool is_full_dimensional_bounded_polytope(MyMatrix<T> const &FAC,
   }
 #endif
   int dim = FAC.cols();
-  MyVector<T> IneqFund(dim);
+  MyVector<T> IneqFund = ZeroVector<T>(dim);
   IneqFund(0) = 1;
   std::optional<MyVector<T>> opt =
       SolutionMatStrictlyPositive(FAC, IneqFund, os);
