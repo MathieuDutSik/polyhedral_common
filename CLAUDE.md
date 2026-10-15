@@ -46,7 +46,7 @@ If unsure whether a path lives inside a submodule, `cat .gitmodules` lists them.
 
 ## Print statements must be gated by named `#ifdef` blocks
 
-Free-standing `std::cerr << ...`, `os << ...`, etc. that produce output unconditionally must not be added to the codebase. Every diagnostic line must live inside a named preprocessor gate, in one of three categories with different intents. The suffix is the **context** — usually the source-file area (`SHVEC`, `LATTICE_STAB_EQUI_CAN`, `TSPACE_FUNCTIONS`, …) — never a generic name like `DEBUG`.
+Free-standing `std::cerr << ...`, `os << ...`, etc. that produce output unconditionally must not be added to the codebase. Every diagnostic line must live inside a named preprocessor gate, in one of four categories with different intents. The suffix is the **context** — usually the source-file area (`SHVEC`, `LATTICE_STAB_EQUI_CAN`, `TSPACE_FUNCTIONS`, …) — never a generic name like `DEBUG`.
 
 The rule is for the library code: the headers and the functions they define. The `main` program files (`.cpp` files with a `main`, such as `POLY_redundancyGroup.cpp`) are the calling code and may print unconditionally: usage text, progress lines, results and the termination message need no gate.
 
@@ -81,7 +81,16 @@ For wall-clock measurement. Prints elapsed times around the operation being meas
 #endif
 ```
 
-Existing macros in use can be discovered with `grep -rh '#ifdef \(DEBUG\|SANITY_CHECK\|TIMINGS\)_' src_*/ | sort -u`. Reuse an existing context name when adding to that area rather than inventing a new one.
+### `#ifdef KEY_VALUE_<CONTEXT>`
+For machine-readable output that is collected to tune the heuristics offline (the Thompson sampling). Prints lines of the form `KEY=(...) VALUE=(...)`, where the key describes the instance and the choice made and the value is the measurement. Like `DEBUG_`, it must not affect the execution path. Example:
+```cpp
+#ifdef KEY_VALUE_DUAL_DESC
+  os << "DDD: KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_"
+     << std::format("{}", prog) << ") VALUE=(" << time_total << ")\n";
+#endif
+```
+
+Existing macros in use can be discovered with `grep -rh '#ifdef \(DEBUG\|SANITY_CHECK\|TIMINGS\|KEY_VALUE\)_' src_*/ | sort -u`. Reuse an existing context name when adding to that area rather than inventing a new one.
 
 ## Builds must be warning-clean
 
