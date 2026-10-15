@@ -132,7 +132,7 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   //
   if (!DoRecur) {
     auto comp_dd = [&]() -> vectface {
-      if (is_method_supported<T>(prog)) {
+      if (dual_desc_program_from_string_opt(prog)) {
         return DirectFacetComputationIncidence(EXT, prog, os);
       }
       if (prog == "fullrankfacetset") {

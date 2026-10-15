@@ -36,40 +36,6 @@
 #define KEY_VALUE_DUAL_DESC
 #endif
 
-template <typename T> std::vector<size_t> Convert_T_To_Set(T const &val) {
-  size_t pos = 0;
-  std::vector<size_t> V;
-  T valWork = val;
-  T two = 2;
-  while (true) {
-    if (valWork == 0)
-      break;
-    T res = ResInt(valWork, two);
-    if (res == 1) {
-      V.push_back(pos);
-    }
-    valWork = (valWork - res) / two;
-    pos++;
-  }
-  return V;
-}
-
-template <typename T> T Convert_Set_To_T(std::vector<size_t> const &V) {
-  T ThePow = 1;
-  size_t pos = 0;
-  T retval = 0;
-  for (auto &eV : V) {
-    while (true) {
-      if (pos == eV)
-        break;
-      ThePow *= 2;
-      pos++;
-    }
-    retval += ThePow;
-  }
-  return retval;
-}
-
 // The dual description program to use for a direct (non-recursive)
 // computation. This is the type-safe replacement for the "ansProg" strings.
 // The string form is still available (parsed from the heuristics / command
@@ -138,52 +104,6 @@ inline DualDescProgram dual_desc_program_from_string(std::string const &prog) {
     throw TerminalException{1};
   }
   return *opt;
-}
-
-template <typename T> bool is_method_supported(DualDescProgram prog) {
-  switch (prog) {
-  case DualDescProgram::cdd:
-    // Served by the double description method, which runs division-free.
-  case DualDescProgram::lrs:
-  case DualDescProgram::beneath_beyond:
-    // Beneath-and-beyond runs in ring arithmetic; the one nullspace (the
-    // initial simplicial cone) is taken over the overlying field.
-    // Applies to the field or ring case.
-    return true;
-  case DualDescProgram::small_polytopes:
-    // The kernel vectors come from the subset solver and the one row
-    // relation from the overlying field; only its signs are used.
-  case DualDescProgram::pd_lrs:
-    // The linear programming parts (polytopization, initial full rank
-    // facet set, violated facets) route through the overlying field.
-    // Applies to the field or ring case.
-    return true;
-  case DualDescProgram::normaliz:
-    // The native Normaliz port runs in ring arithmetic (FM combination,
-    // gcd reduction, division-free rank tests), field or ring case.
-    return true;
-  }
-  return false;
-}
-
-template <typename T> bool is_method_supported(std::string const &prog) {
-  std::optional<DualDescProgram> opt = dual_desc_program_from_string_opt(prog);
-  return opt.has_value() && is_method_supported<T>(*opt);
-}
-
-// The heuristics may name a program that the arithmetic cannot serve
-// (e.g. an external program over a ring type): the double description
-// method, which runs for every type, serves as the substitute.
-template <typename T>
-DualDescProgram ResolveSupportedProgram(DualDescProgram prog,
-                                        [[maybe_unused]] std::ostream &os) {
-  if (is_method_supported<T>(prog))
-    return prog;
-#ifdef DEBUG_DUAL_DESC
-  os << "DDD: program " << std::format("{}", prog)
-     << " is not available for the arithmetic, substituting cdd\n";
-#endif
-  return DualDescProgram::cdd;
 }
 
 [[noreturn]] inline void

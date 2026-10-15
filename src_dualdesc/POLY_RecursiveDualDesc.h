@@ -1062,8 +1062,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: ansProg|=" << time_step << "\n";
 #endif
-    DualDescProgram prog =
-        ResolveSupportedProgram<T>(dual_desc_program_from_string(ansProg), os);
+    DualDescProgram prog = dual_desc_program_from_string(ansProg);
     if (df.Stab.size() == 1) {
       auto f_process =
           [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
@@ -1468,8 +1467,7 @@ vectface DUALDESC_AdjacencyDecomposition(
 #endif
     std::string ansProg =
         AllArr.DualDescriptionProgram.get_eval(info.named_map());
-    DualDescProgram prog =
-        ResolveSupportedProgram<T>(dual_desc_program_from_string(ansProg), os);
+    DualDescProgram prog = dual_desc_program_from_string(ansProg);
     vectface TheOutput = DirectFacetOrbitComputation(EXT, GRP, prog, os);
     AllArr.DualDescriptionProgram.pop(os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
