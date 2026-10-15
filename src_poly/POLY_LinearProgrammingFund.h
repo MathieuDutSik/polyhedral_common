@@ -21,21 +21,6 @@
 #define SANITY_CHECK_LINEAR_PROGRAMMING_FUND
 #endif
 
-template <typename T> struct LpSolutionSimple {
-  bool PrimalDefined;
-  T OptimalValue;
-  int nbRow;
-  int nbCol;
-  MyVector<T> DirectSolution;
-  MyVector<T> DirectSolutionExt;
-  // Value 0 for not assigned.
-  // Value 1 for "B"
-  // Value 2 for "NF"
-  // Value 3 for "NL"
-  MyVector<int> RowStatus;
-  MyVector<int> ColumnStatus;
-};
-
 // The primal solution is available iff DirectSolution has a value.
 // The dual solution is available iff DualSolution has a value.
 template <typename T> struct LpSolution {
