@@ -5,6 +5,7 @@
 // clang-format off
 #include "COMB_Combinatorics.h"
 #include "MAT_Matrix.h"
+#include <optional>
 #include <vector>
 // clang-format on
 
@@ -99,9 +100,9 @@ void compute_two_laminations_f(MyMatrix<T> const &M, F f) {
       for (int iCol = 0; iCol < dim; iCol++) {
         AddMul(sum, vect(iCol), M2(iRow, iCol));
       }
-#ifdef DEBUG_LAMINATIONS
+#ifdef SANITY_CHECK_LAMINATIONS
       if (sum != 0 && sum != 1) {
-        std::cerr << "sum should be 0 or 1\n";
+        std::cerr << "LAM: sum should be 0 or 1\n";
         throw TerminalException{1};
       }
 #endif
@@ -141,8 +142,6 @@ vectface compute_all_two_laminations(MyMatrix<T> const &M) {
 
 template <typename T>
 std::optional<Face> compute_one_two_laminations(MyMatrix<T> const &M) {
-  int nbRow = M.rows();
-  vectface vf(nbRow);
   std::optional<Face> opt;
   auto f = [&](Face const &f_ass) -> bool {
     opt = f_ass;

@@ -104,8 +104,13 @@ Face ComputeFaceLpSolution(MyMatrix<T> const &EXT, LpSolution<T> const &eSol) {
   return eFace;
 }
 
-// If eVect = C + sum_i alpha_i v_i
-// if v_i.x >= 0 and alpha_i >= 0 then
+// Checks the dual solution of eSol as a certificate for the minimum of
+// eVect . (1,x) under the inequalities EXT . (1,x) >= 0: with the
+// multipliers lambda <= 0 of the dual solution, eVect(0) + sum lambda_i
+// EXT(i,0) must be the optimal value and the linear parts must cancel,
+// that is eVect - sum (-lambda_i) EXT(i,.) is the constant C. Since
+// -lambda_i >= 0 and EXT(i,.) . (1,x) >= 0, the value C is then a lower
+// bound of the objective.
 template <typename T>
 bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
                                  MyVector<T> const &eVect,
