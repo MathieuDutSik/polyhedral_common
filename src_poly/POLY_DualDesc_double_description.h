@@ -269,21 +269,27 @@ std::vector<RayEntry<T>> DoubleDescription_Kernel(MyMatrix<T> const &EXT,
           }
         }
         bool adjacent = true;
-        for (auto &i3 : row_tight[best_row]) {
-          if (i3 == i1 || i3 == i2 || zero_count[i3] < count_common) {
-            continue;
-          }
-          uint64_t const *w3 = zw.data() + i3 * n_words;
-          bool subset = true;
-          for (size_t k = 0; k < n_words; k++) {
-            if ((common[k] & ~w3[k]) != 0) {
-              subset = false;
+        if (best_row == -1) {
+          // An empty common tight set (possible only for d <= 2) is
+          // contained in the tight set of every other ray.
+          adjacent = n_rays == 2;
+        } else {
+          for (auto &i3 : row_tight[best_row]) {
+            if (i3 == i1 || i3 == i2 || zero_count[i3] < count_common) {
+              continue;
+            }
+            uint64_t const *w3 = zw.data() + i3 * n_words;
+            bool subset = true;
+            for (size_t k = 0; k < n_words; k++) {
+              if ((common[k] & ~w3[k]) != 0) {
+                subset = false;
+                break;
+              }
+            }
+            if (subset) {
+              adjacent = false;
               break;
             }
-          }
-          if (subset) {
-            adjacent = false;
-            break;
           }
         }
         if (!adjacent) {
