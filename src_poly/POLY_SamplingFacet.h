@@ -8,6 +8,7 @@
 #include "POLY_DirectDualDesc.h"
 #include <map>
 #include <limits>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -54,7 +55,8 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 #ifdef DEBUG_SAMPLING_FACET
   os << "SAMP: critlevel=" << critlevel << " critdim=" << critdim
      << " prog=" << prog << " maxnboper=" << maxnboper
-     << " maxnbsize=" << maxnbsize << "\n";
+     << " maxnbsize=" << maxnbsize
+     << " greedy_termination=" << greedy_termination << "\n";
 #endif
   auto IsRecursive = [&]() -> bool {
     if (len < critlevel) {
@@ -219,32 +221,41 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   int maxnboper = 1000;
   int maxnbsize = 20;
   bool greedy_termination = true;
+  // An option is name_value. The names are matched as prefixes, since
+  // greedy_termination and some program names (pd_lrs) contain a '_'.
+  auto get_value = [&](std::string const &eOpt,
+                       std::string const &name) -> std::optional<std::string> {
+    std::string prefix = name + "_";
+    if (eOpt.size() > prefix.size() && eOpt.substr(0, prefix.size()) == prefix)
+      return eOpt.substr(prefix.size());
+    return {};
+  };
   for (auto &eOpt : ListOpt) {
-    std::vector<std::string> ListStrB = STRING_Split(eOpt, "_");
-    if (ListStrB.size() == 2) {
-      if (ListStrB[0] == "prog") {
-        prog = ListStrB[1];
+    if (auto opt = get_value(eOpt, "prog")) {
+      prog = *opt;
+    } else if (auto opt = get_value(eOpt, "critlevel")) {
+      std::istringstream(*opt) >> critlevel;
+    } else if (auto opt = get_value(eOpt, "critdim")) {
+      std::istringstream(*opt) >> critdim;
+    } else if (auto opt = get_value(eOpt, "maxnboper")) {
+      std::istringstream(*opt) >> maxnboper;
+    } else if (auto opt = get_value(eOpt, "maxnbsize")) {
+      std::istringstream(*opt) >> maxnbsize;
+    } else if (auto opt = get_value(eOpt, "greedy_termination")) {
+      if (*opt == "true") {
+        greedy_termination = true;
+      } else if (*opt == "false") {
+        greedy_termination = false;
+      } else {
+        std::cerr << "SAMP: greedy_termination should be true or false, not "
+                  << *opt << "\n";
+        throw TerminalException{1};
       }
-      if (ListStrB[0] == "critlevel") {
-        std::istringstream(ListStrB[1]) >> critlevel;
-      }
-      if (ListStrB[0] == "critdim") {
-        std::istringstream(ListStrB[1]) >> critdim;
-      }
-      if (ListStrB[0] == "maxnboper") {
-        std::istringstream(ListStrB[1]) >> maxnboper;
-      }
-      if (ListStrB[0] == "maxnbsize") {
-        std::istringstream(ListStrB[1]) >> maxnbsize;
-      }
-      if (ListStrB[0] == "greedy_termination") {
-        if (ListStrB[1] == "true") {
-          greedy_termination = true;
-        }
-        if (ListStrB[1] == "false") {
-          greedy_termination = false;
-        }
-      }
+    } else {
+      std::cerr << "SAMP: Unknown sampling option " << eOpt << ", the options "
+                   "are prog, critlevel, critdim, maxnboper, maxnbsize and "
+                   "greedy_termination, written name_value\n";
+      throw TerminalException{1};
     }
   }
   recSamplingOption eOption;
@@ -284,6 +295,11 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
     }
     Face f(n_rows);
     std::string face_str = ListStr[1];
+    if (face_str.size() != static_cast<size_t>(n_rows)) {
+      std::cerr << "SAMP: The face " << face_str << " has " << face_str.size()
+                << " entries but there are " << n_rows << " rows\n";
+      throw TerminalException{1};
+    }
     for (int i_row = 0; i_row < n_rows; i_row++) {
       if (face_str.substr(i_row, 1) == "1") {
         f[i_row] = 1;
