@@ -59,6 +59,12 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
      << " greedy_termination=" << greedy_termination << "\n";
 #endif
   auto IsRecursive = [&]() -> bool {
+    // The recursion goes to the facets, and a cone of rank 1 has no initial
+    // vertex to start from: the cones of rank at most 2 are computed
+    // directly, whatever critdim.
+    if (dim <= 2) {
+      return false;
+    }
     if (len < critlevel) {
       return false;
     }
