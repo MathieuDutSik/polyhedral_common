@@ -86,7 +86,6 @@ std::optional<MyMatrix<T>> AffinizeSubspace(MyMatrix<T> const &NSP) {
     return {};
   T ePivot = NSP(FirstVertex, 0);
   MyMatrix<T> NSPred(TheDim, nbCol);
-  MyVector<T> eVertex(nbCol);
   for (int i = 0; i < nbCol; i++)
     NSPred(0, i) = NSP(FirstVertex, i) / ePivot;
   int pos = 0;
@@ -363,8 +362,8 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
   if (pos.has_internal_vector) {
     if (!pos.eTestExist) {
       if (!pos.InternalVector.has_value()) {
-        std::cerr
-            << "LP: There is an internal vector while eTestExist is true\n";
+        std::cerr << "LP: There is no internal vector while eTestExist is "
+                     "false\n";
         throw TerminalException{1};
       }
       MyVector<T> const &V = *pos.InternalVector;
@@ -382,7 +381,7 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
     } else {
       if (pos.InternalVector.has_value()) {
         std::cerr
-            << "LP: There is no internal vector while eTestExist is false\n";
+            << "LP: There is an internal vector while eTestExist is true\n";
         throw TerminalException{1};
       }
     }
@@ -391,14 +390,14 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
   if (pos.has_relation) {
     if (!pos.eTestExist) {
       if (pos.TheRelat.has_value()) {
-        std::cerr << "LP: There is no relation for TheRelat while eTestExist\n";
-        std::cerr << "LP: is true\n";
+        std::cerr << "LP: There is a relation TheRelat while eTestExist\n";
+        std::cerr << "LP: is false\n";
         throw TerminalException{1};
       }
     } else {
       if (!pos.TheRelat.has_value()) {
-        std::cerr << "LP: There is a relation for TheRelat while eTestExist\n";
-        std::cerr << "LP: is false\n";
+        std::cerr << "LP: There is no relation TheRelat while eTestExist\n";
+        std::cerr << "LP: is true\n";
         throw TerminalException{1};
       }
       MyVector<T> const &V = *pos.TheRelat;
@@ -437,7 +436,9 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
 // The existence of such a system of lambda is equivalent to the absence of a
 // vector x such that x.v_i > 0 for all i.
 //
-// I need to finish understanding what is the idea below.
+// The LP looks for x with v_i . x >= 1 for all i (by scaling, the same as
+// v_i . x > 0). If it is feasible, x is an internal vector and there is no
+// relation. If it is infeasible, its Farkas certificate is a relation.
 template <typename T>
 PosRelRes<T>
 SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect,
@@ -468,7 +469,7 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect,
   if (!eSol.DirectSolution && eSol.DualSolution) {
     IsDone = true;
     eResult.eTestExist = true;
-#ifdef PRINT_LINEAR_PROGRAM_RESULT
+#ifdef DEBUG_SEARCH_POSITIVE_RELATION
     MyVector<T> const &V = *eSol.DualSolution;
     // That seems actually less easy to obtain than we expected.
     // More work is needed here.
@@ -499,7 +500,7 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect,
     std::cerr << "LP: Error. No value assigned\n";
     throw TerminalException{1};
   }
-#ifdef DEBUG_SEARCH_POSITIVE_RELATION
+#ifdef SANITY_CHECK_SEARCH_POSITIVE_RELATION
   CheckResult_PositiveRelationSimple(ListVect, eResult);
 #endif
   return eResult;
@@ -631,7 +632,7 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect, std::ostream &os) {
     return SearchPositiveRelationSimple_DualMethod(ListVect, os);
   };
   PosRelRes<T> the_sol = get_solution();
-#ifdef DEBUG_SEARCH_POSITIVE_RELATION
+#ifdef SANITY_CHECK_SEARCH_POSITIVE_RELATION
   CheckResult_PositiveRelationSimple(ListVect, the_sol);
 #endif
   return the_sol.eTestExist;
