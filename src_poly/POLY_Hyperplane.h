@@ -84,21 +84,22 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
       for (int i = 0; i < n; i++)
         SignedV(i_vect, i) = eSign * ListV(i_vect, i);
     }
-    MyMatrix<T> ListInequalities = AddFirstZeroColumn(SignedV);
 #ifdef DEBUG_HYPERPLANE
-    std::cerr << "ListInequalities=\n";
-    WriteMatrix(std::cerr, ListInequalities);
+    std::cerr << "SignedV=\n";
+    WriteMatrix(std::cerr, SignedV);
 #endif
+    // The exact Clarkson: its LPs are solved in floating point first, and
+    // the result is certified in exact arithmetic.
     std::vector<int> ListIrred =
-        SIMPLEX_RedundancyReductionClarksonFloat(ListInequalities, std::cerr);
+        SIMPLEX_RedundancyReductionClarksonExt(SignedV, std::cerr);
 #ifdef DEBUG_HYPERPLANE
     std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
 #endif
 #ifdef SANITY_CHECK_HYPERPLANE
     if (static_cast<int>(ListIrred.size()) < n) {
-      std::cerr << "RankMat(...)=" << RankMat(ListInequalities) << "\n";
-      std::cerr << "ListInequalities=\n";
-      WriteMatrix(std::cerr, ListInequalities);
+      std::cerr << "RankMat(SignedV)=" << RankMat(SignedV) << "\n";
+      std::cerr << "SignedV=\n";
+      WriteMatrix(std::cerr, SignedV);
       std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
       std::cerr << "ListIrred is too small. It is a bug\n";
       throw TerminalException{1};
