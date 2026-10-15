@@ -42,8 +42,9 @@ jobs:
       - name: Test linear programming and linear determination
         run: |
           make -C src_poly -f Makefile_linear_programming
-          # Makefile_linear_programming builds POLY_cdd_LinearProgramming and
-          # POLY_LinearDetermineByInequalities, so it covers both drivers. The
+          # Makefile_linear_programming builds POLY_cdd_LinearProgramming,
+          # POLY_LinearDetermineByInequalities and POLY_check_empty_intersection,
+          # so it covers the three drivers. The
           # former section 32_LinearDetermineByInequalities is folded in here.
           # It also builds Test_SimplexRealAlgebraic, run below.
           echo "After compilation of linear programming code"
@@ -66,6 +67,11 @@ jobs:
           ../../gap.sh < TestLinearDetermine.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "TestLinearDetermine.g has not created the expected file" >&2
+            exit 1
+          fi
+          ../../gap.sh < TestEmptyIntersection.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "TestEmptyIntersection.g has not created the expected file" >&2
             exit 1
           fi
           cd ../..

@@ -4,7 +4,7 @@ PROGRAM		= POLY_CreateAffineBasis \
 		  POLY_IntegralPoints POLY_SkelettonClarkson \
 		  VectFamily_ColumnReduction \
 		  POLY_lrs POLY_SmallPolytope \
-		  POLY_LinearDetermineByInequalities \
+		  POLY_LinearDetermineByInequalities POLY_check_empty_intersection \
 		  POLY_IsPointedCone \
 		  POLY_SolutionMatNonnegative POLY_cdd_LinearProgramming \
 		  POLY_dual_description \

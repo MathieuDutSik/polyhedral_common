@@ -1103,6 +1103,53 @@ get_linear_determine_by_inequalities:=function(arg)
     return Mat;
 end;
 
+# Whether the convex hulls of the rows of EXT1 and EXT2 (points with first
+# coordinate 1) are disjoint, by POLY_check_empty_intersection: true or
+# false, or a string in case of failure.
+check_empty_intersection:=function(arg)
+    local EXT1, EXT2, options, arith, print_info, TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, result, runtime_str;
+    EXT1:=arg[1];
+    EXT2:=arg[2];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    File1:=Filename(TmpDir, "Test1.in");
+    File2:=Filename(TmpDir, "Test2.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(File1, EXT1);
+    WriteMatrixFile(File2, EXT2);
+    eProg:=GetBinaryFilename("POLY_check_empty_intersection");
+    TheCommand:=Concatenation(eProg, " ", arith, " ", File1, " ", File2,
+                              " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  EXT1=", Length(EXT1), "x", Length(EXT1[1]), " EXT2=", Length(EXT2), "x", Length(EXT2[1]), " arith=", arith, " command=POLY_check_empty_intersection runtime=", runtime_str, "\n");
+    fi;
+    if IsExistingFile(FileO)=false then
+        RemoveFile(File1);
+        RemoveFile(File2);
+        RemoveFile(FileE);
+        return "program failure: POLY_check_empty_intersection did not create the output";
+    fi;
+    result:=ReadAsFunction(FileO)();
+    RemoveFile(File1);
+    RemoveFile(File2);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return result;
+end;
+
 
 # Solve the linear program: minimize ineq[1] + Sum_j ineq[j+1] x_j over
 # { x : FAC[i][1] + Sum_j FAC[i][j+1] x_j >= 0 }.

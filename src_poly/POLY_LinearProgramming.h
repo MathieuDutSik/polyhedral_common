@@ -337,38 +337,6 @@ Face FindOneInitialVertex(MyMatrix<T> const &TheEXT, std::ostream &os) {
   return FindVertices(TheEXT, 1, os)[0];
 }
 
-template <typename T>
-MyMatrix<T> LP_GetExpressionForLP(MyMatrix<T> const &EXT) {
-  MyVector<T> OneVert = EXT.row(0);
-  int nbRow = EXT.rows();
-  int nbCol = EXT.cols();
-  MyMatrix<T> ListDiff(nbRow, nbCol);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    MyVector<T> eDiff = GetMatrixRow(EXT, iRow) - OneVert;
-    AssignMatrixRow(ListDiff, iRow, eDiff);
-  }
-  MyMatrix<T> TheBasis = RowReduction(ListDiff);
-  int TheDim = TheBasis.rows();
-  MyMatrix<T> NewListCoord(nbRow, TheDim + 1);
-  MyVector<T> eEntOne(1);
-  eEntOne(0) = 1;
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    MyVector<T> eVect1 = ListDiff.row(iRow);
-    std::optional<MyVector<T>> opt = SolutionMat(TheBasis, eVect1);
-    const MyVector<T> &eVect2 = *opt;
-    MyVector<T> eVect3 = Concatenation(eEntOne, eVect2);
-    NewListCoord.row(iRow) = eVect3;
-  }
-  MyVector<T> eIso = Isobarycenter(NewListCoord);
-  eIso(0) = 0;
-  MyMatrix<T> RetMat(nbRow, TheDim + 1);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    MyVector<T> V = GetMatrixRow(NewListCoord, iRow) - eIso;
-    AssignMatrixRow(RetMat, iRow, V);
-  }
-  return RetMat;
-}
-
 // Given a configuration of vectors v_i, we are looking for the lambda_i >= 0
 // such that sum_i lambda_i v_i = 0 with not all lambda_i zero.
 // The existence of such a system of lambda is equivalent to the absence of a
@@ -1999,14 +1967,21 @@ bool is_full_dimensional_bounded_polytope(MyMatrix<T> const &FAC,
 }
 
 /*
-  So, EXT1 / EXT2.
-  A separator is done as f(v1) >= 1 for x in EXT1 and f(v2) <= -1 for x in EXT2.
-  We write f(x) = sum_i a_i x_i
-  We minimize sum_i |a_i|
+  Whether the convex hulls of the rows of EXT1 and of EXT2, points with
+  first coordinate 1, are disjoint. They are iff there is a linear form
+  f(x) = sum_i a_i x_i with f(v1) >= 1 on the rows v1 of EXT1 and
+  f(v2) <= -1 on the rows v2 of EXT2, a strictly separating hyperplane.
+  The LP minimizes sum_i |a_i| (written with b_i >= |a_i|), which is
+  bounded below by 0: it has an optimum iff such a form exists.
  */
 template <typename T>
 bool has_empty_intersection(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                             std::ostream &os) {
+  if (EXT1.cols() != EXT2.cols()) {
+    std::cerr << "LP: has_empty_intersection, EXT1 has " << EXT1.cols()
+              << " columns and EXT2 has " << EXT2.cols() << "\n";
+    throw TerminalException{1};
+  }
   int dim = EXT1.cols();
   MyVector<T> v_z = ZeroVector<T>(1 + 2 * dim);
   std::vector<MyVector<T>> list_v;

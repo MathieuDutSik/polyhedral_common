@@ -910,6 +910,7 @@ set(
   POLY_lrs
   POLY_SmallPolytope
   POLY_LinearDetermineByInequalities
+  POLY_check_empty_intersection
   POLY_IsPointedCone
   POLY_SolutionMatNonnegative
   POLY_cdd_LinearProgramming
