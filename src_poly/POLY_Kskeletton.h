@@ -133,10 +133,7 @@ vectface SPAN_face_LinearProgramming(Face const &face_fac,
           int jCol = iCol + nbRowSpann;
           ListVectors(jRow, iCol) = PreListVectorsB(jRow, jCol);
         }
-      //      std::cerr << "nbOrbCompl=" << nbOrbCompl << " LPdim=" << LPdim <<
-      //      "\n";
       bool test = TestExistPositiveRelation(ListVectors, os);
-      //      std::cerr << "test=" << test << "\n";
       if (!test)
         TheReturn.push_back(eCand);
     }
@@ -193,8 +190,6 @@ SPAN_face_ExtremeRays_F(Face const &face_fac, Tgroup const &StabFace_fac,
   int RankFace_fac = RankFace;
   int RankFace_ext = nbCol - RankFace_fac;
   int RankFaceTarget_ext = RankFace_ext - 1;
-  std::vector<size_t> EXTincd_face_vect;
-  EXTincd_face_vect.reserve(nbExt);
   for (int iFac = 0; iFac < nbFac; iFac++)
     if (Treated[iFac] == 0) {
       Face EXTincd_face = EXTincd;
@@ -292,11 +287,13 @@ EnumerationFaces_Fspann_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
     nList[MinVal] = 1;
     ListOrb.push_back(nList);
   }
-  std::cerr << "iLevel=0 |vf|=" << ListOrb.size();
+#ifdef DEBUG_POLY_KSKELETTON
+  os << "SKEL: iLevel=0 |vf|=" << ListOrb.size();
   if (ComputeTotalNumberFaces) {
-    std::cerr << " total=" << n;
+    os << " total=" << n;
   }
-  std::cerr << "\n";
+  os << "\n";
+#endif
   bool test = f_final(0, ListOrb);
   RetList.emplace_back(std::move(ListOrb));
   if (test)
@@ -319,11 +316,13 @@ EnumerationFaces_Fspann_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
         total += TheGRP.OrbitSize_OnSets(face);
       }
     }
-    std::cerr << "iLevel=" << iLevel << " |vf|=" << vf.size();
+#ifdef DEBUG_POLY_KSKELETTON
+    os << "SKEL: iLevel=" << iLevel << " |vf|=" << vf.size();
     if (ComputeTotalNumberFaces) {
-      std::cerr << " total=" << total;
+      os << " total=" << total;
     }
-    std::cerr << "\n";
+    os << "\n";
+#endif
     bool test = f_final(iLevel, vf);
     RetList.emplace_back(std::move(vf));
     if (test)
@@ -349,15 +348,16 @@ Face Compute_extfac_incd(const MyMatrix<T> &FAC, const MyMatrix<T> &EXT) {
   return extfac_incd;
 }
 
-Face GetFacet_extfac(const Face &extfac_incd, [[maybe_unused]] size_t nbFac,
-                     size_t nbExt, size_t iFac) {
+inline Face GetFacet_extfac(const Face &extfac_incd,
+                            [[maybe_unused]] size_t nbFac, size_t nbExt,
+                            size_t iFac) {
   Face f(nbExt);
   for (size_t iExt = 0; iExt < nbExt; iExt++)
     f[iExt] = extfac_incd[iFac * nbExt + iExt];
   return f;
 }
 
-Face Compute_facext(const Face &extfac_incd, int nbFac, int nbExt) {
+inline Face Compute_facext(const Face &extfac_incd, int nbFac, int nbExt) {
   Face facext_incd(nbFac * nbExt);
   for (int iFac = 0; iFac < nbFac; iFac++)
     for (int iExt = 0; iExt < nbExt; iExt++)
@@ -365,8 +365,8 @@ Face Compute_facext(const Face &extfac_incd, int nbFac, int nbExt) {
   return facext_incd;
 }
 
-Face Compute_faceEXT_from_faceFAC(const Face &extfac_incd, int nbFac, int nbExt,
-                                  const Face &face_fac) {
+inline Face Compute_faceEXT_from_faceFAC(const Face &extfac_incd, int nbFac,
+                                         int nbExt, const Face &face_fac) {
   std::vector<int> eV;
   for (int iFac = 0; iFac < nbFac; iFac++)
     if (face_fac[iFac] == 1)
@@ -383,8 +383,8 @@ Face Compute_faceEXT_from_faceFAC(const Face &extfac_incd, int nbFac, int nbExt,
   return f_ext;
 }
 
-Face Compute_faceFAC_from_faceEXT(const Face &extfac_incd, int nbFac, int nbExt,
-                                  const Face &face_ext) {
+inline Face Compute_faceFAC_from_faceEXT(const Face &extfac_incd, int nbFac,
+                                         int nbExt, const Face &face_ext) {
   std::vector<int> eV;
   for (int iExt = 0; iExt < nbExt; iExt++)
     if (face_ext[iExt] == 1)
@@ -431,18 +431,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
         TheGRP, FAC, LevSearch, f_spann, f_final, ComputeTotalNumberFaces, os);
   }
   if (method_spann == "ExtremeRaysNonSimplicial") {
-    int nbFac = FAC.rows();
-    int nbExt = EXT.rows();
-    int nbCol = EXT.cols();
-    Face extfac_incd(nbFac * nbExt);
-    for (int iFac = 0; iFac < nbFac; iFac++)
-      for (int iExt = 0; iExt < nbExt; iExt++) {
-        T sum(0);
-        for (int i = 0; i < nbCol; i++)
-          AddMul(sum, FAC(iFac, i), EXT(iExt, i));
-        if (sum == 0)
-          extfac_incd[iFac * nbExt + iExt] = 1;
-      }
+    Face extfac_incd = Compute_extfac_incd(FAC, EXT);
     auto f_spann = [&](Face const &face, Tgroup const &StabFace,
                        int const &RankFace, MyMatrix<T> const &FAC,
                        [[maybe_unused]] Tgroup const &FullGRP) -> vectface {
@@ -591,8 +580,8 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
 
 template <typename Tgroup>
 std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const &TheGRP) {
-  Face eList;
   int n = TheGRP.n_act();
+  Face eList(n);
   for (int i = 0; i < n; i++) {
     eList[i] = 1;
   }
@@ -606,8 +595,8 @@ std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const &TheGRP) {
   return RetList;
 }
 
-void PrintListOrb_GAP(std::ostream &os_out,
-                      std::vector<std::vector<int>> const &ListOrb) {
+inline void PrintListOrb_GAP(std::ostream &os_out,
+                             std::vector<std::vector<int>> const &ListOrb) {
   os_out << "return ";
   os_out << "rec(ListRepresentent:=[";
   size_t nbOrb = ListOrb.size();
@@ -629,8 +618,8 @@ void PrintListOrb_GAP(std::ostream &os_out,
   os_out << "]);\n";
 }
 
-void PrintListListOrb_IntGAP(std::ostream &os_out,
-                             std::vector<vectface> const &ListListOrb) {
+inline void PrintListListOrb_IntGAP(std::ostream &os_out,
+                                    std::vector<vectface> const &ListListOrb) {
   int nbLev = ListListOrb.size();
   os_out << "return [";
   for (int iLev = 0; iLev < nbLev; iLev++) {
@@ -659,8 +648,9 @@ void PrintListListOrb_IntGAP(std::ostream &os_out,
   os_out << "];\n";
 }
 
-void OutputFaces_stream(const std::vector<vectface> &TheOutput,
-                        std::ostream &os_out, const std::string &OutFormat) {
+inline void OutputFaces_stream(const std::vector<vectface> &TheOutput,
+                               std::ostream &os_out,
+                               const std::string &OutFormat) {
   if (OutFormat == "GAP") {
     os_out << "return ";
     os_out << "[";
@@ -694,7 +684,7 @@ void OutputFaces_stream(const std::vector<vectface> &TheOutput,
   throw TerminalException{1};
 }
 
-FullNamelist NAMELIST_GetStandard_FaceLattice() {
+inline FullNamelist NAMELIST_GetStandard_FaceLattice() {
   std::map<std::string, SingleBlock> ListBlock;
   // PROC
   {
@@ -715,9 +705,11 @@ Only GAP so far is provided.";
 The available options are LinearProgramming, ExtremeRays or ExtremeRaysNonSimplicial";
     ListStringValues_doc["method_final"] = "Default: all\n\
 Available options are all and stop_nonsimplicial";
-    ListStringValues_doc["Arithmetic"] = "Default: rational\n\
-Other possibilities are Qsqrt2, Qsqrt5 (when compiled with\n\
-QUADRATIC_FIELDS) and RealAlgebraic=FileDesc where FileDesc is the description";
+    ListStringValues_doc["Arithmetic"] = "Default: mpq_class\n\
+Other possibilities are mpq_rational, cpp_rational (when compiled with\n\
+ENABLE_BOOST_TYPES), fmpq_class (with ENABLE_FLINT_SUPPORT), Qsqrt2, Qsqrt5\n\
+(with QUADRATIC_FIELDS) and RealAlgebraic=FileDesc where FileDesc is the\n\
+description of the field";
     ListIntValues_doc["LevSearch"] = "Default: -1\n\
 The level of the search. If set to -1 then the full lattice is computed";
     ListBoolValues_doc["ComputeTotalNumberFaces"] = "Default: false\n\
