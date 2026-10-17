@@ -577,12 +577,12 @@ void check_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   }
 #ifdef DEBUG_P_VORONOI_STAB_EQUIV
   os << "ROBUST: check_p_voronoi GRPparall_ord=" << GRPparall_ord << " GRPp_vor_ord=" << GRPp_vor_ord << " orbit_len=" << orbit_len << "\n";
-#endif
   for (size_t i_orbit=0; i_orbit<orbit_len; i_orbit++) {
     os << "ROBUST: check_p_voronoi, i_orbit=" << i_orbit << " EXT=\n";
     MyMatrix<T> EXT = get_vertices_gp(orbit[i_orbit], os);
     WriteMatrix(os, reorder_matrix(EXT));
   }
+#endif
 
   std::vector<SinglePolytope<T>> polytopes;
   for (auto& gp: orbit) {
@@ -593,6 +593,7 @@ void check_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   if (lconn.size() != orbit_len) {
     std::cerr << "ROBUST: The entries of the orbit should be connected\n";
     std::cerr << "ROBUST: and be pairwise not conncted\n";
+    std::cerr << "ROBUST: |lconn|=" << lconn.size() << " orbit_len=" << orbit_len << "\n";
     throw TerminalException{1};
   }
 }

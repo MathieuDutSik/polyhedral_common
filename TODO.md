@@ -438,3 +438,27 @@ To decide: one convention for all the dispatchers (the full incidence of the
 definition, which cdd / lrs / normaliz already give, is the natural one),
 then fix beneath_beyond (recompute the incidences from the facet normals, or
 only for the rows the kernel skipped) and pd_lrs (repeated rows).
+
+## src_robust_covering: `check_p_voronoi` connectivity test too strong
+
+`check_p_voronoi` (`enum_robust_covering.h`, run under
+`SANITY_CHECK_ENUM_P_POLYTOPES`, which `-DSANITY_CHECK` in
+`Makefile_exact_robust` turns on) merges the orbit of the p-Voronoi cell under
+the parallelotope stabilizer and requires `connected_components_decomposition`
+to give one component per orbit image ("pairwise not connected"). It was
+introduced in commit `9341e673` and makes CI 11B fail.
+
+The requirement does not hold in general. On A2 (measured 2026-10-16), the
+first p-Voronoi cell has an orbit of length 3: the triangles (0,0), (2/3,1/3),
+(1,0) / (2/3,1/3), (1,0), (1,1) / (0,0), (2/3,1/3), (1,1). They tile the
+Delaunay triangle and share edges at the deep hole, so `|lconn|=1` while
+`orbit_len=3`. Z2 (the two mirror images share the edge x = 1) and R12 fail
+the same way. With the sanity check off the results are right: A2 8/3, Z2 2,
+R12 3, Z3 3, A3 4, A3* 177/32.
+
+To decide: the property actually meant (images with disjoint interiors, or
+each image connected on its own), then rewrite the test accordingly.
+
+Separately, Z (dimension 1) fails with or without the sanity check
+("MatrixFromVectorFamily. ListVect is empty"; with DEBUG on,
+"ConversionError e=a1=3/2 is not an integer").
