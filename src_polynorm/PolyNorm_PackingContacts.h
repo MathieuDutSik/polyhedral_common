@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "POLY_DirectDualDesc.h"
+#include "POLY_DirectTriangulation.h"
 #include "POLY_LinearProgramming.h"
 #include "PolytopeEquiStab.h"
 #include <algorithm>
@@ -251,6 +252,56 @@ inline std::vector<PCClass> PC_LatticeCrossPolytopes(int n) {
   return ListClass;
 }
 
+// The candidate contact vectors of a class: L cap [-1,1]^n up to sign,
+// scaled by the common denominator E, the unit vectors first.
+inline std::vector<std::vector<int64_t>> PC_Candidates(PCClass const &C,
+                                                       int n) {
+  int64_t E = C.E;
+  std::set<std::vector<int64_t>> set_cand;
+  for (auto const &g : C.elts) {
+    std::vector<int> z(n, -2);
+    while (true) {
+      std::vector<int64_t> v(n);
+      bool ok = true, zero = true;
+      for (int i = 0; i < n; i++) {
+        v[i] = g[i] + E * z[i];
+        if (std::llabs(v[i]) > E)
+          ok = false;
+        if (v[i] != 0)
+          zero = false;
+      }
+      if (ok && !zero) {
+        int64_t f = 0;
+        for (int i = 0; i < n; i++)
+          if (v[i] != 0) {
+            f = v[i];
+            break;
+          }
+        if (f < 0)
+          for (auto &x : v)
+            x = -x;
+        set_cand.insert(v);
+      }
+      int i = 0;
+      while (i < n && z[i] == 1)
+        z[i++] = -2;
+      if (i == n)
+        break;
+      z[i]++;
+    }
+  }
+  std::vector<std::vector<int64_t>> cand;
+  for (int i = 0; i < n; i++) {
+    std::vector<int64_t> e(n, 0);
+    e[i] = E;
+    cand.push_back(e);
+    set_cand.erase(e);
+  }
+  for (auto &v : set_cand)
+    cand.push_back(v);
+  return cand;
+}
+
 // The difference body D = P - P.
 template <typename T> struct PCBody {
   int n;
@@ -274,7 +325,7 @@ PCBody<T> PC_BuildBody(MyMatrix<T> const &EXT_P, std::ostream &os) {
   int n = EXT_P.cols() - 1;
   PCBody<T> body;
   body.n = n;
-  body.vol_P = rev_search::Kernel_VolumePolytope(EXT_P);
+  body.vol_P = DirectVolumePolytope(EXT_P, TriangulationProgram::lrs, os);
   int n_vert = EXT_P.rows();
   std::set<std::vector<T>> set_diff;
   for (int i = 0; i < n_vert; i++)
@@ -552,49 +603,7 @@ template <typename T> struct PCSearch {
   void SearchClass(int i_class, int f0) {
     PCClass const &C = ListClass[i_class];
     int64_t E = C.E;
-    // Candidates: L cap [-1,1]^n up to sign; the unit vectors first.
-    std::set<std::vector<int64_t>> set_cand;
-    for (auto const &g : C.elts) {
-      std::vector<int> z(n, -2);
-      while (true) {
-        std::vector<int64_t> v(n);
-        bool ok = true, zero = true;
-        for (int i = 0; i < n; i++) {
-          v[i] = g[i] + E * z[i];
-          if (std::llabs(v[i]) > E)
-            ok = false;
-          if (v[i] != 0)
-            zero = false;
-        }
-        if (ok && !zero) {
-          int64_t f = 0;
-          for (int i = 0; i < n; i++)
-            if (v[i] != 0) {
-              f = v[i];
-              break;
-            }
-          if (f < 0)
-            for (auto &x : v)
-              x = -x;
-          set_cand.insert(v);
-        }
-        int i = 0;
-        while (i < n && z[i] == 1)
-          z[i++] = -2;
-        if (i == n)
-          break;
-        z[i]++;
-      }
-    }
-    std::vector<std::vector<int64_t>> cand;
-    for (int i = 0; i < n; i++) {
-      std::vector<int64_t> e(n, 0);
-      e[i] = E;
-      cand.push_back(e);
-      set_cand.erase(e);
-    }
-    for (auto &v : set_cand)
-      cand.push_back(v);
+    std::vector<std::vector<int64_t>> cand = PC_Candidates(C, n);
     int nc = cand.size();
     int64_t det_bound = 1;
     for (int i = 0; i < n; i++)

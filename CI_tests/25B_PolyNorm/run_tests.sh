@@ -140,4 +140,38 @@ gmp octa3.ext 0.947368421053
 Qsqrt2 truncated_cube_qsqrt2.ext 0.973747687989
 Qsqrt5 dodecahedron_qsqrt5.ext 0.904508497187
 LIST
+# The maximal kissing number: the number of touching translates of the
+# densest-contact lattice packing. The square and the cube are
+# parallelotopes and reach 3^n - 1; the triangle and the hexagon reach 6,
+# the most a plane convex body other than a parallelogram can.
+# Columns: file, kissing number.
+PROG_KISS=../../src_polynorm/POLYNORM_MaxKissing
+if [ ! -x "$PROG_KISS" ]; then
+  echo "The program $PROG_KISS is missing" >&2
+  exit 1
+fi
+while read -r file kiss; do
+  case "$file" in
+    ''|\#*) continue ;;
+  esac
+  echo "=== kissing $file (kiss=$kiss)"
+  log="kiss_${file%.ext}.log"
+  if ! $PROG_KISS gmp "$file" text "$log" 2>/dev/null; then
+    echo "Failure of POLYNORM_MaxKissing on $file" >&2
+    exit 1
+  fi
+  check_line "$log" "Maximal kissing number kiss=$kiss"
+  if grep -q WARNING "$log"; then
+    echo "Failure on $file: undecided configurations remain" >&2
+    cat "$log" >&2
+    exit 1
+  fi
+  echo "TEST kissing $file: OK"
+done <<'LIST'
+square.ext 8
+triangle.ext 6
+hexagon.ext 6
+cube3.ext 26
+LIST
+
 echo "All tests passed" > CI_CONCLUSION

@@ -46,7 +46,7 @@ void ComputeCertify(std::string const &FileEXT, std::string const &FileLattice,
       W(0, b) = -W(0, b);
     }
   }
-  T vol = rev_search::Kernel_VolumePolytope(data.EXT);
+  T vol = DirectVolumePolytope(data.EXT, TriangulationProgram::lrs, std::cerr);
   os_out << "Dimension n=" << n << ", vol(P)=" << vol
          << ", det(L)=" << DeterminantMat(W) << "\n";
   // Packing.

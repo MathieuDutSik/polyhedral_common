@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "POLY_DirectDualDesc.h"
+#include "POLY_DirectTriangulation.h"
 #include "POLY_LinearProgramming.h"
 #include "PolytopeEquiStab.h"
 #include <algorithm>
@@ -158,7 +159,7 @@ BetkeHenkBody<T> BetkeHenk_BuildBody(MyMatrix<T> const &EXT_P,
     throw TerminalException{1};
   }
   BetkeHenkBody<T> body;
-  body.vol_P = rev_search::Kernel_VolumePolytope(EXT_P);
+  body.vol_P = DirectVolumePolytope(EXT_P, TriangulationProgram::lrs, os);
   // The differences of the vertices.
   int n_vert = EXT_P.rows();
   std::set<std::vector<T>> set_diff;

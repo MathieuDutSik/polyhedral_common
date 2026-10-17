@@ -75,6 +75,11 @@ faster); every result is exact.
     returns the packing and covering densities of `P` for the lattice whose
     basis is the rows of `FileLattice`, and whether that lattice is an
     exactly certified strict local optimum of each problem.
+  * **POLYNORM_MaxKissing** `[arith] [FileEXT] [OutFormat] [OutFile]` computes
+    the maximal kissing number of `P`: the maximum, over the lattices `L`
+    with `P + L` a packing, of the number of translates `P + v`, `v` in `L`,
+    touching `P`, with a witness lattice and its contact vectors. The value
+    is scale invariant. See "Maximal kissing number" below.
 
 `OutFormat` is `text` (default) or `GAP`, and `OutFile` is a file name or
 `stderr` / `stdout`.
@@ -159,6 +164,42 @@ Xue and the tetrahedron covering 125/63 (best known). Global optimality is not p
 global optimum of the packing problem. See `NOTES.md`, section "Optimal lattices", for the method, the
 validation table and the limits.
 
+Maximal kissing number
+----------------------
+
+The translates `P` and `P + v` touch exactly when `v` is on the boundary of
+the difference body `D = P - P`, so the maximal kissing number is the
+maximum number of points of an admissible lattice (no nonzero point in the
+interior of `D`) on the boundary of `D`. `POLYNORM_MaxKissing` enumerates
+the contact configurations as the Betke-Henk style packing enumeration
+does, but without the criticality (the maximum is attained by a lattice
+whose contact set spans `R^n`, which is all that the cross-polytope and
+determinant conditions need), maximizing the number of contacts instead of
+minimizing the determinant. A maximal configuration is decided exactly: a
+linear program puts every contact on its facet and in `D`, and a branch
+and bound certifies that some lattice of the configuration is admissible,
+by the exact enumeration of its points in `D` (a violating point is pushed
+out of the interior one facet at a time). The witness lattice, its contact
+vectors and `vol(P)/det` are returned, and a configuration exhausting the
+branch and bound budget is reported, turning the result into an interval.
+
+The configurations are pruned by the closure of the contact set: a lattice
+point `(a +- b) / 2` of two contacts is on the boundary (in `D` by
+convexity, not interior by admissibility), so it is forced to be a contact;
+a lattice point `(a +- b) / t` with `t >= 3`, or a candidate divisible in
+the lattice, is interior and forbids the configuration. The search is
+seeded with `Z^n` scaled to its first minimum and stops at the bound
+`3^n - 1` of Hadwiger.
+
+Some values: the square and the cube reach `3^n - 1` (8 and 26, the
+parallelohedra of maximal kissing), the triangle and the hexagon reach 6,
+the octahedron reaches 18, by the lattice `D_3 = {x : sum x_i even}` whose
+18 minimal vectors lie on the boundary of `2 P`, and the simplex of
+dimension 3 reaches 18, by a lattice of the index two class: the value 18
+of Talata for the translative kissing number of the tetrahedron is
+attained by a lattice packing. The 2D cases and the cube take seconds; the
+exactness proofs for the octahedron and the tetrahedron take minutes.
+
 Files
 -----
 
@@ -173,4 +214,7 @@ Files
   * `PolyNorm_Packing2D.h`: the exact densest lattice packing of a polygon.
   * `PolyNorm_BetkeHenk.h`: the densest lattice packing of a 3-polytope by
     the algorithm of Betke and Henk.
+  * `PolyNorm_Kissing.h`: the maximal kissing number by the contact
+    configuration enumeration of `PolyNorm_PackingContacts.h` and the exact
+    admissibility branch and bound.
   * The CI test is `CI_tests/25B_PolyNorm/run_tests.sh`.

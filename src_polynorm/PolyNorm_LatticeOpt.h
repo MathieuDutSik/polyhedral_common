@@ -7,6 +7,7 @@
 #include "PolyNorm_Packing.h"
 #include "Basic_random.h"
 #include "ClassicLLL.h"
+#include "POLY_DirectTriangulation.h"
 #include <cmath>
 #include <limits>
 #include <map>
@@ -1658,7 +1659,7 @@ PolyNorm_LatticeOptimize(PolyNormData<T, Tint, Tgroup> const &data,
                          PolyNormLatticeOptParam const &param,
                          std::vector<MyMatrix<T>> const &ListStart,
                          std::ostream &os) {
-  T vol = rev_search::Kernel_VolumePolytope(data.EXT);
+  T vol = DirectVolumePolytope(data.EXT, TriangulationProgram::lrs, os);
   set_random_seed(param.seed);
   std::vector<PolyNormLatticeResult<T>> ListRes;
   std::vector<MyMatrix<T>> ListW = ListStart;

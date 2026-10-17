@@ -59,7 +59,7 @@ void ComputeOptimalLattice(std::string const &FileEXT,
   MyMatrix<T> EXT = ReadMatrixFile<T>(FileEXT);
   PolyNormData<T, Tint, Tgroup> data =
       PolyNorm_BuildData<T, Tint, Tgroup>(EXT, std::cerr);
-  T vol = rev_search::Kernel_VolumePolytope(data.EXT);
+  T vol = DirectVolumePolytope(data.EXT, TriangulationProgram::lrs, std::cerr);
   os_out << "Dimension n=" << data.n << " with " << data.EXT.rows()
          << " vertices, " << data.Lmat.rows() << " facets, vol(P)=" << vol
          << "\n";
