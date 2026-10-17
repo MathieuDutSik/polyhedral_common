@@ -1763,11 +1763,13 @@ template <typename T> struct EmbeddedPolytope {
 
 template <typename T>
 EmbeddedPolytope<T> ComputeEmbeddedPolytope(MyMatrix<T> const &ListIneq,
-                                            MyMatrix<T> const &ListEqua) {
+                                            MyMatrix<T> const &ListEqua,
+                                            std::ostream &os) {
   MyMatrix<T> NSP = NullspaceTrMat(ListEqua);
   MyMatrix<T> ListIneqRed = ListIneq * (NSP.transpose());
-  MyMatrix<T> LinSpa = LinearDeterminedByInequalities(ListIneqRed);
-  MyMatrix<T> FinalSpace = (LinSpa.transpose()) * NSP;
+  // The rows of LinSpa are a basis of the subspace in the coordinates of NSP.
+  MyMatrix<T> LinSpa = LinearDeterminedByInequalities(ListIneqRed, os);
+  MyMatrix<T> FinalSpace = LinSpa * NSP;
   std::optional<MyMatrix<T>> eRes = AffinizeSubspace(FinalSpace);
   if (!eRes) {
     std::cerr << "LP: Call to ComputeEmbeddedPolytope failed\n";
