@@ -1240,7 +1240,9 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
                           MyVector<T> const &eV, std::ostream &os) {
   std::optional<PVoronoiPart<T, Tint>> opt =
       kernel_l2_p_polytope_part(solver, l_excluded_max, eV, os);
-#ifdef SANITY_CHECK_EXTENSIVE_ENUM_P_POLYTOPES
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES_EXTENSIVE
+  std::cerr << "ROBUST: SANITY_CHECK_ENUM_P_POLYTOPES_EXTENSIVE, checking the "
+               "p-polytope part of kernel_l1_p_polytope_part\n";
   if (opt) {
     PVoronoiPart<T, Tint> const& pvp1 = *opt;
     MyMatrix<T> const& G = solver.GramMat;
