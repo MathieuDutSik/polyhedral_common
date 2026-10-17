@@ -1206,7 +1206,16 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
   os << "|LP: KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace|="
      << time << "\n";
 #endif
-#ifdef DEBUG_LINEAR_PROGRAM
+#ifdef SANITY_CHECK_LINEAR_PROGRAM_EXTENSIVE
+  // Runs all three methods: too expensive for SANITY_CHECK_LINEAR_PROGRAM.
+  std::cerr << "LP: SANITY_CHECK_LINEAR_PROGRAM_EXTENSIVE, comparing the three "
+               "methods of KernelLinearDeterminedByInequalitiesAndIndices\n";
+  std::pair<MyMatrix<T>, Face> res_dual =
+      KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
+  std::pair<MyMatrix<T>, Face> res_dir_lp =
+      KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
+  std::pair<MyMatrix<T>, Face> res_dir_lp_nsp =
+      KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
   auto test_equa = [](std::pair<MyMatrix<T>, Face> const &res1,
                       std::pair<MyMatrix<T>, Face> const &res2) -> bool {
     if (res1.second != res2.second) {
@@ -1214,74 +1223,47 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
     }
     return TestEqualitySpannedSpaces(res1.first, res2.first);
   };
-  auto f_print = [&os](std::string const &origin,
-                       std::pair<MyMatrix<T>, Face> const &res) -> void {
-    os << "LP: f_print origin=" << origin << "\n";
-    os << "LP: Face=" << StringFace(res.second) << "\n";
-    os << "LP: Space=\n";
-    WriteMatrix(os, res.first);
+  auto f_print = [](std::string const &origin,
+                    std::pair<MyMatrix<T>, Face> const &res) -> void {
+    std::cerr << "LP: origin=" << origin << "\n";
+    std::cerr << "LP: Face=" << StringFace(res.second) << "\n";
+    std::cerr << "LP: Space=\n";
+    WriteMatrix(std::cerr, res.first);
   };
-  os << "LP: Before KernelLinearDeterminedByInequalitiesAndIndices_DualMeth\n";
-  std::pair<MyMatrix<T>, Face> res_dual =
-      KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
-  os << "LP: |res_dual|=" << res_dual.first.rows() << " / "
-     << res_dual.first.cols() << "\n";
-  os << "LP: res_dual.second=" << StringFace(res_dual.second) << "\n";
-  os << "Before KernelLinearDeterminedByInequalitiesAndIndices_DirectLP\n";
-  os << "res_dual.first=\n";
-  WriteMatrix(os, res_dual.first);
-  std::pair<MyMatrix<T>, Face> res_dir_lp =
-      KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
-  os << "|res_dir_lp|=" << res_dir_lp.first.rows() << " / "
-     << res_dir_lp.first.cols() << "\n";
-  os << "LP: res_dir_lp.second=" << StringFace(res_dir_lp.second) << "\n";
-  os << "res_dir_lp.first=\n";
-  WriteMatrix(os, res_dir_lp.first);
-  os << "Before "
-        "KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
-  std::pair<MyMatrix<T>, Face> res_dir_lp_nsp =
-      KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
-  os << "|res_dir_lp_nsp|=" << res_dir_lp_nsp.first.rows() << " / "
-     << res_dir_lp_nsp.first.cols() << "\n";
-  os << "LP: res_dir_lp_nsp.second=" << StringFace(res_dir_lp_nsp.second)
-     << "\n";
-  os << "res_dir_lp_nsp.first=\n";
-  WriteMatrix(os, res_dir_lp_nsp.first);
   auto f_print_all = [&]() -> void {
-    os << "LP: f_print_all. FAC=\n";
-    WriteMatrix(os, FAC);
+    std::cerr << "LP: FAC=\n";
+    WriteMatrix(std::cerr, FAC);
     f_print("res_dual", res_dual);
     f_print("res_dir_lp", res_dir_lp);
     f_print("res_dir_lp_nsp", res_dir_lp_nsp);
   };
-  os << "After KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
   if (!test_equa(res_dual, res_dir_lp)) {
     std::cerr << "LP: res_dual and res_dir_lp are not equal\n";
     f_print_all();
     throw TerminalException{1};
   }
-  os << "After test_equa1\n";
   if (!test_equa(res_dual, res_dir_lp_nsp)) {
     std::cerr << "LP: res_dual and res_dir_lp_nsp are not equal\n";
     f_print_all();
     throw TerminalException{1};
   }
-  os << "After test_equa2\n";
-  auto test_correct = [&](std::pair<MyMatrix<T>, Face> const &res) -> void {
+  auto test_correct = [&](std::string const &origin,
+                          std::pair<MyMatrix<T>, Face> const &res) -> void {
     for (int i_row = 0; i_row < n_row; i_row++) {
       if (res.second[i_row] == 1) {
         MyVector<T> eRow = GetMatrixRow(FAC, i_row);
         MyVector<T> Vscal = res.first * eRow;
         if (!IsZeroVector(Vscal)) {
-          std::cerr << "LP: The vector Vscal is not zero\n";
+          std::cerr << "LP: origin=" << origin << " i_row=" << i_row
+                    << " is an equality but Vscal is not zero\n";
           throw TerminalException{1};
         }
       }
     }
   };
-  test_correct(res_dual);
-  test_correct(res_dir_lp);
-  test_correct(res_dir_lp_nsp);
+  test_correct("res_dual", res_dual);
+  test_correct("res_dir_lp", res_dir_lp);
+  test_correct("res_dir_lp_nsp", res_dir_lp_nsp);
 #endif
   if (dim_dual < dim_direct) {
     return KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);

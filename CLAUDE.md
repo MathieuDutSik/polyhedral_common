@@ -69,6 +69,15 @@ For invariant checking. **Prints only when the invariant is violated**, then sig
 #endif
 ```
 
+A check that is too expensive to run routinely (for example one that runs every method and compares the results) goes under `SANITY_CHECK_<CONTEXT>_EXTENSIVE`. It is precisely not switched on by `-DSANITY_CHECK`, only by defining it explicitly. It starts with a `std::cerr` line saying that the check has begun, so that whoever runs it knows a possibly very long computation is under way; otherwise it follows the rules above. Example:
+```cpp
+#ifdef SANITY_CHECK_LINEAR_PROGRAM_EXTENSIVE
+  std::cerr << "LP: SANITY_CHECK_LINEAR_PROGRAM_EXTENSIVE, comparing the three "
+               "methods of KernelLinearDeterminedByInequalitiesAndIndices\n";
+  ...
+#endif
+```
+
 ### `#ifdef TIMINGS_<CONTEXT>`
 For wall-clock measurement. Prints elapsed times around the operation being measured. Should rely on the in-tree timing helpers (`HumanTime`, `MicrosecondTime`, etc.) so output is consistent. Example:
 ```cpp
