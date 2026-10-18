@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "PolyGen_vertices arith [ListEXT]\n";
       std::cerr << "\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic: gmp\n";
+      std::cerr << "arithmetic: mpq_class\n";
       std::cerr << "OutFormat: GAP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     f();
     std::cerr << "Normal termination PolyGen_vertices\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in PolyGen_difference\n";
+    std::cerr << "Error in PolyGen_vertices\n";
     exit(e.eVal);
   }
   runtime(time);

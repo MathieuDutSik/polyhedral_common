@@ -773,6 +773,42 @@ get_polygen_vertices:=function(arg)
     return result;
 end;
 
+get_polygen_info:=function(arg)
+    local gp, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, result, runtime_str;
+    gp:=arg[1];
+    arith:="mpq_class";
+    print_info:=false;
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+        if IsBound(options.print_info) and options.print_info then
+            print_info:=true;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteListMatrixFile(FileI, gp);
+    eProg:=GetBinaryFilename("PolyGen_Info");
+    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if print_info then
+        runtime_str:=extract_runtime_from_log(FileE);
+        Print("  |gp|=", Length(gp), " arith=", arith, " command=PolyGen_Info runtime=", runtime_str, "\n");
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: PolyGen_Info should have created a file";
+    fi;
+    result:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return result;
+end;
+
 get_interior_point:=function(arg)
     local FAC, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheV, runtime_str, list_arg, status;
     FAC:=arg[1];
