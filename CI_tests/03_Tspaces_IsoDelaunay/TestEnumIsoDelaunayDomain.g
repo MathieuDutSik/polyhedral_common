@@ -47,6 +47,7 @@ end;
 write_linear_space_input:=function(eFile, RecLinSpa)
     local os;
     os:=OutputTextFile(eFile, true);
+    SetPrintFormattingStatus(os, false);
     OutputStreamMatrix(os, RecLinSpa.SuperMat);
     OutputStreamListMatrix(os, RecLinSpa.ListMat);
     OutputStreamListMatrix(os, RecLinSpa.ListComm);
@@ -191,6 +192,7 @@ get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     #
     # Create the namelist file
     output:=OutputTextFile(FileNml, true);
+    SetPrintFormattingStatus(output, false);
     AppendTo(output, "&SYSTEM\n");
     AppendTo(output, " max_runtime_second = 0\n");
     AppendTo(output, " ApplyStdUnitbuf = T\n");

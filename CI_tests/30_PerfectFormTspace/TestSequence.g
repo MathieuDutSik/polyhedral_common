@@ -24,6 +24,7 @@ get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     # of perfect cones is obtained by setting &QUERIES.FileCells to the
     # desired output path (with IndexCell = 0 for the top level).
     output:=OutputTextFile(FileNml, true);
+    SetPrintFormattingStatus(output, false);
     AppendTo(output, "&DATA\n");
     AppendTo(output, " arithmetic = \"gmp\"\n");
     AppendTo(output, " ComputeComplex = F\n");

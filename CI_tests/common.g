@@ -152,6 +152,7 @@ end;
 WriteStringFile:=function(eFile, strOut)
     local output;
     output:=OutputTextFile(eFile, true);
+    SetPrintFormattingStatus(output, false);
     WriteAll(output, strOut);
     CloseStream(output);
 end;
@@ -173,6 +174,7 @@ end;
 WriteMatrixFile:=function(eFile, EXT)
     local output, eEXT, eVal;
     output:=OutputTextFile(eFile, true);
+    SetPrintFormattingStatus(output, false);
     WriteMatrix(output, EXT);
     CloseStream(output);
 end;
@@ -300,6 +302,7 @@ end;
 WriteVectorFile:=function(eFile, V)
     local output;
     output:=OutputTextFile(eFile, true);
+    SetPrintFormattingStatus(output, false);
     WriteVector(output, V);
     CloseStream(output);
 end;
@@ -354,6 +357,7 @@ end;
 WriteListMatrixFile:=function(eFile, ListMat)
     local output, eMat;
     output:=OutputTextFile(eFile, true);
+    SetPrintFormattingStatus(output, false);
     AppendTo(output, Length(ListMat), "\n");
     for eMat in ListMat
     do
@@ -366,6 +370,7 @@ WriteGroupFile:=function(eFile, n, GRP)
   local ListGen, output, eGen, i, j;
   ListGen:=GeneratorsOfGroup(GRP);
   output:=OutputTextFile(eFile, true);
+  SetPrintFormattingStatus(output, false);
   AppendTo(output, n, " ", Length(ListGen), "\n");
   for eGen in ListGen
   do
@@ -453,6 +458,7 @@ SaveDataToFile:=function(FileName, OBJ)
   local output;
   Exec("rm -f ", FileName,"\n");
   output:=OutputTextFile(FileName, true);;
+  SetPrintFormattingStatus(output, false);
   AppendTo(output, "return ", OBJ, ";\n");
   CloseStream(output);
 end;

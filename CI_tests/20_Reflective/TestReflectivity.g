@@ -38,6 +38,7 @@ WritePoincareCase:=function(PrefixPoincare, ThePt, ListGen)
     FilePoincare_Data:=Concatenation(PrefixPoincare, ".data");
     FilePoincare_Nml:=Concatenation(PrefixPoincare, ".nml");
     output:=OutputTextFile(FilePoincare_Data, true);
+    SetPrintFormattingStatus(output, false);
     WriteVector(output, ThePt);
     AppendTo(output, Length(ListGen), "\n");
     for eGen in ListGen
