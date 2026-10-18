@@ -2229,6 +2229,10 @@ FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration_kernel(LinS
                                                                             PerfectComplexOptions const& pco,
                                                                             std::ostream& os) {
   using TintGroup = typename Tgroup::Tint;
+  if (pco.compute_boundary && !pco.compute_complex) {
+    std::cerr << "PERFCOMP: compute_boundary requires compute_complex\n";
+    throw TerminalException{1};
+  }
   int n = LinSpa.n;
   int dimEXT = LinSpa.ListMat.size();
   PolyHeuristicSerial<TintGroup> AllArr =
@@ -2259,6 +2263,12 @@ FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration_kernel(LinS
   if (pco.compute_boundary) {
     bool test = are_product_zeros(fce, os);
     os << "are_product_zeros, test=" << GAP_logical(test) << "\n";
+    // The complex is not returned (and thus not cached) if the
+    // boundaries are not a complex.
+    if (!test) {
+      std::cerr << "PERFCOMP: the products of successive boundary maps are not zero\n";
+      throw TerminalException{1};
+    }
   } else {
     os << "no boundary available\n";
   }
