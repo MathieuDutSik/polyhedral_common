@@ -81,14 +81,14 @@ ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M,
   return {std::move(TheGramMat), std::move(SHVret)};
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const &M1,
                                                     MyMatrix<Tint> const &M2,
                                                     std::ostream &os) {
   ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M1, os);
   ShortIso<T, Tint> eRec2 = SHORT_GetInformation<T, Tint>(M2, os);
-  return ArithmeticEquivalence_inner<T, Tint>(eRec1.GramMat, eRec1.SHVdisc,
-                                              eRec2.GramMat, eRec2.SHVdisc, os);
+  return ArithmeticEquivalence_inner<T, Tint, Tgroup>(
+      eRec1.GramMat, eRec1.SHVdisc, eRec2.GramMat, eRec2.SHVdisc, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>

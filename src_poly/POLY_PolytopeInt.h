@@ -14,6 +14,10 @@
 #define DEBUG_POLYTOPE_INT
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_POLYTOPE_INT
+#endif
+
 template<typename T, typename Tint>
 MyMatrix<Tint> lll_reduction_matrix(MyMatrix<T> const& FAC, std::ostream& os) {
   int dim = FAC.cols() - 1;
@@ -54,8 +58,11 @@ MyMatrix<T> apply_lll_reduction(MyMatrix<T> const&FAC, MyMatrix<Tint> const& Pma
 }
 
 
+// The bounds of the coordinates pos..dim-1 over the polytope FACin. Returns
+// false when the polytope is empty, and throws when it is unbounded (the
+// integer point enumeration needs a polytope).
 template<typename T, typename Tint>
-void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std::vector<Tint> & ListUpp, std::vector<Tint> & ListLow, std::ostream& os) {
+bool set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std::vector<Tint> & ListUpp, std::vector<Tint> & ListLow, std::ostream& os) {
 #ifdef DEBUG_POLYTOPE_INT
   os << "POLYINT: set_bound_lp, step 1\n";
 #endif
@@ -67,7 +74,11 @@ void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std:
   for (int i = 0; i < dim - pos; i++) {
     Vminimize(1 + i) = 1;
     eSol = SIMPLEX_LinearProgramming(FACin, Vminimize, os);
-    if (!eSol.DualSolution || !eSol.DirectSolution) {
+    if (!eSol.DirectSolution) {
+      // Infeasible: the polytope is empty.
+      return false;
+    }
+    if (!eSol.DualSolution) {
       std::cerr << "eSol.DualDefined=" << eSol.DualSolution.has_value()
                 << " eSol.PrimalDefined=" << eSol.DirectSolution.has_value() << "\n";
       std::cerr << "Failed computation of ListLow at i=" << i
@@ -97,6 +108,7 @@ void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std:
 #ifdef DEBUG_POLYTOPE_INT
   os << "POLYINT: set_bound_lp, step 3\n";
 #endif
+  return true;
 }
 
 
@@ -108,7 +120,10 @@ void Kernel_GetListIntegralPoint_ITER_no_LLL(MyMatrix<T> const &FAC,
   int dim = n - 1;
   std::vector<Tint> ListLow(dim);
   std::vector<Tint> ListUpp(dim);
-  set_bound_lp(FAC, dim, 0, ListUpp, ListLow, os);
+  if (!set_bound_lp(FAC, dim, 0, ListUpp, ListLow, os)) {
+    // An empty polytope has no integer point.
+    return;
+  }
   std::vector<int> ListSize(dim);
   for (int iDim = 0; iDim < dim; iDim++) {
     Tint const& eLow = ListLow[iDim];
@@ -212,7 +227,7 @@ void Kernel_GetListIntegralPoint_LP_no_LLL(MyMatrix<T> const &FAC, Finsert f_ins
   // Getting the bounds with the coordinates i<pos1 being fixed with values
   // set by eVert. The values of the coordinate pos2 is then computed.
   auto set_bound = [&](const MyVector<Tint> &ePoint,
-                       const size_t &pos) -> void {
+                       const size_t &pos) -> bool {
     MyMatrix<T> FACred(n_row, 1 + dim - pos);
     for (size_t i_row = 0; i_row < n_row; i_row++) {
       T val = FAC(i_row, 0);
@@ -222,7 +237,19 @@ void Kernel_GetListIntegralPoint_LP_no_LLL(MyMatrix<T> const &FAC, Finsert f_ins
       for (size_t i = 0; i < dim - pos; i++)
         FACred(i_row, 1 + i) = FAC(i_row, 1 + pos + i);
     }
-    set_bound_lp(FACred, dim, pos, ListUpp, ListLow, os);
+    return set_bound_lp(FACred, dim, pos, ListUpp, ListLow, os);
+  };
+  // Below the top level a slice cannot be empty: the fixed coordinate lies
+  // between the bounds of the projection of the previous slice.
+  auto set_bound_slice = [&](const MyVector<Tint> &ePoint,
+                             const size_t &pos) -> void {
+    [[maybe_unused]] bool feasible = set_bound(ePoint, pos);
+#ifdef SANITY_CHECK_POLYTOPE_INT
+    if (!feasible) {
+      std::cerr << "POLYINT: the slice at pos=" << pos << " is empty\n";
+      throw TerminalException{1};
+    }
+#endif
   };
   auto get_number_poss = [&](const size_t &pos) -> size_t {
     size_t nb_pos = 1;
@@ -255,7 +282,10 @@ void Kernel_GetListIntegralPoint_LP_no_LLL(MyMatrix<T> const &FAC, Finsert f_ins
   // of a number of cases.
   size_t crit_siz = 10000;
   MyVector<Tint> ePoint(dim);
-  set_bound(ePoint, 0);
+  if (!set_bound(ePoint, 0)) {
+    // An empty polytope has no integer point.
+    return;
+  }
 #ifdef DEBUG_POLYTOPE_INT
   os << "ListBound =";
   for (size_t iDim = 0; iDim < dim; iDim++)
@@ -294,7 +324,7 @@ void Kernel_GetListIntegralPoint_LP_no_LLL(MyMatrix<T> const &FAC, Finsert f_ins
         if (ePoint(pos) < ListUpp[pos]) {
           ePoint(pos) += 1;
           pos++;
-          set_bound(ePoint, pos);
+          set_bound_slice(ePoint, pos);
           break;
         }
         if (pos == 0)
@@ -307,7 +337,7 @@ void Kernel_GetListIntegralPoint_LP_no_LLL(MyMatrix<T> const &FAC, Finsert f_ins
              // deeper
       ePoint(pos) = ListLow[pos];
       pos++;
-      set_bound(ePoint, pos);
+      set_bound_slice(ePoint, pos);
     }
   }
 }

@@ -1662,9 +1662,15 @@ SIMPLEX_RedundancyReductionDirect(MyMatrix<T> const &ListIneq,
       obj(k) = ListIneq(i, k);
     }
     LpSolutionScaled<T> sol = SIMPLEX_LinearProgramming_scaled(LPmat, obj, os);
-    if (!sol.DirectSolution || !sol.DualSolution) {
+    if (!sol.DirectSolution) {
+      // The other kept rows are infeasible: the feasible set is empty with or
+      // without row i, which is therefore redundant.
+      keep[i] = 0;
+      continue;
+    }
+    if (!sol.DualSolution) {
       std::cerr << "SIMPLEX_CLARKSON: the redundancy LP should always be "
-                   "feasible and bounded\n";
+                   "bounded since f_i >= -1\n";
       throw TerminalException{1};
     }
     if (sol.OptimalValueNum >= 0) {

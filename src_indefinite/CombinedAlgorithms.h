@@ -36,10 +36,6 @@
 #define SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
 #endif
 
-#ifdef METHOD_COMPARISON
-#define METHOD_COMPARISON_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
-#endif
-
 #ifdef TRACK_INFO
 #define TRACK_INFO_INDEFINITE_COMBINED_ALGORITHMS
 #endif
@@ -2400,7 +2396,10 @@ private:
     std::vector<MyMatrix<Tint>> LOrb =
         INDEF_FORM_GetOrbit_IsotropicKstuff_Method(
             res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, sd);
-#ifdef METHOD_COMPARISON_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC_EXTENSIVE
+    // Runs the right cosets method as well: too expensive for SANITY_CHECK.
+    std::cerr << "COMB: SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC_"
+                 "EXTENSIVE, comparing the double and right cosets orbits\n";
     std::vector<MyMatrix<Tint>> LOrbB =
         INDEF_FORM_GetOrbit_IsotropicKstuff_Method(
             res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, sd);
@@ -2409,6 +2408,8 @@ private:
                 << LOrb.size() << " |LOrbB|=" << LOrbB.size() << "\n";
       throw TerminalException{1};
     }
+    std::cerr << "COMB: SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC_"
+                 "EXTENSIVE, done\n";
 #endif
     std::vector<MyMatrix<Tint>> LOrbRet;
     for (auto &eOrb : LOrb) {

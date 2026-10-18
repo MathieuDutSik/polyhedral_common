@@ -161,9 +161,40 @@ SinglePolytope<T> mat_product(SinglePolytope<T> const& sp, MyMatrix<T> const& P)
 }
 
 
+/*
+  A polytope of dimension 0 is a point. In homogeneous coordinates it has a
+  single column, its unique vertex is (1) and it has no facets: restricted
+  to the point, an inequality is a constant c, satisfied with the point in
+  its interior iff c > 0.
+*/
+template <typename T> SinglePolytope<T> get_point_polytope() {
+  MyMatrix<T> EXT(1, 1);
+  EXT(0, 0) = T(1);
+  MyMatrix<T> FAC(0, 1);
+  vectface facets(1);
+  return SinglePolytope<T>(EXT, FAC, std::move(facets));
+}
+
+// Whether the constant inequalities FAC (a matrix with a single column) are
+// all strictly satisfied, that is whether they define the point.
+template <typename T> bool is_point_constant_inequalities(MyMatrix<T> const &FAC) {
+  for (int i = 0; i < FAC.rows(); i++) {
+    if (FAC(i, 0) <= 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 template<typename T>
 std::optional<SinglePolytope<T>> singlepolytope_halfspace_int(SinglePolytope<T> const& sp, MyVector<T> const& eFAC, std::ostream &os) {
   MyMatrix<T> FACtot = ConcatenateMatVec(sp.FAC, eFAC);
+  if (FACtot.cols() == 1) {
+    if (!is_point_constant_inequalities(FACtot)) {
+      return {};
+    }
+    return get_point_polytope<T>();
+  }
   if (!IsFullDimensional(FACtot, os)) {
     return {};
   }
@@ -176,6 +207,12 @@ std::optional<SinglePolytope<T>> singlepolytope_halfspace_int(SinglePolytope<T> 
 template<typename T>
 std::optional<SinglePolytope<T>> singlepolytope_halfspaces_int(SinglePolytope<T> const& sp, MyMatrix<T> const& FAC_inp, std::ostream &os) {
   MyMatrix<T> FACtot = Concatenate(sp.FAC, FAC_inp);
+  if (FACtot.cols() == 1) {
+    if (!is_point_constant_inequalities(FACtot)) {
+      return {};
+    }
+    return get_point_polytope<T>();
+  }
   if (!IsFullDimensional(FACtot, os)) {
     return {};
   }
@@ -429,6 +466,16 @@ MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {
 template <typename T>
 SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
                                            std::ostream &os) {
+  if (FACinput.cols() == 1) {
+#ifdef SANITY_CHECK_GENERALIZED_POLYTOPE
+    if (!is_point_constant_inequalities(FACinput)) {
+      std::cerr << "GP: generate_single_polytope, the constant inequalities "
+                   "do not define the point\n";
+      throw TerminalException{1};
+    }
+#endif
+    return get_point_polytope<T>();
+  }
   std::vector<int> ListIrred = get_non_redundant_indices(FACinput, os);
   MyMatrix<T> FAC = SelectRow(FACinput, ListIrred);
   MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);

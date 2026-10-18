@@ -55,9 +55,14 @@ public:
       delete LogErr[iThr];
     }
   }
-  int MPU_NumberFree() { return MaxNumThread - numberRunningThread; }
+  // numberRunningThread is shared by all the methods below, so it is only
+  // accessed under the one mutex mul.
+  int MPU_NumberFree() {
+    std::lock_guard<std::mutex> lk(mul);
+    return MaxNumThread - numberRunningThread;
+  }
   void incNRT(int const &TheId) {
-    std::lock_guard<std::mutex> lk(mulNRT);
+    std::lock_guard<std::mutex> lk(mul);
     numberRunningThread++;
     *(LogErr[TheId]) << "Call to incNRT: Now numberRunningThread="
                      << numberRunningThread << "\n";
@@ -65,7 +70,7 @@ public:
                      << " numberSpannedThread=" << numberSpannedThread << "\n";
   }
   void decNRT(int const &TheId) {
-    std::lock_guard<std::mutex> lk(mulNRT);
+    std::lock_guard<std::mutex> lk(mul);
     numberRunningThread--;
     *(LogErr[TheId]) << "Call to decNRT: Now numberRunningThread="
                      << numberRunningThread << "\n";
@@ -104,7 +109,6 @@ public:
 
 private:
   std::mutex mul;
-  std::mutex mulNRT;
   int numberSpannedThread;
   int MaxNumThread;
   int numberRunningThread;
@@ -137,8 +141,12 @@ public:
     numberThread++;
   }
   void MPU_Terminate() {
-    std::lock_guard<std::mutex> lk(mul);
-    numberThread--;
+    {
+      std::lock_guard<std::mutex> lk(mul);
+      numberThread--;
+    }
+    // A thread waiting in MPU_Acquire can now proceed.
+    data_cond.notify_one();
   }
 
 private:
