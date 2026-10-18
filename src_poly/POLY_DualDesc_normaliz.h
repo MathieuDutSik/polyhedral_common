@@ -147,6 +147,11 @@ template <typename Tint> struct NmzKernel {
   size_t dim;
   size_t nr_gen;
   bool is_pyramid;
+  // The arithmetic cost factor of the heuristics (nmz_arith_cost_factor), a
+  // runtime value so that the exact-ring rerun after a machine-integer
+  // overflow takes the same decisions, hence emits the facets in the same
+  // order, as the machine-integer run.
+  size_t cost_factor;
 
   std::vector<uint8_t> in_triang;
   std::vector<size_t> GensInCone;
@@ -165,10 +170,11 @@ template <typename Tint> struct NmzKernel {
   std::vector<NmzFacet<Tint>> LargeRecPyrs;
 
   // top cone
-  NmzKernel(MyMatrix<Tint> const &_TopGen, std::ostream &_os)
+  NmzKernel(MyMatrix<Tint> const &_TopGen, std::ostream &_os,
+            size_t _cost_factor)
       : TopGen(_TopGen), os(_os),
         dim(_TopGen.cols()), nr_gen(_TopGen.rows()), is_pyramid(false),
-        in_triang(nr_gen, 0), nrGensInCone(0),
+        cost_factor(_cost_factor), in_triang(nr_gen, 0), nrGensInCone(0),
         old_nr_supp_hyps(0), HypCounter(1), nrTotalComparisons(0) {
     RowIdx.resize(nr_gen);
     for (size_t i = 0; i < nr_gen; i++)
@@ -181,7 +187,7 @@ template <typename Tint> struct NmzKernel {
   // build_cone has finished.
   NmzKernel(NmzKernel const &C, std::vector<size_t> const &Key)
       : TopGen(C.TopGen), os(C.os), dim(C.dim),
-        nr_gen(Key.size()), is_pyramid(true),
+        nr_gen(Key.size()), is_pyramid(true), cost_factor(C.cost_factor),
         in_triang(nr_gen, 0), nrGensInCone(0), old_nr_supp_hyps(0),
         HypCounter(1), nrTotalComparisons(0) {
     RowIdx.resize(nr_gen);
@@ -363,8 +369,8 @@ template <typename Tint> struct NmzKernel {
     }
     nrGensInCone = dim;
     nrTotalComparisons = dim * dim / 2;
-    if constexpr (nmz_arith_cost_factor<Tint>() != 1)
-      nrTotalComparisons *= (nmz_arith_cost_factor<Tint>() / 4);
+    if (cost_factor != 1)
+      nrTotalComparisons *= (cost_factor / 4);
   }
 
   // workspace of the Bareiss rank test, sized on first use and reused
@@ -756,7 +762,7 @@ template <typename Tint> struct NmzKernel {
           // test instead
           bool common_subfacet = true;
           bool ranktest =
-              (nr_NonSimp > nmz_arith_cost_factor<Tint>() * dim * dim *
+              (nr_NonSimp > cost_factor * dim * dim *
                                 nr_CommonGens / 3);
           if (ranktest) {
             std::optional<bool> opt =
@@ -883,8 +889,8 @@ template <typename Tint> struct NmzKernel {
       bool common_subfacet = true;
       if (!Pos->simplicial) {
         bool ranktest = true;
-        if constexpr (nmz_arith_cost_factor<Tint>() != 1)
-          ranktest = (old_nr_supp_hyps > nmz_arith_cost_factor<Tint>() * dim *
+        if (cost_factor != 1)
+          ranktest = (old_nr_supp_hyps > cost_factor * dim *
                                              dim * nr_common_gens / 3);
         if (ranktest) {
           std::optional<bool> opt =
@@ -1074,7 +1080,7 @@ template <typename Tint> struct NmzKernel {
   // build_cone: the incremental main loop.
   void build_cone() {
     size_t RecBoundSuppHyp =
-        dim * nmz_SuppHypRecursionFactor * nmz_arith_cost_factor<Tint>();
+        dim * nmz_SuppHypRecursionFactor * cost_factor;
     find_and_evaluate_start_simplex();
     // A generator is handled once it has been considered, whether or not it
     // ended up inserted: one already inside the cone stays inside as the
@@ -1159,7 +1165,7 @@ template <typename Tint> struct NmzKernel {
 // completed by scalar products.
 template <typename Tint, typename Ffacet>
 void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
-                               Ffacet f_facet) {
+                               size_t cost_factor, Ffacet f_facet) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
 #ifdef NMZ_COEFF_STATS
@@ -1197,7 +1203,7 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
     for (int k = 0; k < nbCol; k++)
       EXTsort(i, k) = EXT(perm[i], k);
 
-  NmzKernel<Tint> kernel(EXTsort, os);
+  NmzKernel<Tint> kernel(EXTsort, os, cost_factor);
   kernel.build_cone();
   terminate_in_arithmetic_error<Tint>();
 
@@ -1259,20 +1265,24 @@ MyVector<T> NormalizNormalConvert(MyVector<Tw> &&normal) {
 // (terminate_in_arithmetic_error) right before each call to f_facet, so
 // every facet handed out was computed from exact values, and n_emitted
 // counts them. The kernel is deterministic for identical values (the
-// rows are sorted on entry and all branching is on value comparisons),
-// so on overflow the exact-ring rerun produces the same facet sequence
+// rows are sorted on entry and all branching is on value comparisons) and
+// the rerun uses the cost factor of the machine integers, so that the
+// heuristic decisions (pyramids, rank test vs comparison test) are the
+// same: on overflow the exact-ring rerun produces the same facet sequence
 // and simply skips the first n_emitted entries instead of emitting them
 // twice.
 template <typename Tring, typename Ffacet>
 void NormalizDualDesc_ring(MyMatrix<Tring> const &EXTring, std::ostream &os,
                            Ffacet f_facet) {
   if constexpr (use_try_int64<Tring>::value) {
+    constexpr size_t cost_factor =
+        nmz_arith_cost_factor<normaliz_dd::NmzTryInt>();
     size_t n_emitted = 0;
     try {
       MyMatrix<normaliz_dd::NmzTryInt> EXTtry =
           ConvertMatrixToTryInt64<normaliz_dd::NmzTryInt>(EXTring);
       normaliz_dd::NormalizDualDesc_Kernel_f(
-          EXTtry, os,
+          EXTtry, os, cost_factor,
           [&](MyVector<normaliz_dd::NmzTryInt> &&normal, Face &&incd) {
             terminate_in_arithmetic_error<normaliz_dd::NmzTryInt>();
             f_facet(std::move(normal), std::move(incd));
@@ -1286,13 +1296,14 @@ void NormalizDualDesc_ring(MyMatrix<Tring> const &EXTring, std::ostream &os,
     }
     size_t idx = 0;
     normaliz_dd::NormalizDualDesc_Kernel_f(
-        EXTring, os, [&](MyVector<Tring> &&normal, Face &&incd) {
+        EXTring, os, cost_factor, [&](MyVector<Tring> &&normal, Face &&incd) {
           if (idx >= n_emitted)
             f_facet(std::move(normal), std::move(incd));
           idx++;
         });
   } else {
-    normaliz_dd::NormalizDualDesc_Kernel_f(EXTring, os, f_facet);
+    normaliz_dd::NormalizDualDesc_Kernel_f(
+        EXTring, os, nmz_arith_cost_factor<Tring>(), f_facet);
   }
 }
 
