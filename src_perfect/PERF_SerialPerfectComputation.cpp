@@ -44,7 +44,36 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   bool compute_boundary = BlockDATA.get_bool("ComputeBoundary");
   bool only_well_rounded = BlockDATA.get_bool("OnlyWellRounded");
   bool compute_pre_image = BlockDATA.get_bool("ComputePreImage");
-  PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_pre_image};
+  bool compute_complex = BlockDATA.get_bool("ComputeComplex");
+  PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_pre_image, compute_complex};
+  // With ComputeComplex = F only the perfect forms (level 0) are computed.
+  // The options and queries that need the lower dimensional faces are
+  // then rejected.
+  if (!compute_complex) {
+    std::vector<std::string> l_err;
+    if (compute_boundary) {
+      l_err.push_back("DATA:ComputeBoundary");
+    }
+    if (compute_pre_image) {
+      l_err.push_back("DATA:ComputePreImage");
+    }
+    for (std::string const& key : {"FileFaceSearch", "FileCellLowerBoundary", "FileCellUpperBoundary", "FileListLowerBoundary", "FileChainPreImage", "FileChainBoundary", "FileChainSimplification"}) {
+      if (BlockQUERIES.get_string(key) != "null") {
+        l_err.push_back("QUERIES:" + key);
+      }
+    }
+    if (eFull.get_block("HECKE").get_string("FileHeckeMatrix") != "null") {
+      l_err.push_back("HECKE:FileHeckeMatrix");
+    }
+    if (l_err.size() > 0) {
+      std::cerr << "ComputeComplex = F builds only the perfect forms, but the following need the full complex:";
+      for (auto & e_err : l_err) {
+        std::cerr << " " << e_err;
+      }
+      std::cerr << "\nSet ComputeComplex = T\n";
+      throw TerminalException{1};
+    }
+  }
   //
   std::string CacheFile = BlockDATA.get_string("CacheFile");
   FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration<T,Tint,Tgroup>(LinSpa, pco, CacheFile, os);

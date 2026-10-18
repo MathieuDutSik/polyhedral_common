@@ -33,6 +33,7 @@ int main() {
   pco.compute_boundary = false;
   pco.compute_pre_image = false;
   pco.only_well_rounded = false;
+  pco.compute_complex = true;
   FullComplexEnumeration<T, Tint, Tgroup> fce =
       get_full_complex_enumeration_kernel<T, Tint, Tgroup>(LinSpa, pco,
                                                            std::cerr);

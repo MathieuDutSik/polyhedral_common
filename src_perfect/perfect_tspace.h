@@ -419,7 +419,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListStringValues["arithmetic"] = "gmp";
     ListStringValues["FileDualDescription"] = "unset";
     ListStringValues["CacheFile"] = "none";
-    ListBoolValues["ComputeComplex"] = false;
+    ListBoolValues["ComputeComplex"] = true;
     ListBoolValues["OnlyWellRounded"] = true;
     ListBoolValues["ComputeBoundary"] = false;
     ListBoolValues["ComputePreImage"] = false;

@@ -223,6 +223,8 @@ struct PerfectComplexOptions {
   bool only_well_rounded;
   bool compute_boundary;
   bool compute_pre_image;
+  // If false, only the perfect forms (level 0) are computed.
+  bool compute_complex;
 };
 
 inline bool PerfectComplexOptionsEqual(PerfectComplexOptions const &a,
@@ -232,6 +234,8 @@ inline bool PerfectComplexOptionsEqual(PerfectComplexOptions const &a,
   if (a.compute_boundary != b.compute_boundary)
     return false;
   if (a.compute_pre_image != b.compute_pre_image)
+    return false;
+  if (a.compute_complex != b.compute_complex)
     return false;
   return true;
 }
@@ -243,6 +247,7 @@ inline void serialize(Archive &ar, PerfectComplexOptions &val,
   ar &make_nvp("only_well_rounded", val.only_well_rounded);
   ar &make_nvp("compute_boundary", val.compute_boundary);
   ar &make_nvp("compute_pre_image", val.compute_pre_image);
+  ar &make_nvp("compute_complex", val.compute_complex);
 }
 }  // namespace boost::serialization
 
@@ -1328,6 +1333,11 @@ FceFaceSearch<Tint> fce_face_search(FullComplexEnumeration<T, Tint, Tgroup> cons
   int n_mat = fce.pctdi.LinSpa.ListMat.size();
   MyMatrix<T> ScalMat = get_scal_mat(fce.pctdi.LinSpa.ListMat, EXT);
   int index = n_mat - RankMat(ScalMat);
+  int n_levels = fce.levels.size();
+  if (index >= n_levels) {
+    std::cerr << "TSPACE: fce_face_search, index=" << index << " but only " << n_levels << " levels were computed (ComputeComplex = F?)\n";
+    throw TerminalException{1};
+  }
   int n_orb = fce.levels[index].l_faces.size();
   for (int iOrb=0; iOrb<n_orb; iOrb++) {
     std::vector<triple<Tint>> const& l_triple1 = fce.levels[index].l_faces[iOrb].l_triple;
@@ -1488,7 +1498,9 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
 #endif
   std::vector<FacesPerfectComplex<T,Tint,Tgroup>> levels{level};
   std::vector<FullBoundary<Tint>> boundaries;
-  for (int i=1; i<dim_spa; i++) {
+  // Without the complex, only the level of the perfect forms is built.
+  int n_level = pco.compute_complex ? dim_spa : 1;
+  for (int i=1; i<n_level; i++) {
     ResultStepEnumeration<T,Tint,Tgroup> result = compute_next_level(pctdi, levels[i-1], os);
 #ifdef PRINT_PERFECT_COMPLEX_DIMENSION
     int n_orientable = 0;
