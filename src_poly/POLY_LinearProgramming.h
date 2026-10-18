@@ -62,6 +62,7 @@
 #define SANITY_CHECK_FULL_RANK_FACET_SET
 #define SANITY_CHECK_FIND_SINGLE_VERTEX
 #define SANITY_CHECK_IS_BOUNDED_POLYTOPE
+#define SANITY_CHECK_GEOMETRICALLY_UNIQUE
 #endif
 
 #ifdef TIMINGS
@@ -1340,38 +1341,6 @@ LinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
 }
 
 template <typename T>
-MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC,
-                                                 std::ostream &os) {
-  int nbCol = FAC.cols();
-  int nbRow = FAC.rows();
-  PosRelRes<T> eRes = SearchPositiveRelationSimple_Direct(FAC, os);
-  if (!eRes.eTestExist) {
-    return IdentityMat<T>(nbCol);
-  } else {
-    std::vector<int> ListIdx;
-    MyVector<T> const &TheRelat = *eRes.TheRelat;
-    for (int iRow = 0; iRow < nbRow; iRow++)
-      if (TheRelat(iRow) > 0)
-        ListIdx.push_back(iRow);
-    MyMatrix<T> FACred = SelectRow(FAC, ListIdx);
-    SelectionRowCol<T> eSelect = TMat_SelectRowCol(FACred);
-    if (eSelect.NSP.rows() == 0)
-      return MyMatrix<T>(0, nbCol);
-    MyMatrix<T> FACproj = FAC * eSelect.NSP.transpose();
-    MyMatrix<T> FACprojCor = SelectNonZeroRows(FACproj);
-    MyMatrix<T> TheSpann;
-    if (FACprojCor.rows() == 0)
-      TheSpann = IdentityMat<T>(eSelect.NSP.rows());
-    else
-      TheSpann = KernelLinearDeterminedByInequalities(FACprojCor, os);
-    if (TheSpann.rows() == 0)
-      return MyMatrix<T>(0, nbCol);
-    else
-      return TheSpann * eSelect.NSP;
-  }
-}
-
-template <typename T>
 bool IsFullDimensional_V1(MyMatrix<T> const &FAC, std::ostream &os) {
   return !TestExistPositiveRelation(FAC, os);
 }
@@ -1379,8 +1348,7 @@ bool IsFullDimensional_V1(MyMatrix<T> const &FAC, std::ostream &os) {
 template <typename T>
 MyMatrix<T> LinearDeterminedByInequalities(MyMatrix<T> const &FAC,
                                            std::ostream &os) {
-  static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  return KernelLinearDeterminedByInequalities(SelectNonZeroRows(FAC), os);
+  return LinearDeterminedByInequalitiesAndIndices(FAC, os).first;
 }
 
 template <typename T>
@@ -1433,7 +1401,7 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC,
     throw TerminalException{1};
   }
   MyVector<T> const &eVect = *eSol.DirectSolution;
-#ifdef DEBUG_LINEAR_PROGRAM
+#ifdef SANITY_CHECK_LINEAR_PROGRAM
   MyVector<T> ListScal = FAC * eVect;
   for (int i_row = 0; i_row < n_rows; i_row++) {
     T eScal = ListScal(i_row);
@@ -1464,65 +1432,54 @@ bool TestCriterionNonDegenerate(
   int n_row = ListIneq.rows();
   int n_col = ListIneq.cols();
   MyVector<T> eSolDual = -eSol.DualSolution.value();
-#ifdef DEBUG_LINEAR_PROGRAM
-  os << "LP: OptimalValue=" << eSol.OptimalValue << "\n";
-  os << "LP: eSolDual=" << StringVectorGAP(eSolDual) << "\n";
+  std::vector<int> l_support;
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    if (eSolDual(i_row) > 0) {
+      l_support.push_back(i_row);
+    }
+  }
+  int n_non_zero = l_support.size();
+#ifdef SANITY_CHECK_LINEAR_PROGRAM
   MyVector<T> TheSum = ToBeMinimized;
   TheSum(0) -= eSol.OptimalValue;
-  os << "LP: 1: TheSum=" << StringVectorGAP(TheSum) << "\n";
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
     VecSubMul(TheSum, eSolDual(i_row), eRow);
   }
-  os << "LP: 2: TheSum=" << StringVectorGAP(TheSum) << "\n";
   if (!IsZeroVector(TheSum)) {
-    std::cerr << "LP: The vector TheSum should be zero\n";
+    std::cerr << "LP: The dual solution does not express the objective, "
+                 "TheSum=" << StringVectorGAP(TheSum) << "\n";
     throw TerminalException{1};
   }
-  std::vector<MyVector<T>> vect_incd1;
-  for (int i_row = 0; i_row < n_row; i_row++) {
-    if (eSolDual(i_row) > 0) {
-      MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
-      vect_incd1.push_back(eRow);
-    }
-  }
-  os << "LP: |vect_incd1|=" << vect_incd1.size() << "\n";
-  MyMatrix<T> MatIncd1 = MatrixFromVectorFamily(vect_incd1);
-  int rnk_incd = RankMat(MatIncd1);
-  os << "LP: rnk_incd=" << rnk_incd << "\n";
-  std::vector<MyVector<T>> vect_incd2;
   MyVector<T> DirectSolutionExt = GetDirectSolutionExt(eSol);
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
-    T scal = eRow.dot(DirectSolutionExt);
-    if (scal < 0) {
-      std::cerr << "LP: The scalar product is negative, which is not allowed\n";
+    if (eRow.dot(DirectSolutionExt) < 0) {
+      std::cerr << "LP: The direct solution violates the inequality i_row="
+                << i_row << "\n";
       throw TerminalException{1};
     }
-    if (scal == 0) {
-      vect_incd2.push_back(eRow);
+  }
+  // The criterion below requires a basic dual solution: the inequalities in
+  // its support must be linearly independent (as linear forms in x).
+  if (n_non_zero > 0) {
+    MyMatrix<T> MatSupport = DropColumn(SelectRow(ListIneq, l_support), 0);
+    int rnk = RankMat(MatSupport);
+    if (rnk != n_non_zero) {
+      std::cerr << "LP: The dual solution is not basic, n_non_zero="
+                << n_non_zero << " rnk=" << rnk << "\n";
+      throw TerminalException{1};
     }
   }
-  os << "LP: |vect_incd2|=" << vect_incd2.size() << "\n";
-  MyMatrix<T> MatIncd2 = MatrixFromVectorFamily(vect_incd2);
-  int rnk_incd2 = RankMat(MatIncd2);
-  os << "LP: rnk_incd2=" << rnk_incd2 << "\n";
 #endif
-  int n_non_zero = 0;
-  for (int i_row = 0; i_row < n_row; i_row++) {
-    if (eSolDual(i_row) > 0) {
-      n_non_zero += 1;
-    }
-  }
   int target_dim = n_col - 1;
 #ifdef DEBUG_LINEAR_PROGRAM
-  os << "LP: n_non_zero=" << n_non_zero << " n_col=" << n_col
-     << " target_dim=" << target_dim << " rnk_incd=" << rnk_incd << "\n";
+  os << "LP: OptimalValue=" << eSol.OptimalValue << "\n";
+  os << "LP: eSolDual=" << StringVectorGAP(eSolDual) << "\n";
+  os << "LP: n_non_zero=" << n_non_zero << " target_dim=" << target_dim
+     << "\n";
 #endif
-  if (n_non_zero == target_dim) {
-    return true;
-  }
-  return false;
+  return n_non_zero == target_dim;
 }
 
 /*
@@ -1541,20 +1498,21 @@ bool TestCriterionNonDegenerate(
 template <typename T>
 MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
                                                 std::ostream &os) {
-#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+#ifdef SANITY_CHECK_GEOMETRICALLY_UNIQUE
   auto check_return = [&](MyVector<T> const &Vret) -> void {
     int len = FAC.rows();
     for (int i = 0; i < len; i++) {
       MyVector<T> eFAC = GetMatrixRow(FAC, i);
-      os << "LP: i=" << i << " |eFAC|=" << eFAC.size()
-         << " |retV|=" << Vret.size() << "\n";
       T scal = eFAC.dot(Vret);
       if (scal <= 0) {
-        std::cerr << "LP: We should have strictly positive scalar product\n";
+        std::cerr << "LP: GGUIP, the scalar product with row i=" << i
+                  << " is " << scal << ", it should be strictly positive\n";
         throw TerminalException{1};
       }
     }
   };
+#endif
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GetGeometricallyUniqueInteriorPoint(GGUIP) : beginning\n";
 #endif
   int n_rows = FAC.rows();
@@ -1595,6 +1553,8 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
     os << "LP: GGUIP, returns a solution\n";
     os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size()
        << " case 1\n";
+#endif
+#ifdef SANITY_CHECK_GEOMETRICALLY_UNIQUE
     check_return(V);
 #endif
     // The happy scenario where the linear programming directly gets us
@@ -1626,8 +1586,10 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
   os << "LP: pair.second=" << StringFace(pair.second)
      << " |pair.first|=" << pair.first.rows() << " / " << pair.first.cols()
      << " RankMat(pair.first)=" << RankMat(pair.first) << "\n";
+#endif
+#ifdef SANITY_CHECK_GEOMETRICALLY_UNIQUE
   if (pair.first.rows() == 0) {
-    std::cerr << "LP: The dimension is 0 which is impossible\n";
+    std::cerr << "LP: GGUIP, the dimension is 0 which is impossible\n";
     throw TerminalException{1};
   }
 #endif
@@ -1637,6 +1599,8 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
     os << "LP: GGUIP, returns a solution\n";
     os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size()
        << " case 2\n";
+#endif
+#ifdef SANITY_CHECK_GEOMETRICALLY_UNIQUE
     check_return(V);
 #endif
     // The happy scenario where the linear programming directly gets us
@@ -1672,9 +1636,9 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
 #endif
   MyVector<T> SolSubspace = pair.first.transpose() * SolSubspaceB;
   MyVector<T> V = NSP.transpose() * SolSubspace;
-#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+#ifdef SANITY_CHECK_GEOMETRICALLY_UNIQUE
   if (V(0) <= 0) {
-    std::cerr << "LP: The first coordinate should be strictly positive\n";
+    std::cerr << "LP: GGUIP, the first coordinate should be strictly positive\n";
     throw TerminalException{1};
   }
 #endif
@@ -1686,6 +1650,8 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
   os << "LP: GGUIP, eSolFinal found\n";
   os << "LP: GGUIP Vret=" << StringVectorGAP(Vret) << " |V|=" << Vret.size()
      << " case 3\n";
+#endif
+#ifdef SANITY_CHECK_GEOMETRICALLY_UNIQUE
   check_return(Vret);
 #endif
   return Vret;
@@ -1698,7 +1664,7 @@ MyVector<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
   MyMatrix<T> FACred = FAC * NSP.transpose();
   MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FACred, os);
   MyVector<T> TheSol = NSP.transpose() * eVectInt;
-#ifdef DEBUG_LINEAR_PROGRAM
+#ifdef SANITY_CHECK_LINEAR_PROGRAM
   MyVector<T> ListScal_FAC = FAC * TheSol;
   for (int i_row = 0; i_row < FAC.rows(); i_row++) {
     T eScal = ListScal_FAC(i_row);
