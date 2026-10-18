@@ -1890,9 +1890,12 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
     is not equal to 0
   ----
   (A) If the linear form phi(v) = v[1] is a sum with strictly
-      positive coefficients of FAC, then we have that phi(v) > 0
-      for v <> 0. This is because one of the inequality in FAC
-      is strictly not matched.
+      positive coefficients of FAC and the rows of FAC span the whole
+      space, then we have that phi(v) > 0 for v <> 0. This is because
+      one of the inequality in FAC is strictly not matched. If the rows
+      do not span the space, then the cone contains a line, on which
+      phi vanishes since phi is in the span of the rows: the polytope
+      is unbounded.
   (B) If there is no expression with strictly positive coefficient.
       + If there is an expression with non-negative coefficients,
         then there is a vector in the cone with phi(v) = 0.
@@ -1906,12 +1909,15 @@ bool is_full_dimensional_bounded_polytope(MyMatrix<T> const &FAC,
                                           std::ostream &os) {
 #ifdef SANITY_CHECK_IS_BOUNDED_POLYTOPE
   if (!IsFullDimensional(FAC, os)) {
-    std::cerr << "LP: is_full_dimensional_bounded_polytope require\n";
-    std::cerr << "LP: the polytope to be bounded\n";
+    std::cerr << "LP: is_full_dimensional_bounded_polytope requires\n";
+    std::cerr << "LP: the polytope to be full dimensional\n";
     throw TerminalException{1};
   }
 #endif
   int dim = FAC.cols();
+  if (RankMat(FAC) < dim) {
+    return false;
+  }
   MyVector<T> IneqFund = ZeroVector<T>(dim);
   IneqFund(0) = 1;
   std::optional<MyVector<T>> opt =
