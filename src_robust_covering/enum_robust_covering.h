@@ -423,8 +423,15 @@ std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup
   Tidx n_act = EXT_T.rows();
   std::vector<Telt> LGenBig = GRPbig.SmallGeneratingSet();
   std::vector<Telt> LGenSma;
+  // Polytope_StabilizerKernel preserves the lattice spanned by the vertices,
+  // which for the rational vertices of a p-Voronoi cell can be finer than
+  // the lattice itself (in dimension 1, x -> 3/2 - x for the cell [1/2, 1]):
+  // only the integral matrices are lattice symmetries.
   auto f_correct=[&](Telt const& x) -> bool {
     MyMatrix<T> P = RepresentVertexPermutation(EXT_T, EXT_T, x);
+    if (!IsIntegralMatrix(P)) {
+      return false;
+    }
     GeneralizedPolytope<T> gp_img = mat_product(pv.gp, P);
     return is_equal(pv.gp, gp_img, os);
   };
@@ -512,10 +519,15 @@ std::optional<MyMatrix<Tint>> get_p_voronoi_equivalence(DataLattice<T, Tint, Tgr
 #endif
     return *opt2;
   };
+  // As in get_p_voronoi_stabilizer, only the integral matrices are lattice
+  // equivalences.
   auto f_is_ok=[&](MyMatrix<T> const& x) -> bool {
 #ifdef DEBUG_P_VORONOI_STAB_EQUIV
     os << "ROBUST: get_p_voronoi_equivalence f_is_ok, step 1\n";
 #endif
+    if (!IsIntegralMatrix(x)) {
+      return false;
+    }
     GeneralizedPolytope<T> gp_img = mat_product(pv1.gp, x);
 #ifdef DEBUG_P_VORONOI_STAB_EQUIV
     os << "ROBUST: get_p_voronoi_equivalence f_is_ok, step 2\n";

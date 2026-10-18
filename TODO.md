@@ -459,6 +459,10 @@ R12 3, Z3 3, A3 4, A3* 177/32.
 To decide: the property actually meant (images with disjoint interiors, or
 each image connected on its own), then rewrite the test accordingly.
 
-Separately, Z (dimension 1) fails with or without the sanity check
-("MatrixFromVectorFamily. ListVect is empty"; with DEBUG on,
-"ConversionError e=a1=3/2 is not an integer").
+In dimension 1 (Z, which works since the 0-dimensional polytopes were added
+to src_polygen) the check fails earlier: the parallelotope of the single
+minimal robust matrix has one vertex, which `get_parall_stabilizer` recenters
+to the zero vector, and `LinPolytopeIntegral_Stabilizer` (through
+`SublatticeBasisChange` in `src_group/MatrixGroup.h`) requires a full-rank
+configuration, so an Eigen size assertion fires. To be fixed together with
+the connectivity test.
