@@ -260,9 +260,7 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
     }
   }
   MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
-  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
-  std::vector<MyVector<Tint>> ListPt =
-      GetListIntegralPoint<T, Tint>(FAC, EXT, os);
+  std::vector<MyVector<Tint>> ListPt = GetListIntegralPoint<T, Tint>(FAC, os);
   //
   // Breaking into orbits
   //
