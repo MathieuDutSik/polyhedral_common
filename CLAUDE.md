@@ -46,7 +46,7 @@ If unsure whether a path lives inside a submodule, `cat .gitmodules` lists them.
 
 ## Print statements must be gated by named `#ifdef` blocks
 
-Free-standing `std::cerr << ...`, `os << ...`, etc. that produce output unconditionally must not be added to the codebase. Every diagnostic line must live inside a named preprocessor gate, in one of four categories with different intents. The suffix is the **context** — usually the source-file area (`SHVEC`, `LATTICE_STAB_EQUI_CAN`, `TSPACE_FUNCTIONS`, …) — never a generic name like `DEBUG`.
+Free-standing `std::cerr << ...`, `os << ...`, etc. that produce output unconditionally must not be added to the codebase. Every diagnostic line must live inside a named preprocessor gate, in one of five categories with different intents. The suffix is the **context** — usually the source-file area (`SHVEC`, `LATTICE_STAB_EQUI_CAN`, `TSPACE_FUNCTIONS`, …) — never a generic name like `DEBUG`.
 
 The rule is for the library code: the headers and the functions they define. The `main` program files (`.cpp` files with a `main`, such as `POLY_redundancyGroup.cpp`) are the calling code and may print unconditionally: usage text, progress lines, results and the termination message need no gate.
 
@@ -69,12 +69,13 @@ For invariant checking. **Prints only when the invariant is violated**, then sig
 #endif
 ```
 
-A check that is too expensive to run routinely (for example one that runs every method and compares the results) goes under `SANITY_CHECK_<CONTEXT>_EXTENSIVE`. It is precisely not switched on by `-DSANITY_CHECK`, only by defining it explicitly. It starts with a `std::cerr` line saying that the check has begun, so that whoever runs it knows a possibly very long computation is under way; otherwise it follows the rules above. Example:
+A check that is too expensive to run routinely (for example one that runs several methods only to check that they agree) goes under `SANITY_CHECK_<CONTEXT>_EXTENSIVE`. It is precisely not switched on by `-DSANITY_CHECK`, only by defining it explicitly. It starts with a `std::cerr` line saying that the check has begun, so that whoever runs it knows a possibly very long computation is under way, and ends with another one saying that it is done; otherwise it follows the rules above. Example:
 ```cpp
 #ifdef SANITY_CHECK_LINEAR_PROGRAM_EXTENSIVE
   std::cerr << "LP: SANITY_CHECK_LINEAR_PROGRAM_EXTENSIVE, comparing the three "
                "methods of KernelLinearDeterminedByInequalitiesAndIndices\n";
   ...
+  std::cerr << "LP: SANITY_CHECK_LINEAR_PROGRAM_EXTENSIVE, done\n";
 #endif
 ```
 
@@ -99,7 +100,20 @@ For machine-readable output that is collected to tune the heuristics offline (th
 #endif
 ```
 
-Existing macros in use can be discovered with `grep -rh '#ifdef \(DEBUG\|SANITY_CHECK\|TIMINGS\|KEY_VALUE\)_' src_*/ | sort -u`. Reuse an existing context name when adding to that area rather than inventing a new one.
+### `#ifdef METHOD_COMPARISON_<CONTEXT>`
+For comparing the performance (mainly the runtime) of two or more techniques that compute the same thing: each is run and measured, and the result of one of them is used. Like `DEBUG_`, it must not affect the result. It is distinct from the two neighbouring categories: `KEY_VALUE_` records data on the one method chosen, for offline tuning, and `SANITY_CHECK_<CONTEXT>_EXTENSIVE` runs several methods only to check that they agree. Example:
+```cpp
+#ifdef METHOD_COMPARISON_MATRIX_GROUP_SIMPLIFICATION
+  MicrosecondTime time;
+  std::optional<...> opt1 = ExhaustiveReductionComplexityKernel_V1(...);
+  os << "|SIMP: ExhaustiveReductionComplexityKernel_V1|=" << time << "\n";
+  std::optional<...> opt2 = ExhaustiveReductionComplexityKernel_V2(...);
+  os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time << "\n";
+  return opt2;
+#endif
+```
+
+Existing macros in use can be discovered with `grep -rh '#ifdef \(DEBUG\|SANITY_CHECK\|TIMINGS\|KEY_VALUE\|METHOD_COMPARISON\)_' src_*/ | sort -u`. Reuse an existing context name when adding to that area rather than inventing a new one.
 
 ## Builds must be warning-clean
 

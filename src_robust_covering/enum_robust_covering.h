@@ -1346,6 +1346,7 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
       N += 1;
     }
   }
+  std::cerr << "ROBUST: SANITY_CHECK_ENUM_P_POLYTOPES_EXTENSIVE, done\n";
 #endif
   return opt;
 }

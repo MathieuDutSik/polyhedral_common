@@ -69,10 +69,6 @@
 #define TIMINGS_FULL_RANK_FACET_SET
 #endif
 
-#ifdef METHOD_COMPARISON
-#define METHOD_COMPARISON_SEARCH_POSITIVE_RELATION
-#endif
-
 template <typename T>
 std::optional<MyMatrix<T>> AffinizeSubspace(MyMatrix<T> const &NSP) {
   int TheDim = NSP.rows();
@@ -615,8 +611,10 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect, std::ostream &os) {
   int nbCol = ListVect.cols();
   int dim_direct = nbRow - nbCol;
   int dim_dual = nbCol;
-#ifdef METHOD_COMPARISON_SEARCH_POSITIVE_RELATION
-  // Relatively expensive checks to do
+#ifdef SANITY_CHECK_SEARCH_POSITIVE_RELATION_EXTENSIVE
+  // Runs both methods: too expensive for SANITY_CHECK_SEARCH_POSITIVE_RELATION.
+  std::cerr << "LP: SANITY_CHECK_SEARCH_POSITIVE_RELATION_EXTENSIVE, comparing "
+               "the Direct and DualMethod positive relation searches\n";
   PosRelRes<T> sol1 = SearchPositiveRelationSimple_Direct(ListVect, os);
   PosRelRes<T> sol2 = SearchPositiveRelationSimple_DualMethod(ListVect, os);
   if (sol1.eTestExist != sol2.eTestExist) {
@@ -624,6 +622,7 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect, std::ostream &os) {
     std::cerr << "LP: Clearly not what we expected\n";
     throw TerminalException{1};
   }
+  std::cerr << "LP: SANITY_CHECK_SEARCH_POSITIVE_RELATION_EXTENSIVE, done\n";
 #endif
   auto get_solution = [&]() -> PosRelRes<T> {
     // We take the dimensionality as the driving factor for the complexity of
@@ -1265,6 +1264,7 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
   test_correct("res_dual", res_dual);
   test_correct("res_dir_lp", res_dir_lp);
   test_correct("res_dir_lp_nsp", res_dir_lp_nsp);
+  std::cerr << "LP: SANITY_CHECK_LINEAR_PROGRAM_EXTENSIVE, done\n";
 #endif
   if (dim_dual < dim_direct) {
     return KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
