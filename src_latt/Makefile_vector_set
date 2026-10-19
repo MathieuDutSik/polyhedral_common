@@ -9,7 +9,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++20 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++20 -O3
 #CC		= g++ -std=c++20 -Wall -Wextra -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
-CC		= g++ -std=c++20 -Wall -Wextra -g -O3
+CC		= g++ -std=c++20 -Wall -Wextra -O3
 
 NOLINKFLAG 	= -c
 CDEPS           = -MMD -MP

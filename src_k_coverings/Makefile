@@ -2,7 +2,7 @@ PROGRAM		= LATT_SerialComputeKDelaunay LATT_SerialLattice_IsoKDelaunayDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-CC		= g++ -std=c++20 -Wall -Wextra -g -O3
+CC		= g++ -std=c++20 -Wall -Wextra -O3
 
 NOLINKFLAG 	= -c
 CDEPS           = -MMD -MP

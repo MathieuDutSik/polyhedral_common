@@ -4,7 +4,7 @@ PROGRAM		= POLYNORM_Packing POLYNORM_Covering POLYNORM_TestCovering \
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-CC		= g++ -std=c++20 -Wall -Wextra -g -O3
+CC		= g++ -std=c++20 -Wall -Wextra -O3
 
 NOLINKFLAG 	= -c
 CDEPS           = -MMD -MP

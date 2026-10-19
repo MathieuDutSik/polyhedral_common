@@ -2,7 +2,9 @@ PROGRAM		= INDEF_FORM_GetOrbitRepresentative INDEF_FORM_TestEquivalence INDEF_FO
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-CC		= g++ -std=c++20 -Wall -Wextra -O3 -g
+# No -g: with GCC the debug information makes each object about 2GB and
+# the build runs the CI runner out of memory.
+CC		= g++ -std=c++20 -Wall -Wextra -O3
 #CC		= g++ -std=c++20 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
 
 NOLINKFLAG 	= -c
