@@ -2675,6 +2675,16 @@ PERFCOMP_group_generators:=function(arg)
 end;
 
 
+# The presentation by generators and relators: a record with the finitely
+# presented group fp and the matrices ListGen of its generators.
+PERFCOMP_group_generator_relation:=function(arg)
+    local desc, general_query;
+    desc:=arg[1];
+    general_query:="FileGroupGeneratorRelation";
+    return CallFuncList(PERFCOMP_general_query, Concatenation([desc, general_query], arg{[2..Length(arg)]}));
+end;
+
+
 PERFCOMP_list_number_orbit:=function(arg)
     local desc, general_query;
     desc:=arg[1];

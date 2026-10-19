@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "perfect_complex.h"
+#include "perfect_presentation.h"
 #include "hecke_operators.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -58,7 +59,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     if (compute_pre_image) {
       l_err.push_back("DATA:ComputePreImage");
     }
-    for (std::string const& key : {"FileFaceSearch", "FileCellLowerBoundary", "FileCellUpperBoundary", "FileListLowerBoundary", "FileChainPreImage", "FileChainBoundary", "FileChainSimplification"}) {
+    for (std::string const& key : {"FileGroupGeneratorRelation", "FileFaceSearch", "FileCellLowerBoundary", "FileCellUpperBoundary", "FileListLowerBoundary", "FileChainPreImage", "FileChainBoundary", "FileChainSimplification"}) {
       if (BlockQUERIES.get_string(key) != "null") {
         l_err.push_back("QUERIES:" + key);
       }
@@ -87,6 +88,15 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     os_out << "return ";
     WriteListMatrixGAP(os_out, list_gen);
     os_out << ";\n";
+  }
+  // The presentation by generators and relators, which needs the cells of
+  // codimension 2.
+  std::string FileGroupGeneratorRelation = BlockQUERIES.get_string("FileGroupGeneratorRelation");
+  if (FileGroupGeneratorRelation != "null") {
+    permutalib::Presentation<MyMatrix<Tint>> P =
+        get_presentation_fce<T, Tint, Tgroup>(fce, os);
+    std::ofstream os_out(FileGroupGeneratorRelation);
+    WritePresentationGAP(os_out, P);
   }
   std::string FileListNumberOrbit = BlockQUERIES.get_string("FileListNumberOrbit");
   if (FileListNumberOrbit != "null") {
