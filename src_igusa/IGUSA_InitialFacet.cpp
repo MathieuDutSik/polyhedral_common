@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, mpz_class>;
     ArithmeticDispatch dispatch;
-    add_rational_integer_arithmetics_by_library<false>(
+    add_rational_integer_arithmetics_by_library(
         dispatch, [&]<typename T, typename Tint>() -> void {
           process<T, Tint, Tgroup>(eFull, std::cerr);
         });
