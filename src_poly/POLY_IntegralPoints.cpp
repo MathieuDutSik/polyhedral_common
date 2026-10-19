@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "POLY_PolytopeInt.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -57,62 +58,32 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string method, FileFac;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      process<T>(FileFac, method, OutFormat, OutFile);
+    };
+    add_rational_arithmetics_by_library(dispatch, f_arith);
     if (argc != 4 && argc != 6) {
       std::cerr << "This program is used as\n";
       std::cerr << "POLY_IntegralPoints arith method [FAC] [OutFormat] "
                 << "[OutFile]\n";
       std::cerr << "or\n";
       std::cerr << "POLY_IntegralPoints arith method [FAC]\n";
+      std::cerr << "\n";
+      std::cerr << "arith: " << dispatch.choices() << "\n";
       return -1;
     }
     std::string arith = argv[1];
-    std::string method = argv[2];
-    std::string FileFac = argv[3];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    method = argv[2];
+    FileFac = argv[3];
     if (argc == 6) {
       OutFormat = argv[4];
       OutFile = argv[5];
     }
-    auto f=[&]() -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return process<T>(FileFac, method, OutFormat, OutFile);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(FileFac, method, OutFormat, OutFile);
-      }
-      if (arith == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(FileFac, method, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return process<T>(FileFac, method, OutFormat, OutFile);
-      }
-#endif
-      std::cerr << "Failed to find a matching arithmetic for arith="
-                << arith << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << ", flint\n";
-#else
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
-    };
-    f();
+    dispatch.run(arith);
     std::cerr << "Normal termination of POLY_IntegralPoints\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_IntegralPoints\n";

@@ -11,6 +11,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "POLY_LinearProgramming.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -31,6 +32,14 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string eFileI;
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      process<T>(eFileI, *os_ptr, std::cerr);
+    };
+    add_rational_arithmetics(dispatch, f_arith);
+    add_algebraic_field_arithmetics(dispatch, f_arith);
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -38,84 +47,15 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "mpq_class : rational arithmetic over GMP mpq_class\n";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "mpq_rational : rational arithmetic over "
-                   "boost::multiprecision::mpq_rational\n";
-#endif
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "cpp_rational : rational arithmetic over "
-                   "boost::multiprecision::cpp_rational\n";
-#endif
-#ifdef QUADRATIC_FIELDS
-      std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
-      std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-#endif
-      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case of a "
-                   "field whose description is in FileDesc\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     //
     std::string arith = argv[1];
-    std::string eFileI = argv[2];
+    eFileI = argv[2];
     auto compute_pointedness = [&](std::ostream &os_out) -> void {
-      if (arith == "mpq_class") {
-        using T = mpq_class;
-        return process<T>(eFileI, os_out, std::cerr);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(eFileI, os_out, std::cerr);
-      }
-      if (arith == "cpp_rational") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(eFileI, os_out, std::cerr);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpq_class") {
-        using T = fmpq_class;
-        return process<T>(eFileI, os_out, std::cerr);
-      }
-#endif
-#ifdef QUADRATIC_FIELDS
-      if (arith == "Qsqrt5") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 5>;
-        return process<T>(eFileI, os_out, std::cerr);
-      }
-      if (arith == "Qsqrt2") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 2>;
-        return process<T>(eFileI, os_out, std::cerr);
-      }
-#endif
-      std::optional<std::string> opt_realalgebraic =
-          get_postfix(arith, "RealAlgebraic=");
-      if (opt_realalgebraic) {
-        std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!FILE_IsExistingFile(FileAlgebraicField)) {
-          std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                    << " is missing\n";
-          throw TerminalException{1};
-        }
-        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
-        int const idx_real_algebraic_field = 1;
-        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-        using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFileI, os_out, std::cerr);
-      }
-      std::cerr << "Failed to find a matching field for arith=" << arith
-                << "\n";
-#ifdef QUADRATIC_FIELDS
-      std::cerr << "Available possibilities: mpq_class, Qsqrt5, Qsqrt2, "
-                   "RealAlgebraic\n";
-#else
-      std::cerr << "Available possibilities: mpq_class, "
-                   "RealAlgebraic\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os_out;
+      dispatch.run(arith);
     };
     compute_pointedness(std::cerr);
     std::cerr << "Normal termination of POLY_IsPointedCone\n";
