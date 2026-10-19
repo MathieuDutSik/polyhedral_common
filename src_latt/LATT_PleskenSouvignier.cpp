@@ -3,12 +3,12 @@
 #include "NumberTheoryBoostCppInt.h"
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
-#include "NumberTheorySafeInt.h"
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
 #include "LatticePleskenSouvignier.h"
 #include "Positivity.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -97,6 +97,20 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string mode, FileGram1;
+    std::string FileGram2 = "unset";
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics_by_library(
+        dispatch, [&]<typename T>() -> void {
+          if (mode == "aut") {
+            return process_automorphism<T>(FileGram1, OutFormat, *os_ptr);
+          }
+          return process_isometry<T>(FileGram1, FileGram2, OutFormat,
+                                     *os_ptr);
+        });
     if (argc != 4 && argc != 6 && argc != 5 && argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -106,65 +120,30 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_PleskenSouvignier [arith] iso [GramFile1] "
                 << "[GramFile2] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "arith: gmp for T=mpq, Tint=mpz\n";
-      std::cerr << "       safe for the overflow-checked machine integers\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "       flint for T=fmpq, Tint=fmpz\n";
-#endif
+      std::cerr << "arith: " << dispatch.choices() << "\n";
       std::cerr << "aut: the automorphism group generators and order\n";
       std::cerr << "iso: an isometry P with P * M1 * P^T = M2, or fail\n";
       std::cerr << "OutFormat: GAP (default) or CPP\n";
       return -1;
     }
     std::string arith = argv[1];
-    std::string mode = argv[2];
+    mode = argv[2];
     if (mode != "aut" && mode != "iso") {
       std::cerr << "The mode should be aut or iso\n";
       throw TerminalException{1};
     }
     int n_file = (mode == "aut") ? 1 : 2;
-    std::string FileGram1 = argv[3];
-    std::string FileGram2 = (n_file == 2) ? argv[4] : "unset";
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    FileGram1 = argv[3];
+    if (n_file == 2) {
+      FileGram2 = argv[4];
+    }
     if (argc == 3 + n_file + 2) {
       OutFormat = argv[3 + n_file];
       OutFile = argv[3 + n_file + 1];
     }
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        if (mode == "aut") {
-          return process_automorphism<T>(FileGram1, OutFormat, os);
-        }
-        return process_isometry<T>(FileGram1, FileGram2, OutFormat, os);
-      }
-      if (arith == "safe") {
-        // Machine integers with overflow detection: an overflow throws
-        // instead of corrupting, so a caller can fall back to gmp.
-        using T = Rational<SafeInt64>;
-        if (mode == "aut") {
-          return process_automorphism<T>(FileGram1, OutFormat, os);
-        }
-        return process_isometry<T>(FileGram1, FileGram2, OutFormat, os);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        if (mode == "aut") {
-          return process_automorphism<T>(FileGram1, OutFormat, os);
-        }
-        return process_isometry<T>(FileGram1, FileGram2, OutFormat, os);
-      }
-#endif
-      std::cerr << "Failed to find a matching entry for arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp, safe, flint\n";
-#else
-      std::cerr << "Allowed values: gmp, safe (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
     std::cerr << "Normal termination of LATT_PleskenSouvignier\n";
