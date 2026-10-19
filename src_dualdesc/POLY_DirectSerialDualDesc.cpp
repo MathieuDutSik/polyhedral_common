@@ -15,6 +15,7 @@
 #include "GRP_GroupFile.h"
 #include "Permutation.h"
 #include "Group.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tidx>
@@ -55,59 +56,34 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string EXTfile;
+    std::string GRPfile;
+    std::string OutFormat;
+    std::string OutFile;
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
+    };
+    add_rational_arithmetics(dispatch, f_arith);
+    add_algebraic_field_arithmetics(dispatch, f_arith);
     if (argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "POLY_DirectSerialDualDesc [arith] [EXTfile] [GRPfile] "
                    "[OutFormat] [OutFile]\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     std::string arith = argv[1];
-    std::string EXTfile = argv[2];
-    std::string GRPfile = argv[3];
-    std::string OutFormat = argv[4];
-    std::string OutFile = argv[5];
+    EXTfile = argv[2];
+    GRPfile = argv[3];
+    OutFormat = argv[4];
+    OutFile = argv[5];
     //
-    auto f = [&]() -> void {
-      if (arith == "rational") {
-        using T = mpq_class;
-        return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "cpp_rational") {
-        using T = boost::multiprecision::cpp_rational;
-        return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpq_class") {
-        using T = fmpq_class;
-        return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
-      }
-#endif
-#ifdef QUADRATIC_FIELDS
-      if (arith == "Qsqrt5") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 5>;
-        return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
-      }
-      if (arith == "Qsqrt2") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 2>;
-        return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
-      }
-#endif
-      std::cerr << "Failed to find a matching type entry arith=" << arith
-                << "\n";
-      throw TerminalException{1};
-    };
-    f();
+    dispatch.run(arith);
     //
     std::cerr << "Normal termination of POLY_DirectSerialDualDesc\n";
   } catch (TerminalException const &e) {

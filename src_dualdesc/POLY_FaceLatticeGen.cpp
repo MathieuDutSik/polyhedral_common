@@ -14,6 +14,7 @@
 #include "Group.h"
 #include "POLY_Kskeletton.h"
 #include "Permutation.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tgroup>
@@ -114,56 +115,13 @@ template <typename Tgroup>
 void MainFunctionFaceLattice(FullNamelist const &eFull) {
   SingleBlock const &BlockPROC = eFull.get_block("PROC");
   std::string const &arith = BlockPROC.get_string("Arithmetic");
-  if (arith == "mpq_class") {
-    using T = mpq_class;
-    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
-  }
-#ifdef ENABLE_BOOST_TYPES
-  if (arith == "mpq_rational") {
-    using T = boost::multiprecision::mpq_rational;
-    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
-  }
-  if (arith == "cpp_rational") {
-    using T = boost::multiprecision::cpp_rational;
-    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
-  }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arith == "fmpq_class") {
-    using T = fmpq_class;
-    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
-  }
-#endif
-#ifdef QUADRATIC_FIELDS
-  if (arith == "Qsqrt5") {
-    using Trat = Trat_quad_field;
-    using T = QuadField<Trat, 5>;
-    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
-  }
-  if (arith == "Qsqrt2") {
-    using Trat = Trat_quad_field;
-    using T = QuadField<Trat, 2>;
-    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
-  }
-#endif
-  std::optional<std::string> opt_realalgebraic =
-      get_postfix(arith, "RealAlgebraic=");
-  if (opt_realalgebraic) {
-    std::string const &FileAlgebraicField = *opt_realalgebraic;
-    if (!FILE_IsExistingFile(FileAlgebraicField)) {
-      std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                << " is missing\n";
-      throw TerminalException{1};
-    }
-    HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
-    int const idx_real_algebraic_field = 1;
-    insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-    using T = RealField<idx_real_algebraic_field>;
-    return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
-  }
-  std::cerr << "Failed to find a matching arithmetic for arith=" << arith
-            << "\n";
-  throw TerminalException{1};
+  ArithmeticDispatch dispatch;
+  auto f_arith = [&]<typename T>() -> void {
+    MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
+  };
+  add_rational_arithmetics(dispatch, f_arith);
+  add_algebraic_field_arithmetics(dispatch, f_arith);
+  dispatch.run(arith);
 }
 
 int main(int argc, char *argv[]) {
