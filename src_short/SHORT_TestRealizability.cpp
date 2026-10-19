@@ -9,6 +9,7 @@
 #include "Permutation.h"
 #include "SHORT_Realizability.h"
 #include "rational.h"
+#include "Arithmetic_dispatch_types.h"
 
 template <typename T>
 void test_realizability(std::string const& FileSHV, std::string const& OutFormat, std::string const& OutFile) {
@@ -60,6 +61,13 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string FileSHV;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stdout";
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
+      test_realizability<T>(FileSHV, OutFormat, OutFile);
+    });
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -68,33 +76,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "SHORT_TestRealizability [arith] [FileIn] [OutFormat] "
                 << "[OutFile]\n";
       std::cerr << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "[arith]        : The arithmetic being used: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << " or flint\n";
-#else
-      std::cerr << "[arith]        : The arithmetic being used: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, or multi_boost";
-#endif
-      std::cerr << "\n";
-      std::cerr << "                 (build with ENABLE_FLINT_SUPPORT=1 for "
-                << "flint)\n";
-#endif
-      std::cerr << "  gmp         : T = mpq_class, Tint = mpz_class\n";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "  gmp_boost   : T = boost::multiprecision::mpq_rational, "
-                << "Tint = boost::multiprecision::mpz_int\n";
-#endif
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, "
-                << "Tint = boost::multiprecision::cpp_int\n";
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "  flint       : T = fmpq_class, Tint = fmpz_class\n";
-#endif
+      std::cerr << "[arith]        : The arithmetic being used:\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "[FileIn]       : The input file of the system\n";
       std::cerr << "[OutFormat]    : The output format, TXT or GAP\n";
       std::cerr << "[OutFile]      : The output file of the program\n";
@@ -102,53 +85,13 @@ int main(int argc, char *argv[]) {
     }
     //
     std::string arith = argv[1];
-    std::string FileSHV = argv[2];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stdout";
+    FileSHV = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
     //
-    auto f_treat=[&]() -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return test_realizability<T>(FileSHV, OutFormat, OutFile);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return test_realizability<T>(FileSHV, OutFormat, OutFile);
-      }
-      if (arith == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return test_realizability<T>(FileSHV, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return test_realizability<T>(FileSHV, OutFormat, OutFile);
-      }
-#endif
-      std::cerr << "SHORT_TestRealizability: failed to find a matching "
-                << "arithmetic\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << ", flint\n";
-#else
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
-    };
-    f_treat();
+    dispatch.run(arith);
     //
     //
     std::cerr << "Normal termination of SHORT_TestRealizability\n";

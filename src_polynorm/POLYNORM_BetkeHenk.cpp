@@ -10,6 +10,7 @@
 #include "Permutation.h"
 #include "PolyNorm_BetkeHenk.h"
 #include <iomanip>
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -148,6 +149,28 @@ int main(int argc, char *argv[]) {
   maybe_install_tls_gmp_pool();
   HumanTime time;
   try {
+    std::string FileEXT;
+    std::string OutFile = "stderr";
+    int n_thread = 1;
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      ComputeBetkeHenk<T>(FileEXT, n_thread, *os_ptr);
+    };
+    add_rational_arithmetics_by_library(dispatch, f_arith);
+    add_algebraic_field_arithmetics(dispatch, f_arith);
+#ifndef QUADRATIC_FIELDS
+    // The quadratic fields are always compiled here, while the shared
+    // registration only adds them under QUADRATIC_FIELDS.
+    dispatch.add("Qsqrt2", "arithmetic over the field Q(sqrt(2))",
+                 [&]() -> void {
+                   f_arith.template operator()<QuadField<Trat_quad_field, 2>>();
+                 });
+    dispatch.add("Qsqrt5", "arithmetic over the field Q(sqrt(5))",
+                 [&]() -> void {
+                   f_arith.template operator()<QuadField<Trat_quad_field, 5>>();
+                 });
+#endif
     if (argc != 3 && argc != 4 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -155,9 +178,7 @@ int main(int argc, char *argv[]) {
           << "POLYNORM_BetkeHenk [arith] [FileEXT] [OutFile] [n_thread]\n";
       std::cerr << "\n";
       std::cerr << "arith values:\n";
-      std::cerr << "  gmp                : the rationals\n";
-      std::cerr << "  Qsqrt2, Qsqrt5     : the fields Q(sqrt 2), Q(sqrt 5)\n";
-      std::cerr << "  RealAlgebraic=File : the real algebraic field of File\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "FileEXT : the vertices of the 3-polytope, one per row\n";
       std::cerr << "          in homogeneous coordinates (1, v)\n";
       std::cerr << "OutFile : the output file, or stderr / stdout\n";
@@ -168,46 +189,16 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     std::string arith = argv[1];
-    std::string FileEXT = argv[2];
-    std::string OutFile = "stderr";
+    FileEXT = argv[2];
     if (argc >= 4) {
       OutFile = argv[3];
     }
-    int n_thread = 1;
     if (argc == 5) {
       n_thread = ParseScalar<int>(argv[4]);
     }
     auto prt = [&](std::ostream &os_out) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return ComputeBetkeHenk<T>(FileEXT, n_thread, os_out);
-      }
-      if (arith == "Qsqrt5") {
-        using T = QuadField<Trat_quad_field, 5>;
-        return ComputeBetkeHenk<T>(FileEXT, n_thread, os_out);
-      }
-      if (arith == "Qsqrt2") {
-        using T = QuadField<Trat_quad_field, 2>;
-        return ComputeBetkeHenk<T>(FileEXT, n_thread, os_out);
-      }
-      std::optional<std::string> opt_realalgebraic =
-          get_postfix(arith, "RealAlgebraic=");
-      if (opt_realalgebraic) {
-        std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!FILE_IsExistingFile(FileAlgebraicField)) {
-          std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                    << " is missing\n";
-          throw TerminalException{1};
-        }
-        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
-        int const idx_real_algebraic_field = 1;
-        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-        using T = RealField<idx_real_algebraic_field>;
-        return ComputeBetkeHenk<T>(FileEXT, n_thread, os_out);
-      }
-      std::cerr << "Failed to find a matching entry for arith=" << arith
-                << "\n";
-      throw TerminalException{1};
+      os_ptr = &os_out;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, prt);
     std::cerr << "Normal termination of POLYNORM_BetkeHenk\n";

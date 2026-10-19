@@ -9,6 +9,7 @@
 #include "PolyNorm_LatticeOpt.h"
 #include "PolyNorm_Packing2D.h"
 #include <iomanip>
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -120,6 +121,18 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string FileEXT;
+    std::string problem;
+    int n_start = 0;
+    uint64_t seed = 0;
+    std::string FileStart = "none";
+    std::string OutFile = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
+      ComputeOptimalLattice<T>(FileEXT, problem, n_start, seed, FileStart,
+                               *os_ptr);
+    });
     if (argc != 6 && argc != 7 && argc != 8) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -127,10 +140,7 @@ int main(int argc, char *argv[]) {
                    "[n_start] [seed] [FileStart] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "arith values:\n";
-      std::cerr << "  gmp   : mpq_class / mpz_class\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "  flint : fmpq_class / fmpz_class\n";
-#endif
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "FileEXT   : the vertices of the polytope, one per row\n";
       std::cerr << "            in homogeneous coordinates (1, v)\n";
       std::cerr << "problem   : packing or covering\n";
@@ -147,12 +157,10 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     std::string arith = argv[1];
-    std::string FileEXT = argv[2];
-    std::string problem = argv[3];
-    int n_start = ParseScalar<int>(argv[4]);
-    uint64_t seed = ParseScalar<uint64_t>(argv[5]);
-    std::string FileStart = "none";
-    std::string OutFile = "stderr";
+    FileEXT = argv[2];
+    problem = argv[3];
+    n_start = ParseScalar<int>(argv[4]);
+    seed = ParseScalar<uint64_t>(argv[5]);
     if (argc >= 7) {
       FileStart = argv[6];
     }
@@ -160,21 +168,8 @@ int main(int argc, char *argv[]) {
       OutFile = argv[7];
     }
     auto prt = [&](std::ostream &os_out) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return ComputeOptimalLattice<T>(FileEXT, problem, n_start, seed,
-                                        FileStart, os_out);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return ComputeOptimalLattice<T>(FileEXT, problem, n_start, seed,
-                                        FileStart, os_out);
-      }
-#endif
-      std::cerr << "Failed to find a matching entry for arith=" << arith
-                << "\n";
-      throw TerminalException{1};
+      os_ptr = &os_out;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, prt);
     std::cerr << "Normal termination of POLYNORM_OptimalLattice\n";

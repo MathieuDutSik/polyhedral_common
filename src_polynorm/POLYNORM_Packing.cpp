@@ -7,6 +7,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "PolyNorm_Packing.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -59,6 +60,14 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string FileEXT;
+    std::string OutFormat = "text";
+    std::string OutFile = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
+      ComputePacking<T>(FileEXT, OutFormat, *os_ptr);
+    });
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -67,10 +76,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "POLYNORM_Packing [arith] [FileEXT]\n";
       std::cerr << "\n";
       std::cerr << "arith values:\n";
-      std::cerr << "  gmp   : mpq_class / mpz_class\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "  flint : fmpq_class / fmpz_class\n";
-#endif
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "FileEXT   : the vertices of the polytope, one per row\n";
       std::cerr << "            in homogeneous coordinates (1, v)\n";
       std::cerr << "OutFormat : text (default) or GAP\n";
@@ -82,34 +88,14 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     std::string arith = argv[1];
-    std::string FileEXT = argv[2];
-    std::string OutFormat = "text";
-    std::string OutFile = "stderr";
+    FileEXT = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
     auto prt = [&](std::ostream &os_out) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return ComputePacking<T>(FileEXT, OutFormat, os_out);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return ComputePacking<T>(FileEXT, OutFormat, os_out);
-      }
-#endif
-      std::cerr << "Failed to find a matching entry for arith=" << arith
-                << "\n";
-      std::cerr << "Available possibilities: gmp";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << ", flint";
-#else
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)";
-#endif
-      std::cerr << "\n";
-      throw TerminalException{1};
+      os_ptr = &os_out;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, prt);
     std::cerr << "Normal termination of POLYNORM_Packing\n";

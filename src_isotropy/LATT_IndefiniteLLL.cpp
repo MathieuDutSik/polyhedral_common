@@ -8,6 +8,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "Indefinite_LLL.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -48,58 +49,35 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 3 && argc != 2) {
+    std::string FileI;
+    std::string OutFormat = "GAP";
+    std::string FileO = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
+      process<T>(FileI, OutFormat, *os_ptr);
+    });
+    if (argc != 3 && argc != 5) {
       std::cerr
           << "LATT_IndefiniteLLL arithmetic [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "LATT_IndefiniteLLL arithmetic [FileI]\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       throw TerminalException{1};
     }
     std::string arith = argv[1];
-    std::string FileI = argv[2];
-    std::string OutFormat = "GAP";
-    std::string FileO = "stderr";
+    FileI = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       FileO = argv[4];
     }
     //
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return process<T>(FileI, OutFormat, os);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(FileI, OutFormat, os);
-      }
-      if (arith == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(FileI, OutFormat, os);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return process<T>(FileI, OutFormat, os);
-      }
-#endif
-      std::cerr << "Failed to find a matching type for arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Possibilities: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << ", flint\n";
-#else
-      std::cerr << "Possibilities: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(FileO, f);
     std::cerr << "Normal termination of LATT_IndefiniteLLL\n";

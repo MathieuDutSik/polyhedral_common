@@ -1398,7 +1398,7 @@ quadratic_form_isotropic_test_generic:=function(arg)
     local eProg, mat, options, arith, print_info, TmpDir, FileI, FileO, FileE, U, runtime_str, list_arg, status;
     eProg:=arg[1];
     mat:=arg[2];
-    arith:="rational";
+    arith:="mpq_class";
     print_info:=false;
     if Length(arg) >= 3 then
         options:=arg[3];

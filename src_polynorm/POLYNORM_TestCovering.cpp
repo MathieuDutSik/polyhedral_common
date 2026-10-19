@@ -8,6 +8,7 @@
 #include "Permutation.h"
 #include "PolyNorm_Packing.h"
 #include "PolyNorm_Covering.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 /*
@@ -82,42 +83,12 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 3 && argc != 5 && argc != 6) {
-      std::cerr << "Number of argument is = " << argc << "\n";
-      std::cerr << "This program is used as\n";
-      std::cerr << "POLYNORM_TestCovering [arith] [FileEXT]\n";
-      std::cerr << "    or\n";
-      std::cerr << "POLYNORM_TestCovering [arith] [FileEXT] [alpha] [mu]\n";
-      std::cerr << "    or\n";
-      std::cerr << "POLYNORM_TestCovering [arith] [FileEXT] [alpha] [mu] "
-                << "[max_brute_force]\n";
-      std::cerr << "\n";
-      std::cerr << "arith   : gmp";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << " or flint";
-#endif
-      std::cerr << "\n";
-      std::cerr << "FileEXT : the vertices in homogeneous coordinates\n";
-      std::cerr << "alpha   : the expected packing scalar, or none\n";
-      std::cerr << "mu      : the expected covering radius, or none\n";
-      std::cerr << "max_brute_force : the largest number of systems for\n";
-      std::cerr << "          which the brute force check is run\n";
-      std::cerr << "          (default 2000000)\n";
-      return -1;
-    }
-    std::string arith = argv[1];
-    std::string FileEXT = argv[2];
+    std::string FileEXT;
     std::string s_alpha = "none";
     std::string s_mu = "none";
     size_t max_brute_force = 2000000;
-    if (argc >= 5) {
-      s_alpha = argv[3];
-      s_mu = argv[4];
-    }
-    if (argc == 6) {
-      max_brute_force = ParseScalar<size_t>(argv[5]);
-    }
-    auto run = [&]<typename T>() -> void {
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
       std::optional<T> alpha_expected;
       std::optional<T> mu_expected;
       if (s_alpha != "none") {
@@ -128,18 +99,37 @@ int main(int argc, char *argv[]) {
       }
       TestPolytope<T>(FileEXT, alpha_expected, mu_expected, max_brute_force,
                       std::cerr);
-    };
-    if (arith == "gmp") {
-      run.template operator()<mpq_class>();
-#ifdef ENABLE_FLINT_SUPPORT
-    } else if (arith == "flint") {
-      run.template operator()<fmpq_class>();
-#endif
-    } else {
-      std::cerr << "Failed to find a matching entry for arith=" << arith
-                << "\n";
-      throw TerminalException{1};
+    });
+    if (argc != 3 && argc != 5 && argc != 6) {
+      std::cerr << "Number of argument is = " << argc << "\n";
+      std::cerr << "This program is used as\n";
+      std::cerr << "POLYNORM_TestCovering [arith] [FileEXT]\n";
+      std::cerr << "    or\n";
+      std::cerr << "POLYNORM_TestCovering [arith] [FileEXT] [alpha] [mu]\n";
+      std::cerr << "    or\n";
+      std::cerr << "POLYNORM_TestCovering [arith] [FileEXT] [alpha] [mu] "
+                << "[max_brute_force]\n";
+      std::cerr << "\n";
+      std::cerr << "arith   :\n";
+      dispatch.print_descriptions(std::cerr);
+      std::cerr << "FileEXT : the vertices in homogeneous coordinates\n";
+      std::cerr << "alpha   : the expected packing scalar, or none\n";
+      std::cerr << "mu      : the expected covering radius, or none\n";
+      std::cerr << "max_brute_force : the largest number of systems for\n";
+      std::cerr << "          which the brute force check is run\n";
+      std::cerr << "          (default 2000000)\n";
+      return -1;
     }
+    std::string arith = argv[1];
+    FileEXT = argv[2];
+    if (argc >= 5) {
+      s_alpha = argv[3];
+      s_mu = argv[4];
+    }
+    if (argc == 6) {
+      max_brute_force = ParseScalar<size_t>(argv[5]);
+    }
+    dispatch.run(arith);
     std::cerr << "Normal termination of POLYNORM_TestCovering\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLYNORM_TestCovering\n";
