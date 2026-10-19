@@ -39,7 +39,7 @@ end;
 # action of G on the points as reference.
 CaseFromPoints:=function(name, G, ListPts)
     return rec(name:=name, EXT:=List(ListPts, x->Concatenation([1], x)),
-               arith:="rational", GRPref:=Action(G, ListPts, OnRight));
+               arith:="mpq_class", GRPref:=Action(G, ListPts, OnRight));
 end;
 
 # The orbit of a point under B_n.

@@ -68,7 +68,7 @@ end;
 get_grp_automorphy:=function(arg)
     local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheGRP_rat, runtime_str, list_arg, status;
     EXT:=arg[1];
-    arith:="rational";
+    arith:="mpq_class";
     print_info:=false;
     if Length(arg) >= 2 then
         options:=arg[2];
@@ -359,7 +359,7 @@ get_isomorphism_result:=function(arg)
     local EXT1, EXT2, options, arith, print_info, TmpDir, File1, File2, FileO, FileE, eProg, result, runtime_str, list_arg, status;
     EXT1:=arg[1];
     EXT2:=arg[2];
-    arith:="rational";
+    arith:="mpq_class";
     print_info:=false;
     if Length(arg) >= 3 then
         options:=arg[3];

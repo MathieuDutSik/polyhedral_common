@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "MatrixGroupSimplification.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -39,6 +40,16 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string FileMatrGroup;
+    std::string OutFormat = "Stat";
+    std::string FileOut = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      process<T>(FileMatrGroup, OutFormat, *os_ptr);
+    };
+    add_rational_arithmetics(dispatch, f_arith);
+    add_integer_arithmetics(dispatch, f_arith);
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -47,77 +58,27 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "GRP_MatrixGroupSimplification [Arith] [FileMatrGroup]\n";
       std::cerr << "\n";
-      std::cerr << "Arith         : mpq_class / mpz_class";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << " / mpq_rational / cpp_rational / mpz_int / cpp_int";
-#endif
-      std::cerr << "\n";
       std::cerr << "FileMatrGroup : The file containing the list of matrices\n";
-      std::cerr << "OutFormat     : Optional parameter GAP / CPP\n";
+      std::cerr << "OutFormat     : Optional parameter GAP / CPP / Stat\n";
       std::cerr
           << "FileOut       : File where to write the simplified matrices\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- Arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     //
     std::string arith = argv[1];
-    std::string FileMatrGroup = argv[2];
-    std::string OutFormat = "Stat";
-    std::string FileOut = "stderr";
+    FileMatrGroup = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       FileOut = argv[4];
     }
 
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "mpq_class") {
-        using T = mpq_class;
-        return process<T>(FileMatrGroup, OutFormat, os);
-      }
-      if (arith == "mpz_class") {
-        using T = mpz_class;
-        return process<T>(FileMatrGroup, OutFormat, os);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(FileMatrGroup, OutFormat, os);
-      }
-      if (arith == "cpp_rational") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(FileMatrGroup, OutFormat, os);
-      }
-      if (arith == "mpz_int") {
-        using T = boost::multiprecision::mpz_int;
-        return process<T>(FileMatrGroup, OutFormat, os);
-      }
-      if (arith == "cpp_int") {
-        using T = boost::multiprecision::cpp_int;
-        return process<T>(FileMatrGroup, OutFormat, os);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpq_class") {
-        using T = fmpq_class;
-        return process<T>(FileMatrGroup, OutFormat, os);
-      }
-      if (arith == "fmpz_class") {
-        using T = fmpz_class;
-        return process<T>(FileMatrGroup, OutFormat, os);
-      }
-#endif
-      std::cerr << "Failed to find a matching arith. Allowed is mpq_class / "
-                << "mpz_class";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << " / mpq_rational / cpp_rational / mpz_int / cpp_int";
-#endif
-      std::cerr << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "                  or fmpq_class / fmpz_class\n";
-#else
-      std::cerr << "                  (build with ENABLE_FLINT_SUPPORT=1 "
-                   "for fmpq_class / fmpz_class)\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of GRP_MatrixGroupSimplification\n";

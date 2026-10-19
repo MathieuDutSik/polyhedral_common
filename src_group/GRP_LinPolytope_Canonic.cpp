@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "PolytopeEquiStab.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template<typename T>
@@ -38,6 +39,13 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string FileExt;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics(dispatch, [&]<typename T>() -> void {
+      process<T>(FileExt, OutFormat, OutFile);
+    });
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -49,57 +57,21 @@ int main(int argc, char *argv[]) {
       std::cerr << "EXTIN  : The list of vertices (or inequalities for that "
                    "matter)\n";
       std::cerr << "OutCan : The canonicalization file\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     //
     std::string arith = argv[1];
-    std::string FileExt = argv[2];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    FileExt = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
     //
-    auto f_work=[&]() -> void {
-      if (arith == "mpq_class") {
-        using T = mpq_class;
-        return process<T>(FileExt, OutFormat, OutFile);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(FileExt, OutFormat, OutFile);
-      }
-      if (arith == "cpp_rational") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(FileExt, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpq_class") {
-        using T = fmpq_class;
-        return process<T>(FileExt, OutFormat, OutFile);
-      }
-#endif
-      std::cerr << "GRP_LinPolytope_Canonic: No matching entry for arith="
-                << arith << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: mpq_class";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", mpq_rational, cpp_rational";
-#endif
-      std::cerr << ", fmpq_class\n";
-#else
-      std::cerr << "Allowed values: mpq_class";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", mpq_rational, cpp_rational";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for fmpq_class)\n";
-#endif
-      throw TerminalException{1};
-    };
-    f_work();
+    dispatch.run(arith);
     std::cerr << "Normal termination of GRP_LinPolytope_Canonic\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Canonic\n";

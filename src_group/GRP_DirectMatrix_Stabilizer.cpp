@@ -5,6 +5,7 @@
 #include "NumberTheory.h"
 #include "Permutation.h"
 #include "WeightMatrix.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 /*
@@ -82,6 +83,17 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    using Tint = mpz_class;
+    using Telt = permutalib::SingleSidedPerm<uint32_t>;
+    using Tgroup = permutalib::Group<Telt, Tint>;
+    std::string FileMat;
+    std::string OutFormat = "GAP";
+    std::string FileOut = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics(dispatch, [&]<typename T>() -> void {
+      process<T, Tgroup>(FileMat, OutFormat, *os_ptr);
+    });
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -95,30 +107,23 @@ int main(int argc, char *argv[]) {
       std::cerr << "matrix M of FileMatrix, which does not have to be "
                    "symmetric.\n";
       std::cerr << "\n";
-      std::cerr << "arith     : rational\n";
       std::cerr << "OutFormat : GAP or Oscar (default GAP)\n";
       std::cerr << "FileOut   : The output file (default stderr)\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
-    using Tint = mpz_class;
-    using Telt = permutalib::SingleSidedPerm<uint32_t>;
-    using Tgroup = permutalib::Group<Telt, Tint>;
     std::string arith = argv[1];
-    std::string FileMat = argv[2];
-    std::string OutFormat = "GAP";
-    std::string FileOut = "stderr";
+    FileMat = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       FileOut = argv[4];
     }
     auto f = [&](std::ostream &os_out) -> void {
-      if (arith == "rational") {
-        using T = mpq_class;
-        return process<T, Tgroup>(FileMat, OutFormat, os_out);
-      }
-      std::cerr << "GRP_DirectMatrix_Stabilizer: No matching entry for arith="
-                << arith << ". Allowed values: rational\n";
-      throw TerminalException{1};
+      os_ptr = &os_out;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of GRP_DirectMatrix_Stabilizer\n";

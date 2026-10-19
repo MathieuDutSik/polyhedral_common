@@ -8,6 +8,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "PolytopeEquiStabInt.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename Tint>
@@ -43,6 +44,15 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string FileExt1;
+    std::string FileExt2;
+    std::string OutFormat = "GAP";
+    std::string FileOut = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_integer_arithmetics(dispatch, [&]<typename Tint>() -> void {
+      process_A<Tint>(FileExt1, FileExt2, OutFormat, *os_ptr);
+    });
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -53,8 +63,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "         ------ arith -------\n";
       std::cerr << "\n";
-      std::cerr << "mpz_class   : The GMP class with the GMP binder\n";
-      std::cerr << "mpq_integer : The GMP class embedded into boost\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "\n";
       std::cerr << "EXT1 and EXT2 are files of the input files\n";
       std::cerr << "\n";
@@ -71,38 +80,18 @@ int main(int argc, char *argv[]) {
     }
     //
     std::string arith = argv[1];
-    std::string FileExt1 = argv[2];
-    std::string FileExt2 = argv[3];
-    std::string OutFormat = "GAP";
-    std::string FileOut = "stderr";
+    FileExt1 = argv[2];
+    FileExt2 = argv[3];
     if (argc == 6) {
       OutFormat = argv[4];
       FileOut = argv[5];
     }
     //
-    auto process_B = [&](std::ostream &os) -> void {
-      if (arith == "mpz_class") {
-        using Tint = mpz_class;
-        return process_A<Tint>(FileExt1, FileExt2, OutFormat, os);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpz_class") {
-        using Tint = fmpz_class;
-        return process_A<Tint>(FileExt1, FileExt2, OutFormat, os);
-      }
-#endif
-      std::cerr
-#ifdef ENABLE_FLINT_SUPPORT
-          << "Failed to find a matching type for arith. "
-             "Allowed = mpz_class, fmpz_class\n";
-#else
-          << "Failed to find a matching type for arith. "
-             "Allowed = mpz_class (build with ENABLE_FLINT_SUPPORT=1 "
-             "for fmpz_class)\n";
-#endif
-      throw TerminalException{1};
+    auto f = [&](std::ostream &os) -> void {
+      os_ptr = &os;
+      dispatch.run(arith);
     };
-    FILE_PrintStderrStdoutFile(FileOut, process_B);
+    FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of GRP_LinPolytopeIntegral_Isomorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytopeIntegral_Isomorphism\n";

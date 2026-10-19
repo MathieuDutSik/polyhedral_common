@@ -10,6 +10,7 @@
 #include "Permutation.h"
 #include "PolytopeEquiStabInt.h"
 #include <format>
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename Tint>
@@ -94,20 +95,27 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string FileExt;
+    std::string FileGrpV;
+    std::string OutFormat = "GAP";
+    std::string FileOut = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_integer_arithmetics(dispatch, [&]<typename Tint>() -> void {
+      process_A<Tint>(FileExt, FileGrpV, OutFormat, *os_ptr);
+    });
     if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset arith "
-                   "[EXT] [GRP_V] "
-                   "[OutFormat] [FileOut]\n";
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer "
+                   "arith [EXT] [GRP_V] [OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset arith "
-                   "[EXT] [GRP_V]\n";
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer "
+                   "arith [EXT] [GRP_V]\n";
       std::cerr << "\n";
       std::cerr << "         ------ arith -------\n";
       std::cerr << "\n";
-      std::cerr << "mpz_class   : The GMP class with the GMP binder\n";
-      std::cerr << "mpq_integer : The GMP class embedded into boost\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "\n";
       std::cerr << "EXT is file of the input polytope\n";
       std::cerr << "\n";
@@ -127,42 +135,23 @@ int main(int argc, char *argv[]) {
     }
     //
     std::string arith = argv[1];
-    std::string FileExt = argv[2];
-    std::string FileGrpV = argv[3];
-    std::string OutFormat = "GAP";
-    std::string FileOut = "stderr";
+    FileExt = argv[2];
+    FileGrpV = argv[3];
     if (argc == 6) {
       OutFormat = argv[4];
       FileOut = argv[5];
     }
     //
-    auto process_B = [&](std::ostream &os) -> void {
-      if (arith == "mpz_class") {
-        using Tint = mpz_class;
-        return process_A<Tint>(FileExt, FileGrpV, OutFormat, os);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpz_class") {
-        using Tint = fmpz_class;
-        return process_A<Tint>(FileExt, FileGrpV, OutFormat, os);
-      }
-#endif
-      std::cerr << "Failed to find a matching type for arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "arith=" << arith
-                << " allowed = mpz_class, fmpz_class\n";
-#else
-      std::cerr << "arith=" << arith
-                << " allowed = mpz_class (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for fmpz_class)\n";
-#endif
-      throw TerminalException{1};
+    auto f = [&](std::ostream &os) -> void {
+      os_ptr = &os;
+      dispatch.run(arith);
     };
-    FILE_PrintStderrStdoutFile(FileOut, process_B);
+    FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of "
-                 "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset\n";
+                 "GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_LinPolytopeIntegral_Automorphism_DoubleCoset\n";
+    std::cerr << "Error in "
+                 "GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer\n";
     exit(e.eVal);
   }
   runtime(time1);

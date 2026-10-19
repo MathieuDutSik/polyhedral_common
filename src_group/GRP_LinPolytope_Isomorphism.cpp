@@ -9,6 +9,7 @@
 #endif
 #include "GRP_GroupFct.h"
 #include "PolytopeEquiStab.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -64,6 +65,22 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string FileExt1;
+    std::string FileExt2;
+    std::string OutFormat = "GAP";
+    std::string FileO = "stderr";
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      process<T>(FileExt1, FileExt2, OutFormat, FileO);
+    };
+    add_rational_arithmetics(dispatch, f_arith);
+    add_algebraic_field_arithmetics(dispatch, f_arith);
+#ifdef QUADRATIC_FIELDS
+    dispatch.add("Qsqrt3", "arithmetic over the field Q(sqrt(3))",
+                 [&]() -> void {
+                   f_arith.template operator()<QuadField<Trat_quad_field, 3>>();
+                 });
+#endif
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -75,59 +92,21 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "OutEquiv : The equivalence information file (otherwise "
                    "printed to screen)\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     //
     std::string arith = argv[1];
-    std::string FileExt1 = argv[2];
-    std::string FileExt2 = argv[3];
-    std::string OutFormat = "GAP";
-    std::string FileO = "stderr";
+    FileExt1 = argv[2];
+    FileExt2 = argv[3];
     if (argc == 6) {
       OutFormat = argv[4];
       FileO = argv[5];
     }
-    auto f = [&]() -> void {
-      if (arith == "rational") {
-        using T = mpq_class;
-        return process<T>(FileExt1, FileExt2, OutFormat, FileO);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return process<T>(FileExt1, FileExt2, OutFormat, FileO);
-      }
-#endif
-#ifdef QUADRATIC_FIELDS
-      if (arith == "Qsqrt3") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 3>;
-        return process<T>(FileExt1, FileExt2, OutFormat, FileO);
-      }
-#endif
-      std::cerr << "Failed to find a matching arithmetic\n";
-#ifdef ENABLE_FLINT_SUPPORT
-#ifdef QUADRATIC_FIELDS
-      std::cerr << "Allowed values: rational, Qsqrt3, Qsqrt5, Qsqrt2, "
-                << "RealAlgebraic=file, flint\n";
-#else
-      std::cerr << "Allowed values: rational, "
-                << "RealAlgebraic=file, flint\n";
-#endif
-#else
-#ifdef QUADRATIC_FIELDS
-      std::cerr << "Allowed values: rational, Qsqrt3, Qsqrt5, Qsqrt2, "
-                << "RealAlgebraic=file (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#else
-      std::cerr << "Allowed values: rational, "
-                << "RealAlgebraic=file (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-#endif
-      throw TerminalException{1};
-    };
-    f();
+    dispatch.run(arith);
     std::cerr << "Normal termination of GRP_LinPolytope_Isomorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Isomorphism\n";

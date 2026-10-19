@@ -17,7 +17,7 @@ get_direct_matrix_stabilizer:=function(M)
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, M);
     eProg:=GetBinaryFilename("GRP_DirectMatrix_Stabilizer");
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: GRP_DirectMatrix_Stabilizer did not return anything, likely crash";
@@ -39,7 +39,7 @@ get_grammat_automorphism:=function(EXT, GramMat)
     WriteMatrixFile(FileI, EXT);
     WriteMatrixFile(FileG, GramMat);
     eProg:=GetBinaryFilename("GRP_LinPolytope_Automorphism_GramMat");
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " ", FileG, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " ", FileG, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: GRP_LinPolytope_Automorphism_GramMat did not return anything, likely crash";

@@ -6,6 +6,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "PolytopeEquiStab.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tfield>
@@ -39,6 +40,15 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string FileExt;
+    std::string OutFormat = "CPP";
+    std::string FileOut = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics(dispatch, [&]<typename T>() -> void {
+      using Tfield = T;
+      process<T, Tfield>(FileExt, OutFormat, *os_ptr);
+    });
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -47,55 +57,25 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytope_Invariant [Arith] [FileEXT]\n";
       std::cerr << "\n";
-      std::cerr << "EXTIN  : The list of vertices\n";
-      std::cerr << "OutCan : The file for the hash\n";
+      std::cerr << "FileEXT : The list of vertices\n";
+      std::cerr << "FileOut : The file for the hash\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- Arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     //
     std::string arith = argv[1];
-    std::string FileExt = argv[2];
-    std::string OutFormat = "CPP";
-    std::string FileOut = "stderr";
+    FileExt = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       FileOut = argv[4];
     }
 
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "rational") {
-        using T = mpq_class;
-        using Tfield = T;
-        return process<T, Tfield>(FileExt, OutFormat, os);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        using Tfield = T;
-        return process<T, Tfield>(FileExt, OutFormat, os);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        using Tfield = T;
-        return process<T, Tfield>(FileExt, OutFormat, os);
-      }
-#endif
-      std::cerr << "Failed to find a matching arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: rational";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", mpq_rational";
-#endif
-      std::cerr << ", flint\n";
-#else
-      std::cerr << "Allowed values: rational";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", mpq_rational";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of GRP_LinPolytope_Invariant\n";
