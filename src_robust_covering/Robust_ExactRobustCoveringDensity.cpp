@@ -11,6 +11,7 @@
 #endif
 #include "enum_robust_covering.h"
 #include "pyvista_json.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tint>
@@ -72,40 +73,18 @@ void process_B(std::string const &MatFile, std::string const &OutFormat,
   FILE_PrintStderrStdoutFile(OutFile, f_print);
 }
 
-void process_A(std::string const &arithmetic, std::string const &MatFile,
-               std::string const &OutFormat, std::string const &OutFile) {
-  if (arithmetic == "gmp") {
-    using T = mpq_class;
-    using Tint = mpz_class;
-    return process_B<T, Tint>(MatFile, OutFormat, OutFile);
-  }
-#ifdef ENABLE_BOOST_TYPES
-  if (arithmetic == "gmp_boost") {
-    using T = boost::multiprecision::mpq_rational;
-    using Tint = boost::multiprecision::mpz_int;
-    return process_B<T, Tint>(MatFile, OutFormat, OutFile);
-  }
-  if (arithmetic == "multi_boost") {
-    using T = boost::multiprecision::cpp_rational;
-    using Tint = boost::multiprecision::cpp_int;
-    return process_B<T, Tint>(MatFile, OutFormat, OutFile);
-  }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arithmetic == "flint") {
-    using T = fmpq_class;
-    using Tint = fmpz_class;
-    return process_B<T, Tint>(MatFile, OutFormat, OutFile);
-  }
-#endif
-  std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";
-  throw TerminalException{1};
-}
-
 int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string MatFile;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    ArithmeticDispatch dispatch;
+    add_rational_integer_arithmetics_by_library(
+        dispatch, [&]<typename T, typename Tint>() -> void {
+          process_B<T, Tint>(MatFile, OutFormat, OutFile);
+        });
     if (argc != 5 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -114,33 +93,19 @@ int main(int argc, char *argv[]) {
       std::cerr << "       or\n";
       std::cerr << "Robust_ExactRobustCoveringDensity [arith] [MatFile]\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << "\n";
-      std::cerr << "  gmp         : T = mpq_class, Tint = mpz_class\n";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "  gmp_boost   : T = boost::multiprecision::mpq_rational, "
-                   "Tint = boost::multiprecision::mpz_int\n";
-#endif
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, "
-                   "Tint = boost::multiprecision::cpp_int\n";
-#endif
+      std::cerr << "arithmetic:\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "OutFormat: GAP, GAP_extend, PyVista_json\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }
     std::string arithmetic = argv[1];
-    std::string MatFile = argv[2];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    MatFile = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
-    process_A(arithmetic, MatFile, OutFormat, OutFile);
+    dispatch.run(arithmetic);
     std::cerr << "Normal termination of Robust_ExactRobustCoveringDensity\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in Robust_ExactRobustCoveringDensity\n";

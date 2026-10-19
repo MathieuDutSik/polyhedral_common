@@ -9,6 +9,7 @@
 #include "lorentzian_perfect_mpi.h"
 #include "Permutation.h"
 #include "Group.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tint>
@@ -23,47 +24,12 @@ void process_C(boost::mpi::communicator &comm, FullNamelist const &eFull) {
 void process_A(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   std::string arithmetic =
       GetNamelistStringEntry(eFull, "DATA", "arithmetic");
-  if (arithmetic == "gmp") {
-    using T = mpq_class;
-    using Tint = mpz_class;
-    return process_C<T, Tint>(comm, eFull);
-  }
-#ifdef ENABLE_BOOST_TYPES
-  if (arithmetic == "gmp_boost") {
-    using T = boost::multiprecision::mpq_rational;
-    using Tint = boost::multiprecision::mpz_int;
-    return process_C<T, Tint>(comm, eFull);
-  }
-  if (arithmetic == "multi_boost") {
-    using T = boost::multiprecision::cpp_rational;
-    using Tint = boost::multiprecision::cpp_int;
-    return process_C<T, Tint>(comm, eFull);
-  }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arithmetic == "flint") {
-    using T = fmpq_class;
-    using Tint = fmpz_class;
-    return process_C<T, Tint>(comm, eFull);
-  }
-#endif
-  std::cerr << "LORENTZ_MPI_PerfectLorentzian: Failed to find a matching "
-               "type for arithmetic="
-            << arithmetic << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-  std::cerr << "Available types: gmp";
-#ifdef ENABLE_BOOST_TYPES
-  std::cerr << ", gmp_boost, multi_boost";
-#endif
-  std::cerr << ", flint\n";
-#else
-  std::cerr << "Available types: gmp";
-#ifdef ENABLE_BOOST_TYPES
-  std::cerr << ", gmp_boost, multi_boost";
-#endif
-  std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-  throw TerminalException{1};
+  ArithmeticDispatch dispatch;
+  add_rational_integer_arithmetics_by_library(
+      dispatch, [&]<typename T, typename Tint>() -> void {
+        process_C<T, Tint>(comm, eFull);
+      });
+  dispatch.run(arithmetic);
 }
 
 int main(int argc, char *argv[]) {

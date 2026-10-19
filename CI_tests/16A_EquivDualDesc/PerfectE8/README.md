@@ -35,7 +35,7 @@ setting only removes the per-subproblem conversion in the surrounding layer.
 
 ## What the facets look like
 
-`POLY_sampling_facets rational lp_cdd:iter_300 PerfectE8.ext` finds facets of
+`POLY_sampling_facets mpq_class lp_cdd:iter_300 PerfectE8.ext` finds facets of
 incidence 42 up to 75 (the rank of a facet is 35), with stabilizers of order 2
 for the incidence 42 ones up to 23040 for the incidence 75 ones. Since the
 total facet count divided by the number of orbits is 3.0e8, just below

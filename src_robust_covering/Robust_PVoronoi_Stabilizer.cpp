@@ -10,6 +10,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "enum_robust_covering.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -53,6 +54,14 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string MatFile;
+    std::string PVoronoiFile;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
+      process<T>(MatFile, PVoronoiFile, OutFormat, OutFile);
+    });
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -62,56 +71,21 @@ int main(int argc, char *argv[]) {
       std::cerr << "Robust_PVoronoi_Stabilizer [arith] [MatFile] "
                 << "[PVoronoiFile]\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << "\n";
-      std::cerr << "  gmp         : T = mpq_class, Tint = mpz_class\n";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "  gmp_boost   : T = boost::multiprecision::mpq_rational, "
-                << "Tint = boost::multiprecision::mpz_int\n";
-#endif
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "  multi_boost : T = boost::multiprecision::cpp_rational, "
-                << "Tint = boost::multiprecision::cpp_int\n";
-#endif
+      std::cerr << "arithmetic:\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "OutFormat: GAP, CPP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }
     std::string arithmetic = argv[1];
-    std::string MatFile = argv[2];
-    std::string PVoronoiFile = argv[3];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    MatFile = argv[2];
+    PVoronoiFile = argv[3];
     if (argc == 6) {
       OutFormat = argv[4];
       OutFile = argv[5];
     }
-    auto f=[&]() -> void {
-      if (arithmetic == "gmp") {
-        using T = mpq_class;
-        return process<T>(MatFile, PVoronoiFile, OutFormat, OutFile);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arithmetic == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(MatFile, PVoronoiFile, OutFormat, OutFile);
-      }
-      if (arithmetic == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(MatFile, PVoronoiFile, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arithmetic == "flint") {
-        using T = fmpq_class;
-        return process<T>(MatFile, PVoronoiFile, OutFormat, OutFile);
-      }
-#endif
-      std::cerr << "failure: No matching entry for arithmetic\n";
-      throw TerminalException{1};
+    auto f = [&]() -> void {
+      dispatch.run(arithmetic);
     };
     f();
     std::cerr << "Normal termination of Robust_PVoronoi_Stabilizer\n";

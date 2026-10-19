@@ -696,6 +696,7 @@ set(
   LATT_FindPositiveVector
   CheckPositiveSemiDefinite
   LATT_DiophantApprox
+  LATT_AutomorphyReduction
 )
 foreach(target IN LISTS ISOTROPY_PROGRAMS)
   add_polyhedral_binary(

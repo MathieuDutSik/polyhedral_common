@@ -10,6 +10,7 @@
 #include "Permutation.h"
 #include "Group.h"
 #include <boost/archive/text_oarchive.hpp>
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 /*
@@ -118,43 +119,12 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
 void process_C(FullNamelist const &eFull) {
   std::string arithmetic =
       GetNamelistStringEntry(eFull, "DATA", "arithmetic");
-  if (arithmetic == "gmp") {
-    using T = mpq_class;
-    using Tint = mpz_class;
-    return process_A<T, Tint>(eFull);
-  }
-#ifdef ENABLE_BOOST_TYPES
-  if (arithmetic == "gmp_boost") {
-    using T = boost::multiprecision::mpq_rational;
-    using Tint = boost::multiprecision::mpz_int;
-    return process_A<T, Tint>(eFull);
-  }
-  if (arithmetic == "multi_boost") {
-    using T = boost::multiprecision::cpp_rational;
-    using Tint = boost::multiprecision::cpp_int;
-    return process_A<T, Tint>(eFull);
-  }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arithmetic == "flint") {
-    using T = fmpq_class;
-    using Tint = fmpz_class;
-    return process_A<T, Tint>(eFull);
-  }
-#endif
-  std::cerr << "LATT_SerialLattice_IsoKDelaunayDomain: Failed to find a "
-               "matching type for arithmetic="
-            << arithmetic << "\n";
-  std::cerr << "Available types: gmp";
-#ifdef ENABLE_BOOST_TYPES
-  std::cerr << ", gmp_boost, multi_boost";
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  std::cerr << ", flint\n";
-#else
-  std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-  throw TerminalException{1};
+  ArithmeticDispatch dispatch;
+  add_rational_integer_arithmetics_by_library(
+      dispatch, [&]<typename T, typename Tint>() -> void {
+        process_A<T, Tint>(eFull);
+      });
+  dispatch.run(arithmetic);
 }
 
 int main(int argc, char *argv[]) {
