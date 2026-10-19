@@ -677,7 +677,8 @@ ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2,
   std::vector<int> esign;
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     f1(iRow);
-    int idx_diagonal;
+    // Always set, at jRow == iRow.
+    int idx_diagonal = 0;
     for (size_t jRow = 0; jRow < nbRow; jRow++) {
       T val = f2(jRow);
       int idx = get_T_idx(val);
