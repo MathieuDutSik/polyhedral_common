@@ -10,6 +10,7 @@
 #include "CombinedAlgorithms.h"
 #include "Group.h"
 #include "Permutation.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -63,60 +64,36 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string File1;
+    std::string File2;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
+      process<T>(File1, File2, OutFormat, *os_ptr);
+    });
     if (argc != 4 && argc != 6) {
       std::cerr << "INDEF_FORM_TestEquivalence [arith] [File1] [File2]\n";
       std::cerr << "or\n";
       std::cerr << "INDEF_FORM_TestEquivalence [arith] [File1] [File2] "
                    "[OutFormat] [OutFile]\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       throw TerminalException{1};
     }
     std::string arith = argv[1];
-    std::string File1 = argv[2];
-    std::string File2 = argv[3];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    File1 = argv[2];
+    File2 = argv[3];
     if (argc == 6) {
       OutFormat = argv[4];
       OutFile = argv[5];
     }
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return process<T>(File1, File2, OutFormat, os);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(File1, File2, OutFormat, os);
-      }
-      if (arith == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(File1, File2, OutFormat, os);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return process<T>(File1, File2, OutFormat, os);
-      }
-#endif
-      std::cerr << "Failed to find matching type for arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp, flint (and, with ENABLE_BOOST_TYPES";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost";
-#endif
-      std::cerr << " and ";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "multi_boost";
-#endif
-      std::cerr << ")\n";
-#else
-      std::cerr << "Allowed values: gmp (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint; with "
-                << "ENABLE_BOOST_TYPES for the boost ones)\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
     //

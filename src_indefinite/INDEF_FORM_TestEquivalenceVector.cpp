@@ -10,6 +10,7 @@
 #include "CombinedAlgorithms.h"
 #include "Group.h"
 #include "Permutation.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -57,68 +58,45 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string FileM;
+    std::string FileV1;
+    std::string FileV2;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
+      process<T>(FileM, FileV1, FileV2, OutFormat, *os_ptr);
+    });
     if (argc != 5 && argc != 7) {
       std::cerr << "INDEF_FORM_TestEquivalenceVector [arith] [FileM] [FileV1] "
                    "[FileV2]\n";
       std::cerr << "or\n";
       std::cerr << "INDEF_FORM_TestEquivalenceVector [arith] [FileM] [FileV1] "
                    "[FileV2] [OutFormat] [OutFile]\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       throw TerminalException{1};
     }
     std::string arith = argv[1];
-    std::string FileM = argv[2];
-    std::string FileV1 = argv[3];
-    std::string FileV2 = argv[4];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    FileM = argv[2];
+    FileV1 = argv[3];
+    FileV2 = argv[4];
     if (argc == 7) {
       OutFormat = argv[5];
       OutFile = argv[6];
     }
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return process<T>(FileM, FileV1, FileV2, OutFormat, os);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(FileM, FileV1, FileV2, OutFormat, os);
-      }
-      if (arith == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(FileM, FileV1, FileV2, OutFormat, os);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return process<T>(FileM, FileV1, FileV2, OutFormat, os);
-      }
-#endif
-      std::cerr << "Failed to find matching type for arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp, flint (and, with ENABLE_BOOST_TYPES";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost";
-#endif
-      std::cerr << " and ";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "multi_boost";
-#endif
-      std::cerr << ")\n";
-#else
-      std::cerr << "Allowed values: gmp (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint; with "
-                << "ENABLE_BOOST_TYPES for the boost ones)\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
     //
     std::cerr << "Normal termination of INDEF_FORM_TestEquivalence\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_TestEquivalence, runtime=" << time
+    std::cerr << "Error in INDEF_FORM_TestEquivalenceVector, runtime=" << time
               << "\n";
     exit(e.eVal);
   }
