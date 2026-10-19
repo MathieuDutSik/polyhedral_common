@@ -774,7 +774,7 @@ get_polygen_vertices:=function(arg)
 end;
 
 get_polygen_info:=function(arg)
-    local gp, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheCommand, result, runtime_str;
+    local gp, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, result, runtime_str, list_arg, status;
     gp:=arg[1];
     arith:="mpq_class";
     print_info:=false;
@@ -793,8 +793,11 @@ get_polygen_info:=function(arg)
     FileE:=Filename(TmpDir, "Test.err");
     WriteListMatrixFile(FileI, gp);
     eProg:=GetBinaryFilename("PolyGen_Info");
-    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " GAP ", FileO, " 2> ", FileE);
-    Exec(TheCommand);
+    list_arg:=[arith, FileI, "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
     if print_info then
         runtime_str:=extract_runtime_from_log(FileE);
         Print("  |gp|=", Length(gp), " arith=", arith, " command=PolyGen_Info runtime=", runtime_str, "\n");
