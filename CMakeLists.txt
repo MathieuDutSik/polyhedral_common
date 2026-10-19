@@ -350,6 +350,7 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src_dualdesc"
     "${CMAKE_SOURCE_DIR}/src_k_coverings"
     "${CMAKE_SOURCE_DIR}/src_enum_schemes"
+    "${CMAKE_SOURCE_DIR}/src_erdahl"
     "${CMAKE_SOURCE_DIR}/src_genera"
     "${CMAKE_SOURCE_DIR}/src_group"
     "${CMAKE_SOURCE_DIR}/src_igusa"
@@ -360,6 +361,7 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src_lorentzian"
     "${CMAKE_SOURCE_DIR}/src_perfect"
     "${CMAKE_SOURCE_DIR}/src_poincare_polyhedron"
+    "${CMAKE_SOURCE_DIR}/src_polynorm"
     "${CMAKE_SOURCE_DIR}/src_poly"
     "${CMAKE_SOURCE_DIR}/src_polydecomp"
     "${CMAKE_SOURCE_DIR}/src_polygen"
@@ -562,6 +564,20 @@ target_link_libraries(
     polyhedral_mpi_support
 )
 
+add_library(polyhedral_erdahl_support INTERFACE)
+target_link_libraries(
+  polyhedral_erdahl_support
+  INTERFACE
+    polyhedral_group_support
+)
+
+add_library(polyhedral_polynorm_support INTERFACE)
+target_link_libraries(
+  polyhedral_polynorm_support
+  INTERFACE
+    polyhedral_group_support
+)
+
 function(add_polyhedral_binary target source support_target)
   add_executable(${target} ${source} ${ARGN})
   target_link_libraries(${target} PRIVATE ${support_target})
@@ -609,7 +625,6 @@ endforeach()
 
 set(
   GROUP_PROGRAMS
-  TEST_WeightMatrixLimited
   GRP_DirectMatrix_Stabilizer
   GRP_OrbitSplitting
   GRP_VectorSplitting
@@ -769,7 +784,6 @@ set(
   TSPACE_Stabilizer
   TSPACE_Equivalence
   TSPACE_IntegralSaturation
-  TEST_EquiStabFamily
   LATT_ComputeShortestOrbits
   GRP_TestFiniteness
   LATT_ResolveModAction
@@ -778,6 +792,7 @@ set(
   LATT_RankinSublattices
   LATT_Reduction
   VectFamily_Reduction
+  LATT_PleskenSouvignier
 )
 foreach(target IN LISTS LATT_PROGRAMS)
   add_polyhedral_binary(
@@ -923,6 +938,7 @@ set(
   POLY_triangulation_det
   POLY_TwoLaminations
   POLY_triangulation_facets
+  POLY_GapFindHyperplaneRegions
 )
 foreach(target IN LISTS POLY_PROGRAMS)
   add_polyhedral_binary(
@@ -1034,12 +1050,41 @@ set(
   Robust_GetPVoronoi
   Robust_PVoronoi_Stabilizer
   Robust_ExactRobustCoveringDensity
-  Test_SoftBoundaryStore
 )
 foreach(target IN LISTS ROBUST_PROGRAMS)
   add_polyhedral_binary(
     ${target}
     "${CMAKE_SOURCE_DIR}/src_robust_covering/${target}.cpp"
     polyhedral_robust_support
+  )
+endforeach()
+
+set(
+  ERDAHL_PROGRAMS
+  ERDAHL_CutInequalities
+  ERDAHL_EnumeratePerfect
+)
+foreach(target IN LISTS ERDAHL_PROGRAMS)
+  add_polyhedral_binary(
+    ${target}
+    "${CMAKE_SOURCE_DIR}/src_erdahl/${target}.cpp"
+    polyhedral_erdahl_support
+  )
+endforeach()
+
+set(
+  POLYNORM_PROGRAMS
+  POLYNORM_BetkeHenk
+  POLYNORM_Covering
+  POLYNORM_LatticeCertify
+  POLYNORM_MaxKissing
+  POLYNORM_OptimalLattice
+  POLYNORM_Packing
+)
+foreach(target IN LISTS POLYNORM_PROGRAMS)
+  add_polyhedral_binary(
+    ${target}
+    "${CMAKE_SOURCE_DIR}/src_polynorm/${target}.cpp"
+    polyhedral_polynorm_support
   )
 endforeach()

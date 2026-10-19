@@ -208,7 +208,8 @@ PolyNorm_ExactPacking2D(MyMatrix<T> const &LmatDiff,
         }
         T sign = val_mid > 0 ? T(1) : T(-1);
         std::vector<T> ListX{*lo, *hi};
-        if (sign * qa > 0) {
+        T sign_qa = sign * qa;
+        if (sign_qa > 0) {
           T x = -qb / (2 * qa);
           if (*lo <= x && x <= *hi) {
             ListX.push_back(x);
