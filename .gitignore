@@ -157,6 +157,7 @@ src_lorentzian/COXDYN_*
 src_lorentzian/LATT_GetIntegralMatricesPossibleOrders
 src_perfect/PERF_*
 src_perfect/IsEutactic
+src_perfect/IsStronglySemiEutactic
 src_poincare_polyhedron/POINCARE_*
 src_poly/POLY_*
 src_poly/VectFamily_ColumnReduction
