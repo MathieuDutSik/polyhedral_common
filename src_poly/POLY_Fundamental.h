@@ -237,6 +237,8 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   return solver.GetPositiveKernelVector(OneInc);
 }
 
+// The dimension of the null space of the rows of TheEXT selected by OneInc,
+// that is nbCol minus their rank: 1 when OneInc is the incidence of a facet.
 template <typename T>
 int GetFacetRank(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   size_t nb = OneInc.count();
