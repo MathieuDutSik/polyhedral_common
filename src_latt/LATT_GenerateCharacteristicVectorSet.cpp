@@ -8,6 +8,7 @@
 #endif
 #include "InvariantVectorFamily.h"
 #include "LatticePleskenSouvignier.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -258,41 +259,12 @@ int main(int argc, char *argv[]) {
       OutFile = argv[5];
     }
     auto f=[&]() -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return process<T>(choice, MatFile, OutFormat, OutFile);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(choice, MatFile, OutFormat, OutFile);
-      }
-      if (arith == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(choice, MatFile, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return process<T>(choice, MatFile, OutFormat, OutFile);
-      }
-#endif
-      std::cerr << "process_A failure: No matching entry for arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << ", flint\n";
-#else
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
+      ArithmeticDispatch dispatch;
+      add_rational_arithmetics_by_library(
+          dispatch, [&]<typename T>() -> void {
+            process<T>(choice, MatFile, OutFormat, OutFile);
+          });
+      dispatch.run(arith);
     };
     f();
     std::cerr << "Normal termination of LATT_GenerateCharacteristicVectorSet\n";

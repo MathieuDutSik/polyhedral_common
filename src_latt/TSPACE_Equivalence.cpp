@@ -9,6 +9,7 @@
 #include "Tspace_General.h"
 #include "Permutation.h"
 #include "Group.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -94,46 +95,12 @@ int main(int argc, char *argv[]) {
     }
     //
     auto f = [&](std::ostream &os_out) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return ComputeEquivalence<T>(FileTspace, FileGram1, FileGram2,
-                                           OutFormat, os_out);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return ComputeEquivalence<T>(FileTspace, FileGram1, FileGram2,
-                                           OutFormat, os_out);
-      }
-      if (arith == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return ComputeEquivalence<T>(FileTspace, FileGram1, FileGram2,
-                                           OutFormat, os_out);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return ComputeEquivalence<T>(FileTspace, FileGram1, FileGram2,
-                                           OutFormat, os_out);
-      }
-#endif
-      std::cerr << "Failed to find a matching entry for arith=" << arith
-                << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Available possibilities: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << ", flint\n";
-#else
-      std::cerr << "Available possibilities: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
+      ArithmeticDispatch dispatch;
+      add_rational_arithmetics_by_library(
+          dispatch, [&]<typename T>() -> void {
+            ComputeEquivalence<T>(FileTspace, FileGram1, FileGram2, OutFormat, os_out);
+          });
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of TSPACE_Equivalence\n";

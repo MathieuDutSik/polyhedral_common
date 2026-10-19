@@ -15,6 +15,7 @@
 #include "LatticeStabEquiCan.h"
 #include "InvariantVectorFamily.h"
 #include "SignatureSymmetric.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -134,79 +135,15 @@ int main(int argc, char *argv[]) {
     }
     //
     auto prt = [&](std::ostream &os) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
-      }
-      if (arith == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
-      }
-#endif
       // The lattice is Z^n whatever field the form takes its values in, so
       // Tint stays mpz_class: only the Gram matrices leave the rationals.
-#ifdef QUADRATIC_FIELDS
-      if (arith == "Qsqrt2") {
-        using T = QuadField<Trat_quad_field, 2>;
-        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
-      }
-      if (arith == "Qsqrt5") {
-        using T = QuadField<Trat_quad_field, 5>;
-        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
-      }
-#endif
-      std::optional<std::string> opt_realalgebraic =
-          get_postfix(arith, "RealAlgebraic=");
-      if (opt_realalgebraic) {
-        std::string const &FileAlgebraicField = *opt_realalgebraic;
-        if (!FILE_IsExistingFile(FileAlgebraicField)) {
-          std::cerr << "LATT_Automorphism: FileAlgebraicField="
-                    << FileAlgebraicField << " is missing\n";
-          throw TerminalException{1};
-        }
-        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
-        int const idx_real_algebraic_field = 1;
-        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-        using T = RealField<idx_real_algebraic_field>;
-        return ComputeAutomorphism<T>(FileListMat, OutFormat, os);
-      }
-      std::cerr << "Failed to find a matching entry for arith=" << arith
-                << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Available possibilities: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << ", flint";
-#ifdef QUADRATIC_FIELDS
-      std::cerr << ", Qsqrt2, Qsqrt5, RealAlgebraic=FileDesc\n";
-#else
-      std::cerr << ", RealAlgebraic=FileDesc\n";
-#endif
-#else
-      std::cerr << "Available possibilities: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-#ifdef QUADRATIC_FIELDS
-      std::cerr << ", Qsqrt2, Qsqrt5, RealAlgebraic=FileDesc";
-#else
-      std::cerr << ", RealAlgebraic=FileDesc";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
+      ArithmeticDispatch dispatch;
+      auto f_arith = [&]<typename T>() -> void {
+        ComputeAutomorphism<T>(FileListMat, OutFormat, os);
+      };
+      add_rational_arithmetics_by_library(dispatch, f_arith);
+      add_algebraic_field_arithmetics(dispatch, f_arith);
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, prt);
     std::cerr << "Normal termination of LATT_Automorphism\n";

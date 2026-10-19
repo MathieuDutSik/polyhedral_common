@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "Tspace_ListMatSaturation.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -47,41 +48,12 @@ int main(int argc, char *argv[]) {
     }
     //
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "mpq_class") {
-        using T = mpq_class;
-        return IntegralSaturation<T>(FileI, OutFormat, os);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        return IntegralSaturation<T>(FileI, OutFormat, os);
-      }
-      if (arith == "cpp_rational") {
-        using T = boost::multiprecision::cpp_rational;
-        return IntegralSaturation<T>(FileI, OutFormat, os);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpq_class") {
-        using T = fmpq_class;
-        return IntegralSaturation<T>(FileI, OutFormat, os);
-      }
-#endif
-      std::cerr << "Failed to find a matching entry for arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: mpq_class";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", mpq_rational, cpp_rational";
-#endif
-      std::cerr << ", fmpq_class\n";
-#else
-      std::cerr << "Allowed values: mpq_class";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", mpq_rational, cpp_rational";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for fmpq_class)\n";
-#endif
-      throw TerminalException{1};
+      ArithmeticDispatch dispatch;
+      add_rational_arithmetics(
+          dispatch, [&]<typename T>() -> void {
+            IntegralSaturation<T>(FileI, OutFormat, os);
+          });
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
     //

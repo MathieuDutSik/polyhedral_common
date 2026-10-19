@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "Zp_action.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -36,41 +37,12 @@ void process(std::string const &arith,
              std::string const &list_matrix_file,
              std::string const &mod_val_string,
              std::string const &OutFormat, std::ostream &os_out) {
-  if (arith == "mpz_class") {
-    using T = mpz_class;
-    return compute_orbit_partition<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
-  }
-#ifdef ENABLE_BOOST_TYPES
-  if (arith == "mpz_int") {
-    using T = boost::multiprecision::mpz_int;
-    return compute_orbit_partition<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
-  }
-  if (arith == "cpp_int") {
-    using T = boost::multiprecision::cpp_int;
-    return compute_orbit_partition<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
-  }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arith == "fmpz_class") {
-    using T = fmpz_class;
-    return compute_orbit_partition<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
-  }
-#endif
-  std::cerr << "Failed to find a matching entry for arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-  std::cerr << "Allowed values: mpz_class";
-#ifdef ENABLE_BOOST_TYPES
-  std::cerr << ", mpz_int, cpp_int";
-#endif
-  std::cerr << ", fmpz_class\n";
-#else
-  std::cerr << "Allowed values: mpz_class";
-#ifdef ENABLE_BOOST_TYPES
-  std::cerr << ", mpz_int, cpp_int";
-#endif
-  std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for fmpz_class)\n";
-#endif
-  throw TerminalException{1};
+  ArithmeticDispatch dispatch;
+  add_integer_arithmetics(
+      dispatch, [&]<typename T>() -> void {
+        compute_orbit_partition<T>(list_matrix_file, mod_val_string, OutFormat, os_out);
+      });
+  dispatch.run(arith);
 }
 
 int main(int argc, char *argv[]) {

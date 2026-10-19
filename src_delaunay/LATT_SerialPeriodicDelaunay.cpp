@@ -7,6 +7,7 @@
 #include "PeriodicDelaunay.h"
 #include "Permutation.h"
 #include "Group.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 /*
@@ -186,20 +187,6 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
 void process_C(FullNamelist const &eFull) {
   std::string arithmetic =
       GetNamelistStringEntry(eFull, "DATA", "arithmetic");
-  using Tint = mpz_class;
-  if (arithmetic == "gmp") {
-    using T = mpq_class;
-    return process_A<T, Tint>(eFull);
-  }
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arithmetic == "flint") {
-    using T = fmpq_class;
-    // Tint is fixed to mpz_class above, so the flint branch names its own:
-    // mixing the two arithmetics in one instantiation does not compile.
-    using Tint_flint = fmpz_class;
-    return process_A<T, Tint_flint>(eFull);
-  }
-#endif
   /*
     Only the rationals, for now. Both an algebraic form and, more
     importantly, an algebraic coset are out of reach, and for different
@@ -223,16 +210,12 @@ void process_C(FullNamelist const &eFull) {
     set can only be treated exactly through a rational point set, which is
     what the record certificate in CI_tests/29_SerialDelaunayQueries does.
    */
-  std::cerr << "LATT_SerialPeriodicDelaunay: Failed to find a matching type "
-               "for arithmetic="
-            << arithmetic << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-  std::cerr << "Available types: gmp, flint\n";
-#else
-  std::cerr << "Available types: gmp (build with "
-            << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-  throw TerminalException{1};
+  ArithmeticDispatch dispatch;
+  add_rational_integer_arithmetics_by_library<false>(
+      dispatch, [&]<typename T, typename Tint>() -> void {
+        process_A<T, Tint>(eFull);
+      });
+  dispatch.run(arithmetic);
 }
 
 int main(int argc, char *argv[]) {

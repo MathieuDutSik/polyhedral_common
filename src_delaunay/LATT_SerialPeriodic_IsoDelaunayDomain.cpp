@@ -10,6 +10,7 @@
 #include "Permutation.h"
 #include "Group.h"
 #include <boost/archive/text_oarchive.hpp>
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
@@ -125,28 +126,12 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
 void process_C(FullNamelist const &eFull) {
   std::string arithmetic =
       GetNamelistStringEntry(eFull, "DATA", "arithmetic");
-  if (arithmetic == "gmp") {
-    using T = mpq_class;
-    using Tint = mpz_class;
-    return process_A<T, Tint>(eFull);
-  }
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arithmetic == "flint") {
-    using T = fmpq_class;
-    using Tint = fmpz_class;
-    return process_A<T, Tint>(eFull);
-  }
-#endif
-  std::cerr << "LATT_SerialPeriodic_IsoDelaunayDomain: Failed to find a "
-               "matching type for arithmetic="
-            << arithmetic << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-  std::cerr << "Available types: gmp, flint\n";
-#else
-  std::cerr << "Available types: gmp (build with "
-            << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-  throw TerminalException{1};
+  ArithmeticDispatch dispatch;
+  add_rational_integer_arithmetics_by_library<false>(
+      dispatch, [&]<typename T, typename Tint>() -> void {
+        process_A<T, Tint>(eFull);
+      });
+  dispatch.run(arithmetic);
 }
 
 int main(int argc, char *argv[]) {
