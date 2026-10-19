@@ -11,6 +11,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "POLY_DirectDualDesc.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -66,6 +67,19 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string command;
+    std::string choice;
+    std::string eFileI;
+    std::string eFileO = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      process<T>(eFileI, command, choice, *os_ptr);
+    };
+    dispatch.add("mpz_class", "integer arithmetic over GMP mpz_class",
+                 [f_arith]() -> void { f_arith.template operator()<mpz_class>(); });
+    add_rational_arithmetics(dispatch, f_arith);
+    add_algebraic_field_arithmetics(dispatch, f_arith);
     if (argc != 5 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -84,29 +98,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "cpp_rational           : rational arithmetic based on "
-                   "boost header library\n";
-#endif
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << "mpq_rational           : rational arithmetic based on "
-                   "boost mpq data type\n";
-#endif
-      std::cerr << "mpq_class              : rational arithmetic over GMP "
-                   "mpq_class\n";
-      std::cerr << "mpz_class              : integer ring arithmetic over GMP "
-                   "mpz_class\n";
-#ifdef QUADRATIC_FIELDS
-      std::cerr
-          << "Qsqrt2                 : arithmetic over the field Q(sqrt(2))\n";
-#endif
-#ifdef QUADRATIC_FIELDS
-      std::cerr
-          << "Qsqrt5                 : arithmetic over the field Q(sqrt(5))\n";
-#endif
-      std::cerr
-          << "RealAlgebraic=FileDesc : For the real algebraic case of a\n";
-      std::cerr << "    field whose description is in FileDesc\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "\n";
       std::cerr << "        --- command ---\n";
       std::cerr << "\n";
@@ -128,76 +120,14 @@ int main(int argc, char *argv[]) {
     }
     //
     std::string arith = argv[1];
-    std::string command = argv[2];
-    std::string choice = argv[3];
-    std::string eFileI = argv[4];
-    std::string eFileO = "stderr";
+    command = argv[2];
+    choice = argv[3];
+    eFileI = argv[4];
     if (argc == 6)
       eFileO = argv[5];
     auto dual_desc = [&](std::ostream &os_out) -> void {
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "cpp_rational") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(eFileI, command, choice, os_out);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpq_class") {
-        using T = fmpq_class;
-        return process<T>(eFileI, command, choice, os_out);
-      }
-#endif
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(eFileI, command, choice, os_out);
-      }
-#endif
-      if (arith == "mpq_class") {
-        using T = mpq_class;
-        return process<T>(eFileI, command, choice, os_out);
-      }
-      if (arith == "mpz_class") {
-        using T = mpz_class;
-        return process<T>(eFileI, command, choice, os_out);
-      }
-#ifdef QUADRATIC_FIELDS
-      if (arith == "Qsqrt5") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 5>;
-        return process<T>(eFileI, command, choice, os_out);
-      }
-      if (arith == "Qsqrt2") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 2>;
-        return process<T>(eFileI, command, choice, os_out);
-      }
-#endif
-      std::optional<std::string> opt_realalgebraic =
-          get_postfix(arith, "RealAlgebraic=");
-      if (opt_realalgebraic) {
-        std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!FILE_IsExistingFile(FileAlgebraicField)) {
-          std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                    << " is missing\n";
-          throw TerminalException{1};
-        }
-        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
-        int const idx_real_algebraic_field = 1;
-        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-        using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFileI, command, choice, os_out);
-      }
-      std::cerr << "Failed to find a matching field for arith=" << arith
-                << "\n";
-#ifdef QUADRATIC_FIELDS
-      std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
-                   "RealAlgebraic\n";
-#else
-      std::cerr << "Available possibilities: rational, "
-                   "RealAlgebraic\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os_out;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(eFileO, dual_desc);
     std::cerr << "Normal termination of POLY_dual_description\n";

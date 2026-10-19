@@ -26,10 +26,6 @@
 #define SANITY_CHECK_ELIMINATION_REDUNDANCY
 #endif
 
-#ifdef PRINT
-#define PRINT_ELIMINATION_REDUNDANCY
-#endif
-
 template <typename T>
 std::vector<int> get_non_redundant_from_dd(const MyMatrix<T> &M,
                                            MyMatrix<T> const& EXT,
@@ -180,23 +176,6 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
           int const &iRow) -> std::pair<bool, std::vector<int>> {
     MyMatrix<T> EXT_sel = SelectRow(EXT_work, ListIRow);
     MyVector<T> eRow = GetMatrixRow(EXT_work, iRow);
-#ifdef PRINT_ELIMINATION_REDUNDANCY
-    os << "-------------------\n";
-    os << "H-representation\n";
-    os << "begin\n";
-    os << " " << EXT_sel.rows() << " " << EXT_sel.cols() << " integer\n";
-    for (int i_r = 0; i_r < EXT_sel.rows(); i_r++) {
-      for (int i_c = 0; i_c < EXT_sel.cols(); i_c++)
-        os << " " << EXT_sel(i_r, i_c);
-      os << "\n";
-    }
-    os << "end\n";
-    os << "minimize\n";
-    for (int i_c = 0; i_c < EXT_sel.cols(); i_c++)
-      os << " " << eRow(i_c);
-    os << "\n";
-    os << "-------------------\n";
-#endif
     LpSolution<T> eSol = SIMPLEX_LinearProgramming(EXT_sel, eRow, os);
     if (!eSol.DualSolution || !eSol.DirectSolution) {
       return {false, {}};
@@ -651,7 +630,9 @@ std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& 
   }
 #endif
   std::vector<int> list_irredA = SIMPLEX_RedundancyReductionClarksonExt(M, os);
-#ifdef SANITY_CHECK_EXTENSIVE_ELIMINATION_REDUNDANCY
+#ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY_EXTENSIVE
+  std::cerr << "REDUND: SANITY_CHECK_ELIMINATION_REDUNDANCY_EXTENSIVE, comparing "
+               "Clarkson with the double description\n";
   MyMatrix<T> M_ext = AddFirstZeroColumn(M);
   std::vector<int> list_irredB = Kernel_GetNonRedundant_DualDesc(M_ext, os);
   if (!is_equal_list_irred(list_irredA, list_irredB)) {
@@ -662,6 +643,7 @@ std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& 
     std::cerr << "REDUND: list_irredB=" << StdVectorToString(list_irredB) << "\n";
     throw TerminalException{1};
   }
+  std::cerr << "REDUND: SANITY_CHECK_ELIMINATION_REDUNDANCY_EXTENSIVE, done\n";
 #endif
   return list_irredA;
 }

@@ -8,6 +8,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "generalized_polytopes.h"
+#include "Arithmetic_dispatch.h"
 // clang-format on
 
 template <typename T>
@@ -21,7 +22,7 @@ void process(std::string const &GenPolyFile1,
   GeneralizedPolytope<T> gp1 = list_ext_to_generalizedpolytope(dim, list_ext1);
   GeneralizedPolytope<T> gp2 = list_ext_to_generalizedpolytope(dim, list_ext2);
   GeneralizedPolytope<T> gp_d12 = difference_gp_gp(gp1, gp2, std::cerr);
-  GeneralizedPolytope<T> gp_d21 = difference_gp_gp(gp1, gp2, std::cerr);
+  GeneralizedPolytope<T> gp_d21 = difference_gp_gp(gp2, gp1, std::cerr);
   GeneralizedPolytope<T> gp_int = intersection_gp_gp(gp1, gp2, std::cerr);
 
 
@@ -63,57 +64,50 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string PolyFile1, PolyFile2;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    ArithmeticDispatch dispatch;
+    dispatch.add("mpq_class", [&]() -> void {
+      process<mpq_class>(PolyFile1, PolyFile2, OutFormat, OutFile);
+    });
+#ifdef ENABLE_BOOST_TYPES
+    dispatch.add("mpq_rational", [&]() -> void {
+      process<boost::multiprecision::mpq_rational>(PolyFile1, PolyFile2, OutFormat, OutFile);
+    });
+    dispatch.add("cpp_rational", [&]() -> void {
+      process<boost::multiprecision::cpp_rational>(PolyFile1, PolyFile2, OutFormat, OutFile);
+    });
+#endif
+#ifdef ENABLE_FLINT_SUPPORT
+    dispatch.add("fmpq_class", [&]() -> void {
+      process<fmpq_class>(PolyFile1, PolyFile2, OutFormat, OutFile);
+    });
+#endif
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "PolyGen_difference arith [ListEXT1] [ListEXT2] "
-                << "[OutFormat] [OutFile]\n";
+      std::cerr << "PolyGen_Difference arith [ListEXT1] [ListEXT2] [OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
-      std::cerr << "PolyGen_difference arith [ListEXT1] [ListEXT2]\n";
+      std::cerr << "PolyGen_Difference arith [ListEXT1] [ListEXT2]\n";
       std::cerr << "\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic: mpq_class\n";
+      std::cerr << "arithmetic: " << dispatch.choices() << "\n";
       std::cerr << "OutFormat: GAP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }
     std::string arith = argv[1];
-    std::string PolyFile1 = argv[2];
-    std::string PolyFile2 = argv[3];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    PolyFile1 = argv[2];
+    PolyFile2 = argv[3];
     if (argc == 6) {
       OutFormat = argv[4];
       OutFile = argv[5];
     }
-    auto f=[&]() -> void {
-      if (arith == "mpq_class") {
-        using T = mpq_class;
-        return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
-      }
-      if (arith == "cpp_rational") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpq_class") {
-        using T = fmpq_class;
-        return process<T>(PolyFile1, PolyFile2, OutFormat, OutFile);
-      }
-#endif
-      std::cerr << "Error for the template parameter arith=" << arith << "\n";
-      throw TerminalException{1};
-    };
-    f();
-    std::cerr << "Normal termination PolyGen_difference\n";
+    dispatch.run(arith);
+    std::cerr << "Normal termination PolyGen_Difference\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in PolyGen_difference\n";
+    std::cerr << "Error in PolyGen_Difference\n";
     exit(e.eVal);
   }
   runtime(time);

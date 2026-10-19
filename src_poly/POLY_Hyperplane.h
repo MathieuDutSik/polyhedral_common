@@ -24,6 +24,11 @@ template <typename T>
 vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
   int n = ListV.cols();
   int n_vect = ListV.rows();
+#ifdef SANITY_CHECK_HYPERPLANE
+  // A region of a central arrangement of rank r has at least r walls (r < n
+  // when the normals do not span the space, the regions then have a lineality).
+  int rank_arr = RankMat(ListV);
+#endif
 #ifdef DEBUG_HYPERPLANE
   auto StringFace = [&](Face const &f) -> std::string {
     std::string strO = "[";
@@ -96,11 +101,11 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
     std::cerr << "len(ListIrred)=" << ListIrred.size() << "\n";
 #endif
 #ifdef SANITY_CHECK_HYPERPLANE
-    if (static_cast<int>(ListIrred.size()) < n) {
+    if (static_cast<int>(ListIrred.size()) < rank_arr) {
       std::cerr << "RankMat(SignedV)=" << RankMat(SignedV) << "\n";
       std::cerr << "SignedV=\n";
       WriteMatrix(std::cerr, SignedV);
-      std::cerr << "|ListIrred|=" << ListIrred.size() << "\n";
+      std::cerr << "|ListIrred|=" << ListIrred.size() << " rank_arr=" << rank_arr << "\n";
       std::cerr << "ListIrred is too small. It is a bug\n";
       throw TerminalException{1};
     }

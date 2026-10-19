@@ -1,4 +1,4 @@
-PROGRAM		= PolyGen_Difference PolyGen_vertices
+PROGRAM		= PolyGen_Difference PolyGen_vertices PolyGen_Info
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

@@ -746,7 +746,10 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> &gp,
             drop_from_list(i_polytope0);
             drop_from_list(i_polytope1);
           }
-          f_insert_polytope(poly);
+          // The merged polytope replaces the two: it goes into the list as
+          // well as into the facet map, at the index f_insert_polytope gives.
+          gp.polytopes.push_back(poly);
+          f_insert_polytope(gp.polytopes.back());
           return true;
         }
       }

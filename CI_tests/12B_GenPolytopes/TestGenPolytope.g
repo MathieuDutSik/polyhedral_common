@@ -101,7 +101,120 @@ end;
 RecResult:=ProcessAllCases();
 Print("RecResult.n_error=", RecResult.n_error, "\n");
 
-if RecResult.n_error > 0 then
+# Cases with known answers: overlapping and non-convex unions, including
+# dimension 1 (whose boundary consists of points).
+Box:=function(lo, hi)
+    return List(Cartesian(List([1..Length(lo)], i->[lo[i], hi[i]])), x->Concatenation([1], x));
+end;
+
+Test_difference_exact:=function(name, gp1, gp2, vol_int, vol_d12, vol_d21)
+    local result;
+    result:=get_polygen_difference(gp1, gp2);
+    if is_error(result) then
+        Print("Test_difference_exact, name=", name, " error\n");
+        return false;
+    fi;
+    if result.vol_int<>vol_int or result.vol_d12<>vol_d12 or result.vol_d21<>vol_d21 then
+        Print("Test_difference_exact, name=", name, " vol_int=", result.vol_int, " vol_d12=", result.vol_d12, " vol_d21=", result.vol_d21, "\n");
+        return false;
+    fi;
+    return true;
+end;
+
+Test_vertices_exact:=function(name, gp, LVert)
+    local result;
+    result:=get_polygen_vertices(gp);
+    if is_error(result) then
+        Print("Test_vertices_exact, name=", name, " error\n");
+        return false;
+    fi;
+    if Set(result)<>Set(LVert) then
+        Print("Test_vertices_exact, name=", name, " result=", result, "\n");
+        return false;
+    fi;
+    return true;
+end;
+
+ListExact:=[
+  rec(name:="cubes", test:=function()
+        return Test_difference_exact("cubes", [Box([0,0,0],[2,2,2])], [Box([1,1,1],[3,3,3])], 1, 7, 7);
+      end),
+  rec(name:="L_square", test:=function()
+        return Test_difference_exact("L_square", [Box([0,0],[2,1]), Box([0,1],[1,2])], [Box([0,0],[2,2])], 3, 0, 1);
+      end),
+  rec(name:="segments", test:=function()
+        return Test_difference_exact("segments", [Box([0],[1]), Box([1],[2])], [Box([1/2],[3])], 3/2, 1/2, 1);
+      end),
+  rec(name:="L_vertices", test:=function()
+        return Test_vertices_exact("L_vertices", [Box([0,0],[2,1]), Box([0,1],[1,2])], [[1,0,0],[1,2,0],[1,2,1],[1,1,1],[1,1,2],[1,0,2]]);
+      end),
+  rec(name:="segment_vertices", test:=function()
+        return Test_vertices_exact("segment_vertices", [Box([0],[1]), Box([1],[2])], [[1,0],[1,2]]);
+      end),
+  rec(name:="rectangle_vertices", test:=function()
+        return Test_vertices_exact("rectangle_vertices", [Box([0,0],[1,1]), Box([1,0],[2,1])], [[1,0,0],[1,2,0],[1,2,1],[1,0,1]]);
+      end)];
+# PolyGen_Info: disjointness, connected components (pieces sharing a facet),
+# boundary hyperplanes and the merging of convex unions. Only the listed
+# fields are compared.
+Test_info_exact:=function(name, gp, expected)
+    local result, field;
+    result:=get_polygen_info(gp);
+    if is_error(result) then
+        Print("Test_info_exact, name=", name, " error\n");
+        return false;
+    fi;
+    for field in RecNames(expected)
+    do
+        if result.(field)<>expected.(field) then
+            Print("Test_info_exact, name=", name, " field=", field, " result=", result.(field), " expected=", expected.(field), "\n");
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
+ListInfo:=[
+  rec(name:="rectangle", gp:=[Box([0,0],[1,1]), Box([1,0],[2,1])],
+      expected:=rec(n_polytope:=2, volume:=2, is_disjoint:=true, n_component:=1, component_sizes:=[2], n_boundary_hyperplane:=4, n_simplified:=1, volume_simplified:=2)),
+  rec(name:="three_in_a_row", gp:=[Box([0,0],[1,1]), Box([1,0],[2,1]), Box([2,0],[3,1])],
+      expected:=rec(n_polytope:=3, volume:=3, is_disjoint:=true, n_component:=1, component_sizes:=[3], n_boundary_hyperplane:=4, n_simplified:=1, volume_simplified:=3)),
+  rec(name:="L_shape", gp:=[Box([0,0],[2,1]), Box([0,1],[1,2])],
+      expected:=rec(n_polytope:=2, volume:=3, is_disjoint:=true, n_component:=1, component_sizes:=[2], n_boundary_hyperplane:=6, n_simplified:=2, volume_simplified:=3)),
+  rec(name:="apart", gp:=[Box([0,0],[1,1]), Box([2,0],[3,1])],
+      expected:=rec(n_polytope:=2, volume:=2, is_disjoint:=true, n_component:=2, component_sizes:=[1,1], n_boundary_hyperplane:=6, n_simplified:=2, volume_simplified:=2)),
+  rec(name:="corner", gp:=[Box([0,0],[1,1]), Box([1,1],[2,2])],
+      expected:=rec(n_polytope:=2, volume:=2, is_disjoint:=true, n_component:=2, component_sizes:=[1,1], n_boundary_hyperplane:=6, n_simplified:=2, volume_simplified:=2)),
+  rec(name:="overlap", gp:=[Box([0,0],[2,2]), Box([1,1],[3,3])],
+      expected:=rec(n_polytope:=2, is_disjoint:=false)),
+  rec(name:="segments", gp:=[Box([0],[1]), Box([1],[2])],
+      expected:=rec(n_polytope:=2, volume:=2, is_disjoint:=true, n_component:=1, component_sizes:=[2], n_boundary_hyperplane:=2, n_simplified:=1, volume_simplified:=2)),
+  rec(name:="segments_apart", gp:=[Box([0],[1]), Box([2],[3])],
+      expected:=rec(n_polytope:=2, volume:=2, is_disjoint:=true, n_component:=2, component_sizes:=[1,1], n_boundary_hyperplane:=4, n_simplified:=2, volume_simplified:=2)),
+  rec(name:="two_cubes", gp:=[Box([0,0,0],[1,1,1]), Box([1,0,0],[2,1,1])],
+      expected:=rec(n_polytope:=2, volume:=2, is_disjoint:=true, n_component:=1, component_sizes:=[2], n_boundary_hyperplane:=6, n_simplified:=1, volume_simplified:=2))];
+# The closure is built in a function so that it captures its own case.
+make_info_test:=function(eInfo)
+    return function()
+        return Test_info_exact(eInfo.name, eInfo.gp, eInfo.expected);
+    end;
+end;
+for eInfo in ListInfo
+do
+    Add(ListExact, rec(name:=eInfo.name, test:=make_info_test(eInfo)));
+od;
+
+n_error_exact:=0;
+for eExact in ListExact
+do
+    Print("Exact case name=", eExact.name, "\n");
+    if eExact.test()=false then
+        n_error_exact:=n_error_exact + 1;
+    fi;
+od;
+Print("n_error_exact=", n_error_exact, "\n");
+
+if RecResult.n_error > 0 or n_error_exact > 0 then
     # Error case
     Print("Error case\n");
     GAP_EXIT_CODE(1);

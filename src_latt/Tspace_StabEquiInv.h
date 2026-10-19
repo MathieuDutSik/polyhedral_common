@@ -642,7 +642,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
 #ifdef TIMINGS_TSPACE_FUNCTIONS
   os << "|TSPACE: Equiv, coset_search|=" << time_eq << "\n";
 #endif
-#ifdef SANITY_CHECK_EXTENSIVE_TSPACE_FUNCTIONS
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS_EXTENSIVE
+  std::cerr << "TSPACE: SANITY_CHECK_TSPACE_FUNCTIONS_EXTENSIVE, checking the "
+               "equivalence result\n";
   if (result) {
     MyMatrix<T> const& eMat_T = *result;
     if (!is_stab_space(eMat_T, LinSpa)) {
@@ -678,6 +680,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
       }
     }
   }
+  std::cerr << "TSPACE: SANITY_CHECK_TSPACE_FUNCTIONS_EXTENSIVE, done\n";
 #endif
   return result;
 }

@@ -2109,12 +2109,15 @@ FindViolatedFacetInequality(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
         if (scal == 0) tightFace[iRow] = 1;
       }
       // (4) The tight rows must span a hyperplane of codim 1 in R^nbCol, so
-      //     that f genuinely defines a facet (not a higher-codim face).
-      int tight_rank = GetFacetRank(EXT, tightFace);
-      if (tight_rank != nbCol - 1) {
-        std::cerr << "LP: FindViolatedFacetInequality: incidence rank "
-                  << tight_rank << " != nbCol - 1 (" << (nbCol - 1)
-                  << "); returned inequality is not a facet\n";
+      //     that f genuinely defines a facet (not a higher-codim face): the
+      //     null space of the tight rows, which GetFacetRank returns the
+      //     dimension of, must be the line spanned by f.
+      int dim_nsp = GetFacetRank(EXT, tightFace);
+      if (dim_nsp != 1) {
+        std::cerr << "LP: FindViolatedFacetInequality: the null space of the "
+                     "tight rows has dimension "
+                  << dim_nsp << " instead of 1; returned inequality is not a "
+                     "facet\n";
         throw TerminalException{1};
       }
   #endif

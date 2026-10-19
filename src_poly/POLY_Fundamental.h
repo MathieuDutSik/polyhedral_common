@@ -23,6 +23,10 @@
 #undef DEBUG_POLY_FUNDAMENTAL
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_POLY_FUNDAMENTAL
+#endif
+
 template <typename T>
 MyMatrix<T> SelectRow(MyMatrix<T> const &TheMat, Face const &eList) {
   int nbRowRed = eList.count();
@@ -233,6 +237,8 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   return solver.GetPositiveKernelVector(OneInc);
 }
 
+// The dimension of the null space of the rows of TheEXT selected by OneInc,
+// that is nbCol minus their rank: 1 when OneInc is the incidence of a facet.
 template <typename T>
 int GetFacetRank(MyMatrix<T> const &TheEXT, Face const &OneInc) {
   size_t nb = OneInc.count();
@@ -357,7 +363,7 @@ private:
   std::vector<T> ListInvScal;
   Face f_select;
   std::ostream &os;
-#ifdef DEBUG_POLY_FUNDAMENTAL
+#ifdef SANITY_CHECK_POLY_FUNDAMENTAL
   MyMatrix<T> EXT_debug;
 #endif
 
@@ -369,7 +375,7 @@ public:
         e_incd1(OneInc.count()), nbRow(EXT.rows()), nbCol(EXT.cols()),
         PairIncs(Dynamic_bitset_to_vectorints(OneInc)), ListInvScal(e_incd0),
         f_select(e_incd0), os(_os) {
-#ifdef DEBUG_POLY_FUNDAMENTAL
+#ifdef SANITY_CHECK_POLY_FUNDAMENTAL
     EXT_debug = EXT;
 #endif
     MyVector<T> FacetIneq = FindFacetInequality(EXT, OneInc);
@@ -437,14 +443,17 @@ public:
     Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
 #ifdef DEBUG_POLY_FUNDAMENTAL
     os << "FLIP: FlippingFramework_Field<T> before check\n";
+#endif
+#ifdef SANITY_CHECK_POLY_FUNDAMENTAL
     CheckFacetInequality(EXT_debug, fret, "InternalFlipFaceIneq 1");
 #endif
     return fret;
   }
   Face FlipFace(Face const &sInc) {
-#ifdef DEBUG_POLY_FUNDAMENTAL
+#ifdef SANITY_CHECK_POLY_FUNDAMENTAL
     if (OneInc.count() != sInc.size()) {
-      std::cerr << "Error in Flip 1\n";
+      std::cerr << "FLIP: |sInc|=" << sInc.size() << " but the facet has "
+                << OneInc.count() << " vertices\n";
       throw TerminalException{1};
     }
 #endif
@@ -503,7 +512,7 @@ private:
   MyMatrix<Tint> EXT_red;
   MyMatrix<Tint> EXT_red_sub;
   subsetsolver_type<T> solver;
-#ifdef DEBUG_POLY_FUNDAMENTAL
+#ifdef SANITY_CHECK_POLY_FUNDAMENTAL
   MyMatrix<T> EXT_debug;
 #endif
 
@@ -523,7 +532,7 @@ public:
         EXT_red_sub(SelectRow(EXT_red, PairIncs.second)),
         solver(subsetsolver_type<T>(EXT_red_sub)),
         EXT_face(GetEXT_face(EXT, idx_drop, PairIncs.second)), os(_os) {
-#ifdef DEBUG_POLY_FUNDAMENTAL
+#ifdef SANITY_CHECK_POLY_FUNDAMENTAL
     EXT_debug = EXT;
 #endif
     //
@@ -589,14 +598,17 @@ public:
     os << "FLIP: beta_max_num=" << beta_max_num
        << " / beta_max_den=" << beta_max_den << "\n";
     os << "FLIP: FlippingFramework_Accelerate<mpq_class> before check\n";
+#endif
+#ifdef SANITY_CHECK_POLY_FUNDAMENTAL
     CheckFacetInequality(EXT_debug, fret, "InternalFlipFaceIneq 2");
 #endif
     return fret;
   }
   Face FlipFace(Face const &sInc) {
-#ifdef DEBUG_POLY_FUNDAMENTAL
+#ifdef SANITY_CHECK_POLY_FUNDAMENTAL
     if (OneInc.count() != sInc.size()) {
-      std::cerr << "Error in Flip 1\n";
+      std::cerr << "FLIP: |sInc|=" << sInc.size() << " but the facet has "
+                << OneInc.count() << " vertices\n";
       throw TerminalException{1};
     }
 #endif

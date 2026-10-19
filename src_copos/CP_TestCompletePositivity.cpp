@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "StrictPositivity.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -26,6 +27,15 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+    std::string FileI;
+    std::string OutFormat = "classic";
+    std::string OutFile = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      compute<T>(FileI, OutFormat, *os_ptr);
+    };
+    add_rational_arithmetics_by_library(dispatch, f_arith);
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -34,7 +44,7 @@ int main(int argc, char *argv[]) {
       std::cerr
           << "CP_TestCompletePositivity [arith] [eMat] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "arith: The chosen arithmetic\n";
+      std::cerr << "arith: " << dispatch.choices() << "\n";
       std::cerr << "eMat: the symmetric matrix which we want to test\n";
       std::cerr << "OutFormat: classic or GAP. Default value is classic\n";
       std::cerr << "OutFile: if present, output goes to OutFile, otherwise to "
@@ -47,51 +57,15 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     std::string arith = argv[1];
-    std::string FileI = argv[2];
-    std::string OutFormat = "classic";
-    std::string OutFile = "stderr";
+    FileI = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
     //
     auto f_print = [&](std::ostream &os_out) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        return compute<T>(FileI, OutFormat, os_out);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        return compute<T>(FileI, OutFormat, os_out);
-      }
-      if (arith == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        return compute<T>(FileI, OutFormat, os_out);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return compute<T>(FileI, OutFormat, os_out);
-      }
-#endif
-      std::cerr << "Failed to find a matching entry for arith=" << arith
-                << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << ", flint\n";
-#else
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os_out;
+      dispatch.run(arith);
     };
     //
     FILE_PrintStderrStdoutFile(OutFile, f_print);

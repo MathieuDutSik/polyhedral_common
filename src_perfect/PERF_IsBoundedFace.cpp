@@ -9,6 +9,7 @@
 #include "perfect_complex.h"
 #include "Permutation.h"
 #include "Group.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 FullNamelist NAMELIST_get_is_bounded_face() {
@@ -90,35 +91,12 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     SingleBlock const &BlockDATA = eFull.get_block("DATA");
     std::string arithmetic = BlockDATA.get_string("arithmetic");
-    auto f=[&]() -> void {
-      if (arithmetic == "gmp") {
-        using T = mpq_class;
-        using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(eFull);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arithmetic == "gmp_boost") {
-        using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpz_int;
-        return process<T,Tint,Tgroup>(eFull);
-      }
-      if (arithmetic == "multi_boost") {
-        using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_int;
-        return process<T,Tint,Tgroup>(eFull);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arithmetic == "flint") {
-        using T = fmpq_class;
-        using Tint = fmpz_class;
-        return process<T,Tint,Tgroup>(eFull);
-      }
-#endif
-      std::cerr << "Failed to find a matching entry for arithmetic=" << arithmetic << "\n";
-      throw TerminalException{1};
-    };
-    f();
+    ArithmeticDispatch dispatch;
+    add_rational_integer_arithmetics_by_library(
+        dispatch, [&]<typename T, typename Tint>() -> void {
+          process<T, Tint, Tgroup>(eFull);
+        });
+    dispatch.run(arithmetic);
     std::cerr << "Normal termination of PERF_IsBoundedFace\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in PERF_IsBoundedFace\n";

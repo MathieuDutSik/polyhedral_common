@@ -8,6 +8,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "generalized_polytopes.h"
+#include "Arithmetic_dispatch.h"
 // clang-format on
 
 
@@ -35,6 +36,26 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string PolyFile;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    ArithmeticDispatch dispatch;
+    dispatch.add("mpq_class", [&]() -> void {
+      process<mpq_class>(PolyFile, OutFormat, OutFile);
+    });
+#ifdef ENABLE_BOOST_TYPES
+    dispatch.add("mpq_rational", [&]() -> void {
+      process<boost::multiprecision::mpq_rational>(PolyFile, OutFormat, OutFile);
+    });
+    dispatch.add("cpp_rational", [&]() -> void {
+      process<boost::multiprecision::cpp_rational>(PolyFile, OutFormat, OutFile);
+    });
+#endif
+#ifdef ENABLE_FLINT_SUPPORT
+    dispatch.add("fmpq_class", [&]() -> void {
+      process<fmpq_class>(PolyFile, OutFormat, OutFile);
+    });
+#endif
     if (argc != 5 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -43,47 +64,21 @@ int main(int argc, char *argv[]) {
       std::cerr << "PolyGen_vertices arith [ListEXT]\n";
       std::cerr << "\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic: gmp\n";
+      std::cerr << "arithmetic: " << dispatch.choices() << "\n";
       std::cerr << "OutFormat: GAP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
     }
     std::string arith = argv[1];
-    std::string PolyFile = argv[2];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    PolyFile = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
-    auto f=[&]() -> void {
-      if (arith == "mpq_class") {
-        using T = mpq_class;
-        return process<T>(PolyFile, OutFormat, OutFile);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        return process<T>(PolyFile, OutFormat, OutFile);
-      }
-      if (arith == "cpp_rational") {
-        using T = boost::multiprecision::cpp_rational;
-        return process<T>(PolyFile, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "fmpq_class") {
-        using T = fmpq_class;
-        return process<T>(PolyFile, OutFormat, OutFile);
-      }
-#endif
-      std::cerr << "Error for the template parameter arith=" << arith << "\n";
-      throw TerminalException{1};
-    };
-    f();
+    dispatch.run(arith);
     std::cerr << "Normal termination PolyGen_vertices\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in PolyGen_difference\n";
+    std::cerr << "Error in PolyGen_vertices\n";
     exit(e.eVal);
   }
   runtime(time);

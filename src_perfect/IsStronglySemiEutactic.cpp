@@ -8,6 +8,7 @@
 #endif
 #include "Shvec_exact.h"
 #include "strongly_semi_eutactic.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tint>
@@ -48,32 +49,12 @@ void test_strongly_semi_eutactic_kernel(std::string const &eFile,
 
 void test_strongly_semi_eutactic(std::string const &arithmetic,
                                  std::string const &eFile, size_t max_node) {
-  if (arithmetic == "gmp") {
-    using T = mpq_class;
-    using Tint = mpz_class;
-    return test_strongly_semi_eutactic_kernel<T, Tint>(eFile, max_node);
-  }
-#ifdef ENABLE_BOOST_TYPES
-  if (arithmetic == "gmp_boost") {
-    using T = boost::multiprecision::mpq_rational;
-    using Tint = boost::multiprecision::mpz_int;
-    return test_strongly_semi_eutactic_kernel<T, Tint>(eFile, max_node);
-  }
-  if (arithmetic == "multi_boost") {
-    using T = boost::multiprecision::cpp_rational;
-    using Tint = boost::multiprecision::cpp_int;
-    return test_strongly_semi_eutactic_kernel<T, Tint>(eFile, max_node);
-  }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arithmetic == "flint") {
-    using T = fmpq_class;
-    using Tint = fmpz_class;
-    return test_strongly_semi_eutactic_kernel<T, Tint>(eFile, max_node);
-  }
-#endif
-  std::cerr << "Failed to find a matching arithmetic\n";
-  throw TerminalException{1};
+  ArithmeticDispatch dispatch;
+  add_rational_integer_arithmetics_by_library(
+      dispatch, [&]<typename T, typename Tint>() -> void {
+        test_strongly_semi_eutactic_kernel<T, Tint>(eFile, max_node);
+      });
+  dispatch.run(arithmetic);
 }
 
 int main(int argc, char *argv[]) {
@@ -85,11 +66,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "IsStronglySemiEutactic [arithmetic] [inputMat] "
                    "[max_node]\n";
       std::cerr << "\n";
-      std::cerr << "arithmetic: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << "\n";
+      ArithmeticDispatch dispatch_list;
+      add_rational_integer_arithmetics_by_library(
+          dispatch_list, []<typename T, typename Tint>() -> void {});
+      std::cerr << "arithmetic: " << dispatch_list.choices() << "\n";
       std::cerr << "max_node (optional): the node budget of the search, "
                    "default 1000000\n";
       return -1;
