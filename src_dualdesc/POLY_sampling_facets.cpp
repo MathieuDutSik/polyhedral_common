@@ -14,6 +14,7 @@
 #endif
 #include "POLY_SamplingFacet.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -30,6 +31,23 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time1;
   try {
+#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using Trat = boost::multiprecision::mpq_rational;
+#else
+    using Trat = mpq_class;
+#endif
+    //
+    std::string command;
+    std::string eFileI;
+    std::string OutFormat = "GAP";
+    std::string eFileO = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      process<T>(eFileI, command, OutFormat, *os_ptr);
+    };
+    add_rational_arithmetics<Trat>(dispatch, f_arith);
+    add_algebraic_field_arithmetics(dispatch, f_arith);
     if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -49,14 +67,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
-      std::cerr << "rational : rational arithmetic on input\n";
-#ifdef QUADRATIC_FIELDS
-      std::cerr << "Qsqrt2   : arithmetic over the field Q(sqrt(2))\n";
-      std::cerr << "Qsqrt5   : arithmetic over the field Q(sqrt(5))\n";
-#endif
-      std::cerr
-          << "RealAlgebraic=FileDesc  : For the real algebraic case of a\n";
-      std::cerr << "    field whose description is in FileDesc\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "\n";
       std::cerr << "        --- command ---\n";
       std::cerr << "\n";
@@ -85,67 +96,16 @@ int main(int argc, char *argv[]) {
                    "is not full dimensional, then it is underdefined\n";
       return -1;
     }
-#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-    using Trat = boost::multiprecision::mpq_rational;
-#else
-    using Trat = mpq_class;
-#endif
-    //
     std::string arith = argv[1];
-    std::string command = argv[2];
-    std::string eFileI = argv[3];
-    std::string OutFormat = "GAP";
-    std::string eFileO = "stderr";
+    command = argv[2];
+    eFileI = argv[3];
     if (argc == 6) {
       OutFormat = argv[4];
       eFileO = argv[5];
     }
     auto call_lrs = [&](std::ostream &os) -> void {
-      if (arith == "rational") {
-        using T = Trat;
-        return process<T>(eFileI, command, OutFormat, os);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return process<T>(eFileI, command, OutFormat, os);
-      }
-#endif
-#ifdef QUADRATIC_FIELDS
-      if (arith == "Qsqrt5") {
-        using T = QuadField<Trat_quad_field, 5>;
-        return process<T>(eFileI, command, OutFormat, os);
-      }
-      if (arith == "Qsqrt2") {
-        using T = QuadField<Trat_quad_field, 2>;
-        return process<T>(eFileI, command, OutFormat, os);
-      }
-#endif
-      std::optional<std::string> opt_realalgebraic =
-          get_postfix(arith, "RealAlgebraic=");
-      if (opt_realalgebraic) {
-        std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!FILE_IsExistingFile(FileAlgebraicField)) {
-          std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                    << " is missing\n";
-          throw TerminalException{1};
-        }
-        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
-        int const idx_real_algebraic_field = 1;
-        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-        using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFileI, command, OutFormat, os);
-      }
-      std::cerr << "Failed to find a matching field for arith=" << arith
-                << "\n";
-#ifdef QUADRATIC_FIELDS
-      std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
-                   "RealAlgebraic\n";
-#else
-      std::cerr << "Available possibilities: rational, "
-                   "RealAlgebraic\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(eFileO, call_lrs);
     std::cerr << "Normal termination of POLY_sampling_facets\n";

@@ -978,7 +978,7 @@ sample_facet_polytope:=function(arg)
     local EXT, method, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, result, runtime_str, list_arg, status;
     EXT:=arg[1];
     method:=arg[2];
-    arith:="rational";
+    arith:="mpq_class";
     print_info:=false;
     if Length(arg) >= 3 then
         options:=arg[3];
