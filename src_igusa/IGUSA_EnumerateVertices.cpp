@@ -7,6 +7,7 @@
 #include "igusa.h"
 #include "Permutation.h"
 #include "Group.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
@@ -180,30 +181,13 @@ int main(int argc, char *argv[]) {
     std::string arithmetic = BlockDATA.get_string("arithmetic");
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
-    auto f_process = [&]() -> void {
-      if (arithmetic == "gmp") {
-        using T = mpq_class;
-        using Tint = mpz_class;
-        using Tgroup = permutalib::Group<Telt, mpz_class>;
-        return process<T, Tint, Tgroup>(eFull, std::cerr);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arithmetic == "flint") {
-        using T = fmpq_class;
-        using Tint = fmpz_class;
-        using Tgroup = permutalib::Group<Telt, mpz_class>;
-        return process<T, Tint, Tgroup>(eFull, std::cerr);
-      }
-#endif
-      std::cerr << "IGUSA: Unknown arithmetic=" << arithmetic << "\n";
-      std::cerr << "IGUSA: Allowed arithmetic: gmp";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << ", flint";
-#endif
-      std::cerr << "\n";
-      throw TerminalException{1};
-    };
-    f_process();
+    using Tgroup = permutalib::Group<Telt, mpz_class>;
+    ArithmeticDispatch dispatch;
+    add_rational_integer_arithmetics_by_library<false>(
+        dispatch, [&]<typename T, typename Tint>() -> void {
+          process<T, Tint, Tgroup>(eFull, std::cerr);
+        });
+    dispatch.run(arithmetic);
     std::cerr << "Normal termination of IGUSA_EnumerateVertices\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in IGUSA_EnumerateVertices\n";
