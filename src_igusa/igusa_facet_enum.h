@@ -760,7 +760,7 @@ template <typename T, typename Tint, typename Tgroup> struct IgusaIncidenceCache
       return;
     }
     std::filesystem::create_directories(dir);
-    size_t n_read = 0;
+    [[maybe_unused]] size_t n_read = 0;
     for (auto const &entry : std::filesystem::directory_iterator(dir)) {
       std::string path = entry.path().string();
       std::string name = entry.path().filename().string();
@@ -1086,7 +1086,7 @@ igusa_facet_enumeration(IgusaSpace<T, Tint> &space,
       l_orbit[i_facet].stab_size = os_size.str();
       l_orbit[i_facet].n_ridge_orbit = l_ridge.size();
       write_checkpoint();
-      size_t i_ridge = 0;
+      [[maybe_unused]] size_t i_ridge = 0;
       for (auto &ridge : l_ridge) {
         MyMatrix<T> Ridge0 = inc.l_incident[ridge.face.find_first()];
 #ifdef DEBUG_IGUSA_FACET_ENUM
