@@ -35,6 +35,10 @@ void automorphism_group(std::string const& FileSHV, std::string const& OutFormat
       osf << ";\n";
       return;
     }
+    if (OutFormat == "TXT") {
+      WriteListMatrix(osf, list_mat);
+      return;
+    }
     std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
     std::cerr << "Allowed OutFormat are GAP, TXT\n";
     throw TerminalException{1};
@@ -49,13 +53,13 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     std::string FileSHV;
-    std::string OutFormat;
-    std::string OutFile;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stdout";
     ArithmeticDispatch dispatch;
     add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
       automorphism_group<T>(FileSHV, OutFormat, OutFile);
     });
-    if (argc != 5) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "SHORT_AutomorphismGroup [arith] [FileSHV]\n";
@@ -73,8 +77,10 @@ int main(int argc, char *argv[]) {
     //
     std::string arith = argv[1];
     FileSHV = argv[2];
-    OutFormat = argv[3];
-    OutFile = argv[4];
+    if (argc == 5) {
+      OutFormat = argv[3];
+      OutFile = argv[4];
+    }
     //
     dispatch.run(arith);
     //

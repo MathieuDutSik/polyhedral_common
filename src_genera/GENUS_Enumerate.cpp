@@ -1,10 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-# include "NumberTheoryBoostGmpInt.h"
-#else
-# include "NumberTheory.h"
-#endif
+#include "NumberTheory.h"
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
@@ -12,6 +8,7 @@
 #include "Permutation.h"
 #include "GenusEnumeration.h"
 #include "SignatureSymmetric.h"
+#include "Arithmetic_dispatch_types.h"
 #include <string>
 #include <vector>
 // clang-format on
@@ -62,6 +59,28 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    // The group orders are counted in TintGroup and the mass lives in
+    // overlying_field<TintGroup>. Both are unrelated to the arithmetic of
+    // the lattice coordinates, so Tgroup is fixed once here while the
+    // coordinate types T / Tint are chosen per arithmetic below.
+    using Tidx = uint32_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using TintGroup = mpz_class;
+    using Tgroup = permutalib::Group<Telt, TintGroup>;
+    //
+    std::string FileGenus;
+    std::string FileLattice;
+    std::string FileMass;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    GenusScheme scheme = GenusScheme::CanonicalForm;
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_integer_arithmetics_by_library(
+        dispatch, [&]<typename T, typename Tint>() -> void {
+          ProcessGenus<T, Tint, Tgroup>(FileGenus, FileLattice, FileMass,
+                                        OutFormat, scheme, *os_ptr);
+        });
     if (argc != 5 && argc != 7 && argc != 8) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -72,6 +91,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "    or\n";
       std::cerr << "GENUS_Enumerate [arith] [Genus] [Lattice] [Mass] "
                 << "[OutFormat] [OutFile] [Strategy]\n";
+      std::cerr << "\n";
+      std::cerr << "arith values:\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "\n";
       std::cerr << "Strategy (optional): canonical (default), schemeA / ps "
                 << "(Plesken-Souvignier isomorphism), or schemeB / matrixgroup "
@@ -99,26 +121,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "  Summary : the class number and the mass check only\n";
       return -1;
     }
-    // The group orders are counted in TintGroup and the mass lives in
-    // overlying_field<TintGroup>. Both are unrelated to the arithmetic of
-    // the lattice coordinates, so Tgroup is fixed once here while the
-    // coordinate types T / Tint are chosen per arithmetic below.
-    using Tidx = uint32_t;
-    using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using TintGroup = mpz_class;
-    using Tgroup = permutalib::Group<Telt, TintGroup>;
-    //
     std::string arith = argv[1];
-    std::string FileGenus = argv[2];
-    std::string FileLattice = argv[3];
-    std::string FileMass = argv[4];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    FileGenus = argv[2];
+    FileLattice = argv[3];
+    FileMass = argv[4];
     if (argc >= 7) {
       OutFormat = argv[5];
       OutFile = argv[6];
     }
-    GenusScheme scheme = GenusScheme::CanonicalForm;
     if (argc == 8) {
       std::string s = argv[7];
       if (s == "schemeA" || s == "ps" || s == "pleskensouvignier" ||
@@ -133,34 +143,8 @@ int main(int argc, char *argv[]) {
       }
     }
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "gmp") {
-#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-        using T = boost::multiprecision::mpz_int;
-        using Tint = boost::multiprecision::mpz_int;
-#else
-        using T = mpz_class;
-        using Tint = mpz_class;
-#endif
-        return ProcessGenus<T, Tint, Tgroup>(FileGenus, FileLattice, FileMass,
-                                             OutFormat, scheme, os);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpz_class;
-        using Tint = fmpz_class;
-        return ProcessGenus<T, Tint, Tgroup>(FileGenus, FileLattice, FileMass,
-                                             OutFormat, scheme, os);
-      }
-#endif
-      std::cerr << "Failed to find a matching entry for arith=" << arith
-                << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp, flint\n";
-#else
-      std::cerr << "Allowed values: gmp (build with ENABLE_FLINT_SUPPORT=1 "
-                << "for flint)\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
     std::cerr << "Normal termination of GENUS_Enumerate\n";
