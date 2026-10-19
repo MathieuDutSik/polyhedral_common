@@ -11,6 +11,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "eutacticity.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tint>
@@ -31,32 +32,12 @@ void compute_eutacticity_kernel(std::string const &eFile,
 void compute_eutacticity(std::string const &arithmetic,
                          std::string const &eFile,
                          std::string const &eutacticity) {
-  if (arithmetic == "gmp") {
-    using T = mpq_class;
-    using Tint = mpz_class;
-    return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
-  }
-#ifdef ENABLE_BOOST_TYPES
-  if (arithmetic == "gmp_boost") {
-    using T = boost::multiprecision::mpq_rational;
-    using Tint = boost::multiprecision::mpz_int;
-    return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
-  }
-  if (arithmetic == "multi_boost") {
-    using T = boost::multiprecision::cpp_rational;
-    using Tint = boost::multiprecision::cpp_int;
-    return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
-  }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arithmetic == "flint") {
-    using T = fmpq_class;
-    using Tint = fmpz_class;
-    return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
-  }
-#endif
-  std::cerr << "Failed to find a matching arithmetic\n";
-  throw TerminalException{1};
+  ArithmeticDispatch dispatch;
+  add_rational_integer_arithmetics_by_library(
+      dispatch, [&]<typename T, typename Tint>() -> void {
+        compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
+      });
+  dispatch.run(arithmetic);
 }
 
 int main(int argc, char *argv[]) {
@@ -65,8 +46,12 @@ int main(int argc, char *argv[]) {
   try {
     if (argc != 4) {
       std::cerr << "This program is used as\n";
-      std::cerr << "DeterminantMat [arithmetic] [inputMat] [Eutacticity]\n";
+      std::cerr << "IsEutactic [arithmetic] [inputMat] [Eutacticity]\n";
       std::cerr << "\n";
+      ArithmeticDispatch dispatch_list;
+      add_rational_integer_arithmetics_by_library(
+          dispatch_list, []<typename T, typename Tint>() -> void {});
+      std::cerr << "arithmetic: " << dispatch_list.choices() << "\n";
       std::cerr << "Eutacticity: Eutactic, WeaklyEutactic\n";
       return -1;
     }

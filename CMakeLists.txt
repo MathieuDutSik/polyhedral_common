@@ -693,6 +693,7 @@ endforeach()
 set(
   PERFECT_PROGRAMS
   IsEutactic
+  IsStronglySemiEutactic
   PERF_SerialPerfectComputation
   PERF_IsBoundedFace
 )
@@ -996,6 +997,7 @@ set(
   POLYGEN_PROGRAMS
   PolyGen_Difference
   PolyGen_vertices
+  PolyGen_Info
 )
 foreach(target IN LISTS POLYGEN_PROGRAMS)
   add_polyhedral_binary(
