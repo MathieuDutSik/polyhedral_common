@@ -11,3 +11,9 @@ The GetFundamentalInfo function computes the RealImagSum and RealImagProd values
 - For d ≡ 1 (mod 4): eSum=1, eProd=(1-d)/4
 
 The test verifies that the serial enumeration program correctly identifies and enumerates perfect forms in these T-spaces.
+
+TestGeneratorRelation.g checks the presentations by generators and relators of GL2(Z) and GL3(Z) computed by PERF_SerialPerfectComputation (QUERIES:FileGroupGeneratorRelation):
+- The relators hold for the matrices of the generators.
+- The abelian invariants are [2,2] for GL2(Z) and [2] for GL3(Z).
+- The quotients by the normal closure of E12^N are GL_n(Z) / Gamma(N), of orders 12, 48, 96, 240 for n=2 and N=2..5, and 336, 11232 for n=3 and N=2, 3.
+- The numbers of subgroups of index at most 8 of GL2(Z) are the ones of the amalgam D8 *_{C2 x C2} D12.

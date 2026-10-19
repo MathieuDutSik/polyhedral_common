@@ -54,3 +54,14 @@ jobs:
             exit 1
           fi
           cd ../..
+
+      - name: Test the presentations by generators and relators of GL2(Z) and GL3(Z)
+        run: |
+          cd CI_tests/30_PerfectFormTspace
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestGeneratorRelation.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
