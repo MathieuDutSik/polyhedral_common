@@ -185,10 +185,11 @@ destroyed one. It is kept separate from the reducers themselves so that a
 disappointing experiment can be attributed to the representation, the
 objective, the move set or the search strategy rather than to all four at once.
 
-Programs:
-  * **TEST_ReductionBenchmark** `[dim] [n_iter] [seed]`, comparing the
-    available reducers over the families Zn, An, Dn, E8 and a low-symmetry
-    random family, at three strengths of destruction.
+The experiment is run by the CI section `16B_GramReductions`: from GAP, every
+method of `LATT_Reduction` is applied to scrambled presentations of Zn, root
+lattices and low-symmetry random lattices, at two strengths of destruction,
+and for each method the number of recoveries and of outputs at least as good
+as the hidden presentation is printed.
 
 The reductions offered by `LATT_Reduction` -- LLL, Seysen, deep insertion, BKZ,
 slide, Minkowski and the best-of search -- are validated by the CI section
@@ -202,11 +203,9 @@ the lattice-reduction problem; recovery is strictly stronger and is not
 geometrically meaningful, since every signed permutation of a good basis is
 equally good.
 
-Everything is measured on the Gram side in exact arithmetic. The orthogonal
-factor of the Iwasawa decomposition never appears, being killed by
-`G = B B^T`, and the remaining Iwasawa data is read off the Bareiss
-decomposition that `FullGramInfo` in `Shvec_exact.h` already computes, through
-`a_i^2 = d(i)/d(i-1)` and `mu_{i,j} = Nmat(i,j)/d(i)`.
+Everything is measured on the Gram side in exact arithmetic: the quality is
+the squared orthogonality defect `prod_i G_ii / det G`, and recovery is the
+test that `P U` is a signed permutation, `U` being the scrambling matrix.
 
 
 BKZ
