@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "zero_one_solution.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -87,44 +88,22 @@ void process_zero_one_solutions(std::string const &FileMatrix,
   }
 }
 
-void process_arithmetic(std::string const &arithmetic,
-                        std::string const &FileMatrix,
-                        std::string const &FileRHS,
-                        std::string const &OutFormat,
-                        std::string const &FileOut,
-                        ZeroOneOptions const &options) {
-  if (arithmetic == "gmp") {
-    using T = mpz_class;
-    return process_zero_one_solutions<T>(FileMatrix, FileRHS, OutFormat,
-                                         FileOut, options);
-  }
-#ifdef ENABLE_BOOST_TYPES
-  if (arithmetic == "gmp_boost") {
-    using T = boost::multiprecision::mpz_int;
-    return process_zero_one_solutions<T>(FileMatrix, FileRHS, OutFormat,
-                                         FileOut, options);
-  }
-  if (arithmetic == "multi_boost") {
-    using T = boost::multiprecision::cpp_int;
-    return process_zero_one_solutions<T>(FileMatrix, FileRHS, OutFormat,
-                                         FileOut, options);
-  }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arithmetic == "flint") {
-    using T = fmpz_class;
-    return process_zero_one_solutions<T>(FileMatrix, FileRHS, OutFormat,
-                                         FileOut, options);
-  }
-#endif
-  std::cerr << "Failed to find a matching arithmetic\n";
-  throw TerminalException{1};
-}
 
 int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string FileMatrix;
+    std::string FileRHS;
+    std::string OutFormat;
+    std::string FileOut;
+    ZeroOneOptions options;
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T, typename Tint>() -> void {
+      process_zero_one_solutions<Tint>(FileMatrix, FileRHS, OutFormat, FileOut,
+                                       options);
+    };
+    add_rational_integer_arithmetics_by_library(dispatch, f_arith);
     if (argc < 6 || argc > 8) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -133,11 +112,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "It enumerates all the x in {0,1}^n with A x = b\n";
       std::cerr << "\n";
-      std::cerr << "arithmetic  : gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << "\n";
+      std::cerr << "arithmetic  :\n";
+      dispatch.print_descriptions(std::cerr);
       std::cerr << "FileMatrix  : the matrix A, in the format of "
                    "ReadMatrixFile\n";
       std::cerr << "FileRHS     : the vector b, in the format of "
@@ -154,11 +130,10 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     std::string arithmetic = argv[1];
-    std::string FileMatrix = argv[2];
-    std::string FileRHS = argv[3];
-    std::string OutFormat = argv[4];
-    std::string FileOut = argv[5];
-    ZeroOneOptions options;
+    FileMatrix = argv[2];
+    FileRHS = argv[3];
+    OutFormat = argv[4];
+    FileOut = argv[5];
     if (argc >= 7) {
       std::string max_node_str = argv[6];
       options.max_node = ParseScalar<size_t>(max_node_str);
@@ -167,8 +142,7 @@ int main(int argc, char *argv[]) {
       std::string lp_max_depth_str = argv[7];
       options.lp_max_depth = ParseScalar<int>(lp_max_depth_str);
     }
-    process_arithmetic(arithmetic, FileMatrix, FileRHS, OutFormat, FileOut,
-                       options);
+    dispatch.run(arithmetic);
     std::cerr << "Normal termination of LATT_ZeroOneSolutions\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_ZeroOneSolutions\n";

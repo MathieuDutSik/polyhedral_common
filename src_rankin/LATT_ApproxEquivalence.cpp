@@ -10,6 +10,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "ApproxAutoEquiv.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tint>
@@ -57,48 +58,22 @@ void compute_approx_equivalence_kernel(std::string const &eFile1,
   FILE_PrintStderrStdoutFile(OutFile, prt);
 }
 
-void compute_approx_equivalence(std::string const &arithmetic,
-                                std::string const &eFile1,
-                                std::string const &eFile2,
-                                std::string const &strTol,
-                                std::string const &OutFormat,
-                                std::string const &OutFile) {
-  if (arithmetic == "gmp") {
-    using T = mpq_class;
-    using Tint = mpz_class;
-    return compute_approx_equivalence_kernel<T, Tint>(eFile1, eFile2, strTol,
-                                                      OutFormat, OutFile);
-  }
-#ifdef ENABLE_BOOST_TYPES
-  if (arithmetic == "gmp_boost") {
-    using T = boost::multiprecision::mpq_rational;
-    using Tint = boost::multiprecision::mpz_int;
-    return compute_approx_equivalence_kernel<T, Tint>(eFile1, eFile2, strTol,
-                                                      OutFormat, OutFile);
-  }
-  if (arithmetic == "multi_boost") {
-    using T = boost::multiprecision::cpp_rational;
-    using Tint = boost::multiprecision::cpp_int;
-    return compute_approx_equivalence_kernel<T, Tint>(eFile1, eFile2, strTol,
-                                                      OutFormat, OutFile);
-  }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arithmetic == "flint") {
-    using T = fmpq_class;
-    using Tint = fmpz_class;
-    return compute_approx_equivalence_kernel<T, Tint>(eFile1, eFile2, strTol,
-                                                      OutFormat, OutFile);
-  }
-#endif
-  std::cerr << "Failed to find a matching arithmetic=" << arithmetic << "\n";
-  throw TerminalException{1};
-}
 
 int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string eFile1;
+    std::string eFile2;
+    std::string strTol;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T, typename Tint>() -> void {
+      compute_approx_equivalence_kernel<T, Tint>(eFile1, eFile2, strTol,
+                                                 OutFormat, OutFile);
+    };
+    add_rational_integer_arithmetics_by_library(dispatch, f_arith);
     if (argc != 5 && argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -107,20 +82,21 @@ int main(int argc, char *argv[]) {
       std::cerr << "    or\n";
       std::cerr << "LATT_ApproxEquivalence [arithmetic] [GramMat1] [GramMat2] "
                    "[tol]\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arithmetic -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     std::string arithmetic = argv[1];
-    std::string eFile1 = argv[2];
-    std::string eFile2 = argv[3];
-    std::string strTol = argv[4];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    eFile1 = argv[2];
+    eFile2 = argv[3];
+    strTol = argv[4];
     if (argc == 7) {
       OutFormat = argv[5];
       OutFile = argv[6];
     }
-    compute_approx_equivalence(arithmetic, eFile1, eFile2, strTol, OutFormat,
-                               OutFile);
+    dispatch.run(arithmetic);
     std::cerr << "Normal termination of LATT_ApproxEquivalence\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_ApproxEquivalence\n";

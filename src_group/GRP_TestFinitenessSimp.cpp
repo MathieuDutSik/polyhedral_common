@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "FiniteMatrixGroupFund.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template<typename Tint>
@@ -36,66 +37,38 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string FileListMat;
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stderr";
+    ArithmeticDispatch dispatch;
+    add_rational_integer_arithmetics_by_library(
+        dispatch, [&]<typename T, typename Tint>() -> void {
+          process<Tint>(FileListMat, OutFormat, OutFile);
+        });
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_TestFiniteness [arith] [ListMat] [OutFormat] "
+      std::cerr << "GRP_TestFinitenessSimp [arith] [ListMat] [OutFormat] "
                 << "[OutFile]\n";
       std::cerr << "    or\n";
-      std::cerr << "GRP_TestFiniteness [arith] [ListMat]\n";
+      std::cerr << "GRP_TestFinitenessSimp [arith] [ListMat]\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     //
     std::string arith = argv[1];
-    std::string FileListMat = argv[2];
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
+    FileListMat = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
-    auto f=[&]() -> void {
-      if (arith == "gmp") {
-        using Tint = mpz_class;
-        return process<Tint>(FileListMat, OutFormat, OutFile);
-      }
-#ifdef ENABLE_BOOST_TYPES
-      if (arith == "gmp_boost") {
-        using Tint = boost::multiprecision::mpz_int;
-        return process<Tint>(FileListMat, OutFormat, OutFile);
-      }
-      if (arith == "multi_boost") {
-        using Tint = boost::multiprecision::cpp_int;
-        return process<Tint>(FileListMat, OutFormat, OutFile);
-      }
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using Tint = fmpz_class;
-        return process<Tint>(FileListMat, OutFormat, OutFile);
-      }
-#endif
-      std::cerr << "Failed to find a matching entry for arith=" << arith
-                << "\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << ", flint\n";
-#else
-      std::cerr << "Allowed values: gmp";
-#ifdef ENABLE_BOOST_TYPES
-      std::cerr << ", gmp_boost, multi_boost";
-#endif
-      std::cerr << " (build with ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
-    };
-    f();
-    std::cerr << "Normal termination of GRP_TestFiniteness\n";
+    dispatch.run(arith);
+    std::cerr << "Normal termination of GRP_TestFinitenessSimp\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_TestFiniteness\n";
+    std::cerr << "Error in GRP_TestFinitenessSimp\n";
     exit(e.eVal);
   }
   runtime(time);
