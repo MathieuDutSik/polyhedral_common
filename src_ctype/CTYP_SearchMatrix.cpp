@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   //
   if (argc != 3) {
     std::cerr << "Usage:\n";
-    std::cerr << "CTYP_SearchMartrix [WORK_OUT_] [FileI]\n";
+    std::cerr << "CTYP_SearchMatrix [WORK_OUT_] [FileI]\n";
     return 0;
   }
   std::string Prefix = argv[1];

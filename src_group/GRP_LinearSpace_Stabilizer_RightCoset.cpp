@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
     //
-    std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
+    std::cerr << "GRP_LinearSpace_Stabilizer_RightCoset : Reading input\n";
     std::string GRP_file = argv[1];
     std::string SPA_file = argv[2];
     std::string OUT_file = argv[3];

@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 5) {
-      std::cerr << "TEST_Anisotropic a b c M\n";
+      std::cerr << "LORENTZ_TwoDimAnisotropic_Allcock a b c M\n";
       throw TerminalException{1};
     }
     using T = mpq_class;

@@ -122,9 +122,9 @@ int main(int argc, char *argv[]) {
       dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(eFileO, call_dualdesc);
-    std::cerr << "Normal termination of POLY_dual_description\n";
+    std::cerr << "Normal termination of POLY_dual_description_group\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POLY_dual_description\n";
+    std::cerr << "Error in POLY_dual_description_group\n";
     exit(e.eVal);
   }
   runtime(time1);

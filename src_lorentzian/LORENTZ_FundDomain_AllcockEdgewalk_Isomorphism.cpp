@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   try {
     FullNamelist eFull = NAMELIST_GetStandard_EDGEWALK_Isomorphism();
     if (argc != 2) {
-      std::cerr << "LORENTZ_FundDomain_AllcockEdgeWalk_Isomorphism [FileNML]\n";
+      std::cerr << "LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism [FileNML]\n";
       std::cerr << "with fileNML a namelist file\n";
       eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       throw TerminalException{1};

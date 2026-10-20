@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   try {
     if (argc != 2) {
-      std::cerr << "CTYP_ComputeAverage [FileName]\n";
+      std::cerr << "CTYP_ComputeHashStat [FileName]\n";
       throw TerminalException{1};
     }
     std::string FileName = argv[1];

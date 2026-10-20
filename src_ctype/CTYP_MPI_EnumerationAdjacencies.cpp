@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
   if (argc != 2) {
     std::cerr << "Number of argument is = " << argc << "\n";
     std::cerr << "This program is used as\n";
-    std::cerr << "CTYP_MPI_Enumeration_c [file.nml]\n";
+    std::cerr << "CTYP_MPI_EnumerationAdjacencies [file.nml]\n";
     std::cerr << "With file.nml a namelist file\n";
     eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
     return -1;

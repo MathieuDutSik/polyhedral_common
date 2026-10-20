@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     using Tgroup = permutalib::Group<Telt, Tint>;
     using Thelper = GeneralMatrixGroupHelper<T, Telt, Tint>;
     //
-    std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
+    std::cerr << "GRP_LinearSpace_Equivalence : Reading input\n";
     std::string GRP_file = argv[1];
     std::string SPA1_file = argv[2];
     std::string SPA2_file = argv[3];

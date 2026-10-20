@@ -83,9 +83,9 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileO, print_result);
-    std::cerr << "Normal termination of LATT_IndefiniteReductionPermSign\n";
+    std::cerr << "Normal termination of INDEF_FORM_ApproxCanonicalForm\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_IndefiniteReductionPermSign, runtime=" << time
+    std::cerr << "Error in INDEF_FORM_ApproxCanonicalForm, runtime=" << time
               << "\n";
     exit(e.eVal);
   }

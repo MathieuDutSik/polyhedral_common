@@ -88,9 +88,9 @@ int main(int argc, char *argv[]) {
       dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(FileOut, f);
-    std::cerr << "Normal termination of GRP_MatrixGroupSimplification\n";
+    std::cerr << "Normal termination of GRP_MatrixGroupPermSimplification\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_LinPolytope_Invariant\n";
+    std::cerr << "Error in GRP_MatrixGroupPermSimplification\n";
     exit(e.eVal);
   }
   runtime(time);

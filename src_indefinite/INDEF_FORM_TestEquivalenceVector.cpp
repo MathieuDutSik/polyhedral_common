@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
     //
-    std::cerr << "Normal termination of INDEF_FORM_TestEquivalence\n";
+    std::cerr << "Normal termination of INDEF_FORM_TestEquivalenceVector\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in INDEF_FORM_TestEquivalenceVector, runtime=" << time
               << "\n";

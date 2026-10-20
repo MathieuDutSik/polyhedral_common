@@ -56,9 +56,9 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     FILE_PrintStderrStdoutFile(FileO, print_mat);
-    std::cerr << "Normal termination of VectFamily_Reduction\n";
+    std::cerr << "Normal termination of VectFamily_ColumnReduction\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in VectFamily_Reduction\n";
+    std::cerr << "Error in VectFamily_ColumnReduction\n";
     exit(e.eVal);
   }
   runtime(time1);
