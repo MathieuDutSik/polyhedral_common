@@ -4,6 +4,7 @@
 // clang-format off
 #include "MAT_Matrix.h"
 #include "SignatureSymmetric.h"
+#include "TypeConversionFinal.h"
 // clang-format on
 
 #ifdef DEBUG
