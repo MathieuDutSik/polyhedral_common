@@ -43,6 +43,7 @@ jobs:
         run: |
           make -C src_latt -f Makefile_latt_can_aut_iso
           make -C src_short -f Makefile_realizability
+          make -C src_latt -f Makefile_plesken_souvignier
           pwd
           echo "After compilation of lattice code"
 

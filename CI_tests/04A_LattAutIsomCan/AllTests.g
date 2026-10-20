@@ -374,6 +374,91 @@ test_non_isomorphic:=function()
 end;
 
 
+# The Plesken-Souvignier algorithm of LATT_PleskenSouvignier, checked against
+# the references above. Every generator must preserve the form, the order the
+# program reports must be the order of the permutation group that the
+# generators induce on an invariant family of vectors, and that order must be
+# the known one, or the one of LATT_Automorphism.
+test_ps_automorphism:=function(name, eMat, ord_ref)
+    local res, eGen, ListVect, SetVect, ord_perm;
+    res:=get_latt_ps_automorphism(eMat);
+    if is_error(res) then
+        Print("test_ps_automorphism, ", name, ": program failure\n");
+        return 1;
+    fi;
+    for eGen in res.ListGen
+    do
+        if eGen * eMat * TransposedMat(eGen) <> eMat then
+            Print("test_ps_automorphism, ", name, ": a generator does not preserve the form\n");
+            return 1;
+        fi;
+    od;
+    ListVect:=get_fullrank_invariant_family(eMat, "fullrank");
+    if is_error(ListVect) then
+        return 1;
+    fi;
+    SetVect:=Set(ListVect);
+    ord_perm:=Order(Group(List(res.ListGen, x->SortingPerm(SetVect * x)), ()));
+    Print("  ", name, " PS |Aut|=", res.order, " perm=", ord_perm, " reference=", ord_ref, "\n");
+    if res.order <> ord_perm or ord_perm <> ord_ref then
+        Print("test_ps_automorphism, ", name, ": the orders disagree\n");
+        return 1;
+    fi;
+    return 0;
+end;
+
+# An isometry to a random conjugate must be found and must be correct.
+test_ps_isomorphism:=function(name, eMat)
+    local iter, eMat_B, P;
+    for iter in [1..5]
+    do
+        eMat_B:=get_random_conjugate(eMat);
+        P:=get_latt_ps_isomorphism(eMat, eMat_B);
+        if is_error(P) or P=fail then
+            Print("test_ps_isomorphism, ", name, ": no isometry found\n");
+            return 1;
+        fi;
+        if P * eMat * TransposedMat(P) <> eMat_B then
+            Print("test_ps_isomorphism, ", name, ": the isometry is wrong\n");
+            return 1;
+        fi;
+    od;
+    return 0;
+end;
+
+test_all_ps:=function()
+    local n_error, eRec, iMat, eMat, GRPperm, test_iso;
+    n_error:=0;
+    for eRec in ListKnownOrder
+    do
+        n_error:=n_error + test_ps_automorphism(eRec.name, eRec.eG, eRec.ord);
+        n_error:=n_error + test_ps_isomorphism(eRec.name, eRec.eG);
+    od;
+    for iMat in [1..Length(ListMat)]
+    do
+        eMat:=ListMat[iMat];
+        GRPperm:=get_latt_automorphism_perm_group(eMat);
+        if GRPperm=fail then
+            n_error:=n_error+1;
+        else
+            n_error:=n_error + test_ps_automorphism(Concatenation("ListMat[", String(iMat), "]"), eMat, Order(GRPperm));
+        fi;
+        n_error:=n_error + test_ps_isomorphism(Concatenation("ListMat[", String(iMat), "]"), eMat);
+    od;
+    for eRec in ListNonIsomorphic
+    do
+        test_iso:=get_latt_ps_isomorphism(eRec.eG1, eRec.eG2);
+        Print("  PS ", eRec.name1, " against ", eRec.name2, " iso=", test_iso, "\n");
+        if is_error(test_iso) or test_iso<>fail then
+            Print("test_all_ps: ", eRec.name1, " and ", eRec.name2, " not reported as non isometric\n");
+            n_error:=n_error+1;
+        fi;
+    od;
+    Print("n_error_ps=", n_error, "\n");
+    return n_error;
+end;
+
+
 test_all:=function()
     local n_error;
     n_error:=n_error_realizability;
@@ -382,6 +467,7 @@ test_all:=function()
     n_error:=n_error + test_all_isoms();
     n_error:=n_error + test_known_orders();
     n_error:=n_error + test_non_isomorphic();
+    n_error:=n_error + test_all_ps();
     return n_error;
 end;
 

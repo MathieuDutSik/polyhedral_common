@@ -898,6 +898,78 @@ get_latt_isomorphism_test:=function(arg)
     return U;
 end;
 
+# The automorphism group of a positive definite Gram matrix by the
+# Plesken-Souvignier algorithm of LATT_PleskenSouvignier. Returns the record
+# rec(ListGen, order), or a string on a program failure.
+get_latt_ps_automorphism:=function(arg)
+    local eMat, options, arith, TmpDir, FileI, FileO, FileE, eProg, U, list_arg, status;
+    eMat:=arg[1];
+    arith:="gmp";
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "PS_aut.in");
+    FileO:=Filename(TmpDir, "PS_aut.out");
+    FileE:=Filename(TmpDir, "PS_aut.err");
+    WriteMatrixFile(FileI, eMat);
+    eProg:=GetBinaryFilename("LATT_PleskenSouvignier");
+    list_arg:=[arith, "aut", FileI, "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: LATT_PleskenSouvignier aut failed to create a file";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+# An isometry P with P * eMat1 * TransposedMat(P) = eMat2 by the
+# Plesken-Souvignier algorithm, fail if the lattices are not isometric, or a
+# string on a program failure.
+get_latt_ps_isomorphism:=function(arg)
+    local eMat1, eMat2, options, arith, TmpDir, FileI1, FileI2, FileO, FileE, eProg, U, list_arg, status;
+    eMat1:=arg[1];
+    eMat2:=arg[2];
+    arith:="gmp";
+    if Length(arg) >= 3 then
+        options:=arg[3];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileI1:=Filename(TmpDir, "PS_iso1.in");
+    FileI2:=Filename(TmpDir, "PS_iso2.in");
+    FileO:=Filename(TmpDir, "PS_iso.out");
+    FileE:=Filename(TmpDir, "PS_iso.err");
+    WriteMatrixFile(FileI1, eMat1);
+    WriteMatrixFile(FileI2, eMat2);
+    eProg:=GetBinaryFilename("LATT_PleskenSouvignier");
+    list_arg:=[arith, "iso", FileI1, FileI2, "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: LATT_PleskenSouvignier iso failed to create a file";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI1);
+    RemoveFile(FileI2);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
 
 
 get_group_skeleton:=function(arg)

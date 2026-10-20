@@ -179,9 +179,9 @@ int main(int argc, char *argv[]) {
       process<T>(ListMatFile, OutFormat, *os_ptr);
     });
     if (argc != 3 && argc != 5) {
-      std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile]\n";
+      std::cerr << "LATT_EquiStabFamily [arith] [ListMatFile]\n";
       std::cerr << "or\n";
-      std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile] [OutFormat] "
+      std::cerr << "LATT_EquiStabFamily [arith] [ListMatFile] [OutFormat] "
                    "[FileOut]\n";
       std::cerr << "\n";
       std::cerr << "     ------- arith -------\n";
@@ -201,9 +201,9 @@ int main(int argc, char *argv[]) {
       dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(FileOut, f);
-    std::cerr << "Normal termination of TEST_EquiStabFamily\n";
+    std::cerr << "Normal termination of LATT_EquiStabFamily\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in TEST_EquiStabFamily\n";
+    std::cerr << "Error in LATT_EquiStabFamily\n";
     exit(e.eVal);
   }
   runtime(time);

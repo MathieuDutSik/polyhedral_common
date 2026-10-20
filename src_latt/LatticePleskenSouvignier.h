@@ -89,11 +89,55 @@ MyMatrix<Tint> PleskenSouvignierZspanFamilyHalf(MyMatrix<T> const &GramMat,
 }
 
 /*
+  The matrices over the ring, each scaled by the positive multiplier that
+  makes it integral. The automorphisms of a form are those of any positive
+  multiple of it, so the search can run on integral forms.
+ */
+template <typename T, typename Tint>
+std::vector<MyMatrix<Tint>>
+PleskenSouvignierIntegralForms(std::vector<MyMatrix<T>> const &ListMat) {
+  std::vector<MyMatrix<Tint>> ListMatInt;
+  ListMatInt.reserve(ListMat.size());
+  for (auto &eMat : ListMat) {
+    MyMatrix<T> eMatScal = RemoveFractionMatrixPlusCoeff(eMat).TheMat;
+    ListMatInt.push_back(UniversalMatrixConversion<Tint, T>(eMatScal));
+  }
+  return ListMatInt;
+}
+
+/*
+  The same for a pair of configurations: ListMat1[i] and ListMat2[i] are
+  scaled by the SAME multiplier, the one making ListMat1[i] integral, since
+  P * M1 * P^T = M2 holds if and only if it holds for c M1 and c M2. When
+  c ListMat2[i] is not integral, no integral P can map the first form to
+  the second, and nothing is returned.
+ */
+template <typename T, typename Tint>
+std::optional<
+    std::pair<std::vector<MyMatrix<Tint>>, std::vector<MyMatrix<Tint>>>>
+PleskenSouvignierIntegralFormsPair(std::vector<MyMatrix<T>> const &ListMat1,
+                                   std::vector<MyMatrix<T>> const &ListMat2) {
+  std::vector<MyMatrix<Tint>> ListMatInt1;
+  std::vector<MyMatrix<Tint>> ListMatInt2;
+  for (size_t i = 0; i < ListMat1.size(); i++) {
+    FractionMatrix<T> fr = RemoveFractionMatrixPlusCoeff(ListMat1[i]);
+    MyMatrix<T> eMat2Scal = fr.TheMult * ListMat2[i];
+    if (!IsIntegralMatrix(eMat2Scal)) {
+      return {};
+    }
+    ListMatInt1.push_back(UniversalMatrixConversion<Tint, T>(fr.TheMat));
+    ListMatInt2.push_back(UniversalMatrixConversion<Tint, T>(eMat2Scal));
+  }
+  return std::make_pair(std::move(ListMatInt1), std::move(ListMatInt2));
+}
+
+/*
   The automorphism group of the configuration: generators over the ring
   in the ORIGINAL basis, satisfying g * M * g^T = M for every matrix of
   ListMat, and the orbit lengths along the stabilizer chain whose
   product is the group order. ListMat[0] has to be symmetric positive
-  definite with integral entries, the others symmetric integral.
+  definite, the others symmetric. The matrices may be rational: they are
+  made integral by PleskenSouvignierIntegralForms.
  */
 template <typename T, typename Tint>
 PleskenSouvignierAutomResult<Tint>
@@ -106,7 +150,7 @@ PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
   MyMatrix<Tint> const &Pmat = rec.Pmat;
   MyMatrix<Tint> PmatInv = Inverse(Pmat);
   std::vector<MyMatrix<Tint>> ListMatInt =
-      UniversalStdVectorMatrixConversion<Tint, T>(ListMat);
+      PleskenSouvignierIntegralForms<T, Tint>(ListMat);
   std::vector<MyMatrix<Tint>> ListMatRed;
   ListMatRed.reserve(ListMatInt.size());
   for (auto &eMat : ListMatInt) {
@@ -168,10 +212,14 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierLatticeIsometry(
   LLLreduction<T, Tint> rec2 = LLLreducedBasis<T, Tint>(ListMat2[0], os);
   MyMatrix<Tint> const &Pmat1 = rec1.Pmat;
   MyMatrix<Tint> const &Pmat2 = rec2.Pmat;
-  std::vector<MyMatrix<Tint>> ListMatInt1 =
-      UniversalStdVectorMatrixConversion<Tint, T>(ListMat1);
-  std::vector<MyMatrix<Tint>> ListMatInt2 =
-      UniversalStdVectorMatrixConversion<Tint, T>(ListMat2);
+  std::optional<
+      std::pair<std::vector<MyMatrix<Tint>>, std::vector<MyMatrix<Tint>>>>
+      opt_int = PleskenSouvignierIntegralFormsPair<T, Tint>(ListMat1, ListMat2);
+  if (!opt_int) {
+    return {};
+  }
+  std::vector<MyMatrix<Tint>> const &ListMatInt1 = opt_int->first;
+  std::vector<MyMatrix<Tint>> const &ListMatInt2 = opt_int->second;
   std::vector<MyMatrix<Tint>> ListMatRed1;
   std::vector<MyMatrix<Tint>> ListMatRed2;
   for (auto &eMat : ListMatInt1) {
