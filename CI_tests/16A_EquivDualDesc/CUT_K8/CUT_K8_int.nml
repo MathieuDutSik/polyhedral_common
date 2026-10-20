@@ -1,6 +1,6 @@
 &DATA
  EXTfile = "CutK8.ext"
- NumericalType = "integer"
+ NumericalType = "mpz_class"
  GRPfile = "CutK8.grp"
  OutFile = "CutK8.orbitFacet"
  DeterministicRuntime = T

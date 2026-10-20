@@ -2,7 +2,7 @@
  EXTfile = "CutK55.ext"
  GRPfile = "CutK55.grp"
  OutFile = "CutK55.orbitFacet"
- NumericalType = "integer"
+ NumericalType = "mpz_class"
  DeterministicRuntime = T
  max_runtime = -1
  AdvancedTerminationCriterion = T

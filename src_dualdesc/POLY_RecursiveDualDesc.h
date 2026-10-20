@@ -1684,12 +1684,15 @@ FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
     std::map<std::string, std::string> ListStringValues_doc;
     std::map<std::string, std::string> ListBoolValues_doc;
     std::map<std::string, std::string> ListIntValues_doc;
-    ListStringValues_doc["NumericalType"] = "Default: rational\n\
+    ListStringValues_doc["NumericalType"] = "Default: mpq_class\n\
 The numerical type being used for the computation. Possible values:\n\
-rational: the rational type, what you want in 99.999\% of cases\n\
-integer: the integer ring, the whole computation runs division free\n\
-flint_rational, flint_integer: the same with the FLINT types (when compiled\n\
-with ENABLE_FLINT_SUPPORT), usually faster\n\
+mpq_class: the rational type, what you want in 99.999\% of cases\n\
+mpz_class: the integer ring, the whole computation runs division free\n\
+  (POLY_SerialDualDesc only)\n\
+fmpq_class, fmpz_class: the same with the FLINT types (when compiled\n\
+  with ENABLE_FLINT_SUPPORT), usually faster\n\
+mpq_rational, cpp_rational, mpz_int, cpp_int: the boost types (when compiled\n\
+  with ENABLE_BOOST_TYPES)\n\
 Qsqrt5, Qsqrt2: coordinates in the field Q(sqrt(5)), Q(sqrt(2)) (when\n\
 compiled with QUADRATIC_FIELDS)\n\
 RealAlgebraic=FileDesc: coordinate in the real algebraic field whose description\n\
@@ -1937,33 +1940,11 @@ template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
   return ReadMatrixFile<T>(EXTfile);
 }
 
+// The NumericalType is checked by the ArithmeticDispatch of the program, which
+// lists the arithmetics that were compiled in.
 std::string GetNumericalType(FullNamelist const &eFull) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
-  std::string const &NumericalType = BlockDATA.get_string("NumericalType");
-  std::vector<std::string> Ltype{"integer", "rational", "cpp_rational",
-                                 "mpq_rational"};
-#ifdef QUADRATIC_FIELDS
-  Ltype.push_back("Qsqrt2");
-  Ltype.push_back("Qsqrt3");
-  Ltype.push_back("Qsqrt5");
-#endif
-#ifdef ENABLE_FLINT_SUPPORT
-  Ltype.push_back("flint_integer");
-  Ltype.push_back("flint_rational");
-#endif
-  // The real algebraic case carries the field description file as a postfix:
-  // NumericalType = "RealAlgebraic=<FileAlgebraicField>".
-  bool is_real_algebraic =
-      get_postfix(NumericalType, "RealAlgebraic=").has_value();
-  if (PositionVect(Ltype, NumericalType) == -1 && !is_real_algebraic) {
-    std::cerr << "NumericalType=" << NumericalType << "\n";
-    std::cerr << "Ltype =";
-    for (auto &e_type : Ltype)
-      std::cerr << " " << e_type;
-    std::cerr << " RealAlgebraic=<FileAlgebraicField>\n";
-    throw TerminalException{1};
-  }
-  return NumericalType;
+  return BlockDATA.get_string("NumericalType");
 }
 
 template <typename T, typename Tidx>

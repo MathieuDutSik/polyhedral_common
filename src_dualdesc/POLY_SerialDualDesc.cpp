@@ -14,6 +14,7 @@
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "Group.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tidx>
@@ -60,71 +61,18 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     std::string NumericalType = GetNumericalType(eFull);
-    auto process = [&]() -> void {
-      if (NumericalType == "integer") {
-        using T = mpz_class;
-        return Process<T>(eFull);
-      }
-      if (NumericalType == "rational") {
-        using T = mpq_class;
-        return Process<T>(eFull);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (NumericalType == "flint_integer") {
-        using T = fmpz_class;
-        return Process<T>(eFull);
-      }
-      if (NumericalType == "flint_rational") {
-        using T = fmpq_class;
-        return Process<T>(eFull);
-      }
-#endif
-#ifdef ENABLE_BOOST_TYPES
-      if (NumericalType == "cpp_rational") {
-        using T = boost::multiprecision::cpp_rational;
-        return Process<T>(eFull);
-      }
-      if (NumericalType == "mpq_rational") {
-        using T = boost::multiprecision::mpq_rational;
-        return Process<T>(eFull);
-      }
-#endif
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void { Process<T>(eFull); };
+    add_rational_arithmetics(dispatch, f_arith);
+    add_integer_arithmetics(dispatch, f_arith);
+    add_algebraic_field_arithmetics(dispatch, f_arith);
 #ifdef QUADRATIC_FIELDS
-      if (NumericalType == "Qsqrt5") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 5>;
-        return Process<T>(eFull);
-      }
-      if (NumericalType == "Qsqrt3") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 3>;
-        return Process<T>(eFull);
-      }
-      if (NumericalType == "Qsqrt2") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 2>;
-        return Process<T>(eFull);
-      }
+    dispatch.add("Qsqrt3", "arithmetic over the field Q(sqrt(3))",
+                 [&]() -> void {
+                   f_arith.template operator()<QuadField<Trat_quad_field, 3>>();
+                 });
 #endif
-      std::optional<std::string> opt_realalgebraic =
-          get_postfix(NumericalType, "RealAlgebraic=");
-      if (opt_realalgebraic) {
-        std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!FILE_IsExistingFile(FileAlgebraicField)) {
-          std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                    << " is missing\n";
-          throw TerminalException{1};
-        }
-        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
-        int const idx_real_algebraic_field = 1;
-        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-        using T = RealField<idx_real_algebraic_field>;
-        return Process<T>(eFull);
-      }
-      std::cerr << "Failed to find a matching type entry\n";
-      throw TerminalException{1};
-    };
-    process();
+    dispatch.run(NumericalType);
     //
     std::cerr << "Normal termination of POLY_SerialDualDesc\n";
   } catch (TerminalException const &e) {
@@ -136,7 +84,7 @@ int main(int argc, char *argv[]) {
     // exit(e.eVal);
   } catch (SafeIntException const &e) {
     std::cerr << "The int64_t arithmetic overflowed: rerun with an "
-                 "arbitrary precision NumericalType (integer, rational)\n";
+                 "arbitrary precision NumericalType (mpz_class, mpq_class)\n";
     std::cerr << "Error in POLY_SerialDualDesc\n";
     exit(e.eVal);
   }

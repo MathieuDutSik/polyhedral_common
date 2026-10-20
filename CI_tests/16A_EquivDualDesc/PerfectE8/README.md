@@ -20,9 +20,9 @@ The shape of the run is: everything found in the first half hour, 83091 of the
 83092 orbits done within two hours, and the last twenty minutes spent on the
 single orbit 229, of incidence 75 and stabilizer 23040.
 
-`NumericalType = "integer"` is set. It makes no difference to the result (same
+`NumericalType = "mpz_class"` is set. It makes no difference to the result (same
 83092 orbits, identical as a set) and none to the speed either: 2h23m against
-the 2h17m of `rational`, one run each, which is inside what this machine
+the 2h17m of `mpq_class`, one run each, which is inside what this machine
 resolves. The reason is that the kernels already run on integers in the
 rational setting -- both the reverse search and the normaliz port scale each
 row into the underlying ring once and then work over TryInt64 -- so the

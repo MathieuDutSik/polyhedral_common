@@ -11,6 +11,7 @@
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "POLY_RecursiveDualDesc_MPI.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tidx>
@@ -72,42 +73,13 @@ int main(int argc, char *argv[]) {
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     std::string NumericalType = GetNumericalType(eFull);
-    auto process = [&]() -> void {
-      if (NumericalType == "rational") {
-        using T = mpq_class;
-        return Process_eFull_select_type<T>(world, eFull);
-      }
-#ifdef QUADRATIC_FIELDS
-      if (NumericalType == "Qsqrt5") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 5>;
-        return Process_eFull_select_type<T>(world, eFull);
-      }
-      if (NumericalType == "Qsqrt2") {
-        using Trat = Trat_quad_field;
-        using T = QuadField<Trat, 2>;
-        return Process_eFull_select_type<T>(world, eFull);
-      }
-#endif
-      std::optional<std::string> opt_realalgebraic =
-          get_postfix(NumericalType, "RealAlgebraic=");
-      if (opt_realalgebraic) {
-        std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!FILE_IsExistingFile(FileAlgebraicField)) {
-          std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                    << " is missing\n";
-          throw TerminalException{1};
-        }
-        HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
-        int const idx_real_algebraic_field = 1;
-        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-        using T = RealField<idx_real_algebraic_field>;
-        return Process_eFull_select_type<T>(world, eFull);
-      }
-      std::cerr << "Failed to find a matching type entry\n";
-      throw TerminalException{1};
+    ArithmeticDispatch dispatch;
+    auto f_arith = [&]<typename T>() -> void {
+      Process_eFull_select_type<T>(world, eFull);
     };
-    process();
+    add_rational_arithmetics(dispatch, f_arith);
+    add_algebraic_field_arithmetics(dispatch, f_arith);
+    dispatch.run(NumericalType);
     //
     //    using T = boost::multiprecision::cpp_rational;
     //    using T = boost::multiprecision::mpq_rational;
