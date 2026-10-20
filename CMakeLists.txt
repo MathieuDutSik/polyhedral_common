@@ -795,6 +795,7 @@ set(
   VectFamily_Reduction
   LATT_PleskenSouvignier
   LATT_EquiStabFamily
+  LATT_ShvecSieve
 )
 foreach(target IN LISTS LATT_PROGRAMS)
   add_polyhedral_binary(

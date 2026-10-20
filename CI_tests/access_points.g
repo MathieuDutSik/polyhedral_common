@@ -1746,6 +1746,40 @@ get_orbit_shortest:=function(arg)
     return U;
 end;
 
+# The minimum and the minimal vectors of a positive definite Gram matrix by
+# the certified Gauss sieve of LATT_ShvecSieve. Returns rec(min, SHV) with the
+# rows of SHV in pairs v, -v, or a string on a program failure.
+get_shvec_sieve:=function(arg)
+    local eMat, options, arith, TmpDir, FileI, FileO, FileE, eProg, U, list_arg, status;
+    eMat:=arg[1];
+    arith:="gmp";
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Sieve.in");
+    FileO:=Filename(TmpDir, "Sieve.out");
+    FileE:=Filename(TmpDir, "Sieve.err");
+    WriteMatrixFile(FileI, eMat);
+    eProg:=GetBinaryFilename("LATT_ShvecSieve");
+    list_arg:=[arith, FileI, "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: LATT_ShvecSieve failed to create a file";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
 
 
 

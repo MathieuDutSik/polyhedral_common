@@ -80,10 +80,14 @@ Entry points:
     from what that enumeration returns. The output is the same as
     `T_ShortestVector`'s, pairs `v, -v` included.
 
-**TEST_ShvecSieve** `[dim] [n_iter] [seed]` checks the certified sieve
-against `T_ShortestVector` on the benchmark families. It stops at the first
-difference in the minimum or in the set of minimal vectors. Measured with seed
-3, one instance per family, in a release build:
+**LATT_ShvecSieve** `[arith] [GramFile] [OutFormat] [OutFile]` gives the
+minimum and the minimal vectors of a Gram matrix by `T_ShortestVectorSieve`.
+CI 27A checks it against the `ShortestVectors` of GAP on the classical root
+lattices and on random conjugates of them.
+
+The former test program TEST_ShvecSieve compared the certified sieve with
+`T_ShortestVector` on the benchmark families. Measured with it, seed 3, one
+instance per family, in a release build:
 
 | instance | minimum | enumeration | sieve alone | sieve + certification |
 |---|---|---|---|---|
