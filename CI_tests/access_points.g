@@ -434,14 +434,18 @@ get_saturated_space:=function(arg)
 end;
 
 get_latt_canonical_form:=function(arg)
-    local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, U, runtime_str, list_arg, status;
+    local eMat, options, arith, method, print_info, TmpDir, FileI, FileO, FileE, eProg, U, runtime_str, list_arg, status;
     eMat:=arg[1];
     arith:="gmp";
+    method:="graph";
     print_info:=false;
     if Length(arg) >= 2 then
         options:=arg[2];
         if IsBound(options.arith) then
             arith:=options.arith;
+        fi;
+        if IsBound(options.method) then
+            method:=options.method;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -454,7 +458,7 @@ get_latt_canonical_form:=function(arg)
     WriteMatrixFile(FileI, eMat);
     #
     eProg:=GetBinaryFilename("LATT_Canonicalize");
-    list_arg:=[arith, FileI, "GAP_full", FileO];
+    list_arg:=[arith, FileI, "GAP_full", FileO, method];
     status:=run_binary(eProg, list_arg, FileE);
     if status <> 0 then
         return binary_failure(eProg, list_arg, status, FileE);

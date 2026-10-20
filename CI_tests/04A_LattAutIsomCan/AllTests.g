@@ -505,6 +505,61 @@ test_known_orders_methods:=function()
     return n_error;
 end;
 
+# The canonical form of LATT_Canonicalize along the root decomposition, method
+# vinberg, on the integral Gram matrices: the basis must be unimodular and
+# produce the returned form, the form must not change under conjugation, and
+# non isometric lattices must have different forms. Those forms are compared
+# only among themselves, never with the ones of the graph method.
+test_canonical_vinberg_one:=function(name, eMat)
+    local opt, TheCan, iter, eMat_B, TheCan_B;
+    opt:=rec(method:="vinberg");
+    TheCan:=get_latt_canonical_form(eMat, opt);
+    if is_error(TheCan) then
+        Print("test_canonical_vinberg, ", name, ": program failure\n");
+        return 1;
+    fi;
+    if AbsInt(DeterminantMat(TheCan.Basis)) <> 1 or TheCan.Basis * eMat * TransposedMat(TheCan.Basis) <> TheCan.eG then
+        Print("test_canonical_vinberg, ", name, ": the basis does not give the form\n");
+        return 1;
+    fi;
+    for iter in [1..5]
+    do
+        eMat_B:=get_random_conjugate(eMat);
+        TheCan_B:=get_latt_canonical_form(eMat_B, opt);
+        if is_error(TheCan_B) or TheCan_B.eG <> TheCan.eG then
+            Print("test_canonical_vinberg, ", name, ": the canonical forms do not match\n");
+            return 1;
+        fi;
+    od;
+    return 0;
+end;
+
+test_canonical_vinberg:=function()
+    local n_error, eRec, iMat, can1, can2;
+    n_error:=0;
+    for eRec in ListKnownOrder
+    do
+        n_error:=n_error + test_canonical_vinberg_one(eRec.name, eRec.eG);
+    od;
+    for iMat in [1..Length(ListMat)]
+    do
+        if ForAll(Flat(ListMat[iMat]), IsInt) then
+            n_error:=n_error + test_canonical_vinberg_one(Concatenation("ListMat[", String(iMat), "]"), ListMat[iMat]);
+        fi;
+    od;
+    for eRec in ListNonIsomorphic
+    do
+        can1:=get_latt_canonical_form(eRec.eG1, rec(method:="vinberg"));
+        can2:=get_latt_canonical_form(eRec.eG2, rec(method:="vinberg"));
+        if is_error(can1) or is_error(can2) or can1.eG = can2.eG then
+            Print("test_canonical_vinberg, ", eRec.name1, " and ", eRec.name2, ": not distinguished\n");
+            n_error:=n_error+1;
+        fi;
+    od;
+    Print("n_error_canonical_vinberg=", n_error, "\n");
+    return n_error;
+end;
+
 test_all:=function()
     local n_error;
     n_error:=n_error_realizability;
@@ -515,6 +570,7 @@ test_all:=function()
     n_error:=n_error + test_known_orders_methods();
     n_error:=n_error + test_non_isomorphic();
     n_error:=n_error + test_all_aut_iso_methods();
+    n_error:=n_error + test_canonical_vinberg();
     return n_error;
 end;
 
