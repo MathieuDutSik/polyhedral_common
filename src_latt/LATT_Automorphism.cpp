@@ -15,12 +15,15 @@
 #include "LatticeStabEquiCan.h"
 #include "InvariantVectorFamily.h"
 #include "SignatureSymmetric.h"
+#include "LatticePleskenSouvignier.h"
+#include "LatticeAutomorphismVinberg.h"
 #include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
 void ComputeAutomorphism(std::string const &FileListMat,
-                         std::string const &OutFormat, std::ostream &os) {
+                         std::string const &OutFormat,
+                         std::string const &method, std::ostream &os) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -38,7 +41,13 @@ void ComputeAutomorphism(std::string const &FileListMat,
               << FileListMat << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
-  if (OutFormat == "GAP_order") {
+  if (method != "graph" && method != "plesken_souvignier" &&
+      method != "vinberg") {
+    std::cerr << "LATT_Automorphism: unknown method=" << method << "\n";
+    std::cerr << "The methods are graph, plesken_souvignier and vinberg\n";
+    throw TerminalException{1};
+  }
+  if (method == "graph" && OutFormat == "GAP_order") {
     // Lightweight path: compute a full-rank invariant short-vector
     // family, take the permutation action of the lattice automorphism
     // group on it, and report just the group order. Matches what
@@ -61,8 +70,45 @@ void ComputeAutomorphism(std::string const &FileListMat,
     os << "return " << grp.size() << ";\n";
     return;
   }
-  std::vector<MyMatrix<Tint>> ListGen =
-      ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, std::cerr);
+  std::vector<MyMatrix<Tint>> ListGen;
+  // The order, when the method computes it on the way.
+  std::optional<mpz_class> opt_order;
+  if (method == "graph") {
+    ListGen = ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
+                                                                   std::cerr);
+  } else {
+    // Plesken-Souvignier and Vinberg work with the lattice coordinates over
+    // the rationals; the algebraic fields only have the graph method.
+    if constexpr (is_implementation_of_Q<T>::value) {
+      if (method == "plesken_souvignier") {
+        PleskenSouvignierAutomResult<Tint> result =
+            PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, std::cerr);
+        ListGen = result.ListGen;
+        opt_order =
+            PleskenSouvignierGroupOrder<mpz_class>(result.ListOrbitSize);
+      } else {
+        // The reflections in the roots of norm 2 are integral only for an
+        // integral form, and the decomposition is the one of a single form.
+        if (ListMat.size() != 1 || !IsIntegralMatrix(ListMat[0])) {
+          std::cerr << "LATT_Automorphism: the vinberg method needs a single "
+                       "integral Gram matrix\n";
+          throw TerminalException{1};
+        }
+        VinbergAutom<Tint> vin =
+            ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0], std::cerr);
+        ListGen = vin.ListGen;
+        opt_order = vin.order;
+      }
+    } else {
+      std::cerr << "LATT_Automorphism: the method " << method
+                << " is only available for the rational arithmetics\n";
+      throw TerminalException{1};
+    }
+  }
+  if (OutFormat == "GAP_order") {
+    os << "return " << *opt_order << ";\n";
+    return;
+  }
   if (OutFormat == "GAP") {
     os << "return ";
     WriteListMatrixGAP(os, ListGen);
@@ -85,13 +131,16 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 3 && argc != 5) {
+    if (argc != 3 && argc != 5 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "LATT_Automorphism [arith] [ListMat] [OutFormat] "
                 << "[OutFile]\n";
       std::cerr << "    or\n";
       std::cerr << "LATT_Automorphism [arith] [ListMat]\n";
+      std::cerr << "    or\n";
+      std::cerr << "LATT_Automorphism [arith] [ListMat] [OutFormat] "
+                << "[OutFile] [method]\n";
       std::cerr << "\n";
       std::cerr << "arith values:\n";
       std::cerr << "  gmp         : mpq_class / mpz_class (default choice)\n";
@@ -123,15 +172,30 @@ int main(int argc, char *argv[]) {
       std::cerr << "              the permutation action on a full-rank\n";
       std::cerr << "              invariant vector family (skips the matrix\n";
       std::cerr << "              lift, much cheaper)\n";
+      std::cerr << "method values:\n";
+      std::cerr << "  graph              : the automorphisms of a vector "
+                   "family as a\n";
+      std::cerr << "                       graph (default)\n";
+      std::cerr << "  plesken_souvignier : the backtrack of Plesken and "
+                   "Souvignier\n";
+      std::cerr << "                       (rational arithmetics)\n";
+      std::cerr << "  vinberg            : Aut(L) = W(R) x| Aut(L, rho) "
+                   "for a single\n";
+      std::cerr << "                       integral Gram matrix (rational "
+                   "arithmetics)\n";
       return -1;
     }
     std::string arith = argv[1];
     std::string FileListMat = argv[2];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
-    if (argc == 5) {
+    std::string method = "graph";
+    if (argc >= 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
+    }
+    if (argc == 6) {
+      method = argv[5];
     }
     //
     auto prt = [&](std::ostream &os) -> void {
@@ -139,7 +203,7 @@ int main(int argc, char *argv[]) {
       // Tint stays mpz_class: only the Gram matrices leave the rationals.
       ArithmeticDispatch dispatch;
       auto f_arith = [&]<typename T>() -> void {
-        ComputeAutomorphism<T>(FileListMat, OutFormat, os);
+        ComputeAutomorphism<T>(FileListMat, OutFormat, method, os);
       };
       add_rational_arithmetics_by_library(dispatch, f_arith);
       add_algebraic_field_arithmetics(dispatch, f_arith);

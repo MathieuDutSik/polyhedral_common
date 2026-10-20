@@ -8,6 +8,7 @@
 #include "LatticeRootSystem.h"
 #include "LatticeRootDecomposition.h"
 #include "LatticeStabEquiCan.h"
+#include <optional>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -179,6 +180,57 @@ VinbergAutom<Tint> ComputeAutomorphismVinberg(MyMatrix<T> const &GramMat,
   }
 #endif
   return res;
+}
+
+/*
+  The isometry test through the same decomposition. An isometry phi from L1
+  to L2 maps the roots to the roots and the fundamental chamber of L1 to a
+  chamber of L2, which an element w of W(R2) brings back to the fundamental
+  chamber of L2. Then w phi maps the simple roots of L1 to those of L2, and
+  the characteristic family of R1^perp to that of R2^perp, the family being
+  intrinsic. So L1 and L2 are isometric exactly when the residual families
+  are equivalent, which is a test on two small families. The returned P
+  satisfies P * GramMat1 * P^T = GramMat2.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+ComputeIsometryVinberg(MyMatrix<T> const &GramMat1,
+                       MyMatrix<T> const &GramMat2, std::ostream &os) {
+  RootSystemData<Tint> rs1 = ComputeRootSystem<T, Tint>(GramMat1, os);
+  RootSystemData<Tint> rs2 = ComputeRootSystem<T, Tint>(GramMat2, os);
+  if (rs1.n_roots != rs2.n_roots) {
+    return {};
+  }
+  std::vector<MyMatrix<T>> ListMat1{GramMat1};
+  std::vector<MyMatrix<T>> ListMat2{GramMat2};
+  if (rs1.n_roots == 0) {
+    // Root free: no Weyl factor, the ordinary test on the full family.
+    return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
+                                                          os);
+  }
+  RootDecomposition<T, Tint> dec1 =
+      ComputeRootDecomposition<T, Tint, Tgroup>(GramMat1, os);
+  RootDecomposition<T, Tint> dec2 =
+      ComputeRootDecomposition<T, Tint, Tgroup>(GramMat2, os);
+  MyMatrix<Tint> SHV1 = ResidualFamily<T, Tint>(rs1, dec1, os);
+  MyMatrix<Tint> SHV2 = ResidualFamily<T, Tint>(rs2, dec2, os);
+  if (SHV1.rows() != SHV2.rows()) {
+    return {};
+  }
+  std::vector<T> Vdiag(SHV1.rows(), T(0));
+  std::optional<MyMatrix<Tint>> opt =
+      TestIntEquivalence_ListMat_Vdiag<T, Tint, Tgroup>(
+          SHV1, ListMat1, Vdiag, SHV2, ListMat2, Vdiag, os);
+#ifdef SANITY_CHECK_LATTICE_AUTOMORPHISM_VINBERG
+  if (opt) {
+    MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(*opt);
+    if (P_T * GramMat1 * P_T.transpose() != GramMat2) {
+      std::cerr << "VINBERG: the isometry does not map the forms\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return opt;
 }
 
 // clang-format off

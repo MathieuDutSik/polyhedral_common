@@ -374,90 +374,136 @@ test_non_isomorphic:=function()
 end;
 
 
-# The Plesken-Souvignier algorithm of LATT_PleskenSouvignier, checked against
-# the references above. Every generator must preserve the form, the order the
-# program reports must be the order of the permutation group that the
-# generators induce on an invariant family of vectors, and that order must be
-# the known one, or the one of LATT_Automorphism.
-test_ps_automorphism:=function(name, eMat, ord_ref)
-    local res, eGen, ListVect, SetVect, ord_perm;
-    res:=get_latt_ps_automorphism(eMat);
-    if is_error(res) then
-        Print("test_ps_automorphism, ", name, ": program failure\n");
+# The methods plesken_souvignier and vinberg of LATT_Automorphism and
+# LATT_Isomorphism, checked against the references above. The automorphisms
+# of plesken_souvignier must preserve the form and generate a group of the
+# order found by the graph method; the isometries to random conjugates must be
+# found and be correct; the non isometric pairs must be reported as such. The
+# vinberg method is run on the integral Gram matrices only.
+test_aut_method:=function(name, eMat, method, ord_ref)
+    local ListGen, ListVect, SetVect, ord_perm;
+    ListGen:=get_latt_automorphism_group(eMat, rec(method:=method));
+    if ListGen=fail then
+        Print("test_aut_method, ", name, " ", method, ": program failure\n");
         return 1;
     fi;
-    for eGen in res.ListGen
-    do
-        if eGen * eMat * TransposedMat(eGen) <> eMat then
-            Print("test_ps_automorphism, ", name, ": a generator does not preserve the form\n");
-            return 1;
-        fi;
-    od;
+    if ForAny(ListGen, g->g * eMat * TransposedMat(g) <> eMat) then
+        Print("test_aut_method, ", name, " ", method, ": a generator does not preserve the form\n");
+        return 1;
+    fi;
     ListVect:=get_fullrank_invariant_family(eMat, "fullrank");
     if is_error(ListVect) then
         return 1;
     fi;
     SetVect:=Set(ListVect);
-    ord_perm:=Order(Group(List(res.ListGen, x->SortingPerm(SetVect * x)), ()));
-    Print("  ", name, " PS |Aut|=", res.order, " perm=", ord_perm, " reference=", ord_ref, "\n");
-    if res.order <> ord_perm or ord_perm <> ord_ref then
-        Print("test_ps_automorphism, ", name, ": the orders disagree\n");
+    ord_perm:=Order(Group(List(ListGen, g->SortingPerm(SetVect * g)), ()));
+    Print("  ", name, " ", method, " |Aut|=", ord_perm, " reference=", ord_ref, "\n");
+    if ord_perm <> ord_ref then
+        Print("test_aut_method, ", name, " ", method, ": wrong order\n");
         return 1;
     fi;
     return 0;
 end;
 
-# An isometry to a random conjugate must be found and must be correct.
-test_ps_isomorphism:=function(name, eMat)
+test_iso_method:=function(name, eMat, method)
     local iter, eMat_B, P;
     for iter in [1..5]
     do
         eMat_B:=get_random_conjugate(eMat);
-        P:=get_latt_ps_isomorphism(eMat, eMat_B);
-        if is_error(P) or P=fail then
-            Print("test_ps_isomorphism, ", name, ": no isometry found\n");
+        P:=get_latt_isomorphism_test(eMat, eMat_B, rec(method:=method));
+        if is_error(P) or P=false then
+            Print("test_iso_method, ", name, " ", method, ": no isometry found\n");
             return 1;
         fi;
         if P * eMat * TransposedMat(P) <> eMat_B then
-            Print("test_ps_isomorphism, ", name, ": the isometry is wrong\n");
+            Print("test_iso_method, ", name, " ", method, ": the isometry is wrong\n");
             return 1;
         fi;
     od;
     return 0;
 end;
 
-test_all_ps:=function()
-    local n_error, eRec, iMat, eMat, GRPperm, test_iso;
+get_iso_methods:=function(eMat)
+    if ForAll(Flat(eMat), IsInt) then
+        return ["plesken_souvignier", "vinberg"];
+    fi;
+    return ["plesken_souvignier"];
+end;
+
+test_all_aut_iso_methods:=function()
+    local n_error, eRec, iMat, eMat, name, GRPperm, method, test_iso;
     n_error:=0;
     for eRec in ListKnownOrder
     do
-        n_error:=n_error + test_ps_automorphism(eRec.name, eRec.eG, eRec.ord);
-        n_error:=n_error + test_ps_isomorphism(eRec.name, eRec.eG);
+        for method in get_iso_methods(eRec.eG)
+        do
+            n_error:=n_error + test_iso_method(eRec.name, eRec.eG, method);
+        od;
     od;
     for iMat in [1..Length(ListMat)]
     do
         eMat:=ListMat[iMat];
+        name:=Concatenation("ListMat[", String(iMat), "]");
         GRPperm:=get_latt_automorphism_perm_group(eMat);
         if GRPperm=fail then
             n_error:=n_error+1;
         else
-            n_error:=n_error + test_ps_automorphism(Concatenation("ListMat[", String(iMat), "]"), eMat, Order(GRPperm));
+            n_error:=n_error + test_aut_method(name, eMat, "plesken_souvignier", Order(GRPperm));
         fi;
-        n_error:=n_error + test_ps_isomorphism(Concatenation("ListMat[", String(iMat), "]"), eMat);
+        for method in get_iso_methods(eMat)
+        do
+            n_error:=n_error + test_iso_method(name, eMat, method);
+        od;
     od;
     for eRec in ListNonIsomorphic
     do
-        test_iso:=get_latt_ps_isomorphism(eRec.eG1, eRec.eG2);
-        Print("  PS ", eRec.name1, " against ", eRec.name2, " iso=", test_iso, "\n");
-        if is_error(test_iso) or test_iso<>fail then
-            Print("test_all_ps: ", eRec.name1, " and ", eRec.name2, " not reported as non isometric\n");
-            n_error:=n_error+1;
-        fi;
+        for method in get_iso_methods(eRec.eG1)
+        do
+            test_iso:=get_latt_isomorphism_test(eRec.eG1, eRec.eG2, rec(method:=method));
+            Print("  ", method, " ", eRec.name1, " against ", eRec.name2, " iso=", test_iso, "\n");
+            if is_error(test_iso) or test_iso<>false then
+                Print("test_all_aut_iso_methods: ", eRec.name1, " and ", eRec.name2, " not reported as non isometric by ", method, "\n");
+                n_error:=n_error+1;
+            fi;
+        od;
     od;
-    Print("n_error_ps=", n_error, "\n");
+    Print("n_error_aut_iso_methods=", n_error, "\n");
     return n_error;
 end;
 
+
+# The three methods of LATT_Automorphism on the lattices of known order: every
+# generator must preserve the form and the permutation group they induce on
+# an invariant family of vectors must have the known order.
+test_known_orders_methods:=function()
+    local n_error, eRec, method, ListGen, ListVect, SetVect, ord;
+    n_error:=0;
+    for eRec in ListKnownOrder
+    do
+        ListVect:=get_fullrank_invariant_family(eRec.eG, "fullrank");
+        SetVect:=Set(ListVect);
+        for method in ["graph", "plesken_souvignier", "vinberg"]
+        do
+            ListGen:=get_latt_automorphism_group(eRec.eG, rec(method:=method));
+            if ListGen=fail then
+                Print("test_known_orders_methods, ", eRec.name, " ", method, ": program failure\n");
+                n_error:=n_error+1;
+            elif ForAny(ListGen, g->g * eRec.eG * TransposedMat(g) <> eRec.eG) then
+                Print("test_known_orders_methods, ", eRec.name, " ", method, ": a generator does not preserve the form\n");
+                n_error:=n_error+1;
+            else
+                ord:=Order(Group(List(ListGen, g->SortingPerm(SetVect * g)), ()));
+                Print("  ", eRec.name, " ", method, " |Aut|=", ord, " expected=", eRec.ord, "\n");
+                if ord <> eRec.ord then
+                    Print("test_known_orders_methods, ", eRec.name, " ", method, ": wrong order\n");
+                    n_error:=n_error+1;
+                fi;
+            fi;
+        od;
+    od;
+    Print("n_error_known_order_methods=", n_error, "\n");
+    return n_error;
+end;
 
 test_all:=function()
     local n_error;
@@ -466,8 +512,9 @@ test_all:=function()
     n_error:=n_error + test_all_automs();
     n_error:=n_error + test_all_isoms();
     n_error:=n_error + test_known_orders();
+    n_error:=n_error + test_known_orders_methods();
     n_error:=n_error + test_non_isomorphic();
-    n_error:=n_error + test_all_ps();
+    n_error:=n_error + test_all_aut_iso_methods();
     return n_error;
 end;
 

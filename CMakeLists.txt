@@ -793,7 +793,6 @@ set(
   LATT_RankinSublattices
   LATT_Reduction
   VectFamily_Reduction
-  LATT_PleskenSouvignier
   LATT_EquiStabFamily
   LATT_ShvecSieve
 )
