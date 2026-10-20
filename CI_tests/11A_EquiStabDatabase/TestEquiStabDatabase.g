@@ -29,7 +29,7 @@ TestEquiStabDatabase:=function(ListMat, n_equiv)
     #
     eProg:=GetBinaryFilename("TEST_EquiStabFamily");
     Print("Before the Effective run\n");
-    TheCommand:=Concatenation(eProg, " rational ", FileIn, " GAP ", FileOut);
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);
     #
     if IsExistingFile(FileOut)=false then

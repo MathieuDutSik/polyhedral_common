@@ -11,50 +11,19 @@
 #include "poincare_polyhedron.h"
 #include "Group.h"
 #include "Permutation.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename Tgroup>
 void Process_rec_option(RecOption const &rec_option, std::ostream &os) {
   std::string arith = rec_option.Arithmetic;
-  if (arith == "rational") {
-    using T = mpq_class;
-    return full_process_type<T, Tgroup>(rec_option, os);
-  }
-#ifdef ENABLE_FLINT_SUPPORT
-  if (arith == "flint") {
-    using T = fmpq_class;
-    return full_process_type<T, Tgroup>(rec_option, os);
-  }
-#endif
-#ifdef QUADRATIC_FIELDS
-  if (arith == "Qsqrt5") {
-    using Trat = Trat_quad_field;
-    using T = QuadField<Trat, 5>;
-    return full_process_type<T, Tgroup>(rec_option, os);
-  }
-  if (arith == "Qsqrt2") {
-    using Trat = Trat_quad_field;
-    using T = QuadField<Trat, 2>;
-    return full_process_type<T, Tgroup>(rec_option, os);
-  }
-#endif
-  std::optional<std::string> opt_realalgebraic =
-      get_postfix(arith, "RealAlgebraic=");
-  if (opt_realalgebraic) {
-    std::string const &FileAlgebraicField = *opt_realalgebraic;
-    if (!FILE_IsExistingFile(FileAlgebraicField)) {
-      std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                << " is missing\n";
-      throw TerminalException{1};
-    }
-    HelperClassRealField<Trat_real_field> hcrf(FileAlgebraicField);
-    int const idx_real_algebraic_field = 1;
-    insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-    using T = RealField<idx_real_algebraic_field>;
-    return full_process_type<T, Tgroup>(rec_option, os);
-  }
-  std::cerr << "Failed to find a matching arithmetic\n";
-  throw TerminalException{1};
+  ArithmeticDispatch dispatch;
+  auto f_arith = [&]<typename T>() -> void {
+    full_process_type<T, Tgroup>(rec_option, os);
+  };
+  add_rational_arithmetics(dispatch, f_arith);
+  add_algebraic_field_arithmetics(dispatch, f_arith);
+  dispatch.run(arith);
 }
 
 int main(int argc, char *argv[]) {

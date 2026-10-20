@@ -1664,9 +1664,11 @@ The step enum current state";
     ListStringValues_doc["FileDataPoincare"] = "Default: unset\n\
 The input file of the computation";
     ListStringValues_doc["FileO"] = "The output file of the computation";
-    ListStringValues_doc["Arithmetic"] = "Default: rational\n\
-Other possibilities are Qsqrt2, Qsqrt5 (when compiled with QUADRATIC_FIELDS)\n\
-and RealAlgebraic=FileDesc where FileDesc is the description";
+    ListStringValues_doc["Arithmetic"] = "Default: mpq_class\n\
+Other possibilities are mpq_rational, cpp_rational (when compiled with\n\
+ENABLE_BOOST_TYPES), fmpq_class (with ENABLE_FLINT_SUPPORT), Qsqrt2, Qsqrt5\n\
+(with QUADRATIC_FIELDS) and RealAlgebraic=FileDesc where FileDesc is the\n\
+description of the field";
     ListStringValues_doc["Approach"] = "IncrementallyAdd or FacetAdjacencies";
     ListStringValues_doc["MethodMissingI"] = "Default: Gen1\n\
 Method used for computing TypeI neighbors";

@@ -12,6 +12,7 @@
 #include "COMB_Combinatorics.h"
 #include "GRAPH_GraphicalBasic.h"
 #include <unordered_set>
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
@@ -169,41 +170,35 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
+    std::string ListMatFile;
+    std::string OutFormat = "GAP";
+    std::string FileOut = "stderr";
+    std::ostream *os_ptr = nullptr;
+    ArithmeticDispatch dispatch;
+    add_rational_arithmetics(dispatch, [&]<typename T>() -> void {
+      process<T>(ListMatFile, OutFormat, *os_ptr);
+    });
     if (argc != 3 && argc != 5) {
       std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile]\n";
       std::cerr << "or\n";
       std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile] [OutFormat] "
                    "[FileOut]\n";
+      std::cerr << "\n";
+      std::cerr << "     ------- arith -------\n";
+      std::cerr << "\n";
+      dispatch.print_descriptions(std::cerr);
       throw TerminalException{1};
     }
     std::string arith = argv[1];
-    std::string ListMatFile = argv[2];
-    std::string OutFormat = "GAP";
-    std::string FileOut = "stderr";
+    ListMatFile = argv[2];
     if (argc == 5) {
       OutFormat = argv[3];
       FileOut = argv[4];
     }
     //
     auto f = [&](std::ostream &os_out) -> void {
-      if (arith == "rational") {
-        using T = mpq_class;
-        return process<T>(ListMatFile, OutFormat, os_out);
-      }
-#ifdef ENABLE_FLINT_SUPPORT
-      if (arith == "flint") {
-        using T = fmpq_class;
-        return process<T>(ListMatFile, OutFormat, os_out);
-      }
-#endif
-      std::cerr << "Failed to find matching type for arith\n";
-#ifdef ENABLE_FLINT_SUPPORT
-      std::cerr << "Allowed values: rational, flint\n";
-#else
-      std::cerr << "Allowed values: rational (build with "
-                << "ENABLE_FLINT_SUPPORT=1 for flint)\n";
-#endif
-      throw TerminalException{1};
+      os_ptr = &os_out;
+      dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(FileOut, f);
     std::cerr << "Normal termination of TEST_EquiStabFamily\n";
