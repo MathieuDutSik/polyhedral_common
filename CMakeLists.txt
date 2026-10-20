@@ -656,6 +656,7 @@ set(
   GRP_MatrixGroupSimplificationOnline
   GRP_MatrixGroupSimplificationOnlineOpt
   GRP_TestFinitenessSimp
+  POLY_HashWeightMatrixLimited
 )
 foreach(target IN LISTS GROUP_PROGRAMS)
   add_polyhedral_binary(

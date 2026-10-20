@@ -104,6 +104,40 @@ get_grp_automorphy:=function(arg)
     return TheGRP_rat;
 end;
 
+# The hashes of the faces ListFace (lists of 0/1) by the limited weight
+# matrix of POLY_HashWeightMatrixLimited, built from the polytope EXT
+# (input="EXT") or from a permutation group on its vertices (input="GRP").
+# Returns the list of hashes or a string on a program failure.
+get_hash_weight_matrix_limited:=function(input, EXT, GRP, ListFace, max_offdiag)
+    local TmpDir, FileI, FileF, FileO, FileE, eProg, U, list_arg, status;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Hash.in");
+    FileF:=Filename(TmpDir, "Hash.faces");
+    FileO:=Filename(TmpDir, "Hash.out");
+    FileE:=Filename(TmpDir, "Hash.err");
+    if input="EXT" then
+        WriteMatrixFile(FileI, EXT);
+    else
+        WriteGroupFile(FileI, Length(EXT), GRP);
+    fi;
+    WriteMatrixFile(FileF, ListFace);
+    eProg:=GetBinaryFilename("POLY_HashWeightMatrixLimited");
+    list_arg:=["mpq_class", input, FileI, FileF, String(max_offdiag), "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: POLY_HashWeightMatrixLimited failed to create a file";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileF);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
 get_grp_integral_automorphy:=function(arg)
     local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheGRP_int, runtime_str, list_arg, status;
     EXT:=arg[1];

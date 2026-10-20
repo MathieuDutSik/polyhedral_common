@@ -137,7 +137,7 @@ src_dualdesc/POLY_*
 src_dualdesc/Read_MPI_sizes
 src_group/GRP_*
 src_genera/GENUS_*
-src_group/TEST_WeightMatrixLimited
+src_group/POLY_HashWeightMatrixLimited
 src_indefinite/INDEF_*
 src_isotropy/LATT_*
 src_isotropy/CheckPositiveSemiDefinite
