@@ -30,6 +30,10 @@
 #define DEBUG_FIFTH_AND_HIGHER_ORDER
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_FIFTH_AND_HIGHER_ORDER
+#endif
+
 #ifdef DISABLE_DEBUG_FIFTH_AND_HIGHER_ORDER
 #undef DEBUG_FIFTH_AND_HIGHER_ORDER
 #endif
@@ -50,7 +54,7 @@ MyVector<T> solve_fifth_equation(MyVector<T> const &a, std::ostream &os) {
   std::vector<T> v_quad{a(2), a(3), a(4)};
   std::vector<int> poss_quad = get_poss_signs(v_quad);
   std::vector<int> poss = IntersectionVect(poss_tern, poss_quad);
-#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+#ifdef SANITY_CHECK_FIFTH_AND_HIGHER_ORDER
   if (poss.empty()) {
     std::cerr << "FIFTH: No possibilities\n";
     throw TerminalException{1};
@@ -102,13 +106,15 @@ MyVector<T> solve_fifth_equation(MyVector<T> const &a, std::ostream &os) {
         for (int u = 2; u < 5; u++) {
           iso_fifth(u) = iso_quad(u - 2) * val_tern;
         }
-#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+#ifdef SANITY_CHECK_FIFTH_AND_HIGHER_ORDER
         T sum(0);
         for (int u = 0; u < 5; u++) {
           T val = iso_fifth(u);
           sum += a(u) * val * val;
         }
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
         os << "FIFTH: Before return sum=" << sum << "\n";
+#endif
         if (sum != 0) {
           std::cerr << "FIFTH: Error, a=" << StringVector(a) << "\n";
           std::cerr << "FIFTH: Error, t=" << t << "\n";
@@ -222,6 +228,8 @@ MyVector<T> FifthOrderIsotropicVector(MyMatrix<T> const &M, std::ostream &os) {
   using Tring = typename underlying_ring<T>::ring_type;
 #ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
   os << "FIFTH: FifthOrderIsotropicVector, beginning\n";
+#endif
+#ifdef SANITY_CHECK_FIFTH_AND_HIGHER_ORDER
   if (M.rows() != 5) {
     std::cerr << "FIFTH: M should be a 5x5 matrix\n";
     throw TerminalException{1};
@@ -234,6 +242,8 @@ MyVector<T> FifthOrderIsotropicVector(MyMatrix<T> const &M, std::ostream &os) {
   MyVector<T> sol3 = pair1.first.transpose() * sol2;
 #ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
   os << "FIFTH: sol3=" << StringVector(sol3) << "\n";
+#endif
+#ifdef SANITY_CHECK_FIFTH_AND_HIGHER_ORDER
   T sum3 = EvaluationQuadForm(M, sol3);
   if (sum3 != 0) {
     std::cerr << "FIFTH: sol3 is not a solution of the equation\n";
@@ -272,6 +282,8 @@ MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const &Q,
     MyVector<T> v2 = basis.transpose() * v1;
 #ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
     os << "FIFTH: From NSP, v2=" << StringVector(v2) << "\n";
+#endif
+#ifdef SANITY_CHECK_FIFTH_AND_HIGHER_ORDER
     T sum2 = EvaluationQuadForm(Q, v2);
     if (sum2 != 0) {
       std::cerr << "FIFTH: v2 is not a solution of the equation\n";
@@ -298,6 +310,8 @@ MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const &Q,
   MyVector<T> v2 = basis.transpose() * v1;
 #ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
   os << "FIFTH: From fifth order v2=" << StringVector(v2) << "\n";
+#endif
+#ifdef SANITY_CHECK_FIFTH_AND_HIGHER_ORDER
   T sum2 = EvaluationQuadForm(Q, v2);
   if (sum2 != 0) {
     std::cerr << "FIFTH: v2 is not a solution of the equation\n";

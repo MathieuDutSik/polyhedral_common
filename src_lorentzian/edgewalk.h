@@ -37,6 +37,10 @@
 #define DEBUG_ENUM_PROCESS
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_EDGEWALK
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_EDGEWALK
 #endif
@@ -1897,6 +1901,8 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
   WriteMatrixGAP(os, G);
   os << "\n";
   os << "EDGE: V=" << StringVectorGAP(V) << " norm=" << norm << "\n";
+#endif
+#ifdef SANITY_CHECK_EDGEWALK
   if (norm > 0) {
     std::cerr << "We need a vector of negative norm or zero norm in order to "
                  "build a system of simple roots\n";
@@ -2177,7 +2183,7 @@ ResultEdgewalk<T, Tint> StandardEdgewalkAnalysis(MyMatrix<T> const &G,
         HeuristicTryTerminateDualDescription, os);
     return re;
   } catch (NonReflectivityException const &e) {
-#ifdef DEBUG_EDGEWALK
+#ifdef SANITY_CHECK_EDGEWALK
     if (!EarlyTerminationIfNotReflective) {
       std::cerr << "The program cannot go forward. Since we have "
                    "EarlyTerminationIfNotReflective = F\n";
@@ -2248,7 +2254,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
         HeuristicTryTerminateDualDescription, os);
     print_result_edgewalk(re);
   } catch (NonReflectivityException const &e) {
-#ifdef DEBUG_EDGEWALK
+#ifdef SANITY_CHECK_EDGEWALK
     if (!EarlyTerminationIfNotReflective) {
       std::cerr << "The program cannot go forward. Since we have "
                    "EarlyTerminationIfNotReflective = F\n";

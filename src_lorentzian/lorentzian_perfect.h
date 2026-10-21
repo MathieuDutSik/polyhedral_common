@@ -236,7 +236,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
   MyVector<Tint> const &eBasSol_basic = TheRec.V;
   MyVector<T> eBasSol_T_basic =
       UniversalVectorConversion<T, Tint>(eBasSol_basic);
-#ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
+#ifdef SANITY_CHECK_LORENTZIAN_FIND_POSITIVE_VECTORS
   T scal1_basic = eBasSol_T_basic.dot(eVect_LorMat);
   T scal2_basic = alpha_basic * eVect.dot(eVect_LorMat);
 #endif
@@ -258,22 +258,28 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 2\n";
 #endif
+#ifdef SANITY_CHECK_LORENTZIAN_FIND_POSITIVE_VECTORS
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 3\n";
     T alpha = eVal * alpha_basic;
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 4 alpha=" << alpha
        << "\n";
+#endif
     T scal1 = eVal * scal1_basic;
     T scal2 = eVal * scal2_basic;
+#ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: scal1=" << scal1
        << " scal2=" << scal2 << "\n";
+#endif
     if (scal1 != scal2) {
       std::cerr << "LORPERF: We should have scal1 = scal\n";
       throw TerminalException{1};
     }
+#ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     MyVector<T> eTrans = eVal * eTrans_basic;
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 5 eTrans="
        << StringVector(eTrans) << "\n";
+#endif
 #endif
     MyVector<T> eSol = eVal * eSol_basic;
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
@@ -1933,13 +1939,15 @@ LORENTZ_TestEquivalenceMatrices_Reduced(MyMatrix<T> const &LorMat1,
 #endif
       MyMatrix<Tint> eBigMat = Inverse(*opt_res);
       opt = eBigMat;
-#ifdef DEBUG_LORENTZIAN_PERFECT
+#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
       MyMatrix<T> eBigMat_T = UniversalMatrixConversion<T, Tint>(eBigMat);
       MyMatrix<T> eProd = eBigMat_T * LorMat1 * eBigMat_T.transpose();
       if (eProd != LorMat2) {
         std::cerr << "LORPERF: It is not actually an equivalence\n";
         throw TerminalException{1};
       }
+#endif
+#ifdef DEBUG_LORENTZIAN_PERFECT
       os << "LORPERF: We found a matching entry. Exiting the enumeration\n";
 #endif
       return true;

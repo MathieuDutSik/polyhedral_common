@@ -787,7 +787,9 @@ inline PairWeightMatrixVertexSignatures<T>
 ComputePairVertexSignatures(size_t nbRow, [[maybe_unused]] bool canonically,
                             F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
                             std::ostream &os) {
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+  std::cerr << "WMS: SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE, comparing "
+               "the direct and dual matrices\n";
   std::vector<std::vector<T>> Mat_direct;
   for (size_t i = 0; i < nbRow; i++) {
     std::vector<T> eV;
@@ -809,8 +811,8 @@ ComputePairVertexSignatures(size_t nbRow, [[maybe_unused]] bool canonically,
     Mat_dual.push_back(eV);
   }
   size_t n_error_direct_dual = 0;
-  size_t n_nonsymm_direct = 0;
-  size_t n_nonsymm_dual = 0;
+  [[maybe_unused]] size_t n_nonsymm_direct = 0;
+  [[maybe_unused]] size_t n_nonsymm_dual = 0;
   for (size_t i = 0; i < nbRow; i++) {
     for (size_t j = 0; j < nbRow; j++) {
       T val1 = Mat_direct[i][j];
@@ -825,14 +827,17 @@ ComputePairVertexSignatures(size_t nbRow, [[maybe_unused]] bool canonically,
         n_nonsymm_dual += 1;
       }
     }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
   }
   os << "WMS: n_error_direct_dual=" << n_error_direct_dual << "\n";
   os << "WMS: n_nonsymm_direct=" << n_nonsymm_direct << "\n";
+#endif
   os << "WMS: n_nonsymm_dual=" << n_nonsymm_dual << "\n";
   if (n_error_direct_dual > 0) {
     std::cerr << "We have n_error_direct_dual=" << n_error_direct_dual << "\n";
     throw TerminalException{1};
   }
+  std::cerr << "WMS: SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE, done\n";
 #endif
   WeightMatrixVertexSignatures<T> WMVS_direct =
       ComputeVertexSignatures<T>(nbRow, f1, f2, os);
@@ -1065,6 +1070,8 @@ get_expanded_symbolic(size_t nWei,
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
   os << "WMS: n_sign_direct=" << n_sign_direct << " n_sign_dual=" << n_sign_dual
      << "\n";
+#endif
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   auto f_check = [&](std::vector<std::pair<int, int>> const &e_vect,
                      int the_case) -> void {
     size_t sum_vert = 0;
@@ -1101,7 +1108,7 @@ get_expanded_symbolic(size_t nWei,
     // Adjacency (V, spec = 2*nbRow)
     int diag_val = esign[0]; // The diagonal value
     fUpdate(e_vect, diag_val, 1);
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
     f_check(e_vect, 1);
 #endif
     list_signature.push_back(e_vect);
@@ -1127,7 +1134,7 @@ get_expanded_symbolic(size_t nWei,
     fUpdate(e_vect, nWei + 2, nbRow - 1);
     // The adjacency (V = v2, spec)
     fUpdate(e_vect, nWei + 1, 1);
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
     f_check(e_vect, 2);
 #endif
     list_signature.push_back(e_vect);
@@ -1146,7 +1153,7 @@ get_expanded_symbolic(size_t nWei,
   for (auto &kv : map_vert_nRow) {
     f_vect.push_back({kv.first, kv.second});
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   f_check(f_vect, 3);
 #endif
   list_signature.push_back(f_vect);
@@ -1283,7 +1290,7 @@ GetSimplifiedVCG(F1 f1, F2 f2,
       MatrixAdj(iH, iCase) += nb_adj1;
     }
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   auto f_print = [&](std::ostream &os_o) -> void {
     os_o << "WMS: hS=" << hS << " nbCase=" << nbCase << " MatrixAdj=\n";
     for (size_t iH = 0; iH < hS; iH++) {
@@ -1313,7 +1320,7 @@ GetSimplifiedVCG(F1 f1, F2 f2,
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     std::vector<std::pair<int, int>> const &e_vect =
         expand.list_signature[iCase];
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
     for (auto &epair : e_vect) {
       if (epair.second < 0) {
         std::cerr << "WMS: iCase=" << iCase << "\n";
@@ -1377,7 +1384,7 @@ GetSimplifiedVCG(F1 f1, F2 f2,
   os << "WMS: SimplifiedVCG stuff set up\n";
 #endif
   //
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   std::vector<int> ListDegExpe(nbVertTot, 0);
 #endif
   auto f_adj = [&](size_t iVert, size_t jVert) -> void {
@@ -1385,7 +1392,7 @@ GetSimplifiedVCG(F1 f1, F2 f2,
     ListShift[iVert]++;
     s.e[ListShift[jVert]] = iVert;
     ListShift[jVert]++;
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
     ListDegExpe[iVert]++;
     ListDegExpe[jVert]++;
 #endif
@@ -1399,7 +1406,9 @@ GetSimplifiedVCG(F1 f1, F2 f2,
       }
     }
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
+  std::cerr << "WMS: SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE, comparing "
+               "the evaluated multiplicities with the signatures\n";
   MyMatrix<size_t> Mval(nbVert, nbVert);
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
     if (iVert < nbRow) {
@@ -1467,6 +1476,7 @@ GetSimplifiedVCG(F1 f1, F2 f2,
       throw TerminalException{1};
     }
   }
+  std::cerr << "WMS: SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE, done\n";
 #endif
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
     if (iVert < nbRow) {
@@ -1494,11 +1504,11 @@ GetSimplifiedVCG(F1 f1, F2 f2,
       }
     }
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
-  int sum_adj = 0;
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
+  [[maybe_unused]] int sum_adj = 0;
   int nb_error01 = 0;
-  size_t sum_deg0 = 0;
-  size_t sum_deg1 = 0;
+  [[maybe_unused]] size_t sum_deg0 = 0;
+  [[maybe_unused]] size_t sum_deg1 = 0;
   std::unordered_set<std::pair<size_t, size_t>> set_case_error;
   for (size_t i = 0; i < nbVertTot; i++) {
     size_t iVert = i % nbVert;
@@ -1523,6 +1533,7 @@ GetSimplifiedVCG(F1 f1, F2 f2,
     }
     sum_adj += deg1;
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
   double frac_adj =
       static_cast<double>(sum_adj) /
       (static_cast<double>(nbVertTot) * static_cast<double>(nbVertTot - 1));
@@ -1531,6 +1542,7 @@ GetSimplifiedVCG(F1 f1, F2 f2,
   std::cerr << "WMS: nb_error01=" << nb_error01 << "\n";
   std::cerr << "WMS: sum_deg0=" << sum_deg0 << "  sum_deg1=" << sum_deg1
             << " nbAdjacent=" << nbAdjacent << "\n";
+#endif
   /*
   for (auto & case_error : set_case_error) {
     std::cerr << "case_error: iVert=" << case_error.first << " iH=" <<

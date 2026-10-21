@@ -2135,7 +2135,7 @@ DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
   using Tidx_value = int32_t;
   std::ostream &os = rddo.os;
   //
-#ifdef DEBUG_RECURSIVE_DUAL_DESC
+#ifdef SANITY_CHECK_RECURSIVE_DUAL_DESC
   int rnk = RankMat(EXT);
   if (rnk != EXT.cols()) {
     std::cerr << "RDD: For DualDescriptionRecordFullDim we should have rnk = "
@@ -2148,6 +2148,8 @@ DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
     std::cerr << "The group GRP is not a symmetry group\n";
     throw TerminalException{1};
   }
+#endif
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: DualDescriptionRecord, beginning\n";
   PrintPolyHeuristicSerial(rddo.AllArr, os);
 #endif

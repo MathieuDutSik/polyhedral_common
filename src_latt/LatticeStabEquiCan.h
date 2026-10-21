@@ -134,6 +134,8 @@ CanonicallyReorder_SHV_kernel(std::vector<MyMatrix<Tval>> const &ListMat,
   int n = SHV.cols();
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: nbRow=" << nbRow << " n=" << n << "\n";
+#endif
+#ifdef SANITY_CHECK_LATTICE_STAB_EQUI_CAN
   if (!CheckCentralSymmetry(SHV)) {
     std::cerr
         << "LSEC: The set of vector does not respect the central symmetry "

@@ -1860,7 +1860,7 @@ public:
     std::vector<MyMatrix<T>> const& ListMat = fce.pctdi.LinSpa.ListMat;
     MyMatrix<Tint> EXT2 = EXT1 * M;
     MyMatrix<Tint> EXT3 = tot_set(EXT2);
-#ifdef DEBUG_PERFECT_COMPLEX
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
     if (!map_ext_set.contains(EXT3)) {
       std::cerr << "PERFCOMP: We fail to find EXT3 in map_ext_set\n";
       std::cerr << "PERFCOMP: |map_ext_set|=" << map_ext_set.size() << "\n";

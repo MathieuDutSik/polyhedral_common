@@ -19,6 +19,10 @@
 #define DEBUG_QUATERNARY
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_QUATERNARY
+#endif
+
 #ifdef DISABLE_DEBUG_QUATERNARY
 #undef DEBUG_QUATERNARY
 #endif
@@ -338,6 +342,8 @@ std::vector<T> get_tp_classes(MyVector<T> const &a,
     os << "QUAD: p=" << p << "\n";
     os << "QUAD: n_cond_12=" << n_cond_12 << " n_cond_34=" << n_cond_34
        << " |matches|=" << matches.size() << "\n";
+#endif
+#ifdef SANITY_CHECK_QUATERNARY
     if (matches.empty()) {
       std::cerr << "QUAD: matches should not be empty\n";
       throw TerminalException{1};
@@ -383,7 +389,7 @@ T get_q_val(MyVector<T> const &a, std::vector<T> const &classes,
   std::vector<int> set12 = get_poss_signs(vect12);
   std::vector<int> set34 = get_poss_signs(vect34);
   std::vector<int> set = IntersectionVect(set12, set34);
-#ifdef DEBUG_QUATERNARY
+#ifdef SANITY_CHECK_QUATERNARY
   if (set.empty()) {
     std::cerr << "set should not be empty\n";
     throw TerminalException{1};
@@ -447,6 +453,8 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const &a,
     MyVector<T> V12 = unfold_opt(opt12, "opt12 should be solvable");
 #ifdef DEBUG_QUATERNARY
     os << "QUAD: V12=" << StringVectorGAP(V12) << "\n";
+#endif
+#ifdef SANITY_CHECK_QUATERNARY
     T sum12 = a1 * V12(0) * V12(0) + a2 * V12(1) * V12(1) - t * V12(2) * V12(2);
     if (sum12 != 0) {
       std::cerr << "V12 should be an isotropic vector\n";
@@ -472,6 +480,8 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const &a,
     MyVector<T> V34 = unfold_opt(opt34, "opt34 should be solvable");
 #ifdef DEBUG_QUATERNARY
     os << "QUAD: V34=" << StringVectorGAP(V34) << "\n";
+#endif
+#ifdef SANITY_CHECK_QUATERNARY
     T sum34 = a3 * V34(0) * V34(0) + a4 * V34(1) * V34(1) + t * V34(2) * V34(2);
     if (sum34 != 0) {
       std::cerr << "V34 should be an isotropic vector\n";
@@ -486,7 +496,7 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const &a,
     Vret(1) = V12(1) * val34;
     Vret(2) = V34(0) * val12;
     Vret(3) = V34(1) * val12;
-#ifdef DEBUG_QUATERNARY
+#ifdef SANITY_CHECK_QUATERNARY
     T sum = 0;
     for (int u = 0; u < 4; u++) {
       sum += a(u) * Vret(u) * Vret(u);
@@ -520,7 +530,7 @@ MyVector<T> dim4_compute_solution(MyVector<T> const &a,
   os << "QUAD: q=" << q << "\n";
 #endif
   MyVector<T> V = dim4_pair_legendre_iterate_solution(a, primes, q, os);
-#ifdef DEBUG_QUATERNARY
+#ifdef SANITY_CHECK_QUATERNARY
   if (IsZeroVector(V)) {
     std::cerr << "QUAD: We found a zero vector\n";
     throw TerminalException{1};
@@ -589,6 +599,8 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const &M,
   MyVector<T> sol3 = pair1.first.transpose() * sol2;
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: sol3=" << StringVector(sol3) << "\n";
+#endif
+#ifdef SANITY_CHECK_QUATERNARY
   T sum3 = EvaluationQuadForm(M, sol3);
   if (sum3 != 0) {
     std::cerr << "QUAD: sol3 is not a solution of the equation\n";

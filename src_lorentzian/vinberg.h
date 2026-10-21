@@ -482,7 +482,7 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   MyVector<Tint> w0(n - 1);
   for (size_t i = 0; i < n - 1; i++)
     w0(i) = res(i);
-#ifdef DEBUG_VINBERG
+#ifdef SANITY_CHECK_VINBERG
   MyVector<T> w0_T = UniversalVectorConversion<T, Tint>(w0);
   MyVector<T> a_T = UniversalVectorConversion<T, Tint>(a);
   MyMatrix<T> Morth_T = UniversalMatrixConversion<T, Tint>(Vtot.Morth);
@@ -493,11 +493,13 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     std::cerr << "vv_T should be integral\n";
     throw TerminalException{1};
   }
+#endif
+#ifdef DEBUG_VINBERG
   os << "w0=" << StringVectorGAP(w0) << "\n";
 #endif
   MyMatrix<Tint> U_block = SublatticeBasisReduction(NullspaceIntMat(Bmat), os);
   size_t dim = U_block.rows();
-#ifdef DEBUG_VINBERG
+#ifdef SANITY_CHECK_VINBERG
   if (dim != n - 1) {
     std::cerr << "The dimension dim should be equal to n-1\n";
     throw TerminalException{1};
@@ -507,7 +509,7 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   for (size_t i = 0; i < dim; i++)
     for (size_t j = 0; j < n - 1; j++)
       U(j, i) = U_block(i, j);
-#ifdef DEBUG_VINBERG
+#ifdef SANITY_CHECK_VINBERG
   for (size_t i = 0; i < dim; i++) {
     MyVector<Tint> Ucol = GetMatrixCol(U, i);
     MyVector<Tint> G_M_Ucol = Vtot.G * Vtot.Morth * Ucol;
@@ -519,6 +521,8 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
       throw TerminalException{1};
     }
   }
+#endif
+#ifdef DEBUG_VINBERG
   os << "U=\n";
   WriteMatrix(os, U);
 #endif

@@ -26,6 +26,7 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_LORENTZIAN_STAB_EQUIV
+#define SANITY_CHECK_GET_CANONICALIZED_RECORD
 #endif
 
 template <typename T, typename Tint> struct FundDomainVertex {
@@ -239,6 +240,10 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
 #endif
   }
   MyMatrix<T> const MatV_reord = MatrixFromVectorFamily(l_vect_reord);
+#if defined(DEBUG_GET_CANONICALIZED_RECORD) ||                                 \
+    defined(SANITY_CHECK_GET_CANONICALIZED_RECORD)
+  MyMatrix<T> const MatV_reord_red = ColumnReduction(MatV_reord);
+#endif
 #ifdef DEBUG_GET_CANONICALIZED_RECORD
   std::cerr << "Map1 =";
   for (auto &eval : Map1)
@@ -252,7 +257,6 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   WriteMatrix(std::cerr, MatV);
   std::cerr << "MatV_red=\n";
   WriteMatrix(std::cerr, MatV_red);
-  MyMatrix<T> const MatV_reord_red = ColumnReduction(MatV_reord);
   std::cerr << "MatV_reord=\n";
   WriteMatrix(std::cerr, MatV_reord);
   std::cerr << "MatV_reord_red=\n";
@@ -267,7 +271,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   //
   std::vector<Telt> LGen1;
   for (auto &eGen : ListGen) {
-#ifdef DEBUG_GET_CANONICALIZED_RECORD
+#ifdef SANITY_CHECK_GET_CANONICALIZED_RECORD
     MyMatrix<T> eEquivMat =
         RepresentVertexPermutation(MatV_red, MatV_red, eGen);
     std::optional<MyMatrix<T>> opt_EquivMat =
@@ -281,9 +285,11 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
                    "algorithms\n";
       throw TerminalException{1};
     }
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "get_canonicalized_record eGen=" << Telt(eGen)
               << " eEquivMat=\n";
     WriteMatrix(std::cerr, eEquivMat);
+#endif
 #endif
     //  l_vect_reord[i] = l_vect[ListIdx[i]]
     //  l_vect_reord[ListIdxRev[i]] = l_vect[i]
@@ -300,12 +306,16 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
       Vloc[i1] = i4;
     }
     //
-#ifdef DEBUG_GET_CANONICALIZED_RECORD
+#ifdef SANITY_CHECK_GET_CANONICALIZED_RECORD
     Telt eGenReord(Vloc);
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "Before computing eEquivMqtReord\n";
+#endif
     MyMatrix<T> eEquivMatReord =
         RepresentVertexPermutation(MatV_reord_red, MatV_reord_red, eGenReord);
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "After computing eEquivMqtReord\n";
+#endif
     std::optional<MyMatrix<T>> opt_EquivMatReord =
         FindMatrixTransformationTest(MatV_reord_red, MatV_reord_red, Vloc);
     if (!opt_EquivMatReord) {
@@ -317,9 +327,11 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
                    "different algorithms\n";
       throw TerminalException{1};
     }
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "get_canonicalized_record eGenReord=" << eGenReord
               << " eEquivMatReord=\n";
     WriteMatrix(std::cerr, eEquivMatReord);
+#endif
     if (!TestEqualityMatrix(eEquivMatReord, eEquivMat)) {
       std::cerr << "eEquivMat and eEquivMatReord should be equal\n";
       throw TerminalException{1};

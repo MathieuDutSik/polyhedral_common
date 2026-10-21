@@ -12,6 +12,10 @@
 #define DEBUG_MPI_ADJACENCY_SCHEME
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_MPI_ADJACENCY_SCHEME
+#endif
+
 #ifdef DISABLE_DEBUG_MPI_ADJACENCY_SCHEME
 #undef DEBUG_MPI_ADJACENCY_SCHEME
 #endif
@@ -747,7 +751,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
     os << "MPI_ADJ_SCH: f_terminate, begin\n";
 #endif
-#ifdef DEBUG_MPI_ADJACENCY_SCHEME
+#ifdef SANITY_CHECK_MPI_ADJACENCY_SCHEME
     if (i_rank > 0) {
       std::cerr << "The terminate cannot be called for a i_rank>0\n";
       std::cerr << "The reason is that the check for termination is a\n";

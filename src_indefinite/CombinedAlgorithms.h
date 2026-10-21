@@ -356,7 +356,7 @@ public:
           MyMatrix<Tint> eGen1 = GRPmatr[i_gen];
           MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
           MyMatrix<T> eGen3 = SublatticeInv * eGen2 * Sublattice;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
           if (!IsIntegralMatrix(eGen3)) {
             std::cerr << "COMB: eGen3 should be integral\n";
             throw TerminalException{1};

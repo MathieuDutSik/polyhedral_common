@@ -234,7 +234,7 @@ get_spanning_list_triple(
 #endif
   auto f_insert_generator = [&](const MyMatrix<Tint> &eMatrGen) -> void {
     ListSetGens.insert(eMatrGen);
-#ifdef DEBUG_TRIPLE
+#ifdef SANITY_CHECK_TRIPLE
     for (auto &eV : EXTinner) {
       MyVector<Tint> Vimg = eMatrGen.transpose() * eV;
       if (std::find(EXTinner.begin(), EXTinner.end(), Vimg) == EXTinner.end()) {
@@ -312,29 +312,41 @@ get_spanning_list_triple(
 #ifdef DEBUG_TRIPLE
         os << "TRIP: |l_pair|=" << l_pair.size() << "\n";
 #endif
-#ifdef DEBUG_TRIPLE
+#ifdef SANITY_CHECK_TRIPLE
         vectface vfo =
             OrbitFace(e_sing_adj.f_ext, eC.GRP_ext.GeneratorsOfGroup());
+#ifdef DEBUG_TRIPLE
         n_facet += vfo.size();
+#endif
         Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef.f_ext);
+#ifdef DEBUG_TRIPLE
         os << "TRIP: |vfo|=" << vfo.size() << " |stab|=" << stab.size() << "\n";
+#endif
         size_t n_match = 0;
         vectface vfcont(vfo.get_n());
         for (auto &eFace : vfo) {
           if (is_subset(ef.f_ext, eFace)) {
+#ifdef DEBUG_TRIPLE
             os << "TRIP: V=" << StringFace(eFace) << "\n";
+#endif
             vfcont.push_back(eFace);
             n_match++;
           }
         }
+#ifdef DEBUG_TRIPLE
         os << "TRIP: |vfcont|=" << vfcont.size() << "\n";
+#endif
         vectface vfs = OrbitSplittingSet(vfcont, stab);
+#ifdef DEBUG_TRIPLE
         os << "TRIP: |l_pair|=" << l_pair.size()
            << " |e_sing_adj.f_ext|=" << SignatureFace(e_sing_adj.f_ext)
            << " |ef.f_ext|=" << SignatureFace(ef.f_ext)
            << " n_match=" << n_match << " |vfs|=" << vfs.size() << "\n";
+#endif
         if (vfs.size() != l_pair.size()) {
-          std::cerr << "We have a size error\n";
+          std::cerr << "TRIP: We have a size error, |vfs|=" << vfs.size()
+                    << " |l_pair|=" << l_pair.size() << " n_match=" << n_match
+                    << "\n";
           throw TerminalException{1};
         }
 #endif

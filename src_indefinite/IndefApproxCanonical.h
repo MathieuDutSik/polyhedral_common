@@ -14,6 +14,10 @@
 #define DEBUG_INDEX_APPROX_CANONICAL
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_INDEX_APPROX_CANONICAL
+#endif
+
 #ifdef DISABLE_DEBUG_INDEX_APPROX_CANONICAL
 #undef DEBUG_INDEX_APPROX_CANONICAL
 #endif
@@ -57,7 +61,7 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
     Tidx j_row = CanonicOrd[i_row];
     Mtrans1(i_row, j_row) = 1;
   }
-#ifdef DEBUG_INDEX_APPROX_CANONICAL
+#ifdef SANITY_CHECK_INDEX_APPROX_CANONICAL
   MyMatrix<T> Mtrans1_T = UniversalMatrixConversion<T, Tint>(Mtrans1);
   MyMatrix<T> eProd = Mtrans1_T * M * Mtrans1_T.transpose();
   if (eProd != Mreord) {
@@ -265,7 +269,7 @@ order_blocks_by_signature(MyMatrix<T> const &M,
     }
     pos += len;
   }
-#ifdef DEBUG_INDEX_APPROX_CANONICAL
+#ifdef SANITY_CHECK_INDEX_APPROX_CANONICAL
   MyMatrix<T> Bret_T = UniversalMatrixConversion<T, Tint>(Bret);
   MyMatrix<T> prod = Bret_T * M * Bret_T.transpose();
   if (prod != Mret) {
@@ -285,7 +289,7 @@ ResultReduction<T, Tint> get_individual_reduction(MyMatrix<T> const &M,
   int n_minus = signature.second;
   int n_zero = n - n_plus - n_minus;
   if (n_zero > 0) {
-#ifdef DEBUG_INDEX_APPROX_CANONICAL
+#ifdef SANITY_CHECK_INDEX_APPROX_CANONICAL
     if (n_plus > 0 || n_minus > 0) {
       std::cerr << "IAC: We should have a zero matrix\n";
       throw TerminalException{1};
@@ -314,7 +318,7 @@ ResultReduction<T, Tint> get_individual_reduction(MyMatrix<T> const &M,
     MyMatrix<Tint> B = ComputeCanonicalForm<T, Tint, Tgroup>(Mpos, os);
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
     MyMatrix<T> Mred = T(pair.first) * (B_T * Mpos * B_T.transpose());
-#ifdef DEBUG_INDEX_APPROX_CANONICAL
+#ifdef SANITY_CHECK_INDEX_APPROX_CANONICAL
     MyMatrix<T> prod = B_T * M * B_T.transpose();
     if (prod != Mred) {
       std::cerr << "IAC: The reduction did not work out correctly\n";
@@ -355,7 +359,7 @@ ResultReduction<T, Tint> apply_reduction_on_blocks(MyMatrix<T> const &M,
       }
     }
   }
-#ifdef DEBUG_INDEX_APPROX_CANONICAL
+#ifdef SANITY_CHECK_INDEX_APPROX_CANONICAL
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   MyMatrix<T> prod = B_T * M * B_T.transpose();
   if (prod != Mred) {
@@ -379,7 +383,7 @@ ResultReduction<T, Tint> ApproxCanonicalIndefiniteForm(MyMatrix<T> const &M,
   ResultReduction<T, Tint> RRI_C =
       order_blocks_by_signature<T, Tint>(RRI_B.Mred, os);
   MyMatrix<Tint> B = RRI_C.B * RRI_B.B * RRI_A.B;
-#ifdef DEBUG_INDEX_APPROX_CANONICAL
+#ifdef SANITY_CHECK_INDEX_APPROX_CANONICAL
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   MyMatrix<T> prod = B_T * M * B_T.transpose();
   if (prod != RRI_C.Mred) {

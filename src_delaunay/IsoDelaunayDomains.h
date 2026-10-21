@@ -1228,7 +1228,7 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
       }
 #endif
       std::optional<std::vector<Tidx>> opt = get_v_positions(eMat);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
       if (!opt) {
         std::cerr << "The get_v_positions returned a null\n";
         throw TerminalException{1};
@@ -1419,12 +1419,16 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
   os << "ISODEL: FRING: TotalListVertices=\n";
   WriteMatrix(os, TotalListVertices);
   os << "ISODEL: FRING: Before testing symmetry for TotalListVertices\n";
+#endif
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
   if (!IsSymmetryGroupOfPolytope(TotalListVertices, PermGRP)) {
     std::cerr << "ISODEL: FRING: PermGRP is not a symmetry group of "
                  "TotalListVertices\n";
     throw TerminalException{1};
   }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FRING: Before testing symmetry for TotalListVerticesRed_T\n";
+#endif
   if (!IsSymmetryGroupOfPolytope(TotalListVerticesRed, PermGRP)) {
     std::cerr << "ISODEL: FRING: PermGRP is not a symmetry group of "
                  "TotalListVertices\n";
@@ -1596,6 +1600,8 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
          << static_cast<int>(ListOrbitFacet[iOrb].Position) << "\n";
       os << "ISODEL: FRING: Before IsSymmetryGroupOfPolytope after "
             "computation\n";
+#endif
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
       if (!IsSymmetryGroupOfPolytope(ListOrbitFacet[iOrb].EXT, TheStabVect)) {
         std::cerr << "ISODEL: FRING: The initial computation went wrong\n";
         throw TerminalException{1};
@@ -2159,32 +2165,40 @@ FlippingLtype(
        << " iDelaunay=" << iDelaunay << " iInfo=" << iInfo
        << " iFacet=" << iFacet << "\n";
   }
+#endif
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
   auto check_adj = [&](int iOrb, Delaunay_AdjIneqO<Tring> const &NewAdj,
                        std::string const &context) -> void {
     MyMatrix<Tring> const &EXT = l_dels[iOrb].EXT;
     ContainerMatrix<Tring> cont(EXT);
     Face f_att(EXT.rows());
     MyMatrix<Tring> EXTadj = l_dels[NewAdj.iOrb].EXT * NewAdj.eBigMat;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FLT: check_adj iOrb=" << iOrb
        << " NewAdj.iOrb=" << NewAdj.iOrb << "\n";
     os << "ISODEL: FLT:      |EXT|=" << EXT.rows() << " / " << EXT.cols()
        << "\n";
     os << "ISODEL: FLT:   |EXTadj|=" << EXTadj.rows() << " / " << EXTadj.cols()
        << "\n";
+#endif
     int len = EXTadj.rows();
     for (int iVert = 0; iVert < len; iVert++) {
       MyVector<Tring> V = GetMatrixRow(EXTadj, iVert);
       std::optional<size_t> opt = cont.GetIdx_v(V);
       if (opt) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         size_t pos = *opt;
         os << "ISODEL: FLT: iVert=" << iVert << " pos=" << pos << "\n";
+#endif
         f_att[*opt] = 1;
       }
     }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FLT:     |f_att|=" << f_att.size() << " / " << f_att.count()
        << "\n";
     os << "ISODEL: FLT: NewAdj.eInc=" << NewAdj.eInc.size() << " / "
        << NewAdj.eInc.count() << "\n";
+#endif
     if (f_att != NewAdj.eInc) {
       std::cerr << "f_att should be equal to NewAdj.eInc\n";
       std::cerr << "Consistency error in context=" << context << "\n";
@@ -2254,6 +2268,8 @@ FlippingLtype(
           os << "ISODEL: eAdj.eBigMat=\n";
           WriteMatrix(os, eAdj.eBigMat);
           os << "ISODEL: iOrb=" << iOrb << " iOrbAdj=" << iOrbAdj << "\n";
+#endif
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 1");
 #endif
           ListAdj.push_back(NAdj);
@@ -2307,7 +2323,7 @@ FlippingLtype(
 #endif
           Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat1), Pos,
                                     std::move(eIneq)};
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 2");
 #endif
           ListAdj.push_back(NAdj);
@@ -2398,7 +2414,7 @@ FlippingLtype(
 #endif
           Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat2), Pos,
                                     std::move(eIneq)};
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 3");
 #endif
           ListAdj.push_back(NAdj);
@@ -2432,7 +2448,7 @@ FlippingLtype(
 #endif
             Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat1), Pos2,
                                       std::move(eIneq)};
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 4");
 #endif
             ListAdj.push_back(NAdj);
@@ -2477,7 +2493,7 @@ FlippingLtype(
 #endif
             Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat1), Pos,
                                       std::move(eIneq)};
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 5");
 #endif
             ListAdj.push_back(NAdj);
@@ -2499,7 +2515,7 @@ FlippingLtype(
 #endif
           Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, eAdj.eBigMat, Pos,
                                     std::move(eIneq)};
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 6");
 #endif
           ListAdj.push_back(NAdj);
