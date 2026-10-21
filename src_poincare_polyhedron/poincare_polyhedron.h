@@ -22,6 +22,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_POINCARE_POLYHEDRON
+#endif
+
 template <typename T> struct DataEXT {
   MyMatrix<T> EXT;
   vectface vf;
@@ -95,19 +99,24 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI,
   std::ifstream is(FileI);
   MyVector<T> x = ReadVector<T>(is);
   int n = x.size();
-  std::cerr << "ReadDataPoincare : |x|=" << n << "\n";
+#ifdef DEBUG_POINCARE_POLYHEDRON
+  std::cerr << "POINCARE: ReadDataPoincare |x|=" << n << "\n";
+#endif
   int n_elt;
   is >> n_elt;
-  std::cerr << "ReadDataPoincare : n_elt=" << n_elt << "\n";
+#ifdef DEBUG_POINCARE_POLYHEDRON
+  std::cerr << "POINCARE: ReadDataPoincare n_elt=" << n_elt << "\n";
+#endif
   std::unordered_set<CombElt<T>> s_elt;
   s_elt.insert(GenerateIdentity<T>(n));
   for (int i_elt = 0; i_elt < n_elt; i_elt++) {
     int pos = i_elt + 1;
     MyMatrix<T> eElt = ReadMatrix<T>(is);
     MyMatrix<double> eElt_d = UniversalMatrixConversion<double, T>(eElt);
-    T TheDet = DeterminantMat(eElt);
-    std::cerr << "i_elt=" << i_elt << "/" << n_elt << " TheDet=" << TheDet
-              << "\n";
+#ifdef DEBUG_POINCARE_POLYHEDRON
+    std::cerr << "POINCARE: i_elt=" << i_elt << "/" << n_elt
+              << " det=" << DeterminantMat(eElt) << "\n";
+#endif
     TrackGroup tg{{pos}};
     CombElt<T> pe{tg, eElt, eElt_d};
     s_elt.insert(pe);
@@ -115,14 +124,21 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI,
   std::vector<CombElt<T>> l_elt;
   for (auto &eElt : s_elt)
     l_elt.push_back(eElt);
-  std::cerr << "|Initial set|=" << l_elt.size() << "\n";
+#ifdef DEBUG_POINCARE_POLYHEDRON
+  std::cerr << "POINCARE: |Initial set|=" << l_elt.size() << "\n";
+#endif
   l_elt = InverseSaturation(l_elt);
   std::vector<CombElt<T>> l_gen = l_elt;
-  std::cerr << "|Inverse saturation|=" << l_elt.size() << "\n";
-  std::cerr << "n_expand=" << n_expand << "\n";
+#ifdef DEBUG_POINCARE_POLYHEDRON
+  std::cerr << "POINCARE: |Inverse saturation|=" << l_elt.size()
+            << " n_expand=" << n_expand << "\n";
+#endif
   for (int i_expand = 0; i_expand < n_expand; i_expand++) {
     l_elt = ListExpansion(l_elt, l_gen);
-    std::cerr << "i_expand=" << i_expand << " |l_elt|=" << l_elt.size() << "\n";
+#ifdef DEBUG_POINCARE_POLYHEDRON
+    std::cerr << "POINCARE: i_expand=" << i_expand
+              << " |l_elt|=" << l_elt.size() << "\n";
+#endif
   }
   return {x, l_elt};
 }

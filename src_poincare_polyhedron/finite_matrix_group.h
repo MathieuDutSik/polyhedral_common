@@ -8,6 +8,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_FINITE_MATRIX_GROUP
+#endif
+
 template <typename T>
 std::vector<CombElt<T>>
 GroupGeneration(std::vector<CombElt<T>> const &input_l_ent) {
@@ -78,7 +82,9 @@ IdentifyLeftCosets(std::vector<CombElt<T>> const &l_ent,
     for (auto &e_grp_elt : list_grp_elt) {
       CombElt<T> prod = ProductComb(pe, e_grp_elt);
       if (s_coset.contains(prod)) {
-        std::cerr << "find matching\n";
+#ifdef DEBUG_FINITE_MATRIX_GROUP
+        std::cerr << "FMG: find matching\n";
+#endif
         return;
       }
     }
@@ -88,9 +94,11 @@ IdentifyLeftCosets(std::vector<CombElt<T>> const &l_ent,
     f_insert(pe);
   }
   std::vector<CombElt<T>> l_coset(s_coset.begin(), s_coset.end());
-  std::cerr << "|l_ent|=" << l_ent.size()
+#ifdef DEBUG_FINITE_MATRIX_GROUP
+  std::cerr << "FMG: |l_ent|=" << l_ent.size()
             << " |list_grp_elt|=" << list_grp_elt.size()
             << " |l_coset|=" << l_coset.size() << "\n";
+#endif
   return l_coset;
 }
 
@@ -105,7 +113,9 @@ IdentifyDoubleCosets(MyVector<T> const &x, std::vector<CombElt<T>> const &l_ent,
       MyVector<T> x3 = e_grp_elt.mat.transpose() * x2;
       auto iter = map.find(x3);
       if (iter != map.end()) {
-        std::cerr << "find matching\n";
+#ifdef DEBUG_FINITE_MATRIX_GROUP
+        std::cerr << "FMG: find matching\n";
+#endif
         return;
       }
     }
@@ -116,9 +126,11 @@ IdentifyDoubleCosets(MyVector<T> const &x, std::vector<CombElt<T>> const &l_ent,
   std::vector<CombElt<T>> l_coset;
   for (auto &kv : map)
     l_coset.push_back(kv.second);
-  std::cerr << "|l_ent|=" << l_ent.size()
+#ifdef DEBUG_FINITE_MATRIX_GROUP
+  std::cerr << "FMG: |l_ent|=" << l_ent.size()
             << " |list_grp_elt|=" << list_grp_elt.size()
             << " |l_coset|=" << l_coset.size() << "\n";
+#endif
   return l_coset;
 }
 

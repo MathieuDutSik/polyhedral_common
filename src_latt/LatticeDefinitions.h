@@ -12,6 +12,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_LATTICE_DEFINITIONS
+#endif
+
 template <typename T, typename Tint> struct Tshortest {
   T min;
   MyMatrix<Tint> SHV;
@@ -182,7 +186,7 @@ void EnumerateOrbitPrimitiveVector(
       ThePos++;
     }
   };
-  int nbOrbit = 0;
+  [[maybe_unused]] int nbOrbit = 0;
   while (true) {
     if (cnt == 0)
       break;
@@ -208,10 +212,14 @@ void EnumerateOrbitPrimitiveVector(
       }
     }
     FCT(eRepr, OrbSize);
-    std::cerr << "Find an orbit of size " << OrbSize << "\n";
+#ifdef DEBUG_LATTICE_DEFINITIONS
+    std::cerr << "LATTDEF: Find an orbit of size " << OrbSize << "\n";
+#endif
     nbOrbit++;
   }
-  std::cerr << "nbOrbit=" << nbOrbit << "\n";
+#ifdef DEBUG_LATTICE_DEFINITIONS
+  std::cerr << "LATTDEF: nbOrbit=" << nbOrbit << "\n";
+#endif
 }
 
 // clang-format off

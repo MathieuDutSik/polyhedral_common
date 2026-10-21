@@ -513,7 +513,9 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
       std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
   std::vector<std::vector<Tface>> list_list_face;
   for (int iLev = 1; iLev <= TheLev; iLev++) {
-    std::cerr << "iLev=" << iLev << "\n";
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
+    std::cerr << "DECOMP: iLev=" << iLev << "\n";
+#endif
     std::vector<Tface> list_face;
     auto f_insert = [&](const triple<Tint> &ef_A) -> void {
       for (auto &eOrbit : list_face) {
@@ -756,7 +758,9 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
 #endif
   // Building the FAC matrix
   int n_fac_final = SetFAC.size();
-  std::cerr << "n_fac_final=" << n_fac_final << "\n";
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
+  std::cerr << "DECOMP: n_fac_final=" << n_fac_final << "\n";
+#endif
   MyMatrix<T> FACfinal(n_fac_final, dim);
   std::vector<MyVector<T>> ListFACfinal;
   int pos_fac = 0;

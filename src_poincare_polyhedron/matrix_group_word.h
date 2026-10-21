@@ -9,6 +9,14 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_MATRIX_GROUP_WORD
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_MATRIX_GROUP_WORD
+#endif
+
 // The data structure for keeping track of the group elements:
 // ---Positive value (so element 0 correspond to 1, X to X+1, ...) are the
 // elements themselves.
@@ -208,19 +216,25 @@ template <typename T> struct ShortVectorGroup {
       std::cerr << "Therefore calling the function does not make sense 1\n";
       throw TerminalException{1};
     }
+#ifdef TIMINGS_MATRIX_GROUP_WORD
     HumanTime time;
-    std::cerr << "Beginning of GetShortVectorNoDuplication\n";
+#endif
+#ifdef DEBUG_MATRIX_GROUP_WORD
+    std::cerr << "MGW: Beginning of GetShortVectorNoDuplication\n";
+#endif
     std::unordered_set<MyVector<T>> set_done;
     std::unordered_map<MyVector<T>, std::vector<size_t>> list_active;
     list_active[x] = std::vector<size_t>();
     set_done.insert(x);
     size_t nGen = ListGen.size();
     int n = y.size();
-    int iter = 0;
-    int n_cons = 0;
+    [[maybe_unused]] int iter = 0;
+    [[maybe_unused]] int n_cons = 0;
     while (true) {
-      std::cerr << "iter=" << iter << " |list_active|=" << list_active.size()
-                << "\n";
+#ifdef DEBUG_MATRIX_GROUP_WORD
+      std::cerr << "MGW: iter=" << iter
+                << " |list_active|=" << list_active.size() << "\n";
+#endif
       std::unordered_map<MyVector<T>, std::vector<size_t>> list_curr =
           std::move(list_active);
       for (auto &kv : list_curr) {
@@ -235,9 +249,13 @@ template <typename T> struct ShortVectorGroup {
             for (auto &pos : eList) {
               RetElt = ProductComb(RetElt, ListGen[pos]);
             }
+#ifdef DEBUG_MATRIX_GROUP_WORD
             std::cerr << "MGW: GetShortVectorNoDuplication n_cons=" << n_cons
                       << "\n";
+#endif
+#ifdef TIMINGS_MATRIX_GROUP_WORD
             std::cerr << "|MGW: GetShortVectorNoDuplication|=" << time << "\n";
+#endif
             return RetElt;
           }
           n_cons++;
@@ -257,14 +275,20 @@ template <typename T> struct ShortVectorGroup {
       std::cerr << "Therefore calling the function does not make sense 2\n";
       throw TerminalException{1};
     }
+#ifdef TIMINGS_MATRIX_GROUP_WORD
     HumanTime time;
-    std::cerr << "Beginning of GetShortVectorIteration\n";
+#endif
+#ifdef DEBUG_MATRIX_GROUP_WORD
+    std::cerr << "MGW: Beginning of GetShortVectorIteration\n";
+#endif
     size_t nGen = ListGen.size();
     int n = y.size();
-    int n_cons = 0;
+    [[maybe_unused]] int n_cons = 0;
     int n_iter = 1;
     while (true) {
-      std::cerr << "Passing by the loop for n_iter=" << n_iter << "\n";
+#ifdef DEBUG_MATRIX_GROUP_WORD
+      std::cerr << "MGW: Passing by the loop for n_iter=" << n_iter << "\n";
+#endif
       std::vector<MyVector<T>> ListX(n_iter + 1);
       std::vector<size_t> eList(n_iter, 0);
       ListX[0] = x;
@@ -302,9 +326,13 @@ template <typename T> struct ShortVectorGroup {
           for (auto &pos : eList) {
             RetElt = ProductComb(RetElt, ListGen[pos]);
           }
+#ifdef DEBUG_MATRIX_GROUP_WORD
           std::cerr << "MGW: Exiting GetShortVectorIteration n_cons=" << n_cons
                     << "\n";
+#endif
+#ifdef TIMINGS_MATRIX_GROUP_WORD
           std::cerr << "|MGW: GetShortVectorIteration|=" << time << "\n";
+#endif
           return RetElt;
         }
         n_cons++;
