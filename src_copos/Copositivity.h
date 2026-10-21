@@ -583,7 +583,7 @@ PairDecomposition([[maybe_unused]] MyMatrix<T> const &eSymmMat,
     throw TerminalException{1};
   }
 #endif
-#ifdef PRINT_SPLIT_CONE
+#ifdef DEBUG_COPOSITIVITY_SPLIT_CONE
   std::cerr << "COP: iFound=" << iFound << " jFound=" << jFound
             << " PairXY_found=" << PairXY_found.first << " / "
             << PairXY_found.second << "\n";

@@ -18,9 +18,9 @@
 // clang-format off
 
 //#define TIMINGS
-//#define PRINT_FLIP
-//#define PRINT_TRIPLE
-//#define PRINT_GET_ADJ
+//#define DEBUG_CTYPE_FLIP
+//#define DEBUG_CTYPE_TRIPLE
+//#define DEBUG_CTYPE_GET_ADJ
 // #define DEBUG_CRITERION_ELIMINATION
 
 #ifdef SANITY_CHECK
@@ -329,20 +329,20 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const &TheCtype,
   size_t n_rows = TheCtype.rows();
   size_t n_cols = TheCtype.cols();
   size_t n_rows_ret = n_rows / 2;
-#ifdef PRINT_FLIP
+#ifdef DEBUG_CTYPE_FLIP
   std::cerr << "CTYP_TheFlipping n_rows=" << n_rows << " n_cols=" << n_cols
             << "\n";
 #endif
   Face ListIchange(n_rows);
   for (auto &e_triple : TheInfo) {
-#ifdef PRINT_FLIP
+#ifdef DEBUG_CTYPE_FLIP
     std::cerr << "e_triple=" << static_cast<int>(e_triple.i) << " , "
               << static_cast<int>(e_triple.j) << " , "
               << static_cast<int>(e_triple.k) << "\n";
 #endif
     ListIchange[e_triple.i] = 1;
   }
-#ifdef PRINT_FLIP
+#ifdef DEBUG_CTYPE_FLIP
   std::cerr << "ListIchange =";
   for (size_t i_row = 0; i_row < n_rows; i_row++)
     std::cerr << " " << ListIchange[i_row];
@@ -429,7 +429,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
   int n_edgered = n_edge / 2;
   int n_cols = TheCtype.cols();
   Tidx n_cols_idx = n_cols;
-#ifdef PRINT_TRIPLE
+#ifdef DEBUG_CTYPE_TRIPLE
   os << "n_edge=" << n_edge << " n_cols=" << n_cols << "\n";
   os << "TEST TheCtype=\n";
   WriteMatrix(os, TheCtype);
@@ -439,7 +439,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
   T eTwo = 2;
   auto get_position = [&](MyVector<T> const &eV, Tidx start_idx) -> Tidx {
     auto get_nature = [&](Tidx pos) -> bool {
-#ifdef PRINT_TRIPLE
+#ifdef DEBUG_CTYPE_TRIPLE
       os << "get_nature pos=" << pos << "\n";
 #endif
       for (Tidx i_col = 0; i_col < n_cols_idx; i_col++)
@@ -456,7 +456,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
         AddMul(pos, res, e_pow);
         e_pow *= 2;
       }
-#ifdef PRINT_TRIPLE
+#ifdef DEBUG_CTYPE_TRIPLE
       os << "eV =";
       for (int i = 0; i < n_cols; i++)
         os << " " << eV(i);
@@ -472,7 +472,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
       return -1;
     };
     Tidx pos = get_value();
-#ifdef PRINT_TRIPLE
+#ifdef DEBUG_CTYPE_TRIPLE
     os << "After get_value pos=" << static_cast<int>(pos) << "\n";
 #endif
     if (pos > start_idx)
@@ -482,17 +482,17 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
   MyVector<T> eDiff(n_cols);
   for (Tidx i = 0; i < n_edge_idx; i++)
     for (Tidx j = i + 1; j < n_edge_idx; j++) {
-#ifdef PRINT_TRIPLE
+#ifdef DEBUG_CTYPE_TRIPLE
       os << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j) << "\n";
 #endif
       for (Tidx i_col = 0; i_col < n_cols_idx; i_col++)
         eDiff(i_col) = -TheCtype(i, i_col) - TheCtype(j, i_col);
-#ifdef PRINT_TRIPLE
+#ifdef DEBUG_CTYPE_TRIPLE
       os << "We have eDiff=" << StringVectorGAP(eDiff) << "\n";
 #endif
       Tidx k = get_position(eDiff, j);
       Tidx crit = -1;
-#ifdef PRINT_TRIPLE
+#ifdef DEBUG_CTYPE_TRIPLE
       os << "k=" << static_cast<int>(k) << "\n";
 #endif
       if (k != crit) {
@@ -503,7 +503,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
         Tidx ired = i / 2;
         Tidx jred = j / 2;
         Tidx kred = k / 2;
-#ifdef PRINT_TRIPLE
+#ifdef DEBUG_CTYPE_TRIPLE
         os << "n_edgered=" << n_edgered << " i/j/kred=" << ired << " " << jred
            << " " << kred << "\n";
 #endif
@@ -517,7 +517,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
         MappingVect[kred * n_edgered + jred] = ired;
       }
     }
-#ifdef PRINT_TRIPLE
+#ifdef DEBUG_CTYPE_TRIPLE
   os << "Exiting CTYP_GetListTriple\n";
 #endif
   return {std::move(ListTriples), std::move(MappingVect)};
@@ -528,7 +528,7 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M,
                                   [[maybe_unused]] std::ostream &os) {
   int n = M.cols();
   int nbRow = M.rows();
-#ifdef PRINT_EXPRESS
+#ifdef DEBUG_CTYPE_EXPRESS
   os << "n=" << n << " nbRow=" << nbRow << "\n";
 #endif
   MyMatrix<T> Mret(2 * nbRow, n);
@@ -537,7 +537,7 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M,
 #endif
   T eTwo = 2;
   for (int iRow = 0; iRow < nbRow; iRow++) {
-#ifdef PRINT_EXPRESS
+#ifdef DEBUG_CTYPE_EXPRESS
     os << "iRow=" << iRow << "/" << nbRow << "\n";
 #endif
     int pos = -1;
@@ -545,14 +545,14 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M,
     for (int i = 0; i < n; i++) {
       T res_T = ResInt(M(iRow, i), eTwo);
       int res = UniversalScalarConversion<int, T>(res_T);
-#ifdef PRINT_EXPRESS
+#ifdef DEBUG_CTYPE_EXPRESS
       os << "  i=" << i << " M(iRow,i)=" << M(iRow, i) << " res_T=" << res_T
          << " res=" << res << " e_pow=" << e_pow << "\n";
 #endif
       AddMul(pos, res, e_pow);
       e_pow *= 2;
     }
-#ifdef PRINT_EXPRESS
+#ifdef DEBUG_CTYPE_EXPRESS
     os << "  pos=" << pos << "\n";
 #endif
 #ifdef DEBUG
@@ -589,7 +589,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   os << "CTYP_GetConeInformation, step 1\n";
 #endif
   MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat, os);
@@ -598,7 +598,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #ifdef TIMINGS
   os << "|CTYP: ExpressMatrixForCType|=" << time << "\n";
 #endif
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   os << "CTYP_GetConeInformation, step 2\n";
 #endif
   std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>> PairTriple =
@@ -607,7 +607,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #ifdef TIMINGS
   os << "|CTYP: GetListTriple|=" << time << "\n";
 #endif
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   os << "CTYP_GetConeInformation, step 3\n";
 #endif
   Tidx n = TheCtype.cols();
@@ -653,7 +653,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   for (auto &e_triple : PairTriple.first)
     FuncInsertInequality(e_triple.i, e_triple.j, e_triple.k);
   int nb_ineq = Tot_map.size();
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   os << "Input |Tot_map|=" << Tot_map.size() << "\n";
 #endif
 
@@ -714,11 +714,11 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #endif
   int n_edgered = n_edge / 2;
   Tidx n_edgered_idx = n_edgered;
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   int nb_match = 0;
   int nb_pass = 0;
 #endif
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   for (int i_edge = 0; i_edge < n_edgered; i_edge++) {
     for (int j_edge = 0; j_edge < n_edgered; j_edge++)
       os << " "
@@ -726,19 +726,19 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
     os << "\n";
   }
 #endif
-  // #define PRINT_GET_ADJ_O
+  // #define DEBUG_CTYPE_GET_ADJ_O
   //  We apply here the 3 dimensional criterion for feasibility of C-type
   //  switches
   auto TestApplicabilityCriterion_with_e = [&](triple<Tidx> const &e_triple,
                                                Tidx const &e) -> bool {
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
     nb_pass++;
 #endif
     Tidx i = e_triple.i / 2;
     Tidx j = e_triple.j / 2;
     Tidx k = e_triple.k / 2;
     Tidx crit = -1;
-#ifdef PRINT_GET_ADJ_O
+#ifdef DEBUG_CTYPE_GET_ADJ_O
     os << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
        << " k=" << static_cast<int>(k) << " e=" << static_cast<int>(e) << "\n";
 #endif
@@ -749,7 +749,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
     //
     // getting f and testing it
     Tidx f = PairTriple.second[i * n_edgered + e];
-#ifdef PRINT_GET_ADJ_O
+#ifdef DEBUG_CTYPE_GET_ADJ_O
     os << "f=" << static_cast<int>(f) << "\n";
 #endif
     if (f == crit || f == j || f == k)
@@ -757,7 +757,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
     //
     // getting g and testing it
     Tidx g = PairTriple.second[j * n_edgered + e];
-#ifdef PRINT_GET_ADJ_O
+#ifdef DEBUG_CTYPE_GET_ADJ_O
     os << "g=" << static_cast<int>(g) << "\n";
 #endif
     if (g == crit || g == f || g == i || g == k)
@@ -765,7 +765,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
     //
     // getting h and testing it
     Tidx h = PairTriple.second[i * n_edgered + g];
-#ifdef PRINT_GET_ADJ_O
+#ifdef DEBUG_CTYPE_GET_ADJ_O
     os << "h=" << static_cast<int>(h) << "\n";
 #endif
     if (h == crit || h == f || h == e || h == j || h == k)
@@ -773,14 +773,14 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
     //
     // testing presence of {j,f,h}
     Tidx h2 = PairTriple.second[j * n_edgered + f];
-#ifdef PRINT_GET_ADJ_O
+#ifdef DEBUG_CTYPE_GET_ADJ_O
     os << "h2=" << static_cast<int>(h2) << "\n";
 #endif
     if (h2 != h)
       return false;
     //
     // We have the 7-uple.
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
     nb_match++;
 #endif
     return true;
@@ -797,7 +797,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
       Tidx i = e_triple.i;
       Tidx j = e_triple.j;
       Tidx k = e_triple.k;
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
       os << "FOUND i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
          << " k=" << static_cast<int>(k) << "\n";
       os << "ENT1 = " << static_cast<int>(j) << " " << static_cast<int>(k)
@@ -812,7 +812,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   auto TestFeasibilityListTriple =
       [&](std::vector<triple<Tidx>> const &list_triple) -> bool {
     for (auto &e_triple : list_triple) {
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
       os << "e_triple i=" << static_cast<int>(e_triple.i) << " "
          << static_cast<int>(e_triple.j) << "\n";
 #endif
@@ -822,20 +822,20 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
     return true;
   };
   // erasing the inequalities that are sure to be redundant.
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   int nb_redund = 0;
 #endif
   std::unordered_map<MyVector<T>, std::vector<triple<Tidx>>> Tot_mapB;
   for (auto &kv : Tot_map) {
     if (!TestFeasibilityListTriple(kv.second)) {
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
       nb_redund++;
 #endif
     } else {
       Tot_mapB[kv.first] = kv.second;
     }
   }
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   os << "nb_match=" << nb_match << " nb_pass=" << nb_pass << "\n";
   os << "nb_redund = " << nb_redund << "\n";
   os << "After criterion |Tot_mapB|=" << Tot_mapB.size() << "\n";
@@ -844,7 +844,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #ifdef TIMINGS
   os << "|CTYP: Criterion Ineq Drop|=" << time << "\n";
 #endif
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   os << "CTYP_GetConeInformation, step 4\n";
 #endif
   int nb_ineq_after_crit = Tot_mapB.size();
@@ -857,7 +857,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
     i_ineq++;
     ListInformations.push_back(std::move(kv.second));
   }
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   os << "CTYP_GetConeInformation, step 5\n";
   os << "ListInequalities=\n";
   WriteMatrix(os, ListInequalities);
@@ -908,7 +908,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   os << "|CTYP: RedundancyReductionClarkson|=" << time << "\n";
 #endif
 
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   os << "|ListIrred|=" << ListIrred.size() << "\n";
   os << "ListIrred =";
   for (auto &idx : ListIrred)
@@ -1010,7 +1010,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr,
       ListCtype.push_back({std::move(FlipMat)});
     }
   }
-#ifdef PRINT_GET_ADJ
+#ifdef DEBUG_CTYPE_GET_ADJ
   os << "CTYP_GetConeInformation, step 7\n";
 #endif
 

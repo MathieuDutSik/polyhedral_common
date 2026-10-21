@@ -25,9 +25,6 @@
 #define DEBUG_PERFECT_COMPLEX
 #endif
 
-#ifdef PRINT
-#define PRINT_PERFECT_COMPLEX_DIMENSION
-#endif
 
 /*
   Construction of the perfect form complex.
@@ -1488,12 +1485,12 @@ template<typename T, typename Tint, typename Tgroup>
 FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, PerfectComplexOptions const& pco, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, pco, os);
-#ifdef PRINT_PERFECT_COMPLEX_DIMENSION
+#ifdef DEBUG_PERFECT_COMPLEX_DIMENSION
   os << "PERFCOMP: We have pctdi, |pctdi.l_perfect|=" << pctdi.l_perfect.size() << "\n";
 #endif
   int dim_spa = LinSpa.ListMat.size();
   FacesPerfectComplex<T,Tint,Tgroup> level = get_first_step_perfect_complex_enumeration(pctdi, os);
-#ifdef PRINT_PERFECT_COMPLEX_DIMENSION
+#ifdef DEBUG_PERFECT_COMPLEX_DIMENSION
   os << "PERFCOMP: We have the first level |level|=" << level.l_faces.size() << "\n";
 #endif
   std::vector<FacesPerfectComplex<T,Tint,Tgroup>> levels{level};
@@ -1502,7 +1499,7 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
   int n_level = pco.compute_complex ? dim_spa : 1;
   for (int i=1; i<n_level; i++) {
     ResultStepEnumeration<T,Tint,Tgroup> result = compute_next_level(pctdi, levels[i-1], os);
-#ifdef PRINT_PERFECT_COMPLEX_DIMENSION
+#ifdef DEBUG_PERFECT_COMPLEX_DIMENSION
     int n_orientable = 0;
     for (auto & ent: result.level.l_faces) {
       if (ent.is_orientable) {

@@ -717,7 +717,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-#ifdef PRINT_DEBUG_STAB_EQUIV_INFO
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV_INFO
   os << "LORENTZ_TestEquivalence, vertFull1.method=" << vertFull1.method
      << "\n";
   os << "LORENTZ_TestEquivalence, gen1=" << StringVector(vertFull1.vert.gen)

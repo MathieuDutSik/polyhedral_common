@@ -16,9 +16,6 @@
 #define SANITY_CHECK_ENUM_PARALL_SEARCH
 #endif
 
-#ifdef PRINT
-#define PRINT_ENUM_PARALL_SEARCH
-#endif
 
 #ifdef DISABLE_DEBUG_ENUM_PARALL_SEARCH
 #undef DEBUG_ENUM_PARALL_SEARCH
@@ -673,7 +670,7 @@ T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
   MyVector<T> eV = ZeroVector<T>(1 + dim);
   eV(0) = 1;
   f_update(eV);
-#ifdef PRINT_ENUM_PARALL_SEARCH
+#ifdef DEBUG_ENUM_PARALL_SEARCH_RESULT
   os << "PARALL: random_estimation_robust_covering eV_best=" << StringVectorGAP(eV_best) << "\n";
 #endif
   return max_cov;
