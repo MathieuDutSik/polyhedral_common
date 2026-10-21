@@ -33,8 +33,8 @@
 #define TIMINGS_LORENTZIAN_PERFECT
 #endif
 
-#ifdef GAPDEBUGOUT
-#define GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
+#ifdef TRACK_INFO
+#define TRACK_INFO_LORENTZIAN_FIND_POSITIVE_VECTORS
 #endif
 
 static const int LORENTZIAN_PERFECT_OPTION_ISOTROP = 23;
@@ -124,7 +124,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
      << " nbZero=" << DiagInfo.nbZero << " nbMinus=" << DiagInfo.nbMinus
      << "\n";
 #endif
-#ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
+#ifdef TRACK_INFO_LORENTZIAN_FIND_POSITIVE_VECTORS
   auto f_save = [&](std::vector<MyVector<Tint>> const &TotalList) -> void {
     std::string FileSave =
         FILE_FindAvailableFileFromPrefix("LORENTZ_FindPositiveVectors");
@@ -354,7 +354,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
        << TotalListSol.size() << "\n";
 #endif
     if (OnlyShortest && TotalListSol.size()) {
-#ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
+#ifdef TRACK_INFO_LORENTZIAN_FIND_POSITIVE_VECTORS
       f_save(TotalListSol);
 #endif
 #ifdef DEBUG_LORENTZIAN_PERFECT
@@ -379,7 +379,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
       }
     }
   }
-#ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
+#ifdef TRACK_INFO_LORENTZIAN_FIND_POSITIVE_VECTORS
   f_save(TotalListSol);
 #endif
 #ifdef DEBUG_LORENTZIAN_PERFECT

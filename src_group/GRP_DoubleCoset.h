@@ -17,6 +17,11 @@
 #include <vector>
 // clang-format on
 
+#ifdef TRACK_INFO
+#define TRACK_INFO_DOUBLE_COSET_RAW
+#define TRACK_INFO_DOUBLE_COSET_TEST_PROBLEM
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_DOUBLE_COSET
 #endif
@@ -371,8 +376,8 @@ void PrintDoubleCosetCasesTestProblem(
     const Tface_orbitsize &ListFaceOrbitsize) {
   using Tint = typename Tgroup::Tint;
   size_t nbOrbit = ListFaceOrbitsize.size();
-  std::string strSizeSma = std::to_string(SmaGRP.size());
-  std::string strSizeBig = std::to_string(BigGRP.size());
+  std::string strSizeSma = std::format("{}", SmaGRP.size());
+  std::string strSizeBig = std::format("{}", BigGRP.size());
   std::string strLen = std::to_string(nbOrbit);
   std::string strN = std::to_string(static_cast<int>(BigGRP.n_act()));
   std::string Prefix = "DoubleCoset_n" + strN + "_big" + strSizeBig + "_sma" +
@@ -400,13 +405,13 @@ void PrintAllRawDoubleCosetEntries(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                    const Tface_orbitsize &ListFaceOrbitsize) {
   using Tint = typename Tgroup::Tint;
   size_t nbOrbit = ListFaceOrbitsize.size();
-  std::string strSizeV = std::to_string(SmaGRP.size());
-  std::string strSizeG = std::to_string(BigGRP.size());
+  std::string strSizeV = std::format("{}", SmaGRP.size());
+  std::string strSizeG = std::format("{}", BigGRP.size());
   for (size_t i_orbit = 0; i_orbit < nbOrbit; i_orbit++) {
     std::pair<Face, Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
     Face const &f = pair.first;
     Tgroup eStab = BigGRP.Stabilizer_OnSets(f);
-    std::string strSizeU = std::to_string(eStab.size());
+    std::string strSizeU = std::format("{}", eStab.size());
     std::string Prefix =
         "RawDoubleCoset_" + strSizeG + "_" + strSizeU + "_" + strSizeV + "_-_";
     std::string FileOut = FILE_FindAvailableFileFromPrefix(Prefix);
@@ -741,10 +746,10 @@ vectface OrbitSplittingListOrbitKernel_spec(
      << " |vf|=" << ListFaceOrbitsize.size()
      << " method=" << std::format("{}", spec.kind) << "\n";
 #endif
-#ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
+#ifdef TRACK_INFO_DOUBLE_COSET_TEST_PROBLEM
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, ListFaceOrbitsize);
 #endif
-#ifdef CREATE_RAW_DOUBLE_COSET
+#ifdef TRACK_INFO_DOUBLE_COSET_RAW
   PrintAllRawDoubleCosetEntries(BigGRP, SmaGRP, ListFaceOrbitsize);
 #endif
   auto get_split = [&]() -> vectface {

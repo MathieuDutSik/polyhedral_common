@@ -45,6 +45,10 @@
 #include <memory>
 // clang-format on
 
+#ifdef TRACK_INFO
+#define TRACK_INFO_RECURSIVE_DUAL_DESC_SAMPLE
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_RECURSIVE_DUAL_DESC
 #endif
@@ -467,12 +471,12 @@ public:
        << face_can.count() << " |eStab|=" << eStab.size()
        << " f=" << StringFace(face_can) << "\n";
 #endif
-#ifdef CREATE_SAMPLE_ENTRY_DATABASE
+#ifdef TRACK_INFO_RECURSIVE_DUAL_DESC_SAMPLE
     Tgroup eStabB = GRP.Stabilizer_OnSets(face_can);
     Tint ord1 = GRP.size();
     Tint ord2 = eStabB.size();
-    std::string eFile = "GrpAndSubA_" + std::to_string(ord1) + "_" +
-                        std::to_string(ord2) + "_-_";
+    std::string eFile = "GrpAndSubA_" + std::format("{}", ord1) + "_" +
+                        std::format("{}", ord2) + "_-_";
     std::string fFile = FILE_FindAvailableFileFromPrefix(eFile);
     std::ofstream os(fFile);
     WriteGroup(os, eStabB);
@@ -515,12 +519,12 @@ public:
     os << "RDD: FuncInsertPair: Inserting a face of size |face_can|="
        << pair.first.count() << " |O|=" << pair.second << "\n";
 #endif
-#ifdef CREATE_SAMPLE_ENTRY_DATABASE
+#ifdef TRACK_INFO_RECURSIVE_DUAL_DESC_SAMPLE
     Tgroup eStabB = GRP.Stabilizer_OnSets(pair.first);
     Tint ord1 = GRP.size();
     Tint ord2 = eStabB.size();
-    std::string eFile = "GrpAndSubB_" + std::to_string(ord1) + "_" +
-                        std::to_string(ord2) + "_-_";
+    std::string eFile = "GrpAndSubB_" + std::format("{}", ord1) + "_" +
+                        std::format("{}", ord2) + "_-_";
     std::string fFile = FILE_FindAvailableFileFromPrefix(eFile);
     std::ofstream os(fFile);
     WriteGroup(os, eStabB);

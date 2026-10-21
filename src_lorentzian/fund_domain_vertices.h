@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "lorentzian_linalg.h"
+#include <format>
 #include <limits>
 #include <set>
 #include <string>
@@ -12,6 +13,10 @@
 #include <utility>
 #include <vector>
 // clang-format on
+
+#ifdef TRACK_INFO
+#define TRACK_INFO_EDGEWALK
+#endif
 
 #ifdef DEBUG
 #define DEBUG_QMAT
@@ -434,7 +439,7 @@ std::string StringListGen(std::vector<Telt> const &LGen) {
     if (!IsFirst)
       strListGen += ",";
     IsFirst = false;
-    strListGen += std::to_string(eGen);
+    strListGen += std::format("{}", eGen);
   }
   strListGen += "]";
   return "Group(" + strListGen + ")";
@@ -535,7 +540,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
         FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull.GRP1, os);
     std::vector<MyMatrix<T>> LGen1 =
         MappingPermutationGenerators(G, G, Subspace1, LGen1_D);
-#ifdef TRACK_INFOS_LOG
+#ifdef TRACK_INFO_EDGEWALK
     std::cout << "rec(group:=" << StringListGen(LGen1_D) << "),\n";
 #endif
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1, os);

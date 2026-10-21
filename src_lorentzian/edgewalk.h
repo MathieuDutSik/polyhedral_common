@@ -28,6 +28,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef TRACK_INFO
+#define TRACK_INFO_EDGEWALK
+#endif
+
 #ifdef DEBUG
 #define DEBUG_EDGEWALK
 #define DEBUG_ENUM_PROCESS
@@ -1440,7 +1444,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
   CuspidalBank<T, Tint> cusp_bank;
   std::vector<int> l_status;
   std::list<FundDomainVertex_FullInfo<T, Tint, Tgroup>> l_orbit_vertices;
-#ifdef TRACK_INFOS_LOG
+#ifdef TRACK_INFO_EDGEWALK
   std::cout << "return [\n";
 #endif
 #ifdef DEBUG_ENUM_PROCESS
@@ -1577,7 +1581,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
         os << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm
            << "\n";
 #endif
-#ifdef TRACK_INFOS_LOG
+#ifdef TRACK_INFO_EDGEWALK
         std::vector<T> const &l_norms = si.l_norms;
         os << "rec(k1:=" << StringFundDomainVertexGAP(theVert)
            << ", k2:=" << StringFundDomainVertexGAP(fVert)
@@ -1768,7 +1772,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
       return false;
     if (!s_gen_isom_cox.insert(eP).second)
       return false;
-#ifdef TRACK_INFOS_LOG
+#ifdef TRACK_INFO_EDGEWALK
     std::cout << "rec(isom:=" << StringMatrixGAP(eP) << "),\n";
 #endif
     if (EarlyTerminationIfNotReflective) {
