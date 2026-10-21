@@ -399,16 +399,23 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
   std::vector<std::vector<FaceDesc>> ListListDomain;
   ListListDomain.push_back(ListDomain);
   //
+#ifdef SANITY_CHECK_POLYHEDRAL_DECOMPOSITION_EXTENSIVE
+  std::cerr << "DECOMP: SANITY_CHECK_POLYHEDRAL_DECOMPOSITION_EXTENSIVE, "
+               "classifying the faces of every level also by the triple "
+               "equivalence of strategy1\n";
+#endif
   for (int i = 1; i < TheLev; i++) {
 #ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     os << "i=" << i << "\n";
 #endif
     std::vector<std::pair<size_t, Tent<T, Tint, Tidx_value>>> NewListCand;
-#ifdef SANITY_CHECK_POLYHEDRAL_DECOMPOSITION
+#ifdef SANITY_CHECK_POLYHEDRAL_DECOMPOSITION_EXTENSIVE
+    // The same faces classified by the method of strategy1: a face that
+    // f_insert keeps as new must not be equivalent, as a canonicalized
+    // triple, to one already kept.
     using Tface =
       std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
     std::vector<Tface> list_face;
-    size_t n_equiv_found = 0;
     size_t dim = ListCones[0].FAC.cols();
     auto f_insert_face = [&](const FaceDesc &fd_A) -> void {
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[fd_A.iCone];
@@ -421,7 +428,6 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
           std::optional<MyMatrix<Tint>> equiv_opt =
             test_equiv_triple(ListCones, ef_A, ef_B, os);
           if (equiv_opt) {
-            n_equiv_found++;
             Tent<T, Tint, Tidx_value> ent_A =
                 f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd_A, os);
             const ConeDesc<T, Tint, Tgroup> &eC_B = ListCones[ef_B.iCone];
@@ -433,13 +439,15 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
             bool test = false;
             if (f_equiv<T, Tint, Tgroup, Tidx_value>(ent_A, ent_B, os))
               test = true;
-            std::cerr << "------------------ FOUND A BUG ---------------\n";
+            std::cerr << "DECOMP: the two methods disagree, the face is new "
+                         "for f_equiv but equivalent to a kept one for "
+                         "test_equiv_triple\n";
             std::cerr << "ent_A=\n";
             PrintTent(std::cerr, ent_A);
             std::cerr << "ent_B=\n";
             PrintTent(std::cerr, ent_B);
-            std::cerr << "test=" << test << "\n";
-            return;
+            std::cerr << "f_equiv(ent_A, ent_B)=" << test << "\n";
+            throw TerminalException{1};
           }
         }
       }
@@ -456,7 +464,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
             return;
         }
       }
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
+#ifdef SANITY_CHECK_POLYHEDRAL_DECOMPOSITION_EXTENSIVE
       f_insert_face(eEnt.fd);
 #endif
       std::pair<size_t, Tent<T, Tint, Tidx_value>> e_pair{e_inv,
@@ -487,19 +495,23 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
     for (auto &eEnt : NewListCand) {
       NewListDomain.push_back(eEnt.second.fd);
     }
-#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
+#ifdef SANITY_CHECK_POLYHEDRAL_DECOMPOSITION_EXTENSIVE
     if (list_face.size() != NewListDomain.size()) {
-      std::cerr << "Inconsistent sizes\n";
-      std::cerr << "|list_face|=" << list_face.size()
-                << " |NewListDomain|=" << NewListDomain.size()
-                << " n_equiv_found=" << n_equiv_found << "\n";
+      std::cerr << "DECOMP: Inconsistent sizes |list_face|=" << list_face.size()
+                << " |NewListDomain|=" << NewListDomain.size() << "\n";
       throw TerminalException{1};
     }
+#endif
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     std::cerr << "i=" << i << " |NewListDomain|=" << NewListDomain.size()
               << "\n";
 #endif
     ListListDomain.emplace_back(std::move(NewListDomain));
   }
+#ifdef SANITY_CHECK_POLYHEDRAL_DECOMPOSITION_EXTENSIVE
+  std::cerr << "DECOMP: SANITY_CHECK_POLYHEDRAL_DECOMPOSITION_EXTENSIVE, "
+               "done\n";
+#endif
   return ListListDomain;
 }
 

@@ -10,6 +10,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_SPARSE_SOLVER
+#endif
+
 template <typename T> T L1_Norm(MyVector<T> const &b) {
   T eNorm = 0;
   int siz = b.size();
@@ -168,7 +172,10 @@ Test Version: please do NOT distribute
   MyVector<T> z0;
   RecOptSparse<T> NewRecOpt = eRecOpt;
   if ((posdel && posrho) || (posdel && posnu) || (posrho && posnu)) {
-    std::cerr << "Model parameter conflict! YALL1: set delta = 0 && nu = 0;\n";
+#ifdef DEBUG_SPARSE_SOLVER
+    std::cerr << "SPARSE: Model parameter conflict! YALL1: set delta = 0 && "
+                 "nu = 0;\n";
+#endif
     NewRecOpt.delta = 0;
     posdel = false;
     NewRecOpt.nu = 0;
@@ -222,12 +229,12 @@ Test Version: please do NOT distribute
     }
     Out.x = xShort;
   }
-#ifdef DEBUG
   if (eRecOpt.basis) {
-    // x = opts.basis.trans(x);
-    std::cerr << "Missing code here\n";
+    // x = opts.basis.trans(x) of YALL1, which is not implemented: the result
+    // would silently be the one without the change of basis.
+    std::cerr << "SPARSE: the basis option is not implemented\n";
+    throw TerminalException{1};
   }
-#endif
   if (nonneg) {
     int xSize = Out.x.size();
     for (int i = 0; i < xSize; i++) {
