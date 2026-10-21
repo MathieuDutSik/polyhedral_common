@@ -346,7 +346,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     gamma = 1.618;
   T eps = eRecOpt.eps;
   int maxit = eRecOpt.maxit;
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   bool print = eRecOpt.print;
 #endif
   T nu = eRecOpt.nu;
@@ -368,7 +368,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     z = ZeroVector<T>(n);
   MyVector<T> y(m);
   MyVector<T> Aty(n);
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   auto iprint1_1 = [&]() -> void {
     MyVector<T> rp = eRecSparse.A(x) - b;
     T objp = T_sumAbs(w, x);
@@ -389,7 +389,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     std::cerr << " " << rel_gap << "  " << rel_rd << "  " << rel_rp << "\n";
   };
 #endif
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   auto iprint2 = [&]() -> void {
     T rdnrm = L2_Norm(rd);
     MyVector<T> rp = eRecSparse.A(x) - b;
@@ -405,7 +405,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     //    std::cerr << "iprint2, step 6\n";
     T dgap = std::abs(objd - objp);
     //    std::cerr << "iprint2, step 7 iter=" << iter << "\n";
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
     if (iter % 50 == 0) {
       std::cerr << "  Iter " << iter << ":\n";
       std::cerr << "  Dgap " << dgap << "\n";
@@ -491,7 +491,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     for (size_t i = 0; i < size_t(n); i++)
       Aty(i) = 0;
   }
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   if (print)
     std::cerr << "--- YALL1 vb6 ---\n";
 #endif
@@ -542,7 +542,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     x = x + (gamma * mu) * rd;
 
     bool stop = check_stopping();
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
     if (print) {
       iprint2();
     }
@@ -555,7 +555,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
   if (iter == maxit) {
     Out.exit = "Exit: maxiter";
   }
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   if (print)
     iprint1_1();
 #endif

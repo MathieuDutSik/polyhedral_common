@@ -589,7 +589,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
 #endif
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism(
       ep.first, fp.first, GRP1, ePerm, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: LinPolytopeIntegral_Isomorphism|=" << time << "\n";
 #endif
   if (eRes) {

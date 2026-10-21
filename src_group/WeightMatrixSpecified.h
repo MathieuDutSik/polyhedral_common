@@ -473,7 +473,7 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
     MicrosecondTime time;
 #endif
     bool test = DoRefinement(iBlock);
-#ifdef TIMINGS
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
     os << "|WMS: DoRefinement|=" << time << "\n";
 #endif
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE

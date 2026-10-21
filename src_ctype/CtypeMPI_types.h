@@ -17,7 +17,7 @@
 #include <vector>
 // clang-format off
 
-//#define TIMINGS
+//#define TIMINGS_CTYPE
 //#define DEBUG_CTYPE_FLIP
 //#define DEBUG_CTYPE_TRIPLE
 //#define DEBUG_CTYPE_GET_ADJ
@@ -25,6 +25,10 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_CTYPE
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_CTYPE
 #endif
 
 // The expression of the vectors is obtained from Section 5 of
@@ -404,7 +408,7 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const &TheCtype,
       idx++;
     }
   }
-#ifdef DEBUG
+#ifdef SANITY_CHECK_CTYPE
   if (n_rows_ret != idx) {
     std::cerr << "Incoherence in idx, n_rows_ret. idx=" << idx
               << " n_rows_ret=" << n_rows_ret << "\n";
@@ -532,7 +536,7 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M,
   os << "n=" << n << " nbRow=" << nbRow << "\n";
 #endif
   MyMatrix<T> Mret(2 * nbRow, n);
-#ifdef DEBUG
+#ifdef SANITY_CHECK_CTYPE
   std::vector<int> ListStatus(nbRow, 0);
 #endif
   T eTwo = 2;
@@ -555,7 +559,7 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M,
 #ifdef DEBUG_CTYPE_EXPRESS
     os << "  pos=" << pos << "\n";
 #endif
-#ifdef DEBUG
+#ifdef SANITY_CHECK_CTYPE
     ListStatus[pos] += 1;
 #endif
     for (int i = 0; i < n; i++) {
@@ -563,7 +567,7 @@ MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M,
       Mret(2 * pos + 1, i) = -M(iRow, i);
     }
   }
-#ifdef DEBUG
+#ifdef SANITY_CHECK_CTYPE
   for (int i = 0; i < nbRow; i++)
     if (ListStatus[i] != 1) {
       std::cerr << "Consistency error at i=" << i << "\n";
@@ -586,7 +590,7 @@ template <typename T, typename Tidx> struct DataCtypeFacet {
 template <typename T, typename Tidx>
 DataCtypeFacet<T, Tidx>
 CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   MicrosecondTime time;
 #endif
 #ifdef DEBUG_CTYPE_GET_ADJ
@@ -595,7 +599,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat, os);
   int n_edge = TheCtype.rows();
 
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: ExpressMatrixForCType|=" << time << "\n";
 #endif
 #ifdef DEBUG_CTYPE_GET_ADJ
@@ -604,7 +608,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>> PairTriple =
       CTYP_GetListTriple<T, Tidx>(TheCtype, os);
 
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: GetListTriple|=" << time << "\n";
 #endif
 #ifdef DEBUG_CTYPE_GET_ADJ
@@ -709,7 +713,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   }
 #endif
 
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: Insert inequalities|=" << time << "\n";
 #endif
   int n_edgered = n_edge / 2;
@@ -841,7 +845,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   os << "After criterion |Tot_mapB|=" << Tot_mapB.size() << "\n";
 #endif
 
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: Criterion Ineq Drop|=" << time << "\n";
 #endif
 #ifdef DEBUG_CTYPE_GET_ADJ
@@ -863,7 +867,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   WriteMatrix(os, ListInequalities);
 #endif
 
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: ListInformations|=" << time << "\n";
 #endif
   // The Clarkson methods take the first column of their input as the
@@ -904,7 +908,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   std::vector<int> ListIrred =
       SIMPLEX_RedundancyReductionClarksonFloat(ListInequalities, os);
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: RedundancyReductionClarkson|=" << time << "\n";
 #endif
 
@@ -990,12 +994,12 @@ std::vector<TypeCtypeExch<T>>
 CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr,
                                      bool const &canonicalize,
                                      std::ostream &os) {
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   MicrosecondTime time;
 #endif
   DataCtypeFacet<T, Tidx> data =
       CTYP_GetConeInformation<T, Tidx>(TheCtypeArr, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: data|=" << time << "\n";
 #endif
   std::vector<TypeCtypeExch<T>> ListCtype;
@@ -1014,7 +1018,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr,
   os << "CTYP_GetConeInformation, step 7\n";
 #endif
 
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: Flip + Canonic|=" << time << "\n";
 #endif
   return ListCtype;
@@ -1088,7 +1092,7 @@ int CTYP_GetNbAutom(TypeCtypeExch<T> const &TheCtypeArr,
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   MicrosecondTime time;
 #endif
 
@@ -1096,7 +1100,7 @@ int CTYP_GetNbAutom(TypeCtypeExch<T> const &TheCtypeArr,
   int n_edge = 2 * nbRow;
   std::vector<std::vector<unsigned int>> ListGen =
       LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: LinPolytopeAntipodal_Automorphism|=" << time << "\n";
 #endif
 
@@ -1118,13 +1122,13 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
                                       std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   MicrosecondTime time;
 #endif
 
   DataCtypeFacet<T, Tidx> data =
       CTYP_GetConeInformation<T, Tidx>(TheCtypeArr, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: GetNumberFreeVectors|=" << time << "\n";
 #endif
   int nb_triple = data.nb_triple;
@@ -1132,13 +1136,13 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
   int nb_ineq_after_crit = data.nb_ineq_after_crit;
 
   int nb_free = CTYP_GetNumberFreeVectors(TheCtypeArr);
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: GetNumberFreeVectors|=" << time << "\n";
 #endif
 
   int nb_autom = CTYP_GetNbAutom<T, Tgroup>(TheCtypeArr, os);
 
-#ifdef TIMINGS
+#ifdef TIMINGS_CTYPE
   os << "|CTYP: NumberAutomorphism|=" << time << "\n";
 #endif
   return {nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
