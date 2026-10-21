@@ -210,10 +210,14 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
   //
   int n = BlockDATA.get_int("n");
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
+#ifdef DEBUG_CTYPE_MPI_ENUMERATION
   std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
+#endif
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
+#ifdef DEBUG_CTYPE_MPI_ENUMERATION
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+#endif
 
   DataCtype data{n, os};
   using Tdata = DataCtypeFunc<T, Tint, Tgroup>;

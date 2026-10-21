@@ -838,8 +838,10 @@ ConnectedComponentsPolyhedral(std::vector<ConeSimpDesc<T>> const &l_cone) {
     pos++;
   }
   size_t n_ext_tot = pos;
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
   std::cerr << "Building the full set of vertices n_ext_tot=" << n_ext_tot
             << "\n";
+#endif
   //
   std::map<Face, std::vector<size_t>> MapFace_idx;
   size_t n_cone = l_cone.size();
