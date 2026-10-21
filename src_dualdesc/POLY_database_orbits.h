@@ -9,9 +9,9 @@
 // can be resumed after a crash. The storage-agnostic logic is shared with
 // NoSaveDatabaseOrbits through the DatabaseOrbitsCommon base. Macros used
 // internally (DEBUG_RECURSIVE_DUAL_DESC, TIMINGS_RECURSIVE_DUAL_DESC,
-// TRACK_DATABASE, TRACK_RUN) are intentionally shared with
-// POLY_RecursiveDualDesc.h -- when this file is included from there, all four
-// toggles are already configured.
+// DEBUG_RECURSIVE_DUAL_DESC_DATABASE, DEBUG_RECURSIVE_DUAL_DESC_RUN) are
+// intentionally shared with POLY_RecursiveDualDesc.h -- when this file is
+// included from there, all four toggles are already configured.
 
 // clang-format off
 #include "POLY_database_orbits_common.h"
@@ -47,23 +47,23 @@ public:
     os_file << static_cast<int>(method);
   }
   CanonicStrategy read_method(std::string const &eFileMethod) const {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "SavingTrigger=" << SavingTrigger << " eFileMethod=" << eFileMethod
        << "\n";
 #endif
     if (SavingTrigger) {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
       os << "Running the save system\n";
 #endif
       if (!FILE_IsExistingFile(eFileMethod)) {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
         os << "The file does not exists\n";
 #endif
         CanonicStrategy canonic_method = bb.get_default_strategy();
         write_method(eFileMethod, canonic_method);
         return canonic_method;
       } else {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
         os << "The file exists\n";
 #endif
         std::ifstream is_file(eFileMethod);
@@ -96,7 +96,7 @@ public:
     // remove it
     // optional future function: check for equivalence and convert
     if (SavingTrigger) {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
       os << "Database got changed, removing old one\n";
 #endif
       remove_database_files();

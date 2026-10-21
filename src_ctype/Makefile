@@ -16,7 +16,7 @@ CLOCAL          = -I../src_basic -I../basic_common_cpp   -I../src_number -I../sr
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -isystem $(EIGEN_PATH) $(shell pkg-config --cflags ompi) $(NAUTY_INCLUDE) $(NETCDF_CXX_ALLINC)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
-#CDEFS           = -DERR_LOG
+#CDEFS           = -DDEBUG_CTYPE_MPI
 CDEFS           = -DGMP_POOL $(CHOICE_COMPILATION)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)

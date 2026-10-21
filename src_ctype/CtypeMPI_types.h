@@ -89,7 +89,7 @@ template <typename T> struct TypeCtypeExch {
 template <typename T>
 void PairExch_to_vectorchar(TypeCtypeExch<T> const &eCtype, int const &nbRow,
                             int const &nbCol, char *ptr_o, [[maybe_unused]] std::ostream& os) {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   os << "PairExch_to_vectorchar, Begin\n";
 #endif
   for (int i = 0; i < nbRow; i++)
@@ -97,7 +97,7 @@ void PairExch_to_vectorchar(TypeCtypeExch<T> const &eCtype, int const &nbRow,
       std::memcpy(ptr_o, (char *)(&eCtype.eMat(i, j)), sizeof(T));
       ptr_o += sizeof(T);
     }
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   os << "PairExch_to_vectorchar, End\n";
 #endif
 }
@@ -106,7 +106,7 @@ template <typename T>
 TypeCtypeExch<T> vectorchar_to_PairExch(char *ptr_i, int const &nbRow,
                                         int const &nbCol,
                                         [[maybe_unused]] std::ostream& os) {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   os << "vectorchar_to_PairExch, Begin\n";
 #endif
   MyMatrix<T> eMat(nbRow, nbCol);
@@ -117,7 +117,7 @@ TypeCtypeExch<T> vectorchar_to_PairExch(char *ptr_i, int const &nbRow,
       ptr_i += sizeof(T);
       eMat(i, j) = eVal;
     }
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   os << "vectorchar_to_PairExch, End\n";
 #endif
   return {eMat};
@@ -191,7 +191,7 @@ template <typename T> struct TypeCtypeAdjExch {
 template <typename T>
 void PairAdjExch_to_ptrchar(TypeCtypeAdjExch<T> const &eCtype, int const &nbRow,
                             int const &nbCol, char *ptr_o) {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "PairAdjExch_to_vectorchar, Begin\n";
 #endif
   for (int i = 0; i < nbRow; i++)
@@ -203,7 +203,7 @@ void PairAdjExch_to_ptrchar(TypeCtypeAdjExch<T> const &eCtype, int const &nbRow,
   ptr_o += sizeof(int8_t);
   std::memcpy(ptr_o, (char *)(&eCtype.pos), sizeof(int));
   ptr_o += sizeof(int);
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "PairAdjExch_to_vectorchar, End\n";
 #endif
 }
@@ -211,7 +211,7 @@ void PairAdjExch_to_ptrchar(TypeCtypeAdjExch<T> const &eCtype, int const &nbRow,
 template <typename T>
 TypeCtypeAdjExch<T> ptrchar_to_PairAdjExch(char *ptr_i, int const &nbRow,
                                            int const &nbCol) {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "vectorchar_to_PairAdjExch, Begin\n";
 #endif
   MyMatrix<T> eMat(nbRow, nbCol);
@@ -229,7 +229,7 @@ TypeCtypeAdjExch<T> ptrchar_to_PairAdjExch(char *ptr_i, int const &nbRow,
   int pos;
   std::memcpy((char *)(&pos), ptr_i, sizeof(int));
   ptr_i += sizeof(int);
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "vectorchar_to_PairAdjExch, End\n";
 #endif
   return {eMat, iProc, pos};

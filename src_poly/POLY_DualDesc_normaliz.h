@@ -89,7 +89,7 @@ using NmzTryInt = TrySimdInt64;
 using NmzTryInt = TryCarryInt64;
 #endif
 
-#ifdef NMZ_COEFF_STATS
+#ifdef DEBUG_NORMALIZ_DUAL_DESC_COEFF_STATS
 // Maximum absolute facet coefficient seen across the whole run (all kernel
 // levels), for calibrating the bound-discipline arithmetic. Reset by the
 // top-level driver.
@@ -208,7 +208,7 @@ template <typename Tint> struct NmzKernel {
     hyp.BornAt = born_at;
     hyp.Ident = HypCounter;
     HypCounter++;
-#ifdef NMZ_COEFF_STATS
+#ifdef DEBUG_NORMALIZ_DUAL_DESC_COEFF_STATS
     // Measurement hook for the bound-discipline design: every persisted
     // facet passes through here at creation, right after gcd reduction, so
     // this maximum is exactly the H of the safety conditions
@@ -389,7 +389,7 @@ template <typename Tint> struct NmzKernel {
   // arithmetic is left untouched for the outer terminate check.
   std::optional<bool> rank_face_at_least(Face const &f, size_t target) {
     size_t nb_row = f.count();
-#ifdef NMZ_COEFF_STATS
+#ifdef DEBUG_NORMALIZ_DUAL_DESC_COEFF_STATS
     nmz_stat_rank_calls++;
     nmz_stat_rank_rows += nb_row;
 #endif
@@ -421,7 +421,7 @@ template <typename Tint> struct NmzKernel {
         col++;
         continue;
       }
-#ifdef NMZ_COEFF_STATS
+#ifdef DEBUG_NORMALIZ_DUAL_DESC_COEFF_STATS
       nmz_stat_rank_pivots++;
 #endif
       if (piv != rank)
@@ -1168,7 +1168,7 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
                                size_t cost_factor, Ffacet f_facet) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
-#ifdef NMZ_COEFF_STATS
+#ifdef DEBUG_NORMALIZ_DUAL_DESC_COEFF_STATS
   nmz_stat_max_abs_coeff = 0;
   nmz_stat_rank_calls = 0;
   nmz_stat_rank_rows = 0;
@@ -1230,7 +1230,7 @@ void NormalizDualDesc_Kernel_f(MyMatrix<Tint> const &EXT, std::ostream &os,
   os << "NMZ: |EXT|=" << nbRow << "/" << nbCol
      << " |facets|=" << n_facet << " time=" << time << "\n";
 #endif
-#ifdef NMZ_COEFF_STATS
+#ifdef DEBUG_NORMALIZ_DUAL_DESC_COEFF_STATS
   os << "NMZ: max_abs_coeff=" << nmz_stat_max_abs_coeff
      << " rank_calls=" << nmz_stat_rank_calls
      << " rank_rows=" << nmz_stat_rank_rows

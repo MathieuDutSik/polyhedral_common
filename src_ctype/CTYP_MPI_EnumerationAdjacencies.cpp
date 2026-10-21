@@ -113,11 +113,11 @@ void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> &M,
   std::vector<size_t> start2{size_t(pos), 0, 0};
   std::vector<size_t> count2{1, n_vect, n};
   std::vector<T> V(n_vect * n);
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "Before NC_ReadMatrix_T, getvar\n";
 #endif
   varCtype.getVar(start2, count2, V.data());
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "After NC_ReadMatrix_T, getvar\n";
 #endif
   int idx = 0;
@@ -140,11 +140,11 @@ void NC_WriteMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> const &M,
       V[idx] = M(i_vect, i);
       idx++;
     }
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "Before NC_WriteMatrix_T, putvar\n";
 #endif
   varCtype.putVar(start2, count2, V.data());
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "After NC_WriteMatrix_T, putvar\n";
 #endif
 }
@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
   size_t irank = irank_i;
   int8_t irank_i8 = irank;
   size_t n_pes = n_pes_i;
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "irank=" << irank << " n_pes=" << n_pes << "\n";
 #endif
   //
@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
   for (int i_matrix = 1; i_matrix < total_nb_matrix; i_matrix++)
     ListShift[i_matrix] =
         ListShift[i_matrix - 1] + ListNbAdjacent[i_matrix - 1];
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   for (int i_matrix = 0; i_matrix < total_nb_matrix; i_matrix++)
     std::cerr << "i_matrix=" << i_matrix << " shift=" << ListShift[i_matrix]
               << " nbadj=" << ListNbAdjacent[i_matrix] << "\n";
@@ -289,7 +289,7 @@ int main(int argc, char *argv[]) {
           << "Error. Trying to write some adjacency that is not present\n";
       throw TerminalException{1};
     }
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
     std::cerr << "NCWA : pos=" << pos << " idx_proc=" << idx_proc
               << " idx_adj=" << idx_adj << "\n";
     std::cerr << "NCWA : shift=" << ListShift[pos]
@@ -313,20 +313,20 @@ int main(int argc, char *argv[]) {
                                           std::vector<char>(totalsiz_exch));
   int nbRequest = 0;
   auto GetFreeIndex = [&]() -> int {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
     std::cerr << "Beginning of GetFreeIndex\n";
 #endif
     for (int u = 0; u < MaxNumberFlyingMessage; u++) {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
       std::cerr << "GetFreeIndex u=" << u << "\n";
 #endif
       if (RequestStatus[u] == 0) {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
         std::cerr << "GetFreeIndex, returning u=" << u << "\n";
 #endif
         return u;
       }
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
       std::cerr << "Testing and getting a request\n";
 #endif
       int flag;
@@ -336,7 +336,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "Failing at MPI_Test\n";
         throw TerminalException{1};
       }
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
       std::cerr << "flag=" << flag << "\n";
 #endif
       if (flag) {
@@ -347,7 +347,7 @@ int main(int argc, char *argv[]) {
         // https://www.mpich.org/static/docs/v3.2/www3/MPI_Test.html
         RequestStatus[u] = 0;
         nbRequest--;
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
         std::cerr << "GetFreeIndex, clearing u=" << u << " returning it\n";
 #endif
         return u;
@@ -374,7 +374,7 @@ int main(int argc, char *argv[]) {
   size_t nb_oper = 0;
   auto fInsert_Ctype = [&](TypeCtypeAdjExch<Tint> const &eCtype) -> void {
     size_t e_hash = std::hash<TypeCtypeAdjExch<Tint>>()(eCtype);
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
     std::cerr << "e_hash=" << e_hash << " |eCtype|=" << eCtype.eMat.rows()
               << " / " << eCtype.eMat.cols() << "\n";
     WriteMatrix(std::cerr, eCtype.eMat);
@@ -436,7 +436,7 @@ int main(int argc, char *argv[]) {
       int idx = GetFreeIndex();
       if (idx == -1)
         break;
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
       std::cerr << "Assigning the request idx=" << idx << " to processor "
                 << i_pes << "\n";
 #endif
@@ -482,7 +482,7 @@ int main(int argc, char *argv[]) {
   //
   // Reading the initial file in memory
   //
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
   std::cerr << "Beginning reading WorkFile=" << WorkFile << "\n";
 #endif
   for (int iCurr = 0; iCurr < total_nb_matrix; iCurr++) {
@@ -491,7 +491,7 @@ int main(int argc, char *argv[]) {
     int8_t eStatus = NC_GetStatus(iCurr);
     std::vector<int> &eList = MapIndexByHash[e_hash];
     eList.push_back(iCurr);
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
     std::cerr << "iCurr=" << iCurr << " eStatus=" << int(eStatus) << "\n";
 #endif
     if (eStatus == 0)
@@ -515,7 +515,7 @@ int main(int argc, char *argv[]) {
         std::chrono::duration_cast<std::chrono::seconds>(ref_time - start)
             .count();
     // Now the operations themselves
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
     std::cerr << "Begin while, we have |ListCasesNotDone|="
               << ListUndoneIndex.size() << " elapsed_time=" << elapsed_seconds
               << "\n";
@@ -550,14 +550,14 @@ int main(int argc, char *argv[]) {
         int nbRecv;
         std::memcpy((char *)(&nbRecv), ptr_recv, sizeof(int));
         ptr_recv += sizeof(int);
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
         std::cerr << "Receiving nbRecv=" << nbRecv << " entries\n";
 #endif
         for (int iRecv = 0; iRecv < nbRecv; iRecv++) {
           int8_t iChoice;
           std::memcpy((char *)(&iChoice), ptr_recv, sizeof(int8_t));
           ptr_recv += sizeof(int8_t);
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
           std::cerr << "iRecv=" << iRecv << "/" << nbRecv
                     << " iChoice=" << int(iChoice) << "\n";
 #endif
@@ -572,7 +572,7 @@ int main(int argc, char *argv[]) {
           } else {
             if (iChoice == 1) {
               TypeAdjExch equad = ptrchar_to_TypeAdjExch(ptr_recv);
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
               std::cerr << "equad=" << equad << "\n";
 #endif
               if (equad.iProc1 != irank_i8) {
@@ -610,7 +610,7 @@ int main(int argc, char *argv[]) {
         }
       }
     } else {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
       std::cerr << "irank=" << irank
                 << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices
                 << "\n";
@@ -626,7 +626,7 @@ int main(int argc, char *argv[]) {
         }
       }
       // Now finding the adjacent if we indeed do something.
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
       std::cerr << "DoSomething = " << DoSomething << "\n";
 #endif
       if (DoSomething) {
@@ -635,14 +635,14 @@ int main(int argc, char *argv[]) {
           DidSomething = true;
           StatusNeighbors[irank] = 0;
           int idxMatrixF = eReq->second;
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
           std::cerr << "Starting Adjacent Form Method\n";
           std::cerr << "eReq->first=" << eReq->first << "\n";
           //          WriteMatrix(std::cerr, eReq->first.eMat);
 #endif
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject =
             CTYP_GetAdjacentCanonicCtypes<Tint>({eReq->first}, std::cerr);
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
           std::cerr << "We have ListAdjacentObject\n";
 #endif
           NC_WriteStatus(idxMatrixF, 1);
@@ -674,7 +674,7 @@ int main(int argc, char *argv[]) {
     size_t nb_unsent = 0;
     for (size_t i_pes = 0; i_pes < n_pes; i_pes++)
       nb_unsent += ListListMatrixUnsent[i_pes].size();
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
     std::cerr << "TimeClear=" << TimeClear
               << " TimeForDeclaringItOver=" << TimeForDeclaringItOver << "\n";
 #endif
@@ -682,7 +682,7 @@ int main(int argc, char *argv[]) {
         CurrentBufferSize == 1 && !TerminationNoticeSent) {
       TerminationNoticeSent = true;
       for (size_t i_pes = 0; i_pes < n_pes; i_pes++) {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
         std::cerr << "Before world.isend for termination i_pes=" << i_pes
                   << "\n";
 #endif
@@ -715,7 +715,7 @@ int main(int argc, char *argv[]) {
       nb_finished += StatusNeighbors[i_pes];
     }
     if (nb_finished == n_pes) {
-#ifdef ERR_LOG
+#ifdef DEBUG_CTYPE_MPI
       std::cerr << "Before the all_reduce operation\n";
 #endif
       int64_t nbAll = total_nb_matrix;

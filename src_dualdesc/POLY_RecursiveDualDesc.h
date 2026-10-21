@@ -280,7 +280,7 @@ public:
                            bool const &status, size_t const &pos) {
     Face const &face = face_pair.first;
     Tint const &orbSize = face_pair.second;
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "RDD: InsertEntryDatabase |EXT|=" << nbRow << "/" << nbCol
        << " status=" << status << " face.size=" << face.size()
        << " face.count=" << face.count() << " orbSize=" << orbSize
@@ -440,18 +440,18 @@ public:
     }
 #endif
     // The face should have been canonicalized beforehand.
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "RDD: FuncInsert face_can.size=" << face_can.size()
        << " face_can.count=" << face_can.count() << "\n";
 #endif
     foc.InsertListOrbitFace(face_can);
     DictOrbit.insert(foc.nbOrbit);
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "RDD: DictOrbit.size=" << DictOrbit.size()
        << " foc.nbOrbit=" << foc.nbOrbit << "\n";
 #endif
     if (DictOrbit.size() == foc.nbOrbit) {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
       os << "RDD: FuncInsert : Already present exit\n";
 #endif
       // Insertion did not raise the count
@@ -461,7 +461,7 @@ public:
     /* TRICK 8: The insertion yield something new. So now we compute the
      * expensive stabilizer */
     Tint orbSize = GRP.OrbitSize_OnSets(face_can);
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "RDD: FuncInsert : New orbSize=" << orbSize << "\n";
 #endif
     foc.FinishWithOrbSizeAssignation(orbSize);
@@ -494,7 +494,7 @@ public:
       throw TerminalException{1};
     }
 #endif
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "RDD: FuncInsertPair face_orbsize.size=" << face_orbsize.size()
        << " face_orbsize.count=" << face_orbsize.count() << "\n";
 #endif
@@ -503,7 +503,7 @@ public:
     foc.InsertListOrbitFaceComplete(face_orbsize);
     DictOrbit.insert(foc.nbOrbit);
     if (DictOrbit.size() == foc.nbOrbit) {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
       os << "RDD: FuncInsertPair : Already present exit\n";
 #endif
       // Insertion did not raise the count
@@ -511,7 +511,7 @@ public:
       return;
     }
     std::pair<Face, Tint> pair = foc.recConvert.ConvertFace(face_orbsize);
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "RDD: FuncInsertPair : New orbSize(pair.second)=" << pair.second
        << "\n";
 #endif
@@ -533,7 +533,7 @@ public:
     InsertEntryDatabase(pair, false, foc.nbOrbit);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "RDD: FuncPutOrbitAsDone : nbRow=" << nbRow << " nbCol=" << nbCol
        << "\n";
     os << "RDD: FuncPutOrbitAsDone : CompleteList_SetUndone\n";
@@ -545,13 +545,13 @@ public:
 #endif
     std::pair<Face, Tint> eEnt = foc.RetrieveListOrbitEntry(i_orb);
     size_t len = eEnt.first.count();
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "RDD: FuncPutOrbitAsDone : len=" << len << "\n";
 #endif
     /* TRICK 1: We copy the last element in first position to erase it and then
      * pop_back the vector. */
     std::vector<Tidx_orbit> &V = CompleteList_SetUndone[len];
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_DATABASE
     os << "RDD: FuncPutOrbitAsDone : |V|=" << V.size() << "\n";
 #endif
     if (V.size() == 1) {
@@ -1360,18 +1360,18 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     }
   };
   size_t nr_orbit = RPL.FuncNumberOrbit();
-#ifdef TRACK_RUN
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_RUN
   os << "RDD: Kernel_DUALDESC_AdjacencyDecomposition nr_orbit=" << nr_orbit
      << "\n";
 #endif
   if (nr_orbit == 0) {
     std::string ansSamp = dual_desc_heuristic_evaluation(AllArr.InitialFacetSet, info);
-#ifdef TRACK_RUN
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_RUN
     os << "RDD: ansSamp=" << ansSamp << " |EXT|=" << bb.EXT.rows() << "/"
        << bb.EXT.cols() << "\n";
 #endif
     vectface vf = DirectComputationInitialFacetSet(bb.EXT, ansSamp, os);
-#ifdef TRACK_RUN
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_RUN
     os << "RDD: DirectComputationInitialFacetSet |vf|=" << vf.size() << "\n";
     std::unordered_map<size_t, size_t> map;
     os << "RDD: map=";
@@ -1402,7 +1402,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     if (test_final)
       break;
     DataFacet<T, Tgroup> df = RPL.FuncGetMinimalUndoneOrbit();
-#ifdef TRACK_RUN
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_RUN
     os << "RDD: Treating orbit=" << df.SelectedOrbit
        << " |inc|=" << df.eInc.count()
        << " |stab|=" << df.Stab.size() << "\n";

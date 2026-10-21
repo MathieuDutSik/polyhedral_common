@@ -82,7 +82,7 @@ template <typename T> inline int scalar_valuation(T const &x) {
 template <typename Tb, int N> inline int scalar_valuation(jet<Tb, N> const &x) {
   return x.leading_index();
 }
-#ifdef PROFILE_SIMPLEX_VALUATION
+#ifdef DEBUG_QUANTIZATION_INTEGRAL_PROFILE
 inline long g_simplex_valuation[32] = {0};
 inline long g_simplex_total = 0;
 #endif
@@ -612,7 +612,7 @@ struct QuantizationComputer {
       // forced the tiny t0 = tmax/1000000. For a plain scalar T, EXTinBasis_t0 ==
       // EXTinBasis, so this reduces to the ordinary sign of |det|.
       T VolSimplex = DeterminantMat(EXTsimplex);
-#ifdef PROFILE_SIMPLEX_VALUATION
+#ifdef DEBUG_QUANTIZATION_INTEGRAL_PROFILE
       {
         int val = scalar_valuation(VolSimplex);
         if (val > 31)
@@ -1202,7 +1202,7 @@ QuantizationSecMomentMatJet(DelaunayTesselation<Tint, Tgroup> const &DT_base,
   QuantizationComputer<Tj, Tint, Tgroup> comp(n, SHV_jet, GramMat_jet, DT_jet,
                                               os, t0);
   MyMatrix<jet<T, N>> res = comp.compute().SecMomentMat;
-#ifdef PROFILE_SIMPLEX_VALUATION
+#ifdef DEBUG_QUANTIZATION_INTEGRAL_PROFILE
   os << "SIMPLEX_VALUATION total=" << g_simplex_total << "\n";
   for (int v = 0; v < 8; v++)
     if (g_simplex_valuation[v] > 0)
