@@ -383,8 +383,9 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     // Step A: the action on the cell complex
     std::string HeckeMethod = BlockHECKE.get_string("HeckeMethod");
     bool dual = (HeckeMethod == "Dual");
-    if (!dual && HeckeMethod != "Vertex") {
-      std::cerr << "HeckeMethod should be Dual or Vertex\n";
+    bool sharbly = (HeckeMethod == "Sharbly");
+    if (!dual && !sharbly && HeckeMethod != "Vertex") {
+      std::cerr << "HeckeMethod should be Dual, Vertex or Sharbly\n";
       throw TerminalException{1};
     }
     // A clean failure (budget exhausted) is reported in the output files
@@ -402,8 +403,13 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     };
     HeckeChainMap<T, Tint> hcm;
     try {
-      hcm = dual ? compute_hecke_chain_map_dual(fce, x, os)
-                 : compute_hecke_chain_map(fce, x, os);
+      if (dual) {
+        hcm = compute_hecke_chain_map_dual(fce, x, os);
+      } else if (sharbly) {
+        hcm = compute_hecke_chain_map_sharbly(fce, x, os);
+      } else {
+        hcm = compute_hecke_chain_map(fce, x, os);
+      }
     } catch (HeckeFailure const &e) {
       report_failure(e.message);
     }
@@ -420,8 +426,8 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       std::string SubgroupType = BlockHECKE.get_string("SubgroupType");
       int SubgroupLevel = BlockHECKE.get_int("SubgroupLevel");
       bool OnlyWellRoundedHomology = BlockHECKE.get_bool("OnlyWellRoundedHomology");
-      if (dual && !OnlyWellRoundedHomology) {
-        std::cerr << "The Dual method only gives the homology of the well rounded complex\n";
+      if ((dual || sharbly) && !OnlyWellRoundedHomology) {
+        std::cerr << "The " << HeckeMethod << " method only gives the homology of the well rounded complex\n";
         throw TerminalException{1};
       }
       FiniteIndexSubgroup<Tint> gamma{SubgroupType, Tint(SubgroupLevel), LinSpa.n};

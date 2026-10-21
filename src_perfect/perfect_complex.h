@@ -1958,7 +1958,11 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homoto
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: partial_contracting_homotopy_specified, step 5\n";
 #endif
-  // Now building the differential operator
+  // Now building the differential operator. Every face of a cell of the
+  // covering is in the covering, so a face is missing only when f_filter
+  // rejects it. If f_filter is closed under taking faces this does not
+  // happen; otherwise (e.g. the well rounded cells) the rejected faces are
+  // dropped and the system is the one of the quotient complex.
   std::vector<PerfectFace<Tint>> const& faces1 = cb1.get_faces();
   using T2 = Eigen::Triplet<T>;
   std::vector<T2> tripletList;
@@ -1967,7 +1971,18 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homoto
     int iRow = i1;
     for (auto & ebnd: fce.boundaries[index-1].ll_bound[face1.iOrb].l_bound) {
       MyMatrix<Tint> M = ebnd.M * face1.M;
-      std::pair<size_t, int> p = cb2.get_position(ebnd.iOrb, M);
+      std::optional<std::pair<size_t, int>> opt_p = cb2.find_position(ebnd.iOrb, M);
+      if (!opt_p) {
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+        MyMatrix<Tint> EXT = fce.levels[index].l_faces[ebnd.iOrb].EXT * M;
+        if (f_filter(EXT)) {
+          std::cerr << "PERFCOMP: A face accepted by the filter is missing from the covering\n";
+          throw TerminalException{1};
+        }
+#endif
+        continue;
+      }
+      std::pair<size_t, int> const& p = *opt_p;
       T value = T(p.second) * T(ebnd.sign);
       int iCol = p.first;
       T2 entry(iRow, iCol, value);
@@ -2118,8 +2133,13 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homoto
 
 
 
+/*
+  The covering starts from the top dimensional cells containing the cells
+  of the chain and from the cells of l_top_seed (e.g. cells met by a
+  geometric filling), and grows by adjacency until a solution is found.
+ */
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::vector<TopPerfectCone<Tint>> const& l_top_seed, std::ostream& os) {
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: partial_contracting_homotopy_kernel, step 1\n";
 #endif
@@ -2138,6 +2158,9 @@ std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int c
     int i_perfect = l_triple[0].iCone;
     MyMatrix<Tint> M = l_triple[0].eMat * pfe.M;
     TopPerfectCone<Tint> tpc{i_perfect, M};
+    f_insert(tpc);
+  }
+  for (auto & tpc: l_top_seed) {
     f_insert(tpc);
   }
 #ifdef DEBUG_PERFECT_COMPLEX
@@ -2178,6 +2201,12 @@ std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int c
   }
 }
 
+
+template<typename T, typename Tint, typename Tgroup>
+std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os) {
+  std::vector<TopPerfectCone<Tint>> l_top_seed;
+  return partial_contracting_homotopy_kernel(index, chain, fce, f_filter, l_top_seed, os);
+}
 
 /*
   The partial contracting homotopy: for a cycle chain (d(chain) = 0)
