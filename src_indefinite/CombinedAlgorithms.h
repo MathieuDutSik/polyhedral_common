@@ -318,10 +318,6 @@ public:
     MyMatrix<T> eGen1 = TheRec.get_one_transformation();
     MyMatrix<T> eGen2 = HelpingSublatticeInv * eGen1 * HelpingSublattice;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    //    os << "COMB: HelpingSublattice=\n";
-    //    WriteMatrix(os, HelpingSublattice);
-    //    os << "COMB: |HelpingSublattice|=" <<
-    //    DeterminantMat(HelpingSublattice) << "\n";
     check_generator(eGenRed, eGen2);
 #endif
     return eGen2;
