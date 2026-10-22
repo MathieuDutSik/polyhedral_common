@@ -291,10 +291,10 @@ Not used by this program");
     std::map<std::string, std::string> ListStringValues_doc;
     ListStringValues_doc["arithmetic"] =
         doc_rational_integer_arithmetics_by_library();
-    ListStringValues_doc["FileIsoDelaunay"] = "The file containing the\n\
-iso-Delaunay domain as a boost text archive, as written by\n\
-LATT_SerialLattice_IsoDelaunayDomain (PrefixIsoDelaunayDomains) or by\n\
-LATT_SerialComputeDelaunay (FileIsoDelaunayDomain)";
+    ListStringValues_doc["FileIsoDelaunay"] =
+        "The file containing the iso-Delaunay domain as a boost text archive,\n\
+as written by LATT_SerialLattice_IsoDelaunayDomain (PrefixIsoDelaunayDomains)\n\
+or by LATT_SerialComputeDelaunay (FileIsoDelaunayDomain)";
     ListStringValues_doc["FileLinSpace"] = "Default: null\n\
 The T-space the iso-Delaunay domain was computed with, in the format of\n\
 WriteLinSpaceFile. If null then the canonical T-space of all the quadratic\n\

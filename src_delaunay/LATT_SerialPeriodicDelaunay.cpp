@@ -29,14 +29,18 @@ PackingCoveringGAP: the covering radius, the packing radius and the\n\
   packing-covering constant of the point set, exactly as squares and in\n\
   floating point");
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["GRAMfile"] = "unset";
-    // The file with the rational coset matrix of the periodic point set:
-    // one coset per row, the zero coset included.
-    ListStringValues["FileCosets"] = "unset";
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library<false>();
+    ListStringValues_doc["GRAMfile"] =
+        "The file containing the positive definite Gram matrix";
+    ListStringValues_doc["FileCosets"] =
+        "The file containing the rational coset matrix of the periodic point\n\
+set: one coset per row, the zero coset included. The cosets must not form\n\
+a group modulo Z^n, otherwise the point set is a lattice to be treated by\n\
+LATT_SerialComputeDelaunay";
     SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
+    BlockDATA.setListStringValues_doc(ListStringValues_doc);
     ListBlock["DATA"] = BlockDATA;
   }
   return FullNamelist(ListBlock);
