@@ -11,6 +11,7 @@
 #include "LatticeDelaunay.h"
 #include "Tspace_General.h"
 #include "SystemNamelist.h"
+#include "Arithmetic_dispatch_types.h"
 #include <format>
 #include <string>
 #include <vector>
@@ -2555,25 +2556,31 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["FileDualDescription"] = "unset";
-    ListStringValues["CommonGramMat"] = "unset";
-    // When set to a directory/prefix P (not "unset"), each enumerated
-    // iso-Delaunay domain is written as a boost text-archive of an
-    // IsoDelaunayDomain to the file P<i> (i = 0, 1, ...), consumable by
-    // LATT_AnalysisIsoDelaunay.
-    ListStringValues["PrefixIsoDelaunayDomains"] = "unset";
-    ListStringValues["CVPmethod"] = "SVexact";
-    std::map<std::string, bool> ListBoolValues;
-    // Default false keeps the historical behaviour of enumerating only
-    // the top-dimensional iso-Delaunay domains. Set to true to run the
-    // full L-type complex enumeration (top-dim + lower-dim cells, with
-    // the positive-definite filter applied per cell).
-    ListBoolValues["compute_full_dimensional"] = false;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["FileDualDescription"] = "Default: unset\n\
+A namelist file in the format of POLY_SerialDualDesc whose heuristics are\n\
+used for the dual description computations.\n\
+If unset then the default heuristics are used";
+    ListStringValues_doc["CommonGramMat"] = "Default: unset\n\
+A file containing a Gram matrix G of the T-space. If set, only the\n\
+iso-Delaunay domains whose closure contains G are enumerated (the star of G).\n\
+If unset then all the iso-Delaunay domains are enumerated";
+    ListStringValues_doc["PrefixIsoDelaunayDomains"] = "Default: unset\n\
+If set to a prefix P, each enumerated iso-Delaunay domain i is written as a\n\
+boost text archive to the file P + i, which is read by LATT_AnalysisIsoDelaunay.\n\
+Used only by LATT_SerialLattice_IsoDelaunayDomain";
+    ListBoolValues_doc["compute_full_dimensional"] = "Default: F\n\
+Used only by LATT_SerialLattice_IsoDelaunayDomain\n\
+F: the output is the iso-Delaunay domains of full dimension\n\
+T: all the cells of the L-type complex are enumerated (full and lower\n\
+  dimensional), keeping those whose relative interior contains positive\n\
+  definite forms. OutFormat must then be GAP or NumberGAP";
     SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    BlockDATA.setListBoolValues(ListBoolValues);
+    BlockDATA.setListStringValues_doc(ListStringValues_doc);
+    BlockDATA.setListBoolValues_doc(ListBoolValues_doc);
     ListBlock["DATA"] = BlockDATA;
   }
   // TSPACE

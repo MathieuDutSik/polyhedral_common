@@ -71,7 +71,6 @@ are the entry points for such a follow-up.
     FileDualDescription = "unset"
     CommonGramMat = "unset"
     PrefixIsoDelaunayDomains = "/path/dom_"
-    CVPmethod = "SVexact"
    /
    &TSPACE
     TypeTspace = "Classic"

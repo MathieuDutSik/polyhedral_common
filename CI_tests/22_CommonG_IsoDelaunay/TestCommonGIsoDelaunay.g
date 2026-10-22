@@ -35,7 +35,6 @@ write_enum_nml := function(FileNml, dim, OutFile, DomPrefix, CommonG)
     AppendTo(os, " FileDualDescription = \"unset\"\n");
     AppendTo(os, " CommonGramMat = \"", CommonG, "\"\n");
     AppendTo(os, " PrefixIsoDelaunayDomains = \"", DomPrefix, "\"\n");
-    AppendTo(os, " CVPmethod = \"SVexact\"\n");
     AppendTo(os, "/\n");
     AppendTo(os, "&TSPACE\n");
     AppendTo(os, " TypeTspace = \"Classic\"\n");

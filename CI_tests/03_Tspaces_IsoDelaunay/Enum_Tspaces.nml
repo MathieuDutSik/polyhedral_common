@@ -11,7 +11,6 @@
 &DATA
  arithmetic = "gmp"
  FileDualDescription = "unset"
- CVPmethod = "SVexact"
 /
 
 &TSPACE
