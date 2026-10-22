@@ -4052,6 +4052,9 @@ template <typename T> struct HeckeHomologyLevel {
   int n_cell;
   MyMatrix<T> harmonic;
   MyMatrix<T> hecke_matrix;
+  // Nonempty when the Hecke matrix could not be computed (modulo p, when p
+  // divides a denominator of the images); the homology is still given.
+  std::string hecke_failure;
 };
 
 template <typename T> struct HeckeHomologyResult {
@@ -4123,7 +4126,7 @@ MyVector<T> get_hecke_image_cell(
   columns of D_index. The entries of the Hecke matrix are residues mod p.
  */
 template <typename T, typename Tint>
-MyMatrix<T> get_hecke_matrix_mod(int const &index, GammaComplex<T, Tint> const &gc,
+HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint> const &gc,
                                  HeckeChainMap<T, Tint> const &hcm,
                                  HeckeCosets<T> const &cosets_gamma, int64_t const &p,
                                  [[maybe_unused]] std::ostream &os) {
@@ -4301,8 +4304,9 @@ MyMatrix<T> get_hecke_matrix_mod(int const &index, GammaComplex<T, Tint> const &
         }
         std::optional<int64_t> opt = residue_mod_p(kv.second, p);
         if (!opt) {
-          throw HeckeFailure{"Hecke matrix mod p: a denominator of an image is divisible by p=" +
-                             std::to_string(p)};
+          // The homology is known, but not the Hecke matrix.
+          return {index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0),
+                  "a denominator of an image is divisible by p=" + std::to_string(p)};
         }
         int64_t &val = acc[l_label[kv.first]];
         val = ResidueModPrime(val + e.second * (*opt), p);
@@ -4323,7 +4327,7 @@ MyMatrix<T> get_hecke_matrix_mod(int const &index, GammaComplex<T, Tint> const &
       hecke_matrix(i, iter->second) = UniversalScalarConversion<T, int64_t>(e.second);
     }
   }
-  return hecke_matrix;
+  return {index, n_cell, MyMatrix<T>(dim_hom, 0), std::move(hecke_matrix), ""};
 }
 
 /*
@@ -4532,10 +4536,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
     }
     int n_cell = gc.basis[index].size();
     if (prime > 0) {
-      MyMatrix<T> hecke_matrix_mod = get_hecke_matrix_mod(index, gc, hcm, cosets_gamma, prime, os);
-      HeckeHomologyLevel<T> level_mod{index, n_cell, MyMatrix<T>(hecke_matrix_mod.rows(), 0),
-                                      std::move(hecke_matrix_mod)};
-      result.l_level.emplace_back(std::move(level_mod));
+      result.l_level.emplace_back(get_hecke_level_mod(index, gc, hcm, cosets_gamma, prime, os));
 #ifdef TIMINGS_HECKE_OPERATORS
       os << "|HECKE: homology mod p level " << index << "|=" << time << "\n";
 #endif
@@ -4609,7 +4610,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
 #endif
       }
     }
-    HeckeHomologyLevel<T> level{index, n_cell, std::move(harmonic), std::move(hecke_matrix)};
+    HeckeHomologyLevel<T> level{index, n_cell, std::move(harmonic), std::move(hecke_matrix), ""};
     result.l_level.emplace_back(std::move(level));
 #ifdef TIMINGS_HECKE_OPERATORS
     os << "|HECKE: homology level " << index << "|=" << time << "\n";
@@ -4642,6 +4643,9 @@ void WriteHeckeHomologyResultGAP(std::ostream &os_out, HeckeHomologyResult<T> co
     WriteMatrixGAP(os_out, level.harmonic);
     os_out << ", HeckeMatrix:=";
     WriteMatrixGAP(os_out, level.hecke_matrix);
+    if (!level.hecke_failure.empty()) {
+      os_out << ", hecke_failure:=\"" << level.hecke_failure << "\"";
+    }
     os_out << ")";
   }
   os_out << "])";
