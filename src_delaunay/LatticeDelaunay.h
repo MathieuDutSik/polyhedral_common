@@ -1077,34 +1077,58 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["GRAMfile"] = "unset.gram";
-    ListStringValues["SVRfile"] = "unset";
-    ListStringValues["choice_initial"] = "direct";
-    ListStringValues["FileDualDescription"] = "unset";
-    ListStringValues["CacheFile"] = "none";
+    std::map<std::string, std::string> ListStringValues_doc;
+    Insert_DelaunayLattice_DATA_doc(ListStringValues_doc);
+    ListStringValues_doc["CacheFile"] = "Default: none\n\
+A file caching the Delaunay tesselation. If it exists, the tesselation is\n\
+read from it, otherwise it is computed and written to it. The cache is not\n\
+checked against GRAMfile, so it must come from the same lattice.\n\
+If none then the tesselation is computed and not cached";
     SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
+    BlockDATA.setListStringValues_doc(ListStringValues_doc);
     ListBlock["DATA"] = BlockDATA;
   }
   // QUERIES
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["FileQuantization"] = "null";
-    ListStringValues["FileIsotropy"] = "null";
-    ListStringValues["FileFreeVectors"] = "null";
-    ListStringValues["FileRigidityDegree"] = "null";
-    ListStringValues["FileIsoDelaunayDomain"] = "null";
-    ListStringValues["FileDeformation"] = "null";
-    ListStringValues["FileDeformationOrbits"] = "null";
-    ListStringValues["FileHessian"] = "null";
-    ListStringValues["FileHessianPlus"] = "null";
-    std::map<std::string, int> ListIntValues;
-    ListIntValues["DeformationNumberOrbit"] = 6;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListStringValues_doc["FileQuantization"] = "Default: null\n\
+The file to which the quantization integral of the lattice is written in GAP.\n\
+If null then it is not computed";
+    ListStringValues_doc["FileIsotropy"] = "Default: null\n\
+The file to which the isotropy test is written in GAP: whether GramMat times\n\
+the second moment matrix of the Voronoi cell is a multiple of the identity,\n\
+with the defect matrix. If null then it is not computed";
+    ListStringValues_doc["FileFreeVectors"] = "Default: null\n\
+The file to which the free vectors of the lattice are written in GAP.\n\
+If null then they are not computed";
+    ListStringValues_doc["FileRigidityDegree"] = "Default: null\n\
+The file to which the rigidity degree of the lattice is written in GAP.\n\
+If null then it is not computed";
+    ListStringValues_doc["FileIsoDelaunayDomain"] = "Default: null\n\
+The file to which the iso-Delaunay domain of the lattice is written as a\n\
+boost text archive, read by LATT_AnalysisIsoDelaunay. The rigidity degree\n\
+must be n(n+1)/2. If null then it is not computed";
+    ListStringValues_doc["FileDeformation"] = "Default: null\n\
+A file containing a symmetric matrix H. The derivatives of the quantizer\n\
+constant G along Q + t H are written in GAP to FileDeformation + \".output\".\n\
+If null then they are not computed";
+    ListStringValues_doc["FileDeformationOrbits"] = "Default: null\n\
+The file to which G''(0) along the directions v v^T is written in GAP, for\n\
+the first DeformationNumberOrbit orbits of integer vectors v under Aut(Q),\n\
+ordered by v^T Q^{-1} v. If null then it is not computed";
+    ListIntValues_doc["DeformationNumberOrbit"] = "Default: 6\n\
+The number of orbits of vectors used for FileDeformationOrbits";
+    ListStringValues_doc["FileHessian"] = "Default: null\n\
+The file to which the Hessian of G at Q and its signature are written in GAP.\n\
+If null then it is not computed";
+    ListStringValues_doc["FileHessianPlus"] = "Default: null\n\
+The file to which it is written in GAP whether the Hessian of G at Q has a\n\
+positive direction, the scan stopping at the first one found. It is cheaper\n\
+than FileHessian. If null then it is not computed";
     SingleBlock BlockQUERIES;
-    BlockQUERIES.setListStringValues(ListStringValues);
-    BlockQUERIES.setListIntValues(ListIntValues);
+    BlockQUERIES.setListStringValues_doc(ListStringValues_doc);
+    BlockQUERIES.setListIntValues_doc(ListIntValues_doc);
     ListBlock["QUERIES"] = BlockQUERIES;
   }
   // Merging all data
