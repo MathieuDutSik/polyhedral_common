@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <functional>
 #include <map>
+#include <numeric>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -181,6 +182,94 @@ get_ambient_group_generators(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   get_key(g) returns a complete invariant of the coset g Gamma, which
   is what the coset table is keyed by.
  */
+/*
+  The keys of the cosets g Gamma are vectors of residues modulo N, computed
+  with int64_t arithmetic: they are formed millions of times for the large
+  levels. The determinants of the elements of G are +-1, so the inverses
+  are given by the adjugates.
+ */
+using GammaKey = std::vector<int64_t>;
+
+struct GammaKeyHash {
+  size_t operator()(GammaKey const &key) const {
+    size_t h = key.size();
+    for (auto &x : key) {
+      h = h * 1000003 ^ std::hash<int64_t>()(x);
+    }
+    return h;
+  }
+};
+
+// The determinant modulo m of the n x n matrix a (row major), by the
+// cofactor expansion (n is small).
+inline int64_t determinant_mod(std::vector<int64_t> const &a, int const &n, int64_t const &m) {
+  if (n == 1) {
+    return ResidueModPrime(a[0], m);
+  }
+  int64_t det = 0;
+  std::vector<int64_t> minor((n - 1) * (n - 1));
+  for (int j = 0; j < n; j++) {
+    if (a[j] == 0) {
+      continue;
+    }
+    int pos = 0;
+    for (int i2 = 1; i2 < n; i2++) {
+      for (int j2 = 0; j2 < n; j2++) {
+        if (j2 != j) {
+          minor[pos] = a[i2 * n + j2];
+          pos += 1;
+        }
+      }
+    }
+    int64_t term = (a[j] * determinant_mod(minor, n - 1, m)) % m;
+    det = (j % 2 == 0) ? (det + term) % m : (det - term) % m;
+  }
+  return ResidueModPrime(det, m);
+}
+
+// The inverse modulo m of a matrix of determinant det_mod (a unit mod m):
+// inv(i, j) = det^{-1} (-1)^{i+j} minor(j, i).
+inline std::vector<int64_t> inverse_mod(std::vector<int64_t> const &a, int const &n,
+                                        int64_t const &m, int64_t const &det_mod) {
+  std::vector<int64_t> inv(n * n, 0);
+  if (m == 1) {
+    return inv;
+  }
+  int64_t det_inv = InverseModPrime(det_mod, m);
+  std::vector<int64_t> minor((n - 1) * (n - 1));
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      // The minor deleting the row j and the column i.
+      int pos = 0;
+      for (int i2 = 0; i2 < n; i2++) {
+        if (i2 == j) {
+          continue;
+        }
+        for (int j2 = 0; j2 < n; j2++) {
+          if (j2 != i) {
+            minor[pos] = a[i2 * n + j2];
+            pos += 1;
+          }
+        }
+      }
+      int64_t val = (n == 1) ? 1 : determinant_mod(minor, n - 1, m);
+      if ((i + j) % 2 == 1) {
+        val = m - val;
+      }
+      inv[i * n + j] = (ResidueModPrime(val, m) * det_inv) % m;
+    }
+  }
+  return inv;
+}
+
+// What the action of an element s of G on the keys needs: its residues,
+// the ones of its inverse and the sign of its determinant.
+struct GammaAction {
+  std::vector<int64_t> s_mod;
+  std::vector<int64_t> s_inv_mod;
+  int64_t det_sign;
+};
+
 template <typename Tint> struct FiniteIndexSubgroup {
   std::string type;
   Tint N;
@@ -239,83 +328,143 @@ template <typename Tint> struct FiniteIndexSubgroup {
     std::cerr << "HECKE: Unsupported subgroup type=" << type << "\n";
     throw TerminalException{1};
   }
-  // A complete invariant of the coset g Gamma. For the SL variants, g and
-  // h are in the same coset iff they are for the base type and
-  // det(g) = det(h), so the determinant is appended to the key.
-  MyMatrix<Tint> get_key(MyMatrix<Tint> const &g) const {
-    MyMatrix<Tint> key = get_key_base(g);
-    if (!is_sl()) {
-      return key;
-    }
-    MyMatrix<Tint> key_ext = ZeroMatrix<Tint>(key.rows() + 1, key.cols());
-    for (int i = 0; i < key.rows(); i++) {
-      for (int j = 0; j < key.cols(); j++) {
-        key_ext(i, j) = key(i, j);
+  int64_t get_n_mod() const { return UniversalScalarConversion<int64_t, Tint>(N); }
+  std::vector<int64_t> get_residues(MyMatrix<Tint> const &g) const {
+    std::vector<int64_t> r(n * n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        r[i * n + j] = UniversalScalarConversion<int64_t, Tint>(ResInt(g(i, j), N));
       }
     }
-    key_ext(key.rows(), 0) = DeterminantMat(g);
-    return key_ext;
+    return r;
   }
-  MyMatrix<Tint> get_key_base(MyMatrix<Tint> const &g) const {
-    std::string type = base_type();
-    if (type == "Full") {
-      return ZeroMatrix<Tint>(1, 1);
+  // The sign of det(g) = +-1, from its residue when N > 2.
+  int64_t get_det_sign(MyMatrix<Tint> const &g, std::vector<int64_t> const &r) const {
+    int64_t m = get_n_mod();
+    if (m > 2) {
+      return (determinant_mod(r, n, m) == 1) ? 1 : -1;
     }
+    Tint det = DeterminantMat(g);
+    return (det > 0) ? 1 : -1;
+  }
+  // The canonical form of the row of a Gamma0 key under the units mod N:
+  // the first nonzero entry is 1 for N prime, the smallest multiple in the
+  // lexicographic order otherwise.
+  void canonicalize_gamma0(std::vector<int64_t> &row) const {
+    int64_t m = get_n_mod();
+    if (is_prime_n()) {
+      for (int j = 0; j < n; j++) {
+        if (row[j] != 0) {
+          int64_t inv = InverseModPrime(row[j], m);
+          for (int k = 0; k < n; k++) {
+            row[k] = (row[k] * inv) % m;
+          }
+          return;
+        }
+      }
+      return;
+    }
+    std::vector<int64_t> best = row;
+    for (int64_t u = 2; u < m; u++) {
+      if (std::gcd(u, m) != 1) {
+        continue;
+      }
+      std::vector<int64_t> cand(n);
+      for (int k = 0; k < n; k++) {
+        cand[k] = (u * row[k]) % m;
+      }
+      if (cand < best) {
+        best = cand;
+      }
+    }
+    row = best;
+  }
+  bool is_prime_n() const {
+    int64_t m = get_n_mod();
+    if (m < 2) {
+      return false;
+    }
+    for (int64_t d = 2; d * d <= m; d++) {
+      if (m % d == 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+  /*
+    A complete invariant of the coset g Gamma, as residues modulo N:
+    - "Full": empty; "Principal": g mod N;
+    - "Gamma0" / "Gamma1": g Gamma = h Gamma iff e_n h^{-1} g = lambda e_n
+      mod N, that is iff the rows e_n g^{-1} and e_n h^{-1} agree modulo N
+      up to a unit lambda (lambda = 1 for Gamma1);
+    - for the SL variants the sign of det(g) is appended.
+   */
+  GammaKey get_key(MyMatrix<Tint> const &g) const {
+    std::vector<int64_t> r = get_residues(g);
+    int64_t m = get_n_mod();
+    std::string type = base_type();
+    GammaKey key;
     if (type == "Principal") {
-      MyMatrix<Tint> key(n, n);
+      key = r;
+    } else if (type == "Gamma0" || type == "Gamma1") {
+      int64_t det_sign = get_det_sign(g, r);
+      int64_t det_mod = ResidueModPrime(det_sign, m);
+      std::vector<int64_t> inv = inverse_mod(r, n, m, (m == 1) ? 0 : det_mod);
+      key = std::vector<int64_t>(inv.begin() + (n - 1) * n, inv.end());
+      if (type == "Gamma0") {
+        canonicalize_gamma0(key);
+      }
+    } else if (type != "Full") {
+      std::cerr << "HECKE: Unsupported subgroup type=" << type << "\n";
+      throw TerminalException{1};
+    }
+    if (is_sl()) {
+      key.push_back(get_det_sign(g, r));
+    }
+    return key;
+  }
+  GammaAction get_action(MyMatrix<Tint> const &s) const {
+    GammaAction a;
+    int64_t m = get_n_mod();
+    a.s_mod = get_residues(s);
+    a.det_sign = get_det_sign(s, a.s_mod);
+    a.s_inv_mod = inverse_mod(a.s_mod, n, m, (m == 1) ? 0 : ResidueModPrime(a.det_sign, m));
+    return a;
+  }
+  // The key of s g Gamma from the key of g Gamma: s g mod N for
+  // "Principal", e_n g^{-1} s^{-1} for "Gamma0" / "Gamma1".
+  GammaKey act(GammaKey const &key, GammaAction const &a) const {
+    int64_t m = get_n_mod();
+    std::string type = base_type();
+    GammaKey key_ret;
+    if (type == "Principal") {
+      key_ret = std::vector<int64_t>(n * n, 0);
       for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-          key(i, j) = ResInt(g(i, j), N);
-        }
-      }
-      return key;
-    }
-    if (type == "Gamma0" || type == "Gamma1") {
-      // g Gamma = h Gamma iff e_n h^{-1} g = lambda e_n mod N, that is
-      // iff the rows e_n g^{-1} and e_n h^{-1} agree modulo N up to a
-      // unit lambda (lambda = 1 for Gamma1).
-      MyMatrix<Tint> gInv = Inverse(g);
-      MyMatrix<Tint> row(1, n);
-      for (int j = 0; j < n; j++) {
-        row(0, j) = ResInt(gInv(n - 1, j), N);
-      }
-      if (type == "Gamma1") {
-        return row;
-      }
-      // For Gamma0 we take the lexicographically smallest multiple by a
-      // unit modulo N.
-      MyMatrix<Tint> best = row;
-      bool has_best = false;
-      for (Tint u = 1; u < N; u++) {
-        Tint g_val = GcdPair(u, N);
-        if (g_val != 1) {
-          continue;
-        }
-        MyMatrix<Tint> cand(1, n);
-        for (int j = 0; j < n; j++) {
-          Tint val = u * row(0, j);
-          cand(0, j) = ResInt(val, N);
-        }
-        auto is_smaller = [&]() -> bool {
-          for (int j = 0; j < n; j++) {
-            if (cand(0, j) < best(0, j)) {
-              return true;
-            }
-            if (cand(0, j) > best(0, j)) {
-              return false;
-            }
+          int64_t sum = 0;
+          for (int k = 0; k < n; k++) {
+            sum = (sum + a.s_mod[i * n + k] * key[k * n + j]) % m;
           }
-          return false;
-        };
-        if (!has_best || is_smaller()) {
-          best = cand;
-          has_best = true;
+          key_ret[i * n + j] = sum;
         }
       }
-      return best;
+    } else if (type == "Gamma0" || type == "Gamma1") {
+      key_ret = std::vector<int64_t>(n, 0);
+      for (int j = 0; j < n; j++) {
+        int64_t sum = 0;
+        for (int k = 0; k < n; k++) {
+          sum = (sum + key[k] * a.s_inv_mod[k * n + j]) % m;
+        }
+        key_ret[j] = sum;
+      }
+      if (type == "Gamma0") {
+        canonicalize_gamma0(key_ret);
+      }
     }
-    std::cerr << "HECKE: Unsupported subgroup type=" << type << "\n";
-    throw TerminalException{1};
+    if (is_sl()) {
+      key_ret.push_back(a.det_sign * key.back());
+    }
+    return key_ret;
   }
 };
 
@@ -327,13 +476,23 @@ template <typename Tint> struct CosetTableGamma {
   FiniteIndexSubgroup<Tint> gamma;
   std::vector<MyMatrix<Tint>> l_coset;
   std::vector<MyMatrix<Tint>> l_coset_inv;
-  std::unordered_map<MyMatrix<Tint>, int> map_key;
+  std::vector<GammaKey> l_key;
+  std::unordered_map<GammaKey, int, GammaKeyHash> map_key;
   size_t size() const { return l_coset.size(); }
   std::optional<int> find_index(MyMatrix<Tint> const &g) const {
-    MyMatrix<Tint> key = gamma.get_key(g);
+    GammaKey key = gamma.get_key(g);
     auto iter = map_key.find(key);
     if (iter == map_key.end()) {
       return {};
+    }
+    return iter->second;
+  }
+  // The index of the coset s g_i Gamma, from the key of g_i Gamma.
+  int index_of_action(int const &i, GammaAction const &a) const {
+    auto iter = map_key.find(gamma.act(l_key[i], a));
+    if (iter == map_key.end()) {
+      std::cerr << "HECKE: The coset of s g was not found in the coset table\n";
+      throw TerminalException{1};
     }
     return iter->second;
   }
@@ -365,28 +524,38 @@ enumerate_cosets_gamma(FiniteIndexSubgroup<Tint> const &gamma,
                        [[maybe_unused]] std::ostream &os) {
   CosetTableGamma<Tint> ct;
   ct.gamma = gamma;
-  auto f_insert = [&](MyMatrix<Tint> const &g) -> void {
-    MyMatrix<Tint> key = gamma.get_key(g);
-    if (ct.map_key.contains(key)) {
-      return;
-    }
-    int idx = ct.l_coset.size();
-    ct.map_key[key] = idx;
-    ct.l_coset_inv.push_back(Inverse(g));
-    ct.l_coset.push_back(g);
-  };
-  f_insert(IdentityMat<Tint>(n));
+  // The keys of the new cosets are obtained by the action on the keys,
+  // and the inverses as products.
+  std::vector<GammaAction> l_act;
+  std::vector<MyMatrix<Tint>> l_gens_inv;
+  for (auto &s : l_gens) {
+    l_act.push_back(gamma.get_action(s));
+    l_gens_inv.push_back(Inverse(s));
+  }
+  MyMatrix<Tint> id = IdentityMat<Tint>(n);
+  ct.l_key.push_back(gamma.get_key(id));
+  ct.map_key[ct.l_key[0]] = 0;
+  ct.l_coset.push_back(id);
+  ct.l_coset_inv.push_back(id);
   size_t pos = 0;
   HeckeBudget budget;
   while (pos < ct.l_coset.size()) {
     if (ct.l_coset.size() > budget.max_cosets) {
       throw HeckeFailure{"enumerate_cosets_gamma: more than " + std::to_string(budget.max_cosets) + " cosets (is the index finite?)"};
     }
-    // The vector may be reallocated by f_insert, so we copy.
-    MyMatrix<Tint> g = ct.l_coset[pos];
-    for (auto &s : l_gens) {
-      MyMatrix<Tint> prod = s * g;
-      f_insert(prod);
+    for (size_t i_gen = 0; i_gen < l_gens.size(); i_gen++) {
+      GammaKey key = gamma.act(ct.l_key[pos], l_act[i_gen]);
+      if (ct.map_key.contains(key)) {
+        continue;
+      }
+      int idx = ct.l_coset.size();
+      ct.map_key[key] = idx;
+      ct.l_key.push_back(key);
+      // The vectors may be reallocated by the push_back, so we copy.
+      MyMatrix<Tint> g = ct.l_coset[pos];
+      MyMatrix<Tint> g_inv = ct.l_coset_inv[pos];
+      ct.l_coset.push_back(l_gens[i_gen] * g);
+      ct.l_coset_inv.push_back(g_inv * l_gens_inv[i_gen]);
     }
     pos += 1;
   }
@@ -3615,9 +3784,15 @@ GammaOrbitSplit get_gamma_orbit_split(
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     MyMatrix<Tint> const &s = face.l_gens[i_gen];
     sign_gen[i_gen] = get_face_orientation(face.EXT, ListMat, face.or_info, s);
+    GammaAction a = ct.gamma.get_action(s);
     for (size_t i = 0; i < n_coset; i++) {
-      MyMatrix<Tint> prod = s * ct.l_coset[i];
-      perm[i_gen][i] = ct.index_of(prod);
+      perm[i_gen][i] = ct.index_of_action(i, a);
+#ifdef SANITY_CHECK_HECKE_OPERATORS
+      if (perm[i_gen][i] != ct.index_of(s * ct.l_coset[i])) {
+        std::cerr << "HECKE: the action on the keys differs from the product\n";
+        throw TerminalException{1};
+      }
+#endif
     }
   }
   GammaOrbitSplit gos;
@@ -3686,7 +3861,11 @@ template <typename T, typename Tint> struct GammaComplex {
   // basis, if it is present.
   std::optional<std::pair<int, int>>
   cell_position(int const &index, int const &iOrb, MyMatrix<Tint> const &M) const {
-    int i0 = ct.index_of(M);
+    return cell_position_coset(index, iOrb, ct.index_of(M));
+  }
+  // The same for the cell F_{iOrb} g_{i0}, given by its coset index.
+  std::optional<std::pair<int, int>>
+  cell_position_coset(int const &index, int const &iOrb, int const &i0) const {
     GammaOrbitSplit const &gos = splits[index][iOrb];
     int rep = gos.orbit_rep[i0];
     int idx = basis_index[index][iOrb][rep];
@@ -3756,14 +3935,23 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     int n_row = gc.basis[index].size();
     int n_col = gc.basis[index + 1].size();
     std::vector<std::vector<std::pair<int, int>>> D_sparse(n_row);
+    // The actions of the matrices of the boundary on the cosets, per orbit.
+    int n_orb = fce.levels[index].l_faces.size();
+    std::vector<std::vector<GammaAction>> ll_act(n_orb);
+    for (int iOrb = 0; iOrb < n_orb; iOrb++) {
+      for (auto &ebnd : fce.boundaries[index].ll_bound[iOrb].l_bound) {
+        ll_act[iOrb].push_back(ct.gamma.get_action(ebnd.M));
+      }
+    }
     for (int i_row = 0; i_row < n_row; i_row++) {
       int iOrb = gc.basis[index][i_row].first;
       int i_coset = gc.basis[index][i_row].second;
-      MyMatrix<Tint> const &g = ct.l_coset[i_coset];
       std::map<int, int> map_row;
-      for (auto &ebnd : fce.boundaries[index].ll_bound[iOrb].l_bound) {
-        MyMatrix<Tint> M = ebnd.M * g;
-        std::optional<std::pair<int, int>> opt = gc.cell_position(index + 1, ebnd.iOrb, M);
+      std::vector<BoundEntry<Tint>> const &l_bound = fce.boundaries[index].ll_bound[iOrb].l_bound;
+      for (size_t k = 0; k < l_bound.size(); k++) {
+        BoundEntry<Tint> const &ebnd = l_bound[k];
+        int i0 = ct.index_of_action(i_coset, ll_act[iOrb][k]);
+        std::optional<std::pair<int, int>> opt = gc.cell_position_coset(index + 1, ebnd.iOrb, i0);
         if (opt) {
           map_row[opt->first] += ebnd.sign * opt->second;
         }
@@ -3922,14 +4110,13 @@ MyVector<T> get_hecke_image_cell(
   The Hecke operator on the homology of a level modulo a prime p, by
   sparse linear algebra: no matrix of the size of the complex is formed,
   which is what limits the rational computation. With B the space of the
-  boundaries and Z the one of the cycles:
-  - the echelon form of B gives the normal form modulo B, which has zero
-    entries at the pivot cells; the other cells are the free ones,
-  - H = Z / B is isomorphic to the cycles supported on the free cells, the
-    left kernel of the cycle condition restricted to them, of dimension
-    dim H (small),
-  - the image of a basis vector of H is reduced modulo B and expressed in
-    that basis.
+  boundaries and Z the one of the cycles, H = Z / B is computed in the
+  coordinates of the cells outside a set S whose cycle condition rows are
+  a basis of the cycle conditions (see below); a basis of H is given by
+  the free cells of the echelon form of the boundaries there, lifted to
+  cycles, and the image of a basis vector is restricted to the complement
+  of S and reduced modulo the boundaries, its normal form giving its
+  coordinates.
   For a chain map commuting with the boundary (Sharbly, Vertex) the cycles
   are the v with v D_index = 0 and the boundaries the rows of D_{index-1};
   for the transposed one (Dual), the v with D_{index-1} v = 0 and the
@@ -3995,28 +4182,30 @@ MyMatrix<T> get_hecke_matrix_mod(int const &index, GammaComplex<T, Tint> const &
       }
     }
   }
-  // The cells are relabeled by increasing number of boundary generators
-  // containing them: the pivot of a row is its first entry, so a rarely
-  // used cell as pivot keeps the fill-in small (a Markowitz-like order on
-  // the columns). The generators are inserted by increasing length. All the
-  // vectors over the cells below are in the new labels.
-  std::vector<int> l_count(n_cell, 0);
-  for (auto &v : l_bnd) {
-    for (auto &e : v) {
-      l_count[e.first] += 1;
+  // The column order of an echelon form: by increasing number of vectors
+  // containing the column, so that the pivots (the first entries) are
+  // rarely used columns and the fill-in stays small. Returns the label of
+  // each column.
+  auto f_label = [](std::vector<SparseVectorMod> const &l_vect, int const &n_col) -> std::vector<int> {
+    std::vector<int> l_count(n_col, 0);
+    for (auto &v : l_vect) {
+      for (auto &e : v) {
+        l_count[e.first] += 1;
+      }
     }
-  }
-  std::vector<int> l_order(n_cell);
-  for (int c = 0; c < n_cell; c++) {
-    l_order[c] = c;
-  }
-  std::stable_sort(l_order.begin(), l_order.end(),
-                   [&](int const &a, int const &b) -> bool { return l_count[a] < l_count[b]; });
-  std::vector<int> l_label(n_cell);
-  for (int c = 0; c < n_cell; c++) {
-    l_label[l_order[c]] = c;
-  }
-  auto f_relabel = [&](SparseVectorMod const &v) -> SparseVectorMod {
+    std::vector<int> l_order(n_col);
+    for (int c = 0; c < n_col; c++) {
+      l_order[c] = c;
+    }
+    std::stable_sort(l_order.begin(), l_order.end(),
+                     [&](int const &a, int const &b) -> bool { return l_count[a] < l_count[b]; });
+    std::vector<int> l_label(n_col);
+    for (int c = 0; c < n_col; c++) {
+      l_label[l_order[c]] = c;
+    }
+    return l_label;
+  };
+  auto f_relabel = [](SparseVectorMod const &v, std::vector<int> const &l_label) -> SparseVectorMod {
     SparseVectorMod w;
     w.reserve(v.size());
     for (auto &e : v) {
@@ -4025,49 +4214,91 @@ MyMatrix<T> get_hecke_matrix_mod(int const &index, GammaComplex<T, Tint> const &
     std::sort(w.begin(), w.end());
     return w;
   };
-  std::sort(l_bnd.begin(), l_bnd.end(),
+  /*
+    The approach of Ash, Gunnells and McConnell (their matrix eta): first
+    a set S of cells whose cycle condition rows are a basis of the row
+    space of the cycle condition. A cycle v is then determined by its
+    restriction to the complement S^c, and every vector on S^c extends to
+    a cycle, so H = Z / B is the quotient of the vectors on S^c by the
+    restrictions of the boundaries. That quotient has a small dimension,
+    so the elimination of the boundaries has a low corank and a small
+    fill-in, unlike the elimination of the boundaries in all the cells.
+   */
+  std::vector<int> l_label_next = f_label(l_cycle_row, n_next);
+  SparseEchelonMod echelon_cyc(p);
+  std::vector<uint8_t> in_S(n_cell, 0);
+  for (int c = 0; c < n_cell; c++) {
+    if (!l_cycle_row[c].empty() && echelon_cyc.insert(f_relabel(l_cycle_row[c], l_label_next))) {
+      in_S[c] = 1;
+    }
+  }
+  // The same rows with markers at n_next + c: the reduction of the cycle
+  // condition row of a cell gives its expression in the rows of S.
+  SparseEchelonMod echelon_cyc_mark(p);
+  for (int c = 0; c < n_cell; c++) {
+    if (in_S[c] == 1) {
+      SparseVectorMod v = f_relabel(l_cycle_row[c], l_label_next);
+      v.push_back({n_next + c, 1});
+      echelon_cyc_mark.insert(v);
+    }
+  }
+  // The restrictions of the boundaries to S^c, with the cells of S^c
+  // relabeled by the count.
+  std::vector<SparseVectorMod> l_bnd_res;
+  for (auto &v : l_bnd) {
+    SparseVectorMod w;
+    for (auto &e : v) {
+      if (in_S[e.first] == 0) {
+        w.push_back(e);
+      }
+    }
+    if (!w.empty()) {
+      l_bnd_res.emplace_back(std::move(w));
+    }
+  }
+  std::vector<int> l_label = f_label(l_bnd_res, n_cell);
+  std::sort(l_bnd_res.begin(), l_bnd_res.end(),
             [](SparseVectorMod const &a, SparseVectorMod const &b) -> bool { return a.size() < b.size(); });
   SparseEchelonMod echelon_bnd(p);
-  for (auto &v : l_bnd) {
-    echelon_bnd.insert(f_relabel(v));
+  for (auto &v : l_bnd_res) {
+    echelon_bnd.insert(f_relabel(v, l_label));
   }
-  // l_free holds the original indices of the free cells.
+  // The free cells of S^c give the basis of H; their positions.
   std::vector<int> l_free;
-  std::vector<SparseVectorMod> l_row_free;
-  for (int c_new = 0; c_new < n_cell; c_new++) {
-    if (!echelon_bnd.is_pivot(c_new)) {
-      int c = l_order[c_new];
+  std::unordered_map<int, int> map_free;
+  for (int c = 0; c < n_cell; c++) {
+    if (in_S[c] == 0 && !echelon_bnd.is_pivot(l_label[c])) {
+      map_free[l_label[c]] = l_free.size();
       l_free.push_back(c);
-      l_row_free.push_back(l_cycle_row[c]);
     }
   }
-  std::vector<SparseVectorMod> l_kernel = SparseLeftKernelMod(l_row_free, n_next, p);
-  int dim_hom = l_kernel.size();
-  // The basis of H on the cells, and its echelon form with markers at
-  // n_cell + i for expressing a vector in it.
-  std::vector<SparseVectorMod> l_hom;
-  SparseEchelonMod echelon_hom(p);
-  for (int i = 0; i < dim_hom; i++) {
-    SparseVectorMod v;
-    for (auto &e : l_kernel[i]) {
-      v.push_back({l_label[l_free[e.first]], e.second});
-    }
-    std::sort(v.begin(), v.end());
-    SparseVectorMod v_mark = v;
-    v_mark.push_back({n_cell + i, 1});
-    echelon_hom.insert(v_mark);
-    l_hom.emplace_back(std::move(v));
-  }
+  int dim_hom = l_free.size();
 #ifdef DEBUG_HECKE_OPERATORS
-  os << "HECKE: mod p index=" << index << " n_cell=" << n_cell << " rank(B)=" << echelon_bnd.rank()
-     << " n_free=" << l_free.size() << " dim_hom=" << dim_hom << "\n";
+  os << "HECKE: mod p index=" << index << " n_cell=" << n_cell << " |S|=" << echelon_cyc.rank()
+     << " rank(B)=" << echelon_bnd.rank() << " dim_hom=" << dim_hom << "\n";
 #endif
   MyMatrix<T> hecke_matrix = ZeroMatrix<T>(dim_hom, dim_hom);
   for (int i = 0; i < dim_hom; i++) {
+    int c_free = l_free[i];
+    // The cycle lifting the free cell: e_c plus its part on S.
+    SparseVectorMod v{{c_free, 1}};
+    if (!l_cycle_row[c_free].empty()) {
+      SparseVectorMod red = echelon_cyc_mark.reduce(f_relabel(l_cycle_row[c_free], l_label_next));
+      for (auto &e : red) {
+        if (e.first < n_next) {
+          throw HeckeFailure{"Hecke matrix mod p: a cycle condition row is not in the span of S"};
+        }
+        v.push_back({e.first - n_next, e.second});
+      }
+      std::sort(v.begin(), v.end());
+    }
+    // Its image, restricted to S^c and reduced modulo the boundaries.
     std::map<int, int64_t> acc;
-    for (auto &e : l_hom[i]) {
-      int c = l_order[e.first];
-      for (auto &kv : get_hecke_image_cell_sparse(index, c, gc, hcm, cosets_gamma)) {
+    for (auto &e : v) {
+      for (auto &kv : get_hecke_image_cell_sparse(index, e.first, gc, hcm, cosets_gamma)) {
+        if (in_S[kv.first] == 1) {
+          continue;
+        }
         std::optional<int64_t> opt = residue_mod_p(kv.second, p);
         if (!opt) {
           throw HeckeFailure{"Hecke matrix mod p: a denominator of an image is divisible by p=" +
@@ -4083,18 +4314,106 @@ MyMatrix<T> get_hecke_matrix_mod(int const &index, GammaComplex<T, Tint> const &
         w.push_back(kv);
       }
     }
-    SparseVectorMod w_nf = echelon_bnd.reduce(w);
-    SparseVectorMod res = echelon_hom.reduce(w_nf);
-    for (auto &e : res) {
-      if (e.first < n_cell) {
-        throw HeckeFailure{"Hecke matrix mod p: the image of a homology class is not a cycle "
-                           "modulo the boundaries, index=" + std::to_string(index)};
+    for (auto &e : echelon_bnd.reduce(w)) {
+      auto iter = map_free.find(e.first);
+      if (iter == map_free.end()) {
+        throw HeckeFailure{"Hecke matrix mod p: a normal form is not supported on the free cells, index=" +
+                           std::to_string(index)};
       }
-      int j = e.first - n_cell;
-      hecke_matrix(i, j) = UniversalScalarConversion<T, int64_t>(ResidueModPrime(-e.second, p));
+      hecke_matrix(i, iter->second) = UniversalScalarConversion<T, int64_t>(e.second);
     }
   }
   return hecke_matrix;
+}
+
+/*
+  The cosets of Gamma \ Gamma x Gamma without any enumeration, when Gamma
+  contains the principal congruence subgroup of level N and det(x) is
+  coprime to N. The left cosets y_k G of G x G are then in bijection with
+  the Gamma \ Gamma x Gamma, and the one in y_k G is y_k g for the coset
+  g Gamma such that y_k g satisfies the congruences of Gamma x Gamma
+  modulo N:
+  - "Gamma0": e_n y ~ e_n (up to a unit), so the key e_n g^{-1} of g is
+    the one of e_n y_k,
+  - "Gamma1": e_n y = e_n x = c e_n, so the key of g is c^{-1} e_n y_k,
+  - "Principal": y = x, so the key of g is y_k^{-1} x,
+  - "Full": any g,
+  and for the SL variants det(y_k g) = det(x). Nothing is returned when
+  one of the conditions is not met.
+ */
+template <typename T, typename Tint>
+std::optional<HeckeCosets<T>>
+get_hecke_cosets_gamma_direct(HeckeChainMap<T, Tint> const &hcm, CosetTableGamma<Tint> const &ct,
+                              std::function<bool(MyMatrix<T> const &)> const &f_member_gamma) {
+  FiniteIndexSubgroup<Tint> const &gamma = ct.gamma;
+  int n = gamma.n;
+  int64_t m = gamma.get_n_mod();
+  std::string type = gamma.base_type();
+  MyMatrix<T> const &x = hcm.x;
+  T det_x = DeterminantMat(x);
+  if (!IsInteger(det_x)) {
+    return {};
+  }
+  Tint det_x_int = UniversalScalarConversion<Tint, T>(det_x);
+  if (GcdPair(det_x_int, gamma.N) != 1) {
+    return {};
+  }
+  // The residue modulo m of a rational whose denominator is coprime to m.
+  auto f_res = [&](T const &val) -> int64_t {
+    Tint num = UniversalScalarConversion<Tint, T>(GetNumerator_z(val));
+    Tint den = UniversalScalarConversion<Tint, T>(GetDenominator_z(val));
+    int64_t num_r = UniversalScalarConversion<int64_t, Tint>(ResInt(num, gamma.N));
+    int64_t den_r = UniversalScalarConversion<int64_t, Tint>(ResInt(den, gamma.N));
+    if (m == 1) {
+      return 0;
+    }
+    return (num_r * InverseModPrime(den_r, m)) % m;
+  };
+  int64_t c_inv = 1;
+  if (type == "Gamma1") {
+    for (int j = 0; j < n - 1; j++) {
+      if (f_res(x(n - 1, j)) != 0) {
+        return {};
+      }
+    }
+    c_inv = InverseModPrime(f_res(x(n - 1, n - 1)), m);
+  }
+  HeckeCosets<T> hc;
+  hc.x = x;
+  hc.f_member = f_member_gamma;
+  for (auto &y : hcm.cosets.l_coset) {
+    GammaKey key;
+    if (type == "Gamma0" || type == "Gamma1") {
+      for (int j = 0; j < n; j++) {
+        key.push_back((f_res(y(n - 1, j)) * c_inv) % m);
+      }
+      if (type == "Gamma0") {
+        gamma.canonicalize_gamma0(key);
+      }
+    } else if (type == "Principal") {
+      MyMatrix<T> z = Inverse(y) * x;
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          key.push_back(f_res(z(i, j)));
+        }
+      }
+    } else if (type != "Full") {
+      return {};
+    }
+    if (gamma.is_sl()) {
+      T ratio = det_x / DeterminantMat(y);
+      key.push_back((ratio > 0) ? 1 : -1);
+    }
+    auto iter = ct.map_key.find(key);
+    if (iter == ct.map_key.end()) {
+      return {};
+    }
+    MyMatrix<T> g = UniversalMatrixConversion<T, Tint>(ct.l_coset[iter->second]);
+    MyMatrix<T> y_new = y * g;
+    hc.l_coset_inv.push_back(Inverse(y_new));
+    hc.l_coset.push_back(y_new);
+  }
+  return hc;
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -4114,7 +4433,6 @@ HeckeHomologyResult<T> compute_hecke_homology(
 #ifdef TIMINGS_HECKE_OPERATORS
   os << "|HECKE: enumerate_cosets_gamma|=" << time << "\n";
 #endif
-  std::vector<MyMatrix<Tint>> l_gens_gamma = get_schreier_generators(ct, l_gens_G, n, os);
   std::function<bool(MyMatrix<T> const &)> f_member_gamma =
       [&LinSpa, &gamma](MyMatrix<T> const &g) -> bool {
     if (!is_in_ambient_group(LinSpa, g)) {
@@ -4138,15 +4456,44 @@ HeckeHomologyResult<T> compute_hecke_homology(
       }
     }
   }
-  HeckeCosets<T> cosets_gamma =
-      enumerate_hecke_cosets<T, Tint>(hcm.x, l_gens_gamma, f_member_gamma, os, n_expected);
+  // The direct construction first; the enumeration with the Schreier
+  // generators of Gamma otherwise (their number is about the index times
+  // the number of generators of G, which is large for the large levels).
+  std::optional<HeckeCosets<T>> opt_cosets = get_hecke_cosets_gamma_direct(hcm, ct, f_member_gamma);
+  HeckeCosets<T> cosets_gamma;
+  if (opt_cosets) {
+    cosets_gamma = *opt_cosets;
+  } else {
+    std::vector<MyMatrix<Tint>> l_gens_gamma = get_schreier_generators(ct, l_gens_G, n, os);
+    cosets_gamma = enumerate_hecke_cosets<T, Tint>(hcm.x, l_gens_gamma, f_member_gamma, os, n_expected);
+  }
 #ifdef SANITY_CHECK_HECKE_OPERATORS
-  if (n_expected > 0) {
+  {
+    std::vector<MyMatrix<Tint>> l_gens_gamma = get_schreier_generators(ct, l_gens_G, n, os);
     HeckeCosets<T> cosets_gamma_full =
         enumerate_hecke_cosets<T, Tint>(hcm.x, l_gens_gamma, f_member_gamma, os);
-    if (cosets_gamma_full.size() != n_expected) {
+    if (n_expected > 0 && cosets_gamma_full.size() != n_expected) {
       std::cerr << "HECKE: the number of Hecke cosets of Gamma is " << cosets_gamma_full.size()
                 << " and not " << n_expected << " as for G\n";
+      throw TerminalException{1};
+    }
+    if (cosets_gamma.size() != cosets_gamma_full.size()) {
+      std::cerr << "HECKE: the Hecke cosets of Gamma have " << cosets_gamma.size()
+                << " elements instead of " << cosets_gamma_full.size() << "\n";
+      throw TerminalException{1};
+    }
+    // Each coset found is one of those of the enumeration, and distinct.
+    std::set<int> set_idx;
+    for (auto &y : cosets_gamma.l_coset) {
+      std::optional<std::pair<int, MyMatrix<T>>> opt = cosets_gamma_full.find_decompose(y);
+      if (!opt) {
+        std::cerr << "HECKE: a Hecke coset of Gamma is not in Gamma x Gamma\n";
+        throw TerminalException{1};
+      }
+      set_idx.insert(opt->first);
+    }
+    if (set_idx.size() != cosets_gamma.size()) {
+      std::cerr << "HECKE: two Hecke cosets of Gamma coincide\n";
       throw TerminalException{1};
     }
   }
