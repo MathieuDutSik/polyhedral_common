@@ -486,6 +486,10 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     // the top two degrees only)
     ListStringValues["HeckeMethod"] = "Dual";
     ListIntValues["SubgroupLevel"] = 1;
+    // If nonzero, a prime p < 2^31 and the homology and the Hecke matrices
+    // are computed modulo p by sparse linear algebra (for the large
+    // subgroups); the Hecke matrices are then given by their residues.
+    ListIntValues["HeckeHomologyPrime"] = 0;
     // Whether the homology is that of the well rounded complex (the
     // cohomology of the subgroup) or of the full complex with the cells
     // at infinity

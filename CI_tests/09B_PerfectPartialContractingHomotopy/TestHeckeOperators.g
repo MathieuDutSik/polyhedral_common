@@ -235,6 +235,53 @@ test_sharbly:=function()
     return true;
 end;
 
+# The homology modulo a prime p by sparse linear algebra: the Hecke
+# matrices are given by their residues, and their characteristic
+# polynomials must be those of the rational Hecke matrices reduced mod p,
+# for the Sharbly and the Dual (transposed) chain maps.
+# The residues modulo p of a rational matrix, as elements of GF(p).
+matrix_mod_p:=function(M, p)
+    return List(M, row -> List(row, x -> (NumeratorRat(x) * PowerMod(DenominatorRat(x), -1, p)) mod p) * One(GF(p)));
+end;
+
+test_homology_mod:=function()
+    local p, desc, x, ListCase, eCase, ResQ, ResP, index, eLevQ, eLevP, CharQ, CharP;
+    p:=2147483647;
+    ListCase:=[[2, [[1,0],[0,2]], "Gamma0SL", 11, "Sharbly", [0, 1]],
+               [2, [[1,0],[0,2]], "Gamma0SL", 11, "Dual", [0, 1]],
+               [3, [[1,0,0],[0,1,0],[0,0,2]], "Gamma0", 11, "Sharbly", [2, 3]]];
+    for eCase in ListCase
+    do
+        desc:=GenerateTspaceDescription_classic(eCase[1], false);
+        ResQ:=PERFCOMP_hecke_operators(desc, eCase[2], eCase[3], eCase[4], true, eCase[5], "none", 0);
+        ResP:=PERFCOMP_hecke_operators(desc, eCase[2], eCase[3], eCase[4], true, eCase[5], "none", p);
+        if ResP.prime<>p then
+            Print("The modular result should record the prime\n");
+            return false;
+        fi;
+        for index in eCase[6]
+        do
+            eLevQ:=get_hecke_level(ResQ, index);
+            eLevP:=get_hecke_level(ResP, index);
+            if eLevQ.dim_homology<>eLevP.dim_homology then
+                Print("The dimensions of the homology differ, ", eCase[5], " index=", index, "\n");
+                return false;
+            fi;
+            if eLevQ.dim_homology > 0 then
+                CharQ:=CharacteristicPolynomial(matrix_mod_p(eLevQ.HeckeMatrix, p));
+                CharP:=CharacteristicPolynomial(matrix_mod_p(eLevP.HeckeMatrix, p));
+                Print("Mod p ", eCase[3], "(", eCase[4], ") ", eCase[5], " index=", index,
+                      " dim=", eLevP.dim_homology, " same=", CharQ=CharP, "\n");
+                if CharQ<>CharP then
+                    Print("The characteristic polynomials mod p differ\n");
+                    return false;
+                fi;
+            fi;
+        od;
+    od;
+    return true;
+end;
+
 f_compute:=function()
     local n_error;
     n_error:=0;
@@ -248,6 +295,9 @@ f_compute:=function()
         n_error:=n_error+1;
     fi;
     if not test_sharbly() then
+        n_error:=n_error+1;
+    fi;
+    if not test_homology_mod() then
         n_error:=n_error+1;
     fi;
     return n_error=0;

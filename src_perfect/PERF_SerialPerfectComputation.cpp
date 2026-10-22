@@ -415,6 +415,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     if (FileHeckeHomology != "null") {
       std::string SubgroupType = BlockHECKE.get_string("SubgroupType");
       int SubgroupLevel = BlockHECKE.get_int("SubgroupLevel");
+      int64_t HeckeHomologyPrime = BlockHECKE.get_int("HeckeHomologyPrime");
       bool OnlyWellRoundedHomology = BlockHECKE.get_bool("OnlyWellRoundedHomology");
       if (hcm.method != "Vertex" && !OnlyWellRoundedHomology) {
         std::cerr << "The " << hcm.method << " method only gives the homology of the well rounded complex\n";
@@ -423,7 +424,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       FiniteIndexSubgroup<Tint> gamma{SubgroupType, Tint(SubgroupLevel), LinSpa.n};
       HeckeHomologyResult<T> result;
       try {
-        result = compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, os);
+        result = compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, HeckeHomologyPrime, os);
       } catch (HeckeFailure const &e) {
         report_failure(e.message);
       }

@@ -2856,7 +2856,7 @@ end;
 # (induction from the vertices in the full complex, required when
 # only_well_rounded_homology is false).
 PERFCOMP_hecke_operators:=function(arg)
-    local desc, HeckeMatrix, SubgroupType, SubgroupLevel, only_well_rounded_homology, HeckeMethod, FileCache, TmpDir, FileN, FileM, FileO, FileE, output, binary, status, TheResult;
+    local desc, HeckeMatrix, SubgroupType, SubgroupLevel, only_well_rounded_homology, HeckeMethod, FileCache, HomologyPrime, TmpDir, FileN, FileM, FileO, FileE, output, binary, status, TheResult;
     desc:=arg[1];
     HeckeMatrix:=arg[2];
     SubgroupType:=arg[3];
@@ -2871,6 +2871,11 @@ PERFCOMP_hecke_operators:=function(arg)
     FileCache:="none";
     if Length(arg) >= 7 then
         FileCache:=arg[7];
+    fi;
+    # A prime p for the homology modulo p (0 for the rational homology).
+    HomologyPrime:=0;
+    if Length(arg) >= 8 then
+        HomologyPrime:=arg[8];
     fi;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
@@ -2890,6 +2895,7 @@ PERFCOMP_hecke_operators:=function(arg)
     AppendTo(output, " OnlyWellRoundedHomology = ", FORTRAN_logical(only_well_rounded_homology), "\n");
     AppendTo(output, " HeckeMethod = \"", HeckeMethod, "\"\n");
     AppendTo(output, " FileHeckeChainMapCache = \"", FileCache, "\"\n");
+    AppendTo(output, " HeckeHomologyPrime = ", HomologyPrime, "\n");
     AppendTo(output, "/\n");
     CloseStream(output);
     #
