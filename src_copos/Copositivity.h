@@ -952,8 +952,10 @@ Tshortest<T, Tint> CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
   };
   CopositivityTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
       eSymmMat, InitialBasis, f_insert, f_test, os);
-#ifdef SANITY_CHECK_COPOSITIVITY
+#ifdef DEBUG_COPOSITIVITY
   os << "COP: nbCone=" << nbCone << "\n";
+#endif
+#ifdef SANITY_CHECK_COPOSITIVITY
   if (!eResult.test) {
     std::cerr << "COP: We should not have non-copositivity in "
                  "CopositiveShortestVector\n";
