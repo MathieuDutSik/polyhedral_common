@@ -22,7 +22,10 @@ FullNamelist NAMELIST_get_is_bounded_face() {
   BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System("Default: GAP\n\
+The formatting used for the output. Possible values:\n\
+GAP: the results of the two tests as a GAP list of two booleans\n\
+CPP: the results of the two tests, one per line");
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   // Merging all data

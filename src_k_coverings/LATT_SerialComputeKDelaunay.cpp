@@ -30,7 +30,8 @@
 FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_K_DELAUNAY() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  ListBlock["SYSTEM"] =
+      SINGLEBLOCK_Get_System(doc_OutFormat_KDelaunayTesselation());
   // DATA
   {
     std::map<std::string, std::string> ListStringValues;

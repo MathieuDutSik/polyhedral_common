@@ -2553,7 +2553,10 @@ FlippingLtype(
 FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System(
+      doc_OutFormat_FamilyObjects() + "\n\
+With compute_full_dimensional = T, only GAP (the cells of the L-type complex)\n\
+and NumberGAP (their numbers by dimension) are possible");
   // DATA
   {
     std::map<std::string, std::string> ListStringValues_doc;

@@ -591,6 +591,24 @@ UniqueAdjacencies(std::vector<AdjO_Serial<TadjO>> const &ListAdj,
   return new_v;
 }
 
+// The namelist documentation of OutFormat for the programs writing their
+// output with WriteFamilyObjects or WriteFamilyObjects_MPI.
+std::string doc_OutFormat_FamilyObjects() {
+  return "Default: NumberGAP\n\
+The formatting used for the output. Possible values:\n\
+nothing: no output\n\
+NumberGAP: the number of objects, as a GAP file\n\
+ObjectGAP: the list of objects, as a GAP file\n\
+DetailedObjectGAP: the list of objects with more details, as a GAP file\n\
+ObjectPYTHON: the list of objects, as a PYTHON file\n\
+ObjectFullAdjacencyGAP, ObjectFullAdjacencyPYTHON: the objects with all\n\
+  their adjacencies, as a GAP or PYTHON file\n\
+ObjectReducedAdjacencyGAP, ObjectReducedAdjacencyPYTHON: the objects with\n\
+  the indices of their adjacent objects, as a GAP or PYTHON file\n\
+AdjacencyGAP, AdjacencyPYTHON: for each object the indices of its adjacent\n\
+  objects, as a GAP or PYTHON file";
+}
+
 template <typename Tdata, typename Tobj, typename TadjO>
 bool WriteFamilyObjects(
     Tdata const &data, std::string const &OutFormat, std::ostream &os_out,

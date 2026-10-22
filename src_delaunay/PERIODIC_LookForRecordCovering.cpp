@@ -232,7 +232,8 @@ void process_C(FullNamelist const &eFull) {
 FullNamelist NAMELIST_GetStandard_PERIODIC_RECORD_COVERING() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System("Default: unset\n\
+Not used by this program");
   // DATA
   {
     std::map<std::string, std::string> ListStringValues;

@@ -2378,7 +2378,7 @@ EnumerateIsoKDelaunayDomains(DataIsoKDelaunayDomains<T, Tint, Tgroup> &data,
 FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoKDelaunayDomains() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System(doc_OutFormat_FamilyObjects());
   // DATA
   {
     std::map<std::string, std::string> ListStringValues;

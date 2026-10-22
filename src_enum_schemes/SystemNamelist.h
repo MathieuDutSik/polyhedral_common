@@ -10,7 +10,10 @@
 #include <string>
 // clang-format on
 
-SingleBlock SINGLEBLOCK_Get_System() {
+// The SYSTEM block. The values of OutFormat depend on the function writing
+// the output, so its documentation, default included, is given by the caller,
+// usually from a doc_OutFormat_* function next to that writer.
+SingleBlock SINGLEBLOCK_Get_System(std::string const &doc_OutFormat) {
   std::map<std::string, std::string> ListStringValues1_doc;
   std::map<std::string, std::string> ListBoolValues1_doc;
   std::map<std::string, std::string> ListIntValues1_doc;
@@ -28,15 +31,7 @@ T: If you run the program again you will get exactly the same result (good for d
 F: Running the program again will get you something different";
   ListStringValues1_doc["OutFile"] = "Default: unset.out\n\
 The file path for the output results";
-  ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
-The formatting used for the output. Possible values:\n\
-nothing: Do not write anything\n\
-NumberGAP: Only the number of entries created as a GAP readable file\n\
-ObjectGAP: The list of objects generated as a GAP readable file\n\
-DetailedObjectGAP: The list of objects generated in details as a GAP readable file\n\
-ObjectPYTHON: The list of objects generated as a PYTHON readable file\n\
-AdjacencyGAP: The adjacencies between the objects in a GAP format\n\
-AdjacencyPYTHON: The adjacencies between the objects in a PYTHON format";
+  ListStringValues1_doc["OutFormat"] = doc_OutFormat;
   SingleBlock BlockSYSTEM;
   BlockSYSTEM.setListStringValues_doc(ListStringValues1_doc);
   BlockSYSTEM.setListBoolValues_doc(ListBoolValues1_doc);

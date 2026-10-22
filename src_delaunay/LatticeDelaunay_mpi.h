@@ -72,6 +72,7 @@ void WriteFamilyDelaunay_Mpi(
       os_out << "iDel=" << iDel << "/" << nbDel << "\n";
       WriteMatrix(os_out, ListDel[iDel].x.EXT);
     }
+    return;
   }
   if (OutFormat == "GAP_Covering") {
     T max_radius(0);

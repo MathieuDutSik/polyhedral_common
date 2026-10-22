@@ -985,6 +985,16 @@ void WriteDelaunayTesselation(std::string const &OutFormat,
   throw TerminalException{1};
 }
 
+// The namelist documentation of OutFormat for WriteDelaunayTesselation.
+std::string doc_OutFormat_DelaunayTesselation() {
+  return "Default: GAP\n\
+The formatting used for the output. Possible values:\n\
+nothing: no output\n\
+GAP: the Delaunay tesselation, as a GAP file\n\
+PYTHON: the Delaunay tesselation, as a PYTHON file\n\
+GAP_Covering: the covering radius and density of the lattice, as a GAP file";
+}
+
 template <typename T, typename Tint, typename Tgroup, typename Fincorrect>
 std::optional<DelaunayTesselation<Tint, Tgroup>>
 EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
@@ -1050,10 +1060,23 @@ An initial polytope with fewer vertices makes the computation cheaper";
   ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
 }
 
+// The namelist documentation of OutFormat for WriteFamilyDelaunay_Mpi in
+// LatticeDelaunay_mpi.h.
+std::string doc_OutFormat_FamilyDelaunay_Mpi() {
+  return "Default: GAP\n\
+The formatting used for the output. Possible values:\n\
+nothing: no output\n\
+GAP: the Delaunay tesselation, as a GAP file\n\
+RAW: the vertices of the Delaunay polytopes, as matrices\n\
+GAP_Covering: the covering radius and density of the lattice, as a GAP file\n\
+CheckMergedOutput: only check the adjacencies of the merged tesselation";
+}
+
 FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  ListBlock["SYSTEM"] =
+      SINGLEBLOCK_Get_System(doc_OutFormat_FamilyDelaunay_Mpi());
   // DATA
   {
     std::map<std::string, std::string> ListStringValues_doc;
@@ -1074,7 +1097,8 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
 FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  ListBlock["SYSTEM"] =
+      SINGLEBLOCK_Get_System(doc_OutFormat_DelaunayTesselation());
   // DATA
   {
     std::map<std::string, std::string> ListStringValues_doc;

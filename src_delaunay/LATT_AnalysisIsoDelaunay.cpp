@@ -284,7 +284,8 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
 FullNamelist NAMELIST_GetStandard_ANALYSIS_ISODELAUNAY() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System("Default: unset\n\
+Not used by this program");
   // DATA
   {
     std::map<std::string, std::string> ListStringValues_doc;

@@ -18,7 +18,16 @@
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_PeriodicDelaunay() {
   std::map<std::string, SingleBlock> ListBlock;
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System("Default: NumberGAP\n\
+The formatting used for the output. Possible values:\n\
+NumberGAP: the number of orbits of Delaunay polytopes\n\
+SummaryGAP: for each orbit, the number of vertices, the order of the\n\
+  stabilizer and the number of adjacencies\n\
+ObjectGAP: the vertices of each orbit representative, in the scaled\n\
+  coordinates (the numerators over the coset denominator)\n\
+PackingCoveringGAP: the covering radius, the packing radius and the\n\
+  packing-covering constant of the point set, exactly as squares and in\n\
+  floating point");
   {
     std::map<std::string, std::string> ListStringValues;
     ListStringValues["arithmetic"] = "gmp";

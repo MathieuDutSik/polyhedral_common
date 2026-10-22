@@ -1350,6 +1350,16 @@ void WriteKDelaunayTesselation(std::string const &OutFormat,
   throw TerminalException{1};
 }
 
+// The namelist documentation of OutFormat for WriteKDelaunayTesselation.
+std::string doc_OutFormat_KDelaunayTesselation() {
+  return "Default: GAP\n\
+The formatting used for the output. Possible values:\n\
+nothing: no output\n\
+GAP: the k-Delaunay tesselation, as a GAP file\n\
+PYTHON: the k-Delaunay tesselation, as a PYTHON file\n\
+GAP_Covering: the k-covering radius and density of the lattice, as a GAP file";
+}
+
 template <typename Tint, typename Tgroup>
 void write_k_delaunay_to_file(std::string const &file,
                               KDelaunayTesselation<Tint, Tgroup> const &DT) {
