@@ -30,13 +30,12 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
   {
-    std::map<std::string, int> ListIntValues;
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListIntValues["n"] = -1;
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListIntValues_doc["n"] = "The dimension n of the lattices.\n\
+The program enumerates the iso-edge domains (the C-types) of the\n\
+n-dimensional lattices, starting from the principal domain";
     SingleBlock BlockDATA;
-    BlockDATA.setListIntValues(ListIntValues);
-    BlockDATA.setListStringValues(ListStringValues);
+    BlockDATA.setListIntValues_doc(ListIntValues_doc);
     ListBlock["DATA"] = BlockDATA;
   }
   // Merging all data
