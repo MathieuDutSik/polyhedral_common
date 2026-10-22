@@ -2952,7 +2952,8 @@ void compute_sharbly_level_below(
 #endif
         std::vector<TopPerfectCone<Tint>> l_top_seed =
             get_sharbly_covering_seed(index, iOrb, cosets.l_coset[j], fce, walker, reducer);
-        sol = partial_contracting_homotopy_kernel(index + 1, rhs, fce, f_filter, l_top_seed, os);
+        bool guided_growth = true;
+        sol = partial_contracting_homotopy_kernel(index + 1, rhs, fce, f_filter, l_top_seed, guided_growth, os);
       }
 #ifdef TIMINGS_HECKE_OPERATORS
       os << "|HECKE: sharbly level below iOrb=" << iOrb << "/" << n_orb << " j=" << j << "/" << n_coset

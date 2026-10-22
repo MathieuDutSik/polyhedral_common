@@ -13,6 +13,7 @@
 #include "SignatureSymmetric.h"
 #include "boost_serialization.h"
 #include <boost/dynamic_bitset/serialization.hpp>
+#include <Eigen/IterativeLinearSolvers>
 #include <fstream>
 #include <functional>
 // clang-format on
@@ -1906,7 +1907,7 @@ struct TopPerfectCone {
   Here we try to solve the equation in a specific set of top dimensional cells.
  */
 template<typename T, typename Tint, typename Tgroup>
-std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homotopy_specified(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os) {
+std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homotopy_specified(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os, std::vector<PerfectFace<Tint>>* l_obstruction = nullptr) {
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: partial_contracting_homotopy_specified, step 1, index=" << index << "\n";
 #endif
@@ -2091,6 +2092,34 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homoto
       opt = SparseSolutionMat_Exact(SpMat, Bvect, os);
     }
     if (!opt) {
+      if (l_obstruction) {
+        // Where the covering is too small: the cells of index "index"
+        // where the least squares residual r = B - X A is large. Since
+        // A r = 0 and B r = |r|^2 > 0 it certifies that there is no
+        // solution, and its support is where the filling has to go out of
+        // the covering. Floating point is enough: it only guides the
+        // growth of the covering.
+        MySparseMatrix<double> SpMatT_d = UniversalSparseMatrixConversion<double,T>(SpMat).transpose();
+        MyVector<double> Bvect_d = UniversalVectorConversion<double,T>(Bvect);
+        Eigen::LeastSquaresConjugateGradient<MySparseMatrix<double>> lscg;
+        lscg.setMaxIterations(2 * (nbRow + nbCol));
+        lscg.compute(SpMatT_d);
+        MyVector<double> x_d = lscg.solve(Bvect_d);
+        MyVector<double> r_d = Bvect_d - SpMatT_d * x_d;
+        double max_r = 0;
+        for (int i2=0; i2<nbCol; i2++) {
+          max_r = std::max(max_r, std::abs(r_d(i2)));
+        }
+        for (int i2=0; i2<nbCol; i2++) {
+          if (std::abs(r_d(i2)) >= 0.5 * max_r && max_r > 0) {
+            l_obstruction->push_back(cb2.faces[i2]);
+          }
+        }
+#ifdef DEBUG_PERFECT_COMPLEX
+        os << "PERFCOMP: partial_contracting_homotopy_specified, max residual=" << max_r
+           << " |obstruction|=" << l_obstruction->size() << "\n";
+#endif
+      }
       return {};
     }
     size_t max_row_l1 = 50000;
@@ -2139,7 +2168,7 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homoto
   geometric filling), and grows by adjacency until a solution is found.
  */
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::vector<TopPerfectCone<Tint>> const& l_top_seed, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::vector<TopPerfectCone<Tint>> const& l_top_seed, bool const& guided_growth, std::ostream& os) {
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: partial_contracting_homotopy_kernel, step 1\n";
 #endif
@@ -2175,7 +2204,9 @@ std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int c
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: partial_contracting_homotopy_kernel, start=" << start << "\n";
 #endif
-    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = partial_contracting_homotopy_specified(index, chain, fce, l_top, f_filter, os);
+    std::vector<PerfectFace<Tint>> l_obstruction;
+    std::vector<PerfectFace<Tint>>* ptr_obstruction = guided_growth ? &l_obstruction : nullptr;
+    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = partial_contracting_homotopy_specified(index, chain, fce, l_top, f_filter, os, ptr_obstruction);
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: partial_contracting_homotopy_kernel, we have opt\n";
 #endif
@@ -2186,6 +2217,20 @@ std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int c
     if (len > max_top) {
       std::cerr << "PERFCOMP: partial_contracting_homotopy_kernel, no solution found with " << len << " covering cones\n";
       throw TerminalException{1};
+    }
+    // The guided growth: the perfect cones containing the cells of the
+    // obstruction. If it brings nothing new, the whole ring of neighbors.
+    for (auto & pf: l_obstruction) {
+      for (auto & t: fce.levels[index].l_faces[pf.iOrb].l_triple) {
+        TopPerfectCone<Tint> tpc{static_cast<int>(t.iCone), t.eMat * pf.M};
+        f_insert(tpc);
+      }
+    }
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: partial_contracting_homotopy_kernel, guided growth " << len << " -> " << l_top.size() << "\n";
+#endif
+    if (l_top.size() > len) {
+      continue;
     }
     for (size_t u=start; u<len; u++) {
       int i_perfect = l_top[u].i_perfect;
@@ -2205,7 +2250,8 @@ std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int c
 template<typename T, typename Tint, typename Tgroup>
 std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os) {
   std::vector<TopPerfectCone<Tint>> l_top_seed;
-  return partial_contracting_homotopy_kernel(index, chain, fce, f_filter, l_top_seed, os);
+  bool guided_growth = false;
+  return partial_contracting_homotopy_kernel(index, chain, fce, f_filter, l_top_seed, guided_growth, os);
 }
 
 /*
