@@ -932,6 +932,13 @@ public:
 // Step A: the Hecke chain map on the complex
 //
 
+/*
+  The action of the Hecke double coset G x G on the cell complex (step A).
+  It is built once, by any of the methods (compute_hecke_chain_map_dual,
+  compute_hecke_chain_map, compute_hecke_chain_map_sharbly, ...), and is
+  then consumed by compute_hecke_homology for any finite index subgroup.
+  Nothing in it depends on the subgroup.
+ */
 template <typename T, typename Tint> struct HeckeChainMap {
   MyMatrix<T> x;
   HeckeCosets<T> cosets;
@@ -943,6 +950,13 @@ template <typename T, typename Tint> struct HeckeChainMap {
   // symbol level and the level below it, and the homology is reported
   // only there.
   std::vector<uint8_t> l_level_computed;
+  // The method that built it ("Dual", "Vertex", "Sharbly").
+  std::string method;
+  // Whether the images commute with the transposed differential (the
+  // coboundary from a cell to the cells containing it, as for "Dual")
+  // rather than with the boundary. The cycles and boundaries of step B
+  // are taken accordingly.
+  bool transposed;
   bool is_level_computed(int const &index) const {
     if (l_level_computed.empty()) {
       return true;
@@ -950,6 +964,23 @@ template <typename T, typename Tint> struct HeckeChainMap {
     return l_level_computed[index] == 1;
   }
 };
+
+// The f_member of the cosets is not stored: it is the membership in the
+// ambient group and is set again on reading.
+namespace boost::serialization {
+template <class Archive, typename T, typename Tint>
+inline void serialize(Archive &ar, HeckeChainMap<T, Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", val.x);
+  ar &make_nvp("cosets_x", val.cosets.x);
+  ar &make_nvp("l_coset", val.cosets.l_coset);
+  ar &make_nvp("l_coset_inv", val.cosets.l_coset_inv);
+  ar &make_nvp("images", val.images);
+  ar &make_nvp("l_level_computed", val.l_level_computed);
+  ar &make_nvp("method", val.method);
+  ar &make_nvp("transposed", val.transposed);
+}
+}  // namespace boost::serialization
 
 /*
   The action of the generators of the stabilizer of a cell on the Hecke
@@ -1404,7 +1435,7 @@ compute_hecke_chain_map(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     os << "|HECKE: level " << index << "|=" << time << "\n";
 #endif
   }
-  return {x, std::move(cosets), std::move(images), {}};
+  return {x, std::move(cosets), std::move(images), {}, "Vertex", false};
 }
 
 template <typename T, typename Tint>
@@ -2472,7 +2503,7 @@ compute_hecke_chain_map_dual(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     os << "|HECKE: dual level " << index << "|=" << time << "\n";
 #endif
   }
-  return {x, std::move(cosets), std::move(images), {}};
+  return {x, std::move(cosets), std::move(images), {}, "Dual", true};
 }
 
 //
@@ -3089,6 +3120,90 @@ compute_hecke_chain_map_sharbly(FullComplexEnumeration<T, Tint, Tgroup> const &f
   hcm.cosets = std::move(cosets);
   hcm.images = std::move(images);
   hcm.l_level_computed = std::move(l_level_computed);
+  hcm.method = "Sharbly";
+  hcm.transposed = false;
+  return hcm;
+}
+
+//
+// Step A, all methods: building the chain map once and caching it
+//
+
+/*
+  The chain map of x by the given method. If cache_file is not "none" and
+  holds the chain map of the same x on the same complex, it is read
+  instead of computed; otherwise it is computed and written there. The
+  stored images refer to the cells by their orbit index, so the complex
+  is identified by the vectors of the representatives of the orbits.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::vector<std::vector<MyMatrix<Tint>>>
+get_complex_fingerprint(FullComplexEnumeration<T, Tint, Tgroup> const &fce) {
+  std::vector<std::vector<MyMatrix<Tint>>> l_ext;
+  for (auto &level : fce.levels) {
+    std::vector<MyMatrix<Tint>> l_ext_level;
+    for (auto &face : level.l_faces) {
+      l_ext_level.push_back(face.EXT);
+    }
+    l_ext.emplace_back(std::move(l_ext_level));
+  }
+  return l_ext;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+HeckeChainMap<T, Tint>
+compute_hecke_chain_map_method(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+                               MyMatrix<T> const &x, std::string const &method,
+                               std::ostream &os) {
+  if (method == "Dual") {
+    return compute_hecke_chain_map_dual(fce, x, os);
+  }
+  if (method == "Vertex") {
+    return compute_hecke_chain_map(fce, x, os);
+  }
+  if (method == "Sharbly") {
+    return compute_hecke_chain_map_sharbly(fce, x, os);
+  }
+  std::cerr << "HECKE: HeckeMethod should be Dual, Vertex or Sharbly, method=" << method << "\n";
+  throw TerminalException{1};
+}
+
+template <typename T, typename Tint, typename Tgroup>
+HeckeChainMap<T, Tint>
+get_hecke_chain_map(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+                    MyMatrix<T> const &x, std::string const &method,
+                    std::string const &cache_file, std::ostream &os) {
+  LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
+  std::vector<std::vector<MyMatrix<Tint>>> l_ext = get_complex_fingerprint(fce);
+  if (cache_file != "none" && FILE_IsExistingFile(cache_file)) {
+    std::vector<std::vector<MyMatrix<Tint>>> l_ext_read;
+    HeckeChainMap<T, Tint> hcm;
+    {
+      std::ifstream ifs(cache_file);
+      boost::archive::text_iarchive ia(ifs);
+      ia >> l_ext_read;
+      ia >> hcm;
+    }
+    if (l_ext_read == l_ext && hcm.x == x) {
+      hcm.cosets.f_member = [&LinSpa](MyMatrix<T> const &g) -> bool {
+        return is_in_ambient_group(LinSpa, g);
+      };
+#ifdef DEBUG_HECKE_OPERATORS
+      os << "HECKE: chain map read from " << cache_file << " method=" << hcm.method << "\n";
+#endif
+      return hcm;
+    }
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: the chain map of " << cache_file << " is for another x or complex, recomputing\n";
+#endif
+  }
+  HeckeChainMap<T, Tint> hcm = compute_hecke_chain_map_method(fce, x, method, os);
+  if (cache_file != "none") {
+    std::ofstream ofs(cache_file);
+    boost::archive::text_oarchive oa(ofs);
+    oa << l_ext;
+    oa << hcm;
+  }
   return hcm;
 }
 
@@ -3331,6 +3446,7 @@ template <typename T> struct HeckeHomologyLevel {
 };
 
 template <typename T> struct HeckeHomologyResult {
+  std::string method; // The method of the chain map.
   std::string subgroup_type;
   bool only_well_rounded;
   size_t n_coset_gamma;
@@ -3374,7 +3490,8 @@ HeckeHomologyResult<T> compute_hecke_homology(
     FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     HeckeChainMap<T, Tint> const &hcm,
     FiniteIndexSubgroup<Tint> const &gamma, bool const &only_well_rounded,
-    [[maybe_unused]] bool const &dual, std::ostream &os) {
+    std::ostream &os) {
+  [[maybe_unused]] bool const &dual = hcm.transposed;
   LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
   int n = LinSpa.n;
 #ifdef TIMINGS_HECKE_OPERATORS
@@ -3404,6 +3521,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
   os << "|HECKE: compute_gamma_complex|=" << time << "\n";
 #endif
   HeckeHomologyResult<T> result;
+  result.method = hcm.method;
   result.subgroup_type = gamma.type;
   result.only_well_rounded = only_well_rounded;
   result.n_coset_gamma = ct.size();
@@ -3493,7 +3611,8 @@ HeckeHomologyResult<T> compute_hecke_homology(
 
 template <typename T>
 void WriteHeckeHomologyResultGAP(std::ostream &os_out, HeckeHomologyResult<T> const &result) {
-  os_out << "rec(subgroup_type:=\"" << result.subgroup_type << "\"";
+  os_out << "rec(method:=\"" << result.method << "\"";
+  os_out << ", subgroup_type:=\"" << result.subgroup_type << "\"";
   os_out << ", only_well_rounded:=" << GAP_logical(result.only_well_rounded);
   os_out << ", n_coset_gamma:=" << result.n_coset_gamma;
   os_out << ", n_hecke_coset:=" << result.n_hecke_coset;

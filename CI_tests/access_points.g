@@ -2856,7 +2856,7 @@ end;
 # (induction from the vertices in the full complex, required when
 # only_well_rounded_homology is false).
 PERFCOMP_hecke_operators:=function(arg)
-    local desc, HeckeMatrix, SubgroupType, SubgroupLevel, only_well_rounded_homology, HeckeMethod, TmpDir, FileN, FileM, FileO, FileE, output, binary, status, TheResult;
+    local desc, HeckeMatrix, SubgroupType, SubgroupLevel, only_well_rounded_homology, HeckeMethod, FileCache, TmpDir, FileN, FileM, FileO, FileE, output, binary, status, TheResult;
     desc:=arg[1];
     HeckeMatrix:=arg[2];
     SubgroupType:=arg[3];
@@ -2865,6 +2865,12 @@ PERFCOMP_hecke_operators:=function(arg)
     HeckeMethod:="Dual";
     if Length(arg) >= 6 then
         HeckeMethod:=arg[6];
+    fi;
+    # The cache of step A (the chain map of HeckeMatrix), shared by the
+    # runs for several subgroups.
+    FileCache:="none";
+    if Length(arg) >= 7 then
+        FileCache:=arg[7];
     fi;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
@@ -2883,6 +2889,7 @@ PERFCOMP_hecke_operators:=function(arg)
     AppendTo(output, " SubgroupLevel = ", SubgroupLevel, "\n");
     AppendTo(output, " OnlyWellRoundedHomology = ", FORTRAN_logical(only_well_rounded_homology), "\n");
     AppendTo(output, " HeckeMethod = \"", HeckeMethod, "\"\n");
+    AppendTo(output, " FileHeckeChainMapCache = \"", FileCache, "\"\n");
     AppendTo(output, "/\n");
     CloseStream(output);
     #

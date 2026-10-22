@@ -44,13 +44,29 @@ driven by the `&HECKE` block of `PERF_SerialPerfectComputation`:
 
 * `FileHeckeMatrix`: the rational matrix x of the double coset Gamma x Gamma
   (it must preserve the T-space).
+* `HeckeMethod`: how step A is built. `Dual` (induction from the perfect
+  cones in the well rounded complex), `Vertex` (induction from the vertices
+  in the full complex, needed for the homology of the full complex) or
+  `Sharbly` (Ash-Rudolph reduction of the modular symbols at the top degree
+  and filling of the level below: the top two degrees only).
 * `FileHeckeChainMap`: output of step A, the chains representing the images
   of the cells under the cosets of G x G.
+* `FileHeckeChainMapCache`: step A does not depend on the subgroup. If this
+  file holds the chain map of the same x on the same complex it is read
+  and step A is skipped (whatever `HeckeMethod` says); otherwise step A is
+  computed and written there. A run reading the cache of a `Sharbly` or
+  `Dual` chain map can use `ComputePartialContractingHomotopy = F`, which
+  saves the memory of the coverings.
 * `FileHeckeHomology`: output of step B, the Hecke matrices on the homology
   of the quotient by the subgroup, level by level, in a basis of harmonic
   representatives.
 * `SubgroupType` / `SubgroupLevel`: `Full`, `Principal`, `Gamma0` (last row
-  congruent to (0,...,0,*)) or `Gamma1` (last row congruent to (0,...,0,1)).
+  congruent to (0,...,0,*)) or `Gamma1` (last row congruent to (0,...,0,1)),
+  and their intersections with SL_n: `SL`, `PrincipalSL`, `Gamma0SL`,
+  `Gamma1SL`. The elements of determinant -1 can reverse the orientation of
+  the cells and kill them in the quotient complex: the cohomology of the
+  literature (Ash, Gunnells, McConnell for SL_4) is the one of the SL
+  variants.
 * `OnlyWellRoundedHomology`: restrict to the well rounded cells, which
   gives the cohomology of the subgroup by duality; otherwise the homology of
   the full complex with its cells at infinity.

@@ -380,14 +380,10 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   std::string FileHeckeMatrix = BlockHECKE.get_string("FileHeckeMatrix");
   if (FileHeckeMatrix != "null") {
     MyMatrix<T> x = ReadMatrixFile<T>(FileHeckeMatrix);
-    // Step A: the action on the cell complex
+    // Step A: the action on the cell complex, computed by HeckeMethod or
+    // read from FileHeckeChainMapCache
     std::string HeckeMethod = BlockHECKE.get_string("HeckeMethod");
-    bool dual = (HeckeMethod == "Dual");
-    bool sharbly = (HeckeMethod == "Sharbly");
-    if (!dual && !sharbly && HeckeMethod != "Vertex") {
-      std::cerr << "HeckeMethod should be Dual, Vertex or Sharbly\n";
-      throw TerminalException{1};
-    }
+    std::string FileHeckeChainMapCache = BlockHECKE.get_string("FileHeckeChainMapCache");
     // A clean failure (budget exhausted) is reported in the output files
     // and the program stops with an error code.
     auto report_failure = [&](std::string const &message) -> void {
@@ -403,13 +399,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     };
     HeckeChainMap<T, Tint> hcm;
     try {
-      if (dual) {
-        hcm = compute_hecke_chain_map_dual(fce, x, os);
-      } else if (sharbly) {
-        hcm = compute_hecke_chain_map_sharbly(fce, x, os);
-      } else {
-        hcm = compute_hecke_chain_map(fce, x, os);
-      }
+      hcm = get_hecke_chain_map(fce, x, HeckeMethod, FileHeckeChainMapCache, os);
     } catch (HeckeFailure const &e) {
       report_failure(e.message);
     }
@@ -426,14 +416,14 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       std::string SubgroupType = BlockHECKE.get_string("SubgroupType");
       int SubgroupLevel = BlockHECKE.get_int("SubgroupLevel");
       bool OnlyWellRoundedHomology = BlockHECKE.get_bool("OnlyWellRoundedHomology");
-      if ((dual || sharbly) && !OnlyWellRoundedHomology) {
-        std::cerr << "The " << HeckeMethod << " method only gives the homology of the well rounded complex\n";
+      if (hcm.method != "Vertex" && !OnlyWellRoundedHomology) {
+        std::cerr << "The " << hcm.method << " method only gives the homology of the well rounded complex\n";
         throw TerminalException{1};
       }
       FiniteIndexSubgroup<Tint> gamma{SubgroupType, Tint(SubgroupLevel), LinSpa.n};
       HeckeHomologyResult<T> result;
       try {
-        result = compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, dual, os);
+        result = compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, os);
       } catch (HeckeFailure const &e) {
         report_failure(e.message);
       }

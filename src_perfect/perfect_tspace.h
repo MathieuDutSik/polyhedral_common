@@ -468,15 +468,22 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListStringValues["FileHeckeMatrix"] = "null";
     // The action of x on the cell complex (step A), GAP readable
     ListStringValues["FileHeckeChainMap"] = "null";
+    // The cache of step A: if the file holds the chain map of the same x
+    // on the same complex, step A is not computed, otherwise it is
+    // computed (by HeckeMethod) and written there. It does not depend on
+    // the subgroup, so the runs for several subgroups share it.
+    ListStringValues["FileHeckeChainMapCache"] = "none";
     // The Hecke matrices on the homology of the quotient by the finite
     // index subgroup (step B), GAP readable
     ListStringValues["FileHeckeHomology"] = "null";
-    // The finite index subgroup: Full, Principal, Gamma0, Gamma1
+    // The finite index subgroup: Full, Principal, Gamma0, Gamma1, and
+    // their intersections with SL_n: SL, PrincipalSL, Gamma0SL, Gamma1SL
     ListStringValues["SubgroupType"] = "Full";
     // The construction of the chain map: "Dual" (induction from the
-    // perfect cones in the well rounded complex) or "Vertex" (induction
+    // perfect cones in the well rounded complex), "Vertex" (induction
     // from the vertices in the full complex, needed for the homology of
-    // the full complex)
+    // the full complex) or "Sharbly" (reduction of the modular symbols,
+    // the top two degrees only)
     ListStringValues["HeckeMethod"] = "Dual";
     ListIntValues["SubgroupLevel"] = 1;
     // Whether the homology is that of the well rounded complex (the

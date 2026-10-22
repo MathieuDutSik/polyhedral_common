@@ -111,7 +111,7 @@ end;
 # relative to the Dual chain map, so the matrices differ but the
 # characteristic polynomials coincide.
 test_sharbly:=function()
-    local desc, p, a_p, ListPrime, ListAp, i, x, ResS, ResD, eLevS, eLevD, M, dim, P1, P2, N, ListN, ListChar, index;
+    local desc, p, a_p, ListPrime, ListAp, i, x, ResS, ResD, eLevS, eLevD, M, dim, P1, P2, N, ListN, ListChar, index, FileCache;
     desc:=GenerateTspaceDescription_classic(2, false);
     ListPrime:=[2, 3];
     ListAp:=[-2, -1];
@@ -188,6 +188,27 @@ test_sharbly:=function()
             return false;
         fi;
     od;
+    # The chain map does not depend on the subgroup: computed once by the
+    # Sharbly method for Gamma0(11), it is read from the cache for
+    # Gamma0SL(11). The second run asks for the Dual method, so getting the
+    # Sharbly method and matrices back shows that the cache was used.
+    FileCache:=Filename(DirectoryTemporary(), "hecke_chain_map_cache");
+    ResS:=PERFCOMP_hecke_operators(desc, x, "Gamma0", 11, true, "Sharbly", FileCache);
+    ResD:=PERFCOMP_hecke_operators(desc, x, "Gamma0SL", 11, true, "Dual", FileCache);
+    Print("Cache: method of the second run=", ResD.method, "\n");
+    if ResS.method<>"Sharbly" or ResD.method<>"Sharbly" then
+        Print("The chain map should have been read from the cache\n");
+        return false;
+    fi;
+    ResS:=PERFCOMP_hecke_operators(desc, x, "Gamma0SL", 11, true, "Sharbly");
+    for index in [0, 1]
+    do
+        if get_hecke_level(ResS, index).HeckeMatrix<>get_hecke_level(ResD, index).HeckeMatrix then
+            Print("The Hecke matrices with and without the cache should be equal\n");
+            return false;
+        fi;
+    od;
+    RemoveFile(FileCache);
     # GL3, Gamma0(9) and Gamma0(11): nonzero homology at the symbol level
     # (index 3), compared between the Sharbly and the Dual methods.
     desc:=GenerateTspaceDescription_classic(3, false);
