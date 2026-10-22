@@ -36,7 +36,7 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_K_DELAUNAY() {
     std::map<std::string, std::string> ListStringValues;
     ListStringValues["arithmetic"] = "gmp";
     ListStringValues["GRAMfile"] = "unset.gram";
-    ListStringValues["SVRfile"] = "unset.svr";
+    ListStringValues["SVRfile"] = "unset";
     ListStringValues["choice_initial"] = "direct";
     ListStringValues["FileDualDescription"] = "unset";
     ListStringValues["CacheFile"] = "none";

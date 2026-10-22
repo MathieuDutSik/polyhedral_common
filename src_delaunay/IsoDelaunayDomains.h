@@ -2560,10 +2560,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
     std::map<std::string, std::string> ListBoolValues_doc;
     ListStringValues_doc["arithmetic"] =
         doc_rational_integer_arithmetics_by_library();
-    ListStringValues_doc["FileDualDescription"] = "Default: unset\n\
-A namelist file in the format of POLY_SerialDualDesc whose heuristics are\n\
-used for the dual description computations.\n\
-If unset then the default heuristics are used";
+    ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
     ListStringValues_doc["CommonGramMat"] = "Default: unset\n\
 A file containing a Gram matrix G of the T-space. If set, only the\n\
 iso-Delaunay domains whose closure contains G are enumerated (the star of G).\n\

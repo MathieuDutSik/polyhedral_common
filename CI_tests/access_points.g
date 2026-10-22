@@ -1539,7 +1539,7 @@ get_lattice_covering:=function(arg)
         strOut:="&DATA\n";
         strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
         strOut:=Concatenation(strOut, " GRAMfile = \"", FileI, "\"\n");
-        strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
+        strOut:=Concatenation(strOut, " SVRfile = \"unset\"\n");
         strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
         strOut:=Concatenation(strOut, " OutFile = \"", FileO, "\"\n");
         strOut:=Concatenation(strOut, " max_runtime_second = 10800\n");
@@ -1565,7 +1565,7 @@ get_lattice_covering:=function(arg)
         strOut:=Concatenation(strOut, "&DATA\n");
         strOut:=Concatenation(strOut, " arithmetic = \"", arith, "\"\n");
         strOut:=Concatenation(strOut, " GRAMfile = \"", FileI, "\"\n");
-        strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
+        strOut:=Concatenation(strOut, " SVRfile = \"unset\"\n");
         strOut:=Concatenation(strOut, " CacheFile = \"none\"\n");
         strOut:=Concatenation(strOut, "/\n");
         strOut:=Concatenation(strOut, "\n");

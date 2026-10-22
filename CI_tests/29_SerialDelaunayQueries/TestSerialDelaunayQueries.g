@@ -38,7 +38,7 @@ RunSerialDelaunay:=function(TmpDir, eG, queriesBody)
     strOut:=Concatenation(strOut, "&DATA\n");
     strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
     strOut:=Concatenation(strOut, " GRAMfile = \"", FileG, "\"\n");
-    strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
+    strOut:=Concatenation(strOut, " SVRfile = \"unset\"\n");
     strOut:=Concatenation(strOut, " CacheFile = \"none\"\n");
     strOut:=Concatenation(strOut, "/\n\n");
     strOut:=Concatenation(strOut, "&QUERIES\n");
@@ -326,7 +326,7 @@ TestEnumeration:=function(eRec)
     strOut:=Concatenation(strOut, "&DATA\n");
     strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
     strOut:=Concatenation(strOut, " GRAMfile = \"", FileG, "\"\n");
-    strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
+    strOut:=Concatenation(strOut, " SVRfile = \"unset\"\n");
     strOut:=Concatenation(strOut, " CacheFile = \"none\"\n");
     strOut:=Concatenation(strOut, "/\n\n");
     strOut:=Concatenation(strOut, "&QUERIES\n");
@@ -383,7 +383,7 @@ RunEnumeration:=function(eG, shv)
     FileE:=Filename(TmpDir, "Enum.err");
     WriteMatrixFile(FileG, eG);
     if shv = fail then
-        strSVR:="unset.svr";
+        strSVR:="unset";
     else
         FileS:=Filename(TmpDir, "Svr.in");
         WriteMatrixFile(FileS, shv);

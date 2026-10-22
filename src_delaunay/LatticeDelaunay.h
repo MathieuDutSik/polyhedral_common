@@ -11,6 +11,7 @@
 #include "POLY_AdjacencyScheme.h"
 #include "GraverBasis.h"
 #include "SystemNamelist.h"
+#include "Arithmetic_dispatch_types.h"
 #include <map>
 #include <optional>
 #include <string>
@@ -1025,20 +1026,40 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
   return DT;
 }
 
+// The DATA keys read by get_data_lattice, common to the namelists of
+// LATT_MPI_ComputeDelaunay and LATT_SerialComputeDelaunay.
+void Insert_DelaunayLattice_DATA_doc(
+    std::map<std::string, std::string> &ListStringValues_doc) {
+  ListStringValues_doc["arithmetic"] =
+      doc_rational_integer_arithmetics_by_library();
+  ListStringValues_doc["GRAMfile"] =
+      "The file containing the Gram matrix of the lattice";
+  ListStringValues_doc["SVRfile"] = "Default: unset\n\
+A file containing a set of vectors that the isometries have to preserve:\n\
+the Delaunay polytopes are classified up to the subgroup of the automorphism\n\
+group of the lattice preserving that set.\n\
+If unset then the whole automorphism group is used";
+  ListStringValues_doc["choice_initial"] = "Default: direct\n\
+The method for finding the initial Delaunay polytope. Possible values:\n\
+direct: the first Delaunay polytope found\n\
+simple_iter: from it, up to 10 moves to the adjacent Delaunay polytope with\n\
+  the fewest vertices, stopping at one with at most 2n vertices\n\
+sampling: the same moves, with the facets found by sampling, as long as\n\
+  the number of vertices decreases\n\
+An initial polytope with fewer vertices makes the computation cheaper";
+  ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
+}
+
 FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["GRAMfile"] = "unset.gram";
-    ListStringValues["SVRfile"] = "unset.svr";
-    ListStringValues["choice_initial"] = "direct";
-    ListStringValues["FileDualDescription"] = "unset";
+    std::map<std::string, std::string> ListStringValues_doc;
+    Insert_DelaunayLattice_DATA_doc(ListStringValues_doc);
     SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
+    BlockDATA.setListStringValues_doc(ListStringValues_doc);
     ListBlock["DATA"] = BlockDATA;
   }
   // Merging all data
@@ -1059,7 +1080,7 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
     std::map<std::string, std::string> ListStringValues;
     ListStringValues["arithmetic"] = "gmp";
     ListStringValues["GRAMfile"] = "unset.gram";
-    ListStringValues["SVRfile"] = "unset.svr";
+    ListStringValues["SVRfile"] = "unset";
     ListStringValues["choice_initial"] = "direct";
     ListStringValues["FileDualDescription"] = "unset";
     ListStringValues["CacheFile"] = "none";
@@ -1172,11 +1193,16 @@ get_data_lattice(FullNamelist const &eFull,
   //
   std::string SVRfile = BlockDATA.get_string("SVRfile");
   auto get_SVR = [&]() -> MyMatrix<T> {
-    if (FILE_IsExistingFile(SVRfile)) {
-      return ReadMatrixFile<T>(SVRfile);
+    if (SVRfile == "unset") {
+      int n = GramMat.rows();
+      return ZeroMatrix<T>(0, n);
     }
-    int n = GramMat.rows();
-    return ZeroMatrix<T>(0, n);
+    if (!FILE_IsExistingFile(SVRfile)) {
+      std::cerr << "DEL_ENUM: The file SVRfile=" << SVRfile
+                << " is missing\n";
+      throw TerminalException{1};
+    }
+    return ReadMatrixFile<T>(SVRfile);
   };
   MyMatrix<T> SVR = get_SVR();
 #ifdef DEBUG_DELAUNAY_ENUMERATION

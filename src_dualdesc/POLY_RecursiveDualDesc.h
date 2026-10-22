@@ -2009,6 +2009,15 @@ Read_AllStandardHeuristicSerial([[maybe_unused]] FullNamelist const &eFull, int 
   return AllArr;
 }
 
+// The namelist documentation of the FileDualDescription key, the file read by
+// Read_AllStandardHeuristicSerial_File.
+std::string doc_FileDualDescription() {
+  return "Default: unset\n\
+A namelist file in the format of POLY_SerialDualDesc whose heuristics are\n\
+used for the dual description computations.\n\
+If unset then the default heuristics are used";
+}
+
 template <typename T, typename TintGroup>
 PolyHeuristicSerial<TintGroup>
 Read_AllStandardHeuristicSerial_File([[maybe_unused]] std::string const &eFile,
