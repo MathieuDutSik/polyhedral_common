@@ -90,6 +90,11 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
   std::string FileLinSpace = BlockDATA.get_string("FileLinSpace");
   std::string FileCosets = BlockDATA.get_string("FileCosets");
   //
+  if (!FILE_IsExistingFile(FileIso)) {
+    std::cerr << "LATT_AnalysisIsoDelaunay: The file FileIsoDelaunay="
+              << FileIso << " is missing\n";
+    throw TerminalException{1};
+  }
   IsoDelaunayDomain<T, Tint, Tgroup> x;
   {
     std::ifstream ifs(FileIso);
@@ -282,46 +287,50 @@ FullNamelist NAMELIST_GetStandard_ANALYSIS_ISODELAUNAY() {
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["FileIsoDelaunay"] = "unset";
-    // The T-space the iso-Delaunay domain was computed with, in the format
-    // of WriteLinSpaceFile. "null" (the default) uses the canonical GL_n(Z)
-    // T-space, which is the right one for the enumerations run over the full
-    // space of quadratic forms.
-    ListStringValues["FileLinSpace"] = "null";
-    // For a domain coming from LATT_SerialPeriodic_IsoDelaunayDomain, the
-    // very coset file that enumeration was run with. It is what tells the
-    // covering density apart from the lattice one. "null" (the default)
-    // treats the domain as a lattice one.
-    ListStringValues["FileCosets"] = "null";
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["FileIsoDelaunay"] = "The file containing the\n\
+iso-Delaunay domain as a boost text archive, as written by\n\
+LATT_SerialLattice_IsoDelaunayDomain (PrefixIsoDelaunayDomains) or by\n\
+LATT_SerialComputeDelaunay (FileIsoDelaunayDomain)";
+    ListStringValues_doc["FileLinSpace"] = "Default: null\n\
+The T-space the iso-Delaunay domain was computed with, in the format of\n\
+WriteLinSpaceFile. If null then the canonical T-space of all the quadratic\n\
+forms is used, which is the right one for the enumerations over that space";
+    ListStringValues_doc["FileCosets"] = "Default: null\n\
+For a domain coming from LATT_SerialPeriodic_IsoDelaunayDomain, the coset\n\
+file that enumeration was run with. It is needed for the covering density\n\
+of the periodic point set. If null then the domain is treated as a lattice\n\
+one";
     SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
+    BlockDATA.setListStringValues_doc(ListStringValues_doc);
     ListBlock["DATA"] = BlockDATA;
   }
   // QUERIES
   {
-    std::map<std::string, std::string> ListStringValues;
-    // The facets (irredundant defining inequalities FACred) of the L-type cone,
-    // as a matrix in CPP format. "null" (the default) skips the writing.
-    ListStringValues["FileFacets"] = "null";
-    // The full-rank (rigid) extreme rays of the domain, as a GAP list of Gram
-    // matrices. "null" (the default) skips the computation.
-    ListStringValues["FileFullRankRays"] = "null";
-    // The tally of extreme-ray ranks, as a GAP list of [rank, count] pairs.
-    // "null" (the default) skips the computation.
-    ListStringValues["FileRankTally"] = "null";
-    // A Gram matrix in the relative interior of the L-type cone. "null" (the
-    // default) skips the computation.
-    ListStringValues["FileInnerGramMat"] = "null";
-    // JSON export of the (simplex-Delaunay) L-type for the Julia downstream.
-    // "null" (the default) skips the computation.
-    ListStringValues["FileQuantizerLtypeJSON"] = "null";
-    // The covering density optimum over the domain, as a GAP record.
-    // "null" (the default) skips the computation.
-    ListStringValues["FileCoveringOptimum"] = "null";
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["FileFacets"] = "Default: null\n\
+The file to which the irredundant defining inequalities of the L-type cone\n\
+are written as a matrix. If null then they are not written";
+    ListStringValues_doc["FileFullRankRays"] = "Default: null\n\
+The file to which the extreme rays of the domain that are positive definite\n\
+(of full rank) are written as a GAP list of Gram matrices.\n\
+If null then they are not computed";
+    ListStringValues_doc["FileRankTally"] = "Default: null\n\
+The file to which the ranks of the extreme rays are written as a GAP list of\n\
+[rank, count] pairs. If null then they are not computed";
+    ListStringValues_doc["FileInnerGramMat"] = "Default: null\n\
+The file to which a Gram matrix in the relative interior of the L-type cone\n\
+is written. If null then it is not computed";
+    ListStringValues_doc["FileQuantizerLtypeJSON"] = "Default: null\n\
+The file to which the L-type (with simplicial Delaunay polytopes) is written\n\
+in JSON, for the Julia code of the quantizer. If null then it is not written";
+    ListStringValues_doc["FileCoveringOptimum"] = "Default: null\n\
+The file to which the optimum of the covering density over the domain is\n\
+written as a GAP record. If null then it is not computed";
     SingleBlock BlockQUERIES;
-    BlockQUERIES.setListStringValues(ListStringValues);
+    BlockQUERIES.setListStringValues_doc(ListStringValues_doc);
     ListBlock["QUERIES"] = BlockQUERIES;
   }
   return FullNamelist(ListBlock);
