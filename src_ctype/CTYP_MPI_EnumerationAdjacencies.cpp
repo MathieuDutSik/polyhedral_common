@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "CtypeMPI_types.h"
+#include "CtypeMPI_namelist.h"
 #include "Namelist.h"
 #include "hash_functions.h"
 #include "rational.h"
@@ -83,22 +84,18 @@ namespace mpi = boost::mpi;
 FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  ListIntValues1["n"] = 6;
-  ListStringValues1["WorkingPrefix"] = "WORK_OUT_6_";
-  ListStringValues1["WorkingAdjPrefix"] = "WORK_ADJ_6_";
-  ListIntValues1["MaxNumberFlyingMessage"] = 100;
-  ListIntValues1["MaxStoredUnsentMatrices"] = 1000;
-  ListIntValues1["MaxRunTimeSecond"] = -1;
-  ListIntValues1["TimeForDeclaringItOver"] = 120;
-  ListIntValues1["MpiBufferSize"] = 20;
-  ListBoolValues1["StopWhenFinished"] = false;
+  std::map<std::string, std::string> ListIntValues1_doc;
+  std::map<std::string, std::string> ListStringValues1_doc;
+  Insert_CtypeMPI_ExchangeKeys(ListIntValues1_doc);
+  ListStringValues1_doc["WorkingPrefix"] = "The prefix of the netCDF files of C-types.\n\
+The process of rank i reads the file WorkingPrefix + i + \".nc\"\n\
+which is the result of CTYP_MPI_Enumeration_c";
+  ListStringValues1_doc["WorkingAdjPrefix"] = "The prefix of the netCDF files of adjacencies.\n\
+The process of rank i writes to the file WorkingAdjPrefix + i + \".nc\"\n\
+which has been created by CTYP_PrepareAdjacencyFile";
   SingleBlock BlockDATA;
-  BlockDATA.setListIntValues(ListIntValues1);
-  BlockDATA.setListStringValues(ListStringValues1);
-  BlockDATA.setListBoolValues(ListBoolValues1);
+  BlockDATA.setListIntValues_doc(ListIntValues1_doc);
+  BlockDATA.setListStringValues_doc(ListStringValues1_doc);
   ListBlock["DATA"] = BlockDATA;
   // Merging all data
   return FullNamelist(ListBlock);
@@ -195,7 +192,6 @@ int main(int argc, char *argv[]) {
   size_t MpiBufferSize = BlDATA.get_int("MpiBufferSize");
   int TimeForDeclaringItOver =
     BlDATA.get_int("TimeForDeclaringItOver");
-  bool StopWhenFinished = BlDATA.get_bool("StopWhenFinished");
   std::string WorkingPrefix = BlDATA.get_string("WorkingPrefix");
   std::string WorkingAdjPrefix = BlDATA.get_string("WorkingAdjPrefix");
   //
@@ -619,7 +615,7 @@ int main(int argc, char *argv[]) {
       if (!AreBufferFullEnough()) {
         if (MaxRunTimeSecond < 0 || elapsed_seconds < MaxRunTimeSecond) {
           // We pass the first test with respect to runtime
-          if (!StopWhenFinished || !ListUndoneIndex.empty()) {
+          if (!ListUndoneIndex.empty()) {
             // We pass the test of being non-empty
             DoSomething = true;
           }

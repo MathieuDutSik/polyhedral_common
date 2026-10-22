@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "CtypeMPI_types.h"
+#include "CtypeMPI_namelist.h"
 #include "Namelist.h"
 #include "hash_functions.h"
 #include "rational.h"
@@ -90,25 +91,10 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI() {
   // DATA
   std::map<std::string, std::string> ListIntValues1_doc;
   std::map<std::string, std::string> ListStringValues1_doc;
-  ListIntValues1_doc["n"] = "The dimension n of the lattices.\n\
-It must be the dimension of the C-types stored in the netCDF files";
+  Insert_CtypeMPI_ExchangeKeys(ListIntValues1_doc);
   ListStringValues1_doc["WorkingPrefix"] = "The prefix of the netCDF files.\n\
 The process of rank i works with the file WorkingPrefix + i + \".nc\"\n\
 which has been created by CTYP_PrepareInitialFile (its PrefixOutput)";
-  ListIntValues1_doc["MaxNumberFlyingMessage"] = "Default: 100\n\
-The maximum number of MPI messages being sent at the same time";
-  ListIntValues1_doc["MaxStoredUnsentMatrices"] = "Default: 1000\n\
-When more C-types than this wait to be sent, no new adjacency\n\
-computation is started until the buffers are cleared";
-  ListIntValues1_doc["MaxRunTimeSecond"] = "Default: -1\n\
-The maximum runtime in seconds after which no new adjacency computation\n\
-is started. The state is in the netCDF files, so the run can be resumed.\n\
-If negative then there is no maximum runtime";
-  ListIntValues1_doc["TimeForDeclaringItOver"] = "Default: 120\n\
-The number of seconds without any operation after which a process\n\
-declares itself finished to the other processes";
-  ListIntValues1_doc["MpiBufferSize"] = "Default: 20\n\
-The maximum number of C-types sent in a single MPI message";
   SingleBlock BlockDATA;
   BlockDATA.setListIntValues_doc(ListIntValues1_doc);
   BlockDATA.setListStringValues_doc(ListStringValues1_doc);
