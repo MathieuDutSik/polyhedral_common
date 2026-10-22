@@ -614,6 +614,13 @@ std::optional<MyVector<T>> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpM
     }
   }
   int nbRowRed = l_rows.size();
+  // The exact solve on the support is dense: when the support is large
+  // (typically when yall1 did not converge) it would take gigabytes, so
+  // nothing is returned and the caller keeps its own solution.
+  size_t max_ent_dense = 4000000;
+  if (static_cast<size_t>(nbRowRed) * static_cast<size_t>(SpMat.cols()) > max_ent_dense) {
+    return {};
+  }
   MySparseMatrix<T> SpMatRed = SparseMatrixSelectRows(SpMat, l_rows);
   MyMatrix<T> Mred = MyMatrixFromSparseMatrix(SpMatRed);
   std::optional<MyVector<T>> opt = SolutionMat(Mred, Bvect);

@@ -475,7 +475,8 @@ HeckeCosets<T>
 enumerate_hecke_cosets(MyMatrix<T> const &x,
                        std::vector<MyMatrix<Tint>> const &l_gens,
                        std::function<bool(MyMatrix<T> const &)> f_member,
-                       [[maybe_unused]] std::ostream &os) {
+                       [[maybe_unused]] std::ostream &os,
+                       size_t const &n_expected = 0) {
   HeckeCosets<T> hc;
   hc.x = x;
   hc.f_member = f_member;
@@ -495,6 +496,11 @@ enumerate_hecke_cosets(MyMatrix<T> const &x,
     }
     MyMatrix<T> y = hc.l_coset[pos];
     for (auto &s : l_gens) {
+      // When the number of cosets is known, the enumeration stops as soon
+      // as they are all found.
+      if (n_expected > 0 && hc.l_coset.size() == n_expected) {
+        break;
+      }
       MyMatrix<T> s_T = UniversalMatrixConversion<T, Tint>(s);
       MyMatrix<T> prod = s_T * y;
       f_insert(prod);
@@ -2530,14 +2536,14 @@ compute_hecke_chain_map_dual(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   homology level sanity checks (the image of a cycle is a cycle and
   projects onto the harmonic space modulo boundaries) verify the result.
 
-  The reducing point w is chosen among the minimal vectors of a perfect
-  cone whose closure contains the barycenter of the symbol (the Voronoi
-  reduction of Gunnells), with the Ash-Rudolph candidates
-  e_j - sum_i floor(q_i) v_i as a guaranteed fallback; among the valid
-  candidates one minimizing the largest new determinant is kept. The
-  choice depends only on the set of vectors of the symbol, so the output
-  is equivariant by construction; the averaging over the coset stabilizer
-  is kept as a safety net and the invariance is checked.
+  The reducing points w are the lattice points of the box
+  {sum_i q_i v_i : |q_i| < 1} minimizing max |q_i| (the largest new
+  determinant), and the reduction is averaged over them. The box only
+  depends on the symbol, so the reduction Phi is a G-equivariant function
+  of the symbol: Phi(W g) = Phi(W) g. This makes the images of all the
+  symbols consistent, which the level below relies on; the averaging over
+  the coset stabilizer is kept as a safety net and the invariance is
+  checked.
 
   A unimodular symbol is a cell of the unimodular frame orbit iOrb_0 (the
   orbit of the standard frame; GL_n(Z) is transitive on the frames). The
@@ -2578,127 +2584,144 @@ template <typename T, typename Tint, typename Tgroup>
 struct SharblyReducer {
 private:
   FullComplexEnumeration<T, Tint, Tgroup> const &fce;
-  ConeWalker<T, Tint, Tgroup> const &walker;
   int symbol_level;
   int iOrb0;
   MyMatrix<Tint> E0_inv;
   HeckeBudget budget;
   std::ostream &os;
-  struct Candidate {
-    MyVector<Tint> w;
-    MyVector<T> q;
-    T score;
-    int n_nonzero;
-  };
-  // The coefficients q with w = sum q_i v_i, the rows of W being the v_i.
-  MyVector<T> get_coefficients(MyMatrix<T> const &W_inv, MyVector<Tint> const &w) const {
-    MyVector<T> w_T = UniversalVectorConversion<T, Tint>(w);
-    return W_inv.transpose() * w_T;
+  // x - floor(x), in [0, 1).
+  static T frac(T const &x) {
+    Tint fl = UniversalFloorScalarInteger<Tint, T>(x);
+    return x - T(fl);
   }
-  // A candidate is valid when all |q_i| < 1 and at least one q_i is not
-  // zero. The score is the largest |q_i|: the largest determinant of the
-  // sub-symbols relative to the current one.
-  std::optional<Candidate> evaluate(MyMatrix<T> const &W_inv, MyVector<Tint> const &w_in) const {
-    MyVector<Tint> w = RemoveFractionVector(w_in);
-    if (IsZeroVector(w)) {
-      return {};
-    }
-    MyVector<T> q = get_coefficients(W_inv, w);
-    int n = q.size();
-    T score(0);
-    int n_nonzero = 0;
-    for (int i = 0; i < n; i++) {
-      T aq = T_abs(q(i));
-      if (aq >= 1) {
-        return {};
-      }
-      if (aq > score) {
-        score = aq;
-      }
-      if (q(i) != 0) {
-        n_nonzero += 1;
-      }
-    }
-    if (n_nonzero == 0) {
-      return {};
-    }
-    Candidate cand{std::move(w), std::move(q), std::move(score), n_nonzero};
-    return cand;
-  }
-  // The Ash-Rudolph candidates: for a basis vector e_j outside of the
-  // lattice spanned by the rows, w = e_j - sum_i floor(q_i) v_i has
-  // 0 <= q_i < 1 with some q_i not integral. At least one e_j works
-  // since |det| > 1. This guarantees that a reducing point exists.
-  void insert_fallback_candidates(MyMatrix<Tint> const &W, MyMatrix<T> const &W_inv,
-                                  std::vector<MyVector<Tint>> &l_cand) const {
-    int n = W.cols();
+  /*
+    The reducing points of the symbol of the rows of W: the nonzero lattice
+    points w = sum_i q_i v_i with all |q_i| < 1 for which max_i |q_i| is the
+    smallest, then the number of nonzero q_i, then sum_i q_i^2. They are returned as the
+    vectors q, one for each pair {w, -w}. The lattice points of this box
+    only depend on the symbol (the box is invariant under the permutations
+    and the sign changes of the rows), so the reduction, which averages
+    over all of them, is G-equivariant: Phi(W g) = Phi(W) g.
+   */
+  std::vector<MyVector<T>> get_reducing_points(MyMatrix<T> const &W_inv) const {
+    int n = W_inv.rows();
+    // The coefficients modulo 1 of the lattice points form the group
+    // Z^n / L(W) of order |det W|, generated by those of the e_j, which are
+    // the rows of W^{-1}.
+    std::vector<MyVector<T>> l_gen;
     for (int j = 0; j < n; j++) {
-      MyVector<Tint> u = ZeroVector<Tint>(n);
-      u(j) = 1;
-      MyVector<T> q = get_coefficients(W_inv, u);
-      MyVector<Tint> w = u;
-      bool is_integral = true;
+      MyVector<T> g(n);
       for (int i = 0; i < n; i++) {
-        Tint fl = UniversalFloorScalarInteger<Tint, T>(q(i));
-        if (T(fl) != q(i)) {
-          is_integral = false;
+        g(i) = frac(W_inv(j, i));
+      }
+      l_gen.push_back(g);
+    }
+    std::set<MyVector<T>> set_class;
+    std::vector<MyVector<T>> l_class;
+    MyVector<T> zero = ZeroVector<T>(n);
+    set_class.insert(zero);
+    l_class.push_back(zero);
+    size_t pos = 0;
+    while (pos < l_class.size()) {
+      MyVector<T> f = l_class[pos];
+      for (auto &g : l_gen) {
+        MyVector<T> h(n);
+        for (int i = 0; i < n; i++) {
+          h(i) = frac(f(i) + g(i));
         }
-        if (fl != 0) {
-          MyVector<Tint> V = GetMatrixRow(W, i);
-          w -= fl * V;
+        if (set_class.insert(h).second) {
+          l_class.push_back(h);
         }
       }
-      if (!is_integral) {
-        l_cand.push_back(w);
+      pos += 1;
+    }
+    // In a class f, the smallest |q_i| is min(f_i, 1 - f_i). The classes
+    // are ordered by max |q_i|, then the number of nonzero q_i, then
+    // sum q_i^2 = w (W^T W)^{-1} w^T, all invariant under G.
+    T half = T(1) / T(2);
+    std::optional<std::tuple<T, int, T>> best;
+    std::vector<MyVector<T>> l_best;
+    for (auto &f : l_class) {
+      if (IsZeroVector(f)) {
+        continue;
       }
-    }
-  }
-  // The Voronoi candidates: the minimal vectors of a perfect cone whose
-  // closure contains the barycenter of the symbol (Gunnells).
-  void insert_voronoi_candidates(MyMatrix<Tint> const &W,
-                                 std::vector<MyVector<Tint>> &l_cand) const {
-    MyMatrix<T> W_T = UniversalMatrixConversion<T, Tint>(W);
-    TopPerfectCone<Tint> tpc = walker.find_containing_cone_T(W_T);
-    MyMatrix<Tint> EXT_cone = fce.pctdi.l_perfect[tpc.i_perfect].EXT * tpc.M;
-    for (int i_row = 0; i_row < EXT_cone.rows(); i_row++) {
-      l_cand.push_back(GetMatrixRow(EXT_cone, i_row));
-    }
-  }
-  MyVector<T> choose_reducing_point(MyMatrix<Tint> const &W, MyMatrix<T> const &W_inv,
-                                    MyVector<Tint> &w_ret) const {
-    std::vector<MyVector<Tint>> l_cand;
-    insert_voronoi_candidates(W, l_cand);
-    insert_fallback_candidates(W, W_inv, l_cand);
-    std::optional<Candidate> best;
-    for (auto &w : l_cand) {
-      std::optional<Candidate> opt = evaluate(W_inv, w);
-      if (opt) {
-        bool is_better = true;
-        if (best) {
-          if (best->score < opt->score) {
-            is_better = false;
+      T score(0);
+      T sum_sqr(0);
+      int n_nonzero = 0;
+      for (int i = 0; i < n; i++) {
+        if (f(i) != 0) {
+          n_nonzero += 1;
+          T a = (f(i) <= half) ? f(i) : T(1) - f(i);
+          sum_sqr += a * a;
+          if (a > score) {
+            score = a;
           }
-          if (best->score == opt->score && best->n_nonzero <= opt->n_nonzero) {
-            is_better = false;
-          }
-        }
-        if (is_better) {
-          best = opt;
         }
       }
+      std::tuple<T, int, T> key{score, n_nonzero, sum_sqr};
+      if (!best || key < *best) {
+        best = key;
+        l_best.clear();
+      }
+      if (key == *best) {
+        l_best.push_back(f);
+      }
     }
-    if (!best) {
-      throw HeckeFailure{"sharbly: no reducing point found, which contradicts Ash-Rudolph"};
+    // The vectors q of the classes: f_i = 1/2 gives the two choices +-1/2.
+    std::set<MyVector<T>> set_q;
+    for (auto &f : l_best) {
+      std::vector<MyVector<T>> l_q{ZeroVector<T>(n)};
+      for (int i = 0; i < n; i++) {
+        std::vector<MyVector<T>> l_q_new;
+        for (auto &q : l_q) {
+          auto f_push = [&](T const &val) -> void {
+            MyVector<T> q2 = q;
+            q2(i) = val;
+            l_q_new.push_back(q2);
+          };
+          if (f(i) == half) {
+            f_push(half);
+            f_push(-half);
+          } else if (f(i) < half) {
+            f_push(f(i));
+          } else {
+            f_push(f(i) - T(1));
+          }
+        }
+        l_q = std::move(l_q_new);
+      }
+      for (auto &q : l_q) {
+        // w and -w give the same symbols: one of them is kept.
+        MyVector<T> q_can = q;
+        for (int i = 0; i < n; i++) {
+          if (q_can(i) != 0) {
+            if (q_can(i) < 0) {
+              q_can = -q_can;
+            }
+            break;
+          }
+        }
+        set_q.insert(q_can);
+      }
     }
-    w_ret = best->w;
-    return best->q;
+    return std::vector<MyVector<T>>(set_q.begin(), set_q.end());
   }
 public:
-  SharblyReducer(FullComplexEnumeration<T, Tint, Tgroup> const &_fce,
-                 ConeWalker<T, Tint, Tgroup> const &_walker, int const &_symbol_level,
+  SharblyReducer(FullComplexEnumeration<T, Tint, Tgroup> const &_fce, int const &_symbol_level,
                  int const &_iOrb0, MyMatrix<Tint> const &_E0_inv, std::ostream &_os)
-      : fce(_fce), walker(_walker), symbol_level(_symbol_level), iOrb0(_iOrb0),
-        E0_inv(_E0_inv), os(_os) {
+      : fce(_fce), symbol_level(_symbol_level), iOrb0(_iOrb0), E0_inv(_E0_inv), os(_os) {
+  }
+  // The reducing points of the symbol of the rows of W (|det W| > 1), as
+  // primitive integral vectors.
+  std::vector<MyVector<Tint>> reducing_points(MyMatrix<Tint> const &W) const {
+    MyMatrix<T> W_T = UniversalMatrixConversion<T, Tint>(W);
+    MyMatrix<T> W_inv = Inverse(W_T);
+    std::vector<MyVector<Tint>> l_w;
+    for (auto &q : get_reducing_points(W_inv)) {
+      MyVector<T> w_T = W_T.transpose() * q;
+      l_w.push_back(UniversalVectorConversion<Tint, T>(RemoveFractionVector(w_T)));
+    }
+    return l_w;
   }
   // Make the rows primitive integral vectors: the symbol is invariant
   // under the scaling of its rows.
@@ -2747,23 +2770,33 @@ public:
       }
       MyMatrix<T> W_T = UniversalMatrixConversion<T, Tint>(W);
       MyMatrix<T> W_inv = Inverse(W_T);
-      MyVector<Tint> w;
-      MyVector<T> q = choose_reducing_point(W, W_inv, w);
+      std::vector<MyVector<T>> l_q = get_reducing_points(W_inv);
+      if (l_q.empty()) {
+        throw HeckeFailure{"sharbly: no reducing point for a symbol of determinant > 1"};
+      }
+      int n_q = l_q.size();
+      T coef_q = coef / T(n_q);
       int n = W.rows();
       if (l_sample) {
         l_sample->push_back(W);
-        MyMatrix<Tint> Wext(n + 1, n);
-        AssignMatrixRow(Wext, 0, w);
-        for (int i = 0; i < n; i++) {
-          AssignMatrixRow(Wext, i + 1, GetMatrixRow(W, i));
-        }
-        l_sample->push_back(std::move(Wext));
       }
-      for (int i = 0; i < n; i++) {
-        if (q(i) != 0) {
-          MyMatrix<Tint> W_new = W;
-          AssignMatrixRow(W_new, i, w);
-          l_work.push_back({coef, std::move(W_new)});
+      for (auto &q : l_q) {
+        MyVector<T> w_T = W_T.transpose() * q;
+        MyVector<Tint> w = UniversalVectorConversion<Tint, T>(RemoveFractionVector(w_T));
+        if (l_sample) {
+          MyMatrix<Tint> Wext(n + 1, n);
+          AssignMatrixRow(Wext, 0, w);
+          for (int i = 0; i < n; i++) {
+            AssignMatrixRow(Wext, i + 1, GetMatrixRow(W, i));
+          }
+          l_sample->push_back(std::move(Wext));
+        }
+        for (int i = 0; i < n; i++) {
+          if (q(i) != 0) {
+            MyMatrix<Tint> W_new = W;
+            AssignMatrixRow(W_new, i, w);
+            l_work.push_back({coef_q, std::move(W_new)});
+          }
         }
       }
     }
@@ -2843,6 +2876,45 @@ chain_boundary_well_rounded(int const &index, std::vector<PerfectFaceEntry<T, Ti
 }
 
 /*
+  The perfect cones containing points of the simplex of the rank one forms
+  of the rows of P: the points weighted towards a subset of its vertices
+  (the vectors of the subset doubled, so their rank one forms have weight
+  4), all the subsets for the small simplices, the singletons otherwise.
+ */
+template <typename T, typename Tint, typename Tgroup>
+void locate_simplex_cones(MyMatrix<Tint> const &P, ConeWalker<T, Tint, Tgroup> const &walker,
+                          std::vector<TopPerfectCone<Tint>> &l_top) {
+  int max_row_all_subsets = 6;
+  MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(P);
+  int n_row = P_T.rows();
+  auto f_locate = [&](std::vector<int> const &l_row) -> void {
+    MyMatrix<T> Q_T = P_T;
+    for (auto &i_row : l_row) {
+      for (int i_col = 0; i_col < Q_T.cols(); i_col++) {
+        Q_T(i_row, i_col) *= 2;
+      }
+    }
+    l_top.push_back(walker.find_containing_cone_T(Q_T));
+  };
+  f_locate({});
+  if (n_row <= max_row_all_subsets) {
+    for (int mask = 1; mask < (1 << n_row) - 1; mask++) {
+      std::vector<int> l_row;
+      for (int i_row = 0; i_row < n_row; i_row++) {
+        if ((mask >> i_row) & 1) {
+          l_row.push_back(i_row);
+        }
+      }
+      f_locate(l_row);
+    }
+  } else {
+    for (int i_row = 0; i_row < n_row; i_row++) {
+      f_locate({i_row});
+    }
+  }
+}
+
+/*
   The seed of the covering for the filling of the image of F under y: the
   perfect cones containing the points of a filling in the sharbly complex,
   namely the cone F y with its facets and the symbols and the 1-sharblies
@@ -2869,43 +2941,282 @@ get_sharbly_covering_seed(int const &index, int const &iOrb, MyMatrix<T> const &
     l_sample.push_back(W);
     (void)reducer.reduce(W, &l_sample);
   }
-  // Each sample is a simplex of rank one forms. The points located are
-  // the ones weighted towards a subset of its vertices (the vectors of the
-  // subset doubled, so their rank one forms have weight 4): all the
-  // subsets for the small simplices, the singletons otherwise.
   std::vector<TopPerfectCone<Tint>> l_top;
-  int max_row_all_subsets = 6;
   for (auto &P : l_sample) {
-    MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(P);
-    int n_row = P_T.rows();
-    auto f_locate = [&](std::vector<int> const &l_row) -> void {
-      MyMatrix<T> Q_T = P_T;
-      for (auto &i_row : l_row) {
-        for (int i_col = 0; i_col < Q_T.cols(); i_col++) {
-          Q_T(i_row, i_col) *= 2;
-        }
-      }
-      l_top.push_back(walker.find_containing_cone_T(Q_T));
-    };
-    f_locate({});
-    if (n_row <= max_row_all_subsets) {
-      for (int mask = 1; mask < (1 << n_row) - 1; mask++) {
-        std::vector<int> l_row;
-        for (int i_row = 0; i_row < n_row; i_row++) {
-          if ((mask >> i_row) & 1) {
-            l_row.push_back(i_row);
-          }
-        }
-        f_locate(l_row);
-      }
-    } else {
-      for (int i_row = 0; i_row < n_row; i_row++) {
-        f_locate({i_row});
-      }
-    }
+    locate_simplex_cones(P, walker, l_top);
   }
   return l_top;
 }
+
+/*
+  The local filling of the image of a cell F of the level below the symbol
+  level under a coset y (the 1-sharbly reduction).
+
+  The 1-sharblies D = [u_0, ..., u_n] (n+1 vectors spanning R^n) are
+  mapped to the chains Phi(dD) of the symbol level, with Phi the reduction
+  of the symbols and dD = sum_k (-1)^k [u_0, .., u_k^, .., u_n]. Two
+  identities are used:
+  - The right hand side R of F y is sum_S c_S Phi(dD_S) for the
+    1-sharblies D_S made of n+1 of the vectors of F y; the coefficients
+    c_S are found by a small exact system, which also settles the
+    orientations.
+  - For any vector w, D = sum_k D[u_k <- w] + d[w, u_0, ..., u_n], so
+    Phi(dD) = sum_k Phi(dD[u_k <- w]): a 1-sharbly can be split.
+  A filling of R is then the sum of fillings of the pieces. A piece whose
+  n-subsets have |det| <= 1 (its faces are reduced symbols, so Phi leaves
+  them in place) is filled on a covering seeded by the cones met by its
+  simplex. Otherwise it is split along its worst face sigma with the
+  reducing points of sigma used by Phi: this follows the reduction of
+  sigma by Phi one degree up, as the lifts of Gunnells do. The splitting
+  is not equivariant, which does not matter since the result is averaged
+  afterwards. Its termination is not proven (as for Gunnells), so the
+  depth and the number of pieces are bounded, a piece at the maximal
+  depth being filled directly.
+ */
+template <typename T, typename Tint, typename Tgroup>
+struct SharblyLocalFiller {
+private:
+  int index;
+  FullComplexEnumeration<T, Tint, Tgroup> const &fce;
+  ConeWalker<T, Tint, Tgroup> const &walker;
+  SharblyReducer<T, Tint, Tgroup> const &reducer;
+  std::function<bool(MyMatrix<Tint> const &)> f_filter;
+  CoveringOptions options;
+  std::ostream &os;
+  // The pieces are filled from the depth max_depth, and split further up to
+  // max_depth_split when their covering is beyond the budget.
+  int max_depth = 1;
+  int max_depth_split = 3;
+  size_t max_piece = 2000;
+  size_t n_piece = 0;
+  std::unordered_map<MyMatrix<Tint>, std::vector<PerfectFaceEntry<T, Tint>>> cache_phi;
+  // The rows of D except the row k.
+  static MyMatrix<Tint> remove_row(MyMatrix<Tint> const &D, int const &k) {
+    MyMatrix<Tint> W(D.rows() - 1, D.cols());
+    int pos = 0;
+    for (int i = 0; i < D.rows(); i++) {
+      if (i != k) {
+        AssignMatrixRow(W, pos, GetMatrixRow(D, i));
+        pos += 1;
+      }
+    }
+    return W;
+  }
+  std::vector<PerfectFaceEntry<T, Tint>> const &phi(MyMatrix<Tint> const &W) {
+    auto iter = cache_phi.find(W);
+    if (iter != cache_phi.end()) {
+      return iter->second;
+    }
+    std::vector<PerfectFaceEntry<T, Tint>> chain = reducer.reduce(W);
+    return cache_phi.emplace(W, std::move(chain)).first->second;
+  }
+  // The largest |det| of the n-subsets of the rows of D, and their sum.
+  static std::pair<Tint, Tint> det_size(MyMatrix<Tint> const &D) {
+    Tint max_val(0), sum_val(0);
+    for (int k = 0; k < D.rows(); k++) {
+      Tint det = T_abs(DeterminantMat(remove_row(D, k)));
+      sum_val += det;
+      if (det > max_val) {
+        max_val = det;
+      }
+    }
+    return {max_val, sum_val};
+  }
+  std::vector<PerfectFaceEntry<T, Tint>> fill_piece(MyMatrix<Tint> const &D, int const &depth) {
+    n_piece += 1;
+    if (n_piece > max_piece) {
+      throw HeckeFailure{"sharbly local filling: more than " + std::to_string(max_piece) + " pieces"};
+    }
+    std::vector<PerfectFaceEntry<T, Tint>> rhs = phi_boundary(D);
+    if (rhs.empty()) {
+      return {};
+    }
+    MyMatrix<T> D_T = UniversalMatrixConversion<T, Tint>(D);
+    TopPerfectCone<Tint> tpc = walker.find_containing_cone_T(D_T);
+    std::pair<Tint, Tint> size_D = det_size(D);
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: local piece depth=" << depth << " |D|=" << D.rows() << " max_det=" << size_D.first
+       << " sum_det=" << size_D.second << " |rhs|=" << rhs.size() << "\n";
+#endif
+    if (size_D.first <= 1 || depth >= max_depth) {
+      std::vector<TopPerfectCone<Tint>> l_top_seed{tpc};
+      locate_simplex_cones(D, walker, l_top_seed);
+      try {
+        return partial_contracting_homotopy_kernel(index + 1, rhs, fce, f_filter, l_top_seed, options, os);
+      } catch (CoveringFailure const &e) {
+        // Too large for the budget of a piece: it is split further.
+        if (size_D.first <= 1 || depth >= max_depth_split) {
+          throw HeckeFailure{"sharbly local filling of a piece: " + e.message};
+        }
+      }
+    }
+    // The split along the worst face sigma = D minus u_j: with the reducing
+    // points w of sigma used by Phi (averaged as Phi does),
+    //   D = (1/|W|) sum_w sum_k D[u_k <- w]   modulo boundaries.
+    // The pieces D[u_j <- w] have the faces sigma and its children in the
+    // reduction of Phi, so their Phi(d .) sum to zero over w: they are
+    // dropped (this is checked). The other pieces hold the children of
+    // sigma, of smaller determinants, and are split further.
+    int n_row = D.rows();
+    int j_worst = -1;
+    Tint det_worst(0);
+    for (int k = 0; k < n_row; k++) {
+      Tint det = T_abs(DeterminantMat(remove_row(D, k)));
+      if (det > det_worst) {
+        det_worst = det;
+        j_worst = k;
+      }
+    }
+    std::vector<MyVector<Tint>> l_w = reducer.reducing_points(remove_row(D, j_worst));
+    if (l_w.empty()) {
+      throw HeckeFailure{"sharbly local filling: no reducing point for a face"};
+    }
+    T coef_w = T(1) / T(static_cast<int>(l_w.size()));
+    std::vector<MyMatrix<Tint>> l_piece_j;
+    {
+      ChainBuilder<T, Tint, Tgroup> cb_check(index + 1, fce, os);
+      for (auto &w : l_w) {
+        MyMatrix<Tint> Dj = D;
+        AssignMatrixRow(Dj, j_worst, w);
+        l_piece_j.push_back(Dj);
+        for (auto &fe : phi_boundary(Dj)) {
+          cb_check.f_insert(fe.value, fe.iOrb, fe.M);
+        }
+      }
+      if (!cb_check.is_zero_chain()) {
+        // Not expected; the pieces are then kept.
+#ifdef DEBUG_HECKE_OPERATORS
+        os << "HECKE: local piece, the pieces through the worst face do not cancel\n";
+#endif
+      } else {
+        l_piece_j.clear();
+      }
+    }
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: local piece split along the face " << j_worst << " of det " << det_worst
+       << " with " << l_w.size() << " reducing points\n";
+#endif
+    ChainBuilder<T, Tint, Tgroup> cb(index, fce, os);
+    auto f_add = [&](MyMatrix<Tint> const &Dk) -> void {
+      if (RankMat(Dk) < Dk.cols()) {
+        return;
+      }
+      for (auto &fe : fill_piece(Dk, depth + 1)) {
+        cb.f_insert(coef_w * fe.value, fe.iOrb, fe.M);
+      }
+    };
+    for (auto &w : l_w) {
+      for (int k = 0; k < n_row; k++) {
+        if (k == j_worst) {
+          continue;
+        }
+        MyMatrix<Tint> Dk = D;
+        AssignMatrixRow(Dk, k, w);
+        f_add(Dk);
+      }
+    }
+    for (auto &Dj : l_piece_j) {
+      f_add(Dj);
+    }
+    return cb.get_faces();
+  }
+public:
+  SharblyLocalFiller(int const &_index, FullComplexEnumeration<T, Tint, Tgroup> const &_fce,
+                     ConeWalker<T, Tint, Tgroup> const &_walker,
+                     SharblyReducer<T, Tint, Tgroup> const &_reducer,
+                     std::function<bool(MyMatrix<Tint> const &)> const &_f_filter,
+                     CoveringOptions const &_options, std::ostream &_os)
+      : index(_index), fce(_fce), walker(_walker), reducer(_reducer), f_filter(_f_filter),
+        options(_options), os(_os) {
+  }
+  size_t get_n_piece() const { return n_piece; }
+  // Phi(dD) for the (n+1) x n matrix D.
+  std::vector<PerfectFaceEntry<T, Tint>> phi_boundary(MyMatrix<Tint> const &D) {
+    ChainBuilder<T, Tint, Tgroup> cb(index + 1, fce, os);
+    for (int k = 0; k < D.rows(); k++) {
+      T sign = (k % 2 == 0) ? T(1) : T(-1);
+      for (auto &fe : phi(remove_row(D, k))) {
+        cb.f_insert(sign * fe.value, fe.iOrb, fe.M);
+      }
+    }
+    return cb.get_faces();
+  }
+  // A filling of rhs, the image of the boundary of the cell whose vectors
+  // (one per pair {v, -v}) mapped by y are the rows of V. Nothing if rhs
+  // is not a combination of the Phi(dD_S).
+  std::optional<std::vector<PerfectFaceEntry<T, Tint>>>
+  fill(MyMatrix<Tint> const &V, std::vector<PerfectFaceEntry<T, Tint>> const &rhs) {
+    n_piece = 0;
+    int n = V.cols();
+    int m = V.rows();
+    // The (n+1)-subsets of the rows spanning R^n.
+    std::vector<MyMatrix<Tint>> l_D;
+    std::vector<int> subset(n + 1);
+    std::function<void(int, int)> f_enum = [&](int start, int depth) -> void {
+      if (depth == n + 1) {
+        MyMatrix<Tint> D(n + 1, n);
+        for (int k = 0; k <= n; k++) {
+          AssignMatrixRow(D, k, GetMatrixRow(V, subset[k]));
+        }
+        if (RankMat(D) == n) {
+          l_D.push_back(D);
+        }
+        return;
+      }
+      for (int i = start; i < m; i++) {
+        subset[depth] = i;
+        f_enum(i + 1, depth + 1);
+      }
+    };
+    f_enum(0, 0);
+    // The system sum_S c_S Phi(dD_S) = rhs, on the cells met.
+    ComplexBuilder<T, Tint, Tgroup> cb2(index + 1, fce, os);
+    std::vector<std::vector<PerfectFaceEntry<T, Tint>>> l_bnd;
+    for (auto &D : l_D) {
+      std::vector<PerfectFaceEntry<T, Tint>> bnd = phi_boundary(D);
+      for (auto &fe : bnd) {
+        cb2.f_insert(fe.iOrb, fe.M);
+      }
+      l_bnd.emplace_back(std::move(bnd));
+    }
+    for (auto &fe : rhs) {
+      cb2.f_insert(fe.iOrb, fe.M);
+    }
+    int n_D = l_D.size();
+    int n_cell = cb2.dimension();
+    MyMatrix<T> A = ZeroMatrix<T>(n_D, n_cell);
+    for (int i_D = 0; i_D < n_D; i_D++) {
+      for (auto &fe : l_bnd[i_D]) {
+        std::pair<size_t, int> p = cb2.get_position(fe.iOrb, fe.M);
+        A(i_D, p.first) += fe.value * T(p.second);
+      }
+    }
+    MyVector<T> b = ZeroVector<T>(n_cell);
+    for (auto &fe : rhs) {
+      std::pair<size_t, int> p = cb2.get_position(fe.iOrb, fe.M);
+      b(p.first) += fe.value * T(p.second);
+    }
+    std::optional<MyVector<T>> opt = SolutionMat(A, b);
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: local fill |V|=" << m << " n_D=" << n_D << " n_cell=" << n_cell
+       << " solvable=" << (opt ? 1 : 0) << "\n";
+#endif
+    if (!opt) {
+      return {};
+    }
+    ChainBuilder<T, Tint, Tgroup> cb(index, fce, os);
+    for (int i_D = 0; i_D < n_D; i_D++) {
+      T c = (*opt)(i_D);
+      if (c == 0) {
+        continue;
+      }
+      for (auto &fe : fill_piece(l_D[i_D], 0)) {
+        cb.f_insert(c * fe.value, fe.iOrb, fe.M);
+      }
+    }
+    return cb.get_faces();
+  }
+};
 
 template <typename T, typename Tint, typename Tgroup>
 void compute_sharbly_level_below(
@@ -2924,6 +3235,7 @@ void compute_sharbly_level_below(
 #ifdef TIMINGS_HECKE_OPERATORS
   MicrosecondTime time;
 #endif
+  HeckeBudget budget;
   int n_orb = fce.levels[index].l_faces.size();
   for (int iOrb = 0; iOrb < n_orb; iOrb++) {
     FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[index].l_faces[iOrb];
@@ -2950,10 +3262,69 @@ void compute_sharbly_level_below(
           }
         }
 #endif
-        std::vector<TopPerfectCone<Tint>> l_top_seed =
-            get_sharbly_covering_seed(index, iOrb, cosets.l_coset[j], fce, walker, reducer);
-        bool guided_growth = true;
-        sol = partial_contracting_homotopy_kernel(index + 1, rhs, fce, f_filter, l_top_seed, guided_growth, os);
+        CoveringOptions options;
+        options.guided_growth = true;
+        options.clean_failure = true;
+        options.max_entries_exact = budget.max_entries_exact;
+        options.l1_first = true;
+        options.max_l1_iter = budget.max_yall1_iter;
+        // Three attempts: the filling of the whole right hand side on a
+        // small covering, accepted if it is not bloated; the local filling
+        // (the 1-sharbly reduction) with the same small coverings for the
+        // pieces; the filling of the whole right hand side on a covering of
+        // any size.
+        CoveringOptions options_small = options;
+        options_small.max_top = 100;
+        options_small.max_unknowns = 50000;
+        options_small.max_entries_exact = 500000;
+        std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt_sol;
+        {
+          std::vector<TopPerfectCone<Tint>> l_top_seed =
+              get_sharbly_covering_seed(index, iOrb, cosets.l_coset[j], fce, walker, reducer);
+          try {
+            std::vector<PerfectFaceEntry<T, Tint>> sol_small =
+                partial_contracting_homotopy_kernel(index + 1, rhs, fce, f_filter, l_top_seed, options_small, os);
+            if (sol_small.size() <= 20 * rhs.size() + 50) {
+              opt_sol = sol_small;
+            }
+          } catch (CoveringFailure const &e) {
+#ifdef DEBUG_HECKE_OPERATORS
+            os << "HECKE: sharbly small global filling failed: " << e.message << "\n";
+#endif
+          }
+#ifdef TIMINGS_HECKE_OPERATORS
+          os << "|HECKE: sharbly small global filling iOrb=" << iOrb << " j=" << j
+             << " success=" << (opt_sol ? 1 : 0) << "|=" << time << "\n";
+#endif
+        }
+        if (!opt_sol) {
+          SharblyLocalFiller<T, Tint, Tgroup> filler(index, fce, walker, reducer, f_filter, options_small, os);
+          MyMatrix<Tint> V = reducer.primitive_rows(
+              UniversalMatrixConversion<T, Tint>(half_vector_set(face.EXT)) * cosets.l_coset[j]);
+          try {
+            opt_sol = filler.fill(V, rhs);
+          } catch (HeckeFailure const &e) {
+#ifdef DEBUG_HECKE_OPERATORS
+            os << "HECKE: sharbly local filling failed: " << e.message << "\n";
+#endif
+          }
+#ifdef TIMINGS_HECKE_OPERATORS
+          os << "|HECKE: sharbly local filling iOrb=" << iOrb << " j=" << j
+             << " success=" << (opt_sol ? 1 : 0) << " n_piece=" << filler.get_n_piece() << "|=" << time << "\n";
+#endif
+        }
+        if (opt_sol) {
+          sol = *opt_sol;
+        } else {
+          std::vector<TopPerfectCone<Tint>> l_top_seed =
+              get_sharbly_covering_seed(index, iOrb, cosets.l_coset[j], fce, walker, reducer);
+          try {
+            sol = partial_contracting_homotopy_kernel(index + 1, rhs, fce, f_filter, l_top_seed, options, os);
+          } catch (CoveringFailure const &e) {
+            throw HeckeFailure{"sharbly, filling of the cell " + std::to_string(iOrb) + " of level " +
+                               std::to_string(index) + " for the coset " + std::to_string(j) + ": " + e.message};
+          }
+        }
       }
 #ifdef TIMINGS_HECKE_OPERATORS
       os << "|HECKE: sharbly level below iOrb=" << iOrb << "/" << n_orb << " j=" << j << "/" << n_coset
@@ -3048,7 +3419,7 @@ compute_hecke_chain_map_sharbly(FullComplexEnumeration<T, Tint, Tgroup> const &f
   MyMatrix<Tint> E0 = half_vector_set(fce.levels[symbol_level].l_faces[iOrb0].EXT);
   MyMatrix<Tint> E0_inv = Inverse(E0);
   ConeWalker<T, Tint, Tgroup> walker(fce, os);
-  SharblyReducer<T, Tint, Tgroup> reducer(fce, walker, symbol_level, iOrb0, E0_inv, os);
+  SharblyReducer<T, Tint, Tgroup> reducer(fce, symbol_level, iOrb0, E0_inv, os);
   std::vector<std::vector<std::vector<std::vector<PerfectFaceEntry<T, Tint>>>>> images(n_levels);
   std::vector<uint8_t> l_level_computed(n_levels, 0);
   l_level_computed[symbol_level] = 1;
@@ -3325,7 +3696,8 @@ template <typename T, typename Tint, typename Tgroup>
 GammaComplex<T, Tint>
 compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
                       CosetTableGamma<Tint> const &ct,
-                      bool const &only_well_rounded, std::ostream &os) {
+                      bool const &only_well_rounded,
+                      std::vector<uint8_t> const &l_level_needed, std::ostream &os) {
   GammaComplex<T, Tint> gc;
   gc.ct = ct;
   gc.only_well_rounded = only_well_rounded;
@@ -3336,6 +3708,9 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   gc.basis = std::vector<std::vector<std::pair<int, int>>>(n_levels);
   gc.basis_index = std::vector<std::vector<std::vector<int>>>(n_levels);
   for (int index = 0; index < n_levels; index++) {
+    if (l_level_needed[index] == 0) {
+      continue;
+    }
     int n_orb = fce.levels[index].l_faces.size();
     gc.basis_index[index] = std::vector<std::vector<int>>(n_orb, std::vector<int>(n_coset, -1));
     for (int iOrb = 0; iOrb < n_orb; iOrb++) {
@@ -3366,6 +3741,10 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   // The boundary matrices
   //
   for (int index = 0; index < n_levels - 1; index++) {
+    if (l_level_needed[index] == 0 || l_level_needed[index + 1] == 0) {
+      gc.boundary.push_back(MyMatrix<T>(0, 0));
+      continue;
+    }
     int n_row = gc.basis[index].size();
     int n_col = gc.basis[index + 1].size();
     MyMatrix<T> D = ZeroMatrix<T>(n_row, n_col);
@@ -3385,6 +3764,9 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   }
 #ifdef SANITY_CHECK_HECKE_OPERATORS
   for (int index = 0; index < n_levels - 2; index++) {
+    if (l_level_needed[index] == 0 || l_level_needed[index + 1] == 0 || l_level_needed[index + 2] == 0) {
+      continue;
+    }
     MyMatrix<T> prod = gc.boundary[index] * gc.boundary[index + 1];
     if (!IsZeroMatrix(prod)) {
       std::cerr << "HECKE: The product of the boundary matrices should be zero at index=" << index << "\n";
@@ -3512,12 +3894,50 @@ HeckeHomologyResult<T> compute_hecke_homology(
     MyMatrix<Tint> g_int = UniversalMatrixConversion<Tint, T>(g);
     return gamma.is_in_gamma(g_int);
   };
+  // If Gamma contains the principal congruence subgroup of level N and
+  // det(x) is coprime to N, the cosets of Gamma \ Gamma x Gamma are in
+  // bijection with those of G \ G x G (strong approximation), so their
+  // number is known and the enumeration with the many Schreier generators
+  // of Gamma can stop early.
+  size_t n_expected = 0;
+  {
+    T det_x = DeterminantMat(hcm.x);
+    if (IsInteger(det_x)) {
+      Tint det_int = UniversalScalarConversion<Tint, T>(det_x);
+      if (GcdPair(det_int, gamma.N) == 1) {
+        n_expected = hcm.cosets.size();
+      }
+    }
+  }
   HeckeCosets<T> cosets_gamma =
-      enumerate_hecke_cosets<T, Tint>(hcm.x, l_gens_gamma, f_member_gamma, os);
+      enumerate_hecke_cosets<T, Tint>(hcm.x, l_gens_gamma, f_member_gamma, os, n_expected);
+#ifdef SANITY_CHECK_HECKE_OPERATORS
+  if (n_expected > 0) {
+    HeckeCosets<T> cosets_gamma_full =
+        enumerate_hecke_cosets<T, Tint>(hcm.x, l_gens_gamma, f_member_gamma, os);
+    if (cosets_gamma_full.size() != n_expected) {
+      std::cerr << "HECKE: the number of Hecke cosets of Gamma is " << cosets_gamma_full.size()
+                << " and not " << n_expected << " as for G\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
 #ifdef TIMINGS_HECKE_OPERATORS
   os << "|HECKE: enumerate_hecke_cosets (Gamma)|=" << time << "\n";
 #endif
-  GammaComplex<T, Tint> gc = compute_gamma_complex(fce, ct, only_well_rounded, os);
+  // Only the levels of the chain map and their neighbors (for the
+  // boundaries) are needed: the dense boundary matrices of the other
+  // levels can be by far the largest objects.
+  int n_levels_fce = fce.levels.size();
+  std::vector<uint8_t> l_level_needed(n_levels_fce, 0);
+  for (int index = 0; index < n_levels_fce; index++) {
+    if (hcm.is_level_computed(index)) {
+      for (int k = std::max(0, index - 1); k <= std::min(n_levels_fce - 1, index + 1); k++) {
+        l_level_needed[k] = 1;
+      }
+    }
+  }
+  GammaComplex<T, Tint> gc = compute_gamma_complex(fce, ct, only_well_rounded, l_level_needed, os);
 #ifdef TIMINGS_HECKE_OPERATORS
   os << "|HECKE: compute_gamma_complex|=" << time << "\n";
 #endif

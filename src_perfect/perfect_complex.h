@@ -1901,13 +1901,79 @@ struct TopPerfectCone {
 
 
 /*
+  The options of the covering method. By default the covering grows by
+  whole rings of neighbors and the eliminations are not bounded. With
+  guided_growth it grows first by the cones around the obstruction to the
+  solution (see partial_contracting_homotopy_specified), and with
+  clean_failure a CoveringFailure is thrown when an exact elimination needs
+  more than max_entries_exact entries or the covering more than max_top
+  cones, instead of using the memory or stopping the program.
+ */
+struct CoveringOptions {
+  bool guided_growth = false;
+  bool clean_failure = false;
+  size_t max_entries_exact = std::numeric_limits<size_t>::max();
+  size_t max_top = 20000;
+  // The largest number of unknowns of a system, beyond which the covering
+  // fails (with clean_failure).
+  size_t max_unknowns = std::numeric_limits<size_t>::max();
+  // Whether the L1 solver (floating point, then exact on the support) is
+  // tried before the exact elimination: the elimination can blow up in
+  // memory by the growth of the coefficients, which max_entries_exact does
+  // not see.
+  bool l1_first = false;
+  // The iterations of the L1 solver (yall1) when l1_first is set.
+  int max_l1_iter = 99999;
+};
+
+struct CoveringFailure {
+  std::string message;
+};
+
+/*
+  The L1 solution of x A = b: the support is found by yall1 in floating
+  point and the system is then solved exactly on that support by the
+  budgeted sparse elimination (the dense solve of AMP_SolutionSparseSystem
+  builds matrices of the size of the equations squared). Nothing is
+  returned if no exact solution is found on the support.
+ */
+template<typename T>
+std::optional<MyVector<T>> l1_support_solve(MySparseMatrix<T> const& SpMat, MyVector<T> const& Bvect,
+                                            size_t const& max_entries, int const& maxit, std::ostream& os) {
+  MySparseMatrix<double> SpMat_d = UniversalSparseMatrixConversion<double,T>(SpMat);
+  MyVector<double> Bvect_d = UniversalVectorConversion<double,T>(Bvect);
+  MyVector<double> x_out = AMP_SolutionSparseSystem_d(SpMat_d, Bvect_d, maxit, os);
+  double thr = 1e-4;
+  std::vector<int> l_rows;
+  int nbRow = x_out.size();
+  for (int i_row=0; i_row<nbRow; i_row++) {
+    if (std::abs(x_out(i_row)) > thr) {
+      l_rows.push_back(i_row);
+    }
+  }
+  if (l_rows.empty()) {
+    return {};
+  }
+  MySparseMatrix<T> SpMatRed = SparseMatrixSelectRows(SpMat, l_rows);
+  SparseSolveResult<T> res = SparseSolutionMat_Exact_Budget(SpMatRed, Bvect, max_entries, os);
+  if (res.status != SparseSolveStatus::Solved) {
+    return {};
+  }
+  MyVector<T> sol = ZeroVector<T>(nbRow);
+  for (size_t u=0; u<l_rows.size(); u++) {
+    sol(l_rows[u]) = res.sol(u);
+  }
+  return sol;
+}
+
+/*
   chain is of index "index" and we are looking for a chain of index "index-1" which induces it.
   By index we mean of course, the index in the list, not the dimension
   ----
   Here we try to solve the equation in a specific set of top dimensional cells.
  */
 template<typename T, typename Tint, typename Tgroup>
-std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homotopy_specified(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os, std::vector<PerfectFace<Tint>>* l_obstruction = nullptr) {
+std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homotopy_specified(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os, std::vector<PerfectFace<Tint>>* l_obstruction = nullptr, CoveringOptions const& options = CoveringOptions()) {
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: partial_contracting_homotopy_specified, step 1, index=" << index << "\n";
 #endif
@@ -1944,6 +2010,10 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homoto
 #endif
   int dim1 = cb1.dimension();
   int dim2 = cb2.dimension();
+  if (options.clean_failure && static_cast<size_t>(dim1) > options.max_unknowns) {
+    throw CoveringFailure{"a covering system has " + std::to_string(dim1) + " unknowns, more than " +
+                          std::to_string(options.max_unknowns)};
+  }
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: partial_contracting_homotopy_specified, step 4, dim1=" << dim1 << " dim2=" << dim2 << "\n";
 #endif
@@ -2089,7 +2159,22 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homoto
       MyMatrix<T> Mdense = MyMatrixFromSparseMatrix(SpMat);
       opt = SolutionMat(Mdense, Bvect);
     } else {
-      opt = SparseSolutionMat_Exact(SpMat, Bvect, os);
+      if (options.l1_first && static_cast<size_t>(nbRow) <= 50000) {
+        opt = l1_support_solve(SpMat, Bvect, options.max_entries_exact, options.max_l1_iter, os);
+      }
+    }
+    if (!opt && n_ent > max_ent_dense) {
+      SparseSolveResult<T> res = SparseSolutionMat_Exact_Budget(SpMat, Bvect, options.max_entries_exact, os);
+      if (res.status == SparseSolveStatus::Aborted) {
+        if (options.clean_failure) {
+          throw CoveringFailure{"the exact elimination of a covering system of " + std::to_string(nbRow) +
+                                " x " + std::to_string(nbCol) + " needs more than " +
+                                std::to_string(options.max_entries_exact) + " entries"};
+        }
+        opt = SparseSolutionMat_Exact(SpMat, Bvect, os);
+      } else if (res.status == SparseSolveStatus::Solved) {
+        opt = res.sol;
+      }
     }
     if (!opt) {
       if (l_obstruction) {
@@ -2125,7 +2210,13 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homoto
     size_t max_row_l1 = 50000;
     int n_nz_exact = count_nz(*opt);
     if (static_cast<size_t>(nbRow) <= max_row_l1 && n_nz_exact > 1) {
-      std::optional<MyVector<T>> opt_l1 = AMP_SolutionSparseSystem(SpMat, Bvect, os);
+      std::optional<MyVector<T>> opt_l1;
+      if (options.l1_first) {
+        // The solution comes from the L1 solver already, or the L1 solver
+        // failed on this system.
+      } else {
+        opt_l1 = AMP_SolutionSparseSystem(SpMat, Bvect, os);
+      }
       if (opt_l1) {
         int n_nz_l1 = count_nz(*opt_l1);
 #ifdef DEBUG_PERFECT_COMPLEX
@@ -2168,7 +2259,7 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> partial_contracting_homoto
   geometric filling), and grows by adjacency until a solution is found.
  */
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::vector<TopPerfectCone<Tint>> const& l_top_seed, bool const& guided_growth, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::vector<TopPerfectCone<Tint>> const& l_top_seed, CoveringOptions const& options, std::ostream& os) {
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: partial_contracting_homotopy_kernel, step 1\n";
 #endif
@@ -2199,14 +2290,19 @@ std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int c
   // The covering grows exponentially with the flowering, so a runaway
   // search (for a chain which is not a boundary in the filtered complex)
   // is stopped rather than exhausting the memory.
-  size_t max_top = 20000;
+  size_t max_top = options.max_top;
   while(true) {
+    // A covering beyond the budget is not even built (a ring of neighbors
+    // can multiply its size).
+    if (options.clean_failure && l_top.size() > max_top) {
+      throw CoveringFailure{"no solution found with at most " + std::to_string(max_top) + " covering cones"};
+    }
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: partial_contracting_homotopy_kernel, start=" << start << "\n";
 #endif
     std::vector<PerfectFace<Tint>> l_obstruction;
-    std::vector<PerfectFace<Tint>>* ptr_obstruction = guided_growth ? &l_obstruction : nullptr;
-    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = partial_contracting_homotopy_specified(index, chain, fce, l_top, f_filter, os, ptr_obstruction);
+    std::vector<PerfectFace<Tint>>* ptr_obstruction = options.guided_growth ? &l_obstruction : nullptr;
+    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = partial_contracting_homotopy_specified(index, chain, fce, l_top, f_filter, os, ptr_obstruction, options);
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: partial_contracting_homotopy_kernel, we have opt\n";
 #endif
@@ -2215,6 +2311,9 @@ std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int c
     }
     size_t len = l_top.size();
     if (len > max_top) {
+      if (options.clean_failure) {
+        throw CoveringFailure{"no solution found with " + std::to_string(len) + " covering cones"};
+      }
       std::cerr << "PERFCOMP: partial_contracting_homotopy_kernel, no solution found with " << len << " covering cones\n";
       throw TerminalException{1};
     }
@@ -2250,8 +2349,8 @@ std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int c
 template<typename T, typename Tint, typename Tgroup>
 std::vector<PerfectFaceEntry<T, Tint>> partial_contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::function<bool(MyMatrix<Tint> const&)> const& f_filter, std::ostream& os) {
   std::vector<TopPerfectCone<Tint>> l_top_seed;
-  bool guided_growth = false;
-  return partial_contracting_homotopy_kernel(index, chain, fce, f_filter, l_top_seed, guided_growth, os);
+  CoveringOptions options;
+  return partial_contracting_homotopy_kernel(index, chain, fce, f_filter, l_top_seed, options, os);
 }
 
 /*
