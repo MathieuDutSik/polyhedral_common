@@ -10,22 +10,36 @@
 FullNamelist NAMELIST_InitialPreparation() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  ListIntValues1["n"] = 6;
-  ListIntValues1["NprocInput"] = 100;
-  ListIntValues1["NprocOutput"] = 100;
-  ListBoolValues1["ApplyCanonicalization"] = true;
-  ListStringValues1["OutputType"] = "int16";
-  ListStringValues1["NatureInput"] = "text";
-  ListStringValues1["InputFile"] = "InputFile";
-  ListStringValues1["PrefixInput"] = "LOGinput_";
-  ListStringValues1["PrefixOutput"] = "LOGoutput_";
+  std::map<std::string, std::string> ListIntValues1_doc;
+  std::map<std::string, std::string> ListBoolValues1_doc;
+  std::map<std::string, std::string> ListStringValues1_doc;
+  ListIntValues1_doc["n"] = "The dimension n of the lattices";
+  ListStringValues1_doc["NatureInput"] = "The nature of the input. Possible values:\n\
+text: a single text file InputFile containing the number of C-types\n\
+  followed by the C-types as matrices\n\
+netcdf: the NprocInput netCDF files PrefixInput + i + \".nc\" of a previous run";
+  ListStringValues1_doc["InputFile"] = "Default: unset\n\
+The input text file. Used only if NatureInput = text";
+  ListStringValues1_doc["PrefixInput"] = "Default: unset\n\
+The prefix of the input netCDF files. Used only if NatureInput = netcdf";
+  ListIntValues1_doc["NprocInput"] = "Default: -1\n\
+The number of input netCDF files. Used only if NatureInput = netcdf,\n\
+in which case it must be positive";
+  ListIntValues1_doc["NprocOutput"] = "The number of output netCDF files.\n\
+It must be the number of processes of the CTYP_MPI_Enumeration_c run";
+  ListStringValues1_doc["PrefixOutput"] = "The prefix of the output netCDF files.\n\
+The file i is PrefixOutput + i + \".nc\". It is the WorkingPrefix of\n\
+the CTYP_MPI_Enumeration_c run";
+  ListStringValues1_doc["OutputType"] = "Default: short\n\
+The integer type for the coordinates of the C-types in the output.\n\
+Possible values: byte (8 bits), short (16 bits), int (32 bits), int64 (64 bits)";
+  ListBoolValues1_doc["ApplyCanonicalization"] = "Default: T\n\
+T: the C-types are canonicalized before being written\n\
+F: they are written as read, which is correct only if they are already canonical";
   SingleBlock BlockDATA;
-  BlockDATA.setListIntValues(ListIntValues1);
-  BlockDATA.setListStringValues(ListStringValues1);
-  BlockDATA.setListBoolValues(ListBoolValues1);
+  BlockDATA.setListIntValues_doc(ListIntValues1_doc);
+  BlockDATA.setListStringValues_doc(ListStringValues1_doc);
+  BlockDATA.setListBoolValues_doc(ListBoolValues1_doc);
   ListBlock["DATA"] = BlockDATA;
   // Merging all data
   return FullNamelist(ListBlock);
@@ -77,7 +91,6 @@ int main(int argc, char *argv[]) {
     SingleBlock const &BlDATA = eFull.get_block("DATA");
     size_t n = BlDATA.get_int("n");
     size_t n_vect = std::pow(2, n) - 1;
-    size_t NprocInput = BlDATA.get_int("NprocInput");
     size_t NprocOutput = BlDATA.get_int("NprocOutput");
     std::string PrefixInput = BlDATA.get_string("PrefixInput");
     std::string InputFile = BlDATA.get_string("InputFile");
@@ -88,6 +101,12 @@ int main(int argc, char *argv[]) {
     if (posNature == -1) {
       std::cerr << "The NatureInput should be text or netcdf\n";
       std::cerr << "NatureInput=" << NatureInput << "\n";
+      throw TerminalException{1};
+    }
+    int NprocInput_i = BlDATA.get_int("NprocInput");
+    if (posNature == 1 && NprocInput_i <= 0) {
+      std::cerr << "For NatureInput=netcdf, NprocInput should be positive\n";
+      std::cerr << "NprocInput=" << NprocInput_i << "\n";
       throw TerminalException{1};
     }
     std::string OutputType = BlDATA.get_string("OutputType");
@@ -198,6 +217,7 @@ int main(int argc, char *argv[]) {
     // Inserting data if it is a series of netcdf files.
     //
     if (posNature == 1) {
+      size_t NprocInput = NprocInput_i;
       for (size_t iProcI = 0; iProcI < NprocInput; iProcI++) {
         std::string FileI = PrefixInput + std::to_string(iProcI) + ".nc";
         if (!FILE_IsExistingFile(FileI)) {
