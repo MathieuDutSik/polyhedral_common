@@ -10,6 +10,7 @@
 #include "SignatureSymmetric.h"
 #include "integer_linear_programming.h"
 #include "GRP_GroupFile.h"
+#include "Arithmetic_dispatch_types.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -1984,57 +1985,79 @@ inline FullNamelist NAMELIST_GetStandard_ENUMERATE_IGUSA_TSPACE() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    std::map<std::string, int> ListIntValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["IlpMethod"] = "default";
-    ListStringValues["OutFormat"] = "GAP";
-    ListStringValues["OutFile"] = "stderr";
-    // If set, only the local cone of the vertex in that file is computed
-    ListStringValues["FileVertex"] = "unset";
-    ListIntValues["NormBound"] = 2;
-    ListIntValues["NbRandomFacet"] = 10;
-    ListIntValues["NbCleanRound"] = 2;
-    ListIntValues["MaxNormEnumeration"] = 1000000;
-    // If positive, that many random facets are sampled and checked before
-    // the dual description
-    ListIntValues["NbSampleFacet"] = 0;
-    // StopBeforeDualDescription only for instances with that many rays
-    ListIntValues["StopMinRays"] = 0;
-    // Stop doubling the bound of the enumeration by norm beyond this once
-    // the rays span the space (0: no limit)
-    ListIntValues["MaxEnumerationBound"] = 0;
-    // Write each dual description instance with this prefix
-    ListStringValues["FileInstancePrefix"] = "unset";
-    // With FileVertex, the edges known at that vertex (list of matrices)
-    ListStringValues["FileKnownEdges"] = "unset";
-    // If set, the enumeration starts from that vertex (it must be a vertex)
-    ListStringValues["FileInitialVertex"] = "unset";
-    // The heuristics of the dual description, a namelist file in the format
-    // of POLY_SerialDualDesc, or unset for the standard ones without the
-    // bank above 10000 vertices
-    ListStringValues["FileDualDescription"] = "unset";
-    ListIntValues["max_runtime_second"] = 0;
-    std::map<std::string, bool> ListBoolValues;
-    ListBoolValues["NormClosure"] = true;
-    // In the FileVertex mode, also time the dual description from the
-    // facets to the rays, for the analysis of the complexity
-    ListBoolValues["CompareDualSide"] = false;
-    // Stop after writing the first dual description instance
-    ListBoolValues["StopBeforeDualDescription"] = false;
-    // With FileVertex, only test whether the vertex is a vertex of P
-    ListBoolValues["VertexTest"] = false;
-    // Insert the candidates and the new rays with their whole orbit
-    ListBoolValues["OrbitClosure"] = true;
-    // Write the neighbor type of each new ray found by a facet check
-    ListBoolValues["LogNewRays"] = false;
-    // The face test with the coordinate functions instead of random ones
-    ListBoolValues["VertexTestRigorous"] = false;
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    BlockDATA.setListIntValues(ListIntValues);
-    BlockDATA.setListBoolValues(ListBoolValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["IlpMethod"] = doc_IlpMethod();
+    ListStringValues_doc["OutFormat"] = "Default: GAP\n\
+The formatting of the orbits of vertices and of facets. Possible values:\n\
+GAP: a GAP readable file\n\
+PYTHON: a PYTHON readable file";
+    ListStringValues_doc["OutFile"] = "Default: stderr\n\
+The output: stdout, stderr or the name of a file";
+    ListStringValues_doc["FileVertex"] = "Default: unset\n\
+If set, only the local cone of the vertex in that file is computed (see\n\
+VertexTest, VertexTestRigorous, FileKnownEdges and CompareDualSide)";
+    ListStringValues_doc["FileInitialVertex"] = "Default: unset\n\
+If set, the enumeration starts from that vertex, which must be a vertex";
+    ListStringValues_doc["FileKnownEdges"] = "Default: unset\n\
+With FileVertex: the file of the edges known at that vertex, a list of\n\
+matrices";
+    ListStringValues_doc["FileInstancePrefix"] = "Default: unset\n\
+If set, each dual description instance (rays and permutation group) is\n\
+written to files with this prefix before being computed";
+    ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription() +
+                                                  "\n\
+Here unset means the heuristics of igusa_dual_description_heuristic, the\n\
+standard ones without the bank above 10000 vertices";
+    ListIntValues_doc["NormBound"] = "Default: 2\n\
+The candidate rays D are those with tr((A^{-1} D)^2) <= NormBound";
+    ListIntValues_doc["NbRandomFacet"] = "Default: 10\n\
+The number of random facets tested per round";
+    ListIntValues_doc["NbCleanRound"] = "Default: 2\n\
+The number of consecutive rounds without violation before the dual\n\
+description is computed";
+    ListIntValues_doc["MaxNormEnumeration"] = "Default: 1000000\n\
+The norm closure is skipped when the estimated number of lattice vectors\n\
+to enumerate is above this";
+    ListIntValues_doc["NbSampleFacet"] = "Default: 0\n\
+If positive, a sampling phase of that many random facets, each checked, is\n\
+done before the dual description";
+    ListIntValues_doc["StopMinRays"] = "Default: 0\n\
+StopBeforeDualDescription applies only to the instances with at least that\n\
+many rays";
+    ListIntValues_doc["MaxEnumerationBound"] = "Default: 0\n\
+If positive, the bound of the enumeration by norm is not doubled beyond it\n\
+once the rays span the space. If 0 then there is no limit";
+    ListIntValues_doc["max_runtime_second"] = "Default: 0\n\
+The maximum runtime of the enumeration in seconds. If 0 then there is no\n\
+limit";
+    ListBoolValues_doc["NormClosure"] = "Default: T\n\
+Whether to insert all the candidates up to the largest norm of the extreme\n\
+rays before the dual description";
+    ListBoolValues_doc["CompareDualSide"] = "Default: F\n\
+With FileVertex: also time the dual description from the facets to the\n\
+rays, for the analysis of the complexity";
+    ListBoolValues_doc["StopBeforeDualDescription"] = "Default: F\n\
+Whether to stop after writing the first dual description instance";
+    ListBoolValues_doc["VertexTest"] = "Default: F\n\
+With FileVertex: only test whether the matrix is a vertex of P";
+    ListBoolValues_doc["VertexTestRigorous"] = "Default: F\n\
+Whether the vertex test uses the coordinate functions instead of random\n\
+ones";
+    ListBoolValues_doc["OrbitClosure"] = "Default: T\n\
+Whether the candidates and the new rays are inserted with their whole orbit\n\
+under the stabilizer (the known edges always are). With F the group of the\n\
+cone is taken trivial: for the large stabilizers of dimension 9 and more\n\
+the orbits cannot be stored";
+    ListBoolValues_doc["LogNewRays"] = "Default: F\n\
+Whether to write the type of the neighbor of each new ray found by a facet\n\
+check as soon as it is found";
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["DATA"].setListBoolValues_doc(ListBoolValues_doc);
   }
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();

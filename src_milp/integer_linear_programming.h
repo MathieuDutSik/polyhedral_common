@@ -174,6 +174,23 @@ inline std::string ILP_DefaultMethod() {
 #endif
 }
 
+// The namelist documentation of a key choosing the method of
+// ILP_IntegerLinearProgramming. Only the methods compiled in are listed.
+inline std::string doc_IlpMethod() {
+  std::string str = "Default: default\n\
+The integer linear programming method. Possible values:\n\
+default: the method " + ILP_DefaultMethod() + "\n\
+exact_bb: a best-first branch and bound over the exact simplex method, slow\n\
+  but exact";
+#ifdef ENABLE_SCIP_SUPPORT
+  str += "\n\
+scip: the SCIP solver, which works with doubles\n\
+scip_or_exact: SCIP, or exact_bb for the problems whose coefficients do\n\
+  not convert exactly to doubles";
+#endif
+  return str;
+}
+
 template <typename T>
 IlpSolution<T> ILP_IntegerLinearProgramming(MyMatrix<T> const &ListIneq,
                                             MyMatrix<T> const &ListEqua,
