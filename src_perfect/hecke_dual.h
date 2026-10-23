@@ -413,7 +413,8 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<std::vector<PerfectFaceEntry<T, Tint>>>
 dual_partial_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, Tint>> const &rhs,
                           UpperFaceCache<T, Tint, Tgroup> &ufc, MyMatrix<T> const &Q0,
-                          HeckeBudget const &budget, std::ostream &os) {
+                          HeckeBudget const &budget, std::ostream &os,
+                          ConeWalker<T, Tint, Tgroup> const *walker = nullptr) {
   FullComplexEnumeration<T, Tint, Tgroup> const &fce = ufc.fce;
   if (k > 1) {
     std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt_peel =
@@ -433,6 +434,36 @@ dual_partial_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, 
   };
   for (auto &fe : rhs) {
     insert_faces_of(fe.iOrb, fe.M);
+  }
+  /*
+    At the level 1 the right hand side is a combination of perfect cones
+    and a filling is made of paths of facets between them. In a hyperbolic
+    space (Bianchi groups) the rings of unknowns grow exponentially before
+    joining two distant cones, so the facets crossed by the straight walks
+    from the first cone to the others are added to the unknowns.
+   */
+  if (k == 1 && walker && rhs.size() >= 2) {
+    std::optional<TopPerfectCone<Tint>> start_cone;
+    for (auto &fe : rhs) {
+      MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(fce.levels[0].l_faces[fe.iOrb].EXT * fe.M);
+      if (!start_cone) {
+        start_cone = walker->find_containing_cone_T(EXT_T);
+        continue;
+      }
+      std::optional<std::vector<PerfectFace<Tint>>> opt_path =
+          walker->walk_facets(start_cone->i_perfect, start_cone->M, EXT_T);
+#ifdef DEBUG_HECKE_OPERATORS
+      os << "HECKE: dual level 1, walk between the cones of the right hand side: "
+         << (opt_path ? std::to_string(opt_path->size()) + " facets" : std::string("failed")) << "\n";
+#endif
+      if (opt_path) {
+        for (auto &pf : *opt_path) {
+          if (fce.levels[1].l_faces[pf.iOrb].is_well_rounded) {
+            cb_k.f_insert(pf.iOrb, pf.M);
+          }
+        }
+      }
+    }
   }
   size_t start = 0;
   for (size_t ring = 0; ring < budget.max_rings; ring++) {
@@ -512,6 +543,36 @@ dual_partial_contracting_homotopy(int const &k, std::vector<PerfectFaceEntry<T, 
 }
 
 /*
+  The orientation of the reference orientation of a perfect cone (the
+  frame of its selected rays, see get_face_orientation) relative to the
+  orientation of the T-space given by its coordinates. The orientations
+  of the representatives of the orbits of perfect cones are independent,
+  so the image of a cone has to be corrected by them.
+ */
+template <typename T, typename Tint, typename Tgroup>
+int top_cone_orientation(FacePerfectComplex<T, Tint, Tgroup> const &face, std::vector<MyMatrix<T>> const &ListMat) {
+  int n_mat = ListMat.size();
+  std::vector<int> const &l_row = face.or_info.ListRowSelect;
+  if (static_cast<int>(l_row.size()) != n_mat) {
+    std::cerr << "HECKE: top_cone_orientation, the cell is not a perfect cone\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> A(n_mat, n_mat);
+  for (int i = 0; i < n_mat; i++) {
+    MyVector<Tint> V = GetMatrixRow(face.EXT, l_row[i]);
+    for (int k = 0; k < n_mat; k++) {
+      A(i, k) = EvaluationQuadForm<T, Tint>(ListMat[k], V);
+    }
+  }
+  T det = DeterminantMat(A);
+  if (det == 0) {
+    std::cerr << "HECKE: top_cone_orientation, the selected rays are not independent\n";
+    throw TerminalException{1};
+  }
+  return (det > 0) ? 1 : -1;
+}
+
+/*
   The image of a perfect cone C under y: a cone whose closure contains
   the image of the barycenter of C, found by the walk. When the point
   lies on a lower face the choice is not canonical; the equivariance is
@@ -529,9 +590,24 @@ get_cone_image(int const &iOrb, MyMatrix<T> const &y,
   MyMatrix<Tint> const &EXT = fce.levels[0].l_faces[iOrb].EXT;
   MyMatrix<T> W = UniversalMatrixConversion<T, Tint>(EXT) * y;
   TopPerfectCone<Tint> tpc = walker.find_containing_cone_T(W);
+#ifdef SANITY_CHECK_HECKE_OPERATORS
+  {
+    MyMatrix<Tint> EXT_a = fce.levels[0].l_faces[tpc.i_perfect].EXT;
+    MyMatrix<Tint> EXT_b = fce.pctdi.l_perfect[tpc.i_perfect].EXT;
+    if (tot_set(EXT_a) != tot_set(EXT_b)) {
+      std::cerr << "HECKE: get_cone_image, the perfect cones and the level 0 are not in the same order\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
   MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(tpc.M);
   int eps_M = tspace_orientation_sign(LinSpa, M_T);
-  PerfectFaceEntry<T, Tint> fe{tpc.i_perfect, T(eps_y * eps_M), tpc.M};
+  // The orientations of the two representatives relative to the T-space:
+  // y maps the cone with its orientation to the target cone with the
+  // orientation of its representative transported by M.
+  int o_src = top_cone_orientation(fce.levels[0].l_faces[iOrb], LinSpa.ListMat);
+  int o_dst = top_cone_orientation(fce.levels[0].l_faces[tpc.i_perfect], LinSpa.ListMat);
+  PerfectFaceEntry<T, Tint> fe{tpc.i_perfect, T(eps_y * eps_M * o_src * o_dst), tpc.M};
   return {fe};
 }
 
@@ -626,7 +702,7 @@ compute_hecke_chain_map_dual(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
           rhs = get_hecke_coboundary_image(index, iOrb, j, fce, cosets, images[index - 1], ufc, os);
           if (!rhs.empty()) {
             std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt_sol =
-                dual_partial_contracting_homotopy(index, rhs, ufc, Q0, budget, os);
+                dual_partial_contracting_homotopy(index, rhs, ufc, Q0, budget, os, &walker);
             if (!opt_sol) {
               throw HeckeFailure{"no filling found for the cell of level " + std::to_string(index) +
                                  " orbit " + std::to_string(iOrb) + " coset " + std::to_string(j) +

@@ -291,6 +291,93 @@ public:
     }
   }
   /*
+    The facet i_f of the cone (i_cone, M) as a cell of the level 1 of the
+    complex: its orbit and the matrix mapping the representative to it.
+   */
+  PerfectFace<Tint> facet_cell(int const &i_cone, int const &i_f, MyMatrix<Tint> const &M) const {
+    sing_adj<Tint> const &adj = fce.pctdi.l_perfect[i_cone].full_adjacencies(os)[i_f];
+    triple<Tint> t{static_cast<size_t>(i_cone), adj.f_ext, M};
+    triple<Tint> t_can = canonicalize_triple(fce.pctdi.l_perfect, t, os);
+    int n_orb = fce.levels[1].l_faces.size();
+    for (int iOrb = 0; iOrb < n_orb; iOrb++) {
+      std::vector<triple<Tint>> const &l_triple = fce.levels[1].l_faces[iOrb].l_triple;
+      std::optional<MyMatrix<Tint>> opt = test_triple_in_listtriple(fce.pctdi.l_perfect, l_triple, t_can, os);
+      if (opt) {
+        return {iOrb, *opt};
+      }
+    }
+    std::cerr << "HECKE: facet_cell, the facet was not found among the orbits of level 1\n";
+    throw TerminalException{1};
+  }
+  /*
+    The facets crossed by the segment from a point of the cone
+    (i_start, M_start) (its vectors with random positive weights) to the
+    barycenter of the rays of P, in order: they join the start cone to a
+    cone containing that barycenter. Empty if the walk cycles in all the
+    attempts or is longer than the budget.
+   */
+  std::optional<std::vector<PerfectFace<Tint>>> walk_facets(int const &i_start, MyMatrix<Tint> const &M_start,
+                                                            MyMatrix<T> const &P) const {
+    std::vector<T> weights_p(P.rows(), T(1));
+    MyMatrix<T> Q0 = UniversalMatrixConversion<T, Tint>(fce.pctdi.l_perfect[i_start].EXT * M_start);
+    uint64_t seed = 54321;
+    auto next_random = [&]() -> uint64_t {
+      seed = seed * 6364136223846793005ULL + 1442695040888963407ULL;
+      return seed >> 33;
+    };
+    HeckeBudget budget;
+    for (int attempt = 0; attempt < 20; attempt++) {
+      std::vector<T> weights_q(Q0.rows());
+      for (int i_row = 0; i_row < Q0.rows(); i_row++) {
+        weights_q[i_row] = T(1 + static_cast<int>(next_random() % 1000));
+      }
+      int i_cone = i_start;
+      MyMatrix<Tint> M = M_start;
+      std::unordered_set<MyMatrix<Tint>> set_visited;
+      std::vector<PerfectFace<Tint>> l_facet;
+      bool cycle = false;
+      while (true) {
+        if (set_visited.size() > budget.max_walk_steps) {
+          return {};
+        }
+        MyMatrix<Tint> EXT_cone = fce.pctdi.l_perfect[i_cone].EXT * M;
+        MyMatrix<Tint> key = tot_set(EXT_cone);
+        if (!set_visited.insert(key).second) {
+          cycle = true;
+          break;
+        }
+        MyMatrix<T> Minv = Inverse(UniversalMatrixConversion<T, Tint>(M));
+        MyVector<T> cq = get_coords(Q0 * Minv, weights_q);
+        MyVector<T> cp = get_coords(P * Minv, weights_p);
+        std::optional<T> best_t;
+        int best_f = -1;
+        std::vector<MyVector<T>> const &l_fct = ll_facet_fct[i_cone];
+        for (int i_f = 0; i_f < static_cast<int>(l_fct.size()); i_f++) {
+          T a = ScalarProduct(l_fct[i_f], cq);
+          T b = ScalarProduct(l_fct[i_f], cp);
+          if (b < 0) {
+            T t_f = a / (a - b);
+            if (!best_t || t_f < *best_t) {
+              best_t = t_f;
+              best_f = i_f;
+            }
+          }
+        }
+        if (best_f == -1) {
+          return l_facet;
+        }
+        l_facet.push_back(facet_cell(i_cone, best_f, M));
+        sing_adj<Tint> const &adj = fce.pctdi.l_perfect[i_cone].full_adjacencies(os)[best_f];
+        M = adj.eMat * M;
+        i_cone = adj.jCone;
+      }
+      if (!cycle) {
+        break;
+      }
+    }
+    return {};
+  }
+  /*
     The vertex of the complex on the ray of the functional
     Q -> sum_w Q[w] for the rational vectors w of W. The vectors of the
     vertex are the vectors of the containing cone whose functional is
