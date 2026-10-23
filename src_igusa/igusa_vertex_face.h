@@ -519,20 +519,16 @@ igusa_vertex_test_face(IgusaSpace<T, Tint> &space, MyMatrix<T> const &A,
 
 inline FullNamelist NAMELIST_GetStandard_IGUSA_VERTEX_TEST() {
   std::map<std::string, SingleBlock> ListBlock;
+  // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    std::map<std::string, int> ListIntValues;
-    std::map<std::string, bool> ListBoolValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["IlpMethod"] = "default";
-    ListStringValues["OutFile"] = "stderr";
-    // A list of forms (ListMatrix format) to be tested
-    ListStringValues["FileListForm"] = "unset";
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    BlockDATA.setListIntValues(ListIntValues);
-    BlockDATA.setListBoolValues(ListBoolValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["IlpMethod"] = doc_IlpMethod();
+    ListStringValues_doc["OutFile"] = doc_StderrStdoutFile("stderr");
+    ListStringValues_doc["FileListForm"] =
+        "The file containing the forms to be tested, in ListMatrix format";
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   return FullNamelist(ListBlock);

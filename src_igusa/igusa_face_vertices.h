@@ -409,27 +409,26 @@ igusa_face_vertices(IgusaParameters<T> const &params, MyMatrix<T> const &F,
 
 inline FullNamelist NAMELIST_GetStandard_IGUSA_FACE_VERTICES() {
   std::map<std::string, SingleBlock> ListBlock;
+  // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    std::map<std::string, int> ListIntValues;
-    std::map<std::string, bool> ListBoolValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["IlpMethod"] = "default";
-    ListStringValues["OutFile"] = "stderr";
-    // The matrix F (n x n, positive semidefinite) of tr(F X) >= rhs
-    ListStringValues["FileFacet"] = "unset";
-    ListStringValues["FacetRhs"] = "unset";
-    // The representatives of the orbits of vertices of P_r, r the rank of
-    // F (ListMatrix format)
-    ListStringValues["FileListVertex"] = "unset";
-    // For F positive definite: also compute the incidence by
-    // IGUSA_FacetIncidence and compare
-    ListBoolValues["CompareIncidence"] = false;
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    BlockDATA.setListIntValues(ListIntValues);
-    BlockDATA.setListBoolValues(ListBoolValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["IlpMethod"] = doc_IlpMethod();
+    ListStringValues_doc["OutFile"] = doc_StderrStdoutFile("stderr");
+    ListStringValues_doc["FileFacet"] = "The file containing the matrix F\n\
+(n x n, positive semidefinite) of the face tr(F X) >= rhs";
+    ListStringValues_doc["FacetRhs"] = "The right hand side rhs of the face,\n\
+a rational number";
+    ListStringValues_doc["FileListVertex"] = "The file containing the\n\
+representatives of the orbits of vertices of P_r, r the rank of F, in\n\
+ListMatrix format";
+    ListBoolValues_doc["CompareIncidence"] = "Default: F\n\
+For F positive definite: also compute the incidence as IGUSA_FacetIncidence\n\
+does and compare";
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["DATA"].setListBoolValues_doc(ListBoolValues_doc);
   }
   return FullNamelist(ListBlock);
 }

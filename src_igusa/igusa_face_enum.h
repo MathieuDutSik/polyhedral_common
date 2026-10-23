@@ -927,30 +927,31 @@ igusa_enumerate_facets(IgusaFaceContext<T, Tint, Tgroup> &ctx,
 
 inline FullNamelist NAMELIST_GetStandard_IGUSA_FACE_ENUMERATION() {
   std::map<std::string, SingleBlock> ListBlock;
+  // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    std::map<std::string, int> ListIntValues;
-    std::map<std::string, bool> ListBoolValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["IlpMethod"] = "default";
-    ListStringValues["OutFile"] = "stderr";
-    // The vertex representatives of the P_r, r <= n, all ranks in one
-    // ListMatrix file
-    ListStringValues["FileVertexRepr"] = "unset";
-    // The facets of lower rank of P_n (lifts of the full rank facets of
-    // the P_r, r < n): n x n matrices and right hand sides
-    ListStringValues["FileLowerFacets"] = "unset";
-    ListStringValues["FileLowerRhs"] = "unset";
-    // Optional full rank facets to start from
-    ListStringValues["FileInitialFacets"] = "unset";
-    ListStringValues["FileInitialRhs"] = "unset";
-    // Stop after processing that many facets (0: no limit)
-    ListIntValues["MaxFacet"] = 0;
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    BlockDATA.setListIntValues(ListIntValues);
-    BlockDATA.setListBoolValues(ListBoolValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["IlpMethod"] = doc_IlpMethod();
+    ListStringValues_doc["OutFile"] = doc_StderrStdoutFile("stderr");
+    ListStringValues_doc["FileVertexRepr"] = "The file containing the vertex\n\
+representatives of the P_r, r <= n, all ranks in one ListMatrix file";
+    ListStringValues_doc["FileLowerFacets"] = "Default: unset\n\
+The facets of lower rank of P_n (lifts of the full rank facets of the P_r,\n\
+r < n), as n x n matrices in ListMatrix format, their right hand sides being\n\
+in FileLowerRhs. If unset then there are none";
+    ListStringValues_doc["FileLowerRhs"] = "Default: unset\n\
+The right hand sides of FileLowerFacets, separated by whitespace";
+    ListStringValues_doc["FileInitialFacets"] = "Default: unset\n\
+Optional full rank facets to start from, in ListMatrix format, their right\n\
+hand sides being in FileInitialRhs. If unset then there are none";
+    ListStringValues_doc["FileInitialRhs"] = "Default: unset\n\
+The right hand sides of FileInitialFacets, separated by whitespace";
+    ListIntValues_doc["MaxFacet"] = "Default: 0\n\
+Stop after processing that many facets. If 0 then there is no limit";
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
   }
   return FullNamelist(ListBlock);
 }
