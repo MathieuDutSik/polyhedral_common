@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "MAT_MatrixInt.h"
+#include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -51,34 +53,88 @@ MyVector<Tring> PeriodicVectorMod(MyVector<Tring> const &u, Tring const &N) {
 }
 
 /*
-  Whether the cosets form a group modulo Z^n, in which case the point set
-  is a lattice containing Z^n rather than a genuinely periodic set.
+  The translations preserving the point set S: the indices of the cosets p,
+  the origin included, with S + p = S modulo Z^n. They form a group P, and
+  the point set is periodic for the lattice Z^n + P, over which it is
+  described by |S| / |P| cosets. The description over Z^n is reduced when P
+  is trivial, and the set is a lattice when P = S.
 
-  The coset formalism is not the right one for that case -- the set should
-  be described as the lattice it is -- so it is rejected at construction.
-  Z^2 + {(0,0), (1/2,1/2)} is such a set, the cosets being closed under
-  addition; Z^2 + {(0,0), (1/3,0)} is not, since (1/3,0) + (1/3,0) is
-  (2/3,0), which is not a coset.
+  Z^2 + {(0,0), (1/2,0), (0,1/3), (1/2,1/3)} is not reduced, being preserved
+  by the translation by (1/2,0): it is Z^2 + {(0,0), (0,1/3)} over the
+  lattice Z^2 + Z (1/2,0). Z^2 + {(0,0), (1/2,1/2)} is a lattice, and
+  Z^2 + {(0,0), (1/3,0)} is reduced.
 
-  The set contains the origin after normalization and is finite, so being
-  closed under addition is all that has to be checked.
+  The set contains the origin after normalization, so the translations are
+  among the cosets, and a translation mapping S into S maps it onto S since
+  S is finite.
  */
 template <typename Tring>
-bool IsPeriodicPointSetLattice(PeriodicPointSet<Tring> const &pps) {
+std::vector<size_t>
+GetPeriodicPointSetTranslations(PeriodicPointSet<Tring> const &pps) {
   int n_coset = pps.cosets_num.rows();
   int n = pps.cosets_num.cols();
-  for (int k1 = 0; k1 < n_coset; k1++) {
-    for (int k2 = k1; k2 < n_coset; k2++) {
+  std::vector<size_t> l_trans;
+  for (int p = 0; p < n_coset; p++) {
+    bool is_trans = true;
+    for (int k = 0; k < n_coset; k++) {
       MyVector<Tring> eSum(n);
       for (int j = 0; j < n; j++) {
-        eSum(j) = pps.cosets_num(k1, j) + pps.cosets_num(k2, j);
+        eSum(j) = pps.cosets_num(k, j) + pps.cosets_num(p, j);
       }
       if (!GetCosetIndex(pps, eSum)) {
-        return false;
+        is_trans = false;
+        break;
       }
     }
+    if (is_trans) {
+      l_trans.push_back(p);
+    }
   }
-  return true;
+  return l_trans;
+}
+
+// Why the point set is not reduced, from its translations l_trans as
+// returned by GetPeriodicPointSetTranslations.
+template <typename Tring>
+void WritePeriodicPointSetNotReduced(std::ostream &os,
+                                     PeriodicPointSet<Tring> const &pps,
+                                     std::vector<size_t> const &l_trans) {
+  size_t n_coset = pps.cosets_num.rows();
+  int n = pps.cosets_num.cols();
+  size_t n_trans = l_trans.size();
+  os << "the point set is not reduced, the non-zero translations preserving "
+        "it modulo Z^n being\n";
+  for (auto &p : l_trans) {
+    bool is_zero = true;
+    for (int j = 0; j < n; j++) {
+      if (pps.cosets_num(p, j) != 0) {
+        is_zero = false;
+      }
+    }
+    if (!is_zero) {
+      os << " ";
+      for (int j = 0; j < n; j++) {
+        Tring num = pps.cosets_num(p, j);
+        if (num == 0) {
+          os << " 0";
+        } else {
+          Tring g = GcdPair(num, pps.N);
+          os << " " << QuoInt(num, g) << "/" << QuoInt(pps.N, g);
+        }
+      }
+      os << "\n";
+    }
+  }
+  size_t n_coset_red = n_coset / n_trans;
+  os << "Together with Z^n they generate a lattice L over which the point set "
+        "is described by "
+     << n_coset_red << " coset(s)";
+  if (n_coset_red == 1) {
+    os << ": the point set is the lattice L, to be treated by the lattice "
+          "programs\n";
+  } else {
+    os << ", which is the description to use\n";
+  }
 }
 
 /*
@@ -153,16 +209,33 @@ PeriodicPointSetFromRational_Kernel(MyMatrix<T> const &Cosets) {
   return {std::move(cosets_num), std::move(N)};
 }
 
-// The point set, or nothing when the cosets form a group and the set is
-// therefore a lattice. For a caller that has to decide rather than to
-// require, a random generator of point sets among others.
+// The point set, or nothing when its description is not reduced (see
+// GetPeriodicPointSetTranslations). For a caller that has to decide rather
+// than to require, a random generator of point sets among others.
 template <typename Tring, typename T>
 std::optional<PeriodicPointSet<Tring>>
 PeriodicPointSetFromRational_Opt(MyMatrix<T> const &Cosets) {
   PeriodicPointSet<Tring> ret =
       PeriodicPointSetFromRational_Kernel<Tring, T>(Cosets);
-  if (IsPeriodicPointSetLattice(ret)) {
+  if (GetPeriodicPointSetTranslations(ret).size() > 1) {
     return {};
+  }
+  return ret;
+}
+
+// The point set of a user input: it has to be reduced, which is checked
+// unconditionally, the program stopping with the reason if it is not.
+template <typename Tring, typename T>
+PeriodicPointSet<Tring>
+PeriodicPointSetFromRational_Reduced(MyMatrix<T> const &Cosets,
+                                     std::string const &prog) {
+  PeriodicPointSet<Tring> ret =
+      PeriodicPointSetFromRational_Kernel<Tring, T>(Cosets);
+  std::vector<size_t> l_trans = GetPeriodicPointSetTranslations(ret);
+  if (l_trans.size() > 1) {
+    std::cerr << prog << ": ";
+    WritePeriodicPointSetNotReduced(std::cerr, ret, l_trans);
+    throw TerminalException{1};
   }
   return ret;
 }
@@ -172,10 +245,10 @@ PeriodicPointSet<Tring> PeriodicPointSetFromRational(MyMatrix<T> const &Cosets) 
   PeriodicPointSet<Tring> ret =
       PeriodicPointSetFromRational_Kernel<Tring, T>(Cosets);
 #ifdef SANITY_CHECK_PERIODIC_STRUCTURES
-  if (IsPeriodicPointSetLattice(ret)) {
-    std::cerr << "PERIODIC: PeriodicPointSetFromRational: the cosets form a "
-                 "group modulo Z^n, so the point set is a lattice and has to "
-                 "be described as one rather than by cosets\n";
+  std::vector<size_t> l_trans = GetPeriodicPointSetTranslations(ret);
+  if (l_trans.size() > 1) {
+    std::cerr << "PERIODIC: PeriodicPointSetFromRational: ";
+    WritePeriodicPointSetNotReduced(std::cerr, ret, l_trans);
     throw TerminalException{1};
   }
 #endif

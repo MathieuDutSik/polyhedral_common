@@ -34,8 +34,7 @@ PackingCoveringGAP: the covering radius, the packing radius and the\n\
         doc_rational_integer_arithmetics_by_library<false>();
     ListStringValues_doc["GRAMfile"] =
         "The file containing the positive definite Gram matrix";
-    ListStringValues_doc["FileCosets"] =
-        doc_FileCosets("LATT_SerialComputeDelaunay");
+    ListStringValues_doc["FileCosets"] = doc_FileCosets();
     ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   return FullNamelist(ListBlock);
@@ -71,15 +70,8 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
               << n << "\n";
     throw TerminalException{1};
   }
-  std::optional<PeriodicPointSet<Tint>> opt_pps =
-      PeriodicPointSetFromRational_Opt<Tint, T>(Cosets);
-  if (!opt_pps) {
-    std::cerr << "LATT_SerialPeriodicDelaunay: the cosets form a group "
-                 "modulo Z^n, so the point set is a lattice: it has to be "
-                 "treated by LATT_SerialComputeDelaunay over that lattice\n";
-    throw TerminalException{1};
-  }
-  PeriodicPointSet<Tint> pps = *opt_pps;
+  PeriodicPointSet<Tint> pps = PeriodicPointSetFromRational_Reduced<Tint, T>(
+      Cosets, "LATT_SerialPeriodicDelaunay");
   //
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);

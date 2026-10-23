@@ -82,8 +82,8 @@ void process_A(FullNamelist const &eFull) {
   os << "PERIODIC_RECORD: n=" << n << " record=" << record << "\n";
   //
   // The periodic point set, with the same validation as the enumeration:
-  // cosets that form a group modulo Z^n describe a lattice, and the
-  // pointwise stabilizer of the T-space has to stabilize the point set.
+  // its description has to be reduced, and the pointwise stabilizer of the
+  // T-space has to stabilize the point set.
   //
   std::string FileCosets = BlockDATA.get_string("FileCosets");
   MyMatrix<T> Cosets = ReadMatrixFile<T>(FileCosets);
@@ -93,15 +93,8 @@ void process_A(FullNamelist const &eFull) {
               << n << "\n";
     throw TerminalException{1};
   }
-  std::optional<PeriodicPointSet<Tint>> opt_pps =
-      PeriodicPointSetFromRational_Opt<Tint, T>(Cosets);
-  if (!opt_pps) {
-    std::cerr << "PERIODIC_LookForRecordCovering: the cosets form a group "
-                 "modulo Z^n, so the point set is a lattice and cannot beat "
-                 "the lattice record by construction\n";
-    throw TerminalException{1};
-  }
-  PeriodicPointSet<Tint> pps = *opt_pps;
+  PeriodicPointSet<Tint> pps = PeriodicPointSetFromRational_Reduced<Tint, T>(
+      Cosets, "PERIODIC_LookForRecordCovering");
   for (auto &eGen : LinSpa.PtStabGens) {
     if (!PeriodicAffineExtension<Tint, T>(pps, eGen)) {
       std::cerr << "PERIODIC_LookForRecordCovering: a generator of the "

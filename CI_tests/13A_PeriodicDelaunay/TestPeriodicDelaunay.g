@@ -284,12 +284,31 @@ RunRejectLattice:=function()
     return 0;
 end;
 
+# A set of cosets preserved by a non-zero translation is not reduced: here
+# (1/2,0) preserves Z^2 + {0, (1/2,0), (0,1/3), (1/2,1/3)}, which is
+# Z^2 + {0, (0,1/3)} over the lattice Z^2 + Z (1/2,0). It is not a lattice,
+# and the periodic programs refuse it all the same.
+RunRejectNotReduced:=function()
+    local GramMat, TheRec;
+    GramMat:=[[2,-1],[-1,2]];
+    Print("The cosets {0, (1/2,0), (0,1/3), (1/2,1/3)} have to be refused\n");
+    TheRec:=RunPeriodicDelaunay(GramMat, [[0,0],[1/2,0],[0,1/3],[1/2,1/3]],
+                                "reject_red", true);
+    if TheRec<>fail then
+        Print("The description is not reduced and should have been refused\n");
+        return 1;
+    fi;
+    Print("  refused, as it should be\n");
+    return 0;
+end;
+
 FullTest:=function()
     local n_error;
     n_error:=0;
     n_error:=n_error + RunIsoDelaunayCases();
     n_error:=n_error + RunDelaunayCases();
     n_error:=n_error + RunRejectLattice();
+    n_error:=n_error + RunRejectNotReduced();
     Print("FullTest: n_error=", n_error, "\n");
     return n_error;
 end;

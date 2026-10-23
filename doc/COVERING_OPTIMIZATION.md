@@ -159,9 +159,12 @@ structures, and for each of them over its iso-Delaunay domains.
 
 Two constraints narrow which coset structures can be given:
 
-* The cosets must not form a group modulo `Z^d` — such a point set is a
-  lattice and has to be treated as one. Both periodic programs reject it with
-  a message saying so.
+* The description has to be reduced: no non-zero translation may map the
+  point set onto itself modulo `Z^d`. Such translations form a group `P`, and
+  the point set is then described by `|S|/|P|` cosets over the finer lattice
+  `Z^d + P` — when `|S|/|P| = 1` it is a lattice and has to be treated as one.
+  The periodic programs reject a description that is not reduced, giving the
+  translations and the number of cosets over `Z^d + P`.
 * Every generator of the pointwise stabilizer of the T-space has to admit an
   affine extension preserving the point set, which the enumeration needs for
   its equivalences to be the right ones. For the classic `GL_d(Z)` T-space

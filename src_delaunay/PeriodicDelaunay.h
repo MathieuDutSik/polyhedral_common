@@ -1390,13 +1390,14 @@ struct PeriodicDataIsoDelaunayDomainsFunc {
 };
 
 // The namelist documentation of FileCosets, the periodic point set of the
-// periodic programs. lattice_program is the program to use when the point
-// set is a lattice.
-std::string doc_FileCosets(std::string const &lattice_program) {
+// periodic programs.
+std::string doc_FileCosets() {
   return "The file containing the rational coset matrix of the periodic point\n\
-set: one coset per row, the zero coset included. The cosets must not form\n\
-a group modulo Z^n, otherwise the point set is a lattice to be treated by\n" +
-         lattice_program;
+set S: one coset per row, the zero coset included. The description has to\n\
+be reduced: no translation v other than 0 may map S onto itself modulo Z^n.\n\
+Such translations form a group P, and S is then periodic for the finer\n\
+lattice Z^n + P, over which it is described by |S|/|P| cosets; when\n\
+|S|/|P| = 1 it is a lattice, to be treated by the lattice programs";
 }
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_PERIODIC_IsoDelaunayDomains() {
@@ -1410,7 +1411,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERIODIC_IsoDelaunayDomains() {
         doc_rational_integer_arithmetics_by_library<false>();
     ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
     ListStringValues_doc["FileCosets"] =
-        doc_FileCosets("LATT_SerialLattice_IsoDelaunayDomain") + "\n\
+        doc_FileCosets() + "\n\
 The pointwise stabilizer of the T-space must preserve the point set";
     ListStringValues_doc["PrefixIsoDelaunayDomains"] = "Default: unset\n\
 If set to a prefix P, each enumerated iso-Delaunay domain i is written as a\n\

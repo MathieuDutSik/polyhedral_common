@@ -49,16 +49,8 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
               << LinSpa.n << "\n";
     throw TerminalException{1};
   }
-  std::optional<PeriodicPointSet<Tint>> opt_pps =
-      PeriodicPointSetFromRational_Opt<Tint, T>(Cosets);
-  if (!opt_pps) {
-    std::cerr << "LATT_SerialPeriodic_IsoDelaunayDomain: the cosets form a "
-                 "group modulo Z^n, so the point set is a lattice: it has to "
-                 "be treated by LATT_SerialLattice_IsoDelaunayDomain over "
-                 "that lattice instead\n";
-    throw TerminalException{1};
-  }
-  PeriodicPointSet<Tint> pps = *opt_pps;
+  PeriodicPointSet<Tint> pps = PeriodicPointSetFromRational_Reduced<Tint, T>(
+      Cosets, "LATT_SerialPeriodic_IsoDelaunayDomain");
   for (auto &eGen : LinSpa.PtStabGens) {
     if (!PeriodicAffineExtension<Tint, T>(pps, eGen)) {
       std::cerr << "LATT_SerialPeriodic_IsoDelaunayDomain: a generator of the "
