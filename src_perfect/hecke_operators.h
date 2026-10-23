@@ -94,7 +94,7 @@ struct HeckeFailure {
 // The budgets of the methods. They bound the memory and the running time
 // of every step; exceeding one of them is a clean failure.
 struct HeckeBudget {
-  size_t max_cosets = 2000000;          // cosets of G / Gamma
+  size_t max_cosets = 20000000;         // cosets of G / Gamma
   size_t max_hecke_cosets = 1000000;    // cosets of a Hecke double coset
   size_t max_closure = 1000000;         // elements of a finite closure
   size_t max_walk_steps = 1000000;      // steps of a walk through the cones
@@ -4262,7 +4262,7 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
   std::vector<int> l_label = f_label(l_bnd_res, n_cell);
   std::sort(l_bnd_res.begin(), l_bnd_res.end(),
             [](SparseVectorMod const &a, SparseVectorMod const &b) -> bool { return a.size() < b.size(); });
-  SparseEchelonMod echelon_bnd(p);
+  SparseRrefMod echelon_bnd(p);
   for (auto &v : l_bnd_res) {
     echelon_bnd.insert(f_relabel(v, l_label));
   }
