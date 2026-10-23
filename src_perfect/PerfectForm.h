@@ -236,6 +236,11 @@ bool find_positive_semidefinite_shv_zero(LinSpaceMatrix<T> const &LinSpa, MyMatr
   std::vector<MyVector<Tint>> ListVect = VectorFamilyFromMatrix(SHV);
   std::vector<MyVector<Tint>> TestV_init = get_initial_vector_test_v<Tint>(n, ListVect, os);
   std::vector<MyMatrix<T>> BasisSpace = get_spec_basis_shv_zero<T,Tint>(LinSpa.ListMat, ListVect);
+  // Only the zero form vanishes on all the vectors, so there is no non-zero
+  // positive semidefinite one.
+  if (BasisSpace.empty()) {
+    return true;
+  }
 #ifdef DEBUG_BOUNDED_FACE
   os << "PERF: is_bounded_face_iterative_bis, step 5\n";
 #endif
