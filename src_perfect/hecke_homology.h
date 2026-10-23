@@ -34,6 +34,8 @@ struct GammaOrbitSplit {
   std::vector<int> l_rep;
   std::vector<int> rep_position;
   std::vector<bool> l_orientable;
+  // The size of the orbit of each representative.
+  std::vector<size_t> l_orbit_size;
 };
 
 template <typename T, typename Tint, typename Tgroup>
@@ -99,6 +101,7 @@ GammaOrbitSplit get_gamma_orbit_split(
     gos.rep_position[rep] = gos.l_rep.size();
     gos.l_rep.push_back(rep);
     gos.l_orientable.push_back(is_orientable);
+    gos.l_orbit_size.push_back(l_orbit.size());
   }
   return gos;
 }
@@ -116,6 +119,9 @@ template <typename T, typename Tint> struct GammaComplex {
   std::vector<std::vector<GammaOrbitSplit>> splits;
   std::vector<std::vector<std::pair<int, int>>> basis;
   std::vector<std::vector<std::vector<int>>> basis_index;
+  // The order of the stabilizer in Gamma of each basis cell F g_rep: the
+  // order of Stab_G(F) divided by the size of the orbit of the coset rep.
+  std::vector<std::vector<int64_t>> stab_order;
   // The dense boundary matrices (for the rational homology) and the sparse
   // ones: boundary_sparse[index][i] is the list of the (column, value) of
   // the row i, sorted by column.
@@ -157,6 +163,7 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   gc.splits = std::vector<std::vector<GammaOrbitSplit>>(n_levels);
   gc.basis = std::vector<std::vector<std::pair<int, int>>>(n_levels);
   gc.basis_index = std::vector<std::vector<std::vector<int>>>(n_levels);
+  gc.stab_order = std::vector<std::vector<int64_t>>(n_levels);
   for (int index = 0; index < n_levels; index++) {
     if (l_level_needed[index] == 0) {
       continue;
@@ -171,12 +178,23 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
         is_ok = false;
       }
       if (is_ok) {
+        // The well rounded cells span the space, so Stab_G(F) acts
+        // faithfully on their vectors.
+        auto order_grp = face.GRP_ext.size();
+        int64_t order_stab = UniversalScalarConversion<int64_t, decltype(order_grp)>(order_grp);
         size_t n_rep = gos.l_rep.size();
         for (size_t i_rep = 0; i_rep < n_rep; i_rep++) {
           if (gos.l_orientable[i_rep]) {
             int rep = gos.l_rep[i_rep];
+            int64_t orbit_size = gos.l_orbit_size[i_rep];
+            if (order_stab % orbit_size != 0) {
+              std::cerr << "HECKE: the orbit size " << orbit_size << " does not divide the order "
+                        << order_stab << " of the stabilizer\n";
+              throw TerminalException{1};
+            }
             gc.basis_index[index][iOrb][rep] = gc.basis[index].size();
             gc.basis[index].push_back({iOrb, rep});
+            gc.stab_order[index].push_back(order_stab / orbit_size);
           }
         }
       }
@@ -424,6 +442,24 @@ MyVector<T> get_hecke_image_cell(
 }
 
 /*
+  For a chain map commuting with the transposed differential (the Dual
+  method), the images are chains of the dual complex W (the well rounded
+  retract), and the complex of the quotient Gamma \ W is not the transpose
+  of the one of Gamma \ Pi when the cells have stabilizers in Gamma: by
+  counting the incident pairs over the orbits, its boundary is
+    B(sigma, rho) = D(rho, sigma) |Gamma_sigma| / |Gamma_rho|.
+  In the coordinates u = z S (S the diagonal of the stabilizer orders),
+  in which the cycles and boundaries are those of the transposed complex
+  of Gamma \ Pi, the operator z -> z T becomes u -> u S^{-1} T S: the entry
+  (c, c') of the images is multiplied by |Gamma_c'| / |Gamma_c|.
+ */
+template <typename T, typename Tint>
+T get_dual_stab_weight(GammaComplex<T, Tint> const &gc, int const &index, int const &c, int const &c_img) {
+  return UniversalScalarConversion<T, int64_t>(gc.stab_order[index][c_img]) /
+         UniversalScalarConversion<T, int64_t>(gc.stab_order[index][c]);
+}
+
+/*
   The Hecke operator on the homology of a level modulo a prime p, by
   sparse linear algebra: no matrix of the size of the complex is formed,
   which is what limits the rational computation. With B the space of the
@@ -649,7 +685,12 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
         if (in_S[kv.first] == 1) {
           continue;
         }
-        std::optional<int64_t> opt = residue_mod_p(kv.second, p);
+        T value = kv.second;
+        if (transposed) {
+          // The dual complex of the quotient (see get_dual_stab_weight).
+          value *= get_dual_stab_weight(gc, index, e.first, kv.first);
+        }
+        std::optional<int64_t> opt = residue_mod_p(value, p);
         if (!opt) {
           // The homology is known, but not the Hecke matrix.
           return {index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0),
@@ -907,6 +948,14 @@ HeckeHomologyResult<T> compute_hecke_homology(
       HeckeImageKeyActions actions = get_hecke_image_key_actions(index, gc, hcm);
       for (int i_cell = 0; i_cell < n_cell; i_cell++) {
         l_img[i_cell] = get_hecke_image_cell(index, i_cell, gc, hcm, cosets_gamma, fce, &actions);
+        if (dual) {
+          // The dual complex of the quotient (see get_dual_stab_weight).
+          for (int j_cell = 0; j_cell < n_cell; j_cell++) {
+            if (l_img[i_cell](j_cell) != 0) {
+              l_img[i_cell](j_cell) *= get_dual_stab_weight(gc, index, i_cell, j_cell);
+            }
+          }
+        }
       }
       MyMatrix<T> Gram = harmonic * harmonic.transpose();
       MyMatrix<T> GramInv = Inverse(Gram);

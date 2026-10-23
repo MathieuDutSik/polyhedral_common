@@ -316,6 +316,28 @@ test_sharbly_gaussian:=function()
     return true;
 end;
 
+# GL2 over the Gaussian integers, Gamma0(11 O_K): the cells of the quotient
+# have stabilizers of different orders (the units i), for which the Dual
+# method needs the stabilizer weights of the dual complex. H^1 carries the
+# Bianchi form 121.1-a (base change of 11a): T_{1+i} = a_2 = -2, with the
+# Sharbly and the Dual methods.
+test_dual_gaussian:=function()
+    local desc, x, method, Res, eLev;
+    desc:=GenerateTspaceDescription_imag_quad(2, -4, true);
+    x:=[[1,0,0,0],[0,1,0,1],[0,0,1,0],[0,-1,0,1]];
+    for method in ["Sharbly", "Dual"]
+    do
+        Res:=PERFCOMP_hecke_operators(desc, x, "Gamma0", 11, true, method);
+        eLev:=get_hecke_level(Res, 1);
+        Print("GL2(Z[i]) Gamma0(11) ", method, " H^1 M=", eLev.HeckeMatrix, "\n");
+        if eLev.HeckeMatrix<>[[-2]] then
+            Print("The Hecke matrix on H^1 should be [[-2]]\n");
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
 f_compute:=function()
     local n_error;
     n_error:=0;
@@ -335,6 +357,9 @@ f_compute:=function()
         n_error:=n_error+1;
     fi;
     if not test_sharbly_gaussian() then
+        n_error:=n_error+1;
+    fi;
+    if not test_dual_gaussian() then
         n_error:=n_error+1;
     fi;
     return n_error=0;
