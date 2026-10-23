@@ -1072,6 +1072,16 @@ GAP_Covering: the covering radius and density of the lattice, as a GAP file\n\
 CheckMergedOutput: only check the adjacencies of the merged tesselation";
 }
 
+// The namelist documentation of CacheFile, the cache of the tesselation of
+// the serial programs.
+std::string doc_CacheFile() {
+  return "Default: none\n\
+A file caching the tesselation. If it exists, the tesselation is read from\n\
+it, otherwise it is computed and written to it. The cache is not checked\n\
+against GRAMfile, so it must come from the same lattice.\n\
+If none then the tesselation is computed and not cached";
+}
+
 FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
@@ -1101,11 +1111,7 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_DELAUNAY() {
   {
     std::map<std::string, std::string> ListStringValues_doc;
     Insert_DelaunayLattice_DATA_doc(ListStringValues_doc);
-    ListStringValues_doc["CacheFile"] = "Default: none\n\
-A file caching the Delaunay tesselation. If it exists, the tesselation is\n\
-read from it, otherwise it is computed and written to it. The cache is not\n\
-checked against GRAMfile, so it must come from the same lattice.\n\
-If none then the tesselation is computed and not cached";
+    ListStringValues_doc["CacheFile"] = doc_CacheFile();
     ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // QUERIES

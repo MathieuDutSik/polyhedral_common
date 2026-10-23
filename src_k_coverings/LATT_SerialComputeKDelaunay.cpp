@@ -34,29 +34,36 @@ FullNamelist NAMELIST_GetStandard_SERIAL_COMPUTE_K_DELAUNAY() {
       SINGLEBLOCK_Get_System(doc_OutFormat_KDelaunayTesselation());
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["GRAMfile"] = "unset.gram";
-    ListStringValues["SVRfile"] = "unset";
-    ListStringValues["choice_initial"] = "direct";
-    ListStringValues["FileDualDescription"] = "unset";
-    ListStringValues["CacheFile"] = "none";
-    std::map<std::string, int> ListIntValues;
-    ListIntValues["k"] = 2;
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    BlockDATA.setListIntValues(ListIntValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["GRAMfile"] =
+        "The file containing the Gram matrix of the lattice";
+    ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
+    ListStringValues_doc["CacheFile"] = doc_CacheFile() + "\n\
+A cached tiling of another order k is recomputed";
+    ListIntValues_doc["k"] = "The order k of the tiling, at least 1";
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
   }
   // QUERIES
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["FileTilingVolume"] = "null";
-    ListStringValues["FileIsoKDelaunayDomain"] = "null";
-    ListStringValues["FileCoveringOptimum"] = "null";
-    SingleBlock BlockQUERIES;
-    BlockQUERIES.setListStringValues(ListStringValues);
-    ListBlock["QUERIES"] = BlockQUERIES;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["FileTilingVolume"] = "Default: null\n\
+The file to which the volume identity of the tiling is written in GAP: the\n\
+sum over the orbits of tiles against its expected value, a check of the\n\
+enumeration. If null then it is not computed";
+    ListStringValues_doc["FileIsoKDelaunayDomain"] = "Default: null\n\
+The file to which the (L,k)-domain of the form in the space of all\n\
+symmetric matrices is written as a boost text archive. It has to be full\n\
+dimensional: no tile may have more than n+1 points on its sphere.\n\
+If null then it is not computed";
+    ListStringValues_doc["FileCoveringOptimum"] = "Default: null\n\
+The file to which the minimum of the k-covering density over the\n\
+(L,k)-domain of the form is written as a GAP record, with the same\n\
+condition as FileIsoKDelaunayDomain. If null then it is not computed";
+    ListBlock["QUERIES"].setListStringValues_doc(ListStringValues_doc);
   }
   return FullNamelist(ListBlock);
 }
@@ -84,7 +91,7 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
                                                          os);
   DataLattice<T, Tint, Tgroup> data =
-      get_data_lattice<T, Tint, Tgroup>(eFull, AllArr, os);
+      GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
   //
   std::string CacheFile = BlockDATA.get_string("CacheFile");
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
