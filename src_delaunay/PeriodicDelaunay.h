@@ -1389,28 +1389,41 @@ struct PeriodicDataIsoDelaunayDomainsFunc {
   size_t f_complexity([[maybe_unused]] Tobj const &x) { return 0; }
 };
 
+// The namelist documentation of FileCosets, the periodic point set of the
+// periodic programs. lattice_program is the program to use when the point
+// set is a lattice.
+std::string doc_FileCosets(std::string const &lattice_program) {
+  return "The file containing the rational coset matrix of the periodic point\n\
+set: one coset per row, the zero coset included. The cosets must not form\n\
+a group modulo Z^n, otherwise the point set is a lattice to be treated by\n" +
+         lattice_program;
+}
+
 FullNamelist NAMELIST_GetStandard_COMPUTE_PERIODIC_IsoDelaunayDomains() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System(doc_OutFormat_FamilyObjects());
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["FileDualDescription"] = "unset";
-    // The file with the rational coset matrix of the periodic point set:
-    // one coset per row, the zero coset included.
-    ListStringValues["FileCosets"] = "unset";
-    // Prefix under which every enumerated domain is dumped as a boost
-    // text-archive of an IsoDelaunayDomain, the format that
-    // LATT_AnalysisIsoDelaunay reads. "unset" (the default) skips the dump.
-    ListStringValues["PrefixIsoDelaunayDomains"] = "unset";
-    // The file to which the T-space actually used is written, in the format
-    // that LATT_AnalysisIsoDelaunay's FileLinSpace and TypeTspace = "File"
-    // read. "unset" (the default) skips the writing.
-    ListStringValues["FileLinSpaceOut"] = "unset";
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library<false>();
+    ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
+    ListStringValues_doc["FileCosets"] =
+        doc_FileCosets("LATT_SerialLattice_IsoDelaunayDomain") + "\n\
+The pointwise stabilizer of the T-space must preserve the point set";
+    ListStringValues_doc["PrefixIsoDelaunayDomains"] = "Default: unset\n\
+If set to a prefix P, each enumerated iso-Delaunay domain i is written as a\n\
+boost text archive to the file P + i, which is read by\n\
+LATT_AnalysisIsoDelaunay (with FileCosets for the covering density).\n\
+If unset then nothing is written";
+    ListStringValues_doc["FileLinSpaceOut"] = "Default: unset\n\
+The file to which the T-space used is written, in the format read by\n\
+FileLinSpace of LATT_AnalysisIsoDelaunay and by TypeTspace = File.\n\
+The domains are expressed in its coordinates.\n\
+If unset then it is not written";
     SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
+    BlockDATA.setListStringValues_doc(ListStringValues_doc);
     ListBlock["DATA"] = BlockDATA;
   }
   // TSPACE

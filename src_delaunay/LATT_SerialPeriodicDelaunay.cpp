@@ -35,10 +35,7 @@ PackingCoveringGAP: the covering radius, the packing radius and the\n\
     ListStringValues_doc["GRAMfile"] =
         "The file containing the positive definite Gram matrix";
     ListStringValues_doc["FileCosets"] =
-        "The file containing the rational coset matrix of the periodic point\n\
-set: one coset per row, the zero coset included. The cosets must not form\n\
-a group modulo Z^n, otherwise the point set is a lattice to be treated by\n\
-LATT_SerialComputeDelaunay";
+        doc_FileCosets("LATT_SerialComputeDelaunay");
     SingleBlock BlockDATA;
     BlockDATA.setListStringValues_doc(ListStringValues_doc);
     ListBlock["DATA"] = BlockDATA;
