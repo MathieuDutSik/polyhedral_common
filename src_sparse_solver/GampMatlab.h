@@ -5,6 +5,7 @@
 // clang-format off>
 #include "MAT_Matrix.h"
 #include "MAT_SparseMatrix.h"
+#include "Timings.h"
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -12,6 +13,10 @@
 
 #ifdef DEBUG
 #define DEBUG_SPARSE_SOLVER
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_SPARSE_SOLVER
 #endif
 
 template <typename T> T L1_Norm(MyVector<T> const &b) {
@@ -564,11 +569,8 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
 }
 
 
-MyVector<double> AMP_SolutionSparseSystem_d(MySparseMatrix<double> const &SpMat_d,
-                                            MyVector<double> const &Bvect_d, int const& maxit,
-                                            [[maybe_unused]] std::ostream& os) {
-  RecSparse<double> eRecSparse = AMP_linear_operators(SpMat_d);
-  //
+// The options of yall1 for the L1 solution of x A = b (those of Matlab).
+inline RecOptSparse<double> AMP_default_options(int const &maxit) {
   RecOptSparse<double> eRecOpt;
   eRecOpt.delta = 0;
   eRecOpt.mu = 0;
@@ -586,12 +588,72 @@ MyVector<double> AMP_SolutionSparseSystem_d(MySparseMatrix<double> const &SpMat_
   eRecOpt.stepfreq = 1;
   eRecOpt.maxit = maxit;
   eRecOpt.xs = -1;
-  OutSolver<double> eRecOut = AMP_yall1(eRecSparse, Bvect_d, eRecOpt);
-  return eRecOut.x;
+  return eRecOpt;
 }
 
-MyVector<double> AMP_SolutionSparseSystem_d(MySparseMatrix<double> const &SpMat_d,
-                                            MyVector<double> const &Bvect_d, std::ostream& os) {
+/*
+  The L1 solution of x A = b in floating point, sparsified by n_round
+  rounds of reweighting (weights 1/(|x_i| + eps)); n_round = 0 is the
+  plain L1 solution.
+ */
+inline MyVector<double> AMP_SolutionSparseSystem_reweighted_d(MySparseMatrix<double> const &SpMat_d,
+                                                              MyVector<double> const &Bvect_d,
+                                                              int const &maxit, int const &n_round,
+                                                              [[maybe_unused]] std::ostream &os) {
+  RecSparse<double> rec = AMP_linear_operators(SpMat_d);
+  RecOptSparse<double> opt = AMP_default_options(maxit);
+  [[maybe_unused]] auto count_above = [](MyVector<double> const &v, double thr) -> int {
+    int n_nz = 0;
+    for (int i = 0; i < v.size(); i++) {
+      if (std::abs(v(i)) > thr) {
+        n_nz += 1;
+      }
+    }
+    return n_nz;
+  };
+#ifdef TIMINGS_SPARSE_SOLVER
+  MicrosecondTime time;
+#endif
+  OutSolver<double> out = AMP_yall1(rec, Bvect_d, opt);
+  MyVector<double> x = out.x;
+#ifdef DEBUG_SPARSE_SOLVER
+  os << "SPARSE_SOLVER: yall1 round 0 iter=" << out.iter << " " << out.exit
+     << " support(1e-4)=" << count_above(x, 1e-4) << "\n";
+#endif
+#ifdef TIMINGS_SPARSE_SOLVER
+  os << "|SPARSE_SOLVER: yall1 round 0|=" << time << "\n";
+#endif
+  int n = x.size();
+  for (int i_round = 0; i_round < n_round; i_round++) {
+    double max_abs = 0;
+    for (int i = 0; i < n; i++) {
+      max_abs = std::max(max_abs, std::abs(x(i)));
+    }
+    double eps = 1e-3 * max_abs + 1e-12;
+    for (int i = 0; i < n; i++) {
+      rec.weights(i) = 1.0 / (std::abs(x(i)) + eps);
+    }
+    out = AMP_yall1(rec, Bvect_d, opt);
+    x = out.x;
+#ifdef DEBUG_SPARSE_SOLVER
+    os << "SPARSE_SOLVER: yall1 round " << (i_round + 1) << " iter=" << out.iter << " " << out.exit
+       << " support(1e-4)=" << count_above(x, 1e-4) << "\n";
+#endif
+#ifdef TIMINGS_SPARSE_SOLVER
+    os << "|SPARSE_SOLVER: yall1 round " << (i_round + 1) << "|=" << time << "\n";
+#endif
+  }
+  return x;
+}
+
+inline MyVector<double> AMP_SolutionSparseSystem_d(MySparseMatrix<double> const &SpMat_d,
+                                                   MyVector<double> const &Bvect_d, int const& maxit,
+                                                   std::ostream& os) {
+  return AMP_SolutionSparseSystem_reweighted_d(SpMat_d, Bvect_d, maxit, 0, os);
+}
+
+inline MyVector<double> AMP_SolutionSparseSystem_d(MySparseMatrix<double> const &SpMat_d,
+                                                   MyVector<double> const &Bvect_d, std::ostream& os) {
   int maxit = 99999;
   return AMP_SolutionSparseSystem_d(SpMat_d, Bvect_d, maxit, os);
 }

@@ -5,8 +5,7 @@
 // clang-format off>
 #include "perfect_tspace.h"
 #include "triples.h"
-#include "GampMatlab.h"
-#include "SparseExactSolver.h"
+#include "SparseChainSolver.h"
 #include "FiniteMatrixGroupTest.h"
 #include "MatrixGroupNest.h"
 #include "MatrixGroupSimplification.h"
@@ -1943,27 +1942,11 @@ std::optional<MyVector<T>> l1_support_solve(MySparseMatrix<T> const& SpMat, MyVe
   MySparseMatrix<double> SpMat_d = UniversalSparseMatrixConversion<double,T>(SpMat);
   MyVector<double> Bvect_d = UniversalVectorConversion<double,T>(Bvect);
   MyVector<double> x_out = AMP_SolutionSparseSystem_d(SpMat_d, Bvect_d, maxit, os);
-  double thr = 1e-4;
-  std::vector<int> l_rows;
-  int nbRow = x_out.size();
-  for (int i_row=0; i_row<nbRow; i_row++) {
-    if (std::abs(x_out(i_row)) > thr) {
-      l_rows.push_back(i_row);
-    }
-  }
-  if (l_rows.empty()) {
-    return {};
-  }
-  MySparseMatrix<T> SpMatRed = SparseMatrixSelectRows(SpMat, l_rows);
-  SparseSolveResult<T> res = SparseSolutionMat_Exact_Budget(SpMatRed, Bvect, max_entries, os);
+  SparseSolveResult<T> res = SparseSolutionMat_L1Support(SpMat, Bvect, x_out, {1e-4}, max_entries, os);
   if (res.status != SparseSolveStatus::Solved) {
     return {};
   }
-  MyVector<T> sol = ZeroVector<T>(nbRow);
-  for (size_t u=0; u<l_rows.size(); u++) {
-    sol(l_rows[u]) = res.sol(u);
-  }
-  return sol;
+  return res.sol;
 }
 
 /*

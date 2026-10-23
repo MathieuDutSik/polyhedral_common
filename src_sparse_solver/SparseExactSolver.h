@@ -4,6 +4,9 @@
 
 // clang-format off
 #include "MAT_SparseMatrix.h"
+#ifndef WASM_PLATFORM
+#include "NumberTheoryGmp.h"
+#endif
 #include <limits>
 #include <optional>
 #include <set>

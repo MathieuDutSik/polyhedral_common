@@ -39,8 +39,15 @@ Hecke operators
 ===============
 
 `hecke_operators.h` computes the Hecke operators on the homology of the
-quotient of the perfect form complex by a finite index subgroup. It is
-driven by the `&HECKE` block of `PERF_SerialPerfectComputation`:
+quotient of the perfect form complex by a finite index subgroup. The code
+is split in `hecke_common.h` (failures, budgets, the ambient group, the
+Hecke double cosets), `hecke_subgroups.h` (the congruence subgroups),
+`hecke_chains.h` (chains, walk through the perfect cones),
+`hecke_chain_map.h` (step A and the `Vertex` method), `hecke_dual.h` (the
+`Dual` method), `hecke_symbols.h` and `hecke_sharbly.h` (the `Sharbly`
+method), `hecke_homology.h` (step B), the sparse exact solutions being in
+`src_sparse_solver/SparseChainSolver.h`. It is driven by the `&HECKE`
+block of `PERF_SerialPerfectComputation`:
 
 * `FileHeckeMatrix`: the rational matrix x of the double coset Gamma x Gamma
   (it must preserve the T-space).
