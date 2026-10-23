@@ -5,6 +5,7 @@
 // clang-format off
 #include "perfect_complex.h"
 #include "MAT_SparseMatrixMod.h"
+#include "ImagQuadRing.h"
 #include <algorithm>
 #include <functional>
 #include <map>
@@ -200,63 +201,108 @@ struct GammaKeyHash {
   }
 };
 
-// The determinant modulo m of the n x n matrix a (row major), by the
-// cofactor expansion (n is small).
-inline int64_t determinant_mod(std::vector<int64_t> const &a, int const &n, int64_t const &m) {
-  if (n == 1) {
-    return ResidueModPrime(a[0], m);
-  }
-  int64_t det = 0;
-  std::vector<int64_t> minor((n - 1) * (n - 1));
-  for (int j = 0; j < n; j++) {
-    if (a[j] == 0) {
-      continue;
+/*
+  The elimination modulo m (any m >= 1) of the n x n matrix a (row major),
+  with the same row operations applied to the n x n matrix b. The entries
+  below the diagonal are cleared column by column by the Euclidean
+  algorithm on the rows, which needs no inverse modulo m: the diagonal
+  entry of a column is then a gcd of the entries of the column. Returns the
+  sign (+-1) of the row permutations.
+ */
+inline int64_t elimination_mod(std::vector<int64_t> &a, std::vector<int64_t> &b, int const &n,
+                               int64_t const &m) {
+  int64_t sign = 1;
+  auto f_sub = [&](std::vector<int64_t> &M, int const &i_dst, int64_t const &q, int const &i_src) -> void {
+    for (int j = 0; j < n; j++) {
+      M[i_dst * n + j] = ResidueModPrime(M[i_dst * n + j] - (q * M[i_src * n + j]) % m, m);
     }
-    int pos = 0;
-    for (int i2 = 1; i2 < n; i2++) {
-      for (int j2 = 0; j2 < n; j2++) {
-        if (j2 != j) {
-          minor[pos] = a[i2 * n + j2];
-          pos += 1;
-        }
+  };
+  auto f_swap = [&](std::vector<int64_t> &M, int const &i1, int const &i2) -> void {
+    for (int j = 0; j < n; j++) {
+      std::swap(M[i1 * n + j], M[i2 * n + j]);
+    }
+  };
+  for (int col = 0; col < n; col++) {
+    for (int r = col + 1; r < n; r++) {
+      while (a[r * n + col] != 0) {
+        int64_t q = a[col * n + col] / a[r * n + col];
+        f_sub(a, col, q, r);
+        f_sub(b, col, q, r);
+        f_swap(a, col, r);
+        f_swap(b, col, r);
+        sign = -sign;
       }
     }
-    int64_t term = (a[j] * determinant_mod(minor, n - 1, m)) % m;
-    det = (j % 2 == 0) ? (det + term) % m : (det - term) % m;
   }
-  return ResidueModPrime(det, m);
+  return sign;
 }
 
-// The inverse modulo m of a matrix of determinant det_mod (a unit mod m):
-// inv(i, j) = det^{-1} (-1)^{i+j} minor(j, i).
+// The determinant modulo m of the n x n matrix a (row major).
+inline int64_t determinant_mod(std::vector<int64_t> const &a, int const &n, int64_t const &m) {
+  if (m == 1) {
+    return 0;
+  }
+  std::vector<int64_t> a_work(n * n);
+  for (int i = 0; i < n * n; i++) {
+    a_work[i] = ResidueModPrime(a[i], m);
+  }
+  std::vector<int64_t> b_work(n * n, 0);
+  int64_t det = ResidueModPrime(elimination_mod(a_work, b_work, n, m), m);
+  for (int i = 0; i < n; i++) {
+    det = (det * a_work[i * n + i]) % m;
+  }
+  return det;
+}
+
+// The inverse modulo m of the matrix a, whose determinant det_mod is a
+// unit modulo m: after the elimination the diagonal entries are units, and
+// the back substitution gives the inverse.
 inline std::vector<int64_t> inverse_mod(std::vector<int64_t> const &a, int const &n,
-                                        int64_t const &m, int64_t const &det_mod) {
+                                        int64_t const &m, [[maybe_unused]] int64_t const &det_mod) {
   std::vector<int64_t> inv(n * n, 0);
   if (m == 1) {
     return inv;
   }
-  int64_t det_inv = InverseModPrime(det_mod, m);
-  std::vector<int64_t> minor((n - 1) * (n - 1));
+  std::vector<int64_t> a_work(n * n);
+  for (int i = 0; i < n * n; i++) {
+    a_work[i] = ResidueModPrime(a[i], m);
+  }
   for (int i = 0; i < n; i++) {
+    inv[i * n + i] = 1;
+  }
+  [[maybe_unused]] int64_t sign = elimination_mod(a_work, inv, n, m);
+#ifdef SANITY_CHECK_HECKE_OPERATORS
+  {
+    int64_t det = ResidueModPrime(sign, m);
+    for (int i = 0; i < n; i++) {
+      det = (det * a_work[i * n + i]) % m;
+    }
+    if (det != ResidueModPrime(det_mod, m)) {
+      std::cerr << "HECKE: inverse_mod, the determinant is not the one given\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  // The back substitution, from the last row.
+  for (int col = n - 1; col >= 0; col--) {
+    int64_t piv = a_work[col * n + col];
+    if (std::gcd(piv, m) != 1) {
+      std::cerr << "HECKE: inverse_mod, the matrix is not invertible modulo m=" << m << "\n";
+      throw TerminalException{1};
+    }
+    int64_t piv_inv = InverseModPrime(piv, m);
     for (int j = 0; j < n; j++) {
-      // The minor deleting the row j and the column i.
-      int pos = 0;
-      for (int i2 = 0; i2 < n; i2++) {
-        if (i2 == j) {
-          continue;
-        }
-        for (int j2 = 0; j2 < n; j2++) {
-          if (j2 != i) {
-            minor[pos] = a[i2 * n + j2];
-            pos += 1;
-          }
+      a_work[col * n + j] = (a_work[col * n + j] * piv_inv) % m;
+      inv[col * n + j] = (inv[col * n + j] * piv_inv) % m;
+    }
+    for (int r = 0; r < col; r++) {
+      int64_t q = a_work[r * n + col];
+      if (q != 0) {
+        for (int j = 0; j < n; j++) {
+          a_work[r * n + j] = ResidueModPrime(a_work[r * n + j] - (q * a_work[col * n + j]) % m, m);
+          inv[r * n + j] = ResidueModPrime(inv[r * n + j] - (q * inv[col * n + j]) % m, m);
         }
       }
-      int64_t val = (n == 1) ? 1 : determinant_mod(minor, n - 1, m);
-      if ((i + j) % 2 == 1) {
-        val = m - val;
-      }
-      inv[i * n + j] = (ResidueModPrime(val, m) * det_inv) % m;
     }
   }
   return inv;
@@ -306,11 +352,11 @@ template <typename Tint> struct FiniteIndexSubgroup {
   }
   template <typename Tval>
   std::pair<Tval, Tval> mul_k(std::pair<Tval, Tval> const &x, std::pair<Tval, Tval> const &y) const {
-    Tval p = UniversalScalarConversion<Tval, int64_t>(eProd_field);
-    Tval s = UniversalScalarConversion<Tval, int64_t>(eSum_field);
-    return {x.first * y.first - p * x.second * y.second,
-            x.first * y.second + x.second * y.first + s * x.second * y.second};
+    ImagQuadRing<Tval> ring(UniversalScalarConversion<Tval, int64_t>(eSum_field),
+                            UniversalScalarConversion<Tval, int64_t>(eProd_field));
+    return ring.mul(x, y);
   }
+
   // The determinant over O_K of the realification g, by the expansion
   // along the first row.
   std::pair<Tint, Tint> determinant_k(MyMatrix<Tint> const &g) const {
@@ -447,14 +493,18 @@ template <typename Tint> struct FiniteIndexSubgroup {
     int64_t m = get_n_mod();
     if (is_hermitian()) {
       // The row is an element of (O_K / N)^m, in the realified layout.
+      // The smallest of the u row in the lexicographic order, u a unit
+      // of O_K / N (the product written out, this is the inner loop of
+      // the coset keys).
       int mf = m_field;
       std::vector<int64_t> best = row;
+      std::vector<int64_t> cand(2 * mf);
       for (auto &u : l_unit_mod) {
-        std::vector<int64_t> cand(2 * mf);
         for (int j = 0; j < mf; j++) {
-          std::pair<int64_t, int64_t> z = mul_k(u, std::pair<int64_t, int64_t>{row[j], row[mf + j]});
-          cand[j] = ResidueModPrime(z.first, m);
-          cand[mf + j] = ResidueModPrime(z.second, m);
+          int64_t a = row[j], b = row[mf + j];
+          int64_t ub_b = (u.second * b) % m;
+          cand[j] = ResidueModPrime(u.first * a - eProd_field * ub_b, m);
+          cand[mf + j] = ResidueModPrime(u.first * b + u.second * a + eSum_field * ub_b, m);
         }
         if (cand < best) {
           best = cand;
@@ -695,6 +745,19 @@ enumerate_cosets_gamma(FiniteIndexSubgroup<Tint> const &gamma,
      << " index=" << ct.l_coset.size() << "\n";
 #endif
 #ifdef SANITY_CHECK_HECKE_OPERATORS
+  // The keys against the membership, linearly in the index: each coset
+  // representative has its own key and g_i^{-1} g_i is in Gamma.
+  for (size_t i = 0; i < ct.l_coset.size(); i++) {
+    if (gamma.get_key(ct.l_coset[i]) != ct.l_key[i] ||
+        !gamma.is_in_gamma(ct.l_coset_inv[i] * ct.l_coset[i])) {
+      std::cerr << "HECKE: Inconsistent coset table at i=" << i << "\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+#ifdef SANITY_CHECK_HECKE_OPERATORS_EXTENSIVE
+  // All the pairs: quadratic in the index.
+  std::cerr << "HECKE: SANITY_CHECK_HECKE_OPERATORS_EXTENSIVE, checking all the pairs of the coset table\n";
   for (size_t i = 0; i < ct.l_coset.size(); i++) {
     for (size_t j = 0; j < ct.l_coset.size(); j++) {
       MyMatrix<Tint> prod = ct.l_coset_inv[i] * ct.l_coset[j];
@@ -705,6 +768,7 @@ enumerate_cosets_gamma(FiniteIndexSubgroup<Tint> const &gamma,
       }
     }
   }
+  std::cerr << "HECKE: SANITY_CHECK_HECKE_OPERATORS_EXTENSIVE, done\n";
 #endif
   return ct;
 }
@@ -769,6 +833,29 @@ template <typename T> struct HeckeCosets {
       throw TerminalException{1};
     }
     return *opt;
+  }
+  /*
+    The decomposition for the cosets of G x G with G the ambient group (the
+    integral matrices of determinant +-1 preserving the T-space): for y in
+    G x G, x_k^{-1} y preserves the T-space and has determinant +-1, so it
+    is in G iff it is integral, which is much cheaper than f_member.
+   */
+  std::pair<int, MyMatrix<T>> decompose_ambient(MyMatrix<T> const &y) const {
+    size_t n_coset = l_coset.size();
+    for (size_t k = 0; k < n_coset; k++) {
+      MyMatrix<T> h = l_coset_inv[k] * y;
+      if (IsIntegralMatrix(h)) {
+#ifdef SANITY_CHECK_HECKE_OPERATORS
+        if (!f_member(h)) {
+          std::cerr << "HECKE: decompose_ambient, an integral h is not in the ambient group\n";
+          throw TerminalException{1};
+        }
+#endif
+        return {static_cast<int>(k), h};
+      }
+    }
+    std::cerr << "HECKE: The matrix y does not belong to the double coset (decompose_ambient)\n";
+    throw TerminalException{1};
   }
 };
 
@@ -2930,6 +3017,8 @@ std::optional<ImagQuadStructure<T>> get_imag_quad_structure(LinSpaceMatrix<T> co
  */
 template <typename T, typename Tint> struct SymbolGeometry {
   std::optional<ImagQuadStructure<T>> field;
+  // The arithmetic of O_K (Euclidean division, gcd, units).
+  std::optional<ImagQuadRing<T>> ring;
   // The number of rows of a symbol: n, or m.
   int dim;
   int n;
@@ -2940,74 +3029,13 @@ template <typename T, typename Tint> struct SymbolGeometry {
       : field(get_imag_quad_structure(LinSpa)), n(LinSpa.n) {
     if (field) {
       dim = field->m;
-      for (int a = -2; a <= 2; a++) {
-        for (int b = -2; b <= 2; b++) {
-          Elt u{T(a), T(b)};
-          if (norm(u) == 1) {
-            l_unit.push_back(u);
-          }
-        }
-      }
+      ring = ImagQuadRing<T>(field->eSum, field->eProd);
+      l_unit = ring->units();
     } else {
       dim = n;
     }
   }
   bool is_hermitian() const { return field.has_value(); }
-  Elt mul(Elt const &x, Elt const &y) const {
-    return {x.first * y.first - field->eProd * x.second * y.second,
-            x.first * y.second + x.second * y.first + field->eSum * x.second * y.second};
-  }
-  T norm(Elt const &x) const {
-    return x.first * x.first + field->eSum * x.first * x.second + field->eProd * x.second * x.second;
-  }
-  Elt conj(Elt const &x) const { return {x.first + field->eSum * x.second, -x.second}; }
-  Elt div(Elt const &x, Elt const &y) const {
-    Elt z = mul(x, conj(y));
-    T nrm = norm(y);
-    return {z.first / nrm, z.second / nrm};
-  }
-  static bool is_zero(Elt const &x) { return x.first == 0 && x.second == 0; }
-  // The element of O_K nearest to x for the norm, all the nearest ones
-  // being returned.
-  std::vector<Elt> nearest_integers(Elt const &x) const {
-    Tint fa = UniversalFloorScalarInteger<Tint, T>(x.first);
-    Tint fb = UniversalFloorScalarInteger<Tint, T>(x.second);
-    std::optional<T> best;
-    std::vector<Elt> l_best;
-    for (int k = -2; k <= 3; k++) {
-      for (int l = -2; l <= 3; l++) {
-        Elt c{T(fa) + T(k), T(fb) + T(l)};
-        T val = norm({x.first - c.first, x.second - c.second});
-        if (!best || val < *best) {
-          best = val;
-          l_best.clear();
-        }
-        if (val == *best) {
-          l_best.push_back(c);
-        }
-      }
-    }
-    return l_best;
-  }
-  // The gcd by the Euclidean algorithm for the norm.
-  Elt gcd(Elt a, Elt b) const {
-    size_t n_iter = 0;
-    while (!is_zero(b)) {
-      n_iter += 1;
-      if (n_iter > 1000) {
-        throw HeckeFailure{"sharbly: the Euclidean algorithm does not terminate, O_K is not norm-Euclidean"};
-      }
-      Elt q = nearest_integers(div(a, b))[0];
-      Elt qb = mul(q, b);
-      Elt r{a.first - qb.first, a.second - qb.second};
-      if (norm(r) >= norm(b)) {
-        throw HeckeFailure{"sharbly: O_K is not norm-Euclidean"};
-      }
-      a = b;
-      b = r;
-    }
-    return a;
-  }
   Elt get_entry(MyVector<T> const &V, int const &j) const { return {V(j), V(field->m + j)}; }
   void set_entry(MyVector<T> &V, int const &j, Elt const &x) const {
     V(j) = x.first;
@@ -3016,7 +3044,7 @@ template <typename T, typename Tint> struct SymbolGeometry {
   MyVector<T> scale(Elt const &u, MyVector<T> const &V) const {
     MyVector<T> W(n);
     for (int j = 0; j < field->m; j++) {
-      set_entry(W, j, mul(u, get_entry(V, j)));
+      set_entry(W, j, ring->mul(u, get_entry(V, j)));
     }
     return W;
   }
@@ -3027,13 +3055,17 @@ template <typename T, typename Tint> struct SymbolGeometry {
     if (!field) {
       return UniversalVectorConversion<Tint, T>(Vred);
     }
-    Elt g{T(0), T(0)};
+    std::vector<Elt> l_entry;
     for (int j = 0; j < field->m; j++) {
-      g = gcd(g, get_entry(Vred, j));
+      l_entry.push_back(get_entry(Vred, j));
+    }
+    std::optional<Elt> opt_g = ring->gcd(l_entry);
+    if (!opt_g) {
+      throw HeckeFailure{"sharbly: a Euclidean division failed, O_K is not norm-Euclidean"};
     }
     MyVector<T> Vprim(n);
     for (int j = 0; j < field->m; j++) {
-      set_entry(Vprim, j, div(get_entry(Vred, j), g));
+      set_entry(Vprim, j, ring->div(l_entry[j], *opt_g));
     }
     std::optional<MyVector<T>> best;
     for (auto &u : l_unit) {
@@ -3151,6 +3183,18 @@ private:
   int sign0;
   HeckeBudget budget;
   SymbolGeometry<T, Tint> geom;
+  // The cells of the symbol level which are not unimodular (for example
+  // the frames of determinant sqrt(-2) over Z[sqrt(-2)]): a symbol
+  // equivalent to one of them is reduced, it is that cell. The cell is
+  // sign times the symbol of the rows of E.
+  struct SymbolCell {
+    int iOrb;
+    MyMatrix<Tint> E;
+    MyMatrix<T> R_inv;
+    Tint det;
+    int sign;
+  };
+  std::vector<SymbolCell> l_symbol_cell;
   /*
     The reducing points of a symbol of a Hermitian T-space: the classes
     f of Z^{2m} modulo the rows of R(W), whose coordinates q_i are taken
@@ -3207,15 +3251,15 @@ private:
       std::vector<std::vector<Elt>> l_rep(m);
       for (int i = 0; i < m; i++) {
         Elt x{f(i), f(m + i)};
-        if (SymbolGeometry<T, Tint>::is_zero(x)) {
+        if (ImagQuadRing<T>::is_zero(x)) {
           l_rep[i].push_back(x);
           continue;
         }
         n_nonzero += 1;
-        for (auto &c : geom.nearest_integers(x)) {
+        for (auto &c : geom.ring->nearest_integers(x)) {
           l_rep[i].push_back({x.first - c.first, x.second - c.second});
         }
-        T nrm = geom.norm(l_rep[i][0]);
+        T nrm = geom.ring->norm(l_rep[i][0]);
         sum_norm += nrm;
         if (nrm > score) {
           score = nrm;
@@ -3253,7 +3297,7 @@ private:
         for (auto &u : geom.l_unit) {
           MyVector<T> cu(n2);
           for (int i = 0; i < m; i++) {
-            Elt q = geom.mul(u, Elt{c(i), c(m + i)});
+            Elt q = geom.ring->mul(u, Elt{c(i), c(m + i)});
             cu(i) = q.first;
             cu(m + i) = q.second;
           }
@@ -3423,8 +3467,113 @@ public:
                  int const &_sign0, SymbolGeometry<T, Tint> const &_geom, std::ostream &_os)
       : fce(_fce), symbol_level(_symbol_level), iOrb0(_iOrb0), E0_inv(_E0_inv), sign0(_sign0),
         geom(_geom), os(_os) {
+    int n_orb = fce.levels[symbol_level].l_faces.size();
+    for (int iOrb = 0; iOrb < n_orb; iOrb++) {
+      FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[symbol_level].l_faces[iOrb];
+      if (!face.is_well_rounded) {
+        continue;
+      }
+      MyMatrix<Tint> E = geom.symbol_rows(face.EXT);
+      if (E.rows() != geom.dim) {
+        continue;
+      }
+      Tint det = geom.det_norm(E);
+      if (det > 1) {
+        MyMatrix<T> R_inv = Inverse(geom.realify(UniversalMatrixConversion<T, Tint>(E)));
+        int sign = symbol_orientation(face, E, fce.pctdi.LinSpa.ListMat);
+        l_symbol_cell.push_back({iOrb, E, R_inv, det, sign});
+      }
+    }
+#ifdef DEBUG_HECKE_OPERATORS
+    os << "HECKE: sharbly |l_symbol_cell|=" << l_symbol_cell.size() << " (non unimodular symbol cells)\n";
+#endif
   }
   SymbolGeometry<T, Tint> const &get_geometry() const { return geom; }
+  /*
+    The cell of the symbol level equivalent to the symbol of the rows of W
+    (|det| > 1), if any: (iOrb, sign, M) with [W] = sign F_iOrb M. The rows
+    W' of W permuted by sigma and scaled by units are tried: E M = W' for
+    the M = R(E)^{-1} R(W') which is integral (then of determinant +-1,
+    so in G), and [W'] = sign(sigma) [W]. The scaling of all the rows by a
+    unit is in G, so the first row is not scaled.
+   */
+  std::optional<std::tuple<int, int, MyMatrix<Tint>>> match_cell(MyMatrix<Tint> const &W) const {
+    if (l_symbol_cell.empty()) {
+      return {};
+    }
+    Tint det = geom.det_norm(W);
+    int m = W.rows();
+    MyMatrix<T> W_T = UniversalMatrixConversion<T, Tint>(W);
+    std::vector<std::pair<T, T>> l_unit = geom.l_unit;
+    if (!geom.is_hermitian()) {
+      l_unit = {{T(1), T(0)}, {T(-1), T(0)}};
+    }
+    auto f_scale = [&](std::pair<T, T> const &u, MyVector<T> const &V) -> MyVector<T> {
+      if (geom.is_hermitian()) {
+        return geom.scale(u, V);
+      }
+      return u.first * V;
+    };
+    for (auto &sc : l_symbol_cell) {
+      if (sc.det != det) {
+        continue;
+      }
+      std::vector<int> sigma(m);
+      for (int i = 0; i < m; i++) {
+        sigma[i] = i;
+      }
+      do {
+        int sign_sigma = 1;
+        for (int i = 0; i < m; i++) {
+          for (int j = i + 1; j < m; j++) {
+            if (sigma[i] > sigma[j]) {
+              sign_sigma = -sign_sigma;
+            }
+          }
+        }
+        // The unit choices for the rows 1, ..., m-1 as a counter.
+        size_t n_unit = l_unit.size();
+        std::vector<size_t> l_choice(m, 0);
+        while (true) {
+          MyMatrix<T> Wp(m, W.cols());
+          for (int i = 0; i < m; i++) {
+            MyVector<T> V = GetMatrixRow(W_T, sigma[i]);
+            if (i > 0) {
+              V = f_scale(l_unit[l_choice[i]], V);
+            }
+            AssignMatrixRow(Wp, i, V);
+          }
+          MyMatrix<T> M_T = sc.R_inv * geom.realify(Wp);
+          if (IsIntegralMatrix(M_T)) {
+            return std::tuple<int, int, MyMatrix<Tint>>{sc.iOrb, sign_sigma * sc.sign,
+                                                         UniversalMatrixConversion<Tint, T>(M_T)};
+          }
+          int pos = 1;
+          while (pos < m) {
+            l_choice[pos] += 1;
+            if (l_choice[pos] < n_unit) {
+              break;
+            }
+            l_choice[pos] = 0;
+            pos += 1;
+          }
+          if (pos >= m) {
+            break;
+          }
+        }
+      } while (std::next_permutation(sigma.begin(), sigma.end()));
+    }
+    return {};
+  }
+  // The size of a symbol for the reduction: 1 if it is reduced (a cell of
+  // the symbol level), otherwise |det| (|N(det)| for a Hermitian T-space).
+  Tint reduction_size(MyMatrix<Tint> const &W) const {
+    Tint det = geom.det_norm(W);
+    if (det > 1 && match_cell(W)) {
+      return Tint(1);
+    }
+    return det;
+  }
   // The reducing points of the symbol of the rows of W (|det| > 1), as
   // primitive integral vectors.
   std::vector<MyVector<Tint>> reducing_points(MyMatrix<Tint> const &W) const {
@@ -3469,6 +3618,11 @@ public:
         // The symbol [W] = [E0] M is sign0 times the cell iOrb0 mapped by M.
         MyMatrix<Tint> M = E0_inv * geom.realify_int(W);
         cb.f_insert(coef * T(sign0), iOrb0, M);
+        continue;
+      }
+      std::optional<std::tuple<int, int, MyMatrix<Tint>>> opt_cell = match_cell(W);
+      if (opt_cell) {
+        cb.f_insert(coef * T(std::get<1>(*opt_cell)), std::get<0>(*opt_cell), std::get<2>(*opt_cell));
         continue;
       }
       std::vector<std::pair<MyVector<Tint>, std::vector<int>>> l_q = get_reducing_points_full(W);
@@ -3714,7 +3868,7 @@ private:
   std::pair<Tint, Tint> det_size(MyMatrix<Tint> const &D) const {
     Tint max_val(0), sum_val(0);
     for (int k = 0; k < D.rows(); k++) {
-      Tint det = reducer.get_geometry().det_norm(remove_row(D, k));
+      Tint det = reducer.reduction_size(remove_row(D, k));
       sum_val += det;
       if (det > max_val) {
         max_val = det;
@@ -3761,7 +3915,7 @@ private:
     int j_worst = -1;
     Tint det_worst(0);
     for (int k = 0; k < n_row; k++) {
-      Tint det = reducer.get_geometry().det_norm(remove_row(D, k));
+      Tint det = reducer.reduction_size(remove_row(D, k));
       if (det > det_worst) {
         det_worst = det;
         j_worst = k;
@@ -4637,14 +4791,42 @@ template <typename T> struct HeckeHomologyResult {
 };
 
 /*
+  The actions on the coset keys of the matrices M of the entries of the
+  images of a level: the coset of M g is then found from the key of g by
+  an action, without computing the key of the product.
+ */
+using HeckeImageKeyActions = std::vector<std::vector<std::vector<GammaAction>>>;
+
+template <typename T, typename Tint>
+HeckeImageKeyActions get_hecke_image_key_actions(int const &index, GammaComplex<T, Tint> const &gc,
+                                                 HeckeChainMap<T, Tint> const &hcm) {
+  HeckeImageKeyActions actions;
+  for (auto &l_chain : hcm.images[index]) {
+    std::vector<std::vector<GammaAction>> l_act_orb;
+    for (auto &chain : l_chain) {
+      std::vector<GammaAction> l_act;
+      for (auto &fe : chain) {
+        l_act.push_back(gc.ct.gamma.get_action(fe.M));
+      }
+      l_act_orb.emplace_back(std::move(l_act));
+    }
+    actions.emplace_back(std::move(l_act_orb));
+  }
+  return actions;
+}
+
+/*
   The Hecke operator on the basis cell (iOrb, i) of level index:
     T(F g_i) = sum_k Phi(F, y_j) g'   with g_i x_k = y_j g'
-  expressed in the basis of the level.
+  expressed in the basis of the level. With the actions of the entries
+  (get_hecke_image_key_actions), the coset of M g' is the action of M on
+  the key of g'.
  */
 template <typename T, typename Tint>
 std::map<int, T> get_hecke_image_cell_sparse(
     int const &index, int const &i_cell, GammaComplex<T, Tint> const &gc,
-    HeckeChainMap<T, Tint> const &hcm, HeckeCosets<T> const &cosets_gamma) {
+    HeckeChainMap<T, Tint> const &hcm, HeckeCosets<T> const &cosets_gamma,
+    HeckeImageKeyActions const *actions = nullptr) {
   std::map<int, T> V;
   int iOrb = gc.basis[index][i_cell].first;
   int i_coset = gc.basis[index][i_cell].second;
@@ -4652,11 +4834,32 @@ std::map<int, T> get_hecke_image_cell_sparse(
   size_t n_hecke = cosets_gamma.size();
   for (size_t k = 0; k < n_hecke; k++) {
     MyMatrix<T> z = g_T * cosets_gamma.l_coset[k];
-    std::pair<int, MyMatrix<T>> pair = hcm.cosets.decompose(z);
+    std::pair<int, MyMatrix<T>> pair = hcm.cosets.decompose_ambient(z);
     MyMatrix<Tint> g_conj = UniversalMatrixConversion<Tint, T>(pair.second);
-    for (auto &fe : hcm.images[index][iOrb][pair.first]) {
-      MyMatrix<Tint> M = fe.M * g_conj;
-      std::optional<std::pair<int, int>> opt = gc.cell_position(index, fe.iOrb, M);
+    std::vector<PerfectFaceEntry<T, Tint>> const &chain = hcm.images[index][iOrb][pair.first];
+    std::optional<GammaKey> key_conj;
+    if (actions) {
+      key_conj = gc.ct.gamma.get_key(g_conj);
+    }
+    for (size_t e = 0; e < chain.size(); e++) {
+      PerfectFaceEntry<T, Tint> const &fe = chain[e];
+      std::optional<std::pair<int, int>> opt;
+      if (actions) {
+        auto iter = gc.ct.map_key.find(gc.ct.gamma.act(*key_conj, (*actions)[iOrb][pair.first][e]));
+        if (iter == gc.ct.map_key.end()) {
+          std::cerr << "HECKE: get_hecke_image_cell_sparse, the coset of M g was not found\n";
+          throw TerminalException{1};
+        }
+        opt = gc.cell_position_coset(index, fe.iOrb, iter->second);
+#ifdef SANITY_CHECK_HECKE_OPERATORS
+        if (opt != gc.cell_position(index, fe.iOrb, fe.M * g_conj)) {
+          std::cerr << "HECKE: get_hecke_image_cell_sparse, the action on the keys is wrong\n";
+          throw TerminalException{1};
+        }
+#endif
+      } else {
+        opt = gc.cell_position(index, fe.iOrb, fe.M * g_conj);
+      }
       if (opt) {
         V[opt->first] += fe.value * T(opt->second);
       }
@@ -4669,10 +4872,11 @@ template <typename T, typename Tint, typename Tgroup>
 MyVector<T> get_hecke_image_cell(
     int const &index, int const &i_cell, GammaComplex<T, Tint> const &gc,
     HeckeChainMap<T, Tint> const &hcm, HeckeCosets<T> const &cosets_gamma,
-    [[maybe_unused]] FullComplexEnumeration<T, Tint, Tgroup> const &fce) {
+    [[maybe_unused]] FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+    HeckeImageKeyActions const *actions = nullptr) {
   int n_cell = gc.basis[index].size();
   MyVector<T> V = ZeroVector<T>(n_cell);
-  for (auto &kv : get_hecke_image_cell_sparse(index, i_cell, gc, hcm, cosets_gamma)) {
+  for (auto &kv : get_hecke_image_cell_sparse(index, i_cell, gc, hcm, cosets_gamma, actions)) {
     V(kv.first) += kv.second;
   }
   return V;
@@ -4685,10 +4889,10 @@ MyVector<T> get_hecke_image_cell(
   boundaries and Z the one of the cycles, H = Z / B is computed in the
   coordinates of the cells outside a set S whose cycle condition rows are
   a basis of the cycle conditions (see below); a basis of H is given by
-  the free cells of the echelon form of the boundaries there, lifted to
-  cycles, and the image of a basis vector is restricted to the complement
-  of S and reduced modulo the boundaries, its normal form giving its
-  coordinates.
+  the basis cells of the quotient by the boundaries there
+  (SparseQuotientMod), lifted to cycles, and the image of a basis vector
+  is restricted to the complement of S, its class in the quotient giving
+  its coordinates.
   For a chain map commuting with the boundary (Sharbly, Vertex) the cycles
   are the v with v D_index = 0 and the boundaries the rows of D_{index-1};
   for the transposed one (Dual), the v with D_{index-1} v = 0 and the
@@ -4796,6 +5000,9 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
     so the elimination of the boundaries has a low corank and a small
     fill-in, unlike the elimination of the boundaries in all the cells.
    */
+#ifdef TIMINGS_HECKE_OPERATORS
+  MicrosecondTime time;
+#endif
   std::vector<int> l_label_next = f_label(l_cycle_row, n_next);
   SparseEchelonMod echelon_cyc(p);
   std::vector<uint8_t> in_S(n_cell, 0);
@@ -4804,6 +5011,10 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
       in_S[c] = 1;
     }
   }
+#ifdef TIMINGS_HECKE_OPERATORS
+  os << "|HECKE: mod p index=" << index << " echelon of the cycle conditions, n_cell=" << n_cell
+     << " n_next=" << n_next << " |S|=" << echelon_cyc.rank() << "|=" << time << "\n";
+#endif
   // The same rows with markers at n_next + c: the reduction of the cycle
   // condition row of a cell gives its expression in the rows of S.
   SparseEchelonMod echelon_cyc_mark(p);
@@ -4814,6 +5025,15 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
       echelon_cyc_mark.insert(v);
     }
   }
+#ifdef TIMINGS_HECKE_OPERATORS
+  {
+    size_t n_entry = 0;
+    for (size_t i = 0; i < echelon_cyc_mark.rank(); i++) {
+      n_entry += echelon_cyc_mark.get_row(i).size();
+    }
+    os << "|HECKE: mod p index=" << index << " marked echelon, n_entry=" << n_entry << "|=" << time << "\n";
+  }
+#endif
   // The restrictions of the boundaries to S^c, with the cells of S^c
   // relabeled by the count.
   std::vector<SparseVectorMod> l_bnd_res;
@@ -4828,28 +5048,45 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
       l_bnd_res.emplace_back(std::move(w));
     }
   }
-  std::vector<int> l_label = f_label(l_bnd_res, n_cell);
-  std::sort(l_bnd_res.begin(), l_bnd_res.end(),
-            [](SparseVectorMod const &a, SparseVectorMod const &b) -> bool { return a.size() < b.size(); });
-  SparseRrefMod echelon_bnd(p);
-  for (auto &v : l_bnd_res) {
-    echelon_bnd.insert(f_relabel(v, l_label));
-  }
-  // The free cells of S^c give the basis of H; their positions.
-  std::vector<int> l_free;
-  std::unordered_map<int, int> map_free;
+  // The quotient of the vectors on S^c (the cell c at the position
+  // pos_Sc[c]) by the restrictions of the boundaries. The pivots are chosen
+  // globally and the last columns are treated densely: the incremental
+  // reduced echelon form fills in on the large levels.
+  std::vector<int> pos_Sc(n_cell, -1);
+  std::vector<int> l_Sc;
   for (int c = 0; c < n_cell; c++) {
-    if (in_S[c] == 0 && !echelon_bnd.is_pivot(l_label[c])) {
-      map_free[l_label[c]] = l_free.size();
-      l_free.push_back(c);
+    if (in_S[c] == 0) {
+      pos_Sc[c] = l_Sc.size();
+      l_Sc.push_back(c);
     }
+  }
+  int n_Sc = l_Sc.size();
+  std::vector<SparseVectorMod> l_bnd_Sc;
+  for (auto &v : l_bnd_res) {
+    SparseVectorMod w;
+    for (auto &e : v) {
+      w.push_back({pos_Sc[e.first], e.second});
+    }
+    l_bnd_Sc.emplace_back(std::move(w));
+  }
+  SparseQuotientMod quot_bnd(l_bnd_Sc, n_Sc, p);
+#ifdef TIMINGS_HECKE_OPERATORS
+  os << "|HECKE: mod p index=" << index << " quotient by the boundaries, |l_bnd_res|=" << l_bnd_res.size()
+     << " n_Sc=" << n_Sc << " rank=" << quot_bnd.rank() << " n_sparse_pivot=" << quot_bnd.n_sparse_pivot()
+     << " n_dense_col=" << quot_bnd.n_dense_col() << " n_entry=" << quot_bnd.n_entry() << "|=" << time << "\n";
+#endif
+  // The basis columns of the quotient give the cells of the basis of H.
+  std::vector<int> l_free;
+  for (auto &u : quot_bnd.basis_columns()) {
+    l_free.push_back(l_Sc[u]);
   }
   int dim_hom = l_free.size();
 #ifdef DEBUG_HECKE_OPERATORS
   os << "HECKE: mod p index=" << index << " n_cell=" << n_cell << " |S|=" << echelon_cyc.rank()
-     << " rank(B)=" << echelon_bnd.rank() << " dim_hom=" << dim_hom << "\n";
+     << " rank(B)=" << quot_bnd.rank() << " dim_hom=" << dim_hom << "\n";
 #endif
   MyMatrix<T> hecke_matrix = ZeroMatrix<T>(dim_hom, dim_hom);
+  HeckeImageKeyActions actions = get_hecke_image_key_actions(index, gc, hcm);
   for (int i = 0; i < dim_hom; i++) {
     int c_free = l_free[i];
     // The cycle lifting the free cell: e_c plus its part on S.
@@ -4864,10 +5101,10 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
       }
       std::sort(v.begin(), v.end());
     }
-    // Its image, restricted to S^c and reduced modulo the boundaries.
+    // Its image, restricted to S^c, and its class modulo the boundaries.
     std::map<int, int64_t> acc;
     for (auto &e : v) {
-      for (auto &kv : get_hecke_image_cell_sparse(index, e.first, gc, hcm, cosets_gamma)) {
+      for (auto &kv : get_hecke_image_cell_sparse(index, e.first, gc, hcm, cosets_gamma, &actions)) {
         if (in_S[kv.first] == 1) {
           continue;
         }
@@ -4877,7 +5114,7 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
           return {index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0),
                   "a denominator of an image is divisible by p=" + std::to_string(p)};
         }
-        int64_t &val = acc[l_label[kv.first]];
+        int64_t &val = acc[pos_Sc[kv.first]];
         val = ResidueModPrime(val + e.second * (*opt), p);
       }
     }
@@ -4887,13 +5124,9 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
         w.push_back(kv);
       }
     }
-    for (auto &e : echelon_bnd.reduce(w)) {
-      auto iter = map_free.find(e.first);
-      if (iter == map_free.end()) {
-        throw HeckeFailure{"Hecke matrix mod p: a normal form is not supported on the free cells, index=" +
-                           std::to_string(index)};
-      }
-      hecke_matrix(i, iter->second) = UniversalScalarConversion<T, int64_t>(e.second);
+    std::vector<int64_t> coord = quot_bnd.coordinates(w);
+    for (int j = 0; j < dim_hom; j++) {
+      hecke_matrix(i, j) = UniversalScalarConversion<T, int64_t>(coord[j]);
     }
   }
   return {index, n_cell, MyMatrix<T>(dim_hom, 0), std::move(hecke_matrix), ""};
@@ -5130,8 +5363,9 @@ HeckeHomologyResult<T> compute_hecke_homology(
     if (dim_hom > 0) {
       // The images of the basis cells, computed once.
       std::vector<MyVector<T>> l_img(n_cell);
+      HeckeImageKeyActions actions = get_hecke_image_key_actions(index, gc, hcm);
       for (int i_cell = 0; i_cell < n_cell; i_cell++) {
-        l_img[i_cell] = get_hecke_image_cell(index, i_cell, gc, hcm, cosets_gamma, fce);
+        l_img[i_cell] = get_hecke_image_cell(index, i_cell, gc, hcm, cosets_gamma, fce, &actions);
       }
       MyMatrix<T> Gram = harmonic * harmonic.transpose();
       MyMatrix<T> GramInv = Inverse(Gram);
