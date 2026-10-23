@@ -55,33 +55,48 @@
 
 FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   std::map<std::string, SingleBlock> ListBlock;
-  // DATA
+  // PROC
   {
-    std::map<std::string, bool> ListBoolValues;
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["FileLorMat"] = "the lorentzian matrix used";
-    ListStringValues["OptionInitialVertex"] =
-      "vinberg or FileVertex or FileVertexRoots and if FileVertex or "
-      "FileVertexRoots selected use FileVertDomain as initial vertex";
-    ListStringValues["FileInitialVertex"] =
-      "unset put the name of the file used for the initial vertex";
-    ListStringValues["OptionNorms"] =
-      "possible option K3 (then just 2) or all where all norms are considered";
-    ListStringValues["DualDescProg"] = "lrs_iterate";
-    ListStringValues["OutFormat"] = "GAP for gap use or TXT for text output";
-    ListStringValues["FileOut"] =
-      "stdout, or stderr or the filename of the file you want to write to";
-  // Sometimes we can terminate by proving that it is not reflective
-    ListBoolValues["EarlyTerminationIfNotReflective"] = false;
-  // Normally, we want to ApplyReduction, this is for debug only
-    ListBoolValues["ApplyReduction"] = true;
-    ListBoolValues["ComputeAllSimpleRoots"] = true;
-    ListStringValues["FileHeuristicIdealStabEquiv"] = "unset.heu";
-    ListStringValues["FileHeuristicTryTerminateDualDescription"] = "unset.heu";
-    SingleBlock BlockPROC;
-    BlockPROC.setListStringValues(ListStringValues);
-    BlockPROC.setListBoolValues(ListBoolValues);
-    ListBlock["PROC"] = BlockPROC;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["FileLorMat"] =
+        "The file containing the Lorentzian matrix";
+    ListStringValues_doc["OptionInitialVertex"] = "Default: vinberg\n\
+The method for the initial vertex. Possible values:\n\
+vinberg: the initial vertex found by the Vinberg algorithm\n\
+isotropic_vinberg: an isotropic vector if the form is isotropic, otherwise\n\
+  the Vinberg algorithm\n\
+FileVertex: the vertex in FileInitialVertex, the matching roots computed\n\
+  internally\n\
+FileVertexRoots: the vertex and the roots in FileInitialVertex, useful for\n\
+  debugging";
+    ListStringValues_doc["FileInitialVertex"] = "Default: unset\n\
+The file of the initial vertex. Used only if OptionInitialVertex is\n\
+FileVertex or FileVertexRoots";
+    ListStringValues_doc["OptionNorms"] = doc_OptionNorms();
+    ListStringValues_doc["DualDescProg"] = doc_DualDescProg();
+    ListStringValues_doc["OutFormat"] = "Default: GAP\n\
+The formatting used for the output. Possible values:\n\
+GAP: a GAP readable file\n\
+PYTHON: a PYTHON readable file";
+    ListStringValues_doc["FileOut"] = doc_FileOut();
+    ListBoolValues_doc["EarlyTerminationIfNotReflective"] = "Default: F\n\
+T: the computation stops as soon as the group is proved not to be\n\
+  reflective, which is then reported\n\
+F: that case is a runtime error";
+    ListBoolValues_doc["ApplyReduction"] = "Default: T\n\
+Whether to apply the reduction. F is for debugging only";
+    ListBoolValues_doc["ComputeAllSimpleRoots"] = "Default: T\n\
+Whether to compute and write all the simple roots";
+    ListStringValues_doc["FileHeuristicIdealStabEquiv"] = "Default: unset.heu\n\
+The heuristic file for the stabilizer and equivalence of the ideal\n\
+vertices. If unset.heu then the built-in heuristic is used";
+    ListStringValues_doc["FileHeuristicTryTerminateDualDescription"] =
+        "Default: unset.heu\n\
+The heuristic file for trying to terminate the dual descriptions early.\n\
+If unset.heu then the built-in heuristic is used";
+    ListBlock["PROC"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["PROC"].setListBoolValues_doc(ListBoolValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);
@@ -89,24 +104,27 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK() {
 
 FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism() {
   std::map<std::string, SingleBlock> ListBlock;
-  // DATA
+  // PROC
   {
-    std::map<std::string, bool> ListBoolValues;
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["FileLorMat1"] = "the lorentzian matrix used";
-    ListStringValues["FileLorMat2"] = "the lorentzian matrix used";
-    ListStringValues["OptionNorms"] =
-      "possible option K3 (then just 2) or all where all norms are considered";
-    ListStringValues["DualDescProg"] = "lrs_iterate";
-    ListStringValues["OutFormat"] = "GAP for gap use or TXT for text output";
-    ListStringValues["FileOut"] =
-      "stdout, or stderr or the filename of the file you want to write to";
-  // Normally, we want to ApplyReduction, this is for debug only
-    ListBoolValues["ApplyReduction"] = true;
-    SingleBlock BlockPROC;
-    BlockPROC.setListStringValues(ListStringValues);
-    BlockPROC.setListBoolValues(ListBoolValues);
-    ListBlock["PROC"] = BlockPROC;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["FileLorMat1"] =
+        "The file containing the first Lorentzian matrix";
+    ListStringValues_doc["FileLorMat2"] =
+        "The file containing the second Lorentzian matrix";
+    ListStringValues_doc["DualDescProg"] = doc_DualDescProg();
+    ListStringValues_doc["OutFormat"] = "Default: GAP\n\
+The formatting used for the output. Possible value:\n\
+GAP: the isometry mapping the first matrix to the second, or fail if they\n\
+  are not isometric, as a GAP readable file";
+    ListStringValues_doc["FileOut"] = doc_FileOut();
+    ListBoolValues_doc["ApplyReduction"] = "Default: T\n\
+Whether to apply the reduction. F is for debugging only";
+    ListStringValues_doc["FileHeuristicIdealStabEquiv"] = "Default: unset.heu\n\
+The heuristic file for the stabilizer and equivalence of the ideal\n\
+vertices. If unset.heu then the built-in heuristic is used";
+    ListBlock["PROC"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["PROC"].setListBoolValues_doc(ListBoolValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);

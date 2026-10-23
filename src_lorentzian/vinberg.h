@@ -132,6 +132,26 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint> &M,
   return root_lengths;
 }
 
+// The namelist documentation of the keys shared by the namelists of the
+// Vinberg and edgewalk programs.
+std::string doc_OptionNorms() {
+  return "Default: all\n\
+The norms of the roots considered. Possible values:\n\
+all: all the possible root norms of the lattice\n\
+K3: only the roots of norm 2";
+}
+
+std::string doc_DualDescProg() {
+  return "Default: lrs_iterate\n\
+The program for the dual descriptions: lrs_iterate, or one of the programs\n\
+of DirectFacetComputationIncidence (cdd, lrs, ...)";
+}
+
+std::string doc_FileOut() {
+  return "Default: stdout\n\
+The output: stdout, stderr or the name of a file";
+}
+
 template <typename T, typename Tint>
 std::vector<T> get_initial_list_norms(MyMatrix<T> const &G,
                                       std::string const &OptionNorms,
