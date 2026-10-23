@@ -187,7 +187,8 @@ BetkeHenkBody<T> BetkeHenk_BuildBody(MyMatrix<T> const &EXT_P,
   }
   // The symmetric polytope D has 0 as interior point, so the facets are
   // ell(x) <= 1.
-  vectface vf = DirectFacetComputationIncidence(EXTdiff, "cdd", os);
+  // The differences are mostly not vertices of D.
+  vectface vf = DirectFacetComputationIncidence_General(EXTdiff, "cdd", os);
   int m = vf.size();
   body.m = m;
   body.Lmat = MyMatrix<T>(m, 3);

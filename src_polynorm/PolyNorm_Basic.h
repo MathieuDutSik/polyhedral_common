@@ -379,7 +379,9 @@ PolyNormData<T, Tint, Tgroup> PolyNorm_BuildData(MyMatrix<T> const &EXT_input,
       EXTdiff(i, k + 1) = list_diff[i](k);
     }
   }
-  vectface vf_diff = DirectFacetComputationIncidence(EXTdiff, "cdd", os);
+  // The differences are mostly not vertices of P - P (0 is one of them).
+  vectface vf_diff =
+      DirectFacetComputationIncidence_General(EXTdiff, "cdd", os);
   data.LmatDiff = PolyNorm_LinearForms(EXTdiff, vf_diff);
 #ifdef TIMINGS_POLYNORM_BASIC
   os << "|POLYNORM: facets of P - P|=" << time << "\n";

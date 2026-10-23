@@ -349,7 +349,8 @@ PCBody<T> PC_BuildBody(MyMatrix<T> const &EXT_P, std::ostream &os) {
     body.ListPoint.push_back(V);
     pos++;
   }
-  vectface vf = DirectFacetComputationIncidence(EXTdiff, "cdd", os);
+  // The differences are mostly not vertices of P - P.
+  vectface vf = DirectFacetComputationIncidence_General(EXTdiff, "cdd", os);
   int m = vf.size();
   body.m = m;
   body.Lmat = MyMatrix<T>(m, n);
