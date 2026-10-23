@@ -660,7 +660,6 @@ bool WriteFamilyObjects(
   }
   if (OutFormat == "ObjectFullAdjacencyGAP") {
     os_out << "return [";
-    // INCORRECT CODE
     size_t len = l_tot.size();
     for (size_t i = 0; i < len; i++) {
       if (i > 0)

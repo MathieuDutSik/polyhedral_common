@@ -103,43 +103,6 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
   }
 }
 
-template <typename Tdata, typename Tobj, typename TadjO>
-bool WriteFamilyObjects_MPI(
-    [[maybe_unused]] boost::mpi::communicator const &comm,
-    [[maybe_unused]] Tdata const &data, std::string const &OutFormat,
-    std::ostream &os_out,
-    std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &l_obj,
-    [[maybe_unused]] std::ostream &os) {
-  if (OutFormat == "GAP") {
-    os_out << "[";
-    bool IsFirst = true;
-    for (auto &ent : l_obj) {
-      if (!IsFirst)
-        os_out << ",";
-      IsFirst = false;
-      WriteEntryGAP(os_out, ent);
-    }
-    os_out << "]";
-    return false;
-  }
-  if (OutFormat == "PYTHON") {
-    os_out << "[";
-    bool IsFirst = true;
-    for (auto &ent : l_obj) {
-      if (!IsFirst)
-        os_out << ",";
-      IsFirst = false;
-      WriteEntryPYTHON(os_out, ent);
-    }
-    os_out << "]";
-    return false;
-  }
-  if (OutFormat == "nothing") {
-    return false;
-  }
-  return true;
-}
-
 // clang-format off
 #endif  // SRC_PERFECT_PERFECT_TSPACE_MPI_H_
 // clang-format on
