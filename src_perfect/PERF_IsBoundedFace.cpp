@@ -15,17 +15,22 @@
 FullNamelist NAMELIST_get_is_bounded_face() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, std::string> ListStringValues1;
-  ListStringValues1["arithmetic"] = "gmp";
-  ListStringValues1["FileSHV"] = "unset";
-  SingleBlock BlockDATA;
-  BlockDATA.setListStringValues(ListStringValues1);
-  ListBlock["DATA"] = BlockDATA;
+  {
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["FileSHV"] =
+        "The file containing the integral vectors v, one per row";
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
+  }
   // SYSTEM
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System("Default: GAP\n\
-The formatting used for the output. Possible values:\n\
-GAP: the results of the two tests as a GAP list of two booleans\n\
-CPP: the results of the two tests, one per line");
+The output is two booleans: whether no positive definite form A of the\n\
+T-space takes the same value A[v] on all the vectors v, and whether no\n\
+non-zero positive semidefinite form A of the T-space has A[v] = 0 for all\n\
+of them. Possible values:\n\
+GAP: the two booleans as a GAP list\n\
+CPP: the two booleans, one per line");
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   // Merging all data
