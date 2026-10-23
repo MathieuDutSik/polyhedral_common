@@ -1787,9 +1787,10 @@ If set to unset.heu then disabled";
     std::map<std::string, std::string> ListBoolValues_doc;
     std::map<std::string, std::string> ListStringValues_doc;
     ListBoolValues_doc["Saving"] = "Default: F\n\
-Whether to save the bank information to a disk for further reuse";
+Whether to track the computation on file, so that it can be resumed";
     ListStringValues_doc["Prefix"] = "Default: /irrelevant/\n\
-The directory in which the bank is saved. Put something significant if Saving = T";
+The prefix in which the data of the computation is saved. Put something\n\
+significant if Saving = T";
     ListBlock["METHOD"].setListBoolValues_doc(ListBoolValues_doc);
     ListBlock["METHOD"].setListStringValues_doc(ListStringValues_doc);
   }
@@ -1798,9 +1799,10 @@ The directory in which the bank is saved. Put something significant if Saving = 
     std::map<std::string, std::string> ListBoolValues_doc;
     std::map<std::string, std::string> ListStringValues_doc;
     ListBoolValues_doc["Saving"] = "Default: F\n\
-Whether to track the computation on file or not";
+Whether to save the bank information to a disk for further reuse";
     ListStringValues_doc["Prefix"] = "Default: /irrelevant/\n\
-The prefix in which data is saved. Put something significant if Saving = T";
+The directory in which the bank is saved. Put something significant if\n\
+Saving = T";
     ListBlock["BANK"].setListBoolValues_doc(ListBoolValues_doc);
     ListBlock["BANK"].setListStringValues_doc(ListStringValues_doc);
   }
@@ -1810,19 +1812,22 @@ The prefix in which data is saved. Put something significant if Saving = T";
 
 FullNamelist NAMELIST_GetStandard_BankingSystem() {
   std::map<std::string, SingleBlock> ListBlock;
-  // DATA
+  // PROC
   {
-    std::map<std::string, int> ListIntValues;
-    std::map<std::string, bool> ListBoolValues;
-    std::map<std::string, std::string> ListStringValues;
-    ListBoolValues["Saving"] = false;
-    ListStringValues["Prefix"] = "/irrelevant/";
-    ListIntValues["port"] = 1234;
-    SingleBlock BlockPROC;
-    BlockPROC.setListIntValues(ListIntValues);
-    BlockPROC.setListBoolValues(ListBoolValues);
-    BlockPROC.setListStringValues(ListStringValues);
-    ListBlock["PROC"] = BlockPROC;
+    std::map<std::string, std::string> ListIntValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListBoolValues_doc["Saving"] = "Default: F\n\
+Whether the bank saves its entries to disk, for the reuse by later runs";
+    ListStringValues_doc["Prefix"] = "Default: /irrelevant/\n\
+The directory in which the bank is saved. Put something significant if\n\
+Saving = T";
+    ListIntValues_doc["port"] = "Default: 1234\n\
+The TCP port on which the bank listens. It has to be the port of the dual\n\
+description runs using the bank (bank_parallelization_method = bank_asio)";
+    ListBlock["PROC"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["PROC"].setListBoolValues_doc(ListBoolValues_doc);
+    ListBlock["PROC"].setListStringValues_doc(ListStringValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);
