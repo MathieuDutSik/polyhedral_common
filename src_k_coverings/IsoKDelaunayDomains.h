@@ -2379,42 +2379,47 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoKDelaunayDomains() {
   std::map<std::string, SingleBlock> ListBlock;
   // SYSTEM
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System(doc_OutFormat_FamilyObjects());
+  {
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListIntValues_doc["max_runtime_second"] = "Default: 0\n\
+Not used: the enumeration of the (L,k)-types runs to completion";
+    ListBlock["SYSTEM"].setListIntValues_doc(ListIntValues_doc);
+  }
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["FileDualDescription"] = "unset";
-    // Read by get_data_isodelaunay_domains; a common Gram matrix is not
-    // supported by the order-k enumeration and has to stay unset.
-    ListStringValues["CommonGramMat"] = "unset";
-    // When set to a prefix P, each enumerated domain is written as a boost
-    // text-archive of an IsoKDelaunayDomain to the file P<i>.
-    ListStringValues["PrefixIsoKDelaunayDomains"] = "unset";
-    // When set, the k-covering density is minimized over each enumerated
-    // domain by the determinant maximization of CoveringMaxdet.h and the
-    // results are written to that file as a GAP list.
-    ListStringValues["FileCoveringOptimum"] = "null";
-    // When set, the extreme rays of each enumerated domain are computed and
-    // the ones of full rank (positive definite forms) are written to that
-    // file as a GAP list, together with the rank distribution of all rays.
-    ListStringValues["FileFullRankRays"] = "null";
-    // The flip across a wall: "incremental" (the tiling is flipped, the
-    // default) or "recompute" (the tiling of a trial form beyond the wall
-    // is computed from scratch, slower, kept as a cross-check).
-    ListStringValues["FlipMethod"] = "incremental";
-    std::map<std::string, bool> ListBoolValues;
-    // Drop the stabilizers and adjacencies of the tiling of a domain once
-    // its neighbours are computed (they dominate the memory and are not
-    // needed afterwards). With T the ObjectGAP output has trivial tile
-    // stabilizers and no tile adjacencies.
-    ListBoolValues["SlimDomains"] = true;
-    std::map<std::string, int> ListIntValues;
-    ListIntValues["k"] = 2;
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    BlockDATA.setListIntValues(ListIntValues);
-    BlockDATA.setListBoolValues(ListBoolValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListIntValues_doc["k"] = "The order k of the k-coverings, at least 1.\n\
+For k = 1 the domains are the iso-Delaunay domains";
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
+    ListStringValues_doc["PrefixIsoKDelaunayDomains"] = "Default: unset\n\
+If set to a prefix P, each enumerated domain i is written as a boost text\n\
+archive of an IsoKDelaunayDomain to the file P + i.\n\
+If unset then nothing is written";
+    ListStringValues_doc["FileCoveringOptimum"] = "Default: null\n\
+The file to which the minimum of the k-covering density over each domain\n\
+(by the determinant maximization of CoveringMaxdet.h) is written as a GAP\n\
+list. If null then it is not computed";
+    ListStringValues_doc["FileFullRankRays"] = "Default: null\n\
+The file to which, for each domain, the extreme rays that are positive\n\
+definite and the distribution of the ranks of all the rays are written as\n\
+a GAP list. If null then they are not computed";
+    ListStringValues_doc["FlipMethod"] = "Default: incremental\n\
+The method of the flip across a wall. Possible values:\n\
+incremental: the tiling of the domain is flipped\n\
+recompute: the tiling of a form beyond the wall is computed from scratch,\n\
+  slower, kept as a cross-check";
+    ListBoolValues_doc["SlimDomains"] = "Default: T\n\
+T: the stabilizers and adjacencies of the tiles of a domain are dropped once\n\
+  its neighbours are computed, saving memory; ObjectGAP then has trivial\n\
+  tile stabilizers and no tile adjacencies\n\
+F: they are kept";
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["DATA"].setListBoolValues_doc(ListBoolValues_doc);
+    ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
   }
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
@@ -2432,18 +2437,22 @@ get_data_iso_k_delaunay_domains(FullNamelist const &eFull,
     std::cerr << "ISO_K_DELAUNAY: k=" << k << " should be at least 1\n";
     throw TerminalException{1};
   }
-  DataIsoDelaunayDomains<T, Tint, Tgroup> data =
-      get_data_isodelaunay_domains<T, Tint, Tgroup>(eFull, AllArr, os);
-  if (data.CommonGramMat) {
-    std::cerr << "ISO_K_DELAUNAY: CommonGramMat is not supported by the "
-                 "order-k enumeration\n";
+  std::string FlipMethod = BlockDATA.get_string("FlipMethod");
+  if (FlipMethod != "incremental" && FlipMethod != "recompute") {
+    std::cerr << "ISO_K_DELAUNAY: FlipMethod=" << FlipMethod
+              << " should be incremental or recompute\n";
     throw TerminalException{1};
   }
+  // A common Gram matrix is not supported by the order-k enumeration.
+  std::optional<MyMatrix<T>> CommonGramMat;
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data =
+      get_data_isodelaunay_domains_kernel<T, Tint, Tgroup>(
+          eFull.get_block("TSPACE"), CommonGramMat, AllArr, os);
   std::vector<std::vector<Tint>> ListGramRing =
       GetListGramRing(data.LinSpa.ListLineMat);
   DataIsoKDelaunayDomains<T, Tint, Tgroup> data_k{
       std::move(data), k, std::move(ListGramRing),
-      BlockDATA.get_string("FlipMethod"), BlockDATA.get_bool("SlimDomains"),
+      FlipMethod, BlockDATA.get_bool("SlimDomains"),
       false, nullptr};
   return data_k;
 }

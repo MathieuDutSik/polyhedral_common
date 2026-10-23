@@ -3510,6 +3510,33 @@ struct DataIsoDelaunayDomainsFunc {
   }
 };
 
+// The data of the enumeration from the TSPACE block and the common Gram
+// matrix, if any. The order-k enumeration, which does not support a common
+// Gram matrix, calls it directly.
+template <typename T, typename Tint, typename Tgroup>
+DataIsoDelaunayDomains<T, Tint, Tgroup> get_data_isodelaunay_domains_kernel(
+    SingleBlock const &BlockTSPACE,
+    std::optional<MyMatrix<T>> const &CommonGramMat,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, std::ostream &os) {
+  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "We have LinSpa\n";
+#endif
+  //
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "We have rddo\n";
+#endif
+  //
+  LinSpaceMatrix<Tint> LinSpaRing = LINSPA_GetRingVersion(LinSpa);
+  std::optional<MyMatrix<Tint>> CommonGramMatRing =
+      GetCommonGramMatRing<Tint, T>(CommonGramMat);
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data{
+      LinSpa, std::move(LinSpaRing), std::move(rddo), CommonGramMat,
+      CommonGramMatRing};
+  return data;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 DataIsoDelaunayDomains<T, Tint, Tgroup>
 get_data_isodelaunay_domains(FullNamelist const &eFull,
@@ -3529,24 +3556,8 @@ get_data_isodelaunay_domains(FullNamelist const &eFull,
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "We have CommonGramMat\n";
 #endif
-  //
-  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-  os << "We have LinSpa\n";
-#endif
-  //
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-  os << "We have rddo\n";
-#endif
-  //
-  LinSpaceMatrix<Tint> LinSpaRing = LINSPA_GetRingVersion(LinSpa);
-  std::optional<MyMatrix<Tint>> CommonGramMatRing =
-      GetCommonGramMatRing<Tint, T>(CommonGramMat);
-  DataIsoDelaunayDomains<T, Tint, Tgroup> data{
-      LinSpa, std::move(LinSpaRing), std::move(rddo), CommonGramMat,
-      CommonGramMatRing};
-  return data;
+  return get_data_isodelaunay_domains_kernel<T, Tint, Tgroup>(
+      BlockTSPACE, CommonGramMat, AllArr, os);
 }
 
 // clang-format off
