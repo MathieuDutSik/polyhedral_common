@@ -95,10 +95,8 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI() {
   ListStringValues1_doc["WorkingPrefix"] = "The prefix of the netCDF files.\n\
 The process of rank i works with the file WorkingPrefix + i + \".nc\"\n\
 which has been created by CTYP_PrepareInitialFile (its PrefixOutput)";
-  SingleBlock BlockDATA;
-  BlockDATA.setListIntValues_doc(ListIntValues1_doc);
-  BlockDATA.setListStringValues_doc(ListStringValues1_doc);
-  ListBlock["DATA"] = BlockDATA;
+  ListBlock["DATA"].setListIntValues_doc(ListIntValues1_doc);
+  ListBlock["DATA"].setListStringValues_doc(ListStringValues1_doc);
   // Merging all data
   return FullNamelist(ListBlock);
 }

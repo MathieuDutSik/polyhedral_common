@@ -36,9 +36,7 @@ PackingCoveringGAP: the covering radius, the packing radius and the\n\
         "The file containing the positive definite Gram matrix";
     ListStringValues_doc["FileCosets"] =
         doc_FileCosets("LATT_SerialComputeDelaunay");
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["DATA"] = BlockDATA;
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   return FullNamelist(ListBlock);
 }

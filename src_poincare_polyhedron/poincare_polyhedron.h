@@ -1690,11 +1690,9 @@ description of the field";
 Method used for computing TypeI neighbors";
     ListStringValues_doc["MethodVertexMatching"] = "Default: none\n\
 Whether to generate new elements from vertex matchings";
-    SingleBlock BlockPROC;
-    BlockPROC.setListBoolValues_doc(ListBoolValues_doc);
-    BlockPROC.setListIntValues_doc(ListIntValues_doc);
-    BlockPROC.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["PROC"] = BlockPROC;
+    ListBlock["PROC"].setListBoolValues_doc(ListBoolValues_doc);
+    ListBlock["PROC"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["PROC"].setListStringValues_doc(ListStringValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);

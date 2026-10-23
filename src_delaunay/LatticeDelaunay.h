@@ -1081,9 +1081,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   {
     std::map<std::string, std::string> ListStringValues_doc;
     Insert_DelaunayLattice_DATA_doc(ListStringValues_doc);
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["DATA"] = BlockDATA;
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);
@@ -1108,9 +1106,7 @@ A file caching the Delaunay tesselation. If it exists, the tesselation is\n\
 read from it, otherwise it is computed and written to it. The cache is not\n\
 checked against GRAMfile, so it must come from the same lattice.\n\
 If none then the tesselation is computed and not cached";
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["DATA"] = BlockDATA;
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // QUERIES
   {
@@ -1150,10 +1146,8 @@ If null then it is not computed";
 The file to which it is written in GAP whether the Hessian of G at Q has a\n\
 positive direction, the scan stopping at the first one found. It is cheaper\n\
 than FileHessian. If null then it is not computed";
-    SingleBlock BlockQUERIES;
-    BlockQUERIES.setListStringValues_doc(ListStringValues_doc);
-    BlockQUERIES.setListIntValues_doc(ListIntValues_doc);
-    ListBlock["QUERIES"] = BlockQUERIES;
+    ListBlock["QUERIES"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["QUERIES"].setListIntValues_doc(ListIntValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);

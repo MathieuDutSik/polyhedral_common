@@ -714,11 +714,9 @@ description of the field";
 The level of the search. If set to -1 then the full lattice is computed";
     ListBoolValues_doc["ComputeTotalNumberFaces"] = "Default: false\n\
 Whether to compute the total number of faces by stabilizer computation";
-    SingleBlock BlockPROC;
-    BlockPROC.setListIntValues_doc(ListIntValues_doc);
-    BlockPROC.setListBoolValues_doc(ListBoolValues_doc);
-    BlockPROC.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["PROC"] = BlockPROC;
+    ListBlock["PROC"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["PROC"].setListBoolValues_doc(ListBoolValues_doc);
+    ListBlock["PROC"].setListStringValues_doc(ListStringValues_doc);
   }
   // GROUP
   {
@@ -735,10 +733,8 @@ File for output of the group.\n\
 stdout for std::cout,\n\
 stderr for std::cerr and\n\
 otherwise to the file";
-    SingleBlock BlockGROUP;
-    BlockGROUP.setListBoolValues_doc(ListBoolValues_doc);
-    BlockGROUP.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["GROUP"] = BlockGROUP;
+    ListBlock["GROUP"].setListBoolValues_doc(ListBoolValues_doc);
+    ListBlock["GROUP"].setListStringValues_doc(ListStringValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);

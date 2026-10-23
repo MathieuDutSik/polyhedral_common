@@ -2578,10 +2578,8 @@ F: the output is the iso-Delaunay domains of full dimension\n\
 T: all the cells of the L-type complex are enumerated (full and lower\n\
   dimensional), keeping those whose relative interior contains positive\n\
   definite forms. OutFormat must then be GAP or NumberGAP";
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues_doc(ListStringValues_doc);
-    BlockDATA.setListBoolValues_doc(ListBoolValues_doc);
-    ListBlock["DATA"] = BlockDATA;
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["DATA"].setListBoolValues_doc(ListBoolValues_doc);
   }
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();

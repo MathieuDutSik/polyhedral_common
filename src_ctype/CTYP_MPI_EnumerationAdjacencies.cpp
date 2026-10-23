@@ -93,10 +93,8 @@ which is the result of CTYP_MPI_Enumeration_c";
   ListStringValues1_doc["WorkingAdjPrefix"] = "The prefix of the netCDF files of adjacencies.\n\
 The process of rank i writes to the file WorkingAdjPrefix + i + \".nc\"\n\
 which has been created by CTYP_PrepareAdjacencyFile";
-  SingleBlock BlockDATA;
-  BlockDATA.setListIntValues_doc(ListIntValues1_doc);
-  BlockDATA.setListStringValues_doc(ListStringValues1_doc);
-  ListBlock["DATA"] = BlockDATA;
+  ListBlock["DATA"].setListIntValues_doc(ListIntValues1_doc);
+  ListBlock["DATA"].setListStringValues_doc(ListStringValues1_doc);
   // Merging all data
   return FullNamelist(ListBlock);
 }

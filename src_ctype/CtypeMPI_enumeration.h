@@ -34,9 +34,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
     ListIntValues_doc["n"] = "The dimension n of the lattices.\n\
 The program enumerates the iso-edge domains (the C-types) of the\n\
 n-dimensional lattices, starting from the principal domain";
-    SingleBlock BlockDATA;
-    BlockDATA.setListIntValues_doc(ListIntValues_doc);
-    ListBlock["DATA"] = BlockDATA;
+    ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);

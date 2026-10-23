@@ -1422,9 +1422,7 @@ The file to which the T-space used is written, in the format read by\n\
 FileLinSpace of LATT_AnalysisIsoDelaunay and by TypeTspace = File.\n\
 The domains are expressed in its coordinates.\n\
 If unset then it is not written";
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["DATA"] = BlockDATA;
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();

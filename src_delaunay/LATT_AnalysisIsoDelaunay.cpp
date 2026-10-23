@@ -304,9 +304,7 @@ For a domain coming from LATT_SerialPeriodic_IsoDelaunayDomain, the coset\n\
 file that enumeration was run with. It is needed for the covering density\n\
 of the periodic point set. If null then the domain is treated as a lattice\n\
 one";
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["DATA"] = BlockDATA;
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // QUERIES
   {
@@ -330,9 +328,7 @@ in JSON, for the Julia code of the quantizer. If null then it is not written";
     ListStringValues_doc["FileCoveringOptimum"] = "Default: null\n\
 The file to which the optimum of the covering density over the domain is\n\
 written as a GAP record. If null then it is not computed";
-    SingleBlock BlockQUERIES;
-    BlockQUERIES.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["QUERIES"] = BlockQUERIES;
+    ListBlock["QUERIES"].setListStringValues_doc(ListStringValues_doc);
   }
   return FullNamelist(ListBlock);
 }

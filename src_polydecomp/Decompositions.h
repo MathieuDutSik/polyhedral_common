@@ -602,10 +602,8 @@ The output file. stderr means writing to std::cerr, stdout means for std::cout a
 Whether to test for pairwise intersection of cones. That test can be expensive and so it can be disabled";
     ListBoolValues_doc["BreakConnectedComponents"] = "Default: false\n\
 It can be that the cones are union of disjoint cones. In that first process this";
-    SingleBlock BlockPROC;
-    BlockPROC.setListBoolValues_doc(ListBoolValues_doc);
-    BlockPROC.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["PROC"] = BlockPROC;
+    ListBlock["PROC"].setListBoolValues_doc(ListBoolValues_doc);
+    ListBlock["PROC"].setListStringValues_doc(ListStringValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);

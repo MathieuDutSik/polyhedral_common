@@ -1742,11 +1742,9 @@ if max_runtime is negative then there is no maximum runtime";
 This is about whether to used the advanced Balinski termination criterion";
     ListBoolValues_doc["SimpleExchangeScheme"] = "Default: F\n\
 If selected then a message sent to another node can be sent only after the previously sent is marked as finished";
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues_doc(ListStringValues_doc);
-    BlockDATA.setListBoolValues_doc(ListBoolValues_doc);
-    BlockDATA.setListIntValues_doc(ListIntValues_doc);
-    ListBlock["DATA"] = BlockDATA;
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["DATA"].setListBoolValues_doc(ListBoolValues_doc);
+    ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
   }
   // HEURISTIC
   {
@@ -1782,9 +1780,7 @@ If set to unset.heu then disabled";
     ListStringValues_doc["ChoiceCanonicalizationFile"] = "Default: unset.heu\n\
 The heuristic for choosing the canonicalization method used.\n\
 If set to unset.heu then disabled";
-    SingleBlock BlockHEURIS;
-    BlockHEURIS.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["HEURISTIC"] = BlockHEURIS;
+    ListBlock["HEURISTIC"].setListStringValues_doc(ListStringValues_doc);
   }
   // METHOD
   {
@@ -1794,10 +1790,8 @@ If set to unset.heu then disabled";
 Whether to save the bank information to a disk for further reuse";
     ListStringValues_doc["Prefix"] = "Default: /irrelevant/\n\
 The directory in which the bank is saved. Put something significant if Saving = T";
-    SingleBlock BlockMETHOD;
-    BlockMETHOD.setListBoolValues_doc(ListBoolValues_doc);
-    BlockMETHOD.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["METHOD"] = BlockMETHOD;
+    ListBlock["METHOD"].setListBoolValues_doc(ListBoolValues_doc);
+    ListBlock["METHOD"].setListStringValues_doc(ListStringValues_doc);
   }
   // BANK
   {
@@ -1807,10 +1801,8 @@ The directory in which the bank is saved. Put something significant if Saving = 
 Whether to track the computation on file or not";
     ListStringValues_doc["Prefix"] = "Default: /irrelevant/\n\
 The prefix in which data is saved. Put something significant if Saving = T";
-    SingleBlock BlockBANK;
-    BlockBANK.setListBoolValues_doc(ListBoolValues_doc);
-    BlockBANK.setListStringValues_doc(ListStringValues_doc);
-    ListBlock["BANK"] = BlockBANK;
+    ListBlock["BANK"].setListBoolValues_doc(ListBoolValues_doc);
+    ListBlock["BANK"].setListStringValues_doc(ListStringValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);

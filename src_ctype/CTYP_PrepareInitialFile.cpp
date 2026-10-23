@@ -36,11 +36,9 @@ Possible values: byte (8 bits), short (16 bits), int (32 bits), int64 (64 bits)"
   ListBoolValues1_doc["ApplyCanonicalization"] = "Default: T\n\
 T: the C-types are canonicalized before being written\n\
 F: they are written as read, which is correct only if they are already canonical";
-  SingleBlock BlockDATA;
-  BlockDATA.setListIntValues_doc(ListIntValues1_doc);
-  BlockDATA.setListStringValues_doc(ListStringValues1_doc);
-  BlockDATA.setListBoolValues_doc(ListBoolValues1_doc);
-  ListBlock["DATA"] = BlockDATA;
+  ListBlock["DATA"].setListIntValues_doc(ListIntValues1_doc);
+  ListBlock["DATA"].setListStringValues_doc(ListStringValues1_doc);
+  ListBlock["DATA"].setListBoolValues_doc(ListBoolValues1_doc);
   // Merging all data
   return FullNamelist(ListBlock);
 }
