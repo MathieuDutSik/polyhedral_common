@@ -12,6 +12,7 @@
 #include "hash_functions.h"
 #include "Tspace_Namelist.h"
 #include "SystemNamelist.h"
+#include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 #ifdef DEBUG
@@ -395,12 +396,11 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System(doc_OutFormat_FamilyObjects());
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["FileDualDescription"] = "unset";
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
