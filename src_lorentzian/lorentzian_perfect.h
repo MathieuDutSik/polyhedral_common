@@ -8,6 +8,7 @@
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
 #include "SystemNamelist.h"
+#include "Arithmetic_dispatch_types.h"
 #include "fractions.h"
 #include <limits>
 #include <map>
@@ -1491,14 +1492,18 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System(doc_OutFormat_FamilyObjects());
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["LorMatFile"] = "unset.gram";
-    ListStringValues["Option"] = "unset";
-    ListStringValues["FileDualDescription"] = "unset";
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library();
+    ListStringValues_doc["LorMatFile"] =
+        "The file containing the Lorentzian matrix L: exactly one positive\n\
+eigenvalue and no zero eigenvalue";
+    ListStringValues_doc["Option"] = "The vectors defining the perfect forms.\n\
+Possible values:\n\
+total: the integral vectors x with x L x >= 0\n\
+isotropic: only the isotropic ones, x L x = 0, which needs L isotropic";
+    ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);
