@@ -5,6 +5,7 @@
 // clang-format off
 #include "POLY_DualDesc_reverse_search.h"
 #include "POLY_DualDesc_beneath_and_beyond.h"
+#include "POLY_RedundancyElimination.h"
 #include <algorithm>
 #include <format>
 #include <optional>
@@ -110,6 +111,30 @@ inline int sort_simplex_sign(std::vector<int> &simplex) {
   throw TerminalException{1};
 }
 
+/*
+  The input of the triangulation dispatchers has to be made of distinct
+  extreme rays: a triangulation of a repeated or a non-extreme row does not
+  make sense. Exact arithmetic only, as for the check of the determinants.
+ */
+template <typename T>
+void check_direct_triangulation_input(
+    [[maybe_unused]] MyMatrix<T> const &EXT,
+    [[maybe_unused]] std::string const &context,
+    [[maybe_unused]] std::ostream &os) {
+  if constexpr (!std::is_floating_point_v<T>) {
+#ifdef SANITY_CHECK_DIRECT_TRIANGULATION
+    check_distinct_nonzero_rays(EXT, context);
+#endif
+#ifdef SANITY_CHECK_DIRECT_TRIANGULATION_EXTENSIVE
+    std::cerr << "TRIG: SANITY_CHECK_DIRECT_TRIANGULATION_EXTENSIVE, checking "
+                 "that the rows are extreme rays in "
+              << context << "\n";
+    check_all_extreme_rays(EXT, context, os);
+    std::cerr << "TRIG: SANITY_CHECK_DIRECT_TRIANGULATION_EXTENSIVE, done\n";
+#endif
+  }
+}
+
 // The triangulation streamed: f_trig_det(simplex, det) is called for each
 // simplex, simplex the sorted indices of its vertices and det the signed
 // determinant of SelectRow(EXT, simplex).
@@ -117,6 +142,7 @@ template <typename T, typename Ftrig_det>
 void DirectTriangulationDet_f(MyMatrix<T> const &EXT,
                               TriangulationProgram prog, std::ostream &os,
                               Ftrig_det f_trig_det) {
+  check_direct_triangulation_input(EXT, "DirectTriangulationDet_f", os);
 #ifdef DEBUG_DIRECT_TRIANGULATION
   os << "TRIG: DirectTriangulationDet_f, prog=" << std::format("{}", prog)
      << " |EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
@@ -253,6 +279,7 @@ template <typename T>
 std::pair<std::vector<std::vector<int>>, vectface>
 DirectTriangulationFacet(MyMatrix<T> const &EXT, TriangulationProgram prog,
                          std::ostream &os) {
+  check_direct_triangulation_input(EXT, "DirectTriangulationFacet", os);
 #ifdef DEBUG_DIRECT_TRIANGULATION
   os << "TRIG: DirectTriangulationFacet, prog=" << std::format("{}", prog)
      << " |EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";

@@ -11,12 +11,14 @@
 #include "POLY_DualDesc_beneath_and_beyond.h"
 #include "POLY_DualDesc_normaliz.h"
 #include "SmallPolytopes.h"
+#include "POLY_RedundancyElimination.h"
 #include <algorithm>
 #include <format>
 #include <optional>
 #include <utility>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 // clang-format on
 
@@ -34,6 +36,10 @@
 
 #ifdef KEY_VALUE
 #define KEY_VALUE_DUAL_DESC
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_DUAL_DESC
 #endif
 
 // The dual description program to use for a direct (non-recursive)
@@ -114,10 +120,34 @@ terminate_direct_dual_desc(std::string const &context, DualDescProgram prog) {
   throw TerminalException{1};
 }
 
+/*
+  The input of the dispatchers below has to be made of distinct extreme rays:
+  no zero row, no two rows that are the same ray, no row that is not an
+  extreme ray. Removing them never helps the methods, and they do not agree
+  on the incidence of such rows. A general input goes through the _General
+  functions at the end of this file, which reduce it.
+ */
+template <typename T>
+void check_direct_dual_desc_input([[maybe_unused]] MyMatrix<T> const &EXT,
+                                  [[maybe_unused]] std::string const &context,
+                                  [[maybe_unused]] std::ostream &os) {
+#ifdef SANITY_CHECK_DUAL_DESC
+  check_distinct_nonzero_rays(EXT, context);
+#endif
+#ifdef SANITY_CHECK_DUAL_DESC_EXTENSIVE
+  std::cerr << "DDD: SANITY_CHECK_DUAL_DESC_EXTENSIVE, checking that the rows "
+               "are extreme rays in "
+            << context << "\n";
+  check_all_extreme_rays(EXT, context, os);
+  std::cerr << "DDD: SANITY_CHECK_DUAL_DESC_EXTENSIVE, done\n";
+#endif
+}
+
 template <typename T>
 vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
                                          DualDescProgram prog,
                                          std::ostream &os) {
+  check_direct_dual_desc_input(EXT, "DirectFacetComputationIncidence", os);
 #ifdef DEBUG_DUAL_DESC
   os << "DDD: DirectFacetComputationIncidence, prog="
      << std::format("{}", prog) << "\n";
@@ -158,6 +188,7 @@ template <typename T>
 MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
                                                DualDescProgram prog,
                                                std::ostream &os) {
+  check_direct_dual_desc_input(EXT, "DirectFacetComputationInequalities", os);
 #ifdef DEBUG_DUAL_DESC
   os << "DDD: DirectFacetComputationInequalities, prog="
      << std::format("{}", prog) << "\n";
@@ -198,6 +229,7 @@ template <typename T, typename Fprocess>
 void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
                                     DualDescProgram prog, Fprocess f_process,
                                     std::ostream &os) {
+  check_direct_dual_desc_input(EXT, "DirectFacetComputationFaceIneq", os);
 #ifdef DEBUG_DUAL_DESC
   os << "DDD: DirectFacetComputationFaceIneq, prog="
      << std::format("{}", prog) << "\n";
@@ -355,6 +387,113 @@ void DirectDualDescription_f(MyMatrix<T> const &EXT,
   return DirectFacetComputationFaceIneq(EXT, ansProg, f_process, os);
 }
 
+/*
+  The dual description of a general input: the rows of EXT may be zero, be
+  the same ray several times (positive multiples) or not be extreme rays.
+  The facets are computed from the extreme rays, one row per ray, and the
+  incidence of a facet f is over all the rows of EXT: {i : f . EXT_i = 0}.
+  As for the dispatchers, EXT has to span the whole space.
+ */
+template <typename T>
+std::vector<int> get_distinct_extreme_rays_indices(MyMatrix<T> const &EXT,
+                                                   std::ostream &os) {
+  int n_row = EXT.rows();
+  std::vector<int> l_distinct;
+  std::unordered_set<MyVector<T>> set_ray;
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    MyVector<T> V = GetMatrixRow(EXT, i_row);
+    if (IsZeroVector(V)) {
+      continue;
+    }
+    if (set_ray.insert(ScalarCanonicalizationVector(V)).second) {
+      l_distinct.push_back(i_row);
+    }
+  }
+  MyMatrix<T> EXTdistinct = SelectRow(EXT, l_distinct);
+  std::vector<int> l_irred = get_non_redundant_indices(EXTdistinct, os);
+  std::vector<int> l_ret;
+  for (auto &i_irred : l_irred) {
+    l_ret.push_back(l_distinct[i_irred]);
+  }
+#ifdef DEBUG_DUAL_DESC
+  os << "DDD: get_distinct_extreme_rays_indices |EXT|=" << n_row
+     << " |distinct|=" << l_distinct.size() << " |extreme|=" << l_ret.size()
+     << "\n";
+#endif
+  return l_ret;
+}
+
+template <typename T, typename Fprocess>
+void DirectFacetComputationFaceIneq_General(MyMatrix<T> const &EXT,
+                                            DualDescProgram prog,
+                                            Fprocess f_process,
+                                            std::ostream &os) {
+  std::vector<int> l_ext = get_distinct_extreme_rays_indices(EXT, os);
+  MyMatrix<T> EXTred = SelectRow(EXT, l_ext);
+  int n_row = EXT.rows();
+  int n_col = EXT.cols();
+  auto f_process_red =
+      [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
+    MyVector<T> const &eIneq = pair_face.second;
+    Face f(n_row);
+    for (int i_row = 0; i_row < n_row; i_row++) {
+      T scal(0);
+      for (int i_col = 0; i_col < n_col; i_col++) {
+        scal += EXT(i_row, i_col) * eIneq(i_col);
+      }
+      if (scal == 0) {
+        f[i_row] = 1;
+      }
+    }
+    f_process({f, eIneq});
+  };
+  DirectFacetComputationFaceIneq(EXTred, prog, f_process_red, os);
+}
+
+template <typename T, typename Fprocess>
+void DirectFacetComputationFaceIneq_General(MyMatrix<T> const &EXT,
+                                            std::string const &ansProg,
+                                            Fprocess f_process,
+                                            std::ostream &os) {
+  return DirectFacetComputationFaceIneq_General(
+      EXT, dual_desc_program_from_string(ansProg), f_process, os);
+}
+
+template <typename T>
+vectface DirectFacetComputationIncidence_General(MyMatrix<T> const &EXT,
+                                                 DualDescProgram prog,
+                                                 std::ostream &os) {
+  vectface vf(EXT.rows());
+  auto f_process = [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
+    vf.push_back(pair_face.first);
+  };
+  DirectFacetComputationFaceIneq_General(EXT, prog, f_process, os);
+  return vf;
+}
+
+template <typename T>
+vectface DirectFacetComputationIncidence_General(MyMatrix<T> const &EXT,
+                                                 std::string const &ansProg,
+                                                 std::ostream &os) {
+  return DirectFacetComputationIncidence_General(
+      EXT, dual_desc_program_from_string(ansProg), os);
+}
+
+template <typename T>
+MyMatrix<T> DirectFacetComputationInequalities_General(MyMatrix<T> const &EXT,
+                                                       DualDescProgram prog,
+                                                       std::ostream &os) {
+  std::vector<int> l_ext = get_distinct_extreme_rays_indices(EXT, os);
+  MyMatrix<T> EXTred = SelectRow(EXT, l_ext);
+  return DirectFacetComputationInequalities(EXTred, prog, os);
+}
+
+template <typename T>
+MyMatrix<T> DirectFacetComputationInequalities_General(
+    MyMatrix<T> const &EXT, std::string const &ansProg, std::ostream &os) {
+  return DirectFacetComputationInequalities_General(
+      EXT, dual_desc_program_from_string(ansProg), os);
+}
 
 // clang-format off
 #endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_

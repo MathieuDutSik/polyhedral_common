@@ -6,8 +6,11 @@
 #include "GRP_GroupFct.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_DualDesc_double_description.h"
+#include "MAT_MatrixInt.h"
 #include <algorithm>
 #include <set>
+#include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -618,10 +621,11 @@ inline bool is_equal_list_irred(std::vector<int> const& l1, std::vector<int> con
 }
 
 /*
-  The generic function encapsulating all the possible function call
+  The generic function encapsulating all the possible function call, for a
+  field type T.
  */
 template<typename T>
-std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& os) {
+std::vector<int> get_non_redundant_indices_field(MyMatrix<T> const& M , std::ostream& os) {
 #ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
   bool test = IsFullDimensional(M, os);
   if (!test) {
@@ -646,6 +650,66 @@ std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& 
   std::cerr << "REDUND: SANITY_CHECK_ELIMINATION_REDUNDANCY_EXTENSIVE, done\n";
 #endif
   return list_irredA;
+}
+
+/*
+  The non-redundant rows of M. The linear programs need a field: a ring type
+  goes through its overlying field, which has the same non-redundant rows.
+ */
+template<typename T>
+std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& os) {
+  if constexpr (is_ring_field<T>::value) {
+    return get_non_redundant_indices_field(M, os);
+  } else {
+    using Tfield = typename overlying_field<T>::field_type;
+    MyMatrix<Tfield> M_field = UniversalMatrixConversion<Tfield, T>(M);
+    return get_non_redundant_indices_field(M_field, os);
+  }
+}
+
+/*
+  The preconditions of the dual description and triangulation dispatchers on
+  the rays EXT, checked under their SANITY_CHECK macros. A failure is a
+  programming error: the caller has to reduce its input, or to call the
+  _General functions of POLY_DirectDualDesc.h.
+  ---
+  check_distinct_nonzero_rays: no zero row, and no two rows that are the same
+  ray, that is positive multiples of each other. Linear in the size of EXT.
+  ---
+  check_all_extreme_rays: every row is an extreme ray of the cone. It solves
+  a linear program per row, so it is for the _EXTENSIVE checks.
+ */
+template <typename T>
+void check_distinct_nonzero_rays(MyMatrix<T> const &EXT,
+                                 std::string const &context) {
+  int n_row = EXT.rows();
+  std::unordered_set<MyVector<T>> set_ray;
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    MyVector<T> V = GetMatrixRow(EXT, i_row);
+    if (IsZeroVector(V)) {
+      std::cerr << "REDUND: " << context << ": the row " << i_row
+                << " is zero\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> Vcan = ScalarCanonicalizationVector(V);
+    if (!set_ray.insert(Vcan).second) {
+      std::cerr << "REDUND: " << context << ": the row " << i_row
+                << " is the same ray as an earlier row\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
+template <typename T>
+void check_all_extreme_rays(MyMatrix<T> const &EXT, std::string const &context,
+                            std::ostream &os) {
+  std::vector<int> list_irred = get_non_redundant_indices(EXT, os);
+  int n_irred = list_irred.size();
+  if (n_irred != EXT.rows()) {
+    std::cerr << "REDUND: " << context << ": only " << n_irred << " of the "
+              << EXT.rows() << " rows are extreme rays\n";
+    throw TerminalException{1};
+  }
 }
 
 // clang-format off
