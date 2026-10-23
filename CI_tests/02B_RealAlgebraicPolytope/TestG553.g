@@ -97,7 +97,7 @@ TestDirectDualDesc:=function(nb_facet_expected)
         RemoveFileIfExist(FileOut);
         TheCommand:=Concatenation("(cd ", prefix, " && ", eProg,
                                   " RealAlgebraic=FileDesc5 ", eMethod,
-                                  " Number G553.ext ", FileOut, ")");
+                                  " vertices Number G553.ext ", FileOut, ")");
         Exec(TheCommand);
         if IsExistingFile(FileOut)=false then
             Print("method=", eMethod, " created no output\n");

@@ -26,10 +26,21 @@
 
 template <typename T, typename Tgroup>
 void process(std::string const &eFileI, std::string const &eFileG,
-             std::string const &ansProg, std::string const &OutFormat,
-             std::ostream &os) {
+             std::string const &ansProg, std::string const &input,
+             std::string const &OutFormat, std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  vectface vf = DirectFacetComputationIncidence(EXT, ansProg, os);
+  auto get_vf = [&]() -> vectface {
+    if (input == "general") {
+      return DirectFacetComputationIncidence_General(EXT, ansProg, os);
+    }
+    if (input == "vertices") {
+      return DirectFacetComputationIncidence(EXT, ansProg, os);
+    }
+    std::cerr << "POLY_dual_description_group : input=" << input
+              << " but allowed possibilities are general and vertices\n";
+    throw TerminalException{1};
+  };
+  vectface vf = get_vf();
   Tgroup GRP = ReadGroupFile<Tgroup>(eFileG);
   std::unordered_set<Face> SetFace(vf.begin(), vf.end());
   vectface vfo = OrbitSplittingSet_T(SetFace, GRP);
@@ -66,6 +77,7 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, Tint>;
     std::string command;
+    std::string input;
     std::string eFileI;
     std::string eFileG;
     std::string OutFormat = "GAP";
@@ -73,23 +85,27 @@ int main(int argc, char *argv[]) {
     std::ostream *os_ptr = nullptr;
     ArithmeticDispatch dispatch;
     auto f_arith = [&]<typename T>() -> void {
-      process<T, Tgroup>(eFileI, eFileG, command, OutFormat, *os_ptr);
+      process<T, Tgroup>(eFileI, eFileG, command, input, OutFormat, *os_ptr);
     };
     add_rational_arithmetics<Trat>(dispatch, f_arith);
     add_algebraic_field_arithmetics(dispatch, f_arith);
-    if (argc != 5 && argc != 7) {
+    if (argc != 6 && argc != 8) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_dual_description_group arith command [FileEXT] "
+      std::cerr << "POLY_dual_description_group arith command input [FileEXT] "
                    "[FileGRP] [OutFormat] [FileOUT]\n";
       std::cerr << "or\n";
-      std::cerr
-          << "POLY_dual_description_group arith command [FileEXT] [FileGRP]\n";
+      std::cerr << "POLY_dual_description_group arith command input [FileEXT] "
+                   "[FileGRP]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
       std::cerr << "arith     : the chosen arithmetic\n";
       std::cerr << "command   : the program used for computing the dual "
                    "description\n";
+      std::cerr << "input     : vertices if the rows of FileEXT are distinct "
+                   "extreme rays,\n";
+      std::cerr << "            general otherwise (the incidences are then "
+                   "over all the rows)\n";
       std::cerr << "FileEXT   : The polyhedral cone inequalities\n";
       std::cerr << "FileGRP   : The permutation group used for reduction\n";
       std::cerr << "OutFormat : The file format in output, GAP or Oscar\n";
@@ -111,11 +127,12 @@ int main(int argc, char *argv[]) {
     }
     std::string arith = argv[1];
     command = argv[2];
-    eFileI = argv[3];
-    eFileG = argv[4];
-    if (argc == 7) {
-      OutFormat = argv[5];
-      eFileO = argv[6];
+    input = argv[3];
+    eFileI = argv[4];
+    eFileG = argv[5];
+    if (argc == 8) {
+      OutFormat = argv[6];
+      eFileO = argv[7];
     }
     auto call_dualdesc = [&](std::ostream &os) -> void {
       os_ptr = &os;

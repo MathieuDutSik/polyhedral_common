@@ -70,7 +70,8 @@ TestDualDescNgon:=function(n)
         FileOut:=Filename(DirectoryTemporary(), "Ngon.fac");
         RemoveFileIfExist(FileOut);
         TheCommand:=Concatenation(eProg, " ", GetFieldFile(n), " ", eMethod,
-                                  " Number ", GetPolytopeFile(n), " ", FileOut);
+                                  " vertices Number ", GetPolytopeFile(n), " ",
+                                  FileOut);
         Exec(TheCommand);
         if IsExistingFile(FileOut)=false then
             Print("N=", n, " method=", eMethod, " created no output\n");

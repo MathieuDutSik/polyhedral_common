@@ -109,9 +109,9 @@ Automorphism group of the polytope (the dihedral group of order 2N):
 
 Dual description (facets); a regular N-gon has N facets:
 
-  ./POLY_dual_description RealAlgebraic=FileDesc5 cdd CPP Regular5gon out5
-  ./POLY_dual_description RealAlgebraic=FileDesc7 cdd CPP Regular7gon out7
-  ./POLY_dual_description RealAlgebraic=FileDesc9 cdd CPP Regular9gon out9
+  ./POLY_dual_description RealAlgebraic=FileDesc5 cdd vertices CPP Regular5gon out5
+  ./POLY_dual_description RealAlgebraic=FileDesc7 cdd vertices CPP Regular7gon out7
+  ./POLY_dual_description RealAlgebraic=FileDesc9 cdd vertices CPP Regular9gon out9
 
 Note: for a real algebraic field use the output format `CPP` (or `control`); the
 `GAP` output format does not support algebraic field entries.

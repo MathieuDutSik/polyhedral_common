@@ -1146,16 +1146,21 @@ get_integral_interior_point:=function(arg)
 end;
 
 get_dual_desc_kernel:=function(arg)
-    local choice, EXT, method, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, FAC, runtime_str, list_arg, status;
+    local choice, EXT, method, options, arith, input, print_info, TmpDir, FileI, FileO, FileE, eProg, FAC, runtime_str, list_arg, status;
     choice:=arg[1];
     EXT:=arg[2];
     method:=arg[3];
     arith:="mpq_class";
+    # "general": any rows; "vertices": the rows are distinct extreme rays.
+    input:="general";
     print_info:=false;
     if Length(arg) >= 4 then
         options:=arg[4];
         if IsBound(options.arith) then
             arith:=options.arith;
+        fi;
+        if IsBound(options.input) then
+            input:=options.input;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -1167,7 +1172,7 @@ get_dual_desc_kernel:=function(arg)
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_dual_description");
-    list_arg:=[arith, method, choice, FileI, FileO];
+    list_arg:=[arith, method, input, choice, FileI, FileO];
     status:=run_binary(eProg, list_arg, FileE);
     if status <> 0 then
         return binary_failure(eProg, list_arg, status, FileE);
