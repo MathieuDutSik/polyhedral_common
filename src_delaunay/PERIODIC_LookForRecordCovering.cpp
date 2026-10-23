@@ -31,11 +31,11 @@
   and terminates normally, reporting the best density it saw.
 
   Driven by a namelist:
-    SYSTEM   max_runtime_second is the search budget, Prefix the directory
-             where the Gram matrix of every improvement is written, OutFile
-             the GAP record of the outcome.
-    DATA     arithmetic, FileDualDescription, FileCosets.
-    SEARCH   RecordToBeat and n_walk_steps.
+    SYSTEM   max_runtime_second is the search budget (3600 by default),
+             Prefix the directory where the Gram matrix of every improvement
+             is written, OutFile the GAP record of the outcome.
+    DATA     arithmetic, FileDualDescription, FileCosets, FileStartGram.
+    SEARCH   RecordToBeat, n_walk_steps, start_scale and max_gram_entry.
     TSPACE   the T-space, which has to be the one the point set lives in.
  */
 
@@ -224,49 +224,59 @@ void process_C(FullNamelist const &eFull) {
 
 FullNamelist NAMELIST_GetStandard_PERIODIC_RECORD_COVERING() {
   std::map<std::string, SingleBlock> ListBlock;
-  // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System("Default: unset\n\
-Not used by this program");
+  // SYSTEM, with the meaning of Prefix and max_runtime_second in this program
+  {
+    ListBlock["SYSTEM"] =
+        SINGLEBLOCK_Get_System("Default: unset\nNot used by this program");
+    std::map<std::string, std::string> ListIntValues_doc;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListIntValues_doc["max_runtime_second"] = "Default: 3600\n\
+The budget of the search in seconds. If 0 then there is no limit and the\n\
+search ends only when the record is beaten";
+    ListStringValues_doc["Prefix"] = "Default: /irrelevant/\n\
+The directory to which the Gram matrix of every improvement is written.\n\
+If /irrelevant/ then they are not written";
+    ListBlock["SYSTEM"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["SYSTEM"].setListStringValues_doc(ListStringValues_doc);
+  }
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["arithmetic"] = "gmp";
-    ListStringValues["FileDualDescription"] = "unset";
-    // The file with the rational coset matrix of the periodic point set:
-    // one coset per row, the zero coset included.
-    ListStringValues["FileCosets"] = "unset";
-    // A Gram matrix to search near, typically the best lattice covering of
-    // the dimension. "unset" (the default) starts from a random form.
-    ListStringValues["FileStartGram"] = "unset";
-    SingleBlock BlockDATA;
-    BlockDATA.setListStringValues(ListStringValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["arithmetic"] =
+        doc_rational_integer_arithmetics_by_library<false>();
+    ListStringValues_doc["FileDualDescription"] = doc_FileDualDescription();
+    ListStringValues_doc["FileCosets"] = doc_FileCosets() + "\n\
+The pointwise stabilizer of the T-space must preserve the point set";
+    ListStringValues_doc["FileStartGram"] = "Default: unset\n\
+A positive definite Gram matrix near which the walk starts and restarts,\n\
+typically the best lattice covering of the dimension.\n\
+If unset then it starts from a random form";
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // SEARCH
   {
-    std::map<std::string, std::string> ListStringValues;
-    std::map<std::string, int> ListIntValues;
-    // The covering density to beat. "auto" (the default) takes the least
-    // dense known lattice covering of the dimension: A_n^* up to dimension
-    // 5, then the L^c_n of Schuermann and Vallentin.
-    ListStringValues["RecordToBeat"] = "auto";
-    // The number of random adjacency jumps taken to leave a local minimum.
-    ListIntValues["n_walk_steps"] = 20;
-    // How closely FileStartGram is approached: the form is multiplied by
-    // this before a random perturbation of size one is added, so a larger
-    // value lands nearer to it. Only used with FileStartGram.
-    ListIntValues["start_scale"] = 1000;
-    std::map<std::string, double> ListDoubleValues;
-    // The walk restarts from a fresh domain once the Gram matrix of the
-    // current one has an entry above this. Flipping never brings the
-    // coordinates back down, so a long walk drifts into representatives too
-    // skewed to optimize in floating point; 0 disables the guard.
-    ListDoubleValues["max_gram_entry"] = 1000000;
-    SingleBlock BlockSEARCH;
-    BlockSEARCH.setListStringValues(ListStringValues);
-    BlockSEARCH.setListIntValues(ListIntValues);
-    BlockSEARCH.setListDoubleValues(ListDoubleValues);
-    ListBlock["SEARCH"] = BlockSEARCH;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    std::map<std::string, std::string> ListDoubleValues_doc;
+    ListStringValues_doc["RecordToBeat"] = "Default: auto\n\
+The covering density to beat. If auto then the least dense known lattice\n\
+covering of the dimension: A_n^* up to dimension 5 (exact), then the L^c_n\n\
+of Schuermann and Vallentin in dimensions 6 to 8 (rounded, so a hit close\n\
+to it has to be checked). Other dimensions need an explicit value";
+    ListIntValues_doc["n_walk_steps"] = "Default: 20\n\
+The number of random adjacency jumps taken to leave a local minimum";
+    ListIntValues_doc["start_scale"] = "Default: 1000\n\
+How closely FileStartGram is approached: the form is multiplied by this\n\
+before a random perturbation of size one is added, so a larger value lands\n\
+nearer to it. Used only with FileStartGram";
+    ListDoubleValues_doc["max_gram_entry"] = "Default: 1000000\n\
+The walk restarts from a fresh domain once the Gram matrix of the current\n\
+one has an entry above this, since flipping lets the coordinates drift into\n\
+representatives too skewed to optimize in floating point.\n\
+If 0 then there is no such restart";
+    ListBlock["SEARCH"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["SEARCH"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["SEARCH"].setListDoubleValues_doc(ListDoubleValues_doc);
   }
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
