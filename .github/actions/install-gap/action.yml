@@ -4,7 +4,7 @@ inputs:
   version:
     description: 'GAP version to install.'
     required: false
-    default: '4.14.0'
+    default: '4.16.1'
 runs:
   using: 'composite'
   steps:
