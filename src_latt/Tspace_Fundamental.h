@@ -462,6 +462,8 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: IsBravaisSpace: |ListGen|=" << ListGen.size() << "\n";
   os << "TSPACE: IsBravaisSpace: |ListMat|=" << ListMat.size() << "\n";
+#endif
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   for (auto &eGen : ListGen) {
     for (auto &eMat : ListMat) {
       MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
@@ -485,6 +487,8 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
      << Big_ListMat.cols() << "\n";
   os << "TSPACE: IsBravaisSpace: |Big_BasisInv|=" << Big_BasisInv.rows()
      << " / " << Big_BasisInv.cols() << "\n";
+#endif
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   if (!IsSubspaceContained(Big_ListMat, Big_BasisInv)) {
     std::cerr << "TSPACE: The elements of ListMat are not in the invariant "
                  "space which "

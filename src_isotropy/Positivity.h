@@ -24,6 +24,10 @@
 #define DEBUG_POSITIVITY
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_POSITIVITY
+#endif
+
 #ifdef DISABLE_DEBUG_POSITIVITY
 #undef DEBUG_POSITIVITY
 #endif
@@ -73,7 +77,7 @@ MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat, std::ostream &os) {
   for (int i = 0; i < n; i++) {
     if (RedMat(i, i) > 0) {
       MyVector<T> eVect = GetMatrixRow(Transform, i);
-#ifdef DEBUG_POSITIVITY
+#ifdef SANITY_CHECK_POSITIVITY
       T norm = eVect.dot(SymMat * eVect);
       if (norm != RedMat(i, i)) {
         std::cerr << "We have a consistency error\n";
@@ -481,7 +485,7 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
   os << "POS: GetIntegralVector_allmeth: We have V1\n";
 #endif
   MyVector<Tint> V2 = res_B.transpose() * V1;
-#ifdef DEBUG_POSITIVITY
+#ifdef SANITY_CHECK_POSITIVITY
   T norm_red = EvaluationQuadForm(res_Mred, V1);
   T norm = EvaluationQuadForm(M, V2);
   if (norm_red != norm) {
@@ -489,6 +493,8 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
     std::cerr << "But they should be equal\n";
     throw TerminalException{1};
   }
+#endif
+#ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: We have V2=" << StringVectorGAP(V2)
      << "\n";
 #endif
@@ -681,7 +687,7 @@ std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat,
       MyVector<T> eVect = ZeroVector<T>(n);
       eVect(i) = 1;
       MyVector<T> fVect = (eRecDiag.Transform.transpose()) * eVect;
-#ifdef DEBUG_POSITIVITY
+#ifdef SANITY_CHECK_POSITIVITY
       T eEval = EvaluationQuadForm(SymMat, fVect);
       if (eEval > 0) {
         std::cerr << "Big bad error\n";

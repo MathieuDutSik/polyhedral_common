@@ -22,6 +22,10 @@ template <typename T> struct ResultDetMin {
 #define DEBUG_DETERMINANT_MINIMIZATION
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_DETERMINANT_MINIMIZATION
+#endif
+
 #ifdef DISABLE_DEBUG_DETERMINANT_MINIMIZATION
 #undef DEBUG_DETERMINANT_MINIMIZATION
 #endif
@@ -153,7 +157,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
 #endif
   MyMatrix<T> Qw = Q;
   MyMatrix<T> Pw = IdentityMat<T>(n);
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
   auto check_state = [&]() -> void {
     MyMatrix<T> ResQ = Pw * Q * Pw.transpose();
     if (!IsMatrixNonZeroMultiple(ResQ, Qw)) {
@@ -166,17 +170,21 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
   while (true) {
     std::vector<Tring> list_P_erase;
     bool DoSomethingGlobal = false;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
     T TheDet = DeterminantMat(Qw);
     Tring TheDet_abs = UniversalScalarConversion<Tring, T>(T_abs(TheDet));
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
     os << "DETMIN: TheDet=" << TheDet << " TheDet_abs=" << TheDet_abs << "\n";
+#endif
     Tring eProd(1);
     for (auto &kv : map) {
       for (size_t u = 0; u < kv.second; u++) {
         eProd *= kv.first;
       }
     }
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
     os << "DETMIN: eProd=" << eProd << "\n";
+#endif
     if (eProd != TheDet_abs) {
       std::cerr << "DETMIN: Incoherence of determinant\n";
       throw TerminalException{1};
@@ -187,8 +195,10 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
       T p = UniversalScalarConversion<T, Tring>(p_ring);
       size_t &v_mult_s = kv.second;
       int v_mult_i = v_mult_s;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
       T p_sqr = p * p;
+#endif
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
       os << "DETMIN: iter=" << iter << " p=" << p << " mult=" << v_mult_i
          << "\n";
 #endif
@@ -202,7 +212,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
       auto change_basis = [&]() -> void {
         Pw = res.BasisTot * Pw;
         Qw = res.BasisTot * Qw * res.BasisTot.transpose();
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
         check_state();
         for (int i = 0; i < d_mult_i; i++) {
           for (int j = 0; j < n; j++) {
@@ -254,7 +264,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
           DoSomethingGlobal = true;
           v_mult_i -= 2 * n;
           v_mult_s -= 2 * n;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
           for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
               T res = ResInt(Qw(i, j), p);
@@ -296,7 +306,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
           Pw = Hmat * Pw;
           Qw = Hmat * Qw * Hmat.transpose();
           int dimNSPB = resB.dimNSP;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
           check_state();
           for (int i = 0; i < dimNSPB; i++) {
             for (int j = 0; j < dimNSPB; j++) {
@@ -315,7 +325,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
             U(i, i) = 1 / p;
           Pw = U * Pw;
           Qw = U * Qw * U.transpose();
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
           check_state();
           if (!IsIntegralMatrix(Qw)) {
             std::cerr << "The matrix Qw is not integral\n";
@@ -350,7 +360,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
           }
           Pw = U * Pw;
           Qw = U * Qw * U.transpose() / p;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
           check_state();
 #endif
           DoSomething = true;
@@ -401,6 +411,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
             os << "DETMIN: We have |eV|=" << eV.size() << "\n";
             os << "DETMIN: eV=" << StringVectorGAP(eV) << "\n";
+#endif
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
             T val = EvaluationQuadForm(Qtilde, eV);
             T val_mod = ResInt(val, p);
             if (val_mod != 0) {
@@ -427,7 +439,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
 #endif
             Pw = U * Pw;
             Qw = U * Qw * U.transpose();
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
             check_state();
             T res = ResInt(Qw(0, 0), p_sqr);
             if (res != 0) {
@@ -467,6 +479,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
   }
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
   os << "DETMIN: EXITING DETERMINANT MINIMIZATION\n";
+#endif
+#ifdef SANITY_CHECK_DETERMINANT_MINIMIZATION
   check_state();
 #endif
   return {Pw, Qw};

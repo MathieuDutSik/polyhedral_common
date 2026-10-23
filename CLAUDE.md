@@ -46,7 +46,7 @@ If unsure whether a path lives inside a submodule, `cat .gitmodules` lists them.
 
 ## Print statements must be gated by named `#ifdef` blocks
 
-Free-standing `std::cerr << ...`, `os << ...`, etc. that produce output unconditionally must not be added to the codebase. Every diagnostic line must live inside a named preprocessor gate, in one of five categories with different intents. The suffix is the **context** — usually the source-file area (`SHVEC`, `LATTICE_STAB_EQUI_CAN`, `TSPACE_FUNCTIONS`, …) — never a generic name like `DEBUG`.
+Free-standing `std::cerr << ...`, `os << ...`, etc. that produce output unconditionally must not be added to the codebase. Every diagnostic line must live inside a named preprocessor gate, in one of six categories with different intents. The suffix is the **context** — usually the source-file area (`SHVEC`, `LATTICE_STAB_EQUI_CAN`, `TSPACE_FUNCTIONS`, …) — never a generic name like `DEBUG`.
 
 The rule is for the library code: the headers and the functions they define. The `main` program files (`.cpp` files with a `main`, such as `POLY_redundancyGroup.cpp`) are the calling code and may print unconditionally: usage text, progress lines, results and the termination message need no gate.
 
@@ -113,7 +113,19 @@ For comparing the performance (mainly the runtime) of two or more techniques tha
 #endif
 ```
 
-Existing macros in use can be discovered with `grep -rh '#ifdef \(DEBUG\|SANITY_CHECK\|TIMINGS\|KEY_VALUE\|METHOD_COMPARISON\)_' src_*/ | sort -u`. Reuse an existing context name when adding to that area rather than inventing a new one.
+### `#ifdef TRACK_INFO_<CONTEXT>`
+For writing the data of a computation — its inputs, intermediate objects, test problems — to files or to a stream, for offline analysis or to turn a hard case into a test. Like `DEBUG_`, it must not affect the execution path. It is not switched on by `-DDEBUG`: it is enabled per context, or for all contexts by the parent `TRACK_INFO`. It is distinct from `KEY_VALUE_`, which prints measurements in the `KEY=(...) VALUE=(...)` format for tuning a heuristic. Example:
+```cpp
+#ifdef TRACK_INFO
+#define TRACK_INFO_MATRIX_GROUP_SIMPLIFICATION
+#endif
+...
+#ifdef TRACK_INFO_MATRIX_GROUP_SIMPLIFICATION
+  write_matrix_group(ListM, "Call_to_ExhaustiveReductionComplexityGroupMatrix");
+#endif
+```
+
+Existing macros in use can be discovered with `grep -rh '#ifdef \(DEBUG\|SANITY_CHECK\|TIMINGS\|KEY_VALUE\|METHOD_COMPARISON\|TRACK_INFO\)_' src_*/ | sort -u`. Reuse an existing context name when adding to that area rather than inventing a new one.
 
 ## Builds must be warning-clean
 

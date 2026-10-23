@@ -81,7 +81,7 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen,
         eMat(i, j) = eRow(FuncPos(i, j));
     TheBasis[iDim] = eMat;
   }
-#ifdef DEBUG_TSPACE_FUNCTIONS
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   for (auto &eBasis : TheBasis) {
     for (auto &eGen : ListGen) {
       MyMatrix<T> eProd = eGen * eBasis * eGen.transpose();

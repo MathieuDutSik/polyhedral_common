@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   try {
     if (argc != 4) {
-      std::cerr << "CTYP_ComputeAverage [FileName] [VarName] [nCol]\n";
+      std::cerr << "NC_ComputeAverage [FileName] [VarName] [nCol]\n";
       throw TerminalException{1};
     }
     std::string FileName = argv[1];

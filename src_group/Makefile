@@ -1,4 +1,4 @@
-PROGRAM		= TEST_WeightMatrixLimited \
+PROGRAM		= POLY_HashWeightMatrixLimited \
                   GRP_OrbitSplitting GRP_VectorSplitting \
                   GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer \
                   GRP_LinearSpace_Stabilizer_RightCoset \

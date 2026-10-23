@@ -259,7 +259,7 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
                                           MyMatrix<T> const &EXT) {
   MyVector<T> eCent = CenterDelaunayPolytopeGeneral(GramMat, EXT);
   T SquareRadius = SquareRadiusFromCenter(GramMat, EXT, eCent);
-#ifdef DEBUG_DELAUNAY
+#ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
   int n = GramMat.rows();
   int nbVert = EXT.rows();
   for (int iVert = 1; iVert < nbVert; iVert++) {
@@ -424,7 +424,7 @@ public:
       }
     }
     MyMatrix<T> NSP = NullspaceTrMat(Equa);
-#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
+#ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
     if (NSP.rows() != 2) {
       std::cerr << "DEL: Error in the computation of the kernel\n";
       throw TerminalException{1};

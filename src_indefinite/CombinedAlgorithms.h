@@ -318,10 +318,6 @@ public:
     MyMatrix<T> eGen1 = TheRec.get_one_transformation();
     MyMatrix<T> eGen2 = HelpingSublatticeInv * eGen1 * HelpingSublattice;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    //    os << "COMB: HelpingSublattice=\n";
-    //    WriteMatrix(os, HelpingSublattice);
-    //    os << "COMB: |HelpingSublattice|=" <<
-    //    DeterminantMat(HelpingSublattice) << "\n";
     check_generator(eGenRed, eGen2);
 #endif
     return eGen2;
@@ -356,7 +352,7 @@ public:
           MyMatrix<Tint> eGen1 = GRPmatr[i_gen];
           MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
           MyMatrix<T> eGen3 = SublatticeInv * eGen2 * Sublattice;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
           if (!IsIntegralMatrix(eGen3)) {
             std::cerr << "COMB: eGen3 should be integral\n";
             throw TerminalException{1};

@@ -10,6 +10,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_SPARSE_SOLVER
+#endif
+
 template <typename T> T L1_Norm(MyVector<T> const &b) {
   T eNorm = 0;
   int siz = b.size();
@@ -168,7 +172,10 @@ Test Version: please do NOT distribute
   MyVector<T> z0;
   RecOptSparse<T> NewRecOpt = eRecOpt;
   if ((posdel && posrho) || (posdel && posnu) || (posrho && posnu)) {
-    std::cerr << "Model parameter conflict! YALL1: set delta = 0 && nu = 0;\n";
+#ifdef DEBUG_SPARSE_SOLVER
+    std::cerr << "SPARSE: Model parameter conflict! YALL1: set delta = 0 && "
+                 "nu = 0;\n";
+#endif
     NewRecOpt.delta = 0;
     posdel = false;
     NewRecOpt.nu = 0;
@@ -222,12 +229,12 @@ Test Version: please do NOT distribute
     }
     Out.x = xShort;
   }
-#ifdef DEBUG
   if (eRecOpt.basis) {
-    // x = opts.basis.trans(x);
-    std::cerr << "Missing code here\n";
+    // x = opts.basis.trans(x) of YALL1, which is not implemented: the result
+    // would silently be the one without the change of basis.
+    std::cerr << "SPARSE: the basis option is not implemented\n";
+    throw TerminalException{1};
   }
-#endif
   if (nonneg) {
     int xSize = Out.x.size();
     for (int i = 0; i < xSize; i++) {
@@ -339,7 +346,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     gamma = 1.618;
   T eps = eRecOpt.eps;
   int maxit = eRecOpt.maxit;
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   bool print = eRecOpt.print;
 #endif
   T nu = eRecOpt.nu;
@@ -361,7 +368,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     z = ZeroVector<T>(n);
   MyVector<T> y(m);
   MyVector<T> Aty(n);
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   auto iprint1_1 = [&]() -> void {
     MyVector<T> rp = eRecSparse.A(x) - b;
     T objp = T_sumAbs(w, x);
@@ -382,7 +389,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     std::cerr << " " << rel_gap << "  " << rel_rd << "  " << rel_rp << "\n";
   };
 #endif
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   auto iprint2 = [&]() -> void {
     T rdnrm = L2_Norm(rd);
     MyVector<T> rp = eRecSparse.A(x) - b;
@@ -398,7 +405,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     //    std::cerr << "iprint2, step 6\n";
     T dgap = std::abs(objd - objp);
     //    std::cerr << "iprint2, step 7 iter=" << iter << "\n";
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
     if (iter % 50 == 0) {
       std::cerr << "  Iter " << iter << ":\n";
       std::cerr << "  Dgap " << dgap << "\n";
@@ -484,7 +491,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     for (size_t i = 0; i < size_t(n); i++)
       Aty(i) = 0;
   }
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   if (print)
     std::cerr << "--- YALL1 vb6 ---\n";
 #endif
@@ -535,7 +542,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
     x = x + (gamma * mu) * rd;
 
     bool stop = check_stopping();
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
     if (print) {
       iprint2();
     }
@@ -548,7 +555,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
   if (iter == maxit) {
     Out.exit = "Exit: maxiter";
   }
-#ifdef DEBUG
+#ifdef DEBUG_SPARSE_SOLVER
   if (print)
     iprint1_1();
 #endif

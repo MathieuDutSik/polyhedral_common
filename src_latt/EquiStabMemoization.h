@@ -56,6 +56,10 @@
 #define DEBUG_EQUI_STAB_MEMOIZATION
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_EQUI_STAB_MEMOIZATION
+#endif
+
 #ifdef DISABLE_DEBUG_EQUI_STAB_MEMOIZATION
 #undef DEBUG_EQUI_STAB_MEMOIZATION
 #endif
@@ -221,7 +225,7 @@ public:
     std::vector<std::pair<Tdata, Tequiv>> l_pair_x =
         connected_component<decltype(f_terminate_x)>(x, f_terminate_x);
     if (opt) {
-#ifdef DEBUG_EQUI_STAB_MEMOIZATION
+#ifdef SANITY_CHECK_EQUI_STAB_MEMOIZATION
       if (!l_pair_x.empty()) {
         std::cerr << "l_pair_x should be of zero length\n";
         throw TerminalException{1};

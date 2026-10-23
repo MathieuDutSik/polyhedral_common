@@ -137,7 +137,7 @@ src_dualdesc/POLY_*
 src_dualdesc/Read_MPI_sizes
 src_group/GRP_*
 src_genera/GENUS_*
-src_group/TEST_WeightMatrixLimited
+src_group/POLY_HashWeightMatrixLimited
 src_indefinite/INDEF_*
 src_isotropy/LATT_*
 src_isotropy/CheckPositiveSemiDefinite
@@ -145,9 +145,8 @@ src_latt/LATT_*
 src_polynorm/POLYNORM_*
 src_latt/TSPACE_*
 src_latt/GRP_TestFiniteness
-src_latt/TEST_EquiStabFamily
-src_latt/TEST_ReductionBenchmark
-src_latt/TEST_ShvecSieve
+src_latt/LATT_EquiStabFamily
+src_latt/LATT_ShvecSieve
 src_latt/VectFamily_Reduction
 src_latt/LATT_Reduction
 src_milp/LATT_*

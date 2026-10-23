@@ -1,4 +1,4 @@
-PROGRAM		= GRP_LinPolytope_Automorphism GRP_LinPolytope_Canonic GRP_LinPolytope_Isomorphism GRP_LinPolytope_Invariant
+PROGRAM		= GRP_LinPolytope_Automorphism GRP_LinPolytope_Canonic GRP_LinPolytope_Isomorphism GRP_LinPolytope_Invariant POLY_HashWeightMatrixLimited
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

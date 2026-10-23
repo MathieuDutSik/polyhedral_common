@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   try {
     FullNamelist eFull = NAMELIST_GetStandard_EDGEWALK();
     if (argc != 2) {
-      std::cerr << "LORENTZ_FundDomain_AllcockEdgeWalk [FileNML]\n";
+      std::cerr << "LORENTZ_FundDomain_AllcockEdgewalk [FileNML]\n";
       std::cerr << "with fileNML a namelist file\n";
       eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       throw TerminalException{1};

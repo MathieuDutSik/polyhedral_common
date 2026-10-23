@@ -29,7 +29,9 @@ void WriteFamilyDelaunay_Mpi(
     std::ostream &os) {
   int i_rank = comm.rank();
   if (OutFormat == "nothing") {
-    std::cerr << "No output\n";
+#ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
+    std::cerr << "DEL_ENUM: No output\n";
+#endif
     return;
   }
   using Tout =
@@ -43,8 +45,8 @@ void WriteFamilyDelaunay_Mpi(
           DelaunayTesselation_From_DatabaseEntries_Serial<T, Tint, Tgroup>(
               l_ent);
       check_delaunay_tessellation(DT, os);
+      os_out << "The Delaunay tessellation passed the adjacency check\n";
     }
-    std::cerr << "The Delaunay tesselation passed the adjacency check\n";
     return;
   }
   if (OutFormat == "GAP") {
@@ -58,7 +60,9 @@ void WriteFamilyDelaunay_Mpi(
       WriteEntryGAP(os_out, DT);
       os_out << ";\n";
     }
-    std::cerr << "The Delaunay tesselation has been written to file\n";
+#ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
+    std::cerr << "DEL_ENUM: The Delaunay tessellation has been written\n";
+#endif
     return;
   }
   if (OutFormat == "RAW") {

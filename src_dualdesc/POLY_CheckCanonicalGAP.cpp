@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 2) {
-      std::cerr << "POLY_MakeInitialFileGAP [FileIn]\n";
+      std::cerr << "POLY_CheckCanonicalGAP [FileIn]\n";
       throw TerminalException{1};
     }
     //

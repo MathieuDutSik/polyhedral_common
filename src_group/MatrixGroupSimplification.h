@@ -616,6 +616,16 @@ template <typename Ttype, typename Tnorm> struct TcombPair {
   Tnorm norm;
 };
 
+// Writes one element of a simplification, a matrix or a permutation.
+template <typename Ttype>
+void WriteSimplificationElement(std::ostream &os, Ttype const &x) {
+  if constexpr (is_mymatrix<Ttype>::value) {
+    WriteMatrix(os, x);
+  } else {
+    os << x << "\n";
+  }
+}
+
 template <typename Ttype, typename Tnorm>
 bool operator==(TcombPair<Ttype, Tnorm> const &x,
                 TcombPair<Ttype, Tnorm> const &y) {
@@ -1104,8 +1114,8 @@ ExhaustiveReductionComplexityKernel_V1(
     os << "SIMP: starting with the following matrices\n";
     for (auto &[comb, nonce] : map) {
       os << "SIMP: pos=" << pos << " nonce=" << nonce
-         << " norm=" << comb.second << " eM=\n";
-      WriteMatrix(os, comb.first);
+         << " norm=" << comb.norm << " eM=\n";
+      WriteSimplificationElement(os, comb.pair.first);
       pos += 1;
     }
 #endif
@@ -1126,8 +1136,8 @@ ExhaustiveReductionComplexityKernel_V1(
       size_t nonce_b = iter2->second;
       std::pair<size_t, size_t> nonce_pair{nonce_a, nonce_b};
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
-      os << "SIMP:   Complexities, a.second=" << a.second
-         << " b.second=" << b.second << "\n";
+      os << "SIMP:   Complexities, a.norm=" << a.norm
+         << " b.norm=" << b.norm << "\n";
 #endif
       //
       bool already_treated = false;
@@ -1152,9 +1162,9 @@ ExhaustiveReductionComplexityKernel_V1(
 #endif
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
         os << "SIMP:   Working with a=\n";
-        WriteMatrix(os, a.first);
+        WriteSimplificationElement(os, a.pair.first);
         os << "SIMP:   and b=\n";
-        WriteMatrix(os, b.first);
+        WriteSimplificationElement(os, b.pair.first);
 #endif
         std::vector<size_t> att;
         std::vector<TcombPair<Ttype, Tnorm>> new_elt;
@@ -1163,8 +1173,8 @@ ExhaustiveReductionComplexityKernel_V1(
         bool b_attained = false;
         for (auto &ent : gen.l_ent) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
-          os << "SIMP:  ent.comp=" << ent.second << " elt.eM=\n";
-          WriteMatrix(os, ent.first);
+          os << "SIMP:  ent.comp=" << ent.norm << " elt.eM=\n";
+          WriteSimplificationElement(os, ent.pair.first);
 #endif
           auto iter = map.find(ent);
           if (iter == map.end()) {
@@ -1204,8 +1214,8 @@ ExhaustiveReductionComplexityKernel_V1(
 #endif
         for (auto &elt : new_elt) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
-          os << "SIMP:  elt.comp=" << elt.second << " elt.eM=\n";
-          WriteMatrix(os, elt.first);
+          os << "SIMP:  elt.comp=" << elt.norm << " elt.eM=\n";
+          WriteSimplificationElement(os, elt.pair.first);
 #endif
           map[elt] = nonce;
           nonce += 1;

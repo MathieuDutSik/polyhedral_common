@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 2) {
-      std::cerr << "CTYP_MakeInitialFile [FileIn]\n";
+      std::cerr << "CTYP_CheckCanonical [FileIn]\n";
       throw TerminalException{1};
     }
     using Tmat = mpz_class;

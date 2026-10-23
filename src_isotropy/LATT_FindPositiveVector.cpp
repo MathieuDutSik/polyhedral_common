@@ -87,9 +87,9 @@ int main(int argc, char *argv[]) {
       dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(FileO, f);
-    std::cerr << "Normal termination of LATT_FindIsotropic\n";
+    std::cerr << "Normal termination of LATT_FindPositiveVector\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_FindIsotropic\n";
+    std::cerr << "Error in LATT_FindPositiveVector\n";
     exit(e.eVal);
   }
   runtime(time);

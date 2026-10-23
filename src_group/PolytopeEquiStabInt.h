@@ -219,8 +219,6 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo =
       f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
-  //  os <<
-  //  "---------------------------------------------------------------------------\n";
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo_B =
       f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
   check_iso_info_coherence(IsoInfo, IsoInfo_B,
@@ -589,7 +587,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
 #endif
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism(
       ep.first, fp.first, GRP1, ePerm, os);
-#ifdef TIMINGS
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: LinPolytopeIntegral_Isomorphism|=" << time << "\n";
 #endif
   if (eRes) {

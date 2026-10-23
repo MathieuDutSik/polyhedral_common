@@ -1,4 +1,4 @@
-PROGRAM		= TEST_EquiStabFamily
+PROGRAM		= LATT_EquiStabFamily
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

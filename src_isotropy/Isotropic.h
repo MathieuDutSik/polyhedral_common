@@ -19,6 +19,10 @@
 #define DEBUG_ISOTROPIC
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_ISOTROPIC
+#endif
+
 #ifdef DISABLE_DEBUG_ISOTROPIC
 #undef DEBUG_ISOTROPIC
 #endif
@@ -237,7 +241,7 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const &M) {
     T const &sqrt_Delta = *opt;
     V(0) = -b + sqrt_Delta;
     V(1) = a;
-#ifdef DEBUG_ISOTROPIC
+#ifdef SANITY_CHECK_ISOTROPIC
     if (IsZeroVector(V)) {
       std::cerr << "ISOTROP: V should be non-zero\n";
       throw TerminalException{1};
@@ -282,6 +286,8 @@ std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M,
   int n = M.rows();
 #ifdef DEBUG_ISOTROPIC
   os << "ISOTROP: STARTEXACT M=" << StringMatrixGAP(M) << "\n";
+#endif
+#ifdef SANITY_CHECK_ISOTROPIC
   int rnk = RankMat(M);
   if (rnk != n) {
     std::cerr << "ISOTROP: FindIsotropicExact failing with rnk=" << rnk
@@ -315,6 +321,8 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M,
   int n = M.rows();
 #ifdef DEBUG_ISOTROPIC
   os << "ISOTROP: START M=" << StringMatrixGAP(M) << "\n";
+#endif
+#ifdef SANITY_CHECK_ISOTROPIC
   int rnk = RankMat(M);
   if (rnk != n) {
     std::cerr << "ISOTROP: FindIsotropic failing with rnk=" << rnk << " n=" << n
@@ -344,7 +352,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M,
 #endif
   if (res.Xisotrop) {
     MyVector<T> const &eV = *res.Xisotrop;
-#ifdef DEBUG_ISOTROPIC
+#ifdef SANITY_CHECK_ISOTROPIC
     T sum = EvaluationQuadForm<T, T>(M, eV);
     if (sum != 0) {
       std::cerr << "ISOTROP: FindIsotropic, eV should be an isotropic vector "
@@ -363,7 +371,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M,
     MyVector<T> const &eV = *optB;
     MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
     MyVector<T> fV = B_T.transpose() * eV;
-#ifdef DEBUG_ISOTROPIC
+#ifdef SANITY_CHECK_ISOTROPIC
     T sum = EvaluationQuadForm<T, T>(M, fV);
     if (sum != 0) {
       std::cerr << "ISOTROP: FindIsotropic, fV should be an isotropic vector "
@@ -383,7 +391,7 @@ bool is_isotropic(MyMatrix<T> const &M, std::ostream &os) {
   MicrosecondTime time;
 #endif
   int n = M.rows();
-#ifdef DEBUG_ISOTROPIC
+#ifdef SANITY_CHECK_ISOTROPIC
   int rnk = RankMat(M);
   if (rnk != n) {
     std::cerr << "ISOTROP: is_isotropic failing with rnk=" << rnk << " n=" << n

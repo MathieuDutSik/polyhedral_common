@@ -8,6 +8,7 @@
 #include "Shvec_exact.h"
 #include "LatticeStabEquiCan.h"
 #include "ClassicLLL.h"
+#include <unordered_set>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -193,13 +194,22 @@ DecomposedCharacteristicFamily(MyMatrix<T> const &GramMat,
                                RootDecomposition<T, Tint> const &dec,
                                std::ostream &os) {
   int n = GramMat.rows();
-  // The roots, in the coordinates of L.
+  // The roots, in the coordinates of L, with both signs: fixed_norm_vectors
+  // returns one vector per antipodal pair, and which one depends on the
+  // basis, so only the full root system is an isometry invariant.
   MyMatrix<Tint> Roots = T_ShortVector_fixed<T, Tint>(GramMat, T(2), os);
   // The characteristic family of R^perp, lifted to L: a vector u in the
   // basis PerpBasis becomes u * PerpBasis in the coordinates of L.
   std::vector<MyVector<Tint>> family;
+  std::unordered_set<MyVector<Tint>> seen;
   for (int i = 0; i < Roots.rows(); i++) {
-    family.push_back(GetMatrixRow(Roots, i));
+    MyVector<Tint> v = GetMatrixRow(Roots, i);
+    MyVector<Tint> v_neg = -v;
+    for (MyVector<Tint> const &w : {v, v_neg}) {
+      if (seen.insert(w).second) {
+        family.push_back(w);
+      }
+    }
   }
   if (dec.PerpBasis.rows() > 0) {
     CanonicVectorFamily<Tint> perpFam =

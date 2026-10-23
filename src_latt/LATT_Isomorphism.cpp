@@ -10,13 +10,16 @@
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
 #include "SignatureSymmetric.h"
+#include "LatticePleskenSouvignier.h"
+#include "LatticeAutomorphismVinberg.h"
 #include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
 void ComputeIsomorphism(std::string const &FileListMat1,
                         std::string const &FileListMat2,
-                        std::string const &OutFormat, std::ostream &os) {
+                        std::string const &OutFormat,
+                        std::string const &method, std::ostream &os) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -46,9 +49,34 @@ void ComputeIsomorphism(std::string const &FileListMat1,
               << FileListMat2 << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
-  std::optional<MyMatrix<Tint>> equiv =
-      ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
-                                                     std::cerr);
+  std::optional<MyMatrix<Tint>> equiv;
+  if (method == "graph") {
+    equiv = ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
+                                                           std::cerr);
+  } else if (method == "plesken_souvignier") {
+    if (ListMat1.size() != ListMat2.size()) {
+      std::cerr << "LATT_Isomorphism: the two lists have different lengths\n";
+      throw TerminalException{1};
+    }
+    std::vector<MyMatrix<Tint>> ListGenAut2;
+    equiv = PleskenSouvignierLatticeIsometry<T, Tint>(ListMat1, ListMat2,
+                                                      ListGenAut2, std::cerr);
+  } else if (method == "vinberg") {
+    // The reflections in the roots of norm 2 are integral only for an
+    // integral form, and the decomposition is the one of a single form.
+    if (ListMat1.size() != 1 || ListMat2.size() != 1 ||
+        !IsIntegralMatrix(ListMat1[0]) || !IsIntegralMatrix(ListMat2[0])) {
+      std::cerr << "LATT_Isomorphism: the vinberg method needs a single "
+                   "integral Gram matrix on each side\n";
+      throw TerminalException{1};
+    }
+    equiv = ComputeIsometryVinberg<T, Tint, Tgroup>(ListMat1[0], ListMat2[0],
+                                                    std::cerr);
+  } else {
+    std::cerr << "LATT_Isomorphism: unknown method=" << method << "\n";
+    std::cerr << "The methods are graph, plesken_souvignier and vinberg\n";
+    throw TerminalException{1};
+  }
   if (OutFormat == "GAP") {
     if (equiv) {
       os << "return ";
@@ -76,13 +104,16 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 4 && argc != 6) {
+    if (argc != 4 && argc != 6 && argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "LATT_Isomorphism [arith] [ListMat1] [ListMat2] [OutFormat] "
                    "[OutFile]\n";
       std::cerr << "    or\n";
       std::cerr << "LATT_Isomorphism [arith] [ListMat1] [ListMat2]\n";
+      std::cerr << "    or\n";
+      std::cerr << "LATT_Isomorphism [arith] [ListMat1] [ListMat2] [OutFormat] "
+                   "[OutFile] [method]\n";
       std::cerr << "\n";
       std::cerr << "arith values:\n";
       std::cerr << "  gmp         : mpq_class / mpz_class (default choice)\n";
@@ -98,6 +129,15 @@ int main(int argc, char *argv[]) {
       std::cerr << "OutFormat values:\n";
       std::cerr << "  GAP   : the equivalence matrix or false, GAP readable\n";
       std::cerr << "  Oscar : the equivalence matrix in the Oscar format\n";
+      std::cerr << "method values:\n";
+      std::cerr << "  graph              : the isomorphism of vector families "
+                   "as graphs\n";
+      std::cerr << "                       (default)\n";
+      std::cerr << "  plesken_souvignier : the backtrack of Plesken and "
+                   "Souvignier\n";
+      std::cerr << "  vinberg            : through the root system, for a "
+                   "single integral\n";
+      std::cerr << "                       Gram matrix on each side\n";
       return -1;
     }
     std::string arith = argv[1];
@@ -105,16 +145,21 @@ int main(int argc, char *argv[]) {
     std::string FileListMat2 = argv[3];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
-    if (argc == 6) {
+    std::string method = "graph";
+    if (argc >= 6) {
       OutFormat = argv[4];
       OutFile = argv[5];
+    }
+    if (argc == 7) {
+      method = argv[6];
     }
     //
     auto prt = [&](std::ostream &os) -> void {
       ArithmeticDispatch dispatch;
       add_rational_arithmetics_by_library(
           dispatch, [&]<typename T>() -> void {
-            ComputeIsomorphism<T>(FileListMat1, FileListMat2, OutFormat, os);
+            ComputeIsomorphism<T>(FileListMat1, FileListMat2, OutFormat,
+                                  method, os);
           });
       dispatch.run(arith);
     };

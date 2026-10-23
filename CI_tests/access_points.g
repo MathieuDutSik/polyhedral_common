@@ -104,6 +104,40 @@ get_grp_automorphy:=function(arg)
     return TheGRP_rat;
 end;
 
+# The hashes of the faces ListFace (lists of 0/1) by the limited weight
+# matrix of POLY_HashWeightMatrixLimited, built from the polytope EXT
+# (input="EXT") or from a permutation group on its vertices (input="GRP").
+# Returns the list of hashes or a string on a program failure.
+get_hash_weight_matrix_limited:=function(input, EXT, GRP, ListFace, max_offdiag)
+    local TmpDir, FileI, FileF, FileO, FileE, eProg, U, list_arg, status;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Hash.in");
+    FileF:=Filename(TmpDir, "Hash.faces");
+    FileO:=Filename(TmpDir, "Hash.out");
+    FileE:=Filename(TmpDir, "Hash.err");
+    if input="EXT" then
+        WriteMatrixFile(FileI, EXT);
+    else
+        WriteGroupFile(FileI, Length(EXT), GRP);
+    fi;
+    WriteMatrixFile(FileF, ListFace);
+    eProg:=GetBinaryFilename("POLY_HashWeightMatrixLimited");
+    list_arg:=["mpq_class", input, FileI, FileF, String(max_offdiag), "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: POLY_HashWeightMatrixLimited failed to create a file";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileF);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
 get_grp_integral_automorphy:=function(arg)
     local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheGRP_int, runtime_str, list_arg, status;
     EXT:=arg[1];
@@ -434,14 +468,18 @@ get_saturated_space:=function(arg)
 end;
 
 get_latt_canonical_form:=function(arg)
-    local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, U, runtime_str, list_arg, status;
+    local eMat, options, arith, method, print_info, TmpDir, FileI, FileO, FileE, eProg, U, runtime_str, list_arg, status;
     eMat:=arg[1];
     arith:="gmp";
+    method:="graph";
     print_info:=false;
     if Length(arg) >= 2 then
         options:=arg[2];
         if IsBound(options.arith) then
             arith:=options.arith;
+        fi;
+        if IsBound(options.method) then
+            method:=options.method;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -454,7 +492,7 @@ get_latt_canonical_form:=function(arg)
     WriteMatrixFile(FileI, eMat);
     #
     eProg:=GetBinaryFilename("LATT_Canonicalize");
-    list_arg:=[arith, FileI, "GAP_full", FileO];
+    list_arg:=[arith, FileI, "GAP_full", FileO, method];
     status:=run_binary(eProg, list_arg, FileE);
     if status <> 0 then
         return binary_failure(eProg, list_arg, status, FileE);
@@ -474,14 +512,18 @@ get_latt_canonical_form:=function(arg)
 end;
 
 get_latt_automorphism_group:=function(arg)
-    local eMat, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, U, runtime_str, list_arg, status;
+    local eMat, options, arith, method, print_info, TmpDir, FileI, FileO, FileE, eProg, U, runtime_str, list_arg, status;
     eMat:=arg[1];
     arith:="gmp";
+    method:="graph";
     print_info:=false;
     if Length(arg) >= 2 then
         options:=arg[2];
         if IsBound(options.arith) then
             arith:=options.arith;
+        fi;
+        if IsBound(options.method) then
+            method:=options.method;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -494,7 +536,7 @@ get_latt_automorphism_group:=function(arg)
     WriteListMatrixFile(FileI, [eMat]);
     #
     eProg:=GetBinaryFilename("LATT_Automorphism");
-    list_arg:=[arith, FileI, "GAP", FileO];
+    list_arg:=[arith, FileI, "GAP", FileO, method];
     status:=run_binary(eProg, list_arg, FileE);
     if status <> 0 then
         Print(binary_failure(eProg, list_arg, status, FileE), "\n");
@@ -855,15 +897,19 @@ end;
 
 
 get_latt_isomorphism_test:=function(arg)
-    local eMat1, eMat2, options, arith, print_info, TmpDir, FileIn1, FileIn2, FileOut, FileErr, eProg, U, runtime_str, list_arg, status;
+    local eMat1, eMat2, options, arith, method, print_info, TmpDir, FileIn1, FileIn2, FileOut, FileErr, eProg, U, runtime_str, list_arg, status;
     eMat1:=arg[1];
     eMat2:=arg[2];
     arith:="gmp";
+    method:="graph";
     print_info:=false;
     if Length(arg) >= 3 then
         options:=arg[3];
         if IsBound(options.arith) then
             arith:=options.arith;
+        fi;
+        if IsBound(options.method) then
+            method:=options.method;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -878,7 +924,7 @@ get_latt_isomorphism_test:=function(arg)
     WriteListMatrixFile(FileIn2, [eMat2]);
     #
     eProg:=GetBinaryFilename("LATT_Isomorphism");
-    list_arg:=[arith, FileIn1, FileIn2, "GAP", FileOut];
+    list_arg:=[arith, FileIn1, FileIn2, "GAP", FileOut, method];
     status:=run_binary(eProg, list_arg, FileErr);
     if status <> 0 then
         return binary_failure(eProg, list_arg, status, FileErr);
@@ -1666,6 +1712,40 @@ get_orbit_shortest:=function(arg)
     fi;
     if IsExistingFile(FileO)=false then
         return "program failure: LATT_ComputeShortestOrbits did not return anything, likely crash";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+# The minimum and the minimal vectors of a positive definite Gram matrix by
+# the certified Gauss sieve of LATT_ShvecSieve. Returns rec(min, SHV) with the
+# rows of SHV in pairs v, -v, or a string on a program failure.
+get_shvec_sieve:=function(arg)
+    local eMat, options, arith, TmpDir, FileI, FileO, FileE, eProg, U, list_arg, status;
+    eMat:=arg[1];
+    arith:="gmp";
+    if Length(arg) >= 2 then
+        options:=arg[2];
+        if IsBound(options.arith) then
+            arith:=options.arith;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Sieve.in");
+    FileO:=Filename(TmpDir, "Sieve.out");
+    FileE:=Filename(TmpDir, "Sieve.err");
+    WriteMatrixFile(FileI, eMat);
+    eProg:=GetBinaryFilename("LATT_ShvecSieve");
+    list_arg:=[arith, FileI, "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: LATT_ShvecSieve failed to create a file";
     fi;
     U:=ReadAsFunction(FileO)();
     RemoveFile(FileI);

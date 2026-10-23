@@ -21,6 +21,10 @@
 #define DEBUG_APPROXIMATE_MODELS
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_APPROXIMATE_MODELS
+#endif
+
 #ifdef DISABLE_DEBUG_APPROXIMATE_MODELS
 #undef DEBUG_APPROXIMATE_MODELS
 #endif
@@ -87,7 +91,7 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const &Qmat,
   int n = Qmat.rows();
   MyVector<T> x_T = UniversalVectorConversion<T, Tint>(x);
   MyVector<T> f_T = UniversalVectorConversion<T, Tint>(f);
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
   T fNorm = EvaluationQuadForm(Qmat, f);
   MyVector<T> eProd = Qmat * x_T;
   T scal = f_T.dot(eProd);
@@ -115,7 +119,7 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const &Qmat,
     VecSubMul(eImg, scal2_tint, x);
     AssignMatrixRow(RetMat, u, eImg);
   }
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
   MyMatrix<T> RetMat_T = UniversalMatrixConversion<T, Tint>(RetMat);
   MyMatrix<T> prod = RetMat_T * Qmat * RetMat_T.transpose();
   if (prod != Qmat) {
@@ -140,7 +144,7 @@ std::optional<MyVector<Tint>> INDEF_FindIsotropic(MyMatrix<T> const &M,
     MyMatrix<T> NSP_T = SublatticeBasisReduction(NullspaceIntMat(M), os);
     MyVector<T> eV_T = GetMatrixRow(NSP_T, 0);
     MyVector<Tint> eV = UniversalVectorConversion<Tint, T>(eV_T);
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
     T sum = EvaluationQuadForm<T, Tint>(M, eV);
     if (sum != 0) {
       std::cerr << "MODEL: INDEF_FindIsotropic, error in the isotrop by rank\n";
@@ -154,7 +158,7 @@ std::optional<MyVector<Tint>> INDEF_FindIsotropic(MyMatrix<T> const &M,
     MyVector<T> const &eV = *opt;
     MyVector<T> fV = RemoveFractionVector(eV);
     MyVector<Tint> gV = UniversalVectorConversion<Tint, T>(fV);
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
     T sum = EvaluationQuadForm<T, Tint>(M, gV);
     if (sum != 0) {
       std::cerr << "MODEL: INDEF_FindIsotropic, error in the isotrop by "
@@ -291,7 +295,7 @@ template <typename T, typename Tint, typename Tgroup>
 ApproximateModel<T, Tint>
 INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
   int n = Qmat.rows();
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
   if (!is_eichler_canonical(Qmat)) {
     std::cerr << "MODEL: The matrix should be Eichler canonical form\n";
     throw TerminalException{1};
@@ -364,7 +368,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
     for (auto &eMatrGen : GRPmatr) {
       std::vector<Tidx> eList;
       for (auto &eClassExt : ListClassesExt) {
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
         MyMatrix<T> eMatrGen_T = UniversalMatrixConversion<T, Tint>(eMatrGen);
         MyMatrix<T> prod = eMatrGen_T * Qmat * eMatrGen_T.transpose();
         if (prod != Qmat) {
@@ -479,7 +483,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
     };
     std::vector<MyMatrix<Tint>> ListGenerators;
     auto FuncInsert = [&](MyMatrix<Tint> const &TheMat) -> void {
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
       MyMatrix<T> TheMat_T = UniversalMatrixConversion<T, Tint>(TheMat);
       MyMatrix<T> eProd = TheMat_T * Qmat * TheMat_T.transpose();
       if (eProd != Qmat) {
@@ -662,14 +666,16 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
             MyVector<T> w = quot * eRec.V;
             MyVector<T> eClass4 = eClass3 + DivV * w;
             T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / T(2);
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
             T Aclass4_res2 = ResInt(Aclass4_norm, DivV_sqr);
+#ifdef DEBUG_APPROXIMATE_MODELS
             os << "MODEL: EnumerateVectorOverDiscriminant w="
                << StringVectorGAP(w) << "\n";
             os << "MODEL: EnumerateVectorOverDiscriminant eClass4="
                << StringVectorGAP(eClass4) << "\n";
             os << "MODEL: EnumerateVectorOverDiscriminant Aclass4_res2="
                << Aclass4_res2 << " X_res2=" << X_res2 << "\n";
+#endif
             if (Aclass4_res2 != X_res2) {
               std::cerr << "MODEL: A bug to resolve\n";
               throw TerminalException{1};
@@ -685,12 +691,14 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
             for (int u = 0; u < n - 4; u++) {
               eSolution_T(u + 4) = eClass4(u);
             }
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
             T eNorm = EvaluationQuadForm(Qmat, eSolution_T);
             if (eNorm != X) {
               std::cerr << "MODEL: eNorm / X is inconsistent\n";
               throw TerminalException{1};
             }
+#endif
+#ifdef DEBUG_APPROXIMATE_MODELS
             os << "MODEL: EnumerateVectorOverDiscriminant DivV=" << DivV
                << " u=" << u << "\n";
             os << "MODEL: EnumerateVectorOverDiscriminant eSolution_T="
@@ -828,7 +836,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
 #endif
   std::vector<MyMatrix<Tint>> ListGenerators;
   auto f_insert = [&](MyMatrix<Tint> const &P) -> void {
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
     MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(P);
     MyMatrix<T> prod = P_T * Qmat * P_T.transpose();
     if (prod != Qmat) {
@@ -1020,6 +1028,8 @@ ResultHyperbolicPlane<T, Tint> GetHyperbolicPlane(MyMatrix<T> const &Qmat,
 #ifdef DEBUG_APPROXIMATE_MODELS
       os << "MODEL: GetHyperbolicPlane eVect=" << StringVectorGAP(eVect)
          << "\n";
+#endif
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
       T sum1 = EvaluationQuadForm<T, Tint>(M, eVect);
       if (sum1 != 0) {
         std::cerr << "MODEL: eVect is not an isotropic vector for M\n";
@@ -1030,6 +1040,8 @@ ResultHyperbolicPlane<T, Tint> GetHyperbolicPlane(MyMatrix<T> const &Qmat,
 #ifdef DEBUG_APPROXIMATE_MODELS
       os << "MODEL: GetHyperbolicPlane NewVect=" << StringVectorGAP(NewVect)
          << "\n";
+#endif
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
       T sum2 = EvaluationQuadForm<T, Tint>(Qmat, NewVect);
       if (sum2 != 0) {
         std::cerr << "MODEL: NewVect is not an isotropic vector for Qmat\n";
@@ -1260,7 +1272,7 @@ EichlerReduction<T, Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const &Qmat,
   EmbedSimpInv(2, 2) = 1 / a2;
   MyMatrix<T> preEmbedInv_T = EmbedSimpInv * FullBasis_T;
   MyMatrix<T> QmatEichler = preEmbedInv_T * Qmat * preEmbedInv_T.transpose();
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
   if (!is_eichler_canonical(QmatEichler)) {
     std::cerr << "MODEL: The matrix should be reduced according to the Eichler "
                  "canonical form\n";
@@ -1339,6 +1351,8 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: fGen_T=\n";
     WriteMatrix(os, fGen_T);
+#endif
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
     if (!IsIntegralMatrix(fGen_T)) {
       std::cerr << "MODEL: fGen should be integral\n";
       throw TerminalException{1};
@@ -1377,7 +1391,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
           SolutionIntMat(shr_ptr->er.Embed, fRepr);
       if (opt) {
         MyVector<Tint> const &eSol = *opt;
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef SANITY_CHECK_APPROXIMATE_MODELS
         MyMatrix<T> const &Qmat = shr_ptr->Qmat;
         T eNorm = EvaluationQuadForm<T, Tint>(Qmat, eSol);
         if (eNorm != X) {

@@ -305,7 +305,7 @@
 #endif
 
 #ifdef DEBUG
-#define PRINT_ENUM_P_POLYTOPES
+#define DEBUG_ENUM_P_POLYTOPES_PROGRESS
 #endif
 
 #ifdef SANITY_CHECK
@@ -2122,7 +2122,7 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &G, size_t n_iter,
   for (size_t iter = 0; iter < n_iter; iter++) {
     int denom = random_int(1, 1000000);
     MyVector<T> eV = get_random_vector<T>(denom, dim);
-#ifdef PRINT_ENUM_P_POLYTOPES
+#ifdef DEBUG_ENUM_P_POLYTOPES_PROGRESS
     os << "ROBUST: robust vertex iter=" << iter << "/" << n_iter << "\n";
 #endif
 #ifdef DEBUG_ROBUST_VERTEX_ENUM

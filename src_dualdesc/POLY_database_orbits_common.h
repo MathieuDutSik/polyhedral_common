@@ -48,7 +48,7 @@ protected:
 
 public:
   void print_status() const {
-#ifdef TRACK_RUN
+#ifdef DEBUG_RECURSIVE_DUAL_DESC_RUN
     os << "RDD: Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone
        << "," << (bb.foc.nbOrbit - bb.foc.nbOrbitDone) << ") facet=("
        << bb.foc.TotalNumber << "," << (bb.foc.TotalNumber - bb.foc.nbUndone)

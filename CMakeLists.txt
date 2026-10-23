@@ -656,6 +656,7 @@ set(
   GRP_MatrixGroupSimplificationOnline
   GRP_MatrixGroupSimplificationOnlineOpt
   GRP_TestFinitenessSimp
+  POLY_HashWeightMatrixLimited
 )
 foreach(target IN LISTS GROUP_PROGRAMS)
   add_polyhedral_binary(
@@ -793,7 +794,8 @@ set(
   LATT_RankinSublattices
   LATT_Reduction
   VectFamily_Reduction
-  LATT_PleskenSouvignier
+  LATT_EquiStabFamily
+  LATT_ShvecSieve
 )
 foreach(target IN LISTS LATT_PROGRAMS)
   add_polyhedral_binary(

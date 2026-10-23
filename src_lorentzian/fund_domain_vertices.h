@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "lorentzian_linalg.h"
+#include <format>
 #include <limits>
 #include <set>
 #include <string>
@@ -13,6 +14,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef TRACK_INFO
+#define TRACK_INFO_EDGEWALK
+#endif
+
 #ifdef DEBUG
 #define DEBUG_QMAT
 #define DEBUG_GET_CANONICALIZED_RECORD
@@ -21,6 +26,7 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_LORENTZIAN_STAB_EQUIV
+#define SANITY_CHECK_GET_CANONICALIZED_RECORD
 #endif
 
 template <typename T, typename Tint> struct FundDomainVertex {
@@ -234,6 +240,10 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
 #endif
   }
   MyMatrix<T> const MatV_reord = MatrixFromVectorFamily(l_vect_reord);
+#if defined(DEBUG_GET_CANONICALIZED_RECORD) ||                                 \
+    defined(SANITY_CHECK_GET_CANONICALIZED_RECORD)
+  MyMatrix<T> const MatV_reord_red = ColumnReduction(MatV_reord);
+#endif
 #ifdef DEBUG_GET_CANONICALIZED_RECORD
   std::cerr << "Map1 =";
   for (auto &eval : Map1)
@@ -247,7 +257,6 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   WriteMatrix(std::cerr, MatV);
   std::cerr << "MatV_red=\n";
   WriteMatrix(std::cerr, MatV_red);
-  MyMatrix<T> const MatV_reord_red = ColumnReduction(MatV_reord);
   std::cerr << "MatV_reord=\n";
   WriteMatrix(std::cerr, MatV_reord);
   std::cerr << "MatV_reord_red=\n";
@@ -262,7 +271,7 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
   //
   std::vector<Telt> LGen1;
   for (auto &eGen : ListGen) {
-#ifdef DEBUG_GET_CANONICALIZED_RECORD
+#ifdef SANITY_CHECK_GET_CANONICALIZED_RECORD
     MyMatrix<T> eEquivMat =
         RepresentVertexPermutation(MatV_red, MatV_red, eGen);
     std::optional<MyMatrix<T>> opt_EquivMat =
@@ -276,9 +285,11 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
                    "algorithms\n";
       throw TerminalException{1};
     }
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "get_canonicalized_record eGen=" << Telt(eGen)
               << " eEquivMat=\n";
     WriteMatrix(std::cerr, eEquivMat);
+#endif
 #endif
     //  l_vect_reord[i] = l_vect[ListIdx[i]]
     //  l_vect_reord[ListIdxRev[i]] = l_vect[i]
@@ -295,12 +306,16 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
       Vloc[i1] = i4;
     }
     //
-#ifdef DEBUG_GET_CANONICALIZED_RECORD
+#ifdef SANITY_CHECK_GET_CANONICALIZED_RECORD
     Telt eGenReord(Vloc);
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "Before computing eEquivMqtReord\n";
+#endif
     MyMatrix<T> eEquivMatReord =
         RepresentVertexPermutation(MatV_reord_red, MatV_reord_red, eGenReord);
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "After computing eEquivMqtReord\n";
+#endif
     std::optional<MyMatrix<T>> opt_EquivMatReord =
         FindMatrixTransformationTest(MatV_reord_red, MatV_reord_red, Vloc);
     if (!opt_EquivMatReord) {
@@ -312,9 +327,11 @@ ret_type<T, Tint, Tgroup> get_canonicalized_record(
                    "different algorithms\n";
       throw TerminalException{1};
     }
+#ifdef DEBUG_GET_CANONICALIZED_RECORD
     std::cerr << "get_canonicalized_record eGenReord=" << eGenReord
               << " eEquivMatReord=\n";
     WriteMatrix(std::cerr, eEquivMatReord);
+#endif
     if (!TestEqualityMatrix(eEquivMatReord, eEquivMat)) {
       std::cerr << "eEquivMat and eEquivMatReord should be equal\n";
       throw TerminalException{1};
@@ -434,7 +451,7 @@ std::string StringListGen(std::vector<Telt> const &LGen) {
     if (!IsFirst)
       strListGen += ",";
     IsFirst = false;
-    strListGen += std::to_string(eGen);
+    strListGen += std::format("{}", eGen);
   }
   strListGen += "]";
   return "Group(" + strListGen + ")";
@@ -535,7 +552,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
         FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull.GRP1, os);
     std::vector<MyMatrix<T>> LGen1 =
         MappingPermutationGenerators(G, G, Subspace1, LGen1_D);
-#ifdef TRACK_INFOS_LOG
+#ifdef TRACK_INFO_EDGEWALK
     std::cout << "rec(group:=" << StringListGen(LGen1_D) << "),\n";
 #endif
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1, os);
@@ -717,7 +734,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-#ifdef PRINT_DEBUG_STAB_EQUIV_INFO
+#ifdef DEBUG_LORENTZIAN_STAB_EQUIV_INFO
   os << "LORENTZ_TestEquivalence, vertFull1.method=" << vertFull1.method
      << "\n";
   os << "LORENTZ_TestEquivalence, gen1=" << StringVector(vertFull1.vert.gen)

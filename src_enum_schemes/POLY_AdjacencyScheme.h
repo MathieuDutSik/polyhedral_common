@@ -597,7 +597,9 @@ bool WriteFamilyObjects(
     std::vector<DatabaseEntry_Serial<Tobj, TadjO>> const &l_tot,
     std::ostream &os) {
   if (OutFormat == "nothing") {
-    std::cerr << "No output\n";
+#ifdef DEBUG_ADJACENCY_SCHEME
+    std::cerr << "ADJ_SCH: No output\n";
+#endif
     return false;
   }
   if (OutFormat == "NumberGAP") {

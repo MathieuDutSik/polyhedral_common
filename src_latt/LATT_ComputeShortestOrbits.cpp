@@ -42,9 +42,9 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_ComputeShortestOrbitsBasis [arith] [FileM]\n";
+      std::cerr << "LATT_ComputeShortestOrbits [arith] [FileM]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_ComputeShortestOrbitsBasis [arith] [FileM] "
+      std::cerr << "LATT_ComputeShortestOrbits [arith] [FileM] "
                    "[OutFormat] [OutFille]\n";
       std::cerr << "\n";
 #ifdef ENABLE_FLINT_SUPPORT
@@ -86,9 +86,9 @@ int main(int argc, char *argv[]) {
       dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
-    std::cerr << "Normal termination of LATT_ComputeShortestOrbitsBasis\n";
+    std::cerr << "Normal termination of LATT_ComputeShortestOrbits\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_ComputeShortestOrbitsBasis\n";
+    std::cerr << "Error in LATT_ComputeShortestOrbits\n";
     exit(e.eVal);
   }
   runtime(time);

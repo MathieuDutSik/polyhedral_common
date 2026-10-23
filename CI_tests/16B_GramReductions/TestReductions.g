@@ -426,6 +426,8 @@ get_slide_parameter:=function(method)
     return Int(rest);
 end;
 
+# false on a failure, true for a slide method correctly rejected, otherwise
+# the record returned by LATT_Reduction.
 test_reduction:=function(eMat, method)
     local res, Pmat, test, input_defect, direct, k;
     # A slide method whose block size does not divide the dimension is not
@@ -493,7 +495,7 @@ test_reduction:=function(eMat, method)
             return false;
         fi;
     fi;
-    return true;
+    return res;
 end;
 
 #
@@ -538,9 +540,44 @@ do
     for n_ops in [20, 80]
     do
         U:=get_random_unimodular(rs, n, n_ops);
-        Add(ListInstance, rec(name:=Concatenation(eCase.name, "/", String(n_ops)), G:=U * eCase.G * TransposedMat(U)));
+        Add(ListInstance, rec(name:=Concatenation(eCase.name, "/", String(n_ops)), G:=U * eCase.G * TransposedMat(U), Ggood:=eCase.G, U:=U));
     od;
 od;
+
+# The benchmark of the reductions on the hidden good bases. For each method,
+# how often the hidden basis is recovered, that is Pmat * U is a signed
+# permutation, and how often the reduced form is at least as good as the
+# hidden one for the orthogonality defect. Those are measures and not
+# requirements: they are printed, not counted as errors.
+is_signed_permutation:=function(M)
+    return ForAll(M, eLine->Number(eLine, x->x<>0)=1 and ForAll(eLine, x->x in [-1,0,1]))
+        and ForAll(TransposedMat(M), eLine->Number(eLine, x->x<>0)=1);
+end;
+
+ListBench:=List(ListMethod, x->rec(n_run:=0, n_recovered:=0, n_quality_ok:=0));
+
+record_benchmark:=function(eInst, method, res)
+    local eBench;
+    eBench:=ListBench[Position(ListMethod, method)];
+    eBench.n_run:=eBench.n_run + 1;
+    if is_signed_permutation(res.Pmat * eInst.U) then
+        eBench.n_recovered:=eBench.n_recovered + 1;
+    fi;
+    if get_orth_defect_sq(res.GramMat) <= get_orth_defect_sq(eInst.Ggood) then
+        eBench.n_quality_ok:=eBench.n_quality_ok + 1;
+    fi;
+end;
+
+print_benchmark:=function()
+    local i, eBench;
+    Print("Benchmark on the hidden good bases: recovered, quality_ok, over the runs\n");
+    for i in [1..Length(ListMethod)]
+    do
+        eBench:=ListBench[i];
+        Print("  ", ListMethod[i], ": recovered=", eBench.n_recovered, "/", eBench.n_run,
+              " quality_ok=", eBench.n_quality_ok, "/", eBench.n_run, "\n");
+    od;
+end;
 
 FullTest:=function()
     local n_error, eInst, method, reply, iInst;
@@ -556,6 +593,8 @@ FullTest:=function()
             if reply=false then
                 Print("  FAILURE name=", eInst.name, " method=", method, "\n");
                 n_error:=n_error + 1;
+            elif IsRecord(reply) then
+                record_benchmark(eInst, method, reply);
             fi;
         od;
     od;
@@ -570,6 +609,7 @@ FullTest:=function()
 end;
 
 n_error:=FullTest();
+print_benchmark();
 Print("n_error=", n_error, "\n");
 CI_Decision_Reset();
 if n_error > 0 then

@@ -9,6 +9,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "PolytopeEquiStab.h"
+#include "MatchingTypes.h"
 // clang-format on
 
 template <typename Tfield, typename Twork, typename Tgroup>
@@ -102,12 +103,14 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     using Tidx = uint32_t;
-    using T = mpz_class;
-    using Tfield = mpq_class;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
+    using T = boost::multiprecision::mpz_int;
+    using Tfield = boost::multiprecision::mpq_rational;
     using Tint = boost::multiprecision::mpz_int;
 #else
+    using T = mpz_class;
+    using Tfield = mpq_class;
     using Tint = mpz_class;
 #endif
     using Tgroup = permutalib::Group<Telt, Tint>;

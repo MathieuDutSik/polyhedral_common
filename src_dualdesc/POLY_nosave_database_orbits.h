@@ -8,9 +8,9 @@
 // without save such as WASM platform. The storage-agnostic logic is shared
 // with DatabaseOrbits through the DatabaseOrbitsCommon base. Macros used
 // internally (DEBUG_RECURSIVE_DUAL_DESC, TIMINGS_RECURSIVE_DUAL_DESC,
-// TRACK_DATABASE, TRACK_RUN) are intentionally shared with
-// POLY_RecursiveDualDesc.h -- when this file is included from there, all four
-// toggles are already configured.
+// DEBUG_RECURSIVE_DUAL_DESC_DATABASE, DEBUG_RECURSIVE_DUAL_DESC_RUN) are
+// intentionally shared with POLY_RecursiveDualDesc.h -- when this file is
+// included from there, all four toggles are already configured.
 
 // clang-format off
 #include "POLY_database_orbits_common.h"

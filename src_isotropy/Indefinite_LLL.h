@@ -19,6 +19,11 @@
 #define DEBUG_SIMPLE_INDEFINITE_REDUCTION
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_INDEFINITE_LLL
+#define SANITY_CHECK_SIMPLE_INDEFINITE_REDUCTION
+#endif
+
 #ifdef DISABLE_DEBUG_INDEFINITE_LLL
 #undef DEBUG_INDEFINITE_LLL
 #endif
@@ -260,7 +265,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M, bool const &look_for_isotropic,
     if (res.Xisotrop && look_for_isotropic) {
       MyVector<T> const &Xisotrop = *res.Xisotrop;
       MyVector<T> V = B_T.transpose() * Xisotrop;
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef SANITY_CHECK_INDEFINITE_LLL
       T sum = EvaluationQuadForm<T, T>(M, V);
       if (sum != 0) {
         std::cerr << "ILLL: Error in ComputeReductionIndefinite, M=\n";
@@ -271,7 +276,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M, bool const &look_for_isotropic,
 #endif
       MyMatrix<Tint> Bret = res.B * B;
       Mwork = res.Mred;
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef SANITY_CHECK_INDEFINITE_LLL
       MyMatrix<T> Bret_T = UniversalMatrixConversion<T, Tint>(Bret);
       MyMatrix<T> prod = Bret_T * M * Bret_T.transpose();
       if (prod != Mwork) {
@@ -289,7 +294,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M, bool const &look_for_isotropic,
     B_T = UniversalMatrixConversion<T, Tint>(B);
     Mwork = res.Mred;
     T norm = get_norm(res.Mred);
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef SANITY_CHECK_INDEFINITE_LLL
     MyMatrix<T> prod = B_T * M * B_T.transpose();
     if (prod != Mwork) {
       std::cerr << "ILLL: B is not the correct reduction matrix\n";
@@ -512,7 +517,8 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M,
     RowAddMul(Mwork, i, c_T, j);
     ColAddMul(Mwork, i, c_T, j);
   };
-#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
+#if defined(DEBUG_SIMPLE_INDEFINITE_REDUCTION) ||                             \
+    defined(SANITY_CHECK_SIMPLE_INDEFINITE_REDUCTION)
   auto f_compute =
       [&](ResSearch const &x) -> std::pair<MyMatrix<Tint>, MyMatrix<T>> {
     int i = x.i;
@@ -525,6 +531,8 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M,
     MyMatrix<T> Mwork_test = BT_test * M * BT_test.transpose();
     return {Btest, Mwork_test};
   };
+#endif
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
   size_t n_oper = 0;
 #endif
   //
@@ -532,24 +540,27 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M,
     std::optional<ResSearch> opt = f_search();
     if (opt) {
       ResSearch const &x = *opt;
+#if defined(DEBUG_SIMPLE_INDEFINITE_REDUCTION) ||                             \
+    defined(SANITY_CHECK_SIMPLE_INDEFINITE_REDUCTION)
+      T norm_prev = get_l1_norm(Mwork);
+      std::pair<MyMatrix<Tint>, MyMatrix<T>> pair = f_compute(x);
+      T delta = get_delta(x);
+#endif
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
       n_oper += 1;
       os << "------------ n_oper=" << n_oper << " --------------------\n";
       os << "ILLL: i=" << x.i << " j=" << x.j << " c=" << x.c << "\n";
-      T norm_prev = get_l1_norm(Mwork);
       os << "ILLL: Mwork=\n";
       WriteMatrix(os, Mwork);
-      std::pair<MyMatrix<Tint>, MyMatrix<T>> pair = f_compute(x);
       os << "ILLL: pair.first(B)=\n";
       WriteMatrix(os, pair.first);
       os << "ILLL: pair.second(M)=\n";
       WriteMatrix(os, pair.second);
       os << "ILLL: L1(Mwork)=" << get_l1_norm(Mwork)
          << " L1(pair.second)=" << get_l1_norm(pair.second) << "\n";
-      T delta = get_delta(x);
 #endif
       update(x);
-#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
+#ifdef SANITY_CHECK_SIMPLE_INDEFINITE_REDUCTION
       T norm_next = get_l1_norm(Mwork);
       size_t num_error = 0;
       if (norm_prev - delta != norm_next) {
@@ -621,7 +632,7 @@ ResultReduction<T, Tint> IndefiniteReductionNonDegenerate(MyMatrix<T> const &M,
   std::pair<int, int> signature = GetSignature(M, os);
   int n_plus = signature.first;
   int n_minus = signature.second;
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef SANITY_CHECK_INDEFINITE_LLL
   int n_zero = n - n_plus - n_minus;
   if (n_zero > 0) {
     std::cerr << "ILLL: The matrix should be non-degenerate\n";
@@ -919,7 +930,7 @@ ResultReduction<T, Tint> IndefiniteReduction(MyMatrix<T> const &M,
 #endif
   MyMatrix<Tint> B = BredB * pair.first.B;
   ResultReduction<T, Tint> res_ret{B, MredB};
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef SANITY_CHECK_INDEFINITE_LLL
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   MyMatrix<T> prod = B_T * M * B_T.transpose();
   if (prod != MredB) {

@@ -29,10 +29,6 @@ IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
   os << "PERFECT: IsEutactic, beginning\n";
 #endif
   int n = eGram.rows();
-  if (eGram.cols() != n) {
-    std::cerr << "Error: eGram must be square\n";
-    return {};
-  }
   if (SHV_T.cols() != n) {
     std::cerr << "Error: SHV_T must have n columns\n";
     return {};
@@ -123,10 +119,6 @@ bool IsPerfect(MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
   os << "EUTACTIC: IsPerfect, beginning\n";
 #endif
   int n = eGram.rows();
-  if (eGram.cols() != n) {
-    std::cerr << "Error: eGram must be square\n";
-    return false;
-  }
   if (SHV_T.cols() != n) {
     std::cerr << "Error: SHV_T must have n columns\n";
     return false;

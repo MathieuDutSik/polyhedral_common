@@ -59,6 +59,49 @@ TestCase_Rational_Automorphy:=function(EXT)
     return true;
 end;
 
+# The hash of the faces by the limited weight matrix, from the polytope and
+# from its symmetry group, must be invariant under that group, whatever the
+# bound on the number of off diagonal weights.
+TestCase_Rational_HashWeightMatrixLimited:=function(EXT)
+    local rec_gap, GRP, n, total, ListPair, ListFace, iFace, eSet, eElt, max_offdiag, input, ListHash, i;
+    rec_gap:=get_grp_automorphy(EXT);
+    if is_error(rec_gap) then
+        return false;
+    fi;
+    GRP:=rec_gap.GAPperm;
+    n:=Length(EXT);
+    total:=n * (n - 1) / 2;
+    ListPair:=[];
+    for iFace in [1..5]
+    do
+        eSet:=Filtered([1..n], x->Random([true, false]));
+        for i in [1..3]
+        do
+            eElt:=Random(GRP);
+            Add(ListPair, [eSet, OnSets(eSet, eElt)]);
+        od;
+    od;
+    ListFace:=Concatenation(List(ListPair, x->List(x, y->List([1..n], function(z) if z in y then return 1; fi; return 0; end))));
+    for max_offdiag in [0, Int(total / 2), total + 1]
+    do
+        for input in ["EXT", "GRP"]
+        do
+            ListHash:=get_hash_weight_matrix_limited(input, EXT, GRP, ListFace, max_offdiag);
+            if is_error(ListHash) then
+                return false;
+            fi;
+            for i in [1..Length(ListPair)]
+            do
+                if ListHash[2*i-1] <> ListHash[2*i] then
+                    Print("HashWeightMatrixLimited: input=", input, " max_offdiag=", max_offdiag, " the hash is not invariant\n");
+                    return false;
+                fi;
+            od;
+        od;
+    od;
+    return true;
+end;
+
 TestCase_Rational_Canonic:=function(EXT)
     local EXT_img, EXT_can1, EXT_can2;
     EXT_img:=scramble_ext(EXT);
@@ -398,7 +441,8 @@ n_error:=0;
 n_error:=n_error + RunTestSuite("Rational",
     [["Rational_Automorphy", TestCase_Rational_Automorphy],
      ["Rational_Canonic", TestCase_Rational_Canonic],
-     ["Rational_Isomorphy", TestCase_Rational_Isomorphy]],
+     ["Rational_Isomorphy", TestCase_Rational_Isomorphy],
+     ["Rational_HashWeightMatrixLimited", TestCase_Rational_HashWeightMatrixLimited]],
     ListEXT_simplices);
 
 n_error:=n_error + RunTestSuite("Integral",

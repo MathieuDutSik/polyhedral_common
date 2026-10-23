@@ -28,9 +28,17 @@
 #include <vector>
 // clang-format on
 
+#ifdef TRACK_INFO
+#define TRACK_INFO_EDGEWALK
+#endif
+
 #ifdef DEBUG
 #define DEBUG_EDGEWALK
 #define DEBUG_ENUM_PROCESS
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_EDGEWALK
 #endif
 
 #ifdef TIMINGS
@@ -1440,7 +1448,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
   CuspidalBank<T, Tint> cusp_bank;
   std::vector<int> l_status;
   std::list<FundDomainVertex_FullInfo<T, Tint, Tgroup>> l_orbit_vertices;
-#ifdef TRACK_INFOS_LOG
+#ifdef TRACK_INFO_EDGEWALK
   std::cout << "return [\n";
 #endif
 #ifdef DEBUG_ENUM_PROCESS
@@ -1577,7 +1585,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
         os << " fVert=" << StringVectorGAP(fVert.gen) << " norm=" << norm
            << "\n";
 #endif
-#ifdef TRACK_INFOS_LOG
+#ifdef TRACK_INFO_EDGEWALK
         std::vector<T> const &l_norms = si.l_norms;
         os << "rec(k1:=" << StringFundDomainVertexGAP(theVert)
            << ", k2:=" << StringFundDomainVertexGAP(fVert)
@@ -1768,7 +1776,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
       return false;
     if (!s_gen_isom_cox.insert(eP).second)
       return false;
-#ifdef TRACK_INFOS_LOG
+#ifdef TRACK_INFO_EDGEWALK
     std::cout << "rec(isom:=" << StringMatrixGAP(eP) << "),\n";
 #endif
     if (EarlyTerminationIfNotReflective) {
@@ -1893,6 +1901,8 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
   WriteMatrixGAP(os, G);
   os << "\n";
   os << "EDGE: V=" << StringVectorGAP(V) << " norm=" << norm << "\n";
+#endif
+#ifdef SANITY_CHECK_EDGEWALK
   if (norm > 0) {
     std::cerr << "We need a vector of negative norm or zero norm in order to "
                  "build a system of simple roots\n";
@@ -2173,7 +2183,7 @@ ResultEdgewalk<T, Tint> StandardEdgewalkAnalysis(MyMatrix<T> const &G,
         HeuristicTryTerminateDualDescription, os);
     return re;
   } catch (NonReflectivityException const &e) {
-#ifdef DEBUG_EDGEWALK
+#ifdef SANITY_CHECK_EDGEWALK
     if (!EarlyTerminationIfNotReflective) {
       std::cerr << "The program cannot go forward. Since we have "
                    "EarlyTerminationIfNotReflective = F\n";
@@ -2244,7 +2254,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
         HeuristicTryTerminateDualDescription, os);
     print_result_edgewalk(re);
   } catch (NonReflectivityException const &e) {
-#ifdef DEBUG_EDGEWALK
+#ifdef SANITY_CHECK_EDGEWALK
     if (!EarlyTerminationIfNotReflective) {
       std::cerr << "The program cannot go forward. Since we have "
                    "EarlyTerminationIfNotReflective = F\n";

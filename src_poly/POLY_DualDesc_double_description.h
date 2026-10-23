@@ -6,6 +6,7 @@
 #include "Boost_bitset.h"
 #include "GRAPH_BitsetType.h"
 #include "MAT_Matrix.h"
+#include "MAT_MatrixInt.h"
 #include "MAT_NonUniqueRescale.h"
 #include "POLY_SimplexClarkson.h"
 #include <algorithm>

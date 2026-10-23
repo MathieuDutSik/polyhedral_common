@@ -89,9 +89,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr
-          << "POLY_cdd_lp2 arith [FileFAC] [FileIneq] [OutFormat] [FileO]\n";
+          << "POLY_cdd_LinearProgramming arith [FileFAC] [FileIneq] "
+             "[OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_cdd_lp2 arith [FileFAC] [FileIneq]\n";
+      std::cerr << "POLY_cdd_LinearProgramming arith [FileFAC] [FileIneq]\n";
       std::cerr << "\n";
       std::cerr << "with:\n";
       std::cerr << "arith     : the chosen arithmetic\n";
