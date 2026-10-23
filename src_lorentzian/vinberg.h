@@ -147,11 +147,6 @@ The program for the dual descriptions: lrs_iterate, or one of the programs\n\
 of DirectFacetComputationIncidence (cdd, lrs, ...)";
 }
 
-std::string doc_FileOut() {
-  return "Default: stdout\n\
-The output: stdout, stderr or the name of a file";
-}
-
 template <typename T, typename Tint>
 std::vector<T> get_initial_list_norms(MyMatrix<T> const &G,
                                       std::string const &OptionNorms,
@@ -1537,7 +1532,7 @@ If compute then a short integral vector v0 is computed by the program";
 The formatting used for the output. Possible values:\n\
 GAP: a GAP readable file\n\
 TXT: a text file";
-    ListStringValues_doc["FileOut"] = doc_FileOut();
+    ListStringValues_doc["FileOut"] = doc_StderrStdoutFile("stdout");
     ListBoolValues_doc["ReflectivityEarlyTermination"] = "Default: F\n\
 T: stop as soon as the group is proved not to be reflective\n\
 F: carry on the enumeration in any case\n\

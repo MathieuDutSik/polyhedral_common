@@ -1995,8 +1995,7 @@ inline FullNamelist NAMELIST_GetStandard_ENUMERATE_IGUSA_TSPACE() {
 The formatting of the orbits of vertices and of facets. Possible values:\n\
 GAP: a GAP readable file\n\
 PYTHON: a PYTHON readable file";
-    ListStringValues_doc["OutFile"] = "Default: stderr\n\
-The output: stdout, stderr or the name of a file";
+    ListStringValues_doc["OutFile"] = doc_StderrStdoutFile("stderr");
     ListStringValues_doc["FileVertex"] = "Default: unset\n\
 If set, only the local cone of the vertex in that file is computed (see\n\
 VertexTest, VertexTestRigorous, FileKnownEdges and CompareDualSide)";

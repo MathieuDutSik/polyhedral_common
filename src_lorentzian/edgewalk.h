@@ -79,7 +79,7 @@ FileVertex or FileVertexRoots";
 The formatting used for the output. Possible values:\n\
 GAP: a GAP readable file\n\
 PYTHON: a PYTHON readable file";
-    ListStringValues_doc["FileOut"] = doc_FileOut();
+    ListStringValues_doc["FileOut"] = doc_StderrStdoutFile("stdout");
     ListBoolValues_doc["EarlyTerminationIfNotReflective"] = "Default: F\n\
 T: the computation stops as soon as the group is proved not to be\n\
   reflective, which is then reported\n\
@@ -117,7 +117,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism() {
 The formatting used for the output. Possible value:\n\
 GAP: the isometry mapping the first matrix to the second, or fail if they\n\
   are not isometric, as a GAP readable file";
-    ListStringValues_doc["FileOut"] = doc_FileOut();
+    ListStringValues_doc["FileOut"] = doc_StderrStdoutFile("stdout");
     ListBoolValues_doc["ApplyReduction"] = "Default: T\n\
 Whether to apply the reduction. F is for debugging only";
     ListStringValues_doc["FileHeuristicIdealStabEquiv"] = "Default: unset.heu\n\

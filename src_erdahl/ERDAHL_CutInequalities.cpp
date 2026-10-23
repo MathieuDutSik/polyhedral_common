@@ -30,7 +30,8 @@ The perfect functions of the full space of dimension n separated from\n\
 CUT_E(n) are those of the method polytopes with dim L <= TestMaxDimL.\n\
 If -1 then none";
     ListStringValues_doc["FileDualDesc"] = doc_FileDualDescription();
-    ListStringValues_doc["OutFile"] = doc_ErdahlOutFile();
+    ListStringValues_doc["OutFile"] =
+        doc_StderrStdoutFile("stderr") + "\nThe output is in GAP format";
     ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
     ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }

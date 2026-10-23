@@ -602,11 +602,6 @@ For the method polytopes: the perfect polyhedra P + L with dim L <= MaxDimL\n\
 are kept, only the polytopes for 0";
 }
 
-std::string doc_ErdahlOutFile() {
-  return "Default: stderr\n\
-The output, in GAP format: stdout, stderr or the name of a file";
-}
-
 // clang-format off
 #endif  // SRC_ERDAHL_ERDAHL_POLYTOPE_ENUMERATION_H_
 // clang-format on

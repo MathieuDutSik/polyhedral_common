@@ -40,7 +40,8 @@ file in the format of ReadMatrixFile with the function of a Delaunay\n\
 polytope of the space, made perfect by moves if it is not already";
     ListIntValues_doc["MaxDimL"] = doc_ErdahlMaxDimL();
     ListStringValues_doc["FileDualDesc"] = doc_FileDualDescription();
-    ListStringValues_doc["OutFile"] = doc_ErdahlOutFile();
+    ListStringValues_doc["OutFile"] =
+        doc_StderrStdoutFile("stderr") + "\nThe output is in GAP format";
     ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
     ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
