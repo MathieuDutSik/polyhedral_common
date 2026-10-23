@@ -20,43 +20,29 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    std::map<std::string, int> ListIntValues;
-    // The dimension.
-    ListIntValues["n"] = -1;
-    // "full": all the functions a + b.x + C[x].
-    // "centered": the functions a + C[x - c], whose zero sets are the
-    // Delaunay polyhedra symmetric around c, read from FileCenter in the
-    // format of ReadVectorFile (n followed by the n entries, rational entries
-    // written as p/q).
-    ListStringValues["space"] = "full";
-    ListStringValues["FileCenter"] = "unset";
-    // "recursive": all the perfect Delaunay polyhedra, by the recursive
-    // adjacency decomposition through the degenerate polyhedra.
-    // "polytopes": only the perfect Delaunay polytopes (or the perfect
-    // polyhedra P + L with dim L <= MaxDimL), by flips between them from a
-    // starting perfect polytope; complete only if the graph restricted to
-    // them is connected.
-    ListStringValues["method"] = "recursive";
-    // For the method "polytopes": "auto" starts from the Erdahl-Rybnikov
-    // polytope P_ER(n) (full space) or its symmetrization from dimension
-    // n-1 (centered space), see erdahl_initial_polytope; otherwise a file
-    // in the format of ReadMatrixFile with the function of a Delaunay
-    // polytope of the space, made perfect by moves if it is not already.
-    ListStringValues["FileStart"] = "auto";
-    // For the method "polytopes": the perfect polyhedra P + L with
-    // dim L <= MaxDimL are kept, the polytopes only for 0.
-    ListIntValues["MaxDimL"] = 0;
-    // The namelist of the heuristics of the dual descriptions, e.g.
-    // CI_tests/16A_EquivDualDesc/CUT_K8/input.nml, or "unset" for the
-    // default ones.
-    ListStringValues["FileDualDesc"] = "unset";
-    // The output, in GAP format: a file, "stderr" or "stdout".
-    ListStringValues["OutFile"] = "stderr";
-    SingleBlock BlockDATA;
-    BlockDATA.setListIntValues(ListIntValues);
-    BlockDATA.setListStringValues(ListStringValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListIntValues_doc["n"] = "The dimension n, at least 1";
+    ListStringValues_doc["space"] = "Default: full\n\
+The space of functions. Possible values:\n\
+full: all the functions a + b.x + C[x]\n\
+centered: the functions a + C[x - c], whose zero sets are the Delaunay\n\
+  polyhedra symmetric around the center c of FileCenter";
+    ListStringValues_doc["FileCenter"] = "Default: unset\n\
+For the space centered: the file of the center c, in the format of\n\
+ReadVectorFile (n followed by the n entries, rational entries written p/q)";
+    ListStringValues_doc["method"] = doc_ErdahlMethod();
+    ListStringValues_doc["FileStart"] = "Default: auto\n\
+For the method polytopes: the starting polytope. If auto then the\n\
+Erdahl-Rybnikov polytope P_ER(n) (full space) or its symmetrization from\n\
+dimension n-1 (centered space), see erdahl_initial_polytope; otherwise a\n\
+file in the format of ReadMatrixFile with the function of a Delaunay\n\
+polytope of the space, made perfect by moves if it is not already";
+    ListIntValues_doc["MaxDimL"] = doc_ErdahlMaxDimL();
+    ListStringValues_doc["FileDualDesc"] = doc_FileDualDescription();
+    ListStringValues_doc["OutFile"] = doc_ErdahlOutFile();
+    ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   return FullNamelist(ListBlock);
 }

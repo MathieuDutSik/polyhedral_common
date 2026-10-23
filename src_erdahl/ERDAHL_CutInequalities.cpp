@@ -19,28 +19,20 @@ FullNamelist NAMELIST_GetStandard_CUT_INEQUALITIES() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   {
-    std::map<std::string, std::string> ListStringValues;
-    std::map<std::string, int> ListIntValues;
-    // The dimension n of the cone CUT_E(n).
-    ListIntValues["n"] = -1;
-    // The enumeration of the centrally symmetric perfect polyhedra of
-    // dimension n+1: "recursive" (complete) or "polytopes" (the perfect
-    // polyhedra with dim L <= MaxDimL connected to a starting polytope),
-    // see ERDAHL_EnumeratePerfect.
-    ListStringValues["method"] = "recursive";
-    ListIntValues["MaxDimL"] = 0;
-    // The perfect functions of the full space of dimension n separated from
-    // CUT_E(n) are those of the method "polytopes" with dim L <= this.
-    // -1 for none.
-    ListIntValues["TestMaxDimL"] = 1;
-    // The heuristics of the dual descriptions, "unset" for the default.
-    ListStringValues["FileDualDesc"] = "unset";
-    // The output, in GAP format: a file, "stderr" or "stdout".
-    ListStringValues["OutFile"] = "stderr";
-    SingleBlock BlockDATA;
-    BlockDATA.setListIntValues(ListIntValues);
-    BlockDATA.setListStringValues(ListStringValues);
-    ListBlock["DATA"] = BlockDATA;
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListIntValues_doc["n"] = "The dimension n of the cone CUT_E(n), at least 1";
+    ListStringValues_doc["method"] = doc_ErdahlMethod() + "\n\
+It is applied to the centrally symmetric perfect polyhedra of dimension n+1";
+    ListIntValues_doc["MaxDimL"] = doc_ErdahlMaxDimL();
+    ListIntValues_doc["TestMaxDimL"] = "Default: 1\n\
+The perfect functions of the full space of dimension n separated from\n\
+CUT_E(n) are those of the method polytopes with dim L <= TestMaxDimL.\n\
+If -1 then none";
+    ListStringValues_doc["FileDualDesc"] = doc_FileDualDescription();
+    ListStringValues_doc["OutFile"] = doc_ErdahlOutFile();
+    ListBlock["DATA"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   return FullNamelist(ListBlock);
 }

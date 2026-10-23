@@ -8,6 +8,7 @@
 #include <optional>
 #include <random>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -581,6 +582,29 @@ erdahl_enumerate_perfect_polytopes(ErdahlFunctionSpace<T> const &W,
     l_perfect.push_back(entry.D);
   }
   return {l_perfect, n_degenerate, n_flip};
+}
+
+// The namelist documentation of the keys shared by ERDAHL_EnumeratePerfect
+// and ERDAHL_CutInequalities.
+std::string doc_ErdahlMethod() {
+  return "Default: recursive\n\
+The enumeration of the perfect Delaunay polyhedra. Possible values:\n\
+recursive: all of them, by the recursive adjacency decomposition through\n\
+  the degenerate polyhedra\n\
+polytopes: only the perfect polyhedra P + L with dim L <= MaxDimL, by flips\n\
+  from a starting perfect polytope; complete only if the graph restricted\n\
+  to them is connected";
+}
+
+std::string doc_ErdahlMaxDimL() {
+  return "Default: 0\n\
+For the method polytopes: the perfect polyhedra P + L with dim L <= MaxDimL\n\
+are kept, only the polytopes for 0";
+}
+
+std::string doc_ErdahlOutFile() {
+  return "Default: stderr\n\
+The output, in GAP format: stdout, stderr or the name of a file";
 }
 
 // clang-format off
