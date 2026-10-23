@@ -282,6 +282,40 @@ test_homology_mod:=function()
     return true;
 end;
 
+# GL3 over the Gaussian integers, Gamma0(11 O_K) in SL3(Z[i]), the Sharbly
+# method: the homology at index 5 (the degree 5 of the cohomology) is of
+# dimension 2, carrying the Eisenstein classes of the Bianchi form 121.1-a
+# (the base change of 11a): T_pi has the eigenvalues a + q^2 and 1 + q a,
+# with q = N(pi) and a = a_pi, which is a_2 = -2 for pi = 1+i and a_5 = 1
+# for pi = 2+i. The index of Gamma is 59052: the homology is computed
+# modulo p (the rational one uses dense matrices).
+test_sharbly_gaussian:=function()
+    local p, desc, ListX, ListChar, i, Res, eLev, CharP;
+    p:=2147483647;
+    desc:=GenerateTspaceDescription_imag_quad(3, -4, true);
+    # The realified matrices diag(1, 1, pi), in the layout
+    # (x_1, x_2, x_3, y_1, y_2, y_3) of z_j = x_j + i y_j.
+    ListX:=[[[1,0,0,0,0,0],[0,1,0,0,0,0],[0,0,1,0,0,1],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,-1,0,0,1]],
+            [[1,0,0,0,0,0],[0,1,0,0,0,0],[0,0,2,0,0,1],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,-1,0,0,2]]];
+    ListChar:=[[-6, 1, 1], [156, -32, 1]];
+    for i in [1..Length(ListX)]
+    do
+        Res:=PERFCOMP_hecke_operators(desc, ListX[i], "Gamma0SL", 11, true, "Sharbly", "none", p);
+        eLev:=get_hecke_level(Res, 5);
+        Print("Sharbly SL3(Z[i]) Gamma0(11) i=", i, " dim=", eLev.dim_homology, " M=", eLev.HeckeMatrix, "\n");
+        if eLev.dim_homology<>2 then
+            Print("The homology should be of dimension 2\n");
+            return false;
+        fi;
+        CharP:=CharacteristicPolynomial(matrix_mod_p(eLev.HeckeMatrix, p));
+        if CoefficientsOfUnivariatePolynomial(CharP)<>List(ListChar[i], c->c*One(GF(p))) then
+            Print("The characteristic polynomial does not match the expected one\n");
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
 f_compute:=function()
     local n_error;
     n_error:=0;
@@ -298,6 +332,9 @@ f_compute:=function()
         n_error:=n_error+1;
     fi;
     if not test_homology_mod() then
+        n_error:=n_error+1;
+    fi;
+    if not test_sharbly_gaussian() then
         n_error:=n_error+1;
     fi;
     return n_error=0;

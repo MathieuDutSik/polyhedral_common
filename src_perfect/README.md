@@ -48,7 +48,10 @@ driven by the `&HECKE` block of `PERF_SerialPerfectComputation`:
   cones in the well rounded complex), `Vertex` (induction from the vertices
   in the full complex, needed for the homology of the full complex) or
   `Sharbly` (Ash-Rudolph reduction of the modular symbols at the top degree
-  and filling of the level below: the top two degrees only).
+  and filling of the level below: the top two degrees only). `Sharbly` also
+  works for the Hermitian T-spaces (`ImagQuad`) over a norm-Euclidean ring
+  O_K (d = -1, -2, -3, -7, -11): the symbols are then m lines over O_K and
+  the top two degrees are 5 and 6 for GL_3(O_K).
 * `FileHeckeChainMap`: output of step A, the chains representing the images
   of the cells under the cosets of G x G.
 * `FileHeckeChainMapCache`: step A does not depend on the subgroup. If this
@@ -66,7 +69,9 @@ driven by the `&HECKE` block of `PERF_SerialPerfectComputation`:
   `Gamma1SL`. The elements of determinant -1 can reverse the orientation of
   the cells and kill them in the quotient complex: the cohomology of the
   literature (Ash, Gunnells, McConnell for SL_4) is the one of the SL
-  variants.
+  variants. For a Hermitian T-space the subgroups are those of GL_m(O_K):
+  the congruences are on the entries over O_K modulo N O_K (N an integer)
+  and the SL condition is that the determinant over O_K is 1.
 * `OnlyWellRoundedHomology`: restrict to the well rounded cells, which
   gives the cohomology of the subgroup by duality; otherwise the homology of
   the full complex with its cells at infinity.

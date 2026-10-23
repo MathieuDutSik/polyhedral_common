@@ -421,7 +421,16 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         std::cerr << "The " << hcm.method << " method only gives the homology of the well rounded complex\n";
         throw TerminalException{1};
       }
-      FiniteIndexSubgroup<Tint> gamma{SubgroupType, Tint(SubgroupLevel), LinSpa.n};
+      FiniteIndexSubgroup<Tint> gamma{};
+      gamma.type = SubgroupType;
+      gamma.N = Tint(SubgroupLevel);
+      gamma.n = LinSpa.n;
+      // The subgroups of GL_m(O_K) for a Hermitian T-space.
+      std::optional<ImagQuadStructure<T>> field = get_imag_quad_structure(LinSpa);
+      if (field) {
+        gamma.set_field(field->m, UniversalScalarConversion<int64_t, T>(field->eSum),
+                        UniversalScalarConversion<int64_t, T>(field->eProd));
+      }
       HeckeHomologyResult<T> result;
       try {
         result = compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, HeckeHomologyPrime, os);

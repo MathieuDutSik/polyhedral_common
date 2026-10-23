@@ -268,12 +268,85 @@ struct GammaAction {
   std::vector<int64_t> s_mod;
   std::vector<int64_t> s_inv_mod;
   int64_t det_sign;
+  // For a Hermitian T-space, the determinant over O_K (a unit).
+  std::pair<int64_t, int64_t> det_k;
 };
 
 template <typename Tint> struct FiniteIndexSubgroup {
   std::string type;
   Tint N;
   int n;
+  /*
+    For a Hermitian T-space over O_K = Z[omega], omega^2 = s omega - p,
+    the matrices are the realifications of the m x m matrices over O_K
+    (n = 2m, the entry (i, j) over O_K being (g(i, j), g(i, m + j))), and
+    the subgroups are those of GL_m(O_K): the congruences are on the
+    entries over O_K modulo N O_K and the SL condition is det_K = 1.
+   */
+  int m_field = 0;
+  int64_t eSum_field = 0;
+  int64_t eProd_field = 0;
+  // The units of O_K / N O_K, for the canonical form of the Gamma0 keys.
+  std::vector<std::pair<int64_t, int64_t>> l_unit_mod;
+  bool is_hermitian() const { return m_field > 0; }
+  void set_field(int const &m, int64_t const &eSum, int64_t const &eProd) {
+    m_field = m;
+    eSum_field = eSum;
+    eProd_field = eProd;
+    int64_t mod = get_n_mod();
+    l_unit_mod.clear();
+    for (int64_t a = 0; a < mod; a++) {
+      for (int64_t b = 0; b < mod; b++) {
+        int64_t nrm = ResidueModPrime(a * a + eSum * a * b + eProd * b * b, mod);
+        if (std::gcd(nrm, mod) == 1 && !(a == 1 && b == 0)) {
+          l_unit_mod.push_back({a, b});
+        }
+      }
+    }
+  }
+  template <typename Tval>
+  std::pair<Tval, Tval> mul_k(std::pair<Tval, Tval> const &x, std::pair<Tval, Tval> const &y) const {
+    Tval p = UniversalScalarConversion<Tval, int64_t>(eProd_field);
+    Tval s = UniversalScalarConversion<Tval, int64_t>(eSum_field);
+    return {x.first * y.first - p * x.second * y.second,
+            x.first * y.second + x.second * y.first + s * x.second * y.second};
+  }
+  // The determinant over O_K of the realification g, by the expansion
+  // along the first row.
+  std::pair<Tint, Tint> determinant_k(MyMatrix<Tint> const &g) const {
+    int m = m_field;
+    std::function<std::pair<Tint, Tint>(std::vector<int> const &, std::vector<int> const &)> f_det =
+        [&](std::vector<int> const &l_row, std::vector<int> const &l_col) -> std::pair<Tint, Tint> {
+      if (l_row.empty()) {
+        return {Tint(1), Tint(0)};
+      }
+      std::pair<Tint, Tint> det{Tint(0), Tint(0)};
+      int i = l_row[0];
+      std::vector<int> l_row_sub(l_row.begin() + 1, l_row.end());
+      for (size_t pos = 0; pos < l_col.size(); pos++) {
+        int j = l_col[pos];
+        std::vector<int> l_col_sub;
+        for (size_t pos2 = 0; pos2 < l_col.size(); pos2++) {
+          if (pos2 != pos) {
+            l_col_sub.push_back(l_col[pos2]);
+          }
+        }
+        std::pair<Tint, Tint> entry{g(i, j), g(i, m + j)};
+        std::pair<Tint, Tint> term = mul_k(entry, f_det(l_row_sub, l_col_sub));
+        if (pos % 2 == 0) {
+          det = {det.first + term.first, det.second + term.second};
+        } else {
+          det = {det.first - term.first, det.second - term.second};
+        }
+      }
+      return det;
+    };
+    std::vector<int> l_idx(m);
+    for (int i = 0; i < m; i++) {
+      l_idx[i] = i;
+    }
+    return f_det(l_idx, l_idx);
+  }
   bool is_sl() const {
     return type == "SL" || type == "PrincipalSL" || type == "Gamma0SL" || type == "Gamma1SL";
   }
@@ -289,7 +362,11 @@ template <typename Tint> struct FiniteIndexSubgroup {
   }
   bool is_in_gamma(MyMatrix<Tint> const &g) const {
     if (is_sl()) {
-      if (DeterminantMat(g) != 1) {
+      if (is_hermitian()) {
+        if (determinant_k(g) != std::pair<Tint, Tint>{Tint(1), Tint(0)}) {
+          return false;
+        }
+      } else if (DeterminantMat(g) != 1) {
         return false;
       }
     }
@@ -307,6 +384,22 @@ template <typename Tint> struct FiniteIndexSubgroup {
           if (ResInt(val, N) != 0) {
             return false;
           }
+        }
+      }
+      return true;
+    }
+    if ((type == "Gamma0" || type == "Gamma1") && is_hermitian()) {
+      // The last row over O_K is the row m - 1 of the realification.
+      int m = m_field;
+      for (int j = 0; j < m - 1; j++) {
+        if (ResInt(g(m - 1, j), N) != 0 || ResInt(g(m - 1, m + j), N) != 0) {
+          return false;
+        }
+      }
+      if (type == "Gamma1") {
+        Tint val = g(m - 1, m - 1) - 1;
+        if (ResInt(val, N) != 0 || ResInt(g(m - 1, 2 * m - 1), N) != 0) {
+          return false;
         }
       }
       return true;
@@ -352,6 +445,24 @@ template <typename Tint> struct FiniteIndexSubgroup {
   // lexicographic order otherwise.
   void canonicalize_gamma0(std::vector<int64_t> &row) const {
     int64_t m = get_n_mod();
+    if (is_hermitian()) {
+      // The row is an element of (O_K / N)^m, in the realified layout.
+      int mf = m_field;
+      std::vector<int64_t> best = row;
+      for (auto &u : l_unit_mod) {
+        std::vector<int64_t> cand(2 * mf);
+        for (int j = 0; j < mf; j++) {
+          std::pair<int64_t, int64_t> z = mul_k(u, std::pair<int64_t, int64_t>{row[j], row[mf + j]});
+          cand[j] = ResidueModPrime(z.first, m);
+          cand[mf + j] = ResidueModPrime(z.second, m);
+        }
+        if (cand < best) {
+          best = cand;
+        }
+      }
+      row = best;
+      return;
+    }
     if (is_prime_n()) {
       for (int j = 0; j < n; j++) {
         if (row[j] != 0) {
@@ -410,7 +521,9 @@ template <typename Tint> struct FiniteIndexSubgroup {
       int64_t det_sign = get_det_sign(g, r);
       int64_t det_mod = ResidueModPrime(det_sign, m);
       std::vector<int64_t> inv = inverse_mod(r, n, m, (m == 1) ? 0 : det_mod);
-      key = std::vector<int64_t>(inv.begin() + (n - 1) * n, inv.end());
+      // The last row of g^{-1} (over O_K: the row m - 1 of the realification).
+      int i_last = is_hermitian() ? m_field - 1 : n - 1;
+      key = std::vector<int64_t>(inv.begin() + i_last * n, inv.begin() + (i_last + 1) * n);
       if (type == "Gamma0") {
         canonicalize_gamma0(key);
       }
@@ -419,7 +532,13 @@ template <typename Tint> struct FiniteIndexSubgroup {
       throw TerminalException{1};
     }
     if (is_sl()) {
-      key.push_back(get_det_sign(g, r));
+      if (is_hermitian()) {
+        std::pair<Tint, Tint> det = determinant_k(g);
+        key.push_back(UniversalScalarConversion<int64_t, Tint>(det.first));
+        key.push_back(UniversalScalarConversion<int64_t, Tint>(det.second));
+      } else {
+        key.push_back(get_det_sign(g, r));
+      }
     }
     return key;
   }
@@ -429,6 +548,11 @@ template <typename Tint> struct FiniteIndexSubgroup {
     a.s_mod = get_residues(s);
     a.det_sign = get_det_sign(s, a.s_mod);
     a.s_inv_mod = inverse_mod(a.s_mod, n, m, (m == 1) ? 0 : ResidueModPrime(a.det_sign, m));
+    if (is_hermitian()) {
+      std::pair<Tint, Tint> det = determinant_k(s);
+      a.det_k = {UniversalScalarConversion<int64_t, Tint>(det.first),
+                 UniversalScalarConversion<int64_t, Tint>(det.second)};
+    }
     return a;
   }
   // The key of s g Gamma from the key of g Gamma: s g mod N for
@@ -462,7 +586,14 @@ template <typename Tint> struct FiniteIndexSubgroup {
       }
     }
     if (is_sl()) {
-      key_ret.push_back(a.det_sign * key.back());
+      if (is_hermitian()) {
+        size_t len = key.size();
+        std::pair<int64_t, int64_t> det = mul_k(a.det_k, std::pair<int64_t, int64_t>{key[len - 2], key[len - 1]});
+        key_ret.push_back(det.first);
+        key_ret.push_back(det.second);
+      } else {
+        key_ret.push_back(a.det_sign * key.back());
+      }
     }
     return key_ret;
   }
@@ -2724,15 +2855,6 @@ compute_hecke_chain_map_dual(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   is sign-consistent across all insertions.
  */
 
-// The symbol level: the level of the cones of dimension n, which is
-// dim T - n since level k holds the cones of codimension k.
-template <typename T, typename Tint, typename Tgroup>
-int get_symbol_level(FullComplexEnumeration<T, Tint, Tgroup> const &fce) {
-  int dimT = fce.pctdi.LinSpa.ListMat.size();
-  int n = fce.pctdi.LinSpa.n;
-  return dimT - n;
-}
-
 // One vector per pair {v, -v} of the rows, each with its first non-zero
 // entry positive. The EXT of a face holds both v and -v.
 template <typename Tint>
@@ -2751,6 +2873,273 @@ MyMatrix<Tint> half_vector_set(MyMatrix<Tint> const &EXT) {
   return M;
 }
 
+/*
+  The symbols of a Hermitian T-space over an imaginary quadratic field
+  K = Q(omega), omega^2 = s omega - p. The vectors of Z^{2m} are the
+  elements of O_K^m with the layout (x_1, ..., x_m, y_1, ..., y_m) for
+  z_j = x_j + y_j omega, and the multiplication by omega is the matrix J
+  of ListComm acting on the right (GetCommQuadratic). A symbol is a family
+  of m lines over K: its cell has the dimension m, so the symbol level is
+  dim T - m, and the EXT of the cell holds all the unit multiples of the
+  generators of the lines.
+
+  The Ash-Rudolph reduction works the same over a norm-Euclidean ring
+  O_K: for a symbol [v_1, ..., v_m] with |N(det)| > 1 and a lattice point
+  w = sum_i q_i v_i with all N(q_i) < 1,
+    [v_1, ..., v_m] = sum_{q_i <> 0} [v_1, .., v_{i-1}, w, v_{i+1}, .., v_m]
+  and each term has the norm of determinant N(q_i) |N(det)|. The lattice
+  points modulo the O_K-span of the v_i are the classes of Z^{2m} modulo
+  the Z-span of the rows of the realification R(W) = (W ; W J), and the
+  coordinate q_i of the class f is (f_i, f_{m+i}) modulo O_K.
+ */
+template <typename T> struct ImagQuadStructure {
+  int m;
+  T eSum;
+  T eProd;
+  MyMatrix<T> J;
+};
+
+template <typename T>
+std::optional<ImagQuadStructure<T>> get_imag_quad_structure(LinSpaceMatrix<T> const &LinSpa) {
+  if (LinSpa.ListComm.size() != 1) {
+    return {};
+  }
+  int n = LinSpa.n;
+  if (n % 2 != 0) {
+    return {};
+  }
+  int m = n / 2;
+  MyMatrix<T> const &J = LinSpa.ListComm[0];
+  T eSum = J(m, m);
+  T eProd = -J(m, 0);
+  T disc = eSum * eSum - 4 * eProd;
+  if (disc >= 0) {
+    return {};
+  }
+  if (J != GetCommQuadratic(m, eSum, eProd)) {
+    return {};
+  }
+  return ImagQuadStructure<T>{m, eSum, eProd, J};
+}
+
+/*
+  The geometry of the symbols: the classic T-space (the symbols are n
+  vectors of Z^n) or a Hermitian T-space (m lines over O_K). All the
+  matrices of vectors are of rational integers, a line of O_K^m being
+  given by one of its generators.
+ */
+template <typename T, typename Tint> struct SymbolGeometry {
+  std::optional<ImagQuadStructure<T>> field;
+  // The number of rows of a symbol: n, or m.
+  int dim;
+  int n;
+  // The units of O_K, as pairs (a, b) for a + b omega.
+  std::vector<std::pair<T, T>> l_unit;
+  using Elt = std::pair<T, T>;
+  explicit SymbolGeometry(LinSpaceMatrix<T> const &LinSpa)
+      : field(get_imag_quad_structure(LinSpa)), n(LinSpa.n) {
+    if (field) {
+      dim = field->m;
+      for (int a = -2; a <= 2; a++) {
+        for (int b = -2; b <= 2; b++) {
+          Elt u{T(a), T(b)};
+          if (norm(u) == 1) {
+            l_unit.push_back(u);
+          }
+        }
+      }
+    } else {
+      dim = n;
+    }
+  }
+  bool is_hermitian() const { return field.has_value(); }
+  Elt mul(Elt const &x, Elt const &y) const {
+    return {x.first * y.first - field->eProd * x.second * y.second,
+            x.first * y.second + x.second * y.first + field->eSum * x.second * y.second};
+  }
+  T norm(Elt const &x) const {
+    return x.first * x.first + field->eSum * x.first * x.second + field->eProd * x.second * x.second;
+  }
+  Elt conj(Elt const &x) const { return {x.first + field->eSum * x.second, -x.second}; }
+  Elt div(Elt const &x, Elt const &y) const {
+    Elt z = mul(x, conj(y));
+    T nrm = norm(y);
+    return {z.first / nrm, z.second / nrm};
+  }
+  static bool is_zero(Elt const &x) { return x.first == 0 && x.second == 0; }
+  // The element of O_K nearest to x for the norm, all the nearest ones
+  // being returned.
+  std::vector<Elt> nearest_integers(Elt const &x) const {
+    Tint fa = UniversalFloorScalarInteger<Tint, T>(x.first);
+    Tint fb = UniversalFloorScalarInteger<Tint, T>(x.second);
+    std::optional<T> best;
+    std::vector<Elt> l_best;
+    for (int k = -2; k <= 3; k++) {
+      for (int l = -2; l <= 3; l++) {
+        Elt c{T(fa) + T(k), T(fb) + T(l)};
+        T val = norm({x.first - c.first, x.second - c.second});
+        if (!best || val < *best) {
+          best = val;
+          l_best.clear();
+        }
+        if (val == *best) {
+          l_best.push_back(c);
+        }
+      }
+    }
+    return l_best;
+  }
+  // The gcd by the Euclidean algorithm for the norm.
+  Elt gcd(Elt a, Elt b) const {
+    size_t n_iter = 0;
+    while (!is_zero(b)) {
+      n_iter += 1;
+      if (n_iter > 1000) {
+        throw HeckeFailure{"sharbly: the Euclidean algorithm does not terminate, O_K is not norm-Euclidean"};
+      }
+      Elt q = nearest_integers(div(a, b))[0];
+      Elt qb = mul(q, b);
+      Elt r{a.first - qb.first, a.second - qb.second};
+      if (norm(r) >= norm(b)) {
+        throw HeckeFailure{"sharbly: O_K is not norm-Euclidean"};
+      }
+      a = b;
+      b = r;
+    }
+    return a;
+  }
+  Elt get_entry(MyVector<T> const &V, int const &j) const { return {V(j), V(field->m + j)}; }
+  void set_entry(MyVector<T> &V, int const &j, Elt const &x) const {
+    V(j) = x.first;
+    V(field->m + j) = x.second;
+  }
+  MyVector<T> scale(Elt const &u, MyVector<T> const &V) const {
+    MyVector<T> W(n);
+    for (int j = 0; j < field->m; j++) {
+      set_entry(W, j, mul(u, get_entry(V, j)));
+    }
+    return W;
+  }
+  // The generator of the line of V in O_K^m (or Z^n) that is the
+  // largest in the lexicographic order among its unit multiples.
+  MyVector<Tint> primitive_vector(MyVector<T> const &V) const {
+    MyVector<T> Vred = RemoveFractionVector(V);
+    if (!field) {
+      return UniversalVectorConversion<Tint, T>(Vred);
+    }
+    Elt g{T(0), T(0)};
+    for (int j = 0; j < field->m; j++) {
+      g = gcd(g, get_entry(Vred, j));
+    }
+    MyVector<T> Vprim(n);
+    for (int j = 0; j < field->m; j++) {
+      set_entry(Vprim, j, div(get_entry(Vred, j), g));
+    }
+    std::optional<MyVector<T>> best;
+    for (auto &u : l_unit) {
+      MyVector<T> Vu = scale(u, Vprim);
+      if (!best || *best < Vu) {
+        best = Vu;
+      }
+    }
+    return UniversalVectorConversion<Tint, T>(*best);
+  }
+  MyMatrix<Tint> primitive_rows(MyMatrix<T> const &W_T) const {
+    MyMatrix<Tint> W(W_T.rows(), W_T.cols());
+    for (int i_row = 0; i_row < W_T.rows(); i_row++) {
+      AssignMatrixRow(W, i_row, primitive_vector(GetMatrixRow(W_T, i_row)));
+    }
+    return W;
+  }
+  // The vectors of a cell, one per line (one per pair {v, -v} for the
+  // classic T-space), in a canonical order.
+  MyMatrix<Tint> symbol_rows(MyMatrix<Tint> const &EXT) const {
+    if (!field) {
+      return half_vector_set(EXT);
+    }
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
+    std::set<MyVector<Tint>> set;
+    for (int i_row = 0; i_row < EXT.rows(); i_row++) {
+      set.insert(primitive_vector(GetMatrixRow(EXT_T, i_row)));
+    }
+    MyMatrix<Tint> M(set.size(), EXT.cols());
+    int pos = 0;
+    for (auto &V : set) {
+      AssignMatrixRow(M, pos, V);
+      pos += 1;
+    }
+    return M;
+  }
+  // The rows of W and of W J.
+  MyMatrix<T> realify(MyMatrix<T> const &W) const {
+    if (!field) {
+      return W;
+    }
+    MyMatrix<T> WJ = W * field->J;
+    MyMatrix<T> R(2 * W.rows(), W.cols());
+    for (int i = 0; i < W.rows(); i++) {
+      for (int j = 0; j < W.cols(); j++) {
+        R(i, j) = W(i, j);
+        R(W.rows() + i, j) = WJ(i, j);
+      }
+    }
+    return R;
+  }
+  MyMatrix<Tint> realify_int(MyMatrix<Tint> const &W) const {
+    return UniversalMatrixConversion<Tint, T>(realify(UniversalMatrixConversion<T, Tint>(W)));
+  }
+  // |det W| for the classic T-space, |N(det W)| for the Hermitian one.
+  Tint det_norm(MyMatrix<Tint> const &W) const {
+    return T_abs(DeterminantMat(realify_int(W)));
+  }
+  // Whether the rows of D span the whole space (over K).
+  bool is_spanning(MyMatrix<Tint> const &D) const {
+    return RankMat(realify_int(D)) == n;
+  }
+};
+
+// The symbol level: the level of the cones of dimension n (m lines for a
+// Hermitian T-space), which is dim T - n since level k holds the cones of
+// codimension k.
+template <typename T, typename Tint, typename Tgroup>
+int get_symbol_level(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+                     SymbolGeometry<T, Tint> const &geom) {
+  int dimT = fce.pctdi.LinSpa.ListMat.size();
+  return dimT - geom.dim;
+}
+
+/*
+  The orientation of a simplicial cell of the symbol level, given with its
+  rays in the order of the rows of W0, relative to the reference
+  orientation of the cell (or_info): the cell is symbol_orientation times
+  the oriented simplex [W0]. The rank one forms of v and u v (u a unit)
+  are the same, so any generator of the lines can be used.
+ */
+template <typename T, typename Tint, typename Tgroup>
+int symbol_orientation(FacePerfectComplex<T, Tint, Tgroup> const &face, MyMatrix<Tint> const &W0,
+                       std::vector<MyMatrix<T>> const &ListMat) {
+  OrientationInfo const &or_info = face.or_info;
+  int dim = or_info.ListColSelect.size();
+  if (W0.rows() != dim) {
+    std::cerr << "HECKE: symbol_orientation, the symbol has " << W0.rows()
+              << " rows but the cell is of dimension " << dim << "\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> M(dim, dim);
+  for (int i = 0; i < dim; i++) {
+    MyVector<Tint> V = GetMatrixRow(W0, i);
+    for (int j = 0; j < dim; j++) {
+      M(i, j) = EvaluationQuadForm<T, Tint>(ListMat[or_info.ListColSelect[j]], V);
+    }
+  }
+  T det = DeterminantMat(M);
+  if (det == 0) {
+    std::cerr << "HECKE: symbol_orientation, the rays should be independent\n";
+    throw TerminalException{1};
+  }
+  return (det > 0) ? or_info.sign : -or_info.sign;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 struct SharblyReducer {
 private:
@@ -2758,7 +3147,158 @@ private:
   int symbol_level;
   int iOrb0;
   MyMatrix<Tint> E0_inv;
+  // The cell iOrb0 is sign0 times the symbol of the rows of E0.
+  int sign0;
   HeckeBudget budget;
+  SymbolGeometry<T, Tint> geom;
+  /*
+    The reducing points of a symbol of a Hermitian T-space: the classes
+    f of Z^{2m} modulo the rows of R(W), whose coordinates q_i are taken
+    of the smallest norm modulo O_K (all of them if there are ties), with
+    the classes ordered by max N(q_i), then the number of nonzero q_i,
+    then sum N(q_i). The points w and u w for u a unit give the same
+    symbols: one of them is kept. As for the classic case, the result only
+    depends on the symbol, so the reduction is G-equivariant. Returned
+    with the indices i of the nonzero q_i.
+   */
+  std::vector<std::pair<MyVector<Tint>, std::vector<int>>>
+  get_reducing_points_hermitian(MyMatrix<Tint> const &W) const {
+    using Elt = std::pair<T, T>;
+    int m = geom.dim;
+    MyMatrix<T> R_T = geom.realify(UniversalMatrixConversion<T, Tint>(W));
+    MyMatrix<T> R_inv = Inverse(R_T);
+    int n2 = 2 * m;
+    std::vector<MyVector<T>> l_gen;
+    for (int j = 0; j < n2; j++) {
+      MyVector<T> g(n2);
+      for (int i = 0; i < n2; i++) {
+        g(i) = frac(R_inv(j, i));
+      }
+      l_gen.push_back(g);
+    }
+    std::set<MyVector<T>> set_class;
+    std::vector<MyVector<T>> l_class;
+    MyVector<T> zero = ZeroVector<T>(n2);
+    set_class.insert(zero);
+    l_class.push_back(zero);
+    size_t pos = 0;
+    while (pos < l_class.size()) {
+      MyVector<T> f = l_class[pos];
+      for (auto &g : l_gen) {
+        MyVector<T> h(n2);
+        for (int i = 0; i < n2; i++) {
+          h(i) = frac(f(i) + g(i));
+        }
+        if (set_class.insert(h).second) {
+          l_class.push_back(h);
+        }
+      }
+      pos += 1;
+    }
+    std::optional<std::tuple<T, int, T>> best;
+    std::vector<std::vector<std::vector<Elt>>> l_best;
+    for (auto &f : l_class) {
+      if (IsZeroVector(f)) {
+        continue;
+      }
+      T score(0);
+      T sum_norm(0);
+      int n_nonzero = 0;
+      std::vector<std::vector<Elt>> l_rep(m);
+      for (int i = 0; i < m; i++) {
+        Elt x{f(i), f(m + i)};
+        if (SymbolGeometry<T, Tint>::is_zero(x)) {
+          l_rep[i].push_back(x);
+          continue;
+        }
+        n_nonzero += 1;
+        for (auto &c : geom.nearest_integers(x)) {
+          l_rep[i].push_back({x.first - c.first, x.second - c.second});
+        }
+        T nrm = geom.norm(l_rep[i][0]);
+        sum_norm += nrm;
+        if (nrm > score) {
+          score = nrm;
+        }
+      }
+      std::tuple<T, int, T> key{score, n_nonzero, sum_norm};
+      if (!best || key < *best) {
+        best = key;
+        l_best.clear();
+      }
+      if (key == *best) {
+        l_best.push_back(l_rep);
+      }
+    }
+    if (!best || std::get<0>(*best) >= 1) {
+      throw HeckeFailure{"sharbly: no reducing point of norm < 1, O_K is not norm-Euclidean"};
+    }
+    std::set<MyVector<T>> set_c;
+    for (auto &l_rep : l_best) {
+      std::vector<MyVector<T>> l_c{ZeroVector<T>(n2)};
+      for (int i = 0; i < m; i++) {
+        std::vector<MyVector<T>> l_c_new;
+        for (auto &c : l_c) {
+          for (auto &q : l_rep[i]) {
+            MyVector<T> c2 = c;
+            c2(i) = q.first;
+            c2(m + i) = q.second;
+            l_c_new.push_back(c2);
+          }
+        }
+        l_c = std::move(l_c_new);
+      }
+      for (auto &c : l_c) {
+        std::optional<MyVector<T>> c_can;
+        for (auto &u : geom.l_unit) {
+          MyVector<T> cu(n2);
+          for (int i = 0; i < m; i++) {
+            Elt q = geom.mul(u, Elt{c(i), c(m + i)});
+            cu(i) = q.first;
+            cu(m + i) = q.second;
+          }
+          if (!c_can || cu < *c_can) {
+            c_can = cu;
+          }
+        }
+        set_c.insert(*c_can);
+      }
+    }
+    std::vector<std::pair<MyVector<Tint>, std::vector<int>>> l_ret;
+    for (auto &c : set_c) {
+      MyVector<T> w_T = R_T.transpose() * c;
+      std::vector<int> l_nz;
+      for (int i = 0; i < m; i++) {
+        if (c(i) != 0 || c(m + i) != 0) {
+          l_nz.push_back(i);
+        }
+      }
+      l_ret.push_back({geom.primitive_vector(w_T), l_nz});
+    }
+    return l_ret;
+  }
+  // The reducing points as primitive vectors, with the indices of the
+  // rows they replace.
+  std::vector<std::pair<MyVector<Tint>, std::vector<int>>>
+  get_reducing_points_full(MyMatrix<Tint> const &W) const {
+    if (geom.is_hermitian()) {
+      return get_reducing_points_hermitian(W);
+    }
+    MyMatrix<T> W_T = UniversalMatrixConversion<T, Tint>(W);
+    MyMatrix<T> W_inv = Inverse(W_T);
+    std::vector<std::pair<MyVector<Tint>, std::vector<int>>> l_ret;
+    for (auto &q : get_reducing_points(W_inv)) {
+      MyVector<T> w_T = W_T.transpose() * q;
+      std::vector<int> l_nz;
+      for (int i = 0; i < q.size(); i++) {
+        if (q(i) != 0) {
+          l_nz.push_back(i);
+        }
+      }
+      l_ret.push_back({UniversalVectorConversion<Tint, T>(RemoveFractionVector(w_T)), l_nz});
+    }
+    return l_ret;
+  }
   std::ostream &os;
   // x - floor(x), in [0, 1).
   static T frac(T const &x) {
@@ -2879,34 +3419,25 @@ private:
   }
 public:
   SharblyReducer(FullComplexEnumeration<T, Tint, Tgroup> const &_fce, int const &_symbol_level,
-                 int const &_iOrb0, MyMatrix<Tint> const &_E0_inv, std::ostream &_os)
-      : fce(_fce), symbol_level(_symbol_level), iOrb0(_iOrb0), E0_inv(_E0_inv), os(_os) {
+                 int const &_iOrb0, MyMatrix<Tint> const &_E0_inv,
+                 int const &_sign0, SymbolGeometry<T, Tint> const &_geom, std::ostream &_os)
+      : fce(_fce), symbol_level(_symbol_level), iOrb0(_iOrb0), E0_inv(_E0_inv), sign0(_sign0),
+        geom(_geom), os(_os) {
   }
-  // The reducing points of the symbol of the rows of W (|det W| > 1), as
+  SymbolGeometry<T, Tint> const &get_geometry() const { return geom; }
+  // The reducing points of the symbol of the rows of W (|det| > 1), as
   // primitive integral vectors.
   std::vector<MyVector<Tint>> reducing_points(MyMatrix<Tint> const &W) const {
-    MyMatrix<T> W_T = UniversalMatrixConversion<T, Tint>(W);
-    MyMatrix<T> W_inv = Inverse(W_T);
     std::vector<MyVector<Tint>> l_w;
-    for (auto &q : get_reducing_points(W_inv)) {
-      MyVector<T> w_T = W_T.transpose() * q;
-      l_w.push_back(UniversalVectorConversion<Tint, T>(RemoveFractionVector(w_T)));
+    for (auto &pair : get_reducing_points_full(W)) {
+      l_w.push_back(pair.first);
     }
     return l_w;
   }
-  // Make the rows primitive integral vectors: the symbol is invariant
-  // under the scaling of its rows.
+  // Make the rows primitive integral vectors (generators of their lines
+  // over O_K): the symbol is invariant under the scaling of its rows.
   MyMatrix<Tint> primitive_rows(MyMatrix<T> const &W_T) const {
-    int n_row = W_T.rows();
-    int n_col = W_T.cols();
-    MyMatrix<Tint> W(n_row, n_col);
-    for (int i_row = 0; i_row < n_row; i_row++) {
-      MyVector<T> V = GetMatrixRow(W_T, i_row);
-      MyVector<T> Vred = RemoveFractionVector(V);
-      MyVector<Tint> Vint = UniversalVectorConversion<Tint, T>(Vred);
-      AssignMatrixRow(W, i_row, Vint);
-    }
-    return W;
+    return geom.primitive_rows(W_T);
   }
   // The Ash-Rudolph reduction of the symbol of the rows of W, written
   // as a chain of cells of the symbol level. If l_sample is not null, the
@@ -2929,45 +3460,41 @@ public:
       l_work.pop_back();
       T const &coef = pair.first;
       MyMatrix<Tint> const &W = pair.second;
-      Tint det = DeterminantMat(W);
+      Tint det = geom.det_norm(W);
       if (det == 0) {
         // A degenerate symbol vanishes in the quotient complex.
         continue;
       }
-      if (T_abs(det) == 1) {
-        MyMatrix<Tint> M = E0_inv * W;
-        cb.f_insert(coef, iOrb0, M);
+      if (det == 1) {
+        // The symbol [W] = [E0] M is sign0 times the cell iOrb0 mapped by M.
+        MyMatrix<Tint> M = E0_inv * geom.realify_int(W);
+        cb.f_insert(coef * T(sign0), iOrb0, M);
         continue;
       }
-      MyMatrix<T> W_T = UniversalMatrixConversion<T, Tint>(W);
-      MyMatrix<T> W_inv = Inverse(W_T);
-      std::vector<MyVector<T>> l_q = get_reducing_points(W_inv);
+      std::vector<std::pair<MyVector<Tint>, std::vector<int>>> l_q = get_reducing_points_full(W);
       if (l_q.empty()) {
         throw HeckeFailure{"sharbly: no reducing point for a symbol of determinant > 1"};
       }
       int n_q = l_q.size();
       T coef_q = coef / T(n_q);
-      int n = W.rows();
+      int n_row = W.rows();
       if (l_sample) {
         l_sample->push_back(W);
       }
-      for (auto &q : l_q) {
-        MyVector<T> w_T = W_T.transpose() * q;
-        MyVector<Tint> w = UniversalVectorConversion<Tint, T>(RemoveFractionVector(w_T));
+      for (auto &pair : l_q) {
+        MyVector<Tint> const &w = pair.first;
         if (l_sample) {
-          MyMatrix<Tint> Wext(n + 1, n);
+          MyMatrix<Tint> Wext(n_row + 1, W.cols());
           AssignMatrixRow(Wext, 0, w);
-          for (int i = 0; i < n; i++) {
+          for (int i = 0; i < n_row; i++) {
             AssignMatrixRow(Wext, i + 1, GetMatrixRow(W, i));
           }
           l_sample->push_back(std::move(Wext));
         }
-        for (int i = 0; i < n; i++) {
-          if (q(i) != 0) {
-            MyMatrix<Tint> W_new = W;
-            AssignMatrixRow(W_new, i, w);
-            l_work.push_back({coef_q, std::move(W_new)});
-          }
+        for (auto &i : pair.second) {
+          MyMatrix<Tint> W_new = W;
+          AssignMatrixRow(W_new, i, w);
+          l_work.push_back({coef_q, std::move(W_new)});
         }
       }
     }
@@ -2984,20 +3511,21 @@ public:
 template <typename T, typename Tint, typename Tgroup>
 int get_unimodular_frame_orbit(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
                                int const &symbol_level,
+                               SymbolGeometry<T, Tint> const &geom,
                                [[maybe_unused]] std::ostream &os) {
-  int n = fce.pctdi.LinSpa.n;
   std::vector<int> l_found;
   int n_orb = fce.levels[symbol_level].l_faces.size();
   for (int iOrb = 0; iOrb < n_orb; iOrb++) {
     FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[symbol_level].l_faces[iOrb];
-    // The EXT of a face holds both v and -v: the frame is the half set.
-    MyMatrix<Tint> half = half_vector_set(face.EXT);
+    // The EXT of a face holds both v and -v (all the unit multiples for
+    // a Hermitian T-space): the frame is one vector per line.
+    MyMatrix<Tint> half = geom.symbol_rows(face.EXT);
 #ifdef DEBUG_HECKE_OPERATORS
     os << "HECKE: sharbly symbol_level=" << symbol_level << " iOrb=" << iOrb
        << " |half|=" << half.rows() << " wr=" << face.is_well_rounded << "\n";
 #endif
-    if (face.is_well_rounded && half.rows() == n) {
-      Tint det = DeterminantMat(half);
+    if (face.is_well_rounded && half.rows() == geom.dim) {
+      Tint det = geom.det_norm(half);
 #ifdef DEBUG_HECKE_OPERATORS
       os << "HECKE: sharbly iOrb=" << iOrb << " det=" << det << "\n";
 #endif
@@ -3101,13 +3629,14 @@ get_sharbly_covering_seed(int const &index, int const &iOrb, MyMatrix<T> const &
                           SharblyReducer<T, Tint, Tgroup> const &reducer) {
   std::vector<MyMatrix<Tint>> l_sample;
   MyMatrix<Tint> const &EXT_F = fce.levels[index].l_faces[iOrb].EXT;
-  l_sample.push_back(reducer.primitive_rows(UniversalMatrixConversion<T, Tint>(half_vector_set(EXT_F)) * y));
+  SymbolGeometry<T, Tint> const &geom = reducer.get_geometry();
+  l_sample.push_back(reducer.primitive_rows(UniversalMatrixConversion<T, Tint>(geom.symbol_rows(EXT_F)) * y));
   for (auto &ebnd : fce.boundaries[index].ll_bound[iOrb].l_bound) {
     FacePerfectComplex<T, Tint, Tgroup> const &face_G = fce.levels[index + 1].l_faces[ebnd.iOrb];
     if (!face_G.is_well_rounded) {
       continue;
     }
-    MyMatrix<Tint> EXT_G = half_vector_set(face_G.EXT) * ebnd.M;
+    MyMatrix<Tint> EXT_G = geom.symbol_rows(face_G.EXT) * ebnd.M;
     MyMatrix<Tint> W = reducer.primitive_rows(UniversalMatrixConversion<T, Tint>(EXT_G) * y);
     l_sample.push_back(W);
     (void)reducer.reduce(W, &l_sample);
@@ -3182,10 +3711,10 @@ private:
     return cache_phi.emplace(W, std::move(chain)).first->second;
   }
   // The largest |det| of the n-subsets of the rows of D, and their sum.
-  static std::pair<Tint, Tint> det_size(MyMatrix<Tint> const &D) {
+  std::pair<Tint, Tint> det_size(MyMatrix<Tint> const &D) const {
     Tint max_val(0), sum_val(0);
     for (int k = 0; k < D.rows(); k++) {
-      Tint det = T_abs(DeterminantMat(remove_row(D, k)));
+      Tint det = reducer.get_geometry().det_norm(remove_row(D, k));
       sum_val += det;
       if (det > max_val) {
         max_val = det;
@@ -3232,7 +3761,7 @@ private:
     int j_worst = -1;
     Tint det_worst(0);
     for (int k = 0; k < n_row; k++) {
-      Tint det = T_abs(DeterminantMat(remove_row(D, k)));
+      Tint det = reducer.get_geometry().det_norm(remove_row(D, k));
       if (det > det_worst) {
         det_worst = det;
         j_worst = k;
@@ -3269,7 +3798,7 @@ private:
 #endif
     ChainBuilder<T, Tint, Tgroup> cb(index, fce, os);
     auto f_add = [&](MyMatrix<Tint> const &Dk) -> void {
-      if (RankMat(Dk) < Dk.cols()) {
+      if (!reducer.get_geometry().is_spanning(Dk)) {
         return;
       }
       for (auto &fe : fill_piece(Dk, depth + 1)) {
@@ -3318,18 +3847,18 @@ public:
   std::optional<std::vector<PerfectFaceEntry<T, Tint>>>
   fill(MyMatrix<Tint> const &V, std::vector<PerfectFaceEntry<T, Tint>> const &rhs) {
     n_piece = 0;
-    int n = V.cols();
+    int n = reducer.get_geometry().dim;
     int m = V.rows();
     // The (n+1)-subsets of the rows spanning R^n.
     std::vector<MyMatrix<Tint>> l_D;
     std::vector<int> subset(n + 1);
     std::function<void(int, int)> f_enum = [&](int start, int depth) -> void {
       if (depth == n + 1) {
-        MyMatrix<Tint> D(n + 1, n);
+        MyMatrix<Tint> D(n + 1, V.cols());
         for (int k = 0; k <= n; k++) {
           AssignMatrixRow(D, k, GetMatrixRow(V, subset[k]));
         }
-        if (RankMat(D) == n) {
+        if (reducer.get_geometry().is_spanning(D)) {
           l_D.push_back(D);
         }
         return;
@@ -3371,6 +3900,19 @@ public:
 #ifdef DEBUG_HECKE_OPERATORS
     os << "HECKE: local fill |V|=" << m << " n_D=" << n_D << " n_cell=" << n_cell
        << " solvable=" << (opt ? 1 : 0) << "\n";
+    if (!opt) {
+      os << "HECKE: local fill V=\n";
+      WriteMatrix(os, V);
+      os << "HECKE: local fill b=" << StringVectorGAP(b) << "\n";
+      for (int i_D = 0; i_D < n_D; i_D++) {
+        os << "HECKE: local fill A(" << i_D << ")=" << StringVectorGAP(MyVector<T>(GetMatrixRow(A, i_D))) << "\n";
+        for (int k = 0; k < l_D[i_D].rows(); k++) {
+          MyMatrix<Tint> W = remove_row(l_D[i_D], k);
+          os << "HECKE: local fill   k=" << k << " det_norm=" << reducer.get_geometry().det_norm(W)
+             << " |phi|=" << phi(W).size() << "\n";
+        }
+      }
+    }
 #endif
     if (!opt) {
       return {};
@@ -3399,9 +3941,10 @@ void compute_sharbly_level_below(
   LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
   int n = LinSpa.n;
   size_t n_coset = cosets.size();
+  SymbolGeometry<T, Tint> const &geom = reducer.get_geometry();
   std::function<bool(MyMatrix<Tint> const &)> f_filter =
-      [n](MyMatrix<Tint> const &EXT) -> bool {
-    return RankMat(EXT) == n;
+      [&geom](MyMatrix<Tint> const &EXT) -> bool {
+    return geom.is_spanning(EXT);
   };
 #ifdef TIMINGS_HECKE_OPERATORS
   MicrosecondTime time;
@@ -3471,7 +4014,7 @@ void compute_sharbly_level_below(
         if (!opt_sol) {
           SharblyLocalFiller<T, Tint, Tgroup> filler(index, fce, walker, reducer, f_filter, options_small, os);
           MyMatrix<Tint> V = reducer.primitive_rows(
-              UniversalMatrixConversion<T, Tint>(half_vector_set(face.EXT)) * cosets.l_coset[j]);
+              UniversalMatrixConversion<T, Tint>(geom.symbol_rows(face.EXT)) * cosets.l_coset[j]);
           try {
             opt_sol = filler.fill(V, rhs);
           } catch (HeckeFailure const &e) {
@@ -3580,17 +4123,41 @@ compute_hecke_chain_map_sharbly(FullComplexEnumeration<T, Tint, Tgroup> const &f
   os << "|HECKE: enumerate_hecke_cosets|=" << time << "\n";
 #endif
   int n_levels = fce.levels.size();
-  int symbol_level = get_symbol_level(fce);
+  SymbolGeometry<T, Tint> geom(LinSpa);
+#ifdef DEBUG_HECKE_OPERATORS
+  os << "HECKE: sharbly is_hermitian=" << geom.is_hermitian() << " dim=" << geom.dim
+     << " |units|=" << geom.l_unit.size() << "\n";
+  // The structure of the complex: per level, the orbits, the well rounded
+  // ones and the sizes of the half vector sets of the cells.
+  for (int index = 0; index < n_levels; index++) {
+    std::map<int, int> map_size;
+    int n_wr = 0;
+    for (auto &face : fce.levels[index].l_faces) {
+      if (face.is_well_rounded) {
+        n_wr += 1;
+        map_size[geom.symbol_rows(face.EXT).rows()] += 1;
+      }
+    }
+    os << "HECKE: sharbly level " << index << " n_orb=" << fce.levels[index].l_faces.size()
+       << " n_wr=" << n_wr << " |half| of the well rounded:";
+    for (auto &kv : map_size) {
+      os << " " << kv.first << "^" << kv.second;
+    }
+    os << "\n";
+  }
+#endif
+  int symbol_level = get_symbol_level(fce, geom);
   if (symbol_level < 0 || symbol_level >= n_levels) {
     std::cerr << "HECKE: sharbly, the symbol level " << symbol_level
               << " is not in the complex (n_levels=" << n_levels << ")\n";
     throw TerminalException{1};
   }
-  int iOrb0 = get_unimodular_frame_orbit(fce, symbol_level, os);
-  MyMatrix<Tint> E0 = half_vector_set(fce.levels[symbol_level].l_faces[iOrb0].EXT);
-  MyMatrix<Tint> E0_inv = Inverse(E0);
+  int iOrb0 = get_unimodular_frame_orbit(fce, symbol_level, geom, os);
+  MyMatrix<Tint> E0 = geom.symbol_rows(fce.levels[symbol_level].l_faces[iOrb0].EXT);
+  MyMatrix<Tint> E0_inv = Inverse(geom.realify_int(E0));
+  int sign0 = symbol_orientation(fce.levels[symbol_level].l_faces[iOrb0], E0, LinSpa.ListMat);
   ConeWalker<T, Tint, Tgroup> walker(fce, os);
-  SharblyReducer<T, Tint, Tgroup> reducer(fce, symbol_level, iOrb0, E0_inv, os);
+  SharblyReducer<T, Tint, Tgroup> reducer(fce, symbol_level, iOrb0, E0_inv, sign0, geom, os);
   std::vector<std::vector<std::vector<std::vector<PerfectFaceEntry<T, Tint>>>>> images(n_levels);
   std::vector<uint8_t> l_level_computed(n_levels, 0);
   l_level_computed[symbol_level] = 1;
@@ -3605,14 +4172,16 @@ compute_hecke_chain_map_sharbly(FullComplexEnumeration<T, Tint, Tgroup> const &f
     if (!face.is_well_rounded) {
       continue;
     }
-    MyMatrix<Tint> half = half_vector_set(face.EXT);
-    if (half.rows() != n) {
+    MyMatrix<Tint> half = geom.symbol_rows(face.EXT);
+    if (half.rows() != geom.dim) {
       throw HeckeFailure{"sharbly: the cell " + std::to_string(iOrb) +
                          " of the symbol level has " + std::to_string(half.rows()) +
-                         " vectors instead of " + std::to_string(n) +
+                         " vectors instead of " + std::to_string(geom.dim) +
                          ": not a symbol, use another method"};
     }
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(half);
+    // The cell is sign_F times the symbol of the rows of half.
+    int sign_F = symbol_orientation(face, half, LinSpa.ListMat);
     std::vector<std::vector<std::pair<int, MyMatrix<Tint>>>> act =
         get_stab_coset_action(face.l_gens, cosets);
     std::vector<int> status(n_coset, 0);
@@ -3625,7 +4194,7 @@ compute_hecke_chain_map_sharbly(FullComplexEnumeration<T, Tint, Tgroup> const &f
 #endif
       MyMatrix<T> W_T = EXT_T * cosets.l_coset[j];
       MyMatrix<Tint> W = reducer.primitive_rows(W_T);
-      std::vector<PerfectFaceEntry<T, Tint>> sol = reducer.reduce(W);
+      std::vector<PerfectFaceEntry<T, Tint>> sol = chain_right_multiply(reducer.reduce(W), T(sign_F), IdentityMat<Tint>(n));
       CosetOrbit<Tint> co = get_coset_orbit(j, face.l_gens, act, n_coset, n);
       std::vector<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>> l_schreier =
           get_coset_stabilizer_schreier(co, face.l_gens, act, n);
@@ -4350,6 +4919,11 @@ std::optional<HeckeCosets<T>>
 get_hecke_cosets_gamma_direct(HeckeChainMap<T, Tint> const &hcm, CosetTableGamma<Tint> const &ct,
                               std::function<bool(MyMatrix<T> const &)> const &f_member_gamma) {
   FiniteIndexSubgroup<Tint> const &gamma = ct.gamma;
+  if (gamma.is_hermitian()) {
+    // The congruences over O_K are not implemented here: the cosets are
+    // enumerated.
+    return {};
+  }
   int n = gamma.n;
   int64_t m = gamma.get_n_mod();
   std::string type = gamma.base_type();
@@ -4471,8 +5045,12 @@ HeckeHomologyResult<T> compute_hecke_homology(
     std::vector<MyMatrix<Tint>> l_gens_gamma = get_schreier_generators(ct, l_gens_G, n, os);
     cosets_gamma = enumerate_hecke_cosets<T, Tint>(hcm.x, l_gens_gamma, f_member_gamma, os, n_expected);
   }
-#ifdef SANITY_CHECK_HECKE_OPERATORS
+#ifdef SANITY_CHECK_HECKE_OPERATORS_EXTENSIVE
   {
+    // The enumeration without the early stop, with the many Schreier
+    // generators of Gamma: its memory and time grow with the index.
+    std::cerr << "HECKE: SANITY_CHECK_HECKE_OPERATORS_EXTENSIVE, comparing the Hecke cosets of "
+                 "Gamma with their full enumeration\n";
     std::vector<MyMatrix<Tint>> l_gens_gamma = get_schreier_generators(ct, l_gens_G, n, os);
     HeckeCosets<T> cosets_gamma_full =
         enumerate_hecke_cosets<T, Tint>(hcm.x, l_gens_gamma, f_member_gamma, os);
@@ -4500,6 +5078,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
       std::cerr << "HECKE: two Hecke cosets of Gamma coincide\n";
       throw TerminalException{1};
     }
+    std::cerr << "HECKE: SANITY_CHECK_HECKE_OPERATORS_EXTENSIVE, done\n";
   }
 #endif
 #ifdef TIMINGS_HECKE_OPERATORS
