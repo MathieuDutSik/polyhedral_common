@@ -1522,24 +1522,29 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T, Tint> &Vtot,
 
 FullNamelist NAMELIST_GetStandard_VINBERG() {
   std::map<std::string, SingleBlock> ListBlock;
-  // DATA
+  // PROC
   {
-    std::map<std::string, bool> ListBoolValues;
-    std::map<std::string, std::string> ListStringValues;
-    ListStringValues["FileLorMat"] = "the lorentzian matrix used";
-    ListStringValues["FileV0"] = "the file for the initial vector v0. Put "
-      "compute if you want to compute it";
-    ListStringValues["OptionNorms"] =
-      "possible option K3 (then just 2) or all where all norms are considered";
-    ListStringValues["DualDescProg"] = "lrs_iterate";
-    ListStringValues["OutFormat"] = "GAP for gap use or TXT for text output";
-    ListStringValues["FileOut"] =
-      "stdout, or stderr or the filename you want to write to";
-    ListBoolValues["ReflectivityEarlyTermination"] = false;
-    SingleBlock BlockPROC;
-    BlockPROC.setListStringValues(ListStringValues);
-    BlockPROC.setListBoolValues(ListBoolValues);
-    ListBlock["PROC"] = BlockPROC;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["FileLorMat"] =
+        "The file containing the Lorentzian matrix";
+    ListStringValues_doc["FileV0"] = "Default: compute\n\
+The file containing the vector v0 from which the Vinberg algorithm starts.\n\
+If compute then a short integral vector v0 is computed by the program";
+    ListStringValues_doc["OptionNorms"] = doc_OptionNorms();
+    ListStringValues_doc["DualDescProg"] = doc_DualDescProg();
+    ListStringValues_doc["OutFormat"] = "Default: GAP\n\
+The formatting used for the output. Possible values:\n\
+GAP: a GAP readable file\n\
+TXT: a text file";
+    ListStringValues_doc["FileOut"] = doc_FileOut();
+    ListBoolValues_doc["ReflectivityEarlyTermination"] = "Default: F\n\
+T: stop as soon as the group is proved not to be reflective\n\
+F: carry on the enumeration in any case\n\
+The early termination is not implemented in the Vinberg algorithm yet, so\n\
+T has currently the same effect as F";
+    ListBlock["PROC"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["PROC"].setListBoolValues_doc(ListBoolValues_doc);
   }
   // Merging all data
   return FullNamelist(ListBlock);
