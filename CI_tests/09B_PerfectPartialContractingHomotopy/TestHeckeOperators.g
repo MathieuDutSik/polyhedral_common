@@ -338,6 +338,28 @@ test_dual_gaussian:=function()
     return true;
 end;
 
+# GL2 over the Gaussian integers at the level ideal (-7+4i) of norm 65: H^1
+# is the Bianchi form 65.2-a, which is not a base change (LMFDB): T_{1+i} = 0,
+# T_3 = -2.
+test_ideal_level:=function()
+    local desc, ListX, ListVal, i, Res, eLev;
+    desc:=GenerateTspaceDescription_imag_quad(2, -4, true);
+    ListX:=[[[1,0,0,0],[0,1,0,1],[0,0,1,0],[0,-1,0,1]],
+            [[1,0,0,0],[0,3,0,0],[0,0,1,0],[0,0,0,3]]];
+    ListVal:=[0, -2];
+    for i in [1..Length(ListX)]
+    do
+        Res:=PERFCOMP_hecke_operators(desc, ListX[i], "Gamma0", 1, true, "Sharbly", "none", 0, "-7,4");
+        eLev:=get_hecke_level(Res, 1);
+        Print("GL2(Z[i]) Gamma0((-7+4i)) i=", i, " index=", Res.n_coset_gamma, " H^1 M=", eLev.HeckeMatrix, "\n");
+        if Res.n_coset_gamma<>84 or eLev.HeckeMatrix<>[[ListVal[i]]] then
+            Print("The index should be 84 and the Hecke matrix [[", ListVal[i], "]]\n");
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
 f_compute:=function()
     local n_error;
     n_error:=0;
@@ -360,6 +382,9 @@ f_compute:=function()
         n_error:=n_error+1;
     fi;
     if not test_dual_gaussian() then
+        n_error:=n_error+1;
+    fi;
+    if not test_ideal_level() then
         n_error:=n_error+1;
     fi;
     return n_error=0;

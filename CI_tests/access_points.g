@@ -2861,7 +2861,7 @@ end;
 # (induction from the vertices in the full complex, required when
 # only_well_rounded_homology is false).
 PERFCOMP_hecke_operators:=function(arg)
-    local desc, HeckeMatrix, SubgroupType, SubgroupLevel, only_well_rounded_homology, HeckeMethod, FileCache, HomologyPrime, TmpDir, FileN, FileM, FileO, FileE, output, binary, status, TheResult;
+    local desc, HeckeMatrix, SubgroupType, SubgroupLevel, only_well_rounded_homology, HeckeMethod, FileCache, HomologyPrime, LevelIdeal, TmpDir, FileN, FileM, FileO, FileE, output, binary, status, TheResult;
     desc:=arg[1];
     HeckeMatrix:=arg[2];
     SubgroupType:=arg[3];
@@ -2882,6 +2882,12 @@ PERFCOMP_hecke_operators:=function(arg)
     if Length(arg) >= 8 then
         HomologyPrime:=arg[8];
     fi;
+    # For a Hermitian T-space, the level ideal of O_K by generators, as a
+    # string "a,b;a,b" (for a + b omega), replacing SubgroupLevel.
+    LevelIdeal:="none";
+    if Length(arg) >= 9 then
+        LevelIdeal:=arg[9];
+    fi;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
     FileM:=Filename(TmpDir, "PerfComp.hecke");
@@ -2901,6 +2907,7 @@ PERFCOMP_hecke_operators:=function(arg)
     AppendTo(output, " HeckeMethod = \"", HeckeMethod, "\"\n");
     AppendTo(output, " FileHeckeChainMapCache = \"", FileCache, "\"\n");
     AppendTo(output, " HeckeHomologyPrime = ", HomologyPrime, "\n");
+    AppendTo(output, " SubgroupLevelIdeal = \"", LevelIdeal, "\"\n");
     AppendTo(output, "/\n");
     CloseStream(output);
     #

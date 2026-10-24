@@ -823,6 +823,25 @@ HeckeHomologyResult<T> compute_hecke_homology(
 #endif
   std::vector<MyMatrix<Tint>> l_gens_G = get_ambient_group_generators(fce, os);
   CosetTableGamma<Tint> ct = enumerate_cosets_gamma(gamma, l_gens_G, n, os);
+#ifdef DEBUG_HECKE_OPERATORS
+  {
+    // The orbifold Euler characteristic of G on the well rounded retract:
+    // sum over the levels of (-1)^k sum over the orbits 1 / |Stab_G(F)|.
+    // It vanishes when the symmetric space has odd dimension (the Bianchi
+    // groups), which checks the stabilizers and the orbits of the complex.
+    T chi_orb(0);
+    for (size_t index = 0; index < fce.levels.size(); index++) {
+      for (auto &face : fce.levels[index].l_faces) {
+        if (face.is_well_rounded) {
+          auto order = face.GRP_ext.size();
+          T val = T(1) / UniversalScalarConversion<T, decltype(order)>(order);
+          chi_orb += (index % 2 == 0) ? val : -val;
+        }
+      }
+    }
+    os << "HECKE: orbifold Euler characteristic of G on the well rounded cells: " << chi_orb << "\n";
+  }
+#endif
 #ifdef TIMINGS_HECKE_OPERATORS
   os << "|HECKE: enumerate_cosets_gamma|=" << time << "\n";
 #endif

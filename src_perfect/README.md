@@ -79,6 +79,10 @@ block of `PERF_SerialPerfectComputation`:
   variants. For a Hermitian T-space the subgroups are those of GL_m(O_K):
   the congruences are on the entries over O_K modulo N O_K (N an integer)
   and the SL condition is that the determinant over O_K is 1.
+* `SubgroupLevelIdeal`: for a Hermitian T-space, the level as an ideal n
+  of O_K given by generators, `"a,b"` or `"a1,b1;a2,b2"` for a + b omega
+  (any ideal, also for a class number > 1); it replaces `SubgroupLevel`.
+  `"none"` (the default) for the level `SubgroupLevel` O_K.
 * `OnlyWellRoundedHomology`: restrict to the well rounded cells, which
   gives the cohomology of the subgroup by duality; otherwise the homology of
   the full complex with its cells at infinity.

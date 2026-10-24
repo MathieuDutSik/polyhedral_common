@@ -427,9 +427,29 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       gamma.n = LinSpa.n;
       // The subgroups of GL_m(O_K) for a Hermitian T-space.
       std::optional<ImagQuadStructure<T>> field = get_imag_quad_structure(LinSpa);
+      std::string SubgroupLevelIdeal = BlockHECKE.get_string("SubgroupLevelIdeal");
       if (field) {
-        gamma.set_field(field->m, UniversalScalarConversion<int64_t, T>(field->eSum),
-                        UniversalScalarConversion<int64_t, T>(field->eProd));
+        int64_t eSum = UniversalScalarConversion<int64_t, T>(field->eSum);
+        int64_t eProd = UniversalScalarConversion<int64_t, T>(field->eProd);
+        if (SubgroupLevelIdeal == "none") {
+          gamma.set_field(field->m, eSum, eProd);
+        } else {
+          // The generators "a,b;a,b;..." of the level ideal.
+          std::vector<std::pair<int64_t, int64_t>> l_gen;
+          for (auto &str_gen : STRING_Split(SubgroupLevelIdeal, ";")) {
+            std::vector<std::string> l_str = STRING_Split(str_gen, ",");
+            if (l_str.size() != 2) {
+              std::cerr << "HECKE: SubgroupLevelIdeal should be of the form a,b;a,b;... and is "
+                        << SubgroupLevelIdeal << "\n";
+              throw TerminalException{1};
+            }
+            l_gen.push_back({ParseScalar<int64_t>(l_str[0]), ParseScalar<int64_t>(l_str[1])});
+          }
+          gamma.set_field_ideal(field->m, eSum, eProd, l_gen);
+        }
+      } else if (SubgroupLevelIdeal != "none") {
+        std::cerr << "HECKE: SubgroupLevelIdeal is only for a Hermitian T-space\n";
+        throw TerminalException{1};
       }
       HeckeHomologyResult<T> result;
       try {

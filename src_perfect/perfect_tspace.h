@@ -486,6 +486,10 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     // the top two degrees only)
     ListStringValues["HeckeMethod"] = "Dual";
     ListIntValues["SubgroupLevel"] = 1;
+    // For a Hermitian T-space: the level ideal of O_K by generators
+    // "a,b" or "a1,b1;a2,b2" (for a + b omega), replacing SubgroupLevel
+    // (the ideal SubgroupLevel O_K); "none" if not used.
+    ListStringValues["SubgroupLevelIdeal"] = "none";
     // If nonzero, a prime p < 2^31 and the homology and the Hecke matrices
     // are computed modulo p by sparse linear algebra (for the large
     // subgroups); the Hecke matrices are then given by their residues.
