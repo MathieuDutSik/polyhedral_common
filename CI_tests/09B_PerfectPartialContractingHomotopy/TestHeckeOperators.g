@@ -360,6 +360,31 @@ test_ideal_level:=function()
     return true;
 end;
 
+# GL2 over Q(sqrt(-19)) (class number 1, not norm-Euclidean), Gamma0(11):
+# the Sharbly method (with the principal generators of the lines and the
+# reduction to the symbol cells, the frames of determinant 2 included) and
+# the Dual method agree; H^1 holds the base change of 11a (T_P5 = a_5 = 1)
+# and a newform with coefficients in Q(sqrt(2)) (T_P5: x^2 + 2x - 7).
+test_class_number_one:=function()
+    local desc, x, method, Res, eLev, l_char;
+    desc:=GenerateTspaceDescription_imag_quad(2, -19, true);
+    x:=[[1,0,0,0],[0,-1,0,1],[0,0,1,0],[0,-5,0,0]];
+    l_char:=[];
+    for method in ["Sharbly", "Dual"]
+    do
+        Res:=PERFCOMP_hecke_operators(desc, x, "Gamma0", 11, true, method);
+        eLev:=get_hecke_level(Res, 1);
+        Print("GL2(O_{-19}) Gamma0(11) ", method, " H^1 dim=", eLev.dim_homology, "\n");
+        Add(l_char, CoefficientsOfUnivariatePolynomial(CharacteristicPolynomial(eLev.HeckeMatrix)));
+    od;
+    # (x - 1)(x^2 + 2x - 7) = x^3 + x^2 - 9x + 7
+    if l_char[1]<>[7, -9, 1, 1] or l_char[2]<>l_char[1] then
+        Print("The characteristic polynomials should be x^3 + x^2 - 9x + 7, l_char=", l_char, "\n");
+        return false;
+    fi;
+    return true;
+end;
+
 f_compute:=function()
     local n_error;
     n_error:=0;
@@ -385,6 +410,9 @@ f_compute:=function()
         n_error:=n_error+1;
     fi;
     if not test_ideal_level() then
+        n_error:=n_error+1;
+    fi;
+    if not test_class_number_one() then
         n_error:=n_error+1;
     fi;
     return n_error=0;
