@@ -3,6 +3,7 @@
 #define SRC_GENERA_GENUSENUMERATION_H_
 
 // clang-format off
+#include "Boost_bitset.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "LatticeStabEquiCan.h"
@@ -31,6 +32,10 @@
 
 #ifdef TIMINGS
 #define TIMINGS_GENUS_ENUMERATION
+#endif
+
+#ifdef TRACK_INFO
+#define TRACK_INFO_GENUS_ENUMERATION
 #endif
 
 /*
@@ -144,10 +149,106 @@ template <typename Tint> int ValuationP(Tint const &x, int p) {
 }
 
 /*
-  The points of the projective space over F_p, as the vectors whose first
-  non-zero coordinate is 1. There are (p^n - 1) / (p - 1) of them: 16383 for
-  n = 14 and p = 2, which is why p = 2 or 3 is what one uses in rank 14.
+  The points of the projective space P^{n-1}(F_p), indexed WITHOUT being
+  enumerated. There are (p^n - 1) / (p - 1) of them: 16383 for n = 14 and
+  p = 2, but 1.5 x 10^9 at p = 5, where materialising the list (as an
+  earlier version did) is itself a hundred gigabytes. The representatives
+  are the vectors whose first non-zero coordinate is 1; the index runs
+  through the blocks ipos = 0, ..., n-1 (position of that coordinate), each
+  block of size p^{n-ipos-1}, the free coordinates read little-endian
+  (v[ipos+1] least significant). ProjectiveLineOfIndex and
+  IndexOfProjectiveLine are mutually inverse bijections for this order.
  */
+inline size_t NumberProjectiveLines(int n, int p) {
+  size_t const max_val = std::numeric_limits<size_t>::max();
+  size_t p_s = static_cast<size_t>(p);
+  size_t total = 0;
+  size_t power = 1;
+  for (int k = 0; k < n; k++) {
+    if (total > max_val - power) {
+      std::cerr << "GENUS: (p^n - 1)/(p - 1) overflows size_t for p=" << p
+                << " n=" << n << "\n";
+      throw TerminalException{1};
+    }
+    total += power;
+    if (k + 1 < n) {
+      if (power > max_val / p_s) {
+        std::cerr << "GENUS: p^" << (k + 1) << " overflows size_t for p=" << p
+                  << "\n";
+        throw TerminalException{1};
+      }
+      power *= p_s;
+    }
+  }
+  return total;
+}
+
+inline std::vector<int> ProjectiveLineOfIndex(int n, int p, size_t index) {
+  size_t p_s = static_cast<size_t>(p);
+  // block size p^{n-1} of the block ipos = 0
+  size_t block = 1;
+  for (int i = 0; i < n - 1; i++) {
+    block *= p_s;
+  }
+  size_t work = index;
+  int ipos = 0;
+  while (work >= block) {
+    work -= block;
+    block /= p_s;
+    ipos++;
+#ifdef SANITY_CHECK_GENUS_ENUMERATION
+    if (ipos == n) {
+      std::cerr << "GENUS: ProjectiveLineOfIndex, index out of range\n";
+      throw TerminalException{1};
+    }
+#endif
+  }
+  std::vector<int> v(n, 0);
+  v[ipos] = 1;
+  for (int i = ipos + 1; i < n; i++) {
+    v[i] = static_cast<int>(work % p_s);
+    work /= p_s;
+  }
+  return v;
+}
+
+inline size_t IndexOfProjectiveLine(std::vector<int> const &v, int p) {
+  size_t p_s = static_cast<size_t>(p);
+  int n = static_cast<int>(v.size());
+  int ipos = 0;
+  while (ipos < n && ((v[ipos] % p) + p) % p == 0) {
+    ipos++;
+  }
+#ifdef SANITY_CHECK_GENUS_ENUMERATION
+  if (ipos == n) {
+    std::cerr << "GENUS: IndexOfProjectiveLine called on the zero vector\n";
+    throw TerminalException{1};
+  }
+#endif
+  int scal = InverseModP(v[ipos], p);
+  // start of the block: sum_{k < ipos} p^{n-k-1}
+  size_t block = 1;
+  for (int i = 0; i < n - 1; i++) {
+    block *= p_s;
+  }
+  size_t index = 0;
+  for (int k = 0; k < ipos; k++) {
+    index += block;
+    block /= p_s;
+  }
+  // offset inside the block, little-endian in the normalised coordinates
+  size_t mult = 1;
+  for (int i = ipos + 1; i < n; i++) {
+    int val = ((((v[i] % p) + p) % p) * scal) % p;
+    index += mult * static_cast<size_t>(val);
+    mult *= p_s;
+  }
+  return index;
+}
+
+// Kept only for the sanity check of the indexing, as an INDEPENDENT
+// enumeration of the same order (small cases only); the enumeration itself
+// never materialises the projective space.
 inline std::vector<std::vector<int>> EnumerateProjectiveLines(int n, int p) {
   std::vector<std::vector<int>> ListLines;
   for (int ipos = 0; ipos < n; ipos++) {
@@ -170,34 +271,54 @@ inline std::vector<std::vector<int>> EnumerateProjectiveLines(int n, int p) {
   return ListLines;
 }
 
-/*
-  A key for a projective point: normalise so that the first non-zero
-  coordinate is 1, then read the coordinates as a base-p number. Injective on
-  projective points, which is all that is needed to index them.
- */
-inline int64_t EncodeProjectiveLine(std::vector<int> const &v, int p) {
-  size_t n = v.size();
-  size_t ipos = 0;
-  while (ipos < n && ((v[ipos] % p) + p) % p == 0) {
-    ipos++;
-  }
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
-  if (ipos == n) {
-    std::cerr << "GENUS: EncodeProjectiveLine called on the zero vector\n";
-    throw TerminalException{1};
+// The indexing against the independent enumeration: exhaustive when the
+// space is small, and for a large space the roundtrip index -> line ->
+// index on the block boundaries and on a stride through the range.
+inline void CheckProjectiveLineIndexing(int n, int p) {
+  size_t n_line = NumberProjectiveLines(n, p);
+  if (n_line <= 100000) {
+    std::vector<std::vector<int>> ListLines = EnumerateProjectiveLines(n, p);
+    if (ListLines.size() != n_line) {
+      std::cerr << "GENUS: NumberProjectiveLines disagrees with the "
+                   "enumeration\n";
+      throw TerminalException{1};
+    }
+    for (size_t i = 0; i < n_line; i++) {
+      if (ProjectiveLineOfIndex(n, p, i) != ListLines[i] ||
+          IndexOfProjectiveLine(ListLines[i], p) != i) {
+        std::cerr << "GENUS: projective line indexing broken at index " << i
+                  << "\n";
+        throw TerminalException{1};
+      }
+    }
+    return;
   }
-#endif
-  int scal = InverseModP(v[ipos], p);
-  int64_t code = 0;
-  int64_t mult = 1;
-  for (size_t i = 0; i < n; i++) {
-    int val = (((v[i] % p) + p) % p) * scal;
-    val = ((val % p) + p) % p;
-    code += mult * val;
-    mult *= p;
+  auto roundtrip = [&](size_t i) -> void {
+    std::vector<int> v = ProjectiveLineOfIndex(n, p, i);
+    if (IndexOfProjectiveLine(v, p) != i) {
+      std::cerr << "GENUS: projective line roundtrip broken at index " << i
+                << "\n";
+      throw TerminalException{1};
+    }
+  };
+  size_t block_start = 0;
+  size_t block = n_line - (n_line - 1) / static_cast<size_t>(p);
+  // block = p^{n-1}; the boundaries of every block and their neighbours
+  for (int ipos = 0; ipos < n; ipos++) {
+    roundtrip(block_start);
+    if (block_start + block - 1 < n_line) {
+      roundtrip(block_start + block - 1);
+    }
+    block_start += block;
+    block /= static_cast<size_t>(p);
   }
-  return code;
+  size_t stride = 1 + n_line / 10000;
+  for (size_t i = 0; i < n_line; i += stride) {
+    roundtrip(i);
+  }
 }
+#endif
 
 /*
   The p-neighbour of the lattice with Gram matrix G attached to an isotropic
@@ -503,64 +624,112 @@ MyMatrix<T> GenusCanonicalGram(MyMatrix<T> const &GramMat, std::ostream &os) {
 }
 
 /*
-  The projective points to visit, one per orbit of the automorphism group.
-  Without this the rank-14 enumeration would canonicalise 16383 neighbours per
-  lattice at p = 2; the orbits cut that by the order of the group acting.
+  The projective points to visit, one per orbit of the automorphism group,
+  as INDICES in the order of ProjectiveLineOfIndex. Without the orbits the
+  rank-14 enumeration would canonicalise 16383 neighbours per lattice at
+  p = 2; the orbits cut that by the order of the group acting.
+
+  Nothing of the size of the projective space is materialised: the images
+  under the generators are computed point by point through the index
+  bijection, and the visited set is one bit per point (190 MB at p = 5,
+  n = 14, where the point count is 1.5 x 10^9 and the earlier
+  materialisation of the lines, the index map and one permutation table
+  per generator was the memory explosion of 2026-10-25).
+
+  Generators acting trivially on the projective space -- the scalar
+  matrices mod p, in particular -Id, which is a generator of every
+  automorphism group here -- are discarded first. When nothing remains the
+  group acts trivially, every point is its own representative, and the
+  selection says so through all = true rather than materialising
+  0, ..., n_line - 1.
  */
+struct ProjectiveLineSelection {
+  // true: every index in [0, n_line) is a representative; ListRepr empty.
+  bool all;
+  size_t n_line;
+  std::vector<size_t> ListRepr;
+  size_t size() const { return all ? n_line : ListRepr.size(); }
+  size_t at(size_t i) const { return all ? i : ListRepr[i]; }
+};
+
 template <typename Tint>
-std::vector<std::vector<int>>
+bool IsScalarModP(MyMatrix<Tint> const &eGen, int p) {
+  int n = eGen.rows();
+  int diag = ResidueModP(eGen(0, 0), p);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      int res = ResidueModP(eGen(i, j), p);
+      if (i == j && res != diag) {
+        return false;
+      }
+      if (i != j && res != 0) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+template <typename Tint>
+ProjectiveLineSelection
 ProjectiveLineOrbitRepresentatives(int n, int p,
                                    std::vector<MyMatrix<Tint>> const &ListGen) {
-  std::vector<std::vector<int>> ListLines = EnumerateProjectiveLines(n, p);
-  size_t n_line = ListLines.size();
-  if (ListGen.empty()) {
-    return ListLines;
-  }
-  std::unordered_map<int64_t, size_t> MapIndex;
-  for (size_t i_line = 0; i_line < n_line; i_line++) {
-    MapIndex[EncodeProjectiveLine(ListLines[i_line], p)] = i_line;
-  }
-  // the permutation of the projective points induced by each generator
-  std::vector<std::vector<size_t>> ListPermLine;
+#ifdef SANITY_CHECK_GENUS_ENUMERATION
+  CheckProjectiveLineIndexing(n, p);
+#endif
+  size_t n_line = NumberProjectiveLines(n, p);
+  // the generators as reduced integer matrices mod p, scalars dropped
+  std::vector<std::vector<int>> ListGenRed;
   for (auto &eGen : ListGen) {
-    std::vector<size_t> ePerm(n_line);
-    for (size_t i_line = 0; i_line < n_line; i_line++) {
-      std::vector<int> const &v = ListLines[i_line];
-      std::vector<int> w(n, 0);
-      for (int j = 0; j < n; j++) {
-        int64_t sum = 0;
-        for (int i = 0; i < n; i++) {
-          sum += static_cast<int64_t>(v[i]) *
-                 UniversalScalarConversion<int64_t, Tint>(eGen(i, j));
+    if (!IsScalarModP(eGen, p)) {
+      std::vector<int> gred(n * n);
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          gred[i * n + j] = ResidueModP(eGen(i, j), p);
         }
-        w[j] = static_cast<int>(((sum % p) + p) % p);
       }
-      ePerm[i_line] = MapIndex.at(EncodeProjectiveLine(w, p));
+      ListGenRed.push_back(gred);
     }
-    ListPermLine.push_back(ePerm);
   }
-  std::vector<uint8_t> status(n_line, 0);
-  std::vector<std::vector<int>> ListRepr;
+  if (ListGenRed.empty()) {
+    return {true, n_line, {}};
+  }
+  auto image = [&](std::vector<int> const &v,
+                   std::vector<int> const &gred) -> size_t {
+    std::vector<int> w(n, 0);
+    for (int j = 0; j < n; j++) {
+      int64_t sum = 0;
+      for (int i = 0; i < n; i++) {
+        sum += static_cast<int64_t>(v[i]) * gred[i * n + j];
+      }
+      w[j] = static_cast<int>(sum % p);
+    }
+    return IndexOfProjectiveLine(w, p);
+  };
+  Face status(n_line);
+  std::vector<size_t> ListRepr;
+  std::vector<size_t> ListActive;
   for (size_t i_line = 0; i_line < n_line; i_line++) {
-    if (status[i_line] == 1) {
+    if (status[i_line]) {
       continue;
     }
-    ListRepr.push_back(ListLines[i_line]);
-    std::vector<size_t> ListActive{i_line};
+    ListRepr.push_back(i_line);
     status[i_line] = 1;
+    ListActive.push_back(i_line);
     while (!ListActive.empty()) {
       size_t pos = ListActive.back();
       ListActive.pop_back();
-      for (auto &ePerm : ListPermLine) {
-        size_t img = ePerm[pos];
-        if (status[img] == 0) {
+      std::vector<int> v = ProjectiveLineOfIndex(n, p, pos);
+      for (auto &gred : ListGenRed) {
+        size_t img = image(v, gred);
+        if (!status[img]) {
           status[img] = 1;
           ListActive.push_back(img);
         }
       }
     }
   }
-  return ListRepr;
+  return {false, n_line, std::move(ListRepr)};
 }
 
 /*
@@ -741,7 +910,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
 #ifdef TIMINGS_GENUS_ENUMERATION
     MicrosecondTime time_orb;
 #endif
-    std::vector<std::vector<int>> ListRepr =
+    ProjectiveLineSelection ListRepr =
         ProjectiveLineOrbitRepresentatives<Tint>(n, prime, ListGenMat);
 #ifdef TIMINGS_GENUS_ENUMERATION
     os << "|GENUS: ProjectiveLineOrbits|=" << time_orb << "\n";
@@ -750,18 +919,31 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
     os << "GENUS: lattice " << pos << " has " << ListRepr.size()
        << " orbits of projective points\n";
 #endif
-    [[maybe_unused]] size_t i_orbit = 0;
-    for (auto &eLine : ListRepr) {
-      i_orbit++;
+    // the representatives are indices; the line vectors are instantiated
+    // one at a time, so nothing of the size of the projective space exists
+    for (size_t i_orbit = 0; i_orbit < ListRepr.size(); i_orbit++) {
 #ifdef DEBUG_GENUS_ENUMERATION
-      os << "GENUS: lattice " << pos << " orbit " << i_orbit << " / "
+      os << "GENUS: lattice " << pos << " orbit " << (i_orbit + 1) << " / "
          << ListRepr.size() << "\n";
 #endif
+      std::vector<int> eLine =
+          ProjectiveLineOfIndex(n, prime, ListRepr.at(i_orbit));
       std::optional<MyMatrix<T>> opt =
           GenusNeighbor<T, Tint>(G_int, eLine, prime, os);
       if (opt) {
 #ifdef DEBUG_GENUS_ENUMERATION
         os << "GENUS:   neighbour built, testing against known classes\n";
+#endif
+#ifdef TRACK_INFO_GENUS_ENUMERATION
+        // With GENUS_NEIGHBOUR_DUMP set, the Gram matrix of every neighbour
+        // is written to that file before it is canonicalized, each write
+        // replacing the last. When a canonicalization dies (time, memory),
+        // the file holds the Gram matrix that killed it, which is otherwise
+        // unrecoverable: the neighbour is a function of the whole run state.
+        static const char *dump_file = std::getenv("GENUS_NEIGHBOUR_DUMP");
+        if (dump_file) {
+          WriteMatrixFile(std::string(dump_file), *opt);
+        }
 #endif
         (void)f_insert(*opt);
         if (result.accumulated_mass == TotalMass) {
