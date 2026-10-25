@@ -479,7 +479,7 @@ template <typename T, typename Tint>
 HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint> const &gc,
                                  HeckeChainMap<T, Tint> const &hcm,
                                  HeckeCosets<T> const &cosets_gamma, int64_t const &p,
-                                 [[maybe_unused]] std::ostream &os) {
+                                 bool const &with_hecke, [[maybe_unused]] std::ostream &os) {
   int n_levels = gc.basis.size();
   int n_cell = gc.basis[index].size();
   bool transposed = hcm.transposed;
@@ -596,7 +596,7 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
   // condition row of a cell gives its expression in the rows of S.
   SparseEchelonMod echelon_cyc_mark(p);
   for (int c = 0; c < n_cell; c++) {
-    if (in_S[c] == 1) {
+    if (with_hecke && in_S[c] == 1) {
       SparseVectorMod v = f_relabel(l_cycle_row[c], l_label_next);
       v.push_back({n_next + c, 1});
       echelon_cyc_mark.insert(v);
@@ -662,6 +662,9 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
   os << "HECKE: mod p index=" << index << " n_cell=" << n_cell << " |S|=" << echelon_cyc.rank()
      << " rank(B)=" << quot_bnd.rank() << " dim_hom=" << dim_hom << "\n";
 #endif
+  if (!with_hecke) {
+    return {index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0), "no chain map at this level"};
+  }
   MyMatrix<T> hecke_matrix = ZeroMatrix<T>(dim_hom, dim_hom);
   HeckeImageKeyActions actions = get_hecke_image_key_actions(index, gc, hcm);
   for (int i = 0; i < dim_hom; i++) {
@@ -814,7 +817,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
     FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     HeckeChainMap<T, Tint> const &hcm,
     FiniteIndexSubgroup<Tint> const &gamma, bool const &only_well_rounded,
-    int64_t const &prime, std::ostream &os) {
+    bool const &all_levels, int64_t const &prime, std::ostream &os) {
   [[maybe_unused]] bool const &dual = hcm.transposed;
   LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
   int n = LinSpa.n;
@@ -924,7 +927,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
   int n_levels_fce = fce.levels.size();
   std::vector<uint8_t> l_level_needed(n_levels_fce, 0);
   for (int index = 0; index < n_levels_fce; index++) {
-    if (hcm.is_level_computed(index)) {
+    if (all_levels || hcm.is_level_computed(index)) {
       for (int k = std::max(0, index - 1); k <= std::min(n_levels_fce - 1, index + 1); k++) {
         l_level_needed[k] = 1;
       }
@@ -944,12 +947,14 @@ HeckeHomologyResult<T> compute_hecke_homology(
   result.n_hecke_coset = cosets_gamma.size();
   int n_levels = fce.levels.size();
   for (int index = 0; index < n_levels; index++) {
-    if (!hcm.is_level_computed(index)) {
+    // Without the chain map at this level, only the homology is given.
+    bool with_hecke = hcm.is_level_computed(index);
+    if (!with_hecke && !all_levels) {
       continue;
     }
     int n_cell = gc.basis[index].size();
     if (prime > 0) {
-      result.l_level.emplace_back(get_hecke_level_mod(index, gc, hcm, cosets_gamma, prime, os));
+      result.l_level.emplace_back(get_hecke_level_mod(index, gc, hcm, cosets_gamma, prime, with_hecke, os));
 #ifdef TIMINGS_HECKE_OPERATORS
       os << "|HECKE: homology mod p level " << index << "|=" << time << "\n";
 #endif
@@ -960,6 +965,12 @@ HeckeHomologyResult<T> compute_hecke_homology(
 #ifdef DEBUG_HECKE_OPERATORS
     os << "HECKE: index=" << index << " n_cell=" << n_cell << " dim_hom=" << dim_hom << "\n";
 #endif
+    if (!with_hecke) {
+      HeckeHomologyLevel<T> level{index, n_cell, std::move(harmonic), MyMatrix<T>(0, 0),
+                                  "no chain map at this level"};
+      result.l_level.emplace_back(std::move(level));
+      continue;
+    }
     MyMatrix<T> hecke_matrix = ZeroMatrix<T>(dim_hom, dim_hom);
     if (dim_hom > 0) {
       // The images of the basis cells, computed once.

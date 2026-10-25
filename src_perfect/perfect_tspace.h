@@ -485,6 +485,10 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     // the full complex) or "Sharbly" (reduction of the modular symbols,
     // the top two degrees only)
     ListStringValues["HeckeMethod"] = "Dual";
+    // For the Sharbly method: the number of levels below the symbol level
+    // that are computed (1: the top two degrees, 2: also the next one, by
+    // filling the image of the boundary, ...)
+    ListIntValues["HeckeSharblyDepth"] = 1;
     ListIntValues["SubgroupLevel"] = 1;
     // For a Hermitian T-space: the level ideal of O_K by generators
     // "a,b" or "a1,b1;a2,b2" (for a + b omega), replacing SubgroupLevel
@@ -498,6 +502,10 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     // cohomology of the subgroup) or of the full complex with the cells
     // at infinity
     ListBoolValues["OnlyWellRoundedHomology"] = true;
+    // Whether the dimension of the homology is also given at the levels
+    // where the chain map is not computed (the levels below the symbol
+    // level minus one for the sharbly method), without the Hecke matrix
+    ListBoolValues["HeckeHomologyAllLevels"] = false;
     SingleBlock BlockHECKE;
     BlockHECKE.setListStringValues(ListStringValues);
     BlockHECKE.setListIntValues(ListIntValues);

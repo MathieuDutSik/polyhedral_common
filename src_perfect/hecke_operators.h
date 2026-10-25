@@ -117,11 +117,26 @@ compute_hecke_chain_map_method(FullComplexEnumeration<T, Tint, Tgroup> const &fc
   throw TerminalException{1};
 }
 
+template <typename T, typename Tint>
+void write_hecke_chain_map_cache(std::string const &cache_file,
+                                 std::vector<std::vector<MyMatrix<Tint>>> const &l_ext,
+                                 HeckeChainMap<T, Tint> const &hcm) {
+  std::ofstream ofs(cache_file);
+  boost::archive::text_oarchive oa(ofs);
+  oa << l_ext;
+  oa << hcm;
+}
+
+/*
+  For the Sharbly method, sharbly_depth is the number of levels below the
+  symbol level that are computed (1: the level s - 1 only). A chain map
+  read from the cache with fewer levels is extended, and written back.
+ */
 template <typename T, typename Tint, typename Tgroup>
 HeckeChainMap<T, Tint>
 get_hecke_chain_map(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
                     MyMatrix<T> const &x, std::string const &method,
-                    std::string const &cache_file, std::ostream &os) {
+                    std::string const &cache_file, int const &sharbly_depth, std::ostream &os) {
   LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
   std::vector<std::vector<MyMatrix<Tint>>> l_ext = get_complex_fingerprint(fce);
   if (cache_file != "none" && FILE_IsExistingFile(cache_file)) {
@@ -140,6 +155,11 @@ get_hecke_chain_map(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
 #ifdef DEBUG_HECKE_OPERATORS
       os << "HECKE: chain map read from " << cache_file << " method=" << hcm.method << "\n";
 #endif
+      if (hcm.method == "Sharbly" && sharbly_depth > 1) {
+        if (extend_hecke_chain_map_sharbly(fce, hcm, sharbly_depth, os)) {
+          write_hecke_chain_map_cache(cache_file, l_ext, hcm);
+        }
+      }
       return hcm;
     }
 #ifdef DEBUG_HECKE_OPERATORS
@@ -147,11 +167,15 @@ get_hecke_chain_map(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
 #endif
   }
   HeckeChainMap<T, Tint> hcm = compute_hecke_chain_map_method(fce, x, method, os);
+  // Written before the extension, which can fail on a budget and be
+  // resumed from the cache.
   if (cache_file != "none") {
-    std::ofstream ofs(cache_file);
-    boost::archive::text_oarchive oa(ofs);
-    oa << l_ext;
-    oa << hcm;
+    write_hecke_chain_map_cache(cache_file, l_ext, hcm);
+  }
+  if (method == "Sharbly" && sharbly_depth > 1) {
+    if (extend_hecke_chain_map_sharbly(fce, hcm, sharbly_depth, os) && cache_file != "none") {
+      write_hecke_chain_map_cache(cache_file, l_ext, hcm);
+    }
   }
   return hcm;
 }

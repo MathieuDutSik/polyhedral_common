@@ -59,6 +59,12 @@ block of `PERF_SerialPerfectComputation`:
   works for the Hermitian T-spaces (`ImagQuad`) over a norm-Euclidean ring
   O_K (d = -1, -2, -3, -7, -11): the symbols are then m lines over O_K and
   the top two degrees are 5 and 6 for GL_3(O_K).
+* `HeckeSharblyDepth`: for `Sharbly`, the number of levels below the
+  symbol level that are computed (default 1, the top two degrees). The
+  levels further down are filled from the image of the boundary by the
+  map of the level above (no reduction of the k-sharblies); depth 2 gives
+  H^4 for GL_3(O_K). A cached chain map with fewer levels is extended and
+  written back.
 * `FileHeckeChainMap`: output of step A, the chains representing the images
   of the cells under the cosets of G x G.
 * `FileHeckeChainMapCache`: step A does not depend on the subgroup. If this
@@ -83,6 +89,8 @@ block of `PERF_SerialPerfectComputation`:
   of O_K given by generators, `"a,b"` or `"a1,b1;a2,b2"` for a + b omega
   (any ideal, also for a class number > 1); it replaces `SubgroupLevel`.
   `"none"` (the default) for the level `SubgroupLevel` O_K.
+* `HeckeHomologyAllLevels`: also give the dimension of the homology at the
+  levels where the chain map is not computed (without the Hecke matrix).
 * `OnlyWellRoundedHomology`: restrict to the well rounded cells, which
   gives the cohomology of the subgroup by duality; otherwise the homology of
   the full complex with its cells at infinity.

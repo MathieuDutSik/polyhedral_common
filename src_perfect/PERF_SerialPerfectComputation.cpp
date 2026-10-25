@@ -399,7 +399,8 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     };
     HeckeChainMap<T, Tint> hcm;
     try {
-      hcm = get_hecke_chain_map(fce, x, HeckeMethod, FileHeckeChainMapCache, os);
+      int HeckeSharblyDepth = BlockHECKE.get_int("HeckeSharblyDepth");
+      hcm = get_hecke_chain_map(fce, x, HeckeMethod, FileHeckeChainMapCache, HeckeSharblyDepth, os);
     } catch (HeckeFailure const &e) {
       report_failure(e.message);
     }
@@ -417,6 +418,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       int SubgroupLevel = BlockHECKE.get_int("SubgroupLevel");
       int64_t HeckeHomologyPrime = BlockHECKE.get_int("HeckeHomologyPrime");
       bool OnlyWellRoundedHomology = BlockHECKE.get_bool("OnlyWellRoundedHomology");
+      bool HeckeHomologyAllLevels = BlockHECKE.get_bool("HeckeHomologyAllLevels");
       if (hcm.method != "Vertex" && !OnlyWellRoundedHomology) {
         std::cerr << "The " << hcm.method << " method only gives the homology of the well rounded complex\n";
         throw TerminalException{1};
@@ -453,7 +455,8 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       }
       HeckeHomologyResult<T> result;
       try {
-        result = compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, HeckeHomologyPrime, os);
+        result = compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, HeckeHomologyAllLevels,
+                                        HeckeHomologyPrime, os);
       } catch (HeckeFailure const &e) {
         report_failure(e.message);
       }
