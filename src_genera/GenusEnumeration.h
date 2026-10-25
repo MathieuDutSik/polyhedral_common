@@ -71,12 +71,37 @@
   doing this here: the pairwise scheme is quadratic in the class number.
  */
 
+/*
+  How the neighbour primes are scheduled.
+
+  OutPrime: one prime for the whole run -- the one given, or the smallest
+  prime NOT dividing the determinant. At such a prime the neighbour graph
+  is connected on the spinor genus (Kneser), so the enumeration terminates
+  with the full list; the cost is that an even determinant forces p >= 5
+  and the projective space grows as p^{n-1}.
+
+  Iterate: primes 2, 3, 5, 7, ... in order, including those dividing the
+  determinant. A p-neighbour is in the genus for EVERY p (Schulze-Pillot,
+  properties (i)-(iv): same determinant, integral, even, same genus), so
+  every class found is genuine at any prime; what is lost at p | det is
+  only the guarantee that one prime connects the graph. The scheduler
+  always works at the smallest prime that still has unexpanded classes, so
+  classes discovered at an expensive prime are expanded at the cheap
+  primes first, and a new prime enters only when every known class has
+  been expanded at every prime in play and the mass has not closed.
+  Deterministic, and termination is inherited from OutPrime: the schedule
+  eventually reaches a prime not dividing the determinant.
+ */
+enum class NeighborStrategy { OutPrime, Iterate };
+
 // The description of the genus. `prime` is the prime used for the neighbour
-// step; 0 means "choose the smallest prime not dividing 2*det".
+// step; 0 means "choose the smallest prime not dividing 2*det". With the
+// Iterate strategy the prime is ignored.
 template <typename T> struct GenusSpec {
   int rank;
   T det;
   int prime;
+  NeighborStrategy strategy;
 };
 
 /*
@@ -791,7 +816,8 @@ GenusEnumerationResult<T, Tgroup>
 GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                  typename GenusEnumerationResult<T, Tgroup>::Tmass const
                      &TotalMass,
-                 int prime, GenusScheme scheme, std::ostream &os) {
+                 int prime, GenusScheme scheme, NeighborStrategy strategy,
+                 std::ostream &os) {
   using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
   using TintGroup = typename Tgroup::Tint;
 #ifdef TIMINGS_GENUS_ENUMERATION
@@ -901,35 +927,36 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
     }
     (void)f_insert(eSeed);
   }
-  size_t pos = 0;
-  while (pos < ListGramWork.size() && result.accumulated_mass != TotalMass) {
+  // Expands one known class at one prime: the orbits of projective points,
+  // the neighbour of each representative, insertion of the new classes.
+  // Stops early when the mass closes.
+  auto expand_at = [&](size_t pos, int p) -> void {
     MyMatrix<T> GramMat = ListGramWork[pos];
     std::vector<MyMatrix<Tint>> const &ListGenMat = ListAutInfo[pos].ListGenMat;
-    pos++;
     MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
 #ifdef TIMINGS_GENUS_ENUMERATION
     MicrosecondTime time_orb;
 #endif
     ProjectiveLineSelection ListRepr =
-        ProjectiveLineOrbitRepresentatives<Tint>(n, prime, ListGenMat);
+        ProjectiveLineOrbitRepresentatives<Tint>(n, p, ListGenMat);
 #ifdef TIMINGS_GENUS_ENUMERATION
     os << "|GENUS: ProjectiveLineOrbits|=" << time_orb << "\n";
 #endif
 #ifdef DEBUG_GENUS_ENUMERATION
-    os << "GENUS: lattice " << pos << " has " << ListRepr.size()
-       << " orbits of projective points\n";
+    os << "GENUS: lattice " << (pos + 1) << " has " << ListRepr.size()
+       << " orbits of projective points at p=" << p << "\n";
 #endif
     // the representatives are indices; the line vectors are instantiated
     // one at a time, so nothing of the size of the projective space exists
     for (size_t i_orbit = 0; i_orbit < ListRepr.size(); i_orbit++) {
 #ifdef DEBUG_GENUS_ENUMERATION
-      os << "GENUS: lattice " << pos << " orbit " << (i_orbit + 1) << " / "
-         << ListRepr.size() << "\n";
+      os << "GENUS: lattice " << (pos + 1) << " orbit " << (i_orbit + 1)
+         << " / " << ListRepr.size() << "\n";
 #endif
       std::vector<int> eLine =
-          ProjectiveLineOfIndex(n, prime, ListRepr.at(i_orbit));
+          ProjectiveLineOfIndex(n, p, ListRepr.at(i_orbit));
       std::optional<MyMatrix<T>> opt =
-          GenusNeighbor<T, Tint>(G_int, eLine, prime, os);
+          GenusNeighbor<T, Tint>(G_int, eLine, p, os);
       if (opt) {
 #ifdef DEBUG_GENUS_ENUMERATION
         os << "GENUS:   neighbour built, testing against known classes\n";
@@ -947,9 +974,72 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
 #endif
         (void)f_insert(*opt);
         if (result.accumulated_mass == TotalMass) {
+          return;
+        }
+      }
+    }
+  };
+
+  if (strategy == NeighborStrategy::OutPrime) {
+    size_t pos = 0;
+    while (pos < ListGramWork.size() &&
+           result.accumulated_mass != TotalMass) {
+      expand_at(pos, prime);
+      pos++;
+    }
+  } else {
+    /*
+      The iterate strategy: see NeighborStrategy. ListPrimeUsed holds the
+      primes in play in increasing order; next_expand[i] is the number of
+      classes, in discovery order, already expanded at ListPrimeUsed[i].
+      The invariant exits: the mass closes (complete), or the accumulated
+      mass passes the target (impossible for genuine neighbours, so it
+      would witness a programming error and stops the run as incomplete
+      rather than spinning), or NumberProjectiveLines overflows at an
+      absurd prime (an exception, equally a witness that something is
+      wrong with the genus data).
+     */
+    std::vector<int> ListPrimeUsed;
+    std::vector<size_t> next_expand;
+    auto next_prime = [](int q) -> int {
+      int cand = q + 1;
+      while (true) {
+        bool is_prime = cand >= 2;
+        for (int d = 2; d * d <= cand; d++) {
+          if (cand % d == 0) {
+            is_prime = false;
+            break;
+          }
+        }
+        if (is_prime) {
+          return cand;
+        }
+        cand++;
+      }
+    };
+    while (result.accumulated_mass != TotalMass) {
+      if (result.accumulated_mass > TotalMass) {
+        break;
+      }
+      size_t i_work = ListPrimeUsed.size();
+      for (size_t i = 0; i < ListPrimeUsed.size(); i++) {
+        if (next_expand[i] < ListGramWork.size()) {
+          i_work = i;
           break;
         }
       }
+      if (i_work == ListPrimeUsed.size()) {
+        int p_new =
+            ListPrimeUsed.empty() ? 2 : next_prime(ListPrimeUsed.back());
+        ListPrimeUsed.push_back(p_new);
+        next_expand.push_back(0);
+#ifdef DEBUG_GENUS_ENUMERATION
+        os << "GENUS: iterate strategy brings in prime " << p_new << "\n";
+#endif
+        continue;
+      }
+      expand_at(next_expand[i_work], ListPrimeUsed[i_work]);
+      next_expand[i_work]++;
     }
   }
   result.complete = (result.accumulated_mass == TotalMass);
@@ -993,6 +1083,7 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
   spec.rank = -1;
   spec.det = T(0);
   spec.prime = 0;
+  spec.strategy = NeighborStrategy::OutPrime;
   std::string key;
   while (is >> key) {
     if (key == "rank") {
@@ -1001,9 +1092,21 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
       is >> spec.det;
     } else if (key == "prime") {
       is >> spec.prime;
+    } else if (key == "strategy") {
+      std::string strat;
+      is >> strat;
+      if (strat == "out_prime") {
+        spec.strategy = NeighborStrategy::OutPrime;
+      } else if (strat == "iterate") {
+        spec.strategy = NeighborStrategy::Iterate;
+      } else {
+        std::cerr << "GENUS: unrecognised strategy \"" << strat << "\" in "
+                  << file_name << ". Allowed: out_prime, iterate\n";
+        throw TerminalException{1};
+      }
     } else {
       std::cerr << "GENUS: unrecognised key \"" << key << "\" in "
-                << file_name << ". Allowed: rank, det, prime\n";
+                << file_name << ". Allowed: rank, det, prime, strategy\n";
       throw TerminalException{1};
     }
   }
