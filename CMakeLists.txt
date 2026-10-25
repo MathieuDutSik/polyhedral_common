@@ -1107,6 +1107,7 @@ set(
   ERDAHL_PROGRAMS
   ERDAHL_CutInequalities
   ERDAHL_EnumeratePerfect
+  ERDAHL_zero_set
 )
 foreach(target IN LISTS ERDAHL_PROGRAMS)
   add_polyhedral_binary(

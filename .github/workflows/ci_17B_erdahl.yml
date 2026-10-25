@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [TestErdahl_full7, TestErdahl_centered8]
+        test: [TestErdahl_full7, TestErdahl_centered8, TestErdahl_zero_set]
     env:
       GMP_INCDIR: /usr/include
       GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
