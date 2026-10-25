@@ -2,7 +2,6 @@
 #PROGRAM		= VectFamily_Reduction
 #PROGRAM		= VectFamily_ColumnReduction
 #PROGRAM		= POLY_process_csdp
-#PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_GeometricallyUniqueInteriorPoint
 #PROGRAM		= POLY_LinearDetermineByInequalities
 #PROGRAM		= POLY_redundancy
