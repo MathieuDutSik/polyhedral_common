@@ -121,6 +121,11 @@ template <typename T, typename Tgroup> struct GenusEnumerationResult {
   Tmass accumulated_mass;
   Tmass target_mass;
   bool complete;
+  // The primes the neighbour steps used, in the order they came into play,
+  // and how many new classes the neighbours at each of them produced. The
+  // seeds are not counted. With the out_prime strategy there is one entry.
+  std::vector<int> ListPrimeUsed;
+  std::vector<size_t> ListNewClassPerPrime;
 };
 
 // Inverse of a modulo the prime p, by extended Euclid. p is small.
@@ -930,7 +935,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
   // Expands one known class at one prime: the orbits of projective points,
   // the neighbour of each representative, insertion of the new classes.
   // Stops early when the mass closes.
-  auto expand_at = [&](size_t pos, int p) -> void {
+  auto expand_at = [&](size_t pos, int p, size_t i_prime) -> void {
     MyMatrix<T> GramMat = ListGramWork[pos];
     std::vector<MyMatrix<Tint>> const &ListGenMat = ListAutInfo[pos].ListGenMat;
     MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
@@ -972,7 +977,9 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
           WriteMatrixFile(std::string(dump_file), *opt);
         }
 #endif
-        (void)f_insert(*opt);
+        if (f_insert(*opt)) {
+          result.ListNewClassPerPrime[i_prime]++;
+        }
         if (result.accumulated_mass == TotalMass) {
           return;
         }
@@ -981,10 +988,12 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
   };
 
   if (strategy == NeighborStrategy::OutPrime) {
+    result.ListPrimeUsed.push_back(prime);
+    result.ListNewClassPerPrime.push_back(0);
     size_t pos = 0;
     while (pos < ListGramWork.size() &&
            result.accumulated_mass != TotalMass) {
-      expand_at(pos, prime);
+      expand_at(pos, prime, 0);
       pos++;
     }
   } else {
@@ -999,7 +1008,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
       absurd prime (an exception, equally a witness that something is
       wrong with the genus data).
      */
-    std::vector<int> ListPrimeUsed;
+    std::vector<int> &ListPrimeUsed = result.ListPrimeUsed;
     std::vector<size_t> next_expand;
     auto next_prime = [](int q) -> int {
       int cand = q + 1;
@@ -1032,13 +1041,14 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
         int p_new =
             ListPrimeUsed.empty() ? 2 : next_prime(ListPrimeUsed.back());
         ListPrimeUsed.push_back(p_new);
+        result.ListNewClassPerPrime.push_back(0);
         next_expand.push_back(0);
 #ifdef DEBUG_GENUS_ENUMERATION
         os << "GENUS: iterate strategy brings in prime " << p_new << "\n";
 #endif
         continue;
       }
-      expand_at(next_expand[i_work], ListPrimeUsed[i_work]);
+      expand_at(next_expand[i_work], ListPrimeUsed[i_work], i_work);
       next_expand[i_work]++;
     }
   }
@@ -1153,6 +1163,12 @@ void WriteGenusEnumerationResult(
     std::string const &OutFormat, int prime) {
   if (OutFormat == "Summary") {
     os << "prime = " << prime << "\n";
+    os << "primes used (new classes found):";
+    for (size_t i = 0; i < result.ListPrimeUsed.size(); i++) {
+      os << " " << result.ListPrimeUsed[i] << " ("
+         << result.ListNewClassPerPrime[i] << ")";
+    }
+    os << "\n";
     os << "class number = " << result.ListGram.size() << "\n";
     os << "accumulated mass = " << result.accumulated_mass << "\n";
     os << "target mass = " << result.target_mass << "\n";
@@ -1189,7 +1205,15 @@ void WriteGenusEnumerationResult(
     os << "],\n accumulated_mass:=" << result.accumulated_mass
        << ",\n target_mass:=" << result.target_mass
        << ",\n complete:=" << (result.complete ? "true" : "false")
-       << ",\n prime:=" << prime << ");\n";
+       << ",\n prime:=" << prime << ",\n ListPrimeUsed:=[";
+    for (size_t i = 0; i < result.ListPrimeUsed.size(); i++) {
+      os << (i > 0 ? ", " : "") << result.ListPrimeUsed[i];
+    }
+    os << "],\n ListNewClassPerPrime:=[";
+    for (size_t i = 0; i < result.ListNewClassPerPrime.size(); i++) {
+      os << (i > 0 ? ", " : "") << result.ListNewClassPerPrime[i];
+    }
+    os << "]);\n";
     return;
   }
   std::cerr << "GENUS: failed to find a matching entry for OutFormat="
