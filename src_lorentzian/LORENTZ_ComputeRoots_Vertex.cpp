@@ -32,9 +32,11 @@ int main(int argc, char *argv[]) {
     //
     // This code is mainly for testing
     std::string OptionNorms = "all";
-    std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms);
+    std::vector<T> l_norms =
+        get_initial_list_norms<T, Tint>(G, OptionNorms, std::cerr);
+    SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms, std::cerr);
     //
-    MyMatrix<Tint> MatRoot = get_simple_cone<T, Tint>(G, l_norms, gen);
+    MyMatrix<Tint> MatRoot = get_simple_cone<T, Tint>(si, gen, std::cerr);
     //
     auto prt = [&](std::ostream &os) -> void {
       os << "return " << StringMatrixGAP(MatRoot) << ";\n";
