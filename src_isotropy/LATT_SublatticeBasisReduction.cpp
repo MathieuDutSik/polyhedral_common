@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> M = ReadMatrixFile<T>(FileI);
     //
     auto print_result = [&](std::ostream &os) -> void {
-      MyMatrix<T> Mred = SublatticeBasisReduction(M);
+      MyMatrix<T> Mred = SublatticeBasisReduction(M, std::cerr);
       if (OutFormat == "GAP") {
         os << "return rec(Mred:=";
         WriteMatrixGAP(os, Mred);

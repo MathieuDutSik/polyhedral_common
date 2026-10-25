@@ -731,6 +731,7 @@ set(
   CheckPositiveSemiDefinite
   LATT_DiophantApprox
   LATT_AutomorphyReduction
+  LATT_SublatticeBasisReduction
 )
 foreach(target IN LISTS ISOTROPY_PROGRAMS)
   add_polyhedral_binary(
