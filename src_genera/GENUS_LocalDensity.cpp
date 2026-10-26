@@ -70,9 +70,12 @@
                                    root-free lattices and the non-zero
                                    masses by type of root system
     two_adic_symbol         record: n T          (T even)
-                            value: [raw, canonical], the 2-adic symbol of
-                                   one Jordan splitting (determinants mod
-                                   8) and the canonical symbol
+                            value: [raw, canonical, modular], the 2-adic
+                                   symbol of one Jordan splitting
+                                   (determinants mod 8), the canonical
+                                   symbol, and the canonical symbol again
+                                   from the modular splitting (empty when
+                                   it would overflow)
     genus_mass              record: n T          (T even, positive)
                             value: the mass of the genus of T
     full_rank_mass          record: n T S        (S of rank n)
@@ -113,7 +116,14 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
   }
   size_t n_rec;
   is >> n_rec;
-  std::vector<std::string> ListVal;
+  // each value is written as soon as it is computed, so that a long run
+  // that stops keeps what it has done
+  size_t n_written = 0;
+  auto emit = [&](std::string const &val) -> void {
+    os << (n_written == 0 ? "return [" : ",\n") << val;
+    os.flush();
+    n_written++;
+  };
   LocalDensityCache<T> cache;
   std::map<std::vector<T>, GenusDensityDataFull<T>> genus_data;
   FullRankOverlatticeCache<T> full_rank_cache;
@@ -123,7 +133,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
   auto push = [&](T const &val) -> void {
     std::ostringstream oss;
     oss << val;
-    ListVal.push_back(oss.str());
+    emit(oss.str());
   };
   for (size_t i_rec = 0; i_rec < n_rec; i_rec++) {
     if (task == "bernoulli") {
@@ -150,7 +160,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       int m;
       is >> p >> m;
       MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
-      ListVal.push_back(
+      emit(
           PolynomialToGAP(SiegelSeriesPolynomial<T, Tint>(S, p, cache.siegel)));
     } else if (task == "rank_one_density") {
       int64_t p, a;
@@ -172,7 +182,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       if (opt) {
         push(*opt);
       } else {
-        ListVal.push_back("fail");
+        emit("fail");
       }
     } else if (task == "counting") {
       int64_t p;
@@ -187,7 +197,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       if (opt) {
         push(*opt);
       } else {
-        ListVal.push_back("fail");
+        emit("fail");
       }
     } else if (task == "reduction") {
       int64_t p;
@@ -211,7 +221,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       if (opt) {
         push(*opt);
       } else {
-        ListVal.push_back("fail");
+        emit("fail");
       }
     } else if (task == "brute_force") {
       int64_t p;
@@ -224,7 +234,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       if (opt) {
         push(*opt);
       } else {
-        ListVal.push_back("fail");
+        emit("fail");
       }
     } else if (task == "mass_ratio") {
       int n, m;
@@ -250,7 +260,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
                                            ParseAdeType(nameT), root_cache);
       std::ostringstream oss;
       oss << val;
-      ListVal.push_back(oss.str());
+      emit(oss.str());
     } else if (task == "root_free_mass") {
       int n;
       is >> n;
@@ -274,7 +284,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
         }
       }
       oss << "]]";
-      ListVal.push_back(oss.str());
+      emit(oss.str());
     } else if (task == "two_adic_symbol") {
       int n;
       is >> n;
@@ -293,8 +303,23 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
         return oss.str();
       };
       std::vector<std::array<int, 5>> raw = TwoAdicSymbolRaw<T, Tint>(Tg);
-      ListVal.push_back("[" + to_gap(raw) + ", " +
-                        to_gap(CanonicalTwoAdicReduction(raw)) + "]");
+      int64_t det = DeterminantInt64<T, Tint>(Tg);
+      int v_det = 0;
+      while (det % 2 == 0) {
+        det /= 2;
+        v_det++;
+      }
+      std::optional<std::vector<int>> key = LocalSymbolKeyModular(
+          UniversalMatrixConversion<int64_t, T>(Tg), 2, v_det);
+      std::vector<std::array<int, 5>> modular;
+      if (key) {
+        for (size_t i = 0; i + 4 < key->size(); i += 5) {
+          modular.push_back({(*key)[i], (*key)[i + 1], (*key)[i + 2],
+                             (*key)[i + 3], (*key)[i + 4]});
+        }
+      }
+      emit("[" + to_gap(raw) + ", " + to_gap(CanonicalTwoAdicReduction(raw)) +
+           ", " + to_gap(modular) + "]");
     } else if (task == "genus_mass") {
       int n;
       is >> n;
@@ -322,9 +347,8 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       throw TerminalException{1};
     }
   }
-  os << "return [";
-  for (size_t i = 0; i < ListVal.size(); i++) {
-    os << (i > 0 ? ",\n" : "") << ListVal[i];
+  if (n_written == 0) {
+    os << "return [";
   }
   os << "];\n";
 }

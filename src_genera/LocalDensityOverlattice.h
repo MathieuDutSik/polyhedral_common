@@ -8,15 +8,370 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <optional>
 #include <unordered_set>
 #include <vector>
 // clang-format on
 
+#ifdef TIMINGS
+#define TIMINGS_LOCAL_DENSITY_OVERLATTICE
+#endif
+
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE
 #endif
+
+//
+// Local isometry classes
+//
+
+// The Jordan invariants at an odd prime: for every level, its rank and the
+// Legendre symbol of the product of its units (of T / 2; the factor 2 is a
+// unit and changes the classes of both sides alike).
+inline std::vector<std::array<int, 3>>
+OddLocalSymbolFromClasses(std::vector<PadicClass> const &classes, int64_t p) {
+  std::map<int, std::pair<int, int64_t>> levels;
+  for (auto const &c : classes) {
+    auto &lv = levels[c.val];
+    if (lv.first == 0) {
+      lv.second = 1;
+    }
+    lv.first++;
+    lv.second = MulMod(lv.second, c.unit, p);
+  }
+  std::vector<std::array<int, 3>> res;
+  for (auto const &kv : levels) {
+    res.push_back({kv.first, kv.second.first, LegendreUnit(kv.second.second, p)});
+  }
+  return res;
+}
+
+template <typename T, typename Tint>
+std::vector<std::array<int, 3>> OddLocalSymbol(MyMatrix<T> const &Gram,
+                                               int64_t p) {
+  return OddLocalSymbolFromClasses(OddDiagonalClasses<T, Tint>(Gram, p), p);
+}
+
+/*
+  The canonical 2-adic symbol of an even lattice (Conway-Sloane, Sphere
+  Packings, Lattices and Groups, ch. 15, Sec. 7.5-7.6; the reduction follows
+  Sage's canonical_2_adic_reduction): one quintuple (scale exponent, rank,
+  determinant, type, oddity) per Jordan component, the determinants reduced
+  to +-1, the oddities fused over the compartments and the signs walked to
+  the front of every train. Two 2-adic lattices are isometric iff their
+  canonical symbols are equal.
+ */
+inline std::vector<std::array<int, 5>>
+CanonicalTwoAdicReduction(std::vector<std::array<int, 5>> sym) {
+  for (auto &c : sym) {
+    c[2] = (c[2] == 1 || c[2] == 7) ? 1 : -1;
+  }
+  // compartments: maximal runs of odd components of consecutive scales
+  std::vector<std::vector<int>> compartments;
+  {
+    int i = 0, r = static_cast<int>(sym.size());
+    while (i < r) {
+      if (sym[i][3] == 1) {
+        int v = sym[i][0];
+        std::vector<int> c;
+        while (i < r && sym[i][3] == 1 && sym[i][0] == v) {
+          c.push_back(i);
+          i++;
+          v++;
+        }
+        compartments.push_back(c);
+      } else {
+        i++;
+      }
+    }
+  }
+  for (auto const &compart : compartments) {
+    int oddity = 0;
+    for (int i : compart) {
+      oddity += sym[i][4];
+      sym[i][4] = 0;
+    }
+    sym[compart[0]][4] = ModPositive(oddity, 8);
+  }
+  // trains
+  std::vector<std::vector<int>> trains;
+  {
+    std::vector<std::array<int, 5>> ext = sym;
+    ext.push_back({sym.back()[0] + 1, 0, 1, 0, 0});
+    std::vector<int> new_train{0};
+    for (size_t i = 1; i + 1 < ext.size(); i++) {
+      auto const &prev = ext[i - 1];
+      auto const &cur = ext[i];
+      if (cur[0] - prev[0] > 2) {
+        trains.push_back(new_train);
+        new_train = {static_cast<int>(i)};
+      } else if (cur[0] - prev[0] == 2 && cur[3] * prev[3] == 0) {
+        trains.push_back(new_train);
+        new_train = {static_cast<int>(i)};
+      } else if (prev[3] == 0 && cur[3] == 0) {
+        trains.push_back(new_train);
+        new_train = {static_cast<int>(i)};
+      } else {
+        new_train.push_back(static_cast<int>(i));
+      }
+    }
+    trains.push_back(new_train);
+  }
+  for (auto const &train : trains) {
+    int t = static_cast<int>(train.size());
+    for (int i = 0; i < t - 1; i++) {
+      int t1 = train[t - i - 1];
+      if (sym[t1][2] == -1) {
+        sym[t1][2] = 1;
+        sym[t1 - 1][2] *= -1;
+        for (auto const &compart : compartments) {
+          bool in = std::find(compart.begin(), compart.end(), t1 - 1) != compart.end() ||
+                    std::find(compart.begin(), compart.end(), t1) != compart.end();
+          if (in) {
+            sym[compart[0]][4] = ModPositive(sym[compart[0]][4] + 4, 8);
+          }
+        }
+      }
+    }
+  }
+  return sym;
+}
+
+// The 2-adic symbol of an even Gram matrix, from one Jordan splitting:
+// a unit u at level e of T / 2 is an odd component 2^{e+1} u of T; the
+// binary blocks h (det -1 = 7) and y (det 3) of level e are components of
+// scale 2^e. Neither adds to the oddity: <u> + y = <3u, -u, -u> and
+// <u> + h = <u, 1, -1> have the oddity u of <u>. The determinants are kept
+// mod 8 (Sage's symbol_tuple_list); they depend on the decomposition, the
+// canonical symbol below does not.
+inline std::vector<std::array<int, 5>>
+TwoAdicSymbolFromSplitting(std::vector<SiegelJordanBlock> const &blocks) {
+  std::map<int, std::array<int, 5>> comp;
+  for (auto const &b : blocks) {
+    int s = (b.kind == SiegelBlockKind::Unit) ? b.e + 1 : b.e;
+    auto iter = comp.find(s);
+    if (iter == comp.end()) {
+      iter = comp.emplace(s, std::array<int, 5>{s, 0, 1, 0, 0}).first;
+    }
+    auto &c = iter->second;
+    if (b.kind == SiegelBlockKind::Unit) {
+      c[1] += 1;
+      c[2] = static_cast<int>(MulMod(c[2], b.unit, 8));
+      c[3] = 1;
+      c[4] = ModPositive(c[4] + b.unit, 8);
+    } else if (b.kind == SiegelBlockKind::H) {
+      c[1] += 2;
+      c[2] = static_cast<int>(MulMod(c[2], 7, 8));
+    } else {
+      c[1] += 2;
+      c[2] = static_cast<int>(MulMod(c[2], 3, 8));
+    }
+  }
+  std::vector<std::array<int, 5>> sym;
+  for (auto &kv : comp) {
+    if (kv.second[3] == 0) {
+      kv.second[4] = 0;
+    }
+    sym.push_back(kv.second);
+  }
+  return sym;
+}
+
+template <typename T, typename Tint>
+std::vector<std::array<int, 5>> TwoAdicSymbolRaw(MyMatrix<T> const &Gram) {
+  return TwoAdicSymbolFromSplitting(JordanSplitting2<T, Tint>(Gram / T(2)));
+}
+
+template <typename T, typename Tint>
+std::vector<std::array<int, 5>> TwoAdicSymbol(MyMatrix<T> const &Gram) {
+  return CanonicalTwoAdicReduction(TwoAdicSymbolRaw<T, Tint>(Gram));
+}
+
+// The local symbol at p flattened to integers: equal iff locally isometric
+template <typename T, typename Tint>
+std::vector<int> LocalSymbolKey(MyMatrix<T> const &Gram, int64_t p) {
+  std::vector<int> key;
+  if (p == 2) {
+    for (auto const &c : TwoAdicSymbol<T, Tint>(Gram)) {
+      key.insert(key.end(), c.begin(), c.end());
+    }
+  } else {
+    for (auto const &c : OddLocalSymbol<T, Tint>(Gram, p)) {
+      key.insert(key.end(), c.begin(), c.end());
+    }
+  }
+  return key;
+}
+
+/*
+  The same key for an integral (even at p = 2) Gram matrix in int64, by a
+  Jordan splitting modulo p^K, K = v_p(det) + 5: pivoting on an entry of
+  minimal valuation e, every update subtracts a product of a quotient known
+  modulo p^{K-e} by an entry of valuation >= e, so the entries stay exact
+  modulo p^K, which determines the units modulo 8 (or p) of every Jordan
+  block. Returns nothing when p^{2K} would overflow; the caller then uses
+  LocalSymbolKey.
+ */
+inline int64_t ValuationResidue(int64_t x, int64_t p, int K) {
+  if (x == 0) {
+    return K;
+  }
+  int v = 0;
+  while (x % p == 0) {
+    x /= p;
+    v++;
+  }
+  return v;
+}
+
+inline int64_t InverseModPower(int64_t u, int64_t mod) {
+  // u odd (p = 2) or prime to p: extended Euclid
+  int64_t a = ModPositive(u, mod), b = mod, x0 = 1, x1 = 0;
+  while (b != 0) {
+    int64_t q = a / b;
+    int64_t t = a - q * b;
+    a = b;
+    b = t;
+    t = x0 - q * x1;
+    x0 = x1;
+    x1 = t;
+  }
+  return ModPositive(x0, mod);
+}
+
+inline std::optional<std::vector<int>>
+LocalSymbolKeyModular(MyMatrix<int64_t> const &Gram, int64_t p, int v_det) {
+  int n = Gram.rows();
+  int K = v_det + 5;
+  int64_t M = 1;
+  for (int i = 0; i < K; i++) {
+    if (M > (int64_t(1) << 30) / p) {
+      return {};
+    }
+    M *= p;
+  }
+  std::vector<std::vector<int64_t>> A(n, std::vector<int64_t>(n));
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      A[i][j] = ModPositive(Gram(i, j), M);
+    }
+  }
+  std::vector<int> active(n);
+  for (int i = 0; i < n; i++) {
+    active[i] = i;
+  }
+  auto remove = [&](int i) -> void {
+    active.erase(std::find(active.begin(), active.end(), i));
+  };
+  int64_t pe_div;
+  std::vector<SiegelJordanBlock> blocks2;
+  std::vector<PadicClass> classes;
+  int64_t inv2 = (p == 2) ? 0 : InverseModPower(2, p);
+  while (!active.empty()) {
+    int best_v = K + 1, bi = -1, bj = -1;
+    for (int i : active) {
+      for (int j : active) {
+        if (j < i) {
+          continue;
+        }
+        int v = static_cast<int>(ValuationResidue(A[i][j], p, K));
+        // a diagonal pivot when it has the minimal valuation
+        if (v < best_v || (v == best_v && i == j && bi != bj)) {
+          best_v = v;
+          bi = i;
+          bj = j;
+        }
+      }
+    }
+    if (best_v >= K - 3) {
+      // a degenerate matrix, or precision exhausted
+      return {};
+    }
+    int e = best_v;
+    pe_div = 1;
+    for (int i = 0; i < e; i++) {
+      pe_div *= p;
+    }
+    if (bi != bj && p != 2) {
+      // x_i <- x_i + x_j makes the diagonal of valuation e
+      int i = bi, j = bj;
+      for (int k : active) {
+        A[i][k] = ModPositive(A[i][k] + A[j][k], M);
+      }
+      for (int k : active) {
+        A[k][i] = (k == i) ? A[k][i] : A[i][k];
+      }
+      A[i][i] = ModPositive(A[i][i] + A[j][i], M);
+      bj = bi;
+      if (ValuationResidue(A[i][i], p, K) != e) {
+        std::cerr << "LDOV: the diagonal pivot has the wrong valuation\n";
+        throw TerminalException{1};
+      }
+    }
+    if (bi == bj) {
+      int i = bi;
+      int64_t u = A[i][i] / pe_div;
+      int64_t uinv = InverseModPower(u, M / pe_div);
+      remove(i);
+      for (int j : active) {
+        int64_t fj = ModPositive((A[j][i] / pe_div) * uinv, M / pe_div);
+        for (int k : active) {
+          A[j][k] = ModPositive(A[j][k] - fj * A[i][k], M);
+        }
+      }
+      if (p == 2) {
+        blocks2.push_back({e - 1, SiegelBlockKind::Unit, ModPositive(u, 8)});
+      } else {
+        classes.push_back({e, MulMod(ModPositive(u, p), inv2, p)});
+      }
+    } else {
+      int i = bi, j = bj;
+      int64_t a = A[i][i], b = A[i][j], c = A[j][j];
+      int64_t pe2 = pe_div * pe_div;
+      int64_t d = a * c - b * b;
+      int64_t d_red = ModPositive(d / pe2, M / pe_div);
+      int64_t dinv = InverseModPower(d_red, M / pe_div);
+      remove(i);
+      remove(j);
+      std::vector<std::pair<int64_t, int64_t>> coef;
+      for (int k : active) {
+        int64_t num_a = c * A[i][k] - b * A[j][k];
+        int64_t num_b = a * A[j][k] - b * A[i][k];
+        int64_t al = ModPositive((num_a / pe2) % (M / pe_div) * dinv, M / pe_div);
+        int64_t be = ModPositive((num_b / pe2) % (M / pe_div) * dinv, M / pe_div);
+        coef.push_back({al, be});
+      }
+      for (size_t x = 0; x < active.size(); x++) {
+        int kx = active[x];
+        for (int l : active) {
+          A[kx][l] = ModPositive(A[kx][l] - coef[x].first * A[i][l] -
+                                     coef[x].second * A[j][l],
+                                 M);
+        }
+      }
+      bool is_y = (ModPositive(d_red, 8) == 3);
+      blocks2.push_back({e, is_y ? SiegelBlockKind::Y : SiegelBlockKind::H, 0});
+    }
+  }
+  std::vector<int> key;
+  if (p == 2) {
+    for (auto const &c : CanonicalTwoAdicReduction(TwoAdicSymbolFromSplitting(blocks2))) {
+      key.insert(key.end(), c.begin(), c.end());
+    }
+  } else {
+    for (auto const &c : OddLocalSymbolFromClasses(classes, p)) {
+      key.insert(key.end(), c.begin(), c.end());
+    }
+  }
+  return key;
+}
+
+template <typename T, typename Tint>
+bool LocallyIsometric(MyMatrix<T> const &G1, MyMatrix<T> const &G2, int64_t p) {
+  return LocalSymbolKey<T, Tint>(G1, p) == LocalSymbolKey<T, Tint>(G2, p);
+}
 
 /*
   alpha_p(S, L) for a lattice L that is not unimodular at p, from Siegel
@@ -138,13 +493,11 @@ template <typename T> bool LatticeContained(MyMatrix<T> const &B1,
 }
 
 
-/*
-  The vectors c of (Z/p)^m with c G = 0 mod p, one per line (first non-zero
-  coordinate 1), for an integral G: Gaussian elimination over F_p.
- */
+// A basis of the left kernel {c : c G = 0 mod p} of an integral G, by
+// Gaussian elimination over F_p.
 template <typename T, typename Tint>
-std::vector<std::vector<int64_t>> ProjectiveKernelModP(MyMatrix<T> const &G,
-                                                       int64_t p) {
+std::vector<std::vector<int64_t>> KernelBasisModP(MyMatrix<T> const &G,
+                                                  int64_t p) {
   int m = G.rows();
   Tint p_T(static_cast<long>(p));
   // the columns of G mod p, as the rows of the system c G = 0
@@ -202,6 +555,17 @@ std::vector<std::vector<int64_t>> ProjectiveKernelModP(MyMatrix<T> const &G,
     }
     basis.push_back(v);
   }
+  return basis;
+}
+
+// The vectors c of (Z/p)^m with c G = 0 mod p, one per line (first non-zero
+// coordinate 1).
+template <typename T, typename Tint>
+std::vector<std::vector<int64_t>> ProjectiveKernelModP(MyMatrix<T> const &G,
+                                                       int64_t p) {
+  int m = G.rows();
+  std::vector<std::vector<int64_t>> basis = KernelBasisModP<T, Tint>(G, p);
+  int t = static_cast<int>(basis.size());
   std::vector<std::vector<int64_t>> dirs;
   int64_t total = 1;
   for (int i = 0; i < t; i++) {
@@ -382,6 +746,300 @@ T PrimitiveDensityOverlattices(MyMatrix<T> const &S, OverlatticeSet<T> const &os
 }
 
 /*
+  The same g(R) from the elementary overlattices alone. The interval
+  [R, Lambda] of the poset of overlattices is the lattice of subgroups of
+  Lambda / R, whose Moebius function vanishes unless Lambda / R = (Z/p)^k,
+  where it is (-1)^k p^{k(k-1)/2} (P. Hall), so
+      g(R) = sum_k (-1)^k p^{k(k-1)/2 + c k}
+                   sum_{Lambda / R = (Z/p)^k} f(Lambda),
+  and f(Lambda), a Siegel series of S + Lambda, depends only on the local
+  class of Lambda: the elementary overlattices are tabulated once, by
+  (k, class), with a count and one representative.
+
+  They are R + W, W a subspace of V = D(R)[p] (the vectors c / p, c in the
+  left kernel of the Gram matrix mod p): R + W is integral iff
+  c G d^t = 0 mod p^2 on W, and even iff moreover c G c^t = 0 mod 2 p^2
+  (automatic at odd p). Both depend on c modulo p only. The subspaces are
+  enumerated in reduced row echelon form, each from its canonical parent,
+  the span of its rows but the last.
+ */
+template <typename T> struct ElementaryOverlatticeClass {
+  int k;
+  int64_t count;
+  MyMatrix<T> gram;
+};
+
+template <typename T, typename Tint>
+std::vector<ElementaryOverlatticeClass<T>>
+ElementaryOverlatticeClasses(MyMatrix<T> const &R, int64_t p) {
+  int m = R.rows();
+  std::vector<std::vector<int64_t>> kb = KernelBasisModP<T, Tint>(R, p);
+  int t = static_cast<int>(kb.size());
+  int64_t p2 = p * p;
+  int64_t mod_q = (p == 2) ? 2 * p2 : p2;
+  std::vector<std::vector<int64_t>> Ri(m, std::vector<int64_t>(m));
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < m; j++) {
+      Ri[i][j] = UniversalScalarConversion<int64_t, T>(R(i, j));
+    }
+  }
+  auto form = [&](std::vector<int64_t> const &x,
+                  std::vector<int64_t> const &y) -> int64_t {
+    int64_t s = 0;
+    for (int i = 0; i < m; i++) {
+      if (x[i] != 0) {
+        for (int j = 0; j < m; j++) {
+          s += x[i] * Ri[i][j] * y[j];
+        }
+      }
+    }
+    return s;
+  };
+  // q on the basis mod 2p^2 (p^2 at odd p), b mod p^2
+  std::vector<int64_t> Qd(t);
+  std::vector<std::vector<int64_t>> Bm(t, std::vector<int64_t>(t));
+  for (int i = 0; i < t; i++) {
+    for (int j = 0; j < t; j++) {
+      Bm[i][j] = ModPositive(form(kb[i], kb[j]), p2);
+    }
+    Qd[i] = ModPositive(form(kb[i], kb[i]), mod_q);
+  }
+  auto q_of = [&](std::vector<int64_t> const &a) -> int64_t {
+    int64_t s = 0;
+    for (int i = 0; i < t; i++) {
+      if (a[i] == 0) {
+        continue;
+      }
+      s += a[i] * a[i] * Qd[i];
+      for (int j = i + 1; j < t; j++) {
+        s += 2 * a[i] * a[j] * Bm[i][j];
+      }
+    }
+    return ModPositive(s, mod_q);
+  };
+  auto b_of = [&](std::vector<int64_t> const &a,
+                  std::vector<int64_t> const &a2) -> int64_t {
+    int64_t s = 0;
+    for (int i = 0; i < t; i++) {
+      if (a[i] != 0) {
+        for (int j = 0; j < t; j++) {
+          s += a[i] * a2[j] * Bm[i][j];
+        }
+      }
+    }
+    return ModPositive(s, p2);
+  };
+  // the free column of each kernel vector: kb[i] has a 1 there and 0 at
+  // the free columns of the others
+  std::vector<int> free_col(t);
+  for (int i = 0; i < t; i++) {
+    free_col[i] = -1;
+    for (int c = 0; c < m && free_col[i] < 0; c++) {
+      bool ok = (kb[i][c] == 1);
+      for (int i2 = 0; i2 < t && ok; i2++) {
+        if (i2 != i && kb[i2][c] != 0) {
+          ok = false;
+        }
+      }
+      if (ok) {
+        free_col[i] = c;
+      }
+    }
+    if (free_col[i] < 0) {
+      std::cerr << "LDOV: kernel basis without a free column\n";
+      throw TerminalException{1};
+    }
+  }
+  std::map<std::pair<int, std::vector<int>>, size_t> index;
+  std::vector<ElementaryOverlatticeClass<T>> classes;
+  int v_det_R = 0;
+  {
+    int64_t detR = DeterminantInt64<T, Tint>(R);
+    while (detR % p == 0) {
+      detR /= p;
+      v_det_R++;
+    }
+  }
+  // A basis of R + W: the rows of W lifted to c_r / p replace the basis
+  // vectors e_i at the free columns of their pivots (a row of W in reduced
+  // echelon form has a 1 at its pivot and 0 at the other pivots, so the
+  // lift has a 1 at that free column and 0 at the others). The Gram matrix
+  // is integral and computed in int64.
+  auto record = [&](std::vector<std::vector<int64_t>> const &rows,
+                    std::vector<int> const &pivots) -> void {
+    int k = static_cast<int>(rows.size());
+    std::vector<std::vector<int64_t>> lifts(k, std::vector<int64_t>(m, 0));
+    std::vector<bool> replaced(m, false);
+    for (int r = 0; r < k; r++) {
+      for (int i = 0; i < t; i++) {
+        if (rows[r][i] != 0) {
+          for (int j = 0; j < m; j++) {
+            lifts[r][j] += rows[r][i] * kb[i][j];
+          }
+        }
+      }
+      replaced[free_col[pivots[r]]] = true;
+    }
+    // each basis vector: (is it a lift, index)
+    std::vector<std::pair<bool, int>> vecs;
+    for (int i = 0; i < m; i++) {
+      if (!replaced[i]) {
+        vecs.push_back({false, i});
+      }
+    }
+    for (int r = 0; r < k; r++) {
+      vecs.push_back({true, r});
+    }
+    std::vector<int64_t> Rx(m);
+    MyMatrix<int64_t> gram(m, m);
+    for (int a = 0; a < m; a++) {
+      // R times the vector a (times p for a lift)
+      for (int j = 0; j < m; j++) {
+        Rx[j] = vecs[a].first ? 0 : Ri[vecs[a].second][j];
+      }
+      if (vecs[a].first) {
+        for (int j = 0; j < m; j++) {
+          for (int i = 0; i < m; i++) {
+            Rx[j] += lifts[vecs[a].second][i] * Ri[i][j];
+          }
+        }
+      }
+      for (int b = 0; b < m; b++) {
+        int64_t val = vecs[b].first ? 0 : Rx[vecs[b].second];
+        if (vecs[b].first) {
+          for (int j = 0; j < m; j++) {
+            val += lifts[vecs[b].second][j] * Rx[j];
+          }
+        }
+        int64_t div = (vecs[a].first ? p : 1) * (vecs[b].first ? p : 1);
+        gram(a, b) = val / div;
+      }
+    }
+    std::optional<std::vector<int>> opt =
+        LocalSymbolKeyModular(gram, p, v_det_R - 2 * k);
+    std::vector<int> sym =
+        opt ? *opt
+            : LocalSymbolKey<T, Tint>(UniversalMatrixConversion<T, int64_t>(gram),
+                                      p);
+#ifdef SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE_EXTENSIVE
+    if (opt && *opt != LocalSymbolKey<T, Tint>(
+                           UniversalMatrixConversion<T, int64_t>(gram), p)) {
+      std::cerr << "LDOV: the modular local symbol disagrees\n";
+      throw TerminalException{1};
+    }
+#endif
+    std::pair<int, std::vector<int>> key{k, sym};
+    auto iter = index.find(key);
+    if (iter == index.end()) {
+      index[key] = classes.size();
+      classes.push_back({k, 1, UniversalMatrixConversion<T, int64_t>(gram)});
+    } else {
+      classes[iter->second].count++;
+    }
+  };
+  std::vector<std::vector<int64_t>> rows;
+  std::vector<int> pivots;
+#ifdef TIMINGS_LOCAL_DENSITY_OVERLATTICE
+  MicrosecondTime time;
+  int64_t n_subspace = 0, n_candidate = 0;
+  int64_t time_record = 0;
+#endif
+  std::function<void()> rec = [&]() -> void {
+#ifdef TIMINGS_LOCAL_DENSITY_OVERLATTICE
+    n_subspace++;
+    MicrosecondTime time_rec;
+#endif
+    record(rows, pivots);
+#ifdef TIMINGS_LOCAL_DENSITY_OVERLATTICE
+    time_record += time_rec.eval_int64();
+#endif
+    int start = pivots.empty() ? 0 : pivots.back() + 1;
+    for (int j = start; j < t; j++) {
+      bool blocked = false;
+      for (auto const &r : rows) {
+        if (r[j] != 0) {
+          blocked = true;
+        }
+      }
+      if (blocked) {
+        continue;
+      }
+      // the free coordinates of the new row: after j, off the pivots
+      std::vector<int> free_pos;
+      for (int f = j + 1; f < t; f++) {
+        if (std::find(pivots.begin(), pivots.end(), f) == pivots.end()) {
+          free_pos.push_back(f);
+        }
+      }
+      int64_t n_assign = 1;
+      for (size_t i = 0; i < free_pos.size(); i++) {
+        n_assign *= p;
+      }
+      std::vector<int64_t> a(t, 0);
+      a[j] = 1;
+      for (int64_t idx = 0; idx < n_assign; idx++) {
+        int64_t w = idx;
+        for (int f : free_pos) {
+          a[f] = w % p;
+          w /= p;
+        }
+#ifdef TIMINGS_LOCAL_DENSITY_OVERLATTICE
+        n_candidate++;
+#endif
+        if (q_of(a) != 0) {
+          continue;
+        }
+        bool ortho = true;
+        for (auto const &r : rows) {
+          if (b_of(a, r) != 0) {
+            ortho = false;
+            break;
+          }
+        }
+        if (!ortho) {
+          continue;
+        }
+        rows.push_back(a);
+        pivots.push_back(j);
+        rec();
+        rows.pop_back();
+        pivots.pop_back();
+      }
+    }
+  };
+  rec();
+#ifdef TIMINGS_LOCAL_DENSITY_OVERLATTICE
+  std::cerr << "LDOV: ElementaryOverlatticeClasses t=" << t << " subspaces="
+            << n_subspace << " candidates=" << n_candidate
+            << " classes=" << classes.size() << " record=" << time_record
+            << "us total=" << time << "\n";
+#endif
+  return classes;
+}
+
+template <typename T, typename Tint>
+T PrimitiveDensityElementary(
+    MyMatrix<T> const &S,
+    std::vector<ElementaryOverlatticeClass<T>> const &classes, int64_t p,
+    int k_N, int xi_N, int n, SiegelSeriesCache<T> &cache) {
+  int m = S.rows();
+  int c = m + 1 - n;
+  T p_T = ScalarFromInt64<T>(p);
+  T g(0);
+  for (auto const &cls : classes) {
+    MyMatrix<T> G = (m == 0) ? cls.gram : BlockDiagonal2(S, cls.gram);
+    T f = TrueAlphaUnimodularTarget<T, Tint>(G, p, k_N, xi_N, cache);
+    T coef = PowerInt(p_T, cls.k * (cls.k - 1) / 2 + c * cls.k) *
+             ScalarFromInt64<T>(cls.count);
+    if (cls.k % 2 == 1) {
+      coef = -coef;
+    }
+    g += coef * f;
+  }
+  return g;
+}
+
+/*
   alpha_p(S, L) by the gluing into a unimodular lattice, in the convention of
   AlphaUnimodularTarget (at p = 2, 2^{m-1} times the density of the
   definition). Nothing when the rank of N would be odd (only possible at odd
@@ -406,12 +1064,28 @@ std::optional<T> OverlatticeDensity(MyMatrix<T> const &S, MyMatrix<T> const &Tgr
   // the result is returned in the convention of AlphaUnimodularTarget
   T conv = (p == 2) ? PowerInt(T(2), S.rows() - 1) : T(1);
   MyMatrix<T> R = -us.P;
-  OverlatticeSet<T> os = EnumerateOverlattices<T, Tint>(R, p);
+  std::vector<ElementaryOverlatticeClass<T>> classes =
+      ElementaryOverlatticeClasses<T, Tint>(R, p);
   MyMatrix<T> empty(0, 0);
-  T num = PrimitiveDensityOverlattices<T, Tint>(S, os, p, n_N / 2, xi_N, n,
-                                                cache);
-  T den = PrimitiveDensityOverlattices<T, Tint>(empty, os, p, n_N / 2, xi_N, n,
-                                                cache);
+  T num = PrimitiveDensityElementary<T, Tint>(S, classes, p, n_N / 2, xi_N, n,
+                                              cache);
+  T den = PrimitiveDensityElementary<T, Tint>(empty, classes, p, n_N / 2,
+                                              xi_N, n, cache);
+#ifdef SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE_EXTENSIVE
+  std::cerr << "LDOV: SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE_EXTENSIVE, the "
+               "Moebius inversion over all the overlattices\n";
+  OverlatticeSet<T> os = EnumerateOverlattices<T, Tint>(R, p);
+  T num_all = PrimitiveDensityOverlattices<T, Tint>(S, os, p, n_N / 2, xi_N, n,
+                                                    cache);
+  T den_all = PrimitiveDensityOverlattices<T, Tint>(empty, os, p, n_N / 2,
+                                                    xi_N, n, cache);
+  if (num_all != num || den_all != den) {
+    std::cerr << "LDOV: elementary overlattices give " << num << " / " << den
+              << ", all overlattices " << num_all << " / " << den_all << "\n";
+    throw TerminalException{1};
+  }
+  std::cerr << "LDOV: SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE_EXTENSIVE, done\n";
+#endif
   if (den == 0) {
     std::cerr << "LDOV: R has no primitive embedding in N\n";
     throw TerminalException{1};
@@ -430,7 +1104,7 @@ template <typename T> struct OverlatticeGenusData {
   int n_N;
   int xi_N;
   bool unimodular;
-  OverlatticeSet<T> os;
+  std::vector<ElementaryOverlatticeClass<T>> classes;
   T den;
 };
 
@@ -451,10 +1125,10 @@ ComputeOverlatticeGenusData(MyMatrix<T> const &Tgram, int64_t p,
   data.xi_N = KroneckerSymbol(SignedPower(data.n_N / 2, detN), p);
   data.unimodular = (mP == 0);
   if (!data.unimodular) {
-    data.os = EnumerateOverlattices<T, Tint>(-us.P, p);
+    data.classes = ElementaryOverlatticeClasses<T, Tint>(-us.P, p);
     MyMatrix<T> empty(0, 0);
-    data.den = PrimitiveDensityOverlattices<T, Tint>(
-        empty, data.os, p, data.n_N / 2, data.xi_N, data.n, cache);
+    data.den = PrimitiveDensityElementary<T, Tint>(
+        empty, data.classes, p, data.n_N / 2, data.xi_N, data.n, cache);
     if (data.den == 0) {
       std::cerr << "LDOV: R has no primitive embedding in N\n";
       throw TerminalException{1};
@@ -474,8 +1148,9 @@ T OverlatticeDensityFromData(MyMatrix<T> const &S,
     return AlphaUnimodularTarget<T, Tint>(S, p, data.n / 2, data.xi_N, cache);
   }
   T conv = (p == 2) ? PowerInt(T(2), S.rows() - 1) : T(1);
-  T num = PrimitiveDensityOverlattices<T, Tint>(S, data.os, p, data.n_N / 2,
-                                                data.xi_N, data.n, cache);
+  T num = PrimitiveDensityElementary<T, Tint>(S, data.classes, p,
+                                              data.n_N / 2, data.xi_N, data.n,
+                                              cache);
   return conv * num / data.den;
 }
 
@@ -548,181 +1223,8 @@ std::optional<T> BruteForceDensity(MyMatrix<T> const &S, MyMatrix<T> const &Tgra
 
 
 //
-// Local isometry classes, and M_R for R of full rank
+// M_R for R of full rank
 //
-
-// The Jordan invariants at an odd prime: for every level, its rank and the
-// Legendre symbol of the product of its units (of T / 2; the factor 2 is a
-// unit and changes the classes of both sides alike).
-template <typename T, typename Tint>
-std::vector<std::array<int, 3>> OddLocalSymbol(MyMatrix<T> const &Gram,
-                                               int64_t p) {
-  std::map<int, std::pair<int, int64_t>> levels;
-  for (auto const &c : OddDiagonalClasses<T, Tint>(Gram, p)) {
-    auto &lv = levels[c.val];
-    if (lv.first == 0) {
-      lv.second = 1;
-    }
-    lv.first++;
-    lv.second = MulMod(lv.second, c.unit, p);
-  }
-  std::vector<std::array<int, 3>> res;
-  for (auto const &kv : levels) {
-    res.push_back({kv.first, kv.second.first, LegendreUnit(kv.second.second, p)});
-  }
-  return res;
-}
-
-/*
-  The canonical 2-adic symbol of an even lattice (Conway-Sloane, Sphere
-  Packings, Lattices and Groups, ch. 15, Sec. 7.5-7.6; the reduction follows
-  Sage's canonical_2_adic_reduction): one quintuple (scale exponent, rank,
-  determinant, type, oddity) per Jordan component, the determinants reduced
-  to +-1, the oddities fused over the compartments and the signs walked to
-  the front of every train. Two 2-adic lattices are isometric iff their
-  canonical symbols are equal.
- */
-inline std::vector<std::array<int, 5>>
-CanonicalTwoAdicReduction(std::vector<std::array<int, 5>> sym) {
-  for (auto &c : sym) {
-    c[2] = (c[2] == 1 || c[2] == 7) ? 1 : -1;
-  }
-  // compartments: maximal runs of odd components of consecutive scales
-  std::vector<std::vector<int>> compartments;
-  {
-    int i = 0, r = static_cast<int>(sym.size());
-    while (i < r) {
-      if (sym[i][3] == 1) {
-        int v = sym[i][0];
-        std::vector<int> c;
-        while (i < r && sym[i][3] == 1 && sym[i][0] == v) {
-          c.push_back(i);
-          i++;
-          v++;
-        }
-        compartments.push_back(c);
-      } else {
-        i++;
-      }
-    }
-  }
-  for (auto const &compart : compartments) {
-    int oddity = 0;
-    for (int i : compart) {
-      oddity += sym[i][4];
-      sym[i][4] = 0;
-    }
-    sym[compart[0]][4] = ModPositive(oddity, 8);
-  }
-  // trains
-  std::vector<std::vector<int>> trains;
-  {
-    std::vector<std::array<int, 5>> ext = sym;
-    ext.push_back({sym.back()[0] + 1, 0, 1, 0, 0});
-    std::vector<int> new_train{0};
-    for (size_t i = 1; i + 1 < ext.size(); i++) {
-      auto const &prev = ext[i - 1];
-      auto const &cur = ext[i];
-      if (cur[0] - prev[0] > 2) {
-        trains.push_back(new_train);
-        new_train = {static_cast<int>(i)};
-      } else if (cur[0] - prev[0] == 2 && cur[3] * prev[3] == 0) {
-        trains.push_back(new_train);
-        new_train = {static_cast<int>(i)};
-      } else if (prev[3] == 0 && cur[3] == 0) {
-        trains.push_back(new_train);
-        new_train = {static_cast<int>(i)};
-      } else {
-        new_train.push_back(static_cast<int>(i));
-      }
-    }
-    trains.push_back(new_train);
-  }
-  for (auto const &train : trains) {
-    int t = static_cast<int>(train.size());
-    for (int i = 0; i < t - 1; i++) {
-      int t1 = train[t - i - 1];
-      if (sym[t1][2] == -1) {
-        sym[t1][2] = 1;
-        sym[t1 - 1][2] *= -1;
-        for (auto const &compart : compartments) {
-          bool in = std::find(compart.begin(), compart.end(), t1 - 1) != compart.end() ||
-                    std::find(compart.begin(), compart.end(), t1) != compart.end();
-          if (in) {
-            sym[compart[0]][4] = ModPositive(sym[compart[0]][4] + 4, 8);
-          }
-        }
-      }
-    }
-  }
-  return sym;
-}
-
-// The 2-adic symbol of an even Gram matrix, from one Jordan splitting:
-// a unit u at level e of T / 2 is an odd component 2^{e+1} u of T; the
-// binary blocks h (det -1 = 7) and y (det 3) of level e are components of
-// scale 2^e. Neither adds to the oddity: <u> + y = <3u, -u, -u> and
-// <u> + h = <u, 1, -1> have the oddity u of <u>. The determinants are kept mod 8 (Sage's
-// symbol_tuple_list); they depend on the decomposition, the canonical
-// symbol below does not.
-template <typename T, typename Tint>
-std::vector<std::array<int, 5>> TwoAdicSymbolRaw(MyMatrix<T> const &Gram) {
-  std::map<int, std::array<int, 5>> comp;
-  for (auto const &b : JordanSplitting2<T, Tint>(Gram / T(2))) {
-    int s = (b.kind == SiegelBlockKind::Unit) ? b.e + 1 : b.e;
-    auto iter = comp.find(s);
-    if (iter == comp.end()) {
-      iter = comp.emplace(s, std::array<int, 5>{s, 0, 1, 0, 0}).first;
-    }
-    auto &c = iter->second;
-    if (b.kind == SiegelBlockKind::Unit) {
-      c[1] += 1;
-      c[2] = static_cast<int>(MulMod(c[2], b.unit, 8));
-      c[3] = 1;
-      c[4] = ModPositive(c[4] + b.unit, 8);
-    } else if (b.kind == SiegelBlockKind::H) {
-      c[1] += 2;
-      c[2] = static_cast<int>(MulMod(c[2], 7, 8));
-    } else {
-      c[1] += 2;
-      c[2] = static_cast<int>(MulMod(c[2], 3, 8));
-    }
-  }
-  std::vector<std::array<int, 5>> sym;
-  for (auto &kv : comp) {
-    if (kv.second[3] == 0) {
-      kv.second[4] = 0;
-    }
-    sym.push_back(kv.second);
-  }
-  return sym;
-}
-
-template <typename T, typename Tint>
-std::vector<std::array<int, 5>> TwoAdicSymbol(MyMatrix<T> const &Gram) {
-  return CanonicalTwoAdicReduction(TwoAdicSymbolRaw<T, Tint>(Gram));
-}
-
-// The local symbol at p flattened to integers: equal iff locally isometric
-template <typename T, typename Tint>
-std::vector<int> LocalSymbolKey(MyMatrix<T> const &Gram, int64_t p) {
-  std::vector<int> key;
-  if (p == 2) {
-    for (auto const &c : TwoAdicSymbol<T, Tint>(Gram)) {
-      key.insert(key.end(), c.begin(), c.end());
-    }
-  } else {
-    for (auto const &c : OddLocalSymbol<T, Tint>(Gram, p)) {
-      key.insert(key.end(), c.begin(), c.end());
-    }
-  }
-  return key;
-}
-
-template <typename T, typename Tint>
-bool LocallyIsometric(MyMatrix<T> const &G1, MyMatrix<T> const &G2, int64_t p) {
-  return LocalSymbolKey<T, Tint>(G1, p) == LocalSymbolKey<T, Tint>(G2, p);
-}
 
 // For every S and p, the number of even overlattices of S of each index p^v
 // and local symbol at p: the enumeration does not depend on the genus.

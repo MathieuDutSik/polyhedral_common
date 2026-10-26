@@ -877,8 +877,8 @@ test_genus_mass:=function(arith)
     fi;
     for i in [1..Length(ListRef)]
     do
-        if ListVal[i][2] <> ListRef[i][4] then
-            Print("  canonical 2-adic symbol ", i, ": got ", ListVal[i][2], " expected ", ListRef[i][4], "\n");
+        if ListVal[i][2] <> ListRef[i][4] or ListVal[i][3] <> ListRef[i][4] then
+            Print("  canonical 2-adic symbol ", i, ": got ", ListVal[i][2], " and ", ListVal[i][3], " (modular) expected ", ListRef[i][4], "\n");
             n_error:=n_error + 1;
         fi;
     od;
