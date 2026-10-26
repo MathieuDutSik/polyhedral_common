@@ -110,20 +110,40 @@ GammaOrbitSplit get_gamma_orbit_split(
 }
 
 /*
+  The cells of the complex that form the basis of the quotient: all of
+  them, the well rounded ones (the complex Pi / Pi_infinity, whose homology
+  is the cohomology of Gamma), or the cells at infinity (their vectors do
+  not span, the forms are degenerate: the subcomplex Pi_infinity, whose
+  quotient by Gamma is the boundary of the Satake compactification).
+ */
+enum class CellSelection { All, WellRounded, AtInfinity };
+
+template <typename T, typename Tint, typename Tgroup>
+bool is_cell_selected(FacePerfectComplex<T, Tint, Tgroup> const &face, CellSelection const &selection) {
+  if (selection == CellSelection::WellRounded) {
+    return face.is_well_rounded;
+  }
+  if (selection == CellSelection::AtInfinity) {
+    return !face.is_well_rounded;
+  }
+  return true;
+}
+
+/*
   The chain complex of the quotient by Gamma. The basis of each level is
-  the list of orientable Gamma-cells (restricted to the well rounded ones
-  if only_well_rounded is set, which gives the complex Pi / Pi_infinity).
+  the list of orientable Gamma-cells among the selected ones.
   The boundary matrix of a level has one row per basis cell of the level
   and one column per basis cell of the next level.
  */
 template <typename T, typename Tint> struct GammaComplex {
   CosetTableGamma<Tint> ct;
-  bool only_well_rounded;
+  CellSelection selection;
   std::vector<std::vector<GammaOrbitSplit>> splits;
   std::vector<std::vector<std::pair<int, int>>> basis;
   std::vector<std::vector<std::vector<int>>> basis_index;
   // The order of the stabilizer in Gamma of each basis cell F g_rep: the
   // order of Stab_G(F) divided by the size of the orbit of the coset rep.
+  // It is 0 for a cell at infinity, whose stabilizer is infinite.
   std::vector<std::vector<int64_t>> stab_order;
   // The dense boundary matrices (for the rational homology) and the sparse
   // ones: boundary_sparse[index][i] is the list of the (column, value) of
@@ -150,16 +170,59 @@ template <typename T, typename Tint> struct GammaComplex {
   }
 };
 
+/*
+  The boundary of the basis cells of the level index of gc_src, in the
+  basis cells of the level index + 1 of gc_dst (the two complexes being
+  for the same subgroup, with possibly different cell selections): one
+  sparse row per cell of gc_src, sorted by column.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::vector<std::vector<std::pair<int, int>>>
+get_gamma_boundary_sparse(FullComplexEnumeration<T, Tint, Tgroup> const &fce, GammaComplex<T, Tint> const &gc_src,
+                          GammaComplex<T, Tint> const &gc_dst, int const &index) {
+  CosetTableGamma<Tint> const &ct = gc_src.ct;
+  int n_row = gc_src.basis[index].size();
+  std::vector<std::vector<std::pair<int, int>>> D_sparse(n_row);
+  // The actions of the matrices of the boundary on the cosets, per orbit.
+  int n_orb = fce.levels[index].l_faces.size();
+  std::vector<std::vector<GammaAction>> ll_act(n_orb);
+  for (int iOrb = 0; iOrb < n_orb; iOrb++) {
+    for (auto &ebnd : fce.boundaries[index].ll_bound[iOrb].l_bound) {
+      ll_act[iOrb].push_back(ct.gamma.get_action(ebnd.M));
+    }
+  }
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    int iOrb = gc_src.basis[index][i_row].first;
+    int i_coset = gc_src.basis[index][i_row].second;
+    std::map<int, int> map_row;
+    std::vector<BoundEntry<Tint>> const &l_bound = fce.boundaries[index].ll_bound[iOrb].l_bound;
+    for (size_t k = 0; k < l_bound.size(); k++) {
+      BoundEntry<Tint> const &ebnd = l_bound[k];
+      int i0 = ct.index_of_action(i_coset, ll_act[iOrb][k]);
+      std::optional<std::pair<int, int>> opt = gc_dst.cell_position_coset(index + 1, ebnd.iOrb, i0);
+      if (opt) {
+        map_row[opt->first] += ebnd.sign * opt->second;
+      }
+    }
+    for (auto &kv : map_row) {
+      if (kv.second != 0) {
+        D_sparse[i_row].push_back(kv);
+      }
+    }
+  }
+  return D_sparse;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 GammaComplex<T, Tint>
 compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
                       CosetTableGamma<Tint> const &ct,
-                      bool const &only_well_rounded,
+                      CellSelection const &selection,
                       std::vector<uint8_t> const &l_level_needed,
                       bool const &dense_boundary, std::ostream &os) {
   GammaComplex<T, Tint> gc;
   gc.ct = ct;
-  gc.only_well_rounded = only_well_rounded;
+  gc.selection = selection;
   int n_levels = fce.levels.size();
   size_t n_coset = ct.size();
   std::vector<MyMatrix<T>> const &ListMat = fce.pctdi.LinSpa.ListMat;
@@ -176,28 +239,30 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     for (int iOrb = 0; iOrb < n_orb; iOrb++) {
       FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[index].l_faces[iOrb];
       GammaOrbitSplit gos = get_gamma_orbit_split(face, ListMat, ct, os);
-      bool is_ok = true;
-      if (only_well_rounded && !face.is_well_rounded) {
-        is_ok = false;
-      }
-      if (is_ok) {
+      if (is_cell_selected(face, selection)) {
         // The well rounded cells span the space, so Stab_G(F) acts
-        // faithfully on their vectors.
-        auto order_grp = face.GRP_ext.size();
-        int64_t order_stab = UniversalScalarConversion<int64_t, decltype(order_grp)>(order_grp);
+        // faithfully on their vectors and GRP_ext is the stabilizer. For a
+        // cell at infinity, the stabilizer is infinite (l_gens generates
+        // it, which is all the orbit split needs) and GRP_ext is only its
+        // image on the vectors.
+        int64_t order_stab = 0;
+        if (face.is_well_rounded) {
+          auto order_grp = face.GRP_ext.size();
+          order_stab = UniversalScalarConversion<int64_t, decltype(order_grp)>(order_grp);
+        }
         size_t n_rep = gos.l_rep.size();
         for (size_t i_rep = 0; i_rep < n_rep; i_rep++) {
           if (gos.l_orientable[i_rep]) {
             int rep = gos.l_rep[i_rep];
             int64_t orbit_size = gos.l_orbit_size[i_rep];
-            if (order_stab % orbit_size != 0) {
+            if (face.is_well_rounded && order_stab % orbit_size != 0) {
               std::cerr << "HECKE: the orbit size " << orbit_size << " does not divide the order "
                         << order_stab << " of the stabilizer\n";
               throw TerminalException{1};
             }
             gc.basis_index[index][iOrb][rep] = gc.basis[index].size();
             gc.basis[index].push_back({iOrb, rep});
-            gc.stab_order[index].push_back(order_stab / orbit_size);
+            gc.stab_order[index].push_back(face.is_well_rounded ? order_stab / orbit_size : 0);
           }
         }
       }
@@ -219,34 +284,7 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     }
     int n_row = gc.basis[index].size();
     int n_col = gc.basis[index + 1].size();
-    std::vector<std::vector<std::pair<int, int>>> D_sparse(n_row);
-    // The actions of the matrices of the boundary on the cosets, per orbit.
-    int n_orb = fce.levels[index].l_faces.size();
-    std::vector<std::vector<GammaAction>> ll_act(n_orb);
-    for (int iOrb = 0; iOrb < n_orb; iOrb++) {
-      for (auto &ebnd : fce.boundaries[index].ll_bound[iOrb].l_bound) {
-        ll_act[iOrb].push_back(ct.gamma.get_action(ebnd.M));
-      }
-    }
-    for (int i_row = 0; i_row < n_row; i_row++) {
-      int iOrb = gc.basis[index][i_row].first;
-      int i_coset = gc.basis[index][i_row].second;
-      std::map<int, int> map_row;
-      std::vector<BoundEntry<Tint>> const &l_bound = fce.boundaries[index].ll_bound[iOrb].l_bound;
-      for (size_t k = 0; k < l_bound.size(); k++) {
-        BoundEntry<Tint> const &ebnd = l_bound[k];
-        int i0 = ct.index_of_action(i_coset, ll_act[iOrb][k]);
-        std::optional<std::pair<int, int>> opt = gc.cell_position_coset(index + 1, ebnd.iOrb, i0);
-        if (opt) {
-          map_row[opt->first] += ebnd.sign * opt->second;
-        }
-      }
-      for (auto &kv : map_row) {
-        if (kv.second != 0) {
-          D_sparse[i_row].push_back(kv);
-        }
-      }
-    }
+    std::vector<std::vector<std::pair<int, int>>> D_sparse = get_gamma_boundary_sparse(fce, gc, gc, index);
     if (dense_boundary) {
       MyMatrix<T> D = ZeroMatrix<T>(n_row, n_col);
       for (int i_row = 0; i_row < n_row; i_row++) {
@@ -333,13 +371,26 @@ MyMatrix<T> get_harmonic_basis(GammaComplex<T, Tint> const &gc, int const &index
 }
 
 template <typename T> struct HeckeHomologyLevel {
-  int index;
-  int n_cell;
+  HeckeHomologyLevel() = default;
+  HeckeHomologyLevel(int const &_index, int const &_n_cell, MyMatrix<T> _harmonic, MyMatrix<T> _hecke_matrix,
+                     std::string _hecke_failure)
+      : index(_index), n_cell(_n_cell), harmonic(std::move(_harmonic)), hecke_matrix(std::move(_hecke_matrix)),
+        hecke_failure(std::move(_hecke_failure)) {}
+  int index = 0;
+  int n_cell = 0;
   MyMatrix<T> harmonic;
   MyMatrix<T> hecke_matrix;
   // Nonempty when the Hecke matrix could not be computed (modulo p, when p
   // divides a denominator of the images); the homology is still given.
   std::string hecke_failure;
+  // With the boundary map (see get_boundary_map_mod): the dimension of its
+  // kernel (-1 if not computed), a basis of the kernel in the coordinates
+  // of the homology, the Hecke matrix on it in that basis, and whether the
+  // kernel is stable under the Hecke operator (it must be).
+  int dim_ker_boundary = -1;
+  MyMatrix<T> ker_boundary;
+  MyMatrix<T> hecke_matrix_ker;
+  bool ker_boundary_stable = true;
 };
 
 template <typename T> struct HeckeHomologyResult {
@@ -570,6 +621,118 @@ inline void write_cycle_conditions_instance(int const &index, CycleConditionsMod
 #endif
 
 /*
+  The boundary map of the Satake compactification at a level k: the well
+  rounded quotient complex is the quotient of the full complex by the
+  subcomplex of the cells at infinity, and the connecting map
+    delta : H_k(well rounded) -> H_{k+1}(at infinity)
+  sends the class of a cycle z to the class of the part z D_wi of its
+  boundary on the cells at infinity (a cycle there, since D^2 = 0). For
+  GL_2 over Q at the symbol level, it is the boundary map {a, b} -> [b] - [a]
+  of the modular symbols to the cusps (Cremona). The kernel of delta
+  contains the interior cohomology (the image of the cohomology with
+  compact support); it is Hecke stable, since delta is Hecke equivariant.
+  The data: for each well rounded basis cell of the level k its boundary
+  on the cells at infinity of the level k + 1 (D_wi), the boundaries of the
+  cells at infinity of the level k in those of the level k + 1 (D_ii), and
+  the number of cells at infinity of the level k + 1.
+ */
+struct BoundaryMapData {
+  std::vector<SparseVectorMod> l_row_wi;
+  std::vector<SparseVectorMod> l_row_ii;
+  int n_inf_next = 0;
+};
+
+/*
+  The kernel of delta on the homology classes of the basis cycles l_cycle,
+  and the Hecke matrix on it. The class of delta(z) is given by its
+  coordinates in the quotient of the chains at infinity of the level k + 1
+  by the boundaries of the cells at infinity of the level k (a cycle has a
+  zero class there iff it is a boundary).
+ */
+template <typename T>
+void get_boundary_map_mod(BoundaryMapData const &bmd, std::vector<SparseVectorMod> const &l_cycle,
+                          int64_t const &p, HeckeHomologyLevel<T> &level, [[maybe_unused]] std::ostream &os) {
+  int dim_hom = l_cycle.size();
+  SparseQuotientMod quot_inf(bmd.l_row_ii, bmd.n_inf_next, p);
+  std::vector<SparseVectorMod> l_delta;
+  for (auto &z : l_cycle) {
+    std::map<int, int64_t> acc;
+    for (auto &e : z) {
+      for (auto &f : bmd.l_row_wi[e.first]) {
+        int64_t &val = acc[f.first];
+        val = ResidueModPrime(val + e.second * f.second, p);
+      }
+    }
+    SparseVectorMod w;
+    for (auto &kv : acc) {
+      if (kv.second != 0) {
+        w.push_back(kv);
+      }
+    }
+    std::vector<int64_t> coord = quot_inf.coordinates(w);
+    SparseVectorMod delta;
+    for (size_t u = 0; u < coord.size(); u++) {
+      if (coord[u] != 0) {
+        delta.push_back({static_cast<int>(u), coord[u]});
+      }
+    }
+    l_delta.emplace_back(std::move(delta));
+  }
+  // The kernel: the combinations x of the classes with sum_i x_i delta_i = 0.
+  std::vector<SparseVectorMod> l_ker = SparseLeftKernelMod(l_delta, quot_inf.dim(), p);
+  int dim_ker = l_ker.size();
+#ifdef DEBUG_HECKE_OPERATORS
+  os << "HECKE: boundary map, dim_hom=" << dim_hom << " dim H(infinity)=" << quot_inf.dim()
+     << " dim ker=" << dim_ker << "\n";
+#endif
+  level.dim_ker_boundary = dim_ker;
+  level.ker_boundary = ZeroMatrix<T>(dim_ker, dim_hom);
+  for (int i = 0; i < dim_ker; i++) {
+    for (auto &e : l_ker[i]) {
+      level.ker_boundary(i, e.first) = UniversalScalarConversion<T, int64_t>(e.second);
+    }
+  }
+  int n_col_hecke = level.hecke_matrix.cols();
+  if (dim_ker == 0 || n_col_hecke != dim_hom) {
+    level.hecke_matrix_ker = MyMatrix<T>(0, 0);
+    return;
+  }
+  // The rows of K extended by markers: the reduction of (y, 0), y = x T
+  // for a row x of K, leaves (0, -c) with y = sum_i c_i K_i if y is in
+  // the span of the rows of K.
+  SparseEchelonMod echelon(p);
+  for (int i = 0; i < dim_ker; i++) {
+    SparseVectorMod v = l_ker[i];
+    v.push_back({dim_hom + i, 1});
+    echelon.insert(v);
+  }
+  level.hecke_matrix_ker = ZeroMatrix<T>(dim_ker, dim_ker);
+  for (int i = 0; i < dim_ker; i++) {
+    std::vector<int64_t> y(dim_hom, 0);
+    for (auto &e : l_ker[i]) {
+      for (int j = 0; j < dim_hom; j++) {
+        int64_t t_ij = UniversalScalarConversion<int64_t, T>(level.hecke_matrix(e.first, j));
+        y[j] = ResidueModPrime(y[j] + e.second * t_ij, p);
+      }
+    }
+    SparseVectorMod v_y;
+    for (int j = 0; j < dim_hom; j++) {
+      if (y[j] != 0) {
+        v_y.push_back({j, y[j]});
+      }
+    }
+    for (auto &e : echelon.reduce(v_y)) {
+      if (e.first < dim_hom) {
+        level.ker_boundary_stable = false;
+        level.hecke_matrix_ker = MyMatrix<T>(0, 0);
+        return;
+      }
+      level.hecke_matrix_ker(i, e.first - dim_hom) = UniversalScalarConversion<T, int64_t>(ResidueModPrime(-e.second, p));
+    }
+  }
+}
+
+/*
   The Hecke operator on the homology of a level modulo a prime p, by
   sparse linear algebra: no matrix of the size of the complex is formed,
   which is what limits the rational computation. With B the space of the
@@ -590,7 +753,8 @@ template <typename T, typename Tint>
 HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint> const &gc,
                                  HeckeChainMap<T, Tint> const &hcm,
                                  HeckeCosets<T> const &cosets_gamma, int64_t const &p,
-                                 bool const &with_hecke, [[maybe_unused]] std::ostream &os) {
+                                 bool const &with_hecke, BoundaryMapData const *bmd,
+                                 [[maybe_unused]] std::ostream &os) {
   int n_cell = gc.basis[index].size();
   bool transposed = hcm.transposed;
 #ifdef TIMINGS_HECKE_OPERATORS
@@ -647,14 +811,23 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
   os << "HECKE: mod p index=" << index << " n_cell=" << n_cell << " rank(Z conditions)=" << ker.rank()
      << " rank(B)=" << quot_bnd.rank() << " dim_hom=" << dim_hom << "\n";
 #endif
+  // The cycles lifting the basis cells.
+  std::vector<SparseVectorMod> l_cycle;
+  for (int i = 0; i < dim_hom; i++) {
+    l_cycle.emplace_back(ker.lift(l_basis[i]));
+  }
   if (!with_hecke) {
-    return {index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0), "no chain map at this level"};
+    HeckeHomologyLevel<T> level{index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0),
+                                "no chain map at this level"};
+    if (bmd) {
+      get_boundary_map_mod(*bmd, l_cycle, p, level, os);
+    }
+    return level;
   }
   MyMatrix<T> hecke_matrix = ZeroMatrix<T>(dim_hom, dim_hom);
   HeckeImageKeyActions actions = get_hecke_image_key_actions(index, gc, hcm);
   for (int i = 0; i < dim_hom; i++) {
-    // The cycle lifting the basis cell.
-    SparseVectorMod v = ker.lift(l_basis[i]);
+    SparseVectorMod const &v = l_cycle[i];
     // Its image, restricted to F, and its class modulo the boundaries.
     std::map<int, int64_t> acc;
     for (auto &e : v) {
@@ -670,8 +843,12 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
         std::optional<int64_t> opt = residue_mod_p(value, p);
         if (!opt) {
           // The homology is known, but not the Hecke matrix.
-          return {index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0),
-                  "a denominator of an image is divisible by p=" + std::to_string(p)};
+          HeckeHomologyLevel<T> level{index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0),
+                                      "a denominator of an image is divisible by p=" + std::to_string(p)};
+          if (bmd) {
+            get_boundary_map_mod(*bmd, l_cycle, p, level, os);
+          }
+          return level;
         }
         int64_t &val = acc[pos_F[kv.first]];
         val = ResidueModPrime(val + e.second * (*opt), p);
@@ -691,7 +868,15 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
 #ifdef TIMINGS_HECKE_OPERATORS
   os << "|HECKE: mod p index=" << index << " Hecke matrix, dim_hom=" << dim_hom << "|=" << time << "\n";
 #endif
-  return {index, n_cell, MyMatrix<T>(dim_hom, 0), std::move(hecke_matrix), ""};
+  HeckeHomologyLevel<T> level{index, n_cell, MyMatrix<T>(dim_hom, 0), std::move(hecke_matrix), ""};
+  if (bmd) {
+    get_boundary_map_mod(*bmd, l_cycle, p, level, os);
+#ifdef TIMINGS_HECKE_OPERATORS
+    os << "|HECKE: mod p index=" << index << " boundary map, dim_ker=" << level.dim_ker_boundary << "|=" << time
+       << "\n";
+#endif
+  }
+  return level;
 }
 
 /*
@@ -794,7 +979,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
     FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     HeckeChainMap<T, Tint> const &hcm,
     FiniteIndexSubgroup<Tint> const &gamma, bool const &only_well_rounded,
-    bool const &all_levels, int64_t const &prime, std::ostream &os) {
+    bool const &all_levels, bool const &boundary_map, int64_t const &prime, std::ostream &os) {
   [[maybe_unused]] bool const &dual = hcm.transposed;
   LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
   int n = LinSpa.n;
@@ -911,7 +1096,29 @@ HeckeHomologyResult<T> compute_hecke_homology(
     }
   }
   bool dense_boundary = (prime == 0);
-  GammaComplex<T, Tint> gc = compute_gamma_complex(fce, ct, only_well_rounded, l_level_needed, dense_boundary, os);
+  CellSelection selection = only_well_rounded ? CellSelection::WellRounded : CellSelection::All;
+  GammaComplex<T, Tint> gc = compute_gamma_complex(fce, ct, selection, l_level_needed, dense_boundary, os);
+  // The boundary map of the Satake compactification: the cells at infinity
+  // of the levels k and k + 1 for each level k computed.
+  std::optional<GammaComplex<T, Tint>> opt_gc_inf;
+  if (boundary_map) {
+    if (prime == 0 || !only_well_rounded || hcm.transposed || fce.pctdi.pco.only_well_rounded) {
+      std::cerr << "HECKE: the boundary map needs the homology modulo a prime of the well rounded complex, "
+                   "a chain map commuting with the boundary (Sharbly or Vertex) and the full complex "
+                   "(OnlyWellRounded = F)\n";
+      throw TerminalException{1};
+    }
+    std::vector<uint8_t> l_level_needed_inf(n_levels_fce, 0);
+    for (int index = 0; index < n_levels_fce; index++) {
+      if (all_levels || hcm.is_level_computed(index)) {
+        l_level_needed_inf[index] = 1;
+        if (index + 1 < n_levels_fce) {
+          l_level_needed_inf[index + 1] = 1;
+        }
+      }
+    }
+    opt_gc_inf = compute_gamma_complex(fce, ct, CellSelection::AtInfinity, l_level_needed_inf, false, os);
+  }
 #ifdef TRACK_INFO_HECKE_OPERATORS
   if (prime > 0) {
     for (int index = 0; index < n_levels_fce; index++) {
@@ -940,7 +1147,35 @@ HeckeHomologyResult<T> compute_hecke_homology(
     }
     int n_cell = gc.basis[index].size();
     if (prime > 0) {
-      result.l_level.emplace_back(get_hecke_level_mod(index, gc, hcm, cosets_gamma, prime, with_hecke, os));
+      std::optional<BoundaryMapData> opt_bmd;
+      if (opt_gc_inf) {
+        GammaComplex<T, Tint> const &gc_inf = *opt_gc_inf;
+        BoundaryMapData bmd;
+        auto f_mod = [&](std::vector<std::pair<int, int>> const &row) -> SparseVectorMod {
+          SparseVectorMod v;
+          for (auto &e : row) {
+            int64_t val = ResidueModPrime(e.second, prime);
+            if (val != 0) {
+              v.push_back({e.first, val});
+            }
+          }
+          return v;
+        };
+        if (index + 1 < n_levels) {
+          bmd.n_inf_next = gc_inf.basis[index + 1].size();
+          for (auto &row : get_gamma_boundary_sparse(fce, gc, gc_inf, index)) {
+            bmd.l_row_wi.emplace_back(f_mod(row));
+          }
+          for (auto &row : gc_inf.boundary_sparse[index]) {
+            bmd.l_row_ii.emplace_back(f_mod(row));
+          }
+        } else {
+          bmd.l_row_wi.resize(gc.basis[index].size());
+        }
+        opt_bmd = std::move(bmd);
+      }
+      BoundaryMapData const *ptr_bmd = opt_bmd ? &(*opt_bmd) : nullptr;
+      result.l_level.emplace_back(get_hecke_level_mod(index, gc, hcm, cosets_gamma, prime, with_hecke, ptr_bmd, os));
 #ifdef TIMINGS_HECKE_OPERATORS
       os << "|HECKE: homology mod p level " << index << "|=" << time << "\n";
 #endif
@@ -1064,6 +1299,14 @@ void WriteHeckeHomologyResultGAP(std::ostream &os_out, HeckeHomologyResult<T> co
     WriteMatrixGAP(os_out, level.hecke_matrix);
     if (!level.hecke_failure.empty()) {
       os_out << ", hecke_failure:=\"" << level.hecke_failure << "\"";
+    }
+    if (level.dim_ker_boundary >= 0) {
+      os_out << ", dim_ker_boundary:=" << level.dim_ker_boundary;
+      os_out << ", ker_boundary:=";
+      WriteMatrixGAP(os_out, level.ker_boundary);
+      os_out << ", HeckeMatrixKerBoundary:=";
+      WriteMatrixGAP(os_out, level.hecke_matrix_ker);
+      os_out << ", ker_boundary_stable:=" << GAP_logical(level.ker_boundary_stable);
     }
     os_out << ")";
   }

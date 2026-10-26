@@ -506,6 +506,11 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     // where the chain map is not computed (the levels below the symbol
     // level minus one for the sharbly method), without the Hecke matrix
     ListBoolValues["HeckeHomologyAllLevels"] = false;
+    // Whether the boundary map of the Satake compactification is computed
+    // on the homology modulo p: the classes whose boundary on the cells at
+    // infinity is a boundary there (it needs OnlyWellRounded = F in DATA).
+    // Gives dim_ker_boundary and the Hecke matrix on that kernel.
+    ListBoolValues["HeckeBoundaryMap"] = false;
     SingleBlock BlockHECKE;
     BlockHECKE.setListStringValues(ListStringValues);
     BlockHECKE.setListIntValues(ListIntValues);

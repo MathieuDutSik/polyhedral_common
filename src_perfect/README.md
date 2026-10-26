@@ -91,6 +91,18 @@ block of `PERF_SerialPerfectComputation`:
   `"none"` (the default) for the level `SubgroupLevel` O_K.
 * `HeckeHomologyAllLevels`: also give the dimension of the homology at the
   levels where the chain map is not computed (without the Hecke matrix).
+* `HeckeBoundaryMap`: the boundary map of the Satake compactification on
+  the homology modulo p (needs `OnlyWellRounded = F` in DATA, so that the
+  cells at infinity, whose vectors do not span, are in the complex, and the
+  Sharbly or Vertex method). The class of a cycle z goes to the class of
+  the part of its boundary on the cells at infinity, in the homology of the
+  subcomplex at infinity; for GL_2 over Q this is the boundary map of the
+  modular symbols to the cusps. Its kernel (`dim_ker_boundary`, with the
+  Hecke matrix `HeckeMatrixKerBoundary` on it) contains the interior
+  cohomology. For GL_3 over O_K it detects the Eisenstein classes coming
+  from the parabolic subgroup fixing a line (eigenvalue q^2 + a for a
+  Bianchi form), but not those coming from the one fixing a plane
+  (1 + q a), whose stratum in the Satake boundary is a point.
 * `OnlyWellRoundedHomology`: restrict to the well rounded cells, which
   gives the cohomology of the subgroup by duality; otherwise the homology of
   the full complex with its cells at infinity.

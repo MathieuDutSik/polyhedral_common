@@ -385,6 +385,38 @@ test_class_number_one:=function()
     return true;
 end;
 
+# The boundary map of the Satake compactification on H^1 of Gamma_0(N) in
+# SL_2(Z), N = 11 and 37: modular symbols to cusps (Cremona). Its kernel is
+# the cuspidal part, of dimension 2g (g = 1, 2), with T_2 = -2 (11a) and
+# T_2 in {-2, 0} (37a, 37b), each twice; the Eisenstein class (T_2 = 3) is
+# not in the kernel.
+test_boundary_map:=function()
+    local p, desc, x, ListLevel, ListDim, ListChar, i, Res, eLev, CharP;
+    p:=2147483647;
+    desc:=GenerateTspaceDescription_classic(2, false);
+    x:=[[1,0],[0,2]];
+    ListLevel:=[11, 37];
+    ListDim:=[2, 4];
+    # (x + 2)^2 and (x + 2)^2 x^2
+    ListChar:=[[4, 4, 1], [0, 0, 4, 4, 1]];
+    for i in [1..Length(ListLevel)]
+    do
+        Res:=PERFCOMP_hecke_operators(desc, x, "Gamma0SL", ListLevel[i], true, "Sharbly", "none", p, "none", true);
+        eLev:=get_hecke_level(Res, 1);
+        Print("GL2(Z) Gamma0(", ListLevel[i], ") H^1 dim=", eLev.dim_homology, " dim_ker_boundary=", eLev.dim_ker_boundary, "\n");
+        if eLev.dim_ker_boundary<>ListDim[i] or eLev.ker_boundary_stable<>true then
+            Print("The kernel of the boundary map should be of dimension ", ListDim[i], " and Hecke stable\n");
+            return false;
+        fi;
+        CharP:=CharacteristicPolynomial(matrix_mod_p(eLev.HeckeMatrixKerBoundary, p));
+        if CoefficientsOfUnivariatePolynomial(CharP)<>List(ListChar[i], c->c*One(GF(p))) then
+            Print("The Hecke polynomial on the kernel does not match the cusp forms\n");
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
 f_compute:=function()
     local n_error;
     n_error:=0;
@@ -413,6 +445,9 @@ f_compute:=function()
         n_error:=n_error+1;
     fi;
     if not test_class_number_one() then
+        n_error:=n_error+1;
+    fi;
+    if not test_boundary_map() then
         n_error:=n_error+1;
     fi;
     return n_error=0;
