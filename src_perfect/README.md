@@ -102,7 +102,19 @@ block of `PERF_SerialPerfectComputation`:
   cohomology. For GL_3 over O_K it detects the Eisenstein classes coming
   from the parabolic subgroup fixing a line (eigenvalue q^2 + a for a
   Bianchi form), but not those coming from the one fixing a plane
-  (1 + q a), whose stratum in the Satake boundary is a point.
+  (1 + q a), whose stratum in the Satake boundary is a point. Those are
+  seen by the dual Satake compactification (the forms replaced by their
+  inverses): with theta(g) = (g^T)^{-1}, the composition of theta and of
+  the conjugation by diag(N, ..., N, 1) (which maps Gamma_0(N) to theta(
+  Gamma_0(N))) is an involution of the cohomology exchanging T(p, k) and
+  T(p, n - k), and it maps the kernel of the boundary map to the kernel of
+  the dual one. So an eigensystem (a(p, 1), a(p, 2)) is in the dual kernel
+  iff (a(p, 2), a(p, 1)) is in the kernel, and the interior cohomology is
+  in the eigensystems whose swap is also in the kernel: for GL_3 over
+  Q(sqrt(-7)), Gamma_0(11), the kernel is the class (-3, 2) (1 + q a,
+  q^2 + a for a = -2), whose swap is not there, while at Gamma_0(13) the
+  pair (lambda, conj(lambda)) stays. Note that theta(Gamma_0(N)), being
+  conjugate to Gamma_0(N) in GL_n(Q), gives the same boundary map.
 * `OnlyWellRoundedHomology`: restrict to the well rounded cells, which
   gives the cohomology of the subgroup by duality; otherwise the homology of
   the full complex with its cells at infinity.
