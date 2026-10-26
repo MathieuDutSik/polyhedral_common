@@ -250,6 +250,16 @@ template <typename Tint> struct PleskenSouvignierContext {
   std::vector<MyMatrix<Tint>> Fmat;
   MyMatrix<Tint> Badj;
   Tint Bden;
+  /*
+    The adjugate and determinant of ListMat[0], with adjM0 / detM0 its
+    inverse and detM0 > 0 by positive definiteness. The inverse of an
+    automorphism X is (M0 * X^T * adjM0) / detM0: every intermediate is
+    bounded by the certificate of ps_certify_int64_kernel, while the
+    adjugate route of Inverse(X) goes through minors of X that are
+    exponentially larger than its entries and overflow a machine word.
+   */
+  MyMatrix<Tint> adjM0;
+  Tint detM0;
   // The basis order per and the fingerprint diagonal (candidate count
   // per level under the identity prefix); std_basis[i] is the signed
   // index of the chain-position-i basis vector in the family.
@@ -435,6 +445,14 @@ std::vector<int> ps_select_basis(PleskenSouvignierContext<Tint> const &ctx) {
     if (has_std) {
       return bas;
     }
+  }
+  if constexpr (std::is_same_v<Tint, int64_t>) {
+    // The certificate admits int64 only when the family contains the
+    // standard basis: the rational rank tool and the adjugate descent
+    // below have intermediates no machine word holds.
+    std::cerr << "PS: an int64 run without the standard basis in the "
+              << "family\n";
+    throw TerminalException{1};
   }
   std::vector<int> order(m);
   for (int j = 0; j < m; j++) {
@@ -695,16 +713,39 @@ bool ps_vector_sum_check(PleskenSouvignierContext<Tint> const &Ci,
   of n/10 rounded, as Hecke does; depth = 0 disables the vector sums.
  */
 template <typename Tint>
-PleskenSouvignierContext<Tint>
-PleskenSouvignierBuildContext(std::vector<MyMatrix<Tint>> const &ListMat,
-                              MyMatrix<Tint> const &SHVhalf,
-                              bool with_fingerprint, int depth,
-                              [[maybe_unused]] std::ostream &os) {
+PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
+    std::vector<MyMatrix<Tint>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
+    bool with_fingerprint, int depth, [[maybe_unused]] std::ostream &os,
+    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0 = {}) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
   PleskenSouvignierContext<Tint> ctx;
   ctx.ListMat = ListMat;
+  if (adjdet0) {
+    ctx.adjM0 = adjdet0->first;
+    ctx.detM0 = adjdet0->second;
+  } else {
+    if constexpr (std::is_same_v<Tint, int64_t>) {
+      // The Bareiss minors of the adjugate overflow a machine word; an
+      // int64 context has to receive the adjugate from the caller, who
+      // computed it over the big integers.
+      std::cerr << "PS: an int64 context needs the precomputed adjugate of "
+                << "ListMat[0]\n";
+      throw TerminalException{1};
+    } else {
+      std::pair<MyMatrix<Tint>, Tint> pr = AdjugateDeterminant(ListMat[0]);
+      ctx.adjM0 = std::move(pr.first);
+      ctx.detM0 = pr.second;
+    }
+  }
+#ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
+  if (ctx.detM0 <= 0) {
+    std::cerr << "PS: ListMat[0] has to be positive definite, so its "
+              << "determinant has to be positive\n";
+    throw TerminalException{1};
+  }
+#endif
   ctx.VS = PleskenSouvignierBuildVectorSet(SHVhalf);
   int n = ctx.VS.n;
   int m = ctx.VS.m;
@@ -920,6 +961,48 @@ MyMatrix<Tint> ps_matgen(PleskenSouvignierContext<Tint> const &Ci,
   return unfold_opt(opt, "the assignment should give an integral matrix");
 }
 
+/*
+  The inverse of an isometry Q with Q * M2 * Q^T = M1: from
+  M2 * Q^T = Q^{-1} * M1 one gets Q^{-1} = (M2 * Q^T * adjM1) / detM1,
+  and the division is exact. For an automorphism M1 = M2. Unlike
+  Inverse(Q), whose adjugate goes through minors of Q exponentially
+  larger than its entries, the intermediates here are bounded by
+  n^2 * |M2| * |adjM1| * |Q|, which the int64 certificate covers.
+ */
+template <typename Tint>
+MyMatrix<Tint> ps_isometry_inverse(MyMatrix<Tint> const &M2,
+                                   MyMatrix<Tint> const &adjM1,
+                                   Tint const &detM1, MyMatrix<Tint> const &Q) {
+  int n = Q.rows();
+  MyMatrix<Tint> Z = M2 * Q.transpose() * adjM1;
+  MyMatrix<Tint> Qinv(n, n);
+  for (int i = 0; i < n; i++) {
+    for (int k = 0; k < n; k++) {
+#ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
+      if (ResInt(Z(i, k), detM1) != 0) {
+        std::cerr << "PS: the isometry inverse is not integral\n";
+        throw TerminalException{1};
+      }
+#endif
+      Qinv(i, k) = QuoInt(Z(i, k), detM1);
+    }
+  }
+#ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
+  if (Q * Qinv != IdentityMat<Tint>(n)) {
+    std::cerr << "PS: ps_isometry_inverse did not invert the matrix\n";
+    throw TerminalException{1};
+  }
+#endif
+  return Qinv;
+}
+
+// The inverse of an automorphism of the context's configuration.
+template <typename Tint>
+MyMatrix<Tint> ps_aut_inverse(PleskenSouvignierContext<Tint> const &ctx,
+                              MyMatrix<Tint> const &X) {
+  return ps_isometry_inverse(ctx.ListMat[0], ctx.adjM0, ctx.detM0, X);
+}
+
 // The orbit of a set of signed points under a list of matrices.
 template <typename Tint>
 std::vector<int> ps_orbit(PleskenSouvignierContext<Tint> const &ctx,
@@ -1010,7 +1093,7 @@ MyMatrix<Tint> ps_stabil(PleskenSouvignierContext<Tint> const &ctx,
   }
   MyMatrix<Tint> XG = ps_matgen(ctx, ctx, x);
   MyMatrix<Tint> X2 = ps_matgen(ctx, ctx, x2);
-  MyMatrix<Tint> S = XG * Inverse(X2);
+  MyMatrix<Tint> S = XG * ps_aut_inverse(ctx, X2);
 #ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
   if (S * X2 != XG) {
     std::cerr << "PS: the stabilizer element does not solve S * X2 = XG\n";
@@ -1327,6 +1410,200 @@ void ps_reset_group(PleskenSouvignierContext<Tint> &ctx) {
   ctx.g[0].push_back(-IdentityMat<Tint>(n));
 }
 
+// The conversions of the int64 fast path. The downward one is reached
+// only behind the certificate, whose bounds dominate every entry.
+template <typename Tint>
+MyMatrix<int64_t> ps_matrix_to_int64(MyMatrix<Tint> const &M) {
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  MyMatrix<int64_t> Ms(nbRow, nbCol);
+  for (int i = 0; i < nbRow; i++) {
+    for (int j = 0; j < nbCol; j++) {
+      Ms(i, j) = UniversalScalarConversion<int64_t, Tint>(M(i, j));
+    }
+  }
+  return Ms;
+}
+
+template <typename Tint>
+MyMatrix<Tint> ps_matrix_from_int64(MyMatrix<int64_t> const &M) {
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  MyMatrix<Tint> Mt(nbRow, nbCol);
+  for (int i = 0; i < nbRow; i++) {
+    for (int j = 0; j < nbCol; j++) {
+      Mt(i, j) = UniversalScalarConversion<Tint, int64_t>(M(i, j));
+    }
+  }
+  return Mt;
+}
+
+/*
+  The measured maxima from which the int64 certificate is computed, all
+  in the big type of the caller. has_std_basis records whether the family
+  contains the whole standard basis: then the searched basis is a
+  permutation matrix, its adjugate is free of blow-up and every leaf is
+  integral, which is what the int64 engine requires.
+ */
+template <typename Tint> struct PSInt64Bounds {
+  Tint n;
+  Tint m;
+  Tint Vmax;
+  Tint Mmax;
+  Tint maxMii;
+  Tint adjMmax;
+  Tint detM0;
+  bool has_std_basis;
+};
+
+template <typename Tint>
+PSInt64Bounds<Tint>
+ps_int64_bounds(std::vector<MyMatrix<Tint>> const &ListMat,
+                MyMatrix<Tint> const &SHVhalf,
+                std::pair<MyMatrix<Tint>, Tint> const &adjdet0) {
+  int n = SHVhalf.cols();
+  int m = SHVhalf.rows();
+  PSInt64Bounds<Tint> b;
+  b.n = Tint(n);
+  b.m = Tint(m);
+  b.Vmax = Tint(1);
+  for (int j = 0; j < m; j++) {
+    for (int i = 0; i < n; i++) {
+      Tint val = T_abs(SHVhalf(j, i));
+      if (val > b.Vmax) {
+        b.Vmax = val;
+      }
+    }
+  }
+  b.Mmax = Tint(1);
+  for (auto &eMat : ListMat) {
+    for (int i = 0; i < n; i++) {
+      for (int k = 0; k < n; k++) {
+        Tint val = T_abs(eMat(i, k));
+        if (val > b.Mmax) {
+          b.Mmax = val;
+        }
+      }
+    }
+  }
+  b.maxMii = Tint(1);
+  for (int i = 0; i < n; i++) {
+    if (ListMat[0](i, i) > b.maxMii) {
+      b.maxMii = ListMat[0](i, i);
+    }
+  }
+  b.adjMmax = Tint(1);
+  for (int i = 0; i < n; i++) {
+    for (int k = 0; k < n; k++) {
+      Tint val = T_abs(adjdet0.first(i, k));
+      if (val > b.adjMmax) {
+        b.adjMmax = val;
+      }
+    }
+  }
+  b.detM0 = adjdet0.second;
+  b.has_std_basis = true;
+  std::vector<uint8_t> found(n, 0);
+  for (int j = 0; j < m; j++) {
+    int nb_nonzero = 0;
+    int pos = -1;
+    for (int i = 0; i < n; i++) {
+      if (SHVhalf(j, i) != 0) {
+        nb_nonzero++;
+        pos = i;
+      }
+    }
+    if (nb_nonzero == 1 && T_abs(SHVhalf(j, pos)) == 1) {
+      found[pos] = 1;
+    }
+  }
+  for (int i = 0; i < n; i++) {
+    if (found[i] == 0) {
+      b.has_std_basis = false;
+    }
+  }
+  return b;
+}
+
+// The merge for an isometry test, where the one search touches the
+// vectors and automorphisms of both configurations. The determinants
+// have to agree for an isometry to exist, which the caller has checked.
+template <typename Tint>
+PSInt64Bounds<Tint> ps_int64_bounds_merge(PSInt64Bounds<Tint> const &b1,
+                                          PSInt64Bounds<Tint> const &b2) {
+  PSInt64Bounds<Tint> b = b1;
+  auto f_max = [](Tint &tgt, Tint const &other) -> void {
+    if (other > tgt) {
+      tgt = other;
+    }
+  };
+  f_max(b.m, b2.m);
+  f_max(b.Vmax, b2.Vmax);
+  f_max(b.Mmax, b2.Mmax);
+  f_max(b.maxMii, b2.maxMii);
+  f_max(b.adjMmax, b2.adjMmax);
+  // The basis is searched on the first configuration only.
+  b.has_std_basis = b1.has_std_basis;
+  return b;
+}
+
+/*
+  Whether the whole search provably fits int64_t: every runtime
+  expression class is bounded against 2^61, with room to spare below the
+  word, so the engine then runs on raw machine integers with no per
+  operation check (the point of the analysis: SafeInt64 pays for every
+  single operation, int64_t for none).
+
+  Gb bounds the entries of every automorphism or isometry X appearing:
+  row i of X has M-norm M_ii, and a vector v with v M v^T = c has
+  |v_j| <= sqrt(c * (M^-1)_jj) <= sqrt(maxMii * adjMmax / detM0).
+  The expressions:
+  * E1 = n * Vmax * (n * Vmax * Mmax): the scalar product scans against
+    the W tables, the W entries themselves, norms, Gram targets and the
+    vector-sum tuples.
+  * E2 = n * Vmax * Gb: the point images of ps_operate.
+  * E3 = n * Gb^2: products of two automorphisms.
+  * E5 = n * Mmax * Gb and E6 = n * adjMmax * E5: the two steps of
+    ps_isometry_inverse; E6 also dominates detM0 and the adjugate
+    entries.
+  * E7 = m * Vmax and E8 = n^2 * Mmax * E7^2: the vector sums of one
+    tuple class and their norms.
+ */
+template <typename Tint>
+bool ps_certify_int64(PSInt64Bounds<Tint> const &b,
+                      [[maybe_unused]] std::ostream &os) {
+  if (!b.has_std_basis) {
+#ifdef DEBUG_PLESKEN_SOUVIGNIER
+    os << "PS: no int64, the family does not contain the standard basis\n";
+#endif
+    return false;
+  }
+  Tint CAP = UniversalScalarConversion<Tint, int64_t>(int64_t(1) << 61);
+  Tint num = b.maxMii * b.adjMmax;
+  Tint Gb(1);
+  while (Gb * Gb * b.detM0 < num) {
+    Gb *= 2;
+    if (Gb > CAP) {
+      return false;
+    }
+  }
+  Gb += 1;
+  Tint Wmax = b.n * b.Vmax * b.Mmax;
+  Tint E1 = b.n * b.Vmax * Wmax;
+  Tint E2 = b.n * b.Vmax * Gb;
+  Tint E3 = b.n * Gb * Gb;
+  Tint E5 = b.n * b.Mmax * Gb;
+  Tint E6 = b.n * b.adjMmax * E5;
+  Tint E7 = b.m * b.Vmax;
+  Tint E8 = b.n * b.n * b.Mmax * E7 * E7;
+  bool fits = E1 <= CAP && E2 <= CAP && E3 <= CAP && E5 <= CAP &&
+              E6 <= CAP && E7 <= CAP && E8 <= CAP;
+#ifdef DEBUG_PLESKEN_SOUVIGNIER
+  os << "PS: int64 certificate fits=" << fits << "\n";
+#endif
+  return fits;
+}
+
 // The backtrack node budget above which the adaptive depth is raised.
 // A depth-appropriate search visits a few hundred nodes at most (the
 // largest healthy count observed on the d351 genus was ~160); a
@@ -1345,13 +1622,56 @@ static const size_t PS_NODE_BUDGET = 500;
 static const int PS_MAX_ADAPTIVE_DEPTH = 8;
 
 template <typename Tint>
-PleskenSouvignierAutomResult<Tint>
-PleskenSouvignierAutomorphism(std::vector<MyMatrix<Tint>> const &ListMat,
-                              MyMatrix<Tint> const &SHVhalf, std::ostream &os,
-                              int depth = -1) {
+PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
+    std::vector<MyMatrix<Tint>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
+    std::ostream &os, int depth = -1,
+    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0_opt = {}) {
+  std::pair<MyMatrix<Tint>, Tint> adjdet0 = [&]() {
+    if (adjdet0_opt) {
+      return *adjdet0_opt;
+    }
+    if constexpr (std::is_same_v<Tint, int64_t>) {
+      std::cerr << "PS: an int64 automorphism run needs the precomputed "
+                << "adjugate of ListMat[0]\n";
+      throw TerminalException{1};
+    } else {
+      return AdjugateDeterminant(ListMat[0]);
+    }
+  }();
+  if constexpr (!std::is_same_v<Tint, int64_t>) {
+    // The certified int64 fast path: the preanalysis proves that no
+    // operation of the search can overflow, so the engine runs on raw
+    // machine integers with no per-operation check.
+    PSInt64Bounds<Tint> bounds = ps_int64_bounds(ListMat, SHVhalf, adjdet0);
+    if (ps_certify_int64(bounds, os)) {
+      std::vector<MyMatrix<int64_t>> ListMat64;
+      ListMat64.reserve(ListMat.size());
+      for (auto &eMat : ListMat) {
+        ListMat64.push_back(ps_matrix_to_int64(eMat));
+      }
+      MyMatrix<int64_t> SHVhalf64 = ps_matrix_to_int64(SHVhalf);
+      std::optional<std::pair<MyMatrix<int64_t>, int64_t>> adjdet64 =
+          std::make_pair(ps_matrix_to_int64(adjdet0.first),
+                         UniversalScalarConversion<int64_t, Tint>(
+                             adjdet0.second));
+      PleskenSouvignierAutomResult<int64_t> res64 =
+          PleskenSouvignierAutomorphism<int64_t>(ListMat64, SHVhalf64, os,
+                                                 depth, adjdet64);
+      PleskenSouvignierAutomResult<Tint> res;
+      res.ListGen.reserve(res64.ListGen.size());
+      for (auto &eGen : res64.ListGen) {
+        res.ListGen.push_back(ps_matrix_from_int64<Tint>(eGen));
+      }
+      res.ListOrbitSize = std::move(res64.ListOrbitSize);
+      res.depth_used = res64.depth_used;
+      res.nodes_used = res64.nodes_used;
+      return res;
+    }
+  }
   bool adaptive = (depth == -1);
   PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
-      ListMat, SHVhalf, true, depth, os);
+      ListMat, SHVhalf, true, depth, os,
+      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet0));
   int d = ctx.depth;
   while (true) {
     // Once the cap is reached the search runs unbudgeted, so it always
@@ -1434,7 +1754,7 @@ ps_isostab(PleskenSouvignierContext<Tint> const &ctx, int pt,
         MyMatrix<Tint> B = w[wpos[orb[cnd] + m]] * eGen;
         MyMatrix<Tint> const &Bknown = w[wpos[im + m]];
         if (B != Bknown) {
-          MyMatrix<Tint> S = B * Inverse(Bknown);
+          MyMatrix<Tint> S = B * ps_aut_inverse(ctx, Bknown);
           bool is_known = false;
           for (auto &eH : H) {
             if (eH == S) {
@@ -1519,13 +1839,15 @@ bool ps_iso_extend(PleskenSouvignierContext<Tint> const &Ci,
 // rule: vectors of norm at most B for the SAME bound B on both sides
 // (see the src_latt wrappers).
 template <typename Tint>
-std::optional<MyMatrix<Tint>>
-PleskenSouvignierIsometry(std::vector<MyMatrix<Tint>> const &ListMat1,
-                          MyMatrix<Tint> const &SHVhalf1,
-                          std::vector<MyMatrix<Tint>> const &ListMat2,
-                          MyMatrix<Tint> const &SHVhalf2,
-                          std::vector<MyMatrix<Tint>> const &ListGenAut2,
-                          std::ostream &os, int depth = -1) {
+std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
+    std::vector<MyMatrix<Tint>> const &ListMat1,
+    MyMatrix<Tint> const &SHVhalf1,
+    std::vector<MyMatrix<Tint>> const &ListMat2,
+    MyMatrix<Tint> const &SHVhalf2,
+    std::vector<MyMatrix<Tint>> const &ListGenAut2, std::ostream &os,
+    int depth = -1,
+    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet1_opt = {},
+    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet2_opt = {}) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -1538,17 +1860,85 @@ PleskenSouvignierIsometry(std::vector<MyMatrix<Tint>> const &ListMat1,
   // An isometry P has det P = +-1, so P M1 P^T = M2 forces equal
   // determinants. Without this, families of equal size on lattices of
   // different determinants could match through an integral P of |det| > 1,
-  // whose inverse is not integral.
-  for (size_t iMat = 0; iMat < ListMat1.size(); iMat++) {
-    if (DeterminantMat(ListMat1[iMat]) != DeterminantMat(ListMat2[iMat])) {
-      return {};
+  // whose inverse is not integral. The int64 recursion receives the
+  // adjugates from the caller, who has already run the check; the
+  // Bareiss minors of DeterminantMat do not fit a machine word anyway.
+  if (!adjdet1_opt) {
+    if constexpr (std::is_same_v<Tint, int64_t>) {
+      std::cerr << "PS: an int64 isometry run needs the precomputed "
+                << "adjugates\n";
+      throw TerminalException{1};
+    } else {
+      for (size_t iMat = 0; iMat < ListMat1.size(); iMat++) {
+        if (DeterminantMat(ListMat1[iMat]) != DeterminantMat(ListMat2[iMat])) {
+          return {};
+        }
+      }
+    }
+  }
+  std::pair<MyMatrix<Tint>, Tint> adjdet1 = [&]() {
+    if (adjdet1_opt) {
+      return *adjdet1_opt;
+    }
+    if constexpr (std::is_same_v<Tint, int64_t>) {
+      throw TerminalException{1};
+    } else {
+      return AdjugateDeterminant(ListMat1[0]);
+    }
+  }();
+  std::pair<MyMatrix<Tint>, Tint> adjdet2 = [&]() {
+    if (adjdet2_opt) {
+      return *adjdet2_opt;
+    }
+    if constexpr (std::is_same_v<Tint, int64_t>) {
+      throw TerminalException{1};
+    } else {
+      return AdjugateDeterminant(ListMat2[0]);
+    }
+  }();
+  if constexpr (!std::is_same_v<Tint, int64_t>) {
+    // The certified int64 fast path over the maxima of both sides.
+    PSInt64Bounds<Tint> bounds = ps_int64_bounds_merge(
+        ps_int64_bounds(ListMat1, SHVhalf1, adjdet1),
+        ps_int64_bounds(ListMat2, SHVhalf2, adjdet2));
+    if (ps_certify_int64(bounds, os)) {
+      std::vector<MyMatrix<int64_t>> ListMat1_64;
+      std::vector<MyMatrix<int64_t>> ListMat2_64;
+      std::vector<MyMatrix<int64_t>> ListGenAut2_64;
+      for (auto &eMat : ListMat1) {
+        ListMat1_64.push_back(ps_matrix_to_int64(eMat));
+      }
+      for (auto &eMat : ListMat2) {
+        ListMat2_64.push_back(ps_matrix_to_int64(eMat));
+      }
+      for (auto &eGen : ListGenAut2) {
+        ListGenAut2_64.push_back(ps_matrix_to_int64(eGen));
+      }
+      MyMatrix<int64_t> SHVhalf1_64 = ps_matrix_to_int64(SHVhalf1);
+      MyMatrix<int64_t> SHVhalf2_64 = ps_matrix_to_int64(SHVhalf2);
+      auto f_adj = [](std::pair<MyMatrix<Tint>, Tint> const &pr)
+          -> std::optional<std::pair<MyMatrix<int64_t>, int64_t>> {
+        return std::make_pair(
+            ps_matrix_to_int64(pr.first),
+            UniversalScalarConversion<int64_t, Tint>(pr.second));
+      };
+      std::optional<MyMatrix<int64_t>> opt64 =
+          PleskenSouvignierIsometry<int64_t>(
+              ListMat1_64, SHVhalf1_64, ListMat2_64, SHVhalf2_64,
+              ListGenAut2_64, os, depth, f_adj(adjdet1), f_adj(adjdet2));
+      if (!opt64) {
+        return {};
+      }
+      return ps_matrix_from_int64<Tint>(*opt64);
     }
   }
   bool adaptive = (depth == -1);
   PleskenSouvignierContext<Tint> Ci = PleskenSouvignierBuildContext(
-      ListMat1, SHVhalf1, true, depth, os);
+      ListMat1, SHVhalf1, true, depth, os,
+      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet1));
   PleskenSouvignierContext<Tint> Co = PleskenSouvignierBuildContext(
-      ListMat2, SHVhalf2, false, 0, os);
+      ListMat2, SHVhalf2, false, 0, os,
+      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet2));
   int n = Ci.n();
   std::vector<int> x(n, 0);
   std::vector<int> cand0_base;
@@ -1586,9 +1976,11 @@ PleskenSouvignierIsometry(std::vector<MyMatrix<Tint>> const &ListMat1,
     return {};
   }
   // The assignment gives Q with Q * M2 * Q^T = M1; the repository
-  // convention is the inverse direction.
+  // convention is the inverse direction, computed through the forms so
+  // that the intermediates stay within the certified bounds.
   MyMatrix<Tint> Q = ps_matgen(Ci, Co, x);
-  MyMatrix<Tint> P = Inverse(Q);
+  MyMatrix<Tint> P =
+      ps_isometry_inverse(ListMat2[0], Ci.adjM0, Ci.detM0, Q);
 #ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
   for (size_t iMat = 0; iMat < ListMat1.size(); iMat++) {
     if (P * ListMat1[iMat] * P.transpose() != ListMat2[iMat]) {
