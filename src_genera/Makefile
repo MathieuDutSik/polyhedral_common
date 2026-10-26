@@ -1,4 +1,4 @@
-PROGRAM		= GENUS_Enumerate
+PROGRAM		= GENUS_Enumerate GENUS_LocalDensity
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -53,7 +53,7 @@ endif
 
 all:	$(PROGRAM)
 
-$(PROGRAM): 	$(OBJECTS)
+$(PROGRAM): %: %.o
 		@echo
 		@echo link $@
 		$(CC) $(DEBUGFLAG) $@.o $(LIBS) -o $@

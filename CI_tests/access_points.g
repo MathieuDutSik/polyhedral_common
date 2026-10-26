@@ -3147,3 +3147,33 @@ end;
 PERFCOMP_chain_simplification:=function(desc, index, the_chain)
     return __PERFCOMP_chain_query(desc, index, the_chain, "FileChainSimplification");
 end;
+
+# Runs a task of GENUS_LocalDensity (src_genera) on a list of records, each
+# a list of integers, and returns the list of values it computes, one per
+# record. arith is "gmp" or "flint".
+get_genus_local_density:=function(arith, task, ListRecord)
+    local TmpDir, FileI, FileO, FileE, output, eRec, eProg, list_arg, status, ListVal;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "LocalDensity.in");
+    FileO:=Filename(TmpDir, "LocalDensity.out");
+    FileE:=Filename(TmpDir, "LocalDensity.err");
+    output:=OutputTextFile(FileI, true);
+    SetPrintFormattingStatus(output, false);
+    AppendTo(output, Length(ListRecord), "\n");
+    for eRec in ListRecord
+    do
+        AppendTo(output, JoinStringsWithSeparator(List(eRec, String), " "), "\n");
+    od;
+    CloseStream(output);
+    eProg:=GetBinaryFilename("GENUS_LocalDensity");
+    list_arg:=[arith, task, FileI, FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    ListVal:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return ListVal;
+end;

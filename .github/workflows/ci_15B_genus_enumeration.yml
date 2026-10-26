@@ -33,6 +33,7 @@ jobs:
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-gap
       - name: Test genus enumeration
         run: |
           make -C src_genera
@@ -44,6 +45,17 @@ jobs:
           ./RunTests.sh
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The genus enumeration test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
+      - name: Test the local densities
+        run: |
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestLocalDensity.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The local density test has not created the expected file" >&2
             exit 1
           fi
           cd ../..
