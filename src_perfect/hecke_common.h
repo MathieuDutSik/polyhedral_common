@@ -29,6 +29,10 @@
 #define TIMINGS_HECKE_OPERATORS
 #endif
 
+#ifdef TRACK_INFO
+#define TRACK_INFO_HECKE_OPERATORS
+#endif
+
 /*
   The common part of the Hecke operators (see hecke_operators.h for the
   overview): the clean failures and the budgets, the ambient group G of

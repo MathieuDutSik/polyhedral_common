@@ -6,6 +6,9 @@
 #include "hecke_subgroups.h"
 #include "hecke_chain_map.h"
 #include "MAT_SparseMatrixMod.h"
+#include <cstdio>
+#include <fstream>
+#include <string>
 // clang-format on
 
 /*
@@ -460,34 +463,27 @@ T get_dual_stab_weight(GammaComplex<T, Tint> const &gc, int const &index, int co
 }
 
 /*
-  The Hecke operator on the homology of a level modulo a prime p, by
-  sparse linear algebra: no matrix of the size of the complex is formed,
-  which is what limits the rational computation. With B the space of the
-  boundaries and Z the one of the cycles, H = Z / B is computed in the
-  coordinates of the cells outside a set S whose cycle condition rows are
-  a basis of the cycle conditions (see below); a basis of H is given by
-  the basis cells of the quotient by the boundaries there
-  (SparseQuotientMod), lifted to cycles, and the image of a basis vector
-  is restricted to the complement of S, its class in the quotient giving
-  its coordinates.
+  The cycle conditions of the cells of a level modulo p, one sparse row per
+  cell c (a vector v is a cycle iff sum_c v_c row_c = 0), and the
+  generators of the boundaries.
   For a chain map commuting with the boundary (Sharbly, Vertex) the cycles
   are the v with v D_index = 0 and the boundaries the rows of D_{index-1};
   for the transposed one (Dual), the v with D_{index-1} v = 0 and the
-  columns of D_index. The entries of the Hecke matrix are residues mod p.
+  columns of D_index.
  */
+struct CycleConditionsMod {
+  std::vector<SparseVectorMod> l_cycle_row;
+  int n_next = 0;
+  std::vector<SparseVectorMod> l_bnd;
+};
+
 template <typename T, typename Tint>
-HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint> const &gc,
-                                 HeckeChainMap<T, Tint> const &hcm,
-                                 HeckeCosets<T> const &cosets_gamma, int64_t const &p,
-                                 bool const &with_hecke, [[maybe_unused]] std::ostream &os) {
+CycleConditionsMod get_cycle_conditions_mod(int const &index, GammaComplex<T, Tint> const &gc,
+                                            bool const &transposed, int64_t const &p) {
   int n_levels = gc.basis.size();
   int n_cell = gc.basis[index].size();
-  bool transposed = hcm.transposed;
-  // The cycle condition sum_c v_c l_cycle_row[c] = 0 and the generators of
-  // the boundaries, as sparse vectors modulo p.
-  std::vector<SparseVectorMod> l_cycle_row(n_cell);
-  std::vector<SparseVectorMod> l_bnd;
-  int n_next = 0;
+  CycleConditionsMod cc;
+  cc.l_cycle_row.resize(n_cell);
   auto f_push = [&](SparseVectorMod &v, int const &idx, int const &val) -> void {
     int64_t val_p = ResidueModPrime(val, p);
     if (val_p != 0) {
@@ -496,10 +492,10 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
   };
   if (!transposed) {
     if (index < n_levels - 1) {
-      n_next = gc.basis[index + 1].size();
+      cc.n_next = gc.basis[index + 1].size();
       for (int c = 0; c < n_cell; c++) {
         for (auto &e : gc.boundary_sparse[index][c]) {
-          f_push(l_cycle_row[c], e.first, e.second);
+          f_push(cc.l_cycle_row[c], e.first, e.second);
         }
       }
     }
@@ -509,16 +505,16 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
         for (auto &e : row) {
           f_push(v, e.first, e.second);
         }
-        l_bnd.emplace_back(std::move(v));
+        cc.l_bnd.emplace_back(std::move(v));
       }
     }
   } else {
     if (index > 0) {
-      n_next = gc.basis[index - 1].size();
+      cc.n_next = gc.basis[index - 1].size();
       int n_prev = gc.boundary_sparse[index - 1].size();
       for (int r = 0; r < n_prev; r++) {
         for (auto &e : gc.boundary_sparse[index - 1][r]) {
-          f_push(l_cycle_row[e.first], r, e.second);
+          f_push(cc.l_cycle_row[e.first], r, e.second);
         }
       }
     }
@@ -531,135 +527,124 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
         }
       }
       for (auto &v : l_col) {
-        l_bnd.emplace_back(std::move(v));
+        cc.l_bnd.emplace_back(std::move(v));
       }
     }
   }
-  // The column order of an echelon form: by increasing number of vectors
-  // containing the column, so that the pivots (the first entries) are
-  // rarely used columns and the fill-in stays small. Returns the label of
-  // each column.
-  auto f_label = [](std::vector<SparseVectorMod> const &l_vect, int const &n_col) -> std::vector<int> {
-    std::vector<int> l_count(n_col, 0);
-    for (auto &v : l_vect) {
+  for (auto &v : cc.l_cycle_row) {
+    std::sort(v.begin(), v.end());
+  }
+  for (auto &v : cc.l_bnd) {
+    std::sort(v.begin(), v.end());
+  }
+  return cc;
+}
+
+#ifdef TRACK_INFO_HECKE_OPERATORS
+/*
+  Writes the cycle conditions of the level as an instance of the cycle
+  lifting job of basic_common_cpp/src_matrix/Bench_SparseKernelMod: the
+  line "p n_row n_col", then one line per cell with its number of entries
+  and the pairs (column, value). The file is written under a temporary
+  name and renamed when complete.
+ */
+inline void write_cycle_conditions_instance(int const &index, CycleConditionsMod const &cc, int64_t const &p,
+                                            std::ostream &os) {
+  std::string file = "HECKE_cycle_conditions_index" + std::to_string(index) + "_n" +
+                     std::to_string(cc.l_cycle_row.size()) + "_m" + std::to_string(cc.n_next) + ".txt";
+  std::string file_tmp = file + ".tmp";
+  {
+    std::ofstream os_file(file_tmp);
+    os_file << p << " " << cc.l_cycle_row.size() << " " << cc.n_next << "\n";
+    for (auto &v : cc.l_cycle_row) {
+      os_file << v.size();
       for (auto &e : v) {
-        l_count[e.first] += 1;
+        os_file << " " << e.first << " " << e.second;
       }
+      os_file << "\n";
     }
-    std::vector<int> l_order(n_col);
-    for (int c = 0; c < n_col; c++) {
-      l_order[c] = c;
-    }
-    std::stable_sort(l_order.begin(), l_order.end(),
-                     [&](int const &a, int const &b) -> bool { return l_count[a] < l_count[b]; });
-    std::vector<int> l_label(n_col);
-    for (int c = 0; c < n_col; c++) {
-      l_label[l_order[c]] = c;
-    }
-    return l_label;
-  };
-  auto f_relabel = [](SparseVectorMod const &v, std::vector<int> const &l_label) -> SparseVectorMod {
-    SparseVectorMod w;
-    w.reserve(v.size());
-    for (auto &e : v) {
-      w.push_back({l_label[e.first], e.second});
-    }
-    std::sort(w.begin(), w.end());
-    return w;
-  };
-  /*
-    The approach of Ash, Gunnells and McConnell (their matrix eta): first
-    a set S of cells whose cycle condition rows are a basis of the row
-    space of the cycle condition. A cycle v is then determined by its
-    restriction to the complement S^c, and every vector on S^c extends to
-    a cycle, so H = Z / B is the quotient of the vectors on S^c by the
-    restrictions of the boundaries. That quotient has a small dimension,
-    so the elimination of the boundaries has a low corank and a small
-    fill-in, unlike the elimination of the boundaries in all the cells.
-   */
+  }
+  std::rename(file_tmp.c_str(), file.c_str());
+  os << "HECKE: the cycle conditions of the level " << index << " are written to " << file << "\n";
+}
+#endif
+
+/*
+  The Hecke operator on the homology of a level modulo a prime p, by
+  sparse linear algebra: no matrix of the size of the complex is formed,
+  which is what limits the rational computation. With B the space of the
+  boundaries and Z the one of the cycles:
+  - the cycles are the kernel of the constraints given by the columns of
+    the matrix of the cycle conditions (SparseKernelMod, with the pivots
+    chosen globally): a cycle is determined by its restriction to a set F
+    of free cells, and every vector on F extends to a cycle,
+  - H = Z / B is then the quotient of the vectors on F by the restrictions
+    of the boundaries (SparseQuotientMod),
+  - a basis of H is given by the basis cells of that quotient, lifted to
+    cycles, and the image of a basis vector is restricted to F, its class
+    in the quotient giving its coordinates.
+  The entries of the Hecke matrix are residues mod p. Without with_hecke
+  only the dimension is computed.
+ */
+template <typename T, typename Tint>
+HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint> const &gc,
+                                 HeckeChainMap<T, Tint> const &hcm,
+                                 HeckeCosets<T> const &cosets_gamma, int64_t const &p,
+                                 bool const &with_hecke, [[maybe_unused]] std::ostream &os) {
+  int n_cell = gc.basis[index].size();
+  bool transposed = hcm.transposed;
 #ifdef TIMINGS_HECKE_OPERATORS
   MicrosecondTime time;
 #endif
-  std::vector<int> l_label_next = f_label(l_cycle_row, n_next);
-  SparseEchelonMod echelon_cyc(p);
-  std::vector<uint8_t> in_S(n_cell, 0);
+  CycleConditionsMod cc = get_cycle_conditions_mod(index, gc, transposed, p);
+  // The constraints: the columns of the matrix of the cycle conditions.
+  std::vector<SparseVectorMod> l_constraint(cc.n_next);
   for (int c = 0; c < n_cell; c++) {
-    if (!l_cycle_row[c].empty() && echelon_cyc.insert(f_relabel(l_cycle_row[c], l_label_next))) {
-      in_S[c] = 1;
+    for (auto &e : cc.l_cycle_row[c]) {
+      l_constraint[e.first].push_back({c, e.second});
     }
   }
+  SparseKernelMod ker(l_constraint, n_cell, p);
+  l_constraint.clear();
+  std::vector<int> const &l_F = ker.free_columns();
+  int n_F = l_F.size();
 #ifdef TIMINGS_HECKE_OPERATORS
-  os << "|HECKE: mod p index=" << index << " echelon of the cycle conditions, n_cell=" << n_cell
-     << " n_next=" << n_next << " |S|=" << echelon_cyc.rank() << "|=" << time << "\n";
+  os << "|HECKE: mod p index=" << index << " kernel of the cycle conditions, n_cell=" << n_cell
+     << " n_next=" << cc.n_next << " rank=" << ker.rank() << " n_sparse_pivot=" << ker.n_sparse_pivot()
+     << " n_dense_col=" << ker.n_dense_col() << " n_entry=" << ker.n_entry() << "|=" << time << "\n";
 #endif
-  // The same rows with markers at n_next + c: the reduction of the cycle
-  // condition row of a cell gives its expression in the rows of S.
-  SparseEchelonMod echelon_cyc_mark(p);
-  for (int c = 0; c < n_cell; c++) {
-    if (with_hecke && in_S[c] == 1) {
-      SparseVectorMod v = f_relabel(l_cycle_row[c], l_label_next);
-      v.push_back({n_next + c, 1});
-      echelon_cyc_mark.insert(v);
-    }
+  // The restrictions of the boundaries to F, the cell l_F[u] at the
+  // position u.
+  std::vector<int> pos_F(n_cell, -1);
+  for (int u = 0; u < n_F; u++) {
+    pos_F[l_F[u]] = u;
   }
-#ifdef TIMINGS_HECKE_OPERATORS
-  {
-    size_t n_entry = 0;
-    for (size_t i = 0; i < echelon_cyc_mark.rank(); i++) {
-      n_entry += echelon_cyc_mark.get_row(i).size();
-    }
-    os << "|HECKE: mod p index=" << index << " marked echelon, n_entry=" << n_entry << "|=" << time << "\n";
-  }
-#endif
-  // The restrictions of the boundaries to S^c, with the cells of S^c
-  // relabeled by the count.
-  std::vector<SparseVectorMod> l_bnd_res;
-  for (auto &v : l_bnd) {
+  std::vector<SparseVectorMod> l_bnd_F;
+  for (auto &v : cc.l_bnd) {
     SparseVectorMod w;
     for (auto &e : v) {
-      if (in_S[e.first] == 0) {
-        w.push_back(e);
+      if (pos_F[e.first] != -1) {
+        w.push_back({pos_F[e.first], e.second});
       }
     }
     if (!w.empty()) {
-      l_bnd_res.emplace_back(std::move(w));
+      std::sort(w.begin(), w.end());
+      l_bnd_F.emplace_back(std::move(w));
     }
   }
-  // The quotient of the vectors on S^c (the cell c at the position
-  // pos_Sc[c]) by the restrictions of the boundaries. The pivots are chosen
-  // globally and the last columns are treated densely: the incremental
-  // reduced echelon form fills in on the large levels.
-  std::vector<int> pos_Sc(n_cell, -1);
-  std::vector<int> l_Sc;
-  for (int c = 0; c < n_cell; c++) {
-    if (in_S[c] == 0) {
-      pos_Sc[c] = l_Sc.size();
-      l_Sc.push_back(c);
-    }
-  }
-  int n_Sc = l_Sc.size();
-  std::vector<SparseVectorMod> l_bnd_Sc;
-  for (auto &v : l_bnd_res) {
-    SparseVectorMod w;
-    for (auto &e : v) {
-      w.push_back({pos_Sc[e.first], e.second});
-    }
-    l_bnd_Sc.emplace_back(std::move(w));
-  }
-  SparseQuotientMod quot_bnd(l_bnd_Sc, n_Sc, p);
+  cc.l_bnd.clear();
+  SparseQuotientMod quot_bnd(l_bnd_F, n_F, p);
 #ifdef TIMINGS_HECKE_OPERATORS
-  os << "|HECKE: mod p index=" << index << " quotient by the boundaries, |l_bnd_res|=" << l_bnd_res.size()
-     << " n_Sc=" << n_Sc << " rank=" << quot_bnd.rank() << " n_sparse_pivot=" << quot_bnd.n_sparse_pivot()
+  os << "|HECKE: mod p index=" << index << " quotient by the boundaries, |l_bnd_F|=" << l_bnd_F.size()
+     << " n_F=" << n_F << " rank=" << quot_bnd.rank() << " n_sparse_pivot=" << quot_bnd.n_sparse_pivot()
      << " n_dense_col=" << quot_bnd.n_dense_col() << " n_entry=" << quot_bnd.n_entry() << "|=" << time << "\n";
 #endif
+  l_bnd_F.clear();
   // The basis columns of the quotient give the cells of the basis of H.
-  std::vector<int> l_free;
-  for (auto &u : quot_bnd.basis_columns()) {
-    l_free.push_back(l_Sc[u]);
-  }
-  int dim_hom = l_free.size();
+  std::vector<int> l_basis = quot_bnd.basis_columns();
+  int dim_hom = l_basis.size();
 #ifdef DEBUG_HECKE_OPERATORS
-  os << "HECKE: mod p index=" << index << " n_cell=" << n_cell << " |S|=" << echelon_cyc.rank()
+  os << "HECKE: mod p index=" << index << " n_cell=" << n_cell << " rank(Z conditions)=" << ker.rank()
      << " rank(B)=" << quot_bnd.rank() << " dim_hom=" << dim_hom << "\n";
 #endif
   if (!with_hecke) {
@@ -668,24 +653,13 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
   MyMatrix<T> hecke_matrix = ZeroMatrix<T>(dim_hom, dim_hom);
   HeckeImageKeyActions actions = get_hecke_image_key_actions(index, gc, hcm);
   for (int i = 0; i < dim_hom; i++) {
-    int c_free = l_free[i];
-    // The cycle lifting the free cell: e_c plus its part on S.
-    SparseVectorMod v{{c_free, 1}};
-    if (!l_cycle_row[c_free].empty()) {
-      SparseVectorMod red = echelon_cyc_mark.reduce(f_relabel(l_cycle_row[c_free], l_label_next));
-      for (auto &e : red) {
-        if (e.first < n_next) {
-          throw HeckeFailure{"Hecke matrix mod p: a cycle condition row is not in the span of S"};
-        }
-        v.push_back({e.first - n_next, e.second});
-      }
-      std::sort(v.begin(), v.end());
-    }
-    // Its image, restricted to S^c, and its class modulo the boundaries.
+    // The cycle lifting the basis cell.
+    SparseVectorMod v = ker.lift(l_basis[i]);
+    // Its image, restricted to F, and its class modulo the boundaries.
     std::map<int, int64_t> acc;
     for (auto &e : v) {
       for (auto &kv : get_hecke_image_cell_sparse(index, e.first, gc, hcm, cosets_gamma, &actions)) {
-        if (in_S[kv.first] == 1) {
+        if (pos_F[kv.first] == -1) {
           continue;
         }
         T value = kv.second;
@@ -699,7 +673,7 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
           return {index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0),
                   "a denominator of an image is divisible by p=" + std::to_string(p)};
         }
-        int64_t &val = acc[pos_Sc[kv.first]];
+        int64_t &val = acc[pos_F[kv.first]];
         val = ResidueModPrime(val + e.second * (*opt), p);
       }
     }
@@ -714,6 +688,9 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
       hecke_matrix(i, j) = UniversalScalarConversion<T, int64_t>(coord[j]);
     }
   }
+#ifdef TIMINGS_HECKE_OPERATORS
+  os << "|HECKE: mod p index=" << index << " Hecke matrix, dim_hom=" << dim_hom << "|=" << time << "\n";
+#endif
   return {index, n_cell, MyMatrix<T>(dim_hom, 0), std::move(hecke_matrix), ""};
 }
 
@@ -935,6 +912,15 @@ HeckeHomologyResult<T> compute_hecke_homology(
   }
   bool dense_boundary = (prime == 0);
   GammaComplex<T, Tint> gc = compute_gamma_complex(fce, ct, only_well_rounded, l_level_needed, dense_boundary, os);
+#ifdef TRACK_INFO_HECKE_OPERATORS
+  if (prime > 0) {
+    for (int index = 0; index < n_levels_fce; index++) {
+      if (all_levels || hcm.is_level_computed(index)) {
+        write_cycle_conditions_instance(index, get_cycle_conditions_mod(index, gc, hcm.transposed, prime), prime, os);
+      }
+    }
+  }
+#endif
 #ifdef TIMINGS_HECKE_OPERATORS
   os << "|HECKE: compute_gamma_complex|=" << time << "\n";
 #endif
