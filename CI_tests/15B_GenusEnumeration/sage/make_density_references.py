@@ -31,6 +31,11 @@ Tasks:
                  genus representatives and the certified representation
                  masses of the strongly perfect lattice project
                  (results/density_calib/reps and results/reference_MR).
+  genus_mass     the mass of the genus of positive definite even forms
+                 (root lattices and random forms with structure at one or
+                 two primes, ranks 2 to 14), from Sage's Genus.mass, the
+                 Conway-Sloane formula on Sage's own genus symbols, with
+                 the canonical 2-adic symbol of each form.
 
 The Euler factors of the good-prime density are those of LocalDensity.h;
 they are checked independently, against the orders of the orthogonal
@@ -360,6 +365,27 @@ def grid_certified_mass_ratio(ref_dir):
     return out
 
 
+def grid_genus_mass():
+    from sage.quadratic_forms.genera.genus import Genus
+    rng = random.Random(20261026)
+    forms = [ade_gram(t) for t in ade_types(14) if len(t) <= 2]
+    for n in range(2, 15):
+        for p in (2, 3, 5):
+            forms.append(random_even_form(rng, n, p))
+        for (p, q) in ((2, 3), (2, 5), (3, 5)):
+            a = rng.randint(1, n - 1)
+            forms.append(block_diagonal_matrix(
+                [random_even_form(rng, a, p), random_even_form(rng, n - a, q)],
+                subdivide=False))
+    out = []
+    for T in forms:
+        G = Genus(T)
+        sym2 = [s for s in G.local_symbols() if s.prime() == 2][0]
+        canonical = [[int(x) for x in c] for c in sym2.canonical_symbol()]
+        out.append([T.nrows(), T.list(), G.mass(), canonical])
+    return out
+
+
 def gap_string(x):
     if isinstance(x, (list, tuple)):
         return "[" + ", ".join(gap_string(y) for y in x) + "]"
@@ -382,6 +408,8 @@ def main():
         rows = grid_unit_chain()
     elif task == "certified_mass_ratio":
         rows = grid_certified_mass_ratio(sys.argv[3])
+    elif task == "genus_mass":
+        rows = grid_genus_mass()
     else:
         raise ValueError("unknown task " + task)
     with open(out_file, "w") as fh:

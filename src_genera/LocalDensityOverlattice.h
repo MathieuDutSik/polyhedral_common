@@ -658,15 +658,17 @@ CanonicalTwoAdicReduction(std::vector<std::array<int, 5>> sym) {
   return sym;
 }
 
-// The 2-adic symbol of an even Gram matrix, from its Jordan blocks: a unit
-// u at level e of T / 2 is an odd component 2^{e+1} u of T; the binary
-// blocks h (det -1 = 7, oddity 0) and y (det 3, oddity 4) of level e are
-// components of scale 2^e.
+// The 2-adic symbol of an even Gram matrix, from one Jordan splitting:
+// a unit u at level e of T / 2 is an odd component 2^{e+1} u of T; the
+// binary blocks h (det -1 = 7) and y (det 3) of level e are components of
+// scale 2^e. Neither adds to the oddity: <u> + y = <3u, -u, -u> and
+// <u> + h = <u, 1, -1> have the oddity u of <u>. The determinants are kept mod 8 (Sage's
+// symbol_tuple_list); they depend on the decomposition, the canonical
+// symbol below does not.
 template <typename T, typename Tint>
-std::vector<std::array<int, 5>> TwoAdicSymbol(MyMatrix<T> const &Gram) {
-  SiegelJordanBlocks q = JordanBlocks2<T, Tint>(Gram / T(2));
+std::vector<std::array<int, 5>> TwoAdicSymbolRaw(MyMatrix<T> const &Gram) {
   std::map<int, std::array<int, 5>> comp;
-  for (auto const &b : q.blocks) {
+  for (auto const &b : JordanSplitting2<T, Tint>(Gram / T(2))) {
     int s = (b.kind == SiegelBlockKind::Unit) ? b.e + 1 : b.e;
     auto iter = comp.find(s);
     if (iter == comp.end()) {
@@ -684,7 +686,6 @@ std::vector<std::array<int, 5>> TwoAdicSymbol(MyMatrix<T> const &Gram) {
     } else {
       c[1] += 2;
       c[2] = static_cast<int>(MulMod(c[2], 3, 8));
-      c[4] = ModPositive(c[4] + 4, 8);
     }
   }
   std::vector<std::array<int, 5>> sym;
@@ -694,7 +695,12 @@ std::vector<std::array<int, 5>> TwoAdicSymbol(MyMatrix<T> const &Gram) {
     }
     sym.push_back(kv.second);
   }
-  return CanonicalTwoAdicReduction(sym);
+  return sym;
+}
+
+template <typename T, typename Tint>
+std::vector<std::array<int, 5>> TwoAdicSymbol(MyMatrix<T> const &Gram) {
+  return CanonicalTwoAdicReduction(TwoAdicSymbolRaw<T, Tint>(Gram));
 }
 
 // The local symbol at p flattened to integers: equal iff locally isometric

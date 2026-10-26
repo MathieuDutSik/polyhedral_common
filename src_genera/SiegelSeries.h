@@ -691,8 +691,16 @@ TransJordanDec2(std::vector<TwoAdicItem> const &us) {
   return l1;
 }
 
+/*
+  A Jordan splitting of the half-integral S at p = 2: unit diagonal entries
+  2^e u and binary blocks h or y of level e, the latter meaning 2^e times
+  [[0, 1/2], [1/2, 0]] (determinant -1/4) or [[1, 1/2], [1/2, 1]] (3/4) up
+  to 2-adic isometry. It is an isometric decomposition, so it carries the
+  2-adic symbol; JordanBlocks2 then trades triples of units for Katsurada's
+  recursion, which preserves the Siegel series but not the isometry class.
+ */
 template <typename T, typename Tint>
-SiegelJordanBlocks JordanBlocks2(MyMatrix<T> S) {
+std::vector<SiegelJordanBlock> JordanSplitting2(MyMatrix<T> S) {
   int64_t p = 2;
   int n = S.rows();
   std::vector<MyMatrix<T>> mat_lst;
@@ -742,7 +750,7 @@ SiegelJordanBlocks JordanBlocks2(MyMatrix<T> S) {
       n -= 2;
     }
   }
-  // the blocks before the trading of triples of units
+  // each block with its level and kind
   std::vector<SiegelJordanBlock> raw;
   for (auto const &M : mat_lst) {
     if (M.rows() == 1) {
@@ -764,6 +772,12 @@ SiegelJordanBlocks JordanBlocks2(MyMatrix<T> S) {
           {e, is_y ? SiegelBlockKind::Y : SiegelBlockKind::H, 0});
     }
   }
+  return raw;
+}
+
+template <typename T, typename Tint>
+SiegelJordanBlocks JordanBlocks2(MyMatrix<T> const &S) {
+  std::vector<SiegelJordanBlock> raw = JordanSplitting2<T, Tint>(S);
   // the binary blocks, then each scale of unit diagonal entries reduced to at
   // most two units, the traded triples becoming binary forms one scale up
   std::vector<SiegelJordanBlock> res;

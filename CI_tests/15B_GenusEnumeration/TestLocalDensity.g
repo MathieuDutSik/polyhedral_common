@@ -831,6 +831,62 @@ end;
 
 
 #
+# The mass of a genus (Conway-Sloane): against Sage's Genus.mass, and
+# against the masses certified by the enumeration of the rank-8 genera; the
+# canonical 2-adic symbol it is read from, against Sage's.
+#
+
+test_genus_mass:=function(arith)
+    local ListRef, ListVal, n_error, i, name, ListName, ListMass, eLatt, n;
+    ListRef:=ReadAsFunction("density_genus_mass.g")();
+    ListVal:=get_genus_local_density(arith, "genus_mass",
+        List(ListRef, x->Concatenation([x[1]], x[2])));
+    if is_error(ListVal) then
+        return 1;
+    fi;
+    n_error:=0;
+    for i in [1..Length(ListRef)]
+    do
+        if ListVal[i] <> ListRef[i][3] then
+            Print("  genus mass ", i, ": got ", ListVal[i], " expected ", ListRef[i][3], "\n");
+            n_error:=n_error + 1;
+        fi;
+    od;
+    ListName:=["E8", "rank8_det9", "rank8_det25", "rank8_det8", "rank8_det12", "rank8_det16a", "rank8_det16b"];
+    ListMass:=List(ListName, name->EvalString(Concatenation("[", ReplacedString(Chomp(StringFile(Concatenation(name, "_mass.txt"))), " ", ","), "]")));
+    ListVal:=get_genus_local_density(arith, "genus_mass",
+        List(ListName, function(name)
+            local G;
+            G:=ReadListMatrixFile(Concatenation(name, "_lattice.txt"))[1];
+            return Concatenation([Length(G)], Concatenation(G));
+        end));
+    if is_error(ListVal) then
+        return n_error + 1;
+    fi;
+    for i in [1..Length(ListName)]
+    do
+        if ListVal[i] <> ListMass[i][1] / ListMass[i][2] then
+            Print("  genus mass of ", ListName[i], ": got ", ListVal[i], " expected ", ListMass[i], "\n");
+            n_error:=n_error + 1;
+        fi;
+    od;
+    ListVal:=get_genus_local_density(arith, "two_adic_symbol",
+        List(ListRef, x->Concatenation([x[1]], x[2])));
+    if is_error(ListVal) then
+        return n_error + 1;
+    fi;
+    for i in [1..Length(ListRef)]
+    do
+        if ListVal[i][2] <> ListRef[i][4] then
+            Print("  canonical 2-adic symbol ", i, ": got ", ListVal[i][2], " expected ", ListRef[i][4], "\n");
+            n_error:=n_error + 1;
+        fi;
+    od;
+    Print("  genus mass: ", Length(ListRef), " Sage values and canonical 2-adic symbols, ", Length(ListName), " enumerated genera\n");
+    return n_error;
+end;
+
+#
 # Root lattices of rank n - 2 to n: Siegel's constant is halved at n - m = 1,
 # and at m = n the representation mass is a count of overlattices.
 #
@@ -983,6 +1039,7 @@ FullTest:=function()
                       ["overlattice_vs_brute_force", test_overlattice_vs_brute_force],
                       ["overlattice_vs_reduction", test_overlattice_vs_reduction],
                       ["certified_mass_ratio_even", test_certified_mass_ratio_even],
+                      ["genus_mass", test_genus_mass],
                       ["certified_high_rank", test_certified_high_rank],
                       ["full_rank_enumerated", test_full_rank_enumerated]]
         do

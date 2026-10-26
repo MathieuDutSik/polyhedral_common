@@ -5,6 +5,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "LocalDensity.h"
+#include "GenusMass.h"
 #include "LocalDensityOverlattice.h"
 #include "Arithmetic_dispatch_types.h"
 #include <fstream>
@@ -56,6 +57,12 @@
                                    they differ
     mass_ratio              record: n T m S      (n even, m < n)
                             value: M_S / mass of the genus of T
+    two_adic_symbol         record: n T          (T even)
+                            value: [raw, canonical], the 2-adic symbol of
+                                   one Jordan splitting (determinants mod
+                                   8) and the canonical symbol
+    genus_mass              record: n T          (T even, positive)
+                            value: the mass of the genus of T
     full_rank_mass          record: n T S        (S of rank n)
                             value: M_S itself (not divided by the mass):
                                    the number of even overlattices of S in
@@ -221,6 +228,31 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
                    .first;
       }
       push(MassRatioFromDensitiesFull<T, Tint>(S, iter->second, cache));
+    } else if (task == "two_adic_symbol") {
+      int n;
+      is >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      auto to_gap = [](std::vector<std::array<int, 5>> const &sym) {
+        std::ostringstream oss;
+        oss << "[";
+        for (size_t i = 0; i < sym.size(); i++) {
+          if (i > 0) {
+            oss << ", ";
+          }
+          oss << "[" << sym[i][0] << ", " << sym[i][1] << ", " << sym[i][2]
+              << ", " << sym[i][3] << ", " << sym[i][4] << "]";
+        }
+        oss << "]";
+        return oss.str();
+      };
+      std::vector<std::array<int, 5>> raw = TwoAdicSymbolRaw<T, Tint>(Tg);
+      ListVal.push_back("[" + to_gap(raw) + ", " +
+                        to_gap(CanonicalTwoAdicReduction(raw)) + "]");
+    } else if (task == "genus_mass") {
+      int n;
+      is >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      push(GenusMass<T, Tint>(Tg));
     } else if (task == "full_rank_mass") {
       int n;
       is >> n;
@@ -283,6 +315,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  overlattice            records: p n T m S\n";
       std::cerr << "  brute_force            records: p k n T m S\n";
       std::cerr << "  mass_ratio             records: n T m S\n";
+      std::cerr << "  two_adic_symbol        records: n T\n";
+      std::cerr << "  genus_mass             records: n T\n";
       std::cerr << "  full_rank_mass         records: n T S\n";
       std::cerr << "FileOut: a GAP list, or stdout / stderr\n";
       return -1;
