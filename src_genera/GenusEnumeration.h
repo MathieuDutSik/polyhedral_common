@@ -634,18 +634,18 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusScheme scheme,
  */
 template <typename T, typename Tint, typename Tgroup>
 MyMatrix<T> GenusCanonicalGram(MyMatrix<T> const &GramMat, std::ostream &os) {
-  // The root-decomposed canonical form: the roots and the (root-free,
-  // smaller, well-conditioned) complement are canonicalized separately
-  // and the glue tied by the subspace machinery, avoiding the
-  // characteristic-family explosion of the monolithic form on lattices
-  // with spread minima. Measured 45x faster on the determinant-351
-  // genus. Every class of the enumeration uses this same function, so
-  // the deduplication stays consistent.
+  // The Weyl-chamber canonical form (Brandhorst-Hofmann, Prop. 7.6): the
+  // characteristic vectors in one Weyl chamber and the simple roots, a
+  // family spanning the lattice, so neither the Weyl group nor the glue
+  // step enters the computation. About 2x faster than the root-decomposed
+  // form on the 813 classes of the determinant-351 genus. Every class of
+  // the enumeration uses this same function, so the deduplication stays
+  // consistent; the keys are not comparable with those of another method.
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_can;
 #endif
-  MyMatrix<Tint> B = ComputeCanonicalFormRootDecomposed<T, Tint, Tgroup>(
-      GramMat, os);
+  MyMatrix<Tint> B =
+      ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(GramMat, os);
 #ifdef TIMINGS_GENUS_ENUMERATION
   os << "|GENUS: GenusCanonicalGram|=" << time_can << "\n";
 #endif

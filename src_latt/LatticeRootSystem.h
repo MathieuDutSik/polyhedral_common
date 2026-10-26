@@ -46,6 +46,7 @@ template <typename Tint> struct RootSystemData {
   int n_roots;                            // roots up to sign
   int rank;                               // rank of the root sublattice
   MyMatrix<Tint> SimpleRoots;             // rows: a fundamental system
+  MyMatrix<Tint> PositiveRoots;           // rows: the positive roots
   std::vector<DynkinComponent> components;
 };
 
@@ -215,6 +216,7 @@ RootSystemData<Tint> ComputeRootSystem(MyMatrix<T> const &GramMat,
   if (rs.n_roots == 0) {
     rs.rank = 0;
     rs.SimpleRoots = MyMatrix<Tint>(0, n);
+    rs.PositiveRoots = MyMatrix<Tint>(0, n);
     return rs;
   }
 
@@ -277,6 +279,7 @@ RootSystemData<Tint> ComputeRootSystem(MyMatrix<T> const &GramMat,
     }
   }
   rs.SimpleRoots = MatrixFromVectorFamilyDim(n, simple);
+  rs.PositiveRoots = MatrixFromVectorFamilyDim(n, pos);
   rs.rank = simple.size();
 #ifdef DEBUG_LATTICE_ROOT_SYSTEM
   os << "ROOTSYS: n_roots=" << rs.n_roots << " rank=" << rs.rank << "\n";

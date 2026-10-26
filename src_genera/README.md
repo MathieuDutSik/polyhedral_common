@@ -55,7 +55,8 @@ the enumeration, which is what this program does. Timings for
 * The projective points are cut into orbits under the automorphism group
   before neighbours are formed. In rank 14 at p = 2 that is 16383 points, and
   on the determinant-243 seed they fall into 8 orbits.
-* Deduplication is by canonical form (`ComputeCanonicalFormFullRank`), so
+* Deduplication is by canonical form (`ComputeCanonicalFormWeylChamber`,
+  the characteristic vectors in one Weyl chamber and the simple roots), so
   recognising an already known class is a dictionary lookup and not a test
   against every class found so far; the pairwise scheme is quadratic in the
   class number, which is what makes it the bottleneck of a large enumeration.
