@@ -497,7 +497,7 @@ test_certified_mass_ratio:=function(arith)
         fi;
     od;
     Print("  certified mass ratio: ", Length(ListRef), " cases, ", n_covered, " covered\n");
-    if n_covered < 80 then
+    if n_covered < Length(ListRef) then
         Print("  certified mass ratio: coverage dropped to ", n_covered, "\n");
         n_error:=n_error + 1;
     fi;
@@ -558,6 +558,100 @@ test_enumerated_genera:=function(arith)
     return n_error;
 end;
 
+
+#
+# The reduction formula against counting, two independent computations of
+# alpha_p(S, T) at an odd prime with several non-unit entries of S.
+#
+
+random_unimodular:=function(rs, n)
+    local U, i_op, i, j;
+    U:=IdentityMat(n);
+    for i_op in [1..3*n]
+    do
+        i:=Random(rs, [1..n]);
+        j:=Random(rs, [1..n]);
+        if i <> j then
+            U[i]:=U[i] + Random(rs, [-1, 1]) * U[j];
+        fi;
+    od;
+    return U;
+end;
+
+# An even form of rank n with Jordan levels 0 and 1 at p.
+random_form_at_p:=function(rs, n, p)
+    local blocks, rest, kind, E, U;
+    blocks:=[];
+    rest:=n;
+    while rest > 0
+    do
+        kind:=Random(rs, [1..4]);
+        if (kind = 2 or kind = 4) and rest < 2 then
+            kind:=1;
+        fi;
+        if kind = 1 then
+            Add(blocks, cartan_A(1)); rest:=rest - 1;
+        elif kind = 2 then
+            Add(blocks, cartan_A(2)); rest:=rest - 2;
+        elif kind = 3 then
+            Add(blocks, p * cartan_A(1)); rest:=rest - 1;
+        else
+            Add(blocks, p * cartan_A(2)); rest:=rest - 2;
+        fi;
+    od;
+    E:=block_diagonal(blocks);
+    U:=random_unimodular(rs, n);
+    return TransposedMat(U) * E * U;
+end;
+
+test_reduction_vs_counting:=function(arith)
+    local rs, ListRec, p, i, n, T, ListS, S, ListRed, ListCnt, n_cmp, n_error, k;
+    rs:=RandomSource(IsMersenneTwister, 20261029);
+    ListRec:=[];
+    for p in [3, 5, 7]
+    do
+        # two non-unit entries: counting is cheap there; three or more are
+        # checked through the certified values of test_certified_mass_ratio
+        ListS:=[block_diagonal([p * cartan_A(1), p * cartan_A(1)]),
+                p * cartan_A(2),
+                block_diagonal([p * cartan_A(1), p^2 * cartan_A(1)])];
+        for i in [1..12]
+        do
+            n:=Random(rs, [5..8]);
+            T:=random_form_at_p(rs, n, p);
+            for S in ListS
+            do
+                if n - Length(S) >= 2 then
+                    Add(ListRec, Concatenation([p, n], Concatenation(T), [Length(S)], Concatenation(S)));
+                fi;
+            od;
+        od;
+    od;
+    ListRed:=get_genus_local_density(arith, "reduction", ListRec);
+    ListCnt:=get_genus_local_density(arith, "counting", ListRec);
+    if is_error(ListRed) or is_error(ListCnt) then
+        return 1;
+    fi;
+    n_cmp:=0;
+    n_error:=0;
+    for k in [1..Length(ListRec)]
+    do
+        if ListCnt[k] <> fail then
+            n_cmp:=n_cmp + 1;
+            if ListRed[k] <> ListCnt[k] then
+                Print("  reduction vs counting, record ", ListRec[k], ": reduction ", ListRed[k], " counting ", ListCnt[k], "\n");
+                n_error:=n_error + 1;
+            fi;
+        fi;
+    od;
+    Print("  reduction vs counting: ", Length(ListRec), " cases, ", n_cmp, " compared\n");
+    if n_cmp < 20 then
+        Print("  reduction vs counting: too few comparisons\n");
+        n_error:=n_error + 1;
+    fi;
+    return n_error;
+end;
+
 FullTest:=function()
     local n_error, arith, eTest, n_err;
     n_error:=0;
@@ -573,7 +667,8 @@ FullTest:=function()
                       ["rank_one_density", test_rank_one_density],
                       ["unit_chain", test_unit_chain],
                       ["certified_mass_ratio", test_certified_mass_ratio],
-                      ["enumerated_genera", test_enumerated_genera]]
+                      ["enumerated_genera", test_enumerated_genera],
+                      ["reduction_vs_counting", test_reduction_vs_counting]]
         do
             n_err:=eTest[2](arith);
             Print("arith=", arith, " test=", eTest[1], " n_error=", n_err, "\n");

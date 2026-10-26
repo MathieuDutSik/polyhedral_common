@@ -38,6 +38,13 @@
     unit_chain              record: p n T m S    (p odd)
                             value: alpha_p(S, T), or fail when S has two
                                    or more non-unit entries at p
+    counting                record: p n T m S    (p odd)
+                            value: alpha_p(S, T) by counting on all of S at
+                                   once (no unit chain), or fail beyond the
+                                   counting budget
+    reduction               record: p n T m S    (p odd)
+                            value: alpha_p(S, T) by the unit chain and the
+                                   reduction formula
     mass_ratio              record: n T m S      (n even, det T odd)
                             value: M_S / mass of the genus of T, or fail
                                    outside the coverage of the unit chain
@@ -132,6 +139,31 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       } else {
         ListVal.push_back("fail");
       }
+    } else if (task == "counting") {
+      int64_t p;
+      int n, m;
+      is >> p >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      is >> m;
+      MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
+      std::optional<T> opt = CountingDensity<T>(
+          OddDiagonalClasses<T, Tint>(S, p), OddDiagonalClasses<T, Tint>(Tg, p),
+          p, cache.bad);
+      if (opt) {
+        push(*opt);
+      } else {
+        ListVal.push_back("fail");
+      }
+    } else if (task == "reduction") {
+      int64_t p;
+      int n, m;
+      is >> p >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      is >> m;
+      MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
+      push(DensityOddDiagonal<T>(OddDiagonalClasses<T, Tint>(S, p),
+                                 OddDiagonalClasses<T, Tint>(Tg, p), p,
+                                 cache.bad));
     } else if (task == "mass_ratio") {
       int n, m;
       is >> n;
@@ -204,6 +236,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  alpha_unimodular       records: p k xi_T m S\n";
       std::cerr << "  rank_one_density       records: p n T a\n";
       std::cerr << "  unit_chain             records: p n T m S\n";
+      std::cerr << "  counting               records: p n T m S\n";
+      std::cerr << "  reduction              records: p n T m S\n";
       std::cerr << "  mass_ratio             records: n T m S\n";
       std::cerr << "FileOut: a GAP list, or stdout / stderr\n";
       return -1;

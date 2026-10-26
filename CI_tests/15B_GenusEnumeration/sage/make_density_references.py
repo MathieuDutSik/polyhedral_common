@@ -275,6 +275,14 @@ def grid_rank_one_density():
     return out
 
 
+def true_local_density(Q, p, a):
+    """The local density of the definition: Sage's local_density divides the
+    form and the target by the content of the form, which for an imprimitive
+    Q = p^v Q' divides the density by p^v (see grid_rank_one_density)."""
+    from sage.all import gcd, valuation
+    return QQ(p)**valuation(gcd(Q.coefficients()), p) * Q.local_density(p, a)
+
+
 def unit_chain_sage(S, T, p):
     from sage.all import QuadraticForm, valuation
     def diag(M):
@@ -293,13 +301,15 @@ def unit_chain_sage(S, T, p):
     chain = units + nonunits
     alpha = QQ(1)
     for k, s in enumerate(chain):
-        alpha *= qf(D).local_density(p, s)
+        alpha *= true_local_density(qf(D), p, s)
         if k == len(chain) - 1:
             break
         uni = [c for c in D if valuation(c, p) == 0]
         rest = [c for c in D if valuation(c, p) > 0]
         if len(uni) < 2:
-            return "fail"
+            # no unimodular part left in the complement
+            D = rest
+            continue
         prod_uni = prod(QQ(c) for c in uni)
         keep = uni[:-2]
         last = prod_uni / (QQ(s) * prod(QQ(c) for c in keep))
