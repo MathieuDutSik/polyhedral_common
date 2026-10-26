@@ -289,6 +289,28 @@ else()
   message(STATUS "netCDF not found — CTYP_* targets will be skipped")
 endif()
 
+find_path(
+  QHULL_INCLUDE_DIR
+  NAMES libqhull_r/qhull_ra.h
+  HINTS
+    /opt/homebrew/include
+    /usr/local/include
+)
+find_library(
+  QHULL_LIBRARY
+  NAMES qhullstatic_r
+  HINTS
+    /opt/homebrew/lib
+    /usr/local/lib
+)
+if(QHULL_INCLUDE_DIR AND QHULL_LIBRARY)
+  set(HAVE_QHULL TRUE)
+  message(STATUS "qhull found — PERIODIC_JointCoveringSearch will be built")
+else()
+  set(HAVE_QHULL FALSE)
+  message(STATUS "qhull not found — PERIODIC_JointCoveringSearch will be skipped")
+endif()
+
 set(NAUTY_PREFIX "${CMAKE_BINARY_DIR}/external/nauty")
 set(NAUTY_INSTALL_DIR "${NAUTY_PREFIX}/install")
 set(NAUTY_INCLUDE_DIR "${NAUTY_INSTALL_DIR}/include")
@@ -438,6 +460,17 @@ if(HAVE_NETCDF)
     INTERFACE
       "${NETCDF_CXX_LIBRARY}"
       "${NETCDF_LIBRARY}"
+  )
+endif()
+
+if(HAVE_QHULL)
+  add_library(polyhedral_qhull_support INTERFACE)
+  target_include_directories(polyhedral_qhull_support INTERFACE "${QHULL_INCLUDE_DIR}")
+  target_link_libraries(
+    polyhedral_qhull_support
+    INTERFACE
+      polyhedral_common
+      "${QHULL_LIBRARY}"
   )
 endif()
 
@@ -698,6 +731,7 @@ set(
   CheckPositiveSemiDefinite
   LATT_DiophantApprox
   LATT_AutomorphyReduction
+  LATT_SublatticeBasisReduction
 )
 foreach(target IN LISTS ISOTROPY_PROGRAMS)
   add_polyhedral_binary(
@@ -842,6 +876,13 @@ foreach(target IN LISTS DELAUNAY_PROGRAMS)
     polyhedral_delaunay_support
   )
 endforeach()
+if(HAVE_QHULL)
+  add_polyhedral_binary(
+    PERIODIC_JointCoveringSearch
+    "${CMAKE_SOURCE_DIR}/src_delaunay/PERIODIC_JointCoveringSearch.cpp"
+    polyhedral_qhull_support
+  )
+endif()
 
 set(
   K_COVERING_PROGRAMS
@@ -872,6 +913,7 @@ set(
   LORENTZ_PERF_Isomorphism
   LORENTZ_Serial_PerfectLorentzian
   LORENTZ_ReflectiveEdgewalk
+  LORENTZ_ComputeRoots_Vertex
 )
 foreach(target IN LISTS LORENTZIAN_PROGRAMS)
   add_polyhedral_binary(
@@ -926,7 +968,6 @@ set(
   POLY_IntegralPoints
   POLY_SkelettonClarkson
   VectFamily_ColumnReduction
-  POLY_lrs
   POLY_SmallPolytope
   POLY_LinearDetermineByInequalities
   POLY_check_empty_intersection
@@ -1066,6 +1107,7 @@ set(
   ERDAHL_PROGRAMS
   ERDAHL_CutInequalities
   ERDAHL_EnumeratePerfect
+  ERDAHL_zero_set
 )
 foreach(target IN LISTS ERDAHL_PROGRAMS)
   add_polyhedral_binary(
@@ -1083,6 +1125,7 @@ set(
   POLYNORM_MaxKissing
   POLYNORM_OptimalLattice
   POLYNORM_Packing
+  POLYNORM_PackingContacts
 )
 foreach(target IN LISTS POLYNORM_PROGRAMS)
   add_polyhedral_binary(

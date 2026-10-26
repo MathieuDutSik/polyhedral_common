@@ -109,7 +109,7 @@ This is exact on the simplices, cross polytopes and cubes themselves.
 
 ## Validation
 
-`POLYNORM_TestCovering` and `CI_tests/25B_PolyNorm/run_tests.sh`: known
+`CI_tests/25B_PolyNorm/TestPolyNorm.g`: known
 values in dimensions 2 to 5 (cubes, cross polytopes, simplices, the
 hexagon, the 24-cell) and the brute force enumeration of the paper (all
 systems of `n+1` pairs, one at `z = 0`, solved exactly) on every
@@ -126,7 +126,7 @@ takes 0.5 s (128 nodes).
 
 The drivers take `gmp` (`mpq_class`) or, with `make ENABLE_FLINT_SUPPORT=1`,
 `flint` (`fmpq_class`). Same results everywhere; the non-debug timings of
-`POLYNORM_TestCovering` (Apple M-series):
+the packing and covering computations (Apple M-series):
 
 | case                         | gmp     | flint  |
 |------------------------------|---------|--------|

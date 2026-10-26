@@ -2,7 +2,7 @@
 # that ignores CHOICE_COMPILATION (no debug, timing or sanity code), on the
 # FLINT arithmetic. FLINT_INCDIR / FLINT_LINK can be set in the environment;
 # the defaults assume FLINT installed next to GMP.
-PROGRAM		= ERDAHL_EnumeratePerfect
+PROGRAM		= ERDAHL_EnumeratePerfect ERDAHL_zero_set
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

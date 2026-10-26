@@ -36,15 +36,16 @@ jobs:
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-gap
       - name: Test the packing and covering computations.
         run: |
           make -C src_polynorm
           echo "After compilation of the polyhedral norm code"
 
           cd CI_tests/25B_PolyNorm
-          ./run_tests.sh
+          ../../gap.sh < TestPolyNorm.g
           if [ ! -f "CI_CONCLUSION" ]; then
-            echo "The test script has not created the expected file" >&2
+            echo "The gap test code has not created the expected file" >&2
             exit 1
           fi
           cd ../..

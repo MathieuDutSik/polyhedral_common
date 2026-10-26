@@ -1,4 +1,4 @@
-PROGRAM		= Robust_RandomEstimation Robust_GetPVoronoi Robust_ExactRobustCoveringDensity Robust_RandomVertexEstimation Robust_PVoronoi_Stabilizer Test_SoftBoundaryStore
+PROGRAM		= Robust_RandomEstimation Robust_GetPVoronoi Robust_ExactRobustCoveringDensity Robust_RandomVertexEstimation Robust_PVoronoi_Stabilizer
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

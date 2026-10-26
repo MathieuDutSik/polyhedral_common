@@ -46,13 +46,17 @@ void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
     }
   }
   int prime = spec.prime;
-  if (prime == 0) {
+  if (spec.strategy == NeighborStrategy::OutPrime && prime == 0) {
     prime = ChooseNeighborPrime<T>(spec.det);
   }
   GenusEnumerationResult<T, Tgroup> result =
       GenusEnumeration<T, Tint, Tgroup>(ListSeed, TotalMass, prime, scheme,
-                                        std::cerr);
-  WriteGenusEnumerationResult(os, result, OutFormat, prime);
+                                        spec.strategy, std::cerr);
+  // With the iterate strategy there is no single prime; 0 marks that in
+  // the output record.
+  int prime_out =
+      (spec.strategy == NeighborStrategy::OutPrime) ? prime : 0;
+  WriteGenusEnumerationResult(os, result, OutFormat, prime_out);
 }
 
 int main(int argc, char *argv[]) {
@@ -104,6 +108,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "                     rank <n>\n";
       std::cerr << "                     det <determinant>\n";
       std::cerr << "                     prime <p>     (optional, 0 = auto)\n";
+      std::cerr << "                     strategy <s>  (optional: out_prime\n";
+      std::cerr << "                       (default) runs one prime, the\n";
+      std::cerr << "                       given one or the smallest not\n";
+      std::cerr << "                       dividing det; iterate runs the\n";
+      std::cerr << "                       primes 2, 3, 5, ... in order,\n";
+      std::cerr << "                       including those dividing det,\n";
+      std::cerr << "                       cheapest first, until the mass\n";
+      std::cerr << "                       closes; prime is then ignored)\n";
       std::cerr << "Lattice (input) : one or more Gram matrices, in the\n";
       std::cerr << "                  ListMatrix format. One seed per SPINOR\n";
       std::cerr << "                  genus is needed: the p-neighbour graph\n";

@@ -1,4 +1,4 @@
-PROGRAM		= POLYNORM_Packing POLYNORM_Covering POLYNORM_TestCovering \
+PROGRAM		= POLYNORM_Packing POLYNORM_Covering \
 		  POLYNORM_OptimalLattice POLYNORM_LatticeCertify \
 		  POLYNORM_BetkeHenk POLYNORM_MaxKissing
 

@@ -46,16 +46,15 @@ faster); every result is exact.
   * **POLYNORM_Packing** `[arith] [FileEXT] [OutFormat] [OutFile]` returns the
     packing scalar `alpha` and the contact vectors, the lattice vectors `z`
     for which `alpha P` and `alpha P + z` touch.
-  * **POLYNORM_Covering** `[arith] [FileEXT] [OutFormat] [OutFile]` returns the
-    covering radius `mu`, a last covered point `p` (in the coordinates of
+  * **POLYNORM_Covering** `[arith] [FileEXT] [OutFormat] [OutFile] [method]`
+    returns the covering radius `mu`, a last covered point `p` (in the coordinates of
     the input) and the lattice points on the boundary of the empty translate
     `p - mu P` together with the facets of `P` they touch. This translate is
     the analogue of a Delaunay polytope: its interior is lattice free and
-    the lattice points on its boundary pin it.
-  * **POLYNORM_TestCovering** `[arith] [FileEXT] [alpha] [mu] [max_brute_force]`
-    runs both computations, compares them with the expected values (or
-    `none`) and, when the enumeration has at most `max_brute_force`
-    systems, with the brute force algorithm of the paper above.
+    the lattice points on its boundary pin it. The `method` is
+    `branch_and_bound` (default) or `brute_force`, the enumeration of all
+    the candidate systems of the paper above, for small cases only, which
+    gives `mu` and `p` only.
   * **POLYNORM_OptimalLattice** `[arith] [FileEXT] [problem] [n_start] [seed] [FileStart] [OutFile]`
     searches the lattice `L` giving the densest lattice packing
     (`problem=packing`) or the thinnest lattice covering
@@ -217,4 +216,4 @@ Files
   * `PolyNorm_Kissing.h`: the maximal kissing number by the contact
     configuration enumeration of `PolyNorm_PackingContacts.h` and the exact
     admissibility branch and bound.
-  * The CI test is `CI_tests/25B_PolyNorm/run_tests.sh`.
+  * The CI test is `CI_tests/25B_PolyNorm/TestPolyNorm.g`.

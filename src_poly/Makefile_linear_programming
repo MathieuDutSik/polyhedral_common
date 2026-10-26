@@ -1,4 +1,4 @@
-PROGRAM		= POLY_cdd_LinearProgramming POLY_LinearDetermineByInequalities POLY_check_empty_intersection Test_SimplexRealAlgebraic
+PROGRAM		= POLY_cdd_LinearProgramming POLY_LinearDetermineByInequalities POLY_check_empty_intersection
 
 SRCFILES	=
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

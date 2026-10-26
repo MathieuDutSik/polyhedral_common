@@ -12,7 +12,7 @@
 
 template <typename T>
 void ComputeCovering(std::string const &FileEXT, std::string const &OutFormat,
-                     std::ostream &os_out) {
+                     std::string const &method, std::ostream &os_out) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -21,6 +21,32 @@ void ComputeCovering(std::string const &FileEXT, std::string const &OutFormat,
   MyMatrix<T> EXT = ReadMatrixFile<T>(FileEXT);
   PolyNormData<T, Tint, Tgroup> data =
       PolyNorm_BuildData<T, Tint, Tgroup>(EXT, std::cerr);
+  if (method == "brute_force") {
+    // The enumeration of all the candidate systems, only for small cases: it
+    // gives the covering radius and a last covered point.
+    std::pair<T, MyVector<T>> brute =
+        PolyNorm_CoveringBruteForce(data, std::cerr);
+    MyVector<T> p_input = brute.second + data.center;
+    if (OutFormat == "text") {
+      os_out << "Covering radius mu=" << brute.first << "\n";
+      os_out << "Last covered point p=" << StringVector(p_input) << "\n";
+      return;
+    }
+    if (OutFormat == "GAP") {
+      os_out << "return rec(mu:=" << brute.first << ", p:=";
+      WriteVectorGAP(os_out, p_input);
+      os_out << ");\n";
+      return;
+    }
+    std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+              << "\n";
+    throw TerminalException{1};
+  }
+  if (method != "branch_and_bound") {
+    std::cerr << "Failed to find a matching entry for method=" << method
+              << ", allowed: branch_and_bound and brute_force\n";
+    throw TerminalException{1};
+  }
   PolyNormCovering<T, Tint> res =
       ComputePolyNormCovering<T, Tint, Tgroup>(data, std::cerr);
   // The last covered point in the coordinates of the input.
@@ -74,14 +100,18 @@ int main(int argc, char *argv[]) {
     std::string FileEXT;
     std::string OutFormat = "text";
     std::string OutFile = "stderr";
+    std::string method = "branch_and_bound";
     std::ostream *os_ptr = nullptr;
     ArithmeticDispatch dispatch;
     add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
-      ComputeCovering<T>(FileEXT, OutFormat, *os_ptr);
+      ComputeCovering<T>(FileEXT, OutFormat, method, *os_ptr);
     });
-    if (argc != 3 && argc != 5) {
+    if (argc != 3 && argc != 5 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
+      std::cerr << "POLYNORM_Covering [arith] [FileEXT] [OutFormat] [OutFile] "
+                   "[method]\n";
+      std::cerr << "    or\n";
       std::cerr << "POLYNORM_Covering [arith] [FileEXT] [OutFormat] [OutFile]\n";
       std::cerr << "    or\n";
       std::cerr << "POLYNORM_Covering [arith] [FileEXT]\n";
@@ -92,6 +122,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "            in homogeneous coordinates (1, v)\n";
       std::cerr << "OutFormat : text (default) or GAP\n";
       std::cerr << "OutFile   : the output file, or stderr / stdout\n";
+      std::cerr << "method    : branch_and_bound (default), or brute_force,\n";
+      std::cerr << "            the enumeration of all the candidate\n";
+      std::cerr << "            systems, for small cases only\n";
       std::cerr << "\n";
       std::cerr << "Computes the smallest mu such that the translates\n";
       std::cerr << "mu P + z, z in Z^n, cover R^n, with a last covered point\n";
@@ -100,9 +133,12 @@ int main(int argc, char *argv[]) {
     }
     std::string arith = argv[1];
     FileEXT = argv[2];
-    if (argc == 5) {
+    if (argc >= 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
+    }
+    if (argc == 6) {
+      method = argv[5];
     }
     auto prt = [&](std::ostream &os_out) -> void {
       os_ptr = &os_out;

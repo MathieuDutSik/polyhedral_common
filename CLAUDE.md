@@ -26,6 +26,21 @@ programs or tests run side by side, no `mpirun` with more than one process,
 and a computation that would go over 10G is stopped or cut down to a smaller
 case rather than left to grow.
 
+### Every long or memory-risky run goes through `scripts/run_capped.sh`
+
+    scripts/run_capped.sh <maxGB> <max_seconds> <logfile> <command> [args...]
+
+It polls the summed RSS of the WHOLE process tree and kills it on breach
+(exit 137 for memory, 124 for time; the command's own code otherwise), and
+appends the reason and the peak RSS to the logfile. Do not write ad hoc
+watchdog loops instead: a hand-rolled monitor that watches the PID of a
+wrapper (`/usr/bin/time`, a shell) instead of the compute binary is blind,
+which is how a GENUS_Enumerate run ate all the machine's memory on
+2026-10-25. The tree-based script cannot be blinded that way. macOS has no
+enforceable `ulimit -v`, so polling is the mechanism; a very fast allocation
+spike can overshoot by what it allocates within one poll interval
+(`RUN_CAPPED_POLL`, default 10 s).
+
 ## `basic_common_cpp/` and `permutalib/` are git submodules — do not edit in place
 
 Both `basic_common_cpp/` and `permutalib/` inside this repo are git submodules of their respective upstream projects. Any edit made directly to a file under either directory will be silently overwritten the next time the submodule is updated and will not propagate to the upstream.
