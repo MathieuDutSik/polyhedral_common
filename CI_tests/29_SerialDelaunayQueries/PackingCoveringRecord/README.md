@@ -22,7 +22,7 @@ The configuration recorded here is a 2-periodic NON-LATTICE point set with
 | `Gram_record` | the exact optimum `A_0`, over that field |
 | `Cosets_record` | the coset of the exact optimum, over that field |
 
-`../run_packing_covering_record.sh` runs `LATT_SerialPeriodicDelaunay` on the
+`../TestPackingCoveringRecord.g` runs `LATT_SerialPeriodicDelaunay` on the
 witness and checks the inequality exactly.
 
 ## The witness, and why it is the thing that gets checked
