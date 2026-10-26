@@ -355,28 +355,28 @@ roots_and_products:=function(G)
     return rec(roots:=roots, IP:=List(roots, x->List(roots, y->x * G * y)));
 end;
 
-# The number of ordered tuples of roots with Gram matrix S (diagonal 2).
+# The number of ordered tuples of roots with Gram matrix S (diagonal 2):
+# allowed[l] holds the roots compatible with the choices so far at the
+# position l, and the last position is counted without being enumerated.
 count_representations:=function(RP, S)
-    local m, n_root, rec_count;
+    local m, rec_count;
     m:=Length(S);
-    n_root:=Length(RP.roots);
-    rec_count:=function(chosen)
-        local k, total, j;
-        k:=Length(chosen) + 1;
+    rec_count:=function(k, allowed)
+        local total, j, new_allowed;
+        if k = m then
+            return Length(allowed[m]);
+        fi;
         total:=0;
-        for j in [1..n_root]
+        for j in allowed[k]
         do
-            if ForAll([1..k-1], i->RP.IP[chosen[i]][j] = S[i][k]) then
-                if k = m then
-                    total:=total + 1;
-                else
-                    total:=total + rec_count(Concatenation(chosen, [j]));
-                fi;
+            new_allowed:=List([k+1..m], l->Filtered(allowed[l], x->RP.IP[j][x] = S[k][l]));
+            if ForAll(new_allowed, x->Length(x) > 0) then
+                total:=total + rec_count(k + 1, Concatenation(List([1..k], l->[]), new_allowed));
             fi;
         od;
         return total;
     end;
-    return rec_count([]);
+    return rec_count(1, List([1..m], l->[1..Length(RP.roots)]));
 end;
 
 # 2 * (generic part) * prod_{p | 2 det S} alpha_p(S, T), T of rank n = 2k
@@ -829,6 +829,140 @@ test_certified_mass_ratio_even:=function(arith)
     return n_error;
 end;
 
+
+#
+# Root lattices of rank n - 2 to n: Siegel's constant is halved at n - m = 1,
+# and at m = n the representation mass is a count of overlattices.
+#
+
+test_certified_high_rank:=function(arith)
+    local R, ListVal, n_error, i;
+    R:=ReadAsFunction("density_certified_high_rank.g")();
+    n_error:=0;
+    ListVal:=get_genus_local_density(arith, "mass_ratio",
+        List(R.high, x->Concatenation([x[1]], x[2], [x[3]], x[4])));
+    if is_error(ListVal) then
+        return 1;
+    fi;
+    for i in [1..Length(R.high)]
+    do
+        if ListVal[i] <> R.high[i][5] then
+            Print("  certified high rank ", i, ": got ", ListVal[i], " expected ", R.high[i][5], "\n");
+            n_error:=n_error + 1;
+        fi;
+    od;
+    ListVal:=get_genus_local_density(arith, "full_rank_mass",
+        List(R.full, x->Concatenation([x[1]], x[2], x[3])));
+    if is_error(ListVal) then
+        return n_error + 1;
+    fi;
+    for i in [1..Length(R.full)]
+    do
+        if ListVal[i] <> R.full[i][4] then
+            Print("  certified full rank ", i, ": got ", ListVal[i], " expected ", R.full[i][4], "\n");
+            n_error:=n_error + 1;
+        fi;
+    od;
+    Print("  certified high rank: ", Length(R.high), " mass ratios, ", Length(R.full), " full rank masses\n");
+    return n_error;
+end;
+
+# The ADE root lattices of rank n with at most max_comp components, as Gram
+# matrices.
+root_lattices_of_rank:=function(n, max_comp)
+    local irreducible, result, rec_build;
+    irreducible:=function(r)
+        local L;
+        L:=[cartan_A(r)];
+        if r >= 4 then
+            Add(L, cartan_D(r));
+        fi;
+        if r in [6, 7, 8] then
+            Add(L, cartan_E8(){[1..r]}{[1..r]});
+        fi;
+        return L;
+    end;
+    result:=[];
+    # components of non-increasing rank, to list every type once up to order
+    rec_build:=function(chosen, rest, max_rank)
+        local r, C;
+        if rest = 0 then
+            Add(result, block_diagonal(chosen));
+            return;
+        fi;
+        if Length(chosen) = max_comp then
+            return;
+        fi;
+        for r in [1..Minimum(rest, max_rank)]
+        do
+            for C in irreducible(r)
+            do
+                rec_build(Concatenation(chosen, [C]), rest - r, r);
+            od;
+        od;
+    end;
+    rec_build([], n, n);
+    return result;
+end;
+
+# the counted masses do not depend on the arithmetic: computed once
+full_rank_counted:=rec();
+
+test_full_rank_enumerated:=function(arith)
+    local ListS, n_error, n_nonzero, name, R, ListRP, ListVal, truth, i, detT, detS, n_rootS;
+    # with many small components the counting of root tuples in GAP is slow
+    ListS:=root_lattices_of_rank(8, 3);
+    n_error:=0;
+    n_nonzero:=0;
+    for name in ["rank8_det9", "rank8_det25", "rank8_det8", "rank8_det12", "rank8_det16a", "rank8_det16b"]
+    do
+        R:=enumerate_genus(name);
+        if R.complete <> true then
+            Print("  ", name, ": the enumeration is not complete\n");
+            return 1;
+        fi;
+        ListRP:=List(R.ListGram, roots_and_products);
+        ListVal:=get_genus_local_density(arith, "full_rank_mass",
+            List(ListS, S->Concatenation([8], Concatenation(R.ListGram[1]), Concatenation(S))));
+        if is_error(ListVal) then
+            return n_error + 1;
+        fi;
+        detT:=DeterminantMat(R.ListGram[1]);
+        if not IsBound(full_rank_counted.(name)) then
+            full_rank_counted.(name):=[];
+        fi;
+        for i in [1..Length(ListS)]
+        do
+            if not IsBound(full_rank_counted.(name)[i]) then
+                # S embeds in L only if L contains S with square index, and
+                # then the roots of S are among those of L
+                detS:=DeterminantMat(ListS[i]);
+                n_rootS:=Length(roots_and_products(ListS[i]).roots);
+                if detS mod detT <> 0 or not IsSquareInt(detS / detT) then
+                    full_rank_counted.(name)[i]:=0;
+                else
+                    full_rank_counted.(name)[i]:=Sum(Filtered([1..Length(R.ListGram)], j->Length(ListRP[j].roots) >= n_rootS),
+                        j->count_representations(ListRP[j], ListS[i]) / R.ListAutOrder[j]);
+                fi;
+            fi;
+            truth:=full_rank_counted.(name)[i];
+            if truth <> 0 then
+                n_nonzero:=n_nonzero + 1;
+            fi;
+            if ListVal[i] <> truth then
+                Print("  ", name, ", S=", ListS[i], ": counted ", truth, " predicted ", ListVal[i], "\n");
+                n_error:=n_error + 1;
+            fi;
+        od;
+    od;
+    Print("  full rank on enumerated genera: ", Length(ListS), " root lattices, ", n_nonzero, " non-zero masses\n");
+    if n_nonzero < 6 then
+        Print("  full rank on enumerated genera: too few non-zero masses\n");
+        n_error:=n_error + 1;
+    fi;
+    return n_error;
+end;
+
 FullTest:=function()
     local n_error, arith, eTest, n_err;
     n_error:=0;
@@ -848,7 +982,9 @@ FullTest:=function()
                       ["reduction_vs_counting", test_reduction_vs_counting],
                       ["overlattice_vs_brute_force", test_overlattice_vs_brute_force],
                       ["overlattice_vs_reduction", test_overlattice_vs_reduction],
-                      ["certified_mass_ratio_even", test_certified_mass_ratio_even]]
+                      ["certified_mass_ratio_even", test_certified_mass_ratio_even],
+                      ["certified_high_rank", test_certified_high_rank],
+                      ["full_rank_enumerated", test_full_rank_enumerated]]
         do
             n_err:=eTest[2](arith);
             Print("arith=", arith, " test=", eTest[1], " n_error=", n_err, "\n");

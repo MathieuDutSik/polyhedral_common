@@ -54,8 +54,12 @@
                             value: alpha_p(S, T) by exhaustive counting at
                                    the levels k - 1 and k, or fail when
                                    they differ
-    mass_ratio              record: n T m S      (n even)
+    mass_ratio              record: n T m S      (n even, m < n)
                             value: M_S / mass of the genus of T
+    full_rank_mass          record: n T S        (S of rank n)
+                            value: M_S itself (not divided by the mass):
+                                   the number of even overlattices of S in
+                                   the genus of T
  */
 
 template <typename T> MyMatrix<T> ReadSquareMatrixEntries(std::istream &is, int m) {
@@ -93,6 +97,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
   std::vector<std::string> ListVal;
   LocalDensityCache<T> cache;
   std::map<std::vector<T>, GenusDensityDataFull<T>> genus_data;
+  FullRankOverlatticeCache<T> full_rank_cache;
   auto push = [&](T const &val) -> void {
     std::ostringstream oss;
     oss << val;
@@ -216,6 +221,12 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
                    .first;
       }
       push(MassRatioFromDensitiesFull<T, Tint>(S, iter->second, cache));
+    } else if (task == "full_rank_mass") {
+      int n;
+      is >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, n);
+      push(FullRankRepresentationMass<T, Tint>(S, Tg, full_rank_cache));
     } else if (task == "alpha_unimodular") {
       int64_t p;
       int k, xi_T, m;
@@ -272,6 +283,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "  overlattice            records: p n T m S\n";
       std::cerr << "  brute_force            records: p k n T m S\n";
       std::cerr << "  mass_ratio             records: n T m S\n";
+      std::cerr << "  full_rank_mass         records: n T S\n";
       std::cerr << "FileOut: a GAP list, or stdout / stderr\n";
       return -1;
     }

@@ -16,7 +16,7 @@
   Representation masses from local densities.
 
   For a positive definite form S of rank m and a genus G of rank n, with
-  n - m >= 3, Siegel's theorem reads
+  n - m >= 1, Siegel's theorem reads
 
       M_S / mass(G) = c * alpha_oo(S, T) * prod_p alpha_p(S, T),
 
@@ -28,7 +28,8 @@
   masses of completely enumerated genera: S and T are EVEN bilinear Gram
   matrices, the local density at p counts solutions of X^t T X = S modulo
   p^k off the diagonal and 2 p^k on it, and with that normalisation the
-  archimedean constant is c = 2.
+  archimedean constant is c = 2 for n - m >= 2 and c = 1 for n - m = 1
+  (Siegel's epsilon; checked on the certified masses of ranks 12 and 13).
 
   This file holds the part of the product that does not depend on the
   p-adic structure beyond the determinants: the archimedean factor times
@@ -157,8 +158,8 @@ PiRadical<T> ArchimedeanFactor(int n, int m, int64_t detS, int64_t detT) {
  */
 template <typename T>
 T GenericDensityPart(int n, int m, int64_t detS, int64_t detT) {
-  if (n - m < 3) {
-    std::cerr << "LDEN: GenericDensityPart needs n - m >= 3, got n=" << n
+  if (n - m < 1) {
+    std::cerr << "LDEN: GenericDensityPart needs n - m >= 1, got n=" << n
               << " m=" << m << "\n";
     throw TerminalException{1};
   }

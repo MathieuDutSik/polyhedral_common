@@ -787,40 +787,6 @@ template <typename T> struct LocalDensityCache {
   BadPrimeDensityCache<T> bad;
 };
 
-template <typename T, typename Tint>
-std::optional<T> MassRatioFromDensities(MyMatrix<T> const &S,
-                                        GenusDensityData const &data,
-                                        LocalDensityCache<T> &cache) {
-  int n = data.n;
-  int m = S.rows();
-  if (n % 2 != 0) {
-    std::cerr << "LDBP: MassRatioFromDensities needs an even rank\n";
-    throw TerminalException{1};
-  }
-  if (n - m < 3) {
-    std::cerr << "LDBP: MassRatioFromDensities needs n - m >= 3\n";
-    throw TerminalException{1};
-  }
-  int64_t detS = DeterminantInt64<T, Tint>(S);
-  int64_t detT = data.detT;
-  if (detT % 2 == 0) {
-    std::cerr << "LDBP: MassRatioFromDensities needs an odd determinant\n";
-    throw TerminalException{1};
-  }
-  int k = n / 2;
-  T val = T(2) * GenericDensityPart<T>(n, m, detS, detT);
-  for (int64_t p : BadPrimes(detS, detT)) {
-    if (detT % p == 0) {
-      val *= DensityOddDiagonal<T>(OddDiagonalClasses<T, Tint>(S, p),
-                                   data.odd_diagonal.at(p), p, cache.bad);
-    } else {
-      int xi_T = KroneckerSymbol(SignedPower(k, detT), p);
-      val *= AlphaUnimodularTarget<T, Tint>(S, p, k, xi_T, cache.siegel);
-    }
-  }
-  return val;
-}
-
 // clang-format off
 #endif  // SRC_GENERA_LOCALDENSITYBADPRIMES_H_
 // clang-format on
