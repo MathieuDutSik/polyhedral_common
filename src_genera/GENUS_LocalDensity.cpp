@@ -7,9 +7,11 @@
 #include "LocalDensity.h"
 #include "GenusMass.h"
 #include "LocalDensityOverlattice.h"
+#include "RootEmbeddings.h"
 #include "Arithmetic_dispatch_types.h"
 #include <fstream>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -57,6 +59,10 @@
                                    they differ
     mass_ratio              record: n T m S      (n even, m < n)
                             value: M_S / mass of the genus of T
+    root_embedding          record: R T          (ADE type names, e.g.
+                                                  A1+A2+E6, 0 for none)
+                            value: r(R, T), the number of isometric
+                                   embeddings of the root lattice R in T
     two_adic_symbol         record: n T          (T even)
                             value: [raw, canonical], the 2-adic symbol of
                                    one Jordan splitting (determinants mod
@@ -105,6 +111,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
   LocalDensityCache<T> cache;
   std::map<std::vector<T>, GenusDensityDataFull<T>> genus_data;
   FullRankOverlatticeCache<T> full_rank_cache;
+  RootEmbeddingCache<Tint> root_cache;
   auto push = [&](T const &val) -> void {
     std::ostringstream oss;
     oss << val;
@@ -228,6 +235,14 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
                    .first;
       }
       push(MassRatioFromDensitiesFull<T, Tint>(S, iter->second, cache));
+    } else if (task == "root_embedding") {
+      std::string nameR, nameT;
+      is >> nameR >> nameT;
+      Tint val = RootEmbeddingNumber<Tint>(ParseAdeType(nameR),
+                                           ParseAdeType(nameT), root_cache);
+      std::ostringstream oss;
+      oss << val;
+      ListVal.push_back(oss.str());
     } else if (task == "two_adic_symbol") {
       int n;
       is >> n;
@@ -315,6 +330,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "  overlattice            records: p n T m S\n";
       std::cerr << "  brute_force            records: p k n T m S\n";
       std::cerr << "  mass_ratio             records: n T m S\n";
+      std::cerr << "  root_embedding         records: R T\n";
       std::cerr << "  two_adic_symbol        records: n T\n";
       std::cerr << "  genus_mass             records: n T\n";
       std::cerr << "  full_rank_mass         records: n T S\n";

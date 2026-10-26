@@ -1019,6 +1019,116 @@ test_full_rank_enumerated:=function(arith)
     return n_error;
 end;
 
+#
+# The embedding numbers r(R, T) of root lattices.
+#
+
+ade_type_name:=function(ListComp)
+    if Length(ListComp) = 0 then
+        return "0";
+    fi;
+    return JoinStringsWithSeparator(List(ListComp, c->Concatenation(c[1], String(c[2]))), "+");
+end;
+
+ade_gram_of_name:=function(name)
+    local blocks, comp, letter, r;
+    if name = "0" then
+        return [];
+    fi;
+    blocks:=[];
+    for comp in SplitString(name, "+")
+    do
+        letter:=comp{[1]};
+        r:=Int(comp{[2..Length(comp)]});
+        if letter = "A" then
+            Add(blocks, cartan_A(r));
+        elif letter = "D" then
+            Add(blocks, cartan_D(r));
+        else
+            Add(blocks, cartan_E8(){[1..r]}{[1..r]});
+        fi;
+    od;
+    return block_diagonal(blocks);
+end;
+
+# The ADE type names of rank at most n with at most max_comp components,
+# components sorted as in RootEmbeddings.h (letter, then rank).
+ade_type_names:=function(n, max_comp)
+    local irr, result, rec_build;
+    irr:=Concatenation(List([1..n], r->["A", r]), List([4..n], r->["D", r]),
+                       List(Filtered([6..8], r->r <= n), r->["E", r]));
+    result:=[];
+    rec_build:=function(chosen, rest, start)
+        local i;
+        if Length(chosen) > 0 then
+            Add(result, ade_type_name(chosen));
+        fi;
+        if Length(chosen) = max_comp then
+            return;
+        fi;
+        for i in [start..Length(irr)]
+        do
+            if irr[i][2] <= rest then
+                rec_build(Concatenation(chosen, [irr[i]]), rest - irr[i][2], i);
+            fi;
+        od;
+    end;
+    rec_build([], n, 1);
+    return result;
+end;
+
+test_root_embedding:=function(arith)
+    local ListRef, ListVal, n_error, i, ListName, ListPair, R, T, RP, truth, n_nonzero;
+    n_error:=0;
+    ListRef:=ReadAsFunction("density_root_embedding.g")();
+    ListVal:=get_genus_local_density(arith, "root_embedding", List(ListRef, x->[x[1], x[2]]));
+    if is_error(ListVal) then
+        return 1;
+    fi;
+    for i in [1..Length(ListRef)]
+    do
+        if ListVal[i] <> ListRef[i][3] then
+            Print("  r(", ListRef[i][1], ", ", ListRef[i][2], "): got ", ListVal[i], " expected ", ListRef[i][3], "\n");
+            n_error:=n_error + 1;
+        fi;
+    od;
+    # counted in GAP, as tuples of roots of T with the Gram matrix of R
+    ListName:=ade_type_names(5, 3);
+    ListPair:=[];
+    for T in ListName
+    do
+        for R in Concatenation(["0"], ListName)
+        do
+            if Length(ade_gram_of_name(R)) <= Length(ade_gram_of_name(T)) then
+                Add(ListPair, [R, T]);
+            fi;
+        od;
+    od;
+    ListVal:=get_genus_local_density(arith, "root_embedding", ListPair);
+    if is_error(ListVal) then
+        return n_error + 1;
+    fi;
+    n_nonzero:=0;
+    for i in [1..Length(ListPair)]
+    do
+        if ListPair[i][1] = "0" then
+            truth:=1;
+        else
+            RP:=roots_and_products(ade_gram_of_name(ListPair[i][2]));
+            truth:=count_representations(RP, ade_gram_of_name(ListPair[i][1]));
+        fi;
+        if truth <> 0 then
+            n_nonzero:=n_nonzero + 1;
+        fi;
+        if ListVal[i] <> truth then
+            Print("  r(", ListPair[i][1], ", ", ListPair[i][2], "): got ", ListVal[i], " counted ", truth, "\n");
+            n_error:=n_error + 1;
+        fi;
+    od;
+    Print("  root embedding: ", Length(ListRef), " Julia values, ", Length(ListPair), " counted (", n_nonzero, " non-zero)\n");
+    return n_error;
+end;
+
 FullTest:=function()
     local n_error, arith, eTest, n_err;
     n_error:=0;
@@ -1041,7 +1151,8 @@ FullTest:=function()
                       ["certified_mass_ratio_even", test_certified_mass_ratio_even],
                       ["genus_mass", test_genus_mass],
                       ["certified_high_rank", test_certified_high_rank],
-                      ["full_rank_enumerated", test_full_rank_enumerated]]
+                      ["full_rank_enumerated", test_full_rank_enumerated],
+                      ["root_embedding", test_root_embedding]]
         do
             n_err:=eTest[2](arith);
             Print("arith=", arith, " test=", eTest[1], " n_error=", n_err, "\n");
