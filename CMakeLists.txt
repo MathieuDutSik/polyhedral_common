@@ -387,6 +387,7 @@ target_include_directories(
     "${CMAKE_SOURCE_DIR}/src_poly"
     "${CMAKE_SOURCE_DIR}/src_polydecomp"
     "${CMAKE_SOURCE_DIR}/src_polygen"
+    "${CMAKE_SOURCE_DIR}/src_projective_systems"
     "${CMAKE_SOURCE_DIR}/src_rankin"
     "${CMAKE_SOURCE_DIR}/src_robust_covering"
     "${CMAKE_SOURCE_DIR}/src_short"
@@ -755,6 +756,12 @@ foreach(target IN LISTS PERFECT_PROGRAMS)
     polyhedral_perfect_support
   )
 endforeach()
+
+add_polyhedral_binary(
+  SP4_HeckeOperators
+  "${CMAKE_SOURCE_DIR}/src_projective_systems/SP4_HeckeOperators.cpp"
+  polyhedral_perfect_support
+)
 
 set(
   IGUSA_PROGRAMS

@@ -41,18 +41,68 @@ struct GammaOrbitSplit {
   std::vector<size_t> l_orbit_size;
 };
 
-template <typename T, typename Tint, typename Tgroup>
-GammaOrbitSplit get_gamma_orbit_split(
-    FacePerfectComplex<T, Tint, Tgroup> const &face,
-    std::vector<MyMatrix<T>> const &ListMat, CosetTableGamma<Tint> const &ct,
-    [[maybe_unused]] std::ostream &os) {
+/*
+  The cell complex as step B uses it: the orbits of cells of each level
+  under the ambient group G, with the generators of their stabilizers and
+  the orientation character of the stabilizers, the boundaries (the faces
+  of a cell of level index are at level index + 1), the generators of G
+  and its membership test. PerfectComplexView is the one of the perfect
+  complex of a T-space; src_projective_systems has another one (Sp_4(Z)).
+  A complex class provides
+    int dim() const;                         (the matrices are dim x dim)
+    int n_levels() const;
+    int n_orbit(int index) const;
+    std::vector<MyMatrix<Tint>> const &stabilizer_generators(int index, int iOrb) const;
+    int orientation(int index, int iOrb, MyMatrix<Tint> const &g) const;  (g in the stabilizer)
+    bool is_well_rounded(int index, int iOrb) const;
+    int64_t stabilizer_order(int index, int iOrb) const;  (for the well rounded cells)
+    std::vector<BoundEntry<Tint>> const &boundary(int index, int iOrb) const;
+    std::vector<MyMatrix<Tint>> ambient_generators(std::ostream &os) const;
+    bool in_ambient_group(MyMatrix<T> const &g) const;
+    bool has_cells_at_infinity() const;
+ */
+template <typename T, typename Tint, typename Tgroup> struct PerfectComplexView {
+  FullComplexEnumeration<T, Tint, Tgroup> const &fce;
+  int dim() const { return fce.pctdi.LinSpa.n; }
+  int n_levels() const { return fce.levels.size(); }
+  int n_orbit(int const &index) const { return fce.levels[index].l_faces.size(); }
+  std::vector<MyMatrix<Tint>> const &stabilizer_generators(int const &index, int const &iOrb) const {
+    return fce.levels[index].l_faces[iOrb].l_gens;
+  }
+  int orientation(int const &index, int const &iOrb, MyMatrix<Tint> const &g) const {
+    FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[index].l_faces[iOrb];
+    return get_face_orientation(face.EXT, fce.pctdi.LinSpa.ListMat, face.or_info, g);
+  }
+  bool is_well_rounded(int const &index, int const &iOrb) const {
+    return fce.levels[index].l_faces[iOrb].is_well_rounded;
+  }
+  // The well rounded cells span the space, so Stab_G(F) acts faithfully on
+  // their vectors and GRP_ext is the stabilizer.
+  int64_t stabilizer_order(int const &index, int const &iOrb) const {
+    auto order_grp = fce.levels[index].l_faces[iOrb].GRP_ext.size();
+    return UniversalScalarConversion<int64_t, decltype(order_grp)>(order_grp);
+  }
+  std::vector<BoundEntry<Tint>> const &boundary(int const &index, int const &iOrb) const {
+    return fce.boundaries[index].ll_bound[iOrb].l_bound;
+  }
+  std::vector<MyMatrix<Tint>> ambient_generators(std::ostream &os) const {
+    return get_ambient_group_generators(fce, os);
+  }
+  bool in_ambient_group(MyMatrix<T> const &g) const { return is_in_ambient_group(fce.pctdi.LinSpa, g); }
+  bool has_cells_at_infinity() const { return !fce.pctdi.pco.only_well_rounded; }
+};
+
+template <typename T, typename Tint, typename TComplex>
+GammaOrbitSplit get_gamma_orbit_split(TComplex const &cx, int const &index, int const &iOrb,
+                                      CosetTableGamma<Tint> const &ct, [[maybe_unused]] std::ostream &os) {
   size_t n_coset = ct.size();
-  size_t n_gen = face.l_gens.size();
+  std::vector<MyMatrix<Tint>> const &l_gens = cx.stabilizer_generators(index, iOrb);
+  size_t n_gen = l_gens.size();
   std::vector<std::vector<int>> perm(n_gen, std::vector<int>(n_coset));
   std::vector<int> sign_gen(n_gen);
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
-    MyMatrix<Tint> const &s = face.l_gens[i_gen];
-    sign_gen[i_gen] = get_face_orientation(face.EXT, ListMat, face.or_info, s);
+    MyMatrix<Tint> const &s = l_gens[i_gen];
+    sign_gen[i_gen] = cx.orientation(index, iOrb, s);
     GammaAction a = ct.gamma.get_action(s);
     for (size_t i = 0; i < n_coset; i++) {
       perm[i_gen][i] = ct.index_of_action(i, a);
@@ -118,13 +168,12 @@ GammaOrbitSplit get_gamma_orbit_split(
  */
 enum class CellSelection { All, WellRounded, AtInfinity };
 
-template <typename T, typename Tint, typename Tgroup>
-bool is_cell_selected(FacePerfectComplex<T, Tint, Tgroup> const &face, CellSelection const &selection) {
+inline bool is_cell_selected(bool const &is_well_rounded, CellSelection const &selection) {
   if (selection == CellSelection::WellRounded) {
-    return face.is_well_rounded;
+    return is_well_rounded;
   }
   if (selection == CellSelection::AtInfinity) {
-    return !face.is_well_rounded;
+    return !is_well_rounded;
   }
   return true;
 }
@@ -176,18 +225,18 @@ template <typename T, typename Tint> struct GammaComplex {
   for the same subgroup, with possibly different cell selections): one
   sparse row per cell of gc_src, sorted by column.
  */
-template <typename T, typename Tint, typename Tgroup>
+template <typename T, typename Tint, typename TComplex>
 std::vector<std::vector<std::pair<int, int>>>
-get_gamma_boundary_sparse(FullComplexEnumeration<T, Tint, Tgroup> const &fce, GammaComplex<T, Tint> const &gc_src,
+get_gamma_boundary_sparse(TComplex const &cx, GammaComplex<T, Tint> const &gc_src,
                           GammaComplex<T, Tint> const &gc_dst, int const &index) {
   CosetTableGamma<Tint> const &ct = gc_src.ct;
   int n_row = gc_src.basis[index].size();
   std::vector<std::vector<std::pair<int, int>>> D_sparse(n_row);
   // The actions of the matrices of the boundary on the cosets, per orbit.
-  int n_orb = fce.levels[index].l_faces.size();
+  int n_orb = cx.n_orbit(index);
   std::vector<std::vector<GammaAction>> ll_act(n_orb);
   for (int iOrb = 0; iOrb < n_orb; iOrb++) {
-    for (auto &ebnd : fce.boundaries[index].ll_bound[iOrb].l_bound) {
+    for (auto &ebnd : cx.boundary(index, iOrb)) {
       ll_act[iOrb].push_back(ct.gamma.get_action(ebnd.M));
     }
   }
@@ -195,7 +244,7 @@ get_gamma_boundary_sparse(FullComplexEnumeration<T, Tint, Tgroup> const &fce, Ga
     int iOrb = gc_src.basis[index][i_row].first;
     int i_coset = gc_src.basis[index][i_row].second;
     std::map<int, int> map_row;
-    std::vector<BoundEntry<Tint>> const &l_bound = fce.boundaries[index].ll_bound[iOrb].l_bound;
+    std::vector<BoundEntry<Tint>> const &l_bound = cx.boundary(index, iOrb);
     for (size_t k = 0; k < l_bound.size(); k++) {
       BoundEntry<Tint> const &ebnd = l_bound[k];
       int i0 = ct.index_of_action(i_coset, ll_act[iOrb][k]);
@@ -213,9 +262,9 @@ get_gamma_boundary_sparse(FullComplexEnumeration<T, Tint, Tgroup> const &fce, Ga
   return D_sparse;
 }
 
-template <typename T, typename Tint, typename Tgroup>
+template <typename T, typename Tint, typename TComplex>
 GammaComplex<T, Tint>
-compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+compute_gamma_complex(TComplex const &cx,
                       CosetTableGamma<Tint> const &ct,
                       CellSelection const &selection,
                       std::vector<uint8_t> const &l_level_needed,
@@ -223,9 +272,8 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
   GammaComplex<T, Tint> gc;
   gc.ct = ct;
   gc.selection = selection;
-  int n_levels = fce.levels.size();
+  int n_levels = cx.n_levels();
   size_t n_coset = ct.size();
-  std::vector<MyMatrix<T>> const &ListMat = fce.pctdi.LinSpa.ListMat;
   gc.splits = std::vector<std::vector<GammaOrbitSplit>>(n_levels);
   gc.basis = std::vector<std::vector<std::pair<int, int>>>(n_levels);
   gc.basis_index = std::vector<std::vector<std::vector<int>>>(n_levels);
@@ -234,35 +282,31 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     if (l_level_needed[index] == 0) {
       continue;
     }
-    int n_orb = fce.levels[index].l_faces.size();
+    int n_orb = cx.n_orbit(index);
     gc.basis_index[index] = std::vector<std::vector<int>>(n_orb, std::vector<int>(n_coset, -1));
     for (int iOrb = 0; iOrb < n_orb; iOrb++) {
-      FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[index].l_faces[iOrb];
-      GammaOrbitSplit gos = get_gamma_orbit_split(face, ListMat, ct, os);
-      if (is_cell_selected(face, selection)) {
-        // The well rounded cells span the space, so Stab_G(F) acts
-        // faithfully on their vectors and GRP_ext is the stabilizer. For a
-        // cell at infinity, the stabilizer is infinite (l_gens generates
-        // it, which is all the orbit split needs) and GRP_ext is only its
-        // image on the vectors.
+      bool is_well_rounded = cx.is_well_rounded(index, iOrb);
+      GammaOrbitSplit gos = get_gamma_orbit_split<T, Tint>(cx, index, iOrb, ct, os);
+      if (is_cell_selected(is_well_rounded, selection)) {
+        // For a cell at infinity, the stabilizer is infinite (its
+        // generators are all the orbit split needs) and has no order.
         int64_t order_stab = 0;
-        if (face.is_well_rounded) {
-          auto order_grp = face.GRP_ext.size();
-          order_stab = UniversalScalarConversion<int64_t, decltype(order_grp)>(order_grp);
+        if (is_well_rounded) {
+          order_stab = cx.stabilizer_order(index, iOrb);
         }
         size_t n_rep = gos.l_rep.size();
         for (size_t i_rep = 0; i_rep < n_rep; i_rep++) {
           if (gos.l_orientable[i_rep]) {
             int rep = gos.l_rep[i_rep];
             int64_t orbit_size = gos.l_orbit_size[i_rep];
-            if (face.is_well_rounded && order_stab % orbit_size != 0) {
+            if (is_well_rounded && order_stab % orbit_size != 0) {
               std::cerr << "HECKE: the orbit size " << orbit_size << " does not divide the order "
                         << order_stab << " of the stabilizer\n";
               throw TerminalException{1};
             }
             gc.basis_index[index][iOrb][rep] = gc.basis[index].size();
             gc.basis[index].push_back({iOrb, rep});
-            gc.stab_order[index].push_back(face.is_well_rounded ? order_stab / orbit_size : 0);
+            gc.stab_order[index].push_back(is_well_rounded ? order_stab / orbit_size : 0);
           }
         }
       }
@@ -284,7 +328,7 @@ compute_gamma_complex(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     }
     int n_row = gc.basis[index].size();
     int n_col = gc.basis[index + 1].size();
-    std::vector<std::vector<std::pair<int, int>>> D_sparse = get_gamma_boundary_sparse(fce, gc, gc, index);
+    std::vector<std::vector<std::pair<int, int>>> D_sparse = get_gamma_boundary_sparse(cx, gc, gc, index);
     if (dense_boundary) {
       MyMatrix<T> D = ZeroMatrix<T>(n_row, n_col);
       for (int i_row = 0; i_row < n_row; i_row++) {
@@ -481,11 +525,10 @@ std::map<int, T> get_hecke_image_cell_sparse(
   return V;
 }
 
-template <typename T, typename Tint, typename Tgroup>
+template <typename T, typename Tint>
 MyVector<T> get_hecke_image_cell(
     int const &index, int const &i_cell, GammaComplex<T, Tint> const &gc,
     HeckeChainMap<T, Tint> const &hcm, HeckeCosets<T> const &cosets_gamma,
-    [[maybe_unused]] FullComplexEnumeration<T, Tint, Tgroup> const &fce,
     HeckeImageKeyActions const *actions = nullptr) {
   int n_cell = gc.basis[index].size();
   MyVector<T> V = ZeroVector<T>(n_cell);
@@ -974,19 +1017,18 @@ get_hecke_cosets_gamma_direct(HeckeChainMap<T, Tint> const &hcm, CosetTableGamma
   return hc;
 }
 
-template <typename T, typename Tint, typename Tgroup>
+template <typename T, typename Tint, typename TComplex>
 HeckeHomologyResult<T> compute_hecke_homology(
-    FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+    TComplex const &cx,
     HeckeChainMap<T, Tint> const &hcm,
     FiniteIndexSubgroup<Tint> const &gamma, bool const &only_well_rounded,
     bool const &all_levels, bool const &boundary_map, int64_t const &prime, std::ostream &os) {
   [[maybe_unused]] bool const &dual = hcm.transposed;
-  LinSpaceMatrix<T> const &LinSpa = fce.pctdi.LinSpa;
-  int n = LinSpa.n;
+  int n = cx.dim();
 #ifdef TIMINGS_HECKE_OPERATORS
   MicrosecondTime time;
 #endif
-  std::vector<MyMatrix<Tint>> l_gens_G = get_ambient_group_generators(fce, os);
+  std::vector<MyMatrix<Tint>> l_gens_G = cx.ambient_generators(os);
   CosetTableGamma<Tint> ct = enumerate_cosets_gamma(gamma, l_gens_G, n, os);
 #ifdef DEBUG_HECKE_OPERATORS
   {
@@ -995,11 +1037,10 @@ HeckeHomologyResult<T> compute_hecke_homology(
     // It vanishes when the symmetric space has odd dimension (the Bianchi
     // groups), which checks the stabilizers and the orbits of the complex.
     T chi_orb(0);
-    for (size_t index = 0; index < fce.levels.size(); index++) {
-      for (auto &face : fce.levels[index].l_faces) {
-        if (face.is_well_rounded) {
-          auto order = face.GRP_ext.size();
-          T val = T(1) / UniversalScalarConversion<T, decltype(order)>(order);
+    for (int index = 0; index < cx.n_levels(); index++) {
+      for (int iOrb = 0; iOrb < cx.n_orbit(index); iOrb++) {
+        if (cx.is_well_rounded(index, iOrb)) {
+          T val = T(1) / UniversalScalarConversion<T, int64_t>(cx.stabilizer_order(index, iOrb));
           chi_orb += (index % 2 == 0) ? val : -val;
         }
       }
@@ -1011,8 +1052,8 @@ HeckeHomologyResult<T> compute_hecke_homology(
   os << "|HECKE: enumerate_cosets_gamma|=" << time << "\n";
 #endif
   std::function<bool(MyMatrix<T> const &)> f_member_gamma =
-      [&LinSpa, &gamma](MyMatrix<T> const &g) -> bool {
-    if (!is_in_ambient_group(LinSpa, g)) {
+      [&cx, &gamma](MyMatrix<T> const &g) -> bool {
+    if (!cx.in_ambient_group(g)) {
       return false;
     }
     MyMatrix<Tint> g_int = UniversalMatrixConversion<Tint, T>(g);
@@ -1086,7 +1127,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
   // Only the levels of the chain map and their neighbors (for the
   // boundaries) are needed: the dense boundary matrices of the other
   // levels can be by far the largest objects.
-  int n_levels_fce = fce.levels.size();
+  int n_levels_fce = cx.n_levels();
   std::vector<uint8_t> l_level_needed(n_levels_fce, 0);
   for (int index = 0; index < n_levels_fce; index++) {
     if (all_levels || hcm.is_level_computed(index)) {
@@ -1097,12 +1138,12 @@ HeckeHomologyResult<T> compute_hecke_homology(
   }
   bool dense_boundary = (prime == 0);
   CellSelection selection = only_well_rounded ? CellSelection::WellRounded : CellSelection::All;
-  GammaComplex<T, Tint> gc = compute_gamma_complex(fce, ct, selection, l_level_needed, dense_boundary, os);
+  GammaComplex<T, Tint> gc = compute_gamma_complex<T, Tint>(cx, ct, selection, l_level_needed, dense_boundary, os);
   // The boundary map of the Satake compactification: the cells at infinity
   // of the levels k and k + 1 for each level k computed.
   std::optional<GammaComplex<T, Tint>> opt_gc_inf;
   if (boundary_map) {
-    if (prime == 0 || !only_well_rounded || hcm.transposed || fce.pctdi.pco.only_well_rounded) {
+    if (prime == 0 || !only_well_rounded || hcm.transposed || !cx.has_cells_at_infinity()) {
       std::cerr << "HECKE: the boundary map needs the homology modulo a prime of the well rounded complex, "
                    "a chain map commuting with the boundary (Sharbly or Vertex) and the full complex "
                    "(OnlyWellRounded = F)\n";
@@ -1117,7 +1158,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
         }
       }
     }
-    opt_gc_inf = compute_gamma_complex(fce, ct, CellSelection::AtInfinity, l_level_needed_inf, false, os);
+    opt_gc_inf = compute_gamma_complex<T, Tint>(cx, ct, CellSelection::AtInfinity, l_level_needed_inf, false, os);
   }
 #ifdef TRACK_INFO_HECKE_OPERATORS
   if (prime > 0) {
@@ -1138,7 +1179,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
   result.only_well_rounded = only_well_rounded;
   result.n_coset_gamma = ct.size();
   result.n_hecke_coset = cosets_gamma.size();
-  int n_levels = fce.levels.size();
+  int n_levels = cx.n_levels();
   for (int index = 0; index < n_levels; index++) {
     // Without the chain map at this level, only the homology is given.
     bool with_hecke = hcm.is_level_computed(index);
@@ -1163,7 +1204,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
         };
         if (index + 1 < n_levels) {
           bmd.n_inf_next = gc_inf.basis[index + 1].size();
-          for (auto &row : get_gamma_boundary_sparse(fce, gc, gc_inf, index)) {
+          for (auto &row : get_gamma_boundary_sparse(cx, gc, gc_inf, index)) {
             bmd.l_row_wi.emplace_back(f_mod(row));
           }
           for (auto &row : gc_inf.boundary_sparse[index]) {
@@ -1198,7 +1239,7 @@ HeckeHomologyResult<T> compute_hecke_homology(
       std::vector<MyVector<T>> l_img(n_cell);
       HeckeImageKeyActions actions = get_hecke_image_key_actions(index, gc, hcm);
       for (int i_cell = 0; i_cell < n_cell; i_cell++) {
-        l_img[i_cell] = get_hecke_image_cell(index, i_cell, gc, hcm, cosets_gamma, fce, &actions);
+        l_img[i_cell] = get_hecke_image_cell(index, i_cell, gc, hcm, cosets_gamma, &actions);
         if (dual) {
           // The dual complex of the quotient (see get_dual_stab_weight).
           for (int j_cell = 0; j_cell < n_cell; j_cell++) {

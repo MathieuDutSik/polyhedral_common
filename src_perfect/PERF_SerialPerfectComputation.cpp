@@ -456,7 +456,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       }
       HeckeHomologyResult<T> result;
       try {
-        result = compute_hecke_homology(fce, hcm, gamma, OnlyWellRoundedHomology, HeckeHomologyAllLevels, HeckeBoundaryMap,
+        result = compute_hecke_homology(PerfectComplexView<T, Tint, Tgroup>{fce}, hcm, gamma, OnlyWellRoundedHomology, HeckeHomologyAllLevels, HeckeBoundaryMap,
                                         HeckeHomologyPrime, os);
       } catch (HeckeFailure const &e) {
         report_failure(e.message);
