@@ -5,9 +5,10 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "LocalDensity.h"
-#include "SiegelSeries.h"
+#include "LocalDensityBadPrimes.h"
 #include "Arithmetic_dispatch_types.h"
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -32,6 +33,14 @@
     alpha_unimodular        record: p k xi_T m S
                             value: alpha_p(S, T) for T unimodular at p of
                                    rank 2k and character xi_T at p
+    rank_one_density        record: p n T a      (T even, n*n entries)
+                            value: alpha_p(a, T), Q(x) = x^t T x / 2
+    unit_chain              record: p n T m S    (p odd)
+                            value: alpha_p(S, T), or fail when S has two
+                                   or more non-unit entries at p
+    mass_ratio              record: n T m S      (n even, det T odd)
+                            value: M_S / mass of the genus of T, or fail
+                                   outside the coverage of the unit chain
  */
 
 template <typename T> MyMatrix<T> ReadSquareMatrixEntries(std::istream &is, int m) {
@@ -67,7 +76,8 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
   size_t n_rec;
   is >> n_rec;
   std::vector<std::string> ListVal;
-  SiegelSeriesCache<T> cache;
+  LocalDensityCache<T> cache;
+  std::map<std::vector<T>, GenusDensityData> genus_data;
   auto push = [&](T const &val) -> void {
     std::ostringstream oss;
     oss << val;
@@ -99,13 +109,56 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       is >> p >> m;
       MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
       ListVal.push_back(
-          PolynomialToGAP(SiegelSeriesPolynomial<T, Tint>(S, p, cache)));
+          PolynomialToGAP(SiegelSeriesPolynomial<T, Tint>(S, p, cache.siegel)));
+    } else if (task == "rank_one_density") {
+      int64_t p, a;
+      int n;
+      is >> p >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      is >> a;
+      SiegelJordanBlocks q = SiegelJordanBlocksOf<T, Tint>(Tg / T(2), p);
+      push(RankOneDensity<T>(q, PadicFromInt64(a, p), cache.bad));
+    } else if (task == "unit_chain") {
+      int64_t p;
+      int n, m;
+      is >> p >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      is >> m;
+      MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
+      std::optional<T> opt = UnitChainDensity<T, Tint>(
+          S, OddDiagonalClasses<T, Tint>(Tg, p), p, cache.bad);
+      if (opt) {
+        push(*opt);
+      } else {
+        ListVal.push_back("fail");
+      }
+    } else if (task == "mass_ratio") {
+      int n, m;
+      is >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      is >> m;
+      MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
+      // the genus data is computed once per distinct T, as a sweep over the
+      // root lattices of one genus would
+      std::vector<T> key(Tg.data(), Tg.data() + n * n);
+      auto iter = genus_data.find(key);
+      if (iter == genus_data.end()) {
+        iter = genus_data.emplace(key, ComputeGenusDensityData<T, Tint>(Tg))
+                   .first;
+      }
+      std::optional<T> opt =
+          MassRatioFromDensities<T, Tint>(S, iter->second, cache);
+      if (opt) {
+        push(*opt);
+      } else {
+        ListVal.push_back("fail");
+      }
     } else if (task == "alpha_unimodular") {
       int64_t p;
       int k, xi_T, m;
       is >> p >> k >> xi_T >> m;
       MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
-      push(AlphaUnimodularTarget<T, Tint>(S, p, k, xi_T, cache));
+      push(AlphaUnimodularTarget<T, Tint>(S, p, k, xi_T, cache.siegel));
     } else {
       std::cerr << "GENUS_LocalDensity: unknown task " << task << "\n";
       throw TerminalException{1};
@@ -149,6 +202,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "  generic_part           records: n m detS detT\n";
       std::cerr << "  siegel_series          records: p m S (m*m entries)\n";
       std::cerr << "  alpha_unimodular       records: p k xi_T m S\n";
+      std::cerr << "  rank_one_density       records: p n T a\n";
+      std::cerr << "  unit_chain             records: p n T m S\n";
+      std::cerr << "  mass_ratio             records: n T m S\n";
       std::cerr << "FileOut: a GAP list, or stdout / stderr\n";
       return -1;
     }

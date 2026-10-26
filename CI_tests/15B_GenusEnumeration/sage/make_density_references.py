@@ -19,6 +19,18 @@ Tasks:
   alpha_unimodular
                  alpha_p(S, T) for T unimodular at p of rank 2k and
                  character xi_T, assembled from that polynomial.
+  rank_one_density
+                 alpha_p(a, T) from Sage's QuadraticForm.local_density, for
+                 random even forms T with structure at p, p = 2, 3, 5, 7.
+  unit_chain     alpha_p(S, T) at an odd p dividing det T by splitting off
+                 the unit diagonal entries of S (Sage's local_normal_form and
+                 local_density), or fail when S has two or more non-unit
+                 entries at p.
+  certified_mass_ratio <reference_dir>
+                 M_S / mass from completely enumerated genera: reads the
+                 genus representatives and the certified representation
+                 masses of the strongly perfect lattice project
+                 (results/density_calib/reps and results/reference_MR).
 
 The Euler factors of the good-prime density are those of LocalDensity.h;
 they are checked independently, against the orders of the orthogonal
@@ -212,6 +224,132 @@ def grid_alpha_unimodular():
     return out
 
 
+def random_even_form(rng, n, p):
+    """R^t E R with E an even form carrying structure at p."""
+    blocks = []
+    rest = n
+    while rest > 0:
+        kind = rng.choice(["A1", "A2", "pA1", "pA2", "p2A1", "A3"])
+        if kind in ("A2", "pA2") and rest < 2:
+            kind = "A1"
+        if kind == "A3" and rest < 3:
+            kind = "A1"
+        if kind == "A1":
+            blocks.append(cartan("A", 1)); rest -= 1
+        elif kind == "A2":
+            blocks.append(cartan("A", 2)); rest -= 2
+        elif kind == "A3":
+            blocks.append(cartan("A", 3)); rest -= 3
+        elif kind == "pA1":
+            blocks.append(p * cartan("A", 1)); rest -= 1
+        elif kind == "pA2":
+            blocks.append(p * cartan("A", 2)); rest -= 2
+        else:
+            blocks.append(p * p * cartan("A", 1)); rest -= 1
+    E = block_diagonal_matrix(blocks, subdivide=False)
+    while True:
+        R = matrix(ZZ, n, n, [rng.randint(-1, 1) for _ in range(n * n)])
+        if abs(R.det()) == 1:
+            return R.transpose() * E * R
+
+
+def grid_rank_one_density():
+    from sage.all import QuadraticForm, gcd, valuation
+    rng = random.Random(20261027)
+    out = []
+    for p in (2, 3, 5, 7):
+        for i in range(25):
+            n = rng.randint(3, 8)
+            T = random_even_form(rng, n, p)
+            Q = QuadraticForm(ZZ, T)
+            # Sage's local_density divides the form and the target by the
+            # content of the form, which for Q = p^v Q' divides the density
+            # by p^v; the definition (and the C++ code) does not, so the
+            # factor is restored. (Checked by exhaustive counting modulo p^k
+            # on forms of content 2 and 3.)
+            content = gcd(Q.coefficients())
+            fix = QQ(p)**valuation(content, p)
+            for a in (1, 2, 3, 4, 5, 6, 8, 9, 12, 25, 27, 49):
+                out.append((p, n, list(T.list()), a,
+                            fix * Q.local_density(p, a)))
+    return out
+
+
+def unit_chain_sage(S, T, p):
+    from sage.all import QuadraticForm, valuation
+    def diag(M):
+        N = QuadraticForm(ZZ, M).local_normal_form(p)
+        return [ZZ(N[i, i]) for i in range(N.dim())]
+    def qf(coeffs):
+        n = len(coeffs)
+        return QuadraticForm(ZZ, n, [coeffs[i] if i == j else 0
+                                     for i in range(n) for j in range(i, n)])
+    D = diag(T)
+    DS = diag(S)
+    units = [s for s in DS if valuation(s, p) == 0]
+    nonunits = [s for s in DS if valuation(s, p) > 0]
+    if len(nonunits) > 1:
+        return "fail"
+    chain = units + nonunits
+    alpha = QQ(1)
+    for k, s in enumerate(chain):
+        alpha *= qf(D).local_density(p, s)
+        if k == len(chain) - 1:
+            break
+        uni = [c for c in D if valuation(c, p) == 0]
+        rest = [c for c in D if valuation(c, p) > 0]
+        if len(uni) < 2:
+            return "fail"
+        prod_uni = prod(QQ(c) for c in uni)
+        keep = uni[:-2]
+        last = prod_uni / (QQ(s) * prod(QQ(c) for c in keep))
+        D = keep + [ZZ(last.numerator() * last.denominator())] + rest
+    return alpha
+
+
+def grid_unit_chain():
+    rng = random.Random(20261028)
+    out = []
+    types = [t for t in ade_types(4)]
+    for p in (3, 5, 7):
+        for i in range(12):
+            n = rng.choice([6, 8, 10])
+            T = random_even_form(rng, n, p)
+            if T.det() % p != 0:
+                continue
+            for t in types:
+                S = ade_gram(t)
+                if n - S.nrows() < 3:
+                    continue
+                out.append((p, n, list(T.list()), S.nrows(), list(S.list()),
+                            unit_chain_sage(S, T, p)))
+    return out
+
+
+def grid_certified_mass_ratio(ref_dir):
+    genera = [("243", "0"), ("351", "0"), ("375", "0")]
+    out = []
+    for (d, g) in genera:
+        tok = open(os.path.join(ref_dir, "density_calib", "reps",
+                                "d%sg%s" % (d, g), "l.txt")).read().split()
+        n = int(tok[1])
+        T = [int(x) for x in tok[3:3 + n * n]]
+        path = os.path.join(ref_dir, "reference_MR",
+                            "det%s_genus%s_MR.txt" % (d, g))
+        for line in open(path):
+            if line.startswith("#") or not line.strip():
+                continue
+            name, _, ratio = line.split()[:3]
+            if name == "0":
+                continue
+            typ = [(c[0], int(c[1:])) for c in name.split("+")]
+            S = ade_gram(typ)
+            if S.nrows() > 6:
+                continue
+            out.append((n, T, S.nrows(), list(S.list()), QQ(ratio)))
+    return out
+
+
 def gap_string(x):
     if isinstance(x, (list, tuple)):
         return "[" + ", ".join(gap_string(y) for y in x) + "]"
@@ -220,12 +358,20 @@ def gap_string(x):
 
 def main():
     task, out_file = sys.argv[1], sys.argv[2]
+    if task == "certified_mass_ratio" and len(sys.argv) < 4:
+        raise ValueError("certified_mass_ratio needs the reference directory")
     if task == "generic_part":
         rows = grid_generic_part()
     elif task == "siegel_series":
         rows = grid_siegel_series()
     elif task == "alpha_unimodular":
         rows = grid_alpha_unimodular()
+    elif task == "rank_one_density":
+        rows = grid_rank_one_density()
+    elif task == "unit_chain":
+        rows = grid_unit_chain()
+    elif task == "certified_mass_ratio":
+        rows = grid_certified_mass_ratio(sys.argv[3])
     else:
         raise ValueError("unknown task " + task)
     with open(out_file, "w") as fh:

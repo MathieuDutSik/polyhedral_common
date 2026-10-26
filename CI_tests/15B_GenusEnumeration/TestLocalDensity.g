@@ -437,6 +437,127 @@ test_representation_numbers:=function(arith)
     return n_error;
 end;
 
+
+#
+# Densities at the primes where T is not unimodular.
+#
+
+# A reference table whose entries are [inputs..., value]; value may be fail,
+# and the C++ program must then answer fail as well.
+compare_table:=function(arith, task, FileRef, f_record, n_input)
+    local ListRef, ListVal, n_error, i, expected;
+    ListRef:=ReadAsFunction(FileRef)();
+    ListVal:=get_genus_local_density(arith, task, List(ListRef, f_record));
+    if is_error(ListVal) then
+        return 1;
+    fi;
+    n_error:=0;
+    for i in [1..Length(ListRef)]
+    do
+        expected:=ListRef[i][n_input + 1];
+        if ListVal[i] <> expected then
+            Print("  ", task, " record ", i, ": got ", ListVal[i], " expected ", expected, "\n");
+            n_error:=n_error + 1;
+        fi;
+    od;
+    Print("  ", task, ": ", Length(ListRef), " cases\n");
+    return n_error;
+end;
+
+test_rank_one_density:=function(arith)
+    return compare_table(arith, "rank_one_density", "density_rank_one_density.g",
+                         x->Concatenation([x[1], x[2]], x[3], [x[4]]), 4);
+end;
+
+test_unit_chain:=function(arith)
+    return compare_table(arith, "unit_chain", "density_unit_chain.g",
+                         x->Concatenation([x[1], x[2]], x[3], [x[4]], x[5]), 5);
+end;
+
+# Certified values M_S / mass of completely enumerated genera: a value the
+# program computes must be exact; fail (outside the unit chain) is allowed.
+test_certified_mass_ratio:=function(arith)
+    local ListRef, ListVal, n_error, n_covered, i;
+    ListRef:=ReadAsFunction("density_certified_mass_ratio.g")();
+    ListVal:=get_genus_local_density(arith, "mass_ratio",
+        List(ListRef, x->Concatenation([x[1]], x[2], [x[3]], x[4])));
+    if is_error(ListVal) then
+        return 1;
+    fi;
+    n_error:=0;
+    n_covered:=0;
+    for i in [1..Length(ListRef)]
+    do
+        if ListVal[i] <> fail then
+            n_covered:=n_covered + 1;
+            if ListVal[i] <> ListRef[i][5] then
+                Print("  certified mass ratio ", i, ": got ", ListVal[i], " expected ", ListRef[i][5], "\n");
+                n_error:=n_error + 1;
+            fi;
+        fi;
+    od;
+    Print("  certified mass ratio: ", Length(ListRef), " cases, ", n_covered, " covered\n");
+    if n_covered < 80 then
+        Print("  certified mass ratio: coverage dropped to ", n_covered, "\n");
+        n_error:=n_error + 1;
+    fi;
+    return n_error;
+end;
+
+# The classes of a genus from GENUS_Enumerate, the representations counted in
+# GAP class by class: M_S / mass against the densities, for genera that are
+# not unimodular at the primes dividing their determinant.
+enumerate_genus:=function(name)
+    local TmpDir, FileO, FileE, eProg, list_arg;
+    TmpDir:=DirectoryTemporary();
+    FileO:=Filename(TmpDir, "genus.out");
+    FileE:=Filename(TmpDir, "genus.err");
+    eProg:=GetBinaryFilename("GENUS_Enumerate");
+    list_arg:=["gmp", Concatenation(name, "_genus.txt"), Concatenation(name, "_lattice.txt"),
+               Concatenation(name, "_mass.txt"), "GAP", FileO];
+    run_binary_checked(eProg, list_arg, FileE);
+    return ReadAsFunction(FileO)();
+end;
+
+test_enumerated_genera:=function(arith)
+    local n_error, name, R, ListRP, ListS, S, truth, ListVal, i, n_checked;
+    n_error:=0;
+    n_checked:=0;
+    ListS:=[cartan_A(1), cartan_A(2), block_diagonal([cartan_A(1), cartan_A(1)]),
+            cartan_A(3), block_diagonal([cartan_A(1), cartan_A(2)]),
+            block_diagonal([cartan_A(1), cartan_A(1), cartan_A(1)]), cartan_D(4),
+            cartan_A(4), block_diagonal([cartan_A(2), cartan_A(2)])];
+    for name in ["rank8_det9", "rank8_det25"]
+    do
+        R:=enumerate_genus(name);
+        if R.complete <> true then
+            Print("  ", name, ": the enumeration is not complete\n");
+            return 1;
+        fi;
+        ListRP:=List(R.ListGram, roots_and_products);
+        ListVal:=get_genus_local_density(arith, "mass_ratio",
+            List(ListS, S->Concatenation([8], Concatenation(R.ListGram[1]), [Length(S)], Concatenation(S))));
+        if is_error(ListVal) then
+            return n_error + 1;
+        fi;
+        for i in [1..Length(ListS)]
+        do
+            if ListVal[i] = fail then
+                continue;
+            fi;
+            S:=ListS[i];
+            truth:=Sum([1..Length(R.ListGram)], j->count_representations(ListRP[j], S) / R.ListAutOrder[j]) / R.accumulated_mass;
+            n_checked:=n_checked + 1;
+            if ListVal[i] <> truth then
+                Print("  ", name, ", S=", S, ": counted ", truth, " predicted ", ListVal[i], "\n");
+                n_error:=n_error + 1;
+            fi;
+        od;
+    od;
+    Print("  enumerated genera: ", n_checked, " values checked against counted representations\n");
+    return n_error;
+end;
+
 FullTest:=function()
     local n_error, arith, eTest, n_err;
     n_error:=0;
@@ -448,7 +569,11 @@ FullTest:=function()
                       ["generic_part", test_generic_part],
                       ["siegel_series", test_siegel_series],
                       ["alpha_unimodular", test_alpha_unimodular],
-                      ["representation_numbers", test_representation_numbers]]
+                      ["representation_numbers", test_representation_numbers],
+                      ["rank_one_density", test_rank_one_density],
+                      ["unit_chain", test_unit_chain],
+                      ["certified_mass_ratio", test_certified_mass_ratio],
+                      ["enumerated_genera", test_enumerated_genera]]
         do
             n_err:=eTest[2](arith);
             Print("arith=", arith, " test=", eTest[1], " n_error=", n_err, "\n");
