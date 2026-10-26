@@ -1020,7 +1020,8 @@ test_full_rank_enumerated:=function(arith)
 end;
 
 #
-# The embedding numbers r(R, T) of root lattices.
+# The embedding numbers r(R, T) of root lattices, and the masses x_T of the
+# lattices of a genus by type of root system, x_0 that of the root-free ones.
 #
 
 ade_type_name:=function(ListComp)
@@ -1129,6 +1130,73 @@ test_root_embedding:=function(arith)
     return n_error;
 end;
 
+ade_number_roots:=function(name)
+    if name = "0" then
+        return 0;
+    fi;
+    return Length(roots_and_products(ade_gram_of_name(name)).roots);
+end;
+
+test_root_free_mass:=function(arith)
+    local n_error, name, R, ListVal, val, by_roots_truth, by_roots, j, nr, t, n_root_free;
+    n_error:=0;
+    n_root_free:=0;
+    for name in ["E8", "rank8_det9", "rank8_det25", "rank8_det8", "rank8_det12", "rank8_det16a", "rank8_det16b",
+                 "rank4_det116", "rank4_det120", "rank4_det129"]
+    do
+        if name = "E8" then
+            R:=rec(complete:=true, ListGram:=[ReadListMatrixFile("E8_lattice.txt")[1]], ListAutOrder:=[696729600], accumulated_mass:=1/696729600);
+        else
+            R:=enumerate_genus(name);
+        fi;
+        if R.complete <> true then
+            Print("  ", name, ": the enumeration is not complete\n");
+            return 1;
+        fi;
+        ListVal:=get_genus_local_density(arith, "root_free_mass",
+            [Concatenation([Length(R.ListGram[1])], Concatenation(R.ListGram[1]))]);
+        if is_error(ListVal) then
+            return n_error + 1;
+        fi;
+        val:=ListVal[1];
+        by_roots_truth:=rec();
+        for j in [1..Length(R.ListGram)]
+        do
+            nr:=String(Length(roots_and_products(R.ListGram[j]).roots));
+            if not IsBound(by_roots_truth.(nr)) then
+                by_roots_truth.(nr):=0;
+            fi;
+            by_roots_truth.(nr):=by_roots_truth.(nr) + 1 / R.ListAutOrder[j];
+        od;
+        by_roots:=rec();
+        for t in val[3]
+        do
+            nr:=String(ade_number_roots(t[1]));
+            if not IsBound(by_roots.(nr)) then
+                by_roots.(nr):=0;
+            fi;
+            by_roots.(nr):=by_roots.(nr) + t[2];
+        od;
+        if val[1] <> Sum(R.ListAutOrder, a->1/a) then
+            Print("  ", name, ": mass ", val[1], " expected ", Sum(R.ListAutOrder, a->1/a), "\n");
+            n_error:=n_error + 1;
+        fi;
+        if by_roots <> by_roots_truth then
+            Print("  ", name, ": masses by number of roots ", by_roots, " expected ", by_roots_truth, "\n");
+            n_error:=n_error + 1;
+        fi;
+        if val[2] <> 0 then
+            n_root_free:=n_root_free + 1;
+        fi;
+    od;
+    Print("  root-free mass: 10 enumerated genera, ", n_root_free, " with root-free lattices\n");
+    if n_root_free < 3 then
+        Print("  root-free mass: the rank-4 genera should have root-free lattices\n");
+        n_error:=n_error + 1;
+    fi;
+    return n_error;
+end;
+
 FullTest:=function()
     local n_error, arith, eTest, n_err;
     n_error:=0;
@@ -1152,7 +1220,8 @@ FullTest:=function()
                       ["genus_mass", test_genus_mass],
                       ["certified_high_rank", test_certified_high_rank],
                       ["full_rank_enumerated", test_full_rank_enumerated],
-                      ["root_embedding", test_root_embedding]]
+                      ["root_embedding", test_root_embedding],
+                      ["root_free_mass", test_root_free_mass]]
         do
             n_err:=eTest[2](arith);
             Print("arith=", arith, " test=", eTest[1], " n_error=", n_err, "\n");

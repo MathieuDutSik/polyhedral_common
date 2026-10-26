@@ -8,6 +8,7 @@
 #include "GenusMass.h"
 #include "LocalDensityOverlattice.h"
 #include "RootEmbeddings.h"
+#include "RootFreeMass.h"
 #include "Arithmetic_dispatch_types.h"
 #include <fstream>
 #include <map>
@@ -63,6 +64,11 @@
                                                   A1+A2+E6, 0 for none)
                             value: r(R, T), the number of isometric
                                    embeddings of the root lattice R in T
+    root_free_mass          record: n T          (T even, n even)
+                            value: [mass, x_0, [[type, x_type], ...]], the
+                                   mass of the genus, that of its
+                                   root-free lattices and the non-zero
+                                   masses by type of root system
     two_adic_symbol         record: n T          (T even)
                             value: [raw, canonical], the 2-adic symbol of
                                    one Jordan splitting (determinants mod
@@ -112,6 +118,8 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
   std::map<std::vector<T>, GenusDensityDataFull<T>> genus_data;
   FullRankOverlatticeCache<T> full_rank_cache;
   RootEmbeddingCache<Tint> root_cache;
+  std::optional<RootMassSystem<Tint>> root_system;
+  RootFreeMassCaches<T> root_free_caches;
   auto push = [&](T const &val) -> void {
     std::ostringstream oss;
     oss << val;
@@ -243,6 +251,30 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       std::ostringstream oss;
       oss << val;
       ListVal.push_back(oss.str());
+    } else if (task == "root_free_mass") {
+      int n;
+      is >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      if (!root_system || root_system->max_rank < n) {
+        root_system = BuildRootMassSystem<Tint>(n, root_cache);
+      }
+      RootFreeMassResult<T> res =
+          ComputeRootFreeMass<T, Tint>(Tg, *root_system, root_free_caches);
+      std::ostringstream oss;
+      oss << "[" << res.mass << ", " << res.x0 << ", [";
+      bool first = true;
+      for (size_t i = 0; i < res.x.size(); i++) {
+        if (res.x[i] != 0) {
+          if (!first) {
+            oss << ", ";
+          }
+          first = false;
+          oss << "[\"" << AdeTypeName(root_system->types[i]) << "\", "
+              << res.x[i] << "]";
+        }
+      }
+      oss << "]]";
+      ListVal.push_back(oss.str());
     } else if (task == "two_adic_symbol") {
       int n;
       is >> n;
@@ -331,6 +363,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "  brute_force            records: p k n T m S\n";
       std::cerr << "  mass_ratio             records: n T m S\n";
       std::cerr << "  root_embedding         records: R T\n";
+      std::cerr << "  root_free_mass         records: n T\n";
       std::cerr << "  two_adic_symbol        records: n T\n";
       std::cerr << "  genus_mass             records: n T\n";
       std::cerr << "  full_rank_mass         records: n T S\n";

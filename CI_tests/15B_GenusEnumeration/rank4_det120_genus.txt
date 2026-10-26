@@ -1,0 +1,3 @@
+rank 4
+det 120
+strategy iterate
