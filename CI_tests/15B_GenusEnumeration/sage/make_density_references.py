@@ -277,6 +277,19 @@ def grid_rank_one_density():
             for a in (1, 2, 3, 4, 5, 6, 8, 9, 12, 25, 27, 49):
                 out.append((p, n, list(T.list()), a,
                             fix * Q.local_density(p, a)))
+    # larger primes, where counting modulo p^k is out of reach and the C++
+    # code uses its recursion only
+    rng = random.Random(20261026)
+    for p in (11, 13, 397, 1061):
+        for i in range(10):
+            n = rng.randint(3, 8)
+            T = random_even_form(rng, n, p)
+            Q = QuadraticForm(ZZ, T)
+            content = gcd(Q.coefficients())
+            fix = QQ(p)**valuation(content, p)
+            for a in (1, 2, 3, p, 2 * p, 3 * p, p * p, 2 * p * p, p**3):
+                out.append((p, n, list(T.list()), a,
+                            fix * Q.local_density(p, a)))
     return out
 
 

@@ -1231,6 +1231,10 @@ std::optional<T> BruteForceDensity(MyMatrix<T> const &S, MyMatrix<T> const &Tgra
 template <typename T> struct FullRankOverlatticeCache {
   using SymbolCount = std::map<std::pair<int, std::vector<int>>, int64_t>;
   std::map<int64_t, std::unordered_map<MyMatrix<T>, SymbolCount>> counts;
+  // the counts at one index p^h, by (p, h), then S
+  std::map<std::pair<int64_t, int>,
+           std::unordered_map<MyMatrix<T>, std::map<std::vector<int>, int64_t>>>
+      counts_at_index;
 };
 
 template <typename T, typename Tint>
@@ -1248,6 +1252,214 @@ OverlatticeSymbolCount(MyMatrix<T> const &S, int64_t p,
     sc[{os.val[i], LocalSymbolKey<T, Tint>(os.gram[i], p)}]++;
   }
   return by_S.emplace(S, std::move(sc)).first->second;
+}
+
+// The canonical row Hermite normal form (positive pivots, the entries above
+// a pivot reduced to [0, pivot)) of an integral matrix of full column rank
+// m, as its m x m upper triangle; small entries, int64.
+inline std::vector<int64_t>
+HermiteNormalFormInt64(std::vector<std::vector<int64_t>> M, int m) {
+  int nr = static_cast<int>(M.size());
+  int row = 0;
+  for (int c = 0; c < m && row < nr; c++) {
+    int piv = -1;
+    for (int i = row; i < nr; i++) {
+      if (M[i][c] != 0) {
+        piv = i;
+        break;
+      }
+    }
+    if (piv < 0) {
+      continue;
+    }
+    std::swap(M[row], M[piv]);
+    for (int i = row + 1; i < nr; i++) {
+      while (M[i][c] != 0) {
+        int64_t q = M[row][c] / M[i][c];
+        for (int j = c; j < m; j++) {
+          M[row][j] -= q * M[i][j];
+        }
+        std::swap(M[row], M[i]);
+      }
+    }
+    if (M[row][c] < 0) {
+      for (int j = c; j < m; j++) {
+        M[row][j] = -M[row][j];
+      }
+    }
+    for (int i = 0; i < row; i++) {
+      int64_t q = M[i][c] / M[row][c];
+      if (M[i][c] - q * M[row][c] < 0) {
+        q--;
+      }
+      if (q != 0) {
+        for (int j = c; j < m; j++) {
+          M[i][j] -= q * M[row][j];
+        }
+      }
+    }
+    row++;
+  }
+  if (row != m) {
+    std::cerr << "LDOV: HermiteNormalFormInt64 expects a full rank matrix\n";
+    throw TerminalException{1};
+  }
+  std::vector<int64_t> key;
+  for (int i = 0; i < m; i++) {
+    for (int j = i; j < m; j++) {
+      key.push_back(M[i][j]);
+    }
+  }
+  return key;
+}
+
+/*
+  The even (integral at odd p) overlattices of index p^h of the lattice
+  with Gram matrix R, counted by local symbol. Each is carried as the
+  Hermite normal form of P B, P = p^h and B a basis in the coordinates of
+  R (integral, since p^h kills Lambda / R), level by level, each level
+  deduplicated; the extensions of Lambda come from the left kernel of its
+  Gram matrix mod p, as in EnumerateOverlattices, but only up to the index
+  needed, in int64, and the class from the modular Jordan splitting.
+ */
+template <typename T, typename Tint>
+std::map<std::vector<int>, int64_t>
+OverlatticeClassCountsAtIndex(MyMatrix<T> const &R, int64_t p, int h) {
+  int m = R.rows();
+  std::vector<std::vector<int64_t>> Ri(m, std::vector<int64_t>(m));
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < m; j++) {
+      Ri[i][j] = UniversalScalarConversion<int64_t, T>(R(i, j));
+    }
+  }
+  int64_t P = 1;
+  for (int i = 0; i < h; i++) {
+    P *= p;
+  }
+  int64_t P2 = P * P;
+  int64_t mod_even = (p == 2) ? 2 : 1;
+  auto unpack = [&](std::vector<int64_t> const &key) {
+    std::vector<std::vector<int64_t>> M(m, std::vector<int64_t>(m, 0));
+    size_t pos = 0;
+    for (int i = 0; i < m; i++) {
+      for (int j = i; j < m; j++) {
+        M[i][j] = key[pos++];
+      }
+    }
+    return M;
+  };
+  // the products x R y^t of the rows of M, divided by P^2
+  auto gram_of = [&](std::vector<std::vector<int64_t>> const &M) {
+    MyMatrix<int64_t> G(m, m);
+    std::vector<std::vector<int64_t>> MR(m, std::vector<int64_t>(m, 0));
+    for (int i = 0; i < m; i++) {
+      for (int k = 0; k < m; k++) {
+        if (M[i][k] != 0) {
+          for (int j = 0; j < m; j++) {
+            MR[i][j] += M[i][k] * Ri[k][j];
+          }
+        }
+      }
+    }
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < m; j++) {
+        int64_t v = 0;
+        for (int k = 0; k < m; k++) {
+          v += MR[i][k] * M[j][k];
+        }
+        G(i, j) = v / P2;
+      }
+    }
+    return std::make_pair(G, MR);
+  };
+  std::vector<std::vector<int64_t>> frontier;
+  {
+    std::vector<std::vector<int64_t>> M0(m, std::vector<int64_t>(m, 0));
+    for (int i = 0; i < m; i++) {
+      M0[i][i] = P;
+    }
+    frontier.push_back(HermiteNormalFormInt64(M0, m));
+  }
+  for (int level = 0; level < h; level++) {
+    std::unordered_set<std::vector<int64_t>, std::hash<std::vector<int64_t>>>
+        seen;
+    std::vector<std::vector<int64_t>> next;
+    for (auto const &key : frontier) {
+      std::vector<std::vector<int64_t>> M = unpack(key);
+      auto [G, MR] = gram_of(M);
+      for (auto const &c : ProjectiveKernelModP<int64_t, int64_t>(G, p)) {
+        std::vector<int64_t> v(m, 0);
+        for (int i = 0; i < m; i++) {
+          if (c[i] != 0) {
+            for (int j = 0; j < m; j++) {
+              v[j] += c[i] * M[i][j];
+            }
+          }
+        }
+        bool ok = true;
+        for (int j = 0; j < m && ok; j++) {
+          if (v[j] % p != 0) {
+            ok = false;
+          }
+          v[j] /= p;
+        }
+        if (!ok) {
+          continue;
+        }
+        // integrality with Lambda and evenness of the new vector
+        std::vector<int64_t> vR(m, 0);
+        for (int k = 0; k < m; k++) {
+          if (v[k] != 0) {
+            for (int j = 0; j < m; j++) {
+              vR[j] += v[k] * Ri[k][j];
+            }
+          }
+        }
+        for (int i = 0; i < m && ok; i++) {
+          int64_t s = 0;
+          for (int j = 0; j < m; j++) {
+            s += vR[j] * M[i][j];
+          }
+          if (s % P2 != 0) {
+            ok = false;
+          }
+        }
+        int64_t nv = 0;
+        for (int j = 0; j < m; j++) {
+          nv += vR[j] * v[j];
+        }
+        if (!ok || nv % (P2 * mod_even) != 0) {
+          continue;
+        }
+        std::vector<std::vector<int64_t>> Mext = M;
+        Mext.push_back(v);
+        std::vector<int64_t> knew = HermiteNormalFormInt64(Mext, m);
+        if (seen.insert(knew).second) {
+          next.push_back(std::move(knew));
+        }
+      }
+    }
+    frontier = std::move(next);
+  }
+  int v_det = 0;
+  {
+    int64_t d = DeterminantInt64<T, Tint>(R);
+    while (d % p == 0) {
+      d /= p;
+      v_det++;
+    }
+  }
+  std::map<std::vector<int>, int64_t> counts;
+  for (auto const &key : frontier) {
+    MyMatrix<int64_t> G = gram_of(unpack(key)).first;
+    std::optional<std::vector<int>> opt =
+        LocalSymbolKeyModular(G, p, v_det - 2 * h);
+    std::vector<int> sym =
+        opt ? *opt
+            : LocalSymbolKey<T, Tint>(UniversalMatrixConversion<T, int64_t>(G), p);
+    counts[sym]++;
+  }
+  return counts;
 }
 
 /*
@@ -1283,12 +1495,32 @@ T FullRankRepresentationMass(MyMatrix<T> const &S, MyMatrix<T> const &Tgram,
       // p = 2 with det S odd: both even unimodular at 2, of the same class
       continue;
     }
+    auto &by_S = cache.counts_at_index[{p, v / 2}];
+    auto it_S = by_S.find(S);
+    if (it_S == by_S.end()) {
+      it_S = by_S.emplace(S, OverlatticeClassCountsAtIndex<T, Tint>(S, p, v / 2))
+                 .first;
+    }
+    std::vector<int> keyT = LocalSymbolKey<T, Tint>(Tgram, p);
+    auto iter = it_S->second.find(keyT);
+    int64_t n_p = (iter == it_S->second.end()) ? 0 : iter->second;
+#ifdef SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE_EXTENSIVE
+    std::cerr << "LDOV: SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE_EXTENSIVE, the "
+                 "full rank count against all the overlattices\n";
     auto const &sc = OverlatticeSymbolCount<T, Tint>(S, p, cache);
-    auto iter = sc.find({v / 2, LocalSymbolKey<T, Tint>(Tgram, p)});
-    if (iter == sc.end()) {
+    auto iter_all = sc.find({v / 2, keyT});
+    int64_t n_all = (iter_all == sc.end()) ? 0 : iter_all->second;
+    if (n_all != n_p) {
+      std::cerr << "LDOV: " << n_p << " overlattices at the index, " << n_all
+                << " among all\n";
+      throw TerminalException{1};
+    }
+    std::cerr << "LDOV: SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE_EXTENSIVE, done\n";
+#endif
+    if (n_p == 0) {
       return T(0);
     }
-    count *= ScalarFromInt64<T>(iter->second);
+    count *= ScalarFromInt64<T>(n_p);
   }
   return count;
 }
@@ -1325,6 +1557,24 @@ ComputeGenusDensityDataFull(MyMatrix<T> const &Tgram,
   return data;
 }
 
+// alpha_p(S, T) for T the genus of the data, in the conventions of
+// AlphaUnimodularTarget, at a prime p | 2 det S det T.
+template <typename T, typename Tint>
+T LocalDensityAtPrime(MyMatrix<T> const &S, GenusDensityDataFull<T> const &data,
+                      int64_t p, LocalDensityCache<T> &cache) {
+  int64_t detT = data.odd.detT;
+  if (detT % p != 0) {
+    int k = data.odd.n / 2;
+    int xi_T = KroneckerSymbol(SignedPower(k, detT), p);
+    return AlphaUnimodularTarget<T, Tint>(S, p, k, xi_T, cache.siegel);
+  }
+  if (p == 2) {
+    return OverlatticeDensityFromData<T, Tint>(S, *data.two_adic, cache.siegel);
+  }
+  return DensityOddDiagonal<T>(OddDiagonalClasses<T, Tint>(S, p),
+                               data.odd.odd_diagonal.at(p), p, cache.bad);
+}
+
 template <typename T, typename Tint>
 T MassRatioFromDensitiesFull(MyMatrix<T> const &S,
                              GenusDensityDataFull<T> const &data,
@@ -1341,25 +1591,17 @@ T MassRatioFromDensitiesFull(MyMatrix<T> const &S,
   }
   int64_t detS = DeterminantInt64<T, Tint>(S);
   int64_t detT = data.odd.detT;
-  int k = n / 2;
   // Siegel's constant: 2 in the conventions of LocalDensity.h, halved when
   // n = m + 1 (checked on the certified representation masses of eleven odd
   // and sixteen even rank-14 genera, ranks 12 and 13)
   T eps = (n - m == 1) ? T(1) : T(2);
   T val = eps * GenericDensityPart<T>(n, m, detS, detT);
   for (int64_t p : BadPrimes(detS, detT)) {
-    if (detT % p != 0) {
-      int xi_T = KroneckerSymbol(SignedPower(k, detT), p);
-      val *= AlphaUnimodularTarget<T, Tint>(S, p, k, xi_T, cache.siegel);
-    } else if (p == 2) {
-      val *= OverlatticeDensityFromData<T, Tint>(S, *data.two_adic, cache.siegel);
-    } else {
-      val *= DensityOddDiagonal<T>(OddDiagonalClasses<T, Tint>(S, p),
-                                   data.odd.odd_diagonal.at(p), p, cache.bad);
-    }
+    val *= LocalDensityAtPrime<T, Tint>(S, data, p, cache);
   }
   return val;
 }
+
 
 // clang-format off
 #endif  // SRC_GENERA_LOCALDENSITYOVERLATTICE_H_

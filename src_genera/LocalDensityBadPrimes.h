@@ -267,6 +267,101 @@ T CountRepresentationsModPk(ResidueClasses const &rc,
   return total[rc.class_of[a_res]];
 }
 
+// #{x in F_p^r : Q(x) = c} for a non-degenerate quadratic form Q of rank r
+// and determinant class d over F_p, p odd (Lidl-Niederreiter, Theorems
+// 6.26 and 6.27).
+template <typename T>
+T QuadraticFormValueCount(int r, int64_t d, int64_t c, int64_t p) {
+  T p_T = ScalarFromInt64<T>(p);
+  c = ModPositive(c, p);
+  if (r == 0) {
+    return (c == 0) ? T(1) : T(0);
+  }
+  T base = PowerInt(p_T, r - 1);
+  if (r % 2 == 0) {
+    int64_t sgn = ((r / 2) % 2 == 0) ? 1 : p - 1;
+    int eta = LegendreUnit(MulMod(sgn, ModPositive(d, p), p), p);
+    T nu = (c == 0) ? p_T - T(1) : T(-1);
+    return base + nu * PowerInt(p_T, r / 2 - 1) * ScalarFromInt64<T>(eta);
+  }
+  if (c == 0) {
+    return base;
+  }
+  int64_t sgn = (((r - 1) / 2) % 2 == 0) ? 1 : p - 1;
+  int eta = LegendreUnit(MulMod(MulMod(sgn, c, p), ModPositive(d, p), p), p);
+  return base + PowerInt(p_T, (r - 1) / 2) * ScalarFromInt64<T>(eta);
+}
+
+/*
+  alpha_p(a, T), p odd, T = T_0 + p T_1 + p^2 T_2 + ... diagonal (the
+  levels given by rank and unit product), a = p^v u, with no counting
+  modulo p^k. A solution x has x_0 = 0 mod p or not. If not, Hensel lifts
+  it from T_0[x_0] = a mod p (the gradient 2 T_0 x_0 is non-zero), which
+  gives #{x_0 : T_0[x_0] = a} / p^{r-1}, r = rank T_0 (the non-zero x_0 when
+  p | a). If x_0 = p y, then T[x] = p T'[(y, x_+)] with T' = p T_0 + T_1 +
+  p T_2 + ..., and the measure gives p^{1-r} alpha(a / p, T'). So
+      alpha(u, T) = #{T_0 = u} / p^{r-1},
+      alpha(p a', T) = (#{T_0 = 0} - 1) / p^{r-1} + p^{1-r} alpha(a', T').
+ */
+template <typename T>
+T RankOneDensityOddLevels(std::map<int, std::pair<int, int64_t>> const &levels,
+                          int v, int64_t u, int64_t p) {
+  int r0 = 0;
+  int64_t d0 = 1;
+  auto iter = levels.find(0);
+  if (iter != levels.end()) {
+    r0 = iter->second.first;
+    d0 = iter->second.second;
+  }
+  T p_T = ScalarFromInt64<T>(p);
+  if (v == 0) {
+    if (r0 == 0) {
+      return T(0);
+    }
+    return QuadraticFormValueCount<T>(r0, d0, u, p) / PowerInt(p_T, r0 - 1);
+  }
+  T c0(0);
+  if (r0 > 0) {
+    c0 = (QuadraticFormValueCount<T>(r0, d0, 0, p) - T(1)) /
+         PowerInt(p_T, r0 - 1);
+  }
+  std::map<int, std::pair<int, int64_t>> next;
+  for (auto const &kv : levels) {
+    int e = (kv.first == 0) ? 1 : kv.first - 1;
+    auto &lv = next[e];
+    if (lv.first == 0) {
+      lv.second = 1;
+    }
+    lv.first += kv.second.first;
+    lv.second = MulMod(lv.second, kv.second.second, p);
+  }
+  return c0 + PowerInt(p_T, 1 - r0) *
+                  RankOneDensityOddLevels<T>(next, v - 1, u, p);
+}
+
+template <typename T>
+T RankOneDensityOdd(SiegelJordanBlocks const &q, PadicClass const &a) {
+  int64_t p = q.p;
+  std::map<int, std::pair<int, int64_t>> levels;
+  for (auto const &b : q.blocks) {
+    if (b.kind != SiegelBlockKind::Unit) {
+      std::cerr << "LDBP: a binary block at an odd prime\n";
+      throw TerminalException{1};
+    }
+    auto &lv = levels[b.e];
+    if (lv.first == 0) {
+      lv.second = 1;
+    }
+    lv.first++;
+    lv.second = MulMod(lv.second, ModPositive(b.unit, p), p);
+  }
+  return RankOneDensityOddLevels<T>(levels, a.val, ModPositive(a.unit, p), p);
+}
+
+template <typename T>
+T RankOneDensityCounting(SiegelJordanBlocks const &q, PadicClass const &a,
+                         BadPrimeDensityCache<T> &cache);
+
 /*
   alpha_p(a, T) for the Jordan blocks q of T/2 and a target a (a p-adic
   class), raising k until two consecutive levels agree.
@@ -279,6 +374,34 @@ T RankOneDensity(SiegelJordanBlocks const &q, PadicClass const &a,
   if (cache_iter != cache.rank_one.end()) {
     return cache_iter->second;
   }
+  int64_t p = q.p;
+  if (p != 2) {
+    T val = RankOneDensityOdd<T>(q, a);
+#ifdef SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES_EXTENSIVE
+    std::cerr << "LDBP: SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES_EXTENSIVE, the "
+                 "rank one density against counting\n";
+    if (val != RankOneDensityCounting<T>(q, a, cache)) {
+      std::cerr << "LDBP: the rank one recursion disagrees with counting at "
+                   "p=" << p << "\n";
+      throw TerminalException{1};
+    }
+    std::cerr << "LDBP: SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES_EXTENSIVE, done\n";
+#endif
+    cache.rank_one[cache_key] = val;
+    return val;
+  }
+  return RankOneDensityCounting<T>(q, a, cache);
+}
+
+/*
+  alpha_p(a, T) by counting modulo p^k, k raised until two consecutive
+  levels agree: the method at p = 2, and the check of the recursion at odd
+  p. The tables have size p^k, so it is for small p only.
+ */
+template <typename T>
+T RankOneDensityCounting(SiegelJordanBlocks const &q, PadicClass const &a,
+                         BadPrimeDensityCache<T> &cache) {
+  auto cache_key = std::make_tuple(SiegelBlocksKey(q), a.val, a.unit);
   int64_t p = q.p;
   int n = q.dim();
   int e_max = 0;
