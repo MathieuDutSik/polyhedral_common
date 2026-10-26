@@ -41,7 +41,10 @@
   xi_T = kronecker((-1)^k det T, p), xi_B = kronecker(D_B, p) with D_B the
   fundamental discriminant of (-1)^{m/2} det S. This identity was pinned in
   the Sage prototype on exact representation numbers of E8 and of the
-  rank-16 even unimodular genus.
+  rank-16 even unimodular genus. At p = 2 the factor 2^{m-1} is a
+  convention: it makes the global constant of LocalDensity.h equal to 2;
+  the density of the definition (exhaustive counting modulo 2^k) is the
+  value without it.
 
   All the local invariants of Katsurada's recursion depend only on p-adic
   square classes, carried as (valuation, unit residue), the residue being

@@ -5,7 +5,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "LocalDensity.h"
-#include "LocalDensityBadPrimes.h"
+#include "LocalDensityOverlattice.h"
 #include "Arithmetic_dispatch_types.h"
 #include <fstream>
 #include <map>
@@ -45,9 +45,17 @@
     reduction               record: p n T m S    (p odd)
                             value: alpha_p(S, T) by the unit chain and the
                                    reduction formula
-    mass_ratio              record: n T m S      (n even, det T odd)
-                            value: M_S / mass of the genus of T, or fail
-                                   outside the coverage of the unit chain
+    overlattice             record: p n T m S
+                            value: alpha_p(S, T) by the gluing of T with
+                                   the negated non-unimodular part into a
+                                   unimodular lattice, or fail when that
+                                   lattice would have odd rank
+    brute_force             record: p k n T m S  (tiny cases only)
+                            value: alpha_p(S, T) by exhaustive counting at
+                                   the levels k - 1 and k, or fail when
+                                   they differ
+    mass_ratio              record: n T m S      (n even)
+                            value: M_S / mass of the genus of T
  */
 
 template <typename T> MyMatrix<T> ReadSquareMatrixEntries(std::istream &is, int m) {
@@ -84,7 +92,7 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
   is >> n_rec;
   std::vector<std::string> ListVal;
   LocalDensityCache<T> cache;
-  std::map<std::vector<T>, GenusDensityData> genus_data;
+  std::map<std::vector<T>, GenusDensityDataFull<T>> genus_data;
   auto push = [&](T const &val) -> void {
     std::ostringstream oss;
     oss << val;
@@ -164,6 +172,33 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       push(DensityOddDiagonal<T>(OddDiagonalClasses<T, Tint>(S, p),
                                  OddDiagonalClasses<T, Tint>(Tg, p), p,
                                  cache.bad));
+    } else if (task == "overlattice") {
+      int64_t p;
+      int n, m;
+      is >> p >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      is >> m;
+      MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
+      std::optional<T> opt =
+          OverlatticeDensity<T, Tint>(S, Tg, p, cache.siegel);
+      if (opt) {
+        push(*opt);
+      } else {
+        ListVal.push_back("fail");
+      }
+    } else if (task == "brute_force") {
+      int64_t p;
+      int k, n, m;
+      is >> p >> k >> n;
+      MyMatrix<T> Tg = ReadSquareMatrixEntries<T>(is, n);
+      is >> m;
+      MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
+      std::optional<T> opt = BruteForceDensity<T>(S, Tg, p, k);
+      if (opt) {
+        push(*opt);
+      } else {
+        ListVal.push_back("fail");
+      }
     } else if (task == "mass_ratio") {
       int n, m;
       is >> n;
@@ -175,16 +210,12 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
       std::vector<T> key(Tg.data(), Tg.data() + n * n);
       auto iter = genus_data.find(key);
       if (iter == genus_data.end()) {
-        iter = genus_data.emplace(key, ComputeGenusDensityData<T, Tint>(Tg))
+        iter = genus_data
+                   .emplace(key, ComputeGenusDensityDataFull<T, Tint>(
+                                     Tg, cache.siegel))
                    .first;
       }
-      std::optional<T> opt =
-          MassRatioFromDensities<T, Tint>(S, iter->second, cache);
-      if (opt) {
-        push(*opt);
-      } else {
-        ListVal.push_back("fail");
-      }
+      push(MassRatioFromDensitiesFull<T, Tint>(S, iter->second, cache));
     } else if (task == "alpha_unimodular") {
       int64_t p;
       int k, xi_T, m;
@@ -238,6 +269,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  unit_chain             records: p n T m S\n";
       std::cerr << "  counting               records: p n T m S\n";
       std::cerr << "  reduction              records: p n T m S\n";
+      std::cerr << "  overlattice            records: p n T m S\n";
+      std::cerr << "  brute_force            records: p k n T m S\n";
       std::cerr << "  mass_ratio             records: n T m S\n";
       std::cerr << "FileOut: a GAP list, or stdout / stderr\n";
       return -1;

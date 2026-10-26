@@ -527,7 +527,7 @@ test_enumerated_genera:=function(arith)
             cartan_A(3), block_diagonal([cartan_A(1), cartan_A(2)]),
             block_diagonal([cartan_A(1), cartan_A(1), cartan_A(1)]), cartan_D(4),
             cartan_A(4), block_diagonal([cartan_A(2), cartan_A(2)])];
-    for name in ["rank8_det9", "rank8_det25"]
+    for name in ["rank8_det9", "rank8_det25", "rank8_det8", "rank8_det12", "rank8_det16a", "rank8_det16b"]
     do
         R:=enumerate_genus(name);
         if R.complete <> true then
@@ -652,6 +652,183 @@ test_reduction_vs_counting:=function(arith)
     return n_error;
 end;
 
+
+#
+# The gluing into a unimodular lattice: against exhaustive counting at p = 2,
+# against the reduction formula at odd p, against certified values and
+# counted representations at even determinants.
+#
+
+# A tiny even form with structure at 2.
+random_tiny_form_at_2:=function(rs, n)
+    local blocks, rest, kind, U;
+    blocks:=[];
+    rest:=n;
+    while rest > 0
+    do
+        kind:=Random(rs, [1..4]);
+        if kind = 2 and rest < 2 then
+            kind:=1;
+        fi;
+        if kind = 1 then
+            Add(blocks, cartan_A(1)); rest:=rest - 1;
+        elif kind = 2 then
+            Add(blocks, cartan_A(2)); rest:=rest - 2;
+        elif kind = 3 then
+            Add(blocks, 2 * cartan_A(1)); rest:=rest - 1;
+        else
+            Add(blocks, [[6]]); rest:=rest - 1;
+        fi;
+    od;
+    U:=random_unimodular(rs, n);
+    return TransposedMat(U) * block_diagonal(blocks) * U;
+end;
+
+test_overlattice_vs_brute_force:=function(arith)
+    local rs, ListRecO, ListRecB, ListM, i, n, T, S, k, ListO, ListB, n_cmp, n_error, j;
+    rs:=RandomSource(IsMersenneTwister, 20261030);
+    ListRecO:=[];
+    ListRecB:=[];
+    ListM:=[];
+    for i in [1..24]
+    do
+        n:=Random(rs, [3, 4]);
+        T:=random_tiny_form_at_2(rs, n);
+        if i mod 3 = 0 and n = 4 then
+            S:=block_diagonal([cartan_A(1), cartan_A(1)]);
+            k:=3;
+        elif i mod 3 = 1 then
+            S:=cartan_A(1);
+            k:=4;
+        else
+            S:=[[4]];
+            k:=4;
+        fi;
+        Add(ListRecO, Concatenation([2, n], Concatenation(T), [Length(S)], Concatenation(S)));
+        Add(ListRecB, Concatenation([2, k, n], Concatenation(T), [Length(S)], Concatenation(S)));
+        Add(ListM, Length(S));
+    od;
+    ListO:=get_genus_local_density(arith, "overlattice", ListRecO);
+    ListB:=get_genus_local_density(arith, "brute_force", ListRecB);
+    if is_error(ListO) or is_error(ListB) then
+        return 1;
+    fi;
+    n_cmp:=0;
+    n_error:=0;
+    for j in [1..Length(ListRecO)]
+    do
+        if ListB[j] <> fail and ListO[j] <> fail then
+            n_cmp:=n_cmp + 1;
+            # the convention at p = 2: 2^{m-1} times the density of the definition
+            if ListO[j] <> 2^(ListM[j] - 1) * ListB[j] then
+                Print("  overlattice vs brute force, record ", ListRecO[j], ": overlattice ", ListO[j], " brute force ", ListB[j], "\n");
+                n_error:=n_error + 1;
+            fi;
+        fi;
+    od;
+    Print("  overlattice vs brute force: ", Length(ListRecO), " cases, ", n_cmp, " compared\n");
+    if n_cmp < 12 then
+        Print("  overlattice vs brute force: too few comparisons\n");
+        n_error:=n_error + 1;
+    fi;
+    return n_error;
+end;
+
+
+# An even form of rank n at p with at most two non-unimodular blocks, so that
+# the overlattices of the negated non-unimodular part stay few.
+random_form_at_p_small_tail:=function(rs, n, p)
+    local blocks, rest, n_tail, kind, U;
+    blocks:=[];
+    rest:=n;
+    n_tail:=0;
+    while rest > 0
+    do
+        kind:=Random(rs, [1..4]);
+        if kind >= 3 and n_tail >= 2 then
+            kind:=kind - 2;
+        fi;
+        if (kind = 2 or kind = 4) and rest < 2 then
+            kind:=1;
+        fi;
+        if kind = 1 then
+            Add(blocks, cartan_A(1)); rest:=rest - 1;
+        elif kind = 2 then
+            Add(blocks, cartan_A(2)); rest:=rest - 2;
+        elif kind = 3 then
+            Add(blocks, p * cartan_A(1)); rest:=rest - 1; n_tail:=n_tail + 1;
+        else
+            Add(blocks, p * cartan_A(2)); rest:=rest - 2; n_tail:=n_tail + 1;
+        fi;
+    od;
+    U:=random_unimodular(rs, n);
+    return TransposedMat(U) * block_diagonal(blocks) * U;
+end;
+
+test_overlattice_vs_reduction:=function(arith)
+    local rs, ListRec, p, i, n, T, S, ListO, ListR, n_cmp, n_error, j;
+    rs:=RandomSource(IsMersenneTwister, 20261031);
+    ListRec:=[];
+    for p in [3, 5, 7]
+    do
+        for i in [1..10]
+        do
+            n:=Random(rs, [6..10]);
+            T:=random_form_at_p_small_tail(rs, n, p);
+            for S in [cartan_A(1), cartan_A(2), block_diagonal([p * cartan_A(1), p * cartan_A(1)]),
+                      block_diagonal([cartan_A(1), cartan_A(2), p * cartan_A(1)])]
+            do
+                if n - Length(S) >= 3 then
+                    Add(ListRec, Concatenation([p, n], Concatenation(T), [Length(S)], Concatenation(S)));
+                fi;
+            od;
+        od;
+    od;
+    ListO:=get_genus_local_density(arith, "overlattice", ListRec);
+    ListR:=get_genus_local_density(arith, "reduction", ListRec);
+    if is_error(ListO) or is_error(ListR) then
+        return 1;
+    fi;
+    n_cmp:=0;
+    n_error:=0;
+    for j in [1..Length(ListRec)]
+    do
+        if ListO[j] <> fail then
+            n_cmp:=n_cmp + 1;
+            if ListO[j] <> ListR[j] then
+                Print("  overlattice vs reduction, record ", ListRec[j], ": overlattice ", ListO[j], " reduction ", ListR[j], "\n");
+                n_error:=n_error + 1;
+            fi;
+        fi;
+    od;
+    Print("  overlattice vs reduction: ", Length(ListRec), " cases, ", n_cmp, " compared\n");
+    if n_cmp < 40 then
+        Print("  overlattice vs reduction: too few comparisons\n");
+        n_error:=n_error + 1;
+    fi;
+    return n_error;
+end;
+
+test_certified_mass_ratio_even:=function(arith)
+    local ListRef, ListVal, n_error, i;
+    ListRef:=ReadAsFunction("density_certified_mass_ratio_even.g")();
+    ListVal:=get_genus_local_density(arith, "mass_ratio",
+        List(ListRef, x->Concatenation([x[1]], x[2], [x[3]], x[4])));
+    if is_error(ListVal) then
+        return 1;
+    fi;
+    n_error:=0;
+    for i in [1..Length(ListRef)]
+    do
+        if ListVal[i] <> ListRef[i][5] then
+            Print("  certified mass ratio (even det) ", i, ": got ", ListVal[i], " expected ", ListRef[i][5], "\n");
+            n_error:=n_error + 1;
+        fi;
+    od;
+    Print("  certified mass ratio (even det): ", Length(ListRef), " cases\n");
+    return n_error;
+end;
+
 FullTest:=function()
     local n_error, arith, eTest, n_err;
     n_error:=0;
@@ -668,7 +845,10 @@ FullTest:=function()
                       ["unit_chain", test_unit_chain],
                       ["certified_mass_ratio", test_certified_mass_ratio],
                       ["enumerated_genera", test_enumerated_genera],
-                      ["reduction_vs_counting", test_reduction_vs_counting]]
+                      ["reduction_vs_counting", test_reduction_vs_counting],
+                      ["overlattice_vs_brute_force", test_overlattice_vs_brute_force],
+                      ["overlattice_vs_reduction", test_overlattice_vs_reduction],
+                      ["certified_mass_ratio_even", test_certified_mass_ratio_even]]
         do
             n_err:=eTest[2](arith);
             Print("arith=", arith, " test=", eTest[1], " n_error=", n_err, "\n");

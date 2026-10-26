@@ -17,6 +17,10 @@
 #define SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES
 #endif
 
+// SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES_EXTENSIVE (not switched on by
+// SANITY_CHECK): every value of the reduction formula is compared with the
+// counting method whenever the latter fits its budget.
+
 /*
   Local densities at a prime where T is not unimodular.
 
@@ -572,6 +576,17 @@ T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
              DensityOddDiagonal<T>(SigmaRed, G, p, cache);
     total += coef * beta;
   }
+#ifdef SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES_EXTENSIVE
+  std::cerr << "LDBP: SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES_EXTENSIVE, "
+               "the reduction formula against counting\n";
+  std::optional<T> opt_count = CountingDensity<T>(Sigma, Cdiag, p, cache);
+  if (opt_count && *opt_count != total) {
+    std::cerr << "LDBP: the reduction formula gives " << total
+              << " and counting " << *opt_count << " at p=" << p << "\n";
+    throw TerminalException{1};
+  }
+  std::cerr << "LDBP: SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES_EXTENSIVE, done\n";
+#endif
   return total;
 }
 
