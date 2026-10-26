@@ -13,16 +13,26 @@ Tasks:
                  primes not dividing 2 det S det T, for S of rank m and
                  determinant detS, T of rank n and determinant detT
                  (conventions of the C++ header LocalDensity.h).
+  siegel_series  Katsurada's polynomial F_p(S/2, X) for even Gram matrices S
+                 (root lattices and random even forms) at p = 2, 3, 5, 7,
+                 from the vendored package external/siegel_series.
+  alpha_unimodular
+                 alpha_p(S, T) for T unimodular at p of rank 2k and
+                 character xi_T, assembled from that polynomial.
 
 The Euler factors of the good-prime density are those of LocalDensity.h;
 they are checked independently, against the orders of the orthogonal
 groups over F_p, by the GAP test itself.
 """
 
+import os
+import random
 import sys
 
-from sage.all import (QQ, SR, ZZ, fundamental_discriminant, gamma,
-                      kronecker_symbol, pi, prod)
+from sage.all import (QQ, SR, ZZ, CartanMatrix, block_diagonal_matrix,
+                      fundamental_discriminant, gamma, identity_matrix,
+                      kronecker_symbol, matrix, pi, prod,
+                      PolynomialRing)
 from sage.quadratic_forms.special_values import (quadratic_L_function__exact,
                                                  zeta__exact)
 
@@ -87,17 +97,141 @@ def grid_generic_part():
     return out
 
 
+def cartan(letter, rank):
+    C = CartanMatrix([letter, rank])
+    return matrix(ZZ, C.nrows(), C.ncols(), list(C))
+
+
+def ade_types(max_rank):
+    """All root lattice types of rank <= max_rank, as lists of (letter, rank)."""
+    comps = [("A", r) for r in range(1, max_rank + 1)]
+    comps += [("D", r) for r in range(4, max_rank + 1)]
+    comps += [("E", r) for r in (6, 7, 8) if r <= max_rank]
+    out = []
+
+    def rec(start, rank_left, current):
+        if current:
+            out.append(list(current))
+        for i in range(start, len(comps)):
+            if comps[i][1] <= rank_left:
+                current.append(comps[i])
+                rec(i, rank_left - comps[i][1], current)
+                current.pop()
+    rec(0, max_rank, [])
+    return out
+
+
+def ade_gram(typ):
+    return block_diagonal_matrix([cartan(l, r) for (l, r) in typ],
+                                 subdivide=False)
+
+
+def test_matrices():
+    """Root lattices, and random even positive definite forms R^t E R."""
+    mats = [ade_gram(t) for t in ade_types(6)]
+    extra = [[("A", 7)], [("A", 8)], [("D", 7)], [("D", 8)], [("E", 7)],
+             [("E", 8)], [("A", 1), ("E", 7)], [("A", 2), ("A", 1), ("D", 4)],
+             [("A", 1)] * 7, [("A", 2)] * 4]
+    mats += [ade_gram(t) for t in extra]
+    rng = random.Random(20261026)
+    for i in range(150):
+        m = rng.randint(1, 6)
+        kind = rng.choice(["2I", "A", "2A", "6I", "D", "10I"])
+        if kind == "2I":
+            E = 2 * identity_matrix(ZZ, m)
+        elif kind == "6I":
+            E = 6 * identity_matrix(ZZ, m)
+        elif kind == "10I":
+            E = 10 * identity_matrix(ZZ, m)
+        elif kind == "A":
+            E = cartan("A", m)
+        elif kind == "2A":
+            E = 2 * cartan("A", m)
+        else:
+            E = cartan("D", m) if m >= 4 else cartan("A", m)
+        while True:
+            R = matrix(ZZ, m, m, [rng.randint(-2, 2) for _ in range(m * m)])
+            if R.det() != 0:
+                break
+        mats.append(R.transpose() * E * R)
+    return mats
+
+
+def load_siegel_series():
+    here = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, os.path.join(here, "external"))
+    from siegel_series.impl import siegel_series_polynomial
+    return siegel_series_polynomial
+
+
+def poly_coeffs(F):
+    R = PolynomialRing(QQ, "x")
+    G = R.fraction_field()(F)
+    num, den = R(G.numerator()), R(G.denominator())
+    assert den.degree() == 0, "the Siegel series is not a polynomial"
+    P = num / den.constant_coefficient()
+    return [QQ(c) for c in R(P).list()]
+
+
+def grid_siegel_series():
+    ssp = load_siegel_series()
+    out = []
+    for S in test_matrices():
+        for p in (2, 3, 5, 7):
+            F = ssp(S / 2, ZZ(p))
+            out.append((p, S.nrows(), list(S.list()), poly_coeffs(F)))
+    return out
+
+
+def alpha_unimodular(ssp, S, p, k, xi_T):
+    m = S.nrows()
+    p = ZZ(p)
+    X = QQ(xi_T) / p**k
+    coeffs = poly_coeffs(ssp(S / 2, p))
+    Fv = sum(c * X**i for i, c in enumerate(coeffs))
+    pre = (1 - X) * prod(1 - p**(2 * i) * X**2 for i in range(1, m // 2 + 1))
+    if m % 2 == 0:
+        D = fundamental_discriminant((-1)**(m // 2) * S.det())
+        pre /= (1 - p**(m // 2) * kronecker_symbol(D, p) * X)
+    if p == 2:
+        pre *= ZZ(2)**(m - 1)
+    return pre * Fv
+
+
+def grid_alpha_unimodular():
+    ssp = load_siegel_series()
+    out = []
+    cases = [(2, 4, 1), (2, 7, 1), (2, 7, -1), (2, 8, 1), (3, 7, 1),
+             (3, 7, -1), (5, 7, 1), (5, 7, -1)]
+    for t in ade_types(6):
+        S = ade_gram(t)
+        for (p, k, xi) in cases:
+            if 2 * k - S.nrows() >= 3:
+                out.append((p, k, xi, S.nrows(), list(S.list()),
+                            alpha_unimodular(ssp, S, p, k, xi)))
+    return out
+
+
+def gap_string(x):
+    if isinstance(x, (list, tuple)):
+        return "[" + ", ".join(gap_string(y) for y in x) + "]"
+    return str(x)
+
+
 def main():
     task, out_file = sys.argv[1], sys.argv[2]
     if task == "generic_part":
         rows = grid_generic_part()
+    elif task == "siegel_series":
+        rows = grid_siegel_series()
+    elif task == "alpha_unimodular":
+        rows = grid_alpha_unimodular()
     else:
         raise ValueError("unknown task " + task)
     with open(out_file, "w") as fh:
         fh.write("# Generated by sage/make_density_references.py %s\n" % task)
         fh.write("return [\n")
-        fh.write(",\n".join("[%s]" % ", ".join(str(x) for x in r)
-                            for r in rows))
+        fh.write(",\n".join(gap_string(r) for r in rows))
         fh.write("];\n")
     print("%d records written to %s" % (len(rows), out_file))
 

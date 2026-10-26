@@ -5,8 +5,10 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "LocalDensity.h"
+#include "SiegelSeries.h"
 #include "Arithmetic_dispatch_types.h"
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 // clang-format on
@@ -24,9 +26,37 @@
     generic_part            record: n m detS detT
                             value: alpha_oo times all good primes,
                                    without the constant c = 2
+    siegel_series           record: p m S (m*m entries, S even)
+                            value: the coefficients [c_0, c_1, ...] of
+                                   Katsurada's polynomial F_p(S/2, X)
+    alpha_unimodular        record: p k xi_T m S
+                            value: alpha_p(S, T) for T unimodular at p of
+                                   rank 2k and character xi_T at p
  */
 
-template <typename T>
+template <typename T> MyMatrix<T> ReadSquareMatrixEntries(std::istream &is, int m) {
+  MyMatrix<T> S(m, m);
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < m; j++) {
+      long val;
+      is >> val;
+      S(i, j) = T(val);
+    }
+  }
+  return S;
+}
+
+template <typename T> std::string PolynomialToGAP(UnivariatePolynomial<T> const &P) {
+  std::ostringstream oss;
+  oss << "[";
+  for (size_t i = 0; i < P.coeff.size(); i++) {
+    oss << (i > 0 ? ", " : "") << P.coeff[i];
+  }
+  oss << "]";
+  return oss.str();
+}
+
+template <typename T, typename Tint>
 void ProcessTask(std::string const &task, std::string const &FileIn,
                  std::ostream &os) {
   std::ifstream is(FileIn);
@@ -36,28 +66,46 @@ void ProcessTask(std::string const &task, std::string const &FileIn,
   }
   size_t n_rec;
   is >> n_rec;
-  std::vector<T> ListVal;
+  std::vector<std::string> ListVal;
+  SiegelSeriesCache<T> cache;
+  auto push = [&](T const &val) -> void {
+    std::ostringstream oss;
+    oss << val;
+    ListVal.push_back(oss.str());
+  };
   for (size_t i_rec = 0; i_rec < n_rec; i_rec++) {
     if (task == "bernoulli") {
       int k;
       is >> k;
-      ListVal.push_back(BernoulliNumbers<T>(k)[k]);
+      push(BernoulliNumbers<T>(k)[k]);
     } else if (task == "generalized_bernoulli") {
       int k;
       int64_t D;
       is >> k >> D;
-      ListVal.push_back(GeneralizedBernoulli<T>(k, D));
+      push(GeneralizedBernoulli<T>(k, D));
     } else if (task == "euler_value") {
       int n, m;
       int64_t detS, detT, p;
       is >> n >> m >> detS >> detT >> p;
-      ListVal.push_back(
-          EulerValueAtPrime<T>(GoodPrimeEulerTerms(n, m, detS, detT), p));
+      push(EulerValueAtPrime<T>(GoodPrimeEulerTerms(n, m, detS, detT), p));
     } else if (task == "generic_part") {
       int n, m;
       int64_t detS, detT;
       is >> n >> m >> detS >> detT;
-      ListVal.push_back(GenericDensityPart<T>(n, m, detS, detT));
+      push(GenericDensityPart<T>(n, m, detS, detT));
+    } else if (task == "siegel_series") {
+      int64_t p;
+      int m;
+      is >> p >> m;
+      MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
+      ListVal.push_back(
+          PolynomialToGAP(SiegelSeriesPolynomial<T, Tint>(S, p, cache)));
+    } else if (task == "alpha_unimodular") {
+      int64_t p;
+      int k, xi_T, m;
+      is >> p >> k >> xi_T >> m;
+      MyMatrix<T> S = ReadSquareMatrixEntries<T>(is, m);
+      push(AlphaUnimodularTarget<T, Tint>(S, p, k, xi_T, cache));
     } else {
       std::cerr << "GENUS_LocalDensity: unknown task " << task << "\n";
       throw TerminalException{1};
@@ -82,9 +130,10 @@ int main(int argc, char *argv[]) {
     std::string FileIn;
     std::ostream *os_ptr = nullptr;
     ArithmeticDispatch dispatch;
-    add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
-      ProcessTask<T>(task, FileIn, *os_ptr);
-    });
+    add_rational_integer_arithmetics_by_library<false>(
+        dispatch, [&]<typename T, typename Tint>() -> void {
+          ProcessTask<T, Tint>(task, FileIn, *os_ptr);
+        });
     if (argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -98,6 +147,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  generalized_bernoulli  records: k D\n";
       std::cerr << "  euler_value            records: n m detS detT p\n";
       std::cerr << "  generic_part           records: n m detS detT\n";
+      std::cerr << "  siegel_series          records: p m S (m*m entries)\n";
+      std::cerr << "  alpha_unimodular       records: p k xi_T m S\n";
       std::cerr << "FileOut: a GAP list, or stdout / stderr\n";
       return -1;
     }

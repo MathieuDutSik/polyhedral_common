@@ -89,6 +89,9 @@ inline int KroneckerSymbol(int64_t a, int64_t n) {
   return (nn == 1) ? result : 0;
 }
 
+// (-1)^r x.
+inline int64_t SignedPower(int r, int64_t x) { return (r % 2 == 0) ? x : -x; }
+
 // The square-free part of a non-zero integer, with its sign.
 inline int64_t SquareFreePart(int64_t x) {
   if (x == 0) {

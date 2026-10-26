@@ -50,8 +50,6 @@ struct EulerTerm {
   int e;
 };
 
-inline int64_t SignedPower(int r, int64_t x) { return (r % 2 == 0) ? x : -x; }
-
 /*
   The Euler factors of alpha_p(S, T) at a good prime, for S of rank m and
   determinant detS and T of rank n and determinant detT. By Witt, O(V_T)
