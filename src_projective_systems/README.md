@@ -85,3 +85,26 @@ eliminated, `EliminateInfinity = true` in the driver).
   space of dimension one), which is not possible for Hecke eigenvalues; the
   matrices here are to be compared with the integrality and with the
   dimensions of the homology instead.
+
+## Results
+
+The driver's range (`B`, p = 2, eDimMax = 4), computed modulo 2^31 - 1. The
+whole range takes about 5 minutes and 2.4G; the complex alone takes 2.5 s.
+Below are the factors of the characteristic polynomial of T(2) on the
+homology of the GAP level 4 (exponents give multiplicities). For Gamma0_B(17)
+and (19) the polynomial was lifted by the Chinese remainder theorem from
+three primes; the rational homology does not finish in 20 minutes.
+
+| N  | Gamma0_A (Siegel)                  | Gamma0_B (Klingen)                                          |
+|----|------------------------------------|-------------------------------------------------------------|
+| 2  | (x-2)                              | (x-10)(x-3)                                                 |
+| 3  | (x-15)                             | (x-15)^2                                                    |
+| 5  | (x-15)                             | (x-15)^2 (x-2)                                              |
+| 7  | (x-15)                             | (x-15)^2 (x-5)                                              |
+| 11 | (x-15)                             | (x-15)^2 (x^2-14x+46) (x^2+6x+6)^2                          |
+| 13 | (x-15) (x-1)                       | (x-15)^2 (x-1)^4 (x^2-13x+38)                               |
+| 17 | (x-15) (x-3) (x+5)^4               | (x-15)^2 (x-3)^4 (x+5)^2 (x^3-19x^2+96x-76) (x^3+5x^2-16x-12)^2 |
+| 19 | (x-15) (x-3) (x+3)^4               | (x-15)^2 (x-3)^4 (x+2)^4 (x+3)^2 (x^3-21x^2+126x-178) (x^3-3x^2-18x+38)^2 |
+
+The eigenvalue 15 = 1 + 2 + 4 + 8 is the degree of T(2), the Eisenstein
+class.
