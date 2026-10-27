@@ -335,6 +335,79 @@ general warning that applies here: a past attempt at reduced arithmetic in
 this area produced a performance regression, so any change must be measured
 end to end on real workloads before being adopted.
 
+## Shortest-vector enumeration in floating point, as PARI does (NOT attempted)
+
+The enumeration of `CVPSolver` (`compute_minimum` / `computeIt` in
+`src_latt/Shvec_exact.h`) runs Fincke-Pohst in exact rational arithmetic, and
+on large shells that is the dominant cost. Measured 2026-10-27 on the Leech
+lattice (196560 minimal vectors, Gram matrix built from the Golay code):
+
+| enumeration of the minimal vectors        | time   |
+|-------------------------------------------|--------|
+| ours, flint (inside `LATT_Canonicalize`)  | 13.0 s |
+| ours, gmp, LLL-reduced input              | 60 s   |
+| ours, gmp + `ENABLE_SHVEC_FAST_PATH`      | 53 s   |
+| PARI `qfminim`, default (flag 0)          | 0.37 s |
+| PARI `qfminim`, flag 2 (`fincke_pohst`)   | 4.4 s  |
+
+The profile is all `gmpz_mul` / `gmpz_gcd` / `gmpq_aors`. The enumeration is
+half of the 25.4 s Leech canonicalization (`plesken_souvignier` method; the
+rest: orbit-split prefix selection 7.0 s, automorphism group 3.7 s).
+
+What PARI does (`src/basemath/bibli1.c`, `minim0_dolll`; `qfauto` uses the same
+code through `minim0_zm`):
+
+1. It accepts only an integer Gram matrix and LLL-reduces it exactly
+   (`lllgramint`), so the Cholesky coefficients satisfy |q_ij| <= 1/2.
+2. The Gauss reduction is done in multiprecision reals (exact rational if that
+   fails) and then cast to C `double`.
+3. The whole enumeration runs in `double` (partial norms, centers) and `long`
+   (coordinates): a few multiply-adds, one `sqrt` and one `floor` per node,
+   no exact arithmetic at all.
+4. The bound is `B * (1 + 1e-10)`; the norms being integers, the slack only
+   keeps the norm-B vectors from being lost to rounding.
+5. There is NO exact check of the output and no certified error bound: the
+   norm of a vector is its double value rounded. The only failure detected is
+   a bound too large for a `long` / `double` (`pari_err_PREC`). PARI's speed
+   rests on a heuristic: integer input plus LLL makes the doubles good enough.
+
+The careful variant (flag 2, `fincke_pohst`) does two LLLs, works in
+multiprecision reals with comparisons that count a difference only when it is
+about 24 bits above the rounding noise, and catches precision errors: 12x the
+cost of flag 0 on Leech.
+
+Why the native-integer fast path above does not get there: it keeps the EXACT
+algorithm (Bareiss data, scaled numerators, exact divisions and floors) and only
+changes the number type, so the work per node is the same and there is a
+per-call preparation on top. Doubles change the algorithm itself: exact
+arithmetic would be paid per output vector, not per node.
+
+Proposed design, rigorous where PARI is not:
+
+1. Enumerate in `double` on the LLL-reduced Gram matrix, with the bound B + 1/2
+   instead of B (1 + 1e-10). For an integral form a spurious candidate has norm
+   at least B + 1, so it needs an error above 1/2 to get in, and a genuine
+   vector is lost only if the error exceeds 1/2: a margin about 10^9 times
+   PARI's.
+2. Check every candidate exactly: its integer norm, n^2 operations per output
+   vector (about 1.1e8 for Leech, ~0.1 s). This removes the false positives.
+3. Certify before running that the floating error stays below 1/2: an a
+   priori bound from n, B and the size of the Cholesky data (errors of order
+   n^2 B 2^-52), or an exact computation of the residual G - R~^T R~ of the
+   floating Cholesky. When the certificate fails (very large or badly
+   conditioned input) fall back to the current exact path, which also stays
+   available as the reference.
+4. Rational Gram matrices: clear the denominator first so that the norms are
+   integers, as `ShvecFastPrep` already does.
+5. Cosets / closest vectors (`nearest_vectors`): the same idea, with the
+   integrality argument applied to the distances to the scaled center.
+
+Test plan: counts and vector sets identical to the exact path on Leech, the 813
+classes of the determinant-351 genus, and the LatticeAutBench datasets
+(`../input/LatticeAutBench`), plus the existing shell computations of the
+iso-Delaunay work, where the shells are small and the gain should be measured
+rather than assumed (cf. the native fast path above, which lost there).
+
 ## EXT reduction before dual description (measured 2026-09-22)
 
 `POLY_RecursiveDualDesc.h:2117` and `:2191` call
