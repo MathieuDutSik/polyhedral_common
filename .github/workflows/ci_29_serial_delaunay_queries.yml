@@ -39,9 +39,16 @@ jobs:
         run: |
           make -C src_delaunay -f Makefile_serial_delaunay LATT_SerialComputeDelaunay
           echo "After compilation of LATT_SerialComputeDelaunay"
+          make -C src_delaunay -f Makefile_periodic LATT_SerialPeriodicDelaunay
+          echo "After compilation of LATT_SerialPeriodicDelaunay"
 
           cd CI_tests/29_SerialDelaunayQueries
           ../../gap.sh < TestSerialDelaunayQueries.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          ../../gap.sh < TestPackingCoveringRecord.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
             exit 1

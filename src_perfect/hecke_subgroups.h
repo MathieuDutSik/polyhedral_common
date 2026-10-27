@@ -325,6 +325,20 @@ template <typename Tint> struct FiniteIndexSubgroup {
       }
       return true;
     }
+    if (type == "Gamma0Siegel" && !is_hermitian()) {
+      // The Siegel parabolic subgroup modulo N (n = 2g): the first g rows
+      // vanish in the last g columns, g preserves the Lagrangian subspace
+      // spanned by e_1, ..., e_g (for the form J[i][g + i] = 1).
+      int half = n / 2;
+      for (int i = 0; i < half; i++) {
+        for (int j = half; j < n; j++) {
+          if (ResInt(g(i, j), N) != 0) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
     std::cerr << "HECKE: Unsupported subgroup type=" << type << "\n";
     throw TerminalException{1};
   }
@@ -437,6 +451,45 @@ template <typename Tint> struct FiniteIndexSubgroup {
       up to a unit lambda (lambda = 1 for Gamma1);
     - for the SL variants the sign of det(g) is appended.
    */
+  // The reduced row echelon form modulo the prime N of the rows (of length
+  // n) stored in rows, in place: the canonical form of their span.
+  void rref_rows(std::vector<int64_t> &rows) const {
+    int64_t m = get_n_mod();
+    if (!is_prime_n()) {
+      std::cerr << "HECKE: the subgroup type " << type << " needs a prime level\n";
+      throw TerminalException{1};
+    }
+    int n_row = rows.size() / n;
+    int i_row = 0;
+    for (int col = 0; col < n && i_row < n_row; col++) {
+      int piv = -1;
+      for (int r = i_row; r < n_row; r++) {
+        if (rows[r * n + col] != 0) {
+          piv = r;
+          break;
+        }
+      }
+      if (piv == -1) {
+        continue;
+      }
+      for (int j = 0; j < n; j++) {
+        std::swap(rows[piv * n + j], rows[i_row * n + j]);
+      }
+      int64_t inv = InverseModPrime(rows[i_row * n + col], m);
+      for (int j = 0; j < n; j++) {
+        rows[i_row * n + j] = (rows[i_row * n + j] * inv) % m;
+      }
+      for (int r = 0; r < n_row; r++) {
+        if (r != i_row && rows[r * n + col] != 0) {
+          int64_t c = m - rows[r * n + col];
+          for (int j = 0; j < n; j++) {
+            rows[r * n + j] = (rows[r * n + j] + c * rows[i_row * n + j]) % m;
+          }
+        }
+      }
+      i_row += 1;
+    }
+  }
   GammaKey get_key(MyMatrix<Tint> const &g) const {
     std::vector<int64_t> r = get_residues(g);
     std::string type = base_type();
@@ -462,6 +515,12 @@ template <typename Tint> struct FiniteIndexSubgroup {
       if (type == "Gamma0") {
         canonicalize_gamma0(key);
       }
+    } else if (type == "Gamma0Siegel") {
+      // The subspace spanned by the first n / 2 rows of g^{-1}, in reduced
+      // echelon form.
+      std::vector<int64_t> inv = inverse_residues(r);
+      key = std::vector<int64_t>(inv.begin(), inv.begin() + (n / 2) * n);
+      rref_rows(key);
     } else if (type != "Full") {
       std::cerr << "HECKE: Unsupported subgroup type=" << type << "\n";
       throw TerminalException{1};
@@ -549,6 +608,19 @@ template <typename Tint> struct FiniteIndexSubgroup {
       if (type == "Gamma0") {
         canonicalize_gamma0(key_ret);
       }
+    } else if (type == "Gamma0Siegel") {
+      int half = n / 2;
+      key_ret = std::vector<int64_t>(half * n, 0);
+      for (int i = 0; i < half; i++) {
+        for (int j = 0; j < n; j++) {
+          int64_t sum = 0;
+          for (int k = 0; k < n; k++) {
+            sum = (sum + key[i * n + k] * a.s_inv_mod[k * n + j]) % m;
+          }
+          key_ret[i * n + j] = sum;
+        }
+      }
+      rref_rows(key_ret);
     }
     if (is_sl()) {
       if (is_hermitian()) {

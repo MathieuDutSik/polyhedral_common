@@ -6,6 +6,8 @@
 #include "Shvec_exact.h"
 #include "Positivity.h"
 #include "Timings.h"
+#include <functional>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -844,17 +846,41 @@ MyMatrix<Tint> ivf_z_spanning(MyMatrix<T> const &GramMat,
      integral lifts are a + (minimal P1-glue), a closest vector problem in P1.
   The result Z-spans L. With use_roots this is the Z-spanning
   root-iterated-shortest family (Hecke's _reduced_characteristic_vectors).
+
+  The optional chamber restricts the top level to a fundamental Weyl chamber
+  (Brandhorst-Hofmann, Remark 7.9): use_roots is set, the block is the root
+  system, and chamber(y, reps) returns the vectors of minimal norm of
+  y + P1 that lie in the closed chamber, where P1 is the union of the cosets
+  x + S1 for x in reps (the zero vector included). It replaces the closest
+  vector problems of the top level, and the roots themselves are left out,
+  the caller supplying the simple roots. The deeper levels are untouched,
+  the Weyl group acting trivially on the orthogonal complement of P1.
  */
+template <typename Tint>
+using InnerSpanChamber = std::function<std::vector<MyVector<Tint>>(
+    MyVector<Tint> const &, std::vector<MyVector<Tint>> const &)>;
+
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
 inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
-                                 std::ostream &os) {
+                                 std::ostream &os,
+                                 InnerSpanChamber<Tint> const *chamber =
+                                     nullptr) {
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  MicrosecondTime time;
+#endif
   int n = G.rows();
   MyMatrix<Tint> SHV = get_shv_block<T, Tint>(G, use_roots, os);
   int r = RankMat(SHV);
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  os << "|IVF: inner_span n=" << n << ", block of " << SHV.rows()
+     << " vectors of rank " << r << "|=" << time << "\n";
+#endif
   std::vector<MyVector<Tint>> cvL;
-  for (int i = 0; i < SHV.rows(); i++) {
-    cvL.push_back(GetMatrixRow(SHV, i));
+  if (chamber == nullptr) {
+    for (int i = 0; i < SHV.rows(); i++) {
+      cvL.push_back(GetMatrixRow(SHV, i));
+    }
   }
   // S1 = <SHV>, P1 = saturation of S1 in Z^n, both as row bases in Z^n.
   MyMatrix<Tint> S1 = GetZbasis(SHV);
@@ -877,9 +903,33 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
     }
   }
   MyMatrix<T> S1_T = UniversalMatrixConversion<T, Tint>(S1);
+  // The representatives in Z^n of P1 / S1, for the chamber variant.
+  std::vector<MyVector<Tint>> P1reps{ZeroVector<Tint>(n)};
   // Saturation completion S1 -> P1: only needed when S1 is a proper
   // sublattice of its saturation.
-  if (T_abs(DeterminantMatBareiss(C)) != Tint(1)) {
+  if (T_abs(DeterminantMatBareiss(C)) != Tint(1) && chamber != nullptr) {
+    std::vector<MyVector<Tint>> cosets =
+        ComputeTranslationClasses<Tint, Tint>(C);
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+    os << "|IVF: inner_span n=" << n << ", " << cosets.size()
+       << " translation classes|=" << time << "\n";
+#endif
+    for (auto &cr : cosets) {
+      if (IsZeroVector(cr)) {
+        continue;
+      }
+      MyVector<Tint> p = P1.transpose() * cr;
+      P1reps.push_back(p);
+      for (auto &w : (*chamber)(p, {ZeroVector<Tint>(n)})) {
+        cvL.push_back(w);
+      }
+    }
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+    os << "|IVF: inner_span n=" << n << ", chamber saturation completion over "
+       << cosets.size() << " cosets|=" << time << "\n";
+#endif
+  }
+  if (T_abs(DeterminantMatBareiss(C)) != Tint(1) && chamber == nullptr) {
     MyMatrix<T> G_S1 = S1_T * G * S1_T.transpose();
     CVPSolver<T, Tint> solverS1(G_S1, os);
     std::vector<MyVector<Tint>> cosets =
@@ -907,6 +957,10 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
         cvL.push_back(w);
       }
     }
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+    os << "|IVF: inner_span n=" << n << ", saturation completion over "
+       << cosets.size() << " cosets|=" << time << "\n";
+#endif
   }
   if (r == n) {
     return cvL;
@@ -944,9 +998,22 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
       P_Z(i, j) = UniversalScalarConversion<Tint, T>((*opt)(j));
     }
   }
-  CVPSolver<T, Tint> solverP1(P1GP1t, os);
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  os << "|IVF: inner_span n=" << n << ", projection|=" << time << "\n";
+#endif
   std::vector<MyVector<Tint>> rec2 =
       inner_span_iterated_shortest_rec<T, Tint>(G_L2, use_roots, os);
+  // Built on first use: the chamber variant does not need it.
+  std::optional<CVPSolver<T, Tint>> opt_solverP1;
+  auto get_solverP1 = [&]() -> CVPSolver<T, Tint> & {
+    if (!opt_solverP1) {
+      opt_solverP1.emplace(P1GP1t, os);
+    }
+    return *opt_solverP1;
+  };
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  os << "|IVF: inner_span n=" << n << ", recursion|=" << time << "\n";
+#endif
   for (auto &a : rec2) {
     MyVector<T> a_T = UniversalVectorConversion<T, Tint>(a);
     MyVector<T> aL = L2basis.transpose() * a_T;
@@ -966,6 +1033,12 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
     }
 #endif
     MyVector<Tint> const &vL = *vL_opt;
+    if (chamber != nullptr) {
+      for (auto &w : (*chamber)(vL, P1reps)) {
+        cvL.push_back(w);
+      }
+      continue;
+    }
     MyVector<T> vL_T = UniversalVectorConversion<T, Tint>(vL);
     MyVector<T> w_amb = pr1.transpose() * vL_T;
     std::optional<MyVector<T>> w_opt = SolutionMat(P1_T, w_amb);
@@ -975,6 +1048,7 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
       throw TerminalException{1};
     }
 #endif
+    CVPSolver<T, Tint> &solverP1 = get_solverP1();
     resultCVP<T, Tint> cvp = solverP1.nearest_vectors(*w_opt);
     for (int rr = 0; rr < cvp.ListVect.rows(); rr++) {
       MyVector<Tint> jp = GetMatrixRow(cvp.ListVect, rr);
@@ -983,6 +1057,10 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
       cvL.push_back(glue);
     }
   }
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  os << "|IVF: inner_span n=" << n << ", lifts of " << rec2.size()
+     << " vectors|=" << time << "\n";
+#endif
   return cvL;
 }
 

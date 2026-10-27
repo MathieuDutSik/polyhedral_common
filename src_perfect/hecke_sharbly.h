@@ -365,6 +365,7 @@ public:
 #endif
   }
   SymbolGeometry<T, Tint> const &get_geometry() const { return geom; }
+  int get_symbol_level() const { return symbol_level; }
   /*
     The cell of the symbol level equivalent to the symbol of the rows of W
     (|det| > 1), if any: (iOrb, sign, M) with [W] = sign F_iOrb M. The rows
@@ -679,6 +680,39 @@ get_sharbly_covering_seed(int const &index, int const &iOrb, MyMatrix<T> const &
 }
 
 /*
+  The seed of the covering at the levels further below the symbol level
+  (the k-sharblies, k >= 2): the cone F y and its facets. The right hand
+  side is the image of the boundary of F by the chain map of the level
+  above, itself a filling, and partial_contracting_homotopy_kernel adds
+  the cones of its cells. There is no reduction of the k-sharblies to
+  follow: the sharbly complex is not used below the level s - 1.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::vector<TopPerfectCone<Tint>>
+get_sharbly_covering_seed_lower(int const &index, int const &iOrb, MyMatrix<T> const &y,
+                                FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+                                ConeWalker<T, Tint, Tgroup> const &walker,
+                                SharblyReducer<T, Tint, Tgroup> const &reducer) {
+  std::vector<MyMatrix<Tint>> l_sample;
+  MyMatrix<Tint> const &EXT_F = fce.levels[index].l_faces[iOrb].EXT;
+  SymbolGeometry<T, Tint> const &geom = reducer.get_geometry();
+  l_sample.push_back(reducer.primitive_rows(UniversalMatrixConversion<T, Tint>(geom.symbol_rows(EXT_F)) * y));
+  for (auto &ebnd : fce.boundaries[index].ll_bound[iOrb].l_bound) {
+    FacePerfectComplex<T, Tint, Tgroup> const &face_G = fce.levels[index + 1].l_faces[ebnd.iOrb];
+    if (!face_G.is_well_rounded) {
+      continue;
+    }
+    MyMatrix<Tint> EXT_G = geom.symbol_rows(face_G.EXT) * ebnd.M;
+    l_sample.push_back(reducer.primitive_rows(UniversalMatrixConversion<T, Tint>(EXT_G) * y));
+  }
+  std::vector<TopPerfectCone<Tint>> l_top;
+  for (auto &P : l_sample) {
+    locate_simplex_cones(P, walker, l_top);
+  }
+  return l_top;
+}
+
+/*
   The local filling of the image of a cell F of the level below the symbol
   level under a coset y (the 1-sharbly reduction).
 
@@ -980,6 +1014,16 @@ void compute_sharbly_level_below(
   MicrosecondTime time;
 #endif
   HeckeBudget budget;
+  // The level s - 1 (the 1-sharblies) has the seeds from the reduction of
+  // the symbols and the local filling; the levels further below only the
+  // fillings on the coverings.
+  bool is_first_below = (index == reducer.get_symbol_level() - 1);
+  auto f_seed = [&](int const &iOrb, MyMatrix<T> const &y) -> std::vector<TopPerfectCone<Tint>> {
+    if (is_first_below) {
+      return get_sharbly_covering_seed(index, iOrb, y, fce, walker, reducer);
+    }
+    return get_sharbly_covering_seed_lower(index, iOrb, y, fce, walker, reducer);
+  };
   int n_orb = fce.levels[index].l_faces.size();
   for (int iOrb = 0; iOrb < n_orb; iOrb++) {
     FacePerfectComplex<T, Tint, Tgroup> const &face = fce.levels[index].l_faces[iOrb];
@@ -1023,8 +1067,7 @@ void compute_sharbly_level_below(
         options_small.max_entries_exact = 500000;
         std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt_sol;
         {
-          std::vector<TopPerfectCone<Tint>> l_top_seed =
-              get_sharbly_covering_seed(index, iOrb, cosets.l_coset[j], fce, walker, reducer);
+          std::vector<TopPerfectCone<Tint>> l_top_seed = f_seed(iOrb, cosets.l_coset[j]);
           try {
             std::vector<PerfectFaceEntry<T, Tint>> sol_small =
                 partial_contracting_homotopy_kernel(index + 1, rhs, fce, f_filter, l_top_seed, options_small, os);
@@ -1041,7 +1084,7 @@ void compute_sharbly_level_below(
              << " success=" << (opt_sol ? 1 : 0) << "|=" << time << "\n";
 #endif
         }
-        if (!opt_sol) {
+        if (!opt_sol && is_first_below) {
           SharblyLocalFiller<T, Tint, Tgroup> filler(index, fce, walker, reducer, f_filter, options_small, os);
           MyMatrix<Tint> V = reducer.primitive_rows(
               UniversalMatrixConversion<T, Tint>(geom.symbol_rows(face.EXT)) * cosets.l_coset[j]);
@@ -1060,8 +1103,7 @@ void compute_sharbly_level_below(
         if (opt_sol) {
           sol = *opt_sol;
         } else {
-          std::vector<TopPerfectCone<Tint>> l_top_seed =
-              get_sharbly_covering_seed(index, iOrb, cosets.l_coset[j], fce, walker, reducer);
+          std::vector<TopPerfectCone<Tint>> l_top_seed = f_seed(iOrb, cosets.l_coset[j]);
           try {
             sol = partial_contracting_homotopy_kernel(index + 1, rhs, fce, f_filter, l_top_seed, options, os);
           } catch (CoveringFailure const &e) {
@@ -1124,6 +1166,25 @@ void compute_sharbly_level_below(
   }
 }
 
+// The reducer of the symbols of the complex: its symbol level and its
+// unimodular frame.
+template <typename T, typename Tint, typename Tgroup>
+SharblyReducer<T, Tint, Tgroup> get_sharbly_reducer(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+                                                    SymbolGeometry<T, Tint> const &geom, std::ostream &os) {
+  int n_levels = fce.levels.size();
+  int symbol_level = get_symbol_level(fce, geom);
+  if (symbol_level < 0 || symbol_level >= n_levels) {
+    std::cerr << "HECKE: sharbly, the symbol level " << symbol_level
+              << " is not in the complex (n_levels=" << n_levels << ")\n";
+    throw TerminalException{1};
+  }
+  int iOrb0 = get_unimodular_frame_orbit(fce, symbol_level, geom, os);
+  MyMatrix<Tint> E0 = geom.symbol_rows(fce.levels[symbol_level].l_faces[iOrb0].EXT);
+  MyMatrix<Tint> E0_inv = Inverse(geom.realify_int(E0));
+  int sign0 = symbol_orientation(fce.levels[symbol_level].l_faces[iOrb0], E0, fce.pctdi.LinSpa.ListMat);
+  return SharblyReducer<T, Tint, Tgroup>(fce, symbol_level, iOrb0, E0_inv, sign0, geom, os);
+}
+
 template <typename T, typename Tint, typename Tgroup>
 HeckeChainMap<T, Tint>
 compute_hecke_chain_map_sharbly(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
@@ -1176,18 +1237,9 @@ compute_hecke_chain_map_sharbly(FullComplexEnumeration<T, Tint, Tgroup> const &f
     os << "\n";
   }
 #endif
-  int symbol_level = get_symbol_level(fce, geom);
-  if (symbol_level < 0 || symbol_level >= n_levels) {
-    std::cerr << "HECKE: sharbly, the symbol level " << symbol_level
-              << " is not in the complex (n_levels=" << n_levels << ")\n";
-    throw TerminalException{1};
-  }
-  int iOrb0 = get_unimodular_frame_orbit(fce, symbol_level, geom, os);
-  MyMatrix<Tint> E0 = geom.symbol_rows(fce.levels[symbol_level].l_faces[iOrb0].EXT);
-  MyMatrix<Tint> E0_inv = Inverse(geom.realify_int(E0));
-  int sign0 = symbol_orientation(fce.levels[symbol_level].l_faces[iOrb0], E0, LinSpa.ListMat);
+  SharblyReducer<T, Tint, Tgroup> reducer = get_sharbly_reducer(fce, geom, os);
+  int symbol_level = reducer.get_symbol_level();
   ConeWalker<T, Tint, Tgroup> walker(fce, os);
-  SharblyReducer<T, Tint, Tgroup> reducer(fce, symbol_level, iOrb0, E0_inv, sign0, geom, os);
   std::vector<std::vector<std::vector<std::vector<PerfectFaceEntry<T, Tint>>>>> images(n_levels);
   std::vector<uint8_t> l_level_computed(n_levels, 0);
   l_level_computed[symbol_level] = 1;
@@ -1265,6 +1317,52 @@ compute_hecke_chain_map_sharbly(FullComplexEnumeration<T, Tint, Tgroup> const &f
   hcm.method = "Sharbly";
   hcm.transposed = false;
   return hcm;
+}
+
+/*
+  The extension of a chain map of the sharbly method to the levels s - 2,
+  ..., s - depth below the symbol level s (the k-sharblies, k >= 2, which
+  carry H^{nu - k}). The image of a cell F of the level k under a coset y
+  is a filling X of the image R of its boundary by the chain map at the
+  level k + 1: R is a cycle (d R = h(d d F) = 0), and the well rounded
+  quotient complex is exact below the symbol level, so the filling exists.
+  The levels already computed (for instance read from the cache) are kept.
+  Returns whether a level was added.
+ */
+template <typename T, typename Tint, typename Tgroup>
+bool extend_hecke_chain_map_sharbly(FullComplexEnumeration<T, Tint, Tgroup> const &fce,
+                                    HeckeChainMap<T, Tint> &hcm, int const &depth, std::ostream &os) {
+  if (hcm.method != "Sharbly") {
+    std::cerr << "HECKE: only a chain map of the Sharbly method can be extended\n";
+    throw TerminalException{1};
+  }
+  if (!fce.pctdi.pco.compute_partial_contracting_homotopy) {
+    std::cerr << "HECKE: the levels below the symbol level need ComputePartialContractingHomotopy = T\n";
+    throw TerminalException{1};
+  }
+  SymbolGeometry<T, Tint> geom(fce.pctdi.LinSpa);
+  SharblyReducer<T, Tint, Tgroup> reducer = get_sharbly_reducer(fce, geom, os);
+  int symbol_level = reducer.get_symbol_level();
+  ConeWalker<T, Tint, Tgroup> walker(fce, os);
+  bool added = false;
+  for (int index = symbol_level - 2; index >= std::max(0, symbol_level - depth); index--) {
+    if (hcm.is_level_computed(index)) {
+      continue;
+    }
+    if (!hcm.is_level_computed(index + 1)) {
+      throw HeckeFailure{"sharbly extension: the level " + std::to_string(index + 1) + " is not computed"};
+    }
+#ifdef TIMINGS_HECKE_OPERATORS
+    MicrosecondTime time;
+#endif
+    compute_sharbly_level_below(index, fce, hcm.cosets, walker, reducer, hcm.images, os);
+    hcm.l_level_computed[index] = 1;
+    added = true;
+#ifdef TIMINGS_HECKE_OPERATORS
+    os << "|HECKE: sharbly images level " << index << "|=" << time << "\n";
+#endif
+  }
+  return added;
 }
 
 // clang-format off
