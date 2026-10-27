@@ -5,6 +5,7 @@
 // clang-format off
 #include "LatticePleskenSouvignier.h"
 #include "LatticeStabEquiCan.h"
+#include <algorithm>
 #include <map>
 #include <optional>
 #include <utility>
@@ -196,33 +197,12 @@ template <typename Tint>
 MyMatrix<Tint> osc_products_column(PleskenSouvignierContext<Tint> const &ctx,
                                    int p) {
   int m = ctx.VS.m;
-  int n = ctx.n();
   int nbMat = ctx.ListMat.size();
   MyMatrix<Tint> col(m, nbMat);
   for (int iMat = 0; iMat < nbMat; iMat++) {
-    for (int j = 0; j < m; j++) {
-      Tint sum(0);
-      for (int i = 0; i < n; i++) {
-        sum += ctx.VS.V(j, i) * ctx.W[iMat](p, i);
-      }
-      col(j, iMat) = sum;
-    }
+    col.col(iMat) = ctx.VS.V * ctx.W[iMat].row(p).transpose();
   }
   return col;
-}
-
-// The sign-normalized product tuple of pair j against prefix level k,
-// read off the precomputed column: the pair-level invariant.
-template <typename Tint>
-std::vector<Tint>
-osc_pair_tuple(std::vector<MyMatrix<Tint>> const &prefix_col, int k, int j) {
-  int nbMat = prefix_col[k].cols();
-  std::vector<Tint> tup(nbMat);
-  for (int iMat = 0; iMat < nbMat; iMat++) {
-    tup[iMat] = prefix_col[k](j, iMat);
-  }
-  osc_normalize_tuple(tup);
-  return tup;
 }
 
 /*
@@ -240,28 +220,36 @@ std::vector<Tint> osc_orbit_key(PleskenSouvignierContext<Tint> const &ctx,
                                 size_t orbit_size, int rep) {
   int nbMat = ctx.ListMat.size();
   size_t n_prefix = prefix_col.size();
-  std::vector<Tint> key;
-  key.reserve(2 + nbMat + n_prefix * nbMat);
-  std::vector<std::vector<Tint>> tuples(n_prefix);
+  // Written in place: the flag and the orbit size first, then the norms,
+  // then the normalized tuples, the flag being set once they are known.
+  std::vector<Tint> key(2 + nbMat + n_prefix * nbMat);
+  key[1] = Tint(static_cast<int>(orbit_size));
+  for (int iMat = 0; iMat < nbMat; iMat++) {
+    key[2 + iMat] = ctx.Lengths(rep, iMat);
+  }
   bool orth = true;
+  size_t pos = 2 + nbMat;
   for (size_t k = 0; k < n_prefix; k++) {
-    tuples[k] = osc_pair_tuple(prefix_col, k, rep);
-    for (auto &val : tuples[k]) {
-      if (val != 0) {
+    size_t start = pos;
+    for (int iMat = 0; iMat < nbMat; iMat++) {
+      key[pos] = prefix_col[k](rep, iMat);
+      if (key[pos] != 0) {
         orth = false;
+      }
+      pos++;
+    }
+    // The sign normalization of osc_normalize_tuple, on the slice.
+    size_t ipos = start;
+    while (ipos < pos && key[ipos] == 0) {
+      ipos++;
+    }
+    if (ipos < pos && key[ipos] < 0) {
+      for (size_t u = ipos; u < pos; u++) {
+        key[u] = -key[u];
       }
     }
   }
-  key.push_back(orth ? Tint(1) : Tint(0));
-  key.push_back(Tint(static_cast<int>(orbit_size)));
-  for (int iMat = 0; iMat < nbMat; iMat++) {
-    key.push_back(ctx.Lengths(rep, iMat));
-  }
-  for (size_t k = 0; k < n_prefix; k++) {
-    for (auto &val : tuples[k]) {
-      key.push_back(val);
-    }
-  }
+  key[0] = orth ? Tint(1) : Tint(0);
   return key;
 }
 
@@ -287,55 +275,178 @@ osc_refine_tie(PleskenSouvignierContext<Tint> const &ctx,
                std::vector<std::vector<Tint>> &hist, std::vector<int> tied,
                [[maybe_unused]] std::ostream &os) {
   int m = ctx.VS.m;
-  int n = ctx.n();
   int nbMat = ctx.ListMat.size();
+  int n_orbit = orbits.size();
+  /*
+    The classes are the distinct histories in increasing order. During the
+    refinement only the histories of the orbits of the initial tie change:
+    they all start equal to one key K and grow by appending, while every
+    other history stays the key it was, all keys having one length. So
+    the order of the other keys is computed once, and in each round only
+    the changed histories are sorted and placed right after K, which they
+    all exceed and which every larger key exceeds them in turn. This is
+    the order the histories would have in a std::map over all orbits.
+   */
+  std::vector<int> by_hist(n_orbit);
+  for (int iOrb = 0; iOrb < n_orbit; iOrb++) {
+    by_hist[iOrb] = iOrb;
+  }
+  std::sort(by_hist.begin(), by_hist.end(), [&](int a, int b) -> bool {
+    if (hist[a] != hist[b]) {
+      return hist[a] < hist[b];
+    }
+    return a < b;
+  });
+  std::vector<int> base_rank(n_orbit);
+  int n_base = 0;
+  for (int k = 0; k < n_orbit; k++) {
+    if (k > 0 && hist[by_hist[k]] != hist[by_hist[k - 1]]) {
+      n_base++;
+    }
+    base_rank[by_hist[k]] = n_base;
+  }
+  n_base++;
+  std::vector<int> const changed = tied;
+  std::vector<uint8_t> is_changed(n_orbit, 0);
+  for (auto &iOrb : changed) {
+    is_changed[iOrb] = 1;
+  }
+  int rank_K = base_rank[changed[0]];
+  // The normalized product tuples of each tied representative against all
+  // the pairs, flattened (pair j at positions j * nbMat ...): they do not
+  // depend on the round, so they are computed once per tied orbit.
+  std::map<int, std::vector<Tint>> tuples_of;
+  auto get_tuples = [&](int iOrb) -> std::vector<Tint> const & {
+    auto iter = tuples_of.find(iOrb);
+    if (iter != tuples_of.end()) {
+      return iter->second;
+    }
+    int rep = orbits[iOrb][0];
+    // One matrix-vector product per form: V is column major, so this is
+    // contiguous where an entrywise loop over the rows of V is not.
+    std::vector<MyVector<Tint>> cols;
+    for (int iMat = 0; iMat < nbMat; iMat++) {
+      cols.push_back(ctx.VS.V * ctx.W[iMat].row(rep).transpose());
+    }
+    std::vector<Tint> flat(static_cast<size_t>(m) * nbMat);
+    std::vector<Tint> tup(nbMat);
+    for (int j = 0; j < m; j++) {
+      for (int iMat = 0; iMat < nbMat; iMat++) {
+        tup[iMat] = cols[iMat](j);
+      }
+      osc_normalize_tuple(tup);
+      for (int iMat = 0; iMat < nbMat; iMat++) {
+        flat[static_cast<size_t>(j) * nbMat + iMat] = tup[iMat];
+      }
+    }
+    return tuples_of.emplace(iOrb, std::move(flat)).first->second;
+  };
   while (true) {
 #ifdef DEBUG_ORBIT_SPLIT_CANONICAL
     os << "OSC: refining a tie of " << tied.size() << " orbits\n";
 #endif
-    // The classes of all orbits, ordered canonically by key history.
-    std::map<std::vector<Tint>, int> class_map;
-    for (auto &h : hist) {
-      class_map.try_emplace(h, 0);
+#ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
+    MicrosecondTime time;
+#endif
+    // The classes of all orbits, ordered canonically by key history: the
+    // changed histories, sorted, take the ranks right after K.
+    std::vector<int> changed_sorted = changed;
+    std::sort(changed_sorted.begin(), changed_sorted.end(),
+              [&](int a, int b) -> bool { return hist[a] < hist[b]; });
+    std::vector<int> class_of_orbit(n_orbit);
+    int n_sub = 0;
+    for (size_t k = 0; k < changed_sorted.size(); k++) {
+      if (k > 0 && hist[changed_sorted[k]] != hist[changed_sorted[k - 1]]) {
+        n_sub++;
+      }
+      class_of_orbit[changed_sorted[k]] = rank_K + 1 + n_sub;
     }
-    int n_class = 0;
-    for (auto &kv : class_map) {
-      kv.second = n_class;
-      n_class++;
+    n_sub++;
+    for (int iOrb = 0; iOrb < n_orbit; iOrb++) {
+      if (is_changed[iOrb] == 0) {
+        int r = base_rank[iOrb];
+        class_of_orbit[iOrb] = (r <= rank_K) ? r : r + n_sub;
+      }
     }
-    std::vector<int> class_of_orbit(orbits.size());
-    for (size_t iOrb = 0; iOrb < orbits.size(); iOrb++) {
-      class_of_orbit[iOrb] = class_map.at(hist[iOrb]);
-    }
+    int n_class = n_base + n_sub;
+#ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
+    os << "|OSC: refine, " << n_class << " classes|=" << time << "\n";
+#endif
     // The extension of each tied orbit: per class, the sorted multiset
     // of normalized product tuples of the representative against the
     // class members, flattened in class order.
     std::vector<std::vector<Tint>> ext(tied.size());
     for (size_t iTied = 0; iTied < tied.size(); iTied++) {
-      int rep = orbits[tied[iTied]][0];
-      std::vector<std::vector<std::vector<Tint>>> buckets(n_class);
-      std::vector<Tint> tup(nbMat);
-      for (int j = 0; j < m; j++) {
-        for (int iMat = 0; iMat < nbMat; iMat++) {
-          Tint sum(0);
-          for (int i = 0; i < n; i++) {
-            sum += ctx.VS.V(j, i) * ctx.W[iMat](rep, i);
-          }
-          tup[iMat] = sum;
-        }
-        osc_normalize_tuple(tup);
-        buckets[class_of_orbit[orbit_id[j]]].push_back(tup);
-      }
+      std::vector<Tint> const &flat = get_tuples(tied[iTied]);
       std::vector<Tint> &e = ext[iTied];
-      for (int c = 0; c < n_class; c++) {
-        std::sort(buckets[c].begin(), buckets[c].end());
-        for (auto &t : buckets[c]) {
-          for (auto &val : t) {
+      e.reserve(flat.size());
+      Tint vmin(0), vmax(0);
+      if (nbMat == 1) {
+        for (auto &val : flat) {
+          if (val < vmin) {
+            vmin = val;
+          }
+          if (val > vmax) {
+            vmax = val;
+          }
+        }
+      }
+      if (nbMat == 1 && vmax - vmin < Tint(64)) {
+        // Small values, the common case: a counting sort over (class,
+        // value) gives the same sequence as the per-class sorts, without
+        // a bucket per class -- at the deep levels almost every orbit is a
+        // class of its own.
+        int range = UniversalScalarConversion<int, Tint>(vmax - vmin) + 1;
+        std::vector<int> counts(static_cast<size_t>(n_class) * range, 0);
+        for (int j = 0; j < m; j++) {
+          int v = UniversalScalarConversion<int, Tint>(flat[j] - vmin);
+          counts[static_cast<size_t>(class_of_orbit[orbit_id[j]]) * range +
+                 v]++;
+        }
+        for (int c = 0; c < n_class; c++) {
+          for (int v = 0; v < range; v++) {
+            int cnt = counts[static_cast<size_t>(c) * range + v];
+            for (int u = 0; u < cnt; u++) {
+              e.push_back(vmin + Tint(v));
+            }
+          }
+        }
+      } else if (nbMat == 1) {
+        // Tuples of length one: a sort of scalars per class gives the same
+        // order as the sort of the one-entry tuples, without a vector per
+        // tuple.
+        std::vector<std::vector<Tint>> buckets(n_class);
+        for (int j = 0; j < m; j++) {
+          buckets[class_of_orbit[orbit_id[j]]].push_back(flat[j]);
+        }
+        for (int c = 0; c < n_class; c++) {
+          std::sort(buckets[c].begin(), buckets[c].end());
+          for (auto &val : buckets[c]) {
             e.push_back(val);
+          }
+        }
+      } else {
+        std::vector<std::vector<std::vector<Tint>>> buckets(n_class);
+        for (int j = 0; j < m; j++) {
+          std::vector<Tint> tup(flat.begin() + static_cast<size_t>(j) * nbMat,
+                                flat.begin() +
+                                    static_cast<size_t>(j + 1) * nbMat);
+          buckets[class_of_orbit[orbit_id[j]]].push_back(std::move(tup));
+        }
+        for (int c = 0; c < n_class; c++) {
+          std::sort(buckets[c].begin(), buckets[c].end());
+          for (auto &t : buckets[c]) {
+            for (auto &val : t) {
+              e.push_back(val);
+            }
           }
         }
       }
     }
+#ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
+    os << "|OSC: refine, extensions of " << tied.size() << " orbits|=" << time
+       << "\n";
+#endif
     // The new tied set: the orbits whose extension is minimal.
     size_t i_min = 0;
     for (size_t iTied = 1; iTied < tied.size(); iTied++) {
@@ -458,9 +569,16 @@ bool osc_select_rec(PleskenSouvignierContext<Tint> const &ctx,
     out_prefix.push_back(prefix);
     return true;
   }
+#ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
+  MicrosecondTime time;
+#endif
   std::vector<Telt> LGen = H.GeneratorsOfGroup();
   std::pair<std::vector<std::vector<int>>, std::vector<int>> pr =
       osc_orbits(LGen, ctx.VS.m);
+#ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
+  os << "|OSC: level " << prefix.size() << ", orbits of " << LGen.size()
+     << " generators|=" << time << "\n";
+#endif
   std::vector<std::vector<int>> const &orbits = pr.first;
   std::vector<int> const &orbit_id = pr.second;
   std::vector<std::vector<Tint>> hist(orbits.size());
@@ -468,20 +586,52 @@ bool osc_select_rec(PleskenSouvignierContext<Tint> const &ctx,
     hist[iOrb] =
         osc_orbit_key(ctx, prefix_col, orbits[iOrb].size(), orbits[iOrb][0]);
   }
+#ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
+  os << "|OSC: level " << prefix.size() << ", keys of " << orbits.size()
+     << " orbits|=" << time << "\n";
+#endif
   // The rank-increase test runs lazily, by ascending key: only the keys
   // at the front are ever tested. Membership of the span is constant on
-  // an orbit, the stabilizer fixing the span pointwise.
-  std::vector<size_t> order(orbits.size());
-  for (size_t iOrb = 0; iOrb < orbits.size(); iOrb++) {
-    order[iOrb] = iOrb;
-  }
-  std::sort(order.begin(), order.end(), [&](size_t a, size_t b) -> bool {
+  // an orbit, the stabilizer fixing the span pointwise. The orbits come
+  // off a min-heap on (key, orbit index), the order of a full sort, in
+  // blocks of equal keys: building the heap is linear and each orbit
+  // taken costs a logarithm, whereas the selection only ever looks at the
+  // first block with a rank-increasing orbit.
+  auto heap_cmp = [&](int a, int b) -> bool {
     if (hist[a] != hist[b]) {
-      return hist[a] < hist[b];
+      return hist[b] < hist[a];
     }
-    return a < b;
-  });
+    return b < a;
+  };
+  std::vector<int> heap(orbits.size());
+  for (size_t iOrb = 0; iOrb < orbits.size(); iOrb++) {
+    heap[iOrb] = iOrb;
+  }
+  std::make_heap(heap.begin(), heap.end(), heap_cmp);
+  auto pop_min = [&]() -> int {
+    std::pop_heap(heap.begin(), heap.end(), heap_cmp);
+    int iOrb = heap.back();
+    heap.pop_back();
+    return iOrb;
+  };
+  auto next_block = [&]() -> std::vector<int> {
+    std::vector<int> block;
+    if (heap.empty()) {
+      return block;
+    }
+    block.push_back(pop_min());
+    while (!heap.empty() && hist[heap.front()] == hist[block[0]]) {
+      block.push_back(pop_min());
+    }
+    return block;
+  };
+#ifdef DEBUG_ORBIT_SPLIT_CANONICAL
+  size_t n_rank_test = 0;
+#endif
   auto f_increases = [&](int iOrb) -> bool {
+#ifdef DEBUG_ORBIT_SPLIT_CANONICAL
+    n_rank_test++;
+#endif
     int rep = orbits[iOrb][0];
     MyVector<Tfield> v(n);
     for (int i = 0; i < n; i++) {
@@ -492,16 +642,15 @@ bool osc_select_rec(PleskenSouvignierContext<Tint> const &ctx,
   // The orbits to explore: the unique minimal one, or every member of a
   // tie the refinement cannot break.
   std::vector<int> selected;
-  size_t pos = 0;
-  while (pos < order.size()) {
-    size_t pos_end = pos + 1;
-    while (pos_end < order.size() && hist[order[pos_end]] == hist[order[pos]]) {
-      pos_end++;
+  while (true) {
+    std::vector<int> key_block = next_block();
+    if (key_block.empty()) {
+      break;
     }
     std::vector<int> block;
-    for (size_t k = pos; k < pos_end; k++) {
-      if (f_increases(order[k])) {
-        block.push_back(order[k]);
+    for (auto &iOrb : key_block) {
+      if (f_increases(iOrb)) {
+        block.push_back(iOrb);
       }
     }
     if (block.size() == 1) {
@@ -522,8 +671,14 @@ bool osc_select_rec(PleskenSouvignierContext<Tint> const &ctx,
       }
       break;
     }
-    pos = pos_end;
   }
+#ifdef DEBUG_ORBIT_SPLIT_CANONICAL
+  os << "OSC: level " << prefix.size() << ", " << n_rank_test
+     << " rank tests\n";
+#endif
+#ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
+  os << "|OSC: level " << prefix.size() << ", choice|=" << time << "\n";
+#endif
   if (selected.empty()) {
     std::cerr << "OSC: no rank-increasing orbit although the rank is not "
               << "full, the family does not have full rank\n";
@@ -548,7 +703,14 @@ bool osc_select_rec(PleskenSouvignierContext<Tint> const &ctx,
     ech_next.insert(v);
     bool res;
     if (ech_next.get_rank() < n) {
+#ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
+      MicrosecondTime time_stab;
+#endif
       Tgroup Hnext = H.Stabilizer_OnPoints(Tidx(rep));
+#ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
+      os << "|OSC: level " << (prefix.size() - 1) << ", stabilizer|="
+         << time_stab << "\n";
+#endif
       res = osc_select_rec(ctx, Hnext, prefix, prefix_col, ech_next,
                            out_prefix, os);
     } else {
