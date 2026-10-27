@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_PROJECTIVE_SYSTEMS_SP4_HECKE_H_
-#define SRC_PROJECTIVE_SYSTEMS_SP4_HECKE_H_
+#ifndef SRC_PROJECTIVE_SYSTEMS_PROJECTIVE_HECKE_H_
+#define SRC_PROJECTIVE_SYSTEMS_PROJECTIVE_HECKE_H_
 
 // clang-format off
-#include "sp4_complex.h"
+#include "projective_complex.h"
 #include "SparseChainSolver.h"
 #include <map>
 #include <set>
@@ -13,45 +13,55 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_SP4_HECKE
+#define DEBUG_PROJECTIVE_HECKE
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_SP4_HECKE
+#define SANITY_CHECK_PROJECTIVE_HECKE
 #endif
 
 #ifdef TIMINGS
-#define TIMINGS_SP4_HECKE
+#define TIMINGS_PROJECTIVE_HECKE
 #endif
 
 /*
-  Step A of the Hecke operators for Sp_4(Z) (SP4Z_ComputeHeckeOperators):
-  the chain map of a double coset G x G on the complex of Sp_4(Z), as the
-  images Phi(F, y_j) of the representative cells F of each level under the
-  cosets y_j of G x G, in the format of HeckeChainMap of src_perfect, so
-  that step B (compute_hecke_homology) gives the Hecke operators on the
+  Step A of the Hecke operators on the complex of a projective system
+  (SP4Z_ComputeHeckeOperators): the chain map of a double coset G x G, as
+  the images Phi(F, y_j) of the representative cells F of each level under
+  the cosets y_j of G x G, in the format of HeckeChainMap of src_perfect,
+  so that step B (compute_hecke_homology) gives the Hecke operators on the
   homology of any finite index subgroup.
 
-  - A single vector v (the last index) goes to the cell of v y_j, found by
-    a walk through the top cells (SP4Z_GetSequenceToRay): a top cell
-    containing v y_j up to the positive multiples.
+  - A single vector v (the last index) goes to the cell of the primitive
+    vector of v y_j, found by a walk through the top cells
+    (SP4Z_GetSequenceToRay): a top cell containing it up to the units.
   - A cell F of a lower index goes to a filling of the image of its
     boundary, found on a covering of top cells containing the vectors of
     that image (SP4Z_SolutionInComplex), averaged over the stabilizer of
     the coset in Stab(F) and propagated to the orbit of the coset, as in
     the Vertex method of src_perfect.
+
+  The walk toward a vector v ("voronoi" in the description) crosses the
+  facets of the cones of the rank one forms of the top cells whose
+  inequality is negative at the rank one form of v, the forms of x being
+  sum_rho (x rho)^T (x rho) for rho in the basis 1, omega of R (the real
+  part of the Hermitian form x^* x over O_K).
  */
 
-namespace sp4 {
+namespace psys {
 
-// The vector of the upper triangle of v^T v (the rank one form of v).
-inline MyVector<T> rank_one_form(MyVector<Tint> const &v) {
-  MyVector<T> w(10);
-  int pos = 0;
-  for (int i = 0; i < 4; i++) {
-    for (int j = i; j < 4; j++) {
-      w(pos) = T(v(i) * v(j));
-      pos += 1;
+// The vector of the upper triangle of the rank one form of v.
+inline MyVector<T> rank_one_form(ProjectiveRing const &ring, MyVector<Tint> const &v) {
+  int n = ring.n();
+  MyVector<T> w = ZeroVector<T>(n * (n + 1) / 2);
+  for (auto &rho : ring.l_ring_basis) {
+    MyVector<Tint> u = rho.transpose() * v;
+    int pos = 0;
+    for (int i = 0; i < n; i++) {
+      for (int j = i; j < n; j++) {
+        w(pos) += T(u(i) * u(j));
+        pos += 1;
+      }
     }
   }
   return w;
@@ -65,9 +75,9 @@ struct PlacedCell {
   ConfigKey key;
 };
 
-inline PlacedCell get_placed_cell(std::vector<TopCell> const &l_top, int const &iTopCell, MyMatrix<Tint> const &eMat) {
-  MyMatrix<Tint> EXTcell = l_top[iTopCell].EXT * eMat;
-  ConfigKey key = config_key(EXTcell);
+inline PlacedCell get_placed_cell(ProjectiveCellComplex const &cx, int const &iTopCell, MyMatrix<Tint> const &eMat) {
+  MyMatrix<Tint> EXTcell = cx.l_top[iTopCell].EXT * eMat;
+  ConfigKey key = config_key(cx.ring(), EXTcell);
   return {iTopCell, eMat, std::move(EXTcell), std::move(key)};
 }
 
@@ -76,48 +86,54 @@ inline PlacedCell get_placed_cell(std::vector<TopCell> const &l_top, int const &
   of the rank one forms of the cell for the ridge eSet: positive in the
   cell, zero on the ridge.
  */
-inline T facet_value(MyMatrix<Tint> const &EXTcell, std::vector<int> const &eSet, MyVector<Tint> const &v) {
+inline T facet_value(ProjectiveRing const &ring, MyMatrix<Tint> const &EXTcell, std::vector<int> const &eSet,
+                     MyVector<Tint> const &v) {
+  int n = ring.n();
+  int dim = n * (n + 1) / 2;
   int n_set = eSet.size();
-  MyMatrix<T> M(n_set, 10);
+  MyMatrix<T> M(n_set, dim);
   for (int i = 0; i < n_set; i++) {
-    MyVector<T> w = rank_one_form(GetMatrixRow(EXTcell, eSet[i]));
-    for (int j = 0; j < 10; j++) {
+    MyVector<T> w = rank_one_form(ring, GetMatrixRow(EXTcell, eSet[i]));
+    for (int j = 0; j < dim; j++) {
       M(i, j) = w(j);
     }
   }
   MyMatrix<T> NSP = NullspaceTrMat(M);
   if (NSP.rows() != 1) {
-    std::cerr << "SP4: facet_value, the ridge should span a hyperplane\n";
+    std::cerr << "PSYS: facet_value, the ridge should span a hyperplane (walk voronoi)\n";
     throw TerminalException{1};
   }
   MyVector<T> fac = GetMatrixRow(NSP, 0);
   for (int i = 0; i < EXTcell.rows(); i++) {
     if (!std::binary_search(eSet.begin(), eSet.end(), i)) {
-      T val = fac.dot(rank_one_form(GetMatrixRow(EXTcell, i)));
+      T val = fac.dot(rank_one_form(ring, GetMatrixRow(EXTcell, i)));
       if (val < 0) {
         fac = -fac;
       }
       break;
     }
   }
-  return fac.dot(rank_one_form(v));
+  return fac.dot(rank_one_form(ring, v));
 }
 
 /*
-  A walk through the top cells to a top cell containing v (up to sign) and
-  the vectors l_cont (SP4Z_GetSequenceToRay_General): from the current
-  cell, cross a facet whose inequality is negative at v while the new cell
-  contains l_cont; when no such move exists, the cells containing l_cont
-  around the visited ones are explored ("flowering"). Returns the sequence
-  of the visited cells, reduced to a shortest path of adjacent cells.
+  A walk through the top cells to a top cell containing v (up to the
+  units) and the vectors l_cont (SP4Z_GetSequenceToRay_General): from the
+  current cell, cross a facet whose inequality is negative at v while the
+  new cell contains l_cont; when no such move exists, the cells containing
+  l_cont around the visited ones are explored ("flowering"). Returns the
+  sequence of the visited cells, reduced to a shortest path of adjacent
+  cells.
  */
-inline std::vector<PlacedCell> get_sequence_to_ray(std::vector<TopCell> const &l_top, MyVector<Tint> const &v,
+inline std::vector<PlacedCell> get_sequence_to_ray(ProjectiveCellComplex const &cx, MyVector<Tint> const &v,
                                                    MyMatrix<Tint> const &l_cont, PlacedCell const &start) {
+  ProjectiveRing const &ring = cx.ring();
+  std::vector<TopCell> const &l_top = cx.l_top;
   std::vector<PlacedCell> l_cell;
   std::map<ConfigKey, int> map_cell;
   auto f_contains_all = [&](MyMatrix<Tint> const &EXTcell) -> bool {
     for (int i = 0; i < l_cont.rows(); i++) {
-      if (!position_antipodal(EXTcell, GetMatrixRow(l_cont, i))) {
+      if (!position_unit(ring, EXTcell, GetMatrixRow(l_cont, i))) {
         return false;
       }
     }
@@ -134,8 +150,8 @@ inline std::vector<PlacedCell> get_sequence_to_ray(std::vector<TopCell> const &l
   };
   auto f_next = [&](PlacedCell const &c) -> std::optional<PlacedCell> {
     for (auto &adj : l_top[c.iTopCell].l_adj) {
-      if (facet_value(c.EXTcell, adj.eSet, v) < 0) {
-        PlacedCell c_new = get_placed_cell(l_top, adj.iCell, adj.eEquiv * c.eMat);
+      if (facet_value(ring, c.EXTcell, adj.eSet, v) < 0) {
+        PlacedCell c_new = get_placed_cell(cx, adj.iCell, adj.eEquiv * c.eMat);
         if (f_contains_all(c_new.EXTcell)) {
           return c_new;
         }
@@ -152,10 +168,10 @@ inline std::vector<PlacedCell> get_sequence_to_ray(std::vector<TopCell> const &l
     while (true) {
       n_step += 1;
       if (n_step > budget.max_walk_steps) {
-        throw HeckeFailure{"SP4: get_sequence_to_ray, too many steps"};
+        throw HeckeFailure{"PSYS: get_sequence_to_ray, too many steps"};
       }
       PlacedCell const &c = l_cell.back();
-      if (position_antipodal(c.EXTcell, v)) {
+      if (position_unit(ring, c.EXTcell, v)) {
         found = true;
         break;
       }
@@ -176,7 +192,7 @@ inline std::vector<PlacedCell> get_sequence_to_ray(std::vector<TopCell> const &l
     while (pos < l_queue.size() && !found && !resume) {
       PlacedCell c = l_cell[l_queue[pos]];
       for (auto &adj : l_top[c.iTopCell].l_adj) {
-        PlacedCell c_new = get_placed_cell(l_top, adj.iCell, adj.eEquiv * c.eMat);
+        PlacedCell c_new = get_placed_cell(cx, adj.iCell, adj.eEquiv * c.eMat);
         if (!f_contains_all(c_new.EXTcell)) {
           continue;
         }
@@ -184,7 +200,7 @@ inline std::vector<PlacedCell> get_sequence_to_ray(std::vector<TopCell> const &l
         if (!ins.second) {
           continue;
         }
-        if (position_antipodal(c_new.EXTcell, v)) {
+        if (position_unit(ring, c_new.EXTcell, v)) {
           found = true;
           break;
         }
@@ -197,14 +213,14 @@ inline std::vector<PlacedCell> get_sequence_to_ray(std::vector<TopCell> const &l
       }
       pos += 1;
       if (l_cell.size() > budget.max_walk_steps) {
-        throw HeckeFailure{"SP4: get_sequence_to_ray, too many cells"};
+        throw HeckeFailure{"PSYS: get_sequence_to_ray, too many cells"};
       }
     }
     if (found) {
       break;
     }
     if (!resume) {
-      throw HeckeFailure{"SP4: get_sequence_to_ray, the walk is stuck"};
+      throw HeckeFailure{"PSYS: get_sequence_to_ray, the walk is stuck"};
     }
   }
   // The shortest path of adjacent cells (sharing a ridge) from the start
@@ -212,13 +228,18 @@ inline std::vector<PlacedCell> get_sequence_to_ray(std::vector<TopCell> const &l
   int n_cell = l_cell.size();
   int i_end = n_cell - 1;
   auto f_adjacent = [&](int i, int j) -> bool {
-    int n_common = 0;
+    std::vector<int> l_common;
     for (int a = 0; a < l_cell[i].EXTcell.rows(); a++) {
-      if (position_antipodal(l_cell[j].EXTcell, GetMatrixRow(l_cell[i].EXTcell, a))) {
-        n_common += 1;
+      if (position_unit(ring, l_cell[j].EXTcell, GetMatrixRow(l_cell[i].EXTcell, a))) {
+        l_common.push_back(a);
       }
     }
-    return n_common == 9;
+    for (auto &adj : l_top[l_cell[i].iTopCell].l_adj) {
+      if (adj.eSet == l_common) {
+        return true;
+      }
+    }
+    return false;
   };
   std::vector<int> prev(n_cell, -1);
   std::vector<int> l_queue{0};
@@ -251,22 +272,22 @@ inline std::vector<PlacedCell> get_sequence_to_ray(std::vector<TopCell> const &l
 
 /*
   Chains of a level: lists of entries value * (F_{iOrb} M). Two entries
-  are the same cell iff their vectors are the same up to sign, and then
-  M2 M1^{-1} is in the stabilizer of F_{iOrb}, whose orientation gives the
-  relative sign.
+  are the same cell iff their vectors are the same up to the units, and
+  then M2 M1^{-1} is in the stabilizer of F_{iOrb}, whose orientation gives
+  the relative sign.
  */
 using Chain = std::vector<PerfectFaceEntry<T, Tint>>;
 
 struct ChainReducer {
-  Sp4CellComplex const &cx;
+  ProjectiveCellComplex const &cx;
   int index;
   std::map<std::pair<int, ConfigKey>, size_t> map_cell;
   std::vector<PerfectFaceEntry<T, Tint>> l_entry;
-  ChainReducer(Sp4CellComplex const &_cx, int const &_index) : cx(_cx), index(_index) {}
+  ChainReducer(ProjectiveCellComplex const &_cx, int const &_index) : cx(_cx), index(_index) {}
   // The position of the cell and the sign of M relative to the stored one.
   std::pair<size_t, int> locate(int const &iOrb, MyMatrix<Tint> const &M) {
     CellOrbit const &orbit = cx.levels[index][iOrb];
-    std::pair<int, ConfigKey> key{iOrb, config_key(orbit.EXT * M)};
+    std::pair<int, ConfigKey> key{iOrb, config_key(cx.ring(), orbit.EXT * M)};
     auto iter = map_cell.find(key);
     if (iter == map_cell.end()) {
       size_t pos = l_entry.size();
@@ -276,7 +297,7 @@ struct ChainReducer {
     }
     size_t pos = iter->second;
     MyMatrix<Tint> quot = M * Inverse(l_entry[pos].M);
-    return {pos, orbit_orientation(orbit, quot)};
+    return {pos, orbit_orientation(cx.ring(), orbit, quot)};
   }
   void insert(int const &iOrb, T const &value, MyMatrix<Tint> const &M) {
     std::pair<size_t, int> pair = locate(iOrb, M);
@@ -293,7 +314,7 @@ struct ChainReducer {
   }
 };
 
-inline Chain reduce_chain(Sp4CellComplex const &cx, int const &index, Chain const &chain) {
+inline Chain reduce_chain(ProjectiveCellComplex const &cx, int const &index, Chain const &chain) {
   ChainReducer cr(cx, index);
   for (auto &fe : chain) {
     cr.insert(fe.iOrb, fe.value, fe.M);
@@ -302,7 +323,7 @@ inline Chain reduce_chain(Sp4CellComplex const &cx, int const &index, Chain cons
 }
 
 // The boundary of a chain of the level index, a chain of the level index + 1.
-inline Chain chain_boundary_sp4(Sp4CellComplex const &cx, int const &index, Chain const &chain) {
+inline Chain chain_boundary_psys(ProjectiveCellComplex const &cx, int const &index, Chain const &chain) {
   ChainReducer cr(cx, index + 1);
   for (auto &fe : chain) {
     for (auto &eb : cx.levels[index][fe.iOrb].l_bound) {
@@ -312,7 +333,7 @@ inline Chain chain_boundary_sp4(Sp4CellComplex const &cx, int const &index, Chai
   return cr.get_chain();
 }
 
-inline bool is_equal_chain_sp4(Sp4CellComplex const &cx, int const &index, Chain const &c1, Chain const &c2) {
+inline bool is_equal_chain_psys(ProjectiveCellComplex const &cx, int const &index, Chain const &c1, Chain const &c2) {
   Chain diff = c1;
   for (auto &fe : c2) {
     diff.push_back({fe.iOrb, -fe.value, fe.M});
@@ -325,9 +346,9 @@ inline bool is_equal_chain_sp4(Sp4CellComplex const &cx, int const &index, Chain
   from the images of the level index + 1:
     Phi(dF, y_j) = sum_faces sign Phi(F', y_k) g'   with M y_j = y_k g'.
  */
-inline Chain get_boundary_image_sp4(Sp4CellComplex const &cx, int const &index, int const &iOrb, size_t const &j,
-                                    HeckeCosets<T> const &cosets,
-                                    std::vector<std::vector<Chain>> const &images_next) {
+inline Chain get_boundary_image_psys(ProjectiveCellComplex const &cx, int const &index, int const &iOrb,
+                                     size_t const &j, HeckeCosets<T> const &cosets,
+                                     std::vector<std::vector<Chain>> const &images_next) {
   ChainReducer cr(cx, index + 1);
   MyMatrix<T> const &y = cosets.l_coset[j];
   for (auto &eb : cx.levels[index][iOrb].l_bound) {
@@ -345,17 +366,17 @@ inline Chain get_boundary_image_sp4(Sp4CellComplex const &cx, int const &index, 
   The image of a single vector cell under y: the cell of the primitive
   vector of v y, found in a top cell by the walk.
  */
-inline Chain get_vertex_image_sp4(Sp4CellComplex const &cx, int const &iOrb, MyMatrix<T> const &y) {
+inline Chain get_vertex_image_psys(ProjectiveCellComplex const &cx, int const &iOrb, MyMatrix<T> const &y) {
+  ProjectiveRing const &ring = cx.ring();
+  int n = ring.n();
   int index = cx.levels.size() - 1;
   CellOrbit const &orbit = cx.levels[index][iOrb];
   MyVector<T> v0 = UniversalVectorConversion<T, Tint>(GetMatrixRow(orbit.EXT, 0));
-  MyVector<T> w = y.transpose() * v0;
-  w = RemoveFractionVector(w);
-  MyVector<Tint> v = UniversalVectorConversion<Tint, T>(w);
-  PlacedCell start = get_placed_cell(cx.l_top, 0, IdentityMat<Tint>(4));
-  std::vector<PlacedCell> l_seq = get_sequence_to_ray(cx.l_top, v, MyMatrix<Tint>(0, 4), start);
+  MyVector<Tint> v = ring.primitive(y.transpose() * v0);
+  PlacedCell start = get_placed_cell(cx, 0, IdentityMat<Tint>(n));
+  std::vector<PlacedCell> l_seq = get_sequence_to_ray(cx, v, MyMatrix<Tint>(0, n), start);
   PlacedCell const &c = l_seq.back();
-  int pos = *position_antipodal(c.EXTcell, v);
+  int pos = *position_unit(ring, c.EXTcell, v);
   Triple t{c.iTopCell, {pos}, c.eMat};
   for (size_t jOrb = 0; jOrb < cx.levels[index].size(); jOrb++) {
     for (auto &t_orb : cx.levels[index][jOrb].l_triple) {
@@ -365,7 +386,7 @@ inline Chain get_vertex_image_sp4(Sp4CellComplex const &cx, int const &iOrb, MyM
       }
     }
   }
-  throw HeckeFailure{"SP4: get_vertex_image_sp4, the cell of the vector is not found"};
+  throw HeckeFailure{"PSYS: get_vertex_image_psys, the cell of the vector is not found"};
 }
 
 /*
@@ -373,36 +394,36 @@ inline Chain get_vertex_image_sp4(Sp4CellComplex const &cx, int const &iOrb, MyM
   complex): a chain X of the level index with dX = rhs, found on a covering
   of top cells containing the vectors of rhs (SP4Z_SolutionInComplex).
   The cells are restricted to the span of the vectors of rhs when they do
-  not span Z^4 (the singularities of the cells at infinity are kept). The
+  not span R^m (the singularities of the cells at infinity are kept). The
   covering grows by the neighbors when the system has no solution.
  */
-inline Chain solve_in_complex(Sp4CellComplex const &cx, int const &index, Chain const &rhs, std::ostream &os) {
+inline Chain solve_in_complex(ProjectiveCellComplex const &cx, int const &index, Chain const &rhs,
+                              std::ostream &os) {
+  ProjectiveRing const &ring = cx.ring();
+  int n = ring.n();
   std::vector<TopCell> const &l_top = cx.l_top;
-  // The vectors of the right hand side.
+  // The vectors of the right hand side, up to the units.
   std::vector<MyVector<Tint>> l_vert;
+  std::set<MyVector<Tint>, std::function<bool(MyVector<Tint> const &, MyVector<Tint> const &)>> set_vert(
+      [](MyVector<Tint> const &a, MyVector<Tint> const &b) -> bool { return lex_less(a, b); });
   for (auto &fe : rhs) {
     MyMatrix<Tint> EXT = cx.levels[index + 1][fe.iOrb].EXT * fe.M;
     for (int i = 0; i < EXT.rows(); i++) {
       MyVector<Tint> v = GetMatrixRow(EXT, i);
-      bool is_new = true;
-      for (auto &u : l_vert) {
-        if (u == v || u == MyVector<Tint>(-v)) {
-          is_new = false;
-        }
-      }
-      if (is_new) {
+      if (set_vert.insert(unit_normalize(ring, v)).second) {
         l_vert.push_back(v);
       }
     }
   }
-  MyMatrix<Tint> M_vert(l_vert.size(), 4);
+  MyMatrix<Tint> M_vert(l_vert.size(), n);
   for (size_t i = 0; i < l_vert.size(); i++) {
-    for (int j = 0; j < 4; j++) {
+    for (int j = 0; j < n; j++) {
       M_vert(i, j) = l_vert[i](j);
     }
   }
-  MyMatrix<T> M_vert_T = UniversalMatrixConversion<T, Tint>(M_vert);
-  MyMatrix<T> l_equa = (RankMat(M_vert_T) == 4) ? MyMatrix<T>(0, 4) : NullspaceTrMat(M_vert_T);
+  // The span over R of the vectors (the unit multiples).
+  MyMatrix<T> M_vert_T = UniversalMatrixConversion<T, Tint>(totality(ring, M_vert));
+  MyMatrix<T> l_equa = (RankMat(M_vert_T) == n) ? MyMatrix<T>(0, n) : NullspaceTrMat(M_vert_T);
   auto f_correct_face = [&](MyMatrix<Tint> const &EXT) -> bool {
     for (int i = 0; i < EXT.rows(); i++) {
       MyVector<T> v = UniversalVectorConversion<T, Tint>(GetMatrixRow(EXT, i));
@@ -422,19 +443,19 @@ inline Chain solve_in_complex(Sp4CellComplex const &cx, int const &index, Chain 
       l_cov.push_back(c);
     }
   };
-  PlacedCell start = get_placed_cell(l_top, 0, IdentityMat<Tint>(4));
-  std::vector<PlacedCell> l_seq = get_sequence_to_ray(l_top, l_vert[0], MyMatrix<Tint>(0, 4), start);
+  PlacedCell start = get_placed_cell(cx, 0, IdentityMat<Tint>(n));
+  std::vector<PlacedCell> l_seq = get_sequence_to_ray(cx, l_vert[0], MyMatrix<Tint>(0, n), start);
   PlacedCell good = l_seq.back();
   f_insert_cov(good);
   for (size_t i = 1; i < l_vert.size(); i++) {
     bool covered = false;
     for (auto &c : l_cov) {
-      if (position_antipodal(c.EXTcell, l_vert[i])) {
+      if (position_unit(ring, c.EXTcell, l_vert[i])) {
         covered = true;
       }
     }
     if (!covered) {
-      for (auto &c : get_sequence_to_ray(l_top, l_vert[i], MyMatrix<Tint>(0, 4), good)) {
+      for (auto &c : get_sequence_to_ray(cx, l_vert[i], MyMatrix<Tint>(0, n), good)) {
         f_insert_cov(c);
       }
     }
@@ -447,7 +468,7 @@ inline Chain solve_in_complex(Sp4CellComplex const &cx, int const &index, Chain 
     for (auto &c : l_cov) {
       bool all = true;
       for (int i = 0; i < EXT.rows(); i++) {
-        if (!position_antipodal(c.EXTcell, GetMatrixRow(EXT, i))) {
+        if (!position_unit(ring, c.EXTcell, GetMatrixRow(EXT, i))) {
           all = false;
         }
       }
@@ -459,19 +480,19 @@ inline Chain solve_in_complex(Sp4CellComplex const &cx, int const &index, Chain 
     if (!contained) {
       PlacedCell c0 = l_cov[0];
       for (auto &c : l_cov) {
-        if (position_antipodal(c.EXTcell, GetMatrixRow(EXT, 0))) {
+        if (position_unit(ring, c.EXTcell, GetMatrixRow(EXT, 0))) {
           c0 = c;
           break;
         }
       }
       for (int iv = 0; iv < EXT.rows(); iv++) {
-        MyMatrix<Tint> l_cont(iv, 4);
+        MyMatrix<Tint> l_cont(iv, n);
         for (int a = 0; a < iv; a++) {
-          for (int b = 0; b < 4; b++) {
+          for (int b = 0; b < n; b++) {
             l_cont(a, b) = EXT(a, b);
           }
         }
-        std::vector<PlacedCell> l_seq2 = get_sequence_to_ray(l_top, GetMatrixRow(EXT, iv), l_cont, c0);
+        std::vector<PlacedCell> l_seq2 = get_sequence_to_ray(cx, GetMatrixRow(EXT, iv), l_cont, c0);
         for (auto &c : l_seq2) {
           f_insert_cov(c);
         }
@@ -532,27 +553,27 @@ inline Chain solve_in_complex(Sp4CellComplex const &cx, int const &index, Chain 
           sol.push_back({cr_row.l_entry[iRow].iOrb, res.sol(iRow), cr_row.l_entry[iRow].M});
         }
       }
-#ifdef SANITY_CHECK_SP4_HECKE
-      if (!is_equal_chain_sp4(cx, index + 1, chain_boundary_sp4(cx, index, sol), rhs)) {
-        std::cerr << "SP4: solve_in_complex, the solution is not a filling\n";
+#ifdef SANITY_CHECK_PROJECTIVE_HECKE
+      if (!is_equal_chain_psys(cx, index + 1, chain_boundary_psys(cx, index, sol), rhs)) {
+        std::cerr << "PSYS: solve_in_complex, the solution is not a filling\n";
         throw TerminalException{1};
       }
 #endif
       return sol;
     }
-#ifdef DEBUG_SP4_HECKE
-    os << "SP4: solve_in_complex index=" << index << " flowering " << n_flower << " |l_cov|=" << l_cov.size()
+#ifdef DEBUG_PROJECTIVE_HECKE
+    os << "PSYS: solve_in_complex index=" << index << " flowering " << n_flower << " |l_cov|=" << l_cov.size()
        << "\n";
 #endif
     // The flowering: the neighbors of the covering.
     std::vector<PlacedCell> l_cov_old = l_cov;
     for (auto &c : l_cov_old) {
       for (auto &adj : l_top[c.iTopCell].l_adj) {
-        f_insert_cov(get_placed_cell(l_top, adj.iCell, adj.eEquiv * c.eMat));
+        f_insert_cov(get_placed_cell(cx, adj.iCell, adj.eEquiv * c.eMat));
       }
     }
   }
-  throw HeckeFailure{"SP4: solve_in_complex, no filling found after 100 flowerings"};
+  throw HeckeFailure{"PSYS: solve_in_complex, no filling found after 100 flowerings"};
 }
 
 /*
@@ -563,15 +584,16 @@ inline Chain solve_in_complex(Sp4CellComplex const &cx, int const &index, Chain 
   of the chain (the action on the chain is finite even for a cell at
   infinity), and the average is their mean.
  */
-inline Chain average_chain_sp4(Sp4CellComplex const &cx, int const &index, int const &iOrb, Chain const &chain,
-                               std::vector<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>> const &l_schreier) {
+inline Chain average_chain_psys(ProjectiveCellComplex const &cx, int const &index, int const &iOrb,
+                                Chain const &chain,
+                                std::vector<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>> const &l_schreier) {
   if (l_schreier.empty()) {
     return chain;
   }
   CellOrbit const &orbit = cx.levels[index][iOrb];
   std::vector<int> l_sign;
   for (auto &pair : l_schreier) {
-    l_sign.push_back(orbit_orientation(orbit, pair.first));
+    l_sign.push_back(orbit_orientation(cx.ring(), orbit, pair.first));
   }
   // The chains, as vectors on a common list of cells.
   ChainReducer cr(cx, index);
@@ -596,7 +618,7 @@ inline Chain average_chain_sp4(Sp4CellComplex const &cx, int const &index, int c
   HeckeBudget budget;
   while (pos < l_chain.size()) {
     if (l_chain.size() > budget.max_closure) {
-      throw HeckeFailure{"SP4: average_chain_sp4, too many images"};
+      throw HeckeFailure{"PSYS: average_chain_psys, too many images"};
     }
     for (size_t i = 0; i < l_schreier.size(); i++) {
       Chain c_new = chain_right_multiply(l_chain[pos], T(l_sign[i]), l_schreier[i].second);
@@ -625,17 +647,22 @@ inline Chain average_chain_sp4(Sp4CellComplex const &cx, int const &index, int c
   index) up to the index index_min (SP4Z_ComputeHeckeOperators with
   eDimMax = n_levels - index_min).
  */
-inline HeckeChainMap<T, Tint> compute_sp4_hecke_chain_map(Sp4CellComplex const &cx, MyMatrix<T> const &x,
-                                                          int const &index_min, std::ostream &os) {
-#ifdef TIMINGS_SP4_HECKE
+inline HeckeChainMap<T, Tint> compute_projective_hecke_chain_map(ProjectiveCellComplex const &cx,
+                                                                 MyMatrix<T> const &x, int const &index_min,
+                                                                 std::ostream &os) {
+#ifdef TIMINGS_PROJECTIVE_HECKE
   MicrosecondTime time;
 #endif
+  ProjectiveRing const &ring = cx.ring();
+  int n = ring.n();
   int n_levels = cx.levels.size();
-  std::function<bool(MyMatrix<T> const &)> f_member = [](MyMatrix<T> const &g) -> bool { return is_in_sp4(g); };
+  std::function<bool(MyMatrix<T> const &)> f_member = [&](MyMatrix<T> const &g) -> bool {
+    return ring.in_group(g);
+  };
   HeckeCosets<T> cosets = enumerate_hecke_cosets<T, Tint>(x, cx.l_gens_G, f_member, os);
   size_t n_coset = cosets.size();
-#ifdef TIMINGS_SP4_HECKE
-  os << "|SP4: Hecke cosets, n_coset=" << n_coset << "|=" << time << "\n";
+#ifdef TIMINGS_PROJECTIVE_HECKE
+  os << "|PSYS: Hecke cosets, n_coset=" << n_coset << "|=" << time << "\n";
 #endif
   std::vector<std::vector<std::vector<Chain>>> images(n_levels);
   std::vector<uint8_t> l_level_computed(n_levels, 0);
@@ -646,14 +673,13 @@ inline HeckeChainMap<T, Tint> compute_sp4_hecke_chain_map(Sp4CellComplex const &
   int vlevel = n_levels - 1;
   for (size_t iOrb = 0; iOrb < cx.levels[vlevel].size(); iOrb++) {
     for (size_t j = 0; j < n_coset; j++) {
-      images[vlevel][iOrb][j] = get_vertex_image_sp4(cx, iOrb, cosets.l_coset[j]);
+      images[vlevel][iOrb][j] = get_vertex_image_psys(cx, iOrb, cosets.l_coset[j]);
     }
   }
   l_level_computed[vlevel] = 1;
-#ifdef TIMINGS_SP4_HECKE
-  os << "|SP4: vertex images|=" << time << "\n";
+#ifdef TIMINGS_PROJECTIVE_HECKE
+  os << "|PSYS: vertex images|=" << time << "\n";
 #endif
-  int n = 4;
   for (int index = vlevel - 1; index >= index_min; index--) {
     for (size_t iOrb = 0; iOrb < cx.levels[index].size(); iOrb++) {
       CellOrbit const &orbit = cx.levels[index][iOrb];
@@ -663,7 +689,7 @@ inline HeckeChainMap<T, Tint> compute_sp4_hecke_chain_map(Sp4CellComplex const &
         if (status[j] == 1) {
           continue;
         }
-        Chain rhs = get_boundary_image_sp4(cx, index, iOrb, j, cosets, images[index + 1]);
+        Chain rhs = get_boundary_image_psys(cx, index, iOrb, j, cosets, images[index + 1]);
         Chain sol;
         if (!rhs.empty()) {
           sol = solve_in_complex(cx, index, rhs, os);
@@ -671,27 +697,27 @@ inline HeckeChainMap<T, Tint> compute_sp4_hecke_chain_map(Sp4CellComplex const &
         CosetOrbit<Tint> co = get_coset_orbit(j, orbit.l_stab_gens, act, n_coset, n);
         std::vector<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>> l_schreier =
             get_coset_stabilizer_schreier(co, orbit.l_stab_gens, act, n);
-        Chain sol_avg = average_chain_sp4(cx, index, iOrb, sol, l_schreier);
-#ifdef SANITY_CHECK_SP4_HECKE
-        if (!is_equal_chain_sp4(cx, index + 1, chain_boundary_sp4(cx, index, sol_avg), rhs)) {
-          std::cerr << "SP4: the averaged chain is not a filling, index=" << index << " iOrb=" << iOrb << "\n";
+        Chain sol_avg = average_chain_psys(cx, index, iOrb, sol, l_schreier);
+#ifdef SANITY_CHECK_PROJECTIVE_HECKE
+        if (!is_equal_chain_psys(cx, index + 1, chain_boundary_psys(cx, index, sol_avg), rhs)) {
+          std::cerr << "PSYS: the averaged chain is not a filling, index=" << index << " iOrb=" << iOrb << "\n";
           throw TerminalException{1};
         }
 #endif
         // Phi(F, y_{j'}) = sign(z) Phi(F, y_j) z'^{-1} for z y_j = y_{j'} z'.
         for (size_t p = 0; p < co.l_orbit.size(); p++) {
           int j2 = co.l_orbit[p];
-          int sign = orbit_orientation(orbit, co.transversal[p]);
+          int sign = orbit_orientation(ring, orbit, co.transversal[p]);
           MyMatrix<Tint> Minv = Inverse(co.transversal_conj[p]);
           images[index][iOrb][j2] = chain_right_multiply(sol_avg, T(sign), Minv);
           status[j2] = 1;
         }
       }
-#ifdef SANITY_CHECK_SP4_HECKE
+#ifdef SANITY_CHECK_PROJECTIVE_HECKE
       for (size_t j = 0; j < n_coset; j++) {
-        Chain rhs = get_boundary_image_sp4(cx, index, iOrb, j, cosets, images[index + 1]);
-        if (!is_equal_chain_sp4(cx, index + 1, chain_boundary_sp4(cx, index, images[index][iOrb][j]), rhs)) {
-          std::cerr << "SP4: the chain map property fails, index=" << index << " iOrb=" << iOrb << " j=" << j
+        Chain rhs = get_boundary_image_psys(cx, index, iOrb, j, cosets, images[index + 1]);
+        if (!is_equal_chain_psys(cx, index + 1, chain_boundary_psys(cx, index, images[index][iOrb][j]), rhs)) {
+          std::cerr << "PSYS: the chain map property fails, index=" << index << " iOrb=" << iOrb << " j=" << j
                     << "\n";
           throw TerminalException{1};
         }
@@ -699,8 +725,8 @@ inline HeckeChainMap<T, Tint> compute_sp4_hecke_chain_map(Sp4CellComplex const &
 #endif
     }
     l_level_computed[index] = 1;
-#ifdef TIMINGS_SP4_HECKE
-    os << "|SP4: images of the level " << index << "|=" << time << "\n";
+#ifdef TIMINGS_PROJECTIVE_HECKE
+    os << "|PSYS: images of the level " << index << "|=" << time << "\n";
 #endif
   }
   HeckeChainMap<T, Tint> hcm;
@@ -708,13 +734,13 @@ inline HeckeChainMap<T, Tint> compute_sp4_hecke_chain_map(Sp4CellComplex const &
   hcm.cosets = std::move(cosets);
   hcm.images = std::move(images);
   hcm.l_level_computed = std::move(l_level_computed);
-  hcm.method = "Sp4";
+  hcm.method = "ProjectiveSystem";
   hcm.transposed = false;
   return hcm;
 }
 
-}  // namespace sp4
+}  // namespace psys
 
 // clang-format off
-#endif  // SRC_PROJECTIVE_SYSTEMS_SP4_HECKE_H_
+#endif  // SRC_PROJECTIVE_SYSTEMS_PROJECTIVE_HECKE_H_
 // clang-format on

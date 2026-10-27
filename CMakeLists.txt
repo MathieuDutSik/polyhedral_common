@@ -758,8 +758,8 @@ foreach(target IN LISTS PERFECT_PROGRAMS)
 endforeach()
 
 add_polyhedral_binary(
-  SP4_HeckeOperators
-  "${CMAKE_SOURCE_DIR}/src_projective_systems/SP4_HeckeOperators.cpp"
+  PROJ_HeckeOperators
+  "${CMAKE_SOURCE_DIR}/src_projective_systems/PROJ_HeckeOperators.cpp"
   polyhedral_perfect_support
 )
 

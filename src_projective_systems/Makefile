@@ -1,4 +1,4 @@
-PROGRAM		= SP4_HeckeOperators
+PROGRAM		= PROJ_HeckeOperators
 
 SRCFILES	=
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

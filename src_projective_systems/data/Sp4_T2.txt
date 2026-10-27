@@ -1,0 +1,6 @@
+# The Hecke matrix diag(2, 2, 1, 1) of T(2) for Sp_4(Z)
+4 4
+2 0 0 0
+0 2 0 0
+0 0 1 0
+0 0 0 1
