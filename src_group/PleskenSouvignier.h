@@ -202,18 +202,7 @@ template <typename Tint> struct PleskenSouvignierVectorSumLevel {
   int dep;
   std::unordered_map<MyVector<Tint>, int> TupleMap;
   std::vector<int> counts;
-  // Whether the tuple is zero: the sign of a zero-tuple vector is not
-  // determined, so it is excluded from the sums (but counted).
-  std::vector<uint8_t> is_zero;
-  // The sums are compared through their pairwise products when the
-  // number of tuple classes is small and through their norms otherwise;
-  // the switch depends only on the count, an invariant, so isometric
-  // lattices take the same branch.
-  bool full_gram;
-  // full_gram: SumGram[iMat] is the n_tuple x n_tuple product matrix of
-  // the sums (zero-tuple rows and columns zero). Otherwise SumNorm[iMat]
-  // holds the diagonal alone.
-  std::vector<MyMatrix<Tint>> SumGram;
+  // SumNorm[iMat][a] is the norm of the sum of the vectors of class a.
   std::vector<std::vector<Tint>> SumNorm;
   int n_tuple() const { return counts.size(); }
 };
@@ -290,6 +279,17 @@ template <typename Tint> struct PleskenSouvignierContext {
   mutable size_t node_count = 0;
   mutable size_t total_nodes = 0;
   size_t node_budget = 0;
+  /*
+    Where a search aborted by the budget resumes. The steps before
+    resume_step were completed, and what they established does not depend
+    on the depth: their generators are automorphisms, and a candidate
+    whose subtree was searched to the end without a leaf has no
+    extension. So a higher depth resumes at resume_step with the group
+    found so far, and with resume_bad, the candidates of that step already
+    shown not to extend, instead of starting from -Id at step 0.
+   */
+  int resume_step = 0;
+  std::vector<int> resume_bad;
   int n() const { return VS.n; }
 };
 
@@ -606,7 +606,6 @@ void ps_init_vector_sums(PleskenSouvignierContext<Tint> &ctx, int depth,
       }
     }
     int n_tuple = lev.counts.size();
-    lev.full_gram = false;
     lev.SumNorm.resize(nbMat);
     for (int iMat = 0; iMat < nbMat; iMat++) {
       lev.SumNorm[iMat].resize(n_tuple);
@@ -712,11 +711,31 @@ bool ps_vector_sum_check(PleskenSouvignierContext<Tint> const &Ci,
   vector-sum data are only needed there. depth = -1 selects the default
   of n/10 rounded, as Hecke does; depth = 0 disables the vector sums.
  */
+/*
+  The searched basis of a context and the inverse data of its
+  position-ordered matrix (see the context). Computed once over the big
+  integers by a context built there, it lets an int64 context skip
+  ps_select_basis and the adjugate of the basis, whose intermediates do
+  not fit a machine word, while every quantity of the search itself is
+  covered by the certificate.
+ */
+template <typename Tint> struct PSBasisData {
+  std::vector<int> bas;
+  MyMatrix<Tint> Badj;
+  Tint Bden;
+};
+
+template <typename Tint>
+PSBasisData<Tint> ps_basis_data(PleskenSouvignierContext<Tint> const &ctx) {
+  return {ctx.bas, ctx.Badj, ctx.Bden};
+}
+
 template <typename Tint>
 PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
     std::vector<MyMatrix<Tint>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
     bool with_fingerprint, int depth, [[maybe_unused]] std::ostream &os,
-    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0 = {}) {
+    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0 = {},
+    std::optional<PSBasisData<Tint>> const &basis_data = {}) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -780,7 +799,7 @@ PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
   // -Id preserves every symmetric form and every antipodal family.
   ctx.g[0].push_back(-IdentityMat<Tint>(n));
   if (with_fingerprint) {
-    ctx.bas = ps_select_basis(ctx);
+    ctx.bas = basis_data ? basis_data->bas : ps_select_basis(ctx);
     ctx.Fmat.clear();
     for (int iMat = 0; iMat < nbMat; iMat++) {
       MyMatrix<Tint> F(n, n);
@@ -808,15 +827,31 @@ PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
     }
     // The adjugate and determinant of the basis, fraction free
     // (adj = det B^{-1}), so the leaves stay in integer arithmetic with
-    // B^{-1} = Badj / Bden and Bden > 0.
-    std::pair<MyMatrix<Tint>, Tint> adjdet = AdjugateDeterminant(B);
-    ctx.Badj = std::move(adjdet.first);
-    Tint det = adjdet.second;
-    if (det < 0) {
-      det = -det;
-      ctx.Badj = -ctx.Badj;
+    // B^{-1} = Badj / Bden and Bden > 0. The fingerprint order per is the
+    // same as in the context that computed basis_data, the data being the
+    // same, so its inverse data applies as is.
+    // In int64 without basis_data the basis is the standard one (the
+    // certificate requires it), a signed permutation matrix, whose
+    // adjugate stays small.
+    if (basis_data) {
+      ctx.Badj = basis_data->Badj;
+      ctx.Bden = basis_data->Bden;
+    } else {
+      std::pair<MyMatrix<Tint>, Tint> adjdet = AdjugateDeterminant(B);
+      ctx.Badj = std::move(adjdet.first);
+      Tint det = adjdet.second;
+      if (det < 0) {
+        det = -det;
+        ctx.Badj = -ctx.Badj;
+      }
+      ctx.Bden = det;
     }
-    ctx.Bden = det;
+#ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
+    if (B * ctx.Badj != ctx.Bden * IdentityMat<Tint>(n)) {
+      std::cerr << "PS: the inverse data does not invert the basis\n";
+      throw TerminalException{1};
+    }
+#endif
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
     if (ctx.Bden != 1) {
       os << "PS: the searched basis spans a sublattice of index " << ctx.Bden
@@ -1291,7 +1326,7 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
 #endif
   int n = ctx.n();
   int m = ctx.VS.m;
-  for (int step = 0; step < n; step++) {
+  for (int step = ctx.resume_step; step < n; step++) {
     std::vector<MyMatrix<Tint>> H;
     for (int i = step; i < n; i++) {
       for (auto &eGen : ctx.g[i]) {
@@ -1319,6 +1354,13 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
     ctx.orders[step] = orb.size();
     ps_setdiff(cand_step, orb, m);
     std::vector<int> bad;
+    if (step == ctx.resume_step && !ctx.resume_bad.empty()) {
+      bad = ctx.resume_bad;
+      std::vector<int> oc = ps_orbit(ctx, bad, H);
+      ps_setdiff(cand_step, oc, m);
+    }
+    ctx.resume_step = step;
+    ctx.resume_bad = bad;
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
     os << "PS: step " << step << ", fingerprint " << ctx.fp_diagonal[step]
        << ", candidates outside the orbit " << cand_step.size() << "\n";
@@ -1346,6 +1388,7 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
         std::vector<int> oc = ps_orbit(ctx, {im}, H);
         ps_setdiff(cand_step, oc, m);
         bad.push_back(im);
+        ctx.resume_bad = bad;
       } else {
         ctx.g[step].push_back(ps_matgen(ctx, ctx, x));
         H.push_back(ctx.g[step].back());
@@ -1366,6 +1409,8 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
     if (step < n - 1 && ctx.orders[step] > 1) {
       ps_stab(ctx, step, os);
     }
+    ctx.resume_step = step + 1;
+    ctx.resume_bad.clear();
   }
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
   os << "PS: auto nodes=" << ctx.total_nodes << " depth=" << ctx.depth << "\n";
@@ -1399,17 +1444,6 @@ Tord PleskenSouvignierGroupOrder(std::vector<int> const &ListOrbitSize) {
   return order;
 }
 
-// Resets the stabilizer-chain data to the initial state (only -Id known),
-// so that the search can be rerun at a higher vector-sum depth.
-template <typename Tint>
-void ps_reset_group(PleskenSouvignierContext<Tint> &ctx) {
-  int n = ctx.n();
-  ctx.g.assign(n, {});
-  ctx.nsg.assign(n, 0);
-  ctx.orders.assign(n, 1);
-  ctx.g[0].push_back(-IdentityMat<Tint>(n));
-}
-
 // The conversions of the int64 fast path. The downward one is reached
 // only behind the certificate, whose bounds dominate every entry.
 template <typename Tint>
@@ -1438,6 +1472,12 @@ MyMatrix<Tint> ps_matrix_from_int64(MyMatrix<int64_t> const &M) {
   return Mt;
 }
 
+template <typename Tint>
+PSBasisData<int64_t> ps_basis_data_to_int64(PSBasisData<Tint> const &bd) {
+  return {bd.bas, ps_matrix_to_int64(bd.Badj),
+          UniversalScalarConversion<int64_t, Tint>(bd.Bden)};
+}
+
 /*
   The measured maxima from which the int64 certificate is computed, all
   in the big type of the caller. has_std_basis records whether the family
@@ -1454,6 +1494,11 @@ template <typename Tint> struct PSInt64Bounds {
   Tint adjMmax;
   Tint detM0;
   bool has_std_basis;
+  // Set when the searched basis comes as precomputed PSBasisData, BadjMax
+  // being the largest entry of its adjugate: the leaves then compute
+  // Badj * A, bounded by E9 below.
+  bool has_basis_data = false;
+  Tint BadjMax = Tint(0);
 };
 
 template <typename Tint>
@@ -1525,6 +1570,40 @@ ps_int64_bounds(std::vector<MyMatrix<Tint>> const &ListMat,
   return b;
 }
 
+/*
+  When the family lacks the standard basis, the basis of the search is
+  selected once over the big integers, by a context built without vector
+  sums, and its data added to the bounds; the int64 search then reuses it.
+ */
+template <typename Tint>
+std::optional<PSBasisData<Tint>>
+ps_basis_data_for_int64(std::vector<MyMatrix<Tint>> const &ListMat,
+                        MyMatrix<Tint> const &SHVhalf,
+                        std::pair<MyMatrix<Tint>, Tint> const &adjdet0,
+                        PSInt64Bounds<Tint> &bounds, std::ostream &os) {
+  if (bounds.has_std_basis) {
+    return {};
+  }
+  PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
+      ListMat, SHVhalf, true, 0, os,
+      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet0));
+  PSBasisData<Tint> bd = ps_basis_data(ctx);
+  bounds.has_basis_data = true;
+  bounds.BadjMax = Tint(1);
+  for (int i = 0; i < bd.Badj.rows(); i++) {
+    for (int k = 0; k < bd.Badj.cols(); k++) {
+      Tint val = T_abs(bd.Badj(i, k));
+      if (val > bounds.BadjMax) {
+        bounds.BadjMax = val;
+      }
+    }
+  }
+  if (bd.Bden > bounds.BadjMax) {
+    bounds.BadjMax = bd.Bden;
+  }
+  return bd;
+}
+
 // The merge for an isometry test, where the one search touches the
 // vectors and automorphisms of both configurations. The determinants
 // have to agree for an isometry to exist, which the caller has checked.
@@ -1568,11 +1647,13 @@ PSInt64Bounds<Tint> ps_int64_bounds_merge(PSInt64Bounds<Tint> const &b1,
     entries.
   * E7 = m * Vmax and E8 = n^2 * Mmax * E7^2: the vector sums of one
     tuple class and their norms.
+  * E9 = n * BadjMax * Vmax: the leaf products Badj * A, when the basis
+    is not the standard one and comes as precomputed PSBasisData.
  */
 template <typename Tint>
 bool ps_certify_int64(PSInt64Bounds<Tint> const &b,
                       [[maybe_unused]] std::ostream &os) {
-  if (!b.has_std_basis) {
+  if (!b.has_std_basis && !b.has_basis_data) {
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
     os << "PS: no int64, the family does not contain the standard basis\n";
 #endif
@@ -1598,6 +1679,12 @@ bool ps_certify_int64(PSInt64Bounds<Tint> const &b,
   Tint E8 = b.n * b.n * b.Mmax * E7 * E7;
   bool fits = E1 <= CAP && E2 <= CAP && E3 <= CAP && E5 <= CAP &&
               E6 <= CAP && E7 <= CAP && E8 <= CAP;
+  if (!b.has_std_basis) {
+    // The leaves of a basis drawn from the family: Badj * A with A the
+    // stacked images, and the quotient by Bden.
+    Tint E9 = b.n * b.BadjMax * b.Vmax;
+    fits = fits && E9 <= CAP && b.BadjMax <= CAP;
+  }
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
   os << "PS: int64 certificate fits=" << fits << "\n";
 #endif
@@ -1625,7 +1712,8 @@ template <typename Tint>
 PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
     std::vector<MyMatrix<Tint>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
     std::ostream &os, int depth = -1,
-    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0_opt = {}) {
+    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0_opt = {},
+    std::optional<PSBasisData<Tint>> const &basis_data = {}) {
   std::pair<MyMatrix<Tint>, Tint> adjdet0 = [&]() {
     if (adjdet0_opt) {
       return *adjdet0_opt;
@@ -1643,6 +1731,8 @@ PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
     // operation of the search can overflow, so the engine runs on raw
     // machine integers with no per-operation check.
     PSInt64Bounds<Tint> bounds = ps_int64_bounds(ListMat, SHVhalf, adjdet0);
+    std::optional<PSBasisData<Tint>> bd =
+        ps_basis_data_for_int64(ListMat, SHVhalf, adjdet0, bounds, os);
     if (ps_certify_int64(bounds, os)) {
       std::vector<MyMatrix<int64_t>> ListMat64;
       ListMat64.reserve(ListMat.size());
@@ -1654,9 +1744,13 @@ PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
           std::make_pair(ps_matrix_to_int64(adjdet0.first),
                          UniversalScalarConversion<int64_t, Tint>(
                              adjdet0.second));
+      std::optional<PSBasisData<int64_t>> bd64;
+      if (bd) {
+        bd64 = ps_basis_data_to_int64(*bd);
+      }
       PleskenSouvignierAutomResult<int64_t> res64 =
           PleskenSouvignierAutomorphism<int64_t>(ListMat64, SHVhalf64, os,
-                                                 depth, adjdet64);
+                                                 depth, adjdet64, bd64);
       PleskenSouvignierAutomResult<Tint> res;
       res.ListGen.reserve(res64.ListGen.size());
       for (auto &eGen : res64.ListGen) {
@@ -1671,7 +1765,7 @@ PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
   bool adaptive = (depth == -1);
   PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
       ListMat, SHVhalf, true, depth, os,
-      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet0));
+      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet0), basis_data);
   int d = ctx.depth;
   while (true) {
     // Once the cap is reached the search runs unbudgeted, so it always
@@ -1684,11 +1778,13 @@ PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
       ps_auto(ctx, os);
       break;
     } catch (PSBudgetExceeded const &) {
+      // The group found so far and the completed steps are kept; the
+      // search resumes at ctx.resume_step (see the context).
       d++;
-      ps_reset_group(ctx);
       ps_init_vector_sums(ctx, d, os);
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
-      os << "PS: auto node budget exceeded, raising depth to " << d << "\n";
+      os << "PS: auto node budget exceeded, raising depth to " << d
+         << ", resuming at step " << ctx.resume_step << "\n";
 #endif
     }
   }
@@ -1847,7 +1943,8 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
     std::vector<MyMatrix<Tint>> const &ListGenAut2, std::ostream &os,
     int depth = -1,
     std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet1_opt = {},
-    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet2_opt = {}) {
+    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet2_opt = {},
+    std::optional<PSBasisData<Tint>> const &basis_data1 = {}) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -1901,6 +1998,9 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
     PSInt64Bounds<Tint> bounds = ps_int64_bounds_merge(
         ps_int64_bounds(ListMat1, SHVhalf1, adjdet1),
         ps_int64_bounds(ListMat2, SHVhalf2, adjdet2));
+    // The basis is searched on the first configuration only.
+    std::optional<PSBasisData<Tint>> bd =
+        ps_basis_data_for_int64(ListMat1, SHVhalf1, adjdet1, bounds, os);
     if (ps_certify_int64(bounds, os)) {
       std::vector<MyMatrix<int64_t>> ListMat1_64;
       std::vector<MyMatrix<int64_t>> ListMat2_64;
@@ -1925,7 +2025,10 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
       std::optional<MyMatrix<int64_t>> opt64 =
           PleskenSouvignierIsometry<int64_t>(
               ListMat1_64, SHVhalf1_64, ListMat2_64, SHVhalf2_64,
-              ListGenAut2_64, os, depth, f_adj(adjdet1), f_adj(adjdet2));
+              ListGenAut2_64, os, depth, f_adj(adjdet1), f_adj(adjdet2),
+              bd ? std::optional<PSBasisData<int64_t>>(
+                       ps_basis_data_to_int64(*bd))
+                 : std::optional<PSBasisData<int64_t>>());
       if (!opt64) {
         return {};
       }
@@ -1935,7 +2038,7 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
   bool adaptive = (depth == -1);
   PleskenSouvignierContext<Tint> Ci = PleskenSouvignierBuildContext(
       ListMat1, SHVhalf1, true, depth, os,
-      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet1));
+      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet1), basis_data1);
   PleskenSouvignierContext<Tint> Co = PleskenSouvignierBuildContext(
       ListMat2, SHVhalf2, false, 0, os,
       std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet2));
@@ -1951,13 +2054,16 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
   H.push_back(-IdentityMat<Tint>(n));
   int d = Ci.depth;
   bool found = false;
+  // Kept across depth escalations: ps_iso_extend removes a level-0
+  // candidate (with its orbit) only once its subtree has been searched to
+  // the end, and that refutation does not depend on the depth.
+  std::vector<int> cand0 = cand0_base;
   while (true) {
     bool budgeted = adaptive && d < PS_MAX_ADAPTIVE_DEPTH;
     Ci.node_count = 0;
     Ci.total_nodes = 0;
     Ci.node_budget = budgeted ? PS_NODE_BUDGET : 0;
     std::fill(x.begin(), x.end(), 0);
-    std::vector<int> cand0 = cand0_base;
     try {
       found = ps_iso_extend(Ci, Co, 0, x, cand0, H);
       break;
