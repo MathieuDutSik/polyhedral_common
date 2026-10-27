@@ -371,6 +371,13 @@ ComputeCanonicalFormWeylReduced(MyMatrix<T> const &GramMat, std::ostream &os) {
   WeylReducedCharacteristicFamily: an isometry carries chamber to chamber,
   and the Weyl group moves chambers onto each other while preserving V.
 
+  With simple_both_signs the family is centrally symmetric, as the canonical
+  form needs; its symmetries can then include -1 and elements of W(R)
+  fixing the non-root part. Without it the only roots of the family are
+  E_rho, so a symmetry preserves E_rho, hence rho, and the symmetry group
+  is exactly Aut(L, rho), which is what the automorphism group and the
+  isometry test need. Both versions span L.
+
   V is the Z-spanning root-iterated-shortest family of
   InvariantVectorFamily.h. V cap P_rho is computed directly (Remark 7.8),
   without forming V: at the top level of the recursion, the closest vector
@@ -383,6 +390,7 @@ ComputeCanonicalFormWeylReduced(MyMatrix<T> const &GramMat, std::ostream &os) {
 template <typename T, typename Tint>
 MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
                                                RootSystemData<Tint> const &rs,
+                                               bool simple_both_signs,
                                                std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   int n = GramMat.rows();
@@ -488,7 +496,13 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
     }
   };
   for (int i = 0; i < k; i++) {
-    insert_pm(GetMatrixRow(rs.SimpleRoots, i));
+    MyVector<Tint> e = GetMatrixRow(rs.SimpleRoots, i);
+    if (simple_both_signs) {
+      insert_pm(e);
+    } else {
+      seen.insert(e);
+      family.push_back(e);
+    }
   }
   for (auto &v : cvL) {
     insert_pm(v);
@@ -502,7 +516,9 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
     for (int i = 0; i < k; i++) {
       MyVector<Tint> e = GetMatrixRow(rs.SimpleRoots, i);
       filtered.insert(e);
-      filtered.insert(-e);
+      if (simple_both_signs) {
+        filtered.insert(-e);
+      }
     }
     for (int i = 0; i < V.rows(); i++) {
       MyVector<Tint> v = GetMatrixRow(V, i);
@@ -555,7 +571,7 @@ MyMatrix<Tint> ComputeCanonicalFormWeylChamber(MyMatrix<T> const &GramMat,
   os << "|ROOTDEC: WeylChamber, LLL and root system|=" << time << "\n";
 #endif
   MyMatrix<Tint> family =
-      WeylChamberCharacteristicFamily<T, Tint>(GramRed, rs, os);
+      WeylChamberCharacteristicFamily<T, Tint>(GramRed, rs, true, os);
 #ifdef TIMINGS_LATTICE_ROOT_DECOMPOSITION
   os << "|ROOTDEC: WeylChamber, family of " << family.rows()
      << " vectors|=" << time << "\n";

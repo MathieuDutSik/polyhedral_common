@@ -42,9 +42,10 @@ void ComputeAutomorphism(std::string const &FileListMat,
     throw TerminalException{1};
   }
   if (method != "graph" && method != "plesken_souvignier" &&
-      method != "vinberg") {
+      method != "vinberg" && method != "weyl_chamber") {
     std::cerr << "LATT_Automorphism: unknown method=" << method << "\n";
-    std::cerr << "The methods are graph, plesken_souvignier and vinberg\n";
+    std::cerr << "The methods are graph, plesken_souvignier, vinberg and "
+                 "weyl_chamber\n";
     throw TerminalException{1};
   }
   if (method == "graph" && OutFormat == "GAP_order") {
@@ -90,12 +91,16 @@ void ComputeAutomorphism(std::string const &FileListMat,
         // The reflections in the roots of norm 2 are integral only for an
         // integral form, and the decomposition is the one of a single form.
         if (ListMat.size() != 1 || !IsIntegralMatrix(ListMat[0])) {
-          std::cerr << "LATT_Automorphism: the vinberg method needs a single "
-                       "integral Gram matrix\n";
+          std::cerr << "LATT_Automorphism: the " << method
+                    << " method needs a single integral Gram matrix\n";
           throw TerminalException{1};
         }
         VinbergAutom<Tint> vin =
-            ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0], std::cerr);
+            (method == "vinberg")
+                ? ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0],
+                                                              std::cerr)
+                : ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0],
+                                                                  std::cerr);
         ListGen = vin.ListGen;
         opt_order = vin.order;
       }
@@ -183,6 +188,9 @@ int main(int argc, char *argv[]) {
                    "for a single\n";
       std::cerr << "                       integral Gram matrix (rational "
                    "arithmetics)\n";
+      std::cerr << "  weyl_chamber       : as vinberg, Aut(L, rho) from the "
+                   "Weyl-chamber\n";
+      std::cerr << "                       family, which spans the lattice\n";
       return -1;
     }
     std::string arith = argv[1];

@@ -61,20 +61,26 @@ void ComputeIsomorphism(std::string const &FileListMat1,
     std::vector<MyMatrix<Tint>> ListGenAut2;
     equiv = PleskenSouvignierLatticeIsometry<T, Tint>(ListMat1, ListMat2,
                                                       ListGenAut2, std::cerr);
-  } else if (method == "vinberg") {
+  } else if (method == "vinberg" || method == "weyl_chamber") {
     // The reflections in the roots of norm 2 are integral only for an
     // integral form, and the decomposition is the one of a single form.
     if (ListMat1.size() != 1 || ListMat2.size() != 1 ||
         !IsIntegralMatrix(ListMat1[0]) || !IsIntegralMatrix(ListMat2[0])) {
-      std::cerr << "LATT_Isomorphism: the vinberg method needs a single "
-                   "integral Gram matrix on each side\n";
+      std::cerr << "LATT_Isomorphism: the " << method << " method needs a "
+                << "single integral Gram matrix on each side\n";
       throw TerminalException{1};
     }
-    equiv = ComputeIsometryVinberg<T, Tint, Tgroup>(ListMat1[0], ListMat2[0],
-                                                    std::cerr);
+    if (method == "vinberg") {
+      equiv = ComputeIsometryVinberg<T, Tint, Tgroup>(ListMat1[0],
+                                                      ListMat2[0], std::cerr);
+    } else {
+      equiv = ComputeIsometryWeylChamber<T, Tint, Tgroup>(
+          ListMat1[0], ListMat2[0], std::cerr);
+    }
   } else {
     std::cerr << "LATT_Isomorphism: unknown method=" << method << "\n";
-    std::cerr << "The methods are graph, plesken_souvignier and vinberg\n";
+    std::cerr << "The methods are graph, plesken_souvignier, vinberg and "
+                 "weyl_chamber\n";
     throw TerminalException{1};
   }
   if (OutFormat == "GAP") {
@@ -138,6 +144,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  vinberg            : through the root system, for a "
                    "single integral\n";
       std::cerr << "                       Gram matrix on each side\n";
+      std::cerr << "  weyl_chamber       : as vinberg, on the Weyl-chamber "
+                   "families\n";
       return -1;
     }
     std::string arith = argv[1];

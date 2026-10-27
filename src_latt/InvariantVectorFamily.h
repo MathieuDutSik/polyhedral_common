@@ -910,6 +910,10 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
   if (T_abs(DeterminantMatBareiss(C)) != Tint(1) && chamber != nullptr) {
     std::vector<MyVector<Tint>> cosets =
         ComputeTranslationClasses<Tint, Tint>(C);
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+    os << "|IVF: inner_span n=" << n << ", " << cosets.size()
+       << " translation classes|=" << time << "\n";
+#endif
     for (auto &cr : cosets) {
       if (IsZeroVector(cr)) {
         continue;
