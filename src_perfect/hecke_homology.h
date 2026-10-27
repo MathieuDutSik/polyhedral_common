@@ -869,32 +869,65 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
   }
   MyMatrix<T> hecke_matrix = ZeroMatrix<T>(dim_hom, dim_hom);
   HeckeImageKeyActions actions = get_hecke_image_key_actions(index, gc, hcm);
+  // The images of the cells restricted to F modulo p, computed once per
+  // cell: the lifts of the basis cycles are dense and share their cells.
+  // The cache stops growing beyond max_cache_entry entries, the images of
+  // the other cells being then recomputed for each cycle.
+  size_t const max_cache_entry = size_t(1) << 26;
+  size_t n_cache_entry = 0;
+  std::vector<SparseVectorMod> cache_img(n_cell);
+  std::vector<uint8_t> is_cached(n_cell, 0);
+  SparseVectorMod img_buf;
+  // nullptr when a denominator of the image is divisible by p.
+  auto get_image = [&](int const &c) -> SparseVectorMod const * {
+    if (is_cached[c] == 1) {
+      return &cache_img[c];
+    }
+    SparseVectorMod img;
+    for (auto &kv : get_hecke_image_cell_sparse(index, c, gc, hcm, cosets_gamma, &actions)) {
+      if (pos_F[kv.first] == -1) {
+        continue;
+      }
+      T value = kv.second;
+      if (transposed) {
+        // The dual complex of the quotient (see get_dual_stab_weight).
+        value *= get_dual_stab_weight(gc, index, c, kv.first);
+      }
+      std::optional<int64_t> opt = residue_mod_p(value, p);
+      if (!opt) {
+        return nullptr;
+      }
+      if (*opt != 0) {
+        img.push_back({pos_F[kv.first], *opt});
+      }
+    }
+    if (n_cache_entry + img.size() <= max_cache_entry) {
+      n_cache_entry += img.size();
+      cache_img[c] = std::move(img);
+      is_cached[c] = 1;
+      return &cache_img[c];
+    }
+    img_buf = std::move(img);
+    return &img_buf;
+  };
   for (int i = 0; i < dim_hom; i++) {
     SparseVectorMod const &v = l_cycle[i];
     // Its image, restricted to F, and its class modulo the boundaries.
     std::map<int, int64_t> acc;
     for (auto &e : v) {
-      for (auto &kv : get_hecke_image_cell_sparse(index, e.first, gc, hcm, cosets_gamma, &actions)) {
-        if (pos_F[kv.first] == -1) {
-          continue;
+      SparseVectorMod const *img = get_image(e.first);
+      if (img == nullptr) {
+        // The homology is known, but not the Hecke matrix.
+        HeckeHomologyLevel<T> level{index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0),
+                                    "a denominator of an image is divisible by p=" + std::to_string(p)};
+        if (bmd) {
+          get_boundary_map_mod(*bmd, l_cycle, p, level, os);
         }
-        T value = kv.second;
-        if (transposed) {
-          // The dual complex of the quotient (see get_dual_stab_weight).
-          value *= get_dual_stab_weight(gc, index, e.first, kv.first);
-        }
-        std::optional<int64_t> opt = residue_mod_p(value, p);
-        if (!opt) {
-          // The homology is known, but not the Hecke matrix.
-          HeckeHomologyLevel<T> level{index, n_cell, MyMatrix<T>(dim_hom, 0), MyMatrix<T>(0, 0),
-                                      "a denominator of an image is divisible by p=" + std::to_string(p)};
-          if (bmd) {
-            get_boundary_map_mod(*bmd, l_cycle, p, level, os);
-          }
-          return level;
-        }
-        int64_t &val = acc[pos_F[kv.first]];
-        val = ResidueModPrime(val + e.second * (*opt), p);
+        return level;
+      }
+      for (auto &kv : *img) {
+        int64_t &val = acc[kv.first];
+        val = ResidueModPrime(val + e.second * kv.second, p);
       }
     }
     SparseVectorMod w;
