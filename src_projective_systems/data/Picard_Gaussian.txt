@@ -1,0 +1,78 @@
+# The Picard modular group U(2,1; Z[i]): the ideal cell complex dual to the
+# spine of D. Yasaki (Explicit reduction for SU(2,1; Z[i]), 2006). The cells
+# are the strongly admissible sets of isotropic vectors J^k_j of Yasaki, of
+# dimension |J| - 1 for |J| <= 5 and 4 for J^8 (the ideal 4-cells J^5, J^8 on
+# top, the cusps at infinity).
+# Yasaki's form Q(u, v) = u^* Q v with Q = [[0, 0, i], [0, -1, 0], [-i, 0, 0]]
+# on the column vectors; on the row vectors, h = Q^T = [[0, 0, -i], [0, -1, 0],
+# [i, 0, 0]], given as h_a + h_b i. The vectors are realified as
+# (a_1, a_2, a_3, b_1, b_2, b_3) for a_j + b_j i.
+ring QuadraticImag 0 1
+dimension 3
+form
+3 3
+0 0 0
+0 -1 0
+0 0 0
+3 3
+0 0 -1
+0 0 0
+1 0 0
+at_infinity single
+walk potential
+levels 5
+# index 0: J5, J8
+level 2
+5 6
+1 0 0 0 0 0
+0 0 1 0 0 0
+1 0 1 0 0 0
+0 1 1 1 1 0
+1 1 1 1 1 0
+8 6
+1 0 0 0 0 0
+0 0 1 0 0 0
+-1 1 1 0 1 1
+-1 1 1 1 1 0
+1 1 1 1 -1 0
+0 1 1 1 1 1
+0 2 1 2 0 0
+0 2 2 1 0 0
+# index 1: J4_1, J4_2
+level 2
+4 6
+1 0 0 0 0 0
+0 0 1 0 0 0
+1 0 1 0 0 0
+0 1 1 1 1 0
+4 6
+1 0 0 0 0 0
+0 0 1 0 0 0
+1 1 1 1 1 0
+-1 -1 1 0 1 1
+# index 2: J3_1, J3_2, J3_3
+level 3
+3 6
+1 0 0 0 0 0
+0 0 1 0 0 0
+1 0 1 0 0 0
+3 6
+1 0 0 0 0 0
+0 0 1 0 0 0
+0 1 1 1 1 0
+3 6
+1 0 0 0 0 0
+0 0 1 0 0 0
+1 1 1 1 1 0
+# index 3: J2_1, J2_2
+level 2
+2 6
+1 0 0 0 0 0
+0 0 1 0 0 0
+2 6
+1 0 0 0 0 0
+0 1 1 1 1 1
+# index 4: single cusp
+level 1
+1 6
+1 0 0 0 0 0

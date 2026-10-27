@@ -117,6 +117,25 @@ inline T facet_value(ProjectiveRing const &ring, MyMatrix<Tint> const &EXTcell, 
 }
 
 /*
+  The potential of a top cell toward v ("potential" in the description):
+  with X the center of the cell (a negative vector, a point of the
+  symmetric space attached to the cell), the Busemann type function
+  |h(X, v)|^2 / |h(X, X)| of the cusp of v, which decreases along a path
+  toward that cusp. |h(X, v)|^2 is up to a constant B(X, v)^2 + B(X, v
+  omega)^2 for the trace form B of h (O_K = Z[i]).
+ */
+inline T cell_potential(ProjectiveRing const &ring, MyVector<Tint> const &X, MyVector<Tint> const &v) {
+  MyVector<Tint> BX = ring.B.transpose() * X;
+  T num(0);
+  for (auto &rho : ring.l_ring_basis) {
+    Tint val = BX.dot(rho.transpose() * v);
+    num += T(val * val);
+  }
+  Tint den = X.dot(ring.B * X);
+  return num / T(den < 0 ? Tint(-den) : den);
+}
+
+/*
   A walk through the top cells to a top cell containing v (up to the
   units) and the vectors l_cont (SP4Z_GetSequenceToRay_General): from the
   current cell, cross a facet whose inequality is negative at v while the
@@ -148,16 +167,35 @@ inline std::vector<PlacedCell> get_sequence_to_ray(ProjectiveCellComplex const &
     l_cell.push_back(c);
     return {static_cast<int>(l_cell.size()) - 1, true};
   };
+  bool is_voronoi = (cx.desc.walk == "voronoi");
   auto f_next = [&](PlacedCell const &c) -> std::optional<PlacedCell> {
-    for (auto &adj : l_top[c.iTopCell].l_adj) {
-      if (facet_value(ring, c.EXTcell, adj.eSet, v) < 0) {
-        PlacedCell c_new = get_placed_cell(cx, adj.iCell, adj.eEquiv * c.eMat);
-        if (f_contains_all(c_new.EXTcell)) {
-          return c_new;
+    if (is_voronoi) {
+      for (auto &adj : l_top[c.iTopCell].l_adj) {
+        if (facet_value(ring, c.EXTcell, adj.eSet, v) < 0) {
+          PlacedCell c_new = get_placed_cell(cx, adj.iCell, adj.eEquiv * c.eMat);
+          if (f_contains_all(c_new.EXTcell)) {
+            return c_new;
+          }
         }
       }
+      return {};
     }
-    return {};
+    // The neighbor of the smallest potential, if it decreases.
+    T pot_c = cell_potential(ring, c.eMat.transpose() * l_top[c.iTopCell].center, v);
+    std::optional<PlacedCell> best;
+    T pot_best = pot_c;
+    for (auto &adj : l_top[c.iTopCell].l_adj) {
+      PlacedCell c_new = get_placed_cell(cx, adj.iCell, adj.eEquiv * c.eMat);
+      if (!f_contains_all(c_new.EXTcell)) {
+        continue;
+      }
+      T pot_new = cell_potential(ring, c_new.eMat.transpose() * l_top[c_new.iTopCell].center, v);
+      if (pot_new < pot_best) {
+        pot_best = pot_new;
+        best = c_new;
+      }
+    }
+    return best;
   };
   f_insert(start);
   HeckeBudget budget;
@@ -640,6 +678,33 @@ inline Chain average_chain_psys(ProjectiveCellComplex const &cx, int const &inde
     }
   }
   return avg;
+}
+
+/*
+  The chain map of the identity, every cell going to itself: the homology
+  of a subgroup without a Hecke operator (a check of the complex).
+ */
+inline HeckeChainMap<T, Tint> identity_chain_map(ProjectiveCellComplex const &cx, std::ostream &os) {
+  ProjectiveRing const &ring = cx.ring();
+  int n = ring.n();
+  int n_levels = cx.levels.size();
+  MyMatrix<T> x = IdentityMat<T>(n);
+  std::function<bool(MyMatrix<T> const &)> f_member = [&](MyMatrix<T> const &g) -> bool {
+    return ring.in_group(g);
+  };
+  HeckeChainMap<T, Tint> hcm;
+  hcm.x = x;
+  hcm.cosets = enumerate_hecke_cosets<T, Tint>(x, cx.l_gens_G, f_member, os);
+  hcm.images = std::vector<std::vector<std::vector<Chain>>>(n_levels);
+  for (int index = 0; index < n_levels; index++) {
+    for (size_t iOrb = 0; iOrb < cx.levels[index].size(); iOrb++) {
+      hcm.images[index].push_back({{{static_cast<int>(iOrb), T(1), IdentityMat<Tint>(n)}}});
+    }
+  }
+  hcm.l_level_computed = std::vector<uint8_t>(n_levels, 1);
+  hcm.method = "ProjectiveSystemIdentity";
+  hcm.transposed = false;
+  return hcm;
 }
 
 /*

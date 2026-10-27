@@ -38,10 +38,49 @@ MyMatrix<psys::T> read_rational_matrix(std::string const &file) {
   return M;
 }
 
-std::vector<int> parse_list(std::string const &str) {
-  std::vector<int> l;
+/*
+  A level: an integer N (the ideal N R) or, over O_K, a generator a+bw of
+  the ideal (w = omega), written "a+bw", "a-bw", "bw".
+ */
+struct Level {
+  std::string name;
+  int64_t a;
+  int64_t b;
+};
+
+std::vector<Level> parse_levels(std::string const &str) {
+  std::vector<Level> l;
   for (auto &s : STRING_Split(str, ",")) {
-    l.push_back(ParseScalar<int>(s));
+    size_t pos_w = s.find('w');
+    if (pos_w == std::string::npos) {
+      l.push_back({s, ParseScalar<int64_t>(s), 0});
+      continue;
+    }
+    // The position of the sign separating a and b (not the leading one).
+    size_t pos_sign = std::string::npos;
+    for (size_t i = 1; i < pos_w; i++) {
+      if (s[i] == '+' || s[i] == '-') {
+        pos_sign = i;
+      }
+    }
+    int64_t a = 0;
+    std::string str_b;
+    if (pos_sign == std::string::npos) {
+      str_b = s.substr(0, pos_w);
+    } else {
+      a = ParseScalar<int64_t>(s.substr(0, pos_sign));
+      str_b = s.substr(pos_sign, pos_w - pos_sign);
+      if (str_b[0] == '+') {
+        str_b = str_b.substr(1);
+      }
+    }
+    int64_t b = 1;
+    if (str_b == "-") {
+      b = -1;
+    } else if (!str_b.empty()) {
+      b = ParseScalar<int64_t>(str_b);
+    }
+    l.push_back({s, a, b});
   }
   return l;
 }
@@ -57,7 +96,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "  hecke: the file of the Hecke matrix (realified, rational entries)\n";
       std::cerr << "  eDimMax: the number of levels, from the single vectors, on which the chain map is computed\n";
       std::cerr << "  subgroups: comma separated list of subgroup types of src_perfect (Gamma0, Gamma0Siegel, ...)\n";
-      std::cerr << "  levels: comma separated list of the levels N of the subgroups\n";
+      std::cerr << "  levels: comma separated list of the levels N of the subgroups (over O_K: a+bw, w = omega)\n";
       std::cerr << "  prime: 0 for the rational homology, otherwise the homology modulo it\n";
       std::cerr << "  prefix: the GAP results are written to prefix_[subgroup]_[N].g\n";
       return -1;
@@ -66,7 +105,7 @@ int main(int argc, char *argv[]) {
     std::string file_hecke = argv[2];
     int eDimMax = ParseScalar<int>(argv[3]);
     std::vector<std::string> l_sub = STRING_Split(argv[4], ",");
-    std::vector<int> l_level = parse_list(argv[5]);
+    std::vector<Level> l_level = parse_levels(argv[5]);
     int64_t prime = ParseScalar<int64_t>(argv[6]);
     std::string prefix = argv[7];
     std::ostream &os = std::cerr;
@@ -85,36 +124,45 @@ int main(int argc, char *argv[]) {
             orientable = false;
           }
         }
-        std::cerr << " [|EXT|=" << orbit.EXT.rows() << " rank=" << rnk << " |Stab on EXT|=" << orbit.perm_grp.size()
+        std::cerr << " [|EXT|=" << orbit.EXT.rows() << " rank=" << rnk << " |Stab|=" << orbit.stab_order << " |Stab on EXT|=" << orbit.perm_grp.size()
                   << " orientable=" << orientable << " |faces|=" << orbit.l_bound.size() << "]";
       }
       std::cerr << "\n";
     }
-    MyMatrix<psys::T> x = read_rational_matrix(file_hecke);
-    if (x.rows() != ring.n() || x.cols() != ring.n()) {
-      std::cerr << "PROJ_HeckeOperators: the Hecke matrix should be of dimension " << ring.n() << "\n";
-      throw TerminalException{1};
-    }
     int index_min = n_levels - eDimMax;
-    HeckeChainMap<psys::T, psys::Tint> hcm = psys::compute_projective_hecke_chain_map(cx, x, index_min, os);
+    HeckeChainMap<psys::T, psys::Tint> hcm;
+    if (file_hecke == "identity") {
+      // The identity: the homology only, the chain map being the identity.
+      hcm = psys::identity_chain_map(cx, os);
+    } else {
+      MyMatrix<psys::T> x = read_rational_matrix(file_hecke);
+      if (x.rows() != ring.n() || x.cols() != ring.n()) {
+        std::cerr << "PROJ_HeckeOperators: the Hecke matrix should be of dimension " << ring.n() << "\n";
+        throw TerminalException{1};
+      }
+      hcm = psys::compute_projective_hecke_chain_map(cx, x, index_min, os);
+    }
     std::cerr << "Chain map computed, |Hecke cosets|=" << hcm.cosets.size() << "\n";
     for (auto &sub : l_sub) {
       for (auto &N : l_level) {
         FiniteIndexSubgroup<psys::Tint> gamma{};
         gamma.type = sub;
-        gamma.N = psys::Tint(N);
+        gamma.N = psys::Tint(static_cast<long>(N.a));
         gamma.n = ring.n();
         if (ring.d == 2) {
-          gamma.set_field(ring.m, ring.s, ring.p);
+          gamma.set_field_ideal(ring.m, ring.s, ring.p, {{N.a, N.b}});
+        } else if (N.b != 0) {
+          std::cerr << "PROJ_HeckeOperators: a level a+bw needs a ring of integers\n";
+          throw TerminalException{1};
         }
         HeckeHomologyResult<psys::T> result =
             compute_hecke_homology(psys::ProjectiveComplexView{cx}, hcm, gamma, true, false, false, prime, os);
-        std::string file = prefix + "_" + sub + "_" + std::to_string(N) + ".g";
+        std::string file = prefix + "_" + sub + "_" + N.name + ".g";
         std::ofstream os_out(file);
         os_out << "return ";
         WriteHeckeHomologyResultGAP(os_out, result);
         os_out << ";\n";
-        std::cerr << sub << " N=" << N << " index=" << result.n_coset_gamma
+        std::cerr << sub << " N=" << N.name << " index=" << result.n_coset_gamma
                   << " |Hecke cosets of Gamma|=" << result.n_hecke_coset << " dimensions:";
         for (auto &level : result.l_level) {
           std::cerr << " H(index " << level.index << ")=" << level.harmonic.rows();
