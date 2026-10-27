@@ -41,6 +41,13 @@ enforceable `ulimit -v`, so polling is the mechanism; a very fast allocation
 spike can overshoot by what it allocates within one poll interval
 (`RUN_CAPPED_POLL`, default 10 s).
 
+To stop a capped run, kill its PID and its children (`pkill -P <pid>; kill
+<pid>`), never `pkill -f run_capped.sh`: several sessions use this script at
+the same time, and a pattern kill on its name stops every capped run on the
+machine, as it did twice to a sweep on 2026-10-27. A pattern, if one is
+needed, must contain something only your run has (its log or input file,
+your scratchpad path).
+
 ## `basic_common_cpp/` and `permutalib/` are git submodules — do not edit in place
 
 Both `basic_common_cpp/` and `permutalib/` inside this repo are git submodules of their respective upstream projects. Any edit made directly to a file under either directory will be silently overwritten the next time the submodule is updated and will not propagate to the upstream.
