@@ -21,7 +21,13 @@ void write_amf_result(std::ostream &os, AmfResult const &res, std::string const 
   for (size_t j = 0; j < res.l_class.size(); j++) {
     os << (j > 0 ? ", " : "") << res.l_class[j].l_orbit_repr.size();
   }
-  os << "],\nmass:=" << res.mass << ",\nListHecke:=[";
+  os << "],\nmass:=" << res.mass << ",\nmass_formula:=";
+  if (res.mass_formula) {
+    os << *res.mass_formula << ", complete:=" << (*res.mass_formula == res.mass ? "true" : "false");
+  } else {
+    os << "fail, complete:=fail";
+  }
+  os << ",\nListHecke:=[";
   for (size_t ip = 0; ip < res.l_hecke.size(); ip++) {
     AmfHeckeMatrix const &hm = res.l_hecke[ip];
     os << (ip > 0 ? ",\n" : "") << "rec(prime:=\"" << hm.P.name << "\", n_neighbor:=" << hm.n_neighbor
@@ -52,8 +58,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "positive definite even lattice over Z, and their Hecke operators.\n";
       std::cerr << "  description: the ring, the dimension and the form of the seed lattice\n";
       std::cerr << "               R^m (see RealifiedRing.h)\n";
-      std::cerr << "  level: 1, or a prime of O_K: an inert integer prime or a generator a+bw\n";
-      std::cerr << "         of a split prime (w = omega)\n";
+      std::cerr << "  level: 1, or a prime of O_K: an inert integer prime, a generator a+bw\n";
+      std::cerr << "         of a split prime (w = omega), or ell@r for the split prime\n";
+      std::cerr << "         (ell, omega - r), which need not be principal\n";
       std::cerr << "  primes: comma separated list of the Hecke primes, given in the same way\n";
       std::cerr << "  output: the GAP file of the classes and the Hecke matrices\n";
       return -1;
@@ -70,11 +77,10 @@ int main(int argc, char *argv[]) {
     }
     std::optional<OrderPrime> N;
     if (str_level != "1") {
-      N = get_order_prime(ring, parse_ring_elements(str_level)[0]);
+      N = parse_order_primes(ring, str_level)[0];
     }
     std::vector<OrderPrime> l_prime;
-    for (auto &e : parse_ring_elements(str_primes)) {
-      OrderPrime P = get_order_prime(ring, e);
+    for (auto &P : parse_order_primes(ring, str_primes)) {
       if (N && N->ell == P.ell) {
         std::cerr << "GENUS_AlgebraicModularForms: the prime " << P.name << " lies over the same rational prime as "
                   << "the level\n";
@@ -85,6 +91,12 @@ int main(int argc, char *argv[]) {
     AmfResult res = compute_algebraic_modular_forms(ring, N, l_prime, std::cerr);
     std::cerr << "GENUS_AlgebraicModularForms: " << res.l_class.size() << " classes, mass " << res.mass << ", "
               << res.n_state << " states\n";
+    if (res.mass_formula) {
+      std::cerr << "GENUS_AlgebraicModularForms: mass formula " << *res.mass_formula << ", the genus is "
+                << (*res.mass_formula == res.mass ? "complete" : "NOT complete") << "\n";
+    } else {
+      std::cerr << "GENUS_AlgebraicModularForms: no mass formula for this genus, completeness not certified\n";
+    }
     std::ofstream os(file_out);
     write_amf_result(os, res, str_level);
     std::cerr << "Normal termination of GENUS_AlgebraicModularForms\n";

@@ -11,6 +11,9 @@
 #include "InvariantVectorFamily.h"
 #include "ClassicLLL.h"
 #include "LatticeRootDecomposition.h"
+#include "LocalDensity.h"
+#include "GenusMass.h"
+#include "HermitianMass.h"
 #include <map>
 #include <optional>
 #include <string>
@@ -84,6 +87,8 @@ struct AmfResult {
   std::vector<size_t> l_offset;
   size_t n_state = 0;
   mpq_class mass;
+  // the mass of the genus by the mass formula, when it is covered
+  std::optional<mpq_class> mass_formula;
   std::vector<AmfHeckeMatrix> l_hecke;
 };
 
@@ -286,6 +291,19 @@ inline AmfClass amf_new_class(RealifiedRing<AmfT, AmfTint> const &ring, AmfCanon
 }
 
 /*
+  The mass of the genus of the seed lattice by the mass formula: GenusMass
+  over Z (even lattices), HermitianGenusMass over O_K (the lattices that are
+  unimodular at every prime). When it is known, the classes found account
+  for the whole genus iff the sum of the 1 / |Aut(L_j)| is equal to it.
+ */
+inline std::optional<mpq_class> amf_genus_mass(RealifiedRing<AmfT, AmfTint> const &ring, std::ostream &os) {
+  if (ring.d == 1) {
+    return GenusMass<AmfT, AmfTint>(UniversalMatrixConversion<AmfT, AmfTint>(ring.B));
+  }
+  return HermitianGenusMass(ring, os);
+}
+
+/*
   The Hecke operator at P on the class L_i: one neighbour per orbit X of
   Aut(L_i) on the lines of L_i / P L_i. For a level orbit O of L_i, the
   entry (O, O') counts the lines x with the image of a fixed l in O by the
@@ -431,6 +449,7 @@ inline AmfResult compute_algebraic_modular_forms(RealifiedRing<AmfT, AmfTint> co
     res.mass += mpq_class(1) / mpq_class(cl.aut_order);
   }
   res.n_state = offset;
+  res.mass_formula = amf_genus_mass(ring, os);
   for (size_t ip = 0; ip < l_prime.size(); ip++) {
     AmfHeckeMatrix hm;
     hm.P = l_prime[ip];

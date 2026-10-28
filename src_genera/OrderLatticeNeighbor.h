@@ -160,6 +160,35 @@ inline OrderPrime get_order_prime(RealifiedRing<AmfT, AmfTint> const &ring,
   return P;
 }
 
+/*
+  The primes given by name, a comma separated list: an integer, a generator
+  a+bw (see get_order_prime), or ell@r for the prime (ell, omega - r) of
+  degree one, which need not be principal.
+ */
+inline std::vector<OrderPrime> parse_order_primes(RealifiedRing<AmfT, AmfTint> const &ring, std::string const &str) {
+  std::vector<OrderPrime> l_prime;
+  for (auto &tok : STRING_Split(str, ",")) {
+    size_t pos = tok.find('@');
+    if (pos == std::string::npos) {
+      l_prime.push_back(get_order_prime(ring, parse_ring_elements(tok)[0]));
+      continue;
+    }
+    OrderPrime P;
+    P.name = tok;
+    P.ell = ParseScalar<int64_t>(tok.substr(0, pos));
+    P.r = ResidueModPrime(ParseScalar<int64_t>(tok.substr(pos + 1)), P.ell);
+    P.f = 1;
+    int64_t D = ring.s * ring.s - 4 * ring.p;
+    if (ring.d != 2 || !order_is_prime(P.ell) || ResidueModPrime(D, P.ell) == 0 ||
+        ResidueModPrime(P.r * P.r - ring.s * P.r + ring.p, P.ell) != 0) {
+      std::cerr << "AMF: " << tok << " is not a split prime (ell, omega - r) of O_K\n";
+      throw TerminalException{1};
+    }
+    l_prime.push_back(P);
+  }
+  return l_prime;
+}
+
 inline int64_t order_residue(AmfTint const &x, int64_t const &ell) {
   return static_cast<int64_t>(mpz_fdiv_ui(x.get_mpz_t(), static_cast<unsigned long>(ell)));
 }
