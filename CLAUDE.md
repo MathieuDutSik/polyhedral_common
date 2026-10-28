@@ -48,6 +48,33 @@ machine, as it did twice to a sweep on 2026-10-27. A pattern, if one is
 needed, must contain something only your run has (its log or input file,
 your scratchpad path).
 
+### Long and unattended runs: the session must be woken when they end
+
+A Claude session only acts when a message or a tool event arrives. A run
+that nobody is notified about leaves the session idle: on the night of
+2026-10-27 a 7-minute job was launched with a plain shell `&`, the turn
+ended, and nothing ran from 21:40 to 06:04 although computations had been
+asked until 06:00.
+
+- Launch every run that outlives the tool call with the Bash tool's
+  `run_in_background: true`. Never detach with `&`, `nohup`, `disown` or
+  `( ... ) &` inside a foreground call: the harness does not track such a
+  job, it sends no completion notification, and nothing wakes the session.
+- Keep the PID for stopping (see above) by writing it from inside the
+  background command (`echo $$ > queue.pid` as its first statement), not
+  by detaching.
+- For unattended work (overnight, or while the user is away), put the whole
+  plan into one background queue script: the compute batches in order,
+  then the analysis scripts that write their results to files. The queue
+  advances without the session; the session is woken when it ends or
+  fails, and then starts the next queue.
+- Never end a turn with planned work outstanding unless a tracked
+  background task or an armed Monitor (whose filter catches the end and the
+  failures of the run) will wake the session. If neither exists, say
+  explicitly that nothing will run until the user writes.
+- When a Monitor expires before the run ends, re-arm it; a run that is not
+  watched and not tracked is the same as no run.
+
 ## `basic_common_cpp/` and `permutalib/` are git submodules — do not edit in place
 
 Both `basic_common_cpp/` and `permutalib/` inside this repo are git submodules of their respective upstream projects. Any edit made directly to a file under either directory will be silently overwritten the next time the submodule is updated and will not propagate to the upstream.
