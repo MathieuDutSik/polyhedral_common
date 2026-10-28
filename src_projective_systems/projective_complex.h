@@ -5,6 +5,7 @@
 // clang-format off
 #include "hecke_operators.h"
 #include "ImagQuadRing.h"
+#include "RealifiedRing.h"
 #include "PolytopeEquiStab.h"
 #include <fstream>
 #include <map>
@@ -93,69 +94,10 @@ inline MyMatrix<Tint> select_rows(MyMatrix<Tint> const &EXT, std::vector<int> co
 }
 
 /*
-  The ring R and the form: the dimension n = d m of the realification
-  (d = 1 for Z, 2 for O_K), the multiplication by omega W, the units (as
-  the matrices of the scalar multiplications) and the real form B.
+  The ring R and the form, see RealifiedRing.h.
  */
-struct ProjectiveRing {
-  int d = 1;
-  int m = 0;
-  long s = 0;
-  long p = 0;
-  MyMatrix<Tint> W;
-  std::vector<MyMatrix<Tint>> l_unit;
-  std::vector<MyMatrix<Tint>> l_ring_basis;
-  MyMatrix<Tint> B;
-  int n() const { return d * m; }
-  // Whether g is in G: integral, R-linear and preserving B.
-  template <typename Tf> bool in_group(MyMatrix<Tf> const &g) const {
-    if (!IsIntegralMatrix(g)) {
-      return false;
-    }
-    MyMatrix<Tf> B_f = UniversalMatrixConversion<Tf, Tint>(B);
-    if (d == 2) {
-      MyMatrix<Tf> W_f = UniversalMatrixConversion<Tf, Tint>(W);
-      if (g * W_f != W_f * g) {
-        return false;
-      }
-    }
-    return g * B_f * g.transpose() == B_f;
-  }
-  // The element a + b omega of O_K for the coordinate j of v.
-  std::pair<T, T> entry(MyVector<Tint> const &v, int const &j) const {
-    return {T(v(j)), T(v(m + j))};
-  }
-  /*
-    The primitive vector of the line of v: v divided by the gcd of its
-    entries (over R).
-   */
-  MyVector<Tint> primitive(MyVector<T> const &v_in) const {
-    MyVector<T> v = RemoveFractionVector(v_in);
-    if (d == 1) {
-      return UniversalVectorConversion<Tint, T>(v);
-    }
-    ImagQuadRing<T> ring{T(s), T(p)};
-    std::vector<std::pair<T, T>> l_x;
-    for (int j = 0; j < m; j++) {
-      std::pair<T, T> x{v(j), v(m + j)};
-      if (!ring.is_zero(x)) {
-        l_x.push_back(x);
-      }
-    }
-    std::optional<std::pair<T, T>> opt = ring.gcd(l_x);
-    if (!opt) {
-      std::cerr << "PSYS: primitive, the gcd of the entries is not principal\n";
-      throw TerminalException{1};
-    }
-    MyVector<Tint> w(n());
-    for (int j = 0; j < m; j++) {
-      std::pair<T, T> y = ring.div({v(j), v(m + j)}, *opt);
-      w(j) = UniversalScalarConversion<Tint, T>(y.first);
-      w(m + j) = UniversalScalarConversion<Tint, T>(y.second);
-    }
-    return w;
-  }
-};
+using ProjectiveRing = RealifiedRing<T, Tint>;
+using TokenReader = DescriptionTokenReader<Tint>;
 
 /*
   The description of a projective system: the ring and the form, the
@@ -173,137 +115,11 @@ struct ProjectiveDescription {
   std::string walk;
 };
 
-/*
-  The tokens of a description file, the comments (from # to the end of
-  the line) removed.
- */
-inline std::vector<std::string> read_tokens(std::string const &file) {
-  std::ifstream is(file);
-  if (!is.good()) {
-    std::cerr << "PSYS: the description file " << file << " cannot be read\n";
-    throw TerminalException{1};
-  }
-  std::vector<std::string> l_tok;
-  std::string line;
-  while (std::getline(is, line)) {
-    size_t pos = line.find('#');
-    if (pos != std::string::npos) {
-      line = line.substr(0, pos);
-    }
-    std::istringstream iss(line);
-    std::string tok;
-    while (iss >> tok) {
-      l_tok.push_back(tok);
-    }
-  }
-  return l_tok;
-}
-
-struct TokenReader {
-  std::vector<std::string> l_tok;
-  size_t pos = 0;
-  std::string next() {
-    if (pos >= l_tok.size()) {
-      std::cerr << "PSYS: the description file ends too early\n";
-      throw TerminalException{1};
-    }
-    return l_tok[pos++];
-  }
-  void expect(std::string const &key) {
-    std::string tok = next();
-    if (tok != key) {
-      std::cerr << "PSYS: expected " << key << " in the description file, found " << tok << "\n";
-      throw TerminalException{1};
-    }
-  }
-  int next_int() { return ParseScalar<int>(next()); }
-  MyMatrix<Tint> next_matrix() {
-    int n_row = next_int();
-    int n_col = next_int();
-    MyMatrix<Tint> M(n_row, n_col);
-    for (int i = 0; i < n_row; i++) {
-      for (int j = 0; j < n_col; j++) {
-        M(i, j) = ParseScalar<Tint>(next());
-      }
-    }
-    return M;
-  }
-};
-
-/*
-  The real form B: for R = Z the form h itself, for R = O_K the trace form
-  Tr_{K/Q} h(e, f) on the real basis e_j, omega e_j of O_K^m.
- */
-inline MyMatrix<Tint> get_real_form(int const &m, long const &s, long const &p, MyMatrix<Tint> const &h_a,
-                                    MyMatrix<Tint> const &h_b) {
-  ImagQuadRing<T> ring{T(s), T(p)};
-  std::vector<std::pair<T, T>> l_basis{{T(1), T(0)}, {T(0), T(1)}};
-  MyMatrix<Tint> B(2 * m, 2 * m);
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < m; j++) {
-      std::pair<T, T> h_ij{T(h_a(i, j)), T(h_b(i, j))};
-      for (int ki = 0; ki < 2; ki++) {
-        for (int kj = 0; kj < 2; kj++) {
-          std::pair<T, T> val = ring.mul(ring.mul(l_basis[ki], h_ij), ring.conj(l_basis[kj]));
-          B(ki * m + i, kj * m + j) = UniversalScalarConversion<Tint, T>(ring.trace(val));
-        }
-      }
-    }
-  }
-  return B;
-}
-
 inline ProjectiveDescription read_description(std::string const &file) {
-  TokenReader tr{read_tokens(file)};
+  TokenReader tr{read_description_tokens(file)};
   ProjectiveDescription desc;
-  ProjectiveRing &ring = desc.ring;
-  tr.expect("ring");
-  std::string ring_name = tr.next();
-  if (ring_name == "Z") {
-    ring.d = 1;
-  } else if (ring_name == "QuadraticImag") {
-    ring.d = 2;
-    ring.s = tr.next_int();
-    ring.p = tr.next_int();
-  } else {
-    std::cerr << "PSYS: the ring should be Z or QuadraticImag, not " << ring_name << "\n";
-    throw TerminalException{1};
-  }
-  tr.expect("dimension");
-  ring.m = tr.next_int();
-  int n = ring.n();
-  tr.expect("form");
-  if (ring.d == 1) {
-    ring.B = tr.next_matrix();
-  } else {
-    MyMatrix<Tint> h_a = tr.next_matrix();
-    MyMatrix<Tint> h_b = tr.next_matrix();
-    ring.B = get_real_form(ring.m, ring.s, ring.p, h_a, h_b);
-  }
-  if (ring.B.rows() != n || ring.B.cols() != n) {
-    std::cerr << "PSYS: the form should be of dimension " << n << "\n";
-    throw TerminalException{1};
-  }
-  MyMatrix<Tint> id = IdentityMat<Tint>(n);
-  ring.l_ring_basis.push_back(id);
-  if (ring.d == 1) {
-    ring.l_unit = {id, MyMatrix<Tint>(-id)};
-  } else {
-    // (a, b) -> omega (a + b omega) = -p b + (a + s b) omega.
-    ring.W = ZeroMatrix<Tint>(n, n);
-    for (int j = 0; j < ring.m; j++) {
-      ring.W(j, ring.m + j) = 1;
-      ring.W(ring.m + j, j) = -ring.p;
-      ring.W(ring.m + j, ring.m + j) = ring.s;
-    }
-    ring.l_ring_basis.push_back(ring.W);
-    ImagQuadRing<T> iq{T(ring.s), T(ring.p)};
-    for (auto &u : iq.units()) {
-      MyMatrix<Tint> U = UniversalScalarConversion<Tint, T>(u.first) * id +
-                         UniversalScalarConversion<Tint, T>(u.second) * ring.W;
-      ring.l_unit.push_back(U);
-    }
-  }
+  desc.ring = read_realified_ring<T, Tint>(tr);
+  int n = desc.ring.n();
   tr.expect("at_infinity");
   desc.at_infinity = tr.next();
   tr.expect("walk");

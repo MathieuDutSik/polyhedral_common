@@ -118,7 +118,7 @@ inline bool is_picard_gaussian(ProjectiveRing const &ring) {
   h_a(1, 1) = -1;
   h_b(0, 2) = -1;
   h_b(2, 0) = 1;
-  return ring.B == get_real_form(3, 0, 1, h_a, h_b);
+  return ring.B == get_real_form<T, Tint>(3, 0, 1, h_a, h_b);
 }
 
 /*

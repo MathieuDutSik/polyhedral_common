@@ -847,12 +847,14 @@ foreach(target IN LISTS LATT_PROGRAMS)
 endforeach()
 
 # src_genera: enumeration of a genus of even positive definite lattices by
-# Kneser p-neighbours. It builds on the src_latt headers (canonical form,
+# Kneser p-neighbours, and the algebraic modular forms of the genera of
+# Hermitian lattices over O_K and of even lattices over Z. It builds on the src_latt headers (canonical form,
 # automorphism group, invariant vector families), so it reuses the same
 # support interface.
 set(
   GENERA_PROGRAMS
   GENUS_Enumerate
+  GENUS_AlgebraicModularForms
 )
 foreach(target IN LISTS GENERA_PROGRAMS)
   add_polyhedral_binary(

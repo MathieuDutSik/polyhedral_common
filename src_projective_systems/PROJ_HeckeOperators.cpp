@@ -26,7 +26,7 @@ namespace {
 // A matrix of rationals: the numbers of rows and columns, then the
 // entries (a, -a, a/b).
 MyMatrix<psys::T> read_rational_matrix(std::string const &file) {
-  psys::TokenReader tr{psys::read_tokens(file)};
+  psys::TokenReader tr{read_description_tokens(file)};
   int n_row = tr.next_int();
   int n_col = tr.next_int();
   MyMatrix<psys::T> M(n_row, n_col);
@@ -38,52 +38,7 @@ MyMatrix<psys::T> read_rational_matrix(std::string const &file) {
   return M;
 }
 
-/*
-  A level: an integer N (the ideal N R) or, over O_K, a generator a+bw of
-  the ideal (w = omega), written "a+bw", "a-bw", "bw".
- */
-struct Level {
-  std::string name;
-  int64_t a;
-  int64_t b;
-};
-
-std::vector<Level> parse_levels(std::string const &str) {
-  std::vector<Level> l;
-  for (auto &s : STRING_Split(str, ",")) {
-    size_t pos_w = s.find('w');
-    if (pos_w == std::string::npos) {
-      l.push_back({s, ParseScalar<int64_t>(s), 0});
-      continue;
-    }
-    // The position of the sign separating a and b (not the leading one).
-    size_t pos_sign = std::string::npos;
-    for (size_t i = 1; i < pos_w; i++) {
-      if (s[i] == '+' || s[i] == '-') {
-        pos_sign = i;
-      }
-    }
-    int64_t a = 0;
-    std::string str_b;
-    if (pos_sign == std::string::npos) {
-      str_b = s.substr(0, pos_w);
-    } else {
-      a = ParseScalar<int64_t>(s.substr(0, pos_sign));
-      str_b = s.substr(pos_sign, pos_w - pos_sign);
-      if (str_b[0] == '+') {
-        str_b = str_b.substr(1);
-      }
-    }
-    int64_t b = 1;
-    if (str_b == "-") {
-      b = -1;
-    } else if (!str_b.empty()) {
-      b = ParseScalar<int64_t>(str_b);
-    }
-    l.push_back({s, a, b});
-  }
-  return l;
-}
+using Level = RingElementName;
 
 }  // namespace
 
@@ -105,7 +60,7 @@ int main(int argc, char *argv[]) {
     std::string file_hecke = argv[2];
     int eDimMax = ParseScalar<int>(argv[3]);
     std::vector<std::string> l_sub = STRING_Split(argv[4], ",");
-    std::vector<Level> l_level = parse_levels(argv[5]);
+    std::vector<Level> l_level = parse_ring_elements(argv[5]);
     std::vector<int64_t> l_prime;
     for (auto &str : STRING_Split(argv[6], ",")) {
       l_prime.push_back(ParseScalar<int64_t>(str));

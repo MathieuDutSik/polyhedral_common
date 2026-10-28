@@ -1,4 +1,4 @@
-PROGRAM		= GENUS_Enumerate GENUS_LocalDensity
+PROGRAM		= GENUS_Enumerate GENUS_LocalDensity GENUS_AlgebraicModularForms
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
