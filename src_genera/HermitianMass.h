@@ -78,13 +78,14 @@ HermitianGramStandard(RealifiedRing<T, Tint> const &ring) {
   int m = ring.m;
   int n = ring.n();
   MyMatrix<Tint> BW = ring.B * ring.W.transpose();
-  T s(ring.s), nw(ring.p);
+  T s = ScalarFromInt64<T>(ring.s);
+  T nw = ScalarFromInt64<T>(ring.p);
   T absD = 4 * nw - s * s;
   std::vector<std::vector<std::pair<T, T>>> h(m, std::vector<std::pair<T, T>>(m));
   for (int j = 0; j < m; j++) {
     for (int k = 0; k < m; k++) {
-      T t1(ring.B(j, k));
-      T t2(BW(j, k));
+      T t1 = UniversalScalarConversion<T, Tint>(ring.B(j, k));
+      T t2 = UniversalScalarConversion<T, Tint>(BW(j, k));
       h[j][k] = {(2 * nw * t1 - s * t2) / absD, (2 * t2 - s * t1) / absD};
     }
   }
@@ -127,8 +128,10 @@ std::pair<T, T> DeterminantOverK(ImagQuadRing<T> const &ring,
 
 // Whether the nonzero rational x is a norm from Q_p(sqrt D).
 template <typename T> bool IsLocalNormQuadratic(T const &x, int64_t D, int64_t p) {
-  int64_t num = UniversalScalarConversion<int64_t, T>(T(x.get_num()));
-  int64_t den = UniversalScalarConversion<int64_t, T>(T(x.get_den()));
+  auto num_z = GetNumerator_z(x);
+  auto den_z = GetDenominator_z(x);
+  int64_t num = UniversalScalarConversion<int64_t, decltype(num_z)>(num_z);
+  int64_t den = UniversalScalarConversion<int64_t, decltype(den_z)>(den_z);
   // x and x den^2 = num den have the same class
   PadicClass cx = PadicFromInt64(num * den, p);
   PadicClass cD = PadicFromInt64(D, p);
@@ -137,7 +140,7 @@ template <typename T> bool IsLocalNormQuadratic(T const &x, int64_t D, int64_t p
 
 template <typename T> T HermitianPowerInt(int64_t q, int e) {
   T res(1);
-  T q_T(static_cast<long>(q));
+  T q_T = ScalarFromInt64<T>(q);
   if (e >= 0) {
     for (int i = 0; i < e; i++) {
       res *= q_T;
@@ -210,7 +213,7 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
   T detB = DeterminantMat(UniversalMatrixConversion<T, Tint>(ring.B));
   T target(1);
   for (int i = 0; i < m; i++) {
-    target *= T(static_cast<long>(absD));
+    target *= ScalarFromInt64<T>(absD);
   }
   if (T_abs(detB) != target) {
 #ifdef DEBUG_HERMITIAN_MASS
@@ -222,7 +225,7 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
   T mass = HermitianPowerInt<T>(2, 1 - m);
   for (int i = 1; i <= m; i++) {
     int64_t chi = (i % 2 == 1) ? D : 1;
-    T Lval = -GeneralizedBernoulli<T>(i, chi) / T(i);
+    T Lval = -GeneralizedBernoulli<T>(i, chi) / ScalarFromInt64<T>(i);
     mass *= T_abs(Lval);
   }
   // the discriminant class
@@ -255,7 +258,7 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
       if (m % 2 == 1) {
         lambda = T(1) / T(2);
       } else {
-        lambda = (HermitianPowerInt<T>(p, m / 2) + T(d_is_norm ? 1 : -1)) / T(2);
+        lambda = (HermitianPowerInt<T>(p, m / 2) + ScalarFromInt64<T>(d_is_norm ? 1 : -1)) / T(2);
       }
     } else {
       int e = 0;
@@ -266,8 +269,9 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
       }
       int v2 = 0;
       Tint ng = T_abs(norm_gen);
-      while (ng % 2 == 0) {
-        ng /= 2;
+      Tint two(2);
+      while (ng % two == 0) {
+        ng /= two;
         v2++;
       }
       lambda = HermitianLocalFactorDyadicUnimodular<T>(m, e, 2 * v2, d_is_norm);

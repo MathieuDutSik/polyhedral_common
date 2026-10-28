@@ -7,6 +7,7 @@
 #include "GenusEnumeration.h"
 #include "MAT_MatrixMod.h"
 #include "MAT_MatrixModInt64.h"
+#include "SiegelSpecialValues.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -64,12 +65,9 @@
   primes are not treated.
  */
 
-using AmfT = mpq_class;
-using AmfTint = mpz_class;
-
-// int64_t is long long on some platforms, which gmpxx does not convert from.
-inline AmfTint amf_int(int64_t const &x) { return AmfTint(static_cast<long>(x)); }
-inline AmfT amf_rat(int64_t const &x) { return AmfT(static_cast<long>(x)); }
+// The number types are T (a field, mpq_class or fmpq_class) and Tint (its
+// ring of integers); int64_t goes through ScalarFromInt64.
+template <typename Tring> Tring amf_int(int64_t const &x) { return ScalarFromInt64<Tring>(x); }
 
 /*
   A prime ideal P of R: the rational prime ell under it and the residue
@@ -99,7 +97,8 @@ inline bool order_is_prime(int64_t const &x) {
   The prime of R named by e: over Z an integer prime; over O_K an integer
   prime inert in O_K, or a generator a + b omega (b != 0) of a split prime.
  */
-inline OrderPrime get_order_prime(RealifiedRing<AmfT, AmfTint> const &ring,
+template <typename T, typename Tint>
+OrderPrime get_order_prime(RealifiedRing<T, Tint> const &ring,
                                   RingElementName const &e) {
   OrderPrime P;
   P.name = e.name;
@@ -165,7 +164,8 @@ inline OrderPrime get_order_prime(RealifiedRing<AmfT, AmfTint> const &ring,
   a+bw (see get_order_prime), or ell@r for the prime (ell, omega - r) of
   degree one, which need not be principal.
  */
-inline std::vector<OrderPrime> parse_order_primes(RealifiedRing<AmfT, AmfTint> const &ring, std::string const &str) {
+template <typename T, typename Tint>
+std::vector<OrderPrime> parse_order_primes(RealifiedRing<T, Tint> const &ring, std::string const &str) {
   std::vector<OrderPrime> l_prime;
   for (auto &tok : STRING_Split(str, ",")) {
     size_t pos = tok.find('@');
@@ -189,14 +189,19 @@ inline std::vector<OrderPrime> parse_order_primes(RealifiedRing<AmfT, AmfTint> c
   return l_prime;
 }
 
-inline int64_t order_residue(AmfTint const &x, int64_t const &ell) {
-  return static_cast<int64_t>(mpz_fdiv_ui(x.get_mpz_t(), static_cast<unsigned long>(ell)));
+template <typename Tint> int64_t order_residue(Tint const &x, int64_t const &ell) {
+  Tint ell_T = ScalarFromInt64<Tint>(ell);
+  Tint r = x % ell_T;
+  if (r < 0) {
+    r += ell_T;
+  }
+  return UniversalScalarConversion<int64_t, Tint>(r);
 }
 
 // The residue of a rational whose denominator is prime to ell.
-inline int64_t order_residue(AmfT const &x, int64_t const &ell) {
-  int64_t num = order_residue(AmfTint(x.get_num()), ell);
-  int64_t den = order_residue(AmfTint(x.get_den()), ell);
+template <typename T> int64_t order_residue_rat(T const &x, int64_t const &ell) {
+  int64_t num = order_residue(GetNumerator_z(x), ell);
+  int64_t den = order_residue(GetDenominator_z(x), ell);
   if (den == 0) {
     std::cerr << "AMF: a denominator is divisible by " << ell << "\n";
     throw TerminalException{1};
@@ -239,8 +244,9 @@ struct ResidueField {
 };
 
 // The rank mod ell of the rows of M.
-inline int order_rank_mod(MyMatrix<AmfTint> const &M, int64_t const &ell) {
-  MyMatrix<AmfTint> NSP = NullspaceMatMod(M, amf_int(ell));
+template <typename Tint>
+int order_rank_mod(MyMatrix<Tint> const &M, int64_t const &ell) {
+  MyMatrix<Tint> NSP = NullspaceMatMod(M, amf_int<Tint>(ell));
   return M.rows() - NSP.rows();
 }
 
@@ -311,16 +317,18 @@ struct LineSpace {
   }
 };
 
-inline std::vector<int64_t> order_residue_vector(MyVector<AmfT> const &v, int64_t const &ell) {
+template <typename T>
+std::vector<int64_t> order_residue_vector(MyVector<T> const &v, int64_t const &ell) {
   std::vector<int64_t> z(v.size());
   for (int k = 0; k < v.size(); k++) {
-    z[k] = order_residue(v(k), ell);
+    z[k] = order_residue_rat(v(k), ell);
   }
   return z;
 }
 
-inline LineSpace get_line_space(RealifiedRing<AmfT, AmfTint> const &ring,
-                                MyMatrix<AmfTint> const &Omega,
+template <typename T, typename Tint>
+LineSpace get_line_space(RealifiedRing<T, Tint> const &ring,
+                                MyMatrix<Tint> const &Omega,
                                 OrderPrime const &P) {
   LineSpace ls;
   int n = ring.n();
@@ -328,15 +336,15 @@ inline LineSpace get_line_space(RealifiedRing<AmfT, AmfTint> const &ring,
   ls.m = ring.m;
   ls.F = ResidueField{P.ell, P.f, ring.s, ring.p};
   int64_t ell = P.ell;
-  MyMatrix<AmfTint> Bas(n, n);
+  MyMatrix<Tint> Bas(n, n);
   if (ring.d == 1) {
-    Bas = IdentityMat<AmfTint>(n);
+    Bas = IdentityMat<Tint>(n);
   } else if (P.f == 1) {
     // the eigenspaces of Omega mod ell for r and conj(r) = s - r
     int64_t r_conj = ResidueModPrime(ring.s - P.r, ell);
-    MyMatrix<AmfTint> Id = IdentityMat<AmfTint>(n);
-    MyMatrix<AmfTint> V1 = NullspaceMatMod(MyMatrix<AmfTint>(Omega - amf_int(P.r) * Id), amf_int(ell));
-    MyMatrix<AmfTint> V2 = NullspaceMatMod(MyMatrix<AmfTint>(Omega - amf_int(r_conj) * Id), amf_int(ell));
+    MyMatrix<Tint> Id = IdentityMat<Tint>(n);
+    MyMatrix<Tint> V1 = NullspaceMatMod(MyMatrix<Tint>(Omega - amf_int<Tint>(P.r) * Id), amf_int<Tint>(ell));
+    MyMatrix<Tint> V2 = NullspaceMatMod(MyMatrix<Tint>(Omega - amf_int<Tint>(r_conj) * Id), amf_int<Tint>(ell));
     if (V1.rows() != ring.m || V2.rows() != ring.m) {
       std::cerr << "AMF: the eigenspaces of omega mod " << ell << " have dimensions " << V1.rows() << ", "
                 << V2.rows() << " instead of " << ring.m << "\n";
@@ -351,7 +359,7 @@ inline LineSpace get_line_space(RealifiedRing<AmfT, AmfTint> const &ring,
   } else {
     int n_found = 0;
     for (int k = 0; k < n && n_found < ring.m; k++) {
-      MyMatrix<AmfTint> Test(2 * n_found + 1, n);
+      MyMatrix<Tint> Test(2 * n_found + 1, n);
       for (int i = 0; i < 2 * n_found; i++) {
         for (int j = 0; j < n; j++) {
           Test(i, j) = Bas(i, j);
@@ -392,24 +400,25 @@ inline LineSpace get_line_space(RealifiedRing<AmfT, AmfTint> const &ring,
   The Hermitian product h(e_k, x) for the basis vectors e_k of L, as the
   pairs (a_k, b_k), h = a + b omega; over Z simply B(e_k, x) (b_k = 0).
  */
-inline std::vector<std::pair<AmfTint, AmfTint>>
-order_hermitian_products(RealifiedRing<AmfT, AmfTint> const &ring, MyMatrix<AmfTint> const &G,
-                         MyMatrix<AmfTint> const &Omega, MyVector<AmfTint> const &x) {
+template <typename T, typename Tint>
+std::vector<std::pair<Tint, Tint>>
+order_hermitian_products(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
+                         MyMatrix<Tint> const &Omega, MyVector<Tint> const &x) {
   int n = G.rows();
-  MyVector<AmfTint> t1 = G * x;
-  std::vector<std::pair<AmfTint, AmfTint>> l_h(n);
+  MyVector<Tint> t1 = G * x;
+  std::vector<std::pair<Tint, Tint>> l_h(n);
   if (ring.d == 1) {
     for (int k = 0; k < n; k++) {
-      l_h[k] = {t1(k), AmfTint(0)};
+      l_h[k] = {t1(k), Tint(0)};
     }
     return l_h;
   }
-  MyVector<AmfTint> xO = Omega.transpose() * x;
-  MyVector<AmfTint> t2 = G * xO;
-  AmfTint absD = 4 * ring.p - ring.s * ring.s;
+  MyVector<Tint> xO = Omega.transpose() * x;
+  MyVector<Tint> t2 = G * xO;
+  Tint absD = 4 * ring.p - ring.s * ring.s;
   for (int k = 0; k < n; k++) {
-    AmfTint a_num = 2 * ring.p * t1(k) - ring.s * t2(k);
-    AmfTint b_num = 2 * t2(k) - ring.s * t1(k);
+    Tint a_num = 2 * ring.p * t1(k) - ring.s * t2(k);
+    Tint b_num = 2 * t2(k) - ring.s * t1(k);
 #ifdef SANITY_CHECK_ORDER_LATTICE
     if (a_num % absD != 0 || b_num % absD != 0) {
       std::cerr << "AMF: the Hermitian product is not in O_K\n";
@@ -422,8 +431,9 @@ order_hermitian_products(RealifiedRing<AmfT, AmfTint> const &ring, MyMatrix<AmfT
 }
 
 // h(x, x) = G(x, x) / 2 for R = O_K.
-inline AmfTint order_hermitian_norm(MyMatrix<AmfTint> const &G, MyVector<AmfTint> const &x) {
-  AmfTint val = x.dot(G * x);
+template <typename Tint>
+Tint order_hermitian_norm(MyMatrix<Tint> const &G, MyVector<Tint> const &x) {
+  Tint val = x.dot(G * x);
 #ifdef SANITY_CHECK_ORDER_LATTICE
   if (val % 2 != 0) {
     std::cerr << "AMF: Tr h(x, x) is odd\n";
@@ -438,34 +448,35 @@ inline AmfTint order_hermitian_norm(MyMatrix<AmfTint> const &G, MyVector<AmfTint
   the rows of a Z-basis in the coordinates of L. Nothing when the line is
   not isotropic (inert P).
  */
-inline std::optional<MyMatrix<AmfT>>
-order_neighbor(RealifiedRing<AmfT, AmfTint> const &ring, MyMatrix<AmfTint> const &G,
-               MyMatrix<AmfTint> const &Omega, OrderPrime const &P, std::vector<int64_t> const &z) {
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
+               MyMatrix<Tint> const &Omega, OrderPrime const &P, std::vector<int64_t> const &z) {
   // Over Z (an even lattice, h(x, x) = Q(x) = B(x, x) / 2) the construction
   // is the one of an inert prime with the single functional B(y, x): L' = M
   // + Z x / ell, M = {y : B(y, x) = 0 mod ell}.
   bool split = ring.d == 2 && P.f == 1;
   int n = G.rows();
   int64_t ell = P.ell;
-  AmfTint ell_T = amf_int(ell);
-  MyVector<AmfTint> x(n);
+  Tint ell_T = amf_int<Tint>(ell);
+  MyVector<Tint> x(n);
   for (int k = 0; k < n; k++) {
-    x(k) = amf_int(z[k]);
+    x(k) = amf_int<Tint>(z[k]);
   }
-  MyMatrix<AmfTint> Id = IdentityMat<AmfTint>(n);
+  MyMatrix<Tint> Id = IdentityMat<Tint>(n);
   if (split) {
     // x modulo P L, P L generated by ell L and the rows of Omega - r.
-    AmfTint hx = order_hermitian_norm(G, x);
+    Tint hx = order_hermitian_norm(G, x);
     int64_t hx_res = order_residue(hx, ell);
     if (hx_res != 0) {
-      MyMatrix<AmfTint> OmR = Omega - amf_int(P.r) * Id;
+      MyMatrix<Tint> OmR = Omega - amf_int<Tint>(P.r) * Id;
       bool done = false;
       for (int k = 0; k < n && !done; k++) {
-        MyVector<AmfTint> y = GetMatrixRow(OmR, k);
-        int64_t bxy = order_residue(AmfTint(x.dot(G * y)), ell);
+        MyVector<Tint> y = GetMatrixRow(OmR, k);
+        int64_t bxy = order_residue(Tint(x.dot(G * y)), ell);
         if (bxy != 0) {
           int64_t c = ResidueModPrime(-hx_res * InverseModPrime(bxy, ell), ell);
-          x += amf_int(c) * y;
+          x += amf_int<Tint>(c) * y;
           done = true;
         }
       }
@@ -475,20 +486,20 @@ order_neighbor(RealifiedRing<AmfT, AmfTint> const &ring, MyMatrix<AmfTint> const
       }
     }
   } else {
-    AmfTint hx = order_hermitian_norm(G, x);
+    Tint hx = order_hermitian_norm(G, x);
     if (order_residue(hx, ell) != 0) {
       return {};
     }
     // x + ell c e_k: h = h(x, x) + ell c Tr h(x, e_k) mod ell^2
-    int64_t hx_red = order_residue(AmfTint(hx / ell_T), ell);
+    int64_t hx_red = order_residue(Tint(hx / ell_T), ell);
     if (hx_red != 0) {
-      MyVector<AmfTint> Gx = G * x;
+      MyVector<Tint> Gx = G * x;
       bool done = false;
       for (int k = 0; k < n && !done; k++) {
         int64_t bxe = order_residue(Gx(k), ell);
         if (bxe != 0) {
           int64_t c = ResidueModPrime(-hx_red * InverseModPrime(bxe, ell), ell);
-          x(k) += ell_T * amf_int(c);
+          x(k) += ell_T * amf_int<Tint>(c);
           done = true;
         }
       }
@@ -500,8 +511,8 @@ order_neighbor(RealifiedRing<AmfT, AmfTint> const &ring, MyMatrix<AmfTint> const
   }
 #ifdef SANITY_CHECK_ORDER_LATTICE
   {
-    AmfTint hx = order_hermitian_norm(G, x);
-    AmfTint mod = split ? ell_T : ell_T * ell_T;
+    Tint hx = order_hermitian_norm(G, x);
+    Tint mod = split ? ell_T : ell_T * ell_T;
     if (hx % mod != 0) {
       std::cerr << "AMF: the adjusted vector is not isotropic enough\n";
       throw TerminalException{1};
@@ -509,52 +520,52 @@ order_neighbor(RealifiedRing<AmfT, AmfTint> const &ring, MyMatrix<AmfTint> const
   }
 #endif
   // M: the kernel of y -> h(y, x) mod conj(P) (split) or mod ell (inert, Z).
-  std::vector<std::pair<AmfTint, AmfTint>> l_h = order_hermitian_products(ring, G, Omega, x);
+  std::vector<std::pair<Tint, Tint>> l_h = order_hermitian_products(ring, G, Omega, x);
   int n_func = ring.d == 1 || split ? 1 : 2;
-  MyMatrix<AmfTint> Func(n, n_func);
+  MyMatrix<Tint> Func(n, n_func);
   int64_t r_conj = ResidueModPrime(ring.s - P.r, ell);
   for (int k = 0; k < n; k++) {
     int64_t a = order_residue(l_h[k].first, ell);
     int64_t b = order_residue(l_h[k].second, ell);
     if (split) {
       // omega = conj(r) mod conj(P)
-      Func(k, 0) = amf_int((a + b * r_conj) % ell);
+      Func(k, 0) = amf_int<Tint>((a + b * r_conj) % ell);
     } else {
-      Func(k, 0) = amf_int(a);
+      Func(k, 0) = amf_int<Tint>(a);
       if (ring.d == 2) {
-        Func(k, 1) = amf_int(b);
+        Func(k, 1) = amf_int<Tint>(b);
       }
     }
   }
-  MyMatrix<AmfTint> NSP = NullspaceMatMod(Func, ell_T);
+  MyMatrix<Tint> NSP = NullspaceMatMod(Func, ell_T);
   int n_gen = NSP.rows() + n + 2;
-  MyMatrix<AmfT> Gens(n_gen, n);
+  MyMatrix<T> Gens(n_gen, n);
   int pos = 0;
   for (int i = 0; i < NSP.rows(); i++) {
     for (int k = 0; k < n; k++) {
-      Gens(pos, k) = AmfT(NSP(i, k));
+      Gens(pos, k) = UniversalScalarConversion<T, Tint>(NSP(i, k));
     }
     pos++;
   }
   for (int i = 0; i < n; i++) {
     for (int k = 0; k < n; k++) {
-      Gens(pos, k) = (i == k) ? amf_rat(ell) : AmfT(0);
+      Gens(pos, k) = (i == k) ? amf_int<T>(ell) : T(0);
     }
     pos++;
   }
   // P^{-1} x: x and (omega - conj(r)) x / ell (split); x / ell and omega x /
   // ell (inert); x / ell (Z).
-  MyVector<AmfTint> xO = ring.d == 2 ? MyVector<AmfTint>(Omega.transpose() * x) : x;
+  MyVector<Tint> xO = ring.d == 2 ? MyVector<Tint>(Omega.transpose() * x) : x;
   for (int k = 0; k < n; k++) {
     if (split) {
-      Gens(pos, k) = AmfT(x(k));
-      Gens(pos + 1, k) = AmfT(xO(k) - amf_int(r_conj) * x(k)) / amf_rat(ell);
+      Gens(pos, k) = UniversalScalarConversion<T, Tint>(x(k));
+      Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k) - amf_int<Tint>(r_conj) * x(k)) / amf_int<T>(ell);
     } else {
-      Gens(pos, k) = AmfT(x(k)) / amf_rat(ell);
-      Gens(pos + 1, k) = AmfT(xO(k)) / amf_rat(ell);
+      Gens(pos, k) = UniversalScalarConversion<T, Tint>(x(k)) / amf_int<T>(ell);
+      Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k)) / amf_int<T>(ell);
     }
   }
-  MyMatrix<AmfT> Basis = GetZbasis(Gens);
+  MyMatrix<T> Basis = GetZbasis(Gens);
 #ifdef SANITY_CHECK_ORDER_LATTICE
   if (Basis.rows() != n || T_abs(DeterminantMat(Basis)) != 1) {
     std::cerr << "AMF: the neighbour does not have the covolume of L\n";

@@ -58,13 +58,13 @@ using AmfTidx = uint32_t;
 using AmfTelt = permutalib::SingleSidedPerm<AmfTidx>;
 using AmfTgroup = permutalib::Group<AmfTelt, mpz_class>;
 
-struct AmfClass {
+template <typename T, typename Tint> struct AmfClass {
   // the canonical Z-basis, rows in the realified coordinates
-  MyMatrix<AmfT> basis;
-  MyMatrix<AmfT> basis_inv;
-  MyMatrix<AmfTint> G;
-  MyMatrix<AmfTint> Omega;
-  std::vector<MyMatrix<AmfTint>> l_aut;
+  MyMatrix<T> basis;
+  MyMatrix<T> basis_inv;
+  MyMatrix<Tint> G;
+  MyMatrix<Tint> Omega;
+  std::vector<MyMatrix<Tint>> l_aut;
   mpz_class aut_order;
   // the level structure: the line space mod N, the orbit of each line
   // (-1 for a non isotropic one) and a representative line of each orbit
@@ -82,29 +82,30 @@ struct AmfHeckeMatrix {
   size_t n_neighbor = 0;
 };
 
-struct AmfResult {
-  std::vector<AmfClass> l_class;
+template <typename T, typename Tint> struct AmfResult {
+  std::vector<AmfClass<T, Tint>> l_class;
   std::vector<size_t> l_offset;
   size_t n_state = 0;
-  mpq_class mass;
+  T mass;
   // the mass of the genus by the mass formula, when it is covered
-  std::optional<mpq_class> mass_formula;
+  std::optional<T> mass_formula;
   std::vector<AmfHeckeMatrix> l_hecke;
 };
 
-struct AmfCanonical {
-  MyMatrix<AmfT> basis;
-  MyMatrix<AmfTint> G;
-  MyMatrix<AmfTint> Omega;
+template <typename T, typename Tint> struct AmfCanonical {
+  MyMatrix<T> basis;
+  MyMatrix<Tint> G;
+  MyMatrix<Tint> Omega;
 };
 
 /*
   The canonical form of the lattice of basis A (realified coordinates).
  */
-inline AmfCanonical amf_canonical(RealifiedRing<AmfT, AmfTint> const &ring, MyMatrix<AmfT> const &A_in,
+template <typename T, typename Tint>
+AmfCanonical<T, Tint> amf_canonical(RealifiedRing<T, Tint> const &ring, MyMatrix<T> const &A_in,
                                   std::ostream &os) {
   // Over Z the family is {G} and Omega is empty.
-  MyMatrix<AmfT> B_T = UniversalMatrixConversion<AmfT, AmfTint>(ring.B);
+  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(ring.B);
   /*
     The basis of a neighbour (from GetZbasis) and the canonical bases are
     skewed, and the canonical form starts by enumerating the shells of short
@@ -112,39 +113,40 @@ inline AmfCanonical amf_canonical(RealifiedRing<AmfT, AmfTint> const &ring, MyMa
     quinary genus of 389 classes was in that enumeration). The canonical form
     does not depend on the basis, so it is reduced first.
    */
-  LLLreduction<AmfT, AmfTint> rec = LLLreducedBasis<AmfT, AmfTint>(MyMatrix<AmfT>(A_in * B_T * A_in.transpose()), os);
-  MyMatrix<AmfT> A = UniversalMatrixConversion<AmfT, AmfTint>(rec.Pmat) * A_in;
-  MyMatrix<AmfT> G = rec.GramMatRed;
-  std::vector<MyMatrix<AmfT>> l_mat{G};
-  MyMatrix<AmfT> W_T;
+  LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(MyMatrix<T>(A_in * B_T * A_in.transpose()), os);
+  MyMatrix<T> A = UniversalMatrixConversion<T, Tint>(rec.Pmat) * A_in;
+  MyMatrix<T> G = rec.GramMatRed;
+  std::vector<MyMatrix<T>> l_mat{G};
+  MyMatrix<T> W_T;
   if (ring.d == 2) {
-    W_T = UniversalMatrixConversion<AmfT, AmfTint>(ring.W);
-    MyMatrix<AmfT> Om = A * W_T * Inverse(A);
+    W_T = UniversalMatrixConversion<T, Tint>(ring.W);
+    MyMatrix<T> Om = A * W_T * Inverse(A);
     l_mat.push_back(G * Om.transpose());
   }
   // Over Z the Weyl-chamber canonical form of GenusEnumeration; over O_K the
   // canonical form of the family.
-  MyMatrix<AmfTint> Pc = ring.d == 1 ? ComputeCanonicalFormWeylChamber<AmfT, AmfTint, AmfTgroup>(G, os)
-                                     : ComputeCanonicalFormMultiple<AmfT, AmfTint, AmfTgroup>(l_mat, os);
-  MyMatrix<AmfT> Pc_T = UniversalMatrixConversion<AmfT, AmfTint>(Pc);
-  MyMatrix<AmfT> A_can = Pc_T * A;
-  MyMatrix<AmfT> G_can = A_can * B_T * A_can.transpose();
-  MyMatrix<AmfT> Om_can = ring.d == 2 ? MyMatrix<AmfT>(A_can * W_T * Inverse(A_can)) : MyMatrix<AmfT>(0, 0);
+  MyMatrix<Tint> Pc = ring.d == 1 ? ComputeCanonicalFormWeylChamber<T, Tint, AmfTgroup>(G, os)
+                                     : ComputeCanonicalFormMultiple<T, Tint, AmfTgroup>(l_mat, os);
+  MyMatrix<T> Pc_T = UniversalMatrixConversion<T, Tint>(Pc);
+  MyMatrix<T> A_can = Pc_T * A;
+  MyMatrix<T> G_can = A_can * B_T * A_can.transpose();
+  MyMatrix<T> Om_can = ring.d == 2 ? MyMatrix<T>(A_can * W_T * Inverse(A_can)) : MyMatrix<T>(0, 0);
 #ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS
   if (!IsIntegralMatrix(G_can) || !IsIntegralMatrix(Om_can)) {
     std::cerr << "AMF: the lattice is not integral or not an O_K-module\n";
     throw TerminalException{1};
   }
 #endif
-  return {A_can, UniversalMatrixConversion<AmfTint, AmfT>(G_can),
-          UniversalMatrixConversion<AmfTint, AmfT>(Om_can)};
+  return {A_can, UniversalMatrixConversion<Tint, T>(G_can),
+          UniversalMatrixConversion<Tint, T>(Om_can)};
 }
 
-inline bool amf_is_isotropic(MyMatrix<AmfTint> const &G, std::vector<int64_t> const &z,
+template <typename Tint>
+bool amf_is_isotropic(MyMatrix<Tint> const &G, std::vector<int64_t> const &z,
                              int64_t const &ell) {
-  MyVector<AmfTint> x(z.size());
+  MyVector<Tint> x(z.size());
   for (size_t k = 0; k < z.size(); k++) {
-    x(k) = amf_int(z[k]);
+    x(k) = amf_int<Tint>(z[k]);
   }
   return order_residue(order_hermitian_norm(G, x), ell) == 0;
 }
@@ -161,8 +163,8 @@ struct LineOrbits {
   std::vector<size_t> l_size;
 };
 
-template <typename F>
-LineOrbits amf_line_orbits(LineSpace const &ls, std::vector<MyMatrix<AmfTint>> const &l_gen, F f_filter,
+template <typename Tint, typename F>
+LineOrbits amf_line_orbits(LineSpace const &ls, std::vector<MyMatrix<Tint>> const &l_gen, F f_filter,
                            std::vector<int64_t> *orbit_of_line) {
   int64_t ell = ls.F.ell;
   int n = ls.n;
@@ -230,41 +232,42 @@ LineOrbits amf_line_orbits(LineSpace const &ls, std::vector<MyMatrix<AmfTint>> c
 /*
   A new class: its automorphism group and the orbits of the level lines.
  */
-inline AmfClass amf_new_class(RealifiedRing<AmfT, AmfTint> const &ring, AmfCanonical const &can,
+template <typename T, typename Tint>
+AmfClass<T, Tint> amf_new_class(RealifiedRing<T, Tint> const &ring, AmfCanonical<T, Tint> const &can,
                               std::optional<OrderPrime> const &N, std::ostream &os) {
-  AmfClass cl;
+  AmfClass<T, Tint> cl;
   cl.basis = can.basis;
   cl.basis_inv = Inverse(can.basis);
   cl.G = can.G;
   cl.Omega = can.Omega;
   // The automorphisms are computed on a reduced basis Q (rows in the
   // canonical basis) and brought back: g = Q^{-1} g_red Q.
-  MyMatrix<AmfT> G_can = UniversalMatrixConversion<AmfT, AmfTint>(cl.G);
-  LLLreduction<AmfT, AmfTint> rec = LLLreducedBasis<AmfT, AmfTint>(G_can, os);
-  MyMatrix<AmfT> Q = UniversalMatrixConversion<AmfT, AmfTint>(rec.Pmat);
-  MyMatrix<AmfT> Q_inv = Inverse(Q);
-  MyMatrix<AmfT> G_T = rec.GramMatRed;
-  std::vector<MyMatrix<AmfT>> l_mat{G_T};
+  MyMatrix<T> G_can = UniversalMatrixConversion<T, Tint>(cl.G);
+  LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(G_can, os);
+  MyMatrix<T> Q = UniversalMatrixConversion<T, Tint>(rec.Pmat);
+  MyMatrix<T> Q_inv = Inverse(Q);
+  MyMatrix<T> G_T = rec.GramMatRed;
+  std::vector<MyMatrix<T>> l_mat{G_T};
   if (ring.d == 2) {
-    MyMatrix<AmfT> Om_T = Q * UniversalMatrixConversion<AmfT, AmfTint>(cl.Omega) * Q_inv;
+    MyMatrix<T> Om_T = Q * UniversalMatrixConversion<T, Tint>(cl.Omega) * Q_inv;
     l_mat.push_back(G_T * Om_T.transpose());
   }
-  std::vector<MyMatrix<AmfTint>> l_aut_red;
+  std::vector<MyMatrix<Tint>> l_aut_red;
   if (ring.d == 1) {
     // Over Z the Vinberg decomposition of GenusEnumeration gives the order
     // and the generators without enumerating the group.
-    LatticeAutInfo<AmfT, AmfTint, AmfTgroup> info =
-        GetLatticeAutInfo<AmfT, AmfTint, AmfTgroup>(G_T, GenusScheme::CanonicalForm, os);
+    LatticeAutInfo<T, Tint, AmfTgroup> info =
+        GetLatticeAutInfo<T, Tint, AmfTgroup>(G_T, GenusScheme::CanonicalForm, os);
     l_aut_red = info.ListGenMat;
     cl.aut_order = info.order;
   } else {
-    l_aut_red = ArithmeticAutomorphismGroupMultiple<AmfT, AmfTint, AmfTgroup>(l_mat, os);
-    MyMatrix<AmfTint> SHV = GetCanonicVectorFamily<AmfT, AmfTint>(G_T, os).get_full();
-    cl.aut_order = OrderFromGens<AmfTint, AmfTgroup>(SHV, l_aut_red);
+    l_aut_red = ArithmeticAutomorphismGroupMultiple<T, Tint, AmfTgroup>(l_mat, os);
+    MyMatrix<Tint> SHV = GetCanonicVectorFamily<T, Tint>(G_T, os).get_full();
+    cl.aut_order = OrderFromGens<Tint, AmfTgroup>(SHV, l_aut_red);
   }
   for (auto &g_red : l_aut_red) {
-    MyMatrix<AmfT> g = Q_inv * UniversalMatrixConversion<AmfT, AmfTint>(g_red) * Q;
-    cl.l_aut.push_back(UniversalMatrixConversion<AmfTint, AmfT>(g));
+    MyMatrix<T> g = Q_inv * UniversalMatrixConversion<T, Tint>(g_red) * Q;
+    cl.l_aut.push_back(UniversalMatrixConversion<Tint, T>(g));
   }
 #ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS
   for (auto &g : cl.l_aut) {
@@ -296,9 +299,10 @@ inline AmfClass amf_new_class(RealifiedRing<AmfT, AmfTint> const &ring, AmfCanon
   unimodular at every prime). When it is known, the classes found account
   for the whole genus iff the sum of the 1 / |Aut(L_j)| is equal to it.
  */
-inline std::optional<mpq_class> amf_genus_mass(RealifiedRing<AmfT, AmfTint> const &ring, std::ostream &os) {
+template <typename T, typename Tint>
+std::optional<T> amf_genus_mass(RealifiedRing<T, Tint> const &ring, std::ostream &os) {
   if (ring.d == 1) {
-    return GenusMass<AmfT, AmfTint>(UniversalMatrixConversion<AmfT, AmfTint>(ring.B));
+    return GenusMass<T, Tint>(UniversalMatrixConversion<T, Tint>(ring.B));
   }
   return HermitianGenusMass(ring, os);
 }
@@ -314,14 +318,15 @@ inline std::optional<mpq_class> amf_genus_mass(RealifiedRing<AmfT, AmfTint> cons
   while the neighbours, which cost a canonical form each, are one per
   orbit.
  */
-inline AmfResult compute_algebraic_modular_forms(RealifiedRing<AmfT, AmfTint> const &ring,
+template <typename T, typename Tint>
+AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
                                                  std::optional<OrderPrime> const &N,
                                                  std::vector<OrderPrime> const &l_prime,
                                                  std::ostream &os) {
-  AmfResult res;
-  std::map<std::pair<MyMatrix<AmfTint>, MyMatrix<AmfTint>>, size_t> map_class;
-  auto f_insert = [&](AmfCanonical const &can) -> size_t {
-    std::pair<MyMatrix<AmfTint>, MyMatrix<AmfTint>> key{can.G, can.Omega};
+  AmfResult<T, Tint> res;
+  std::map<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>, size_t> map_class;
+  auto f_insert = [&](AmfCanonical<T, Tint> const &can) -> size_t {
+    std::pair<MyMatrix<Tint>, MyMatrix<Tint>> key{can.G, can.Omega};
     auto iter = map_class.find(key);
     if (iter != map_class.end()) {
       return iter->second;
@@ -336,14 +341,14 @@ inline AmfResult compute_algebraic_modular_forms(RealifiedRing<AmfT, AmfTint> co
     return idx;
   };
   int n = ring.n();
-  (void)f_insert(amf_canonical(ring, IdentityMat<AmfT>(n), os));
+  (void)f_insert(amf_canonical(ring, IdentityMat<T>(n), os));
   // The weighted transitions (class, orbit) -> (class, orbit), per prime.
   struct Transition {
     size_t i;
     size_t o;
     size_t j;
     size_t o2;
-    mpq_class weight;
+    T weight;
   };
   std::vector<std::vector<Transition>> l_trans(l_prime.size());
   std::vector<size_t> l_n_neighbor(l_prime.size(), 0);
@@ -354,13 +359,13 @@ inline AmfResult compute_algebraic_modular_forms(RealifiedRing<AmfT, AmfTint> co
       MicrosecondTime time;
 #endif
       // copies: f_insert may reallocate l_class
-      MyMatrix<AmfTint> G_i = res.l_class[i].G;
-      MyMatrix<AmfTint> Om_i = res.l_class[i].Omega;
-      MyMatrix<AmfT> basis_i = res.l_class[i].basis;
+      MyMatrix<Tint> G_i = res.l_class[i].G;
+      MyMatrix<Tint> Om_i = res.l_class[i].Omega;
+      MyMatrix<T> basis_i = res.l_class[i].basis;
       std::vector<int64_t> orbit_of_line_i = res.l_class[i].orbit_of_line;
       std::vector<size_t> size_i = res.l_class[i].l_orbit_size;
       LineSpace ls_level_i = res.l_class[i].ls_level;
-      std::vector<MyMatrix<AmfTint>> l_aut_i = res.l_class[i].l_aut;
+      std::vector<MyMatrix<Tint>> l_aut_i = res.l_class[i].l_aut;
       LineSpace ls = get_line_space(ring, Om_i, P);
       LineOrbits orb = amf_line_orbits(ls, l_aut_i, [](size_t const &) -> bool { return true; }, nullptr);
 #ifdef TIMINGS_ALGEBRAIC_MODULAR_FORMS
@@ -369,30 +374,30 @@ inline AmfResult compute_algebraic_modular_forms(RealifiedRing<AmfT, AmfTint> co
       size_t n_nb = 0;
       for (size_t i_orb = 0; i_orb < orb.l_repr.size(); i_orb++) {
         size_t size_X = orb.l_size[i_orb];
-        std::optional<MyMatrix<AmfT>> opt = order_neighbor(ring, G_i, Om_i, P, ls.line_vector(orb.l_repr[i_orb]));
+        std::optional<MyMatrix<T>> opt = order_neighbor(ring, G_i, Om_i, P, ls.line_vector(orb.l_repr[i_orb]));
         if (!opt) {
           continue;
         }
         n_nb += size_X;
-        MyMatrix<AmfT> A_nb = (*opt) * basis_i;
-        AmfCanonical can = amf_canonical(ring, A_nb, os);
+        MyMatrix<T> A_nb = (*opt) * basis_i;
+        AmfCanonical<T, Tint> can = amf_canonical(ring, A_nb, os);
         size_t j = f_insert(can);
         if (!N) {
-          l_trans[ip].push_back({i, 0, j, 0, mpq_class(static_cast<long>(size_X))});
+          l_trans[ip].push_back({i, 0, j, 0, ScalarFromInt64<T>(static_cast<int64_t>(size_X))});
           continue;
         }
         // The level lines of L_i carried to L_j: the coordinates in the
         // basis of L_i, then in the canonical basis of the neighbour, which
         // are those of L_j. The matrix has denominators dividing ell(P),
         // which is prime to N.
-        MyMatrix<AmfT> R = basis_i * Inverse(can.basis);
+        MyMatrix<T> R = basis_i * Inverse(can.basis);
         std::vector<int64_t> R_red(n * n);
         for (int a = 0; a < n; a++) {
           for (int b = 0; b < n; b++) {
-            R_red[a * n + b] = order_residue(R(a, b), N->ell);
+            R_red[a * n + b] = order_residue_rat(R(a, b), N->ell);
           }
         }
-        AmfClass const &cl_j = res.l_class[j];
+        AmfClass<T, Tint> const &cl_j = res.l_class[j];
         std::map<std::pair<size_t, size_t>, size_t> count;
         for (size_t idx = 0; idx < orbit_of_line_i.size(); idx++) {
           if (orbit_of_line_i[idx] == -1) {
@@ -421,8 +426,8 @@ inline AmfResult compute_algebraic_modular_forms(RealifiedRing<AmfT, AmfTint> co
         }
         for (auto &kv : count) {
           size_t o = kv.first.first;
-          mpq_class weight = mpq_class(static_cast<long>(size_X * kv.second)) /
-                             mpq_class(static_cast<long>(size_i[o]));
+          T weight = ScalarFromInt64<T>(static_cast<int64_t>(size_X * kv.second)) /
+                     ScalarFromInt64<T>(static_cast<int64_t>(size_i[o]));
           l_trans[ip].push_back({i, o, j, kv.first.second, weight});
         }
       }
@@ -446,7 +451,7 @@ inline AmfResult compute_algebraic_modular_forms(RealifiedRing<AmfT, AmfTint> co
   for (auto &cl : res.l_class) {
     res.l_offset.push_back(offset);
     offset += cl.l_orbit_repr.size();
-    res.mass += mpq_class(1) / mpq_class(cl.aut_order);
+    res.mass += T(1) / UniversalScalarConversion<T, mpz_class>(cl.aut_order);
   }
   res.n_state = offset;
   res.mass_formula = amf_genus_mass(ring, os);
@@ -454,16 +459,16 @@ inline AmfResult compute_algebraic_modular_forms(RealifiedRing<AmfT, AmfTint> co
     AmfHeckeMatrix hm;
     hm.P = l_prime[ip];
     hm.n_neighbor = l_n_neighbor[ip];
-    std::map<std::pair<size_t, size_t>, mpq_class> entries;
+    std::map<std::pair<size_t, size_t>, T> entries;
     for (auto &t : l_trans[ip]) {
       entries[{res.l_offset[t.i] + t.o, res.l_offset[t.j] + t.o2}] += t.weight;
     }
     for (auto &kv : entries) {
-      if (kv.second.get_den() != 1) {
+      if (!IsInteger(kv.second)) {
         std::cerr << "AMF: a Hecke matrix entry is not an integer\n";
         throw TerminalException{1};
       }
-      hm.entries[kv.first] = kv.second.get_num().get_si();
+      hm.entries[kv.first] = UniversalScalarConversion<int64_t, T>(kv.second);
     }
     res.l_hecke.push_back(hm);
   }
