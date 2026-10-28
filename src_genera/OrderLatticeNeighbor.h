@@ -57,7 +57,9 @@
     there are (q^m - 1)/(q - 1) of them.
   - inert: x isotropic modulo ell, adjusted modulo ell L so that ell^2
     divides h(x, x), M = {y in L : h(y, x) in ell O_K} and L' = M + O_K x /
-    ell.
+    ell. The admissible lifts x + ell y form an affine line over F_ell modulo
+    M, so each isotropic line gives ell neighbours, and T(ell) has degree
+    ell (ell^{2m-3} + ...) (ell (ell^3 + 1) for m = 3).
   - over Z (L even, h(x, x) = Q(x) = B(x, x) / 2): x isotropic modulo ell,
     adjusted modulo ell L so that ell^2 divides Q(x), M = {y in L : B(y, x)
     = 0 mod ell} and L' = M + Z x / ell, the classical Kneser neighbour.
@@ -444,12 +446,13 @@ Tint order_hermitian_norm(MyMatrix<Tint> const &G, MyVector<Tint> const &x) {
 }
 
 /*
-  The neighbour of L at P for the residue vector z of a line of L / P L, as
-  the rows of a Z-basis in the coordinates of L. Nothing when the line is
-  not isotropic (inert P).
+  The neighbours of L at P for the residue vector z of a line of L / P L,
+  each as the rows of a Z-basis in the coordinates of L: one for a split
+  prime or over Z, ell for an inert prime (see below), none when the line
+  is not isotropic.
  */
 template <typename T, typename Tint>
-std::optional<MyMatrix<T>>
+std::vector<MyMatrix<T>>
 order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
                MyMatrix<Tint> const &Omega, OrderPrime const &P, std::vector<int64_t> const &z) {
   // Over Z (an even lattice, h(x, x) = Q(x) = B(x, x) / 2) the construction
@@ -553,26 +556,80 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
     }
     pos++;
   }
-  // P^{-1} x: x and (omega - conj(r)) x / ell (split); x / ell and omega x /
-  // ell (inert); x / ell (Z).
-  MyVector<Tint> xO = ring.d == 2 ? MyVector<Tint>(Omega.transpose() * x) : x;
-  for (int k = 0; k < n; k++) {
-    if (split) {
-      Gens(pos, k) = UniversalScalarConversion<T, Tint>(x(k));
-      Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k) - amf_int<Tint>(r_conj) * x(k)) / amf_int<T>(ell);
-    } else {
-      Gens(pos, k) = UniversalScalarConversion<T, Tint>(x(k)) / amf_int<T>(ell);
-      Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k)) / amf_int<T>(ell);
+  /*
+    The lifts of the line. Split prime, Z: x alone. Inert prime: L / M is
+    O / ell = F_{ell^2} through y -> h(y, x), and the lifts x + ell y with
+    ell^2 | h(x + ell y, x + ell y) form an affine line, y being determined
+    modulo M up to the elements with Tr h(x, y) = 0 mod ell. So there are ell
+    of them, x + ell t y1 for t in F_ell, with h(y1, x) = 2 omega - s mod ell
+    (of trace 0), and as many neighbours of the line.
+   */
+  std::vector<MyVector<Tint>> l_lift{x};
+  if (!split && ring.d == 2) {
+    // y1 = c1 e_k1 + c2 e_k2 for two basis vectors whose h(e_k, x) are
+    // independent mod ell
+    int64_t target_a = ResidueModPrime(-ring.s, ell), target_b = 2 % ell;
+    std::optional<MyVector<Tint>> opt_y1;
+    for (int k1 = 0; k1 < n && !opt_y1; k1++) {
+      for (int k2 = k1 + 1; k2 < n && !opt_y1; k2++) {
+        int64_t a1 = order_residue(l_h[k1].first, ell), b1 = order_residue(l_h[k1].second, ell);
+        int64_t a2 = order_residue(l_h[k2].first, ell), b2 = order_residue(l_h[k2].second, ell);
+        int64_t det = ResidueModPrime(a1 * b2 - a2 * b1, ell);
+        if (det == 0) {
+          continue;
+        }
+        int64_t det_inv = InverseModPrime(det, ell);
+        int64_t c1 = ResidueModPrime((target_a * b2 - a2 * target_b) % ell * det_inv, ell);
+        int64_t c2 = ResidueModPrime((a1 * target_b - target_a * b1) % ell * det_inv, ell);
+        MyVector<Tint> y1 = ZeroVector<Tint>(n);
+        y1(k1) = amf_int<Tint>(c1);
+        y1(k2) = amf_int<Tint>(c2);
+        opt_y1 = y1;
+      }
+    }
+    if (!opt_y1) {
+      std::cerr << "AMF: y -> h(y, x) is not onto O / ell\n";
+      throw TerminalException{1};
+    }
+    for (int64_t t = 1; t < ell; t++) {
+      Tint coef = ell_T * amf_int<Tint>(t);
+      l_lift.push_back(MyVector<Tint>(x + coef * (*opt_y1)));
     }
   }
-  MyMatrix<T> Basis = GetZbasis(Gens);
+  std::vector<MyMatrix<T>> l_basis;
+  for (auto &xl : l_lift) {
 #ifdef SANITY_CHECK_ORDER_LATTICE
-  if (Basis.rows() != n || T_abs(DeterminantMat(Basis)) != 1) {
-    std::cerr << "AMF: the neighbour does not have the covolume of L\n";
-    throw TerminalException{1};
-  }
+    {
+      Tint hxl = order_hermitian_norm(G, xl);
+      Tint mod = split ? ell_T : ell_T * ell_T;
+      if (hxl % mod != 0) {
+        std::cerr << "AMF: a lift is not isotropic enough\n";
+        throw TerminalException{1};
+      }
+    }
 #endif
-  return Basis;
+    // P^{-1} x: x and (omega - conj(r)) x / ell (split); x / ell and omega x
+    // / ell (inert); x / ell (Z).
+    MyVector<Tint> xO = ring.d == 2 ? MyVector<Tint>(Omega.transpose() * xl) : xl;
+    for (int k = 0; k < n; k++) {
+      if (split) {
+        Gens(pos, k) = UniversalScalarConversion<T, Tint>(xl(k));
+        Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k) - amf_int<Tint>(r_conj) * xl(k)) / amf_int<T>(ell);
+      } else {
+        Gens(pos, k) = UniversalScalarConversion<T, Tint>(xl(k)) / amf_int<T>(ell);
+        Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k)) / amf_int<T>(ell);
+      }
+    }
+    MyMatrix<T> Basis = GetZbasis(Gens);
+#ifdef SANITY_CHECK_ORDER_LATTICE
+    if (Basis.rows() != n || T_abs(DeterminantMat(Basis)) != 1) {
+      std::cerr << "AMF: the neighbour does not have the covolume of L\n";
+      throw TerminalException{1};
+    }
+#endif
+    l_basis.push_back(Basis);
+  }
+  return l_basis;
 }
 
 // clang-format off

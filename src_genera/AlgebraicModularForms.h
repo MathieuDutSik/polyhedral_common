@@ -374,61 +374,60 @@ AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const 
       size_t n_nb = 0;
       for (size_t i_orb = 0; i_orb < orb.l_repr.size(); i_orb++) {
         size_t size_X = orb.l_size[i_orb];
-        std::optional<MyMatrix<T>> opt = order_neighbor(ring, G_i, Om_i, P, ls.line_vector(orb.l_repr[i_orb]));
-        if (!opt) {
-          continue;
-        }
-        n_nb += size_X;
-        MyMatrix<T> A_nb = (*opt) * basis_i;
-        AmfCanonical<T, Tint> can = amf_canonical(ring, A_nb, os);
-        size_t j = f_insert(can);
-        if (!N) {
-          l_trans[ip].push_back({i, 0, j, 0, ScalarFromInt64<T>(static_cast<int64_t>(size_X))});
-          continue;
-        }
-        // The level lines of L_i carried to L_j: the coordinates in the
-        // basis of L_i, then in the canonical basis of the neighbour, which
-        // are those of L_j. The matrix has denominators dividing ell(P),
-        // which is prime to N.
-        MyMatrix<T> R = basis_i * Inverse(can.basis);
-        std::vector<int64_t> R_red(n * n);
-        for (int a = 0; a < n; a++) {
-          for (int b = 0; b < n; b++) {
-            R_red[a * n + b] = order_residue_rat(R(a, b), N->ell);
-          }
-        }
-        AmfClass<T, Tint> const &cl_j = res.l_class[j];
-        std::map<std::pair<size_t, size_t>, size_t> count;
-        for (size_t idx = 0; idx < orbit_of_line_i.size(); idx++) {
-          if (orbit_of_line_i[idx] == -1) {
+        std::vector<MyMatrix<T>> l_nb = order_neighbor(ring, G_i, Om_i, P, ls.line_vector(orb.l_repr[i_orb]));
+        for (auto &basis_nb : l_nb) {
+          n_nb += size_X;
+          MyMatrix<T> A_nb = basis_nb * basis_i;
+          AmfCanonical<T, Tint> can = amf_canonical(ring, A_nb, os);
+          size_t j = f_insert(can);
+          if (!N) {
+            l_trans[ip].push_back({i, 0, j, 0, ScalarFromInt64<T>(static_cast<int64_t>(size_X))});
             continue;
           }
-          std::vector<int64_t> z = ls_level_i.line_vector(idx);
-          std::vector<int64_t> w(n, 0);
-          for (int b = 0; b < n; b++) {
-            int64_t sum = 0;
-            for (int a = 0; a < n; a++) {
-              sum = (sum + z[a] * R_red[a * n + b]) % N->ell;
+          // The level lines of L_i carried to L_j: the coordinates in the
+          // basis of L_i, then in the canonical basis of the neighbour, which
+          // are those of L_j. The matrix has denominators dividing ell(P),
+          // which is prime to N.
+          MyMatrix<T> R = basis_i * Inverse(can.basis);
+          std::vector<int64_t> R_red(n * n);
+          for (int a = 0; a < n; a++) {
+            for (int b = 0; b < n; b++) {
+              R_red[a * n + b] = order_residue_rat(R(a, b), N->ell);
             }
-            w[b] = sum;
           }
-          std::optional<size_t> opt_idx = cl_j.ls_level.line_index(w);
-          if (!opt_idx) {
-            std::cerr << "AMF: a level line is sent to zero\n";
-            throw TerminalException{1};
+          AmfClass<T, Tint> const &cl_j = res.l_class[j];
+          std::map<std::pair<size_t, size_t>, size_t> count;
+          for (size_t idx = 0; idx < orbit_of_line_i.size(); idx++) {
+            if (orbit_of_line_i[idx] == -1) {
+              continue;
+            }
+            std::vector<int64_t> z = ls_level_i.line_vector(idx);
+            std::vector<int64_t> w(n, 0);
+            for (int b = 0; b < n; b++) {
+              int64_t sum = 0;
+              for (int a = 0; a < n; a++) {
+                sum = (sum + z[a] * R_red[a * n + b]) % N->ell;
+              }
+              w[b] = sum;
+            }
+            std::optional<size_t> opt_idx = cl_j.ls_level.line_index(w);
+            if (!opt_idx) {
+              std::cerr << "AMF: a level line is sent to zero\n";
+              throw TerminalException{1};
+            }
+            int64_t orb2 = cl_j.orbit_of_line[*opt_idx];
+            if (orb2 == -1) {
+              std::cerr << "AMF: a level line is sent to a non isotropic line\n";
+              throw TerminalException{1};
+            }
+            count[{static_cast<size_t>(orbit_of_line_i[idx]), static_cast<size_t>(orb2)}]++;
           }
-          int64_t orb2 = cl_j.orbit_of_line[*opt_idx];
-          if (orb2 == -1) {
-            std::cerr << "AMF: a level line is sent to a non isotropic line\n";
-            throw TerminalException{1};
+          for (auto &kv : count) {
+            size_t o = kv.first.first;
+            T weight = ScalarFromInt64<T>(static_cast<int64_t>(size_X * kv.second)) /
+                       ScalarFromInt64<T>(static_cast<int64_t>(size_i[o]));
+            l_trans[ip].push_back({i, o, j, kv.first.second, weight});
           }
-          count[{static_cast<size_t>(orbit_of_line_i[idx]), static_cast<size_t>(orb2)}]++;
-        }
-        for (auto &kv : count) {
-          size_t o = kv.first.first;
-          T weight = ScalarFromInt64<T>(static_cast<int64_t>(size_X * kv.second)) /
-                     ScalarFromInt64<T>(static_cast<int64_t>(size_i[o]));
-          l_trans[ip].push_back({i, o, j, kv.first.second, weight});
         }
       }
       if (i == 0) {
