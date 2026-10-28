@@ -147,25 +147,35 @@ CanonicallyReorder_SHV_kernel(std::vector<MyMatrix<Tval>> const &ListMat,
   // Computing the scalar product matrix
   //
   using Tidx_value = int16_t;
-  // The matrices are Gram matrices, so the weight matrix is symmetric. That
-  // halves its entries and halves the number of vertices of the graph, which
-  // is a quarter of the edges, and the edges are what nauty is bounded by.
-  const bool is_symm = true;
-  WeightMatrix<is_symm, std::vector<T>, Tidx_value> WMat =
-      T_TranslateToMatrix_ListMat_SHV<is_symm, T, Tint, Tidx_value>(ListMat,
-                                                                    SHV, os);
+  /*
+    When the matrices are symmetric (Gram matrices), so is the weight matrix.
+    That halves its entries and halves the number of vertices of the graph,
+    which is a quarter of the edges, and the edges are what nauty is bounded
+    by. A family with a non-symmetric matrix (a symplectic form, the form
+    B(x, w y) of a Hermitian lattice) needs the directed weight matrix: the
+    symmetric one reads only the entries (i, j) with j <= i, so it would
+    depend on the order of the vectors and not be canonical.
+   */
+  auto f_canonic = [&]<bool is_symm>() -> std::vector<int> {
+    WeightMatrix<is_symm, std::vector<T>, Tidx_value> WMat =
+        T_TranslateToMatrix_ListMat_SHV<is_symm, T, Tint, Tidx_value>(ListMat,
+                                                                      SHV, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: WMat|=" << time << "\n";
+    os << "|LSEC: WMat|=" << time << "\n";
 #endif
-  WMat.ReorderingSetWeight();
+    WMat.ReorderingSetWeight();
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ReorderingSetWeight|=" << time << "\n";
+    os << "|LSEC: ReorderingSetWeight|=" << time << "\n";
 #endif
+    return GetCanonicalizationVector_Kernel<std::vector<T>, Tgr, int>(WMat,
+                                                                      os);
+  };
   //
   // Computing the canonicalization of the scalar product matrix
   //
-  std::vector<int> CanonicOrd =
-    GetCanonicalizationVector_Kernel<std::vector<T>, Tgr, int>(WMat, os);
+  std::vector<int> CanonicOrd = is_family_symmmetric(ListMat)
+                                    ? f_canonic.template operator()<true>()
+                                    : f_canonic.template operator()<false>();
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
@@ -330,6 +340,13 @@ template <typename T, typename Tint>
 std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick(
     std::vector<MyMatrix<T>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
     std::ostream &os) {
+  // The weights of the pairs are unordered, see
+  // T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV: a non-symmetric family
+  // goes to the reordering on the whole family. Declining depends only on the
+  // family, so isometric inputs still take the same branch.
+  if (!is_family_symmmetric(ListMat)) {
+    return {};
+  }
   using Tring = typename underlying_ring<T>::ring_type;
   if constexpr (!std::is_same_v<T, Tring>) {
     if (IsIntegralListMat(ListMat)) {
@@ -401,6 +418,11 @@ std::optional<std::vector<std::vector<typename Tgroup::Telt::Tidx>>>
 GetListGenAutomorphism_AbsTrick(std::vector<MyMatrix<T>> const &ListMat,
                                 MyMatrix<Tint> const &SHVhalf,
                                 std::ostream &os) {
+  // As for the canonical form: the pair weights are unordered, so a
+  // non-symmetric family is left to the computation on the whole family.
+  if (!is_family_symmmetric(ListMat)) {
+    return {};
+  }
   using Tring = typename underlying_ring<T>::ring_type;
   if constexpr (!std::is_same_v<T, Tring>) {
     if (IsIntegralListMat(ListMat)) {
