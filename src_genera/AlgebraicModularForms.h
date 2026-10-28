@@ -9,6 +9,8 @@
 #include "LatticeStabEquiCan.h"
 #include "LatticeAutomorphismVinberg.h"
 #include "InvariantVectorFamily.h"
+#include "ClassicLLL.h"
+#include "LatticeRootDecomposition.h"
 #include <map>
 #include <optional>
 #include <string>
@@ -94,11 +96,20 @@ struct AmfCanonical {
 /*
   The canonical form of the lattice of basis A (realified coordinates).
  */
-inline AmfCanonical amf_canonical(RealifiedRing<AmfT, AmfTint> const &ring, MyMatrix<AmfT> const &A,
+inline AmfCanonical amf_canonical(RealifiedRing<AmfT, AmfTint> const &ring, MyMatrix<AmfT> const &A_in,
                                   std::ostream &os) {
   // Over Z the family is {G} and Omega is empty.
   MyMatrix<AmfT> B_T = UniversalMatrixConversion<AmfT, AmfTint>(ring.B);
-  MyMatrix<AmfT> G = A * B_T * A.transpose();
+  /*
+    The basis of a neighbour (from GetZbasis) and the canonical bases are
+    skewed, and the canonical form starts by enumerating the shells of short
+    vectors, which a skewed Gram matrix makes very slow (99% of the time of a
+    quinary genus of 389 classes was in that enumeration). The canonical form
+    does not depend on the basis, so it is reduced first.
+   */
+  LLLreduction<AmfT, AmfTint> rec = LLLreducedBasis<AmfT, AmfTint>(MyMatrix<AmfT>(A_in * B_T * A_in.transpose()), os);
+  MyMatrix<AmfT> A = UniversalMatrixConversion<AmfT, AmfTint>(rec.Pmat) * A_in;
+  MyMatrix<AmfT> G = rec.GramMatRed;
   std::vector<MyMatrix<AmfT>> l_mat{G};
   MyMatrix<AmfT> W_T;
   if (ring.d == 2) {
@@ -106,7 +117,10 @@ inline AmfCanonical amf_canonical(RealifiedRing<AmfT, AmfTint> const &ring, MyMa
     MyMatrix<AmfT> Om = A * W_T * Inverse(A);
     l_mat.push_back(G * Om.transpose());
   }
-  MyMatrix<AmfTint> Pc = ComputeCanonicalFormMultiple<AmfT, AmfTint, AmfTgroup>(l_mat, os);
+  // Over Z the Weyl-chamber canonical form of GenusEnumeration; over O_K the
+  // canonical form of the family.
+  MyMatrix<AmfTint> Pc = ring.d == 1 ? ComputeCanonicalFormWeylChamber<AmfT, AmfTint, AmfTgroup>(G, os)
+                                     : ComputeCanonicalFormMultiple<AmfT, AmfTint, AmfTgroup>(l_mat, os);
   MyMatrix<AmfT> Pc_T = UniversalMatrixConversion<AmfT, AmfTint>(Pc);
   MyMatrix<AmfT> A_can = Pc_T * A;
   MyMatrix<AmfT> G_can = A_can * B_T * A_can.transpose();
@@ -218,13 +232,35 @@ inline AmfClass amf_new_class(RealifiedRing<AmfT, AmfTint> const &ring, AmfCanon
   cl.basis_inv = Inverse(can.basis);
   cl.G = can.G;
   cl.Omega = can.Omega;
-  MyMatrix<AmfT> G_T = UniversalMatrixConversion<AmfT, AmfTint>(cl.G);
-  MyMatrix<AmfT> Om_T = UniversalMatrixConversion<AmfT, AmfTint>(cl.Omega);
+  // The automorphisms are computed on a reduced basis Q (rows in the
+  // canonical basis) and brought back: g = Q^{-1} g_red Q.
+  MyMatrix<AmfT> G_can = UniversalMatrixConversion<AmfT, AmfTint>(cl.G);
+  LLLreduction<AmfT, AmfTint> rec = LLLreducedBasis<AmfT, AmfTint>(G_can, os);
+  MyMatrix<AmfT> Q = UniversalMatrixConversion<AmfT, AmfTint>(rec.Pmat);
+  MyMatrix<AmfT> Q_inv = Inverse(Q);
+  MyMatrix<AmfT> G_T = rec.GramMatRed;
   std::vector<MyMatrix<AmfT>> l_mat{G_T};
   if (ring.d == 2) {
+    MyMatrix<AmfT> Om_T = Q * UniversalMatrixConversion<AmfT, AmfTint>(cl.Omega) * Q_inv;
     l_mat.push_back(G_T * Om_T.transpose());
   }
-  cl.l_aut = ArithmeticAutomorphismGroupMultiple<AmfT, AmfTint, AmfTgroup>(l_mat, os);
+  std::vector<MyMatrix<AmfTint>> l_aut_red;
+  if (ring.d == 1) {
+    // Over Z the Vinberg decomposition of GenusEnumeration gives the order
+    // and the generators without enumerating the group.
+    LatticeAutInfo<AmfT, AmfTint, AmfTgroup> info =
+        GetLatticeAutInfo<AmfT, AmfTint, AmfTgroup>(G_T, GenusScheme::CanonicalForm, os);
+    l_aut_red = info.ListGenMat;
+    cl.aut_order = info.order;
+  } else {
+    l_aut_red = ArithmeticAutomorphismGroupMultiple<AmfT, AmfTint, AmfTgroup>(l_mat, os);
+    MyMatrix<AmfTint> SHV = GetCanonicVectorFamily<AmfT, AmfTint>(G_T, os).get_full();
+    cl.aut_order = OrderFromGens<AmfTint, AmfTgroup>(SHV, l_aut_red);
+  }
+  for (auto &g_red : l_aut_red) {
+    MyMatrix<AmfT> g = Q_inv * UniversalMatrixConversion<AmfT, AmfTint>(g_red) * Q;
+    cl.l_aut.push_back(UniversalMatrixConversion<AmfTint, AmfT>(g));
+  }
 #ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS
   for (auto &g : cl.l_aut) {
     if (g * cl.G * g.transpose() != cl.G || (ring.d == 2 && g * cl.Omega != cl.Omega * g)) {
@@ -233,8 +269,6 @@ inline AmfClass amf_new_class(RealifiedRing<AmfT, AmfTint> const &ring, AmfCanon
     }
   }
 #endif
-  MyMatrix<AmfTint> SHV = GetCanonicVectorFamily<AmfT, AmfTint>(G_T, os).get_full();
-  cl.aut_order = OrderFromGens<AmfTint, AmfTgroup>(SHV, cl.l_aut);
   if (!N) {
     cl.orbit_of_line = {0};
     cl.l_orbit_repr = {0};
