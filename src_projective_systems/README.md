@@ -101,6 +101,36 @@ PROJ_HeckeOperators [description] [hecke] [eDimMax] [subgroups] [levels] [prime]
 The homology is that of the well rounded cells (the cells at infinity
 eliminated, `EliminateInfinity = true` in the driver).
 
+## The Picard group U(2,1; Z[i])
+
+`data/Picard_Gaussian.txt` is the ideal cell complex dual to the spine of
+D. Yasaki (*Explicit reduction for SU(2,1; Z[i])*): its cells are his nine
+strongly admissible sets of isotropic vectors (the 4-cells J^5, J^8 on top,
+the cusps at infinity, `at_infinity single`). The stabilizers (4 times
+those of Yasaki, U(2,1) containing the scalar units) and the incidences
+agree with his tables, and the ranks of H^1, H^2, H^3 of Gamma_0(n) with
+his Table 3 (n = 2, 3, 4, 5, 2+i, 3+2i, 4+i, 5+2i).
+
+The cells are not cones of a linear fan (J^8 spans a space of rank 6), so
+the walk across the facets does not apply. `walk cusp_reduction` uses the
+reduction theory of Yasaki instead (`picard_reduction.h`): a Euclidean
+algorithm on the cusps, translations of the integral Heisenberg group and
+the element w, gives for a cusp v an element of the group mapping it to
+e_1 and a path of edges equivalent to {e_1, e_3} from e_1 to v (the
+analogue of the continued fractions of Manin). The top cells containing
+these edges give the cell of a vertex and the coverings of the fillings.
+
+The Hecke matrices (realified, row vectors) are `data/Picard_Gaussian_T2+i.txt`
+= diag(5, 2+i, 1), `T2-i`, `T1+i` = diag(2, 1+i, 1) and `T3` = diag(9, 3, 1).
+The levels are given as `a+bw` (w = i), for instance
+
+```
+PROJ_HeckeOperators data/Picard_Gaussian.txt data/Picard_Gaussian_T2+i.txt 3 Gamma0 3,3+2w,4+w 2147483647,2147483629 out
+```
+
+computes T(2+i) on H^2 (index 2) and H^3 (index 3) of Gamma_0(n) modulo two
+primes. `identity` as the Hecke matrix gives the homology only.
+
 ## Differences with the GAP code
 
 * The cells of the quotient by the subgroup are obtained from the cosets

@@ -97,8 +97,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  eDimMax: the number of levels, from the single vectors, on which the chain map is computed\n";
       std::cerr << "  subgroups: comma separated list of subgroup types of src_perfect (Gamma0, Gamma0Siegel, ...)\n";
       std::cerr << "  levels: comma separated list of the levels N of the subgroups (over O_K: a+bw, w = omega)\n";
-      std::cerr << "  prime: 0 for the rational homology, otherwise the homology modulo it\n";
-      std::cerr << "  prefix: the GAP results are written to prefix_[subgroup]_[N].g\n";
+      std::cerr << "  prime: 0 for the rational homology, otherwise the homology modulo it; comma separated for several\n";
+      std::cerr << "  prefix: the GAP results are written to prefix_[subgroup]_[N].g (prefix_[prime]_[subgroup]_[N].g for several primes)\n";
       return -1;
     }
     std::string file_desc = argv[1];
@@ -106,7 +106,10 @@ int main(int argc, char *argv[]) {
     int eDimMax = ParseScalar<int>(argv[3]);
     std::vector<std::string> l_sub = STRING_Split(argv[4], ",");
     std::vector<Level> l_level = parse_levels(argv[5]);
-    int64_t prime = ParseScalar<int64_t>(argv[6]);
+    std::vector<int64_t> l_prime;
+    for (auto &str : STRING_Split(argv[6], ",")) {
+      l_prime.push_back(ParseScalar<int64_t>(str));
+    }
     std::string prefix = argv[7];
     std::ostream &os = std::cerr;
     psys::ProjectiveDescription desc = psys::read_description(file_desc);
@@ -155,19 +158,24 @@ int main(int argc, char *argv[]) {
           std::cerr << "PROJ_HeckeOperators: a level a+bw needs a ring of integers\n";
           throw TerminalException{1};
         }
-        HeckeHomologyResult<psys::T> result =
-            compute_hecke_homology(psys::ProjectiveComplexView{cx}, hcm, gamma, true, false, false, prime, os);
-        std::string file = prefix + "_" + sub + "_" + N.name + ".g";
-        std::ofstream os_out(file);
-        os_out << "return ";
-        WriteHeckeHomologyResultGAP(os_out, result);
-        os_out << ";\n";
-        std::cerr << sub << " N=" << N.name << " index=" << result.n_coset_gamma
-                  << " |Hecke cosets of Gamma|=" << result.n_hecke_coset << " dimensions:";
-        for (auto &level : result.l_level) {
-          std::cerr << " H(index " << level.index << ")=" << level.harmonic.rows();
+        for (auto &prime : l_prime) {
+          HeckeHomologyResult<psys::T> result =
+              compute_hecke_homology(psys::ProjectiveComplexView{cx}, hcm, gamma, true, false, false, prime, os);
+          std::string file = prefix + "_" + sub + "_" + N.name + ".g";
+          if (l_prime.size() > 1) {
+            file = prefix + "_" + std::to_string(prime) + "_" + sub + "_" + N.name + ".g";
+          }
+          std::ofstream os_out(file);
+          os_out << "return ";
+          WriteHeckeHomologyResultGAP(os_out, result);
+          os_out << ";\n";
+          std::cerr << sub << " N=" << N.name << " index=" << result.n_coset_gamma
+                    << " |Hecke cosets of Gamma|=" << result.n_hecke_coset << " dimensions:";
+          for (auto &level : result.l_level) {
+            std::cerr << " H(index " << level.index << ")=" << level.harmonic.rows();
+          }
+          std::cerr << " -> " << file << "\n";
         }
-        std::cerr << " -> " << file << "\n";
       }
     }
     std::cerr << "Normal termination of PROJ_HeckeOperators\n";

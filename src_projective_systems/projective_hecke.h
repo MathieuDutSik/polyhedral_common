@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "projective_complex.h"
+#include "picard_reduction.h"
 #include "SparseChainSolver.h"
 #include <map>
 #include <set>
@@ -309,6 +310,59 @@ inline std::vector<PlacedCell> get_sequence_to_ray(ProjectiveCellComplex const &
 }
 
 /*
+  The walk "cusp_reduction" (the Picard group over Z[i], see
+  picard_reduction.h): the top cells containing the edges of the path of
+  the reduction from e_1 to the line of v. The edge {e_1, e_3} is the cell
+  orbit.EXT M0 of an orbit of the edges, found in the top cell 0 (which
+  contains e_1 and e_3), and the edge {e_1, e_3} M_k is in the top cell of
+  the triple of the orbit mapped by t.eMat M0 M_k.
+ */
+inline std::vector<PlacedCell> get_cusp_path_cells(ProjectiveCellComplex const &cx, MyVector<Tint> const &v) {
+  ProjectiveRing const &ring = cx.ring();
+  int n = ring.n();
+  int index_edge = cx.levels.size() - 2;
+  MyMatrix<Tint> E13 = ZeroMatrix<Tint>(2, n);
+  E13(0, 0) = 1;
+  E13(1, 2) = 1;
+  TopCell const &top0 = cx.l_top[0];
+  std::vector<int> eSet;
+  for (int i = 0; i < 2; i++) {
+    std::optional<int> opt = position_unit(ring, top0.EXT, GetMatrixRow(E13, i));
+    if (!opt) {
+      std::cerr << "PSYS: get_cusp_path_cells, the top cell 0 should contain e_1 and e_3\n";
+      throw TerminalException{1};
+    }
+    eSet.push_back(*opt);
+  }
+  std::sort(eSet.begin(), eSet.end());
+  Triple t13{0, eSet, IdentityMat<Tint>(n)};
+  std::optional<std::pair<Triple, MyMatrix<Tint>>> opt_orb;
+  for (auto &orbit : cx.levels[index_edge]) {
+    for (auto &t_orb : orbit.l_triple) {
+      std::optional<MyMatrix<Tint>> opt = test_equivalence_triple(cx.l_top, t_orb, t13);
+      if (opt && !opt_orb) {
+        opt_orb = std::pair<Triple, MyMatrix<Tint>>{orbit.l_triple[0], *opt};
+      }
+    }
+  }
+  if (!opt_orb) {
+    std::cerr << "PSYS: get_cusp_path_cells, {e_1, e_3} should be an edge of the complex\n";
+    throw TerminalException{1};
+  }
+  Triple const &t = opt_orb->first;
+  MyMatrix<Tint> const &M0 = opt_orb->second;
+  PicardReduction red = picard_cusp_reduction(ring, v);
+  std::vector<PlacedCell> l_cell;
+  if (red.l_M.empty()) {
+    l_cell.push_back(get_placed_cell(cx, 0, IdentityMat<Tint>(n)));
+  }
+  for (auto &M : red.l_M) {
+    l_cell.push_back(get_placed_cell(cx, t.iTopCell, t.eMat * M0 * M));
+  }
+  return l_cell;
+}
+
+/*
   Chains of a level: lists of entries value * (F_{iOrb} M). Two entries
   are the same cell iff their vectors are the same up to the units, and
   then M2 M1^{-1} is in the stabilizer of F_{iOrb}, whose orientation gives
@@ -411,8 +465,13 @@ inline Chain get_vertex_image_psys(ProjectiveCellComplex const &cx, int const &i
   CellOrbit const &orbit = cx.levels[index][iOrb];
   MyVector<T> v0 = UniversalVectorConversion<T, Tint>(GetMatrixRow(orbit.EXT, 0));
   MyVector<Tint> v = ring.primitive(y.transpose() * v0);
-  PlacedCell start = get_placed_cell(cx, 0, IdentityMat<Tint>(n));
-  std::vector<PlacedCell> l_seq = get_sequence_to_ray(cx, v, MyMatrix<Tint>(0, n), start);
+  std::vector<PlacedCell> l_seq;
+  if (cx.desc.walk == "cusp_reduction") {
+    l_seq = get_cusp_path_cells(cx, v);
+  } else {
+    PlacedCell start = get_placed_cell(cx, 0, IdentityMat<Tint>(n));
+    l_seq = get_sequence_to_ray(cx, v, MyMatrix<Tint>(0, n), start);
+  }
   PlacedCell const &c = l_seq.back();
   int pos = *position_unit(ring, c.EXTcell, v);
   Triple t{c.iTopCell, {pos}, c.eMat};
@@ -459,9 +518,12 @@ inline Chain solve_in_complex(ProjectiveCellComplex const &cx, int const &index,
       M_vert(i, j) = l_vert[i](j);
     }
   }
-  // The span over R of the vectors (the unit multiples).
+  // The span over R of the vectors (the unit multiples): the cells at
+  // infinity of a filling stay in it ("at_infinity rank"); when only the
+  // single vectors are at infinity, the filling is not restricted.
   MyMatrix<T> M_vert_T = UniversalMatrixConversion<T, Tint>(totality(ring, M_vert));
-  MyMatrix<T> l_equa = (RankMat(M_vert_T) == n) ? MyMatrix<T>(0, n) : NullspaceTrMat(M_vert_T);
+  MyMatrix<T> l_equa = (RankMat(M_vert_T) == n || cx.desc.at_infinity == "single") ? MyMatrix<T>(0, n)
+                                                                                    : NullspaceTrMat(M_vert_T);
   auto f_correct_face = [&](MyMatrix<Tint> const &EXT) -> bool {
     for (int i = 0; i < EXT.rows(); i++) {
       MyVector<T> v = UniversalVectorConversion<T, Tint>(GetMatrixRow(EXT, i));
@@ -481,11 +543,34 @@ inline Chain solve_in_complex(ProjectiveCellComplex const &cx, int const &index,
       l_cov.push_back(c);
     }
   };
+  if (cx.desc.walk == "cusp_reduction") {
+    // The paths of the reduction from the first vertex u_0 to the others
+    // (the reduction of u_0 maps it to e_1), and a top cell containing each
+    // cell of rhs (from the triple of its orbit).
+    PicardReduction red0 = picard_cusp_reduction(ring, l_vert[0]);
+    MyMatrix<Tint> R0_inv = Inverse(red0.R_G);
+    for (auto &x : l_vert) {
+      MyVector<Tint> y = red0.R_G.transpose() * x;
+      for (auto &c : get_cusp_path_cells(cx, y)) {
+        f_insert_cov(get_placed_cell(cx, c.iTopCell, c.eMat * R0_inv));
+      }
+    }
+    for (auto &fe : rhs) {
+      Triple const &t = cx.levels[index + 1][fe.iOrb].l_triple[0];
+      f_insert_cov(get_placed_cell(cx, t.iTopCell, t.eMat * fe.M));
+    }
+  }
   PlacedCell start = get_placed_cell(cx, 0, IdentityMat<Tint>(n));
-  std::vector<PlacedCell> l_seq = get_sequence_to_ray(cx, l_vert[0], MyMatrix<Tint>(0, n), start);
+  std::vector<PlacedCell> l_seq;
+  if (cx.desc.walk != "cusp_reduction") {
+    l_seq = get_sequence_to_ray(cx, l_vert[0], MyMatrix<Tint>(0, n), start);
+  } else {
+    l_seq.push_back(l_cov[0]);
+  }
   PlacedCell good = l_seq.back();
   f_insert_cov(good);
-  for (size_t i = 1; i < l_vert.size(); i++) {
+  bool is_walk = (cx.desc.walk != "cusp_reduction");
+  for (size_t i = 1; i < l_vert.size() && is_walk; i++) {
     bool covered = false;
     for (auto &c : l_cov) {
       if (position_unit(ring, c.EXTcell, l_vert[i])) {
@@ -501,6 +586,9 @@ inline Chain solve_in_complex(ProjectiveCellComplex const &cx, int const &index,
   // Each cell of rhs must be in a cell of the covering: otherwise the
   // walk to its vectors one by one, keeping the previous ones.
   for (auto &fe : rhs) {
+    if (!is_walk) {
+      break;
+    }
     MyMatrix<Tint> EXT = cx.levels[index + 1][fe.iOrb].EXT * fe.M;
     bool contained = false;
     for (auto &c : l_cov) {
