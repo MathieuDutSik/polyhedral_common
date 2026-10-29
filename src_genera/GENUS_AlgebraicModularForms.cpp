@@ -59,13 +59,15 @@ void process_amf(std::string const &file_desc, std::string const &str_level, std
     std::cerr << "GENUS_AlgebraicModularForms: over Z only the trivial level for now\n";
     throw TerminalException{1};
   }
-  std::optional<OrderPrime> N;
+  std::optional<AmfLevel> N;
   if (str_level != "1") {
-    N = parse_order_primes(ring, str_level)[0];
+    N = get_amf_level(ring, str_level);
+    std::cerr << "GENUS_AlgebraicModularForms: level " << N->name << " of norm " << N->norm << ", "
+              << (N->prime ? "prime" : "general") << " level lines, isotropy modulo " << N->t << "\n";
   }
   std::vector<OrderPrime> l_prime;
   for (auto &P : parse_order_primes(ring, str_primes)) {
-    if (N && N->ell == P.ell) {
+    if (N && N->norm % P.ell == 0) {
       std::cerr << "GENUS_AlgebraicModularForms: the prime " << P.name << " lies over the same rational prime as "
                 << "the level\n";
       throw TerminalException{1};
@@ -75,6 +77,15 @@ void process_amf(std::string const &file_desc, std::string const &str_level, std
   AmfResult<T, Tint> res = compute_algebraic_modular_forms(ring, N, l_prime, std::cerr);
   std::cerr << "GENUS_AlgebraicModularForms: " << res.l_class.size() << " classes, mass " << res.mass << ", "
             << res.n_state << " states\n";
+  if (N) {
+    size_t n_level = 0;
+    for (auto &v : res.l_class[0].orbit_of_line) {
+      if (v != -1) {
+        n_level++;
+      }
+    }
+    std::cerr << "GENUS_AlgebraicModularForms: " << n_level << " level lines on the first class\n";
+  }
   if (res.mass_formula) {
     std::cerr << "GENUS_AlgebraicModularForms: mass formula " << *res.mass_formula << ", the genus is "
               << (*res.mass_formula == res.mass ? "complete" : "NOT complete") << "\n";
@@ -106,8 +117,10 @@ int main(int argc, char *argv[]) {
       dispatch.print_descriptions(std::cerr);
       std::cerr << "  description: the ring, the dimension and the form of the seed lattice\n";
       std::cerr << "               R^m (see RealifiedRing.h)\n";
-      std::cerr << "  level: 1, or a prime of O_K: an inert integer prime, a generator a+bw\n";
-      std::cerr << "         of a split prime (w = omega), or ell@r for the split prime\n";
+      std::cerr << "  level: 1, an ideal a+bw of O_K (w = omega) or an integer: the level\n";
+      std::cerr << "         structure is the isotropic lines modulo the ideal (any ideal,\n";
+      std::cerr << "         composite or ramified; enumerated in full unless it is a\n";
+      std::cerr << "         prime of degree one or inert), or ell@r for the split prime\n";
       std::cerr << "         (ell, omega - r), which need not be principal\n";
       std::cerr << "  primes: comma separated list of the Hecke primes, given in the same way\n";
       std::cerr << "  output: the GAP file of the classes and the Hecke matrices\n";

@@ -68,7 +68,7 @@ template <typename T, typename Tint> struct AmfClass {
   mpz_class aut_order;
   // the level structure: the line space mod N, the orbit of each line
   // (-1 for a non isotropic one) and a representative line of each orbit
-  LineSpace ls_level;
+  LevelSpace ls_level;
   std::vector<int64_t> orbit_of_line;
   std::vector<size_t> l_orbit_repr;
   std::vector<size_t> l_orbit_size;
@@ -163,11 +163,11 @@ struct LineOrbits {
   std::vector<size_t> l_size;
 };
 
-template <typename Tint, typename F>
-LineOrbits amf_line_orbits(LineSpace const &ls, std::vector<MyMatrix<Tint>> const &l_gen, F f_filter,
+template <typename Tint, typename LS, typename F>
+LineOrbits amf_line_orbits(LS const &ls, std::vector<MyMatrix<Tint>> const &l_gen, F f_filter,
                            std::vector<int64_t> *orbit_of_line) {
-  int64_t ell = ls.F.ell;
-  int n = ls.n;
+  int64_t ell = ls.modulus();
+  int n = ls.dim();
   // the generators mod ell, those acting as scalars on the lines dropped
   std::vector<std::vector<int64_t>> l_gen_red;
   for (auto &g : l_gen) {
@@ -234,7 +234,7 @@ LineOrbits amf_line_orbits(LineSpace const &ls, std::vector<MyMatrix<Tint>> cons
  */
 template <typename T, typename Tint>
 AmfClass<T, Tint> amf_new_class(RealifiedRing<T, Tint> const &ring, AmfCanonical<T, Tint> const &can,
-                              std::optional<OrderPrime> const &N, std::ostream &os) {
+                              std::optional<AmfLevel> const &N, std::ostream &os) {
   AmfClass<T, Tint> cl;
   cl.basis = can.basis;
   cl.basis_inv = Inverse(can.basis);
@@ -283,9 +283,15 @@ AmfClass<T, Tint> amf_new_class(RealifiedRing<T, Tint> const &ring, AmfCanonical
     cl.l_orbit_size = {1};
     return cl;
   }
-  cl.ls_level = get_line_space(ring, cl.Omega, *N);
+  if (N->prime) {
+    cl.ls_level.ls = get_line_space(ring, cl.Omega, *N->prime);
+  } else {
+    cl.ls_level.general = true;
+    cl.ls_level.gls = get_general_level_space(ring, cl.G, cl.Omega, *N);
+  }
+  // the general level lines are isotropic by construction
   auto f_filter = [&](size_t const &idx) -> bool {
-    return N->f == 1 || amf_is_isotropic(cl.G, cl.ls_level.line_vector(idx), N->ell);
+    return N->t == 1 || cl.ls_level.general || amf_is_isotropic(cl.G, cl.ls_level.line_vector(idx), N->t);
   };
   LineOrbits orb = amf_line_orbits(cl.ls_level, cl.l_aut, f_filter, &cl.orbit_of_line);
   cl.l_orbit_repr = orb.l_repr;
@@ -320,7 +326,7 @@ std::optional<T> amf_genus_mass(RealifiedRing<T, Tint> const &ring, std::ostream
  */
 template <typename T, typename Tint>
 AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
-                                                 std::optional<OrderPrime> const &N,
+                                                 std::optional<AmfLevel> const &N,
                                                  std::vector<OrderPrime> const &l_prime,
                                                  std::ostream &os) {
   AmfResult<T, Tint> res;
@@ -364,7 +370,8 @@ AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const 
       MyMatrix<T> basis_i = res.l_class[i].basis;
       std::vector<int64_t> orbit_of_line_i = res.l_class[i].orbit_of_line;
       std::vector<size_t> size_i = res.l_class[i].l_orbit_size;
-      LineSpace ls_level_i = res.l_class[i].ls_level;
+      LevelSpace ls_level_i = res.l_class[i].ls_level;
+      int64_t mod_level = N ? ls_level_i.modulus() : 1;
       std::vector<MyMatrix<Tint>> l_aut_i = res.l_class[i].l_aut;
       LineSpace ls = get_line_space(ring, Om_i, P);
       LineOrbits orb = amf_line_orbits(ls, l_aut_i, [](size_t const &) -> bool { return true; }, nullptr);
@@ -392,7 +399,7 @@ AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const 
           std::vector<int64_t> R_red(n * n);
           for (int a = 0; a < n; a++) {
             for (int b = 0; b < n; b++) {
-              R_red[a * n + b] = order_residue_rat(R(a, b), N->ell);
+              R_red[a * n + b] = order_residue_rat(R(a, b), mod_level);
             }
           }
           AmfClass<T, Tint> const &cl_j = res.l_class[j];
@@ -406,7 +413,7 @@ AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const 
             for (int b = 0; b < n; b++) {
               int64_t sum = 0;
               for (int a = 0; a < n; a++) {
-                sum = (sum + z[a] * R_red[a * n + b]) % N->ell;
+                sum = (sum + z[a] * R_red[a * n + b]) % mod_level;
               }
               w[b] = sum;
             }
