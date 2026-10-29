@@ -950,11 +950,6 @@ public:
   Tidx n_part;
   // number of elements
   Tidx n_elt;
-  // scratch arrays
-  std::vector<Tidx> scratch1;
-  std::vector<Tidx> scratch2;
-  std::vector<Tidx> scratch3;
-  std::vector<Tidx> scratch4;
   PartitionStorage(Face const &f, std::ostream &_os) : os(_os) {
     size_t siz_in = f.count();
     size_t siz_out = f.size() - siz_in;
@@ -996,87 +991,90 @@ public:
         pos_out += 1;
       }
     }
-    scratch1 = std::vector<Tidx>(n_elt);
-    scratch2 = std::vector<Tidx>(n_elt);
-    scratch3 = std::vector<Tidx>(n_elt, 0);
-    scratch4 = std::vector<Tidx>(n_elt);
   }
-  bool RefinePartitionByElement(Telt const &g) {
-    for (Tidx ipart = 0; ipart < n_part; ipart++) {
-      for (Tidx j = 0; j < n_part; j++) {
-        scratch1[j] = 0;
-      }
-      Tidx pos_first = firsts[ipart];
-      Tidx len = lengths[ipart];
-      for (Tidx u = 0; u < len; u++) {
-        Tidx x = points[pos_first + u];
-        Tidx y = g.at(x);
-        Tidx i_cell = cellno[y];
-        Tidx first = firsts[i_cell];
-        Tidx n_belong = scratch1[i_cell];
-        scratch2[first + n_belong] = y;
-        n_belong += 1;
-        scratch1[i_cell] = n_belong;
-      }
-      Tidx n_part_more = 0;
-      for (Tidx i_cell = 0; i_cell < n_part; i_cell++) {
-        Tidx siz_part = scratch1[i_cell];
-        if (siz_part != 0 && siz_part != lengths[i_cell]) {
-          Tidx len = lengths[i_cell];
-          Tidx first = firsts[i_cell];
-          Tidx siz_out_part = len - siz_part;
-          for (Tidx i = 0; i < siz_part; i++) {
-            Tidx x = scratch2[first + i];
-            Tidx pos = cellpos[x];
-            scratch3[pos] = 1;
-          }
-          for (Tidx i = 0; i < len; i++) {
-            scratch4[i] = points[first + i];
-          }
-          Tidx pos_in = 0;
-          Tidx pos_out = 0;
-          for (Tidx u = 0; u < len; u++) {
-            Tidx x = scratch4[u];
-            if (scratch3[u] == 1) {
-              points[first + pos_in] = x;
-              cellno[x] = i_cell;
-              cellpos[x] = pos_in;
-              pos_in += 1;
-            } else {
-              points[first + siz_part + pos_out] = x;
-              cellno[x] = n_part + n_part_more;
-              cellpos[x] = pos_out;
-              pos_out += 1;
-            }
-          }
-          lengths[i_cell] = siz_part;
-          lengths.push_back(siz_out_part);
-          firsts.push_back(firsts[i_cell] + siz_part);
-          for (Tidx u = 0; u < len; u++) {
-            scratch3[u] = 0;
-          }
-          n_part_more += 1;
-        }
-      }
-      n_part += n_part_more;
-      if (n_part_more > 0) {
-        return false;
-      }
-    }
-    return true;
-  }
+  /*
+    The coarsest refinement that every element of list_gen maps cell to
+    cell, by colour refinement: each round gives every point the tuple of
+    its colour and of the colours of its images, and renumbers the distinct
+    tuples, until the number of colours is stable. A partition is stable
+    under that refinement exactly when each generator maps each cell into a
+    single cell, hence onto one, the generators being bijections; and the
+    refinement only splits where some generator forces it, so the result is
+    the coarsest such partition. A round costs O(n_elt * |list_gen|), where
+    splitting one cell at a time cost O(n_part^2) per split, which on a
+    partition ending with tens of thousands of cells was most of the time
+    of a modular canonicalization.
+
+    The cells are then numbered by their smallest point. The partition
+    being invariant under the group the generators generate (each element
+    permutes its cells), that numbering only depends on the group and the
+    initial partition's orbit, which is what a canonical computation needs.
+   */
   void RefinePartitionByListElt(std::vector<Telt> const &list_gen) {
+    size_t k = list_gen.size();
+    std::vector<Tidx> color = cellno;
+    size_t n_color = n_part;
+    struct SigHash {
+      size_t operator()(std::vector<Tidx> const &v) const {
+        size_t h = 0x9e3779b97f4a7c15ULL;
+        for (auto &x : v) {
+          h ^= static_cast<size_t>(x) + 0x9e3779b97f4a7c15ULL + (h << 6) +
+               (h >> 2);
+        }
+        return h;
+      }
+    };
+    std::vector<Tidx> new_color(n_elt);
+    std::vector<Tidx> sig(k + 1);
     while (true) {
-      bool IsFinished = true;
-      for (auto &e_gen : list_gen) {
-        bool test = RefinePartitionByElement(e_gen);
-        if (!test) {
-          IsFinished = false;
+      std::unordered_map<std::vector<Tidx>, Tidx, SigHash> map_sig;
+      for (Tidx x = 0; x < n_elt; x++) {
+        sig[0] = color[x];
+        for (size_t j = 0; j < k; j++) {
+          sig[j + 1] = color[list_gen[j].at(x)];
+        }
+        auto iter = map_sig.find(sig);
+        if (iter == map_sig.end()) {
+          Tidx c = static_cast<Tidx>(map_sig.size());
+          map_sig.emplace(sig, c);
+          new_color[x] = c;
+        } else {
+          new_color[x] = iter->second;
         }
       }
-      if (IsFinished) {
+      size_t n_new = map_sig.size();
+      color.swap(new_color);
+      if (n_new == n_color) {
         break;
       }
+      n_color = n_new;
+    }
+    // Rebuild the cells, numbered by their smallest point, with their
+    // points in increasing order.
+    std::vector<Tidx> label(n_color, std::numeric_limits<Tidx>::max());
+    Tidx n_label = 0;
+    for (Tidx x = 0; x < n_elt; x++) {
+      if (label[color[x]] == std::numeric_limits<Tidx>::max()) {
+        label[color[x]] = n_label;
+        n_label++;
+      }
+    }
+    n_part = n_label;
+    lengths.assign(n_part, 0);
+    for (Tidx x = 0; x < n_elt; x++) {
+      lengths[label[color[x]]]++;
+    }
+    firsts.assign(n_part, 0);
+    for (Tidx c = 1; c < n_part; c++) {
+      firsts[c] = firsts[c - 1] + lengths[c - 1];
+    }
+    std::vector<Tidx> fill(n_part, 0);
+    for (Tidx x = 0; x < n_elt; x++) {
+      Tidx c = label[color[x]];
+      points[firsts[c] + fill[c]] = x;
+      cellno[x] = c;
+      cellpos[x] = fill[c];
+      fill[c]++;
     }
   }
   Face map_face(Face const &f) const {
