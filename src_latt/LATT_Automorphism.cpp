@@ -48,35 +48,19 @@ void ComputeAutomorphism(std::string const &FileListMat,
                  "weyl_chamber\n";
     throw TerminalException{1};
   }
-  if (method == "graph" && OutFormat == "GAP_order") {
-    // Lightweight path: compute a full-rank invariant short-vector
-    // family, take the permutation action of the lattice automorphism
-    // group on it, and report just the group order. Matches what
-    // ArithmeticAutomorphismGroupMultiple_inner computes internally
-    // before lifting permutations back to matrices, but skips the
-    // (sometimes expensive) integral matrix recovery step.
-    MyMatrix<Tint> SHV =
-        ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], std::cerr);
-    MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-    int n_row = SHV_T.rows();
-    std::vector<T> Vdiag(n_row, T(0));
-    std::vector<std::vector<Tidx>> ListPerm =
-        GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV_T, ListMat,
-                                                           Vdiag, std::cerr);
-    std::vector<Telt> ListPermGens;
-    for (auto &eList : ListPerm) {
-      ListPermGens.push_back(Telt(eList));
-    }
-    Tgroup grp(ListPermGens, n_row);
-    os << "return " << grp.size() << ";\n";
-    return;
-  }
   std::vector<MyMatrix<Tint>> ListGen;
   // The order, when the method computes it on the way.
   std::optional<mpz_class> opt_order;
   if (method == "graph") {
     ListGen = ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
                                                                    std::cerr);
+    if (OutFormat == "GAP_order") {
+      // The action on the canonic family is faithful, the family being of
+      // full rank.
+      CanonicVectorFamily<Tint> fam =
+          GetCanonicVectorFamily<T, Tint>(ListMat[0], std::cerr);
+      opt_order = OrderFromGens<Tint, Tgroup>(fam.get_full(), ListGen);
+    }
   } else {
     // Plesken-Souvignier and Vinberg work with the lattice coordinates over
     // the rationals; the algebraic fields only have the graph method.
