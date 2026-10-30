@@ -61,38 +61,28 @@ void ComputeAutomorphism(std::string const &FileListMat,
           GetCanonicVectorFamily<T, Tint>(ListMat[0], std::cerr);
       opt_order = OrderFromGens<Tint, Tgroup>(fam.get_full(), ListGen);
     }
+  } else if (method == "plesken_souvignier") {
+    PleskenSouvignierAutomResult<Tint> result =
+        PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, std::cerr);
+    ListGen = result.ListGen;
+    opt_order =
+        PleskenSouvignierGroupOrder<mpz_class>(result.ListOrbitSize);
   } else {
-    // Plesken-Souvignier and Vinberg work with the lattice coordinates over
-    // the rationals; the algebraic fields only have the graph method.
-    if constexpr (is_implementation_of_Q<T>::value) {
-      if (method == "plesken_souvignier") {
-        PleskenSouvignierAutomResult<Tint> result =
-            PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, std::cerr);
-        ListGen = result.ListGen;
-        opt_order =
-            PleskenSouvignierGroupOrder<mpz_class>(result.ListOrbitSize);
-      } else {
-        // The reflections in the roots of norm 2 are integral only for an
-        // integral form, and the decomposition is the one of a single form.
-        if (ListMat.size() != 1 || !IsIntegralMatrix(ListMat[0])) {
-          std::cerr << "LATT_Automorphism: the " << method
-                    << " method needs a single integral Gram matrix\n";
-          throw TerminalException{1};
-        }
-        VinbergAutom<Tint> vin =
-            (method == "vinberg")
-                ? ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0],
-                                                              std::cerr)
-                : ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0],
-                                                                  std::cerr);
-        ListGen = vin.ListGen;
-        opt_order = vin.order;
-      }
-    } else {
-      std::cerr << "LATT_Automorphism: the method " << method
-                << " is only available for the rational arithmetics\n";
+    // The reflections in the roots of norm 2 are integral only for an
+    // integral form, and the decomposition is the one of a single form.
+    if (ListMat.size() != 1 || !IsIntegralMatrix(ListMat[0])) {
+      std::cerr << "LATT_Automorphism: the " << method
+                << " method needs a single integral Gram matrix\n";
       throw TerminalException{1};
     }
+    VinbergAutom<Tint> vin =
+        (method == "vinberg")
+            ? ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0],
+                                                          std::cerr)
+            : ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0],
+                                                              std::cerr);
+    ListGen = vin.ListGen;
+    opt_order = vin.order;
   }
   if (OutFormat == "GAP_order") {
     os << "return " << *opt_order << ";\n";
@@ -167,11 +157,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "                       graph (default)\n";
       std::cerr << "  plesken_souvignier : the backtrack of Plesken and "
                    "Souvignier\n";
-      std::cerr << "                       (rational arithmetics)\n";
+      std::cerr << "                       (forms with rational entries)\n";
       std::cerr << "  vinberg            : Aut(L) = W(R) x| Aut(L, rho) "
                    "for a single\n";
-      std::cerr << "                       integral Gram matrix (rational "
-                   "arithmetics)\n";
+      std::cerr << "                       integral Gram matrix\n";
       std::cerr << "  weyl_chamber       : as vinberg, Aut(L, rho) from the "
                    "Weyl-chamber\n";
       std::cerr << "                       family, which spans the lattice\n";

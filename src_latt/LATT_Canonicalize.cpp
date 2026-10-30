@@ -29,57 +29,67 @@ void ComputeCanonical(std::string const &FileI, std::string const &OutFormat,
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
-  MyMatrix<Tint> B;
-  if (method == "graph") {
-    B = ComputeCanonicalForm<T, Tint, Tgroup>(eMat, std::cerr);
-  } else if (method == "plesken_souvignier") {
-    // Orbit splitting over the Plesken-Souvignier automorphism group:
-    // nothing quadratic in the family, so it reaches lattices like Leech
-    // whose vector families the graph method cannot handle. The method
-    // can fail (surviving orbit tie, straddled sign components); the
-    // failure is a property of the isometry class, so the forms it does
-    // canonicalize remain comparable with each other.
-    std::optional<MyMatrix<Tint>> opt =
-        OrbitSplitCanonicalizeGram<T, Tint, Tgroup>(eMat, std::cerr);
-    if (!opt) {
-      std::cerr << "LATT_Canonicalize: the orbit splitting could not select "
-                   "a canonical prefix, no canonical form for this input\n";
-      throw TerminalException{1};
+  auto f_canonical = [&]() -> MyMatrix<Tint> {
+    if (method == "graph") {
+      return ComputeCanonicalForm<T, Tint, Tgroup>(eMat, std::cerr);
     }
-    B = *opt;
-  } else if (method == "vinberg") {
-    // The roots are the vectors of norm 2, which is the decomposition of an
-    // integral form.
-    if (!IsIntegralMatrix(eMat)) {
-      std::cerr << "LATT_Canonicalize: the vinberg method needs an integral "
-                   "Gram matrix\n";
-      throw TerminalException{1};
+    if (method == "plesken_souvignier") {
+      // Orbit splitting over the Plesken-Souvignier automorphism group:
+      // nothing quadratic in the family, so it reaches lattices like Leech
+      // whose vector families the graph method cannot handle. The method
+      // can fail (surviving orbit tie, straddled sign components); the
+      // failure is a property of the isometry class, so the forms it does
+      // canonicalize remain comparable with each other.
+      std::optional<MyMatrix<Tint>> opt =
+          OrbitSplitCanonicalizeGram<T, Tint, Tgroup>(eMat, std::cerr);
+      if (!opt) {
+        std::cerr << "LATT_Canonicalize: the orbit splitting could not "
+                     "select a canonical prefix, no canonical form for this "
+                     "input\n";
+        throw TerminalException{1};
+      }
+      return *opt;
     }
-    B = ComputeCanonicalFormRootDecomposed<T, Tint, Tgroup>(eMat, std::cerr);
-  } else if (method == "weyl") {
-    // As vinberg, but with the simple roots of one positive system in place
-    // of the whole root system, so the Weyl group leaves the configuration.
-    if (!IsIntegralMatrix(eMat)) {
-      std::cerr << "LATT_Canonicalize: the weyl method needs an integral "
-                   "Gram matrix\n";
-      throw TerminalException{1};
+    if (method == "vinberg") {
+      // The roots are the vectors of norm 2, which is the decomposition of
+      // an integral form.
+      if (!IsIntegralMatrix(eMat)) {
+        std::cerr << "LATT_Canonicalize: the vinberg method needs an "
+                     "integral Gram matrix\n";
+        throw TerminalException{1};
+      }
+      return ComputeCanonicalFormRootDecomposed<T, Tint, Tgroup>(eMat,
+                                                                 std::cerr);
     }
-    B = ComputeCanonicalFormWeylReduced<T, Tint, Tgroup>(eMat, std::cerr);
-  } else if (method == "weyl_chamber") {
-    // The characteristic vectors in the fundamental Weyl chamber and the
-    // simple roots: a family spanning L, so no glue step.
-    if (!IsIntegralMatrix(eMat)) {
-      std::cerr << "LATT_Canonicalize: the weyl_chamber method needs an "
-                   "integral Gram matrix\n";
-      throw TerminalException{1};
+    if (method == "weyl") {
+      // As vinberg, but with the simple roots of one positive system in
+      // place of the whole root system, so the Weyl group leaves the
+      // configuration.
+      if (!IsIntegralMatrix(eMat)) {
+        std::cerr << "LATT_Canonicalize: the weyl method needs an integral "
+                     "Gram matrix\n";
+        throw TerminalException{1};
+      }
+      return ComputeCanonicalFormWeylReduced<T, Tint, Tgroup>(eMat,
+                                                              std::cerr);
     }
-    B = ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(eMat, std::cerr);
-  } else {
+    if (method == "weyl_chamber") {
+      // The characteristic vectors in the fundamental Weyl chamber and the
+      // simple roots: a family spanning L, so no glue step.
+      if (!IsIntegralMatrix(eMat)) {
+        std::cerr << "LATT_Canonicalize: the weyl_chamber method needs an "
+                     "integral Gram matrix\n";
+        throw TerminalException{1};
+      }
+      return ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(eMat,
+                                                              std::cerr);
+    }
     std::cerr << "LATT_Canonicalize: unknown method=" << method << "\n";
     std::cerr << "The methods are graph, plesken_souvignier, vinberg, weyl "
                  "and weyl_chamber\n";
     throw TerminalException{1};
-  }
+  };
+  MyMatrix<Tint> B = f_canonical();
   MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
   MyMatrix<T> eMat_red = B_T * eMat * B_T.transpose();
   if (OutFormat == "CPP") {

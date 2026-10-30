@@ -49,40 +49,43 @@ void ComputeIsomorphism(std::string const &FileListMat1,
               << FileListMat2 << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
-  std::optional<MyMatrix<Tint>> equiv;
-  if (method == "graph") {
-    equiv = ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
-                                                           std::cerr);
-  } else if (method == "plesken_souvignier") {
-    if (ListMat1.size() != ListMat2.size()) {
-      std::cerr << "LATT_Isomorphism: the two lists have different lengths\n";
-      throw TerminalException{1};
+  auto f_equiv = [&]() -> std::optional<MyMatrix<Tint>> {
+    if (method == "graph") {
+      return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
+                                                            std::cerr);
     }
-    std::vector<MyMatrix<Tint>> ListGenAut2;
-    equiv = PleskenSouvignierLatticeIsometry<T, Tint>(ListMat1, ListMat2,
-                                                      ListGenAut2, std::cerr);
-  } else if (method == "vinberg" || method == "weyl_chamber") {
-    // The reflections in the roots of norm 2 are integral only for an
-    // integral form, and the decomposition is the one of a single form.
-    if (ListMat1.size() != 1 || ListMat2.size() != 1 ||
-        !IsIntegralMatrix(ListMat1[0]) || !IsIntegralMatrix(ListMat2[0])) {
-      std::cerr << "LATT_Isomorphism: the " << method << " method needs a "
-                << "single integral Gram matrix on each side\n";
-      throw TerminalException{1};
+    if (method == "plesken_souvignier") {
+      if (ListMat1.size() != ListMat2.size()) {
+        std::cerr << "LATT_Isomorphism: the two lists have different "
+                     "lengths\n";
+        throw TerminalException{1};
+      }
+      std::vector<MyMatrix<Tint>> ListGenAut2;
+      return PleskenSouvignierLatticeIsometry<T, Tint>(ListMat1, ListMat2,
+                                                       ListGenAut2, std::cerr);
     }
-    if (method == "vinberg") {
-      equiv = ComputeIsometryVinberg<T, Tint, Tgroup>(ListMat1[0],
-                                                      ListMat2[0], std::cerr);
-    } else {
-      equiv = ComputeIsometryWeylChamber<T, Tint, Tgroup>(
+    if (method == "vinberg" || method == "weyl_chamber") {
+      // The reflections in the roots of norm 2 are integral only for an
+      // integral form, and the decomposition is the one of a single form.
+      if (ListMat1.size() != 1 || ListMat2.size() != 1 ||
+          !IsIntegralMatrix(ListMat1[0]) || !IsIntegralMatrix(ListMat2[0])) {
+        std::cerr << "LATT_Isomorphism: the " << method << " method needs a "
+                  << "single integral Gram matrix on each side\n";
+        throw TerminalException{1};
+      }
+      if (method == "vinberg") {
+        return ComputeIsometryVinberg<T, Tint, Tgroup>(ListMat1[0],
+                                                       ListMat2[0], std::cerr);
+      }
+      return ComputeIsometryWeylChamber<T, Tint, Tgroup>(
           ListMat1[0], ListMat2[0], std::cerr);
     }
-  } else {
     std::cerr << "LATT_Isomorphism: unknown method=" << method << "\n";
     std::cerr << "The methods are graph, plesken_souvignier, vinberg and "
                  "weyl_chamber\n";
     throw TerminalException{1};
-  }
+  };
+  std::optional<MyMatrix<Tint>> equiv = f_equiv();
   if (OutFormat == "GAP") {
     if (equiv) {
       os << "return ";

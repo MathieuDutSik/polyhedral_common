@@ -91,7 +91,8 @@ MyMatrix<Tint> PleskenSouvignierZspanFamilyHalf(MyMatrix<T> const &GramMat,
 /*
   The matrices over the ring, each scaled by the positive multiplier that
   makes it integral. The automorphisms of a form are those of any positive
-  multiple of it, so the search can run on integral forms.
+  multiple of it, so the search can run on integral forms. Over an algebraic
+  field, this needs forms with rational entries.
  */
 template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>>
@@ -100,6 +101,11 @@ PleskenSouvignierIntegralForms(std::vector<MyMatrix<T>> const &ListMat) {
   ListMatInt.reserve(ListMat.size());
   for (auto &eMat : ListMat) {
     MyMatrix<T> eMatScal = RemoveFractionMatrixPlusCoeff(eMat).TheMat;
+    if (!IsIntegralMatrix(eMatScal)) {
+      std::cerr << "PleskenSouvignierIntegralForms: the Plesken-Souvignier "
+                   "method needs forms with rational entries\n";
+      throw TerminalException{1};
+    }
     ListMatInt.push_back(UniversalMatrixConversion<Tint, T>(eMatScal));
   }
   return ListMatInt;
@@ -146,11 +152,11 @@ PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
+  std::vector<MyMatrix<Tint>> ListMatInt =
+      PleskenSouvignierIntegralForms<T, Tint>(ListMat);
   LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(ListMat[0], os);
   MyMatrix<Tint> const &Pmat = rec.Pmat;
   MyMatrix<Tint> PmatInv = Inverse(Pmat);
-  std::vector<MyMatrix<Tint>> ListMatInt =
-      PleskenSouvignierIntegralForms<T, Tint>(ListMat);
   std::vector<MyMatrix<Tint>> ListMatRed;
   ListMatRed.reserve(ListMatInt.size());
   for (auto &eMat : ListMatInt) {
