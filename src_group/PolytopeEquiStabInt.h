@@ -400,16 +400,16 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value(
   // Lift the generators of the absolute graph to signed permutations of the
   // whole family, declining when one of them does not lift. The map v -> -v
   // is added by the helper.
-  std::optional<std::vector<std::vector<Tidx>>> opt =
+  std::optional<AbsTrickLift<Tidx>> opt_lift =
       AbsTrick_LiftGenerators<Tint, Tidx, Tidx_value>(WMatAbs, ListGen, nbRow);
-  if (!opt) {
+  if (!opt_lift) {
     return {};
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: Check Generators|=" << time << "\n";
 #endif
   std::vector<std::vector<unsigned int>> ListGenRet;
-  for (auto &eGen : *opt) {
+  for (auto &eGen : opt_lift->ListGen) {
     ListGenRet.push_back(
         std::vector<unsigned int>(eGen.begin(), eGen.end()));
   }

@@ -89,16 +89,50 @@ MyMatrix<Tint> PleskenSouvignierZspanFamilyHalf(MyMatrix<T> const &GramMat,
 }
 
 /*
+  The kind of a matrix for the engine, which compares the products of the
+  vectors in one order only (see ps_cand in PleskenSouvignier.h): that is
+  complete for a symmetric or an antisymmetric matrix, whose products in
+  the other order are the same up to sign. Any other matrix M is replaced
+  by the symmetric M + M^T and the antisymmetric M - M^T: an integral g
+  preserves M if and only if it preserves both, their sum being 2 M.
+ */
+enum class PSFormKind { Symmetric, Antisymmetric, General };
+
+template <typename Tint>
+PSFormKind PleskenSouvignierFormKind(MyMatrix<Tint> const &M) {
+  MyMatrix<Tint> Mtr = M.transpose();
+  if (M == Mtr) {
+    return PSFormKind::Symmetric;
+  }
+  if (M == -Mtr) {
+    return PSFormKind::Antisymmetric;
+  }
+  return PSFormKind::General;
+}
+
+template <typename Tint>
+void PleskenSouvignierPushForm(std::vector<MyMatrix<Tint>> &ListMatInt,
+                               MyMatrix<Tint> const &M, PSFormKind kind) {
+  if (kind == PSFormKind::General) {
+    MyMatrix<Tint> Mtr = M.transpose();
+    ListMatInt.push_back(M + Mtr);
+    ListMatInt.push_back(M - Mtr);
+  } else {
+    ListMatInt.push_back(M);
+  }
+}
+
+/*
   The matrices over the ring, each scaled by the positive multiplier that
-  makes it integral. The automorphisms of a form are those of any positive
-  multiple of it, so the search can run on integral forms. Over an algebraic
-  field, this needs forms with rational entries.
+  makes it integral, and split as above when neither symmetric nor
+  antisymmetric. The automorphisms of a form are those of any positive
+  multiple of it, so the search can run on integral forms. Over an
+  algebraic field, this needs forms with rational entries.
  */
 template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>>
 PleskenSouvignierIntegralForms(std::vector<MyMatrix<T>> const &ListMat) {
   std::vector<MyMatrix<Tint>> ListMatInt;
-  ListMatInt.reserve(ListMat.size());
   for (auto &eMat : ListMat) {
     MyMatrix<T> eMatScal = RemoveFractionMatrixPlusCoeff(eMat).TheMat;
     if (!IsIntegralMatrix(eMatScal)) {
@@ -106,7 +140,8 @@ PleskenSouvignierIntegralForms(std::vector<MyMatrix<T>> const &ListMat) {
                    "method needs forms with rational entries\n";
       throw TerminalException{1};
     }
-    ListMatInt.push_back(UniversalMatrixConversion<Tint, T>(eMatScal));
+    MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(eMatScal);
+    PleskenSouvignierPushForm(ListMatInt, M, PleskenSouvignierFormKind(M));
   }
   return ListMatInt;
 }
@@ -115,8 +150,10 @@ PleskenSouvignierIntegralForms(std::vector<MyMatrix<T>> const &ListMat) {
   The same for a pair of configurations: ListMat1[i] and ListMat2[i] are
   scaled by the SAME multiplier, the one making ListMat1[i] integral, since
   P * M1 * P^T = M2 holds if and only if it holds for c M1 and c M2. When
-  c ListMat2[i] is not integral, no integral P can map the first form to
-  the second, and nothing is returned.
+  c ListMat2[i] is not integral, or not of the kind of ListMat1[i] (P M1
+  P^T is symmetric, antisymmetric or neither as M1 is), no integral P can
+  map the first form to the second, and nothing is returned. The split is
+  decided on ListMat1[i] and applied to both.
  */
 template <typename T, typename Tint>
 std::optional<
@@ -127,12 +164,24 @@ PleskenSouvignierIntegralFormsPair(std::vector<MyMatrix<T>> const &ListMat1,
   std::vector<MyMatrix<Tint>> ListMatInt2;
   for (size_t i = 0; i < ListMat1.size(); i++) {
     FractionMatrix<T> fr = RemoveFractionMatrixPlusCoeff(ListMat1[i]);
+    if (!IsIntegralMatrix(fr.TheMat)) {
+      std::cerr << "PleskenSouvignierIntegralFormsPair: the "
+                   "Plesken-Souvignier method needs forms with rational "
+                   "entries\n";
+      throw TerminalException{1};
+    }
     MyMatrix<T> eMat2Scal = fr.TheMult * ListMat2[i];
     if (!IsIntegralMatrix(eMat2Scal)) {
       return {};
     }
-    ListMatInt1.push_back(UniversalMatrixConversion<Tint, T>(fr.TheMat));
-    ListMatInt2.push_back(UniversalMatrixConversion<Tint, T>(eMat2Scal));
+    MyMatrix<Tint> M1 = UniversalMatrixConversion<Tint, T>(fr.TheMat);
+    MyMatrix<Tint> M2 = UniversalMatrixConversion<Tint, T>(eMat2Scal);
+    PSFormKind kind = PleskenSouvignierFormKind(M1);
+    if (PleskenSouvignierFormKind(M2) != kind) {
+      return {};
+    }
+    PleskenSouvignierPushForm(ListMatInt1, M1, kind);
+    PleskenSouvignierPushForm(ListMatInt2, M2, kind);
   }
   return std::make_pair(std::move(ListMatInt1), std::move(ListMatInt2));
 }
@@ -142,8 +191,9 @@ PleskenSouvignierIntegralFormsPair(std::vector<MyMatrix<T>> const &ListMat1,
   in the ORIGINAL basis, satisfying g * M * g^T = M for every matrix of
   ListMat, and the orbit lengths along the stabilizer chain whose
   product is the group order. ListMat[0] has to be symmetric positive
-  definite, the others symmetric. The matrices may be rational: they are
-  made integral by PleskenSouvignierIntegralForms.
+  definite, the others are arbitrary. The matrices may be rational: they
+  are made integral, and split when neither symmetric nor antisymmetric,
+  by PleskenSouvignierIntegralForms.
  */
 template <typename T, typename Tint, typename Tgroup>
 PleskenSouvignierAutomResult<Tint, Tgroup>
@@ -215,16 +265,22 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierLatticeIsometry(
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
-  LLLreduction<T, Tint> rec1 = LLLreducedBasis<T, Tint>(ListMat1[0], os);
-  LLLreduction<T, Tint> rec2 = LLLreducedBasis<T, Tint>(ListMat2[0], os);
-  MyMatrix<Tint> const &Pmat1 = rec1.Pmat;
-  MyMatrix<Tint> const &Pmat2 = rec2.Pmat;
+  if (ListMat1.size() != ListMat2.size()) {
+    std::cerr << "PleskenSouvignierLatticeIsometry: the two lists of "
+                 "matrices have different lengths\n";
+    throw TerminalException{1};
+  }
+  // Before the LLL, which cannot run on forms with irrational entries.
   std::optional<
       std::pair<std::vector<MyMatrix<Tint>>, std::vector<MyMatrix<Tint>>>>
       opt_int = PleskenSouvignierIntegralFormsPair<T, Tint>(ListMat1, ListMat2);
   if (!opt_int) {
     return {};
   }
+  LLLreduction<T, Tint> rec1 = LLLreducedBasis<T, Tint>(ListMat1[0], os);
+  LLLreduction<T, Tint> rec2 = LLLreducedBasis<T, Tint>(ListMat2[0], os);
+  MyMatrix<Tint> const &Pmat1 = rec1.Pmat;
+  MyMatrix<Tint> const &Pmat2 = rec2.Pmat;
   std::vector<MyMatrix<Tint>> const &ListMatInt1 = opt_int->first;
   std::vector<MyMatrix<Tint>> const &ListMatInt2 = opt_int->second;
   std::vector<MyMatrix<Tint>> ListMatRed1;

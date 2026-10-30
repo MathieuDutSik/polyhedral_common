@@ -394,7 +394,7 @@ GetListGenAutomorphism_AbsTrick_kernel(
   GraphGeneratorsOrder<Tidx> gens_order =
       GetStabilizerWeightMatrix_KernelGraph<std::vector<T>, Tgr, Tidx,
                                             Tidx_value, true>(WMatAbs.WMat, os);
-  std::optional<std::vector<std::vector<Tidx>>> opt =
+  std::optional<AbsTrickLift<Tidx>> opt =
       AbsTrick_LiftGenerators<std::vector<T>, Tidx, Tidx_value>(
           WMatAbs, gens_order.ListGen, nbPair);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
@@ -408,16 +408,15 @@ GetListGenAutomorphism_AbsTrick_kernel(
     return {};
   }
   // The lifted group maps onto the group of the generators on the pairs,
-  // with as kernel the sign flips of the components, one generator each
-  // appended by AbsTrick_LiftGenerators: its order is 2^c times the one on
-  // the pairs, of which the graph order is a multiple.
+  // with as kernel the sign flips of the n_comp components: its order is
+  // 2^n_comp times the one on the pairs, of which the graph order is a
+  // multiple.
   using TintGroup = typename Tgroup::Tint;
-  size_t n_comp = opt->size() - gens_order.ListGen.size();
   TintGroup order = GetGraphGroupOrder<TintGroup>(gens_order);
-  for (size_t i_comp = 0; i_comp < n_comp; i_comp++) {
+  for (size_t i_comp = 0; i_comp < opt->n_comp; i_comp++) {
     order *= 2;
   }
-  return StabGeneratorsOrder<Tidx, TintGroup>{std::move(*opt), order};
+  return StabGeneratorsOrder<Tidx, TintGroup>{std::move(opt->ListGen), order};
 }
 
 // Over the ring rather than over the field when the configuration allows it,
@@ -710,6 +709,10 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple_inner(
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: |SHV1|=" << SHV1.rows() << " |SHV2|=" << SHV2.rows() << "\n";
 #endif
+  if (ListMat1.size() != ListMat2.size()) {
+    std::cerr << "LSEC: the two lists of matrices have different lengths\n";
+    throw TerminalException{1};
+  }
   if (SHV1.rows() != SHV2.rows())
     return {};
   int n_rows = SHV1.rows();
@@ -785,16 +788,16 @@ IteratedShortestSchemeFamily(std::vector<MyMatrix<T>> const &ListMat,
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>>
-IteratedShortestAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
-                                          std::ostream &os) {
+IntAutomorphismGroup<Tint, Tgroup> IteratedShortestAutomorphismGroupMultiple(
+    std::vector<MyMatrix<T>> const &ListMat, std::ostream &os) {
   MyMatrix<Tint> SHV = IteratedShortestSchemeFamily<T, Tint>(ListMat, os);
-  return ArithmeticAutomorphismGroupMultiple_inner<T, Tint, Tgroup>(ListMat, SHV,
-                                                                    os);
+  std::vector<T> Vdiag(SHV.rows(), T(0));
+  return GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(SHV, ListMat, Vdiag,
+                                                           os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>>
+IntAutomorphismGroup<Tint, Tgroup>
 IteratedShortestAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{inpMat};
   return IteratedShortestAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);

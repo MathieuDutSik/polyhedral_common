@@ -1835,8 +1835,15 @@ AbsTrick_LiftGenerator(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
   on the three pairs has no automorphism at all, and the answer would be a
   group of order 2 where the truth is 8.
  */
+template <typename Tidx> struct AbsTrickLift {
+  // The lifts of the generators of the graph, followed by the n_comp flips.
+  std::vector<std::vector<Tidx>> ListGen;
+  // The number of connected components, the kernel being of order 2^n_comp.
+  size_t n_comp;
+};
+
 template <typename T, typename Tidx, typename Tidx_value>
-std::optional<std::vector<std::vector<Tidx>>>
+std::optional<AbsTrickLift<Tidx>>
 AbsTrick_LiftGenerators(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
                         std::vector<std::vector<Tidx>> const &ListGen,
                         size_t nbRow) {
@@ -1888,7 +1895,8 @@ AbsTrick_LiftGenerators(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
     }
     ListGenRet.push_back(eGenSign);
   }
-  return ListGenRet;
+  return AbsTrickLift<Tidx>{std::move(ListGenRet),
+                            static_cast<size_t>(n_comp)};
 }
 
 // Whether every generator lifts, for the callers that only need to know.

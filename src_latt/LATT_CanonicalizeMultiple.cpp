@@ -35,20 +35,13 @@ void ComputeCanonicalMultiple(std::string const &FileI,
                                                            std::cerr);
     }
     if (method == "plesken_souvignier") {
-      // The engine needs the first matrix positive definite and every
-      // matrix symmetric.
+      // The engine needs the first matrix positive definite, the others
+      // are arbitrary.
       if (!IsSymmetricMatrix(ListMatrix[0]) ||
           !IsPositiveDefinite(ListMatrix[0], std::cerr)) {
         std::cerr << "LATT_CanonicalizeMultiple: the first matrix has to be "
                      "symmetric positive definite\n";
         throw TerminalException{1};
-      }
-      for (auto &eMat : ListMatrix) {
-        if (!IsSymmetricMatrix(eMat)) {
-          std::cerr << "LATT_CanonicalizeMultiple: the plesken_souvignier "
-                       "method needs symmetric matrices\n";
-          throw TerminalException{1};
-        }
       }
       std::optional<MyMatrix<Tint>> opt =
           OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(ListMatrix,
@@ -125,8 +118,8 @@ int main(int argc, char *argv[]) {
                    "automorphism group\n";
       std::cerr << "                       computed by the Plesken-Souvignier "
                    "backtrack;\n";
-      std::cerr << "                       the first matrix positive definite, "
-                   "all symmetric\n";
+      std::cerr << "                       the first matrix positive "
+                   "definite\n";
       std::cerr << "The canonical forms of two methods are not comparable "
                    "with each other.\n";
       return -1;

@@ -6,6 +6,10 @@
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
+#include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
+#include "NumberTheoryQuadField.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
@@ -49,17 +53,16 @@ void ComputeIsomorphism(std::string const &FileListMat1,
               << FileListMat2 << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
+  if (ListMat1.size() != ListMat2.size()) {
+    std::cerr << "LATT_Isomorphism: the two lists have different lengths\n";
+    throw TerminalException{1};
+  }
   auto f_equiv = [&]() -> std::optional<MyMatrix<Tint>> {
     if (method == "graph") {
       return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
                                                             std::cerr);
     }
     if (method == "plesken_souvignier") {
-      if (ListMat1.size() != ListMat2.size()) {
-        std::cerr << "LATT_Isomorphism: the two lists have different "
-                     "lengths\n";
-        throw TerminalException{1};
-      }
       std::vector<MyMatrix<Tint>> ListGenAut2;
       return PleskenSouvignierLatticeIsometry<T, Tint>(ListMat1, ListMat2,
                                                        ListGenAut2, std::cerr);
@@ -135,6 +138,15 @@ int main(int argc, char *argv[]) {
 #ifdef ENABLE_FLINT_SUPPORT
       std::cerr << "  flint       : fmpq_class / fmpz_class\n";
 #endif
+#ifdef QUADRATIC_FIELDS
+      std::cerr << "  Qsqrt2      : the form over the field Q(sqrt(2))\n";
+#endif
+#ifdef QUADRATIC_FIELDS
+      std::cerr << "  Qsqrt5      : the form over the field Q(sqrt(5))\n";
+#endif
+      std::cerr << "  RealAlgebraic=FileDesc : the form over the real\n";
+      std::cerr << "              algebraic field described in FileDesc\n";
+      std::cerr << "              (the lattice is Z^n in every case)\n";
       std::cerr << "OutFormat values:\n";
       std::cerr << "  GAP   : the equivalence matrix or false, GAP readable\n";
       std::cerr << "  Oscar : the equivalence matrix in the Oscar format\n";
@@ -167,11 +179,12 @@ int main(int argc, char *argv[]) {
     //
     auto prt = [&](std::ostream &os) -> void {
       ArithmeticDispatch dispatch;
-      add_rational_arithmetics_by_library(
-          dispatch, [&]<typename T>() -> void {
-            ComputeIsomorphism<T>(FileListMat1, FileListMat2, OutFormat,
-                                  method, os);
-          });
+      auto f_arith = [&]<typename T>() -> void {
+        ComputeIsomorphism<T>(FileListMat1, FileListMat2, OutFormat, method,
+                              os);
+      };
+      add_rational_arithmetics_by_library(dispatch, f_arith);
+      add_algebraic_field_arithmetics(dispatch, f_arith);
       dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, prt);

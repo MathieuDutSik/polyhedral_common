@@ -1105,7 +1105,7 @@ OrbitSplitCanonicalizeKernel(std::vector<MyMatrix<Tint>> const &ListMatRed,
 
 /*
   The canonical form of a configuration of matrices, ListMat[0] symmetric
-  positive definite and the others symmetric, by the orbit splitting over
+  positive definite and the others arbitrary, by the orbit splitting over
   the Plesken-Souvignier automorphism group of the configuration: the
   basis B with the B * ListMat[i] * B^T canonical, or nothing when the
   tie exploration exceeds the branch cap or every branch has straddled

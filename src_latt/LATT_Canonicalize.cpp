@@ -6,6 +6,10 @@
 #ifdef ENABLE_FLINT_SUPPORT
 #include "NumberTheoryFlint.h"
 #endif
+#include "NumberTheoryRealField.h"
+#ifdef QUADRATIC_FIELDS
+#include "NumberTheoryQuadField.h"
+#endif
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
@@ -134,6 +138,26 @@ int main(int argc, char *argv[]) {
                    "[method]\n";
       std::cerr << "\n";
       std::cerr << "GramI (input) : The gram matrix on input\n";
+      std::cerr << "arith values:\n";
+      std::cerr << "  gmp         : mpq_class / mpz_class (default choice)\n";
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << "  gmp_boost   : the boost bindings to the gmp types\n";
+#endif
+#ifdef ENABLE_BOOST_TYPES
+      std::cerr << "  multi_boost : the boost multiprecision types\n";
+#endif
+#ifdef ENABLE_FLINT_SUPPORT
+      std::cerr << "  flint       : fmpq_class / fmpz_class\n";
+#endif
+#ifdef QUADRATIC_FIELDS
+      std::cerr << "  Qsqrt2      : the form over the field Q(sqrt(2))\n";
+#endif
+#ifdef QUADRATIC_FIELDS
+      std::cerr << "  Qsqrt5      : the form over the field Q(sqrt(5))\n";
+#endif
+      std::cerr << "  RealAlgebraic=FileDesc : the form over the real\n";
+      std::cerr << "              algebraic field described in FileDesc\n";
+      std::cerr << "              (the lattice is Z^n in every case)\n";
       std::cerr << "OutFile: The filename of the data in output\n";
       std::cerr << "method values:\n";
       std::cerr << "  graph   : from the characteristic vector family "
@@ -171,10 +195,11 @@ int main(int argc, char *argv[]) {
     //
     auto f = [&](std::ostream &os) -> void {
       ArithmeticDispatch dispatch;
-      add_rational_arithmetics_by_library(
-          dispatch, [&]<typename T>() -> void {
-            ComputeCanonical<T>(FileI, OutFormat, method, os);
-          });
+      auto f_arith = [&]<typename T>() -> void {
+        ComputeCanonical<T>(FileI, OutFormat, method, os);
+      };
+      add_rational_arithmetics_by_library(dispatch, f_arith);
+      add_algebraic_field_arithmetics(dispatch, f_arith);
       dispatch.run(arith);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);

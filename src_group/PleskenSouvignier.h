@@ -60,8 +60,13 @@
   representative is normalized internally. Requirements on the input:
 
   (1) ListMat[0] is symmetric positive definite and every other matrix is
-      symmetric. Positive definiteness is what makes the pointwise
-      stabilizer of a basis trivial, which the order computation uses.
+      symmetric or antisymmetric. Positive definiteness is what makes the
+      pointwise stabilizer of a basis trivial, which the order computation
+      uses. The products of two vectors are compared in one order only
+      (ps_cand), which is complete exactly when the products in the other
+      order are the same up to sign; a general matrix M is given as the
+      pair M + M^T, M - M^T (see PleskenSouvignierIntegralForms in
+      src_latt/LatticePleskenSouvignier.h).
   (2) The set {±v} is invariant under the group being computed. Any set
       of the form {v : v M v^T <= bound for the matrices M} is.
   (3) S has full rank. It does not have to contain the standard basis
@@ -771,9 +776,10 @@ PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
   int nbMat = ListMat.size();
 #ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
   for (auto &eMat : ListMat) {
-    if (!IsSymmetricMatrix(eMat)) {
+    MyMatrix<Tint> eMatTr = eMat.transpose();
+    if (eMat != eMatTr && eMat != MyMatrix<Tint>(-eMatTr)) {
       std::cerr << "PS: the matrices of the configuration have to be "
-                << "symmetric\n";
+                << "symmetric or antisymmetric\n";
       throw TerminalException{1};
     }
   }
@@ -796,7 +802,7 @@ PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
   ctx.nsg.assign(n, 0);
   ctx.orders.assign(n, 1);
   ctx.depth = 0;
-  // -Id preserves every symmetric form and every antipodal family.
+  // -Id preserves every bilinear form and every antipodal family.
   ctx.g[0].push_back(-IdentityMat<Tint>(n));
   if (with_fingerprint) {
     ctx.bas = basis_data ? basis_data->bas : ps_select_basis(ctx);

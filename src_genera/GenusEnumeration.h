@@ -599,13 +599,12 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusScheme scheme,
     info.order = res.order;
     info.ListGenMat = res.ListGen;
   } else {
-    // Scheme B: the MatrixGroup algorithm on the full-rank family. The order
-    // is read off the permutation action of the generators on an invariant
-    // family.
-    info.ListGenMat =
+    // Scheme B: the MatrixGroup algorithm on the full-rank family, which
+    // gives the order with the generators.
+    IntAutomorphismGroup<Tint, Tgroup> aut =
         IteratedShortestAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
-    MyMatrix<Tint> fam = root_iterated_shortest<T, Tint>(GramMat, os);
-    info.order = OrderFromGens<Tint, Tgroup>(fam, info.ListGenMat);
+    info.order = aut.order;
+    info.ListGenMat = std::move(aut.ListGen);
   }
 #ifdef DEBUG_GENUS_ENUMERATION
   if (scheme != GenusScheme::CanonicalForm) {
