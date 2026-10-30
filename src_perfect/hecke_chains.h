@@ -216,8 +216,34 @@ public:
     return find_containing_cone_T(P);
   }
   TopPerfectCone<Tint> find_containing_cone_T(MyMatrix<T> const &P) const {
-    int n = fce.pctdi.LinSpa.n;
     std::vector<T> weights_p(P.rows(), T(1));
+    auto f_cp = [&](MyMatrix<T> const &Minv) -> MyVector<T> {
+      return get_coords(P * Minv, weights_p);
+    };
+    return find_containing_cone_coords(f_cp);
+  }
+  /*
+    A top dimensional cone whose closure contains the positive form A
+    (A = sum_v lambda_v v^T v for the rows v of the cone): in the frame of
+    the cone (i_perfect, M) the form is Minv^T A Minv, of coordinates
+    Tr(ListMat_k Minv^T A Minv).
+   */
+  TopPerfectCone<Tint> find_containing_cone_form(MyMatrix<T> const &A) const {
+    std::vector<MyMatrix<T>> const &ListMat = fce.pctdi.LinSpa.ListMat;
+    auto f_cp = [&](MyMatrix<T> const &Minv) -> MyVector<T> {
+      MyMatrix<T> A_frame = Minv.transpose() * A * Minv;
+      int n_mat = ListMat.size();
+      MyVector<T> coords = ZeroVector<T>(n_mat);
+      for (int k = 0; k < n_mat; k++) {
+        coords(k) = (ListMat[k] * A_frame).trace();
+      }
+      return coords;
+    };
+    return find_containing_cone_coords(f_cp);
+  }
+  template <typename Fcp>
+  TopPerfectCone<Tint> find_containing_cone_coords(Fcp const &f_cp) const {
+    int n = fce.pctdi.LinSpa.n;
     MyMatrix<T> Q0 = UniversalMatrixConversion<T, Tint>(fce.pctdi.l_perfect[0].EXT);
     size_t n_attempt = 0;
     uint64_t seed = 12345;
@@ -253,7 +279,7 @@ public:
         MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(M);
         MyMatrix<T> Minv = Inverse(M_T);
         MyVector<T> cq = get_coords(Q0 * Minv, weights_q);
-        MyVector<T> cp = get_coords(P * Minv, weights_p);
+        MyVector<T> cp = f_cp(Minv);
         std::optional<T> best_t;
         int best_f = -1;
         std::vector<MyVector<T>> const &l_fct = ll_facet_fct[i_cone];

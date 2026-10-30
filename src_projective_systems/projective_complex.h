@@ -113,6 +113,18 @@ struct ProjectiveDescription {
   // "voronoi": the walk across the facets of the cones of rank one forms
   // of the top cells; "potential": the walk decreasing min_x |h(x, v)|.
   std::string walk;
+  /*
+    The sub-configurations that are not faces (optional section non_faces
+    of the description file): l_non_face[index][iConf] lists the subsets
+    of the rows of the configuration l_conf[index][iConf] that are
+    configurations of the index + 1 but whose cells are not in the closure
+    of its cell. Without them the faces of a cell are all the cells of the
+    next index whose vectors are among its vectors (MacPherson and
+    McConnell for Sp_4(Z)); for the paramodular groups a cell of dimension
+    1 can for instance join two of its vectors at infinity only. The lists
+    are closed under the stabilizer of the configuration.
+   */
+  std::vector<std::vector<std::vector<MyMatrix<Tint>>>> l_non_face;
 };
 
 inline ProjectiveDescription read_description(std::string const &file) {
@@ -139,6 +151,23 @@ inline ProjectiveDescription read_description(std::string const &file) {
       l_conf.push_back(EXT);
     }
     desc.l_conf.push_back(l_conf);
+  }
+  desc.l_non_face = std::vector<std::vector<std::vector<MyMatrix<Tint>>>>(n_levels);
+  for (int index = 0; index < n_levels; index++) {
+    desc.l_non_face[index] = std::vector<std::vector<MyMatrix<Tint>>>(desc.l_conf[index].size());
+  }
+  if (!tr.at_end()) {
+    tr.expect("non_faces");
+    int n_entry = tr.next_int();
+    for (int i = 0; i < n_entry; i++) {
+      int index = tr.next_int();
+      int iConf = tr.next_int();
+      if (index < 0 || index >= n_levels - 1 || iConf < 0 || iConf >= static_cast<int>(desc.l_conf[index].size())) {
+        std::cerr << "PSYS: wrong entry of non_faces index=" << index << " iConf=" << iConf << "\n";
+        throw TerminalException{1};
+      }
+      desc.l_non_face[index][iConf].push_back(tr.next_matrix());
+    }
   }
   return desc;
 }
@@ -475,15 +504,35 @@ inline std::vector<MyMatrix<Tint>> list_embedding_rev(ProjectiveRing const &ring
   For eFace1 spanning R^m, by list_embedding. Otherwise a basis over R of
   the span of eFace1 is mapped to rows of eFace2 (up to the units) with the
   same Gram matrix; the linear map must map eFace1 into eFace2 and the
-  saturated lattice of the span of eFace1 onto a saturated lattice. Such
-  an isometry of saturated sublattices is assumed to extend to G (true for
-  the primitive isotropic sublattices of Sp_4(Z), and for the sublattices
-  of rank 2 spanned by isotropic vectors of SU(2,1; O_K) of class number 1,
-  whose classes are given by the pairings).
+  saturated lattice of the span of eFace1 onto a saturated lattice S'.
+  An element of G extending the map from S to S' maps the lattice
+  { (B(s_i, w))_i : w in Z^n } of the pairings of a basis (s_i) of S onto
+  that of the images of the s_i, so the two lattices must be equal; this
+  separates, for the paramodular form J_N, the vectors v of the different
+  invariants v J_N Z^n = m Z. The isometries passing this test are assumed
+  to extend to G (true for the primitive isotropic sublattices of Sp_4(Z)
+  and of Sp(J_N, Z) for a prime N, and for the sublattices of rank 2
+  spanned by isotropic vectors of SU(2,1; O_K) of class number 1, whose
+  classes are given by the pairings).
  */
 inline std::vector<std::vector<int>> get_all_embeddings(ProjectiveRing const &ring, MyMatrix<Tint> const &eFace1,
                                                         MyMatrix<Tint> const &eFace2) {
   std::set<std::vector<int>> set_img;
+  // Whether the lattices of the pairings of the rows of S1 and of S2 (the
+  // rows of (S B)^T in Z^k, k the number of rows) are equal.
+  auto same_pairing_lattice = [&](MyMatrix<Tint> const &S1, MyMatrix<Tint> const &S2) -> bool {
+    MyMatrix<Tint> P1 = (S1 * ring.B).transpose();
+    MyMatrix<Tint> P2 = (S2 * ring.B).transpose();
+    auto f_contained = [](MyMatrix<Tint> const &Pa, MyMatrix<Tint> const &Pb) -> bool {
+      for (int i = 0; i < Pa.rows(); i++) {
+        if (!SolutionIntMat(Pb, GetMatrixRow(Pa, i))) {
+          return false;
+        }
+      }
+      return true;
+    };
+    return f_contained(P1, P2) && f_contained(P2, P1);
+  };
   auto f_image_set = [&](MyMatrix<Tint> const &EXTimg) -> std::optional<std::vector<int>> {
     std::vector<int> l_pos;
     for (int i = 0; i < EXTimg.rows(); i++) {
@@ -528,7 +577,11 @@ inline std::vector<std::vector<int>> get_all_embeddings(ProjectiveRing const &ri
     if (!IsIntegralMatrix(EXTimg_T) || !IsIntegralMatrix(SATimg_T)) {
       return;
     }
-    if (!is_saturated(UniversalMatrixConversion<Tint, T>(SATimg_T))) {
+    MyMatrix<Tint> SATimg = UniversalMatrixConversion<Tint, T>(SATimg_T);
+    if (!is_saturated(SATimg)) {
+      return;
+    }
+    if (!same_pairing_lattice(EXTsat, SATimg)) {
       return;
     }
     std::optional<std::vector<int>> opt = f_image_set(UniversalMatrixConversion<Tint, T>(EXTimg_T));
@@ -1088,8 +1141,33 @@ inline ProjectiveCellComplex compute_projective_cell_complex(ProjectiveDescripti
         // its top cell.
         std::vector<int> l_iface;
         std::vector<MyMatrix<Tint>> l_elt;
+        // The sub-configurations that are not faces, mapped to the
+        // vectors of the top cell of t0.
+        std::set<ConfigKey> set_non_face;
+        for (size_t iConf = 0; iConf < l_conf[index].size(); iConf++) {
+          std::vector<MyMatrix<Tint>> const &l_nf = cx.desc.l_non_face[index][iConf];
+          if (l_nf.empty()) {
+            continue;
+          }
+          MyMatrix<Tint> const &EXTconf = l_conf[index][iConf];
+          if (EXTconf.rows() != orbit.EXT.rows()) {
+            continue;
+          }
+          std::vector<MyMatrix<Tint>> l_M = list_embedding(ring, EXTconf, orbit.EXT);
+          if (l_M.empty()) {
+            continue;
+          }
+          MyMatrix<Tint> M_top = l_M[0] * Inverse(t0.eMat);
+          for (auto &EXTnf : l_nf) {
+            set_non_face.insert(config_key(ring, EXTnf * M_top));
+          }
+        }
+        MyMatrix<Tint> const &EXTtop0 = l_top[t0.iTopCell].EXT;
         for (auto &fi : cx.face_index[index + 1][t0.iTopCell]) {
           if (std::includes(t0.eSet.begin(), t0.eSet.end(), fi.eSet.begin(), fi.eSet.end())) {
+            if (set_non_face.count(config_key(ring, select_rows(EXTtop0, fi.eSet))) > 0) {
+              continue;
+            }
             l_iface.push_back(fi.iOrbit);
             l_elt.push_back(fi.eEquiv);
             std::vector<int> set_m1;
@@ -1103,7 +1181,7 @@ inline ProjectiveCellComplex compute_projective_cell_complex(ProjectiveDescripti
         std::vector<int> l_sign;
         if (index == n_levels - 2) {
           if (n_face != 2) {
-            std::cerr << "PSYS: a cell of two vectors should have two faces\n";
+            std::cerr << "PSYS: a cell of the index n_levels - 2 should have two faces, n_face=" << n_face << "\n";
             throw TerminalException{1};
           }
           l_sign = {1, -1};
@@ -1145,8 +1223,14 @@ inline ProjectiveCellComplex compute_projective_cell_complex(ProjectiveDescripti
         for (size_t i_gen = 0; i_gen < orbit.l_stab_gens.size(); i_gen++) {
           MyMatrix<Tint> const &g = orbit.l_stab_gens[i_gen];
           if (index == n_levels - 2) {
-            // The sign of the permutation of the two vectors.
-            l_sign_gens[i_gen] = (l_perm_gens[i_gen][0] == 0) ? 1 : -1;
+            // Whether g exchanges the two endpoints (for a cell of two
+            // vectors, the permutation of the two vectors).
+            std::vector<int> set0_img;
+            for (auto &i : orbit.l_set_m1[0]) {
+              set0_img.push_back(l_perm_gens[i_gen][i]);
+            }
+            std::sort(set0_img.begin(), set0_img.end());
+            l_sign_gens[i_gen] = (set0_img == orbit.l_set_m1[0]) ? 1 : -1;
             continue;
           }
           std::vector<int> const &set1 = orbit.l_set_m1[0];

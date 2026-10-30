@@ -1,4 +1,4 @@
-PROGRAM		= PROJ_HeckeOperators
+PROGRAM		= PROJ_HeckeOperators PROJ_SiegelVoronoiCells
 
 SRCFILES	=
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
