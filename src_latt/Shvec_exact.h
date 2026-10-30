@@ -1002,16 +1002,31 @@ private:
   // shared by every enumeration of this solver.
   std::optional<ShvecFastPrep<T>> fast_prep;
 
-public:
-  CVPSolver(MyMatrix<T> const &_GramMat, std::ostream &_os)
-      : GramMat(_GramMat), dim(GramMat.rows()), os(_os),
-        eRec(LLLreducedBasisDual<T, Tint>(GramMat, os)) {
+  void init_from_reduction() {
     MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
     Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
     request = FullGramInfo<T>(eRec.GramMatRed);
     if constexpr (shvec_has_fast_path<T>::value) {
       fast_prep = ComputeShvecFastPrep(eRec.GramMatRed);
     }
+  }
+
+public:
+  CVPSolver(MyMatrix<T> const &_GramMat, std::ostream &_os)
+      : GramMat(_GramMat), dim(GramMat.rows()), os(_os),
+        eRec(LLLreducedBasisDual<T, Tint>(GramMat, os)) {
+    init_from_reduction();
+  }
+  /*
+    With a reduction of GramMat that the caller already has, which is not
+    computed again. For a matrix the caller has just reduced, it is
+    LLLnoreduction(GramMat): the primal reduction serves the enumeration as
+    well as the dual one (see LLLreducedBasisDual).
+   */
+  CVPSolver(MyMatrix<T> const &_GramMat, LLLreduction<T, Tint> const &_eRec,
+            std::ostream &_os)
+      : GramMat(_GramMat), dim(GramMat.rows()), os(_os), eRec(_eRec) {
+    init_from_reduction();
   }
   ShvecFastPrep<T> const *get_prep() const {
     if (fast_prep) {

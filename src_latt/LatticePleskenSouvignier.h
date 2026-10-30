@@ -68,15 +68,18 @@ template <typename T> T PleskenSouvignierBound(MyMatrix<T> const &GramMat) {
   test build corresponding families independently. The root variant is used
   for a single form, where the norm-2 roots are a meaningful block; for
   several forms at once, where "root" is not a notion of the pair, the plain
-  shortest-vector tower is used instead.
+  shortest-vector tower is used instead. GramMat is the LLL-reduced Gram
+  matrix of the callers, which is not reduced again.
  */
 template <typename T, typename Tint>
 MyMatrix<Tint> PleskenSouvignierZspanFamilyHalf(MyMatrix<T> const &GramMat,
                                                 bool single, std::ostream &os) {
   int n = GramMat.rows();
   MyMatrix<Tint> full =
-      single ? inner_span_root_iterated_shortest<T, Tint>(GramMat, os)
-             : inner_span_iterated_shortest<T, Tint>(GramMat, os);
+      single ? inner_span_root_iterated_shortest<T, Tint>(
+                   GramMat, GramReduction::AlreadyReduced, os)
+             : inner_span_iterated_shortest<T, Tint>(
+                   GramMat, GramReduction::AlreadyReduced, os);
   std::unordered_set<MyVector<Tint>> seen;
   std::vector<MyVector<Tint>> rows;
   for (int i = 0; i < full.rows(); i++) {
@@ -100,11 +103,26 @@ enum class PSFormKind { Symmetric, Antisymmetric, General };
 
 template <typename Tint>
 PSFormKind PleskenSouvignierFormKind(MyMatrix<Tint> const &M) {
-  MyMatrix<Tint> Mtr = M.transpose();
-  if (M == Mtr) {
+  int n = M.rows();
+  bool is_symm = true;
+  bool is_antisymm = true;
+  for (int i = 0; i < n; i++) {
+    if (M(i, i) != 0) {
+      is_antisymm = false;
+    }
+    for (int j = 0; j < i; j++) {
+      if (M(i, j) != M(j, i)) {
+        is_symm = false;
+      }
+      if (M(i, j) != -M(j, i)) {
+        is_antisymm = false;
+      }
+    }
+  }
+  if (is_symm) {
     return PSFormKind::Symmetric;
   }
-  if (M == -Mtr) {
+  if (is_antisymm) {
     return PSFormKind::Antisymmetric;
   }
   return PSFormKind::General;

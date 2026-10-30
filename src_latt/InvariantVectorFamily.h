@@ -595,12 +595,32 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
   starts the tower from the root sublattice, matching the root decomposition
   of LatticeRootDecomposition.h. The set is always closed under v -> -v.
  */
+/*
+  Whether the Gram matrix given to a family function is already
+  LLL-reduced, in which case the shortest vector enumeration on it does not
+  reduce it again, or has to be reduced. Only the matrix given is concerned:
+  the matrices formed along the way (orthogonal complements, sublattices)
+  are reduced as needed.
+ */
+enum class GramReduction { Reduce, AlreadyReduced };
+
+template <typename T, typename Tint>
+CVPSolver<T, Tint> ivf_cvp_solver(MyMatrix<T> const &GramMat,
+                                  GramReduction reduction, std::ostream &os) {
+  if (reduction == GramReduction::AlreadyReduced) {
+    return CVPSolver<T, Tint>(GramMat, LLLnoreduction<T, Tint>(GramMat), os);
+  }
+  return CVPSolver<T, Tint>(GramMat, os);
+}
+
 template <typename T, typename Tint>
 MyMatrix<Tint> get_shv_block(MyMatrix<T> const &GramMat, bool use_roots,
-                             std::ostream &os) {
+                             GramReduction reduction, std::ostream &os) {
   int n = GramMat.rows();
+  CVPSolver<T, Tint> solver = ivf_cvp_solver<T, Tint>(GramMat, reduction, os);
   if (use_roots) {
-    MyMatrix<Tint> roots = T_ShortVector_fixed<T, Tint>(GramMat, T(2), os);
+    MyMatrix<Tint> roots =
+        MatrixFromVectorFamilyDim(n, solver.fixed_norm_vectors(T(2)));
     if (roots.rows() > 0) {
       // Symmetrise to both signs, whatever the enumerator's convention.
       std::unordered_set<MyVector<Tint>> seen;
@@ -618,7 +638,7 @@ MyMatrix<Tint> get_shv_block(MyMatrix<T> const &GramMat, bool use_roots,
       return MatrixFromVectorFamilyDim(n, rows);
     }
   }
-  return T_ShortestVector<T, Tint>(GramMat, os).SHV;
+  return solver.shortest_vectors().SHV;
 }
 
 /*
@@ -642,7 +662,8 @@ MyMatrix<Tint> IteratedShortestVectorFamilyHalf_gen(MyMatrix<T> const &GramMat,
                                                     bool use_roots,
                                                     std::ostream &os) {
   int n = GramMat.rows();
-  MyMatrix<Tint> SHV = get_shv_block<T, Tint>(GramMat, use_roots, os);
+  MyMatrix<Tint> SHV =
+      get_shv_block<T, Tint>(GramMat, use_roots, GramReduction::Reduce, os);
   int r = RankMat(SHV);
   // One representative per +/-v pair of the shortest vectors.
   std::unordered_set<MyVector<Tint>> seen;
@@ -771,7 +792,8 @@ MyMatrix<Tint> ivf_z_spanning(MyMatrix<T> const &GramMat,
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   MyMatrix<T> Binv = Inverse(B_T);
   MyMatrix<T> G_K = lll.GramMatRed;
-  CVPSolver<T, Tint> solver(G_K, os);
+  // G_K is reduced just above.
+  CVPSolver<T, Tint> solver(G_K, LLLnoreduction<T, Tint>(G_K), os);
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time_tc;
 #endif
@@ -863,14 +885,14 @@ using InnerSpanChamber = std::function<std::vector<MyVector<Tint>>(
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
 inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
-                                 std::ostream &os,
+                                 GramReduction reduction, std::ostream &os,
                                  InnerSpanChamber<Tint> const *chamber =
                                      nullptr) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
 #endif
   int n = G.rows();
-  MyMatrix<Tint> SHV = get_shv_block<T, Tint>(G, use_roots, os);
+  MyMatrix<Tint> SHV = get_shv_block<T, Tint>(G, use_roots, reduction, os);
   int r = RankMat(SHV);
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   os << "|IVF: inner_span n=" << n << ", block of " << SHV.rows()
@@ -1002,7 +1024,8 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
   os << "|IVF: inner_span n=" << n << ", projection|=" << time << "\n";
 #endif
   std::vector<MyVector<Tint>> rec2 =
-      inner_span_iterated_shortest_rec<T, Tint>(G_L2, use_roots, os);
+      inner_span_iterated_shortest_rec<T, Tint>(G_L2, use_roots,
+                                                GramReduction::Reduce, os);
   // Built on first use: the chamber variant does not need it.
   std::optional<CVPSolver<T, Tint>> opt_solverP1;
   auto get_solverP1 = [&]() -> CVPSolver<T, Tint> & {
@@ -1073,12 +1096,14 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
 template <typename T, typename Tint>
 MyMatrix<Tint> inner_span_iterated_shortest_gen(MyMatrix<T> const &GramMat,
                                                 bool use_roots,
+                                                GramReduction reduction,
                                                 std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   int n = GramMat.rows();
   MyMatrix<Tfield> GramMat_F = UniversalMatrixConversion<Tfield, T>(GramMat);
   std::vector<MyVector<Tint>> cvL =
-      inner_span_iterated_shortest_rec<Tfield, Tint>(GramMat_F, use_roots, os);
+      inner_span_iterated_shortest_rec<Tfield, Tint>(GramMat_F, use_roots,
+                                                     reduction, os);
   std::unordered_set<MyVector<Tint>> seen;
   std::vector<MyVector<Tint>> rows;
   for (auto &v : cvL) {
@@ -1096,15 +1121,19 @@ MyMatrix<Tint> inner_span_iterated_shortest_gen(MyMatrix<T> const &GramMat,
 // The Z-spanning iterated-shortest characteristic vector family.
 template <typename T, typename Tint>
 MyMatrix<Tint> inner_span_iterated_shortest(MyMatrix<T> const &GramMat,
+                                            GramReduction reduction,
                                             std::ostream &os) {
-  return inner_span_iterated_shortest_gen<T, Tint>(GramMat, false, os);
+  return inner_span_iterated_shortest_gen<T, Tint>(GramMat, false, reduction,
+                                                   os);
 }
 
 // The Z-spanning root-iterated-shortest characteristic vector family.
 template <typename T, typename Tint>
 MyMatrix<Tint> inner_span_root_iterated_shortest(MyMatrix<T> const &GramMat,
+                                                 GramReduction reduction,
                                                  std::ostream &os) {
-  return inner_span_iterated_shortest_gen<T, Tint>(GramMat, true, os);
+  return inner_span_iterated_shortest_gen<T, Tint>(GramMat, true, reduction,
+                                                   os);
 }
 
 template <typename T, typename Tint>

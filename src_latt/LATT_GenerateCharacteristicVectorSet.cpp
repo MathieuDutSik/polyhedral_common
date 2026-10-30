@@ -49,7 +49,8 @@ void process(std::string choice, std::string MatFile,
     // orthogonal recursion (Hecke's _characteristic_vectors), keeping every
     // closest vector problem on the shortest-vector sublattice.
     if (choice == "inner_span_iterated_shortest") {
-      return inner_span_iterated_shortest<T, Tint>(GramMat, std::cerr);
+      return inner_span_iterated_shortest<T, Tint>(
+          GramMat, GramReduction::Reduce, std::cerr);
     }
     // The root variants: the tower starts from the roots (norm-2 vectors)
     // rather than the shortest vectors. Full-rank and its Z-spanning form.
@@ -57,7 +58,8 @@ void process(std::string choice, std::string MatFile,
       return root_iterated_shortest<T, Tint>(GramMat, std::cerr);
     }
     if (choice == "inner_span_root_iterated_shortest") {
-      return inner_span_root_iterated_shortest<T, Tint>(GramMat, std::cerr);
+      return inner_span_root_iterated_shortest<T, Tint>(
+          GramMat, GramReduction::Reduce, std::cerr);
     }
     if (choice == "relevant_voronoi") {
       return ComputeVoronoiRelevantVector<T, Tint>(GramMat, std::cerr);

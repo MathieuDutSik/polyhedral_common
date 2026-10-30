@@ -299,7 +299,8 @@ LLLreduction<Tmat, Tint> LLLreducedGeneral(MyMatrix<Tmat> const &GramMat,
   throw TerminalException{1};
 }
 
-// This is for debugging purposes
+// The trivial reduction, for a matrix that is already reduced (see the
+// CVPSolver constructor taking a reduction) or for debugging.
 template <typename Tmat, typename Tint>
 LLLreduction<Tmat, Tint> LLLnoreduction(MyMatrix<Tmat> const &GramMat) {
   return {GramMat, IdentityMat<Tint>(GramMat.rows())};

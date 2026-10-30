@@ -483,8 +483,8 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   };
   MyMatrix<Tfield> GramMat_F = UniversalMatrixConversion<Tfield, T>(GramMat);
   std::vector<MyVector<Tint>> cvL =
-      inner_span_iterated_shortest_rec<Tfield, Tint>(GramMat_F, true, os,
-                                                     &chamber);
+      inner_span_iterated_shortest_rec<Tfield, Tint>(
+          GramMat_F, true, GramReduction::Reduce, os, &chamber);
   std::vector<MyVector<Tint>> family;
   std::unordered_set<MyVector<Tint>> seen;
   auto insert_pm = [&](MyVector<Tint> const &v) -> void {
@@ -511,7 +511,8 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   std::cerr << "ROOTDEC: SANITY_CHECK_LATTICE_ROOT_DECOMPOSITION_EXTENSIVE, "
                "comparing with the chamber filter of the whole family\n";
   {
-    MyMatrix<Tint> V = inner_span_root_iterated_shortest<T, Tint>(GramMat, os);
+    MyMatrix<Tint> V = inner_span_root_iterated_shortest<T, Tint>(
+        GramMat, GramReduction::Reduce, os);
     std::unordered_set<MyVector<Tint>> filtered;
     for (int i = 0; i < k; i++) {
       MyVector<Tint> e = GetMatrixRow(rs.SimpleRoots, i);
