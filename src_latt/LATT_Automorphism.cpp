@@ -41,62 +41,69 @@ void ComputeAutomorphism(std::string const &FileListMat,
               << FileListMat << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
-  if (method != "graph" && method != "plesken_souvignier" &&
-      method != "vinberg" && method != "weyl_chamber") {
-    std::cerr << "LATT_Automorphism: unknown method=" << method << "\n";
-    std::cerr << "The methods are graph, plesken_souvignier, vinberg and "
-                 "weyl_chamber\n";
-    throw TerminalException{1};
-  }
-  std::vector<MyMatrix<Tint>> ListGen;
-  // The order, when the method computes it on the way.
-  std::optional<mpz_class> opt_order;
-  if (method == "graph") {
-    ListGen = ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
-                                                                   std::cerr);
-    if (OutFormat == "GAP_order") {
+  // The generators, and the order when the method computes it on the way
+  // or when OutFormat asks for it.
+  struct AutomorphismGroup {
+    std::vector<MyMatrix<Tint>> ListGen;
+    std::optional<mpz_class> opt_order;
+  };
+  auto f_group = [&]() -> AutomorphismGroup {
+    if (method == "graph") {
+      std::vector<MyMatrix<Tint>> ListGen =
+          ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
+                                                               std::cerr);
+      if (OutFormat != "GAP_order") {
+        return {std::move(ListGen), {}};
+      }
       // The action on the canonic family is faithful, the family being of
       // full rank.
       CanonicVectorFamily<Tint> fam =
           GetCanonicVectorFamily<T, Tint>(ListMat[0], std::cerr);
-      opt_order = OrderFromGens<Tint, Tgroup>(fam.get_full(), ListGen);
+      mpz_class order = OrderFromGens<Tint, Tgroup>(fam.get_full(), ListGen);
+      return {std::move(ListGen), order};
     }
-  } else if (method == "plesken_souvignier") {
-    PleskenSouvignierAutomResult<Tint> result =
-        PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, std::cerr);
-    ListGen = result.ListGen;
-    opt_order =
-        PleskenSouvignierGroupOrder<mpz_class>(result.ListOrbitSize);
-  } else {
-    // The reflections in the roots of norm 2 are integral only for an
-    // integral form, and the decomposition is the one of a single form.
-    if (ListMat.size() != 1 || !IsIntegralMatrix(ListMat[0])) {
-      std::cerr << "LATT_Automorphism: the " << method
-                << " method needs a single integral Gram matrix\n";
-      throw TerminalException{1};
+    if (method == "plesken_souvignier") {
+      PleskenSouvignierAutomResult<Tint> result =
+          PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, std::cerr);
+      mpz_class order =
+          PleskenSouvignierGroupOrder<mpz_class>(result.ListOrbitSize);
+      return {std::move(result.ListGen), order};
     }
-    VinbergAutom<Tint> vin =
-        (method == "vinberg")
-            ? ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0],
-                                                          std::cerr)
-            : ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0],
-                                                              std::cerr);
-    ListGen = vin.ListGen;
-    opt_order = vin.order;
-  }
+    if (method == "vinberg" || method == "weyl_chamber") {
+      // The reflections in the roots of norm 2 are integral only for an
+      // integral form, and the decomposition is the one of a single form.
+      if (ListMat.size() != 1 || !IsIntegralMatrix(ListMat[0])) {
+        std::cerr << "LATT_Automorphism: the " << method
+                  << " method needs a single integral Gram matrix\n";
+        throw TerminalException{1};
+      }
+      VinbergAutom<Tint> vin =
+          (method == "vinberg")
+              ? ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0],
+                                                            std::cerr)
+              : ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0],
+                                                                std::cerr);
+      return {std::move(vin.ListGen), vin.order};
+    }
+    std::cerr << "LATT_Automorphism: unknown method=" << method << "\n";
+    std::cerr << "The methods are graph, plesken_souvignier, vinberg and "
+                 "weyl_chamber\n";
+    throw TerminalException{1};
+  };
+  AutomorphismGroup group = f_group();
   if (OutFormat == "GAP_order") {
-    os << "return " << *opt_order << ";\n";
+    os << "return " << *group.opt_order << ";\n";
     return;
   }
   if (OutFormat == "GAP") {
     os << "return ";
-    WriteListMatrixGAP(os, ListGen);
+    WriteListMatrixGAP(os, group.ListGen);
     os << ";\n";
     return;
   }
   if (OutFormat == "Oscar") {
-    os << ListGen.size() << "\n";
-    for (auto &eMat : ListGen) {
+    os << group.ListGen.size() << "\n";
+    for (auto &eMat : group.ListGen) {
       WriteMatrix(os, eMat);
     }
     return;
