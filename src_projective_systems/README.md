@@ -131,19 +131,28 @@ PROJ_HeckeOperators data/Picard_Gaussian.txt data/Picard_Gaussian_T2+i.txt 3 Gam
 computes T(2+i) on H^2 (index 2) and H^3 (index 3) of Gamma_0(n) modulo two
 primes. `identity` as the Hecke matrix gives the homology only.
 
-## The paramodular groups: PROJ_SiegelVoronoiCells
+## The paramodular groups and Sp_2g(Z): PROJ_SiegelVoronoiCells
 
 ```
-PROJ_SiegelVoronoiCells [N] [n_start] [seed] [output]
+PROJ_SiegelVoronoiCells [g] [N] [mode] [n_start] [seed] [output]
 ```
 
-writes the description file of K(N) = Sp(J_N, Z), J_N = [[0, D], [-D, 0]],
-D = diag(1, N) (N = 1 is Sp_4(Z)): the cells of the Siegel space of J_N
-(the positive forms A with (A J_N)^2 = -lambda I) cut out by the Voronoi
-cones of the perfect quaternary forms, as MacPherson and McConnell did for
-Sp_4(Z) (`siegel_voronoi.h`).
+for the group Sp(J, Z), J = [[0, D], [-D, 0]], D = diag(1, ..., 1, N) on
+Z^{2g}: Sp_2g(Z) for N = 1, the paramodular group K(N) for g = 2. Its
+cells are the cells of the Siegel space of J (the positive forms A with
+(A J)^2 = -lambda I) cut out by the Voronoi cones of the perfect forms in
+2g variables, as MacPherson and McConnell did for Sp_4(Z)
+(`siegel_voronoi.h`). The modes:
 
-* The perfect cones of GL_4(Z) and their adjacencies come from
+* `full` (g = 2): the description file of the complex, all the levels;
+* `top`: the top cells only, with the orders of their stabilizers;
+* `fast`: as `top`, the facets tested with the margin 0.01 / |X| only (the
+  same cells for Sp_4(Z), K(2), K(3), about ten times faster);
+* `rays`: as `top`, the ridges found by shooting rays from an interior
+  point instead of testing all the facets (fast, but misses ridges: 20 or
+  21 top cells instead of 22 for K(3)).
+
+* The perfect cones of GL_2g(Z) and their adjacencies come from
   `src_perfect` (`get_full_complex_enumeration_kernel`); the first top cell
   is the cone containing a random rational point of the Siegel space
   (`ConeWalker::find_containing_cone_form`), the others are reached across
@@ -155,6 +164,17 @@ Sp_4(Z) (`siegel_voronoi.h`).
   (`n_start` random starts), the dimension is the kernel of the
   differential of the equations on the span of C(X). Points found only
   with smaller weights are reported as doubtful and not counted.
+* The top cells and the ridges crossed by the walk are certified exactly
+  (`certify_top_cell`, `certify_ridge`): the Siegel space has the rational
+  parametrization A(X, W) = S^{-1} [[W, W X], [X W, X W X + W^{-1}]] S^{-1},
+  S = diag(I, D). A top cell gets a rational point A(X, W) in the open
+  cone. A ridge gets a rational curve (X, W)(t) from one side to the
+  other, on which, by Sturm sequences, the functional of the facet has one
+  simple root in (0, 1) and the other facet functionals of the two cones
+  none: the facet meets the Siegel space in dimension g (g + 1) - 1. Only
+  the certified ridges are crossed. In the modes other than `full`, 200
+  random rational points of the Siegel space are located in the perfect
+  cones as an independent check that every top cell met is known.
 * The faces at infinity are the faces spanning an isotropic line or
   Lagrangian plane.
 * A configuration Y of the next level contained in X is a face only if the
@@ -169,7 +189,8 @@ Sp_4(Z) (`siegel_voronoi.h`).
   which `compute_projective_cell_complex` uses to drop these incidences.
 
 For N = 1 the output is the complex of `data/Sp4.txt` (the fourteen sets,
-no non faces, the same homology and Hecke operators). For N = 2 the orbits
+no non faces, the same homology and Hecke operators). The top cells, all
+certified: 2 for Sp_4(Z), 6 for K(2), 22 for K(3). For N = 2 the orbits
 of cells of the dimensions 6, ..., 0 are 6, 25, 41, 33, 12, 4, 2, but the
 cells of dimension 1 end at interior points of the cells at infinity of
 two vectors (Lagrangian pairs), so the complex is not regular at infinity
