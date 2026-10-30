@@ -581,10 +581,9 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusScheme scheme,
       what the enumeration needs -- the order for the mass, the generators
       for the orbits of projective points.
      */
-    VinbergAutom<Tint> vin =
+    VinbergAutom<Tint, Tgroup> vin =
         ComputeAutomorphismVinberg<T, Tint, Tgroup>(GramMat, os);
-    info.order =
-        UniversalScalarConversion<typename Tgroup::Tint, mpz_class>(vin.order);
+    info.order = vin.order;
     info.ListGenMat = vin.ListGen;
 #ifdef DEBUG_GENUS_ENUMERATION
     os << "GENUS: |Aut|=" << vin.order << " = |W(R)|=" << vin.weyl_order
@@ -595,10 +594,9 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusScheme scheme,
     // Scheme A: the Plesken-Souvignier engine on the Z-spanning family. The
     // order is the product of the stabilizer-chain orbit lengths.
     std::vector<MyMatrix<T>> ListMat{GramMat};
-    PleskenSouvignierAutomResult<Tint> res =
-        PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, os);
-    info.order =
-        UniversalScalarConversion<typename Tgroup::Tint, mpz_class>(res.order);
+    PleskenSouvignierAutomResult<Tint, Tgroup> res =
+        PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(ListMat, os);
+    info.order = res.order;
     info.ListGenMat = res.ListGen;
   } else {
     // Scheme B: the MatrixGroup algorithm on the full-rank family. The order
@@ -607,8 +605,7 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusScheme scheme,
     info.ListGenMat =
         IteratedShortestAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
     MyMatrix<Tint> fam = root_iterated_shortest<T, Tint>(GramMat, os);
-    info.order = UniversalScalarConversion<typename Tgroup::Tint, mpz_class>(
-        OrderFromGens<Tint, Tgroup>(fam, info.ListGenMat));
+    info.order = OrderFromGens<Tint, Tgroup>(fam, info.ListGenMat);
   }
 #ifdef DEBUG_GENUS_ENUMERATION
   if (scheme != GenusScheme::CanonicalForm) {

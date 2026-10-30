@@ -798,9 +798,9 @@ std::optional<MyMatrix<Tint>> TestIntEquivalence_ListMat_Vdiag(
   The generators of the integral automorphism group of a configuration and
   its order.
  */
-template <typename Tint, typename TintGroup> struct IntAutomorphismGroup {
+template <typename Tint, typename Tgroup> struct IntAutomorphismGroup {
   std::vector<MyMatrix<Tint>> ListGen;
-  TintGroup order;
+  typename Tgroup::Tint order;
 };
 
 /*
@@ -817,7 +817,7 @@ template <typename Tint, typename TintGroup> struct IntAutomorphismGroup {
   returns the index of the integral subgroup in it.
  */
 template <typename T, typename Tint, typename Tgroup>
-IntAutomorphismGroup<Tint, typename Tgroup::Tint>
+IntAutomorphismGroup<Tint, Tgroup>
 GetIntAutomorphism_FromPermGens(
     MyMatrix<Tint> const &SHV,
     [[maybe_unused]] std::vector<MyMatrix<T>> const &ListMat,
@@ -928,7 +928,7 @@ GetIntAutomorphism_FromPermGens(
 }
 
 template <typename T, typename Tint, typename Tgroup>
-IntAutomorphismGroup<Tint, typename Tgroup::Tint>
+IntAutomorphismGroup<Tint, Tgroup>
 GetIntAutomorphism_ListMat_Vdiag(
     MyMatrix<Tint> const &SHV, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {

@@ -15,8 +15,9 @@
 
 namespace {
 
-template <typename T, typename Tint>
-void write_amf_result(std::ostream &os, AmfResult<T, Tint> const &res, std::string const &level) {
+template <typename T, typename Tint, typename Tgroup>
+void write_amf_result(std::ostream &os, AmfResult<T, Tint, Tgroup> const &res,
+                      std::string const &level) {
   os << "return rec(level:=\"" << level << "\", n_class:=" << res.l_class.size() << ", n_state:=" << res.n_state
      << ",\nListAutOrder:=[";
   for (size_t j = 0; j < res.l_class.size(); j++) {
@@ -53,6 +54,10 @@ void write_amf_result(std::ostream &os, AmfResult<T, Tint> const &res, std::stri
 template <typename T, typename Tint>
 void process_amf(std::string const &file_desc, std::string const &str_level, std::string const &str_primes,
                  std::string const &file_out) {
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using TintGroup = mpz_class;
+  using Tgroup = permutalib::Group<Telt, TintGroup>;
   DescriptionTokenReader<Tint> tr{read_description_tokens(file_desc)};
   RealifiedRing<T, Tint> ring = read_realified_ring<T, Tint>(tr);
   if (ring.d == 1 && str_level != "1") {
@@ -74,7 +79,8 @@ void process_amf(std::string const &file_desc, std::string const &str_level, std
     }
     l_prime.push_back(P);
   }
-  AmfResult<T, Tint> res = compute_algebraic_modular_forms(ring, N, l_prime, std::cerr);
+  AmfResult<T, Tint, Tgroup> res =
+      compute_algebraic_modular_forms<T, Tint, Tgroup>(ring, N, l_prime, std::cerr);
   std::cerr << "GENUS_AlgebraicModularForms: " << res.l_class.size() << " classes, mass " << res.mass << ", "
             << res.n_state << " states\n";
   if (N) {

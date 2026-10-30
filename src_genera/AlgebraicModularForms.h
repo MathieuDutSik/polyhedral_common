@@ -54,18 +54,14 @@
   is returned for that.
  */
 
-using AmfTidx = uint32_t;
-using AmfTelt = permutalib::SingleSidedPerm<AmfTidx>;
-using AmfTgroup = permutalib::Group<AmfTelt, mpz_class>;
-
-template <typename T, typename Tint> struct AmfClass {
+template <typename T, typename Tint, typename Tgroup> struct AmfClass {
   // the canonical Z-basis, rows in the realified coordinates
   MyMatrix<T> basis;
   MyMatrix<T> basis_inv;
   MyMatrix<Tint> G;
   MyMatrix<Tint> Omega;
   std::vector<MyMatrix<Tint>> l_aut;
-  mpz_class aut_order;
+  typename Tgroup::Tint aut_order;
   // the level structure: the line space mod N, the orbit of each line
   // (-1 for a non isotropic one) and a representative line of each orbit
   LevelSpace ls_level;
@@ -82,8 +78,8 @@ struct AmfHeckeMatrix {
   size_t n_neighbor = 0;
 };
 
-template <typename T, typename Tint> struct AmfResult {
-  std::vector<AmfClass<T, Tint>> l_class;
+template <typename T, typename Tint, typename Tgroup> struct AmfResult {
+  std::vector<AmfClass<T, Tint, Tgroup>> l_class;
   std::vector<size_t> l_offset;
   size_t n_state = 0;
   T mass;
@@ -101,7 +97,7 @@ template <typename T, typename Tint> struct AmfCanonical {
 /*
   The canonical form of the lattice of basis A (realified coordinates).
  */
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 AmfCanonical<T, Tint> amf_canonical(RealifiedRing<T, Tint> const &ring, MyMatrix<T> const &A_in,
                                   std::ostream &os) {
   // Over Z the family is {G} and Omega is empty.
@@ -125,8 +121,8 @@ AmfCanonical<T, Tint> amf_canonical(RealifiedRing<T, Tint> const &ring, MyMatrix
   }
   // Over Z the Weyl-chamber canonical form of GenusEnumeration; over O_K the
   // canonical form of the family.
-  MyMatrix<Tint> Pc = ring.d == 1 ? ComputeCanonicalFormWeylChamber<T, Tint, AmfTgroup>(G, os)
-                                     : ComputeCanonicalFormMultiple<T, Tint, AmfTgroup>(l_mat, os);
+  MyMatrix<Tint> Pc = ring.d == 1 ? ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(G, os)
+                                     : ComputeCanonicalFormMultiple<T, Tint, Tgroup>(l_mat, os);
   MyMatrix<T> Pc_T = UniversalMatrixConversion<T, Tint>(Pc);
   MyMatrix<T> A_can = Pc_T * A;
   MyMatrix<T> G_can = A_can * B_T * A_can.transpose();
@@ -232,10 +228,11 @@ LineOrbits amf_line_orbits(LS const &ls, std::vector<MyMatrix<Tint>> const &l_ge
 /*
   A new class: its automorphism group and the orbits of the level lines.
  */
-template <typename T, typename Tint>
-AmfClass<T, Tint> amf_new_class(RealifiedRing<T, Tint> const &ring, AmfCanonical<T, Tint> const &can,
-                              std::optional<AmfLevel> const &N, std::ostream &os) {
-  AmfClass<T, Tint> cl;
+template <typename T, typename Tint, typename Tgroup>
+AmfClass<T, Tint, Tgroup>
+amf_new_class(RealifiedRing<T, Tint> const &ring, AmfCanonical<T, Tint> const &can,
+              std::optional<AmfLevel> const &N, std::ostream &os) {
+  AmfClass<T, Tint, Tgroup> cl;
   cl.basis = can.basis;
   cl.basis_inv = Inverse(can.basis);
   cl.G = can.G;
@@ -256,13 +253,13 @@ AmfClass<T, Tint> amf_new_class(RealifiedRing<T, Tint> const &ring, AmfCanonical
   if (ring.d == 1) {
     // Over Z the Vinberg decomposition of GenusEnumeration gives the order
     // and the generators without enumerating the group.
-    LatticeAutInfo<T, Tint, AmfTgroup> info =
-        GetLatticeAutInfo<T, Tint, AmfTgroup>(G_T, GenusScheme::CanonicalForm, os);
+    LatticeAutInfo<T, Tint, Tgroup> info =
+        GetLatticeAutInfo<T, Tint, Tgroup>(G_T, GenusScheme::CanonicalForm, os);
     l_aut_red = info.ListGenMat;
     cl.aut_order = info.order;
   } else {
-    IntAutomorphismGroup<Tint, typename AmfTgroup::Tint> aut =
-        ArithmeticAutomorphismGroupMultiple<T, Tint, AmfTgroup>(l_mat, os);
+    IntAutomorphismGroup<Tint, Tgroup> aut =
+        ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(l_mat, os);
     l_aut_red = std::move(aut.ListGen);
     cl.aut_order = aut.order;
   }
@@ -325,12 +322,13 @@ std::optional<T> amf_genus_mass(RealifiedRing<T, Tint> const &ring, std::ostream
   while the neighbours, which cost a canonical form each, are one per
   orbit.
  */
-template <typename T, typename Tint>
-AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
-                                                 std::optional<AmfLevel> const &N,
-                                                 std::vector<OrderPrime> const &l_prime,
-                                                 std::ostream &os) {
-  AmfResult<T, Tint> res;
+template <typename T, typename Tint, typename Tgroup>
+AmfResult<T, Tint, Tgroup>
+compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
+                                std::optional<AmfLevel> const &N,
+                                std::vector<OrderPrime> const &l_prime,
+                                std::ostream &os) {
+  AmfResult<T, Tint, Tgroup> res;
   std::map<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>, size_t> map_class;
   auto f_insert = [&](AmfCanonical<T, Tint> const &can) -> size_t {
     std::pair<MyMatrix<Tint>, MyMatrix<Tint>> key{can.G, can.Omega};
@@ -339,7 +337,7 @@ AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const 
       return iter->second;
     }
     size_t idx = res.l_class.size();
-    res.l_class.push_back(amf_new_class(ring, can, N, os));
+    res.l_class.push_back(amf_new_class<T, Tint, Tgroup>(ring, can, N, os));
     map_class[key] = idx;
 #ifdef DEBUG_ALGEBRAIC_MODULAR_FORMS
     os << "AMF: class " << idx << " |Aut|=" << res.l_class[idx].aut_order << " level orbits "
@@ -348,7 +346,7 @@ AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const 
     return idx;
   };
   int n = ring.n();
-  (void)f_insert(amf_canonical(ring, IdentityMat<T>(n), os));
+  (void)f_insert(amf_canonical<T, Tint, Tgroup>(ring, IdentityMat<T>(n), os));
   // The weighted transitions (class, orbit) -> (class, orbit), per prime.
   struct Transition {
     size_t i;
@@ -386,7 +384,7 @@ AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const 
         for (auto &basis_nb : l_nb) {
           n_nb += size_X;
           MyMatrix<T> A_nb = basis_nb * basis_i;
-          AmfCanonical<T, Tint> can = amf_canonical(ring, A_nb, os);
+          AmfCanonical<T, Tint> can = amf_canonical<T, Tint, Tgroup>(ring, A_nb, os);
           size_t j = f_insert(can);
           if (!N) {
             l_trans[ip].push_back({i, 0, j, 0, ScalarFromInt64<T>(static_cast<int64_t>(size_X))});
@@ -403,7 +401,7 @@ AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const 
               R_red[a * n + b] = order_residue_rat(R(a, b), mod_level);
             }
           }
-          AmfClass<T, Tint> const &cl_j = res.l_class[j];
+          AmfClass<T, Tint, Tgroup> const &cl_j = res.l_class[j];
           std::map<std::pair<size_t, size_t>, size_t> count;
           for (size_t idx = 0; idx < orbit_of_line_i.size(); idx++) {
             if (orbit_of_line_i[idx] == -1) {
@@ -458,7 +456,7 @@ AmfResult<T, Tint> compute_algebraic_modular_forms(RealifiedRing<T, Tint> const 
   for (auto &cl : res.l_class) {
     res.l_offset.push_back(offset);
     offset += cl.l_orbit_repr.size();
-    res.mass += T(1) / UniversalScalarConversion<T, mpz_class>(cl.aut_order);
+    res.mass += T(1) / UniversalScalarConversion<T, typename Tgroup::Tint>(cl.aut_order);
   }
   res.n_state = offset;
   res.mass_formula = amf_genus_mass(ring, os);

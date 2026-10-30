@@ -635,7 +635,7 @@ MyMatrix<Tint> ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::os
   lifted generators index.
  */
 template <typename T, typename Tint, typename Tgroup>
-IntAutomorphismGroup<Tint, typename Tgroup::Tint>
+IntAutomorphismGroup<Tint, Tgroup>
 GetIntAutomorphism_Family(std::vector<MyMatrix<T>> const &ListMat,
                           CanonicVectorFamily<Tint> const &fam,
                           MyMatrix<Tint> const &SHV, std::ostream &os) {
@@ -678,7 +678,7 @@ ArithmeticAutomorphismGroup_inner(MyMatrix<T> const &inpMat,
   and its order.
  */
 template <typename T, typename Tint, typename Tgroup>
-IntAutomorphismGroup<Tint, typename Tgroup::Tint>
+IntAutomorphismGroup<Tint, Tgroup>
 ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
                                     std::ostream &os) {
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
@@ -696,7 +696,7 @@ ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
 }
 
 template <typename T, typename Tint, typename Tgroup>
-IntAutomorphismGroup<Tint, typename Tgroup::Tint>
+IntAutomorphismGroup<Tint, Tgroup>
 ArithmeticAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{inpMat};
   return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);

@@ -1424,21 +1424,23 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
   The result of the automorphism computation. The group order is the
   product of the orbit lengths along the stabilizer chain.
  */
-template <typename Tint> struct PleskenSouvignierAutomResult {
+template <typename Tint, typename Tgroup> struct PleskenSouvignierAutomResult {
   std::vector<MyMatrix<Tint>> ListGen;
   std::vector<int> ListOrbitSize;
-  mpz_class order;
+  typename Tgroup::Tint order;
   // The vector-sum depth the adaptive search settled on and the number of
   // backtrack nodes it visited (diagnostics for tuning the depth rule).
   int depth_used = 0;
   size_t nodes_used = 0;
 };
 
-inline mpz_class
+template <typename Tgroup>
+typename Tgroup::Tint
 PleskenSouvignierGroupOrder(std::vector<int> const &ListOrbitSize) {
-  mpz_class order(1);
+  using TintGroup = typename Tgroup::Tint;
+  TintGroup order(1);
   for (auto &siz : ListOrbitSize) {
-    order *= siz;
+    order *= TintGroup(siz);
   }
   return order;
 }
@@ -1707,8 +1709,9 @@ static const size_t PS_NODE_BUDGET = 500;
 // into ever-larger vector-sum data.
 static const int PS_MAX_ADAPTIVE_DEPTH = 8;
 
-template <typename Tint>
-PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
+template <typename Tint, typename Tgroup>
+PleskenSouvignierAutomResult<Tint, Tgroup>
+PleskenSouvignierAutomorphism(
     std::vector<MyMatrix<Tint>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
     std::ostream &os, int depth = -1,
     std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0_opt = {},
@@ -1747,10 +1750,10 @@ PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
       if (bd) {
         bd64 = ps_basis_data_to_int64(*bd);
       }
-      PleskenSouvignierAutomResult<int64_t> res64 =
-          PleskenSouvignierAutomorphism<int64_t>(ListMat64, SHVhalf64, os,
-                                                 depth, adjdet64, bd64);
-      PleskenSouvignierAutomResult<Tint> res;
+      PleskenSouvignierAutomResult<int64_t, Tgroup> res64 =
+          PleskenSouvignierAutomorphism<int64_t, Tgroup>(
+              ListMat64, SHVhalf64, os, depth, adjdet64, bd64);
+      PleskenSouvignierAutomResult<Tint, Tgroup> res;
       res.ListGen.reserve(res64.ListGen.size());
       for (auto &eGen : res64.ListGen) {
         res.ListGen.push_back(ps_matrix_from_int64<Tint>(eGen));
@@ -1788,14 +1791,14 @@ PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
 #endif
     }
   }
-  PleskenSouvignierAutomResult<Tint> result;
+  PleskenSouvignierAutomResult<Tint, Tgroup> result;
   for (int i = 0; i < ctx.n(); i++) {
     for (int j = ctx.nsg[i]; j < static_cast<int>(ctx.g[i].size()); j++) {
       result.ListGen.push_back(ctx.g[i][j]);
     }
   }
   result.ListOrbitSize = ctx.orders;
-  result.order = PleskenSouvignierGroupOrder(result.ListOrbitSize);
+  result.order = PleskenSouvignierGroupOrder<Tgroup>(result.ListOrbitSize);
   result.depth_used = ctx.depth;
   result.nodes_used = ctx.total_nodes;
 #ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER

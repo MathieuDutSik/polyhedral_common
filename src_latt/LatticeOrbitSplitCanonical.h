@@ -501,7 +501,7 @@ static const size_t OSC_MAX_BRANCH = 16;
  */
 template <typename Tint, typename Tord>
 Tord osc_pair_action_order(PleskenSouvignierContext<Tint> const &ctx,
-                           mpz_class const &order_aut) {
+                           Tord const &order_aut) {
   int n = ctx.n();
   int m = ctx.VS.m;
   // The standard basis in the family.
@@ -534,8 +534,7 @@ Tord osc_pair_action_order(PleskenSouvignierContext<Tint> const &ctx,
     }
   }
   (void)m;
-  Tord order = UniversalScalarConversion<Tord, mpz_class>(order_aut);
-  return order / Tord(2);
+  return order_aut / Tord(2);
 }
 
 /*
@@ -920,9 +919,9 @@ std::optional<std::vector<MyMatrix<Tint>>> OrbitSplitCanonicalFamily(
 #ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
   MicrosecondTime time;
 #endif
-  PleskenSouvignierAutomResult<Tint> aut =
-      PleskenSouvignierAutomorphism<Tint>(ListMatRed, SHVhalf, os, -1,
-                                          adjdet0);
+  PleskenSouvignierAutomResult<Tint, Tgroup> aut =
+      PleskenSouvignierAutomorphism<Tint, Tgroup>(ListMatRed, SHVhalf, os, -1,
+                                                  adjdet0);
 #ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
   os << "|OSC: automorphism group|=" << time << "\n";
 #endif

@@ -41,14 +41,15 @@ void ComputeAutomorphism(std::string const &FileListMat,
               << FileListMat << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
-  auto f_group = [&]() -> IntAutomorphismGroup<Tint, mpz_class> {
+  auto f_group = [&]() -> IntAutomorphismGroup<Tint, Tgroup> {
     if (method == "graph") {
       return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
                                                                   std::cerr);
     }
     if (method == "plesken_souvignier") {
-      PleskenSouvignierAutomResult<Tint> result =
-          PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, std::cerr);
+      PleskenSouvignierAutomResult<Tint, Tgroup> result =
+          PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(ListMat,
+                                                                std::cerr);
       return {std::move(result.ListGen), result.order};
     }
     if (method == "vinberg" || method == "weyl_chamber") {
@@ -59,7 +60,7 @@ void ComputeAutomorphism(std::string const &FileListMat,
                   << " method needs a single integral Gram matrix\n";
         throw TerminalException{1};
       }
-      VinbergAutom<Tint> vin =
+      VinbergAutom<Tint, Tgroup> vin =
           (method == "vinberg")
               ? ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0],
                                                             std::cerr)
@@ -72,7 +73,7 @@ void ComputeAutomorphism(std::string const &FileListMat,
                  "weyl_chamber\n";
     throw TerminalException{1};
   };
-  IntAutomorphismGroup<Tint, mpz_class> group = f_group();
+  IntAutomorphismGroup<Tint, Tgroup> group = f_group();
   if (OutFormat == "GAP_order") {
     os << "return " << group.order << ";\n";
     return;

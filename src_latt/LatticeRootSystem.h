@@ -51,11 +51,13 @@ template <typename Tint> struct RootSystemData {
 };
 
 // The order of the Weyl group of one irreducible component.
-inline void WeylOrderComponent(DynkinComponent const &c,
-                               mpz_class &acc) {
+template <typename Tgroup>
+void WeylOrderComponent(DynkinComponent const &c,
+                        typename Tgroup::Tint &acc) {
+  using TintGroup = typename Tgroup::Tint;
   int k = c.rank;
-  auto fact = [](int m) -> mpz_class {
-    mpz_class r(1);
+  auto fact = [](int m) -> TintGroup {
+    TintGroup r(1);
     for (int i = 2; i <= m; i++) {
       r *= i;
     }
@@ -66,18 +68,18 @@ inline void WeylOrderComponent(DynkinComponent const &c,
     acc *= fact(k + 1);
   } else if (c.letter == 'D') {
     // |W(D_k)| = 2^{k-1} k!
-    mpz_class w = fact(k);
+    TintGroup w = fact(k);
     for (int i = 0; i < k - 1; i++) {
       w *= 2;
     }
     acc *= w;
   } else if (c.letter == 'E') {
     if (k == 6) {
-      acc *= mpz_class(51840);
+      acc *= TintGroup(51840);
     } else if (k == 7) {
-      acc *= mpz_class(2903040);
+      acc *= TintGroup(2903040);
     } else if (k == 8) {
-      acc *= mpz_class(696729600);
+      acc *= TintGroup(696729600);
     } else {
       std::cerr << "ROOTSYS: E_" << k << " is not a root system\n";
       throw TerminalException{1};
@@ -88,11 +90,11 @@ inline void WeylOrderComponent(DynkinComponent const &c,
   }
 }
 
-template <typename Tint>
-mpz_class WeylGroupOrder(RootSystemData<Tint> const &rs) {
-  mpz_class acc(1);
+template <typename Tgroup, typename Tint>
+typename Tgroup::Tint WeylGroupOrder(RootSystemData<Tint> const &rs) {
+  typename Tgroup::Tint acc(1);
   for (auto &c : rs.components) {
-    WeylOrderComponent(c, acc);
+    WeylOrderComponent<Tgroup>(c, acc);
   }
   return acc;
 }

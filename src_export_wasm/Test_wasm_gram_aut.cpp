@@ -23,7 +23,7 @@ int main() {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, cpp_int>;
-  IntAutomorphismGroup<cpp_int, cpp_int> aut =
+  IntAutomorphismGroup<cpp_int, Tgroup> aut =
       ArithmeticAutomorphismGroupMultiple<cpp_rational, cpp_int, Tgroup>(
           ListMat, std::cerr);
   std::vector<MyMatrix<cpp_int>> const &ListGen = aut.ListGen;
