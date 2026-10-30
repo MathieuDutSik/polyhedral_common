@@ -570,24 +570,22 @@ f_for_stab_heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
     }
   };
   // The generators of the subset method with the order of the graph of the
-  // subset, a multiple of the order of the group (see
+  // subset, which is the order of the group (see
   // GetStabilizerWeightMatrix_Heuristic_Limited).
   auto f_subset_result = [&](GraphGeneratorsOrder<Tidx> &&gens_order)
       -> StabGeneratorsOrder<Tidx, Tint> {
-    std::optional<Tint> order = GetGraphGroupOrder<Tint>(gens_order);
+    Tint order = GetGraphGroupOrder<Tint>(gens_order);
 #ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
-    if (order) {
-      std::vector<Telt> LGen;
-      for (auto &eList : gens_order.ListGen)
-        LGen.emplace_back(Telt(eList));
-      Tgroup GRP(LGen, Telt(static_cast<Tidx>(nbRow)));
-      if (*order % GRP.size() != 0) {
-        std::cerr << "PES: f_for_stab_heuristic, the order of the graph of the "
-                     "subset "
-                  << *order << " is not a multiple of the one of the group "
-                  << GRP.size() << "\n";
-        throw TerminalException{1};
-      }
+    std::vector<Telt> LGen;
+    for (auto &eList : gens_order.ListGen)
+      LGen.emplace_back(Telt(eList));
+    Tgroup GRP(LGen, Telt(static_cast<Tidx>(nbRow)));
+    if (order != GRP.size()) {
+      std::cerr << "PES: f_for_stab_heuristic, the order of the graph of the "
+                   "subset "
+                << order << " is not the one of the group " << GRP.size()
+                << "\n";
+      throw TerminalException{1};
     }
 #endif
     return {std::move(gens_order.ListGen), order};
@@ -732,7 +730,7 @@ LinPolytope_Automorphism_GramMat_GensOrder_Kernel(MyMatrix<T> const &EXT,
   return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
 }
 
-// The generators of the automorphism group, with its order when known (see
+// The generators of the automorphism group with its order (see
 // f_for_stab_heuristic and f_for_stab_kernel). Only the kernel depends on
 // the index type of the weights.
 template <typename T, typename Tgroup>
@@ -1442,10 +1440,10 @@ GetListGenAutomorphism_ListMat_Vdiag_Kernel(
 }
 
 /*
-  The generators of the automorphism group of the configuration with, when
-  the graph program gives it, a multiple of the order of the group they
-  generate (see StabGeneratorsOrder). Only the kernel depends on the index
-  type of the weights (see f_for_stab_heuristic).
+  The generators of the automorphism group of the configuration with the
+  order of the group they generate (see StabGeneratorsOrder). Only the
+  kernel depends on the index type of the weights (see
+  f_for_stab_heuristic).
  */
 template <typename T, typename Tfield, typename Tgroup>
 StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>

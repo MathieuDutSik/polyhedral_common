@@ -1439,11 +1439,12 @@ GetStabilizerWeightMatrix_Kernel_idxin(Tgr const &eGR, size_t nbRow,
 
 /*
   The generators of the stabilizer of the weight matrix and the order of the
-  automorphism group of the graph as exact factors (GraphGeneratorsOrder). The generators are the restrictions
-  of the graph automorphisms to the nbRow vertices of the matrix, so that
-  the group they generate is a quotient of the automorphism group of the
-  graph: its order divides the one of the graph, with equality when the
-  restriction is faithful.
+  automorphism group of the graph as exact factors (GraphGeneratorsOrder).
+  The generators are the restrictions of the graph automorphisms to the
+  nbRow vertices of the matrix. The restriction is faithful for the graphs
+  of GetGraphFromWeightedMatrix, so the order of the graph is the order of
+  the group the generators generate. That faithfulness is checked under
+  SANITY_CHECK_WEIGHT_MATRIX by GroupFromStabGeneratorsOrder.
  */
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value,
           bool is_symm>
@@ -1480,18 +1481,14 @@ GraphGeneratorsOrder<Tidx> GetStabilizerWeightMatrix_KernelGraph(
 }
 
 /*
-  The generators of a stabilizer with, when it is known, the order of the
-  group they generate or a multiple of it. Tgroup(LGen, id, order) (see
-  GroupFromStabGeneratorsOrder) builds the stabilizer chain by the randomized
-  construction of permutalib, which stops when the chain reaches the order:
-  the chain is made of group elements, so that it reaches the order of the
-  group only when it is complete, and never reaches a strict multiple of it,
-  the chain being then completed exactly (only more slowly). A value below
-  the order of the group would give a wrong group.
+  The generators of a stabilizer and the exact order of the group they
+  generate. Tgroup(LGen, id, order) (see GroupFromStabGeneratorsOrder)
+  builds the stabilizer chain by the randomized construction of permutalib,
+  which stops when the chain reaches the order.
  */
 template <typename Tidx, typename Tint> struct StabGeneratorsOrder {
   std::vector<std::vector<Tidx>> ListGen;
-  std::optional<Tint> order;
+  Tint order;
 };
 
 template <typename Tgroup>
@@ -1505,14 +1502,22 @@ Tgroup GroupFromStabGeneratorsOrder(
   for (auto &eList : gens_order.ListGen)
     LGen.emplace_back(Telt(eList));
   Telt id(static_cast<Tidx>(nbRow));
-  if (gens_order.order)
-    return Tgroup(LGen, id, *gens_order.order);
-  return Tgroup(LGen, id);
+#ifdef SANITY_CHECK_WEIGHT_MATRIX
+  // The group built without the order, so that its size is computed
+  // independently of the value checked.
+  Tgroup GRP_check(LGen, id);
+  if (GRP_check.size() != gens_order.order) {
+    std::cerr << "WEIGHT: the order " << gens_order.order
+              << " is not the one of the group generated, "
+              << GRP_check.size() << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  return Tgroup(LGen, id, gens_order.order);
 }
 
 // The generators of the stabilizer of the weight matrix with the order of
-// the automorphism group of the graph, a multiple of the order of the group
-// they generate (see GetStabilizerWeightMatrix_KernelGraph).
+// the group they generate (see GetStabilizerWeightMatrix_KernelGraph).
 template <typename T, typename Tgr, typename Tidx, typename Tint,
           typename Tidx_value, bool is_symm>
 StabGeneratorsOrder<Tidx, Tint> GetStabilizerWeightMatrix_Kernel(

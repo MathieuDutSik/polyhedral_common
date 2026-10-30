@@ -809,12 +809,11 @@ template <typename Tint, typename Tgroup> struct IntAutomorphismGroup {
   that obtained the permutations another way, for instance through the
   absolute trick on an antipodal family, does not have to compute them again.
 
-  The order: the permutation group is built from the generators with the
-  bound of gens_order (exact, a bound only speeding up the construction, see
-  StabGeneratorsOrder). The family being of full rank, the permutation group
-  is isomorphic to the rational group it lifts to. When every generator is
-  integral that is the integral group; otherwise the subspace machinery
-  returns the index of the integral subgroup in it.
+  The order: the family being of full rank, the permutation group of
+  gens_order, of order gens_order.order, is isomorphic to the rational group
+  it lifts to. When every generator is integral that is the integral group;
+  otherwise the subspace machinery returns the index of the integral
+  subgroup in it.
  */
 template <typename T, typename Tint, typename Tgroup>
 IntAutomorphismGroup<Tint, Tgroup>
@@ -850,11 +849,22 @@ GetIntAutomorphism_FromPermGens(
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   MicrosecondTime time;
 #endif
-  typename Tgroup::Tint order_perm =
-      GroupFromStabGeneratorsOrder<Tgroup>(gens_order, SHV.rows()).size();
-#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "|PES: GetIntAutomorphism, order of the permutation group|=" << time
-     << "\n";
+  typename Tgroup::Tint const &order_perm = gens_order.order;
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB_INT
+  {
+    // The group built without the order, so that its size is computed
+    // independently of the value checked.
+    std::vector<Telt> LGen;
+    for (auto &eList : ListGen)
+      LGen.emplace_back(Telt(eList));
+    Tgroup GRP_check(LGen, Telt(static_cast<Tidx>(SHV.rows())));
+    if (GRP_check.size() != order_perm) {
+      std::cerr << "PES: GetIntAutomorphism, the order " << order_perm
+                << " is not the one of the group generated, "
+                << GRP_check.size() << "\n";
+      throw TerminalException{1};
+    }
+  }
 #endif
   auto check_result =
       [&]([[maybe_unused]] std::vector<MyMatrix<Tint>> const &LGen) -> void {

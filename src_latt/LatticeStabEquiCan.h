@@ -409,8 +409,7 @@ GetListGenAutomorphism_AbsTrick_kernel(
   }
   // The lifted group maps onto the group of the generators on the pairs,
   // with as kernel the sign flips of the n_comp components: its order is
-  // 2^n_comp times the one on the pairs, of which the graph order is a
-  // multiple.
+  // 2^n_comp times the one on the pairs, which is the order of the graph.
   using TintGroup = typename Tgroup::Tint;
   TintGroup order = GetGraphGroupOrder<TintGroup>(gens_order);
   for (size_t i_comp = 0; i_comp < opt->n_comp; i_comp++) {
