@@ -119,7 +119,8 @@ void ComputeCanonical(std::string const &FileI, std::string const &OutFormat,
     os << ");\n";
     return;
   }
-  std::cerr << "Failed to find a matching entry\n";
+  std::cerr << "LATT_Canonicalize: unknown OutFormat=" << OutFormat << "\n";
+  std::cerr << "The OutFormat values are CPP, PYTHON, GAP and GAP_full\n";
   throw TerminalException{1};
 }
 
@@ -159,6 +160,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "              algebraic field described in FileDesc\n";
       std::cerr << "              (the lattice is Z^n in every case)\n";
       std::cerr << "OutFile: The filename of the data in output\n";
+      std::cerr << "OutFormat values:\n";
+      std::cerr << "  CPP      : the canonical Gram matrix (default)\n";
+      std::cerr << "  PYTHON   : the basis and the canonical Gram matrix\n";
+      std::cerr << "  GAP      : the canonical Gram matrix\n";
+      std::cerr << "  GAP_full : the basis and the canonical Gram matrix\n";
       std::cerr << "method values:\n";
       std::cerr << "  graph   : from the characteristic vector family "
                    "(default)\n";

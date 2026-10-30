@@ -67,7 +67,10 @@ void ComputeIsomorphism(std::string const &FileListMat1,
       return PleskenSouvignierLatticeIsometry<T, Tint>(ListMat1, ListMat2,
                                                        ListGenAut2, std::cerr);
     }
-    if (method == "vinberg" || method == "weyl_chamber") {
+    // weyl is vinberg: the residual family of the decomposition is already
+    // the Weyl-reduced one, the simple roots and a family of R^perp, which
+    // is what the weyl method of LATT_Canonicalize uses.
+    if (method == "vinberg" || method == "weyl" || method == "weyl_chamber") {
       // The reflections in the roots of norm 2 are integral only for an
       // integral form, and the decomposition is the one of a single form.
       if (ListMat1.size() != 1 || ListMat2.size() != 1 ||
@@ -76,16 +79,16 @@ void ComputeIsomorphism(std::string const &FileListMat1,
                   << "single integral Gram matrix on each side\n";
         throw TerminalException{1};
       }
-      if (method == "vinberg") {
-        return ComputeIsometryVinberg<T, Tint, Tgroup>(ListMat1[0],
-                                                       ListMat2[0], std::cerr);
+      if (method == "weyl_chamber") {
+        return ComputeIsometryWeylChamber<T, Tint, Tgroup>(
+            ListMat1[0], ListMat2[0], std::cerr);
       }
-      return ComputeIsometryWeylChamber<T, Tint, Tgroup>(
-          ListMat1[0], ListMat2[0], std::cerr);
+      return ComputeIsometryVinberg<T, Tint, Tgroup>(ListMat1[0], ListMat2[0],
+                                                     std::cerr);
     }
     std::cerr << "LATT_Isomorphism: unknown method=" << method << "\n";
-    std::cerr << "The methods are graph, plesken_souvignier, vinberg and "
-                 "weyl_chamber\n";
+    std::cerr << "The methods are graph, plesken_souvignier, vinberg, weyl "
+                 "and weyl_chamber\n";
     throw TerminalException{1};
   };
   std::optional<MyMatrix<Tint>> equiv = f_equiv();
@@ -159,6 +162,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "  vinberg            : through the root system, for a "
                    "single integral\n";
       std::cerr << "                       Gram matrix on each side\n";
+      std::cerr << "  weyl               : the same computation as vinberg, "
+                   "whose family\n";
+      std::cerr << "                       is the Weyl-reduced one of the weyl "
+                   "method of\n";
+      std::cerr << "                       LATT_Canonicalize\n";
       std::cerr << "  weyl_chamber       : as vinberg, on the Weyl-chamber "
                    "families\n";
       return -1;

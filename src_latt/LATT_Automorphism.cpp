@@ -52,7 +52,10 @@ void ComputeAutomorphism(std::string const &FileListMat,
                                                                 std::cerr);
       return {std::move(result.ListGen), result.order};
     }
-    if (method == "vinberg" || method == "weyl_chamber") {
+    // weyl is vinberg: the residual family of the decomposition is already
+    // the Weyl-reduced one, the simple roots and a family of R^perp, which
+    // is what the weyl method of LATT_Canonicalize uses.
+    if (method == "vinberg" || method == "weyl" || method == "weyl_chamber") {
       // The reflections in the roots of norm 2 are integral only for an
       // integral form, and the decomposition is the one of a single form.
       if (ListMat.size() != 1 || !IsIntegralMatrix(ListMat[0])) {
@@ -61,16 +64,16 @@ void ComputeAutomorphism(std::string const &FileListMat,
         throw TerminalException{1};
       }
       VinbergAutom<Tint, Tgroup> vin =
-          (method == "vinberg")
-              ? ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0],
-                                                            std::cerr)
-              : ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0],
-                                                                std::cerr);
+          (method == "weyl_chamber")
+              ? ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0],
+                                                                std::cerr)
+              : ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0],
+                                                            std::cerr);
       return {std::move(vin.ListGen), vin.order};
     }
     std::cerr << "LATT_Automorphism: unknown method=" << method << "\n";
-    std::cerr << "The methods are graph, plesken_souvignier, vinberg and "
-                 "weyl_chamber\n";
+    std::cerr << "The methods are graph, plesken_souvignier, vinberg, weyl "
+                 "and weyl_chamber\n";
     throw TerminalException{1};
   };
   IntAutomorphismGroup<Tint, Tgroup> group = f_group();
@@ -149,6 +152,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "  vinberg            : Aut(L) = W(R) x| Aut(L, rho) "
                    "for a single\n";
       std::cerr << "                       integral Gram matrix\n";
+      std::cerr << "  weyl               : the same computation as vinberg, "
+                   "whose family\n";
+      std::cerr << "                       is the Weyl-reduced one of the weyl "
+                   "method of\n";
+      std::cerr << "                       LATT_Canonicalize\n";
       std::cerr << "  weyl_chamber       : as vinberg, Aut(L, rho) from the "
                    "Weyl-chamber\n";
       std::cerr << "                       family, which spans the lattice\n";

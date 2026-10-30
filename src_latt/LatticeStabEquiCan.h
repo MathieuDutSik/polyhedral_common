@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_LATT_MATRIXCANONICALFORM_H_
-#define SRC_LATT_MATRIXCANONICALFORM_H_
+#ifndef SRC_LATT_LATTICESTABEQUICAN_H_
+#define SRC_LATT_LATTICESTABEQUICAN_H_
 
 // clang-format off
 #include "InvariantVectorFamily.h"
@@ -125,7 +125,7 @@ CanonicallyReorder_SHV_kernel(std::vector<MyMatrix<Tval>> const &ListMat,
   using T = Tval;
   using Tgr = GraphListAdj;
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "LSEC: Begining of ComputeCanonicalForm\n";
+  os << "LSEC: Beginning of CanonicallyReorder_SHV_kernel\n";
 #endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
@@ -146,7 +146,7 @@ CanonicallyReorder_SHV_kernel(std::vector<MyMatrix<Tval>> const &ListMat,
   //
   // Computing the scalar product matrix
   //
-  using Tidx_value = int16_t;
+  using Tidx_value = int32_t;
   /*
     When the matrices are symmetric (Gram matrices), so is the weight matrix.
     That halves its entries and halves the number of vertices of the graph,
@@ -269,7 +269,7 @@ std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick_kernel(
   using T = Tval;
   using Tgr = GraphListAdj;
   using Tidx = uint32_t;
-  using Tidx_value = int16_t;
+  using Tidx_value = int32_t;
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
@@ -383,7 +383,7 @@ GetListGenAutomorphism_AbsTrick_kernel(
   using Tgr = GraphListAdj;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using Tidx_value = int16_t;
+  using Tidx_value = int32_t;
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
@@ -472,7 +472,7 @@ MyMatrix<Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &List
   // Computing the Z-basis on which the computation relies.
   //
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "LSEC: Begining of ComputeCanonicalForm\n";
+  os << "LSEC: Beginning of ComputeCanonicalFormMultiple\n";
 #endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
@@ -729,6 +729,60 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalence_inner(
   return ArithmeticEquivalenceMultiple_inner<T,Tint,Tgroup>(ListMat1, SHV1, ListMat2, SHV2, os);
 }
 
+/*
+  The equivalence through the canonical forms of the absolute trick, which
+  works on the antipodal pairs, a quarter of the vertices of the graph of
+  the whole family. Applies when both families span the lattice and the
+  trick concludes on both sides: the configurations are then equivalent
+  exactly when their canonical forms B_k * ListMat_k[i] * B_k^T agree, and
+  P = B2^{-1} B1 satisfies P * ListMat1[i] * P^T = ListMat2[i]. Nothing
+  when the route does not apply, for the caller to run the test on the
+  whole family.
+ */
+template <typename T, typename Tint>
+std::optional<std::optional<MyMatrix<Tint>>>
+ArithmeticEquivalenceMultiple_AbsTrick(
+    std::vector<MyMatrix<T>> const &ListMat1,
+    CanonicVectorFamily<Tint> const &fam1,
+    std::vector<MyMatrix<T>> const &ListMat2,
+    CanonicVectorFamily<Tint> const &fam2, std::ostream &os) {
+  if (!fam1.spans_lattice || !fam2.spans_lattice) {
+    return {};
+  }
+  std::optional<MyMatrix<Tint>> opt1 =
+      CanonicallyReorder_SHV_AbsTrick<T, Tint>(ListMat1, fam1.SHVhalf, os);
+  if (!opt1) {
+    return {};
+  }
+  std::optional<MyMatrix<Tint>> opt2 =
+      CanonicallyReorder_SHV_AbsTrick<T, Tint>(ListMat2, fam2.SHVhalf, os);
+  if (!opt2) {
+    return {};
+  }
+  MyMatrix<Tint> B1 = get_canonicalization_matrix(*opt1, os);
+  MyMatrix<Tint> B2 = get_canonicalization_matrix(*opt2, os);
+  MyMatrix<T> B1_T = UniversalMatrixConversion<T, Tint>(B1);
+  MyMatrix<T> B2_T = UniversalMatrixConversion<T, Tint>(B2);
+  for (size_t iMat = 0; iMat < ListMat1.size(); iMat++) {
+    if (B1_T * ListMat1[iMat] * B1_T.transpose() !=
+        B2_T * ListMat2[iMat] * B2_T.transpose()) {
+      return std::optional<MyMatrix<Tint>>();
+    }
+  }
+  MyMatrix<Tint> P = Inverse(B2) * B1;
+#ifdef SANITY_CHECK_LATTICE_STAB_EQUI_CAN
+  MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(P);
+  for (size_t iMat = 0; iMat < ListMat1.size(); iMat++) {
+    if (P_T * ListMat1[iMat] * P_T.transpose() != ListMat2[iMat]) {
+      std::cerr << "LSEC: the equivalence of the canonical forms does not "
+                   "map the configurations\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return std::optional<MyMatrix<Tint>>(P);
+}
+
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
@@ -737,23 +791,37 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
+  if (ListMat1.size() != ListMat2.size()) {
+    std::cerr << "LSEC: the two lists of matrices have different lengths\n";
+    throw TerminalException{1};
+  }
   /*
     The smaller of the two families on each side. The rule picking it depends
     only on the isometry class, both candidate sizes being invariants, so two
     isometric lattices pick corresponding families and the comparison below
     of the two sizes cannot reject an equivalence that exists.
    */
-  MyMatrix<Tint> SHV1 =
-      GetCanonicVectorFamily<T, Tint>(ListMat1[0], os).get_full();
+  CanonicVectorFamily<Tint> fam1 =
+      GetCanonicVectorFamily<T, Tint>(ListMat1[0], os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetCanonicVectorFamily1|=" << time << "\n";
 #endif
-  MyMatrix<Tint> SHV2 =
-      GetCanonicVectorFamily<T, Tint>(ListMat2[0], os).get_full();
+  CanonicVectorFamily<Tint> fam2 =
+      GetCanonicVectorFamily<T, Tint>(ListMat2[0], os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetCanonicVectorFamily2|=" << time << "\n";
 #endif
-  return ArithmeticEquivalenceMultiple_inner<T,Tint,Tgroup>(ListMat1, SHV1, ListMat2, SHV2, os);
+  std::optional<std::optional<MyMatrix<Tint>>> opt_abs =
+      ArithmeticEquivalenceMultiple_AbsTrick<T, Tint>(ListMat1, fam1, ListMat2,
+                                                      fam2, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: ArithmeticEquivalenceMultiple_AbsTrick|=" << time << "\n";
+#endif
+  if (opt_abs) {
+    return *opt_abs;
+  }
+  return ArithmeticEquivalenceMultiple_inner<T, Tint, Tgroup>(
+      ListMat1, fam1.get_full(), ListMat2, fam2.get_full(), os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -823,5 +891,5 @@ IteratedShortestEquivalence(MyMatrix<T> const &inpMat1,
 }
 
 // clang-format off
-#endif  // SRC_LATT_MATRIXCANONICALFORM_H_
+#endif  // SRC_LATT_LATTICESTABEQUICAN_H_
 // clang-format on

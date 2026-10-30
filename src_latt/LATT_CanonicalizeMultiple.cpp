@@ -60,21 +60,28 @@ void ComputeCanonicalMultiple(std::string const &FileI,
     throw TerminalException{1};
   };
   MyMatrix<Tint> B = f_canonical();
+  // The canonical form is the whole list of reduced matrices: two
+  // inequivalent configurations can agree on the first one.
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
-  MyMatrix<T> Mat_red = B_T * ListMatrix[0] * B_T.transpose();
+  std::vector<MyMatrix<T>> ListMatRed;
+  for (auto &eMat : ListMatrix) {
+    ListMatRed.push_back(B_T * eMat * B_T.transpose());
+  }
   if (OutFormat == "CPP") {
-    WriteMatrix(os, Mat_red);
+    WriteListMatrix(os, ListMatRed);
     return;
   }
   if (OutFormat == "GAP") {
     os << "return rec(Basis:=";
     WriteMatrixGAP(os, B);
-    os << ", eG:=";
-    WriteMatrixGAP(os, Mat_red);
+    os << ", ListMatRed:=";
+    WriteListMatrixGAP(os, ListMatRed);
     os << ");\n";
     return;
   }
-  std::cerr << "OutFormat does not match anything\n";
+  std::cerr << "LATT_CanonicalizeMultiple: unknown OutFormat=" << OutFormat
+            << "\n";
+  std::cerr << "The OutFormat values are CPP and GAP\n";
   throw TerminalException{1};
 }
 
@@ -109,8 +116,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  flint       : fmpq_class / fmpz_class\n";
 #endif
       std::cerr << "OutFormat values:\n";
-      std::cerr << "  CPP : only the reduced matrix is in output\n";
-      std::cerr << "  GAP : the basis and the reduced matrix in GAP format\n";
+      std::cerr << "  CPP : the list of reduced matrices B * M_i * B^T\n";
+      std::cerr << "  GAP : the basis B and the list of reduced matrices\n";
       std::cerr << "method values:\n";
       std::cerr << "  graph              : from the characteristic vector "
                    "family (default)\n";
