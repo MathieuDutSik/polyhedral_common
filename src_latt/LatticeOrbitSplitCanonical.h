@@ -632,10 +632,8 @@ bool osc_select_rec(PleskenSouvignierContext<Tint> const &ctx,
     n_rank_test++;
 #endif
     int rep = orbits[iOrb][0];
-    MyVector<Tfield> v(n);
-    for (int i = 0; i < n; i++) {
-      v(i) = UniversalScalarConversion<Tfield, Tint>(ctx.VS.V(rep, i));
-    }
+    MyVector<Tfield> v =
+        UniversalVectorConversion<Tfield, Tint>(GetMatrixRow(ctx.VS.V, rep));
     return ech.increases_rank(v);
   };
   // The orbits to explore: the unique minimal one, or every member of a
@@ -694,10 +692,8 @@ bool osc_select_rec(PleskenSouvignierContext<Tint> const &ctx,
 #endif
     prefix.push_back(rep);
     prefix_col.push_back(osc_products_column(ctx, rep));
-    MyVector<Tfield> v(n);
-    for (int i = 0; i < n; i++) {
-      v(i) = UniversalScalarConversion<Tfield, Tint>(ctx.VS.V(rep, i));
-    }
+    MyVector<Tfield> v =
+        UniversalVectorConversion<Tfield, Tint>(GetMatrixRow(ctx.VS.V, rep));
     OscEchelon<Tfield> ech_next = ech;
     ech_next.insert(v);
     bool res;
@@ -920,14 +916,18 @@ std::optional<std::vector<MyMatrix<Tint>>> OrbitSplitCanonicalFamily(
   MicrosecondTime time;
 #endif
   PleskenSouvignierAutomResult<Tint, Tgroup> aut =
-      PleskenSouvignierAutomorphism<Tint, Tgroup>(ListMatRed, SHVhalf, os, -1,
-                                                  adjdet0);
+      PleskenSouvignierAutomorphism<Tint, Tgroup>(
+          ListMatRed, SHVhalf, PSAutomorphismOptions<Tint>{.adjdet0 = adjdet0},
+          os);
 #ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
   os << "|OSC: automorphism group|=" << time << "\n";
 #endif
   PleskenSouvignierContext<Tint> ctx =
-      PleskenSouvignierBuildContext(ListMatRed, SHVhalf, false, 0, os,
-                                    adjdet0);
+      PleskenSouvignierBuildContext(
+          ListMatRed, SHVhalf,
+          PSContextOptions<Tint>{
+              .with_fingerprint = false, .depth = 0, .adjdet0 = adjdet0},
+          os);
   int m = ctx.VS.m;
   // The generators as permutations of the antipodal pairs; -Id acts
   // trivially there, and the orbits and stabilizers on pairs are what
@@ -1050,24 +1050,19 @@ OrbitSplitCanonicalizeKernel(std::vector<MyMatrix<Tint>> const &ListMatRed,
   std::vector<MyMatrix<Tint>> ListSHVcan;
   PSInt64Bounds<Tint> bounds = ps_int64_bounds(ListMatRed, SHVhalf, adjdet0);
   if (ps_certify_int64(bounds, os)) {
-    std::vector<MyMatrix<int64_t>> ListMatRed64;
-    for (auto &eMat : ListMatRed) {
-      ListMatRed64.push_back(ps_matrix_to_int64(eMat));
-    }
-    MyMatrix<int64_t> SHVhalf64 = ps_matrix_to_int64(SHVhalf);
+    std::vector<MyMatrix<int64_t>> ListMatRed64 =
+        UniversalStdVectorMatrixConversion<int64_t, Tint>(ListMatRed);
+    MyMatrix<int64_t> SHVhalf64 =
+        UniversalMatrixConversion<int64_t, Tint>(SHVhalf);
     std::optional<std::pair<MyMatrix<int64_t>, int64_t>> adjdet64 =
-        std::make_pair(
-            ps_matrix_to_int64(adjdet0.first),
-            UniversalScalarConversion<int64_t, Tint>(adjdet0.second));
+        ps_adjdet_to_int64(adjdet0);
     std::optional<std::vector<MyMatrix<int64_t>>> opt64 =
         OrbitSplitCanonicalFamily<int64_t, Tgroup>(ListMatRed64, SHVhalf64,
                                                    adjdet64, os);
     if (!opt64) {
       return {};
     }
-    for (auto &eSHV : *opt64) {
-      ListSHVcan.push_back(ps_matrix_from_int64<Tint>(eSHV));
-    }
+    ListSHVcan = UniversalStdVectorMatrixConversion<Tint, int64_t>(*opt64);
   } else {
     std::optional<std::vector<MyMatrix<Tint>>> opt =
         OrbitSplitCanonicalFamily<Tint, Tgroup>(ListMatRed, SHVhalf, adjdet0,

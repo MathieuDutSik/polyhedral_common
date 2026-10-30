@@ -198,7 +198,7 @@ PleskenSouvignierIntegralFormsPair(std::vector<MyMatrix<T>> const &ListMat1,
 template <typename T, typename Tint, typename Tgroup>
 PleskenSouvignierAutomResult<Tint, Tgroup>
 PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
-                                     std::ostream &os, int depth = -1) {
+                                     std::ostream &os) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -223,8 +223,8 @@ PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
   os << "|PS: LatticeAutomorphism, preparation|=" << time << "\n";
 #endif
   PleskenSouvignierAutomResult<Tint, Tgroup> result =
-      PleskenSouvignierAutomorphism<Tint, Tgroup>(ListMatRed, SHVhalf, os,
-                                                  depth);
+      PleskenSouvignierAutomorphism<Tint, Tgroup>(
+          ListMatRed, SHVhalf, PSAutomorphismOptions<Tint>{}, os);
   // g_red preserves P M P^T, so P^{-1} g_red P preserves M, and it is
   // integral, P being unimodular.
   for (auto &eGen : result.ListGen) {
@@ -320,7 +320,8 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierLatticeIsometry(
     ListGenAut2Red.push_back(Pmat2 * eGen * Pmat2Inv);
   }
   std::optional<MyMatrix<Tint>> opt = PleskenSouvignierIsometry<Tint>(
-      ListMatRed1, SHVhalf1, ListMatRed2, SHVhalf2, ListGenAut2Red, os);
+      ListMatRed1, SHVhalf1, ListMatRed2, SHVhalf2, ListGenAut2Red,
+      PSIsometryOptions<Tint>{}, os);
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   os << "|PS: LatticeIsometry found=" << opt.has_value() << "|=" << time
      << "\n";

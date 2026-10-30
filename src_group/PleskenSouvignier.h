@@ -473,12 +473,10 @@ std::vector<int> ps_select_basis(PleskenSouvignierContext<Tint> const &ctx) {
   });
   RankTool<Tfield> tool(n);
   std::vector<int> bas;
-  MyVector<Tfield> Vf(n);
   for (int idx = 0; idx < m && static_cast<int>(bas.size()) < n; idx++) {
     int j = order[idx];
-    for (int i = 0; i < n; i++) {
-      Vf(i) = UniversalScalarConversion<Tfield, Tint>(ctx.VS.V(j, i));
-    }
+    MyVector<Tfield> Vf =
+        UniversalVectorConversion<Tfield, Tint>(GetMatrixRow(ctx.VS.V, j));
     int rank_prev = tool.get_rank();
     tool.insert_if_indep(Vf);
     if (tool.get_rank() != rank_prev) {
@@ -713,8 +711,9 @@ bool ps_vector_sum_check(PleskenSouvignierContext<Tint> const &Ci,
   The context. with_fingerprint is set for the lattice whose basis is
   searched (the only one for automorphisms, the first one for an
   isometry); the fingerprint, the location of the standard basis and the
-  vector-sum data are only needed there. depth = -1 selects the default
-  of n/10 rounded, as Hecke does; depth = 0 disables the vector sums.
+  vector-sum data are only needed there. An unset depth selects the
+  default of n/10 rounded, as Hecke does; depth = 0 disables the vector
+  sums (see PSContextOptions).
  */
 /*
   The searched basis of a context and the inverse data of its
@@ -735,12 +734,30 @@ PSBasisData<Tint> ps_basis_data(PleskenSouvignierContext<Tint> const &ctx) {
   return {ctx.bas, ctx.Badj, ctx.Bden};
 }
 
+/*
+  The options of the context, given by name at the call site, for example
+  {.with_fingerprint = true, .depth = 0, .adjdet0 = adjdet0}.
+ */
+template <typename Tint> struct PSContextOptions {
+  // Set for the lattice whose basis is searched (see the context).
+  bool with_fingerprint = false;
+  // The vector-sum depth; nothing selects Hecke's default round(n / 10),
+  // and 0 disables the vector sums.
+  std::optional<int> depth;
+  // The adjugate and the determinant of ListMat[0], when already known.
+  std::optional<std::pair<MyMatrix<Tint>, Tint>> adjdet0;
+  // The searched basis and its inverse data, when already known.
+  std::optional<PSBasisData<Tint>> basis_data;
+};
+
 template <typename Tint>
 PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
     std::vector<MyMatrix<Tint>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
-    bool with_fingerprint, int depth, [[maybe_unused]] std::ostream &os,
-    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0 = {},
-    std::optional<PSBasisData<Tint>> const &basis_data = {}) {
+    PSContextOptions<Tint> const &options, [[maybe_unused]] std::ostream &os) {
+  bool with_fingerprint = options.with_fingerprint;
+  std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0 =
+      options.adjdet0;
+  std::optional<PSBasisData<Tint>> const &basis_data = options.basis_data;
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -864,10 +881,8 @@ PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
          << ", rational leaves will be discarded\n";
     }
 #endif
-    if (depth == -1) {
-      // Hecke's default round(n / 10): 1 from dimension 5 up, 2 from 15.
-      depth = (n + 5) / 10;
-    }
+    // Hecke's default round(n / 10): 1 from dimension 5 up, 2 from 15.
+    int depth = options.depth ? *options.depth : (n + 5) / 10;
     ps_init_vector_sums(ctx, depth, os);
   }
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
@@ -1208,17 +1223,17 @@ void ps_stab(PleskenSouvignierContext<Tint> &ctx, int I,
   flag[orb[0] + m] = 1;
   w[orb[0] + m] = ctx.std_basis;
   size_t cnd = 0;
-  int fail = 0;
+  int nb_fail = 0;
   PSDeterministicRng rng;
-  while (cnd < orb.size() && fail < Maxfail + Rest) {
+  while (cnd < orb.size() && nb_fail < Maxfail + Rest) {
     size_t nH = H.size();
     for (size_t i = 0; i < nH; i++) {
-      if (fail >= Maxfail + Rest) {
+      if (nb_fail >= Maxfail + Rest) {
         break;
       }
       size_t use_cnd = cnd;
       size_t use_i = i;
-      if (fail >= Maxfail) {
+      if (nb_fail >= Maxfail) {
         // The regular harvest failed Maxfail times: Rest more elements
         // are taken by prodding arbitrary orbit points, which often
         // helps the deeper levels.
@@ -1245,7 +1260,7 @@ void ps_stab(PleskenSouvignierContext<Tint> &ctx, int I,
           }
           j++;
         }
-        if (j < n && (ctx.orders[j] < ctx.fp_diagonal[j] || fail >= Maxfail)) {
+        if (j < n && (ctx.orders[j] < ctx.fp_diagonal[j] || nb_fail >= Maxfail)) {
           std::vector<int> x1(n);
           for (int k = 0; k < n; k++) {
             x1[k] = w[orb[use_cnd] + m][k];
@@ -1259,25 +1274,25 @@ void ps_stab(PleskenSouvignierContext<Tint> &ctx, int I,
           }
           int tmplen =
               ps_orbitlen(ctx, ctx.std_basis[j], ctx.fp_diagonal[j], Hj);
-          if (tmplen > ctx.orders[j] || fail >= Maxfail) {
+          if (tmplen > ctx.orders[j] || nb_fail >= Maxfail) {
             ctx.orders[j] = tmplen;
             ctx.nsg[j]++;
             ctx.g[j].insert(ctx.g[j].begin() + (ctx.nsg[j] - 1), S);
             H.push_back(S);
-            if (fail < Maxfail) {
-              fail = 0;
+            if (nb_fail < Maxfail) {
+              nb_fail = 0;
             } else {
-              fail++;
+              nb_fail++;
             }
           } else {
-            fail++;
+            nb_fail++;
           }
         } else {
-          fail++;
+          nb_fail++;
         }
       }
     }
-    if (fail < Maxfail) {
+    if (nb_fail < Maxfail) {
       cnd++;
     }
   }
@@ -1451,38 +1466,19 @@ PleskenSouvignierGroupOrder(std::vector<int> const &ListOrbitSize) {
   return order;
 }
 
-// The conversions of the int64 fast path. The downward one is reached
+// The conversions of the int64 fast path. The downward ones are reached
 // only behind the certificate, whose bounds dominate every entry.
 template <typename Tint>
-MyMatrix<int64_t> ps_matrix_to_int64(MyMatrix<Tint> const &M) {
-  int nbRow = M.rows();
-  int nbCol = M.cols();
-  MyMatrix<int64_t> Ms(nbRow, nbCol);
-  for (int i = 0; i < nbRow; i++) {
-    for (int j = 0; j < nbCol; j++) {
-      Ms(i, j) = UniversalScalarConversion<int64_t, Tint>(M(i, j));
-    }
-  }
-  return Ms;
-}
-
-template <typename Tint>
-MyMatrix<Tint> ps_matrix_from_int64(MyMatrix<int64_t> const &M) {
-  int nbRow = M.rows();
-  int nbCol = M.cols();
-  MyMatrix<Tint> Mt(nbRow, nbCol);
-  for (int i = 0; i < nbRow; i++) {
-    for (int j = 0; j < nbCol; j++) {
-      Mt(i, j) = UniversalScalarConversion<Tint, int64_t>(M(i, j));
-    }
-  }
-  return Mt;
-}
-
-template <typename Tint>
 PSBasisData<int64_t> ps_basis_data_to_int64(PSBasisData<Tint> const &bd) {
-  return {bd.bas, ps_matrix_to_int64(bd.Badj),
+  return {bd.bas, UniversalMatrixConversion<int64_t, Tint>(bd.Badj),
           UniversalScalarConversion<int64_t, Tint>(bd.Bden)};
+}
+
+template <typename Tint>
+std::pair<MyMatrix<int64_t>, int64_t>
+ps_adjdet_to_int64(std::pair<MyMatrix<Tint>, Tint> const &adjdet) {
+  return {UniversalMatrixConversion<int64_t, Tint>(adjdet.first),
+          UniversalScalarConversion<int64_t, Tint>(adjdet.second)};
 }
 
 /*
@@ -1592,8 +1588,10 @@ ps_basis_data_for_int64(std::vector<MyMatrix<Tint>> const &ListMat,
     return {};
   }
   PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
-      ListMat, SHVhalf, true, 0, os,
-      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet0));
+      ListMat, SHVhalf,
+      PSContextOptions<Tint>{
+          .with_fingerprint = true, .depth = 0, .adjdet0 = adjdet0},
+      os);
   PSBasisData<Tint> bd = ps_basis_data(ctx);
   bounds.has_basis_data = true;
   bounds.BadjMax = Tint(1);
@@ -1705,7 +1703,7 @@ bool ps_certify_int64(PSInt64Bounds<Tint> const &b,
 // healthy regime both separates the two and minimises the work wasted on
 // the doomed low-depth attempt before escalating -- which matters on a
 // large vector family, where every node scans the whole family. Only
-// consulted when the depth is chosen automatically (depth == -1).
+// consulted when the depth is chosen automatically (depth unset).
 static const size_t PS_NODE_BUDGET = 500;
 
 // The highest vector-sum depth the adaptive escalation will reach. Beyond
@@ -1715,16 +1713,27 @@ static const size_t PS_NODE_BUDGET = 500;
 // into ever-larger vector-sum data.
 static const int PS_MAX_ADAPTIVE_DEPTH = 8;
 
+/*
+  The options of the automorphism computation, given by name at the call
+  site, for example {.adjdet0 = adjdet0}.
+ */
+template <typename Tint> struct PSAutomorphismOptions {
+  // The vector-sum depth; nothing selects the adaptive search, which starts
+  // at Hecke's default and raises the depth when the node budget runs out.
+  std::optional<int> depth;
+  // The adjugate and the determinant of ListMat[0], when already known.
+  std::optional<std::pair<MyMatrix<Tint>, Tint>> adjdet0;
+  // The searched basis and its inverse data, when already known.
+  std::optional<PSBasisData<Tint>> basis_data;
+};
+
 template <typename Tint, typename Tgroup>
-PleskenSouvignierAutomResult<Tint, Tgroup>
-PleskenSouvignierAutomorphism(
+PleskenSouvignierAutomResult<Tint, Tgroup> PleskenSouvignierAutomorphism(
     std::vector<MyMatrix<Tint>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
-    std::ostream &os, int depth = -1,
-    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet0_opt = {},
-    std::optional<PSBasisData<Tint>> const &basis_data = {}) {
+    PSAutomorphismOptions<Tint> const &options, std::ostream &os) {
   std::pair<MyMatrix<Tint>, Tint> adjdet0 = [&]() {
-    if (adjdet0_opt) {
-      return *adjdet0_opt;
+    if (options.adjdet0) {
+      return *options.adjdet0;
     }
     if constexpr (std::is_same_v<Tint, int64_t>) {
       std::cerr << "PS: an int64 automorphism run needs the precomputed "
@@ -1742,28 +1751,25 @@ PleskenSouvignierAutomorphism(
     std::optional<PSBasisData<Tint>> bd =
         ps_basis_data_for_int64(ListMat, SHVhalf, adjdet0, bounds, os);
     if (ps_certify_int64(bounds, os)) {
-      std::vector<MyMatrix<int64_t>> ListMat64;
-      ListMat64.reserve(ListMat.size());
-      for (auto &eMat : ListMat) {
-        ListMat64.push_back(ps_matrix_to_int64(eMat));
-      }
-      MyMatrix<int64_t> SHVhalf64 = ps_matrix_to_int64(SHVhalf);
-      std::optional<std::pair<MyMatrix<int64_t>, int64_t>> adjdet64 =
-          std::make_pair(ps_matrix_to_int64(adjdet0.first),
-                         UniversalScalarConversion<int64_t, Tint>(
-                             adjdet0.second));
+      std::vector<MyMatrix<int64_t>> ListMat64 =
+          UniversalStdVectorMatrixConversion<int64_t, Tint>(ListMat);
+      MyMatrix<int64_t> SHVhalf64 =
+          UniversalMatrixConversion<int64_t, Tint>(SHVhalf);
       std::optional<PSBasisData<int64_t>> bd64;
       if (bd) {
         bd64 = ps_basis_data_to_int64(*bd);
       }
       PleskenSouvignierAutomResult<int64_t, Tgroup> res64 =
           PleskenSouvignierAutomorphism<int64_t, Tgroup>(
-              ListMat64, SHVhalf64, os, depth, adjdet64, bd64);
+              ListMat64, SHVhalf64,
+              PSAutomorphismOptions<int64_t>{
+                  .depth = options.depth,
+                  .adjdet0 = ps_adjdet_to_int64(adjdet0),
+                  .basis_data = bd64},
+              os);
       PleskenSouvignierAutomResult<Tint, Tgroup> res;
-      res.ListGen.reserve(res64.ListGen.size());
-      for (auto &eGen : res64.ListGen) {
-        res.ListGen.push_back(ps_matrix_from_int64<Tint>(eGen));
-      }
+      res.ListGen =
+          UniversalStdVectorMatrixConversion<Tint, int64_t>(res64.ListGen);
       res.ListOrbitSize = std::move(res64.ListOrbitSize);
       res.order = res64.order;
       res.depth_used = res64.depth_used;
@@ -1771,10 +1777,14 @@ PleskenSouvignierAutomorphism(
       return res;
     }
   }
-  bool adaptive = (depth == -1);
+  bool adaptive = !options.depth;
   PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
-      ListMat, SHVhalf, true, depth, os,
-      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet0), basis_data);
+      ListMat, SHVhalf,
+      PSContextOptions<Tint>{.with_fingerprint = true,
+                             .depth = options.depth,
+                             .adjdet0 = adjdet0,
+                             .basis_data = options.basis_data},
+      os);
   int d = ctx.depth;
   while (true) {
     // Once the cap is reached the search runs unbudgeted, so it always
@@ -1847,8 +1857,8 @@ ps_isostab(PleskenSouvignierContext<Tint> const &ctx, int pt,
   wpos[pt + m] = 0;
   w[0] = IdentityMat<Tint>(n);
   size_t cnd = 0;
-  int fail = 0;
-  while (cnd < orb.size() && fail < max_fail && H.size() < max_gens) {
+  int nb_fail = 0;
+  while (cnd < orb.size() && nb_fail < max_fail && H.size() < max_gens) {
     for (auto &eGen : ListGen) {
       int im = ps_operate(ctx, orb[cnd], eGen);
       if (flag[im + m] == 0) {
@@ -1869,7 +1879,7 @@ ps_isostab(PleskenSouvignierContext<Tint> const &ctx, int pt,
             }
           }
           if (is_known) {
-            fail++;
+            nb_fail++;
           } else {
             H.push_back(S);
             if (H.size() >= max_gens) {
@@ -1877,7 +1887,7 @@ ps_isostab(PleskenSouvignierContext<Tint> const &ctx, int pt,
             }
           }
         } else {
-          fail++;
+          nb_fail++;
         }
       }
     }
@@ -1944,17 +1954,33 @@ bool ps_iso_extend(PleskenSouvignierContext<Tint> const &Ci,
 // or nothing. The two families have to be built by the same invariant
 // rule: vectors of norm at most B for the SAME bound B on both sides
 // (see the src_latt wrappers).
+/*
+  The options of the isometry test, given by name at the call site.
+ */
+template <typename Tint> struct PSIsometryOptions {
+  // The vector-sum depth; nothing selects the adaptive search.
+  std::optional<int> depth;
+  // The adjugates and the determinants of ListMat1[0] and ListMat2[0],
+  // when already known; their presence also means that the determinants
+  // of the two configurations have been compared.
+  std::optional<std::pair<MyMatrix<Tint>, Tint>> adjdet1;
+  std::optional<std::pair<MyMatrix<Tint>, Tint>> adjdet2;
+  // The basis searched on the first configuration, when already known.
+  std::optional<PSBasisData<Tint>> basis_data1;
+};
+
 template <typename Tint>
 std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
     std::vector<MyMatrix<Tint>> const &ListMat1,
     MyMatrix<Tint> const &SHVhalf1,
     std::vector<MyMatrix<Tint>> const &ListMat2,
     MyMatrix<Tint> const &SHVhalf2,
-    std::vector<MyMatrix<Tint>> const &ListGenAut2, std::ostream &os,
-    int depth = -1,
-    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet1_opt = {},
-    std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet2_opt = {},
-    std::optional<PSBasisData<Tint>> const &basis_data1 = {}) {
+    std::vector<MyMatrix<Tint>> const &ListGenAut2,
+    PSIsometryOptions<Tint> const &options, std::ostream &os) {
+  std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet1_opt =
+      options.adjdet1;
+  std::optional<std::pair<MyMatrix<Tint>, Tint>> const &adjdet2_opt =
+      options.adjdet2;
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -2012,46 +2038,42 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
     std::optional<PSBasisData<Tint>> bd =
         ps_basis_data_for_int64(ListMat1, SHVhalf1, adjdet1, bounds, os);
     if (ps_certify_int64(bounds, os)) {
-      std::vector<MyMatrix<int64_t>> ListMat1_64;
-      std::vector<MyMatrix<int64_t>> ListMat2_64;
-      std::vector<MyMatrix<int64_t>> ListGenAut2_64;
-      for (auto &eMat : ListMat1) {
-        ListMat1_64.push_back(ps_matrix_to_int64(eMat));
+      std::optional<PSBasisData<int64_t>> bd64;
+      if (bd) {
+        bd64 = ps_basis_data_to_int64(*bd);
       }
-      for (auto &eMat : ListMat2) {
-        ListMat2_64.push_back(ps_matrix_to_int64(eMat));
-      }
-      for (auto &eGen : ListGenAut2) {
-        ListGenAut2_64.push_back(ps_matrix_to_int64(eGen));
-      }
-      MyMatrix<int64_t> SHVhalf1_64 = ps_matrix_to_int64(SHVhalf1);
-      MyMatrix<int64_t> SHVhalf2_64 = ps_matrix_to_int64(SHVhalf2);
-      auto f_adj = [](std::pair<MyMatrix<Tint>, Tint> const &pr)
-          -> std::optional<std::pair<MyMatrix<int64_t>, int64_t>> {
-        return std::make_pair(
-            ps_matrix_to_int64(pr.first),
-            UniversalScalarConversion<int64_t, Tint>(pr.second));
-      };
       std::optional<MyMatrix<int64_t>> opt64 =
           PleskenSouvignierIsometry<int64_t>(
-              ListMat1_64, SHVhalf1_64, ListMat2_64, SHVhalf2_64,
-              ListGenAut2_64, os, depth, f_adj(adjdet1), f_adj(adjdet2),
-              bd ? std::optional<PSBasisData<int64_t>>(
-                       ps_basis_data_to_int64(*bd))
-                 : std::optional<PSBasisData<int64_t>>());
+              UniversalStdVectorMatrixConversion<int64_t, Tint>(ListMat1),
+              UniversalMatrixConversion<int64_t, Tint>(SHVhalf1),
+              UniversalStdVectorMatrixConversion<int64_t, Tint>(ListMat2),
+              UniversalMatrixConversion<int64_t, Tint>(SHVhalf2),
+              UniversalStdVectorMatrixConversion<int64_t, Tint>(ListGenAut2),
+              PSIsometryOptions<int64_t>{
+                  .depth = options.depth,
+                  .adjdet1 = ps_adjdet_to_int64(adjdet1),
+                  .adjdet2 = ps_adjdet_to_int64(adjdet2),
+                  .basis_data1 = bd64},
+              os);
       if (!opt64) {
         return {};
       }
-      return ps_matrix_from_int64<Tint>(*opt64);
+      return UniversalMatrixConversion<Tint, int64_t>(*opt64);
     }
   }
-  bool adaptive = (depth == -1);
+  bool adaptive = !options.depth;
   PleskenSouvignierContext<Tint> Ci = PleskenSouvignierBuildContext(
-      ListMat1, SHVhalf1, true, depth, os,
-      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet1), basis_data1);
+      ListMat1, SHVhalf1,
+      PSContextOptions<Tint>{.with_fingerprint = true,
+                             .depth = options.depth,
+                             .adjdet0 = adjdet1,
+                             .basis_data = options.basis_data1},
+      os);
   PleskenSouvignierContext<Tint> Co = PleskenSouvignierBuildContext(
-      ListMat2, SHVhalf2, false, 0, os,
-      std::optional<std::pair<MyMatrix<Tint>, Tint>>(adjdet2));
+      ListMat2, SHVhalf2,
+      PSContextOptions<Tint>{.with_fingerprint = false, .depth = 0,
+                             .adjdet0 = adjdet2},
+      os);
   int n = Ci.n();
   std::vector<int> x(n, 0);
   std::vector<int> cand0_base;
