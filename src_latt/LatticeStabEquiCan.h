@@ -412,14 +412,10 @@ GetListGenAutomorphism_AbsTrick_kernel(
   // appended by AbsTrick_LiftGenerators: its order is 2^c times the one on
   // the pairs, of which the graph order is a multiple.
   using TintGroup = typename Tgroup::Tint;
-  std::optional<TintGroup> order;
-  if (gens_order.has_order) {
-    size_t n_comp = opt->size() - gens_order.ListGen.size();
-    TintGroup order_val = GetGraphGroupOrder<TintGroup>(gens_order);
-    for (size_t i_comp = 0; i_comp < n_comp; i_comp++) {
-      order_val *= 2;
-    }
-    order = order_val;
+  size_t n_comp = opt->size() - gens_order.ListGen.size();
+  TintGroup order = GetGraphGroupOrder<TintGroup>(gens_order);
+  for (size_t i_comp = 0; i_comp < n_comp; i_comp++) {
+    order *= 2;
   }
   return StabGeneratorsOrder<Tidx, TintGroup>{std::move(*opt), order};
 }

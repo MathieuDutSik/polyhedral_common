@@ -569,14 +569,12 @@ f_for_stab_heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
       return {};
     }
   };
-  // The generators of the subset method with, when known, the order of the
-  // graph of the subset, a multiple of the order of the group (see
+  // The generators of the subset method with the order of the graph of the
+  // subset, a multiple of the order of the group (see
   // GetStabilizerWeightMatrix_Heuristic_Limited).
   auto f_subset_result = [&](GraphGeneratorsOrder<Tidx> &&gens_order)
       -> StabGeneratorsOrder<Tidx, Tint> {
-    std::optional<Tint> order;
-    if (gens_order.has_order)
-      order = GetGraphGroupOrder<Tint>(gens_order);
+    std::optional<Tint> order = GetGraphGroupOrder<Tint>(gens_order);
 #ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
     if (order) {
       std::vector<Telt> LGen;

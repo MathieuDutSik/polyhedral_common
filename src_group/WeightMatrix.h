@@ -1438,9 +1438,8 @@ GetStabilizerWeightMatrix_Kernel_idxin(Tgr const &eGR, size_t nbRow,
 }
 
 /*
-  The generators of the stabilizer of the weight matrix and, when the graph
-  program gives it, the order of the automorphism group of the graph as
-  exact factors (GraphGeneratorsOrder). The generators are the restrictions
+  The generators of the stabilizer of the weight matrix and the order of the
+  automorphism group of the graph as exact factors (GraphGeneratorsOrder). The generators are the restrictions
   of the graph automorphisms to the nbRow vertices of the matrix, so that
   the group they generate is a quotient of the automorphism group of the
   graph: its order divides the one of the graph, with equality when the
@@ -1521,10 +1520,7 @@ StabGeneratorsOrder<Tidx, Tint> GetStabilizerWeightMatrix_Kernel(
   GraphGeneratorsOrder<Tidx> gens_order =
       GetStabilizerWeightMatrix_KernelGraph<T, Tgr, Tidx, Tidx_value, is_symm>(
           WMat, os);
-  if (gens_order.has_order)
-    return {std::move(gens_order.ListGen),
-            GetGraphGroupOrder<Tint>(gens_order)};
-  return {std::move(gens_order.ListGen), {}};
+  return {std::move(gens_order.ListGen), GetGraphGroupOrder<Tint>(gens_order)};
 }
 
 template <typename T, typename Tgr, typename Tgroup, typename Tidx_value>
