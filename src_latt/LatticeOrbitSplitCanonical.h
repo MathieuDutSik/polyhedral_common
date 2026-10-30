@@ -1010,23 +1010,29 @@ std::optional<std::vector<MyMatrix<Tint>>> OrbitSplitCanonicalFamily(
 
 /*
   The kernel on the reduced integral configuration: the basis BasisRed
-  with BasisRed * ListMatRed[0] * BasisRed^T canonical, or nothing on an
-  orbit tie or straddled sign components. The family stage runs over
+  with the BasisRed * ListMatRed[i] * BasisRed^T canonical, or nothing on
+  an orbit tie or straddled sign components. The family stage runs over
   certified int64 whenever the bounds of ps_certify_int64 allow; the
   basis extraction from the ordered family runs over the big type, its
   Hermite elimination having no certified bound. A failure of the family
   stage is an algorithmic failure, identical in either ring, so it is
   not retried.
  */
-// Lexicographic comparison of two symmetric matrices, row major: the
-// rule by which the branch results are ordered.
+// Lexicographic comparison of two lists of matrices of the same sizes,
+// matrix by matrix and row major: the rule by which the branch results are
+// ordered.
 template <typename Tint>
-bool osc_gram_less(MyMatrix<Tint> const &A, MyMatrix<Tint> const &B) {
-  int n = A.rows();
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      if (A(i, j) != B(i, j)) {
-        return A(i, j) < B(i, j);
+bool osc_listmat_less(std::vector<MyMatrix<Tint>> const &ListA,
+                      std::vector<MyMatrix<Tint>> const &ListB) {
+  for (size_t iMat = 0; iMat < ListA.size(); iMat++) {
+    MyMatrix<Tint> const &A = ListA[iMat];
+    MyMatrix<Tint> const &B = ListB[iMat];
+    int n = A.rows();
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (A(i, j) != B(i, j)) {
+          return A(i, j) < B(i, j);
+        }
       }
     }
   }
@@ -1074,16 +1080,20 @@ OrbitSplitCanonicalizeKernel(std::vector<MyMatrix<Tint>> const &ListMatRed,
 #ifdef TIMINGS_ORBIT_SPLIT_CANONICAL
   MicrosecondTime time;
 #endif
-  // The branch whose canonical Gram matrix is lexicographically minimal:
-  // the branches of two isometric inputs correspond with equal Gram
-  // matrices, so the minimum is canonical.
+  // The branch whose list of canonical matrices is lexicographically
+  // minimal: the branches of two equivalent inputs correspond with equal
+  // lists, so the minimum is canonical. All the matrices are compared, two
+  // branches may agree on the first one and differ on the others.
   std::optional<MyMatrix<Tint>> best_basis;
-  std::optional<MyMatrix<Tint>> best_gram;
+  std::optional<std::vector<MyMatrix<Tint>>> best_list;
   for (auto &eSHV : ListSHVcan) {
     MyMatrix<Tint> BasisRed = get_canonicalization_matrix(eSHV, os);
-    MyMatrix<Tint> eGram = BasisRed * ListMatRed[0] * BasisRed.transpose();
-    if (!best_gram || osc_gram_less(eGram, *best_gram)) {
-      best_gram = std::move(eGram);
+    std::vector<MyMatrix<Tint>> eList;
+    for (auto &eMat : ListMatRed) {
+      eList.push_back(BasisRed * eMat * BasisRed.transpose());
+    }
+    if (!best_list || osc_listmat_less(eList, *best_list)) {
+      best_list = std::move(eList);
       best_basis = std::move(BasisRed);
     }
   }
@@ -1094,13 +1104,14 @@ OrbitSplitCanonicalizeKernel(std::vector<MyMatrix<Tint>> const &ListMatRed,
 }
 
 /*
-  The canonical form of a positive definite Gram matrix by the orbit
-  splitting over the Plesken-Souvignier automorphism group: the basis B
-  with B * GramMat * B^T canonical, or nothing when the tie exploration
-  exceeds the branch cap or every branch has straddled sign components.
-  The failure is a property of the isometry class, not of the
-  presentation, so the method stays comparable across inputs: it fails
-  on both members of an isometric pair or on neither.
+  The canonical form of a configuration of matrices, ListMat[0] symmetric
+  positive definite and the others symmetric, by the orbit splitting over
+  the Plesken-Souvignier automorphism group of the configuration: the
+  basis B with the B * ListMat[i] * B^T canonical, or nothing when the
+  tie exploration exceeds the branch cap or every branch has straddled
+  sign components. The failure is a property of the equivalence class,
+  not of the presentation, so the method stays comparable across inputs:
+  it fails on both members of an equivalent pair or on neither.
 
   The family stage runs over certified int64 whenever the preanalysis of
   ps_certify_int64 allows, which covers every LLL-reduced lattice of the
@@ -1108,16 +1119,21 @@ OrbitSplitCanonicalizeKernel(std::vector<MyMatrix<Tint>> const &ListMatRed,
  */
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
-OrbitSplitCanonicalizeGram(MyMatrix<T> const &GramMat, std::ostream &os) {
-  LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(GramMat, os);
-  MyMatrix<Tint> const &Pmat = rec.Pmat;
-  std::vector<MyMatrix<T>> ListMat{GramMat};
+OrbitSplitCanonicalizeListMat(std::vector<MyMatrix<T>> const &ListMat,
+                              std::ostream &os) {
   std::vector<MyMatrix<Tint>> ListMatInt =
       PleskenSouvignierIntegralForms<T, Tint>(ListMat);
-  std::vector<MyMatrix<Tint>> ListMatRed{Pmat * ListMatInt[0] *
-                                         Pmat.transpose()};
+  LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(ListMat[0], os);
+  MyMatrix<Tint> const &Pmat = rec.Pmat;
+  std::vector<MyMatrix<Tint>> ListMatRed;
+  for (auto &eMat : ListMatInt) {
+    ListMatRed.push_back(Pmat * eMat * Pmat.transpose());
+  }
+  // As for the automorphisms: the root variant of the family for a single
+  // form, the plain shortest-vector tower for several.
+  bool single = (ListMat.size() == 1);
   MyMatrix<Tint> SHVhalf =
-      PleskenSouvignierZspanFamilyHalf<T, Tint>(rec.GramMatRed, true, os);
+      PleskenSouvignierZspanFamilyHalf<T, Tint>(rec.GramMatRed, single, os);
 #ifdef DEBUG_ORBIT_SPLIT_CANONICAL
   os << "OSC: Z-spanning family of " << SHVhalf.rows() << " antipodal pairs\n";
 #endif
@@ -1134,6 +1150,13 @@ OrbitSplitCanonicalizeGram(MyMatrix<T> const &GramMat, std::ostream &os) {
   }
 #endif
   return B;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+OrbitSplitCanonicalizeGram(MyMatrix<T> const &GramMat, std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat{GramMat};
+  return OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(ListMat, os);
 }
 
 // clang-format off
