@@ -374,7 +374,8 @@ std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick(
   automorphisms from the whole family as before.
  */
 template <typename Tval, typename Tint, typename Tgroup>
-std::optional<std::vector<std::vector<typename Tgroup::Telt::Tidx>>>
+std::optional<
+    StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>>
 GetListGenAutomorphism_AbsTrick_kernel(
     std::vector<MyMatrix<Tval>> const &ListMat, MyMatrix<Tint> const &SHVhalf,
     std::ostream &os) {
@@ -390,31 +391,45 @@ GetListGenAutomorphism_AbsTrick_kernel(
   WeightMatrixAbs<std::vector<T>, Tidx_value> WMatAbs =
       T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV<T, Tint, Tidx_value>(
           ListMat, SHVhalf, os);
-  std::vector<std::vector<Tidx>> ListGen =
+  GraphGeneratorsOrder<Tidx> gens_order =
       GetStabilizerWeightMatrix_KernelGraph<std::vector<T>, Tgr, Tidx,
-                                            Tidx_value, true>(WMatAbs.WMat, os)
-          .ListGen;
+                                            Tidx_value, true>(WMatAbs.WMat, os);
   std::optional<std::vector<std::vector<Tidx>>> opt =
-      AbsTrick_LiftGenerators<std::vector<T>, Tidx, Tidx_value>(WMatAbs,
-                                                                ListGen,
-                                                                nbPair);
+      AbsTrick_LiftGenerators<std::vector<T>, Tidx, Tidx_value>(
+          WMatAbs, gens_order.ListGen, nbPair);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetListGenAutomorphism_AbsTrick|=" << time << "\n";
 #endif
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   if (!opt) {
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
     os << "LSEC: the absolute trick does not lift the automorphisms, falling "
        << "back\n";
-  }
 #endif
-  return opt;
+    return {};
+  }
+  // The lifted group maps onto the group of the generators on the pairs,
+  // with as kernel the sign flips of the components, one generator each
+  // appended by AbsTrick_LiftGenerators: its order is 2^c times the one on
+  // the pairs, of which the graph order is a multiple.
+  using TintGroup = typename Tgroup::Tint;
+  std::optional<TintGroup> order;
+  if (gens_order.has_order) {
+    size_t n_comp = opt->size() - gens_order.ListGen.size();
+    TintGroup order_val = GetGraphGroupOrder<TintGroup>(gens_order);
+    for (size_t i_comp = 0; i_comp < n_comp; i_comp++) {
+      order_val *= 2;
+    }
+    order = order_val;
+  }
+  return StabGeneratorsOrder<Tidx, TintGroup>{std::move(*opt), order};
 }
 
 // Over the ring rather than over the field when the configuration allows it,
 // see CanonicallyReorder_SHV_AbsTrick. The generators are permutations, so
 // they do not depend on which of the two the weights were computed in.
 template <typename T, typename Tint, typename Tgroup>
-std::optional<std::vector<std::vector<typename Tgroup::Telt::Tidx>>>
+std::optional<
+    StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>>
 GetListGenAutomorphism_AbsTrick(std::vector<MyMatrix<T>> const &ListMat,
                                 MyMatrix<Tint> const &SHVhalf,
                                 std::ostream &os) {
@@ -620,13 +635,13 @@ MyMatrix<Tint> ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::os
   lifted generators index.
  */
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>>
+IntAutomorphismGroup<Tint, typename Tgroup::Tint>
 GetIntAutomorphism_Family(std::vector<MyMatrix<T>> const &ListMat,
                           CanonicVectorFamily<Tint> const &fam,
                           MyMatrix<Tint> const &SHV, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  std::optional<std::vector<std::vector<Tidx>>> opt =
+  std::optional<StabGeneratorsOrder<Tidx, typename Tgroup::Tint>> opt =
       GetListGenAutomorphism_AbsTrick<T, Tint, Tgroup>(ListMat, fam.SHVhalf,
                                                        os);
   if (opt) {
@@ -645,7 +660,8 @@ std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
   int n_row = SHV.rows();
   std::vector<T> Vdiag(n_row, T(0));
   return GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(SHV, ListMat, Vdiag,
-                                                           os);
+                                                           os)
+      .ListGen;
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -657,8 +673,12 @@ ArithmeticAutomorphismGroup_inner(MyMatrix<T> const &inpMat,
                                                                     SHV, os);
 }
 
+/*
+  The generators of the integral automorphism group of the configuration
+  and its order.
+ */
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>>
+IntAutomorphismGroup<Tint, typename Tgroup::Tint>
 ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
                                     std::ostream &os) {
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
@@ -676,7 +696,7 @@ ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>>
+IntAutomorphismGroup<Tint, typename Tgroup::Tint>
 ArithmeticAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{inpMat};
   return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);

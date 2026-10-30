@@ -83,7 +83,7 @@ compute_free_vectors(MyMatrix<T> const &GramMat,
   //    to one per +/- pair and closed under the point group of the lattice.
   //
   std::vector<MyMatrix<Tint>> autom =
-      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os).ListGen;
   std::unordered_set<MyVector<Tint>> set_vect;
   std::vector<MyVector<Tint>> ListVectRed;
   auto f_insert = [&](MyVector<Tint> const &v) -> void {

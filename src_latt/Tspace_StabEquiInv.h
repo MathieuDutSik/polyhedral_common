@@ -382,7 +382,8 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
   // here, so the configuration type is T itself.
   std::vector<MyMatrix<T>> LGenInt =
       GetIntAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV_T, ListMat, Vdiag,
-                                                     os);
+                                                     os)
+          .ListGen;
   bool all_gens_ok = true;
   for (auto &eGen : LGenInt) {
     if (!is_stab_space(eGen, LinSpa) || !f_extra(eGen)) {
@@ -611,7 +612,8 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
   //
   std::vector<MyMatrix<T>> LGenInt =
       GetIntAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV1_T, ListMat1, Vdiag1,
-                                                     os);
+                                                     os)
+          .ListGen;
   PermutationBuilder<T, Telt> builder1(SHV1_T);
   std::vector<Telt> LGenPerm_big;
   for (auto &eGen : LGenInt) {

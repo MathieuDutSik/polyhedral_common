@@ -131,21 +131,22 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_ring(
   returned, so the arithmetic they were found with does not reach the caller.
  */
 template <typename T, typename Tfield, typename Tgroup>
-std::vector<std::vector<typename Tgroup::Telt::Tidx>>
+StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>
 GetListGenAutomorphism_ListMat_Vdiag_ring(
     MyMatrix<T> const &SHV_T, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
   using Tring = typename underlying_ring<T>::ring_type;
   if constexpr (!std::is_same_v<T, Tring>) {
     if (IsIntegralConfiguration(SHV_T, ListMat, Vdiag)) {
-      return GetListGenAutomorphism_ListMat_Vdiag<Tring, Tfield, Tgroup>(
+      return GetListGenAutomorphism_ListMat_Vdiag_GensOrder<Tring, Tfield,
+                                                            Tgroup>(
           UniversalMatrixConversion<Tring, T>(SHV_T),
           ConvertListMatToRing_PES<Tring, T>(ListMat),
           ConvertVdiagToRing<Tring, T>(Vdiag), os);
     }
   }
-  return GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
-                                                                 Vdiag, os);
+  return GetListGenAutomorphism_ListMat_Vdiag_GensOrder<T, Tfield, Tgroup>(
+      SHV_T, ListMat, Vdiag, os);
 }
 
 template <typename Tint, typename Tgroup>
@@ -755,7 +756,8 @@ std::optional<MyMatrix<Tint>> TestIntEquivalence_ListMat_Vdiag(
   // is what selects one.
   std::vector<std::vector<Tidx>> ListGen2 =
       GetListGenAutomorphism_ListMat_Vdiag_ring<T, Tfield_mat, Tgroup>(
-          SHV2_T, ListMat2, Vdiag2, os);
+          SHV2_T, ListMat2, Vdiag2, os)
+          .ListGen;
   std::vector<MyMatrix<Tfield>> ListMatrGens2;
   // Automorphisms of the configuration, realized by construction: the
   // unchecked solve.
@@ -793,16 +795,34 @@ std::optional<MyMatrix<Tint>> TestIntEquivalence_ListMat_Vdiag(
   a field computation.
  */
 /*
+  The generators of the integral automorphism group of a configuration and
+  its order.
+ */
+template <typename Tint, typename TintGroup> struct IntAutomorphismGroup {
+  std::vector<MyMatrix<Tint>> ListGen;
+  TintGroup order;
+};
+
+/*
   The integral automorphisms, from permutation generators of the automorphism
   group of the configuration already computed. Separated so that a caller
   that obtained the permutations another way, for instance through the
   absolute trick on an antipodal family, does not have to compute them again.
+
+  The order: the permutation group is built from the generators with the
+  bound of gens_order (exact, a bound only speeding up the construction, see
+  StabGeneratorsOrder). The family being of full rank, the permutation group
+  is isomorphic to the rational group it lifts to. When every generator is
+  integral that is the integral group; otherwise the subspace machinery
+  returns the index of the integral subgroup in it.
  */
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>> GetIntAutomorphism_FromPermGens(
+IntAutomorphismGroup<Tint, typename Tgroup::Tint>
+GetIntAutomorphism_FromPermGens(
     MyMatrix<Tint> const &SHV,
     [[maybe_unused]] std::vector<MyMatrix<T>> const &ListMat,
-    std::vector<std::vector<typename Tgroup::Telt::Tidx>> const &ListGen,
+    StabGeneratorsOrder<typename Tgroup::Telt::Tidx,
+                        typename Tgroup::Tint> const &gens_order,
     std::ostream &os) {
   static_assert(is_implementation_of_Z<Tint>::value ||
                     is_implementation_of_Q<Tint>::value,
@@ -826,8 +846,15 @@ std::vector<MyMatrix<Tint>> GetIntAutomorphism_FromPermGens(
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   (void)sizeof(Tidx);
+  std::vector<std::vector<Tidx>> const &ListGen = gens_order.ListGen;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   MicrosecondTime time;
+#endif
+  typename Tgroup::Tint order_perm =
+      GroupFromStabGeneratorsOrder<Tgroup>(gens_order, SHV.rows()).size();
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
+  os << "|PES: GetIntAutomorphism, order of the permutation group|=" << time
+     << "\n";
 #endif
   auto check_result =
       [&]([[maybe_unused]] std::vector<MyMatrix<Tint>> const &LGen) -> void {
@@ -869,7 +896,7 @@ std::vector<MyMatrix<Tint>> GetIntAutomorphism_FromPermGens(
     os << "|PES: GetIntAutomorphism, direct|=" << time << "\n";
 #endif
     check_result(ListTransMat);
-    return ListTransMat;
+    return {std::move(ListTransMat), order_perm};
   }
   // A rational generator: the integral subgroup is a strict subgroup and the
   // subspace machinery extracts it.
@@ -897,11 +924,12 @@ std::vector<MyMatrix<Tint>> GetIntAutomorphism_FromPermGens(
   os << "|PES: GetIntAutomorphism, subspaces|=" << time << "\n";
 #endif
   check_result(ListGenInt);
-  return ListGenInt;
+  return {std::move(ListGenInt), order_perm / ret.index};
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>> GetIntAutomorphism_ListMat_Vdiag(
+IntAutomorphismGroup<Tint, typename Tgroup::Tint>
+GetIntAutomorphism_ListMat_Vdiag(
     MyMatrix<Tint> const &SHV, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
   static_assert(is_implementation_of_Z<Tint>::value ||
@@ -922,7 +950,7 @@ std::vector<MyMatrix<Tint>> GetIntAutomorphism_ListMat_Vdiag(
   MicrosecondTime time;
 #endif
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  std::vector<std::vector<Tidx>> ListGen =
+  StabGeneratorsOrder<Tidx, typename Tgroup::Tint> gens_order =
       GetListGenAutomorphism_ListMat_Vdiag_ring<T, Tfield, Tgroup>(
           SHV_T, ListMat, Vdiag, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
@@ -931,7 +959,7 @@ std::vector<MyMatrix<Tint>> GetIntAutomorphism_ListMat_Vdiag(
      << "|=" << time << "\n";
 #endif
   return GetIntAutomorphism_FromPermGens<T, Tint, Tgroup>(SHV, ListMat,
-                                                          ListGen, os);
+                                                          gens_order, os);
 }
 
 // clang-format off

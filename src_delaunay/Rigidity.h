@@ -155,7 +155,7 @@ ComputeLspace(MyMatrix<T> const &GramMat,
   // Lattice automorphism generators acting on R^n; their Sym^2
   // representation is the M -> g M g^T action used by ApplyGenSym2.
   std::vector<MyMatrix<Tint>> ListGen_int =
-      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os).ListGen;
   std::vector<MyMatrix<T>> ListGen_T;
   for (auto &eGen : ListGen_int) {
     ListGen_T.push_back(UniversalMatrixConversion<T, Tint>(eGen));

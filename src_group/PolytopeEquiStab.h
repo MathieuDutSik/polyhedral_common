@@ -1405,12 +1405,12 @@ size_t GetInvariant_ListMat_Vdiag(size_t const &seed, MyMatrix<T> const &EXT,
 }
 
 template <typename T, typename Tfield, typename Tgroup>
-std::vector<std::vector<typename Tgroup::Telt::Tidx>>
+StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>
 GetListGenAutomorphism_ListMat_Vdiag_Heuristic(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
-  using Treturn = std::vector<std::vector<Tidx>>;
+  using Treturn = StabGeneratorsOrder<Tidx, typename Tgroup::Tint>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3,
                auto f4, auto f5, bool is_symm) -> Treturn {
     // The weights are vectors, which are not individualized.
@@ -1419,40 +1419,41 @@ GetListGenAutomorphism_ListMat_Vdiag_Heuristic(
                                 decltype(f2), decltype(f1tr), decltype(f2tr),
                                 decltype(f3), decltype(f4), decltype(f5),
                                 decltype(f_lift)>(nbRow, f1, f2, f1tr, f2tr, f3,
-                                                  f4, f5, f_lift, is_symm, os)
-        .ListGen;
+                                                  f4, f5, f_lift, is_symm, os);
   };
   return FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat,
                                                                   Vdiag, f, os);
 }
 
 template <typename T, typename Tfield, typename Tgroup, typename Tidx_value>
-std::vector<std::vector<typename Tgroup::Telt::Tidx>>
+StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>
 GetListGenAutomorphism_ListMat_Vdiag_Kernel(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
-  using Treturn = std::vector<std::vector<Tidx>>;
+  using Treturn = StabGeneratorsOrder<Tidx, typename Tgroup::Tint>;
   auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f1tr,
                [[maybe_unused]] auto f2tr, [[maybe_unused]] auto f3,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
                bool is_symm) -> Treturn {
     return f_for_stab_kernel<std::vector<T>, Tgroup, Tidx_value>(nbRow, f1, f2,
-                                                                 is_symm, os)
-        .ListGen;
+                                                                 is_symm, os);
   };
   return FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat,
                                                                   Vdiag, f, os);
 }
 
-// Only the kernel depends on the index type of the weights (see
-// f_for_stab_heuristic).
+/*
+  The generators of the automorphism group of the configuration with, when
+  the graph program gives it, a multiple of the order of the group they
+  generate (see StabGeneratorsOrder). Only the kernel depends on the index
+  type of the weights (see f_for_stab_heuristic).
+ */
 template <typename T, typename Tfield, typename Tgroup>
-std::vector<std::vector<typename Tgroup::Telt::Tidx>>
-GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
-                                     std::vector<MyMatrix<T>> const &ListMat,
-                                     std::vector<T> const &Vdiag,
-                                     std::ostream &os) {
+StabGeneratorsOrder<typename Tgroup::Telt::Tidx, typename Tgroup::Tint>
+GetListGenAutomorphism_ListMat_Vdiag_GensOrder(
+    MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
+    std::vector<T> const &Vdiag, std::ostream &os) {
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
@@ -1473,14 +1474,26 @@ GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
         max_val_poss, "GetListGenAutomorphism_ListMat_Vdiag", f_dispatch);
   };
 #ifdef SANITY_CHECK_THRESHOLD_SCHEME
-  check_threshold_scheme<Tgroup>(f_heuristic(), f_kernel(), nbRow);
+  check_threshold_scheme<Tgroup>(f_heuristic().ListGen, f_kernel().ListGen,
+                                 nbRow);
 #endif
-  auto ListGen =
+  auto gens_order =
       (nbRow > THRESHOLD_USE_SUBSET_SCHEME_STAB) ? f_heuristic() : f_kernel();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   os << "|PES: GetListGenAutomorphism_ListMat_Vdiag|=" << time << "\n";
 #endif
-  return ListGen;
+  return gens_order;
+}
+
+template <typename T, typename Tfield, typename Tgroup>
+std::vector<std::vector<typename Tgroup::Telt::Tidx>>
+GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
+                                     std::vector<MyMatrix<T>> const &ListMat,
+                                     std::vector<T> const &Vdiag,
+                                     std::ostream &os) {
+  return GetListGenAutomorphism_ListMat_Vdiag_GensOrder<T, Tfield, Tgroup>(
+             EXT, ListMat, Vdiag, os)
+      .ListGen;
 }
 
 template <typename T, typename Tfield, typename Tidx, typename Tidx_value>

@@ -1422,24 +1422,23 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
 
 /*
   The result of the automorphism computation. The group order is the
-  product of the orbit lengths along the stabilizer chain; it is
-  returned as the list of factors so that the caller multiplies in
-  whatever integer type its orders live in.
+  product of the orbit lengths along the stabilizer chain.
  */
 template <typename Tint> struct PleskenSouvignierAutomResult {
   std::vector<MyMatrix<Tint>> ListGen;
   std::vector<int> ListOrbitSize;
+  mpz_class order;
   // The vector-sum depth the adaptive search settled on and the number of
   // backtrack nodes it visited (diagnostics for tuning the depth rule).
   int depth_used = 0;
   size_t nodes_used = 0;
 };
 
-template <typename Tord>
-Tord PleskenSouvignierGroupOrder(std::vector<int> const &ListOrbitSize) {
-  Tord order(1);
+inline mpz_class
+PleskenSouvignierGroupOrder(std::vector<int> const &ListOrbitSize) {
+  mpz_class order(1);
   for (auto &siz : ListOrbitSize) {
-    order *= Tord(siz);
+    order *= siz;
   }
   return order;
 }
@@ -1757,6 +1756,7 @@ PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
         res.ListGen.push_back(ps_matrix_from_int64<Tint>(eGen));
       }
       res.ListOrbitSize = std::move(res64.ListOrbitSize);
+      res.order = res64.order;
       res.depth_used = res64.depth_used;
       res.nodes_used = res64.nodes_used;
       return res;
@@ -1795,6 +1795,7 @@ PleskenSouvignierAutomResult<Tint> PleskenSouvignierAutomorphism(
     }
   }
   result.ListOrbitSize = ctx.orders;
+  result.order = PleskenSouvignierGroupOrder(result.ListOrbitSize);
   result.depth_used = ctx.depth;
   result.nodes_used = ctx.total_nodes;
 #ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER

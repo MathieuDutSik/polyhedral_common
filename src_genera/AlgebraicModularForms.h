@@ -261,9 +261,10 @@ AmfClass<T, Tint> amf_new_class(RealifiedRing<T, Tint> const &ring, AmfCanonical
     l_aut_red = info.ListGenMat;
     cl.aut_order = info.order;
   } else {
-    l_aut_red = ArithmeticAutomorphismGroupMultiple<T, Tint, AmfTgroup>(l_mat, os);
-    MyMatrix<Tint> SHV = GetCanonicVectorFamily<T, Tint>(G_T, os).get_full();
-    cl.aut_order = OrderFromGens<Tint, AmfTgroup>(SHV, l_aut_red);
+    IntAutomorphismGroup<Tint, typename AmfTgroup::Tint> aut =
+        ArithmeticAutomorphismGroupMultiple<T, Tint, AmfTgroup>(l_mat, os);
+    l_aut_red = std::move(aut.ListGen);
+    cl.aut_order = aut.order;
   }
   for (auto &g_red : l_aut_red) {
     MyMatrix<T> g = Q_inv * UniversalMatrixConversion<T, Tint>(g_red) * Q;

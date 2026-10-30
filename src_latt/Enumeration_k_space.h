@@ -498,7 +498,7 @@ Rankin_k_level_orbits_setbased(MyMatrix<T> const &A, int const &k,
                                T const &MaxDet, std::ostream &os) {
   std::vector<MyMatrix<Tint>> l_latt = Rankin_k_level<T, Tint>(A, k, MaxDet, os);
   std::vector<MyMatrix<Tint>> ListGen =
-      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(A, os);
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(A, os).ListGen;
 #ifdef DEBUG_ENUMERATION_K_SPACE
   os << "ENUM_K_SPACE: Rankin_k_level_orbits_setbased |l_latt|="
      << l_latt.size() << " |ListGen|=" << ListGen.size() << "\n";
@@ -592,7 +592,8 @@ SublatticeStabilizerGenerators(SublatticeStabEquiData<T, Tint> const &data,
                                std::ostream &os) {
   std::vector<MyMatrix<Tint>> LGen =
       GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(sc.conf, data.ListMat,
-                                                        sc.Vdiag, os);
+                                                        sc.Vdiag, os)
+          .ListGen;
   std::vector<MyMatrix<Tint>> LGenRet;
   for (auto &g : LGen) {
 #ifdef SANITY_CHECK_ENUMERATION_K_SPACE

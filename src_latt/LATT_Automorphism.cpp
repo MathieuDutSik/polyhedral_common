@@ -41,33 +41,15 @@ void ComputeAutomorphism(std::string const &FileListMat,
               << FileListMat << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
-  // The generators, and the order when the method computes it on the way
-  // or when OutFormat asks for it.
-  struct AutomorphismGroup {
-    std::vector<MyMatrix<Tint>> ListGen;
-    std::optional<mpz_class> opt_order;
-  };
-  auto f_group = [&]() -> AutomorphismGroup {
+  auto f_group = [&]() -> IntAutomorphismGroup<Tint, mpz_class> {
     if (method == "graph") {
-      std::vector<MyMatrix<Tint>> ListGen =
-          ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
-                                                               std::cerr);
-      if (OutFormat != "GAP_order") {
-        return {std::move(ListGen), {}};
-      }
-      // The action on the canonic family is faithful, the family being of
-      // full rank.
-      CanonicVectorFamily<Tint> fam =
-          GetCanonicVectorFamily<T, Tint>(ListMat[0], std::cerr);
-      mpz_class order = OrderFromGens<Tint, Tgroup>(fam.get_full(), ListGen);
-      return {std::move(ListGen), order};
+      return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
+                                                                  std::cerr);
     }
     if (method == "plesken_souvignier") {
       PleskenSouvignierAutomResult<Tint> result =
           PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, std::cerr);
-      mpz_class order =
-          PleskenSouvignierGroupOrder<mpz_class>(result.ListOrbitSize);
-      return {std::move(result.ListGen), order};
+      return {std::move(result.ListGen), result.order};
     }
     if (method == "vinberg" || method == "weyl_chamber") {
       // The reflections in the roots of norm 2 are integral only for an
@@ -90,9 +72,9 @@ void ComputeAutomorphism(std::string const &FileListMat,
                  "weyl_chamber\n";
     throw TerminalException{1};
   };
-  AutomorphismGroup group = f_group();
+  IntAutomorphismGroup<Tint, mpz_class> group = f_group();
   if (OutFormat == "GAP_order") {
-    os << "return " << *group.opt_order << ";\n";
+    os << "return " << group.order << ";\n";
     return;
   }
   if (OutFormat == "GAP") {
@@ -153,11 +135,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "  GAP       : ListGen returned as a GAP-readable list of\n";
       std::cerr << "              integral matrix generators (default)\n";
       std::cerr << "  Oscar     : ListGen returned in the Oscar format\n";
-      std::cerr << "  GAP_order : the order |Aut(GramMat)| only, computed "
-                << "via\n";
-      std::cerr << "              the permutation action on a full-rank\n";
-      std::cerr << "              invariant vector family (skips the matrix\n";
-      std::cerr << "              lift, much cheaper)\n";
+      std::cerr << "  GAP_order : the order |Aut(GramMat)| only, as computed "
+                   "by the\n";
+      std::cerr << "              method along with the generators\n";
       std::cerr << "method values:\n";
       std::cerr << "  graph              : the automorphisms of a vector "
                    "family as a\n";

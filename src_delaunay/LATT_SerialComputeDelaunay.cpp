@@ -60,7 +60,7 @@ HessianPlusResult<T> HasHessianPlus(MyMatrix<T> const &Q, std::ostream &os) {
   MyMatrix<T> M0 = q0.SecMomentMat;
   T S = q0.SecMoment;
   std::vector<MyMatrix<Tint>> autom =
-      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os);
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os).ListGen;
   T Tn(n);
   T detQ = DeterminantMat(Q);
   MyMatrix<T> Qadj = detQ * Qinv; // adjugate: integral, positive definite
@@ -283,7 +283,7 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     MyMatrix<T> Qinv = Inverse(GramMat);
     MyMatrix<T> Qadj = DeterminantMat(GramMat) * Qinv; // adj(Q): integral, PD
     std::vector<MyMatrix<Tint>> autom =
-        ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
+        ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os).ListGen;
     std::vector<std::pair<MyVector<Tint>, size_t>> reps =
         get_k_short_orbit_vectors<T, Tint>(Qadj, autom, Korb, os);
     std::ofstream os_out(FileDeformationOrbits);

@@ -102,7 +102,8 @@ erdahl_polytope_group(ErdahlFunctionSpace<T> const &W,
   std::vector<T> Vdiag(n_ext, T(0));
   std::vector<MyMatrix<Tint>> l_gen_all =
       GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(D.EXT, ListMat, Vdiag,
-                                                        os);
+                                                        os)
+          .ListGen;
   auto get_perm = [&](MyMatrix<Tint> const &g) -> Telt {
     std::optional<Telt> opt =
         erdahl_permutation_of_rows<Tint, Telt>(D.EXT, D.EXT, g);

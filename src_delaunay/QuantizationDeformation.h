@@ -59,7 +59,7 @@ std::vector<MyMatrix<T>> compute_qh_symmetry_gens(MyMatrix<T> const &Q,
                                                   std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{Q, H};
   std::vector<MyMatrix<Tint>> gens_i =
-      ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);
+      ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os).ListGen;
   return UniversalStdVectorMatrixConversion<T,Tint>(gens_i);
 }
 
@@ -722,7 +722,7 @@ HessianResult<T> compute_hessian_signature(MyMatrix<T> const &Q,
   MyMatrix<T> M0 = q0.SecMomentMat;
   T S = q0.SecMoment;
   std::vector<MyMatrix<Tint>> autom =
-      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os);
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os).ListGen;
 #ifdef DEBUG_QUANTIZATION_DEFORMATION
   os << "QHESS: |Aut(Q) generators|=" << autom.size() << "\n";
 #endif

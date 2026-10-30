@@ -1129,7 +1129,7 @@ CheckKDelaunayTesselationVolume(MyMatrix<T> const &GramMat,
     map[GetMatrixRow(SHV, i_row)] = i_row;
   }
   std::vector<MyMatrix<Tint>> ListGen =
-      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os).ListGen;
   std::vector<Telt> ListPermGen;
   for (auto &eGen : ListGen) {
     std::vector<Tidx> l_pos(n_shv);

@@ -68,7 +68,7 @@ void process(std::string const &ListMatFile, std::string const &OutFormat,
       return *opt;
     } else {
       std::vector<MyMatrix<Tint>> ListGen =
-          ArithmeticAutomorphismGroup<T, Tint, Tgroup>(eMat, std::cerr);
+          ArithmeticAutomorphismGroup<T, Tint, Tgroup>(eMat, std::cerr).ListGen;
       database.insert_stab(eMat, ListGen);
       return ListGen;
     }

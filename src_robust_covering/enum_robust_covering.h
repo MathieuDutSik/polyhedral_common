@@ -1808,7 +1808,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   std::ostream &os = eData.rddo.os;
   MyMatrix<T> const& G = eData.solver.GramMat;
   int dim = G.rows();
-  std::vector<MyMatrix<Tint>> LGen = ArithmeticAutomorphismGroup<T,Tint,Tgroup>(G, os);
+  std::vector<MyMatrix<Tint>> LGen = ArithmeticAutomorphismGroup<T,Tint,Tgroup>(G, os).ListGen;
   std::vector<MyMatrix<Tint>> LElt = get_group_elements(LGen, os);
   std::vector<MyMatrix<T>> LEltAff_T;
   for (auto & elt: LElt) {

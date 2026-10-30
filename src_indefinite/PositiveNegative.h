@@ -40,7 +40,7 @@ INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const &Q, T const &X,
       ListVect.push_back(eV);
     }
     std::vector<MyMatrix<Tint>> LGen =
-        ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Qin, os);
+        ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Qin, os).ListGen;
 #ifdef DEBUG_POSITIVE_NEGATIVE_FORMS
     os << "POSNEG: |LGen|=" << LGen.size() << "\n";
 #endif
@@ -92,10 +92,10 @@ INDEF_FORM_AutomorphismGroup_PosNeg(MyMatrix<T> const &Q, std::ostream &os) {
   DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(Q, os);
   if (DSM.nbPlus == 0 && DSM.nbZero == 0) {
     MyMatrix<T> Qneg = -Q;
-    return ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Qneg, os);
+    return ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Qneg, os).ListGen;
   }
   if (DSM.nbMinus == 0 && DSM.nbZero == 0) {
-    return ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os);
+    return ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Q, os).ListGen;
   }
   std::cerr << "Failed to find a matching entry for PosNeg\n";
   throw TerminalException{1};

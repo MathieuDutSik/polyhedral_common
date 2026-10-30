@@ -597,8 +597,8 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusScheme scheme,
     std::vector<MyMatrix<T>> ListMat{GramMat};
     PleskenSouvignierAutomResult<Tint> res =
         PleskenSouvignierLatticeAutomorphism<T, Tint>(ListMat, os);
-    info.order = UniversalScalarConversion<typename Tgroup::Tint, mpz_class>(
-        PleskenSouvignierGroupOrder<mpz_class>(res.ListOrbitSize));
+    info.order =
+        UniversalScalarConversion<typename Tgroup::Tint, mpz_class>(res.order);
     info.ListGenMat = res.ListGen;
   } else {
     // Scheme B: the MatrixGroup algorithm on the full-rank family. The order

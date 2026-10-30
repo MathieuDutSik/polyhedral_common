@@ -449,7 +449,8 @@ erdahl_finite_group(DelaunayPolyhedron<T, Tint> const &X,
   std::vector<T> Vdiag(n_ext, T(0));
   std::vector<MyMatrix<Tint>> l_red =
       GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(cfg.EXTred, cfg.ListMat,
-                                                        Vdiag, os);
+                                                        Vdiag, os)
+          .ListGen;
   std::vector<Telt> l_perm;
   bool all_ok = true;
   for (auto &h : l_red) {

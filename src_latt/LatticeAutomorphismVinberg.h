@@ -144,13 +144,12 @@ VinbergAutom<Tint> ComputeAutomorphismVinberg(MyMatrix<T> const &GramMat,
   if (rs.n_roots == 0) {
     // Root free: no Weyl factor, Aut(L) is the residual itself. Fall back
     // to the ordinary automorphism computation on the full family.
-    std::vector<MyMatrix<Tint>> gens =
+    IntAutomorphismGroup<Tint, typename Tgroup::Tint> aut =
         ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
-    CanonicVectorFamily<Tint> fam = GetCanonicVectorFamily<T, Tint>(GramMat, os);
     res.weyl_order = mpz_class(1);
-    res.residual_order = OrderFromGens<Tint, Tgroup>(fam.get_full(), gens);
+    res.residual_order = aut.order;
     res.order = res.residual_order;
-    res.ListGen = gens;
+    res.ListGen = std::move(aut.ListGen);
     return res;
   }
   res.weyl_order = WeylGroupOrder(rs);
@@ -160,10 +159,10 @@ VinbergAutom<Tint> ComputeAutomorphismVinberg(MyMatrix<T> const &GramMat,
   std::vector<T> Vdiag(SHV.rows(), T(0));
   std::vector<MyMatrix<T>> ListMat{GramMat};
   // The automorphisms of the residual family = Aut(L, rho).
-  std::vector<MyMatrix<Tint>> resGen =
+  IntAutomorphismGroup<Tint, typename Tgroup::Tint> resAut =
       GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(SHV, ListMat, Vdiag,
                                                         os);
-  res.residual_order = OrderFromGens<Tint, Tgroup>(SHV, resGen);
+  res.residual_order = resAut.order;
   res.order = res.weyl_order * res.residual_order;
   // Generators of Aut(L): the simple-root reflections (generating W(R))
   // and the residual generators.
@@ -171,7 +170,7 @@ VinbergAutom<Tint> ComputeAutomorphismVinberg(MyMatrix<T> const &GramMat,
     res.ListGen.push_back(
         RootReflection<T, Tint>(GramMat, GetMatrixRow(rs.SimpleRoots, i)));
   }
-  for (auto &g : resGen) {
+  for (auto &g : resAut.ListGen) {
     res.ListGen.push_back(g);
   }
 #ifdef SANITY_CHECK_LATTICE_AUTOMORPHISM_VINBERG
@@ -268,7 +267,7 @@ VinbergAutom<Tint> ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat,
 #endif
   std::vector<T> Vdiag(SHV.rows(), T(0));
   std::vector<MyMatrix<T>> ListMat{GramRed};
-  std::vector<MyMatrix<Tint>> resGen =
+  IntAutomorphismGroup<Tint, typename Tgroup::Tint> resAut =
       GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(SHV, ListMat, Vdiag,
                                                         os);
 #ifdef TIMINGS_LATTICE_AUTOMORPHISM_VINBERG
@@ -276,7 +275,7 @@ VinbergAutom<Tint> ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat,
 #endif
   VinbergAutom<Tint> res;
   res.weyl_order = WeylGroupOrder(rs);
-  res.residual_order = OrderFromGens<Tint, Tgroup>(SHV, resGen);
+  res.residual_order = resAut.order;
   res.order = res.weyl_order * res.residual_order;
   // g_red preserves Pmat G Pmat^T, so Pmat^{-1} g_red Pmat preserves G.
   MyMatrix<Tint> const &Pmat = red.Pmat;
@@ -286,7 +285,7 @@ VinbergAutom<Tint> ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat,
         RootReflection<T, Tint>(GramRed, GetMatrixRow(rs.SimpleRoots, i));
     res.ListGen.push_back(PmatInv * g * Pmat);
   }
-  for (auto &g : resGen) {
+  for (auto &g : resAut.ListGen) {
     res.ListGen.push_back(PmatInv * g * Pmat);
   }
 #ifdef SANITY_CHECK_LATTICE_AUTOMORPHISM_VINBERG

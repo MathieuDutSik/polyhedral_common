@@ -90,7 +90,7 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> igusa_vector_automorphisms(MyMatrix<T> const &A,
                                                        std::ostream &os) {
   std::vector<MyMatrix<Tint>> l_h =
-      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(A, os);
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(A, os).ListGen;
   std::vector<MyMatrix<Tint>> l_M;
   for (auto &h : l_h) {
     MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);

@@ -23,9 +23,15 @@ int main() {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, cpp_int>;
-  std::vector<MyMatrix<cpp_int>> ListGen =
+  IntAutomorphismGroup<cpp_int, cpp_int> aut =
       ArithmeticAutomorphismGroupMultiple<cpp_rational, cpp_int, Tgroup>(
           ListMat, std::cerr);
+  std::vector<MyMatrix<cpp_int>> const &ListGen = aut.ListGen;
+  if (aut.order != 8) {
+    std::cerr << "Test_wasm_gram_aut: order=" << aut.order
+              << " instead of 8\n";
+    return 1;
+  }
   if (ListGen.empty()) {
     std::cerr << "Test_wasm_gram_aut: no generators returned\n";
     return 1;

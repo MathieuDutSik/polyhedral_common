@@ -135,7 +135,7 @@ std::vector<MyMatrix<Tint>>
 igusa_functional_stabilizer(std::vector<MyMatrix<T>> const &ListM,
                             std::ostream &os) {
   std::vector<MyMatrix<Tint>> l_h =
-      ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListM, os);
+      ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListM, os).ListGen;
   std::vector<MyMatrix<Tint>> l_g;
   for (auto &h : l_h) {
     MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);
