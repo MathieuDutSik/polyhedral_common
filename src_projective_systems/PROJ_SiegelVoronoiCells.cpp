@@ -150,6 +150,9 @@ struct TopRep {
   int i_cone;
   MyMatrix<Tint> M;
   MyMatrix<Tint> EXT;
+  // An exact point of the Siegel space in the open cone, when the cell was
+  // reached across a certified ridge.
+  std::optional<MyMatrix<T>> A_interior;
 };
 
 }  // namespace
@@ -229,7 +232,7 @@ int main(int argc, char *argv[]) {
         l_facet.push_back(adj.f_ext);
       }
       if (in_cone_interior(A, EXT_cone, l_facet)) {
-        l_top.push_back({tpc.i_perfect, tpc.M, EXT});
+        l_top.push_back({tpc.i_perfect, tpc.M, EXT, {}});
       }
     }
     // The walk through the top cells, up to G, with the exact certificates
@@ -299,17 +302,26 @@ int main(int argc, char *argv[]) {
     size_t pos = 0;
     while (pos < l_top.size()) {
       TopRep top = l_top[pos];
-      oracle.set_margins(l_margin_all);
-      SiegelIntersection si = f_intersect(top.EXT);
-      oracle.set_margins(l_margin_facet);
-      if (!si.nonempty || si.dim != dim_top) {
-        std::cerr << "SIEGEL: the top cell " << pos << " should meet the Siegel space in dimension " << dim_top << ", dim=" << si.dim << "\n";
-        throw TerminalException{1};
+      std::optional<MyMatrix<T>> opt_A;
+      if (top.A_interior) {
+        opt_A = top.A_interior;
+      } else {
+        oracle.set_margins(l_margin_all);
+        SiegelIntersection si = f_intersect(top.EXT);
+        oracle.set_margins(l_margin_facet);
+        if (!si.nonempty || si.dim != dim_top) {
+          std::cerr << "SIEGEL: the top cell " << pos << " should meet the Siegel space in dimension " << dim_top << ", dim=" << si.dim << "\n";
+          throw TerminalException{1};
+        }
+        opt_A = certify_top_cell(sp, f_numeric_point(top.EXT, si.weights), f_cone_functionals(top.i_cone, top.M));
       }
       MyMatrix<Tint> EXT_cone = l_perfect[top.i_cone].EXT * top.M;
       std::vector<sing_adj<Tint>> const &l_adj = l_perfect[top.i_cone].full_adjacencies(os);
       std::vector<MyVector<T>> l_fct = f_cone_functionals(top.i_cone, top.M);
-      std::optional<MyMatrix<T>> opt_A = certify_top_cell(sp, f_numeric_point(top.EXT, si.weights), l_fct);
+      if (opt_A && !in_cone_interior_exact(*opt_A, l_fct)) {
+        std::cerr << "SIEGEL: the point of the top cell " << pos << " is not in the open cone\n";
+        throw TerminalException{1};
+      }
       if (opt_A) {
         n_top_certified++;
       } else {
@@ -377,7 +389,8 @@ int main(int argc, char *argv[]) {
           throw TerminalException{1};
         }
         std::vector<MyVector<T>> l_fct1 = f_cone_functionals(adj.jCone, M_adj);
-        if (certify_ridge(sp, cand.second, l_fct, i_F, l_fct1, i_F1)) {
+        std::optional<MyMatrix<T>> opt_A_adj = certify_ridge(sp, cand.second, l_fct, i_F, l_fct1, i_F1);
+        if (opt_A_adj) {
           n_ridge_certified++;
         } else {
           // Only the certified ridges are crossed, so that every top cell
@@ -393,7 +406,7 @@ int main(int argc, char *argv[]) {
           }
         }
         if (is_new) {
-          l_top.push_back({static_cast<int>(adj.jCone), M_adj, EXT_adj});
+          l_top.push_back({static_cast<int>(adj.jCone), M_adj, EXT_adj, opt_A_adj});
           std::cerr << "SIEGEL: new top cell |EXT|=" << EXT_adj.rows() << " |l_top|=" << l_top.size() << "\n";
         }
       }

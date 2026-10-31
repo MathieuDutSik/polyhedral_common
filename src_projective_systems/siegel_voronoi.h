@@ -781,9 +781,10 @@ inline std::optional<MyMatrix<T>> certify_top_cell(SiegelParametrization const &
   The certificate of a ridge: the facet i_F of the cone of functionals
   l_fct0 (sigma), and the cone of functionals l_fct1 (sigma') whose facet
   i_F1 is the same facet, A_num a numerical point of the Siegel space on
-  the facet.
+  the facet. Returns the end A(1) of the curve, an exact point of the
+  Siegel space in the open cone sigma', which certifies that top cell.
  */
-inline bool certify_ridge(SiegelParametrization const &sp, MyMatrix<double> const &A_num,
+inline std::optional<MyMatrix<T>> certify_ridge(SiegelParametrization const &sp, MyMatrix<double> const &A_num,
                           std::vector<MyVector<T>> const &l_fct0, int const &i_F,
                           std::vector<MyVector<T>> const &l_fct1, int const &i_F1) {
   SiegelParam<double> P = sp.param_of(A_num);
@@ -835,7 +836,7 @@ inline bool certify_ridge(SiegelParametrization const &sp, MyMatrix<double> cons
     grad(k) = (f_phi_exactpar(vp) - f_phi_exactpar(vm)) / (2 * h);
   }
   if (grad.norm() == 0) {
-    return false;
+    return {};
   }
   Eigen::VectorXd dir = grad / grad.norm();
   int n_pt = 2 * g + 8;
@@ -937,10 +938,12 @@ inline bool certify_ridge(SiegelParametrization const &sp, MyMatrix<double> cons
       continue;
     }
     if (f_positive(l_fct0, i_F) && f_positive(l_fct1, i_F1)) {
-      return true;
+      // The end A(1) is in the open cone sigma': its facets other than F
+      // are positive on [0, 1], and the functional of F is negative at 1.
+      return sp.point(P1, false);
     }
   }
-  return false;
+  return {};
 }
 
 
