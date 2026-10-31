@@ -864,10 +864,54 @@ inline bool certify_ridge(SiegelParametrization const &sp, MyMatrix<double> cons
       }
       return poly_interpolate(l_t, l_val);
     };
+    /*
+      A bound on the variation of the curve: the entries of
+      B(t) = det(W(t)) A(t) are polynomials, and |B_ab(t) - B_ab(0)| <= E_ab,
+      the sum of the absolute values of the coefficients of degree >= 1, on
+      [0, 1]. A functional L with L(B(0)) > sum |L_ab| w_ab E_ab (w_ab the
+      weights of eval_functional) is then positive on [0, 1], without the
+      Sturm sequence.
+     */
+    int n = l_A[0].rows();
+    MyMatrix<T> E(n, n);
+    for (int a = 0; a < n; a++) {
+      for (int b = a; b < n; b++) {
+        std::vector<T> l_val;
+        for (auto &A : l_A) {
+          l_val.push_back(A(a, b));
+        }
+        Poly p = poly_interpolate(l_t, l_val);
+        T bound(0);
+        for (size_t k = 1; k < p.size(); k++) {
+          bound += T_abs(p[k]);
+        }
+        E(a, b) = bound;
+        E(b, a) = bound;
+      }
+    }
+    MyMatrix<T> const &B_start = l_A[0];
+    auto f_far = [&](MyVector<T> const &L) -> bool {
+      T val0 = eval_functional<T>(L, B_start);
+      if (val0 <= 0) {
+        return false;
+      }
+      T bound(0);
+      int pos = 0;
+      for (int a = 0; a < n; a++) {
+        for (int b = a; b < n; b++) {
+          bound += T_abs(L(pos)) * E(a, b) * (a == b ? 1 : 2);
+          pos++;
+        }
+      }
+      return val0 > bound;
+    };
     // No root in [0, 1] for the other facets of sigma and sigma'.
     auto f_positive = [&](std::vector<MyVector<T>> const &l_fct, int const &i_skip) -> bool {
       for (size_t i = 0; i < l_fct.size(); i++) {
         if (static_cast<int>(i) == i_skip) {
+          continue;
+        }
+        if (f_far(l_fct[i])) {
           continue;
         }
         Poly p = f_poly(l_fct[i]);

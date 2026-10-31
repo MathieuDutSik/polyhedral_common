@@ -246,12 +246,52 @@ int main(int argc, char *argv[]) {
       }
       return A;
     };
+    /*
+      The facet functionals of the cone l_perfect[i_cone].EXT M: with the
+      functional L of a facet of the reference cone as the symmetric matrix
+      Lambda (L(A) = Tr(Lambda A)), the points of the cone of EXT M are the
+      M^T A M, so the functional becomes M^{-1} Lambda M^{-T}. The reference
+      ones are computed once.
+     */
+    std::map<int, std::vector<MyMatrix<T>>> map_ref_fct;
     auto f_cone_functionals = [&](int const &i_cone, MyMatrix<Tint> const &M) -> std::vector<MyVector<T>> {
-      std::vector<Face> l_facet;
-      for (auto &adj : l_perfect[i_cone].full_adjacencies(os)) {
-        l_facet.push_back(adj.f_ext);
+      auto iter = map_ref_fct.find(i_cone);
+      if (iter == map_ref_fct.end()) {
+        std::vector<Face> l_facet;
+        for (auto &adj : l_perfect[i_cone].full_adjacencies(os)) {
+          l_facet.push_back(adj.f_ext);
+        }
+        std::vector<MyMatrix<T>> l_mat;
+        for (auto &L : facet_functionals(l_perfect[i_cone].EXT, l_facet)) {
+          MyMatrix<T> Lambda(n, n);
+          int pos = 0;
+          for (int a = 0; a < n; a++) {
+            for (int b = a; b < n; b++) {
+              Lambda(a, b) = L(pos);
+              Lambda(b, a) = L(pos);
+              pos++;
+            }
+          }
+          l_mat.push_back(Lambda);
+        }
+        iter = map_ref_fct.emplace(i_cone, std::move(l_mat)).first;
       }
-      return facet_functionals(l_perfect[i_cone].EXT * M, l_facet);
+      MyMatrix<T> Minv = Inverse(UniversalMatrixConversion<T, Tint>(M));
+      MyMatrix<T> MinvT = Minv.transpose();
+      std::vector<MyVector<T>> l_fct;
+      for (auto &Lambda : iter->second) {
+        MyMatrix<T> Lp = Minv * Lambda * MinvT;
+        MyVector<T> L(n * (n + 1) / 2);
+        int pos = 0;
+        for (int a = 0; a < n; a++) {
+          for (int b = a; b < n; b++) {
+            L(pos) = Lp(a, b);
+            pos++;
+          }
+        }
+        l_fct.push_back(L);
+      }
+      return l_fct;
     };
     int n_top_certified = 0;
     int n_ridge = 0;
