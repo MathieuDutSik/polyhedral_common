@@ -207,13 +207,27 @@ ClassifyComponent(std::vector<int> const &nodes,
   throw TerminalException{1};
 }
 
+// The roots of the lattice, the vectors of norm 2, one per antipodal pair.
 template <typename T, typename Tint>
-RootSystemData<Tint> ComputeRootSystem(MyMatrix<T> const &GramMat,
-                                       std::ostream &os) {
+MyMatrix<Tint> GetLatticeRoots(MyMatrix<T> const &GramMat,
+                               GramReduction reduction, std::ostream &os) {
+  CVPSolver<T, Tint> solver = GetCVPSolver<T, Tint>(GramMat, reduction, os);
+  return MatrixFromVectorFamilyDim(GramMat.rows(),
+                                   solver.fixed_norm_vectors(T(2)));
+}
+
+/*
+  The root system from the roots of GetLatticeRoots, for a caller that also
+  needs them elsewhere (ComputeRootDecompositionFromRoots) and enumerates
+  them once.
+ */
+template <typename T, typename Tint>
+RootSystemData<Tint>
+ComputeRootSystemFromRoots(MyMatrix<T> const &GramMat,
+                           MyMatrix<Tint> const &Roots,
+                           [[maybe_unused]] std::ostream &os) {
   int n = GramMat.rows();
   RootSystemData<Tint> rs;
-  // Roots up to sign: the norm-2 vectors.
-  MyMatrix<Tint> Roots = T_ShortVector_fixed<T, Tint>(GramMat, T(2), os);
   rs.n_roots = Roots.rows();
   if (rs.n_roots == 0) {
     rs.rank = 0;
@@ -332,6 +346,14 @@ RootSystemData<Tint> ComputeRootSystem(MyMatrix<T> const &GramMat,
     n_comp++;
   }
   return rs;
+}
+
+template <typename T, typename Tint>
+RootSystemData<Tint> ComputeRootSystem(MyMatrix<T> const &GramMat,
+                                       GramReduction reduction,
+                                       std::ostream &os) {
+  MyMatrix<Tint> Roots = GetLatticeRoots<T, Tint>(GramMat, reduction, os);
+  return ComputeRootSystemFromRoots<T, Tint>(GramMat, Roots, os);
 }
 
 // clang-format off

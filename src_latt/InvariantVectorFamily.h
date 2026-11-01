@@ -334,12 +334,18 @@ bool operator<(FundInvariantVectorFamily<Tint> const &x,
  */
 template <typename T, typename Tint, typename Ffinal, typename Finvariant>
 struct ShellFamilyBuilder {
-  ShellFamilyBuilder(MyMatrix<T> const &GramMat, Ffinal f_final,
-                     Finvariant f_invariant, std::ostream &os)
+  /*
+    The solver on GramMat comes from the caller, who may share it with other
+    computations on the same matrix. max_norm_ is the largest diagonal entry
+    of the reduced Gram matrix of the solver: any basis gives a ball that
+    contains it, and the family does not depend on which (see one_shell).
+   */
+  ShellFamilyBuilder(MyMatrix<T> const &GramMat,
+                     CVPSolver<T, Tint> const &solver, Ffinal f_final,
+                     Finvariant f_invariant)
       : f_final_(f_final), f_invariant_(f_invariant), n_(GramMat.rows()),
-        solver_(GramMat, os),
-        incr_(GetShellStep<T, Tint>(GramMat, solver_)),
-        max_norm_(GetMaxNorm<T, Tint>(GramMat, os)), norm_(incr_),
+        solver_(solver), incr_(GetShellStep<T, Tint>(GramMat, solver_)),
+        max_norm_(MaximumDiagonal(solver.get_reduced_gram())), norm_(incr_),
         SHVret_(0, GramMat.rows()),
         fi_ret_(TrivFundamentalInvariant<Tint>()), done_(false),
         exhausted_(false) {}
@@ -442,7 +448,7 @@ private:
   int n_;
   // Before incr_, which is initialized from it: over an algebraic scalar type
   // the step is the lattice minimum, which the solver computes.
-  CVPSolver<T, Tint> solver_;
+  CVPSolver<T, Tint> const &solver_;
   T incr_, max_norm_, norm_;
   MyMatrix<Tint> SHVret_;
   FundInvariantVectorFamily<Tint> fi_ret_;
@@ -457,8 +463,9 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyHalf(MyMatrix<T> const &GramMat,
                                                 Ffinal f_final,
                                                 Finvariant f_invariant,
                                                 std::ostream &os) {
-  ShellFamilyBuilder<T, Tint, Ffinal, Finvariant> builder(GramMat, f_final,
-                                                          f_invariant, os);
+  CVPSolver<T, Tint> solver(GramMat, os);
+  ShellFamilyBuilder<T, Tint, Ffinal, Finvariant> builder(GramMat, solver,
+                                                          f_final, f_invariant);
   while (!builder.is_done()) {
     builder.one_shell(os);
   }
@@ -595,29 +602,11 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
   starts the tower from the root sublattice, matching the root decomposition
   of LatticeRootDecomposition.h. The set is always closed under v -> -v.
  */
-/*
-  Whether the Gram matrix given to a family function is already
-  LLL-reduced, in which case the shortest vector enumeration on it does not
-  reduce it again, or has to be reduced. Only the matrix given is concerned:
-  the matrices formed along the way (orthogonal complements, sublattices)
-  are reduced as needed.
- */
-enum class GramReduction { Reduce, AlreadyReduced };
-
-template <typename T, typename Tint>
-CVPSolver<T, Tint> ivf_cvp_solver(MyMatrix<T> const &GramMat,
-                                  GramReduction reduction, std::ostream &os) {
-  if (reduction == GramReduction::AlreadyReduced) {
-    return CVPSolver<T, Tint>(GramMat, LLLnoreduction<T, Tint>(GramMat), os);
-  }
-  return CVPSolver<T, Tint>(GramMat, os);
-}
-
 template <typename T, typename Tint>
 MyMatrix<Tint> get_shv_block(MyMatrix<T> const &GramMat, bool use_roots,
                              GramReduction reduction, std::ostream &os) {
   int n = GramMat.rows();
-  CVPSolver<T, Tint> solver = ivf_cvp_solver<T, Tint>(GramMat, reduction, os);
+  CVPSolver<T, Tint> solver = GetCVPSolver<T, Tint>(GramMat, reduction, os);
   if (use_roots) {
     MyMatrix<Tint> roots =
         MatrixFromVectorFamilyDim(n, solver.fixed_norm_vectors(T(2)));
@@ -1356,9 +1345,7 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
 
 // Min(A), with both signs, as rows of the returned matrix.
 template <typename T, typename Tint>
-MyMatrix<Tint> CharVectSet_MinimalVectors(MyMatrix<T> const &GramMat,
-                                          std::ostream &os) {
-  CVPSolver<T, Tint> solver(GramMat, os);
+MyMatrix<Tint> CharVectSet_MinimalVectors(CVPSolver<T, Tint> const &solver) {
   Tshortest<T, Tint> RecSHV = solver.shortest_vectors();
   // Already antipodal, unlike fixed_norm_vectors which returns one vector per
   // pair and is the one the shell based families have to duplicate.
@@ -1477,18 +1464,16 @@ struct CharVectSet_Budget {
   coset and there are [Z^n : L_min] of them. What is lost is that the family
   then generates L_min instead of Z^n.
  */
+// With the minimal vectors SHV of GramMat, which the caller may already have.
 template <typename T, typename Tint>
-std::optional<MyMatrix<Tint>>
-CharacteristicVectorSetWellRoundedCV(MyMatrix<T> const &GramMat,
-                                     bool const &spanning,
-                                     bool const &antipodal_half,
-                                     CharVectSet_Budget const &budget,
-                                     std::ostream &os) {
+std::optional<MyMatrix<Tint>> CharacteristicVectorSetWellRoundedCV_min(
+    MyMatrix<T> const &GramMat, MyMatrix<Tint> const &SHV,
+    bool const &spanning, bool const &antipodal_half,
+    CharVectSet_Budget const &budget, std::ostream &os) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
 #endif
   int n = GramMat.rows();
-  MyMatrix<Tint> SHV = CharVectSet_MinimalVectors<T, Tint>(GramMat, os);
 #ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
   if (RankMat(SHV) != n) {
     std::cerr << "IVF: CharacteristicVectorSetWellRoundedCV called on a "
@@ -1549,29 +1534,50 @@ CharacteristicVectorSetWellRoundedCV(MyMatrix<T> const &GramMat,
   return RetMat;
 }
 
+template <typename T, typename Tint>
+std::optional<MyMatrix<Tint>>
+CharacteristicVectorSetWellRoundedCV(MyMatrix<T> const &GramMat,
+                                     bool const &spanning,
+                                     bool const &antipodal_half,
+                                     CharVectSet_Budget const &budget,
+                                     std::ostream &os) {
+  CVPSolver<T, Tint> solver(GramMat, os);
+  MyMatrix<Tint> SHV = CharVectSet_MinimalVectors<T, Tint>(solver);
+  return CharacteristicVectorSetWellRoundedCV_min<T, Tint>(
+      GramMat, SHV, spanning, antipodal_half, budget, os);
+}
+
 /*
   V_cv(A) of (2.2.6).  Recursive over the successive saturated spans of the
-  minimal vectors.
+  minimal vectors. The solver on GramMat and the minimal vectors SHV come
+  from the caller, who may reuse them across calls on the same matrix (see
+  GetCanonicVectorFamily_kernel); each matrix of the construction gets one
+  solver.
  */
+// Defined below, called by the recursion on the projection.
 template <typename T, typename Tint>
 std::optional<MyMatrix<Tint>>
 CharacteristicVectorSetCV(MyMatrix<T> const &GramMat, bool const &spanning,
-                                         bool const &antipodal_half,
-                                         CharVectSet_Budget const &budget,
-                                         std::ostream &os) {
+                          bool const &antipodal_half,
+                          CharVectSet_Budget const &budget, std::ostream &os);
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<Tint>> CharacteristicVectorSetCV_solver(
+    MyMatrix<T> const &GramMat, CVPSolver<T, Tint> const &solver,
+    MyMatrix<Tint> const &SHV, bool const &spanning, bool const &antipodal_half,
+    CharVectSet_Budget const &budget, std::ostream &os) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
 #endif
   int n = GramMat.rows();
-  MyMatrix<Tint> SHV = CharVectSet_MinimalVectors<T, Tint>(GramMat, os);
   int r = RankMat(SHV);
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
   os << "IVF: CV n=" << n << " |Min|=" << SHV.rows() << " r=" << r << "\n";
 #endif
   if (r == n) {
     // A is well-rounded, the recursion stops.
-    return CharacteristicVectorSetWellRoundedCV<T, Tint>(
-        GramMat, spanning, antipodal_half, budget, os);
+    return CharacteristicVectorSetWellRoundedCV_min<T, Tint>(
+        GramMat, SHV, spanning, antipodal_half, budget, os);
   }
   CharVectSet_Accumulator<Tint> acc;
   acc.antipodal_half = antipodal_half;
@@ -1579,9 +1585,13 @@ CharacteristicVectorSetCV(MyMatrix<T> const &GramMat, bool const &spanning,
   MyMatrix<Tint> B1 = IntegralSpaceSaturation(GetZbasis(SHV));
   MyMatrix<T> B1_T = UniversalMatrixConversion<T, Tint>(B1);
   MyMatrix<T> Gram1 = B1_T * GramMat * B1_T.transpose();
+  // One solver on Gram1, for its minimal vectors and for the closest
+  // vectors below.
+  CVPSolver<T, Tint> solver1(Gram1, os);
+  MyMatrix<Tint> SHV1 = CharVectSet_MinimalVectors<T, Tint>(solver1);
   std::optional<MyMatrix<Tint>> opt_wr =
-      CharacteristicVectorSetWellRoundedCV<T, Tint>(Gram1, spanning,
-                                                    antipodal_half, budget, os);
+      CharacteristicVectorSetWellRoundedCV_min<T, Tint>(
+          Gram1, SHV1, spanning, antipodal_half, budget, os);
   if (!opt_wr) {
     return {};
   }
@@ -1618,8 +1628,6 @@ CharacteristicVectorSetCV(MyMatrix<T> const &GramMat, bool const &spanning,
     return {};
   }
   MyMatrix<Tint> const &V2 = *opt_V2;
-  CVPSolver<T, Tint> solver(GramMat, os);
-  CVPSolver<T, Tint> solver1(Gram1, os);
   // Projection of Z^n onto L_2 written in the B_2 coordinates, that is
   // x |-> x - (x A B_1^T) Gram1^{-1} B_1 followed by the B_2 coordinates.
   // In the basis (B_1, C) of Z^n the projection of B_1 is 0 and that of C
@@ -1672,6 +1680,17 @@ CharacteristicVectorSetCV(MyMatrix<T> const &GramMat, bool const &spanning,
   os << "IVF: CV |V_cv|=" << RetMat.rows() << "\n";
 #endif
   return RetMat;
+}
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<Tint>>
+CharacteristicVectorSetCV(MyMatrix<T> const &GramMat, bool const &spanning,
+                          bool const &antipodal_half,
+                          CharVectSet_Budget const &budget, std::ostream &os) {
+  CVPSolver<T, Tint> solver(GramMat, os);
+  MyMatrix<Tint> SHV = CharVectSet_MinimalVectors<T, Tint>(solver);
+  return CharacteristicVectorSetCV_solver<T, Tint>(
+      GramMat, solver, SHV, spanning, antipodal_half, budget, os);
 }
 
 /*
@@ -1795,11 +1814,15 @@ GetCanonicVectorFamily_kernel(MyMatrix<Tfield> const &GramMat,
       [&](MyMatrix<Tint> const &M) -> FundInvariantVectorFamily<Tint> {
     return ComputeRankInvariant(M, os);
   };
+  // One solver on GramMat and its minimal vectors, shared by the shells and
+  // by every attempt of V_cv, which is restarted after each shell.
+  CVPSolver<T, Tint> solver(GramMat, os);
+  MyMatrix<Tint> SHVmin = CharVectSet_MinimalVectors<T, Tint>(solver);
   auto f_cv = [&](int64_t const &ns,
                   size_t const &sz) -> std::optional<MyMatrix<Tint>> {
     CharVectSet_Budget budget(ns, sz);
-    return CharacteristicVectorSetCV<T, Tint>(GramMat, false, antipodal_half,
-                                              budget, os);
+    return CharacteristicVectorSetCV_solver<T, Tint>(
+        GramMat, solver, SHVmin, false, antipodal_half, budget, os);
   };
   auto f_ret = [&](MyMatrix<Tint> &&SHV,
                    [[maybe_unused]] const char *who) -> CanonicVectorFamily<Tint> {
@@ -1812,7 +1835,7 @@ GetCanonicVectorFamily_kernel(MyMatrix<Tfield> const &GramMat,
     return get_canonic_vector_family<Tint>(std::move(SHV));
   };
   ShellFamilyBuilder<T, Tint, decltype(f_final), decltype(f_invariant)> shells(
-      GramMat, f_final, f_invariant, os);
+      GramMat, solver, f_final, f_invariant);
   int64_t shell_ns = 0;
   while (true) {
     NanosecondTime time_shell;

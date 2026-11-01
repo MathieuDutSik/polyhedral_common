@@ -1028,6 +1028,9 @@ public:
       : GramMat(_GramMat), dim(GramMat.rows()), os(_os), eRec(_eRec) {
     init_from_reduction();
   }
+  // The Gram matrix in the reduced basis of the solver, the one the
+  // enumeration runs in.
+  MyMatrix<T> const &get_reduced_gram() const { return eRec.GramMatRed; }
   ShvecFastPrep<T> const *get_prep() const {
     if (fast_prep) {
       return &*fast_prep;
@@ -1333,6 +1336,23 @@ public:
   the DualLLL is not a good thing, then you have to write
   specific code.
  */
+/*
+  Whether a Gram matrix given to a computation is already LLL-reduced, in
+  which case the solver on it does not reduce it again, or has to be
+  reduced. Only the matrix given is concerned: the matrices formed along the
+  way (orthogonal complements, sublattices) are reduced as needed.
+ */
+enum class GramReduction { Reduce, AlreadyReduced };
+
+template <typename T, typename Tint>
+CVPSolver<T, Tint> GetCVPSolver(MyMatrix<T> const &GramMat,
+                                GramReduction reduction, std::ostream &os) {
+  if (reduction == GramReduction::AlreadyReduced) {
+    return CVPSolver<T, Tint>(GramMat, LLLnoreduction<T, Tint>(GramMat), os);
+  }
+  return CVPSolver<T, Tint>(GramMat, os);
+}
+
 template <typename T, typename Tint>
 resultCVP<T, Tint> NearestVectors(MyMatrix<T> const &GramMat,
                                   MyVector<T> const &eV, std::ostream &os) {

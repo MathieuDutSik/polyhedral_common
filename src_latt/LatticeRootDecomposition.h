@@ -58,6 +58,8 @@ template <typename T, typename Tint> struct RootDecomposition {
   // Gram matrices of the two components in those bases.
   MyMatrix<T> RootGram;
   MyMatrix<T> PerpGram;
+  // The roots, one per antipodal pair, as GetLatticeRoots gives them.
+  MyMatrix<Tint> Roots;
   // The number of roots (norm 2 vectors up to sign), the rank of the
   // root sublattice, and the glue index [L : R (+) R^perp].
   int n_roots;
@@ -81,15 +83,22 @@ MyMatrix<Tint> IntegralOrthogonalComplement(MyMatrix<T> const &GramMat,
   return NullspaceIntMat(Prod);
 }
 
-template <typename T, typename Tint, typename Tgroup>
+/*
+  The decomposition from the roots of GetLatticeRoots, for a caller that
+  also needs them elsewhere (ComputeRootSystemFromRoots) and enumerates them
+  once.
+ */
+template <typename T, typename Tint>
 RootDecomposition<T, Tint>
-ComputeRootDecomposition(MyMatrix<T> const &GramMat, std::ostream &os) {
+ComputeRootDecompositionFromRoots(MyMatrix<T> const &GramMat,
+                                  MyMatrix<Tint> const &Roots,
+                                  [[maybe_unused]] std::ostream &os) {
   int n = GramMat.rows();
   RootDecomposition<T, Tint> dec;
 
   // (1) The roots: vectors of norm 2, up to sign. For an even lattice of
   // minimum 2 these are the shortest vectors.
-  MyMatrix<Tint> Roots = T_ShortVector_fixed<T, Tint>(GramMat, T(2), os);
+  dec.Roots = Roots;
   dec.n_roots = Roots.rows();
 #ifdef DEBUG_LATTICE_ROOT_DECOMPOSITION
   os << "ROOTDEC: n_roots=" << dec.n_roots << "\n";
@@ -144,6 +153,14 @@ ComputeRootDecomposition(MyMatrix<T> const &GramMat, std::ostream &os) {
      << " glue_index=" << dec.glue_index << "\n";
 #endif
   return dec;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+RootDecomposition<T, Tint>
+ComputeRootDecomposition(MyMatrix<T> const &GramMat, std::ostream &os) {
+  MyMatrix<Tint> Roots =
+      GetLatticeRoots<T, Tint>(GramMat, GramReduction::Reduce, os);
+  return ComputeRootDecompositionFromRoots<T, Tint>(GramMat, Roots, os);
 }
 
 /*
@@ -202,8 +219,9 @@ DecomposedCharacteristicFamily(MyMatrix<T> const &GramMat,
   int n = GramMat.rows();
   // The roots, in the coordinates of L, with both signs: fixed_norm_vectors
   // returns one vector per antipodal pair, and which one depends on the
-  // basis, so only the full root system is an isometry invariant.
-  MyMatrix<Tint> Roots = T_ShortVector_fixed<T, Tint>(GramMat, T(2), os);
+  // basis, so only the full root system is an isometry invariant. The
+  // decomposition already holds them.
+  MyMatrix<Tint> const &Roots = dec.Roots;
   // The characteristic family of R^perp, lifted to L: a vector u in the
   // basis PerpBasis becomes u * PerpBasis in the coordinates of L.
   std::vector<MyVector<Tint>> family;
@@ -329,7 +347,8 @@ ComputeCanonicalFormWeylReduced(MyMatrix<T> const &GramMat, std::ostream &os) {
   if (dec.n_roots == 0) {
     return ComputeCanonicalForm<T, Tint, Tgroup>(GramMat, os);
   }
-  RootSystemData<Tint> rs = ComputeRootSystem<T, Tint>(GramMat, os);
+  RootSystemData<Tint> rs =
+      ComputeRootSystemFromRoots<T, Tint>(GramMat, dec.Roots, os);
 #ifdef TIMINGS_LATTICE_ROOT_DECOMPOSITION
   os << "|ROOTDEC: WeylReduced, decomposition and root system|=" << time
      << "\n";
@@ -386,6 +405,8 @@ ComputeCanonicalFormWeylReduced(MyMatrix<T> const &GramMat, std::ostream &os) {
   the minuscule one, and it is reached from y by reflecting into the chamber
   and subtracting a positive root delta whenever <y, delta> >= 2, which
   shortens y; both moves stay in y + R.
+
+  GramMat is LLL-reduced by every caller, and is not reduced again.
  */
 template <typename T, typename Tint>
 MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
@@ -484,7 +505,7 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   MyMatrix<Tfield> GramMat_F = UniversalMatrixConversion<Tfield, T>(GramMat);
   std::vector<MyVector<Tint>> cvL =
       inner_span_iterated_shortest_rec<Tfield, Tint>(
-          GramMat_F, true, GramReduction::Reduce, os, &chamber);
+          GramMat_F, true, GramReduction::AlreadyReduced, os, &chamber);
   std::vector<MyVector<Tint>> family;
   std::unordered_set<MyVector<Tint>> seen;
   auto insert_pm = [&](MyVector<Tint> const &v) -> void {
@@ -564,7 +585,8 @@ MyMatrix<Tint> ComputeCanonicalFormWeylChamber(MyMatrix<T> const &GramMat,
   // the Hermite normal form does.
   LLLreduction<T, Tint> red = LLLreducedBasis<T, Tint>(GramMat, os);
   MyMatrix<T> const &GramRed = red.GramMatRed;
-  RootSystemData<Tint> rs = ComputeRootSystem<T, Tint>(GramRed, os);
+  RootSystemData<Tint> rs =
+      ComputeRootSystem<T, Tint>(GramRed, GramReduction::AlreadyReduced, os);
   if (rs.n_roots == 0) {
     return ComputeCanonicalForm<T, Tint, Tgroup>(GramMat, os);
   }
