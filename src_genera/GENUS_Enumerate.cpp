@@ -51,7 +51,7 @@ void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
   }
   GenusEnumerationResult<T, Tgroup> result =
       GenusEnumeration<T, Tint, Tgroup>(ListSeed, TotalMass, prime, scheme,
-                                        spec.strategy, std::cerr);
+                                        spec.strategy, spec.rw, std::cerr);
   // With the iterate strategy there is no single prime; 0 marks that in
   // the output record.
   int prime_out =
@@ -115,7 +115,13 @@ int main(int argc, char *argv[]) {
       std::cerr << "                       primes 2, 3, 5, ... in order,\n";
       std::cerr << "                       including those dividing det,\n";
       std::cerr << "                       cheapest first, until the mass\n";
-      std::cerr << "                       closes; prime is then ignored)\n";
+      std::cerr << "                       closes; prime is then ignored;\n";
+      std::cerr << "                       random_walk first treats each\n";
+      std::cerr << "                       new class by random 2-neighbours\n";
+      std::cerr << "                       and falls back on iterate)\n";
+      std::cerr << "                     seed <s>      (optional, random_walk)\n";
+      std::cerr << "                     draws_factor <f> (optional,\n";
+      std::cerr << "                       random_walk: draws per needed hit)\n";
       std::cerr << "Lattice (input) : one or more Gram matrices, in the\n";
       std::cerr << "                  ListMatrix format. One seed per SPINOR\n";
       std::cerr << "                  genus is needed: the p-neighbour graph\n";

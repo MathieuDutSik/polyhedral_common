@@ -13,9 +13,11 @@
 #include "InvariantVectorFamily.h"
 #include "ClassicLLL.h"
 #include "Positivity.h"
+#include "Basic_random.h"
 #include <limits>
 #include <map>
 #include <optional>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -91,17 +93,38 @@
   been expanded at every prime in play and the mass has not closed.
   Deterministic, and termination is inherited from OutPrime: the schedule
   eventually reaches a prime not dividing the determinant.
+
+  RandomWalk: most neighbours of the full expansion are classes already
+  known, so each new class is first treated by random 2-neighbours. A class
+  with |Aut| = g gets the bound b, the smallest integer with g < 2^b; random
+  projective lines mod 2 are drawn (uniformly, so an orbit is hit in
+  proportion to its size and no orbit computation is needed) and their
+  neighbours inserted, until b of them are known classes. The draws are
+  also bounded by draws_factor * b, since a line need not give a neighbour.
+  The pending classes are treated by decreasing |Aut|. If the mass closes in
+  this first phase the enumeration is over. Otherwise the full expansion
+  follows, at 2, then 3, 5, ... as in Iterate, and every new class it finds
+  is again treated by the random walk first. In both phases the class with
+  the largest |Aut| goes first. Deterministic for a given seed, and
+  terminating since the second phase is Iterate.
  */
-enum class NeighborStrategy { OutPrime, Iterate };
+enum class NeighborStrategy { OutPrime, Iterate, RandomWalk };
+
+// The parameters of the random walk phase of the RandomWalk strategy.
+struct GenusRandomWalkOptions {
+  uint64_t seed = 1;
+  size_t draws_factor = 16;
+};
 
 // The description of the genus. `prime` is the prime used for the neighbour
 // step; 0 means "choose the smallest prime not dividing 2*det". With the
-// Iterate strategy the prime is ignored.
+// Iterate and RandomWalk strategies the prime is ignored.
 template <typename T> struct GenusSpec {
   int rank;
   T det;
   int prime;
   NeighborStrategy strategy;
+  GenusRandomWalkOptions rw;
 };
 
 /*
@@ -126,6 +149,13 @@ template <typename T, typename Tgroup> struct GenusEnumerationResult {
   // seeds are not counted. With the out_prime strategy there is one entry.
   std::vector<int> ListPrimeUsed;
   std::vector<size_t> ListNewClassPerPrime;
+  // The cost in neighbours: how many the full expansion built, and how many
+  // the random walk built and how many new classes those gave. Whether the
+  // mass closed during the first, random walk only, phase.
+  size_t n_neighbor_full = 0;
+  size_t n_neighbor_random = 0;
+  size_t n_new_random = 0;
+  bool closed_in_random_walk = false;
 };
 
 // Inverse of a modulo the prime p, by extended Euclid. p is small.
@@ -955,8 +985,14 @@ struct GenusEnumerationState {
   // Expands one known class at one prime: the orbits of projective points,
   // the neighbour of each representative, insertion of the new classes.
   // Stops early when the mass closes. i_prime is the index of p in
-  // result.ListPrimeUsed, for the count of the new classes.
+  // result.ListPrimeUsed, for the count of the new classes. f_new is called
+  // on the index of every new class, as soon as it is inserted.
   void expand_at(size_t pos, int p, size_t i_prime) {
+    expand_at(pos, p, i_prime, [](size_t) -> void {});
+  }
+
+  template <typename Fnew>
+  void expand_at(size_t pos, int p, size_t i_prime, Fnew f_new) {
     MyMatrix<T> GramMat = ListGramWork[pos];
     std::vector<MyMatrix<Tint>> const &ListGenMat = ListAutInfo[pos].ListGenMat;
     MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
@@ -998,8 +1034,10 @@ struct GenusEnumerationState {
           WriteMatrixFile(std::string(dump_file), *opt);
         }
 #endif
+        result.n_neighbor_full++;
         if (insert(*opt)) {
           result.ListNewClassPerPrime[i_prime]++;
+          f_new(ListGramWork.size() - 1);
         }
         if (is_closed()) {
           return;
@@ -1026,6 +1064,25 @@ void GenusEnumerationOutPrime(GenusEnumerationState<T, Tint, Tgroup> &state,
   }
 }
 
+// The smallest prime larger than q, for the schedules that bring in the
+// primes one after the other.
+inline int GenusNextPrime(int q) {
+  int cand = q + 1;
+  while (true) {
+    bool is_prime = cand >= 2;
+    for (int d = 2; d * d <= cand; d++) {
+      if (cand % d == 0) {
+        is_prime = false;
+        break;
+      }
+    }
+    if (is_prime) {
+      return cand;
+    }
+    cand++;
+  }
+}
+
 /*
   The iterate schedule: see NeighborStrategy. ListPrimeUsed holds the
   primes in play in increasing order; next_expand[i] is the number of
@@ -1042,22 +1099,6 @@ void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
   auto &result = state.result;
   std::vector<int> &ListPrimeUsed = result.ListPrimeUsed;
   std::vector<size_t> next_expand;
-  auto next_prime = [](int q) -> int {
-    int cand = q + 1;
-    while (true) {
-      bool is_prime = cand >= 2;
-      for (int d = 2; d * d <= cand; d++) {
-        if (cand % d == 0) {
-          is_prime = false;
-          break;
-        }
-      }
-      if (is_prime) {
-        return cand;
-      }
-      cand++;
-    }
-  };
   while (!state.is_closed()) {
     if (result.accumulated_mass > state.TotalMass) {
       break;
@@ -1070,7 +1111,7 @@ void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
       }
     }
     if (i_work == ListPrimeUsed.size()) {
-      int p_new = ListPrimeUsed.empty() ? 2 : next_prime(ListPrimeUsed.back());
+      int p_new = ListPrimeUsed.empty() ? 2 : GenusNextPrime(ListPrimeUsed.back());
       ListPrimeUsed.push_back(p_new);
       result.ListNewClassPerPrime.push_back(0);
       next_expand.push_back(0);
@@ -1081,6 +1122,145 @@ void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
     }
     state.expand_at(next_expand[i_work], ListPrimeUsed[i_work], i_work);
     next_expand[i_work]++;
+  }
+}
+
+// The smallest b with g < 2^b: the number of known classes the random walk
+// must hit from a class with |Aut| = g before that class counts as treated.
+template <typename TintGroup>
+size_t GenusRandomWalkBound(TintGroup const &order) {
+  size_t b = 0;
+  TintGroup pow(1);
+  while (pow <= order) {
+    pow *= 2;
+    b++;
+  }
+  return b;
+}
+
+/*
+  The random_walk schedule: see NeighborStrategy. The classes waiting for
+  their random walk are in pending, the full expansion is scheduled as in
+  GenusEnumerationIterate except that, at a given prime, the unexpanded class
+  with the largest |Aut| goes first. A class found by either phase is put in
+  pending and the random walks are run before the full expansion goes on.
+ */
+template <typename T, typename Tint, typename Tgroup>
+void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
+                                GenusRandomWalkOptions const &rw) {
+  auto &result = state.result;
+  int n = state.n;
+  int p_walk = 2;
+  size_t n_line = NumberProjectiveLines(n, p_walk);
+  std::mt19937_64 engine(rw.seed);
+  // The position, among the indices in vec, of the class of largest |Aut|,
+  // the first discovered among the ties.
+  auto get_max_aut = [&](std::vector<size_t> const &vec) -> size_t {
+    size_t i_best = 0;
+    for (size_t i = 1; i < vec.size(); i++) {
+      if (result.ListAutOrder[vec[i]] > result.ListAutOrder[vec[i_best]]) {
+        i_best = i;
+      }
+    }
+    return i_best;
+  };
+  std::vector<size_t> pending;
+  auto random_walk = [&](size_t pos) -> void {
+    MyMatrix<Tint> G_int =
+        UniversalMatrixConversion<Tint, T>(state.ListGramWork[pos]);
+    size_t bound = GenusRandomWalkBound(result.ListAutOrder[pos]);
+    size_t max_draws = rw.draws_factor * bound;
+    size_t n_hit = 0;
+    size_t n_draw = 0;
+    while (n_hit < bound && n_draw < max_draws) {
+      n_draw++;
+      std::vector<int> eLine =
+          ProjectiveLineOfIndex(n, p_walk, random_index(engine, n_line));
+      std::optional<MyMatrix<T>> opt =
+          GenusNeighbor<T, Tint>(G_int, eLine, p_walk, state.os);
+      if (!opt) {
+        continue;
+      }
+      result.n_neighbor_random++;
+      if (state.insert(*opt)) {
+        result.n_new_random++;
+        pending.push_back(state.ListGramWork.size() - 1);
+        if (state.is_closed()) {
+          return;
+        }
+      } else {
+        n_hit++;
+      }
+    }
+#ifdef DEBUG_GENUS_ENUMERATION
+    state.os << "GENUS: random walk on lattice " << (pos + 1) << " |Aut|="
+             << result.ListAutOrder[pos] << " bound=" << bound
+             << " draws=" << n_draw << " hits=" << n_hit << "\n";
+#endif
+  };
+  auto run_pending = [&]() -> void {
+    while (!pending.empty() && !state.is_closed()) {
+      size_t i_best = get_max_aut(pending);
+      size_t pos = pending[i_best];
+      pending.erase(pending.begin() + i_best);
+      random_walk(pos);
+    }
+  };
+  for (size_t pos = 0; pos < state.ListGramWork.size(); pos++) {
+    pending.push_back(pos);
+  }
+  run_pending();
+  if (state.is_closed()) {
+    result.closed_in_random_walk = true;
+    return;
+  }
+#ifdef DEBUG_GENUS_ENUMERATION
+  state.os << "GENUS: random walk phase over with "
+           << state.ListGramWork.size() << " classes, full expansion\n";
+#endif
+  // The full expansion: is_expanded[i][pos] tells whether the class pos has
+  // been expanded at ListPrimeUsed[i].
+  std::vector<int> &ListPrimeUsed = result.ListPrimeUsed;
+  std::vector<std::vector<bool>> is_expanded;
+  while (!state.is_closed()) {
+    if (result.accumulated_mass > state.TotalMass) {
+      break;
+    }
+    size_t n_class = state.ListGramWork.size();
+    size_t i_work = ListPrimeUsed.size();
+    std::vector<size_t> unexpanded;
+    for (size_t i = 0; i < ListPrimeUsed.size(); i++) {
+      is_expanded[i].resize(n_class, false);
+      for (size_t pos = 0; pos < n_class; pos++) {
+        if (!is_expanded[i][pos]) {
+          unexpanded.push_back(pos);
+        }
+      }
+      if (!unexpanded.empty()) {
+        i_work = i;
+        break;
+      }
+    }
+    if (i_work == ListPrimeUsed.size()) {
+      int p_new = ListPrimeUsed.empty() ? 2 : GenusNextPrime(ListPrimeUsed.back());
+      ListPrimeUsed.push_back(p_new);
+      result.ListNewClassPerPrime.push_back(0);
+      is_expanded.push_back(std::vector<bool>(n_class, false));
+#ifdef DEBUG_GENUS_ENUMERATION
+      state.os << "GENUS: random walk strategy brings in prime " << p_new
+               << "\n";
+#endif
+      continue;
+    }
+    size_t pos = unexpanded[get_max_aut(unexpanded)];
+    is_expanded[i_work][pos] = true;
+    // A new class found by the expansion gets its random walk at once,
+    // before the expansion goes on.
+    state.expand_at(pos, ListPrimeUsed[i_work], i_work,
+                    [&](size_t idx) -> void {
+                      pending.push_back(idx);
+                      run_pending();
+                    });
   }
 }
 
@@ -1096,7 +1276,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                  typename GenusEnumerationResult<T, Tgroup>::Tmass const
                      &TotalMass,
                  int prime, GenusScheme scheme, NeighborStrategy strategy,
-                 std::ostream &os) {
+                 GenusRandomWalkOptions const &rw, std::ostream &os) {
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_total;
 #endif
@@ -1110,8 +1290,10 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
   }
   if (strategy == NeighborStrategy::OutPrime) {
     GenusEnumerationOutPrime(state, prime);
-  } else {
+  } else if (strategy == NeighborStrategy::Iterate) {
     GenusEnumerationIterate(state);
+  } else {
+    GenusEnumerationRandomWalk(state, rw);
   }
   GenusEnumerationResult<T, Tgroup> &result = state.result;
   result.complete = state.is_closed();
@@ -1139,6 +1321,10 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
       rank 14
       det 243
       prime 3        (optional, 0 or absent means "choose automatically")
+      strategy random_walk   (optional: out_prime, iterate, random_walk)
+      seed 1         (optional, the seed of the random walk)
+      draws_factor 16 (optional, the draws of a random walk are bounded by
+                     draws_factor times the number of hits it needs)
 
   It carries no information the enumeration needs beyond the prime -- the
   p-neighbour construction preserves the genus by itself -- but it lets the
@@ -1166,6 +1352,10 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
       is >> spec.det;
     } else if (key == "prime") {
       is >> spec.prime;
+    } else if (key == "seed") {
+      is >> spec.rw.seed;
+    } else if (key == "draws_factor") {
+      is >> spec.rw.draws_factor;
     } else if (key == "strategy") {
       std::string strat;
       is >> strat;
@@ -1173,14 +1363,17 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
         spec.strategy = NeighborStrategy::OutPrime;
       } else if (strat == "iterate") {
         spec.strategy = NeighborStrategy::Iterate;
+      } else if (strat == "random_walk") {
+        spec.strategy = NeighborStrategy::RandomWalk;
       } else {
         std::cerr << "GENUS: unrecognised strategy \"" << strat << "\" in "
-                  << file_name << ". Allowed: out_prime, iterate\n";
+                  << file_name << ". Allowed: out_prime, iterate, random_walk\n";
         throw TerminalException{1};
       }
     } else {
       std::cerr << "GENUS: unrecognised key \"" << key << "\" in "
-                << file_name << ". Allowed: rank, det, prime, strategy\n";
+                << file_name << ". Allowed: rank, det, prime, strategy, seed, "
+                << "draws_factor\n";
       throw TerminalException{1};
     }
   }
@@ -1236,6 +1429,11 @@ void WriteGenusEnumerationResult(
     os << "class number = " << result.ListGram.size() << "\n";
     os << "accumulated mass = " << result.accumulated_mass << "\n";
     os << "target mass = " << result.target_mass << "\n";
+    os << "neighbours built: full expansion " << result.n_neighbor_full
+       << ", random walk " << result.n_neighbor_random << " ("
+       << result.n_new_random << " new classes)\n";
+    os << "closed in the random walk phase = "
+       << (result.closed_in_random_walk ? "true" : "false") << "\n";
     os << "complete = " << (result.complete ? "true" : "false") << "\n";
     if (!result.complete) {
       os << "The accumulated mass is short of the target. Either the genus "
@@ -1277,7 +1475,11 @@ void WriteGenusEnumerationResult(
     for (size_t i = 0; i < result.ListNewClassPerPrime.size(); i++) {
       os << (i > 0 ? ", " : "") << result.ListNewClassPerPrime[i];
     }
-    os << "]);\n";
+    os << "],\n n_neighbor_full:=" << result.n_neighbor_full
+       << ",\n n_neighbor_random:=" << result.n_neighbor_random
+       << ",\n n_new_random:=" << result.n_new_random
+       << ",\n closed_in_random_walk:="
+       << (result.closed_in_random_walk ? "true" : "false") << ");\n";
     return;
   }
   std::cerr << "GENUS: failed to find a matching entry for OutFormat="

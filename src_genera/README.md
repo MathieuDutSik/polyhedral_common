@@ -7,7 +7,11 @@ Smith-Minkowski-Siegel mass is reached.
     GENUS_Enumerate [arith] [Genus] [Lattice] [Mass] [OutFormat] [OutFile]
 
 * `Genus`   -- key/value lines `rank`, `det`, and optionally `prime`
-               (0 or absent selects the smallest prime not dividing det).
+               (0 or absent selects the smallest prime not dividing det),
+               `strategy` (`out_prime`, the default, `iterate` or
+               `random_walk`), and for `random_walk` the `seed` and the
+               `draws_factor` (see `NeighborStrategy` in
+               `GenusEnumeration.h`).
 * `Lattice` -- one or more Gram matrices in the ListMatrix format, the seeds.
 * `Mass`    -- the mass of the genus as `num den`, or a single integer.
 * `OutFormat` -- `GAP` (default), `CPP`, or `Summary`.
