@@ -9,8 +9,9 @@ Smith-Minkowski-Siegel mass is reached.
 * `Genus`   -- key/value lines `rank`, `det`, and optionally `prime`
                (0 or absent selects the smallest prime not dividing det),
                `strategy` (`out_prime`, the default, `iterate` or
-               `random_walk`), and for `random_walk` the `seed` and the
-               `draws_factor` (see `NeighborStrategy` in
+               `random_walk`), and for `random_walk` the `seed`, the
+               `hits_factor` and the `failed_draws_factor` (see
+               `NeighborStrategy` in
                `GenusEnumeration.h`).
 * `Lattice` -- one or more Gram matrices in the ListMatrix format, the seeds.
 * `Mass`    -- the mass of the genus as `num den`, or a single integer.

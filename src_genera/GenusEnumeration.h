@@ -14,6 +14,8 @@
 #include "ClassicLLL.h"
 #include "Positivity.h"
 #include "Basic_random.h"
+#include <algorithm>
+#include <cmath>
 #include <limits>
 #include <map>
 #include <optional>
@@ -96,11 +98,13 @@
 
   RandomWalk: most neighbours of the full expansion are classes already
   known, so each new class is first treated by random 2-neighbours. A class
-  with |Aut| = g gets the bound b, the smallest integer with g < 2^b; random
-  projective lines mod 2 are drawn (uniformly, so an orbit is hit in
-  proportion to its size and no orbit computation is needed) and their
-  neighbours inserted, until b of them are known classes. The draws are
-  also bounded by draws_factor * b, since a line need not give a neighbour.
+  with |Aut| = g gets the number b, the smallest integer with g < 2^b, and
+  the bound max(1, ceil(hits_factor * b)); random projective lines mod 2 are
+  drawn (uniformly, so an orbit is hit in proportion to its size and no
+  orbit computation is needed) and their neighbours inserted, until that
+  many of them are known classes. A new class never stops the walk. A line
+  need not give a neighbour, and a class may have no 2-neighbour at all, so
+  the draws that give none are bounded by failed_draws_factor * b.
   The pending classes are treated by decreasing |Aut|. If the mass closes in
   this first phase the enumeration is over. Otherwise the full expansion
   follows, at 2, then 3, 5, ... as in Iterate, and every new class it finds
@@ -113,7 +117,8 @@ enum class NeighborStrategy { OutPrime, Iterate, RandomWalk };
 // The parameters of the random walk phase of the RandomWalk strategy.
 struct GenusRandomWalkOptions {
   uint64_t seed = 1;
-  size_t draws_factor = 16;
+  double hits_factor = 1;
+  size_t failed_draws_factor = 16;
 };
 
 // The description of the genus. `prime` is the prime used for the neighbour
@@ -910,7 +915,7 @@ struct GenusEnumerationState {
     result.complete = false;
   }
 
-  bool is_closed() const { return result.accumulated_mass == TotalMass; }
+  bool is_finished() const { return result.accumulated_mass == TotalMass; }
 
   // Records a new class and its automorphism data; returns its index.
   size_t add(MyMatrix<T> const &StoreGram,
@@ -934,12 +939,15 @@ struct GenusEnumerationState {
   bool insert(MyMatrix<T> const &GramMat) {
     if (scheme == GenusScheme::CanonicalForm) {
       MyMatrix<T> GramCan = GenusCanonicalGram<T, Tint, Tgroup>(GramMat, os);
-      if (MapCanonic.count(GramCan) == 1) {
+      // One search of the map: the entry is created here and its index
+      // filled in once the class is added.
+      auto [iter, is_new] = MapCanonic.try_emplace(GramCan, 0);
+      if (!is_new) {
         return false;
       }
       LatticeAutInfo<T, Tint, Tgroup> info =
-          GetLatticeAutInfo<T, Tint, Tgroup>(GramCan, scheme, os);
-      MapCanonic[GramCan] = add(GramCan, info);
+          GetLatticeAutInfo<T, Tint, Tgroup>(iter->first, scheme, os);
+      iter->second = add(iter->first, info);
       return true;
     }
     // Isomorphism schemes: bucket by the cheap invariant, then run the
@@ -1039,7 +1047,7 @@ struct GenusEnumerationState {
           result.ListNewClassPerPrime[i_prime]++;
           f_new(ListGramWork.size() - 1);
         }
-        if (is_closed()) {
+        if (is_finished()) {
           return;
         }
       }
@@ -1058,7 +1066,7 @@ void GenusEnumerationOutPrime(GenusEnumerationState<T, Tint, Tgroup> &state,
   result.ListPrimeUsed.push_back(prime);
   result.ListNewClassPerPrime.push_back(0);
   size_t pos = 0;
-  while (pos < state.ListGramWork.size() && !state.is_closed()) {
+  while (pos < state.ListGramWork.size() && !state.is_finished()) {
     state.expand_at(pos, prime, 0);
     pos++;
   }
@@ -1099,7 +1107,7 @@ void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
   auto &result = state.result;
   std::vector<int> &ListPrimeUsed = result.ListPrimeUsed;
   std::vector<size_t> next_expand;
-  while (!state.is_closed()) {
+  while (!state.is_finished()) {
     if (result.accumulated_mass > state.TotalMass) {
       break;
     }
@@ -1125,10 +1133,11 @@ void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
   }
 }
 
-// The smallest b with g < 2^b: the number of known classes the random walk
-// must hit from a class with |Aut| = g before that class counts as treated.
+// The smallest b with g < 2^b, for a class with |Aut| = g: the scale of the
+// number of known classes the random walk must hit from that class before
+// it counts as treated.
 template <typename TintGroup>
-size_t GenusRandomWalkBound(TintGroup const &order) {
+size_t GenusRandomWalkLogOrder(TintGroup const &order) {
   size_t b = 0;
   TintGroup pow(1);
   while (pow <= order) {
@@ -1168,24 +1177,27 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
   auto random_walk = [&](size_t pos) -> void {
     MyMatrix<Tint> G_int =
         UniversalMatrixConversion<Tint, T>(state.ListGramWork[pos]);
-    size_t bound = GenusRandomWalkBound(result.ListAutOrder[pos]);
-    size_t max_draws = rw.draws_factor * bound;
+    size_t log_order = GenusRandomWalkLogOrder(result.ListAutOrder[pos]);
+    size_t bound = std::max(
+        size_t(1), static_cast<size_t>(std::ceil(rw.hits_factor *
+                                                 static_cast<double>(log_order))));
+    size_t max_failed = rw.failed_draws_factor * log_order;
     size_t n_hit = 0;
-    size_t n_draw = 0;
-    while (n_hit < bound && n_draw < max_draws) {
-      n_draw++;
+    size_t n_failed = 0;
+    while (n_hit < bound && n_failed < max_failed) {
       std::vector<int> eLine =
           ProjectiveLineOfIndex(n, p_walk, random_index(engine, n_line));
       std::optional<MyMatrix<T>> opt =
           GenusNeighbor<T, Tint>(G_int, eLine, p_walk, state.os);
       if (!opt) {
+        n_failed++;
         continue;
       }
       result.n_neighbor_random++;
       if (state.insert(*opt)) {
         result.n_new_random++;
         pending.push_back(state.ListGramWork.size() - 1);
-        if (state.is_closed()) {
+        if (state.is_finished()) {
           return;
         }
       } else {
@@ -1195,11 +1207,12 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
 #ifdef DEBUG_GENUS_ENUMERATION
     state.os << "GENUS: random walk on lattice " << (pos + 1) << " |Aut|="
              << result.ListAutOrder[pos] << " bound=" << bound
-             << " draws=" << n_draw << " hits=" << n_hit << "\n";
+             << " failed=" << n_failed
+             << " hits=" << n_hit << "\n";
 #endif
   };
   auto run_pending = [&]() -> void {
-    while (!pending.empty() && !state.is_closed()) {
+    while (!pending.empty() && !state.is_finished()) {
       size_t i_best = get_max_aut(pending);
       size_t pos = pending[i_best];
       pending.erase(pending.begin() + i_best);
@@ -1210,7 +1223,7 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
     pending.push_back(pos);
   }
   run_pending();
-  if (state.is_closed()) {
+  if (state.is_finished()) {
     result.closed_in_random_walk = true;
     return;
   }
@@ -1222,7 +1235,7 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
   // been expanded at ListPrimeUsed[i].
   std::vector<int> &ListPrimeUsed = result.ListPrimeUsed;
   std::vector<std::vector<bool>> is_expanded;
-  while (!state.is_closed()) {
+  while (!state.is_finished()) {
     if (result.accumulated_mass > state.TotalMass) {
       break;
     }
@@ -1283,7 +1296,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
   int n = ListSeed[0].rows();
   GenusEnumerationState<T, Tint, Tgroup> state(n, scheme, TotalMass, os);
   for (auto &eSeed : ListSeed) {
-    if (state.is_closed()) {
+    if (state.is_finished()) {
       break;
     }
     (void)state.insert(eSeed);
@@ -1296,7 +1309,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
     GenusEnumerationRandomWalk(state, rw);
   }
   GenusEnumerationResult<T, Tgroup> &result = state.result;
-  result.complete = state.is_closed();
+  result.complete = state.is_finished();
 #ifdef DEBUG_GENUS_ISO_STATS
   os << "GENUS_ISO: FINAL isometry_tests=" << state.n_iso_test
      << " positive=" << state.n_iso_positive << " tests_per_positive="
@@ -1323,8 +1336,10 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
       prime 3        (optional, 0 or absent means "choose automatically")
       strategy random_walk   (optional: out_prime, iterate, random_walk)
       seed 1         (optional, the seed of the random walk)
-      draws_factor 16 (optional, the draws of a random walk are bounded by
-                     draws_factor times the number of hits it needs)
+      hits_factor 1  (optional, the known classes a random walk must hit,
+                     as a multiple of log2 |Aut|)
+      failed_draws_factor 16 (optional, the draws giving no neighbour are
+                     bounded by this times log2 |Aut|)
 
   It carries no information the enumeration needs beyond the prime -- the
   p-neighbour construction preserves the genus by itself -- but it lets the
@@ -1354,8 +1369,10 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
       is >> spec.prime;
     } else if (key == "seed") {
       is >> spec.rw.seed;
-    } else if (key == "draws_factor") {
-      is >> spec.rw.draws_factor;
+    } else if (key == "hits_factor") {
+      is >> spec.rw.hits_factor;
+    } else if (key == "failed_draws_factor") {
+      is >> spec.rw.failed_draws_factor;
     } else if (key == "strategy") {
       std::string strat;
       is >> strat;
@@ -1373,7 +1390,7 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
     } else {
       std::cerr << "GENUS: unrecognised key \"" << key << "\" in "
                 << file_name << ". Allowed: rank, det, prime, strategy, seed, "
-                << "draws_factor\n";
+                << "hits_factor, failed_draws_factor\n";
       throw TerminalException{1};
     }
   }

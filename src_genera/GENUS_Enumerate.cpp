@@ -120,8 +120,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "                       new class by random 2-neighbours\n";
       std::cerr << "                       and falls back on iterate)\n";
       std::cerr << "                     seed <s>      (optional, random_walk)\n";
-      std::cerr << "                     draws_factor <f> (optional,\n";
-      std::cerr << "                       random_walk: draws per needed hit)\n";
+      std::cerr << "                     hits_factor <f> (optional,\n";
+      std::cerr << "                       random_walk: known classes to hit,\n";
+      std::cerr << "                       as a multiple of log2 |Aut|)\n";
+      std::cerr << "                     failed_draws_factor <f> (optional,\n";
+      std::cerr << "                       random_walk: bound on the draws\n";
+      std::cerr << "                       giving no neighbour)\n";
       std::cerr << "Lattice (input) : one or more Gram matrices, in the\n";
       std::cerr << "                  ListMatrix format. One seed per SPINOR\n";
       std::cerr << "                  genus is needed: the p-neighbour graph\n";
