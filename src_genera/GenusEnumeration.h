@@ -831,28 +831,22 @@ std::map<T, int> GenusIsoInvariant(MyMatrix<T> const &GramMat,
 }
 
 /*
-  The enumeration itself. Starts from the seed lattices, forms p-neighbours,
-  keeps the new ones (recognised either by canonical form or by the
-  isomorphism strategy), and stops when the accumulated mass reaches the
-  target.
+  The state of an enumeration, shared by the two neighbour schedules: the
+  classes found so far with their automorphism data, the structure that
+  recognises a known class, and the accumulated mass. The two operations on
+  it, inserting a lattice and expanding a known class at one prime, are the
+  same for every schedule; what differs is only the order of the expansions,
+  see GenusEnumerationOutPrime and GenusEnumerationIterate.
  */
 template <typename T, typename Tint, typename Tgroup>
-GenusEnumerationResult<T, Tgroup>
-GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
-                 typename GenusEnumerationResult<T, Tgroup>::Tmass const
-                     &TotalMass,
-                 int prime, GenusScheme scheme, NeighborStrategy strategy,
-                 std::ostream &os) {
+struct GenusEnumerationState {
   using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
   using TintGroup = typename Tgroup::Tint;
-#ifdef TIMINGS_GENUS_ENUMERATION
-  MicrosecondTime time_total;
-#endif
-  int n = ListSeed[0].rows();
+  int n;
+  GenusScheme scheme;
+  Tmass const &TotalMass;
+  std::ostream &os;
   GenusEnumerationResult<T, Tgroup> result;
-  result.target_mass = TotalMass;
-  result.accumulated_mass = Tmass(0);
-  result.complete = false;
   // The classes are held in canonical form, so recognising an already known
   // one is a dictionary lookup rather than a comparison against every class
   // found so far. That is the whole point of canonicalising: the pairwise
@@ -875,12 +869,22 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
   // tests_per_positive close to 1 means the invariant is almost perfect (a
   // duplicate is found with a single test); larger means the buckets carry
   // non-isometric collisions that cost extra tests.
-  [[maybe_unused]] size_t n_iso_test = 0;
-  [[maybe_unused]] size_t n_iso_positive = 0;
+  size_t n_iso_test = 0;
+  size_t n_iso_positive = 0;
+
+  GenusEnumerationState(int _n, GenusScheme _scheme, Tmass const &_TotalMass,
+                        std::ostream &_os)
+      : n(_n), scheme(_scheme), TotalMass(_TotalMass), os(_os) {
+    result.target_mass = TotalMass;
+    result.accumulated_mass = Tmass(0);
+    result.complete = false;
+  }
+
+  bool is_closed() const { return result.accumulated_mass == TotalMass; }
 
   // Records a new class and its automorphism data; returns its index.
-  auto f_add = [&](MyMatrix<T> const &StoreGram,
-                   LatticeAutInfo<T, Tint, Tgroup> const &info) -> size_t {
+  size_t add(MyMatrix<T> const &StoreGram,
+             LatticeAutInfo<T, Tint, Tgroup> const &info) {
     size_t idx = result.ListGram.size();
     result.ListGram.push_back(StoreGram);
     result.ListAutOrder.push_back(info.order);
@@ -893,9 +897,11 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
        << ", mass " << result.accumulated_mass << " / " << TotalMass << "\n";
 #endif
     return idx;
-  };
+  }
 
-  auto f_insert = [&](MyMatrix<T> const &GramMat) -> bool {
+  // Inserts the lattice if its class is not known yet; returns whether it
+  // was new.
+  bool insert(MyMatrix<T> const &GramMat) {
     if (scheme == GenusScheme::CanonicalForm) {
       MyMatrix<T> GramCan = GenusCanonicalGram<T, Tint, Tgroup>(GramMat, os);
       if (MapCanonic.count(GramCan) == 1) {
@@ -903,7 +909,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
       }
       LatticeAutInfo<T, Tint, Tgroup> info =
           GetLatticeAutInfo<T, Tint, Tgroup>(GramCan, scheme, os);
-      MapCanonic[GramCan] = f_add(GramCan, info);
+      MapCanonic[GramCan] = add(GramCan, info);
       return true;
     }
     // Isomorphism schemes: bucket by the cheap invariant, then run the
@@ -942,20 +948,15 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
     }
     LatticeAutInfo<T, Tint, Tgroup> info =
         GetLatticeAutInfo<T, Tint, Tgroup>(GramMat, scheme, os);
-    bucket.push_back(f_add(GramMat, info));
+    bucket.push_back(add(GramMat, info));
     return true;
-  };
-
-  for (auto &eSeed : ListSeed) {
-    if (result.accumulated_mass == TotalMass) {
-      break;
-    }
-    (void)f_insert(eSeed);
   }
+
   // Expands one known class at one prime: the orbits of projective points,
   // the neighbour of each representative, insertion of the new classes.
-  // Stops early when the mass closes.
-  auto expand_at = [&](size_t pos, int p, size_t i_prime) -> void {
+  // Stops early when the mass closes. i_prime is the index of p in
+  // result.ListPrimeUsed, for the count of the new classes.
+  void expand_at(size_t pos, int p, size_t i_prime) {
     MyMatrix<T> GramMat = ListGramWork[pos];
     std::vector<MyMatrix<Tint>> const &ListGenMat = ListAutInfo[pos].ListGenMat;
     MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
@@ -997,92 +998,135 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
           WriteMatrixFile(std::string(dump_file), *opt);
         }
 #endif
-        if (f_insert(*opt)) {
+        if (insert(*opt)) {
           result.ListNewClassPerPrime[i_prime]++;
         }
-        if (result.accumulated_mass == TotalMass) {
+        if (is_closed()) {
           return;
         }
       }
     }
-  };
+  }
+};
 
-  if (strategy == NeighborStrategy::OutPrime) {
-    result.ListPrimeUsed.push_back(prime);
-    result.ListNewClassPerPrime.push_back(0);
-    size_t pos = 0;
-    while (pos < ListGramWork.size() &&
-           result.accumulated_mass != TotalMass) {
-      expand_at(pos, prime, 0);
-      pos++;
-    }
-  } else {
-    /*
-      The iterate strategy: see NeighborStrategy. ListPrimeUsed holds the
-      primes in play in increasing order; next_expand[i] is the number of
-      classes, in discovery order, already expanded at ListPrimeUsed[i].
-      The invariant exits: the mass closes (complete), or the accumulated
-      mass passes the target (impossible for genuine neighbours, so it
-      would witness a programming error and stops the run as incomplete
-      rather than spinning), or NumberProjectiveLines overflows at an
-      absurd prime (an exception, equally a witness that something is
-      wrong with the genus data).
-     */
-    std::vector<int> &ListPrimeUsed = result.ListPrimeUsed;
-    std::vector<size_t> next_expand;
-    auto next_prime = [](int q) -> int {
-      int cand = q + 1;
-      while (true) {
-        bool is_prime = cand >= 2;
-        for (int d = 2; d * d <= cand; d++) {
-          if (cand % d == 0) {
-            is_prime = false;
-            break;
-          }
-        }
-        if (is_prime) {
-          return cand;
-        }
-        cand++;
-      }
-    };
-    while (result.accumulated_mass != TotalMass) {
-      if (result.accumulated_mass > TotalMass) {
-        break;
-      }
-      size_t i_work = ListPrimeUsed.size();
-      for (size_t i = 0; i < ListPrimeUsed.size(); i++) {
-        if (next_expand[i] < ListGramWork.size()) {
-          i_work = i;
+/*
+  The out_prime schedule: see NeighborStrategy. Every known class, in
+  discovery order, is expanded at the one prime until the mass closes.
+ */
+template <typename T, typename Tint, typename Tgroup>
+void GenusEnumerationOutPrime(GenusEnumerationState<T, Tint, Tgroup> &state,
+                              int prime) {
+  auto &result = state.result;
+  result.ListPrimeUsed.push_back(prime);
+  result.ListNewClassPerPrime.push_back(0);
+  size_t pos = 0;
+  while (pos < state.ListGramWork.size() && !state.is_closed()) {
+    state.expand_at(pos, prime, 0);
+    pos++;
+  }
+}
+
+/*
+  The iterate schedule: see NeighborStrategy. ListPrimeUsed holds the
+  primes in play in increasing order; next_expand[i] is the number of
+  classes, in discovery order, already expanded at ListPrimeUsed[i].
+  The invariant exits: the mass closes (complete), or the accumulated
+  mass passes the target (impossible for genuine neighbours, so it
+  would witness a programming error and stops the run as incomplete
+  rather than spinning), or NumberProjectiveLines overflows at an
+  absurd prime (an exception, equally a witness that something is
+  wrong with the genus data).
+ */
+template <typename T, typename Tint, typename Tgroup>
+void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
+  auto &result = state.result;
+  std::vector<int> &ListPrimeUsed = result.ListPrimeUsed;
+  std::vector<size_t> next_expand;
+  auto next_prime = [](int q) -> int {
+    int cand = q + 1;
+    while (true) {
+      bool is_prime = cand >= 2;
+      for (int d = 2; d * d <= cand; d++) {
+        if (cand % d == 0) {
+          is_prime = false;
           break;
         }
       }
-      if (i_work == ListPrimeUsed.size()) {
-        int p_new =
-            ListPrimeUsed.empty() ? 2 : next_prime(ListPrimeUsed.back());
-        ListPrimeUsed.push_back(p_new);
-        result.ListNewClassPerPrime.push_back(0);
-        next_expand.push_back(0);
-#ifdef DEBUG_GENUS_ENUMERATION
-        os << "GENUS: iterate strategy brings in prime " << p_new << "\n";
-#endif
-        continue;
+      if (is_prime) {
+        return cand;
       }
-      expand_at(next_expand[i_work], ListPrimeUsed[i_work], i_work);
-      next_expand[i_work]++;
+      cand++;
     }
+  };
+  while (!state.is_closed()) {
+    if (result.accumulated_mass > state.TotalMass) {
+      break;
+    }
+    size_t i_work = ListPrimeUsed.size();
+    for (size_t i = 0; i < ListPrimeUsed.size(); i++) {
+      if (next_expand[i] < state.ListGramWork.size()) {
+        i_work = i;
+        break;
+      }
+    }
+    if (i_work == ListPrimeUsed.size()) {
+      int p_new = ListPrimeUsed.empty() ? 2 : next_prime(ListPrimeUsed.back());
+      ListPrimeUsed.push_back(p_new);
+      result.ListNewClassPerPrime.push_back(0);
+      next_expand.push_back(0);
+#ifdef DEBUG_GENUS_ENUMERATION
+      state.os << "GENUS: iterate strategy brings in prime " << p_new << "\n";
+#endif
+      continue;
+    }
+    state.expand_at(next_expand[i_work], ListPrimeUsed[i_work], i_work);
+    next_expand[i_work]++;
   }
-  result.complete = (result.accumulated_mass == TotalMass);
+}
+
+/*
+  The enumeration itself. Starts from the seed lattices, forms p-neighbours
+  on the schedule of the strategy, keeps the new ones (recognised either by
+  canonical form or by the isomorphism strategy), and stops when the
+  accumulated mass reaches the target.
+ */
+template <typename T, typename Tint, typename Tgroup>
+GenusEnumerationResult<T, Tgroup>
+GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
+                 typename GenusEnumerationResult<T, Tgroup>::Tmass const
+                     &TotalMass,
+                 int prime, GenusScheme scheme, NeighborStrategy strategy,
+                 std::ostream &os) {
+#ifdef TIMINGS_GENUS_ENUMERATION
+  MicrosecondTime time_total;
+#endif
+  int n = ListSeed[0].rows();
+  GenusEnumerationState<T, Tint, Tgroup> state(n, scheme, TotalMass, os);
+  for (auto &eSeed : ListSeed) {
+    if (state.is_closed()) {
+      break;
+    }
+    (void)state.insert(eSeed);
+  }
+  if (strategy == NeighborStrategy::OutPrime) {
+    GenusEnumerationOutPrime(state, prime);
+  } else {
+    GenusEnumerationIterate(state);
+  }
+  GenusEnumerationResult<T, Tgroup> &result = state.result;
+  result.complete = state.is_closed();
 #ifdef DEBUG_GENUS_ISO_STATS
-  os << "GENUS_ISO: FINAL isometry_tests=" << n_iso_test
-     << " positive=" << n_iso_positive << " tests_per_positive="
-     << (n_iso_positive > 0 ? double(n_iso_test) / double(n_iso_positive) : 0.0)
+  os << "GENUS_ISO: FINAL isometry_tests=" << state.n_iso_test
+     << " positive=" << state.n_iso_positive << " tests_per_positive="
+     << (state.n_iso_positive > 0
+             ? double(state.n_iso_test) / double(state.n_iso_positive)
+             : 0.0)
      << "\n";
 #endif
 #ifdef TIMINGS_GENUS_ENUMERATION
   os << "|GENUS: GenusEnumeration|=" << time_total << "\n";
 #endif
-  return result;
+  return std::move(result);
 }
 
 //
