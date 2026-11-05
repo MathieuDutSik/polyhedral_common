@@ -13,7 +13,9 @@ Smith-Minkowski-Siegel mass is reached.
                `hits_factor`, the `failed_draws_factor` and the primes of
                the walk, `walk_prime_min` and `walk_prime_max` (see
                `NeighborStrategy` in
-               `GenusEnumeration.h`).
+               `GenusEnumeration.h`), and `hecke 1` to skip the expansions
+               whose neighbours are all expanded classes (see
+               `GenusEnumerationState`).
 * `Lattice` -- one or more Gram matrices in the ListMatrix format, the seeds.
 * `Mass`    -- the mass of the genus as `num den`, or a single integer.
 * `OutFormat` -- `GAP` (default), `CPP`, or `Summary`.

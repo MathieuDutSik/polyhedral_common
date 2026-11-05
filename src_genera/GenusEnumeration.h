@@ -138,6 +138,7 @@ template <typename T> struct GenusSpec {
   int prime;
   NeighborStrategy strategy;
   GenusRandomWalkOptions rw;
+  bool hecke;
 };
 
 /*
@@ -166,6 +167,9 @@ template <typename T, typename Tgroup> struct GenusEnumerationResult {
   // the random walk built and how many new classes those gave. Whether the
   // mass closed during the first, random walk only, phase.
   size_t n_neighbor_full = 0;
+  // The expansions started, and those the Hecke bookkeeping skipped.
+  size_t n_expansion = 0;
+  size_t n_expansion_skipped = 0;
   size_t n_neighbor_random = 0;
   size_t n_new_random = 0;
   bool closed_in_random_walk = false;
@@ -420,28 +424,57 @@ template <typename T, typename Tint> struct GenusNeighborBasis {
   MyMatrix<T> GramN;
 };
 
-template <typename T, typename Tint>
-std::optional<GenusNeighborBasis<T, Tint>>
-GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
-                    int p, [[maybe_unused]] std::ostream &os) {
+
+// w = G x, the linear form y -> (y, x).
+template <typename Tint>
+MyVector<Tint> GenusLinearForm(MyMatrix<Tint> const &G, MyVector<Tint> const &x) {
+  int n = G.rows();
+  MyVector<Tint> w(n);
+  for (int i = 0; i < n; i++) {
+    Tint sum(0);
+    for (int j = 0; j < n; j++) {
+      sum += G(i, j) * x(j);
+    }
+    w(i) = sum;
+  }
+  return w;
+}
+
+template <typename Tint>
+Tint GenusNormOf(MyVector<Tint> const &x, MyVector<Tint> const &wx) {
+  Tint sum(0);
+  for (int i = 0; i < x.size(); i++) {
+    sum += x(i) * wx(i);
+  }
+  return sum;
+}
+
+// What the neighbour construction needs of the point v: the lift, its linear
+// form, a pivot of that form mod p, and the norm with its valuation.
+template <typename Tint> struct GenusNeighborLine {
+  MyVector<Tint> v;
+  MyVector<Tint> w;
+  int jpiv;
+  Tint nrm;
+  int val;
+};
+
+/*
+  The point v of P^{n-1}(F_p) gives a neighbour exactly when it is not in the
+  radical of the form mod p and v_p((v,v)) > e, e = v_p(2): the valuation
+  e + 1 is corrected by GenusNeighbor, a smaller one is not. This test is
+  cheap, and it is what the Hecke bookkeeping counts the lines with.
+ */
+template <typename Tint>
+std::optional<GenusNeighborLine<Tint>>
+GenusNeighborLineData(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
+                      int p) {
   int n = G.rows();
   MyVector<Tint> v(n);
   for (int i = 0; i < n; i++) {
     v(i) = Tint(v_line[i]);
   }
-  // w = G v, the linear form y -> (y, v)
-  auto compute_w = [&](MyVector<Tint> const &x) -> MyVector<Tint> {
-    MyVector<Tint> w(n);
-    for (int i = 0; i < n; i++) {
-      Tint sum(0);
-      for (int j = 0; j < n; j++) {
-        sum += G(i, j) * x(j);
-      }
-      w(i) = sum;
-    }
-    return w;
-  };
-  MyVector<Tint> w = compute_w(v);
+  MyVector<Tint> w = GenusLinearForm(G, v);
   int jpiv = -1;
   for (int i = 0; i < n; i++) {
     if (ResidueModP(w(i), p) != 0) {
@@ -453,19 +486,31 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     // v lies in the radical of the form mod p: no neighbour from it
     return {};
   }
-  auto norm_of = [&](MyVector<Tint> const &x, MyVector<Tint> const &wx) -> Tint {
-    Tint sum(0);
-    for (int i = 0; i < n; i++) {
-      sum += x(i) * wx(i);
-    }
-    return sum;
-  };
   int e = (p == 2) ? 1 : 0;
-  Tint nrm = norm_of(v, w);
+  Tint nrm = GenusNormOf(v, w);
   int val = ValuationP(nrm, p);
   if (val <= e) {
     return {};
   }
+  return GenusNeighborLine<Tint>{v, w, jpiv, nrm, val};
+}
+
+template <typename T, typename Tint>
+std::optional<GenusNeighborBasis<T, Tint>>
+GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
+                    int p, [[maybe_unused]] std::ostream &os) {
+  int n = G.rows();
+  std::optional<GenusNeighborLine<Tint>> opt_line =
+      GenusNeighborLineData(G, v_line, p);
+  if (!opt_line) {
+    return {};
+  }
+  MyVector<Tint> v = opt_line->v;
+  MyVector<Tint> w = opt_line->w;
+  int jpiv = opt_line->jpiv;
+  Tint nrm = opt_line->nrm;
+  int val = opt_line->val;
+  int e = (p == 2) ? 1 : 0;
   if (val == e + 1) {
     // correct v so that the valuation rises to at least e + 2. With
     // a = nrm / (2 p (v, e_jpiv)) taken mod p, the two leading terms of
@@ -483,8 +528,8 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     int a = (ResidueModP(num_red, p) *
              InverseModP(ResidueModP(den_red, p), p)) % p;
     v(jpiv) -= Tint(a) * Tint(p);
-    w = compute_w(v);
-    nrm = norm_of(v, w);
+    w = GenusLinearForm(G, v);
+    nrm = GenusNormOf(v, w);
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
     if (ValuationP(nrm, p) < e + 2) {
       std::cerr << "GENUS: the correction of the isotropic vector failed, "
@@ -741,8 +786,11 @@ struct ProjectiveLineSelection {
   bool all;
   size_t n_line;
   std::vector<size_t> ListRepr;
+  // the number of points of the orbit of ListRepr[i]
+  std::vector<size_t> ListOrbitSize;
   size_t size() const { return all ? n_line : ListRepr.size(); }
   size_t at(size_t i) const { return all ? i : ListRepr[i]; }
+  size_t orbit_size(size_t i) const { return all ? 1 : ListOrbitSize[i]; }
 };
 
 template <typename Tint>
@@ -785,7 +833,7 @@ ProjectiveLineOrbitRepresentatives(int n, int p,
     }
   }
   if (ListGenRed.empty()) {
-    return {true, n_line, {}};
+    return {true, n_line, {}, {}};
   }
   auto image = [&](std::vector<int> const &v,
                    std::vector<int> const &gred) -> size_t {
@@ -801,6 +849,7 @@ ProjectiveLineOrbitRepresentatives(int n, int p,
   };
   Face status(n_line);
   std::vector<size_t> ListRepr;
+  std::vector<size_t> ListOrbitSize;
   std::vector<size_t> ListActive;
   for (size_t i_line = 0; i_line < n_line; i_line++) {
     if (status[i_line]) {
@@ -809,9 +858,11 @@ ProjectiveLineOrbitRepresentatives(int n, int p,
     ListRepr.push_back(i_line);
     status[i_line] = 1;
     ListActive.push_back(i_line);
+    size_t orbit_size = 0;
     while (!ListActive.empty()) {
       size_t pos = ListActive.back();
       ListActive.pop_back();
+      orbit_size++;
       std::vector<int> v = ProjectiveLineOfIndex(n, p, pos);
       for (auto &gred : ListGenRed) {
         size_t img = image(v, gred);
@@ -821,8 +872,9 @@ ProjectiveLineOrbitRepresentatives(int n, int p,
         }
       }
     }
+    ListOrbitSize.push_back(orbit_size);
   }
-  return {false, n_line, std::move(ListRepr)};
+  return {false, n_line, std::move(ListRepr), std::move(ListOrbitSize)};
 }
 
 /*
@@ -914,10 +966,32 @@ struct GenusEnumerationState {
   // non-isometric collisions that cost extra tests.
   size_t n_iso_test = 0;
   size_t n_iso_positive = 0;
+  /*
+    The Hecke bookkeeping. At a prime p, write T(M, L) for the number of
+    points of P^{n-1}(F_p) whose neighbour of M is isometric to L. Counting
+    the neighbouring pairs up to isometry gives
+
+        T(M, L) / |Aut M| = T(L, M) / |Aut L| ,
+
+    so the expansions already done tell part of the neighbours of every other
+    class: hecke_in[i][L] is the sum of T(M, L) / |Aut M| over the classes
+    M != L expanded at the i-th prime. When |Aut L| hecke_in[i][L] is the
+    number of points of L that give a neighbour, every neighbour of L is a
+    class already expanded, and the expansion of L can be skipped: it would
+    find nothing new, and its neighbours towards the classes expanded later
+    are zero by the same identity, so the counts stay exact. hecke_row[i][M]
+    is the row T(M, .) of an expanded class, kept for the checks only.
+   */
+  bool hecke;
+  std::vector<std::vector<Tmass>> hecke_in;
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE
+  std::vector<std::map<size_t, std::map<size_t, size_t>>> hecke_row;
+#endif
 
   GenusEnumerationState(int _n, GenusScheme _scheme, Tmass const &_TotalMass,
-                        std::ostream &_os)
-      : n(_n), scheme(_scheme), TotalMass(_TotalMass), os(_os) {
+                        bool _hecke, std::ostream &_os)
+      : n(_n), scheme(_scheme), TotalMass(_TotalMass), os(_os),
+        hecke(_hecke) {
     result.target_mass = TotalMass;
     result.accumulated_mass = Tmass(0);
     result.complete = false;
@@ -945,18 +1019,23 @@ struct GenusEnumerationState {
   // Inserts the lattice if its class is not known yet; returns whether it
   // was new.
   bool insert(MyMatrix<T> const &GramMat) {
+    return insert_index(GramMat).first;
+  }
+
+  // The same, with the index of the class of the lattice, new or known.
+  std::pair<bool, size_t> insert_index(MyMatrix<T> const &GramMat) {
     if (scheme == GenusScheme::CanonicalForm) {
       MyMatrix<T> GramCan = GenusCanonicalGram<T, Tint, Tgroup>(GramMat, os);
       // One search of the map: the entry is created here and its index
       // filled in once the class is added.
       auto [iter, is_new] = MapCanonic.try_emplace(GramCan, 0);
       if (!is_new) {
-        return false;
+        return {false, iter->second};
       }
       LatticeAutInfo<T, Tint, Tgroup> info =
           GetLatticeAutInfo<T, Tint, Tgroup>(iter->first, scheme, os);
       iter->second = add(iter->first, info);
-      return true;
+      return {true, iter->second};
     }
     // Isomorphism schemes: bucket by the cheap invariant, then run the
     // isometry test of the chosen engine against the same-invariant classes.
@@ -989,13 +1068,14 @@ struct GenusEnumerationState {
              << (double(n_iso_test) / double(n_iso_positive)) << "\n";
         }
 #endif
-        return false;
+        return {false, idx};
       }
     }
     LatticeAutInfo<T, Tint, Tgroup> info =
         GetLatticeAutInfo<T, Tint, Tgroup>(GramMat, scheme, os);
-    bucket.push_back(add(GramMat, info));
-    return true;
+    size_t idx_new = add(GramMat, info);
+    bucket.push_back(idx_new);
+    return {true, idx_new};
   }
 
   // Expands one known class at one prime: the orbits of projective points,
@@ -1024,6 +1104,49 @@ struct GenusEnumerationState {
     os << "GENUS: lattice " << (pos + 1) << " has " << ListRepr.size()
        << " orbits of projective points at p=" << p << "\n";
 #endif
+    result.n_expansion++;
+    Tmass order_mass =
+        UniversalScalarConversion<Tmass, TintGroup>(result.ListAutOrder[pos]);
+    [[maybe_unused]] bool would_skip = false;
+    if (hecke) {
+      if (hecke_in.size() <= i_prime) {
+        hecke_in.resize(i_prime + 1);
+      }
+      hecke_in[i_prime].resize(ListGramWork.size(), Tmass(0));
+      // the points of the lattice that give a neighbour
+      size_t n_point = 0;
+      for (size_t i_orbit = 0; i_orbit < ListRepr.size(); i_orbit++) {
+        std::vector<int> eLine =
+            ProjectiveLineOfIndex(n, p, ListRepr.at(i_orbit));
+        if (GenusNeighborLineData(G_int, eLine, p)) {
+          n_point += ListRepr.orbit_size(i_orbit);
+        }
+      }
+      Tmass accounted = hecke_in[i_prime][pos] * order_mass;
+#ifdef SANITY_CHECK_GENUS_ENUMERATION
+      if (accounted > Tmass(n_point)) {
+        std::cerr << "GENUS: the expanded classes account for " << accounted
+                  << " neighbours of lattice " << (pos + 1) << " at p=" << p
+                  << " which has only " << n_point << "\n";
+        throw TerminalException{1};
+      }
+#endif
+      if (accounted == Tmass(n_point)) {
+#ifdef DEBUG_GENUS_ENUMERATION
+        os << "GENUS: lattice " << (pos + 1) << " skipped at p=" << p
+           << ", its " << n_point << " neighbours are all expanded classes\n";
+#endif
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE
+        // the expansion is done anyway, and checked below
+        would_skip = true;
+#else
+        result.n_expansion_skipped++;
+        return;
+#endif
+      }
+    }
+    // the row T(pos, .) of the expansion, for the bookkeeping
+    std::map<size_t, size_t> row;
     // the representatives are indices; the line vectors are instantiated
     // one at a time, so nothing of the size of the projective space exists
     for (size_t i_orbit = 0; i_orbit < ListRepr.size(); i_orbit++) {
@@ -1051,14 +1174,68 @@ struct GenusEnumerationState {
         }
 #endif
         result.n_neighbor_full++;
-        if (insert(*opt)) {
+        std::pair<bool, size_t> pair = insert_index(*opt);
+        if (hecke) {
+          row[pair.second] += ListRepr.orbit_size(i_orbit);
+        }
+        if (pair.first) {
           result.ListNewClassPerPrime[i_prime]++;
-          f_new(ListGramWork.size() - 1);
+          f_new(pair.second);
         }
         if (is_finished()) {
           return;
         }
       }
+    }
+    if (hecke) {
+      std::vector<Tmass> &vin = hecke_in[i_prime];
+      vin.resize(ListGramWork.size(), Tmass(0));
+      for (auto &kv : row) {
+        if (kv.first != pos) {
+          vin[kv.first] += Tmass(kv.second) / order_mass;
+        }
+      }
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE
+      std::cerr << "GENUS: SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE, the Hecke "
+                   "identity for lattice "
+                << (pos + 1) << " at p=" << p << "\n";
+      if (hecke_row.size() <= i_prime) {
+        hecke_row.resize(i_prime + 1);
+      }
+      auto &rows = hecke_row[i_prime];
+      auto get = [](std::map<size_t, size_t> const &m, size_t k) -> size_t {
+        auto iter = m.find(k);
+        return iter == m.end() ? 0 : iter->second;
+      };
+      for (auto &kv : rows) {
+        size_t other = kv.first;
+        Tmass order_other = UniversalScalarConversion<Tmass, TintGroup>(
+            result.ListAutOrder[other]);
+        Tmass lhs = Tmass(get(row, other)) / order_mass;
+        Tmass rhs = Tmass(get(kv.second, pos)) / order_other;
+        if (lhs != rhs) {
+          std::cerr << "GENUS: Hecke identity fails between lattices "
+                    << (pos + 1) << " and " << (other + 1) << " at p=" << p
+                    << ": T=" << get(row, other) << " |Aut|=" << order_mass
+                    << " against T=" << get(kv.second, pos)
+                    << " |Aut|=" << order_other << "\n";
+          throw TerminalException{1};
+        }
+      }
+      if (would_skip) {
+        for (auto &kv : row) {
+          if (kv.first != pos && rows.count(kv.first) == 0) {
+            std::cerr << "GENUS: lattice " << (pos + 1) << " would have been "
+                      << "skipped at p=" << p << " but has the unexpanded "
+                      << "neighbour " << (kv.first + 1) << "\n";
+            throw TerminalException{1};
+          }
+        }
+        result.n_expansion_skipped++;
+      }
+      rows[pos] = row;
+      std::cerr << "GENUS: SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE, done\n";
+#endif
     }
   }
 };
@@ -1367,12 +1544,14 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                  typename GenusEnumerationResult<T, Tgroup>::Tmass const
                      &TotalMass,
                  int prime, GenusScheme scheme, NeighborStrategy strategy,
-                 GenusRandomWalkOptions const &rw, std::ostream &os) {
+                 GenusRandomWalkOptions const &rw, bool hecke,
+                 std::ostream &os) {
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_total;
 #endif
   int n = ListSeed[0].rows();
-  GenusEnumerationState<T, Tint, Tgroup> state(n, scheme, TotalMass, os);
+  GenusEnumerationState<T, Tint, Tgroup> state(n, scheme, TotalMass, hecke,
+                                               os);
   for (auto &eSeed : ListSeed) {
     if (state.is_finished()) {
       break;
@@ -1421,6 +1600,9 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
       walk_prime_min 2, walk_prime_max 2 (optional, the primes of the
                      random walk: 2 by default, otherwise the primes of
                      that interval not dividing 2 det)
+      hecke 1        (optional, default 0: skip the expansions whose
+                     neighbours are all expanded classes, see
+                     GenusEnumerationState)
 
   It carries no information the enumeration needs beyond the prime -- the
   p-neighbour construction preserves the genus by itself -- but it lets the
@@ -1440,6 +1622,7 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
   spec.det = T(0);
   spec.prime = 0;
   spec.strategy = NeighborStrategy::OutPrime;
+  spec.hecke = false;
   std::string key;
   while (is >> key) {
     if (key == "rank") {
@@ -1454,6 +1637,10 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
       is >> spec.rw.hits_factor;
     } else if (key == "failed_draws_factor") {
       is >> spec.rw.failed_draws_factor;
+    } else if (key == "hecke") {
+      int val;
+      is >> val;
+      spec.hecke = (val != 0);
     } else if (key == "walk_prime_min") {
       is >> spec.rw.walk_prime_min;
     } else if (key == "walk_prime_max") {
@@ -1476,7 +1663,7 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
       std::cerr << "GENUS: unrecognised key \"" << key << "\" in "
                 << file_name << ". Allowed: rank, det, prime, strategy, seed, "
                 << "hits_factor, failed_draws_factor, walk_prime_min, "
-                << "walk_prime_max\n";
+                << "walk_prime_max, hecke\n";
       throw TerminalException{1};
     }
   }
@@ -1535,6 +1722,8 @@ void WriteGenusEnumerationResult(
     os << "neighbours built: full expansion " << result.n_neighbor_full
        << ", random walk " << result.n_neighbor_random << " ("
        << result.n_new_random << " new classes)\n";
+    os << "expansions: " << result.n_expansion << " ("
+       << result.n_expansion_skipped << " skipped by the Hecke bookkeeping)\n";
     os << "closed in the random walk phase = "
        << (result.closed_in_random_walk ? "true" : "false") << "\n";
     os << "complete = " << (result.complete ? "true" : "false") << "\n";
@@ -1581,6 +1770,8 @@ void WriteGenusEnumerationResult(
     os << "],\n n_neighbor_full:=" << result.n_neighbor_full
        << ",\n n_neighbor_random:=" << result.n_neighbor_random
        << ",\n n_new_random:=" << result.n_new_random
+       << ",\n n_expansion:=" << result.n_expansion
+       << ",\n n_expansion_skipped:=" << result.n_expansion_skipped
        << ",\n closed_in_random_walk:="
        << (result.closed_in_random_walk ? "true" : "false") << ");\n";
     return;
