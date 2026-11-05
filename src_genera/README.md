@@ -20,6 +20,7 @@ full list of entries, their defaults and their documentation.
      prime = 0
      scheme = "canonical"
      hecke = F
+     order = "deficit"
     /
 
     &RANDOM_WALK
@@ -43,7 +44,8 @@ full list of entries, their defaults and their documentation.
   `NeighborStrategy` in `GenusEnumeration.h`); the `scheme` by which a known
   class is recognised (`canonical`, `ps` or `matrixgroup`); and `hecke` to
   skip the expansions whose neighbours are all expanded classes (see
-  `GenusEnumerationState`).
+  `GenusEnumerationState`); and the `order` of the expansions, `aut` or
+  `deficit` (see `GenusExpansionOrder`).
 * `RANDOM_WALK` -- the parameters of the `random_walk` strategy.
 * `SYSTEM` -- `OutFormat`, `GAP` (default), `CPP` or `Summary`, and
   `OutFile`, a file name, `stderr` (default) or `stdout`.

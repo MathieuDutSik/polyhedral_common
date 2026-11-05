@@ -59,7 +59,7 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   }
   GenusEnumerationResult<T, Tgroup> result = GenusEnumeration<T, Tint, Tgroup>(
       ListSeed, TotalMass, prime, spec.scheme, spec.strategy, spec.rw,
-      spec.hecke, os);
+      spec.hecke, spec.order, os);
   // With the iterate and random_walk strategies there is no single prime; 0
   // marks that in the output record.
   int prime_out = (spec.strategy == NeighborStrategy::OutPrime) ? prime : 0;

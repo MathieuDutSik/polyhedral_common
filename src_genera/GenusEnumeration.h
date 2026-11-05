@@ -121,10 +121,22 @@
  */
 enum class NeighborStrategy { OutPrime, Iterate, RandomWalk };
 
+/*
+  The order of the full expansions at a prime. Default (order aut in the
+  namelist): the one of the schedule, discovery order for OutPrime and
+  Iterate, largest |Aut| first for RandomWalk. Deficit, the default of the
+  namelist: the class with the largest Hecke deficit, the number
+  of its points giving a neighbour that the classes already expanded do not
+  account for (see GenusEnumerationState), ties going to the larger |Aut|.
+  When the mass has not closed, the missing classes are neighbours of the
+  classes with a positive deficit only, so those go first.
+ */
+enum class GenusExpansionOrder { Default, Deficit };
+
 // The parameters of the random walk phase of the RandomWalk strategy.
 struct GenusRandomWalkOptions {
   uint64_t seed = 1;
-  double hits_factor = 1;
+  double hits_factor = 0.25;
   size_t failed_draws_factor = 16;
   int walk_prime_min = 2;
   int walk_prime_max = 2;
@@ -972,15 +984,24 @@ struct GenusEnumerationState {
     is the row T(M, .) of an expanded class, kept for the checks only.
    */
   bool hecke;
+  GenusExpansionOrder order;
   std::vector<std::vector<Tmass>> hecke_in;
+  // hecke_npoint[i]: the number of points giving a neighbour at the i-th
+  // prime, -1 while not computed. Whether a point gives a neighbour depends
+  // on L / p^2 L only, so on L (x) Z_p, which is the same for all the
+  // classes of the genus: one number per prime.
+  std::vector<int64_t> hecke_npoint;
 #ifdef SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE
   std::vector<std::map<size_t, std::map<size_t, size_t>>> hecke_row;
 #endif
 
+  // The deficit order needs the bookkeeping, so it switches it on.
   GenusEnumerationState(int _n, GenusScheme _scheme, Tmass const &_TotalMass,
-                        bool _hecke, std::ostream &_os)
+                        bool _hecke, GenusExpansionOrder _order,
+                        std::ostream &_os)
       : n(_n), scheme(_scheme), TotalMass(_TotalMass), os(_os),
-        hecke(_hecke) {
+        hecke(_hecke || _order == GenusExpansionOrder::Deficit),
+        order(_order) {
     result.target_mass = TotalMass;
     result.accumulated_mass = Tmass(0);
     result.complete = false;
@@ -1067,6 +1088,73 @@ struct GenusEnumerationState {
     return {true, idx_new};
   }
 
+  // The number of points of the class pos giving a neighbour at p, from the
+  // orbits ListRepr of its automorphism group.
+  size_t count_points(int p, ProjectiveLineSelection const &ListRepr,
+                      MyMatrix<Tint> const &G_int) const {
+    size_t n_point = 0;
+    for (size_t i_orbit = 0; i_orbit < ListRepr.size(); i_orbit++) {
+      std::vector<int> eLine = ProjectiveLineOfIndex(n, p, ListRepr.at(i_orbit));
+      if (GenusNeighborLineData(G_int, eLine, p)) {
+        n_point += ListRepr.orbit_size(i_orbit);
+      }
+    }
+    return n_point;
+  }
+
+  // The number of points giving a neighbour at the i-th prime p, the same
+  // for all the classes; computed on the class pos the first time.
+  size_t n_point_genus(size_t pos, int p, size_t i_prime) {
+    if (hecke_npoint.size() <= i_prime) {
+      hecke_npoint.resize(i_prime + 1, -1);
+    }
+    if (hecke_npoint[i_prime] < 0) {
+      MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(ListGramWork[pos]);
+      ProjectiveLineSelection ListRepr = ProjectiveLineOrbitRepresentatives<Tint>(
+          n, p, ListAutInfo[pos].ListGenMat);
+      hecke_npoint[i_prime] =
+          static_cast<int64_t>(count_points(p, ListRepr, G_int));
+    }
+    return static_cast<size_t>(hecke_npoint[i_prime]);
+  }
+
+  // The Hecke deficit of the class pos at p: its points giving a neighbour
+  // that the classes expanded at p do not account for.
+  Tmass deficit(size_t pos, int p, size_t i_prime) {
+    size_t n_point = n_point_genus(pos, p, i_prime);
+    Tmass in(0);
+    if (hecke_in.size() > i_prime && hecke_in[i_prime].size() > pos) {
+      in = hecke_in[i_prime][pos];
+    }
+    Tmass order_mass =
+        UniversalScalarConversion<Tmass, TintGroup>(result.ListAutOrder[pos]);
+    return Tmass(n_point) - in * order_mass;
+  }
+
+  // The class to expand next among the unexpanded ones at the i-th prime p,
+  // which are listed in increasing order: default_pick (a position in that
+  // list, the choice of the schedule) with the default order, the one of
+  // largest deficit with the deficit order.
+  size_t pick(std::vector<size_t> const &unexpanded, int p, size_t i_prime,
+              size_t default_pick) {
+    if (order == GenusExpansionOrder::Default) {
+      return unexpanded[default_pick];
+    }
+    size_t best = unexpanded[0];
+    Tmass best_def = deficit(best, p, i_prime);
+    for (size_t i = 1; i < unexpanded.size(); i++) {
+      size_t pos = unexpanded[i];
+      Tmass def = deficit(pos, p, i_prime);
+      if (def > best_def ||
+          (def == best_def &&
+           result.ListAutOrder[pos] > result.ListAutOrder[best])) {
+        best = pos;
+        best_def = def;
+      }
+    }
+    return best;
+  }
+
   // Expands one known class at one prime: the orbits of projective points,
   // the neighbour of each representative, insertion of the new classes.
   // Stops early when the mass closes. i_prime is the index of p in
@@ -1103,14 +1191,16 @@ struct GenusEnumerationState {
       }
       hecke_in[i_prime].resize(ListGramWork.size(), Tmass(0));
       // the points of the lattice that give a neighbour
-      size_t n_point = 0;
-      for (size_t i_orbit = 0; i_orbit < ListRepr.size(); i_orbit++) {
-        std::vector<int> eLine =
-            ProjectiveLineOfIndex(n, p, ListRepr.at(i_orbit));
-        if (GenusNeighborLineData(G_int, eLine, p)) {
-          n_point += ListRepr.orbit_size(i_orbit);
-        }
+      size_t n_point = n_point_genus(pos, p, i_prime);
+#ifdef SANITY_CHECK_GENUS_ENUMERATION
+      size_t n_point_here = count_points(p, ListRepr, G_int);
+      if (n_point_here != n_point) {
+        std::cerr << "GENUS: lattice " << (pos + 1) << " has " << n_point_here
+                  << " points giving a neighbour at p=" << p
+                  << " against " << n_point << " for the genus\n";
+        throw TerminalException{1};
       }
+#endif
       Tmass accounted = hecke_in[i_prime][pos] * order_mass;
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
       if (accounted > Tmass(n_point)) {
@@ -1231,7 +1321,8 @@ struct GenusEnumerationState {
 
 /*
   The out_prime schedule: see NeighborStrategy. Every known class, in
-  discovery order, is expanded at the one prime until the mass closes.
+  discovery order (or by deficit, see GenusExpansionOrder), is expanded at
+  the one prime until the mass closes.
  */
 template <typename T, typename Tint, typename Tgroup>
 void GenusEnumerationOutPrime(GenusEnumerationState<T, Tint, Tgroup> &state,
@@ -1239,10 +1330,22 @@ void GenusEnumerationOutPrime(GenusEnumerationState<T, Tint, Tgroup> &state,
   auto &result = state.result;
   result.ListPrimeUsed.push_back(prime);
   result.ListNewClassPerPrime.push_back(0);
-  size_t pos = 0;
-  while (pos < state.ListGramWork.size() && !state.is_finished()) {
+  std::vector<bool> is_expanded;
+  while (!state.is_finished()) {
+    size_t n_class = state.ListGramWork.size();
+    is_expanded.resize(n_class, false);
+    std::vector<size_t> unexpanded;
+    for (size_t pos = 0; pos < n_class; pos++) {
+      if (!is_expanded[pos]) {
+        unexpanded.push_back(pos);
+      }
+    }
+    if (unexpanded.empty()) {
+      break;
+    }
+    size_t pos = state.pick(unexpanded, prime, 0, 0);
+    is_expanded[pos] = true;
     state.expand_at(pos, prime, 0);
-    pos++;
   }
 }
 
@@ -1267,8 +1370,9 @@ inline int GenusNextPrime(int q) {
 
 /*
   The iterate schedule: see NeighborStrategy. ListPrimeUsed holds the
-  primes in play in increasing order; next_expand[i] is the number of
-  classes, in discovery order, already expanded at ListPrimeUsed[i].
+  primes in play in increasing order; is_expanded[i][pos] tells whether the
+  class pos has been expanded at ListPrimeUsed[i]. At a prime the classes go
+  in discovery order (or by deficit, see GenusExpansionOrder).
   The invariant exits: the mass closes (complete), or the accumulated
   mass passes the target (impossible for genuine neighbours, so it
   would witness a programming error and stops the run as incomplete
@@ -1280,14 +1384,22 @@ template <typename T, typename Tint, typename Tgroup>
 void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
   auto &result = state.result;
   std::vector<int> &ListPrimeUsed = result.ListPrimeUsed;
-  std::vector<size_t> next_expand;
+  std::vector<std::vector<bool>> is_expanded;
   while (!state.is_finished()) {
     if (result.accumulated_mass > state.TotalMass) {
       break;
     }
+    size_t n_class = state.ListGramWork.size();
     size_t i_work = ListPrimeUsed.size();
+    std::vector<size_t> unexpanded;
     for (size_t i = 0; i < ListPrimeUsed.size(); i++) {
-      if (next_expand[i] < state.ListGramWork.size()) {
+      is_expanded[i].resize(n_class, false);
+      for (size_t pos = 0; pos < n_class; pos++) {
+        if (!is_expanded[i][pos]) {
+          unexpanded.push_back(pos);
+        }
+      }
+      if (!unexpanded.empty()) {
         i_work = i;
         break;
       }
@@ -1296,14 +1408,16 @@ void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
       int p_new = ListPrimeUsed.empty() ? 2 : GenusNextPrime(ListPrimeUsed.back());
       ListPrimeUsed.push_back(p_new);
       result.ListNewClassPerPrime.push_back(0);
-      next_expand.push_back(0);
+      is_expanded.push_back(std::vector<bool>(n_class, false));
 #ifdef DEBUG_GENUS_ENUMERATION
       state.os << "GENUS: iterate strategy brings in prime " << p_new << "\n";
 #endif
       continue;
     }
-    state.expand_at(next_expand[i_work], ListPrimeUsed[i_work], i_work);
-    next_expand[i_work]++;
+    int p = ListPrimeUsed[i_work];
+    size_t pos = state.pick(unexpanded, p, i_work, 0);
+    is_expanded[i_work][pos] = true;
+    state.expand_at(pos, p, i_work);
   }
 }
 
@@ -1509,7 +1623,8 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
 #endif
       continue;
     }
-    size_t pos = unexpanded[get_max_aut(unexpanded)];
+    size_t pos = state.pick(unexpanded, ListPrimeUsed[i_work], i_work,
+                            get_max_aut(unexpanded));
     is_expanded[i_work][pos] = true;
     // A new class found by the expansion gets its random walk at once,
     // before the expansion goes on.
@@ -1534,13 +1649,13 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                      &TotalMass,
                  int prime, GenusScheme scheme, NeighborStrategy strategy,
                  GenusRandomWalkOptions const &rw, bool hecke,
-                 std::ostream &os) {
+                 GenusExpansionOrder order, std::ostream &os) {
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_total;
 #endif
   int n = ListSeed[0].rows();
   GenusEnumerationState<T, Tint, Tgroup> state(n, scheme, TotalMass, hecke,
-                                               os);
+                                               order, os);
   for (auto &eSeed : ListSeed) {
     if (state.is_finished()) {
       break;
@@ -1583,6 +1698,7 @@ struct GenusSpec {
   GenusScheme scheme;
   GenusRandomWalkOptions rw;
   bool hecke;
+  GenusExpansionOrder order;
 };
 
 /*
@@ -1627,6 +1743,11 @@ test)";
     ListBoolValues_doc["hecke"] = "Default: F\n\
 Whether to skip the expansions whose neighbours are all expanded classes,\n\
 by the Hecke bookkeeping of GenusEnumerationState";
+    ListStringValues_doc["order"] = "Default: deficit\n\
+The order of the full expansions at a prime, see GenusExpansionOrder:\n\
+aut: discovery order for out_prime and iterate, largest |Aut| first for\n\
+  random_walk\n\
+deficit: the class with the largest Hecke deficit first (implies hecke)";
     ListBlock["METHOD"].setListStringValues_doc(ListStringValues_doc);
     ListBlock["METHOD"].setListIntValues_doc(ListIntValues_doc);
     ListBlock["METHOD"].setListBoolValues_doc(ListBoolValues_doc);
@@ -1637,7 +1758,7 @@ by the Hecke bookkeeping of GenusEnumerationState";
     std::map<std::string, std::string> ListDoubleValues_doc;
     ListIntValues_doc["seed"] = "Default: 1\n\
 The seed of the random walk";
-    ListDoubleValues_doc["hits_factor"] = "Default: 1\n\
+    ListDoubleValues_doc["hits_factor"] = "Default: 0.25\n\
 A class with |Aut| = g, and b the smallest integer with g < 2^b, is treated\n\
 when max(1, ceil(hits_factor * b)) of its random neighbours are known\n\
 classes";
@@ -1701,6 +1822,16 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
     throw TerminalException{1};
   }
   spec.hecke = BlockMETHOD.get_bool("hecke");
+  std::string order = BlockMETHOD.get_string("order");
+  if (order == "aut") {
+    spec.order = GenusExpansionOrder::Default;
+  } else if (order == "deficit") {
+    spec.order = GenusExpansionOrder::Deficit;
+  } else {
+    std::cerr << "GENUS: unrecognised order \"" << order
+              << "\". Allowed: aut, deficit\n";
+    throw TerminalException{1};
+  }
   int seed = BlockRW.get_int("seed");
   int failed_draws_factor = BlockRW.get_int("failed_draws_factor");
   if (seed < 0 || failed_draws_factor < 0) {
