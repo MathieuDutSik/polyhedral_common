@@ -105,6 +105,12 @@
   many of them are known classes. A new class never stops the walk. A line
   need not give a neighbour, and a class may have no 2-neighbour at all, so
   the draws that give none are bounded by failed_draws_factor * b.
+  The walk is at p = 2 by default. With walk_prime_max > 2, every draw takes
+  instead a prime uniformly among those of [walk_prime_min, walk_prime_max]
+  not dividing 2 det, and an isotropic line at that prime: a neighbour costs
+  the same at any prime, at such a prime the neighbour graph is connected on
+  the spinor genus (Kneser), which p = 2 is not, and the neighbours at a
+  large prime are spread much more widely over the genus.
   The pending classes are treated by decreasing |Aut|. If the mass closes in
   this first phase the enumeration is over. Otherwise the full expansion
   follows, at 2, then 3, 5, ... as in Iterate, and every new class it finds
@@ -119,6 +125,8 @@ struct GenusRandomWalkOptions {
   uint64_t seed = 1;
   double hits_factor = 1;
   size_t failed_draws_factor = 16;
+  int walk_prime_min = 2;
+  int walk_prime_max = 2;
 };
 
 // The description of the genus. `prime` is the prime used for the neighbour
@@ -1159,9 +1167,72 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
                                 GenusRandomWalkOptions const &rw) {
   auto &result = state.result;
   int n = state.n;
-  int p_walk = 2;
-  size_t n_line = NumberProjectiveLines(n, p_walk);
   std::mt19937_64 engine(rw.seed);
+  // The primes of the walk. At p = 2 the lines are drawn uniformly and most
+  // of them give a neighbour; at an odd prime only about one line in p is
+  // isotropic, so the isotropic ones are drawn directly.
+  std::vector<int> walk_primes;
+  if (rw.walk_prime_max <= 2) {
+    walk_primes.push_back(2);
+  } else {
+    T det = DeterminantMat(state.ListGramWork[0]);
+    int p_start = std::max(rw.walk_prime_min, 3);
+    for (int p = GenusNextPrime(p_start - 1); p <= rw.walk_prime_max;
+         p = GenusNextPrime(p)) {
+      if (ResInt(det, T(p)) != T(0)) {
+        walk_primes.push_back(p);
+      }
+    }
+  }
+  if (walk_primes.empty()) {
+    std::cerr << "GENUS: no prime of [" << rw.walk_prime_min << ", "
+              << rw.walk_prime_max << "] for the random walk does not divide "
+              << "2 det\n";
+    throw TerminalException{1};
+  }
+  size_t n_line_2 = NumberProjectiveLines(n, 2);
+  // A random isotropic point mod p, by rejection: about p draws of O(n^2)
+  // each, nothing next to the canonical form of the neighbour, and exactly
+  // uniform over the isotropic points. A form without isotropic point mod p
+  // (rank <= 2) gives nothing after 64 p tries.
+  auto draw_line = [&](MyMatrix<Tint> const &G_int,
+                       int p) -> std::optional<std::vector<int>> {
+    if (p == 2) {
+      return ProjectiveLineOfIndex(n, 2, random_index(engine, n_line_2));
+    }
+    std::vector<int64_t> G_mod(n * n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        G_mod[i * n + j] = ResidueModP(G_int(i, j), p);
+      }
+    }
+    int64_t p64 = p;
+    std::vector<int> v(n);
+    for (int i_try = 0; i_try < 64 * p; i_try++) {
+      bool is_zero = true;
+      for (int i = 0; i < n; i++) {
+        v[i] = random_int(engine, 0, p - 1);
+        if (v[i] != 0) {
+          is_zero = false;
+        }
+      }
+      if (is_zero) {
+        continue;
+      }
+      int64_t q = 0;
+      for (int i = 0; i < n; i++) {
+        int64_t row = 0;
+        for (int j = 0; j < n; j++) {
+          row = (row + G_mod[i * n + j] * v[j]) % p64;
+        }
+        q = (q + row * v[i]) % p64;
+      }
+      if (q == 0) {
+        return v;
+      }
+    }
+    return {};
+  };
   // The position, among the indices in vec, of the class of largest |Aut|,
   // the first discovered among the ties.
   auto get_max_aut = [&](std::vector<size_t> const &vec) -> size_t {
@@ -1185,10 +1256,17 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
     size_t n_hit = 0;
     size_t n_failed = 0;
     while (n_hit < bound && n_failed < max_failed) {
-      std::vector<int> eLine =
-          ProjectiveLineOfIndex(n, p_walk, random_index(engine, n_line));
+      // with one prime no draw, so that the p = 2 walk keeps its sequence
+      int p = (walk_primes.size() == 1)
+                  ? walk_primes[0]
+                  : walk_primes[random_index(engine, walk_primes.size())];
+      std::optional<std::vector<int>> opt_line = draw_line(G_int, p);
+      if (!opt_line) {
+        n_failed++;
+        continue;
+      }
       std::optional<MyMatrix<T>> opt =
-          GenusNeighbor<T, Tint>(G_int, eLine, p_walk, state.os);
+          GenusNeighbor<T, Tint>(G_int, *opt_line, p, state.os);
       if (!opt) {
         n_failed++;
         continue;
@@ -1340,6 +1418,9 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                      as a multiple of log2 |Aut|)
       failed_draws_factor 16 (optional, the draws giving no neighbour are
                      bounded by this times log2 |Aut|)
+      walk_prime_min 2, walk_prime_max 2 (optional, the primes of the
+                     random walk: 2 by default, otherwise the primes of
+                     that interval not dividing 2 det)
 
   It carries no information the enumeration needs beyond the prime -- the
   p-neighbour construction preserves the genus by itself -- but it lets the
@@ -1373,6 +1454,10 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
       is >> spec.rw.hits_factor;
     } else if (key == "failed_draws_factor") {
       is >> spec.rw.failed_draws_factor;
+    } else if (key == "walk_prime_min") {
+      is >> spec.rw.walk_prime_min;
+    } else if (key == "walk_prime_max") {
+      is >> spec.rw.walk_prime_max;
     } else if (key == "strategy") {
       std::string strat;
       is >> strat;
@@ -1390,7 +1475,8 @@ GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
     } else {
       std::cerr << "GENUS: unrecognised key \"" << key << "\" in "
                 << file_name << ". Allowed: rank, det, prime, strategy, seed, "
-                << "hits_factor, failed_draws_factor\n";
+                << "hits_factor, failed_draws_factor, walk_prime_min, "
+                << "walk_prime_max\n";
       throw TerminalException{1};
     }
   }

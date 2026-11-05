@@ -126,6 +126,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "                     failed_draws_factor <f> (optional,\n";
       std::cerr << "                       random_walk: bound on the draws\n";
       std::cerr << "                       giving no neighbour)\n";
+      std::cerr << "                     walk_prime_min <p>, walk_prime_max <p>\n";
+      std::cerr << "                       (optional, random_walk: the primes\n";
+      std::cerr << "                       of the walk, 2 by default)\n";
       std::cerr << "Lattice (input) : one or more Gram matrices, in the\n";
       std::cerr << "                  ListMatrix format. One seed per SPINOR\n";
       std::cerr << "                  genus is needed: the p-neighbour graph\n";

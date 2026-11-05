@@ -10,7 +10,8 @@ Smith-Minkowski-Siegel mass is reached.
                (0 or absent selects the smallest prime not dividing det),
                `strategy` (`out_prime`, the default, `iterate` or
                `random_walk`), and for `random_walk` the `seed`, the
-               `hits_factor` and the `failed_draws_factor` (see
+               `hits_factor`, the `failed_draws_factor` and the primes of
+               the walk, `walk_prime_min` and `walk_prime_max` (see
                `NeighborStrategy` in
                `GenusEnumeration.h`).
 * `Lattice` -- one or more Gram matrices in the ListMatrix format, the seeds.
