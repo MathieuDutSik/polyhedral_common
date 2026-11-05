@@ -12,11 +12,9 @@
 #endif
 #include "Group.h"
 #include "Permutation.h"
-#include "LatticeStabEquiCan.h"
+#include "LatticeMethods.h"
 #include "InvariantVectorFamily.h"
 #include "SignatureSymmetric.h"
-#include "LatticePleskenSouvignier.h"
-#include "LatticeAutomorphismVinberg.h"
 #include "Arithmetic_dispatch_types.h"
 // clang-format on
 
@@ -41,42 +39,9 @@ void ComputeAutomorphism(std::string const &FileListMat,
               << FileListMat << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
-  auto f_group = [&]() -> IntAutomorphismGroup<Tint, Tgroup> {
-    if (method == "graph") {
-      return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
-                                                                  std::cerr);
-    }
-    if (method == "plesken_souvignier") {
-      PleskenSouvignierAutomResult<Tint, Tgroup> result =
-          PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(ListMat,
-                                                                std::cerr);
-      return {std::move(result.ListGen), result.order};
-    }
-    // weyl is vinberg: the residual family of the decomposition is already
-    // the Weyl-reduced one, the simple roots and a family of R^perp, which
-    // is what the weyl method of LATT_Canonicalize uses.
-    if (method == "vinberg" || method == "weyl" || method == "weyl_chamber") {
-      // The reflections in the roots of norm 2 are integral only for an
-      // integral form, and the decomposition is the one of a single form.
-      if (ListMat.size() != 1 || !IsIntegralMatrix(ListMat[0])) {
-        std::cerr << "LATT_Automorphism: the " << method
-                  << " method needs a single integral Gram matrix\n";
-        throw TerminalException{1};
-      }
-      VinbergAutom<Tint, Tgroup> vin =
-          (method == "weyl_chamber")
-              ? ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0],
-                                                                std::cerr)
-              : ComputeAutomorphismVinberg<T, Tint, Tgroup>(ListMat[0],
-                                                            std::cerr);
-      return {std::move(vin.ListGen), vin.order};
-    }
-    std::cerr << "LATT_Automorphism: unknown method=" << method << "\n";
-    std::cerr << "The methods are graph, plesken_souvignier, vinberg, weyl "
-                 "and weyl_chamber\n";
-    throw TerminalException{1};
-  };
-  IntAutomorphismGroup<Tint, Tgroup> group = f_group();
+  LatticeStabCanIsomMethod emethod = ParseLatticeStabCanIsomMethod(method);
+  IntAutomorphismGroup<Tint, Tgroup> group =
+      LatticeAutomorphismGroup<T, Tint, Tgroup>(ListMat, emethod, std::cerr);
   if (OutFormat == "GAP_order") {
     os << "return " << group.order << ";\n";
     return;
@@ -142,24 +107,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "  GAP_order : the order |Aut(GramMat)| only, as computed "
                    "by the\n";
       std::cerr << "              method along with the generators\n";
-      std::cerr << "method values:\n";
-      std::cerr << "  graph              : the automorphisms of a vector "
-                   "family as a\n";
-      std::cerr << "                       graph (default)\n";
-      std::cerr << "  plesken_souvignier : the backtrack of Plesken and "
-                   "Souvignier\n";
-      std::cerr << "                       (forms with rational entries)\n";
-      std::cerr << "  vinberg            : Aut(L) = W(R) x| Aut(L, rho) "
-                   "for a single\n";
-      std::cerr << "                       integral Gram matrix\n";
-      std::cerr << "  weyl               : the same computation as vinberg, "
-                   "whose family\n";
-      std::cerr << "                       is the Weyl-reduced one of the weyl "
-                   "method of\n";
-      std::cerr << "                       LATT_Canonicalize\n";
-      std::cerr << "  weyl_chamber       : as vinberg, Aut(L, rho) from the "
-                   "Weyl-chamber\n";
-      std::cerr << "                       family, which spans the lattice\n";
+      std::cerr << "method values (default graph):\n";
+      PrintLatticeStabCanIsomMethods(std::cerr);
       return -1;
     }
     std::string arith = argv[1];

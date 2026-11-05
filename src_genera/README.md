@@ -18,7 +18,10 @@ full list of entries, their defaults and their documentation.
     &METHOD
      strategy = "iterate"
      prime = 0
-     scheme = "canonical"
+     recognition = "canonical"
+     canonical_method = "weyl_chamber"
+     isomorphism_method = "plesken_souvignier"
+     automorphism_method = "vinberg"
      hecke = F
      order = "deficit"
     /
@@ -41,9 +44,13 @@ full list of entries, their defaults and their documentation.
   integer. The seeds must have the same rank and determinant.
 * `METHOD` -- the `strategy`: `out_prime` (the default, one prime, `prime`
   or the smallest one not dividing det), `iterate` or `random_walk` (see
-  `NeighborStrategy` in `GenusEnumeration.h`); the `scheme` by which a known
-  class is recognised (`canonical`, `ps` or `matrixgroup`); and `hecke` to
-  skip the expansions whose neighbours are all expanded classes (see
+  `NeighborStrategy` in `GenusEnumeration.h`); the `recognition` of a known
+  class, by its canonical form (`canonical`) or by the isometry test within
+  the buckets of a cheap invariant (`isomorphism`), with the
+  `canonical_method`, `isomorphism_method` and `automorphism_method` of
+  `src_latt/LatticeMethods.h`, the same methods as `LATT_Canonicalize`,
+  `LATT_Isomorphism` and `LATT_Automorphism` (see `GenusMethods`); `hecke`
+  to skip the expansions whose neighbours are all expanded classes (see
   `GenusEnumerationState`); and the `order` of the expansions, `aut` or
   `deficit` (see `GenusExpansionOrder`).
 * `RANDOM_WALK` -- the parameters of the `random_walk` strategy.

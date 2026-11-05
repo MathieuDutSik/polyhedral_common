@@ -58,7 +58,7 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
     prime = ChooseNeighborPrime<T>(det);
   }
   GenusEnumerationResult<T, Tgroup> result = GenusEnumeration<T, Tint, Tgroup>(
-      ListSeed, TotalMass, prime, spec.scheme, spec.strategy, spec.rw,
+      ListSeed, TotalMass, prime, spec.methods, spec.strategy, spec.rw,
       spec.hecke, spec.order, os);
   // With the iterate and random_walk strategies there is no single prime; 0
   // marks that in the output record.

@@ -12,10 +12,8 @@
 #endif
 #include "Group.h"
 #include "Permutation.h"
-#include "LatticeStabEquiCan.h"
+#include "LatticeMethods.h"
 #include "SignatureSymmetric.h"
-#include "LatticePleskenSouvignier.h"
-#include "LatticeAutomorphismVinberg.h"
 #include "Arithmetic_dispatch_types.h"
 // clang-format on
 
@@ -57,41 +55,10 @@ void ComputeIsomorphism(std::string const &FileListMat1,
     std::cerr << "LATT_Isomorphism: the two lists have different lengths\n";
     throw TerminalException{1};
   }
-  auto f_equiv = [&]() -> std::optional<MyMatrix<Tint>> {
-    if (method == "graph") {
-      return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
-                                                            std::cerr);
-    }
-    if (method == "plesken_souvignier") {
-      std::vector<MyMatrix<Tint>> ListGenAut2;
-      return PleskenSouvignierLatticeIsometry<T, Tint>(ListMat1, ListMat2,
-                                                       ListGenAut2, std::cerr);
-    }
-    // weyl is vinberg: the residual family of the decomposition is already
-    // the Weyl-reduced one, the simple roots and a family of R^perp, which
-    // is what the weyl method of LATT_Canonicalize uses.
-    if (method == "vinberg" || method == "weyl" || method == "weyl_chamber") {
-      // The reflections in the roots of norm 2 are integral only for an
-      // integral form, and the decomposition is the one of a single form.
-      if (ListMat1.size() != 1 || ListMat2.size() != 1 ||
-          !IsIntegralMatrix(ListMat1[0]) || !IsIntegralMatrix(ListMat2[0])) {
-        std::cerr << "LATT_Isomorphism: the " << method << " method needs a "
-                  << "single integral Gram matrix on each side\n";
-        throw TerminalException{1};
-      }
-      if (method == "weyl_chamber") {
-        return ComputeIsometryWeylChamber<T, Tint, Tgroup>(
-            ListMat1[0], ListMat2[0], std::cerr);
-      }
-      return ComputeIsometryVinberg<T, Tint, Tgroup>(ListMat1[0], ListMat2[0],
-                                                     std::cerr);
-    }
-    std::cerr << "LATT_Isomorphism: unknown method=" << method << "\n";
-    std::cerr << "The methods are graph, plesken_souvignier, vinberg, weyl "
-                 "and weyl_chamber\n";
-    throw TerminalException{1};
-  };
-  std::optional<MyMatrix<Tint>> equiv = f_equiv();
+  LatticeStabCanIsomMethod emethod = ParseLatticeStabCanIsomMethod(method);
+  std::vector<MyMatrix<Tint>> ListGenAut2;
+  std::optional<MyMatrix<Tint>> equiv = LatticeIsometry<T, Tint, Tgroup>(
+      ListMat1, ListMat2, ListGenAut2, emethod, std::cerr);
   if (OutFormat == "GAP") {
     if (equiv) {
       os << "return ";
@@ -153,22 +120,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "OutFormat values:\n";
       std::cerr << "  GAP   : the equivalence matrix or false, GAP readable\n";
       std::cerr << "  Oscar : the equivalence matrix in the Oscar format\n";
-      std::cerr << "method values:\n";
-      std::cerr << "  graph              : the isomorphism of vector families "
-                   "as graphs\n";
-      std::cerr << "                       (default)\n";
-      std::cerr << "  plesken_souvignier : the backtrack of Plesken and "
-                   "Souvignier\n";
-      std::cerr << "  vinberg            : through the root system, for a "
-                   "single integral\n";
-      std::cerr << "                       Gram matrix on each side\n";
-      std::cerr << "  weyl               : the same computation as vinberg, "
-                   "whose family\n";
-      std::cerr << "                       is the Weyl-reduced one of the weyl "
-                   "method of\n";
-      std::cerr << "                       LATT_Canonicalize\n";
-      std::cerr << "  weyl_chamber       : as vinberg, on the Weyl-chamber "
-                   "families\n";
+      std::cerr << "method values (default graph):\n";
+      PrintLatticeStabCanIsomMethods(std::cerr);
       return -1;
     }
     std::string arith = argv[1];

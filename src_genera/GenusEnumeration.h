@@ -7,6 +7,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "LatticeStabEquiCan.h"
+#include "LatticeMethods.h"
 #include "LatticeRootDecomposition.h"
 #include "LatticeAutomorphismVinberg.h"
 #include "LatticePleskenSouvignier.h"
@@ -647,22 +648,31 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
   return rec.GramMatRed;
 }
 
-// The scheme by which classes are told apart and their automorphism groups
-// computed.
-//
-//   CanonicalForm      -- a canonical Gram matrix per neighbour, recognising
-//                         a known class by a dictionary lookup; automorphism
-//                         groups by the Vinberg decomposition.
-//   PleskenSouvignier  -- scheme A of the isomorphism strategy of Hecke.jl:
-//                         neighbours bucketed by a cheap isometry invariant
-//                         and, within a bucket, told apart by the
-//                         Plesken-Souvignier isometry test on the Z-spanning
-//                         family; automorphism groups by the same engine.
-//   MatrixGroup        -- scheme B: same bucketing, but the isometry and the
-//                         automorphism group come from the MatrixGroup
-//                         algorithm on the full-rank (not Z-spanning)
-//                         iterated-shortest family.
-enum class GenusScheme { CanonicalForm, PleskenSouvignier, MatrixGroup };
+/*
+  How the classes are told apart and their automorphism groups computed, by
+  the methods of src_latt/LatticeMethods.h.
+
+  by_canonical true: a canonical Gram matrix per neighbour (canonical), and a
+  known class is a dictionary lookup. by_canonical false: the neighbours are
+  bucketed by a cheap isometry invariant and, within a bucket, told apart by
+  the isometry test (isomorphism), as in the isomorphism strategy of
+  Hecke.jl; the Plesken-Souvignier test is pruned by the automorphism group
+  of the known class. The automorphism groups (automorphism) give the orders
+  for the mass and the generators for the orbits of projective points.
+
+  The defaults are the Weyl-chamber canonical form (Brandhorst-Hofmann,
+  Prop. 7.6), about 2x faster than the root-decomposed one on the 813 classes
+  of the determinant-351 genus, and the automorphism group through the
+  Vinberg decomposition Aut(L) = W(R) rtimes Aut(L, rho), which reads |W(R)|
+  off the Dynkin type and searches only the small residual Aut(L, rho).
+ */
+struct GenusMethods {
+  bool by_canonical = true;
+  LatticeStabCanIsomMethod canonical = LatticeStabCanIsomMethod::WeylChamber;
+  LatticeStabCanIsomMethod isomorphism =
+      LatticeStabCanIsomMethod::PleskenSouvignier;
+  LatticeStabCanIsomMethod automorphism = LatticeStabCanIsomMethod::Vinberg;
+};
 
 /*
   The automorphism data of one lattice: the order, needed for the mass, and
@@ -678,52 +688,21 @@ template <typename T, typename Tint, typename Tgroup> struct LatticeAutInfo {
 
 template <typename T, typename Tint, typename Tgroup>
 LatticeAutInfo<T, Tint, Tgroup>
-GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusScheme scheme,
+GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusMethods const &methods,
                   std::ostream &os) {
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time;
 #endif
+  std::vector<MyMatrix<T>> ListMat{GramMat};
+  IntAutomorphismGroup<Tint, Tgroup> aut =
+      LatticeAutomorphismGroup<T, Tint, Tgroup>(ListMat, methods.automorphism,
+                                                os);
   LatticeAutInfo<T, Tint, Tgroup> info;
-  if (scheme == GenusScheme::CanonicalForm) {
-    /*
-      The automorphism group through the Vinberg decomposition Aut(L) =
-      W(R) rtimes Aut(L, rho): the Weyl group W(R) of the root system is not
-      enumerated, its order is read off the Dynkin type and its generators
-      are the reflections in the simple roots; only the small residual
-      Aut(L, rho) is searched. The order and the generators are exactly
-      what the enumeration needs -- the order for the mass, the generators
-      for the orbits of projective points.
-     */
-    VinbergAutom<Tint, Tgroup> vin =
-        ComputeAutomorphismVinberg<T, Tint, Tgroup>(GramMat, os);
-    info.order = vin.order;
-    info.ListGenMat = vin.ListGen;
+  info.order = aut.order;
+  info.ListGenMat = std::move(aut.ListGen);
 #ifdef DEBUG_GENUS_ENUMERATION
-    os << "GENUS: |Aut|=" << vin.order << " = |W(R)|=" << vin.weyl_order
-       << " x residual=" << vin.residual_order << ", " << info.ListGenMat.size()
-       << " generators\n";
-#endif
-  } else if (scheme == GenusScheme::PleskenSouvignier) {
-    // Scheme A: the Plesken-Souvignier engine on the Z-spanning family. The
-    // order is the product of the stabilizer-chain orbit lengths.
-    std::vector<MyMatrix<T>> ListMat{GramMat};
-    PleskenSouvignierAutomResult<Tint, Tgroup> res =
-        PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(ListMat, os);
-    info.order = res.order;
-    info.ListGenMat = res.ListGen;
-  } else {
-    // Scheme B: the MatrixGroup algorithm on the full-rank family, which
-    // gives the order with the generators.
-    IntAutomorphismGroup<Tint, Tgroup> aut =
-        IteratedShortestAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
-    info.order = aut.order;
-    info.ListGenMat = std::move(aut.ListGen);
-  }
-#ifdef DEBUG_GENUS_ENUMERATION
-  if (scheme != GenusScheme::CanonicalForm) {
-    os << "GENUS: |Aut|=" << info.order << ", " << info.ListGenMat.size()
-       << " generators\n";
-  }
+  os << "GENUS: |Aut|=" << info.order << ", " << info.ListGenMat.size()
+     << " generators\n";
 #endif
 #ifdef TIMINGS_GENUS_ENUMERATION
   os << "|GENUS: GetLatticeAutInfo|=" << time << "\n";
@@ -742,19 +721,16 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusScheme scheme,
   nauty cannot allocate, against 238 for V_cv.
  */
 template <typename T, typename Tint, typename Tgroup>
-MyMatrix<T> GenusCanonicalGram(MyMatrix<T> const &GramMat, std::ostream &os) {
-  // The Weyl-chamber canonical form (Brandhorst-Hofmann, Prop. 7.6): the
-  // characteristic vectors in one Weyl chamber and the simple roots, a
-  // family spanning the lattice, so neither the Weyl group nor the glue
-  // step enters the computation. About 2x faster than the root-decomposed
-  // form on the 813 classes of the determinant-351 genus. Every class of
-  // the enumeration uses this same function, so the deduplication stays
-  // consistent; the keys are not comparable with those of another method.
+MyMatrix<T> GenusCanonicalGram(MyMatrix<T> const &GramMat,
+                               LatticeStabCanIsomMethod method,
+                               std::ostream &os) {
+  // Every class of the enumeration uses this same method, so the
+  // deduplication stays consistent; the keys are not comparable with those
+  // of another method.
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_can;
 #endif
-  MyMatrix<Tint> B =
-      ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(GramMat, os);
+  MyMatrix<Tint> B = LatticeCanonicalBasis<T, Tint, Tgroup>(GramMat, method, os);
 #ifdef TIMINGS_GENUS_ENUMERATION
   os << "|GENUS: GenusCanonicalGram|=" << time_can << "\n";
 #endif
@@ -939,7 +915,7 @@ struct GenusEnumerationState {
   using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
   using TintGroup = typename Tgroup::Tint;
   int n;
-  GenusScheme scheme;
+  GenusMethods methods;
   Tmass const &TotalMass;
   std::ostream &os;
   GenusEnumerationResult<T, Tgroup> result;
@@ -996,10 +972,11 @@ struct GenusEnumerationState {
 #endif
 
   // The deficit order needs the bookkeeping, so it switches it on.
-  GenusEnumerationState(int _n, GenusScheme _scheme, Tmass const &_TotalMass,
+  GenusEnumerationState(int _n, GenusMethods const &_methods,
+                        Tmass const &_TotalMass,
                         bool _hecke, GenusExpansionOrder _order,
                         std::ostream &_os)
-      : n(_n), scheme(_scheme), TotalMass(_TotalMass), os(_os),
+      : n(_n), methods(_methods), TotalMass(_TotalMass), os(_os),
         hecke(_hecke || _order == GenusExpansionOrder::Deficit),
         order(_order) {
     result.target_mass = TotalMass;
@@ -1034,8 +1011,9 @@ struct GenusEnumerationState {
 
   // The same, with the index of the class of the lattice, new or known.
   std::pair<bool, size_t> insert_index(MyMatrix<T> const &GramMat) {
-    if (scheme == GenusScheme::CanonicalForm) {
-      MyMatrix<T> GramCan = GenusCanonicalGram<T, Tint, Tgroup>(GramMat, os);
+    if (methods.by_canonical) {
+      MyMatrix<T> GramCan =
+          GenusCanonicalGram<T, Tint, Tgroup>(GramMat, methods.canonical, os);
       // One search of the map: the entry is created here and its index
       // filled in once the class is added.
       auto [iter, is_new] = MapCanonic.try_emplace(GramCan, 0);
@@ -1043,31 +1021,22 @@ struct GenusEnumerationState {
         return {false, iter->second};
       }
       LatticeAutInfo<T, Tint, Tgroup> info =
-          GetLatticeAutInfo<T, Tint, Tgroup>(iter->first, scheme, os);
+          GetLatticeAutInfo<T, Tint, Tgroup>(iter->first, methods, os);
       iter->second = add(iter->first, info);
       return {true, iter->second};
     }
-    // Isomorphism schemes: bucket by the cheap invariant, then run the
-    // isometry test of the chosen engine against the same-invariant classes.
+    // By isometry: bucket by the cheap invariant, then run the isometry
+    // test against the same-invariant classes, with the automorphism
+    // generators of the known class.
     std::map<T, int> inv = GenusIsoInvariant<T, Tint>(GramMat, os);
     std::vector<size_t> &bucket = MapInvariant[inv];
     for (size_t idx : bucket) {
-      bool isamorphic;
-      if (scheme == GenusScheme::PleskenSouvignier) {
-        // Scheme A: the Plesken-Souvignier isometry test on the Z-spanning
-        // family, passing the known class's automorphism generators to prune
-        // the search.
-        std::vector<MyMatrix<T>> LM1{GramMat};
-        std::vector<MyMatrix<T>> LM2{result.ListGram[idx]};
-        isamorphic = PleskenSouvignierLatticeIsometry<T, Tint>(
-                         LM1, LM2, ListAutInfo[idx].ListGenMat, os)
-                         .has_value();
-      } else {
-        // Scheme B: the MatrixGroup isometry test on the full-rank family.
-        isamorphic = IteratedShortestEquivalence<T, Tint, Tgroup>(
-                         GramMat, result.ListGram[idx], os)
-                         .has_value();
-      }
+      std::vector<MyMatrix<T>> LM1{GramMat};
+      std::vector<MyMatrix<T>> LM2{result.ListGram[idx]};
+      bool isamorphic = LatticeIsometry<T, Tint, Tgroup>(
+                            LM1, LM2, ListAutInfo[idx].ListGenMat,
+                            methods.isomorphism, os)
+                            .has_value();
       n_iso_test++;
       if (isamorphic) {
         n_iso_positive++;
@@ -1082,7 +1051,7 @@ struct GenusEnumerationState {
       }
     }
     LatticeAutInfo<T, Tint, Tgroup> info =
-        GetLatticeAutInfo<T, Tint, Tgroup>(GramMat, scheme, os);
+        GetLatticeAutInfo<T, Tint, Tgroup>(GramMat, methods, os);
     size_t idx_new = add(GramMat, info);
     bucket.push_back(idx_new);
     return {true, idx_new};
@@ -1647,14 +1616,15 @@ GenusEnumerationResult<T, Tgroup>
 GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                  typename GenusEnumerationResult<T, Tgroup>::Tmass const
                      &TotalMass,
-                 int prime, GenusScheme scheme, NeighborStrategy strategy,
+                 int prime, GenusMethods const &methods,
+                 NeighborStrategy strategy,
                  GenusRandomWalkOptions const &rw, bool hecke,
                  GenusExpansionOrder order, std::ostream &os) {
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_total;
 #endif
   int n = ListSeed[0].rows();
-  GenusEnumerationState<T, Tint, Tgroup> state(n, scheme, TotalMass, hecke,
+  GenusEnumerationState<T, Tint, Tgroup> state(n, methods, TotalMass, hecke,
                                                order, os);
   for (auto &eSeed : ListSeed) {
     if (state.is_finished()) {
@@ -1695,7 +1665,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
 struct GenusSpec {
   int prime;
   NeighborStrategy strategy;
-  GenusScheme scheme;
+  GenusMethods methods;
   GenusRandomWalkOptions rw;
   bool hecke;
   GenusExpansionOrder order;
@@ -1736,10 +1706,22 @@ random_walk: every new class is first treated by random neighbours (the\n\
     ListIntValues_doc["prime"] = "Default: 0\n\
 The prime of out_prime, 0 for the smallest prime not dividing det. Ignored\n\
 by iterate and random_walk";
-    ListStringValues_doc["scheme"] = "Default: canonical\n\
-How a known class is recognised: canonical (canonical form), ps\n\
-(Plesken-Souvignier isometry test) or matrixgroup (MatrixGroup isometry\n\
-test)";
+    ListStringValues_doc["recognition"] = "Default: canonical\n\
+How a known class is recognised, see GenusMethods: canonical (by the\n\
+canonical form of canonical_method) or isomorphism (by the isometry test\n\
+of isomorphism_method within the buckets of a cheap invariant)";
+    ListStringValues_doc["canonical_method"] =
+        "Default: weyl_chamber\nThe method of the canonical form, with "
+        "recognition canonical. The methods are:" +
+        DocLatticeStabCanIsomMethods();
+    ListStringValues_doc["isomorphism_method"] =
+        "Default: plesken_souvignier\nThe method of the isometry test, with "
+        "recognition isomorphism. The methods are:" +
+        DocLatticeStabCanIsomMethods();
+    ListStringValues_doc["automorphism_method"] =
+        "Default: vinberg\nThe method of the automorphism group of every "
+        "class. The methods are:" +
+        DocLatticeStabCanIsomMethods();
     ListBoolValues_doc["hecke"] = "Default: F\n\
 Whether to skip the expansions whose neighbours are all expanded classes,\n\
 by the Hecke bookkeeping of GenusEnumerationState";
@@ -1809,18 +1791,22 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
               << "\". Allowed: out_prime, iterate, random_walk\n";
     throw TerminalException{1};
   }
-  std::string scheme = BlockMETHOD.get_string("scheme");
-  if (scheme == "canonical") {
-    spec.scheme = GenusScheme::CanonicalForm;
-  } else if (scheme == "ps") {
-    spec.scheme = GenusScheme::PleskenSouvignier;
-  } else if (scheme == "matrixgroup") {
-    spec.scheme = GenusScheme::MatrixGroup;
+  std::string recognition = BlockMETHOD.get_string("recognition");
+  if (recognition == "canonical") {
+    spec.methods.by_canonical = true;
+  } else if (recognition == "isomorphism") {
+    spec.methods.by_canonical = false;
   } else {
-    std::cerr << "GENUS: unrecognised scheme \"" << scheme
-              << "\". Allowed: canonical, ps, matrixgroup\n";
+    std::cerr << "GENUS: unrecognised recognition \"" << recognition
+              << "\". Allowed: canonical, isomorphism\n";
     throw TerminalException{1};
   }
+  spec.methods.canonical = ParseLatticeStabCanIsomMethod(
+      BlockMETHOD.get_string("canonical_method"));
+  spec.methods.isomorphism = ParseLatticeStabCanIsomMethod(
+      BlockMETHOD.get_string("isomorphism_method"));
+  spec.methods.automorphism = ParseLatticeStabCanIsomMethod(
+      BlockMETHOD.get_string("automorphism_method"));
   spec.hecke = BlockMETHOD.get_bool("hecke");
   std::string order = BlockMETHOD.get_string("order");
   if (order == "aut") {
