@@ -10,12 +10,22 @@
 set -e
 BIN=../../src_genera/GENUS_Enumerate
 
+# The namelist of a case: its DATA and METHOD blocks (name.nml) and a SYSTEM
+# block sending the Summary to stdout, written to a temporary directory. The
+# file names in name.nml are relative to this directory.
+TMPD=$(mktemp -d)
+trap 'rm -rf "$TMPD"' EXIT
+run_nml() {
+    { cat $1.nml; printf '\n&SYSTEM\n OutFormat = "Summary"\n OutFile = "stdout"\n/\n'; } \
+        > $TMPD/$1.nml
+    $BIN $TMPD/$1.nml 2>/dev/null
+}
+
 run_case() {
     name=$1
     expected=$2
     echo "--- $name (expecting $expected classes) ---"
-    out=$($BIN gmp ${name}_genus.txt ${name}_lattice.txt ${name}_mass.txt \
-              Summary stdout 2>/dev/null)
+    out=$(run_nml $name)
     echo "$out"
     nb=$(echo "$out" | sed -n 's/^class number = //p')
     complete=$(echo "$out" | sed -n 's/^complete = //p')
@@ -40,8 +50,7 @@ run_case rank8_det25 3
 # completeness here, or looping, would mean the mass certificate is not doing
 # its job, and every result of the program rests on that certificate.
 echo "--- E8 with an unreachable mass (expecting complete = false) ---"
-out=$($BIN gmp E8_genus.txt E8_lattice.txt E8_wrongmass.txt Summary stdout \
-          2>/dev/null)
+out=$(run_nml E8_wrongmass)
 echo "$out"
 complete=$(echo "$out" | sed -n 's/^complete = //p')
 if [ "$complete" != "false" ]; then

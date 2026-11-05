@@ -4,21 +4,53 @@
 p-neighbours, deduplicating by canonical form and stopping when the
 Smith-Minkowski-Siegel mass is reached.
 
-    GENUS_Enumerate [arith] [Genus] [Lattice] [Mass] [OutFormat] [OutFile]
+    GENUS_Enumerate [file.nml]
 
-* `Genus`   -- key/value lines `rank`, `det`, and optionally `prime`
-               (0 or absent selects the smallest prime not dividing det),
-               `strategy` (`out_prime`, the default, `iterate` or
-               `random_walk`), and for `random_walk` the `seed`, the
-               `hits_factor`, the `failed_draws_factor` and the primes of
-               the walk, `walk_prime_min` and `walk_prime_max` (see
-               `NeighborStrategy` in
-               `GenusEnumeration.h`), and `hecke 1` to skip the expansions
-               whose neighbours are all expanded classes (see
-               `GenusEnumerationState`).
-* `Lattice` -- one or more Gram matrices in the ListMatrix format, the seeds.
-* `Mass`    -- the mass of the genus as `num den`, or a single integer.
-* `OutFormat` -- `GAP` (default), `CPP`, or `Summary`.
+The namelist has four blocks; run the program without argument for the
+full list of entries, their defaults and their documentation.
+
+    &DATA
+     arithmetic = "gmp"
+     FileLattice = "E8_lattice.txt"
+     FileMass = "E8_mass.txt"
+    /
+
+    &METHOD
+     strategy = "iterate"
+     prime = 0
+     scheme = "canonical"
+     hecke = F
+    /
+
+    &RANDOM_WALK
+     seed = 1
+     hits_factor = 0.25
+     failed_draws_factor = 16
+     walk_prime_min = 2
+     walk_prime_max = 2
+    /
+
+    &SYSTEM
+     OutFormat = "Summary"
+     OutFile = "stdout"
+    /
+
+* `DATA` -- the seeds, one or more Gram matrices in the ListMatrix format
+  (one per spinor genus), and the mass of the genus as `num den` or a single
+  integer. The seeds must have the same rank and determinant.
+* `METHOD` -- the `strategy`: `out_prime` (the default, one prime, `prime`
+  or the smallest one not dividing det), `iterate` or `random_walk` (see
+  `NeighborStrategy` in `GenusEnumeration.h`); the `scheme` by which a known
+  class is recognised (`canonical`, `ps` or `matrixgroup`); and `hecke` to
+  skip the expansions whose neighbours are all expanded classes (see
+  `GenusEnumerationState`).
+* `RANDOM_WALK` -- the parameters of the `random_walk` strategy.
+* `SYSTEM` -- `OutFormat`, `GAP` (default), `CPP` or `Summary`, and
+  `OutFile`, a file name, `stderr` (default) or `stdout`.
+
+A block that is omitted takes its defaults. The file names are relative to
+the directory the program runs in: `TestData/E8.nml` is run from
+`TestData`.
 
 ## Why this is not an adjacency scheme
 

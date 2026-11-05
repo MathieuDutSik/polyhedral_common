@@ -1,0 +1,10 @@
+&DATA
+ arithmetic = "gmp"
+ FileLattice = "E8_lattice.txt"
+ FileMass = "E8_mass.txt"
+/
+
+&METHOD
+ strategy = "out_prime"
+ prime = 0
+/

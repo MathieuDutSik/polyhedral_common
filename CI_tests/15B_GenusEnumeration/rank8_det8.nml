@@ -1,0 +1,10 @@
+&DATA
+ arithmetic = "gmp"
+ FileLattice = "rank8_det8_lattice.txt"
+ FileMass = "rank8_det8_mass.txt"
+/
+
+&METHOD
+ strategy = "iterate"
+ prime = 0
+/

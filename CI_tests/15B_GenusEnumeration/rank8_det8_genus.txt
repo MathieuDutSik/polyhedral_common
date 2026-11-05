@@ -1,3 +1,0 @@
-rank 8
-det 8
-strategy iterate

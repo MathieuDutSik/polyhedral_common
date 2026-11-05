@@ -508,13 +508,20 @@ end;
 # GAP class by class: M_S / mass against the densities, for genera that are
 # not unimodular at the primes dividing their determinant.
 enumerate_genus:=function(name)
-    local TmpDir, FileO, FileE, eProg, list_arg;
+    local TmpDir, FileO, FileE, FileNml, strNml, eProg, list_arg;
     TmpDir:=DirectoryTemporary();
     FileO:=Filename(TmpDir, "genus.out");
     FileE:=Filename(TmpDir, "genus.err");
+    FileNml:=Filename(TmpDir, "genus.nml");
     eProg:=GetBinaryFilename("GENUS_Enumerate");
-    list_arg:=["gmp", Concatenation(name, "_genus.txt"), Concatenation(name, "_lattice.txt"),
-               Concatenation(name, "_mass.txt"), "GAP", FileO];
+    # The DATA and METHOD blocks of the case, and the output in GAP to FileO.
+    strNml:=StringFile(Concatenation(name, ".nml"));
+    strNml:=Concatenation(strNml, "\n&SYSTEM\n");
+    strNml:=Concatenation(strNml, " OutFormat = \"GAP\"\n");
+    strNml:=Concatenation(strNml, " OutFile = \"", FileO, "\"\n");
+    strNml:=Concatenation(strNml, "/\n");
+    WriteStringFile(FileNml, strNml);
+    list_arg:=[FileNml];
     run_binary_checked(eProg, list_arg, FileE);
     return ReadAsFunction(FileO)();
 end;

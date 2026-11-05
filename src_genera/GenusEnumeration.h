@@ -13,6 +13,7 @@
 #include "InvariantVectorFamily.h"
 #include "ClassicLLL.h"
 #include "Positivity.h"
+#include "Namelist.h"
 #include "Basic_random.h"
 #include <algorithm>
 #include <cmath>
@@ -127,18 +128,6 @@ struct GenusRandomWalkOptions {
   size_t failed_draws_factor = 16;
   int walk_prime_min = 2;
   int walk_prime_max = 2;
-};
-
-// The description of the genus. `prime` is the prime used for the neighbour
-// step; 0 means "choose the smallest prime not dividing 2*det". With the
-// Iterate and RandomWalk strategies the prime is ignored.
-template <typename T> struct GenusSpec {
-  int rank;
-  T det;
-  int prime;
-  NeighborStrategy strategy;
-  GenusRandomWalkOptions rw;
-  bool hecke;
 };
 
 /*
@@ -1585,98 +1574,144 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
 // Input and output
 //
 
+// The method of an enumeration, read from the namelist. `prime` is the prime
+// of the out_prime strategy; 0 means "choose the smallest prime not dividing
+// det". With the Iterate and RandomWalk strategies the prime is ignored.
+struct GenusSpec {
+  int prime;
+  NeighborStrategy strategy;
+  GenusScheme scheme;
+  GenusRandomWalkOptions rw;
+  bool hecke;
+};
+
 /*
-  The genus description, as key/value lines:
-
-      rank 14
-      det 243
-      prime 3        (optional, 0 or absent means "choose automatically")
-      strategy random_walk   (optional: out_prime, iterate, random_walk)
-      seed 1         (optional, the seed of the random walk)
-      hits_factor 1  (optional, the known classes a random walk must hit,
-                     as a multiple of log2 |Aut|)
-      failed_draws_factor 16 (optional, the draws giving no neighbour are
-                     bounded by this times log2 |Aut|)
-      walk_prime_min 2, walk_prime_max 2 (optional, the primes of the
-                     random walk: 2 by default, otherwise the primes of
-                     that interval not dividing 2 det)
-      hecke 1        (optional, default 0: skip the expansions whose
-                     neighbours are all expanded classes, see
-                     GenusEnumerationState)
-
-  It carries no information the enumeration needs beyond the prime -- the
-  p-neighbour construction preserves the genus by itself -- but it lets the
-  seed lattices be checked against the genus they are supposed to represent,
-  which catches a mismatched input immediately rather than as a mass that
-  never closes.
+  The namelist of GENUS_Enumerate. The genus is given by its seed lattices,
+  one per spinor genus, and its mass; the rest chooses the method.
  */
-template <typename T>
-GenusSpec<T> ReadGenusSpecFile(std::string const &file_name) {
-  if (!FILE_IsExistingFile(file_name)) {
-    std::cerr << "GENUS: the file " << file_name << " does not exist\n";
+inline FullNamelist NAMELIST_GetStandard_GENUS_ENUMERATE() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  {
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["arithmetic"] = "Default: gmp\n\
+The arithmetic of the Gram matrices";
+    ListStringValues_doc["FileLattice"] = "Default: unset\n\
+One or more Gram matrices in the ListMatrix format, the seeds. One seed per\n\
+SPINOR genus is needed: the p-neighbour graph is connected on a spinor\n\
+genus, not on a genus, so a single seed may reach only part of the genus";
+    ListStringValues_doc["FileMass"] = "Default: unset\n\
+The mass of the genus, as \"num den\" or a single integer. The enumeration\n\
+stops when sum 1/|Aut| reaches it, and that equality certifies completeness";
+    ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
+  }
+  // METHOD
+  {
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    ListStringValues_doc["strategy"] = "Default: out_prime\n\
+The schedule of the neighbour steps, see NeighborStrategy:\n\
+out_prime: one prime, the given one or the smallest not dividing det\n\
+iterate: the primes 2, 3, 5, ... in order, including those dividing det,\n\
+  cheapest first, until the mass closes\n\
+random_walk: every new class is first treated by random neighbours (the\n\
+  RANDOM_WALK block), then the expansion of iterate";
+    ListIntValues_doc["prime"] = "Default: 0\n\
+The prime of out_prime, 0 for the smallest prime not dividing det. Ignored\n\
+by iterate and random_walk";
+    ListStringValues_doc["scheme"] = "Default: canonical\n\
+How a known class is recognised: canonical (canonical form), ps\n\
+(Plesken-Souvignier isometry test) or matrixgroup (MatrixGroup isometry\n\
+test)";
+    ListBoolValues_doc["hecke"] = "Default: F\n\
+Whether to skip the expansions whose neighbours are all expanded classes,\n\
+by the Hecke bookkeeping of GenusEnumerationState";
+    ListBlock["METHOD"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["METHOD"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["METHOD"].setListBoolValues_doc(ListBoolValues_doc);
+  }
+  // RANDOM_WALK
+  {
+    std::map<std::string, std::string> ListIntValues_doc;
+    std::map<std::string, std::string> ListDoubleValues_doc;
+    ListIntValues_doc["seed"] = "Default: 1\n\
+The seed of the random walk";
+    ListDoubleValues_doc["hits_factor"] = "Default: 1\n\
+A class with |Aut| = g, and b the smallest integer with g < 2^b, is treated\n\
+when max(1, ceil(hits_factor * b)) of its random neighbours are known\n\
+classes";
+    ListIntValues_doc["failed_draws_factor"] = "Default: 16\n\
+The draws giving no neighbour are bounded by failed_draws_factor * b";
+    ListIntValues_doc["walk_prime_min"] = "Default: 2\n\
+The smallest prime of the random walk";
+    ListIntValues_doc["walk_prime_max"] = "Default: 2\n\
+The largest prime of the random walk: 2 for the walk at p = 2, otherwise\n\
+the primes of [walk_prime_min, walk_prime_max] not dividing 2 det";
+    ListBlock["RANDOM_WALK"].setListIntValues_doc(ListIntValues_doc);
+    ListBlock["RANDOM_WALK"].setListDoubleValues_doc(ListDoubleValues_doc);
+  }
+  // SYSTEM
+  {
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["OutFormat"] = "Default: GAP\n\
+GAP: a record with the Gram matrices, the group orders, the mass and the\n\
+  counters of the enumeration\n\
+CPP: the list of Gram matrices\n\
+Summary: the class number, the mass check and the counters";
+    ListStringValues_doc["OutFile"] = "Default: stderr\n\
+The file of the output, or stderr, or stdout";
+    ListBlock["SYSTEM"].setListStringValues_doc(ListStringValues_doc);
+  }
+  return FullNamelist(ListBlock);
+}
+
+/*
+  The method part of the namelist. The genus itself is not described: the
+  p-neighbour construction preserves it, and the seeds are checked against
+  each other (same rank, same determinant) by GENUS_Enumerate.
+ */
+inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
+  SingleBlock const &BlockMETHOD = eFull.get_block("METHOD");
+  SingleBlock const &BlockRW = eFull.get_block("RANDOM_WALK");
+  GenusSpec spec;
+  spec.prime = BlockMETHOD.get_int("prime");
+  std::string strat = BlockMETHOD.get_string("strategy");
+  if (strat == "out_prime") {
+    spec.strategy = NeighborStrategy::OutPrime;
+  } else if (strat == "iterate") {
+    spec.strategy = NeighborStrategy::Iterate;
+  } else if (strat == "random_walk") {
+    spec.strategy = NeighborStrategy::RandomWalk;
+  } else {
+    std::cerr << "GENUS: unrecognised strategy \"" << strat
+              << "\". Allowed: out_prime, iterate, random_walk\n";
     throw TerminalException{1};
   }
-  std::ifstream is(file_name);
-  GenusSpec<T> spec;
-  spec.rank = -1;
-  spec.det = T(0);
-  spec.prime = 0;
-  spec.strategy = NeighborStrategy::OutPrime;
-  spec.hecke = false;
-  std::string key;
-  while (is >> key) {
-    if (key == "rank") {
-      is >> spec.rank;
-    } else if (key == "det") {
-      is >> spec.det;
-    } else if (key == "prime") {
-      is >> spec.prime;
-    } else if (key == "seed") {
-      is >> spec.rw.seed;
-    } else if (key == "hits_factor") {
-      is >> spec.rw.hits_factor;
-    } else if (key == "failed_draws_factor") {
-      is >> spec.rw.failed_draws_factor;
-    } else if (key == "hecke") {
-      int val;
-      is >> val;
-      spec.hecke = (val != 0);
-    } else if (key == "walk_prime_min") {
-      is >> spec.rw.walk_prime_min;
-    } else if (key == "walk_prime_max") {
-      is >> spec.rw.walk_prime_max;
-    } else if (key == "strategy") {
-      std::string strat;
-      is >> strat;
-      if (strat == "out_prime") {
-        spec.strategy = NeighborStrategy::OutPrime;
-      } else if (strat == "iterate") {
-        spec.strategy = NeighborStrategy::Iterate;
-      } else if (strat == "random_walk") {
-        spec.strategy = NeighborStrategy::RandomWalk;
-      } else {
-        std::cerr << "GENUS: unrecognised strategy \"" << strat << "\" in "
-                  << file_name << ". Allowed: out_prime, iterate, random_walk\n";
-        throw TerminalException{1};
-      }
-    } else {
-      std::cerr << "GENUS: unrecognised key \"" << key << "\" in "
-                << file_name << ". Allowed: rank, det, prime, strategy, seed, "
-                << "hits_factor, failed_draws_factor, walk_prime_min, "
-                << "walk_prime_max, hecke\n";
-      throw TerminalException{1};
-    }
-  }
-  if (spec.rank <= 0) {
-    std::cerr << "GENUS: the rank is missing or not positive in " << file_name
-              << "\n";
+  std::string scheme = BlockMETHOD.get_string("scheme");
+  if (scheme == "canonical") {
+    spec.scheme = GenusScheme::CanonicalForm;
+  } else if (scheme == "ps") {
+    spec.scheme = GenusScheme::PleskenSouvignier;
+  } else if (scheme == "matrixgroup") {
+    spec.scheme = GenusScheme::MatrixGroup;
+  } else {
+    std::cerr << "GENUS: unrecognised scheme \"" << scheme
+              << "\". Allowed: canonical, ps, matrixgroup\n";
     throw TerminalException{1};
   }
-  if (spec.det <= T(0)) {
-    std::cerr << "GENUS: the determinant is missing or not positive in "
-              << file_name << "\n";
+  spec.hecke = BlockMETHOD.get_bool("hecke");
+  int seed = BlockRW.get_int("seed");
+  int failed_draws_factor = BlockRW.get_int("failed_draws_factor");
+  if (seed < 0 || failed_draws_factor < 0) {
+    std::cerr << "GENUS: seed and failed_draws_factor must be nonnegative\n";
     throw TerminalException{1};
   }
+  spec.rw.seed = static_cast<uint64_t>(seed);
+  spec.rw.hits_factor = BlockRW.get_double("hits_factor");
+  spec.rw.failed_draws_factor = static_cast<size_t>(failed_draws_factor);
+  spec.rw.walk_prime_min = BlockRW.get_int("walk_prime_min");
+  spec.rw.walk_prime_max = BlockRW.get_int("walk_prime_max");
   return spec;
 }
 

@@ -14,10 +14,14 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
-                  std::string const &FileMass, std::string const &OutFormat,
-                  GenusScheme scheme, std::ostream &os) {
-  GenusSpec<T> spec = ReadGenusSpecFile<T>(FileGenus);
+void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
+  std::string FileLattice = BlockDATA.get_string("FileLattice");
+  std::string FileMass = BlockDATA.get_string("FileMass");
+  std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
+  std::string OutFile = BlockSYSTEM.get_string("OutFile");
+  GenusSpec spec = ReadGenusSpec(eFull);
   std::vector<MyMatrix<T>> ListSeed = ReadListMatrixFile<T>(FileLattice);
   if (ListSeed.empty()) {
     std::cerr << "GENUS_Enumerate: no seed lattice in " << FileLattice << "\n";
@@ -27,37 +31,42 @@ void ProcessGenus(std::string const &FileGenus, std::string const &FileLattice,
   // with, which has nothing to do with the type of the Gram matrices.
   using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
   Tmass TotalMass = ReadMassFile<Tmass>(FileMass);
+  // The seeds of one genus have the same rank and the same determinant.
+  int rank = ListSeed[0].rows();
+  T det = DeterminantMat(ListSeed[0]);
   for (auto &eSeed : ListSeed) {
     if (!IsSymmetricMatrix(eSeed) || !IsPositiveDefinite(eSeed, std::cerr)) {
       std::cerr << "GENUS_Enumerate: a seed Gram matrix in " << FileLattice
                 << " is not symmetric positive definite\n";
       throw TerminalException{1};
     }
-    if (eSeed.rows() != spec.rank) {
-      std::cerr << "GENUS_Enumerate: a seed lattice has rank " << eSeed.rows()
-                << " but the genus has rank " << spec.rank << "\n";
+    if (eSeed.rows() != rank) {
+      std::cerr << "GENUS_Enumerate: the seeds in " << FileLattice
+                << " have the ranks " << rank << " and " << eSeed.rows()
+                << "\n";
       throw TerminalException{1};
     }
-    if (DeterminantMat(eSeed) != spec.det) {
-      std::cerr << "GENUS_Enumerate: a seed lattice has determinant "
-                << DeterminantMat(eSeed) << " but the genus has determinant "
-                << spec.det << "\n";
+    if (DeterminantMat(eSeed) != det) {
+      std::cerr << "GENUS_Enumerate: the seeds in " << FileLattice
+                << " have the determinants " << det << " and "
+                << DeterminantMat(eSeed) << "\n";
       throw TerminalException{1};
     }
   }
   int prime = spec.prime;
   if (spec.strategy == NeighborStrategy::OutPrime && prime == 0) {
-    prime = ChooseNeighborPrime<T>(spec.det);
+    prime = ChooseNeighborPrime<T>(det);
   }
-  GenusEnumerationResult<T, Tgroup> result =
-      GenusEnumeration<T, Tint, Tgroup>(ListSeed, TotalMass, prime, scheme,
-                                        spec.strategy, spec.rw, spec.hecke,
-                                        std::cerr);
-  // With the iterate strategy there is no single prime; 0 marks that in
-  // the output record.
-  int prime_out =
-      (spec.strategy == NeighborStrategy::OutPrime) ? prime : 0;
-  WriteGenusEnumerationResult(os, result, OutFormat, prime_out);
+  GenusEnumerationResult<T, Tgroup> result = GenusEnumeration<T, Tint, Tgroup>(
+      ListSeed, TotalMass, prime, spec.scheme, spec.strategy, spec.rw,
+      spec.hecke, os);
+  // With the iterate and random_walk strategies there is no single prime; 0
+  // marks that in the output record.
+  int prime_out = (spec.strategy == NeighborStrategy::OutPrime) ? prime : 0;
+  auto f = [&](std::ostream &os_out) -> void {
+    WriteGenusEnumerationResult(os_out, result, OutFormat, prime_out);
+  };
+  FILE_PrintStderrStdoutFile(OutFile, f);
 }
 
 int main(int argc, char *argv[]) {
@@ -73,109 +82,26 @@ int main(int argc, char *argv[]) {
     using TintGroup = mpz_class;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
     //
-    std::string FileGenus;
-    std::string FileLattice;
-    std::string FileMass;
-    std::string OutFormat = "GAP";
-    std::string OutFile = "stderr";
-    GenusScheme scheme = GenusScheme::CanonicalForm;
-    std::ostream *os_ptr = nullptr;
+    FullNamelist eFull = NAMELIST_GetStandard_GENUS_ENUMERATE();
     ArithmeticDispatch dispatch;
     add_rational_integer_arithmetics_by_library(
         dispatch, [&]<typename T, typename Tint>() -> void {
-          ProcessGenus<T, Tint, Tgroup>(FileGenus, FileLattice, FileMass,
-                                        OutFormat, scheme, *os_ptr);
+          ProcessGenus<T, Tint, Tgroup>(eFull, std::cerr);
         });
-    if (argc != 5 && argc != 7 && argc != 8) {
+    if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GENUS_Enumerate [arith] [Genus] [Lattice] [Mass]\n";
-      std::cerr << "    or\n";
-      std::cerr << "GENUS_Enumerate [arith] [Genus] [Lattice] [Mass] "
-                << "[OutFormat] [OutFile]\n";
-      std::cerr << "    or\n";
-      std::cerr << "GENUS_Enumerate [arith] [Genus] [Lattice] [Mass] "
-                << "[OutFormat] [OutFile] [Strategy]\n";
-      std::cerr << "\n";
-      std::cerr << "arith values:\n";
+      std::cerr << "GENUS_Enumerate [file.nml]\n";
+      std::cerr << "With file.nml a namelist file\n";
+      eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
+      std::cerr << "arithmetic values:\n";
       dispatch.print_descriptions(std::cerr);
-      std::cerr << "\n";
-      std::cerr << "Strategy (optional): canonical (default), schemeA / ps "
-                << "(Plesken-Souvignier isomorphism), or schemeB / matrixgroup "
-                << "(MatrixGroup isomorphism)\n";
-      std::cerr << "\n";
-      std::cerr << "Genus   (input) : the description of the genus, as the\n";
-      std::cerr << "                  key/value lines\n";
-      std::cerr << "                     rank <n>\n";
-      std::cerr << "                     det <determinant>\n";
-      std::cerr << "                     prime <p>     (optional, 0 = auto)\n";
-      std::cerr << "                     strategy <s>  (optional: out_prime\n";
-      std::cerr << "                       (default) runs one prime, the\n";
-      std::cerr << "                       given one or the smallest not\n";
-      std::cerr << "                       dividing det; iterate runs the\n";
-      std::cerr << "                       primes 2, 3, 5, ... in order,\n";
-      std::cerr << "                       including those dividing det,\n";
-      std::cerr << "                       cheapest first, until the mass\n";
-      std::cerr << "                       closes; prime is then ignored;\n";
-      std::cerr << "                       random_walk first treats each\n";
-      std::cerr << "                       new class by random 2-neighbours\n";
-      std::cerr << "                       and falls back on iterate)\n";
-      std::cerr << "                     seed <s>      (optional, random_walk)\n";
-      std::cerr << "                     hits_factor <f> (optional,\n";
-      std::cerr << "                       random_walk: known classes to hit,\n";
-      std::cerr << "                       as a multiple of log2 |Aut|)\n";
-      std::cerr << "                     failed_draws_factor <f> (optional,\n";
-      std::cerr << "                       random_walk: bound on the draws\n";
-      std::cerr << "                       giving no neighbour)\n";
-      std::cerr << "                     walk_prime_min <p>, walk_prime_max <p>\n";
-      std::cerr << "                       (optional, random_walk: the primes\n";
-      std::cerr << "                       of the walk, 2 by default)\n";
-      std::cerr << "                     hecke <0|1>   (optional: skip the\n";
-      std::cerr << "                       expansions whose neighbours are\n";
-      std::cerr << "                       all expanded classes)\n";
-      std::cerr << "Lattice (input) : one or more Gram matrices, in the\n";
-      std::cerr << "                  ListMatrix format. One seed per SPINOR\n";
-      std::cerr << "                  genus is needed: the p-neighbour graph\n";
-      std::cerr << "                  is connected on a spinor genus, not on\n";
-      std::cerr << "                  a genus, so a single seed may reach\n";
-      std::cerr << "                  only part of the genus\n";
-      std::cerr << "Mass    (input) : the mass of the genus, as \"num den\"\n";
-      std::cerr << "                  or a single integer. The enumeration\n";
-      std::cerr << "                  stops when sum 1/|Aut| reaches it, and\n";
-      std::cerr << "                  that equality certifies completeness\n";
-      std::cerr << "OutFormat values:\n";
-      std::cerr << "  GAP     : a record with the Gram matrices, the group\n";
-      std::cerr << "            orders and the mass (default)\n";
-      std::cerr << "  CPP     : the list of Gram matrices\n";
-      std::cerr << "  Summary : the class number and the mass check only\n";
       return -1;
     }
-    std::string arith = argv[1];
-    FileGenus = argv[2];
-    FileLattice = argv[3];
-    FileMass = argv[4];
-    if (argc >= 7) {
-      OutFormat = argv[5];
-      OutFile = argv[6];
-    }
-    if (argc == 8) {
-      std::string s = argv[7];
-      if (s == "schemeA" || s == "ps" || s == "pleskensouvignier" ||
-          s == "isomorphism" || s == "iso") {
-        scheme = GenusScheme::PleskenSouvignier;
-      } else if (s == "schemeB" || s == "matrixgroup" || s == "matgrp") {
-        scheme = GenusScheme::MatrixGroup;
-      } else if (s != "canonical") {
-        std::cerr << "Strategy must be 'canonical', 'schemeA'/'ps', or "
-                  << "'schemeB'/'matrixgroup', got " << s << "\n";
-        throw TerminalException{1};
-      }
-    }
-    auto f = [&](std::ostream &os) -> void {
-      os_ptr = &os;
-      dispatch.run(arith);
-    };
-    FILE_PrintStderrStdoutFile(OutFile, f);
+    std::string eFileName = argv[1];
+    NAMELIST_ReadNamelistFile(eFileName, eFull);
+    std::string arith = GetNamelistStringEntry(eFull, "DATA", "arithmetic");
+    dispatch.run(arith);
     std::cerr << "Normal termination of GENUS_Enumerate\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GENUS_Enumerate\n";

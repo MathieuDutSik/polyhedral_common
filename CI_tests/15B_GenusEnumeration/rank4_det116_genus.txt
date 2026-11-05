@@ -1,3 +1,0 @@
-rank 4
-det 116
-strategy iterate

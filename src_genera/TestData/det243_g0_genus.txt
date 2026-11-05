@@ -1,3 +1,0 @@
-rank 14
-det 243
-prime 0

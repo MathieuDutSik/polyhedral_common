@@ -1,0 +1,10 @@
+&DATA
+ arithmetic = "gmp"
+ FileLattice = "unimod16_lattice.txt"
+ FileMass = "unimod16_mass.txt"
+/
+
+&METHOD
+ strategy = "out_prime"
+ prime = 0
+/

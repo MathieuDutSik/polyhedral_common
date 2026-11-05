@@ -1,0 +1,10 @@
+&DATA
+ arithmetic = "gmp"
+ FileLattice = "det243_g0_lattice.txt"
+ FileMass = "det243_g0_mass.txt"
+/
+
+&METHOD
+ strategy = "out_prime"
+ prime = 0
+/
