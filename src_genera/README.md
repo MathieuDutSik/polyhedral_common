@@ -21,7 +21,7 @@ full list of entries, their defaults and their documentation.
      recognition = "canonical"
      canonical_method = "weyl_chamber"
      isomorphism_method = "plesken_souvignier"
-     automorphism_method = "vinberg"
+     automorphism_method = "weyl_chamber"
      hecke = F
      order = "deficit"
     /

@@ -660,18 +660,20 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
   of the known class. The automorphism groups (automorphism) give the orders
   for the mass and the generators for the orbits of projective points.
 
-  The defaults are the Weyl-chamber canonical form (Brandhorst-Hofmann,
-  Prop. 7.6), about 2x faster than the root-decomposed one on the 813 classes
-  of the determinant-351 genus, and the automorphism group through the
-  Vinberg decomposition Aut(L) = W(R) rtimes Aut(L, rho), which reads |W(R)|
-  off the Dynkin type and searches only the small residual Aut(L, rho).
+  The defaults are the Weyl-chamber methods (Brandhorst-Hofmann, Prop. 7.6)
+  for both: the characteristic vectors in one Weyl chamber and the simple
+  roots, a family spanning the lattice. On the classes of the genera of
+  determinant 30 (rank 19) and 210 (rank 15), the canonical form takes 46 ms
+  against 94 for weyl, 249 for vinberg and 4.8 s for plesken_souvignier, and
+  the automorphism group 38 and 16 ms against 73 and 35 for vinberg, the
+  next fastest.
  */
 struct GenusMethods {
   bool by_canonical = true;
   LatticeStabCanIsomMethod canonical = LatticeStabCanIsomMethod::WeylChamber;
   LatticeStabCanIsomMethod isomorphism =
       LatticeStabCanIsomMethod::PleskenSouvignier;
-  LatticeStabCanIsomMethod automorphism = LatticeStabCanIsomMethod::Vinberg;
+  LatticeStabCanIsomMethod automorphism = LatticeStabCanIsomMethod::WeylChamber;
 };
 
 /*
@@ -1719,7 +1721,7 @@ of isomorphism_method within the buckets of a cheap invariant)";
         "recognition isomorphism. The methods are:" +
         DocLatticeStabCanIsomMethods();
     ListStringValues_doc["automorphism_method"] =
-        "Default: vinberg\nThe method of the automorphism group of every "
+        "Default: weyl_chamber\nThe method of the automorphism group of every "
         "class. The methods are:" +
         DocLatticeStabCanIsomMethods();
     ListBoolValues_doc["hecke"] = "Default: F\n\
