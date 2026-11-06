@@ -1,4 +1,4 @@
-PROGRAM		= PERF_MPI_EnumeratePerfectCones IsEutactic IsStronglySemiEutactic PERF_SerialPerfectComputation PERF_IsBoundedFace
+PROGRAM		= PERF_MPI_EnumeratePerfectCones IsEutactic IsStronglySemiEutactic PERF_SerialPerfectComputation PERF_IsBoundedFace PERF_FiniteGroupNormalizer PERF_FiniteGroupConjugacy
 
 SRCFILES	=
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

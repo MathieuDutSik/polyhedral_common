@@ -35,6 +35,47 @@ be done from the Tspace equivalence code. That part is clear.
 
 
 
+Normalizer and conjugacy of finite matrix groups
+===============================================
+
+`PERF_FiniteGroupNormalizer [FileGens] [OutFile]` computes generators of
+the normalizer in GL_n(Z) of a finite group G of GL_n(Z), and
+`PERF_FiniteGroupConjugacy [FileGens1] [FileGens2] [OutFile]` decides
+whether two finite groups are conjugate in GL_n(Z) (Z-equivalent) and gives
+X with X G1 X^{-1} = G2. The groups are given by generators in the
+ListMatrix format, acting on the forms by M -> g M g^T. The code is in
+`FiniteGroupNormalizer.h`; the method is that of Opgenorth, Plesken and
+Schulz (Crystallographic algorithms and tables, Acta Cryst. A54 (1998),
+Remark 5 and Section 3.3):
+
+* B = B(G), the Bravais group, is the pointwise stabilizer of the space
+  F(G) of invariant forms. N(B) is the stabilizer of the T-space F(G), and
+  Voronoi's algorithm on the G-perfect forms gives generators of it (the
+  stabilizers of the perfect forms and the equivalences of their
+  neighbours).
+* N(G) is the stabilizer of G in the conjugation action of N(B) on the
+  subgroups of the finite group B: an orbit computation with Schreier
+  generators.
+* For the conjugacy, a matrix mapping B1 to B2 is searched among the
+  isometries from one perfect form of F(G1) to the perfect forms of F(G2)
+  up to N(B2) (an orbit of B1 in the finite group O(P1)), and then G2 in
+  the orbit of X G1 X^{-1} under N(B2).
+
+In the spaces of invariant forms of reducible groups some facets of the
+perfect domains lie in the boundary of the positive cone: their direction
+is positive semidefinite and the edge of the Ryshkov polyhedron is
+unbounded. `TSPACE_GetAdjacencies` skips them.
+
+The finite groups are handled by the list of their elements, which limits
+the method to groups of moderate order. Checked against the tabulated
+normalizers of the GAP package crystcat (`NormalizerZClass`) for all the
+Z-classes of dimension 2 and 3: the images modulo 3, 5 and 7 and, when
+finite, the orders agree; a random GL_n(Z) conjugate of each group is
+found conjugate, and the different Z-classes of every Q-class are found
+not conjugate.
+
+
+
 Hecke operators
 ===============
 

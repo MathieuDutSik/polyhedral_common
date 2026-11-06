@@ -192,6 +192,18 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
 #endif
     MyVector<T> eFacet = solver_perf.GetPositiveKernelVector(incd_sma);
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
+    // A facet whose direction is positive semidefinite lies in the
+    // boundary of the positive cone: eGram + t eMatDir keeps every value
+    // >= the minimum for all t >= 0, the edge of the Ryshkov polyhedron is
+    // unbounded and there is no neighbour. This happens in the spaces of
+    // invariant forms of reducible groups (diagonal forms for instance),
+    // and is skipped as in Opgenorth's algorithm.
+    if (IsPositiveSemiDefinite(eMatDir, os)) {
+#ifdef DEBUG_PERFECT_TSPACE
+      os << "PERF_TSPACE: unbounded edge, no adjacent perfect form\n";
+#endif
+      continue;
+    }
     // That seems to slow down things
     //    MyMatrix<T> eMatDirScal = ScalarCanonicalizationMatrix(eMatDir);
 #ifdef TIMINGS_PERFECT_TSPACE
