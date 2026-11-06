@@ -79,3 +79,49 @@ the enumeration, which is what this program does. Timings for
 rank-14 genus is checked class by class against a certified complete list
 (21 classes, every `|Aut|` known), which is how both bugs listed above were
 found.
+
+## The mass of a genus of lattices with an isometry
+
+`GENUS_IsometryMass` computes, for an even positive definite L and an
+isometry g of finite order (g^T A g = A), the mass
+
+    mass(L, g) = sum over the classes of pairs (L', g) in the genus of the
+                 pair of 1 / |C_{O(L')}(g)| ,
+
+the certificate an enumeration of the g-stable lattices needs.
+
+    GENUS_IsometryMass mass  [Gram] [Isometry] [HermMass] [OutFile]
+    GENUS_IsometryMass check [Gram] [Isometry] [HermMass] [OutFile]
+
+With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabiliser of L in
+the adelic centraliser is a subgroup of finite index of that of L_0, so
+
+    mass(L, g) = prod_d mass(L_d, g) * prod_q |G_q . H_q| ,
+
+H_q the glue L / L_0 at q in the discriminant group of L_0 and G_q the
+image of the local stabiliser of L_0 (see `IsometryMass.h`). The masses of
+the orthogonal components (d = 1, 2) come from `GenusMass`; those of the
+Hermitian components (d >= 3, lattices over Z[zeta_d]) are given in
+`HermMass` as lines `d num den`, from Hecke for instance (`none` if there
+are none). The glue factor is computed exhaustively: the isometries of
+each primary discriminant module commuting with g are listed by
+backtracking, and the orbit of the glue is closed under them. For d = 1, 2
+these are the image of the local group (Nikulin, Theorem 1.9.5); for d >= 3
+the code takes all of them, and says so (`image_assumed`).
+
+Limits: the exhaustive glue computation stops (with an error) beyond
+2^20 elements in a discriminant module, 2 10^6 isometries or 2 10^6
+subgroups in an orbit. A large 2-elementary glue, as for an involution
+with two large eigenspaces in rank 19, is beyond them; it needs the orders
+of the finite orthogonal groups and of their parabolic subgroups rather
+than a listing.
+
+Validation (`check` mode): the elements tau of O(L) with the
+characteristic polynomial of g are listed, grouped by the mass of (L, tau)
+and the genera of the components, and for a genus of class number one the
+count of each group divided by |O(L)| times the mass must be the number of
+genera of pairs in it. On A1^3, A3, A2+A2, D4, D5 and E6 with every
+product of orthogonal reflections, and on A2, D4 and E6 with elements of
+order 3, 4, 5 and 6 whose Hermitian components have rank one (mass 1/6,
+1/4, 1/10 over Z[zeta_3], Z[i], Z[zeta_5]), every ratio is exactly 1,
+with glue factors up to 6, including cases where `image_assumed` is set.

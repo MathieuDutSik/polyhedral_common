@@ -49,6 +49,17 @@ jobs:
           fi
           cd ../..
 
+      - name: Test the mass of a genus with an isometry
+        run: |
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ./RunIsometryMassTests.sh
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The isometry mass test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
       - name: Test the local densities
         run: |
           cd CI_tests/15B_GenusEnumeration
