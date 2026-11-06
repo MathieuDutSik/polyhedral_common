@@ -146,7 +146,7 @@ enum class NeighborStrategy { OutPrime, Iterate, RandomWalk };
 enum class GenusExpansionOrder { Creation, Deficit, Aut, Mixed };
 
 struct GenusOrderOptions {
-  GenusExpansionOrder order = GenusExpansionOrder::Deficit;
+  GenusExpansionOrder order = GenusExpansionOrder::Mixed;
   int mixed_deficit = 1;
   int mixed_aut = 1;
 };
@@ -1821,7 +1821,7 @@ of isomorphism_method within the buckets of a cheap invariant)";
     ListBoolValues_doc["hecke"] = "Default: F\n\
 Whether to skip the expansions whose neighbours are all expanded classes,\n\
 by the Hecke bookkeeping of GenusEnumerationState";
-    ListStringValues_doc["order"] = "Default: deficit\n\
+    ListStringValues_doc["order"] = "Default: mixed\n\
 The order of the full expansions at a prime, see GenusExpansionOrder:\n\
 creation: discovery order\n\
 deficit: the largest Hecke deficit first (implies hecke)\n\

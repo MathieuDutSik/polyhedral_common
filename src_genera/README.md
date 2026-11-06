@@ -23,7 +23,7 @@ full list of entries, their defaults and their documentation.
      isomorphism_method = "plesken_souvignier"
      automorphism_method = "weyl_chamber"
      hecke = F
-     order = "deficit"
+     order = "mixed"
     /
 
     &RANDOM_WALK
