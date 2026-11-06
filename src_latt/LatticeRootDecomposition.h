@@ -418,9 +418,8 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   int k = rs.SimpleRoots.rows();
   int n_pos = rs.PositiveRoots.rows();
   MyMatrix<Tint> G = UniversalMatrixConversion<Tint, T>(GramMat);
-  // Columns: the linear forms x -> <x, e> for the simple and positive roots.
-  MyMatrix<Tint> GE = G * rs.SimpleRoots.transpose();
-  MyMatrix<Tint> GP = G * rs.PositiveRoots.transpose();
+  // Columns: the linear forms x -> <x, e> for the simple roots.
+  MyMatrix<Tint> GE = MatrixProduct(G, TransposedMat(rs.SimpleRoots));
   auto scal = [&](MyVector<Tint> const &z, MyMatrix<Tint> const &M,
                   int j) -> Tint {
     Tint sum(0);
@@ -434,37 +433,75 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   // component of z in R into a bounded box, so that the descent below takes
   // few steps whatever the basis; without it the descent subtracts one root
   // at a time from a component that can be huge in a non-reduced basis.
-  MyMatrix<Tfield> E_F =
-      UniversalMatrixConversion<Tfield, Tint>(rs.SimpleRoots);
-  MyMatrix<Tfield> EG_F = E_F * UniversalMatrixConversion<Tfield, Tint>(G);
-  MyMatrix<Tfield> EGEt = EG_F * E_F.transpose();
-  MyMatrix<Tfield> EGEt_inv = Inverse(EGEt);
-  auto babai = [&](MyVector<Tint> const &z) -> MyVector<Tint> {
-    MyVector<Tfield> z_F = UniversalVectorConversion<Tfield, Tint>(z);
-    MyVector<Tfield> c = EGEt_inv * (EG_F * z_F);
-    MyVector<Tint> zr = z;
+  // c = C^{-1} (E G z), with C = E G E^T the Cartan matrix, is computed over
+  // the integers as CinvNum (E G z) / Cinv_den. The rounding only decides
+  // where the descent starts, not where it ends: the minimal vector of the
+  // coset in the chamber is unique.
+  MyMatrix<Tint> Cartan = MatrixProduct(rs.SimpleRoots, GE);
+  FractionMatrixRing<Tfield> fr_inv = RemoveFractionMatrixPlusCoeffRing(
+      Inverse(UniversalMatrixConversion<Tfield, Tint>(Cartan)));
+  using Tring = typename underlying_ring<Tfield>::ring_type;
+  MyMatrix<Tint> CinvNum =
+      UniversalMatrixConversion<Tint, Tring>(fr_inv.TheMat);
+  Tint Cinv_den = UniversalScalarConversion<Tint, Tfield>(fr_inv.TheMult);
+  Tint two_den = 2 * Cinv_den;
+  // The descent only reads the products w = E G z of z with the simple
+  // roots, which it keeps up to date: a reflection in e_i changes w by a row
+  // of the Cartan matrix, the subtraction of the positive root p_j by the
+  // row j of PE = P G E^T, and <z, p_j> = Pcoord(j) . w, with Pcoord(j) the
+  // coordinates of p_j in the simple roots.
+  MyMatrix<Tint> PE = MatrixProduct(rs.PositiveRoots, GE);
+  MyMatrix<Tint> PcoordNum = MatrixProduct(PE, CinvNum);
+  MyMatrix<Tint> Pcoord(n_pos, k);
+  for (int j = 0; j < n_pos; j++) {
     for (int i = 0; i < k; i++) {
-      Tint ci = UniversalNearestScalarInteger<Tint, Tfield>(c(i));
+      Pcoord(j, i) = QuoInt(PcoordNum(j, i), Cinv_den);
+#ifdef SANITY_CHECK_LATTICE_ROOT_DECOMPOSITION
+      if (Pcoord(j, i) * Cinv_den != PcoordNum(j, i)) {
+        std::cerr << "ROOTDEC: a positive root is not an integral "
+                     "combination of the simple roots\n";
+        throw TerminalException{1};
+      }
+#endif
+    }
+  }
+  auto reduce = [&](MyVector<Tint> z) -> MyVector<Tint> {
+    MyVector<Tint> w(k);
+    for (int i = 0; i < k; i++) {
+      w(i) = scal(z, GE, i);
+    }
+    // The Babai rounding, with c = C^{-1} w as CinvNum w / Cinv_den.
+    MyVector<Tint> w_start = w;
+    for (int i = 0; i < k; i++) {
+      Tint num(0);
+      for (int j = 0; j < k; j++) {
+        num += CinvNum(i, j) * w_start(j);
+      }
+      // The nearest integer to num / Cinv_den, Cinv_den > 0.
+      Tint num_shift = 2 * num + Cinv_den;
+      Tint ci = QuoInt(num_shift, two_den);
       if (ci != 0) {
         for (int u = 0; u < n; u++) {
-          zr(u) -= ci * rs.SimpleRoots(i, u);
+          z(u) -= ci * rs.SimpleRoots(i, u);
+        }
+        for (int j = 0; j < k; j++) {
+          w(j) -= ci * Cartan(i, j);
         }
       }
     }
-    return zr;
-  };
-  auto reduce = [&](MyVector<Tint> z) -> MyVector<Tint> {
-    z = babai(z);
     while (true) {
       bool moved = true;
       while (moved) {
         moved = false;
         for (int i = 0; i < k; i++) {
-          Tint sc = scal(z, GE, i);
+          Tint sc = w(i);
           if (sc < 0) {
             // The reflection in e_i: z - <z, e_i> e_i.
             for (int u = 0; u < n; u++) {
               z(u) -= sc * rs.SimpleRoots(i, u);
+            }
+            for (int j = 0; j < k; j++) {
+              w(j) -= sc * Cartan(i, j);
             }
             moved = true;
           }
@@ -472,9 +509,16 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
       }
       bool shortened = false;
       for (int j = 0; j < n_pos && !shortened; j++) {
-        if (scal(z, GP, j) >= 2) {
+        Tint sc(0);
+        for (int i = 0; i < k; i++) {
+          sc += Pcoord(j, i) * w(i);
+        }
+        if (sc >= 2) {
           for (int u = 0; u < n; u++) {
             z(u) -= rs.PositiveRoots(j, u);
+          }
+          for (int i = 0; i < k; i++) {
+            w(i) -= PE(j, i);
           }
           shortened = true;
         }
@@ -503,9 +547,13 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
     return best;
   };
   MyMatrix<Tfield> GramMat_F = UniversalMatrixConversion<Tfield, T>(GramMat);
+  // The top block of the recursion is the root system, both signs, which rs
+  // already holds.
+  MyMatrix<Tint> roots_pm = matrix_duplication(rs.PositiveRoots);
   std::vector<MyVector<Tint>> cvL =
       inner_span_iterated_shortest_rec<Tfield, Tint>(
-          GramMat_F, true, GramReduction::AlreadyReduced, os, &chamber);
+          GramMat_F, true, GramReduction::AlreadyReduced, os, &chamber,
+          &roots_pm);
   std::vector<MyVector<Tint>> family;
   std::unordered_set<MyVector<Tint>> seen;
   auto insert_pm = [&](MyVector<Tint> const &v) -> void {

@@ -261,13 +261,16 @@ ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat, std::ostream &os) {
   // g_red preserves Pmat G Pmat^T, so Pmat^{-1} g_red Pmat preserves G.
   MyMatrix<Tint> const &Pmat = red.Pmat;
   MyMatrix<Tint> PmatInv = Inverse(Pmat);
+  // The conjugate Pmat^{-1} s_r Pmat of the reflection in the root r of
+  // GramRed is the reflection in the root r Pmat of GramMat, which needs no
+  // matrix product.
   for (int i = 0; i < rs.SimpleRoots.rows(); i++) {
-    MyMatrix<Tint> g =
-        RootReflection<T, Tint>(GramRed, GetMatrixRow(rs.SimpleRoots, i));
-    res.ListGen.push_back(PmatInv * g * Pmat);
+    MyVector<Tint> r = GetMatrixRow(rs.SimpleRoots, i);
+    MyVector<Tint> r_orig = Pmat.transpose() * r;
+    res.ListGen.push_back(RootReflection<T, Tint>(GramMat, r_orig));
   }
   for (auto &g : resAut.ListGen) {
-    res.ListGen.push_back(PmatInv * g * Pmat);
+    res.ListGen.push_back(MatrixProduct(MatrixProduct(PmatInv, g), Pmat));
   }
 #ifdef SANITY_CHECK_LATTICE_AUTOMORPHISM_VINBERG
   MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);

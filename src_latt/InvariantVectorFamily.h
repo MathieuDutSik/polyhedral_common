@@ -866,6 +866,10 @@ MyMatrix<Tint> ivf_z_spanning(MyMatrix<T> const &GramMat,
   vector problems of the top level, and the roots themselves are left out,
   the caller supplying the simple roots. The deeper levels are untouched,
   the Weyl group acting trivially on the orthogonal complement of P1.
+
+  The optional block is the base block of the top level, both signs, for a
+  caller that already has it (the chamber variant has the root system); it
+  saves its enumeration. It must be what get_shv_block returns, up to order.
  */
 template <typename Tint>
 using InnerSpanChamber = std::function<std::vector<MyVector<Tint>>(
@@ -876,12 +880,15 @@ std::vector<MyVector<Tint>>
 inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
                                  GramReduction reduction, std::ostream &os,
                                  InnerSpanChamber<Tint> const *chamber =
-                                     nullptr) {
+                                     nullptr,
+                                 MyMatrix<Tint> const *block = nullptr) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
 #endif
   int n = G.rows();
-  MyMatrix<Tint> SHV = get_shv_block<T, Tint>(G, use_roots, reduction, os);
+  MyMatrix<Tint> SHV = block != nullptr
+                           ? *block
+                           : get_shv_block<T, Tint>(G, use_roots, reduction, os);
   int r = RankMat(SHV);
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   os << "|IVF: inner_span n=" << n << ", block of " << SHV.rows()
@@ -941,7 +948,8 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
 #endif
   }
   if (T_abs(DeterminantMatBareiss(C)) != Tint(1) && chamber == nullptr) {
-    MyMatrix<T> G_S1 = S1_T * G * S1_T.transpose();
+    MyMatrix<T> G_S1 =
+        MatrixProduct(MatrixProduct(S1_T, G), TransposedMat(S1_T));
     CVPSolver<T, Tint> solverS1(G_S1, os);
     std::vector<MyVector<Tint>> cosets =
         ComputeTranslationClasses<Tint, Tint>(C);
@@ -978,11 +986,13 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
   }
   // The G-orthogonal projection onto the span of P1 and its complement:
   // pr1 = G P1^T (P1 G P1^T)^{-1} P1, proj2 = I - pr1.
+  // The products go through MatrixProduct, which has a native backend for
+  // the flint types.
   MyMatrix<T> P1_T = UniversalMatrixConversion<T, Tint>(P1);
-  MyMatrix<T> GP1t = G * P1_T.transpose();
-  MyMatrix<T> P1GP1t = P1_T * GP1t;
+  MyMatrix<T> GP1t = MatrixProduct(G, TransposedMat(P1_T));
+  MyMatrix<T> P1GP1t = MatrixProduct(P1_T, GP1t);
   MyMatrix<T> P1GP1t_inv = Inverse(P1GP1t);
-  MyMatrix<T> pr1 = GP1t * P1GP1t_inv * P1_T;
+  MyMatrix<T> pr1 = MatrixProduct(MatrixProduct(GP1t, P1GP1t_inv), P1_T);
   MyMatrix<T> proj2 = IdentityMat<T>(n) - pr1;
   // L2 = projection of Z^n onto the complement, as a rational row basis:
   // clear denominators, take an integer Z-basis, divide back.
@@ -990,14 +1000,17 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
   MyMatrix<Tint> proj2_scaled = UniversalMatrixConversion<Tint, T>(fr.TheMat);
   MyMatrix<Tint> B2int = GetZbasis(proj2_scaled);
   MyMatrix<T> L2basis = UniversalMatrixConversion<T, Tint>(B2int) / fr.TheMult;
-  MyMatrix<T> G_L2 = L2basis * G * L2basis.transpose();
+  MyMatrix<T> G_L2 =
+      MatrixProduct(MatrixProduct(L2basis, G), TransposedMat(L2basis));
   // P_Z: coordinates of proj2(e_i) in the basis of L2, an integer n x (n-r)
   // matrix mapping x in Z^n to its projection in L2 coordinates.
   int nc = L2basis.rows();
   MyMatrix<Tint> P_Z(n, nc);
+  // The n systems share the basis L2basis, which is solved once.
+  SolutionMatRepetitive<T> smr(L2basis);
   for (int i = 0; i < n; i++) {
     MyVector<T> row = GetMatrixRow(proj2, i);
-    std::optional<MyVector<T>> opt = SolutionMat(L2basis, row);
+    std::optional<MyVector<T>> opt = smr.GetSolution(row);
 #ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
     if (!opt || !IsIntegralVector(*opt)) {
       std::cerr << "IVF: inner_span, a projection is not in the projection "

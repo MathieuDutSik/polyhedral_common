@@ -2373,32 +2373,44 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
   }
 #endif
   size_t nbRow = SHV.rows();
-  size_t n = SHV.cols();
   size_t nbMat = ListMat.size();
   // The family over T, for the same reason as in the antipodal variant above:
   // the products mix a Gram entry with a vector entry, and the conversion is
   // paid once for the family rather than once per entry of the weight matrix.
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  std::vector<MyVector<T>> ListV(nbMat);
+  MyMatrix<T> SHVt_T = TransposedMat(SHV_T);
+  // The scalar products are the entries of SHV M SHV^T. They are computed by
+  // MatrixProduct, which has a native backend for the flint types, a block
+  // of rows at a time so that the memory stays that of a block: the rows
+  // [b0, b1) against the columns f2 reads for them, those below b1 in the
+  // symmetric case and all of them otherwise. This relies on the order in
+  // which the WeightMatrix constructor calls f1, row after row from 0.
+  size_t const block_size = 64;
+  std::vector<MyMatrix<T>> ListSHVM(nbMat);
+  for (size_t iMat = 0; iMat < nbMat; iMat++) {
+    ListSHVM[iMat] = MatrixProduct(SHV_T, ListMat[iMat]);
+  }
+  std::vector<MyMatrix<T>> ListBlock(nbMat);
+  size_t b0 = 0;
+  size_t cur_row = 0;
   auto f1 = [&](size_t iRow) -> void {
+    cur_row = iRow;
+    if (iRow % block_size != 0) {
+      return;
+    }
+    b0 = iRow;
+    size_t b1 = std::min(nbRow, b0 + block_size);
+    size_t n_col = is_symm ? b1 : nbRow;
+    MyMatrix<T> Cols = SHVt_T.leftCols(n_col);
     for (size_t iMat = 0; iMat < nbMat; iMat++) {
-      MyVector<T> V(n);
-      for (size_t i = 0; i < n; i++) {
-        T eVal(0);
-        for (size_t j = 0; j < n; j++)
-          eVal += ListMat[iMat](j, i) * SHV_T(iRow, j);
-        V(i) = eVal;
-      }
-      ListV[iMat] = V;
+      MyMatrix<T> Rows = ListSHVM[iMat].middleRows(b0, b1 - b0);
+      ListBlock[iMat] = MatrixProduct(Rows, Cols);
     }
   };
   std::vector<T> ListScal(nbMat);
   auto f2 = [&](size_t iCol) -> std::vector<T> {
     for (size_t iMat = 0; iMat < nbMat; iMat++) {
-      T eScal(0);
-      for (size_t i = 0; i < n; i++)
-        eScal += ListV[iMat](i) * SHV_T(iCol, i);
-      ListScal[iMat] = eScal;
+      ListScal[iMat] = ListBlock[iMat](cur_row - b0, iCol);
     }
     return ListScal;
   };

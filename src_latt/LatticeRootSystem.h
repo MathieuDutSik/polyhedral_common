@@ -301,12 +301,16 @@ ComputeRootSystemFromRoots(MyMatrix<T> const &GramMat,
   os << "ROOTSYS: n_roots=" << rs.n_roots << " rank=" << rs.rank << "\n";
 #endif
 
-  // The Dynkin graph: an edge between simple roots with product -1.
+  // The Dynkin graph: an edge between simple roots with product -1. The
+  // products are those of the integral form, one matrix product for all the
+  // pairs.
   int k = rs.rank;
+  MyMatrix<Tint> G = UniversalMatrixConversion<Tint, T>(GramMat);
+  MyMatrix<Tint> GE = MatrixProduct(G, TransposedMat(rs.SimpleRoots));
   std::vector<std::vector<int>> adj(k);
   for (int a = 0; a < k; a++) {
     for (int b = a + 1; b < k; b++) {
-      Tint sc = RootScal(GramMat, simple[a], simple[b]);
+      Tint sc = simple[a].dot(GE.col(b));
       if (sc == Tint(-1)) {
         adj[a].push_back(b);
         adj[b].push_back(a);
