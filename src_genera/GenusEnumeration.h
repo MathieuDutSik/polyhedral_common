@@ -17,6 +17,7 @@
 #include "Namelist.h"
 #include "Basic_random.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <limits>
 #include <map>
@@ -175,6 +176,8 @@ template <typename T, typename Tgroup> struct GenusEnumerationResult {
   size_t n_neighbor_random = 0;
   size_t n_new_random = 0;
   bool closed_in_random_walk = false;
+  // Whether the enumeration was stopped by max_runtime_second.
+  bool stopped_by_runtime = false;
 };
 
 // Inverse of a modulo the prime p, by extended Euclid. p is small.
@@ -974,6 +977,13 @@ struct GenusEnumerationState {
 #endif
 
   // The deficit order needs the bookkeeping, so it switches it on.
+  // The time limit: 0 for none. When it is reached the enumeration stops as
+  // if it were over, and the classes found so far are the result, with
+  // complete false.
+  int max_runtime_second = 0;
+  std::chrono::steady_clock::time_point time_start =
+      std::chrono::steady_clock::now();
+
   GenusEnumerationState(int _n, GenusMethods const &_methods,
                         Tmass const &_TotalMass,
                         bool _hecke, GenusExpansionOrder _order,
@@ -986,7 +996,23 @@ struct GenusEnumerationState {
     result.complete = false;
   }
 
-  bool is_finished() const { return result.accumulated_mass == TotalMass; }
+  bool is_mass_closed() const { return result.accumulated_mass == TotalMass; }
+
+  // The mass is closed, or the time limit is reached.
+  bool is_finished() {
+    if (is_mass_closed()) {
+      return true;
+    }
+    if (max_runtime_second > 0 && !result.stopped_by_runtime) {
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+                         std::chrono::steady_clock::now() - time_start)
+                         .count();
+      if (elapsed >= max_runtime_second) {
+        result.stopped_by_runtime = true;
+      }
+    }
+    return result.stopped_by_runtime;
+  }
 
   // Records a new class and its automorphism data; returns its index.
   size_t add(MyMatrix<T> const &StoreGram,
@@ -1553,7 +1579,7 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
   }
   run_pending();
   if (state.is_finished()) {
-    result.closed_in_random_walk = true;
+    result.closed_in_random_walk = state.is_mass_closed();
     return;
   }
 #ifdef DEBUG_GENUS_ENUMERATION
@@ -1621,13 +1647,15 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                  int prime, GenusMethods const &methods,
                  NeighborStrategy strategy,
                  GenusRandomWalkOptions const &rw, bool hecke,
-                 GenusExpansionOrder order, std::ostream &os) {
+                 GenusExpansionOrder order, int max_runtime_second,
+                 std::ostream &os) {
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_total;
 #endif
   int n = ListSeed[0].rows();
   GenusEnumerationState<T, Tint, Tgroup> state(n, methods, TotalMass, hecke,
                                                order, os);
+  state.max_runtime_second = max_runtime_second;
   for (auto &eSeed : ListSeed) {
     if (state.is_finished()) {
       break;
@@ -1642,7 +1670,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
     GenusEnumerationRandomWalk(state, rw);
   }
   GenusEnumerationResult<T, Tgroup> &result = state.result;
-  result.complete = state.is_finished();
+  result.complete = state.is_mass_closed();
 #ifdef DEBUG_GENUS_ISO_STATS
   os << "GENUS_ISO: FINAL isometry_tests=" << state.n_iso_test
      << " positive=" << state.n_iso_positive << " tests_per_positive="
@@ -1766,7 +1794,12 @@ CPP: the list of Gram matrices\n\
 Summary: the class number, the mass check and the counters";
     ListStringValues_doc["OutFile"] = "Default: stderr\n\
 The file of the output, or stderr, or stdout";
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListIntValues_doc["max_runtime_second"] = "Default: 0\n\
+The maximum runtime of the enumeration in seconds (0 = unlimited). When it\n\
+is reached the classes found so far are written, with complete false";
     ListBlock["SYSTEM"].setListStringValues_doc(ListStringValues_doc);
+    ListBlock["SYSTEM"].setListIntValues_doc(ListIntValues_doc);
   }
   return FullNamelist(ListBlock);
 }
@@ -1880,6 +1913,8 @@ void WriteGenusEnumerationResult(
        << result.n_expansion_skipped << " skipped by the Hecke bookkeeping)\n";
     os << "closed in the random walk phase = "
        << (result.closed_in_random_walk ? "true" : "false") << "\n";
+    os << "stopped by max_runtime_second = "
+       << (result.stopped_by_runtime ? "true" : "false") << "\n";
     os << "complete = " << (result.complete ? "true" : "false") << "\n";
     if (!result.complete) {
       os << "The accumulated mass is short of the target. Either the genus "
@@ -1913,6 +1948,8 @@ void WriteGenusEnumerationResult(
     os << "],\n accumulated_mass:=" << result.accumulated_mass
        << ",\n target_mass:=" << result.target_mass
        << ",\n complete:=" << (result.complete ? "true" : "false")
+       << ",\n stopped_by_runtime:="
+       << (result.stopped_by_runtime ? "true" : "false")
        << ",\n prime:=" << prime << ",\n ListPrimeUsed:=[";
     for (size_t i = 0; i < result.ListPrimeUsed.size(); i++) {
       os << (i > 0 ? ", " : "") << result.ListPrimeUsed[i];

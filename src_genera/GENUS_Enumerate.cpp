@@ -21,6 +21,7 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   std::string FileMass = BlockDATA.get_string("FileMass");
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
+  int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
   GenusSpec spec = ReadGenusSpec(eFull);
   std::vector<MyMatrix<T>> ListSeed = ReadListMatrixFile<T>(FileLattice);
   if (ListSeed.empty()) {
@@ -59,7 +60,7 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   }
   GenusEnumerationResult<T, Tgroup> result = GenusEnumeration<T, Tint, Tgroup>(
       ListSeed, TotalMass, prime, spec.methods, spec.strategy, spec.rw,
-      spec.hecke, spec.order, os);
+      spec.hecke, spec.order, max_runtime_second, os);
   // With the iterate and random_walk strategies there is no single prime; 0
   // marks that in the output record.
   int prime_out = (spec.strategy == NeighborStrategy::OutPrime) ? prime : 0;
