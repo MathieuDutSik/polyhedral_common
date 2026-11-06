@@ -51,8 +51,9 @@ full list of entries, their defaults and their documentation.
   `src_latt/LatticeMethods.h`, the same methods as `LATT_Canonicalize`,
   `LATT_Isomorphism` and `LATT_Automorphism` (see `GenusMethods`); `hecke`
   to skip the expansions whose neighbours are all expanded classes (see
-  `GenusEnumerationState`); and the `order` of the expansions, `aut` or
-  `deficit` (see `GenusExpansionOrder`).
+  `GenusEnumerationState`); and the `order` of the expansions, `creation`,
+  `deficit`, `aut` or `mixed` with its proportions `mixed_deficit` and
+  `mixed_aut` (see `GenusExpansionOrder`).
 * `RANDOM_WALK` -- the parameters of the `random_walk` strategy.
 * `SYSTEM` -- `OutFormat`, `GAP` (default), `CPP` or `Summary`, and
   `OutFile`, a file name, `stderr` (default) or `stdout`.

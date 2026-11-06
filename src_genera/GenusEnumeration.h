@@ -124,16 +124,32 @@
 enum class NeighborStrategy { OutPrime, Iterate, RandomWalk };
 
 /*
-  The order of the full expansions at a prime. Default (order aut in the
-  namelist): the one of the schedule, discovery order for OutPrime and
-  Iterate, largest |Aut| first for RandomWalk. Deficit, the default of the
-  namelist: the class with the largest Hecke deficit, the number
-  of its points giving a neighbour that the classes already expanded do not
-  account for (see GenusEnumerationState), ties going to the larger |Aut|.
-  When the mass has not closed, the missing classes are neighbours of the
-  classes with a positive deficit only, so those go first.
+  The order of the full expansions at a prime, among the classes not yet
+  expanded there:
+    Creation: discovery order.
+    Deficit: the largest Hecke deficit first, the number of points giving a
+      neighbour that the classes already expanded do not account for (see
+      GenusEnumerationState). When the mass has not closed, the missing
+      classes are neighbours of the classes with a positive deficit only.
+    Aut: the largest |Aut| first. The classes of large |Aut| are rarely
+      reached from the generic ones (few of their points lead to them), but
+      are neighbours of each other, and have few orbits of points, so their
+      expansions are cheap. On the genus of det 90 and rank 19 with 28 528
+      classes, the deficit order expanded 1103 classes and found the last
+      one, A12 D5 with |Aut| = 2.4 10^13, through 9 of the 262 143 points of
+      A4 A8 D4; 6188 points of the never expanded A16 lead to it.
+    Mixed: mixed_deficit picks by deficit, then mixed_aut picks by |Aut|,
+      in turn.
+  Ties go to the larger |Aut|, then to the earlier class. Deficit and Mixed
+  switch the Hecke bookkeeping on.
  */
-enum class GenusExpansionOrder { Default, Deficit };
+enum class GenusExpansionOrder { Creation, Deficit, Aut, Mixed };
+
+struct GenusOrderOptions {
+  GenusExpansionOrder order = GenusExpansionOrder::Deficit;
+  int mixed_deficit = 1;
+  int mixed_aut = 1;
+};
 
 // The parameters of the random walk phase of the RandomWalk strategy.
 struct GenusRandomWalkOptions {
@@ -173,6 +189,14 @@ template <typename T, typename Tgroup> struct GenusEnumerationResult {
   // The expansions started, and those the Hecke bookkeeping skipped.
   size_t n_expansion = 0;
   size_t n_expansion_skipped = 0;
+  // The random walks run, one per class treated by the random walk.
+  size_t n_walk = 0;
+  // Where each class was found: the class it is a neighbour of (-1 for a
+  // seed), how ('s' seed, 'e' full expansion, 'w' random walk) and at which
+  // prime (0 for a seed).
+  std::vector<int64_t> ListOriginClass;
+  std::vector<char> ListOriginKind;
+  std::vector<int> ListOriginPrime;
   size_t n_neighbor_random = 0;
   size_t n_new_random = 0;
   bool closed_in_random_walk = false;
@@ -965,7 +989,9 @@ struct GenusEnumerationState {
     is the row T(M, .) of an expanded class, kept for the checks only.
    */
   bool hecke;
-  GenusExpansionOrder order;
+  GenusOrderOptions order;
+  // the number of picks done, for the alternation of the Mixed order
+  size_t n_pick = 0;
   std::vector<std::vector<Tmass>> hecke_in;
   // hecke_npoint[i]: the number of points giving a neighbour at the i-th
   // prime, -1 while not computed. Whether a point gives a neighbour depends
@@ -986,10 +1012,11 @@ struct GenusEnumerationState {
 
   GenusEnumerationState(int _n, GenusMethods const &_methods,
                         Tmass const &_TotalMass,
-                        bool _hecke, GenusExpansionOrder _order,
+                        bool _hecke, GenusOrderOptions const &_order,
                         std::ostream &_os)
       : n(_n), methods(_methods), TotalMass(_TotalMass), os(_os),
-        hecke(_hecke || _order == GenusExpansionOrder::Deficit),
+        hecke(_hecke || _order.order == GenusExpansionOrder::Deficit ||
+              _order.order == GenusExpansionOrder::Mixed),
         order(_order) {
     result.target_mass = TotalMass;
     result.accumulated_mass = Tmass(0);
@@ -1015,6 +1042,20 @@ struct GenusEnumerationState {
   }
 
   // Records a new class and its automorphism data; returns its index.
+  // The origin of the neighbours inserted now, set by the expansion or the
+  // random walk under way and restored when it ends.
+  struct GenusOrigin {
+    int64_t cls = -1;
+    char kind = 's';
+    int prime = 0;
+  };
+  GenusOrigin origin;
+  struct RestoreOrigin {
+    GenusOrigin &ref;
+    GenusOrigin saved;
+    ~RestoreOrigin() { ref = saved; }
+  };
+
   size_t add(MyMatrix<T> const &StoreGram,
              LatticeAutInfo<T, Tint, Tgroup> const &info) {
     size_t idx = result.ListGram.size();
@@ -1024,6 +1065,9 @@ struct GenusEnumerationState {
         Tmass(1) / UniversalScalarConversion<Tmass, TintGroup>(info.order);
     ListGramWork.push_back(StoreGram);
     ListAutInfo.push_back(info);
+    result.ListOriginClass.push_back(origin.cls);
+    result.ListOriginKind.push_back(origin.kind);
+    result.ListOriginPrime.push_back(origin.prime);
 #ifdef DEBUG_GENUS_ENUMERATION
     os << "GENUS: class " << result.ListGram.size() << ", |Aut|=" << info.order
        << ", mass " << result.accumulated_mass << " / " << TotalMass << "\n";
@@ -1129,15 +1173,31 @@ struct GenusEnumerationState {
   }
 
   // The class to expand next among the unexpanded ones at the i-th prime p,
-  // which are listed in increasing order: default_pick (a position in that
-  // list, the choice of the schedule) with the default order, the one of
-  // largest deficit with the deficit order.
-  size_t pick(std::vector<size_t> const &unexpanded, int p, size_t i_prime,
-              size_t default_pick) {
-    if (order == GenusExpansionOrder::Default) {
-      return unexpanded[default_pick];
+  // which are listed in increasing order, by the order (see
+  // GenusExpansionOrder).
+  size_t pick(std::vector<size_t> const &unexpanded, int p, size_t i_prime) {
+    GenusExpansionOrder kind = order.order;
+    if (kind == GenusExpansionOrder::Mixed) {
+      size_t period =
+          static_cast<size_t>(order.mixed_deficit + order.mixed_aut);
+      kind = (n_pick % period < static_cast<size_t>(order.mixed_deficit))
+                 ? GenusExpansionOrder::Deficit
+                 : GenusExpansionOrder::Aut;
+    }
+    n_pick++;
+    if (kind == GenusExpansionOrder::Creation) {
+      return unexpanded[0];
     }
     size_t best = unexpanded[0];
+    if (kind == GenusExpansionOrder::Aut) {
+      for (size_t i = 1; i < unexpanded.size(); i++) {
+        size_t pos = unexpanded[i];
+        if (result.ListAutOrder[pos] > result.ListAutOrder[best]) {
+          best = pos;
+        }
+      }
+      return best;
+    }
     Tmass best_def = deficit(best, p, i_prime);
     for (size_t i = 1; i < unexpanded.size(); i++) {
       size_t pos = unexpanded[i];
@@ -1179,6 +1239,8 @@ struct GenusEnumerationState {
        << " orbits of projective points at p=" << p << "\n";
 #endif
     result.n_expansion++;
+    RestoreOrigin restore{origin, origin};
+    origin = GenusOrigin{static_cast<int64_t>(pos), 'e', p};
     Tmass order_mass =
         UniversalScalarConversion<Tmass, TintGroup>(result.ListAutOrder[pos]);
     [[maybe_unused]] bool would_skip = false;
@@ -1318,7 +1380,7 @@ struct GenusEnumerationState {
 
 /*
   The out_prime schedule: see NeighborStrategy. Every known class, in
-  discovery order (or by deficit, see GenusExpansionOrder), is expanded at
+  the order of GenusExpansionOrder, is expanded at
   the one prime until the mass closes.
  */
 template <typename T, typename Tint, typename Tgroup>
@@ -1340,7 +1402,7 @@ void GenusEnumerationOutPrime(GenusEnumerationState<T, Tint, Tgroup> &state,
     if (unexpanded.empty()) {
       break;
     }
-    size_t pos = state.pick(unexpanded, prime, 0, 0);
+    size_t pos = state.pick(unexpanded, prime, 0);
     is_expanded[pos] = true;
     state.expand_at(pos, prime, 0);
   }
@@ -1369,7 +1431,7 @@ inline int GenusNextPrime(int q) {
   The iterate schedule: see NeighborStrategy. ListPrimeUsed holds the
   primes in play in increasing order; is_expanded[i][pos] tells whether the
   class pos has been expanded at ListPrimeUsed[i]. At a prime the classes go
-  in discovery order (or by deficit, see GenusExpansionOrder).
+  in the order of GenusExpansionOrder.
   The invariant exits: the mass closes (complete), or the accumulated
   mass passes the target (impossible for genuine neighbours, so it
   would witness a programming error and stops the run as incomplete
@@ -1412,7 +1474,7 @@ void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
       continue;
     }
     int p = ListPrimeUsed[i_work];
-    size_t pos = state.pick(unexpanded, p, i_work, 0);
+    size_t pos = state.pick(unexpanded, p, i_work);
     is_expanded[i_work][pos] = true;
     state.expand_at(pos, p, i_work);
   }
@@ -1523,6 +1585,9 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
   };
   std::vector<size_t> pending;
   auto random_walk = [&](size_t pos) -> void {
+    result.n_walk++;
+    typename GenusEnumerationState<T, Tint, Tgroup>::RestoreOrigin restore{
+        state.origin, state.origin};
     MyMatrix<Tint> G_int =
         UniversalMatrixConversion<Tint, T>(state.ListGramWork[pos]);
     size_t log_order = GenusRandomWalkLogOrder(result.ListAutOrder[pos]);
@@ -1549,6 +1614,8 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
         continue;
       }
       result.n_neighbor_random++;
+      state.origin = typename GenusEnumerationState<T, Tint, Tgroup>::GenusOrigin{
+          static_cast<int64_t>(pos), 'w', p};
       if (state.insert(*opt)) {
         result.n_new_random++;
         pending.push_back(state.ListGramWork.size() - 1);
@@ -1620,8 +1687,7 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
 #endif
       continue;
     }
-    size_t pos = state.pick(unexpanded, ListPrimeUsed[i_work], i_work,
-                            get_max_aut(unexpanded));
+    size_t pos = state.pick(unexpanded, ListPrimeUsed[i_work], i_work);
     is_expanded[i_work][pos] = true;
     // A new class found by the expansion gets its random walk at once,
     // before the expansion goes on.
@@ -1647,7 +1713,7 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
                  int prime, GenusMethods const &methods,
                  NeighborStrategy strategy,
                  GenusRandomWalkOptions const &rw, bool hecke,
-                 GenusExpansionOrder order, int max_runtime_second,
+                 GenusOrderOptions const &order, int max_runtime_second,
                  std::ostream &os) {
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_total;
@@ -1698,7 +1764,7 @@ struct GenusSpec {
   GenusMethods methods;
   GenusRandomWalkOptions rw;
   bool hecke;
-  GenusExpansionOrder order;
+  GenusOrderOptions order;
 };
 
 /*
@@ -1757,9 +1823,15 @@ Whether to skip the expansions whose neighbours are all expanded classes,\n\
 by the Hecke bookkeeping of GenusEnumerationState";
     ListStringValues_doc["order"] = "Default: deficit\n\
 The order of the full expansions at a prime, see GenusExpansionOrder:\n\
-aut: discovery order for out_prime and iterate, largest |Aut| first for\n\
-  random_walk\n\
-deficit: the class with the largest Hecke deficit first (implies hecke)";
+creation: discovery order\n\
+deficit: the largest Hecke deficit first (implies hecke)\n\
+aut: the largest |Aut| first\n\
+mixed: mixed_deficit picks by deficit, then mixed_aut picks by |Aut|, in\n\
+  turn (implies hecke)";
+    ListIntValues_doc["mixed_deficit"] = "Default: 1\n\
+With order mixed, the number of picks by deficit in each turn";
+    ListIntValues_doc["mixed_aut"] = "Default: 1\n\
+With order mixed, the number of picks by |Aut| in each turn";
     ListBlock["METHOD"].setListStringValues_doc(ListStringValues_doc);
     ListBlock["METHOD"].setListIntValues_doc(ListIntValues_doc);
     ListBlock["METHOD"].setListBoolValues_doc(ListBoolValues_doc);
@@ -1844,13 +1916,25 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
       BlockMETHOD.get_string("automorphism_method"));
   spec.hecke = BlockMETHOD.get_bool("hecke");
   std::string order = BlockMETHOD.get_string("order");
-  if (order == "aut") {
-    spec.order = GenusExpansionOrder::Default;
+  if (order == "creation") {
+    spec.order.order = GenusExpansionOrder::Creation;
   } else if (order == "deficit") {
-    spec.order = GenusExpansionOrder::Deficit;
+    spec.order.order = GenusExpansionOrder::Deficit;
+  } else if (order == "aut") {
+    spec.order.order = GenusExpansionOrder::Aut;
+  } else if (order == "mixed") {
+    spec.order.order = GenusExpansionOrder::Mixed;
   } else {
     std::cerr << "GENUS: unrecognised order \"" << order
-              << "\". Allowed: aut, deficit\n";
+              << "\". Allowed: creation, deficit, aut, mixed\n";
+    throw TerminalException{1};
+  }
+  spec.order.mixed_deficit = BlockMETHOD.get_int("mixed_deficit");
+  spec.order.mixed_aut = BlockMETHOD.get_int("mixed_aut");
+  if (spec.order.mixed_deficit < 0 || spec.order.mixed_aut < 0 ||
+      spec.order.mixed_deficit + spec.order.mixed_aut == 0) {
+    std::cerr << "GENUS: mixed_deficit and mixed_aut must be nonnegative, "
+              << "not both zero\n";
     throw TerminalException{1};
   }
   int seed = BlockRW.get_int("seed");
@@ -1909,6 +1993,19 @@ void WriteGenusEnumerationResult(
     os << "neighbours built: full expansion " << result.n_neighbor_full
        << ", random walk " << result.n_neighbor_random << " ("
        << result.n_new_random << " new classes)\n";
+    os << "random walks: " << result.n_walk << "\n";
+    if (!result.ListOriginClass.empty()) {
+      size_t last = result.ListOriginClass.size() - 1;
+      os << "last class: " << (last + 1) << ", from ";
+      if (result.ListOriginKind[last] == 's') {
+        os << "the seeds\n";
+      } else {
+        os << "class " << (result.ListOriginClass[last] + 1) << " by "
+           << (result.ListOriginKind[last] == 'e' ? "full expansion"
+                                                    : "random walk")
+           << " at p=" << result.ListOriginPrime[last] << "\n";
+      }
+    }
     os << "expansions: " << result.n_expansion << " ("
        << result.n_expansion_skipped << " skipped by the Hecke bookkeeping)\n";
     os << "closed in the random walk phase = "
@@ -1963,6 +2060,24 @@ void WriteGenusEnumerationResult(
        << ",\n n_new_random:=" << result.n_new_random
        << ",\n n_expansion:=" << result.n_expansion
        << ",\n n_expansion_skipped:=" << result.n_expansion_skipped
+       << ",\n n_walk:=" << result.n_walk;
+    // the origins: the class it is a neighbour of (0 for a seed), how and
+    // at which prime
+    os << ",\n ListOriginClass:=[";
+    for (size_t i = 0; i < result.ListOriginClass.size(); i++) {
+      os << (i > 0 ? ", " : "") << (result.ListOriginClass[i] + 1);
+    }
+    os << "],\n ListOriginKind:=[";
+    for (size_t i = 0; i < result.ListOriginKind.size(); i++) {
+      char k = result.ListOriginKind[i];
+      os << (i > 0 ? ", " : "")
+         << (k == 's' ? "\"seed\"" : (k == 'e' ? "\"expansion\"" : "\"walk\""));
+    }
+    os << "],\n ListOriginPrime:=[";
+    for (size_t i = 0; i < result.ListOriginPrime.size(); i++) {
+      os << (i > 0 ? ", " : "") << result.ListOriginPrime[i];
+    }
+    os << "]"
        << ",\n closed_in_random_walk:="
        << (result.closed_in_random_walk ? "true" : "false") << ");\n";
     return;
