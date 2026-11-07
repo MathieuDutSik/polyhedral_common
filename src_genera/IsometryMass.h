@@ -6,6 +6,8 @@
 #include "LocalDensity.h"
 #include "GenusMass.h"
 #include "CyclotomicHermitianMass.h"
+#include "WeightMatrix.h"
+#include "GRAPH_GraphicalBasic.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "factorizations.h"
@@ -443,16 +445,179 @@ struct GlueOrbitResult {
   int64_t glue_order;
   std::vector<int> list_d;
   std::vector<int64_t> list_module_order;
-  std::vector<int64_t> list_group_order;
-  int64_t orbit_size;
+  std::vector<mpz_class> list_group_order;
+  mpz_class orbit_size;
+  // "listing" or "graph"
+  std::string method;
 };
 
+// The elements of the glue, as vectors of all the coordinates.
+inline std::vector<ModuleElt>
+GlueElements(std::vector<PrimaryQuadModule> const &mods,
+             std::vector<std::vector<ModuleElt>> const &glue_gens) {
+  size_t t = mods.size();
+  std::vector<int64_t> radix;
+  std::vector<size_t> offset;
+  for (auto const &M : mods) {
+    offset.push_back(radix.size());
+    for (int64_t o : M.ord) {
+      radix.push_back(o);
+    }
+  }
+  size_t R = radix.size();
+  std::set<ModuleElt> H;
+  H.insert(ModuleElt(R, 0));
+  std::vector<ModuleElt> work{ModuleElt(R, 0)};
+  while (!work.empty()) {
+    ModuleElt x = work.back();
+    work.pop_back();
+    for (auto const &g : glue_gens) {
+      ModuleElt y(R);
+      for (size_t s = 0; s < t; s++) {
+        for (size_t i = 0; i < mods[s].rank(); i++) {
+          size_t pos = offset[s] + i;
+          y[pos] = ModPos64(x[pos] + g[s][i], radix[pos]);
+        }
+      }
+      if (H.insert(y).second) {
+        work.push_back(y);
+      }
+    }
+  }
+  return std::vector<ModuleElt>(H.begin(), H.end());
+}
+
+/*
+  The orbit length of the glue without listing the groups. For a module M
+  with a nondegenerate form, a bijection of M preserving b(x, y) for all x,
+  y is additive (phi(x + y) - phi(x) - phi(y) is orthogonal to everything),
+  so the isometries of M commuting with sigma are the automorphisms of the
+  complete graph on the elements of M with the vertices coloured by q(x)
+  and the edges by b(x, y) and by whether y = sigma(x). The glue H is added
+  as one vertex per element, joined to its components: the automorphisms of
+  that graph are the stabilizer of H in G = prod_s G_s (the module of each
+  vertex is in its colour, so the modules are not exchanged, and an element
+  of H is determined by its components). The orbit length is |G| / |Stab_G
+  H|, the orders being those of the graph automorphism groups.
+ */
 inline std::optional<GlueOrbitResult>
-GlueOrbit(int64_t q, std::vector<PrimaryQuadModule> const &mods,
-          std::vector<std::vector<ModuleElt>> const &glue_gens,
-          int64_t max_module, size_t max_group, size_t max_orbit) {
+GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
+               std::vector<std::vector<ModuleElt>> const &glue_gens,
+               size_t max_vertices, std::ostream &os) {
+  using Tgr = GraphListAdj;
+  using Tidx = uint32_t;
+  using Tidx_value = int32_t;
   GlueOrbitResult res;
   res.q = q;
+  res.method = "graph";
+  size_t t = mods.size();
+  std::vector<ModuleElt> H = GlueElements(mods, glue_gens);
+  res.glue_order = static_cast<int64_t>(H.size());
+  std::vector<std::vector<ModuleElt>> elts(t);
+  size_t n_vert = H.size();
+  int64_t BIG = 1;
+  for (size_t s = 0; s < t; s++) {
+    if (mods[s].size() > static_cast<int64_t>(max_vertices)) {
+      return {};
+    }
+    elts[s] = ListModuleElements(mods[s]);
+    n_vert += elts[s].size();
+    BIG = std::max(BIG, 4 * mods[s].N + 4);
+  }
+  if (n_vert > max_vertices) {
+    return {};
+  }
+  std::vector<std::vector<ModuleElt>> sigma_img(t);
+  for (size_t s = 0; s < t; s++) {
+    for (auto const &x : elts[s]) {
+      sigma_img[s].push_back(ModuleCombination(mods[s], x, mods[s].sigma_img));
+    }
+  }
+  // the vertices: (module s, index) for the modules, then the glue
+  std::vector<std::pair<int, size_t>> vert;
+  for (size_t s = 0; s < t; s++) {
+    for (size_t i = 0; i < elts[s].size(); i++) {
+      vert.push_back({static_cast<int>(s), i});
+    }
+  }
+  size_t n_mod = vert.size();
+  // the position of the coordinates of module s in an element of H
+  std::vector<size_t> offset(t, 0);
+  for (size_t s = 1; s < t; s++) {
+    offset[s] = offset[s - 1] + mods[s - 1].rank();
+  }
+  auto weight = [&](size_t i, size_t j, bool with_glue) -> int64_t {
+    (void)with_glue;
+    bool gi = i >= n_mod, gj = j >= n_mod;
+    if (!gi && !gj) {
+      int s = vert[i].first, s2 = vert[j].first;
+      ModuleElt const &x = elts[s][vert[i].second];
+      if (s != s2) {
+        return -2;
+      }
+      if (i == j) {
+        return 4 * (s * BIG + ModuleQ(mods[s], x));
+      }
+      ModuleElt const &y = elts[s][vert[j].second];
+      int64_t flag = 0;
+      if (!IsScalarAction(mods[s]) && sigma_img[s][vert[i].second] == y) {
+        flag = 1;
+      }
+      return 4 * ((s * BIG + ModuleB(mods[s], x, y)) * 2 + flag) + 1;
+    }
+    if (gi && gj) {
+      return (i == j) ? -1 : -5;
+    }
+    size_t ih = gi ? i - n_mod : j - n_mod;
+    size_t im = gi ? j : i;
+    int s = vert[im].first;
+    ModuleElt const &x = elts[s][vert[im].second];
+    ModuleElt const &h = H[ih];
+    for (size_t k = 0; k < mods[s].rank(); k++) {
+      if (h[offset[s] + k] != x[k]) {
+        return -4;
+      }
+    }
+    return -3;
+  };
+  auto group_order = [&](size_t n, auto f) -> mpz_class {
+    WeightMatrix<false, int64_t, Tidx_value> WMat(n, f, os);
+    return GetStabilizerWeightMatrix_Kernel<int64_t, Tgr, Tidx, mpz_class,
+                                            Tidx_value, false>(WMat, os)
+        .order;
+  };
+  mpz_class order_G(1);
+  size_t base = 0;
+  for (size_t s = 0; s < t; s++) {
+    size_t ns = elts[s].size();
+    auto f = [&](size_t i, size_t j) -> int64_t {
+      return weight(base + i, base + j, false);
+    };
+    mpz_class o = group_order(ns, f);
+    res.list_d.push_back(mods[s].d);
+    res.list_module_order.push_back(mods[s].size());
+    res.list_group_order.push_back(o);
+    order_G *= o;
+    base += ns;
+  }
+  auto f_all = [&](size_t i, size_t j) -> int64_t { return weight(i, j, true); };
+  mpz_class order_stab = group_order(n_vert, f_all);
+  if (order_G % order_stab != 0) {
+    std::cerr << "ISOM_MASS: the stabilizer of the glue does not divide the "
+                 "group\n";
+    throw TerminalException{1};
+  }
+  res.orbit_size = order_G / order_stab;
+  return res;
+}
+
+inline std::optional<GlueOrbitResult>
+GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
+                 std::vector<std::vector<ModuleElt>> const &glue_gens,
+                 int64_t max_module, size_t max_group, size_t max_orbit) {
+  GlueOrbitResult res;
+  res.q = q;
+  res.method = "listing";
   size_t t = mods.size();
   std::vector<int64_t> radix;
   std::vector<size_t> offset;
@@ -512,7 +677,7 @@ GlueOrbit(int64_t q, std::vector<PrimaryQuadModule> const &mods,
     }
     res.list_d.push_back(mods[s].d);
     res.list_module_order.push_back(mods[s].size());
-    res.list_group_order.push_back(static_cast<int64_t>(opt->size()));
+    res.list_group_order.push_back(mpz_class(static_cast<long>(opt->size())));
     gens[s] = GeneratingSubset(mods[s], *opt);
   }
   std::vector<ModuleElt> Hlist(H.begin(), H.end());
@@ -552,8 +717,34 @@ GlueOrbit(int64_t q, std::vector<PrimaryQuadModule> const &mods,
       }
     }
   }
-  res.orbit_size = static_cast<int64_t>(orbit.size());
+  res.orbit_size = mpz_class(static_cast<long>(orbit.size()));
   return res;
+}
+
+/*
+  The orbit of the glue: by listing the groups when they are small, and
+  otherwise by the graph automorphism groups (GlueOrbitGraph).
+ */
+inline std::optional<GlueOrbitResult>
+GlueOrbit(int64_t q, std::vector<PrimaryQuadModule> const &mods,
+          std::vector<std::vector<ModuleElt>> const &glue_gens,
+          int64_t max_module, size_t max_group, size_t max_orbit,
+          size_t max_vertices, std::ostream &os) {
+  std::optional<GlueOrbitResult> opt =
+      GlueOrbitListing(q, mods, glue_gens, max_module, max_group, max_orbit);
+  if (opt) {
+#ifdef SANITY_CHECK_ISOMETRY_MASS
+    std::optional<GlueOrbitResult> opt2 =
+        GlueOrbitGraph(q, mods, glue_gens, max_vertices, os);
+    if (opt2 && opt2->orbit_size != opt->orbit_size) {
+      std::cerr << "ISOM_MASS: the glue orbit by listing is " << opt->orbit_size
+                << " and by the graph " << opt2->orbit_size << "\n";
+      throw TerminalException{1};
+    }
+#endif
+    return opt;
+  }
+  return GlueOrbitGraph(q, mods, glue_gens, max_vertices, os);
 }
 
 template <typename T> struct IsometryComponentMass {
@@ -578,9 +769,11 @@ template <typename T> struct IsometryMassResult {
 };
 
 struct IsometryMassBounds {
-  int64_t max_module = 1 << 20;
-  size_t max_group = 2000000;
-  size_t max_orbit = 2000000;
+  int64_t max_module = 1 << 12;
+  size_t max_group = 100000;
+  size_t max_orbit = 100000;
+  // the graph method: the number of vertices (module elements and glue)
+  size_t max_vertices = 6000;
 };
 
 template <typename T> int IsometryOrder(MyMatrix<T> const &P) {
@@ -792,10 +985,10 @@ IsometryMassResult<T> IsometryGenusMass(MyMatrix<T> const &A,
     }
     std::optional<GlueOrbitResult> opt =
         GlueOrbit(q, mods, glue_gens, bounds.max_module, bounds.max_group,
-                  bounds.max_orbit);
+                  bounds.max_orbit, bounds.max_vertices, os);
     if (!opt) {
       std::cerr << "ISOM_MASS: the glue at q=" << q
-                << " exceeds the bounds of the exhaustive computation\n";
+                << " exceeds the bounds of both the listing and the graph\n";
       throw TerminalException{1};
     }
     for (auto const &M : mods) {
@@ -807,7 +1000,7 @@ IsometryMassResult<T> IsometryGenusMass(MyMatrix<T> const &A,
     os << "ISOM_MASS: q=" << q << " |H_q|=" << opt->glue_order
        << " orbit=" << opt->orbit_size << "\n";
 #endif
-    res.glue_factor *= ScalarFromInt64<T>(opt->orbit_size);
+    res.glue_factor *= UniversalScalarConversion<T, mpz_class>(opt->orbit_size);
     res.glue.push_back(*opt);
   }
 #ifdef SANITY_CHECK_ISOMETRY_MASS
@@ -857,7 +1050,7 @@ void WriteIsometryMassResult(std::ostream &os, IsometryMassResult<T> const &res)
        << ", d:=" << StringStdVectorGAP(gl.list_d)
        << ", module_orders:=" << StringStdVectorGAP(gl.list_module_order)
        << ", group_orders:=" << StringStdVectorGAP(gl.list_group_order)
-       << ", orbit:=" << gl.orbit_size << ")";
+       << ", orbit:=" << gl.orbit_size << ", method:=\"" << gl.method << "\")";
   }
   os << "],\n  glue_factor:=" << res.glue_factor
      << ",\n  image_assumed:=" << GAP_logical(res.image_assumed);

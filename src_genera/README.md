@@ -129,12 +129,17 @@ backtracking, and the orbit of the glue is closed under them. For d = 1, 2
 these are the image of the local group (Nikulin, Theorem 1.9.5); for d >= 3
 the code takes all of them, and says so (`image_assumed`).
 
-Limits: the exhaustive glue computation stops (with an error) beyond
-2^20 elements in a discriminant module, 2 10^6 isometries or 2 10^6
-subgroups in an orbit. A large 2-elementary glue, as for an involution
-with two large eigenspaces in rank 19, is beyond them; it needs the orders
-of the finite orthogonal groups and of their parabolic subgroups rather
-than a listing.
+When the groups are too large to be listed, the orbit length is |G| /
+|Stab_G(H)| with both orders taken from graph automorphism groups: a
+bijection of a module preserving the nondegenerate b is additive, so the
+isometries (commuting with g) are the automorphisms of the complete graph
+on the elements with the colours q(x), b(x, y) and y = g(x), and adding one
+vertex per element of the glue, joined to its components, gives the
+stabilizer. This works up to some thousands of vertices: an involution of
+the determinant-30 genus with eigenspaces of rank 9 and 10 (glue (Z/2)^9,
+modules of 512 and 1024 elements, groups of order up to 9 10^10) takes
+20 s; E8+E8 with the exchange of the factors gives |O+_8(2)| = 348364800
+as glue factor, as it must.
 
 Validation (`check` mode): the elements tau of O(L) with the
 characteristic polynomial of g are listed, grouped by the mass of (L, tau)

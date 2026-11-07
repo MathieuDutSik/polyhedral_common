@@ -54,6 +54,12 @@ mass_case E8 minusI 1/696729600
 mass_case E8 refl 1/5806080
 mass_case E8 E8_inv2 1/184320
 mass_case E8 E8_inv3 1/18432
+# E8+E8 with the exchange of the factors: the glue is the graph of an
+# anti-isometry between two copies of the discriminant form of E8(2), the
+# plus type quadratic space of dimension 8 over F_2, so the glue factor is
+# |O+_8(2)| = 348364800, beyond the listing and computed by the graph
+# automorphism groups; the mass is 1/(2 |W(E8)|), that of the single pair.
+mass_case E8E8_16 swap16 1/1393459200
 
 check_case A2A2 A2A2_inv2
 check_case D4 D4_inv1
