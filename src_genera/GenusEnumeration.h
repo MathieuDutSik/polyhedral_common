@@ -365,10 +365,22 @@ inline void CheckProjectiveLineIndexing(int n, int p) {
   Returns nothing when v lies in the radical mod p, or when the valuation is
   too small to be corrected (which can only happen for p = 2).
  */
+/*
+  The neighbour before reduction: Bp, whose rows divided by p are a basis of
+  N in the coordinates of L, and the Gram matrix of that basis. Split from
+  GenusNeighbor so that the enumeration of lattices with an isometry
+  (GenusEnumerationGroup.h) can carry the isometry over to N; GenusNeighbor
+  does the same work as before.
+ */
+template <typename T, typename Tint> struct GenusNeighborBasis {
+  MyMatrix<Tint> Bp;
+  MyMatrix<T> GramN;
+};
+
 template <typename T, typename Tint>
-std::optional<MyMatrix<T>>
-GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
-              [[maybe_unused]] std::ostream &os) {
+std::optional<GenusNeighborBasis<T, Tint>>
+GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
+                    int p, [[maybe_unused]] std::ostream &os) {
   int n = G.rows();
   MyVector<Tint> v(n);
   for (int i = 0; i < n; i++) {
@@ -517,6 +529,18 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
     throw TerminalException{1};
   }
 #endif
+  return GenusNeighborBasis<T, Tint>{std::move(Bp), std::move(GramN)};
+}
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
+              [[maybe_unused]] std::ostream &os) {
+  std::optional<GenusNeighborBasis<T, Tint>> opt =
+      GenusNeighborKernel<T, Tint>(G, v_line, p, os);
+  if (!opt) {
+    return {};
+  }
   /*
     Reduce before returning. The basis coming out of GetZbasis and divided by p
     is arbitrary and can be very skewed, and everything downstream -- the
@@ -527,7 +551,7 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
 #ifdef TIMINGS_GENUS_ENUMERATION
   MicrosecondTime time_lll;
 #endif
-  LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(GramN, os);
+  LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(opt->GramN, os);
 #ifdef TIMINGS_GENUS_ENUMERATION
   os << "|GENUS: neighbour LLL|=" << time_lll << "\n";
 #endif

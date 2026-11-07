@@ -125,3 +125,37 @@ product of orthogonal reflections, and on A2, D4 and E6 with elements of
 order 3, 4, 5 and 6 whose Hermitian components have rank one (mass 1/6,
 1/4, 1/10 over Z[zeta_3], Z[i], Z[zeta_5]), every ratio is exactly 1,
 with glue factors up to 6, including cases where `image_assumed` is set.
+
+## Enumeration of the lattices with an isometry
+
+`GENUS_EnumerateIsometry` enumerates the classes of pairs (L, g) in the
+genus of a pair, g an isometry of finite order m, and stops when the mass
+computed by `GENUS_IsometryMass` is reached.
+
+    GENUS_EnumerateIsometry [Gram] [Isometry] [Mass] [OutFormat] [OutFile]
+                            [prime] [max_prime]
+
+The code is in `GenusEnumerationGroup.h` and reuses `GenusEnumeration.h`
+without changing its cost: `GenusNeighbor` is split into
+`GenusNeighborKernel`, which also returns the basis of the neighbour, and
+the reduction.
+
+* The neighbours are the sigma-stable ones: at a good prime p (p not
+  dividing m det), N = L_v + Z v/p for v an eigenvector modulo p^2 of an
+  eigenvalue in F_p, obtained by the projector R(P) / R(lambda') with
+  lambda' the Teichmueller lift and R = (x^m - 1) / (x - lambda'). For
+  lambda != +-1 every eigenvector is isotropic; for lambda = +-1 the
+  isotropic lines are corrected modulo p^2 inside the eigenlattice.
+* The lines are cut into orbits of the centralizer C_{O(L)}(g), eigenspace
+  by eigenspace, the small ones first.
+* A pair is identified by the canonical form of (A, A g^T) and its weight
+  is 1 / |C_{O(L)}(g)|, the automorphism group of that pair of forms.
+* The primes: 2 when it is good (m and det odd: the fixed space over F_2 is
+  the cheapest projective space), then the good primes p = 1 mod m, at
+  which all the eigenvalues are in F_p. A single prime can be imposed.
+
+The seeds (one per genus of pairs and per component of the neighbour
+graph) are input. `CI_tests/15B_GenusEnumeration/RunEnumerateIsometryTests.sh`
+checks the even unimodular genus of rank 16 with -1, a root reflection and
+an element of order 3, and the genus of rank 8 and determinant 25 with -1
+and a root reflection.
