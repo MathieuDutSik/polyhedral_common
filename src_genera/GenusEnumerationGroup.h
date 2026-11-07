@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "GenusEnumeration.h"
+#include "LatticeOrbitSplitCanonical.h"
 #include <algorithm>
 #include <map>
 #include <optional>
@@ -57,7 +58,8 @@
 
   The classes. A pair is told apart by the canonical form of the pair of
   forms (A, A P^T) (the second one not symmetric), and C_{O(L)}(sigma) is
-  the automorphism group of that pair of forms.
+  the automorphism group of that pair of forms, both by the
+  Plesken-Souvignier engine, whose backtrack the second form prunes.
  */
 
 template <typename T, typename Tgroup> struct GenusEnumerationGroupResult {
@@ -439,8 +441,12 @@ PairAutInfo<T, Tint, Tgroup> GetPairAutInfo(MyMatrix<T> const &A,
                                             MyMatrix<T> const &P,
                                             std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat = PairForms(A, P);
-  IntAutomorphismGroup<Tint, Tgroup> aut =
-      ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);
+  // Plesken-Souvignier with the second form: the backtrack is pruned by
+  // both forms, which keeps it small even on lattices with huge
+  // automorphism groups, where the graph of the characteristic vector
+  // family of the first form alone explodes.
+  PleskenSouvignierAutomResult<Tint, Tgroup> aut =
+      PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(ListMat, os);
   PairAutInfo<T, Tint, Tgroup> info;
   info.order = aut.order;
   auto preserves = [&](MyMatrix<Tint> const &h) -> bool {
@@ -465,18 +471,39 @@ PairAutInfo<T, Tint, Tgroup> GetPairAutInfo(MyMatrix<T> const &A,
   return info;
 }
 
-// The canonical representative of the pair: the reduced forms and the
-// isometry in the canonical basis.
+/*
+  The canonical representative of the pair: the reduced forms and the
+  isometry in the canonical basis, with the method used (0: orbit splitting
+  over the Plesken-Souvignier automorphism group, 1: the graph of the
+  characteristic vector family). The orbit splitting may decline an input;
+  that depends only on the configuration, so isometric pairs take the same
+  branch, and the method is part of the key since the two canonical forms
+  are not comparable.
+ */
+template <typename T> struct CanonicalPairData {
+  int method;
+  MyMatrix<T> Acan;
+  MyMatrix<T> Pcan;
+};
+
 template <typename T, typename Tint, typename Tgroup>
-std::pair<MyMatrix<T>, MyMatrix<T>> CanonicalPair(MyMatrix<T> const &A,
-                                                  MyMatrix<T> const &P,
-                                                  std::ostream &os) {
+CanonicalPairData<T> CanonicalPair(MyMatrix<T> const &A, MyMatrix<T> const &P,
+                                   std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat = PairForms(A, P);
-  MyMatrix<Tint> B = ComputeCanonicalFormMultiple<T, Tint, Tgroup>(ListMat, os);
+  std::optional<MyMatrix<Tint>> opt =
+      OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(ListMat, os);
+  int method = 0;
+  MyMatrix<Tint> B;
+  if (opt) {
+    B = *opt;
+  } else {
+    method = 1;
+    B = ComputeCanonicalFormMultiple<T, Tint, Tgroup>(ListMat, os);
+  }
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   MyMatrix<T> Acan = B_T * A * B_T.transpose();
   MyMatrix<T> Pcan = B_T * P * Inverse(B_T);
-  return {Acan, Pcan};
+  return {method, Acan, Pcan};
 }
 
 template <typename Tint> int FiniteMatrixOrderInt(MyMatrix<Tint> const &P) {
@@ -551,24 +578,24 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
   // the work list: the canonical pairs (Gram, isometry on the rows)
   std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListPairWork;
   std::vector<PairAutInfo<T, Tint, Tgroup>> ListAutInfo;
-  std::map<std::pair<MyMatrix<T>, MyMatrix<T>>, size_t> MapCanonic;
+  std::map<std::pair<int, std::pair<MyMatrix<T>, MyMatrix<T>>>, size_t>
+      MapCanonic;
   int m = -1;
   T det(0);
   auto f_insert = [&](MyMatrix<T> const &A, MyMatrix<T> const &P) -> bool {
-    std::pair<MyMatrix<T>, MyMatrix<T>> can =
-        CanonicalPair<T, Tint, Tgroup>(A, P, os);
-    std::pair<MyMatrix<T>, MyMatrix<T>> key{can.first,
-                                            can.first * can.second.transpose()};
+    CanonicalPairData<T> can = CanonicalPair<T, Tint, Tgroup>(A, P, os);
+    std::pair<int, std::pair<MyMatrix<T>, MyMatrix<T>>> key{
+        can.method, {can.Acan, can.Acan * can.Pcan.transpose()}};
     if (MapCanonic.count(key) == 1) {
       return false;
     }
     PairAutInfo<T, Tint, Tgroup> info =
-        GetPairAutInfo<T, Tint, Tgroup>(can.first, can.second, os);
+        GetPairAutInfo<T, Tint, Tgroup>(can.Acan, can.Pcan, os);
     MapCanonic[key] = ListPairWork.size();
-    ListPairWork.push_back(can);
+    ListPairWork.push_back({can.Acan, can.Pcan});
     ListAutInfo.push_back(info);
-    result.ListGram.push_back(can.first);
-    result.ListIsom.push_back(can.second.transpose());
+    result.ListGram.push_back(can.Acan);
+    result.ListIsom.push_back(can.Pcan.transpose());
     result.ListCentralizerOrder.push_back(info.order);
     result.accumulated_mass +=
         Tmass(1) / UniversalScalarConversion<Tmass, TintGroup>(info.order);

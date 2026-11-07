@@ -105,8 +105,18 @@ Hermitian components (d >= 3, lattices over Z[zeta_d]) of rank one are
 computed (`CyclotomicHermitianMass.h`: the mass is 2^{1-n} |L(0,
 chi_{E/K})|, halved when d is a prime power, that is h^- / w, the
 L-values being products of generalized Bernoulli numbers taken exactly
-through norms in Q(zeta_e)); those of higher rank are given in `HermMass`
-as lines `d num den`, from Hecke for instance (`none` if there are none).
+through norms in Q(zeta_e)). In higher rank the mass is the standard
+mass times the local factors of Hecke.jl at the bad primes, from the
+Hermitian Jordan decompositions read off the trace form and the action of
+zeta_d: at the primes of K unramified in E (all of them when d is not a
+prime power) through the idempotents of Z_q[x]/Phi_d and the invariants of
+the discriminant module under 1 - zeta^{d'}, and at the ramified prime
+(d = q^a, q odd) by a Jordan splitting of the Hermitian form computed in E,
+with the norm classes of the blocks of even scale. The dyadic ramified
+prime (4 | d, rank >= 2) is not treated; such masses are given in
+`HermMass` as lines `d num den`, from Hecke for instance (`none` if there
+are none). Checked against Hecke.jl on 38 Hermitian lattices of rank 2 and
+3 over Q(zeta_d), d = 3, 5, 7, 9, 11, 12, 13, 15.
 `GENUS_IsometryMass hermitian d m` prints the standard mass of rank m over
 Q(zeta_d) and, for m = 1, the mass. The glue factor is computed exhaustively: the isometries of
 each primary discriminant module commuting with g are listed by

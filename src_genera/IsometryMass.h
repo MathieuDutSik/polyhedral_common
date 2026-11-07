@@ -61,9 +61,9 @@
 
   The masses of the orthogonal L_d come from GenusMass. The genus of the
   pair (L_d, sigma_d), d >= 3, is the genus of L_d as a Hermitian lattice
-  over Z[zeta_d], for the form h with b = Tr h. In Hermitian rank one its
-  mass depends only on d and is computed exactly
-  (CyclotomicHermitianMass.h); in higher rank it is supplied by the
+  over Z[zeta_d], for the form h with b = Tr h. Its mass is computed
+  exactly (CyclotomicHermitianMass.h), except in rank >= 2 when d is a
+  prime power (the ramified prime of E/K); it is then supplied by the
   caller, from Hecke for instance.
 
   Conventions: the Gram matrix A of L, the isometry g acting on the column
@@ -704,10 +704,14 @@ IsometryMassResult<T> IsometryGenusMass(MyMatrix<T> const &A,
       auto iter = herm_mass.find(comp.d);
       if (iter != herm_mass.end()) {
         cm.mass = iter->second;
-      } else if (cm.rank == EulerPhi(comp.d)) {
-        // Hermitian rank one: the mass depends only on d
-        cm.mass = UniversalScalarConversion<T, mpq_class>(
-            RankOneHermitianMassCyclotomic(comp.d));
+      } else {
+        // computed exactly except at a ramified prime of E/K in rank >= 2
+        std::optional<mpq_class> opt = HermitianMassCyclotomicLattice(
+            UniversalMatrixConversion<mpq_class, T>(comp.gram),
+            UniversalMatrixConversion<mpq_class, T>(comp.sigma), comp.d);
+        if (opt) {
+          cm.mass = UniversalScalarConversion<T, mpq_class>(*opt);
+        }
       }
     }
     if (cm.mass) {

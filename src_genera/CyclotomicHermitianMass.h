@@ -5,8 +5,13 @@
 // clang-format off
 #include "SiegelSpecialValues.h"
 #include "MAT_Matrix.h"
+#include "MAT_MatrixInt.h"
+#include "factorizations.h"
+#include <optional>
 #include <cstdint>
 #include <numeric>
+#include <map>
+#include <set>
 #include <vector>
 // clang-format on
 
@@ -491,6 +496,1069 @@ inline mpq_class RankOneHermitianMassCyclotomic(int64_t d_in) {
   mpq_class res = StandardHermitianMassCyclotomic(d, 1);
   if (IsPrimePower(d)) {
     res /= 2;
+  }
+  return res;
+}
+
+/*
+  Higher rank: the local factors.
+
+  The Hermitian lattice is given as a Z-lattice with Gram matrix B of the
+  trace form b = Tr_{E/Q} h and the action of zeta_d (an isometry S on the
+  row vectors, Phi_d(S) = 0). At a rational prime q, Z_q[x] / Phi_d is the
+  product of the completions O_P of O_E at the primes P over q, cut out by
+  idempotents: Phi_d = Phi_{d'}^{phi(q^a)} modulo q for d = q^a d', the
+  factors g_i of Phi_{d'} modulo q (all of degree f, the order of q modulo
+  d') give the primes P_i, and the idempotent of P_i, congruent to 1 modulo
+  g_i^{phi(q^a)} and to 0 modulo the others, is lifted to Z / q^N by e <-
+  3 e^2 - 2 e^3. The complex conjugation maps P_i to the prime of the
+  reciprocal polynomial of g_i: the prime of K below is split in E when
+  the two differ, and otherwise inert, or ramified when d is a power of q.
+
+  A uniformizer of O_P is q when q does not divide d, and 1 - zeta^{d'}
+  otherwise. The Jordan decomposition of h at P has the scales s_i with
+  ranks m_i; the trace dual and the Hermitian dual differ by the different,
+  L^{#b} = D^{-1} L^{#h}, so e_P L^{#b} / e_P L is the O_P-module
+  (+)_i (O_P / P^{s_i + delta})^{m_i}, delta = v_P(D_{E/Q}). Its invariants
+  are read off the lengths of the pi^k e_P L^{#b} + L over L, computed as
+  indices of Z-lattices. For a split prime the module of P alone gives the
+  elementary divisors of the pairing between the lattices at P and P-bar.
+
+  The local factor at a prime of K unramified in E is that of Hecke.jl
+  (QuadForm/Herm/Mass.jl, local_factor): 1 for a single Jordan block,
+  otherwise q_K^N |GL or U_m(q_K)| / prod_i |GL or U_{m_i}(q_K)|, with N =
+  sum_i s_i m_i (sum_{j<i} m_j - sum_{j>i} m_j) for the scales in
+  increasing order, and the group orders normalized as prod_j (1 -
+  (+-q_K)^{-j}). It does not change when all the scales are shifted, so
+  delta does not matter there. The ramified prime, when d is a prime
+  power, also needs the norm classes of the determinants of the blocks of
+  even scale, and is not treated: the mass is then not computed.
+ */
+
+using PolyQ = std::vector<int64_t>;
+
+// a b modulo q without overflow, for 0 <= a, b < q < 2^62
+inline int64_t MulModQ(int64_t a, int64_t b, int64_t q) {
+  __int128 p = static_cast<__int128>(a) * static_cast<__int128>(b);
+  int64_t r = static_cast<int64_t>(p % q);
+  return (r < 0) ? r + q : r;
+}
+
+inline void PolyTrim(PolyQ &a) {
+  while (!a.empty() && a.back() == 0) {
+    a.pop_back();
+  }
+}
+
+inline PolyQ PolyReduce(PolyQ a, int64_t q) {
+  for (auto &x : a) {
+    x = ((x % q) + q) % q;
+  }
+  PolyTrim(a);
+  return a;
+}
+
+inline PolyQ PolyMulQ(PolyQ const &a, PolyQ const &b, int64_t q) {
+  if (a.empty() || b.empty()) {
+    return {};
+  }
+  PolyQ c(a.size() + b.size() - 1, 0);
+  for (size_t i = 0; i < a.size(); i++) {
+    for (size_t j = 0; j < b.size(); j++) {
+      c[i + j] = (c[i + j] + MulModQ(a[i], b[j], q)) % q;
+    }
+  }
+  PolyTrim(c);
+  return c;
+}
+
+inline PolyQ PolySubQ(PolyQ a, PolyQ const &b, int64_t q) {
+  if (a.size() < b.size()) {
+    a.resize(b.size(), 0);
+  }
+  for (size_t i = 0; i < b.size(); i++) {
+    a[i] = ((a[i] - b[i]) % q + q) % q;
+  }
+  PolyTrim(a);
+  return a;
+}
+
+inline int64_t InvModQ(int64_t a, int64_t q) {
+  int64_t r0 = q, r1 = ((a % q) + q) % q, s0 = 0, s1 = 1;
+  while (r1 != 0) {
+    int64_t t = r0 / r1;
+    int64_t r2 = r0 - t * r1;
+    r0 = r1;
+    r1 = r2;
+    int64_t s2 = static_cast<int64_t>((static_cast<__int128>(s0) - static_cast<__int128>(t) * s1) % q);
+    s0 = s1;
+    s1 = s2;
+  }
+  return ((s0 % q) + q) % q;
+}
+
+// quotient and remainder modulo q, b nonzero
+inline std::pair<PolyQ, PolyQ> PolyDivModQ(PolyQ a, PolyQ const &b, int64_t q) {
+  PolyTrim(a);
+  if (a.size() < b.size()) {
+    return {{}, a};
+  }
+  int64_t inv = InvModQ(b.back(), q);
+  PolyQ quo(a.size() - b.size() + 1, 0);
+  for (size_t k = a.size() - b.size() + 1; k-- > 0;) {
+    int64_t c = MulModQ(a[k + b.size() - 1], inv, q);
+    quo[k] = c;
+    for (size_t j = 0; j < b.size(); j++) {
+      a[k + j] = ((a[k + j] - MulModQ(c, b[j], q)) % q + q) % q;
+    }
+  }
+  PolyTrim(a);
+  PolyTrim(quo);
+  return {quo, a};
+}
+
+inline PolyQ PolyMonicQ(PolyQ a, int64_t q) {
+  if (a.empty()) {
+    return a;
+  }
+  int64_t inv = InvModQ(a.back(), q);
+  for (auto &x : a) {
+    x = MulModQ(x, inv, q);
+  }
+  return a;
+}
+
+inline PolyQ PolyGcdQ(PolyQ a, PolyQ b, int64_t q) {
+  PolyTrim(a);
+  PolyTrim(b);
+  while (!b.empty()) {
+    PolyQ r = PolyDivModQ(a, b, q).second;
+    a = b;
+    b = r;
+  }
+  return PolyMonicQ(a, q);
+}
+
+// u with u a = gcd modulo b (a and b coprime): the inverse of a modulo b
+inline PolyQ PolyInverseModQ(PolyQ const &a, PolyQ const &b, int64_t q) {
+  PolyQ r0 = b, r1 = PolyDivModQ(a, b, q).second;
+  PolyQ s0 = {}, s1 = {1};
+  while (!r1.empty()) {
+    std::pair<PolyQ, PolyQ> qr = PolyDivModQ(r0, r1, q);
+    PolyQ s2 = PolySubQ(s0, PolyMulQ(qr.first, s1, q), q);
+    r0 = r1;
+    r1 = qr.second;
+    s0 = s1;
+    s1 = s2;
+  }
+  // r0 is a nonzero constant
+  if (r0.size() != 1) {
+    std::cerr << "CYCLO: the polynomials are not coprime\n";
+    throw TerminalException{1};
+  }
+  int64_t inv = InvModQ(r0[0], q);
+  for (auto &x : s0) {
+    x = MulModQ(x, inv, q);
+  }
+  return PolyDivModQ(s0, b, q).second;
+}
+
+inline PolyQ PolyPowModQ(PolyQ base, uint64_t e, PolyQ const &m, int64_t q) {
+  PolyQ res = {1};
+  base = PolyDivModQ(base, m, q).second;
+  while (e > 0) {
+    if (e & 1) {
+      res = PolyDivModQ(PolyMulQ(res, base, q), m, q).second;
+    }
+    base = PolyDivModQ(PolyMulQ(base, base, q), m, q).second;
+    e >>= 1;
+  }
+  return res;
+}
+
+/*
+  The irreducible factors (monic) of the squarefree g modulo q, all of
+  degree f, by the equal degree splitting of Cantor and Zassenhaus (q odd)
+  or by the trace map (q = 2). The random polynomials are replaced by a
+  deterministic sequence, which splits as well.
+ */
+inline std::vector<PolyQ> EqualDegreeFactorization(PolyQ const &g, int f,
+                                                   int64_t q) {
+  int deg = static_cast<int>(g.size()) - 1;
+  if (deg == f) {
+    return {PolyMonicQ(g, q)};
+  }
+  for (int64_t c = 1;; c++) {
+    // r = x^{1 + c mod deg} + c, a varied family of polynomials
+    PolyQ r(2 + static_cast<size_t>(c % deg), 0);
+    r.back() = 1;
+    r[0] = c % q;
+    r = PolyReduce(r, q);
+    PolyQ h;
+    if (q == 2) {
+      PolyQ t = PolyDivModQ(r, g, q).second;
+      h = t;
+      for (int i = 1; i < f; i++) {
+        t = PolyDivModQ(PolyMulQ(t, t, q), g, q).second;
+        h = PolySubQ(h, PolySubQ({}, t, q), q);
+      }
+    } else {
+      // r^{(q^f - 1)/2} = prod_{i < f} (r^{(q-1)/2})^{q^i}, which keeps the
+      // exponents within 64 bits
+      PolyQ t = PolyPowModQ(r, static_cast<uint64_t>((q - 1) / 2), g, q);
+      h = {1};
+      for (int i = 0; i < f; i++) {
+        h = PolyDivModQ(PolyMulQ(h, t, q), g, q).second;
+        t = PolyPowModQ(t, static_cast<uint64_t>(q), g, q);
+      }
+      h = PolySubQ(h, {1}, q);
+    }
+    PolyQ dgc = PolyGcdQ(g, h, q);
+    int dd = static_cast<int>(dgc.size()) - 1;
+    if (dd > 0 && dd < deg) {
+      std::vector<PolyQ> res = EqualDegreeFactorization(dgc, f, q);
+      std::vector<PolyQ> res2 =
+          EqualDegreeFactorization(PolyDivModQ(g, dgc, q).first, f, q);
+      res.insert(res.end(), res2.begin(), res2.end());
+      return res;
+    }
+    if (c > 100000) {
+      std::cerr << "CYCLO: the equal degree splitting failed\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
+inline PolyQ ReciprocalPolyQ(PolyQ const &g, int64_t q) {
+  PolyQ r(g.rbegin(), g.rend());
+  return PolyMonicQ(PolyReduce(r, q), q);
+}
+
+// The order of q modulo d'.
+inline int MultiplicativeOrder(int64_t q, int64_t m) {
+  if (m == 1) {
+    return 1;
+  }
+  int64_t x = q % m;
+  int o = 1;
+  while (x != 1) {
+    x = (x * q) % m;
+    o++;
+  }
+  return o;
+}
+
+/*
+  Polynomials over Z (mpz), reduced modulo Phi_d (monic) and with the
+  coefficients modulo Q = q^N.
+ */
+using PolyZ = std::vector<mpz_class>;
+
+inline PolyZ PolyZReduce(PolyZ a, std::vector<int64_t> const &Phi,
+                         mpz_class const &Q) {
+  int deg = static_cast<int>(Phi.size()) - 1;
+  for (int k = static_cast<int>(a.size()) - 1; k >= deg; k--) {
+    mpz_class c = a[k];
+    if (c == 0) {
+      continue;
+    }
+    for (int j = 0; j <= deg; j++) {
+      a[k - deg + j] -= c * mpz_class(static_cast<long>(Phi[j]));
+    }
+  }
+  a.resize(deg, mpz_class(0));
+  for (auto &x : a) {
+    x %= Q;
+    if (x < 0) {
+      x += Q;
+    }
+  }
+  return a;
+}
+
+inline PolyZ PolyZMul(PolyZ const &a, PolyZ const &b) {
+  PolyZ c(a.size() + b.size() - 1, mpz_class(0));
+  for (size_t i = 0; i < a.size(); i++) {
+    for (size_t j = 0; j < b.size(); j++) {
+      c[i + j] += a[i] * b[j];
+    }
+  }
+  return c;
+}
+
+/*
+  The Jordan data of h at a prime of K over q: the splitting type (0 split,
+  1 inert, 2 ramified), the residue degree of the prime of K and the list
+  of (scale, rank) in increasing scales.
+ */
+struct HermitianLocalJordan {
+  int type;
+  int f_K;
+  std::vector<std::pair<int, int>> blocks;
+};
+
+template <typename T>
+int ValuationQRational(T const &x, int64_t q) {
+  // v_q of a nonzero rational
+  mpq_class y = UniversalScalarConversion<mpq_class, T>(x);
+  mpz_class num = y.get_num(), den = y.get_den();
+  if (num < 0) {
+    num = -num;
+  }
+  int v = 0;
+  mpz_class qz(static_cast<long>(q));
+  while (num % qz == 0) {
+    num /= qz;
+    v++;
+  }
+  while (den % qz == 0) {
+    den /= qz;
+    v--;
+  }
+  return v;
+}
+
+inline int RankModQ(std::vector<std::vector<int64_t>> M, int64_t q) {
+  int rows = static_cast<int>(M.size());
+  int cols = rows ? static_cast<int>(M[0].size()) : 0;
+  int rank = 0;
+  for (int c = 0; c < cols && rank < rows; c++) {
+    int piv = -1;
+    for (int i = rank; i < rows; i++) {
+      if (M[i][c] % q != 0) {
+        piv = i;
+        break;
+      }
+    }
+    if (piv < 0) {
+      continue;
+    }
+    std::swap(M[piv], M[rank]);
+    int64_t inv = InvModQ(M[rank][c], q);
+    for (int i = 0; i < rows; i++) {
+      if (i != rank && M[i][c] % q != 0) {
+        int64_t t = MulModQ(M[i][c], inv, q);
+        for (int j = 0; j < cols; j++) {
+          M[i][j] = ((M[i][j] - MulModQ(t, M[rank][j], q)) % q + q) % q;
+        }
+      }
+    }
+    rank++;
+  }
+  return rank;
+}
+
+// v_q of the index [L + span(rows of M) : L], M rational, L = Z^r.
+inline int ValuationIndexOverlattice(MyMatrix<mpq_class> const &M, int64_t q) {
+  int r = M.cols();
+  mpz_class D(1);
+  for (int i = 0; i < M.rows(); i++) {
+    for (int j = 0; j < r; j++) {
+      D = lcm(D, M(i, j).get_den());
+    }
+  }
+  MyMatrix<mpz_class> G(M.rows() + r, r);
+  for (int i = 0; i < M.rows(); i++) {
+    for (int j = 0; j < r; j++) {
+      mpq_class v = M(i, j) * D;
+      G(i, j) = v.get_num();
+    }
+  }
+  for (int i = 0; i < r; i++) {
+    for (int j = 0; j < r; j++) {
+      G(M.rows() + i, j) = (i == j) ? D : mpz_class(0);
+    }
+  }
+  MyMatrix<mpz_class> Bz = GetZbasis(G);
+  mpq_class idx = mpq_class(mpz_class(1)) / mpq_class(DeterminantMat(Bz));
+  for (int i = 0; i < r; i++) {
+    idx *= mpq_class(D);
+  }
+  return ValuationQRational(idx, q);
+}
+
+inline std::vector<HermitianLocalJordan>
+HermitianJordanAtPrime(MyMatrix<mpq_class> const &B, MyMatrix<mpq_class> const &S,
+                       int64_t d, int64_t q) {
+  int r = B.rows();
+  int64_t qa = 1;
+  int64_t dp = d;
+  while (dp % q == 0) {
+    dp /= q;
+    qa *= q;
+  }
+  int a = 0;
+  for (int64_t x = qa; x > 1; x /= q) {
+    a++;
+  }
+  int64_t e_ram = (qa == 1) ? 1 : qa / q * (q - 1);
+  int64_t delta = (qa == 1) ? 0 : a * e_ram - qa / q;
+  int f = MultiplicativeOrder(q, dp);
+  std::vector<int64_t> PhiD = CyclotomicPolynomial(static_cast<int>(d));
+  std::vector<int64_t> PhiDp = CyclotomicPolynomial(static_cast<int>(dp));
+  PolyQ phid_q = PolyReduce(PolyQ(PhiD.begin(), PhiD.end()), q);
+  std::vector<PolyQ> gs =
+      EqualDegreeFactorization(PolyReduce(PolyQ(PhiDp.begin(), PhiDp.end()), q),
+                               f, q);
+  // the precision: beyond the exponent of the discriminant group at q
+  int vdet = ValuationQRational(DeterminantMat(B), q);
+  int N = vdet + 4;
+  mpz_class Q(1);
+  for (int i = 0; i < N; i++) {
+    Q *= static_cast<long>(q);
+  }
+  // the dual basis, the uniformizer and the idempotent of each factor
+  MyMatrix<mpq_class> Binv = Inverse(B);
+  MyMatrix<mpq_class> Id = IdentityMat<mpq_class>(r);
+  MyMatrix<mpq_class> Pi;
+  if (qa == 1) {
+    Pi = Id * mpq_class(static_cast<long>(q));
+  } else {
+    MyMatrix<mpq_class> Sd = Id;
+    for (int64_t i = 0; i < dp; i++) {
+      Sd = Sd * S;
+    }
+    Pi = Id - Sd;
+  }
+  auto idempotent_matrix = [&](PolyQ const &g) -> MyMatrix<mpq_class> {
+    PolyQ P = {1};
+    for (int64_t i = 0; i < e_ram; i++) {
+      P = PolyMulQ(P, g, q);
+    }
+    PolyQ Qp = PolyDivModQ(phid_q, P, q).first;
+    // e = Qp * (Qp^{-1} mod P): 1 modulo P, 0 modulo Qp
+    PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
+    PolyZ ez;
+    for (int64_t c : e0) {
+      ez.push_back(mpz_class(static_cast<long>(c)));
+    }
+    ez = PolyZReduce(ez, PhiD, Q);
+    for (int it = 0; it < 64; it++) {
+      PolyZ e2 = PolyZReduce(PolyZMul(ez, ez), PhiD, Q);
+      PolyZ e3 = PolyZReduce(PolyZMul(e2, ez), PhiD, Q);
+      PolyZ en(e2.size());
+      for (size_t i = 0; i < e2.size(); i++) {
+        en[i] = 3 * e2[i] - 2 * e3[i];
+      }
+      en = PolyZReduce(en, PhiD, Q);
+      if (en == ez) {
+        break;
+      }
+      ez = en;
+    }
+    MyMatrix<mpq_class> E = ZeroMatrix<mpq_class>(r, r);
+    MyMatrix<mpq_class> pw = Id;
+    for (size_t i = 0; i < ez.size(); i++) {
+      E += pw * mpq_class(ez[i]);
+      pw = pw * S;
+    }
+    return E;
+  };
+  std::vector<HermitianLocalJordan> res;
+  std::vector<bool> done(gs.size(), false);
+  for (size_t i = 0; i < gs.size(); i++) {
+    if (done[i]) {
+      continue;
+    }
+    PolyQ gr = ReciprocalPolyQ(gs[i], q);
+    size_t j = i;
+    for (size_t u = 0; u < gs.size(); u++) {
+      if (gs[u] == gr) {
+        j = u;
+      }
+    }
+    done[i] = true;
+    done[j] = true;
+    HermitianLocalJordan hj;
+    if (j != i) {
+      hj.type = 0;
+      hj.f_K = f;
+    } else if (qa > 1 && dp == 1) {
+      hj.type = 2;
+      hj.f_K = f;
+    } else {
+      hj.type = 1;
+      hj.f_K = f / 2;
+    }
+    MyMatrix<mpq_class> E = idempotent_matrix(gs[i]);
+    // the O_P-rank: the rank modulo q of E divided by [O_P : Z_q]
+    std::vector<std::vector<int64_t>> Emod(r, std::vector<int64_t>(r));
+    mpz_class qz(static_cast<long>(q));
+    for (int u = 0; u < r; u++) {
+      for (int v = 0; v < r; v++) {
+        mpz_class x = E(u, v).get_num() % qz;
+        if (x < 0) {
+          x += qz;
+        }
+        Emod[u][v] = x.get_si();
+      }
+    }
+    int rk = RankModQ(Emod, q);
+    int m = rk / static_cast<int>(e_ram * f);
+    // len[k] = log_q |pi^k X|, X = e_P L^# / e_P L, until it vanishes
+    std::vector<int> len;
+    MyMatrix<mpq_class> Mk = Binv * E;
+    while (true) {
+      len.push_back(ValuationIndexOverlattice(Mk, q));
+      if (len.back() == 0 || len.size() > static_cast<size_t>(4 * vdet + 8)) {
+        break;
+      }
+      Mk = Mk * Pi;
+    }
+    // c[k] = #{invariants t > k} = dim_{F_q}(pi^k X / pi^{k+1} X) / f
+    std::vector<int> c;
+    for (size_t k = 0; k + 1 < len.size(); k++) {
+      c.push_back((len[k] - len[k + 1]) / f);
+    }
+    std::map<int, int> counts;
+    int n_pos = 0;
+    for (size_t j = 1; j <= c.size(); j++) {
+      int nb = c[j - 1] - ((j < c.size()) ? c[j] : 0);
+      if (nb > 0) {
+        counts[static_cast<int>(j)] += nb;
+        n_pos += nb;
+      }
+    }
+    if (m - n_pos > 0) {
+      counts[0] += m - n_pos;
+    }
+    for (auto &kv : counts) {
+      hj.blocks.push_back({kv.first - static_cast<int>(delta), kv.second});
+    }
+    res.push_back(hj);
+  }
+  return res;
+}
+
+inline mpq_class HermitianGroupOrderNormalized(int type, int m, int64_t qK) {
+  // GL (split) or U (inert): prod_{j=1}^{m} (1 - (+-qK)^{-j})
+  mpq_class res(1);
+  mpq_class base = (type == 0) ? mpq_class(static_cast<long>(qK))
+                               : mpq_class(-static_cast<long>(qK));
+  mpq_class pw(1);
+  for (int j = 1; j <= m; j++) {
+    pw /= base;
+    res *= (1 - pw);
+  }
+  return res;
+}
+
+inline mpq_class HermitianLocalFactorUnramified(HermitianLocalJordan const &hj,
+                                                int64_t q) {
+  if (hj.blocks.size() <= 1) {
+    return mpq_class(1);
+  }
+  int64_t qK = 1;
+  for (int i = 0; i < hj.f_K; i++) {
+    qK *= q;
+  }
+  int m = 0;
+  for (auto &b : hj.blocks) {
+    m += b.second;
+  }
+  mpq_class f = HermitianGroupOrderNormalized(hj.type, m, qK);
+  int64_t N = 0;
+  int before = 0;
+  for (size_t i = 0; i < hj.blocks.size(); i++) {
+    int s = hj.blocks[i].first;
+    int mi = hj.blocks[i].second;
+    int after = m - before - mi;
+    N += static_cast<int64_t>(s) * mi * (before - after);
+    f /= HermitianGroupOrderNormalized(hj.type, mi, qK);
+    before += mi;
+  }
+  mpq_class qpow(1);
+  mpq_class qK_T(static_cast<long>(qK));
+  for (int64_t i = 0; i < (N >= 0 ? N : -N); i++) {
+    if (N >= 0) {
+      qpow *= qK_T;
+    } else {
+      qpow /= qK_T;
+    }
+  }
+  return qpow * f;
+}
+
+/*
+  The ramified prime, d = q^a with q odd: E_P / Q_q is totally ramified, P
+  is the only prime over q, its residue field is F_q and v_P(x) =
+  v_q(N_{E/Q}(x)). The Hermitian form is computed in E exactly: an
+  O_P-basis x_1, ..., x_m of L (x) Z_q is taken among the vectors
+  independent in L / pi L (pi = 1 - zeta), and h(x, y) = sum_t b(zeta^t x,
+  y) zeta_t^v with (zeta_t^v) the basis dual to (zeta^t) for Tr_{E/Q}. The
+  Jordan splitting splits off a block of rank one when an entry of minimal
+  valuation is on the diagonal and of rank two otherwise; the elimination
+  coefficients are integral at P. A block of even scale s has a
+  discriminant (-1)^{m_i (m_i - 1) / 2} det = N(pi)^{s m_i / 2} u, and it
+  is a norm from E_P iff the residue of the unit u, its value at zeta = 1
+  modulo q, is a square.
+  The local factor is then that of Hecke.jl at a ramified non-dyadic
+  prime, with the Sp and O^+- orders of the residue field F_q.
+ */
+using ElemE = std::vector<mpq_class>;
+
+struct CyclotomicField {
+  int64_t d;
+  int deg;
+  std::vector<int64_t> Phi;
+};
+
+inline ElemE EReduce(std::vector<mpq_class> a, CyclotomicField const &K) {
+  int deg = K.deg;
+  for (int k = static_cast<int>(a.size()) - 1; k >= deg; k--) {
+    mpq_class c = a[k];
+    if (c == 0) {
+      continue;
+    }
+    for (int j = 0; j <= deg; j++) {
+      a[k - deg + j] -= c * mpq_class(static_cast<long>(K.Phi[j]));
+    }
+  }
+  a.resize(deg, mpq_class(0));
+  return a;
+}
+
+inline ElemE EMul(ElemE const &a, ElemE const &b, CyclotomicField const &K) {
+  std::vector<mpq_class> c(a.size() + b.size(), mpq_class(0));
+  for (size_t i = 0; i < a.size(); i++) {
+    if (a[i] == 0) {
+      continue;
+    }
+    for (size_t j = 0; j < b.size(); j++) {
+      c[i + j] += a[i] * b[j];
+    }
+  }
+  return EReduce(c, K);
+}
+
+inline ElemE ESub(ElemE a, ElemE const &b) {
+  for (size_t i = 0; i < a.size(); i++) {
+    a[i] -= b[i];
+  }
+  return a;
+}
+
+inline ElemE EZetaPower(int64_t t, CyclotomicField const &K) {
+  std::vector<mpq_class> c(K.d, mpq_class(0));
+  c[((t % K.d) + K.d) % K.d] = 1;
+  return EReduce(c, K);
+}
+
+inline ElemE EConj(ElemE const &a, CyclotomicField const &K) {
+  std::vector<mpq_class> c(K.d, mpq_class(0));
+  for (int t = 0; t < K.deg; t++) {
+    c[(K.d - t) % K.d] += a[t];
+  }
+  return EReduce(c, K);
+}
+
+inline MyMatrix<mpq_class> EMulMatrix(ElemE const &a, CyclotomicField const &K) {
+  MyMatrix<mpq_class> M(K.deg, K.deg);
+  for (int j = 0; j < K.deg; j++) {
+    ElemE c = EMul(a, EZetaPower(j, K), K);
+    for (int i = 0; i < K.deg; i++) {
+      M(j, i) = c[i];
+    }
+  }
+  return M;
+}
+
+inline bool EIsZero(ElemE const &a) {
+  for (auto &x : a) {
+    if (x != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline ElemE EInv(ElemE const &a, CyclotomicField const &K) {
+  // x a = 1: x M_a = e_0 with the rows of M_a the a zeta^j
+  MyMatrix<mpq_class> M = EMulMatrix(a, K);
+  MyMatrix<mpq_class> Minv = Inverse(M);
+  ElemE x(K.deg);
+  for (int i = 0; i < K.deg; i++) {
+    x[i] = Minv(0, i);
+  }
+  return x;
+}
+
+// v_q(N(a)), large for zero
+inline int EValuation(ElemE const &a, CyclotomicField const &K, int64_t q) {
+  if (EIsZero(a)) {
+    return 1 << 28;
+  }
+  return ValuationQRational(DeterminantMat(EMulMatrix(a, K)), q);
+}
+
+inline int LegendreModQ(mpz_class a, int64_t q) {
+  mpz_class qz(static_cast<long>(q));
+  a %= qz;
+  if (a < 0) {
+    a += qz;
+  }
+  if (a == 0) {
+    return 0;
+  }
+  mpz_class r;
+  mpz_class e = (qz - 1) / 2;
+  mpz_powm(r.get_mpz_t(), a.get_mpz_t(), e.get_mpz_t(), qz.get_mpz_t());
+  return (r == 1) ? 1 : -1;
+}
+
+// the residue at zeta = 1 modulo q of a P-integral element
+inline mpz_class EResidue(ElemE const &a, int64_t q) {
+  mpz_class qz(static_cast<long>(q));
+  mpz_class res(0);
+  for (auto &x : a) {
+    mpz_class num = x.get_num() % qz;
+    mpz_class den = x.get_den() % qz;
+    mpz_class inv;
+    mpz_invert(inv.get_mpz_t(), den.get_mpz_t(), qz.get_mpz_t());
+    res = (res + num * inv) % qz;
+  }
+  if (res < 0) {
+    res += qz;
+  }
+  return res;
+}
+
+inline mpq_class HeckeGroupOrderSp(int m, int64_t q) {
+  mpq_class res(1);
+  for (int j = 2; j <= m; j += 2) {
+    mpq_class pw(1);
+    for (int i = 0; i < j; i++) {
+      pw /= mpq_class(static_cast<long>(q));
+    }
+    res *= (1 - pw);
+  }
+  return res;
+}
+
+inline mpq_class HeckeGroupOrderO(int m, int eps, int64_t q) {
+  auto qinv_pow = [&](int j) -> mpq_class {
+    mpq_class pw(1);
+    for (int i = 0; i < j; i++) {
+      pw /= mpq_class(static_cast<long>(q));
+    }
+    return pw;
+  };
+  mpq_class res(2);
+  if (m % 2 == 0) {
+    int k = m / 2;
+    res *= (1 - mpq_class(eps) * qinv_pow(k));
+    for (int j = 2; j <= m - 2; j += 2) {
+      res *= (1 - qinv_pow(j));
+    }
+  } else {
+    for (int j = 2; j <= m; j += 2) {
+      res *= (1 - qinv_pow(j));
+    }
+  }
+  return res;
+}
+
+/*
+  The local factor at the ramified prime, or nothing for q = 2.
+ */
+inline std::optional<mpq_class>
+HermitianLocalFactorRamified(MyMatrix<mpq_class> const &B,
+                             MyMatrix<mpq_class> const &S, int64_t d,
+                             int64_t q) {
+  if (q == 2) {
+    return {};
+  }
+  int r = B.rows();
+  CyclotomicField K;
+  K.d = d;
+  K.Phi = CyclotomicPolynomial(static_cast<int>(d));
+  K.deg = static_cast<int>(K.Phi.size()) - 1;
+  int m = r / K.deg;
+  // the dual basis of (zeta^t) for the trace: T_{st} = Tr(zeta^{s+t})
+  auto trace = [&](ElemE const &x) -> mpq_class {
+    // Tr(zeta^t) for t < deg, then linear
+    mpq_class res(0);
+    for (int t = 0; t < K.deg; t++) {
+      if (x[t] == 0) {
+        continue;
+      }
+      // Tr(zeta^t) is the Ramanujan sum c_d(t)
+      mpq_class tr(0);
+      int64_t g = CycloGcd(t, d);
+      int64_t dd = d / g;
+      // c_d(t) = mu(dd) phi(d) / phi(dd)
+      int64_t mu = 1;
+      {
+        int64_t x2 = dd;
+        for (int64_t p = 2; p <= x2; p++) {
+          if (x2 % p == 0) {
+            x2 /= p;
+            if (x2 % p == 0) {
+              mu = 0;
+              break;
+            }
+            mu = -mu;
+          }
+        }
+      }
+      tr = mpq_class(static_cast<long>(mu * EulerPhi(d) / EulerPhi(dd)));
+      res += x[t] * tr;
+    }
+    return res;
+  };
+  MyMatrix<mpq_class> T(K.deg, K.deg);
+  for (int s2 = 0; s2 < K.deg; s2++) {
+    for (int t = 0; t < K.deg; t++) {
+      T(s2, t) = trace(EZetaPower(s2 + t, K));
+    }
+  }
+  MyMatrix<mpq_class> Tinv = Inverse(T);
+  // an O_P-basis among the standard vectors: independent modulo pi L
+  MyMatrix<mpq_class> Id = IdentityMat<mpq_class>(r);
+  MyMatrix<mpq_class> Pi = Id - S;
+  std::vector<std::vector<int64_t>> rows;
+  mpz_class qz(static_cast<long>(q));
+  auto red = [&](mpq_class const &x) -> int64_t {
+    mpz_class v = x.get_num() % qz;
+    if (v < 0) {
+      v += qz;
+    }
+    return v.get_si();
+  };
+  for (int i = 0; i < r; i++) {
+    std::vector<int64_t> row(r);
+    for (int j = 0; j < r; j++) {
+      row[j] = red(Pi(i, j));
+    }
+    rows.push_back(row);
+  }
+  int base_rank = RankModQ(rows, q);
+  std::vector<int> chosen;
+  for (int k = 0; k < r && static_cast<int>(chosen.size()) < m; k++) {
+    std::vector<std::vector<int64_t>> test = rows;
+    for (int c : chosen) {
+      std::vector<int64_t> e(r, 0);
+      e[c] = 1;
+      test.push_back(e);
+    }
+    std::vector<int64_t> e(r, 0);
+    e[k] = 1;
+    test.push_back(e);
+    if (RankModQ(test, q) == base_rank + static_cast<int>(chosen.size()) + 1) {
+      chosen.push_back(k);
+    }
+  }
+  if (static_cast<int>(chosen.size()) != m) {
+    std::cerr << "CYCLO: no O_P-basis found\n";
+    throw TerminalException{1};
+  }
+  // h(x_i, x_j) = sum_t b(zeta^t x_i, x_j) zeta_t^v, zeta_t^v = sum_s
+  // Tinv(t, s) zeta^s
+  std::vector<MyMatrix<mpq_class>> Spow{Id};
+  for (int t = 1; t < K.deg; t++) {
+    Spow.push_back(Spow.back() * S);
+  }
+  std::vector<std::vector<ElemE>> H(m, std::vector<ElemE>(m));
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < m; j++) {
+      ElemE val(K.deg, mpq_class(0));
+      for (int t = 0; t < K.deg; t++) {
+        // b(zeta^t x_i, x_j) with x_i the chosen standard vector
+        mpq_class bt(0);
+        for (int u = 0; u < r; u++) {
+          bt += Spow[t](chosen[i], u) * B(u, chosen[j]);
+        }
+        for (int s2 = 0; s2 < K.deg; s2++) {
+          val[s2] += bt * Tinv(t, s2);
+        }
+      }
+      H[i][j] = val;
+    }
+  }
+  // the Jordan splitting
+  std::map<int, std::pair<int, ElemE>> blocks;  // scale -> (rank, det)
+  auto add_block = [&](int s, int rk, ElemE const &det) -> void {
+    auto iter = blocks.find(s);
+    if (iter == blocks.end()) {
+      blocks[s] = {rk, det};
+    } else {
+      iter->second.first += rk;
+      iter->second.second = EMul(iter->second.second, det, K);
+    }
+  };
+  while (!H.empty()) {
+    int n = static_cast<int>(H.size());
+    int vmin = 1 << 28, bi = -1, bj = -1;
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        int v = EValuation(H[i][j], K, q);
+        if (v < vmin || (v == vmin && i == j && bi != bj)) {
+          vmin = v;
+          bi = i;
+          bj = j;
+        }
+      }
+    }
+    if (bi == bj) {
+      ElemE hinv = EInv(H[bi][bi], K);
+      for (int k = 0; k < n; k++) {
+        if (k == bi) {
+          continue;
+        }
+        ElemE c = EMul(H[k][bi], hinv, K);
+        ElemE cc = EConj(c, K);
+        for (int l = 0; l < n; l++) {
+          H[k][l] = ESub(H[k][l], EMul(c, H[bi][l], K));
+        }
+        for (int l = 0; l < n; l++) {
+          H[l][k] = ESub(H[l][k], EMul(H[l][bi], cc, K));
+        }
+      }
+      add_block(vmin, 1, H[bi][bi]);
+      H.erase(H.begin() + bi);
+      for (auto &row : H) {
+        row.erase(row.begin() + bi);
+      }
+    } else {
+      int i0 = bi, j0 = bj;
+      ElemE a11 = H[i0][i0], a12 = H[i0][j0], a21 = H[j0][i0], a22 = H[j0][j0];
+      ElemE det2 = ESub(EMul(a11, a22, K), EMul(a12, a21, K));
+      ElemE dinv = EInv(det2, K);
+      // the inverse of the 2x2 block: [[a22, -a12], [-a21, a11]] / det2
+      for (int k = 0; k < n; k++) {
+        if (k == i0 || k == j0) {
+          continue;
+        }
+        // (c1, c2) = (H[k][i0], H[k][j0]) * block^{-1}
+        ElemE x1 = H[k][i0], x2 = H[k][j0];
+        ElemE c1 = EMul(ESub(EMul(x1, a22, K), EMul(x2, a21, K)), dinv, K);
+        ElemE c2 = EMul(ESub(EMul(x2, a11, K), EMul(x1, a12, K)), dinv, K);
+        ElemE cc1 = EConj(c1, K), cc2 = EConj(c2, K);
+        for (int l = 0; l < n; l++) {
+          H[k][l] = ESub(ESub(H[k][l], EMul(c1, H[i0][l], K)),
+                         EMul(c2, H[j0][l], K));
+        }
+        for (int l = 0; l < n; l++) {
+          H[l][k] = ESub(ESub(H[l][k], EMul(H[l][i0], cc1, K)),
+                         EMul(H[l][j0], cc2, K));
+        }
+      }
+      add_block(vmin, 2, det2);
+      int hi = std::max(i0, j0), lo = std::min(i0, j0);
+      H.erase(H.begin() + hi);
+      H.erase(H.begin() + lo);
+      for (auto &row : H) {
+        row.erase(row.begin() + hi);
+        row.erase(row.begin() + lo);
+      }
+    }
+  }
+  // the local factor of Hecke.jl at a ramified non-dyadic prime
+  mpq_class f = HeckeGroupOrderSp(2 * (m / 2), q);
+  int64_t N = 0;
+  int after_total = m;
+  ElemE pipibar = ESub(ESub(EZetaPower(0, K), EZetaPower(1, K)),
+                       ESub(EZetaPower(-1, K), EZetaPower(0, K)));
+  for (auto &kv : blocks) {
+    int s = kv.first;
+    int mi = kv.second.first;
+    after_total -= mi;
+    int ri = after_total;
+    int64_t fl = (s >= 0) ? s / 2 : -((-s + 1) / 2);
+    N -= fl * mi * mi;
+    if (s % 2 != 0) {
+      N -= static_cast<int64_t>(mi + 1) * (mi / 2);
+      f /= HeckeGroupOrderSp(mi, q);
+    } else {
+      // det = (pi pi-bar)^{s mi / 2} u
+      ElemE u = kv.second.second;
+      int w = EValuation(u, K, q);
+      ElemE pinv = EInv(pipibar, K);
+      for (int i = 0; i < w / 2; i++) {
+        u = EMul(u, pinv, K);
+      }
+      // the discriminant (-1)^{m_i (m_i - 1) / 2} det, as in Hecke.jl
+      mpz_class res_u = EResidue(u, q);
+      if ((mi * (mi - 1) / 2) % 2 == 1) {
+        res_u = -res_u;
+      }
+      int leg = LegendreModQ(res_u, q);
+      f /= HeckeGroupOrderO(mi, leg, q);
+    }
+    N -= static_cast<int64_t>(s) * mi * ri;
+    N += static_cast<int64_t>(s) * mi * m / 2;
+  }
+  if (m % 2 == 0) {
+    N += m / 2;
+  }
+  mpq_class qpow(1);
+  for (int64_t i = 0; i < (N >= 0 ? N : -N); i++) {
+    if (N >= 0) {
+      qpow *= mpq_class(static_cast<long>(q));
+    } else {
+      qpow /= mpq_class(static_cast<long>(q));
+    }
+  }
+  return qpow * f;
+}
+
+/*
+  The mass of the genus of the Hermitian lattice over Q(zeta_d) given by
+  the Gram matrix B of its trace form and the action S of zeta_d, or
+  nothing at a ramified prime of E/K with rank >= 2.
+ */
+inline std::optional<mpq_class>
+HermitianMassCyclotomicLattice(MyMatrix<mpq_class> const &B,
+                               MyMatrix<mpq_class> const &S, int64_t d_in) {
+  int64_t d = NormalizeCyclotomicIndex(d_in);
+  int r = B.rows();
+  int64_t phi = EulerPhi(d);
+  int m = static_cast<int>(r / phi);
+  if (m == 1) {
+    return RankOneHermitianMassCyclotomic(d);
+  }
+  // For d_in = 2 d with d odd, Phi_{d_in}(S) = Phi_d(-S): -S is the action
+  // of a primitive d-th root of unity.
+  MyMatrix<mpq_class> Sd = S;
+  if (d != d_in) {
+    Sd = -S;
+  }
+  mpq_class res = StandardHermitianMassCyclotomic(d, m);
+  mpq_class det = DeterminantMat(B);
+  std::set<int64_t> primes;
+  {
+    mpz_class num = det.get_num();
+    if (num < 0) {
+      num = -num;
+    }
+    if (num > 1) {
+      for (mpz_class const &p : FactorsInt(num)) {
+        primes.insert(p.get_si());
+      }
+    }
+    // the primes dividing d, where E/Q ramifies
+    int64_t x = d;
+    for (int64_t p = 2; p <= x; p++) {
+      if (x % p == 0) {
+        primes.insert(p);
+        while (x % p == 0) {
+          x /= p;
+        }
+      }
+    }
+  }
+  for (int64_t q : primes) {
+    for (auto &hj : HermitianJordanAtPrime(B, Sd, d, q)) {
+      if (hj.type == 2) {
+        std::optional<mpq_class> opt = HermitianLocalFactorRamified(B, Sd, d, q);
+        if (!opt) {
+          return {};
+        }
+        res *= *opt;
+      } else {
+        res *= HermitianLocalFactorUnramified(hj, q);
+      }
+    }
   }
   return res;
 }
