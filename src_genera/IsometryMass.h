@@ -62,9 +62,8 @@
   The masses of the orthogonal L_d come from GenusMass. The genus of the
   pair (L_d, sigma_d), d >= 3, is the genus of L_d as a Hermitian lattice
   over Z[zeta_d], for the form h with b = Tr h. Its mass is computed
-  exactly (CyclotomicHermitianMass.h), except in rank >= 2 when d is a
-  prime power (the ramified prime of E/K); it is then supplied by the
-  caller, from Hecke for instance.
+  exactly (CyclotomicHermitianMass.h); a mass supplied by the caller takes
+  precedence.
 
   Conventions: the Gram matrix A of L, the isometry g acting on the column
   vectors, g^T A g = A. Internally the row vectors are acted on by P =

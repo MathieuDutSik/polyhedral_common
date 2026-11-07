@@ -112,11 +112,16 @@ zeta_d: at the primes of K unramified in E (all of them when d is not a
 prime power) through the idempotents of Z_q[x]/Phi_d and the invariants of
 the discriminant module under 1 - zeta^{d'}, and at the ramified prime
 (d = q^a, q odd) by a Jordan splitting of the Hermitian form computed in E,
-with the norm classes of the blocks of even scale. The dyadic ramified
-prime (4 | d, rank >= 2) is not treated; such masses are given in
-`HermMass` as lines `d num den`, from Hecke for instance (`none` if there
-are none). Checked against Hecke.jl on 38 Hermitian lattices of rank 2 and
-3 over Q(zeta_d), d = 3, 5, 7, 9, 11, 12, 13, 15.
+with the norm classes of the blocks of even scale. At the dyadic ramified
+prime (4 | d) the factor is that of Hecke.jl: the formula for a maximal
+lattice when L is maximal there, and otherwise the generic method, a chain
+of overlattices of index 2 up to a maximal one with, at each step, the
+numbers of sublattices and superlattices of index 2 locally isometric to
+the neighbours in the chain, the local isometry being decided by the genus
+symbol of Kirschmer. All the masses over Q(zeta_d) are thus computed; a
+mass given in `HermMass` as a line `d num den` still takes precedence.
+Checked against Hecke.jl on 78 Hermitian lattices of rank 2 and 3 over
+Q(zeta_d), d = 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16.
 `GENUS_IsometryMass hermitian d m` prints the standard mass of rank m over
 Q(zeta_d) and, for m = 1, the mass. The glue factor is computed exhaustively: the isometries of
 each primary discriminant module commuting with g are listed by

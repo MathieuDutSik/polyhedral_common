@@ -104,6 +104,12 @@ herm_lattice_case cases7 12 52486783453/384
 herm_lattice_case cases12 15 1244881/900
 herm_lattice_case ram11 7 691590/49
 herm_lattice_case ram15 9 1200500/81
+# the dyadic ramified prime: of Q(zeta_8) for a lattice maximal there, of
+# Q(i) in rank 3 and of Q(zeta_16) for lattices that are not (the chain
+# method with Kirschmer's local isometry test)
+herm_lattice_case dy21 8 1741/96
+herm_lattice_case dy10 4 1333/16
+herm_lattice_case dy37 16 28824005/32
 herm_case 47 1 mass 695/94
 herm_case 19 1 mass 1/38
 herm_case 16 1 mass 1/16

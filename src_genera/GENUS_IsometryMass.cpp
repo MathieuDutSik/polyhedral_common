@@ -199,13 +199,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "                   definite lattice L\n";
       std::cerr << "Isometry (input) : g in GL_n(Z) of finite order with\n";
       std::cerr << "                   g^T A g = A\n";
-      std::cerr << "HermMass (input) : 'none', or lines 'd num den', the\n";
-      std::cerr << "                   masses of the Hermitian components\n";
-      std::cerr << "                   L cap ker Phi_d(g), d >= 3, of rank\n";
-      std::cerr << "                   >= 2 (from Hecke); those of rank one\n";
-      std::cerr << "                   are computed. Without them the\n";
-      std::cerr << "                   program gives the glue factor and\n";
-      std::cerr << "                   the other masses only\n";
+      std::cerr << "HermMass (input) : 'none' (the masses of the Hermitian\n";
+      std::cerr << "                   components L cap ker Phi_d(g), d >= 3,\n";
+      std::cerr << "                   are computed), or lines 'd num den'\n";
+      std::cerr << "                   giving them, which take precedence\n";
       std::cerr << "OutFile          : stderr (default), stdout or a file\n";
       std::cerr << "\n";
       std::cerr << "mass  : the mass of the genus of the pair (L, g)\n";
