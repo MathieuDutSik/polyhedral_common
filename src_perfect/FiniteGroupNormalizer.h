@@ -367,6 +367,26 @@ ComputeBravaisNormalizer(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
   return res;
 }
 
+/*
+  N(G) as the stabilizer of G in the conjugation action of N(B) on the
+  subgroups of B: the orbit length [N(B) : N(G)] and the generators.
+ */
+template <typename Tint>
+std::pair<size_t, std::vector<MyMatrix<Tint>>>
+NormalizerFromBravaisNormalizer(std::vector<MyMatrix<Tint>> const &elts_G,
+                                std::vector<MyMatrix<Tint>> const &gens_G, int n,
+                                std::vector<MyMatrix<Tint>> const &gens_NB,
+                                FiniteGroupNormalizerBounds const &bounds,
+                                std::ostream &os) {
+  SubgroupOrbitResult<Tint> orb =
+      OrbitSubgroupConjugation(elts_G, n, gens_NB, {}, bounds.max_orbit);
+  std::vector<MyMatrix<Tint>> sch = orb.stabilizer_gens;
+  for (auto const &g : gens_G) {
+    sch.push_back(g);
+  }
+  return {orb.transversal.size(), ReduceGenerators(sch, n, os)};
+}
+
 template <typename Tint> struct FiniteGroupNormalizerResult {
   int n;
   size_t order_G;
@@ -405,14 +425,11 @@ FiniteGroupNormalizer(std::vector<MyMatrix<Tint>> const &gens_G,
     res.index_in_NB = 1;
     res.gens = bnd.normalizer_gens;
   } else {
-    SubgroupOrbitResult<Tint> orb = OrbitSubgroupConjugation(
-        elts_G, n, bnd.normalizer_gens, {}, bounds.max_orbit);
-    res.index_in_NB = orb.transversal.size();
-    std::vector<MyMatrix<Tint>> sch = orb.stabilizer_gens;
-    for (auto const &g : gens_G) {
-      sch.push_back(g);
-    }
-    res.gens = ReduceGenerators(sch, n, os);
+    std::pair<size_t, std::vector<MyMatrix<Tint>>> pair =
+        NormalizerFromBravaisNormalizer(elts_G, gens_G, n, bnd.normalizer_gens,
+                                        bounds, os);
+    res.index_in_NB = pair.first;
+    res.gens = pair.second;
   }
   std::unordered_set<MyMatrix<Tint>> set_G(elts_G.begin(), elts_G.end());
   for (auto const &x : res.gens) {
@@ -447,6 +464,8 @@ std::optional<MyMatrix<Tint>> OrientIsometry(MyMatrix<Tint> const &M,
 template <typename Tint> struct FiniteGroupConjugacyResult {
   std::optional<MyMatrix<Tint>> conjugator;
   std::string reason;
+  // the generators of N(B2) when they were computed, for reuse
+  std::vector<MyMatrix<Tint>> normalizer_B2_gens;
 };
 
 template <typename T, typename Tint, typename Tgroup>
@@ -494,6 +513,7 @@ FiniteGroupConjugacy(std::vector<MyMatrix<Tint>> const &gens_G1,
   // Step 1: a matrix mapping B1 to B2
   BravaisNormalizerData<T, Tint> bnd2 =
       ComputeBravaisNormalizer<T, Tint, Tgroup>(LinSpa2, os);
+  res.normalizer_B2_gens = bnd2.normalizer_gens;
   MyMatrix<T> P1 = GetOnePerfectForm<T, Tint>(LinSpa1, os).first;
   std::vector<size_t> key_B2 = SubgroupKey(elts_B2);
   std::optional<MyMatrix<Tint>> opt_X1;
@@ -558,6 +578,133 @@ FiniteGroupConjugacy(std::vector<MyMatrix<Tint>> const &gens_G1,
       std::cerr << "FGN: the conjugating matrix is wrong\n";
       throw TerminalException{1};
     }
+  }
+  res.conjugator = Y;
+  res.reason = "conjugate";
+  return res;
+}
+
+/*
+  Conjugacy of two elements g, h of finite order of GL_n(Z): X g X^{-1} = h.
+
+  If X g X^{-1} = h then X <g> X^{-1} = <h>, so the cyclic groups are
+  Z-equivalent, by some X1. Every X with X <g> X^{-1} = <h> is then Y X1
+  with Y in N(<h>), so g and h are conjugate iff h is in the orbit of
+  X1 g X1^{-1}, an element of <h>, under the conjugation action of N(<h>).
+  The orbit is finite (it lies in <h>). N(<h>) is obtained from the
+  normalizer of the Bravais group of <h>, which the group conjugacy has
+  already computed.
+
+  The characteristic polynomial of g is prod_d Phi_d^{r_d}, determined by
+  the ranks of the g^k - I for the k dividing the order, which are
+  compared first.
+ */
+template <typename T, typename Tint>
+std::vector<int> FixedSpaceRanks(MyMatrix<Tint> const &g, int m) {
+  int n = g.rows();
+  MyMatrix<T> g_T = UniversalMatrixConversion<T, Tint>(g);
+  MyMatrix<T> pw = IdentityMat<T>(n);
+  std::vector<int> res;
+  for (int k = 1; k <= m; k++) {
+    pw = pw * g_T;
+    if (m % k == 0) {
+      res.push_back(n - RankMat(MyMatrix<T>(pw - IdentityMat<T>(n))));
+    }
+  }
+  return res;
+}
+
+template <typename Tint> int FiniteMatrixOrder(MyMatrix<Tint> const &g, size_t max_order) {
+  int n = g.rows();
+  MyMatrix<Tint> Id = IdentityMat<Tint>(n);
+  MyMatrix<Tint> pw = g;
+  for (size_t k = 1; k <= max_order; k++) {
+    if (pw == Id) {
+      return static_cast<int>(k);
+    }
+    pw = pw * g;
+  }
+  std::cerr << "FGN: the matrix is not of finite order\n";
+  throw TerminalException{1};
+}
+
+template <typename T, typename Tint, typename Tgroup>
+FiniteGroupConjugacyResult<Tint>
+FiniteElementConjugacy(MyMatrix<Tint> const &g, MyMatrix<Tint> const &h,
+                       FiniteGroupNormalizerBounds const &bounds,
+                       std::ostream &os) {
+  FiniteGroupConjugacyResult<Tint> res;
+  int n = g.rows();
+  if (h.rows() != n) {
+    res.reason = "different dimensions";
+    return res;
+  }
+  int m = FiniteMatrixOrder(g, bounds.max_group);
+  if (FiniteMatrixOrder(h, bounds.max_group) != m) {
+    res.reason = "different orders";
+    return res;
+  }
+  if (FixedSpaceRanks<T, Tint>(g, m) != FixedSpaceRanks<T, Tint>(h, m)) {
+    res.reason = "different characteristic polynomials";
+    return res;
+  }
+  if (g == h) {
+    res.conjugator = IdentityMat<Tint>(n);
+    res.reason = "conjugate";
+    return res;
+  }
+  std::vector<MyMatrix<Tint>> gens_g{g};
+  std::vector<MyMatrix<Tint>> gens_h{h};
+  FiniteGroupConjugacyResult<Tint> rg =
+      FiniteGroupConjugacy<T, Tint, Tgroup>(gens_g, gens_h, bounds, os);
+  if (!rg.conjugator) {
+    res.reason = "the cyclic groups are not Z-equivalent (" + rg.reason + ")";
+    return res;
+  }
+  MyMatrix<Tint> X1 = *rg.conjugator;
+  MyMatrix<Tint> g1 = X1 * g * IntegralInverse(X1);
+  std::vector<MyMatrix<Tint>> elts_h =
+      FiniteMatrixGroupElements(gens_h, n, bounds.max_group);
+  std::vector<MyMatrix<Tint>> gens_N =
+      NormalizerFromBravaisNormalizer(elts_h, gens_h, n, rg.normalizer_B2_gens,
+                                      bounds, os)
+          .second;
+  // the orbit of g1 under the conjugation by N(<h>), with a transversal
+  std::vector<MyMatrix<Tint>> gens_N_inv;
+  for (auto const &x : gens_N) {
+    gens_N_inv.push_back(IntegralInverse(x));
+  }
+  std::unordered_map<MyMatrix<Tint>, MyMatrix<Tint>> transversal;
+  std::vector<MyMatrix<Tint>> work{g1};
+  transversal[g1] = IdentityMat<Tint>(n);
+  std::optional<MyMatrix<Tint>> found;
+  if (g1 == h) {
+    found = IdentityMat<Tint>(n);
+  }
+  for (size_t pos = 0; pos < work.size() && !found; pos++) {
+    MyMatrix<Tint> x = work[pos];
+    MyMatrix<Tint> t = transversal[x];
+    for (size_t u = 0; u < gens_N.size(); u++) {
+      MyMatrix<Tint> y = gens_N[u] * x * gens_N_inv[u];
+      if (transversal.count(y) == 0) {
+        MyMatrix<Tint> ty = gens_N[u] * t;
+        transversal[y] = ty;
+        work.push_back(y);
+        if (y == h) {
+          found = ty;
+          break;
+        }
+      }
+    }
+  }
+  if (!found) {
+    res.reason = "the cyclic groups are Z-equivalent, but not the elements";
+    return res;
+  }
+  MyMatrix<Tint> Y = *found * X1;
+  if (Y * g != h * Y) {
+    std::cerr << "FGN: the conjugating matrix of the elements is wrong\n";
+    throw TerminalException{1};
   }
   res.conjugator = Y;
   res.reason = "conjugate";

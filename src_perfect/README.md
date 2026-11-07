@@ -61,6 +61,22 @@ Remark 5 and Section 3.3):
   up to N(B2) (an orbit of B1 in the finite group O(P1)), and then G2 in
   the orbit of X G1 X^{-1} under N(B2).
 
+`PERF_FiniteElementConjugacy [FileG] [FileH] [OutFile]` decides whether
+two matrices g, h of finite order are conjugate in GL_n(Z) and gives X
+with X g X^{-1} = h. After comparing the orders and the ranks of the
+g^k - I (which determine the characteristic polynomial), the cyclic groups
+<g>, <h> are tested for Z-equivalence as above, by some X1; every X with
+X <g> X^{-1} = <h> is Y X1 with Y in N(<h>), so g and h are conjugate iff
+h lies in the orbit of X1 g X1^{-1} under N(<h>), a finite orbit inside
+<h>. The normalizer of the Bravais group computed for the group conjugacy
+is reused for N(<h>). Since the minimal polynomial of an element of finite
+order is squarefree, this covers what the general algorithm of
+Bley-Hofmann-Johnston (Hecke's is_GLZ_conjugate) is needed for here.
+Checked against is_GLZ_conjugate on the 443 pairs of elements of the
+crystallographic groups of dimension 2 and 3 (from crystcat) with the same
+characteristic polynomial, the second conjugated by a random matrix: 312
+conjugate (with a verified conjugator) and 131 not, as Hecke says.
+
 In the spaces of invariant forms of reducible groups some facets of the
 perfect domains lie in the boundary of the positive cone: their direction
 is positive semidefinite and the edge of the Ryshkov polyhedron is
