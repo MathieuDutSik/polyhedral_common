@@ -71,6 +71,30 @@ check_case D4 D4_w012
 check_case D4 D4_w0123
 check_case E6 E6_w01
 
+# The same check with all the masses computed (no mass file), on glued
+# Hermitian components of rank two, where the image of the local unitary
+# group is taken to be all the equivariant isometries of the discriminant
+# form (Question 6 of the paper): an element of order 4 of D5 (Z[i] in
+# rank 2, glued to the fixed line) and one of order 6 of E6 (Z[zeta_3] in
+# rank 2 glued to Z[zeta_6] in rank 1).
+check_case_computed() {
+    lat=$1
+    isom=$2
+    echo "--- check of ($lat, $isom), masses computed ---"
+    out=$($BIN check isom_${lat}.txt isom_${isom}.txt none stdout 2>/dev/null)
+    echo "$out"
+    if ! echo "$out" | grep -q "^check: every ratio is an integer$"; then
+        echo "ERROR: the check of ($lat, $isom) failed" >&2
+        exit 1
+    fi
+    if echo "$out" | grep "^count=" | grep -v -q " ratio=1 "; then
+        echo "ERROR: the check of ($lat, $isom) has a ratio other than 1" >&2
+        exit 1
+    fi
+}
+check_case_computed D5 D5_g5
+check_case_computed E6 E6_g24
+
 # The masses of the Hermitian lattices of rank one over Q(zeta_d), h^- / w,
 # and standard masses, checked against Hecke.jl: a prime (relative class
 # number 695 for 47), a power of 2 (the dyadic prime), composite d (no
