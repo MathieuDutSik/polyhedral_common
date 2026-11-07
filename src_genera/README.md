@@ -100,10 +100,15 @@ the adelic centraliser is a subgroup of finite index of that of L_0, so
 
 H_q the glue L / L_0 at q in the discriminant group of L_0 and G_q the
 image of the local stabiliser of L_0 (see `IsometryMass.h`). The masses of
-the orthogonal components (d = 1, 2) come from `GenusMass`; those of the
-Hermitian components (d >= 3, lattices over Z[zeta_d]) are given in
-`HermMass` as lines `d num den`, from Hecke for instance (`none` if there
-are none). The glue factor is computed exhaustively: the isometries of
+the orthogonal components (d = 1, 2) come from `GenusMass`. Those of the
+Hermitian components (d >= 3, lattices over Z[zeta_d]) of rank one are
+computed (`CyclotomicHermitianMass.h`: the mass is 2^{1-n} |L(0,
+chi_{E/K})|, halved when d is a prime power, that is h^- / w, the
+L-values being products of generalized Bernoulli numbers taken exactly
+through norms in Q(zeta_e)); those of higher rank are given in `HermMass`
+as lines `d num den`, from Hecke for instance (`none` if there are none).
+`GENUS_IsometryMass hermitian d m` prints the standard mass of rank m over
+Q(zeta_d) and, for m = 1, the mass. The glue factor is computed exhaustively: the isometries of
 each primary discriminant module commuting with g are listed by
 backtracking, and the orbit of the glue is closed under them. For d = 1, 2
 these are the image of the local group (Nikulin, Theorem 1.9.5); for d >= 3

@@ -192,6 +192,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "    or\n";
       std::cerr << "GENUS_IsometryMass check [Gram] [Isometry] [HermMass] "
                    "[OutFile]\n";
+      std::cerr << "    or\n";
+      std::cerr << "GENUS_IsometryMass hermitian [d] [m]\n";
       std::cerr << "\n";
       std::cerr << "Gram     (input) : the Gram matrix A of an even positive\n";
       std::cerr << "                   definite lattice L\n";
@@ -199,10 +201,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "                   g^T A g = A\n";
       std::cerr << "HermMass (input) : 'none', or lines 'd num den', the\n";
       std::cerr << "                   masses of the Hermitian components\n";
-      std::cerr << "                   L cap ker Phi_d(g), d >= 3 (from\n";
-      std::cerr << "                   Hecke); without them the program\n";
-      std::cerr << "                   gives the glue factor and the\n";
-      std::cerr << "                   orthogonal masses only\n";
+      std::cerr << "                   L cap ker Phi_d(g), d >= 3, of rank\n";
+      std::cerr << "                   >= 2 (from Hecke); those of rank one\n";
+      std::cerr << "                   are computed. Without them the\n";
+      std::cerr << "                   program gives the glue factor and\n";
+      std::cerr << "                   the other masses only\n";
       std::cerr << "OutFile          : stderr (default), stdout or a file\n";
       std::cerr << "\n";
       std::cerr << "mass  : the mass of the genus of the pair (L, g)\n";
@@ -215,6 +218,18 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     std::string mode = argv[1];
+    if (mode == "hermitian") {
+      // the standard mass of rank m over Q(zeta_d), and the mass in rank one
+      int64_t d = std::stoll(argv[2]);
+      int m = std::stoi(argv[3]);
+      std::cout << "return rec(d:=" << d << ", m:=" << m << ", standard_mass:="
+                << StandardHermitianMassCyclotomic(d, m);
+      if (m == 1) {
+        std::cout << ", mass:=" << RankOneHermitianMassCyclotomic(d);
+      }
+      std::cout << ");\n";
+      return 0;
+    }
     std::string FileGram = argv[2];
     std::string FileIsom = argv[3];
     if (mode == "mass") {

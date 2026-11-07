@@ -65,5 +65,30 @@ check_case D4 D4_w012
 check_case D4 D4_w0123
 check_case E6 E6_w01
 
+# The masses of the Hermitian lattices of rank one over Q(zeta_d), h^- / w,
+# and standard masses, checked against Hecke.jl: a prime (relative class
+# number 695 for 47), a power of 2 (the dyadic prime), composite d (no
+# ramified prime) and rank two.
+herm_case() {
+    d=$1
+    m=$2
+    key=$3
+    expected=$4
+    out=$($BIN hermitian $d $m 2>/dev/null)
+    val=$(echo "$out" | sed -n "s/.*${key}:=\([0-9/]*\).*/\1/p")
+    echo "--- hermitian d=$d m=$m $key=$val (expecting $expected) ---"
+    if [ "$val" != "$expected" ]; then
+        echo "ERROR: hermitian d=$d m=$m gave $key=$val" >&2
+        exit 1
+    fi
+}
+herm_case 47 1 mass 695/94
+herm_case 19 1 mass 1/38
+herm_case 16 1 mass 1/16
+herm_case 12 1 mass 1/12
+herm_case 39 1 mass 1/39
+herm_case 3 2 standard_mass 1/72
+herm_case 16 2 standard_mass 5/768
+
 echo "All isometry mass tests passed"
 touch CI_CONCLUSION

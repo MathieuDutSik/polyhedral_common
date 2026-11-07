@@ -5,6 +5,7 @@
 // clang-format off
 #include "LocalDensity.h"
 #include "GenusMass.h"
+#include "CyclotomicHermitianMass.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "factorizations.h"
@@ -58,50 +59,17 @@
   are the image of the local unitary group is not proved here, and the
   result says when it is relied on.
 
-  The masses of the orthogonal L_d come from GenusMass. Those of the
-  Hermitian L_d (d >= 3) are supplied by the caller, from Hecke for
-  instance: the genus of the pair (L_d, sigma_d) is the genus of L_d as a
-  Hermitian lattice over Z[zeta_d], for the form h with b = Tr h.
+  The masses of the orthogonal L_d come from GenusMass. The genus of the
+  pair (L_d, sigma_d), d >= 3, is the genus of L_d as a Hermitian lattice
+  over Z[zeta_d], for the form h with b = Tr h. In Hermitian rank one its
+  mass depends only on d and is computed exactly
+  (CyclotomicHermitianMass.h); in higher rank it is supplied by the
+  caller, from Hecke for instance.
 
   Conventions: the Gram matrix A of L, the isometry g acting on the column
   vectors, g^T A g = A. Internally the row vectors are acted on by P =
   g^T, as in the rest of the code.
  */
-
-// The polynomials have integer coefficients, by increasing degree.
-inline std::vector<int64_t>
-ExactMonicPolynomialDivision(std::vector<int64_t> num,
-                             std::vector<int64_t> const &den) {
-  int dn = static_cast<int>(num.size()) - 1;
-  int dd = static_cast<int>(den.size()) - 1;
-  std::vector<int64_t> quo(dn - dd + 1, 0);
-  for (int k = dn - dd; k >= 0; k--) {
-    int64_t c = num[k + dd];
-    quo[k] = c;
-    for (int j = 0; j <= dd; j++) {
-      num[k + j] -= c * den[j];
-    }
-  }
-  for (int j = 0; j < dd; j++) {
-    if (num[j] != 0) {
-      std::cerr << "ISOM_MASS: the division of polynomials is not exact\n";
-      throw TerminalException{1};
-    }
-  }
-  return quo;
-}
-
-inline std::vector<int64_t> CyclotomicPolynomial(int d) {
-  std::vector<int64_t> num(d + 1, 0);
-  num[0] = -1;
-  num[d] = 1;
-  for (int e = 1; e < d; e++) {
-    if (d % e == 0) {
-      num = ExactMonicPolynomialDivision(num, CyclotomicPolynomial(e));
-    }
-  }
-  return num;
-}
 
 template <typename T>
 MyMatrix<T> EvaluatePolynomialMatrix(std::vector<int64_t> const &coeff,
@@ -736,6 +704,10 @@ IsometryMassResult<T> IsometryGenusMass(MyMatrix<T> const &A,
       auto iter = herm_mass.find(comp.d);
       if (iter != herm_mass.end()) {
         cm.mass = iter->second;
+      } else if (cm.rank == EulerPhi(comp.d)) {
+        // Hermitian rank one: the mass depends only on d
+        cm.mass = UniversalScalarConversion<T, mpq_class>(
+            RankOneHermitianMassCyclotomic(comp.d));
       }
     }
     if (cm.mass) {
