@@ -98,10 +98,12 @@ the enumeration, which is what this program does. Timings for
 
 ## Performance notes
 
-* The neighbour is LLL-reduced before anything else touches it. The basis
-  coming from `GetZbasis` divided by p is arbitrary and can be very skewed,
-  and both the canonical form and the automorphism group start by enumerating
-  short vectors.
+* The neighbour is LLL-reduced once before anything else touches it. The
+  basis coming from `GetZbasis` divided by p is arbitrary and can be very
+  skewed, and both the canonical form and the automorphism group start by
+  enumerating short vectors. The reduction is done by the dispatchers of
+  `src_latt/LatticeMethods.h`, which reduce their input once and give the
+  result back in the basis of the input, for every method.
 * The projective points are cut into orbits under the automorphism group
   before neighbours are formed. In rank 14 at p = 2 that is 16383 points, and
   on the determinant-243 seed they fall into 8 orbits.

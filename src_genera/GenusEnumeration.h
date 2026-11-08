@@ -659,20 +659,13 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
     return {};
   }
   /*
-    Reduce before returning. The basis coming out of GetZbasis and divided by p
-    is arbitrary and can be very skewed, and everything downstream -- the
-    canonical form and the automorphism group -- starts by enumerating short
-    vectors, which is where a skewed basis is punishing. Without this the
-    enumeration stalls on the first neighbour.
+    Not reduced here. The basis coming out of GetZbasis and divided by p is
+    arbitrary and can be very skewed, and everything downstream starts by
+    enumerating short vectors, where a skewed basis is punishing: the
+    canonical form, the isometry and the automorphism group of
+    LatticeMethods.h reduce their input, once.
    */
-#ifdef TIMINGS_GENUS_ENUMERATION
-  MicrosecondTime time_lll;
-#endif
-  LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(opt->GramN, os);
-#ifdef TIMINGS_GENUS_ENUMERATION
-  os << "|GENUS: neighbour LLL|=" << time_lll << "\n";
-#endif
-  return rec.GramMatRed;
+  return std::move(opt->GramN);
 }
 
 /*
@@ -1081,7 +1074,9 @@ struct GenusEnumerationState {
     return insert_index(GramMat).first;
   }
 
-  // The same, with the index of the class of the lattice, new or known.
+  // The same, with the index of the class of the lattice, new or known. The
+  // lattice need not be reduced: the methods of LatticeMethods.h reduce their
+  // input.
   std::pair<bool, size_t> insert_index(MyMatrix<T> const &GramMat) {
     if (methods.by_canonical) {
       MyMatrix<T> GramCan =

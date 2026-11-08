@@ -224,8 +224,8 @@ ComputeIsometryVinberg(MyMatrix<T> const &GramMat1,
   WeylChamberCharacteristicFamily). Its symmetry group is exactly
   Aut(L, rho), and unlike ResidualFamily it spans L, so every permutation of
   it preserving the scalar products is realized by an integral matrix: the
-  integral lift is direct, with no search over the glue. The computation is
-  done in an LLL-reduced basis.
+  integral lift is direct, with no search over the glue. GramMat is
+  LLL-reduced by the caller (LatticeAutomorphismGroup reduces its input).
  */
 template <typename T, typename Tint, typename Tgroup>
 VinbergAutom<Tint, Tgroup>
@@ -233,8 +233,7 @@ ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat, std::ostream &os) {
 #ifdef TIMINGS_LATTICE_AUTOMORPHISM_VINBERG
   MicrosecondTime time;
 #endif
-  LLLreduction<T, Tint> red = LLLreducedBasis<T, Tint>(GramMat, os);
-  MyMatrix<T> const &GramRed = red.GramMatRed;
+  MyMatrix<T> const &GramRed = GramMat;
   RootSystemData<Tint> rs =
       ComputeRootSystem<T, Tint>(GramRed, GramReduction::AlreadyReduced, os);
   if (rs.n_roots == 0) {
@@ -258,19 +257,12 @@ ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat, std::ostream &os) {
   res.weyl_order = WeylGroupOrder<Tgroup>(rs);
   res.residual_order = resAut.order;
   res.order = res.weyl_order * res.residual_order;
-  // g_red preserves Pmat G Pmat^T, so Pmat^{-1} g_red Pmat preserves G.
-  MyMatrix<Tint> const &Pmat = red.Pmat;
-  MyMatrix<Tint> PmatInv = Inverse(Pmat);
-  // The conjugate Pmat^{-1} s_r Pmat of the reflection in the root r of
-  // GramRed is the reflection in the root r Pmat of GramMat, which needs no
-  // matrix product.
   for (int i = 0; i < rs.SimpleRoots.rows(); i++) {
     MyVector<Tint> r = GetMatrixRow(rs.SimpleRoots, i);
-    MyVector<Tint> r_orig = Pmat.transpose() * r;
-    res.ListGen.push_back(RootReflection<T, Tint>(GramMat, r_orig));
+    res.ListGen.push_back(RootReflection<T, Tint>(GramMat, r));
   }
   for (auto &g : resAut.ListGen) {
-    res.ListGen.push_back(PmatInv * g * Pmat);
+    res.ListGen.push_back(g);
   }
 #ifdef SANITY_CHECK_LATTICE_AUTOMORPHISM_VINBERG
   MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
@@ -294,7 +286,8 @@ ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat, std::ostream &os) {
   of rho1 back to that of rho2, maps the family of L1 onto that of L2; and
   conversely a scalar product preserving bijection between the two families
   is an isometry, the families spanning the lattices. The returned P
-  satisfies P * GramMat1 * P^T = GramMat2.
+  satisfies P * GramMat1 * P^T = GramMat2. Both matrices are LLL-reduced by
+  the caller (LatticeIsometry reduces its input).
  */
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
@@ -303,12 +296,10 @@ ComputeIsometryWeylChamber(MyMatrix<T> const &GramMat1,
   if (GramMat1.rows() != GramMat2.rows()) {
     return {};
   }
-  LLLreduction<T, Tint> red1 = LLLreducedBasis<T, Tint>(GramMat1, os);
-  LLLreduction<T, Tint> red2 = LLLreducedBasis<T, Tint>(GramMat2, os);
-  RootSystemData<Tint> rs1 = ComputeRootSystem<T, Tint>(
-      red1.GramMatRed, GramReduction::AlreadyReduced, os);
-  RootSystemData<Tint> rs2 = ComputeRootSystem<T, Tint>(
-      red2.GramMatRed, GramReduction::AlreadyReduced, os);
+  RootSystemData<Tint> rs1 =
+      ComputeRootSystem<T, Tint>(GramMat1, GramReduction::AlreadyReduced, os);
+  RootSystemData<Tint> rs2 =
+      ComputeRootSystem<T, Tint>(GramMat2, GramReduction::AlreadyReduced, os);
   if (rs1.n_roots != rs2.n_roots || rs1.rank != rs2.rank) {
     return {};
   }
@@ -316,23 +307,22 @@ ComputeIsometryWeylChamber(MyMatrix<T> const &GramMat1,
     return ComputeIsometryVinberg<T, Tint, Tgroup>(GramMat1, GramMat2, os);
   }
   MyMatrix<Tint> SHV1 =
-      WeylChamberCharacteristicFamily<T, Tint>(red1.GramMatRed, rs1, false, os);
+      WeylChamberCharacteristicFamily<T, Tint>(GramMat1, rs1, false, os);
   MyMatrix<Tint> SHV2 =
-      WeylChamberCharacteristicFamily<T, Tint>(red2.GramMatRed, rs2, false, os);
+      WeylChamberCharacteristicFamily<T, Tint>(GramMat2, rs2, false, os);
   if (SHV1.rows() != SHV2.rows()) {
     return {};
   }
   std::vector<T> Vdiag(SHV1.rows(), T(0));
-  std::vector<MyMatrix<T>> ListMat1{red1.GramMatRed};
-  std::vector<MyMatrix<T>> ListMat2{red2.GramMatRed};
+  std::vector<MyMatrix<T>> ListMat1{GramMat1};
+  std::vector<MyMatrix<T>> ListMat2{GramMat2};
   std::optional<MyMatrix<Tint>> opt =
       TestIntEquivalence_ListMat_Vdiag<T, Tint, Tgroup>(
           SHV1, ListMat1, Vdiag, SHV2, ListMat2, Vdiag, os);
   if (!opt) {
     return {};
   }
-  // P_red (P1 G1 P1^T) P_red^T = P2 G2 P2^T, so P = P2^{-1} P_red P1.
-  MyMatrix<Tint> P = Inverse(red2.Pmat) * (*opt) * red1.Pmat;
+  MyMatrix<Tint> P = *opt;
 #ifdef SANITY_CHECK_LATTICE_AUTOMORPHISM_VINBERG
   MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(P);
   if (P_T * GramMat1 * P_T.transpose() != GramMat2) {

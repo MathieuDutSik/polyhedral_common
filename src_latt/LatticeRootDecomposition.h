@@ -628,11 +628,10 @@ MyMatrix<Tint> ComputeCanonicalFormWeylChamber(MyMatrix<T> const &GramMat,
 #ifdef TIMINGS_LATTICE_ROOT_DECOMPOSITION
   MicrosecondTime time;
 #endif
-  // The family is built in an LLL-reduced basis: the canonical form does not
-  // depend on the basis, but the cost of the closest vector problems and of
-  // the Hermite normal form does.
-  LLLreduction<T, Tint> red = LLLreducedBasis<T, Tint>(GramMat, os);
-  MyMatrix<T> const &GramRed = red.GramMatRed;
+  // GramMat is LLL-reduced by the caller (LatticeCanonicalBasis reduces its
+  // input): the canonical form does not depend on the basis, but the cost of
+  // the closest vector problems and of the Hermite normal form does.
+  MyMatrix<T> const &GramRed = GramMat;
   RootSystemData<Tint> rs =
       ComputeRootSystem<T, Tint>(GramRed, GramReduction::AlreadyReduced, os);
   if (rs.n_roots == 0) {
@@ -661,8 +660,7 @@ MyMatrix<Tint> ComputeCanonicalFormWeylChamber(MyMatrix<T> const &GramMat,
 #ifdef TIMINGS_LATTICE_ROOT_DECOMPOSITION
   os << "|ROOTDEC: WeylChamber, canonical form|=" << time << "\n";
 #endif
-  // B_red GramRed B_red^T is canonical and GramRed = Pmat GramMat Pmat^T.
-  return B_red * red.Pmat;
+  return B_red;
 }
 
 // clang-format off

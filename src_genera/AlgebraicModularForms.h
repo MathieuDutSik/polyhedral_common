@@ -11,6 +11,7 @@
 #include "InvariantVectorFamily.h"
 #include "ClassicLLL.h"
 #include "LatticeRootDecomposition.h"
+#include "LatticeMethods.h"
 #include "LocalDensity.h"
 #include "GenusMass.h"
 #include "HermitianMass.h"
@@ -121,7 +122,8 @@ AmfCanonical<T, Tint> amf_canonical(RealifiedRing<T, Tint> const &ring, MyMatrix
   }
   // Over Z the Weyl-chamber canonical form of GenusEnumeration; over O_K the
   // canonical form of the family.
-  MyMatrix<Tint> Pc = ring.d == 1 ? ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(G, os)
+  MyMatrix<Tint> Pc = ring.d == 1 ? LatticeCanonicalBasis<T, Tint, Tgroup>(
+                                         G, LatticeStabCanIsomMethod::WeylChamber, os)
                                      : ComputeCanonicalFormMultiple<T, Tint, Tgroup>(l_mat, os);
   MyMatrix<T> Pc_T = UniversalMatrixConversion<T, Tint>(Pc);
   MyMatrix<T> A_can = Pc_T * A;
