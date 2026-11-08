@@ -331,7 +331,15 @@ Tint Bound_Ceil(T const &K, T const &B, T const &den) {
   for a fractional coset. With cden = 1 the recursion is literally the
   unscaled one. The norm handed to f_insert is the scaled cden^2 * norm.
  */
-template <typename T, typename Tint, typename Finsert, typename Fsetbound>
+/*
+  With zero_coset the coset is zero (Cnum = 0, cden = 1), which is the case
+  of every shortest-vector and norm-shell enumeration: the terms in Cnum and
+  cden drop out of the recursion, and over a ring (T = Tint) the scaled copy
+  x_S of x is not needed either, x being read directly. The vectors found and
+  their order are those of the general recursion.
+ */
+template <bool zero_coset, typename T, typename Tint, typename Finsert,
+          typename Fsetbound>
 bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
                           MyVector<T> const &Cnum, T const &cden,
                           bool const &central, const T &bound, Finsert f_insert,
@@ -356,6 +364,15 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
     return true;
   };
   MyVector<T> x_S(dim);
+  // Over a ring with the zero coset x_S would be a copy of x.
+  constexpr bool read_x = zero_coset && std::is_same_v<T, Tint>;
+  auto xs = [&](int j) -> T const & {
+    if constexpr (read_x) {
+      return x(j);
+    } else {
+      return x_S(j);
+    }
+  };
 #if defined SANITY_CHECK_SHVEC || defined DEBUG_SHVEC
   const MyMatrix<T> &g = request.gram_matrix;
 #endif
@@ -381,7 +398,11 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
   // handed to f_set_bound.
   MyVector<T> den(dim);
   for (i = 0; i < dim; i++) {
-    den(i) = d(i) * cden;
+    if constexpr (zero_coset) {
+      den(i) = d(i);
+    } else {
+      den(i) = d(i) * cden;
+    }
   }
   bool needs_new_bound = true;
   i = dim - 1;
@@ -389,7 +410,11 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
     return true;
   }
   Ttil(i) = d(i) * bound;
-  Bvec(i) = d(i) * Cnum(i);
+  if constexpr (zero_coset) {
+    Bvec(i) = 0;
+  } else {
+    Bvec(i) = d(i) * Cnum(i);
+  }
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: Before while loop\n";
 #endif
@@ -409,11 +434,23 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
         Kval *= d(i - 1);
       }
       f_set_bound(Kval, Bvec(i), den(i), x, i, Upper(i), x(i));
-      x_S(i) = cden * UniversalScalarConversion<T, Tint>(x(i));
+      if constexpr (zero_coset) {
+        if constexpr (!read_x) {
+          x_S(i) = UniversalScalarConversion<T, Tint>(x(i));
+        }
+      } else {
+        x_S(i) = cden * UniversalScalarConversion<T, Tint>(x(i));
+      }
       needs_new_bound = false;
     } else {
       x(i) += 1;
-      x_S(i) += cden;
+      if constexpr (zero_coset) {
+        if constexpr (!read_x) {
+          x_S(i) += 1;
+        }
+      } else {
+        x_S(i) += cden;
+      }
     }
     if (x(i) <= Upper(i)) {
       if (i == 0) {
@@ -425,7 +462,7 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
             return true;
           }
         }
-        Hval = d(0) * x_S(0) + Bvec(0);
+        Hval = d(0) * xs(0) + Bvec(0);
         // bound - Trem(-1), the exact norm; the division is exact because
         // Trem(-1) = bound - Q(x + C) is a value of the original form.
         num = Ttil(0) - Hval * Hval;
@@ -441,7 +478,7 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
         T norm(0);
         for (int i2 = 0; i2 < dim; i2++)
           for (int j2 = 0; j2 < dim; j2++)
-            norm += g(i2, j2) * (x_S(i2) + Cnum(i2)) * (x_S(j2) + Cnum(j2));
+            norm += g(i2, j2) * (xs(i2) + Cnum(i2)) * (xs(j2) + Cnum(j2));
         if (norm != eNorm) {
           std::cerr << "Norm inconsistency\n";
           std::cerr << "norm=" << norm << "\n";
@@ -475,11 +512,17 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
           return false;
         }
       } else {
-        Hval = d(i) * x_S(i) + Bvec(i);
+        Hval = d(i) * xs(i) + Bvec(i);
         i--;
-        Bvec(i) = d(i) * Cnum(i);
-        for (j = i + 1; j < dim; j++)
-          Bvec(i) += N(i, j) * (x_S(j) + Cnum(j));
+        if constexpr (zero_coset) {
+          Bvec(i) = 0;
+          for (j = i + 1; j < dim; j++)
+            Bvec(i) += N(i, j) * xs(j);
+        } else {
+          Bvec(i) = d(i) * Cnum(i);
+          for (j = i + 1; j < dim; j++)
+            Bvec(i) += N(i, j) * (x_S(j) + Cnum(j));
+        }
         // Ttil(i) = (d(i) * Ttil(i+1) - Hval^2) / d(i+1), the fraction-free
         // form of Trem(i) = Trem(i+1) - q(i+1,i+1) * hVal^2. The division is
         // exact: d(i) * Trem(i) is a value of the Schur complement of the
@@ -515,7 +558,13 @@ inline bool computeIt_Gen(const FullGramInfo<T> &request,
                           const T &bound, Finsert f_insert,
                           Fsetbound f_set_bound) {
   T cden(1);
-  return computeIt_Gen_Kernel<T, Tint, Finsert, Fsetbound>(
+  // The zero coset, as for every shortest-vector and shell enumeration, has
+  // its own variant of the recursion.
+  if (IsZeroVector(coset)) {
+    return computeIt_Gen_Kernel<true, T, Tint, Finsert, Fsetbound>(
+        request, coset, cden, central, bound, f_insert, f_set_bound);
+  }
+  return computeIt_Gen_Kernel<false, T, Tint, Finsert, Fsetbound>(
       request, coset, cden, central, bound, f_insert, f_set_bound);
 }
 
@@ -824,7 +873,7 @@ bool computeIt_fast(ShvecFastPrep<T> const &prep, MyVector<T> const &Cnum,
     upper = Bound_Floor<Tfast, Tfast>(K, B, den);
     lower = Bound_Ceil<Tfast, Tfast>(K, B, den);
   };
-  return computeIt_Gen_Kernel<Tfast, Tfast, decltype(f_insert_fast),
+  return computeIt_Gen_Kernel<false, Tfast, Tfast, decltype(f_insert_fast),
                               decltype(f_set_bound)>(
       request_fast, Cnum_fast, cden_fast, central, bound_fast, f_insert_fast,
       f_set_bound);
