@@ -164,6 +164,34 @@ herm_lattice_case ram15 9 1200500/81
 herm_lattice_case dy21 8 1741/96
 herm_lattice_case dy10 4 1333/16
 herm_lattice_case dy37 16 28824005/32
+# Hermitian lattices over abelian CM fields that are not cyclotomic,
+# given by the trace Gram matrix and the actions of a Z-basis of O_E, the
+# field as the subfield of Q(zeta_n) fixed by H, with the masses of
+# Hecke.jl: Q(sqrt -7), Q(sqrt -15) (odd ramified primes), Q(sqrt -2) and
+# Q(sqrt -6) (the dyadic ramified prime, with relative different exponent
+# 3), Q(i, sqrt 5) (dyadic, residue field F_4), and Q(sqrt 5, sqrt -7),
+# where 2 is a common index divisor.
+hab_case() {
+    tag=$1
+    n=$2
+    H=$3
+    expected=$4
+    out=$($BIN hermitianablattice hab_${tag}_gram.txt hab_${tag}_omega.txt $n $H \
+              2>/dev/null)
+    val=$(echo "$out" | sed -n 's/return rec(mass:=\(.*\));/\1/p')
+    echo "--- Hermitian lattice $tag over the subfield of Q(zeta_$n): mass=$val (expecting $expected) ---"
+    if [ "$val" != "$expected" ]; then
+        echo "ERROR: the Hermitian lattice $tag gave the mass $val" >&2
+        exit 1
+    fi
+}
+hab_case q7r3 7 1,2,4 4802/3
+hab_case q15r3 15 1,2,4,8 426720
+hab_case s5m7r2 35 1,4,9,11,16,29 25
+hab_case s5m7r3 35 1,4,9,11,16,29 257985
+hab_case q2r3 8 1,3 564375/32
+hab_case q6r2 24 1,5,7,11 16
+hab_case i5r2 20 1,9 300
 herm_case 47 1 mass 695/94
 herm_case 19 1 mass 1/38
 herm_case 16 1 mass 1/16
