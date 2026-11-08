@@ -58,14 +58,12 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::vector<MyVector<Tint>> ListVert;
-  std::unordered_map<MyVector<Tint>, int> MapVert;
-  int pos = 0;
+  std::unordered_map<MyVector<Tint>, Tidx> MapVert;
   for (int i = 0; i < SHV.rows(); i++) {
     MyVector<Tint> V = GetMatrixRow(SHV, i);
     if (is_canonical(V)) {
+      MapVert[V] = ListVert.size();
       ListVert.push_back(V);
-      pos += 1;
-      MapVert[V] = pos;
     }
   }
   Tidx nbVert = ListVert.size();
@@ -77,14 +75,16 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,
       MyVector<Tint> const &V = ListVert[i];
       MyVector<Tint> Vimg = eGen.transpose() * V;
       canonicalize_sign_vector(Vimg);
-      int pos = MapVert[Vimg];
+      // A lookup, not operator[], which would insert a missing image.
+      auto iter = MapVert.find(Vimg);
 #ifdef SANITY_CHECK_ORBITS_VECTOR_BASIS
-      if (pos == 0) {
-        std::cerr << "pos should be strictly positive\n";
+      if (iter == MapVert.end()) {
+        std::cerr << "ORBITS_VECTOR_BASIS: a generator does not preserve the "
+                     "family of vectors\n";
         throw TerminalException{1};
       }
 #endif
-      eList[i] = pos - 1;
+      eList[i] = iter->second;
     }
     Telt ePermGen(eList);
 #ifdef DEBUG_ORBITS_VECTOR_BASIS
