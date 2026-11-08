@@ -1134,6 +1134,19 @@ MyMatrix<Tint> inner_span_root_iterated_shortest(MyMatrix<T> const &GramMat,
                                                    os);
 }
 
+/*
+  A shell family of eMat that is not preserved by the matrices of ListMatr,
+  acting on rows (v -> v g), both signs.
+
+  The shells are built one vector per antipodal pair, the sign being the
+  enumerator's choice, which depends on the basis. So the test is on the
+  pairs: the family, closed under v -> -v, is preserved by g exactly when
+  every image v g is, up to sign, one of its vectors. Testing the vectors
+  themselves would count an image -w, with w the representative kept, as
+  leaving the family: -Id, which preserves every such family, would break
+  each of them, and whether a matrix breaks a family would depend on the
+  signs the enumeration happened to keep, hence on the basis.
+ */
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(
     MyMatrix<T> const &eMat, std::vector<MyMatrix<Tint>> const &ListMatr,
@@ -1143,13 +1156,13 @@ MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(
     std::unordered_set<MyVector<Tint>> set;
     for (int i = 0; i < n_row; i++) {
       MyVector<Tint> V = GetMatrixRow(M, i);
-      set.insert(V);
+      set.insert(SignCanonicalizeVector(V));
     }
     for (auto &eMatr : ListMatr) {
       MyMatrix<Tint> Mprod = M * eMatr;
       for (int i = 0; i < n_row; i++) {
         MyVector<Tint> V = GetMatrixRow(Mprod, i);
-        if (!set.contains(V))
+        if (!set.contains(SignCanonicalizeVector(V)))
           return true;
       }
     }
