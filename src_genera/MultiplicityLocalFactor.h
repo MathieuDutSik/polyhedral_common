@@ -293,6 +293,248 @@ LocalOrthogonalImage(ModMat const &A, int64_t p, int c, int e,
   return res;
 }
 
+/*
+  The image modulo p^c of the stabiliser {g in Lambda (x) Z_p : g A g^T =
+  A} (rows convention), Lambda the Z-span of the m x m integer matrices of
+  basis: the centraliser of a group acting on a lattice of Gram matrix A,
+  when Lambda is its commutant. The Newton step g -> g - (1/2) E g^{-T}
+  A^{-1}, E = g A g^T - A, stays in the commutant when g does, since the
+  group preserves A and E; so Lemma (multfactor) holds within Lambda, and
+  the image is the set of the solutions modulo p^c in Lambda that lift to
+  solutions modulo p^K, lifted level by level by Delta in Lambda / p
+  Lambda. Nothing beyond the bounds.
+ */
+inline std::optional<std::vector<ModMat>>
+LocalStabilizerImage(ModMat const &A, std::vector<ModMat> const &basis,
+                     int64_t p, int c, int e,
+                     MultiplicityFactorBounds const &bounds) {
+  // A and basis are exact integer matrices: a solution is kept by its
+  // coordinates in the basis, so that it stays in Lambda (the entrywise
+  // reduction of an element of Lambda need not be in Lambda, and the
+  // lifts g + p^j Delta, Delta in Lambda, would miss the isometries)
+  size_t m = A.size();
+  size_t dim = basis.size();
+  int t = (p == 2) ? 1 : 0;
+  int K = std::max(c + e + t, e + 2 * t + 1);
+  using Coord = std::vector<int64_t>;
+  auto matrix_of = [&](Coord const &x) -> std::vector<std::vector<__int128>> {
+    std::vector<std::vector<__int128>> g(m, std::vector<__int128>(m, 0));
+    for (size_t i = 0; i < dim; i++) {
+      if (x[i] == 0) {
+        continue;
+      }
+      for (size_t a = 0; a < m; a++) {
+        for (size_t b = 0; b < m; b++) {
+          g[a][b] += static_cast<__int128>(x[i]) * basis[i][a][b];
+        }
+      }
+    }
+    return g;
+  };
+  // E = g A g^T - A, exactly
+  auto error = [&](std::vector<std::vector<__int128>> const &g)
+      -> std::vector<std::vector<__int128>> {
+    std::vector<std::vector<__int128>> gA(m, std::vector<__int128>(m, 0));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        __int128 sum = 0;
+        for (size_t u = 0; u < m; u++) {
+          sum += g[a][u] * A[u][b];
+        }
+        gA[a][b] = sum;
+      }
+    }
+    std::vector<std::vector<__int128>> E(m, std::vector<__int128>(m, 0));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        __int128 sum = 0;
+        for (size_t u = 0; u < m; u++) {
+          sum += gA[a][u] * g[b][u];
+        }
+        E[a][b] = sum - A[a][b];
+      }
+    }
+    return E;
+  };
+  auto mod_p = [&](__int128 v) -> int64_t {
+    __int128 r = v % p;
+    if (r < 0) {
+      r += p;
+    }
+    return static_cast<int64_t>(r);
+  };
+  // level 1: all x in {0, ..., p-1}^dim
+  size_t n_x = 1;
+  for (size_t i = 0; i < dim; i++) {
+    n_x *= static_cast<size_t>(p);
+    if (n_x > bounds.max_solution * 10) {
+      return {};
+    }
+  }
+  std::vector<Coord> level;
+  for (size_t u = 0; u < n_x; u++) {
+    Coord x(dim);
+    size_t tt = u;
+    for (size_t i = 0; i < dim; i++) {
+      x[i] = static_cast<int64_t>(tt % static_cast<size_t>(p));
+      tt /= static_cast<size_t>(p);
+    }
+    std::vector<std::vector<__int128>> g = matrix_of(x);
+    std::vector<std::vector<__int128>> E = error(g);
+    bool ok = true;
+    for (size_t a = 0; a < m && ok; a++) {
+      for (size_t b = 0; b < m && ok; b++) {
+        if (E[a][b] % p != 0) {
+          ok = false;
+        }
+      }
+    }
+    if (!ok) {
+      continue;
+    }
+    ModMat gp(m, std::vector<int64_t>(m));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        gp[a][b] = mod_p(g[a][b]);
+      }
+    }
+    if (ModRank(gp, p) == m) {
+      level.push_back(x);
+      if (level.size() > bounds.max_solution) {
+        return {};
+      }
+    }
+  }
+  // the lifts x + p^j y, y modulo p solving the linear system
+  auto lifts = [&](Coord const &x, int64_t pj) -> std::vector<Coord> {
+    int64_t pj1 = pj * p;
+    std::vector<std::vector<__int128>> g = matrix_of(x);
+    std::vector<std::vector<__int128>> E = error(g);
+    std::vector<std::vector<int64_t>> gA(m, std::vector<int64_t>(m, 0));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        __int128 sum = 0;
+        for (size_t u = 0; u < m; u++) {
+          sum += g[a][u] * A[u][b];
+        }
+        gA[a][b] = mod_p(sum);
+      }
+    }
+    ModMat aug;
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = a; b < m; b++) {
+        std::vector<int64_t> row(dim + 1, 0);
+        for (size_t i = 0; i < dim; i++) {
+          // (Delta A g^T + g A Delta^T)(a, b), A symmetric
+          int64_t v = 0;
+          for (size_t u = 0; u < m; u++) {
+            v += mod_p(basis[i][a][u]) * gA[b][u] % p;
+            v += gA[a][u] * mod_p(basis[i][b][u]) % p;
+          }
+          row[i] = ModP(v, p);
+        }
+        __int128 r = E[a][b] % pj1;
+        if (r < 0) {
+          r += pj1;
+        }
+        if (r % pj != 0) {
+          std::cerr << "MULT_FACTOR: not a solution modulo p^j\n";
+          throw TerminalException{1};
+        }
+        row[dim] = ModP(-static_cast<int64_t>(r / pj), p);
+        aug.push_back(row);
+      }
+    }
+    ModRowSpace rs = ModRowReduce(aug, p);
+    for (size_t piv : rs.pivots) {
+      if (piv == dim) {
+        return {};
+      }
+    }
+    Coord part(dim, 0);
+    for (size_t i = 0; i < rs.pivots.size(); i++) {
+      part[rs.pivots[i]] = rs.basis[i][dim];
+    }
+    std::vector<bool> is_pivot(dim, false);
+    for (size_t piv : rs.pivots) {
+      is_pivot[piv] = true;
+    }
+    std::vector<Coord> ker;
+    for (size_t f = 0; f < dim; f++) {
+      if (is_pivot[f]) {
+        continue;
+      }
+      Coord v(dim, 0);
+      v[f] = 1;
+      for (size_t i = 0; i < rs.pivots.size(); i++) {
+        v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
+      }
+      ker.push_back(v);
+    }
+    size_t n_sol = 1;
+    for (size_t i = 0; i < ker.size(); i++) {
+      n_sol *= static_cast<size_t>(p);
+    }
+    std::vector<Coord> res;
+    for (size_t u = 0; u < n_sol; u++) {
+      Coord y = part;
+      size_t tt = u;
+      for (auto const &kv : ker) {
+        int64_t cc = static_cast<int64_t>(tt % static_cast<size_t>(p));
+        tt /= static_cast<size_t>(p);
+        for (size_t i = 0; i < dim; i++) {
+          y[i] = (y[i] + cc * kv[i]) % p;
+        }
+      }
+      Coord x2 = x;
+      for (size_t i = 0; i < dim; i++) {
+        x2[i] = x[i] + pj * y[i];
+      }
+      res.push_back(x2);
+    }
+    return res;
+  };
+  int64_t pj = p;
+  for (int j = 1; j < c; j++) {
+    std::vector<Coord> next;
+    for (auto const &x : level) {
+      std::vector<Coord> l = lifts(x, pj);
+      next.insert(next.end(), l.begin(), l.end());
+      if (next.size() > bounds.max_solution) {
+        return {};
+      }
+    }
+    level = std::move(next);
+    pj *= p;
+  }
+  std::function<bool(Coord const &, int, int64_t)> liftable =
+      [&](Coord const &x, int j, int64_t pj_loc) -> bool {
+    if (j >= K) {
+      return true;
+    }
+    for (auto const &x2 : lifts(x, pj_loc)) {
+      if (liftable(x2, j + 1, pj_loc * p)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  std::vector<ModMat> res;
+  for (auto const &x : level) {
+    if (liftable(x, std::max(c, 1), pj)) {
+      std::vector<std::vector<__int128>> g = matrix_of(x);
+      ModMat gm(m, std::vector<int64_t>(m));
+      for (size_t a = 0; a < m; a++) {
+        for (size_t b = 0; b < m; b++) {
+          gm[a][b] = static_cast<int64_t>(g[a][b]);
+        }
+      }
+      res.push_back(gm);
+    }
+  }
+  return res;
+}
+
 template <typename T> int ValuationOfRational(T const &x, int64_t p) {
   // x nonzero
   T y = x;

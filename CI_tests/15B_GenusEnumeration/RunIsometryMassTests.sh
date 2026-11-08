@@ -95,6 +95,30 @@ check_case_computed() {
 check_case_computed D5 D5_g5
 check_case_computed E6 E6_g24
 
+# Question 6 decided: the image of the local centraliser on the
+# discriminant modules of the glued Hermitian components is computed, by
+# lifting the solutions of g A g^T = A in the commutant (or by -1 and sigma
+# when they already generate all the equivariant isometries), and found
+# to be all of them. Here for D5_g5 and E6_g24, and for the isometry of
+# order 19 of the determinant-30 genus (rank 19, glue Z/19).
+image_case() {
+    lat=$1
+    isom=$2
+    expected=$3
+    echo "--- image of the local group for ($lat, $isom), expecting mass $expected ---"
+    out=$($BIN mass isom_${lat}.txt isom_${isom}.txt none stdout 2>/dev/null)
+    mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
+    assumed=$(echo "$out" | sed -n 's/^  image_assumed:=\(.*\),$/\1/p')
+    echo "mass = $mass, image_assumed = $assumed"
+    if [ "$mass" != "$expected" ] || [ "$assumed" != "false" ]; then
+        echo "ERROR: ($lat, $isom) gave mass $mass, image_assumed $assumed" >&2
+        exit 1
+    fi
+}
+image_case D5 D5_g5 1/64
+image_case E6 E6_g24 1/144
+image_case det30_L557 det30_g19 1/38
+
 # The masses of the Hermitian lattices of rank one over Q(zeta_d), h^- / w,
 # and standard masses, checked against Hecke.jl: a prime (relative class
 # number 695 for 47), a power of 2 (the dyadic prime), composite d (no

@@ -182,6 +182,8 @@ struct PrimaryQuadModule {
 };
 
 using ModuleElt = std::vector<int64_t>;
+// an automorphism, as the images of the generators
+using ModuleAut = std::vector<ModuleElt>;
 
 inline int64_t ModuleB(PrimaryQuadModule const &M, ModuleElt const &x,
                        ModuleElt const &y) {
@@ -308,6 +310,44 @@ inline bool IsScalarAction(PrimaryQuadModule const &M) {
 }
 
 /*
+  The generators of the q-primary part of D(L) as vectors of L^# (rows, in
+  the coordinates of L), in the order of BuildPrimaryQuadModule.
+ */
+template <typename T>
+std::vector<MyVector<T>> PrimaryModuleGenerators(IsometryComponent<T> const &comp,
+                                                 PrimaryQuadModule const &M) {
+  std::vector<MyVector<T>> gens;
+  int k = comp.gram.rows();
+  for (size_t s = 0; s < M.rank(); s++) {
+    int i = M.index[s];
+    MyVector<T> g(k);
+    for (int j = 0; j < k; j++) {
+      g(j) = comp.row(i, j) / ScalarFromInt64<T>(M.ord[s]);
+    }
+    gens.push_back(g);
+  }
+  return gens;
+}
+
+/*
+  The automorphism of the q-primary module M of D(L) induced by an isometry
+  h of L acting on the rows (h A h^T = A), as the images of the generators.
+ */
+template <typename T, typename Tint>
+ModuleAut ModuleActionOfIsometry(IsometryComponent<T> const &comp,
+                                 PrimaryQuadModule const &M,
+                                 std::vector<MyVector<T>> const &gens,
+                                 MyMatrix<Tint> const &h) {
+  MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);
+  ModuleAut phi;
+  for (auto const &g : gens) {
+    MyVector<T> img = h_T.transpose() * g;
+    phi.push_back(ModuleCoordinates(M, comp, img));
+  }
+  return phi;
+}
+
+/*
   All the isometries of the module commuting with sigma, as the images of
   the generators, by backtracking: the image of g_i has an order dividing
   ord_i, the same q value, and the same b with the images already chosen.
@@ -315,7 +355,6 @@ inline bool IsScalarAction(PrimaryQuadModule const &M) {
   automorphism. Nothing is returned when the module or the group exceeds
   the bounds.
  */
-using ModuleAut = std::vector<ModuleElt>;
 
 inline std::vector<ModuleElt> ListModuleElements(PrimaryQuadModule const &M) {
   std::vector<ModuleElt> res;
@@ -476,6 +515,10 @@ struct GlueOrbitResult {
   std::vector<int> list_d;
   std::vector<int64_t> list_module_order;
   std::vector<mpz_class> list_group_order;
+  // per module: "scalar" (Nikulin), "full" (the image of the local group
+  // is all the equivariant isometries), "proper" (a proper subgroup, used
+  // as such) or "assumed" (not computed, all the isometries used)
+  std::vector<std::string> list_image;
   mpz_class orbit_size;
   // "listing" or "graph"
   std::string method;
@@ -661,6 +704,8 @@ GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
 inline std::optional<GlueOrbitResult>
 GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
                  std::vector<std::vector<ModuleElt>> const &glue_gens,
+                 std::vector<std::optional<std::vector<ModuleAut>>> const
+                     &image_groups,
                  int64_t max_module, size_t max_group, size_t max_orbit) {
   GlueOrbitResult res;
   res.q = q;
@@ -717,8 +762,12 @@ GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
   res.glue_order = static_cast<int64_t>(H.size());
   std::vector<std::vector<ModuleAut>> gens(t);
   for (size_t s = 0; s < t; s++) {
-    std::optional<std::vector<ModuleAut>> opt =
-        EquivariantModuleIsometries(mods[s], max_module, max_group);
+    // the image of the local group when it was computed, otherwise all
+    // the equivariant isometries
+    std::optional<std::vector<ModuleAut>> opt = image_groups[s];
+    if (!opt) {
+      opt = EquivariantModuleIsometries(mods[s], max_module, max_group);
+    }
     if (!opt) {
       return {};
     }
@@ -775,15 +824,19 @@ GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
 inline std::optional<GlueOrbitResult>
 GlueOrbit(int64_t q, std::vector<PrimaryQuadModule> const &mods,
           std::vector<std::vector<ModuleElt>> const &glue_gens,
-          int64_t max_module, size_t max_group, size_t max_orbit,
-          size_t max_vertices, std::ostream &os) {
-  std::optional<GlueOrbitResult> opt =
-      GlueOrbitListing(q, mods, glue_gens, max_module, max_group, max_orbit);
-  if (opt) {
+          std::vector<std::optional<std::vector<ModuleAut>>> const
+              &image_groups,
+          bool image_proper, int64_t max_module, size_t max_group,
+          size_t max_orbit, size_t max_vertices, std::ostream &os) {
+  std::optional<GlueOrbitResult> opt = GlueOrbitListing(
+      q, mods, glue_gens, image_groups, max_module, max_group, max_orbit);
+  if (opt || image_proper) {
+    // the graph method uses all the equivariant isometries, which is not
+    // the group when an image is a proper subgroup
 #ifdef SANITY_CHECK_ISOMETRY_MASS
     std::optional<GlueOrbitResult> opt2 =
         GlueOrbitGraph(q, mods, glue_gens, max_vertices, os);
-    if (opt2 && opt2->orbit_size != opt->orbit_size) {
+    if (opt && !image_proper && opt2 && opt2->orbit_size != opt->orbit_size) {
       std::cerr << "ISOM_MASS: the glue orbit by listing is " << opt->orbit_size
                 << " and by the graph " << opt2->orbit_size << "\n";
       throw TerminalException{1};
@@ -792,6 +845,136 @@ GlueOrbit(int64_t q, std::vector<PrimaryQuadModule> const &mods,
     return opt;
   }
   return GlueOrbitGraph(q, mods, glue_gens, max_vertices, os);
+}
+
+/*
+  The image in the automorphisms of the q-primary module M of D(L_d) of
+  the stabiliser of L_d in the centraliser C(Q_q) of the group acting on
+  the component: the elements of the commutant Lambda of comp.sigma and
+  comp.extra_sigma that preserve the form, found modulo q^c (q^c the
+  exponent of M) by LocalStabilizerImage, then moved to M. Nothing beyond
+  the bounds.
+ */
+template <typename T, typename Tint>
+std::optional<std::vector<ModuleAut>>
+LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
+                   [[maybe_unused]] std::ostream &os) {
+  int k = comp.gram.rows();
+  std::vector<MyMatrix<T>> ListX{comp.sigma};
+  ListX.insert(ListX.end(), comp.extra_sigma.begin(), comp.extra_sigma.end());
+  // the integral commutant: Y X = X Y, saturated
+  int kk = k * k;
+  MyMatrix<Tint> Eq(kk, kk * static_cast<int>(ListX.size()));
+  for (int i = 0; i < Eq.rows(); i++) {
+    for (int j = 0; j < Eq.cols(); j++) {
+      Eq(i, j) = 0;
+    }
+  }
+  for (size_t ix = 0; ix < ListX.size(); ix++) {
+    MyMatrix<Tint> X = UniversalMatrixConversion<Tint, T>(ListX[ix]);
+    for (int u = 0; u < k; u++) {
+      for (int v = 0; v < k; v++) {
+        int col = static_cast<int>(ix) * kk + u * k + v;
+        for (int w = 0; w < k; w++) {
+          Eq(u * k + w, col) += X(w, v);
+          Eq(w * k + v, col) -= X(u, w);
+        }
+      }
+    }
+  }
+  MyMatrix<Tint> ker = NullspaceIntTrMat(MyMatrix<Tint>(Eq.transpose()));
+  int64_t q = M.q;
+  int c = 0;
+  for (int64_t x = M.N; x > 1; x /= q) {
+    c++;
+  }
+  int e = 0;
+  {
+    MyMatrix<T> Ainv = Inverse(comp.gram);
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < k; j++) {
+        if (Ainv(i, j) != T(0)) {
+          e = std::max(e, ValuationOfRational(GetDenominator(Ainv(i, j)), q));
+        }
+      }
+    }
+  }
+  // exact integer matrices: the solutions must stay in Lambda
+  auto exact = [&](MyMatrix<Tint> const &X) -> ModMat {
+    ModMat R(k, std::vector<int64_t>(k));
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < k; j++) {
+        R[i][j] = UniversalScalarConversion<int64_t, Tint>(X(i, j));
+      }
+    }
+    return R;
+  };
+  std::vector<ModMat> basis;
+  for (int r = 0; r < ker.rows(); r++) {
+    MyMatrix<Tint> Y(k, k);
+    for (int u = 0; u < k; u++) {
+      for (int v = 0; v < k; v++) {
+        Y(u, v) = ker(r, u * k + v);
+      }
+    }
+    basis.push_back(exact(Y));
+  }
+  ModMat A_mod = exact(UniversalMatrixConversion<Tint, T>(comp.gram));
+  MultiplicityFactorBounds mbounds;
+  std::optional<std::vector<ModMat>> opt =
+      LocalStabilizerImage(A_mod, basis, q, c, e, mbounds);
+  if (!opt) {
+    return {};
+  }
+  std::vector<MyVector<T>> gens = PrimaryModuleGenerators(comp, M);
+  std::set<ModuleAut> images;
+  for (auto const &g : *opt) {
+    MyMatrix<Tint> h(k, k);
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < k; j++) {
+        h(i, j) = UniversalScalarConversion<Tint, int64_t>(g[i][j]);
+      }
+    }
+    images.insert(ModuleActionOfIsometry(comp, M, gens, h));
+  }
+#ifdef DEBUG_ISOMETRY_MASS
+  os << "ISOM_MASS: q=" << q << " d=" << comp.d << " dim Lambda="
+     << basis.size() << " solutions mod q^c=" << opt->size()
+     << " image on D=" << images.size() << "\n";
+#endif
+  return std::vector<ModuleAut>(images.begin(), images.end());
+}
+
+// The order of the group generated by the automorphisms gens of M, by
+// closure, stopping beyond max_size.
+inline size_t ModuleGroupClosureSize(PrimaryQuadModule const &M,
+                                     std::vector<ModuleAut> const &gens,
+                                     size_t max_size) {
+  size_t r = M.rank();
+  ModuleAut id(r, ModuleElt(r, 0));
+  for (size_t i = 0; i < r; i++) {
+    id[i][i] = 1;
+  }
+  std::set<ModuleAut> seen{id};
+  std::vector<ModuleAut> queue{id};
+  while (!queue.empty()) {
+    ModuleAut x = queue.back();
+    queue.pop_back();
+    for (auto const &g : gens) {
+      // x then g: the images of the generators by x, moved by g
+      ModuleAut y;
+      for (auto const &xi : x) {
+        y.push_back(ApplyModuleAut(M, g, xi));
+      }
+      if (seen.insert(y).second) {
+        if (seen.size() > max_size) {
+          return seen.size();
+        }
+        queue.push_back(y);
+      }
+    }
+  }
+  return seen.size();
 }
 
 template <typename T> struct IsometryComponentMass {
@@ -1216,19 +1399,67 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
       }
       glue_gens.push_back(g_i);
     }
-    std::optional<GlueOrbitResult> opt =
-        GlueOrbit(q, mods, glue_gens, bounds.max_module, bounds.max_group,
-                  bounds.max_orbit, bounds.max_vertices, os);
+    // the images of the local groups on the non-scalar modules
+    std::vector<std::optional<std::vector<ModuleAut>>> image_groups;
+    std::vector<std::string> list_image;
+    bool image_proper = false;
+    for (size_t s = 0; s < mods.size(); s++) {
+      if (IsScalarAction(mods[s])) {
+        image_groups.push_back({});
+        list_image.push_back("scalar");
+        continue;
+      }
+      std::optional<std::vector<ModuleAut>> full = EquivariantModuleIsometries(
+          mods[s], bounds.max_module, bounds.max_group);
+      if (full) {
+        // a lower bound first: -1 and, for a cyclic component, sigma are
+        // in the local group; if they generate all the equivariant
+        // isometries the image is full without a search
+        IsometryComponent<T> const &comp = res.components[comp_pos[s]];
+        std::vector<MyVector<T>> gens = PrimaryModuleGenerators(comp, mods[s]);
+        int kc = comp.gram.rows();
+        std::vector<ModuleAut> lower{ModuleActionOfIsometry(
+            comp, mods[s], gens,
+            MyMatrix<Tint>(-IdentityMat<Tint>(kc)))};
+        if (comp.extra_sigma.empty()) {
+          lower.push_back(ModuleActionOfIsometry(
+              comp, mods[s], gens,
+              UniversalMatrixConversion<Tint, T>(comp.sigma)));
+        }
+        if (ModuleGroupClosureSize(mods[s], lower, full->size()) ==
+            full->size()) {
+          image_groups.push_back(full);
+          list_image.push_back("full");
+          continue;
+        }
+      }
+      std::optional<std::vector<ModuleAut>> img =
+          LocalImageOnModule<T, Tint>(res.components[comp_pos[s]], mods[s], os);
+      if (!img) {
+        image_groups.push_back({});
+        list_image.push_back("assumed");
+        res.image_assumed = true;
+        continue;
+      }
+      if (full && full->size() == img->size()) {
+        // the whole group: the graph method may be used as well
+        image_groups.push_back(full);
+        list_image.push_back("full");
+      } else {
+        image_groups.push_back(img);
+        list_image.push_back("proper");
+        image_proper = true;
+      }
+    }
+    std::optional<GlueOrbitResult> opt = GlueOrbit(
+        q, mods, glue_gens, image_groups, image_proper, bounds.max_module,
+        bounds.max_group, bounds.max_orbit, bounds.max_vertices, os);
     if (!opt) {
       std::cerr << "ISOM_MASS: the glue at q=" << q
                 << " exceeds the bounds of both the listing and the graph\n";
       throw TerminalException{1};
     }
-    for (auto const &M : mods) {
-      if (!IsScalarAction(M)) {
-        res.image_assumed = true;
-      }
-    }
+    opt->list_image = list_image;
 #ifdef DEBUG_ISOMETRY_MASS
     os << "ISOM_MASS: q=" << q << " |H_q|=" << opt->glue_order
        << " orbit=" << opt->orbit_size << "\n";
@@ -1636,7 +1867,12 @@ void WriteIsometryMassResult(std::ostream &os, IsometryMassResult<T> const &res)
        << ", d:=" << StringStdVectorGAP(gl.list_d)
        << ", module_orders:=" << StringStdVectorGAP(gl.list_module_order)
        << ", group_orders:=" << StringStdVectorGAP(gl.list_group_order)
-       << ", orbit:=" << gl.orbit_size << ", method:=\"" << gl.method << "\")";
+       << ", orbit:=" << gl.orbit_size << ", method:=\"" << gl.method
+       << "\", image:=[";
+    for (size_t s = 0; s < gl.list_image.size(); s++) {
+      os << (s > 0 ? ", " : "") << "\"" << gl.list_image[s] << "\"";
+    }
+    os << "])";
   }
   os << "],\n  glue_factor:=" << res.glue_factor
      << ",\n  image_assumed:=" << GAP_logical(res.image_assumed)

@@ -306,44 +306,6 @@ template <typename T> MyMatrix<T> BlockDiagonal(MyMatrix<T> const &X,
   return Z;
 }
 
-/*
-  The generators of the q-primary part of D(L) as vectors of L^# (rows, in
-  the coordinates of L), in the order of BuildPrimaryQuadModule.
- */
-template <typename T>
-std::vector<MyVector<T>> PrimaryModuleGenerators(IsometryComponent<T> const &comp,
-                                                 PrimaryQuadModule const &M) {
-  std::vector<MyVector<T>> gens;
-  int k = comp.gram.rows();
-  for (size_t s = 0; s < M.rank(); s++) {
-    int i = M.index[s];
-    MyVector<T> g(k);
-    for (int j = 0; j < k; j++) {
-      g(j) = comp.row(i, j) / ScalarFromInt64<T>(M.ord[s]);
-    }
-    gens.push_back(g);
-  }
-  return gens;
-}
-
-/*
-  The automorphism of the q-primary module M of D(L) induced by an isometry
-  h of L acting on the rows (h A h^T = A), as the images of the generators.
- */
-template <typename T, typename Tint>
-ModuleAut ModuleActionOfIsometry(IsometryComponent<T> const &comp,
-                                 PrimaryQuadModule const &M,
-                                 std::vector<MyVector<T>> const &gens,
-                                 MyMatrix<Tint> const &h) {
-  MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);
-  ModuleAut phi;
-  for (auto const &g : gens) {
-    MyVector<T> img = h_T.transpose() * g;
-    phi.push_back(ModuleCoordinates(M, comp, img));
-  }
-  return phi;
-}
-
 // phi on the first summand of M1 (+) M2 (shift 0) or the second.
 inline ModuleAut ExtendModuleAut(ModuleAut const &phi, size_t r1, size_t r2,
                                  bool first) {
