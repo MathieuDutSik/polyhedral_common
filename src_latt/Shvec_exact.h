@@ -1001,6 +1001,18 @@ private:
   // The Gram-only part of the fast-path preparation, computed once and
   // shared by every enumeration of this solver.
   std::optional<ShvecFastPrep<T>> fast_prep;
+  /*
+    The decomposition over the ring, for a rational T whose reduced Gram
+    matrix is integral. The enumeration is fraction-free, so for an integral
+    form and the zero coset every quantity it forms is an integer, and the
+    central enumerations run over Tint, where an operation costs no
+    canonicalization. The kernel is the same and its arithmetic exact either
+    way, so the vectors found and their order are those of the field. The
+    opt-in native-integer fast path keeps the field, which it converts itself.
+   */
+  static constexpr bool ring_path =
+      is_implementation_of_Q<T>::value && !shvec_has_fast_path<T>::value;
+  std::optional<FullGramInfo<Tint>> request_ring;
 
   void init_from_reduction() {
     // The identity, for a matrix the caller has already reduced
@@ -1015,6 +1027,39 @@ private:
     if constexpr (shvec_has_fast_path<T>::value) {
       fast_prep = ComputeShvecFastPrep(eRec.GramMatRed);
     }
+    if constexpr (ring_path) {
+      if (IsIntegralMatrix(eRec.GramMatRed)) {
+        request_ring = FullGramInfo<Tint>(
+            UniversalMatrixConversion<Tint, T>(eRec.GramMatRed));
+      }
+    }
+  }
+  /*
+    The enumeration of the zero coset up to the bound, over the ring when
+    request_ring is set, the norms handed to f_insert being converted back
+    to T. Norms of integral vectors are then integers, so the bound is taken
+    down to an integer, which changes no vector found.
+   */
+  template <typename Finsert>
+  void central_enumeration(T const &bound, Finsert f_insert) const {
+    if constexpr (ring_path) {
+      if (request_ring) {
+        if (bound < 0) {
+          return;
+        }
+        Tint bound_ring = UniversalFloorScalarInteger<Tint, T>(bound);
+        MyVector<Tint> coset = ZeroVector<Tint>(dim);
+        auto f_ring = [&](MyVector<Tint> const &V, Tint const &norm) -> bool {
+          return f_insert(V, UniversalScalarConversion<T, Tint>(norm));
+        };
+        (void)computeIt<Tint, Tint, decltype(f_ring)>(
+            *request_ring, coset, true, bound_ring, f_ring, nullptr);
+        return;
+      }
+    }
+    MyVector<T> coset = ZeroVector<T>(dim);
+    (void)computeIt<T, Tint, Finsert>(request, coset, true, bound, f_insert,
+                                      get_prep());
   }
 
 public:
@@ -1153,10 +1198,24 @@ public:
     return {TheNorm, std::move(ListClos)};
   }
   Tshortest<T, Tint> shortest_vectors() const {
-    MyVector<T> coset = ZeroVector<T>(dim);
     bool central = true;
-    T_shvec_info<T, Tint> info =
-        compute_minimum<T, Tint>(request, coset, central, get_prep());
+    T_shvec_info<T, Tint> info;
+    // Over the ring when the form allows it, see request_ring.
+    bool done = false;
+    if constexpr (ring_path) {
+      if (request_ring) {
+        MyVector<Tint> coset = ZeroVector<Tint>(dim);
+        T_shvec_info<Tint, Tint> info_ring =
+            compute_minimum<Tint, Tint>(*request_ring, coset, central, nullptr);
+        info.short_vectors = std::move(info_ring.short_vectors);
+        info.minimum = UniversalScalarConversion<T, Tint>(info_ring.minimum);
+        done = true;
+      }
+    }
+    if (!done) {
+      MyVector<T> coset = ZeroVector<T>(dim);
+      info = compute_minimum<T, Tint>(request, coset, central, get_prep());
+    }
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
@@ -1209,8 +1268,6 @@ public:
     return ListVect;
   }
   std::vector<MyVector<Tint>> fixed_norm_vectors(T const &TheNorm) const {
-    MyVector<T> coset = ZeroVector<T>(dim);
-    bool central = true;
     std::vector<MyVector<Tint>> ListVect;
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       if (min == TheNorm) {
@@ -1225,9 +1282,7 @@ public:
       }
       return true;
     };
-    (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central,
-                                                 TheNorm, f_insert,
-                                                 get_prep());
+    central_enumeration(TheNorm, f_insert);
     return ListVect;
   }
   std::vector<MyVector<Tint>> at_most_dist_vectors(MyVector<T> const &eV,
@@ -1309,8 +1364,6 @@ public:
     }
   }
   std::vector<MyVector<Tint>> at_most_norm_vectors(T const &MaxNorm) const {
-    MyVector<T> coset = ZeroVector<T>(dim);
-    bool central = true;
     std::vector<MyVector<Tint>> ListVect;
     auto f_insert = [&](const MyVector<Tint> &V,
                         [[maybe_unused]] const T &min) -> bool {
@@ -1324,9 +1377,7 @@ public:
       ListVect.emplace_back(std::move(x));
       return true;
     };
-    (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central,
-                                                 MaxNorm, f_insert,
-                                                 get_prep());
+    central_enumeration(MaxNorm, f_insert);
     return ListVect;
   }
 };
