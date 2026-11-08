@@ -71,6 +71,17 @@ jobs:
           fi
           cd ../..
 
+      - name: Test the seeds of the lattices with an isometry by gluing
+        run: |
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ./RunGlueIsometryTests.sh
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gluing test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
       - name: Test the local densities
         run: |
           cd CI_tests/15B_GenusEnumeration

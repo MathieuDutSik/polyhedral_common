@@ -107,7 +107,7 @@ inline int64_t PowModInt64(int64_t a, int64_t e, int64_t m) {
   return res;
 }
 
-inline int64_t InverseModInt64(int64_t u, int64_t m) {
+inline int64_t InverseModPosInt64(int64_t u, int64_t m) {
   int64_t a = ModPosInt64(u, m), b = m, x0 = 1, x1 = 0;
   while (b != 0) {
     int64_t q = a / b;
@@ -176,7 +176,7 @@ inline RowSpaceModP ComputeRowSpaceModP(ModMatrix rows, int64_t p) {
       continue;
     }
     std::swap(rows[r], rows[piv]);
-    int64_t inv = InverseModInt64(rows[r][col], p);
+    int64_t inv = InverseModPosInt64(rows[r][col], p);
     for (auto &x : rows[r]) {
       x = (x * inv) % p;
     }
@@ -283,7 +283,7 @@ std::vector<EigenspaceData> ComputeEigenspaces(MyMatrix<Tint> const &P, int m,
     }
     int64_t Rlambda = (static_cast<int64_t>(m) % p2) *
                       PowModInt64(lambda2, m - 1, p2) % p2;
-    int64_t inv = InverseModInt64(Rlambda, p2);
+    int64_t inv = InverseModPosInt64(Rlambda, p2);
     for (auto &row : RP) {
       for (auto &x : row) {
         x = (x * inv) % p2;
@@ -458,7 +458,7 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
       twob_red /= p_T;
     }
     int64_t a = (static_cast<int64_t>(ResidueModP(q_red, p)) *
-                 InverseModInt64(ResidueModP(twob_red, p), p)) %
+                 InverseModPosInt64(ResidueModP(twob_red, p), p)) %
                 p;
     for (int i = 0; i < n; i++) {
       v[i] = ModPosInt64(v[i] - a * p * (*opt_u)[i], p2);

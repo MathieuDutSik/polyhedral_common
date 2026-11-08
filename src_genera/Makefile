@@ -1,4 +1,4 @@
-PROGRAM		= GENUS_Enumerate GENUS_LocalDensity GENUS_AlgebraicModularForms GENUS_IsometryMass GENUS_EnumerateIsometry
+PROGRAM		= GENUS_Enumerate GENUS_LocalDensity GENUS_AlgebraicModularForms GENUS_IsometryMass GENUS_EnumerateIsometry GENUS_GlueIsometry
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
