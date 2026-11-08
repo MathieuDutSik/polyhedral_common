@@ -6,6 +6,7 @@
 #include "GenusEnumeration.h"
 #include "LatticeOrbitSplitCanonical.h"
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <numeric>
 #include <optional>
@@ -745,15 +746,59 @@ inline int NextPrimeAfter(int q) {
 }
 
 /*
+  The good primes in the order of the cost of their neighbours: the number
+  of points sum_chi (p^k_chi - 1) / (p - 1) of the projective spaces of the
+  joint eigenspaces defined over F_p, of dimensions k_chi. At p != 1 mod m
+  only the characters with values in F_p contribute; their neighbours may
+  already reach every class, and far more cheaply: for E8+E8 with a group
+  of order 6 whose fixed lattice has rank 13, p = 5 visits P^12(F_5) where
+  p = 7 visits P^12(F_7), 50 times larger. A prime with no eigenspace over
+  F_p gives no neighbour and is left out. The genus fixes the dimensions,
+  so the first class gives them.
+ */
+template <typename T, typename Tint = mpz_class>
+std::vector<int> OrderedNeighborPrimes(std::vector<MyMatrix<T>> const &ListP,
+                                       int m, T const &det, bool scalar) {
+  std::vector<MyMatrix<Tint>> ListP_int;
+  for (auto const &P : ListP) {
+    ListP_int.push_back(UniversalMatrixConversion<Tint, T>(P));
+  }
+  // the first good primes with an eigenspace over F_p
+  size_t n_cand = 12;
+  std::vector<std::pair<double, int>> ListCost;
+  int p = 1;
+  while (ListCost.size() < n_cand) {
+    p = NextPrimeAfter(p);
+    if (!IsGoodNeighborPrime(p, m, det, scalar)) {
+      continue;
+    }
+    std::vector<EigenspaceData> ListEig =
+        ComputeJointEigenspaces(ListP_int, m, p);
+    if (ListEig.empty()) {
+      continue;
+    }
+    double cost = 0;
+    for (auto const &ed : ListEig) {
+      double k = static_cast<double>(ed.space.basis.size());
+      cost += (std::pow(static_cast<double>(p), k) - 1) / (p - 1);
+    }
+    ListCost.push_back({cost, p});
+  }
+  std::stable_sort(ListCost.begin(), ListCost.end());
+  std::vector<int> res;
+  for (auto const &pair : ListCost) {
+    res.push_back(pair.second);
+  }
+  return res;
+}
+
+/*
   The enumeration. ListSeed holds pairs (Gram, isometries on the columns),
   the isometries commuting and generating a finite abelian group G of
   exponent m. With prime != 0 only that prime is used (any good prime).
-  With prime = 0 the prime 2 when it is good, then the good primes
-  p = 1 mod m, at which every character of G takes its values in F_p, are
-  brought in in increasing order as in the iterate strategy of
-  GenusEnumeration, at most max_prime of them. At a prime p != 1 mod m only
-  the eigenvalues in F_p give neighbours, and the projective space of the
-  fixed space can be large while the useful lines are elsewhere.
+  With prime = 0 the good primes are brought in one after the other in the
+  order of OrderedNeighborPrimes, as in the iterate strategy of
+  GenusEnumeration, at most max_prime of them.
  */
 template <typename T, typename Tint, typename Tgroup>
 GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
@@ -924,6 +969,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       expand_at(pos, prime, 0);
     }
   } else {
+    std::vector<int> ListCandidate =
+        OrderedNeighborPrimes(ListPairWork[0].second, m, det, scalar);
     std::vector<size_t> next_expand;
     while (result.accumulated_mass != TotalMass) {
       if (result.accumulated_mass > TotalMass) {
@@ -937,23 +984,11 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         }
       }
       if (i_work == result.ListPrimeUsed.size()) {
-        if (result.ListPrimeUsed.size() == max_prime) {
+        if (result.ListPrimeUsed.size() == max_prime ||
+            result.ListPrimeUsed.size() == ListCandidate.size()) {
           break;
         }
-        // 2 first when it is good, then the primes p = 1 mod m, at which
-        // all the eigenvalues are in F_p
-        int p_new;
-        if (result.ListPrimeUsed.empty() && IsGoodNeighborPrime(2, m, det, scalar)) {
-          p_new = 2;
-        } else {
-          int q = result.ListPrimeUsed.empty() ? 2 : result.ListPrimeUsed.back();
-          p_new = NextPrimeAfter(q);
-          while (!IsGoodNeighborPrime(p_new, m, det, scalar) ||
-                 (!scalar && p_new % m != 1)) {
-            p_new = NextPrimeAfter(p_new);
-          }
-        }
-        result.ListPrimeUsed.push_back(p_new);
+        result.ListPrimeUsed.push_back(ListCandidate[i_work]);
         result.ListNewClassPerPrime.push_back(0);
         next_expand.push_back(0);
         continue;
