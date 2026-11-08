@@ -191,12 +191,6 @@ template <typename T, typename Tgroup> struct GenusEnumerationResult {
   size_t n_expansion_skipped = 0;
   // The random walks run, one per class treated by the random walk.
   size_t n_walk = 0;
-  // Where each class was found: the class it is a neighbour of (-1 for a
-  // seed), how ('s' seed, 'e' full expansion, 'w' random walk) and at which
-  // prime (0 for a seed).
-  std::vector<int64_t> ListOriginClass;
-  std::vector<char> ListOriginKind;
-  std::vector<int> ListOriginPrime;
   size_t n_neighbor_random = 0;
   size_t n_new_random = 0;
   bool closed_in_random_walk = false;
@@ -1035,20 +1029,6 @@ struct GenusEnumerationState {
   }
 
   // Records a new class and its automorphism data; returns its index.
-  // The origin of the neighbours inserted now, set by the expansion or the
-  // random walk under way and restored when it ends.
-  struct GenusOrigin {
-    int64_t cls = -1;
-    char kind = 's';
-    int prime = 0;
-  };
-  GenusOrigin origin;
-  struct RestoreOrigin {
-    GenusOrigin &ref;
-    GenusOrigin saved;
-    ~RestoreOrigin() { ref = saved; }
-  };
-
   size_t add(MyMatrix<T> const &StoreGram,
              LatticeAutInfo<T, Tint, Tgroup> const &info) {
     size_t idx = result.ListGram.size();
@@ -1058,9 +1038,6 @@ struct GenusEnumerationState {
         Tmass(1) / UniversalScalarConversion<Tmass, TintGroup>(info.order);
     ListGramWork.push_back(StoreGram);
     ListAutInfo.push_back(info);
-    result.ListOriginClass.push_back(origin.cls);
-    result.ListOriginKind.push_back(origin.kind);
-    result.ListOriginPrime.push_back(origin.prime);
 #ifdef DEBUG_GENUS_ENUMERATION
     os << "GENUS: class " << result.ListGram.size() << ", |Aut|=" << info.order
        << ", mass " << result.accumulated_mass << " / " << TotalMass << "\n";
@@ -1234,8 +1211,6 @@ struct GenusEnumerationState {
        << " orbits of projective points at p=" << p << "\n";
 #endif
     result.n_expansion++;
-    RestoreOrigin restore{origin, origin};
-    origin = GenusOrigin{static_cast<int64_t>(pos), 'e', p};
     Tmass order_mass =
         UniversalScalarConversion<Tmass, TintGroup>(result.ListAutOrder[pos]);
     [[maybe_unused]] bool would_skip = false;
@@ -1581,8 +1556,6 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
   std::vector<size_t> pending;
   auto random_walk = [&](size_t pos) -> void {
     result.n_walk++;
-    typename GenusEnumerationState<T, Tint, Tgroup>::RestoreOrigin restore{
-        state.origin, state.origin};
     MyMatrix<Tint> G_int =
         UniversalMatrixConversion<Tint, T>(state.ListGramWork[pos]);
     size_t log_order = GenusRandomWalkLogOrder(result.ListAutOrder[pos]);
@@ -1609,8 +1582,6 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
         continue;
       }
       result.n_neighbor_random++;
-      state.origin = typename GenusEnumerationState<T, Tint, Tgroup>::GenusOrigin{
-          static_cast<int64_t>(pos), 'w', p};
       if (state.insert(*opt)) {
         result.n_new_random++;
         pending.push_back(state.ListGramWork.size() - 1);
@@ -1989,18 +1960,6 @@ void WriteGenusEnumerationResult(
        << ", random walk " << result.n_neighbor_random << " ("
        << result.n_new_random << " new classes)\n";
     os << "random walks: " << result.n_walk << "\n";
-    if (!result.ListOriginClass.empty()) {
-      size_t last = result.ListOriginClass.size() - 1;
-      os << "last class: " << (last + 1) << ", from ";
-      if (result.ListOriginKind[last] == 's') {
-        os << "the seeds\n";
-      } else {
-        os << "class " << (result.ListOriginClass[last] + 1) << " by "
-           << (result.ListOriginKind[last] == 'e' ? "full expansion"
-                                                    : "random walk")
-           << " at p=" << result.ListOriginPrime[last] << "\n";
-      }
-    }
     os << "expansions: " << result.n_expansion << " ("
        << result.n_expansion_skipped << " skipped by the Hecke bookkeeping)\n";
     os << "closed in the random walk phase = "
@@ -2055,24 +2014,7 @@ void WriteGenusEnumerationResult(
        << ",\n n_new_random:=" << result.n_new_random
        << ",\n n_expansion:=" << result.n_expansion
        << ",\n n_expansion_skipped:=" << result.n_expansion_skipped
-       << ",\n n_walk:=" << result.n_walk;
-    // the origins: the class it is a neighbour of (0 for a seed), how and
-    // at which prime
-    os << ",\n ListOriginClass:=[";
-    for (size_t i = 0; i < result.ListOriginClass.size(); i++) {
-      os << (i > 0 ? ", " : "") << (result.ListOriginClass[i] + 1);
-    }
-    os << "],\n ListOriginKind:=[";
-    for (size_t i = 0; i < result.ListOriginKind.size(); i++) {
-      char k = result.ListOriginKind[i];
-      os << (i > 0 ? ", " : "")
-         << (k == 's' ? "\"seed\"" : (k == 'e' ? "\"expansion\"" : "\"walk\""));
-    }
-    os << "],\n ListOriginPrime:=[";
-    for (size_t i = 0; i < result.ListOriginPrime.size(); i++) {
-      os << (i > 0 ? ", " : "") << result.ListOriginPrime[i];
-    }
-    os << "]"
+       << ",\n n_walk:=" << result.n_walk
        << ",\n closed_in_random_walk:="
        << (result.closed_in_random_walk ? "true" : "false") << ");\n";
     return;
