@@ -847,18 +847,9 @@ GlueOrbit(int64_t q, std::vector<PrimaryQuadModule> const &mods,
   return GlueOrbitGraph(q, mods, glue_gens, max_vertices, os);
 }
 
-/*
-  The image in the automorphisms of the q-primary module M of D(L_d) of
-  the stabiliser of L_d in the centraliser C(Q_q) of the group acting on
-  the component: the elements of the commutant Lambda of comp.sigma and
-  comp.extra_sigma that preserve the form, found modulo q^c (q^c the
-  exponent of M) by LocalStabilizerImage, then moved to M. Nothing beyond
-  the bounds.
- */
+// The commutant of comp.sigma and comp.extra_sigma in M_k(Z), saturated.
 template <typename T, typename Tint>
-std::optional<std::vector<ModuleAut>>
-LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
-                   [[maybe_unused]] std::ostream &os) {
+std::vector<MyMatrix<Tint>> IntegralCommutant(IsometryComponent<T> const &comp) {
   int k = comp.gram.rows();
   std::vector<MyMatrix<T>> ListX{comp.sigma};
   ListX.insert(ListX.end(), comp.extra_sigma.begin(), comp.extra_sigma.end());
@@ -883,6 +874,129 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
     }
   }
   MyMatrix<Tint> ker = NullspaceIntTrMat(MyMatrix<Tint>(Eq.transpose()));
+  std::vector<MyMatrix<Tint>> res;
+  for (int r = 0; r < ker.rows(); r++) {
+    MyMatrix<Tint> Y(k, k);
+    for (int u = 0; u < k; u++) {
+      for (int v = 0; v < k; v++) {
+        Y(u, v) = ker(r, u * k + v);
+      }
+    }
+    res.push_back(Y);
+  }
+  return res;
+}
+
+/*
+  Elements of the local centraliser by the Cayley transform: for Y in the
+  commutant with Y A + A Y^T = 0 and I + Y invertible modulo q, g = (I - Y)
+  (I + Y)^{-1} is an isometry (Y A = -A Y^T gives (I + Y) A = A (I - Y^T))
+  commuting with the group, with denominators prime to q. Returned as
+  integer matrices congruent to g modulo q^c, which is all the action on
+  D(L)_q sees. count random Y with small coefficients, from a fixed seed.
+ */
+template <typename T, typename Tint>
+std::vector<MyMatrix<Tint>> CayleyLocalElements(IsometryComponent<T> const &comp,
+                                                int64_t q, int c, size_t count) {
+  int k = comp.gram.rows();
+  std::vector<MyMatrix<Tint>> ListComm = IntegralCommutant<T, Tint>(comp);
+  size_t dim = ListComm.size();
+  MyMatrix<Tint> A = UniversalMatrixConversion<Tint, T>(comp.gram);
+  // the skew part: x with sum x_i (Y_i A + A Y_i^T) = 0
+  int n_eq = k * k;
+  MyMatrix<Tint> Eq(static_cast<int>(dim), n_eq);
+  for (size_t i = 0; i < dim; i++) {
+    MyMatrix<Tint> Z = ListComm[i] * A + A * ListComm[i].transpose();
+    for (int u = 0; u < k; u++) {
+      for (int v = 0; v < k; v++) {
+        Eq(static_cast<int>(i), u * k + v) = Z(u, v);
+      }
+    }
+  }
+  MyMatrix<Tint> ker = NullspaceIntTrMat(MyMatrix<Tint>(Eq.transpose()));
+  std::vector<MyMatrix<Tint>> ListSkew;
+  for (int r = 0; r < ker.rows(); r++) {
+    MyMatrix<Tint> Y = ZeroMatrix<Tint>(k, k);
+    for (size_t i = 0; i < dim; i++) {
+      Tint coef = ker(r, static_cast<int>(i));
+      if (coef != 0) {
+        MyMatrix<Tint> term = ListComm[i] * coef;
+        Y += term;
+      }
+    }
+    ListSkew.push_back(Y);
+  }
+  std::vector<MyMatrix<Tint>> res;
+  if (ListSkew.empty()) {
+    return res;
+  }
+  Tint q_T = UniversalScalarConversion<Tint, int64_t>(q);
+  Tint qc(1);
+  for (int i = 0; i < c; i++) {
+    qc *= q_T;
+  }
+  std::mt19937_64 rng(static_cast<uint64_t>(q) * 2654435761ULL + k);
+  std::uniform_int_distribution<int> unif(-2, 2);
+  MyMatrix<Tint> Id = IdentityMat<Tint>(k);
+  for (size_t iter = 0; iter < 20 * count && res.size() < count; iter++) {
+    MyMatrix<Tint> Y = ZeroMatrix<Tint>(k, k);
+    for (auto const &S : ListSkew) {
+      int coef = unif(rng);
+      if (coef != 0) {
+        MyMatrix<Tint> term = S * Tint(coef);
+        Y += term;
+      }
+    }
+    MyMatrix<Tint> Ip = Id + Y;
+    Tint det = DeterminantMat(Ip);
+    Tint r = ((det % q_T) + q_T) % q_T;
+    if (r == 0) {
+      continue;
+    }
+    // (I - Y) adj(I + Y) det^{-1} modulo q^c
+    MyMatrix<T> IpInv = Inverse(UniversalMatrixConversion<T, Tint>(Ip));
+    MyMatrix<Tint> adj = UniversalMatrixConversion<Tint, T>(
+        MyMatrix<T>(IpInv * UniversalScalarConversion<T, Tint>(det)));
+    Tint dm = ((det % qc) + qc) % qc;
+    int64_t dinv = InvModQ(UniversalScalarConversion<int64_t, Tint>(dm),
+                           UniversalScalarConversion<int64_t, Tint>(qc));
+    MyMatrix<Tint> ImY = Id - Y;
+    MyMatrix<Tint> g = ImY * adj;
+    Tint dinv_T = UniversalScalarConversion<Tint, int64_t>(dinv);
+    for (int u = 0; u < k; u++) {
+      for (int v = 0; v < k; v++) {
+        Tint x = g(u, v) * dinv_T;
+        g(u, v) = ((x % qc) + qc) % qc;
+      }
+    }
+    res.push_back(g);
+  }
+  return res;
+}
+
+/*
+  The image in the automorphisms of the q-primary module M of D(L_d) of
+  the stabiliser of L_d in the centraliser C(Q_q) of the group acting on
+  the component: the elements of the commutant Lambda of comp.sigma and
+  comp.extra_sigma that preserve the form, found modulo q^c (q^c the
+  exponent of M) by LocalStabilizerImage, then moved to M. Nothing beyond
+  the bounds.
+ */
+template <typename T, typename Tint>
+std::optional<std::vector<ModuleAut>>
+LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
+                   [[maybe_unused]] std::ostream &os) {
+  int k = comp.gram.rows();
+  int kk = k * k;
+  std::vector<MyMatrix<Tint>> ListComm = IntegralCommutant<T, Tint>(comp);
+  MyMatrix<Tint> ker(static_cast<int>(ListComm.size()), kk);
+  for (size_t r = 0; r < ListComm.size(); r++) {
+    for (int u = 0; u < k; u++) {
+      for (int v = 0; v < k; v++) {
+        ker(static_cast<int>(r), u * k + v) = ListComm[r](u, v);
+      }
+    }
+  }
   int64_t q = M.q;
   int c = 0;
   for (int64_t x = M.N; x > 1; x /= q) {
@@ -1426,8 +1540,23 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
               comp, mods[s], gens,
               UniversalMatrixConversion<Tint, T>(comp.sigma)));
         }
-        if (ModuleGroupClosureSize(mods[s], lower, full->size()) ==
-            full->size()) {
+        bool is_full =
+            ModuleGroupClosureSize(mods[s], lower, full->size()) ==
+            full->size();
+        if (!is_full) {
+          // and elements of the local group by the Cayley transform
+          int c = 0;
+          for (int64_t x = mods[s].N; x > 1; x /= mods[s].q) {
+            c++;
+          }
+          for (auto const &g :
+               CayleyLocalElements<T, Tint>(comp, mods[s].q, c, 12)) {
+            lower.push_back(ModuleActionOfIsometry(comp, mods[s], gens, g));
+          }
+          is_full = ModuleGroupClosureSize(mods[s], lower, full->size()) ==
+                    full->size();
+        }
+        if (is_full) {
           image_groups.push_back(full);
           list_image.push_back("full");
           continue;

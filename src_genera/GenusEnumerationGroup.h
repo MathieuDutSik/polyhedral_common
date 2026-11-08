@@ -7,6 +7,7 @@
 #include "LatticeOrbitSplitCanonical.h"
 #include "GroupNeighborModP.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <map>
 #include <numeric>
@@ -1034,23 +1035,150 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   bool scalar = false;
   // commuting generators: the eigenvectors; otherwise the G-submodules
   bool abelian = true;
-  auto f_insert = [&](MyMatrix<T> const &A,
-                      std::vector<MyMatrix<T>> const &ListP) -> bool {
-    CanonicalPairData<T> can = CanonicalPair<T, Tint, Tgroup>(A, ListP, os);
-    std::pair<int, std::vector<MyMatrix<T>>> key{
-        can.method, PairForms(can.Acan, can.ListPcan)};
-    if (MapCanonic.count(key) == 1) {
-      return false;
+  /*
+    The projective spaces are visited in rounds. Building the orbits costs
+    the size of the space, as the first orbit covers most of it
+    (P^13(F_5) for the fixed lattice of rank 14 of W(A_2) on E8+E8 has 1.5
+    10^9 points), while random points find the frequent classes at once
+    but may take long to hit a rare one. So: up to small_space points the
+    orbits are built; up to large_space points random points come first,
+    and the orbits are built before a further prime is brought in, if the
+    mass has not closed (the cheapest prime is exhausted first); beyond,
+    only random points, four times as many in each final round. The seeds
+    are fixed per round. The mass, not the visit, certifies completeness.
+   */
+  size_t const small_space = 5000000;
+  size_t const large_space = 20000000;
+  size_t n_sample = 200;
+  size_t i_round = 0;
+  bool more_rounds = false;
+  // the medium spaces whose orbits were deferred, by prime index
+  std::vector<uint8_t> deferred;
+  bool orbit_phase = false;
+  size_t i_prime_cur = 0;
+  // 0: nothing to do, 1: build the orbits, 2: random points
+  auto visit_mode = [&](size_t n_point) -> int {
+    if (orbit_phase) {
+      return (n_point > small_space && n_point <= large_space) ? 1 : 0;
     }
+    if (n_point <= small_space) {
+      return (i_round == 0) ? 1 : 0;
+    }
+    if (n_point <= large_space) {
+      if (i_round == 0) {
+        if (deferred.size() <= i_prime_cur) {
+          deferred.resize(i_prime_cur + 1, 0);
+        }
+        deferred[i_prime_cur] = 1;
+        return 2;
+      }
+      return 0;
+    }
+    more_rounds = true;
+    return 2;
+  };
+  /*
+    A class is recognised by isometry tests rather than canonical forms:
+    the classes are bucketed by the canonical form of the lattice alone
+    (the fast Weyl-chamber one), and a neighbour is tested against those of
+    its bucket by Plesken-Souvignier on the pair forms, pruned by the
+    known centraliser of the class. The canonical form of a pair is slow
+    when the centraliser is large (10^12 for W(A3) on E8+E8, 99% of the
+    time), and with random points most neighbours are known classes, for
+    which an isometry is found quickly.
+   */
+  /*
+    A known class is recognised in one of two ways, chosen by their
+    measured cost: the canonical form of the pair (key in MapCanonic), or
+    isometry tests. For the latter the classes with the same lattice are
+    put in one bucket, keyed by the canonical form Akey = B A B^T of the
+    lattice (the fast Weyl-chamber one); every pair of the bucket is moved
+    by B to that canonical basis, then by a fixed LLL reduction R of Akey,
+    so that all of them share one Gram matrix and one Z-spanning family,
+    computed once per bucket, and a neighbour costs the canonical form of
+    its lattice and the Plesken-Souvignier backtrack against the classes of
+    its bucket, pruned by their centralisers. Which is cheaper depends on
+    the case: the canonical form of the pair takes 99% of the time for
+    W(A3) on E8+E8 and less than the isometry tests for two reflections.
+    The first neighbours try both in turn, then the cheaper on average is
+    used; a class gets the data of a method when that method first meets
+    it, so both always see all the classes.
+   */
+  struct PairBucket {
+    MyMatrix<Tint> Rmat;
+    MyMatrix<Tint> SHVhalf;
+    std::vector<size_t> classes;
+  };
+  std::map<MyMatrix<T>, PairBucket> MapBucket;
+  std::vector<std::vector<MyMatrix<Tint>>> ListFormsRed;
+  std::vector<std::vector<MyMatrix<Tint>>> ListAutRed;
+  std::vector<uint8_t> ListInBucket;
+  std::vector<uint8_t> ListHasKey;
+  double t_can = 0, t_iso = 0;
+  size_t n_can = 0, n_iso = 0;
+  using CanonKey = std::pair<int, std::vector<MyMatrix<T>>>;
+  auto canon_key = [&](MyMatrix<T> const &A,
+                       std::vector<MyMatrix<T>> const &ListP) -> CanonKey {
+    CanonicalPairData<T> can = CanonicalPair<T, Tint, Tgroup>(A, ListP, os);
+    return {can.method, PairForms(can.Acan, can.ListPcan)};
+  };
+  // the bucket data of a pair: its bucket and its forms in the reduced
+  // canonical basis, with the basis change M = R B
+  struct BucketData {
+    MyMatrix<T> Akey;
+    MyMatrix<Tint> M;
+    std::vector<MyMatrix<Tint>> forms;
+  };
+  auto bucket_data = [&](MyMatrix<T> const &A,
+                         std::vector<MyMatrix<T>> const &ListP) -> BucketData {
+    MyMatrix<Tint> B =
+        LatticeCanonicalBasis<T, Tint, Tgroup>(A, GenusMethods().canonical, os);
+    MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
+    MyMatrix<T> Akey = B_T * A * B_T.transpose();
+    auto iter = MapBucket.find(Akey);
+    if (iter == MapBucket.end()) {
+      PairBucket bucket;
+      LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(Akey, os);
+      bucket.Rmat = rec.Pmat;
+      bucket.SHVhalf =
+          PleskenSouvignierZspanFamilyHalf<T, Tint>(rec.GramMatRed, false, os);
+      iter = MapBucket.emplace(Akey, bucket).first;
+    }
+    MyMatrix<Tint> M = iter->second.Rmat * B;
+    MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(M);
+    std::vector<MyMatrix<Tint>> forms;
+    for (auto const &F : PairForms(A, ListP)) {
+      forms.push_back(UniversalMatrixConversion<Tint, T>(
+          MyMatrix<T>(M_T * F * M_T.transpose())));
+    }
+    return {Akey, M, forms};
+  };
+  auto put_in_bucket = [&](size_t idx, BucketData const &bd) -> void {
+    MyMatrix<Tint> Minv = Inverse(bd.M);
+    std::vector<MyMatrix<Tint>> gens_red;
+    for (auto const &h : ListAutInfo[idx].ListGenMat) {
+      gens_red.push_back(bd.M * h * Minv);
+    }
+    ListFormsRed[idx] = bd.forms;
+    ListAutRed[idx] = gens_red;
+    ListInBucket[idx] = 1;
+    MapBucket[bd.Akey].classes.push_back(idx);
+  };
+  auto add_class = [&](MyMatrix<T> const &A,
+                       std::vector<MyMatrix<T>> const &ListP) -> size_t {
     PairAutInfo<T, Tint, Tgroup> info =
-        GetPairAutInfo<T, Tint, Tgroup>(can.Acan, can.ListPcan, os);
-    MapCanonic[key] = ListPairWork.size();
-    ListPairWork.push_back({can.Acan, can.ListPcan});
+        GetPairAutInfo<T, Tint, Tgroup>(A, ListP, os);
+    size_t idx = ListPairWork.size();
+    ListPairWork.push_back({A, ListP});
     ListAutInfo.push_back(info);
-    result.ListGram.push_back(can.Acan);
+    ListFormsRed.push_back({});
+    ListAutRed.push_back({});
+    ListInBucket.push_back(0);
+    ListHasKey.push_back(0);
+    result.ListGram.push_back(A);
     std::vector<MyMatrix<T>> ListIsom;
-    for (auto const &Pcan : can.ListPcan) {
-      ListIsom.push_back(Pcan.transpose());
+    for (auto const &P : ListP) {
+      ListIsom.push_back(P.transpose());
     }
     result.ListListIsom.push_back(ListIsom);
     result.ListCentralizerOrder.push_back(info.order);
@@ -1061,7 +1189,76 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
        << ", |C(sigma)|=" << info.order << ", mass " << result.accumulated_mass
        << " / " << TotalMass << "\n";
 #endif
+    return idx;
+  };
+  auto f_insert_canonical = [&](MyMatrix<T> const &A,
+                                std::vector<MyMatrix<T>> const &ListP) -> bool {
+    for (size_t idx = 0; idx < ListPairWork.size(); idx++) {
+      if (!ListHasKey[idx]) {
+        MapCanonic[canon_key(ListPairWork[idx].first,
+                             ListPairWork[idx].second)] = idx;
+        ListHasKey[idx] = 1;
+      }
+    }
+    CanonKey key = canon_key(A, ListP);
+    if (MapCanonic.count(key) == 1) {
+      return false;
+    }
+    size_t idx = add_class(A, ListP);
+    MapCanonic[key] = idx;
+    ListHasKey[idx] = 1;
     return true;
+  };
+  auto f_insert_isometry = [&](MyMatrix<T> const &A,
+                               std::vector<MyMatrix<T>> const &ListP) -> bool {
+    for (size_t idx = 0; idx < ListPairWork.size(); idx++) {
+      if (!ListInBucket[idx]) {
+        put_in_bucket(idx, bucket_data(ListPairWork[idx].first,
+                                       ListPairWork[idx].second));
+      }
+    }
+    BucketData bd = bucket_data(A, ListP);
+    PairBucket &bucket = MapBucket[bd.Akey];
+    for (size_t i_b = 0; i_b < bucket.classes.size(); i_b++) {
+      size_t idx = bucket.classes[i_b];
+      std::optional<MyMatrix<Tint>> opt = PleskenSouvignierIsometry<Tint>(
+          bd.forms, bucket.SHVhalf, ListFormsRed[idx], bucket.SHVhalf,
+          ListAutRed[idx], PSIsometryOptions<Tint>{.depth = 0}, os);
+      if (opt) {
+        // the class matched last is tried first next time
+        std::swap(bucket.classes[i_b], bucket.classes[0]);
+        return false;
+      }
+    }
+    size_t idx = add_class(A, ListP);
+    put_in_bucket(idx, bd);
+    return true;
+  };
+  auto f_insert = [&](MyMatrix<T> const &A,
+                      std::vector<MyMatrix<T>> const &ListP) -> bool {
+    bool use_canonical;
+    if (AllScalarIsometries(ListP)) {
+      use_canonical = true;
+    } else if (n_can + n_iso < 6) {
+      use_canonical = (n_can <= n_iso);
+    } else {
+      use_canonical = (t_can / static_cast<double>(n_can) <=
+                       t_iso / static_cast<double>(n_iso));
+    }
+    auto start = std::chrono::steady_clock::now();
+    bool res = use_canonical ? f_insert_canonical(A, ListP)
+                             : f_insert_isometry(A, ListP);
+    double dt = std::chrono::duration<double>(
+                    std::chrono::steady_clock::now() - start)
+                    .count();
+    if (use_canonical) {
+      t_can += dt;
+      n_can++;
+    } else {
+      t_iso += dt;
+      n_iso++;
+    }
+    return res;
   };
   for (auto &eSeed : ListSeed) {
     MyMatrix<T> const &A = eSeed.first;
@@ -1188,20 +1385,13 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         closed = (result.accumulated_mass == TotalMass);
         return closed;
       };
-      /*
-        Beyond max_point_orbit points the orbits are not built: building
-        the first one, which covers most of the space, costs the size of
-        the space (P^13(F_5) for the fixed lattice of rank 14 of W(A_2) on
-        E8+E8 has 1.5 10^9 points). Random points are taken instead, with
-        a fixed seed; the mass, not the visit, certifies completeness.
-       */
-      size_t const max_point_orbit = 2000000;
-      size_t const n_sample = 2000;
-      if (n_point <= max_point_orbit) {
+      int mode = visit_mode(n_point);
+      if (mode == 1) {
         IndexOrbitForEach(n_point, ListAct.size(), image, visit);
-      } else {
+      } else if (mode == 2) {
         std::mt19937_64 rng_point(static_cast<uint64_t>(pos) * 7919ULL +
-                                  static_cast<uint64_t>(p));
+                                  static_cast<uint64_t>(p) * 104729ULL +
+                                  i_round);
         std::uniform_int_distribution<size_t> unif(0, n_point - 1);
         for (size_t i_s = 0; i_s < n_sample; i_s++) {
           if (visit(unif(rng_point))) {
@@ -1220,6 +1410,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
   };
   auto expand_at = [&](size_t pos, int p, size_t i_prime) -> void {
+    i_prime_cur = i_prime;
     if (!abelian) {
       expand_at_module(pos, p, i_prime);
       return;
@@ -1249,8 +1440,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       size_t n_orbit = 0;
 #endif
       bool closed = false;
-      ProjectiveLineOrbitForEach<Tint>(
-          static_cast<int>(k), p, ListGenEig, [&](size_t i_line) -> bool {
+      auto visit_line = [&](size_t i_line) -> bool {
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
             n_orbit++;
 #endif
@@ -1271,7 +1461,23 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
             }
             closed = (result.accumulated_mass == TotalMass);
             return closed;
-          });
+          };
+      size_t n_line = NumberProjectiveLines(static_cast<int>(k), p);
+      int mode = visit_mode(n_line);
+      if (mode == 1) {
+        ProjectiveLineOrbitForEach<Tint>(static_cast<int>(k), p, ListGenEig,
+                                         visit_line);
+      } else if (mode == 2) {
+        std::mt19937_64 rng_point(static_cast<uint64_t>(pos) * 7919ULL +
+                                  static_cast<uint64_t>(p) * 104729ULL +
+                                  i_round);
+        std::uniform_int_distribution<size_t> unif(0, n_line - 1);
+        for (size_t i_s = 0; i_s < n_sample; i_s++) {
+          if (visit_line(unif(rng_point))) {
+            break;
+          }
+        }
+      }
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
       os << "GENUS_GROUP: class " << (pos + 1) << " p=" << p
          << " lambda=" << ed.lambda << " dim=" << k << " orbits visited="
@@ -1314,6 +1520,27 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         }
       }
       if (i_work == result.ListPrimeUsed.size()) {
+        // the deferred orbits of the medium spaces at the primes in use
+        bool did_orbits = false;
+        for (size_t i = 0; i < deferred.size() &&
+                           result.accumulated_mass < TotalMass;
+             i++) {
+          if (!deferred[i]) {
+            continue;
+          }
+          deferred[i] = 0;
+          did_orbits = true;
+          orbit_phase = true;
+          size_t n_class = ListPairWork.size();
+          for (size_t pos = 0;
+               pos < n_class && result.accumulated_mass < TotalMass; pos++) {
+            expand_at(pos, result.ListPrimeUsed[i], i);
+          }
+          orbit_phase = false;
+        }
+        if (did_orbits) {
+          continue;
+        }
         if (result.ListPrimeUsed.size() == max_prime ||
             result.ListPrimeUsed.size() == ListCandidate.size()) {
           break;
@@ -1325,6 +1552,22 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       }
       expand_at(next_expand[i_work], result.ListPrimeUsed[i_work], i_work);
       next_expand[i_work]++;
+    }
+  }
+  // more random points while the mass is not closed
+  while (more_rounds && result.accumulated_mass < TotalMass && i_round < 6) {
+    i_round++;
+    n_sample *= 4;
+    more_rounds = false;
+    for (size_t i_prime = 0;
+         i_prime < result.ListPrimeUsed.size() &&
+         result.accumulated_mass < TotalMass;
+         i_prime++) {
+      for (size_t pos = 0;
+           pos < ListPairWork.size() && result.accumulated_mass < TotalMass;
+           pos++) {
+        expand_at(pos, result.ListPrimeUsed[i_prime], i_prime);
+      }
     }
   }
   result.complete = (result.accumulated_mass == TotalMass);
