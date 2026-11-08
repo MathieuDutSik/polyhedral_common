@@ -27,13 +27,18 @@
 
 /*
   The lattice-level entry points of the Plesken-Souvignier engine of
-  src_group/PleskenSouvignier.h: they LLL-reduce the Gram matrix, build
-  the vector set of the paper -- the vectors of norm at most the largest
-  diagonal entry of the reduced Gram matrix, which contains the standard
-  basis and is invariant -- run the engine in the reduced basis, and
-  transport the answers back to the original basis. The short vector
+  src_group/PleskenSouvignier.h: they LLL-reduce the Gram matrix, build a
+  Z-spanning characteristic vector family of it
+  (PleskenSouvignierZspanFamilyHalf), run the engine in the reduced basis,
+  and transport the answers back to the original basis. The short vector
   enumeration and the LLL are what the engine header cannot depend on,
   which is why these wrappers live in src_latt.
+
+  The vector set of the paper -- the vectors of norm at most the largest
+  diagonal entry of the reduced Gram matrix, which contains the standard
+  basis and is invariant -- is no longer what the engine is run on; it
+  remains below (PleskenSouvignierVectorFamily) for
+  LATT_GenerateCharacteristicVectorSet.
  */
 
 // The vector set of the paper for a Gram matrix, one vector per
@@ -267,8 +272,8 @@ PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
 
 /*
   The isometry test: P with P * ListMat1[i] * P^T = ListMat2[i] for
-  every i, in the original bases, or nothing. The vector sets of the two
-  sides are cut at the SAME bound, the one of the first lattice, which
+  every i, in the original bases, or nothing. The two sides build their
+  Z-spanning families independently; the construction is intrinsic, which
   is what makes them correspond under any isometry. ListGenAut2 is any
   set of automorphisms of the second configuration in its original
   basis, typically the generators the caller already knows for a lattice

@@ -282,10 +282,15 @@ void process_A(FullNamelist const &eFull, std::ostream &os) {
     size_t Korb = BlockQUERIES.get_int("DeformationNumberOrbit");
     MyMatrix<T> Qinv = Inverse(GramMat);
     MyMatrix<T> Qadj = DeterminantMat(GramMat) * Qinv; // adj(Q): integral, PD
-    std::vector<MyMatrix<Tint>> autom =
-        ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os).ListGen;
+    // g Q g^T = Q gives g^T Q^{-1} g = Q^{-1}: the transposes act on the
+    // dual vectors, the rows of the enumeration by adj(Q).
+    std::vector<MyMatrix<Tint>> autom_dual;
+    for (auto &g : ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os)
+                       .ListGen) {
+      autom_dual.push_back(g.transpose());
+    }
     std::vector<std::pair<MyVector<Tint>, size_t>> reps =
-        get_k_short_orbit_vectors<T, Tint>(Qadj, autom, Korb, os);
+        get_k_short_orbit_vectors<T, Tint>(Qadj, autom_dual, Korb, os);
     std::ofstream os_out(FileDeformationOrbits);
     os_out << "return rec(nbEvaluated:=" << reps.size() << ",\nListOrbit:=[";
     bool IsFirst = true;
