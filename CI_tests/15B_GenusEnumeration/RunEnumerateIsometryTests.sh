@@ -51,6 +51,10 @@ run_case E8E8 c6 3
 # isotropic G-submodules at p = 5, by random points in P^13(F_5), find the
 # class on D16+ (2 classes)
 run_case E8E8 S3 2
+# W(A2) diagonal on A2^3 in E6 (one class, centraliser of order 12, the
+# local factor 2) and on two orthogonal A2 of E8+E8 (3 classes)
+run_case E6diag A2diag 1
+run_case E8E8 S3diag2 3
 
 echo "All isometry enumeration tests passed"
 touch CI_CONCLUSION

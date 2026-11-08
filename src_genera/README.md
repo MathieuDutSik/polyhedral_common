@@ -155,12 +155,15 @@ rational isotypic parts, the common eigenspaces of the rational class
 sums; where G acts through a cyclic quotient they are treated as above,
 and where End_G = Q the mass is that of the multiplicity lattice
 L cap (l (x) U), l (x) U the image of an idempotent of Q[H] of rank one on
-the irreducible W. This is exact in multiplicity one; in higher
-multiplicity the local factors at the primes dividing |G| are not
-computed (local_correction_open), and they need not be 1: for W(A2) acting
-diagonally on E6, the mass is 1/12 where the multiplicity lattice gives
-1/24. Other components (End_G a quaternion algebra or a field that is not
-cyclotomic) get no mass.
+the irreducible W, times the local factors [O(X_p) : Stab(L_p)] at the p
+dividing |G| (`MultiplicityLocalFactor.h`): the orbit of L_p / N_p in
+N_p^# / N_p, N = Z[G] X, under the image of O(X_p) modulo p^c, found by
+lifting the solutions of g^T A g = A level by level up to the level where
+a Newton step gives an exact isometry. The factors need not be 1: 2 for
+W(A2) acting diagonally on the A2^3 of E6 (mass 1/12), 8 on the A2^4 of
+E8. Beyond the bounds of that search the result says
+local_correction_open. Other components (End_G a quaternion algebra or a
+field that is not cyclotomic) get no mass.
 
 With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabiliser of L in
 the adelic centraliser is a subgroup of finite index of that of L_0, so

@@ -6,6 +6,7 @@
 #include "LocalDensity.h"
 #include "GenusMass.h"
 #include "CyclotomicHermitianMass.h"
+#include "MultiplicityLocalFactor.h"
 #include "WeightMatrix.h"
 #include "GRAPH_GraphicalBasic.h"
 #include "MAT_Matrix.h"
@@ -128,6 +129,8 @@ template <typename T> struct IsometryComponent {
   // End_G = Q: the lattice X = L cap (l (x) U) of the multiplicity space,
   // whose genus gives the mass up to the local factors at p | |G|
   std::optional<MyMatrix<T>> multiplicity_gram;
+  // the product over p | |G| of [O(X_p) : Stab(L_p)], when computed
+  std::optional<T> multiplicity_factor;
   MyMatrix<T> row;
   MyMatrix<T> row_inv;
   std::vector<int64_t> elem;
@@ -1110,8 +1113,11 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
       if (comp.multiplicity_gram) {
         cm.mass = GenusMass<T, Tint>(*comp.multiplicity_gram);
         // multiplicity one: the centraliser on the component is {+-1},
-        // which preserves every lattice, so no local factor is missing
-        if (comp.multiplicity_gram->rows() > 1) {
+        // which preserves every lattice, so no local factor is missing;
+        // otherwise the local factors at p | |G|, unless beyond the bounds
+        if (comp.multiplicity_factor) {
+          *cm.mass *= *comp.multiplicity_factor;
+        } else if (comp.multiplicity_gram->rows() > 1) {
           res.local_correction_open = true;
         }
       } else {
@@ -1505,6 +1511,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
     if (central_q && m * m == e) {
       // a common eigenspace of dimension m, for one or two elements
       std::optional<MyMatrix<T>> found;
+      MyMatrix<T> found_basis;
       std::vector<std::pair<size_t, int>> cand;
       for (size_t i = 0; i < n_elt; i++) {
         cand.push_back({i, 1});
@@ -1535,6 +1542,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         }
         MyMatrix<T> X = UniversalMatrixConversion<T, Tint>(K_i);
         found = X * A * X.transpose();
+        found_basis = X;
         return true;
       };
       for (size_t a = 0; a < cand.size() && !found; a++) {
@@ -1548,6 +1556,11 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         }
       }
       comp.multiplicity_gram = found;
+      if (found) {
+        MultiplicityFactorBounds mbounds;
+        comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
+            A, found_basis, blk.E, elts, mbounds, os);
+      }
     }
 #ifdef DEBUG_ISOMETRY_MASS
     os << "ISOM_MASS: non-cyclic component of rank " << k << ", dim End_G="

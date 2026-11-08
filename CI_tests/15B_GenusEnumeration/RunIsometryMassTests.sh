@@ -178,6 +178,12 @@ group_mass_case d25 klein 155/9216
 # closed by GENUS_EnumerateIsometry from one seed (2 and 3 classes).
 group_mass_case E8E8_16 S3 691/20659760529408000
 group_mass_case E8E8_16 S4 691/765176315904000
+# In higher multiplicity the local factors [O(X_p) : Stab(L_p)] at the p
+# dividing |G| enter: W(A2) acting diagonally on the A2^3 of E6 (the
+# multiplicity lattice gives 1/24, the factor is 2) and on two orthogonal
+# A2 of E8+E8 (glue factor 8); both masses are closed by the enumeration.
+group_mass_case E6diag A2diag 1/12
+group_mass_case E8E8_16 S3diag2 143/1203948748800
 
 # The brute-force check for the groups <g, tau>, tau in C_{O(L)}(g); the
 # ratios are integers but not 1, as (g, tau) and (g, g tau) generate the
