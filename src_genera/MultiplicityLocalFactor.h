@@ -51,6 +51,8 @@
 struct MultiplicityFactorBounds {
   size_t max_solution = 2000000;
   size_t max_module = 1000000;
+  // the nodes of the backtrack of the solutions modulo p
+  size_t max_node = 5000000;
 };
 
 /*
@@ -173,7 +175,8 @@ inline std::vector<ModMat> LiftSolutions(ModMat const &g, ModMat const &A,
 
 // The solutions modulo p of g^T A g = A with g invertible, column by column.
 inline std::optional<std::vector<ModMat>>
-SolutionsModP(ModMat const &A, int64_t p, size_t max_solution) {
+SolutionsModP(ModMat const &A, int64_t p, size_t max_solution,
+              size_t max_node) {
   size_t m = A.size();
   std::vector<std::vector<int64_t>> vects;
   size_t n_vect = 1;
@@ -202,10 +205,12 @@ SolutionsModP(ModMat const &A, int64_t p, size_t max_solution) {
   std::vector<ModMat> res;
   std::vector<std::vector<int64_t>> cols(m);
   bool overflow = false;
+  size_t n_node = 0;
   std::function<void(size_t)> rec = [&](size_t j) -> void {
     if (overflow) {
       return;
     }
+
     if (j == m) {
       ModMat g(m, std::vector<int64_t>(m));
       for (size_t a = 0; a < m; a++) {
@@ -222,6 +227,11 @@ SolutionsModP(ModMat const &A, int64_t p, size_t max_solution) {
       return;
     }
     for (auto const &v : vects) {
+      // the budget counts the candidate columns tried
+      if (++n_node > max_node) {
+        overflow = true;
+        return;
+      }
       bool ok = true;
       for (size_t i = 0; i <= j && ok; i++) {
         std::vector<int64_t> const &w = (i == j) ? v : cols[i];
@@ -252,7 +262,7 @@ LocalOrthogonalImage(ModMat const &A, int64_t p, int c, int e,
   int t = (p == 2) ? 1 : 0;
   int K = std::max(c + e + t, e + 2 * t + 1);
   std::optional<std::vector<ModMat>> opt =
-      SolutionsModP(A, p, bounds.max_solution);
+      SolutionsModP(A, p, bounds.max_solution, bounds.max_node);
   if (!opt) {
     return {};
   }
@@ -545,291 +555,6 @@ template <typename T> int ValuationOfRational(T const &x, int64_t p) {
     v++;
   }
   return v;
-}
-
-/*
-  The product over the primes of [O(X_p) : Stab(L_p)].
-  A: the Gram matrix of L; Xb: a basis of X (rows, coordinates of L); E: a
-  basis of L_rho = L cap V_rho; elts: the elements of G (on the rows).
-  Nothing when the bounds are exceeded.
- */
-template <typename T, typename Tint>
-std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
-                                         MyMatrix<T> const &Xb,
-                                         MyMatrix<T> const &E,
-                                         std::vector<MyMatrix<T>> const &elts,
-                                         MultiplicityFactorBounds const &bounds,
-                                         [[maybe_unused]] std::ostream &os) {
-  int m = Xb.rows();
-  int k = E.rows();
-  int n = A.cols();
-  if (k % m != 0) {
-    return {};
-  }
-  int w = k / m;
-  // the gamma_a: gamma x_1 independent
-  std::vector<size_t> ListGamma;
-  {
-    MyMatrix<T> rows(0, n);
-    for (size_t ig = 0; ig < elts.size() && static_cast<int>(ListGamma.size()) < w; ig++) {
-      MyVector<T> v = elts[ig].transpose() * GetMatrixRow(Xb, 0);
-      MyMatrix<T> test(rows.rows() + 1, n);
-      for (int i = 0; i < rows.rows(); i++) {
-        for (int j = 0; j < n; j++) {
-          test(i, j) = rows(i, j);
-        }
-      }
-      for (int j = 0; j < n; j++) {
-        test(rows.rows(), j) = v(j);
-      }
-      if (RankMat(test) == test.rows()) {
-        rows = test;
-        ListGamma.push_back(ig);
-      }
-    }
-  }
-  if (static_cast<int>(ListGamma.size()) != w) {
-    return {};
-  }
-  // the basis B_V = {gamma_a x_i}, index a * m + i
-  MyMatrix<T> BV(k, n);
-  for (int a = 0; a < w; a++) {
-    MyMatrix<T> Y = Xb * elts[ListGamma[a]];
-    for (int i = 0; i < m; i++) {
-      for (int j = 0; j < n; j++) {
-        BV(a * m + i, j) = Y(i, j);
-      }
-    }
-  }
-  if (RankMat(BV) != k) {
-    return {};
-  }
-  // coordinates in B_V of vectors of V_rho
-  auto coords = [&](MyMatrix<T> const &M) -> MyMatrix<T> {
-    // M = C BV, C = M BV^T (BV BV^T)^{-1}
-    MyMatrix<T> BB = BV * BV.transpose();
-    return M * BV.transpose() * Inverse(BB);
-  };
-  // N = Z[G] X
-  MyMatrix<T> Ngen(static_cast<int>(elts.size()) * m, n);
-  for (size_t ig = 0; ig < elts.size(); ig++) {
-    MyMatrix<T> Y = Xb * elts[ig];
-    for (int i = 0; i < m; i++) {
-      for (int j = 0; j < n; j++) {
-        Ngen(static_cast<int>(ig) * m + i, j) = Y(i, j);
-      }
-    }
-  }
-  MyMatrix<Tint> Ngen_i = UniversalMatrixConversion<Tint, T>(Ngen);
-  MyMatrix<T> Nb = UniversalMatrixConversion<T, Tint>(GetZbasis(Ngen_i));
-  if (Nb.rows() != k) {
-    return {};
-  }
-  MyMatrix<T> GramN = Nb * A * Nb.transpose();
-  MyMatrix<T> Nsharp = Inverse(GramN) * Nb;
-  MyMatrix<T> N_c = coords(Nb);
-  MyMatrix<T> Ns_c = coords(Nsharp);
-  MyMatrix<T> L_c = coords(E);
-  // N in the coordinates of N^#: R = Nb Nsharp^{-1}, integral
-  MyMatrix<T> Rm = N_c * Inverse(Ns_c);
-  MyMatrix<Tint> R_i = UniversalMatrixConversion<Tint, T>(Rm);
-  ResultSmithNormalForm<Tint> snf = SmithNormalForm(R_i);
-  MyMatrix<Tint> Dm = snf.ROW * R_i * snf.COL;
-  MyMatrix<T> COL_T = UniversalMatrixConversion<T, Tint>(snf.COL);
-  // f = COL^{-1} Nsharp: the coordinates of x in N^# are x_F COL
-  MyMatrix<T> F_c = Inverse(COL_T) * Ns_c;
-  MyMatrix<T> F_inv = Inverse(F_c);
-  // the index [L_rho : N]
-  T index = T_abs(DeterminantMat(MyMatrix<T>(N_c * Inverse(L_c))));
-  T factor(1);
-  if (index == T(1)) {
-    return factor;
-  }
-  std::vector<Tint> primes =
-      FactorsInt(UniversalScalarConversion<Tint, T>(index));
-  std::sort(primes.begin(), primes.end());
-  primes.erase(std::unique(primes.begin(), primes.end()), primes.end());
-  MyMatrix<T> GramX = Xb * A * Xb.transpose();
-  for (auto const &p_i : primes) {
-    int64_t p = UniversalScalarConversion<int64_t, Tint>(p_i);
-    // the p-part of N^# / N: coordinates i with p | d_i, orders p^{v_i}
-    std::vector<int> ListIdx;
-    std::vector<int64_t> ListOrd;
-    int c = 0;
-    for (int i = 0; i < k; i++) {
-      T d = T_abs(UniversalScalarConversion<T, Tint>(Dm(i, i)));
-      if (d == T(0)) {
-        return {};
-      }
-      int v = ValuationOfRational(d, p);
-      if (v > 0) {
-        ListIdx.push_back(i);
-        int64_t o = 1;
-        for (int u = 0; u < v; u++) {
-          o *= p;
-        }
-        ListOrd.push_back(o);
-        c = std::max(c, v);
-      }
-    }
-    size_t r = ListIdx.size();
-    // a vector of V_rho (B_V coordinates, p-integral in N^#) to its class
-    auto residue = [&](MyVector<T> const &x) -> std::vector<int64_t> {
-      MyVector<T> y = F_inv.transpose() * x;
-      std::vector<int64_t> res(r);
-      for (size_t s = 0; s < r; s++) {
-        T val = y(ListIdx[s]);
-        // p-integral: numerator times the inverse of the denominator
-        Tint num = val.get_num();
-        Tint den = val.get_den();
-        Tint o_T = UniversalScalarConversion<Tint, int64_t>(ListOrd[s]);
-        Tint nm = ((num % o_T) + o_T) % o_T;
-        Tint dn = ((den % o_T) + o_T) % o_T;
-        int64_t nm64 = UniversalScalarConversion<int64_t, Tint>(nm);
-        int64_t dn64 = UniversalScalarConversion<int64_t, Tint>(dn);
-        res[s] = MulModQ(nm64, InvModQ(dn64, ListOrd[s]), ListOrd[s]);
-      }
-      return res;
-    };
-    size_t q_size = 1;
-    for (auto o : ListOrd) {
-      q_size *= static_cast<size_t>(o);
-      if (q_size > bounds.max_module) {
-        return {};
-      }
-    }
-    auto encode = [&](std::vector<int64_t> const &x) -> size_t {
-      size_t idx = 0;
-      for (size_t s = r; s-- > 0;) {
-        idx = idx * static_cast<size_t>(ListOrd[s]) + static_cast<size_t>(x[s]);
-      }
-      return idx;
-    };
-    // the subgroup generated by vectors, as the sorted set of its elements
-    auto span = [&](std::vector<std::vector<int64_t>> const &gens)
-        -> std::vector<size_t> {
-      std::set<size_t> seen;
-      std::vector<std::vector<int64_t>> queue{std::vector<int64_t>(r, 0)};
-      seen.insert(0);
-      while (!queue.empty()) {
-        std::vector<int64_t> x = queue.back();
-        queue.pop_back();
-        for (auto const &g : gens) {
-          std::vector<int64_t> y(r);
-          for (size_t s = 0; s < r; s++) {
-            y[s] = (x[s] + g[s]) % ListOrd[s];
-          }
-          if (seen.insert(encode(y)).second) {
-            queue.push_back(y);
-          }
-        }
-      }
-      return std::vector<size_t>(seen.begin(), seen.end());
-    };
-    // L / N
-    std::vector<std::vector<int64_t>> Lgens;
-    for (int i = 0; i < k; i++) {
-      Lgens.push_back(residue(GetMatrixRow(L_c, i)));
-    }
-    // the image of O(X_p) modulo p^c
-    int e = 0;
-    {
-      MyMatrix<T> Ainv = Inverse(GramX);
-      for (int i = 0; i < m; i++) {
-        for (int j = 0; j < m; j++) {
-          if (Ainv(i, j) != T(0)) {
-            T den = GetDenominator(Ainv(i, j));
-            e = std::max(e, ValuationOfRational(den, p));
-          }
-        }
-      }
-    }
-    ModMat A_mod(m, std::vector<int64_t>(m));
-    for (int i = 0; i < m; i++) {
-      for (int j = 0; j < m; j++) {
-        A_mod[i][j] = UniversalScalarConversion<int64_t, T>(GramX(i, j));
-      }
-    }
-    std::optional<std::vector<ModMat>> opt =
-        LocalOrthogonalImage(A_mod, p, c, e, bounds);
-    if (!opt) {
-      return {};
-    }
-    // the action of an element on the generators f_s of the p-part: the
-    // rows f_s (B_V coordinates) moved by 1 (x) g
-    auto act_gens = [&](ModMat const &g) -> std::vector<std::vector<int64_t>> {
-      std::vector<std::vector<int64_t>> res;
-      for (size_t s = 0; s < r; s++) {
-        MyVector<T> f = GetMatrixRow(F_c, ListIdx[s]);
-        MyVector<T> img = ZeroVector<T>(k);
-        for (int a = 0; a < w; a++) {
-          for (int i = 0; i < m; i++) {
-            T x = f(a * m + i);
-            if (x == T(0)) {
-              continue;
-            }
-            for (int j = 0; j < m; j++) {
-              // rows convention: x_i -> sum_j g(j, i) x_j, g acting on the
-              // columns of coordinates of X
-              img(a * m + j) += x * UniversalScalarConversion<T, int64_t>(g[j][i]);
-            }
-          }
-        }
-        res.push_back(residue(img));
-      }
-      return res;
-    };
-    std::vector<std::vector<std::vector<int64_t>>> ListAct;
-    for (auto const &g : *opt) {
-      ListAct.push_back(act_gens(g));
-    }
-    auto apply = [&](std::vector<std::vector<int64_t>> const &act,
-                     std::vector<int64_t> const &x) -> std::vector<int64_t> {
-      std::vector<int64_t> y(r, 0);
-      for (size_t s = 0; s < r; s++) {
-        if (x[s] == 0) {
-          continue;
-        }
-        for (size_t u = 0; u < r; u++) {
-          y[u] = (y[u] + MulModQ(x[s], act[s][u], ListOrd[u])) % ListOrd[u];
-        }
-      }
-      return y;
-    };
-    auto decode = [&](size_t idx) -> std::vector<int64_t> {
-      std::vector<int64_t> x(r);
-      for (size_t s = 0; s < r; s++) {
-        x[s] = static_cast<int64_t>(idx % static_cast<size_t>(ListOrd[s]));
-        idx /= static_cast<size_t>(ListOrd[s]);
-      }
-      return x;
-    };
-    std::vector<size_t> L0 = span(Lgens);
-    std::set<std::vector<size_t>> orbit{L0};
-    std::vector<std::vector<size_t>> queue{L0};
-    while (!queue.empty()) {
-      std::vector<size_t> H = queue.back();
-      queue.pop_back();
-      for (auto const &act : ListAct) {
-        std::vector<size_t> img;
-        for (size_t idx : H) {
-          img.push_back(encode(apply(act, decode(idx))));
-        }
-        std::sort(img.begin(), img.end());
-        if (orbit.insert(img).second) {
-          queue.push_back(img);
-        }
-      }
-    }
-#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
-    os << "MULT_FACTOR: p=" << p << " c=" << c << " e=" << e
-       << " |image of O(X_p)|=" << opt->size() << " |N^#/N|_p=" << q_size
-       << " |L/N|_p=" << L0.size() << " orbit=" << orbit.size() << "\n";
-#endif
-    factor *= UniversalScalarConversion<T, int64_t>(
-        static_cast<int64_t>(orbit.size()));
-  }
-  return factor;
 }
 
 // clang-format off
