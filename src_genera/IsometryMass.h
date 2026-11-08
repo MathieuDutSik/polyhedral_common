@@ -7,6 +7,7 @@
 #include "GenusMass.h"
 #include "CyclotomicHermitianMass.h"
 #include "MultiplicityLocalFactor.h"
+#include "AbelianHermitianMass.h"
 #include "WeightMatrix.h"
 #include "GRAPH_GraphicalBasic.h"
 #include "MAT_Matrix.h"
@@ -131,6 +132,11 @@ template <typename T> struct IsometryComponent {
   std::optional<MyMatrix<T>> multiplicity_gram;
   // the product over p | |G| of [O(X_p) : Stab(L_p)], when computed
   std::optional<T> multiplicity_factor;
+  // End_G with a CM centre K: the multiplicity lattice X is Hermitian over
+  // K, with the actions of a Z-basis of O_K
+  std::optional<AbelianCMField> herm_field;
+  MyMatrix<T> herm_gram;
+  std::vector<MyMatrix<T>> herm_omega;
   MyMatrix<T> row;
   MyMatrix<T> row_inv;
   std::vector<int64_t> elem;
@@ -1406,7 +1412,24 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     cm.d = comp.d;
     cm.rank = comp.gram.rows();
     cm.det = DeterminantMat(comp.gram);
-    if (comp.d == 0) {
+    if (comp.d == 0 && comp.herm_field) {
+      std::vector<MyMatrix<mpq_class>> om;
+      for (auto const &W : comp.herm_omega) {
+        om.push_back(UniversalMatrixConversion<mpq_class, T>(W));
+      }
+      std::optional<mpq_class> hm = HermitianMassAbelianLattice(
+          UniversalMatrixConversion<mpq_class, T>(comp.herm_gram), om,
+          *comp.herm_field);
+      if (hm && comp.multiplicity_factor) {
+        cm.mass = UniversalScalarConversion<T, mpq_class>(*hm) *
+                  *comp.multiplicity_factor;
+      } else if (hm) {
+        cm.mass = UniversalScalarConversion<T, mpq_class>(*hm);
+        res.local_correction_open = true;
+      } else {
+        res.unsupported_component = true;
+      }
+    } else if (comp.d == 0) {
       if (comp.multiplicity_gram) {
         cm.mass = GenusMass<T, Tint>(*comp.multiplicity_gram);
         // multiplicity one: the centraliser on the component is {+-1},
@@ -1723,6 +1746,13 @@ std::vector<MyMatrix<Tint>> LocalReflections(MyMatrix<T> const &A, int64_t p,
   return res;
 }
 
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+#define MULT_FACTOR_FAIL(tag) \
+  std::cerr << "MULT_FACTOR: gives up at check " << (tag) << "\n"
+#else
+#define MULT_FACTOR_FAIL(tag)
+#endif
+
 // The size of the orbit of the subgroup spanned by gens under the
 // automorphisms group_gens of M; nothing beyond max_size subgroups.
 inline std::optional<size_t>
@@ -1793,6 +1823,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
                                          MyMatrix<T> const &E,
                                          std::vector<MyMatrix<T>> const &elts,
                                          std::vector<MyMatrix<T>> const &ListP,
+                                         std::vector<MyMatrix<T>> const &OmegaX,
+                                         std::vector<MyMatrix<T>> const &ListCentral,
                                          MultiplicityFactorBounds const &bounds,
                                          [[maybe_unused]] std::ostream &os) {
   int m = Xb.rows();
@@ -1802,20 +1834,23 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     return {};
   }
   int w = k / m;
-  // the gamma_a: gamma x_1 independent
+  // the gamma_a with the gamma_a X in direct sum (V_rho = W (x)_K U and
+  // X in l (x) U, l a line of W over the centre K)
   std::vector<size_t> ListGamma;
   {
     MyMatrix<T> rows(0, n);
     for (size_t ig = 0; ig < elts.size() && static_cast<int>(ListGamma.size()) < w; ig++) {
-      MyVector<T> v = elts[ig].transpose() * GetMatrixRow(Xb, 0);
-      MyMatrix<T> test(rows.rows() + 1, n);
+      MyMatrix<T> Y = Xb * elts[ig];
+      MyMatrix<T> test(rows.rows() + m, n);
       for (int i = 0; i < rows.rows(); i++) {
         for (int j = 0; j < n; j++) {
           test(i, j) = rows(i, j);
         }
       }
-      for (int j = 0; j < n; j++) {
-        test(rows.rows(), j) = v(j);
+      for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+          test(rows.rows() + i, j) = Y(i, j);
+        }
       }
       if (RankMat(test) == test.rows()) {
         rows = test;
@@ -1824,6 +1859,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     }
   }
   if (static_cast<int>(ListGamma.size()) != w) {
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+    os << "MULT_FACTOR: only " << ListGamma.size() << " of the " << w
+       << " translates of X found in direct sum\n";
+#endif
     return {};
   }
   // the basis B_V = {gamma_a x_i}, index a * m + i
@@ -1837,6 +1876,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     }
   }
   if (RankMat(BV) != k) {
+    MULT_FACTOR_FAIL(1872);
     return {};
   }
   // coordinates in B_V of vectors of V_rho
@@ -1858,6 +1898,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
   MyMatrix<Tint> Ngen_i = UniversalMatrixConversion<Tint, T>(Ngen);
   MyMatrix<T> Nb = UniversalMatrixConversion<T, Tint>(GetZbasis(Ngen_i));
   if (Nb.rows() != k) {
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+    os << "MULT_FACTOR: Z[G] X has rank " << Nb.rows() << " instead of " << k
+       << "\n";
+#endif
     return {};
   }
   MyMatrix<T> GramN = Nb * A * Nb.transpose();
@@ -1894,6 +1938,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     for (int i = 0; i < k; i++) {
       T d = T_abs(UniversalScalarConversion<T, Tint>(Dm(i, i)));
       if (d == T(0)) {
+        MULT_FACTOR_FAIL(1933);
         return {};
       }
       int v = ValuationOfRational(d, p);
@@ -1930,6 +1975,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     for (auto o : ListOrd) {
       q_size *= static_cast<size_t>(o);
       if (q_size > bounds.max_module) {
+        MULT_FACTOR_FAIL(1969);
         return {};
       }
     }
@@ -1982,6 +2028,9 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         compN.extra_sigma.push_back(Nb * ListP[i] * A * Nb.transpose() *
                                     GramNinv);
       }
+      for (auto const &Zc : ListCentral) {
+        compN.extra_sigma.push_back(Nb * Zc * A * Nb.transpose() * GramNinv);
+      }
       PrimaryQuadModule MN = BuildPrimaryQuadModule(compN, p);
       std::optional<std::vector<ModuleAut>> upper =
           EquivariantModuleIsometries(MN, 1 << 12, 100000);
@@ -2012,6 +2061,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         };
         IsometryComponent<T> compX = BuildIsometryComponent<T, Tint>(
             A, Xb, IdentityMat<T>(A.rows()), 1);
+        // the Cayley transforms commute with O_K when it acts on X
+        compX.extra_sigma = OmegaX;
         std::vector<ModuleAut> lower{ModuleActionOfIsometry(
             compN, MN, gensMN, MyMatrix<Tint>(-IdentityMat<Tint>(k)))};
         int cN = 0;
@@ -2021,8 +2072,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         for (auto const &h : CayleyLocalElements<T, Tint>(compX, p, cN, 16)) {
           lower.push_back(ModuleActionOfIsometry(compN, MN, gensMN, on_N(h)));
         }
-        for (auto const &h : LocalReflections<T, Tint>(GramX, p, cN, 24)) {
-          lower.push_back(ModuleActionOfIsometry(compN, MN, gensMN, on_N(h)));
+        if (OmegaX.empty()) {
+          for (auto const &h : LocalReflections<T, Tint>(GramX, p, cN, 24)) {
+            lower.push_back(ModuleActionOfIsometry(compN, MN, gensMN, on_N(h)));
+          }
         }
         std::optional<size_t> orb_low = ModuleSubgroupOrbitSize(
             MN, LgensMN, lower, bounds.max_module);
@@ -2060,9 +2113,29 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         A_mod[i][j] = UniversalScalarConversion<int64_t, T>(GramX(i, j));
       }
     }
-    std::optional<std::vector<ModMat>> opt =
-        LocalOrthogonalImage(A_mod, p, c, e, bounds);
+    std::optional<std::vector<ModMat>> opt;
+    bool rows_convention = !OmegaX.empty();
+    if (OmegaX.empty()) {
+      opt = LocalOrthogonalImage(A_mod, p, c, e, bounds);
+    } else {
+      // the K-linear endomorphisms of X, exact
+      IsometryComponent<T> compX = BuildIsometryComponent<T, Tint>(
+          A, Xb, IdentityMat<T>(A.rows()), 1);
+      compX.extra_sigma = OmegaX;
+      std::vector<ModMat> basis;
+      for (auto const &Y : IntegralCommutant<T, Tint>(compX)) {
+        ModMat Ym(m, std::vector<int64_t>(m));
+        for (int i = 0; i < m; i++) {
+          for (int j = 0; j < m; j++) {
+            Ym[i][j] = UniversalScalarConversion<int64_t, Tint>(Y(i, j));
+          }
+        }
+        basis.push_back(Ym);
+      }
+      opt = LocalStabilizerImage(A_mod, basis, p, c, e, bounds);
+    }
     if (!opt) {
+      MULT_FACTOR_FAIL(2128);
       return {};
     }
     // the action of an element on the generators f_s of the p-part: the
@@ -2081,7 +2154,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
             for (int j = 0; j < m; j++) {
               // rows convention: x_i -> sum_j g(j, i) x_j, g acting on the
               // columns of coordinates of X
-              img(a * m + j) += x * UniversalScalarConversion<T, int64_t>(g[j][i]);
+              int64_t gij = rows_convention ? g[i][j] : g[j][i];
+              img(a * m + j) += x * UniversalScalarConversion<T, int64_t>(gij);
             }
           }
         }
@@ -2405,7 +2479,202 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       if (found) {
         MultiplicityFactorBounds mbounds;
         comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
-            A, found_basis, blk.E, elts, ListP, mbounds, os);
+            A, found_basis, blk.E, elts, ListP, {}, {}, mbounds, os);
+      }
+    }
+    // with a centre of degree c, End_G = M_m(K) has dimension m^2 c
+    if (c > 1 && e % c == 0) {
+      m = static_cast<int>(std::llround(std::sqrt(static_cast<double>(e / c))));
+    }
+    if (c > 1 && m * m * c == e) {
+      /*
+        End_G = M_m(K) with K = Q(chi) the centre, of degree c. When K is
+        CM (the adjoint acts nontrivially on the centre), the
+        multiplicity space is Hermitian over K: X = L cap F, F the image of
+        an idempotent of Q[H] of K-rank one on W, of dimension m c, with
+        the action of the order generated by the class sums. K is the
+        subfield of Q(zeta_N), N the exponent of G, fixed by the a with C_g
+        = C_{g^a} on V_rho for every class (sigma_a sends the central
+        character of C_g to that of C_{g^a}).
+       */
+      std::vector<MyMatrix<T>> Centre = commutant(ListBoth);
+      MyMatrix<T> Gblk = blk.E * A * blk.E.transpose();
+      MyMatrix<T> GblkInv = Inverse(Gblk);
+      bool is_cm = false;
+      for (auto const &Z : Centre) {
+        MyMatrix<T> Zs = (GblkInv * Z * Gblk).transpose();
+        if (Zs != Z) {
+          is_cm = true;
+        }
+      }
+      // the conjugacy classes and their sums on the block
+      std::vector<int> ccls(n_elt, -1);
+      int n_ccls = 0;
+      for (size_t i = 0; i < n_elt; i++) {
+        if (ccls[i] != -1) {
+          continue;
+        }
+        for (size_t j = 0; j < n_elt; j++) {
+          size_t u = index[flatten(MyMatrix<T>(inv[j] * elts[i] * elts[j]))];
+          ccls[u] = n_ccls;
+        }
+        n_ccls++;
+      }
+      std::vector<MyMatrix<T>> ClassSum(n_ccls, ZeroMatrix<T>(n, n));
+      for (size_t i = 0; i < n_elt; i++) {
+        ClassSum[ccls[i]] += elts[i];
+      }
+      int64_t Nexp = 1;
+      for (auto const &x : elts) {
+        Nexp = std::lcm(Nexp, static_cast<int64_t>(IsometryOrder(x)));
+      }
+      std::vector<int64_t> Hgens;
+      for (int64_t a = 1; a < Nexp; a++) {
+        if (std::gcd(a, Nexp) != 1) {
+          continue;
+        }
+        bool fixes = true;
+        for (size_t i = 0; i < n_elt && fixes; i++) {
+          MyMatrix<T> pw = IdentityMat<T>(n);
+          for (int64_t t = 0; t < a; t++) {
+            pw = pw * elts[i];
+          }
+          int ci = ccls[i];
+          int ca = ccls[index[flatten(pw)]];
+          if (ci != ca && action(ClassSum[ci]) != action(ClassSum[ca])) {
+            fixes = false;
+          }
+        }
+        if (fixes) {
+          Hgens.push_back(a);
+        }
+      }
+      std::optional<MyMatrix<T>> found_basis;
+      if (is_cm && Nexp > 2) {
+        std::vector<std::pair<size_t, int>> cand;
+        for (size_t i = 0; i < n_elt; i++) {
+          cand.push_back({i, 1});
+          cand.push_back({i, -1});
+        }
+        auto try_conditions =
+            [&](std::vector<std::pair<size_t, int>> const &cs) -> bool {
+          std::vector<MyMatrix<T>> all = blk.conditions;
+          for (auto const &cc : cs) {
+            all.push_back(elts[cc.first] -
+                          ScalarFromInt64<T>(cc.second) * IdentityMat<T>(n));
+          }
+          MyMatrix<T> Big(n, n * static_cast<int>(all.size()));
+          for (size_t a = 0; a < all.size(); a++) {
+            for (int i = 0; i < n; i++) {
+              for (int j = 0; j < n; j++) {
+                Big(i, static_cast<int>(a) * n + j) = all[a](i, j);
+              }
+            }
+          }
+          MyMatrix<Tint> Big_i = UniversalMatrixConversion<Tint, T>(Big);
+          MyMatrix<Tint> K_i =
+              NullspaceIntTrMat(MyMatrix<Tint>(Big_i.transpose()));
+          if (K_i.rows() != m * c) {
+            return false;
+          }
+          found_basis = UniversalMatrixConversion<T, Tint>(K_i);
+          return true;
+        };
+        for (size_t a = 0; a < cand.size() && !found_basis; a++) {
+          (void)try_conditions({cand[a]});
+        }
+        for (size_t a = 0; a < cand.size() && !found_basis; a++) {
+          for (size_t b = a + 1; b < cand.size() && !found_basis; b++) {
+            if (cand[a].first != cand[b].first) {
+              (void)try_conditions({cand[a], cand[b]});
+            }
+          }
+        }
+      }
+      if (found_basis) {
+        MyMatrix<T> const &Xb = *found_basis;
+        int mX = Xb.rows();
+        MyMatrix<T> XX = Xb * Xb.transpose();
+        MyMatrix<T> XXinv = Inverse(XX);
+        // the class sums on X, then the ring they generate
+        auto on_X = [&](MyMatrix<T> const &Mc) -> MyMatrix<T> {
+          return Xb * Mc * Xb.transpose() * XXinv;
+        };
+        std::vector<MyMatrix<T>> gens{IdentityMat<T>(mX)};
+        for (auto const &Cs : ClassSum) {
+          gens.push_back(on_X(Cs));
+        }
+        auto zbasis = [&](std::vector<MyMatrix<T>> const &L)
+            -> std::vector<MyMatrix<T>> {
+          MyMatrix<Tint> F(static_cast<int>(L.size()), mX * mX);
+          for (size_t i = 0; i < L.size(); i++) {
+            for (int u = 0; u < mX; u++) {
+              for (int v = 0; v < mX; v++) {
+                F(static_cast<int>(i), u * mX + v) =
+                    UniversalScalarConversion<Tint, T>(L[i](u, v));
+              }
+            }
+          }
+          MyMatrix<Tint> Bz = GetZbasis(F);
+          std::vector<MyMatrix<T>> res_b;
+          for (int i = 0; i < Bz.rows(); i++) {
+            MyMatrix<T> Y(mX, mX);
+            for (int u = 0; u < mX; u++) {
+              for (int v = 0; v < mX; v++) {
+                Y(u, v) = UniversalScalarConversion<T, Tint>(Bz(i, u * mX + v));
+              }
+            }
+            res_b.push_back(Y);
+          }
+          return res_b;
+        };
+        std::vector<MyMatrix<T>> Omega = zbasis(gens);
+        for (int iter = 0; iter < 8; iter++) {
+          std::vector<MyMatrix<T>> prods = Omega;
+          for (auto const &X1 : Omega) {
+            for (auto const &X2 : Omega) {
+              prods.push_back(X1 * X2);
+            }
+          }
+          std::vector<MyMatrix<T>> next = zbasis(prods);
+          if (next.size() == Omega.size()) {
+            Omega = next;
+            break;
+          }
+          Omega = next;
+        }
+        AbelianCMField Fk = MakeAbelianCMField(Nexp, Hgens);
+        // the order is O_K when its discriminant is that of K (the product
+        // of the conductors of the characters)
+        bool maximal = (static_cast<int>(Omega.size()) == c);
+        if (maximal) {
+          MyMatrix<T> Tr(c, c);
+          for (int i = 0; i < c; i++) {
+            for (int j = 0; j < c; j++) {
+              MyMatrix<T> P = Omega[i] * Omega[j];
+              T t(0);
+              for (int u = 0; u < mX; u++) {
+                t += P(u, u);
+              }
+              Tr(i, j) = t / ScalarFromInt64<T>(m);
+            }
+          }
+          T dO = T_abs(DeterminantMat(Tr));
+          DirichletGroup Gd = ComputeDirichletGroup(Fk.n);
+          T dK(1);
+          for (auto const &t : FieldCharacters(Gd, Fk.H, false)) {
+            dK *= ScalarFromInt64<T>(PrimitiveCharacter(Gd, t).first);
+          }
+          maximal = (dO == dK);
+        }
+        if (maximal) {
+          comp.herm_field = Fk;
+          comp.herm_gram = Xb * A * Xb.transpose();
+          comp.herm_omega = Omega;
+          MultiplicityFactorBounds mbounds;
+          comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
+              A, Xb, blk.E, elts, ListP, Omega, ClassSum, mbounds, os);
+        }
       }
     }
 #ifdef DEBUG_ISOMETRY_MASS

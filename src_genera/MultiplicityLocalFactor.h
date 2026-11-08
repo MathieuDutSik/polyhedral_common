@@ -50,7 +50,9 @@
 
 struct MultiplicityFactorBounds {
   size_t max_solution = 2000000;
-  size_t max_module = 1000000;
+  // the order of the p-part of N^# / N, which only enters an encoding of
+  // its elements (the orbits are of the subgroup L / N, spanned)
+  size_t max_module = size_t(1) << 62;
   // the nodes of the backtrack of the solutions modulo p
   size_t max_node = 5000000;
 };

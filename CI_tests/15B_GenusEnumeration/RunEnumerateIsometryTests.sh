@@ -55,6 +55,9 @@ run_case E8E8 S3 2
 # local factor 2) and on two orthogonal A2 of E8+E8 (3 classes)
 run_case E6diag A2diag 1
 run_case E8E8 S3diag2 3
+# F21 on seven of the nine coordinates of A8: a Hermitian component over
+# Q(sqrt -7) glued at 7 to the fixed lattice, 2 classes
+run_case A8 F21A8 2
 
 echo "All isometry enumeration tests passed"
 touch CI_CONCLUSION
