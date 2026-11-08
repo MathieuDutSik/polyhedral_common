@@ -306,7 +306,7 @@ ComputeRootSystemFromRoots(MyMatrix<T> const &GramMat,
   // pairs.
   int k = rs.rank;
   MyMatrix<Tint> G = UniversalMatrixConversion<Tint, T>(GramMat);
-  MyMatrix<Tint> GE = MatrixProduct(G, TransposedMat(rs.SimpleRoots));
+  MyMatrix<Tint> GE = G * rs.SimpleRoots.transpose();
   std::vector<std::vector<int>> adj(k);
   for (int a = 0; a < k; a++) {
     for (int b = a + 1; b < k; b++) {

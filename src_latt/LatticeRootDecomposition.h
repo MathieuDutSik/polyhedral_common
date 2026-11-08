@@ -419,7 +419,7 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   int n_pos = rs.PositiveRoots.rows();
   MyMatrix<Tint> G = UniversalMatrixConversion<Tint, T>(GramMat);
   // Columns: the linear forms x -> <x, e> for the simple roots.
-  MyMatrix<Tint> GE = MatrixProduct(G, TransposedMat(rs.SimpleRoots));
+  MyMatrix<Tint> GE = G * rs.SimpleRoots.transpose();
   auto scal = [&](MyVector<Tint> const &z, MyMatrix<Tint> const &M,
                   int j) -> Tint {
     Tint sum(0);
@@ -437,7 +437,7 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   // the integers as CinvNum (E G z) / Cinv_den. The rounding only decides
   // where the descent starts, not where it ends: the minimal vector of the
   // coset in the chamber is unique.
-  MyMatrix<Tint> Cartan = MatrixProduct(rs.SimpleRoots, GE);
+  MyMatrix<Tint> Cartan = rs.SimpleRoots * GE;
   FractionMatrixRing<Tfield> fr_inv = RemoveFractionMatrixPlusCoeffRing(
       Inverse(UniversalMatrixConversion<Tfield, Tint>(Cartan)));
   using Tring = typename underlying_ring<Tfield>::ring_type;
@@ -450,8 +450,8 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   // of the Cartan matrix, the subtraction of the positive root p_j by the
   // row j of PE = P G E^T, and <z, p_j> = Pcoord(j) . w, with Pcoord(j) the
   // coordinates of p_j in the simple roots.
-  MyMatrix<Tint> PE = MatrixProduct(rs.PositiveRoots, GE);
-  MyMatrix<Tint> PcoordNum = MatrixProduct(PE, CinvNum);
+  MyMatrix<Tint> PE = rs.PositiveRoots * GE;
+  MyMatrix<Tint> PcoordNum = PE * CinvNum;
   MyMatrix<Tint> Pcoord(n_pos, k);
   for (int j = 0; j < n_pos; j++) {
     for (int i = 0; i < k; i++) {

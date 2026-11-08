@@ -2378,17 +2378,15 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
   // the products mix a Gram entry with a vector entry, and the conversion is
   // paid once for the family rather than once per entry of the weight matrix.
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  MyMatrix<T> SHVt_T = TransposedMat(SHV_T);
   // The scalar products are the entries of SHV M SHV^T. They are computed by
-  // MatrixProduct, which has a native backend for the flint types, a block
-  // of rows at a time so that the memory stays that of a block: the rows
+  // matrix products, a block of rows at a time so that the memory stays that of a block: the rows
   // [b0, b1) against the columns f2 reads for them, those below b1 in the
   // symmetric case and all of them otherwise. This relies on the order in
   // which the WeightMatrix constructor calls f1, row after row from 0.
   size_t const block_size = 64;
   std::vector<MyMatrix<T>> ListSHVM(nbMat);
   for (size_t iMat = 0; iMat < nbMat; iMat++) {
-    ListSHVM[iMat] = MatrixProduct(SHV_T, ListMat[iMat]);
+    ListSHVM[iMat] = SHV_T * ListMat[iMat];
   }
   std::vector<MyMatrix<T>> ListBlock(nbMat);
   size_t b0 = 0;
@@ -2401,10 +2399,9 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
     b0 = iRow;
     size_t b1 = std::min(nbRow, b0 + block_size);
     size_t n_col = is_symm ? b1 : nbRow;
-    MyMatrix<T> Cols = SHVt_T.leftCols(n_col);
     for (size_t iMat = 0; iMat < nbMat; iMat++) {
-      MyMatrix<T> Rows = ListSHVM[iMat].middleRows(b0, b1 - b0);
-      ListBlock[iMat] = MatrixProduct(Rows, Cols);
+      ListBlock[iMat] = ListSHVM[iMat].middleRows(b0, b1 - b0) *
+                        SHV_T.topRows(n_col).transpose();
     }
   };
   std::vector<T> ListScal(nbMat);

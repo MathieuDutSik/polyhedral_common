@@ -270,7 +270,7 @@ ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat, std::ostream &os) {
     res.ListGen.push_back(RootReflection<T, Tint>(GramMat, r_orig));
   }
   for (auto &g : resAut.ListGen) {
-    res.ListGen.push_back(MatrixProduct(MatrixProduct(PmatInv, g), Pmat));
+    res.ListGen.push_back(PmatInv * g * Pmat);
   }
 #ifdef SANITY_CHECK_LATTICE_AUTOMORPHISM_VINBERG
   MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
