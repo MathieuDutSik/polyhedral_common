@@ -413,7 +413,8 @@ inline mpq_class RationalRoot(mpq_class const &x, int r) {
   (-1)^parity, taken primitive.
  */
 inline mpq_class ProductDirichletLValues(int64_t d, int k, int parity,
-                                         std::vector<int64_t> const &H = {}) {
+                                         std::vector<int64_t> const &H = {},
+                                         std::vector<int64_t> const &Hsub = {}) {
   using T = mpq_class;
   DirichletGroup G = ComputeDirichletGroup(d);
   int64_t e = G.e;
@@ -432,6 +433,20 @@ inline mpq_class ProductDirichletLValues(int64_t d, int k, int parity,
     }
     if (!on_field) {
       continue;
+    }
+    // with Hsub (a supergroup of H): only the characters not trivial on
+    // it, those of the field fixed by H that are not of the field fixed by
+    // Hsub
+    if (!Hsub.empty()) {
+      bool on_sub = true;
+      for (int64_t h : Hsub) {
+        if (CharacterExponent(G, t, h) != 0) {
+          on_sub = false;
+        }
+      }
+      if (on_sub) {
+        continue;
+      }
     }
     int64_t ex_m1 = (d <= 2) ? 0 : CharacterExponent(G, t, d - 1);
     int par = (ex_m1 == 0) ? 0 : 1;

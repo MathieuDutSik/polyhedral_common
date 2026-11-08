@@ -6,6 +6,7 @@
 #include "LatticeStabEquiCan.h"
 #include "IsometryMass.h"
 #include "AbelianHermitianMass.h"
+#include "AbelianQuadraticMass.h"
 #include <fstream>
 #include <map>
 #include <set>
@@ -301,6 +302,40 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     std::string mode = argv[1];
+    if (mode == "quadab") {
+      // the standard mass of a quadratic lattice of rank m over the real
+      // subfield of Q(zeta_n) fixed by <H, -1>; for m even, "square" or
+      // the generators of H_E for E = K(sqrt disc)
+      int64_t n = std::stoll(argv[2]);
+      auto parse = [](std::string const &lst) -> std::vector<int64_t> {
+        std::vector<int64_t> res;
+        std::stringstream ss(lst);
+        std::string tok;
+        while (std::getline(ss, tok, ',')) {
+          if (!tok.empty()) {
+            res.push_back(std::stoll(tok));
+          }
+        }
+        return res;
+      };
+      AbelianCMField FK = MakeAbelianRealField(n, parse(argv[3]));
+      int m = std::stoi(argv[4]);
+      bool square = (argc >= 6 && std::string(argv[5]) == "square");
+      std::optional<AbelianCMField> FE;
+      if (argc >= 6 && !square) {
+        FE = MakeAbelianCMField(n, parse(argv[5]));
+      }
+      std::optional<mpq_class> sm =
+          StandardQuadraticMassAbelian(FK, m, square, FE);
+      std::cout << "return rec(standard_mass:=";
+      if (sm) {
+        std::cout << *sm;
+      } else {
+        std::cout << "fail";
+      }
+      std::cout << ");\n";
+      return 0;
+    }
     if (mode == "hermitianablattice") {
       // the mass of a Hermitian lattice over an abelian CM field: the trace
       // Gram matrix, the actions of a Z-basis of O_E (a number, then the
