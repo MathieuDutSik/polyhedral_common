@@ -103,26 +103,36 @@ ResidualFamily(RootSystemData<Tint> const &rs,
   return MatrixFromVectorFamilyDim(n, family);
 }
 
+/*
+  The automorphism group of a root free lattice: no Weyl factor, Aut(L) is
+  the residual itself, computed on the whole characteristic family.
+ */
+template <typename T, typename Tint, typename Tgroup>
+VinbergAutom<Tint, Tgroup>
+ComputeAutomorphismRootFree(MyMatrix<T> const &GramMat, std::ostream &os) {
+  using TintGroup = typename Tgroup::Tint;
+  IntAutomorphismGroup<Tint, Tgroup> aut =
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
+  VinbergAutom<Tint, Tgroup> res;
+  res.weyl_order = TintGroup(1);
+  res.residual_order = aut.order;
+  res.order = res.residual_order;
+  res.ListGen = std::move(aut.ListGen);
+  return res;
+}
+
+// GramMat is LLL-reduced by the caller (LatticeAutomorphismGroup).
 template <typename T, typename Tint, typename Tgroup>
 VinbergAutom<Tint, Tgroup>
 ComputeAutomorphismVinberg(MyMatrix<T> const &GramMat, std::ostream &os) {
-  using TintGroup = typename Tgroup::Tint;
   VinbergAutom<Tint, Tgroup> res;
   // The roots, enumerated once for the root system and the decomposition.
   MyMatrix<Tint> Roots =
-      GetLatticeRoots<T, Tint>(GramMat, GramReduction::Reduce, os);
+      GetLatticeRoots<T, Tint>(GramMat, GramReduction::AlreadyReduced, os);
   RootSystemData<Tint> rs =
       ComputeRootSystemFromRoots<T, Tint>(GramMat, Roots, os);
   if (rs.n_roots == 0) {
-    // Root free: no Weyl factor, Aut(L) is the residual itself. Fall back
-    // to the ordinary automorphism computation on the full family.
-    IntAutomorphismGroup<Tint, Tgroup> aut =
-        ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, os);
-    res.weyl_order = TintGroup(1);
-    res.residual_order = aut.order;
-    res.order = res.residual_order;
-    res.ListGen = std::move(aut.ListGen);
-    return res;
+    return ComputeAutomorphismRootFree<T, Tint, Tgroup>(GramMat, os);
   }
   res.weyl_order = WeylGroupOrder<Tgroup>(rs);
   RootDecomposition<T, Tint> dec =
@@ -172,11 +182,12 @@ std::optional<MyMatrix<Tint>>
 ComputeIsometryVinberg(MyMatrix<T> const &GramMat1,
                        MyMatrix<T> const &GramMat2, std::ostream &os) {
   // The roots of each side, enumerated once for the root system and the
-  // decomposition.
+  // decomposition. Both matrices are LLL-reduced by the caller
+  // (LatticeIsometry).
   MyMatrix<Tint> Roots1 =
-      GetLatticeRoots<T, Tint>(GramMat1, GramReduction::Reduce, os);
+      GetLatticeRoots<T, Tint>(GramMat1, GramReduction::AlreadyReduced, os);
   MyMatrix<Tint> Roots2 =
-      GetLatticeRoots<T, Tint>(GramMat2, GramReduction::Reduce, os);
+      GetLatticeRoots<T, Tint>(GramMat2, GramReduction::AlreadyReduced, os);
   RootSystemData<Tint> rs1 =
       ComputeRootSystemFromRoots<T, Tint>(GramMat1, Roots1, os);
   RootSystemData<Tint> rs2 =
@@ -237,7 +248,7 @@ ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat, std::ostream &os) {
   RootSystemData<Tint> rs =
       ComputeRootSystem<T, Tint>(GramRed, GramReduction::AlreadyReduced, os);
   if (rs.n_roots == 0) {
-    return ComputeAutomorphismVinberg<T, Tint, Tgroup>(GramMat, os);
+    return ComputeAutomorphismRootFree<T, Tint, Tgroup>(GramMat, os);
   }
   MyMatrix<Tint> SHV =
       WeylChamberCharacteristicFamily<T, Tint>(GramRed, rs, false, os);
@@ -304,7 +315,12 @@ ComputeIsometryWeylChamber(MyMatrix<T> const &GramMat1,
     return {};
   }
   if (rs1.n_roots == 0) {
-    return ComputeIsometryVinberg<T, Tint, Tgroup>(GramMat1, GramMat2, os);
+    // Root free on both sides (the counts agree): the test on the whole
+    // characteristic families, as ComputeIsometryVinberg does.
+    std::vector<MyMatrix<T>> ListMat1{GramMat1};
+    std::vector<MyMatrix<T>> ListMat2{GramMat2};
+    return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
+                                                          os);
   }
   MyMatrix<Tint> SHV1 =
       WeylChamberCharacteristicFamily<T, Tint>(GramMat1, rs1, false, os);

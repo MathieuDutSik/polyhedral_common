@@ -155,11 +155,13 @@ ComputeRootDecompositionFromRoots(MyMatrix<T> const &GramMat,
   return dec;
 }
 
+// The reduction says whether GramMat is LLL-reduced already, as for
+// ComputeRootSystem.
 template <typename T, typename Tint, typename Tgroup>
-RootDecomposition<T, Tint>
-ComputeRootDecomposition(MyMatrix<T> const &GramMat, std::ostream &os) {
-  MyMatrix<Tint> Roots =
-      GetLatticeRoots<T, Tint>(GramMat, GramReduction::Reduce, os);
+RootDecomposition<T, Tint> ComputeRootDecomposition(MyMatrix<T> const &GramMat,
+                                                    GramReduction reduction,
+                                                    std::ostream &os) {
+  MyMatrix<Tint> Roots = GetLatticeRoots<T, Tint>(GramMat, reduction, os);
   return ComputeRootDecompositionFromRoots<T, Tint>(GramMat, Roots, os);
 }
 
@@ -267,8 +269,9 @@ template <typename T, typename Tint, typename Tgroup>
 MyMatrix<Tint>
 ComputeCanonicalFormRootDecomposed(MyMatrix<T> const &GramMat,
                                    std::ostream &os) {
-  RootDecomposition<T, Tint> dec =
-      ComputeRootDecomposition<T, Tint, Tgroup>(GramMat, os);
+  // GramMat is LLL-reduced by the caller (LatticeCanonicalBasis).
+  RootDecomposition<T, Tint> dec = ComputeRootDecomposition<T, Tint, Tgroup>(
+      GramMat, GramReduction::AlreadyReduced, os);
   if (dec.n_roots == 0) {
     // Root free: no decomposition to exploit, fall back to the monolithic
     // characteristic-set canonical form.
@@ -342,8 +345,9 @@ ComputeCanonicalFormWeylReduced(MyMatrix<T> const &GramMat, std::ostream &os) {
 #ifdef TIMINGS_LATTICE_ROOT_DECOMPOSITION
   MicrosecondTime time;
 #endif
-  RootDecomposition<T, Tint> dec =
-      ComputeRootDecomposition<T, Tint, Tgroup>(GramMat, os);
+  // GramMat is LLL-reduced by the caller (LatticeCanonicalBasis).
+  RootDecomposition<T, Tint> dec = ComputeRootDecomposition<T, Tint, Tgroup>(
+      GramMat, GramReduction::AlreadyReduced, os);
   if (dec.n_roots == 0) {
     return ComputeCanonicalForm<T, Tint, Tgroup>(GramMat, os);
   }
