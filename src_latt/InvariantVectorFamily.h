@@ -880,22 +880,23 @@ MyMatrix<Tint> ivf_z_spanning(MyMatrix<T> const &GramMat,
   The result Z-spans L. With use_roots this is the Z-spanning
   root-iterated-shortest family (Hecke's _reduced_characteristic_vectors).
 
-  The optional chamber restricts the top level to a fundamental Weyl chamber
-  (Brandhorst-Hofmann, Remark 7.9): use_roots is set, the block is the root
-  system, and chamber(y, reps) returns the vectors of minimal norm of
+  The chamber, unless nullptr, restricts the top level to a fundamental Weyl
+  chamber (Brandhorst-Hofmann, Remark 7.9): use_roots is set, the block is
+  the root system, and chamber(y, reps) returns the vectors of minimal norm of
   y + P1 that lie in the closed chamber, where P1 is the union of the cosets
   x + S1 for x in reps (the zero vector included). It replaces the closest
   vector problems of the top level, and the roots themselves are left out,
   the caller supplying the simple roots. The deeper levels are untouched,
   the Weyl group acting trivially on the orthogonal complement of P1.
 
-  The optional block is the base block of the top level, both signs, for a
-  caller that already has it (the chamber variant has the root system); it
-  saves its enumeration. It must be what get_shv_block returns, up to order.
-  The optional block_basis, with it, is a Z-basis of the lattice the block
-  spans (the simple roots of the root system); it saves the rank and the
-  Z-basis computations. Any basis does: the family depends on the lattices
-  S1 and P1, not on their bases.
+  The block, unless nullptr, is the base block of the top level, both signs,
+  for a caller that already has it (the chamber variant has the root
+  system); it saves its enumeration. It must be what get_shv_block returns,
+  up to order. The block_basis, unless nullptr, is a Z-basis of the lattice
+  the block spans (the simple roots of the root system); it saves the rank
+  and the Z-basis computations. Any basis does: the family depends on the
+  lattices S1 and P1, not on their bases. A caller with neither passes
+  nullptr for both, as for the chamber.
  */
 template <typename Tint>
 using InnerSpanChamber = std::function<std::vector<MyVector<Tint>>(
@@ -905,10 +906,9 @@ template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
 inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
                                  GramReduction reduction, std::ostream &os,
-                                 InnerSpanChamber<Tint> const *chamber =
-                                     nullptr,
-                                 MyMatrix<Tint> const *block = nullptr,
-                                 MyMatrix<Tint> const *block_basis = nullptr) {
+                                 InnerSpanChamber<Tint> const *chamber,
+                                 MyMatrix<Tint> const *block,
+                                 MyMatrix<Tint> const *block_basis) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
 #endif
@@ -1065,9 +1065,10 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   os << "|IVF: inner_span n=" << n << ", projection|=" << time << "\n";
 #endif
-  std::vector<MyVector<Tint>> rec2 =
-      inner_span_iterated_shortest_rec<T, Tint>(G_L2, use_roots,
-                                                GramReduction::Reduce, os);
+  // The deeper levels are the plain construction: no chamber, and their
+  // block is enumerated.
+  std::vector<MyVector<Tint>> rec2 = inner_span_iterated_shortest_rec<T, Tint>(
+      G_L2, use_roots, GramReduction::Reduce, os, nullptr, nullptr, nullptr);
   // Built on first use: the chamber variant does not need it.
   std::optional<CVPSolver<T, Tint>> opt_solverP1;
   auto get_solverP1 = [&]() -> CVPSolver<T, Tint> & {
@@ -1144,8 +1145,8 @@ MyMatrix<Tint> inner_span_iterated_shortest_gen(MyMatrix<T> const &GramMat,
   int n = GramMat.rows();
   MyMatrix<Tfield> GramMat_F = UniversalMatrixConversion<Tfield, T>(GramMat);
   std::vector<MyVector<Tint>> cvL =
-      inner_span_iterated_shortest_rec<Tfield, Tint>(GramMat_F, use_roots,
-                                                     reduction, os);
+      inner_span_iterated_shortest_rec<Tfield, Tint>(
+          GramMat_F, use_roots, reduction, os, nullptr, nullptr, nullptr);
   std::unordered_set<MyVector<Tint>> seen;
   std::vector<MyVector<Tint>> rows;
   for (auto &v : cvL) {
