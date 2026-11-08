@@ -252,20 +252,24 @@ ComputeRootSystemFromRoots(MyMatrix<T> const &GramMat,
     pos.push_back(SignCanonicalizeVector(GetMatrixRow(Roots, i)));
   }
 
-  // Simple roots: positive roots not equal to a sum of two positive roots.
-  std::unordered_map<MyVector<Tint>, int> posIndex;
-  for (size_t i = 0; i < pos.size(); i++) {
-    posIndex[pos[i]] = static_cast<int>(i);
-  }
+  /*
+    Simple roots: the positive roots that are not the sum of two positive
+    roots. A positive root alpha is such a sum when alpha - beta is a positive
+    root for some positive root beta. For two roots, alpha - beta has norm
+    4 - 2 <alpha, beta>, so it is a root exactly when <alpha, beta> = 1, and it
+    is positive exactly when beta < alpha in the lexicographic order, which
+    defines the positive roots and is translation invariant. So only the
+    products of the positive roots are needed, one matrix product.
+   */
+  rs.PositiveRoots = MatrixFromVectorFamilyDim(n, pos);
+  MyMatrix<Tint> G = UniversalMatrixConversion<Tint, T>(GramMat);
+  MyMatrix<Tint> PosGram = rs.PositiveRoots * G * rs.PositiveRoots.transpose();
   std::vector<MyVector<Tint>> simple;
-  for (size_t i = 0; i < pos.size(); i++) {
+  size_t n_pos = pos.size();
+  for (size_t i = 0; i < n_pos; i++) {
     bool is_sum = false;
-    for (size_t j = 0; j < pos.size() && !is_sum; j++) {
-      if (j == i) {
-        continue;
-      }
-      MyVector<Tint> diff = pos[i] - pos[j];
-      if (posIndex.count(diff) == 1) {
+    for (size_t j = 0; j < n_pos && !is_sum; j++) {
+      if (PosGram(i, j) == 1 && pos[j] < pos[i]) {
         is_sum = true;
       }
     }
@@ -274,7 +278,6 @@ ComputeRootSystemFromRoots(MyMatrix<T> const &GramMat,
     }
   }
   rs.SimpleRoots = MatrixFromVectorFamilyDim(n, simple);
-  rs.PositiveRoots = MatrixFromVectorFamilyDim(n, pos);
   rs.rank = simple.size();
 #ifdef DEBUG_LATTICE_ROOT_SYSTEM
   os << "ROOTSYS: n_roots=" << rs.n_roots << " rank=" << rs.rank << "\n";
@@ -284,7 +287,6 @@ ComputeRootSystemFromRoots(MyMatrix<T> const &GramMat,
   // products are those of the integral form, one matrix product for all the
   // pairs.
   int k = rs.rank;
-  MyMatrix<Tint> G = UniversalMatrixConversion<Tint, T>(GramMat);
   MyMatrix<Tint> GE = G * rs.SimpleRoots.transpose();
   std::vector<std::vector<int>> adj(k);
   for (int a = 0; a < k; a++) {

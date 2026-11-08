@@ -1003,8 +1003,14 @@ private:
   std::optional<ShvecFastPrep<T>> fast_prep;
 
   void init_from_reduction() {
-    MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
-    Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
+    // The identity, for a matrix the caller has already reduced
+    // (LLLnoreduction), is its own inverse.
+    if (IsIdentity(eRec.Pmat)) {
+      Q_T = IdentityMat<T>(dim);
+    } else {
+      MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
+      Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
+    }
     request = FullGramInfo<T>(eRec.GramMatRed);
     if constexpr (shvec_has_fast_path<T>::value) {
       fast_prep = ComputeShvecFastPrep(eRec.GramMatRed);
