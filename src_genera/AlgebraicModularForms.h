@@ -251,10 +251,11 @@ amf_new_class(RealifiedRing<T, Tint> const &ring, AmfCanonical<T, Tint> const &c
   }
   std::vector<MyMatrix<Tint>> l_aut_red;
   if (ring.d == 1) {
-    // Over Z the Vinberg decomposition of GenusEnumeration gives the order
-    // and the generators without enumerating the group.
+    // Over Z the automorphism group of GenusEnumeration (the default
+    // automorphism_method, weyl_chamber) gives the order and the generators
+    // without enumerating the group.
     LatticeAutInfo<T, Tint, Tgroup> info =
-        GetLatticeAutInfo<T, Tint, Tgroup>(G_T, GenusScheme::CanonicalForm, os);
+        GetLatticeAutInfo<T, Tint, Tgroup>(G_T, GenusMethods{}, os);
     l_aut_red = info.ListGenMat;
     cl.aut_order = info.order;
   } else {
