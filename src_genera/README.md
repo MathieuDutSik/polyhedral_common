@@ -253,8 +253,15 @@ the reduction.
   isotropic lines are corrected modulo p^2 inside the eigenlattice.
 * The lines are cut into orbits of the centralizer C_{O(L)}(g), eigenspace
   by eigenspace, the small ones first.
-* A pair is identified by the canonical form of (A, A g^T) and its weight
-  is 1 / |C_{O(L)}(g)|, the automorphism group of that pair of forms.
+* A pair is identified either by the canonical form of (A, A g^T) or by
+  Plesken-Souvignier isometry tests against the classes on the same
+  lattice (bucketed by the canonical form of the lattice, so that the
+  Z-spanning family is computed once per lattice); the first neighbours
+  try both and the cheaper on average is used. Its weight is
+  1 / |C_{O(L)}(g)|, the automorphism group of the pair of forms.
+* The projective spaces are cut into orbits up to 5 10^6 points; up to
+  2 10^7 random points come first and the orbits before a new prime;
+  beyond, random points in growing rounds. The mass certifies the result.
 * The primes: the good ones (p not dividing m det) in the order of the
   number of points of the projective spaces of their eigenspaces over F_p.
   At p != 1 mod m only some eigenvalues are in F_p, which is often enough
