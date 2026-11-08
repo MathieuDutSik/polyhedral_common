@@ -5,7 +5,9 @@
 // clang-format off
 #include "AbelianHermitianMass.h"
 #include <algorithm>
+#include <cmath>
 #include <map>
+#include <numeric>
 #include <optional>
 #include <set>
 #include <vector>
@@ -1934,6 +1936,306 @@ QuadraticLocalFactors(MyMatrix<mpq_class> const &B,
     res[q] = QuadLocalFactorAtPrime(B, Omega, q);
   }
   return res;
+}
+
+/*
+  The square roots in the totally real K = Q(theta): d = y^2 forces y in
+  den^{-1} O_K, O_K in disc(f)^{-1} Z[theta], and y(theta_j) = +/- the
+  square root of d(theta_j) at the real roots theta_j of f. For each sign
+  pattern the coordinates of y are recovered from the Vandermonde system at
+  a precision covering the denominators, rounded, and the candidate is
+  checked exactly; so a square root returned is exact, and none is missed
+  as the precision bounds the rounding error.
+ */
+inline std::vector<mpf_class> RealRootsMpf(std::vector<int64_t> const &f,
+                                           mp_bitcnt_t prec) {
+  int n = static_cast<int>(f.size()) - 1;
+  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(n, n);
+  for (int i = 0; i + 1 < n; i++) {
+    C(i + 1, i) = 1;
+  }
+  for (int i = 0; i < n; i++) {
+    C(i, n - 1) = -static_cast<double>(f[i]) / static_cast<double>(f[n]);
+  }
+  Eigen::EigenSolver<Eigen::MatrixXd> es(C, false);
+  std::vector<mpf_class> roots;
+  auto eval = [&](mpf_class const &x, mpf_class &fx, mpf_class &dfx) {
+    fx = mpf_class(0, prec);
+    dfx = mpf_class(0, prec);
+    for (int i = n; i >= 0; i--) {
+      dfx = dfx * x + fx;
+      fx = fx * x + mpf_class(static_cast<double>(f[i]), prec);
+    }
+  };
+  for (int i = 0; i < n; i++) {
+    mpf_class x(es.eigenvalues()(i).real(), prec);
+    mpf_class fx(0, prec), dfx(0, prec);
+    for (int it = 0; it < 200; it++) {
+      eval(x, fx, dfx);
+      if (dfx == 0) {
+        break;
+      }
+      mpf_class dx(fx / dfx, prec);
+      x -= dx;
+      if (dx == 0 || abs(dx) < mpf_class(std::ldexp(1.0, -static_cast<int>(prec) + 8), prec) * (1 + abs(x))) {
+        break;
+      }
+    }
+    roots.push_back(x);
+  }
+  std::sort(roots.begin(), roots.end());
+  for (int i = 0; i + 1 < n; i++) {
+    mpf_class gap = roots[i + 1] - roots[i];
+    if (gap < mpf_class(std::ldexp(1.0, -static_cast<int>(prec) / 2), prec)) {
+      std::cerr << "ABQUAD: the real roots of the minimal polynomial are not "
+                   "separated\n";
+      throw TerminalException{1};
+    }
+  }
+  return roots;
+}
+
+inline std::optional<ElemE> SqrtInK(ElemE const &d, CyclotomicField const &K) {
+  int n = K.deg;
+  if (EIsZero(d)) {
+    return d;
+  }
+  auto [dz, den] = ClearDenominators(d);
+  // dd = d den^2, integral
+  ElemE dd(n, mpq_class(0));
+  for (int i = 0; i < n; i++) {
+    dd[i] = mpq_class(dz[i] * den);
+  }
+  std::vector<mpq_class> pt = PowerTraces(K.Phi, 2 * n);
+  MyMatrix<mpq_class> Tm(n, n);
+  for (int a = 0; a < n; a++) {
+    for (int b = 0; b < n; b++) {
+      Tm(a, b) = pt[a + b];
+    }
+  }
+  mpq_class discf = DeterminantMat(Tm);
+  mpz_class D = abs(discf.get_num());
+  // magnitudes in double for the precision
+  double logD = std::log2(D.get_d() + 1);
+  double maxc = 1;
+  for (auto const &x : dd) {
+    maxc = std::max(maxc, std::abs(x.get_d()));
+  }
+  double maxf = 1;
+  for (auto const &x : K.Phi) {
+    maxf = std::max(maxf, std::abs(static_cast<double>(x)));
+  }
+  double logR = std::log2(1 + maxf);
+  double need = logD + std::log2(maxc) + 2 * n * logR + 4 * std::log2(n + 1) + 64;
+  mp_bitcnt_t prec = static_cast<mp_bitcnt_t>(std::max(256.0, 2 * need));
+  std::vector<mpf_class> th = RealRootsMpf(K.Phi, prec);
+  std::vector<mpf_class> sq;
+  for (int j = 0; j < n; j++) {
+    mpf_class v(0, prec);
+    mpf_class pw(1, prec);
+    for (int i = 0; i < n; i++) {
+      v += pw * mpf_class(dd[i], prec);
+      pw *= th[j];
+    }
+    if (v <= 0) {
+      return {};
+    }
+    sq.push_back(sqrt(v));
+  }
+  // the inverse of the Vandermonde matrix V(j, i) = th_j^i
+  std::vector<std::vector<mpf_class>> A(n, std::vector<mpf_class>(2 * n, mpf_class(0, prec)));
+  for (int j = 0; j < n; j++) {
+    mpf_class pw(1, prec);
+    for (int i = 0; i < n; i++) {
+      A[j][i] = pw;
+      pw *= th[j];
+    }
+    A[j][n + j] = mpf_class(1, prec);
+  }
+  for (int c = 0; c < n; c++) {
+    int piv = c;
+    for (int r = c + 1; r < n; r++) {
+      if (abs(A[r][c]) > abs(A[piv][c])) {
+        piv = r;
+      }
+    }
+    std::swap(A[c], A[piv]);
+    mpf_class inv = mpf_class(1, prec) / A[c][c];
+    for (auto &x : A[c]) {
+      x *= inv;
+    }
+    for (int r = 0; r < n; r++) {
+      if (r != c && A[r][c] != 0) {
+        mpf_class t = A[r][c];
+        for (int u = 0; u < 2 * n; u++) {
+          A[r][u] -= t * A[c][u];
+        }
+      }
+    }
+  }
+  // c = V^{-1} w: Vinv(i, j) = A[i][n + j]
+  mpf_class Df(D, prec);
+  for (uint64_t pat = 0; pat < (uint64_t(1) << (n - 1)); pat++) {
+    ElemE y(n, mpq_class(0));
+    for (int i = 0; i < n; i++) {
+      mpf_class c(0, prec);
+      for (int j = 0; j < n; j++) {
+        bool neg = (j > 0) && ((pat >> (j - 1)) & 1);
+        if (neg) {
+          c -= A[i][n + j] * sq[j];
+        } else {
+          c += A[i][n + j] * sq[j];
+        }
+      }
+      mpf_class z = floor(c * Df + mpf_class(0.5, prec));
+      mpz_class zi(z);
+      y[i] = mpq_class(zi, D);
+      y[i].canonicalize();
+    }
+    if (EMul(y, y, K) == dd) {
+      return EScal(y, mpq_class(1) / mpq_class(den));
+    }
+  }
+  return {};
+}
+
+// The field (n, H) seen in Q(zeta_N), n | N.
+inline AbelianCMField LiftAbelianField(AbelianCMField const &F, int64_t N) {
+  std::set<int64_t> Hs(F.H.begin(), F.H.end());
+  std::vector<int64_t> H;
+  for (int64_t a = 1; a < N; a++) {
+    if (std::gcd(a, N) == 1 && Hs.count(a % F.n) == 1) {
+      H.push_back(a);
+    }
+  }
+  return {N, H};
+}
+
+/*
+  The mass of the genus of the quadratic lattice over K (the standard mass
+  times the local factors), or nothing when a local factor is not computed
+  or, for m even with a discriminant d not a square in K, when K(sqrt d) is
+  not K(sqrt D) for a fundamental discriminant D (built from the primes
+  dividing 2 n N(d)); E = K(sqrt D) is then the subfield of Q(zeta_N), N =
+  lcm(n, |D|), fixed by the elements of H with Kronecker symbol (D / a) =
+  1.
+ */
+inline std::optional<mpq_class>
+QuadraticMassAbelianLattice(MyMatrix<mpq_class> const &B,
+                            std::vector<MyMatrix<mpq_class>> const &Omega,
+                            AbelianCMField const &FK) {
+  int deg = static_cast<int>(Omega.size());
+  int m = B.rows() / deg;
+  if (m == 1) {
+    return mpq_class(1, 2);
+  }
+  mpq_class local(1);
+  for (auto const &kv : QuadraticLocalFactors(B, Omega, FK)) {
+    if (!kv.second) {
+      return {};
+    }
+    local *= *kv.second;
+  }
+  std::optional<mpq_class> sm;
+  if (m % 2 == 1) {
+    sm = StandardQuadraticMassAbelian(FK, m, false, {});
+  } else {
+    auto is_prime = [](int64_t x) -> bool {
+      for (int64_t p = 2; p * p <= x; p++) {
+        if (x % p == 0) {
+          return false;
+        }
+      }
+      return x >= 2;
+    };
+    std::optional<LocalGenerator> lg;
+    int64_t q0 = 2;
+    while (!lg) {
+      if (is_prime(q0)) {
+        lg = FindLocalGenerator(B, Omega, q0);
+      }
+      if (!lg) {
+        q0++;
+      }
+      if (q0 > 1000) {
+        return {};
+      }
+    }
+    CyclotomicField K;
+    K.d = 0;
+    K.deg = deg;
+    K.Phi = lg->f;
+    K.conj = lg->conj;
+    ElemE d = DetK(LocalOKGram(B, *lg, q0), K);
+    if ((m * (m - 1) / 2) % 2 == 1) {
+      d = EScal(d, mpq_class(-1));
+    }
+#ifdef DEBUG_ABQUAD
+    std::cerr << "ABQUAD: disc =";
+    for (auto const &x : d) {
+      std::cerr << " " << x;
+    }
+    std::cerr << " (powers of theta, f =";
+    for (auto const &x : K.Phi) {
+      std::cerr << " " << x;
+    }
+    std::cerr << ")\n";
+#endif
+    if (SqrtInK(d, K)) {
+      sm = StandardQuadraticMassAbelian(FK, m, true, {});
+    } else {
+      std::set<int64_t> ps;
+      mpq_class Nd = DeterminantMat(EMulMatrix(d, K));
+      for (mpz_class x : {mpz_class(abs(Nd.get_num())), mpz_class(Nd.get_den()),
+                          mpz_class(static_cast<long>(2 * FK.n))}) {
+        if (x > 1) {
+          for (mpz_class const &p : FactorsInt(x)) {
+            ps.insert(p.get_si());
+          }
+        }
+      }
+      std::vector<int64_t> odd(ps.begin(), ps.end());
+      odd.erase(std::remove(odd.begin(), odd.end(), 2), odd.end());
+      for (uint64_t sub = 0; sub < (uint64_t(1) << odd.size()) && !sm; sub++) {
+        int64_t Dodd = 1;
+        for (size_t i = 0; i < odd.size(); i++) {
+          if ((sub >> i) & 1) {
+            Dodd *= (odd[i] % 4 == 1) ? odd[i] : -odd[i];
+          }
+        }
+        for (int64_t two : {1, -4, 8, -8}) {
+          int64_t Dq = Dodd * two;
+          if (Dq == 1) {
+            continue;
+          }
+          if (!SqrtInK(EScal(d, mpq_class(static_cast<long>(Dq))), K)) {
+            continue;
+          }
+#ifdef DEBUG_ABQUAD
+          std::cerr << "ABQUAD: E = K(sqrt " << Dq << ")\n";
+#endif
+          int64_t N = std::lcm(FK.n, std::abs(Dq));
+          AbelianCMField FK2 = LiftAbelianField(FK, N);
+          std::vector<int64_t> HE;
+          for (int64_t a : FK2.H) {
+            if (KroneckerSymbol(Dq, a) == 1) {
+              HE.push_back(a);
+            }
+          }
+          sm = StandardQuadraticMassAbelian(FK2, m, false,
+                                            AbelianCMField{N, HE});
+          break;
+        }
+      }
+      if (!sm) {
+        return {};
+      }
+    }
+  }
+  if (!sm) {
+    return {};
+  }
+  return *sm * local;
 }
 
 // clang-format off

@@ -58,6 +58,9 @@ run_case E8E8 S3diag2 3
 # F21 on seven of the nine coordinates of A8: a Hermitian component over
 # Q(sqrt -7) glued at 7 to the fixed lattice, 2 classes
 run_case A8 F21A8 2
+# D5 in W(A4) on two A4, one in each E8 of E8+E8: a component quadratic
+# over Q(sqrt 5) glued at 5 to the fixed lattice, 2 classes (at p = 3)
+run_case E8E8D5 D5 2
 
 echo "All isometry enumeration tests passed"
 touch CI_CONCLUSION

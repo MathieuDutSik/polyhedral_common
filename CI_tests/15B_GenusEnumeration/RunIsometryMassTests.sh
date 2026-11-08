@@ -223,6 +223,32 @@ quad_case z32pm3 32 1 9375024
 quad_case s6m2 24 5,19 1/4
 quad_case s7m3 28 3,9 155370096
 quad_case s6m2b 24 5,19 1/8
+# The masses of quadratic lattices over totally real abelian fields, as
+# given by Hecke.jl (mass), with E = K(sqrt D) for the even ranks.
+quadmass_case() {
+    tag=$1
+    n=$2
+    H=$3
+    expected=$4
+    out=$($BIN quadablocal quadm_${tag}_gram.txt quadm_${tag}_omega.txt $n $H \
+              2>/dev/null)
+    val=$(echo "$out" | sed -n 's/return rec(mass:=\([^,]*\),.*/\1/p')
+    echo "--- quadratic lattice $tag over a real subfield of Q(zeta_$n): mass=$val (expecting $expected) ---"
+    if [ "$val" != "$expected" ]; then
+        echo "ERROR: the quadratic lattice $tag gave the mass $val" >&2
+        exit 1
+    fi
+}
+quadmass_case s5m2 5 1 1
+quadmass_case s2m2 8 7 45/4
+quadmass_case s3m2 12 11 36
+quadmass_case z7pm2 7 1 7/4
+quadmass_case z9pm2 9 1 21/4
+quadmass_case z15pm2 15 1 75/4
+quadmass_case z16pm2 16 1 1/8
+quadmass_case s5m3 5 1 15925/4
+quadmass_case z7pm3 7 1 245245/12
+quadmass_case z16pm3 16 1 5197365/16
 herm_case 47 1 mass 695/94
 herm_case 19 1 mass 1/38
 herm_case 16 1 mass 1/16
@@ -274,6 +300,13 @@ group_mass_case A6 F21 1/2
 group_mass_case A8 F21 1/2
 group_mass_case A6A6 F21 1/8
 group_mass_case E8E8_16 S3diag2 143/1203948748800
+# The dihedral group D5 = <(12345), (25)(34)> in W(A4): End_G has the
+# totally real centre Q(sqrt 5), so the multiplicity lattice is quadratic
+# over Q(sqrt 5). Diagonally on A4 + A4 (rank two, mass 1/8), and on two
+# A4, one in each E8 of E8+E8 (glued at 5 to the fixed lattice, mass
+# 13/921600, closed by GENUS_EnumerateIsometry with 2 classes).
+group_mass_case A4A4 D5 1/8
+group_mass_case E8E8D5 D5 13/921600
 
 # The brute-force check for the groups <g, tau>, tau in C_{O(L)}(g); the
 # ratios are integers but not 1, as (g, tau) and (g, g tau) generate the

@@ -8,6 +8,7 @@
 #include "CyclotomicHermitianMass.h"
 #include "MultiplicityLocalFactor.h"
 #include "AbelianHermitianMass.h"
+#include "AbelianQuadraticMass.h"
 #include "WeightMatrix.h"
 #include "GRAPH_GraphicalBasic.h"
 #include "MAT_Matrix.h"
@@ -132,11 +133,13 @@ template <typename T> struct IsometryComponent {
   std::optional<MyMatrix<T>> multiplicity_gram;
   // the product over p | |G| of [O(X_p) : Stab(L_p)], when computed
   std::optional<T> multiplicity_factor;
-  // End_G with a CM centre K: the multiplicity lattice X is Hermitian over
-  // K, with the actions of a Z-basis of O_K
+  // End_G with a centre K other than Q: the multiplicity lattice X, with
+  // the actions of a Z-basis of O_K, is Hermitian over K when K is CM
+  // (herm_field) and quadratic over K when K is totally real (quad_field)
   std::optional<AbelianCMField> herm_field;
-  MyMatrix<T> herm_gram;
-  std::vector<MyMatrix<T>> herm_omega;
+  std::optional<AbelianCMField> quad_field;
+  MyMatrix<T> centre_gram;
+  std::vector<MyMatrix<T>> centre_omega;
   MyMatrix<T> row;
   MyMatrix<T> row_inv;
   std::vector<int64_t> elem;
@@ -1412,14 +1415,16 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     cm.d = comp.d;
     cm.rank = comp.gram.rows();
     cm.det = DeterminantMat(comp.gram);
-    if (comp.d == 0 && comp.herm_field) {
+    if (comp.d == 0 && (comp.herm_field || comp.quad_field)) {
       std::vector<MyMatrix<mpq_class>> om;
-      for (auto const &W : comp.herm_omega) {
+      for (auto const &W : comp.centre_omega) {
         om.push_back(UniversalMatrixConversion<mpq_class, T>(W));
       }
-      std::optional<mpq_class> hm = HermitianMassAbelianLattice(
-          UniversalMatrixConversion<mpq_class, T>(comp.herm_gram), om,
-          *comp.herm_field);
+      MyMatrix<mpq_class> Bc =
+          UniversalMatrixConversion<mpq_class, T>(comp.centre_gram);
+      std::optional<mpq_class> hm =
+          comp.herm_field ? HermitianMassAbelianLattice(Bc, om, *comp.herm_field)
+                          : QuadraticMassAbelianLattice(Bc, om, *comp.quad_field);
       if (hm && comp.multiplicity_factor) {
         cm.mass = UniversalScalarConversion<T, mpq_class>(*hm) *
                   *comp.multiplicity_factor;
@@ -2019,7 +2024,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       p-part of D(N), which contain the image, at least. When they agree
       that is the factor, without the search of the solutions.
      */
-    {
+    auto bounds_factor = [&](int64_t max_dn,
+                             size_t max_group) -> std::optional<size_t> {
       IsometryComponent<T> compN =
           BuildIsometryComponent<T, Tint>(A, Nb, ListP[0], 1);
       compN.d = 0;
@@ -2033,7 +2039,14 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
       PrimaryQuadModule MN = BuildPrimaryQuadModule(compN, p);
       std::optional<std::vector<ModuleAut>> upper =
-          EquivariantModuleIsometries(MN, 1 << 12, 100000);
+          EquivariantModuleIsometries(MN, max_dn, max_group);
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+      if (!upper) {
+        os << "MULT_FACTOR: p=" << p << " the equivariant isometries of the "
+           << "p-part of D(N), of exponent " << MN.N << " and order "
+           << MN.size() << ", exceed the bound\n";
+      }
+#endif
       if (upper) {
         std::vector<MyVector<T>> gensMN = PrimaryModuleGenerators(compN, MN);
         MyMatrix<T> NbInv_c = Inverse(N_c);
@@ -2088,11 +2101,14 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
            << "\n";
 #endif
         if (orb_low && orb_up && *orb_low == *orb_up) {
-          factor *= UniversalScalarConversion<T, int64_t>(
-              static_cast<int64_t>(*orb_low));
-          continue;
+          return *orb_low;
         }
       }
+      return {};
+    };
+    if (std::optional<size_t> fb = bounds_factor(int64_t(1) << 12, 100000)) {
+      factor *= UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(*fb));
+      continue;
     }
     // the image of O(X_p) modulo p^c
     int e = 0;
@@ -2135,6 +2151,12 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       opt = LocalStabilizerImage(A_mod, basis, p, c, e, bounds);
     }
     if (!opt) {
+      // the search is beyond its bounds: the bounds again, with the p-part
+      // of D(N) allowed to be larger
+      if (std::optional<size_t> fb = bounds_factor(int64_t(1) << 17, 2000000)) {
+        factor *= UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(*fb));
+        continue;
+      }
       MULT_FACTOR_FAIL(2128);
       return {};
     }
@@ -2488,14 +2510,18 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
     }
     if (c > 1 && m * m * c == e) {
       /*
-        End_G = M_m(K) with K = Q(chi) the centre, of degree c. When K is
-        CM (the adjoint acts nontrivially on the centre), the
-        multiplicity space is Hermitian over K: X = L cap F, F the image of
-        an idempotent of Q[H] of K-rank one on W, of dimension m c, with
-        the action of the order generated by the class sums. K is the
-        subfield of Q(zeta_N), N the exponent of G, fixed by the a with C_g
-        = C_{g^a} on V_rho for every class (sigma_a sends the central
-        character of C_g to that of C_{g^a}).
+        End_G = M_m(K) with K = Q(chi) the centre, of degree c. The
+        multiplicity space is X = L cap F, F the image of an idempotent of
+        Q[H] of K-rank one on W, of dimension m c, with the action of the
+        order generated by the class sums: Hermitian over K when K is CM
+        (the adjoint acts nontrivially on the centre), quadratic over K
+        when K is totally real. K is the subfield of Q(zeta_N), N the
+        exponent of G, fixed by the a with C_g = C_{g^a} on V_rho for every
+        class (sigma_a sends the central character of C_g to that of
+        C_{g^a}). F is stable under End_G, so it has no dimension m c when
+        End_G is not split (M_{m/2}(D), D a quaternion algebra over K, has
+        no module of that dimension), and the component is then left
+        without a mass.
        */
       std::vector<MyMatrix<T>> Centre = commutant(ListBoth);
       MyMatrix<T> Gblk = blk.E * A * blk.E.transpose();
@@ -2550,7 +2576,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         }
       }
       std::optional<MyMatrix<T>> found_basis;
-      if (is_cm && Nexp > 2) {
+      if (Nexp > 2) {
         std::vector<std::pair<size_t, int>> cand;
         for (size_t i = 0; i < n_elt; i++) {
           cand.push_back({i, 1});
@@ -2643,7 +2669,8 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           }
           Omega = next;
         }
-        AbelianCMField Fk = MakeAbelianCMField(Nexp, Hgens);
+        AbelianCMField Fk = is_cm ? MakeAbelianCMField(Nexp, Hgens)
+                                  : MakeAbelianRealField(Nexp, Hgens);
         // the order is O_K when its discriminant is that of K (the product
         // of the conductors of the characters)
         bool maximal = (static_cast<int>(Omega.size()) == c);
@@ -2668,9 +2695,13 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           maximal = (dO == dK);
         }
         if (maximal) {
-          comp.herm_field = Fk;
-          comp.herm_gram = Xb * A * Xb.transpose();
-          comp.herm_omega = Omega;
+          if (is_cm) {
+            comp.herm_field = Fk;
+          } else {
+            comp.quad_field = Fk;
+          }
+          comp.centre_gram = Xb * A * Xb.transpose();
+          comp.centre_omega = Omega;
           MultiplicityFactorBounds mbounds;
           comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
               A, Xb, blk.E, elts, ListP, Omega, ClassSum, mbounds, os);

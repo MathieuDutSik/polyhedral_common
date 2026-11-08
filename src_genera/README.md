@@ -167,9 +167,15 @@ Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
 over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
 C_{g^a} agree on the component), O_K acts through the order they generate
 (required maximal), and the mass is the Hermitian mass over K times the
-local factors, computed with the K-linear endomorphisms. Other components
-(End_G a quaternion algebra or a totally real field other than Q) get no
-mass.
+local factors, computed with the K-linear endomorphisms. When the centre
+K is totally real (Q(sqrt 5) for the dihedral group D5 in W(A4)) the
+multiplicity lattice is quadratic over K and its mass is the quadratic
+mass below; for D5 on two A4, one in each E8 of E8+E8, the mass
+13/921600 is closed by GENUS_EnumerateIsometry with 2 classes. When the
+bounds and the search of the local factors fail, the bounds are tried
+again with a p-part of D(N) of up to 2^17 elements. Components where
+End_G is a quaternion algebra get no mass (the subspace F, stable under
+End_G, has no dimension m c then).
 
     GENUS_IsometryMass hermitianab [n] [h1,h2,...] [m]
     GENUS_IsometryMass hermitianablattice [Gram] [Omega] [n] [h1,h2,...]
@@ -182,8 +188,28 @@ the cyclotomic case runs on a generator of O_E with the prime not dividing
 its index, or, at a common index divisor unramified in E, on idempotents
 refined from several elements; the ramified primes are treated over a
 residue field of any degree, the dyadic one with its relative different
-exponent. Checked against Hecke.jl on 84 lattices over Q(sqrt -D),
+exponent. Checked against Hecke.jl on 86 lattices over Q(sqrt -D),
 Q(sqrt 5, sqrt -7), Q(sqrt 5, sqrt -3), Q(i, sqrt 5) and Q(zeta_7)^+(sqrt -3).
+
+    GENUS_IsometryMass quadab [n] [h1,h2,...] [m] [square|g1,g2,...]
+    GENUS_IsometryMass quadablocal [Gram] [Omega] [n] [h1,h2,...]
+
+give the standard mass of a quadratic lattice of rank m over the totally
+real subfield K of Q(zeta_n) fixed by <h_i, -1>, and the mass, the local
+mass and the local factors of a quadratic lattice over K given by its
+trace Gram matrix and the actions of a Z-basis of O_K
+(`AbelianQuadraticMass.h`, after Hecke.jl's MassQuad.jl). At each prime q
+the form is written over K on a local O_K-basis and each prime of K over
+q is treated with the exact arithmetic of K, the valuations and residues
+being read through its idempotent: the odd primes by the Jordan
+decomposition, the dyadic primes unramified over 2 by Cho's formula, the
+dyadic primes ramified over 2 by the maximal and unimodular formulas or
+the chain of integral overlattices with Kirschmer's local isometry test.
+For m even the discriminant d is tested exactly for being a square, and
+E = K(sqrt d) is taken as K(sqrt D) for a fundamental discriminant D
+(then abelian); otherwise the mass is not computed. Checked against
+Hecke.jl on 698 local factors over 13 fields and the masses of 40
+lattices.
 
 With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabiliser of L in
 the adelic centraliser is a subgroup of finite index of that of L_0, so

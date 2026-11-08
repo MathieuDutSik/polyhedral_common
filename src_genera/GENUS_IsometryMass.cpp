@@ -364,7 +364,14 @@ int main(int argc, char *argv[]) {
           local_mass = {};
         }
       }
-      std::cout << "return rec(local_mass:=";
+      std::optional<mpq_class> mass = QuadraticMassAbelianLattice(B, Omega, FK);
+      std::cout << "return rec(mass:=";
+      if (mass) {
+        std::cout << *mass;
+      } else {
+        std::cout << "fail";
+      }
+      std::cout << ", local_mass:=";
       if (local_mass) {
         std::cout << *local_mass;
       } else {
