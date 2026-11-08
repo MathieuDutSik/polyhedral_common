@@ -260,6 +260,13 @@ template <typename T, typename Tint> struct BravaisNormalizerData {
   std::vector<MyMatrix<T>> perfect_forms;
 };
 
+/*
+  The T-space F(G) of a finite group, with its Bravais group as the
+  pointwise stabilizer. The positive definite element is the average
+  sum_{g in G} g g^T of the identity, which is invariant and positive
+  definite: the general search of BuildLinSpaceMatrix for a positive
+  element of a T-space hardly converges on groups with large entries.
+ */
 template <typename T, typename Tint, typename Tgroup>
 LinSpaceMatrix<T> InvariantFormSpace(std::vector<MyMatrix<Tint>> const &gens,
                                      int n, std::ostream &os) {
@@ -270,7 +277,22 @@ LinSpaceMatrix<T> InvariantFormSpace(std::vector<MyMatrix<Tint>> const &gens,
     std::cerr << "FGN: the group has no invariant form, it is not finite\n";
     throw TerminalException{1};
   }
-  return BuildLinSpaceMatrix<T, Tint, Tgroup>(ListMat, os);
+  FiniteGroupNormalizerBounds bounds;
+  std::vector<MyMatrix<Tint>> elts =
+      FiniteMatrixGroupElements(gens, n, bounds.max_group);
+  MyMatrix<T> SuperMat = ZeroMatrix<T>(n, n);
+  for (auto const &g : elts) {
+    MyMatrix<T> g_T = UniversalMatrixConversion<T, Tint>(g);
+    SuperMat += g_T * g_T.transpose();
+  }
+  LinSpaceMatrix<T> LinSpa;
+  LinSpa.ListMat = ListMat;
+  reset_paperwork(LinSpa);
+  LinSpa.SuperMat = SuperMat;
+  reset_pt_stab_gens<T, Tint, Tgroup>(LinSpa, os);
+  LinSpa.isBravais =
+      IsBravaisSpace(LinSpa.n, LinSpa.ListMat, LinSpa.PtStabGens, os);
+  return LinSpa;
 }
 
 template <typename T>

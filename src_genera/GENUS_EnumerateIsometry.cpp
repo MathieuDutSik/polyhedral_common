@@ -13,7 +13,9 @@
   The classes of pairs (L, g) in the genus of a pair, g an isometry of
   finite order, by the sigma-stable Kneser neighbours, until the mass of
   the genus of the pair (GENUS_IsometryMass) is reached. See
-  GenusEnumerationGroup.h.
+  GenusEnumerationGroup.h. With k isometries per seed, the classes of
+  (L, G) for the finite abelian group G = <g_1, ..., g_k>, the mass then
+  given by GENUS_IsometryMass group.
  */
 
 template <typename T, typename Tint, typename Tgroup>
@@ -22,31 +24,37 @@ void process(std::string const &FileGram, std::string const &FileIsom,
              int prime, size_t max_prime, std::ostream &os) {
   std::vector<MyMatrix<T>> ListGram = ReadListMatrixFile<T>(FileGram);
   std::vector<MyMatrix<T>> ListIsom = ReadListMatrixFile<T>(FileIsom);
-  if (ListGram.empty() || ListGram.size() != ListIsom.size()) {
-    std::cerr << "GENUS_EnumerateIsometry: the files must hold the same "
-                 "positive number of Gram matrices and isometries\n";
+  if (ListGram.empty() || ListIsom.empty() ||
+      ListIsom.size() % ListGram.size() != 0) {
+    std::cerr << "GENUS_EnumerateIsometry: the isometry file must hold k "
+                 "isometries per Gram matrix, k >= 1\n";
     throw TerminalException{1};
   }
-  std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListSeed;
+  size_t k = ListIsom.size() / ListGram.size();
+  std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> ListSeed;
   for (size_t i = 0; i < ListGram.size(); i++) {
     MyMatrix<T> const &A = ListGram[i];
-    MyMatrix<T> const &g = ListIsom[i];
     if (!IsSymmetricMatrix(A) || !IsPositiveDefinite(A, std::cerr)) {
       std::cerr << "GENUS_EnumerateIsometry: a Gram matrix is not symmetric "
                    "positive definite\n";
       throw TerminalException{1};
     }
-    if (g.transpose() * A * g != A) {
-      std::cerr << "GENUS_EnumerateIsometry: g^T A g is not A for a seed\n";
-      throw TerminalException{1};
+    std::vector<MyMatrix<T>> ListG;
+    for (size_t j = 0; j < k; j++) {
+      MyMatrix<T> const &g = ListIsom[i * k + j];
+      if (g.transpose() * A * g != A) {
+        std::cerr << "GENUS_EnumerateIsometry: g^T A g is not A for a seed\n";
+        throw TerminalException{1};
+      }
+      ListG.push_back(g);
     }
-    ListSeed.push_back({A, g});
+    ListSeed.push_back({A, ListG});
   }
   using Tmass = typename GenusEnumerationGroupResult<T, Tgroup>::Tmass;
   Tmass TotalMass = ReadMassFile<Tmass>(FileMass);
   GenusEnumerationGroupResult<T, Tgroup> result =
-      GenusEnumerationGroup<T, Tint, Tgroup>(ListSeed, TotalMass, prime,
-                                             max_prime, std::cerr);
+      GenusEnumerationAbelianGroup<T, Tint, Tgroup>(ListSeed, TotalMass, prime,
+                                                    max_prime, std::cerr);
   WriteGenusEnumerationGroupResult(os, result, OutFormat);
 }
 
@@ -67,7 +75,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "Gram     (input) : the Gram matrices of the seeds, in the\n";
       std::cerr << "                   ListMatrix format\n";
       std::cerr << "Isometry (input) : their isometries g (g^T A g = A), in\n";
-      std::cerr << "                   the ListMatrix format, one per seed\n";
+      std::cerr << "                   the ListMatrix format, k per seed\n";
+      std::cerr << "                   (consecutive), commuting, generating\n";
+      std::cerr << "                   an abelian group\n";
       std::cerr << "Mass     (input) : the mass of the genus of the pair, as\n";
       std::cerr << "                   \"num den\" (GENUS_IsometryMass)\n";
       std::cerr << "OutFormat        : Summary (default) or GAP\n";
@@ -75,6 +85,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "prime            : 0 (default): the good primes in\n";
       std::cerr << "                   increasing order; otherwise only that\n";
       std::cerr << "                   prime, which must not divide m det\n";
+      std::cerr << "                   (m the exponent of the group)\n";
       std::cerr << "max_prime        : the number of primes brought in at\n";
       std::cerr << "                   most when prime = 0 (default 6)\n";
       return -1;

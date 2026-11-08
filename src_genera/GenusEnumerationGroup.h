@@ -7,6 +7,7 @@
 #include "LatticeOrbitSplitCanonical.h"
 #include <algorithm>
 #include <map>
+#include <numeric>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -54,20 +55,31 @@
   modulo p^2 is done inside the eigenlattice, which keeps it an
   eigenvector. The centralizer C_{O(L)}(sigma) acts on each eigenspace
   modulo p, and the neighbours are taken over its orbits on the projective
-  space of the eigenspace, by ProjectiveLineOrbitRepresentatives.
+  space of the eigenspace, visited one orbit at a time.
 
   The classes. A pair is told apart by the canonical form of the pair of
   forms (A, A P^T) (the second one not symmetric), and C_{O(L)}(sigma) is
   the automorphism group of that pair of forms, both by the
-  Plesken-Souvignier engine, whose backtrack the second form prunes.
+  Plesken-Souvignier engine, whose backtrack the second form prunes. For
+  sigma = +-I the centraliser is O(L) and the lattice alone is used.
+
+  Finite abelian groups. For G = <P_1, ..., P_k> commuting, of exponent m,
+  the G-stable neighbours are those of the common eigenvectors, the
+  eigenvectors of a character chi of G with values in F_p (p = 1 mod m,
+  p not dividing m det). The projector on the chi-eigenspace modulo p^2 is
+  the product of the projectors of the P_i for the eigenvalues chi(P_i),
+  and the isotropy correction is needed only for the real characters. The
+  classes are told apart by the forms (A, A P_1^T, ..., A P_k^T), whose
+  automorphism group is C_{O(L)}(G); the mass is that of GENUS_IsometryMass
+  group.
  */
 
 template <typename T, typename Tgroup> struct GenusEnumerationGroupResult {
   using TintGroup = typename Tgroup::Tint;
   using Tmass = typename overlying_field<TintGroup>::field_type;
   std::vector<MyMatrix<T>> ListGram;
-  // the isometries, acting on the columns: g^T A g = A
-  std::vector<MyMatrix<T>> ListIsom;
+  // the isometries, acting on the columns: g^T A g = A, one list per class
+  std::vector<std::vector<MyMatrix<T>>> ListListIsom;
   std::vector<TintGroup> ListCentralizerOrder;
   Tmass accumulated_mass;
   Tmass target_mass;
@@ -193,6 +205,9 @@ struct EigenspaceData {
   int64_t lambda2;
   ModMatrix E;
   RowSpaceModP space;
+  // the character takes only the values +-1, so the vectors need not be
+  // isotropic
+  bool is_real;
 };
 
 template <typename Tint>
@@ -210,12 +225,40 @@ ModMatrix ReduceMatrixMod(MyMatrix<Tint> const &M, int64_t mod) {
   return R;
 }
 
+// sigma = +-I: the centraliser is the whole of O(L)
+template <typename T> bool IsScalarIsometry(MyMatrix<T> const &P) {
+  int n = P.rows();
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if (i != j && P(i, j) != 0) {
+        return false;
+      }
+    }
+    if (P(i, i) != P(0, 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 template <typename Tint>
 std::vector<EigenspaceData> ComputeEigenspaces(MyMatrix<Tint> const &P, int m,
                                                int p) {
   std::vector<EigenspaceData> res;
   int n = P.rows();
   int64_t p2 = static_cast<int64_t>(p) * p;
+  if (IsScalarIsometry(P)) {
+    // every vector is an eigenvector, for any p (p = 2 included)
+    ModMatrix Id(n, std::vector<int64_t>(n, 0));
+    for (int i = 0; i < n; i++) {
+      Id[i][i] = 1;
+    }
+    int64_t c = UniversalScalarConversion<int64_t, Tint>(P(0, 0));
+    RowSpaceModP space = ComputeRowSpaceModP(Id, p);
+    res.push_back({ModPosInt64(c, p), ModPosInt64(c, p2), std::move(Id),
+                   std::move(space), true});
+    return res;
+  }
   ModMatrix P2 = ReduceMatrixMod(P, p2);
   for (int64_t lambda = 1; lambda < p; lambda++) {
     if (PowModInt64(lambda, m, p) != 1) {
@@ -249,7 +292,41 @@ std::vector<EigenspaceData> ComputeEigenspaces(MyMatrix<Tint> const &P, int m,
     if (space.basis.empty()) {
       continue;
     }
-    res.push_back({lambda, lambda2, std::move(RP), std::move(space)});
+    bool is_real = (lambda == 1 || lambda == p - 1);
+    res.push_back({lambda, lambda2, std::move(RP), std::move(space), is_real});
+  }
+  return res;
+}
+
+/*
+  The joint eigenspaces of commuting P_i, all of order dividing m: the
+  products of their projectors modulo p^2, which commute and are
+  idempotent, so the product is the projector on the intersection.
+ */
+template <typename Tint>
+std::vector<EigenspaceData>
+ComputeJointEigenspaces(std::vector<MyMatrix<Tint>> const &ListP, int m,
+                        int p) {
+  std::vector<EigenspaceData> res = ComputeEigenspaces(ListP[0], m, p);
+  int64_t p2 = static_cast<int64_t>(p) * p;
+  for (size_t i = 1; i < ListP.size(); i++) {
+    if (IsScalarIsometry(ListP[i])) {
+      continue;
+    }
+    std::vector<EigenspaceData> ListEig = ComputeEigenspaces(ListP[i], m, p);
+    std::vector<EigenspaceData> next;
+    for (auto const &ed1 : res) {
+      for (auto const &ed2 : ListEig) {
+        ModMatrix E = ModMatrixProduct(ed1.E, ed2.E, p2);
+        RowSpaceModP space = ComputeRowSpaceModP(E, p);
+        if (space.basis.empty()) {
+          continue;
+        }
+        next.push_back({ed1.lambda, ed1.lambda2, std::move(E),
+                        std::move(space), ed1.is_real && ed2.is_real});
+      }
+    }
+    res = std::move(next);
   }
   return res;
 }
@@ -332,7 +409,7 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
   // e = v_p(2): the neighbour needs v_p((v, v)) >= e + 2, the isotropy
   // modulo p is v_p >= e + 1, and the valuation e + 1 is corrected.
   int e = (p == 2) ? 1 : 0;
-  bool is_pm1 = (ed.lambda == 1 || ed.lambda == p - 1);
+  bool is_pm1 = ed.is_real;
   int val = (q == 0) ? e + 2 : ValuationP(q, p);
   if (val < e + 1) {
     if (!is_pm1) {
@@ -402,12 +479,83 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
 }
 
 /*
+  The orbits of the projective space of dimension n - 1 over F_p, visited
+  one at a time: f receives the index of the representative of an orbit as
+  soon as that orbit is closed and returns true to stop. Unlike
+  ProjectiveLineOrbitRepresentatives, the enumeration of pairs usually
+  closes its mass after a few orbits, and the rest of the space is never
+  traversed.
+ */
+template <typename Tint, typename F>
+void ProjectiveLineOrbitForEach(int n, int p,
+                                std::vector<MyMatrix<Tint>> const &ListGen,
+                                F f) {
+  size_t n_line = NumberProjectiveLines(n, p);
+  std::vector<std::vector<int>> ListGenRed;
+  for (auto &eGen : ListGen) {
+    if (!IsScalarModP(eGen, p)) {
+      std::vector<int> gred(n * n);
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          gred[i * n + j] = ResidueModP(eGen(i, j), p);
+        }
+      }
+      ListGenRed.push_back(gred);
+    }
+  }
+  if (ListGenRed.empty()) {
+    for (size_t i_line = 0; i_line < n_line; i_line++) {
+      if (f(i_line)) {
+        return;
+      }
+    }
+    return;
+  }
+  std::vector<int> w(n);
+  auto image = [&](std::vector<int> const &v,
+                   std::vector<int> const &gred) -> size_t {
+    for (int j = 0; j < n; j++) {
+      int64_t sum = 0;
+      for (int i = 0; i < n; i++) {
+        sum += static_cast<int64_t>(v[i]) * gred[i * n + j];
+      }
+      w[j] = static_cast<int>(sum % p);
+    }
+    return IndexOfProjectiveLine(w, p);
+  };
+  Face status(n_line);
+  std::vector<size_t> ListActive;
+  for (size_t i_line = 0; i_line < n_line; i_line++) {
+    if (status[i_line]) {
+      continue;
+    }
+    status[i_line] = 1;
+    ListActive.push_back(i_line);
+    while (!ListActive.empty()) {
+      size_t pos = ListActive.back();
+      ListActive.pop_back();
+      std::vector<int> v = ProjectiveLineOfIndex(n, p, pos);
+      for (auto &gred : ListGenRed) {
+        size_t img = image(v, gred);
+        if (!status[img]) {
+          status[img] = 1;
+          ListActive.push_back(img);
+        }
+      }
+    }
+    if (f(i_line)) {
+      return;
+    }
+  }
+}
+
+/*
   A neighbour pair: the reduced Gram matrix of N and the isometry carried
   over to its reduced basis (on the row vectors).
  */
 template <typename T, typename Tint>
-std::optional<std::pair<MyMatrix<T>, MyMatrix<T>>>
-GenusNeighborPair(MyMatrix<Tint> const &G, MyMatrix<T> const &P,
+std::optional<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>>
+GenusNeighborPair(MyMatrix<Tint> const &G, std::vector<MyMatrix<T>> const &ListP,
                   std::vector<int> const &v, int p, std::ostream &os) {
   std::optional<GenusNeighborBasis<T, Tint>> opt =
       GenusNeighborKernel<T, Tint>(G, v, p, os);
@@ -417,13 +565,18 @@ GenusNeighborPair(MyMatrix<Tint> const &G, MyMatrix<T> const &P,
   LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(opt->GramN, os);
   // the reduced basis of N in the coordinates of L, times p
   MyMatrix<T> Bred = UniversalMatrixConversion<T, Tint>(rec.Pmat * opt->Bp);
-  MyMatrix<T> S = Bred * P * Inverse(Bred);
-  if (!IsIntegralMatrix(S)) {
-    std::cerr << "GENUS_GROUP: the neighbour is not stable under the "
-                 "isometry\n";
-    throw TerminalException{1};
+  MyMatrix<T> BredInv = Inverse(Bred);
+  std::vector<MyMatrix<T>> ListS;
+  for (auto const &P : ListP) {
+    MyMatrix<T> S = Bred * P * BredInv;
+    if (!IsIntegralMatrix(S)) {
+      std::cerr << "GENUS_GROUP: the neighbour is not stable under the "
+                   "isometry\n";
+      throw TerminalException{1};
+    }
+    ListS.push_back(S);
   }
-  return std::make_pair(rec.GramMatRed, S);
+  return std::make_pair(rec.GramMatRed, ListS);
 }
 
 template <typename T, typename Tint, typename Tgroup> struct PairAutInfo {
@@ -431,16 +584,40 @@ template <typename T, typename Tint, typename Tgroup> struct PairAutInfo {
   std::vector<MyMatrix<Tint>> ListGenMat;
 };
 
-template <typename T> std::vector<MyMatrix<T>> PairForms(MyMatrix<T> const &A,
-                                                         MyMatrix<T> const &P) {
-  return {A, A * P.transpose()};
+template <typename T>
+std::vector<MyMatrix<T>> PairForms(MyMatrix<T> const &A,
+                                   std::vector<MyMatrix<T>> const &ListP) {
+  std::vector<MyMatrix<T>> ListMat{A};
+  for (auto const &P : ListP) {
+    ListMat.push_back(A * P.transpose());
+  }
+  return ListMat;
+}
+
+template <typename T>
+bool AllScalarIsometries(std::vector<MyMatrix<T>> const &ListP) {
+  for (auto const &P : ListP) {
+    if (!IsScalarIsometry(P)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 template <typename T, typename Tint, typename Tgroup>
-PairAutInfo<T, Tint, Tgroup> GetPairAutInfo(MyMatrix<T> const &A,
-                                            MyMatrix<T> const &P,
-                                            std::ostream &os) {
-  std::vector<MyMatrix<T>> ListMat = PairForms(A, P);
+PairAutInfo<T, Tint, Tgroup>
+GetPairAutInfo(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
+               std::ostream &os) {
+  if (AllScalarIsometries(ListP)) {
+    // The pair forms are A and +-A, whose common automorphisms are those of
+    // A alone; the methods of the genus enumeration avoid a
+    // Plesken-Souvignier search over the whole of O(L), which is slow on
+    // root lattices such as E8^2.
+    LatticeAutInfo<T, Tint, Tgroup> lat =
+        GetLatticeAutInfo<T, Tint, Tgroup>(A, GenusMethods(), os);
+    return {lat.order, lat.ListGenMat};
+  }
+  std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
   // Plesken-Souvignier with the second form: the backtrack is pruned by
   // both forms, which keeps it small even on lattices with huge
   // automorphism groups, where the graph of the characteristic vector
@@ -475,7 +652,8 @@ PairAutInfo<T, Tint, Tgroup> GetPairAutInfo(MyMatrix<T> const &A,
   The canonical representative of the pair: the reduced forms and the
   isometry in the canonical basis, with the method used (0: orbit splitting
   over the Plesken-Souvignier automorphism group, 1: the graph of the
-  characteristic vector family). The orbit splitting may decline an input;
+  characteristic vector family, 2: sigma = +-I, the canonical form of the
+  lattice alone). The orbit splitting may decline an input;
   that depends only on the configuration, so isometric pairs take the same
   branch, and the method is part of the key since the two canonical forms
   are not comparable.
@@ -483,13 +661,21 @@ PairAutInfo<T, Tint, Tgroup> GetPairAutInfo(MyMatrix<T> const &A,
 template <typename T> struct CanonicalPairData {
   int method;
   MyMatrix<T> Acan;
-  MyMatrix<T> Pcan;
+  std::vector<MyMatrix<T>> ListPcan;
 };
 
 template <typename T, typename Tint, typename Tgroup>
-CanonicalPairData<T> CanonicalPair(MyMatrix<T> const &A, MyMatrix<T> const &P,
+CanonicalPairData<T> CanonicalPair(MyMatrix<T> const &A,
+                                   std::vector<MyMatrix<T>> const &ListP,
                                    std::ostream &os) {
-  std::vector<MyMatrix<T>> ListMat = PairForms(A, P);
+  if (AllScalarIsometries(ListP)) {
+    // the P are fixed by every change of basis; the key is that of A alone
+    return {2,
+            GenusCanonicalGram<T, Tint, Tgroup>(A, GenusMethods().canonical,
+                                                os),
+            ListP};
+  }
+  std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
   std::optional<MyMatrix<Tint>> opt =
       OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(ListMat, os);
   int method = 0;
@@ -502,8 +688,12 @@ CanonicalPairData<T> CanonicalPair(MyMatrix<T> const &A, MyMatrix<T> const &P,
   }
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
   MyMatrix<T> Acan = B_T * A * B_T.transpose();
-  MyMatrix<T> Pcan = B_T * P * Inverse(B_T);
-  return {method, Acan, Pcan};
+  MyMatrix<T> B_inv = Inverse(B_T);
+  std::vector<MyMatrix<T>> ListPcan;
+  for (auto const &P : ListP) {
+    ListPcan.push_back(B_T * P * B_inv);
+  }
+  return {method, Acan, ListPcan};
 }
 
 template <typename Tint> int FiniteMatrixOrderInt(MyMatrix<Tint> const &P) {
@@ -524,10 +714,13 @@ template <typename Tint> int FiniteMatrixOrderInt(MyMatrix<Tint> const &P) {
   A good prime: p does not divide m det. Then L_p is unimodular and sigma is
   semisimple modulo p. The prime 2 is good when m and det are odd; there
   only the eigenvalue 1 is in F_2, but the projective space of the fixed
-  space over F_2 is the cheapest of all.
+  space over F_2 is the cheapest of all. For sigma = +-I every sublattice
+  is stable and only det matters.
  */
-template <typename T> bool IsGoodNeighborPrime(int p, int m, T const &det) {
-  if (m % p == 0) {
+template <typename T>
+bool IsGoodNeighborPrime(int p, int m, T const &det, bool scalar) {
+  // for sigma = +-I, the ordinary neighbours at any p not dividing det
+  if (!scalar && m % p == 0) {
     return false;
   }
   T p_T(p);
@@ -552,17 +745,20 @@ inline int NextPrimeAfter(int q) {
 }
 
 /*
-  The enumeration. ListSeed holds pairs (Gram, isometry on the columns).
-  With prime != 0 only that prime is used (any good prime). With prime = 0
-  the prime 2 when it is good, then the good primes p = 1 mod m, at which
-  every eigenvalue of sigma is in F_p, are brought in in increasing order as in the iterate strategy of
+  The enumeration. ListSeed holds pairs (Gram, isometries on the columns),
+  the isometries commuting and generating a finite abelian group G of
+  exponent m. With prime != 0 only that prime is used (any good prime).
+  With prime = 0 the prime 2 when it is good, then the good primes
+  p = 1 mod m, at which every character of G takes its values in F_p, are
+  brought in in increasing order as in the iterate strategy of
   GenusEnumeration, at most max_prime of them. At a prime p != 1 mod m only
   the eigenvalues in F_p give neighbours, and the projective space of the
   fixed space can be large while the useful lines are elsewhere.
  */
 template <typename T, typename Tint, typename Tgroup>
-GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
-    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListSeed,
+GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
+    std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> const
+        &ListSeed,
     typename GenusEnumerationGroupResult<T, Tgroup>::Tmass const &TotalMass,
     int prime, size_t max_prime, std::ostream &os) {
   using Tresult = GenusEnumerationGroupResult<T, Tgroup>;
@@ -575,27 +771,34 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
   result.target_mass = TotalMass;
   result.accumulated_mass = Tmass(0);
   result.complete = false;
-  // the work list: the canonical pairs (Gram, isometry on the rows)
-  std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListPairWork;
+  // the work list: the canonical pairs (Gram, isometries on the rows)
+  std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> ListPairWork;
   std::vector<PairAutInfo<T, Tint, Tgroup>> ListAutInfo;
-  std::map<std::pair<int, std::pair<MyMatrix<T>, MyMatrix<T>>>, size_t>
-      MapCanonic;
+  std::map<std::pair<int, std::vector<MyMatrix<T>>>, size_t> MapCanonic;
+  // m: the exponent of the group
   int m = -1;
+  size_t n_gen = 0;
   T det(0);
-  auto f_insert = [&](MyMatrix<T> const &A, MyMatrix<T> const &P) -> bool {
-    CanonicalPairData<T> can = CanonicalPair<T, Tint, Tgroup>(A, P, os);
-    std::pair<int, std::pair<MyMatrix<T>, MyMatrix<T>>> key{
-        can.method, {can.Acan, can.Acan * can.Pcan.transpose()}};
+  bool scalar = false;
+  auto f_insert = [&](MyMatrix<T> const &A,
+                      std::vector<MyMatrix<T>> const &ListP) -> bool {
+    CanonicalPairData<T> can = CanonicalPair<T, Tint, Tgroup>(A, ListP, os);
+    std::pair<int, std::vector<MyMatrix<T>>> key{
+        can.method, PairForms(can.Acan, can.ListPcan)};
     if (MapCanonic.count(key) == 1) {
       return false;
     }
     PairAutInfo<T, Tint, Tgroup> info =
-        GetPairAutInfo<T, Tint, Tgroup>(can.Acan, can.Pcan, os);
+        GetPairAutInfo<T, Tint, Tgroup>(can.Acan, can.ListPcan, os);
     MapCanonic[key] = ListPairWork.size();
-    ListPairWork.push_back({can.Acan, can.Pcan});
+    ListPairWork.push_back({can.Acan, can.ListPcan});
     ListAutInfo.push_back(info);
     result.ListGram.push_back(can.Acan);
-    result.ListIsom.push_back(can.Pcan.transpose());
+    std::vector<MyMatrix<T>> ListIsom;
+    for (auto const &Pcan : can.ListPcan) {
+      ListIsom.push_back(Pcan.transpose());
+    }
+    result.ListListIsom.push_back(ListIsom);
     result.ListCentralizerOrder.push_back(info.order);
     result.accumulated_mass +=
         Tmass(1) / UniversalScalarConversion<Tmass, TintGroup>(info.order);
@@ -608,33 +811,56 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
   };
   for (auto &eSeed : ListSeed) {
     MyMatrix<T> const &A = eSeed.first;
-    MyMatrix<T> P = eSeed.second.transpose();
-    if (P * A * P.transpose() != A) {
-      std::cerr << "GENUS_GROUP: a seed isometry does not preserve its Gram "
-                   "matrix (g^T A g = A is expected)\n";
-      throw TerminalException{1};
+    std::vector<MyMatrix<T>> ListP;
+    int m_seed = 1;
+    for (auto const &g : eSeed.second) {
+      MyMatrix<T> P = g.transpose();
+      if (P * A * P.transpose() != A) {
+        std::cerr << "GENUS_GROUP: a seed isometry does not preserve its "
+                     "Gram matrix (g^T A g = A is expected)\n";
+        throw TerminalException{1};
+      }
+      for (auto const &Q : ListP) {
+        if (P * Q != Q * P) {
+          std::cerr << "GENUS_GROUP: the isometries of a seed do not "
+                       "commute\n";
+          throw TerminalException{1};
+        }
+      }
+      MyMatrix<Tint> P_int = UniversalMatrixConversion<Tint, T>(P);
+      m_seed = std::lcm(m_seed, FiniteMatrixOrderInt(P_int));
+      ListP.push_back(P);
     }
-    MyMatrix<Tint> P_int = UniversalMatrixConversion<Tint, T>(P);
-    int m_seed = FiniteMatrixOrderInt(P_int);
     if (m == -1) {
+      if (ListP.empty()) {
+        std::cerr << "GENUS_GROUP: a seed has no isometry\n";
+        throw TerminalException{1};
+      }
       m = m_seed;
+      n_gen = ListP.size();
       det = DeterminantMat(A);
-    } else if (m != m_seed || DeterminantMat(A) != det) {
-      std::cerr << "GENUS_GROUP: the seeds have different orders or "
-                   "determinants\n";
+      scalar = AllScalarIsometries(ListP);
+    } else if (m != m_seed || ListP.size() != n_gen ||
+               DeterminantMat(A) != det) {
+      std::cerr << "GENUS_GROUP: the seeds have different exponents, numbers "
+                   "of isometries or determinants\n";
       throw TerminalException{1};
     }
     if (result.accumulated_mass == TotalMass) {
       break;
     }
-    (void)f_insert(A, P);
+    (void)f_insert(A, ListP);
   }
   auto expand_at = [&](size_t pos, int p, size_t i_prime) -> void {
     MyMatrix<T> A = ListPairWork[pos].first;
-    MyMatrix<T> P = ListPairWork[pos].second;
+    std::vector<MyMatrix<T>> ListP = ListPairWork[pos].second;
     MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(A);
-    MyMatrix<Tint> P_int = UniversalMatrixConversion<Tint, T>(P);
-    std::vector<EigenspaceData> ListEig = ComputeEigenspaces(P_int, m, p);
+    std::vector<MyMatrix<Tint>> ListP_int;
+    for (auto const &P : ListP) {
+      ListP_int.push_back(UniversalMatrixConversion<Tint, T>(P));
+    }
+    std::vector<EigenspaceData> ListEig =
+        ComputeJointEigenspaces(ListP_int, m, p);
     // The small eigenspaces first: their projective spaces are cheap, and
     // the mass may close before a large one is ever cut into orbits.
     std::stable_sort(ListEig.begin(), ListEig.end(),
@@ -647,38 +873,45 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
       for (auto &h : ListAutInfo[pos].ListGenMat) {
         ListGenEig.push_back(EigenspaceAction(ed, h, p));
       }
-      ProjectiveLineSelection ListRepr =
-          ProjectiveLineOrbitRepresentatives<Tint>(static_cast<int>(k), p,
-                                                   ListGenEig);
+#ifdef DEBUG_GENUS_ENUMERATION_GROUP
+      size_t n_orbit = 0;
+#endif
+      bool closed = false;
+      ProjectiveLineOrbitForEach<Tint>(
+          static_cast<int>(k), p, ListGenEig, [&](size_t i_line) -> bool {
+#ifdef DEBUG_GENUS_ENUMERATION_GROUP
+            n_orbit++;
+#endif
+            std::vector<int> c =
+                ProjectiveLineOfIndex(static_cast<int>(k), p, i_line);
+            std::optional<std::vector<int>> opt_v =
+                EigenvectorNeighborVector(ed, c, G_int, p);
+            if (!opt_v) {
+              return false;
+            }
+            std::optional<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>>
+                opt = GenusNeighborPair<T, Tint>(G_int, ListP, *opt_v, p, os);
+            if (!opt) {
+              return false;
+            }
+            if (f_insert(opt->first, opt->second)) {
+              result.ListNewClassPerPrime[i_prime]++;
+            }
+            closed = (result.accumulated_mass == TotalMass);
+            return closed;
+          });
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
       os << "GENUS_GROUP: class " << (pos + 1) << " p=" << p
-         << " lambda=" << ed.lambda << " dim=" << k << " orbits="
-         << ListRepr.size() << "\n";
+         << " lambda=" << ed.lambda << " dim=" << k << " orbits visited="
+         << n_orbit << "\n";
 #endif
-      for (size_t i_orbit = 0; i_orbit < ListRepr.size(); i_orbit++) {
-        std::vector<int> c = ProjectiveLineOfIndex(static_cast<int>(k), p,
-                                                   ListRepr.at(i_orbit));
-        std::optional<std::vector<int>> opt_v =
-            EigenvectorNeighborVector(ed, c, G_int, p);
-        if (!opt_v) {
-          continue;
-        }
-        std::optional<std::pair<MyMatrix<T>, MyMatrix<T>>> opt =
-            GenusNeighborPair<T, Tint>(G_int, P, *opt_v, p, os);
-        if (!opt) {
-          continue;
-        }
-        if (f_insert(opt->first, opt->second)) {
-          result.ListNewClassPerPrime[i_prime]++;
-        }
-        if (result.accumulated_mass == TotalMass) {
-          return;
-        }
+      if (closed) {
+        return;
       }
     }
   };
   if (prime != 0) {
-    if (!IsGoodNeighborPrime(prime, m, det)) {
+    if (!IsGoodNeighborPrime(prime, m, det, scalar)) {
       std::cerr << "GENUS_GROUP: the prime " << prime
                 << " divides m det\n";
       throw TerminalException{1};
@@ -710,12 +943,13 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
         // 2 first when it is good, then the primes p = 1 mod m, at which
         // all the eigenvalues are in F_p
         int p_new;
-        if (result.ListPrimeUsed.empty() && IsGoodNeighborPrime(2, m, det)) {
+        if (result.ListPrimeUsed.empty() && IsGoodNeighborPrime(2, m, det, scalar)) {
           p_new = 2;
         } else {
           int q = result.ListPrimeUsed.empty() ? 2 : result.ListPrimeUsed.back();
           p_new = NextPrimeAfter(q);
-          while (!IsGoodNeighborPrime(p_new, m, det) || p_new % m != 1) {
+          while (!IsGoodNeighborPrime(p_new, m, det, scalar) ||
+                 (!scalar && p_new % m != 1)) {
             p_new = NextPrimeAfter(p_new);
           }
         }
@@ -733,6 +967,20 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
   os << "|GENUS_GROUP: GenusEnumerationGroup|=" << time_total << "\n";
 #endif
   return result;
+}
+
+// The cyclic case: one isometry per seed.
+template <typename T, typename Tint, typename Tgroup>
+GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
+    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListSeed,
+    typename GenusEnumerationGroupResult<T, Tgroup>::Tmass const &TotalMass,
+    int prime, size_t max_prime, std::ostream &os) {
+  std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> ListSeedGroup;
+  for (auto const &eSeed : ListSeed) {
+    ListSeedGroup.push_back({eSeed.first, {eSeed.second}});
+  }
+  return GenusEnumerationAbelianGroup<T, Tint, Tgroup>(
+      ListSeedGroup, TotalMass, prime, max_prime, os);
 }
 
 template <typename T, typename Tgroup>
@@ -758,10 +1006,24 @@ void WriteGenusEnumerationGroupResult(
       os << (i > 0 ? ",\n" : "");
       WriteMatrixGAP(os, result.ListGram[i]);
     }
-    os << "],\n ListIsom:=[";
-    for (size_t i = 0; i < result.ListIsom.size(); i++) {
+    // one isometry: ListIsom as in the cyclic case; otherwise the lists
+    bool single = true;
+    for (auto const &ListIsom : result.ListListIsom) {
+      single = single && (ListIsom.size() == 1);
+    }
+    os << "],\n " << (single ? "ListIsom" : "ListListIsom") << ":=[";
+    for (size_t i = 0; i < result.ListListIsom.size(); i++) {
       os << (i > 0 ? ",\n" : "");
-      WriteMatrixGAP(os, result.ListIsom[i]);
+      if (single) {
+        WriteMatrixGAP(os, result.ListListIsom[i][0]);
+      } else {
+        os << "[";
+        for (size_t j = 0; j < result.ListListIsom[i].size(); j++) {
+          os << (j > 0 ? ", " : "");
+          WriteMatrixGAP(os, result.ListListIsom[i][j]);
+        }
+        os << "]";
+      }
     }
     os << "],\n ListCentralizerOrder:=[";
     for (size_t i = 0; i < result.ListCentralizerOrder.size(); i++) {

@@ -83,15 +83,52 @@ std::vector<int> KernelRanks(MyMatrix<T> const &P, int m) {
   return res;
 }
 
+template <typename T>
+void AddCheckResult(std::map<std::string, std::pair<int64_t, T>> &groups,
+                    IsometryMassResult<T> const &res) {
+  std::ostringstream key;
+  key << "mass=" << *res.mass;
+  for (auto const &cm : res.component_masses) {
+    key << " [d=" << cm.d << " rank=" << cm.rank << " det=" << cm.det
+        << " mass=" << *cm.mass << "]";
+  }
+  key << " glue=" << res.glue_factor;
+  if (res.image_assumed) {
+    key << " image_assumed";
+  }
+  auto iter = groups.find(key.str());
+  if (iter == groups.end()) {
+    groups[key.str()] = {1, *res.mass};
+  } else {
+    iter->second.first++;
+  }
+}
+
+template <typename T>
+void WriteCheckGroups(std::ostream &os,
+                      std::map<std::string, std::pair<int64_t, T>> const &groups,
+                      T const &order_T) {
+  bool all_integral = true;
+  for (auto const &kv : groups) {
+    T ratio = ScalarFromInt64<T>(kv.second.first) / (order_T * kv.second.second);
+    os << "count=" << kv.second.first << " ratio=" << ratio << " " << kv.first
+       << "\n";
+    if (!IsInteger(ratio)) {
+      all_integral = false;
+    }
+  }
+  os << "check: " << (all_integral ? "every ratio is an integer"
+                                   : "FAILED, a ratio is not an integer")
+     << "\n";
+}
+
+/*
+  The elements of O(L), acting on the rows, for the brute-force checks.
+ */
 template <typename T, typename Tint, typename Tgroup>
-void ProcessCheck(std::string const &FileGram, std::string const &FileIsom,
-                  std::string const &FileHerm, std::ostream &os) {
-  MyMatrix<T> A = ReadMatrixFile<T>(FileGram);
-  MyMatrix<T> g = ReadMatrixFile<T>(FileIsom);
+std::vector<MyMatrix<T>> OrthogonalGroupElements(MyMatrix<T> const &A,
+                                                 T &order_T) {
   int n = A.rows();
-  MyMatrix<T> P0 = g.transpose();
-  int m = IsometryOrder(P0);
-  std::vector<int> ranks0 = KernelRanks<T, Tint>(P0, m);
   IntAutomorphismGroup<Tint, Tgroup> aut =
       IteratedShortestAutomorphismGroup<T, Tint, Tgroup>(A, std::cerr);
   std::vector<MyMatrix<T>> gens;
@@ -122,12 +159,26 @@ void ProcessCheck(std::string const &FileGram, std::string const &FileIsom,
       }
     }
   }
-  T order_T = UniversalScalarConversion<T, typename Tgroup::Tint>(aut.order);
+  order_T = UniversalScalarConversion<T, typename Tgroup::Tint>(aut.order);
   if (ScalarFromInt64<T>(static_cast<int64_t>(elts.size())) != order_T) {
     std::cerr << "GENUS_IsometryMass: listed " << elts.size()
               << " elements but |O(L)| = " << aut.order << "\n";
     throw TerminalException{1};
   }
+  return elts;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+void ProcessCheck(std::string const &FileGram, std::string const &FileIsom,
+                  std::string const &FileHerm, std::ostream &os) {
+  MyMatrix<T> A = ReadMatrixFile<T>(FileGram);
+  MyMatrix<T> g = ReadMatrixFile<T>(FileIsom);
+  MyMatrix<T> P0 = g.transpose();
+  int m = IsometryOrder(P0);
+  std::vector<int> ranks0 = KernelRanks<T, Tint>(P0, m);
+  T order_T;
+  std::vector<MyMatrix<T>> elts =
+      OrthogonalGroupElements<T, Tint, Tgroup>(A, order_T);
   std::map<int, T> herm = ReadHermitianMasses<T>(FileHerm);
   IsometryMassBounds bounds;
   std::map<std::string, std::pair<int64_t, T>> groups;
@@ -142,36 +193,58 @@ void ProcessCheck(std::string const &FileGram, std::string const &FileIsom,
                    "the components\n";
       throw TerminalException{1};
     }
-    std::ostringstream key;
-    key << "mass=" << *res.mass;
-    for (auto const &cm : res.component_masses) {
-      key << " [d=" << cm.d << " rank=" << cm.rank << " det=" << cm.det
-          << " mass=" << *cm.mass << "]";
-    }
-    key << " glue=" << res.glue_factor;
-    if (res.image_assumed) {
-      key << " image_assumed";
-    }
-    auto iter = groups.find(key.str());
-    if (iter == groups.end()) {
-      groups[key.str()] = {1, *res.mass};
-    } else {
-      iter->second.first++;
-    }
+    AddCheckResult(groups, res);
   }
   os << "|O(L)| = " << elts.size() << "\n";
-  bool all_integral = true;
-  for (auto const &kv : groups) {
-    T ratio = ScalarFromInt64<T>(kv.second.first) / (order_T * kv.second.second);
-    os << "count=" << kv.second.first << " ratio=" << ratio << " " << kv.first
-       << "\n";
-    if (!IsInteger(ratio)) {
-      all_integral = false;
+  WriteCheckGroups(os, groups, order_T);
+}
+
+template <typename T, typename Tint>
+void ProcessGroupMass(std::string const &FileGram, std::string const &FileGens,
+                      std::ostream &os) {
+  MyMatrix<T> A = ReadMatrixFile<T>(FileGram);
+  std::vector<MyMatrix<T>> list_g = ReadListMatrixFile<T>(FileGens);
+  IsometryMassBounds bounds;
+  IsometryMassResult<T> res =
+      AbelianGroupGenusMass<T, Tint>(A, list_g, bounds, std::cerr);
+  WriteIsometryMassResult(os, res);
+}
+
+/*
+  The check for the groups <g, tau>, tau running over the centraliser of g
+  in O(L): when the genus of L has one class, the pairs (g', tau') of a
+  genus X of pairs of commuting isometries with g' conjugate to g number
+  |g^{O(L)}| times those with g' = g, so sum_{tau} 1 / |C_{O(L)}(g)| over
+  X is mass(X), and the counts of every group divided by |C(g)| mass are
+  integers.
+ */
+template <typename T, typename Tint, typename Tgroup>
+void ProcessGroupCheck(std::string const &FileGram, std::string const &FileIsom,
+                       std::ostream &os) {
+  MyMatrix<T> A = ReadMatrixFile<T>(FileGram);
+  MyMatrix<T> g = ReadMatrixFile<T>(FileIsom);
+  MyMatrix<T> P0 = g.transpose();
+  T order_T;
+  std::vector<MyMatrix<T>> elts =
+      OrthogonalGroupElements<T, Tint, Tgroup>(A, order_T);
+  IsometryMassBounds bounds;
+  std::map<std::string, std::pair<int64_t, T>> groups;
+  int64_t n_cent = 0;
+  for (auto const &P : elts) {
+    if (P * P0 != P0 * P) {
+      continue;
     }
+    n_cent++;
+    IsometryMassResult<T> res = AbelianGroupGenusMass<T, Tint>(
+        A, {g, MyMatrix<T>(P.transpose())}, bounds, std::cerr);
+    if (!res.mass) {
+      std::cerr << "GENUS_IsometryMass: a component has no mass\n";
+      throw TerminalException{1};
+    }
+    AddCheckResult(groups, res);
   }
-  os << "check: " << (all_integral ? "every ratio is an integer"
-                                   : "FAILED, a ratio is not an integer")
-     << "\n";
+  os << "|O(L)| = " << elts.size() << " |C(g)| = " << n_cent << "\n";
+  WriteCheckGroups(os, groups, ScalarFromInt64<T>(n_cent));
 }
 
 int main(int argc, char *argv[]) {
@@ -194,6 +267,10 @@ int main(int argc, char *argv[]) {
                    "[OutFile]\n";
       std::cerr << "    or\n";
       std::cerr << "GENUS_IsometryMass hermitian [d] [m]\n";
+      std::cerr << "    or\n";
+      std::cerr << "GENUS_IsometryMass group [Gram] [ListIsometry] [OutFile]\n";
+      std::cerr << "    or\n";
+      std::cerr << "GENUS_IsometryMass groupcheck [Gram] [Isometry] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "Gram     (input) : the Gram matrix A of an even positive\n";
       std::cerr << "                   definite lattice L\n";
@@ -212,6 +289,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "        so it is only meaningful when the Hermitian\n";
       std::cerr << "        components all have the same mass (rank one\n";
       std::cerr << "        over Z[zeta_3] or Z[i]: 1/6 or 1/4)\n";
+      std::cerr << "group : the mass of the genus of (L, G), G the finite\n";
+      std::cerr << "        abelian group generated by the isometries of\n";
+      std::cerr << "        ListIsometry (a number, then the matrices)\n";
+      std::cerr << "groupcheck : the brute-force test of the group mass\n";
+      std::cerr << "        for the groups <g, tau>, tau in C_{O(L)}(g)\n";
       return -1;
     }
     std::string mode = argv[1];
@@ -243,8 +325,21 @@ int main(int argc, char *argv[]) {
         ProcessCheck<T, Tint, Tgroup>(FileGram, FileIsom, FileHerm, os);
       };
       FILE_PrintStderrStdoutFile(OutFile, f);
+    } else if (mode == "group") {
+      std::string OutFile = (argc >= 5) ? argv[4] : "stderr";
+      auto f = [&](std::ostream &os) -> void {
+        ProcessGroupMass<T, Tint>(FileGram, FileIsom, os);
+      };
+      FILE_PrintStderrStdoutFile(OutFile, f);
+    } else if (mode == "groupcheck") {
+      std::string OutFile = (argc >= 5) ? argv[4] : "stderr";
+      auto f = [&](std::ostream &os) -> void {
+        ProcessGroupCheck<T, Tint, Tgroup>(FileGram, FileIsom, os);
+      };
+      FILE_PrintStderrStdoutFile(OutFile, f);
     } else {
-      std::cerr << "GENUS_IsometryMass: the mode must be mass or check\n";
+      std::cerr << "GENUS_IsometryMass: the mode must be mass, check, group "
+                   "or groupcheck\n";
       throw TerminalException{1};
     }
     std::cerr << "Normal termination of GENUS_IsometryMass\n";

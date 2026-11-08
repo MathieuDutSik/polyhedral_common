@@ -10,7 +10,8 @@
 # - E8+E8 with an element of order 3 of an A2 subsystem: 2 classes, a
 #   Hermitian component over Z[zeta_3] of mass 1/6, found at p = 2;
 # - the genus of determinant 25 with a root reflection: 4 classes of pairs,
-#   glued at 2.
+#   glued at 2;
+# - groups <r, r'> of two orthogonal reflections.
 # In every case the mass must close: complete = true.
 set -e
 BIN=../../src_genera/GENUS_EnumerateIsometry
@@ -36,6 +37,11 @@ run_case d25 mI8 3
 run_case E8E8 refl16 2
 run_case E8E8 ord3 2
 run_case d25 refl8 4
+# abelian groups, two isometries per seed: two orthogonal root reflections
+# of E8+E8 in one summand (4 classes, D16+ included) and of the genus of
+# determinant 25 (6 classes)
+run_case E8E8 klein16 4
+run_case d25 klein8 6
 
 echo "All isometry enumeration tests passed"
 touch CI_CONCLUSION

@@ -148,5 +148,48 @@ herm_case 39 1 mass 1/39
 herm_case 3 2 standard_mass 1/72
 herm_case 16 2 standard_mass 5/768
 
+# Finite abelian groups (GENUS_IsometryMass group), the components being
+# the Galois orbits of characters: on E8+E8, <-1, r> has the mass of the
+# root reflection r alone; two orthogonal reflections (in one summand or in
+# both, the same genus of pairs), an element of order 3 times a commuting
+# reflection, and two orthogonal reflections of the genus of determinant
+# 25. The masses are those closed by GENUS_EnumerateIsometry from one seed.
+group_mass_case() {
+    lat=$1
+    gens=$2
+    expected=$3
+    echo "--- mass of ($lat, <$gens>), expecting $expected ---"
+    out=$($BIN group isom_${lat}.txt isom_${lat}_${gens}.txt stdout 2>/dev/null)
+    mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
+    echo "mass = $mass"
+    if [ "$mass" != "$expected" ]; then
+        echo "ERROR: ($lat, <$gens>) gave the mass $mass, expected $expected" >&2
+        exit 1
+    fi
+}
+group_mass_case E8E8_16 mIrefl 691/1156946589646848000
+group_mass_case E8E8_16 klein1 42151/385648863215616000
+group_mass_case E8E8_16 klein2 42151/385648863215616000
+group_mass_case E8E8_16 c6 691/397303087104000
+group_mass_case d25 klein 155/9216
+
+# The brute-force check for the groups <g, tau>, tau in C_{O(L)}(g); the
+# ratios are integers but not 1, as (g, tau) and (g, g tau) generate the
+# same group.
+group_check_case() {
+    lat=$1
+    isom=$2
+    echo "--- group check of ($lat, $isom) ---"
+    out=$($BIN groupcheck isom_${lat}.txt isom_${isom}.txt stdout 2>/dev/null)
+    echo "$out"
+    if ! echo "$out" | grep -q "^check: every ratio is an integer$"; then
+        echo "ERROR: the group check of ($lat, $isom) failed" >&2
+        exit 1
+    fi
+}
+group_check_case D4 D4_inv1
+group_check_case D4 D4_w01
+group_check_case D5 D5_inv2
+
 echo "All isometry mass tests passed"
 touch CI_CONCLUSION
