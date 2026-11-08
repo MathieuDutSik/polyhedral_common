@@ -71,6 +71,24 @@ working tree is not part of the repository)
 
 `DATA` holds inputs shared by several of the sections above.
 
+Running times
+-------------
+
+Local runs, one process, on the development machine (Apple Silicon). They
+give the order of magnitude to plan a local check, not a benchmark: the
+2026-11 runs were made with the machine under heavy load (load average 15
+to 70), so they are upper estimates.
+
+| test | build | run | date |
+|------|-------|-----|------|
+| `04A_LattAutIsomCan` | 3 min | 57 min (`AllTests.g`) | 2026-11-08 |
+| `06A_GeometricallyUnique` | | about 3.3 h for the 3382 examples, 38 min per 650 | 2026-10-01 |
+| `06B_CharacteristicVectorSet` | 10 s | 3 min (`ProcessEntries.g`) | 2026-11-08 |
+| `29_SerialDelaunayQueries` | 3 min | 4 min (`TestSerialDelaunayQueries.g`), 10 s (`TestPackingCoveringRecord.g`) | 2026-11-08 |
+
+A test running much longer than its entry here is a sign of a performance
+regression, or of a run that is stuck.
+
 More needs to be added:
 * Computing the orbits of K-dim faces of polytopes (the G6 and G7 are good examples).
 * Running of the various orbit splitting algorithm.
