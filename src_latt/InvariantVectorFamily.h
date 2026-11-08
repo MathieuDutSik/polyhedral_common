@@ -892,6 +892,10 @@ MyMatrix<Tint> ivf_z_spanning(MyMatrix<T> const &GramMat,
   The optional block is the base block of the top level, both signs, for a
   caller that already has it (the chamber variant has the root system); it
   saves its enumeration. It must be what get_shv_block returns, up to order.
+  The optional block_basis, with it, is a Z-basis of the lattice the block
+  spans (the simple roots of the root system); it saves the rank and the
+  Z-basis computations. Any basis does: the family depends on the lattices
+  S1 and P1, not on their bases.
  */
 template <typename Tint>
 using InnerSpanChamber = std::function<std::vector<MyVector<Tint>>(
@@ -903,7 +907,8 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
                                  GramReduction reduction, std::ostream &os,
                                  InnerSpanChamber<Tint> const *chamber =
                                      nullptr,
-                                 MyMatrix<Tint> const *block = nullptr) {
+                                 MyMatrix<Tint> const *block = nullptr,
+                                 MyMatrix<Tint> const *block_basis = nullptr) {
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
 #endif
@@ -911,7 +916,25 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
   MyMatrix<Tint> SHV = block != nullptr
                            ? *block
                            : get_shv_block<T, Tint>(G, use_roots, reduction, os);
-  int r = RankMat(SHV);
+  // S1 = <SHV>, P1 = saturation of S1 in Z^n, both as row bases in Z^n.
+  MyMatrix<Tint> S1 = block_basis != nullptr ? *block_basis : GetZbasis(SHV);
+  int r = S1.rows();
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+  if (block_basis != nullptr) {
+    // A basis of the lattice spanned by the block: as many vectors as its
+    // rank, and every vector of the block an integral combination of them.
+    bool spans = r == RankMat(SHV);
+    for (int i = 0; i < SHV.rows() && spans; i++) {
+      MyVector<Tint> v = GetMatrixRow(SHV, i);
+      spans = SolutionIntMat(S1, v).has_value();
+    }
+    if (!spans) {
+      std::cerr << "IVF: inner_span, block_basis is not a Z-basis of the "
+                   "lattice spanned by the block\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   os << "|IVF: inner_span n=" << n << ", block of " << SHV.rows()
      << " vectors of rank " << r << "|=" << time << "\n";
@@ -922,8 +945,6 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
       cvL.push_back(GetMatrixRow(SHV, i));
     }
   }
-  // S1 = <SHV>, P1 = saturation of S1 in Z^n, both as row bases in Z^n.
-  MyMatrix<Tint> S1 = GetZbasis(SHV);
   MyMatrix<Tint> P1 = IntegralSpaceSaturation(S1);
   // C: the coordinates of S1 in P1, i.e. the integer matrix with S1 = C P1.
   // |det C| = [P1 : S1] is the index whose cosets the completion runs over.
@@ -946,8 +967,9 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
   // The representatives in Z^n of P1 / S1, for the chamber variant.
   std::vector<MyVector<Tint>> P1reps{ZeroVector<Tint>(n)};
   // Saturation completion S1 -> P1: only needed when S1 is a proper
-  // sublattice of its saturation.
-  if (T_abs(DeterminantMatBareiss(C)) != Tint(1) && chamber != nullptr) {
+  // sublattice of its saturation, which is decided once for both variants.
+  bool S1_saturated = T_abs(DeterminantMatBareiss(C)) == Tint(1);
+  if (!S1_saturated && chamber != nullptr) {
     std::vector<MyVector<Tint>> cosets =
         ComputeTranslationClasses<Tint, Tint>(C);
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
@@ -969,7 +991,7 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
        << cosets.size() << " cosets|=" << time << "\n";
 #endif
   }
-  if (T_abs(DeterminantMatBareiss(C)) != Tint(1) && chamber == nullptr) {
+  if (!S1_saturated && chamber == nullptr) {
     MyMatrix<T> G_S1 = S1_T * G * S1_T.transpose();
     CVPSolver<T, Tint> solverS1(G_S1, os);
     std::vector<MyVector<Tint>> cosets =

@@ -552,12 +552,13 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   };
   MyMatrix<Tfield> GramMat_F = UniversalMatrixConversion<Tfield, T>(GramMat);
   // The top block of the recursion is the root system, both signs, which rs
-  // already holds.
+  // already holds, and the simple roots are a Z-basis of the lattice it
+  // spans.
   MyMatrix<Tint> roots_pm = matrix_duplication(rs.PositiveRoots);
   std::vector<MyVector<Tint>> cvL =
       inner_span_iterated_shortest_rec<Tfield, Tint>(
           GramMat_F, true, GramReduction::AlreadyReduced, os, &chamber,
-          &roots_pm);
+          &roots_pm, &rs.SimpleRoots);
   std::vector<MyVector<Tint>> family;
   std::unordered_set<MyVector<Tint>> seen;
   auto insert_pm = [&](MyVector<Tint> const &v) -> void {
