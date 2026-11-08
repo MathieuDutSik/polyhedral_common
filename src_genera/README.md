@@ -182,8 +182,8 @@ the cyclotomic case runs on a generator of O_E with the prime not dividing
 its index, or, at a common index divisor unramified in E, on idempotents
 refined from several elements; the ramified primes are treated over a
 residue field of any degree, the dyadic one with its relative different
-exponent. Checked against Hecke.jl on 76 lattices over Q(sqrt -D),
-Q(sqrt 5, sqrt -7) and Q(i, sqrt 5).
+exponent. Checked against Hecke.jl on 84 lattices over Q(sqrt -D),
+Q(sqrt 5, sqrt -7), Q(sqrt 5, sqrt -3), Q(i, sqrt 5) and Q(zeta_7)^+(sqrt -3).
 
 With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabiliser of L in
 the adelic centraliser is a subgroup of finite index of that of L_0, so
