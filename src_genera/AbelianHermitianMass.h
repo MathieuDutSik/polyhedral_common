@@ -366,6 +366,57 @@ AbelianPrimesOverQ(LocalGenerator const &lg, int64_t q, int64_t eK) {
 }
 
 /*
+  The idempotent on X of the prime (q, g(theta)) of ramification index e,
+  lifted modulo q^N: the CRT idempotent of g^e in F_q[x] / f, refined by e
+  <- 3 e^2 - 2 e^3 modulo (f, q^N), evaluated at theta.
+ */
+inline PolyZ AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
+                                        PolyQ const &g, int e, int64_t q,
+                                        int N) {
+  mpz_class Q = PowInt(q, N);
+  PolyQ fq = PolyReduce(PolyQ(f.begin(), f.end()), q);
+  PolyQ P = {1};
+  for (int i = 0; i < e; i++) {
+    P = PolyMulQ(P, g, q);
+  }
+  PolyQ Qp = PolyDivModQ(fq, P, q).first;
+  PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
+  PolyZ ez;
+  for (int64_t c : e0) {
+    ez.push_back(mpz_class(static_cast<long>(c)));
+  }
+  ez = PolyZReduce(ez, f, Q);
+  for (int it = 0; it < 64; it++) {
+    PolyZ e2 = PolyZReduce(PolyZMul(ez, ez), f, Q);
+    PolyZ e3 = PolyZReduce(PolyZMul(e2, ez), f, Q);
+    PolyZ en(e2.size());
+    for (size_t k = 0; k < e2.size(); k++) {
+      en[k] = 3 * e2[k] - 2 * e3[k];
+    }
+    en = PolyZReduce(en, f, Q);
+    if (en == ez) {
+      break;
+    }
+    ez = en;
+  }
+  return ez;
+}
+
+inline MyMatrix<mpq_class> AbelianPrimeIdempotent(LocalGenerator const &lg,
+                                                  PolyQ const &g, int e,
+                                                  int64_t q, int N) {
+  int r = lg.S.rows();
+  PolyZ ez = AbelianPrimeIdempotentPoly(lg.f, g, e, q, N);
+  MyMatrix<mpq_class> E = ZeroMatrix<mpq_class>(r, r);
+  MyMatrix<mpq_class> pw = IdentityMat<mpq_class>(r);
+  for (size_t k = 0; k < ez.size(); k++) {
+    E += pw * mpq_class(ez[k]);
+    pw = pw * lg.S;
+  }
+  return E;
+}
+
+/*
   The Jordan data at a prime of E over q unramified over K (split: one of
   the pair), as HermitianJordanAtPrime does for Q(zeta_d).
  */
@@ -392,42 +443,8 @@ AbelianJordanAtPrime(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
     vdiscf = ValuationQRational(DeterminantMat(D), q);
   }
   int N = vdet + vdiscf + 6;
-  mpz_class Q = PowInt(q, N);
-  PolyQ fq = PolyReduce(PolyQ(f.begin(), f.end()), q);
-  // the idempotent of the prime, lifted modulo q^N
-  PolyQ P = {1};
-  for (int i = 0; i < ap.e; i++) {
-    P = PolyMulQ(P, ap.g, q);
-  }
-  PolyQ Qp = PolyDivModQ(fq, P, q).first;
-  PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
-  PolyZ ez;
-  for (int64_t c : e0) {
-    ez.push_back(mpz_class(static_cast<long>(c)));
-  }
-  ez = PolyZReduce(ez, f, Q);
-  for (int it = 0; it < 64; it++) {
-    PolyZ e2 = PolyZReduce(PolyZMul(ez, ez), f, Q);
-    PolyZ e3 = PolyZReduce(PolyZMul(e2, ez), f, Q);
-    PolyZ en(e2.size());
-    for (size_t k = 0; k < e2.size(); k++) {
-      en[k] = 3 * e2[k] - 2 * e3[k];
-    }
-    en = PolyZReduce(en, f, Q);
-    if (en == ez) {
-      break;
-    }
-    ez = en;
-  }
   MyMatrix<mpq_class> Id = IdentityMat<mpq_class>(r);
-  MyMatrix<mpq_class> E = ZeroMatrix<mpq_class>(r, r);
-  {
-    MyMatrix<mpq_class> pw = Id;
-    for (size_t k = 0; k < ez.size(); k++) {
-      E += pw * mpq_class(ez[k]);
-      pw = pw * lg.S;
-    }
-  }
+  MyMatrix<mpq_class> E = AbelianPrimeIdempotent(lg, ap.g, ap.e, q, N);
   // the uniformizer: q, or g(theta) when the prime is ramified over q
   MyMatrix<mpq_class> Pi =
       (ap.e == 1) ? MyMatrix<mpq_class>(Id * mpq_class(static_cast<long>(q)))

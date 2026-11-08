@@ -192,6 +192,37 @@ hab_case s5m7r3 35 1,4,9,11,16,29 257985
 hab_case q2r3 8 1,3 564375/32
 hab_case q6r2 24 1,5,7,11 16
 hab_case i5r2 20 1,9 300
+# The local masses (the products of the local factors) of quadratic
+# lattices over totally real abelian fields, as given by Hecke.jl
+# (local_mass): odd primes ramified or split, the dyadic primes unramified
+# (Cho) and ramified (maximal, modular, chain) over 2.
+quad_case() {
+    tag=$1
+    n=$2
+    H=$3
+    expected=$4
+    out=$($BIN quadablocal quad_${tag}_gram.txt quad_${tag}_omega.txt $n $H \
+              2>/dev/null)
+    val=$(echo "$out" | sed -n 's/.*local_mass:=\([^,]*\),.*/\1/p')
+    echo "--- quadratic lattice $tag over a real subfield of Q(zeta_$n): local mass=$val (expecting $expected) ---"
+    if [ "$val" != "$expected" ]; then
+        echo "ERROR: the quadratic lattice $tag gave the local mass $val" >&2
+        exit 1
+    fi
+}
+quad_case s5m2 5 1 9/2
+quad_case z7pm4 7 1 1183
+quad_case z15pm4 15 1 19113046875/2
+quad_case z9pm3 9 1 567
+quad_case s2m4 8 7 8760960
+quad_case s3m4 12 11 6417840
+quad_case s2s5m4 40 9,31 74880000000
+quad_case z16pm4 16 1 5164032
+quad_case z24pm4 24 1 503884800
+quad_case z32pm3 32 1 9375024
+quad_case s6m2 24 5,19 1/4
+quad_case s7m3 28 3,9 155370096
+quad_case s6m2b 24 5,19 1/8
 herm_case 47 1 mass 695/94
 herm_case 19 1 mass 1/38
 herm_case 16 1 mass 1/16

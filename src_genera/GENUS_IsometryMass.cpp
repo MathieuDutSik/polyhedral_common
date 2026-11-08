@@ -336,6 +336,55 @@ int main(int argc, char *argv[]) {
       std::cout << ");\n";
       return 0;
     }
+    if (mode == "quadablocal") {
+      // the local factors of a quadratic lattice over a
+      // totally real abelian field: the trace Gram matrix, the actions of a
+      // Z-basis of O_K, n and the generators of H (-1 is added)
+      MyMatrix<T> B = ReadMatrixFile<T>(argv[2]);
+      std::vector<MyMatrix<T>> Omega = ReadListMatrixFile<T>(argv[3]);
+      int64_t n = std::stoll(argv[4]);
+      std::vector<int64_t> gens;
+      {
+        std::stringstream ss(argv[5]);
+        std::string tok;
+        while (std::getline(ss, tok, ',')) {
+          if (!tok.empty()) {
+            gens.push_back(std::stoll(tok));
+          }
+        }
+      }
+      AbelianCMField FK = MakeAbelianRealField(n, gens);
+      std::map<int64_t, std::optional<mpq_class>> facs =
+          QuadraticLocalFactors(B, Omega, FK);
+      std::optional<mpq_class> local_mass = mpq_class(1);
+      for (auto const &kv : facs) {
+        if (kv.second && local_mass) {
+          *local_mass *= *kv.second;
+        } else {
+          local_mass = {};
+        }
+      }
+      std::cout << "return rec(local_mass:=";
+      if (local_mass) {
+        std::cout << *local_mass;
+      } else {
+        std::cout << "fail";
+      }
+      std::cout << ", factors:=[";
+      bool first = true;
+      for (auto const &kv : facs) {
+        std::cout << (first ? "" : ", ") << "[" << kv.first << ", ";
+        if (kv.second) {
+          std::cout << *kv.second;
+        } else {
+          std::cout << "fail";
+        }
+        std::cout << "]";
+        first = false;
+      }
+      std::cout << "]);\n";
+      return 0;
+    }
     if (mode == "hermitianablattice") {
       // the mass of a Hermitian lattice over an abelian CM field: the trace
       // Gram matrix, the actions of a Z-basis of O_E (a number, then the
