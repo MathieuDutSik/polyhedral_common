@@ -117,10 +117,17 @@ inline int64_t InverseMod64(int64_t u, int64_t m) {
   (1/s_i) Z, and its residues are z_i s_i mod s_i.
  */
 template <typename T> struct IsometryComponent {
+  // d = 0: a component of a non-abelian group on which it does not act
+  // through a cyclic quotient
   int d;
   MyMatrix<T> basis;
   MyMatrix<T> gram;
   MyMatrix<T> sigma;
+  // the actions of the further generators of the group (non-abelian case)
+  std::vector<MyMatrix<T>> extra_sigma;
+  // End_G = Q: the lattice X = L cap (l (x) U) of the multiplicity space,
+  // whose genus gives the mass up to the local factors at p | |G|
+  std::optional<MyMatrix<T>> multiplicity_gram;
   MyMatrix<T> row;
   MyMatrix<T> row_inv;
   std::vector<int64_t> elem;
@@ -159,6 +166,8 @@ struct PrimaryQuadModule {
   std::vector<std::vector<int64_t>> bnum;
   std::vector<int64_t> qnum;
   std::vector<std::vector<int64_t>> sigma_img;
+  // the images by the further generators
+  std::vector<std::vector<std::vector<int64_t>>> extra_sigma_img;
   int64_t size() const {
     int64_t s = 1;
     for (int64_t o : ord) {
@@ -278,10 +287,22 @@ PrimaryQuadModule BuildPrimaryQuadModule(IsometryComponent<T> const &comp,
     MyVector<T> img = comp.sigma.transpose() * gens[i];
     M.sigma_img.push_back(ModuleCoordinates(M, comp, img));
   }
+  for (auto const &sig : comp.extra_sigma) {
+    std::vector<std::vector<int64_t>> imgs;
+    for (size_t i = 0; i < r; i++) {
+      MyVector<T> img = sig.transpose() * gens[i];
+      imgs.push_back(ModuleCoordinates(M, comp, img));
+    }
+    M.extra_sigma_img.push_back(imgs);
+  }
   return M;
 }
 
-inline bool IsScalarAction(PrimaryQuadModule const &M) { return M.d <= 2; }
+// The group acts by +-1 (d = 1, 2), where Nikulin's surjectivity holds and
+// every isometry of the module commutes with it.
+inline bool IsScalarAction(PrimaryQuadModule const &M) {
+  return M.d >= 1 && M.d <= 2;
+}
 
 /*
   All the isometries of the module commuting with sigma, as the images of
@@ -361,6 +382,12 @@ EquivariantModuleIsometries(PrimaryQuadModule const &M, int64_t max_module,
           ModuleElt rhs = ModuleCombination(M, phi[j], M.sigma_img);
           if (lhs != rhs) {
             return;
+          }
+          for (auto const &img : M.extra_sigma_img) {
+            if (ApplyModuleAut(M, phi, img[j]) !=
+                ModuleCombination(M, phi[j], img)) {
+              return;
+            }
           }
         }
       }
@@ -527,10 +554,20 @@ GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
   if (n_vert > max_vertices) {
     return {};
   }
-  std::vector<std::vector<ModuleElt>> sigma_img(t);
+  // the images by the generators of the group, one edge colour bit each
+  std::vector<std::vector<std::vector<ModuleElt>>> sigma_img(t);
+  size_t n_bit = 1;
   for (size_t s = 0; s < t; s++) {
-    for (auto const &x : elts[s]) {
-      sigma_img[s].push_back(ModuleCombination(mods[s], x, mods[s].sigma_img));
+    std::vector<std::vector<std::vector<int64_t>>> imgs{mods[s].sigma_img};
+    imgs.insert(imgs.end(), mods[s].extra_sigma_img.begin(),
+                mods[s].extra_sigma_img.end());
+    n_bit = std::max(n_bit, imgs.size());
+    for (auto const &img : imgs) {
+      std::vector<ModuleElt> col;
+      for (auto const &x : elts[s]) {
+        col.push_back(ModuleCombination(mods[s], x, img));
+      }
+      sigma_img[s].push_back(col);
     }
   }
   // the vertices: (module s, index) for the modules, then the glue
@@ -560,10 +597,17 @@ GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
       }
       ModuleElt const &y = elts[s][vert[j].second];
       int64_t flag = 0;
-      if (!IsScalarAction(mods[s]) && sigma_img[s][vert[i].second] == y) {
-        flag = 1;
+      if (!IsScalarAction(mods[s])) {
+        for (size_t b = 0; b < sigma_img[s].size(); b++) {
+          if (sigma_img[s][b][vert[i].second] == y) {
+            flag |= int64_t(1) << b;
+          }
+        }
       }
-      return 4 * ((s * BIG + ModuleB(mods[s], x, y)) * 2 + flag) + 1;
+      return 4 * ((s * BIG + ModuleB(mods[s], x, y)) *
+                      (int64_t(1) << n_bit) +
+                  flag) +
+             1;
     }
     if (gi && gj) {
       return (i == j) ? -1 : -5;
@@ -765,6 +809,13 @@ template <typename T> struct IsometryMassResult {
   // image of the local unitary group is taken to be all the equivariant
   // isometries of its discriminant form
   bool image_assumed;
+  // a component with End_G = Q of dimension > 1 over the multiplicity
+  // space: its mass is that of the multiplicity lattice, the local factors
+  // at the primes dividing |G| not being computed
+  bool local_correction_open = false;
+  // a component of a type whose mass is not implemented (End_G neither Q
+  // nor reached through a cyclic quotient)
+  bool unsupported_component = false;
   std::optional<T> mass;
 };
 
@@ -1055,7 +1106,18 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     cm.d = comp.d;
     cm.rank = comp.gram.rows();
     cm.det = DeterminantMat(comp.gram);
-    if (comp.d <= 2) {
+    if (comp.d == 0) {
+      if (comp.multiplicity_gram) {
+        cm.mass = GenusMass<T, Tint>(*comp.multiplicity_gram);
+        // multiplicity one: the centraliser on the component is {+-1},
+        // which preserves every lattice, so no local factor is missing
+        if (comp.multiplicity_gram->rows() > 1) {
+          res.local_correction_open = true;
+        }
+      } else {
+        res.unsupported_component = true;
+      }
+    } else if (comp.d <= 2) {
       cm.mass = GenusMass<T, Tint>(comp.gram);
     } else {
       auto iter = herm_mass.find(comp.d);
@@ -1157,7 +1219,7 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
       throw TerminalException{1};
     }
     for (auto const &M : mods) {
-      if (M.d >= 3) {
+      if (!IsScalarAction(M)) {
         res.image_assumed = true;
       }
     }
@@ -1228,6 +1290,311 @@ IsometryMassResult<T> AbelianGroupGenusMass(MyMatrix<T> const &A,
       A, static_cast<int>(elts.size()), components, herm_mass, bounds, os);
 }
 
+/*
+  The rational isotypic components of a finite group G (elements elts, on
+  the rows). The rational class sums R_K = sum of the classes of the g^k,
+  k prime to the order of g, act on the isotypic part of a rational
+  irreducible rho by an integer, and these integers tell the rho apart, so
+  the components are the common eigenspaces of the R_K; their eigenvalues
+  are found numerically and checked exactly.
+
+  On a component where the generators commute, G acts through a cyclic
+  quotient and the component is that of the cyclic case for the element
+  acting with the largest order. Otherwise, End_G(V_rho) = Q is recognised
+  as a centre of dimension 1, End_G of dimension m^2, and a common
+  eigenspace F of some elements h for eigenvalues +-1 of dimension m: F is
+  then the image l (x) U of an idempotent of Q[H] of rank one on W, and X
+  = L cap F, with the restriction of the form, is the multiplicity lattice
+  (Section on non-abelian groups of the paper). Other components get no
+  mass.
+ */
+template <typename T, typename Tint>
+std::vector<IsometryComponent<T>>
+FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
+                      std::vector<MyMatrix<T>> const &elts,
+                      [[maybe_unused]] std::ostream &os) {
+  int n = A.rows();
+  auto flatten = [&](MyMatrix<T> const &M) -> std::vector<T> {
+    std::vector<T> v;
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        v.push_back(M(i, j));
+      }
+    }
+    return v;
+  };
+  std::map<std::vector<T>, size_t> index;
+  for (size_t i = 0; i < elts.size(); i++) {
+    index[flatten(elts[i])] = i;
+  }
+  std::vector<MyMatrix<T>> inv;
+  for (auto const &x : elts) {
+    inv.push_back(Inverse(x));
+  }
+  // the rational classes
+  size_t n_elt = elts.size();
+  std::vector<int> cls(n_elt, -1);
+  int n_cls = 0;
+  for (size_t i = 0; i < n_elt; i++) {
+    if (cls[i] != -1) {
+      continue;
+    }
+    std::vector<size_t> queue{i};
+    cls[i] = n_cls;
+    while (!queue.empty()) {
+      size_t u = queue.back();
+      queue.pop_back();
+      std::vector<size_t> nb;
+      for (size_t j = 0; j < n_elt; j++) {
+        nb.push_back(index[flatten(MyMatrix<T>(inv[j] * elts[u] * elts[j]))]);
+      }
+      // the powers prime to the order
+      int o = IsometryOrder(elts[u]);
+      MyMatrix<T> pw = elts[u];
+      for (int k = 2; k < o; k++) {
+        pw = pw * elts[u];
+        if (std::gcd(k, o) == 1) {
+          nb.push_back(index[flatten(pw)]);
+        }
+      }
+      for (size_t v : nb) {
+        if (cls[v] == -1) {
+          cls[v] = n_cls;
+          queue.push_back(v);
+        }
+      }
+    }
+    n_cls++;
+  }
+  std::vector<MyMatrix<T>> ListR(n_cls, ZeroMatrix<T>(n, n));
+  for (size_t i = 0; i < n_elt; i++) {
+    ListR[cls[i]] += elts[i];
+  }
+  // the common eigenspaces, refined class sum by class sum
+  struct Block {
+    MyMatrix<T> E;
+    std::vector<MyMatrix<T>> conditions;
+  };
+  std::vector<Block> blocks{{IdentityMat<T>(n), {}}};
+  for (auto const &Rk : ListR) {
+    std::vector<Block> next;
+    for (auto const &blk : blocks) {
+      int k = blk.E.rows();
+      // the action of R_K on the block, numerically
+      MyMatrix<T> act =
+          blk.E * Rk * blk.E.transpose() *
+          Inverse(MyMatrix<T>(blk.E * blk.E.transpose()));
+      Eigen::MatrixXd act_d(k, k);
+      for (int i = 0; i < k; i++) {
+        for (int j = 0; j < k; j++) {
+          act_d(i, j) = UniversalScalarConversion<double, T>(act(i, j));
+        }
+      }
+      Eigen::EigenSolver<Eigen::MatrixXd> es(act_d, false);
+      std::set<int64_t> ListLambda;
+      for (int i = 0; i < k; i++) {
+        ListLambda.insert(static_cast<int64_t>(std::llround(es.eigenvalues()(i).real())));
+      }
+      int tot = 0;
+      for (int64_t lambda : ListLambda) {
+        MyMatrix<T> M = Rk - ScalarFromInt64<T>(lambda) * IdentityMat<T>(n);
+        MyMatrix<T> EM = blk.E * M;
+        MyMatrix<Tint> EM_i = UniversalMatrixConversion<Tint, T>(EM);
+        MyMatrix<Tint> K_i = NullspaceIntTrMat(MyMatrix<Tint>(EM_i.transpose()));
+        if (K_i.rows() == 0) {
+          continue;
+        }
+        MyMatrix<T> K = UniversalMatrixConversion<T, Tint>(K_i) * blk.E;
+        std::vector<MyMatrix<T>> cond = blk.conditions;
+        cond.push_back(M);
+        next.push_back({K, cond});
+        tot += K.rows();
+      }
+      if (tot != k) {
+        std::cerr << "ISOM_MASS: the class sums are not diagonalizable with "
+                     "integer eigenvalues on a block\n";
+        throw TerminalException{1};
+      }
+    }
+    blocks = std::move(next);
+  }
+  std::vector<IsometryComponent<T>> res;
+  for (auto const &blk : blocks) {
+    int k = blk.E.rows();
+    MyMatrix<T> Gram = blk.E * A * blk.E.transpose();
+    MyMatrix<T> GramInv = Inverse(Gram);
+    auto action = [&](MyMatrix<T> const &P) -> MyMatrix<T> {
+      return blk.E * P * A * blk.E.transpose() * GramInv;
+    };
+    std::vector<MyMatrix<T>> ListAct;
+    for (auto const &P : ListP) {
+      ListAct.push_back(action(P));
+    }
+    bool commuting = true;
+    for (size_t i = 0; i < ListAct.size(); i++) {
+      for (size_t j = i + 1; j < ListAct.size(); j++) {
+        if (ListAct[i] * ListAct[j] != ListAct[j] * ListAct[i]) {
+          commuting = false;
+        }
+      }
+    }
+    if (commuting) {
+      // a cyclic quotient: the element of largest order on the block
+      size_t i_best = 0;
+      int o_best = 0;
+      for (size_t i = 0; i < n_elt; i++) {
+        int o = IsometryOrder(action(elts[i]));
+        if (o > o_best) {
+          o_best = o;
+          i_best = i;
+        }
+      }
+      res.push_back(
+          BuildIsometryComponent<T, Tint>(A, blk.E, elts[i_best], o_best));
+      continue;
+    }
+    IsometryComponent<T> comp =
+        BuildIsometryComponent<T, Tint>(A, blk.E, ListP[0], 1);
+    comp.d = 0;
+    for (size_t i = 1; i < ListP.size(); i++) {
+      comp.extra_sigma.push_back(action(ListP[i]));
+    }
+    // End_G of the block and its centre
+    auto commutant = [&](std::vector<MyMatrix<T>> const &ListX)
+        -> std::vector<MyMatrix<T>> {
+      // the Y with X Y = Y X for all X, by the nullspace
+      int kk = k * k;
+      MyMatrix<T> Eq(kk, kk * static_cast<int>(ListX.size()));
+      for (size_t ix = 0; ix < ListX.size(); ix++) {
+        MyMatrix<T> const &X = ListX[ix];
+        for (int u = 0; u < k; u++) {
+          for (int v = 0; v < k; v++) {
+            int col = static_cast<int>(ix) * kk + u * k + v;
+            for (int w = 0; w < kk; w++) {
+              Eq(w, col) = 0;
+            }
+            // (X Y - Y X)(u, v) = sum_w X(u,w) Y(w,v) - Y(u,w) X(w,v)
+            for (int w = 0; w < k; w++) {
+              Eq(w * k + v, col) += X(u, w);
+              Eq(u * k + w, col) -= X(w, v);
+            }
+          }
+        }
+      }
+      MyMatrix<T> ker = NullspaceMat(Eq);
+      std::vector<MyMatrix<T>> res_c;
+      for (int r = 0; r < ker.rows(); r++) {
+        MyMatrix<T> Y(k, k);
+        for (int u = 0; u < k; u++) {
+          for (int v = 0; v < k; v++) {
+            Y(u, v) = ker(r, u * k + v);
+          }
+        }
+        res_c.push_back(Y);
+      }
+      return res_c;
+    };
+    std::vector<MyMatrix<T>> End = commutant(ListAct);
+    // the centre of End_G: the elements of End_G commuting with End_G
+    std::vector<MyMatrix<T>> ListBoth = ListAct;
+    ListBoth.insert(ListBoth.end(), End.begin(), End.end());
+    int c = static_cast<int>(commutant(ListBoth).size());
+    int e = static_cast<int>(End.size());
+    int m = static_cast<int>(std::llround(std::sqrt(static_cast<double>(e))));
+    bool central_q = (c == 1);
+    if (central_q && m * m == e) {
+      // a common eigenspace of dimension m, for one or two elements
+      std::optional<MyMatrix<T>> found;
+      std::vector<std::pair<size_t, int>> cand;
+      for (size_t i = 0; i < n_elt; i++) {
+        cand.push_back({i, 1});
+        cand.push_back({i, -1});
+      }
+      auto try_conditions =
+          [&](std::vector<std::pair<size_t, int>> const &cs) -> bool {
+        // the integral kernel of the conditions of the block and of the
+        // eigenvalue conditions
+        std::vector<MyMatrix<T>> all = blk.conditions;
+        for (auto const &c : cs) {
+          all.push_back(elts[c.first] -
+                        ScalarFromInt64<T>(c.second) * IdentityMat<T>(n));
+        }
+        MyMatrix<T> Big(n, n * static_cast<int>(all.size()));
+        for (size_t a = 0; a < all.size(); a++) {
+          for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+              Big(i, static_cast<int>(a) * n + j) = all[a](i, j);
+            }
+          }
+        }
+        MyMatrix<Tint> Big_i = UniversalMatrixConversion<Tint, T>(Big);
+        MyMatrix<Tint> K_i =
+            NullspaceIntTrMat(MyMatrix<Tint>(Big_i.transpose()));
+        if (K_i.rows() != m) {
+          return false;
+        }
+        MyMatrix<T> X = UniversalMatrixConversion<T, Tint>(K_i);
+        found = X * A * X.transpose();
+        return true;
+      };
+      for (size_t a = 0; a < cand.size() && !found; a++) {
+        (void)try_conditions({cand[a]});
+      }
+      for (size_t a = 0; a < cand.size() && !found; a++) {
+        for (size_t b = a + 1; b < cand.size() && !found; b++) {
+          if (cand[a].first != cand[b].first) {
+            (void)try_conditions({cand[a], cand[b]});
+          }
+        }
+      }
+      comp.multiplicity_gram = found;
+    }
+#ifdef DEBUG_ISOMETRY_MASS
+    os << "ISOM_MASS: non-cyclic component of rank " << k << ", dim End_G="
+       << e << ", multiplicity lattice "
+       << (comp.multiplicity_gram ? "found" : "not found") << "\n";
+#endif
+    res.push_back(comp);
+  }
+  return res;
+}
+
+/*
+  The mass of the genus of (L, G) for a finite group G given by
+  generators: AbelianGroupGenusMass when they commute, otherwise the
+  components of FiniteGroupComponents with the glue commuting with all the
+  generators. The result says when local factors are left out
+  (local_correction_open) or a component has no mass.
+ */
+template <typename T, typename Tint>
+IsometryMassResult<T> FiniteGroupGenusMass(MyMatrix<T> const &A,
+                                           std::vector<MyMatrix<T>> const &list_g,
+                                           IsometryMassBounds const &bounds,
+                                           std::ostream &os) {
+  std::vector<MyMatrix<T>> ListP;
+  for (auto const &g : list_g) {
+    CheckIsometryInput(A, g);
+    ListP.push_back(g.transpose());
+  }
+  bool commuting = true;
+  for (size_t i = 0; i < ListP.size(); i++) {
+    for (size_t j = i + 1; j < ListP.size(); j++) {
+      if (ListP[i] * ListP[j] != ListP[j] * ListP[i]) {
+        commuting = false;
+      }
+    }
+  }
+  if (commuting) {
+    return AbelianGroupGenusMass<T, Tint>(A, list_g, bounds, os);
+  }
+  std::vector<MyMatrix<T>> elts = GroupElementsClosure(ListP, bounds.max_group);
+  std::vector<IsometryComponent<T>> components =
+      FiniteGroupComponents<T, Tint>(A, ListP, elts, os);
+  std::map<int, T> herm_mass;
+  return IsometryGenusMassComponents<T, Tint>(
+      A, static_cast<int>(elts.size()), components, herm_mass, bounds, os);
+}
+
 template <typename T>
 void WriteIsometryMassResult(std::ostream &os, IsometryMassResult<T> const &res) {
   os << "return rec(order:=" << res.order << ",\n  components:=[";
@@ -1259,7 +1626,11 @@ void WriteIsometryMassResult(std::ostream &os, IsometryMassResult<T> const &res)
        << ", orbit:=" << gl.orbit_size << ", method:=\"" << gl.method << "\")";
   }
   os << "],\n  glue_factor:=" << res.glue_factor
-     << ",\n  image_assumed:=" << GAP_logical(res.image_assumed);
+     << ",\n  image_assumed:=" << GAP_logical(res.image_assumed)
+     << ",\n  local_correction_open:="
+     << GAP_logical(res.local_correction_open)
+     << ",\n  unsupported_component:="
+     << GAP_logical(res.unsupported_component);
   if (res.mass) {
     os << ",\n  mass:=" << *res.mass;
   }

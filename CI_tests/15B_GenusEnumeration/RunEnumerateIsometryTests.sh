@@ -47,6 +47,10 @@ run_case d25 klein8 6
 # characters with values +-1 have eigenvectors but P^12(F_5) is 50 times
 # smaller than P^12(F_7) for the fixed lattice of rank 13
 run_case E8E8 c6 3
+# a non-abelian group, W(A2) = S3: the neighbours of the irreducible
+# isotropic G-submodules at p = 5, by random points in P^13(F_5), find the
+# class on D16+ (2 classes)
+run_case E8E8 S3 2
 
 echo "All isometry enumeration tests passed"
 touch CI_CONCLUSION
