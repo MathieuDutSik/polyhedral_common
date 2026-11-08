@@ -27,8 +27,9 @@
   no group computation at all.
 
   Roots are the vectors of norm 2. A fundamental system (simple roots) is
-  extracted by choosing a generic linear functional, taking the positive
-  roots, and keeping those that are not the sum of two positive roots.
+  extracted by choosing a positive system -- the roots whose first nonzero
+  coordinate is positive, the order of a generic linear functional -- and
+  keeping the positive roots that are not the sum of two positive roots.
   The Dynkin diagram is the graph on the simple roots with an edge
   between s, t whenever <s, t> = -1 (the lattice being even, the only
   off-diagonal products of distinct simple roots are 0 and -1, so the
@@ -236,41 +237,19 @@ ComputeRootSystemFromRoots(MyMatrix<T> const &GramMat,
     return rs;
   }
 
-  // Positive roots via a generic functional f: f(r) != 0 for every root.
-  // f = (1, c, c^2, ...) with c large enough that no root cancels it.
+  /*
+    Positive roots: those whose first nonzero coordinate is positive, as
+    SignCanonicalizeVector makes them. That is the order of the functional
+    f = (c^{n-1}, ..., c, 1) for any c larger than twice the largest
+    coordinate of a root, the term of the first nonzero coordinate then
+    dominating the others; it is the limit of generic functionals, so the
+    positive roots form a positive system. Reading the sign of a coordinate
+    gives them without forming f, whose entries would exceed the range of a
+    machine integer at the ranks of interest.
+   */
   std::vector<MyVector<Tint>> pos;
-  {
-    // choose the base so that |f(r)| never vanishes: bound by max entry.
-    Tint bound(1);
-    for (int i = 0; i < rs.n_roots; i++) {
-      for (int j = 0; j < n; j++) {
-        Tint a = T_abs(Roots(i, j));
-        if (a > bound) {
-          bound = a;
-        }
-      }
-    }
-    Tint base = 2 * bound * Tint(n) + 1;
-    MyVector<Tint> f(n);
-    Tint p(1);
-    for (int j = 0; j < n; j++) {
-      f(j) = p;
-      p *= base;
-    }
-    for (int i = 0; i < rs.n_roots; i++) {
-      MyVector<Tint> r = GetMatrixRow(Roots, i);
-      Tint val(0);
-      for (int j = 0; j < n; j++) {
-        val += f(j) * r(j);
-      }
-#ifdef SANITY_CHECK_LATTICE_ROOT_SYSTEM
-      if (val == 0) {
-        std::cerr << "ROOTSYS: the functional vanished on a root\n";
-        throw TerminalException{1};
-      }
-#endif
-      pos.push_back(val > 0 ? r : MyVector<Tint>(-r));
-    }
+  for (int i = 0; i < rs.n_roots; i++) {
+    pos.push_back(SignCanonicalizeVector(GetMatrixRow(Roots, i)));
   }
 
   // Simple roots: positive roots not equal to a sum of two positive roots.
