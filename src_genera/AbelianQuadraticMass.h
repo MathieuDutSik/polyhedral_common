@@ -1694,6 +1694,195 @@ QuadLocalFactorsByIdempotents(MyMatrix<T> const &B,
 }
 
 /*
+  A common index divisor q unramified in K, whatever the residue degree f:
+  no generator of O_K has q prime to its index, but at a single prime P
+  over q it suffices that the factor g of f_theta modulo q belonging to P
+  be simple, since then Z_q[theta] is maximal at P (Dedekind) and the
+  idempotent of P lies in Z_q[theta]. So for each prime P a generator
+  theta_P is searched among the small elements of O_K, P being recognized
+  by its idempotent modulo q; the local arithmetic of P is that of
+  LocalPrimeK for (theta_P, g), and the Gram matrix over K is taken on m
+  vectors v_i whose images eps_P v_i span eps_P X / q over F_{q^f}, the
+  F_q-rank of the theta^t eps_P v_i, t < f, being m f. Nothing when the
+  g primes are not all found.
+ */
+template <typename T> struct QuadPrimeGenerator {
+  LocalGenerator<T> lg;
+  PolyQ g;
+  std::vector<MyVector<T>> basis;
+};
+
+template <typename T>
+inline std::optional<std::vector<QuadPrimeGenerator<T>>>
+QuadPrimeGeneratorsUnramified(MyMatrix<T> const &B,
+                              std::vector<MyMatrix<T>> const &Omega,
+                              int64_t q, PrimeDecompositionData const &dK) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
+  if (dK.e != 1) {
+    return {};
+  }
+  int deg = static_cast<int>(Omega.size());
+  int r = B.rows();
+  int m = r / deg;
+  int f_res = static_cast<int>(dK.f);
+  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
+  auto red = [&](T const &x) -> int64_t {
+    Tint num = ResInt(GetNumerator_z(x), qz);
+    Tint den = ResInt(GetDenominator_z(x), qz);
+    if (num < 0) {
+      num += qz;
+    }
+    if (den < 0) {
+      den += qz;
+    }
+    return MulModQ(UniversalScalarConversion<int64_t, Tint>(num),
+                   InvModQ(UniversalScalarConversion<int64_t, Tint>(den), q),
+                   q);
+  };
+  // the small elements of O_K, by increasing size
+  std::vector<std::vector<int>> cands;
+  int n_tot = 1;
+  for (int i = 0; i < deg; i++) {
+    n_tot *= 7;
+  }
+  for (int u = 0; u < n_tot; u++) {
+    std::vector<int> c(deg);
+    int t = u;
+    for (int i = 0; i < deg; i++) {
+      c[i] = t % 7 - 3;
+      t /= 7;
+    }
+    cands.push_back(c);
+  }
+  std::stable_sort(cands.begin(), cands.end(),
+                   [](std::vector<int> const &a, std::vector<int> const &b) {
+                     int na = 0, nb = 0;
+                     for (int x : a) {
+                       na += std::abs(x);
+                     }
+                     for (int x : b) {
+                       nb += std::abs(x);
+                     }
+                     return na < nb;
+                   });
+  std::set<std::vector<int64_t>> found;
+  std::vector<QuadPrimeGenerator<T>> res;
+  for (auto const &c : cands) {
+    if (static_cast<int64_t>(found.size()) == dK.g) {
+      break;
+    }
+    MyMatrix<T> S = ZeroMatrix<T>(r, r);
+    for (int i = 0; i < deg; i++) {
+      if (c[i] != 0) {
+        S += Omega[i] * T(c[i]);
+      }
+    }
+    KrylovData<T> kd = KrylovMinimalPolynomial(S);
+    if (static_cast<int>(kd.minpoly.size()) != deg + 1) {
+      continue;
+    }
+    std::vector<int64_t> f;
+    bool integral = true;
+    for (auto const &x : kd.minpoly) {
+      if (GetDenominator_z(x) != 1) {
+        integral = false;
+      }
+      f.push_back(UniversalScalarConversion<int64_t, Tint>(GetNumerator_z(x)));
+    }
+    if (!integral) {
+      continue;
+    }
+    // K totally real: the conjugate of theta is theta
+    std::vector<T> conj(deg, T(0));
+    if (deg > 1) {
+      conj[1] = T(1);
+    }
+    LocalGenerator<T> lg{S, f, conj};
+    for (auto const &[g, mult] :
+         FactorModQWithMultiplicity(PolyQ(f.begin(), f.end()), q)) {
+      if (mult != 1 || static_cast<int>(g.size()) - 1 != f_res) {
+        continue;
+      }
+      MyMatrix<T> E = AbelianPrimeIdempotent(lg, g, 1, q, 1);
+      std::vector<int64_t> key;
+      for (int i = 0; i < r; i++) {
+        for (int j = 0; j < r; j++) {
+          key.push_back(red(E(i, j)));
+        }
+      }
+      if (found.count(key) == 1) {
+        continue;
+      }
+      found.insert(key);
+      // m vectors whose images span eps_P X / q over F_{q^f}
+      std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
+      for (int t = 1; t < f_res; t++) {
+        Spow.push_back(Spow.back() * S);
+      }
+      std::vector<MyVector<T>> chosen;
+      std::vector<std::vector<int64_t>> acc;
+      auto try_add = [&](MyVector<T> const &v) -> void {
+        std::vector<std::vector<int64_t>> test = acc;
+        for (int t = 0; t < f_res; t++) {
+          MyVector<T> w = E.transpose() * (Spow[t].transpose() * v);
+          std::vector<int64_t> row(r);
+          for (int j = 0; j < r; j++) {
+            row[j] = red(w(j));
+          }
+          test.push_back(row);
+        }
+        if (RankModQ(test, q) == static_cast<int>(test.size())) {
+          chosen.push_back(v);
+          acc = test;
+        }
+      };
+      for (int k = 0; k < r && static_cast<int>(chosen.size()) < m; k++) {
+        MyVector<T> v = ZeroVector<T>(r);
+        v(k) = 1;
+        try_add(v);
+      }
+      if (static_cast<int>(chosen.size()) != m) {
+        std::cerr << "ABQUAD: no local basis at a prime over the common index "
+                     "divisor "
+                  << q << "\n";
+        throw TerminalException{1};
+      }
+      res.push_back({lg, g, chosen});
+    }
+  }
+  if (static_cast<int64_t>(found.size()) != dK.g) {
+    return {};
+  }
+  return res;
+}
+
+// The local factors at a common index divisor q unramified in K: Cho's at
+// q = 2, LocalFactorOddGram otherwise, at each prime over q.
+template <typename T>
+inline std::optional<T>
+QuadLocalFactorsByPrimeGenerators(MyMatrix<T> const &B,
+                                  std::vector<MyMatrix<T>> const &Omega,
+                                  int64_t q, PrimeDecompositionData const &dK) {
+  int m = B.rows() / static_cast<int>(Omega.size());
+  std::optional<std::vector<QuadPrimeGenerator<T>>> pgs =
+      QuadPrimeGeneratorsUnramified(B, Omega, q, dK);
+  if (!pgs) {
+    return {};
+  }
+  T res(1);
+  if (m == 1) {
+    return res;
+  }
+  for (auto const &pg : *pgs) {
+    std::vector<std::vector<ElemE<T>>> H =
+        LocalOKGramFromVectors(B, pg.lg, pg.basis);
+    LocalPrimeK<T> P = MakeLocalPrimeK(pg.lg, pg.g, 1, q);
+    res *= (q == 2) ? LocalFactorCho(H, P) : LocalFactorOddGram(H, P);
+  }
+  return res;
+}
+
+/*
   The product of the local factors at the primes of K over q, or nothing
   when not computed: the odd primes, and the dyadic primes unramified over
   2 (Cho) and those ramified over 2.
@@ -1705,7 +1894,10 @@ QuadLocalFactorAtPrime(MyMatrix<T> const &B,
                        int64_t q, PrimeDecompositionData const &dK) {
   std::optional<LocalGenerator<T>> lg = FindLocalGenerator(B, Omega, q);
   if (!lg) {
-    return QuadLocalFactorsByIdempotents(B, Omega, q, dK);
+    if (dK.f == 1) {
+      return QuadLocalFactorsByIdempotents(B, Omega, q, dK);
+    }
+    return QuadLocalFactorsByPrimeGenerators(B, Omega, q, dK);
   }
   std::vector<std::pair<PolyQ, int>> fac =
       FactorModQWithMultiplicity(PolyQ(lg->f.begin(), lg->f.end()), q);

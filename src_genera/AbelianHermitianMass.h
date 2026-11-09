@@ -689,6 +689,47 @@ inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
 }
 
 /*
+  The Gram matrix over K of phi on the vectors v_i of X: phi(v_i, v_j) on
+  the powers of theta, from the traces Tr(theta^t phi(v_i, v_j)) = b(theta^t
+  v_i, v_j), theta being any generator of K.
+ */
+template <typename T>
+inline std::vector<std::vector<ElemE<T>>>
+LocalOKGramFromVectors(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
+                       std::vector<MyVector<T>> const &chosen) {
+  int r = B.rows();
+  int deg = static_cast<int>(lg.f.size()) - 1;
+  int m = static_cast<int>(chosen.size());
+  std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
+  for (int t = 1; t < deg; t++) {
+    Spow.push_back(Spow.back() * lg.S);
+  }
+  std::vector<T> pt = PowerTraces<T>(lg.f, 2 * deg);
+  MyMatrix<T> Tm(deg, deg);
+  for (int a = 0; a < deg; a++) {
+    for (int b = 0; b < deg; b++) {
+      Tm(a, b) = pt[a + b];
+    }
+  }
+  MyMatrix<T> Tinv = Inverse(Tm);
+  std::vector<std::vector<ElemE<T>>> H(m, std::vector<ElemE<T>>(m));
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < m; j++) {
+      ElemE<T> val(deg, T(0));
+      for (int t = 0; t < deg; t++) {
+        MyVector<T> w = Spow[t].transpose() * chosen[i];
+        T bt = w.dot(B * chosen[j]);
+        for (int s2 = 0; s2 < deg; s2++) {
+          val[s2] += bt * Tinv(t, s2);
+        }
+      }
+      H[i][j] = val;
+    }
+  }
+  return H;
+}
+
+/*
   The Gram matrix over K of phi on m vectors of X spanning X (x) Z_q over
   O_K (x) Z_q: standard vectors first, then small combinations.
  */
@@ -763,29 +804,7 @@ LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
     std::cerr << "ABQUAD: no local O_K-basis found\n";
     throw TerminalException{1};
   }
-  std::vector<T> pt = PowerTraces<T>(lg.f, 2 * deg);
-  MyMatrix<T> Tm(deg, deg);
-  for (int a = 0; a < deg; a++) {
-    for (int b = 0; b < deg; b++) {
-      Tm(a, b) = pt[a + b];
-    }
-  }
-  MyMatrix<T> Tinv = Inverse(Tm);
-  std::vector<std::vector<ElemE<T>>> H(m, std::vector<ElemE<T>>(m));
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < m; j++) {
-      ElemE<T> val(deg, T(0));
-      for (int t = 0; t < deg; t++) {
-        MyVector<T> w = Spow[t].transpose() * chosen[i];
-        T bt = w.dot(B * chosen[j]);
-        for (int s2 = 0; s2 < deg; s2++) {
-          val[s2] += bt * Tinv(t, s2);
-        }
-      }
-      H[i][j] = val;
-    }
-  }
-  return {chosen, H};
+  return {chosen, LocalOKGramFromVectors(B, lg, chosen)};
 }
 
 template <typename T>

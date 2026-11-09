@@ -273,6 +273,11 @@ quadmass_case s2abm4 8 7 205/192
 # mass made exact by the Minkowski multiple, as Hecke.jl does
 quadmass_case s13nabm2 13 4 99/4
 quadmass_case z15pnabm2 15 1 1/2
+# A common index divisor with primes of residue degree 2: 2 in
+# Q(sqrt 5, sqrt 17) and Q(sqrt 13, sqrt 17), each prime of K over 2 with
+# its own generator
+quadmass_case s5s17m3 85 1,4,9,16,19,21,26,36,49,59,64,66,69,76,81,84 3375/2
+quadmass_case s13s17m2 221 1,4,9,16,25,30,35,36,38,42,43,49,53,55,64,66,69,77,81,87,94,100,101,103,118,120,121,127,134,140,144,152,155,157,166,168,172,178,179,183,185,186,191,196,205,212,217,220 5
 # The same with the integer certified by Arb (lvalue=arb), when the
 # programs are built with flint (make ENABLE_FLINT_SUPPORT=1)
 quadmass_arb_case() {

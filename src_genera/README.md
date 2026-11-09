@@ -221,7 +221,14 @@ dyadic primes ramified over 2 by the maximal and unimodular formulas or
 the chain of integral overlattices with Kirschmer's local isometry test.
 A common index divisor unramified in K with primes of residue degree 1
 (2 in Q(sqrt 17, sqrt 41)) is treated on the idempotents refined from
-several elements, the local lattice being then a Z_q-lattice.
+several elements, the local lattice being then a Z_q-lattice. With
+primes of residue degree f > 1 (2 in Q(sqrt 5, sqrt 17), two primes with
+residue field F_4) a generator theta_p is searched for each prime p over
+q, such that the factor of its minimal polynomial modulo q belonging to p
+is simple: Z_q[theta_p] is then maximal at p, and the local arithmetic of
+p, the local factor and chi_{E/K} at p come from it
+(`QuadPrimeGeneratorsUnramified`). Checked against Hecke.jl on 12 local
+factors and 11 masses, and the characters against PARI.
 For m even the discriminant d is tested exactly for being a square, and
 E = K(sqrt d) is taken as K(sqrt D) for a fundamental discriminant D
 (then abelian) when possible. Otherwise E is tested for being abelian

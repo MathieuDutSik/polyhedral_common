@@ -284,22 +284,55 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
         (void)e;
       }
     } else {
+      // the primes over p, each with a generator, its factor and the
+      // discriminant on a K-basis of the lattice good at it
+      struct BadPrime {
+        LocalGenerator<T> lg;
+        PolyQ g;
+        int e;
+        ElemE<T> dp;
+      };
+      std::vector<BadPrime> bps;
+      auto disc_of = [&](LocalGenerator<T> const &lg,
+                         std::vector<std::vector<ElemE<T>>> const &H)
+          -> ElemE<T> {
+        CyclotomicField<T> Kp;
+        Kp.d = 0;
+        Kp.deg = n;
+        Kp.Phi = lg.f;
+        Kp.conj = lg.conj;
+        ElemE<T> dp = DetK(H, Kp);
+        if ((m * (m - 1) / 2) % 2 == 1) {
+          dp = EScal(dp, T(-1));
+        }
+        return dp;
+      };
       std::optional<LocalGenerator<T>> lg = FindLocalGenerator(B, Omega, p);
-      if (!lg) {
-        return {};
+      if (lg) {
+        ElemE<T> dp = disc_of(*lg, LocalOKGram(B, *lg, p));
+        for (auto const &[g, e] :
+             FactorModQWithMultiplicity(PolyQ(lg->f.begin(), lg->f.end()), p)) {
+          bps.push_back({*lg, g, e, dp});
+        }
+      } else {
+        // a common index divisor: a generator for each prime
+        std::optional<std::vector<QuadPrimeGenerator<T>>> pgs =
+            QuadPrimeGeneratorsUnramified(
+                B, Omega, p, PrimeDecompositionCharacters(G, XK, p));
+        if (!pgs) {
+          return {};
+        }
+        for (auto const &pg : *pgs) {
+          bps.push_back({pg.lg, pg.g, 1,
+                         disc_of(pg.lg, LocalOKGramFromVectors(B, pg.lg,
+                                                               pg.basis))});
+        }
       }
-      CyclotomicField<T> Kp;
-      Kp.d = 0;
-      Kp.deg = n;
-      Kp.Phi = lg->f;
-      Kp.conj = lg->conj;
-      ElemE<T> dp = DetK(LocalOKGram(B, *lg, p), Kp);
-      if ((m * (m - 1) / 2) % 2 == 1) {
-        dp = EScal(dp, T(-1));
-      }
-      for (auto const &[g, e] :
-           FactorModQWithMultiplicity(PolyQ(lg->f.begin(), lg->f.end()), p)) {
-        LocalPrimeK<T> P = MakeLocalPrimeK(*lg, g, e, p);
+      for (auto const &bp : bps) {
+        PolyQ const &g = bp.g;
+        int e = bp.e;
+        ElemE<T> const &dp = bp.dp;
+        LocalPrimeK<T> P = MakeLocalPrimeK(bp.lg, g, e, p);
         int fr = P.f_res;
         int v = LocalVal(dp, P);
         // the unit part, when v is even
