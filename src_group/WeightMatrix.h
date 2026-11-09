@@ -298,6 +298,9 @@ public:
     size_t idx = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);
     return TheMat[idx];
   }
+  // The entry at an index of weightmatrix_idx, for a caller that has the
+  // index already, to read the entry and the data stored along it.
+  Tidx_value GetValueAtIndex(size_t const &idx) const { return TheMat[idx]; }
   void intDirectAssign(size_t const &iRow, size_t const &iCol,
                        Tidx_value const &pos) {
     size_t idx = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);

@@ -1774,11 +1774,23 @@ AbsTrick_LiftGenerator(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
         IsFinished = false;
         V[i] = val + 2;
         size_t iImg = eGen[i];
+        // The index of (i, j) in the symmetric storage, followed along the
+        // row: consecutive for j <= i, then increasing by j + 1.
+        size_t idx1 = (i * (i + 1)) / 2;
         for (size_t j = 0; j < nbRow; j++) {
+          if (j > 0) {
+            idx1 += (j <= i) ? 1 : j;
+          }
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+          if (idx1 != weightmatrix_idx<true>(nbRow, i, j)) {
+            std::cerr << "PES: AbsTrick_LiftGenerator, wrong incremental "
+                         "index\n";
+            throw TerminalException{1};
+          }
+#endif
           size_t jImg = eGen[j];
-          Tidx_value pos = WMatAbs.WMat.GetValue(i, j);
+          Tidx_value pos = WMatAbs.WMat.GetValueAtIndex(idx1);
           if (pos != WMatAbs.positionZero) {
-            size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
             size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, jImg);
             bool ChgSign = WMatAbs.ArrSigns[idx1] ^ WMatAbs.ArrSigns[idx2];
             uint8_t valJ;
