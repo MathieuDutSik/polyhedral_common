@@ -2002,7 +2002,9 @@ T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV(
   std::vector<Tidx_value> INP_TheMat(n_ent);
   Face ArrSigns(n_ent);
   std::vector<std::vector<T>> INP_ListWeight;
-  std::map<std::vector<T>, Tidx_value> ValueMap;
+  // A weight gets the index of its first appearance whatever the container,
+  // and the weights are reordered at the end, so a hash map serves.
+  std::unordered_map<std::vector<T>, Tidx_value> ValueMap;
   Tidx_value idxWeight = 0;
   Tidx_value miss_val = std::numeric_limits<Tidx_value>::max();
   Tidx_value positionZero = miss_val;
