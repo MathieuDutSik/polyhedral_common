@@ -262,6 +262,26 @@ quadmass_case z16pm2 16 1 1/8
 quadmass_case s5m3 5 1 15925/4
 quadmass_case z7pm3 7 1 245245/12
 quadmass_case z16pm3 16 1 5197365/16
+# The Hermitian and quadratic masses over abelian fields are generic in the
+# rational type: the same masses with mpq_class, boost mpq_rational and,
+# when built with flint, fmpq_class.
+types_case() {
+    mode=$1
+    tag=$2
+    n=$3
+    H=$4
+    out=$(../../src_genera/Test_MassTypes $mode ${tag}_gram.txt ${tag}_omega.txt $n $H 2>/dev/null)
+    echo "--- the mass of $tag over the rational types: $(echo $out | tr '\n' ' ') ---"
+    if ! echo "$out" | grep -q "^agree$"; then
+        echo "ERROR: the rational types disagree on $tag" >&2
+        exit 1
+    fi
+}
+types_case herm hab_q7r3 7 1,2,4
+types_case herm hab_s17m2 136 9,19
+types_case quad quadm_z7pm2 7 1
+types_case quad quad_s2m4 8 7
+types_case quad quad_s17s41m3 697 2,21
 herm_case 47 1 mass 695/94
 herm_case 19 1 mass 1/38
 herm_case 16 1 mass 1/16

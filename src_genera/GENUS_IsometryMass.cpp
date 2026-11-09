@@ -326,7 +326,7 @@ int main(int argc, char *argv[]) {
         FE = MakeAbelianCMField(n, parse(argv[5]));
       }
       std::optional<mpq_class> sm =
-          StandardQuadraticMassAbelian(FK, m, square, FE);
+          StandardQuadraticMassAbelian<mpq_class>(FK, m, square, FE);
       std::cout << "return rec(standard_mass:=";
       if (sm) {
         std::cout << *sm;
@@ -437,9 +437,9 @@ int main(int argc, char *argv[]) {
       AbelianCMField F = MakeAbelianCMField(n, gens);
       std::cout << "return rec(n:=" << n << ", degree:="
                 << AbelianFieldDegree(F) << ", m:=" << m
-                << ", standard_mass:=" << StandardHermitianMassAbelian(F, m);
+                << ", standard_mass:=" << StandardHermitianMassAbelian<mpq_class>(F, m);
       if (m == 1) {
-        std::cout << ", mass:=" << RankOneHermitianMassAbelian(F);
+        std::cout << ", mass:=" << RankOneHermitianMassAbelian<mpq_class>(F);
       }
       std::cout << ");\n";
       return 0;
@@ -449,9 +449,9 @@ int main(int argc, char *argv[]) {
       int64_t d = std::stoll(argv[2]);
       int m = std::stoi(argv[3]);
       std::cout << "return rec(d:=" << d << ", m:=" << m << ", standard_mass:="
-                << StandardHermitianMassCyclotomic(d, m);
+                << StandardHermitianMassCyclotomic<mpq_class>(d, m);
       if (m == 1) {
-        std::cout << ", mass:=" << RankOneHermitianMassCyclotomic(d);
+        std::cout << ", mass:=" << RankOneHermitianMassCyclotomic<mpq_class>(d);
       }
       std::cout << ");\n";
       return 0;

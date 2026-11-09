@@ -84,21 +84,22 @@ inline std::vector<std::pair<PolyQ, int>> FactorModQWithMultiplicity(PolyQ f,
 }
 
 // Tr(theta^k), k = 0, ..., 2 deg, from the minimal polynomial by Newton.
-inline std::vector<mpq_class> PowerTraces(std::vector<int64_t> const &f,
+template <typename T>
+inline std::vector<T> PowerTraces(std::vector<int64_t> const &f,
                                           int kmax) {
   int deg = static_cast<int>(f.size()) - 1;
   // f = x^deg + c_{deg-1} x^{deg-1} + ... + c_0
-  std::vector<mpq_class> p(kmax + 1, mpq_class(0));
+  std::vector<T> p(kmax + 1, T(0));
   p[0] = deg;
   for (int k = 1; k <= kmax; k++) {
-    mpq_class s(0);
+    T s(0);
     // Newton: p_k + c_{deg-1} p_{k-1} + ... = -k c_{deg-k} for k <= deg
     for (int i = 1; i <= std::min(k - 1, deg); i++) {
-      s += mpq_class(static_cast<long>(f[deg - i])) * p[k - i];
+      s += UniversalScalarConversion<T, int64_t>(f[deg - i]) * p[k - i];
     }
     if (k <= deg) {
-      s += mpq_class(static_cast<long>(k)) *
-           mpq_class(static_cast<long>(f[deg - k]));
+      s += UniversalScalarConversion<T, int64_t>(k) *
+           UniversalScalarConversion<T, int64_t>(f[deg - k]);
     }
     p[k] = -s;
   }
@@ -111,19 +112,20 @@ inline std::vector<mpq_class> PowerTraces(std::vector<int64_t> const &f,
   a nonzero v, which is the minimal polynomial of the element. Also the
   coordinates of a vector w = v M in v, v S, ..., v S^{deg-1} (M in E).
  */
-struct KrylovData {
-  std::vector<mpq_class> minpoly;
-  MyMatrix<mpq_class> basis;
+template <typename T> struct KrylovData {
+  std::vector<T> minpoly;
+  MyMatrix<T> basis;
 };
 
-inline KrylovData KrylovMinimalPolynomial(MyMatrix<mpq_class> const &S) {
+template <typename T>
+inline KrylovData<T> KrylovMinimalPolynomial(MyMatrix<T> const &S) {
   int r = S.rows();
-  MyVector<mpq_class> v = ZeroVector<mpq_class>(r);
+  MyVector<T> v = ZeroVector<T>(r);
   v(0) = 1;
-  std::vector<MyVector<mpq_class>> pw{v};
+  std::vector<MyVector<T>> pw{v};
   for (int k = 1; k <= r; k++) {
-    MyVector<mpq_class> w = S.transpose() * pw.back();
-    MyMatrix<mpq_class> M(k + 1, r);
+    MyVector<T> w = S.transpose() * pw.back();
+    MyMatrix<T> M(k + 1, r);
     for (int i = 0; i < k; i++) {
       for (int j = 0; j < r; j++) {
         M(i, j) = pw[i](j);
@@ -132,14 +134,14 @@ inline KrylovData KrylovMinimalPolynomial(MyMatrix<mpq_class> const &S) {
     for (int j = 0; j < r; j++) {
       M(k, j) = w(j);
     }
-    MyMatrix<mpq_class> ker = NullspaceMat(M);
+    MyMatrix<T> ker = NullspaceMat(M);
     if (ker.rows() > 0) {
       // sum_i ker(0, i) v S^i = 0, normalized at i = k
-      std::vector<mpq_class> mp(k + 1);
+      std::vector<T> mp(k + 1);
       for (int i = 0; i <= k; i++) {
         mp[i] = ker(0, i) / ker(0, k);
       }
-      MyMatrix<mpq_class> basis(k, r);
+      MyMatrix<T> basis(k, r);
       for (int i = 0; i < k; i++) {
         for (int j = 0; j < r; j++) {
           basis(i, j) = pw[i](j);
@@ -158,32 +160,34 @@ inline KrylovData KrylovMinimalPolynomial(MyMatrix<mpq_class> const &S) {
   X, its minimal polynomial f and the conjugate of theta as a polynomial in
   theta. Nothing when no small combination works.
  */
-struct LocalGenerator {
-  MyMatrix<mpq_class> S;
+template <typename T> struct LocalGenerator {
+  MyMatrix<T> S;
   std::vector<int64_t> f;
-  std::vector<mpq_class> conj;
+  std::vector<T> conj;
 };
 
-inline std::optional<LocalGenerator>
-FindLocalGenerator(MyMatrix<mpq_class> const &B,
-                   std::vector<MyMatrix<mpq_class>> const &Omega, int64_t q) {
+template <typename T>
+inline std::optional<LocalGenerator<T>>
+FindLocalGenerator(MyMatrix<T> const &B,
+                   std::vector<MyMatrix<T>> const &Omega, int64_t q) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   int deg = static_cast<int>(Omega.size());
   int r = B.rows();
   int m = r / deg;
   // disc O_E = det(Tr(omega_i omega_j)), Tr_{E/Q} = Tr on X / m
-  MyMatrix<mpq_class> Tr(deg, deg);
+  MyMatrix<T> Tr(deg, deg);
   for (int i = 0; i < deg; i++) {
     for (int j = 0; j < deg; j++) {
-      MyMatrix<mpq_class> P = Omega[i] * Omega[j];
-      mpq_class t(0);
+      MyMatrix<T> P = Omega[i] * Omega[j];
+      T t(0);
       for (int u = 0; u < r; u++) {
         t += P(u, u);
       }
-      Tr(i, j) = t / mpq_class(static_cast<long>(m));
+      Tr(i, j) = t / UniversalScalarConversion<T, int64_t>(m);
     }
   }
   int vdisc = ValuationQRational(DeterminantMat(Tr), q);
-  MyMatrix<mpq_class> Binv = Inverse(B);
+  MyMatrix<T> Binv = Inverse(B);
   // combinations with coefficients in [-2, 2], by increasing size
   std::vector<std::vector<int>> cands;
   int n_tot = 1;
@@ -211,30 +215,30 @@ FindLocalGenerator(MyMatrix<mpq_class> const &B,
                      return na < nb;
                    });
   for (auto const &c : cands) {
-    MyMatrix<mpq_class> S = ZeroMatrix<mpq_class>(r, r);
+    MyMatrix<T> S = ZeroMatrix<T>(r, r);
     for (int i = 0; i < deg; i++) {
       if (c[i] != 0) {
-        S += Omega[i] * mpq_class(c[i]);
+        S += Omega[i] * T(c[i]);
       }
     }
-    KrylovData kd = KrylovMinimalPolynomial(S);
+    KrylovData<T> kd = KrylovMinimalPolynomial(S);
     if (static_cast<int>(kd.minpoly.size()) != deg + 1) {
       continue;
     }
     std::vector<int64_t> f;
     bool integral = true;
     for (auto const &x : kd.minpoly) {
-      if (x.get_den() != 1) {
+      if (GetDenominator_z(x) != 1) {
         integral = false;
       }
-      f.push_back(x.get_num().get_si());
+      f.push_back(UniversalScalarConversion<int64_t, Tint>(GetNumerator_z(x)));
     }
     if (!integral) {
       continue;
     }
     // disc f = det(Tr(theta^{i+j}))
-    std::vector<mpq_class> pt = PowerTraces(f, 2 * deg);
-    MyMatrix<mpq_class> D(deg, deg);
+    std::vector<T> pt = PowerTraces<T>(f, 2 * deg);
+    MyMatrix<T> D(deg, deg);
     for (int i = 0; i < deg; i++) {
       for (int j = 0; j < deg; j++) {
         D(i, j) = pt[i + j];
@@ -245,41 +249,43 @@ FindLocalGenerator(MyMatrix<mpq_class> const &B,
     }
     // the conjugate: S* = (B^{-1} S B)^T on the rows, v S* in the Krylov
     // basis of v
-    MyMatrix<mpq_class> Sstar = (Binv * S * B).transpose();
-    MyVector<mpq_class> v = GetMatrixRow(kd.basis, 0);
-    MyVector<mpq_class> w = Sstar.transpose() * v;
+    MyMatrix<T> Sstar = (Binv * S * B).transpose();
+    MyVector<T> v = GetMatrixRow(kd.basis, 0);
+    MyVector<T> w = Sstar.transpose() * v;
     // w = sum_i a_i v S^i
-    MyMatrix<mpq_class> M = kd.basis;
-    std::optional<MyVector<mpq_class>> sol = SolutionMat(M, w);
+    MyMatrix<T> M = kd.basis;
+    std::optional<MyVector<T>> sol = SolutionMat(M, w);
     if (!sol) {
       std::cerr << "ABHERM: the conjugate of theta is not in Q(theta)\n";
       throw TerminalException{1};
     }
-    std::vector<mpq_class> conj(deg);
+    std::vector<T> conj(deg);
     for (int i = 0; i < deg; i++) {
       conj[i] = (*sol)(i);
     }
-    return LocalGenerator{S, f, conj};
+    return LocalGenerator<T>{S, f, conj};
   }
   return {};
 }
 
-inline mpz_class PowInt(int64_t q, int64_t e) {
-  mpz_class r(1);
+template <typename Tint>
+inline Tint PowInt(int64_t q, int64_t e) {
+  Tint r(1);
   for (int64_t i = 0; i < e; i++) {
-    r *= static_cast<long>(q);
+    r *= UniversalScalarConversion<Tint, int64_t>(q);
   }
   return r;
 }
 
 // The matrix of g(S) for a polynomial g with integer coefficients.
-inline MyMatrix<mpq_class> PolyOfMatrixQ(PolyQ const &g, MyMatrix<mpq_class> const &S) {
+template <typename T>
+inline MyMatrix<T> PolyOfMatrixQ(PolyQ const &g, MyMatrix<T> const &S) {
   int r = S.rows();
-  MyMatrix<mpq_class> res = ZeroMatrix<mpq_class>(r, r);
+  MyMatrix<T> res = ZeroMatrix<T>(r, r);
   for (size_t i = g.size(); i-- > 0;) {
     res = res * S;
     for (int j = 0; j < r; j++) {
-      res(j, j) += mpq_class(static_cast<long>(g[i]));
+      res(j, j) += UniversalScalarConversion<T, int64_t>(g[i]);
     }
   }
   return res;
@@ -299,25 +305,27 @@ struct AbelianPrime {
   int f_K;
 };
 
+template <typename T>
 inline std::vector<AbelianPrime>
-AbelianPrimesOverQ(LocalGenerator const &lg, int64_t q, int64_t eK) {
+AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   std::vector<std::pair<PolyQ, int>> fac =
       FactorModQWithMultiplicity(PolyQ(lg.f.begin(), lg.f.end()), q);
   // the conjugate of the prime of g: the factor dividing g(conj(x))
   auto compose_conj = [&](PolyQ const &g) -> PolyQ {
     // g(c(x)) modulo f and q, c the conjugate of theta (q-integral)
-    mpz_class qz(static_cast<long>(q));
+    Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
     PolyQ c;
     for (auto const &x : lg.conj) {
-      mpz_class num = x.get_num() % qz;
-      mpz_class den = x.get_den() % qz;
+      Tint num = ResInt(GetNumerator_z(x), qz);
+      Tint den = ResInt(GetDenominator_z(x), qz);
       if (num < 0) {
         num += qz;
       }
       if (den < 0) {
         den += qz;
       }
-      int64_t v = MulModQ(num.get_si(), InvModQ(den.get_si(), q), q);
+      int64_t v = MulModQ(UniversalScalarConversion<int64_t, Tint>(num), InvModQ(UniversalScalarConversion<int64_t, Tint>(den), q), q);
       c.push_back(v);
     }
     PolyQ fq = PolyReduce(PolyQ(lg.f.begin(), lg.f.end()), q);
@@ -372,10 +380,11 @@ AbelianPrimesOverQ(LocalGenerator const &lg, int64_t q, int64_t eK) {
   lifted modulo q^N: the CRT idempotent of g^e in F_q[x] / f, refined by e
   <- 3 e^2 - 2 e^3 modulo (f, q^N), evaluated at theta.
  */
-inline PolyZ AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
+template <typename Tint>
+inline PolyZ<Tint> AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
                                         PolyQ const &g, int e, int64_t q,
                                         int N) {
-  mpz_class Q = PowInt(q, N);
+  Tint Q = PowInt<Tint>(q, N);
   PolyQ fq = PolyReduce(PolyQ(f.begin(), f.end()), q);
   PolyQ P = {1};
   for (int i = 0; i < e; i++) {
@@ -383,15 +392,15 @@ inline PolyZ AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
   }
   PolyQ Qp = PolyDivModQ(fq, P, q).first;
   PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
-  PolyZ ez;
+  PolyZ<Tint> ez;
   for (int64_t c : e0) {
-    ez.push_back(mpz_class(static_cast<long>(c)));
+    ez.push_back(UniversalScalarConversion<Tint, int64_t>(c));
   }
   ez = PolyZReduce(ez, f, Q);
   for (int it = 0; it < 64; it++) {
-    PolyZ e2 = PolyZReduce(PolyZMul(ez, ez), f, Q);
-    PolyZ e3 = PolyZReduce(PolyZMul(e2, ez), f, Q);
-    PolyZ en(e2.size());
+    PolyZ<Tint> e2 = PolyZReduce(PolyZMul(ez, ez), f, Q);
+    PolyZ<Tint> e3 = PolyZReduce(PolyZMul(e2, ez), f, Q);
+    PolyZ<Tint> en(e2.size());
     for (size_t k = 0; k < e2.size(); k++) {
       en[k] = 3 * e2[k] - 2 * e3[k];
     }
@@ -404,15 +413,17 @@ inline PolyZ AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
   return ez;
 }
 
-inline MyMatrix<mpq_class> AbelianPrimeIdempotent(LocalGenerator const &lg,
+template <typename T>
+inline MyMatrix<T> AbelianPrimeIdempotent(LocalGenerator<T> const &lg,
                                                   PolyQ const &g, int e,
                                                   int64_t q, int N) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   int r = lg.S.rows();
-  PolyZ ez = AbelianPrimeIdempotentPoly(lg.f, g, e, q, N);
-  MyMatrix<mpq_class> E = ZeroMatrix<mpq_class>(r, r);
-  MyMatrix<mpq_class> pw = IdentityMat<mpq_class>(r);
+  PolyZ<Tint> ez = AbelianPrimeIdempotentPoly<Tint>(lg.f, g, e, q, N);
+  MyMatrix<T> E = ZeroMatrix<T>(r, r);
+  MyMatrix<T> pw = IdentityMat<T>(r);
   for (size_t k = 0; k < ez.size(); k++) {
-    E += pw * mpq_class(ez[k]);
+    E += pw * T(ez[k]);
     pw = pw * lg.S;
   }
   return E;
@@ -422,10 +433,12 @@ inline MyMatrix<mpq_class> AbelianPrimeIdempotent(LocalGenerator const &lg,
   The Jordan data at a prime of E over q unramified over K (split: one of
   the pair), as HermitianJordanAtPrime does for Q(zeta_d).
  */
+template <typename T>
 inline HermitianLocalJordan
-AbelianJordanAtPrime(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
+AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
                      std::vector<AbelianPrime> const &primes, size_t i_prime,
                      int64_t q) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   int r = B.rows();
   AbelianPrime const &ap = primes[i_prime];
   int f_res = static_cast<int>(ap.g.size()) - 1;
@@ -434,9 +447,9 @@ AbelianJordanAtPrime(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
   // the precision covers the discriminant group and the different
   int vdiscf = 0;
   {
-    std::vector<mpq_class> pt = PowerTraces(f, 2 * (static_cast<int>(f.size()) - 1));
+    std::vector<T> pt = PowerTraces<T>(f, 2 * (static_cast<int>(f.size()) - 1));
     int deg = static_cast<int>(f.size()) - 1;
-    MyMatrix<mpq_class> D(deg, deg);
+    MyMatrix<T> D(deg, deg);
     for (int a = 0; a < deg; a++) {
       for (int b = 0; b < deg; b++) {
         D(a, b) = pt[a + b];
@@ -445,11 +458,11 @@ AbelianJordanAtPrime(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
     vdiscf = ValuationQRational(DeterminantMat(D), q);
   }
   int N = vdet + vdiscf + 6;
-  MyMatrix<mpq_class> Id = IdentityMat<mpq_class>(r);
-  MyMatrix<mpq_class> E = AbelianPrimeIdempotent(lg, ap.g, ap.e, q, N);
+  MyMatrix<T> Id = IdentityMat<T>(r);
+  MyMatrix<T> E = AbelianPrimeIdempotent(lg, ap.g, ap.e, q, N);
   // the uniformizer: q, or g(theta) when the prime is ramified over q
-  MyMatrix<mpq_class> Pi =
-      (ap.e == 1) ? MyMatrix<mpq_class>(Id * mpq_class(static_cast<long>(q)))
+  MyMatrix<T> Pi =
+      (ap.e == 1) ? MyMatrix<T>(Id * UniversalScalarConversion<T, int64_t>(q))
                   : PolyOfMatrixQ(ap.g, lg.S);
   // delta = v_P(f'(theta)): v_q(det(f'(S) E + 1 - E)) on X is m f v_P
   int deg = static_cast<int>(f.size()) - 1;
@@ -458,24 +471,24 @@ AbelianJordanAtPrime(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
   for (size_t k = 1; k < f.size(); k++) {
     fprime.push_back(static_cast<int64_t>(k) * f[k]);
   }
-  MyMatrix<mpq_class> FP = PolyOfMatrixQ(fprime, lg.S);
+  MyMatrix<T> FP = PolyOfMatrixQ(fprime, lg.S);
   // the O_P-rank m
   std::vector<std::vector<int64_t>> Emod(r, std::vector<int64_t>(r));
-  mpz_class qz(static_cast<long>(q));
+  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
   for (int u = 0; u < r; u++) {
     for (int v = 0; v < r; v++) {
-      mpz_class x = E(u, v).get_num() % qz;
+      Tint x = ResInt(GetNumerator_z(E(u, v)), qz);
       if (x < 0) {
         x += qz;
       }
-      Emod[u][v] = x.get_si();
+      Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
     }
   }
   int rk = RankModQ(Emod, q);
   int m = rk / (ap.e * f_res);
   int delta = 0;
   {
-    MyMatrix<mpq_class> M = FP * E + Id - E;
+    MyMatrix<T> M = FP * E + Id - E;
     int vv = ValuationQRational(DeterminantMat(M), q);
     // on X the prime part has Z_q-rank m e f, and det = N(f')^m locally
     delta = vv / (m * f_res);
@@ -484,9 +497,9 @@ AbelianJordanAtPrime(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
   HermitianLocalJordan hj;
   hj.type = ap.type;
   hj.f_K = ap.f_K;
-  MyMatrix<mpq_class> Binv = Inverse(B);
+  MyMatrix<T> Binv = Inverse(B);
   std::vector<int> len;
-  MyMatrix<mpq_class> Mk = Binv * E;
+  MyMatrix<T> Mk = Binv * E;
   while (true) {
     len.push_back(ValuationIndexOverlattice(Mk, q));
     if (len.back() == 0 || len.size() > static_cast<size_t>(4 * (vdet + vdiscf) + 8)) {
@@ -526,21 +539,25 @@ AbelianJordanAtPrime(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
   same holds for a prime P of a CM field E, and LocalOKGram then gives the
   Hermitian form over E (h linear in its first argument).
  */
-struct LocalPrimeK {
-  CyclotomicField K;
+template <typename T> struct LocalPrimeK {
+  using Tint = typename underlying_z_ring<T>::ring_type;
+  CyclotomicField<T> K;
   int64_t q;
   PolyQ g;
   int e;
   int f_res;
-  int64_t qf;
-  ElemE pi;
-  ElemE pi_inv;
-  std::map<int, PolyZ> eps;
+  // the order of the residue field, an abstract size
+  Tint qf;
+  ElemE<T> pi;
+  ElemE<T> pi_inv;
+  std::map<int, PolyZ<Tint>> eps;
 };
 
-inline LocalPrimeK MakeLocalPrimeK(LocalGenerator const &lg, PolyQ const &g,
+template <typename T>
+inline LocalPrimeK<T> MakeLocalPrimeK(LocalGenerator<T> const &lg, PolyQ const &g,
                                    int e, int64_t q) {
-  LocalPrimeK P;
+  using Tint = typename underlying_z_ring<T>::ring_type;
+  LocalPrimeK<T> P;
   int deg = static_cast<int>(lg.f.size()) - 1;
   P.K.d = 0;
   P.K.deg = deg;
@@ -550,23 +567,18 @@ inline LocalPrimeK MakeLocalPrimeK(LocalGenerator const &lg, PolyQ const &g,
   P.g = g;
   P.e = e;
   P.f_res = static_cast<int>(g.size()) - 1;
-  P.qf = 1;
+  P.qf = Tint(1);
   for (int i = 0; i < P.f_res; i++) {
-    if (P.qf > (int64_t(1) << 62) / q) {
-      std::cerr << "ABQUAD: the residue field of order " << q << "^"
-                << P.f_res << " is too large\n";
-      throw TerminalException{1};
-    }
-    P.qf *= q;
+    P.qf *= UniversalScalarConversion<Tint, int64_t>(q);
   }
-  P.pi = ElemE(deg, mpq_class(0));
+  P.pi = ElemE<T>(deg, T(0));
   if (e == 1) {
-    P.pi[0] = mpq_class(static_cast<long>(q));
+    P.pi[0] = UniversalScalarConversion<T, int64_t>(q);
   } else {
-    ElemE pw = EZetaPower(0, P.K);
+    ElemE<T> pw = EZetaPower(0, P.K);
     for (size_t i = 0; i < g.size(); i++) {
       for (int t = 0; t < deg; t++) {
-        P.pi[t] += mpq_class(static_cast<long>(g[i])) * pw[t];
+        P.pi[t] += UniversalScalarConversion<T, int64_t>(g[i]) * pw[t];
       }
       pw = EMul(pw, EZetaPower(1, P.K), P.K);
     }
@@ -575,63 +587,71 @@ inline LocalPrimeK MakeLocalPrimeK(LocalGenerator const &lg, PolyQ const &g,
   return P;
 }
 
-inline PolyZ const &LocalEps(LocalPrimeK &P, int N) {
+template <typename T>
+inline PolyZ<typename underlying_z_ring<T>::ring_type> const &LocalEps(LocalPrimeK<T> &P, int N) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   auto it = P.eps.find(N);
   if (it == P.eps.end()) {
-    it = P.eps.emplace(N, AbelianPrimeIdempotentPoly(P.K.Phi, P.g, P.e, P.q, N))
+    it = P.eps.emplace(N, AbelianPrimeIdempotentPoly<Tint>(P.K.Phi, P.g, P.e, P.q, N))
              .first;
   }
   return it->second;
 }
 
 // x = y / d with y in Z[theta] and d > 0
-inline std::pair<PolyZ, mpz_class> ClearDenominators(ElemE const &x) {
-  mpz_class d(1);
+template <typename T>
+inline std::pair<PolyZ<typename underlying_z_ring<T>::ring_type>, typename underlying_z_ring<T>::ring_type>
+ClearDenominators(ElemE<T> const &x) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
+  Tint d(1);
   for (auto const &c : x) {
-    d = lcm(d, c.get_den());
+    d = LCMpair(d, GetDenominator_z(c));
   }
-  PolyZ y;
+  PolyZ<Tint> y;
   for (auto const &c : x) {
-    mpq_class t = c * mpq_class(d);
-    y.push_back(t.get_num());
+    T t = c * T(d);
+    y.push_back(GetNumerator_z(t));
   }
   return {y, d};
 }
 
-inline int ValuationMpz(mpz_class x, int64_t q) {
+template <typename Tint>
+inline int ValuationInteger(Tint x, int64_t q) {
   int v = 0;
-  mpz_class qz(static_cast<long>(q));
-  while (x != 0 && x % qz == 0) {
-    x /= qz;
+  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
+  while (x != 0 && ResInt(x, qz) == 0) {
+    x = QuoInt(x, qz);
     v++;
   }
   return v;
 }
 
-inline int LocalVal(ElemE const &x, LocalPrimeK &P) {
+template <typename T>
+inline int LocalVal(ElemE<T> const &x, LocalPrimeK<T> &P) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   if (EIsZero(x)) {
     return 1 << 28;
   }
   auto [y, d] = ClearDenominators(x);
-  int k = ValuationMpz(d, P.q);
+  int k = ValuationInteger(d, P.q);
   int N = P.f_res * (P.e * k + 4) + 4;
   while (true) {
-    mpz_class Q = PowInt(P.q, N);
-    PolyZ const &eps = LocalEps(P, N);
-    PolyZ w = PolyZReduce(PolyZMul(eps, y), P.K.Phi, Q);
+    Tint Q = PowInt<Tint>(P.q, N);
+    PolyZ<Tint> const &eps = LocalEps(P, N);
+    PolyZ<Tint> w = PolyZReduce(PolyZMul(eps, y), P.K.Phi, Q);
     for (size_t i = 0; i < eps.size(); i++) {
       w[i] -= eps[i];
     }
     w[0] += 1;
     w = PolyZReduce(w, P.K.Phi, Q);
-    ElemE we;
+    ElemE<T> we;
     for (auto const &c : w) {
-      we.push_back(mpq_class(c));
+      we.push_back(T(c));
     }
-    mpq_class det = DeterminantMat(EMulMatrix(we, P.K));
-    mpz_class dn = det.get_num();
-    if (dn % Q != 0) {
-      int v = ValuationMpz(dn, P.q);
+    T det = DeterminantMat(EMulMatrix(we, P.K));
+    Tint dn = GetNumerator_z(det);
+    if (ResInt(dn, Q) != 0) {
+      int v = ValuationInteger(dn, P.q);
       return v / P.f_res - P.e * k;
     }
     N *= 2;
@@ -639,23 +659,25 @@ inline int LocalVal(ElemE const &x, LocalPrimeK &P) {
 }
 
 // The residue in F_q[x] / g of x with v_p(x) >= 0.
-inline PolyQ LocalResidue(ElemE const &x, LocalPrimeK &P) {
+template <typename T>
+inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   auto [y, d] = ClearDenominators(x);
-  int k = ValuationMpz(d, P.q);
-  mpz_class qk = PowInt(P.q, k);
-  mpz_class Q = qk * mpz_class(static_cast<long>(P.q));
-  PolyZ z = PolyZReduce(PolyZMul(LocalEps(P, k + 1), y), P.K.Phi, Q);
-  mpz_class qz(static_cast<long>(P.q));
-  mpz_class dd = (d / qk) % qz;
-  int64_t inv = InvModQ(dd.get_si(), P.q);
+  int k = ValuationInteger(d, P.q);
+  Tint qk = PowInt<Tint>(P.q, k);
+  Tint Q = qk * UniversalScalarConversion<Tint, int64_t>(P.q);
+  PolyZ<Tint> z = PolyZReduce(PolyZMul(LocalEps(P, k + 1), y), P.K.Phi, Q);
+  Tint qz = UniversalScalarConversion<Tint, int64_t>(P.q);
+  Tint dd = ResInt(QuoInt(d, qk), qz);
+  int64_t inv = InvModQ(UniversalScalarConversion<int64_t, Tint>(dd), P.q);
   PolyQ res;
   for (auto const &c : z) {
-    if (c % qk != 0) {
+    if (ResInt(c, qk) != 0) {
       std::cerr << "ABQUAD: the residue of a non integral element\n";
       throw TerminalException{1};
     }
-    mpz_class t = (c / qk) % qz;
-    res.push_back(MulModQ(t.get_si(), inv, P.q));
+    Tint t = ResInt(QuoInt(c, qk), qz);
+    res.push_back(MulModQ(UniversalScalarConversion<int64_t, Tint>(t), inv, P.q));
   }
   PolyTrim(res);
   if (res.empty()) {
@@ -670,37 +692,39 @@ inline PolyQ LocalResidue(ElemE const &x, LocalPrimeK &P) {
   The Gram matrix over K of phi on m vectors of X spanning X (x) Z_q over
   O_K (x) Z_q: standard vectors first, then small combinations.
  */
-struct LocalOKBasisGram {
-  std::vector<MyVector<mpq_class>> basis;
-  std::vector<std::vector<ElemE>> H;
+template <typename T> struct LocalOKBasisGram {
+  std::vector<MyVector<T>> basis;
+  std::vector<std::vector<ElemE<T>>> H;
 };
 
-inline LocalOKBasisGram
-LocalOKGramBasis(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
+template <typename T>
+inline LocalOKBasisGram<T>
+LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
                  int64_t q) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   int r = B.rows();
   int deg = static_cast<int>(lg.f.size()) - 1;
   int m = r / deg;
-  mpz_class qz(static_cast<long>(q));
-  auto red = [&](mpq_class const &x) -> int64_t {
-    mpz_class num = x.get_num() % qz;
-    mpz_class den = x.get_den() % qz;
+  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
+  auto red = [&](T const &x) -> int64_t {
+    Tint num = ResInt(GetNumerator_z(x), qz);
+    Tint den = ResInt(GetDenominator_z(x), qz);
     if (num < 0) {
       num += qz;
     }
     if (den < 0) {
       den += qz;
     }
-    return MulModQ(num.get_si(), InvModQ(den.get_si(), q), q);
+    return MulModQ(UniversalScalarConversion<int64_t, Tint>(num), InvModQ(UniversalScalarConversion<int64_t, Tint>(den), q), q);
   };
-  std::vector<MyMatrix<mpq_class>> Spow{IdentityMat<mpq_class>(r)};
+  std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
   for (int t = 1; t < deg; t++) {
     Spow.push_back(Spow.back() * lg.S);
   }
-  auto orbit_rows = [&](MyVector<mpq_class> const &v) {
+  auto orbit_rows = [&](MyVector<T> const &v) {
     std::vector<std::vector<int64_t>> rows;
     for (int t = 0; t < deg; t++) {
-      MyVector<mpq_class> w = Spow[t].transpose() * v;
+      MyVector<T> w = Spow[t].transpose() * v;
       std::vector<int64_t> row(r);
       for (int j = 0; j < r; j++) {
         row[j] = red(w(j));
@@ -709,9 +733,9 @@ LocalOKGramBasis(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
     }
     return rows;
   };
-  std::vector<MyVector<mpq_class>> chosen;
+  std::vector<MyVector<T>> chosen;
   std::vector<std::vector<int64_t>> acc;
-  auto try_add = [&](MyVector<mpq_class> const &v) -> void {
+  auto try_add = [&](MyVector<T> const &v) -> void {
     std::vector<std::vector<int64_t>> test = acc;
     for (auto &row : orbit_rows(v)) {
       test.push_back(row);
@@ -722,13 +746,13 @@ LocalOKGramBasis(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
     }
   };
   for (int k = 0; k < r && static_cast<int>(chosen.size()) < m; k++) {
-    MyVector<mpq_class> v = ZeroVector<mpq_class>(r);
+    MyVector<T> v = ZeroVector<T>(r);
     v(k) = 1;
     try_add(v);
   }
   uint64_t seed = 1;
   for (int it = 0; it < 1000 && static_cast<int>(chosen.size()) < m; it++) {
-    MyVector<mpq_class> v = ZeroVector<mpq_class>(r);
+    MyVector<T> v = ZeroVector<T>(r);
     for (int j = 0; j < r; j++) {
       seed = seed * 6364136223846793005ULL + 1442695040888963407ULL;
       v(j) = static_cast<long>((seed >> 33) % 5) - 2;
@@ -739,21 +763,21 @@ LocalOKGramBasis(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
     std::cerr << "ABQUAD: no local O_K-basis found\n";
     throw TerminalException{1};
   }
-  std::vector<mpq_class> pt = PowerTraces(lg.f, 2 * deg);
-  MyMatrix<mpq_class> T(deg, deg);
+  std::vector<T> pt = PowerTraces<T>(lg.f, 2 * deg);
+  MyMatrix<T> Tm(deg, deg);
   for (int a = 0; a < deg; a++) {
     for (int b = 0; b < deg; b++) {
-      T(a, b) = pt[a + b];
+      Tm(a, b) = pt[a + b];
     }
   }
-  MyMatrix<mpq_class> Tinv = Inverse(T);
-  std::vector<std::vector<ElemE>> H(m, std::vector<ElemE>(m));
+  MyMatrix<T> Tinv = Inverse(Tm);
+  std::vector<std::vector<ElemE<T>>> H(m, std::vector<ElemE<T>>(m));
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
-      ElemE val(deg, mpq_class(0));
+      ElemE<T> val(deg, T(0));
       for (int t = 0; t < deg; t++) {
-        MyVector<mpq_class> w = Spow[t].transpose() * chosen[i];
-        mpq_class bt = w.dot(B * chosen[j]);
+        MyVector<T> w = Spow[t].transpose() * chosen[i];
+        T bt = w.dot(B * chosen[j]);
         for (int s2 = 0; s2 < deg; s2++) {
           val[s2] += bt * Tinv(t, s2);
         }
@@ -764,15 +788,17 @@ LocalOKGramBasis(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
   return {chosen, H};
 }
 
-inline std::vector<std::vector<ElemE>>
-LocalOKGram(MyMatrix<mpq_class> const &B, LocalGenerator const &lg, int64_t q) {
+template <typename T>
+inline std::vector<std::vector<ElemE<T>>>
+LocalOKGram(MyMatrix<T> const &B, LocalGenerator<T> const &lg, int64_t q) {
   return LocalOKGramBasis(B, lg, q).H;
 }
 
 // x pi^{-k}
-inline ElemE LocalShift(ElemE x, int k, LocalPrimeK const &P) {
+template <typename T>
+inline ElemE<T> LocalShift(ElemE<T> x, int k, LocalPrimeK<T> const &P) {
   if (k > 0) {
-    ElemE pinv = P.pi_inv.empty() ? EInv(P.pi, P.K) : P.pi_inv;
+    ElemE<T> pinv = P.pi_inv.empty() ? EInv(P.pi, P.K) : P.pi_inv;
     for (int i = 0; i < k; i++) {
       x = EMul(x, pinv, P.K);
     }
@@ -791,74 +817,74 @@ inline ElemE LocalShift(ElemE x, int k, LocalPrimeK const &P) {
   spanning X (x) Z_q over O_E (x) Z_q, and v_P and the residues are those
   of LocalPrimeK, so P need not be alone over q.
  */
-struct AbelianLocalGram {
-  CyclotomicField K;
+template <typename T> struct AbelianLocalGram {
+  CyclotomicField<T> K;
   int m;
-  std::vector<std::vector<ElemE>> H;
-  std::shared_ptr<LocalPrimeK> P;
+  std::vector<std::vector<ElemE<T>>> H;
+  std::shared_ptr<LocalPrimeK<T>> P;
 };
 
-inline AbelianLocalGram AbelianLocalHermitianGram(MyMatrix<mpq_class> const &B,
-                                                  LocalGenerator const &lg,
+template <typename T>
+inline AbelianLocalGram<T> AbelianLocalHermitianGram(MyMatrix<T> const &B,
+                                                  LocalGenerator<T> const &lg,
                                                   AbelianPrime const &ap,
                                                   int64_t q) {
-  std::shared_ptr<LocalPrimeK> P =
-      std::make_shared<LocalPrimeK>(MakeLocalPrimeK(lg, ap.g, ap.e, q));
-  CyclotomicField K = P->K;
+  std::shared_ptr<LocalPrimeK<T>> P =
+      std::make_shared<LocalPrimeK<T>>(MakeLocalPrimeK(lg, ap.g, ap.e, q));
+  CyclotomicField<T> K = P->K;
   K.val_div = static_cast<int>(ap.g.size()) - 1;
-  K.valuation = [P](ElemE const &x) -> int { return LocalVal(x, *P); };
-  std::vector<std::vector<ElemE>> H = LocalOKGram(B, lg, q);
+  K.valuation = [P](ElemE<T> const &x) -> int { return LocalVal(x, *P); };
+  std::vector<std::vector<ElemE<T>>> H = LocalOKGram(B, lg, q);
   int m = static_cast<int>(H.size());
   return {K, m, H, P};
 }
 
-inline mpq_class AbelianLocalFactorRamified(MyMatrix<mpq_class> const &B,
-                                            LocalGenerator const &lg,
+template <typename T>
+inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
+                                            LocalGenerator<T> const &lg,
                                             AbelianPrime const &ap, int64_t q) {
-  AbelianLocalGram alg = AbelianLocalHermitianGram(B, lg, ap, q);
-  CyclotomicField const &K = alg.K;
+  AbelianLocalGram<T> alg = AbelianLocalHermitianGram(B, lg, ap, q);
+  CyclotomicField<T> const &K = alg.K;
   int m = alg.m;
   int deg = K.deg;
-  std::vector<std::vector<ElemE>> const &H = alg.H;
-  std::map<int, std::pair<int, ElemE>> blocks;
+  std::vector<std::vector<ElemE<T>>> const &H = alg.H;
+  std::map<int, std::pair<int, ElemE<T>>> blocks;
   for (auto &kv : HermitianJordanSplit(H, K, q)) {
     int rk = 0;
-    ElemE det = EZetaPower(0, K);
+    ElemE<T> det = EZetaPower(0, K);
     for (auto &G : kv.second) {
       rk += static_cast<int>(G.size());
       det = EMul(det, HermitianSmallDet(G, K), K);
     }
     blocks[kv.first] = {rk, det};
   }
-  int64_t qK = 1;
+  T qK(1);
   for (int i = 0; i < ap.f_K; i++) {
-    qK *= q;
+    qK *= UniversalScalarConversion<T, int64_t>(q);
   }
-  mpq_class fac = HeckeGroupOrderSp(2 * (m / 2), qK);
+  T fac = HeckeGroupOrderSp<T>(2 * (m / 2), qK);
   int64_t Nexp = 0;
   int after_total = m;
   // pi = g(theta), and pi pi-bar
-  ElemE pi(deg, mpq_class(0));
+  ElemE<T> pi(deg, T(0));
   {
-    ElemE pw = EZetaPower(0, K);
+    ElemE<T> pw = EZetaPower(0, K);
     for (size_t i = 0; i < ap.g.size(); i++) {
       for (int t = 0; t < deg; t++) {
-        pi[t] += mpq_class(static_cast<long>(ap.g[i])) * pw[t];
+        pi[t] += UniversalScalarConversion<T, int64_t>(ap.g[i]) * pw[t];
       }
       pw = EMul(pw, EZetaPower(1, K), K);
     }
   }
-  ElemE pipibar = EMul(pi, EConj(pi, K), K);
-  ElemE pinv = EInv(pipibar, K);
+  ElemE<T> pipibar = EMul(pi, EConj(pi, K), K);
+  ElemE<T> pinv = EInv(pipibar, K);
   // the square class of a P-unit in the residue field F_q[x] / g
-  auto is_square = [&](ElemE const &u) -> int {
+  auto is_square = [&](ElemE<T> const &u) -> int {
     PolyQ ur = LocalResidue(u, *alg.P);
     if (ur.empty()) {
       return 0;
     }
-    PolyQ y = PolyPowModQ(ur, static_cast<uint64_t>((qK - 1) / 2), ap.g, q);
-    PolyTrim(y);
-    return (y.size() == 1 && y[0] == 1) ? 1 : -1;
+    return ResidueQuadraticCharacter(ur, ap.g, q);
   };
   for (auto &kv : blocks) {
     int s = kv.first;
@@ -869,9 +895,9 @@ inline mpq_class AbelianLocalFactorRamified(MyMatrix<mpq_class> const &B,
     Nexp -= fl * mi * mi;
     if (s % 2 != 0) {
       Nexp -= static_cast<int64_t>(mi + 1) * (mi / 2);
-      fac /= HeckeGroupOrderSp(mi, qK);
+      fac /= HeckeGroupOrderSp<T>(mi, qK);
     } else {
-      ElemE u = kv.second.second;
+      ElemE<T> u = kv.second.second;
       int w = EValuation(u, K, q);
       for (int i = 0; i < w / 2; i++) {
         u = EMul(u, pinv, K);
@@ -881,7 +907,7 @@ inline mpq_class AbelianLocalFactorRamified(MyMatrix<mpq_class> const &B,
           x = -x;
         }
       }
-      fac /= HeckeGroupOrderO(mi, is_square(u), qK);
+      fac /= HeckeGroupOrderO<T>(mi, is_square(u), qK);
     }
     Nexp -= static_cast<int64_t>(s) * mi * ri;
     Nexp += static_cast<int64_t>(s) * mi * m / 2;
@@ -889,12 +915,12 @@ inline mpq_class AbelianLocalFactorRamified(MyMatrix<mpq_class> const &B,
   if (m % 2 == 0) {
     Nexp += m / 2;
   }
-  mpq_class qpow(1);
+  T qpow(1);
   for (int64_t i = 0; i < (Nexp >= 0 ? Nexp : -Nexp); i++) {
     if (Nexp >= 0) {
-      qpow *= mpq_class(static_cast<long>(qK));
+      qpow *= qK;
     } else {
-      qpow /= mpq_class(static_cast<long>(qK));
+      qpow /= qK;
     }
   }
   return qpow * fac;
@@ -910,24 +936,26 @@ inline mpq_class AbelianLocalFactorRamified(MyMatrix<mpq_class> const &B,
   F_P = F_2[x] / g of order 2^f, whose elements are the sum b_j theta^j,
   j < f, b_j in {0, 1}, over which the lines of L / pi L are taken.
  */
-struct GenericDyadic {
-  CyclotomicField K;
-  ElemE one;
-  ElemE pi;
-  ElemE pi_inv;
-  ElemE pipibar;
-  ElemE pipibar_inv;
+template <typename T> struct GenericDyadic {
+  CyclotomicField<T> K;
+  ElemE<T> one;
+  ElemE<T> pi;
+  ElemE<T> pi_inv;
+  ElemE<T> pipibar;
+  ElemE<T> pipibar_inv;
   int d;
   int f;
   // the representatives of F_P, the zero first
-  std::vector<ElemE> reps;
+  std::vector<ElemE<T>> reps;
 };
 
-inline int GDVal(ElemE const &x, GenericDyadic const &C) {
+template <typename T>
+inline int GDVal(ElemE<T> const &x, GenericDyadic<T> const &C) {
   return EValuation(x, C.K, 2);
 }
 
-inline int GDTraceVal(ElemE const &c, GenericDyadic const &C) {
+template <typename T>
+inline int GDTraceVal(ElemE<T> const &c, GenericDyadic<T> const &C) {
   int v = GDVal(c, C);
   if (v >= (1 << 27)) {
     return v;
@@ -937,8 +965,9 @@ inline int GDTraceVal(ElemE const &c, GenericDyadic const &C) {
   return 2 * vp;
 }
 
-inline int GDNormVal(std::vector<std::vector<ElemE>> const &G,
-                     GenericDyadic const &C) {
+template <typename T>
+inline int GDNormVal(std::vector<std::vector<ElemE<T>>> const &G,
+                     GenericDyadic<T> const &C) {
   int n = static_cast<int>(G.size());
   int res = 1 << 28;
   for (int i = 0; i < n; i++) {
@@ -950,8 +979,9 @@ inline int GDNormVal(std::vector<std::vector<ElemE>> const &G,
   return res;
 }
 
-inline bool GDIsLocalNorm(ElemE x, GenericDyadic const &C) {
-  CyclotomicField const &K = C.K;
+template <typename T>
+inline bool GDIsLocalNorm(ElemE<T> x, GenericDyadic<T> const &C) {
+  CyclotomicField<T> const &K = C.K;
   int w = GDVal(x, C);
   for (int i = 0; i < w / 2; i++) {
     x = EMul(x, C.pipibar_inv, K);
@@ -962,19 +992,19 @@ inline bool GDIsLocalNorm(ElemE x, GenericDyadic const &C) {
   size_t nr = C.reps.size();
   int len = 2 * C.d;
   // y = sum_{i < len} a_i pi^i, a_0 a nonzero representative
-  std::vector<ElemE> pipow{C.one};
+  std::vector<ElemE<T>> pipow{C.one};
   for (int i = 1; i < len; i++) {
     pipow.push_back(EMul(pipow.back(), C.pi, K));
   }
   std::vector<size_t> idx(len, 0);
   idx[0] = 1;
   while (true) {
-    ElemE y(K.deg, mpq_class(0));
+    ElemE<T> y(K.deg, T(0));
     for (int i = 0; i < len; i++) {
       if (idx[i] == 0) {
         continue;
       }
-      ElemE t = EMul(C.reps[idx[i]], pipow[i], K);
+      ElemE<T> t = EMul(C.reps[idx[i]], pipow[i], K);
       for (int u = 0; u < K.deg; u++) {
         y[u] += t[u];
       }
@@ -1020,12 +1050,13 @@ inline std::vector<std::vector<size_t>> GDLines(int m, size_t nr) {
 }
 
 // L + R pi^{-1} y, y = sum_i a_i x_i, a_lead = 1
-inline std::vector<std::vector<ElemE>>
-GDOverlattice(std::vector<std::vector<ElemE>> const &H,
-              std::vector<size_t> const &a, GenericDyadic const &C) {
+template <typename T>
+inline std::vector<std::vector<ElemE<T>>>
+GDOverlattice(std::vector<std::vector<ElemE<T>>> const &H,
+              std::vector<size_t> const &a, GenericDyadic<T> const &C) {
   int m = static_cast<int>(H.size());
-  ElemE zero(C.K.deg, mpq_class(0));
-  std::vector<std::vector<ElemE>> U(m, std::vector<ElemE>(m, zero));
+  ElemE<T> zero(C.K.deg, T(0));
+  std::vector<std::vector<ElemE<T>>> U(m, std::vector<ElemE<T>>(m, zero));
   int j = -1;
   for (int i = 0; i < m; i++) {
     U[i][i] = C.one;
@@ -1040,12 +1071,13 @@ GDOverlattice(std::vector<std::vector<ElemE>> const &H,
 }
 
 // the kernel of x -> sum_i a_i c_i modulo pi, a_lead = 1
-inline std::vector<std::vector<ElemE>>
-GDSublattice(std::vector<std::vector<ElemE>> const &H,
-             std::vector<size_t> const &a, GenericDyadic const &C) {
+template <typename T>
+inline std::vector<std::vector<ElemE<T>>>
+GDSublattice(std::vector<std::vector<ElemE<T>>> const &H,
+             std::vector<size_t> const &a, GenericDyadic<T> const &C) {
   int m = static_cast<int>(H.size());
-  ElemE zero(C.K.deg, mpq_class(0));
-  std::vector<std::vector<ElemE>> U(m, std::vector<ElemE>(m, zero));
+  ElemE<T> zero(C.K.deg, T(0));
+  std::vector<std::vector<ElemE<T>>> U(m, std::vector<ElemE<T>>(m, zero));
   int j = -1;
   for (int i = 0; i < m; i++) {
     if (a[i] != 0) {
@@ -1066,24 +1098,25 @@ GDSublattice(std::vector<std::vector<ElemE>> const &H,
   return HermitianCongruence(H, U, C.K);
 }
 
-struct GDSymbolEntry {
+template <typename T> struct GDSymbolEntry {
   int rank;
   int scale;
   bool normal;
   int v;
-  ElemE det;
+  ElemE<T> det;
 };
 
-inline std::vector<GDSymbolEntry>
-GDKirschmerSymbol(std::vector<std::vector<ElemE>> const &H,
-                  GenericDyadic const &C) {
-  std::map<int, std::vector<SmallGram>> blocks = HermitianJordanSplit(H, C.K, 2);
+template <typename T>
+inline std::vector<GDSymbolEntry<T>>
+GDKirschmerSymbol(std::vector<std::vector<ElemE<T>>> const &H,
+                  GenericDyadic<T> const &C) {
+  std::map<int, std::vector<SmallGram<T>>> blocks = HermitianJordanSplit(H, C.K, 2);
   std::vector<int> scales, nvals, ranks;
-  std::vector<ElemE> dets;
+  std::vector<ElemE<T>> dets;
   for (auto &kv : blocks) {
     int nv = 1 << 28;
     int rk = 0;
-    ElemE det = C.one;
+    ElemE<T> det = C.one;
     for (auto &G : kv.second) {
       nv = std::min(nv, GDNormVal(G, C));
       rk += static_cast<int>(G.size());
@@ -1094,8 +1127,8 @@ GDKirschmerSymbol(std::vector<std::vector<ElemE>> const &H,
     ranks.push_back(rk);
     dets.push_back(det);
   }
-  std::vector<GDSymbolEntry> sym;
-  ElemE det_partial = C.one;
+  std::vector<GDSymbolEntry<T>> sym;
+  ElemE<T> det_partial = C.one;
   size_t t = scales.size();
   for (size_t i = 0; i < t; i++) {
     int v = 1 << 28;
@@ -1109,9 +1142,10 @@ GDKirschmerSymbol(std::vector<std::vector<ElemE>> const &H,
   return sym;
 }
 
-inline bool GDIsLocallyIsometric(std::vector<GDSymbolEntry> const &S1,
-                                 std::vector<GDSymbolEntry> const &S2,
-                                 GenericDyadic const &C) {
+template <typename T>
+inline bool GDIsLocallyIsometric(std::vector<GDSymbolEntry<T>> const &S1,
+                                 std::vector<GDSymbolEntry<T>> const &S2,
+                                 GenericDyadic<T> const &C) {
   size_t t = S1.size();
   if (t != S2.size()) {
     return false;
@@ -1122,14 +1156,14 @@ inline bool GDIsLocallyIsometric(std::vector<GDSymbolEntry> const &S1,
       return false;
     }
   }
-  auto ratio = [&](size_t i) -> ElemE {
+  auto ratio = [&](size_t i) -> ElemE<T> {
     return EMul(S1[i].det, EInv(S2[i].det, C.K), C.K);
   };
   if (!GDIsLocalNorm(ratio(t - 1), C)) {
     return false;
   }
   for (size_t i = 0; i + 1 < t; i++) {
-    ElemE x = ratio(i);
+    ElemE<T> x = ratio(i);
     if (GDIsLocalNorm(x, C)) {
       continue;
     }
@@ -1146,22 +1180,23 @@ inline bool GDIsLocallyIsometric(std::vector<GDSymbolEntry> const &S1,
   exponent d: the chain method of
   HermitianLocalFactorDyadic over the residue field of P.
  */
-inline mpq_class AbelianLocalFactorDyadic(MyMatrix<mpq_class> const &B,
-                                          LocalGenerator const &lg,
+template <typename T>
+inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
+                                          LocalGenerator<T> const &lg,
                                           AbelianPrime const &ap, int d) {
-  AbelianLocalGram alg = AbelianLocalHermitianGram(B, lg, ap, 2);
-  GenericDyadic C;
+  AbelianLocalGram<T> alg = AbelianLocalHermitianGram(B, lg, ap, 2);
+  GenericDyadic<T> C;
   C.K = alg.K;
-  CyclotomicField const &K = C.K;
+  CyclotomicField<T> const &K = C.K;
   int deg = K.deg;
   int m = alg.m;
   C.one = EZetaPower(0, K);
-  C.pi = ElemE(deg, mpq_class(0));
+  C.pi = ElemE<T>(deg, T(0));
   {
-    ElemE pw = C.one;
+    ElemE<T> pw = C.one;
     for (size_t i = 0; i < ap.g.size(); i++) {
       for (int t = 0; t < deg; t++) {
-        C.pi[t] += mpq_class(static_cast<long>(ap.g[i])) * pw[t];
+        C.pi[t] += UniversalScalarConversion<T, int64_t>(ap.g[i]) * pw[t];
       }
       pw = EMul(pw, EZetaPower(1, K), K);
     }
@@ -1172,10 +1207,10 @@ inline mpq_class AbelianLocalFactorDyadic(MyMatrix<mpq_class> const &B,
   C.d = d;
   C.f = static_cast<int>(ap.g.size()) - 1;
   for (int64_t u = 0; u < (int64_t(1) << C.f); u++) {
-    ElemE x(deg, mpq_class(0));
+    ElemE<T> x(deg, T(0));
     for (int j = 0; j < C.f; j++) {
       if (u & (int64_t(1) << j)) {
-        ElemE t = EZetaPower(j, K);
+        ElemE<T> t = EZetaPower(j, K);
         for (int k = 0; k < deg; k++) {
           x[k] += t[k];
         }
@@ -1185,12 +1220,12 @@ inline mpq_class AbelianLocalFactorDyadic(MyMatrix<mpq_class> const &B,
   }
   int64_t qK = int64_t(1) << ap.f_K;
   std::vector<std::vector<size_t>> lines = GDLines(m, C.reps.size());
-  auto maximal_factor = [&](std::vector<std::vector<ElemE>> const &H) -> mpq_class {
+  auto maximal_factor = [&](std::vector<std::vector<ElemE<T>>> const &H) -> T {
     if (m % 2 == 1) {
-      return mpq_class(1, 2);
+      return RationalFraction<T>(1, 2);
     }
-    std::vector<std::vector<ElemE>> G = H;
-    ElemE det = C.one;
+    std::vector<std::vector<ElemE<T>>> G = H;
+    ElemE<T> det = C.one;
     for (int c = 0; c < m; c++) {
       int piv = -1;
       for (int i = c; i < m; i++) {
@@ -1210,9 +1245,9 @@ inline mpq_class AbelianLocalFactorDyadic(MyMatrix<mpq_class> const &B,
         }
       }
       det = EMul(det, G[c][c], K);
-      ElemE inv = EInv(G[c][c], K);
+      ElemE<T> inv = EInv(G[c][c], K);
       for (int i = c + 1; i < m; i++) {
-        ElemE t = EMul(G[i][c], inv, K);
+        ElemE<T> t = EMul(G[i][c], inv, K);
         for (int j = c; j < m; j++) {
           G[i][j] = ESub(G[i][j], EMul(t, G[c][j], K));
         }
@@ -1224,28 +1259,28 @@ inline mpq_class AbelianLocalFactorDyadic(MyMatrix<mpq_class> const &B,
       }
     }
     if (GDIsLocalNorm(det, C)) {
-      return mpq_class(1);
+      return T(1);
     }
-    mpq_class qm(1);
+    T qm(1);
     for (int i = 0; i < m; i++) {
-      qm *= mpq_class(static_cast<long>(qK));
+      qm *= UniversalScalarConversion<T, int64_t>(qK);
     }
-    return (qm - 1) / mpq_class(static_cast<long>(2 * qK + 2));
+    return (qm - 1) / UniversalScalarConversion<T, int64_t>(2 * qK + 2);
   };
   int nL = GDNormVal(alg.H, C);
-  auto find_over = [&](std::vector<std::vector<ElemE>> const &H)
-      -> std::optional<std::vector<std::vector<ElemE>>> {
+  auto find_over = [&](std::vector<std::vector<ElemE<T>>> const &H)
+      -> std::optional<std::vector<std::vector<ElemE<T>>>> {
     for (auto const &a : lines) {
-      std::vector<std::vector<ElemE>> Hn = GDOverlattice(H, a, C);
+      std::vector<std::vector<ElemE<T>>> Hn = GDOverlattice(H, a, C);
       if (GDNormVal(Hn, C) >= nL) {
         return Hn;
       }
     }
     return {};
   };
-  std::vector<std::vector<std::vector<ElemE>>> chain{alg.H};
+  std::vector<std::vector<std::vector<ElemE<T>>>> chain{alg.H};
   while (true) {
-    std::optional<std::vector<std::vector<ElemE>>> opt = find_over(chain.back());
+    std::optional<std::vector<std::vector<ElemE<T>>>> opt = find_over(chain.back());
     if (!opt) {
       break;
     }
@@ -1255,10 +1290,10 @@ inline mpq_class AbelianLocalFactorDyadic(MyMatrix<mpq_class> const &B,
       throw TerminalException{1};
     }
   }
-  mpq_class fac = maximal_factor(alg.H);
+  T fac = maximal_factor(alg.H);
   for (size_t i = 0; i + 1 < chain.size(); i++) {
-    std::vector<GDSymbolEntry> sym_i = GDKirschmerSymbol(chain[i], C);
-    std::vector<GDSymbolEntry> sym_n = GDKirschmerSymbol(chain[i + 1], C);
+    std::vector<GDSymbolEntry<T>> sym_i = GDKirschmerSymbol(chain[i], C);
+    std::vector<GDSymbolEntry<T>> sym_n = GDKirschmerSymbol(chain[i + 1], C);
     int64_t A = 0, Bc = 0;
     for (auto const &a : lines) {
       if (GDIsLocallyIsometric(GDKirschmerSymbol(GDSublattice(chain[i + 1], a, C), C),
@@ -1274,7 +1309,7 @@ inline mpq_class AbelianLocalFactorDyadic(MyMatrix<mpq_class> const &B,
       std::cerr << "ABHERM: a step of the chain has no isometric neighbour\n";
       throw TerminalException{1};
     }
-    fac *= mpq_class(static_cast<long>(A), static_cast<long>(Bc));
+    fac *= RationalFraction<T>(A, Bc);
   }
   return fac;
 }
@@ -1299,29 +1334,31 @@ inline int DiscriminantValuationCharacters(DirichletGroup const &G,
   residue degree f_res and ramification index e_ram over q, with the
   uniformizer Pi and delta = v_P(different of E / Q).
  */
+template <typename T>
 inline HermitianLocalJordan
-JordanFromIdempotent(MyMatrix<mpq_class> const &B, MyMatrix<mpq_class> const &E,
-                     MyMatrix<mpq_class> const &Pi, int f_res, int e_ram,
+JordanFromIdempotent(MyMatrix<T> const &B, MyMatrix<T> const &E,
+                     MyMatrix<T> const &Pi, int f_res, int e_ram,
                      int delta, int type, int f_K, int64_t q, int bound) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   int r = B.rows();
   std::vector<std::vector<int64_t>> Emod(r, std::vector<int64_t>(r));
-  mpz_class qz(static_cast<long>(q));
+  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
   for (int u = 0; u < r; u++) {
     for (int v = 0; v < r; v++) {
-      mpz_class x = E(u, v).get_num() % qz;
+      Tint x = ResInt(GetNumerator_z(E(u, v)), qz);
       if (x < 0) {
         x += qz;
       }
-      Emod[u][v] = x.get_si();
+      Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
     }
   }
   int m = RankModQ(Emod, q) / (e_ram * f_res);
   HermitianLocalJordan hj;
   hj.type = type;
   hj.f_K = f_K;
-  MyMatrix<mpq_class> Binv = Inverse(B);
+  MyMatrix<T> Binv = Inverse(B);
   std::vector<int> len;
-  MyMatrix<mpq_class> Mk = Binv * E;
+  MyMatrix<T> Mk = Binv * E;
   while (true) {
     len.push_back(ValuationIndexOverlattice(Mk, q));
     if (len.back() == 0 || len.size() > static_cast<size_t>(bound)) {
@@ -1358,36 +1395,35 @@ JordanFromIdempotent(MyMatrix<mpq_class> const &B, MyMatrix<mpq_class> const &E,
   v_q(det B) + 6, and refined by their products until there are n_primes
   of them (fewer when the refinement does not get there).
  */
-inline std::vector<MyMatrix<mpq_class>>
-PrimeIdempotentsByRefinement(MyMatrix<mpq_class> const &B,
-                             std::vector<MyMatrix<mpq_class>> const &Omega,
+template <typename T>
+inline std::vector<MyMatrix<T>>
+PrimeIdempotentsByRefinement(MyMatrix<T> const &B,
+                             std::vector<MyMatrix<T>> const &Omega,
                              int64_t q, int64_t n_primes) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   int r = B.rows();
   int deg = static_cast<int>(Omega.size());
   int vdet = ValuationQRational(DeterminantMat(B), q);
   int N = vdet + 6;
-  mpz_class Q = PowInt(q, N);
-  mpz_class qz(static_cast<long>(q));
-  auto reduce_mod = [&](MyMatrix<mpq_class> M, mpz_class const &mod) {
+  Tint Q = PowInt<Tint>(q, N);
+  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
+  auto reduce_mod = [&](MyMatrix<T> M, Tint const &mod) {
     for (int i = 0; i < M.rows(); i++) {
       for (int j = 0; j < M.cols(); j++) {
-        mpz_class num = M(i, j).get_num(), den = M(i, j).get_den();
-        mpz_class inv;
-        mpz_invert(inv.get_mpz_t(), den.get_mpz_t(), mod.get_mpz_t());
-        mpz_class v = (num * inv) % mod;
-        if (v < 0) {
-          v += mod;
-        }
-        M(i, j) = mpq_class(v);
+        Tint num = GetNumerator_z(M(i, j)), den = GetDenominator_z(M(i, j));
+        Tint inv = mod_inv(ResInt(den, mod), mod);
+        Tint prod = num * inv;
+        Tint v = ResInt(prod, mod);
+        M(i, j) = UniversalScalarConversion<T, Tint>(v);
       }
     }
     return M;
   };
-  auto lift_idempotent = [&](MyMatrix<mpq_class> E) {
+  auto lift_idempotent = [&](MyMatrix<T> E) {
     for (int it = 0; it < 64; it++) {
-      MyMatrix<mpq_class> E2 = E * E;
-      MyMatrix<mpq_class> En =
-          reduce_mod(MyMatrix<mpq_class>(E2 * mpq_class(3) - E2 * E * mpq_class(2)), Q);
+      MyMatrix<T> E2 = E * E;
+      MyMatrix<T> En =
+          reduce_mod(MyMatrix<T>(E2 * T(3) - E2 * E * T(2)), Q);
       if (En == E) {
         break;
       }
@@ -1395,8 +1431,8 @@ PrimeIdempotentsByRefinement(MyMatrix<mpq_class> const &B,
     }
     return E;
   };
-  auto is_zero_mod_q = [&](MyMatrix<mpq_class> const &M) -> bool {
-    MyMatrix<mpq_class> R = reduce_mod(M, qz);
+  auto is_zero_mod_q = [&](MyMatrix<T> const &M) -> bool {
+    MyMatrix<T> R = reduce_mod(M, qz);
     for (int i = 0; i < R.rows(); i++) {
       for (int j = 0; j < R.cols(); j++) {
         if (R(i, j) != 0) {
@@ -1406,19 +1442,19 @@ PrimeIdempotentsByRefinement(MyMatrix<mpq_class> const &B,
     }
     return true;
   };
-  std::vector<MyMatrix<mpq_class>> idem{IdentityMat<mpq_class>(r)};
+  std::vector<MyMatrix<T>> idem{IdentityMat<T>(r)};
   for (int i0 = 0; i0 < deg && static_cast<int64_t>(idem.size()) < n_primes; i0++) {
     for (int i1 = 0; i1 < deg && static_cast<int64_t>(idem.size()) < n_primes;
          i1++) {
-      MyMatrix<mpq_class> S = Omega[i0] + Omega[i1] * mpq_class(i1 + 1);
-      KrylovData kd = KrylovMinimalPolynomial(S);
+      MyMatrix<T> S = Omega[i0] + Omega[i1] * T(i1 + 1);
+      KrylovData<T> kd = KrylovMinimalPolynomial(S);
       std::vector<int64_t> f;
       for (auto const &x : kd.minpoly) {
-        if (x.get_den() != 1) {
+        if (GetDenominator_z(x) != 1) {
           f.clear();
           break;
         }
-        f.push_back(x.get_num().get_si());
+        f.push_back(UniversalScalarConversion<int64_t, Tint>(GetNumerator_z(x)));
       }
       if (f.empty()) {
         continue;
@@ -1428,7 +1464,7 @@ PrimeIdempotentsByRefinement(MyMatrix<mpq_class> const &B,
       if (fac.size() <= 1) {
         continue;
       }
-      std::vector<MyMatrix<mpq_class>> next;
+      std::vector<MyMatrix<T>> next;
       for (auto const &eps : idem) {
         for (auto const &[g, mult] : fac) {
           PolyQ P = {1};
@@ -1437,9 +1473,9 @@ PrimeIdempotentsByRefinement(MyMatrix<mpq_class> const &B,
           }
           PolyQ Qp = PolyDivModQ(fq, P, q).first;
           PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
-          MyMatrix<mpq_class> Eg = lift_idempotent(
+          MyMatrix<T> Eg = lift_idempotent(
               reduce_mod(PolyOfMatrixQ(e0, S), Q));
-          MyMatrix<mpq_class> prod = reduce_mod(MyMatrix<mpq_class>(eps * Eg), Q);
+          MyMatrix<T> prod = reduce_mod(MyMatrix<T>(eps * Eg), Q);
           if (!is_zero_mod_q(prod)) {
             next.push_back(lift_idempotent(prod));
           }
@@ -1458,32 +1494,31 @@ PrimeIdempotentsByRefinement(MyMatrix<mpq_class> const &B,
   refining those of several elements of O_E, each lifted on X by E <- 3 E^2
   - 2 E^3 modulo q^N; the uniformizer is q and the different is a unit.
  */
-inline std::optional<mpq_class>
-UnramifiedFactorsByIdempotents(MyMatrix<mpq_class> const &B,
-                               std::vector<MyMatrix<mpq_class>> const &Omega,
+template <typename T>
+inline std::optional<T>
+UnramifiedFactorsByIdempotents(MyMatrix<T> const &B,
+                               std::vector<MyMatrix<T>> const &Omega,
                                int64_t q, PrimeDecompositionData const &dE) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   int r = B.rows();
   int vdet = ValuationQRational(DeterminantMat(B), q);
   int N = vdet + 6;
-  mpz_class Q = PowInt(q, N);
-  mpz_class qz(static_cast<long>(q));
-  auto reduce_mod = [&](MyMatrix<mpq_class> M, mpz_class const &mod) {
+  Tint Q = PowInt<Tint>(q, N);
+  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
+  auto reduce_mod = [&](MyMatrix<T> M, Tint const &mod) {
     for (int i = 0; i < M.rows(); i++) {
       for (int j = 0; j < M.cols(); j++) {
-        mpz_class num = M(i, j).get_num(), den = M(i, j).get_den();
-        mpz_class inv;
-        mpz_invert(inv.get_mpz_t(), den.get_mpz_t(), mod.get_mpz_t());
-        mpz_class v = (num * inv) % mod;
-        if (v < 0) {
-          v += mod;
-        }
-        M(i, j) = mpq_class(v);
+        Tint num = GetNumerator_z(M(i, j)), den = GetDenominator_z(M(i, j));
+        Tint inv = mod_inv(ResInt(den, mod), mod);
+        Tint prod = num * inv;
+        Tint v = ResInt(prod, mod);
+        M(i, j) = UniversalScalarConversion<T, Tint>(v);
       }
     }
     return M;
   };
-  auto is_zero_mod_q = [&](MyMatrix<mpq_class> const &M) -> bool {
-    MyMatrix<mpq_class> R = reduce_mod(M, qz);
+  auto is_zero_mod_q = [&](MyMatrix<T> const &M) -> bool {
+    MyMatrix<T> R = reduce_mod(M, qz);
     for (int i = 0; i < R.rows(); i++) {
       for (int j = 0; j < R.cols(); j++) {
         if (R(i, j) != 0) {
@@ -1493,18 +1528,18 @@ UnramifiedFactorsByIdempotents(MyMatrix<mpq_class> const &B,
     }
     return true;
   };
-  std::vector<MyMatrix<mpq_class>> idem =
+  std::vector<MyMatrix<T>> idem =
       PrimeIdempotentsByRefinement(B, Omega, q, dE.g);
   if (static_cast<int64_t>(idem.size()) != dE.g) {
     return {};
   }
   // the conjugation: E* = (B^{-1} E B)^T
-  MyMatrix<mpq_class> Binv = Inverse(B);
+  MyMatrix<T> Binv = Inverse(B);
   std::vector<int> conj_of(idem.size(), -1);
   for (size_t i = 0; i < idem.size(); i++) {
-    MyMatrix<mpq_class> Es = reduce_mod((Binv * idem[i] * B).transpose(), Q);
+    MyMatrix<T> Es = reduce_mod((Binv * idem[i] * B).transpose(), Q);
     for (size_t j = 0; j < idem.size(); j++) {
-      if (is_zero_mod_q(MyMatrix<mpq_class>(Es - idem[j]))) {
+      if (is_zero_mod_q(MyMatrix<T>(Es - idem[j]))) {
         conj_of[i] = static_cast<int>(j);
       }
     }
@@ -1512,10 +1547,10 @@ UnramifiedFactorsByIdempotents(MyMatrix<mpq_class> const &B,
       return {};
     }
   }
-  mpq_class res(1);
+  T res(1);
   std::set<size_t> done;
-  MyMatrix<mpq_class> Pi =
-      IdentityMat<mpq_class>(r) * mpq_class(static_cast<long>(q));
+  MyMatrix<T> Pi =
+      IdentityMat<T>(r) * UniversalScalarConversion<T, int64_t>(q);
   for (size_t i = 0; i < idem.size(); i++) {
     if (done.count(i)) {
       continue;
@@ -1526,7 +1561,7 @@ UnramifiedFactorsByIdempotents(MyMatrix<mpq_class> const &B,
     int f_res = static_cast<int>(dE.f);
     int type = (j != i) ? 0 : 1;
     int f_K = (j != i) ? f_res : f_res / 2;
-    res *= HermitianLocalFactorUnramified(
+    res *= HermitianLocalFactorUnramified<T>(
         JordanFromIdempotent(B, idem[i], Pi, f_res, 1, 0, type, f_K, q,
                              4 * vdet + 8),
         q);
@@ -1539,10 +1574,12 @@ UnramifiedFactorsByIdempotents(MyMatrix<mpq_class> const &B,
   matrix B of its trace form and the actions Omega of a Z-basis of O_E, or
   nothing in the cases not treated (see above).
  */
-inline std::optional<mpq_class>
-HermitianMassAbelianLattice(MyMatrix<mpq_class> const &B,
-                            std::vector<MyMatrix<mpq_class>> const &Omega,
+template <typename T>
+inline std::optional<T>
+HermitianMassAbelianLattice(MyMatrix<T> const &B,
+                            std::vector<MyMatrix<T>> const &Omega,
                             AbelianCMField const &F) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   int deg = static_cast<int>(AbelianFieldDegree(F));
   if (static_cast<int>(Omega.size()) != deg) {
     std::cerr << "ABHERM: " << Omega.size() << " basis elements for a field "
@@ -1552,18 +1589,18 @@ HermitianMassAbelianLattice(MyMatrix<mpq_class> const &B,
   int r = B.rows();
   int m = r / deg;
   if (m == 1) {
-    return RankOneHermitianMassAbelian(F);
+    return RankOneHermitianMassAbelian<T>(F);
   }
-  mpq_class res = StandardHermitianMassAbelian(F, m);
+  T res = StandardHermitianMassAbelian<T>(F, m);
   std::set<int64_t> primes;
   {
-    mpz_class num = DeterminantMat(B).get_num();
+    Tint num = GetNumerator_z(DeterminantMat(B));
     if (num < 0) {
       num = -num;
     }
     if (num > 1) {
-      for (mpz_class const &p : FactorsInt(num)) {
-        primes.insert(p.get_si());
+      for (Tint const &p : FactorsInt(num)) {
+        primes.insert(UniversalScalarConversion<int64_t, Tint>(p));
       }
     }
     int64_t x = F.n;
@@ -1580,13 +1617,13 @@ HermitianMassAbelianLattice(MyMatrix<mpq_class> const &B,
   std::vector<std::vector<int64_t>> XK = FieldCharacters(G, F.H, true);
   std::vector<std::vector<int64_t>> XE = FieldCharacters(G, F.H, false);
   for (int64_t q : primes) {
-    std::optional<LocalGenerator> lg = FindLocalGenerator(B, Omega, q);
+    std::optional<LocalGenerator<T>> lg = FindLocalGenerator(B, Omega, q);
     if (!lg) {
       PrimeDecompositionData dE = PrimeDecompositionCharacters(G, XE, q);
       if (dE.e != 1) {
         return {};
       }
-      std::optional<mpq_class> fac =
+      std::optional<T> fac =
           UnramifiedFactorsByIdempotents(B, Omega, q, dE);
       if (!fac) {
         return {};
@@ -1616,7 +1653,7 @@ HermitianMassAbelianLattice(MyMatrix<mpq_class> const &B,
           res *= AbelianLocalFactorRamified(B, *lg, aps[i], q);
         }
       } else {
-        res *= HermitianLocalFactorUnramified(
+        res *= HermitianLocalFactorUnramified<T>(
             AbelianJordanAtPrime(B, *lg, aps, i, q), q);
       }
     }
