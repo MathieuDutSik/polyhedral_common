@@ -624,14 +624,17 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
   starts the tower from the root sublattice, matching the root decomposition
   of LatticeRootDecomposition.h. The set is always closed under v -> -v.
  */
+// The block of the form GramMat scaled by a positive factor, the roots being
+// the vectors of norm root_norm, which is 2 times the factor.
 template <typename T, typename Tint>
-MyMatrix<Tint> get_shv_block(MyMatrix<T> const &GramMat, bool use_roots,
-                             GramReduction reduction, std::ostream &os) {
+MyMatrix<Tint> get_shv_block_scaled(MyMatrix<T> const &GramMat,
+                                    T const &root_norm, bool use_roots,
+                                    GramReduction reduction, std::ostream &os) {
   int n = GramMat.rows();
   CVPSolver<T, Tint> solver = GetCVPSolver<T, Tint>(GramMat, reduction, os);
   if (use_roots) {
     MyMatrix<Tint> roots =
-        MatrixFromVectorFamilyDim(n, solver.fixed_norm_vectors(T(2)));
+        MatrixFromVectorFamilyDim(n, solver.fixed_norm_vectors(root_norm));
     if (roots.rows() > 0) {
       // Symmetrise to both signs, whatever the enumerator's convention.
       std::unordered_set<MyVector<Tint>> seen;
@@ -650,6 +653,27 @@ MyMatrix<Tint> get_shv_block(MyMatrix<T> const &GramMat, bool use_roots,
     }
   }
   return solver.shortest_vectors().SHV;
+}
+
+/*
+  A rational form that is not integral is scaled to an integral one by a
+  positive factor, so that its enumerations run over the ring (see
+  CVPSolver). The vectors are the same: a positive scaling changes no
+  comparison of the enumeration, nor of the reduction, whose conditions are
+  homogeneous, and the norm 2 of the roots is scaled with the form.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint> get_shv_block(MyMatrix<T> const &GramMat, bool use_roots,
+                             GramReduction reduction, std::ostream &os) {
+  if constexpr (is_implementation_of_Q<T>::value) {
+    if (!IsIntegralMatrix(GramMat)) {
+      FractionMatrix<T> fr = RemoveFractionMatrixPlusCoeff(GramMat);
+      return get_shv_block_scaled<T, Tint>(fr.TheMat, T(2) * fr.TheMult,
+                                           use_roots, reduction, os);
+    }
+  }
+  return get_shv_block_scaled<T, Tint>(GramMat, T(2), use_roots, reduction,
+                                       os);
 }
 
 /*
