@@ -922,6 +922,11 @@ std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
   return res;
 }
 
+// The certified evaluation with Arb, when flint is there
+#ifdef ENABLE_FLINT_SUPPORT
+#include "QuadraticHeckeLArb.h"
+#endif
+
 /*
   An integer mu divisible by the order of every finite subgroup of
   GL_m(K) (Hecke.jl, _minkowski_multiple, after Guralnick and Lorenz): for
@@ -998,8 +1003,11 @@ Tint MinkowskiMultiple(AbelianCMField const &FK, int m) {
   terms are the 1/|O(L_i)|), so b = mu num(local) sm is an integer. The
   L-value is computed to the bits of b plus a margin and b rounded; it is
   accepted when a second computation with 16 more bits rounds to the same
-  integer, both within 2^{-8} of it. Nothing when the character cannot be
-  computed (a common index divisor).
+  integer, both within 2^{-8} of it. With flint, b is moreover certified:
+  the Arb enclosure of L(1 - r) (QuadraticHeckeLArb.h) times mu num(local)
+  sm_exact must contain b and no other integer, otherwise the mass is not
+  returned. Nothing when the character cannot be computed (a common index
+  divisor).
  */
 template <typename T>
 std::optional<T>
@@ -1057,6 +1065,33 @@ QuadraticMassNonAbelianE(MyMatrix<T> const &B,
     std::optional<Tint> b1 = rounded(bits);
     std::optional<Tint> b2 = rounded(bits + 16);
     if (b1 && b2 && *b1 == *b2) {
+#ifdef ENABLE_FLINT_SUPPORT
+      // the integer certified by the Arb enclosure of L(1 - r)
+      bool certified = false;
+      for (int cb = bits; cb <= bits + 64 && !certified; cb += 32) {
+        std::optional<ArbReal> La = QuadHeckeLNegativeArb(*Ld, cb);
+        if (!La) {
+          break;
+        }
+        ArbPrecisionGuard g(cb + 128);
+        ArbReal bb = arb_from_rational(factor) * *La;
+        std::optional<Tint> bc = arb_unique_integer<Tint>(bb);
+#ifdef DEBUG_QHECKE
+        std::cerr << "QHECKE_ARB: b in " << bb.str(20) << "\n";
+#endif
+        if (bc) {
+          if (*bc != *b1) {
+            std::cerr << "QHECKE_ARB: the certified b=" << *bc
+                      << " differs from the numerical b=" << *b1 << "\n";
+            throw TerminalException{1};
+          }
+          certified = true;
+        }
+      }
+      if (!certified) {
+        return {};
+      }
+#endif
       T sm = UniversalScalarConversion<T, Tint>(*b1) / factor * sm_exact;
       // sm = b / (mu num(local)), the sign of the L-value included
       if (sm < 0) {

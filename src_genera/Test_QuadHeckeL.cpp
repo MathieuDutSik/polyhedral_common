@@ -73,6 +73,15 @@ void Process(std::string const &FileGram, std::string const &FileOmega,
     } else {
       std::cout << "L: fail\n";
     }
+#ifdef ENABLE_FLINT_SUPPORT
+    std::optional<ArbReal> La = QuadHeckeLNegativeArb(*Ld, prec_bits);
+    if (La) {
+      std::cout << "Larb: "
+                << La->str(static_cast<slong>(prec_bits * 0.30103) + 5) << "\n";
+    } else {
+      std::cout << "Larb: fail\n";
+    }
+#endif
   }
 }
 

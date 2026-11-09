@@ -247,6 +247,14 @@ against PARI/GP. The number of terms is about A times a power of the
 precision; beyond 4 10^8 terms the mass is left not computed.
 `Test_QuadHeckeL` prints the character data, the coefficients and
 L(1 - r) of a lattice.
+Built with flint (`make ENABLE_FLINT_SUPPORT=1`), the rounding is certified
+with Arb (`QuadraticHeckeLArb.h`): the same sum evaluated in balls, with
+proven bounds for the truncation of the series at the poles (Cauchy on
+circles around them), for the Chebyshev interpolation (a majorant on the
+Bernstein ellipse) and for the terms beyond X (G_s(t) <= gamma(sigma)
+t^{-sigma} as phi > 0, and |a_k| <= tau_n(k)); the ball of mu num(local)
+times the standard mass must contain the integer found with MPFR and no
+other. The 54 masses of rank 2 and 19 of rank 4 are certified.
 
 With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabiliser of L in
 the adelic centraliser is a subgroup of finite index of that of L_0, so
