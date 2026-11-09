@@ -180,10 +180,25 @@ struct PrimaryQuadModule {
   std::vector<std::vector<int64_t>> sigma_img;
   // the images by the further generators
   std::vector<std::vector<std::vector<int64_t>>> extra_sigma_img;
-  int64_t size() const {
-    int64_t s = 1;
+  // the number of elements, for the listings: saturated at the largest
+  // size_t, so that a module too large to be listed is never mistaken for a
+  // small one
+  size_t size() const {
+    size_t s = 1;
     for (int64_t o : ord) {
-      s *= o;
+      size_t uo = static_cast<size_t>(o);
+      if (uo != 0 && s > std::numeric_limits<size_t>::max() / uo) {
+        return std::numeric_limits<size_t>::max();
+      }
+      s *= uo;
+    }
+    return s;
+  }
+  // the order, an unbounded integer
+  template <typename Tint> Tint order() const {
+    Tint s(1);
+    for (int64_t o : ord) {
+      s *= UniversalScalarConversion<Tint, int64_t>(o);
     }
     return s;
   }
@@ -392,7 +407,7 @@ inline ModuleElt ApplyModuleAut(PrimaryQuadModule const &M, ModuleAut const &phi
 }
 
 inline std::optional<std::vector<ModuleAut>>
-EquivariantModuleIsometries(PrimaryQuadModule const &M, int64_t max_module,
+EquivariantModuleIsometries(PrimaryQuadModule const &M, size_t max_module,
                             size_t max_group) {
   if (M.size() > max_module) {
     return {};
@@ -518,17 +533,18 @@ GeneratingSubset(PrimaryQuadModule const &M, std::vector<ModuleAut> const &grp) 
   them, and the groups. The subgroups are stored as the sorted list of the
   codes of their elements (mixed radix over all the coordinates).
  */
-struct GlueOrbitResult {
+template <typename Tint> struct GlueOrbitResult {
   int64_t q;
-  int64_t glue_order;
+  // the number of elements of the glue, which are listed
+  size_t glue_order;
   std::vector<int> list_d;
-  std::vector<int64_t> list_module_order;
-  std::vector<mpz_class> list_group_order;
+  std::vector<Tint> list_module_order;
+  std::vector<Tint> list_group_order;
   // per module: "scalar" (Nikulin), "full" (the image of the local group
   // is all the equivariant isometries), "proper" (a proper subgroup, used
   // as such) or "assumed" (not computed, all the isometries used)
   std::vector<std::string> list_image;
-  mpz_class orbit_size;
+  Tint orbit_size;
   // "listing" or "graph"
   std::string method;
 };
@@ -582,24 +598,25 @@ GlueElements(std::vector<PrimaryQuadModule> const &mods,
   of H is determined by its components). The orbit length is |G| / |Stab_G
   H|, the orders being those of the graph automorphism groups.
  */
-inline std::optional<GlueOrbitResult>
+template <typename Tint>
+inline std::optional<GlueOrbitResult<Tint>>
 GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
                std::vector<std::vector<ModuleElt>> const &glue_gens,
                size_t max_vertices, std::ostream &os) {
   using Tgr = GraphListAdj;
   using Tidx = uint32_t;
   using Tidx_value = int32_t;
-  GlueOrbitResult res;
+  GlueOrbitResult<Tint> res;
   res.q = q;
   res.method = "graph";
   size_t t = mods.size();
   std::vector<ModuleElt> H = GlueElements(mods, glue_gens);
-  res.glue_order = static_cast<int64_t>(H.size());
+  res.glue_order = H.size();
   std::vector<std::vector<ModuleElt>> elts(t);
   size_t n_vert = H.size();
   int64_t BIG = 1;
   for (size_t s = 0; s < t; s++) {
-    if (mods[s].size() > static_cast<int64_t>(max_vertices)) {
+    if (mods[s].size() > max_vertices) {
       return {};
     }
     elts[s] = ListModuleElements(mods[s]);
@@ -679,44 +696,45 @@ GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
     }
     return -3;
   };
-  auto group_order = [&](size_t n, auto f) -> mpz_class {
+  auto group_order = [&](size_t n, auto f) -> Tint {
     WeightMatrix<false, int64_t, Tidx_value> WMat(n, f, os);
-    return GetStabilizerWeightMatrix_Kernel<int64_t, Tgr, Tidx, mpz_class,
+    return GetStabilizerWeightMatrix_Kernel<int64_t, Tgr, Tidx, Tint,
                                             Tidx_value, false>(WMat, os)
         .order;
   };
-  mpz_class order_G(1);
+  Tint order_G(1);
   size_t base = 0;
   for (size_t s = 0; s < t; s++) {
     size_t ns = elts[s].size();
     auto f = [&](size_t i, size_t j) -> int64_t {
       return weight(base + i, base + j, false);
     };
-    mpz_class o = group_order(ns, f);
+    Tint o = group_order(ns, f);
     res.list_d.push_back(mods[s].d);
-    res.list_module_order.push_back(mods[s].size());
+    res.list_module_order.push_back(mods[s].template order<Tint>());
     res.list_group_order.push_back(o);
     order_G *= o;
     base += ns;
   }
   auto f_all = [&](size_t i, size_t j) -> int64_t { return weight(i, j, true); };
-  mpz_class order_stab = group_order(n_vert, f_all);
-  if (order_G % order_stab != 0) {
+  Tint order_stab = group_order(n_vert, f_all);
+  if (ResInt(order_G, order_stab) != 0) {
     std::cerr << "ISOM_MASS: the stabilizer of the glue does not divide the "
                  "group\n";
     throw TerminalException{1};
   }
-  res.orbit_size = order_G / order_stab;
+  res.orbit_size = QuoInt(order_G, order_stab);
   return res;
 }
 
-inline std::optional<GlueOrbitResult>
+template <typename Tint>
+inline std::optional<GlueOrbitResult<Tint>>
 GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
                  std::vector<std::vector<ModuleElt>> const &glue_gens,
                  std::vector<std::optional<std::vector<ModuleAut>>> const
                      &image_groups,
-                 int64_t max_module, size_t max_group, size_t max_orbit) {
-  GlueOrbitResult res;
+                 size_t max_module, size_t max_group, size_t max_orbit) {
+  GlueOrbitResult<Tint> res;
   res.q = q;
   res.method = "listing";
   size_t t = mods.size();
@@ -768,7 +786,7 @@ GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
       }
     }
   }
-  res.glue_order = static_cast<int64_t>(H.size());
+  res.glue_order = H.size();
   std::vector<std::vector<ModuleAut>> gens(t);
   for (size_t s = 0; s < t; s++) {
     // the image of the local group when it was computed, otherwise all
@@ -781,8 +799,9 @@ GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
       return {};
     }
     res.list_d.push_back(mods[s].d);
-    res.list_module_order.push_back(mods[s].size());
-    res.list_group_order.push_back(mpz_class(static_cast<long>(opt->size())));
+    res.list_module_order.push_back(mods[s].template order<Tint>());
+    res.list_group_order.push_back(
+        UniversalScalarConversion<Tint, int64_t>(static_cast<int64_t>(opt->size())));
     gens[s] = GeneratingSubset(mods[s], *opt);
   }
   std::vector<ModuleElt> Hlist(H.begin(), H.end());
@@ -822,7 +841,8 @@ GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
       }
     }
   }
-  res.orbit_size = mpz_class(static_cast<long>(orbit.size()));
+  res.orbit_size =
+      UniversalScalarConversion<Tint, int64_t>(static_cast<int64_t>(orbit.size()));
   return res;
 }
 
@@ -830,21 +850,22 @@ GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
   The orbit of the glue: by listing the groups when they are small, and
   otherwise by the graph automorphism groups (GlueOrbitGraph).
  */
-inline std::optional<GlueOrbitResult>
+template <typename Tint>
+inline std::optional<GlueOrbitResult<Tint>>
 GlueOrbit(int64_t q, std::vector<PrimaryQuadModule> const &mods,
           std::vector<std::vector<ModuleElt>> const &glue_gens,
           std::vector<std::optional<std::vector<ModuleAut>>> const
               &image_groups,
-          bool image_proper, int64_t max_module, size_t max_group,
+          bool image_proper, size_t max_module, size_t max_group,
           size_t max_orbit, size_t max_vertices, std::ostream &os) {
-  std::optional<GlueOrbitResult> opt = GlueOrbitListing(
+  std::optional<GlueOrbitResult<Tint>> opt = GlueOrbitListing<Tint>(
       q, mods, glue_gens, image_groups, max_module, max_group, max_orbit);
   if (opt || image_proper) {
     // the graph method uses all the equivariant isometries, which is not
     // the group when an image is a proper subgroup
 #ifdef SANITY_CHECK_ISOMETRY_MASS
-    std::optional<GlueOrbitResult> opt2 =
-        GlueOrbitGraph(q, mods, glue_gens, max_vertices, os);
+    std::optional<GlueOrbitResult<Tint>> opt2 =
+        GlueOrbitGraph<Tint>(q, mods, glue_gens, max_vertices, os);
     if (opt && !image_proper && opt2 && opt2->orbit_size != opt->orbit_size) {
       std::cerr << "ISOM_MASS: the glue orbit by listing is " << opt->orbit_size
                 << " and by the graph " << opt2->orbit_size << "\n";
@@ -853,7 +874,7 @@ GlueOrbit(int64_t q, std::vector<PrimaryQuadModule> const &mods,
 #endif
     return opt;
   }
-  return GlueOrbitGraph(q, mods, glue_gens, max_vertices, os);
+  return GlueOrbitGraph<Tint>(q, mods, glue_gens, max_vertices, os);
 }
 
 // The commutant of comp.sigma and comp.extra_sigma in M_k(Z), saturated.
@@ -1112,7 +1133,7 @@ template <typename T> struct IsometryMassResult {
   std::vector<IsometryComponent<T>> components;
   std::vector<IsometryComponentMass<T>> component_masses;
   T index;
-  std::vector<GlueOrbitResult> glue;
+  std::vector<GlueOrbitResult<typename underlying_z_ring<T>::ring_type>> glue;
   T glue_factor;
   // whether a component with d >= 3 enters the glue, in which case the
   // image of the local unitary group is taken to be all the equivariant
@@ -1129,7 +1150,7 @@ template <typename T> struct IsometryMassResult {
 };
 
 struct IsometryMassBounds {
-  int64_t max_module = 1 << 12;
+  size_t max_module = size_t(1) << 12;
   size_t max_group = 100000;
   size_t max_orbit = 100000;
   // the graph method: the number of vertices (module elements and glue)
@@ -1416,20 +1437,16 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     cm.rank = comp.gram.rows();
     cm.det = DeterminantMat(comp.gram);
     if (comp.d == 0 && (comp.herm_field || comp.quad_field)) {
-      std::vector<MyMatrix<mpq_class>> om;
-      for (auto const &W : comp.centre_omega) {
-        om.push_back(UniversalMatrixConversion<mpq_class, T>(W));
-      }
-      MyMatrix<mpq_class> Bc =
-          UniversalMatrixConversion<mpq_class, T>(comp.centre_gram);
-      std::optional<mpq_class> hm =
-          comp.herm_field ? HermitianMassAbelianLattice(Bc, om, *comp.herm_field)
-                          : QuadraticMassAbelianLattice(Bc, om, *comp.quad_field);
+      std::optional<T> hm =
+          comp.herm_field
+              ? HermitianMassAbelianLattice(comp.centre_gram, comp.centre_omega,
+                                            *comp.herm_field)
+              : QuadraticMassAbelianLattice(comp.centre_gram, comp.centre_omega,
+                                            *comp.quad_field);
       if (hm && comp.multiplicity_factor) {
-        cm.mass = UniversalScalarConversion<T, mpq_class>(*hm) *
-                  *comp.multiplicity_factor;
+        cm.mass = *hm * *comp.multiplicity_factor;
       } else if (hm) {
-        cm.mass = UniversalScalarConversion<T, mpq_class>(*hm);
+        cm.mass = *hm;
         res.local_correction_open = true;
       } else {
         res.unsupported_component = true;
@@ -1456,11 +1473,10 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
         cm.mass = iter->second;
       } else {
         // computed exactly except at a ramified prime of E/K in rank >= 2
-        std::optional<mpq_class> opt = HermitianMassCyclotomicLattice(
-            UniversalMatrixConversion<mpq_class, T>(comp.gram),
-            UniversalMatrixConversion<mpq_class, T>(comp.sigma), comp.d);
+        std::optional<T> opt =
+            HermitianMassCyclotomicLattice(comp.gram, comp.sigma, comp.d);
         if (opt) {
-          cm.mass = UniversalScalarConversion<T, mpq_class>(*opt);
+          cm.mass = *opt;
         }
       }
     }
@@ -1608,7 +1624,8 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
         image_proper = true;
       }
     }
-    std::optional<GlueOrbitResult> opt = GlueOrbit(
+    std::optional<GlueOrbitResult<typename underlying_z_ring<T>::ring_type>> opt =
+        GlueOrbit<typename underlying_z_ring<T>::ring_type>(
         q, mods, glue_gens, image_groups, image_proper, bounds.max_module,
         bounds.max_group, bounds.max_orbit, bounds.max_vertices, os);
     if (!opt) {
@@ -1621,14 +1638,15 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     os << "ISOM_MASS: q=" << q << " |H_q|=" << opt->glue_order
        << " orbit=" << opt->orbit_size << "\n";
 #endif
-    res.glue_factor *= UniversalScalarConversion<T, mpz_class>(opt->orbit_size);
+    res.glue_factor *= UniversalScalarConversion<T, typename underlying_z_ring<T>::ring_type>(
+        opt->orbit_size);
     res.glue.push_back(*opt);
   }
 #ifdef SANITY_CHECK_ISOMETRY_MASS
   {
     T prod(1);
     for (auto const &gl : res.glue) {
-      prod *= ScalarFromInt64<T>(gl.glue_order);
+      prod *= UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(gl.glue_order));
     }
     if (prod != res.index) {
       std::cerr << "ISOM_MASS: the glue has order " << prod
@@ -1700,18 +1718,15 @@ std::vector<MyMatrix<Tint>> LocalReflections(MyMatrix<T> const &A, int64_t p,
   for (int i = 0; i < c; i++) {
     pc *= UniversalScalarConversion<Tint, int64_t>(p);
   }
-  int64_t pc64 = UniversalScalarConversion<int64_t, Tint>(pc);
   auto p_integral = [&](T const &x) -> bool {
-    Tint den = x.get_den();
-    return ((den % UniversalScalarConversion<Tint, int64_t>(p)) != 0);
+    Tint den = GetDenominator_z(x);
+    return ResInt(den, UniversalScalarConversion<Tint, int64_t>(p)) != 0;
   };
   auto reduce = [&](T const &x) -> Tint {
-    Tint num = x.get_num(), den = x.get_den();
-    Tint nm = ((num % pc) + pc) % pc;
-    Tint dn = ((den % pc) + pc) % pc;
-    int64_t inv = InvModQ(UniversalScalarConversion<int64_t, Tint>(dn), pc64);
-    Tint r = (nm * UniversalScalarConversion<Tint, int64_t>(inv)) % pc;
-    return r;
+    Tint nm = ResInt(GetNumerator_z(x), pc);
+    Tint dn = ResInt(GetDenominator_z(x), pc);
+    Tint prod = nm * mod_inv(dn, pc);
+    return ResInt(prod, pc);
   };
   (void)p_T;
   std::vector<MyMatrix<Tint>> res;
@@ -1965,11 +1980,9 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       for (size_t s = 0; s < r; s++) {
         T val = y(ListIdx[s]);
         // p-integral: numerator times the inverse of the denominator
-        Tint num = val.get_num();
-        Tint den = val.get_den();
         Tint o_T = UniversalScalarConversion<Tint, int64_t>(ListOrd[s]);
-        Tint nm = ((num % o_T) + o_T) % o_T;
-        Tint dn = ((den % o_T) + o_T) % o_T;
+        Tint nm = ResInt(GetNumerator_z(val), o_T);
+        Tint dn = ResInt(GetDenominator_z(val), o_T);
         int64_t nm64 = UniversalScalarConversion<int64_t, Tint>(nm);
         int64_t dn64 = UniversalScalarConversion<int64_t, Tint>(dn);
         res[s] = MulModQ(nm64, InvModQ(dn64, ListOrd[s]), ListOrd[s]);
@@ -1978,7 +1991,12 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     };
     size_t q_size = 1;
     for (auto o : ListOrd) {
-      q_size *= static_cast<size_t>(o);
+      size_t uo = static_cast<size_t>(o);
+      if (uo != 0 && q_size > bounds.max_module / uo) {
+        MULT_FACTOR_FAIL(1969);
+        return {};
+      }
+      q_size *= uo;
       if (q_size > bounds.max_module) {
         MULT_FACTOR_FAIL(1969);
         return {};
@@ -2024,7 +2042,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       p-part of D(N), which contain the image, at least. When they agree
       that is the factor, without the search of the solutions.
      */
-    auto bounds_factor = [&](int64_t max_dn,
+    auto bounds_factor = [&](size_t max_dn,
                              size_t max_group) -> std::optional<size_t> {
       IsometryComponent<T> compN =
           BuildIsometryComponent<T, Tint>(A, Nb, ListP[0], 1);
@@ -2111,19 +2129,14 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     std::optional<std::vector<ModMat>> opt;
     bool rows_convention = !OmegaX.empty();
     if (!OmegaX.empty()) {
-      std::vector<MyMatrix<mpq_class>> om;
-      for (auto const &W : OmegaX) {
-        om.push_back(UniversalMatrixConversion<mpq_class, T>(W));
-      }
-      opt = LocalImagePiAdic(UniversalMatrixConversion<mpq_class, T>(GramX), om,
-                             p, c, bounds.max_solution);
+      opt = LocalImagePiAdic(GramX, OmegaX, p, c, bounds.max_solution);
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
       os << "MULT_FACTOR: p=" << p << " pi-adic image "
          << (opt ? static_cast<long>(opt->size()) : -1L) << " elements\n";
 #endif
     }
     if (!opt) {
-      if (std::optional<size_t> fb = bounds_factor(int64_t(1) << 12, 100000)) {
+      if (std::optional<size_t> fb = bounds_factor(size_t(1) << 12, 100000)) {
         factor *= UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(*fb));
         continue;
       }
@@ -2171,7 +2184,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     if (!opt) {
       // the search is beyond its bounds: the bounds again, with the p-part
       // of D(N) allowed to be larger
-      if (std::optional<size_t> fb = bounds_factor(int64_t(1) << 17, 2000000)) {
+      if (std::optional<size_t> fb = bounds_factor(size_t(1) << 17, 2000000)) {
         factor *= UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(*fb));
         continue;
       }

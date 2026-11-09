@@ -52,7 +52,7 @@
 
 struct IsometryGlueBounds {
   // the elements of one primary part of D(L_1) (+) D(L_2)
-  int64_t max_module = 1 << 20;
+  size_t max_module = size_t(1) << 20;
   // the sigma-stable isotropic subgroups of one primary part
   size_t max_subgroup = 100000;
 };
@@ -146,7 +146,7 @@ GlueSubgroups(PrimaryQuadModule const &M, size_t r1, int64_t max_order,
   if (M.size() > bounds.max_module) {
     return {};
   }
-  size_t n_elt = static_cast<size_t>(M.size());
+  size_t n_elt = M.size();
   size_t r = M.rank();
   std::vector<ModuleElt> elts(n_elt);
   std::vector<int64_t> qval(n_elt);

@@ -5,6 +5,7 @@
 // clang-format off
 #include "CyclotomicHermitianMass.h"
 #include <algorithm>
+#include <limits>
 #include <optional>
 #include <random>
 #include <utility>
@@ -706,10 +707,25 @@ inline std::vector<int64_t> FqDecode(FiniteFieldModP const &F, int64_t c) {
   points each) and the remaining coordinates in base q.
  */
 inline size_t NumberProjectivePointsFq(int m, int64_t q) {
+  // the points are indexed by size_t: a count beyond it is refused, as in
+  // NumberProjectiveLines, rather than wrapped around
+  size_t const max_val = std::numeric_limits<size_t>::max();
+  size_t qs = static_cast<size_t>(q);
   size_t tot = 0, pw = 1;
   for (int i = 0; i < m; i++) {
+    if (tot > max_val - pw) {
+      std::cerr << "GENUS: |P^" << (m - 1) << "(F_" << q
+                << ")| overflows size_t\n";
+      throw TerminalException{1};
+    }
     tot += pw;
-    pw *= static_cast<size_t>(q);
+    if (i + 1 < m) {
+      if (pw > max_val / qs) {
+        std::cerr << "GENUS: " << q << "^" << (i + 1) << " overflows size_t\n";
+        throw TerminalException{1};
+      }
+      pw *= qs;
+    }
   }
   return tot;
 }

@@ -1331,6 +1331,12 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       IrreducibleType const &tp = gm.types[i_type];
       FiniteFieldModP F{p, tp.f, tp.mu, 1};
       for (int a = 0; a < tp.f; a++) {
+        // the elements of F_q are coded by integers below q
+        if (F.q > (int64_t(1) << 62) / p) {
+          std::cerr << "GENUS: the field F_" << p << "^" << tp.f
+                    << " is too large for the codes of its elements\n";
+          throw TerminalException{1};
+        }
         F.q *= p;
       }
       int mdim = static_cast<int>(tp.Phi.size());

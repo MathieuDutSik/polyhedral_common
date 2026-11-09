@@ -7,6 +7,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "factorizations.h"
+#include <cmath>
 #include <functional>
 #include <map>
 #include <optional>
@@ -255,6 +256,26 @@ SolutionsModP(ModMat const &A, int64_t p, size_t max_solution,
 }
 
 /*
+  The searches below keep the residues modulo p^K in machine integers and
+  form g A g^T exactly in __int128: this holds when m^2 max|A| p^{2K} stays
+  below 2^120. Beyond that they return nothing (the factor is then not
+  computed), rather than overflow.
+ */
+inline bool ResiduesFitInt128(ModMat const &A, int64_t p, int K) {
+  double bits = 0;
+  int64_t mx = 1;
+  for (auto const &row : A) {
+    for (int64_t x : row) {
+      mx = std::max(mx, (x >= 0) ? x : -x);
+    }
+  }
+  bits += std::log2(static_cast<double>(mx));
+  bits += 2.0 * K * std::log2(static_cast<double>(p));
+  bits += 2.0 * std::log2(static_cast<double>(A.size()) + 1);
+  return bits < 120.0;
+}
+
+/*
   The image of O(X_p) in GL_m(Z / p^c), X with Gram matrix A (integral);
   nothing beyond the bounds.
  */
@@ -263,6 +284,9 @@ LocalOrthogonalImage(ModMat const &A, int64_t p, int c, int e,
                      MultiplicityFactorBounds const &bounds) {
   int t = (p == 2) ? 1 : 0;
   int K = std::max(c + e + t, e + 2 * t + 1);
+  if (!ResiduesFitInt128(A, p, K)) {
+    return {};
+  }
   std::optional<std::vector<ModMat>> opt =
       SolutionsModP(A, p, bounds.max_solution, bounds.max_node);
   if (!opt) {
@@ -328,6 +352,9 @@ LocalStabilizerImage(ModMat const &A, std::vector<ModMat> const &basis,
   size_t dim = basis.size();
   int t = (p == 2) ? 1 : 0;
   int K = std::max(c + e + t, e + 2 * t + 1);
+  if (!ResiduesFitInt128(A, p, K)) {
+    return {};
+  }
   using Coord = std::vector<int64_t>;
   auto matrix_of = [&](Coord const &x) -> std::vector<std::vector<__int128>> {
     std::vector<std::vector<__int128>> g(m, std::vector<__int128>(m, 0));
