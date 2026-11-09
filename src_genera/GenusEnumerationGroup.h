@@ -758,7 +758,7 @@ inline int NextPrimeAfter(int q) {
   F_p gives no neighbour and is left out. The genus fixes the dimensions,
   so the first class gives them.
  */
-template <typename T, typename Tint = mpz_class>
+template <typename T, typename Tint>
 std::vector<int> OrderedNeighborPrimes(std::vector<MyMatrix<T>> const &ListP,
                                        int m, T const &det, bool scalar) {
   std::vector<MyMatrix<Tint>> ListP_int;
@@ -1510,7 +1510,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
   } else {
     std::vector<int> ListCandidate =
-        abelian ? OrderedNeighborPrimes(ListPairWork[0].second, m, det, scalar)
+        abelian ? OrderedNeighborPrimes<T, Tint>(ListPairWork[0].second, m,
+                                                  det, scalar)
                 : OrderedNeighborPrimesModule(ListPairWork[0].first,
                                               ListPairWork[0].second, m, det);
     std::vector<size_t> next_expand;
