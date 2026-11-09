@@ -5,6 +5,7 @@
 // clang-format off
 #include "CyclotomicHermitianMass.h"
 #include <map>
+#include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -35,12 +36,13 @@
   is twice that of K at q (from the characters), and inert otherwise.
   Unramified primes of K, including those over primes ramified in E / Q,
   get the local factor of HermitianLocalFactorUnramified, the different of
-  E / Q being (f'(theta_q)) locally. A ramified prime of K is treated when
-  it is the only prime of E over q and q is odd: the Jordan splitting over
-  E with v_P = v_q(N) / f, the residue field F_q[x] / g of order q^f for
-  the square classes, and the group orders of Hecke at q^{f_K}. The other
-  ramified cases (dyadic, or several primes of E over q) leave the mass
-  not computed.
+  E / Q being (f'(theta_q)) locally. A ramified prime P of K is treated
+  on the Hermitian form over E of vectors spanning X (x) Z_q over O_E (x)
+  Z_q, with v_P and the residues read through the idempotent of P
+  (LocalPrimeK), so whatever the other primes over q: for q odd the
+  Jordan splitting, the residue field F_q[x] / g of order q^f for the
+  square classes, and the group orders of Hecke at q^{f_K}; for q = 2 the
+  chain method with the relative different exponent.
  */
 
 // The distinct irreducible factors of f modulo q with their multiplicities.
@@ -515,44 +517,162 @@ AbelianJordanAtPrime(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
 }
 
 /*
-  The local factor at a ramified prime of K, P alone over q, q odd: the
-  formula of HermitianLocalFactorRamified with the residue field of order
-  q^f.
+  The arithmetic at a prime p = (q, g(theta)) of K, theta = theta_q with q
+  prime to the index: the elements of K are kept exactly on the powers of
+  theta, v_p(x) is v_q of the norm of eps x + 1 - eps over f (eps the
+  idempotent of p in Z_q[theta], known modulo q^N for an N raised until
+  the norm is nonzero modulo q^N), and the residue of x in F_q[x] / g is
+  read on eps x. This holds whatever the other primes over q are. The
+  same holds for a prime P of a CM field E, and LocalOKGram then gives the
+  Hermitian form over E (h linear in its first argument).
  */
-struct AbelianLocalGram {
+struct LocalPrimeK {
   CyclotomicField K;
-  int m;
-  std::vector<std::vector<ElemE>> H;
+  int64_t q;
+  PolyQ g;
+  int e;
+  int f_res;
+  int64_t qf;
+  ElemE pi;
+  std::map<int, PolyZ> eps;
 };
 
-// The Hermitian Gram matrix over E of an O_P-basis of X at the ramified
-// prime P alone over q, chosen among the standard vectors.
-inline AbelianLocalGram AbelianLocalHermitianGram(MyMatrix<mpq_class> const &B,
-                                                  LocalGenerator const &lg,
-                                                  AbelianPrime const &ap,
-                                                  int64_t q) {
+inline LocalPrimeK MakeLocalPrimeK(LocalGenerator const &lg, PolyQ const &g,
+                                   int e, int64_t q) {
+  LocalPrimeK P;
+  int deg = static_cast<int>(lg.f.size()) - 1;
+  P.K.d = 0;
+  P.K.deg = deg;
+  P.K.Phi = lg.f;
+  P.K.conj = lg.conj;
+  P.q = q;
+  P.g = g;
+  P.e = e;
+  P.f_res = static_cast<int>(g.size()) - 1;
+  P.qf = 1;
+  for (int i = 0; i < P.f_res; i++) {
+    if (P.qf > (int64_t(1) << 62) / q) {
+      std::cerr << "ABQUAD: the residue field of order " << q << "^"
+                << P.f_res << " is too large\n";
+      throw TerminalException{1};
+    }
+    P.qf *= q;
+  }
+  P.pi = ElemE(deg, mpq_class(0));
+  if (e == 1) {
+    P.pi[0] = mpq_class(static_cast<long>(q));
+  } else {
+    ElemE pw = EZetaPower(0, P.K);
+    for (size_t i = 0; i < g.size(); i++) {
+      for (int t = 0; t < deg; t++) {
+        P.pi[t] += mpq_class(static_cast<long>(g[i])) * pw[t];
+      }
+      pw = EMul(pw, EZetaPower(1, P.K), P.K);
+    }
+  }
+  return P;
+}
+
+inline PolyZ const &LocalEps(LocalPrimeK &P, int N) {
+  auto it = P.eps.find(N);
+  if (it == P.eps.end()) {
+    it = P.eps.emplace(N, AbelianPrimeIdempotentPoly(P.K.Phi, P.g, P.e, P.q, N))
+             .first;
+  }
+  return it->second;
+}
+
+// x = y / d with y in Z[theta] and d > 0
+inline std::pair<PolyZ, mpz_class> ClearDenominators(ElemE const &x) {
+  mpz_class d(1);
+  for (auto const &c : x) {
+    d = lcm(d, c.get_den());
+  }
+  PolyZ y;
+  for (auto const &c : x) {
+    mpq_class t = c * mpq_class(d);
+    y.push_back(t.get_num());
+  }
+  return {y, d};
+}
+
+inline int ValuationMpz(mpz_class x, int64_t q) {
+  int v = 0;
+  mpz_class qz(static_cast<long>(q));
+  while (x != 0 && x % qz == 0) {
+    x /= qz;
+    v++;
+  }
+  return v;
+}
+
+inline int LocalVal(ElemE const &x, LocalPrimeK &P) {
+  if (EIsZero(x)) {
+    return 1 << 28;
+  }
+  auto [y, d] = ClearDenominators(x);
+  int k = ValuationMpz(d, P.q);
+  int N = P.f_res * (P.e * k + 4) + 4;
+  while (true) {
+    mpz_class Q = PowInt(P.q, N);
+    PolyZ const &eps = LocalEps(P, N);
+    PolyZ w = PolyZReduce(PolyZMul(eps, y), P.K.Phi, Q);
+    for (size_t i = 0; i < eps.size(); i++) {
+      w[i] -= eps[i];
+    }
+    w[0] += 1;
+    w = PolyZReduce(w, P.K.Phi, Q);
+    ElemE we;
+    for (auto const &c : w) {
+      we.push_back(mpq_class(c));
+    }
+    mpq_class det = DeterminantMat(EMulMatrix(we, P.K));
+    mpz_class dn = det.get_num();
+    if (dn % Q != 0) {
+      int v = ValuationMpz(dn, P.q);
+      return v / P.f_res - P.e * k;
+    }
+    N *= 2;
+  }
+}
+
+// The residue in F_q[x] / g of x with v_p(x) >= 0.
+inline PolyQ LocalResidue(ElemE const &x, LocalPrimeK &P) {
+  auto [y, d] = ClearDenominators(x);
+  int k = ValuationMpz(d, P.q);
+  mpz_class qk = PowInt(P.q, k);
+  mpz_class Q = qk * mpz_class(static_cast<long>(P.q));
+  PolyZ z = PolyZReduce(PolyZMul(LocalEps(P, k + 1), y), P.K.Phi, Q);
+  mpz_class qz(static_cast<long>(P.q));
+  mpz_class dd = (d / qk) % qz;
+  int64_t inv = InvModQ(dd.get_si(), P.q);
+  PolyQ res;
+  for (auto const &c : z) {
+    if (c % qk != 0) {
+      std::cerr << "ABQUAD: the residue of a non integral element\n";
+      throw TerminalException{1};
+    }
+    mpz_class t = (c / qk) % qz;
+    res.push_back(MulModQ(t.get_si(), inv, P.q));
+  }
+  PolyTrim(res);
+  if (res.empty()) {
+    return {};
+  }
+  PolyQ r = PolyDivModQ(res, P.g, P.q).second;
+  PolyTrim(r);
+  return r;
+}
+
+/*
+  The Gram matrix over K of phi on m vectors of X spanning X (x) Z_q over
+  O_K (x) Z_q: standard vectors first, then small combinations.
+ */
+inline std::vector<std::vector<ElemE>>
+LocalOKGram(MyMatrix<mpq_class> const &B, LocalGenerator const &lg, int64_t q) {
   int r = B.rows();
   int deg = static_cast<int>(lg.f.size()) - 1;
   int m = r / deg;
-  int f_res = static_cast<int>(ap.g.size()) - 1;
-  CyclotomicField K;
-  K.d = 0;
-  K.deg = deg;
-  K.Phi = lg.f;
-  K.conj = lg.conj;
-  K.val_div = f_res;
-  // the traces of the powers of theta, and the dual basis
-  std::vector<mpq_class> pt = PowerTraces(lg.f, 2 * deg);
-  MyMatrix<mpq_class> T(deg, deg);
-  for (int s2 = 0; s2 < deg; s2++) {
-    for (int t = 0; t < deg; t++) {
-      T(s2, t) = pt[s2 + t];
-    }
-  }
-  MyMatrix<mpq_class> Tinv = Inverse(T);
-  // an O_P-basis among the standard vectors: their O_P / P-spans
-  // independent modulo pi X, the residue field having degree f_res
-  MyMatrix<mpq_class> Pi = PolyOfMatrixQ(ap.g, lg.S);
   mpz_class qz(static_cast<long>(q));
   auto red = [&](mpq_class const &x) -> int64_t {
     mpz_class num = x.get_num() % qz;
@@ -565,49 +685,67 @@ inline AbelianLocalGram AbelianLocalHermitianGram(MyMatrix<mpq_class> const &B,
     }
     return MulModQ(num.get_si(), InvModQ(den.get_si(), q), q);
   };
-  std::vector<std::vector<int64_t>> rows;
-  for (int i = 0; i < r; i++) {
-    std::vector<int64_t> row(r);
-    for (int j = 0; j < r; j++) {
-      row[j] = red(Pi(i, j));
-    }
-    rows.push_back(row);
-  }
-  int base_rank = RankModQ(rows, q);
   std::vector<MyMatrix<mpq_class>> Spow{IdentityMat<mpq_class>(r)};
   for (int t = 1; t < deg; t++) {
     Spow.push_back(Spow.back() * lg.S);
   }
-  std::vector<int> chosen;
-  std::vector<std::vector<int64_t>> acc = rows;
-  for (int k = 0; k < r && static_cast<int>(chosen.size()) < m; k++) {
-    std::vector<std::vector<int64_t>> test = acc;
-    for (int t = 0; t < f_res; t++) {
+  auto orbit_rows = [&](MyVector<mpq_class> const &v) {
+    std::vector<std::vector<int64_t>> rows;
+    for (int t = 0; t < deg; t++) {
+      MyVector<mpq_class> w = Spow[t].transpose() * v;
       std::vector<int64_t> row(r);
       for (int j = 0; j < r; j++) {
-        row[j] = red(Spow[t](k, j));
+        row[j] = red(w(j));
       }
+      rows.push_back(row);
+    }
+    return rows;
+  };
+  std::vector<MyVector<mpq_class>> chosen;
+  std::vector<std::vector<int64_t>> acc;
+  auto try_add = [&](MyVector<mpq_class> const &v) -> void {
+    std::vector<std::vector<int64_t>> test = acc;
+    for (auto &row : orbit_rows(v)) {
       test.push_back(row);
     }
-    if (RankModQ(test, q) ==
-        base_rank + (static_cast<int>(chosen.size()) + 1) * f_res) {
-      chosen.push_back(k);
+    if (RankModQ(test, q) == static_cast<int>(test.size())) {
+      chosen.push_back(v);
       acc = test;
     }
+  };
+  for (int k = 0; k < r && static_cast<int>(chosen.size()) < m; k++) {
+    MyVector<mpq_class> v = ZeroVector<mpq_class>(r);
+    v(k) = 1;
+    try_add(v);
+  }
+  uint64_t seed = 1;
+  for (int it = 0; it < 1000 && static_cast<int>(chosen.size()) < m; it++) {
+    MyVector<mpq_class> v = ZeroVector<mpq_class>(r);
+    for (int j = 0; j < r; j++) {
+      seed = seed * 6364136223846793005ULL + 1442695040888963407ULL;
+      v(j) = static_cast<long>((seed >> 33) % 5) - 2;
+    }
+    try_add(v);
   }
   if (static_cast<int>(chosen.size()) != m) {
-    std::cerr << "ABHERM: no O_P-basis found\n";
+    std::cerr << "ABQUAD: no local O_K-basis found\n";
     throw TerminalException{1};
   }
+  std::vector<mpq_class> pt = PowerTraces(lg.f, 2 * deg);
+  MyMatrix<mpq_class> T(deg, deg);
+  for (int a = 0; a < deg; a++) {
+    for (int b = 0; b < deg; b++) {
+      T(a, b) = pt[a + b];
+    }
+  }
+  MyMatrix<mpq_class> Tinv = Inverse(T);
   std::vector<std::vector<ElemE>> H(m, std::vector<ElemE>(m));
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
       ElemE val(deg, mpq_class(0));
       for (int t = 0; t < deg; t++) {
-        mpq_class bt(0);
-        for (int u = 0; u < r; u++) {
-          bt += Spow[t](chosen[i], u) * B(u, chosen[j]);
-        }
+        MyVector<mpq_class> w = Spow[t].transpose() * chosen[i];
+        mpq_class bt = w.dot(B * chosen[j]);
         for (int s2 = 0; s2 < deg; s2++) {
           val[s2] += bt * Tinv(t, s2);
         }
@@ -615,7 +753,50 @@ inline AbelianLocalGram AbelianLocalHermitianGram(MyMatrix<mpq_class> const &B,
       H[i][j] = val;
     }
   }
-  return {K, m, H};
+  return H;
+}
+
+// x pi^{-k}
+inline ElemE LocalShift(ElemE x, int k, LocalPrimeK const &P) {
+  if (k > 0) {
+    ElemE pinv = EInv(P.pi, P.K);
+    for (int i = 0; i < k; i++) {
+      x = EMul(x, pinv, P.K);
+    }
+  }
+  for (int i = 0; i < -k; i++) {
+    x = EMul(x, P.pi, P.K);
+  }
+  return x;
+}
+
+
+/*
+  The local factor at a ramified prime P of K over the odd prime q: the
+  formula of HermitianLocalFactorRamified with the residue field of P, of
+  order q^f. The Hermitian Gram matrix over E is that of m vectors of X
+  spanning X (x) Z_q over O_E (x) Z_q, and v_P and the residues are those
+  of LocalPrimeK, so P need not be alone over q.
+ */
+struct AbelianLocalGram {
+  CyclotomicField K;
+  int m;
+  std::vector<std::vector<ElemE>> H;
+  std::shared_ptr<LocalPrimeK> P;
+};
+
+inline AbelianLocalGram AbelianLocalHermitianGram(MyMatrix<mpq_class> const &B,
+                                                  LocalGenerator const &lg,
+                                                  AbelianPrime const &ap,
+                                                  int64_t q) {
+  std::shared_ptr<LocalPrimeK> P =
+      std::make_shared<LocalPrimeK>(MakeLocalPrimeK(lg, ap.g, ap.e, q));
+  CyclotomicField K = P->K;
+  K.val_div = static_cast<int>(ap.g.size()) - 1;
+  K.valuation = [P](ElemE const &x) -> int { return LocalVal(x, *P); };
+  std::vector<std::vector<ElemE>> H = LocalOKGram(B, lg, q);
+  int m = static_cast<int>(H.size());
+  return {K, m, H, P};
 }
 
 inline mpq_class AbelianLocalFactorRamified(MyMatrix<mpq_class> const &B,
@@ -626,18 +807,6 @@ inline mpq_class AbelianLocalFactorRamified(MyMatrix<mpq_class> const &B,
   int m = alg.m;
   int deg = K.deg;
   std::vector<std::vector<ElemE>> const &H = alg.H;
-  mpz_class qz(static_cast<long>(q));
-  auto red = [&](mpq_class const &x) -> int64_t {
-    mpz_class num = x.get_num() % qz;
-    mpz_class den = x.get_den() % qz;
-    if (num < 0) {
-      num += qz;
-    }
-    if (den < 0) {
-      den += qz;
-    }
-    return MulModQ(num.get_si(), InvModQ(den.get_si(), q), q);
-  };
   std::map<int, std::pair<int, ElemE>> blocks;
   for (auto &kv : HermitianJordanSplit(H, K, q)) {
     int rk = 0;
@@ -670,12 +839,7 @@ inline mpq_class AbelianLocalFactorRamified(MyMatrix<mpq_class> const &B,
   ElemE pinv = EInv(pipibar, K);
   // the square class of a P-unit in the residue field F_q[x] / g
   auto is_square = [&](ElemE const &u) -> int {
-    PolyQ uq;
-    for (auto const &x : u) {
-      uq.push_back(red(x));
-    }
-    PolyQ ur = PolyDivModQ(uq, ap.g, q).second;
-    PolyTrim(ur);
+    PolyQ ur = LocalResidue(u, *alg.P);
     if (ur.empty()) {
       return 0;
     }
@@ -724,8 +888,7 @@ inline mpq_class AbelianLocalFactorRamified(MyMatrix<mpq_class> const &B,
 }
 
 /*
-  The dyadic ramified prime P of E over the prime p of K, P alone over 2,
-  following HermitianLocalFactorDyadic with what was particular to Q(zeta_{2^a})
+  The dyadic ramified prime P of E over the prime p of K, following HermitianLocalFactorDyadic with what was particular to Q(zeta_{2^a})
   made general: the exponent d of the relative different of E / K at P
   (2 there), which is also the conductor exponent of E_P / K_p, so that
   v_p(Tr(c O_E)) = floor((v_P(c) + d) / 2), a unit u of K is a norm iff
@@ -966,8 +1129,8 @@ inline bool GDIsLocallyIsometric(std::vector<GDSymbolEntry> const &S1,
 }
 
 /*
-  The local factor at the dyadic ramified prime P alone over 2, of
-  relative different exponent d: the chain method of
+  The local factor at a dyadic ramified prime P, of relative different
+  exponent d: the chain method of
   HermitianLocalFactorDyadic over the residue field of P.
  */
 inline mpq_class AbelianLocalFactorDyadic(MyMatrix<mpq_class> const &B,
@@ -1176,16 +1339,16 @@ JordanFromIdempotent(MyMatrix<mpq_class> const &B, MyMatrix<mpq_class> const &E,
 }
 
 /*
-  The local factors at a prime q unramified in E / Q that divides every
-  index [O_E : Z[theta]] (a common index divisor, as 2 in Q(sqrt 5,
-  sqrt -7)): the idempotents of the g primes over q are obtained by
-  refining those of several elements of O_E, each lifted on X by E <- 3 E^2
-  - 2 E^3 modulo q^N; the uniformizer is q and the different is a unit.
+  The idempotents on X of the primes over q of a field given by the
+  actions Omega of a Z-basis of its ring of integers, q unramified: those
+  of several elements, lifted by E <- 3 E^2 - 2 E^3 modulo q^N, N =
+  v_q(det B) + 6, and refined by their products until there are n_primes
+  of them (fewer when the refinement does not get there).
  */
-inline std::optional<mpq_class>
-UnramifiedFactorsByIdempotents(MyMatrix<mpq_class> const &B,
-                               std::vector<MyMatrix<mpq_class>> const &Omega,
-                               int64_t q, PrimeDecompositionData const &dE) {
+inline std::vector<MyMatrix<mpq_class>>
+PrimeIdempotentsByRefinement(MyMatrix<mpq_class> const &B,
+                             std::vector<MyMatrix<mpq_class>> const &Omega,
+                             int64_t q, int64_t n_primes) {
   int r = B.rows();
   int deg = static_cast<int>(Omega.size());
   int vdet = ValuationQRational(DeterminantMat(B), q);
@@ -1231,8 +1394,8 @@ UnramifiedFactorsByIdempotents(MyMatrix<mpq_class> const &B,
     return true;
   };
   std::vector<MyMatrix<mpq_class>> idem{IdentityMat<mpq_class>(r)};
-  for (int i0 = 0; i0 < deg && static_cast<int64_t>(idem.size()) < dE.g; i0++) {
-    for (int i1 = 0; i1 < deg && static_cast<int64_t>(idem.size()) < dE.g;
+  for (int i0 = 0; i0 < deg && static_cast<int64_t>(idem.size()) < n_primes; i0++) {
+    for (int i1 = 0; i1 < deg && static_cast<int64_t>(idem.size()) < n_primes;
          i1++) {
       MyMatrix<mpq_class> S = Omega[i0] + Omega[i1] * mpq_class(i1 + 1);
       KrylovData kd = KrylovMinimalPolynomial(S);
@@ -1272,6 +1435,53 @@ UnramifiedFactorsByIdempotents(MyMatrix<mpq_class> const &B,
       idem = next;
     }
   }
+  return idem;
+}
+
+/*
+  The local factors at a prime q unramified in E / Q that divides every
+  index [O_E : Z[theta]] (a common index divisor, as 2 in Q(sqrt 5,
+  sqrt -7)): the idempotents of the g primes over q are obtained by
+  refining those of several elements of O_E, each lifted on X by E <- 3 E^2
+  - 2 E^3 modulo q^N; the uniformizer is q and the different is a unit.
+ */
+inline std::optional<mpq_class>
+UnramifiedFactorsByIdempotents(MyMatrix<mpq_class> const &B,
+                               std::vector<MyMatrix<mpq_class>> const &Omega,
+                               int64_t q, PrimeDecompositionData const &dE) {
+  int r = B.rows();
+  int vdet = ValuationQRational(DeterminantMat(B), q);
+  int N = vdet + 6;
+  mpz_class Q = PowInt(q, N);
+  mpz_class qz(static_cast<long>(q));
+  auto reduce_mod = [&](MyMatrix<mpq_class> M, mpz_class const &mod) {
+    for (int i = 0; i < M.rows(); i++) {
+      for (int j = 0; j < M.cols(); j++) {
+        mpz_class num = M(i, j).get_num(), den = M(i, j).get_den();
+        mpz_class inv;
+        mpz_invert(inv.get_mpz_t(), den.get_mpz_t(), mod.get_mpz_t());
+        mpz_class v = (num * inv) % mod;
+        if (v < 0) {
+          v += mod;
+        }
+        M(i, j) = mpq_class(v);
+      }
+    }
+    return M;
+  };
+  auto is_zero_mod_q = [&](MyMatrix<mpq_class> const &M) -> bool {
+    MyMatrix<mpq_class> R = reduce_mod(M, qz);
+    for (int i = 0; i < R.rows(); i++) {
+      for (int j = 0; j < R.cols(); j++) {
+        if (R(i, j) != 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+  std::vector<MyMatrix<mpq_class>> idem =
+      PrimeIdempotentsByRefinement(B, Omega, q, dE.g);
   if (static_cast<int64_t>(idem.size()) != dE.g) {
     return {};
   }
@@ -1381,15 +1591,13 @@ HermitianMassAbelianLattice(MyMatrix<mpq_class> const &B,
       done.insert(i);
       done.insert(aps[i].conj_index);
       if (aps[i].type == 2) {
-        if (aps.size() > 1) {
-          return {};
-        }
         if (q == 2) {
-          // d = v_p(d(E / K)) = (v_2 |disc E| - 2 v_2 |disc K|) / f_K, p
-          // alone over 2
+          // d = v_p(d(E / K)): the g primes over 2 are all ramified over
+          // K, so v_2 |disc E| - 2 v_2 |disc K| = g f_K d
           int vE = DiscriminantValuationCharacters(G, XE, 2);
           int vK = DiscriminantValuationCharacters(G, XK, 2);
-          int dexp = (vE - 2 * vK) / aps[i].f_K;
+          int g_primes = static_cast<int>(aps.size());
+          int dexp = (vE - 2 * vK) / (g_primes * aps[i].f_K);
           res *= AbelianLocalFactorDyadic(B, *lg, aps[i], dexp);
         } else {
           res *= AbelianLocalFactorRamified(B, *lg, aps[i], q);

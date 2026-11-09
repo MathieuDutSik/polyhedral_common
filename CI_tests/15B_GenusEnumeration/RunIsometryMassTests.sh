@@ -192,6 +192,13 @@ hab_case s5m7r3 35 1,4,9,11,16,29 257985
 hab_case q2r3 8 1,3 564375/32
 hab_case q6r2 24 1,5,7,11 16
 hab_case i5r2 20 1,9 300
+# ramified primes of K that are not alone over q: 11, 3 and 19 split in
+# K and ramify in E, and 2 splits in Q(sqrt 17) and ramifies in E
+hab_case s5m11 55 4 5/12
+hab_case s13m3 39 4 5/9
+hab_case s17m1 68 9 3/4
+hab_case s17m2 136 9,19 1950
+hab_case s5m19 95 4 500
 # The local masses (the products of the local factors) of quadratic
 # lattices over totally real abelian fields, as given by Hecke.jl
 # (local_mass): odd primes ramified or split, the dyadic primes unramified
@@ -223,6 +230,12 @@ quad_case z32pm3 32 1 9375024
 quad_case s6m2 24 5,19 1/4
 quad_case s7m3 28 3,9 155370096
 quad_case s6m2b 24 5,19 1/8
+# 2 splits completely in Q(sqrt 17, sqrt 41) and Q(sqrt 17, sqrt 33): a
+# common index divisor, the idempotents refined from several elements
+quad_case s17s41m2 697 2,21 1
+quad_case s17s41m3 697 2,21 27720225/16
+quad_case s17s33m2 561 2,25 1/16
+quad_case s17s33m3 561 2,25 3645/16
 # The masses of quadratic lattices over totally real abelian fields, as
 # given by Hecke.jl (mass), with E = K(sqrt D) for the even ranks.
 quadmass_case() {

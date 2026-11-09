@@ -7,6 +7,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "factorizations.h"
+#include <functional>
 #include <optional>
 #include <cstdint>
 #include <numeric>
@@ -1295,6 +1296,8 @@ struct CyclotomicField {
   // v_P = v_q(N(a)) / val_div at a prime P alone over q, of residue
   // degree val_div
   int val_div = 1;
+  // when set, v_P (any prime P, see LocalPrimeK)
+  std::function<int(std::vector<mpq_class> const &)> valuation;
 };
 
 inline ElemE EReduce(std::vector<mpq_class> a, CyclotomicField const &K) {
@@ -1400,6 +1403,9 @@ inline ElemE EInv(ElemE const &a, CyclotomicField const &K) {
 inline int EValuation(ElemE const &a, CyclotomicField const &K, int64_t q) {
   if (EIsZero(a)) {
     return 1 << 28;
+  }
+  if (K.valuation) {
+    return K.valuation(a);
   }
   return ValuationQRational(DeterminantMat(EMulMatrix(a, K)), q) / K.val_div;
 }

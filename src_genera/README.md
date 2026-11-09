@@ -186,10 +186,14 @@ lattice over it, given by its trace Gram matrix and the actions of a
 Z-basis of O_E (`AbelianHermitianMass.h`): at each prime the machinery of
 the cyclotomic case runs on a generator of O_E with the prime not dividing
 its index, or, at a common index divisor unramified in E, on idempotents
-refined from several elements; the ramified primes are treated over a
-residue field of any degree, the dyadic one with its relative different
-exponent. Checked against Hecke.jl on 86 lattices over Q(sqrt -D),
-Q(sqrt 5, sqrt -7), Q(sqrt 5, sqrt -3), Q(i, sqrt 5) and Q(zeta_7)^+(sqrt -3).
+refined from several elements; the ramified primes of K are treated over
+a residue field of any degree, with the valuations and residues read
+through their idempotents, so also when they are not alone over q, the
+dyadic ones with the relative different exponent. Checked against
+Hecke.jl on 116 lattices over Q(sqrt -D), Q(sqrt 5, sqrt -7),
+Q(sqrt 5, sqrt -3), Q(i, sqrt 5), Q(zeta_7)^+(sqrt -3), and, for the
+primes not alone, Q(sqrt 5, sqrt -11), Q(sqrt 5, sqrt -19),
+Q(sqrt 13, sqrt -3), Q(sqrt 17, i) and Q(sqrt 17, sqrt -2).
 
     GENUS_IsometryMass quadab [n] [h1,h2,...] [m] [square|g1,g2,...]
     GENUS_IsometryMass quadablocal [Gram] [Omega] [n] [h1,h2,...]
@@ -205,10 +209,13 @@ being read through its idempotent: the odd primes by the Jordan
 decomposition, the dyadic primes unramified over 2 by Cho's formula, the
 dyadic primes ramified over 2 by the maximal and unimodular formulas or
 the chain of integral overlattices with Kirschmer's local isometry test.
+A common index divisor unramified in K with primes of residue degree 1
+(2 in Q(sqrt 17, sqrt 41)) is treated on the idempotents refined from
+several elements, the local lattice being then a Z_q-lattice.
 For m even the discriminant d is tested exactly for being a square, and
 E = K(sqrt d) is taken as K(sqrt D) for a fundamental discriminant D
 (then abelian); otherwise the mass is not computed. Checked against
-Hecke.jl on 698 local factors over 13 fields and the masses of 40
+Hecke.jl on 753 local factors over 15 fields and the masses of 40
 lattices.
 
 With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabiliser of L in
