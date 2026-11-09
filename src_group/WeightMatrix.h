@@ -234,7 +234,9 @@ public:
       f1(iRow);
       size_t last_idx = weightmatrix_last_idx<is_symmetric>(nbRow, iRow);
       for (size_t iCol = 0; iCol < last_idx; iCol++) {
-        T val = f2(iCol);
+        // A reference: an f2 returning its value by reference is not copied,
+        // one returning by value binds a temporary.
+        T const &val = f2(iCol);
         Tidx_value &idx = ValueMap[val];
         if (idx == 0) {
           idxWeight++;

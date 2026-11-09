@@ -2613,7 +2613,8 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
     }
   };
   std::vector<T> ListScal(nbMat);
-  auto f2 = [&](size_t iCol) -> std::vector<T> {
+  // Returned by reference: the weight matrix copies it only for a new weight.
+  auto f2 = [&](size_t iCol) -> std::vector<T> const & {
     for (size_t iMat = 0; iMat < nbMat; iMat++) {
       ListScal[iMat] = ListBlock[iMat](cur_row - b0, iCol);
     }
