@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "Timings.h"
+#include "MAT_MatrixModReconstruction.h"
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -802,12 +803,52 @@ template <typename T> struct FindTransformationSolver {
   // it need not be representable even when every transformation is.
   MyMatrix<Tfield> eMat1inv;
   bool full_rank;
+  /*
+    The rows selected modulo a prime, for an integral family over a rational
+    type: rows independent modulo p are independent over Q, so a full rank
+    selection modulo p is a valid one, and it costs machine arithmetic
+    instead of an elimination over the field. A prefix of the family is
+    tried first, the independent rows being usually among the first ones,
+    then the whole family. Nothing when the family is not integral or does
+    not reach full rank modulo p (which happens for a prime dividing a
+    minor, or for a family of smaller rank): the exact selection decides.
+   */
+  std::optional<std::vector<int>> select_rows_mod_p() const {
+    if constexpr (is_implementation_of_Q<T>::value) {
+      using Tring = typename underlying_ring<T>::ring_type;
+      int nbRow = EXT1.rows();
+      int nbCol = EXT1.cols();
+      Tring prime(2147483647);
+      int prefix = std::min(nbRow, 4 * nbCol);
+      for (int len : {prefix, nbRow}) {
+        MyMatrix<T> Sub = EXT1.topRows(len);
+        if (!IsIntegralMatrix(Sub)) {
+          return {};
+        }
+        MyMatrix<Tring> Sub_mod = ModuloReductionMatrix<Tring, Tring>(
+            UniversalMatrixConversion<Tring, T>(Sub), prime);
+        SelectionRowColData data = SelectRowColDataMatMod(Sub_mod, prime);
+        if (data.TheRank == static_cast<size_t>(nbCol)) {
+          return data.ListRowSelect;
+        }
+        if (len == nbRow) {
+          break;
+        }
+      }
+    }
+    return {};
+  }
   FindTransformationSolver(MyMatrix<T> const &EXT1) : EXT1(EXT1) {
     int nbRow = EXT1.rows();
     int nbCol = EXT1.cols();
+    std::optional<std::vector<int>> opt_select = select_rows_mod_p();
+    if (opt_select) {
+      ListRowSelect = std::move(*opt_select);
+    }
     RankTool<Tfield> tool(nbCol);
     MyVector<Tfield> V(nbCol);
-    for (int iRow = 0; iRow < nbRow && tool.get_rank() < nbCol; iRow++) {
+    for (int iRow = 0; iRow < nbRow && !opt_select && tool.get_rank() < nbCol;
+         iRow++) {
       for (int iCol = 0; iCol < nbCol; iCol++) {
         V(iCol) = UniversalScalarConversion<Tfield, T>(EXT1(iRow, iCol));
       }
