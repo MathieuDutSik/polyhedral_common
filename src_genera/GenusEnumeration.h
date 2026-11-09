@@ -782,11 +782,8 @@ bool IsScalarModP(MyMatrix<Tint> const &eGen, int p) {
 
 template <typename Tint>
 ProjectiveLineSelection
-ProjectiveLineOrbitRepresentatives(int n, int p,
-                                   std::vector<MyMatrix<Tint>> const &ListGen) {
-#ifdef SANITY_CHECK_GENUS_ENUMERATION
-  CheckProjectiveLineIndexing(n, p);
-#endif
+ProjectiveLineOrbitRepresentativesGeneric(
+    int n, int p, std::vector<MyMatrix<Tint>> const &ListGen) {
   size_t n_line = NumberProjectiveLines(n, p);
   // the generators as reduced integer matrices mod p, scalars dropped
   std::vector<std::vector<int>> ListGenRed;
@@ -844,6 +841,138 @@ ProjectiveLineOrbitRepresentatives(int n, int p,
     ListOrbitSize.push_back(orbit_size);
   }
   return {false, n_line, std::move(ListRepr), std::move(ListOrbitSize)};
+}
+
+/*
+  The same at p = 2, for n <= 31, with the points as bitmasks. A point of
+  P^{n-1}(F_2) is a nonzero vector of F_2^n, the bit i of the mask being its
+  coordinate i, and the generator g acts on it as the row vector v -> v g.
+  The image is the XOR of the rows of g mod 2 over the bits of v, read with
+  one table of 256 entries per byte of the mask and per generator: ceil(n/8)
+  lookups per image, no allocation and no conversion. The generic code
+  builds the vector of every point and multiplies it in n^2 operations; at
+  rank 19 the orbits took 82% of the full expansions of a genus of 28 528
+  classes. Only the representatives are converted to the indices of
+  ProjectiveLineOfIndex. The orbits are those of the generic code, possibly
+  with other representatives and in another order.
+ */
+template <typename Tint>
+ProjectiveLineSelection
+ProjectiveLineOrbitRepresentativesP2(int n,
+                                     std::vector<MyMatrix<Tint>> const &ListGen) {
+  size_t n_line = NumberProjectiveLines(n, 2);
+  int n_byte = (n + 7) / 8;
+  // per generator, per byte of the mask, the XOR of the rows of the bits
+  std::vector<std::vector<uint32_t>> ListTable;
+  for (auto &eGen : ListGen) {
+    if (IsScalarModP(eGen, 2)) {
+      continue;
+    }
+    std::vector<uint32_t> rows(n, 0);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (ResidueModP(eGen(i, j), 2) != 0) {
+          rows[i] |= uint32_t(1) << j;
+        }
+      }
+    }
+    std::vector<uint32_t> table(n_byte * 256, 0);
+    for (int b = 0; b < n_byte; b++) {
+      for (int x = 1; x < 256; x++) {
+        // x with its lowest set bit removed, plus the row of that bit
+        int low = __builtin_ctz(static_cast<unsigned>(x));
+        int i = 8 * b + low;
+        uint32_t row = (i < n) ? rows[i] : 0;
+        table[b * 256 + x] = table[b * 256 + (x & (x - 1))] ^ row;
+      }
+    }
+    ListTable.push_back(std::move(table));
+  }
+  if (ListTable.empty()) {
+    return {true, n_line, {}, {}};
+  }
+  auto image = [&](uint32_t mask, std::vector<uint32_t> const &table)
+      -> uint32_t {
+    uint32_t w = 0;
+    for (int b = 0; b < n_byte; b++) {
+      w ^= table[b * 256 + ((mask >> (8 * b)) & 0xff)];
+    }
+    return w;
+  };
+  // visited[mask], for the masks 1 .. 2^n - 1
+  uint32_t n_mask = static_cast<uint32_t>((uint64_t(1) << n) - 1);
+  std::vector<uint64_t> visited((uint64_t(n_mask) >> 6) + 1, 0);
+  auto is_visited = [&](uint32_t m) -> bool {
+    return (visited[m >> 6] >> (m & 63)) & 1;
+  };
+  auto set_visited = [&](uint32_t m) -> void {
+    visited[m >> 6] |= uint64_t(1) << (m & 63);
+  };
+  std::vector<size_t> ListRepr;
+  std::vector<size_t> ListOrbitSize;
+  std::vector<uint32_t> ListActive;
+  std::vector<int> v(n);
+  for (uint32_t m0 = 1; m0 <= n_mask; m0++) {
+    if (is_visited(m0)) {
+      continue;
+    }
+    for (int i = 0; i < n; i++) {
+      v[i] = (m0 >> i) & 1;
+    }
+    ListRepr.push_back(IndexOfProjectiveLine(v, 2));
+    set_visited(m0);
+    ListActive.push_back(m0);
+    size_t orbit_size = 0;
+    while (!ListActive.empty()) {
+      uint32_t m = ListActive.back();
+      ListActive.pop_back();
+      orbit_size++;
+      for (auto &table : ListTable) {
+        uint32_t img = image(m, table);
+        if (!is_visited(img)) {
+          set_visited(img);
+          ListActive.push_back(img);
+        }
+      }
+    }
+    ListOrbitSize.push_back(orbit_size);
+  }
+  return {false, n_line, std::move(ListRepr), std::move(ListOrbitSize)};
+}
+
+template <typename Tint>
+ProjectiveLineSelection
+ProjectiveLineOrbitRepresentatives(int n, int p,
+                                   std::vector<MyMatrix<Tint>> const &ListGen) {
+#ifdef SANITY_CHECK_GENUS_ENUMERATION
+  CheckProjectiveLineIndexing(n, p);
+#endif
+  if (p != 2 || n > 31) {
+    return ProjectiveLineOrbitRepresentativesGeneric<Tint>(n, p, ListGen);
+  }
+  ProjectiveLineSelection sel = ProjectiveLineOrbitRepresentativesP2<Tint>(n, ListGen);
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE
+  std::cerr << "GENUS: SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE, the orbits "
+               "at p=2 against the generic code\n";
+  ProjectiveLineSelection gen =
+      ProjectiveLineOrbitRepresentativesGeneric<Tint>(n, p, ListGen);
+  std::vector<size_t> sz1, sz2;
+  for (size_t i = 0; i < sel.size(); i++) {
+    sz1.push_back(sel.orbit_size(i));
+  }
+  for (size_t i = 0; i < gen.size(); i++) {
+    sz2.push_back(gen.orbit_size(i));
+  }
+  std::sort(sz1.begin(), sz1.end());
+  std::sort(sz2.begin(), sz2.end());
+  if (sel.all != gen.all || sz1 != sz2) {
+    std::cerr << "GENUS: the orbits at p=2 differ from the generic ones: "
+              << sz1.size() << " against " << sz2.size() << " orbits\n";
+    throw TerminalException{1};
+  }
+  std::cerr << "GENUS: SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE, done\n";
+#endif
+  return sel;
 }
 
 /*
