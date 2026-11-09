@@ -1062,6 +1062,33 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
       P_Z(i, j) = UniversalScalarConversion<Tint, T>((*opt)(j));
     }
   }
+  // R: an integral right inverse of P_Z, R P_Z = I, one solve per unit
+  // vector. a R is then an integral preimage of a. Any preimage serves: the
+  // preimages of a form one coset of P1, the kernel of the projection on Z^n,
+  // and the lifts below depend on that coset only (the chamber works modulo
+  // P1, and the closest vectors of the coset do not depend on the
+  // representative).
+  MyMatrix<Tint> R(nc, n);
+  for (int j = 0; j < nc; j++) {
+    MyVector<Tint> e_j = ZeroVector<Tint>(nc);
+    e_j(j) = 1;
+    std::optional<MyVector<Tint>> opt = SolutionIntMat(P_Z, e_j);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+    if (!opt) {
+      std::cerr << "IVF: inner_span, the projection is not onto the "
+                << "projection lattice\n";
+      throw TerminalException{1};
+    }
+#endif
+    for (int i = 0; i < n; i++) {
+      R(j, i) = (*opt)(i);
+    }
+  }
+  // The lift a L2basis = a B2int / mult is integral when mult divides
+  // a B2int, which is tested over the ring.
+  Tint mult = UniversalScalarConversion<Tint, T>(fr.TheMult);
+  MyMatrix<Tint> B2int_tr = B2int.transpose();
+  MyMatrix<Tint> R_tr = R.transpose();
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   os << "|IVF: inner_span n=" << n << ", projection|=" << time << "\n";
 #endif
@@ -1081,24 +1108,31 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
   os << "|IVF: inner_span n=" << n << ", recursion|=" << time << "\n";
 #endif
   for (auto &a : rec2) {
-    MyVector<T> a_T = UniversalVectorConversion<T, Tint>(a);
-    MyVector<T> aL = L2basis.transpose() * a_T;
-    if (IsIntegralVector(aL)) {
+    MyVector<Tint> aB = B2int_tr * a;
+    bool is_integral = true;
+    for (int i = 0; i < n && is_integral; i++) {
+      if (ResInt(aB(i), mult) != 0) {
+        is_integral = false;
+      }
+    }
+    if (is_integral) {
       // The lift already lies in Z^n: it is a characteristic vector as is.
-      cvL.push_back(UniversalVectorConversion<Tint, T>(aL));
+      MyVector<Tint> aL(n);
+      for (int i = 0; i < n; i++) {
+        aL(i) = aB(i) / mult;
+      }
+      cvL.push_back(aL);
       continue;
     }
     // vL: an actual element of Z^n projecting to a; its minimal-norm coset
     // representatives modulo P1 are the lifts we add.
-    std::optional<MyVector<Tint>> vL_opt = SolutionIntMat(P_Z, a);
+    MyVector<Tint> vL = R_tr * a;
 #ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
-    if (!vL_opt) {
-      std::cerr << "IVF: inner_span, no integral preimage of a projection "
-                << "characteristic vector\n";
+    if (P_Z.transpose() * vL != a) {
+      std::cerr << "IVF: inner_span, vL is not a preimage of a\n";
       throw TerminalException{1};
     }
 #endif
-    MyVector<Tint> const &vL = *vL_opt;
     if (chamber != nullptr) {
       for (auto &w : (*chamber)(vL, P1reps)) {
         cvL.push_back(w);
