@@ -2236,13 +2236,59 @@ AbelianQuadraticExtensionField(MyMatrix<T> const &B,
   return AbelianCMField{N, cands[0]};
 }
 
+/*
+  The evaluation of L(1 - r, chi_{E/K}) when E is not abelian
+  (QuadraticHeckeL.h): Mpfr rounds an MPFR value checked at two
+  precisions, Arb moreover certifies the integer with Arb balls (proven
+  error bounds, about twice the time). Arb needs a build with flint.
+ */
+enum class QuadLValueMethod { Mpfr, Arb };
+
+inline QuadLValueMethod ParseQuadLValueMethod(std::string const &s) {
+  if (s == "mpfr") {
+    return QuadLValueMethod::Mpfr;
+  }
+  if (s == "arb") {
+#ifdef ENABLE_FLINT_SUPPORT
+    return QuadLValueMethod::Arb;
+#else
+    std::cerr << "ABQUAD: lvalue=arb needs flint, this program is built "
+                 "without flint (make ENABLE_FLINT_SUPPORT=1)\n";
+    throw TerminalException{1};
+#endif
+  }
+  std::cerr << "ABQUAD: the L-value method " << s
+            << " is not mpfr or arb\n";
+  throw TerminalException{1};
+}
+
+/*
+  The option lvalue=mpfr / lvalue=arb of the command line programs, found
+  anywhere among the arguments and removed from them; mpfr when absent.
+ */
+inline QuadLValueMethod ExtractQuadLValueOption(int &argc, char *argv[]) {
+  QuadLValueMethod res = QuadLValueMethod::Mpfr;
+  int j = 0;
+  for (int i = 0; i < argc; i++) {
+    std::string a = argv[i];
+    if (a.rfind("lvalue=", 0) == 0) {
+      res = ParseQuadLValueMethod(a.substr(7));
+    } else {
+      argv[j++] = argv[i];
+    }
+  }
+  argc = j;
+  return res;
+}
+
 // QuadraticHeckeL.h, for E not abelian
 template <typename T>
 std::optional<T>
 QuadraticMassNonAbelianE(MyMatrix<T> const &B,
                          std::vector<MyMatrix<T>> const &Omega,
                          AbelianCMField const &FK, ElemE<T> const &d,
-                         CyclotomicField<T> const &K, int m, T const &local);
+                         CyclotomicField<T> const &K, int m, T const &local,
+                         QuadLValueMethod method);
 
 /*
   The field K = Q(theta) of a generator theta of the centre, with a minimal
@@ -2302,7 +2348,7 @@ template <typename T>
 inline std::optional<T>
 QuadraticMassAbelianLattice(MyMatrix<T> const &B,
                             std::vector<MyMatrix<T>> const &Omega,
-                            AbelianCMField const &FK) {
+                            AbelianCMField const &FK, QuadLValueMethod method) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   int deg = static_cast<int>(Omega.size());
   int m = B.rows() / deg;
@@ -2390,7 +2436,8 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
             AbelianQuadraticExtensionField(B, Omega, FK, d, K, m);
         if (!FE) {
           // E not abelian: L(1 - r, chi_{E/K}) numerically, rounded
-          return QuadraticMassNonAbelianE(B, Omega, FK, d, K, m, local);
+          return QuadraticMassNonAbelianE(B, Omega, FK, d, K, m, local,
+                                          method);
         }
         sm = StandardQuadraticMassAbelian<T>(LiftAbelianField(FK, FE->n), m,
                                              false, *FE);

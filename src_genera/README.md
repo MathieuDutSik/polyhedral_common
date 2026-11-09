@@ -247,8 +247,12 @@ against PARI/GP. The number of terms is about A times a power of the
 precision; beyond 4 10^8 terms the mass is left not computed.
 `Test_QuadHeckeL` prints the character data, the coefficients and
 L(1 - r) of a lattice.
-Built with flint (`make ENABLE_FLINT_SUPPORT=1`), the rounding is certified
-with Arb (`QuadraticHeckeLArb.h`): the same sum evaluated in balls, with
+The method is a choice, `QuadLValueMethod { Mpfr, Arb }` (an argument of
+`QuadraticMassAbelianLattice`, the field `lvalue` of `IsometryMassBounds`,
+and the option `lvalue=mpfr` / `lvalue=arb` of `GENUS_IsometryMass` and
+`GENUS_GlueIsometry`, mpfr by default). With Arb, which needs a build with
+flint (`make ENABLE_FLINT_SUPPORT=1`) and takes about twice the time, the
+rounding is certified (`QuadraticHeckeLArb.h`): the same sum evaluated in balls, with
 proven bounds for the truncation of the series at the poles (Cauchy on
 circles around them), for the Chebyshev interpolation (a majorant on the
 Bernstein ellipse) and for the terms beyond X (G_s(t) <= gamma(sigma)

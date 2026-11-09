@@ -1003,18 +1003,17 @@ Tint MinkowskiMultiple(AbelianCMField const &FK, int m) {
   terms are the 1/|O(L_i)|), so b = mu num(local) sm is an integer. The
   L-value is computed to the bits of b plus a margin and b rounded; it is
   accepted when a second computation with 16 more bits rounds to the same
-  integer, both within 2^{-8} of it. With flint, b is moreover certified:
-  the Arb enclosure of L(1 - r) (QuadraticHeckeLArb.h) times mu num(local)
-  sm_exact must contain b and no other integer, otherwise the mass is not
-  returned. Nothing when the character cannot be computed (a common index
-  divisor).
+  integer, both within 2^{-8} of it. With the method Arb, b is moreover
+  certified: the Arb enclosure of L(1 - r) (QuadraticHeckeLArb.h) times mu
+  num(local) sm_exact must contain b and no other integer, otherwise the
+  mass is not returned. Nothing when the character cannot be computed (a common
+  index divisor).
  */
 template <typename T>
-std::optional<T>
-QuadraticMassNonAbelianE(MyMatrix<T> const &B,
-                         std::vector<MyMatrix<T>> const &Omega,
-                         AbelianCMField const &FK, ElemE<T> const &d,
-                         CyclotomicField<T> const &K, int m, T const &local) {
+std::optional<T> QuadraticMassNonAbelianE(
+    MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
+    AbelianCMField const &FK, ElemE<T> const &d, CyclotomicField<T> const &K,
+    int m, T const &local, QuadLValueMethod method) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   using mpfr::mpreal;
   int r = m / 2;
@@ -1067,7 +1066,7 @@ QuadraticMassNonAbelianE(MyMatrix<T> const &B,
     if (b1 && b2 && *b1 == *b2) {
 #ifdef ENABLE_FLINT_SUPPORT
       // the integer certified by the Arb enclosure of L(1 - r)
-      bool certified = false;
+      bool certified = (method == QuadLValueMethod::Mpfr);
       for (int cb = bits; cb <= bits + 64 && !certified; cb += 32) {
         std::optional<ArbReal> La = QuadHeckeLNegativeArb(*Ld, cb);
         if (!La) {
@@ -1090,6 +1089,11 @@ QuadraticMassNonAbelianE(MyMatrix<T> const &B,
       }
       if (!certified) {
         return {};
+      }
+#else
+      if (method == QuadLValueMethod::Arb) {
+        std::cerr << "QHECKE: the Arb certification needs flint\n";
+        throw TerminalException{1};
       }
 #endif
       T sm = UniversalScalarConversion<T, Tint>(*b1) / factor * sm_exact;

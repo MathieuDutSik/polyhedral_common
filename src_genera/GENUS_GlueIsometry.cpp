@@ -31,8 +31,8 @@ std::optional<T> ReadDeterminantArg(std::string const &s) {
   return T(s);
 }
 
-template <typename T> void WriteGluedPairGAP(std::ostream &os,
-                                              GluedPair<T> const &gp) {
+template <typename T>
+void WriteGluedPairGAP(std::ostream &os, GluedPair<T> const &gp) {
   os << "rec(det:=" << gp.det << ", glue_order:=" << gp.glue_order
      << ", gram:=";
   WriteMatrixGAP(os, gp.gram);
@@ -45,16 +45,16 @@ template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &mode, std::string const &FileGram1,
              std::string const &FileIsom1, std::string const &FileGram2,
              std::string const &FileIsom2, std::string const &det_arg,
-             std::string const &OutFormat, std::ostream &os) {
+             std::string const &OutFormat, QuadLValueMethod lvalue,
+             std::ostream &os) {
   MyMatrix<T> A1 = ReadMatrixFile<T>(FileGram1);
   MyMatrix<T> g1 = ReadMatrixFile<T>(FileIsom1);
   MyMatrix<T> A2 = ReadMatrixFile<T>(FileGram2);
   MyMatrix<T> g2 = ReadMatrixFile<T>(FileIsom2);
   std::optional<T> det = ReadDeterminantArg<T>(det_arg);
   IsometryGlueBounds bounds;
-  std::vector<GluedPair<T>> ListGlued =
-      GlueIsometryPairs<T, Tint, Tgroup>(A1, g1, A2, g2, det, bounds,
-                                         std::cerr);
+  std::vector<GluedPair<T>> ListGlued = GlueIsometryPairs<T, Tint, Tgroup>(
+      A1, g1, A2, g2, det, bounds, std::cerr);
   if (mode == "glue") {
     if (OutFormat == "Summary") {
       os << "glued pairs = " << ListGlued.size() << "\n";
@@ -94,8 +94,9 @@ void process(std::string const &mode, std::string const &FileGram1,
   using Tresult = GenusEnumerationGroupResult<T, Tgroup>;
   using Tmass = typename Tresult::Tmass;
   std::set<std::pair<int, std::vector<MyMatrix<T>>>> known;
-  auto key_of = [&](MyMatrix<T> const &A, MyMatrix<T> const &g)
-      -> std::pair<int, std::vector<MyMatrix<T>>> {
+  auto key_of =
+      [&](MyMatrix<T> const &A,
+          MyMatrix<T> const &g) -> std::pair<int, std::vector<MyMatrix<T>>> {
     CanonicalPairData<T> can = CanonicalPair<T, Tint, Tgroup>(
         A, std::vector<MyMatrix<T>>{g.transpose()}, std::cerr);
     return {can.method, PairForms(can.Acan, can.ListPcan)};
@@ -112,6 +113,7 @@ void process(std::string const &mode, std::string const &FileGram1,
       continue;
     }
     IsometryMassBounds mass_bounds;
+    mass_bounds.lvalue = lvalue;
     std::map<int, T> herm_mass;
     IsometryMassResult<T> mres = IsometryGenusMass<T, Tint>(
         gp.gram, gp.isom, herm_mass, mass_bounds, std::cerr);
@@ -124,8 +126,8 @@ void process(std::string const &mode, std::string const &FileGram1,
     Tmass TotalMass = UniversalScalarConversion<Tmass, T>(*mres.mass);
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListSeed{
         {gp.gram, gp.isom}};
-    Tresult result = GenusEnumerationGroup<T, Tint, Tgroup>(
-        ListSeed, TotalMass, 0, 6, std::cerr);
+    Tresult result = GenusEnumerationGroup<T, Tint, Tgroup>(ListSeed, TotalMass,
+                                                            0, 6, std::cerr);
     for (size_t i = 0; i < result.ListGram.size(); i++) {
       known.insert(key_of(result.ListGram[i], result.ListListIsom[i][0]));
     }
@@ -148,9 +150,8 @@ void process(std::string const &mode, std::string const &FileGram1,
     }
     os << "classes of pairs = " << n_class << "\n";
     os << "skipped without a mass = " << n_without_mass << "\n";
-    os << "complete = " << (all_complete && n_without_mass == 0 ? "true"
-                                                                : "false")
-       << "\n";
+    os << "complete = "
+       << (all_complete && n_without_mass == 0 ? "true" : "false") << "\n";
     return;
   }
   if (OutFormat == "GAP") {
@@ -159,8 +160,9 @@ void process(std::string const &mode, std::string const &FileGram1,
       auto const &rec = ListGenus[i];
       os << (i > 0 ? ",\n" : "\n") << "rec(seed:=";
       WriteGluedPairGAP(os, rec.seed);
-      os << ",\n mass:=" << rec.mass << ",\n complete:="
-         << (rec.result.complete ? "true" : "false") << ",\n ListGram:=[";
+      os << ",\n mass:=" << rec.mass
+         << ",\n complete:=" << (rec.result.complete ? "true" : "false")
+         << ",\n ListGram:=[";
       for (size_t j = 0; j < rec.result.ListGram.size(); j++) {
         os << (j > 0 ? ",\n" : "");
         WriteMatrixGAP(os, rec.result.ListGram[j]);
@@ -194,17 +196,21 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using TintGroup = mpz_class;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
+    QuadLValueMethod lvalue = ExtractQuadLValueOption(argc, argv);
     if (argc < 7 || argc > 10) {
       std::cerr << "GENUS_GlueIsometry [mode] [Gram1] [Isom1] [Gram2] [Isom2] "
                    "[det] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "mode             : glue or enumerate\n";
-      std::cerr << "Gram1, Isom1     : the pair (L_1, g_1), g_1^T A_1 g_1 = A_1\n";
+      std::cerr
+          << "Gram1, Isom1     : the pair (L_1, g_1), g_1^T A_1 g_1 = A_1\n";
       std::cerr << "Gram2, Isom2     : the pair (L_2, g_2)\n";
-      std::cerr << "det              : the determinant of the glued lattices,\n";
+      std::cerr
+          << "det              : the determinant of the glued lattices,\n";
       std::cerr << "                   or any\n";
       std::cerr << "OutFormat        : Summary (default), GAP, or for glue\n";
-      std::cerr << "                   ListMatrix (the Gram matrices then the\n";
+      std::cerr
+          << "                   ListMatrix (the Gram matrices then the\n";
       std::cerr << "                   isometries)\n";
       std::cerr << "OutFile          : stderr (default), stdout or a file\n";
       std::cerr << "\n";
@@ -212,6 +218,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "            extensions of L_1 (+) L_2, g = g_1 (+) g_2\n";
       std::cerr << "enumerate : the classes of all the genera of pairs met,\n";
       std::cerr << "            each by its mass\n";
+      std::cerr << "\n";
+      std::cerr << "lvalue=mpfr / lvalue=arb (anywhere, optional): the\n";
+      std::cerr << "        L-values of the quadratic masses with E not\n";
+      std::cerr << "        abelian, MPFR (default) or certified with Arb\n";
+      std::cerr << "        (needs flint, about twice the time)\n";
       return -1;
     }
     std::string mode = argv[1];
@@ -223,8 +234,8 @@ int main(int argc, char *argv[]) {
     std::string OutFormat = (argc >= 8) ? argv[7] : "Summary";
     std::string OutFile = (argc >= 9) ? argv[8] : "stderr";
     auto f = [&](std::ostream &os) -> void {
-      process<T, Tint, Tgroup>(mode, FileGram1, FileIsom1, FileGram2,
-                               FileIsom2, det_arg, OutFormat, os);
+      process<T, Tint, Tgroup>(mode, FileGram1, FileIsom1, FileGram2, FileIsom2,
+                               det_arg, OutFormat, lvalue, os);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
     std::cerr << "Normal termination of GENUS_GlueIsometry\n";

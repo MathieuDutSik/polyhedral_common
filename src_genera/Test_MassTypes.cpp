@@ -41,7 +41,8 @@ std::string ComputeMass(std::string const &mode, std::string const &FileGram,
   if (mode == "herm") {
     mass = HermitianMassAbelianLattice(B, Omega, MakeAbelianCMField(n, gens));
   } else {
-    mass = QuadraticMassAbelianLattice(B, Omega, MakeAbelianRealField(n, gens));
+    mass = QuadraticMassAbelianLattice(B, Omega, MakeAbelianRealField(n, gens),
+                                       QuadLValueMethod::Mpfr);
   }
   if (!mass) {
     return "fail";
@@ -54,18 +55,22 @@ std::string ComputeMass(std::string const &mode, std::string const &FileGram,
 int main(int argc, char *argv[]) {
   try {
     if (argc != 6) {
-      std::cerr << "Test_MassTypes [herm|quad] [Gram] [Omega] [n] [h1,h2,...]\n";
+      std::cerr
+          << "Test_MassTypes [herm|quad] [Gram] [Omega] [n] [h1,h2,...]\n";
       return -1;
     }
     std::string mode = argv[1];
     int64_t n = std::stoll(argv[4]);
     std::vector<int64_t> gens = ParseList(argv[5]);
     std::vector<std::pair<std::string, std::string>> res;
-    res.push_back({"mpq_class", ComputeMass<mpq_class>(mode, argv[2], argv[3], n, gens)});
-    res.push_back({"mpq_rational",
-                   ComputeMass<boost::multiprecision::mpq_rational>(mode, argv[2], argv[3], n, gens)});
+    res.push_back(
+        {"mpq_class", ComputeMass<mpq_class>(mode, argv[2], argv[3], n, gens)});
+    res.push_back(
+        {"mpq_rational", ComputeMass<boost::multiprecision::mpq_rational>(
+                             mode, argv[2], argv[3], n, gens)});
 #ifdef ENABLE_FLINT_SUPPORT
-    res.push_back({"fmpq_class", ComputeMass<fmpq_class>(mode, argv[2], argv[3], n, gens)});
+    res.push_back({"fmpq_class",
+                   ComputeMass<fmpq_class>(mode, argv[2], argv[3], n, gens)});
 #endif
     bool ok = true;
     for (auto const &r : res) {

@@ -51,18 +51,19 @@ std::map<int, T> ReadHermitianMasses(std::string const &file) {
 
 template <typename T, typename Tint>
 void ProcessMass(std::string const &FileGram, std::string const &FileIsom,
-                 std::string const &FileHerm, std::ostream &os) {
+                 std::string const &FileHerm, QuadLValueMethod lvalue,
+                 std::ostream &os) {
   MyMatrix<T> A = ReadMatrixFile<T>(FileGram);
   MyMatrix<T> g = ReadMatrixFile<T>(FileIsom);
   std::map<int, T> herm = ReadHermitianMasses<T>(FileHerm);
   IsometryMassBounds bounds;
+  bounds.lvalue = lvalue;
   IsometryMassResult<T> res =
       IsometryGenusMass<T, Tint>(A, g, herm, bounds, std::cerr);
   WriteIsometryMassResult(os, res);
 }
 
-template <typename T>
-std::vector<int64_t> FlattenMatrix(MyMatrix<T> const &M) {
+template <typename T> std::vector<int64_t> FlattenMatrix(MyMatrix<T> const &M) {
   std::vector<int64_t> v;
   for (int i = 0; i < M.rows(); i++) {
     for (int j = 0; j < M.cols(); j++) {
@@ -107,20 +108,23 @@ void AddCheckResult(std::map<std::string, std::pair<int64_t, T>> &groups,
 }
 
 template <typename T>
-void WriteCheckGroups(std::ostream &os,
-                      std::map<std::string, std::pair<int64_t, T>> const &groups,
-                      T const &order_T) {
+void WriteCheckGroups(
+    std::ostream &os,
+    std::map<std::string, std::pair<int64_t, T>> const &groups,
+    T const &order_T) {
   bool all_integral = true;
   for (auto const &kv : groups) {
-    T ratio = ScalarFromInt64<T>(kv.second.first) / (order_T * kv.second.second);
+    T ratio =
+        ScalarFromInt64<T>(kv.second.first) / (order_T * kv.second.second);
     os << "count=" << kv.second.first << " ratio=" << ratio << " " << kv.first
        << "\n";
     if (!IsInteger(ratio)) {
       all_integral = false;
     }
   }
-  os << "check: " << (all_integral ? "every ratio is an integer"
-                                   : "FAILED, a ratio is not an integer")
+  os << "check: "
+     << (all_integral ? "every ratio is an integer"
+                      : "FAILED, a ratio is not an integer")
      << "\n";
 }
 
@@ -172,7 +176,8 @@ std::vector<MyMatrix<T>> OrthogonalGroupElements(MyMatrix<T> const &A,
 
 template <typename T, typename Tint, typename Tgroup>
 void ProcessCheck(std::string const &FileGram, std::string const &FileIsom,
-                  std::string const &FileHerm, std::ostream &os) {
+                  std::string const &FileHerm, QuadLValueMethod lvalue,
+                  std::ostream &os) {
   MyMatrix<T> A = ReadMatrixFile<T>(FileGram);
   MyMatrix<T> g = ReadMatrixFile<T>(FileIsom);
   MyMatrix<T> P0 = g.transpose();
@@ -183,6 +188,7 @@ void ProcessCheck(std::string const &FileGram, std::string const &FileIsom,
       OrthogonalGroupElements<T, Tint, Tgroup>(A, order_T);
   std::map<int, T> herm = ReadHermitianMasses<T>(FileHerm);
   IsometryMassBounds bounds;
+  bounds.lvalue = lvalue;
   std::map<std::string, std::pair<int64_t, T>> groups;
   for (auto const &P : elts) {
     if (IsometryOrder(P) != m || KernelRanks<T, Tint>(P, m) != ranks0) {
@@ -203,10 +209,11 @@ void ProcessCheck(std::string const &FileGram, std::string const &FileIsom,
 
 template <typename T, typename Tint>
 void ProcessGroupMass(std::string const &FileGram, std::string const &FileGens,
-                      std::ostream &os) {
+                      QuadLValueMethod lvalue, std::ostream &os) {
   MyMatrix<T> A = ReadMatrixFile<T>(FileGram);
   std::vector<MyMatrix<T>> list_g = ReadListMatrixFile<T>(FileGens);
   IsometryMassBounds bounds;
+  bounds.lvalue = lvalue;
   IsometryMassResult<T> res =
       FiniteGroupGenusMass<T, Tint>(A, list_g, bounds, std::cerr);
   WriteIsometryMassResult(os, res);
@@ -222,7 +229,7 @@ void ProcessGroupMass(std::string const &FileGram, std::string const &FileGens,
  */
 template <typename T, typename Tint, typename Tgroup>
 void ProcessGroupCheck(std::string const &FileGram, std::string const &FileIsom,
-                       std::ostream &os) {
+                       QuadLValueMethod lvalue, std::ostream &os) {
   MyMatrix<T> A = ReadMatrixFile<T>(FileGram);
   MyMatrix<T> g = ReadMatrixFile<T>(FileIsom);
   MyMatrix<T> P0 = g.transpose();
@@ -230,6 +237,7 @@ void ProcessGroupCheck(std::string const &FileGram, std::string const &FileIsom,
   std::vector<MyMatrix<T>> elts =
       OrthogonalGroupElements<T, Tint, Tgroup>(A, order_T);
   IsometryMassBounds bounds;
+  bounds.lvalue = lvalue;
   std::map<std::string, std::pair<int64_t, T>> groups;
   int64_t n_cent = 0;
   for (auto const &P : elts) {
@@ -259,6 +267,7 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using TintGroup = mpz_class;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
+    QuadLValueMethod lvalue = ExtractQuadLValueOption(argc, argv);
     if (argc != 4 && argc != 5 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -274,14 +283,16 @@ int main(int argc, char *argv[]) {
       std::cerr << "    or\n";
       std::cerr << "GENUS_IsometryMass group [Gram] [ListIsometry] [OutFile]\n";
       std::cerr << "    or\n";
-      std::cerr << "GENUS_IsometryMass groupcheck [Gram] [Isometry] [OutFile]\n";
+      std::cerr
+          << "GENUS_IsometryMass groupcheck [Gram] [Isometry] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "Gram     (input) : the Gram matrix A of an even positive\n";
       std::cerr << "                   definite lattice L\n";
       std::cerr << "Isometry (input) : g in GL_n(Z) of finite order with\n";
       std::cerr << "                   g^T A g = A\n";
       std::cerr << "HermMass (input) : 'none' (the masses of the Hermitian\n";
-      std::cerr << "                   components L cap ker Phi_d(g), d >= 3,\n";
+      std::cerr
+          << "                   components L cap ker Phi_d(g), d >= 3,\n";
       std::cerr << "                   are computed), or lines 'd num den'\n";
       std::cerr << "                   giving them, which take precedence\n";
       std::cerr << "OutFile          : stderr (default), stdout or a file\n";
@@ -296,9 +307,15 @@ int main(int argc, char *argv[]) {
       std::cerr << "group : the mass of the genus of (L, G), G the finite\n";
       std::cerr << "        group generated by the isometries of\n";
       std::cerr << "        ListIsometry (a number, then the matrices);\n";
-      std::cerr << "        for a non-abelian group see local_correction_open\n";
+      std::cerr
+          << "        for a non-abelian group see local_correction_open\n";
       std::cerr << "groupcheck : the brute-force test of the group mass\n";
       std::cerr << "        for the groups <g, tau>, tau in C_{O(L)}(g)\n";
+      std::cerr << "\n";
+      std::cerr << "lvalue=mpfr / lvalue=arb (anywhere, optional): the\n";
+      std::cerr << "        L-values of the quadratic masses with E not\n";
+      std::cerr << "        abelian, MPFR (default) or certified with Arb\n";
+      std::cerr << "        (needs flint, about twice the time)\n";
       return -1;
     }
     std::string mode = argv[1];
@@ -364,7 +381,8 @@ int main(int argc, char *argv[]) {
           local_mass = {};
         }
       }
-      std::optional<mpq_class> mass = QuadraticMassAbelianLattice(B, Omega, FK);
+      std::optional<mpq_class> mass =
+          QuadraticMassAbelianLattice(B, Omega, FK, lvalue);
       std::cout << "return rec(mass:=";
       if (mass) {
         std::cout << *mass;
@@ -435,9 +453,10 @@ int main(int argc, char *argv[]) {
       }
       int m = std::stoi(argv[4]);
       AbelianCMField F = MakeAbelianCMField(n, gens);
-      std::cout << "return rec(n:=" << n << ", degree:="
-                << AbelianFieldDegree(F) << ", m:=" << m
-                << ", standard_mass:=" << StandardHermitianMassAbelian<mpq_class>(F, m);
+      std::cout << "return rec(n:=" << n
+                << ", degree:=" << AbelianFieldDegree(F) << ", m:=" << m
+                << ", standard_mass:="
+                << StandardHermitianMassAbelian<mpq_class>(F, m);
       if (m == 1) {
         std::cout << ", mass:=" << RankOneHermitianMassAbelian<mpq_class>(F);
       }
@@ -462,26 +481,26 @@ int main(int argc, char *argv[]) {
       std::string FileHerm = (argc >= 5) ? argv[4] : "none";
       std::string OutFile = (argc >= 6) ? argv[5] : "stderr";
       auto f = [&](std::ostream &os) -> void {
-        ProcessMass<T, Tint>(FileGram, FileIsom, FileHerm, os);
+        ProcessMass<T, Tint>(FileGram, FileIsom, FileHerm, lvalue, os);
       };
       FILE_PrintStderrStdoutFile(OutFile, f);
     } else if (mode == "check") {
       std::string FileHerm = (argc >= 5) ? argv[4] : "none";
       std::string OutFile = (argc >= 6) ? argv[5] : "stderr";
       auto f = [&](std::ostream &os) -> void {
-        ProcessCheck<T, Tint, Tgroup>(FileGram, FileIsom, FileHerm, os);
+        ProcessCheck<T, Tint, Tgroup>(FileGram, FileIsom, FileHerm, lvalue, os);
       };
       FILE_PrintStderrStdoutFile(OutFile, f);
     } else if (mode == "group") {
       std::string OutFile = (argc >= 5) ? argv[4] : "stderr";
       auto f = [&](std::ostream &os) -> void {
-        ProcessGroupMass<T, Tint>(FileGram, FileIsom, os);
+        ProcessGroupMass<T, Tint>(FileGram, FileIsom, lvalue, os);
       };
       FILE_PrintStderrStdoutFile(OutFile, f);
     } else if (mode == "groupcheck") {
       std::string OutFile = (argc >= 5) ? argv[4] : "stderr";
       auto f = [&](std::ostream &os) -> void {
-        ProcessGroupCheck<T, Tint, Tgroup>(FileGram, FileIsom, os);
+        ProcessGroupCheck<T, Tint, Tgroup>(FileGram, FileIsom, lvalue, os);
       };
       FILE_PrintStderrStdoutFile(OutFile, f);
     } else {

@@ -1155,6 +1155,8 @@ struct IsometryMassBounds {
   size_t max_orbit = 100000;
   // the graph method: the number of vertices (module elements and glue)
   size_t max_vertices = 6000;
+  // the L-values of the quadratic components with E not abelian
+  QuadLValueMethod lvalue = QuadLValueMethod::Mpfr;
 };
 
 template <typename T> int IsometryOrder(MyMatrix<T> const &P) {
@@ -1442,7 +1444,7 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
               ? HermitianMassAbelianLattice(comp.centre_gram, comp.centre_omega,
                                             *comp.herm_field)
               : QuadraticMassAbelianLattice(comp.centre_gram, comp.centre_omega,
-                                            *comp.quad_field);
+                                            *comp.quad_field, bounds.lvalue);
       if (hm && comp.multiplicity_factor) {
         cm.mass = *hm * *comp.multiplicity_factor;
       } else if (hm) {

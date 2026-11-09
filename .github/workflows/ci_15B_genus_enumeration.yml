@@ -22,6 +22,11 @@ jobs:
       LIBBLISS_PATH: /home/runner/opt/libbliss
       LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
       LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+      # flint, for Arb (the certified L-values, lvalue=arb) and the flint
+      # number types
+      ENABLE_FLINT_SUPPORT: "1"
+      FLINT_INCDIR: /home/runner/opt/flint/include
+      FLINT_LINK: "-L/home/runner/opt/flint/lib -lflint -Wl,-rpath,/home/runner/opt/flint/lib"
 
     steps:
       - uses: actions/checkout@v7
@@ -33,6 +38,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libmpfr-dev
+
+      # flint 3.6.0, the release used for development (Arb is part of it)
+      - name: Install flint
+        run: |
+          wget -q https://github.com/flintlib/flint/releases/download/v3.6.0/flint-3.6.0.tar.gz
+          tar -xzf flint-3.6.0.tar.gz
+          cd flint-3.6.0
+          ./configure --prefix=/home/runner/opt/flint --disable-static
+          make -j"$(nproc)"
+          make install
 
       - uses: ./.github/actions/install-boost
 

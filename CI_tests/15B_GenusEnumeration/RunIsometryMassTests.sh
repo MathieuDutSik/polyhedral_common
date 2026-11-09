@@ -273,6 +273,29 @@ quadmass_case s2abm4 8 7 205/192
 # mass made exact by the Minkowski multiple, as Hecke.jl does
 quadmass_case s13nabm2 13 4 99/4
 quadmass_case z15pnabm2 15 1 1/2
+# The same with the integer certified by Arb (lvalue=arb), when the
+# programs are built with flint (make ENABLE_FLINT_SUPPORT=1)
+quadmass_arb_case() {
+    tag=$1
+    n=$2
+    H=$3
+    expected=$4
+    # without flint the program stops with an error, hence the || true
+    out=$($BIN quadablocal quadm_${tag}_gram.txt quadm_${tag}_omega.txt $n $H \
+              lvalue=arb 2>&1 || true)
+    if echo "$out" | grep -q "built without flint"; then
+        echo "--- quadratic lattice $tag with Arb: skipped, no flint ---"
+        return
+    fi
+    val=$(echo "$out" | sed -n 's/return rec(mass:=\([^,]*\),.*/\1/p')
+    echo "--- quadratic lattice $tag with Arb: mass=$val (expecting $expected) ---"
+    if [ "$val" != "$expected" ]; then
+        echo "ERROR: the quadratic lattice $tag gave with Arb the mass $val" >&2
+        exit 1
+    fi
+}
+quadmass_arb_case s13nabm2 13 4 99/4
+quadmass_arb_case z15pnabm2 15 1 1/2
 # The Hermitian and quadratic masses over abelian fields are generic in the
 # rational type: the same masses with mpq_class, boost mpq_rational and,
 # when built with flint, fmpq_class.
