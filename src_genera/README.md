@@ -53,7 +53,9 @@ full list of entries, their defaults and their documentation.
   to skip the expansions whose neighbours are all expanded classes (see
   `GenusEnumerationState`); and the `order` of the expansions, `creation`,
   `deficit`, `aut` or `mixed` with its proportions `mixed_deficit` and
-  `mixed_aut` (see `GenusExpansionOrder`).
+  `mixed_aut` (see `GenusExpansionOrder`); and `orbit_random_generators`,
+  0 by default, the number of random products of the automorphism
+  generators used for the orbits of points at p = 2.
 * `RANDOM_WALK` -- the parameters of the `random_walk` strategy.
 * `SYSTEM` -- `OutFormat`, `GAP` (default), `CPP` or `Summary`, and
   `OutFile`, a file name, `stderr` (default) or `stdout`.

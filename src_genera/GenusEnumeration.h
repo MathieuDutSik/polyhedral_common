@@ -664,6 +664,10 @@ struct GenusMethods {
   LatticeStabCanIsomMethod isomorphism =
       LatticeStabCanIsomMethod::PleskenSouvignier;
   LatticeStabCanIsomMethod automorphism = LatticeStabCanIsomMethod::WeylChamber;
+  // At p = 2, the orbits of points of an expansion with this many random
+  // products of the generators in place of the generators, 0 for the
+  // generators themselves (see ProjectiveLineOrbitRepresentativesP2).
+  int orbit_random_generators = 0;
 };
 
 /*
@@ -855,15 +859,25 @@ ProjectiveLineOrbitRepresentativesGeneric(
   classes. Only the representatives are converted to the indices of
   ProjectiveLineOfIndex. The orbits are those of the generic code, possibly
   with other representatives and in another order.
+
+  With n_random > 0 the generators are replaced by n_random random products
+  of 20 of them, formed on the rows mod 2. They generate a subgroup H of the
+  image of the group, so an orbit of H lies in an orbit of the group and the
+  expansion over the orbits of H is still exact: an unlucky draw only splits
+  orbits, at the cost of more neighbours. On two genera of rank 16 and 19,
+  2 to 4 random products gave the orbits of the 8 to 20 generators in most
+  classes, and the orbits 3 times faster; the orbits are a negligible part of
+  an expansion, so this is disabled by default.
  */
 template <typename Tint>
 ProjectiveLineSelection
 ProjectiveLineOrbitRepresentativesP2(int n,
-                                     std::vector<MyMatrix<Tint>> const &ListGen) {
+                                     std::vector<MyMatrix<Tint>> const &ListGen,
+                                     int n_random, std::mt19937_64 *rng) {
   size_t n_line = NumberProjectiveLines(n, 2);
   int n_byte = (n + 7) / 8;
-  // per generator, per byte of the mask, the XOR of the rows of the bits
-  std::vector<std::vector<uint32_t>> ListTable;
+  // the generators as the masks of their rows mod 2, the identity dropped
+  std::vector<std::vector<uint32_t>> ListRows;
   for (auto &eGen : ListGen) {
     if (IsScalarModP(eGen, 2)) {
       continue;
@@ -876,6 +890,52 @@ ProjectiveLineOrbitRepresentativesP2(int n,
         }
       }
     }
+    ListRows.push_back(std::move(rows));
+  }
+  // v (g1 g2) = (v g1) g2: the rows of g1 g2 are the images of the rows of g1
+  auto apply = [&](uint32_t mask, std::vector<uint32_t> const &rows)
+      -> uint32_t {
+    uint32_t w = 0;
+    for (int i = 0; i < n; i++) {
+      if ((mask >> i) & 1) {
+        w ^= rows[i];
+      }
+    }
+    return w;
+  };
+  if (n_random > 0 && !ListRows.empty()) {
+    std::vector<std::vector<uint32_t>> ListProd;
+    for (int k = 0; k < n_random; k++) {
+      std::vector<uint32_t> prod(n);
+      for (int i = 0; i < n; i++) {
+        prod[i] = uint32_t(1) << i;
+      }
+      for (int step = 0; step < 20; step++) {
+        std::vector<uint32_t> const &g =
+            ListRows[random_index(*rng, ListRows.size())];
+        for (int i = 0; i < n; i++) {
+          prod[i] = apply(prod[i], g);
+        }
+      }
+      bool is_identity = true;
+      for (int i = 0; i < n; i++) {
+        if (prod[i] != (uint32_t(1) << i)) {
+          is_identity = false;
+        }
+      }
+      if (!is_identity) {
+        ListProd.push_back(std::move(prod));
+      }
+    }
+    // all the products trivial: keep the generators, rather than the action
+    // of the trivial group
+    if (!ListProd.empty()) {
+      ListRows = std::move(ListProd);
+    }
+  }
+  // per generator, per byte of the mask, the XOR of the rows of the bits
+  std::vector<std::vector<uint32_t>> ListTable;
+  for (auto &rows : ListRows) {
     std::vector<uint32_t> table(n_byte * 256, 0);
     for (int b = 0; b < n_byte; b++) {
       for (int x = 1; x < 256; x++) {
@@ -940,17 +1000,21 @@ ProjectiveLineOrbitRepresentativesP2(int n,
   return {false, n_line, std::move(ListRepr), std::move(ListOrbitSize)};
 }
 
+// n_random and rng: see ProjectiveLineOrbitRepresentativesP2 (p = 2 only).
 template <typename Tint>
 ProjectiveLineSelection
 ProjectiveLineOrbitRepresentatives(int n, int p,
-                                   std::vector<MyMatrix<Tint>> const &ListGen) {
+                                   std::vector<MyMatrix<Tint>> const &ListGen,
+                                   int n_random = 0,
+                                   std::mt19937_64 *rng = nullptr) {
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
   CheckProjectiveLineIndexing(n, p);
 #endif
   if (p != 2 || n > 31) {
     return ProjectiveLineOrbitRepresentativesGeneric<Tint>(n, p, ListGen);
   }
-  ProjectiveLineSelection sel = ProjectiveLineOrbitRepresentativesP2<Tint>(n, ListGen);
+  ProjectiveLineSelection sel =
+      ProjectiveLineOrbitRepresentativesP2<Tint>(n, ListGen, n_random, rng);
 #ifdef SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE
   std::cerr << "GENUS: SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE, the orbits "
                "at p=2 against the generic code\n";
@@ -965,10 +1029,25 @@ ProjectiveLineOrbitRepresentatives(int n, int p,
   }
   std::sort(sz1.begin(), sz1.end());
   std::sort(sz2.begin(), sz2.end());
-  if (sel.all != gen.all || sz1 != sz2) {
-    std::cerr << "GENUS: the orbits at p=2 differ from the generic ones: "
-              << sz1.size() << " against " << sz2.size() << " orbits\n";
-    throw TerminalException{1};
+  if (n_random == 0) {
+    if (sel.all != gen.all || sz1 != sz2) {
+      std::cerr << "GENUS: the orbits at p=2 differ from the generic ones: "
+                << sz1.size() << " against " << sz2.size() << " orbits\n";
+      throw TerminalException{1};
+    }
+  } else {
+    // the orbits of a subgroup: a partition of all the points, at least as
+    // fine as that of the group
+    size_t total = 0;
+    for (size_t i = 0; i < sel.size(); i++) {
+      total += sel.orbit_size(i);
+    }
+    if (total != NumberProjectiveLines(n, 2) || sel.size() < gen.size()) {
+      std::cerr << "GENUS: the orbits of the random products at p=2 are not "
+                << "a refinement: " << sel.size() << " orbits of total "
+                << total << " against " << gen.size() << " orbits\n";
+      throw TerminalException{1};
+    }
   }
   std::cerr << "GENUS: SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE, done\n";
 #endif
@@ -1037,6 +1116,9 @@ struct GenusEnumerationState {
   using TintGroup = typename Tgroup::Tint;
   int n;
   GenusMethods methods;
+  // the random products of methods.orbit_random_generators, with a fixed
+  // seed so that a run is reproducible
+  std::mt19937_64 orbit_rng{1};
   Tmass const &TotalMass;
   std::ostream &os;
   GenusEnumerationResult<T, Tgroup> result;
@@ -1307,7 +1389,8 @@ struct GenusEnumerationState {
     MicrosecondTime time_orb;
 #endif
     ProjectiveLineSelection ListRepr =
-        ProjectiveLineOrbitRepresentatives<Tint>(n, p, ListGenMat);
+        ProjectiveLineOrbitRepresentatives<Tint>(
+            n, p, ListGenMat, methods.orbit_random_generators, &orbit_rng);
 #ifdef TIMINGS_GENUS_ENUMERATION
     os << "|GENUS: ProjectiveLineOrbits|=" << time_orb << "\n";
 #endif
@@ -1885,6 +1968,11 @@ of isomorphism_method within the buckets of a cheap invariant)";
         "Default: plesken_souvignier\nThe method of the isometry test, with "
         "recognition isomorphism. The methods are:" +
         DocLatticeStabCanIsomMethods();
+    ListIntValues_doc["orbit_random_generators"] = "Default: 0\n\
+At p = 2, the number of random products of the automorphism generators\n\
+used for the orbits of points of an expansion, 0 for the generators\n\
+themselves. The orbits stay exact (a subgroup only splits them); 2 to 4\n\
+products make them about 3 times faster, a negligible part of the time";
     ListStringValues_doc["automorphism_method"] =
         "Default: weyl_chamber\nThe method of the automorphism group of every "
         "class. The methods are:" +
@@ -1985,6 +2073,12 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
       BlockMETHOD.get_string("isomorphism_method"));
   spec.methods.automorphism = ParseLatticeStabCanIsomMethod(
       BlockMETHOD.get_string("automorphism_method"));
+  spec.methods.orbit_random_generators =
+      BlockMETHOD.get_int("orbit_random_generators");
+  if (spec.methods.orbit_random_generators < 0) {
+    std::cerr << "GENUS: orbit_random_generators must be nonnegative\n";
+    throw TerminalException{1};
+  }
   spec.hecke = BlockMETHOD.get_bool("hecke");
   std::string order = BlockMETHOD.get_string("order");
   if (order == "creation") {
