@@ -320,6 +320,13 @@ group_mass_case E8E8_16 S3diag2 143/1203948748800
 # 13/921600, closed by GENUS_EnumerateIsometry with 2 classes).
 group_mass_case A4A4 D5 1/8
 group_mass_case E8E8D5 D5 13/921600
+# Rank three over O_K, where the local factor at the ramified prime 5 is
+# found by the pi-adic search over O_K (the solutions modulo 5 of the
+# trace form are about 10^4 times too many): D5 diagonally on A4^3 (factor
+# 1, the image of order 30000), and on the three A4 of E8 + A4 (factor 2,
+# so the mass 1/8 is that of the seed, with a centraliser of order 8)
+group_mass_case A4A4A4 D5 1/48
+group_mass_case E8A4 D5 1/8
 
 # The brute-force check for the groups <g, tau>, tau in C_{O(L)}(g); the
 # ratios are integers but not 1, as (g, tau) and (g, g tau) generate the

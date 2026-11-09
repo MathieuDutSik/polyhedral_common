@@ -534,6 +534,7 @@ struct LocalPrimeK {
   int f_res;
   int64_t qf;
   ElemE pi;
+  ElemE pi_inv;
   std::map<int, PolyZ> eps;
 };
 
@@ -570,6 +571,7 @@ inline LocalPrimeK MakeLocalPrimeK(LocalGenerator const &lg, PolyQ const &g,
       pw = EMul(pw, EZetaPower(1, P.K), P.K);
     }
   }
+  P.pi_inv = EInv(P.pi, P.K);
   return P;
 }
 
@@ -668,8 +670,14 @@ inline PolyQ LocalResidue(ElemE const &x, LocalPrimeK &P) {
   The Gram matrix over K of phi on m vectors of X spanning X (x) Z_q over
   O_K (x) Z_q: standard vectors first, then small combinations.
  */
-inline std::vector<std::vector<ElemE>>
-LocalOKGram(MyMatrix<mpq_class> const &B, LocalGenerator const &lg, int64_t q) {
+struct LocalOKBasisGram {
+  std::vector<MyVector<mpq_class>> basis;
+  std::vector<std::vector<ElemE>> H;
+};
+
+inline LocalOKBasisGram
+LocalOKGramBasis(MyMatrix<mpq_class> const &B, LocalGenerator const &lg,
+                 int64_t q) {
   int r = B.rows();
   int deg = static_cast<int>(lg.f.size()) - 1;
   int m = r / deg;
@@ -753,13 +761,18 @@ LocalOKGram(MyMatrix<mpq_class> const &B, LocalGenerator const &lg, int64_t q) {
       H[i][j] = val;
     }
   }
-  return H;
+  return {chosen, H};
+}
+
+inline std::vector<std::vector<ElemE>>
+LocalOKGram(MyMatrix<mpq_class> const &B, LocalGenerator const &lg, int64_t q) {
+  return LocalOKGramBasis(B, lg, q).H;
 }
 
 // x pi^{-k}
 inline ElemE LocalShift(ElemE x, int k, LocalPrimeK const &P) {
   if (k > 0) {
-    ElemE pinv = EInv(P.pi, P.K);
+    ElemE pinv = P.pi_inv.empty() ? EInv(P.pi, P.K) : P.pi_inv;
     for (int i = 0; i < k; i++) {
       x = EMul(x, pinv, P.K);
     }

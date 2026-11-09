@@ -172,8 +172,16 @@ K is totally real (Q(sqrt 5) for the dihedral group D5 in W(A4)) the
 multiplicity lattice is quadratic over K and its mass is the quadratic
 mass below; for D5 on two A4, one in each E8 of E8+E8, the mass
 13/921600 is closed by GENUS_EnumerateIsometry with 2 classes. When the
-bounds and the search of the local factors fail, the bounds are tried
-again with a p-part of D(N) of up to 2^17 elements. Components where
+local factors of such components are found first by a pi-adic search
+over the primes of K over p (`LocalImagePiAdic` in
+`AbelianQuadraticMass.h`): the solutions of g H g^* = H are lifted one
+pi-digit at a time over O_P rather than one p-digit at a time on the
+Z-lattice, where at a ramified prime the trace form only controls the
+form modulo pi (on A4^3 with D5 at 5: an image of order 30000 against
+about 5 10^8 solutions modulo 5). D5 on the three A4 of E8 + A4 gets the
+factor 2 at 5 that way, and its mass 1/8 is closed by the seed. When the
+bounds and the searches all fail, the bounds are tried again with a
+p-part of D(N) of up to 2^17 elements. Components where
 End_G is a quaternion algebra get no mass (the subspace F, stable under
 End_G, has no dimension m c then).
 

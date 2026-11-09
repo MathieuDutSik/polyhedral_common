@@ -2106,9 +2106,27 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
       return {};
     };
-    if (std::optional<size_t> fb = bounds_factor(int64_t(1) << 12, 100000)) {
-      factor *= UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(*fb));
-      continue;
+    // with a centre K other than Q the search over the primes of K over
+    // p, pi-adically, first: it is exact and the fastest
+    std::optional<std::vector<ModMat>> opt;
+    bool rows_convention = !OmegaX.empty();
+    if (!OmegaX.empty()) {
+      std::vector<MyMatrix<mpq_class>> om;
+      for (auto const &W : OmegaX) {
+        om.push_back(UniversalMatrixConversion<mpq_class, T>(W));
+      }
+      opt = LocalImagePiAdic(UniversalMatrixConversion<mpq_class, T>(GramX), om,
+                             p, c, bounds.max_solution);
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+      os << "MULT_FACTOR: p=" << p << " pi-adic image "
+         << (opt ? static_cast<long>(opt->size()) : -1L) << " elements\n";
+#endif
+    }
+    if (!opt) {
+      if (std::optional<size_t> fb = bounds_factor(int64_t(1) << 12, 100000)) {
+        factor *= UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(*fb));
+        continue;
+      }
     }
     // the image of O(X_p) modulo p^c
     int e = 0;
@@ -2129,9 +2147,9 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         A_mod[i][j] = UniversalScalarConversion<int64_t, T>(GramX(i, j));
       }
     }
-    std::optional<std::vector<ModMat>> opt;
-    bool rows_convention = !OmegaX.empty();
-    if (OmegaX.empty()) {
+    if (opt) {
+      // found above
+    } else if (OmegaX.empty()) {
       opt = LocalOrthogonalImage(A_mod, p, c, e, bounds);
     } else {
       // the K-linear endomorphisms of X, exact

@@ -6,6 +6,7 @@
 #include "AbelianHermitianMass.h"
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <map>
 #include <numeric>
 #include <optional>
@@ -2055,6 +2056,597 @@ QuadraticMassAbelianLattice(MyMatrix<mpq_class> const &B,
     return {};
   }
   return *sm * local;
+}
+
+/*
+  The image modulo p^c of the K-linear isometries of the trace form on X_p
+  (the centraliser of a group component with centre K, see
+  MultiplicityLocalFactor), computed pi-adically. With X_p = (+)_P X_P over
+  the primes P of K (or of the CM field) over p, all stable under the
+  involution, the image is the product of the images of the U(X_P), each
+  found in M_m(O_P / P^j) one pi-digit at a time:
+
+  - h on m vectors x_i spanning X_p (LocalOKGramBasis), s_0 the least
+    valuation of its entries; level j: g modulo pi^j with v(g H g^* - H) >=
+    j + s_0;
+  - level 1: the rows y_i of g modulo pi, the conditions y_i Hn y_k^T =
+    Hn_{ik} and y_k Hn y_i^T = Hn_{ki} (k < i, Hn the residue of
+    H / pi^{s_0}) being linear in y_i, the one for k = i quadratic;
+  - g -> g + pi^j Delta, Delta modulo pi solving res(E / pi^{j+s_0}) +
+    Delta A_1 + u_j A_2 Delta^T = 0, A_1 = res(H g^* / pi^{s_0}), A_2 =
+    res(g H / pi^{s_0}), u_j the residue of conj(pi)^j / pi^j (the
+    involution is trivial on the residue field);
+  - the solutions modulo pi^{e c} are kept when they lift to pi^K, K =
+    max(e c + e_H + t, e_H + 2 t + 1), e_H the exponent of the denominator
+    of (H / pi^{s_0})^{-1} and t = v_P(2), by the Newton step g -> g -
+    (1/2) E g^{-*} H^{-1}.
+
+  Each is returned as the matrix on X modulo p^c (rows convention) of the
+  map acting by g on X_P and as the identity on the other X_P'. Nothing
+  when a prime is split over the real subfield or inert in a CM field,
+  when there is no generator of O_K prime to the index, or beyond the
+  bound on the solutions.
+ */
+inline std::optional<std::vector<std::vector<std::vector<int64_t>>>>
+LocalImagePiAdic(MyMatrix<mpq_class> const &B,
+                 std::vector<MyMatrix<mpq_class>> const &Omega, int64_t p,
+                 int c, size_t max_solution) {
+  using IMat = std::vector<std::vector<int64_t>>;
+  std::optional<LocalGenerator> lg = FindLocalGenerator(B, Omega, p);
+  if (!lg) {
+    return {};
+  }
+  int deg = static_cast<int>(lg->f.size()) - 1;
+  int r = B.rows();
+  std::vector<std::pair<PolyQ, int>> fac =
+      FactorModQWithMultiplicity(PolyQ(lg->f.begin(), lg->f.end()), p);
+  {
+    std::vector<AbelianPrime> aps = AbelianPrimesOverQ(*lg, p, 1);
+    for (size_t i = 0; i < aps.size(); i++) {
+      if (aps[i].conj_index != i) {
+        return {};
+      }
+    }
+  }
+  LocalOKBasisGram bg = LocalOKGramBasis(B, *lg, p);
+  std::vector<std::vector<ElemE>> const &H = bg.H;
+  int m = static_cast<int>(H.size());
+  // W: the rows x_i theta^t, index i deg + t
+  std::vector<MyMatrix<mpq_class>> Spow{IdentityMat<mpq_class>(r)};
+  for (int t = 1; t < deg; t++) {
+    Spow.push_back(Spow.back() * lg->S);
+  }
+  MyMatrix<mpq_class> W(r, r);
+  for (int i = 0; i < m; i++) {
+    for (int t = 0; t < deg; t++) {
+      MyVector<mpq_class> w = Spow[t].transpose() * bg.basis[i];
+      for (int a = 0; a < r; a++) {
+        W(i * deg + t, a) = w(a);
+      }
+    }
+  }
+  MyMatrix<mpq_class> Winv = Inverse(W);
+  mpz_class pc = PowInt(p, c);
+  auto mod_pc = [&](mpq_class const &x) -> int64_t {
+    mpz_class den = x.get_den(), inv;
+    if (mpz_invert(inv.get_mpz_t(), den.get_mpz_t(), pc.get_mpz_t()) == 0) {
+      std::cerr << "ABQUAD: a denominator divisible by p\n";
+      throw TerminalException{1};
+    }
+    mpz_class v = (x.get_num() * inv) % pc;
+    if (v < 0) {
+      v += pc;
+    }
+    return v.get_si();
+  };
+  std::vector<IMat> result;
+  for (auto const &[g, e] : fac) {
+    LocalPrimeK P = MakeLocalPrimeK(*lg, g, e, p);
+    CyclotomicField const &K = P.K;
+    ResidueFieldGF F{p, g, P.f_res};
+    int fr = P.f_res;
+    // the conjugate of pi; the involution must be trivial on F_P
+    ElemE pibar = EConj(P.pi, K);
+    {
+      ElemE th = EZetaPower(1, K);
+      ElemE d = ESub(EConj(th, K), th);
+      if (!EIsZero(d) && LocalVal(d, P) < 1) {
+        return {};
+      }
+    }
+    int s0 = 1 << 28;
+    for (auto const &row : H) {
+      for (auto const &x : row) {
+        if (!EIsZero(x)) {
+          s0 = std::min(s0, LocalVal(x, P));
+        }
+      }
+    }
+    auto res_shift = [&](ElemE const &x, int k) -> PolyQ {
+      if (EIsZero(x)) {
+        return {};
+      }
+      return LocalResidue(LocalShift(x, k, P), P);
+    };
+    // the residue of H / pi^{s0}, and e_H
+    std::vector<std::vector<PolyQ>> Hn(m, std::vector<PolyQ>(m));
+    for (int a = 0; a < m; a++) {
+      for (int b = 0; b < m; b++) {
+        Hn[a][b] = res_shift(H[a][b], s0);
+      }
+    }
+    int eH = 0;
+    {
+      // (H / pi^{s0})^{-1} = pi^{s0} H^{-1}
+      std::vector<std::vector<ElemE>> G = H;
+      std::vector<std::vector<ElemE>> Inv(
+          m, std::vector<ElemE>(m, ElemE(deg, mpq_class(0))));
+      for (int a = 0; a < m; a++) {
+        Inv[a][a] = EZetaPower(0, K);
+      }
+      for (int col = 0; col < m; col++) {
+        int piv = -1;
+        for (int a = col; a < m; a++) {
+          if (!EIsZero(G[a][col])) {
+            piv = a;
+            break;
+          }
+        }
+        if (piv < 0) {
+          std::cerr << "ABQUAD: a degenerate local form\n";
+          throw TerminalException{1};
+        }
+        std::swap(G[piv], G[col]);
+        std::swap(Inv[piv], Inv[col]);
+        ElemE iv = EInv(G[col][col], K);
+        for (int b = 0; b < m; b++) {
+          G[col][b] = EMul(G[col][b], iv, K);
+          Inv[col][b] = EMul(Inv[col][b], iv, K);
+        }
+        for (int a = 0; a < m; a++) {
+          if (a == col || EIsZero(G[a][col])) {
+            continue;
+          }
+          ElemE fct = G[a][col];
+          for (int b = 0; b < m; b++) {
+            G[a][b] = ESub(G[a][b], EMul(fct, G[col][b], K));
+            Inv[a][b] = ESub(Inv[a][b], EMul(fct, Inv[col][b], K));
+          }
+        }
+      }
+      for (auto const &row : Inv) {
+        for (auto const &x : row) {
+          if (!EIsZero(x)) {
+            eH = std::max(eH, -(LocalVal(x, P) + s0));
+          }
+        }
+      }
+    }
+    int tt = (p == 2) ? e : 0;
+    int kT = e * c;
+    int Kpi = std::max(kT + eH + tt, eH + 2 * tt + 1);
+    // F_q-linear algebra on F_P = F_q^fr
+    auto coeffs = [&](PolyQ const &a) -> std::vector<int64_t> {
+      std::vector<int64_t> v(fr, 0);
+      for (size_t i = 0; i < a.size() && static_cast<int>(i) < fr; i++) {
+        v[i] = a[i];
+      }
+      return v;
+    };
+    auto mulmat = [&](PolyQ const &a) -> IMat {
+      // column t: a x^t
+      IMat M(fr, std::vector<int64_t>(fr, 0));
+      for (int t = 0; t < fr; t++) {
+        PolyQ xt(t + 1, 0);
+        xt[t] = 1;
+        std::vector<int64_t> v = coeffs(GFMul(a, xt, F));
+        for (int u = 0; u < fr; u++) {
+          M[u][t] = v[u];
+        }
+      }
+      return M;
+    };
+    // affine solutions of rows [coefficients | rhs] over F_q
+    auto affine = [&](IMat aug, size_t nvar)
+        -> std::optional<std::pair<std::vector<int64_t>, IMat>> {
+      size_t row = 0;
+      std::vector<size_t> pivots;
+      for (size_t col = 0; col < nvar && row < aug.size(); col++) {
+        size_t piv = row;
+        while (piv < aug.size() && aug[piv][col] % p == 0) {
+          piv++;
+        }
+        if (piv == aug.size()) {
+          continue;
+        }
+        std::swap(aug[piv], aug[row]);
+        int64_t iv = InvModQ(((aug[row][col] % p) + p) % p, p);
+        for (auto &x : aug[row]) {
+          x = MulModQ(((x % p) + p) % p, iv, p);
+        }
+        for (size_t i = 0; i < aug.size(); i++) {
+          int64_t f0 = ((aug[i][col] % p) + p) % p;
+          if (i != row && f0 != 0) {
+            for (size_t j = 0; j <= nvar; j++) {
+              aug[i][j] = ((aug[i][j] - MulModQ(f0, ((aug[row][j] % p) + p) % p, p)) % p + p) % p;
+            }
+          }
+        }
+        pivots.push_back(col);
+        row++;
+      }
+      for (size_t i = row; i < aug.size(); i++) {
+        if (((aug[i][nvar] % p) + p) % p != 0) {
+          return {};
+        }
+      }
+      std::vector<int64_t> part(nvar, 0);
+      for (size_t i = 0; i < pivots.size(); i++) {
+        part[pivots[i]] = ((aug[i][nvar] % p) + p) % p;
+      }
+      std::vector<bool> isp(nvar, false);
+      for (size_t pv : pivots) {
+        isp[pv] = true;
+      }
+      IMat ker;
+      for (size_t fcol = 0; fcol < nvar; fcol++) {
+        if (isp[fcol]) {
+          continue;
+        }
+        std::vector<int64_t> v(nvar, 0);
+        v[fcol] = 1;
+        for (size_t i = 0; i < pivots.size(); i++) {
+          v[pivots[i]] = ((p - ((aug[i][fcol] % p) + p) % p) % p);
+        }
+        ker.push_back(v);
+      }
+      return std::make_pair(part, ker);
+    };
+    auto from_coeffs = [&](std::vector<int64_t> const &v, size_t off) -> PolyQ {
+      PolyQ a(v.begin() + static_cast<long>(off),
+              v.begin() + static_cast<long>(off + fr));
+      PolyTrim(a);
+      return a;
+    };
+    using GMat = std::vector<std::vector<ElemE>>;
+    // level 1: the rows over F_P
+    std::vector<GMat> level;
+    {
+      std::vector<std::vector<PolyQ>> ys;
+      size_t n_node = 0;
+      bool over = false;
+      auto bil = [&](std::vector<PolyQ> const &x, std::vector<PolyQ> const &y) {
+        PolyQ v;
+        for (int a = 0; a < m; a++) {
+          for (int b = 0; b < m; b++) {
+            v = GFAdd(v, GFMul(GFMul(x[a], Hn[a][b], F), y[b], F), F);
+          }
+        }
+        return v;
+      };
+      std::function<void(int)> rec = [&](int i) {
+        if (over) {
+          return;
+        }
+        if (i == m) {
+          GMat gm(m, std::vector<ElemE>(m));
+          for (int a = 0; a < m; a++) {
+            for (int b = 0; b < m; b++) {
+              gm[a][b] = LiftResidue(ys[a][b], K);
+            }
+          }
+          level.push_back(gm);
+          if (level.size() > max_solution) {
+            over = true;
+          }
+          return;
+        }
+        size_t nvar = static_cast<size_t>(m * fr);
+        IMat aug;
+        for (int k = 0; k < i; k++) {
+          // y_i Hn y_k^T = Hn_ik: coefficients w_b = (Hn y_k^T)_b
+          for (int side = 0; side < 2; side++) {
+            std::vector<PolyQ> w(m);
+            for (int b = 0; b < m; b++) {
+              PolyQ v;
+              for (int d = 0; d < m; d++) {
+                v = (side == 0) ? GFAdd(v, GFMul(Hn[b][d], ys[k][d], F), F)
+                                : GFAdd(v, GFMul(ys[k][d], Hn[d][b], F), F);
+              }
+              w[b] = v;
+            }
+            PolyQ rhs = (side == 0) ? Hn[i][k] : Hn[k][i];
+            std::vector<IMat> blocks;
+            for (int b = 0; b < m; b++) {
+              blocks.push_back(mulmat(w[b]));
+            }
+            std::vector<int64_t> rc = coeffs(rhs);
+            for (int u = 0; u < fr; u++) {
+              std::vector<int64_t> row(nvar + 1, 0);
+              for (int b = 0; b < m; b++) {
+                for (int t = 0; t < fr; t++) {
+                  row[b * fr + t] = blocks[b][u][t];
+                }
+              }
+              row[nvar] = rc[u];
+              aug.push_back(row);
+            }
+          }
+        }
+        std::optional<std::pair<std::vector<int64_t>, IMat>> sol;
+        if (aug.empty()) {
+          IMat ker;
+          for (size_t v = 0; v < nvar; v++) {
+            std::vector<int64_t> e1(nvar, 0);
+            e1[v] = 1;
+            ker.push_back(e1);
+          }
+          sol = std::make_pair(std::vector<int64_t>(nvar, 0), ker);
+        } else {
+          sol = affine(aug, nvar);
+        }
+        if (!sol) {
+          return;
+        }
+        size_t n_y = 1;
+        for (size_t u = 0; u < sol->second.size(); u++) {
+          n_y *= static_cast<size_t>(p);
+          if (n_y > 50000000) {
+            over = true;
+            return;
+          }
+        }
+        for (size_t u = 0; u < n_y && !over; u++) {
+          if (++n_node > 50000000) {
+            over = true;
+            return;
+          }
+          std::vector<int64_t> v = sol->first;
+          size_t t2 = u;
+          for (auto const &kv : sol->second) {
+            int64_t cc = static_cast<int64_t>(t2 % static_cast<size_t>(p));
+            t2 /= static_cast<size_t>(p);
+            if (cc != 0) {
+              for (size_t a = 0; a < nvar; a++) {
+                v[a] = (v[a] + cc * kv[a]) % p;
+              }
+            }
+          }
+          std::vector<PolyQ> y(m);
+          for (int b = 0; b < m; b++) {
+            y[b] = from_coeffs(v, static_cast<size_t>(b * fr));
+          }
+          if (bil(y, y) != Hn[i][i]) {
+            continue;
+          }
+          // independence over F_P
+          GFMat Mrows;
+          for (auto const &yy : ys) {
+            Mrows.push_back(yy);
+          }
+          Mrows.push_back(y);
+          if (!GFLeftKernel(Mrows, Mrows.size(), static_cast<size_t>(m), F).empty()) {
+            continue;
+          }
+          ys.push_back(y);
+          rec(i + 1);
+          ys.pop_back();
+        }
+      };
+      rec(0);
+      if (over) {
+        return {};
+      }
+    }
+    // the lifts of g from pi^j to pi^{j+1}
+    auto matmul = [&](GMat const &X, GMat const &Y) -> GMat {
+      GMat Z(m, std::vector<ElemE>(m, ElemE(deg, mpq_class(0))));
+      for (int a = 0; a < m; a++) {
+        for (int b = 0; b < m; b++) {
+          for (int d = 0; d < m; d++) {
+            if (!EIsZero(X[a][d]) && !EIsZero(Y[d][b])) {
+              Z[a][b] = EAddE(Z[a][b], EMul(X[a][d], Y[d][b], K));
+            }
+          }
+        }
+      }
+      return Z;
+    };
+    auto star = [&](GMat const &X) -> GMat {
+      GMat Z(m, std::vector<ElemE>(m));
+      for (int a = 0; a < m; a++) {
+        for (int b = 0; b < m; b++) {
+          Z[a][b] = EConj(X[b][a], K);
+        }
+      }
+      return Z;
+    };
+    // the residues of conj(pi)^j / pi^j
+    std::vector<PolyQ> ures;
+    {
+      ElemE u1 = EMul(pibar, P.pi_inv, K);
+      ElemE uj = EZetaPower(0, K);
+      for (int j = 0; j <= Kpi + 1; j++) {
+        ures.push_back(LocalResidue(uj, P));
+        uj = EMul(uj, u1, K);
+      }
+    }
+    // the affine space of the Delta lifting g from pi^j to pi^{j+1}
+    auto lift_space = [&](GMat const &gm, int j)
+        -> std::optional<std::pair<std::vector<int64_t>, IMat>> {
+      GMat gs = star(gm);
+      GMat E = matmul(matmul(gm, H), gs);
+      for (int a = 0; a < m; a++) {
+        for (int b = 0; b < m; b++) {
+          E[a][b] = ESub(E[a][b], H[a][b]);
+#ifdef SANITY_CHECK_ABQUAD
+          if (!EIsZero(E[a][b]) && LocalVal(E[a][b], P) < j + s0) {
+            std::cerr << "ABQUAD: not a solution at level " << j << "\n";
+            throw TerminalException{1};
+          }
+#endif
+        }
+      }
+      GMat A1 = matmul(H, gs), A2 = matmul(gm, H);
+      PolyQ uj_res = ures[j];
+      size_t nvar = static_cast<size_t>(m * m * fr);
+      IMat aug;
+      for (int a = 0; a < m; a++) {
+        for (int b = 0; b < m; b++) {
+          std::vector<IMat> coef(static_cast<size_t>(m * m));
+          std::vector<bool> has(static_cast<size_t>(m * m), false);
+          auto add = [&](int cidx, PolyQ const &cf) {
+            if (cf.empty()) {
+              return;
+            }
+            IMat Mm = mulmat(cf);
+            if (!has[cidx]) {
+              coef[cidx] = Mm;
+              has[cidx] = true;
+            } else {
+              for (int u = 0; u < fr; u++) {
+                for (int t = 0; t < fr; t++) {
+                  coef[cidx][u][t] = (coef[cidx][u][t] + Mm[u][t]) % p;
+                }
+              }
+            }
+          };
+          for (int d = 0; d < m; d++) {
+            // Delta_{a d} A1_{d b}
+            add(a * m + d, res_shift(A1[d][b], s0));
+            // u_j A2_{a d} Delta_{b d}
+            add(b * m + d, GFMul(uj_res, res_shift(A2[a][d], s0), F));
+          }
+          std::vector<int64_t> rc = coeffs(res_shift(E[a][b], j + s0));
+          for (int u = 0; u < fr; u++) {
+            std::vector<int64_t> row(nvar + 1, 0);
+            for (int cidx = 0; cidx < m * m; cidx++) {
+              if (!has[cidx]) {
+                continue;
+              }
+              for (int t = 0; t < fr; t++) {
+                row[static_cast<size_t>(cidx * fr + t)] = coef[cidx][u][t];
+              }
+            }
+            row[nvar] = (p - rc[u]) % p;
+            aug.push_back(row);
+          }
+        }
+      }
+      return affine(aug, nvar);
+    };
+    auto n_lifts = [&](std::pair<std::vector<int64_t>, IMat> const &sp) -> size_t {
+      size_t n_y = 1;
+      for (size_t u = 0; u < sp.second.size(); u++) {
+        n_y *= static_cast<size_t>(p);
+      }
+      return n_y;
+    };
+    auto make_lift = [&](GMat const &gm, int j,
+                         std::pair<std::vector<int64_t>, IMat> const &sp,
+                         size_t u) -> GMat {
+      size_t nvar = sp.first.size();
+      std::vector<int64_t> v = sp.first;
+      size_t t2 = u;
+      for (auto const &kv : sp.second) {
+        int64_t cc = static_cast<int64_t>(t2 % static_cast<size_t>(p));
+        t2 /= static_cast<size_t>(p);
+        if (cc != 0) {
+          for (size_t a = 0; a < nvar; a++) {
+            v[a] = (v[a] + cc * kv[a]) % p;
+          }
+        }
+      }
+      ElemE pij = PiPower(j, P);
+      GMat g2 = gm;
+      for (int a = 0; a < m; a++) {
+        for (int b = 0; b < m; b++) {
+          PolyQ dlt = from_coeffs(v, static_cast<size_t>((a * m + b) * fr));
+          if (!dlt.empty()) {
+            g2[a][b] = EAddE(g2[a][b], EMul(LiftResidue(dlt, K), pij, K));
+          }
+        }
+      }
+      return g2;
+    };
+    for (int j = 1; j < kT; j++) {
+      std::vector<GMat> next;
+      for (auto const &gm : level) {
+        std::optional<std::pair<std::vector<int64_t>, IMat>> sp = lift_space(gm, j);
+        if (!sp) {
+          continue;
+        }
+        size_t n_y = n_lifts(*sp);
+        if (next.size() + n_y > max_solution) {
+          return {};
+        }
+        for (size_t u = 0; u < n_y; u++) {
+          next.push_back(make_lift(gm, j, *sp, u));
+        }
+      }
+      level = std::move(next);
+    }
+    // one lift at a time, the first that lifts further ending the search
+    std::function<bool(GMat const &, int)> liftable = [&](GMat const &gm,
+                                                         int j) -> bool {
+      if (j >= Kpi) {
+        return true;
+      }
+      std::optional<std::pair<std::vector<int64_t>, IMat>> sp = lift_space(gm, j);
+      if (!sp) {
+        return false;
+      }
+      size_t n_y = n_lifts(*sp);
+      for (size_t u = 0; u < n_y; u++) {
+        if (liftable(make_lift(gm, j, *sp, u), j + 1)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    // the matrices on X modulo p^c
+    int Nprec = c + 1;
+    mpz_class Qp = PowInt(p, Nprec);
+    PolyZ eps = LocalEps(P, Nprec);
+    for (auto const &gm : level) {
+      if (!liftable(gm, kT)) {
+        continue;
+      }
+      MyMatrix<mpq_class> Mf = ZeroMatrix<mpq_class>(r, r);
+      for (int i = 0; i < m; i++) {
+        for (int j = 0; j < m; j++) {
+          auto [yz, dz] = ClearDenominators(gm[i][j]);
+          PolyZ t = PolyZReduce(PolyZMul(eps, yz), lg->f, Qp * dz);
+          ElemE tot(deg, mpq_class(0));
+          for (int u = 0; u < deg; u++) {
+            tot[u] = mpq_class(t[u]) / mpq_class(dz);
+          }
+          if (i == j) {
+            // + (1 - eps)
+            for (int u = 0; u < deg; u++) {
+              tot[u] -= mpq_class(eps[u]);
+            }
+            tot[0] += 1;
+          }
+          MyMatrix<mpq_class> Mm = EMulMatrix(tot, K);
+          for (int t1 = 0; t1 < deg; t1++) {
+            for (int t2 = 0; t2 < deg; t2++) {
+              Mf(i * deg + t1, j * deg + t2) = Mm(t1, t2);
+            }
+          }
+        }
+      }
+      MyMatrix<mpq_class> Me = Winv * Mf * W;
+      IMat out(r, std::vector<int64_t>(r));
+      for (int a = 0; a < r; a++) {
+        for (int b = 0; b < r; b++) {
+          out[a][b] = mod_pc(Me(a, b));
+        }
+      }
+      result.push_back(out);
+    }
+  }
+  return result;
 }
 
 // clang-format off
