@@ -1005,6 +1005,55 @@ T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request,
   return {std::move(short_vectors), std::move(minimum)};
 }
 
+/*
+  The closest vectors of the coset Cnum / cden, as compute_minimum gives them
+  for a non-zero coset, the norms being scaled by cden^2: Cnum is integral, so
+  for an integral form every quantity of the fraction-free enumeration is an
+  integer, and Tring may be a ring. The search starts, as compute_minimum,
+  from the norm of the point of the coset at the origin, and restarts on every
+  shorter vector found.
+ */
+template <typename Tring, typename Tint>
+T_shvec_info<Tring, Tint>
+compute_minimum_scaled(FullGramInfo<Tring> const &request,
+                       MyVector<Tring> const &Cnum, Tring const &cden) {
+  int dim = request.dim;
+  Tring minimum(0);
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      minimum += request.gram_matrix(i, j) * Cnum(i) * Cnum(j);
+    }
+  }
+  std::vector<MyVector<Tint>> short_vectors;
+  auto f_set_bound = [&](Tring const &K, Tring const &B, Tring const &den,
+                         [[maybe_unused]] MyVector<Tint> const &x,
+                         [[maybe_unused]] int const &i, Tint &upper,
+                         Tint &lower) -> void {
+    upper = Bound_Floor<Tring, Tint>(K, B, den);
+    lower = Bound_Ceil<Tring, Tint>(K, B, den);
+  };
+  while (true) {
+    auto f_insert = [&](MyVector<Tint> const &V, Tring const &min) -> bool {
+      if (min == minimum) {
+        short_vectors.push_back(V);
+        return true;
+      }
+      short_vectors.clear();
+      minimum = min;
+      return false;
+    };
+    bool result =
+        computeIt_Gen_Kernel<false, Tring, Tint, decltype(f_insert),
+                             decltype(f_set_bound)>(request, Cnum, cden, false,
+                                                    minimum, f_insert,
+                                                    f_set_bound);
+    if (result) {
+      break;
+    }
+  }
+  return {std::move(short_vectors), std::move(minimum)};
+}
+
 template <typename Tint> struct ResultShortest {
   std::vector<MyVector<Tint>> shortest;
   std::optional<MyVector<Tint>> better_vector;
@@ -1234,8 +1283,32 @@ public:
         ReductionMod1vector<T, Tint>(cosetRed);
     MyVector<T> const &coset = ePair.second;
     bool central = false;
-    T_shvec_info<T, Tint> info =
-        compute_minimum<T, Tint>(request, coset, central, get_prep());
+    T_shvec_info<T, Tint> info;
+    // Over the ring when the form allows it, see request_ring: the coset is
+    // written as integral numerators over one denominator.
+    bool done = false;
+    if constexpr (ring_path) {
+      if (request_ring) {
+        T cden_T(1);
+        for (int i = 0; i < dim; i++) {
+          cden_T = LCMpair(cden_T, GetDenominator(coset(i)));
+        }
+        Tint cden = UniversalScalarConversion<Tint, T>(cden_T);
+        MyVector<Tint> Cnum(dim);
+        for (int i = 0; i < dim; i++) {
+          Cnum(i) = UniversalScalarConversion<Tint, T>(cden_T * coset(i));
+        }
+        T_shvec_info<Tint, Tint> info_ring =
+            compute_minimum_scaled<Tint, Tint>(*request_ring, Cnum, cden);
+        info.short_vectors = std::move(info_ring.short_vectors);
+        info.minimum = UniversalScalarConversion<T, Tint>(info_ring.minimum) /
+                       (cden_T * cden_T);
+        done = true;
+      }
+    }
+    if (!done) {
+      info = compute_minimum<T, Tint>(request, coset, central, get_prep());
+    }
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
