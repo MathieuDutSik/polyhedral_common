@@ -208,20 +208,59 @@ MyMatrix<Tint> CanonicallyReorder_SHV(std::vector<MyMatrix<T>> const &ListMat,
   return CanonicallyReorder_SHV_kernel<T, Tint>(ListMat, SHV, os);
 }
 
-template<typename Tint>
-MyMatrix<Tint> get_canonicalization_matrix(MyMatrix<Tint> const& SHVcan, [[maybe_unused]] std::ostream &os) {
+/*
+  The canonical basis from the canonically ordered family SHVcan, whose
+  columns span Z^n: with U SHVcan = H the row Hermite normal form, it is
+  (U^{-1})^T. U is not formed. On the pivot columns P of H, SHVcan_P =
+  U^{-1} H_P with H_P upper triangular, so U^{-1} = SHVcan_P H_P^{-1}, a
+  triangular solve whose divisions are exact. H is unique, so this is the
+  same matrix as inverting the transform of the normal form.
+ */
+template <typename Tint>
+MyMatrix<Tint>
+get_canonicalization_matrix(MyMatrix<Tint> const &SHVcan,
+                            [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
-  MyMatrix<Tint> BasisCan_pre = ComputeRowHermiteNormalForm_first(SHVcan);
+  int n = SHVcan.rows();
+  MyMatrix<Tint> H = ComputeRowHermiteNormalForm_second(SHVcan);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: get_canonicalization_matrix, BasisCan_pre|=" << time << "\n";
+  os << "|LSEC: get_canonicalization_matrix, H|=" << time << "\n";
 #endif
-  MyMatrix<Tint> BasisCan = TransposedMat(Inverse(BasisCan_pre));
+  // The pivot column of every row of H.
+  std::vector<int> piv(n);
+  int col = 0;
+  for (int i = 0; i < n; i++) {
+    while (H(i, col) == 0) {
+      col++;
+    }
+    piv[i] = col;
+  }
+  // X = U^{-1}, column by column: X(:, j) H(j, piv[j]) = SHVcan(:, piv[j]) -
+  // sum_{k < j} X(:, k) H(k, piv[j]).
+  MyMatrix<Tint> X(n, n);
+  for (int j = 0; j < n; j++) {
+    Tint const &pivot = H(j, piv[j]);
+    for (int r = 0; r < n; r++) {
+      Tint val = SHVcan(r, piv[j]);
+      for (int k = 0; k < j; k++) {
+        val -= X(r, k) * H(k, piv[j]);
+      }
+#ifdef SANITY_CHECK_LATTICE_STAB_EQUI_CAN
+      if (ResInt(val, pivot) != 0) {
+        std::cerr << "LSEC: get_canonicalization_matrix, a non-exact division "
+                     "in the triangular solve\n";
+        throw TerminalException{1};
+      }
+#endif
+      X(r, j) = val / pivot;
+    }
+  }
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: get_canonicalization_matrix, BasisCan|=" << time << "\n";
 #endif
-  return BasisCan;
+  return TransposedMat(X);
 }
 
 
