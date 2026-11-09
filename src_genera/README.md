@@ -227,8 +227,13 @@ residue field F_4) a generator theta_p is searched for each prime p over
 q, such that the factor of its minimal polynomial modulo q belonging to p
 is simple: Z_q[theta_p] is then maximal at p, and the local arithmetic of
 p, the local factor and chi_{E/K} at p come from it
-(`QuadPrimeGeneratorsUnramified`). Checked against Hecke.jl on 12 local
-factors and 11 masses, and the characters against PARI.
+(`QuadPrimeGenerators`). The same holds for a common index divisor
+ramified in K (2 in Q(sqrt 2) K_31 and Q(sqrt 3) K_31, K_31 the cubic
+field of conductor 31: three primes over 2 with e = 2, f = 1): the factor
+of the prime is then g^e, and Z_q[theta_p] is maximal at p by Dedekind's
+criterion (g does not divide (f - prod g_i^{e_i}) / q modulo q). Checked
+against Hecke.jl on 18 local factors and 17 masses over the four fields,
+and the characters against PARI.
 For m even the discriminant d is tested exactly for being a square, and
 E = K(sqrt d) is taken as K(sqrt D) for a fundamental discriminant D
 (then abelian) when possible. Otherwise E is tested for being abelian

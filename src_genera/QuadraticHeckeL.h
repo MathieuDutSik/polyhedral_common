@@ -317,13 +317,13 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
       } else {
         // a common index divisor: a generator for each prime
         std::optional<std::vector<QuadPrimeGenerator<T>>> pgs =
-            QuadPrimeGeneratorsUnramified(
-                B, Omega, p, PrimeDecompositionCharacters(G, XK, p));
+            QuadPrimeGenerators(B, Omega, p,
+                                PrimeDecompositionCharacters(G, XK, p));
         if (!pgs) {
           return {};
         }
         for (auto const &pg : *pgs) {
-          bps.push_back({pg.lg, pg.g, 1,
+          bps.push_back({pg.lg, pg.g, pg.e,
                          disc_of(pg.lg, LocalOKGramFromVectors(B, pg.lg,
                                                                pg.basis))});
         }

@@ -278,6 +278,9 @@ quadmass_case z15pnabm2 15 1 1/2
 # its own generator
 quadmass_case s5s17m3 85 1,4,9,16,19,21,26,36,49,59,64,66,69,76,81,84 3375/2
 quadmass_case s13s17m2 221 1,4,9,16,25,30,35,36,38,42,43,49,53,55,64,66,69,77,81,87,94,100,101,103,118,120,121,127,134,140,144,152,155,157,166,168,172,178,179,183,185,186,191,196,205,212,217,220 5
+# A common index divisor ramified in K: 2 in Q(sqrt 3) K_31, K_31 the cubic
+# field of conductor 31, three primes over 2 with e = 2 and f = 1
+quadmass_case s3c31m2 372 1,23,35,47,61,85,95,97,109,157,215,263,275,277,287,311,325,337,349,371 3
 # The same with the integer certified by Arb (lvalue=arb), when the
 # programs are built with flint (make ENABLE_FLINT_SUPPORT=1)
 quadmass_arb_case() {

@@ -1694,33 +1694,78 @@ QuadLocalFactorsByIdempotents(MyMatrix<T> const &B,
 }
 
 /*
-  A common index divisor q unramified in K, whatever the residue degree f:
-  no generator of O_K has q prime to its index, but at a single prime P
-  over q it suffices that the factor g of f_theta modulo q belonging to P
-  be simple, since then Z_q[theta] is maximal at P (Dedekind) and the
-  idempotent of P lies in Z_q[theta]. So for each prime P a generator
-  theta_P is searched among the small elements of O_K, P being recognized
-  by its idempotent modulo q; the local arithmetic of P is that of
-  LocalPrimeK for (theta_P, g), and the Gram matrix over K is taken on m
-  vectors v_i whose images eps_P v_i span eps_P X / q over F_{q^f}, the
-  F_q-rank of the theta^t eps_P v_i, t < f, being m f. Nothing when the
+  Dedekind's criterion: with f = prod g_i^{e_i} modulo q (f monic, the g_i
+  monic) and F = (f - prod G_i^{e_i}) / q for lifts G_i of the g_i,
+  Z_q[theta] is maximal at the prime (q, g(theta)) iff e = 1 or g does not
+  divide F modulo q.
+ */
+template <typename Tint>
+inline bool DedekindRegularAt(std::vector<int64_t> const &f,
+                              std::vector<std::pair<PolyQ, int>> const &fac,
+                              PolyQ const &g, int e, int64_t q) {
+  if (e == 1) {
+    return true;
+  }
+  PolyZ<Tint> prod{Tint(1)};
+  for (auto const &[gi, ei] : fac) {
+    PolyZ<Tint> gz;
+    for (int64_t c : gi) {
+      gz.push_back(UniversalScalarConversion<Tint, int64_t>(c));
+    }
+    for (int k = 0; k < ei; k++) {
+      prod = PolyZMul(prod, gz);
+    }
+  }
+  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
+  PolyQ Fq;
+  for (size_t k = 0; k < f.size(); k++) {
+    Tint c = UniversalScalarConversion<Tint, int64_t>(f[k]);
+    if (k < prod.size()) {
+      c -= prod[k];
+    }
+    // exact: f = prod modulo q
+    Tint d = QuoInt(c, qz);
+    Tint r = ResInt(d, qz);
+    if (r < 0) {
+      r += qz;
+    }
+    Fq.push_back(UniversalScalarConversion<int64_t, Tint>(r));
+  }
+  PolyTrim(Fq);
+  if (Fq.empty()) {
+    return false;
+  }
+  PolyQ rem = PolyDivModQ(Fq, g, q).second;
+  PolyTrim(rem);
+  return !rem.empty();
+}
+
+/*
+  A common index divisor q: no generator of O_K has q prime to its index,
+  but at a single prime P over q it suffices that the factor of f_theta
+  modulo q belonging to P be g^e with Z_q[theta] maximal at P (Dedekind's
+  criterion, automatic for e = 1), g coprime to the other factors: then the
+  idempotent of P lies in Z_q[theta] and O_{K_P} = Z_q[theta] eps_P. So for
+  each prime P a generator theta_P is searched among the small elements of
+  O_K, P being recognized by its idempotent modulo q; the local arithmetic
+  of P is that of LocalPrimeK for (theta_P, g, e), and the Gram matrix over
+  K is taken on m vectors v_i with O_{K_P}-span eps_P X, that is with the
+  theta^t eps_P v_i, t < e f, of F_q-rank m e f modulo q. Nothing when the
   g primes are not all found.
  */
 template <typename T> struct QuadPrimeGenerator {
   LocalGenerator<T> lg;
   PolyQ g;
+  int e;
   std::vector<MyVector<T>> basis;
 };
 
 template <typename T>
 inline std::optional<std::vector<QuadPrimeGenerator<T>>>
-QuadPrimeGeneratorsUnramified(MyMatrix<T> const &B,
-                              std::vector<MyMatrix<T>> const &Omega,
-                              int64_t q, PrimeDecompositionData const &dK) {
+QuadPrimeGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
+                    int64_t q, PrimeDecompositionData const &dK) {
   using Tint = typename underlying_z_ring<T>::ring_type;
-  if (dK.e != 1) {
-    return {};
-  }
+  int e_ram = static_cast<int>(dK.e);
   int deg = static_cast<int>(Omega.size());
   int r = B.rows();
   int m = r / deg;
@@ -1798,12 +1843,14 @@ QuadPrimeGeneratorsUnramified(MyMatrix<T> const &B,
       conj[1] = T(1);
     }
     LocalGenerator<T> lg{S, f, conj};
-    for (auto const &[g, mult] :
-         FactorModQWithMultiplicity(PolyQ(f.begin(), f.end()), q)) {
-      if (mult != 1 || static_cast<int>(g.size()) - 1 != f_res) {
+    std::vector<std::pair<PolyQ, int>> fac =
+        FactorModQWithMultiplicity(PolyQ(f.begin(), f.end()), q);
+    for (auto const &[g, mult] : fac) {
+      if (mult != e_ram || static_cast<int>(g.size()) - 1 != f_res ||
+          !DedekindRegularAt<Tint>(f, fac, g, mult, q)) {
         continue;
       }
-      MyMatrix<T> E = AbelianPrimeIdempotent(lg, g, 1, q, 1);
+      MyMatrix<T> E = AbelianPrimeIdempotent(lg, g, e_ram, q, 1);
       std::vector<int64_t> key;
       for (int i = 0; i < r; i++) {
         for (int j = 0; j < r; j++) {
@@ -1814,16 +1861,17 @@ QuadPrimeGeneratorsUnramified(MyMatrix<T> const &B,
         continue;
       }
       found.insert(key);
-      // m vectors whose images span eps_P X / q over F_{q^f}
+      // m vectors with O_{K_P}-span eps_P X
+      int ef = e_ram * f_res;
       std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
-      for (int t = 1; t < f_res; t++) {
+      for (int t = 1; t < ef; t++) {
         Spow.push_back(Spow.back() * S);
       }
       std::vector<MyVector<T>> chosen;
       std::vector<std::vector<int64_t>> acc;
       auto try_add = [&](MyVector<T> const &v) -> void {
         std::vector<std::vector<int64_t>> test = acc;
-        for (int t = 0; t < f_res; t++) {
+        for (int t = 0; t < ef; t++) {
           MyVector<T> w = E.transpose() * (Spow[t].transpose() * v);
           std::vector<int64_t> row(r);
           for (int j = 0; j < r; j++) {
@@ -1847,7 +1895,7 @@ QuadPrimeGeneratorsUnramified(MyMatrix<T> const &B,
                   << q << "\n";
         throw TerminalException{1};
       }
-      res.push_back({lg, g, chosen});
+      res.push_back({lg, g, e_ram, chosen});
     }
   }
   if (static_cast<int64_t>(found.size()) != dK.g) {
@@ -1856,8 +1904,9 @@ QuadPrimeGeneratorsUnramified(MyMatrix<T> const &B,
   return res;
 }
 
-// The local factors at a common index divisor q unramified in K: Cho's at
-// q = 2, LocalFactorOddGram otherwise, at each prime over q.
+// The local factors at a common index divisor q, at each prime over q:
+// LocalFactorOddGram at an odd q, Cho's at q = 2 unramified,
+// LocalFactorDyadicRamified at q = 2 ramified.
 template <typename T>
 inline std::optional<T>
 QuadLocalFactorsByPrimeGenerators(MyMatrix<T> const &B,
@@ -1865,7 +1914,7 @@ QuadLocalFactorsByPrimeGenerators(MyMatrix<T> const &B,
                                   int64_t q, PrimeDecompositionData const &dK) {
   int m = B.rows() / static_cast<int>(Omega.size());
   std::optional<std::vector<QuadPrimeGenerator<T>>> pgs =
-      QuadPrimeGeneratorsUnramified(B, Omega, q, dK);
+      QuadPrimeGenerators(B, Omega, q, dK);
   if (!pgs) {
     return {};
   }
@@ -1876,8 +1925,14 @@ QuadLocalFactorsByPrimeGenerators(MyMatrix<T> const &B,
   for (auto const &pg : *pgs) {
     std::vector<std::vector<ElemE<T>>> H =
         LocalOKGramFromVectors(B, pg.lg, pg.basis);
-    LocalPrimeK<T> P = MakeLocalPrimeK(pg.lg, pg.g, 1, q);
-    res *= (q == 2) ? LocalFactorCho(H, P) : LocalFactorOddGram(H, P);
+    LocalPrimeK<T> P = MakeLocalPrimeK(pg.lg, pg.g, pg.e, q);
+    if (q != 2) {
+      res *= LocalFactorOddGram(H, P);
+    } else if (pg.e == 1) {
+      res *= LocalFactorCho(H, P);
+    } else {
+      res *= LocalFactorDyadicRamified(H, P);
+    }
   }
   return res;
 }
@@ -1894,7 +1949,7 @@ QuadLocalFactorAtPrime(MyMatrix<T> const &B,
                        int64_t q, PrimeDecompositionData const &dK) {
   std::optional<LocalGenerator<T>> lg = FindLocalGenerator(B, Omega, q);
   if (!lg) {
-    if (dK.f == 1) {
+    if (dK.e == 1 && dK.f == 1) {
       return QuadLocalFactorsByIdempotents(B, Omega, q, dK);
     }
     return QuadLocalFactorsByPrimeGenerators(B, Omega, q, dK);
