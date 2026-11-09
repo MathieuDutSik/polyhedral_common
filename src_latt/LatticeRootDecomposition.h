@@ -424,14 +424,6 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   MyMatrix<Tint> G = UniversalMatrixConversion<Tint, T>(GramMat);
   // Columns: the linear forms x -> <x, e> for the simple roots.
   MyMatrix<Tint> GE = G * rs.SimpleRoots.transpose();
-  auto scal = [&](MyVector<Tint> const &z, MyMatrix<Tint> const &M,
-                  int j) -> Tint {
-    Tint sum(0);
-    for (int u = 0; u < n; u++) {
-      sum += z(u) * M(u, j);
-    }
-    return sum;
-  };
   // Babai rounding modulo R: z - round(c) E, with c the coordinates of the
   // projection of z on R in the basis E of simple roots. It brings the
   // component of z in R into a bounded box, so that the descent below takes
@@ -448,7 +440,6 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
   MyMatrix<Tint> CinvNum =
       UniversalMatrixConversion<Tint, Tring>(fr_inv.TheMat);
   Tint Cinv_den = UniversalScalarConversion<Tint, Tfield>(fr_inv.TheMult);
-  Tint two_den = 2 * Cinv_den;
   // The descent only reads the products w = E G z of z with the simple
   // roots, which it keeps up to date: a reflection in e_i changes w by a row
   // of the Cartan matrix, the subtraction of the positive root p_j by the
@@ -469,43 +460,68 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
 #endif
     }
   }
-  auto reduce = [&](MyVector<Tint> z) -> MyVector<Tint> {
-    MyVector<Tint> w(k);
-    for (int i = 0; i < k; i++) {
-      w(i) = scal(z, GE, i);
+  /*
+    The descent from z0, over the scalar type Tval. It follows the products
+    w = E G z with the simple roots and the coefficients c with z = z0 - c E:
+    a reflection in e_i adds w(i) to c(i), the subtraction of a positive root
+    adds its simple-root coordinates, and z itself is formed once at the end,
+    over the ring. Tval is Tint, or the deferred-overflow TryInt64, whose
+    flag is checked on every pass so that no wrapped value decides a move or
+    reaches the result. The moves are those of the descent over Tint.
+   */
+  auto descent = [&]<typename Tval>(
+      MyVector<Tint> const &z0, MyMatrix<Tval> const &GE_v,
+      MyMatrix<Tval> const &CinvNum_v, Tval const &Cinv_den_v,
+      MyMatrix<Tval> const &Cartan_v, MyMatrix<Tval> const &Pcoord_v,
+      MyMatrix<Tval> const &PE_v) -> MyVector<Tint> {
+    MyVector<Tval> z0_v(n);
+    if constexpr (std::is_same_v<Tval, Tint>) {
+      z0_v = z0;
+    } else {
+      Tint scratch;
+      for (int u = 0; u < n; u++) {
+        z0_v(u) = ConvertToTryInt64<Tval>(z0(u), scratch);
+      }
     }
-    // The Babai rounding, with c = C^{-1} w as CinvNum w / Cinv_den.
-    MyVector<Tint> w_start = w;
+    MyVector<Tval> w(k);
     for (int i = 0; i < k; i++) {
-      Tint num(0);
+      Tval sum(0);
+      for (int u = 0; u < n; u++) {
+        sum += z0_v(u) * GE_v(u, i);
+      }
+      w(i) = sum;
+    }
+    MyVector<Tval> c = ZeroVector<Tval>(k);
+    // The Babai rounding, with C^{-1} w as CinvNum w / Cinv_den.
+    Tval two_den_v = 2 * Cinv_den_v;
+    MyVector<Tval> w_start = w;
+    for (int i = 0; i < k; i++) {
+      Tval num(0);
       for (int j = 0; j < k; j++) {
-        num += CinvNum(i, j) * w_start(j);
+        num += CinvNum_v(i, j) * w_start(j);
       }
       // The nearest integer to num / Cinv_den, Cinv_den > 0.
-      Tint num_shift = 2 * num + Cinv_den;
-      Tint ci = QuoInt(num_shift, two_den);
+      Tval num_shift = 2 * num + Cinv_den_v;
+      Tval ci = QuoInt(num_shift, two_den_v);
       if (ci != 0) {
-        for (int u = 0; u < n; u++) {
-          z(u) -= ci * rs.SimpleRoots(i, u);
-        }
+        c(i) += ci;
         for (int j = 0; j < k; j++) {
-          w(j) -= ci * Cartan(i, j);
+          w(j) -= ci * Cartan_v(i, j);
         }
       }
     }
     while (true) {
       bool moved = true;
       while (moved) {
+        terminate_in_arithmetic_error<Tval>();
         moved = false;
         for (int i = 0; i < k; i++) {
-          Tint sc = w(i);
+          Tval sc = w(i);
           if (sc < 0) {
             // The reflection in e_i: z - <z, e_i> e_i.
-            for (int u = 0; u < n; u++) {
-              z(u) -= sc * rs.SimpleRoots(i, u);
-            }
+            c(i) += sc;
             for (int j = 0; j < k; j++) {
-              w(j) -= sc * Cartan(i, j);
+              w(j) -= sc * Cartan_v(i, j);
             }
             moved = true;
           }
@@ -513,24 +529,62 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
       }
       bool shortened = false;
       for (int j = 0; j < n_pos && !shortened; j++) {
-        Tint sc(0);
+        Tval sc(0);
         for (int i = 0; i < k; i++) {
-          sc += Pcoord(j, i) * w(i);
+          sc += Pcoord_v(j, i) * w(i);
         }
         if (sc >= 2) {
-          for (int u = 0; u < n; u++) {
-            z(u) -= rs.PositiveRoots(j, u);
-          }
           for (int i = 0; i < k; i++) {
-            w(i) -= PE(j, i);
+            c(i) += Pcoord_v(j, i);
+            w(i) -= PE_v(j, i);
           }
           shortened = true;
         }
       }
+      terminate_in_arithmetic_error<Tval>();
       if (!shortened) {
-        return z;
+        break;
       }
     }
+    MyVector<Tint> c_int(k);
+    if constexpr (std::is_same_v<Tval, Tint>) {
+      c_int = c;
+    } else {
+      for (int i = 0; i < k; i++) {
+        c_int(i) = ConvertFromTryInt64<Tint>(c(i));
+      }
+    }
+    return z0 - rs.SimpleRoots.transpose() * c_int;
+  };
+  // The data of the descent over TryInt64, when it fits.
+  using Ttry = TryInt64;
+  std::optional<std::vector<MyMatrix<Ttry>>> opt_try;
+  Ttry Cinv_den_try(0);
+  if constexpr (use_try_int64<Tint>::value) {
+    try {
+      Tint scratch;
+      Cinv_den_try = ConvertToTryInt64<Ttry>(Cinv_den, scratch);
+      opt_try = std::vector<MyMatrix<Ttry>>{
+          ConvertMatrixToTryInt64<Ttry>(GE),
+          ConvertMatrixToTryInt64<Ttry>(CinvNum),
+          ConvertMatrixToTryInt64<Ttry>(Cartan),
+          ConvertMatrixToTryInt64<Ttry>(Pcoord),
+          ConvertMatrixToTryInt64<Ttry>(PE)};
+    } catch (TryIntException const &) {
+      opt_try.reset();
+    }
+  }
+  auto reduce = [&](MyVector<Tint> const &z0) -> MyVector<Tint> {
+    if (opt_try) {
+      std::vector<MyMatrix<Ttry>> const &D = *opt_try;
+      try {
+        return descent.template operator()<Ttry>(z0, D[0], D[1], Cinv_den_try,
+                                                  D[2], D[3], D[4]);
+      } catch (TryIntException const &) {
+      }
+    }
+    return descent.template operator()<Tint>(z0, GE, CinvNum, Cinv_den,
+                                              Cartan, Pcoord, PE);
   };
   InnerSpanChamber<Tint> chamber =
       [&](MyVector<Tint> const &y, std::vector<MyVector<Tint>> const &reps)
@@ -602,7 +656,7 @@ MyMatrix<Tint> WeylChamberCharacteristicFamily(MyMatrix<T> const &GramMat,
       }
       bool in_chamber = true;
       for (int j = 0; j < k; j++) {
-        if (scal(v, GE, j) < 0) {
+        if (v.dot(GE.col(j)) < 0) {
           in_chamber = false;
         }
       }
