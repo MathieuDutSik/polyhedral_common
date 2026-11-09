@@ -28,6 +28,12 @@ jobs:
         with:
           submodules: recursive
 
+      # MPFR, for the L-values of the quadratic masses (QuadraticHeckeL.h)
+      - name: Install MPFR
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmpfr-dev
+
       - uses: ./.github/actions/install-boost
 
       - uses: ./.github/actions/install-nauty

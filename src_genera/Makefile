@@ -1,4 +1,4 @@
-PROGRAM		= GENUS_Enumerate GENUS_LocalDensity GENUS_AlgebraicModularForms GENUS_IsometryMass GENUS_EnumerateIsometry GENUS_GlueIsometry Test_MassTypes
+PROGRAM		= GENUS_Enumerate GENUS_LocalDensity GENUS_AlgebraicModularForms GENUS_IsometryMass GENUS_EnumerateIsometry GENUS_GlueIsometry Test_MassTypes Test_QuadHeckeL
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -25,6 +25,13 @@ CDEFS           = -DGMP_POOL
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(NAUTY_LINK)
+
+# MPFR, with the mpfrc++ wrapper of basic_common_cpp/ExternalLib, for the
+# L-values of QuadraticHeckeL.h.
+MPFR_INCDIR	?= $(GMP_INCDIR)
+MPFR_LINK	?= -lmpfr
+CTOTAL		+= -I$(MPFR_INCDIR) -I../basic_common_cpp/ExternalLib/mpfrc++-3.6.8
+LIBS		+= $(MPFR_LINK)
 
 # Optional flint arithmetic: build with `make ENABLE_FLINT_SUPPORT=1`.
 # FLINT_INCDIR / FLINT_LINK can be set in the environment; the defaults

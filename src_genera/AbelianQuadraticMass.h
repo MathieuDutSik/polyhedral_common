@@ -2236,6 +2236,59 @@ AbelianQuadraticExtensionField(MyMatrix<T> const &B,
   return AbelianCMField{N, cands[0]};
 }
 
+// QuadraticHeckeL.h, for E not abelian
+template <typename T>
+std::optional<T>
+QuadraticMassNonAbelianE(MyMatrix<T> const &B,
+                         std::vector<MyMatrix<T>> const &Omega,
+                         AbelianCMField const &FK, ElemE<T> const &d,
+                         CyclotomicField<T> const &K, int m, T const &local);
+
+/*
+  The field K = Q(theta) of a generator theta of the centre, with a minimal
+  polynomial f in Z[x], and the discriminant d = (-1)^{m(m-1)/2} det of the
+  K-bilinear form on a K-basis of the lattice, on the powers of theta: E =
+  K(sqrt d) is determined by its square class. Nothing when no small prime
+  has a local generator.
+ */
+template <typename T>
+inline std::optional<std::pair<CyclotomicField<T>, ElemE<T>>>
+QuadDiscriminantK(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega) {
+  int deg = static_cast<int>(Omega.size());
+  int m = B.rows() / deg;
+  auto is_prime = [](int64_t x) -> bool {
+    for (int64_t p = 2; p * p <= x; p++) {
+      if (x % p == 0) {
+        return false;
+      }
+    }
+    return x >= 2;
+  };
+  std::optional<LocalGenerator<T>> lg;
+  int64_t q0 = 2;
+  while (!lg) {
+    if (is_prime(q0)) {
+      lg = FindLocalGenerator(B, Omega, q0);
+    }
+    if (!lg) {
+      q0++;
+    }
+    if (q0 > 1000) {
+      return {};
+    }
+  }
+  CyclotomicField<T> K;
+  K.d = 0;
+  K.deg = deg;
+  K.Phi = lg->f;
+  K.conj = lg->conj;
+  ElemE<T> d = DetK(LocalOKGram(B, *lg, q0), K);
+  if ((m * (m - 1) / 2) % 2 == 1) {
+    d = EScal(d, T(-1));
+  }
+  return std::make_pair(K, d);
+}
+
 /*
   The mass of the genus of the quadratic lattice over K (the standard mass
   times the local factors), or nothing when a local factor is not computed
@@ -2267,36 +2320,13 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
   if (m % 2 == 1) {
     sm = StandardQuadraticMassAbelian<T>(FK, m, false, {});
   } else {
-    auto is_prime = [](int64_t x) -> bool {
-      for (int64_t p = 2; p * p <= x; p++) {
-        if (x % p == 0) {
-          return false;
-        }
-      }
-      return x >= 2;
-    };
-    std::optional<LocalGenerator<T>> lg;
-    int64_t q0 = 2;
-    while (!lg) {
-      if (is_prime(q0)) {
-        lg = FindLocalGenerator(B, Omega, q0);
-      }
-      if (!lg) {
-        q0++;
-      }
-      if (q0 > 1000) {
-        return {};
-      }
+    std::optional<std::pair<CyclotomicField<T>, ElemE<T>>> Kd =
+        QuadDiscriminantK(B, Omega);
+    if (!Kd) {
+      return {};
     }
-    CyclotomicField<T> K;
-    K.d = 0;
-    K.deg = deg;
-    K.Phi = lg->f;
-    K.conj = lg->conj;
-    ElemE<T> d = DetK(LocalOKGram(B, *lg, q0), K);
-    if ((m * (m - 1) / 2) % 2 == 1) {
-      d = EScal(d, T(-1));
-    }
+    CyclotomicField<T> const &K = Kd->first;
+    ElemE<T> const &d = Kd->second;
 #ifdef DEBUG_ABQUAD
     std::cerr << "ABQUAD: disc =";
     for (auto const &x : d) {
@@ -2359,7 +2389,8 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
         std::optional<AbelianCMField> FE =
             AbelianQuadraticExtensionField(B, Omega, FK, d, K, m);
         if (!FE) {
-          return {};
+          // E not abelian: L(1 - r, chi_{E/K}) numerically, rounded
+          return QuadraticMassNonAbelianE(B, Omega, FK, d, K, m, local);
         }
         sm = StandardQuadraticMassAbelian<T>(LiftAbelianField(FK, FE->n), m,
                                              false, *FE);
@@ -2967,5 +2998,6 @@ LocalImagePiAdic(MyMatrix<T> const &B,
 }
 
 // clang-format off
+#include "QuadraticHeckeL.h"
 #endif  // SRC_GENERA_ABELIANQUADRATICMASS_H_
 // clang-format on

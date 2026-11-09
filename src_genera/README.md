@@ -229,9 +229,24 @@ over Q, exactly: the automorphisms of K (an LLL relation on the real
 roots, checked by f(g) = 0 in K), sigma(d) / d a square for every sigma,
 and the lifts commuting; its character group is then the subgroup of
 index 2 of the lift of H modulo a conductor bound N that the split primes
-single out. A non-abelian E leaves the mass not computed. Checked against
-Hecke.jl on 753 local factors over 15 fields and the masses of 40
-lattices.
+single out. For a non-abelian E, L(1 - r, chi_{E/K}) is computed
+numerically with MPFR (`QuadraticHeckeL.h`) by the smoothed functional
+equation of Lambda(s) = A^s Gamma_R(s + delta)^n L(s), A^2 = |D_K| N(f):
+the character chi(P) and the conductor are read prime by prime (at the
+good primes from a trace in O_K / p, without factoring; at the bad ones
+with the local arithmetic of the local factors, the dyadic conductor by
+quadratic defects), the kernel G_s(t) + G_{1-s}(t) from its series at the
+poles of the gamma factor, interpolated in log t. The mass is then made
+exact as in Hecke.jl: mu num(local) times the standard mass is an
+integer, mu a multiple of the order of the finite subgroups of GL_m(K)
+(Minkowski, Guralnick-Lorenz). Checked against Hecke.jl on 753 local
+factors over 15 fields and the masses of 40 lattices, and for E not
+abelian the masses of 54 lattices; the characters and Dirichlet
+coefficients (110 lattices) and the values L(1 - r) (44, r = 1, 2)
+against PARI/GP. The number of terms is about A times a power of the
+precision; beyond 4 10^8 terms the mass is left not computed.
+`Test_QuadHeckeL` prints the character data, the coefficients and
+L(1 - r) of a lattice.
 
 With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabiliser of L in
 the adelic centraliser is a subgroup of finite index of that of L_0, so

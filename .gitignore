@@ -138,6 +138,7 @@ src_dualdesc/Read_MPI_sizes
 src_group/GRP_*
 src_genera/GENUS_*
 src_genera/Test_MassTypes
+src_genera/Test_QuadHeckeL
 src_group/POLY_HashWeightMatrixLimited
 src_indefinite/INDEF_*
 src_isotropy/LATT_*

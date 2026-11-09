@@ -269,6 +269,10 @@ quadmass_case s5abm2 5 1 1/4
 quadmass_case s5abm4 5 1 205/32
 quadmass_case s2abm2 8 7 1/4
 quadmass_case s2abm4 8 7 205/192
+# E not abelian: L(1 - r, chi_{E/K}) numerically (QuadraticHeckeL.h), the
+# mass made exact by the Minkowski multiple, as Hecke.jl does
+quadmass_case s13nabm2 13 4 99/4
+quadmass_case z15pnabm2 15 1 1/2
 # The Hermitian and quadratic masses over abelian fields are generic in the
 # rational type: the same masses with mpq_class, boost mpq_rational and,
 # when built with flint, fmpq_class.
