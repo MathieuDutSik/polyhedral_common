@@ -447,31 +447,6 @@ template <typename T, typename Tint> struct GenusNeighborBasis {
   MyMatrix<T> GramN;
 };
 
-
-// w = G x, the linear form y -> (y, x).
-template <typename Tint>
-MyVector<Tint> GenusLinearForm(MyMatrix<Tint> const &G, MyVector<Tint> const &x) {
-  int n = G.rows();
-  MyVector<Tint> w(n);
-  for (int i = 0; i < n; i++) {
-    Tint sum(0);
-    for (int j = 0; j < n; j++) {
-      sum += G(i, j) * x(j);
-    }
-    w(i) = sum;
-  }
-  return w;
-}
-
-template <typename Tint>
-Tint GenusNormOf(MyVector<Tint> const &x, MyVector<Tint> const &wx) {
-  Tint sum(0);
-  for (int i = 0; i < x.size(); i++) {
-    sum += x(i) * wx(i);
-  }
-  return sum;
-}
-
 // What the neighbour construction needs of the point v: the lift, its linear
 // form, a pivot of that form mod p, and the norm with its valuation.
 template <typename Tint> struct GenusNeighborLine {
@@ -497,7 +472,8 @@ GenusNeighborLineData(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
   for (int i = 0; i < n; i++) {
     v(i) = Tint(v_line[i]);
   }
-  MyVector<Tint> w = GenusLinearForm(G, v);
+  // w = G v, the linear form y -> (y, v)
+  MyVector<Tint> w = G * v;
   int jpiv = -1;
   for (int i = 0; i < n; i++) {
     if (ResidueModP(w(i), p) != 0) {
@@ -510,7 +486,7 @@ GenusNeighborLineData(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     return {};
   }
   int e = (p == 2) ? 1 : 0;
-  Tint nrm = GenusNormOf(v, w);
+  Tint nrm = v.dot(w);
   int val = ValuationP(nrm, p);
   if (val <= e) {
     return {};
@@ -551,8 +527,8 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     int a = (ResidueModP(num_red, p) *
              InverseModP(ResidueModP(den_red, p), p)) % p;
     v(jpiv) -= Tint(a) * Tint(p);
-    w = GenusLinearForm(G, v);
-    nrm = GenusNormOf(v, w);
+    w = G * v;
+    nrm = v.dot(w);
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
     if (ValuationP(nrm, p) < e + 2) {
       std::cerr << "GENUS: the correction of the isotropic vector failed, "
