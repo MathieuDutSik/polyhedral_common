@@ -1072,7 +1072,6 @@ private:
       MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
       Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
     }
-    request = FullGramInfo<T>(eRec.GramMatRed);
     if constexpr (shvec_has_fast_path<T>::value) {
       fast_prep = ComputeShvecFastPrep(eRec.GramMatRed);
     }
@@ -1080,8 +1079,17 @@ private:
       if (IsIntegralMatrix(eRec.GramMatRed)) {
         request_ring = FullGramInfo<Tint>(
             UniversalMatrixConversion<Tint, T>(eRec.GramMatRed));
+        // The decomposition of an integral form is integral (its entries are
+        // minors), so the one over the field is the conversion of the one
+        // over the ring rather than a second elimination.
+        request = FullGramInfo<T>(
+            eRec.GramMatRed,
+            UniversalVectorConversion<T, Tint>(request_ring->d),
+            UniversalMatrixConversion<T, Tint>(request_ring->Nmat));
+        return;
       }
     }
+    request = FullGramInfo<T>(eRec.GramMatRed);
   }
   /*
     The enumeration of the zero coset up to the bound, over the ring when
