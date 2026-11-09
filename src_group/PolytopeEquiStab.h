@@ -1852,20 +1852,13 @@ template <typename Tidx> struct AbsTrickLift {
   size_t n_comp;
 };
 
+// The lifted generators completed by the flip of each connected component,
+// shared by the two ways of lifting.
 template <typename T, typename Tidx, typename Tidx_value>
-std::optional<AbsTrickLift<Tidx>>
-AbsTrick_LiftGenerators(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
-                        std::vector<std::vector<Tidx>> const &ListGen,
-                        size_t nbRow) {
-  std::vector<std::vector<Tidx>> ListGenRet;
-  for (auto &eGen : ListGen) {
-    std::optional<std::vector<Tidx>> opt =
-        AbsTrick_LiftGenerator<T, Tidx, Tidx_value>(WMatAbs, eGen, nbRow);
-    if (!opt) {
-      return {};
-    }
-    ListGenRet.push_back(*opt);
-  }
+AbsTrickLift<Tidx>
+AbsTrick_AddComponentFlips(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+                           std::vector<std::vector<Tidx>> &&ListGenRet,
+                           size_t nbRow) {
   // The connected components of "this entry carries sign information". The
   // diagonal is skipped, an entry relating a row to itself says nothing
   // about relative signs.
@@ -1909,6 +1902,167 @@ AbsTrick_LiftGenerators(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
                             static_cast<size_t>(n_comp)};
 }
 
+template <typename T, typename Tidx, typename Tidx_value>
+std::optional<AbsTrickLift<Tidx>>
+AbsTrick_LiftGenerators(WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+                        std::vector<std::vector<Tidx>> const &ListGen,
+                        size_t nbRow) {
+  std::vector<std::vector<Tidx>> ListGenRet;
+  for (auto &eGen : ListGen) {
+    std::optional<std::vector<Tidx>> opt =
+        AbsTrick_LiftGenerator<T, Tidx, Tidx_value>(WMatAbs, eGen, nbRow);
+    if (!opt) {
+      return {};
+    }
+    ListGenRet.push_back(*opt);
+  }
+  return AbsTrick_AddComponentFlips<T, Tidx, Tidx_value>(
+      WMatAbs, std::move(ListGenRet), nbRow);
+}
+
+/*
+  The lift of a generator by linear algebra, for a family SHVhalf of full rank
+  together with its forms ListMat. AbsTrick_LiftGenerator propagates the signs
+  and checks them on every pair, which is quadratic in the family. Here the
+  signs are propagated only until every row has one, the propagation being the
+  same; then the signed permutation is accepted when the matrix A realizing it
+  on a basis of rows maps every vector of the family to its signed image and
+  preserves every form, A M A^T = M. That is a check linear in the family.
+
+  The two accept the same lifts. If the signs agree with the weights on every
+  pair, the signed permutation preserves every scalar product, so the linear
+  map it defines on the family (of full rank) exists and preserves the forms.
+  Conversely, if A maps v_i to its signed image w_i and preserves the forms,
+  then <w_i, w_j> = <v_i A, v_j A> = <v_i, v_j> for every pair, which is the
+  agreement of the signs. A row the propagation does not reach declines the
+  lift in both.
+
+  The solver is built once on the family over the field, for all generators.
+ */
+template <typename Tfield, typename T, typename Tidx, typename Tidx_value>
+std::optional<std::vector<Tidx>> AbsTrick_LiftGenerator_Linear(
+    WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+    std::vector<Tidx> const &eGen, size_t nbRow,
+    FindTransformationSolver<Tfield> const &solver,
+    MyMatrix<Tfield> const &SHV_f,
+    std::vector<MyMatrix<Tfield>> const &ListMat_f) {
+  // The sign of the image of each row: 0 unassigned, 1 positive, 2 negative.
+  std::vector<uint8_t> V(nbRow, 0);
+  std::vector<size_t> queue{0};
+  V[0] = 1;
+  size_t n_assigned = 1;
+  for (size_t pos_q = 0; pos_q < queue.size() && n_assigned < nbRow; pos_q++) {
+    size_t i = queue[pos_q];
+    uint8_t val = V[i];
+    size_t iImg = eGen[i];
+    for (size_t j = 0; j < nbRow && n_assigned < nbRow; j++) {
+      if (V[j] != 0) {
+        continue;
+      }
+      size_t idx1 = weightmatrix_idx<true>(nbRow, i, j);
+      if (WMatAbs.WMat.GetValueAtIndex(idx1) == WMatAbs.positionZero) {
+        continue;
+      }
+      size_t idx2 = weightmatrix_idx<true>(nbRow, iImg, eGen[j]);
+      bool ChgSign = WMatAbs.ArrSigns[idx1] ^ WMatAbs.ArrSigns[idx2];
+      V[j] = ((ChgSign && val == 1) || (!ChgSign && val == 2)) ? 2 : 1;
+      queue.push_back(j);
+      n_assigned++;
+    }
+  }
+  if (n_assigned < nbRow) {
+    return {};
+  }
+  // The signed images w_i of the rows, and the matrix realizing them.
+  int n = SHV_f.cols();
+  MyMatrix<Tfield> W(nbRow, n);
+  std::vector<Tidx> eGenRet(2 * nbRow, 0);
+  for (size_t i = 0; i < nbRow; i++) {
+    size_t iImg = eGen[i];
+    if (V[i] == 1) {
+      eGenRet[i] = iImg;
+      eGenRet[i + nbRow] = iImg + nbRow;
+      W.row(i) = SHV_f.row(iImg);
+    } else {
+      eGenRet[i] = iImg + nbRow;
+      eGenRet[i + nbRow] = iImg;
+      W.row(i) = -SHV_f.row(iImg);
+    }
+  }
+  auto f_id = [](int iRow) -> int { return iRow; };
+  std::optional<MyMatrix<Tfield>> opt_A = solver.solve_field_raw_f(W, f_id);
+  if (!opt_A) {
+    return {};
+  }
+  MyMatrix<Tfield> const &A = *opt_A;
+  if (SHV_f * A != W) {
+    return {};
+  }
+  for (auto &M : ListMat_f) {
+    if (A * M * A.transpose() != M) {
+      return {};
+    }
+  }
+  return eGenRet;
+}
+
+/*
+  The lifts of all the generators by linear algebra, for a family of full
+  rank with its forms, the same as AbsTrick_LiftGenerators returns (checked
+  against it under SANITY_CHECK_POLYTOPE_EQUI_STAB); the pairwise lift serves
+  a family that is not of full rank.
+ */
+template <typename T, typename Tval, typename Tint, typename Tidx,
+          typename Tidx_value>
+std::optional<AbsTrickLift<Tidx>> AbsTrick_LiftGenerators_ListMat(
+    WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+    std::vector<std::vector<Tidx>> const &ListGen, size_t nbRow,
+    MyMatrix<Tint> const &SHVhalf, std::vector<MyMatrix<Tval>> const &ListMat) {
+  using Tfield = typename overlying_field<Tval>::field_type;
+  MyMatrix<Tfield> SHV_f = UniversalMatrixConversion<Tfield, Tint>(SHVhalf);
+  FindTransformationSolver<Tfield> solver(SHV_f);
+  if (!solver.full_rank) {
+    return AbsTrick_LiftGenerators<T, Tidx, Tidx_value>(WMatAbs, ListGen,
+                                                         nbRow);
+  }
+  std::vector<MyMatrix<Tfield>> ListMat_f;
+  for (auto &M : ListMat) {
+    ListMat_f.push_back(UniversalMatrixConversion<Tfield, Tval>(M));
+  }
+  std::vector<std::vector<Tidx>> ListGenRet;
+  bool all_lift = true;
+  for (auto &eGen : ListGen) {
+    std::optional<std::vector<Tidx>> opt =
+        AbsTrick_LiftGenerator_Linear<Tfield, T, Tidx, Tidx_value>(
+            WMatAbs, eGen, nbRow, solver, SHV_f, ListMat_f);
+    if (!opt) {
+      all_lift = false;
+      break;
+    }
+    ListGenRet.push_back(*opt);
+  }
+  std::optional<AbsTrickLift<Tidx>> result;
+  if (all_lift) {
+    result = AbsTrick_AddComponentFlips<T, Tidx, Tidx_value>(
+        WMatAbs, std::move(ListGenRet), nbRow);
+  }
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+  std::optional<AbsTrickLift<Tidx>> result_pair =
+      AbsTrick_LiftGenerators<T, Tidx, Tidx_value>(WMatAbs, ListGen, nbRow);
+  bool same = result.has_value() == result_pair.has_value();
+  if (same && result) {
+    same = result->ListGen == result_pair->ListGen &&
+           result->n_comp == result_pair->n_comp;
+  }
+  if (!same) {
+    std::cerr << "PES: AbsTrick_LiftGenerators_ListMat, the linear and the "
+                 "pairwise lifts differ\n";
+    throw TerminalException{1};
+  }
+#endif
+  return result;
+}
+
 // Whether every generator lifts, for the callers that only need to know.
 template <typename T, typename Tidx, typename Tidx_value>
 bool AbsTrick_TestLiftGenerators(
@@ -1920,6 +2074,44 @@ bool AbsTrick_TestLiftGenerators(
     }
   }
   return true;
+}
+
+// Whether every generator lifts, by linear algebra when the family has full
+// rank, for the callers that only need to know.
+template <typename T, typename Tval, typename Tint, typename Tidx,
+          typename Tidx_value>
+bool AbsTrick_TestLiftGenerators_ListMat(
+    WeightMatrixAbs<T, Tidx_value> const &WMatAbs,
+    std::vector<std::vector<Tidx>> const &ListGen, size_t nbRow,
+    MyMatrix<Tint> const &SHVhalf, std::vector<MyMatrix<Tval>> const &ListMat) {
+  using Tfield = typename overlying_field<Tval>::field_type;
+  MyMatrix<Tfield> SHV_f = UniversalMatrixConversion<Tfield, Tint>(SHVhalf);
+  FindTransformationSolver<Tfield> solver(SHV_f);
+  if (!solver.full_rank) {
+    return AbsTrick_TestLiftGenerators<T, Tidx, Tidx_value>(WMatAbs, ListGen,
+                                                            nbRow);
+  }
+  std::vector<MyMatrix<Tfield>> ListMat_f;
+  for (auto &M : ListMat) {
+    ListMat_f.push_back(UniversalMatrixConversion<Tfield, Tval>(M));
+  }
+  bool all_lift = true;
+  for (auto &eGen : ListGen) {
+    if (!AbsTrick_LiftGenerator_Linear<Tfield, T, Tidx, Tidx_value>(
+            WMatAbs, eGen, nbRow, solver, SHV_f, ListMat_f)) {
+      all_lift = false;
+      break;
+    }
+  }
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+  if (all_lift != AbsTrick_TestLiftGenerators<T, Tidx, Tidx_value>(
+                      WMatAbs, ListGen, nbRow)) {
+    std::cerr << "PES: AbsTrick_TestLiftGenerators_ListMat, the linear and "
+                 "the pairwise tests differ\n";
+    throw TerminalException{1};
+  }
+#endif
+  return all_lift;
 }
 
 /*

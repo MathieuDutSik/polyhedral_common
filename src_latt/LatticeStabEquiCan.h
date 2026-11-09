@@ -326,8 +326,9 @@ std::optional<MyMatrix<Tint>> CanonicallyReorder_SHV_AbsTrick_kernel(
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetGroupCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
-  if (!AbsTrick_TestLiftGenerators<std::vector<T>, Tidx, Tidx_value>(
-          WMatAbs, ePair.second, nbPair)) {
+  if (!AbsTrick_TestLiftGenerators_ListMat<std::vector<T>, T, Tint, Tidx,
+                                           Tidx_value>(
+          WMatAbs, ePair.second, nbPair, SHVhalf, ListMat)) {
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
     os << "LSEC: a generator does not lift, falling back\n";
 #endif
@@ -434,8 +435,9 @@ GetListGenAutomorphism_AbsTrick_kernel(
       GetStabilizerWeightMatrix_KernelGraph<std::vector<T>, Tgr, Tidx,
                                             Tidx_value, true>(WMatAbs.WMat, os);
   std::optional<AbsTrickLift<Tidx>> opt =
-      AbsTrick_LiftGenerators<std::vector<T>, Tidx, Tidx_value>(
-          WMatAbs, gens_order.ListGen, nbPair);
+      AbsTrick_LiftGenerators_ListMat<std::vector<T>, T, Tint, Tidx,
+                                      Tidx_value>(
+          WMatAbs, gens_order.ListGen, nbPair, SHVhalf, ListMat);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: GetListGenAutomorphism_AbsTrick|=" << time << "\n";
 #endif
