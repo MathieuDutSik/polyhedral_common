@@ -1090,26 +1090,33 @@ inline void GetGraphFromWeightedMatrix_color_adj(
         f_adj(bVert, aVert);
       }
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
+  // For each weight, the pairs of layers (iH1, iH2) of its set bits, in the
+  // order of the bits. The loop over the vertex pairs then visits only the
+  // edges to add, the frequent weights having few bits or none.
+  std::vector<std::vector<std::pair<int, int>>> ListLayerPairs(nbMult);
+  for (size_t eVal = 0; eVal < nbMult; eVal++) {
+    for (size_t i_pow = 0; i_pow < e_pow; i_pow++) {
+      if (f_total[eVal * e_pow + i_pow] == 1) {
+        ListLayerPairs[eVal].push_back({V[2 * i_pow], V[2 * i_pow + 1]});
+      }
+    }
+  }
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++)
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
       Tidx_value eVal = get_effective_weight_index<Tidx_value, T, is_symm>(
           nbWei, nbRow, iVert, jVert, WMat);
-      size_t shift = eVal * e_pow;
-      for (size_t i_pow = 0; i_pow < e_pow; i_pow++)
-        if (f_total[shift + i_pow] == 1) {
-          int iH1 = V[2 * i_pow];
-          int iH2 = V[2 * i_pow + 1];
-          size_t aVert = iVert + nbVert * iH1;
-          size_t bVert = jVert + nbVert * iH2;
+      for (auto const &[iH1, iH2] : ListLayerPairs[eVal]) {
+        size_t aVert = iVert + nbVert * iH1;
+        size_t bVert = jVert + nbVert * iH2;
+        f_adj(aVert, bVert);
+        f_adj(bVert, aVert);
+        if (iH1 != iH2) {
+          aVert = iVert + nbVert * iH2;
+          bVert = jVert + nbVert * iH1;
           f_adj(aVert, bVert);
           f_adj(bVert, aVert);
-          if (iH1 != iH2) {
-            aVert = iVert + nbVert * iH2;
-            bVert = jVert + nbVert * iH1;
-            f_adj(aVert, bVert);
-            f_adj(bVert, aVert);
-          }
         }
+      }
     }
 }
 
@@ -1179,18 +1186,25 @@ inline void GetGraphFromWeightedMatrix_color_adj(
         f_adj(bVert, aVert);
       }
   Face f_total = GetAllBinaryExpressionsByWeight(hS, nbMult);
+  // For each weight, the layers of its set bits, in the order of the bits.
+  std::vector<std::vector<size_t>> ListLayers(nbMult);
+  for (size_t eVal = 0; eVal < nbMult; eVal++) {
+    for (size_t iH = 0; iH < hS; iH++) {
+      if (f_total[eVal * hS + iH] == 1) {
+        ListLayers[eVal].push_back(iH);
+      }
+    }
+  }
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++)
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
       Tidx_value eVal = get_effective_weight_index<Tidx_value, T, is_symm>(
           nbWei, nbRow, iVert, jVert, WMat);
-      size_t shift = eVal * hS;
-      for (size_t iH = 0; iH < hS; iH++)
-        if (f_total[shift + iH] == 1) {
-          size_t aVert = iVert + nbVert * iH;
-          size_t bVert = jVert + nbVert * iH;
-          f_adj(aVert, bVert);
-          f_adj(bVert, aVert);
-        }
+      for (size_t iH : ListLayers[eVal]) {
+        size_t aVert = iVert + nbVert * iH;
+        size_t bVert = jVert + nbVert * iH;
+        f_adj(aVert, bVert);
+        f_adj(bVert, aVert);
+      }
     }
 }
 
