@@ -262,6 +262,13 @@ quadmass_case z16pm2 16 1 1/8
 quadmass_case s5m3 5 1 15925/4
 quadmass_case z7pm3 7 1 245245/12
 quadmass_case z16pm3 16 1 5197365/16
+# E = K(sqrt d) abelian but not K(sqrt D): Q(zeta_5) and Q(zeta_20)^+ over
+# Q(sqrt 5), Q(zeta_16)^+ and the cyclic quartic CM field of Q(zeta_16)
+# over Q(sqrt 2), found from the automorphisms of K and the split primes
+quadmass_case s5abm2 5 1 1/4
+quadmass_case s5abm4 5 1 205/32
+quadmass_case s2abm2 8 7 1/4
+quadmass_case s2abm4 8 7 205/192
 # The Hermitian and quadratic masses over abelian fields are generic in the
 # rational type: the same masses with mpq_class, boost mpq_rational and,
 # when built with flint, fmpq_class.

@@ -224,7 +224,12 @@ A common index divisor unramified in K with primes of residue degree 1
 several elements, the local lattice being then a Z_q-lattice.
 For m even the discriminant d is tested exactly for being a square, and
 E = K(sqrt d) is taken as K(sqrt D) for a fundamental discriminant D
-(then abelian); otherwise the mass is not computed. Checked against
+(then abelian) when possible. Otherwise E is tested for being abelian
+over Q, exactly: the automorphisms of K (an LLL relation on the real
+roots, checked by f(g) = 0 in K), sigma(d) / d a square for every sigma,
+and the lifts commuting; its character group is then the subgroup of
+index 2 of the lift of H modulo a conductor bound N that the split primes
+single out. A non-abelian E leaves the mass not computed. Checked against
 Hecke.jl on 753 local factors over 15 fields and the masses of 40
 lattices.
 

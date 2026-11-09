@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "AbelianHermitianMass.h"
+#include "ClassicLLL.h"
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -1932,6 +1933,310 @@ inline AbelianCMField LiftAbelianField(AbelianCMField const &F, int64_t N) {
 }
 
 /*
+  E = K(sqrt d) abelian over Q but not of the form K(sqrt D), D rational.
+
+  - The automorphisms of K = Q(theta) (totally real, Galois) are the roots
+    g(theta) of f in K. Writing g(theta_1) = theta_j at the real roots,
+    the integer relation between 1, theta_1, ..., theta_1^{n-1} and
+    theta_j is found by LLL on the Gram matrix I + W^2 v v^T at a working
+    precision, and each candidate is checked exactly by f(g) = 0 in K.
+  - E is Galois over Q iff sigma(d) / d is a square s_sigma^2 in K for
+    every sigma, the lifts sending sqrt d to s_sigma sqrt d; it is then
+    abelian iff sigma(s_tau) s_sigma = tau(s_sigma) s_tau for all sigma,
+    tau. Both are exact (SqrtInK).
+  - An abelian E has a conductor dividing N = lcm(n, l^{max(v_l(n), 1)} for
+    the odd primes l dividing 2 n N(d), 2^{max(v_2(n) + 1, 3)}): a
+    character chi of E has chi^2 a character of K, and at an odd l the
+    square of a character of conductor l^k, k >= 2, keeps that conductor.
+    So E is the field fixed by one of the subgroups of index 2 of the lift
+    H_N of H to (Z/N)^*, containing -1 iff E is real. A prime l splitting
+    completely in K (l mod N in H_N) is in the subgroup of E iff d is a
+    square modulo a prime of K over l; such primes remove the other
+    candidates one by one, all the computations being exact, and since E
+    is among them the one left is E.
+ */
+template <typename T>
+ElemE<T> EApplyAut(ElemE<T> const &x, ElemE<T> const &g,
+                   CyclotomicField<T> const &K) {
+  ElemE<T> res(K.deg, T(0));
+  for (int i = K.deg - 1; i >= 0; i--) {
+    res = EMul(res, g, K);
+    res[0] += x[i];
+  }
+  return res;
+}
+
+template <typename T>
+std::vector<ElemE<T>> AutomorphismsTotallyReal(CyclotomicField<T> const &K) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
+  int n = K.deg;
+  auto is_root = [&](ElemE<T> const &g) -> bool {
+    ElemE<T> v(n, T(0));
+    for (int i = static_cast<int>(K.Phi.size()) - 1; i >= 0; i--) {
+      v = EMul(v, g, K);
+      v[0] += UniversalScalarConversion<T, int64_t>(K.Phi[i]);
+    }
+    return EIsZero(v);
+  };
+  std::vector<T> poly;
+  for (auto const &c : K.Phi) {
+    poly.push_back(UniversalScalarConversion<T, int64_t>(c));
+  }
+  for (size_t prec : {256, 512, 1024, 2048, 4096}) {
+    T eps(1);
+    for (size_t i = 0; i < prec; i++) {
+      eps /= 2;
+    }
+    std::vector<T> th = real_roots_approximation(poly, eps);
+    if (static_cast<int>(th.size()) != n) {
+      std::cerr << "ABQUAD: the field is not totally real\n";
+      throw TerminalException{1};
+    }
+    T W2(1);
+    for (size_t i = 0; i < prec; i++) {
+      W2 *= 2;
+    }
+    std::vector<ElemE<T>> res;
+    for (int j = 0; j < n; j++) {
+      std::vector<T> v(n + 1);
+      T pw(1);
+      for (int k = 0; k < n; k++) {
+        v[k] = pw;
+        pw *= th[0];
+      }
+      v[n] = th[j];
+      MyMatrix<T> G(n + 1, n + 1);
+      for (int a = 0; a <= n; a++) {
+        for (int b = 0; b <= n; b++) {
+          T val = W2 * v[a];
+          val *= v[b];
+          if (a == b) {
+            val += 1;
+          }
+          G(a, b) = val;
+        }
+      }
+      LLLreduction<T, Tint> red = LLLreducedBasis<T, Tint>(G, std::cerr);
+      for (int r = 0; r <= n; r++) {
+        Tint w = red.Pmat(r, n);
+        if (w == 0) {
+          continue;
+        }
+        ElemE<T> g(n, T(0));
+        T wT = UniversalScalarConversion<T, Tint>(w);
+        for (int k = 0; k < n; k++) {
+          T c = UniversalScalarConversion<T, Tint>(red.Pmat(r, k));
+          c /= wT;
+          g[k] = -c;
+        }
+        if (is_root(g)) {
+          if (std::find(res.begin(), res.end(), g) == res.end()) {
+            res.push_back(g);
+          }
+          break;
+        }
+      }
+    }
+    if (static_cast<int>(res.size()) == n) {
+      return res;
+    }
+  }
+  std::cerr << "ABQUAD: the automorphisms of K are not found\n";
+  throw TerminalException{1};
+}
+
+template <typename T>
+bool IsAbelianQuadraticExtension(ElemE<T> const &d, CyclotomicField<T> const &K,
+                                 std::vector<ElemE<T>> const &auts) {
+  ElemE<T> dinv = EInv(d, K);
+  std::vector<ElemE<T>> sv;
+  for (auto const &g : auts) {
+    std::optional<ElemE<T>> opt =
+        SqrtInK(EMul(EApplyAut(d, g, K), dinv, K), K);
+    if (!opt) {
+      return false;
+    }
+    sv.push_back(*opt);
+  }
+  for (size_t a = 0; a < auts.size(); a++) {
+    for (size_t b = a + 1; b < auts.size(); b++) {
+      ElemE<T> lhs = EMul(EApplyAut(sv[b], auts[a], K), sv[a], K);
+      ElemE<T> rhs = EMul(EApplyAut(sv[a], auts[b], K), sv[b], K);
+      if (lhs != rhs) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+// The subgroups of index 2 of the finite subgroup Hl of (Z/N)^*.
+inline std::vector<std::vector<int64_t>>
+IndexTwoSubgroups(std::vector<int64_t> const &Hl, int64_t N) {
+  auto closure = [&](std::vector<int64_t> const &gens) -> std::set<int64_t> {
+    std::set<int64_t> S{1 % N};
+    std::vector<int64_t> queue{1 % N};
+    while (!queue.empty()) {
+      int64_t a = queue.back();
+      queue.pop_back();
+      for (int64_t g : gens) {
+        int64_t b = (a * g) % N;
+        if (S.insert(b).second) {
+          queue.push_back(b);
+        }
+      }
+    }
+    return S;
+  };
+  std::vector<int64_t> squares;
+  for (int64_t h : Hl) {
+    squares.push_back((h * h) % N);
+  }
+  // a basis of Hl modulo the squares
+  std::vector<int64_t> basis;
+  std::vector<int64_t> gens = squares;
+  std::set<int64_t> cur = closure(gens);
+  for (int64_t h : Hl) {
+    if (cur.count(h) == 0) {
+      basis.push_back(h);
+      gens.push_back(h);
+      cur = closure(gens);
+    }
+  }
+  size_t s = basis.size();
+  // the coordinates of each element over F_2
+  std::set<int64_t> Ssq = closure(squares);
+  std::map<int64_t, uint64_t> coord;
+  for (uint64_t c = 0; c < (uint64_t(1) << s); c++) {
+    int64_t rep = 1 % N;
+    for (size_t i = 0; i < s; i++) {
+      if ((c >> i) & 1) {
+        rep = (rep * basis[i]) % N;
+      }
+    }
+    for (int64_t x : Ssq) {
+      coord[(rep * x) % N] = c;
+    }
+  }
+  std::vector<std::vector<int64_t>> res;
+  for (uint64_t lam = 1; lam < (uint64_t(1) << s); lam++) {
+    std::vector<int64_t> Hp;
+    for (int64_t h : Hl) {
+      if (__builtin_popcountll(coord[h] & lam) % 2 == 0) {
+        Hp.push_back(h);
+      }
+    }
+    res.push_back(Hp);
+  }
+  return res;
+}
+
+/*
+  E = K(sqrt d) for the discriminant d of the quadratic lattice (B,
+  Omega), when E is abelian over Q: (N, H_E). Nothing when E is not
+  abelian.
+ */
+template <typename T>
+std::optional<AbelianCMField>
+AbelianQuadraticExtensionField(MyMatrix<T> const &B,
+                               std::vector<MyMatrix<T>> const &Omega,
+                               AbelianCMField const &FK, ElemE<T> const &d,
+                               CyclotomicField<T> const &K, int m) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
+  std::vector<ElemE<T>> auts = AutomorphismsTotallyReal(K);
+  if (!IsAbelianQuadraticExtension(d, K, auts)) {
+    return {};
+  }
+  // the conductor bound
+  T Nd = DeterminantMat(EMulMatrix(d, K));
+  std::set<int64_t> ps;
+  for (Tint x : {Tint(T_abs(GetNumerator_z(Nd))), Tint(GetDenominator_z(Nd)),
+                 UniversalScalarConversion<Tint, int64_t>(2 * FK.n)}) {
+    if (x > 1) {
+      for (Tint const &p : FactorsInt(x)) {
+        ps.insert(UniversalScalarConversion<int64_t, Tint>(p));
+      }
+    }
+  }
+  auto vp = [](int64_t x, int64_t p) -> int {
+    int v = 0;
+    while (x % p == 0) {
+      x /= p;
+      v++;
+    }
+    return v;
+  };
+  int64_t N = FK.n;
+  for (int64_t p : ps) {
+    int64_t pk = 1;
+    int k = (p == 2) ? std::max(vp(FK.n, 2) + 1, 3) : std::max(vp(FK.n, p), 1);
+    for (int i = 0; i < k; i++) {
+      pk *= p;
+    }
+    N = std::lcm(N, pk);
+  }
+  AbelianCMField FK2 = LiftAbelianField(FK, N);
+  bool real = (m % 4 == 0);
+  std::vector<std::vector<int64_t>> cands;
+  for (auto const &Hp : IndexTwoSubgroups(FK2.H, N)) {
+    bool has_m1 = std::find(Hp.begin(), Hp.end(), N - 1) != Hp.end();
+    if (has_m1 == real) {
+      cands.push_back(Hp);
+    }
+  }
+  std::set<int64_t> HN(FK2.H.begin(), FK2.H.end());
+  auto is_prime = [](int64_t x) -> bool {
+    for (int64_t p = 2; p * p <= x; p++) {
+      if (x % p == 0) {
+        return false;
+      }
+    }
+    return x >= 2;
+  };
+  for (int64_t l = 3; cands.size() > 1 && l < 10000000; l += 2) {
+    if (!is_prime(l) || N % l == 0 || ps.count(l) == 1 ||
+        HN.count(l % N) == 0) {
+      continue;
+    }
+    std::optional<LocalGenerator<T>> lg = FindLocalGenerator(B, Omega, l);
+    if (!lg) {
+      continue;
+    }
+    CyclotomicField<T> Kl;
+    Kl.d = 0;
+    Kl.deg = K.deg;
+    Kl.Phi = lg->f;
+    Kl.conj = lg->conj;
+    ElemE<T> dl = DetK(LocalOKGram(B, *lg, l), Kl);
+    if ((m * (m - 1) / 2) % 2 == 1) {
+      dl = EScal(dl, T(-1));
+    }
+    std::vector<std::pair<PolyQ, int>> fac =
+        FactorModQWithMultiplicity(PolyQ(lg->f.begin(), lg->f.end()), l);
+    LocalPrimeK<T> P = MakeLocalPrimeK(*lg, fac[0].first, 1, l);
+    if (LocalVal(dl, P) != 0) {
+      continue;
+    }
+    PolyQ res = LocalResidue(dl, P);
+    bool split = (ResidueQuadraticCharacter(res, P.g, l) == 1);
+    std::vector<std::vector<int64_t>> next;
+    for (auto const &Hp : cands) {
+      bool in = std::binary_search(Hp.begin(), Hp.end(), l % N);
+      if (in == split) {
+        next.push_back(Hp);
+      }
+    }
+    cands = next;
+  }
+  if (cands.size() != 1) {
+    std::cerr << "ABQUAD: " << cands.size()
+              << " candidates for the abelian field E\n";
+    throw TerminalException{1};
+  }
+  return AbelianCMField{N, cands[0]};
+}
+
+/*
   The mass of the genus of the quadratic lattice over K (the standard mass
   times the local factors), or nothing when a local factor is not computed
   or, for m even with a discriminant d not a square in K, when K(sqrt d) is
@@ -2050,7 +2355,14 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
         }
       }
       if (!sm) {
-        return {};
+        // E abelian but not K(sqrt D)
+        std::optional<AbelianCMField> FE =
+            AbelianQuadraticExtensionField(B, Omega, FK, d, K, m);
+        if (!FE) {
+          return {};
+        }
+        sm = StandardQuadraticMassAbelian<T>(LiftAbelianField(FK, FE->n), m,
+                                             false, *FE);
       }
     }
   }
