@@ -22,10 +22,13 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `02B_RealAlgebraicPolytope` -- `ci_02B_real_algebraic_polytope`: Automorphism group and dual description, by bb, cdd, lrs and normaliz, of the regular N-gons over the real algebraic field Q(2*sin(2*pi/N)); and the dual description of G553, a 7-dimensional cone on 150 generators over Q(2*sin(2*pi/5)) with a symmetry group, where the recursive dual description using the symmetry and the direct one ignoring it are checked against each other.
 * `03_Tspaces_IsoDelaunay` -- `ci_03_enum_isodelaunay`: Enumeration of isoDelaunay domains.
 * `04A_LattAutIsomCan` -- `ci_04A_latt_aut_isom_can`: Lattice automorphism isomorphism and canonicalization, on the classical lattices and on the well rounded lattices of dimension 10 realized from their shortest vectors.
+  Local run: build 3 min, run 57 min (`AllTests.g`), 2026-11-08, machine under heavy load.
 * `05A_DirectVolumePolytope` -- `ci_05A_direct_volume`: Computation of the volume of polytopes.
 * `05B_CddSkeletons` -- `ci_05B_cdd_skeletons`: CDD skeletons (DualDescriptionAdjacencies).
 * `06A_GeometricallyUnique` -- `ci_06A_geometrically_unique`: Finding interior point in polytope defined by facets, which is invariant under transformation.
+  Local run: about 3.3 h for the 3382 examples (38 min per 650), 2026-10-01.
 * `06B_CharacteristicVectorSet` -- `ci_06B_characteristic_vector_set`: Generation of characteristic vector sets.
+  Local run: build 10 s, run 3 min (`ProcessEntries.g`), 2026-11-08, machine under heavy load.
 * `07A_facelatticegen` -- `ci_07A_facelatticegen`: Computing the automorphism group by using the skeleton.
 * `07B_StronglySemiEutactic` -- `ci_07B_strongly_semi_eutactic`: Determination of whether a positive definite quadratic form is strongly semi-eutactic, on the 34 strongly semi-eutactic perfect forms of dimension 9 and on lattices that are not strongly semi-eutactic.
 * `08A_ConeIntersection` -- `ci_08A_cone_int`: This is checking different methods for computing the intersection of polyhedral cones.
@@ -58,6 +61,7 @@ to it; `.github/workflows/ci_NN...` fires on day NN of the month.
 * `28A_WythoffH4` -- `ci_28A_wythoff_H4`: This is for computing the dual description of the facets of the orbit of `x W(H4)` for x a random vector (there are 4 orbits).
 * `28B_LorentzianPerfStabEqui` -- `ci_28B_perfect_lorentzian`: Enumeration of perfect lorentzian cones, and stabilizer/equivalence of the resulting forms.
 * `29_SerialDelaunayQueries` -- `ci_29_serial_delaunay_queries`: Serial Delaunay computations.
+  Local run: build 3 min, run 4 min (`TestSerialDelaunayQueries.g`) and 10 s (`TestPackingCoveringRecord.g`), 2026-11-08, machine under heavy load.
 * `30_PerfectFormTspace` -- `ci_30_perfect_form_tspace`: Perfect Forms in T-spaces.
 
 Directories under CI_tests that no workflow drives. They hold data or
@@ -70,24 +74,6 @@ working tree is not part of the repository)
 * `Rankin`
 
 `DATA` holds inputs shared by several of the sections above.
-
-Running times
--------------
-
-Local runs, one process, on the development machine (Apple Silicon). They
-give the order of magnitude to plan a local check, not a benchmark: the
-2026-11 runs were made with the machine under heavy load (load average 15
-to 70), so they are upper estimates.
-
-| test | build | run | date |
-|------|-------|-----|------|
-| `04A_LattAutIsomCan` | 3 min | 57 min (`AllTests.g`) | 2026-11-08 |
-| `06A_GeometricallyUnique` | | about 3.3 h for the 3382 examples, 38 min per 650 | 2026-10-01 |
-| `06B_CharacteristicVectorSet` | 10 s | 3 min (`ProcessEntries.g`) | 2026-11-08 |
-| `29_SerialDelaunayQueries` | 3 min | 4 min (`TestSerialDelaunayQueries.g`), 10 s (`TestPackingCoveringRecord.g`) | 2026-11-08 |
-
-A test running much longer than its entry here is a sign of a performance
-regression, or of a run that is stuck.
 
 More needs to be added:
 * Computing the orbits of K-dim faces of polytopes (the G6 and G7 are good examples).
