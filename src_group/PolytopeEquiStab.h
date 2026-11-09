@@ -1985,7 +1985,6 @@ T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV(
   }
 #endif
   size_t nbPair = SHV.rows();
-  size_t n = SHV.cols();
   size_t nbMat = ListMat.size();
   size_t n_ent = (nbPair * (nbPair + 1)) / 2;
   std::vector<Tidx_value> INP_TheMat(n_ent);
@@ -2007,27 +2006,30 @@ T_TranslateToMatrixAntipodal_AbsTrick_ListMat_SHV(
   // nbPair x n conversion instead of one per entry of the weight matrix,
   // which is quadratic in nbPair.
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  std::vector<MyVector<T>> ListV(nbMat);
+  // The scalar products are the entries of SHV M SHV^T, computed as matrix
+  // products a block of pairs at a time, as in T_TranslateToMatrix_ListMat_SHV:
+  // the pairs [b0, b1) against the pairs below b1, which are the ones read for
+  // them, the weight matrix being symmetric.
+  size_t const block_size = 64;
+  std::vector<MyMatrix<T>> ListSHVM(nbMat);
+  for (size_t iMat = 0; iMat < nbMat; iMat++) {
+    ListSHVM[iMat] = SHV_T * ListMat[iMat];
+  }
+  std::vector<MyMatrix<T>> ListBlock(nbMat);
+  size_t b0 = 0;
   std::vector<T> ListScal(nbMat);
   for (size_t iPair = 0; iPair < nbPair; iPair++) {
-    for (size_t iMat = 0; iMat < nbMat; iMat++) {
-      MyVector<T> V(n);
-      for (size_t i = 0; i < n; i++) {
-        T eVal(0);
-        for (size_t j = 0; j < n; j++) {
-          eVal += ListMat[iMat](j, i) * SHV_T(iPair, j);
-        }
-        V(i) = eVal;
+    if (iPair % block_size == 0) {
+      b0 = iPair;
+      size_t b1 = std::min(nbPair, b0 + block_size);
+      for (size_t iMat = 0; iMat < nbMat; iMat++) {
+        ListBlock[iMat] = ListSHVM[iMat].middleRows(b0, b1 - b0) *
+                          SHV_T.topRows(b1).transpose();
       }
-      ListV[iMat] = V;
     }
     for (size_t jPair = 0; jPair <= iPair; jPair++) {
       for (size_t iMat = 0; iMat < nbMat; iMat++) {
-        T eScal(0);
-        for (size_t i = 0; i < n; i++) {
-          eScal += ListV[iMat](i) * SHV_T(jPair, i);
-        }
-        ListScal[iMat] = eScal;
+        ListScal[iMat] = ListBlock[iMat](iPair - b0, jPair);
       }
       // Normalize the global sign on the first nonzero entry.
       bool ChgSign = false;
