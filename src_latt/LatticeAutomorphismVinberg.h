@@ -55,19 +55,14 @@ template <typename Tint, typename Tgroup> struct VinbergAutom {
 // The reflection in a root r, as an integral matrix acting on rows:
 // s_r(x) = x - <x, r> r, with <r, r> = 2. As a matrix, g = I - (G r^T) r,
 // integral since r and G are integral and <r,r> = 2 cancels the usual 2.
-template <typename T, typename Tint>
-MyMatrix<Tint> RootReflection(MyMatrix<T> const &GramMat,
+// G_int is the Gram matrix over the ring, which the caller converts once for
+// all the roots it reflects in.
+template <typename Tint>
+MyMatrix<Tint> RootReflection(MyMatrix<Tint> const &G_int,
                               MyVector<Tint> const &r) {
-  int n = GramMat.rows();
-  // w = G r^T (column), integral
-  MyVector<Tint> w(n);
-  for (int i = 0; i < n; i++) {
-    T sum(0);
-    for (int j = 0; j < n; j++) {
-      sum += GramMat(i, j) * UniversalScalarConversion<T, Tint>(r(j));
-    }
-    w(i) = UniversalScalarConversion<Tint, T>(sum);
-  }
+  int n = G_int.rows();
+  // w = G r^T (column)
+  MyVector<Tint> w = G_int * r;
   MyMatrix<Tint> g = IdentityMat<Tint>(n);
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
@@ -148,15 +143,15 @@ ComputeAutomorphismVinberg(MyMatrix<T> const &GramMat, std::ostream &os) {
   res.order = res.weyl_order * res.residual_order;
   // Generators of Aut(L): the simple-root reflections (generating W(R))
   // and the residual generators.
+  MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
   for (int i = 0; i < rs.SimpleRoots.rows(); i++) {
     res.ListGen.push_back(
-        RootReflection<T, Tint>(GramMat, GetMatrixRow(rs.SimpleRoots, i)));
+        RootReflection<Tint>(G_int, GetMatrixRow(rs.SimpleRoots, i)));
   }
   for (auto &g : resAut.ListGen) {
     res.ListGen.push_back(g);
   }
 #ifdef SANITY_CHECK_LATTICE_AUTOMORPHISM_VINBERG
-  MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
   for (auto &g : res.ListGen) {
     if (g * G_int * g.transpose() != G_int) {
       std::cerr << "VINBERG: a generator does not preserve the form\n";
@@ -268,15 +263,15 @@ ComputeAutomorphismWeylChamber(MyMatrix<T> const &GramMat, std::ostream &os) {
   res.weyl_order = WeylGroupOrder<Tgroup>(rs);
   res.residual_order = resAut.order;
   res.order = res.weyl_order * res.residual_order;
+  MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
   for (int i = 0; i < rs.SimpleRoots.rows(); i++) {
     MyVector<Tint> r = GetMatrixRow(rs.SimpleRoots, i);
-    res.ListGen.push_back(RootReflection<T, Tint>(GramMat, r));
+    res.ListGen.push_back(RootReflection<Tint>(G_int, r));
   }
   for (auto &g : resAut.ListGen) {
     res.ListGen.push_back(g);
   }
 #ifdef SANITY_CHECK_LATTICE_AUTOMORPHISM_VINBERG
-  MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(GramMat);
   for (auto &g : res.ListGen) {
     if (g * G_int * g.transpose() != G_int) {
       std::cerr << "VINBERG: a Weyl-chamber generator does not preserve the "
