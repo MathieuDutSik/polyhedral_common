@@ -1063,27 +1063,83 @@ inner_span_iterated_shortest_rec(MyMatrix<T> const &G, bool use_roots,
   // clear denominators, take an integer Z-basis, divide back.
   FractionMatrix<T> fr = RemoveFractionMatrixPlusCoeff(proj2);
   MyMatrix<Tint> proj2_scaled = UniversalMatrixConversion<Tint, T>(fr.TheMat);
-  MyMatrix<Tint> B2int = GetZbasis(proj2_scaled);
+  // The nonzero rows of the row Hermite normal form: a Z-basis of the lattice
+  // of the rows, in echelon form, which the coordinates P_Z below use.
+  MyMatrix<Tint> H2 = ComputeRowHermiteNormalForm_second(proj2_scaled);
+  std::vector<MyVector<Tint>> rows2;
+  for (int i = 0; i < H2.rows(); i++) {
+    MyVector<Tint> v = GetMatrixRow(H2, i);
+    if (!IsZeroVector(v)) {
+      rows2.push_back(v);
+    }
+  }
+  MyMatrix<Tint> B2int = MatrixFromVectorFamilyDim(n, rows2);
   MyMatrix<T> L2basis = UniversalMatrixConversion<T, Tint>(B2int) / fr.TheMult;
   MyMatrix<T> G_L2 = L2basis * G * L2basis.transpose();
   // P_Z: coordinates of proj2(e_i) in the basis of L2, an integer n x (n-r)
   // matrix mapping x in Z^n to its projection in L2 coordinates.
   int nc = L2basis.rows();
   MyMatrix<Tint> P_Z(n, nc);
-  // The n systems share the basis L2basis, which is solved once.
-  SolutionMatRepetitive<T> smr(L2basis);
-  for (int i = 0; i < n; i++) {
-    MyVector<T> row = GetMatrixRow(proj2, i);
-    std::optional<MyVector<T>> opt = smr.GetSolution(row);
+  /*
+    The coordinates x with x L2basis = proj2(i) are those with x B2int =
+    proj2_scaled(i), an integral system on a basis of the lattice of the rows.
+    When that basis is in echelon form, the pivot of each row strictly to the
+    right of the one above, x comes by a forward substitution on the pivot
+    columns with exact divisions. Otherwise the systems are solved over the
+    field, sharing the basis.
+   */
+  std::vector<int> piv(nc);
+  bool is_echelon = true;
+  for (int k = 0; k < nc && is_echelon; k++) {
+    int col = 0;
+    while (col < n && B2int(k, col) == 0) {
+      col++;
+    }
+    if (col == n || (k > 0 && col <= piv[k - 1])) {
+      is_echelon = false;
+    } else {
+      piv[k] = col;
+    }
+  }
+  if (is_echelon) {
+    for (int i = 0; i < n; i++) {
+      for (int k = 0; k < nc; k++) {
+        Tint val = proj2_scaled(i, piv[k]);
+        for (int l = 0; l < k; l++) {
+          val -= P_Z(i, l) * B2int(l, piv[k]);
+        }
 #ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
-    if (!opt || !IsIntegralVector(*opt)) {
-      std::cerr << "IVF: inner_span, a projection is not in the projection "
-                << "lattice\n";
+        if (ResInt(val, B2int(k, piv[k])) != 0) {
+          std::cerr << "IVF: inner_span, a non-exact division in the "
+                    << "coordinates of a projection\n";
+          throw TerminalException{1};
+        }
+#endif
+        P_Z(i, k) = val / B2int(k, piv[k]);
+      }
+    }
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+    if (P_Z * B2int != proj2_scaled) {
+      std::cerr << "IVF: inner_span, the coordinates of the projections are "
+                << "wrong\n";
       throw TerminalException{1};
     }
 #endif
-    for (int j = 0; j < nc; j++) {
-      P_Z(i, j) = UniversalScalarConversion<Tint, T>((*opt)(j));
+  } else {
+    SolutionMatRepetitive<T> smr(L2basis);
+    for (int i = 0; i < n; i++) {
+      MyVector<T> row = GetMatrixRow(proj2, i);
+      std::optional<MyVector<T>> opt = smr.GetSolution(row);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+      if (!opt || !IsIntegralVector(*opt)) {
+        std::cerr << "IVF: inner_span, a projection is not in the projection "
+                  << "lattice\n";
+        throw TerminalException{1};
+      }
+#endif
+      for (int j = 0; j < nc; j++) {
+        P_Z(i, j) = UniversalScalarConversion<Tint, T>((*opt)(j));
+      }
     }
   }
   // R: an integral right inverse of P_Z, R P_Z = I, one solve per unit
