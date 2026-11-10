@@ -2137,12 +2137,6 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
          << (opt ? static_cast<long>(opt->size()) : -1L) << " elements\n";
 #endif
     }
-    if (!opt) {
-      if (std::optional<size_t> fb = bounds_factor(size_t(1) << 12, 100000)) {
-        factor *= UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(*fb));
-        continue;
-      }
-    }
     // the image of O(X_p) modulo p^c
     int e = 0;
     {
@@ -2160,6 +2154,46 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         A_mod[i][j] = UniversalScalarConversion<int64_t, T>(GramX(i, j));
+      }
+    }
+    // End_G = Q: generators of the image, complete by construction, with
+    // p^e A^{-1} modulo p^W for the Newton steps
+    if (!opt && OmegaX.empty()) {
+      int Wn = MultiplicityNewtonPrecision(p);
+      Tint pW = UniversalScalarConversion<Tint, int64_t>(1);
+      for (int i = 0; i < Wn; i++) {
+        pW *= UniversalScalarConversion<Tint, int64_t>(p);
+      }
+      MyMatrix<T> Binv = Inverse(GramX);
+      T pe(1);
+      for (int i = 0; i < e; i++) {
+        pe *= UniversalScalarConversion<T, int64_t>(p);
+      }
+      ModMat Be(m, std::vector<int64_t>(m));
+      for (int i = 0; i < m; i++) {
+        for (int j = 0; j < m; j++) {
+          T x = Binv(i, j) * pe;
+          Tint den = GetDenominator_z(x);
+          Tint inv = mod_inv(ResInt(den, pW), pW);
+          Tint v = ResInt(Tint(GetNumerator_z(x) * inv), pW);
+          if (v < 0) {
+            v += pW;
+          }
+          Be[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
+        }
+      }
+      double order = 0;
+      opt = LocalOrthogonalImageGenerators(A_mod, Be, p, c, e, bounds, &order);
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+      os << "MULT_FACTOR: p=" << p << " generators of the image "
+         << (opt ? static_cast<long>(opt->size()) : -1L) << ", |image|="
+         << order << "\n";
+#endif
+    }
+    if (!opt) {
+      if (std::optional<size_t> fb = bounds_factor(size_t(1) << 12, 100000)) {
+        factor *= UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(*fb));
+        continue;
       }
     }
     if (opt) {

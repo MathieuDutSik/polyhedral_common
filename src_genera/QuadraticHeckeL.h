@@ -1381,6 +1381,9 @@ std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
     }
   });
   Lambda += QuadDDToMpreal(sum_dd);
+  (void)n_mpfr;
+  (void)n_dd;
+  (void)n_dbl;
 #ifdef DEBUG_QHECKE
   std::chrono::steady_clock::time_point tc2 = std::chrono::steady_clock::now();
   std::cerr << "QHECKE: " << n_mpfr << " terms with MPFR, " << n_dd

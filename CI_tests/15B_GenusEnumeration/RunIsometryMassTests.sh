@@ -372,6 +372,12 @@ group_mass_case E8E8_16 S4 691/765176315904000
 # multiplicity lattice gives 1/24, the factor is 2) and on two orthogonal
 # A2 of E8+E8 (glue factor 8); both masses are closed by the enumeration.
 group_mass_case E6diag A2diag 1/12
+# the same W(A2) on E6 + E6 and E6^3 (multiplicities 6 and 9): the image
+# of O(X_3) (of order about 10^15 and 10^35) by generators, complete by
+# construction (stabiliser chain modulo 3 and layers); masses closed by
+# GENUS_EnumerateIsometry (2 and 9 classes of pairs)
+group_mass_case E6x2 A2diag 7/1152
+group_mass_case E6x3 A2diag 697/124416
 # The Frobenius group F21 = C7 : C3 on seven coordinates: its faithful
 # rational representation has End_G = Q(sqrt -7), a CM field that is not
 # cyclotomic, so the multiplicity lattice is Hermitian over Q(sqrt -7) (of

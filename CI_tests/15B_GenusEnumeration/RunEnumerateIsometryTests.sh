@@ -54,6 +54,7 @@ run_case E8E8 S3 2
 # W(A2) diagonal on A2^3 in E6 (one class, centraliser of order 12, the
 # local factor 2) and on two orthogonal A2 of E8+E8 (3 classes)
 run_case E6diag A2diag 1
+run_case E6x2 A2diagx2 2
 run_case E8E8 S3diag2 3
 # F21 on seven of the nine coordinates of A8: a Hermitian component over
 # Q(sqrt -7) glued at 7 to the fixed lattice, 2 classes

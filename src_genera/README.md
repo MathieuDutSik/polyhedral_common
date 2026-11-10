@@ -159,12 +159,21 @@ and where End_G = Q the mass is that of the multiplicity lattice
 L cap (l (x) U), l (x) U the image of an idempotent of Q[H] of rank one on
 the irreducible W, times the local factors [O(X_p) : Stab(L_p)] at the p
 dividing |G| (`MultiplicityLocalFactor.h`): the orbit of L_p / N_p in
-N_p^# / N_p, N = Z[G] X, under the image of O(X_p) modulo p^c, found by
-lifting the solutions of g^T A g = A level by level up to the level where
-a Newton step gives an exact isometry. The factors need not be 1: 2 for
-W(A2) acting diagonally on the A2^3 of E6 (mass 1/12), 8 on the A2^4 of
-E8. Beyond the bounds of that search the result says
-local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
+N_p^# / N_p, N = Z[G] X, under the image of O(X_p) modulo p^c. That image
+grows like p^{m(m-1)/2} in the multiplicity m, so it is given by
+generators, complete by construction (`LocalOrthogonalImageGenerators`):
+its reduction modulo p by the stabiliser chain of the basis vectors (for
+each new image of e_i, one element of the stabiliser of e_0, ..., e_{i-1}
+found by a search column by column), then the layers of the elements
+congruent to 1 modulo p^j, F_p-spaces (by linear algebra when p is odd
+and e = 1). Membership is decided by a solution modulo p^{e+2t+1} and the
+Newton steps of the Lemma give the isometry; for e = 1 the search runs in
+a basis adapted to the radical of A mod p, whose image and form A/p are
+kept. The factors need not be 1: 2 for W(A2) acting diagonally on the
+A2^3 of E6 (mass 1/12), 8 on the A2^4 of E8, 8 on E6 + E6 (mass 7/1152,
+an image of order about 10^15) and 80 on E6^3 (mass 697/124416, order
+about 10^35), the last two closed by enumerations. Beyond the bounds the
+result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
 Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
 over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
 C_{g^a} agree on the component), O_K acts through the order they generate

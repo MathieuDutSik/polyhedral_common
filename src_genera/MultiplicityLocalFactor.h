@@ -60,13 +60,26 @@ struct MultiplicityFactorBounds {
 
 /*
   The solutions modulo p^{j+1} lifting g (a solution modulo p^j), j >= 1:
-  g + p^j Delta for the Delta modulo p of the affine solution space.
+  g + p^j Delta for the Delta modulo p of an affine space, given by a
+  particular solution and a basis of the kernel (nothing when it is
+  empty).
  */
-inline std::vector<ModMat> LiftSolutions(ModMat const &g, ModMat const &A,
-                                         int64_t p, int j, int64_t pj) {
+struct LiftAffineSpace {
+  std::vector<int64_t> part;
+  ModMat ker;
+};
+
+// the linear system of the lifts of g from p^j to p^{j+1}: coef Delta =
+// rhs modulo p, the equations indexed by a <= b
+struct LiftSystem {
+  ModMat coef;
+  std::vector<int64_t> rhs;
+};
+
+inline LiftSystem MakeLiftSystem(ModMat const &g, ModMat const &A, int64_t p,
+                                 int64_t pj) {
   size_t m = A.size();
   int64_t pj1 = pj * p;
-  (void)j;
   // E = g^T A g - A, exactly over the integers of the representatives
   std::vector<std::vector<__int128>> Ag(m, std::vector<__int128>(m, 0));
   for (size_t a = 0; a < m; a++) {
@@ -115,6 +128,17 @@ inline std::vector<ModMat> LiftSolutions(ModMat const &g, ModMat const &A,
       rhs.push_back(ModP(-Ered[a][b], p));
     }
   }
+  return LiftSystem{coef, rhs};
+}
+
+inline std::optional<LiftAffineSpace> LiftAffine(ModMat const &g,
+                                                 ModMat const &A, int64_t p,
+                                                 int64_t pj) {
+  size_t m = A.size();
+  size_t n_var = m * m;
+  LiftSystem sys = MakeLiftSystem(g, A, p, pj);
+  ModMat const &coef = sys.coef;
+  std::vector<int64_t> const &rhs = sys.rhs;
   // the affine solutions: x with coef x = rhs
   size_t n_eq = coef.size();
   ModMat aug(n_eq, std::vector<int64_t>(n_var + 1));
@@ -150,28 +174,52 @@ inline std::vector<ModMat> LiftSolutions(ModMat const &g, ModMat const &A,
     }
     ker.push_back(v);
   }
+  return LiftAffineSpace{part, ker};
+}
+
+// the element g + p^j Delta, Delta = part + sum_i coef_i ker_i
+inline ModMat LiftAffineElement(ModMat const &g, LiftAffineSpace const &sp,
+                                std::vector<int64_t> const &coef, int64_t p,
+                                int64_t pj) {
+  size_t m = g.size();
+  int64_t pj1 = pj * p;
+  std::vector<int64_t> x = sp.part;
+  for (size_t i = 0; i < sp.ker.size(); i++) {
+    if (coef[i] != 0) {
+      for (size_t v = 0; v < x.size(); v++) {
+        x[v] = (x[v] + coef[i] * sp.ker[i][v]) % p;
+      }
+    }
+  }
+  ModMat g2 = g;
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      g2[a][b] = ModP(g[a][b] + pj * x[a * m + b], pj1);
+    }
+  }
+  return g2;
+}
+
+inline std::vector<ModMat> LiftSolutions(ModMat const &g, ModMat const &A,
+                                         int64_t p, int j, int64_t pj) {
+  (void)j;
+  std::optional<LiftAffineSpace> sp = LiftAffine(g, A, p, pj);
+  if (!sp) {
+    return {};
+  }
   std::vector<ModMat> res;
   size_t n_sol = 1;
-  for (size_t i = 0; i < ker.size(); i++) {
+  for (size_t i = 0; i < sp->ker.size(); i++) {
     n_sol *= static_cast<size_t>(p);
   }
+  std::vector<int64_t> coef(sp->ker.size());
   for (size_t s = 0; s < n_sol; s++) {
-    std::vector<int64_t> x = part;
     size_t t = s;
-    for (auto const &kv : ker) {
-      int64_t c = static_cast<int64_t>(t % static_cast<size_t>(p));
+    for (size_t i = 0; i < coef.size(); i++) {
+      coef[i] = static_cast<int64_t>(t % static_cast<size_t>(p));
       t /= static_cast<size_t>(p);
-      for (size_t v = 0; v < n_var; v++) {
-        x[v] = (x[v] + c * kv[v]) % p;
-      }
     }
-    ModMat g2 = g;
-    for (size_t a = 0; a < m; a++) {
-      for (size_t b = 0; b < m; b++) {
-        g2[a][b] = ModP(g[a][b] + pj * x[a * m + b], pj1);
-      }
-    }
-    res.push_back(g2);
+    res.push_back(LiftAffineElement(g, *sp, coef, p, pj));
   }
   return res;
 }
@@ -325,6 +373,957 @@ LocalOrthogonalImage(ModMat const &A, int64_t p, int c, int e,
     if (liftable(g, c, pj)) {
       res.push_back(g);
     }
+  }
+  return res;
+}
+
+// the precision W of the Newton steps: p^W < 2^61, so that the products
+// of residues fit in 128 bits
+inline int MultiplicityNewtonPrecision(int64_t p) {
+  int W = 1;
+  int64_t pw = p;
+  while (pw <= (int64_t(1) << 61) / p) {
+    pw *= p;
+    W++;
+  }
+  return W;
+}
+
+/*
+  Generators of the image G of O(X_p) in GL_m(Z / p^c) (columns: g^T A g =
+  A), complete by construction and without listing G, which grows like
+  p^{m(m-1)/2}:
+
+  - G_1 = G mod p by its stabiliser chain on the basis e_0, ..., e_{m-1}.
+    From the last level up, the orbit of e_i under the elements found so
+    far is closed, and for each admissible image y of e_i (B(e_k, y) =
+    A_{k i} for k < i, B(y, y) = A_{i i}) outside it, an element fixing
+    e_0, ..., e_{i-1} with e_i -> y is searched: the further columns one
+    at a time on their affine spaces, the matrix invertible, and a lift to
+    p^K (Lemma: then it comes from an isometry). Once the orbit holds every
+    y with such an element, the elements found generate the stabiliser H
+    of e_0, ..., e_{i-1} in G_1, as they contain the stabiliser of e_i and
+    move e_i over its whole H-orbit.
+  - The layers G_j / G_{j+1}, 1 <= j < c, of the elements congruent to 1
+    modulo p^j: F_p-spaces of the Delta with 1 + p^j Delta lifting to p^K,
+    given by a basis of the solutions when its elements all lift (the
+    liftable ones form a subspace), else by enumerating the space.
+
+  An element of G congruent to a solution g modulo p^j is found from a
+  solution modulo p^k, k = max(j + e + t, e + 2t + 1), extending g (an
+  affine system at each level, a single one for p odd and e <= 1) and the
+  Newton steps of the Lemma, Be = p^e A^{-1} being given modulo p^W, W as
+  large as 64-bit products allow; g mod p is in G_1 exactly when such a
+  solution exists.
+
+  The lifts modulo p^c of these elements generate G (by the filtration
+  G_1 = G mod p, G_j / G_{j+1}), and |G| is the product of the orbit
+  lengths and of the orders of the layers (order, when asked). Nothing
+  beyond the bounds.
+ */
+inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
+    ModMat const &A, ModMat const &Be, int64_t p, int c, int e,
+    size_t rad_start, MultiplicityFactorBounds const &bounds, double *order) {
+  size_t m = A.size();
+  int t = (p == 2) ? 1 : 0;
+  size_t n_pts = 1;
+  for (size_t i = 0; i < m; i++) {
+    n_pts *= static_cast<size_t>(p);
+    if (n_pts > (size_t(1) << 24)) {
+      return {};
+    }
+  }
+  int64_t pc = 1;
+  for (int i = 0; i < c; i++) {
+    pc *= p;
+  }
+  ModMat Ap(m, std::vector<int64_t>(m));
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      Ap[a][b] = ModP(A[a][b], p);
+    }
+  }
+  auto bil = [&](std::vector<int64_t> const &x,
+                 std::vector<int64_t> const &y) -> int64_t {
+    int64_t s = 0;
+    for (size_t a = 0; a < m; a++) {
+      if (x[a] == 0) {
+        continue;
+      }
+      for (size_t b = 0; b < m; b++) {
+        s = (s + x[a] * Ap[a][b] % p * y[b]) % p;
+      }
+    }
+    return s;
+  };
+  size_t n_node = 0;
+  bool over = false;
+  int W = MultiplicityNewtonPrecision(p);
+  if (W < c + 4 * e + 2 * t + 4) {
+    return {};
+  }
+  // the inverse of a modulo M, gcd(a, M) = 1
+  auto inv_mod = [](int64_t a, int64_t M) -> int64_t {
+    int64_t r0 = M, r1 = ((a % M) + M) % M, s0 = 0, s1 = 1;
+    while (r1 != 0) {
+      int64_t q = r0 / r1;
+      int64_t r2 = r0 - q * r1;
+      r0 = r1;
+      r1 = r2;
+      int64_t s2 = static_cast<int64_t>(
+          (static_cast<__int128>(s0) - static_cast<__int128>(q) * s1) % M);
+      s0 = s1;
+      s1 = s2;
+    }
+    return ((s0 % M) + M) % M;
+  };
+  auto pow_p = [&](int k) -> int64_t {
+    int64_t r = 1;
+    for (int i = 0; i < k; i++) {
+      r *= p;
+    }
+    return r;
+  };
+  auto mulmod = [](int64_t x, int64_t y, int64_t M) -> int64_t {
+    __int128 r = static_cast<__int128>(x) * y % M;
+    return static_cast<int64_t>((r < 0) ? r + M : r);
+  };
+  auto matmul = [&](ModMat const &X, ModMat const &Y, int64_t M) -> ModMat {
+    ModMat Z(m, std::vector<int64_t>(m, 0));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t k = 0; k < m; k++) {
+        if (X[a][k] == 0) {
+          continue;
+        }
+        for (size_t b = 0; b < m; b++) {
+          Z[a][b] = (Z[a][b] + mulmod(X[a][k], Y[k][b], M)) % M;
+        }
+      }
+    }
+    return Z;
+  };
+  auto transpose = [&](ModMat const &X) -> ModMat {
+    ModMat Z(m, std::vector<int64_t>(m));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        Z[a][b] = X[b][a];
+      }
+    }
+    return Z;
+  };
+  auto reduce = [&](ModMat X, int64_t M) -> ModMat {
+    for (auto &row : X) {
+      for (auto &x : row) {
+        x = ModP(x, M);
+      }
+    }
+    return X;
+  };
+  // the inverse modulo p^k of g, invertible modulo p: modulo p by Gauss,
+  // then X <- X (2 - g X)
+  auto inverse_mod = [&](ModMat const &g, int k) -> std::optional<ModMat> {
+    ModMat aug(m, std::vector<int64_t>(2 * m, 0));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        aug[a][b] = ModP(g[a][b], p);
+      }
+      aug[a][m + a] = 1;
+    }
+    for (size_t col = 0; col < m; col++) {
+      size_t piv = col;
+      while (piv < m && aug[piv][col] == 0) {
+        piv++;
+      }
+      if (piv == m) {
+        return {};
+      }
+      std::swap(aug[piv], aug[col]);
+      int64_t iv = inv_mod(aug[col][col], p);
+      for (auto &x : aug[col]) {
+        x = x * iv % p;
+      }
+      for (size_t a = 0; a < m; a++) {
+        if (a != col && aug[a][col] != 0) {
+          int64_t f0 = aug[a][col];
+          for (size_t b = 0; b < 2 * m; b++) {
+            aug[a][b] = ModP(aug[a][b] - f0 * aug[col][b], p);
+          }
+        }
+      }
+    }
+    ModMat X(m, std::vector<int64_t>(m));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        X[a][b] = aug[a][m + b];
+      }
+    }
+    int prec = 1;
+    while (prec < k) {
+      prec = std::min(2 * prec, k);
+      int64_t M = pow_p(prec);
+      ModMat gX = matmul(reduce(g, M), X, M);
+      for (size_t a = 0; a < m; a++) {
+        for (size_t b = 0; b < m; b++) {
+          gX[a][b] = ModP(((a == b) ? 2 : 0) - gX[a][b], M);
+        }
+      }
+      X = matmul(X, gX, M);
+    }
+    return X;
+  };
+  // the valuation of g^T A g - A, up to k
+  auto error_val = [&](ModMat const &g, int k) -> int {
+    int64_t M = pow_p(k);
+    ModMat E = matmul(transpose(g), matmul(reduce(A, M), g, M), M);
+    int v = k;
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        int64_t x = ModP(E[a][b] - A[a][b], M);
+        int vx = 0;
+        while (vx < k && x % p == 0) {
+          x /= p;
+          vx++;
+        }
+        v = std::min(v, vx);
+      }
+    }
+    return v;
+  };
+  // Newton (Lemma): from a solution modulo p^k, k > e + 2t, to an
+  // isometry known modulo p^c, the steps g -> g - (1/2) A^{-1} g^{-T} E,
+  // A^{-1} = Be / p^e, the precision of the representatives decreasing by
+  // e + t at each step
+  auto newton = [&](ModMat g) -> std::optional<ModMat> {
+    int prec = W;
+    for (int it = 0; it < 64; it++) {
+      int v = error_val(g, prec);
+      if (v >= c + e + t) {
+        return reduce(g, pc);
+      }
+      if (prec - e - t <= c + e + t) {
+        return {};
+      }
+      int64_t M = pow_p(prec);
+      std::optional<ModMat> gi = inverse_mod(g, prec);
+      if (!gi) {
+        return {};
+      }
+      ModMat E = matmul(transpose(g), matmul(reduce(A, M), g, M), M);
+      for (size_t a = 0; a < m; a++) {
+        for (size_t b = 0; b < m; b++) {
+          E[a][b] = ModP(E[a][b] - A[a][b], M);
+        }
+      }
+      ModMat F = matmul(reduce(Be, M), matmul(transpose(*gi), E, M), M);
+      // F / p^e (/ 2 when p = 2) holds modulo p^{prec - e - t}
+      int64_t div = pow_p(e + t);
+      int nprec = prec - e - t;
+      int64_t NM = pow_p(nprec);
+      int64_t inv2 = (p == 2) ? 1 : inv_mod(2, NM);
+      for (size_t a = 0; a < m; a++) {
+        for (size_t b = 0; b < m; b++) {
+          int64_t x = F[a][b];
+          if (x % div != 0) {
+            return {};
+          }
+          x = (x / div) % NM;
+          x = mulmod(x, inv2, NM);
+          g[a][b] = ModP(g[a][b] - x, NM);
+        }
+      }
+      prec = nprec;
+    }
+    return {};
+  };
+  // a solution modulo p^target extending the solution g modulo p^j, the
+  // first found by a depth-first search over the affine spaces
+  std::function<std::optional<ModMat>(ModMat const &, int, int64_t, int)>
+      extend = [&](ModMat const &g, int j, int64_t pjl,
+                   int target) -> std::optional<ModMat> {
+    if (j >= target) {
+      return g;
+    }
+    if (over || ++n_node > bounds.max_node) {
+      over = true;
+      return {};
+    }
+    std::optional<LiftAffineSpace> sp = LiftAffine(g, A, p, pjl);
+    if (!sp) {
+      return {};
+    }
+    size_t dim = sp->ker.size();
+    std::vector<int64_t> coef(dim, 0);
+    while (!over) {
+      std::optional<ModMat> r = extend(LiftAffineElement(g, *sp, coef, p, pjl),
+                                       j + 1, pjl * p, target);
+      if (r) {
+        return r;
+      }
+      size_t i = 0;
+      while (i < dim && coef[i] == p - 1) {
+        coef[i] = 0;
+        i++;
+      }
+      if (i == dim) {
+        return {};
+      }
+      coef[i]++;
+    }
+    return {};
+  };
+  // the element of G (modulo p^c) congruent to the solution g modulo p^j,
+  // when there is one: a solution modulo p^k, k = max(j + e + t, e + 2t +
+  // 1), extending g, then Newton
+  auto lift_path = [&](ModMat const &g, int j,
+                       int64_t pjl) -> std::optional<ModMat> {
+    int target = std::max(j + e + t, e + 2 * t + 1);
+    std::optional<ModMat> sol = extend(g, j, pjl, target);
+    if (!sol) {
+      return {};
+    }
+    std::optional<ModMat> h = newton(*sol);
+    if (!h) {
+      std::cerr << "MULT_FACTOR: Newton did not converge\n";
+      throw TerminalException{1};
+    }
+    return h;
+  };
+  // the affine space {x : (fixed_k^T A_p) x = rhs_k}
+  auto affine = [&](std::vector<std::vector<int64_t>> const &fixed,
+                    std::vector<int64_t> const &rhs)
+      -> std::optional<std::pair<std::vector<int64_t>, ModMat>> {
+    if (fixed.empty()) {
+      ModMat ker;
+      for (size_t v = 0; v < m; v++) {
+        std::vector<int64_t> e1(m, 0);
+        e1[v] = 1;
+        ker.push_back(e1);
+      }
+      return std::make_pair(std::vector<int64_t>(m, 0), ker);
+    }
+    ModMat aug;
+    for (size_t k = 0; k < fixed.size(); k++) {
+      std::vector<int64_t> row(m + 1, 0);
+      for (size_t b = 0; b < m; b++) {
+        int64_t sacc = 0;
+        for (size_t a = 0; a < m; a++) {
+          sacc = (sacc + fixed[k][a] * Ap[a][b]) % p;
+        }
+        row[b] = sacc;
+      }
+      row[m] = ModP(rhs[k], p);
+      aug.push_back(row);
+    }
+    ModRowSpace rs = ModRowReduce(aug, p);
+    for (size_t piv : rs.pivots) {
+      if (piv == m) {
+        return {};
+      }
+    }
+    std::vector<int64_t> part(m, 0);
+    for (size_t i = 0; i < rs.pivots.size(); i++) {
+      part[rs.pivots[i]] = rs.basis[i][m];
+    }
+    std::vector<bool> is_piv(m, false);
+    for (size_t pv : rs.pivots) {
+      is_piv[pv] = true;
+    }
+    ModMat ker;
+    for (size_t f = 0; f < m; f++) {
+      if (is_piv[f]) {
+        continue;
+      }
+      std::vector<int64_t> v(m, 0);
+      v[f] = 1;
+      for (size_t i = 0; i < rs.pivots.size(); i++) {
+        v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
+      }
+      ker.push_back(v);
+    }
+    return std::make_pair(part, ker);
+  };
+  // f(x) for the x of the affine space with B(x, x) = q, until f is true
+  auto for_each_vector =
+      [&](std::pair<std::vector<int64_t>, ModMat> const &sp, int64_t q,
+          std::function<bool(std::vector<int64_t> const &)> const &f) -> void {
+    size_t dim = sp.second.size();
+    std::vector<int64_t> coef(dim, 0);
+    while (!over) {
+      std::vector<int64_t> x = sp.first;
+      for (size_t i = 0; i < dim; i++) {
+        if (coef[i] != 0) {
+          for (size_t v = 0; v < m; v++) {
+            x[v] = (x[v] + coef[i] * sp.second[i][v]) % p;
+          }
+        }
+      }
+      if (bil(x, x) == q && f(x)) {
+        return;
+      }
+      size_t i = 0;
+      while (i < dim && coef[i] == p - 1) {
+        coef[i] = 0;
+        i++;
+      }
+      if (i == dim) {
+        return;
+      }
+      coef[i]++;
+    }
+  };
+  // an element of G_1 with the given first columns, lifted: the further
+  // columns searched one at a time
+  std::vector<std::vector<int64_t>> cols(m);
+  // e = 1, basis vectors rad_start, ... spanning the radical R of A mod p:
+  // the image of such a vector lies in R, and the form A / p on R is kept
+  // modulo p (representatives in [0, p), which are in X cap p X^#)
+  int64_t p2 = p * p;
+  auto radical_ok = [&](std::vector<int64_t> const &x, size_t i) -> bool {
+    if (i < rad_start) {
+      return true;
+    }
+    for (size_t a = 0; a < rad_start; a++) {
+      if (x[a] != 0) {
+        return false;
+      }
+    }
+    auto pair_val = [&](std::vector<int64_t> const &u,
+                        std::vector<int64_t> const &w) -> int64_t {
+      __int128 sacc = 0;
+      for (size_t a = 0; a < m; a++) {
+        if (u[a] == 0) {
+          continue;
+        }
+        for (size_t b = 0; b < m; b++) {
+          sacc += static_cast<__int128>(u[a]) * A[a][b] * w[b];
+        }
+      }
+      return ModP(static_cast<int64_t>(sacc % p2), p2);
+    };
+    if (pair_val(x, x) != ModP(A[i][i], p2)) {
+      return false;
+    }
+    for (size_t k = rad_start; k < i; k++) {
+      if (pair_val(x, cols[k]) != ModP(A[k][i], p2)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  std::function<std::optional<ModMat>(size_t)> complete =
+      [&](size_t j) -> std::optional<ModMat> {
+    if (j == m) {
+      ModMat g(m, std::vector<int64_t>(m));
+      for (size_t a = 0; a < m; a++) {
+        for (size_t b = 0; b < m; b++) {
+          g[a][b] = cols[b][a];
+        }
+      }
+      if (ModRank(g, p) != m) {
+        return {};
+      }
+      return lift_path(g, 1, p);
+    }
+    std::vector<std::vector<int64_t>> fixed(cols.begin(), cols.begin() + j);
+    std::vector<int64_t> rhs(j);
+    for (size_t k = 0; k < j; k++) {
+      rhs[k] = Ap[k][j];
+    }
+    std::optional<std::pair<std::vector<int64_t>, ModMat>> sp =
+        affine(fixed, rhs);
+    if (!sp) {
+      return {};
+    }
+    std::optional<ModMat> res;
+    for_each_vector(*sp, Ap[j][j], [&](std::vector<int64_t> const &x) -> bool {
+      if (++n_node > bounds.max_node) {
+        over = true;
+        return true;
+      }
+      if (!radical_ok(x, j)) {
+        return false;
+      }
+      cols[j] = x;
+      res = complete(j + 1);
+      return res.has_value();
+    });
+    return res;
+  };
+  auto encode = [&](std::vector<int64_t> const &x) -> size_t {
+    size_t idx = 0;
+    for (size_t a = m; a-- > 0;) {
+      idx = idx * static_cast<size_t>(p) + static_cast<size_t>(x[a]);
+    }
+    return idx;
+  };
+  auto apply = [&](ModMat const &g,
+                   std::vector<int64_t> const &x) -> std::vector<int64_t> {
+    std::vector<int64_t> y(m, 0);
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        y[a] = (y[a] + ModP(g[a][b], p) * x[b]) % p;
+      }
+    }
+    return y;
+  };
+  std::vector<ModMat> gens1;
+  std::vector<ModMat> gens;
+  double log_order = 0;
+  for (size_t i = m; i-- > 0;) {
+    std::vector<int64_t> ei(m, 0);
+    ei[i] = 1;
+    // the orbit of e_i under gens1
+    std::vector<char> in_orbit(n_pts, 0);
+    auto close = [&]() -> size_t {
+      std::vector<std::vector<int64_t>> queue;
+      size_t cnt = 0;
+      for (size_t idx = 0; idx < n_pts; idx++) {
+        if (in_orbit[idx]) {
+          cnt++;
+        }
+      }
+      if (cnt == 0) {
+        in_orbit[encode(ei)] = 1;
+        cnt = 1;
+      }
+      // from every point of the orbit
+      for (size_t idx = 0; idx < n_pts; idx++) {
+        if (in_orbit[idx]) {
+          std::vector<int64_t> x(m);
+          size_t tt = idx;
+          for (size_t a = 0; a < m; a++) {
+            x[a] = static_cast<int64_t>(tt % static_cast<size_t>(p));
+            tt /= static_cast<size_t>(p);
+          }
+          queue.push_back(x);
+        }
+      }
+      while (!queue.empty()) {
+        std::vector<int64_t> x = queue.back();
+        queue.pop_back();
+        for (auto const &g : gens1) {
+          std::vector<int64_t> y = apply(g, x);
+          size_t iy = encode(y);
+          if (!in_orbit[iy]) {
+            in_orbit[iy] = 1;
+            cnt++;
+            queue.push_back(y);
+          }
+        }
+      }
+      return cnt;
+    };
+    size_t orbit_len = close();
+    std::vector<std::vector<int64_t>> fixed;
+    std::vector<int64_t> rhs;
+    for (size_t k = 0; k < i; k++) {
+      std::vector<int64_t> ek(m, 0);
+      ek[k] = 1;
+      fixed.push_back(ek);
+      rhs.push_back(Ap[k][i]);
+    }
+    std::optional<std::pair<std::vector<int64_t>, ModMat>> sp =
+        affine(fixed, rhs);
+    if (!sp) {
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+    std::cerr << "MULT_FACTOR: generators stop: no admissible image of e_i, n_node=" << n_node << "\n";
+#endif
+      return {};
+    }
+    size_t n_cand = 0, n_fail = 0;
+    size_t node0 = n_node;
+    for (size_t k = 0; k < i; k++) {
+      cols[k] = fixed[k];
+    }
+    for_each_vector(*sp, Ap[i][i], [&](std::vector<int64_t> const &y) -> bool {
+      if (!radical_ok(y, i)) {
+        return false;
+      }
+      n_cand++;
+      if (in_orbit[encode(y)]) {
+        return false;
+      }
+      for (size_t k = 0; k < i; k++) {
+        cols[k] = fixed[k];
+      }
+      cols[i] = y;
+      std::optional<ModMat> g = complete(i + 1);
+      if (over) {
+        return true;
+      }
+      if (g) {
+        ModMat g1 = *g;
+        for (auto &row : g1) {
+          for (auto &x : row) {
+            x = ModP(x, p);
+          }
+        }
+        gens1.push_back(g1);
+        gens.push_back(*g);
+        orbit_len = close();
+      } else {
+        n_fail++;
+      }
+      return false;
+    });
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+    std::cerr << "MULT_FACTOR: level " << i << " candidates " << n_cand
+              << " failed " << n_fail << " orbit " << orbit_len << " nodes "
+              << n_node - node0 << "\n";
+#endif
+    if (over) {
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+    std::cerr << "MULT_FACTOR: generators stop: budget at level 1, n_node=" << n_node << "\n";
+#endif
+      return {};
+    }
+    log_order += std::log(static_cast<double>(orbit_len));
+  }
+  // the layers
+  ModMat Id(m, std::vector<int64_t>(m, 0));
+  for (size_t a = 0; a < m; a++) {
+    Id[a][a] = 1;
+  }
+  int64_t pj = p;
+  for (int j = 1; j < c; j++) {
+    std::optional<LiftAffineSpace> sp = LiftAffine(Id, A, p, pj);
+    if (!sp) {
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+    std::cerr << "MULT_FACTOR: generators stop: no layer, n_node=" << n_node << "\n";
+#endif
+      return {};
+    }
+    std::vector<ModMat> lifts;
+    bool all = true;
+    for (auto const &kv : sp->ker) {
+      std::vector<int64_t> coef(sp->ker.size(), 0);
+      for (size_t i = 0; i < sp->ker.size(); i++) {
+        coef[i] = (&kv == &sp->ker[i]) ? 1 : 0;
+      }
+      ModMat g = LiftAffineElement(Id, *sp, coef, p, pj);
+      std::optional<ModMat> lf = lift_path(g, j + 1, pj * p);
+      if (over) {
+        return {};
+      }
+      if (!lf) {
+        all = false;
+        break;
+      }
+      lifts.push_back(*lf);
+    }
+    // p odd and e = 1: one level decides the lift, by a system whose
+    // matrix is constant on the layer; its solvability is f(Delta) = L rhs
+    // = 0, L a basis of the left kernel, f = l + q with l linear and q
+    // quadratic. The liftable Delta form a subspace V (an image of a
+    // group); f(x Delta) = x l + x^2 q for all x in F_p gives V in W0 = ker
+    // l, and V = W0 when f vanishes on a basis of W0 and on the sums of its
+    // pairs (q then vanishes on W0).
+    bool done = false;
+    if (!all && p != 2 && e == 1) {
+      size_t dim = sp->ker.size();
+      int64_t pj1 = pj * p;
+      auto layer_elt = [&](std::vector<int64_t> const &coefv) -> ModMat {
+        return LiftAffineElement(Id, *sp, coefv, p, pj);
+      };
+      LiftSystem sys0 = MakeLiftSystem(layer_elt(std::vector<int64_t>(dim, 0)),
+                                       A, p, pj1);
+      size_t n_eq = sys0.coef.size();
+      size_t n_var = sys0.coef.empty() ? 0 : sys0.coef[0].size();
+      // the left kernel: the y with y^T coef = 0
+      ModMat coefT(n_var, std::vector<int64_t>(n_eq));
+      for (size_t a = 0; a < n_eq; a++) {
+        for (size_t b = 0; b < n_var; b++) {
+          coefT[b][a] = sys0.coef[a][b];
+        }
+      }
+      auto nullspace = [&](ModMat const &M, size_t ncol) -> ModMat {
+        ModRowSpace rs = ModRowReduce(M, p);
+        std::vector<bool> is_piv(ncol, false);
+        for (size_t pv : rs.pivots) {
+          is_piv[pv] = true;
+        }
+        ModMat ker;
+        for (size_t f = 0; f < ncol; f++) {
+          if (is_piv[f]) {
+            continue;
+          }
+          std::vector<int64_t> v(ncol, 0);
+          v[f] = 1;
+          for (size_t i = 0; i < rs.pivots.size(); i++) {
+            v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
+          }
+          ker.push_back(v);
+        }
+        return ker;
+      };
+      ModMat L = nullspace(coefT, n_eq);
+      auto fval = [&](std::vector<int64_t> const &coefv) -> std::vector<int64_t> {
+        LiftSystem sys = MakeLiftSystem(layer_elt(coefv), A, p, pj1);
+        std::vector<int64_t> r(L.size(), 0);
+        for (size_t k = 0; k < L.size(); k++) {
+          for (size_t a = 0; a < n_eq; a++) {
+            r[k] = (r[k] + L[k][a] * sys.rhs[a]) % p;
+          }
+        }
+        return r;
+      };
+      int64_t inv2 = (p + 1) / 2;
+      // l on the basis of the layer: l(b) = f(b) - q(b), q(b) = (f(2b) -
+      // 2 f(b)) / 2
+      ModMat lmat(L.size(), std::vector<int64_t>(dim, 0));
+      for (size_t i = 0; i < dim; i++) {
+        std::vector<int64_t> c1(dim, 0), c2(dim, 0);
+        c1[i] = 1;
+        c2[i] = 2 % p;
+        std::vector<int64_t> f1 = fval(c1), f2 = fval(c2);
+        for (size_t k = 0; k < L.size(); k++) {
+          int64_t q = ModP(f2[k] - 2 * f1[k], p) * inv2 % p;
+          lmat[k][i] = ModP(f1[k] - q, p);
+        }
+      }
+      ModMat W0 = nullspace(lmat, dim);
+      bool q_zero = true;
+      for (size_t a = 0; a < W0.size() && q_zero; a++) {
+        for (size_t b = a; b < W0.size() && q_zero; b++) {
+          std::vector<int64_t> cv = W0[a];
+          if (b != a) {
+            for (size_t i = 0; i < dim; i++) {
+              cv[i] = (cv[i] + W0[b][i]) % p;
+            }
+          }
+          for (int64_t x : fval(cv)) {
+            if (x != 0) {
+              q_zero = false;
+            }
+          }
+        }
+      }
+      if (q_zero) {
+        for (auto const &w : W0) {
+          std::optional<ModMat> lf = lift_path(layer_elt(w), j + 1, pj1);
+          if (over) {
+            return {};
+          }
+          if (!lf) {
+            std::cerr << "MULT_FACTOR: an element of the layer does not lift\n";
+            throw TerminalException{1};
+          }
+          gens.push_back(*lf);
+        }
+        log_order += static_cast<double>(W0.size()) *
+                     std::log(static_cast<double>(p));
+        done = true;
+      }
+    }
+    if (done) {
+      // found above
+    } else if (all) {
+      gens.insert(gens.end(), lifts.begin(), lifts.end());
+      log_order += static_cast<double>(sp->ker.size()) *
+                   std::log(static_cast<double>(p));
+    } else {
+      // the liftable subspace, by enumerating the space
+      size_t dim = sp->ker.size();
+      size_t n_el = 1;
+      for (size_t i = 0; i < dim; i++) {
+        n_el *= static_cast<size_t>(p);
+        if (n_el > 100000) {
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+    std::cerr << "MULT_FACTOR: generators stop: layer too large, n_node=" << n_node << "\n";
+#endif
+          return {};
+        }
+      }
+      ModMat liftable_coefs;
+      std::vector<ModMat> liftable_elts;
+      std::vector<int64_t> coef(dim, 0);
+      for (size_t s2 = 0; s2 < n_el; s2++) {
+        size_t tt = s2;
+        for (size_t i = 0; i < dim; i++) {
+          coef[i] = static_cast<int64_t>(tt % static_cast<size_t>(p));
+          tt /= static_cast<size_t>(p);
+        }
+        ModMat g = LiftAffineElement(Id, *sp, coef, p, pj);
+        std::optional<ModMat> lf = lift_path(g, j + 1, pj * p);
+        if (over) {
+          return {};
+        }
+        if (lf) {
+          ModMat test = liftable_coefs;
+          test.push_back(coef);
+          if (ModRank(test, p) == test.size()) {
+            liftable_coefs = test;
+            liftable_elts.push_back(*lf);
+          }
+        }
+      }
+      gens.insert(gens.end(), liftable_elts.begin(), liftable_elts.end());
+      log_order += static_cast<double>(liftable_coefs.size()) *
+                   std::log(static_cast<double>(p));
+    }
+    pj *= p;
+  }
+  if (order) {
+    *order = std::exp(log_order);
+  }
+  return gens;
+}
+
+/*
+  LocalOrthogonalImageGeneratorsCore in a basis adapted to the radical R of
+  A mod p when e = 1: the complement first, then lifts in [0, p) of a basis
+  of R, P of determinant prime to p; the search runs on A' = P^T A P with
+  the pruning of the radical, and the generators g' come back as P g'
+  P^{-1}. For e != 1 the standard basis, without that pruning.
+ */
+inline std::optional<std::vector<ModMat>>
+LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be, int64_t p,
+                               int c, int e,
+                               MultiplicityFactorBounds const &bounds,
+                               double *order) {
+  size_t m = A.size();
+  if (e != 1) {
+    return LocalOrthogonalImageGeneratorsCore(A, Be, p, c, e, m, bounds,
+                                              order);
+  }
+  // the radical of A mod p
+  ModMat Ap(m, std::vector<int64_t>(m));
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      Ap[a][b] = ModP(A[a][b], p);
+    }
+  }
+  ModRowSpace rs = ModRowReduce(Ap, p);
+  std::vector<bool> is_piv(m, false);
+  for (size_t pv : rs.pivots) {
+    is_piv[pv] = true;
+  }
+  ModMat rad;
+  for (size_t f = 0; f < m; f++) {
+    if (is_piv[f]) {
+      continue;
+    }
+    std::vector<int64_t> v(m, 0);
+    v[f] = 1;
+    for (size_t i = 0; i < rs.pivots.size(); i++) {
+      v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
+    }
+    rad.push_back(v);
+  }
+  if (rad.empty()) {
+    return LocalOrthogonalImageGeneratorsCore(A, Be, p, c, e, m, bounds,
+                                              order);
+  }
+  // a complement from the standard basis
+  ModMat cols_P;
+  ModMat test = rad;
+  for (size_t a = 0; a < m && cols_P.size() + rad.size() < m; a++) {
+    std::vector<int64_t> v(m, 0);
+    v[a] = 1;
+    test.push_back(v);
+    if (ModRank(test, p) == test.size()) {
+      cols_P.push_back(v);
+    } else {
+      test.pop_back();
+    }
+  }
+  size_t rad_start = cols_P.size();
+  for (auto const &v : rad) {
+    cols_P.push_back(v);
+  }
+  ModMat P(m, std::vector<int64_t>(m));
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      P[a][b] = cols_P[b][a];
+    }
+  }
+  int W = MultiplicityNewtonPrecision(p);
+  int64_t pW = 1;
+  for (int i = 0; i < W; i++) {
+    pW *= p;
+  }
+  auto mulmod = [](int64_t x, int64_t y, int64_t M) -> int64_t {
+    __int128 r = static_cast<__int128>(x) * y % M;
+    return static_cast<int64_t>((r < 0) ? r + M : r);
+  };
+  auto matmul = [&](ModMat const &X, ModMat const &Y, int64_t M) -> ModMat {
+    ModMat Z(m, std::vector<int64_t>(m, 0));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t k = 0; k < m; k++) {
+        if (X[a][k] == 0) {
+          continue;
+        }
+        for (size_t b = 0; b < m; b++) {
+          Z[a][b] = (Z[a][b] + mulmod(X[a][k], Y[k][b], M)) % M;
+        }
+      }
+    }
+    return Z;
+  };
+  auto transpose = [&](ModMat const &X) -> ModMat {
+    ModMat Z(m, std::vector<int64_t>(m));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        Z[a][b] = X[b][a];
+      }
+    }
+    return Z;
+  };
+  // P^{-1} modulo p^W: modulo p by Gauss, then X <- X (2 - P X)
+  ModMat Pinv(m, std::vector<int64_t>(m));
+  {
+    ModMat aug(m, std::vector<int64_t>(2 * m, 0));
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        aug[a][b] = ModP(P[a][b], p);
+      }
+      aug[a][m + a] = 1;
+    }
+    ModRowSpace rr = ModRowReduce(aug, p);
+    for (size_t a = 0; a < m; a++) {
+      for (size_t b = 0; b < m; b++) {
+        Pinv[a][b] = rr.basis[a][m + b];
+      }
+    }
+    int64_t M = p;
+    while (M < pW) {
+      M = (M > pW / M) ? pW : M * M;
+      ModMat PX = matmul(P, Pinv, M);
+      for (size_t a = 0; a < m; a++) {
+        for (size_t b = 0; b < m; b++) {
+          PX[a][b] = ModP(((a == b) ? 2 : 0) - PX[a][b], M);
+        }
+      }
+      Pinv = matmul(Pinv, PX, M);
+    }
+  }
+  // A' = P^T A P exactly, Be' = P^{-1} Be P^{-T} modulo p^W
+  ModMat A2(m, std::vector<int64_t>(m, 0));
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      __int128 sacc = 0;
+      for (size_t k = 0; k < m; k++) {
+        for (size_t l = 0; l < m; l++) {
+          sacc += static_cast<__int128>(P[k][a]) * A[k][l] * P[l][b];
+        }
+      }
+      A2[a][b] = static_cast<int64_t>(sacc);
+    }
+  }
+  ModMat Be2 = matmul(matmul(Pinv, Be, pW), transpose(Pinv), pW);
+  std::optional<std::vector<ModMat>> gens =
+      LocalOrthogonalImageGeneratorsCore(A2, Be2, p, c, e, rad_start, bounds,
+                                         order);
+  if (!gens) {
+    return {};
+  }
+  int64_t pc = 1;
+  for (int i = 0; i < c; i++) {
+    pc *= p;
+  }
+  std::vector<ModMat> res;
+  for (auto const &g : *gens) {
+    res.push_back(matmul(matmul(P, g, pc), Pinv, pc));
   }
   return res;
 }
