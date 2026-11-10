@@ -116,6 +116,15 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
     std::cerr << "Impossible for a real quadratic space\n";
     throw TerminalException{1};
   }
+  // A square discriminant means that x^2 - eSum x + eProd splits over Q:
+  // the ring is then not an order of a quadratic field.
+  T SqrtDiscriminant;
+  if (universal_square_root(SqrtDiscriminant, Discriminant)) {
+    std::cerr << "TSPACE: Discriminant=" << Discriminant
+              << " is a square, the polynomial is reducible\n";
+    std::cerr << "Impossible for a real quadratic space\n";
+    throw TerminalException{1};
+  }
   for (int i = 0; i < n; i++) {
     for (int j = i; j < n; j++) {
       {

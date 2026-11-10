@@ -39,7 +39,7 @@ read_existing_file:=function(eFile)
     l_spanning_elements:=[];
     l_outer_elements:=[];
     PairwiseScalarInv:=get_pairwise_scalar_inv(ListMat, SuperMat);
-    return rec(SuperMat:=SuperMat, ListMat:=ListMat, ListComm:=ListComm, ListSubspaces:=ListSubspaces, PtStabGens:=PtStabGens, l_spanning_elements:=l_spanning_elements, l_outer_elements:=l_outer_elements, PairwiseScalarInv:=PairwiseScalarInv);
+    return rec(SuperMat:=SuperMat, ListMat:=ListMat, ListComm:=ListComm, ListSubspaces:=ListSubspaces, PtStabGens:=PtStabGens, l_spanning_elements:=l_spanning_elements, l_outer_elements:=l_outer_elements, PairwiseScalarInv:=PairwiseScalarInv, is_self_dual:=false);
 end;
 
 
@@ -56,6 +56,11 @@ write_linear_space_input:=function(eFile, RecLinSpa)
     OutputStreamListMatrix(os, RecLinSpa.l_spanning_elements);
     OutputStreamListMatrix(os, RecLinSpa.l_outer_elements);
     OutputStreamMatrix(os, RecLinSpa.PairwiseScalarInv);
+    if RecLinSpa.is_self_dual then
+        AppendTo(os, "1\n");
+    else
+        AppendTo(os, "0\n");
+    fi;
     CloseStream(os);
 end;
 

@@ -310,15 +310,20 @@ PairwiseScalarInfo<T> get_pairwise_scalar_info(std::vector<MyMatrix<T>> const& L
     MyMatrix<T> M2 = M1 * InvSuperMat;
     l_mat.push_back(M2);
   }
-  for (int i=0; i<n_mat; i++) {
-    for (int j=i; j<n_mat; j++) {
-      MyMatrix<T> prod = l_mat[i] * l_mat[j];
+  // The trace of the product, without forming it.
+  int n = SuperMat.rows();
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    MyMatrix<T> const& A = l_mat[i_mat];
+    for (int j_mat=i_mat; j_mat<n_mat; j_mat++) {
+      MyMatrix<T> const& B = l_mat[j_mat];
       T scal(0);
-      for (int i=0; i<prod.rows(); i++) {
-        scal += prod(i,i);
+      for (int i=0; i<n; i++) {
+        for (int k=0; k<n; k++) {
+          scal += A(i,k) * B(k,i);
+        }
       }
-      PairwiseScalar(i, j) = scal;
-      PairwiseScalar(j, i) = scal;
+      PairwiseScalar(i_mat, j_mat) = scal;
+      PairwiseScalar(j_mat, i_mat) = scal;
     }
   }
   MyMatrix<T> PairwiseScalarInv = Inverse(PairwiseScalar);
@@ -464,7 +469,7 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
   os << "TSPACE: IsBravaisSpace: |ListMat|=" << ListMat.size() << "\n";
 #endif
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
-  for (auto &eGen : ListGen) {
+  for (auto &eGen : ListGen_T) {
     for (auto &eMat : ListMat) {
       MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
       if (eMatImg != eMat) {
@@ -550,14 +555,8 @@ template <typename T>
 MyVector<T> LINSPA_GetVectorOfMatrixExpression(LinSpaceMatrix<T> const &LinSpa,
                                                MyMatrix<T> const &eMat) {
   MyVector<T> eMatVect = SymmetricMatrixToVector(eMat);
-  int dimSymm = eMatVect.size();
-  int dimLinSpa = LinSpa.ListMat.size();
-  MyMatrix<T> TotalMatrix(dimLinSpa, dimSymm);
-  for (int iLinSpa = 0; iLinSpa < dimLinSpa; iLinSpa++) {
-    MyVector<T> V = SymmetricMatrixToVector(LinSpa.ListMat[iLinSpa]);
-    AssignMatrixRow(TotalMatrix, iLinSpa, V);
-  }
-  std::optional<MyVector<T>> RecSol = SolutionMat(TotalMatrix, eMatVect);
+  std::optional<MyVector<T>> RecSol =
+      SolutionMat(LinSpa.ListMatAsBigMat, eMatVect);
   MyVector<T> V = unfold_opt(RecSol, "Failure in SolutionMat");
   return V;
 }
@@ -567,12 +566,13 @@ MyMatrix<T> matrix_in_t_space(MyMatrix<T> const &Pmat,
                               LinSpaceMatrix<T> const &LinSpa) {
   int dimSpace = LinSpa.ListMat.size();
   MyMatrix<T> MatSpace(dimSpace, dimSpace);
+  // The row selection over the basis is done once for all the images.
+  SolutionMatRepetitive<T> smr(LinSpa.ListMatAsBigMat);
   int pos = 0;
   for (auto &eMatSp : LinSpa.ListMat) {
     MyMatrix<T> eMatSpImg = Pmat * eMatSp * Pmat.transpose();
     MyVector<T> eMatSpImg_V = SymmetricMatrixToVector(eMatSpImg);
-    std::optional<MyVector<T>> opt =
-        SolutionMat(LinSpa.ListMatAsBigMat, eMatSpImg_V);
+    std::optional<MyVector<T>> opt = smr.GetSolution(eMatSpImg_V);
     MyVector<T> eV = unfold_opt(opt, "matrix row");
     AssignMatrixRow(MatSpace, pos, eV);
     pos += 1;
@@ -629,6 +629,8 @@ LinSpaceMatrix<T> BuildLinSpaceMatrix(std::vector<MyMatrix<T>> const &ListMat,
 
 template<typename T, typename Tint>
 MyMatrix<Tint> vector_family_saturation(MyMatrix<Tint> const& SHV, std::vector<MyMatrix<T>> const& l_gen) {
+  std::vector<MyMatrix<Tint>> l_gen_tint =
+      UniversalStdVectorMatrixConversion<Tint, T>(l_gen);
   std::vector<MyVector<Tint>> l_vect;
   std::unordered_set<MyVector<Tint>> set_vect;
   auto f_insert=[&](MyVector<Tint> const& v) -> void {
@@ -645,8 +647,7 @@ MyMatrix<Tint> vector_family_saturation(MyMatrix<Tint> const& SHV, std::vector<M
     size_t len = l_vect.size();
     for (size_t u=start; u<len; u++) {
       MyVector<Tint> v1 = l_vect[u];
-      for (auto & eGen_T: l_gen) {
-        MyMatrix<Tint> eGen = UniversalMatrixConversion<Tint,T>(eGen_T);
+      for (auto & eGen: l_gen_tint) {
         MyVector<Tint> v2 = eGen.transpose() * v1;
         f_insert(v2);
       }

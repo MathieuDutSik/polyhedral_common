@@ -9,6 +9,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <utility>
 // clang-format on
 
 #ifdef DEBUG
@@ -38,11 +39,12 @@ The dimension d of the space corresponding to GL_d(Z)";
   ListIntValues_doc["RealImagDim"] = "Default: 0\n\
 The dimension d of the space corresponding to GL_d(R) for R a number ring";
   ListIntValues_doc["RealImagSum"] = "Default: 0\n\
-The sum of the two roots of the polynomial. Only relevant for RealQuad and ImagQuad";
+The sum of the two roots of the polynomial, 0 or 1. Only relevant for RealQuad and ImagQuad";
   ListIntValues_doc["RealImagProd"] = "Default: 0\n\
 The product of the two roots of the polynomial. Only relevant for RealQuad and ImagQuad";
   ListStringValues_doc["SuperMatMethod"] = "Default: NotNeeded\n\
 NotNeeded: For InvGroup, RealQuad, ImagQuad, the supermat is computed internally and so this option needs to be selected.\n\
+For InvGroup, it is the average of the identity over the group, whatever the option.\n\
 Compute: Compute from the basis of the T-space\n\
 File: Use matrix read from the file";
   ListStringValues_doc["FileInvGroup"] = "Default: unset\n\
@@ -51,7 +53,7 @@ The file containing the list of generators";
 The file containing the list of matrices";
   ListStringValues_doc["FileSuperMat"] = "Default: unset\n\
 The file containing the SuperMat";
-  ListStringValues_doc["ListComm"] = "Default: trivial\n\
+  ListStringValues_doc["ListComm"] = "Default: Trivial\n\
 Trivial: This set it up to empty\n\
 Use_realimag: Use the commuting from the real or imag case\n\
 File: The ListComm will be obtained from the FileListComm";
@@ -113,7 +115,14 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
   std::vector<MyMatrix<T>> l_outer_elements = ReadListMatrix<T>(is);
   MyMatrix<T> PairwiseScalarInv = ReadMatrix<T>(is);
   PairwiseScalarInfo<T> pairwise_scalar_info{PairwiseScalarInv};
-  bool is_self_dual = false;
+  int is_self_dual_i;
+  is >> is_self_dual_i;
+  if (!is || (is_self_dual_i != 0 && is_self_dual_i != 1)) {
+    std::cerr << "TSPACE: ReadLinSpaceFile, the file should end with "
+                 "is_self_dual, 0 or 1\n";
+    throw TerminalException{1};
+  }
+  bool is_self_dual = is_self_dual_i == 1;
   return {n,        isBravais,     SuperMat,
           ListMat,  ListLineMat,   ListMatAsBigMat,
           ListComm, ListSubspaces, PtStabGens,
@@ -124,7 +133,8 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
 /*
   The counterpart of ReadLinSpaceFile, whose reads this has to match one for
   one: SuperMat, ListMat, ListComm, ListSubspaces, PtStabGens, then the
-  spanning and outer elements and the pairwise scalar invariant.
+  spanning and outer elements, the pairwise scalar invariant and
+  is_self_dual as 0 or 1.
  */
 template <typename T>
 void WriteLinSpace(std::ostream &os, LinSpaceMatrix<T> const &LinSpa) {
@@ -136,6 +146,7 @@ void WriteLinSpace(std::ostream &os, LinSpaceMatrix<T> const &LinSpa) {
   WriteListMatrix(os, LinSpa.l_spanning_elements);
   WriteListMatrix(os, LinSpa.l_outer_elements);
   WriteMatrix(os, LinSpa.pairwise_scalar_info.PairwiseScalarInv);
+  os << (LinSpa.is_self_dual ? 1 : 0) << "\n";
 }
 
 template <typename T>
@@ -156,6 +167,7 @@ void WriteLinSpaceGAP(std::ostream &os, LinSpaceMatrix<T> const &LinSpa) {
   WriteListMatrixGAP(os, LinSpa.l_outer_elements);
   os << ", PairwiseScalarInv:=";
   WriteMatrixGAP(os, LinSpa.pairwise_scalar_info.PairwiseScalarInv);
+  os << ", is_self_dual:=" << GAP_logical(LinSpa.is_self_dual);
   os << ")";
 }
 
@@ -171,12 +183,24 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   std::string const &TypeTspace = Blk.get_string("TypeTspace");
   LinSpaceMatrix<T> LinSpaRet;
   auto set_paperwork = [&]() -> void { reset_paperwork(LinSpaRet); };
-  auto get_imultiplication = [&]() -> MyMatrix<T> {
-    int n = Blk.get_int("RealImagDim");
+  // The ring is Z[alpha] with alpha^2 - eSum alpha + eProd = 0. Replacing
+  // alpha by alpha - k does not change the ring, so the sum is normalized
+  // to 0 or 1.
+  auto get_sum_prod = [&]() -> std::pair<int, int> {
     int eSum_i = Blk.get_int("RealImagSum");
     int eProd_i = Blk.get_int("RealImagProd");
-    T eSum = UniversalScalarConversion<T, int>(eSum_i);
-    T eProd = UniversalScalarConversion<T, int>(eProd_i);
+    if (eSum_i < 0 || eSum_i > 1) {
+      std::cerr << "TSPACE: RealImagSum=" << eSum_i
+                << " but it should be 0 or 1\n";
+      throw TerminalException{1};
+    }
+    return {eSum_i, eProd_i};
+  };
+  auto get_imultiplication = [&]() -> MyMatrix<T> {
+    int n = Blk.get_int("RealImagDim");
+    std::pair<int, int> sum_prod = get_sum_prod();
+    T eSum = UniversalScalarConversion<T, int>(sum_prod.first);
+    T eProd = UniversalScalarConversion<T, int>(sum_prod.second);
     T disc = eSum * eSum - 4 * eProd;
     if (disc == 0) {
       std::cerr << "Discriminant is zero, neither totally real, nor imaginary, degenerate\n";
@@ -184,25 +208,21 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     }
     return GetCommQuadratic(n, eSum, eProd);
   };
+  // Whether alpha is a root of unity, that is the Gaussian (sum 0) or the
+  // Eisenstein (sum 1) case. With the sum normalized to 0 or 1, this is
+  // exactly eProd = 1.
   auto get_is_eisenstein_or_gaussian = [&]() -> bool {
-    int eSum_i = Blk.get_int("RealImagSum");
-    int eProd_i = Blk.get_int("RealImagProd");
-    bool answer = false;
-    if (eSum_i == 0 && eProd_i == 1) {
-      // Gaussian
-      answer = true;
-    }
-    if (eSum_i == 1 && eProd_i == 1) {
-      // Eisenstein
-      answer = true;
-    }
+    std::pair<int, int> sum_prod = get_sum_prod();
+    bool answer = sum_prod.second == 1;
 #ifdef SANITY_CHECK_TSPACE_NAMELIST
+    // The roots of unity of a quadratic field have order dividing 4 or 6.
     MyMatrix<T> Imult = get_imultiplication();
-    T det = DeterminantMat(Imult);
-    bool answer_b = false;
-    if (T_abs(det) == 1) {
-      answer_b = true;
+    int n2 = Imult.rows();
+    MyMatrix<T> Ipow = IdentityMat<T>(n2);
+    for (int i = 0; i < 12; i++) {
+      Ipow = Ipow * Imult;
     }
+    bool answer_b = Ipow == IdentityMat<T>(n2);
     if (answer != answer_b) {
       std::cerr << "TSPACE: Inconsistent result between answer and answer_b\n";
       throw TerminalException{1};
@@ -260,15 +280,12 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
         std::cerr << "TSPACE: Cannot use the realimag method in a case that is not readl or imaginary\n";
         throw TerminalException{1};
       }
-      auto get_generator=[&]() -> MyMatrix<T> {
-        if (get_is_eisenstein_or_gaussian()) {
-          return get_imultiplication();
-        } else {
-          return -IdentityMat<T>(LinSpaRet.n);
-        }
-      };
-      MyMatrix<T> eGen = get_generator();
-      LinSpaRet.PtStabGens = {eGen};
+      // -I_n is always there: the multiplication by an Eisenstein alpha
+      // of order 3 does not generate it.
+      LinSpaRet.PtStabGens = {-IdentityMat<T>(LinSpaRet.n)};
+      if (get_is_eisenstein_or_gaussian()) {
+        LinSpaRet.PtStabGens.push_back(get_imultiplication());
+      }
       return;
     }
     if (PtGroupMethod == "Compute") {
@@ -308,15 +325,6 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
 #ifdef DEBUG_TSPACE_NAMELIST
     os << "TSPACE: set_supermat, SuperMatMethod=" << SuperMatMethod << "\n";
 #endif
-    if (SuperMatMethod == "NotNeeded") {
-      return;
-    }
-    if (TypeTspace == "InvGroup") {
-      MyMatrix<T> eMat = IdentityMat<T>(LinSpaRet.n);
-      LinSpaRet.SuperMat =
-          OrbitBarycenterSymmetricMatrix(eMat, LinSpaRet.ListMat);
-      return;
-    }
     if (SuperMatMethod == "NotNeeded") {
       return;
     }
@@ -361,10 +369,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     }
     if (TypeTspace == "RealQuad" || TypeTspace == "ImagQuad") {
       int n = Blk.get_int("RealImagDim");
-      int eSum_i = Blk.get_int("RealImagSum");
-      int eProd_i = Blk.get_int("RealImagProd");
-      T eSum = UniversalScalarConversion<T, int>(eSum_i);
-      T eProd = UniversalScalarConversion<T, int>(eProd_i);
+      std::pair<int, int> sum_prod = get_sum_prod();
+      T eSum = UniversalScalarConversion<T, int>(sum_prod.first);
+      T eProd = UniversalScalarConversion<T, int>(sum_prod.second);
 #ifdef DEBUG_TSPACE_NAMELIST
       os << "n=" << n << " eSum" << eSum << " eProd=" << eProd << "\n";
 #endif
@@ -391,7 +398,10 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       LinSpaRet.n = LGen[0].rows();
       LinSpaRet.ListMat = BasisInvariantForm(LinSpaRet.n, LGen, os);
       set_paperwork();
-      set_supermat();
+      // The average of the identity over the finite group is a positive
+      // definite invariant form, whatever SuperMatMethod says.
+      LinSpaRet.SuperMat =
+          OrbitBarycenterSymmetricMatrix(IdentityMat<T>(LinSpaRet.n), LGen);
       set_listcomm();
       set_subspaces();
       set_pt_stab();

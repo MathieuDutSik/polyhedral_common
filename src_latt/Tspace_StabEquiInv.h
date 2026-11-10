@@ -91,22 +91,61 @@ GetFamilyDiscMatrices(MyMatrix<T> const &eG,
   return ListDisc;
 }
 
-template <typename T>
-bool is_stab_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &LinSpa) {
-  // The membership of the image in the space is a rational question even for
-  // an integral space, so the solution comes back over the overlying field
-  // (which is T itself when T is already a field).
-  using Tfield = typename overlying_field<T>::field_type;
-  for (auto &eMatSp : LinSpa.ListMat) {
-    MyMatrix<T> eMatSpImg = Pmat * eMatSp * Pmat.transpose();
-    MyVector<T> eMatSpImg_V = SymmetricMatrixToVector(eMatSpImg);
-    std::optional<MyVector<Tfield>> opt =
-	SolutionMat(LinSpa.ListMatAsBigMat, eMatSpImg_V);
-    if (!opt) {
-      return false;
+/*
+  The membership test of a symmetric matrix in the T-space. A vector is in
+  the row span of ListMatAsBigMat exactly when it is orthogonal to the
+  kernel of that matrix, so the kernel is computed once and each test is a
+  product with it. No solution is needed, which keeps the test over the
+  ring for an integral space: the kernel is computed over the overlying
+  field and scaled to an integral matrix, which leaves it a kernel.
+
+  It is built once per T-space by the stabilizer and equivalence code, whose
+  coset searches test one candidate after another.
+ */
+template <typename T> struct TspaceMembership {
+  std::vector<MyMatrix<T>> const &ListMat;
+  MyMatrix<T> Orth;
+  TspaceMembership(LinSpaceMatrix<T> const &LinSpa) : ListMat(LinSpa.ListMat) {
+    MyMatrix<T> const &BigMat = LinSpa.ListMatAsBigMat;
+    int sym_dim = BigMat.cols();
+    if constexpr (is_ring_field<T>::value) {
+      Orth = NullspaceTrMat(BigMat);
+    } else {
+      using Tfield = typename overlying_field<T>::field_type;
+      MyMatrix<Tfield> BigMat_F = UniversalMatrixConversion<Tfield, T>(BigMat);
+      MyMatrix<Tfield> Orth_F = NullspaceTrMat(BigMat_F);
+      if (Orth_F.rows() == 0) {
+        Orth = MyMatrix<T>(0, sym_dim);
+      } else {
+        Orth = RemoveFractionMatrixPlusCoeffRing(Orth_F).TheMat;
+      }
     }
   }
-  return true;
+  bool is_member(MyMatrix<T> const &M) const {
+    MyVector<T> V = SymmetricMatrixToVector(M);
+    MyVector<T> prod = Orth * V;
+    for (int i = 0; i < prod.size(); i++) {
+      if (prod(i) != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+  bool is_stab_space(MyMatrix<T> const &Pmat) const {
+    for (auto &eMatSp : ListMat) {
+      MyMatrix<T> eMatSpImg = Pmat * eMatSp * Pmat.transpose();
+      if (!is_member(eMatSpImg)) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+template <typename T>
+bool is_stab_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &LinSpa) {
+  TspaceMembership<T> membership(LinSpa);
+  return membership.is_stab_space(Pmat);
 }
 
 
@@ -147,12 +186,13 @@ get_mat_from_shv_perm(Telt const &elt,
 template <typename T, typename Telt>
 std::optional<MyMatrix<T>>
 is_corr_and_solve(Telt const &elt, FindTransformationSolver<T> const &solver,
-                  MyMatrix<T> const &eMat, LinSpaceMatrix<T> const &LinSpa) {
+                  MyMatrix<T> const &eMat,
+                  TspaceMembership<T> const &membership) {
   std::optional<MyMatrix<T>> opt = get_mat_from_shv_perm(elt, solver, eMat);
   if (!opt) {
     return {};
   }
-  if (!is_stab_space(*opt, LinSpa)) {
+  if (!membership.is_stab_space(*opt)) {
     return {};
   }
   return opt;
@@ -193,7 +233,7 @@ public:
         std::cerr << "TSPACE: M=\n";
         WriteMatrix(std::cerr, M);
         for (int x_row = 0; x_row < n_row; x_row++) {
-          std::cerr << "TSPACE: x_row=" << i_row
+          std::cerr << "TSPACE: x_row=" << x_row
                     << " V=" << StringVectorGAP(ListV[x_row]) << "\n";
         }
         throw TerminalException{1};
@@ -270,9 +310,10 @@ template <typename T, typename Tgroup> struct Result_ComputeStabilizer_SHV {
       std::vector<MyMatrix<T>> LGenGlobStab_matr;
       std::vector<Telt> const &LGenGlobStab_perm = perms_and_group->first;
       FindTransformationSolver<T> solver(SHV_T);
+      TspaceMembership<T> membership(LinSpa);
       for (auto &eGen : LGenGlobStab_perm) {
         std::optional<MyMatrix<T>> opt =
-            is_corr_and_solve(eGen, solver, eMat, LinSpa);
+            is_corr_and_solve(eGen, solver, eMat, membership);
         MyMatrix<T> eGenMatr = unfold_opt(opt, "Failed to unfold");
         LGenGlobStab_matr.push_back(eGenMatr);
       }
@@ -384,9 +425,10 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
       GetIntAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV_T, ListMat, Vdiag,
                                                      os)
           .ListGen;
+  TspaceMembership<T> membership(LinSpa);
   bool all_gens_ok = true;
   for (auto &eGen : LGenInt) {
-    if (!is_stab_space(eGen, LinSpa) || !f_extra(eGen)) {
+    if (!membership.is_stab_space(eGen) || !f_extra(eGen)) {
       all_gens_ok = false;
       break;
     }
@@ -422,7 +464,7 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
   FindTransformationSolver<T> solver(SHV_T);
   auto f_correct=[&](Telt const& x) -> bool {
     std::optional<MyMatrix<T>> opt =
-      is_corr_and_solve(x, solver, eMat, LinSpa);
+      is_corr_and_solve(x, solver, eMat, membership);
     return opt.has_value() && f_extra(*opt);
   };
 
@@ -586,8 +628,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
     }
   }
 #endif
+  TspaceMembership<T> membership(LinSpa);
   auto f_is_ok = [&](MyMatrix<T> const &x) -> bool {
-    return is_stab_space(x, LinSpa) && f_extra(x);
+    return membership.is_stab_space(x) && f_extra(x);
   };
   bool direct_ok = f_is_ok(*optEquivInt);
 #ifdef TIMINGS_TSPACE_FUNCTIONS
@@ -649,7 +692,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
                "equivalence result\n";
   if (result) {
     MyMatrix<T> const& eMat_T = *result;
-    if (!is_stab_space(eMat_T, LinSpa)) {
+    if (!membership.is_stab_space(eMat_T)) {
       std::cerr << "TSPACE: The matrix is not stabilizing the space\n";
       throw TerminalException{1};
     }
