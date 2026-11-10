@@ -12,6 +12,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <tuple>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -422,8 +423,9 @@ inline int MultiplicityNewtonPrecision(int64_t p) {
   beyond the bounds.
  */
 inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
-    ModMat const &A, ModMat const &Be, int64_t p, int c, int e,
-    size_t rad_start, MultiplicityFactorBounds const &bounds, double *order) {
+    ModMat const &A, ModMat const &Be, std::vector<ModMat> const &Om,
+    std::vector<ModMat> const &Lam, int64_t p, int c, int e, size_t rad_start,
+    MultiplicityFactorBounds const &bounds, double *order) {
   size_t m = A.size();
   int t = (p == 2) ? 1 : 0;
   size_t n_pts = 1;
@@ -635,6 +637,183 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     return {};
   };
+  // With a commutant Lam (a centre K), the lifts g + p^j Delta keep Delta
+  // in Lam mod p: the system of MakeLiftSystem restricted to the
+  // coordinates of Lam, its solutions written back as matrices.
+  size_t d_lam = Lam.size();
+  ModMat Mlam;  // m^2 x d_lam, the vec of the Lam_lambda modulo p
+  if (d_lam > 0) {
+    Mlam.assign(m * m, std::vector<int64_t>(d_lam, 0));
+    for (size_t l = 0; l < d_lam; l++) {
+      for (size_t a2 = 0; a2 < m; a2++) {
+        for (size_t b2 = 0; b2 < m; b2++) {
+          Mlam[a2 * m + b2][l] = ModP(Lam[l][a2][b2], p);
+        }
+      }
+    }
+  }
+  auto restrict_coef = [&](ModMat const &coef) -> ModMat {
+    if (d_lam == 0) {
+      return coef;
+    }
+    ModMat res(coef.size(), std::vector<int64_t>(d_lam, 0));
+    for (size_t r2 = 0; r2 < coef.size(); r2++) {
+      for (size_t v = 0; v < m * m; v++) {
+        if (coef[r2][v] == 0) {
+          continue;
+        }
+        for (size_t l = 0; l < d_lam; l++) {
+          res[r2][l] = (res[r2][l] + coef[r2][v] * Mlam[v][l]) % p;
+        }
+      }
+    }
+    return res;
+  };
+  auto to_matrix_vec = [&](std::vector<int64_t> const &dv) -> std::vector<int64_t> {
+    std::vector<int64_t> x(m * m, 0);
+    for (size_t l = 0; l < d_lam; l++) {
+      if (dv[l] == 0) {
+        continue;
+      }
+      for (size_t v = 0; v < m * m; v++) {
+        x[v] = (x[v] + dv[l] * Mlam[v][l]) % p;
+      }
+    }
+    return x;
+  };
+  auto lift_aff = [&](ModMat const &g,
+                      int64_t pjl) -> std::optional<LiftAffineSpace> {
+    if (d_lam == 0) {
+      return LiftAffine(g, A, p, pjl);
+    }
+    LiftSystem sys = MakeLiftSystem(g, A, p, pjl);
+    ModMat cf = restrict_coef(sys.coef);
+    ModMat aug;
+    for (size_t r2 = 0; r2 < cf.size(); r2++) {
+      std::vector<int64_t> row = cf[r2];
+      row.push_back(sys.rhs[r2]);
+      aug.push_back(row);
+    }
+    ModRowSpace rs = ModRowReduce(aug, p);
+    for (size_t piv : rs.pivots) {
+      if (piv == d_lam) {
+        return {};
+      }
+    }
+    std::vector<int64_t> part(d_lam, 0);
+    for (size_t i2 = 0; i2 < rs.pivots.size(); i2++) {
+      part[rs.pivots[i2]] = rs.basis[i2][d_lam];
+    }
+    std::vector<bool> is_piv(d_lam, false);
+    for (size_t pv : rs.pivots) {
+      is_piv[pv] = true;
+    }
+    LiftAffineSpace res;
+    res.part = to_matrix_vec(part);
+    for (size_t f = 0; f < d_lam; f++) {
+      if (is_piv[f]) {
+        continue;
+      }
+      std::vector<int64_t> v(d_lam, 0);
+      v[f] = 1;
+      for (size_t i2 = 0; i2 < rs.pivots.size(); i2++) {
+        v[rs.pivots[i2]] = ModP(-rs.basis[i2][f], p);
+      }
+      res.ker.push_back(to_matrix_vec(v));
+    }
+    return res;
+  };
+  // the element of Lam congruent modulo p^k to g, which is in Lam mod p^k:
+  // the coordinates from d_lam rows of Mlam independent modulo p, solved
+  // modulo p^k, then the combination of the Lam_lambda modulo p^W
+  std::vector<size_t> lam_rows;
+  if (d_lam > 0) {
+    ModMat test;
+    for (size_t v = 0; v < m * m && lam_rows.size() < d_lam; v++) {
+      test.push_back(Mlam[v]);
+      if (ModRank(test, p) == test.size()) {
+        lam_rows.push_back(v);
+      } else {
+        test.pop_back();
+      }
+    }
+    if (lam_rows.size() != d_lam) {
+      return {};
+    }
+  }
+  int64_t pWfull = pow_p(W);
+  auto project = [&](ModMat const &g, int k) -> ModMat {
+    if (d_lam == 0) {
+      return g;
+    }
+    int64_t M = pow_p(k);
+    // S: the d x d matrix of the chosen rows, its inverse modulo p^k
+    ModMat S(d_lam, std::vector<int64_t>(d_lam));
+    for (size_t r2 = 0; r2 < d_lam; r2++) {
+      size_t v = lam_rows[r2];
+      for (size_t l = 0; l < d_lam; l++) {
+        S[r2][l] = ModP(Lam[l][v / m][v % m], M);
+      }
+    }
+    // the inverse modulo p, then Newton
+    ModMat aug(d_lam, std::vector<int64_t>(2 * d_lam, 0));
+    for (size_t r2 = 0; r2 < d_lam; r2++) {
+      for (size_t l = 0; l < d_lam; l++) {
+        aug[r2][l] = ModP(S[r2][l], p);
+      }
+      aug[r2][d_lam + r2] = 1;
+    }
+    ModRowSpace rr = ModRowReduce(aug, p);
+    ModMat Sinv(d_lam, std::vector<int64_t>(d_lam));
+    for (size_t r2 = 0; r2 < d_lam; r2++) {
+      for (size_t l = 0; l < d_lam; l++) {
+        Sinv[r2][l] = rr.basis[r2][d_lam + l];
+      }
+    }
+    int prec2 = 1;
+    while (prec2 < k) {
+      prec2 = std::min(2 * prec2, k);
+      int64_t M2 = pow_p(prec2);
+      ModMat SX(d_lam, std::vector<int64_t>(d_lam, 0));
+      for (size_t a2 = 0; a2 < d_lam; a2++) {
+        for (size_t k2 = 0; k2 < d_lam; k2++) {
+          for (size_t b2 = 0; b2 < d_lam; b2++) {
+            SX[a2][b2] = (SX[a2][b2] + mulmod(ModP(S[a2][k2], M2), Sinv[k2][b2], M2)) % M2;
+          }
+        }
+      }
+      for (size_t a2 = 0; a2 < d_lam; a2++) {
+        for (size_t b2 = 0; b2 < d_lam; b2++) {
+          SX[a2][b2] = ModP(((a2 == b2) ? 2 : 0) - SX[a2][b2], M2);
+        }
+      }
+      ModMat NS(d_lam, std::vector<int64_t>(d_lam, 0));
+      for (size_t a2 = 0; a2 < d_lam; a2++) {
+        for (size_t k2 = 0; k2 < d_lam; k2++) {
+          for (size_t b2 = 0; b2 < d_lam; b2++) {
+            NS[a2][b2] = (NS[a2][b2] + mulmod(Sinv[a2][k2], SX[k2][b2], M2)) % M2;
+          }
+        }
+      }
+      Sinv = NS;
+    }
+    std::vector<int64_t> coefs(d_lam, 0);
+    for (size_t l = 0; l < d_lam; l++) {
+      for (size_t r2 = 0; r2 < d_lam; r2++) {
+        size_t v = lam_rows[r2];
+        coefs[l] = (coefs[l] + mulmod(Sinv[l][r2], ModP(g[v / m][v % m], M), M)) % M;
+      }
+    }
+    ModMat h(m, std::vector<int64_t>(m, 0));
+    for (size_t l = 0; l < d_lam; l++) {
+      for (size_t a2 = 0; a2 < m; a2++) {
+        for (size_t b2 = 0; b2 < m; b2++) {
+          h[a2][b2] = (h[a2][b2] + mulmod(coefs[l], ModP(Lam[l][a2][b2], pWfull), pWfull)) % pWfull;
+        }
+      }
+    }
+    return h;
+  };
   // a solution modulo p^target extending the solution g modulo p^j, the
   // first found by a depth-first search over the affine spaces
   std::function<std::optional<ModMat>(ModMat const &, int, int64_t, int)>
@@ -647,14 +826,17 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       over = true;
       return {};
     }
-    std::optional<LiftAffineSpace> sp = LiftAffine(g, A, p, pjl);
+    // with a commutant, g in Lam modulo p^{j+1} (it is modulo p^j), so that
+    // the lifts g + p^j Delta, Delta in Lam, are in Lam modulo p^{j+1}
+    ModMat gl = (d_lam > 0) ? reduce(project(g, j), pjl * p) : g;
+    std::optional<LiftAffineSpace> sp = lift_aff(gl, pjl);
     if (!sp) {
       return {};
     }
     size_t dim = sp->ker.size();
     std::vector<int64_t> coef(dim, 0);
     while (!over) {
-      std::optional<ModMat> r = extend(LiftAffineElement(g, *sp, coef, p, pjl),
+      std::optional<ModMat> r = extend(LiftAffineElement(gl, *sp, coef, p, pjl),
                                        j + 1, pjl * p, target);
       if (r) {
         return r;
@@ -681,7 +863,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     if (!sol) {
       return {};
     }
-    std::optional<ModMat> h = newton(*sol);
+    std::optional<ModMat> h = newton(project(*sol, target));
     if (!h) {
       std::cerr << "MULT_FACTOR: Newton did not converge\n";
       throw TerminalException{1};
@@ -810,6 +992,138 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     return true;
   };
+  // With an action Om of O_K (a centre K): the image of e_j is forced when
+  // e_j is in the span modulo p of the w e_k, k < j, w in Om; otherwise the
+  // conditions B(w y_k, y) = B(w e_k, e_j) for all k < j and w, and B(w y,
+  // y) = B(w e_j, e_j) for all w.
+  size_t n_om = Om.size();
+  std::vector<std::vector<std::vector<int64_t>>> Omc(n_om);
+  for (size_t w = 0; w < n_om; w++) {
+    Omc[w].assign(m, std::vector<int64_t>(m));
+    for (size_t a2 = 0; a2 < m; a2++) {
+      for (size_t b2 = 0; b2 < m; b2++) {
+        Omc[w][a2][b2] = ModP(Om[w][a2][b2], p);
+      }
+    }
+  }
+  auto om_apply = [&](size_t w, std::vector<int64_t> const &x) -> std::vector<int64_t> {
+    std::vector<int64_t> y(m, 0);
+    for (size_t a2 = 0; a2 < m; a2++) {
+      for (size_t b2 = 0; b2 < m; b2++) {
+        y[a2] = (y[a2] + Omc[w][a2][b2] * x[b2]) % p;
+      }
+    }
+    return y;
+  };
+  // forced[j]: the coefficients (k, w, coefficient) of e_j
+  std::vector<bool> forced(m, false);
+  std::vector<std::vector<std::tuple<size_t, size_t, int64_t>>> forced_combo(m);
+  if (n_om > 0) {
+    std::vector<std::pair<size_t, size_t>> labels;
+    ModMat span;
+    for (size_t j = 0; j < m; j++) {
+      std::vector<int64_t> ej(m, 0);
+      ej[j] = 1;
+      if (!span.empty()) {
+        // solve sum c_r span_r = e_j
+        ModMat aug(m, std::vector<int64_t>(span.size() + 1, 0));
+        for (size_t r2 = 0; r2 < span.size(); r2++) {
+          for (size_t a2 = 0; a2 < m; a2++) {
+            aug[a2][r2] = span[r2][a2];
+          }
+        }
+        for (size_t a2 = 0; a2 < m; a2++) {
+          aug[a2][span.size()] = ej[a2];
+        }
+        ModRowSpace rs = ModRowReduce(aug, p);
+        bool solvable = true;
+        for (size_t pv : rs.pivots) {
+          if (pv == span.size()) {
+            solvable = false;
+          }
+        }
+        if (solvable) {
+          forced[j] = true;
+          for (size_t i2 = 0; i2 < rs.pivots.size(); i2++) {
+            int64_t cf = rs.basis[i2][span.size()];
+            if (cf != 0) {
+              auto lb = labels[rs.pivots[i2]];
+              forced_combo[j].push_back({lb.first, lb.second, cf});
+            }
+          }
+        }
+      }
+      // e_j itself (label n_om), and the w e_j
+      span.push_back(ej);
+      labels.push_back({j, n_om});
+      for (size_t w = 0; w < n_om; w++) {
+        span.push_back(om_apply(w, ej));
+        labels.push_back({j, w});
+      }
+    }
+  }
+  // B(w e_k, e_j) modulo p
+  auto om_entry = [&](size_t w, size_t k, size_t j) -> int64_t {
+    int64_t sacc = 0;
+    for (size_t a2 = 0; a2 < m; a2++) {
+      sacc = (sacc + Omc[w][a2][k] * Ap[a2][j]) % p;
+    }
+    return sacc;
+  };
+  // the conditions on the image y of e_j beyond B(y, y) and B(y_k, y)
+  auto om_ok = [&](std::vector<int64_t> const &y, size_t j) -> bool {
+    for (size_t w = 0; w < n_om; w++) {
+      if (bil(om_apply(w, y), y) != om_entry(w, j, j)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  // the full check of a candidate modulo p: isometry, invertible, and
+  // commuting with Om
+  auto full_ok = [&](ModMat const &g) -> bool {
+    for (size_t a2 = 0; a2 < m; a2++) {
+      for (size_t b2 = 0; b2 < m; b2++) {
+        std::vector<int64_t> ca(m), cb(m);
+        for (size_t u = 0; u < m; u++) {
+          ca[u] = g[u][a2];
+          cb[u] = g[u][b2];
+        }
+        if (bil(ca, cb) != Ap[a2][b2]) {
+          return false;
+        }
+      }
+    }
+    for (size_t w = 0; w < n_om; w++) {
+      for (size_t a2 = 0; a2 < m; a2++) {
+        for (size_t b2 = 0; b2 < m; b2++) {
+          int64_t x1 = 0, x2 = 0;
+          for (size_t u = 0; u < m; u++) {
+            x1 = (x1 + g[a2][u] * Omc[w][u][b2]) % p;
+            x2 = (x2 + Omc[w][a2][u] * g[u][b2]) % p;
+          }
+          if (x1 != x2) {
+            return false;
+          }
+        }
+      }
+    }
+    return ModRank(g, p) == m;
+  };
+  // the affine conditions on the image of e_j given the columns k < j
+  auto conditions = [&](size_t j, std::vector<std::vector<int64_t>> &fixed,
+                        std::vector<int64_t> &rhs) -> void {
+    fixed.clear();
+    rhs.clear();
+    for (size_t k = 0; k < j; k++) {
+      fixed.push_back(cols[k]);
+      rhs.push_back(Ap[k][j]);
+      for (size_t w = 0; w < n_om; w++) {
+        fixed.push_back(om_apply(w, cols[k]));
+        rhs.push_back(om_entry(w, k, j));
+      }
+    }
+  };
   std::function<std::optional<ModMat>(size_t)> complete =
       [&](size_t j) -> std::optional<ModMat> {
     if (j == m) {
@@ -819,16 +1133,28 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
           g[a][b] = cols[b][a];
         }
       }
-      if (ModRank(g, p) != m) {
+      if (!full_ok(g)) {
         return {};
       }
       return lift_path(g, 1, p);
     }
-    std::vector<std::vector<int64_t>> fixed(cols.begin(), cols.begin() + j);
-    std::vector<int64_t> rhs(j);
-    for (size_t k = 0; k < j; k++) {
-      rhs[k] = Ap[k][j];
+    if (forced[j]) {
+      std::vector<int64_t> y(m, 0);
+      for (auto const &[k, w, cf] : forced_combo[j]) {
+        std::vector<int64_t> v = (w == n_om) ? cols[k] : om_apply(w, cols[k]);
+        for (size_t a2 = 0; a2 < m; a2++) {
+          y[a2] = (y[a2] + cf * v[a2]) % p;
+        }
+      }
+      if (!radical_ok(y, j)) {
+        return {};
+      }
+      cols[j] = y;
+      return complete(j + 1);
     }
+    std::vector<std::vector<int64_t>> fixed;
+    std::vector<int64_t> rhs;
+    conditions(j, fixed, rhs);
     std::optional<std::pair<std::vector<int64_t>, ModMat>> sp =
         affine(fixed, rhs);
     if (!sp) {
@@ -840,7 +1166,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         over = true;
         return true;
       }
-      if (!radical_ok(x, j)) {
+      if (!radical_ok(x, j) || !om_ok(x, j)) {
         return false;
       }
       cols[j] = x;
@@ -914,14 +1240,20 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       return cnt;
     };
     size_t orbit_len = close();
-    std::vector<std::vector<int64_t>> fixed;
-    std::vector<int64_t> rhs;
+    if (forced[i]) {
+      // fixing e_0, ..., e_{i-1}, the K-linear maps fix e_i
+      continue;
+    }
+    std::vector<std::vector<int64_t>> idcols(i);
     for (size_t k = 0; k < i; k++) {
       std::vector<int64_t> ek(m, 0);
       ek[k] = 1;
-      fixed.push_back(ek);
-      rhs.push_back(Ap[k][i]);
+      idcols[k] = ek;
+      cols[k] = ek;
     }
+    std::vector<std::vector<int64_t>> fixed;
+    std::vector<int64_t> rhs;
+    conditions(i, fixed, rhs);
     std::optional<std::pair<std::vector<int64_t>, ModMat>> sp =
         affine(fixed, rhs);
     if (!sp) {
@@ -932,11 +1264,8 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     size_t n_cand = 0, n_fail = 0;
     size_t node0 = n_node;
-    for (size_t k = 0; k < i; k++) {
-      cols[k] = fixed[k];
-    }
     for_each_vector(*sp, Ap[i][i], [&](std::vector<int64_t> const &y) -> bool {
-      if (!radical_ok(y, i)) {
+      if (!radical_ok(y, i) || !om_ok(y, i)) {
         return false;
       }
       n_cand++;
@@ -944,7 +1273,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         return false;
       }
       for (size_t k = 0; k < i; k++) {
-        cols[k] = fixed[k];
+        cols[k] = idcols[k];
       }
       cols[i] = y;
       std::optional<ModMat> g = complete(i + 1);
@@ -986,7 +1315,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   }
   int64_t pj = p;
   for (int j = 1; j < c; j++) {
-    std::optional<LiftAffineSpace> sp = LiftAffine(Id, A, p, pj);
+    std::optional<LiftAffineSpace> sp = lift_aff(Id, pj);
     if (!sp) {
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
     std::cerr << "MULT_FACTOR: generators stop: no layer, n_node=" << n_node << "\n";
@@ -1027,13 +1356,14 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       };
       LiftSystem sys0 = MakeLiftSystem(layer_elt(std::vector<int64_t>(dim, 0)),
                                        A, p, pj1);
-      size_t n_eq = sys0.coef.size();
-      size_t n_var = sys0.coef.empty() ? 0 : sys0.coef[0].size();
+      ModMat coef0 = restrict_coef(sys0.coef);
+      size_t n_eq = coef0.size();
+      size_t n_var = coef0.empty() ? 0 : coef0[0].size();
       // the left kernel: the y with y^T coef = 0
       ModMat coefT(n_var, std::vector<int64_t>(n_eq));
       for (size_t a = 0; a < n_eq; a++) {
         for (size_t b = 0; b < n_var; b++) {
-          coefT[b][a] = sys0.coef[a][b];
+          coefT[b][a] = coef0[a][b];
         }
       }
       auto nullspace = [&](ModMat const &M, size_t ncol) -> ModMat {
@@ -1174,17 +1504,22 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   A mod p when e = 1: the complement first, then lifts in [0, p) of a basis
   of R, P of determinant prime to p; the search runs on A' = P^T A P with
   the pruning of the radical, and the generators g' come back as P g'
-  P^{-1}. For e != 1 the standard basis, without that pruning.
+  P^{-1}. For e != 1 the standard basis, without that pruning. Om (the
+  action of a Z-basis of O_K, a centre K) and Lam (a Z-basis of the
+  integral commutant of O_K) are empty when End_G = Q; all the matrices
+  act on the columns of coordinates.
  */
 inline std::optional<std::vector<ModMat>>
-LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be, int64_t p,
+LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
+                               std::vector<ModMat> const &Om,
+                               std::vector<ModMat> const &Lam, int64_t p,
                                int c, int e,
                                MultiplicityFactorBounds const &bounds,
                                double *order) {
   size_t m = A.size();
   if (e != 1) {
-    return LocalOrthogonalImageGeneratorsCore(A, Be, p, c, e, m, bounds,
-                                              order);
+    return LocalOrthogonalImageGeneratorsCore(A, Be, Om, Lam, p, c, e, m,
+                                              bounds, order);
   }
   // the radical of A mod p
   ModMat Ap(m, std::vector<int64_t>(m));
@@ -1211,8 +1546,8 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be, int64_t p,
     rad.push_back(v);
   }
   if (rad.empty()) {
-    return LocalOrthogonalImageGeneratorsCore(A, Be, p, c, e, m, bounds,
-                                              order);
+    return LocalOrthogonalImageGeneratorsCore(A, Be, Om, Lam, p, c, e, m,
+                                              bounds, order);
   }
   // a complement from the standard basis
   ModMat cols_P;
@@ -1311,9 +1646,26 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be, int64_t p,
     }
   }
   ModMat Be2 = matmul(matmul(Pinv, Be, pW), transpose(Pinv), pW);
+  // the action of O_K and the commutant in the new basis: P^{-1} X P
+  auto conj = [&](ModMat const &X) -> ModMat {
+    ModMat Xr = X;
+    for (auto &row : Xr) {
+      for (auto &x : row) {
+        x = ModP(x, pW);
+      }
+    }
+    return matmul(matmul(Pinv, Xr, pW), P, pW);
+  };
+  std::vector<ModMat> Om2, Lam2;
+  for (auto const &X : Om) {
+    Om2.push_back(conj(X));
+  }
+  for (auto const &X : Lam) {
+    Lam2.push_back(conj(X));
+  }
   std::optional<std::vector<ModMat>> gens =
-      LocalOrthogonalImageGeneratorsCore(A2, Be2, p, c, e, rad_start, bounds,
-                                         order);
+      LocalOrthogonalImageGeneratorsCore(A2, Be2, Om2, Lam2, p, c, e,
+                                         rad_start, bounds, order);
   if (!gens) {
     return {};
   }

@@ -2183,9 +2183,68 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
       }
       double order = 0;
-      opt = LocalOrthogonalImageGenerators(A_mod, Be, p, c, e, bounds, &order);
+      opt = LocalOrthogonalImageGenerators(A_mod, Be, {}, {}, p, c, e, bounds,
+                                           &order);
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
       os << "MULT_FACTOR: p=" << p << " generators of the image "
+         << (opt ? static_cast<long>(opt->size()) : -1L) << ", |image|="
+         << order << "\n";
+#endif
+    }
+    // a centre K beyond the pi-adic search: the same generators within the
+    // integral commutant of O_K (K-linear maps), on the columns
+    if (!opt && !OmegaX.empty()) {
+      int Wn = MultiplicityNewtonPrecision(p);
+      Tint pW = UniversalScalarConversion<Tint, int64_t>(1);
+      for (int i = 0; i < Wn; i++) {
+        pW *= UniversalScalarConversion<Tint, int64_t>(p);
+      }
+      MyMatrix<T> Binv = Inverse(GramX);
+      T pe(1);
+      for (int i = 0; i < e; i++) {
+        pe *= UniversalScalarConversion<T, int64_t>(p);
+      }
+      ModMat Be(m, std::vector<int64_t>(m));
+      for (int i = 0; i < m; i++) {
+        for (int j = 0; j < m; j++) {
+          T x = Binv(i, j) * pe;
+          Tint den = GetDenominator_z(x);
+          Tint inv = mod_inv(ResInt(den, pW), pW);
+          Tint v = ResInt(Tint(GetNumerator_z(x) * inv), pW);
+          if (v < 0) {
+            v += pW;
+          }
+          Be[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
+        }
+      }
+      auto to_cols = [&](MyMatrix<T> const &Y) -> ModMat {
+        ModMat Ym(m, std::vector<int64_t>(m));
+        for (int i = 0; i < m; i++) {
+          for (int j = 0; j < m; j++) {
+            Ym[i][j] = UniversalScalarConversion<int64_t, T>(Y(j, i));
+          }
+        }
+        return Ym;
+      };
+      std::vector<ModMat> Om, Lam;
+      for (auto const &W2 : OmegaX) {
+        Om.push_back(to_cols(W2));
+      }
+      IsometryComponent<T> compX = BuildIsometryComponent<T, Tint>(
+          A, Xb, IdentityMat<T>(A.rows()), 1);
+      compX.extra_sigma = OmegaX;
+      for (auto const &Y : IntegralCommutant<T, Tint>(compX)) {
+        Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
+      }
+      double order = 0;
+      opt = LocalOrthogonalImageGenerators(A_mod, Be, Om, Lam, p, c, e,
+                                           bounds, &order);
+      if (opt) {
+        rows_convention = false;
+      }
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+      os << "MULT_FACTOR: p=" << p << " c=" << c << " e=" << e
+         << " K-linear generators of the image "
          << (opt ? static_cast<long>(opt->size()) : -1L) << ", |image|="
          << order << "\n";
 #endif

@@ -385,6 +385,10 @@ group_mass_case E6x3 A2diag 697/124416
 group_mass_case A6 F21 1/2
 group_mass_case A8 F21 1/2
 group_mass_case A6A6 F21 1/8
+# F21 diagonal on A6^3: multiplicity 3 over Q(sqrt -7), the image of the
+# K-linear isometries at the ramified prime 7 (order about 8 10^7) by
+# generators within the integral commutant; closed by enumeration
+group_mass_case A6x3 F21 1/42
 group_mass_case E8E8_16 S3diag2 143/1203948748800
 # The dihedral group D5 = <(12345), (25)(34)> in W(A4): End_G has the
 # totally real centre Q(sqrt 5), so the multiplicity lattice is quadratic

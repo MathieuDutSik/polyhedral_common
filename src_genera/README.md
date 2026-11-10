@@ -172,8 +172,16 @@ a basis adapted to the radical of A mod p, whose image and form A/p are
 kept. The factors need not be 1: 2 for W(A2) acting diagonally on the
 A2^3 of E6 (mass 1/12), 8 on the A2^4 of E8, 8 on E6 + E6 (mass 7/1152,
 an image of order about 10^15) and 80 on E6^3 (mass 697/124416, order
-about 10^35), the last two closed by enumerations. Beyond the bounds the
-result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
+about 10^35), the last two closed by enumerations. With a centre K, when
+the pi-adic search below gives up, the same construction runs within the
+integral commutant of O_K: the lifts in its coordinates, the images of
+the basis vectors forced where O_K-linearity determines them, the
+conditions B(w y_k, y) = B(w e_k, e_j) for w in a basis of O_K, and a
+projection onto the commutant before the Newton steps (which keep
+K-linearity). F21 acting diagonally on A6^3 (multiplicity 3 over Q(sqrt
+-7), an image of order about 8 10^7 at 7) is so computed, mass 1/42
+closed by enumeration. Beyond the bounds the result says
+local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
 Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
 over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
 C_{g^a} agree on the component), O_K acts through the order they generate
