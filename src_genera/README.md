@@ -268,10 +268,15 @@ A cubic field with A^2 about 5 10^11 takes 0.6 s, a quartic one with A^2
 about 4 10^17 about 20 minutes (X about 10^10).
 `Test_QuadHeckeL` prints the character data, the coefficients and
 L(1 - r) of a lattice.
-The method is a choice, `QuadLValueMethod { Mpfr, Arb }` (an argument of
-`QuadraticMassAbelianLattice`, the field `lvalue` of `IsometryMassBounds`,
-and the option `lvalue=mpfr` / `lvalue=arb` of `GENUS_IsometryMass` and
-`GENUS_GlueIsometry`, mpfr by default). With Arb, which needs a build with
+The method is a choice, `QuadLValueMethod { Double, Mpfr, Arb }` (an
+argument of `QuadraticMassAbelianLattice`, the field `lvalue` of
+`IsometryMassBounds`, and the option `lvalue=double` / `lvalue=mpfr` /
+`lvalue=arb` of `GENUS_IsometryMass` and `GENUS_GlueIsometry`, mpfr by
+default). With Double every term of the sum is evaluated in double
+precision (the kernel is still built with MPFR at the nodes): about 50
+bits, enough when the integer to round has at most about 26 bits, the
+mass being left not computed otherwise; about twice as fast as Mpfr on
+the cubic examples. With Arb, which needs a build with
 flint (`make ENABLE_FLINT_SUPPORT=1`) and takes about twice the time, the
 rounding is certified (`QuadraticHeckeLArb.h`): the same sum evaluated in balls, with
 proven bounds for the truncation of the series at the poles (Cauchy on

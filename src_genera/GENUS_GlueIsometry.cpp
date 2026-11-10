@@ -219,10 +219,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "enumerate : the classes of all the genera of pairs met,\n";
       std::cerr << "            each by its mass\n";
       std::cerr << "\n";
-      std::cerr << "lvalue=mpfr / lvalue=arb (anywhere, optional): the\n";
-      std::cerr << "        L-values of the quadratic masses with E not\n";
-      std::cerr << "        abelian, MPFR (default) or certified with Arb\n";
-      std::cerr << "        (needs flint, about twice the time)\n";
+      std::cerr << "lvalue=double / lvalue=mpfr / lvalue=arb (anywhere,\n";
+      std::cerr << "        optional): the L-values of the quadratic masses\n";
+      std::cerr << "        with E not abelian, in double precision (when\n";
+      std::cerr << "        it suffices), MPFR (default) or certified with\n";
+      std::cerr << "        Arb (needs flint, about twice the time)\n";
       return -1;
     }
     std::string mode = argv[1];

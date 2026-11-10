@@ -281,29 +281,34 @@ quadmass_case s13s17m2 221 1,4,9,16,25,30,35,36,38,42,43,49,53,55,64,66,69,77,81
 # A common index divisor ramified in K: 2 in Q(sqrt 3) K_31, K_31 the cubic
 # field of conductor 31, three primes over 2 with e = 2 and f = 1
 quadmass_case s3c31m2 372 1,23,35,47,61,85,95,97,109,157,215,263,275,277,287,311,325,337,349,371 3
-# The same with the integer certified by Arb (lvalue=arb), when the
-# programs are built with flint (make ENABLE_FLINT_SUPPORT=1)
-quadmass_arb_case() {
-    tag=$1
-    n=$2
-    H=$3
-    expected=$4
-    # without flint the program stops with an error, hence the || true
+# The same with the other methods for the L-values: lvalue=double (every
+# term in double precision) and lvalue=arb (the integer certified by Arb),
+# the latter skipped when the programs are built without flint
+# (make ENABLE_FLINT_SUPPORT=1)
+quadmass_method_case() {
+    method=$1
+    tag=$2
+    n=$3
+    H=$4
+    expected=$5
+    # without flint, lvalue=arb stops with an error, hence the || true
     out=$($BIN quadablocal quadm_${tag}_gram.txt quadm_${tag}_omega.txt $n $H \
-              lvalue=arb 2>&1 || true)
+              lvalue=$method 2>&1 || true)
     if echo "$out" | grep -q "built without flint"; then
-        echo "--- quadratic lattice $tag with Arb: skipped, no flint ---"
+        echo "--- quadratic lattice $tag with $method: skipped, no flint ---"
         return
     fi
     val=$(echo "$out" | sed -n 's/return rec(mass:=\([^,]*\),.*/\1/p')
-    echo "--- quadratic lattice $tag with Arb: mass=$val (expecting $expected) ---"
+    echo "--- quadratic lattice $tag with $method: mass=$val (expecting $expected) ---"
     if [ "$val" != "$expected" ]; then
-        echo "ERROR: the quadratic lattice $tag gave with Arb the mass $val" >&2
+        echo "ERROR: the quadratic lattice $tag gave with $method the mass $val" >&2
         exit 1
     fi
 }
-quadmass_arb_case s13nabm2 13 4 99/4
-quadmass_arb_case z15pnabm2 15 1 1/2
+quadmass_method_case double s13nabm2 13 4 99/4
+quadmass_method_case double z15pnabm2 15 1 1/2
+quadmass_method_case arb s13nabm2 13 4 99/4
+quadmass_method_case arb z15pnabm2 15 1 1/2
 # The Hermitian and quadratic masses over abelian fields are generic in the
 # rational type: the same masses with mpq_class, boost mpq_rational and,
 # when built with flint, fmpq_class.

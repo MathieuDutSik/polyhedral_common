@@ -1265,12 +1265,13 @@ void QuadHeckeForEachTerm(QuadHeckeLData<T> &Ld, int64_t X, F &&f) {
 /*
   L(1 - r, chi) to about prec_bits relative bits: Lambda(1 - r) from the
   sum, divided by A^{1-r} gamma(1-r) (no pole there: (1 - r + delta)/2 is
-  a half-integer as r = delta + 1 mod 2). Nothing when the number of terms
-  exceeds the limit (10^12).
+  a half-integer as r = delta + 1 mod 2). With all_double every term is
+  evaluated in double precision, whatever it needs. Nothing when the number
+  of terms exceeds the limit (10^12).
  */
 template <typename T>
 std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
-                                               int prec_bits) {
+                                               int prec_bits, bool all_double) {
   using mpfr::mpreal;
   int r = Ld.m / 2;
   int n = Ld.n;
@@ -1362,7 +1363,7 @@ std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
   QuadHeckeForEachTerm(Ld, X, [&](int64_t k, int64_t ak, QuadDD lk) -> void {
     double ud = lk.hi - logA_d;
     size_t seg = QuadHeckeSegment(I, ud);
-    if (I.band[seg] == 2) {
+    if (all_double || I.band[seg] == 2) {
       double v =
           static_cast<double>(ak) * QuadHeckeInterpValueDouble(I, ud, seg);
       sum_dd = QuadDDAdd(sum_dd, QuadDD{v, 0.0});
@@ -1510,8 +1511,9 @@ std::optional<T> QuadraticMassNonAbelianE(
   if (!Ld) {
     return {};
   }
+  bool all_double = (method == QuadLValueMethod::Double);
   // the size of b, for which a few bits of L(1 - r) are enough
-  std::optional<mpreal> L0 = QuadHeckeLNegative(*Ld, 24);
+  std::optional<mpreal> L0 = QuadHeckeLNegative(*Ld, 24, all_double);
   if (!L0) {
     return {};
   }
@@ -1519,8 +1521,17 @@ std::optional<T> QuadraticMassNonAbelianE(
   double log2_b =
       mpfr::log2(mpfr::abs(mpreal_from_rational(factor, 256) * *L0)).toDouble();
   int bits = std::max(48, static_cast<int>(std::ceil(log2_b)) + 24);
+  if (all_double) {
+    // about 50 bits in double precision: b of at most about 26 bits
+    if (log2_b + 24 > 50) {
+      std::cerr << "QHECKE: the integer to round has " << log2_b
+                << " bits, too many for lvalue=double\n";
+      return {};
+    }
+    bits = 42;
+  }
   auto rounded = [&](int prec) -> std::optional<Tint> {
-    std::optional<mpreal> L = QuadHeckeLNegative(*Ld, prec);
+    std::optional<mpreal> L = QuadHeckeLNegative(*Ld, prec, all_double);
     if (!L) {
       return {};
     }
@@ -1537,13 +1548,13 @@ std::optional<T> QuadraticMassNonAbelianE(
     }
     return b;
   };
-  for (int iter = 0; iter < 4; iter++) {
+  for (int iter = 0; iter < (all_double ? 1 : 4); iter++) {
     std::optional<Tint> b1 = rounded(bits);
-    std::optional<Tint> b2 = rounded(bits + 16);
+    std::optional<Tint> b2 = rounded(bits + (all_double ? 8 : 16));
     if (b1 && b2 && *b1 == *b2) {
 #ifdef ENABLE_FLINT_SUPPORT
       // the integer certified by the Arb enclosure of L(1 - r)
-      bool certified = (method == QuadLValueMethod::Mpfr);
+      bool certified = (method != QuadLValueMethod::Arb);
       for (int cb = bits; cb <= bits + 64 && !certified; cb += 32) {
         std::optional<ArbReal> La = QuadHeckeLNegativeArb(*Ld, cb);
         if (!La) {

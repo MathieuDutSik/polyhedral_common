@@ -2487,11 +2487,17 @@ AbelianQuadraticExtensionField(MyMatrix<T> const &B,
   The evaluation of L(1 - r, chi_{E/K}) when E is not abelian
   (QuadraticHeckeL.h): Mpfr rounds an MPFR value checked at two
   precisions, Arb moreover certifies the integer with Arb balls (proven
-  error bounds, about twice the time). Arb needs a build with flint.
+  error bounds, about twice the time), and Double evaluates every term of
+  the sum in double precision (the kernel itself is still built with
+  MPFR), which is enough when the integer to round has at most about 26
+  bits and gives up otherwise. Arb needs a build with flint.
  */
-enum class QuadLValueMethod { Mpfr, Arb };
+enum class QuadLValueMethod { Double, Mpfr, Arb };
 
 inline QuadLValueMethod ParseQuadLValueMethod(std::string const &s) {
+  if (s == "double") {
+    return QuadLValueMethod::Double;
+  }
   if (s == "mpfr") {
     return QuadLValueMethod::Mpfr;
   }
@@ -2505,12 +2511,13 @@ inline QuadLValueMethod ParseQuadLValueMethod(std::string const &s) {
 #endif
   }
   std::cerr << "ABQUAD: the L-value method " << s
-            << " is not mpfr or arb\n";
+            << " is not double, mpfr or arb\n";
   throw TerminalException{1};
 }
 
 /*
-  The option lvalue=mpfr / lvalue=arb of the command line programs, found
+  The option lvalue=double / lvalue=mpfr / lvalue=arb of the command line
+  programs, found
   anywhere among the arguments and removed from them; mpfr when absent.
  */
 inline QuadLValueMethod ExtractQuadLValueOption(int &argc, char *argv[]) {

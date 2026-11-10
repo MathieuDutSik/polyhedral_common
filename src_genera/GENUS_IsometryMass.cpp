@@ -312,10 +312,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "groupcheck : the brute-force test of the group mass\n";
       std::cerr << "        for the groups <g, tau>, tau in C_{O(L)}(g)\n";
       std::cerr << "\n";
-      std::cerr << "lvalue=mpfr / lvalue=arb (anywhere, optional): the\n";
-      std::cerr << "        L-values of the quadratic masses with E not\n";
-      std::cerr << "        abelian, MPFR (default) or certified with Arb\n";
-      std::cerr << "        (needs flint, about twice the time)\n";
+      std::cerr << "lvalue=double / lvalue=mpfr / lvalue=arb (anywhere,\n";
+      std::cerr << "        optional): the L-values of the quadratic masses\n";
+      std::cerr << "        with E not abelian, in double precision (when\n";
+      std::cerr << "        it suffices), MPFR (default) or certified with\n";
+      std::cerr << "        Arb (needs flint, about twice the time)\n";
       return -1;
     }
     std::string mode = argv[1];

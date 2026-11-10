@@ -65,7 +65,7 @@ void Process(std::string const &FileGram, std::string const &FileOmega,
   if (prec_bits > 0) {
     std::optional<QuadHeckeLData<T>> Ld =
         MakeQuadHeckeLData(B, Omega, FK, Kd->second, Kd->first, m);
-    std::optional<mpfr::mpreal> L = QuadHeckeLNegative(*Ld, prec_bits);
+    std::optional<mpfr::mpreal> L = QuadHeckeLNegative(*Ld, prec_bits, false);
     if (L) {
       std::cout << "L: "
                 << L->toString(static_cast<int>(prec_bits * 0.30103) + 5)
