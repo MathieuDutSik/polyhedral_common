@@ -9,11 +9,16 @@
 #include "LatticePleskenSouvignier.h"
 #include "LatticeAutomorphismVinberg.h"
 #include "ClassicLLL.h"
+#include "SignatureSymmetric.h"
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 // clang-format on
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_LATTICE_METHODS
+#endif
 
 /*
   The methods for the three basic computations on a positive definite form:
@@ -138,6 +143,23 @@ void CheckLatticeMethodIntegral(std::vector<MyMatrix<T>> const &ListMat,
   }
 }
 
+#ifdef SANITY_CHECK_LATTICE_METHODS
+// The dispatchers below work on positive definite forms: the LLL reduction
+// and the short vector enumerations of the methods do not terminate on an
+// indefinite or negative definite form, so a wrong input hangs instead of
+// failing.
+template <typename T>
+void CheckLatticeMethodPositiveDefinite(MyMatrix<T> const &GramMat,
+                                        std::string const &context,
+                                        std::ostream &os) {
+  if (!IsSymmetricMatrix(GramMat) || !IsPositiveDefinite(GramMat, os)) {
+    std::cerr << "LATTICE_METHODS: the input of " << context
+              << " is not a symmetric positive definite matrix\n";
+    throw TerminalException{1};
+  }
+}
+#endif
+
 // The forms of ListMat in the basis Pmat, rows: Pmat M Pmat^T for each M.
 template <typename T, typename Tint>
 std::vector<MyMatrix<T>>
@@ -196,6 +218,9 @@ template <typename T, typename Tint, typename Tgroup>
 MyMatrix<Tint> LatticeCanonicalBasis(MyMatrix<T> const &GramMat,
                                      LatticeStabCanIsomMethod method,
                                      std::ostream &os) {
+#ifdef SANITY_CHECK_LATTICE_METHODS
+  CheckLatticeMethodPositiveDefinite(GramMat, "LatticeCanonicalBasis", os);
+#endif
   LLLreduction<T, Tint> red = LLLreducedBasis<T, Tint>(GramMat, os);
   MyMatrix<Tint> B_red = LatticeCanonicalBasisReduced<T, Tint, Tgroup>(
       red.GramMatRed, method, os);
@@ -251,6 +276,10 @@ LatticeIsometry(std::vector<MyMatrix<T>> const &ListMat1,
       ListMat1[0].rows() != ListMat2[0].rows()) {
     return {};
   }
+#ifdef SANITY_CHECK_LATTICE_METHODS
+  CheckLatticeMethodPositiveDefinite(ListMat1[0], "LatticeIsometry", os);
+  CheckLatticeMethodPositiveDefinite(ListMat2[0], "LatticeIsometry", os);
+#endif
   LLLreduction<T, Tint> red1 = LLLreducedBasis<T, Tint>(ListMat1[0], os);
   LLLreduction<T, Tint> red2 = LLLreducedBasis<T, Tint>(ListMat2[0], os);
   MyMatrix<Tint> P2inv = Inverse(red2.Pmat);
@@ -312,6 +341,10 @@ template <typename T, typename Tint, typename Tgroup>
 IntAutomorphismGroup<Tint, Tgroup>
 LatticeAutomorphismGroup(std::vector<MyMatrix<T>> const &ListMat,
                          LatticeStabCanIsomMethod method, std::ostream &os) {
+#ifdef SANITY_CHECK_LATTICE_METHODS
+  CheckLatticeMethodPositiveDefinite(ListMat[0], "LatticeAutomorphismGroup",
+                                     os);
+#endif
   LLLreduction<T, Tint> red = LLLreducedBasis<T, Tint>(ListMat[0], os);
   IntAutomorphismGroup<Tint, Tgroup> aut =
       LatticeAutomorphismGroupReduced<T, Tint, Tgroup>(

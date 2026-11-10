@@ -41,6 +41,17 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
                 << " is not symmetric positive definite\n";
       throw TerminalException{1};
     }
+    // The neighbour construction and the mass are those of even lattices.
+    bool is_even = IsIntegralMatrix(eSeed);
+    for (int i = 0; i < eSeed.rows() && is_even; i++) {
+      is_even = IsInteger(eSeed(i, i) / T(2));
+    }
+    if (!is_even) {
+      std::cerr << "GENUS_Enumerate: a seed Gram matrix in " << FileLattice
+                << " is not integral with an even diagonal, so it is not "
+                   "an even lattice\n";
+      throw TerminalException{1};
+    }
     if (eSeed.rows() != rank) {
       std::cerr << "GENUS_Enumerate: the seeds in " << FileLattice
                 << " have the ranks " << rank << " and " << eSeed.rows()
