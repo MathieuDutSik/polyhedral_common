@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "MAT_MatrixInt.h"
+#include "Tspace_Canonical.h"
 // clang-format on
 
 template <typename T>
@@ -86,11 +87,6 @@ IntegralSaturationSpace(std::vector<MyMatrix<T>> const &ListMat,
   }
   int n = ListMat[0].rows();
   int sym_dim = (n + 1) * n / 2;
-  if (n_mat == sym_dim) {
-    std::cerr << "TSPACE: We have n_mat=" << n_mat
-              << " equal to sym_dim=" << sym_dim << "\n";
-    throw TerminalException{1};
-  }
   MyMatrix<T> BigMat(n_mat, sym_dim);
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
     int pos = 0;
@@ -100,6 +96,12 @@ IntegralSaturationSpace(std::vector<MyMatrix<T>> const &ListMat,
         pos++;
       }
     }
+  }
+  // The full space: its saturation is the lattice of the integral symmetric
+  // matrices, of which the canonical basis is a basis. The kernel path below
+  // would go through an empty kernel.
+  if (n_mat == sym_dim && RankMat(BigMat) == sym_dim) {
+    return TSPACE_canonical_get_list_matrices<T>(n);
   }
   MyMatrix<T> NSP1 = NullspaceIntTrMat(BigMat);
   MyMatrix<T> BigMat_renorm = NullspaceIntTrMat(NSP1);

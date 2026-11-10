@@ -172,19 +172,22 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
     std::cerr << "Impossible for an imaginary space\n";
     throw TerminalException{1};
   }
+  // The matrices below are taken twice, so that eSum / 2 becomes eSum and
+  // the entries stay integral for a ring T. RemoveFractionMatrix makes them
+  // primitive, so the factor 2 does not change the result.
+  T eProd2 = 2 * eProd;
   for (int i = 0; i < n; i++) {
     for (int j = i; j < n; j++) {
       MyMatrix<T> eMat = ZeroMatrix<T>(2 * n, 2 * n);
-      eMat(i, j) = T(1);
-      eMat(j, i) = T(1);
-      T eVal = eSum / T(2);
-      eMat(n + i, j) = eVal;
-      eMat(n + j, i) = eVal;
-      eMat(i, n + j) = eVal;
-      eMat(j, n + i) = eVal;
+      eMat(i, j) = T(2);
+      eMat(j, i) = T(2);
+      eMat(n + i, j) = eSum;
+      eMat(n + j, i) = eSum;
+      eMat(i, n + j) = eSum;
+      eMat(j, n + i) = eSum;
       //
-      eMat(n + i, n + j) = eProd;
-      eMat(n + j, n + i) = eProd;
+      eMat(n + i, n + j) = eProd2;
+      eMat(n + j, n + i) = eProd2;
       MyMatrix<T> fMat = RemoveFractionMatrix(eMat);
       ListMat.push_back(fMat);
     }
@@ -204,12 +207,11 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   // in which the SuperMat truly lives.
   MyMatrix<T> SuperMat_pre = ZeroMatrix<T>(2 * n, 2 * n);
   for (int i = 0; i < n; i++) {
-    SuperMat_pre(i, i) = T(1);
-    T eVal = eSum / T(2);
-    SuperMat_pre(n + i, i) = eVal;
-    SuperMat_pre(i, n + i) = eVal;
+    SuperMat_pre(i, i) = T(2);
+    SuperMat_pre(n + i, i) = eSum;
+    SuperMat_pre(i, n + i) = eSum;
     //
-    SuperMat_pre(n + i, n + i) = eProd;
+    SuperMat_pre(n + i, n + i) = eProd2;
   }
   MyMatrix<T> SuperMat = RemoveFractionMatrix(SuperMat_pre);
   // The matrix eComm represent multiplication by the primitive element
