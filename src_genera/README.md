@@ -180,8 +180,26 @@ conditions B(w y_k, y) = B(w e_k, e_j) for w in a basis of O_K, and a
 projection onto the commutant before the Newton steps (which keep
 K-linearity). F21 acting diagonally on A6^3 (multiplicity 3 over Q(sqrt
 -7), an image of order about 8 10^7 at 7) is so computed, mass 1/42
-closed by enumeration. Beyond the bounds the result says
-local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
+closed by enumeration. At a ramified prime the conditions modulo p = pi^2
+admit many images that do not lift, so there the chain runs pi-adically
+in `LocalImagePiAdic`: rows modulo pi over the residue field, completed
+row by row and lifted pi-level by pi-level; F21 on A6^4 (multiplicity 4,
+an image of order about 6 10^13) in 4 s, mass 5/1008 closed by
+enumeration. The orbit of L/N is taken on the Howell normal forms of the
+subgroups (`HowellFormPrimePower`), not on their element lists.
+
+Tests: built with -DSANITY_CHECK_MULT, every image computed by generators
+is compared with the listed image where the list fits (equality of the
+generated group element by element; for the K-linear generators,
+membership and equal order), and the Howell orbit with the orbit on
+element lists; `Test_HowellForm` checks the form against brute force on
+random subgroups, and runs in the 15B mass tests.
+
+Not done or not tested: layers by linear algebra beyond p odd and e = 1;
+p = 2 and e >= 2 for the generators (no example yet); primes split or
+inert in a CM centre with a nontrivial factor (no example); residue
+fields with q^m > 2^24 points; quaternion End_G. Beyond the bounds the
+result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
 Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
 over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
 C_{g^a} agree on the component), O_K acts through the order they generate

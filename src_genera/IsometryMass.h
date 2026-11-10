@@ -2156,6 +2156,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         A_mod[i][j] = UniversalScalarConversion<int64_t, T>(GramX(i, j));
       }
     }
+    // which construction gave the image (for the sanity checks)
+    bool gens_over_Q = false, gens_over_K = false;
     // End_G = Q: generators of the image, complete by construction, with
     // p^e A^{-1} modulo p^W for the Newton steps
     if (!opt && OmegaX.empty()) {
@@ -2185,6 +2187,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       double order = 0;
       opt = LocalOrthogonalImageGenerators(A_mod, Be, {}, {}, p, c, e, bounds,
                                            &order);
+      gens_over_Q = opt.has_value();
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
       os << "MULT_FACTOR: p=" << p << " generators of the image "
          << (opt ? static_cast<long>(opt->size()) : -1L) << ", |image|="
@@ -2241,6 +2244,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
                                            bounds, &order);
       if (opt) {
         rows_convention = false;
+        gens_over_K = true;
       }
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
       os << "MULT_FACTOR: p=" << p << " c=" << c << " e=" << e
@@ -2286,6 +2290,226 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       MULT_FACTOR_FAIL(2128);
       return {};
     }
+#ifdef SANITY_CHECK_MULT
+    // the K-linear generators over Z_p against the pi-adic image (rows,
+    // a list or generators): the generated groups must agree
+    if (opt && !gens_over_K && rows_convention && !OmegaX.empty()) {
+      int Wn = MultiplicityNewtonPrecision(p);
+      Tint pW = UniversalScalarConversion<Tint, int64_t>(1);
+      for (int i = 0; i < Wn; i++) {
+        pW *= UniversalScalarConversion<Tint, int64_t>(p);
+      }
+      MyMatrix<T> Binv = Inverse(GramX);
+      T pe(1);
+      for (int i = 0; i < e; i++) {
+        pe *= UniversalScalarConversion<T, int64_t>(p);
+      }
+      ModMat Be(m, std::vector<int64_t>(m));
+      for (int i = 0; i < m; i++) {
+        for (int j = 0; j < m; j++) {
+          T x = Binv(i, j) * pe;
+          Tint den = GetDenominator_z(x);
+          Tint inv = mod_inv(ResInt(den, pW), pW);
+          Tint v = ResInt(Tint(GetNumerator_z(x) * inv), pW);
+          if (v < 0) {
+            v += pW;
+          }
+          Be[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
+        }
+      }
+      auto to_cols = [&](MyMatrix<T> const &Y) -> ModMat {
+        ModMat Ym(m, std::vector<int64_t>(m));
+        for (int i = 0; i < m; i++) {
+          for (int j = 0; j < m; j++) {
+            Ym[i][j] = UniversalScalarConversion<int64_t, T>(Y(j, i));
+          }
+        }
+        return Ym;
+      };
+      std::vector<ModMat> Om, Lam;
+      for (auto const &W2 : OmegaX) {
+        Om.push_back(to_cols(W2));
+      }
+      IsometryComponent<T> compX3 = BuildIsometryComponent<T, Tint>(
+          A, Xb, IdentityMat<T>(A.rows()), 1);
+      compX3.extra_sigma = OmegaX;
+      for (auto const &Y : IntegralCommutant<T, Tint>(compX3)) {
+        Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
+      }
+      double order_k = 0;
+      std::optional<std::vector<ModMat>> kg = LocalOrthogonalImageGenerators(
+          A_mod, Be, Om, Lam, p, c, e, bounds, &order_k);
+      if (kg) {
+        int64_t pcl = 1;
+        for (int i = 0; i < c; i++) {
+          pcl *= p;
+        }
+        auto closure_of = [&](std::vector<ModMat> const &gens, bool transpose,
+                              size_t cap) -> std::set<ModMat> {
+          ModMat Idm(m, std::vector<int64_t>(m, 0));
+          for (int i = 0; i < m; i++) {
+            Idm[i][i] = 1;
+          }
+          std::vector<ModMat> gs;
+          for (auto const &g : gens) {
+            ModMat h(m, std::vector<int64_t>(m));
+            for (int i = 0; i < m; i++) {
+              for (int j = 0; j < m; j++) {
+                h[i][j] = ModPos64(transpose ? g[j][i] : g[i][j], pcl);
+              }
+            }
+            gs.push_back(h);
+          }
+          std::set<ModMat> cl{Idm};
+          std::vector<ModMat> queue{Idm};
+          while (!queue.empty() && cl.size() <= cap) {
+            ModMat x = queue.back();
+            queue.pop_back();
+            for (auto const &g : gs) {
+              ModMat y(m, std::vector<int64_t>(m, 0));
+              for (int a = 0; a < m; a++) {
+                for (int k2 = 0; k2 < m; k2++) {
+                  for (int b = 0; b < m; b++) {
+                    y[a][b] = ModPos64(y[a][b] + x[a][k2] * g[k2][b], pcl);
+                  }
+                }
+              }
+              if (cl.insert(y).second) {
+                queue.push_back(y);
+              }
+            }
+          }
+          return cl;
+        };
+        // when the pi-adic result is the list of the image: the K-linear
+        // generators are in it and their group, of the order given by the
+        // chain, has its order; else the closures are compared
+        std::set<ModMat> listed_set;
+        for (auto const &g : *opt) {
+          ModMat h(m, std::vector<int64_t>(m));
+          for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+              h[i][j] = ModPos64(g[j][i], pcl);
+            }
+          }
+          listed_set.insert(h);
+        }
+        bool all_in = true;
+        for (auto const &g : *kg) {
+          ModMat h = g;
+          for (auto &row : h) {
+            for (auto &x : row) {
+              x = ModPos64(x, pcl);
+            }
+          }
+          if (listed_set.count(h) == 0) {
+            all_in = false;
+          }
+        }
+        if (all_in &&
+            static_cast<size_t>(std::llround(order_k)) == listed_set.size()) {
+          std::cerr << "MULT_FACTOR: SANITY: the K-linear generators lie in the "
+                    << "pi-adic image, of the same order " << listed_set.size()
+                    << " (p=" << p << ")\n";
+        } else {
+        std::set<ModMat> c2 = closure_of(*opt, true, 2000000);
+        std::set<ModMat> c1 = closure_of(*kg, false, c2.size());
+        if (c1 != c2) {
+          std::cerr << "MULT_FACTOR: SANITY: the K-linear generators give "
+                    << c1.size() << " elements, the pi-adic image "
+                    << c2.size() << " (p=" << p << ")\n";
+          throw TerminalException{1};
+        }
+        std::cerr << "MULT_FACTOR: SANITY: the K-linear generators give the "
+                  << c1.size() << " elements of the pi-adic image (p=" << p
+                  << ")\n";
+        }
+      }
+    }
+    // the group generated by the generators is the image listed by the old
+    // searches, when these fit in their bounds (on the columns)
+    if (gens_over_Q || gens_over_K) {
+      std::optional<std::vector<ModMat>> listed;
+      if (gens_over_Q) {
+        listed = LocalOrthogonalImage(A_mod, p, c, e, bounds);
+      } else {
+        IsometryComponent<T> compX2 = BuildIsometryComponent<T, Tint>(
+            A, Xb, IdentityMat<T>(A.rows()), 1);
+        compX2.extra_sigma = OmegaX;
+        std::vector<ModMat> basis2;
+        for (auto const &Y : IntegralCommutant<T, Tint>(compX2)) {
+          ModMat Ym(m, std::vector<int64_t>(m));
+          for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+              Ym[i][j] = UniversalScalarConversion<int64_t, Tint>(Y(i, j));
+            }
+          }
+          basis2.push_back(Ym);
+        }
+        listed = LocalStabilizerImage(A_mod, basis2, p, c, e, bounds);
+        if (listed) {
+          // rows to columns
+          for (auto &g : *listed) {
+            ModMat h(m, std::vector<int64_t>(m));
+            for (int i = 0; i < m; i++) {
+              for (int j = 0; j < m; j++) {
+                h[i][j] = g[j][i];
+              }
+            }
+            g = h;
+          }
+        }
+      }
+      if (listed) {
+        int64_t pcl = 1;
+        for (int i = 0; i < c; i++) {
+          pcl *= p;
+        }
+        std::set<ModMat> listed_set;
+        for (auto const &g : *listed) {
+          ModMat h = g;
+          for (auto &row : h) {
+            for (auto &x : row) {
+              x = ModPos64(x, pcl);
+            }
+          }
+          listed_set.insert(h);
+        }
+        ModMat Idm(m, std::vector<int64_t>(m, 0));
+        for (int i = 0; i < m; i++) {
+          Idm[i][i] = 1;
+        }
+        std::set<ModMat> closure{Idm};
+        std::vector<ModMat> queue{Idm};
+        while (!queue.empty() && closure.size() <= listed_set.size()) {
+          ModMat x = queue.back();
+          queue.pop_back();
+          for (auto const &g : *opt) {
+            ModMat y(m, std::vector<int64_t>(m, 0));
+            for (int a = 0; a < m; a++) {
+              for (int k2 = 0; k2 < m; k2++) {
+                for (int b = 0; b < m; b++) {
+                  y[a][b] = ModPos64(y[a][b] + x[a][k2] * ModPos64(g[k2][b], pcl), pcl);
+                }
+              }
+            }
+            if (closure.insert(y).second) {
+              queue.push_back(y);
+            }
+          }
+        }
+        if (closure != listed_set) {
+          std::cerr << "MULT_FACTOR: SANITY: the generators give "
+                    << closure.size() << " elements, the list has "
+                    << listed_set.size() << " (p=" << p << ")\n";
+          throw TerminalException{1};
+        }
+        std::cerr << "MULT_FACTOR: SANITY: the generators give the "
+                  << listed_set.size() << " elements of the list (p=" << p
+                  << ")\n";
+      }
+    }
+#endif
     // the action of an element on the generators f_s of the p-part: the
     // rows f_s (B_V coordinates) moved by 1 (x) g
     auto act_gens = [&](ModMat const &g) -> std::vector<std::vector<int64_t>> {
@@ -2336,27 +2560,111 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
       return x;
     };
-    std::vector<size_t> L0 = span(Lgens);
-    std::set<std::vector<size_t>> orbit{L0};
-    std::vector<std::vector<size_t>> queue{L0};
+    // the orbit of L/N, each subgroup by its Howell normal form in (Z /
+    // p^C)^r, coordinate s scaled by p^{C - a_s} (ListOrd[s] = p^{a_s})
+    int Cexp = 0;
+    std::vector<int> aexp(r, 0);
+    for (size_t s2 = 0; s2 < r; s2++) {
+      for (int64_t o = ListOrd[s2]; o > 1; o /= p) {
+        aexp[s2]++;
+      }
+      Cexp = std::max(Cexp, aexp[s2]);
+    }
+    auto powp = [&](int k) -> int64_t {
+      int64_t x = 1;
+      for (int i = 0; i < k; i++) {
+        x *= p;
+      }
+      return x;
+    };
+    auto canon = [&](std::vector<std::vector<int64_t>> const &gens_orig)
+        -> ModMat {
+      ModMat sc;
+      for (auto const &x : gens_orig) {
+        std::vector<int64_t> y(r);
+        for (size_t s2 = 0; s2 < r; s2++) {
+          y[s2] = x[s2] * powp(Cexp - aexp[s2]);
+        }
+        sc.push_back(y);
+      }
+      return HowellFormPrimePower(sc, p, Cexp);
+    };
+    auto unscale = [&](std::vector<int64_t> const &y) -> std::vector<int64_t> {
+      std::vector<int64_t> x(r);
+      for (size_t s2 = 0; s2 < r; s2++) {
+        x[s2] = (y[s2] / powp(Cexp - aexp[s2])) % ListOrd[s2];
+      }
+      return x;
+    };
+    // the element lists only serve the sanity check
+    (void)span;
+    (void)decode;
+    ModMat L0c = canon(Lgens);
+    std::set<ModMat> orbit{L0c};
+    std::vector<ModMat> queue{L0c};
     while (!queue.empty()) {
-      std::vector<size_t> H = queue.back();
+      ModMat H = queue.back();
       queue.pop_back();
       for (auto const &act : ListAct) {
-        std::vector<size_t> img;
-        for (size_t idx : H) {
-          img.push_back(encode(apply(act, decode(idx))));
+        std::vector<std::vector<int64_t>> img;
+        for (auto const &row : H) {
+          img.push_back(apply(act, unscale(row)));
         }
-        std::sort(img.begin(), img.end());
-        if (orbit.insert(img).second) {
-          queue.push_back(img);
+        ModMat Hc = canon(img);
+        if (orbit.insert(Hc).second) {
+          queue.push_back(Hc);
         }
       }
     }
+    // |L/N| from the form: the product of the p^{C - v} of the pivots
+    double logL = 0;
+    for (auto const &row : L0c) {
+      for (size_t s2 = 0; s2 < r; s2++) {
+        if (row[s2] != 0) {
+          int v = 0;
+          for (int64_t x = row[s2]; x % p == 0; x /= p) {
+            v++;
+          }
+          logL += (Cexp - v) * std::log(static_cast<double>(p));
+          break;
+        }
+      }
+    }
+#ifdef SANITY_CHECK_MULT
+    // the orbit on the sorted element lists, when L/N is small
+    if (std::exp(logL) <= 200000.5) {
+      std::vector<size_t> L0 = span(Lgens);
+      std::set<std::vector<size_t>> orbit_old{L0};
+      std::vector<std::vector<size_t>> queue_old{L0};
+      while (!queue_old.empty()) {
+        std::vector<size_t> H = queue_old.back();
+        queue_old.pop_back();
+        for (auto const &act : ListAct) {
+          std::vector<size_t> img;
+          for (size_t idx : H) {
+            img.push_back(encode(apply(act, decode(idx))));
+          }
+          std::sort(img.begin(), img.end());
+          if (orbit_old.insert(img).second) {
+            queue_old.push_back(img);
+          }
+        }
+      }
+      if (orbit_old.size() != orbit.size() ||
+          static_cast<double>(L0.size()) != std::round(std::exp(logL))) {
+        std::cerr << "MULT_FACTOR: SANITY: the Howell orbit " << orbit.size()
+                  << " (|L/N| " << std::exp(logL) << ") against "
+                  << orbit_old.size() << " (|L/N| " << L0.size() << ")\n";
+        throw TerminalException{1};
+      }
+      os << "MULT_FACTOR: SANITY: the Howell orbit agrees, " << orbit.size()
+         << "\n";
+    }
+#endif
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
     os << "MULT_FACTOR: p=" << p << " c=" << c << " e=" << e
        << " |image of O(X_p)|=" << opt->size() << " |N^#/N|_p=" << q_size
-       << " |L/N|_p=" << L0.size() << " orbit=" << orbit.size() << "\n";
+       << " |L/N|_p=" << std::exp(logL) << " orbit=" << orbit.size() << "\n";
 #endif
     factor *= UniversalScalarConversion<T, int64_t>(
         static_cast<int64_t>(orbit.size()));

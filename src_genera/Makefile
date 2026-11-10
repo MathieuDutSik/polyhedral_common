@@ -1,4 +1,4 @@
-PROGRAM		= GENUS_Enumerate GENUS_LocalDensity GENUS_AlgebraicModularForms GENUS_IsometryMass GENUS_EnumerateIsometry GENUS_GlueIsometry Test_MassTypes Test_QuadHeckeL
+PROGRAM		= GENUS_Enumerate GENUS_LocalDensity GENUS_AlgebraicModularForms GENUS_IsometryMass GENUS_EnumerateIsometry GENUS_GlueIsometry Test_MassTypes Test_QuadHeckeL Test_HowellForm
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

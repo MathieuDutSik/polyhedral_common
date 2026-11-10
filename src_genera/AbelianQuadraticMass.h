@@ -2957,9 +2957,12 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       return a;
     };
     using GMat = std::vector<std::vector<ElemE<T>>>;
-    // level 1: the rows over F_P
+    // level 1: the rows over F_P, all of them when there are not too many
+    // (the list, when the chain below cannot be used, and in the sanity
+    // checks)
     std::vector<GMat> level;
-    {
+    bool level_over = false;
+    auto list_level1 = [&]() -> void {
       std::vector<std::vector<PolyQ>> ys;
       size_t n_node = 0;
       bool over = false;
@@ -3083,9 +3086,10 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       };
       rec(0);
       if (over) {
-        return {};
+        level_over = true;
+        level.clear();
       }
-    }
+    };
     // the lifts of g from pi^j to pi^{j+1}
     auto matmul = [&](GMat const &X, GMat const &Y) -> GMat {
       GMat Z(m, std::vector<ElemE<T>>(m, ElemE<T>(deg, T(0))));
@@ -3217,16 +3221,23 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       }
       return g2;
     };
-    for (int j = 1; j < kT; j++) {
+    auto list_levels = [&]() -> void {
+    list_level1();
+    for (int j = 1; j < kT && !level_over; j++) {
       std::vector<GMat> next;
       for (auto const &gm : level) {
         std::optional<std::pair<std::vector<int64_t>, IMat>> sp = lift_space(gm, j);
         if (!sp) {
           continue;
         }
+        if (sp->second.size() > 40) {
+          level_over = true;
+          break;
+        }
         size_t n_y = n_lifts(*sp);
         if (next.size() + n_y > max_solution) {
-          return {};
+          level_over = true;
+          break;
         }
         for (size_t u = 0; u < n_y; u++) {
           next.push_back(make_lift(gm, j, *sp, u));
@@ -3234,6 +3245,10 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       }
       level = std::move(next);
     }
+    if (level_over) {
+      level.clear();
+    }
+    };
     // one lift at a time, the first that lifts further ending the search
     std::function<bool(GMat const &, int)> liftable = [&](GMat const &gm,
                                                          int j) -> bool {
@@ -3256,10 +3271,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
     int Nprec = c + 1;
     Tint Qp = PowInt<Tint>(p, Nprec);
     PolyZ<Tint> eps = LocalEps(P, Nprec);
-    for (auto const &gm : level) {
-      if (!liftable(gm, kT)) {
-        continue;
-      }
+    auto to_X = [&](GMat const &gm) -> IMat {
       MyMatrix<T> Mf = ZeroMatrix<T>(r, r);
       for (int i = 0; i < m; i++) {
         for (int j = 0; j < m; j++) {
@@ -3292,8 +3304,489 @@ LocalImagePiAdic(MyMatrix<T> const &B,
           out[a][b] = mod_pc(Me(a, b));
         }
       }
-      result.push_back(out);
+      return out;
+    };
+    std::vector<IMat> listed;
+    auto list_image = [&]() -> void {
+      list_levels();
+      for (auto const &gm : level) {
+        if (liftable(gm, kT)) {
+          listed.push_back(to_X(gm));
+        }
+      }
+    };
+    /*
+      When the list overflows: generators of the image of U(X_P), complete
+      by construction, as LocalOrthogonalImageGenerators does over Z_p but
+      on the rows over F_P (the residue field of P) and the pi-adic levels:
+      the stabiliser chain modulo pi of the basis rows e_0, ..., e_{m-1}
+      (one element searched for each new image of e_i, whose rows are
+      completed one at a time on their affine spaces and lifted to
+      pi^{Kpi} by the lifts of lift_space, which by the Lemma comes from an
+      isometry), then the layers of the elements congruent to 1 modulo pi^j,
+      j < kT, F_q-spaces given by a basis of the solutions of lift_space at
+      1 when all of its elements lift, else by enumerating them (bounded).
+     */
+    auto run_chain = [&](std::vector<IMat> &out_gens) -> bool {
+      size_t nd = static_cast<size_t>(m * fr);
+      size_t n_pts = 1;
+      for (size_t u = 0; u < nd; u++) {
+        n_pts *= static_cast<size_t>(p);
+        if (n_pts > (size_t(1) << 24)) {
+          return false;
+        }
+      }
+      using Row = std::vector<PolyQ>;
+      auto encode_row = [&](Row const &y) -> size_t {
+        size_t idx = 0;
+        for (int b = m - 1; b >= 0; b--) {
+          std::vector<int64_t> cf = coeffs(y[b]);
+          for (int u = fr - 1; u >= 0; u--) {
+            idx = idx * static_cast<size_t>(p) + static_cast<size_t>(((cf[u] % p) + p) % p);
+          }
+        }
+        return idx;
+      };
+      auto decode_row = [&](size_t idx) -> Row {
+        Row y(m);
+        for (int b = 0; b < m; b++) {
+          std::vector<int64_t> cf(fr);
+          for (int u = 0; u < fr; u++) {
+            cf[u] = static_cast<int64_t>(idx % static_cast<size_t>(p));
+            idx /= static_cast<size_t>(p);
+          }
+          PolyQ a2(cf.begin(), cf.end());
+          PolyTrim(a2);
+          y[b] = a2;
+        }
+        return y;
+      };
+      auto bil2 = [&](Row const &x, Row const &y) -> PolyQ {
+        PolyQ v;
+        for (int a2 = 0; a2 < m; a2++) {
+          for (int b2 = 0; b2 < m; b2++) {
+            v = GFAdd(v, GFMul(GFMul(x[a2], Hn[a2][b2], F), y[b2], F), F);
+          }
+        }
+        return v;
+      };
+      // the affine space of the rows y with y Hn x_k^T = Hn_ik and x_k Hn
+      // y^T = Hn_ki for the rows x_k of the prefix
+      auto row_aff = [&](std::vector<Row> const &prefix, int i)
+          -> std::optional<std::pair<std::vector<int64_t>, IMat>> {
+        size_t nvar = nd;
+        IMat aug;
+        for (size_t k = 0; k < prefix.size(); k++) {
+          for (int side = 0; side < 2; side++) {
+            Row w(m);
+            for (int b2 = 0; b2 < m; b2++) {
+              PolyQ v;
+              for (int d2 = 0; d2 < m; d2++) {
+                v = (side == 0) ? GFAdd(v, GFMul(Hn[b2][d2], prefix[k][d2], F), F)
+                                : GFAdd(v, GFMul(prefix[k][d2], Hn[d2][b2], F), F);
+              }
+              w[b2] = v;
+            }
+            PolyQ rhs = (side == 0) ? Hn[i][k] : Hn[k][i];
+            std::vector<IMat> blocks;
+            for (int b2 = 0; b2 < m; b2++) {
+              blocks.push_back(mulmat(w[b2]));
+            }
+            std::vector<int64_t> rc = coeffs(rhs);
+            for (int u = 0; u < fr; u++) {
+              std::vector<int64_t> row(nvar + 1, 0);
+              for (int b2 = 0; b2 < m; b2++) {
+                for (int t3 = 0; t3 < fr; t3++) {
+                  row[b2 * fr + t3] = blocks[b2][u][t3];
+                }
+              }
+              row[nvar] = rc[u];
+              aug.push_back(row);
+            }
+          }
+        }
+        if (aug.empty()) {
+          IMat ker;
+          for (size_t v = 0; v < nvar; v++) {
+            std::vector<int64_t> e1(nvar, 0);
+            e1[v] = 1;
+            ker.push_back(e1);
+          }
+          return std::make_pair(std::vector<int64_t>(nvar, 0), ker);
+        }
+        return affine(aug, nvar);
+      };
+      size_t n_node2 = 0;
+      bool over2 = false;
+      const size_t max_node2 = 5000000;
+      // f(y) for the rows y of the affine space with y Hn y^T = Hn_ii and
+      // independent of the prefix, until f is true
+      auto for_each_row = [&](std::vector<Row> const &prefix, int i,
+                              std::function<bool(Row const &)> const &f) -> void {
+        std::optional<std::pair<std::vector<int64_t>, IMat>> sol =
+            row_aff(prefix, i);
+        if (!sol) {
+          return;
+        }
+        size_t dim = sol->second.size();
+        std::vector<int64_t> cc(dim, 0);
+        while (!over2) {
+          if (++n_node2 > max_node2) {
+            over2 = true;
+            return;
+          }
+          std::vector<int64_t> v = sol->first;
+          for (size_t u = 0; u < dim; u++) {
+            if (cc[u] != 0) {
+              for (size_t a2 = 0; a2 < nd; a2++) {
+                v[a2] = (v[a2] + cc[u] * sol->second[u][a2]) % p;
+              }
+            }
+          }
+          Row y(m);
+          for (int b2 = 0; b2 < m; b2++) {
+            y[b2] = from_coeffs(v, static_cast<size_t>(b2 * fr));
+          }
+          if (bil2(y, y) == Hn[i][i]) {
+            GFMat Mrows(prefix.begin(), prefix.end());
+            Mrows.push_back(y);
+            if (GFLeftKernel(Mrows, Mrows.size(), static_cast<size_t>(m), F)
+                    .empty() &&
+                f(y)) {
+              return;
+            }
+          }
+          size_t u = 0;
+          while (u < dim && cc[u] == p - 1) {
+            cc[u] = 0;
+            u++;
+          }
+          if (u == dim) {
+            return;
+          }
+          cc[u]++;
+        }
+      };
+      // g + pi^j (sum of the coefficient vector times the kernel), lazily
+      auto make_lift_vec = [&](GMat const &gm, int j,
+                               std::pair<std::vector<int64_t>, IMat> const &sp,
+                               std::vector<int64_t> const &cvec) -> GMat {
+        size_t nvar = sp.first.size();
+        std::vector<int64_t> v = sp.first;
+        for (size_t u = 0; u < sp.second.size(); u++) {
+          if (cvec[u] != 0) {
+            for (size_t a2 = 0; a2 < nvar; a2++) {
+              v[a2] = (v[a2] + cvec[u] * sp.second[u][a2]) % p;
+            }
+          }
+        }
+        ElemE<T> pij = PiPower(j, P);
+        GMat g2 = gm;
+        for (int a2 = 0; a2 < m; a2++) {
+          for (int b2 = 0; b2 < m; b2++) {
+            PolyQ dlt = from_coeffs(v, static_cast<size_t>((a2 * m + b2) * fr));
+            if (!dlt.empty()) {
+              g2[a2][b2] = EAddE(g2[a2][b2], EMul(LiftResidue(dlt, K), pij, K));
+            }
+          }
+        }
+        return g2;
+      };
+      // a solution modulo pi^{Kpi} extending the solution gm modulo pi^j,
+      // the first found; by the Lemma it is congruent modulo pi^{kT} to an
+      // element of the image
+      std::function<std::optional<GMat>(GMat const &, int)> path =
+          [&](GMat const &gm, int j) -> std::optional<GMat> {
+        if (j >= Kpi) {
+          return gm;
+        }
+        if (over2 || ++n_node2 > max_node2) {
+          over2 = true;
+          return {};
+        }
+        std::optional<std::pair<std::vector<int64_t>, IMat>> sp =
+            lift_space(gm, j);
+        if (!sp) {
+          return {};
+        }
+        size_t dim = sp->second.size();
+        std::vector<int64_t> cv(dim, 0);
+        while (!over2) {
+          std::optional<GMat> res = path(make_lift_vec(gm, j, *sp, cv), j + 1);
+          if (res) {
+            return res;
+          }
+          size_t u = 0;
+          while (u < dim && cv[u] == p - 1) {
+            cv[u] = 0;
+            u++;
+          }
+          if (u == dim) {
+            return {};
+          }
+          cv[u]++;
+        }
+        return {};
+      };
+      auto act_row = [&](Row const &y, std::vector<Row> const &g) -> Row {
+        Row z(m);
+        for (int b2 = 0; b2 < m; b2++) {
+          PolyQ v;
+          for (int a2 = 0; a2 < m; a2++) {
+            v = GFAdd(v, GFMul(y[a2], g[a2][b2], F), F);
+          }
+          z[b2] = v;
+        }
+        return z;
+      };
+      std::vector<std::vector<Row>> gens1;
+      std::vector<GMat> elems;
+      double log_order = 0;
+      std::vector<Row> rows(m);
+      std::function<std::optional<GMat>(int)> complete =
+          [&](int j) -> std::optional<GMat> {
+        if (j == m) {
+          GMat gm(m, std::vector<ElemE<T>>(m));
+          for (int a2 = 0; a2 < m; a2++) {
+            for (int b2 = 0; b2 < m; b2++) {
+              gm[a2][b2] = LiftResidue(rows[a2][b2], K);
+            }
+          }
+          return path(gm, 1);
+        }
+        std::vector<Row> prefix(rows.begin(), rows.begin() + j);
+        std::optional<GMat> res;
+        for_each_row(prefix, j, [&](Row const &y) -> bool {
+          rows[j] = y;
+          res = complete(j + 1);
+          return res.has_value();
+        });
+        return res;
+      };
+      for (int i = m - 1; i >= 0; i--) {
+        std::vector<Row> prefix(i);
+        for (int k = 0; k < i; k++) {
+          Row ek(m);
+          ek[k] = PolyQ{1};
+          prefix[k] = ek;
+        }
+        Row ei(m);
+        ei[i] = PolyQ{1};
+        std::vector<char> in_orbit(n_pts, 0);
+        size_t orbit_len = 0;
+        auto close = [&]() -> void {
+          std::vector<size_t> queue;
+          if (orbit_len == 0) {
+            in_orbit[encode_row(ei)] = 1;
+            orbit_len = 1;
+          }
+          for (size_t idx = 0; idx < n_pts; idx++) {
+            if (in_orbit[idx]) {
+              queue.push_back(idx);
+            }
+          }
+          while (!queue.empty()) {
+            size_t idx = queue.back();
+            queue.pop_back();
+            Row y = decode_row(idx);
+            for (auto const &g : gens1) {
+              size_t iz = encode_row(act_row(y, g));
+              if (!in_orbit[iz]) {
+                in_orbit[iz] = 1;
+                orbit_len++;
+                queue.push_back(iz);
+              }
+            }
+          }
+        };
+        close();
+        size_t n_cand = 0, n_fail = 0;
+        for_each_row(prefix, i, [&](Row const &y) -> bool {
+          n_cand++;
+          if (in_orbit[encode_row(y)]) {
+            return false;
+          }
+          for (int k = 0; k < i; k++) {
+            rows[k] = prefix[k];
+          }
+          rows[i] = y;
+          std::optional<GMat> g = complete(i + 1);
+          if (over2) {
+            return true;
+          }
+          if (g) {
+            std::vector<Row> g1(m, Row(m));
+            for (int a2 = 0; a2 < m; a2++) {
+              for (int b2 = 0; b2 < m; b2++) {
+                g1[a2][b2] = LocalResidue((*g)[a2][b2], P);
+              }
+            }
+            gens1.push_back(g1);
+            elems.push_back(*g);
+            close();
+          } else {
+            n_fail++;
+          }
+          return false;
+        });
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+        std::cerr << "ABQUAD: pi-adic chain at row " << i << ": candidates "
+                  << n_cand << " failed " << n_fail << " orbit " << orbit_len
+                  << " nodes " << n_node2 << "\n";
+#endif
+        if (over2) {
+          return false;
+        }
+        log_order += std::log(static_cast<double>(orbit_len));
+      }
+      // the layers
+      GMat Id(m, std::vector<ElemE<T>>(m, ElemE<T>(deg, T(0))));
+      for (int a2 = 0; a2 < m; a2++) {
+        Id[a2][a2] = EZetaPower(0, K);
+      }
+      for (int j = 1; j < kT; j++) {
+        std::optional<std::pair<std::vector<int64_t>, IMat>> sp =
+            lift_space(Id, j);
+        if (!sp) {
+          return false;
+        }
+        size_t dim = sp->second.size();
+        std::vector<GMat> lifts;
+        bool all = true;
+        for (size_t u = 0; u < dim; u++) {
+          std::vector<int64_t> cv(dim, 0);
+          cv[u] = 1;
+          std::optional<GMat> g = path(make_lift_vec(Id, j, *sp, cv), j + 1);
+          if (over2) {
+            return false;
+          }
+          if (!g) {
+            all = false;
+            break;
+          }
+          lifts.push_back(*g);
+        }
+        if (all) {
+          elems.insert(elems.end(), lifts.begin(), lifts.end());
+          log_order += static_cast<double>(dim) * std::log(static_cast<double>(p));
+        } else {
+          // the liftable subspace, by enumerating the space
+          size_t n_el = 1;
+          for (size_t u = 0; u < dim; u++) {
+            n_el *= static_cast<size_t>(p);
+            if (n_el > 100000) {
+              return false;
+            }
+          }
+          IMat basis_cv;
+          size_t n_ok = 0;
+          for (size_t s2 = 0; s2 < n_el; s2++) {
+            std::vector<int64_t> cv(dim);
+            size_t tt = s2;
+            for (size_t u = 0; u < dim; u++) {
+              cv[u] = static_cast<int64_t>(tt % static_cast<size_t>(p));
+              tt /= static_cast<size_t>(p);
+            }
+            std::optional<GMat> g = path(make_lift_vec(Id, j, *sp, cv), j + 1);
+            if (over2) {
+              return false;
+            }
+            if (g) {
+              IMat test = basis_cv;
+              test.push_back(cv);
+              size_t rk = 0;
+              {
+                IMat aug2 = test;
+                for (auto &row : aug2) {
+                  row.push_back(0);
+                }
+                std::optional<std::pair<std::vector<int64_t>, IMat>> kk =
+                    affine(aug2, dim);
+                rk = (kk) ? dim - kk->second.size() : 0;
+              }
+              if (rk == test.size()) {
+                basis_cv = test;
+                elems.push_back(*g);
+                n_ok++;
+              }
+            }
+          }
+          log_order += static_cast<double>(n_ok) * std::log(static_cast<double>(p));
+        }
+      }
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+      std::cerr << "ABQUAD: pi-adic chain: " << elems.size()
+                << " generators, |image of U(X_P)| = " << std::exp(log_order)
+                << "\n";
+#endif
+      for (auto const &gm : elems) {
+        out_gens.push_back(to_X(gm));
+      }
+      return true;
+    };
+    // the chain first; the list when the chain cannot be used
+    std::vector<IMat> chain_gens;
+    bool chain_done = run_chain(chain_gens);
+#ifndef SANITY_CHECK_MULT
+    if (chain_done) {
+      result.insert(result.end(), chain_gens.begin(), chain_gens.end());
+      continue;
     }
+#endif
+    list_image();
+    if (level_over) {
+      if (!chain_done) {
+        return {};
+      }
+      result.insert(result.end(), chain_gens.begin(), chain_gens.end());
+      continue;
+    }
+#ifdef SANITY_CHECK_MULT
+    {
+      // the group generated by the chain is the listed image
+      if (chain_done) {
+        std::set<IMat> listed_set(listed.begin(), listed.end());
+        std::set<IMat> closure;
+        IMat Idm(r, std::vector<int64_t>(r, 0));
+        for (int a2 = 0; a2 < r; a2++) {
+          Idm[a2][a2] = 1;
+        }
+        int64_t pcl = UniversalScalarConversion<int64_t, Tint>(pc);
+        std::vector<IMat> queue{Idm};
+        closure.insert(Idm);
+        while (!queue.empty() && closure.size() <= listed_set.size()) {
+          IMat x = queue.back();
+          queue.pop_back();
+          for (auto const &g : chain_gens) {
+            IMat y(r, std::vector<int64_t>(r, 0));
+            for (int a2 = 0; a2 < r; a2++) {
+              for (int k2 = 0; k2 < r; k2++) {
+                if (x[a2][k2] == 0) {
+                  continue;
+                }
+                for (int b2 = 0; b2 < r; b2++) {
+                  y[a2][b2] = (y[a2][b2] + x[a2][k2] * g[k2][b2]) % pcl;
+                }
+              }
+            }
+            if (closure.insert(y).second) {
+              queue.push_back(y);
+            }
+          }
+        }
+        if (closure != listed_set) {
+          std::cerr << "ABQUAD: SANITY: the pi-adic chain generates "
+                    << closure.size() << " elements, the list has "
+                    << listed_set.size() << "\n";
+          throw TerminalException{1};
+        }
+        std::cerr << "ABQUAD: SANITY: the pi-adic chain generates the "
+                  << listed_set.size() << " elements of the list\n";
+      }
+    }
+#endif
+    (void)chain_done;
+    result.insert(result.end(), listed.begin(), listed.end());
   }
   return result;
 }
