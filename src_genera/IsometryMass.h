@@ -9,6 +9,7 @@
 #include "MultiplicityLocalFactor.h"
 #include "AbelianHermitianMass.h"
 #include "AbelianQuadraticMass.h"
+#include "QuaternionicMass.h"
 #include "WeightMatrix.h"
 #include "GRAPH_GraphicalBasic.h"
 #include "MAT_Matrix.h"
@@ -140,6 +141,11 @@ template <typename T> struct IsometryComponent {
   std::optional<AbelianCMField> quad_field;
   MyMatrix<T> centre_gram;
   std::vector<MyMatrix<T>> centre_omega;
+  // End_G = M_r(D), D a totally definite quaternion algebra over a real
+  // centre: the mass of the component, computed directly
+  // (QuaternionicMass.h) when it could be
+  bool quaternionic = false;
+  std::optional<T> quaternionic_mass;
   MyMatrix<T> row;
   MyMatrix<T> row_inv;
   std::vector<int64_t> elem;
@@ -1438,7 +1444,13 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     cm.d = comp.d;
     cm.rank = comp.gram.rows();
     cm.det = DeterminantMat(comp.gram);
-    if (comp.d == 0 && (comp.herm_field || comp.quad_field)) {
+    if (comp.d == 0 && comp.quaternionic) {
+      if (comp.quaternionic_mass) {
+        cm.mass = *comp.quaternionic_mass;
+      } else {
+        res.unsupported_component = true;
+      }
+    } else if (comp.d == 0 && (comp.herm_field || comp.quad_field)) {
       std::optional<T> hm =
           comp.herm_field
               ? HermitianMassAbelianLattice(comp.centre_gram, comp.centre_omega,
@@ -2189,14 +2201,14 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
           Be[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
         }
       }
-      double order = 0;
+      LocalImageOrder order;
       opt = LocalOrthogonalImageGenerators(A_mod, Be, {}, {}, p, c, e, bounds,
                                            &order);
       gens_over_Q = opt.has_value();
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
       os << "MULT_FACTOR: p=" << p << " generators of the image "
          << (opt ? static_cast<long>(opt->size()) : -1L) << ", |image|="
-         << order << "\n";
+         << LocalImageOrderValue(order, p) << "\n";
 #endif
     }
     // a centre K beyond the pi-adic search: the same generators within the
@@ -2244,7 +2256,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       for (auto const &Y : IntegralCommutant<T, Tint>(compX)) {
         Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
       }
-      double order = 0;
+      LocalImageOrder order;
       opt = LocalOrthogonalImageGenerators(A_mod, Be, Om, Lam, p, c, e,
                                            bounds, &order);
       if (opt) {
@@ -2255,7 +2267,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       os << "MULT_FACTOR: p=" << p << " c=" << c << " e=" << e
          << " K-linear generators of the image "
          << (opt ? static_cast<long>(opt->size()) : -1L) << ", |image|="
-         << order << "\n";
+         << LocalImageOrderValue(order, p) << "\n";
 #endif
     }
     if (!opt) {
@@ -2341,7 +2353,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       for (auto const &Y : IntegralCommutant<T, Tint>(compX3)) {
         Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
       }
-      double order_k = 0;
+      LocalImageOrder order_k;
       std::optional<std::vector<ModMat>> kg = LocalOrthogonalImageGenerators(
           A_mod, Be, Om, Lam, p, c, e, bounds, &order_k);
       if (kg) {
@@ -2412,7 +2424,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
           }
         }
         if (all_in &&
-            static_cast<size_t>(std::llround(order_k)) == listed_set.size()) {
+            static_cast<size_t>(std::llround(LocalImageOrderValue(order_k, p))) == listed_set.size()) {
           std::cerr << "MULT_FACTOR: SANITY: the K-linear generators lie in the "
                     << "pi-adic image, of the same order " << listed_set.size()
                     << " (p=" << p << ")\n";
@@ -2882,6 +2894,54 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       }
       return res_c;
     };
+    // the class sums, the exponent N of G and the a with sigma_a fixing
+    // the centre K of End_G (the subfield of Q(zeta_N) it is)
+    auto centre_field = [&]()
+        -> std::tuple<std::vector<MyMatrix<T>>, int64_t, std::vector<int64_t>> {
+      // the conjugacy classes and their sums on the block
+      std::vector<int> ccls(n_elt, -1);
+      int n_ccls = 0;
+      for (size_t i = 0; i < n_elt; i++) {
+        if (ccls[i] != -1) {
+          continue;
+        }
+        for (size_t j = 0; j < n_elt; j++) {
+          size_t u = index[flatten(MyMatrix<T>(inv[j] * elts[i] * elts[j]))];
+          ccls[u] = n_ccls;
+        }
+        n_ccls++;
+      }
+      std::vector<MyMatrix<T>> ClassSum(n_ccls, ZeroMatrix<T>(n, n));
+      for (size_t i = 0; i < n_elt; i++) {
+        ClassSum[ccls[i]] += elts[i];
+      }
+      int64_t Nexp = 1;
+      for (auto const &x : elts) {
+        Nexp = std::lcm(Nexp, static_cast<int64_t>(IsometryOrder(x)));
+      }
+      std::vector<int64_t> Hgens;
+      for (int64_t a = 1; a < Nexp; a++) {
+        if (std::gcd(a, Nexp) != 1) {
+          continue;
+        }
+        bool fixes = true;
+        for (size_t i = 0; i < n_elt && fixes; i++) {
+          MyMatrix<T> pw = IdentityMat<T>(n);
+          for (int64_t t = 0; t < a; t++) {
+            pw = pw * elts[i];
+          }
+          int ci = ccls[i];
+          int ca = ccls[index[flatten(pw)]];
+          if (ci != ca && action(ClassSum[ci]) != action(ClassSum[ca])) {
+            fixes = false;
+          }
+        }
+        if (fixes) {
+          Hgens.push_back(a);
+        }
+      }
+      return {ClassSum, Nexp, Hgens};
+    };
     std::vector<MyMatrix<T>> End = commutant(ListAct);
     // the centre of End_G: the elements of End_G commuting with End_G
     std::vector<MyMatrix<T>> ListBoth = ListAct;
@@ -2890,6 +2950,61 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
     int e = static_cast<int>(End.size());
     int m = static_cast<int>(std::llround(std::sqrt(static_cast<double>(e))));
     bool central_q = (c == 1);
+    {
+      // End_G = M_r(D), D a quaternion algebra (Albert type III), in the
+      // columns convention
+      std::vector<MyMatrix<T>> EndC, CentreC, GensC, EltsC;
+      for (auto const &Y : End) {
+        EndC.push_back(Y.transpose());
+      }
+      for (auto const &Z : commutant(ListBoth)) {
+        CentreC.push_back(Z.transpose());
+      }
+      int rq = QuaternionicRank(Gram, EndC, CentreC);
+      if (rq > 0) {
+        for (auto const &M : ListAct) {
+          GensC.push_back(M.transpose());
+        }
+        for (auto const &x : elts) {
+          EltsC.push_back(action(x).transpose());
+        }
+        for (auto const &C : GensC) {
+          if (MyMatrix<T>(C.transpose() * Gram * C) != Gram) {
+            std::cerr << "ISOM_MASS: a generator is not an isometry of the "
+                         "block\n";
+            throw TerminalException{1};
+          }
+        }
+        std::optional<AbelianCMField> FKq;
+        T dKq(1);
+        if (c > 1) {
+          auto [ClassSumq, Nexpq, Hgensq] = centre_field();
+          (void)ClassSumq;
+          FKq = MakeAbelianRealField(Nexpq, Hgensq);
+          if (AbelianFieldDegree(*FKq) != c) {
+            std::cerr << "ISOM_MASS: the centre has degree " << c
+                      << " but the field found has degree "
+                      << AbelianFieldDegree(*FKq) << "\n";
+            throw TerminalException{1};
+          }
+          DirichletGroup Gd = ComputeDirichletGroup(FKq->n);
+          for (auto const &t : FieldCharacters(Gd, FKq->H, false)) {
+            dKq *= ScalarFromInt64<T>(PrimitiveCharacter(Gd, t).first);
+          }
+        }
+        comp.quaternionic = true;
+        QuaternionicMassBounds qbounds;
+        comp.quaternionic_mass = QuaternionicComponentMass<T, Tint>(
+            Gram, EltsC, GensC, CentreC, FKq, dKq, rq, qbounds, os);
+#ifdef DEBUG_ISOMETRY_MASS
+        os << "ISOM_MASS: quaternionic component of rank " << k << ", r=" << rq
+           << ", centre of degree " << c << ", mass "
+           << (comp.quaternionic_mass ? "found" : "not found") << "\n";
+#endif
+        res.push_back(comp);
+        continue;
+      }
+    }
     if (central_q && m * m == e) {
       // a common eigenspace of dimension m, for one or two elements
       std::optional<MyMatrix<T>> found;
@@ -2973,48 +3088,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           is_cm = true;
         }
       }
-      // the conjugacy classes and their sums on the block
-      std::vector<int> ccls(n_elt, -1);
-      int n_ccls = 0;
-      for (size_t i = 0; i < n_elt; i++) {
-        if (ccls[i] != -1) {
-          continue;
-        }
-        for (size_t j = 0; j < n_elt; j++) {
-          size_t u = index[flatten(MyMatrix<T>(inv[j] * elts[i] * elts[j]))];
-          ccls[u] = n_ccls;
-        }
-        n_ccls++;
-      }
-      std::vector<MyMatrix<T>> ClassSum(n_ccls, ZeroMatrix<T>(n, n));
-      for (size_t i = 0; i < n_elt; i++) {
-        ClassSum[ccls[i]] += elts[i];
-      }
-      int64_t Nexp = 1;
-      for (auto const &x : elts) {
-        Nexp = std::lcm(Nexp, static_cast<int64_t>(IsometryOrder(x)));
-      }
-      std::vector<int64_t> Hgens;
-      for (int64_t a = 1; a < Nexp; a++) {
-        if (std::gcd(a, Nexp) != 1) {
-          continue;
-        }
-        bool fixes = true;
-        for (size_t i = 0; i < n_elt && fixes; i++) {
-          MyMatrix<T> pw = IdentityMat<T>(n);
-          for (int64_t t = 0; t < a; t++) {
-            pw = pw * elts[i];
-          }
-          int ci = ccls[i];
-          int ca = ccls[index[flatten(pw)]];
-          if (ci != ca && action(ClassSum[ci]) != action(ClassSum[ca])) {
-            fixes = false;
-          }
-        }
-        if (fixes) {
-          Hgens.push_back(a);
-        }
-      }
+      auto [ClassSum, Nexp, Hgens] = centre_field();
       std::optional<MyMatrix<T>> found_basis;
       if (Nexp > 2) {
         std::vector<std::pair<size_t, int>> cand;

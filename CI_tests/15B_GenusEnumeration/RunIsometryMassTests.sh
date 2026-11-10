@@ -405,6 +405,19 @@ group_mass_case E8i C4S5 3/16
 # E8 (x) A2 = E8 (x) Z[zeta_3]: centre Q(zeta_3), 5 inert, the image at 5
 # of order 720 = |U_2(F_5)|, orbit 6. Closed by enumeration (1 class).
 group_mass_case E8w C3S5 1/12
+# Quaternionic components (End_G = M_r(D), D a definite quaternion
+# algebra): the mass by comparison with the principal lattice O^r and the
+# local volumes at the bad primes. Q8 by left multiplication on the
+# Hurwitz order D4 and on D4^2 (Hashimoto-Ibukiyama, principal genus), on
+# E8 as a Hurwitz lattice (the non-principal genus, (2^2 - 1)/5760), on
+# the Lipschitz order 2Z^4 (a non-maximal multiplier ring); 2I on the
+# icosian E8 (centre Q(sqrt 5), 2^-2 zeta_K(-1)). Each genus is one class,
+# which GENUS_EnumerateIsometry confirms.
+group_mass_case qD4x1 Q8 1/24
+group_mass_case qD4x2 Q8 1/1152
+group_mass_case qE8h Q8 1/1920
+group_mass_case qZ4 Q8 1/8
+group_mass_case qE8ico 2I 1/120
 # F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
 # the factor at the ramified prime 11 by the pi-adic chain (an image of
 # order about 3 10^4, orbit 1); the module N^#/N at 11 is beyond the old

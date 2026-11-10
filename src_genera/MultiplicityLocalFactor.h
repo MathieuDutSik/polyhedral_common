@@ -502,6 +502,22 @@ inline ModMat HowellFormPrimePower(ModMat rows, int64_t p, int C) {
   return R;
 }
 
+// The order of an image found by LocalOrthogonalImageGeneratorsCore: the
+// product of the orbit lengths of the stabiliser chain modulo p times
+// p^layer_exp, the layers G_j / G_{j+1}
+struct LocalImageOrder {
+  std::vector<size_t> orbits;
+  size_t layer_exp = 0;
+};
+
+inline double LocalImageOrderValue(LocalImageOrder const &o, int64_t p) {
+  double v = 1;
+  for (size_t x : o.orbits) {
+    v *= static_cast<double>(x);
+  }
+  return v * std::pow(static_cast<double>(p), static_cast<double>(o.layer_exp));
+}
+
 // the precision W of the Newton steps: p^W < 2^61, so that the products
 // of residues fit in 128 bits
 inline int MultiplicityNewtonPrecision(int64_t p) {
@@ -532,7 +548,9 @@ inline int MultiplicityNewtonPrecision(int64_t p) {
   - The layers G_j / G_{j+1}, 1 <= j < c, of the elements congruent to 1
     modulo p^j: F_p-spaces of the Delta with 1 + p^j Delta lifting to p^K,
     given by a basis of the solutions when its elements all lift (the
-    liftable ones form a subspace), else by enumerating the space.
+    liftable ones form a subspace V), else from the basis vectors that
+    lift and, for each that does not, a lifting sum with a list of
+    vectors independent modulo V (at most p^{codim V} tries each).
 
   An element of G congruent to a solution g modulo p^j is found from a
   solution modulo p^k, k = max(j + e + t, e + 2t + 1), extending g (an
@@ -549,7 +567,7 @@ inline int MultiplicityNewtonPrecision(int64_t p) {
 inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     ModMat const &A, ModMat const &Be, std::vector<ModMat> const &Om,
     std::vector<ModMat> const &Lam, int64_t p, int c, int e, size_t rad_start,
-    MultiplicityFactorBounds const &bounds, double *order) {
+    MultiplicityFactorBounds const &bounds, LocalImageOrder *order) {
   size_t m = A.size();
   int t = (p == 2) ? 1 : 0;
   size_t n_pts = 1;
@@ -1203,9 +1221,38 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     return true;
   };
-  // the full check of a candidate modulo p: isometry, invertible, and
-  // commuting with Om
+  // the rows vec(Lam_l) modulo p, independent (lam_rows): g modulo p is in
+  // Lam modulo p when adding vec(g) keeps the rank. Commuting with Om
+  // modulo p is weaker when Om modulo p spans less than the order it
+  // generates over Z_p does.
+  ModMat lam_vecs;
+  for (size_t l = 0; l < d_lam; l++) {
+    std::vector<int64_t> v(m * m);
+    for (size_t w = 0; w < m * m; w++) {
+      v[w] = Mlam[w][l];
+    }
+    lam_vecs.push_back(v);
+  }
+  auto in_lam = [&](ModMat const &g) -> bool {
+    if (d_lam == 0) {
+      return true;
+    }
+    ModMat test = lam_vecs;
+    std::vector<int64_t> v(m * m);
+    for (size_t a2 = 0; a2 < m; a2++) {
+      for (size_t b2 = 0; b2 < m; b2++) {
+        v[a2 * m + b2] = ModP(g[a2][b2], p);
+      }
+    }
+    test.push_back(v);
+    return ModRank(test, p) == d_lam;
+  };
+  // the full check of a candidate modulo p: isometry, invertible,
+  // commuting with Om and in Lam
   auto full_ok = [&](ModMat const &g) -> bool {
+    if (!in_lam(g)) {
+      return false;
+    }
     for (size_t a2 = 0; a2 < m; a2++) {
       for (size_t b2 = 0; b2 < m; b2++) {
         std::vector<int64_t> ca(m), cb(m);
@@ -1318,7 +1365,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   };
   std::vector<ModMat> gens1;
   std::vector<ModMat> gens;
-  double log_order = 0;
+  LocalImageOrder ord;
   for (size_t i = m; i-- > 0;) {
     std::vector<int64_t> ei(m, 0);
     ei[i] = 1;
@@ -1431,7 +1478,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
 #endif
       return {};
     }
-    log_order += std::log(static_cast<double>(orbit_len));
+    ord.orbits.push_back(orbit_len);
   }
   // the layers
   ModMat Id(m, std::vector<int64_t>(m, 0));
@@ -1447,24 +1494,30 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
 #endif
       return {};
     }
+    // the basis vectors of the layer that lift, and those that do not
     std::vector<ModMat> lifts;
-    bool all = true;
-    for (auto const &kv : sp->ker) {
+    std::vector<size_t> lifted, failed;
+    for (size_t i0 = 0; i0 < sp->ker.size(); i0++) {
       std::vector<int64_t> coef(sp->ker.size(), 0);
-      for (size_t i = 0; i < sp->ker.size(); i++) {
-        coef[i] = (&kv == &sp->ker[i]) ? 1 : 0;
-      }
+      coef[i0] = 1;
       ModMat g = LiftAffineElement(Id, *sp, coef, p, pj);
       std::optional<ModMat> lf = lift_path(g, j + 1, pj * p);
       if (over) {
         return {};
       }
-      if (!lf) {
-        all = false;
-        break;
+      if (lf) {
+        lifts.push_back(*lf);
+        lifted.push_back(i0);
+      } else {
+        failed.push_back(i0);
       }
-      lifts.push_back(*lf);
     }
+    bool all = failed.empty();
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+    std::cerr << "MULT_FACTOR: layer " << j << " dim " << sp->ker.size()
+              << " lifted " << lifted.size() << " failed " << failed.size()
+              << "\n";
+#endif
     // p odd and e = 1: one level decides the lift, by a system whose
     // matrix is constant on the layer; its solvability is f(Delta) = L rhs
     // = 0, L a basis of the left kernel, f = l + q with l linear and q
@@ -1565,8 +1618,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
           }
           gens.push_back(*lf);
         }
-        log_order += static_cast<double>(W0.size()) *
-                     std::log(static_cast<double>(p));
+        ord.layer_exp += W0.size();
         done = true;
       }
     }
@@ -1574,52 +1626,83 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       // found above
     } else if (all) {
       gens.insert(gens.end(), lifts.begin(), lifts.end());
-      log_order += static_cast<double>(sp->ker.size()) *
-                   std::log(static_cast<double>(p));
+      ord.layer_exp += sp->ker.size();
     } else {
-      // the liftable subspace, by enumerating the space
+      // the liftable subspace V contains the basis vectors that lift. The
+      // failed ones f are taken in turn with a list T of failed vectors
+      // independent modulo V: when some f + sum_t a_t t lifts it is a new
+      // element of V, otherwise f is independent of T modulo V and joins
+      // it. Then W = V + span(T) with T independent modulo V, so V is
+      // spanned by the elements found, at the cost of at most |failed|
+      // p^{codim V} lifts.
       size_t dim = sp->ker.size();
-      size_t n_el = 1;
-      for (size_t i = 0; i < dim; i++) {
-        n_el *= static_cast<size_t>(p);
-        if (n_el > 100000) {
+      ModMat liftable_coefs;
+      std::vector<ModMat> liftable_elts = lifts;
+      for (size_t i0 : lifted) {
+        std::vector<int64_t> coef(dim, 0);
+        coef[i0] = 1;
+        liftable_coefs.push_back(coef);
+      }
+      ModMat reps;
+      for (size_t i0 : failed) {
+        size_t n_el = 1;
+        for (size_t i = 0; i < reps.size(); i++) {
+          n_el *= static_cast<size_t>(p);
+          if (n_el > 100000) {
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
     std::cerr << "MULT_FACTOR: generators stop: layer too large, n_node=" << n_node << "\n";
 #endif
-          return {};
-        }
-      }
-      ModMat liftable_coefs;
-      std::vector<ModMat> liftable_elts;
-      std::vector<int64_t> coef(dim, 0);
-      for (size_t s2 = 0; s2 < n_el; s2++) {
-        size_t tt = s2;
-        for (size_t i = 0; i < dim; i++) {
-          coef[i] = static_cast<int64_t>(tt % static_cast<size_t>(p));
-          tt /= static_cast<size_t>(p);
-        }
-        ModMat g = LiftAffineElement(Id, *sp, coef, p, pj);
-        std::optional<ModMat> lf = lift_path(g, j + 1, pj * p);
-        if (over) {
-          return {};
-        }
-        if (lf) {
-          ModMat test = liftable_coefs;
-          test.push_back(coef);
-          if (ModRank(test, p) == test.size()) {
-            liftable_coefs = test;
-            liftable_elts.push_back(*lf);
+            return {};
           }
         }
+        bool in_v = false;
+        for (size_t s2 = 0; s2 < n_el && !in_v; s2++) {
+          std::vector<int64_t> coef(dim, 0);
+          coef[i0] = 1;
+          size_t tt = s2;
+          for (size_t i = 0; i < reps.size(); i++) {
+            int64_t a = static_cast<int64_t>(tt % static_cast<size_t>(p));
+            tt /= static_cast<size_t>(p);
+            for (size_t v = 0; v < dim; v++) {
+              coef[v] = (coef[v] + a * reps[i][v]) % p;
+            }
+          }
+          if (s2 == 0) {
+            // f itself is known not to lift
+            continue;
+          }
+          ModMat g = LiftAffineElement(Id, *sp, coef, p, pj);
+          std::optional<ModMat> lf = lift_path(g, j + 1, pj * p);
+          if (over) {
+            return {};
+          }
+          if (lf) {
+            liftable_coefs.push_back(coef);
+            liftable_elts.push_back(*lf);
+            in_v = true;
+          }
+        }
+        if (!in_v) {
+          std::vector<int64_t> coef(dim, 0);
+          coef[i0] = 1;
+          reps.push_back(coef);
+        }
       }
+      if (ModRank(liftable_coefs, p) != liftable_coefs.size()) {
+        std::cerr << "MULT_FACTOR: the layer elements found are dependent\n";
+        throw TerminalException{1};
+      }
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+      std::cerr << "MULT_FACTOR: layer " << j << " codimension "
+                << reps.size() << "\n";
+#endif
       gens.insert(gens.end(), liftable_elts.begin(), liftable_elts.end());
-      log_order += static_cast<double>(liftable_coefs.size()) *
-                   std::log(static_cast<double>(p));
+      ord.layer_exp += liftable_coefs.size();
     }
     pj *= p;
   }
   if (order) {
-    *order = std::exp(log_order);
+    *order = ord;
   }
   return gens;
 }
@@ -1640,7 +1723,7 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
                                std::vector<ModMat> const &Lam, int64_t p,
                                int c, int e,
                                MultiplicityFactorBounds const &bounds,
-                               double *order) {
+                               LocalImageOrder *order) {
   size_t m = A.size();
   if (e != 1) {
     return LocalOrthogonalImageGeneratorsCore(A, Be, Om, Lam, p, c, e, m,

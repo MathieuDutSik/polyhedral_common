@@ -205,8 +205,8 @@ F55 on A10^2 (mass 5/24) exercises the ramified 11.
 
 Not done or not tested: layers by linear algebra beyond p odd and e = 1;
 p = 2, e >= 2, c >= 3 and a layer whose basis does not all lift, for the
-generators; a CM centre of degree 4; residue fields with q^m > 2^24 points; quaternion
-End_G. Candidate lattices are listed in TODO.md, not yet built or
+generators; a CM centre of degree 4; residue fields with q^m > 2^24 points;
+quaternionic components where G spans more than D (s > 1). Candidate lattices are listed in TODO.md, not yet built or
 checked. Beyond the bounds the result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
 Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
 over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
@@ -226,9 +226,29 @@ form modulo pi (on A4^3 with D5 at 5: an image of order 30000 against
 about 5 10^8 solutions modulo 5). D5 on the three A4 of E8 + A4 gets the
 factor 2 at 5 that way, and its mass 1/8 is closed by the seed. When the
 bounds and the searches all fail, the bounds are tried again with a
-p-part of D(N) of up to 2^17 elements. Components where
-End_G is a quaternion algebra get no mass (the subspace F, stable under
-End_G, has no dimension m c then).
+p-part of D(N) of up to 2^17 elements.
+
+When End_G = M_r(D), D a totally definite quaternion algebra over a real
+centre K (recognised by the dimension c r (2r + 1) of the skew-adjoint
+part of End_G, that of Sp_2r), the mass comes from QuaternionicMass.h by
+comparison with the principal lattice S = O^r, O a maximal order of D
+(found by enlarging the multiplier ring of X), whose mass is Prasad's
+formula prod_i 2^-c |zeta_K(1 - 2i)| prod_{P | d(D)} prod_i (N P^i +
+(-1)^i) (Hashimoto-Ibukiyama over Q): mass(X) = mass(S) prod_p vol
+U(S_p) / vol U(X_p), with vol U(Z_p) = |U(Z_p) mod p^c| p^{-c dim u}
+|disc u(Z)|_p^{1/2} by the Cayley transform (c = 1, or 2 at p = 2), u(Z)
+the integral skew-adjoint D-linear maps and the trace form. The image
+orders are exact, from the certified generators (commuting with a Z-basis
+of the multiplier ring; the candidates are also required to lie in the
+integral commutant modulo p, which commuting with generators modulo p
+does not imply). Only s = 1 (G spans D, X = L_rho) is treated. Checked:
+Q8 on D4, D4^2, D4^3 (1/24, 1/1152, 1/82944, the principal genus), on E8
+as a Hurwitz lattice (1/1920, the non-principal genus), on 2Z^4 (the
+Lipschitz order, 1/8), on E8 + D4 (1/46080); 2I on the icosian E8 and
+E8^2 (centre Q(sqrt 5), 1/120 and 1/28800); each a single class confirmed
+by GENUS_EnumerateIsometry. Beyond reach: rank 16 at p = 2 (D4^4, the
+icosian lattice glued at 2, Lipschitz^2), the search modulo 2 exhausting
+its budget.
 
     GENUS_IsometryMass hermitianab [n] [h1,h2,...] [m]
     GENUS_IsometryMass hermitianablattice [Gram] [Omega] [n] [h1,h2,...]
