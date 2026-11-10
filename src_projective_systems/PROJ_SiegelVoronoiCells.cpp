@@ -297,6 +297,10 @@ int main(int argc, char *argv[]) {
       return l_fct;
     };
     int n_top_certified = 0;
+    // The configurations of the certified ridges: in the mode full the cells
+    // of dimension g (g + 1) - 1 are exactly the faces equivalent to one of
+    // them.
+    std::vector<MyMatrix<Tint>> l_ridge_certified;
     int n_ridge = 0;
     int n_ridge_certified = 0;
     size_t pos = 0;
@@ -392,6 +396,7 @@ int main(int argc, char *argv[]) {
         std::optional<MyMatrix<T>> opt_A_adj = certify_ridge(sp, cand.second, l_fct, i_F, l_fct1, i_F1);
         if (opt_A_adj) {
           n_ridge_certified++;
+          l_ridge_certified.push_back(EXT_facet);
         } else {
           // Only the certified ridges are crossed, so that every top cell
           // found is certified.
@@ -479,11 +484,52 @@ int main(int argc, char *argv[]) {
       runtime(time);
       return 0;
     }
-    // The cells: the faces of the top cells, up to G, by dimension.
+    /*
+      The cells: the faces of the top cells, up to G, by dimension. The
+      intersection with the Siegel space is decided once per orbit of faces
+      under G: the numerical oracle, run on two equivalent faces, can give
+      them different dimensions (for K(3) a copy of a facet rejected by the
+      walk was found of dimension 5, a ridge without a second top cell).
+      The facets of dimension 5 are the ones equivalent to a certified
+      ridge, the others are decided by the oracle on the first copy met.
+     */
     std::vector<std::vector<MyMatrix<Tint>>> ll_cell(7);
     std::vector<std::vector<double>> ll_margin(7);
     int n_ridge_non_facet = 0;
     int n_doubtful = 0;
+    // An invariant of the configurations up to G: the size and the sorted
+    // absolute values of the pairing.
+    auto f_invariant = [&](MyMatrix<Tint> const &EXT) -> std::vector<Tint> {
+      MyMatrix<Tint> G = EXT * J * EXT.transpose();
+      std::vector<Tint> V{Tint(EXT.rows())};
+      for (int i = 0; i < EXT.rows(); i++) {
+        for (int j = i + 1; j < EXT.rows(); j++) {
+          V.push_back(abs(G(i, j)));
+        }
+      }
+      std::sort(V.begin() + 1, V.end());
+      return V;
+    };
+    std::map<std::vector<Tint>, std::vector<std::pair<MyMatrix<Tint>, SiegelIntersection>>> map_orbit_si;
+    auto f_find_orbit = [&](MyMatrix<Tint> const &EXT) -> std::optional<SiegelIntersection> {
+      auto iter = map_orbit_si.find(f_invariant(EXT));
+      if (iter == map_orbit_si.end()) {
+        return {};
+      }
+      for (auto &pair : iter->second) {
+        if (are_equivalent_configurations(ring, EXT, pair.first)) {
+          return pair.second;
+        }
+      }
+      return {};
+    };
+    for (auto &EXT_ridge : l_ridge_certified) {
+      if (!f_find_orbit(EXT_ridge)) {
+        SiegelIntersection si{true, dim_top - 1, 1, false, {}};
+        map_orbit_si[f_invariant(EXT_ridge)].push_back({EXT_ridge, si});
+      }
+    }
+    int n_facet_orbit_rejected = 0;
     for (auto &top : l_top) {
       MyMatrix<Tint> EXT_cone = l_perfect[top.i_cone].EXT * top.M;
       std::vector<Face> l_facet;
@@ -496,10 +542,25 @@ int main(int argc, char *argv[]) {
         int dim = -1;
         double margin = 1;
         if (RankMat(EXT_face) == n) {
-          SiegelIntersection si = f_intersect(EXT_face);
-          if (si.doubtful) {
-            n_doubtful++;
-            std::cerr << "SIEGEL: doubtful EXT=" << StringMatrixGAP(EXT_face) << "\n";
+          std::optional<SiegelIntersection> opt_si = f_find_orbit(EXT_face);
+          SiegelIntersection si;
+          if (opt_si) {
+            si = *opt_si;
+          } else {
+            si = f_intersect(EXT_face);
+            if (si.doubtful) {
+              n_doubtful++;
+              std::cerr << "SIEGEL: doubtful EXT=" << StringMatrixGAP(EXT_face) << "\n";
+            }
+            if (set_facet.count(f) > 0 && si.nonempty && si.dim == dim_top - 1) {
+              // Not equivalent to a certified ridge: the walk tested an
+              // equivalent facet and found no ridge.
+              n_facet_orbit_rejected++;
+              std::cerr << "SIEGEL: facet of numerical dimension 5 not equivalent to a certified ridge, margin="
+                        << si.margin << " EXT=" << StringMatrixGAP(EXT_face) << "\n";
+              si.nonempty = false;
+            }
+            map_orbit_si[f_invariant(EXT_face)].push_back({EXT_face, si});
           }
           if (!si.nonempty) {
             continue;
@@ -553,7 +614,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "SIEGEL: " << n_ridge_non_facet << " cells of dimension 5 are not facets of their cone, not supported\n";
       throw TerminalException{1};
     }
-    std::cerr << "|doubtful faces|=" << n_doubtful << " (with repetitions)\n";
+    std::cerr << "|doubtful faces|=" << n_doubtful << " |facets of dimension 5 not certified|=" << n_facet_orbit_rejected
+              << "\n";
     /*
       The incidences: a configuration Y of the dimension d - 1 contained in
       a configuration X of the dimension d (X spanning R^4) is a face of X

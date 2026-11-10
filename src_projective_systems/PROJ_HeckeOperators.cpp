@@ -68,6 +68,37 @@ int main(int argc, char *argv[]) {
     std::string prefix = argv[7];
     std::ostream &os = std::cerr;
     psys::ProjectiveDescription desc = psys::read_description(file_desc);
+    if (file_hecke == "euler") {
+      // The orbits of cells only, without the boundaries: the orbifold
+      // Euler characteristic sum (-1)^dim / |Stab| over the well rounded
+      // cells, the cell of the index i having the dimension n_levels - 1 - i.
+      psys::ProjectiveCellComplex cx = psys::compute_projective_cell_complex(desc, os, false);
+      psys::ProjectiveComplexView view{cx};
+      int n_levels = cx.levels.size();
+      psys::T chi = 0;
+      for (int index = 0; index < n_levels; index++) {
+        int dim = n_levels - 1 - index;
+        int n_wr = 0;
+        psys::T chi_level = 0;
+        std::cerr << "  index=" << index << " dim=" << dim << " |Stab| of the well rounded orbits:";
+        for (int iOrb = 0; iOrb < view.n_orbit(index); iOrb++) {
+          if (!view.is_well_rounded(index, iOrb)) {
+            continue;
+          }
+          int64_t order = view.stabilizer_order(index, iOrb);
+          std::cerr << " " << order;
+          n_wr += 1;
+          chi_level += psys::T(1) / psys::T(static_cast<long>(order));
+        }
+        std::cerr << "\n    |orbits|=" << view.n_orbit(index) << " |well rounded|=" << n_wr
+                  << " sum 1/|Stab|=" << chi_level << "\n";
+        chi += (dim % 2 == 0) ? chi_level : psys::T(-chi_level);
+      }
+      std::cerr << "Euler characteristic=" << chi << "\n";
+      std::cerr << "Normal termination of PROJ_HeckeOperators\n";
+      runtime(time);
+      return 0;
+    }
     psys::ProjectiveCellComplex cx = psys::compute_projective_cell_complex(desc, os);
     psys::ProjectiveRing const &ring = cx.ring();
     int n_levels = cx.levels.size();
