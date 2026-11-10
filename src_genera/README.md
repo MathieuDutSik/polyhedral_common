@@ -253,10 +253,19 @@ exact as in Hecke.jl: mu num(local) times the standard mass is an
 integer, mu a multiple of the order of the finite subgroups of GL_m(K)
 (Minkowski, Guralnick-Lorenz). Checked against Hecke.jl on 753 local
 factors over 15 fields and the masses of 40 lattices, and for E not
-abelian the masses of 54 lattices; the characters and Dirichlet
+abelian the masses of 57 lattices; the characters and Dirichlet
 coefficients (110 lattices) and the values L(1 - r) (44, r = 1, 2)
-against PARI/GP. The number of terms is about A times a power of the
-precision; beyond 4 10^8 terms the mass is left not computed.
+against PARI/GP. The number of terms X is about A times a power of the
+precision, and the sum is organized so that only the a_k != 0 are
+visited, in memory O(sqrt X): the sqrt(X)-smooth k by a walk over the
+local series of the small primes, and the k = j q with a prime q >
+sqrt(X) as c_1(q) times a_j, j <= X / q, the primes being sieved by
+segments and those with c_1(q) = 0 skipped; c_1(q) is computed by the
+trace in F_q[x] / (f) in Montgomery arithmetic, and only for the q that
+split completely. Each term needs F(k / A) to abs_bits + log2 F relative
+bits: double precision, double-double or MPFR according to the segment.
+A cubic field with A^2 about 5 10^11 takes 0.6 s, a quartic one with A^2
+about 4 10^17 about 20 minutes (X about 10^10).
 `Test_QuadHeckeL` prints the character data, the coefficients and
 L(1 - r) of a lattice.
 The method is a choice, `QuadLValueMethod { Mpfr, Arb }` (an argument of

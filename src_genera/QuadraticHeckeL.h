@@ -48,19 +48,74 @@ template <typename T> struct QuadHeckeCharacter {
   int delta;
   Tint D_K;
   Tint norm_conductor;
+  // 2 and the primes of disc(f) and of N(d)
+  std::set<int64_t> bad;
   std::map<int64_t, std::vector<QuadHeckePrime>> primes;
 };
 
 /*
-  Arithmetic in F_p[x]/(f) for p < 2^31 and f monic of degree n, on fixed
-  arrays: the inner loop of the characters at the good primes.
+  Arithmetic in F_p[x]/(f) for an odd p < 2^61 and f monic of degree n, on
+  fixed arrays, in Montgomery form (x R mod p, R = 2^64): a product is one
+  128-bit multiplication and a reduction without division, the sums stay
+  below 2p < 2^62. The inner loop
+  of the characters at the good primes.
  */
 struct QuadHeckeModRing {
   int n;
   uint64_t p;
-  // the coefficients f_0, ..., f_{n-1} of f modulo p
+  // -p^{-1} mod 2^64, and R^2 mod p
+  uint64_t pinv;
+  uint64_t r2;
+  // the coefficients f_0, ..., f_{n-1} of f, in Montgomery form
   std::vector<uint64_t> f;
   std::vector<uint64_t> tmp;
+  void init(uint64_t p_in) {
+    p = p_in;
+    // Newton: x <- x (2 - p x) doubles the correct low bits of p^{-1}
+    uint64_t x = p;
+    for (int i = 0; i < 6; i++) {
+      x *= 2 - p * x;
+    }
+    pinv = ~x + 1;
+    unsigned __int128 R = (static_cast<unsigned __int128>(1) << 64) % p;
+    r2 = static_cast<uint64_t>(R * R % p);
+  }
+  uint64_t redc(unsigned __int128 T) const {
+    uint64_t m = static_cast<uint64_t>(T) * pinv;
+    unsigned __int128 t = (T + static_cast<unsigned __int128>(m) * p) >> 64;
+    uint64_t r = static_cast<uint64_t>(t);
+    return (r >= p) ? r - p : r;
+  }
+  uint64_t to_mont(uint64_t a) const {
+    return redc(static_cast<unsigned __int128>(a) * r2);
+  }
+  uint64_t from_mont(uint64_t a) const { return redc(a); }
+  uint64_t mont_mul(uint64_t a, uint64_t b) const {
+    return redc(static_cast<unsigned __int128>(a) * b);
+  }
+  // tmp (degree <= 2n - 2) reduced modulo f into out
+  void reduce(std::vector<uint64_t> &out) {
+    for (int k = 2 * n - 2; k >= n; k--) {
+      uint64_t c = tmp[k];
+      if (c == 0) {
+        continue;
+      }
+      // x^k = x^{k-n} x^n = -x^{k-n} sum_i f_i x^i
+      for (int i = 0; i < n; i++) {
+        uint64_t prod = mont_mul(c, f[i]);
+        uint64_t v = tmp[k - n + i];
+        tmp[k - n + i] = (v >= prod) ? v - prod : v + p - prod;
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      out[i] = tmp[i];
+    }
+  }
+  uint64_t add(uint64_t a, uint64_t b) const {
+    uint64_t v = a + b;
+    return (v >= p) ? v - p : v;
+  }
+  // out = a b in F_p[x]/(f), all in Montgomery form (out may alias a or b)
   void mul(std::vector<uint64_t> const &a, std::vector<uint64_t> const &b,
            std::vector<uint64_t> &out) {
     std::fill(tmp.begin(), tmp.end(), 0);
@@ -69,36 +124,48 @@ struct QuadHeckeModRing {
         continue;
       }
       for (int j = 0; j < n; j++) {
-        tmp[i + j] = (tmp[i + j] + a[i] * b[j]) % p;
+        tmp[i + j] = add(tmp[i + j], mont_mul(a[i], b[j]));
       }
     }
-    for (int k = 2 * n - 2; k >= n; k--) {
-      uint64_t c = tmp[k];
-      if (c == 0) {
+    reduce(out);
+  }
+  // out = a^2, with the products a_i a_j, i < j, counted twice
+  void sqr(std::vector<uint64_t> const &a, std::vector<uint64_t> &out) {
+    std::fill(tmp.begin(), tmp.end(), 0);
+    for (int i = 0; i < n; i++) {
+      if (a[i] == 0) {
         continue;
       }
-      // x^k = x^{k-n} x^n = -x^{k-n} sum_i f_i x^i
-      for (int i = 0; i < n; i++) {
-        tmp[k - n + i] = (tmp[k - n + i] + (p - c) * f[i]) % p;
+      tmp[2 * i] = add(tmp[2 * i], mont_mul(a[i], a[i]));
+      uint64_t a2 = add(a[i], a[i]);
+      for (int j = i + 1; j < n; j++) {
+        tmp[i + j] = add(tmp[i + j], mont_mul(a2, a[j]));
       }
     }
-    for (int i = 0; i < n; i++) {
-      out[i] = tmp[i];
-    }
+    reduce(out);
   }
-  void pow(std::vector<uint64_t> base, uint64_t e, std::vector<uint64_t> &out) {
-    std::vector<uint64_t> res(n, 0);
-    res[0] = 1;
-    std::vector<uint64_t> t(n);
-    while (e > 0) {
-      if (e & 1) {
-        mul(res, base, t);
-        res = t;
+  // out = base^e, with a window of 4 bits
+  void pow(std::vector<uint64_t> const &base, uint64_t e,
+           std::vector<uint64_t> &out) {
+    std::vector<std::vector<uint64_t>> tab(16, std::vector<uint64_t>(n, 0));
+    tab[0][0] = to_mont(1);
+    tab[1] = base;
+    for (int i = 2; i < 16; i++) {
+      mul(tab[i - 1], base, tab[i]);
+    }
+    int nbits = 0;
+    for (uint64_t x = e; x > 0; x >>= 1) {
+      nbits++;
+    }
+    int top = ((nbits + 3) / 4) * 4;
+    std::vector<uint64_t> res = tab[0];
+    for (int sh = top - 4; sh >= 0; sh -= 4) {
+      for (int t = 0; t < 4; t++) {
+        sqr(res, res);
       }
-      e >>= 1;
-      if (e > 0) {
-        mul(base, base, t);
-        base = t;
+      int w = static_cast<int>((e >> sh) & 15);
+      if (w != 0) {
+        mul(res, tab[w], res);
       }
     }
     out = res;
@@ -107,7 +174,7 @@ struct QuadHeckeModRing {
 
 /*
   The characters at a good prime p (p prime to 2 disc(f) N(d), p > 2n,
-  p < 2^31) without factoring f modulo p: K being Galois, the primes over p
+  p < 2^61) without factoring f modulo p: K being Galois, the primes over p
   have the same residue degree f_p, the order of p in (Z/N)^* / H. In
   O_K / p = (+)_P F_P the element w = prod_{i < f_p} d^{p^i} has the norm
   N_{F_P/F_p}(d) as component at P, and u = w^{(p-1)/2} is chi(P) = +-1
@@ -119,7 +186,11 @@ QuadHeckeGoodPrime(QuadHeckeModRing &R, std::vector<uint64_t> const &dq,
                    std::vector<uint64_t> const &traces, int f_p) {
   int n = R.n;
   uint64_t p = R.p;
-  std::vector<uint64_t> w = dq, z = dq;
+  std::vector<uint64_t> dm(n);
+  for (int i = 0; i < n; i++) {
+    dm[i] = R.to_mont(dq[i]);
+  }
+  std::vector<uint64_t> w = dm, z = dm;
   for (int i = 1; i < f_p; i++) {
     R.pow(z, p, z);
     R.mul(w, z, w);
@@ -128,7 +199,9 @@ QuadHeckeGoodPrime(QuadHeckeModRing &R, std::vector<uint64_t> const &dq,
   R.pow(w, (p - 1) / 2, u);
   uint64_t tr = 0;
   for (int i = 0; i < n; i++) {
-    tr = (tr + u[i] * traces[i]) % p;
+    uint64_t prod = static_cast<uint64_t>(
+        static_cast<unsigned __int128>(R.from_mont(u[i])) * traces[i] % p);
+    tr = (tr + prod) % p;
   }
   int64_t S = (tr > p / 2) ? static_cast<int64_t>(tr) - static_cast<int64_t>(p)
                            : static_cast<int64_t>(tr);
@@ -146,6 +219,126 @@ QuadHeckeGoodPrime(QuadHeckeModRing &R, std::vector<uint64_t> const &dq,
     lp.push_back({f_p, -1, 0});
   }
   return lp;
+}
+
+/*
+  The characters at the good primes p > 2n of the field K = Q(theta) of
+  conductor N with the subgroup H, for d on the powers of theta (made
+  integral): the residue degree of p is its order in (Z/N)^* / H, and the
+  sum of the chi(P) over the primes of degree 1, the coefficient c_1(p) of
+  p^{-s} in L(s, chi), is 0 unless p splits completely.
+ */
+template <typename Tint> struct QuadHeckeGoodPrimes {
+  int n;
+  int64_t N;
+  std::vector<char> inH;
+  std::vector<Tint> phi;
+  std::vector<Tint> dint;
+  std::vector<Tint> trZ;
+  QuadHeckeModRing R;
+  std::vector<uint64_t> dq;
+  std::vector<uint64_t> tr;
+  int residue_degree(int64_t p) const {
+    int f_p = 1;
+    int64_t x = p % N;
+    while (!inH[x]) {
+      x = static_cast<int64_t>(static_cast<__int128>(x) * (p % N) % N);
+      f_p++;
+    }
+    return f_p;
+  }
+  // phi, dint and trZ as machine integers, when they all fit
+  bool small = false;
+  std::vector<int64_t> phi_s, dint_s, trZ_s;
+  void make_small() {
+    Tint lim = UniversalScalarConversion<Tint, int64_t>(int64_t(1) << 62);
+    small = true;
+    for (auto const *v : {&phi, &dint, &trZ}) {
+      for (auto const &x : *v) {
+        if (T_abs(x) >= lim) {
+          small = false;
+        }
+      }
+    }
+    if (small) {
+      for (int i = 0; i < n; i++) {
+        phi_s.push_back(UniversalScalarConversion<int64_t, Tint>(phi[i]));
+        dint_s.push_back(UniversalScalarConversion<int64_t, Tint>(dint[i]));
+        trZ_s.push_back(UniversalScalarConversion<int64_t, Tint>(trZ[i]));
+      }
+    }
+  }
+  void setup(int64_t p) {
+    R.init(static_cast<uint64_t>(p));
+    if (small) {
+      auto residue = [&](int64_t c) -> uint64_t {
+        int64_t r = c % p;
+        return static_cast<uint64_t>((r < 0) ? r + p : r);
+      };
+      for (int i = 0; i < n; i++) {
+        R.f[i] = R.to_mont(residue(phi_s[i]));
+        dq[i] = residue(dint_s[i]);
+        tr[i] = residue(trZ_s[i]);
+      }
+      return;
+    }
+    Tint pz = UniversalScalarConversion<Tint, int64_t>(p);
+    auto residue = [&](Tint const &c) -> uint64_t {
+      Tint r = ResInt(c, pz);
+      return static_cast<uint64_t>(UniversalScalarConversion<int64_t, Tint>(r));
+    };
+    for (int i = 0; i < n; i++) {
+      R.f[i] = R.to_mont(residue(phi[i]));
+      dq[i] = residue(dint[i]);
+      tr[i] = residue(trZ[i]);
+    }
+  }
+  std::vector<QuadHeckePrime> local(int64_t p) {
+    setup(p);
+    return QuadHeckeGoodPrime(R, dq, tr, residue_degree(p));
+  }
+  int c1(int64_t p) {
+    if (residue_degree(p) != 1) {
+      return 0;
+    }
+    setup(p);
+    int res = 0;
+    for (auto const &P : QuadHeckeGoodPrime(R, dq, tr, 1)) {
+      res += P.chi;
+    }
+    return res;
+  }
+};
+
+template <typename T>
+QuadHeckeGoodPrimes<typename underlying_z_ring<T>::ring_type>
+MakeQuadHeckeGoodPrimes(AbelianCMField const &FK,
+                        std::vector<typename underlying_z_ring<T>::ring_type> const &dint,
+                        CyclotomicField<T> const &K) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
+  QuadHeckeGoodPrimes<Tint> G;
+  int n = K.deg;
+  G.n = n;
+  G.N = FK.n;
+  G.inH.assign(FK.n, 0);
+  for (int64_t h : FK.H) {
+    G.inH[h] = 1;
+  }
+  for (int i = 0; i < n; i++) {
+    G.phi.push_back(UniversalScalarConversion<Tint, int64_t>(K.Phi[i]));
+  }
+  G.dint = dint;
+  std::vector<T> trT = PowerTraces<T>(K.Phi, n);
+  for (int i = 0; i < n; i++) {
+    G.trZ.push_back(GetNumerator_z(trT[i]));
+  }
+  G.R.n = n;
+  G.R.f.resize(n);
+  G.R.tmp.resize(2 * n);
+  G.dq.resize(n);
+  G.tr.resize(n);
+  G.make_small();
+  return G;
 }
 
 /*
@@ -197,6 +390,7 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
       }
     }
   }
+  res.bad = bad;
   // D_K from the characters
   DirichletGroup G = ComputeDirichletGroup(FK.n);
   std::vector<std::vector<int64_t>> XK = FieldCharacters(G, FK.H, true);
@@ -215,26 +409,7 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
       plist_big.push_back(p);
     }
   }
-  // for the good primes: H, the traces of the powers of theta
-  std::vector<char> inH(FK.n, 0);
-  for (int64_t h : FK.H) {
-    inH[h] = 1;
-  }
-  std::vector<T> trT = PowerTraces<T>(K.Phi, n);
-  std::vector<Tint> trZ(n);
-  for (int i = 0; i < n; i++) {
-    trZ[i] = GetNumerator_z(trT[i]);
-  }
-  QuadHeckeModRing R;
-  R.n = n;
-  R.f.resize(n);
-  R.tmp.resize(2 * n);
-  std::vector<uint64_t> dq_u(n), tr_u(n);
-  auto residue = [](Tint const &c, int64_t p) -> uint64_t {
-    Tint pz = UniversalScalarConversion<Tint, int64_t>(p);
-    Tint r = ResInt(c, pz);
-    return static_cast<uint64_t>(UniversalScalarConversion<int64_t, Tint>(r));
-  };
+  QuadHeckeGoodPrimes<Tint> GP = MakeQuadHeckeGoodPrimes(FK, dint, K);
   size_t i_big = 0;
   int64_t p_next = 2;
   auto next_prime = [&]() -> int64_t {
@@ -254,21 +429,8 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
   };
   for (int64_t p = next_prime(); p != 0; p = next_prime()) {
     std::vector<QuadHeckePrime> lp;
-    if (bad.count(p) == 0 && p > 2 * n && p < (int64_t(1) << 31)) {
-      R.p = static_cast<uint64_t>(p);
-      for (int i = 0; i < n; i++) {
-        Tint c = UniversalScalarConversion<Tint, int64_t>(K.Phi[i]);
-        R.f[i] = residue(c, p);
-        dq_u[i] = residue(dint[i], p);
-        tr_u[i] = residue(trZ[i], p);
-      }
-      int f_p = 1;
-      int64_t x = p % FK.n;
-      while (!inH[x]) {
-        x = (x * p) % FK.n;
-        f_p++;
-      }
-      lp = QuadHeckeGoodPrime(R, dq_u, tr_u, f_p);
+    if (bad.count(p) == 0 && p > 2 * n) {
+      lp = GP.local(p);
     } else if (bad.count(p) == 0) {
       PolyQ fq = PolyReduce(PolyQ(K.Phi.begin(), K.Phi.end()), p);
       PolyQ dq;
@@ -600,12 +762,92 @@ inline mpfr::mpreal QuadHeckeKernelValue(QuadHeckeKernel const &ker,
 }
 
 /*
+  Double-double numbers hi + lo, |lo| <= ulp(hi) / 2, about 106 bits, for
+  the terms of the sum that need more than double precision but much less
+  than the working precision (Dekker, Knuth; Hida, Li and Bailey).
+ */
+struct QuadDD {
+  double hi;
+  double lo;
+};
+
+inline QuadDD QuadDDTwoSum(double a, double b) {
+  double s = a + b;
+  double bb = s - a;
+  double e = (a - (s - bb)) + (b - bb);
+  return {s, e};
+}
+
+inline QuadDD QuadDDQuickTwoSum(double a, double b) {
+  double s = a + b;
+  return {s, b - (s - a)};
+}
+
+inline QuadDD QuadDDAdd(QuadDD a, QuadDD b) {
+  QuadDD s = QuadDDTwoSum(a.hi, b.hi);
+  QuadDD t = QuadDDTwoSum(a.lo, b.lo);
+  s.lo += t.hi;
+  s = QuadDDQuickTwoSum(s.hi, s.lo);
+  s.lo += t.lo;
+  return QuadDDQuickTwoSum(s.hi, s.lo);
+}
+
+inline QuadDD QuadDDMul(QuadDD a, QuadDD b) {
+  double p = a.hi * b.hi;
+  double e = std::fma(a.hi, b.hi, -p);
+  e += a.hi * b.lo + a.lo * b.hi;
+  return QuadDDQuickTwoSum(p, e);
+}
+
+inline QuadDD QuadDDFromMpreal(mpfr::mpreal const &x) {
+  double hi = x.toDouble();
+  double lo = (x - mpfr::mpreal(hi)).toDouble();
+  return QuadDDQuickTwoSum(hi, lo);
+}
+
+inline mpfr::mpreal QuadDDToMpreal(QuadDD const &x) {
+  return mpfr::mpreal(x.hi) + mpfr::mpreal(x.lo);
+}
+
+// exp(x) for |x| < 700: x = k log 2 + r, exp(r / 2^10) by Taylor, then 10
+// squarings kept as expm1 (2 e + e^2), and the scaling by 2^k
+inline QuadDD QuadDDExp(QuadDD x) {
+  const QuadDD ln2{0.6931471805599453, 2.3190468138462996e-17};
+  double k = std::nearbyint(x.hi / ln2.hi);
+  QuadDD r = QuadDDAdd(x, QuadDDMul(ln2, QuadDD{-k, 0.0}));
+  r.hi = std::ldexp(r.hi, -10);
+  r.lo = std::ldexp(r.lo, -10);
+  // expm1(r) = r + r^2/2 + ... + r^9/9!
+  QuadDD e = r;
+  QuadDD term = r;
+  for (int i = 2; i <= 9; i++) {
+    term = QuadDDMul(term, r);
+    term.hi /= i;
+    term.lo /= i;
+    term = QuadDDQuickTwoSum(term.hi, term.lo);
+    e = QuadDDAdd(e, term);
+  }
+  for (int i = 0; i < 10; i++) {
+    // expm1(2y) = 2 expm1(y) + expm1(y)^2
+    QuadDD two_e{2 * e.hi, 2 * e.lo};
+    e = QuadDDAdd(two_e, QuadDDMul(e, e));
+  }
+  QuadDD res = QuadDDAdd(QuadDD{1.0, 0.0}, e);
+  int ki = static_cast<int>(k);
+  return {std::ldexp(res.hi, ki), std::ldexp(res.lo, ki)};
+}
+
+/*
   The kernel F(t) = G_s(t) + G_{1-s}(t) is positive (phi is), and is
   evaluated on the terms k = 1, ..., X through a Chebyshev interpolation
   of g(u) = log F(e^u) on segments of the variable u = log t: the series
   above is only computed at the nodes, at the working precision, and a
   segment is halved until the last two Chebyshev coefficients are below
-  the tolerance, which bounds the error of F by 2^{-abs_bits}.
+  the tolerance, which bounds the error of F by 2^{-abs_bits}. A term only
+  needs F to abs_bits + log2 F relative bits, so a segment is evaluated in
+  double precision when that is at most 45 bits, in double-double when it
+  is at most 85, and with MPFR otherwise: the terms are mostly in the
+  first two bands.
  */
 struct QuadHeckeInterp {
   mpfr_prec_t eprec;
@@ -613,6 +855,14 @@ struct QuadHeckeInterp {
   std::vector<mpfr::mpreal> mid;
   std::vector<mpfr::mpreal> half;
   std::vector<std::vector<mpfr::mpreal>> coef;
+  // 0: MPFR, 1: double-double, 2: double
+  std::vector<int> band;
+  std::vector<double> mid_d;
+  std::vector<double> half_d;
+  std::vector<std::vector<double>> coef_d;
+  std::vector<QuadDD> mid_dd;
+  std::vector<QuadDD> half_dd;
+  std::vector<std::vector<QuadDD>> coef_dd;
 };
 
 inline QuadHeckeInterp MakeQuadHeckeInterp(QuadHeckeKernel const &ker,
@@ -681,6 +931,23 @@ inline QuadHeckeInterp MakeQuadHeckeInterp(QuadHeckeKernel const &ker,
       ce[k] = at_eprec(c[k]);
     }
     res.coef.push_back(ce);
+    std::vector<double> cd(D + 1);
+    for (int k = 0; k <= D; k++) {
+      cd[k] = c[k].toDouble();
+    }
+    res.coef_d.push_back(cd);
+    res.mid_d.push_back((a + b) / 2);
+    res.half_d.push_back((b - a) / 2);
+    std::vector<QuadDD> cdd(D + 1);
+    for (int k = 0; k <= D; k++) {
+      cdd[k] = QuadDDFromMpreal(c[k]);
+    }
+    res.coef_dd.push_back(cdd);
+    res.mid_dd.push_back(QuadDDFromMpreal(m));
+    res.half_dd.push_back(QuadDDFromMpreal(h));
+    // the relative bits needed, with a margin
+    double needed = abs_bits + gmax / std::log(2.0) + 8;
+    res.band.push_back((needed <= 45) ? 2 : ((needed <= 85) ? 1 : 0));
   };
   for (double a = u0; a < u1; a += 1.0) {
     build(a, std::min(a + 1.0, u1), 0);
@@ -688,14 +955,17 @@ inline QuadHeckeInterp MakeQuadHeckeInterp(QuadHeckeKernel const &ker,
   return res;
 }
 
-// F(e^u), seg being the index of the segment of u (moved forward)
+// the segment of u: the last one starting at or below it
+inline size_t QuadHeckeSegment(QuadHeckeInterp const &I, double ud) {
+  size_t i = static_cast<size_t>(
+      std::upper_bound(I.lo.begin(), I.lo.end(), ud) - I.lo.begin());
+  return (i == 0) ? 0 : i - 1;
+}
+
+// F(e^u) on the segment seg
 inline mpfr::mpreal QuadHeckeInterpValue(QuadHeckeInterp const &I,
-                                         mpfr::mpreal const &u, double ud,
-                                         size_t &seg) {
+                                         mpfr::mpreal const &u, size_t seg) {
   using mpfr::mpreal;
-  while (seg + 1 < I.lo.size() && I.lo[seg + 1] <= ud) {
-    seg++;
-  }
   std::vector<mpreal> const &c = I.coef[seg];
   mpreal x = (u - I.mid[seg]) / I.half[seg];
   mpreal x2 = 2 * x;
@@ -706,6 +976,46 @@ inline mpfr::mpreal QuadHeckeInterpValue(QuadHeckeInterp const &I,
     b1 = b0;
   }
   return mpfr::exp(x * b1 - b2 + c[0]);
+}
+
+// the same in double-double
+inline QuadDD QuadHeckeInterpValueDD(QuadHeckeInterp const &I, QuadDD u,
+                                     size_t seg) {
+  std::vector<QuadDD> const &c = I.coef_dd[seg];
+  // x = (u - m) / h, h a power of 2 times a double
+  QuadDD diff = QuadDDAdd(u, QuadDD{-I.mid_dd[seg].hi, -I.mid_dd[seg].lo});
+  double inv = 1.0 / I.half_dd[seg].hi;
+  QuadDD x = QuadDDMul(diff, QuadDD{inv, 0.0});
+  // one Newton step for the division: x += (diff - x h) / h
+  QuadDD xh = QuadDDMul(x, I.half_dd[seg]);
+  QuadDD r = QuadDDAdd(diff, QuadDD{-xh.hi, -xh.lo});
+  x = QuadDDAdd(x, QuadDDMul(r, QuadDD{inv, 0.0}));
+  QuadDD x2{2 * x.hi, 2 * x.lo};
+  QuadDD b1{0, 0}, b2{0, 0};
+  for (int k = static_cast<int>(c.size()) - 1; k >= 1; k--) {
+    QuadDD b0 = QuadDDAdd(QuadDDAdd(QuadDDMul(x2, b1), QuadDD{-b2.hi, -b2.lo}),
+                          c[k]);
+    b2 = b1;
+    b1 = b0;
+  }
+  QuadDD g = QuadDDAdd(QuadDDAdd(QuadDDMul(x, b1), QuadDD{-b2.hi, -b2.lo}),
+                       c[0]);
+  return QuadDDExp(g);
+}
+
+// the same in double precision
+inline double QuadHeckeInterpValueDouble(QuadHeckeInterp const &I, double u,
+                                         size_t seg) {
+  std::vector<double> const &c = I.coef_d[seg];
+  double x = (u - I.mid_d[seg]) / I.half_d[seg];
+  double x2 = 2 * x;
+  double b1 = 0, b2 = 0;
+  for (int k = static_cast<int>(c.size()) - 1; k >= 1; k--) {
+    double b0 = x2 * b1 - b2 + c[k];
+    b2 = b1;
+    b1 = b0;
+  }
+  return std::exp(x * b1 - b2 + c[0]);
 }
 
 // The local series prod_{P | p} 1 / (1 - chi(P) u^{f_P}) up to u^kmax
@@ -734,10 +1044,11 @@ QuadHeckeLocalSeries(std::vector<QuadHeckePrime> const &lp, int kmax) {
 
 /*
   The data of L(s, chi) for the lattice: the character, and for the
-  Dirichlet coefficients up to X the coefficient c1[p] of p^{-s} at the
-  primes p <= X (a sum of at most n values chi(P)) and the local series at
-  the primes p <= sqrt(X). The a_k are then produced by blocks
-  (QuadHeckeBlock), without a table of size X.
+  Dirichlet coefficients a_k, k <= X, the local series at the primes p <= S,
+  S = max(floor(sqrt X), 2n), the a_j for j <= S, and the coefficients
+  c_1(q) of q^{-s} at the bad primes q > S; at the other primes q > S,
+  c_1(q) is computed when needed (QuadHeckeGoodPrimes). Everything is of
+  size O(sqrt X).
  */
 template <typename T> struct QuadHeckeLData {
   using Tint = typename underlying_z_ring<T>::ring_type;
@@ -750,9 +1061,16 @@ template <typename T> struct QuadHeckeLData {
   int n;
   int delta;
   Tint A2;
+  std::set<int64_t> bad;
+  QuadHeckeGoodPrimes<Tint> GP;
   int64_t X;
-  std::vector<int8_t> c1;
+  int64_t S;
   std::vector<std::pair<int64_t, std::vector<int64_t>>> small;
+  std::vector<int64_t> a_small;
+  std::map<int64_t, int> c1_bad;
+  // log p for the small primes, log j for j <= S
+  std::vector<QuadDD> log_small;
+  std::vector<QuadDD> log_j;
 };
 
 template <typename T>
@@ -760,15 +1078,36 @@ std::optional<QuadHeckeLData<T>>
 MakeQuadHeckeLData(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
                    AbelianCMField const &FK, ElemE<T> const &d,
                    CyclotomicField<T> const &K, int m) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   auto f_none = [](int64_t, std::vector<QuadHeckePrime> const &) -> void {};
   std::optional<QuadHeckeCharacter<T>> C =
       ComputeQuadHeckeCharacter(B, Omega, FK, d, K, m, 2, false, f_none);
   if (!C) {
     return {};
   }
-  QuadHeckeLData<T> res{
-      B, Omega, FK, d, K, m, C->n, C->delta, C->D_K * C->norm_conductor,
-      0, {},    {}};
+  auto [dz, den] = ClearDenominators(d);
+  std::vector<Tint> dint;
+  for (auto const &c : dz) {
+    dint.push_back(c * den);
+  }
+  QuadHeckeLData<T> res{B,
+                        Omega,
+                        FK,
+                        d,
+                        K,
+                        m,
+                        C->n,
+                        C->delta,
+                        C->D_K * C->norm_conductor,
+                        C->bad,
+                        MakeQuadHeckeGoodPrimes(FK, dint, K),
+                        0,
+                        0,
+                        {},
+                        {},
+                        {},
+                        {},
+                        {}};
   return res;
 }
 
@@ -776,62 +1115,149 @@ template <typename T> void QuadHeckeLExtend(QuadHeckeLData<T> &Ld, int64_t X) {
   if (X <= Ld.X) {
     return;
   }
-  int64_t sq = 1;
-  while ((sq + 1) * (sq + 1) <= X) {
-    sq++;
+  int64_t S = 1;
+  while ((S + 1) * (S + 1) <= X) {
+    S++;
   }
-  Ld.c1.assign(X + 1, 0);
+  S = std::max<int64_t>(S, 2 * Ld.n);
   Ld.small.clear();
+  Ld.c1_bad.clear();
   auto f_prime = [&](int64_t p, std::vector<QuadHeckePrime> const &lp) -> void {
-    if (p > X) {
-      return;
-    }
-    int64_t c = 0;
-    for (auto const &P : lp) {
-      if (P.f == 1) {
-        c += P.chi;
-      }
-    }
-    Ld.c1[p] = static_cast<int8_t>(c);
-    if (p <= sq) {
+    if (p <= S) {
       int kmax = 0;
       for (int64_t x = 1; x <= X / p; x *= p) {
         kmax++;
       }
       Ld.small.push_back({p, QuadHeckeLocalSeries(lp, kmax)});
+    } else if (p <= X) {
+      int c = 0;
+      for (auto const &P : lp) {
+        if (P.f == 1) {
+          c += P.chi;
+        }
+      }
+      Ld.c1_bad[p] = c;
     }
   };
-  ComputeQuadHeckeCharacter(Ld.B, Ld.Omega, Ld.FK, Ld.d, Ld.K, Ld.m, X, false,
+  ComputeQuadHeckeCharacter(Ld.B, Ld.Omega, Ld.FK, Ld.d, Ld.K, Ld.m, S, false,
                             f_prime);
-  Ld.X = X;
-}
-
-// a_k for k0 <= k < k1, k1 <= X + 1
-template <typename T>
-void QuadHeckeBlock(QuadHeckeLData<T> const &Ld, int64_t k0, int64_t k1,
-                    std::vector<int64_t> &a, std::vector<int64_t> &rem) {
-  size_t len = static_cast<size_t>(k1 - k0);
-  a.assign(len, 1);
-  rem.resize(len);
-  for (size_t i = 0; i < len; i++) {
-    rem[i] = k0 + static_cast<int64_t>(i);
+  // a_j for j <= S
+  Ld.a_small.assign(S + 1, 1);
+  Ld.a_small[0] = 0;
+  std::vector<int64_t> rem(S + 1);
+  for (int64_t j = 0; j <= S; j++) {
+    rem[j] = j;
   }
   for (auto const &[p, c] : Ld.small) {
-    int64_t first = ((k0 + p - 1) / p) * p;
-    for (int64_t k = first; k < k1; k += p) {
-      size_t i = static_cast<size_t>(k - k0);
+    for (int64_t j = p; j <= S; j += p) {
       int e = 0;
-      while (rem[i] % p == 0) {
-        rem[i] /= p;
+      while (rem[j] % p == 0) {
+        rem[j] /= p;
         e++;
       }
-      a[i] *= (e < static_cast<int>(c.size())) ? c[e] : 0;
+      Ld.a_small[j] *= (e < static_cast<int>(c.size())) ? c[e] : 0;
     }
   }
-  for (size_t i = 0; i < len; i++) {
-    if (rem[i] > 1) {
-      // a prime above sqrt(X), to the power 1
-      a[i] *= Ld.c1[rem[i]];
+  {
+    mpfr_prec_t old = mpfr::mpreal::get_default_prec();
+    mpfr::mpreal::set_default_prec(160);
+    Ld.log_small.clear();
+    for (auto const &pc : Ld.small) {
+      Ld.log_small.push_back(QuadDDFromMpreal(
+          mpfr::log(mpfr::mpreal(static_cast<unsigned long>(pc.first)))));
+    }
+    Ld.log_j.assign(S + 1, QuadDD{0, 0});
+    for (int64_t j = 2; j <= S; j++) {
+      Ld.log_j[j] = QuadDDFromMpreal(
+          mpfr::log(mpfr::mpreal(static_cast<unsigned long>(j))));
+    }
+    mpfr::mpreal::set_default_prec(old);
+  }
+  Ld.X = X;
+  Ld.S = S;
+}
+
+// log q to double-double precision, q < 2^53: y = log q in double, then
+// log q = y + log(q e^{-y}) with q e^{-y} = 1 + delta, |delta| < 2^{-50}
+inline QuadDD QuadDDLogInteger(int64_t q) {
+  double y = std::log(static_cast<double>(q));
+  QuadDD e = QuadDDExp(QuadDD{-y, 0.0});
+  QuadDD t = QuadDDMul(e, QuadDD{static_cast<double>(q), 0.0});
+  QuadDD delta = QuadDDAdd(t, QuadDD{-1.0, 0.0});
+  return QuadDDAdd(QuadDD{y, 0.0}, delta);
+}
+
+/*
+  f(k, a_k, log k) for the k <= X with a_k != 0, X <= Ld.X, in no
+  particular order, log k in double-double: the S-smooth k by a depth-first walk over the local series of the
+  primes p <= S (skipping the zero coefficients and what lies under them),
+  and the k = j q with a prime q > S (at most one, as S^2 >= X) and j <= X /
+  q <= S from a segmented sieve over (S, X], the primes with c_1(q) = 0
+  being skipped.
+ */
+template <typename T, typename F>
+void QuadHeckeForEachTerm(QuadHeckeLData<T> &Ld, int64_t X, F &&f) {
+  int64_t S = Ld.S;
+  std::function<void(size_t, int64_t, int64_t, QuadDD)> dfs =
+      [&](size_t i0, int64_t k, int64_t ak, QuadDD lk) -> void {
+    for (size_t i = i0; i < Ld.small.size(); i++) {
+      int64_t p = Ld.small[i].first;
+      if (k > X / p) {
+        break;
+      }
+      std::vector<int64_t> const &c = Ld.small[i].second;
+      int64_t kk = k;
+      QuadDD lkk = lk;
+      for (size_t e = 1; kk <= X / p; e++) {
+        kk *= p;
+        lkk = QuadDDAdd(lkk, Ld.log_small[i]);
+        if (e < c.size() && c[e] != 0) {
+          f(kk, ak * c[e], lkk);
+          dfs(i + 1, kk, ak * c[e], lkk);
+        }
+      }
+    }
+  };
+  f(int64_t(1), int64_t(1), QuadDD{0.0, 0.0});
+  dfs(0, 1, 1, QuadDD{0.0, 0.0});
+  // the primes q in (S, X]
+  const int64_t block = int64_t(1) << 22;
+  std::vector<char> is_p;
+  for (int64_t lo = S + 1; lo <= X; lo += block) {
+    int64_t hi = std::min(lo + block, X + 1);
+    is_p.assign(hi - lo, 1);
+    for (auto const &pc : Ld.small) {
+      int64_t p = pc.first;
+      if (p * p >= hi) {
+        break;
+      }
+      int64_t first = std::max(p * p, ((lo + p - 1) / p) * p);
+      for (int64_t x = first; x < hi; x += p) {
+        is_p[x - lo] = 0;
+      }
+    }
+    for (int64_t q = lo; q < hi; q++) {
+      if (!is_p[q - lo]) {
+        continue;
+      }
+      int c = 0;
+      if (Ld.bad.count(q) == 1) {
+        auto it = Ld.c1_bad.find(q);
+        c = (it == Ld.c1_bad.end()) ? 0 : it->second;
+      } else {
+        c = Ld.GP.c1(q);
+      }
+      if (c == 0) {
+        continue;
+      }
+      int64_t jmax = X / q;
+      QuadDD lq = QuadDDLogInteger(q);
+      for (int64_t j = 1; j <= jmax; j++) {
+        int64_t aj = Ld.a_small[j];
+        if (aj != 0) {
+          f(j * q, aj * c, QuadDDAdd(lq, Ld.log_j[j]));
+        }
+      }
     }
   }
 }
@@ -840,7 +1266,7 @@ void QuadHeckeBlock(QuadHeckeLData<T> const &Ld, int64_t k0, int64_t k1,
   L(1 - r, chi) to about prec_bits relative bits: Lambda(1 - r) from the
   sum, divided by A^{1-r} gamma(1-r) (no pole there: (1 - r + delta)/2 is
   a half-integer as r = delta + 1 mod 2). Nothing when the number of terms
-  exceeds the limit.
+  exceeds the limit (10^12).
  */
 template <typename T>
 std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
@@ -858,7 +1284,7 @@ std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
   double log2_scale =
       (r * logA) / std::log(2.0) +
       mpfr::log2(mpfr::abs(QuadHeckeGamma(mpreal(r, p0), n, delta))).toDouble();
-  double target = std::max(20.0, prec_bits - log2_scale + 20);
+  double target = std::max(20.0, prec_bits - log2_scale + 10);
   // the cutoff: n pi t^{2/n} - (r + n) log t > target log 2 + log(A t)
   double t_max = 1.0;
   auto tail_ok = [&](double t) -> bool {
@@ -869,8 +1295,8 @@ std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
     t_max *= 1.05;
   }
   double X_double = std::ceil(t_max * std::exp(logA)) + 1;
-  // each term to 2^{-abs_bits}: the X terms and the coefficients
-  double abs_bits = target + std::log2(X_double) + 24;
+  // each term to 2^{-abs_bits}, the X terms then add up to 2^{-target}
+  double abs_bits = target + std::log2(X_double) + 6;
   double log2_peak = n * M_PI * std::pow(t_max, 2.0 / n) / std::log(2.0);
   double log2_Fmax = std::max(0.0, log2_scale) + 8;
   mpfr_prec_t wprec =
@@ -904,9 +1330,8 @@ std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
       }
     }
   }
-  // beyond this the sum (and the table of the coefficients of the primes,
-  // one byte each) is out of reach: the mass is left not computed
-  const double X_limit = 4.0e8;
+  // beyond this the sum is out of reach: the mass is left not computed
+  const double X_limit = 1.0e12;
   if (X_double > X_limit) {
     std::cerr << "QHECKE: L(1-r) needs " << X_double
               << " terms (A^2 = " << Ld.A2 << "), beyond the limit " << X_limit
@@ -919,29 +1344,48 @@ std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
   std::chrono::steady_clock::time_point tc0 = std::chrono::steady_clock::now();
 #endif
   QuadHeckeLExtend(Ld, X);
+  QuadHeckeInterp I = MakeQuadHeckeInterp(ker, u0, u1, abs_bits, eprec);
 #ifdef DEBUG_QHECKE
   std::chrono::steady_clock::time_point tc1 = std::chrono::steady_clock::now();
-  std::cerr << "QHECKE: coefficients up to " << X << " in "
+  std::cerr << "QHECKE: data up to " << X << " (S=" << Ld.S << ") in "
             << std::chrono::duration<double>(tc1 - tc0).count() << " s\n";
 #endif
-  QuadHeckeInterp I = MakeQuadHeckeInterp(ker, u0, u1, abs_bits, eprec);
   mpreal::set_default_prec(eprec);
   mpreal logAe = mpfr::log(mpreal_from_integer(Ld.A2, eprec)) / 2;
+  double logA_d = logAe.toDouble();
   mpreal Lambda = 0;
-  size_t seg = 0;
-  std::vector<int64_t> a, rem;
-  const int64_t block = int64_t(1) << 20;
-  for (int64_t k0 = 1; k0 <= X; k0 += block) {
-    int64_t k1 = std::min(k0 + block, X + 1);
-    QuadHeckeBlock(Ld, k0, k1, a, rem);
-    for (int64_t k = k0; k < k1; k++) {
-      int64_t ak = a[k - k0];
-      if (ak != 0) {
-        mpreal u = mpfr::log(mpreal(k)) - logAe;
-        Lambda += ak * QuadHeckeInterpValue(I, u, u.toDouble(), seg);
-      }
+  QuadDD logA_dd = QuadDDFromMpreal(logAe);
+  QuadDD mlogA_dd{-logA_dd.hi, -logA_dd.lo};
+  // the double and double-double terms, summed in double-double
+  QuadDD sum_dd{0, 0};
+  int64_t n_mpfr = 0, n_dd = 0, n_dbl = 0;
+  QuadHeckeForEachTerm(Ld, X, [&](int64_t k, int64_t ak, QuadDD lk) -> void {
+    double ud = lk.hi - logA_d;
+    size_t seg = QuadHeckeSegment(I, ud);
+    if (I.band[seg] == 2) {
+      double v =
+          static_cast<double>(ak) * QuadHeckeInterpValueDouble(I, ud, seg);
+      sum_dd = QuadDDAdd(sum_dd, QuadDD{v, 0.0});
+      n_dbl++;
+    } else if (I.band[seg] == 1) {
+      QuadDD u = QuadDDAdd(lk, mlogA_dd);
+      QuadDD v = QuadDDMul(QuadHeckeInterpValueDD(I, u, seg),
+                           QuadDD{static_cast<double>(ak), 0.0});
+      sum_dd = QuadDDAdd(sum_dd, v);
+      n_dd++;
+    } else {
+      mpreal u = mpfr::log(mpreal(static_cast<unsigned long>(k))) - logAe;
+      Lambda += ak * QuadHeckeInterpValue(I, u, seg);
+      n_mpfr++;
     }
-  }
+  });
+  Lambda += QuadDDToMpreal(sum_dd);
+#ifdef DEBUG_QHECKE
+  std::chrono::steady_clock::time_point tc2 = std::chrono::steady_clock::now();
+  std::cerr << "QHECKE: " << n_mpfr << " terms with MPFR, " << n_dd
+            << " in double-double, " << n_dbl << " in double, in "
+            << std::chrono::duration<double>(tc2 - tc1).count() << " s\n";
+#endif
   mpreal s1 = mpreal(1 - r);
   mpreal res = Lambda / (mpfr::exp(logAe * s1) * QuadHeckeGamma(s1, n, delta));
 #ifdef DEBUG_QHECKE
@@ -1066,8 +1510,8 @@ std::optional<T> QuadraticMassNonAbelianE(
   if (!Ld) {
     return {};
   }
-  // the size of b
-  std::optional<mpreal> L0 = QuadHeckeLNegative(*Ld, 48);
+  // the size of b, for which a few bits of L(1 - r) are enough
+  std::optional<mpreal> L0 = QuadHeckeLNegative(*Ld, 24);
   if (!L0) {
     return {};
   }

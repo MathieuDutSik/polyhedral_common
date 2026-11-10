@@ -426,30 +426,24 @@ std::optional<ArbReal> QuadHeckeLNegativeArb(QuadHeckeLData<T> &Ld,
   ArbReal logAb = arb_log(arb_from_integer(Ld.A2)) / ArbReal(2);
   ArbReal Lambda(0);
   std::vector<int64_t> abs_sum(I->lo.size(), 0);
-  size_t seg = 0;
-  std::vector<int64_t> a, rem;
-  const int64_t block = int64_t(1) << 20;
-  for (int64_t k0 = 1; k0 <= X; k0 += block) {
-    int64_t k1 = std::min(k0 + block, X + 1);
-    QuadHeckeBlock(Ld, k0, k1, a, rem);
-    for (int64_t k = k0; k < k1; k++) {
-      int64_t ak = a[k - k0];
-      if (ak == 0) {
-        continue;
-      }
-      ArbReal u = arb_log(ArbReal(static_cast<slong>(k))) - logAb;
-      double ud = u.mid_d();
-      while (seg + 1 < I->lo.size() && I->lo[seg + 1] <= ud) {
-        seg++;
-      }
-      if (ud < I->lo[seg] - 1e-9 || ud > I->hi[seg] + 1e-9) {
-        std::cerr << "QHECKE_ARB: u_k=" << ud << " outside the segments\n";
-        return {};
-      }
-      Lambda +=
-          ArbReal(static_cast<slong>(ak)) * QuadHeckeInterpArbValue(*I, u, seg);
-      abs_sum[seg] += (ak < 0) ? -ak : ak;
+  bool inside = true;
+  QuadHeckeForEachTerm(Ld, X, [&](int64_t k, int64_t ak, QuadDD) -> void {
+    ArbReal u = arb_log(ArbReal(static_cast<slong>(k))) - logAb;
+    double ud = u.mid_d();
+    size_t seg = static_cast<size_t>(
+        std::upper_bound(I->lo.begin(), I->lo.end(), ud) - I->lo.begin());
+    seg = (seg == 0) ? 0 : seg - 1;
+    if (ud < I->lo[seg] - 1e-9 || ud > I->hi[seg] + 1e-9) {
+      inside = false;
+      return;
     }
+    Lambda +=
+        ArbReal(static_cast<slong>(ak)) * QuadHeckeInterpArbValue(*I, u, seg);
+    abs_sum[seg] += (ak < 0) ? -ak : ak;
+  });
+  if (!inside) {
+    std::cerr << "QHECKE_ARB: a term outside the segments\n";
+    return {};
   }
   // the interpolation errors
   ArbReal err(0);
