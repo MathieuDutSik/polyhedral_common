@@ -112,7 +112,7 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
   std::vector<MyMatrix<T>> ListMat;
   T Discriminant = eSum * eSum - 4 * eProd;
   if (Discriminant <= 0) {
-    std::cerr << "Discriminant is negative\n";
+    std::cerr << "Discriminant is not positive\n";
     std::cerr << "Impossible for a real quadratic space\n";
     throw TerminalException{1};
   }
@@ -168,7 +168,7 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   std::vector<MyMatrix<T>> ListMat;
   T Discriminant = eSum * eSum - 4 * eProd;
   if (Discriminant >= 0) {
-    std::cerr << "Discriminant is positive\n";
+    std::cerr << "Discriminant is not negative\n";
     std::cerr << "Impossible for an imaginary space\n";
     throw TerminalException{1};
   }
