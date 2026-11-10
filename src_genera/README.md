@@ -195,11 +195,19 @@ membership and equal order), and the Howell orbit with the orbit on
 element lists; `Test_HowellForm` checks the form against brute force on
 random subgroups, and runs in the 15B mass tests.
 
+A split prime of a CM centre goes to the K-linear chain over Z_p: C4 x S5
+on E8 (x) Z[i] (centre Q(i), 5 split, multiplicity 2) has the factor 6 at
+5, mass 3/16 closed by enumeration; an inert prime likewise, C3 x S5 on
+E8 (x) A2 (centre Q(zeta_3), 5 inert, image 720 = |U_2(F_5)|, factor 6,
+mass 1/12). F55 = C11 : C5 never reaches its split
+prime 5 (the component is induced from C11, Z_5[G] e_rho is maximal);
+F55 on A10^2 (mass 5/24) exercises the ramified 11.
+
 Not done or not tested: layers by linear algebra beyond p odd and e = 1;
-p = 2 and e >= 2 for the generators (no example yet); primes split or
-inert in a CM centre with a nontrivial factor (no example); residue
-fields with q^m > 2^24 points; quaternion End_G. Beyond the bounds the
-result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
+p = 2, e >= 2, c >= 3 and a layer whose basis does not all lift, for the
+generators; a CM centre of degree 4; residue fields with q^m > 2^24 points; quaternion
+End_G. Candidate lattices are listed in TODO.md, not yet built or
+checked. Beyond the bounds the result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
 Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
 over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
 C_{g^a} agree on the component), O_K acts through the order they generate

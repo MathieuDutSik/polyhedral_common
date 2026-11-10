@@ -56,6 +56,9 @@ run_case E8E8 S3 2
 run_case E6diag A2diag 1
 run_case E6x2 A2diagx2 2
 run_case A6x3 F21x3 2
+run_case E8i C4S5 2
+run_case E8w C3S5 1
+run_case A10x2 F55x2 2
 run_case E8E8 S3diag2 3
 # F21 on seven of the nine coordinates of A8: a Hermitian component over
 # Q(sqrt -7) glued at 7 to the fixed lattice, 2 classes

@@ -1942,6 +1942,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
   MyMatrix<T> F_inv = Inverse(F_c);
   // the index [L_rho : N]
   T index = T_abs(DeterminantMat(MyMatrix<T>(N_c * Inverse(L_c))));
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+  os << "MULT_FACTOR: [L_rho : N] = " << index << ", multiplicity " << m
+     << "\n";
+#endif
   T factor(1);
   if (index == T(1)) {
     return factor;
@@ -1991,19 +1995,20 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
       return res;
     };
+    // |N^#/N|_p, saturated: only the element lists of the sanity check
+    // need it to fit (the orbit itself is on Howell forms)
     size_t q_size = 1;
+    bool q_fits = true;
     for (auto o : ListOrd) {
       size_t uo = static_cast<size_t>(o);
       if (uo != 0 && q_size > bounds.max_module / uo) {
-        MULT_FACTOR_FAIL(1969);
-        return {};
-      }
-      q_size *= uo;
-      if (q_size > bounds.max_module) {
-        MULT_FACTOR_FAIL(1969);
-        return {};
+        q_fits = false;
+        q_size = bounds.max_module;
+      } else {
+        q_size *= uo;
       }
     }
+    (void)q_fits;
     auto encode = [&](std::vector<int64_t> const &x) -> size_t {
       size_t idx = 0;
       for (size_t s = r; s-- > 0;) {
@@ -2632,7 +2637,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     }
 #ifdef SANITY_CHECK_MULT
     // the orbit on the sorted element lists, when L/N is small
-    if (std::exp(logL) <= 200000.5) {
+    if (q_fits && std::exp(logL) <= 200000.5) {
       std::vector<size_t> L0 = span(Lgens);
       std::set<std::vector<size_t>> orbit_old{L0};
       std::vector<std::vector<size_t>> queue_old{L0};
@@ -2663,7 +2668,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
 #endif
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
     os << "MULT_FACTOR: p=" << p << " c=" << c << " e=" << e
-       << " |image of O(X_p)|=" << opt->size() << " |N^#/N|_p=" << q_size
+       << " |image of O(X_p)|=" << opt->size() << " |N^#/N|_p"
+       << (q_fits ? "=" : ">=") << q_size
        << " |L/N|_p=" << std::exp(logL) << " orbit=" << orbit.size() << "\n";
 #endif
     factor *= UniversalScalarConversion<T, int64_t>(

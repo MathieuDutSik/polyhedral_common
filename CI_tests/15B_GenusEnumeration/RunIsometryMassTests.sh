@@ -394,6 +394,24 @@ group_mass_case A6A6 F21 1/8
 # enumeration (2 and 3 classes of pairs)
 group_mass_case A6x3 F21 1/42
 group_mass_case A6x4 F21 5/1008
+# A split prime of a CM centre with a nontrivial factor: C4 x S5 on
+# E8 (x) Z[i] = E8 + E8 (i acting by J, S5 = W(A4) diagonally on the
+# A4 + A4 of E8, glued at 5): centre Q(i), multiplicity 2, 5 split in
+# Q(i); the pi-adic search refuses the split prime and the K-linear chain
+# over Z_5 gives the image (480 elements), orbit 6. Closed by enumeration
+# (2 classes). About 2.5 minutes, in FiniteGroupComponents.
+group_mass_case E8i C4S5 3/16
+# An inert prime of a CM centre with a nontrivial factor: C3 x S5 on
+# E8 (x) A2 = E8 (x) Z[zeta_3]: centre Q(zeta_3), 5 inert, the image at 5
+# of order 720 = |U_2(F_5)|, orbit 6. Closed by enumeration (1 class).
+group_mass_case E8w C3S5 1/12
+# F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
+# the factor at the ramified prime 11 by the pi-adic chain (an image of
+# order about 3 10^4, orbit 1); the module N^#/N at 11 is beyond the old
+# encoding bound. At 5 (split) the factor is always 1 for F55: rho is
+# induced from C11, so Z_5[G] e_rho is maximal and L_5 = N_5. Closed by
+# enumeration (2 classes).
+group_mass_case A10x2 F55 5/24
 group_mass_case E8E8_16 S3diag2 143/1203948748800
 # The dihedral group D5 = <(12345), (25)(34)> in W(A4): End_G has the
 # totally real centre Q(sqrt 5), so the multiplicity lattice is quadratic
