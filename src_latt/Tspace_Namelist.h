@@ -98,8 +98,15 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
   }
   std::ifstream is(eFile);
   MyMatrix<T> SuperMat = ReadMatrix<T>(is);
-  int n = SuperMat.rows();
   std::vector<MyMatrix<T>> ListMat = ReadListMatrix<T>(is);
+  // The dimension comes from the basis: SuperMat can be empty, for a Raw
+  // space read with SuperMatMethod = NotNeeded.
+  if (ListMat.empty()) {
+    std::cerr << "TSPACE: ReadLinSpaceFile, the basis of the T-space is "
+                 "empty in eFile=" << eFile << "\n";
+    throw TerminalException{1};
+  }
+  int n = ListMat[0].rows();
   std::vector<std::vector<T>> ListLineMat;
   for (auto &eMat : ListMat) {
     std::vector<T> eV = GetLineVector(eMat);

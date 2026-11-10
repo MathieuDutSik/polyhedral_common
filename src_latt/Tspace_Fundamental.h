@@ -149,10 +149,16 @@ inline void serialize(Archive &ar, PairwiseScalarInfo<T> &val,
     determinant 1. The group of symmetries has to commutes with the
     elements in ListComm.
  */
+/*
+  The scalar members have default values: several constructions start from
+  a default LinSpaceMatrix and fill it member by member (ReadTspace,
+  BuildLinSpaceMatrix, ...), and is_self_dual was left uninitialized by the
+  ones that never set it.
+ */
 template <typename T> struct LinSpaceMatrix {
-  int n;
+  int n = 0;
   // Whether it is a Bravais space or not
-  bool isBravais;
+  bool isBravais = false;
   // The positive definite matrix.
   MyMatrix<T> SuperMat;
   // The basis of the T-space
@@ -177,7 +183,7 @@ template <typename T> struct LinSpaceMatrix {
   // Pairwise scalar info.
   PairwiseScalarInfo<T> pairwise_scalar_info;
   // Whether the T-space is known to be self-dual
-  bool is_self_dual;
+  bool is_self_dual = false;
 };
 
 // Equality check for LinSpaceMatrix
