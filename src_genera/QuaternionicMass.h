@@ -79,7 +79,7 @@
 
 struct QuaternionicMassBounds {
   // the F_p-space searched for an overorder at p
-  size_t max_overorder = size_t(1) << 20;
+  size_t max_overorder = size_t(1) << 24;
   MultiplicityFactorBounds image;
 };
 
@@ -321,11 +321,12 @@ T QuatOrderDisc(std::vector<MyMatrix<T>> const &O, int r) {
  */
 template <typename T, typename Tint>
 std::optional<std::vector<MyMatrix<T>>>
-QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK4,
+QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
                  QuaternionicMassBounds const &bounds,
                  [[maybe_unused]] std::ostream &os) {
   int k = O[0].rows();
   int d = static_cast<int>(O.size());
+  T dK4 = dK * dK * dK * dK;
   auto ring_closure = [&](std::vector<MyMatrix<T>> M)
       -> std::optional<std::vector<MyMatrix<T>>> {
     for (int iter = 0; iter < 64; iter++) {
@@ -366,14 +367,262 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK4,
       primes.erase(std::unique(primes.begin(), primes.end()), primes.end());
     }
     bool enlarged = false;
+    // the coordinates of an element of D in the basis of O
+    MyMatrix<T> Ob(d, k * k);
+    for (int a = 0; a < d; a++) {
+      for (int u = 0; u < k; u++) {
+        for (int v = 0; v < k; v++) {
+          Ob(a, u * k + v) = O[a](u, v);
+        }
+      }
+    }
+    auto coordsO = [&](MyMatrix<T> const &Y) -> MyVector<T> {
+      MyVector<T> y(k * k);
+      for (int u = 0; u < k; u++) {
+        for (int v = 0; v < k; v++) {
+          y(u * k + v) = Y(u, v);
+        }
+      }
+      std::optional<MyVector<T>> sol = SolutionMat(Ob, y);
+      if (!sol) {
+        std::cerr << "QUAT_MASS: an element is not in the span of the order\n";
+        throw TerminalException{1};
+      }
+      return *sol;
+    };
+    /*
+      First the left and right orders of the two-sided ideal I = O cap p
+      O^# (in coordinates the v with G v = 0 mod p, plus p Z^d, G the Gram
+      matrix of Tr trd): orders containing O, found by linear algebra (the
+      c with M_b c integral for the elements b of a basis of I is R^{-1}
+      Z^d, R a Z-basis of the rows of the M_b). When neither is larger
+      than O at p, the elements of (O^# cap p^{-1} O) / O are tried.
+     */
     for (Tint const &p_i : primes) {
       int64_t p = UniversalScalarConversion<int64_t, Tint>(p_i);
+      MyMatrix<T> Gt(d, d);
+      for (int i = 0; i < d; i++) {
+        for (int j = 0; j < d; j++) {
+          Gt(i, j) = QuatTrTrd(O[i], O[j], r);
+        }
+      }
+      ModMat Gp(d, std::vector<int64_t>(d));
+      for (int i = 0; i < d; i++) {
+        for (int j = 0; j < d; j++) {
+          Gp[i][j] = ModP(UniversalScalarConversion<int64_t, T>(Gt(i, j)), p);
+        }
+      }
+      ModRowSpace rsI = ModRowReduce(Gp, p);
+      std::vector<bool> pivI(d, false);
+      for (size_t pv : rsI.pivots) {
+        pivI[pv] = true;
+      }
+      std::vector<MyVector<T>> Igen;
+      for (int f = 0; f < d; f++) {
+        if (!pivI[f]) {
+          MyVector<T> v = ZeroVector<T>(d);
+          v(f) = T(1);
+          for (size_t i2 = 0; i2 < rsI.pivots.size(); i2++) {
+            v(static_cast<int>(rsI.pivots[i2])) =
+                ScalarFromInt64<T>(ModP(-rsI.basis[i2][f], p));
+          }
+          Igen.push_back(v);
+        }
+        MyVector<T> w = ZeroVector<T>(d);
+        w(f) = ScalarFromInt64<T>(p);
+        Igen.push_back(w);
+      }
+      MyMatrix<T> Iall(static_cast<int>(Igen.size()), d);
+      for (size_t i2 = 0; i2 < Igen.size(); i2++) {
+        for (int a = 0; a < d; a++) {
+          Iall(static_cast<int>(i2), a) = Igen[i2](a);
+        }
+      }
+      MyMatrix<T> IB = GetZbasis(Iall);
+      if (IB.rows() == d && T_abs(DeterminantMat(IB)) > T(1)) {
+        MyMatrix<T> IBinv = Inverse(IB);
+        std::vector<MyMatrix<T>> Ielts;
+        for (int i2 = 0; i2 < d; i2++) {
+          MyMatrix<T> Y = ZeroMatrix<T>(k, k);
+          for (int a = 0; a < d; a++) {
+            Y += IB(i2, a) * O[a];
+          }
+          Ielts.push_back(Y);
+        }
+        for (int side = 0; side < 2 && !enlarged; side++) {
+          // the rows of the M_b: the I-coordinates of w_a b (left) or b w_a
+          MyMatrix<T> Rows(d * d, d);
+          for (int ib = 0; ib < d; ib++) {
+            for (int a = 0; a < d; a++) {
+              MyMatrix<T> Y = (side == 0) ? MyMatrix<T>(O[a] * Ielts[ib])
+                                          : MyMatrix<T>(Ielts[ib] * O[a]);
+              MyVector<T> cI = IBinv.transpose() * coordsO(Y);
+              for (int t = 0; t < d; t++) {
+                Rows(ib * d + t, a) = cI(t);
+              }
+            }
+          }
+          MyMatrix<T> R = GetZbasis(Rows);
+          if (R.rows() != d) {
+            continue;
+          }
+          MyMatrix<T> Rinv = Inverse(R);
+          if (T_abs(DeterminantMat(Rinv)) <= T(1)) {
+            continue;
+          }
+          std::vector<MyMatrix<T>> On;
+          for (int col = 0; col < d; col++) {
+            MyMatrix<T> Y = ZeroMatrix<T>(k, k);
+            for (int a = 0; a < d; a++) {
+              Y += Rinv(a, col) * O[a];
+            }
+            On.push_back(Y);
+          }
+          std::optional<std::vector<MyMatrix<T>>> opt =
+              ring_closure(QuatZBasis(On, k));
+          if (opt && QuatOrderDisc(*opt, r) < QuatOrderDisc(O, r)) {
+#ifdef DEBUG_QUATERNIONIC_MASS
+            os << "QUAT_MASS: the " << (side == 0 ? "left" : "right")
+               << " order of O cap p O^# at p=" << p << " enlarges O\n";
+#endif
+            O = *opt;
+            enlarged = true;
+          }
+        }
+      }
+      if (enlarged) {
+        break;
+      }
+    }
+    if (enlarged) {
+      continue;
+    }
+    for (Tint const &p_i : primes) {
+      int64_t p = UniversalScalarConversion<int64_t, Tint>(p_i);
+      // whether O contains O_K: its integral centre has discriminant d_K
+      // (needed by the filter y^2 = 0 mod p O, x^2 = trd(x) x - nrd(x), and
+      // by the restriction to the y with a y in p O below)
+      bool has_OK = false;
+      std::vector<MyMatrix<T>> Zs;
+      {
+        MyMatrix<T> Eq(d, k * k * d);
+        for (int i = 0; i < d; i++) {
+          for (int j = 0; j < d; j++) {
+            MyMatrix<T> C = O[i] * O[j] - O[j] * O[i];
+            for (int u = 0; u < k; u++) {
+              for (int v = 0; v < k; v++) {
+                Eq(i, j * k * k + u * k + v) = C(u, v);
+              }
+            }
+          }
+        }
+        MyMatrix<Tint> Eq_i =
+            UniversalMatrixConversion<Tint, T>(RemoveFractionMatrix(Eq));
+        MyMatrix<Tint> Zc = NullspaceIntMat(Eq_i);
+        int cc = Zc.rows();
+        MyMatrix<T> Gz(cc, cc);
+        for (int t = 0; t < cc; t++) {
+          MyMatrix<T> Z = ZeroMatrix<T>(k, k);
+          for (int i = 0; i < d; i++) {
+            Z += UniversalScalarConversion<T, Tint>(Zc(t, i)) * O[i];
+          }
+          Zs.push_back(Z);
+        }
+        for (int t1 = 0; t1 < cc; t1++) {
+          for (int t2 = 0; t2 < cc; t2++) {
+            Gz(t1, t2) = QuatTrace(MyMatrix<T>(Zs[t1] * Zs[t2])) /
+                         ScalarFromInt64<T>(k / cc);
+          }
+        }
+        has_OK = (4 * r * cc == k) && (T_abs(DeterminantMat(Gz)) == dK);
+      }
       // the x = sum a_i w_i / p in O^#: sum_i a_i Tr trd(w_i w_j) = 0 mod p
       ModMat Gm(d, std::vector<int64_t>(d));
       for (int i = 0; i < d; i++) {
         for (int j = 0; j < d; j++) {
           T v = QuatTrTrd(O[i], O[j], r);
           Gm[j][i] = ModP(UniversalScalarConversion<int64_t, T>(v), p);
+        }
+      }
+      /*
+        With O_K in O: an overorder O' at p has an x outside O with a x in
+        O, a the product of the primes of K over p (O'/O is an O_K-module
+        killed by a power of p), so y = p x satisfies a y in p O. a / p O_K
+        is the nilradical of O_K / p O_K, the kernel of the F_p-linear map
+        z -> z^{p^m}, p^m >= [K:Q]. The space of the y then has dimension
+        4 sum_P f_P over F_p instead of 4 [K:Q].
+       */
+      if (has_OK) {
+        int cc = static_cast<int>(Zs.size());
+        MyMatrix<T> Zb(cc, k * k);
+        for (int t = 0; t < cc; t++) {
+          for (int u = 0; u < k; u++) {
+            for (int v = 0; v < k; v++) {
+              Zb(t, u * k + v) = Zs[t](u, v);
+            }
+          }
+        }
+        auto coordsZ = [&](MyMatrix<T> const &Y) -> MyVector<T> {
+          MyVector<T> y(k * k);
+          for (int u = 0; u < k; u++) {
+            for (int v = 0; v < k; v++) {
+              y(u * k + v) = Y(u, v);
+            }
+          }
+          std::optional<MyVector<T>> sol = SolutionMat(Zb, y);
+          if (!sol) {
+            std::cerr << "QUAT_MASS: a power of a central element is not "
+                         "central\n";
+            throw TerminalException{1};
+          }
+          return *sol;
+        };
+        int64_t pm = p;
+        while (pm < cc) {
+          pm *= p;
+        }
+        // the Frobenius z -> z^{p^m} on O_K / p O_K, columns
+        ModMat Fr(cc, std::vector<int64_t>(cc));
+        for (int t = 0; t < cc; t++) {
+          MyMatrix<T> Zp = IdentityMat<T>(k);
+          for (int64_t e2 = 0; e2 < pm; e2++) {
+            Zp = Zp * Zs[t];
+          }
+          MyVector<T> cz = coordsZ(Zp);
+          for (int u = 0; u < cc; u++) {
+            Fr[u][t] = ModP(UniversalScalarConversion<int64_t, T>(cz(u)), p);
+          }
+        }
+        ModRowSpace rf = ModRowReduce(Fr, p);
+        std::vector<bool> pivf(cc, false);
+        for (size_t pv : rf.pivots) {
+          pivf[pv] = true;
+        }
+        for (int f = 0; f < cc; f++) {
+          if (pivf[f]) {
+            continue;
+          }
+          std::vector<int64_t> v(cc, 0);
+          v[f] = 1;
+          for (size_t i2 = 0; i2 < rf.pivots.size(); i2++) {
+            v[rf.pivots[i2]] = ModP(-rf.basis[i2][f], p);
+          }
+          MyMatrix<T> nz = ZeroMatrix<T>(k, k);
+          for (int t = 0; t < cc; t++) {
+            nz += ScalarFromInt64<T>(v[t]) * Zs[t];
+          }
+          // the coordinates of nz y in O, 0 modulo p
+          std::vector<MyVector<T>> cols_n;
+          for (int i = 0; i < d; i++) {
+            cols_n.push_back(coordsO(MyMatrix<T>(nz * O[i])));
+          }
+          for (int t = 0; t < d; t++) {
+            std::vector<int64_t> row(d);
+            for (int i = 0; i < d; i++) {
+              row[i] = ModP(UniversalScalarConversion<int64_t, T>(cols_n[i](t)), p);
+            }
+            Gm.push_back(row);
+          }
         }
       }
       ModRowSpace rs = ModRowReduce(Gm, p);
@@ -404,28 +653,75 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK4,
           return {};
         }
       }
-      std::vector<int64_t> coef(ker.size(), 0);
+      // x = y / p, y = sum a_i w_i: two cheap necessary conditions in
+      // integers, Tr trd(y^2) = 0 mod p^2 (x^2 is integral) and y^2 = 0
+      // mod p O (p^2 x^2 is in p O'), from Tr trd(w_i w_j) and the
+      // structure constants of O modulo p
+      std::vector<std::vector<int64_t>> Tij(d, std::vector<int64_t>(d));
+      std::vector<std::vector<std::vector<int64_t>>> Sij(
+          d, std::vector<std::vector<int64_t>>(d, std::vector<int64_t>(d)));
+      int64_t p2 = p * p;
+      for (int i = 0; i < d; i++) {
+        for (int j = 0; j < d; j++) {
+          Tij[i][j] = ModP(UniversalScalarConversion<int64_t, T>(
+                               QuatTrTrd(O[i], O[j], r)), p2);
+          MyVector<T> cij = coordsO(MyMatrix<T>(O[i] * O[j]));
+          for (int t = 0; t < d; t++) {
+            Sij[i][j][t] = ModP(UniversalScalarConversion<int64_t, T>(cij(t)), p);
+          }
+        }
+      }
+      std::vector<int64_t> coef(ker.size(), 0), a(d);
       for (size_t s = 1; s < n_el && !enlarged; s++) {
         size_t tt = s;
         for (size_t i = 0; i < ker.size(); i++) {
           coef[i] = static_cast<int64_t>(tt % static_cast<size_t>(p));
           tt /= static_cast<size_t>(p);
         }
+        for (int i = 0; i < d; i++) {
+          int64_t ai = 0;
+          for (size_t j = 0; j < ker.size(); j++) {
+            ai = (ai + coef[j] * ker[j][i]) % p;
+          }
+          a[i] = ai;
+        }
+        int64_t q2 = 0;
+        for (int i = 0; i < d; i++) {
+          if (a[i] == 0) {
+            continue;
+          }
+          for (int j = 0; j < d; j++) {
+            q2 = (q2 + a[i] * a[j] % p2 * Tij[i][j]) % p2;
+          }
+        }
+        if (q2 != 0) {
+          continue;
+        }
+        bool sq_zero = true;
+        for (int t = 0; t < d && sq_zero && has_OK; t++) {
+          int64_t v = 0;
+          for (int i = 0; i < d; i++) {
+            if (a[i] == 0) {
+              continue;
+            }
+            for (int j = 0; j < d; j++) {
+              v = (v + a[i] * a[j] % p * Sij[i][j][t]) % p;
+            }
+          }
+          if (v != 0) {
+            sq_zero = false;
+          }
+        }
+        if (!sq_zero) {
+          continue;
+        }
         MyMatrix<T> x = ZeroMatrix<T>(k, k);
         for (int i = 0; i < d; i++) {
-          int64_t a = 0;
-          for (size_t j = 0; j < ker.size(); j++) {
-            a = (a + coef[j] * ker[j][i]) % p;
-          }
-          if (a != 0) {
-            x += ScalarFromInt64<T>(a) * O[i];
+          if (a[i] != 0) {
+            x += ScalarFromInt64<T>(a[i]) * O[i];
           }
         }
         x /= ScalarFromInt64<T>(p);
-        // Tr_{K/Q} trd(x^2) is an integer for x integral
-        if (!IsInteger(QuatTrTrd(x, x, r))) {
-          continue;
-        }
         std::vector<MyMatrix<T>> M = O;
         M.push_back(x);
         std::optional<std::vector<MyMatrix<T>>> opt =
@@ -666,7 +962,7 @@ std::optional<T> QuaternionicComponentMass(
   }
   T dK4 = dK * dK * dK * dK;
   std::optional<std::vector<MyMatrix<T>>> opt_O =
-      QuatMaximalOrder<T, Tint>(O0, r, dK4, bounds, os);
+      QuatMaximalOrder<T, Tint>(O0, r, dK, bounds, os);
   if (!opt_O) {
     return {};
   }

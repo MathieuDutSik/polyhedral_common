@@ -21,6 +21,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -1163,6 +1164,12 @@ struct IsometryMassBounds {
   size_t max_vertices = 6000;
   // the L-values of the quadratic components with E not abelian
   QuadLValueMethod lvalue = QuadLValueMethod::Mpfr;
+  // when the image of the local centraliser on a glue module is beyond
+  // the bounds: stop (false), or take it to be all the equivariant
+  // isometries (Question q:surj of the paper), the result then saying
+  // image_assumed. A wrong assumption gives a wrong mass, which can stop
+  // an enumeration before it is complete, so it is not done by default.
+  bool allow_image_assumption = false;
 };
 
 template <typename T> int IsometryOrder(MyMatrix<T> const &P) {
@@ -1626,6 +1633,13 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
       std::optional<std::vector<ModuleAut>> img =
           LocalImageOnModule<T, Tint>(res.components[comp_pos[s]], mods[s], os);
       if (!img) {
+        if (!bounds.allow_image_assumption) {
+          std::cerr << "ISOM_MASS: the image of the local centraliser on the "
+                       "glue module at q=" << q << " is beyond the bounds and "
+                       "the image assumption (Question q:surj) is not "
+                       "allowed, please insert the code\n";
+          throw TerminalException{1};
+        }
         image_groups.push_back({});
         list_image.push_back("assumed");
         res.image_assumed = true;
@@ -2745,25 +2759,109 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
                       std::vector<MyMatrix<T>> const &elts,
                       [[maybe_unused]] std::ostream &os) {
   int n = A.rows();
-  auto flatten = [&](MyMatrix<T> const &M) -> std::vector<T> {
-    std::vector<T> v;
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        v.push_back(M(i, j));
+  /*
+    The group computations (classes, inverses, orders, powers) on the
+    elements as integer matrices, flattened, with products in 64 bits
+    (checked) and a hash index: exact rational products were most of the
+    time of the components for groups of a few hundred elements.
+   */
+  size_t n_elt = elts.size();
+  using IMat = std::vector<int64_t>;
+  struct IMatHash {
+    size_t operator()(IMat const &v) const {
+      size_t h = 1469598103934665603ULL;
+      for (int64_t x : v) {
+        h ^= static_cast<size_t>(x) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+      }
+      return h;
+    }
+  };
+  std::vector<IMat> ielts(n_elt, IMat(n * n));
+  for (size_t i = 0; i < n_elt; i++) {
+    for (int u = 0; u < n; u++) {
+      for (int v = 0; v < n; v++) {
+        T x = elts[i](u, v);
+        if (!IsInteger(x)) {
+          std::cerr << "ISOM_MASS: a group element is not integral\n";
+          throw TerminalException{1};
+        }
+        ielts[i][u * n + v] = UniversalScalarConversion<int64_t, T>(x);
       }
     }
-    return v;
+  }
+  auto imul = [&](IMat const &X, IMat const &Y) -> IMat {
+    IMat Z(n * n, 0);
+    for (int u = 0; u < n; u++) {
+      for (int w = 0; w < n; w++) {
+        int64_t xv = X[u * n + w];
+        if (xv == 0) {
+          continue;
+        }
+        for (int v = 0; v < n; v++) {
+          __int128 z = static_cast<__int128>(Z[u * n + v]) +
+                       static_cast<__int128>(xv) * Y[w * n + v];
+          if (z > INT64_MAX || z < INT64_MIN) {
+            std::cerr << "ISOM_MASS: a product of group elements overflows\n";
+            throw TerminalException{1};
+          }
+          Z[u * n + v] = static_cast<int64_t>(z);
+        }
+      }
+    }
+    return Z;
   };
-  std::map<std::vector<T>, size_t> index;
-  for (size_t i = 0; i < elts.size(); i++) {
-    index[flatten(elts[i])] = i;
+  std::unordered_map<IMat, size_t, IMatHash> iindex;
+  for (size_t i = 0; i < n_elt; i++) {
+    iindex[ielts[i]] = i;
   }
-  std::vector<MyMatrix<T>> inv;
-  for (auto const &x : elts) {
-    inv.push_back(Inverse(x));
+  auto ifind = [&](IMat const &X) -> size_t {
+    auto iter = iindex.find(X);
+    if (iter == iindex.end()) {
+      std::cerr << "ISOM_MASS: a product is not in the group\n";
+      throw TerminalException{1};
+    }
+    return iter->second;
+  };
+  size_t i_id = 0;
+  {
+    IMat Id(n * n, 0);
+    for (int u = 0; u < n; u++) {
+      Id[u * n + u] = 1;
+    }
+    i_id = ifind(Id);
   }
+  // the orders and the inverses, by the powers
+  std::vector<int> iorder(n_elt);
+  std::vector<size_t> iinv(n_elt);
+  for (size_t i = 0; i < n_elt; i++) {
+    IMat pw = ielts[i];
+    size_t prev = i;
+    int o = 1;
+    while (true) {
+      size_t ip = ifind(pw);
+      if (ip == i_id) {
+        break;
+      }
+      prev = ip;
+      pw = imul(pw, ielts[i]);
+      o++;
+    }
+    iorder[i] = o;
+    iinv[i] = (o == 1) ? i : prev;
+  }
+  auto conj = [&](size_t j, size_t u) -> size_t {
+    return ifind(imul(imul(ielts[iinv[j]], ielts[u]), ielts[j]));
+  };
+  // the index of x^a
+  auto ipow = [&](size_t i, int64_t a) -> size_t {
+    IMat pw = ielts[i_id];
+    int64_t e2 = a % iorder[i];
+    for (int64_t t = 0; t < e2; t++) {
+      pw = imul(pw, ielts[i]);
+    }
+    return ifind(pw);
+  };
   // the rational classes
-  size_t n_elt = elts.size();
   std::vector<int> cls(n_elt, -1);
   int n_cls = 0;
   for (size_t i = 0; i < n_elt; i++) {
@@ -2777,15 +2875,15 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       queue.pop_back();
       std::vector<size_t> nb;
       for (size_t j = 0; j < n_elt; j++) {
-        nb.push_back(index[flatten(MyMatrix<T>(inv[j] * elts[u] * elts[j]))]);
+        nb.push_back(conj(j, u));
       }
       // the powers prime to the order
-      int o = IsometryOrder(elts[u]);
-      MyMatrix<T> pw = elts[u];
+      int o = iorder[u];
+      IMat pw = ielts[u];
       for (int k = 2; k < o; k++) {
-        pw = pw * elts[u];
+        pw = imul(pw, ielts[u]);
         if (std::gcd(k, o) == 1) {
-          nb.push_back(index[flatten(pw)]);
+          nb.push_back(ifind(pw));
         }
       }
       for (size_t v : nb) {
@@ -2937,8 +3035,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           continue;
         }
         for (size_t j = 0; j < n_elt; j++) {
-          size_t u = index[flatten(MyMatrix<T>(inv[j] * elts[i] * elts[j]))];
-          ccls[u] = n_ccls;
+          ccls[conj(j, i)] = n_ccls;
         }
         n_ccls++;
       }
@@ -2947,8 +3044,13 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         ClassSum[ccls[i]] += elts[i];
       }
       int64_t Nexp = 1;
-      for (auto const &x : elts) {
-        Nexp = std::lcm(Nexp, static_cast<int64_t>(IsometryOrder(x)));
+      for (size_t i = 0; i < n_elt; i++) {
+        Nexp = std::lcm(Nexp, static_cast<int64_t>(iorder[i]));
+      }
+      // the class sums on the block, once
+      std::vector<MyMatrix<T>> ActClassSum;
+      for (auto const &Cs : ClassSum) {
+        ActClassSum.push_back(action(Cs));
       }
       std::vector<int64_t> Hgens;
       for (int64_t a = 1; a < Nexp; a++) {
@@ -2957,13 +3059,9 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         }
         bool fixes = true;
         for (size_t i = 0; i < n_elt && fixes; i++) {
-          MyMatrix<T> pw = IdentityMat<T>(n);
-          for (int64_t t = 0; t < a; t++) {
-            pw = pw * elts[i];
-          }
           int ci = ccls[i];
-          int ca = ccls[index[flatten(pw)]];
-          if (ci != ca && action(ClassSum[ci]) != action(ClassSum[ca])) {
+          int ca = ccls[ipow(i, a)];
+          if (ci != ca && ActClassSum[ci] != ActClassSum[ca]) {
             fixes = false;
           }
         }
@@ -3063,7 +3161,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           int dimF = 4 * c * rq;
           std::vector<MyMatrix<T>> cand;
           for (size_t i = 0; i < n_elt; i++) {
-            int o = IsometryOrder(elts[i]);
+            int o = iorder[i];
             for (int dd = 1; dd <= o; dd++) {
               if (o % dd == 0) {
                 cand.push_back(EvaluatePolynomialMatrix<T>(

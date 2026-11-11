@@ -206,8 +206,9 @@ F55 on A10^2 (mass 5/24) exercises the ramified 11.
 Not done or not tested: layers by linear algebra beyond p odd and e = 1;
 p = 2, e >= 2, c >= 3 and a layer whose basis does not all lift, for the
 generators; a CM centre of degree 4; residue fields with q^m > 2^24 points;
-a nontrivial multiplicity factor for a quaternionic component with s > 1.
-Candidate lattices are listed in TODO.md, not yet built or
+the first column of the image search when F_p^m is large (it is
+enumerated, with only quadratic conditions: Q(zeta_7)^+ through Dic_7 at
+7, m = 12, is out of reach). Candidate lattices are listed in TODO.md, not yet built or
 checked. Beyond the bounds the result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
 Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
 over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
@@ -251,8 +252,16 @@ MultiplicityLocalFactor (quaternionic: no pi-adic search, the forms of
 the trace dual imposed). Checked for s = 2 with Q8 x S3 on D4 (x) A2 and
 its square (1/24, 1/1152), on a sublattice of index 3^4 of (D4 (x) W)^2,
 W the weight lattice of A2 scaled by 3 (5/64, 3 classes), and on D4 (x)
-A2 + D4 (x) W (5/576, 2 classes), all closed by enumeration; the factors
-met are all 1. Checked for s = 1:
+A2 + D4 (x) W (5/576, 2 classes), and D4 (x) A2 + I (x) W, I a left ideal
+of index 9 of the Hurwitz order (factor 4 at 3, 1/6), all closed by
+enumeration. Other centres: the dicyclic groups Dic_n on Z[z] + Z[z] j
+(centre Q(z + 1/z)): Q(sqrt 2), Q(sqrt 5), Q(sqrt 3) and the cubic
+Q(zeta_9)^+ with D ramified at the prime over 3 (1/16, 1/20, 1/24, 1/36),
+closed by enumeration. The maximal order: first the left and right orders
+of O cap p O^#, then the candidates y / p, restricted when O contains O_K
+to the y with a y in p O (a the radical of p in O_K, the kernel of a
+Frobenius) and filtered by Tr trd(y^2) = 0 mod p^2 and y^2 = 0 mod p O in
+integers. Checked for s = 1:
 Q8 on D4, D4^2, D4^3 (1/24, 1/1152, 1/82944, the principal genus), on E8
 as a Hurwitz lattice (1/1920, the non-principal genus), on 2Z^4 (the
 Lipschitz order, 1/8), on E8 + D4 (1/46080); 2I on the icosian E8 and

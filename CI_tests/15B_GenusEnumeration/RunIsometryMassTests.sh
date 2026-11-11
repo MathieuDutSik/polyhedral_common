@@ -20,6 +20,9 @@ BIN=../../src_genera/GENUS_IsometryMass
 # the Howell normal form of the orbits of the multiplicity factors, against
 # brute force on random subgroups
 ../../src_genera/Test_HowellForm
+# the certified image generators against an independent listing of the
+# image, on random small lattices and on Q8 acting on D4 and on 2 Z^4
+../../src_genera/Test_LocalImage
 
 mass_case() {
     lat=$1
@@ -436,6 +439,16 @@ group_mass_case qD4A2 QS 1/24
 group_mass_case qD4A2x2 QS 1/1152
 group_mass_case qD4W2glue QS 5/64
 group_mass_case qD4A2W2 QS 5/576
+# a nontrivial factor: D4 (x) A2 + I (x) W, I = H (1 + i + j) + 3 H a left
+# ideal of index 9 of the Hurwitz order, the orbit of L/N of length 4 at 3
+group_mass_case qD4Ideal QS 1/6
+# Centres other than Q(sqrt 5): the dicyclic groups Dic_n on Z[z] + Z[z] j,
+# z a primitive 2n-th root of 1, centre Q(z + 1/z): Q(sqrt 2), Q(sqrt 5),
+# Q(sqrt 3) and the cubic Q(zeta_9)^+ (D ramified at the prime over 3)
+group_mass_case qDic4 Dic 1/16
+group_mass_case qDic5 Dic 1/20
+group_mass_case qDic6 Dic 1/24
+group_mass_case qDic9 Dic 1/36
 # F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
 # the factor at the ramified prime 11 by the pi-adic chain (an image of
 # order about 3 10^4, orbit 1); the module N^#/N at 11 is beyond the old

@@ -13,6 +13,8 @@
 #include <optional>
 #include <set>
 #include <tuple>
+#include <unordered_set>
+#include <limits>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -571,11 +573,18 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     MultiplicityFactorBounds const &bounds, LocalImageOrder *order) {
   size_t m = A.size();
   int t = (p == 2) ? 1 : 0;
+  // the points of F_p^m are encoded in a size_t; the orbits are kept in a
+  // table of all the points when there are at most 2^24 of them, else in a
+  // hash set (the orbits of the image are then expected to be small)
   size_t n_pts = 1;
+  bool small_space = true;
   for (size_t i = 0; i < m; i++) {
+    if (n_pts > std::numeric_limits<size_t>::max() / 2 / static_cast<size_t>(p)) {
+      return {};
+    }
     n_pts *= static_cast<size_t>(p);
     if (n_pts > (size_t(1) << 24)) {
-      return {};
+      small_space = false;
     }
   }
   int64_t pc = 1;
@@ -1287,10 +1296,20 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       return ModP(static_cast<int64_t>(sacc % p2), p2);
     };
     if (pair_val(x, x) != ModP(A[i][i], p2)) {
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+      std::cerr << "MULT_FACTOR: radical_ok diag i=" << i << " pair "
+                << pair_val(x, x) << " A_ii " << ModP(A[i][i], p2) << " A_ii raw "
+                << A[i][i] << "\n";
+#endif
       return false;
     }
     for (size_t k = rad_start; k < i; k++) {
       if (pair_val(x, cols[k]) != ModP(A[k][i], p2)) {
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+        std::cerr << "MULT_FACTOR: radical_ok pair i=" << i << " k=" << k
+                  << " pair " << pair_val(x, cols[k]) << " A_ki "
+                  << ModP(A[k][i], p2) << "\n";
+#endif
         return false;
       }
     }
@@ -1538,6 +1557,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // forced column (an image of the w y_k) can make them dependent, which
   // is better seen at once than after the further columns
   size_t n_full_fail = 0, n_lift_fail = 0, n_dual_fail = 0;
+  size_t n_forced_rad = 0, n_forced_diag = 0, n_forced_dep = 0;
   // g^T A g = A is g Be g^T = Be, Be = p^e A^{-1}: modulo p for g modulo
   // p, and on the diagonal modulo 4 when p = 2 (as for diag4_ok). When A
   // is singular modulo p (e >= 1) this is not implied by the conditions on
@@ -1605,11 +1625,35 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
           y[a2] = (y[a2] + cf * v[a2]) % p;
         }
       }
-      if (!radical_ok(y, j) || !diag4_ok(y, j)) {
+      if (!radical_ok(y, j)) {
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+        if (n_forced_rad < 3) {
+          std::cerr << "MULT_FACTOR: forced column " << j << " rad_start "
+                    << rad_start << " y =";
+          for (auto v : y) {
+            std::cerr << " " << v;
+          }
+          std::cerr << " | cols:";
+          for (size_t k = 0; k < j; k++) {
+            std::cerr << " [";
+            for (auto v : cols[k]) {
+              std::cerr << v;
+            }
+            std::cerr << "]";
+          }
+          std::cerr << "\n";
+        }
+#endif
+        n_forced_rad++;
+        return {};
+      }
+      if (!diag4_ok(y, j)) {
+        n_forced_diag++;
         return {};
       }
       cols[j] = y;
       if (!independent(j)) {
+        n_forced_dep++;
         return {};
       }
       return complete(j + 1);
@@ -1664,7 +1708,18 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     std::vector<int64_t> ei(m, 0);
     ei[i] = 1;
     // the orbit of e_i under gens1
-    std::vector<char> in_orbit(n_pts, 0);
+    std::vector<char> in_orbit_tab(small_space ? n_pts : 0, 0);
+    std::unordered_set<size_t> in_orbit_set;
+    auto orbit_has = [&](size_t idx) -> bool {
+      return small_space ? (in_orbit_tab[idx] != 0) : (in_orbit_set.count(idx) > 0);
+    };
+    auto orbit_add = [&](size_t idx) -> void {
+      if (small_space) {
+        in_orbit_tab[idx] = 1;
+      } else {
+        in_orbit_set.insert(idx);
+      }
+    };
     // the orbit, closed incrementally: from e_i under all of gens1 at
     // first, then for a new generator g its images of the orbit points and
     // the closure of the new points under all of gens1
@@ -1676,8 +1731,8 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         for (auto const &g : gens1) {
           std::vector<int64_t> y = apply(g, x);
           size_t iy = encode(y);
-          if (!in_orbit[iy]) {
-            in_orbit[iy] = 1;
+          if (!orbit_has(iy)) {
+            orbit_add(iy);
             orbit_pts.push_back(y);
             queue.push_back(y);
           }
@@ -1685,7 +1740,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       }
     };
     auto close_init = [&]() -> size_t {
-      in_orbit[encode(ei)] = 1;
+      orbit_add(encode(ei));
       orbit_pts.push_back(ei);
       bfs({ei});
       return orbit_pts.size();
@@ -1696,8 +1751,8 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       for (size_t i0 = 0; i0 < n0; i0++) {
         std::vector<int64_t> y = apply(g, orbit_pts[i0]);
         size_t iy = encode(y);
-        if (!in_orbit[iy]) {
-          in_orbit[iy] = 1;
+        if (!orbit_has(iy)) {
+          orbit_add(iy);
           orbit_pts.push_back(y);
           queue.push_back(y);
         }
@@ -1736,7 +1791,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         return false;
       }
       n_cand++;
-      if (in_orbit[encode(y)]) {
+      if (orbit_has(encode(y))) {
         return false;
       }
       for (size_t k = 0; k < i; k++) {
@@ -1771,7 +1826,8 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
               << " failed " << n_fail << " orbit " << orbit_len << " nodes "
               << n_node - node0 << " full_fail " << n_full_fail
               << " dual_fail " << n_dual_fail << " lift_fail " << n_lift_fail
-              << "\n";
+              << " forced rad/diag/dep " << n_forced_rad << "/" << n_forced_diag
+              << "/" << n_forced_dep << "\n";
 #endif
     if (over) {
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
@@ -2144,17 +2200,23 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
       Pinv = matmul(Pinv, PX, M);
     }
   }
-  // A' = P^T A P exactly, Be' = P^{-1} Be P^{-T} modulo p^W
+  // A' = P^T A P and Be' = P^{-1} Be P^{-T} modulo p^W: the search uses A
+  // modulo p^W only, and A may be given as residues modulo p^W, for which
+  // the exact product does not fit in 64 bits
   ModMat A2(m, std::vector<int64_t>(m, 0));
   for (size_t a = 0; a < m; a++) {
     for (size_t b = 0; b < m; b++) {
       __int128 sacc = 0;
       for (size_t k = 0; k < m; k++) {
+        if (P[k][a] == 0) {
+          continue;
+        }
         for (size_t l = 0; l < m; l++) {
-          sacc += static_cast<__int128>(P[k][a]) * A[k][l] * P[l][b];
+          sacc += static_cast<__int128>(P[k][a]) * ModP(A[k][l], pW) * P[l][b];
+          sacc %= pW;
         }
       }
-      A2[a][b] = static_cast<int64_t>(sacc);
+      A2[a][b] = ModP(static_cast<int64_t>(sacc), pW);
     }
   }
   ModMat Be2 = matmul(matmul(Pinv, Be, pW), transpose(Pinv), pW);
