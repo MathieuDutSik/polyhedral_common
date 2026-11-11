@@ -970,6 +970,33 @@ HeckeHomologyLevel<T> get_hecke_level_mod(int const &index, GammaComplex<T, Tint
   and for the SL variants det(y_k g) = det(x). Nothing is returned when
   one of the conditions is not met.
  */
+/*
+  Whether x is integral at the primes of N: det(x) an integer coprime to N
+  and the denominators of the entries coprime to N. The bijection between
+  the cosets of Gamma \ Gamma x Gamma and of G \ G x G holds then; it
+  fails for instance for an element of the paramodular group K(p) not in
+  Sp_4(Z), with the Klingen subgroup of level p (entries 1/p, det 1).
+ */
+template <typename T, typename Tint>
+bool is_coprime_to_level(MyMatrix<T> const &x, Tint const &N) {
+  T det_x = DeterminantMat(x);
+  if (!IsInteger(det_x)) {
+    return false;
+  }
+  if (GcdPair(UniversalScalarConversion<Tint, T>(det_x), N) != 1) {
+    return false;
+  }
+  for (int i = 0; i < x.rows(); i++) {
+    for (int j = 0; j < x.cols(); j++) {
+      Tint den = UniversalScalarConversion<Tint, T>(GetDenominator_z(x(i, j)));
+      if (GcdPair(den, N) != 1) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 template <typename T, typename Tint>
 std::optional<HeckeCosets<T>>
 get_hecke_cosets_gamma_direct(HeckeChainMap<T, Tint> const &hcm, CosetTableGamma<Tint> const &ct,
@@ -985,11 +1012,7 @@ get_hecke_cosets_gamma_direct(HeckeChainMap<T, Tint> const &hcm, CosetTableGamma
   std::string type = gamma.base_type();
   MyMatrix<T> const &x = hcm.x;
   T det_x = DeterminantMat(x);
-  if (!IsInteger(det_x)) {
-    return {};
-  }
-  Tint det_x_int = UniversalScalarConversion<Tint, T>(det_x);
-  if (GcdPair(det_x_int, gamma.N) != 1) {
+  if (!is_coprime_to_level<T, Tint>(x, gamma.N)) {
     return {};
   }
   // The residue modulo m of a rational whose denominator is coprime to m.
@@ -1098,14 +1121,8 @@ HeckeHomologyResult<T> compute_hecke_homology(
   // number is known and the enumeration with the many Schreier generators
   // of Gamma can stop early.
   size_t n_expected = 0;
-  {
-    T det_x = DeterminantMat(hcm.x);
-    if (IsInteger(det_x)) {
-      Tint det_int = UniversalScalarConversion<Tint, T>(det_x);
-      if (GcdPair(det_int, gamma.N) == 1) {
-        n_expected = hcm.cosets.size();
-      }
-    }
+  if (is_coprime_to_level<T, Tint>(hcm.x, gamma.N)) {
+    n_expected = hcm.cosets.size();
   }
   // The direct construction first; the enumeration with the Schreier
   // generators of Gamma otherwise (their number is about the index times
