@@ -206,7 +206,8 @@ F55 on A10^2 (mass 5/24) exercises the ramified 11.
 Not done or not tested: layers by linear algebra beyond p odd and e = 1;
 p = 2, e >= 2, c >= 3 and a layer whose basis does not all lift, for the
 generators; a CM centre of degree 4; residue fields with q^m > 2^24 points;
-quaternionic components where G spans more than D (s > 1). Candidate lattices are listed in TODO.md, not yet built or
+a nontrivial multiplicity factor for a quaternionic component with s > 1.
+Candidate lattices are listed in TODO.md, not yet built or
 checked. Beyond the bounds the result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
 Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
 over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
@@ -241,7 +242,17 @@ the integral skew-adjoint D-linear maps and the trace form. The image
 orders are exact, from the certified generators (commuting with a Z-basis
 of the multiplier ring; the candidates are also required to lie in the
 integral commutant modulo p, which commuting with generators modulo p
-does not imply). Only s = 1 (G spans D, X = L_rho) is treated. Checked:
+does not imply). When G spans D (s = 1), X = L_rho; when G spans M_s(D),
+X = L cap F, F = e V_rho of dimension 4 c r found as the kernel of
+Phi_d(g) for one or two elements (any End_G-submodule of that dimension:
+its orthogonal projection is in the span of G and self-adjoint), D acting
+on F by the e g e, and the mass of X is multiplied by the factors of
+MultiplicityLocalFactor (quaternionic: no pi-adic search, the forms of
+the trace dual imposed). Checked for s = 2 with Q8 x S3 on D4 (x) A2 and
+its square (1/24, 1/1152), on a sublattice of index 3^4 of (D4 (x) W)^2,
+W the weight lattice of A2 scaled by 3 (5/64, 3 classes), and on D4 (x)
+A2 + D4 (x) W (5/576, 2 classes), all closed by enumeration; the factors
+met are all 1. Checked for s = 1:
 Q8 on D4, D4^2, D4^3 (1/24, 1/1152, 1/82944, the principal genus), on E8
 as a Hurwitz lattice (1/1920, the non-principal genus), on 2Z^4 (the
 Lipschitz order, 1/8), on E8 + D4 (1/46080); 2I on the icosian E8 and

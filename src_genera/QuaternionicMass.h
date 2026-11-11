@@ -70,9 +70,11 @@
   and [O : O_X], O_X the multiplier ring of X; elsewhere X_p and S_p are
   unimodular over the maximal order, hence similar.
 
-  Only the case where G spans D itself (s = 1: V_rho is a free D-module
-  of rank r) is treated, so that X = L_rho. Nothing is returned beyond the
-  bounds of the searches.
+  X is L_rho when G spans D (V_rho free of rank r over D); when G spans
+  M_s(D), s > 1, X = L cap e V_rho for a primitive self-adjoint idempotent
+  e of the span of G, D acting by the e g e (FiniteGroupComponents), and
+  the multiplicity factors [U(X_p) : Stab(L_p)] enter as in the split
+  case. Nothing is returned beyond the bounds of the searches.
  */
 
 struct QuaternionicMassBounds {
@@ -599,16 +601,46 @@ int QuaternionicRank(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &End,
 
 /*
   The mass of the quaternionic component, columns convention: B the Gram
-  matrix of X = L_rho, elts the group elements on it, gens the generators,
-  Centre a Q-basis of the centre K, FK the field K (when c > 1) and d_K.
+  matrix of X, Dspan matrices spanning D acting on X over Q (the group
+  elements when G spans D, X = L_rho; the e g e restricted to X = L cap e
+  V_rho otherwise), FK the centre K (when c > 1) and d_K. The multiplier
+  ring O_X of X in D, the centre and the D-linear maps all come from
+  Dspan.
  */
 template <typename T, typename Tint>
 std::optional<T> QuaternionicComponentMass(
-    MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &elts,
-    std::vector<MyMatrix<T>> const &gens, std::vector<MyMatrix<T>> const &Centre,
+    MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Dspan,
     std::optional<AbelianCMField> const &FK, T const &dK, int r,
     QuaternionicMassBounds const &bounds, std::ostream &os) {
   int k = B.rows();
+  // the multiplier ring of X in D
+  std::vector<MyMatrix<T>> O0 = QuatIntegralPoints<T, Tint>(Dspan, k);
+  std::vector<MyMatrix<T>> const &gens = O0;
+  // the centre of D: the elements of the span of O0 commuting with O0
+  std::vector<MyMatrix<T>> Centre;
+  {
+    int d0 = static_cast<int>(O0.size());
+    int kk = k * k;
+    MyMatrix<T> Eq(d0, kk * d0);
+    for (int i = 0; i < d0; i++) {
+      for (int j = 0; j < d0; j++) {
+        MyMatrix<T> C = O0[i] * O0[j] - O0[j] * O0[i];
+        for (int u = 0; u < k; u++) {
+          for (int v = 0; v < k; v++) {
+            Eq(i, j * kk + u * k + v) = C(u, v);
+          }
+        }
+      }
+    }
+    MyMatrix<T> ker = NullspaceMat(Eq);
+    for (int t = 0; t < ker.rows(); t++) {
+      MyMatrix<T> Z = ZeroMatrix<T>(k, k);
+      for (int i = 0; i < d0; i++) {
+        Z += ker(t, i) * O0[i];
+      }
+      Centre.push_back(Z);
+    }
+  }
   int c = static_cast<int>(Centre.size());
   int dimD = 4 * c;
   int dim_u = c * r * (2 * r + 1);
@@ -616,14 +648,11 @@ std::optional<T> QuaternionicComponentMass(
   auto adj = [&](MyMatrix<T> const &Y) -> MyMatrix<T> {
     return Binv * Y.transpose() * B;
   };
-  // the multiplier ring of X in the span of G, which must be D (s = 1)
-  std::vector<MyMatrix<T>> O0 = QuatIntegralPoints<T, Tint>(elts, k);
   if (static_cast<int>(O0.size()) != dimD || k != dimD * r) {
-#ifdef DEBUG_QUATERNIONIC_MASS
-    os << "QUAT_MASS: G spans an algebra of dimension " << O0.size()
-       << ", not D (s > 1), left out\n";
-#endif
-    return {};
+    std::cerr << "QUAT_MASS: the span has dimension " << O0.size()
+              << " for a centre of degree " << c << " and rank " << k
+              << ", not that of D\n";
+    throw TerminalException{1};
   }
   // the adjoint is the canonical involution: x + x^* is central
   for (auto const &w : O0) {
@@ -921,9 +950,21 @@ std::optional<T> QuaternionicComponentMass(
     throw TerminalException{1};
   }
   MyMatrix<T> const &BS = *best_G;
-  for (auto const &g : gensS) {
-    if (MyMatrix<T>(g.transpose() * BS * g) != BS) {
-      std::cerr << "QUAT_MASS: G does not preserve the form of S\n";
+  // the adjoint of the left multiplication by w on S is that by w^*
+  for (size_t ig = 0; ig < gens.size(); ig++) {
+    MyMatrix<T> wbar = adj(gens[ig]);
+    MyMatrix<T> Lbar = ZeroMatrix<T>(kS, kS);
+    for (int a = 0; a < d; a++) {
+      MyVector<T> sv = coords(MyMatrix<T>(wbar * O[a]));
+      for (int b = 0; b < d; b++) {
+        for (int i = 0; i < r; i++) {
+          Lbar(i * d + b, i * d + a) = sv(b);
+        }
+      }
+    }
+    if (MyMatrix<T>(gensS[ig].transpose() * BS) != MyMatrix<T>(BS * Lbar)) {
+      std::cerr << "QUAT_MASS: the adjoint on S is not the canonical "
+                   "involution\n";
       throw TerminalException{1};
     }
   }

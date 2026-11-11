@@ -1445,8 +1445,11 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     cm.rank = comp.gram.rows();
     cm.det = DeterminantMat(comp.gram);
     if (comp.d == 0 && comp.quaternionic) {
-      if (comp.quaternionic_mass) {
+      if (comp.quaternionic_mass && comp.multiplicity_factor) {
+        cm.mass = *comp.quaternionic_mass * *comp.multiplicity_factor;
+      } else if (comp.quaternionic_mass) {
         cm.mass = *comp.quaternionic_mass;
+        res.local_correction_open = true;
       } else {
         res.unsupported_component = true;
       }
@@ -1848,8 +1851,12 @@ ModuleSubgroupOrbitSize(PrimaryQuadModule const &M,
 /*
   The product over the primes of [O(X_p) : Stab(L_p)].
   A: the Gram matrix of L; Xb: a basis of X (rows, coordinates of L); E: a
-  basis of L_rho = L cap V_rho; elts: the elements of G (on the rows).
-  Nothing when the bounds are exceeded.
+  basis of L_rho = L cap V_rho; elts: the elements of G (on the rows);
+  OmegaX: a Z-basis of the order acting on X (O_K, or an order of a
+  quaternion algebra D when quaternionic: the pi-adic search, which needs
+  a commutative O_K, is then skipped, and the forms B(w x, y), w in the
+  trace dual, are imposed in the search). Nothing when the bounds are
+  exceeded.
  */
 template <typename T, typename Tint>
 std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
@@ -1859,6 +1866,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
                                          std::vector<MyMatrix<T>> const &ListP,
                                          std::vector<MyMatrix<T>> const &OmegaX,
                                          std::vector<MyMatrix<T>> const &ListCentral,
+                                         bool quaternionic,
                                          MultiplicityFactorBounds const &bounds,
                                          [[maybe_unused]] std::ostream &os) {
   int m = Xb.rows();
@@ -2146,8 +2154,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     // with a centre K other than Q the search over the primes of K over
     // p, pi-adically, first: it is exact and the fastest
     std::optional<std::vector<ModMat>> opt;
-    bool rows_convention = !OmegaX.empty();
-    if (!OmegaX.empty()) {
+    bool rows_convention = !OmegaX.empty() && !quaternionic;
+    if (!OmegaX.empty() && !quaternionic) {
       opt = LocalImagePiAdic(GramX, OmegaX, p, c, bounds.max_solution);
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
       os << "MULT_FACTOR: p=" << p << " pi-adic image "
@@ -2256,8 +2264,31 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       for (auto const &Y : IntegralCommutant<T, Tint>(compX)) {
         Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
       }
+      // for a quaternion order, the forms B(w x, y) = x W GramX y^T, w in
+      // the trace dual (the integral points of their span), as residues
+      // modulo p^W
+      std::vector<ModMat> Forms;
+      if (quaternionic) {
+        std::vector<MyMatrix<T>> Ls;
+        for (auto const &W2 : OmegaX) {
+          Ls.push_back(MyMatrix<T>(W2 * GramX));
+        }
+        for (auto const &N : QuatIntegralPoints<T, Tint>(Ls, m)) {
+          ModMat Nm(m, std::vector<int64_t>(m));
+          for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+              Tint v = ResInt(UniversalScalarConversion<Tint, T>(N(i, j)), pW);
+              if (v < 0) {
+                v += pW;
+              }
+              Nm[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
+            }
+          }
+          Forms.push_back(Nm);
+        }
+      }
       LocalImageOrder order;
-      opt = LocalOrthogonalImageGenerators(A_mod, Be, Om, Lam, {}, p, c, e,
+      opt = LocalOrthogonalImageGenerators(A_mod, Be, Om, Lam, Forms, p, c, e,
                                            bounds, &order);
       if (opt) {
         rows_convention = false;
@@ -2994,8 +3025,109 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         }
         comp.quaternionic = true;
         QuaternionicMassBounds qbounds;
-        comp.quaternionic_mass = QuaternionicComponentMass<T, Tint>(
-            Gram, EltsC, GensC, CentreC, FKq, dKq, rq, qbounds, os);
+        // G spans M_s(D) on the block, of dimension 4 c s^2
+        int dimA = 0;
+        {
+          MyMatrix<T> Fl(static_cast<int>(EltsC.size()), k * k);
+          for (size_t i = 0; i < EltsC.size(); i++) {
+            for (int u = 0; u < k; u++) {
+              for (int v = 0; v < k; v++) {
+                Fl(static_cast<int>(i), u * k + v) = EltsC[i](u, v);
+              }
+            }
+          }
+          dimA = RankMat(Fl);
+        }
+        int sq = static_cast<int>(std::llround(
+            std::sqrt(static_cast<double>(dimA) / static_cast<double>(4 * c))));
+        if (4 * c * sq * sq != dimA || k != 4 * c * sq * rq) {
+          std::cerr << "ISOM_MASS: G spans an algebra of dimension " << dimA
+                    << " on a quaternionic block of rank " << k << "\n";
+          throw TerminalException{1};
+        }
+        if (sq == 1) {
+          // X = L_rho, on which G spans D
+          comp.quaternionic_mass = QuaternionicComponentMass<T, Tint>(
+              Gram, EltsC, FKq, dKq, rq, qbounds, os);
+          comp.multiplicity_factor = T(1);
+        } else {
+          /*
+            X = L cap F, F = e V_rho for a primitive self-adjoint idempotent
+            e of the span of G: any End_G-submodule of V_rho of dimension 4
+            c r (its orthogonal projection commutes with End_G, so it is in
+            the span of G, and it is self-adjoint). F is found as the kernel
+            of Phi_d(g) for one or two elements, d | ord(g). D acts on F by
+            the e g e restricted to F, and the mass of the component is
+            that of X times the local factors [U(X_p) : Stab(L_p)].
+           */
+          int dimF = 4 * c * rq;
+          std::vector<MyMatrix<T>> cand;
+          for (size_t i = 0; i < n_elt; i++) {
+            int o = IsometryOrder(elts[i]);
+            for (int dd = 1; dd <= o; dd++) {
+              if (o % dd == 0) {
+                cand.push_back(EvaluatePolynomialMatrix<T>(
+                    CyclotomicPolynomial(dd), elts[i]));
+              }
+            }
+          }
+          std::optional<MyMatrix<T>> Xq;
+          auto try_kernel = [&](std::vector<MyMatrix<T>> const &cs) -> bool {
+            std::vector<MyMatrix<T>> all = blk.conditions;
+            all.insert(all.end(), cs.begin(), cs.end());
+            MyMatrix<T> Big(n, n * static_cast<int>(all.size()));
+            for (size_t a = 0; a < all.size(); a++) {
+              for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                  Big(i, static_cast<int>(a) * n + j) = all[a](i, j);
+                }
+              }
+            }
+            MyMatrix<Tint> K_i = NullspaceIntTrMat(
+                MyMatrix<Tint>(UniversalMatrixConversion<Tint, T>(Big).transpose()));
+            if (K_i.rows() != dimF) {
+              return false;
+            }
+            Xq = UniversalMatrixConversion<T, Tint>(K_i);
+            return true;
+          };
+          for (size_t a = 0; a < cand.size() && !Xq; a++) {
+            (void)try_kernel({cand[a]});
+          }
+          for (size_t a = 0; a < cand.size() && !Xq; a++) {
+            for (size_t b = a + 1; b < cand.size() && !Xq; b++) {
+              (void)try_kernel({cand[a], cand[b]});
+            }
+          }
+          if (Xq) {
+            MyMatrix<T> const &Xb = *Xq;
+            MyMatrix<T> GramX = Xb * A * Xb.transpose();
+            MyMatrix<T> GramXinv = Inverse(GramX);
+            // e g e on X (rows), the orthogonal projection onto F
+            std::vector<MyMatrix<T>> DspanX;
+            for (auto const &x : elts) {
+              DspanX.push_back(MyMatrix<T>(Xb * x * A * Xb.transpose() * GramXinv)
+                                   .transpose());
+            }
+            comp.quaternionic_mass = QuaternionicComponentMass<T, Tint>(
+                GramX, DspanX, FKq, dKq, rq, qbounds, os);
+            std::vector<MyMatrix<T>> OmegaQ;
+            for (auto const &W2 : QuatIntegralPoints<T, Tint>(DspanX, dimF)) {
+              OmegaQ.push_back(W2.transpose());
+            }
+            auto [ClassSumq, Nexpq, Hgensq] = centre_field();
+            (void)Nexpq;
+            (void)Hgensq;
+            MultiplicityFactorBounds mbounds;
+            comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
+                A, Xb, blk.E, elts, ListP, OmegaQ, ClassSumq, true, mbounds, os);
+          }
+#ifdef DEBUG_ISOMETRY_MASS
+          os << "ISOM_MASS: quaternionic with s=" << sq << ", X "
+             << (Xq ? "found" : "not found") << ", factor "
+             << (comp.multiplicity_factor ? "found" : "not found") << "\n";
+#endif
+        }
 #ifdef DEBUG_ISOMETRY_MASS
         os << "ISOM_MASS: quaternionic component of rank " << k << ", r=" << rq
            << ", centre of degree " << c << ", mass "
@@ -3056,7 +3188,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       if (found) {
         MultiplicityFactorBounds mbounds;
         comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
-            A, found_basis, blk.E, elts, ListP, {}, {}, mbounds, os);
+            A, found_basis, blk.E, elts, ListP, {}, {}, false, mbounds, os);
       }
     }
     // with a centre of degree c, End_G = M_m(K) has dimension m^2 c
@@ -3218,7 +3350,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           comp.centre_omega = Omega;
           MultiplicityFactorBounds mbounds;
           comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
-              A, Xb, blk.E, elts, ListP, Omega, ClassSum, mbounds, os);
+              A, Xb, blk.E, elts, ListP, Omega, ClassSum, false, mbounds, os);
         }
       }
     }

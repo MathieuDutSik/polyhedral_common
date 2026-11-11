@@ -427,6 +427,15 @@ group_mass_case qIcoLam 2I 17/1800
 group_mass_case qE8hD4 Q8 1/46080
 group_mass_case qD4x3 Q8 1/82944
 group_mass_case qZ4x2 Q8 1/128
+# G spanning M_2(D): Q8 x S3 on D4 (x) A2 (the Weyl action), its square,
+# on {(x, y) in (D4 (x) W)^2 : x = y mod D4 (x) A2}, W the weight lattice
+# of A2 scaled by 3 (3 classes), and on D4 (x) A2 + D4 (x) W (2 classes):
+# X = L cap e V for a primitive idempotent e, its mass times the local
+# factors [U(X_p) : Stab(L_p)] (all 1 here).
+group_mass_case qD4A2 QS 1/24
+group_mass_case qD4A2x2 QS 1/1152
+group_mass_case qD4W2glue QS 5/64
+group_mass_case qD4A2W2 QS 5/576
 # F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
 # the factor at the ramified prime 11 by the pi-adic chain (an image of
 # order about 3 10^4, orbit 1); the module N^#/N at 11 is beyond the old
