@@ -451,6 +451,17 @@ group_mass_case qDic5 Dic 1/20
 group_mass_case qDic6 Dic 1/24
 group_mass_case qDic9 Dic 1/36
 group_mass_case qDic7 Dic 1/28
+# Pairs (L, G) from the benchmark over DefLatDB, each a bug it found: the
+# order of the primes of the enumeration (C3, a class missed at the primes
+# inert in Q(zeta_3)), 64-bit overflows in the glue (C4, C2 with 33
+# classes), the multiplier ring of X in K larger than the order of the
+# class sums (a group of order 24), multiplicity one without a line F (a
+# group of order 144).
+group_mass_case bg0007c3 G 1/72
+group_mass_case bg1235c4 G 1/16
+group_mass_case bg0555c2 G 403/768
+group_mass_case bg2129p242 G 1/6
+group_mass_case bg2141p1441 G 1/24
 # F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
 # the factor at the ramified prime 11 by the pi-adic chain (an image of
 # order about 3 10^4, orbit 1); the module N^#/N at 11 is beyond the old

@@ -152,6 +152,16 @@ template <typename T> struct IsometryComponent {
   std::vector<int64_t> elem;
 };
 
+// The residue in [0, mod) of the integer val, reduced exactly before the
+// conversion to 64 bits (val itself may not fit: the images of a vector by
+// a local isometry known modulo q^c have large coordinates)
+template <typename T> int64_t ResidueOfInteger(T const &val, int64_t mod) {
+  T mod_T = ScalarFromInt64<T>(mod);
+  T fl = UniversalFloorScalarInteger<T, T>(val / mod_T);
+  T r = val - mod_T * fl;
+  return UniversalScalarConversion<int64_t, T>(r);
+}
+
 template <typename T>
 std::vector<int64_t> DiscriminantResidues(IsometryComponent<T> const &comp,
                                           MyVector<T> const &x) {
@@ -163,8 +173,7 @@ std::vector<int64_t> DiscriminantResidues(IsometryComponent<T> const &comp,
       std::cerr << "ISOM_MASS: a vector is not in the dual lattice\n";
       throw TerminalException{1};
     }
-    int64_t r = UniversalScalarConversion<int64_t, T>(val);
-    res.push_back(ModPos64(r, comp.elem[i]));
+    res.push_back(ResidueOfInteger(val, comp.elem[i]));
   }
   return res;
 }
@@ -312,10 +321,9 @@ PrimaryQuadModule BuildPrimaryQuadModule(IsometryComponent<T> const &comp,
         std::cerr << "ISOM_MASS: the discriminant form is not of exponent N\n";
         throw TerminalException{1};
       }
-      int64_t v = UniversalScalarConversion<int64_t, T>(val);
-      M.bnum[i][j] = ModPos64(v, M.N);
+      M.bnum[i][j] = ResidueOfInteger(val, M.N);
       if (i == j) {
-        M.qnum[i] = ModPos64(v, 2 * M.N);
+        M.qnum[i] = ResidueOfInteger(val, 2 * M.N);
       }
     }
   }
@@ -1050,12 +1058,39 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
       }
     }
   }
-  // exact integer matrices: the solutions must stay in Lambda
+  // exact integer matrices: the solutions of the listing must stay in
+  // Lambda; its basis (an integral kernel) may not fit in 64 bits, and the
+  // listing is then left out (fits_int64 false)
+  bool fits_int64 = true;
+  Tint lim = UniversalScalarConversion<Tint, int64_t>(int64_t(1) << 60);
   auto exact = [&](MyMatrix<Tint> const &X) -> ModMat {
+    ModMat R(k, std::vector<int64_t>(k, 0));
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < k; j++) {
+        if (X(i, j) > lim || X(i, j) < -lim) {
+          fits_int64 = false;
+        } else {
+          R[i][j] = UniversalScalarConversion<int64_t, Tint>(X(i, j));
+        }
+      }
+    }
+    return R;
+  };
+  // the residues modulo q^W, for the certified generators
+  int Wq = MultiplicityNewtonPrecision(M.q);
+  Tint qW(1);
+  for (int i = 0; i < Wq; i++) {
+    qW *= UniversalScalarConversion<Tint, int64_t>(M.q);
+  }
+  auto residues = [&](MyMatrix<Tint> const &X) -> ModMat {
     ModMat R(k, std::vector<int64_t>(k));
     for (int i = 0; i < k; i++) {
       for (int j = 0; j < k; j++) {
-        R[i][j] = UniversalScalarConversion<int64_t, Tint>(X(i, j));
+        Tint v = ResInt(X(i, j), qW);
+        if (v < 0) {
+          v += qW;
+        }
+        R[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
       }
     }
     return R;
@@ -1072,6 +1107,136 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
   }
   ModMat A_mod = exact(UniversalMatrixConversion<Tint, T>(comp.gram));
   MultiplicityFactorBounds mbounds;
+  /*
+    First the certified generators of the image modulo q^c
+    (LocalOrthogonalImageGenerators, on the columns, commuting with the
+    group and within its integral commutant), and the closure of their
+    actions on M: the image is not listed. The listing of the image
+    (LocalStabilizerImage) when they are beyond the bounds.
+   */
+  {
+    int Wn = MultiplicityNewtonPrecision(q);
+    Tint pW(1);
+    for (int i = 0; i < Wn; i++) {
+      pW *= UniversalScalarConversion<Tint, int64_t>(q);
+    }
+    MyMatrix<T> Binv = Inverse(comp.gram);
+    T pe(1);
+    for (int i = 0; i < e; i++) {
+      pe *= UniversalScalarConversion<T, int64_t>(q);
+    }
+    ModMat Be(k, std::vector<int64_t>(k));
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < k; j++) {
+        T x = Binv(i, j) * pe;
+        Tint den = GetDenominator_z(x);
+        Tint inv = mod_inv(ResInt(den, pW), pW);
+        Tint v = ResInt(Tint(GetNumerator_z(x) * inv), pW);
+        if (v < 0) {
+          v += pW;
+        }
+        Be[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
+      }
+    }
+    // the group on the columns: the transposes when the matrices act on
+    // the rows (sigma A sigma^T = A)
+    std::vector<MyMatrix<T>> ListX{comp.sigma};
+    ListX.insert(ListX.end(), comp.extra_sigma.begin(), comp.extra_sigma.end());
+    bool on_rows = true;
+    for (auto const &X : ListX) {
+      if (MyMatrix<T>(X * comp.gram * X.transpose()) != comp.gram) {
+        on_rows = false;
+      }
+    }
+    std::vector<ModMat> Om, Lam;
+    for (auto const &X : ListX) {
+      MyMatrix<Tint> Xi = UniversalMatrixConversion<Tint, T>(
+          on_rows ? MyMatrix<T>(X.transpose()) : X);
+      Om.push_back(residues(Xi));
+    }
+    for (auto const &Y : ListComm) {
+      Lam.push_back(residues(on_rows ? MyMatrix<Tint>(Y.transpose()) : Y));
+    }
+    LocalImageOrder ord;
+    std::optional<std::vector<ModMat>> ggens = LocalOrthogonalImageGenerators(
+        residues(UniversalMatrixConversion<Tint, T>(comp.gram)), Be, Om, Lam,
+        {}, q, c, e, mbounds, &ord);
+    if (ggens) {
+      std::vector<MyVector<T>> mgens = PrimaryModuleGenerators(comp, M);
+      std::vector<ModuleAut> gimg;
+      for (auto const &g : *ggens) {
+        // back to the convention of ModuleActionOfIsometry (the rows)
+        MyMatrix<Tint> h(k, k);
+        for (int i = 0; i < k; i++) {
+          for (int j = 0; j < k; j++) {
+            h(i, j) = UniversalScalarConversion<Tint, int64_t>(
+                on_rows ? g[j][i] : g[i][j]);
+          }
+        }
+        gimg.push_back(ModuleActionOfIsometry(comp, M, mgens, h));
+      }
+      size_t r = M.rank();
+      ModuleAut id(r, ModuleElt(r, 0));
+      for (size_t i = 0; i < r; i++) {
+        id[i][i] = 1;
+      }
+      std::set<ModuleAut> seen{id};
+      std::vector<ModuleAut> queue{id};
+      bool too_big = false;
+      while (!queue.empty() && !too_big) {
+        ModuleAut x = queue.back();
+        queue.pop_back();
+        for (auto const &gg : gimg) {
+          ModuleAut y;
+          for (auto const &xi : x) {
+            y.push_back(ApplyModuleAut(M, gg, xi));
+          }
+          if (seen.insert(y).second) {
+            queue.push_back(y);
+            if (seen.size() > 1000000) {
+              too_big = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!too_big) {
+#ifdef DEBUG_ISOMETRY_MASS
+        os << "ISOM_MASS: q=" << q << " d=" << comp.d << " image on D="
+           << seen.size() << " from " << ggens->size() << " generators\n";
+#endif
+#ifdef SANITY_CHECK_ISOMETRY_MASS
+        // the listed image, when within the bounds, is the same set
+        std::optional<std::vector<ModMat>> lst;
+        if (fits_int64) {
+          lst = LocalStabilizerImage(A_mod, basis, q, c, e, mbounds);
+        }
+        if (lst) {
+          std::set<ModuleAut> listed;
+          for (auto const &g : *lst) {
+            MyMatrix<Tint> h(k, k);
+            for (int i = 0; i < k; i++) {
+              for (int j = 0; j < k; j++) {
+                h(i, j) = UniversalScalarConversion<Tint, int64_t>(g[i][j]);
+              }
+            }
+            listed.insert(ModuleActionOfIsometry(comp, M, mgens, h));
+          }
+          if (listed != seen) {
+            std::cerr << "ISOM_MASS: the image on D from the generators ("
+                      << seen.size() << ") differs from the listed one ("
+                      << listed.size() << ")\n";
+            throw TerminalException{1};
+          }
+        }
+#endif
+        return std::vector<ModuleAut>(seen.begin(), seen.end());
+      }
+    }
+  }
+  if (!fits_int64) {
+    return {};
+  }
   std::optional<std::vector<ModMat>> opt =
       LocalStabilizerImage(A_mod, basis, q, c, e, mbounds);
   if (!opt) {
@@ -2756,6 +2921,60 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
   (Section on non-abelian groups of the paper). Other components get no
   mass.
  */
+/*
+  An End_G-submodule of the block of dimension dim, as the integral kernel
+  of Phi_d(g), for one element or two, d dividing the order of g, together
+  with the conditions of the block (row convention, as the elements): the
+  rows of a basis of L cap F, or nothing.
+ */
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+CyclotomicKernelSubmodule(std::vector<MyMatrix<T>> const &elts,
+                          std::vector<MyMatrix<T>> const &conditions, int n,
+                          int dim) {
+  std::vector<std::pair<size_t, MyMatrix<T>>> cand;
+  for (size_t i = 0; i < elts.size(); i++) {
+    int o = IsometryOrder(elts[i]);
+    for (int dd = 1; dd <= o; dd++) {
+      if (o % dd == 0) {
+        cand.push_back({i, EvaluatePolynomialMatrix<T>(CyclotomicPolynomial(dd),
+                                                       elts[i])});
+      }
+    }
+  }
+  std::optional<MyMatrix<T>> res;
+  auto try_kernel = [&](std::vector<MyMatrix<T>> const &cs) -> bool {
+    std::vector<MyMatrix<T>> all = conditions;
+    all.insert(all.end(), cs.begin(), cs.end());
+    MyMatrix<T> Big(n, n * static_cast<int>(all.size()));
+    for (size_t a = 0; a < all.size(); a++) {
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          Big(i, static_cast<int>(a) * n + j) = all[a](i, j);
+        }
+      }
+    }
+    MyMatrix<Tint> K_i = NullspaceIntTrMat(
+        MyMatrix<Tint>(UniversalMatrixConversion<Tint, T>(Big).transpose()));
+    if (K_i.rows() != dim) {
+      return false;
+    }
+    res = UniversalMatrixConversion<T, Tint>(K_i);
+    return true;
+  };
+  for (size_t a = 0; a < cand.size() && !res; a++) {
+    (void)try_kernel({cand[a].second});
+  }
+  for (size_t a = 0; a < cand.size() && !res; a++) {
+    for (size_t b = a + 1; b < cand.size() && !res; b++) {
+      if (cand[a].first != cand[b].first) {
+        (void)try_kernel({cand[a].second, cand[b].second});
+      }
+    }
+  }
+  return res;
+}
+
 template <typename T, typename Tint>
 std::vector<IsometryComponent<T>>
 FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
@@ -3285,6 +3504,27 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           }
         }
       }
+      if (!found) {
+        // the kernels of Phi_d(g) for the d dividing the order of g, alone
+        // or by pairs: any End_G-submodule of dimension m does (its
+        // orthogonal projection is a primitive idempotent of the span of G)
+        std::optional<MyMatrix<T>> Xq = CyclotomicKernelSubmodule<T, Tint>(
+            elts, blk.conditions, n, m);
+        if (Xq) {
+          found = MyMatrix<T>(*Xq * A * Xq->transpose());
+          found_basis = *Xq;
+        }
+      }
+      if (!found && m == 1) {
+        // multiplicity one: the centraliser on the component is {+-1},
+        // which preserves every lattice; the mass is that of any lattice of
+        // rank one (1/2), without the line F and without a local factor
+        MyMatrix<T> one(1, 1);
+        one(0, 0) = T(2);
+        comp.multiplicity_gram = one;
+        res.push_back(comp);
+        continue;
+      }
       comp.multiplicity_gram = found;
       if (found) {
         MultiplicityFactorBounds mbounds;
@@ -3363,7 +3603,16 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             }
           }
         }
+        if (!found_basis) {
+          found_basis = CyclotomicKernelSubmodule<T, Tint>(
+              elts, blk.conditions, n, m * c);
+        }
       }
+#ifdef DEBUG_ISOMETRY_MASS
+      os << "ISOM_MASS: centre of degree " << c << " (" << (is_cm ? "CM" : "real")
+         << "), m=" << m << ", Nexp=" << Nexp << ", F "
+         << (found_basis ? "found" : "not found") << "\n";
+#endif
       if (found_basis) {
         MyMatrix<T> const &Xb = *found_basis;
         int mX = Xb.rows();
@@ -3416,6 +3665,15 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           }
           Omega = next;
         }
+        // the multiplier ring of X in K (the integral matrices of the span
+        // of the class sums on X), which can be larger than the order the
+        // class sums generate: X is an O_K-lattice when it is O_K
+        if (static_cast<int>(Omega.size()) == c) {
+          std::vector<MyMatrix<T>> Mult = QuatIntegralPoints<T, Tint>(Omega, mX);
+          if (static_cast<int>(Mult.size()) == c) {
+            Omega = Mult;
+          }
+        }
         AbelianCMField Fk = is_cm ? MakeAbelianCMField(Nexp, Hgens)
                                   : MakeAbelianRealField(Nexp, Hgens);
         // the order is O_K when its discriminant is that of K (the product
@@ -3441,6 +3699,10 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           }
           maximal = (dO == dK);
         }
+#ifdef DEBUG_ISOMETRY_MASS
+        os << "ISOM_MASS: the order of the class sums on X has rank "
+           << Omega.size() << ", maximal " << maximal << "\n";
+#endif
         if (maximal) {
           if (is_cm) {
             comp.herm_field = Fk;

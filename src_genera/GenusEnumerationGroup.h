@@ -791,6 +791,42 @@ std::vector<int> OrderedNeighborPrimes(std::vector<MyMatrix<T>> const &ListP,
   for (auto const &pair : ListCost) {
     res.push_back(pair.second);
   }
+  /*
+    The neighbours at p realise only the moves of the characters with
+    values in F_p (the primes of degree one of their fields): at p != 1 mod
+    m the components of a unitary (CM) part are not connected, and an
+    enumeration with only such primes can stop short of the mass (C3 on a
+    lattice of rank 8 and determinant 324: the primes 5, 11, ..., 41, all
+    inert in Q(zeta_3), miss a class that p = 7 finds). So a prime p = 1 mod
+    m, where every character has its values in F_p, comes second, the
+    cheapest one among the candidates or the next one beyond them.
+   */
+  if (m > 2) {
+    size_t i_full = res.size();
+    for (size_t i2 = 0; i2 < res.size(); i2++) {
+      if (res[i2] % m == 1) {
+        i_full = i2;
+        break;
+      }
+    }
+    if (i_full == res.size()) {
+      int q = res.empty() ? 1 : *std::max_element(res.begin(), res.end());
+      while (true) {
+        q = NextPrimeAfter(q);
+        if (q % m == 1 && IsGoodNeighborPrime(q, m, det, scalar) &&
+            !ComputeJointEigenspaces(ListP_int, m, q).empty()) {
+          break;
+        }
+      }
+      res.push_back(q);
+      i_full = res.size() - 1;
+    }
+    if (i_full > 1) {
+      int q = res[i_full];
+      res.erase(res.begin() + static_cast<std::ptrdiff_t>(i_full));
+      res.insert(res.begin() + 1, q);
+    }
+  }
   return res;
 }
 
@@ -918,6 +954,34 @@ std::vector<int> OrderedNeighborPrimesModule(MyMatrix<T> const &A,
   std::vector<int> res;
   for (auto const &pair : ListCost) {
     res.push_back(pair.second);
+  }
+  // a prime p = 1 mod m second, as in OrderedNeighborPrimes: at the primes
+  // inert in the centre of a unitary component the local unitary group is
+  // compact and its neighbours do not connect the classes
+  if (m > 2) {
+    size_t i_full = res.size();
+    for (size_t i2 = 0; i2 < res.size(); i2++) {
+      if (res[i2] % m == 1) {
+        i_full = i2;
+        break;
+      }
+    }
+    if (i_full == res.size()) {
+      int q = res.empty() ? 2 : *std::max_element(res.begin(), res.end());
+      while (true) {
+        q = NextPrimeAfter(q);
+        if (q % m == 1 && IsGoodNeighborPrime(q, m, det, false)) {
+          break;
+        }
+      }
+      res.push_back(q);
+      i_full = res.size() - 1;
+    }
+    if (i_full > 1) {
+      int q = res[i_full];
+      res.erase(res.begin() + static_cast<std::ptrdiff_t>(i_full));
+      res.insert(res.begin() + 1, q);
+    }
   }
   return res;
 }
