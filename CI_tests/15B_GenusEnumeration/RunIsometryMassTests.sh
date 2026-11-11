@@ -444,11 +444,13 @@ group_mass_case qD4A2W2 QS 5/576
 group_mass_case qD4Ideal QS 1/6
 # Centres other than Q(sqrt 5): the dicyclic groups Dic_n on Z[z] + Z[z] j,
 # z a primitive 2n-th root of 1, centre Q(z + 1/z): Q(sqrt 2), Q(sqrt 5),
-# Q(sqrt 3) and the cubic Q(zeta_9)^+ (D ramified at the prime over 3)
+# Q(sqrt 3) and the cubic Q(zeta_9)^+ and Q(zeta_7)^+ (D ramified at the
+# prime over 3, resp. 7; rank one over the maximal order there, ratio 1)
 group_mass_case qDic4 Dic 1/16
 group_mass_case qDic5 Dic 1/20
 group_mass_case qDic6 Dic 1/24
 group_mass_case qDic9 Dic 1/36
+group_mass_case qDic7 Dic 1/28
 # F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
 # the factor at the ramified prime 11 by the pi-adic chain (an image of
 # order about 3 10^4, orbit 1); the module N^#/N at 11 is beyond the old

@@ -133,6 +133,52 @@ inline LiftSystem MakeLiftSystem(ModMat const &g, ModMat const &A, int64_t p,
   }
   return LiftSystem{coef, rhs};
 }
+// The right-hand side of the system of MakeLiftSystem alone: -E / p^j
+// modulo p for the a <= b, E = g^T A g - A (its matrix depends on g modulo
+// p only, so a search that changes g by p^j Delta needs only this)
+inline std::vector<int64_t> LiftRhs(ModMat const &g, ModMat const &A, int64_t p,
+                                    int64_t pj) {
+  size_t m = A.size();
+  int64_t pj1 = pj * p;
+  // E = g^T A g - A, exactly over the integers of the representatives
+  std::vector<std::vector<__int128>> Ag(m, std::vector<__int128>(m, 0));
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      __int128 s = 0;
+      for (size_t c = 0; c < m; c++) {
+        s += static_cast<__int128>(A[a][c]) * g[c][b];
+      }
+      Ag[a][b] = s;
+    }
+  }
+  std::vector<std::vector<int64_t>> Ered(m, std::vector<int64_t>(m));
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      __int128 s = 0;
+      for (size_t c = 0; c < m; c++) {
+        s += static_cast<__int128>(g[c][a]) * Ag[c][b];
+      }
+      s -= A[a][b];
+      __int128 r = s % pj1;
+      if (r < 0) {
+        r += pj1;
+      }
+      if (r % pj != 0) {
+        std::cerr << "MULT_FACTOR: g is not a solution modulo p^j\n";
+        throw TerminalException{1};
+      }
+      Ered[a][b] = static_cast<int64_t>(r / pj);
+    }
+  }
+  std::vector<int64_t> rhs;
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = a; b < m; b++) {
+      rhs.push_back(ModP(-Ered[a][b], p));
+    }
+  }
+  return rhs;
+}
+
 
 inline std::optional<LiftAffineSpace> LiftAffine(ModMat const &g,
                                                  ModMat const &A, int64_t p,
@@ -533,6 +579,192 @@ inline int MultiplicityNewtonPrecision(int64_t p) {
 }
 
 /*
+  A Jordan basis of the symmetric A modulo p^W, by congruence: the columns
+  of P, with P^T A P block diagonal, blocks p^l U with U unimodular, of
+  size 1 (and 2 at p = 2 when an off-diagonal entry has the least
+  valuation), and the level l of each column, nondecreasing. In that basis
+  the lattice X^(i) = {x : A x = 0 mod p^i} is spanned modulo p by the
+  columns of level >= i, which lie in it exactly. The precision decreases
+  by the levels met, far above what the search uses.
+ */
+inline std::pair<ModMat, std::vector<int>>
+JordanBasisModPW(ModMat const &A, int64_t p, int W) {
+  size_t m = A.size();
+  int64_t pW = 1;
+  for (int i = 0; i < W; i++) {
+    pW *= p;
+  }
+  auto mulmod = [&](int64_t x, int64_t y) -> int64_t {
+    __int128 r = static_cast<__int128>(x) * y % pW;
+    return static_cast<int64_t>((r < 0) ? r + pW : r);
+  };
+  auto inv_mod = [&](int64_t a) -> int64_t {
+    int64_t r0 = pW, r1 = ((a % pW) + pW) % pW, s0 = 0, s1 = 1;
+    while (r1 != 0) {
+      int64_t q = r0 / r1;
+      int64_t r2 = r0 - q * r1;
+      r0 = r1;
+      r1 = r2;
+      int64_t s2 = static_cast<int64_t>(
+          (static_cast<__int128>(s0) - static_cast<__int128>(q) * s1) % pW);
+      s0 = s1;
+      s1 = s2;
+    }
+    return ((s0 % pW) + pW) % pW;
+  };
+  auto val = [&](int64_t x) -> int {
+    x = ModP(x, pW);
+    if (x == 0) {
+      return W;
+    }
+    int v = 0;
+    while (x % p == 0) {
+      x /= p;
+      v++;
+    }
+    return v;
+  };
+  ModMat M(m, std::vector<int64_t>(m));
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      M[a][b] = ModP(A[a][b], pW);
+    }
+  }
+  ModMat P(m, std::vector<int64_t>(m, 0));
+  for (size_t a = 0; a < m; a++) {
+    P[a][a] = 1;
+  }
+  // column b += f column a, and the same on the rows (a congruence)
+  auto add = [&](size_t b, size_t a, int64_t f) -> void {
+    if (f == 0) {
+      return;
+    }
+    for (size_t u = 0; u < m; u++) {
+      M[u][b] = ModP(M[u][b] + mulmod(f, M[u][a]), pW);
+    }
+    for (size_t u = 0; u < m; u++) {
+      M[b][u] = ModP(M[b][u] + mulmod(f, M[a][u]), pW);
+    }
+    for (size_t u = 0; u < m; u++) {
+      P[u][b] = ModP(P[u][b] + mulmod(f, P[u][a]), pW);
+    }
+  };
+  auto swap_idx = [&](size_t a, size_t b) -> void {
+    if (a == b) {
+      return;
+    }
+    std::swap(M[a], M[b]);
+    for (size_t u = 0; u < m; u++) {
+      std::swap(M[u][a], M[u][b]);
+      std::swap(P[u][a], P[u][b]);
+    }
+  };
+  std::vector<int> levels(m, 0);
+  size_t start = 0;
+  while (start < m) {
+    int vmin = W + 1;
+    size_t ia = start, ib = start;
+    for (size_t a = start; a < m; a++) {
+      for (size_t b = start; b < m; b++) {
+        int v = val(M[a][b]);
+        if (v < vmin) {
+          vmin = v;
+          ia = a;
+          ib = b;
+        }
+      }
+    }
+    if (vmin >= W) {
+      // the rest is zero to the precision: level W
+      for (size_t a = start; a < m; a++) {
+        levels[a] = W;
+      }
+      break;
+    }
+    size_t diag = m;
+    for (size_t a = start; a < m && diag == m; a++) {
+      if (val(M[a][a]) == vmin) {
+        diag = a;
+      }
+    }
+#ifdef DEBUG_JORDAN
+    std::cerr << "JORDAN: start " << start << " vmin " << vmin << " ia " << ia
+              << " ib " << ib << " diag " << diag << "\n";
+#endif
+    if (diag == m && p != 2) {
+      // x_a + x_b: the diagonal entry M_aa + 2 M_ab + M_bb has valuation vmin
+      add(ia, ib, 1);
+      diag = ia;
+    }
+    int64_t pv = 1;
+    for (int i = 0; i < vmin; i++) {
+      pv *= p;
+    }
+    if (diag != m) {
+      swap_idx(diag, start);
+      int64_t u0 = M[start][start] / pv;
+      int64_t iu = inv_mod(u0);
+      for (size_t b = start + 1; b < m; b++) {
+        if (M[start][b] == 0) {
+          continue;
+        }
+        int64_t q = M[start][b] / pv;
+        add(b, start, ModP(-mulmod(q, iu), pW));
+      }
+      levels[start] = vmin;
+      start++;
+      continue;
+    }
+    // p = 2, a 2 x 2 block on (ia, ib): [[x, y], [y, z]] / 2^vmin is
+    // [[0, 1], [1, 0]] modulo 2
+    if (ia == ib) {
+      std::cerr << "JORDAN: no pivot found\n";
+      throw TerminalException{1};
+    }
+    swap_idx(ia, start);
+    if (ib == start) {
+      ib = ia;
+    }
+    swap_idx(ib, start + 1);
+    int64_t x = M[start][start] / pv, y = M[start][start + 1] / pv,
+            z = M[start + 1][start + 1] / pv;
+    int64_t det = ModP(mulmod(x, z) - mulmod(y, y), pW);
+    int64_t idet = inv_mod(det);
+    for (size_t c = start + 2; c < m; c++) {
+      int64_t r1 = M[start][c] / pv, r2 = M[start + 1][c] / pv;
+      if (r1 == 0 && r2 == 0) {
+        continue;
+      }
+      // (f1, f2) = -B^{-1} (r1, r2), B^{-1} = [[z, -y], [-y, x]] / det
+      int64_t f1 = ModP(-mulmod(idet, ModP(mulmod(z, r1) - mulmod(y, r2), pW)), pW);
+      int64_t f2 = ModP(-mulmod(idet, ModP(mulmod(x, r2) - mulmod(y, r1), pW)), pW);
+      add(c, start, f1);
+      add(c, start + 1, f2);
+    }
+    levels[start] = vmin;
+    levels[start + 1] = vmin;
+    start += 2;
+  }
+  // P^T A P is the matrix reduced
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      __int128 sacc = 0;
+      for (size_t k = 0; k < m; k++) {
+        for (size_t l = 0; l < m; l++) {
+          sacc = (sacc + static_cast<__int128>(P[k][a]) * ModP(A[k][l], pW) % pW * P[l][b]) % pW;
+        }
+      }
+      if (ModP(static_cast<int64_t>(sacc), pW) != M[a][b]) {
+        std::cerr << "JORDAN: P^T A P differs from the reduced matrix at " << a
+                  << "," << b << "\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+  return {P, levels};
+}
+
+/*
   Generators of the image G of O(X_p) in GL_m(Z / p^c) (columns: g^T A g =
   A), complete by construction and without listing G, which grows like
   p^{m(m-1)/2}:
@@ -569,7 +801,7 @@ inline int MultiplicityNewtonPrecision(int64_t p) {
 inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     ModMat const &A, ModMat const &Be, std::vector<ModMat> const &Om,
     std::vector<ModMat> const &Lam, std::vector<ModMat> const &Bil, int64_t p,
-    int c, int e, size_t rad_start,
+    int c, int e, std::vector<int> const &levels,
     MultiplicityFactorBounds const &bounds, LocalImageOrder *order) {
   size_t m = A.size();
   int t = (p == 2) ? 1 : 0;
@@ -1044,11 +1276,13 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         L.push_back(v);
       }
       auto residual = [&](std::vector<int64_t> const &cf0) -> std::vector<int64_t> {
-        LiftSystem sys = next_sys(cf0);
+        ModMat g2 = LiftAffineElement(gl, *sp, cf0, p, pjl);
+        ModMat gp = (d_lam > 0) ? reduce(project(g2, j + 1), pj1 * p) : g2;
+        std::vector<int64_t> rv = LiftRhs(gp, A, p, pj1);
         std::vector<int64_t> r(L.size(), 0);
         for (size_t k2 = 0; k2 < L.size(); k2++) {
           for (size_t a = 0; a < n_eq; a++) {
-            r[k2] = (r[k2] + L[k2][a] * sys.rhs[a]) % p;
+            r[k2] = (r[k2] + L[k2][a] * rv[a]) % p;
           }
         }
         return r;
@@ -1269,47 +1503,62 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // an element of G_1 with the given first columns, lifted: the further
   // columns searched one at a time
   std::vector<std::vector<int64_t>> cols(m);
-  // e = 1, basis vectors rad_start, ... spanning the radical R of A mod p:
-  // the image of such a vector lies in R, and the form A / p on R is kept
-  // modulo p (representatives in [0, p), which are in X cap p X^#)
-  int64_t p2 = p * p;
+  // The levels (a Jordan basis, JordanBasisModPW): column j lies in
+  // X^(l_j) = {x : A x = 0 mod p^{l_j}}, and so does the image y of e_j:
+  // zero coordinates on the columns of lower level. The image differs from
+  // its representative (coordinates in [0, p) on the columns of level >=
+  // l_j) by p z, z in X^(l_j - 1) (not X^(l_j): the coordinates on the
+  // lower columns are divisible by p, not zero), so the representatives
+  // fix B(y, y) modulo p^{l_j + 1} (modulo 4 at level 0 when p = 2) and
+  // B(y_k, y) modulo p^{l + 1} only when l_k = l_j = l; between different
+  // levels nothing beyond the conditions modulo p.
+  auto ppow = [&](int k) -> __int128 {
+    __int128 r = 1;
+    for (int i2 = 0; i2 < k; i2++) {
+      r *= p;
+    }
+    return r;
+  };
+  auto pair_mod = [&](std::vector<int64_t> const &u,
+                      std::vector<int64_t> const &w, __int128 M) -> __int128 {
+    __int128 sacc = 0;
+    for (size_t a = 0; a < m; a++) {
+      if (u[a] == 0) {
+        continue;
+      }
+      for (size_t b = 0; b < m; b++) {
+        if (w[b] == 0) {
+          continue;
+        }
+        sacc = (sacc + static_cast<__int128>(u[a]) * (A[a][b] % M) % M * w[b]) % M;
+      }
+    }
+    return ((sacc % M) + M) % M;
+  };
+  auto modM = [&](int64_t x, __int128 M) -> __int128 {
+    __int128 r = static_cast<__int128>(x) % M;
+    return (r < 0) ? r + M : r;
+  };
   auto radical_ok = [&](std::vector<int64_t> const &x, size_t i) -> bool {
-    if (i < rad_start) {
+    int li = levels[i];
+    if (li == 0) {
       return true;
     }
-    for (size_t a = 0; a < rad_start; a++) {
-      if (x[a] != 0) {
+    for (size_t a = 0; a < m; a++) {
+      if (levels[a] < li && x[a] != 0) {
         return false;
       }
     }
-    auto pair_val = [&](std::vector<int64_t> const &u,
-                        std::vector<int64_t> const &w) -> int64_t {
-      __int128 sacc = 0;
-      for (size_t a = 0; a < m; a++) {
-        if (u[a] == 0) {
-          continue;
-        }
-        for (size_t b = 0; b < m; b++) {
-          sacc += static_cast<__int128>(u[a]) * A[a][b] * w[b];
-        }
-      }
-      return ModP(static_cast<int64_t>(sacc % p2), p2);
-    };
-    if (pair_val(x, x) != ModP(A[i][i], p2)) {
-#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
-      std::cerr << "MULT_FACTOR: radical_ok diag i=" << i << " pair "
-                << pair_val(x, x) << " A_ii " << ModP(A[i][i], p2) << " A_ii raw "
-                << A[i][i] << "\n";
-#endif
+    __int128 Md = ppow(li + 1);
+    if (pair_mod(x, x, Md) != modM(A[i][i], Md)) {
       return false;
     }
-    for (size_t k = rad_start; k < i; k++) {
-      if (pair_val(x, cols[k]) != ModP(A[k][i], p2)) {
-#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
-        std::cerr << "MULT_FACTOR: radical_ok pair i=" << i << " k=" << k
-                  << " pair " << pair_val(x, cols[k]) << " A_ki "
-                  << ModP(A[k][i], p2) << "\n";
-#endif
+    for (size_t k = 0; k < i; k++) {
+      if (levels[k] != li) {
+        continue;
+      }
+      __int128 Mk = ppow(li + 1);
+      if (pair_mod(x, cols[k], Mk) != modM(A[k][i], Mk)) {
         return false;
       }
     }
@@ -1436,6 +1685,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         return false;
       }
     }
+
     for (auto const &N : Bilp) {
       int64_t sacc = 0;
       for (size_t a = 0; a < m; a++) {
@@ -1531,9 +1781,68 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       }
       return row;
     };
+    int lj = levels[j];
+    // the columns of lower level: zero coordinates
+    for (size_t a = 0; a < m; a++) {
+      if (levels[a] < lj) {
+        std::vector<int64_t> row(m, 0);
+        row[a] = 1;
+        fixed.push_back(row);
+        rhs.push_back(0);
+      }
+    }
+    // the linear form y -> B(u, y) / p^M modulo p on the coordinates of
+    // level >= l_j, and b / p^M, u in X^(M) or M <= l_j
+    auto level_form = [&](std::vector<int64_t> const &u, int M,
+                          int64_t bval) -> void {
+      __int128 Mk = ppow(M + 1);
+      __int128 pM = ppow(M);
+      std::vector<int64_t> row(m, 0);
+      for (size_t b = 0; b < m; b++) {
+        if (levels[b] < lj) {
+          continue;
+        }
+        __int128 sacc = 0;
+        for (size_t a = 0; a < m; a++) {
+          if (u[a] != 0) {
+            sacc = (sacc + static_cast<__int128>(u[a]) * modM(A[a][b], Mk)) % Mk;
+          }
+        }
+        if (sacc % pM != 0) {
+          std::cerr << "MULT_FACTOR: a pairing is not divisible by its level, p="
+                    << p << " j=" << j << " b=" << b << " M=" << M << " levels";
+          for (int l : levels) {
+            std::cerr << " " << l;
+          }
+          std::cerr << " u =";
+          for (auto v : u) {
+            std::cerr << " " << v;
+          }
+          std::cerr << " A row b mod p^(M+1):";
+          for (size_t a = 0; a < m; a++) {
+            std::cerr << " " << static_cast<int64_t>(modM(A[a][b], Mk));
+          }
+          std::cerr << "\n";
+          throw TerminalException{1};
+        }
+        row[b] = static_cast<int64_t>((sacc / pM) % p);
+      }
+      __int128 bm = modM(bval, Mk);
+      if (bm % pM != 0) {
+        std::cerr << "MULT_FACTOR: an entry of A is not divisible by its level\n";
+        throw TerminalException{1};
+      }
+      fixed.push_back(row);
+      rhs.push_back(static_cast<int64_t>((bm / pM) % p));
+    };
     for (size_t k = 0; k < j; k++) {
-      fixed.push_back(form(cols[k], Ap));
-      rhs.push_back(Ap[k][j]);
+      if (lj > 0 && levels[k] == lj) {
+        // B(y_k, y) / p^l modulo p, both of level l
+        level_form(cols[k], lj, A[k][j]);
+      } else {
+        fixed.push_back(form(cols[k], Ap));
+        rhs.push_back(Ap[k][j]);
+      }
       for (size_t w = 0; w < n_om; w++) {
         fixed.push_back(form(om_apply(w, cols[k]), Ap));
         rhs.push_back(om_entry(w, k, j));
@@ -1628,8 +1937,8 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       if (!radical_ok(y, j)) {
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
         if (n_forced_rad < 3) {
-          std::cerr << "MULT_FACTOR: forced column " << j << " rad_start "
-                    << rad_start << " y =";
+          std::cerr << "MULT_FACTOR: forced column " << j << " level "
+                    << levels[j] << " y =";
           for (auto v : y) {
             std::cerr << " " << v;
           }
@@ -2065,11 +2374,12 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
 }
 
 /*
-  LocalOrthogonalImageGeneratorsCore in a basis adapted to the radical R of
-  A mod p when e = 1: the complement first, then lifts in [0, p) of a basis
-  of R, P of determinant prime to p; the search runs on A' = P^T A P with
-  the pruning of the radical, and the generators g' come back as P g'
-  P^{-1}. For e != 1 the standard basis, without that pruning. Om (the
+  LocalOrthogonalImageGeneratorsCore in a Jordan basis when e >= 1
+  (JordanBasisModPW, P of determinant prime to p): the search runs on A' =
+  P^T A P with the levels of the columns (the images of the columns of
+  level l stay in X^(l), and their pairings are known modulo higher powers
+  of p), and the generators g' come back as P g' P^{-1}. For e = 0 the
+  standard basis, all of level 0. Om (the
   action of a Z-basis of O_K, a centre K) and Lam (a Z-basis of the
   integral commutant of O_K) are empty when End_G = Q; Bil are further
   integral bilinear forms preserved by the group (N -> P^T N P here),
@@ -2085,61 +2395,20 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
                                MultiplicityFactorBounds const &bounds,
                                LocalImageOrder *order) {
   size_t m = A.size();
-  if (e != 1) {
-    return LocalOrthogonalImageGeneratorsCore(A, Be, Om, Lam, Bil, p, c, e, m,
-                                              bounds, order);
+  if (e == 0) {
+    return LocalOrthogonalImageGeneratorsCore(A, Be, Om, Lam, Bil, p, c, e,
+                                              std::vector<int>(m, 0), bounds,
+                                              order);
   }
-  // the radical of A mod p
-  ModMat Ap(m, std::vector<int64_t>(m));
-  for (size_t a = 0; a < m; a++) {
-    for (size_t b = 0; b < m; b++) {
-      Ap[a][b] = ModP(A[a][b], p);
-    }
+  // a Jordan basis and the levels of its columns
+  auto [P, levels] = JordanBasisModPW(A, p, MultiplicityNewtonPrecision(p));
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+  std::cerr << "MULT_FACTOR: Jordan levels";
+  for (int l : levels) {
+    std::cerr << " " << l;
   }
-  ModRowSpace rs = ModRowReduce(Ap, p);
-  std::vector<bool> is_piv(m, false);
-  for (size_t pv : rs.pivots) {
-    is_piv[pv] = true;
-  }
-  ModMat rad;
-  for (size_t f = 0; f < m; f++) {
-    if (is_piv[f]) {
-      continue;
-    }
-    std::vector<int64_t> v(m, 0);
-    v[f] = 1;
-    for (size_t i = 0; i < rs.pivots.size(); i++) {
-      v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
-    }
-    rad.push_back(v);
-  }
-  if (rad.empty()) {
-    return LocalOrthogonalImageGeneratorsCore(A, Be, Om, Lam, Bil, p, c, e, m,
-                                              bounds, order);
-  }
-  // a complement from the standard basis
-  ModMat cols_P;
-  ModMat test = rad;
-  for (size_t a = 0; a < m && cols_P.size() + rad.size() < m; a++) {
-    std::vector<int64_t> v(m, 0);
-    v[a] = 1;
-    test.push_back(v);
-    if (ModRank(test, p) == test.size()) {
-      cols_P.push_back(v);
-    } else {
-      test.pop_back();
-    }
-  }
-  size_t rad_start = cols_P.size();
-  for (auto const &v : rad) {
-    cols_P.push_back(v);
-  }
-  ModMat P(m, std::vector<int64_t>(m));
-  for (size_t a = 0; a < m; a++) {
-    for (size_t b = 0; b < m; b++) {
-      P[a][b] = cols_P[b][a];
-    }
-  }
+  std::cerr << "\n";
+#endif
   int W = MultiplicityNewtonPrecision(p);
   int64_t pW = 1;
   for (int i = 0; i < W; i++) {
@@ -2212,14 +2481,58 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
           continue;
         }
         for (size_t l = 0; l < m; l++) {
-          sacc += static_cast<__int128>(P[k][a]) * ModP(A[k][l], pW) * P[l][b];
-          sacc %= pW;
+          // reduced after each product: the entries of P (a Jordan basis)
+          // are residues modulo p^W, and three of them overflow 128 bits
+          __int128 t1 = static_cast<__int128>(P[k][a]) * ModP(A[k][l], pW) % pW;
+          sacc = (sacc + t1 * P[l][b]) % pW;
         }
       }
       A2[a][b] = ModP(static_cast<int64_t>(sacc), pW);
     }
   }
   ModMat Be2 = matmul(matmul(Pinv, Be, pW), transpose(Pinv), pW);
+  // the levels: A'_ab divisible by p^{max(l_a, l_b)}
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      int64_t pl = 1;
+      for (int i = 0; i < std::max(levels[a], levels[b]) && i < 20; i++) {
+        pl *= p;
+      }
+      if (ModP(A2[a][b], pW) % pl != 0) {
+        std::cerr << "MULT_FACTOR: the Jordan basis does not have the levels "
+                     "given, p=" << p << " a=" << a << " b=" << b << " levels";
+        for (int l : levels) {
+          std::cerr << " " << l;
+        }
+        std::cerr << "\nA mod p^3 =";
+        for (size_t u = 0; u < m; u++) {
+          for (size_t v = 0; v < m; v++) {
+            std::cerr << " " << ModP(A[u][v], p * p * p);
+          }
+          std::cerr << " |";
+        }
+        std::cerr << "\nA' mod p^3 =";
+        for (size_t u = 0; u < m; u++) {
+          for (size_t v = 0; v < m; v++) {
+            std::cerr << " " << ModP(A2[u][v], p * p * p);
+          }
+          std::cerr << " |";
+        }
+        std::cerr << "\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
+  std::cerr << "MULT_FACTOR: A' modulo p^3:";
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      std::cerr << " " << ModP(A2[a][b], p * p * p);
+    }
+    std::cerr << " |";
+  }
+  std::cerr << "\n";
+#endif
   // the action of O_K and the commutant in the new basis: P^{-1} X P
   auto conj = [&](ModMat const &X) -> ModMat {
     ModMat Xr = X;
@@ -2256,7 +2569,7 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
   }
   std::optional<std::vector<ModMat>> gens =
       LocalOrthogonalImageGeneratorsCore(A2, Be2, Om2, Lam2, Bil2, p, c, e,
-                                         rad_start, bounds, order);
+                                         levels, bounds, order);
   if (!gens) {
     return {};
   }

@@ -2197,6 +2197,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     }
     // which construction gave the image (for the sanity checks)
     bool gens_over_Q = false, gens_over_K = false;
+    (void)gens_over_Q;
+    (void)gens_over_K;
     // End_G = Q: generators of the image, complete by construction, with
     // p^e A^{-1} modulo p^W for the Newton steps
     if (!opt && OmegaX.empty()) {
@@ -2680,6 +2682,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     }
     // |L/N| from the form: the product of the p^{C - v} of the pivots
     double logL = 0;
+    (void)logL;
     for (auto const &row : L0c) {
       for (size_t s2 = 0; s2 < r; s2++) {
         if (row[s2] != 0) {

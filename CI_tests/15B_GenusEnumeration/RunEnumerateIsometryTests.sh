@@ -73,6 +73,7 @@ run_case qDic4 qDic4Dic 1
 run_case qDic5 qDic5Dic 1
 run_case qDic6 qDic6Dic 1
 run_case qDic9 qDic9Dic 1
+run_case qDic7 qDic7Dic 1
 run_case A10x2 F55x2 2
 run_case E8E8 S3diag2 3
 # F21 on seven of the nine coordinates of A8: a Hermitian component over

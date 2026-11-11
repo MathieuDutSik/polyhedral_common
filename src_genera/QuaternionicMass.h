@@ -11,6 +11,7 @@
 #include "MAT_MatrixInt.h"
 #include "factorizations.h"
 #include <algorithm>
+#include <chrono>
 #include <map>
 #include <optional>
 #include <set>
@@ -327,6 +328,8 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
   int k = O[0].rows();
   int d = static_cast<int>(O.size());
   T dK4 = dK * dK * dK * dK;
+  auto t_start = std::chrono::steady_clock::now();
+  (void)t_start;
   auto ring_closure = [&](std::vector<MyMatrix<T>> M)
       -> std::optional<std::vector<MyMatrix<T>>> {
     for (int iter = 0; iter < 64; iter++) {
@@ -398,6 +401,9 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
       Z^d, R a Z-basis of the rows of the M_b). When neither is larger
       than O at p, the elements of (O^# cap p^{-1} O) / O are tried.
      */
+#ifdef DEBUG_QUATERNIONIC_MASS
+    os << "QUAT_MASS: time " << "loop start" << " " << std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count() << "\n";
+#endif
     for (Tint const &p_i : primes) {
       int64_t p = UniversalScalarConversion<int64_t, Tint>(p_i);
       MyMatrix<T> Gt(d, d);
@@ -478,8 +484,17 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
             }
             On.push_back(Y);
           }
+#ifdef DEBUG_QUATERNIONIC_MASS
+          os << "QUAT_MASS: the " << (side == 0 ? "left" : "right")
+             << " order of O cap p O^# at p=" << p << " has index "
+             << T_abs(DeterminantMat(Rinv)) << " over O\n";
+#endif
           std::optional<std::vector<MyMatrix<T>>> opt =
               ring_closure(QuatZBasis(On, k));
+#ifdef DEBUG_QUATERNIONIC_MASS
+          os << "QUAT_MASS: its ring closure " << (opt ? "is an order" : "fails")
+             << "\n";
+#endif
           if (opt && QuatOrderDisc(*opt, r) < QuatOrderDisc(O, r)) {
 #ifdef DEBUG_QUATERNIONIC_MASS
             os << "QUAT_MASS: the " << (side == 0 ? "left" : "right")
@@ -497,6 +512,9 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
     if (enlarged) {
       continue;
     }
+#ifdef DEBUG_QUATERNIONIC_MASS
+    os << "QUAT_MASS: time " << "idealizer done" << " " << std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count() << "\n";
+#endif
     for (Tint const &p_i : primes) {
       int64_t p = UniversalScalarConversion<int64_t, Tint>(p_i);
       // whether O contains O_K: its integral centre has discriminant d_K
@@ -642,6 +660,9 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         }
         ker.push_back(v);
       }
+#ifdef DEBUG_QUATERNIONIC_MASS
+    os << "QUAT_MASS: time " << "kernel computed" << " " << std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count() << "\n";
+#endif
       size_t n_el = 1;
       for (size_t i = 0; i < ker.size(); i++) {
         n_el *= static_cast<size_t>(p);
@@ -660,6 +681,8 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
       std::vector<std::vector<int64_t>> Tij(d, std::vector<int64_t>(d));
       std::vector<std::vector<std::vector<int64_t>>> Sij(
           d, std::vector<std::vector<int64_t>>(d, std::vector<int64_t>(d)));
+      std::vector<std::vector<std::vector<int64_t>>> C2(
+          d, std::vector<std::vector<int64_t>>(d, std::vector<int64_t>(d)));
       int64_t p2 = p * p;
       for (int i = 0; i < d; i++) {
         for (int j = 0; j < d; j++) {
@@ -668,15 +691,47 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           MyVector<T> cij = coordsO(MyMatrix<T>(O[i] * O[j]));
           for (int t = 0; t < d; t++) {
             Sij[i][j][t] = ModP(UniversalScalarConversion<int64_t, T>(cij(t)), p);
+            C2[i][j][t] = ModP(UniversalScalarConversion<int64_t, T>(cij(t)), p2);
           }
         }
       }
+      // and x^2 in O' subset O^#: Tr trd(y^2 w_k) = 0 mod p^2 for every k,
+      // from the Tr trd(w_i w_j w_k)
+      std::vector<std::vector<std::vector<int64_t>>> T3(
+          d, std::vector<std::vector<int64_t>>(d, std::vector<int64_t>(d)));
+      for (int i = 0; i < d; i++) {
+        for (int j = 0; j < d; j++) {
+          MyMatrix<T> Wij = O[i] * O[j];
+          for (int kk = 0; kk < d; kk++) {
+            T3[i][j][kk] = ModP(UniversalScalarConversion<int64_t, T>(
+                                    QuatTrTrd(Wij, O[kk], r)), p2);
+          }
+        }
+      }
+#ifdef DEBUG_QUATERNIONIC_MASS
+    os << "QUAT_MASS: time " << "filters precomputed" << " " << std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count() << "\n";
+#endif
       std::vector<int64_t> coef(ker.size(), 0), a(d);
+      size_t n_q2 = 0, n_t3 = 0, n_pair = 0, n_sq = 0, n_closure = 0;
       for (size_t s = 1; s < n_el && !enlarged; s++) {
         size_t tt = s;
         for (size_t i = 0; i < ker.size(); i++) {
           coef[i] = static_cast<int64_t>(tt % static_cast<size_t>(p));
           tt /= static_cast<size_t>(p);
+        }
+        // x and lambda x (lambda prime to p) generate the same order at p:
+        // one coefficient vector per line, the last nonzero one being 1
+        {
+          size_t i_last = ker.size();
+          for (size_t i = ker.size(); i-- > 0;) {
+            if (coef[i] != 0) {
+              i_last = i;
+              break;
+            }
+          }
+          if (i_last == ker.size() || coef[i_last] != 1) {
+            continue;
+          }
         }
         for (int i = 0; i < d; i++) {
           int64_t ai = 0;
@@ -697,6 +752,63 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         if (q2 != 0) {
           continue;
         }
+        n_q2++;
+        bool t3_zero = true;
+        for (int kk = 0; kk < d && t3_zero; kk++) {
+          int64_t v = 0;
+          for (int i = 0; i < d; i++) {
+            if (a[i] == 0) {
+              continue;
+            }
+            for (int j = 0; j < d; j++) {
+              v = (v + a[i] * a[j] % p2 * T3[i][j][kk]) % p2;
+            }
+          }
+          if (v != 0) {
+            t3_zero = false;
+          }
+        }
+        if (!t3_zero) {
+          continue;
+        }
+        n_t3++;
+        // x w_k in O', so Tr trd((x w_k)(x w_l)) is an integer: with v_k the
+        // coordinates of y w_k, v_k^T T v_l = 0 mod p^2 for all k, l
+        {
+          std::vector<std::vector<int64_t>> vk(d, std::vector<int64_t>(d, 0));
+          for (int kk = 0; kk < d; kk++) {
+            for (int i = 0; i < d; i++) {
+              if (a[i] == 0) {
+                continue;
+              }
+              for (int t2 = 0; t2 < d; t2++) {
+                vk[kk][t2] = (vk[kk][t2] + a[i] * C2[i][kk][t2]) % p2;
+              }
+            }
+          }
+          bool pair_zero = true;
+          for (int k1 = 0; k1 < d && pair_zero; k1++) {
+            std::vector<int64_t> Tv(d, 0);
+            for (int u = 0; u < d; u++) {
+              for (int v = 0; v < d; v++) {
+                Tv[u] = (Tv[u] + Tij[u][v] * vk[k1][v]) % p2;
+              }
+            }
+            for (int k2 = 0; k2 < d && pair_zero; k2++) {
+              int64_t w = 0;
+              for (int u = 0; u < d; u++) {
+                w = (w + vk[k2][u] * Tv[u]) % p2;
+              }
+              if (w != 0) {
+                pair_zero = false;
+              }
+            }
+          }
+          if (!pair_zero) {
+            continue;
+          }
+        }
+        n_pair++;
         bool sq_zero = true;
         for (int t = 0; t < d && sq_zero && has_OK; t++) {
           int64_t v = 0;
@@ -715,6 +827,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         if (!sq_zero) {
           continue;
         }
+        n_sq++;
         MyMatrix<T> x = ZeroMatrix<T>(k, k);
         for (int i = 0; i < d; i++) {
           if (a[i] != 0) {
@@ -722,6 +835,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           }
         }
         x /= ScalarFromInt64<T>(p);
+        n_closure++;
         std::vector<MyMatrix<T>> M = O;
         M.push_back(x);
         std::optional<std::vector<MyMatrix<T>>> opt =
@@ -731,6 +845,17 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           enlarged = true;
         }
       }
+#ifdef DEBUG_QUATERNIONIC_MASS
+      os << "QUAT_MASS: overorder candidates at p=" << p << ": " << n_el
+         << " (space of dimension " << ker.size() << "), passing Tr y^2 "
+         << n_q2 << ", Tr y^2 w " << n_t3 << ", (y w)(y w') " << n_pair
+         << ", y^2 " << n_sq << ", closures " << n_closure << "\n";
+#endif
+      (void)n_q2;
+      (void)n_t3;
+      (void)n_pair;
+      (void)n_sq;
+      (void)n_closure;
       if (enlarged) {
         break;
       }
@@ -909,6 +1034,8 @@ std::optional<T> QuaternionicComponentMass(
     std::optional<AbelianCMField> const &FK, T const &dK, int r,
     QuaternionicMassBounds const &bounds, std::ostream &os) {
   int k = B.rows();
+  auto c_start = std::chrono::steady_clock::now();
+  (void)c_start;
   // the multiplier ring of X in D
   std::vector<MyMatrix<T>> O0 = QuatIntegralPoints<T, Tint>(Dspan, k);
   std::vector<MyMatrix<T>> const &gens = O0;
@@ -961,6 +1088,9 @@ std::optional<T> QuaternionicComponentMass(
     }
   }
   T dK4 = dK * dK * dK * dK;
+#ifdef DEBUG_QUATERNIONIC_MASS
+  os << "QUAT_MASS: ctime before maximal order " << std::chrono::duration<double>(std::chrono::steady_clock::now() - c_start).count() << "\n";
+#endif
   std::optional<std::vector<MyMatrix<T>>> opt_O =
       QuatMaximalOrder<T, Tint>(O0, r, dK, bounds, os);
   if (!opt_O) {
@@ -1015,6 +1145,9 @@ std::optional<T> QuaternionicComponentMass(
       throw TerminalException{1};
     }
   }
+#ifdef DEBUG_QUATERNIONIC_MASS
+  os << "QUAT_MASS: ctime after maximal order " << std::chrono::duration<double>(std::chrono::steady_clock::now() - c_start).count() << "\n";
+#endif
   // the ramified primes: |disc O| / d_K^4 = N(d(D))^2
   T qmax = QuatOrderDisc(O, r) / dK4;
   Tint qmax_i = UniversalScalarConversion<Tint, T>(qmax);
@@ -1114,6 +1247,9 @@ std::optional<T> QuaternionicComponentMass(
     }
     gensS.push_back(Lg);
   }
+#ifdef DEBUG_QUATERNIONIC_MASS
+  os << "QUAT_MASS: ctime gensS built " << std::chrono::duration<double>(std::chrono::steady_clock::now() - c_start).count() << "\n";
+#endif
   auto gram_S = [&](MyMatrix<T> const &lambda) -> MyMatrix<T> {
     MyMatrix<T> G = ZeroMatrix<T>(kS, kS);
     for (int a = 0; a < d; a++) {
@@ -1222,8 +1358,36 @@ std::optional<T> QuaternionicComponentMass(
       }
       cf[t]++;
     }
-    for (auto const &lam : cands) {
-      MyMatrix<T> G = gram_S(lam);
+    // gram_S is linear in lambda: the Gram matrices of the reduced basis,
+    // then their combinations
+    std::vector<MyMatrix<T>> GramLB;
+    for (auto const &lam : LambdaBasis) {
+      GramLB.push_back(gram_S(lam));
+    }
+    MyMatrix<T> Gram1 = gram_S(IdentityMat<T>(k));
+    std::vector<MyMatrix<T>> cand_gram{Gram1};
+    {
+      std::vector<int> cg(nb, -bound);
+      while (true) {
+        MyMatrix<T> G = ZeroMatrix<T>(kS, kS);
+        for (int t = 0; t < nb; t++) {
+          G += ScalarFromInt64<T>(cg[t]) * GramLB[t];
+        }
+        cand_gram.push_back(G);
+        int t = 0;
+        while (t < nb && cg[t] == bound) {
+          cg[t] = -bound;
+          t++;
+        }
+        if (t == nb) {
+          break;
+        }
+        cg[t]++;
+      }
+    }
+    for (size_t ic = 0; ic < cands.size(); ic++) {
+      MyMatrix<T> const &lam = cands[ic];
+      MyMatrix<T> G = cand_gram[ic];
       if (!IsZeroMatrix(lam) && QuatIsPositiveDefinite(G)) {
         T det = DeterminantMat(G);
         size_t extra = 0;
@@ -1245,6 +1409,9 @@ std::optional<T> QuaternionicComponentMass(
     std::cerr << "QUAT_MASS: no totally positive lambda found\n";
     throw TerminalException{1};
   }
+#ifdef DEBUG_QUATERNIONIC_MASS
+  os << "QUAT_MASS: ctime lambda chosen " << std::chrono::duration<double>(std::chrono::steady_clock::now() - c_start).count() << "\n";
+#endif
   MyMatrix<T> const &BS = *best_G;
   // the adjoint of the left multiplication by w on S is that by w^*
   for (size_t ig = 0; ig < gens.size(); ig++) {
@@ -1273,6 +1440,9 @@ std::optional<T> QuaternionicComponentMass(
               << " and " << uS.size() << ", not " << dim_u << "\n";
     throw TerminalException{1};
   }
+#ifdef DEBUG_QUATERNIONIC_MASS
+  os << "QUAT_MASS: ctime Lie lattices " << std::chrono::duration<double>(std::chrono::steady_clock::now() - c_start).count() << "\n";
+#endif
   T discX = QuatTraceDiscriminant(uX);
   T discS = QuatTraceDiscriminant(uS);
   std::vector<MyMatrix<T>> LamX = QuatIntegralCommutant<T, Tint>(B, gens, false);
@@ -1326,7 +1496,29 @@ std::optional<T> QuaternionicComponentMass(
      << " disc u(X)=" << discX << " disc u(S)=" << discS << "\n";
 #endif
   T mass = mass_S;
+  // [O : O_X], whose primes are those where O_X is not maximal
+  T index_O = QuatOrderDisc(O0, r) / QuatOrderDisc(O, r);
   for (int64_t p : P) {
+    /*
+      r = 1 and O_X maximal at p: X_p = O_p x (left ideals of a local
+      maximal order are principal), h(a x, b x) = a h(x, x) b^* with h(x,
+      x) central, and the right multiplication by x^{-1} is a D-linear
+      similitude of X_p onto S_p, so U(X_p) and U(S_p) are conjugate and
+      the ratio is 1, without the image search (whose first column would
+      run over the orbit, of size about p^{dim u}). The Lie lattices then
+      have the same discriminant at p, which is checked.
+     */
+    if (r == 1 && ValuationOfRational(index_O, p) == 0) {
+      if (ValuationOfRational(discX, p) != ValuationOfRational(discS, p)) {
+        std::cerr << "QUAT_MASS: rank one over the maximal order at p=" << p
+                  << " but the Lie lattices differ there\n";
+        throw TerminalException{1};
+      }
+#ifdef DEBUG_QUATERNIONIC_MASS
+      os << "QUAT_MASS: p=" << p << " rank one over the maximal order, ratio 1\n";
+#endif
+      continue;
+    }
     int cc = (p == 2) ? 2 : 1;
     std::optional<std::pair<Tint, Tint>> nX =
         QuatLocalImageOrders<T, Tint>(B, O0, LamX, FormsX, p, cc, bounds.image,

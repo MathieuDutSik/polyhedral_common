@@ -206,9 +206,12 @@ F55 on A10^2 (mass 5/24) exercises the ramified 11.
 Not done or not tested: layers by linear algebra beyond p odd and e = 1;
 p = 2, e >= 2, c >= 3 and a layer whose basis does not all lift, for the
 generators; a CM centre of degree 4; residue fields with q^m > 2^24 points;
-the first column of the image search when F_p^m is large (it is
-enumerated, with only quadratic conditions: Q(zeta_7)^+ through Dic_7 at
-7, m = 12, is out of reach). Candidate lattices are listed in TODO.md, not yet built or
+the first column of the image search when F_p^m is large and the local
+group is not of rank one over a maximal order (it is enumerated, with only
+quadratic conditions); the lifts at e >= 2 or p = 2, which go through e +
+2t + 1 levels by a depth-first search (affine filter from the second level
+only: a rank-4 lattice at 2 with e = 4 is beyond the bounds). Candidate
+lattices are listed in TODO.md, not yet built or
 checked. Beyond the bounds the result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
 Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
 over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
@@ -256,8 +259,22 @@ A2 + D4 (x) W (5/576, 2 classes), and D4 (x) A2 + I (x) W, I a left ideal
 of index 9 of the Hurwitz order (factor 4 at 3, 1/6), all closed by
 enumeration. Other centres: the dicyclic groups Dic_n on Z[z] + Z[z] j
 (centre Q(z + 1/z)): Q(sqrt 2), Q(sqrt 5), Q(sqrt 3) and the cubic
-Q(zeta_9)^+ with D ramified at the prime over 3 (1/16, 1/20, 1/24, 1/36),
-closed by enumeration. The maximal order: first the left and right orders
+Q(zeta_9)^+ and Q(zeta_7)^+ with D ramified at the prime over 3, resp. 7
+(1/16, 1/20, 1/24, 1/36, 1/28), closed by enumeration. When r = 1 and the
+multiplier ring is maximal at p, X_p = O_p x and the right multiplication
+by x^{-1} is a similitude onto S_p: the ratio is 1 without the image
+search (whose first column would run over an orbit of size about p^{dim
+u}), the Lie discriminants being checked equal.
+
+The image search (MultiplicityLocalFactor.h) works in a Jordan basis
+(JordanBasisModPW) for e >= 1: the images of the columns of level l have
+zero coordinates on the lower columns, B(y, y) known modulo p^{l + 1}
+(modulo 4 at level 0 and p = 2), the pairings of two columns of the same
+level l modulo p^{l + 1} (between different levels only modulo p: the
+image differs from its representative by p X^(l - 1), not p X^(l)). The
+basis has entries modulo p^W, so products are reduced as they go (an
+unreduced triple product overflowed 128 bits). Test_LocalImage checks the
+whole search against an independent listing. The maximal order: first the left and right orders
 of O cap p O^#, then the candidates y / p, restricted when O contains O_K
 to the y with a y in p O (a the radical of p in O_K, the kernel of a
 Frobenius) and filtered by Tr trd(y^2) = 0 mod p^2 and y^2 = 0 mod p O in
