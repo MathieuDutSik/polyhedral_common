@@ -415,7 +415,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
       ModMat Gp(d, std::vector<int64_t>(d));
       for (int i = 0; i < d; i++) {
         for (int j = 0; j < d; j++) {
-          Gp[i][j] = ModP(UniversalScalarConversion<int64_t, T>(Gt(i, j)), p);
+          Gp[i][j] = ResidueOfInteger(Gt(i, j), p);
         }
       }
       ModRowSpace rsI = ModRowReduce(Gp, p);
@@ -559,7 +559,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
       for (int i = 0; i < d; i++) {
         for (int j = 0; j < d; j++) {
           T v = QuatTrTrd(O[i], O[j], r);
-          Gm[j][i] = ModP(UniversalScalarConversion<int64_t, T>(v), p);
+          Gm[j][i] = ResidueOfInteger(v, p);
         }
       }
       /*
@@ -608,7 +608,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           }
           MyVector<T> cz = coordsZ(Zp);
           for (int u = 0; u < cc; u++) {
-            Fr[u][t] = ModP(UniversalScalarConversion<int64_t, T>(cz(u)), p);
+            Fr[u][t] = ResidueOfInteger(cz(u), p);
           }
         }
         ModRowSpace rf = ModRowReduce(Fr, p);
@@ -637,7 +637,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           for (int t = 0; t < d; t++) {
             std::vector<int64_t> row(d);
             for (int i = 0; i < d; i++) {
-              row[i] = ModP(UniversalScalarConversion<int64_t, T>(cols_n[i](t)), p);
+              row[i] = ResidueOfInteger(cols_n[i](t), p);
             }
             Gm.push_back(row);
           }
@@ -686,12 +686,12 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
       int64_t p2 = p * p;
       for (int i = 0; i < d; i++) {
         for (int j = 0; j < d; j++) {
-          Tij[i][j] = ModP(UniversalScalarConversion<int64_t, T>(
-                               QuatTrTrd(O[i], O[j], r)), p2);
+          Tij[i][j] = ResidueOfInteger(
+                               QuatTrTrd(O[i], O[j], r), p2);
           MyVector<T> cij = coordsO(MyMatrix<T>(O[i] * O[j]));
           for (int t = 0; t < d; t++) {
-            Sij[i][j][t] = ModP(UniversalScalarConversion<int64_t, T>(cij(t)), p);
-            C2[i][j][t] = ModP(UniversalScalarConversion<int64_t, T>(cij(t)), p2);
+            Sij[i][j][t] = ResidueOfInteger(cij(t), p);
+            C2[i][j][t] = ResidueOfInteger(cij(t), p2);
           }
         }
       }
@@ -703,8 +703,8 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         for (int j = 0; j < d; j++) {
           MyMatrix<T> Wij = O[i] * O[j];
           for (int kk = 0; kk < d; kk++) {
-            T3[i][j][kk] = ModP(UniversalScalarConversion<int64_t, T>(
-                                    QuatTrTrd(Wij, O[kk], r)), p2);
+            T3[i][j][kk] = ResidueOfInteger(
+                                    QuatTrTrd(Wij, O[kk], r), p2);
           }
         }
       }

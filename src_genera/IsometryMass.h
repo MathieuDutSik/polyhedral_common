@@ -156,16 +156,6 @@ template <typename T> struct IsometryComponent {
   std::vector<int64_t> elem;
 };
 
-// The residue in [0, mod) of the integer val, reduced exactly before the
-// conversion to 64 bits (val itself may not fit: the images of a vector by
-// a local isometry known modulo q^c have large coordinates)
-template <typename T> int64_t ResidueOfInteger(T const &val, int64_t mod) {
-  T mod_T = ScalarFromInt64<T>(mod);
-  T fl = UniversalFloorScalarInteger<T, T>(val / mod_T);
-  T r = val - mod_T * fl;
-  return UniversalScalarConversion<int64_t, T>(r);
-}
-
 template <typename T>
 std::vector<int64_t> DiscriminantResidues(IsometryComponent<T> const &comp,
                                           MyVector<T> const &x) {
@@ -1071,19 +1061,18 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
       }
     }
   }
-  // exact integer matrices: the solutions of the listing must stay in
-  // Lambda; its basis (an integral kernel) may not fit in 64 bits, and the
-  // listing is then left out (fits_int64 false)
-  bool fits_int64 = true;
-  Tint lim = UniversalScalarConversion<Tint, int64_t>(int64_t(1) << 60);
+  // the listing keeps its solutions by their coordinates in the basis of
+  // Lambda (an integral kernel), so they stay in Lambda; it only sees the
+  // basis and the Gram matrix modulo q^{K+1}, given as residues, whatever
+  // the size of the exact entries. Beyond 2^62 the listing is left out.
+  std::optional<int64_t> listing_mod = LocalImageModulus(q, c, e);
+  bool listable = listing_mod.has_value();
   auto exact = [&](MyMatrix<Tint> const &X) -> ModMat {
     ModMat R(k, std::vector<int64_t>(k, 0));
-    for (int i = 0; i < k; i++) {
-      for (int j = 0; j < k; j++) {
-        if (X(i, j) > lim || X(i, j) < -lim) {
-          fits_int64 = false;
-        } else {
-          R[i][j] = UniversalScalarConversion<int64_t, Tint>(X(i, j));
+    if (listable) {
+      for (int i = 0; i < k; i++) {
+        for (int j = 0; j < k; j++) {
+          R[i][j] = CenteredResidueOfInteger(X(i, j), *listing_mod);
         }
       }
     }
@@ -1221,7 +1210,7 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
 #ifdef SANITY_CHECK_ISOMETRY_MASS
         // the listed image, when within the bounds, is the same set
         std::optional<std::vector<ModMat>> lst;
-        if (fits_int64) {
+        if (listable) {
           lst = LocalStabilizerImage(A_mod, basis, q, c, e, mbounds);
         }
         if (lst) {
@@ -1247,7 +1236,7 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
       }
     }
   }
-  if (!fits_int64) {
+  if (!listable) {
     return {};
   }
   std::optional<std::vector<ModMat>> opt =
@@ -2372,6 +2361,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     ModMat A_mod(m, std::vector<int64_t>(m));
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
+        // exact (the generators read it modulo p^W, the listings modulo
+        // p^{K+1}); the conversion throws beyond 64 bits
         A_mod[i][j] = UniversalScalarConversion<int64_t, T>(GramX(i, j));
       }
     }
@@ -2445,7 +2436,12 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         ModMat Ym(m, std::vector<int64_t>(m));
         for (int i = 0; i < m; i++) {
           for (int j = 0; j < m; j++) {
-            Ym[i][j] = UniversalScalarConversion<int64_t, T>(Y(j, i));
+            // residues modulo p^W, which is all the generators read
+            Tint v = ResInt(UniversalScalarConversion<Tint, T>(Y(j, i)), pW);
+            if (v < 0) {
+              v += pW;
+            }
+            Ym[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
           }
         }
         return Ym;
@@ -2512,17 +2508,21 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       IsometryComponent<T> compX = BuildIsometryComponent<T, Tint>(
           A, Xb, IdentityMat<T>(A.rows()), 1);
       compX.extra_sigma = OmegaX;
-      std::vector<ModMat> basis;
-      for (auto const &Y : IntegralCommutant<T, Tint>(compX)) {
-        ModMat Ym(m, std::vector<int64_t>(m));
-        for (int i = 0; i < m; i++) {
-          for (int j = 0; j < m; j++) {
-            Ym[i][j] = UniversalScalarConversion<int64_t, Tint>(Y(i, j));
+      // the basis as residues modulo the modulus of the listing
+      std::optional<int64_t> listing_mod = LocalImageModulus(p, c, e);
+      if (listing_mod) {
+        std::vector<ModMat> basis;
+        for (auto const &Y : IntegralCommutant<T, Tint>(compX)) {
+          ModMat Ym(m, std::vector<int64_t>(m));
+          for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+              Ym[i][j] = CenteredResidueOfInteger(Y(i, j), *listing_mod);
+            }
           }
+          basis.push_back(Ym);
         }
-        basis.push_back(Ym);
+        opt = LocalStabilizerImage(A_mod, basis, p, c, e, bounds);
       }
-      opt = LocalStabilizerImage(A_mod, basis, p, c, e, bounds);
     }
     if (!opt) {
       // the search is beyond its bounds: the bounds again, with the p-part
@@ -2565,7 +2565,12 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         ModMat Ym(m, std::vector<int64_t>(m));
         for (int i = 0; i < m; i++) {
           for (int j = 0; j < m; j++) {
-            Ym[i][j] = UniversalScalarConversion<int64_t, T>(Y(j, i));
+            // residues modulo p^W, which is all the generators read
+            Tint v = ResInt(UniversalScalarConversion<Tint, T>(Y(j, i)), pW);
+            if (v < 0) {
+              v += pW;
+            }
+            Ym[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
           }
         }
         return Ym;
@@ -2681,16 +2686,20 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
             A, Xb, IdentityMat<T>(A.rows()), 1);
         compX2.extra_sigma = OmegaX;
         std::vector<ModMat> basis2;
-        for (auto const &Y : IntegralCommutant<T, Tint>(compX2)) {
+        std::optional<int64_t> listing_mod = LocalImageModulus(p, c, e);
+        for (auto const &Y : listing_mod ? IntegralCommutant<T, Tint>(compX2)
+                                         : std::vector<MyMatrix<Tint>>{}) {
           ModMat Ym(m, std::vector<int64_t>(m));
           for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
-              Ym[i][j] = UniversalScalarConversion<int64_t, Tint>(Y(i, j));
+              Ym[i][j] = CenteredResidueOfInteger(Y(i, j), *listing_mod);
             }
           }
           basis2.push_back(Ym);
         }
-        listed = LocalStabilizerImage(A_mod, basis2, p, c, e, bounds);
+        if (listing_mod) {
+          listed = LocalStabilizerImage(A_mod, basis2, p, c, e, bounds);
+        }
         if (listed) {
           // rows to columns
           for (auto &g : *listed) {

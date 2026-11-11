@@ -352,6 +352,52 @@ SolutionsModP(ModMat const &A, int64_t p, size_t max_solution,
   return res;
 }
 
+// The residue in [0, mod) of the integer val, reduced exactly before the
+// conversion to 64 bits (val itself may not fit: the images of a vector by
+// a local isometry known modulo q^c have large coordinates)
+template <typename T> int64_t ResidueOfInteger(T const &val, int64_t mod) {
+  T mod_T = ScalarFromInt64<T>(mod);
+  T fl = UniversalFloorScalarInteger<T, T>(val / mod_T);
+  T r = val - mod_T * fl;
+  return UniversalScalarConversion<int64_t, T>(r);
+}
+
+// The residue in (-mod/2, mod/2] of val: an entry smaller than mod / 2 is
+// kept as it is
+template <typename T>
+int64_t CenteredResidueOfInteger(T const &val, int64_t mod) {
+  int64_t r = ResidueOfInteger(val, mod);
+  return (r > mod / 2) ? r - mod : r;
+}
+
+inline int64_t CenteredModP(int64_t x, int64_t mod) {
+  int64_t r = x % mod;
+  if (r < 0) {
+    r += mod;
+  }
+  return (r > mod / 2) ? r - mod : r;
+}
+
+/*
+  The searches of the image of O(X_p) modulo p^c (X with p^e A^{-1}
+  integral) only see A and the solutions modulo p^{K+1}, K as below; the
+  modulus, or nothing beyond 2^62. Exact data (a Gram matrix, a basis of
+  the commutant, Tint) is given to them as residues modulo this modulus,
+  so that it never has to fit in 64 bits.
+ */
+inline std::optional<int64_t> LocalImageModulus(int64_t p, int c, int e) {
+  int t = (p == 2) ? 1 : 0;
+  int K = std::max(c + e + t, e + 2 * t + 1);
+  int64_t M = 1;
+  for (int i = 0; i <= K; i++) {
+    if (M > (int64_t(1) << 62) / p) {
+      return {};
+    }
+    M *= p;
+  }
+  return M;
+}
+
 /*
   The searches below keep the residues modulo p^K in machine integers and
   form g A g^T exactly in __int128: this holds when m^2 max|A| p^{2K} stays
@@ -377,10 +423,21 @@ inline bool ResiduesFitInt128(ModMat const &A, int64_t p, int K) {
   nothing beyond the bounds.
  */
 inline std::optional<std::vector<ModMat>>
-LocalOrthogonalImage(ModMat const &A, int64_t p, int c, int e,
+LocalOrthogonalImage(ModMat const &A_in, int64_t p, int c, int e,
                      MultiplicityFactorBounds const &bounds) {
   int t = (p == 2) ? 1 : 0;
   int K = std::max(c + e + t, e + 2 * t + 1);
+  // A is only read modulo p^{j+1}, j < c: centred modulo p^{K+1}
+  std::optional<int64_t> optM = LocalImageModulus(p, c, e);
+  if (!optM) {
+    return {};
+  }
+  ModMat A = A_in;
+  for (auto &row : A) {
+    for (auto &x : row) {
+      x = CenteredModP(x, *optM);
+    }
+  }
   if (!ResiduesFitInt128(A, p, K)) {
     return {};
   }
@@ -2596,18 +2653,43 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
   Lambda. Nothing beyond the bounds.
  */
 inline std::optional<std::vector<ModMat>>
-LocalStabilizerImage(ModMat const &A, std::vector<ModMat> const &basis,
+LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
                      int64_t p, int c, int e,
                      MultiplicityFactorBounds const &bounds) {
-  // A and basis are exact integer matrices: a solution is kept by its
-  // coordinates in the basis, so that it stays in Lambda (the entrywise
-  // reduction of an element of Lambda need not be in Lambda, and the
-  // lifts g + p^j Delta, Delta in Lambda, would miss the isometries)
-  size_t m = A.size();
-  size_t dim = basis.size();
+  // A and the basis of Lambda, exact or modulo p^{K+1}: a solution is kept
+  // by its coordinates in the basis, so that it stays in Lambda (the
+  // entrywise reduction of an element of Lambda need not be in Lambda, and
+  // the lifts g + p^j Delta, Delta in Lambda, would miss the isometries)
+  size_t m = A_in.size();
+  size_t dim = basis_in.size();
   int t = (p == 2) ? 1 : 0;
   int K = std::max(c + e + t, e + 2 * t + 1);
-  if (!ResiduesFitInt128(A, p, K)) {
+  /*
+    E = g A g^T - A is only read modulo p^{j+1}, j < c <= K: A, the basis
+    and g are taken modulo M = p^{K+1} (centred), so that their size does
+    not depend on the exact data, and the guard below bounds the products
+    m^2 |g|^2 |A| with |g| <= M / 2.
+   */
+  std::optional<int64_t> optM = LocalImageModulus(p, c, e);
+  if (!optM) {
+    return {};
+  }
+  int64_t const M = *optM;
+  ModMat A(m, std::vector<int64_t>(m));
+  for (size_t a = 0; a < m; a++) {
+    for (size_t b = 0; b < m; b++) {
+      A[a][b] = CenteredModP(A_in[a][b], M);
+    }
+  }
+  std::vector<ModMat> basis = basis_in;
+  for (auto &B : basis) {
+    for (auto &row : B) {
+      for (auto &x : row) {
+        x = CenteredModP(x, M);
+      }
+    }
+  }
+  if (!ResiduesFitInt128(A, p, K + 1)) {
     return {};
   }
   using Coord = std::vector<int64_t>;
@@ -2619,13 +2701,22 @@ LocalStabilizerImage(ModMat const &A, std::vector<ModMat> const &basis,
       }
       for (size_t a = 0; a < m; a++) {
         for (size_t b = 0; b < m; b++) {
-          g[a][b] += static_cast<__int128>(x[i]) * basis[i][a][b];
+          g[a][b] = (g[a][b] + static_cast<__int128>(x[i]) * basis[i][a][b]) % M;
+        }
+      }
+    }
+    for (auto &row : g) {
+      for (auto &v : row) {
+        if (v > M / 2) {
+          v -= M;
+        } else if (v < -(M / 2)) {
+          v += M;
         }
       }
     }
     return g;
   };
-  // E = g A g^T - A, exactly
+  // E = g A g^T - A, exactly for these representatives (so modulo M)
   auto error = [&](std::vector<std::vector<__int128>> const &g)
       -> std::vector<std::vector<__int128>> {
     std::vector<std::vector<__int128>> gA(m, std::vector<__int128>(m, 0));

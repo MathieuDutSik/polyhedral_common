@@ -256,7 +256,9 @@ std::vector<EigenspaceData> ComputeEigenspaces(MyMatrix<Tint> const &P, int m,
     for (int i = 0; i < n; i++) {
       Id[i][i] = 1;
     }
-    int64_t c = UniversalScalarConversion<int64_t, Tint>(P(0, 0));
+    // reduced modulo p^2 before the conversion (P(0, 0) is unbounded)
+    Tint p2_T = UniversalScalarConversion<Tint, int64_t>(p2);
+    int64_t c = UniversalScalarConversion<int64_t, Tint>(ResInt(P(0, 0), p2_T));
     RowSpaceModP space = ComputeRowSpaceModP(Id, p);
     res.push_back({ModPosInt64(c, p), ModPosInt64(c, p2), std::move(Id),
                    std::move(space), true});
