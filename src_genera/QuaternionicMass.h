@@ -60,6 +60,12 @@
       mass(S) = prod_{i=1}^r 2^{-c} |zeta_K(1 - 2i)|
                 prod_{P | d(D)} prod_{i=1}^r (N P^i + (-1)^i).
 
+  The image searches also impose, modulo p, the integral forms B(w x, y)
+  for w in D (a Z-basis of their integral points: w runs over the trace
+  dual of the order), which fix the Hermitian form h modulo p O where the
+  form b = Tr trd h alone fixes it modulo a larger ideal (at 2 for the
+  Hurwitz order, h is then only known modulo the prime above 2).
+
   The product of the volume ratios runs over the p dividing det X, det S
   and [O : O_X], O_X the multiplier ring of X; elsewhere X_p and S_p are
   unimodular over the maximal order, hence similar.
@@ -445,7 +451,8 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK4,
 template <typename T, typename Tint>
 std::optional<std::pair<Tint, Tint>>
 QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
-                     std::vector<MyMatrix<T>> const &Lam, int64_t p, int c,
+                     std::vector<MyMatrix<T>> const &Lam,
+                     std::vector<MyMatrix<T>> const &Forms, int64_t p, int c,
                      MultiplicityFactorBounds const &bounds,
                      [[maybe_unused]] std::ostream &os) {
   int m = B.rows();
@@ -470,7 +477,11 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
   ModMat A_mod(m, std::vector<int64_t>(m)), Be(m, std::vector<int64_t>(m));
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
-      A_mod[i][j] = UniversalScalarConversion<int64_t, T>(B(i, j));
+      Tint av = ResInt(UniversalScalarConversion<Tint, T>(B(i, j)), pW);
+      if (av < 0) {
+        av += pW;
+      }
+      A_mod[i][j] = UniversalScalarConversion<int64_t, Tint>(av);
       T x = Binv(i, j) * pe;
       Tint den = GetDenominator_z(x);
       Tint inv = mod_inv(ResInt(den, pW), pW);
@@ -481,16 +492,25 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
       Be[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
     }
   }
+  // the residues modulo p^W in [0, p^W): the searches only use the
+  // matrices modulo p^W, and their entries may not fit in 64 bits
   auto to_mod = [&](MyMatrix<T> const &Y) -> ModMat {
     ModMat Ym(m, std::vector<int64_t>(m));
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
-        Ym[i][j] = UniversalScalarConversion<int64_t, T>(Y(i, j));
+        Tint v = ResInt(UniversalScalarConversion<Tint, T>(Y(i, j)), pW);
+        if (v < 0) {
+          v += pW;
+        }
+        Ym[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
       }
     }
     return Ym;
   };
-  std::vector<ModMat> Om, LamM;
+  std::vector<ModMat> Om, LamM, FormsM;
+  for (auto const &N : Forms) {
+    FormsM.push_back(to_mod(N));
+  }
   for (auto const &g : gens) {
     Om.push_back(to_mod(g));
   }
@@ -516,7 +536,7 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
   for (int cc = c; cc <= c_top; cc++) {
     LocalImageOrder ord;
     std::optional<std::vector<ModMat>> opt = LocalOrthogonalImageGenerators(
-        A_mod, Be, Om, LamM, p, cc, e, bounds, &ord);
+        A_mod, Be, Om, LamM, FormsM, p, cc, e, bounds, &ord);
 #ifdef DEBUG_QUATERNIONIC_MASS
     os << "QUAT_MASS: p=" << p << " c=" << cc << " e=" << e << " image "
        << (opt ? "found" : "not found") << ", order "
@@ -621,7 +641,55 @@ std::optional<T> QuaternionicComponentMass(
   if (!opt_O) {
     return {};
   }
-  std::vector<MyMatrix<T>> const &O = *opt_O;
+  // a Z-basis of O starting with 1, so that the first vector of each
+  // copy of O in S = O^r generates a free module modulo p (with a basis
+  // from the Hermite form it may be a zero divisor modulo p, which leaves
+  // few columns forced in the image search)
+  std::vector<MyMatrix<T>> O;
+  {
+    int dO = static_cast<int>(opt_O->size());
+    MyMatrix<T> Ob(dO, k * k);
+    for (int a = 0; a < dO; a++) {
+      for (int u = 0; u < k; u++) {
+        for (int v = 0; v < k; v++) {
+          Ob(a, u * k + v) = (*opt_O)[a](u, v);
+        }
+      }
+    }
+    MyMatrix<T> Id = IdentityMat<T>(k);
+    MyVector<T> idv(k * k);
+    for (int u = 0; u < k; u++) {
+      for (int v = 0; v < k; v++) {
+        idv(u * k + v) = Id(u, v);
+      }
+    }
+    std::optional<MyVector<T>> c1 = SolutionMat(Ob, idv);
+    if (!c1) {
+      std::cerr << "QUAT_MASS: 1 is not in the span of the order\n";
+      throw TerminalException{1};
+    }
+    MyVector<Tint> c1i(dO);
+    for (int a = 0; a < dO; a++) {
+      if (!IsInteger((*c1)(a))) {
+        std::cerr << "QUAT_MASS: 1 is not in the order\n";
+        throw TerminalException{1};
+      }
+      c1i(a) = UniversalScalarConversion<Tint, T>((*c1)(a));
+    }
+    MyMatrix<Tint> comp = ComplementToBasis(c1i);
+    O.push_back(Id);
+    for (int r2 = 0; r2 < comp.rows(); r2++) {
+      MyMatrix<T> w = ZeroMatrix<T>(k, k);
+      for (int a = 0; a < dO; a++) {
+        w += UniversalScalarConversion<T, Tint>(comp(r2, a)) * (*opt_O)[a];
+      }
+      O.push_back(w);
+    }
+    if (QuatOrderDisc(O, r) != QuatOrderDisc(*opt_O, r)) {
+      std::cerr << "QUAT_MASS: the new basis of O is not a basis\n";
+      throw TerminalException{1};
+    }
+  }
   // the ramified primes: |disc O| / d_K^4 = N(d(D))^2
   T qmax = QuatOrderDisc(O, r) / dK4;
   Tint qmax_i = UniversalScalarConversion<Tint, T>(qmax);
@@ -888,6 +956,17 @@ std::optional<T> QuaternionicComponentMass(
     }
     OmS.push_back(Lw);
   }
+  // the integral forms B(w x, y) = x^T C_w^T B y, w in D
+  auto forms = [&](MyMatrix<T> const &Bz, std::vector<MyMatrix<T>> const &W)
+      -> std::vector<MyMatrix<T>> {
+    std::vector<MyMatrix<T>> L;
+    for (auto const &w : W) {
+      L.push_back(MyMatrix<T>(w.transpose() * Bz));
+    }
+    return QuatIntegralPoints<T, Tint>(L, Bz.rows());
+  };
+  std::vector<MyMatrix<T>> FormsX = forms(B, O0);
+  std::vector<MyMatrix<T>> FormsS = forms(BS, OmS);
   // the primes where X and S may differ
   std::set<int64_t> P = primesX;
   for (int64_t q : prime_set(DeterminantMat(BS))) {
@@ -913,12 +992,14 @@ std::optional<T> QuaternionicComponentMass(
   for (int64_t p : P) {
     int cc = (p == 2) ? 2 : 1;
     std::optional<std::pair<Tint, Tint>> nX =
-        QuatLocalImageOrders<T, Tint>(B, O0, LamX, p, cc, bounds.image, os);
+        QuatLocalImageOrders<T, Tint>(B, O0, LamX, FormsX, p, cc, bounds.image,
+                                      os);
     if (!nX) {
       return {};
     }
     std::optional<std::pair<Tint, Tint>> nS =
-        QuatLocalImageOrders<T, Tint>(BS, OmS, LamS, p, cc, bounds.image, os);
+        QuatLocalImageOrders<T, Tint>(BS, OmS, LamS, FormsS, p, cc,
+                                      bounds.image, os);
     if (!nS) {
       return {};
     }

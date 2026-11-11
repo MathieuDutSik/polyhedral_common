@@ -2202,7 +2202,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
       }
       LocalImageOrder order;
-      opt = LocalOrthogonalImageGenerators(A_mod, Be, {}, {}, p, c, e, bounds,
+      opt = LocalOrthogonalImageGenerators(A_mod, Be, {}, {}, {}, p, c, e, bounds,
                                            &order);
       gens_over_Q = opt.has_value();
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
@@ -2257,7 +2257,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
       }
       LocalImageOrder order;
-      opt = LocalOrthogonalImageGenerators(A_mod, Be, Om, Lam, p, c, e,
+      opt = LocalOrthogonalImageGenerators(A_mod, Be, Om, Lam, {}, p, c, e,
                                            bounds, &order);
       if (opt) {
         rows_convention = false;
@@ -2355,7 +2355,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
       LocalImageOrder order_k;
       std::optional<std::vector<ModMat>> kg = LocalOrthogonalImageGenerators(
-          A_mod, Be, Om, Lam, p, c, e, bounds, &order_k);
+          A_mod, Be, Om, Lam, {}, p, c, e, bounds, &order_k);
       if (kg) {
         int64_t pcl = 1;
         for (int i = 0; i < c; i++) {

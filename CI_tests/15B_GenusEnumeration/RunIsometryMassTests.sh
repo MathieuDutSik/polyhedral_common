@@ -418,6 +418,15 @@ group_mass_case qD4x2 Q8 1/1152
 group_mass_case qE8h Q8 1/1920
 group_mass_case qZ4 Q8 1/8
 group_mass_case qE8ico 2I 1/120
+# Two genera with several classes: Q8 on D4^4 (Hashimoto-Ibukiyama, 2
+# classes) and 2I on {(x, y) in I^2 : x = y (1 + i) mod 2 I}, I the
+# icosians (centre Q(sqrt 5), local ratio 272 at 2, 3 classes); and Q8 on
+# E8 + D4 and D4^3 (one class each).
+group_mass_case qD4x4 Q8 17/39813120
+group_mass_case qIcoLam 2I 17/1800
+group_mass_case qE8hD4 Q8 1/46080
+group_mass_case qD4x3 Q8 1/82944
+group_mass_case qZ4x2 Q8 1/128
 # F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
 # the factor at the ramified prime 11 by the pi-adic chain (an image of
 # order about 3 10^4, orbit 1); the module N^#/N at 11 is beyond the old

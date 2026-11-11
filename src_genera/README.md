@@ -246,9 +246,24 @@ Q8 on D4, D4^2, D4^3 (1/24, 1/1152, 1/82944, the principal genus), on E8
 as a Hurwitz lattice (1/1920, the non-principal genus), on 2Z^4 (the
 Lipschitz order, 1/8), on E8 + D4 (1/46080); 2I on the icosian E8 and
 E8^2 (centre Q(sqrt 5), 1/120 and 1/28800); each a single class confirmed
-by GENUS_EnumerateIsometry. Beyond reach: rank 16 at p = 2 (D4^4, the
-icosian lattice glued at 2, Lipschitz^2), the search modulo 2 exhausting
-its budget.
+by GENUS_EnumerateIsometry. In rank 16: Q8 on D4^4 (17/39813120, 2
+classes) and on the Lipschitz order squared (1/128); 2I on {(x, y) in
+I^2 : x = y (1 + i) mod 2 I} (17/1800 through a local ratio 272 at 2, 3
+classes); all closed by enumeration.
+
+What makes p = 2 in rank 16 feasible, in LocalOrthogonalImageGeneratorsCore:
+the images of the e_j satisfy B(y, y) = A_jj modulo 4; further integral
+bilinear forms N (here B(w x, y) for w in the trace dual of the order)
+are imposed modulo p column by column, which fixes the Hermitian form
+modulo p O where B alone fixes it modulo the prime above p (without them
+nearly all the solutions modulo 2 failed to lift); a placed column must
+keep the columns independent; the lifts g + p^j Delta are searched on the
+affine subspace of the Delta for which the next level is solvable (the
+residual is affine in Delta for j >= 2, checked under SANITY_CHECK_MULT,
+and checked on pairs for j = 1); the inverse used by the projection onto
+the commutant is cached; the orbits are closed incrementally; the basis
+of O starts with 1, so that the first vectors of S generate free modules.
+D4^4 went from out of budget to 17 s.
 
     GENUS_IsometryMass hermitianab [n] [h1,h2,...] [m]
     GENUS_IsometryMass hermitianablattice [Gram] [Omega] [n] [h1,h2,...]
