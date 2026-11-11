@@ -147,6 +147,10 @@ template <typename T> struct IsometryComponent {
   // (QuaternionicMass.h) when it could be
   bool quaternionic = false;
   std::optional<T> quaternionic_mass;
+  // a centre K whose order on X is not O_K: the mass of X computed
+  // directly (by comparison with O_K X), times multiplicity_factor
+  bool direct = false;
+  std::optional<T> direct_mass;
   MyMatrix<T> row;
   MyMatrix<T> row_inv;
   std::vector<int64_t> elem;
@@ -452,8 +456,17 @@ EquivariantModuleIsometries(PrimaryQuadModule const &M, size_t max_module,
   std::vector<ModuleAut> res;
   ModuleAut phi(r);
   bool overflow = false;
+  // the equivariance is only checked on the complete maps: a budget of
+  // nodes, beyond which nothing is returned (the image of the local
+  // centraliser then comes from its generators, LocalImageOnModule)
+  size_t n_node = 0;
+  size_t const max_node = 500000;
   std::function<void(size_t)> rec = [&](size_t i) -> void {
     if (overflow) {
+      return;
+    }
+    if (++n_node > max_node) {
+      overflow = true;
       return;
     }
     if (i == r) {
@@ -1616,11 +1629,13 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     cm.d = comp.d;
     cm.rank = comp.gram.rows();
     cm.det = DeterminantMat(comp.gram);
-    if (comp.d == 0 && comp.quaternionic) {
-      if (comp.quaternionic_mass && comp.multiplicity_factor) {
-        cm.mass = *comp.quaternionic_mass * *comp.multiplicity_factor;
-      } else if (comp.quaternionic_mass) {
-        cm.mass = *comp.quaternionic_mass;
+    if (comp.d == 0 && (comp.quaternionic || comp.direct)) {
+      std::optional<T> const &dm =
+          comp.quaternionic ? comp.quaternionic_mass : comp.direct_mass;
+      if (dm && comp.multiplicity_factor) {
+        cm.mass = *dm * *comp.multiplicity_factor;
+      } else if (dm) {
+        cm.mass = *dm;
         res.local_correction_open = true;
       } else {
         res.unsupported_component = true;
@@ -3714,6 +3729,260 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           MultiplicityFactorBounds mbounds;
           comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
               A, Xb, blk.E, elts, ListP, Omega, ClassSum, false, mbounds, os);
+        } else if (static_cast<int>(Omega.size()) == c) {
+          /*
+            The order O of X in K (its multiplier ring) is not O_K, so X is
+            not an O_K-lattice. O_K is found by adding x = y / p, y in O, x
+            integral (K commutative: the characteristic polynomial of x on
+            F, by the traces of its powers, is integral), at the primes of
+            [O_K : O], until the discriminant is d_K. Then S = O_K X is an
+            O_K-lattice in the same space, of mass given by the Hermitian
+            (or quadratic) mass, and mass(X) = mass(S) prod_p vol U(S_p) /
+            vol U(X_p) over the primes of [S : X], the volumes from the
+            orders of the images modulo p^c and the Lie lattices
+            (QuaternionicMass.h, which holds for any order acting).
+           */
+          comp.direct = true;
+          auto zbasis_rat = [&](std::vector<MyMatrix<T>> const &L)
+              -> std::vector<MyMatrix<T>> {
+            MyMatrix<T> F(static_cast<int>(L.size()), mX * mX);
+            for (size_t i = 0; i < L.size(); i++) {
+              for (int u = 0; u < mX; u++) {
+                for (int v = 0; v < mX; v++) {
+                  F(static_cast<int>(i), u * mX + v) = L[i](u, v);
+                }
+              }
+            }
+            MyMatrix<T> Bz = GetZbasis(F);
+            std::vector<MyMatrix<T>> res_b;
+            for (int i = 0; i < Bz.rows(); i++) {
+              MyMatrix<T> Y(mX, mX);
+              for (int u = 0; u < mX; u++) {
+                for (int v = 0; v < mX; v++) {
+                  Y(u, v) = Bz(i, u * mX + v);
+                }
+              }
+              res_b.push_back(Y);
+            }
+            return res_b;
+          };
+          T dKval(1);
+          {
+            DirichletGroup Gd = ComputeDirichletGroup(Fk.n);
+            for (auto const &t : FieldCharacters(Gd, Fk.H, false)) {
+              dKval *= ScalarFromInt64<T>(PrimitiveCharacter(Gd, t).first);
+            }
+          }
+          T tr_scale = ScalarFromInt64<T>(mX / c);
+          auto disc_of = [&](std::vector<MyMatrix<T>> const &L) -> T {
+            int d0 = static_cast<int>(L.size());
+            MyMatrix<T> G(d0, d0);
+            for (int i = 0; i < d0; i++) {
+              for (int j = 0; j < d0; j++) {
+                G(i, j) = QuatTrace(MyMatrix<T>(L[i] * L[j])) / tr_scale;
+              }
+            }
+            return T_abs(DeterminantMat(G));
+          };
+          // x integral over Z: the elementary symmetric functions of its
+          // eigenvalues, from the traces of its powers, are integers
+          auto integral = [&](MyMatrix<T> const &x) -> bool {
+            std::vector<T> pk(mX + 1), ek(mX + 1);
+            MyMatrix<T> pw = IdentityMat<T>(mX);
+            for (int kk = 1; kk <= mX; kk++) {
+              pw = pw * x;
+              pk[kk] = QuatTrace(pw);
+            }
+            ek[0] = T(1);
+            for (int kk = 1; kk <= mX; kk++) {
+              T sacc(0);
+              for (int i = 1; i <= kk; i++) {
+                T term = ek[kk - i] * pk[i];
+                sacc += (i % 2 == 1) ? term : T(-term);
+              }
+              ek[kk] = sacc / ScalarFromInt64<T>(kk);
+              if (!IsInteger(ek[kk])) {
+                return false;
+              }
+            }
+            return true;
+          };
+          auto ring_of = [&](std::vector<MyMatrix<T>> L) -> std::vector<MyMatrix<T>> {
+            for (int iter = 0; iter < 20; iter++) {
+              std::vector<MyMatrix<T>> prods = L;
+              for (auto const &X1 : L) {
+                for (auto const &X2 : L) {
+                  prods.push_back(X1 * X2);
+                }
+              }
+              std::vector<MyMatrix<T>> next = zbasis_rat(prods);
+              if (next.size() == L.size() && disc_of(next) == disc_of(L)) {
+                return next;
+              }
+              L = next;
+            }
+            return L;
+          };
+          std::vector<MyMatrix<T>> OK = Omega;
+          bool ok_found = false;
+          for (int iter = 0; iter < 64; iter++) {
+            T q = disc_of(OK) / dKval;
+            if (q == T(1)) {
+              ok_found = true;
+              break;
+            }
+            if (!IsInteger(q)) {
+              break;
+            }
+            std::vector<Tint> pr = FactorsInt(UniversalScalarConversion<Tint, T>(q));
+            std::sort(pr.begin(), pr.end());
+            pr.erase(std::unique(pr.begin(), pr.end()), pr.end());
+            bool enlarged = false;
+            for (Tint const &p_i : pr) {
+              int64_t pp = UniversalScalarConversion<int64_t, Tint>(p_i);
+              size_t n_el = 1;
+              for (int i = 0; i < c; i++) {
+                n_el *= static_cast<size_t>(pp);
+              }
+              for (size_t sidx = 1; sidx < n_el && !enlarged; sidx++) {
+                size_t tt = sidx;
+                MyMatrix<T> x = ZeroMatrix<T>(mX, mX);
+                for (int i = 0; i < c; i++) {
+                  int64_t a = static_cast<int64_t>(tt % static_cast<size_t>(pp));
+                  tt /= static_cast<size_t>(pp);
+                  if (a != 0) {
+                    x += ScalarFromInt64<T>(a) * OK[i];
+                  }
+                }
+                x /= ScalarFromInt64<T>(pp);
+                if (integral(x)) {
+                  std::vector<MyMatrix<T>> L = OK;
+                  L.push_back(x);
+                  OK = ring_of(zbasis_rat(L));
+                  enlarged = true;
+                }
+              }
+              if (enlarged) {
+                break;
+              }
+            }
+            if (!enlarged) {
+              break;
+            }
+          }
+#ifdef DEBUG_ISOMETRY_MASS
+          os << "ISOM_MASS: O_K on X " << (ok_found ? "found" : "not found")
+             << ", [O_K : O]^2 = " << disc_of(Omega) / dKval << "\n";
+#endif
+          if (ok_found && static_cast<int>(OK.size()) == c) {
+            MyMatrix<T> GramX = Xb * A * Xb.transpose();
+            // S = O_K X, rows in the coordinates of X
+            std::vector<MyVector<T>> rows;
+            for (auto const &w : OK) {
+              for (int i = 0; i < mX; i++) {
+                rows.push_back(GetMatrixRow(w, i));
+              }
+            }
+            MyMatrix<T> Rall(static_cast<int>(rows.size()), mX);
+            for (size_t i = 0; i < rows.size(); i++) {
+              for (int j = 0; j < mX; j++) {
+                Rall(static_cast<int>(i), j) = rows[i](j);
+              }
+            }
+            MyMatrix<T> Sb = GetZbasis(Rall);
+            MyMatrix<T> SbInv = Inverse(Sb);
+            MyMatrix<T> GramS = Sb * GramX * Sb.transpose();
+            // integral by a scaling, which changes neither U nor the mass
+            T den = GetDenominatorMatrix(GramS);
+            GramS *= den;
+            std::vector<MyMatrix<T>> OmS;
+            for (auto const &w : OK) {
+              OmS.push_back(MyMatrix<T>(Sb * w * SbInv));
+            }
+            std::optional<T> mass_S =
+                is_cm ? HermitianMassAbelianLattice(GramS, OmS, Fk)
+                      : QuadraticMassAbelianLattice(GramS, OmS, Fk,
+                                                    QuadLValueMethod::Mpfr);
+            T index_SX = T_abs(DeterminantMat(SbInv));
+            std::optional<T> mass_X;
+            if (mass_S) {
+              mass_X = *mass_S;
+              std::vector<MyMatrix<T>> gX, gS;
+              for (auto const &w : Omega) {
+                gX.push_back(MyMatrix<T>(w.transpose()));
+              }
+              for (auto const &w : OmS) {
+                gS.push_back(MyMatrix<T>(w.transpose()));
+              }
+              std::vector<MyMatrix<T>> uX =
+                  QuatIntegralCommutant<T, Tint>(GramX, gX, true);
+              std::vector<MyMatrix<T>> uS =
+                  QuatIntegralCommutant<T, Tint>(GramS, gS, true);
+              std::vector<MyMatrix<T>> LamX =
+                  QuatIntegralCommutant<T, Tint>(GramX, gX, false);
+              std::vector<MyMatrix<T>> LamS =
+                  QuatIntegralCommutant<T, Tint>(GramS, gS, false);
+              T discX = QuatTraceDiscriminant(uX);
+              T discS = QuatTraceDiscriminant(uS);
+              // the integral forms B(w x, y), w in the order
+              auto forms = [&](MyMatrix<T> const &Bz,
+                               std::vector<MyMatrix<T>> const &W)
+                  -> std::vector<MyMatrix<T>> {
+                std::vector<MyMatrix<T>> L;
+                for (auto const &w : W) {
+                  L.push_back(MyMatrix<T>(w.transpose() * Bz));
+                }
+                return QuatIntegralPoints<T, Tint>(L, Bz.rows());
+              };
+              std::vector<MyMatrix<T>> FormsX = forms(GramX, gX);
+              std::vector<MyMatrix<T>> FormsS = forms(GramS, gS);
+              MultiplicityFactorBounds ib;
+              std::vector<Tint> pr_SX =
+                  FactorsInt(UniversalScalarConversion<Tint, T>(index_SX));
+              std::sort(pr_SX.begin(), pr_SX.end());
+              pr_SX.erase(std::unique(pr_SX.begin(), pr_SX.end()), pr_SX.end());
+              for (Tint const &p_i : pr_SX) {
+                int64_t pp = UniversalScalarConversion<int64_t, Tint>(p_i);
+                int cc = (pp == 2) ? 2 : 1;
+                auto nX = QuatLocalImageOrders<T, Tint>(GramX, gX, LamX, FormsX,
+                                                        pp, cc, ib, os);
+                auto nS = QuatLocalImageOrders<T, Tint>(GramS, gS, LamS, FormsS,
+                                                        pp, cc, ib, os);
+                if (!nX || !nS) {
+                  mass_X = {};
+                  break;
+                }
+                int vX = ValuationOfRational(discX, pp);
+                int vS = ValuationOfRational(discS, pp);
+                if ((vX - vS) % 2 != 0) {
+                  std::cerr << "ISOM_MASS: the Lie discriminants differ by an "
+                               "odd power of " << pp << "\n";
+                  throw TerminalException{1};
+                }
+                T ratio = UniversalScalarConversion<T, Tint>(nS->first) /
+                          UniversalScalarConversion<T, Tint>(nX->first);
+                int ex = (vX - vS) / 2;
+                for (int i = 0; i < (ex >= 0 ? ex : -ex); i++) {
+                  if (ex >= 0) {
+                    ratio *= ScalarFromInt64<T>(pp);
+                  } else {
+                    ratio /= ScalarFromInt64<T>(pp);
+                  }
+                }
+#ifdef DEBUG_ISOMETRY_MASS
+                os << "ISOM_MASS: p=" << pp << " |U(X_p)|=" << nX->first
+                   << " |U(S_p)|=" << nS->first << " ratio=" << ratio << "\n";
+#endif
+                *mass_X *= ratio;
+              }
+            }
+            comp.direct_mass = mass_X;
+            if (mass_X) {
+              MultiplicityFactorBounds mbounds;
+              comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
+                  A, Xb, blk.E, elts, ListP, Omega, ClassSum, true, mbounds, os);
+            }
+          }
         }
       }
     }

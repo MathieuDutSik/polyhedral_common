@@ -462,6 +462,12 @@ group_mass_case bg1235c4 G 1/16
 group_mass_case bg0555c2 G 403/768
 group_mass_case bg2129p242 G 1/6
 group_mass_case bg2141p1441 G 1/24
+# A centre K of degree 2 whose order on X is not O_K (the mass by
+# comparison with O_K X), and a search of the equivariant isometries
+# stopped by its node budget (C8).
+group_mass_case bg0502p192 G 1/16
+group_mass_case bg0578p72 G 1/6
+group_mass_case bg0840c8 G 1/256
 # F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
 # the factor at the ramified prime 11 by the pi-adic chain (an image of
 # order about 3 10^4, orbit 1); the module N^#/N at 11 is beyond the old

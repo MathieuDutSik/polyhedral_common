@@ -79,6 +79,8 @@ run_case bg1235c4 bg1235c4G 1
 run_case bg0555c2 bg0555c2G 33
 run_case bg2129p242 bg2129p242G 1
 run_case bg2141p1441 bg2141p1441G 1
+run_case bg0502p192 bg0502p192G 1
+run_case bg0578p72 bg0578p72G 1
 run_case A10x2 F55x2 2
 run_case E8E8 S3diag2 3
 # F21 on seven of the nine coordinates of A8: a Hermitian component over
