@@ -52,6 +52,7 @@ form <matrix>               # over O_K: two matrices, h = h_a + h_b omega
 at_infinity rank            # rank: the cells not spanning R^m are at infinity;
                             # single: only the single vectors
 walk voronoi                # how the Hecke operators locate a vector
+orientation top             # optional: bottom (default) or top, see below
 levels L
 level k <matrix> ... <matrix>   # k configurations, top cells first
 ...
@@ -59,6 +60,18 @@ level k <matrix> ... <matrix>   # k configurations, top cells first
 
 A matrix is its numbers of rows and columns followed by its entries; the
 configurations have one vector per row (realified over O_K).
+
+The orientations: `bottom` (the default) orients the cells from the single
+vectors upwards, the signs of the faces of a cell following from the faces
+of codimension two. `top` (`compute_boundaries_top_down`) orients them from
+the top cells downwards, for the cells in the symmetric space only: the top
+cells carry the ambient orientation (the group preserves it), the signs of
+the cofaces of a cell follow from d d = 0 on the diamonds of its star, and
+the character of its stabilizer from the action on the star. It never uses
+the cells at infinity, which are not regular for the paramodular groups,
+and it needs the intervals [tau, rho] of codimension two between cells of
+the symmetric space to be diamonds (two cells), which it checks. Both give
+the same homology for Sp_4(Z).
 
 ## The Hecke operators
 
@@ -148,6 +161,19 @@ cells are the cells of the Siegel space of J (the positive forms A with
 * `top`: the top cells only, with the orders of their stabilizers;
 * `fast`: as `top`, the facets tested with the margin 0.01 / |X| only (the
   same cells for Sp_4(Z), K(2), K(3), about ten times faster);
+* `probeC` (C >= 1): the walk as `fast`, then the faces of the top cells
+  down to the codimension C that meet the Siegel space, up to G, with the
+  orders of their stabilizers, the times and the orbifold Euler
+  characteristic of the cells found. Only the faces meeting the Siegel
+  space are expanded: for Sp_4(Z), K(2), K(3) this finds exactly the
+  transverse cells (of the dimension expected from the span of their forms
+  v^T v) and misses the non-transverse ones, which are deeper in the cone
+  than their dimension. For Sp_6(Z) the first E6 top cell takes about two
+  hours down to the codimension 2 (the numerical test, 0.5 s per face).
+
+In the modes `fast` and `probeC` the top cells (perfect cone, matrix,
+vectors) are written to `output.top` after the walk, and read from it,
+without walking, when it exists (the walk of Sp_6(Z) takes about 10 hours).
 * `rays`: as `top`, the ridges found by shooting rays from an interior
   point instead of testing all the facets (fast, but misses ridges: 20 or
   21 top cells instead of 22 for K(3)).
@@ -190,11 +216,32 @@ cells are the cells of the Siegel space of J (the positive forms A with
 
 For N = 1 the output is the complex of `data/Sp4.txt` (the fourteen sets,
 no non faces, the same homology and Hecke operators). The top cells, all
-certified: 2 for Sp_4(Z), 6 for K(2), 22 for K(3). For N = 2 the orbits
-of cells of the dimensions 6, ..., 0 are 6, 25, 41, 33, 12, 4, 2, but the
-cells of dimension 1 end at interior points of the cells at infinity of
-two vectors (Lagrangian pairs), so the complex is not regular at infinity
-and the orientations of the low dimensional cells are not obtained yet.
+certified: 2 for Sp_4(Z), 6 for K(2), 22 for K(3). The description file
+asks for the orientations from the top: for N = 2 the cells of dimension 1
+end at interior points of the cells at infinity of two vectors (Lagrangian
+pairs), so the complex is not regular at infinity.
+
+`PROJ_HeckeOperators [description] euler 0 x 1 0 x` computes the orbits
+of cells and their stabilizers only and prints the orbifold Euler
+characteristic of the cells in the symmetric space: -1/1440, -1/288,
+-1/144 for Sp_4(Z), K(2), K(3), the values -(N^2 + 1)/1440. The cells in
+the Siegel space of the dimensions 6, ..., 0: K(2) 6, 25, 41, 31, 11, 2, 0;
+K(3) 22, 118, 207, 159, 52, 7, 1.
+
+* K(2): every interval is a diamond, and the homology of the well rounded
+  complex gives H^*(K(2); Q) = Q in the degrees 0, 2, 3.
+* K(3): a non-transverse cell tau of dimension 3 (six vectors) is not
+  regular: the cell of dimension 4 bounding a cell rho = tau + {a, b, c} of
+  dimension 5 along tau changes on the fixed locus of an involution of the
+  stabilizer of tau, which cuts tau in two. The orientation from the top
+  stops there (an interval with three cells); the complex needs this cut.
+* Independently, H^*(K(p); Q) is the eigenspace of the eigenvalue p of
+  U = [Gamma_0'(p) k Gamma_0'(p)], k = I + E_24 / p, on the cohomology of
+  the Klingen subgroup Gamma_0'(p) (`Gamma0`), with the complex of
+  `data/Sp4.txt` and the Hecke matrix k
+  (`PROJ_HeckeOperators data/Sp4.txt k.txt 5 Gamma0 p 0 out`): U has the
+  eigenvalues p and -1 only, and H^*(K(2); Q) = H^*(K(3); Q) = Q in the
+  degrees 0, 2, 3.
 
 ## Differences with the GAP code
 
