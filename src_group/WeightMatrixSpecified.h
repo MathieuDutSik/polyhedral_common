@@ -2156,8 +2156,8 @@ GetStabilizerWeightMatrix_Individualization(size_t nbRow, F1 f1, F2 f2,
     // caller. S(x) has m <= THRESHOLD_INDIVIDUALIZATION_STAB vertices, so:
     // * at most m^2 distinct weights,
     // * nbMult <= m^2 + 3 effective weights, so that the graph has
-    //   hS = Pairs_GetNeededN(nbMult) <= 8 layers (8 layers give 2^32
-    //   colors),
+    //   hS = Pairs_GetNeededN(nbMult) <= 8 layers (8 layers give
+    //   2^(8 + 21) = 2^29 colors),
     // * at most (2 m + 1) hS vertices (2 m + 1 in the non-symmetric case).
     using Tidx_value = uint32_t;
     using TidxC = uint32_t;
@@ -2165,7 +2165,7 @@ GetStabilizerWeightMatrix_Individualization(size_t nbRow, F1 f1, F2 f2,
     static_assert(max_m * max_m <
                       size_t(std::numeric_limits<Tidx_value>::max()),
                   "the weights of the small subset should fit in Tidx_value");
-    static_assert(max_m * max_m + 3 <= (size_t(1) << 32),
+    static_assert(max_m * max_m + 3 <= (size_t(1) << 29),
                   "the graph of the small subset should have at most 8 layers");
     static_assert((2 * max_m + 1) * 8 <
                       size_t(std::numeric_limits<TidxC>::max()),

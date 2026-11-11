@@ -853,33 +853,25 @@ inline Face GetAllBinaryExpressionsByWeight(size_t n, size_t n_ent) {
   --- v_i adjacent to w_j or not for i != j for some (i,j) \n S
   It is needed that if an automorphism happens then they map
   N-uple V to W completely.
-  The way to obtain that is to ensure that the set of pairs S
-  define a graph so that for each vertex i in {1, ...., N} there exist
-  a j such that j\notin S.
-  ---
-  For N even we need to remove pairs {0,1}, {2,3}, ..., {N-2,N-1}
-    Write N = 2K then nb_pair = 2K + 2K(2K-1) / 2 - K = K + K(2K-1) = 2 K*K
-  For N odd we need to remove pairs {0,1}, {2,3}, ..., {N-3, N-2}, {N-2,N-1}
-    Write N = 2K + 1 then nb_pair = 2K + 1 + (2K+1) 2K / 2 - (K+1) = K + (2K+1)
-  K = 2 (K+1) K
-
+  The way to obtain that: if the pair {i, j} (i != j) is not in S, the only
+  neighbor of v_i in the layer j is v_j, so an automorphism mapping v_i to
+  w_i maps v_j to w_j. The pairs not in S must therefore connect all the
+  layers: we remove the path {0,1}, {1,2}, ..., {N-2,N-1}, and
+    nb_pair = N + N(N-1)/2 - (N-1) = N + (N-1)(N-2)/2.
+  Removing only a matching {0,1}, {2,3}, ... (as was done before) ties the
+  layers two by two but not the blocks together: with nearly all the
+  2^nb_pair codes used, a weight containing the four pairs between the
+  blocks {0,1} and {2,3} lets an automorphism of the graph map the two
+  blocks of v to two different vertices, and its restriction to the first
+  layer is not an automorphism of the weight matrix (found with 237 weights
+  on 42 vectors: a transposition v <-> -v in the stabilizer).
  */
 // The power 2^nb_pair is computed in 64 bits: in int it overflows (undefined
 // behavior) from N = 8, that is above 2^24 colors.
 inline int Pairs_GetNeededN(size_t nb_color) {
   int N = 1;
   while (true) {
-    int res = N % 2;
-    int nb_pair;
-    int K = N / 2;
-    if (res == 0) {
-      nb_pair = 2 * K * K;
-    } else {
-      if (N == 1)
-        nb_pair = 1;
-      else
-        nb_pair = 2 * (K + 1) * K;
-    }
+    int nb_pair = N + (N - 1) * (N - 2) / 2;
     // nb_pair >= 64 only for N >= 12, beyond any size_t number of colors.
     if (nb_pair >= 64)
       return N;
@@ -893,7 +885,6 @@ inline int Pairs_GetNeededN(size_t nb_color) {
 inline std::vector<int> Pairs_GetListPair(int N, int nb_color) {
   if (N == 1)
     return {0, 0};
-  int K = N / 2;
   int e_pow = GetNeededPower(nb_color);
   std::vector<int> V;
   int idx = 0;
@@ -904,6 +895,7 @@ inline std::vector<int> Pairs_GetListPair(int N, int nb_color) {
     if (idx == e_pow)
       return V;
   }
+  // The pairs {i, i + 1} are never used (see above).
   for (int i = 0; i < N; i++)
     for (int j = i + 2; j < N; j++) {
       V.push_back(i);
@@ -912,13 +904,6 @@ inline std::vector<int> Pairs_GetListPair(int N, int nb_color) {
       if (idx == e_pow)
         return V;
     }
-  for (int i = 0; i < K - 1; i++) {
-    V.push_back(2 * i + 1);
-    V.push_back(2 * i + 2);
-    idx++;
-    if (idx == e_pow)
-      return V;
-  }
   return V;
 }
 
