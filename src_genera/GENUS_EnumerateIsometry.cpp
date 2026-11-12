@@ -104,10 +104,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "Exit status: 0 complete, 2 incomplete (the classes found\n";
       std::cerr << "weigh less than the mass), 3 the mass is exceeded (the\n";
       std::cerr << "target is wrong), 1 an error.\n";
-      std::cerr << "recognition=auto|isometry|canonical (anywhere, optional,\n";
+      std::cerr << "recognition=auto|isometry|canonical|qspan (anywhere, optional,\n";
       std::cerr << "        default auto): how a new pair is recognised, by\n";
       std::cerr << "        isometry tests or by the canonical form of the pair\n";
-      std::cerr << "        (costly on rank 24 lattices), auto by the cheaper\n";
+      std::cerr << "        (costly on rank 24 lattices), auto by the cheaper;\n";
+      std::cerr << "        qspan: the graph method alone, on a Q-spanning family\n";
       std::cerr << "arithmetic=NAME (anywhere, optional, default gmp): the\n";
       std::cerr << "        arithmetic of the computation, among\n";
       dispatch.print_descriptions(std::cerr);

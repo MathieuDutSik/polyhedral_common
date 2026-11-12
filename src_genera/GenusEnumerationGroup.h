@@ -125,7 +125,7 @@ template <typename Tmass, typename T> Tmass MassToGroupField(T const &x) {
   with a large vector family (rank 24: a Hermite normal form of the whole
   family, beyond 20 GB), which Isometry avoids.
  */
-enum class PairRecognition { Auto, Isometry, Canonical };
+enum class PairRecognition { Auto, Isometry, Canonical, QSpan };
 
 inline PairRecognition ParsePairRecognition(std::string const &s) {
   if (s == "auto") {
@@ -137,8 +137,11 @@ inline PairRecognition ParsePairRecognition(std::string const &s) {
   if (s == "canonical") {
     return PairRecognition::Canonical;
   }
+  if (s == "qspan") {
+    return PairRecognition::QSpan;
+  }
   std::cerr << "GENUS_GROUP: recognition=" << s
-            << " is not auto, isometry or canonical\n";
+            << " is not auto, isometry, canonical or qspan\n";
   throw TerminalException{1};
 }
 
@@ -777,6 +780,70 @@ CanonicalPairData<T> CanonicalPair(MyMatrix<T> const &A,
   return {method, Acan, ListPcan};
 }
 
+/*
+  The canonical form and the centraliser of a pair by the graph method
+  alone (recognition=qspan). CanonicalPair tries the orbit splitting of the
+  Plesken-Souvignier group first, which needs a Z-spanning family; on rank
+  24 lattices whose roots do not span a saturated sublattice that family
+  has millions of vectors. The graph method (ComputeCanonicalFormMultiple)
+  works from the canonic family of GetCanonicVectorFamily, which only has
+  full rank (Q-spanning), and canonicalises Z^n as a superlattice of its
+  span under the automorphisms of the configuration (MatrixGroup.h) when it
+  does not span. The centraliser is read on the same family by
+  GetIntAutomorphism_ListMat_Vdiag, which keeps the transformations that
+  preserve the lattice.
+ */
+template <typename T, typename Tint, typename Tgroup>
+CanonicalPairData<T> CanonicalPairQSpan(MyMatrix<T> const &A,
+                                        std::vector<MyMatrix<T>> const &ListP,
+                                        std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
+  MyMatrix<Tint> B = ComputeCanonicalFormMultiple<T, Tint, Tgroup>(ListMat, os);
+  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
+  MyMatrix<T> Acan = B_T * A * B_T.transpose();
+  MyMatrix<T> B_inv = Inverse(B_T);
+  std::vector<MyMatrix<T>> ListPcan;
+  for (auto const &P : ListP) {
+    ListPcan.push_back(B_T * P * B_inv);
+  }
+  return {1, Acan, ListPcan};
+}
+
+template <typename T, typename Tint, typename Tgroup>
+PairAutInfo<T, Tint, Tgroup>
+GetPairAutInfoQSpan(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
+                    std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
+  MyMatrix<Tint> SHV = GetCanonicVectorFamily<T, Tint>(A, os).get_full();
+  std::vector<T> Vdiag(SHV.rows(), T(0));
+  IntAutomorphismGroup<Tint, Tgroup> aut =
+      GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(SHV, ListMat, Vdiag,
+                                                        os);
+  PairAutInfo<T, Tint, Tgroup> info;
+  info.order = aut.order;
+  auto preserves = [&](MyMatrix<Tint> const &h) -> bool {
+    MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);
+    for (auto &M : ListMat) {
+      if (h_T * M * h_T.transpose() != M) {
+        return false;
+      }
+    }
+    return true;
+  };
+  for (auto &h : aut.ListGen) {
+    if (preserves(h)) {
+      info.ListGenMat.push_back(h);
+    } else if (preserves(h.transpose())) {
+      info.ListGenMat.push_back(h.transpose());
+    } else {
+      std::cerr << "GENUS_GROUP: an automorphism of the pair (qspan) is "
+                   "wrong\n";
+      throw TerminalException{1};
+    }
+  }
+  return info;
+}
+
 template <typename Tint> int FiniteMatrixOrderInt(MyMatrix<Tint> const &P) {
   int n = P.rows();
   MyMatrix<Tint> Id = IdentityMat<Tint>(n);
@@ -1305,7 +1372,11 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   using CanonKey = std::pair<int, std::vector<MyMatrix<T>>>;
   auto canon_key = [&](MyMatrix<T> const &A,
                        std::vector<MyMatrix<T>> const &ListP) -> CanonKey {
-    CanonicalPairData<T> can = CanonicalPair<T, Tint, Tgroup>(A, ListP, os);
+    CanonicalPairData<T> can =
+        (recognition == PairRecognition::QSpan &&
+         !AllScalarIsometries(ListP))
+            ? CanonicalPairQSpan<T, Tint, Tgroup>(A, ListP, os)
+            : CanonicalPair<T, Tint, Tgroup>(A, ListP, os);
     return {can.method, PairForms(can.Acan, can.ListPcan)};
   };
   // the bucket data of a pair: its bucket and its forms in the reduced
@@ -1353,7 +1424,9 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   auto add_class = [&](MyMatrix<T> const &A,
                        std::vector<MyMatrix<T>> const &ListP) -> size_t {
     PairAutInfo<T, Tint, Tgroup> info =
-        GetPairAutInfo<T, Tint, Tgroup>(A, ListP, os);
+        (recognition == PairRecognition::QSpan && !AllScalarIsometries(ListP))
+            ? GetPairAutInfoQSpan<T, Tint, Tgroup>(A, ListP, os)
+            : GetPairAutInfo<T, Tint, Tgroup>(A, ListP, os);
     size_t idx = ListPairWork.size();
     ListPairWork.push_back({A, ListP});
     ListAutInfo.push_back(info);
@@ -1426,7 +1499,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     if (AllScalarIsometries(ListP)) {
       use_canonical = true;
     } else if (recognition != PairRecognition::Auto) {
-      use_canonical = (recognition == PairRecognition::Canonical);
+      use_canonical = (recognition == PairRecognition::Canonical ||
+                       recognition == PairRecognition::QSpan);
     } else if (n_can + n_iso < 6) {
       use_canonical = (n_can <= n_iso);
     } else {
