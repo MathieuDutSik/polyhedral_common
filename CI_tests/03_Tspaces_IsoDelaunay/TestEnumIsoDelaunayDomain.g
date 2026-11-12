@@ -174,12 +174,15 @@ end;
 # expected value.
 #   comm_choice = "Use_realimag": group GL_n(Z[x]).
 #   comm_choice = "Trivial":      group GL_n(Z[x]) with the conjugation.
+#   use_outer = true (UseOuterElements = T, with "Use_realimag"): the group
+#   K_n(R) = GL_n(Z[x]) \cup GL_n(Z[x]) sigma, sigma the conjugation, which is
+#   expected to give the "Trivial" counts.
 # ==========================================================================
 
 #keep_err:=false;
 keep_err:=true;
 
-get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
+get_rec_info:=function(fProg, d, n, comm_choice, use_outer, keep_error)
     local strRun, FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
     #
     strRun:=Concatenation("_", String(n), "_", String(d));
@@ -221,6 +224,11 @@ get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     AppendTo(output, " RealImagDim = ", n, "\n");
     AppendTo(output, " RealImagSum = ", info.eSum, "\n");
     AppendTo(output, " RealImagProd = ", info.eProd, "\n");
+    if use_outer then
+        AppendTo(output, " UseOuterElements = T\n");
+    else
+        AppendTo(output, " UseOuterElements = F\n");
+    fi;
     AppendTo(output, "/\n");
     CloseStream(output);
     #
@@ -281,9 +289,23 @@ set_dim2_nocomm_examples:=function()
     Add(ListCases, rec(n:=2, d:=-24, comm_choice:="Trivial", n_domains:=61));
 end;
 
+set_dim2_outer_examples:=function()
+    Add(ListCases, rec(n:=2, d:=-3, comm_choice:="Use_realimag", use_outer:=true, n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-4, comm_choice:="Use_realimag", use_outer:=true, n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-7, comm_choice:="Use_realimag", use_outer:=true, n_domains:=11));
+    Add(ListCases, rec(n:=2, d:=-8, comm_choice:="Use_realimag", use_outer:=true, n_domains:=5));
+    Add(ListCases, rec(n:=2, d:=-11, comm_choice:="Use_realimag", use_outer:=true, n_domains:=35));
+    Add(ListCases, rec(n:=2, d:=-15, comm_choice:="Use_realimag", use_outer:=true, n_domains:=74));
+    Add(ListCases, rec(n:=2, d:=-19, comm_choice:="Use_realimag", use_outer:=true, n_domains:=112));
+    Add(ListCases, rec(n:=2, d:=-20, comm_choice:="Use_realimag", use_outer:=true, n_domains:=43));
+    Add(ListCases, rec(n:=2, d:=-23, comm_choice:="Use_realimag", use_outer:=true, n_domains:=190));
+    Add(ListCases, rec(n:=2, d:=-24, comm_choice:="Use_realimag", use_outer:=true, n_domains:=61));
+end;
+
 #set_canonical_examples();
 set_dim2_examples();
 set_dim2_nocomm_examples();
+set_dim2_outer_examples();
 
 
 
@@ -291,7 +313,7 @@ set_dim2_nocomm_examples();
 ListProg:=["LATT_SerialLattice_IsoDelaunayDomain"];
 
 TestAlgebraicRings:=function()
-    local n_error, n_case, i_case, eCase, fProg, eRec;
+    local n_error, n_case, i_case, eCase, fProg, eRec, use_outer;
     n_error:=0;
     n_case:=Length(ListCases);
     for i_case in [1..n_case]
@@ -299,9 +321,10 @@ TestAlgebraicRings:=function()
         eCase:=ListCases[i_case];
         Print("----------------------------------------------------------------------\n");
         Print("i_case=", i_case, "/", n_case, " eCase=", eCase, "\n");
+        use_outer:=IsBound(eCase.use_outer) and eCase.use_outer;
         for fProg in ListProg
         do
-            eRec:=get_rec_info(fProg, eCase.d, eCase.n, eCase.comm_choice, keep_err);
+            eRec:=get_rec_info(fProg, eCase.d, eCase.n, eCase.comm_choice, use_outer, keep_err);
             if eRec=fail then
                 Print("Failing because eRec=fail\n");
                 n_error:=n_error+1;

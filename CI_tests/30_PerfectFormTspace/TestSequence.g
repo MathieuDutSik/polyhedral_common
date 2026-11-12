@@ -3,7 +3,7 @@ Print("Beginning Test enumeration of perfect forms in T-spaces\n");
 
 keep_err:=false;
 
-get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
+get_rec_info:=function(fProg, d, n, comm_choice, use_outer, keep_error)
     local strRun, FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
     #
     strRun:=Concatenation("_", String(n), "_", String(d));
@@ -45,6 +45,11 @@ get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     AppendTo(output, " RealImagDim = ", n, "\n");
     AppendTo(output, " RealImagSum = ", info.eSum, "\n");
     AppendTo(output, " RealImagProd = ", info.eProd, "\n");
+    if use_outer then
+        AppendTo(output, " UseOuterElements = T\n");
+    else
+        AppendTo(output, " UseOuterElements = F\n");
+    fi;
     AppendTo(output, "/\n");
     CloseStream(output);
     #
@@ -111,7 +116,26 @@ insert_imag_nocomm_examples:=function()
     Add(ListCases, rec(n:=3, d:=-23, comm_choice:="Trivial", n_perf:=460));
     Add(ListCases, rec(n:=3, d:=-24, comm_choice:="Trivial", n_perf:=315));
     Add(ListCases, rec(n:=4, d:=-3, comm_choice:="Trivial", n_perf:=5));
-    Add(ListCases, rec(n:=4, d:=-4, comm_choice:="Trivial"));
+    Add(ListCases, rec(n:=4, d:=-4, comm_choice:="Trivial", n_perf:=2));
+end;
+
+# The group K_n(R) = GL_n(R) \cup GL_n(R) sigma, sigma the Galois conjugation
+# (ListComm = Use_realimag with UseOuterElements = T). It is expected to be the
+# full symmetry group of the T-space: the counts are those of comm_choice =
+# "Trivial", at a much lower cost for n = 4.
+insert_imag_outer_examples:=function()
+    Add(ListCases, rec(n:=3, d:=-3, comm_choice:="Use_realimag", use_outer:=true, n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-4, comm_choice:="Use_realimag", use_outer:=true, n_perf:=1));
+    Add(ListCases, rec(n:=3, d:=-7, comm_choice:="Use_realimag", use_outer:=true, n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-8, comm_choice:="Use_realimag", use_outer:=true, n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-11, comm_choice:="Use_realimag", use_outer:=true, n_perf:=12));
+    Add(ListCases, rec(n:=3, d:=-15, comm_choice:="Use_realimag", use_outer:=true, n_perf:=59));
+    Add(ListCases, rec(n:=3, d:=-19, comm_choice:="Use_realimag", use_outer:=true, n_perf:=93));
+    Add(ListCases, rec(n:=3, d:=-20, comm_choice:="Use_realimag", use_outer:=true, n_perf:=120));
+    Add(ListCases, rec(n:=3, d:=-23, comm_choice:="Use_realimag", use_outer:=true, n_perf:=460));
+    Add(ListCases, rec(n:=3, d:=-24, comm_choice:="Use_realimag", use_outer:=true, n_perf:=315));
+    Add(ListCases, rec(n:=4, d:=-3, comm_choice:="Use_realimag", use_outer:=true, n_perf:=5));
+    Add(ListCases, rec(n:=4, d:=-4, comm_choice:="Use_realimag", use_outer:=true, n_perf:=2));
 end;
 
 
@@ -161,6 +185,7 @@ end;
 
 
 insert_imag_examples();
+insert_imag_outer_examples();
 #insert_imag_nocomm_examples();
 #insert_real_examples(3, 10);
 #insert_extensive_imag_examples_part1();
@@ -174,16 +199,17 @@ ListProg:=["PERF_SerialPerfectComputation"];
 
 
 f_compute:=function()
-    local n_case, i_case, eCase, fProg, eRec;
+    local n_case, i_case, eCase, fProg, eRec, use_outer;
     n_case:=Length(ListCases);
     for i_case in [1..n_case]
     do
         eCase:=ListCases[i_case];
         Print("----------------------------------------------------------------------\n");
         Print("i_case=", i_case, "/", n_case, " eCase=", eCase, "\n");
+        use_outer:=IsBound(eCase.use_outer) and eCase.use_outer;
         for fProg in ListProg
         do
-            eRec:=get_rec_info(fProg, eCase.d, eCase.n, eCase.comm_choice, keep_err);
+            eRec:=get_rec_info(fProg, eCase.d, eCase.n, eCase.comm_choice, use_outer, keep_err);
             if eRec=fail then
                 Print("Failing because eRec=fail\n");
                 return false;
