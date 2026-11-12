@@ -111,8 +111,15 @@ int Compare(Case const &cs, int64_t p, int c) {
   bounds.max_solution = 200000;
   LocalImageOrder ord;
   auto t0 = std::chrono::steady_clock::now();
+  std::vector<MyMatrix<Tint>> LamInt;
+  for (auto const &X : cs.Lam) {
+    LamInt.push_back(UniversalMatrixConversion<Tint, T>(X));
+  }
+  int64_t pW = ResiduePrimePower(p, MultiplicityNewtonPrecision(p));
+  std::optional<std::vector<ModMat>> Lie = ResidueMatrices(
+      IntegralLieLatticeColumns<T, Tint>(cs.A, LamInt), pW);
   std::optional<std::vector<ModMat>> gens = LocalOrthogonalImageGenerators(
-      A_mod, Be, Om, Lam, Forms, p, c, e, bounds, &ord);
+      A_mod, Be, Om, Lam, Forms, Lie, p, c, e, bounds, &ord);
   auto t1 = std::chrono::steady_clock::now();
   // the listing, on the rows: the transposes of the commutant, or all the
   // matrices

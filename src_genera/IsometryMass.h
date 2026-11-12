@@ -1162,10 +1162,17 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
     for (auto const &Y : ListComm) {
       Lam.push_back(residues(on_rows ? MyMatrix<Tint>(Y.transpose()) : Y));
     }
+    std::vector<MyMatrix<Tint>> CommCols;
+    for (auto const &Y : ListComm) {
+      CommCols.push_back(on_rows ? MyMatrix<Tint>(Y.transpose()) : Y);
+    }
+    std::optional<std::vector<ModMat>> Lie = ResidueMatrices(
+        IntegralLieLatticeColumns<T, Tint>(comp.gram, CommCols),
+        ResidueModulusOf(qW));
     LocalImageOrder ord;
     std::optional<std::vector<ModMat>> ggens = LocalOrthogonalImageGenerators(
         residues(UniversalMatrixConversion<Tint, T>(comp.gram)), Be, Om, Lam,
-        {}, q, c, e, mbounds, &ord);
+        {}, Lie, q, c, e, mbounds, &ord);
     if (ggens) {
       std::vector<MyVector<T>> mgens = PrimaryModuleGenerators(comp, M);
       std::vector<ModuleAut> gimg;
@@ -2445,8 +2452,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
       }
       LocalImageOrder order;
-      opt = LocalOrthogonalImageGenerators(A_mod, Be, {}, {}, {}, p, c, e, bounds,
-                                           &order);
+      std::optional<std::vector<ModMat>> Lie = ResidueMatrices(
+          IntegralLieLatticeColumns<T, Tint>(GramX, {}), ResidueModulusOf(pW));
+      opt = LocalOrthogonalImageGenerators(A_mod, Be, {}, {}, {}, Lie, p, c, e,
+                                           bounds, &order);
       gens_over_Q = opt.has_value();
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
       os << "MULT_FACTOR: p=" << p << " generators of the image "
@@ -2501,9 +2510,14 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       IsometryComponent<T> compX = BuildIsometryComponent<T, Tint>(
           A, Xb, IdentityMat<T>(A.rows()), 1);
       compX.extra_sigma = OmegaX;
+      std::vector<MyMatrix<Tint>> CommColsX;
       for (auto const &Y : IntegralCommutant<T, Tint>(compX)) {
         Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
+        CommColsX.push_back(MyMatrix<Tint>(Y.transpose()));
       }
+      std::optional<std::vector<ModMat>> LieX = ResidueMatrices(
+          IntegralLieLatticeColumns<T, Tint>(GramX, CommColsX),
+          ResidueModulusOf(pW));
       // for a quaternion order, the forms B(w x, y) = x W GramX y^T, w in
       // the trace dual (the integral points of their span), as residues
       // modulo p^W
@@ -2528,8 +2542,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
       }
       LocalImageOrder order;
-      opt = LocalOrthogonalImageGenerators(A_mod, Be, Om, Lam, Forms, p, c, e,
-                                           bounds, &order);
+      opt = LocalOrthogonalImageGenerators(A_mod, Be, Om, Lam, Forms, LieX, p,
+                                           c, e, bounds, &order);
       if (opt) {
         rows_convention = false;
         gens_over_K = true;
@@ -2630,12 +2644,17 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       IsometryComponent<T> compX3 = BuildIsometryComponent<T, Tint>(
           A, Xb, IdentityMat<T>(A.rows()), 1);
       compX3.extra_sigma = OmegaX;
+      std::vector<MyMatrix<Tint>> CommCols3;
       for (auto const &Y : IntegralCommutant<T, Tint>(compX3)) {
         Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
+        CommCols3.push_back(MyMatrix<Tint>(Y.transpose()));
       }
+      std::optional<std::vector<ModMat>> Lie3 = ResidueMatrices(
+          IntegralLieLatticeColumns<T, Tint>(GramX, CommCols3),
+          ResidueModulusOf(pW));
       LocalImageOrder order_k;
       std::optional<std::vector<ModMat>> kg = LocalOrthogonalImageGenerators(
-          A_mod, Be, Om, Lam, {}, p, c, e, bounds, &order_k);
+          A_mod, Be, Om, Lam, {}, Lie3, p, c, e, bounds, &order_k);
       if (kg) {
         int64_t pcl = ResiduePrimePower(p, c);
         auto closure_of = [&](std::vector<ModMat> const &gens, bool transpose,

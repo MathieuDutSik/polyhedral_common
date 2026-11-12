@@ -956,10 +956,16 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
 #else
   int c_top = c;
 #endif
+  std::vector<MyMatrix<Tint>> LamInt;
+  for (auto const &Y : Lam) {
+    LamInt.push_back(UniversalMatrixConversion<Tint, T>(Y));
+  }
+  std::optional<std::vector<ModMat>> Lie = ResidueMatrices(
+      IntegralLieLatticeColumns<T, Tint>(B, LamInt), ResidueModulusOf(pW));
   for (int cc = c; cc <= c_top; cc++) {
     LocalImageOrder ord;
     std::optional<std::vector<ModMat>> opt = LocalOrthogonalImageGenerators(
-        A_mod, Be, Om, LamM, FormsM, p, cc, e, bounds, &ord);
+        A_mod, Be, Om, LamM, FormsM, Lie, p, cc, e, bounds, &ord);
 #ifdef DEBUG_QUATERNIONIC_MASS
     os << "QUAT_MASS: p=" << p << " c=" << cc << " e=" << e << " image "
        << (opt ? "found" : "not found") << ", order "
