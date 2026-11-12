@@ -36,6 +36,11 @@ mass_case() {
         echo "ERROR: ($lat, $isom) gave the mass $mass, expected $expected" >&2
         exit 1
     fi
+    # a proved mass: no flag raised, no partial mass
+    if echo "$out" | grep -q -E ':=true|mass_without_local_factors'; then
+        echo "ERROR: ($lat, $isom) has a flag raised or a partial mass" >&2
+        exit 1
+    fi
 }
 
 check_case() {

@@ -90,5 +90,29 @@ run_case A8 F21A8 2
 # over Q(sqrt 5) glued at 5 to the fixed lattice, 2 classes (at p = 3)
 run_case E8E8D5 D5 2
 
+# The exit status: a target mass that the seed alone exceeds must stop the
+# program with status 3 (mass exceeded), and a target twice the true mass
+# at the single prime 2 with status 2 (incomplete), so that neither can pass
+# for a complete enumeration.
+status_case() {
+    lat=$1
+    isom=$2
+    massfile=$3
+    prime=$4
+    expected_rc=$5
+    expected_line=$6
+    echo "--- ($lat, $isom) with $massfile at p=$prime, expecting exit $expected_rc ---"
+    rc=0
+    out=$($BIN eiso_${lat}.txt eiso_${isom}.txt $massfile Summary stdout \
+              $prime 1 2>/dev/null) || rc=$?
+    echo "$out"
+    if [ "$rc" != "$expected_rc" ] || ! echo "$out" | grep -q "^$expected_line$"; then
+        echo "ERROR: ($lat, $isom) with $massfile exited with $rc" >&2
+        exit 1
+    fi
+}
+status_case E8E8 mI16 eiso_mass_wrong_tiny.txt 2 3 "mass exceeded = true"
+status_case d25 mI8 eiso_mass_mI8_double.txt 2 2 "complete = false"
+
 echo "All isometry enumeration tests passed"
 touch CI_CONCLUSION

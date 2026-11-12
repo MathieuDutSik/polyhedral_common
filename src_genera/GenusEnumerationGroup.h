@@ -89,7 +89,32 @@ template <typename T, typename Tgroup> struct GenusEnumerationGroupResult {
   bool complete;
   std::vector<int> ListPrimeUsed;
   std::vector<size_t> ListNewClassPerPrime;
+  // the classes found weigh more than the target: the target mass is
+  // wrong (or two classes were not recognised as isometric)
+  bool mass_exceeded() const { return accumulated_mass > target_mass; }
 };
+
+/*
+  The exit status of the programs that enumerate genera of pairs, so that
+  an incomplete or inconsistent result cannot pass for a complete one:
+  0 when the mass closed, 2 when the classes found weigh less than the
+  target (the primes or the rounds were exhausted: another prime or another
+  seed is needed), 3 when they weigh more (the target is wrong).
+ */
+int const GENUS_GROUP_EXIT_INCOMPLETE = 2;
+int const GENUS_GROUP_EXIT_MASS_EXCEEDED = 3;
+
+template <typename T, typename Tgroup>
+int GenusEnumerationGroupExitStatus(
+    GenusEnumerationGroupResult<T, Tgroup> const &result) {
+  if (result.mass_exceeded()) {
+    return GENUS_GROUP_EXIT_MASS_EXCEEDED;
+  }
+  if (!result.complete) {
+    return GENUS_GROUP_EXIT_INCOMPLETE;
+  }
+  return 0;
+}
 
 inline int64_t ModPosInt64(int64_t a, int64_t m) {
   a %= m;
@@ -1373,7 +1398,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
                    "of isometries or determinants\n";
       throw TerminalException{1};
     }
-    if (result.accumulated_mass == TotalMass) {
+    if (result.accumulated_mass >= TotalMass) {
       break;
     }
     (void)f_insert(A, ListP);
@@ -1454,7 +1479,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         if (f_insert(nb.first, nb.second)) {
           result.ListNewClassPerPrime[i_prime]++;
         }
-        closed = (result.accumulated_mass == TotalMass);
+        closed = (result.accumulated_mass >= TotalMass);
         return closed;
       };
       int mode = visit_mode(n_point);
@@ -1531,7 +1556,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
             if (f_insert(opt->first, opt->second)) {
               result.ListNewClassPerPrime[i_prime]++;
             }
-            closed = (result.accumulated_mass == TotalMass);
+            closed = (result.accumulated_mass >= TotalMass);
             return closed;
           };
       size_t n_line = NumberProjectiveLines(static_cast<int>(k), p);
@@ -1570,7 +1595,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     result.ListPrimeUsed.push_back(prime);
     result.ListNewClassPerPrime.push_back(0);
     for (size_t pos = 0;
-         pos < ListPairWork.size() && result.accumulated_mass != TotalMass;
+         pos < ListPairWork.size() && result.accumulated_mass < TotalMass;
          pos++) {
       expand_at(pos, prime, 0);
     }
@@ -1581,10 +1606,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
                 : OrderedNeighborPrimesModule(ListPairWork[0].first,
                                               ListPairWork[0].second, m, det);
     std::vector<size_t> next_expand;
-    while (result.accumulated_mass != TotalMass) {
-      if (result.accumulated_mass > TotalMass) {
-        break;
-      }
+    while (result.accumulated_mass < TotalMass) {
       size_t i_work = result.ListPrimeUsed.size();
       for (size_t i = 0; i < result.ListPrimeUsed.size(); i++) {
         if (next_expand[i] < ListPairWork.size()) {
@@ -1679,7 +1701,7 @@ void WriteGenusEnumerationGroupResult(
     os << "accumulated mass = " << result.accumulated_mass << "\n";
     os << "target mass = " << result.target_mass << "\n";
     os << "complete = " << (result.complete ? "true" : "false") << "\n";
-    if (result.accumulated_mass > result.target_mass) {
+    if (result.mass_exceeded()) {
       // the classes found weigh more than the target: the target is wrong,
       // for a non-abelian group typically a local factor at p | |G|
       os << "mass exceeded = true\n";
@@ -1718,6 +1740,7 @@ void WriteGenusEnumerationGroupResult(
     os << "],\n accumulated_mass:=" << result.accumulated_mass
        << ",\n target_mass:=" << result.target_mass
        << ",\n complete:=" << (result.complete ? "true" : "false")
+       << ",\n mass_exceeded:=" << (result.mass_exceeded() ? "true" : "false")
        << ",\n ListPrimeUsed:=[";
     for (size_t i = 0; i < result.ListPrimeUsed.size(); i++) {
       os << (i > 0 ? ", " : "") << result.ListPrimeUsed[i];

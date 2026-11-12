@@ -21,6 +21,9 @@
               (GENUS_IsometryMass) and the enumeration of that genus
               (GENUS_EnumerateIsometry); the result is every class of pairs
               whose pieces lie in the genera of the (L_i, g_i).
+              Exit status as GENUS_EnumerateIsometry: 2 when a genus did
+              not close or a glued pair has no proved mass, 3 when the
+              classes of a genus weigh more than its mass.
  */
 
 template <typename T>
@@ -46,7 +49,7 @@ void process(std::string const &mode, std::string const &FileGram1,
              std::string const &FileIsom1, std::string const &FileGram2,
              std::string const &FileIsom2, std::string const &det_arg,
              std::string const &OutFormat, QuadLValueMethod lvalue,
-             std::ostream &os) {
+             int &status, std::ostream &os) {
   MyMatrix<T> A1 = ReadMatrixFile<T>(FileGram1);
   MyMatrix<T> g1 = ReadMatrixFile<T>(FileIsom1);
   MyMatrix<T> A2 = ReadMatrixFile<T>(FileGram2);
@@ -118,8 +121,10 @@ void process(std::string const &mode, std::string const &FileGram1,
     IsometryMassResult<T> mres = IsometryGenusMass<T, Tint>(
         gp.gram, gp.isom, herm_mass, mass_bounds, std::cerr);
     if (!mres.mass) {
-      std::cerr << "GENUS_GlueIsometry: a seed has a component without a "
-                   "mass, its genus is skipped\n";
+      // no component mass, or local factors missing
+      // (mass_without_local_factors, only a lower bound)
+      std::cerr << "GENUS_GlueIsometry: a seed has no proved mass, its genus "
+                   "is skipped\n";
       n_without_mass++;
       continue;
     }
@@ -134,6 +139,17 @@ void process(std::string const &mode, std::string const &FileGram1,
     // the seed itself, in case the enumeration stopped short
     known.insert(key_of(gp.gram, gp.isom));
     ListGenus.push_back({gp, *mres.mass, result});
+  }
+  for (auto const &rec : ListGenus) {
+    int st = GenusEnumerationGroupExitStatus(rec.result);
+    if (st == GENUS_GROUP_EXIT_MASS_EXCEEDED) {
+      status = st;
+    } else if (st != 0 && status == 0) {
+      status = st;
+    }
+  }
+  if (n_without_mass > 0 && status == 0) {
+    status = GENUS_GROUP_EXIT_INCOMPLETE;
   }
   if (OutFormat == "Summary") {
     os << "glued pairs = " << ListGlued.size() << "\n";
@@ -234,11 +250,24 @@ int main(int argc, char *argv[]) {
     std::string det_arg = argv[6];
     std::string OutFormat = (argc >= 8) ? argv[7] : "Summary";
     std::string OutFile = (argc >= 9) ? argv[8] : "stderr";
+    int status = 0;
     auto f = [&](std::ostream &os) -> void {
       process<T, Tint, Tgroup>(mode, FileGram1, FileIsom1, FileGram2, FileIsom2,
-                               det_arg, OutFormat, lvalue, os);
+                               det_arg, OutFormat, lvalue, status, os);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
+    if (status == GENUS_GROUP_EXIT_MASS_EXCEEDED) {
+      std::cerr << "GENUS_GlueIsometry: ERROR: the classes of a genus of "
+                   "pairs weigh more than its mass\n";
+      runtime(time);
+      exit(status);
+    }
+    if (status == GENUS_GROUP_EXIT_INCOMPLETE) {
+      std::cerr << "GENUS_GlueIsometry: INCOMPLETE: a genus of pairs did not "
+                   "close its mass or has no proved mass\n";
+      runtime(time);
+      exit(status);
+    }
     std::cerr << "Normal termination of GENUS_GlueIsometry\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GENUS_GlueIsometry\n";

@@ -62,9 +62,11 @@
   commute with sigma. For d = 1, 2 (sigma = +-1 on L_d) O(L_{d,q}) maps
   onto O(D(L_d)_q) (Nikulin, Integral symmetric bilinear forms and some of
   their applications, Theorem 1.9.5), so the full group is the image. For
-  d >= 3 the code uses all the isometries commuting with sigma; that they
-  are the image of the local unitary group is not proved here, and the
-  result says when it is relied on.
+  d >= 3 the image of the local unitary group is computed (or proved to be
+  all the isometries commuting with sigma by elements of it); that it is
+  always all of them is not proved (Question q:surj of the paper), and it
+  is assumed only when IsometryMassBounds::allow_image_assumption is set,
+  the result then saying image_assumed.
 
   The masses of the orthogonal L_d come from GenusMass. The genus of the
   pair (L_d, sigma_d), d >= 3, is the genus of L_d as a Hermitian lattice
@@ -1300,6 +1302,9 @@ template <typename T> struct IsometryComponentMass {
   int rank;
   T det;
   std::optional<T> mass;
+  // the multiplicity factors at p | |G| are beyond the bounds: mass is
+  // only that of the multiplicity lattice X, a lower bound
+  bool local_factor_missing = false;
 };
 
 template <typename T> struct IsometryMassResult {
@@ -1309,18 +1314,25 @@ template <typename T> struct IsometryMassResult {
   T index;
   std::vector<GlueOrbitResult<typename underlying_z_ring<T>::ring_type>> glue;
   T glue_factor;
-  // whether a component with d >= 3 enters the glue, in which case the
-  // image of the local unitary group is taken to be all the equivariant
-  // isometries of its discriminant form
+  // the image of a local centraliser on a glue module was beyond the
+  // bounds and taken to be all the equivariant isometries (Question q:surj
+  // of the paper); only with IsometryMassBounds::allow_image_assumption
   bool image_assumed;
-  // a component with End_G = Q of dimension > 1 over the multiplicity
-  // space: its mass is that of the multiplicity lattice, the local factors
-  // at the primes dividing |G| not being computed
+  // the multiplicity factors of a component are beyond the bounds
+  // (IsometryComponentMass::local_factor_missing)
   bool local_correction_open = false;
-  // a component of a type whose mass is not implemented (End_G neither Q
-  // nor reached through a cyclic quotient)
+  // a component of a type whose mass is not implemented
   bool unsupported_component = false;
+  /*
+    The mass of the genus of the pair. It is set only when it is proved:
+    every component has its exact mass, with its local factors. When local
+    factors are missing the product is mass_without_local_factors instead,
+    a lower bound of the mass (each factor is an index, at least 1), which
+    must never be used as the target of an enumeration: the enumeration
+    could stop before it is complete.
+  */
   std::optional<T> mass;
+  std::optional<T> mass_without_local_factors;
 };
 
 struct IsometryMassBounds {
@@ -1625,6 +1637,7 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
         cm.mass = *dm * *comp.multiplicity_factor;
       } else if (dm) {
         cm.mass = *dm;
+        cm.local_factor_missing = true;
         res.local_correction_open = true;
       } else {
         res.unsupported_component = true;
@@ -1640,6 +1653,7 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
         cm.mass = *hm * *comp.multiplicity_factor;
       } else if (hm) {
         cm.mass = *hm;
+        cm.local_factor_missing = true;
         res.local_correction_open = true;
       } else {
         res.unsupported_component = true;
@@ -1653,6 +1667,7 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
         if (comp.multiplicity_factor) {
           *cm.mass *= *comp.multiplicity_factor;
         } else if (comp.multiplicity_gram->rows() > 1) {
+          cm.local_factor_missing = true;
           res.local_correction_open = true;
         }
       } else {
@@ -1665,7 +1680,6 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
       if (iter != herm_mass.end()) {
         cm.mass = iter->second;
       } else {
-        // computed exactly except at a ramified prime of E/K in rank >= 2
         std::optional<T> opt =
             HermitianMassCyclotomicLattice(comp.gram, comp.sigma, comp.d);
         if (opt) {
@@ -1856,7 +1870,11 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
   }
 #endif
   if (all_mass) {
-    res.mass = mass0 * res.glue_factor;
+    if (res.local_correction_open) {
+      res.mass_without_local_factors = mass0 * res.glue_factor;
+    } else {
+      res.mass = mass0 * res.glue_factor;
+    }
   }
   return res;
 }
@@ -2055,8 +2073,19 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
   int m = Xb.rows();
   int k = E.rows();
   int n = A.cols();
+  /*
+    The failures below are not bounds: they mean that the multiplicity
+    lattice does not have the expected structure, a case the code does not
+    handle (or a bug of the decomposition). They stop the program rather
+    than leave the factor out (IsometryComponentMass::local_factor_missing
+    is for the bounds only).
+  */
+  auto structural_failure = [](std::string const &msg) -> void {
+    std::cerr << "MULT_FACTOR: " << msg << ", please insert the code\n";
+    throw TerminalException{1};
+  };
   if (k % m != 0) {
-    return {};
+    structural_failure("the rank of X does not divide that of the component");
   }
   int w = k / m;
   // the gamma_a with the gamma_a X in direct sum (V_rho = W (x)_K U and
@@ -2084,11 +2113,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     }
   }
   if (static_cast<int>(ListGamma.size()) != w) {
-#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
-    os << "MULT_FACTOR: only " << ListGamma.size() << " of the " << w
-       << " translates of X found in direct sum\n";
-#endif
-    return {};
+    structural_failure("only " + std::to_string(ListGamma.size()) + " of the " +
+                       std::to_string(w) +
+                       " translates of X found in direct sum by the greedy "
+                       "choice");
   }
   // the basis B_V = {gamma_a x_i}, index a * m + i
   MyMatrix<T> BV(k, n);
@@ -2101,8 +2129,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     }
   }
   if (RankMat(BV) != k) {
-    MULT_FACTOR_FAIL(1872);
-    return {};
+    structural_failure("the translates of X do not span the component");
   }
   // coordinates in B_V of vectors of V_rho
   auto coords = [&](MyMatrix<T> const &M) -> MyMatrix<T> {
@@ -2123,11 +2150,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
   MyMatrix<Tint> Ngen_i = UniversalMatrixConversion<Tint, T>(Ngen);
   MyMatrix<T> Nb = UniversalMatrixConversion<T, Tint>(GetZbasis(Ngen_i));
   if (Nb.rows() != k) {
-#ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
-    os << "MULT_FACTOR: Z[G] X has rank " << Nb.rows() << " instead of " << k
-       << "\n";
-#endif
-    return {};
+    structural_failure("Z[G] X has rank " + std::to_string(Nb.rows()) +
+                       " instead of " + std::to_string(k));
   }
   MyMatrix<T> GramN = Nb * A * Nb.transpose();
   MyMatrix<T> Nsharp = Inverse(GramN) * Nb;
@@ -2167,8 +2191,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     for (int i = 0; i < k; i++) {
       T d = T_abs(UniversalScalarConversion<T, Tint>(Dm(i, i)));
       if (d == T(0)) {
-        MULT_FACTOR_FAIL(1933);
-        return {};
+        structural_failure("N^# / N is infinite");
       }
       int v = ValuationOfRational(d, p);
       if (v > 0) {
@@ -4051,7 +4074,9 @@ void WriteIsometryMassResult(std::ostream &os, IsometryMassResult<T> const &res)
     }
     os << "\n    rec(d:=" << cm.d << ", rank:=" << cm.rank << ", det:=" << cm.det;
     if (cm.mass) {
-      os << ", mass:=" << *cm.mass;
+      os << (cm.local_factor_missing ? ", mass_without_local_factors:="
+                                     : ", mass:=")
+         << *cm.mass;
     }
     os << ", gram:=";
     WriteMatrixGAP(os, res.components[c].gram);
@@ -4084,6 +4109,10 @@ void WriteIsometryMassResult(std::ostream &os, IsometryMassResult<T> const &res)
      << GAP_logical(res.unsupported_component);
   if (res.mass) {
     os << ",\n  mass:=" << *res.mass;
+  }
+  if (res.mass_without_local_factors) {
+    os << ",\n  mass_without_local_factors:="
+       << *res.mass_without_local_factors;
   }
   os << ");\n";
 }

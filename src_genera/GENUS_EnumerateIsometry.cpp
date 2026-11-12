@@ -15,11 +15,17 @@
   the genus of the pair (GENUS_IsometryMass) is reached. See
   GenusEnumerationGroup.h. With k isometries per seed, the classes of
   (L, G) for the finite abelian group G = <g_1, ..., g_k>, the mass then
-  given by GENUS_IsometryMass group.
+  given by GENUS_IsometryMass group; generators that do not commute give
+  the classes of (L, G) for a non-abelian G, by the G-stable neighbours of
+  the irreducible isotropic submodules.
+
+  Exit status: 0 when the mass closed, 2 when the classes found weigh less
+  than the target (incomplete), 3 when they weigh more (the target is
+  wrong); see GenusEnumerationGroupExitStatus.
  */
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &FileGram, std::string const &FileIsom,
+int process(std::string const &FileGram, std::string const &FileIsom,
              std::string const &FileMass, std::string const &OutFormat,
              int prime, size_t max_prime, std::ostream &os) {
   std::vector<MyMatrix<T>> ListGram = ReadListMatrixFile<T>(FileGram);
@@ -56,6 +62,7 @@ void process(std::string const &FileGram, std::string const &FileIsom,
       GenusEnumerationAbelianGroup<T, Tint, Tgroup>(ListSeed, TotalMass, prime,
                                                     max_prime, std::cerr);
   WriteGenusEnumerationGroupResult(os, result, OutFormat);
+  return GenusEnumerationGroupExitStatus(result);
 }
 
 int main(int argc, char *argv[]) {
@@ -76,8 +83,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "                   ListMatrix format\n";
       std::cerr << "Isometry (input) : their isometries g (g^T A g = A), in\n";
       std::cerr << "                   the ListMatrix format, k per seed\n";
-      std::cerr << "                   (consecutive), commuting, generating\n";
-      std::cerr << "                   an abelian group\n";
+      std::cerr << "                   (consecutive), generating a finite\n";
+      std::cerr << "                   group\n";
       std::cerr << "Mass     (input) : the mass of the genus of the pair, as\n";
       std::cerr << "                   \"num den\" (GENUS_IsometryMass)\n";
       std::cerr << "OutFormat        : Summary (default) or GAP\n";
@@ -88,6 +95,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "                   (m the exponent of the group)\n";
       std::cerr << "max_prime        : the number of primes brought in at\n";
       std::cerr << "                   most when prime = 0 (default 6)\n";
+      std::cerr << "\n";
+      std::cerr << "Exit status: 0 complete, 2 incomplete (the classes found\n";
+      std::cerr << "weigh less than the mass), 3 the mass is exceeded (the\n";
+      std::cerr << "target is wrong), 1 an error.\n";
       return -1;
     }
     std::string FileGram = argv[1];
@@ -97,11 +108,24 @@ int main(int argc, char *argv[]) {
     std::string OutFile = (argc >= 6) ? argv[5] : "stderr";
     int prime = (argc >= 7) ? std::stoi(argv[6]) : 0;
     size_t max_prime = (argc >= 8) ? std::stoul(argv[7]) : 6;
+    int status = 0;
     auto f = [&](std::ostream &os) -> void {
-      process<T, Tint, Tgroup>(FileGram, FileIsom, FileMass, OutFormat, prime,
-                               max_prime, os);
+      status = process<T, Tint, Tgroup>(FileGram, FileIsom, FileMass,
+                                        OutFormat, prime, max_prime, os);
     };
     FILE_PrintStderrStdoutFile(OutFile, f);
+    if (status == GENUS_GROUP_EXIT_MASS_EXCEEDED) {
+      std::cerr << "GENUS_EnumerateIsometry: ERROR: the classes found weigh "
+                   "more than the target mass, which is therefore wrong\n";
+      runtime(time);
+      exit(status);
+    }
+    if (status == GENUS_GROUP_EXIT_INCOMPLETE) {
+      std::cerr << "GENUS_EnumerateIsometry: INCOMPLETE: the mass did not "
+                   "close; another prime or another seed is needed\n";
+      runtime(time);
+      exit(status);
+    }
     std::cerr << "Normal termination of GENUS_EnumerateIsometry\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GENUS_EnumerateIsometry\n";
