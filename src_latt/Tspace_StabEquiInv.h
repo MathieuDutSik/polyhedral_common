@@ -428,7 +428,7 @@ Result_ComputeStabilizer_SHV<T, Tgroup> get_from_perms_and_group(
  */
 template <typename T, typename Tgroup, typename Fextra>
 Result_ComputeStabilizer_SHV<T, Tgroup>
-LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
+LINSPA_ComputeStabilizer_SHV_KernelInner(LinSpaceMatrix<T> const &LinSpa,
                              MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
                              std::optional<MyMatrix<T>> const &CommonGramMat,
                              Fextra const &f_extra, std::ostream &os) {
@@ -521,65 +521,6 @@ LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
   return get_from_perms_and_group<T, Tgroup>(pair);
 }
 
-template <typename T, typename Tgroup>
-Result_ComputeStabilizer_SHV<T, Tgroup>
-LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
-                             MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
-                             std::optional<MyMatrix<T>> const &CommonGramMat,
-                             std::ostream &os) {
-  auto f_extra=[]([[maybe_unused]] MyMatrix<T> const& x) -> bool {
-    return true;
-  };
-  return LINSPA_ComputeStabilizer_SHV_Kernel<T, Tgroup, decltype(f_extra)>(
-      LinSpa, eMat, SHV_T, CommonGramMat, f_extra, os);
-}
-
-template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<T>>
-LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
-                         MyMatrix<T> const &eMat,
-                         std::optional<MyMatrix<T>> const &CommonGramMat,
-                         std::ostream &os) {
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat, os);
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  Result_ComputeStabilizer_SHV<T, Tgroup> result =
-      LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T,
-                                              CommonGramMat, os);
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: LINSPA_ComputeStabilizer, we have result\n";
-#endif
-  return result.get_list_matrix(SHV_T, eMat, LinSpa, os);
-}
-
-template <typename T>
-size_t LINSPA_Invariant_SHV(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
-                            MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
-                            std::optional<MyMatrix<T>> const &CommonGramMat,
-                            std::ostream &os) {
-  using Tfield = typename overlying_field<T>::field_type;
-  int n_row = SHV_T.rows();
-  std::vector<T> Vdiag(n_row, T(0));
-  std::vector<MyMatrix<T>> ListMat =
-      GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
-  // When a common Gram matrix is imposed on all the domains, the relevant
-  // equivalences must preserve it. Adding it to the list of matrices makes
-  // the invariant compatible with that restricted equivalence.
-  if (CommonGramMat) {
-    ListMat.push_back(*CommonGramMat);
-  }
-  return GetInvariant_ListMat_Vdiag<T, Tfield>(seed, SHV_T, ListMat, Vdiag, os);
-}
-
-template <typename T, typename Tint>
-size_t LINSPA_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
-                        MyMatrix<T> const &eMat, std::ostream &os) {
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat, os);
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  std::optional<MyMatrix<T>> CommonGramMat;
-  return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, CommonGramMat, os);
-}
-
-
 /*
   For two positive definite matrices M1 find if it exists a transformation P
   such that
@@ -593,7 +534,7 @@ size_t LINSPA_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
   eMat1 continues past the candidates that do not.
  */
 template <typename T, typename Tgroup, typename Fextra>
-std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
+std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_KernelInner(
     LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eMat1,
     MyMatrix<T> const &eMat2, MyMatrix<T> const &SHV1_T,
     MyMatrix<T> const &SHV2_T,
@@ -775,6 +716,331 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
 #endif
   return result;
 }
+
+/*
+  The outer elements. A T-space can come with matrices c_1, ..., c_k in
+  l_outer_elements, which extend the group G it defines (the integral
+  matrices preserving the T-space and commuting with ListComm) to
+  K = G \cup G c_1 \cup ... \cup G c_k. The case in use is the Galois
+  conjugation sigma of a quadratic ring R = Z[omega], for which G = GL_n(R)
+  and K = GL_n(R) \cup GL_n(R) sigma.
+
+  The elements of G c do not commute with ListComm, so they cannot be
+  searched for by the kernels, whose discriminating family contains
+  Comm * A. They are reduced to G instead: x = g c maps A1 to A2 if and
+  only if g maps c A1 c^T to A2, a question for the kernels. The SHV of
+  c A c^T is SHV c^{-1}, the invariant family being equivariant.
+
+  This requires of each c:
+  * that it preserves the T-space and normalizes G, so that K is a group
+    of symmetries of the T-space;
+  * that {Id, c_1, ..., c_k} is a transversal of K / G closed under the
+    product modulo G, which the invariant uses;
+  * that it preserves CommonGramMat and satisfies f_extra (subgroup
+    defining), so that x = g c is adequate if and only if g is.
+  ListSubspaces is not supported together with outer elements.
+ */
+template <typename T> struct OuterImage {
+  MyMatrix<T> eMat;
+  MyMatrix<T> SHV_T;
+};
+
+template <typename T>
+OuterImage<T> get_outer_image(MyMatrix<T> const &c, MyMatrix<T> const &eMat,
+                              MyMatrix<T> const &SHV_T) {
+  // c is unimodular, so the inverse is exact over a ring as well.
+  MyMatrix<T> c_inv = Inverse(c);
+  return {c * eMat * c.transpose(), SHV_T * c_inv};
+}
+
+template <typename T, typename Fextra>
+void check_outer_elements(LinSpaceMatrix<T> const &LinSpa,
+                          std::optional<MyMatrix<T>> const &CommonGramMat,
+                          Fextra const &f_extra) {
+  if (!LinSpa.ListSubspaces.empty()) {
+    std::cerr << "TSPACE: the outer elements are not supported together "
+                 "with ListSubspaces\n";
+    throw TerminalException{1};
+  }
+  for (auto &c : LinSpa.l_outer_elements) {
+    if (CommonGramMat) {
+      MyMatrix<T> img = c * (*CommonGramMat) * c.transpose();
+      if (img != *CommonGramMat) {
+        std::cerr << "TSPACE: an outer element does not preserve "
+                     "CommonGramMat, which is not supported\n";
+        throw TerminalException{1};
+      }
+    }
+    if (!f_extra(c)) {
+      std::cerr << "TSPACE: an outer element does not satisfy the extra "
+                   "condition, which is not supported\n";
+      throw TerminalException{1};
+    }
+  }
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+  // G is described by ListComm: x is in G when it is integral, unimodular,
+  // preserves the T-space and commutes with ListComm.
+  TspaceMembership<T> membership(LinSpa);
+  auto is_in_g = [&](MyMatrix<T> const &x) -> bool {
+    if (!IsIntegralMatrix(x)) {
+      return false;
+    }
+    T det = DeterminantMat(x);
+    if (det != T(1) && det != T(-1)) {
+      return false;
+    }
+    if (!membership.is_stab_space(x)) {
+      return false;
+    }
+    for (auto &eComm : LinSpa.ListComm) {
+      if (x * eComm != eComm * x) {
+        return false;
+      }
+    }
+    return true;
+  };
+  int n = LinSpa.n;
+  MyMatrix<T> Id = IdentityMat<T>(n);
+  std::vector<MyMatrix<T>> l_comm_span{Id};
+  for (auto &eComm : LinSpa.ListComm) {
+    l_comm_span.push_back(eComm);
+  }
+  MyMatrix<T> BigComm(l_comm_span.size(), n * n);
+  for (size_t i = 0; i < l_comm_span.size(); i++) {
+    for (int u = 0; u < n; u++) {
+      for (int v = 0; v < n; v++) {
+        BigComm(i, u * n + v) = l_comm_span[i](u, v);
+      }
+    }
+  }
+  std::vector<MyMatrix<T>> l_transversal{Id};
+  for (auto &c : LinSpa.l_outer_elements) {
+    l_transversal.push_back(c);
+    if (!membership.is_stab_space(c)) {
+      std::cerr << "TSPACE: an outer element does not preserve the T-space\n";
+      throw TerminalException{1};
+    }
+    // c Comm c^{-1} in the span of Id and ListComm: then c^{-1} G c
+    // commutes with ListComm, and c normalizes G.
+    MyMatrix<T> c_inv = Inverse(c);
+    for (auto &eComm : LinSpa.ListComm) {
+      MyMatrix<T> conj = c * eComm * c_inv;
+      MyVector<T> V(n * n);
+      for (int u = 0; u < n; u++) {
+        for (int v = 0; v < n; v++) {
+          V(u * n + v) = conj(u, v);
+        }
+      }
+      if (!SolutionMat(BigComm, V)) {
+        std::cerr << "TSPACE: an outer element does not normalize the group "
+                     "of ListComm\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+  // The transversal: its elements are in distinct cosets, and a product of
+  // two of them is in the coset of one of them.
+  auto get_coset = [&](MyMatrix<T> const &x) -> std::optional<size_t> {
+    for (size_t k = 0; k < l_transversal.size(); k++) {
+      if (is_in_g(x * Inverse(l_transversal[k]))) {
+        return k;
+      }
+    }
+    return {};
+  };
+  for (size_t i = 0; i < l_transversal.size(); i++) {
+    std::optional<size_t> opt = get_coset(l_transversal[i]);
+    if (!opt || *opt != i) {
+      std::cerr << "TSPACE: the outer elements are not in distinct cosets "
+                   "of G\n";
+      throw TerminalException{1};
+    }
+    for (size_t j = 0; j < l_transversal.size(); j++) {
+      if (!get_coset(l_transversal[i] * l_transversal[j])) {
+        std::cerr << "TSPACE: the transversal of the outer elements is not "
+                     "closed under the product modulo G\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
+}
+
+/*
+  The stabilizer in K: the stabilizer G_0 in G, and for each coset G c that
+  meets the stabilizer, one of its elements g c, found as an equivalence
+  in G from c A c^T to A. Those generate the stabilizer in K.
+ */
+template <typename T, typename Tgroup, typename Fextra>
+Result_ComputeStabilizer_SHV<T, Tgroup>
+LINSPA_ComputeStabilizer_SHV_Kernel(LinSpaceMatrix<T> const &LinSpa,
+                             MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
+                             std::optional<MyMatrix<T>> const &CommonGramMat,
+                             Fextra const &f_extra, std::ostream &os) {
+  Result_ComputeStabilizer_SHV<T, Tgroup> result_g =
+      LINSPA_ComputeStabilizer_SHV_KernelInner<T, Tgroup, Fextra>(
+          LinSpa, eMat, SHV_T, CommonGramMat, f_extra, os);
+  if (LinSpa.l_outer_elements.empty()) {
+    return result_g;
+  }
+  check_outer_elements(LinSpa, CommonGramMat, f_extra);
+  std::vector<MyMatrix<T>> l_gens;
+  for (auto &c : LinSpa.l_outer_elements) {
+    OuterImage<T> img = get_outer_image(c, eMat, SHV_T);
+    std::optional<MyMatrix<T>> opt =
+        LINSPA_TestEquivalenceGramMatrix_SHV_KernelInner<T, Tgroup, Fextra>(
+            LinSpa, img.eMat, eMat, img.SHV_T, SHV_T, CommonGramMat, f_extra,
+            os);
+    if (opt) {
+      l_gens.push_back((*opt) * c);
+    }
+  }
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: Stab, |outer generators|=" << l_gens.size() << "\n";
+#endif
+  if (l_gens.empty()) {
+    return result_g;
+  }
+  for (auto &eGen : result_g.get_list_matrix(SHV_T, eMat, LinSpa, os)) {
+    l_gens.push_back(eGen);
+  }
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+  for (auto &eGen : l_gens) {
+    if (eGen * eMat * eGen.transpose() != eMat) {
+      std::cerr << "TSPACE: Stab, an outer generator does not preserve eMat\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return get_from_gens<T, Tgroup>(l_gens);
+}
+
+/*
+  The equivalence in K: in G first, then in each coset G c, by an
+  equivalence in G from c A1 c^T to A2.
+ */
+template <typename T, typename Tgroup, typename Fextra>
+std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_Kernel(
+    LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eMat1,
+    MyMatrix<T> const &eMat2, MyMatrix<T> const &SHV1_T,
+    MyMatrix<T> const &SHV2_T,
+    std::optional<MyMatrix<T>> const &CommonGramMat, Fextra const &f_extra,
+    std::ostream &os) {
+  std::optional<MyMatrix<T>> opt_g =
+      LINSPA_TestEquivalenceGramMatrix_SHV_KernelInner<T, Tgroup, Fextra>(
+          LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, CommonGramMat, f_extra, os);
+  if (opt_g || LinSpa.l_outer_elements.empty()) {
+    return opt_g;
+  }
+  check_outer_elements(LinSpa, CommonGramMat, f_extra);
+  for (auto &c : LinSpa.l_outer_elements) {
+    OuterImage<T> img = get_outer_image(c, eMat1, SHV1_T);
+    std::optional<MyMatrix<T>> opt =
+        LINSPA_TestEquivalenceGramMatrix_SHV_KernelInner<T, Tgroup, Fextra>(
+            LinSpa, img.eMat, eMat2, img.SHV_T, SHV2_T, CommonGramMat, f_extra,
+            os);
+    if (opt) {
+      MyMatrix<T> x = (*opt) * c;
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+      if (x * eMat1 * x.transpose() != eMat2) {
+        std::cerr << "TSPACE: Equiv, the outer equivalence does not map eMat1 "
+                     "to eMat2\n";
+        throw TerminalException{1};
+      }
+#endif
+      return x;
+    }
+  }
+  return {};
+}
+
+template <typename T, typename Tgroup>
+Result_ComputeStabilizer_SHV<T, Tgroup>
+LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
+                             MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
+                             std::optional<MyMatrix<T>> const &CommonGramMat,
+                             std::ostream &os) {
+  auto f_extra=[]([[maybe_unused]] MyMatrix<T> const& x) -> bool {
+    return true;
+  };
+  return LINSPA_ComputeStabilizer_SHV_Kernel<T, Tgroup, decltype(f_extra)>(
+      LinSpa, eMat, SHV_T, CommonGramMat, f_extra, os);
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<T>>
+LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
+                         MyMatrix<T> const &eMat,
+                         std::optional<MyMatrix<T>> const &CommonGramMat,
+                         std::ostream &os) {
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat, os);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+  Result_ComputeStabilizer_SHV<T, Tgroup> result =
+      LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T,
+                                              CommonGramMat, os);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: LINSPA_ComputeStabilizer, we have result\n";
+#endif
+  return result.get_list_matrix(SHV_T, eMat, LinSpa, os);
+}
+
+template <typename T>
+size_t LINSPA_Invariant_SHV_Inner(size_t const &seed,
+                                  LinSpaceMatrix<T> const &LinSpa,
+                                  MyMatrix<T> const &eMat,
+                                  MyMatrix<T> const &SHV_T,
+                                  std::optional<MyMatrix<T>> const &CommonGramMat,
+                                  std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  int n_row = SHV_T.rows();
+  std::vector<T> Vdiag(n_row, T(0));
+  std::vector<MyMatrix<T>> ListMat =
+      GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
+  // When a common Gram matrix is imposed on all the domains, the relevant
+  // equivalences must preserve it. Adding it to the list of matrices makes
+  // the invariant compatible with that restricted equivalence.
+  if (CommonGramMat) {
+    ListMat.push_back(*CommonGramMat);
+  }
+  return GetInvariant_ListMat_Vdiag<T, Tfield>(seed, SHV_T, ListMat, Vdiag, os);
+}
+
+/*
+  The invariant for the group K of the outer elements. The invariant for G
+  is not one for K: with ListComm, c changes Comm A into (c Comm c^{-1}) A,
+  which that invariant sees (it does for the Eisenstein and the d = -7
+  rings). The invariant of A alone, without the ListComm family, is
+  invariant under every integral transformation, so under K: it is the one
+  used, and it is also cheaper. ListSubspaces is empty with outer elements.
+ */
+template <typename T>
+size_t LINSPA_Invariant_SHV(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
+                            MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
+                            std::optional<MyMatrix<T>> const &CommonGramMat,
+                            std::ostream &os) {
+  if (LinSpa.l_outer_elements.empty()) {
+    return LINSPA_Invariant_SHV_Inner(seed, LinSpa, eMat, SHV_T, CommonGramMat,
+                                      os);
+  }
+  using Tfield = typename overlying_field<T>::field_type;
+  int n_row = SHV_T.rows();
+  std::vector<T> Vdiag(n_row, T(0));
+  std::vector<MyMatrix<T>> ListMat{eMat};
+  if (CommonGramMat) {
+    ListMat.push_back(*CommonGramMat);
+  }
+  return GetInvariant_ListMat_Vdiag<T, Tfield>(seed, SHV_T, ListMat, Vdiag, os);
+}
+
+template <typename T, typename Tint>
+size_t LINSPA_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
+                        MyMatrix<T> const &eMat, std::ostream &os) {
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat, os);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+  std::optional<MyMatrix<T>> CommonGramMat;
+  return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, CommonGramMat, os);
+}
+
 
 template <typename T, typename Tgroup>
 std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(

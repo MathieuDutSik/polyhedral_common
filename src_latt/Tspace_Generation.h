@@ -67,13 +67,15 @@ MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const &eMatB,
   u^{\sigma} = x + alpha^{\sigma} y
              = x + (S - alpha) y
              = [ x + S y ] + alpha [ -y ]
+  The matrix acts on row vectors, (x, y) -> (x, y) ConjOper, as the
+  matrices of GetCommQuadratic and of the stabilizers do.
  */
 template <typename T>
 MyMatrix<T> GetConjugation(int n, T const &eSum) {
   MyMatrix<T> ConjOper = ZeroMatrix<T>(2 * n, 2 * n);
   for (int i = 0; i < n; i++) {
     ConjOper(i, i) = T(1);
-    ConjOper(i, n + i) = eSum;
+    ConjOper(n + i, i) = eSum;
     ConjOper(n + i, n + i) = T(-1);
   }
   return ConjOper;

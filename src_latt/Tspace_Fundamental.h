@@ -177,8 +177,10 @@ template <typename T> struct LinSpaceMatrix {
   // The list of spanning elements. If empty, does not apply. This is used
   // for the T-spaces coming from
   std::vector<MyMatrix<T>> l_spanning_elements;
-  // The list of outer elements used for stabilizer / isomorphism. For
-  // example for quadratic spaces, the conjugation might be put.
+  // The outer elements c_i, which extend the group G of the T-space to
+  // K = G \cup G c_1 \cup ... used by the stabilizer, the equivalence and
+  // the invariant (see LINSPA_ComputeStabilizer_SHV_Kernel). For the
+  // quadratic spaces, the Galois conjugation. Empty: the group is G.
   std::vector<MyMatrix<T>> l_outer_elements;
   // Pairwise scalar info.
   PairwiseScalarInfo<T> pairwise_scalar_info;
@@ -264,12 +266,12 @@ MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const &ListMat) {
   than over the field, where every product renormalizes a fraction.
 
   Those three computations read the basis (ListMat, and ListMatAsBigMat for
-  the membership test), the commuting matrices, the preserved subspaces and
-  the point stabilizer. All of them are integral: the basis is required to be
-  integrally saturated and the others are given by integral matrices. The
-  members left out are the ones that are genuinely rational (SuperMat, the
-  pairwise scalar information) or unused here, and the field version of the
-  space remains the reference for them.
+  the membership test), the commuting matrices, the preserved subspaces, the
+  point stabilizer and the outer elements. All of them are integral: the
+  basis is required to be integrally saturated and the others are given by
+  integral matrices. The members left out are the ones that are genuinely
+  rational (SuperMat, the pairwise scalar information) or unused here, and
+  the field version of the space remains the reference for them.
  */
 template <typename T>
 LinSpaceMatrix<typename underlying_ring<T>::ring_type>
@@ -298,6 +300,7 @@ LINSPA_GetRingVersion(LinSpaceMatrix<T> const &LinSpa) {
   LinSpaRing.ListComm = f_list(LinSpa.ListComm);
   LinSpaRing.ListSubspaces = f_list(LinSpa.ListSubspaces);
   LinSpaRing.PtStabGens = f_list(LinSpa.PtStabGens);
+  LinSpaRing.l_outer_elements = f_list(LinSpa.l_outer_elements);
   LinSpaRing.is_self_dual = LinSpa.is_self_dual;
   return LinSpaRing;
 }

@@ -75,6 +75,10 @@ The filename for the list of subspaces that are preserved";
   ListStringValues_doc["FileLinSpa"] = "Default: unset\n\
 unset: If unset then the file is not needed\n\
 The filename used for reading the whole T-space";
+  ListBoolValues_doc["UseOuterElements"] = "Default: F\n\
+For RealQuad and ImagQuad: T for the group K_n(R) = GL_n(R) \\cup GL_n(R) sigma\n\
+with sigma the Galois conjugation, F for GL_n(R). Meaningful with\n\
+ListComm = Use_realimag, which defines GL_n(R)";
   ListBoolValues_doc["IntegralSaturation"] = "Default: F\n\
 For TypeTspace = Raw: replace the input basis by a basis of its integral\n\
 saturation, which the iso-Delaunay enumerations require";
@@ -395,6 +399,10 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       set_pt_stab();
       set_is_bravais();
       set_self_dual(); // Those spaces are indeed self-dual
+      // The conjugation is in l_outer_elements; it is used only on request.
+      if (!Blk.get_bool("UseOuterElements")) {
+        LinSpaRet.l_outer_elements.clear();
+      }
       return LinSpaRet;
     }
     if (TypeTspace == "InvGroup") {
