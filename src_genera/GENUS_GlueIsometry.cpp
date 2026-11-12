@@ -132,8 +132,8 @@ void process(std::string const &mode, std::string const &FileGram1,
     Tmass TotalMass = MassToGroupField<Tmass>(*mres.mass);
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListSeed{
         {gp.gram, gp.isom}};
-    Tresult result = GenusEnumerationGroup<T, Tint, Tgroup>(ListSeed, TotalMass,
-                                                            0, 6, std::cerr);
+    Tresult result = GenusEnumerationGroup<T, Tint, Tgroup>(
+        ListSeed, TotalMass, 0, 6, PairRecognition::Auto, std::cerr);
     for (size_t i = 0; i < result.ListGram.size(); i++) {
       known.insert(key_of(result.ListGram[i], result.ListListIsom[i][0]));
     }

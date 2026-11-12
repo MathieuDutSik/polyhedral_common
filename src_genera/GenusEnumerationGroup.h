@@ -118,6 +118,48 @@ template <typename Tmass, typename T> Tmass MassToGroupField(T const &x) {
 }
 
 /*
+  The recognition of a new pair among the known classes: by the canonical
+  form of the pair, by isometry tests within the buckets of the lattice
+  canonical form, or (Auto) by the cheaper of the two measured on the first
+  neighbours. The canonical form of a pair can be very costly on lattices
+  with a large vector family (rank 24: a Hermite normal form of the whole
+  family, beyond 20 GB), which Isometry avoids.
+ */
+enum class PairRecognition { Auto, Isometry, Canonical };
+
+inline PairRecognition ParsePairRecognition(std::string const &s) {
+  if (s == "auto") {
+    return PairRecognition::Auto;
+  }
+  if (s == "isometry") {
+    return PairRecognition::Isometry;
+  }
+  if (s == "canonical") {
+    return PairRecognition::Canonical;
+  }
+  std::cerr << "GENUS_GROUP: recognition=" << s
+            << " is not auto, isometry or canonical\n";
+  throw TerminalException{1};
+}
+
+// recognition=NAME anywhere on the command line, removed from argv
+inline PairRecognition ExtractPairRecognitionOption(int &argc, char *argv[]) {
+  PairRecognition res = PairRecognition::Auto;
+  std::string const key = "recognition=";
+  int j = 0;
+  for (int i = 0; i < argc; i++) {
+    std::string a = argv[i];
+    if (a.rfind(key, 0) == 0) {
+      res = ParsePairRecognition(a.substr(key.size()));
+    } else {
+      argv[j++] = argv[i];
+    }
+  }
+  argc = j;
+  return res;
+}
+
+/*
   An enumeration of a genus of pairs that did not close its mass. The
   programs write the result first, so that the classes found are kept,
   then call CheckGenusEnumerationGroupResult, which throws:
@@ -1156,7 +1198,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> const
         &ListSeed,
     typename GenusEnumerationGroupResult<T, Tgroup>::Tmass const &TotalMass,
-    int prime, size_t max_prime, std::ostream &os) {
+    int prime, size_t max_prime, PairRecognition recognition,
+    std::ostream &os) {
   using Tresult = GenusEnumerationGroupResult<T, Tgroup>;
   using Tmass = typename Tresult::Tmass;
   using TintGroup = typename Tgroup::Tint;
@@ -1382,6 +1425,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     bool use_canonical;
     if (AllScalarIsometries(ListP)) {
       use_canonical = true;
+    } else if (recognition != PairRecognition::Auto) {
+      use_canonical = (recognition == PairRecognition::Canonical);
     } else if (n_can + n_iso < 6) {
       use_canonical = (n_can <= n_iso);
     } else {
@@ -1735,13 +1780,14 @@ template <typename T, typename Tint, typename Tgroup>
 GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListSeed,
     typename GenusEnumerationGroupResult<T, Tgroup>::Tmass const &TotalMass,
-    int prime, size_t max_prime, std::ostream &os) {
+    int prime, size_t max_prime, PairRecognition recognition,
+    std::ostream &os) {
   std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> ListSeedGroup;
   for (auto const &eSeed : ListSeed) {
     ListSeedGroup.push_back({eSeed.first, {eSeed.second}});
   }
   return GenusEnumerationAbelianGroup<T, Tint, Tgroup>(
-      ListSeedGroup, TotalMass, prime, max_prime, os);
+      ListSeedGroup, TotalMass, prime, max_prime, recognition, os);
 }
 
 template <typename T, typename Tgroup>

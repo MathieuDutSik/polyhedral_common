@@ -28,7 +28,8 @@
 template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &FileGram, std::string const &FileIsom,
              std::string const &FileMass, std::string const &OutFormat,
-             int prime, size_t max_prime, std::ostream &os) {
+             int prime, size_t max_prime, PairRecognition recognition,
+             std::ostream &os) {
   std::vector<MyMatrix<T>> ListGram = ReadListMatrixFile<T>(FileGram);
   std::vector<MyMatrix<T>> ListIsom = ReadListMatrixFile<T>(FileIsom);
   if (ListGram.empty() || ListIsom.empty() ||
@@ -60,8 +61,8 @@ void process(std::string const &FileGram, std::string const &FileIsom,
   using Tmass = typename GenusEnumerationGroupResult<T, Tgroup>::Tmass;
   Tmass TotalMass = ReadMassFile<Tmass>(FileMass);
   GenusEnumerationGroupResult<T, Tgroup> result =
-      GenusEnumerationAbelianGroup<T, Tint, Tgroup>(ListSeed, TotalMass, prime,
-                                                    max_prime, std::cerr);
+      GenusEnumerationAbelianGroup<T, Tint, Tgroup>(
+          ListSeed, TotalMass, prime, max_prime, recognition, std::cerr);
   WriteGenusEnumerationGroupResult(os, result, OutFormat);
   CheckGenusEnumerationGroupResult(result);
 }
@@ -77,6 +78,7 @@ int main(int argc, char *argv[]) {
     using TintGroup = mpz_class;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
     std::string arith = ExtractArithmeticOption(argc, argv, "gmp");
+    PairRecognition recognition = ExtractPairRecognitionOption(argc, argv);
     ArithmeticDispatch dispatch;
     if (argc < 4 || argc > 8) {
       std::cerr << "GENUS_EnumerateIsometry [Gram] [Isometry] [Mass] "
@@ -102,6 +104,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "Exit status: 0 complete, 2 incomplete (the classes found\n";
       std::cerr << "weigh less than the mass), 3 the mass is exceeded (the\n";
       std::cerr << "target is wrong), 1 an error.\n";
+      std::cerr << "recognition=auto|isometry|canonical (anywhere, optional,\n";
+      std::cerr << "        default auto): how a new pair is recognised, by\n";
+      std::cerr << "        isometry tests or by the canonical form of the pair\n";
+      std::cerr << "        (costly on rank 24 lattices), auto by the cheaper\n";
       std::cerr << "arithmetic=NAME (anywhere, optional, default gmp): the\n";
       std::cerr << "        arithmetic of the computation, among\n";
       dispatch.print_descriptions(std::cerr);
@@ -118,7 +124,7 @@ int main(int argc, char *argv[]) {
         dispatch, [&]<typename T, typename Tint>() -> void {
           auto f = [&](std::ostream &os) -> void {
             process<T, Tint, Tgroup>(FileGram, FileIsom, FileMass, OutFormat, prime,
-                                     max_prime, os);
+                                     max_prime, recognition, os);
           };
           FILE_PrintStderrStdoutFile(OutFile, f);
         });
