@@ -1933,12 +1933,16 @@ inline FullNamelist NAMELIST_GetStandard_GENUS_ENUMERATE() {
     ListStringValues_doc["arithmetic"] = "Default: gmp\n\
 The arithmetic of the Gram matrices";
     ListStringValues_doc["FileLattice"] = "Default: unset\n\
-One or more Gram matrices in the ListMatrix format, the seeds. One seed per\n\
-SPINOR genus is needed: the p-neighbour graph is connected on a spinor\n\
-genus, not on a genus, so a single seed may reach only part of the genus";
+One or more Gram matrices in the ListMatrix format, the seeds. With\n\
+out_prime, which stays at one prime not dividing det, one seed per spinor\n\
+genus may be needed: the p-neighbour graph is connected on a spinor genus,\n\
+not on a genus. iterate and random_walk bring in further primes, whose\n\
+neighbours move between the spinor genera, so one seed suffices for them";
     ListStringValues_doc["FileMass"] = "Default: unset\n\
 The mass of the genus, as \"num den\" or a single integer. The enumeration\n\
-stops when sum 1/|Aut| reaches it, and that equality certifies completeness";
+stops when sum 1/|Aut| reaches it, and that equality certifies completeness.\n\
+If unset, the mass is computed from the first seed by the mass formula of\n\
+Conway and Sloane (GenusMass in GenusMass.h)";
     ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // METHOD

@@ -39,9 +39,11 @@ full list of entries, their defaults and their documentation.
      OutFile = "stdout"
     /
 
-* `DATA` -- the seeds, one or more Gram matrices in the ListMatrix format
-  (one per spinor genus), and the mass of the genus as `num den` or a single
-  integer. The seeds must have the same rank and determinant.
+* `DATA` -- the seeds, one or more Gram matrices in the ListMatrix format,
+  and optionally the mass of the genus as `num den` or a single integer. When
+  `FileMass` is left unset, the mass is computed from the first seed by the
+  mass formula of Conway and Sloane (`GenusMass` in `GenusMass.h`). The seeds
+  must be even, positive definite, and of the same rank and determinant.
 * `METHOD` -- the `strategy`: `out_prime` (the default, one prime, `prime`
   or the smallest one not dividing det), `iterate` or `random_walk` (see
   `NeighborStrategy` in `GenusEnumeration.h`); the `recognition` of a known
@@ -84,18 +86,23 @@ short list silently, it shows up as a mass that never closes.
 
 ## Spinor genera
 
-The p-neighbour graph is connected on a SPINOR genus, not on a genus. A genus
-with several spinor genera therefore needs one seed lattice per spinor genus,
-which is why the `Lattice` file takes a list. Given a single seed on such a
-genus the enumeration converges to a proper subset and the mass falls short;
-the program then reports `complete = false` and says why rather than
-presenting a partial list as an answer.
+For a prime p not dividing det, the p-neighbour graph is connected on a
+SPINOR genus, not on a genus, and its neighbours move from one spinor genus to
+the one given by the class of p in the group of spinor genera. With
+`out_prime`, which stays at one prime, a genus with several spinor genera may
+therefore need one seed per spinor genus, which is why `FileLattice` takes a
+list; given too few seeds the enumeration converges to a proper subset, the
+mass falls short, and the program reports `complete = false` and says why
+rather than presenting a partial list as an answer. `iterate` and
+`random_walk` bring in further primes until the mass closes, and the classes
+of these primes reach every spinor genus, so one seed suffices for them.
 
 ## Getting the input
 
-The genus symbol, a representative and the mass are all cheap to obtain from
-Hecke (or Sage, or Magma) and are the theory-heavy part; the expensive part is
-the enumeration, which is what this program does. Timings for
+The mass is computed by the program when `FileMass` is unset. A seed, a
+lattice of the genus, has to be given: the program does not build one from a
+genus symbol. Hecke (or Sage, or Magma) gives one cheaply, and also the mass
+if one prefers to pass it. Timings for
 `representative(G)` and `mass(G)` in Hecke on rank 14: 0.02 to 0.8 s per genus.
 
 ## Performance notes

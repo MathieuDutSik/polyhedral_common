@@ -7,6 +7,8 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "GenusEnumeration.h"
+#include "LocalDensity.h"
+#include "GenusMass.h"
 #include "SignatureSymmetric.h"
 #include "Arithmetic_dispatch_types.h"
 #include <string>
@@ -31,7 +33,6 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   // A sum of 1 / |Aut(L)|, so a fraction over the type the groups count
   // with, which has nothing to do with the type of the Gram matrices.
   using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
-  Tmass TotalMass = ReadMassFile<Tmass>(FileMass);
   // The seeds of one genus have the same rank and the same determinant.
   int rank = ListSeed[0].rows();
   T det = DeterminantMat(ListSeed[0]);
@@ -64,6 +65,19 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
                 << DeterminantMat(eSeed) << "\n";
       throw TerminalException{1};
     }
+  }
+  // The mass: read from FileMass, or, when it is unset, computed from the
+  // first seed by the mass formula. Tmass is mpq_class, the type GenusMass
+  // computes in.
+  Tmass TotalMass;
+  if (FileMass == "unset") {
+    MyMatrix<mpq_class> Gram =
+        UniversalMatrixConversion<mpq_class, T>(ListSeed[0]);
+    TotalMass = GenusMass<mpq_class, mpz_class>(Gram);
+    os << "GENUS_Enumerate: the mass " << TotalMass
+       << " of the genus is computed from the first seed\n";
+  } else {
+    TotalMass = ReadMassFile<Tmass>(FileMass);
   }
   int prime = spec.prime;
   if (spec.strategy == NeighborStrategy::OutPrime && prime == 0) {
