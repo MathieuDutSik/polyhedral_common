@@ -3,6 +3,7 @@
 #define SRC_LATT_LATTICESTABEQUICAN_H_
 
 // clang-format off
+#include "ResidueArithmetic.h"
 #include "InvariantVectorFamily.h"
 #include "MAT_MatrixInt.h"
 #include "MatrixGroup.h"
@@ -224,9 +225,79 @@ get_canonicalization_matrix(MyMatrix<Tint> const &SHVcan,
   MicrosecondTime time;
 #endif
   int n = SHVcan.rows();
-  MyMatrix<Tint> H = ComputeRowHermiteNormalForm_second(SHVcan);
+  /*
+    The pivots of H are the columns where the rank of the prefix increases,
+    and H is unique: if the first k columns S_k have rank n and U S_k is
+    their Hermite normal form, then U SHVcan is the normal form of SHVcan
+    (its conditions only concern the pivot columns, all among the first k).
+    So the normal form is computed on S_k only, k the first length of full
+    rank, found modulo a prime (the rank modulo p is at most the rank over
+    Q, so a full rank modulo p is a full rank). The family has thousands of
+    vectors on rank 24 lattices, and the normal form of all of it exploded
+    in coefficient size (beyond 20 GB).
+   */
+  int k = SHVcan.cols();
+  {
+    int64_t const p = 2147483647;
+    std::vector<std::vector<int64_t>> basis;  // echelon rows, pivot first
+    std::vector<int> pivpos;
+    for (int c = 0; c < SHVcan.cols() && static_cast<int>(basis.size()) < n;
+         c++) {
+      std::vector<int64_t> v(n);
+      for (int r = 0; r < n; r++) {
+        v[r] = ResModOf(SHVcan(r, c), p);
+      }
+      for (size_t b = 0; b < basis.size(); b++) {
+        int64_t f = v[pivpos[b]];
+        if (f != 0) {
+          for (int r = 0; r < n; r++) {
+            v[r] = ResSub(v[r], ResMul(f, basis[b][r], p), p);
+          }
+        }
+      }
+      int pv = -1;
+      for (int r = 0; r < n; r++) {
+        if (v[r] != 0) {
+          pv = r;
+          break;
+        }
+      }
+      if (pv >= 0) {
+        int64_t inv = ResInv(v[pv], p);
+        for (int r = 0; r < n; r++) {
+          v[r] = ResMul(v[r], inv, p);
+        }
+        // keep the basis reduced on the new pivot
+        for (size_t b = 0; b < basis.size(); b++) {
+          int64_t f = basis[b][pv];
+          if (f != 0) {
+            for (int r = 0; r < n; r++) {
+              basis[b][r] = ResSub(basis[b][r], ResMul(f, v[r], p), p);
+            }
+          }
+        }
+        basis.push_back(v);
+        pivpos.push_back(pv);
+        if (static_cast<int>(basis.size()) == n) {
+          k = c + 1;
+        }
+      }
+    }
+  }
+  MyMatrix<Tint> H =
+      ComputeRowHermiteNormalForm_second(MyMatrix<Tint>(SHVcan.leftCols(k)));
+#ifdef SANITY_CHECK_LATTICE_STAB_EQUI_CAN
+  {
+    MyMatrix<Tint> Hfull = ComputeRowHermiteNormalForm_second(SHVcan);
+    if (MyMatrix<Tint>(Hfull.leftCols(k)) != H) {
+      std::cerr << "LSEC: the normal form of the prefix differs\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: get_canonicalization_matrix, H|=" << time << "\n";
+  os << "|LSEC: get_canonicalization_matrix, H|=" << time << " k=" << k
+     << " of " << SHVcan.cols() << "\n";
 #endif
   // The pivot column of every row of H.
   std::vector<int> piv(n);
