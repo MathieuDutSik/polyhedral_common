@@ -16,6 +16,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_LATTICE_METHODS
+#endif
+
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_LATTICE_METHODS
 #endif
@@ -38,6 +42,11 @@
   automorphism group a single form. The canonical forms of two different
   methods are not comparable with each other.
 
+  heuristic is not a method of its own: it chooses one of the others for
+  each input, from isometry invariants only (see ChooseHeuristicMethod), so
+  that isometric lattices always get the same method and their canonical
+  forms remain comparable.
+
   The dispatchers take a Gram matrix in any basis and LLL-reduce it once
   (the first form of the list for the isometry and the group); the methods
   behind them work on the reduced matrix and assume it is reduced. The
@@ -49,7 +58,8 @@ enum class LatticeStabCanIsomMethod {
   Vinberg,
   Weyl,
   WeylChamber,
-  IteratedShortest
+  IteratedShortest,
+  Heuristic
 };
 
 // A method: its name and a description for the usage and namelist texts.
@@ -79,7 +89,13 @@ ListLatticeStabCanIsomMethod() {
        "a family spanning the lattice; integral form"},
       {"iterated_shortest", LatticeStabCanIsomMethod::IteratedShortest,
        "the MatrixGroup algorithm on the full-rank iterated-shortest family; "
-       "isometry and automorphism group only"}};
+       "isometry and automorphism group only"},
+      {"heuristic", LatticeStabCanIsomMethod::Heuristic,
+       "chooses per lattice from isometry invariants: weyl_chamber if the "
+       "lattice has vectors of norm at most 2, otherwise plesken_souvignier "
+       "if it has many minimal vectors (Leech) and graph if not; graph for "
+       "the canonical form and plesken_souvignier for the isometry and the "
+       "automorphism group of several or non-integral forms"}};
 }
 
 inline LatticeStabCanIsomMethod
@@ -174,6 +190,54 @@ LatticeMethodsChangeBasis(std::vector<MyMatrix<T>> const &ListMat,
 }
 
 /*
+  The method chosen by heuristic for the LLL-reduced forms ListMat. The
+  choice depends only on isometry invariants of the lattice (whether it has
+  vectors of norm at most 2, its number of minimal vectors), never on the
+  basis, so isometric lattices get the same method; this is what keeps the
+  canonical forms of heuristic comparable with each other.
+
+  * Several forms, or a non-integral one: the general methods, graph for the
+    canonical form and plesken_souvignier for the isometry and the group.
+  * An integral lattice with vectors of norm at most 2 (roots): weyl_chamber,
+    which removes the Weyl group. A diagonal entry at most 2 of the reduced
+    Gram matrix shows it without any enumeration.
+  * Otherwise the lattice has no roots, weyl_chamber would fall back on the
+    graph of its characteristic family, and that graph is quadratic in the
+    family: with more than heuristic_max_pairs pairs of minimal vectors
+    (98280 for the Leech lattice) plesken_souvignier, which never builds it,
+    and graph below.
+ */
+inline constexpr size_t heuristic_max_pairs = 5000;
+
+template <typename T, typename Tint>
+LatticeStabCanIsomMethod
+ChooseHeuristicMethod(std::vector<MyMatrix<T>> const &ListMat, bool canonical,
+                      std::ostream &os) {
+  if (ListMat.size() != 1 || !IsIntegralMatrix(ListMat[0])) {
+    return canonical ? LatticeStabCanIsomMethod::Graph
+                     : LatticeStabCanIsomMethod::PleskenSouvignier;
+  }
+  MyMatrix<T> const &G = ListMat[0];
+  for (int i = 0; i < G.rows(); i++) {
+    if (G(i, i) <= T(2)) {
+      return LatticeStabCanIsomMethod::WeylChamber;
+    }
+  }
+  Tshortest<T, Tint> rec = T_ShortestVectorHalf<T, Tint>(G, os);
+  if (rec.min <= T(2)) {
+    return LatticeStabCanIsomMethod::WeylChamber;
+  }
+  size_t n_pairs = static_cast<size_t>(rec.SHV.rows());
+#ifdef DEBUG_LATTICE_METHODS
+  os << "LATTICE_METHODS: heuristic, no roots, minimum " << rec.min << ", "
+     << n_pairs << " pairs of minimal vectors\n";
+#endif
+  return n_pairs > heuristic_max_pairs
+             ? LatticeStabCanIsomMethod::PleskenSouvignier
+             : LatticeStabCanIsomMethod::Graph;
+}
+
+/*
   The canonical form of the form GramMat by the method: a basis B, as rows,
   with B GramMat B^T canonical. LatticeCanonicalBasisReduced assumes GramMat
   LLL-reduced.
@@ -183,6 +247,10 @@ MyMatrix<Tint> LatticeCanonicalBasisReduced(MyMatrix<T> const &GramMat,
                                             LatticeStabCanIsomMethod method,
                                             std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{GramMat};
+  bool heuristic = method == LatticeStabCanIsomMethod::Heuristic;
+  if (heuristic) {
+    method = ChooseHeuristicMethod<T, Tint>(ListMat, true, os);
+  }
   std::string name = NameLatticeStabCanIsomMethod(method);
   switch (method) {
   case LatticeStabCanIsomMethod::Graph:
@@ -192,6 +260,11 @@ MyMatrix<Tint> LatticeCanonicalBasisReduced(MyMatrix<T> const &GramMat,
     // method does canonicalize remain comparable with each other.
     std::optional<MyMatrix<Tint>> opt =
         OrbitSplitCanonicalizeGram<T, Tint, Tgroup>(GramMat, os);
+    if (!opt && heuristic) {
+      // The same failure for every lattice of the isometry class, so the
+      // fallback keeps the canonical forms of heuristic comparable.
+      return ComputeCanonicalForm<T, Tint, Tgroup>(GramMat, os);
+    }
     if (!opt) {
       std::cerr << "LATTICE_METHODS: the orbit splitting could not select a "
                    "canonical prefix, no canonical form for this input\n";
@@ -209,6 +282,7 @@ MyMatrix<Tint> LatticeCanonicalBasisReduced(MyMatrix<T> const &GramMat,
     CheckLatticeMethodIntegral(ListMat, name);
     return ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(GramMat, os);
   case LatticeStabCanIsomMethod::IteratedShortest:
+  case LatticeStabCanIsomMethod::Heuristic:
     break;
   }
   LatticeStabCanIsomMethodUnavailable(method, "a canonical form");
@@ -239,6 +313,11 @@ LatticeIsometryReduced(std::vector<MyMatrix<T>> const &ListMat1,
                        std::vector<MyMatrix<T>> const &ListMat2,
                        std::vector<MyMatrix<Tint>> const &ListGenAut2,
                        LatticeStabCanIsomMethod method, std::ostream &os) {
+  // Lattices with different invariants are not isometric, and the method
+  // chosen for the first one answers that correctly.
+  if (method == LatticeStabCanIsomMethod::Heuristic) {
+    method = ChooseHeuristicMethod<T, Tint>(ListMat1, false, os);
+  }
   std::string name = NameLatticeStabCanIsomMethod(method);
   switch (method) {
   case LatticeStabCanIsomMethod::Graph:
@@ -261,6 +340,8 @@ LatticeIsometryReduced(std::vector<MyMatrix<T>> const &ListMat1,
   case LatticeStabCanIsomMethod::IteratedShortest:
     return IteratedShortestEquivalenceMultiple<T, Tint, Tgroup>(ListMat1,
                                                                 ListMat2, os);
+  case LatticeStabCanIsomMethod::Heuristic:
+    break;
   }
   std::cerr << "LATTICE_METHODS: unreachable isometry method\n";
   throw TerminalException{1};
@@ -307,6 +388,9 @@ IntAutomorphismGroup<Tint, Tgroup>
 LatticeAutomorphismGroupReduced(std::vector<MyMatrix<T>> const &ListMat,
                                 LatticeStabCanIsomMethod method,
                                 std::ostream &os) {
+  if (method == LatticeStabCanIsomMethod::Heuristic) {
+    method = ChooseHeuristicMethod<T, Tint>(ListMat, false, os);
+  }
   std::string name = NameLatticeStabCanIsomMethod(method);
   switch (method) {
   case LatticeStabCanIsomMethod::Graph:
@@ -332,6 +416,8 @@ LatticeAutomorphismGroupReduced(std::vector<MyMatrix<T>> const &ListMat,
   case LatticeStabCanIsomMethod::IteratedShortest:
     return IteratedShortestAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
                                                                       os);
+  case LatticeStabCanIsomMethod::Heuristic:
+    break;
   }
   std::cerr << "LATTICE_METHODS: unreachable automorphism method\n";
   throw TerminalException{1};
