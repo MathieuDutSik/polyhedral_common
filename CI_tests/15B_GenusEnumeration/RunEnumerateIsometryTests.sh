@@ -92,6 +92,35 @@ run_case A8 F21A8 2
 # over Q(sqrt 5) glued at 5 to the fixed lattice, 2 classes (at p = 3)
 run_case E8E8D5 D5 2
 
+# The module neighbours at p = 2, for groups of odd order on lattices of odd
+# determinant: F21 on A8 and on A6^3, at the prime 2 alone; and the prime 2
+# refused for a group of even order (S3 = W(A2) on E8+E8)
+p2_case() {
+    lat=$1
+    isom=$2
+    expected=$3
+    echo "--- ($lat, $isom) at p = 2 alone, expecting $expected classes ---"
+    out=$($BIN eiso_${lat}.txt eiso_${isom}.txt eiso_mass_${isom}.txt \
+              Summary stdout 2 1 2>/dev/null)
+    echo "$out"
+    nb=$(echo "$out" | sed -n 's/^classes of pairs = //p')
+    complete=$(echo "$out" | sed -n 's/^complete = //p')
+    if [ "$nb" != "$expected" ] || [ "$complete" != "true" ]; then
+        echo "ERROR: ($lat, $isom) at p = 2 gave $nb classes, complete=$complete" >&2
+        exit 1
+    fi
+}
+p2_case A8 F21A8 2
+p2_case A6x3 F21x3 2
+echo "--- (E8E8, S3) at p = 2 must be refused ---"
+rc=0
+$BIN eiso_E8E8.txt eiso_S3.txt eiso_mass_S3.txt Summary stdout 2 1 \
+     > /dev/null 2>&1 || rc=$?
+if [ "$rc" != "1" ]; then
+    echo "ERROR: p = 2 was not refused for S3 (exit $rc)" >&2
+    exit 1
+fi
+
 # The exit status: a target mass that the seed alone exceeds must stop the
 # program with status 3 (mass exceeded), and a target twice the true mass
 # at the single prime 2 with status 2 (incomplete), so that neither can pass

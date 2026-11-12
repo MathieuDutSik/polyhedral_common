@@ -932,6 +932,28 @@ struct GroupModuleAtPrime {
   ModMat A;
 };
 
+/*
+  Q(x) = b(x, x) / 2 = 0 mod 2 for x with entries in {0, 1}: b(x, x) mod 4,
+  A8 the Gram matrix modulo 8 (an even lattice). With b(x, y) = 0 mod 2 on
+  a basis this makes the span totally singular.
+ */
+inline bool IsSingularModTwo(std::vector<int64_t> const &x, ModMat const &A8) {
+  size_t n = x.size();
+  int64_t v = 0;
+  for (size_t a = 0; a < n; a++) {
+    if ((x[a] & 1) == 0) {
+      continue;
+    }
+    for (size_t b = 0; b < n; b++) {
+      if ((x[b] & 1) == 0) {
+        continue;
+      }
+      v = (v + ModP(A8[a][b], 4)) % 4;
+    }
+  }
+  return v == 0;
+}
+
 template <typename T>
 GroupModuleAtPrime ComputeGroupModuleAtPrime(MyMatrix<T> const &A,
                                              std::vector<MyMatrix<T>> const &ListP,
@@ -949,12 +971,32 @@ GroupModuleAtPrime ComputeGroupModuleAtPrime(MyMatrix<T> const &A,
   for (auto const &P : ListP) {
     gm.gens.push_back(ModMatOfMatrix(P, p));
   }
-  gm.A = ModMatOfMatrix(A, p * p);
+  // modulo 8 at p = 2: the norms of the lifts are read modulo 8
+  gm.A = ModMatOfMatrix(A, (p == 2) ? 8 : p * p);
   ModMat A_p = ModMatOfMatrix(A, p);
   // a fixed seed: the decomposition is deterministic for a given input
   std::mt19937_64 rng(static_cast<uint64_t>(p) * 1000003ULL + A.rows());
   gm.types = IrreducibleTypes(static_cast<size_t>(A.rows()), gm.gens, elt,
                               eltinv, A_p, p, rng);
+  if (p == 2) {
+    // totally isotropic for b mod 2 is not enough: the isotypic part is
+    // all singular only when Q(x) = b(x, x) / 2 mod 2 vanishes on a basis
+    for (auto &tp : gm.types) {
+      if (!tp.isotypic_isotropic) {
+        continue;
+      }
+      std::vector<ModMat> theta_pow = ThetaPowers(tp, p);
+      for (auto const &X : tp.Phi) {
+        for (auto const &tp_a : theta_pow) {
+          for (auto const &row : ModMatMul(tp_a, X, p)) {
+            if (!IsSingularModTwo(row, gm.A)) {
+              tp.isotypic_isotropic = false;
+            }
+          }
+        }
+      }
+    }
+  }
   return gm;
 }
 
@@ -973,7 +1015,8 @@ std::vector<int> OrderedNeighborPrimesModule(MyMatrix<T> const &A,
                                              std::vector<MyMatrix<T>> const &ListP,
                                              int m, T const &det) {
   std::vector<std::pair<double, int>> ListCost;
-  int p = 2;
+  // 2 included: it is good when |G| and det are odd
+  int p = 1;
   while (ListCost.size() < 8) {
     p = NextPrimeAfter(p);
     if (!IsGoodNeighborPrime(p, m, det, false)) {
@@ -1464,6 +1507,13 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
             ProjectivePointFqOfIndex(F, mdim, idx);
         ModMat S_rows = HomOfPoint(tp, theta_pow, alpha, p);
         if (!tp.isotypic_isotropic) {
+          if (p == 2) {
+            for (auto const &row : S_rows) {
+              if (!IsSingularModTwo(row, gm.A)) {
+                return false;
+              }
+            }
+          }
           ModMat A_p = ModMatOfMatrix(A, p);
           ModMat SA = ModMatMul(S_rows, A_p, p);
           for (auto const &x : SA) {
@@ -1595,8 +1645,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
   };
   if (prime != 0) {
-    if (!IsGoodNeighborPrime(prime, m, det, scalar) ||
-        (!abelian && prime == 2)) {
+    if (!IsGoodNeighborPrime(prime, m, det, scalar)) {
       std::cerr << "GENUS_GROUP: the prime " << prime
                 << " divides m det\n";
       throw TerminalException{1};

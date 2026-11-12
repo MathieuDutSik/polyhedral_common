@@ -874,9 +874,21 @@ ApplyActionOnHom(FiniteFieldModP const &F,
 /*
   The lift of a totally isotropic G-submodule S of L/pL (rows of S_rows)
   to a G-stable submodule of (Z/p^2)^n, free of rank k, totally isotropic
-  modulo p^2 (see the header comment). A: the Gram matrix; ListElt2 and
-  ListEltInv2: the elements of G and their inverses modulo p^2. Nothing
-  when the lift fails, which does not happen for p odd not dividing |G|.
+  modulo p^2 (see the header comment). A: the Gram matrix, modulo p^2 for
+  p odd and modulo 8 for p = 2; ListElt2 and ListEltInv2: the elements of G
+  and their inverses modulo p^2. Nothing when the lift fails, which does not
+  happen for p not dividing |G|.
+
+  At p = 2 (|G| odd, the lattice even of odd determinant) S is totally
+  singular for Q(x) = b(x, x) / 2 mod 2, the vectors of S~ must have
+  b(s~, s~) in 8 Z and their pairings in 4 Z. On S, beta(x, y) = b(x~, y~)
+  / 2 mod 2 and gamma(x) = b(x~, x~) / 4 mod 2 are G-invariant, gamma a
+  quadratic form with polar form beta. Moving s~ to s~ + 2 phi(s), phi : S
+  -> T G-equivariant, adds psi + psi^T to beta and psi(x, x) to gamma, psi(x,
+  y) = b(x, phi(y)) mod 2. So psi must satisfy psi + psi^T = beta and
+  psi(x, x) = gamma(x): the solutions are psi0 (upper triangular) plus the
+  alternating forms, a G-stable affine space, and the sum of the g . psi0
+  over G is a G-invariant solution, |G| being odd.
  */
 inline std::optional<ModMat>
 LiftIsotropicSubmodule(ModMat const &S_rows, ModMat const &A,
@@ -926,6 +938,9 @@ LiftIsotropicSubmodule(ModMat const &S_rows, ModMat const &A,
     }
   }
   ModMat St = ModMatMul(S.basis, E2, p2);
+  // the norms modulo 8 at p = 2: b(s~, s~) mod 8 depends on s~ mod 4 only,
+  // the lattice being even
+  int64_t pnorm = (p == 2) ? 8 : p2;
   auto bil = [&](std::vector<int64_t> const &x, std::vector<int64_t> const &y,
                  int64_t mod) -> int64_t {
     int64_t sum = 0;
@@ -951,6 +966,18 @@ LiftIsotropicSubmodule(ModMat const &S_rows, ModMat const &A,
         throw TerminalException{1};
       }
       beta[i][j] = v / p;
+    }
+  }
+  // p = 2: gamma = b(s~_i, s~_i) / 4 modulo 2, S being totally singular
+  std::vector<int64_t> gamma(k, 0);
+  if (p == 2) {
+    for (size_t i = 0; i < k; i++) {
+      int64_t v = bil(St[i], St[i], 8);
+      if (v % 4 != 0) {
+        std::cerr << "GROUP_NEIGHBOR: the submodule is not singular\n";
+        throw TerminalException{1};
+      }
+      gamma[i] = v / 4;
     }
   }
   // T: a G-stable complement of S^perp, paired perfectly with S
@@ -979,8 +1006,69 @@ LiftIsotropicSubmodule(ModMat const &S_rows, ModMat const &A,
       M[i][l] = bil(S.basis[i], T.basis[l], p);
     }
   }
-  int64_t half = InvModQ(2, p);
-  // t_j = sum_l x_l tau_l with sum_l M(i, l) x_l = -beta(i, j) / 2
+  /*
+    psi(s_i, s_j) = b(s_i, phi(s_j)) mod p, phi : S -> T the correction:
+    -beta / 2 for p odd; at p = 2 the G-invariant solution of psi + psi^T =
+    beta, psi(s_i, s_i) = gamma_i (see above), with the action R_g of the
+    elements on the basis of S.
+   */
+  ModMat psi(k, std::vector<int64_t>(k, 0));
+  if (p != 2) {
+    int64_t half = InvModQ(2, p);
+    for (size_t i = 0; i < k; i++) {
+      for (size_t j = 0; j < k; j++) {
+        psi[i][j] = ModP(-MulModQ(beta[i][j], half, p), p);
+      }
+    }
+  } else {
+    ModMat psi0(k, std::vector<int64_t>(k, 0));
+    for (size_t i = 0; i < k; i++) {
+      psi0[i][i] = ModP(gamma[i], 2);
+      for (size_t j = i + 1; j < k; j++) {
+        psi0[i][j] = ModP(beta[i][j], 2);
+      }
+    }
+    // S^T, to read the coordinates of a vector of S in its basis
+    ModMat SbT(n, std::vector<int64_t>(k));
+    for (size_t a = 0; a < n; a++) {
+      for (size_t i = 0; i < k; i++) {
+        SbT[a][i] = S.basis[i][a];
+      }
+    }
+    for (auto const &g : ListElt) {
+      ModMat Sg = ModMatMul(S.basis, g, 2);
+      ModMat R(k, std::vector<int64_t>(k));
+      for (size_t i = 0; i < k; i++) {
+        std::optional<std::vector<int64_t>> r = ModSolveRows(
+            [&] {
+              ModMat Sb(k, std::vector<int64_t>(n));
+              for (size_t a = 0; a < k; a++) {
+                Sb[a] = S.basis[a];
+              }
+              return Sb;
+            }(),
+            Sg[i], 2);
+        if (!r) {
+          std::cerr << "GROUP_NEIGHBOR: S is not G-stable\n";
+          throw TerminalException{1};
+        }
+        R[i] = *r;
+      }
+      // psi += R psi0 R^T
+      ModMat Rpsi = ModMatMul(R, psi0, 2);
+      for (size_t i = 0; i < k; i++) {
+        for (size_t j = 0; j < k; j++) {
+          int64_t v = 0;
+          for (size_t l = 0; l < k; l++) {
+            v ^= (Rpsi[i][l] & R[j][l]);
+          }
+          psi[i][j] ^= v;
+        }
+      }
+    }
+    (void)SbT;
+  }
+  // t_j = sum_l x_l tau_l with sum_l M(i, l) x_l = psi(i, j)
   ModMat Mt(k, std::vector<int64_t>(k));
   for (size_t i = 0; i < k; i++) {
     for (size_t l = 0; l < k; l++) {
@@ -990,7 +1078,7 @@ LiftIsotropicSubmodule(ModMat const &S_rows, ModMat const &A,
   for (size_t j = 0; j < k; j++) {
     std::vector<int64_t> rhs(k);
     for (size_t i = 0; i < k; i++) {
-      rhs[i] = ModP(-MulModQ(beta[i][j], half, p), p);
+      rhs[i] = psi[i][j];
     }
     // x Mt = rhs, i.e. sum_l x_l M(i, l) = rhs_i
     std::optional<std::vector<int64_t>> x = ModSolveRows(Mt, rhs, p);
@@ -1005,6 +1093,9 @@ LiftIsotropicSubmodule(ModMat const &S_rows, ModMat const &A,
     }
   }
   for (size_t i = 0; i < k; i++) {
+    if (bil(St[i], St[i], pnorm) != 0) {
+      return {};
+    }
     for (size_t j = 0; j < k; j++) {
       if (bil(St[i], St[j], p2) != 0) {
         return {};
