@@ -472,6 +472,11 @@ group_mass_case bg2141p1441 G 1/24
 # stopped by its node budget (C8).
 group_mass_case bg0502p192 G 1/16
 group_mass_case bg0578p72 G 1/6
+# groups of order 576 whose submodule F was searched over all the pairs of
+# elements (minutes); the second one has a CM component of multiplicity
+# one whose F is no eigenspace, found as End_G x
+group_mass_case bg1577p576 G 1/8
+group_mass_case bg0806p576 G 1/64
 group_mass_case bg0840c8 G 1/256
 # F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
 # the factor at the ramified prime 11 by the pi-adic chain (an image of

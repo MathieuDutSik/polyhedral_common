@@ -1776,6 +1776,36 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
         list_image.push_back("scalar");
         continue;
       }
+      {
+        /*
+          A cyclic component (d >= 3, one element acting) is a lattice over
+          Z[sigma] = Z[zeta_d], the maximal order of Q(zeta_d), with an even
+          trace form: the image of its local unitary group is the whole
+          centraliser of sigma in O(D(L_d)_q) (Brandhorst-Hofmann, Finite
+          subgroups of automorphisms of K3 surfaces, Theorem 6.12 with
+          Proposition 6.9). An empty entry means all the equivariant
+          isometries, for the listing and for the graph.
+         */
+        IsometryComponent<T> const &comp_c = res.components[comp_pos[s]];
+        if (comp_c.d >= 3 && comp_c.extra_sigma.empty()) {
+#ifdef SANITY_CHECK_ISOMETRY_MASS
+          std::optional<std::vector<ModuleAut>> all_eq =
+              EquivariantModuleIsometries(mods[s], bounds.max_module,
+                                          bounds.max_group);
+          std::optional<std::vector<ModuleAut>> img_c =
+              LocalImageOnModule<T, Tint>(comp_c, mods[s], os);
+          if (all_eq && img_c && all_eq->size() != img_c->size()) {
+            std::cerr << "ISOM_MASS: SANITY: the image on a cyclic component "
+                         "has " << img_c->size() << " elements, not all the "
+                      << all_eq->size() << " equivariant isometries\n";
+            throw TerminalException{1};
+          }
+#endif
+          image_groups.push_back({});
+          list_image.push_back("full");
+          continue;
+        }
+      }
       std::optional<std::vector<ModuleAut>> full = EquivariantModuleIsometries(
           mods[s], bounds.max_module, bounds.max_group);
       if (full) {
@@ -2955,6 +2985,183 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
   mass.
  */
 /*
+  An End_G-submodule of dimension dim of a block (basis E, rows, in the
+  coordinates of L) as End_G x: End_G y for y a pure tensor of W (x) U is
+  l (x) U, l the line of y, of dimension (multiplicity) x [K : Q]. The y
+  tried are the basis vectors of the block, then their pairwise sums; with
+  multiplicity one every nonzero y is a pure tensor, so the first one
+  succeeds. EndBlk is End_G in the block coordinates, acting on the rows as
+  the elements do. Returned: the rows of an integral basis of L cap F, or
+  nothing. F is a valid choice for the multiplicity lattice: its orthogonal
+  projection commutes with End_G (closed under the adjoint), so it lies in
+  the span of G, and at p not dividing |G| a line through a primitive
+  vector gives L_p = Z_p[G] X_p over the maximal order Z_p[G] e_rho.
+ */
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+EndomorphismSpanSubmodule(MyMatrix<T> const &E,
+                          std::vector<MyMatrix<T>> const &EndBlk, int dim) {
+  int k = E.rows();
+  int n = E.cols();
+  auto try_vector = [&](MyVector<T> const &y) -> std::optional<MyMatrix<T>> {
+    MyMatrix<T> span(static_cast<int>(EndBlk.size()), k);
+    for (size_t i = 0; i < EndBlk.size(); i++) {
+      MyVector<T> z = EndBlk[i].transpose() * y;
+      for (int j = 0; j < k; j++) {
+        span(static_cast<int>(i), j) = z(j);
+      }
+    }
+    if (RankMat(span) != dim) {
+      return {};
+    }
+    // L cap F, F the rows of span E: the integral x killed by the
+    // annihilator of F
+    MyMatrix<T> F = span * E;
+    MyMatrix<T> Ann = NullspaceMat(MyMatrix<T>(F.transpose()));
+    MyMatrix<Tint> Ann_i(Ann.rows(), n);
+    // the annihilator rows with their denominators cleared
+    for (int i = 0; i < Ann.rows(); i++) {
+      Tint den(1);
+      for (int j = 0; j < n; j++) {
+        den = LCMpair(den, GetDenominator_z(Ann(i, j)));
+      }
+      for (int j = 0; j < n; j++) {
+        Ann_i(i, j) = UniversalScalarConversion<Tint, T>(
+            Ann(i, j) * UniversalScalarConversion<T, Tint>(den));
+      }
+    }
+    MyMatrix<Tint> K_i = NullspaceIntTrMat(Ann_i);
+    if (K_i.rows() != dim) {
+      return {};
+    }
+    return UniversalMatrixConversion<T, Tint>(K_i);
+  };
+  for (int i = 0; i < k; i++) {
+    MyVector<T> y = ZeroVector<T>(k);
+    y(i) = T(1);
+    if (std::optional<MyMatrix<T>> opt = try_vector(y)) {
+      return opt;
+    }
+  }
+  for (int i = 0; i < k; i++) {
+    for (int j = i + 1; j < k; j++) {
+      MyVector<T> y = ZeroVector<T>(k);
+      y(i) = T(1);
+      y(j) = T(1);
+      if (std::optional<MyMatrix<T>> opt = try_vector(y)) {
+        return opt;
+      }
+    }
+  }
+  return {};
+}
+
+/*
+  The search of a submodule of a block by kernels. The block is {x : x C = 0
+  for C in conditions} (rows, as the elements); the candidates are the
+  subspaces S_c = {x in the block : x M_c = 0}. Returned: the first S_c of
+  dimension dim, otherwise the first S_a cap S_b of dimension dim with
+  owner[a] != owner[b] (the pairs in lexicographic order), as the rows of an
+  integral basis; or nothing.
+
+  The dimensions are read modulo a prime p first, by linear algebra over
+  F_p in the coordinates of the block: the basis B of the block once, each
+  S_c as the left kernel of B M_c, and dim (S_a cap S_b) = dim S_a + dim S_b
+  - rank [S_a; S_b]. A candidate of the right dimension modulo p is then
+  computed exactly (an integral kernel) and kept only if its dimension over
+  Q is dim. The matrices are integral, and the dimension over Q is at most
+  the one modulo p, so a candidate can be missed only when p divides a
+  minor; nothing wrong is ever returned, a miss only leaves the component
+  without a submodule.
+ */
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+FirstKernelOfDimension(std::vector<MyMatrix<T>> const &conditions,
+                       std::vector<MyMatrix<T>> const &cand,
+                       std::vector<size_t> const &owner, int n, int dim) {
+  int64_t const p = 2147483647;
+  auto to_mod = [&](MyMatrix<T> const &M) -> ModMat {
+    ModMat R(M.rows(), std::vector<int64_t>(M.cols()));
+    for (int i = 0; i < M.rows(); i++) {
+      for (int j = 0; j < M.cols(); j++) {
+        if (!IsInteger(M(i, j))) {
+          std::cerr << "ISOM_MASS: a condition is not integral\n";
+          throw TerminalException{1};
+        }
+        R[i][j] = ResModOf(GetNumerator_z(M(i, j)), p);
+      }
+    }
+    return R;
+  };
+  auto hconcat = [&](std::vector<MyMatrix<T>> const &l) -> MyMatrix<T> {
+    MyMatrix<T> Big(n, n * static_cast<int>(l.size()));
+    for (size_t a = 0; a < l.size(); a++) {
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          Big(i, static_cast<int>(a) * n + j) = l[a](i, j);
+        }
+      }
+    }
+    return Big;
+  };
+  // the exact integral kernel of the conditions and the candidates cs
+  auto exact = [&](std::vector<size_t> const &cs) -> std::optional<MyMatrix<T>> {
+    std::vector<MyMatrix<T>> all = conditions;
+    for (size_t c : cs) {
+      all.push_back(cand[c]);
+    }
+    MyMatrix<Tint> Big_i =
+        UniversalMatrixConversion<Tint, T>(hconcat(all));
+    MyMatrix<Tint> K_i = NullspaceIntTrMat(MyMatrix<Tint>(Big_i.transpose()));
+    if (K_i.rows() != dim) {
+      return {};
+    }
+    return UniversalMatrixConversion<T, Tint>(K_i);
+  };
+  // the block modulo p, then each S_c in its coordinates
+  ModMat B;
+  if (conditions.empty()) {
+    B.assign(n, std::vector<int64_t>(n, 0));
+    for (int i = 0; i < n; i++) {
+      B[i][i] = 1;
+    }
+  } else {
+    B = ModLeftNullspace(to_mod(hconcat(conditions)), p);
+  }
+  std::vector<ModMat> S(cand.size());
+  for (size_t c = 0; c < cand.size(); c++) {
+    S[c] = B.empty() ? ModMat{} : ModLeftNullspace(ModMatMul(B, to_mod(cand[c]), p), p);
+  }
+  for (size_t a = 0; a < cand.size(); a++) {
+    if (static_cast<int>(S[a].size()) == dim) {
+      if (std::optional<MyMatrix<T>> opt = exact({a})) {
+        return opt;
+      }
+    }
+  }
+  for (size_t a = 0; a < cand.size(); a++) {
+    if (static_cast<int>(S[a].size()) < dim) {
+      continue;
+    }
+    for (size_t b = a + 1; b < cand.size(); b++) {
+      if (owner[a] == owner[b] || static_cast<int>(S[b].size()) < dim) {
+        continue;
+      }
+      ModMat stacked = S[a];
+      stacked.insert(stacked.end(), S[b].begin(), S[b].end());
+      int d = static_cast<int>(S[a].size() + S[b].size()) -
+              static_cast<int>(ModRank(stacked, p));
+      if (d == dim) {
+        if (std::optional<MyMatrix<T>> opt = exact({a, b})) {
+          return opt;
+        }
+      }
+    }
+  }
+  return {};
+}
+
+/*
   An End_G-submodule of the block of dimension dim, as the integral kernel
   of Phi_d(g), for one element or two, d dividing the order of g, together
   with the conditions of the block (row convention, as the elements): the
@@ -2975,37 +3182,13 @@ CyclotomicKernelSubmodule(std::vector<MyMatrix<T>> const &elts,
       }
     }
   }
-  std::optional<MyMatrix<T>> res;
-  auto try_kernel = [&](std::vector<MyMatrix<T>> const &cs) -> bool {
-    std::vector<MyMatrix<T>> all = conditions;
-    all.insert(all.end(), cs.begin(), cs.end());
-    MyMatrix<T> Big(n, n * static_cast<int>(all.size()));
-    for (size_t a = 0; a < all.size(); a++) {
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-          Big(i, static_cast<int>(a) * n + j) = all[a](i, j);
-        }
-      }
-    }
-    MyMatrix<Tint> K_i = NullspaceIntTrMat(
-        MyMatrix<Tint>(UniversalMatrixConversion<Tint, T>(Big).transpose()));
-    if (K_i.rows() != dim) {
-      return false;
-    }
-    res = UniversalMatrixConversion<T, Tint>(K_i);
-    return true;
-  };
-  for (size_t a = 0; a < cand.size() && !res; a++) {
-    (void)try_kernel({cand[a].second});
+  std::vector<MyMatrix<T>> mats;
+  std::vector<size_t> owner;
+  for (auto const &c : cand) {
+    owner.push_back(c.first);
+    mats.push_back(c.second);
   }
-  for (size_t a = 0; a < cand.size() && !res; a++) {
-    for (size_t b = a + 1; b < cand.size() && !res; b++) {
-      if (cand[a].first != cand[b].first) {
-        (void)try_kernel({cand[a].second, cand[b].second});
-      }
-    }
-  }
-  return res;
+  return FirstKernelOfDimension<T, Tint>(conditions, mats, owner, n, dim);
 }
 
 template <typename T, typename Tint>
@@ -3424,34 +3607,13 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
               }
             }
           }
-          std::optional<MyMatrix<T>> Xq;
-          auto try_kernel = [&](std::vector<MyMatrix<T>> const &cs) -> bool {
-            std::vector<MyMatrix<T>> all = blk.conditions;
-            all.insert(all.end(), cs.begin(), cs.end());
-            MyMatrix<T> Big(n, n * static_cast<int>(all.size()));
-            for (size_t a = 0; a < all.size(); a++) {
-              for (int i = 0; i < n; i++) {
-                for (int j = 0; j < n; j++) {
-                  Big(i, static_cast<int>(a) * n + j) = all[a](i, j);
-                }
-              }
-            }
-            MyMatrix<Tint> K_i = NullspaceIntTrMat(
-                MyMatrix<Tint>(UniversalMatrixConversion<Tint, T>(Big).transpose()));
-            if (K_i.rows() != dimF) {
-              return false;
-            }
-            Xq = UniversalMatrixConversion<T, Tint>(K_i);
-            return true;
-          };
-          for (size_t a = 0; a < cand.size() && !Xq; a++) {
-            (void)try_kernel({cand[a]});
+          // every pair allowed, two kernels of one element included
+          std::vector<size_t> owner(cand.size());
+          for (size_t a = 0; a < cand.size(); a++) {
+            owner[a] = a;
           }
-          for (size_t a = 0; a < cand.size() && !Xq; a++) {
-            for (size_t b = a + 1; b < cand.size() && !Xq; b++) {
-              (void)try_kernel({cand[a], cand[b]});
-            }
-          }
+          std::optional<MyMatrix<T>> Xq = FirstKernelOfDimension<T, Tint>(
+              blk.conditions, cand, owner, n, dimF);
           if (Xq) {
             MyMatrix<T> const &Xb = *Xq;
             MyMatrix<T> GramX = Xb * A * Xb.transpose();
@@ -3494,48 +3656,19 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       // a common eigenspace of dimension m, for one or two elements
       std::optional<MyMatrix<T>> found;
       MyMatrix<T> found_basis;
-      std::vector<std::pair<size_t, int>> cand;
+      // the common +-1-eigenspaces of one or two elements
+      std::vector<MyMatrix<T>> cand;
+      std::vector<size_t> owner;
       for (size_t i = 0; i < n_elt; i++) {
-        cand.push_back({i, 1});
-        cand.push_back({i, -1});
+        for (int sgn : {1, -1}) {
+          cand.push_back(elts[i] - ScalarFromInt64<T>(sgn) * IdentityMat<T>(n));
+          owner.push_back(i);
+        }
       }
-      auto try_conditions =
-          [&](std::vector<std::pair<size_t, int>> const &cs) -> bool {
-        // the integral kernel of the conditions of the block and of the
-        // eigenvalue conditions
-        std::vector<MyMatrix<T>> all = blk.conditions;
-        for (auto const &c : cs) {
-          all.push_back(elts[c.first] -
-                        ScalarFromInt64<T>(c.second) * IdentityMat<T>(n));
-        }
-        MyMatrix<T> Big(n, n * static_cast<int>(all.size()));
-        for (size_t a = 0; a < all.size(); a++) {
-          for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-              Big(i, static_cast<int>(a) * n + j) = all[a](i, j);
-            }
-          }
-        }
-        MyMatrix<Tint> Big_i = UniversalMatrixConversion<Tint, T>(Big);
-        MyMatrix<Tint> K_i =
-            NullspaceIntTrMat(MyMatrix<Tint>(Big_i.transpose()));
-        if (K_i.rows() != m) {
-          return false;
-        }
-        MyMatrix<T> X = UniversalMatrixConversion<T, Tint>(K_i);
-        found = X * A * X.transpose();
-        found_basis = X;
-        return true;
-      };
-      for (size_t a = 0; a < cand.size() && !found; a++) {
-        (void)try_conditions({cand[a]});
-      }
-      for (size_t a = 0; a < cand.size() && !found; a++) {
-        for (size_t b = a + 1; b < cand.size() && !found; b++) {
-          if (cand[a].first != cand[b].first) {
-            (void)try_conditions({cand[a], cand[b]});
-          }
-        }
+      if (std::optional<MyMatrix<T>> X =
+              FirstKernelOfDimension<T, Tint>(blk.conditions, cand, owner, n, m)) {
+        found = MyMatrix<T>(*X * A * X->transpose());
+        found_basis = *X;
       }
       if (!found) {
         // the kernels of Phi_d(g) for the d dividing the order of g, alone
@@ -3546,6 +3679,14 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         if (Xq) {
           found = MyMatrix<T>(*Xq * A * Xq->transpose());
           found_basis = *Xq;
+        }
+      }
+      if (!found) {
+        // End_G x for a pure tensor x
+        if (std::optional<MyMatrix<T>> X =
+                EndomorphismSpanSubmodule<T, Tint>(blk.E, End, m)) {
+          found = MyMatrix<T>(*X * A * X->transpose());
+          found_basis = *X;
         }
       }
       if (!found && m == 1) {
@@ -3597,49 +3738,26 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       auto [ClassSum, Nexp, Hgens] = centre_field();
       std::optional<MyMatrix<T>> found_basis;
       if (Nexp > 2) {
-        std::vector<std::pair<size_t, int>> cand;
+        std::vector<MyMatrix<T>> cand;
+        std::vector<size_t> owner;
         for (size_t i = 0; i < n_elt; i++) {
-          cand.push_back({i, 1});
-          cand.push_back({i, -1});
-        }
-        auto try_conditions =
-            [&](std::vector<std::pair<size_t, int>> const &cs) -> bool {
-          std::vector<MyMatrix<T>> all = blk.conditions;
-          for (auto const &cc : cs) {
-            all.push_back(elts[cc.first] -
-                          ScalarFromInt64<T>(cc.second) * IdentityMat<T>(n));
-          }
-          MyMatrix<T> Big(n, n * static_cast<int>(all.size()));
-          for (size_t a = 0; a < all.size(); a++) {
-            for (int i = 0; i < n; i++) {
-              for (int j = 0; j < n; j++) {
-                Big(i, static_cast<int>(a) * n + j) = all[a](i, j);
-              }
-            }
-          }
-          MyMatrix<Tint> Big_i = UniversalMatrixConversion<Tint, T>(Big);
-          MyMatrix<Tint> K_i =
-              NullspaceIntTrMat(MyMatrix<Tint>(Big_i.transpose()));
-          if (K_i.rows() != m * c) {
-            return false;
-          }
-          found_basis = UniversalMatrixConversion<T, Tint>(K_i);
-          return true;
-        };
-        for (size_t a = 0; a < cand.size() && !found_basis; a++) {
-          (void)try_conditions({cand[a]});
-        }
-        for (size_t a = 0; a < cand.size() && !found_basis; a++) {
-          for (size_t b = a + 1; b < cand.size() && !found_basis; b++) {
-            if (cand[a].first != cand[b].first) {
-              (void)try_conditions({cand[a], cand[b]});
-            }
+          for (int sgn : {1, -1}) {
+            cand.push_back(elts[i] -
+                           ScalarFromInt64<T>(sgn) * IdentityMat<T>(n));
+            owner.push_back(i);
           }
         }
+        found_basis = FirstKernelOfDimension<T, Tint>(blk.conditions, cand,
+                                                      owner, n, m * c);
         if (!found_basis) {
           found_basis = CyclotomicKernelSubmodule<T, Tint>(
               elts, blk.conditions, n, m * c);
         }
+      }
+      if (!found_basis) {
+        // End_G x for a pure tensor x
+        found_basis =
+            EndomorphismSpanSubmodule<T, Tint>(blk.E, End, m * c);
       }
 #ifdef DEBUG_ISOMETRY_MASS
       os << "ISOM_MASS: centre of degree " << c << " (" << (is_cm ? "CM" : "real")
