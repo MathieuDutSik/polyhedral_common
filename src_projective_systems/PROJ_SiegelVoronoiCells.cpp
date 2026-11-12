@@ -235,6 +235,228 @@ int rank_forms_face(MyMatrix<Tint> const &EXT, Face const &f, [[maybe_unused]] i
   return RankMat(M);
 }
 
+/*
+  The stabilizer of a top cell (the elements l_elt of G) as permutations of
+  the rows of its cone EXT_cone: the rows may contain v and -v (the minimal
+  vectors of the perfect form), so the images are matched exactly, and up
+  to sign only for a row whose negative is not a row.
+ */
+std::vector<std::vector<int>> cone_row_permutations(ProjectiveRing const &ring, MyMatrix<Tint> const &EXT_cone,
+                                                    std::vector<MyMatrix<Tint>> const &l_elt) {
+  int n_ray = EXT_cone.rows();
+  std::map<MyVector<Tint>, int> map_row, map_row_unit;
+  for (int i = 0; i < n_ray; i++) {
+    map_row[GetMatrixRow(EXT_cone, i)] = i;
+    map_row_unit[unit_normalize(ring, GetMatrixRow(EXT_cone, i))] = i;
+  }
+  std::vector<std::vector<int>> l_perm;
+  for (auto &elt : l_elt) {
+    std::vector<int> perm(n_ray);
+    std::vector<int> used(n_ray, 0);
+    for (int i = 0; i < n_ray; i++) {
+      MyVector<Tint> img = elt.transpose() * GetMatrixRow(EXT_cone, i);
+      auto iter = map_row.find(img);
+      if (iter == map_row.end()) {
+        iter = map_row_unit.find(unit_normalize(ring, img));
+        if (iter == map_row_unit.end()) {
+          std::cerr << "SIEGEL: the stabilizer does not preserve the cone\n";
+          throw TerminalException{1};
+        }
+      }
+      perm[i] = iter->second;
+      if (used[perm[i]]++ > 0) {
+        std::cerr << "SIEGEL: the action of the stabilizer on the rows is not a permutation\n";
+        throw TerminalException{1};
+      }
+    }
+    l_perm.push_back(perm);
+  }
+  return l_perm;
+}
+
+Face permute_face(Face const &f, std::vector<int> const &perm) {
+  Face img(f.size());
+  for (size_t i = 0; i < f.size(); i++) {
+    if (f[i] == 1) {
+      img[perm[i]] = 1;
+    }
+  }
+  return img;
+}
+
+// Whether f is the smallest face of its orbit under the permutations.
+bool is_orbit_rep(Face const &f, std::vector<std::vector<int>> const &l_perm) {
+  for (auto &perm : l_perm) {
+    if (permute_face(f, perm) < f) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/*
+  The faces of dimension dim_face of the cone of EXT_cone contained in the
+  faces of l_level (of dimension dim_face + 1): the f cap F of that
+  dimension for F in l_cand. With l_cand all the facets of the cone these
+  are all the facets of the faces of l_level; with a subset, the faces that
+  are intersections with it.
+ */
+std::set<Face> next_level_faces(std::vector<Face> const &l_level, std::vector<Face> const &l_cand,
+                                MyMatrix<Tint> const &EXT_cone, int const &dim_face) {
+  std::set<Face> set_next;
+  for (auto &f : l_level) {
+    std::set<Face> set_cand;
+    for (auto &F : l_cand) {
+      Face h = f & F;
+      if (h != f && static_cast<int>(h.count()) >= dim_face) {
+        set_cand.insert(h);
+      }
+    }
+    for (auto &h : set_cand) {
+      if (set_next.count(h) > 0) {
+        continue;
+      }
+      if (rank_forms_face(EXT_cone, h, dim_face) == dim_face) {
+        set_next.insert(h);
+      }
+    }
+  }
+  return set_next;
+}
+
+/*
+  An invariant of the configurations up to G (J the form), with an integer
+  (the dimension of the cell, or -1). With Q the sum of the v^T v of the
+  rows (Q becomes g^T Q g with the configuration), the values v Q^{-1} w
+  are invariant under GL_n(Z) and the v J w under G: each vector gets the
+  sorted list of the pairs (|v Q^{-1} w|, |v J w|) with the others, and
+  the invariant is the sorted list of these profiles. (With the pairings
+  v J w alone, many inequivalent cones of Sp_6(Z) have the same invariant,
+  and the equivalence tests dominate.)
+ */
+std::vector<T> config_invariant(MyMatrix<Tint> const &EXT, MyMatrix<Tint> const &J, int const &dim) {
+  int k = EXT.rows();
+  int n = EXT.cols();
+  MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
+  MyMatrix<T> Q = ZeroMatrix<T>(n, n);
+  for (int i = 0; i < k; i++) {
+    MyVector<T> v = GetMatrixRow(EXT_T, i);
+    Q += v * v.transpose();
+  }
+  std::vector<T> V{T(dim), T(k)};
+  if (RankMat(Q) < n) {
+    // At infinity: the pairings only.
+    MyMatrix<Tint> G = EXT * J * EXT.transpose();
+    std::vector<std::vector<T>> l_prof(k);
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < k; j++) {
+        if (j != i) {
+          l_prof[i].push_back(T(abs(G(i, j))));
+        }
+      }
+      std::sort(l_prof[i].begin(), l_prof[i].end());
+    }
+    std::sort(l_prof.begin(), l_prof.end());
+    for (auto &prof : l_prof) {
+      V.insert(V.end(), prof.begin(), prof.end());
+    }
+    return V;
+  }
+  MyMatrix<T> Gq = EXT_T * Inverse(Q) * EXT_T.transpose();
+  MyMatrix<Tint> Gj = EXT * J * EXT.transpose();
+  std::vector<std::vector<std::pair<T, T>>> l_prof(k);
+  for (int i = 0; i < k; i++) {
+    for (int j = 0; j < k; j++) {
+      if (j != i) {
+        T q = Gq(i, j);
+        l_prof[i].push_back({q < 0 ? T(-q) : q, T(abs(Gj(i, j)))});
+      }
+    }
+    std::sort(l_prof[i].begin(), l_prof[i].end());
+  }
+  std::sort(l_prof.begin(), l_prof.end());
+  for (int i = 0; i < k; i++) {
+    V.push_back(Gq(i, i));
+  }
+  std::sort(V.begin() + 2, V.end());
+  for (auto &prof : l_prof) {
+    for (auto &pair : prof) {
+      V.push_back(pair.first);
+      V.push_back(pair.second);
+    }
+  }
+  return V;
+}
+
+/*
+  An element g of G = Sp(J, Z) with EXT1 g = EXT2 (rows up to order and
+  sign), if any, for configurations spanning R^n. The isomorphism of the
+  weighted configurations is found by the canonical forms of
+  LinPolytope_Isomorphism_GramMat with the Gram matrix Q^{-1} + J (Q the sum
+  of the v^T v): an element of G preserves both Q^{-1} and J on the
+  vectors, and from v (Q^{-1} + J) w and w (Q^{-1} + J) v both are
+  recovered, so no isomorphism means no element of G. The linear map of an
+  isomorphism found is checked to be integral and in G; otherwise (an
+  isomorphism over Q only) list_embedding decides. The backtracking of
+  list_embedding alone, with the pairings v J w only (mostly 0), is far too
+  slow on the cones of Sp_6(Z).
+ */
+std::optional<MyMatrix<Tint>> sp_equivalence(ProjectiveRing const &ring, MyMatrix<Tint> const &EXT1,
+                                             MyMatrix<Tint> const &EXT2, std::ostream &os) {
+  int n = EXT1.cols();
+  if (EXT1.rows() != EXT2.rows()) {
+    return {};
+  }
+  auto f_fallback = [&]() -> std::optional<MyMatrix<Tint>> {
+    std::vector<MyMatrix<Tint>> l_M = list_embedding(ring, EXT1, EXT2);
+    if (l_M.empty()) {
+      return {};
+    }
+    return l_M[0];
+  };
+  if (RankMat(EXT1) < n || RankMat(EXT2) < n) {
+    return f_fallback();
+  }
+  MyMatrix<Tint> tot1 = totality(ring, EXT1);
+  MyMatrix<Tint> tot2 = totality(ring, EXT2);
+  MyMatrix<T> tot1_T = UniversalMatrixConversion<T, Tint>(tot1);
+  MyMatrix<T> tot2_T = UniversalMatrixConversion<T, Tint>(tot2);
+  MyMatrix<T> J_T = UniversalMatrixConversion<T, Tint>(ring.B);
+  auto f_gram = [&](MyMatrix<T> const &tot) -> MyMatrix<T> {
+    MyMatrix<T> Q = tot.transpose() * tot;
+    return MyMatrix<T>(Inverse(Q) + J_T);
+  };
+  std::optional<std::vector<Tidx>> opt =
+      LinPolytope_Isomorphism_GramMat<T, Tidx>(tot1_T, f_gram(tot1_T), tot2_T, f_gram(tot2_T), os);
+  if (!opt) {
+    return {};
+  }
+  std::vector<int> l_basis = basis_rows(tot1);
+  MyMatrix<T> B1(n, n), B2(n, n);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      B1(i, j) = tot1_T(l_basis[i], j);
+      B2(i, j) = tot2_T((*opt)[l_basis[i]], j);
+    }
+  }
+  MyMatrix<T> g_T = Inverse(B1) * B2;
+  if (IsIntegralMatrix(g_T) && g_T * J_T * g_T.transpose() == J_T) {
+    MyMatrix<Tint> g = UniversalMatrixConversion<Tint, T>(g_T);
+    MyMatrix<Tint> img = tot1 * g;
+    bool is_ok = true;
+    for (int i = 0; i < img.rows(); i++) {
+      if (!position_unit(ring, EXT2, GetMatrixRow(img, i))) {
+        is_ok = false;
+        break;
+      }
+    }
+    if (is_ok) {
+      return g;
+    }
+  }
+  return f_fallback();
+}
+
 struct TopRep {
   int i_cone;
   MyMatrix<Tint> M;
@@ -258,7 +480,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "        or fast (as top, the points on the facets searched with the margin 0.01 / |X| only)\n";
       std::cerr << "        or probeC, C >= 1 (the walk as fast, then the faces of the top cells meeting the Siegel space\n";
       std::cerr << "        down to the codimension C, their orbits, the times and the orbifold Euler characteristic)\n";
-      std::cerr << "        In the modes fast and probeC the top cells are saved in output.top after the walk, and\n";
+      std::cerr << "        or ridgesC (the ridge facets of the top cells, then without numerical test the faces of the\n";
+      std::cerr << "        cones down to the codimension C that are intersections of ridge facets: bounds on the\n";
+      std::cerr << "        number of transverse cells)\n";
+      std::cerr << "        or cellsC (the transverse cells down to the codimension C, by orbits under G: the faces of\n";
+      std::cerr << "        each orbit of cells up to its stabilizer in G, the orbifold Euler characteristic)\n";
+      std::cerr << "        In the modes fast, probeC, ridgesC and cellsC the top cells are saved in output.top after the walk, and\n";
       std::cerr << "        read from it, without walking, when it exists.\n";
       std::cerr << "  n_start: the number of random starts of the numerical search of a point (rays: also the number of rays)\n";
       std::cerr << "  seed: the random seed\n";
@@ -271,16 +498,24 @@ int main(int argc, char *argv[]) {
     int n_start = ParseScalar<int>(argv[4]);
     unsigned seed = ParseScalar<unsigned>(argv[5]);
     std::string file_out = argv[6];
-    int probe_codim = 0;
-    if (mode.size() > 5 && mode.substr(0, 5) == "probe" &&
-        mode.find_first_not_of("0123456789", 5) == std::string::npos) {
-      probe_codim = std::stoi(mode.substr(5));
-    }
-    if (mode != "full" && mode != "top" && mode != "fast" && mode != "rays" && probe_codim == 0) {
-      std::cerr << "SIEGEL: the mode should be full, top, fast, rays or probeC\n";
+    // The modes probeC and ridgesC, C >= 1.
+    auto f_mode_codim = [&](std::string const &prefix) -> int {
+      size_t len = prefix.size();
+      if (mode.size() > len && mode.substr(0, len) == prefix &&
+          mode.find_first_not_of("0123456789", len) == std::string::npos) {
+        return std::stoi(mode.substr(len));
+      }
+      return 0;
+    };
+    int probe_codim = f_mode_codim("probe");
+    int ridges_codim = f_mode_codim("ridges");
+    int cells_codim = f_mode_codim("cells");
+    if (mode != "full" && mode != "top" && mode != "fast" && mode != "rays" && probe_codim == 0 &&
+        ridges_codim == 0 && cells_codim == 0) {
+      std::cerr << "SIEGEL: the mode should be full, top, fast, rays, probeC, ridgesC or cellsC\n";
       throw TerminalException{1};
     }
-    bool use_checkpoint = (mode == "fast" || probe_codim > 0);
+    bool use_checkpoint = (mode == "fast" || probe_codim > 0 || ridges_codim > 0 || cells_codim > 0);
     std::string file_top = file_out + ".top";
     if (mode == "full" && g != 2) {
       std::cerr << "SIEGEL: the mode full is for g = 2 only\n";
@@ -304,7 +539,7 @@ int main(int argc, char *argv[]) {
     // all of them: a top cell reached across a certified ridge exists).
     std::vector<double> l_margin_all{0.2, 0.05, 0.01};
     std::vector<double> l_margin_facet = l_margin_all;
-    if (mode == "fast" || probe_codim > 0) {
+    if (mode == "fast" || probe_codim > 0 || ridges_codim > 0 || cells_codim > 0) {
       l_margin_facet = {0.01};
     }
     std::mt19937 gen(seed);
@@ -552,6 +787,413 @@ int main(int argc, char *argv[]) {
       std::rename(file_tmp.c_str(), file_top.c_str());
       std::cerr << "SIEGEL: the top cells written to " << file_top << "\n";
     }
+    if (cells_codim > 0) {
+      /*
+        The cells by orbits under G, level by level (the codimension in the
+        cone). An orbit of cells Y of codimension k is represented in one top
+        cell, as a face of its cone; its faces of codimension k + 1 are
+        taken up to the stabilizer of Y in G (not the one of the top cell),
+        and a face Z is a candidate only if the faces of codimension k of the
+        cone containing Z are all cells (by their invariant, a necessary
+        condition): near a transverse cell Z the Siegel space meets all of
+        them. The candidates are taken up to G (each orbit is tested once)
+        and tested numerically from the point of Y, then by the full
+        search. The cells found are the transverse cells (the non
+        transverse ones, deeper in the cone than their dimension, are
+        generally missed).
+       */
+      SiegelOracle oracle_warm(J, 2, seed);
+      oracle_warm.set_check_doubtful(false);
+      oracle_warm.set_margins({0.01});
+      // For the facets of the top cells the filter is empty (their only
+      // cover is the top cell) and most of them miss the Siegel space: no
+      // full search (0.5 s each), more random starts instead, and a negative
+      // result is not cached (a ridge missed from one top cell is found from
+      // the other one).
+      SiegelOracle oracle_warm_facet(J, 6, seed + 1);
+      oracle_warm_facet.set_check_doubtful(false);
+      oracle_warm_facet.set_margins({0.01});
+      int dim_sym = n * (n + 1) / 2;
+      struct CellRep {
+        int i_top;
+        Face f;  // the rows of the cone of the top cell
+        MyMatrix<Tint> EXT;  // rows_up_to_sign of these rows
+        std::vector<double> weights;  // a point of the cell, on the rows of EXT
+        int dim;
+        int64_t stab_order;
+      };
+      struct TopData {
+        MyMatrix<Tint> EXT_cone;
+        std::vector<Face> l_facet;
+        // For each facet, the configuration of the perfect cone on the other
+        // side of it.
+        std::map<Face, MyMatrix<Tint>> map_neighbor;
+      };
+      std::vector<TopData> l_top_data;
+      for (auto &top : l_top) {
+        TopData td;
+        td.EXT_cone = l_perfect[top.i_cone].EXT * top.M;
+        for (auto &adj : l_perfect[top.i_cone].full_adjacencies(os)) {
+          td.l_facet.push_back(adj.f_ext);
+          MyMatrix<Tint> M_adj = adj.eMat * top.M;
+          td.map_neighbor[adj.f_ext] = rows_up_to_sign(ring, l_perfect[adj.jCone].EXT * M_adj);
+        }
+        l_top_data.push_back(std::move(td));
+      }
+      // The top cells by invariant: a facet is a ridge only if the Siegel
+      // space crosses it, so only if the cone on the other side is a top
+      // cell.
+      std::map<std::vector<T>, std::vector<int>> map_top_inv;
+      for (size_t i_top = 0; i_top < l_top.size(); i_top++) {
+        map_top_inv[config_invariant(l_top[i_top].EXT, J, -1)].push_back(static_cast<int>(i_top));
+      }
+      // The top cell equivalent to EXT, with g such that EXT g is its
+      // configuration (up to sign), if any.
+      auto f_top_match = [&](MyMatrix<Tint> const &EXT) -> std::optional<std::pair<int, MyMatrix<Tint>>> {
+        auto iter = map_top_inv.find(config_invariant(EXT, J, -1));
+        if (iter == map_top_inv.end()) {
+          return {};
+        }
+        for (auto &i_top : iter->second) {
+          if (EXT.rows() != l_top[i_top].EXT.rows()) {
+            continue;
+          }
+          std::optional<MyMatrix<Tint>> opt_g = sp_equivalence(ring, EXT, l_top[i_top].EXT, os);
+          if (opt_g) {
+            return std::pair<int, MyMatrix<Tint>>{i_top, *opt_g};
+          }
+        }
+        return {};
+      };
+      // The orbits of the configurations tested, with the result: by level
+      // and invariant, the configurations and their intersections.
+      std::vector<std::map<std::vector<T>, std::vector<std::pair<MyMatrix<Tint>, SiegelIntersection>>>>
+          l_map_tested(cells_codim + 1);
+      // The invariants of the cells of each level (for the filter).
+      std::vector<std::set<std::vector<T>>> l_set_inv_cell(cells_codim + 1);
+      std::vector<std::vector<CellRep>> ll_cell(cells_codim + 1);
+      std::map<int, std::vector<int64_t>> map_dim_stab;
+      auto f_weights_from = [&](CellRep const &Y, MyMatrix<Tint> const &EXT) -> std::vector<double> {
+        std::map<MyVector<Tint>, double> map_w;
+        for (int i = 0; i < Y.EXT.rows(); i++) {
+          map_w[unit_normalize(ring, GetMatrixRow(Y.EXT, i))] = Y.weights[i];
+        }
+        std::vector<double> w;
+        for (int i = 0; i < EXT.rows(); i++) {
+          w.push_back(map_w[unit_normalize(ring, GetMatrixRow(EXT, i))]);
+        }
+        return w;
+      };
+      // Level 0: the top cells, with a point of each when one is found (a
+      // thin top cell may have none: its facets then start from the point
+      // of the top cell on the other side).
+      SiegelOracle oracle_top(J, 50, seed + 2);
+      for (size_t i_top = 0; i_top < l_top.size(); i_top++) {
+        std::optional<std::vector<double>> opt_w = oracle_top.point_of_existing_cell(l_top[i_top].EXT);
+        std::vector<double> w;
+        if (opt_w) {
+          w = *opt_w;
+        } else {
+          std::cerr << "CELLS: no point found in the top cell " << i_top << " (|EXT|=" << l_top[i_top].EXT.rows()
+                    << "), its facets start from their other side\n";
+        }
+        Face f_all(l_top_data[i_top].EXT_cone.rows());
+        f_all.set();
+        int64_t order = projective_stabilizer(ring, l_top[i_top].EXT, os).l_elt.size();
+        ll_cell[0].push_back({static_cast<int>(i_top), f_all, l_top[i_top].EXT, w, dim_top, order});
+        l_set_inv_cell[0].insert(config_invariant(l_top[i_top].EXT, J, -1));
+        map_dim_stab[dim_top].push_back(order);
+      }
+      for (int codim = 1; codim <= cells_codim && !ll_cell[codim - 1].empty(); codim++) {
+        HumanTime time_level;
+        int dim_face = dim_sym - codim;
+        size_t n_face = 0, n_rep = 0, n_filtered = 0, n_tested = 0, n_cached = 0, n_warm = 0, n_full = 0;
+        size_t n_equiv = 0;
+        for (auto &Y : ll_cell[codim - 1]) {
+          TopData const &td = l_top_data[Y.i_top];
+          // The faces of Y of codimension one, and the action of its
+          // stabilizer in G on the rows of its cone.
+          std::set<Face> set_face = next_level_faces({Y.f}, td.l_facet, td.EXT_cone, dim_face);
+          n_face += set_face.size();
+          std::vector<int> l_pos;
+          for (int i = 0; i < td.EXT_cone.rows(); i++) {
+            if (Y.f[i] == 1) {
+              l_pos.push_back(i);
+            }
+          }
+          MyMatrix<Tint> EXT_Y = SelectRow(td.EXT_cone, Y.f);
+          std::vector<std::vector<int>> l_perm_Y =
+              cone_row_permutations(ring, EXT_Y, projective_stabilizer(ring, Y.EXT, os).l_elt);
+          auto f_restrict = [&](Face const &h) -> Face {
+            Face g(l_pos.size());
+            for (size_t u = 0; u < l_pos.size(); u++) {
+              g[u] = h[l_pos[u]];
+            }
+            return g;
+          };
+          // The facets of the cone containing h, for its upper covers.
+          for (auto &h : set_face) {
+            if (!is_orbit_rep(f_restrict(h), l_perm_Y)) {
+              continue;
+            }
+            if (n_rep % 5000 == 4999) {
+              std::cerr << "CELLS: codim=" << codim << " progress: reps=" << n_rep + 1 << " cells="
+                        << ll_cell[codim].size() << " tested=" << n_tested << " time=" << time_level << "\n";
+            }
+            n_rep++;
+            MyMatrix<Tint> EXT_h = rows_up_to_sign(ring, SelectRow(td.EXT_cone, h));
+            if (RankMat(EXT_h) < n) {
+              continue;
+            }
+            // At the codimension 1: the cone on the other side of the facet
+            // must be a top cell.
+            std::optional<std::pair<int, MyMatrix<Tint>>> opt_match;
+            if (codim == 1) {
+              opt_match = f_top_match(td.map_neighbor.at(h));
+              if (!opt_match) {
+                n_filtered++;
+                continue;
+              }
+            }
+            // The filter: the faces of the cone of codimension codim - 1
+            // containing h are cells.
+            std::vector<Face> l_fac_h;
+            for (auto &F : td.l_facet) {
+              if (h.is_subset_of(F)) {
+                l_fac_h.push_back(F);
+              }
+            }
+            bool pass = true;
+            std::set<Face> set_cover;
+            for (size_t r = 0; r < h.size() && pass; r++) {
+              if (h[r] == 1) {
+                continue;
+              }
+              Face cl(h.size());
+              cl.set();
+              bool any = false;
+              for (auto &F : l_fac_h) {
+                if (F[r] == 1) {
+                  cl &= F;
+                  any = true;
+                }
+              }
+              if (!any || set_cover.count(cl) > 0) {
+                continue;
+              }
+              set_cover.insert(cl);
+              if (rank_forms_face(td.EXT_cone, cl, dim_face + 1) != dim_face + 1) {
+                continue;
+              }
+              MyMatrix<Tint> EXT_cl = rows_up_to_sign(ring, SelectRow(td.EXT_cone, cl));
+              if (RankMat(EXT_cl) == n && l_set_inv_cell[codim - 1].count(config_invariant(EXT_cl, J, -1)) == 0) {
+                pass = false;
+              }
+            }
+            if (!pass) {
+              n_filtered++;
+              continue;
+            }
+            // The orbit of h tested once.
+            std::vector<T> inv = config_invariant(EXT_h, J, -1);
+            std::vector<std::pair<MyMatrix<Tint>, SiegelIntersection>> &l_bucket = l_map_tested[codim][inv];
+            bool known = false;
+            for (auto &pair : l_bucket) {
+              n_equiv++;
+              if (sp_equivalence(ring, EXT_h, pair.first, os)) {
+                known = true;
+                break;
+              }
+            }
+            if (known) {
+              n_cached++;
+              continue;
+            }
+            n_tested++;
+            SiegelIntersection si;
+            if (codim == 1) {
+              // The start: the point of Y, else the one of the top cell on
+              // the other side, mapped by the equivalence.
+              std::optional<std::vector<double>> init;
+              if (!Y.weights.empty()) {
+                init = f_weights_from(Y, EXT_h);
+              } else {
+                CellRep const &Y2 = ll_cell[0][opt_match->first];
+                if (!Y2.weights.empty()) {
+                  // The rows of EXT_h are rows of the cone on the other side,
+                  // so their images are rows of that top cell (same order).
+                  init = f_weights_from(Y2, EXT_h * opt_match->second);
+                }
+              }
+              si = oracle_warm_facet.intersect(EXT_h, init);
+              if (!si.nonempty) {
+                continue;
+              }
+              n_warm++;
+            } else {
+              si = oracle_warm.intersect(EXT_h, f_weights_from(Y, EXT_h));
+              if (si.nonempty) {
+                n_warm++;
+              } else {
+                si = f_intersect(EXT_h);
+                n_full++;
+              }
+            }
+            l_bucket.push_back({EXT_h, si});
+            if (!si.nonempty) {
+              continue;
+            }
+            int64_t order = projective_stabilizer(ring, EXT_h, os).l_elt.size();
+            ll_cell[codim].push_back({Y.i_top, h, EXT_h, si.weights, si.dim, order});
+            l_set_inv_cell[codim].insert(inv);
+            map_dim_stab[si.dim].push_back(order);
+          }
+        }
+        std::map<int, size_t> map_dim_count;
+        for (auto &Z : ll_cell[codim]) {
+          map_dim_count[Z.dim]++;
+        }
+        std::cerr << "CELLS: codim=" << codim << " |orbits of cells|=" << ll_cell[codim].size() << " by dimension:";
+        for (auto &kv : map_dim_count) {
+          std::cerr << " " << kv.first << ":" << kv.second;
+        }
+        std::cerr << " faces=" << n_face << " reps=" << n_rep << " filtered=" << n_filtered << " cached=" << n_cached
+                  << " tested=" << n_tested << " (warm " << n_warm << ", full " << n_full << ") equivalence tests="
+                  << n_equiv << " time=" << time_level << "\n";
+      }
+      T chi(0);
+      for (auto &kv : map_dim_stab) {
+        T sum(0);
+        for (auto &order : kv.second) {
+          sum += T(1) / T(static_cast<long>(order));
+        }
+        std::cerr << "CELLS: dim=" << kv.first << " |orbits|=" << kv.second.size() << " sum 1/|Stab|=" << sum << "\n";
+        chi += (kv.first % 2 == 0) ? sum : T(-sum);
+      }
+      std::cerr << "CELLS: orbifold Euler characteristic of the cells found=" << chi << "\n";
+      std::cerr << "Normal termination of PROJ_SiegelVoronoiCells\n";
+      runtime(time);
+      return 0;
+    }
+    if (ridges_codim > 0) {
+      /*
+        An estimate of the number of transverse cells. A transverse cell of
+        codimension c in its top cell is cut on a face of codimension c of
+        the cone, and near it the Siegel space meets every facet of the
+        cone containing that face in a ridge: so the face is an
+        intersection of ridge facets. The ridge facets of each top cell
+        are found numerically (one solve per orbit of facets, started from
+        a point of the top cell), then the faces of the cone that are
+        intersections of ridge facets are enumerated down to the
+        codimension ridges_codim, one per orbit of the stabilizer of the
+        top cell, without numerical test. Their numbers summed over the top
+        cells bound the number of orbits of transverse cells from above
+        (a face may not meet the Siegel space, and a cell is counted in
+        each top cell containing it); the number of distinct invariants
+        (config_invariant) bounds the number of orbits of these faces under
+        G from below.
+       */
+      SiegelOracle oracle_warm(J, 2, seed);
+      oracle_warm.set_check_doubtful(false);
+      oracle_warm.set_margins({0.01});
+      int dim_sym = n * (n + 1) / 2;
+      std::vector<size_t> l_n_rep(ridges_codim + 1, 0);
+      std::vector<double> l_time(ridges_codim + 1, 0);
+      std::vector<std::set<std::vector<T>>> l_set_inv(ridges_codim + 1);
+      size_t n_facet_rep_tot = 0;
+      double time_ridge = 0;
+      for (size_t i_top = 0; i_top < l_top.size(); i_top++) {
+        TopRep const &top = l_top[i_top];
+        MyMatrix<Tint> EXT_cone = l_perfect[top.i_cone].EXT * top.M;
+        std::vector<Face> l_facet;
+        for (auto &adj : l_perfect[top.i_cone].full_adjacencies(os)) {
+          l_facet.push_back(adj.f_ext);
+        }
+        std::vector<std::vector<int>> l_perm =
+            cone_row_permutations(ring, EXT_cone, projective_stabilizer(ring, top.EXT, os).l_elt);
+        // A point of the top cell, its weights indexed by the rows of top.EXT.
+        MicrosecondTime time_r;
+        oracle.set_margins(l_margin_all);
+        SiegelIntersection si_top = f_intersect(top.EXT);
+        oracle.set_margins(l_margin_facet);
+        if (!si_top.nonempty || si_top.dim != dim_top) {
+          std::cerr << "SIEGEL: no point found in the top cell " << i_top << "\n";
+          throw TerminalException{1};
+        }
+        std::map<MyVector<Tint>, double> map_weight;
+        for (int i = 0; i < top.EXT.rows(); i++) {
+          map_weight[unit_normalize(ring, GetMatrixRow(top.EXT, i))] = si_top.weights[i];
+        }
+        // The ridge facets: one test per orbit, started from the weights of
+        // the point of the top cell on the rows of the facet.
+        std::vector<Face> l_ridge;
+        int n_rep_facet = 0;
+        int n_rep_ridge = 0;
+        for (auto &f : l_facet) {
+          if (!is_orbit_rep(f, l_perm)) {
+            continue;
+          }
+          n_rep_facet++;
+          MyMatrix<Tint> EXT_facet = rows_up_to_sign(ring, SelectRow(EXT_cone, f));
+          std::vector<double> init;
+          for (int i = 0; i < EXT_facet.rows(); i++) {
+            init.push_back(map_weight[unit_normalize(ring, GetMatrixRow(EXT_facet, i))]);
+          }
+          SiegelIntersection si = oracle_warm.intersect(EXT_facet, init);
+          if (si.nonempty && si.dim == dim_top - 1) {
+            n_rep_ridge++;
+            std::set<Face> set_orb;
+            for (auto &perm : l_perm) {
+              set_orb.insert(permute_face(f, perm));
+            }
+            l_ridge.insert(l_ridge.end(), set_orb.begin(), set_orb.end());
+          }
+        }
+        n_facet_rep_tot += n_rep_facet;
+        double t_ridge = static_cast<double>(time_r.const_eval_int64()) / 1e6;
+        time_ridge += t_ridge;
+        std::cerr << "RIDGES: top cell " << i_top << " |EXT|=" << top.EXT.rows() << " facet orbits=" << n_rep_facet
+                  << " ridge orbits=" << n_rep_ridge << " ridge facets=" << l_ridge.size() << " time=" << t_ridge
+                  << "s\n";
+        // The faces that are intersections of ridge facets.
+        std::vector<Face> l_level;
+        for (auto &f : l_ridge) {
+          if (is_orbit_rep(f, l_perm)) {
+            l_level.push_back(f);
+          }
+        }
+        for (int codim = 1; codim <= ridges_codim && !l_level.empty(); codim++) {
+          MicrosecondTime time_l;
+          if (codim > 1) {
+            std::vector<Face> l_rep;
+            for (auto &f : next_level_faces(l_level, l_ridge, EXT_cone, dim_sym - codim)) {
+              if (is_orbit_rep(f, l_perm)) {
+                l_rep.push_back(f);
+              }
+            }
+            l_level = l_rep;
+          }
+          l_n_rep[codim] += l_level.size();
+          for (auto &f : l_level) {
+            l_set_inv[codim].insert(config_invariant(rows_up_to_sign(ring, SelectRow(EXT_cone, f)), J, -1));
+          }
+          double t_l = static_cast<double>(time_l.const_eval_int64()) / 1e6;
+          l_time[codim] += t_l;
+          std::cerr << "RIDGES: top cell " << i_top << " codim=" << codim << " |reps|=" << l_level.size()
+                    << " time=" << t_l << "s\n";
+        }
+      }
+      std::cerr << "RIDGES: facet orbits tested=" << n_facet_rep_tot << " time of the ridge tests=" << time_ridge
+                << "s\n";
+      for (int codim = 1; codim <= ridges_codim; codim++) {
+        std::cerr << "RIDGES: codim=" << codim << " (cells of dimension " << dim_top - codim
+                  << ") orbits of transverse cells between " << l_set_inv[codim].size() << " and " << l_n_rep[codim]
+                  << ", time=" << l_time[codim] << "s\n";
+      }
+      std::cerr << "Normal termination of PROJ_SiegelVoronoiCells\n";
+      runtime(time);
+      return 0;
+    }
     if (probe_codim > 0) {
       /*
         The faces of the top cells down to the codimension probe_codim (as
@@ -567,28 +1209,6 @@ int main(int argc, char *argv[]) {
         this gives all the cells in the Siegel space and the orbifold Euler
         characteristic.
        */
-      // An invariant of the faces up to G, with the dimension of their
-      // intersection with the Siegel space: the sorted list of the sorted
-      // absolute pairings of each vector with the others.
-      auto f_invariant = [&](MyMatrix<Tint> const &EXT, int const &dim) -> std::vector<Tint> {
-        MyMatrix<Tint> G = EXT * J * EXT.transpose();
-        int k = EXT.rows();
-        std::vector<std::vector<Tint>> l_prof(k);
-        for (int i = 0; i < k; i++) {
-          for (int j = 0; j < k; j++) {
-            if (j != i) {
-              l_prof[i].push_back(abs(G(i, j)));
-            }
-          }
-          std::sort(l_prof[i].begin(), l_prof[i].end());
-        }
-        std::sort(l_prof.begin(), l_prof.end());
-        std::vector<Tint> V{Tint(dim), Tint(k)};
-        for (auto &prof : l_prof) {
-          V.insert(V.end(), prof.begin(), prof.end());
-        }
-        return V;
-      };
       size_t n_equiv_test = 0;
       size_t max_bucket = 0;
       struct ProbeStat {
@@ -602,7 +1222,7 @@ int main(int argc, char *argv[]) {
         double time_equiv = 0;
       };
       std::vector<ProbeStat> l_stat(probe_codim + 1);
-      std::map<std::vector<Tint>, std::vector<MyMatrix<Tint>>> map_orbit;
+      std::map<std::vector<T>, std::vector<MyMatrix<Tint>>> map_orbit;
       // The orbits of cells by dimension, with the orders of the stabilizers.
       std::map<int, std::vector<int64_t>> map_dim_stab;
       int dim_sym = n * (n + 1) / 2;
@@ -617,56 +1237,8 @@ int main(int argc, char *argv[]) {
         for (auto &adj : l_perfect[top.i_cone].full_adjacencies(os)) {
           l_facet.push_back(adj.f_ext);
         }
-        // The stabilizer as permutations of the rows of EXT_cone: the rows
-        // may contain v and -v (the minimal vectors of the perfect form),
-        // so the images are matched exactly, and up to sign only for a row
-        // whose negative is not a row.
-        std::map<MyVector<Tint>, int> map_row, map_row_unit;
-        for (int i = 0; i < n_ray; i++) {
-          map_row[GetMatrixRow(EXT_cone, i)] = i;
-          map_row_unit[unit_normalize(ring, GetMatrixRow(EXT_cone, i))] = i;
-        }
-        std::vector<std::vector<int>> l_perm;
-        for (auto &elt : projective_stabilizer(ring, top.EXT, os).l_elt) {
-          std::vector<int> perm(n_ray);
-          for (int i = 0; i < n_ray; i++) {
-            MyVector<Tint> img = elt.transpose() * GetMatrixRow(EXT_cone, i);
-            auto iter = map_row.find(img);
-            if (iter == map_row.end()) {
-              iter = map_row_unit.find(unit_normalize(ring, img));
-              if (iter == map_row_unit.end()) {
-                std::cerr << "PROBE: the stabilizer does not preserve the cone\n";
-                throw TerminalException{1};
-              }
-            }
-            perm[i] = iter->second;
-          }
-          l_perm.push_back(perm);
-        }
-        for (auto &perm : l_perm) {
-          std::vector<int> sorted = perm;
-          std::sort(sorted.begin(), sorted.end());
-          for (int i = 0; i < n_ray; i++) {
-            if (sorted[i] != i) {
-              std::cerr << "PROBE: the action of the stabilizer on the rows is not a permutation\n";
-              throw TerminalException{1};
-            }
-          }
-        }
-        auto f_is_rep = [&](Face const &f) -> bool {
-          for (auto &perm : l_perm) {
-            Face img(n_ray);
-            for (int i = 0; i < n_ray; i++) {
-              if (f[i] == 1) {
-                img[perm[i]] = 1;
-              }
-            }
-            if (img < f) {
-              return false;
-            }
-          }
-          return true;
-        };
+        std::vector<std::vector<int>> l_perm =
+            cone_row_permutations(ring, EXT_cone, projective_stabilizer(ring, top.EXT, os).l_elt);
         Face f_all(n_ray);
         f_all.set();
         std::vector<Face> l_level{f_all};
@@ -674,27 +1246,10 @@ int main(int argc, char *argv[]) {
           ProbeStat &st = l_stat[codim];
           MicrosecondTime time_g;
           int dim_face = dim_sym - codim;
-          std::set<Face> set_next;
-          for (auto &f : l_level) {
-            std::set<Face> set_cand;
-            for (auto &F : l_facet) {
-              Face h = f & F;
-              if (h != f && static_cast<int>(h.count()) >= dim_face) {
-                set_cand.insert(h);
-              }
-            }
-            for (auto &h : set_cand) {
-              if (set_next.count(h) > 0) {
-                continue;
-              }
-              if (rank_forms_face(EXT_cone, h, dim_face) == dim_face) {
-                set_next.insert(h);
-              }
-            }
-          }
+          std::set<Face> set_next = next_level_faces(l_level, l_facet, EXT_cone, dim_face);
           std::vector<Face> l_rep;
           for (auto &f : set_next) {
-            if (f_is_rep(f)) {
+            if (is_orbit_rep(f, l_perm)) {
               l_rep.push_back(f);
             }
           }
@@ -720,7 +1275,7 @@ int main(int argc, char *argv[]) {
             }
             l_meet.push_back(f);
             MicrosecondTime time_e;
-            std::vector<MyMatrix<Tint>> &l_bucket = map_orbit[f_invariant(EXT_face, si.dim)];
+            std::vector<MyMatrix<Tint>> &l_bucket = map_orbit[config_invariant(EXT_face, J, si.dim)];
             max_bucket = std::max(max_bucket, l_bucket.size());
             bool is_new = true;
             for (auto &EXT2 : l_bucket) {
@@ -848,20 +1403,8 @@ int main(int argc, char *argv[]) {
     std::vector<std::vector<double>> ll_margin(7);
     int n_ridge_non_facet = 0;
     int n_doubtful = 0;
-    // An invariant of the configurations up to G: the size and the sorted
-    // absolute values of the pairing.
-    auto f_invariant = [&](MyMatrix<Tint> const &EXT) -> std::vector<Tint> {
-      MyMatrix<Tint> G = EXT * J * EXT.transpose();
-      std::vector<Tint> V{Tint(EXT.rows())};
-      for (int i = 0; i < EXT.rows(); i++) {
-        for (int j = i + 1; j < EXT.rows(); j++) {
-          V.push_back(abs(G(i, j)));
-        }
-      }
-      std::sort(V.begin() + 1, V.end());
-      return V;
-    };
-    std::map<std::vector<Tint>, std::vector<std::pair<MyMatrix<Tint>, SiegelIntersection>>> map_orbit_si;
+    auto f_invariant = [&](MyMatrix<Tint> const &EXT) -> std::vector<T> { return config_invariant(EXT, J, -1); };
+    std::map<std::vector<T>, std::vector<std::pair<MyMatrix<Tint>, SiegelIntersection>>> map_orbit_si;
     auto f_find_orbit = [&](MyMatrix<Tint> const &EXT) -> std::optional<SiegelIntersection> {
       auto iter = map_orbit_si.find(f_invariant(EXT));
       if (iter == map_orbit_si.end()) {

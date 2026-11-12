@@ -171,9 +171,33 @@ cells are the cells of the Siegel space of J (the positive forms A with
   than their dimension. For Sp_6(Z) the first E6 top cell takes about two
   hours down to the codimension 2 (the numerical test, 0.5 s per face).
 
-In the modes `fast` and `probeC` the top cells (perfect cone, matrix,
-vectors) are written to `output.top` after the walk, and read from it,
-without walking, when it exists (the walk of Sp_6(Z) takes about 10 hours).
+* `ridgesC`: the ridge facets of the top cells (a solve per orbit of
+  facets started from a point of the top cell, about 4 ms instead of 0.5 s),
+  then the faces of the cones that are intersections of ridge facets, down
+  to the codimension C, without numerical test: an upper bound on the
+  transverse cells, loose in the low dimensions;
+* `cellsC`: the transverse cells by orbits under G, level by level. Each
+  orbit of cells is expanded once, its faces taken up to its own
+  stabilizer in G (not the one of a top cell); a facet of a top cell is a
+  candidate only if the cone on its other side is a top cell (at a ridge
+  the Siegel space crosses into it), a deeper face only if the faces one
+  level up containing it are cells; each candidate orbit is tested once,
+  from a point of its parent cell. The equivalences use canonical forms
+  (`sp_equivalence`: the weighted configuration with the Gram matrix
+  Q^{-1} + J, Q the sum of the v^T v, then the integrality of the map),
+  the backtracking of `list_embedding` being far too slow on the cones of
+  Sp_6(Z). For Sp_4(Z), K(2), K(3) it gives exactly the transverse cells.
+
+In the modes `fast`, `probeC`, `ridgesC` and `cellsC` the top cells
+(perfect cone, matrix, vectors) are written to `output.top` after the walk,
+and read from it, without walking, when it exists (the walk of Sp_6(Z)
+takes about 10 hours).
+
+Sp_6(Z) with `cells3`: the orbits of transverse cells of the dimensions
+12, 11, 10 are 47, 822, 6030 (30 min for each of the two levels), and more
+than 19808 of the dimension 9 when stopped after 3 hours. The growth
+suggests 10^5 orbits or more in the middle dimensions: days for the
+transverse cells alone, and the non-transverse ones are missing.
 * `rays`: as `top`, the ridges found by shooting rays from an interior
   point instead of testing all the facets (fast, but misses ridges: 20 or
   21 top cells instead of 22 for K(3)).

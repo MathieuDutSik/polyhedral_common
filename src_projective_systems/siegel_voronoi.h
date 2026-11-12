@@ -131,10 +131,13 @@ private:
   /*
     A point of the Siegel space in the cone of the rays with the weights of
     l_group, by Levenberg-Marquardt on the residual from n_start random
-    starts. Returns the weights.
+    starts, preceded by a start from the weights init when given (positive
+    weights of a nearby point, for instance of a cell containing this one).
+    Returns the weights.
    */
   std::optional<std::vector<double>> search_point(std::vector<MatD> const &l_ray,
-                                                  std::vector<WeightGroup> const &l_group) {
+                                                  std::vector<WeightGroup> const &l_group,
+                                                  std::optional<std::vector<double>> const &init = {}) {
     int k = l_ray.size();
     std::uniform_real_distribution<double> dist(-2.0, 2.0);
     auto f_form = [&](std::vector<double> const &p) -> MatD {
@@ -144,10 +147,18 @@ private:
       }
       return A;
     };
-    for (int i_start = 0; i_start < n_start; i_start++) {
+    int n_try = n_start + (init ? 1 : 0);
+    for (int i_start = 0; i_start < n_try; i_start++) {
       Eigen::VectorXd q(k);
-      for (int i = 0; i < k; i++) {
-        q(i) = dist(gen);
+      if (init && i_start == 0) {
+        // The softmax of log(p) is p normalized in each group.
+        for (int i = 0; i < k; i++) {
+          q(i) = std::log(std::max((*init)[i], 1e-12));
+        }
+      } else {
+        for (int i = 0; i < k; i++) {
+          q(i) = dist(gen);
+        }
       }
       double mu = 1e-3;
       std::pair<std::vector<double>, Eigen::MatrixXd> pw = weights(q, l_group);
@@ -225,12 +236,34 @@ public:
     }
   }
   /*
+    A point of the Siegel space in the open cone C(X) of a cell known to
+    exist (a top cell reached across a certified ridge, for instance): the
+    margins t / |X| for t = 1e-2, 1e-3, 1e-4 are tried in turn, small
+    margins being accepted here. Returns the weights.
+   */
+  std::optional<std::vector<double>> point_of_existing_cell(MyMatrix<Tint> const &EXT) {
+    int k = EXT.rows();
+    std::vector<MatD> l_ray = get_rays(EXT);
+    std::vector<int> l_all(k);
+    for (int i = 0; i < k; i++) {
+      l_all[i] = i;
+    }
+    for (double t_base : {1e-2, 1e-3, 1e-4}) {
+      double t = t_base / k;
+      std::optional<std::vector<double>> opt = search_point(l_ray, {{l_all, t, 1 - k * t}});
+      if (opt) {
+        return opt;
+      }
+    }
+    return {};
+  }
+  /*
     Whether the relative interior of C(X) (X the rows of EXT, up to sign)
     meets the Siegel space, and the dimension of the intersection. The
     margins are tried from the largest: a point found with weights at
     least t is in the relative interior.
    */
-  SiegelIntersection intersect(MyMatrix<Tint> const &EXT) {
+  SiegelIntersection intersect(MyMatrix<Tint> const &EXT, std::optional<std::vector<double>> const &init = {}) {
     int k = EXT.rows();
     std::vector<MatD> l_ray = get_rays(EXT);
     MyMatrix<T> ScalMat(k, n * (n + 1) / 2);
@@ -261,7 +294,7 @@ public:
       for (int i = 0; i < k; i++) {
         l_all[i] = i;
       }
-      std::optional<std::vector<double>> opt = search_point(l_ray, {{l_all, t, 1 - k * t}});
+      std::optional<std::vector<double>> opt = search_point(l_ray, {{l_all, t, 1 - k * t}}, init);
       if (!opt) {
         continue;
       }
