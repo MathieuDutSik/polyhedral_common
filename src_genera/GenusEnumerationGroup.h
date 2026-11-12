@@ -6,6 +6,7 @@
 #include "GenusEnumeration.h"
 #include "LatticeOrbitSplitCanonical.h"
 #include "GroupNeighborModP.h"
+#include "ResidueArithmetic.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -95,63 +96,71 @@ template <typename T, typename Tgroup> struct GenusEnumerationGroupResult {
 };
 
 /*
-  The exit status of the programs that enumerate genera of pairs, so that
-  an incomplete or inconsistent result cannot pass for a complete one:
-  0 when the mass closed, 2 when the classes found weigh less than the
-  target (the primes or the rounds were exhausted: another prime or another
-  seed is needed), 3 when they weigh more (the target is wrong).
+  The target mass in the field Tmass of the group orders, from the rational
+  type T of the computation of the mass. The two need not have a direct
+  conversion (boost rationals and mpq_class), so the numerator and the
+  denominator go through their decimal writing, as the mass files do
+  (ReadMassFile).
  */
-int const GENUS_GROUP_EXIT_INCOMPLETE = 2;
-int const GENUS_GROUP_EXIT_MASS_EXCEEDED = 3;
+template <typename Tmass, typename T> Tmass MassToGroupField(T const &x) {
+  auto convert = [](auto const &z) -> Tmass {
+    std::ostringstream os;
+    os << z;
+    std::istringstream is(os.str());
+    Tmass res;
+    if (!(is >> res)) {
+      std::cerr << "GENUS_GROUP: failed to convert " << os.str() << "\n";
+      throw TerminalException{1};
+    }
+    return res;
+  };
+  return convert(GetNumerator_z(x)) / convert(GetDenominator_z(x));
+}
+
+/*
+  An enumeration of a genus of pairs that did not close its mass. The
+  programs write the result first, so that the classes found are kept,
+  then call CheckGenusEnumerationGroupResult, which throws:
+  - GenusMassExceededException when the classes found weigh more than the
+    target: the target mass is wrong (or two isometric classes were not
+    recognised as such);
+  - GenusMassNotClosedException when they weigh less: the primes or the
+    rounds were exhausted, and another prime or another seed is needed.
+  The main functions turn them into the exit statuses 3 and 2.
+ */
+struct GenusMassExceededException {};
+struct GenusMassNotClosedException {};
+int const GENUS_EXIT_MASS_NOT_CLOSED = 2;
+int const GENUS_EXIT_MASS_EXCEEDED = 3;
 
 template <typename T, typename Tgroup>
-int GenusEnumerationGroupExitStatus(
+void CheckGenusEnumerationGroupResult(
     GenusEnumerationGroupResult<T, Tgroup> const &result) {
   if (result.mass_exceeded()) {
-    return GENUS_GROUP_EXIT_MASS_EXCEEDED;
+    throw GenusMassExceededException{};
   }
   if (!result.complete) {
-    return GENUS_GROUP_EXIT_INCOMPLETE;
+    throw GenusMassNotClosedException{};
   }
-  return 0;
 }
 
-inline int64_t ModPosInt64(int64_t a, int64_t m) {
-  a %= m;
-  return (a < 0) ? a + m : a;
-}
+// residues modulo p or p^2, through ResidueArithmetic.h
+inline int64_t ModPosInt64(int64_t a, int64_t m) { return ResMod(a, m); }
 
 inline int64_t PowModInt64(int64_t a, int64_t e, int64_t m) {
-  int64_t res = 1 % m;
-  a = ModPosInt64(a, m);
+  int64_t res = ResMod(1, m);
+  a = ResMod(a, m);
   while (e > 0) {
     if (e & 1) {
-      res = (res * a) % m;
+      res = ResMul(res, a, m);
     }
-    a = (a * a) % m;
+    a = ResMul(a, a, m);
     e >>= 1;
   }
   return res;
 }
 
-inline int64_t InverseModPosInt64(int64_t u, int64_t m) {
-  int64_t a = ModPosInt64(u, m), b = m, x0 = 1, x1 = 0;
-  while (b != 0) {
-    int64_t q = a / b;
-    int64_t t = a - q * b;
-    a = b;
-    b = t;
-    t = x0 - q * x1;
-    x0 = x1;
-    x1 = t;
-  }
-  if (a != 1) {
-    std::cerr << "GENUS_GROUP: " << u << " is not invertible modulo " << m
-              << "\n";
-    throw TerminalException{1};
-  }
-  return ModPosInt64(x0, m);
-}
+inline int64_t InverseModPosInt64(int64_t u, int64_t m) { return ResInv(u, m); }
 
 using ModMatrix = std::vector<std::vector<int64_t>>;
 
@@ -163,12 +172,12 @@ inline ModMatrix ModMatrixProduct(ModMatrix const &X, ModMatrix const &Y,
   ModMatrix Z(n, std::vector<int64_t>(l, 0));
   for (size_t i = 0; i < n; i++) {
     for (size_t j = 0; j < k; j++) {
-      int64_t x = X[i][j];
+      int64_t x = ResMod(X[i][j], mod);
       if (x == 0) {
         continue;
       }
       for (size_t u = 0; u < l; u++) {
-        Z[i][u] = (Z[i][u] + x * Y[j][u]) % mod;
+        Z[i][u] = ResAdd(Z[i][u], ResMul(x, ResMod(Y[j][u], mod), mod), mod);
       }
     }
   }

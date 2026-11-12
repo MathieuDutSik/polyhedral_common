@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "Arithmetic_dispatch_types.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
@@ -165,12 +166,15 @@ std::vector<MyMatrix<T>> OrthogonalGroupElements(MyMatrix<T> const &A,
       }
     }
   }
-  order_T = UniversalScalarConversion<T, typename Tgroup::Tint>(aut.order);
-  if (ScalarFromInt64<T>(static_cast<int64_t>(elts.size())) != order_T) {
+  // compared in the integers of the group, which need not convert to T
+  using TintGroup = typename Tgroup::Tint;
+  if (UniversalScalarConversion<TintGroup, int64_t>(
+          static_cast<int64_t>(elts.size())) != aut.order) {
     std::cerr << "GENUS_IsometryMass: listed " << elts.size()
               << " elements but |O(L)| = " << aut.order << "\n";
     throw TerminalException{1};
   }
+  order_T = ScalarFromInt64<T>(static_cast<int64_t>(elts.size()));
   return elts;
 }
 
@@ -257,17 +261,220 @@ void ProcessGroupCheck(std::string const &FileGram, std::string const &FileIsom,
   WriteCheckGroups(os, groups, ScalarFromInt64<T>(n_cent));
 }
 
+/*
+  The modes, for the arithmetic T, Tint chosen by arithmetic= (see main).
+ */
+template <typename T, typename Tint, typename Tgroup>
+void RunIsometryMass(int argc, char *argv[], QuadLValueMethod lvalue) {
+  std::string mode = argv[1];
+  if (mode == "quadab") {
+    // the standard mass of a quadratic lattice of rank m over the real
+    // subfield of Q(zeta_n) fixed by <H, -1>; for m even, "square" or
+    // the generators of H_E for E = K(sqrt disc)
+    int64_t n = std::stoll(argv[2]);
+    auto parse = [](std::string const &lst) -> std::vector<int64_t> {
+      std::vector<int64_t> res;
+      std::stringstream ss(lst);
+      std::string tok;
+      while (std::getline(ss, tok, ',')) {
+        if (!tok.empty()) {
+          res.push_back(std::stoll(tok));
+        }
+      }
+      return res;
+    };
+    AbelianCMField FK = MakeAbelianRealField(n, parse(argv[3]));
+    int m = std::stoi(argv[4]);
+    bool square = (argc >= 6 && std::string(argv[5]) == "square");
+    std::optional<AbelianCMField> FE;
+    if (argc >= 6 && !square) {
+      FE = MakeAbelianCMField(n, parse(argv[5]));
+    }
+    std::optional<T> sm =
+        StandardQuadraticMassAbelian<T>(FK, m, square, FE);
+    std::cout << "return rec(standard_mass:=";
+    if (sm) {
+      std::cout << *sm;
+    } else {
+      std::cout << "fail";
+    }
+    std::cout << ");\n";
+    return;
+  }
+  if (mode == "quadablocal") {
+    // the local factors of a quadratic lattice over a
+    // totally real abelian field: the trace Gram matrix, the actions of a
+    // Z-basis of O_K, n and the generators of H (-1 is added)
+    MyMatrix<T> B = ReadMatrixFile<T>(argv[2]);
+    std::vector<MyMatrix<T>> Omega = ReadListMatrixFile<T>(argv[3]);
+    int64_t n = std::stoll(argv[4]);
+    std::vector<int64_t> gens;
+    {
+      std::stringstream ss(argv[5]);
+      std::string tok;
+      while (std::getline(ss, tok, ',')) {
+        if (!tok.empty()) {
+          gens.push_back(std::stoll(tok));
+        }
+      }
+    }
+    AbelianCMField FK = MakeAbelianRealField(n, gens);
+    std::map<int64_t, std::optional<T>> facs =
+        QuadraticLocalFactors(B, Omega, FK);
+    std::optional<T> local_mass = T(1);
+    for (auto const &kv : facs) {
+      if (kv.second && local_mass) {
+        *local_mass *= *kv.second;
+      } else {
+        local_mass = {};
+      }
+    }
+    std::optional<T> mass =
+        QuadraticMassAbelianLattice(B, Omega, FK, lvalue);
+    std::cout << "return rec(mass:=";
+    if (mass) {
+      std::cout << *mass;
+    } else {
+      std::cout << "fail";
+    }
+    std::cout << ", local_mass:=";
+    if (local_mass) {
+      std::cout << *local_mass;
+    } else {
+      std::cout << "fail";
+    }
+    std::cout << ", factors:=[";
+    bool first = true;
+    for (auto const &kv : facs) {
+      std::cout << (first ? "" : ", ") << "[" << kv.first << ", ";
+      if (kv.second) {
+        std::cout << *kv.second;
+      } else {
+        std::cout << "fail";
+      }
+      std::cout << "]";
+      first = false;
+    }
+    std::cout << "]);\n";
+    return;
+  }
+  if (mode == "hermitianablattice") {
+    // the mass of a Hermitian lattice over an abelian CM field: the trace
+    // Gram matrix, the actions of a Z-basis of O_E (a number, then the
+    // matrices), n and the generators of H
+    MyMatrix<T> B = ReadMatrixFile<T>(argv[2]);
+    std::vector<MyMatrix<T>> Omega = ReadListMatrixFile<T>(argv[3]);
+    int64_t n = std::stoll(argv[4]);
+    std::vector<int64_t> gens;
+    {
+      std::stringstream ss(argv[5]);
+      std::string tok;
+      while (std::getline(ss, tok, ',')) {
+        if (!tok.empty()) {
+          gens.push_back(std::stoll(tok));
+        }
+      }
+    }
+    AbelianCMField F = MakeAbelianCMField(n, gens);
+    std::optional<T> ms = HermitianMassAbelianLattice(B, Omega, F);
+    if (ms) {
+      std::cout << "return rec(mass:=" << *ms << ");\n";
+    } else {
+      std::cout << "return rec(mass:=fail);\n";
+    }
+    return;
+  }
+  if (mode == "hermitianab") {
+    // an abelian CM field: the subfield of Q(zeta_n) fixed by the
+    // subgroup generated by the residues of the comma separated list
+    int64_t n = std::stoll(argv[2]);
+    std::vector<int64_t> gens;
+    {
+      std::string lst = argv[3];
+      std::stringstream ss(lst);
+      std::string tok;
+      while (std::getline(ss, tok, ',')) {
+        if (!tok.empty()) {
+          gens.push_back(std::stoll(tok));
+        }
+      }
+    }
+    int m = std::stoi(argv[4]);
+    AbelianCMField F = MakeAbelianCMField(n, gens);
+    std::cout << "return rec(n:=" << n
+              << ", degree:=" << AbelianFieldDegree(F) << ", m:=" << m
+              << ", standard_mass:="
+              << StandardHermitianMassAbelian<T>(F, m);
+    if (m == 1) {
+      std::cout << ", mass:=" << RankOneHermitianMassAbelian<T>(F);
+    }
+    std::cout << ");\n";
+    return;
+  }
+  if (mode == "hermitian") {
+    // the standard mass of rank m over Q(zeta_d), and the mass in rank one
+    int64_t d = std::stoll(argv[2]);
+    int m = std::stoi(argv[3]);
+    std::cout << "return rec(d:=" << d << ", m:=" << m << ", standard_mass:="
+              << StandardHermitianMassCyclotomic<T>(d, m);
+    if (m == 1) {
+      std::cout << ", mass:=" << RankOneHermitianMassCyclotomic<T>(d);
+    }
+    std::cout << ");\n";
+    return;
+  }
+  std::string FileGram = argv[2];
+  std::string FileIsom = argv[3];
+  if (mode == "mass") {
+    std::string FileHerm = (argc >= 5) ? argv[4] : "none";
+    std::string OutFile = (argc >= 6) ? argv[5] : "stderr";
+    auto f = [&](std::ostream &os) -> void {
+      ProcessMass<T, Tint>(FileGram, FileIsom, FileHerm, lvalue, os);
+    };
+    FILE_PrintStderrStdoutFile(OutFile, f);
+  } else if (mode == "check") {
+    std::string FileHerm = (argc >= 5) ? argv[4] : "none";
+    std::string OutFile = (argc >= 6) ? argv[5] : "stderr";
+    auto f = [&](std::ostream &os) -> void {
+      ProcessCheck<T, Tint, Tgroup>(FileGram, FileIsom, FileHerm, lvalue, os);
+    };
+    FILE_PrintStderrStdoutFile(OutFile, f);
+  } else if (mode == "group") {
+    std::string OutFile = (argc >= 5) ? argv[4] : "stderr";
+    auto f = [&](std::ostream &os) -> void {
+      ProcessGroupMass<T, Tint>(FileGram, FileIsom, lvalue, os);
+    };
+    FILE_PrintStderrStdoutFile(OutFile, f);
+  } else if (mode == "groupcheck") {
+    std::string OutFile = (argc >= 5) ? argv[4] : "stderr";
+    auto f = [&](std::ostream &os) -> void {
+      ProcessGroupCheck<T, Tint, Tgroup>(FileGram, FileIsom, lvalue, os);
+    };
+    FILE_PrintStderrStdoutFile(OutFile, f);
+  } else {
+    std::cerr << "GENUS_IsometryMass: the mode must be mass, check, group "
+                 "or groupcheck\n";
+    throw TerminalException{1};
+  }
+}
+
 int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    using T = mpq_class;
-    using Tint = mpz_class;
+    // the group orders are in TintGroup, whatever the arithmetic of the
+    // coordinates T / Tint chosen below
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using TintGroup = mpz_class;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
     QuadLValueMethod lvalue = ExtractQuadLValueOption(argc, argv);
+    std::string arith = ExtractArithmeticOption(argc, argv, "gmp");
+    ArithmeticDispatch dispatch;
+    add_rational_integer_arithmetics_by_library(
+        dispatch, [&]<typename T, typename Tint>() -> void {
+          RunIsometryMass<T, Tint, Tgroup>(argc, argv, lvalue);
+        });
     if (argc != 4 && argc != 5 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -320,198 +527,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "        with E not abelian, in double precision (when\n";
       std::cerr << "        it suffices), MPFR (default) or certified with\n";
       std::cerr << "        Arb (needs flint, about twice the time)\n";
+      std::cerr << "arithmetic=NAME (anywhere, optional, default gmp): the\n";
+      std::cerr << "        arithmetic of the computation, among\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
-    std::string mode = argv[1];
-    if (mode == "quadab") {
-      // the standard mass of a quadratic lattice of rank m over the real
-      // subfield of Q(zeta_n) fixed by <H, -1>; for m even, "square" or
-      // the generators of H_E for E = K(sqrt disc)
-      int64_t n = std::stoll(argv[2]);
-      auto parse = [](std::string const &lst) -> std::vector<int64_t> {
-        std::vector<int64_t> res;
-        std::stringstream ss(lst);
-        std::string tok;
-        while (std::getline(ss, tok, ',')) {
-          if (!tok.empty()) {
-            res.push_back(std::stoll(tok));
-          }
-        }
-        return res;
-      };
-      AbelianCMField FK = MakeAbelianRealField(n, parse(argv[3]));
-      int m = std::stoi(argv[4]);
-      bool square = (argc >= 6 && std::string(argv[5]) == "square");
-      std::optional<AbelianCMField> FE;
-      if (argc >= 6 && !square) {
-        FE = MakeAbelianCMField(n, parse(argv[5]));
-      }
-      std::optional<mpq_class> sm =
-          StandardQuadraticMassAbelian<mpq_class>(FK, m, square, FE);
-      std::cout << "return rec(standard_mass:=";
-      if (sm) {
-        std::cout << *sm;
-      } else {
-        std::cout << "fail";
-      }
-      std::cout << ");\n";
-      return 0;
-    }
-    if (mode == "quadablocal") {
-      // the local factors of a quadratic lattice over a
-      // totally real abelian field: the trace Gram matrix, the actions of a
-      // Z-basis of O_K, n and the generators of H (-1 is added)
-      MyMatrix<T> B = ReadMatrixFile<T>(argv[2]);
-      std::vector<MyMatrix<T>> Omega = ReadListMatrixFile<T>(argv[3]);
-      int64_t n = std::stoll(argv[4]);
-      std::vector<int64_t> gens;
-      {
-        std::stringstream ss(argv[5]);
-        std::string tok;
-        while (std::getline(ss, tok, ',')) {
-          if (!tok.empty()) {
-            gens.push_back(std::stoll(tok));
-          }
-        }
-      }
-      AbelianCMField FK = MakeAbelianRealField(n, gens);
-      std::map<int64_t, std::optional<mpq_class>> facs =
-          QuadraticLocalFactors(B, Omega, FK);
-      std::optional<mpq_class> local_mass = mpq_class(1);
-      for (auto const &kv : facs) {
-        if (kv.second && local_mass) {
-          *local_mass *= *kv.second;
-        } else {
-          local_mass = {};
-        }
-      }
-      std::optional<mpq_class> mass =
-          QuadraticMassAbelianLattice(B, Omega, FK, lvalue);
-      std::cout << "return rec(mass:=";
-      if (mass) {
-        std::cout << *mass;
-      } else {
-        std::cout << "fail";
-      }
-      std::cout << ", local_mass:=";
-      if (local_mass) {
-        std::cout << *local_mass;
-      } else {
-        std::cout << "fail";
-      }
-      std::cout << ", factors:=[";
-      bool first = true;
-      for (auto const &kv : facs) {
-        std::cout << (first ? "" : ", ") << "[" << kv.first << ", ";
-        if (kv.second) {
-          std::cout << *kv.second;
-        } else {
-          std::cout << "fail";
-        }
-        std::cout << "]";
-        first = false;
-      }
-      std::cout << "]);\n";
-      return 0;
-    }
-    if (mode == "hermitianablattice") {
-      // the mass of a Hermitian lattice over an abelian CM field: the trace
-      // Gram matrix, the actions of a Z-basis of O_E (a number, then the
-      // matrices), n and the generators of H
-      MyMatrix<T> B = ReadMatrixFile<T>(argv[2]);
-      std::vector<MyMatrix<T>> Omega = ReadListMatrixFile<T>(argv[3]);
-      int64_t n = std::stoll(argv[4]);
-      std::vector<int64_t> gens;
-      {
-        std::stringstream ss(argv[5]);
-        std::string tok;
-        while (std::getline(ss, tok, ',')) {
-          if (!tok.empty()) {
-            gens.push_back(std::stoll(tok));
-          }
-        }
-      }
-      AbelianCMField F = MakeAbelianCMField(n, gens);
-      std::optional<mpq_class> ms = HermitianMassAbelianLattice(B, Omega, F);
-      if (ms) {
-        std::cout << "return rec(mass:=" << *ms << ");\n";
-      } else {
-        std::cout << "return rec(mass:=fail);\n";
-      }
-      return 0;
-    }
-    if (mode == "hermitianab") {
-      // an abelian CM field: the subfield of Q(zeta_n) fixed by the
-      // subgroup generated by the residues of the comma separated list
-      int64_t n = std::stoll(argv[2]);
-      std::vector<int64_t> gens;
-      {
-        std::string lst = argv[3];
-        std::stringstream ss(lst);
-        std::string tok;
-        while (std::getline(ss, tok, ',')) {
-          if (!tok.empty()) {
-            gens.push_back(std::stoll(tok));
-          }
-        }
-      }
-      int m = std::stoi(argv[4]);
-      AbelianCMField F = MakeAbelianCMField(n, gens);
-      std::cout << "return rec(n:=" << n
-                << ", degree:=" << AbelianFieldDegree(F) << ", m:=" << m
-                << ", standard_mass:="
-                << StandardHermitianMassAbelian<mpq_class>(F, m);
-      if (m == 1) {
-        std::cout << ", mass:=" << RankOneHermitianMassAbelian<mpq_class>(F);
-      }
-      std::cout << ");\n";
-      return 0;
-    }
-    if (mode == "hermitian") {
-      // the standard mass of rank m over Q(zeta_d), and the mass in rank one
-      int64_t d = std::stoll(argv[2]);
-      int m = std::stoi(argv[3]);
-      std::cout << "return rec(d:=" << d << ", m:=" << m << ", standard_mass:="
-                << StandardHermitianMassCyclotomic<mpq_class>(d, m);
-      if (m == 1) {
-        std::cout << ", mass:=" << RankOneHermitianMassCyclotomic<mpq_class>(d);
-      }
-      std::cout << ");\n";
-      return 0;
-    }
-    std::string FileGram = argv[2];
-    std::string FileIsom = argv[3];
-    if (mode == "mass") {
-      std::string FileHerm = (argc >= 5) ? argv[4] : "none";
-      std::string OutFile = (argc >= 6) ? argv[5] : "stderr";
-      auto f = [&](std::ostream &os) -> void {
-        ProcessMass<T, Tint>(FileGram, FileIsom, FileHerm, lvalue, os);
-      };
-      FILE_PrintStderrStdoutFile(OutFile, f);
-    } else if (mode == "check") {
-      std::string FileHerm = (argc >= 5) ? argv[4] : "none";
-      std::string OutFile = (argc >= 6) ? argv[5] : "stderr";
-      auto f = [&](std::ostream &os) -> void {
-        ProcessCheck<T, Tint, Tgroup>(FileGram, FileIsom, FileHerm, lvalue, os);
-      };
-      FILE_PrintStderrStdoutFile(OutFile, f);
-    } else if (mode == "group") {
-      std::string OutFile = (argc >= 5) ? argv[4] : "stderr";
-      auto f = [&](std::ostream &os) -> void {
-        ProcessGroupMass<T, Tint>(FileGram, FileIsom, lvalue, os);
-      };
-      FILE_PrintStderrStdoutFile(OutFile, f);
-    } else if (mode == "groupcheck") {
-      std::string OutFile = (argc >= 5) ? argv[4] : "stderr";
-      auto f = [&](std::ostream &os) -> void {
-        ProcessGroupCheck<T, Tint, Tgroup>(FileGram, FileIsom, lvalue, os);
-      };
-      FILE_PrintStderrStdoutFile(OutFile, f);
-    } else {
-      std::cerr << "GENUS_IsometryMass: the mode must be mass, check, group "
-                   "or groupcheck\n";
-      throw TerminalException{1};
-    }
+    dispatch.run(arith);
     std::cerr << "Normal termination of GENUS_IsometryMass\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GENUS_IsometryMass\n";

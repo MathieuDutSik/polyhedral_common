@@ -75,10 +75,10 @@ inline PrimaryQuadModule DirectSumModule(PrimaryQuadModule const &M1,
     int64_t scale = M.N / Mi.N;
     for (size_t i = 0; i < Mi.rank(); i++) {
       for (size_t j = 0; j < Mi.rank(); j++) {
-        M.bnum[shift + i][shift + j] = ModPos64(Mi.bnum[i][j] * scale, M.N);
+        M.bnum[shift + i][shift + j] = ResMul(Mi.bnum[i][j], scale, M.N);
         M.sigma_img[shift + i][shift + j] = Mi.sigma_img[i][j];
       }
-      M.qnum[shift + i] = ModPos64(Mi.qnum[i] * scale, 2 * M.N);
+      M.qnum[shift + i] = ResMul(Mi.qnum[i], scale, 2 * M.N);
     }
   };
   insert(M1, 0);
@@ -109,7 +109,7 @@ inline ModuleElt ModuleSum(PrimaryQuadModule const &M, ModuleElt const &x,
                            ModuleElt const &y) {
   ModuleElt z(M.rank());
   for (size_t i = 0; i < M.rank(); i++) {
-    z[i] = ModPos64(x[i] + y[i], M.ord[i]);
+    z[i] = ResAdd(x[i], y[i], M.ord[i]);
   }
   return z;
 }
@@ -394,12 +394,12 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
           .ListGenMat;
   size_t i_reduced = 0;
   {
-    int64_t best = -1;
+    size_t best = 0;
     for (size_t iq = 0; iq < primes.size(); iq++) {
       int64_t q = UniversalScalarConversion<int64_t, Tint>(primes[iq]);
-      int64_t size = BuildPrimaryQuadModule(comp1, q).size() *
-                     BuildPrimaryQuadModule(comp2, q).size();
-      if (size > best) {
+      size_t size = SaturatedSizeProduct(BuildPrimaryQuadModule(comp1, q).size(),
+                                         BuildPrimaryQuadModule(comp2, q).size());
+      if (iq == 0 || size > best) {
         best = size;
         i_reduced = iq;
       }

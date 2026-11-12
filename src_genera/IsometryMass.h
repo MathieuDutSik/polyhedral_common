@@ -7,6 +7,7 @@
 #include "GenusMass.h"
 #include "CyclotomicHermitianMass.h"
 #include "MultiplicityLocalFactor.h"
+#include "ResidueArithmetic.h"
 #include "AbelianHermitianMass.h"
 #include "AbelianQuadraticMass.h"
 #include "QuaternionicMass.h"
@@ -93,35 +94,14 @@ MyMatrix<T> EvaluatePolynomialMatrix(std::vector<int64_t> const &coeff,
   return res;
 }
 
-inline int64_t ModPos64(int64_t a, int64_t m) {
-  a %= m;
-  return (a < 0) ? a + m : a;
-}
-
-inline int64_t InverseMod64(int64_t u, int64_t m) {
-  int64_t a = ModPos64(u, m), b = m, x0 = 1, x1 = 0;
-  while (b != 0) {
-    int64_t q = a / b;
-    int64_t t = a - q * b;
-    a = b;
-    b = t;
-    t = x0 - q * x1;
-    x0 = x1;
-    x1 = t;
-  }
-  if (a != 1) {
-    std::cerr << "ISOM_MASS: " << u << " is not invertible modulo " << m << "\n";
-    throw TerminalException{1};
-  }
-  return ModPos64(x0, m);
-}
-
 /*
   One component L_d: a basis (rows, coordinates in L), its Gram matrix, the
   action of sigma (sigma(basis_i) = sum_j sigma(i, j) basis_j), and the
   Smith form of the Gram matrix, which coordinatises D(L_d): with ROW G COL
   = diag(s), x in L_d^# (coordinates in the basis) is z ROW with z_i in
-  (1/s_i) Z, and its residues are z_i s_i mod s_i.
+  (1/s_i) Z, and its residues are z_i s_i mod s_i. The s_i are unbounded
+  integers; only the orders of the primary parts of D(L_d) become machine
+  integers, in PrimaryQuadModule, where their size is checked.
  */
 template <typename T> struct IsometryComponent {
   // d = 0: a component of a non-abelian group on which it does not act
@@ -155,30 +135,17 @@ template <typename T> struct IsometryComponent {
   std::optional<T> direct_mass;
   MyMatrix<T> row;
   MyMatrix<T> row_inv;
-  std::vector<int64_t> elem;
+  std::vector<typename underlying_z_ring<T>::ring_type> elem;
 };
-
-template <typename T>
-std::vector<int64_t> DiscriminantResidues(IsometryComponent<T> const &comp,
-                                          MyVector<T> const &x) {
-  MyVector<T> z = comp.row_inv.transpose() * x;
-  std::vector<int64_t> res;
-  for (size_t i = 0; i < comp.elem.size(); i++) {
-    T val = z(i) * ScalarFromInt64<T>(comp.elem[i]);
-    if (!IsInteger(val)) {
-      std::cerr << "ISOM_MASS: a vector is not in the dual lattice\n";
-      throw TerminalException{1};
-    }
-    res.push_back(ResidueOfInteger(val, comp.elem[i]));
-  }
-  return res;
-}
 
 /*
   The q-primary part of D(L_d): generators g_i (one per elementary divisor
   divisible by q) of orders ord_i, N the exponent, b(g_i, g_j) = bnum_ij / N
   mod 1, q(g_i) = qnum_i / N mod 2, and the images of the generators by
-  sigma in coordinates.
+  sigma in coordinates. The coordinates are residues modulo ord_i, bnum
+  modulo N and qnum modulo 2 N, all handled by ResidueArithmetic.h:
+  BuildPrimaryQuadModule checks that 2 N is a valid modulus, after which
+  no operation on the module can overflow.
  */
 struct PrimaryQuadModule {
   int64_t q = 0;
@@ -229,8 +196,8 @@ inline int64_t ModuleB(PrimaryQuadModule const &M, ModuleElt const &x,
       continue;
     }
     for (size_t j = 0; j < M.rank(); j++) {
-      int64_t t = ModPos64(x[i] * y[j], M.N);
-      val = ModPos64(val + ModPos64(t * M.bnum[i][j], M.N), M.N);
+      int64_t t = ResMul(x[i], y[j], M.N);
+      val = ResAdd(val, ResMul(t, M.bnum[i][j], M.N), M.N);
     }
   }
   return val;
@@ -240,11 +207,11 @@ inline int64_t ModuleQ(PrimaryQuadModule const &M, ModuleElt const &x) {
   int64_t N2 = 2 * M.N;
   int64_t val = 0;
   for (size_t i = 0; i < M.rank(); i++) {
-    int64_t t = ModPos64(x[i] * x[i], N2);
-    val = ModPos64(val + ModPos64(t * M.qnum[i], N2), N2);
+    int64_t t = ResMul(x[i], x[i], N2);
+    val = ResAdd(val, ResMul(t, M.qnum[i], N2), N2);
     for (size_t j = i + 1; j < M.rank(); j++) {
-      int64_t u = ModPos64(2 * ModPos64(x[i] * x[j], N2), N2);
-      val = ModPos64(val + ModPos64(u * M.bnum[i][j], N2), N2);
+      int64_t u = ResMul(2, ResMul(x[i], x[j], N2), N2);
+      val = ResAdd(val, ResMul(u, M.bnum[i][j], N2), N2);
     }
   }
   return val;
@@ -260,21 +227,34 @@ inline ModuleElt ModuleCombination(PrimaryQuadModule const &M,
       continue;
     }
     for (size_t j = 0; j < M.rank(); j++) {
-      res[j] = ModPos64(res[j] + ModPos64(a[i] * y[i][j], M.ord[j]), M.ord[j]);
+      res[j] = ResAdd(res[j], ResMul(a[i], y[i][j], M.ord[j]), M.ord[j]);
     }
   }
   return res;
 }
 
+/*
+  The coordinates in M of the class of x in L_d^#: with z = x ROW^{-1},
+  z_i s_i is an integer, and the coordinate on the generator of order
+  ord_i = q^v (s_i = q^v t) is (z_i s_i) t^{-1} mod ord_i.
+ */
 template <typename T>
 ModuleElt ModuleCoordinates(PrimaryQuadModule const &M,
                             IsometryComponent<T> const &comp,
                             MyVector<T> const &x) {
-  std::vector<int64_t> res = DiscriminantResidues(comp, x);
+  MyVector<T> z = comp.row_inv.transpose() * x;
   ModuleElt a(M.rank());
   for (size_t i = 0; i < M.rank(); i++) {
-    int64_t r = ModPos64(res[M.index[i]], M.ord[i]);
-    a[i] = ModPos64(r * M.tinv[i], M.ord[i]);
+    int ii = M.index[i];
+    T val = z(ii) * UniversalScalarConversion<
+                        T, typename underlying_z_ring<T>::ring_type>(
+                        comp.elem[ii]);
+    if (!IsInteger(val)) {
+      std::cerr << "ISOM_MASS: a vector is not in the dual lattice\n";
+      throw TerminalException{1};
+    }
+    int64_t r = ResModOf(GetNumerator_z(val), M.ord[i]);
+    a[i] = ResMul(r, M.tinv[i], M.ord[i]);
   }
   return a;
 }
@@ -282,23 +262,32 @@ ModuleElt ModuleCoordinates(PrimaryQuadModule const &M,
 template <typename T>
 PrimaryQuadModule BuildPrimaryQuadModule(IsometryComponent<T> const &comp,
                                          int64_t q) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
   PrimaryQuadModule M;
   M.q = q;
   M.d = comp.d;
   std::vector<MyVector<T>> gens;
   int k = comp.gram.rows();
+  Tint q_T = UniversalScalarConversion<Tint, int64_t>(q);
   for (size_t i = 0; i < comp.elem.size(); i++) {
-    int64_t s = comp.elem[i];
-    int64_t qe = 1;
-    while (s % (qe * q) == 0) {
-      qe *= q;
+    // s = q^v t, t prime to q
+    Tint t = comp.elem[i];
+    int v = 0;
+    while (ResInt(t, q_T) == Tint(0)) {
+      t = QuoInt(t, q_T);
+      v++;
     }
-    if (qe == 1) {
+    if (v == 0) {
       continue;
+    }
+    int64_t qe = ResiduePrimePower(q, v);
+    // the quadratic form is read modulo 2 N
+    if (qe > kMaxResidueModulus / 2) {
+      ResidueModulusTooLarge("2 * " + std::to_string(qe));
     }
     M.index.push_back(static_cast<int>(i));
     M.ord.push_back(qe);
-    M.tinv.push_back(InverseMod64(s / qe, qe));
+    M.tinv.push_back(ResInv(ResModOf(t, qe), qe));
     M.N = std::max(M.N, qe);
     MyVector<T> g(k);
     for (int j = 0; j < k; j++) {
@@ -430,7 +419,7 @@ EquivariantModuleIsometries(PrimaryQuadModule const &M, size_t max_module,
   }
   auto order_divides = [&](ModuleElt const &x, int64_t o) -> bool {
     for (size_t j = 0; j < M.rank(); j++) {
-      if (ModPos64(o * x[j], M.ord[j]) != 0) {
+      if (ResMul(ResMod(o, M.ord[j]), x[j], M.ord[j]) != 0) {
         return false;
       }
     }
@@ -594,7 +583,7 @@ GlueElements(std::vector<PrimaryQuadModule> const &mods,
       for (size_t s = 0; s < t; s++) {
         for (size_t i = 0; i < mods[s].rank(); i++) {
           size_t pos = offset[s] + i;
-          y[pos] = ModPos64(x[pos] + g[s][i], radix[pos]);
+          y[pos] = ResAdd(x[pos], g[s][i], radix[pos]);
         }
       }
       if (H.insert(y).second) {
@@ -660,6 +649,18 @@ GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
         col.push_back(ModuleCombination(mods[s], x, img));
       }
       sigma_img[s].push_back(col);
+    }
+  }
+  // the edge colours are coded as 4 ((s BIG + b) 2^n_bit + flag) + 1 with
+  // s < t, b < N <= BIG / 4, flag < 2^n_bit: the largest code must fit
+  {
+    __int128 code = static_cast<__int128>(t) * BIG + BIG;
+    for (size_t b = 0; b < n_bit + 1 && code < (__int128(1) << 62); b++) {
+      code *= 2;
+    }
+    code = 4 * code + 1;
+    if (code >= (__int128(1) << 62)) {
+      return {};
     }
   }
   // the vertices: (module s, index) for the modules, then the glue
@@ -797,7 +798,7 @@ GlueOrbitListing(int64_t q, std::vector<PrimaryQuadModule> const &mods,
         for (size_t s = 0; s < t; s++) {
           for (size_t i = 0; i < mods[s].rank(); i++) {
             size_t pos = offset[s] + i;
-            y[pos] = ModPos64(x[pos] + g[s][i], radix[pos]);
+            y[pos] = ResAdd(x[pos], g[s][i], radix[pos]);
           }
         }
         if (H.insert(y).second) {
@@ -1008,8 +1009,8 @@ std::vector<MyMatrix<Tint>> CayleyLocalElements(IsometryComponent<T> const &comp
     MyMatrix<Tint> adj = UniversalMatrixConversion<Tint, T>(
         MyMatrix<T>(IpInv * UniversalScalarConversion<T, Tint>(det)));
     Tint dm = ((det % qc) + qc) % qc;
-    int64_t dinv = InvModQ(UniversalScalarConversion<int64_t, Tint>(dm),
-                           UniversalScalarConversion<int64_t, Tint>(qc));
+    int64_t qc64 = ResidueModulusOf(qc);
+    int64_t dinv = ResInv(ResModOf(dm, qc64), qc64);
     MyMatrix<Tint> ImY = Id - Y;
     MyMatrix<Tint> g = ImY * adj;
     Tint dinv_T = UniversalScalarConversion<Tint, int64_t>(dinv);
@@ -1389,7 +1390,8 @@ IsometryComponent<T> BuildIsometryComponent(MyMatrix<T> const &A,
   comp.row_inv = Inverse(comp.row);
   for (int i = 0; i < D_i.rows(); i++) {
     Tint s = T_abs(D_i(i, i));
-    comp.elem.push_back(UniversalScalarConversion<int64_t, Tint>(s));
+    comp.elem.push_back(UniversalScalarConversion<
+                        typename underlying_z_ring<T>::ring_type, Tint>(s));
   }
   return comp;
 }
@@ -2016,7 +2018,7 @@ ModuleSubgroupOrbitSize(PrimaryQuadModule const &M,
       for (auto const &y : g) {
         ModuleElt z(r);
         for (size_t i = 0; i < r; i++) {
-          z[i] = ModPos64(x[i] + y[i], M.ord[i]);
+          z[i] = ResAdd(x[i], y[i], M.ord[i]);
         }
         if (seen.insert(encode(z)).second) {
           queue.push_back(z);
@@ -2196,11 +2198,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       int v = ValuationOfRational(d, p);
       if (v > 0) {
         ListIdx.push_back(i);
-        int64_t o = 1;
-        for (int u = 0; u < v; u++) {
-          o *= p;
-        }
-        ListOrd.push_back(o);
+        ListOrd.push_back(ResiduePrimePower(p, v));
         c = std::max(c, v);
       }
     }
@@ -2212,12 +2210,9 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       for (size_t s = 0; s < r; s++) {
         T val = y(ListIdx[s]);
         // p-integral: numerator times the inverse of the denominator
-        Tint o_T = UniversalScalarConversion<Tint, int64_t>(ListOrd[s]);
-        Tint nm = ResInt(GetNumerator_z(val), o_T);
-        Tint dn = ResInt(GetDenominator_z(val), o_T);
-        int64_t nm64 = UniversalScalarConversion<int64_t, Tint>(nm);
-        int64_t dn64 = UniversalScalarConversion<int64_t, Tint>(dn);
-        res[s] = MulModQ(nm64, InvModQ(dn64, ListOrd[s]), ListOrd[s]);
+        int64_t o = ListOrd[s];
+        res[s] = ResMul(ResModOf(GetNumerator_z(val), o),
+                        ResInv(ResModOf(GetDenominator_z(val), o), o), o);
       }
       return res;
     };
@@ -2612,10 +2607,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       std::optional<std::vector<ModMat>> kg = LocalOrthogonalImageGenerators(
           A_mod, Be, Om, Lam, {}, p, c, e, bounds, &order_k);
       if (kg) {
-        int64_t pcl = 1;
-        for (int i = 0; i < c; i++) {
-          pcl *= p;
-        }
+        int64_t pcl = ResiduePrimePower(p, c);
         auto closure_of = [&](std::vector<ModMat> const &gens, bool transpose,
                               size_t cap) -> std::set<ModMat> {
           ModMat Idm(m, std::vector<int64_t>(m, 0));
@@ -2627,7 +2619,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
             ModMat h(m, std::vector<int64_t>(m));
             for (int i = 0; i < m; i++) {
               for (int j = 0; j < m; j++) {
-                h[i][j] = ModPos64(transpose ? g[j][i] : g[i][j], pcl);
+                h[i][j] = ResMod(transpose ? g[j][i] : g[i][j], pcl);
               }
             }
             gs.push_back(h);
@@ -2642,7 +2634,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
               for (int a = 0; a < m; a++) {
                 for (int k2 = 0; k2 < m; k2++) {
                   for (int b = 0; b < m; b++) {
-                    y[a][b] = ModPos64(y[a][b] + x[a][k2] * g[k2][b], pcl);
+                    y[a][b] = ResAdd(y[a][b], ResMul(x[a][k2], g[k2][b], pcl), pcl);
                   }
                 }
               }
@@ -2661,7 +2653,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
           ModMat h(m, std::vector<int64_t>(m));
           for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
-              h[i][j] = ModPos64(g[j][i], pcl);
+              h[i][j] = ResMod(g[j][i], pcl);
             }
           }
           listed_set.insert(h);
@@ -2671,7 +2663,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
           ModMat h = g;
           for (auto &row : h) {
             for (auto &x : row) {
-              x = ModPos64(x, pcl);
+              x = ResMod(x, pcl);
             }
           }
           if (listed_set.count(h) == 0) {
@@ -2737,16 +2729,13 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
       }
       if (listed) {
-        int64_t pcl = 1;
-        for (int i = 0; i < c; i++) {
-          pcl *= p;
-        }
+        int64_t pcl = ResiduePrimePower(p, c);
         std::set<ModMat> listed_set;
         for (auto const &g : *listed) {
           ModMat h = g;
           for (auto &row : h) {
             for (auto &x : row) {
-              x = ModPos64(x, pcl);
+              x = ResMod(x, pcl);
             }
           }
           listed_set.insert(h);
@@ -2765,7 +2754,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
             for (int a = 0; a < m; a++) {
               for (int k2 = 0; k2 < m; k2++) {
                 for (int b = 0; b < m; b++) {
-                  y[a][b] = ModPos64(y[a][b] + x[a][k2] * ModPos64(g[k2][b], pcl), pcl);
+                  y[a][b] = ResAdd(y[a][b], ResMul(x[a][k2], ResMod(g[k2][b], pcl), pcl), pcl);
                 }
               }
             }
@@ -2823,7 +2812,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
           continue;
         }
         for (size_t u = 0; u < r; u++) {
-          y[u] = (y[u] + MulModQ(x[s], act[s][u], ListOrd[u])) % ListOrd[u];
+          y[u] = ResAdd(y[u], ResMul(x[s], act[s][u], ListOrd[u]), ListOrd[u]);
         }
       }
       return y;
@@ -2846,20 +2835,17 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
       Cexp = std::max(Cexp, aexp[s2]);
     }
-    auto powp = [&](int k) -> int64_t {
-      int64_t x = 1;
-      for (int i = 0; i < k; i++) {
-        x *= p;
-      }
-      return x;
-    };
+    // the subgroups live in (Z / p^C)^r: p^C is the modulus, and x p^{C -
+    // a_s} < p^C for x < p^{a_s}
+    int64_t pC = ResiduePrimePower(p, Cexp);
+    auto powp = [&](int k) -> int64_t { return ResiduePrimePower(p, k); };
     auto canon = [&](std::vector<std::vector<int64_t>> const &gens_orig)
         -> ModMat {
       ModMat sc;
       for (auto const &x : gens_orig) {
         std::vector<int64_t> y(r);
         for (size_t s2 = 0; s2 < r; s2++) {
-          y[s2] = x[s2] * powp(Cexp - aexp[s2]);
+          y[s2] = ResMul(x[s2], powp(Cexp - aexp[s2]), pC);
         }
         sc.push_back(y);
       }

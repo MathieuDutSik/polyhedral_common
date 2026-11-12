@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "Arithmetic_dispatch_types.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "IsometryGlue.h"
@@ -49,7 +50,7 @@ void process(std::string const &mode, std::string const &FileGram1,
              std::string const &FileIsom1, std::string const &FileGram2,
              std::string const &FileIsom2, std::string const &det_arg,
              std::string const &OutFormat, QuadLValueMethod lvalue,
-             int &status, std::ostream &os) {
+             std::ostream &os) {
   MyMatrix<T> A1 = ReadMatrixFile<T>(FileGram1);
   MyMatrix<T> g1 = ReadMatrixFile<T>(FileIsom1);
   MyMatrix<T> A2 = ReadMatrixFile<T>(FileGram2);
@@ -128,7 +129,7 @@ void process(std::string const &mode, std::string const &FileGram1,
       n_without_mass++;
       continue;
     }
-    Tmass TotalMass = UniversalScalarConversion<Tmass, T>(*mres.mass);
+    Tmass TotalMass = MassToGroupField<Tmass>(*mres.mass);
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListSeed{
         {gp.gram, gp.isom}};
     Tresult result = GenusEnumerationGroup<T, Tint, Tgroup>(ListSeed, TotalMass,
@@ -140,17 +141,21 @@ void process(std::string const &mode, std::string const &FileGram1,
     known.insert(key_of(gp.gram, gp.isom));
     ListGenus.push_back({gp, *mres.mass, result});
   }
-  for (auto const &rec : ListGenus) {
-    int st = GenusEnumerationGroupExitStatus(rec.result);
-    if (st == GENUS_GROUP_EXIT_MASS_EXCEEDED) {
-      status = st;
-    } else if (st != 0 && status == 0) {
-      status = st;
+  // after the output: a genus whose classes weigh more than its mass first,
+  // then the genera that did not close or have no proved mass
+  auto check_genera = [&]() -> void {
+    for (auto const &rec : ListGenus) {
+      if (rec.result.mass_exceeded()) {
+        throw GenusMassExceededException{};
+      }
     }
-  }
-  if (n_without_mass > 0 && status == 0) {
-    status = GENUS_GROUP_EXIT_INCOMPLETE;
-  }
+    for (auto const &rec : ListGenus) {
+      CheckGenusEnumerationGroupResult(rec.result);
+    }
+    if (n_without_mass > 0) {
+      throw GenusMassNotClosedException{};
+    }
+  };
   if (OutFormat == "Summary") {
     os << "glued pairs = " << ListGlued.size() << "\n";
     os << "genera of pairs = " << ListGenus.size() << "\n";
@@ -168,6 +173,7 @@ void process(std::string const &mode, std::string const &FileGram1,
     os << "skipped without a mass = " << n_without_mass << "\n";
     os << "complete = "
        << (all_complete && n_without_mass == 0 ? "true" : "false") << "\n";
+    check_genera();
     return;
   }
   if (OutFormat == "GAP") {
@@ -195,6 +201,7 @@ void process(std::string const &mode, std::string const &FileGram1,
       os << "])";
     }
     os << "];\n";
+    check_genera();
     return;
   }
   std::cerr << "GENUS_GlueIsometry: unknown OutFormat=" << OutFormat
@@ -206,12 +213,14 @@ int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    using T = mpq_class;
-    using Tint = mpz_class;
+    // the group orders are in TintGroup, whatever the arithmetic of the
+    // coordinates T / Tint chosen by arithmetic=
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using TintGroup = mpz_class;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
+    std::string arith = ExtractArithmeticOption(argc, argv, "gmp");
+    ArithmeticDispatch dispatch;
     QuadLValueMethod lvalue = ExtractQuadLValueOption(argc, argv);
     if (argc < 7 || argc > 10) {
       std::cerr << "GENUS_GlueIsometry [mode] [Gram1] [Isom1] [Gram2] [Isom2] "
@@ -240,6 +249,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "        with E not abelian, in double precision (when\n";
       std::cerr << "        it suffices), MPFR (default) or certified with\n";
       std::cerr << "        Arb (needs flint, about twice the time)\n";
+      std::cerr << "arithmetic=NAME (anywhere, optional, default gmp): the\n";
+      std::cerr << "        arithmetic of the computation, among\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     std::string mode = argv[1];
@@ -250,25 +262,24 @@ int main(int argc, char *argv[]) {
     std::string det_arg = argv[6];
     std::string OutFormat = (argc >= 8) ? argv[7] : "Summary";
     std::string OutFile = (argc >= 9) ? argv[8] : "stderr";
-    int status = 0;
-    auto f = [&](std::ostream &os) -> void {
-      process<T, Tint, Tgroup>(mode, FileGram1, FileIsom1, FileGram2, FileIsom2,
-                               det_arg, OutFormat, lvalue, status, os);
-    };
-    FILE_PrintStderrStdoutFile(OutFile, f);
-    if (status == GENUS_GROUP_EXIT_MASS_EXCEEDED) {
-      std::cerr << "GENUS_GlueIsometry: ERROR: the classes of a genus of "
-                   "pairs weigh more than its mass\n";
-      runtime(time);
-      exit(status);
-    }
-    if (status == GENUS_GROUP_EXIT_INCOMPLETE) {
-      std::cerr << "GENUS_GlueIsometry: INCOMPLETE: a genus of pairs did not "
-                   "close its mass or has no proved mass\n";
-      runtime(time);
-      exit(status);
-    }
+    add_rational_integer_arithmetics_by_library(
+        dispatch, [&]<typename T, typename Tint>() -> void {
+          auto f = [&](std::ostream &os) -> void {
+            process<T, Tint, Tgroup>(mode, FileGram1, FileIsom1, FileGram2, FileIsom2,
+                                     det_arg, OutFormat, lvalue, os);
+          };
+          FILE_PrintStderrStdoutFile(OutFile, f);
+        });
+    dispatch.run(arith);
     std::cerr << "Normal termination of GENUS_GlueIsometry\n";
+  } catch (GenusMassExceededException const &) {
+    std::cerr << "GENUS_GlueIsometry: ERROR: the classes of a genus of pairs "
+                 "weigh more than its mass\n";
+    exit(GENUS_EXIT_MASS_EXCEEDED);
+  } catch (GenusMassNotClosedException const &) {
+    std::cerr << "GENUS_GlueIsometry: INCOMPLETE: a genus of pairs did not "
+                 "close its mass or has no proved mass\n";
+    exit(GENUS_EXIT_MASS_NOT_CLOSED);
   } catch (TerminalException const &e) {
     std::cerr << "Error in GENUS_GlueIsometry\n";
     exit(e.eVal);

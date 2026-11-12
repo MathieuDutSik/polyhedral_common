@@ -726,15 +726,33 @@ bool osc_select_rec(PleskenSouvignierContext<Tint> const &ctx,
   otherwise, each with its vectors spanning Q^n. Nothing when the branch
   cap is exceeded.
  */
+/*
+  The field of the rank tests of osc_select_prefixes: the exact field of
+  Tint when Tint is an unbounded integer type (mpz_class, fmpz_class, the
+  boost mpz_int and cpp_int), mpq_class otherwise.
+ */
+template <typename Tint, bool unbounded> struct OscRankFieldImpl {
+  using type = mpq_class;
+};
+template <typename Tint> struct OscRankFieldImpl<Tint, true> {
+  using type = typename overlying_field<Tint>::field_type;
+};
+template <typename Tint>
+using OscRankField = typename OscRankFieldImpl<
+    Tint, is_mpz_class<Tint>::value || is_fmpz_class<Tint>::value ||
+              is_boost_mpz_int<Tint>::value ||
+              is_boost_cpp_int<Tint>::value>::type;
+
 template <typename Tint, typename Tgroup>
 std::optional<std::vector<std::vector<int>>>
 osc_select_prefixes(PleskenSouvignierContext<Tint> const &ctx,
                     Tgroup const &GRP, std::ostream &os) {
   // The echelon reductions have minor-sized numerators and denominators
   // that Rational<int64_t> would overflow SILENTLY, so the rank tests
-  // stay in mpq whatever ring the products run in; the tests are lazy
-  // and few, so the cost does not matter.
-  using Tfield = mpq_class;
+  // stay in an unbounded field whatever ring the products run in
+  // (OscRankField: that of Tint when Tint is unbounded, mpq otherwise); the
+  // tests are lazy and few, so the cost does not matter.
+  using Tfield = OscRankField<Tint>;
   int n = ctx.n();
   std::vector<int> prefix;
   std::vector<MyMatrix<Tint>> prefix_col;

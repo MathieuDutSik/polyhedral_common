@@ -113,3 +113,16 @@ jobs:
             exit 1
           fi
           cd ../..
+
+      # last, as it rebuilds the programs with the boost types as well
+      - name: Test the programs of the pairs with every arithmetic
+        run: |
+          make -C src_genera -B ENABLE_BOOST_TYPES=1 GENUS_IsometryMass GENUS_EnumerateIsometry
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ./RunArithmeticTests.sh
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The arithmetic test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..

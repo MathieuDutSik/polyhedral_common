@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "Arithmetic_dispatch_types.h"
 #include "Group.h"
 #include "Permutation.h"
 #include "GenusEnumerationGroup.h"
@@ -21,11 +22,11 @@
 
   Exit status: 0 when the mass closed, 2 when the classes found weigh less
   than the target (incomplete), 3 when they weigh more (the target is
-  wrong); see GenusEnumerationGroupExitStatus.
+  wrong); see CheckGenusEnumerationGroupResult.
  */
 
 template <typename T, typename Tint, typename Tgroup>
-int process(std::string const &FileGram, std::string const &FileIsom,
+void process(std::string const &FileGram, std::string const &FileIsom,
              std::string const &FileMass, std::string const &OutFormat,
              int prime, size_t max_prime, std::ostream &os) {
   std::vector<MyMatrix<T>> ListGram = ReadListMatrixFile<T>(FileGram);
@@ -62,19 +63,21 @@ int process(std::string const &FileGram, std::string const &FileIsom,
       GenusEnumerationAbelianGroup<T, Tint, Tgroup>(ListSeed, TotalMass, prime,
                                                     max_prime, std::cerr);
   WriteGenusEnumerationGroupResult(os, result, OutFormat);
-  return GenusEnumerationGroupExitStatus(result);
+  CheckGenusEnumerationGroupResult(result);
 }
 
 int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    using T = mpq_class;
-    using Tint = mpz_class;
+    // the group orders are in TintGroup, whatever the arithmetic of the
+    // coordinates T / Tint chosen by arithmetic=
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using TintGroup = mpz_class;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
+    std::string arith = ExtractArithmeticOption(argc, argv, "gmp");
+    ArithmeticDispatch dispatch;
     if (argc < 4 || argc > 8) {
       std::cerr << "GENUS_EnumerateIsometry [Gram] [Isometry] [Mass] "
                    "[OutFormat] [OutFile] [prime] [max_prime]\n";
@@ -99,6 +102,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "Exit status: 0 complete, 2 incomplete (the classes found\n";
       std::cerr << "weigh less than the mass), 3 the mass is exceeded (the\n";
       std::cerr << "target is wrong), 1 an error.\n";
+      std::cerr << "arithmetic=NAME (anywhere, optional, default gmp): the\n";
+      std::cerr << "        arithmetic of the computation, among\n";
+      dispatch.print_descriptions(std::cerr);
       return -1;
     }
     std::string FileGram = argv[1];
@@ -108,25 +114,24 @@ int main(int argc, char *argv[]) {
     std::string OutFile = (argc >= 6) ? argv[5] : "stderr";
     int prime = (argc >= 7) ? std::stoi(argv[6]) : 0;
     size_t max_prime = (argc >= 8) ? std::stoul(argv[7]) : 6;
-    int status = 0;
-    auto f = [&](std::ostream &os) -> void {
-      status = process<T, Tint, Tgroup>(FileGram, FileIsom, FileMass,
-                                        OutFormat, prime, max_prime, os);
-    };
-    FILE_PrintStderrStdoutFile(OutFile, f);
-    if (status == GENUS_GROUP_EXIT_MASS_EXCEEDED) {
-      std::cerr << "GENUS_EnumerateIsometry: ERROR: the classes found weigh "
-                   "more than the target mass, which is therefore wrong\n";
-      runtime(time);
-      exit(status);
-    }
-    if (status == GENUS_GROUP_EXIT_INCOMPLETE) {
-      std::cerr << "GENUS_EnumerateIsometry: INCOMPLETE: the mass did not "
-                   "close; another prime or another seed is needed\n";
-      runtime(time);
-      exit(status);
-    }
+    add_rational_integer_arithmetics_by_library(
+        dispatch, [&]<typename T, typename Tint>() -> void {
+          auto f = [&](std::ostream &os) -> void {
+            process<T, Tint, Tgroup>(FileGram, FileIsom, FileMass, OutFormat, prime,
+                                     max_prime, os);
+          };
+          FILE_PrintStderrStdoutFile(OutFile, f);
+        });
+    dispatch.run(arith);
     std::cerr << "Normal termination of GENUS_EnumerateIsometry\n";
+  } catch (GenusMassExceededException const &) {
+    std::cerr << "GENUS_EnumerateIsometry: ERROR: the classes found weigh "
+                 "more than the target mass, which is therefore wrong\n";
+    exit(GENUS_EXIT_MASS_EXCEEDED);
+  } catch (GenusMassNotClosedException const &) {
+    std::cerr << "GENUS_EnumerateIsometry: INCOMPLETE: the mass did not "
+                 "close; another prime or another seed is needed\n";
+    exit(GENUS_EXIT_MASS_NOT_CLOSED);
   } catch (TerminalException const &e) {
     std::cerr << "Error in GENUS_EnumerateIsometry\n";
     exit(e.eVal);
