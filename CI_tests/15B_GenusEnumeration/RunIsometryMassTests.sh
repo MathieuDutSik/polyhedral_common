@@ -519,5 +519,21 @@ group_check_case D4 D4_inv1
 group_check_case D4 D4_w01
 group_check_case D5 D5_inv2
 
+# Masses from the literature (Hermitian ranks 4 to 15): the unimodular
+# Hermitian Z[w]-lattices of ranks 14 and 15 (Abdukhalikov-Scharlau, M_14 and
+# M_15); the even unimodular lattices with a structure over Z[w] or Z[i] of
+# ranks 8, 16, 24 (Hentschel-Krieg-Nebe, Theorem 2); index 4 sublattices of
+# the sqrt(-3)-modular ones at the inert prime 2 (Dummigan-Schoennenbeck,
+# the sum of 1/|Aut| over their 25 classes)
+mass_case lit_A2x14 lit_w_A2x14 689532652191539/53623657120923648000
+mass_case lit_A2x15 lit_w_A2x15 4366489808207046403/965225828176625664000
+mass_case lit_E8x1 lit_w_E8x1 1/155520
+mass_case lit_E8x2 lit_w_E8x2 1/48372940800
+mass_case lit_E8x3 lit_w_E8x3 1032508093/67774344416722944000
+mass_case lit_E8x1 lit_i_E8x1 1/46080
+mass_case lit_E8x2 lit_i_E8x2 61/35672555520
+mass_case lit_E8x3 lit_i_E8x3 589874455867/1974522179663953920
+mass_case lit_Ls lit_w_Ls 705203027519/49651534371225600
+
 echo "All isometry mass tests passed"
 touch CI_CONCLUSION

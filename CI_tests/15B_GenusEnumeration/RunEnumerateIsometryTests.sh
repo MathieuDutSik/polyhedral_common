@@ -92,6 +92,13 @@ run_case A8 F21A8 2
 # over Q(sqrt 5) glued at 5 to the fixed lattice, 2 classes (at p = 3)
 run_case E8E8D5 D5 2
 
+# The even unimodular lattices of rank 8 and 16 with a structure over Z[w]
+# and Z[i] (Hentschel-Krieg-Nebe, Corollaries 1 and 2): 1, 1, 1 and 3 classes
+run_case lit_E8x1 lit_w_E8x1 1
+run_case lit_E8x2 lit_w_E8x2 1
+run_case lit_E8x1 lit_i_E8x1 1
+run_case lit_E8x2 lit_i_E8x2 3
+
 # The module neighbours at p = 2, for groups of odd order on lattices of odd
 # determinant: F21 on A8 and on A6^3, at the prime 2 alone; and the prime 2
 # refused for a group of even order (S3 = W(A2) on E8+E8)
