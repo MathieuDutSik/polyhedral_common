@@ -200,7 +200,7 @@ ClassifyComponent(std::vector<int> const &nodes,
     if (arms[0] == 1 && arms[1] == 2 && arms[2] == 4) {
       return {'E', 8};
     }
-    std::cerr << "ROOTSYS: unrecognised arms (" << arms[0] << "," << arms[1]
+    std::cerr << "ROOTSYS: unrecognized arms (" << arms[0] << "," << arms[1]
               << "," << arms[2] << ")\n";
     throw TerminalException{1};
   }

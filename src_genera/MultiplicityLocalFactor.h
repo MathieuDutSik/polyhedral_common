@@ -29,7 +29,7 @@
   group G with End_G(V_rho) = Q (IsometryMass.h, FiniteGroupComponents).
 
   X = L cap (l (x) U) is the multiplicity lattice, N = Z[G] X subset
-  L_rho. The centraliser C_rho = O(U) commutes with G, so the stabiliser
+  L_rho. The centralizer C_rho = O(U) commutes with G, so the stabilizer
   of L_rho in C_rho(Q_p) fixes X_p = L_p cap (l (x) U) and N_p, and
 
       [O(X_p) : Stab(L_p)] = |O(X_p) . (L_p / N_p)|,
@@ -428,7 +428,7 @@ LocalOrthogonalImage(ModMat const &A_in, int64_t p, int c, int e,
                      MultiplicityFactorBounds const &bounds) {
   int t = (p == 2) ? 1 : 0;
   int K = std::max(c + e + t, e + 2 * t + 1);
-  // A is only read modulo p^{j+1}, j < c: centred modulo p^{K+1}
+  // A is only read modulo p^{j+1}, j < c: centered modulo p^{K+1}
   std::optional<int64_t> optM = LocalImageModulus(p, c, e);
   if (!optM) {
     return {};
@@ -609,7 +609,7 @@ inline ModMat HowellFormPrimePower(ModMat rows, int64_t p, int C) {
 }
 
 // The order of an image found by LocalOrthogonalImageGeneratorsCore: the
-// product of the orbit lengths of the stabiliser chain modulo p times
+// product of the orbit lengths of the stabilizer chain modulo p times
 // p^layer_exp, the layers G_j / G_{j+1}
 struct LocalImageOrder {
   std::vector<size_t> orbits;
@@ -823,7 +823,7 @@ JordanBasisModPW(ModMat const &A, int64_t p, int W) {
 }
 
 /*
-  The integral Lie lattice of the local centraliser, on the columns:
+  The integral Lie lattice of the local centralizer, on the columns:
 
       u = {Y in Lambda : Y^T A + A Y = 0},
 
@@ -984,15 +984,15 @@ inline std::vector<ModMat> CayleyLayerGenerators(std::vector<ModMat> const &Lie,
   A), complete by construction and without listing G, which grows like
   p^{m(m-1)/2}:
 
-  - G_1 = G mod p by its stabiliser chain on the basis e_0, ..., e_{m-1}.
+  - G_1 = G mod p by its stabilizer chain on the basis e_0, ..., e_{m-1}.
     From the last level up, the orbit of e_i under the elements found so
     far is closed, and for each admissible image y of e_i (B(e_k, y) =
     A_{k i} for k < i, B(y, y) = A_{i i}) outside it, an element fixing
     e_0, ..., e_{i-1} with e_i -> y is searched: the further columns one
     at a time on their affine spaces, the matrix invertible, and a lift to
     p^K (Lemma: then it comes from an isometry). Once the orbit holds every
-    y with such an element, the elements found generate the stabiliser H
-    of e_0, ..., e_{i-1} in G_1, as they contain the stabiliser of e_i and
+    y with such an element, the elements found generate the stabilizer H
+    of e_0, ..., e_{i-1} in G_1, as they contain the stabilizer of e_i and
     move e_i over its whole H-orbit.
   - The layers G_j / G_{j+1}, 1 <= j < c, of the elements congruent to 1
     modulo p^j: F_p-spaces of the Delta with 1 + p^j Delta lifting to p^K,
@@ -1236,7 +1236,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     return {};
   };
-  // With a commutant Lam (a centre K), the lifts g + p^j Delta keep Delta
+  // With a commutant Lam (a center K), the lifts g + p^j Delta keep Delta
   // in Lam mod p: the system of MakeLiftSystem restricted to the
   // coordinates of Lam, its solutions written back as matrices.
   size_t d_lam = Lam.size();
@@ -1801,7 +1801,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     __int128 d = (sacc - A[j][j]) % 4;
     return d == 0;
   };
-  // With an action Om of O_K (a centre K): the image of e_j is forced when
+  // With an action Om of O_K (a center K): the image of e_j is forced when
   // e_j is in the span modulo p of the w e_k, k < j, w in Om; otherwise the
   // conditions B(w y_k, y) = B(w e_k, e_j) for all k < j and w, and B(w y,
   // y) = B(w e_j, e_j) for all w.
@@ -2596,7 +2596,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   level l stay in X^(l), and their pairings are known modulo higher powers
   of p), and the generators g' come back as P g' P^{-1}. For e = 0 the
   standard basis, all of level 0. Om (the
-  action of a Z-basis of O_K, a centre K) and Lam (a Z-basis of the
+  action of a Z-basis of O_K, a center K) and Lam (a Z-basis of the
   integral commutant of O_K) are empty when End_G = Q; Bil are further
   integral bilinear forms preserved by the group (N -> P^T N P here),
   imposed modulo p on the columns; all the matrices act on the columns of
@@ -2840,9 +2840,9 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
 }
 
 /*
-  The image modulo p^c of the stabiliser {g in Lambda (x) Z_p : g A g^T =
+  The image modulo p^c of the stabilizer {g in Lambda (x) Z_p : g A g^T =
   A} (rows convention), Lambda the Z-span of the m x m integer matrices of
-  basis: the centraliser of a group acting on a lattice of Gram matrix A,
+  basis: the centralizer of a group acting on a lattice of Gram matrix A,
   when Lambda is its commutant. The Newton step g -> g - (1/2) E g^{-T}
   A^{-1}, E = g A g^T - A, stays in the commutant when g does, since the
   group preserves A and E; so Lemma (multfactor) holds within Lambda, and
@@ -2864,7 +2864,7 @@ LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
   int K = std::max(c + e + t, e + 2 * t + 1);
   /*
     E = g A g^T - A is only read modulo p^{j+1}, j < c <= K: A, the basis
-    and g are taken modulo M = p^{K+1} (centred), so that their size does
+    and g are taken modulo M = p^{K+1} (centered), so that their size does
     not depend on the exact data, and the guard below bounds the products
     m^2 |g|^2 |A| with |g| <= M / 2.
    */

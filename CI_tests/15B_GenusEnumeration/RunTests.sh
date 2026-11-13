@@ -2,7 +2,7 @@
 # Enumerate a few genera and check the class number and the mass certificate.
 #
 # The three cases are small on purpose so that the test stays quick, but they
-# exercise the parts that matter: the p = 2 neighbour construction on an even
+# exercise the parts that matter: the p = 2 neighbor construction on an even
 # lattice of odd determinant, the deduplication (the second and third cases
 # have several classes), and the mass as the stopping criterion.
 #

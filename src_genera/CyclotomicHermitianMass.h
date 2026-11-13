@@ -2114,7 +2114,7 @@ HermitianLocalFactorDyadic(MyMatrix<T> const &B,
       }
     }
     if (A == 0 || Bc == 0) {
-      std::cerr << "CYCLO: a step of the chain has no isometric neighbour\n";
+      std::cerr << "CYCLO: a step of the chain has no isometric neighbor\n";
       throw TerminalException{1};
     }
     f *= RationalFraction<T>(A, Bc);

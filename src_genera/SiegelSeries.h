@@ -1097,7 +1097,7 @@ KatsuradaTheorem42Coefficients(std::vector<SiegelJordanBlock> const &b1,
 }
 
 /*
-  F_p(B, X) for the Jordan blocks q of B, memoised on the blocks: the
+  F_p(B, X) for the Jordan blocks q of B, memoized on the blocks: the
   recursion of a matrix runs through the tails of its own decomposition,
   and a sweep over many matrices meets the same tails again and again.
  */

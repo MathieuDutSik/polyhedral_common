@@ -32,7 +32,7 @@ choice here, and in measurement the winner varies by instance.
 
   direct       LLL
   dual         LLL through the adjugate of the form
-  seysen       Seysen, minimising sum_i |b_i|^2 |dual b_i|^2. Treats every
+  seysen       Seysen, minimizing sum_i |b_i|^2 |dual b_i|^2. Treats every
                coordinate symmetrically and reduces the form and its dual in
                one descent; the natural first thing to try here
   seysen_best  Seysen taking the best move of each sweep. Slower, and in
@@ -50,7 +50,7 @@ choice here, and in measurement the winner varies by instance.
   slide-<k>    Gama-Nguyen slide reduction at block size k, which must
                divide the dimension
   best         run a representative selection of the above and keep whichever
-               actually minimises the facet coefficient estimate. The
+               actually minimizes the facet coefficient estimate. The
                unreduced input is among the candidates, so the result is never
                worse than what was handed in. Recommended unless the cost of
                the reduction itself matters: it is a small multiple of one

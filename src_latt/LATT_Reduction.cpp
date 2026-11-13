@@ -40,7 +40,7 @@ unimodular transformation that produced it.
   dual         LLL through the adjugate of the form. On every measure applied
                in this package this is the weaker of the two LLL variants,
                sometimes by orders of magnitude
-  seysen       Seysen, minimising sum_i |b_i|^2 |dual b_i|^2. Treats every
+  seysen       Seysen, minimizing sum_i |b_i|^2 |dual b_i|^2. Treats every
                index symmetrically and reduces the form and its dual in one
                descent; the one to use when what matters is that every
                coefficient be small rather than that one vector be short
@@ -64,7 +64,7 @@ unimodular transformation that produced it.
   slide-<k>    Gama-Nguyen slide reduction at block size k, which must
                divide the dimension
   best         run a representative selection of the above and keep whichever
-               minimises the squared orthogonality defect prod_i G_ii / det G,
+               minimizes the squared orthogonality defect prod_i G_ii / det G,
                ties broken by the sum of absolute entries. The input is among
                the candidates, so the result is never worse than it. The
                selection is direct, dual, seysen, seysen_best, seysen_lll,
@@ -80,7 +80,7 @@ the gains measured in this package were negligible. Slide reduction differs
 from BKZ in using two families of conditions on non-overlapping blocks, which
 buys a polynomial bound on the number of steps that BKZ has no analogue of.
 
-Note that "best" is a choice and not a canonical notion. It minimises the
+Note that "best" is a choice and not a canonical notion. It minimizes the
 orthogonality defect, which is scale free and equals one exactly for an
 orthogonal basis, and breaks ties on the size of the integers. A caller
 wanting a short first vector, a balanced Gram-Schmidt profile or a small

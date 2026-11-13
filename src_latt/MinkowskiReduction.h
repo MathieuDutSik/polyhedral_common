@@ -62,7 +62,7 @@
   outer loop and no termination argument to make: the algorithm is n
   enumerations.
 
-  THE COST IS EXPONENTIAL and this is inherent, not an artefact. Each step
+  THE COST IS EXPONENTIAL and this is inherent, not an artifact. Each step
   enumerates the lattice points of norm at most |b_i|^2, and the last index is
   the expensive one. The method belongs where the dimension is small and
   exactness matters more than speed, which is the regime of the perfect-form,

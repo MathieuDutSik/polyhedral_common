@@ -1,7 +1,7 @@
 # src_genera: enumeration of a genus of integral positive definite lattices
 
 `GENUS_Enumerate` lists the isometry classes of a genus by Kneser
-p-neighbours, deduplicating by canonical form and stopping when the
+p-neighbors, deduplicating by canonical form and stopping when the
 Smith-Minkowski-Siegel mass is reached.
 
     GENUS_Enumerate [file.nml]
@@ -55,7 +55,7 @@ full list of entries, their defaults and their documentation.
   `canonical_method`, `isomorphism_method` and `automorphism_method` of
   `src_latt/LatticeMethods.h`, the same methods as `LATT_Canonicalize`,
   `LATT_Isomorphism` and `LATT_Automorphism` (see `GenusMethods`); `hecke`
-  to skip the expansions whose neighbours are all expanded classes (see
+  to skip the expansions whose neighbors are all expanded classes (see
   `GenusEnumerationState`); and the `order` of the expansions, `creation`,
   `deficit`, `aut` or `mixed` with its proportions `mixed_deficit` and
   `mixed_aut` (see `GenusExpansionOrder`); and `orbit_random_generators`,
@@ -75,8 +75,8 @@ The enumerations in `src_perfect`, `src_delaunay` and friends are built on
 an adjacency relation: orbits are joined by flipping across a facet, and the
 enumeration is over when the orbit list is closed under that relation. Their
 `DataFunc` machinery encodes exactly that, and it does not apply here. In a
-genus every class is a p-neighbour of some other after enough steps, there is
-no facet, and closure of the neighbour graph is not what certifies the answer.
+genus every class is a p-neighbor of some other after enough steps, there is
+no facet, and closure of the neighbor graph is not what certifies the answer.
 
 What certifies it is arithmetic:
 
@@ -84,13 +84,13 @@ What certifies it is arithmetic:
 
 The enumeration accumulates that sum and stops on equality. Since the mass is
 supplied independently, this is a proof of completeness rather than a
-termination heuristic: an error in the neighbour construction cannot return a
+termination heuristic: an error in the neighbor construction cannot return a
 short list silently, it shows up as a mass that never closes.
 
 ## Spinor genera
 
-For a prime p not dividing det, the p-neighbour graph is connected on a
-SPINOR genus, not on a genus, and its neighbours move from one spinor genus to
+For a prime p not dividing det, the p-neighbor graph is connected on a
+SPINOR genus, not on a genus, and its neighbors move from one spinor genus to
 the one given by the class of p in the group of spinor genera. With
 `out_prime`, which stays at one prime, a genus with several spinor genera may
 therefore need one seed per spinor genus, which is why `FileLattice` takes a
@@ -126,18 +126,18 @@ symbol gives a single seed, so a genus with several spinor genera needs
 
 ## Performance notes
 
-* The neighbour is LLL-reduced once before anything else touches it. The
+* The neighbor is LLL-reduced once before anything else touches it. The
   basis coming from `GetZbasis` divided by p is arbitrary and can be very
   skewed, and both the canonical form and the automorphism group start by
   enumerating short vectors. The reduction is done by the dispatchers of
   `src_latt/LatticeMethods.h`, which reduce their input once and give the
   result back in the basis of the input, for every method.
 * The projective points are cut into orbits under the automorphism group
-  before neighbours are formed. In rank 14 at p = 2 that is 16383 points, and
+  before neighbors are formed. In rank 14 at p = 2 that is 16383 points, and
   on the determinant-243 seed they fall into 8 orbits.
 * Deduplication is by canonical form (`ComputeCanonicalFormWeylChamber`,
   the characteristic vectors in one Weyl chamber and the simple roots), so
-  recognising an already known class is a dictionary lookup and not a test
+  recognizing an already known class is a dictionary lookup and not a test
   against every class found so far; the pairwise scheme is quadratic in the
   class number, which is what makes it the bottleneck of a large enumeration.
 * Both the canonical form and the automorphism group work from the FULL RANK
@@ -188,8 +188,8 @@ dividing |G| (`MultiplicityLocalFactor.h`): the orbit of L_p / N_p in
 N_p^# / N_p, N = Z[G] X, under the image of O(X_p) modulo p^c. That image
 grows like p^{m(m-1)/2} in the multiplicity m, so it is given by
 generators, complete by construction (`LocalOrthogonalImageGenerators`):
-its reduction modulo p by the stabiliser chain of the basis vectors (for
-each new image of e_i, one element of the stabiliser of e_0, ..., e_{i-1}
+its reduction modulo p by the stabilizer chain of the basis vectors (for
+each new image of e_i, one element of the stabilizer of e_0, ..., e_{i-1}
 found by a search column by column), then the layers of the elements
 congruent to 1 modulo p^j, F_p-spaces (by linear algebra when p is odd
 and e = 1). Membership is decided by a solution modulo p^{e+2t+1} and the
@@ -198,7 +198,7 @@ a basis adapted to the radical of A mod p, whose image and form A/p are
 kept. The factors need not be 1: 2 for W(A2) acting diagonally on the
 A2^3 of E6 (mass 1/12), 8 on the A2^4 of E8, 8 on E6 + E6 (mass 7/1152,
 an image of order about 10^15) and 80 on E6^3 (mass 697/124416, order
-about 10^35), the last two closed by enumerations. With a centre K, when
+about 10^35), the last two closed by enumerations. With a center K, when
 the pi-adic search below gives up, the same construction runs within the
 integral commutant of O_K: the lifts in its coordinates, the images of
 the basis vectors forced where O_K-linearity determines them, the
@@ -221,29 +221,29 @@ membership and equal order), and the Howell orbit with the orbit on
 element lists; `Test_HowellForm` checks the form against brute force on
 random subgroups, and runs in the 15B mass tests.
 
-A split prime of a CM centre goes to the K-linear chain over Z_p: C4 x S5
-on E8 (x) Z[i] (centre Q(i), 5 split, multiplicity 2) has the factor 6 at
+A split prime of a CM center goes to the K-linear chain over Z_p: C4 x S5
+on E8 (x) Z[i] (center Q(i), 5 split, multiplicity 2) has the factor 6 at
 5, mass 3/16 closed by enumeration; an inert prime likewise, C3 x S5 on
-E8 (x) A2 (centre Q(zeta_3), 5 inert, image 720 = |U_2(F_5)|, factor 6,
+E8 (x) A2 (center Q(zeta_3), 5 inert, image 720 = |U_2(F_5)|, factor 6,
 mass 1/12). F55 = C11 : C5 never reaches its split
 prime 5 (the component is induced from C11, Z_5[G] e_rho is maximal);
 F55 on A10^2 (mass 5/24) exercises the ramified 11.
 
 Not done or not tested: layers by linear algebra beyond p odd and e = 1;
 p = 2, e >= 2, c >= 3 and a layer whose basis does not all lift, for the
-generators; a CM centre of degree 4; residue fields with q^m > 2^24 points;
+generators; a CM center of degree 4; residue fields with q^m > 2^24 points;
 the first column of the image search when F_p^m is large and the local
 group is not of rank one over a maximal order (it is enumerated, with only
 quadratic conditions); the lifts at e >= 2 or p = 2, which go through e +
 2t + 1 levels by a depth-first search (affine filter from the second level
 only: a rank-4 lattice at 2 with e = 4 is beyond the bounds). Candidate
 lattices are listed in TODO.md, not yet built or
-checked. Beyond the bounds the result says local_correction_open. When End_G has a CM centre K (Q(sqrt -7) for the
+checked. Beyond the bounds the result says local_correction_open. When End_G has a CM center K (Q(sqrt -7) for the
 Frobenius group F21 on seven points), the multiplicity lattice is Hermitian
-over K: K is recognised from the class sums (sigma_a fixes K iff C_g and
+over K: K is recognized from the class sums (sigma_a fixes K iff C_g and
 C_{g^a} agree on the component), O_K acts through the order they generate
 (required maximal), and the mass is the Hermitian mass over K times the
-local factors, computed with the K-linear endomorphisms. When the centre
+local factors, computed with the K-linear endomorphisms. When the center
 K is totally real (Q(sqrt 5) for the dihedral group D5 in W(A4)) the
 multiplicity lattice is quadratic over K and its mass is the quadratic
 mass below; for D5 on two A4, one in each E8 of E8+E8, the mass
@@ -260,7 +260,7 @@ bounds and the searches all fail, the bounds are tried again with a
 p-part of D(N) of up to 2^17 elements.
 
 When End_G = M_r(D), D a totally definite quaternion algebra over a real
-centre K (recognised by the dimension c r (2r + 1) of the skew-adjoint
+center K (recognized by the dimension c r (2r + 1) of the skew-adjoint
 part of End_G, that of Sp_2r), the mass comes from QuaternionicMass.h by
 comparison with the principal lattice S = O^r, O a maximal order of D
 (found by enlarging the multiplier ring of X), whose mass is Prasad's
@@ -283,8 +283,8 @@ its square (1/24, 1/1152), on a sublattice of index 3^4 of (D4 (x) W)^2,
 W the weight lattice of A2 scaled by 3 (5/64, 3 classes), and on D4 (x)
 A2 + D4 (x) W (5/576, 2 classes), and D4 (x) A2 + I (x) W, I a left ideal
 of index 9 of the Hurwitz order (factor 4 at 3, 1/6), all closed by
-enumeration. Other centres: the dicyclic groups Dic_n on Z[z] + Z[z] j
-(centre Q(z + 1/z)): Q(sqrt 2), Q(sqrt 5), Q(sqrt 3) and the cubic
+enumeration. Other centers: the dicyclic groups Dic_n on Z[z] + Z[z] j
+(center Q(z + 1/z)): Q(sqrt 2), Q(sqrt 5), Q(sqrt 3) and the cubic
 Q(zeta_9)^+ and Q(zeta_7)^+ with D ramified at the prime over 3, resp. 7
 (1/16, 1/20, 1/24, 1/36, 1/28), closed by enumeration. When r = 1 and the
 multiplier ring is maximal at p, X_p = O_p x and the right multiplication
@@ -308,7 +308,7 @@ integers. Checked for s = 1:
 Q8 on D4, D4^2, D4^3 (1/24, 1/1152, 1/82944, the principal genus), on E8
 as a Hurwitz lattice (1/1920, the non-principal genus), on 2Z^4 (the
 Lipschitz order, 1/8), on E8 + D4 (1/46080); 2I on the icosian E8 and
-E8^2 (centre Q(sqrt 5), 1/120 and 1/28800); each a single class confirmed
+E8^2 (center Q(sqrt 5), 1/120 and 1/28800); each a single class confirmed
 by GENUS_EnumerateIsometry. In rank 16: Q8 on D4^4 (17/39813120, 2
 classes) and on the Lipschitz order squared (1/128); 2I on {(x, y) in
 I^2 : x = y (1 + i) mod 2 I} (17/1800 through a local ratio 272 at 2, 3
@@ -427,13 +427,13 @@ t^{-sigma} as phi > 0, and |a_k| <= tau_n(k)); the ball of mu num(local)
 times the standard mass must contain the integer found with MPFR and no
 other. The 54 masses of rank 2 and 19 of rank 4 are certified.
 
-With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabiliser of L in
-the adelic centraliser is a subgroup of finite index of that of L_0, so
+With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabilizer of L in
+the adelic centralizer is a subgroup of finite index of that of L_0, so
 
     mass(L, g) = prod_d mass(L_d, g) * prod_q |G_q . H_q| ,
 
 H_q the glue L / L_0 at q in the discriminant group of L_0 and G_q the
-image of the local stabiliser of L_0 (see `IsometryMass.h`). The masses of
+image of the local stabilizer of L_0 (see `IsometryMass.h`). The masses of
 the orthogonal components (d = 1, 2) come from `GenusMass`. Those of the
 Hermitian components (d >= 3, lattices over Z[zeta_d]) of rank one are
 computed (`CyclotomicHermitianMass.h`: the mass is 2^{1-n} |L(0,
@@ -451,7 +451,7 @@ prime (4 | d) the factor is that of Hecke.jl: the formula for a maximal
 lattice when L is maximal there, and otherwise the generic method, a chain
 of overlattices of index 2 up to a maximal one with, at each step, the
 numbers of sublattices and superlattices of index 2 locally isometric to
-the neighbours in the chain, the local isometry being decided by the genus
+the neighbors in the chain, the local isometry being decided by the genus
 symbol of Kirschmer. All the masses over Q(zeta_d) are thus computed; a
 mass given in `HermMass` as a line `d num den` still takes precedence.
 Checked against Hecke.jl on 78 Hermitian lattices of rank 2 and 3 over
@@ -462,7 +462,7 @@ each primary discriminant module commuting with g are listed by
 backtracking, and the orbit of the glue is closed under them. For d = 1, 2
 these are the image of the local group (Nikulin, Theorem 1.9.5). For the
 other components (d >= 3, and the components of a non-abelian group) the
-image of the local centraliser is computed: first the group generated by
+image of the local centralizer is computed: first the group generated by
 -1 and sigma, which settles it when it is already all the equivariant
 isometries; otherwise the solutions of g A g^T = A modulo q^c in the
 commutant Lambda of the action, lifted level by level to where the Newton
@@ -475,7 +475,7 @@ When the groups are too large to be listed, the orbit length is |G| /
 |Stab_G(H)| with both orders taken from graph automorphism groups: a
 bijection of a module preserving the nondegenerate b is additive, so the
 isometries (commuting with g) are the automorphisms of the complete graph
-on the elements with the colours q(x), b(x, y) and y = g(x), and adding one
+on the elements with the colors q(x), b(x, y) and y = g(x), and adding one
 vertex per element of the glue, joined to its components, gives the
 stabilizer. This works up to some thousands of vertices: an involution of
 the determinant-30 genus with eigenspaces of rank 9 and 10 (glue (Z/2)^9,
@@ -504,10 +504,10 @@ computed by `GENUS_IsometryMass` is reached.
 
 The code is in `GenusEnumerationGroup.h` and reuses `GenusEnumeration.h`
 without changing its cost: `GenusNeighbor` is split into
-`GenusNeighborKernel`, which also returns the basis of the neighbour, and
+`GenusNeighborKernel`, which also returns the basis of the neighbor, and
 the reduction.
 
-* The neighbours are the sigma-stable ones: at a good prime p (p not
+* The neighbors are the sigma-stable ones: at a good prime p (p not
   dividing m det), N = L_v + Z v/p for v an eigenvector modulo p^2 of an
   eigenvalue in F_p, obtained by the projector R(P) / R(lambda') with
   lambda' the Teichmueller lift and R = (x^m - 1) / (x - lambda'). For
@@ -518,7 +518,7 @@ the reduction.
 * A pair is identified either by the canonical form of (A, A g^T) or by
   Plesken-Souvignier isometry tests against the classes on the same
   lattice (bucketed by the canonical form of the lattice, so that the
-  Z-spanning family is computed once per lattice); the first neighbours
+  Z-spanning family is computed once per lattice); the first neighbors
   try both and the cheaper on average is used. Its weight is
   1 / |C_{O(L)}(g)|, the automorphism group of the pair of forms.
 * The projective spaces are cut into orbits up to 5 10^6 points; up to
@@ -534,14 +534,14 @@ the reduction.
   give the classes of (L, G) for the group they generate, told apart by
   the forms (A, A g_1^T, ..., A g_k^T). Commuting ones use the common
   eigenvectors. For a non-abelian G, at odd p not dividing |G| det, the
-  neighbours are those of the irreducible totally isotropic G-submodules S
+  neighbors are those of the irreducible totally isotropic G-submodules S
   of L/pL, of index p^dim S (`GroupNeighborModP.h`): the points of
   P^{m-1}(F_q) for each irreducible type with End = F_q and multiplicity
-  m, cut into orbits of the centraliser, or sampled at random beyond
+  m, cut into orbits of the centralizer, or sampled at random beyond
   2 10^6 points. "mass exceeded = true" in the summary flags a target mass
   that is too small.
 
-The seeds (one per genus of pairs and per component of the neighbour
+The seeds (one per genus of pairs and per component of the neighbor
 graph) are input, or come from gluing:
 
     GENUS_GlueIsometry [glue|enumerate] [Gram1] [Isom1] [Gram2] [Isom2] [det]
@@ -550,7 +550,7 @@ graph) are input, or come from gluing:
 gives the classes of the g-stable primitive extensions of (L_1, g_1) (+)
 (L_2, g_2), g = g_1 (+) g_2, of the given determinant or of any, from the
 g-stable isotropic subgroups of D(L_1) (+) D(L_2) meeting neither summand,
-taken up to the centralisers of the g_i (`IsometryGlue.h`). In the
+taken up to the centralizers of the g_i (`IsometryGlue.h`). In the
 enumerate mode each genus of pairs met is enumerated by its mass; since the
 genus of a glued pair depends only on the genera of the pieces and the
 local glue, this gives all the classes of pairs whose pieces lie in the

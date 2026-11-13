@@ -4,10 +4,10 @@
 # genus of pairs met enumerated by its mass.
 #
 # - A1 with -1 and E7 with 1, determinant 1: E8 with a root reflection,
-#   one class, centraliser 2 |W(E7)|;
+#   one class, centralizer 2 |W(E7)|;
 # - D4 with 1 and D4 with -1, any determinant: the glue orders 1, 2 and 4,
 #   three genera of one class each, the last one E8 with an involution of
-#   type D4 (centraliser 6 |W(D4)|^2);
+#   type D4 (centralizer 6 |W(D4)|^2);
 # - A1 with -1 and E7+E8 with 1, determinant 1: the genus of II_16 with a
 #   root reflection, whose second class (on D16+) the enumeration finds;
 # - A2 with an element of order 3 and E6+E8 with 1, determinant 1: the

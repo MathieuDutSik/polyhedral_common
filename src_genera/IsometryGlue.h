@@ -380,7 +380,7 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
     }
   }
   /*
-    The glue up to the centralisers C_i of sigma_i in O(L_i): glue groups in
+    The glue up to the centralizers C_i of sigma_i in O(L_i): glue groups in
     the same orbit of C_1 x C_2 give isometric pairs. The orbits are taken
     at one prime only, the one with the largest module: the group acts on
     all the primes at once, and moving the part at that prime to its
@@ -388,11 +388,11 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
    */
   PairMethods methods = DefaultPairMethods();
   std::vector<MyMatrix<Tint>> ListGen1 =
-      PairCentraliser<T, Tint, Tgroup>(A1, std::vector<MyMatrix<T>>{P1},
+      PairCentralizer<T, Tint, Tgroup>(A1, std::vector<MyMatrix<T>>{P1},
                                        methods.automorphism, os)
           .ListGen;
   std::vector<MyMatrix<Tint>> ListGen2 =
-      PairCentraliser<T, Tint, Tgroup>(A2, std::vector<MyMatrix<T>>{P2},
+      PairCentralizer<T, Tint, Tgroup>(A2, std::vector<MyMatrix<T>>{P2},
                                        methods.automorphism, os)
           .ListGen;
   size_t i_reduced = 0;

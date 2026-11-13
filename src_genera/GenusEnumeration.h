@@ -47,13 +47,13 @@
 
 /*
   Enumeration of the isometry classes of a genus of even positive definite
-  lattices, by Kneser p-neighbours.
+  lattices, by Kneser p-neighbors.
 
   The scheme is NOT the adjacency-decomposition scheme of src_perfect and
   src_delaunay, and deliberately does not use their DataFunc machinery. There
   the orbits are joined by a geometric adjacency relation and the enumeration
   terminates when the orbit list is closed under it. Here every lattice of the
-  genus is adjacent to a fixed lattice through some p-neighbour, so there is no
+  genus is adjacent to a fixed lattice through some p-neighbor, so there is no
   useful notion of a facet, and the termination criterion is arithmetic: the
   Smith-Minkowski-Siegel mass
 
@@ -61,34 +61,34 @@
 
   The enumeration stops when the accumulated sum reaches the mass supplied on
   input. That also certifies completeness independently of the enumeration, so
-  a bug in the neighbour construction cannot silently return a short list: it
+  a bug in the neighbor construction cannot silently return a short list: it
   shows up as a mass that never closes.
 
   Two facts govern the design.
 
-  (1) The p-neighbour graph is connected on a SPINOR genus, not on a genus. A
+  (1) The p-neighbor graph is connected on a SPINOR genus, not on a genus. A
   genus with several spinor genera therefore needs one seed lattice per spinor
   genus; with a single seed the enumeration converges to a proper subset and
   the mass falls short. The program reports that rather than pretending to be
   complete, and accepts several seeds on input.
 
   (2) The deduplication is by canonical form (src_latt/LatticeStabEquiCan.h),
-  so testing whether a new neighbour is already known is a hash lookup rather
+  so testing whether a new neighbor is already known is a hash lookup rather
   than an isometry test against every class found so far. That is the point of
   doing this here: the pairwise scheme is quadratic in the class number.
  */
 
 /*
-  How the neighbour primes are scheduled.
+  How the neighbor primes are scheduled.
 
   OutPrime: one prime for the whole run -- the one given, or the smallest
-  prime NOT dividing the determinant. At such a prime the neighbour graph
+  prime NOT dividing the determinant. At such a prime the neighbor graph
   is connected on the spinor genus (Kneser), so the enumeration terminates
   with the full list; the cost is that an even determinant forces p >= 5
   and the projective space grows as p^{n-1}.
 
   Iterate: primes 2, 3, 5, 7, ... in order, including those dividing the
-  determinant. A p-neighbour is in the genus for EVERY p (Schulze-Pillot,
+  determinant. A p-neighbor is in the genus for EVERY p (Schulze-Pillot,
   properties (i)-(iv): same determinant, integral, even, same genus), so
   every class found is genuine at any prime; what is lost at p | det is
   only the guarantee that one prime connects the graph. The scheduler
@@ -99,20 +99,20 @@
   Deterministic, and termination is inherited from OutPrime: the schedule
   eventually reaches a prime not dividing the determinant.
 
-  RandomWalk: most neighbours of the full expansion are classes already
-  known, so each new class is first treated by random 2-neighbours. A class
+  RandomWalk: most neighbors of the full expansion are classes already
+  known, so each new class is first treated by random 2-neighbors. A class
   with |Aut| = g gets the number b, the smallest integer with g < 2^b, and
   the bound max(1, ceil(hits_factor * b)); random projective lines mod 2 are
   drawn (uniformly, so an orbit is hit in proportion to its size and no
-  orbit computation is needed) and their neighbours inserted, until that
+  orbit computation is needed) and their neighbors inserted, until that
   many of them are known classes. A new class never stops the walk. A line
-  need not give a neighbour, and a class may have no 2-neighbour at all, so
+  need not give a neighbor, and a class may have no 2-neighbor at all, so
   the draws that give none are bounded by failed_draws_factor * b.
   The walk is at p = 2 by default. With walk_prime_max > 2, every draw takes
   instead a prime uniformly among those of [walk_prime_min, walk_prime_max]
-  not dividing 2 det, and an isotropic line at that prime: a neighbour costs
-  the same at any prime, at such a prime the neighbour graph is connected on
-  the spinor genus (Kneser), which p = 2 is not, and the neighbours at a
+  not dividing 2 det, and an isotropic line at that prime: a neighbor costs
+  the same at any prime, at such a prime the neighbor graph is connected on
+  the spinor genus (Kneser), which p = 2 is not, and the neighbors at a
   large prime are spread much more widely over the genus.
   The pending classes are treated by decreasing |Aut|. If the mass closes in
   this first phase the enumeration is over. Otherwise the full expansion
@@ -128,12 +128,12 @@ enum class NeighborStrategy { OutPrime, Iterate, RandomWalk };
   expanded there:
     Creation: discovery order.
     Deficit: the largest Hecke deficit first, the number of points giving a
-      neighbour that the classes already expanded do not account for (see
+      neighbor that the classes already expanded do not account for (see
       GenusEnumerationState). When the mass has not closed, the missing
-      classes are neighbours of the classes with a positive deficit only.
+      classes are neighbors of the classes with a positive deficit only.
     Aut: the largest |Aut| first. The classes of large |Aut| are rarely
       reached from the generic ones (few of their points lead to them), but
-      are neighbours of each other, and have few orbits of points, so their
+      are neighbors of each other, and have few orbits of points, so their
       expansions are cheap. On the genus of det 90 and rank 19 with 28 528
       classes, the deficit order expanded 1103 classes and found the last
       one, A12 D5 with |Aut| = 2.4 10^13, through 9 of the 262 143 points of
@@ -177,12 +177,12 @@ template <typename T, typename Tgroup> struct GenusEnumerationResult {
   Tmass accumulated_mass;
   Tmass target_mass;
   bool complete;
-  // The primes the neighbour steps used, in the order they came into play,
-  // and how many new classes the neighbours at each of them produced. The
+  // The primes the neighbor steps used, in the order they came into play,
+  // and how many new classes the neighbors at each of them produced. The
   // seeds are not counted. With the out_prime strategy there is one entry.
   std::vector<int> ListPrimeUsed;
   std::vector<size_t> ListNewClassPerPrime;
-  // The cost in neighbours: how many the full expansion built, and how many
+  // The cost in neighbors: how many the full expansion built, and how many
   // the random walk built and how many new classes those gave. Whether the
   // mass closed during the first, random walk only, phase.
   size_t n_neighbor_full = 0;
@@ -251,7 +251,7 @@ template <typename Tint> int ValuationP(Tint const &x, int p) {
 /*
   The points of the projective space P^{n-1}(F_p), indexed WITHOUT being
   enumerated. There are (p^n - 1) / (p - 1) of them: 16383 for n = 14 and
-  p = 2, but 1.5 x 10^9 at p = 5, where materialising the list (as an
+  p = 2, but 1.5 x 10^9 at p = 5, where materializing the list (as an
   earlier version did) is itself a hundred gigabytes. The representatives
   are the vectors whose first non-zero coordinate is 1; the index runs
   through the blocks ipos = 0, ..., n-1 (position of that coordinate), each
@@ -336,7 +336,7 @@ inline size_t IndexOfProjectiveLine(std::vector<int> const &v, int p) {
     index += block;
     block /= p_s;
   }
-  // offset inside the block, little-endian in the normalised coordinates
+  // offset inside the block, little-endian in the normalized coordinates
   size_t mult = 1;
   for (int i = ipos + 1; i < n; i++) {
     int val = ((((v[i] % p) + p) % p) * scal) % p;
@@ -348,7 +348,7 @@ inline size_t IndexOfProjectiveLine(std::vector<int> const &v, int p) {
 
 // Kept only for the sanity check of the indexing, as an INDEPENDENT
 // enumeration of the same order (small cases only); the enumeration itself
-// never materialises the projective space.
+// never materializes the projective space.
 inline std::vector<std::vector<int>> EnumerateProjectiveLines(int n, int p) {
   std::vector<std::vector<int>> ListLines;
   for (int ipos = 0; ipos < n; ipos++) {
@@ -404,7 +404,7 @@ inline void CheckProjectiveLineIndexing(int n, int p) {
   };
   size_t block_start = 0;
   size_t block = n_line - (n_line - 1) / static_cast<size_t>(p);
-  // block = p^{n-1}; the boundaries of every block and their neighbours
+  // block = p^{n-1}; the boundaries of every block and their neighbors
   for (int ipos = 0; ipos < n; ipos++) {
     roundtrip(block_start);
     if (block_start + block - 1 < n_line) {
@@ -421,7 +421,7 @@ inline void CheckProjectiveLineIndexing(int n, int p) {
 #endif
 
 /*
-  The p-neighbour of the lattice with Gram matrix G attached to an isotropic
+  The p-neighbor of the lattice with Gram matrix G attached to an isotropic
   point v of P^{n-1}(F_p):
 
       N = { y in L : (y, v) = 0 mod p }  +  Z (v/p) .
@@ -436,7 +436,7 @@ inline void CheckProjectiveLineIndexing(int n, int p) {
   too small to be corrected (which can only happen for p = 2).
  */
 /*
-  The neighbour before reduction: Bp, whose rows divided by p are a basis of
+  The neighbor before reduction: Bp, whose rows divided by p are a basis of
   N in the coordinates of L, and the Gram matrix of that basis. Split from
   GenusNeighbor so that the enumeration of lattices with an isometry
   (GenusEnumerationGroup.h) can carry the isometry over to N; GenusNeighbor
@@ -447,7 +447,7 @@ template <typename T, typename Tint> struct GenusNeighborBasis {
   MyMatrix<T> GramN;
 };
 
-// What the neighbour construction needs of the point v: the lift, its linear
+// What the neighbor construction needs of the point v: the lift, its linear
 // form, a pivot of that form mod p, and the norm with its valuation.
 template <typename Tint> struct GenusNeighborLine {
   MyVector<Tint> v;
@@ -458,7 +458,7 @@ template <typename Tint> struct GenusNeighborLine {
 };
 
 /*
-  The point v of P^{n-1}(F_p) gives a neighbour exactly when it is not in the
+  The point v of P^{n-1}(F_p) gives a neighbor exactly when it is not in the
   radical of the form mod p and v_p((v,v)) > e, e = v_p(2): the valuation
   e + 1 is corrected by GenusNeighbor, a smaller one is not. This test is
   cheap, and it is what the Hecke bookkeeping counts the lines with.
@@ -482,7 +482,7 @@ GenusNeighborLineData(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     }
   }
   if (jpiv == -1) {
-    // v lies in the radical of the form mod p: no neighbour from it
+    // v lies in the radical of the form mod p: no neighbor from it
     return {};
   }
   int e = (p == 2) ? 1 : 0;
@@ -577,16 +577,16 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
 #endif
   MyMatrix<Tint> Bp = GetZbasis(Agen);
 #ifdef TIMINGS_GENUS_ENUMERATION
-  os << "|GENUS: neighbour GetZbasis|=" << time_zb << "\n";
+  os << "|GENUS: neighbor GetZbasis|=" << time_zb << "\n";
 #endif
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
   if (Bp.rows() != n) {
-    std::cerr << "GENUS: the neighbour basis has " << Bp.rows()
+    std::cerr << "GENUS: the neighbor basis has " << Bp.rows()
               << " rows instead of " << n << "\n";
     throw TerminalException{1};
   }
 #endif
-  // Gram of the neighbour: (Bp/p) G (Bp/p)^T = Bp G Bp^T / p^2
+  // Gram of the neighbor: (Bp/p) G (Bp/p)^T = Bp G Bp^T / p^2
   MyMatrix<Tint> Prod = Bp * G * Bp.transpose();
   Tint p2 = Tint(p) * Tint(p);
   MyMatrix<T> GramN(n, n);
@@ -594,7 +594,7 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     for (int j = 0; j < n; j++) {
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
       if (Prod(i, j) % p2 != 0) {
-        std::cerr << "GENUS: the neighbour Gram matrix is not integral at ("
+        std::cerr << "GENUS: the neighbor Gram matrix is not integral at ("
                   << i << "," << j << ")\n";
         throw TerminalException{1};
       }
@@ -606,13 +606,13 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
   for (int i = 0; i < n; i++) {
     T two(2);
     if (ResInt(GramN(i, i), two) != T(0)) {
-      std::cerr << "GENUS: the neighbour lattice is not even at " << i << "\n";
+      std::cerr << "GENUS: the neighbor lattice is not even at " << i << "\n";
       throw TerminalException{1};
     }
   }
   if (DeterminantMat(GramN) !=
       UniversalScalarConversion<T, Tint>(DeterminantMat(G))) {
-    std::cerr << "GENUS: the neighbour has a different determinant\n";
+    std::cerr << "GENUS: the neighbor has a different determinant\n";
     throw TerminalException{1};
   }
 #endif
@@ -642,8 +642,8 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
   How the classes are told apart and their automorphism groups computed, by
   the methods of src_latt/LatticeMethods.h.
 
-  by_canonical true: a canonical Gram matrix per neighbour (canonical), and a
-  known class is a dictionary lookup. by_canonical false: the neighbours are
+  by_canonical true: a canonical Gram matrix per neighbor (canonical), and a
+  known class is a dictionary lookup. by_canonical false: the neighbors are
   bucketed by a cheap isometry invariant and, within a bucket, told apart by
   the isometry test (isomorphism), as in the isomorphism strategy of
   Hecke.jl; the Plesken-Souvignier test is pruned by the automorphism group
@@ -736,21 +736,21 @@ MyMatrix<T> GenusCanonicalGram(MyMatrix<T> const &GramMat,
 /*
   The projective points to visit, one per orbit of the automorphism group,
   as INDICES in the order of ProjectiveLineOfIndex. Without the orbits the
-  rank-14 enumeration would canonicalise 16383 neighbours per lattice at
+  rank-14 enumeration would canonicalize 16383 neighbors per lattice at
   p = 2; the orbits cut that by the order of the group acting.
 
-  Nothing of the size of the projective space is materialised: the images
+  Nothing of the size of the projective space is materialized: the images
   under the generators are computed point by point through the index
   bijection, and the visited set is one bit per point (190 MB at p = 5,
   n = 14, where the point count is 1.5 x 10^9 and the earlier
-  materialisation of the lines, the index map and one permutation table
+  materialization of the lines, the index map and one permutation table
   per generator was the memory explosion of 2026-10-25).
 
   Generators acting trivially on the projective space -- the scalar
   matrices mod p, in particular -Id, which is a generator of every
   automorphism group here -- are discarded first. When nothing remains the
   group acts trivially, every point is its own representative, and the
-  selection says so through all = true rather than materialising
+  selection says so through all = true rather than materializing
   0, ..., n_line - 1.
  */
 struct ProjectiveLineSelection {
@@ -863,7 +863,7 @@ ProjectiveLineOrbitRepresentativesGeneric(
   of 20 of them, formed on the rows mod 2. They generate a subgroup H of the
   image of the group, so an orbit of H lies in an orbit of the group and the
   expansion over the orbits of H is still exact: an unlucky draw only splits
-  orbits, at the cost of more neighbours. On two genera of rank 16 and 19,
+  orbits, at the cost of more neighbors. On two genera of rank 16 and 19,
   2 to 4 random products gave the orbits of the 8 to 20 generators in most
   classes, and the orbits 3 times faster; the orbits are a negligible part of
   an expansion, so this is disabled by default.
@@ -1061,7 +1061,7 @@ ProjectiveLineOrbitRepresentatives(int n, int p,
   case needs the valuation correction in GenusNeighbor, which is exactly why
   that correction is there.
 
-  Connectivity of the p-neighbour graph on a spinor genus is the reason for
+  Connectivity of the p-neighbor graph on a spinor genus is the reason for
   excluding the primes dividing the determinant. It is not relied upon blindly:
   if the graph fails to be connected the accumulated mass simply stops short of
   the target and the program reports the enumeration as incomplete.
@@ -1077,7 +1077,7 @@ template <typename T> int ChooseNeighborPrime(T const &det) {
       return p;
     }
   }
-  std::cerr << "GENUS: no suitable neighbouring prime found for det=" << det
+  std::cerr << "GENUS: no suitable neighboring prime found for det=" << det
             << "\n";
   throw TerminalException{1};
 }
@@ -1102,9 +1102,9 @@ std::map<T, int> GenusIsoInvariant(MyMatrix<T> const &GramMat,
 }
 
 /*
-  The state of an enumeration, shared by the two neighbour schedules: the
+  The state of an enumeration, shared by the two neighbor schedules: the
   classes found so far with their automorphism data, the structure that
-  recognises a known class, and the accumulated mass. The two operations on
+  recognizes a known class, and the accumulated mass. The two operations on
   it, inserting a lattice and expanding a known class at one prime, are the
   same for every schedule; what differs is only the order of the expansions,
   see GenusEnumerationOutPrime and GenusEnumerationIterate.
@@ -1121,9 +1121,9 @@ struct GenusEnumerationState {
   Tmass const &TotalMass;
   std::ostream &os;
   GenusEnumerationResult<T, Tgroup> result;
-  // The classes are held in canonical form, so recognising an already known
+  // The classes are held in canonical form, so recognizing an already known
   // one is a dictionary lookup rather than a comparison against every class
-  // found so far. That is the whole point of canonicalising: the pairwise
+  // found so far. That is the whole point of canonicalizing: the pairwise
   // scheme is quadratic in the class number.
   // CanonicalForm strategy: classes held by canonical Gram, so a known one
   // is a dictionary lookup. Isomorphism strategy: classes bucketed by the
@@ -1134,7 +1134,7 @@ struct GenusEnumerationState {
   std::vector<MyMatrix<T>> ListGramWork;
   // The automorphism data is kept alongside: it is the expensive part, it is
   // needed twice (the order for the mass, the generators for the orbits of
-  // projective points), and recomputing it in the neighbour loop doubles the
+  // projective points), and recomputing it in the neighbor loop doubles the
   // cost of the whole enumeration. The generators also prune the isometry
   // test of the isomorphism strategy.
   std::vector<LatticeAutInfo<T, Tint, Tgroup>> ListAutInfo;
@@ -1147,17 +1147,17 @@ struct GenusEnumerationState {
   size_t n_iso_positive = 0;
   /*
     The Hecke bookkeeping. At a prime p, write T(M, L) for the number of
-    points of P^{n-1}(F_p) whose neighbour of M is isometric to L. Counting
-    the neighbouring pairs up to isometry gives
+    points of P^{n-1}(F_p) whose neighbor of M is isometric to L. Counting
+    the neighboring pairs up to isometry gives
 
         T(M, L) / |Aut M| = T(L, M) / |Aut L| ,
 
-    so the expansions already done tell part of the neighbours of every other
+    so the expansions already done tell part of the neighbors of every other
     class: hecke_in[i][L] is the sum of T(M, L) / |Aut M| over the classes
     M != L expanded at the i-th prime. When |Aut L| hecke_in[i][L] is the
-    number of points of L that give a neighbour, every neighbour of L is a
+    number of points of L that give a neighbor, every neighbor of L is a
     class already expanded, and the expansion of L can be skipped: it would
-    find nothing new, and its neighbours towards the classes expanded later
+    find nothing new, and its neighbors towards the classes expanded later
     are zero by the same identity, so the counts stay exact. hecke_row[i][M]
     is the row T(M, .) of an expanded class, kept for the checks only.
    */
@@ -1166,8 +1166,8 @@ struct GenusEnumerationState {
   // the number of picks done, for the alternation of the Mixed order
   size_t n_pick = 0;
   std::vector<std::vector<Tmass>> hecke_in;
-  // hecke_npoint[i]: the number of points giving a neighbour at the i-th
-  // prime, -1 while not computed. Whether a point gives a neighbour depends
+  // hecke_npoint[i]: the number of points giving a neighbor at the i-th
+  // prime, -1 while not computed. Whether a point gives a neighbor depends
   // on L / p^2 L only, so on L (x) Z_p, which is the same for all the
   // classes of the genus: one number per prime.
   std::vector<int64_t> hecke_npoint;
@@ -1287,7 +1287,7 @@ struct GenusEnumerationState {
     return {true, idx_new};
   }
 
-  // The number of points of the class pos giving a neighbour at p, from the
+  // The number of points of the class pos giving a neighbor at p, from the
   // orbits ListRepr of its automorphism group.
   size_t count_points(int p, ProjectiveLineSelection const &ListRepr,
                       MyMatrix<Tint> const &G_int) const {
@@ -1301,7 +1301,7 @@ struct GenusEnumerationState {
     return n_point;
   }
 
-  // The number of points giving a neighbour at the i-th prime p, the same
+  // The number of points giving a neighbor at the i-th prime p, the same
   // for all the classes; computed on the class pos the first time.
   size_t n_point_genus(size_t pos, int p, size_t i_prime) {
     if (hecke_npoint.size() <= i_prime) {
@@ -1317,7 +1317,7 @@ struct GenusEnumerationState {
     return static_cast<size_t>(hecke_npoint[i_prime]);
   }
 
-  // The Hecke deficit of the class pos at p: its points giving a neighbour
+  // The Hecke deficit of the class pos at p: its points giving a neighbor
   // that the classes expanded at p do not account for.
   Tmass deficit(size_t pos, int p, size_t i_prime) {
     size_t n_point = n_point_genus(pos, p, i_prime);
@@ -1371,7 +1371,7 @@ struct GenusEnumerationState {
   }
 
   // Expands one known class at one prime: the orbits of projective points,
-  // the neighbour of each representative, insertion of the new classes.
+  // the neighbor of each representative, insertion of the new classes.
   // Stops early when the mass closes. i_prime is the index of p in
   // result.ListPrimeUsed, for the count of the new classes. f_new is called
   // on the index of every new class, as soon as it is inserted.
@@ -1406,13 +1406,13 @@ struct GenusEnumerationState {
         hecke_in.resize(i_prime + 1);
       }
       hecke_in[i_prime].resize(ListGramWork.size(), Tmass(0));
-      // the points of the lattice that give a neighbour
+      // the points of the lattice that give a neighbor
       size_t n_point = n_point_genus(pos, p, i_prime);
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
       size_t n_point_here = count_points(p, ListRepr, G_int);
       if (n_point_here != n_point) {
         std::cerr << "GENUS: lattice " << (pos + 1) << " has " << n_point_here
-                  << " points giving a neighbour at p=" << p
+                  << " points giving a neighbor at p=" << p
                   << " against " << n_point << " for the genus\n";
         throw TerminalException{1};
       }
@@ -1421,7 +1421,7 @@ struct GenusEnumerationState {
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
       if (accounted > Tmass(n_point)) {
         std::cerr << "GENUS: the expanded classes account for " << accounted
-                  << " neighbours of lattice " << (pos + 1) << " at p=" << p
+                  << " neighbors of lattice " << (pos + 1) << " at p=" << p
                   << " which has only " << n_point << "\n";
         throw TerminalException{1};
       }
@@ -1429,7 +1429,7 @@ struct GenusEnumerationState {
       if (accounted == Tmass(n_point)) {
 #ifdef DEBUG_GENUS_ENUMERATION
         os << "GENUS: lattice " << (pos + 1) << " skipped at p=" << p
-           << ", its " << n_point << " neighbours are all expanded classes\n";
+           << ", its " << n_point << " neighbors are all expanded classes\n";
 #endif
 #ifdef SANITY_CHECK_GENUS_ENUMERATION_EXTENSIVE
         // the expansion is done anyway, and checked below
@@ -1455,14 +1455,14 @@ struct GenusEnumerationState {
           GenusNeighbor<T, Tint>(G_int, eLine, p, os);
       if (opt) {
 #ifdef DEBUG_GENUS_ENUMERATION
-        os << "GENUS:   neighbour built, testing against known classes\n";
+        os << "GENUS:   neighbor built, testing against known classes\n";
 #endif
 #ifdef TRACK_INFO_GENUS_ENUMERATION
-        // With GENUS_NEIGHBOUR_DUMP set, the Gram matrix of every neighbour
+        // With GENUS_NEIGHBOUR_DUMP set, the Gram matrix of every neighbor
         // is written to that file before it is canonicalized, each write
         // replacing the last. When a canonicalization dies (time, memory),
         // the file holds the Gram matrix that killed it, which is otherwise
-        // unrecoverable: the neighbour is a function of the whole run state.
+        // unrecoverable: the neighbor is a function of the whole run state.
         static const char *dump_file = std::getenv("GENUS_NEIGHBOUR_DUMP");
         if (dump_file) {
           WriteMatrixFile(std::string(dump_file), *opt);
@@ -1522,7 +1522,7 @@ struct GenusEnumerationState {
           if (kv.first != pos && rows.count(kv.first) == 0) {
             std::cerr << "GENUS: lattice " << (pos + 1) << " would have been "
                       << "skipped at p=" << p << " but has the unexpanded "
-                      << "neighbour " << (kv.first + 1) << "\n";
+                      << "neighbor " << (kv.first + 1) << "\n";
             throw TerminalException{1};
           }
         }
@@ -1590,7 +1590,7 @@ inline int GenusNextPrime(int q) {
   class pos has been expanded at ListPrimeUsed[i]. At a prime the classes go
   in the order of GenusExpansionOrder.
   The invariant exits: the mass closes (complete), or the accumulated
-  mass passes the target (impossible for genuine neighbours, so it
+  mass passes the target (impossible for genuine neighbors, so it
   would witness a programming error and stops the run as incomplete
   rather than spinning), or NumberProjectiveLines overflows at an
   absurd prime (an exception, equally a witness that something is
@@ -1665,7 +1665,7 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
   int n = state.n;
   std::mt19937_64 engine(rw.seed);
   // The primes of the walk. At p = 2 the lines are drawn uniformly and most
-  // of them give a neighbour; at an odd prime only about one line in p is
+  // of them give a neighbor; at an odd prime only about one line in p is
   // isotropic, so the isotropic ones are drawn directly.
   std::vector<int> walk_primes;
   if (rw.walk_prime_max <= 2) {
@@ -1688,7 +1688,7 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
   }
   size_t n_line_2 = NumberProjectiveLines(n, 2);
   // A random isotropic point mod p, by rejection: about p draws of O(n^2)
-  // each, nothing next to the canonical form of the neighbour, and exactly
+  // each, nothing next to the canonical form of the neighbor, and exactly
   // uniform over the isotropic points. A form without isotropic point mod p
   // (rank <= 2) gives nothing after 64 p tries.
   auto draw_line = [&](MyMatrix<Tint> const &G_int,
@@ -1853,8 +1853,8 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
 }
 
 /*
-  The enumeration itself. Starts from the seed lattices, forms p-neighbours
-  on the schedule of the strategy, keeps the new ones (recognised either by
+  The enumeration itself. Starts from the seed lattices, forms p-neighbors
+  on the schedule of the strategy, keeps the new ones (recognized either by
   canonical form or by the isomorphism strategy), and stops when the
   accumulated mass reaches the target.
  */
@@ -1934,9 +1934,9 @@ The arithmetic of the Gram matrices";
     ListStringValues_doc["FileLattice"] = "Default: unset\n\
 One or more Gram matrices in the ListMatrix format, the seeds. With\n\
 out_prime, which stays at one prime not dividing det, one seed per spinor\n\
-genus may be needed: the p-neighbour graph is connected on a spinor genus,\n\
+genus may be needed: the p-neighbor graph is connected on a spinor genus,\n\
 not on a genus. iterate and random_walk bring in further primes, whose\n\
-neighbours move between the spinor genera, so one seed suffices for them.\n\
+neighbors move between the spinor genera, so one seed suffices for them.\n\
 If unset, the seed is built from GenusSymbol";
     ListStringValues_doc["GenusSymbol"] = "Default: unset\n\
 The genus as a Conway-Sloane symbol in the notation of the DefLatDB labels,\n\
@@ -1958,17 +1958,17 @@ Conway and Sloane (GenusMass in GenusMass.h)";
     std::map<std::string, std::string> ListIntValues_doc;
     std::map<std::string, std::string> ListBoolValues_doc;
     ListStringValues_doc["strategy"] = "Default: out_prime\n\
-The schedule of the neighbour steps, see NeighborStrategy:\n\
+The schedule of the neighbor steps, see NeighborStrategy:\n\
 out_prime: one prime, the given one or the smallest not dividing det\n\
 iterate: the primes 2, 3, 5, ... in order, including those dividing det,\n\
   cheapest first, until the mass closes\n\
-random_walk: every new class is first treated by random neighbours (the\n\
+random_walk: every new class is first treated by random neighbors (the\n\
   RANDOM_WALK block), then the expansion of iterate";
     ListIntValues_doc["prime"] = "Default: 0\n\
 The prime of out_prime, 0 for the smallest prime not dividing det. Ignored\n\
 by iterate and random_walk";
     ListStringValues_doc["recognition"] = "Default: canonical\n\
-How a known class is recognised, see GenusMethods: canonical (by the\n\
+How a known class is recognized, see GenusMethods: canonical (by the\n\
 canonical form of canonical_method) or isomorphism (by the isometry test\n\
 of isomorphism_method within the buckets of a cheap invariant)";
     ListStringValues_doc["canonical_method"] =
@@ -1989,7 +1989,7 @@ products make them about 3 times faster, a negligible part of the time";
         "class. The methods are:" +
         DocLatticeStabCanIsomMethods();
     ListBoolValues_doc["hecke"] = "Default: F\n\
-Whether to skip the expansions whose neighbours are all expanded classes,\n\
+Whether to skip the expansions whose neighbors are all expanded classes,\n\
 by the Hecke bookkeeping of GenusEnumerationState";
     ListStringValues_doc["order"] = "Default: mixed\n\
 The order of the full expansions at a prime, see GenusExpansionOrder:\n\
@@ -2014,10 +2014,10 @@ With order mixed, the number of picks by |Aut| in each turn";
 The seed of the random walk";
     ListDoubleValues_doc["hits_factor"] = "Default: 0.25\n\
 A class with |Aut| = g, and b the smallest integer with g < 2^b, is treated\n\
-when max(1, ceil(hits_factor * b)) of its random neighbours are known\n\
+when max(1, ceil(hits_factor * b)) of its random neighbors are known\n\
 classes";
     ListIntValues_doc["failed_draws_factor"] = "Default: 16\n\
-The draws giving no neighbour are bounded by failed_draws_factor * b";
+The draws giving no neighbor are bounded by failed_draws_factor * b";
     ListIntValues_doc["walk_prime_min"] = "Default: 2\n\
 The smallest prime of the random walk";
     ListIntValues_doc["walk_prime_max"] = "Default: 2\n\
@@ -2048,7 +2048,7 @@ is reached the classes found so far are written, with complete false";
 
 /*
   The method part of the namelist. The genus itself is not described: the
-  p-neighbour construction preserves it, and the seeds are checked against
+  p-neighbor construction preserves it, and the seeds are checked against
   each other (same rank, same determinant) by GENUS_Enumerate.
  */
 inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
@@ -2064,7 +2064,7 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
   } else if (strat == "random_walk") {
     spec.strategy = NeighborStrategy::RandomWalk;
   } else {
-    std::cerr << "GENUS: unrecognised strategy \"" << strat
+    std::cerr << "GENUS: unrecognized strategy \"" << strat
               << "\". Allowed: out_prime, iterate, random_walk\n";
     throw TerminalException{1};
   }
@@ -2074,7 +2074,7 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
   } else if (recognition == "isomorphism") {
     spec.methods.by_canonical = false;
   } else {
-    std::cerr << "GENUS: unrecognised recognition \"" << recognition
+    std::cerr << "GENUS: unrecognized recognition \"" << recognition
               << "\". Allowed: canonical, isomorphism\n";
     throw TerminalException{1};
   }
@@ -2101,7 +2101,7 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
   } else if (order == "mixed") {
     spec.order.order = GenusExpansionOrder::Mixed;
   } else {
-    std::cerr << "GENUS: unrecognised order \"" << order
+    std::cerr << "GENUS: unrecognized order \"" << order
               << "\". Allowed: creation, deficit, aut, mixed\n";
     throw TerminalException{1};
   }
@@ -2166,7 +2166,7 @@ void WriteGenusEnumerationResult(
     os << "class number = " << result.ListGram.size() << "\n";
     os << "accumulated mass = " << result.accumulated_mass << "\n";
     os << "target mass = " << result.target_mass << "\n";
-    os << "neighbours built: full expansion " << result.n_neighbor_full
+    os << "neighbors built: full expansion " << result.n_neighbor_full
        << ", random walk " << result.n_neighbor_random << " ("
        << result.n_new_random << " new classes)\n";
     os << "random walks: " << result.n_walk << "\n";

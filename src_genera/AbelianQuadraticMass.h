@@ -191,7 +191,7 @@ inline T QuadLocalFactorOdd(std::vector<QuadJordanBlock> blocks,
   The Jordan decomposition of Hecke (jordan_decomposition of Lattices.jl)
   on a Gram matrix over K at p: pieces of rank one, or of rank two at a
   dyadic prime when an off-diagonal entry has a smaller valuation than the
-  diagonal ones (normalised to pi^v); consecutive pieces of the same scale
+  diagonal ones (normalized to pi^v); consecutive pieces of the same scale
   make a component. The components keep their pieces, along which their
   Gram matrices are block diagonal.
  */
@@ -1192,7 +1192,7 @@ inline QuadKirschmerSymbol<T> KirschmerSymbolDyadic(KMat<T> const &G, LocalPrime
         Dc[i].push_back(Gp[a][a]);
       }
     }
-    // a diagonalisation of each piece, for the Hasse invariants
+    // a diagonalization of each piece, for the Hasse invariants
     std::vector<ElemE<T>> dg;
     for (auto const &Gp : comps[i].pieces) {
       for (auto const &x : DiagonalizeK(Gp, K)) {
@@ -2545,7 +2545,7 @@ QuadraticMassNonAbelianE(MyMatrix<T> const &B,
                          QuadLValueMethod method);
 
 /*
-  The field K = Q(theta) of a generator theta of the centre, with a minimal
+  The field K = Q(theta) of a generator theta of the center, with a minimal
   polynomial f in Z[x], and the discriminant d = (-1)^{m(m-1)/2} det of the
   K-bilinear form on a K-basis of the lattice, on the powers of theta: E =
   K(sqrt d) is determined by its square class. Nothing when no small prime
@@ -2706,7 +2706,7 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
 
 /*
   The image modulo p^c of the K-linear isometries of the trace form on X_p
-  (the centraliser of a group component with centre K, see
+  (the centralizer of a group component with center K, see
   MultiplicityLocalFactor), computed pi-adically. With X_p = (+)_P X_P over
   the primes P of K (or of the CM field) over p, all stable under the
   involution, the image is the product of the images of the U(X_P), each
@@ -3319,7 +3319,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       When the list overflows: generators of the image of U(X_P), complete
       by construction, as LocalOrthogonalImageGenerators does over Z_p but
       on the rows over F_P (the residue field of P) and the pi-adic levels:
-      the stabiliser chain modulo pi of the basis rows e_0, ..., e_{m-1}
+      the stabilizer chain modulo pi of the basis rows e_0, ..., e_{m-1}
       (one element searched for each new image of e_i, whose rows are
       completed one at a time on their affine spaces and lifted to
       pi^{Kpi} by the lifts of lift_space, which by the Lemma comes from an

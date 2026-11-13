@@ -31,7 +31,7 @@ inline int64_t PowerInt64(int64_t a, int e) {
   solutions for Sigma and for g^t Sigma g, so the distribution of X^t C X is
   a class function on the GL_j-orbits of Sym_j(Z/p^k). An orbit is given by
   its Jordan invariants: for every level v < k the number of diagonal
-  entries p^v u of a diagonalisation and the Legendre symbol of the product
+  entries p^v u of a diagonalization and the Legendre symbol of the product
   of their units; the entries of level >= k are 0. Adding a row x of
   coefficient c adds c x x^t, so
       new[C] = sum_A H_c[C][A] old[A],

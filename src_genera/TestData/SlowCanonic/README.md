@@ -25,7 +25,7 @@ reported as `LSEC: nbRow=24702 n=14`, and the size of the graph handed to the
 canonical labelling.
 
 A single index-2 obstruction therefore multiplies the family by 10.5, which is
-the difference between a graph that is canonicalised easily and one that
+the difference between a graph that is canonicalized easily and one that
 exhausts memory. `ExtractInvariantVectorFamilyFullRank` stops at 1179 (2358
 after duplication) and is fine, which is why `ArithmeticEquivalence` remains
 usable on these lattices while `ComputeCanonicalForm` does not: the equivalence

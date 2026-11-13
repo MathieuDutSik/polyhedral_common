@@ -38,12 +38,12 @@
   sqr_estimate_facet_coefficients of norms.h, which bounds the coefficients of
   the facets that will be produced. That quantity depends on ALL the vectors,
   symmetrically. A reduction aiming at one short vector, which is what LLL
-  does, optimises the wrong thing here; Seysen's measure, which penalises any
+  does, optimizes the wrong thing here; Seysen's measure, which penalizes any
   basis vector being long and is invariant under exchanging the lattice with
   its dual, is a much closer match to it.
 
   So rather than pick a reducer on general grounds, the "best" method runs the
-  candidates and keeps whichever actually minimises the estimate, the input
+  candidates and keeps whichever actually minimizes the estimate, the input
   itself being among the candidates so that the result is never worse than
   what was handed in. The cost is a small multiple of one reduction and is
   negligible against a dual description.
@@ -105,7 +105,7 @@ ReduceVectorFamilySingle(MyMatrix<T> const &M, std::string const &method,
 /*
   Every reduction here needs the column Gram matrix to be positive definite,
   which asks that the family span the ambient space. Checked once and reported
-  in those terms: a rank deficient family is a modelling error upstream, not a
+  in those terms: a rank deficient family is a modeling error upstream, not a
   numerical accident, and the message from a singular elimination deep inside
   a reducer would not say so.
  */
@@ -180,7 +180,7 @@ ReduceVectorFamilyGeneral(MyMatrix<T> const &M, std::string const &method,
   if (method == "best") {
     return ReduceVectorFamilyBest(M, os);
   }
-  // No check against a fixed list here: the parametrised methods make the set
+  // No check against a fixed list here: the parametrized methods make the set
   // of valid names infinite, and LatticeReducedGeneral rejects what it cannot
   // parse with a message naming the shapes it accepts.
   std::pair<MyMatrix<T>, MyMatrix<T>> pair =

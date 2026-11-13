@@ -38,7 +38,7 @@ check_order A2 12 "$METHODS_ONE"
 check_order D4 1152 "$METHODS_ONE"
 check_order E6 103680 "$METHODS_ONE"
 check_order A2A2 288 "$METHODS_ONE"
-# the centraliser of the swap in O(A2+A2) = O(A2) wr S2: the diagonal O(A2)
+# the centralizer of the swap in O(A2+A2) = O(A2) wr S2: the diagonal O(A2)
 # times the swap, order 24
 check_order A2A2swap 24 "$METHODS_SEVERAL"
 

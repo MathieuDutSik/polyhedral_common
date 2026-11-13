@@ -41,16 +41,16 @@
   a prime N of O_K: the functions on the pairs (L_j, l) with L_j a class of
   the genus and l an orbit of Aut(L_j) on the lines of L_j / N L_j (all the
   lines for N split, the isotropic ones for N inert), and the Hecke operator
-  at a prime P coprime to N: the sum over the neighbours of L_j at P.
+  at a prime P coprime to N: the sum over the neighbors of L_j at P.
 
   The classes are kept in canonical form (ComputeCanonicalFormMultiple on
-  the family (G, G Omega^T)): the canonical basis of a neighbour is that of
+  the family (G, G Omega^T)): the canonical basis of a neighbor is that of
   its class, so the class is found by a dictionary lookup, and the map
-  sending the canonical basis of the neighbour to that of the class is the
+  sending the canonical basis of the neighbor to that of the class is the
   isometry that carries its level structure, without any isometry test.
 
-  The genus is the closure of the seed under the neighbours at all the
-  Hecke primes asked for. That is the genus when the neighbour graph is
+  The genus is the closure of the seed under the neighbors at all the
+  Hecke primes asked for. That is the genus when the neighbor graph is
   connected on it, which is not checked here; the mass sum_j 1/|Aut(L_j)|
   is returned for that.
  */
@@ -75,7 +75,7 @@ struct AmfHeckeMatrix {
   OrderPrime P;
   // the entries (row, column) -> multiplicity, rows the source states
   std::map<std::pair<size_t, size_t>, int64_t> entries;
-  // the source states of each class (row sum = number of neighbours)
+  // the source states of each class (row sum = number of neighbors)
   size_t n_neighbor = 0;
 };
 
@@ -104,7 +104,7 @@ AmfCanonical<T, Tint> amf_canonical(RealifiedRing<T, Tint> const &ring, MyMatrix
   // Over Z the family is {G} and Omega is empty.
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(ring.B);
   /*
-    The basis of a neighbour (from GetZbasis) and the canonical bases are
+    The basis of a neighbor (from GetZbasis) and the canonical bases are
     skewed, and the canonical form starts by enumerating the shells of short
     vectors, which a skewed Gram matrix makes very slow (99% of the time of a
     quinary genus of 389 classes was in that enumeration). The canonical form
@@ -315,14 +315,14 @@ std::optional<T> amf_genus_mass(RealifiedRing<T, Tint> const &ring, std::ostream
 }
 
 /*
-  The Hecke operator at P on the class L_i: one neighbour per orbit X of
+  The Hecke operator at P on the class L_i: one neighbor per orbit X of
   Aut(L_i) on the lines of L_i / P L_i. For a level orbit O of L_i, the
   entry (O, O') counts the lines x with the image of a fixed l in O by the
-  neighbour of x in O'; counting the pairs (x, l) of X x O with that
+  neighbor of x in O'; counting the pairs (x, l) of X x O with that
   property in two ways, it is |X| / |O| times the number of l in O sent to
-  O' by the neighbour of the representative of X. So the level lines are
+  O' by the neighbor of the representative of X. So the level lines are
   all carried once per orbit representative, which is a product mod N,
-  while the neighbours, which cost a canonical form each, are one per
+  while the neighbors, which cost a canonical form each, are one per
   orbit.
  */
 template <typename T, typename Tint, typename Tgroup>
@@ -394,7 +394,7 @@ compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
             continue;
           }
           // The level lines of L_i carried to L_j: the coordinates in the
-          // basis of L_i, then in the canonical basis of the neighbour, which
+          // basis of L_i, then in the canonical basis of the neighbor, which
           // are those of L_j. The matrix has denominators dividing ell(P),
           // which is prime to N.
           MyMatrix<T> R = basis_i * Inverse(can.basis);
@@ -442,7 +442,7 @@ compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
       if (i == 0) {
         l_n_neighbor[ip] = n_nb;
       } else if (l_n_neighbor[ip] != n_nb) {
-        std::cerr << "AMF: the classes do not have the same number of neighbours\n";
+        std::cerr << "AMF: the classes do not have the same number of neighbors\n";
         throw TerminalException{1};
       }
 #ifdef TIMINGS_ALGEBRAIC_MODULAR_FORMS

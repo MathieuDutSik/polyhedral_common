@@ -35,7 +35,7 @@
   convolution of class functions only needs the number of ways a fixed
   element of a class is the sum of an element of a second class and one of
   a third, counted once per (p, k). The level k is raised until two
-  consecutive levels give the same density, so the stabilisation is checked
+  consecutive levels give the same density, so the stabilization is checked
   rather than assumed.
 
   UnitChainDensity computes alpha_p(S, T) at an odd prime by splitting off
@@ -425,7 +425,7 @@ T RankOneDensityCounting(SiegelJordanBlocks const &q, PadicClass const &a,
     }
     prev = next;
     if (k > a.val + e_max + 40) {
-      std::cerr << "LDBP: the rank one density did not stabilise\n";
+      std::cerr << "LDBP: the rank one density did not stabilize\n";
       throw TerminalException{1};
     }
   }
@@ -520,7 +520,7 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
     return N / PowerInt(p_T, k * (n * j - j * (j + 1) / 2));
   };
   int k = v_max + e_max + 2;
-  // the stabilisation needs at least the levels k and k + 1: decline before
+  // the stabilization needs at least the levels k and k + 1: decline before
   // computing anything when the second is out of budget
   if (too_expensive(k + 1)) {
     return finish({});

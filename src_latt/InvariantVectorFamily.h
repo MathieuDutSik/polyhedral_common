@@ -663,7 +663,7 @@ MyMatrix<Tint> get_shv_block_scaled(MyMatrix<T> const &GramMat,
     MyMatrix<Tint> roots =
         MatrixFromVectorFamilyDim(n, solver.fixed_norm_vectors(root_norm));
     if (roots.rows() > 0) {
-      // Symmetrise to both signs, whatever the enumerator's convention.
+      // Symmetrize to both signs, whatever the enumerator's convention.
       std::unordered_set<MyVector<Tint>> seen;
       std::vector<MyVector<Tint>> rows;
       for (int i = 0; i < roots.rows(); i++) {
@@ -814,7 +814,7 @@ MyMatrix<Tint> IteratedShortestVectorFamily(MyMatrix<T> const &GramMat,
   minimum-set, but not a single chosen representative onto a chosen one.
 
   This is the saturation completion of Hecke's characteristic vectors
-  (_characteristic_vectors) specialised to an already-full-rank family: the
+  (_characteristic_vectors) specialized to an already-full-rank family: the
   saturation of a full-rank sublattice is the whole lattice, so there is no
   recursion, only the one completion over Z^n / K. The result Z-spans, so a
   searched basis drawn from it is unimodular and the Plesken-Souvignier
@@ -1526,7 +1526,7 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
       zero vector is dropped, it carries no information and a vector family
       containing it is not usable downstream.
   --- CV(A, v) in (2.2.6) is not guaranteed to consist of vectors x with
-      proj(x) = v: a lattice point in a neighbouring L_1-coset can be
+      proj(x) = v: a lattice point in a neighboring L_1-coset can be
       closer to v than every point of the coset of v.  When that happens
       the union misses the coset of v altogether and V_cv(A) does not
       generate Z^n, so (2.2.6) as written is not a characteristic vector
@@ -2136,7 +2136,7 @@ CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
     span. It has full rank but need not span: enough for the correctness
     of the isometry and automorphism searches, not for the canonical bases;
     when it does not span, the searched basis has an index and the search
-    meets many rational leaves (a centraliser of (E8^3, i) took minutes,
+    meets many rational leaves (a centralizer of (E8^3, i) took minutes,
     against seconds on shells_zbasis).
   * diagonal_bound: the vectors of norm at most the largest diagonal entry
     of the reduced Gram matrix, the vector set of Plesken and Souvignier's

@@ -22,10 +22,10 @@ The relevant program is:
     positive definite quadratic form, returning the reduced form and the
     unimodular transformation. Every reduction in the package is available as
     a method -- `direct`, `dual`, `seysen`, `seysen_best`, `seysen_lll`,
-    `deep`, `minkowski`, and the parametrised `deep-<d>`, `bkz-<b>`,
+    `deep`, `minkowski`, and the parametrized `deep-<d>`, `bkz-<b>`,
     `slide-<k>` for any admissible value -- together with `best`, which runs a
     representative
-    selection of them and keeps whichever minimises
+    selection of them and keeps whichever minimizes
     the orthogonality defect, ties broken by the size of the integers. The
     single dispatch over them is `LatticeReduction.h`, which is also what
     `VectFamilyReduction.h` calls, so a new reduction is named in one place.
@@ -306,7 +306,7 @@ undo the work. And the dual step goes through the **reversed dual**: if the
 block has Gram matrix `G` and `J` is the reversal, the reversed dual basis has
 Gram matrix `J G^-1 J`, its first Gram-Schmidt norm is the reciprocal of the
 block's last, and a transformation `U` of the reversed dual corresponds to
-`J U^-T J` of the block. So maximising the last norm is finding a shortest
+`J U^-T J` of the block. So maximizing the last norm is finding a shortest
 vector of `J adj(G) J` and putting it first -- the same enumeration the primal
 step uses, and integral since the adjugate clears the denominators.
 
@@ -366,7 +366,7 @@ a shortest vector of the reversed dual `J adj(G) J` of the block: the dual
 step of slide reduction, applied to every overlapping block rather than to a
 fixed tiling. Only full blocks of size `beta` are used. Micciancio and Walter
 prove bounds comparable to slide reduction's and observe BKZ's practical
-behaviour; measured with fplll on the SVP challenge lattices of dimension 60,
+behavior; measured with fplll on the SVP challenge lattices of dimension 60,
 self-dual BKZ-20 reaches the profile of BKZ-30.
 
 Two implementation choices. After each insertion the **block alone** is LLL
@@ -441,7 +441,7 @@ pays for is the size of every coefficient, and for the dual description the
 relevant quantity is `sqr_estimate_facet_coefficients` of `norms.h`, the
 Hadamard bound on the facet coefficients that will be produced. That depends
 on all the vectors symmetrically, so a reduction aiming at one short vector,
-which is what LLL does, is optimising the wrong thing here. Seysen's measure
+which is what LLL does, is optimizing the wrong thing here. Seysen's measure
 is a much closer match, and deep insertion sometimes wins instead. Which of
 them wins is not predictable from the input:
 
@@ -455,7 +455,7 @@ them wins is not predictable from the input:
 | 24cell | 24 x 5 | 81 | 81 | all tie |
 
 So the useful method is **`best`**: run all the candidates and keep whichever
-actually minimises the estimate, with the unreduced input among the candidates
+actually minimizes the estimate, with the unreduced input among the candidates
 so that the result is never worse than what was handed in. It costs three to
 eighteen times a single reduction, which is tens to hundreds of milliseconds
 on the instances above and negligible against the dual description that
@@ -466,7 +466,7 @@ five orders of magnitude, which is worth knowing since it is one of the two
 methods the program originally offered.
 
 Every method is available: `direct`, `dual`, `seysen`, `seysen_best`,
-`seysen_lll`, `deep`, the parametrised `deep-<d>`, `bkz-<b>` and `slide-<k>`
+`seysen_lll`, `deep`, the parametrized `deep-<d>`, `bkz-<b>` and `slide-<k>`
 for any admissible value, and `best`. The parameter is parsed from the name,
 so the set of accepted methods is not a fixed handful; `best` tries the
 thirteen-way selection `direct`, `dual`, `seysen`, `seysen_best`,

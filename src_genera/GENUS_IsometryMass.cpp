@@ -223,7 +223,7 @@ void ProcessGroupMass(std::string const &FileGram, std::string const &FileGens,
 }
 
 /*
-  The check for the groups <g, tau>, tau running over the centraliser of g
+  The check for the groups <g, tau>, tau running over the centralizer of g
   in O(L): when the genus of L has one class, the pairs (g', tau') of a
   genus X of pairs of commuting isometries with g' conjugate to g number
   |g^{O(L)}| times those with g' = g, so sum_{tau} 1 / |C_{O(L)}(g)| over

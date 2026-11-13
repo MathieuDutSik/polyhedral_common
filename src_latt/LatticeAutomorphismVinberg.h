@@ -32,11 +32,11 @@
     * W(R), the Weyl group of the root system, is not computed as a
       group; its order is read off the Dynkin type (LatticeRootSystem.h)
       and its generators are the reflections in the simple roots.
-    * The residual Aut(L, rho), the stabiliser of a Weyl vector, is the
+    * The residual Aut(L, rho), the stabilizer of a Weyl vector, is the
       automorphism group of the small family consisting of the simple
       roots and a characteristic family of the orthogonal complement
       R^perp: an integral form-preserving map that permutes the simple
-      roots stabilises the fundamental chamber, hence fixes rho, and
+      roots stabilizes the fundamental chamber, hence fixes rho, and
       conversely. That family is far smaller than the full characteristic
       family of L, which is where the speedup comes from.
 

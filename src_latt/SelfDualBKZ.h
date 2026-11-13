@@ -52,7 +52,7 @@
   block, overlapping as in BKZ, rather than to a fixed tiling as slide
   reduction does. Its interest, in the analysis of Micciancio and Walter, is
   that it has proven bounds comparable to slide reduction's and BKZ's
-  practical behaviour:
+  practical behavior:
   measured with fplll on the SVP challenge lattices of dimension 60, it reaches
   at block size 20 the profile BKZ reaches at block size 30.
 
@@ -70,7 +70,7 @@
   (D_1, ..., D_{n-1}) lexicographically; a backward step on [j, k] decreases
   D_{k-1} and fixes D_i for i >= k, but may increase D_j, ..., D_{k-2}, so it
   decreases the same vector in the REVERSE lexicographic order. No single
-  order serves both, and Micciancio and Walter analyse the convergence of the
+  order serves both, and Micciancio and Walter analyze the convergence of the
   profile rather than the termination of the exact loop. The computation is
   therefore in two phases:
     * the self-dual rounds, a forward and a backward tour each, run while a

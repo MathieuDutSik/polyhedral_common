@@ -15,6 +15,7 @@
 #include <numeric>
 #include <optional>
 #include <set>
+#include <tuple>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -47,10 +48,10 @@
   A P^T = A; on input and output it is the matrix g = P^T acting on the
   columns, g^T A g = A.
 
-  The neighbours. At a good prime p (p not dividing m det), L (x) Z_p is
+  The neighbors. At a good prime p (p not dividing m det), L (x) Z_p is
   the direct sum of the eigenlattices of sigma for the eigenvalues in Z_p
-  and of the other primary components. The sigma-stable p-neighbours are
-  the neighbours N = L_v + Z v/p of the eigenvectors v:
+  and of the other primary components. The sigma-stable p-neighbors are
+  the neighbors N = L_v + Z v/p of the eigenvectors v:
   - for lambda != +-1 every eigenvector is isotropic;
   - for lambda = +-1 the isotropic ones.
   The vector has to be an eigenvector modulo p^2, not only modulo p. It is
@@ -60,17 +61,17 @@
   not divide m. For lambda = +-1 the correction to an isotropic vector
   modulo p^2 is done inside the eigenlattice, which keeps it an
   eigenvector. The centralizer C_{O(L)}(sigma) acts on each eigenspace
-  modulo p, and the neighbours are taken over its orbits on the projective
+  modulo p, and the neighbors are taken over its orbits on the projective
   space of the eigenspace, visited one orbit at a time.
 
   The classes. A pair is told apart by the canonical form of the pair of
   forms (A, A P^T) (the second one not symmetric), and C_{O(L)}(sigma) is
   the automorphism group of that pair of forms, both by the
   Plesken-Souvignier engine, whose backtrack the second form prunes. For
-  sigma = +-I the centraliser is O(L) and the lattice alone is used.
+  sigma = +-I the centralizer is O(L) and the lattice alone is used.
 
   Finite abelian groups. For G = <P_1, ..., P_k> commuting, of exponent m,
-  the G-stable neighbours are those of the common eigenvectors, the
+  the G-stable neighbors are those of the common eigenvectors, the
   eigenvectors of a character chi of G with values in F_p (p = 1 mod m,
   p not dividing m det). The projector on the chi-eigenspace modulo p^2 is
   the product of the projectors of the P_i for the eigenvalues chi(P_i),
@@ -93,7 +94,7 @@ template <typename T, typename Tgroup> struct GenusEnumerationGroupResult {
   std::vector<int> ListPrimeUsed;
   std::vector<size_t> ListNewClassPerPrime;
   // the classes found weigh more than the target: the target mass is
-  // wrong (or two classes were not recognised as isometric)
+  // wrong (or two classes were not recognized as isometric)
   bool mass_exceeded() const { return accumulated_mass > target_mass; }
 };
 
@@ -120,26 +121,26 @@ template <typename Tmass, typename T> Tmass MassToGroupField(T const &x) {
 }
 
 /*
-  How the classes of pairs are recognised and their centralisers computed.
+  How the classes of pairs are recognized and their centralizers computed.
   A pair (A, G) is the tuple of forms (A, A g_1^T, ..., A g_k^T) of
   PairForms, so these are the computations of LatticeMethods.h on tuples.
 
-  recognition is the algorithm that decides whether a neighbour is a known
+  recognition is the algorithm that decides whether a neighbor is a known
   class:
   * canonical: the canonical form of the tuple by canonical_method, a
     dictionary lookup;
   * isomorphism: isometry tests of the tuple, by isomorphism_method, against
     the known classes whose lattices may be isometric to its lattice (a
-    bucket), pruned by their centralisers;
+    bucket), pruned by their centralizers;
   * auto: not a third algorithm but a policy, which runs both on the first
-    neighbours and then the one with the smaller average time. Neither is
+    neighbors and then the one with the smaller average time. Neither is
     better in general: the canonical form takes 99% of the time for W(A3)
-    on E8+E8 (a centraliser of order 10^12), while for two reflections it
+    on E8+E8 (a centralizer of order 10^12), while for two reflections it
     is cheaper than the isometry tests.
   A pair whose isometries are all scalar (+-1) is its lattice, and is
-  always recognised by the canonical form, of the lattice alone.
+  always recognized by the canonical form, of the lattice alone.
 
-  automorphism_method computes the centraliser of every new class. The
+  automorphism_method computes the centralizer of every new class. The
   three methods are method choices of LatticeMethods.h (NAME or
   plesken_souvignier:KIND), heuristic by default.
  */
@@ -230,7 +231,7 @@ inline PairMethods ExtractPairMethodsOptions(int &argc, char *argv[]) {
   then call CheckGenusEnumerationGroupResult, which throws:
   - GenusMassExceededException when the classes found weigh more than the
     target: the target mass is wrong (or two isometric classes were not
-    recognised as such);
+    recognized as such);
   - GenusMassNotClosedException when they weigh less: the primes or the
     rounds were exhausted, and another prime or another seed is needed.
   The main functions turn them into the exit statuses 3 and 2.
@@ -369,7 +370,7 @@ ModMatrix ReduceMatrixMod(MyMatrix<Tint> const &M, int64_t mod) {
   return R;
 }
 
-// sigma = +-I: the centraliser is the whole of O(L)
+// sigma = +-I: the centralizer is the whole of O(L)
 template <typename T> bool IsScalarIsometry(MyMatrix<T> const &P) {
   int n = P.rows();
   for (int i = 0; i < n; i++) {
@@ -552,7 +553,7 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
   };
   std::vector<int64_t> v = apply_E(x);
   Tint q = bilinear(v, v);
-  // e = v_p(2): the neighbour needs v_p((v, v)) >= e + 2, the isotropy
+  // e = v_p(2): the neighbor needs v_p((v, v)) >= e + 2, the isotropy
   // modulo p is v_p >= e + 1, and the valuation e + 1 is corrected.
   int e = (p == 2) ? 1 : 0;
   bool is_pm1 = ed.is_real;
@@ -605,8 +606,10 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
     int64_t a = (static_cast<int64_t>(ResidueModP(q_red, p)) *
                  InverseModPosInt64(ResidueModP(twob_red, p), p)) %
                 p;
+    // a p u_i is below p^4, which int64 does not hold for every p
+    int64_t ap = ResMul(a, p, p2);
     for (int i = 0; i < n; i++) {
-      v[i] = ModPosInt64(v[i] - a * p * (*opt_u)[i], p2);
+      v[i] = ResSub(v[i], ResMul(ap, (*opt_u)[i], p2), p2);
     }
 #ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
     Tint q_new = bilinear(v, v);
@@ -696,7 +699,7 @@ void ProjectiveLineOrbitForEach(int n, int p,
 }
 
 /*
-  A neighbour pair: the reduced Gram matrix of N and the isometry carried
+  A neighbor pair: the reduced Gram matrix of N and the isometry carried
   over to its reduced basis (on the row vectors).
  */
 template <typename T, typename Tint>
@@ -716,7 +719,7 @@ GenusNeighborPair(MyMatrix<Tint> const &G, std::vector<MyMatrix<T>> const &ListP
   for (auto const &P : ListP) {
     MyMatrix<T> S = Bred * P * BredInv;
     if (!IsIntegralMatrix(S)) {
-      std::cerr << "GENUS_GROUP: the neighbour is not stable under the "
+      std::cerr << "GENUS_GROUP: the neighbor is not stable under the "
                    "isometry\n";
       throw TerminalException{1};
     }
@@ -773,11 +776,11 @@ PairCanonicalForms(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
   return ListMatCan;
 }
 
-// The centraliser of the pair: the common automorphisms of its forms,
+// The centralizer of the pair: the common automorphisms of its forms,
 // generators g with g A g^T = A, by automorphism_method.
 template <typename T, typename Tint, typename Tgroup>
 IntAutomorphismGroup<Tint, Tgroup>
-PairCentraliser(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
+PairCentralizer(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
                 LatticeMethodChoice const &choice, std::ostream &os) {
   return LatticeAutomorphismGroup<T, Tint, Tgroup>(PairForms(A, ListP), choice,
                                                    os);
@@ -806,7 +809,7 @@ template <typename Tint> int FiniteMatrixOrderInt(MyMatrix<Tint> const &P) {
  */
 template <typename T>
 bool IsGoodNeighborPrime(int p, int m, T const &det, bool scalar) {
-  // for sigma = +-I, the ordinary neighbours at any p not dividing det
+  // for sigma = +-I, the ordinary neighbors at any p not dividing det
   if (!scalar && m % p == 0) {
     return false;
   }
@@ -831,19 +834,8 @@ inline int NextPrimeAfter(int q) {
   }
 }
 
-/*
-  The good primes in the order of the cost of their neighbours: the number
-  of points sum_chi (p^k_chi - 1) / (p - 1) of the projective spaces of the
-  joint eigenspaces defined over F_p, of dimensions k_chi. At p != 1 mod m
-  only the characters with values in F_p contribute; their neighbours may
-  already reach every class, and far more cheaply: for E8+E8 with a group
-  of order 6 whose fixed lattice has rank 13, p = 5 visits P^12(F_5) where
-  p = 7 visits P^12(F_7), 50 times larger. A prime with no eigenspace over
-  F_p gives no neighbour and is left out. The genus fixes the dimensions,
-  so the first class gives them.
- */
 // The number of points of the projective spaces of the joint eigenspaces
-// over F_p, which the eigenvector neighbours at p visit; 0 when there is no
+// over F_p, which the eigenvector neighbors at p visit; 0 when there is no
 // eigenspace over F_p.
 template <typename Tint>
 double EigenNeighborCost(std::vector<MyMatrix<Tint>> const &ListP_int, int m,
@@ -856,6 +848,17 @@ double EigenNeighborCost(std::vector<MyMatrix<Tint>> const &ListP_int, int m,
   return cost;
 }
 
+/*
+  The good primes in the order of the cost of their neighbors: the number
+  of points sum_chi (p^k_chi - 1) / (p - 1) of the projective spaces of the
+  joint eigenspaces defined over F_p, of dimensions k_chi. At p != 1 mod m
+  only the characters with values in F_p contribute; their neighbors may
+  already reach every class, and far more cheaply: for E8+E8 with a group
+  of order 6 whose fixed lattice has rank 13, p = 5 visits P^12(F_5) where
+  p = 7 visits P^12(F_7), 50 times larger. A prime with no eigenspace over
+  F_p gives no neighbor and is left out. The genus fixes the dimensions,
+  so the first class gives them.
+ */
 template <typename T, typename Tint>
 std::vector<int> OrderedNeighborPrimes(std::vector<MyMatrix<T>> const &ListP,
                                        int m, T const &det, bool scalar) {
@@ -884,7 +887,7 @@ std::vector<int> OrderedNeighborPrimes(std::vector<MyMatrix<T>> const &ListP,
     res.push_back(pair.second);
   }
   /*
-    The neighbours at p realise only the moves of the characters with
+    The neighbors at p realize only the moves of the characters with
     values in F_p (the primes of degree one of their fields): at p != 1 mod
     m the components of a unitary (CM) part are not connected, and an
     enumeration with only such primes can stop short of the mass (C3 on a
@@ -1063,7 +1066,7 @@ inline double TypeCost(IrreducibleType const &tp, int64_t p) {
 }
 
 // The number of points sum_tau (q^m_tau - 1) / (q - 1) of the projective
-// spaces that the module neighbours at p visit.
+// spaces that the module neighbors at p visit.
 template <typename T>
 double ModuleNeighborCost(MyMatrix<T> const &A,
                           std::vector<MyMatrix<T>> const &ListP, int p) {
@@ -1077,7 +1080,7 @@ double ModuleNeighborCost(MyMatrix<T> const &A,
 
 /*
   The good primes (2 included when |G| and det are odd) for the module
-  neighbours, in the order of the number of points of their projective
+  neighbors, in the order of the number of points of their projective
   spaces.
  */
 template <typename T>
@@ -1100,8 +1103,8 @@ std::vector<int> OrderedNeighborPrimesModule(MyMatrix<T> const &A,
     res.push_back(pair.second);
   }
   // a prime p = 1 mod m second, as in OrderedNeighborPrimes: at the primes
-  // inert in the centre of a unitary component the local unitary group is
-  // compact and its neighbours do not connect the classes
+  // inert in the center of a unitary component the local unitary group is
+  // compact and its neighbors do not connect the classes
   if (m > 2) {
     size_t i_full = res.size();
     for (size_t i2 = 0; i2 < res.size(); i2++) {
@@ -1162,7 +1165,7 @@ void IndexOrbitForEach(size_t n_point, size_t n_gen, Fimage image, F f) {
 }
 
 /*
-  The neighbour of the lattice with Gram matrix A for the lifted submodule
+  The neighbor of the lattice with Gram matrix A for the lifted submodule
   St: the reduced Gram matrix and the isometries in its basis.
  */
 template <typename T, typename Tint>
@@ -1184,12 +1187,12 @@ GroupNeighborPair(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
                   UniversalScalarConversion<T, int64_t>(p);
   MyMatrix<T> GramN = B * A * B.transpose();
   if (!IsIntegralMatrix(GramN)) {
-    std::cerr << "GENUS_GROUP: the module neighbour is not integral\n";
+    std::cerr << "GENUS_GROUP: the module neighbor is not integral\n";
     throw TerminalException{1};
   }
   for (int i = 0; i < n; i++) {
     if (!IsInteger(GramN(i, i) / T(2))) {
-      std::cerr << "GENUS_GROUP: the module neighbour is not even\n";
+      std::cerr << "GENUS_GROUP: the module neighbor is not even\n";
       throw TerminalException{1};
     }
   }
@@ -1200,7 +1203,7 @@ GroupNeighborPair(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
   for (auto const &P : ListP) {
     MyMatrix<T> S = Bred * P * BredInv;
     if (!IsIntegralMatrix(S)) {
-      std::cerr << "GENUS_GROUP: the module neighbour is not G-stable\n";
+      std::cerr << "GENUS_GROUP: the module neighbor is not G-stable\n";
       throw TerminalException{1};
     }
     ListS.push_back(S);
@@ -1256,7 +1259,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     only random points, four times as many in each final round. The seeds
     are fixed per round. The mass, not the visit, certifies completeness.
 
-    A medium space of a class with a large centraliser has few orbits, at
+    A medium space of a class with a large centralizer has few orbits, at
     least n_point / |C| and close to it: when that bound is at most
     orbit_budget its orbits are built at once rather than deferred, after
     n_sample_before_orbits random points (which close the genera with few
@@ -1264,7 +1267,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     S3 diagonal on two A2 takes 23 s against 2 s). Random
     points reach a class with a probability proportional to its mass, while
     by m(L) N(L -> L') = m(L') N(L' -> L) the rare classes are the
-    neighbours of the rare ones: (E8^3, i) found 15 of its 28 classes, 99.7%
+    neighbors of the rare ones: (E8^3, i) found 15 of its 28 classes, 99.7%
     of the mass, in 40 minutes of random points at p = 5. The spaces up to
     large_space = 4 10^8 points are those of the eigenspaces of rank 12 at
     p = 5 (6.1 10^7 points) and of P^11(F_4) (5.6 10^6 points); the visited
@@ -1276,8 +1279,10 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   // a few random points first, which close at once the genera with few
   // classes before a traversal of up to 4 10^8 points
   size_t const n_sample_before_orbits = 20;
-  // the (class, prime index) whose medium spaces were cut into orbits at once
-  std::set<std::pair<size_t, size_t>> orbits_done;
+  // the (class, prime index, space) whose medium space was cut into orbits
+  // at once; a class has several spaces at a prime (eigenspaces, module
+  // types), some cut at once and some deferred to the orbit phase
+  std::set<std::tuple<size_t, size_t, size_t>> orbits_done;
   size_t n_sample = 200;
   size_t i_round = 0;
   bool more_rounds = false;
@@ -1287,10 +1292,12 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   size_t i_prime_cur = 0;
   // 0: nothing to do, 1: build the orbits, 2: random points, 3: a few
   // random points then the orbits
-  auto visit_mode = [&](size_t n_point, size_t pos) -> int {
+  auto visit_mode = [&](size_t n_point, size_t pos, size_t i_space) -> int {
     bool medium = n_point > small_space && n_point <= large_space;
     if (orbit_phase) {
-      return (medium && orbits_done.count({pos, i_prime_cur}) == 0) ? 1 : 0;
+      return (medium && orbits_done.count({pos, i_prime_cur, i_space}) == 0)
+                 ? 1
+                 : 0;
     }
     if (n_point <= small_space) {
       return (i_round == 0) ? 1 : 0;
@@ -1300,7 +1307,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         double cent = UniversalScalarConversion<double, TintGroup>(
             ListAutInfo[pos].order);
         if (static_cast<double>(n_point) <= orbit_budget * cent) {
-          orbits_done.insert({pos, i_prime_cur});
+          orbits_done.insert({pos, i_prime_cur, i_space});
           return 3;
         }
         if (deferred.size() <= i_prime_cur) {
@@ -1417,7 +1424,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     return res;
   };
   // Plesken-Souvignier (also the choice of the heuristic for tuples) runs
-  // on families kept per bucket, with the data of a neighbour computed once
+  // on families kept per bucket, with the data of a neighbor computed once
   // for all its tests; another method goes through LatticeIsometry.
   bool use_ps =
       methods.isomorphism.method ==
@@ -1510,7 +1517,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   auto add_class = [&](MyMatrix<T> const &A,
                        std::vector<MyMatrix<T>> const &ListP) -> size_t {
     IntAutomorphismGroup<Tint, Tgroup> info =
-        PairCentraliser<T, Tint, Tgroup>(A, ListP, methods.automorphism, os);
+        PairCentralizer<T, Tint, Tgroup>(A, ListP, methods.automorphism, os);
     size_t idx = ListPairWork.size();
     ListPairWork.push_back({A, ListP});
     ListAutInfo.push_back(info);
@@ -1572,7 +1579,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       }
       return res;
     };
-    // the data of the neighbour, the searched side of every test
+    // the data of the neighbor, the searched side of every test
     std::optional<PSSearchData<Tint>> sd;
     if (use_ps && !bucket.classes.empty()) {
       sd = PleskenSouvignierSearchData<Tint>(bd.forms, *bd.fam, os);
@@ -1799,7 +1806,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         closed = (result.accumulated_mass >= TotalMass);
         return closed;
       };
-      int mode = visit_mode(n_point, pos);
+      int mode = visit_mode(n_point, pos, i_type);
       if (mode == 2 || mode == 3) {
         std::mt19937_64 rng_point(static_cast<uint64_t>(pos) * 7919ULL +
                                   static_cast<uint64_t>(p) * 104729ULL +
@@ -1826,14 +1833,14 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
   };
   /*
-    The neighbours of a class are taken among the G-submodules (the module
+    The neighbors of a class are taken among the G-submodules (the module
     path, valid for any group) or, for an abelian group, among the joint
     eigenvectors (a special case, cheaper at the primes where the
     characters have their values in F_p but blind at the others). For an
     abelian group the module path is taken when its cheapest prime visits
     fewer points: C3 on A2^12 has no eigenvector over F_2 and its
     eigenspaces over F_7 have 2.3 10^9 points each, while the module
-    neighbours at 2 visit P^11(F_4), 5.6 10^6 points, and close the genus.
+    neighbors at 2 visit P^11(F_4), 5.6 10^6 points, and close the genus.
    */
   bool module_path = !abelian;
   auto expand_at = [&](size_t pos, int p, size_t i_prime) -> void {
@@ -1857,7 +1864,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
                      [](EigenspaceData const &x, EigenspaceData const &y) {
                        return x.space.basis.size() < y.space.basis.size();
                      });
-    for (auto &ed : ListEig) {
+    for (size_t i_space = 0; i_space < ListEig.size(); i_space++) {
+      EigenspaceData &ed = ListEig[i_space];
       size_t k = ed.space.basis.size();
       std::vector<MyMatrix<Tint>> ListGenEig;
       for (auto &h : ListAutInfo[pos].ListGen) {
@@ -1890,7 +1898,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
             return closed;
           };
       size_t n_line = NumberProjectiveLines(static_cast<int>(k), p);
-      int mode = visit_mode(n_line, pos);
+      int mode = visit_mode(n_line, pos, i_space);
       if (mode == 2 || mode == 3) {
         std::mt19937_64 rng_point(static_cast<uint64_t>(pos) * 7919ULL +
                                   static_cast<uint64_t>(p) * 104729ULL +
@@ -1955,9 +1963,9 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       module_path = cost_module < cost_eigen;
       ListCandidate = module_path ? ListModule : ListEigen;
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
-      os << "GENUS_GROUP: abelian group, eigenvector neighbours at "
+      os << "GENUS_GROUP: abelian group, eigenvector neighbors at "
          << ListEigen[0] << " visit " << cost_eigen
-         << " points, module neighbours at " << ListModule[0] << " visit "
+         << " points, module neighbors at " << ListModule[0] << " visit "
          << cost_module << ", the " << (module_path ? "module" : "eigenvector")
          << " path\n";
 #endif

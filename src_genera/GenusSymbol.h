@@ -37,7 +37,7 @@
     the Legendre symbol eps of the product of its units;
   * at p = 2, a component q^{eps n}_t or q^{eps n}_II per scale q = 2^k:
     eps the Jacobi symbol (2 / unit determinant), and for an odd component
-    (type I) its oddity t, the trace of a diagonalisation mod 8. Only the
+    (type I) its oddity t, the trace of a diagonalization mod 8. Only the
     sums of the oddities over a compartment (a run of odd components of
     consecutive scales) are invariants, and the signs can be walked along
     a train; CanonicalTwoAdicReduction picks one symbol per class.
@@ -694,7 +694,7 @@ MyMatrix<T> TwoAdicLocalGram(std::vector<std::array<int, 5>> const &sym2,
 // Rational invariants
 //
 
-// The diagonal of a diagonalisation over Q of the non-degenerate S.
+// The diagonal of a diagonalization over Q of the non-degenerate S.
 template <typename T> std::vector<T> RationalDiagonalForm(MyMatrix<T> S) {
   int n = S.rows();
   std::vector<T> diag;
@@ -913,7 +913,7 @@ inline int64_t SqrtModPrime(int64_t a, int64_t p) {
 }
 
 // A non-zero isotropic vector of the quadratic form c M c^T over F_p, p
-// odd, M symmetric, by a diagonalisation W M W^T = diag(delta).
+// odd, M symmetric, by a diagonalization W M W^T = diag(delta).
 inline std::optional<std::vector<int64_t>>
 IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
   int m = M.size();
@@ -1011,7 +1011,7 @@ template <typename T, typename Tint> int64_t ResidueModInt(T const &x, int64_t M
 /*
   A vector y of the even L, mod p, with L + Z y / p even: y G = 0 mod p,
   and y G y^T = 0 mod p^2 (odd p) or mod 8 (p = 2). Odd p: the form y G y^T / p mod p on the radical mod p is
-  diagonalised. p = 2: the spans of the first j vectors of a basis of the
+  diagonalized. p = 2: the spans of the first j vectors of a basis of the
   radical are enumerated, j up to 20.
  */
 template <typename T, typename Tint>
@@ -1206,7 +1206,7 @@ std::pair<MyMatrix<T>, std::vector<T>> PadicAdaptedBasis(MyMatrix<T> const &G,
   tried in the descent: in coordinates of a Jordan-adapted basis, the
   combinations of at most `weight` basis vectors, with all coefficients for
   p <= 13 and a few more those making a binary combination isotropic.
-  Normalised with first non-zero coordinate 1, without repetition.
+  Normalized with first non-zero coordinate 1, without repetition.
  */
 template <typename T, typename Tint>
 std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,

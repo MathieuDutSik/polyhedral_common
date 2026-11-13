@@ -76,7 +76,7 @@
   and J is the reversal permutation, the reversed dual basis has Gram matrix
   J G^{-1} J, its first Gram-Schmidt norm is the reciprocal of the block's
   last, and a transformation U of the reversed dual corresponds to
-  J U^{-T} J of the block. So maximising the last norm of the block is finding
+  J U^{-T} J of the block. So maximizing the last norm of the block is finding
   a shortest vector of J adj(G) J and putting it first, which is the same
   enumeration the primal step uses.
 

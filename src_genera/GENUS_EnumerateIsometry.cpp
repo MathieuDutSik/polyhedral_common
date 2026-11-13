@@ -12,12 +12,12 @@
 
 /*
   The classes of pairs (L, g) in the genus of a pair, g an isometry of
-  finite order, by the sigma-stable Kneser neighbours, until the mass of
+  finite order, by the sigma-stable Kneser neighbors, until the mass of
   the genus of the pair (GENUS_IsometryMass) is reached. See
   GenusEnumerationGroup.h. With k isometries per seed, the classes of
   (L, G) for the finite abelian group G = <g_1, ..., g_k>, the mass then
   given by GENUS_IsometryMass group; generators that do not commute give
-  the classes of (L, G) for a non-abelian G, by the G-stable neighbours of
+  the classes of (L, G) for a non-abelian G, by the G-stable neighbors of
   the irreducible isotropic submodules.
 
   Exit status: 0 when the mass closed, 2 when the classes found weigh less
@@ -106,15 +106,15 @@ int main(int argc, char *argv[]) {
       std::cerr << "weigh less than the mass), 3 the mass is exceeded (the\n";
       std::cerr << "target is wrong), 1 an error.\n";
       std::cerr << "recognition=canonical|isomorphism|auto (anywhere,\n";
-      std::cerr << "        optional, default auto): how a neighbour is\n";
-      std::cerr << "        recognised among the known classes, by the\n";
+      std::cerr << "        optional, default auto): how a neighbor is\n";
+      std::cerr << "        recognized among the known classes, by the\n";
       std::cerr << "        canonical form of the pair or by isometry tests;\n";
-      std::cerr << "        auto runs both on the first neighbours, then the\n";
+      std::cerr << "        auto runs both on the first neighbors, then the\n";
       std::cerr << "        faster\n";
       std::cerr << "canonical_method=, isomorphism_method=,\n";
       std::cerr << "automorphism_method= (anywhere, optional, default\n";
       std::cerr << "        heuristic): the methods of the canonical form, of\n";
-      std::cerr << "        the isometry tests and of the centralisers, as\n";
+      std::cerr << "        the isometry tests and of the centralizers, as\n";
       std::cerr << "        NAME or plesken_souvignier:FAMILY (FAMILY among\n";
       std::cerr << "        zspan_closure, root_zspan_closure,\n";
       std::cerr << "        shells_zbasis, shells_fullrank);\n";

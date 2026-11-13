@@ -40,7 +40,7 @@
       adjugate. On every measure applied in this package the dual variant is
       the weaker of the two, sometimes by orders of magnitude.
 
-    * seysen and its variants minimise sum_i |b_i|^2 |dual b_i|^2, which
+    * seysen and its variants minimize sum_i |b_i|^2 |dual b_i|^2, which
       treats all indices symmetrically and reduces the form and its dual in
       one descent. This is the one to try when what matters is that EVERY
       coefficient be small rather than that one vector be short.
@@ -284,7 +284,7 @@ template <typename T, typename Tint> struct LatticeReductionResult {
 };
 
 /*
-  Run every method and keep whichever minimises the criterion above. The
+  Run every method and keep whichever minimizes the criterion above. The
   unreduced input is among the candidates, so the result is never worse than
   what was handed in.
  */

@@ -27,7 +27,7 @@
   friends), where every factor was validated against exact representation
   masses of completely enumerated genera: S and T are EVEN bilinear Gram
   matrices, the local density at p counts solutions of X^t T X = S modulo
-  p^k off the diagonal and 2 p^k on it, and with that normalisation the
+  p^k off the diagonal and 2 p^k on it, and with that normalization the
   archimedean constant is c = 2 for n - m >= 2 and c = 1 for n - m = 1
   (Siegel's epsilon; checked on the certified masses of ranks 12 and 13).
 
@@ -35,7 +35,7 @@
   p-adic structure beyond the determinants: the archimedean factor times
   the product over ALL the good primes p (those not dividing 2 det S det T).
   At a good prime both forms are unimodular and alpha_p is the number of
-  embeddings over F_p normalised, a rational function of p that factors
+  embeddings over F_p normalized, a rational function of p that factors
   into terms (1 - chi_D(p) p^{-s})^e; the product over all p of such terms
   is 1 / L(s, chi_D)^e, and the transcendental parts of the L-values cancel
   against alpha_oo.
@@ -54,7 +54,7 @@ struct EulerTerm {
 /*
   The Euler factors of alpha_p(S, T) at a good prime, for S of rank m and
   determinant detS and T of rank n and determinant detT. By Witt, O(V_T)
-  acts transitively on the embeddings of the space of S, with stabiliser
+  acts transitively on the embeddings of the space of S, with stabilizer
   O(W), W the orthogonal complement, so alpha_p = |O(V_T)| / |O(W)| / p^d;
   the classical orders of the orthogonal groups over F_p factor as below.
   (Derived in the Sage prototype and checked there against the group-order

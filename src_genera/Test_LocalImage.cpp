@@ -10,7 +10,7 @@
 /*
   The order of the image of O(A) (or of the isometries commuting with an
   order acting) modulo p^c, from the certified generators of
-  LocalOrthogonalImageGenerators (with the stabiliser chain modulo p, the
+  LocalOrthogonalImageGenerators (with the stabilizer chain modulo p, the
   modulo 4 check at 2, the independence pruning, the affine filter of the
   lifts and the layers), against the listing of LocalStabilizerImage, an
   independent enumeration:

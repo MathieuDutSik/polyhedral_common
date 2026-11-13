@@ -24,7 +24,7 @@
 
 /*
   Lattices over R = O_K (K imaginary quadratic) with a Hermitian form, and
-  their Kneser neighbours at a prime ideal P of O_K.
+  their Kneser neighbors at a prime ideal P of O_K.
 
   A lattice L is held by a Z-basis, the rows of a matrix A in the realified
   coordinates of RealifiedRing.h. In the coordinates of that basis the form
@@ -51,19 +51,19 @@
   IndexOfProjectiveLine of GenusEnumeration.h, which only need the codes of
   0 and 1 to be 0 and 1.
 
-  The neighbour of L at P for the line of x:
+  The neighbor of L at P for the line of x:
   - split: x adjusted modulo P L so that ell divides h(x, x), M = {y in L :
     h(y, x) in conj(P)} and L' = M + P^{-1} x, P^{-1} = conj(P) / ell, which
-    is Z x + Z (omega - conj(r)) x / ell. Every line gives a neighbour, and
+    is Z x + Z (omega - conj(r)) x / ell. Every line gives a neighbor, and
     there are (q^m - 1)/(q - 1) of them.
   - inert: x isotropic modulo ell, adjusted modulo ell L so that ell^2
     divides h(x, x), M = {y in L : h(y, x) in ell O_K} and L' = M + O_K x /
     ell. The admissible lifts x + ell y form an affine line over F_ell modulo
-    M, so each isotropic line gives ell neighbours, and T(ell) has degree
+    M, so each isotropic line gives ell neighbors, and T(ell) has degree
     ell (ell^{2m-3} + ...) (ell (ell^3 + 1) for m = 3).
   - over Z (L even, h(x, x) = Q(x) = B(x, x) / 2): x isotropic modulo ell,
     adjusted modulo ell L so that ell^2 divides Q(x), M = {y in L : B(y, x)
-    = 0 mod ell} and L' = M + Z x / ell, the classical Kneser neighbour.
+    = 0 mod ell} and L' = M + Z x / ell, the classical Kneser neighbor.
   They are unimodular at ell when L is, and in the genus of L. The ramified
   primes are not treated.
  */
@@ -753,7 +753,7 @@ struct LevelSpace {
 };
 
 /*
-  The neighbours of L at P for the residue vector z of a line of L / P L,
+  The neighbors of L at P for the residue vector z of a line of L / P L,
   each as the rows of a Z-basis in the coordinates of L: one for a split
   prime or over Z, ell for an inert prime (see below), none when the line
   is not isotropic.
@@ -869,7 +869,7 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
     ell^2 | h(x + ell y, x + ell y) form an affine line, y being determined
     modulo M up to the elements with Tr h(x, y) = 0 mod ell. So there are ell
     of them, x + ell t y1 for t in F_ell, with h(y1, x) = 2 omega - s mod ell
-    (of trace 0), and as many neighbours of the line.
+    (of trace 0), and as many neighbors of the line.
    */
   std::vector<MyVector<Tint>> l_lift{x};
   if (!split && ring.d == 2) {
@@ -930,7 +930,7 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
     MyMatrix<T> Basis = GetZbasis(Gens);
 #ifdef SANITY_CHECK_ORDER_LATTICE
     if (Basis.rows() != n || T_abs(DeterminantMat(Basis)) != 1) {
-      std::cerr << "AMF: the neighbour does not have the covolume of L\n";
+      std::cerr << "AMF: the neighbor does not have the covolume of L\n";
       throw TerminalException{1};
     }
 #endif

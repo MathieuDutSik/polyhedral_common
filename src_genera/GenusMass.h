@@ -82,7 +82,7 @@ inline std::vector<int> SpeciesListOdd(std::vector<std::array<int, 3>> const &sy
 }
 
 // The species at p = 2 (Conway-Sloane, Table 1): a component is bound when
-// a neighbouring scale carries an odd component, and the octane value is
+// a neighboring scale carries an odd component, and the octane value is
 // the oddity, plus 4 when the determinant is 3 or 5 mod 8.
 inline std::vector<int>
 SpeciesListTwo(std::vector<std::array<int, 5>> const &sym) {

@@ -21,10 +21,10 @@
 #endif
 
 /*
-  The G-stable neighbours of a lattice L for a finite group G, at an odd
+  The G-stable neighbors of a lattice L for a finite group G, at an odd
   prime p not dividing |G| det.
 
-  L/pL is then a semisimple F_p[G]-module. A G-stable neighbour
+  L/pL is then a semisimple F_p[G]-module. A G-stable neighbor
   N = L_S + (1/p) S~ comes from a G-stable subspace S of L/pL that is
   totally isotropic, lifted to a G-stable S~ modulo p^2 that is totally
   isotropic modulo p^2, with L_S = {x in L : b(x, S~) in pZ}; then
@@ -785,7 +785,7 @@ inline size_t IndexOfProjectivePointFq(FiniteFieldModP const &F, int m,
   points and the action on Hom of the orbit enumeration in those codes: the
   same indices as ProjectivePointFqOfIndex and IndexOfProjectivePointFq,
   without the polynomial arithmetic and the allocations of every product
-  (the orbits of P^11(F_4), 5.6 10^6 points, under the centraliser of
+  (the orbits of P^11(F_4), 5.6 10^6 points, under the centralizer of
   (A2^12, w) took about ten minutes per class).
  */
 struct FqTables {
@@ -1245,7 +1245,7 @@ LiftIsotropicSubmodule(ModMat const &S_rows, ModMat const &A,
 }
 
 /*
-  Generators of p N for the neighbour N = L_S + (1/p) S~: p^2 e_i, p times
+  Generators of p N for the neighbor N = L_S + (1/p) S~: p^2 e_i, p times
   lifts of a basis of the kernel of x -> x A S~^T modulo p, and the rows of
   S~.
  */

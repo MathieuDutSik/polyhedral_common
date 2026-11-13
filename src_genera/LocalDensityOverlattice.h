@@ -388,7 +388,7 @@ bool LocallyIsometric(MyMatrix<T> const &G1, MyMatrix<T> const &G2, int64_t p) {
   the complement modulo p^k. Counting the representations of S + R by N
   whose R-part is primitive therefore gives
       alpha_p(S, L) = alpha_p^{R-prim}(S + R, N) / alpha_p^*(R, N),
-  the normalisations matching since (n + rank R) - rank R = n.
+  the normalizations matching since (n + rank R) - rank R = n.
 
   Both are primitive densities. Sorting the representations of S + L0 by
   the saturation Lambda of their L0-part (an integral, even at p = 2,
@@ -406,7 +406,7 @@ template <typename T> struct UnimodularSplit {
   // the rank of the unimodular component, and its determinant class
   int r_U;
   int64_t detU_unit;
-  // the Gram matrix of the rest, integral, in the normalisation of the input
+  // the Gram matrix of the rest, integral, in the normalization of the input
   MyMatrix<T> P;
 };
 

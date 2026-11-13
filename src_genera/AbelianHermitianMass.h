@@ -1325,7 +1325,7 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
       }
     }
     if (A == 0 || Bc == 0) {
-      std::cerr << "ABHERM: a step of the chain has no isometric neighbour\n";
+      std::cerr << "ABHERM: a step of the chain has no isometric neighbor\n";
       throw TerminalException{1};
     }
     fac *= RationalFraction<T>(A, Bc);

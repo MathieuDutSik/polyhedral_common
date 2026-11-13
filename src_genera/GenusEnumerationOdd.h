@@ -36,7 +36,7 @@
     the odd overlattices N of index 2 of M that lie in G, and two of them
     are isometric iff they are in one Aut(M)-orbit, an isometry between
     them preserving M;
-  * Aut(N) is the stabiliser of N in Aut(M), of order |Aut M| / |orbit|.
+  * Aut(N) is the stabilizer of N in Aut(M), of order |Aut M| / |orbit|.
   An index 2 overlattice is N = M + Z x/2 with x in M, x/2 in M^#, that is
   M x = 0 mod 2 (x in the radical of the form mod 2, as a row vector), and
   N is odd iff b(x/2, x/2) is odd, that is x M x^T = 4 mod 8; N depends only
