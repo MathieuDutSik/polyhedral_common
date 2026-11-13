@@ -37,10 +37,17 @@
 // So we would have min(A)^n / det(A) <= H(n)
 // which gets us min(A)^n <= H(n) det(A)
 // --
-// The constants are known exactly up to n=8 and for n=9.
+// The constants are known exactly up to n=8 and for n=9 to 12.
 // The case n=9 follows from the enumeration of the perfect
 // lattices in dimension 9 which gives gamma_9 = 2 and so
 // H(9) = 2^9 = 512.
+// The cases n=10, 11, 12 are those of R. Geraud-Stewart, D. Naccache,
+// The Hermite constants in dimensions 10, 11 and 12,
+// https://eprint.iacr.org/2026/2825, established under the same
+// classification of the perfect forms of rank nine:
+// gamma_10^10 = 4^10/768, gamma_11^11 = 4^11/972 and gamma_12 = 4/sqrt(3),
+// the values of the laminated lattices Lambda_10, Lambda_11 and of the
+// Coxeter-Todd lattice K_12.
 // For higher n, we use the bound H(n) <= (4/3)^(n(n-1)/2)
 // obtained from Hermite's inequality.
 template <typename T> T GetUpperBoundHermitePower(int n) {
@@ -70,6 +77,18 @@ template <typename T> T GetUpperBoundHermitePower(int n) {
   }
   if (n == 9) {
     return T(512);
+  }
+  if (n == 10) {
+    // 4^10 / 768
+    return T(4096) / T(3);
+  }
+  if (n == 11) {
+    // 4^11 / 972
+    return T(1048576) / T(243);
+  }
+  if (n == 12) {
+    // (4 / sqrt(3))^12 = 4^12 / 3^6
+    return T(16777216) / T(729);
   }
   int h = n * (n - 1) / 2;
   T base = T(4) / T(3);
@@ -170,53 +189,35 @@ T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const &TheGramMat, int k,
   return rNorm * upper;
 }
 
-template <typename T> T get_multiple_value(MyMatrix<T> const &M) {
-  FractionMatrix<T> fr = RemoveFractionMatrixPlusCoeff(M);
-  int n = M.rows();
-  auto get_mat_mult = [&]() -> T {
-    for (int i = 0; i < n; i++) {
-      T quot = fr.TheMat(i, i) / T(2);
-      if (!IsInteger(quot)) {
-        return T(1);
-      }
+// An upper bound for R^{1/k}, computed by exact bisection so that no
+// floating point is involved. The bound is within a factor 2^{-20} of
+// the true root, which is only a matter of speed, not of correctness.
+template <typename T> T UpperKthRootBound(T const &R, int const &k) {
+  if (R <= T(0)) {
+    return T(0);
+  }
+  auto pow_ge = [&](T const &x) -> bool {
+    T p(1);
+    for (int i = 0; i < k; i++) {
+      p *= x;
     }
-    return T(2);
+    return p >= R;
   };
-  return get_mat_mult() / fr.TheMult;
-}
-
-// Find the upper bound
-// --- For floating point types, use the power function
-// --- For exact types, like GMP we can use the denominators of M
-//     to get to the bound
-// We want to find the maximum feasible value of m such that m^k <= C
-template <typename T>
-T MaxKBound(T const &C, int const &k, MyMatrix<T> const &M) {
-  double expo = 1.0 / static_cast<double>(k);
-  if constexpr (std::is_same_v<T, double>) {
-    return std::pow(C, expo);
+  T lo(0);
+  T hi(1);
+  while (!pow_ge(hi)) {
+    lo = hi;
+    hi *= T(2);
   }
-  if constexpr (!std::is_same_v<T, double>) {
-    // Assumed to be exact arithmetic.
-    // pretty inefficient but actually fine.
-    T delta = get_multiple_value(M);
-    auto is_corr = [&](T const &val) -> bool {
-      T ret = val;
-      for (int i = 1; i < k; i++) {
-        ret *= val;
-      }
-      return ret <= C;
-    };
-    T val(0);
-    while (true) {
-      T val_new = val + delta;
-      if (is_corr(val_new)) {
-        val = val_new;
-      } else {
-        return val;
-      }
+  for (int iter = 0; iter < 20; iter++) {
+    T mid = (lo + hi) / T(2);
+    if (pow_ge(mid)) {
+      hi = mid;
+    } else {
+      lo = mid;
     }
   }
+  return hi;
 }
 
 // A k-dimensional sublattice is represented by its row Hermite Normal
@@ -299,7 +300,7 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
   // We are now using the Hermite constant to get a bound on the minimum
   // That is we have min(A)^k <= H(n) * MaxDet
   T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
-  T bound = MaxKBound(upper, k, A);
+  T bound = UpperKthRootBound<T>(upper, k);
   std::vector<MyVector<Tint>> short_vectors =
       computeLevel_GramMat<T, Tint>(A, bound, os);
   for (auto &eV : short_vectors) {
@@ -391,7 +392,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
   // That is we have min(A)^k <= H(n) * MaxDet
   T MaxDet = UpperBoundRankinMinimalDeterminant<T, Tint>(A, k, os);
   T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
-  T bound = MaxKBound(upper, k, A);
+  T bound = UpperKthRootBound<T>(upper, k);
 #ifdef DEBUG_ENUMERATION_K_SPACE
   os << "ENUM_K_SPACE: Rankin_k_minimum, k=" << k << " MaxDet=" << MaxDet
      << " upper=" << upper << " bound=" << bound << "\n";
@@ -761,37 +762,6 @@ InducedProjectedAction(SubspaceProjection<T, Tint> const &sp, int const &dim_x,
   }
 #endif
   return gp;
-}
-
-// An upper bound for R^{1/k}, computed by exact bisection so that no
-// floating point is involved. The bound is within a factor 2^{-20} of
-// the true root, which is only a matter of speed, not of correctness.
-template <typename T> T UpperKthRootBound(T const &R, int const &k) {
-  if (R <= T(0)) {
-    return T(0);
-  }
-  auto pow_ge = [&](T const &x) -> bool {
-    T p(1);
-    for (int i = 0; i < k; i++) {
-      p *= x;
-    }
-    return p >= R;
-  };
-  T lo(0);
-  T hi(1);
-  while (!pow_ge(hi)) {
-    lo = hi;
-    hi *= T(2);
-  }
-  for (int iter = 0; iter < 20; iter++) {
-    T mid = (lo + hi) / T(2);
-    if (pow_ge(mid)) {
-      hi = mid;
-    } else {
-      lo = mid;
-    }
-  }
-  return hi;
 }
 
 template <typename Tint> struct SublatticeRepInfo {
