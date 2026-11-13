@@ -17,6 +17,14 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_LATTICE_REDUCTION
+#endif
+
+#ifdef DISABLE_DEBUG_LATTICE_REDUCTION
+#undef DEBUG_LATTICE_REDUCTION
+#endif
+
 /*
   One dispatch over every reduction of a positive definite Gram matrix that
   this package implements, so that a caller naming a method by string has a

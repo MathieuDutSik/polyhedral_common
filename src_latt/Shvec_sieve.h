@@ -480,6 +480,13 @@ Tshortest<T, Tint> T_ShortestVectorSieve(MyMatrix<T> const &GramMat,
                                          std::ostream &os) {
   int n = GramMat.rows();
   SieveResult<T, Tint> res = GaussSieve<T, Tint>(GramMat, opts, os);
+  // The list is empty only in dimension 0, where there is no shortest vector.
+  if (res.norms.empty()) {
+    std::cerr << "SHVEC_SIEVE: T_ShortestVectorSieve needs a lattice of "
+                 "positive dimension, got n="
+              << n << "\n";
+    throw TerminalException{1};
+  }
   T const &bound = res.norms[0];
 #ifdef TIMINGS_SHVEC_SIEVE
   MicrosecondTime time;

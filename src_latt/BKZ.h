@@ -112,15 +112,6 @@ void BKZ_BareissStep(MyMatrix<Tring> &work, int const &j, Tring &prev) {
 }
 
 /*
-  The unimodular transformation inserting sum_i z_i b_i at position j, the
-  block running from j to k. The coefficient vector returned by the enumerator
-  is primitive -- were its entries to share a factor g, dividing by g would give
-  a shorter vector of the block lattice -- so it extends to a basis, and
-  ComplementToBasis supplies the extension. The inserted vector is put first so
-  that it lands at position j; the rest of the block is whatever completes it,
-  the following LLL pass being what tidies that up.
- */
-/*
   The scaled projected block Gram matrix of the indices j, ..., j+m-1, that is
   d_j times the Gram matrix of pi_j(b_j), ..., pi_j(b_{j+m-1}). Obtained by
   running the fraction-free elimination for j steps and reading the trailing
@@ -209,6 +200,15 @@ void BKZ_ApplyBlockTransformation(MyMatrix<Tring> &gram, MyMatrix<Tint> &H,
   H = U * H;
 }
 
+/*
+  The unimodular transformation inserting sum_i z_i b_i at position j, the
+  block running from j to k. The coefficient vector returned by the enumerator
+  is primitive -- were its entries to share a factor g, dividing by g would give
+  a shorter vector of the block lattice -- so it extends to a basis, and
+  ComplementToBasis supplies the extension. The inserted vector is put first so
+  that it lands at position j; the rest of the block is whatever completes it,
+  the following LLL pass being what tidies that up.
+ */
 template <typename Tint>
 MyMatrix<Tint> BKZ_InsertionMatrix(MyVector<Tint> const &z, int const &n,
                                    int const &j, int const &k) {

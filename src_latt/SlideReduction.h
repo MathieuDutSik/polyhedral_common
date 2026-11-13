@@ -272,7 +272,7 @@ LLLreduction<T, Tint> SlideReducedBasisDelta(MyMatrix<T> const &GramMat,
         }
       }
       os << "SLIDE: iter primal=" << n_primal << " dual=" << n_dual
-         << " max_gram_bits=" << nbits << "\n";
+         << " potential=" << pot << " max_gram_bits=" << nbits << "\n";
     }
 #endif
     if (!did_dual) {

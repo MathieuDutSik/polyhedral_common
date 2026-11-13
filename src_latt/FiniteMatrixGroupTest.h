@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GROUP_FINITEMATRIXGROUPTEST_H_
-#define SRC_GROUP_FINITEMATRIXGROUPTEST_H_
+#ifndef SRC_LATT_FINITEMATRIXGROUPTEST_H_
+#define SRC_LATT_FINITEMATRIXGROUPTEST_H_
 
 // clang-format off
 #include "FiniteMatrixGroupFund.h"
@@ -75,6 +75,11 @@ bool test_finiteness_group(std::vector<MyMatrix<Tint>> const& ListGensInp, std::
   std::vector<MyVector<Tint>> ListV_init = get_initial_vector_test_v<Tint>(n, {}, os);
   SearcherPositiveDefiniteMatrix<T,Tint> spdm(ListMat, ListV_init, os);
   FiniteMatrixGroupTest<Tint> fmgt(ListGens, os);
+  // The constructor already concludes when a matrix of the basis is
+  // positive definite: no iteration is needed then.
+  if (spdm.get_pos_def()) {
+    return true;
+  }
   while(true) {
     //
     // Trying the matrix method
@@ -103,5 +108,5 @@ bool test_finiteness_group(std::vector<MyMatrix<Tint>> const& ListGensInp, std::
 }
 
 // clang-format off
-#endif  // SRC_GROUP_FINITEMATRIXGROUPTEST_H_
+#endif  // SRC_LATT_FINITEMATRIXGROUPTEST_H_
 // clang-format on
