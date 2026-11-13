@@ -660,10 +660,9 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
  */
 struct GenusMethods {
   bool by_canonical = true;
-  LatticeStabCanIsomMethod canonical = LatticeStabCanIsomMethod::WeylChamber;
-  LatticeStabCanIsomMethod isomorphism =
-      LatticeStabCanIsomMethod::PleskenSouvignier;
-  LatticeStabCanIsomMethod automorphism = LatticeStabCanIsomMethod::WeylChamber;
+  LatticeMethodChoice canonical = LatticeStabCanIsomMethod::WeylChamber;
+  LatticeMethodChoice isomorphism = LatticeStabCanIsomMethod::PleskenSouvignier;
+  LatticeMethodChoice automorphism = LatticeStabCanIsomMethod::WeylChamber;
   // At p = 2, the orbits of points of an expansion with this many random
   // products of the generators in place of the generators, 0 for the
   // generators themselves (see ProjectiveLineOrbitRepresentativesP2).
@@ -718,7 +717,7 @@ GetLatticeAutInfo(MyMatrix<T> const &GramMat, GenusMethods const &methods,
  */
 template <typename T, typename Tint, typename Tgroup>
 MyMatrix<T> GenusCanonicalGram(MyMatrix<T> const &GramMat,
-                               LatticeStabCanIsomMethod method,
+                               LatticeMethodChoice const &method,
                                std::ostream &os) {
   // Every class of the enumeration uses this same method, so the
   // deduplication stays consistent; the keys are not comparable with those
@@ -2071,11 +2070,11 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
               << "\". Allowed: canonical, isomorphism\n";
     throw TerminalException{1};
   }
-  spec.methods.canonical = ParseLatticeStabCanIsomMethod(
+  spec.methods.canonical = ParseLatticeMethodChoice(
       BlockMETHOD.get_string("canonical_method"));
-  spec.methods.isomorphism = ParseLatticeStabCanIsomMethod(
+  spec.methods.isomorphism = ParseLatticeMethodChoice(
       BlockMETHOD.get_string("isomorphism_method"));
-  spec.methods.automorphism = ParseLatticeStabCanIsomMethod(
+  spec.methods.automorphism = ParseLatticeMethodChoice(
       BlockMETHOD.get_string("automorphism_method"));
   spec.methods.orbit_random_generators =
       BlockMETHOD.get_int("orbit_random_generators");

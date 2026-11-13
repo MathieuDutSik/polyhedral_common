@@ -28,8 +28,8 @@
 template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &FileGram, std::string const &FileIsom,
              std::string const &FileMass, std::string const &OutFormat,
-             int prime, size_t max_prime, PairRecognition recognition,
-             LatticeStabCanIsomMethod iso_method, std::ostream &os) {
+             int prime, size_t max_prime, PairMethods const &methods,
+             std::ostream &os) {
   std::vector<MyMatrix<T>> ListGram = ReadListMatrixFile<T>(FileGram);
   std::vector<MyMatrix<T>> ListIsom = ReadListMatrixFile<T>(FileIsom);
   if (ListGram.empty() || ListIsom.empty() ||
@@ -62,7 +62,7 @@ void process(std::string const &FileGram, std::string const &FileIsom,
   Tmass TotalMass = ReadMassFile<Tmass>(FileMass);
   GenusEnumerationGroupResult<T, Tgroup> result =
       GenusEnumerationAbelianGroup<T, Tint, Tgroup>(
-          ListSeed, TotalMass, prime, max_prime, recognition, iso_method,
+          ListSeed, TotalMass, prime, max_prime, methods,
           std::cerr);
   WriteGenusEnumerationGroupResult(os, result, OutFormat);
   CheckGenusEnumerationGroupResult(result);
@@ -79,9 +79,7 @@ int main(int argc, char *argv[]) {
     using TintGroup = mpz_class;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
     std::string arith = ExtractArithmeticOption(argc, argv, "gmp");
-    PairRecognition recognition = ExtractPairRecognitionOption(argc, argv);
-    LatticeStabCanIsomMethod iso_method =
-        ExtractPairIsometryMethodOption(argc, argv);
+    PairMethods methods = ExtractPairMethodsOptions(argc, argv);
     ArithmeticDispatch dispatch;
     if (argc < 4 || argc > 8) {
       std::cerr << "GENUS_EnumerateIsometry [Gram] [Isometry] [Mass] "
@@ -107,15 +105,25 @@ int main(int argc, char *argv[]) {
       std::cerr << "Exit status: 0 complete, 2 incomplete (the classes found\n";
       std::cerr << "weigh less than the mass), 3 the mass is exceeded (the\n";
       std::cerr << "target is wrong), 1 an error.\n";
-      std::cerr << "recognition=auto|isometry|canonical|qspan (anywhere, optional,\n";
-      std::cerr << "        default auto): how a new pair is recognised, by\n";
-      std::cerr << "        isometry tests or by the canonical form of the pair\n";
-      std::cerr << "        (costly on rank 24 lattices), auto by the cheaper;\n";
-      std::cerr << "        qspan: the graph method alone, on a Q-spanning family\n";
-      std::cerr << "isomorphism_method=NAME (anywhere, optional, default\n";
-      std::cerr << "        plesken_souvignier): the method of the isometry\n";
-      std::cerr << "        tests and of the centralisers, among graph,\n";
-      std::cerr << "        plesken_souvignier and iterated_shortest\n";
+      std::cerr << "recognition=canonical|isomorphism|auto (anywhere,\n";
+      std::cerr << "        optional, default auto): how a neighbour is\n";
+      std::cerr << "        recognised among the known classes, by the\n";
+      std::cerr << "        canonical form of the pair or by isometry tests;\n";
+      std::cerr << "        auto runs both on the first neighbours, then the\n";
+      std::cerr << "        faster\n";
+      std::cerr << "canonical_method=, isomorphism_method=,\n";
+      std::cerr << "automorphism_method= (anywhere, optional, default\n";
+      std::cerr << "        heuristic): the methods of the canonical form, of\n";
+      std::cerr << "        the isometry tests and of the centralisers, as\n";
+      std::cerr << "        NAME or plesken_souvignier:FAMILY (FAMILY among\n";
+      std::cerr << "        zspan_closure, root_zspan_closure, shells_zbasis);\n";
+      std::cerr << "        the methods that apply to pairs:\n";
+      for (auto &entry : ListLatticeStabCanIsomMethod()) {
+        if (entry.several_forms) {
+          std::cerr << "  " << entry.name << " : " << entry.description
+                    << "\n";
+        }
+      }
       std::cerr << "arithmetic=NAME (anywhere, optional, default gmp): the\n";
       std::cerr << "        arithmetic of the computation, among\n";
       dispatch.print_descriptions(std::cerr);
@@ -132,7 +140,7 @@ int main(int argc, char *argv[]) {
         dispatch, [&]<typename T, typename Tint>() -> void {
           auto f = [&](std::ostream &os) -> void {
             process<T, Tint, Tgroup>(FileGram, FileIsom, FileMass, OutFormat, prime,
-                                     max_prime, recognition, iso_method, os);
+                                     max_prime, methods, os);
           };
           FILE_PrintStderrStdoutFile(OutFile, f);
         });

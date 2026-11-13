@@ -119,86 +119,107 @@ template <typename Tmass, typename T> Tmass MassToGroupField(T const &x) {
 }
 
 /*
-  The recognition of a new pair among the known classes: by the canonical
-  form of the pair, by isometry tests within the buckets of the lattice
-  canonical form, or (Auto) by the cheaper of the two measured on the first
-  neighbours. The canonical form of a pair can be very costly on lattices
-  with a large vector family (rank 24: a Hermite normal form of the whole
-  family, beyond 20 GB), which Isometry avoids.
- */
-enum class PairRecognition { Auto, Isometry, Canonical, QSpan };
+  How the classes of pairs are recognised and their centralisers computed.
+  A pair (A, G) is the tuple of forms (A, A g_1^T, ..., A g_k^T) of
+  PairForms, so these are the computations of LatticeMethods.h on tuples.
 
-inline PairRecognition ParsePairRecognition(std::string const &s) {
-  if (s == "auto") {
-    return PairRecognition::Auto;
-  }
-  if (s == "isometry") {
-    return PairRecognition::Isometry;
-  }
+  recognition is the algorithm that decides whether a neighbour is a known
+  class:
+  * canonical: the canonical form of the tuple by canonical_method, a
+    dictionary lookup;
+  * isomorphism: isometry tests of the tuple, by isomorphism_method, against
+    the known classes whose lattices may be isometric to its lattice (a
+    bucket), pruned by their centralisers;
+  * auto: not a third algorithm but a policy, which runs both on the first
+    neighbours and then the one with the smaller average time. Neither is
+    better in general: the canonical form takes 99% of the time for W(A3)
+    on E8+E8 (a centraliser of order 10^12), while for two reflections it
+    is cheaper than the isometry tests.
+  A pair whose isometries are all scalar (+-1) is its lattice, and is
+  always recognised by the canonical form, of the lattice alone.
+
+  automorphism_method computes the centraliser of every new class. The
+  three methods are method choices of LatticeMethods.h (NAME or
+  plesken_souvignier:KIND), heuristic by default.
+ */
+enum class ClassRecognition { Canonical, Isomorphism, Auto };
+
+struct PairMethods {
+  ClassRecognition recognition;
+  LatticeMethodChoice canonical;
+  LatticeMethodChoice isomorphism;
+  LatticeMethodChoice automorphism;
+};
+
+inline PairMethods DefaultPairMethods() {
+  return {ClassRecognition::Auto, LatticeStabCanIsomMethod::Heuristic,
+          LatticeStabCanIsomMethod::Heuristic,
+          LatticeStabCanIsomMethod::Heuristic};
+}
+
+inline ClassRecognition ParseClassRecognition(std::string const &s) {
   if (s == "canonical") {
-    return PairRecognition::Canonical;
+    return ClassRecognition::Canonical;
   }
-  if (s == "qspan") {
-    return PairRecognition::QSpan;
+  if (s == "isomorphism") {
+    return ClassRecognition::Isomorphism;
+  }
+  if (s == "auto") {
+    return ClassRecognition::Auto;
   }
   std::cerr << "GENUS_GROUP: recognition=" << s
-            << " is not auto, isometry, canonical or qspan\n";
+            << " is not canonical, isomorphism or auto\n";
   throw TerminalException{1};
 }
 
-// recognition=NAME anywhere on the command line, removed from argv
-inline PairRecognition ExtractPairRecognitionOption(int &argc, char *argv[]) {
-  PairRecognition res = PairRecognition::Auto;
-  std::string const key = "recognition=";
+/*
+  The options recognition=, canonical_method=, isomorphism_method= and
+  automorphism_method=, anywhere on the command line, removed from argv.
+ */
+inline PairMethods ExtractPairMethodsOptions(int &argc, char *argv[]) {
+  PairMethods res = DefaultPairMethods();
   int j = 0;
   for (int i = 0; i < argc; i++) {
     std::string a = argv[i];
-    if (a.rfind(key, 0) == 0) {
-      res = ParsePairRecognition(a.substr(key.size()));
+    auto value = [&](std::string const &key) -> std::optional<std::string> {
+      if (a.rfind(key, 0) == 0) {
+        return a.substr(key.size());
+      }
+      return {};
+    };
+    if (auto v = value("recognition=")) {
+      res.recognition = ParseClassRecognition(*v);
+    } else if (auto v = value("canonical_method=")) {
+      res.canonical = ParseLatticeMethodChoice(*v);
+    } else if (auto v = value("isomorphism_method=")) {
+      res.isomorphism = ParseLatticeMethodChoice(*v);
+    } else if (auto v = value("automorphism_method=")) {
+      res.automorphism = ParseLatticeMethodChoice(*v);
     } else {
       argv[j++] = argv[i];
     }
   }
   argc = j;
-  return res;
-}
-
-/*
-  The method of the isometry tests and of the centralisers when a pair is
-  recognised by isometry tests: plesken_souvignier (default), on a
-  Z-spanning family shared by the bucket, graph, on the Q-spanning
-  characteristic family of the pair forms, or iterated_shortest. The other
-  lattice methods use the first form alone and do not apply to pairs.
- */
-inline LatticeStabCanIsomMethod
-ParsePairIsometryMethod(std::string const &s) {
-  LatticeStabCanIsomMethod method = ParseLatticeStabCanIsomMethod(s);
-  if (method != LatticeStabCanIsomMethod::PleskenSouvignier &&
-      method != LatticeStabCanIsomMethod::Graph &&
-      method != LatticeStabCanIsomMethod::IteratedShortest) {
-    std::cerr << "GENUS_GROUP: isomorphism_method=" << s
-              << " is not graph, plesken_souvignier or iterated_shortest, "
-                 "the methods that apply to several forms\n";
+  // a pair is a tuple of several forms in general
+  for (LatticeMethodChoice const &c :
+       {res.canonical, res.isomorphism, res.automorphism}) {
+    if (!LatticeMethodAppliesToMultipleForms(c.method)) {
+      std::cerr << "GENUS_GROUP: the method " << NameLatticeMethodChoice(c)
+                << " reads the first form only, it does not apply to pairs\n";
+      throw TerminalException{1};
+    }
+  }
+  if (res.isomorphism.family == InvariantFamilyKind::DiagonalBound) {
+    std::cerr << "GENUS_GROUP: the diagonal_bound family depends on the basis, "
+                 "it cannot be used for isometry tests\n";
     throw TerminalException{1};
   }
-  return method;
-}
-
-// isomorphism_method=NAME anywhere on the command line, removed from argv
-inline LatticeStabCanIsomMethod
-ExtractPairIsometryMethodOption(int &argc, char *argv[]) {
-  LatticeStabCanIsomMethod res = LatticeStabCanIsomMethod::PleskenSouvignier;
-  std::string const key = "isomorphism_method=";
-  int j = 0;
-  for (int i = 0; i < argc; i++) {
-    std::string a = argv[i];
-    if (a.rfind(key, 0) == 0) {
-      res = ParsePairIsometryMethod(a.substr(key.size()));
-    } else {
-      argv[j++] = argv[i];
-    }
+  if (!LatticeMethodGivesCanonicalForm(res.canonical.method)) {
+    std::cerr << "GENUS_GROUP: canonical_method="
+              << NameLatticeMethodChoice(res.canonical)
+              << " gives no canonical form\n";
+    throw TerminalException{1};
   }
-  argc = j;
   return res;
 }
 
@@ -703,11 +724,6 @@ GenusNeighborPair(MyMatrix<Tint> const &G, std::vector<MyMatrix<T>> const &ListP
   return std::make_pair(rec.GramMatRed, ListS);
 }
 
-template <typename T, typename Tint, typename Tgroup> struct PairAutInfo {
-  typename Tgroup::Tint order;
-  std::vector<MyMatrix<Tint>> ListGenMat;
-};
-
 template <typename T>
 std::vector<MyMatrix<T>> PairForms(MyMatrix<T> const &A,
                                    std::vector<MyMatrix<T>> const &ListP) {
@@ -728,186 +744,42 @@ bool AllScalarIsometries(std::vector<MyMatrix<T>> const &ListP) {
   return true;
 }
 
-template <typename T, typename Tint, typename Tgroup>
-PairAutInfo<T, Tint, Tgroup>
-GetPairAutInfo(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
-               std::ostream &os) {
-  if (AllScalarIsometries(ListP)) {
-    // The pair forms are A and +-A, whose common automorphisms are those of
-    // A alone; the methods of the genus enumeration avoid a
-    // Plesken-Souvignier search over the whole of O(L), which is slow on
-    // root lattices such as E8^2.
-    LatticeAutInfo<T, Tint, Tgroup> lat =
-        GetLatticeAutInfo<T, Tint, Tgroup>(A, GenusMethods(), os);
-    return {lat.order, lat.ListGenMat};
-  }
-  std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
-  // Plesken-Souvignier with the second form: the backtrack is pruned by
-  // both forms, which keeps it small even on lattices with huge
-  // automorphism groups, where the graph of the characteristic vector
-  // family of the first form alone explodes.
-  PleskenSouvignierAutomResult<Tint, Tgroup> aut =
-      PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(
-          ListMat, InvariantFamilyKind::ShellsZbasis, os);
-  PairAutInfo<T, Tint, Tgroup> info;
-  info.order = aut.order;
-  auto preserves = [&](MyMatrix<Tint> const &h) -> bool {
-    MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);
-    for (auto &M : ListMat) {
-      if (h_T * M * h_T.transpose() != M) {
-        return false;
-      }
-    }
-    return true;
-  };
-  for (auto &h : aut.ListGen) {
-    if (preserves(h)) {
-      info.ListGenMat.push_back(h);
-    } else if (preserves(h.transpose())) {
-      info.ListGenMat.push_back(h.transpose());
-    } else {
-      std::cerr << "GENUS_GROUP: an automorphism of the pair is wrong\n";
-      throw TerminalException{1};
-    }
-  }
-  return info;
-}
-
-// The centraliser of the pair by the lattice method on its forms.
-template <typename T, typename Tint, typename Tgroup>
-PairAutInfo<T, Tint, Tgroup>
-GetPairAutInfoMethod(MyMatrix<T> const &A,
-                     std::vector<MyMatrix<T>> const &ListP,
-                     LatticeStabCanIsomMethod method, std::ostream &os) {
-  std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
-  IntAutomorphismGroup<Tint, Tgroup> aut =
-      LatticeAutomorphismGroup<T, Tint, Tgroup>(ListMat, method, os);
-  PairAutInfo<T, Tint, Tgroup> info;
-  info.order = aut.order;
-  for (auto &h : aut.ListGen) {
-    MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);
-    for (auto &M : ListMat) {
-      if (h_T * M * h_T.transpose() != M) {
-        std::cerr << "GENUS_GROUP: an automorphism of the pair is wrong\n";
-        throw TerminalException{1};
-      }
-    }
-    info.ListGenMat.push_back(h);
-  }
-  return info;
-}
-
 /*
-  The canonical representative of the pair: the reduced forms and the
-  isometry in the canonical basis, with the method used (0: orbit splitting
-  over the Plesken-Souvignier automorphism group, 1: the graph of the
-  characteristic vector family, 2: sigma = +-I, the canonical form of the
-  lattice alone). The orbit splitting may decline an input;
-  that depends only on the configuration, so isometric pairs take the same
-  branch, and the method is part of the key since the two canonical forms
-  are not comparable.
- */
-template <typename T> struct CanonicalPairData {
-  int method;
-  MyMatrix<T> Acan;
-  std::vector<MyMatrix<T>> ListPcan;
-};
-
-template <typename T, typename Tint, typename Tgroup>
-CanonicalPairData<T> CanonicalPair(MyMatrix<T> const &A,
-                                   std::vector<MyMatrix<T>> const &ListP,
-                                   std::ostream &os) {
-  if (AllScalarIsometries(ListP)) {
-    // the P are fixed by every change of basis; the key is that of A alone
-    return {2,
-            GenusCanonicalGram<T, Tint, Tgroup>(A, GenusMethods().canonical,
-                                                os),
-            ListP};
-  }
-  std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
-  std::optional<MyMatrix<Tint>> opt =
-      OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(
-          ListMat, DefaultInvariantFamilyKind(ListMat.size()), os);
-  int method = 0;
-  MyMatrix<Tint> B;
-  if (opt) {
-    B = *opt;
-  } else {
-    method = 1;
-    B = ComputeCanonicalFormMultiple<T, Tint, Tgroup>(ListMat, os);
-  }
-  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
-  MyMatrix<T> Acan = B_T * A * B_T.transpose();
-  MyMatrix<T> B_inv = Inverse(B_T);
-  std::vector<MyMatrix<T>> ListPcan;
-  for (auto const &P : ListP) {
-    ListPcan.push_back(B_T * P * B_inv);
-  }
-  return {method, Acan, ListPcan};
-}
-
-/*
-  The canonical form and the centraliser of a pair by the graph method
-  alone (recognition=qspan). CanonicalPair tries the orbit splitting of the
-  Plesken-Souvignier group first, which needs a Z-spanning family; on rank
-  24 lattices whose roots do not span a saturated sublattice that family
-  has millions of vectors. The graph method (ComputeCanonicalFormMultiple)
-  works from the canonic family of GetCanonicVectorFamily, which only has
-  full rank (Q-spanning), and canonicalises Z^n as a superlattice of its
-  span under the automorphisms of the configuration (MatrixGroup.h) when it
-  does not span. The centraliser is read on the same family by
-  GetIntAutomorphism_ListMat_Vdiag, which keeps the transformations that
-  preserve the lattice.
+  The canonical basis B of the pair (A, ListP) by the method: B A B^T and
+  the B P B^{-1} are the canonical pair. PairCanonicalForms gives its forms,
+  a key that two pairs share exactly when they are isometric.
  */
 template <typename T, typename Tint, typename Tgroup>
-CanonicalPairData<T> CanonicalPairQSpan(MyMatrix<T> const &A,
-                                        std::vector<MyMatrix<T>> const &ListP,
-                                        std::ostream &os) {
-  std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
-  MyMatrix<Tint> B = ComputeCanonicalFormMultiple<T, Tint, Tgroup>(ListMat, os);
-  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
-  MyMatrix<T> Acan = B_T * A * B_T.transpose();
-  MyMatrix<T> B_inv = Inverse(B_T);
-  std::vector<MyMatrix<T>> ListPcan;
-  for (auto const &P : ListP) {
-    ListPcan.push_back(B_T * P * B_inv);
-  }
-  return {1, Acan, ListPcan};
+MyMatrix<Tint> PairCanonicalBasis(MyMatrix<T> const &A,
+                                  std::vector<MyMatrix<T>> const &ListP,
+                                  LatticeMethodChoice const &choice,
+                                  std::ostream &os) {
+  return LatticeCanonicalBasisMultiple<T, Tint, Tgroup>(PairForms(A, ListP),
+                                                        choice, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
-PairAutInfo<T, Tint, Tgroup>
-GetPairAutInfoQSpan(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
-                    std::ostream &os) {
+std::vector<MyMatrix<T>>
+PairCanonicalForms(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
+                   LatticeMethodChoice const &choice, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
-  MyMatrix<Tint> SHV = GetCanonicVectorFamily<T, Tint>(A, os).get_full();
-  std::vector<T> Vdiag(SHV.rows(), T(0));
-  IntAutomorphismGroup<Tint, Tgroup> aut =
-      GetIntAutomorphism_ListMat_Vdiag<T, Tint, Tgroup>(SHV, ListMat, Vdiag,
-                                                        os);
-  PairAutInfo<T, Tint, Tgroup> info;
-  info.order = aut.order;
-  auto preserves = [&](MyMatrix<Tint> const &h) -> bool {
-    MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);
-    for (auto &M : ListMat) {
-      if (h_T * M * h_T.transpose() != M) {
-        return false;
-      }
-    }
-    return true;
-  };
-  for (auto &h : aut.ListGen) {
-    if (preserves(h)) {
-      info.ListGenMat.push_back(h);
-    } else if (preserves(h.transpose())) {
-      info.ListGenMat.push_back(h.transpose());
-    } else {
-      std::cerr << "GENUS_GROUP: an automorphism of the pair (qspan) is "
-                   "wrong\n";
-      throw TerminalException{1};
-    }
+  MyMatrix<Tint> B = PairCanonicalBasis<T, Tint, Tgroup>(A, ListP, choice, os);
+  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
+  std::vector<MyMatrix<T>> ListMatCan;
+  for (auto const &M : ListMat) {
+    ListMatCan.push_back(B_T * M * B_T.transpose());
   }
-  return info;
+  return ListMatCan;
+}
+
+// The centraliser of the pair: the common automorphisms of its forms,
+// generators g with g A g^T = A, by automorphism_method.
+template <typename T, typename Tint, typename Tgroup>
+IntAutomorphismGroup<Tint, Tgroup>
+PairCentraliser(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
+                LatticeMethodChoice const &choice, std::ostream &os) {
+  return LatticeAutomorphismGroup<T, Tint, Tgroup>(PairForms(A, ListP), choice,
+                                                   os);
 }
 
 template <typename Tint> int FiniteMatrixOrderInt(MyMatrix<Tint> const &P) {
@@ -1331,8 +1203,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> const
         &ListSeed,
     typename GenusEnumerationGroupResult<T, Tgroup>::Tmass const &TotalMass,
-    int prime, size_t max_prime, PairRecognition recognition,
-    LatticeStabCanIsomMethod iso_method, std::ostream &os) {
+    int prime, size_t max_prime, PairMethods const &methods,
+    std::ostream &os) {
   using Tresult = GenusEnumerationGroupResult<T, Tgroup>;
   using Tmass = typename Tresult::Tmass;
   using TintGroup = typename Tgroup::Tint;
@@ -1345,8 +1217,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   result.complete = false;
   // the work list: the canonical pairs (Gram, isometries on the rows)
   std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> ListPairWork;
-  std::vector<PairAutInfo<T, Tint, Tgroup>> ListAutInfo;
-  std::map<std::pair<int, std::vector<MyMatrix<T>>>, size_t> MapCanonic;
+  std::vector<IntAutomorphismGroup<Tint, Tgroup>> ListAutInfo;
+  std::map<std::vector<MyMatrix<T>>, size_t> MapCanonic;
   // m: the exponent of the group
   int m = -1;
   size_t n_gen = 0;
@@ -1397,32 +1269,23 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     return 2;
   };
   /*
-    A known class is recognised in one of two ways, chosen by their
-    measured cost: the canonical form of the pair (key in MapCanonic), or
-    isometry tests. For the latter the classes are put in buckets of
-    lattices that may be isometric, and a neighbour is tested against the
-    classes of its bucket by Plesken-Souvignier, pruned by their
-    centralisers, on the vectors of norm at most B for the least B for
-    which they span the lattice (the shells_zbasis family, an isometry
-    invariant; the largest diagonal entry of the reduced Gram
-    matrix, the bound of the paper and of Hecke, depends on the basis and
-    can be far larger). The bucket of an integral lattice whose vectors of
-    norm at most 2 have full rank is keyed by its Weyl-chamber canonical
-    form Akey = B A B^T: every pair of the bucket is moved by B, then by a
-    fixed LLL reduction R of Akey, so that all of them share one Gram
-    matrix and one family, computed once per bucket. Another lattice has
-    no fast canonical form (no method gives one of the Leech lattice in
+    The data of the two algorithms of recognition (see PairMethods): the
+    canonical keys of the classes (MapCanonic), and the buckets of the
+    isometry tests. A bucket holds the classes whose lattices may be
+    isometric. When the tests are made by Plesken-Souvignier every pair
+    carries its forms in a reduced basis and an invariant family
+    (shells_zbasis by default). The bucket of an integral lattice whose
+    vectors of norm at most 2 have full rank is keyed by its Weyl-chamber
+    canonical form Akey = B A B^T: every pair of the bucket is moved by B,
+    then by a fixed LLL reduction R of Akey, so that all of them share one
+    Gram matrix and one family, computed once per bucket. Another lattice
+    has no fast canonical form (no method gives one of the Leech lattice in
     minutes, and the Weyl-chamber one of a lattice whose roots do not have
-    full rank built a graph beyond 5 GB in seconds in the genus of
-    A2^12): its pairs are kept in the LLL-reduced basis of the lattice
-    with their own family, in a bucket keyed by B and the size of the
-    family.
-    Which way is cheaper depends on the case: the canonical form of the
-    pair takes 99% of the time for W(A3) on E8+E8 and less than the
-    isometry tests for two reflections. The first neighbours try both in
-    turn, then the cheaper on average is used; a class gets the data of a
-    method when that method first meets it, so both always see all the
-    classes.
+    full rank built a graph beyond 5 GB in seconds in the genus of A2^12):
+    its pairs are kept in the LLL-reduced basis of the lattice with their
+    own family, in a bucket keyed by the largest norm and the size of the
+    family, both invariants. A class gets the data of an algorithm when that
+    algorithm first meets it, so both always see all the classes.
    */
   using FamPtr = std::shared_ptr<MyMatrix<Tint> const>;
   struct PairBucket {
@@ -1446,15 +1309,10 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   std::vector<uint8_t> ListHasKey;
   double t_can = 0, t_iso = 0;
   size_t n_can = 0, n_iso = 0;
-  using CanonKey = std::pair<int, std::vector<MyMatrix<T>>>;
+  using CanonKey = std::vector<MyMatrix<T>>;
   auto canon_key = [&](MyMatrix<T> const &A,
                        std::vector<MyMatrix<T>> const &ListP) -> CanonKey {
-    CanonicalPairData<T> can =
-        (recognition == PairRecognition::QSpan &&
-         !AllScalarIsometries(ListP))
-            ? CanonicalPairQSpan<T, Tint, Tgroup>(A, ListP, os)
-            : CanonicalPair<T, Tint, Tgroup>(A, ListP, os);
-    return {can.method, PairForms(can.Acan, can.ListPcan)};
+    return PairCanonicalForms<T, Tint, Tgroup>(A, ListP, methods.canonical, os);
   };
   // the bucket data of a pair: its bucket, the basis change M to the
   // basis of the bucket, its forms and its family in that basis
@@ -1512,7 +1370,16 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
     return res;
   };
-  bool use_ps = iso_method == LatticeStabCanIsomMethod::PleskenSouvignier;
+  // Plesken-Souvignier (also the choice of the heuristic for tuples) runs
+  // on families kept per bucket, with the data of a neighbour computed once
+  // for all its tests; another method goes through LatticeIsometry.
+  bool use_ps =
+      methods.isomorphism.method ==
+          LatticeStabCanIsomMethod::PleskenSouvignier ||
+      methods.isomorphism.method == LatticeStabCanIsomMethod::Heuristic;
+  InvariantFamilyKind ps_family =
+      methods.isomorphism.family ? *methods.isomorphism.family
+                                 : InvariantFamilyKind::ShellsZbasis;
   // whether the lattice is integral and its vectors of norm at most 2 have
   // full rank, an isometry invariant
   auto has_roots = [&](MyMatrix<T> const &GramRed) -> bool {
@@ -1546,7 +1413,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         if (use_ps) {
           bucket.fam = std::make_shared<MyMatrix<Tint> const>(
               InvariantFamilyHalf<T, Tint>(
-                  recK.GramMatRed, InvariantFamilyKind::ShellsZbasis, os));
+                  recK.GramMatRed, ps_family, os));
         }
         iter = MapBucketRoot.emplace(bd.Akey, bucket).first;
       }
@@ -1554,7 +1421,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       bd.fam = iter->second.fam;
     } else {
       MyMatrix<Tint> fam = InvariantFamilyHalf<T, Tint>(
-          rec.GramMatRed, InvariantFamilyKind::ShellsZbasis, os);
+          rec.GramMatRed, ps_family, os);
       // the largest norm of the family, an invariant like its size
       T max_norm(0);
       for (int i = 0; i < fam.rows(); i++) {
@@ -1582,7 +1449,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   auto put_in_bucket = [&](size_t idx, BucketData const &bd) -> void {
     MyMatrix<Tint> Minv = Inverse(bd.M);
     std::vector<MyMatrix<Tint>> gens_red;
-    for (auto const &h : ListAutInfo[idx].ListGenMat) {
+    for (auto const &h : ListAutInfo[idx].ListGen) {
       gens_red.push_back(bd.M * h * Minv);
     }
     ListFormsRed[idx] = bd.forms;
@@ -1594,14 +1461,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   };
   auto add_class = [&](MyMatrix<T> const &A,
                        std::vector<MyMatrix<T>> const &ListP) -> size_t {
-    bool scalar = AllScalarIsometries(ListP);
-    PairAutInfo<T, Tint, Tgroup> info =
-        (recognition == PairRecognition::QSpan && !scalar)
-            ? GetPairAutInfoQSpan<T, Tint, Tgroup>(A, ListP, os)
-        : (iso_method != LatticeStabCanIsomMethod::PleskenSouvignier &&
-           !scalar)
-            ? GetPairAutInfoMethod<T, Tint, Tgroup>(A, ListP, iso_method, os)
-            : GetPairAutInfo<T, Tint, Tgroup>(A, ListP, os);
+    IntAutomorphismGroup<Tint, Tgroup> info =
+        PairCentraliser<T, Tint, Tgroup>(A, ListP, methods.automorphism, os);
     size_t idx = ListPairWork.size();
     ListPairWork.push_back({A, ListP});
     ListAutInfo.push_back(info);
@@ -1685,7 +1546,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       } else {
         opt = LatticeIsometry<T, Tint, Tgroup>(
             forms_T(bd.forms), forms_T(ListFormsRed[idx]), ListAutRed[idx],
-            iso_method, os);
+            methods.isomorphism, os);
       }
       if (opt) {
         // the class matched last is tried first next time
@@ -1702,9 +1563,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     bool use_canonical;
     if (AllScalarIsometries(ListP)) {
       use_canonical = true;
-    } else if (recognition != PairRecognition::Auto) {
-      use_canonical = (recognition == PairRecognition::Canonical ||
-                       recognition == PairRecognition::QSpan);
+    } else if (methods.recognition != ClassRecognition::Auto) {
+      use_canonical = methods.recognition == ClassRecognition::Canonical;
     } else if (n_can + n_iso < 6) {
       use_canonical = (n_can <= n_iso);
     } else {
@@ -1790,7 +1650,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       return TypeCost(gm.types[a], p) < TypeCost(gm.types[b], p);
     });
     std::vector<ModMat> ListCent;
-    for (auto const &h : ListAutInfo[pos].ListGenMat) {
+    for (auto const &h : ListAutInfo[pos].ListGen) {
       ListCent.push_back(ModMatOfMatrix(UniversalMatrixConversion<T, Tint>(h), p));
     }
     for (size_t i_type : order) {
@@ -1912,7 +1772,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     for (auto &ed : ListEig) {
       size_t k = ed.space.basis.size();
       std::vector<MyMatrix<Tint>> ListGenEig;
-      for (auto &h : ListAutInfo[pos].ListGenMat) {
+      for (auto &h : ListAutInfo[pos].ListGen) {
         ListGenEig.push_back(EigenspaceAction(ed, h, p));
       }
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
@@ -2058,14 +1918,14 @@ template <typename T, typename Tint, typename Tgroup>
 GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListSeed,
     typename GenusEnumerationGroupResult<T, Tgroup>::Tmass const &TotalMass,
-    int prime, size_t max_prime, PairRecognition recognition,
-    LatticeStabCanIsomMethod iso_method, std::ostream &os) {
+    int prime, size_t max_prime, PairMethods const &methods,
+    std::ostream &os) {
   std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> ListSeedGroup;
   for (auto const &eSeed : ListSeed) {
     ListSeedGroup.push_back({eSeed.first, {eSeed.second}});
   }
   return GenusEnumerationAbelianGroup<T, Tint, Tgroup>(
-      ListSeedGroup, TotalMass, prime, max_prime, recognition, iso_method, os);
+      ListSeedGroup, TotalMass, prime, max_prime, methods, os);
 }
 
 template <typename T, typename Tgroup>

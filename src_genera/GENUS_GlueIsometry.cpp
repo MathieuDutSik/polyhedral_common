@@ -97,13 +97,13 @@ void process(std::string const &mode, std::string const &FileGram1,
   }
   using Tresult = GenusEnumerationGroupResult<T, Tgroup>;
   using Tmass = typename Tresult::Tmass;
-  std::set<std::pair<int, std::vector<MyMatrix<T>>>> known;
-  auto key_of =
-      [&](MyMatrix<T> const &A,
-          MyMatrix<T> const &g) -> std::pair<int, std::vector<MyMatrix<T>>> {
-    CanonicalPairData<T> can = CanonicalPair<T, Tint, Tgroup>(
-        A, std::vector<MyMatrix<T>>{g.transpose()}, std::cerr);
-    return {can.method, PairForms(can.Acan, can.ListPcan)};
+  PairMethods methods = DefaultPairMethods();
+  std::set<std::vector<MyMatrix<T>>> known;
+  auto key_of = [&](MyMatrix<T> const &A,
+                    MyMatrix<T> const &g) -> std::vector<MyMatrix<T>> {
+    return PairCanonicalForms<T, Tint, Tgroup>(
+        A, std::vector<MyMatrix<T>>{g.transpose()}, methods.canonical,
+        std::cerr);
   };
   struct GenusRecord {
     GluedPair<T> seed;
@@ -133,8 +133,7 @@ void process(std::string const &mode, std::string const &FileGram1,
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListSeed{
         {gp.gram, gp.isom}};
     Tresult result = GenusEnumerationGroup<T, Tint, Tgroup>(
-        ListSeed, TotalMass, 0, 6, PairRecognition::Auto,
-        LatticeStabCanIsomMethod::PleskenSouvignier, std::cerr);
+        ListSeed, TotalMass, 0, 6, methods, std::cerr);
     for (size_t i = 0; i < result.ListGram.size(); i++) {
       known.insert(key_of(result.ListGram[i], result.ListListIsom[i][0]));
     }

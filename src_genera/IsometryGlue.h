@@ -386,12 +386,15 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
     all the primes at once, and moving the part at that prime to its
     representative leaves the other parts arbitrary, which are all kept.
    */
+  PairMethods methods = DefaultPairMethods();
   std::vector<MyMatrix<Tint>> ListGen1 =
-      GetPairAutInfo<T, Tint, Tgroup>(A1, std::vector<MyMatrix<T>>{P1}, os)
-          .ListGenMat;
+      PairCentraliser<T, Tint, Tgroup>(A1, std::vector<MyMatrix<T>>{P1},
+                                       methods.automorphism, os)
+          .ListGen;
   std::vector<MyMatrix<Tint>> ListGen2 =
-      GetPairAutInfo<T, Tint, Tgroup>(A2, std::vector<MyMatrix<T>>{P2}, os)
-          .ListGenMat;
+      PairCentraliser<T, Tint, Tgroup>(A2, std::vector<MyMatrix<T>>{P2},
+                                       methods.automorphism, os)
+          .ListGen;
   size_t i_reduced = 0;
   {
     size_t best = 0;
@@ -481,7 +484,7 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
   MyMatrix<T> A0 = BlockDiagonal(A1, A2);
   MyMatrix<T> P0 = BlockDiagonal(P1, P2);
   std::vector<GluedPair<T>> res;
-  std::set<std::pair<int, std::vector<MyMatrix<T>>>> known;
+  std::set<std::vector<MyMatrix<T>>> known;
   // the product over the primes
   std::vector<size_t> choice(primes.size(), 0);
   while (true) {
@@ -534,14 +537,15 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
           throw TerminalException{1};
         }
       }
-      CanonicalPairData<T> can =
-          CanonicalPair<T, Tint, Tgroup>(A, std::vector<MyMatrix<T>>{P}, os);
-      std::pair<int, std::vector<MyMatrix<T>>> key{
-          can.method, PairForms(can.Acan, can.ListPcan)};
-      if (known.insert(key).second) {
-        T det_glued = DeterminantMat(can.Acan);
-        res.push_back({can.Acan, can.ListPcan[0].transpose(), det_glued,
-                       glue_order});
+      MyMatrix<T> B_T =
+          UniversalMatrixConversion<T, Tint>(PairCanonicalBasis<T, Tint, Tgroup>(
+              A, std::vector<MyMatrix<T>>{P}, methods.canonical, os));
+      MyMatrix<T> Acan = B_T * A * B_T.transpose();
+      MyMatrix<T> Pcan = B_T * P * Inverse(B_T);
+      if (known.insert(PairForms(Acan, std::vector<MyMatrix<T>>{Pcan}))
+              .second) {
+        T det_glued = DeterminantMat(Acan);
+        res.push_back({Acan, Pcan.transpose(), det_glued, glue_order});
       }
     }
     size_t iq = 0;
