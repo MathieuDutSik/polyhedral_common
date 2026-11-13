@@ -4,7 +4,7 @@
 # First, masses known by hand: A1+A1 with the swap (1/4), E8 with -1
 # (1/|W(E8)|) and with a root reflection (1/(2 |W(E7)|)), and E8 with
 # products of two and three orthogonal reflections, whose glue factors are
-# 2 and 6 (the centralisers W(A1^2) x W(D6) extended by the swap, and so
+# 2 and 6 (the centralizers W(A1^2) x W(D6) extended by the swap, and so
 # on).
 #
 # Then the check mode, independent of the glue computation: on a lattice
@@ -106,7 +106,7 @@ check_case_computed() {
 check_case_computed D5 D5_g5
 check_case_computed E6 E6_g24
 
-# Question 6 decided: the image of the local centraliser on the
+# Question 6 decided: the image of the local centralizer on the
 # discriminant modules of the glued Hermitian components is computed, by
 # lifting the solutions of g A g^T = A in the commutant (or by -1 and sigma
 # when they already generate all the equivariant isometries), and found
@@ -385,7 +385,7 @@ group_mass_case E8E8_16 S4 691/765176315904000
 group_mass_case E6diag A2diag 1/12
 # the same W(A2) on E6 + E6 and E6^3 (multiplicities 6 and 9): the image
 # of O(X_3) (of order about 10^15 and 10^35) by generators, complete by
-# construction (stabiliser chain modulo 3 and layers); masses closed by
+# construction (stabilizer chain modulo 3 and layers); masses closed by
 # GENUS_EnumerateIsometry (2 and 9 classes of pairs)
 group_mass_case E6x2 A2diag 7/1152
 group_mass_case E6x3 A2diag 697/124416
@@ -398,19 +398,19 @@ group_mass_case A8 F21 1/2
 group_mass_case A6A6 F21 1/8
 # F21 diagonal on A6^3 and A6^4: multiplicities 3 and 4 over Q(sqrt -7),
 # the image of the unitary group at the ramified prime 7 (orders about
-# 8 10^7 and 6 10^13) by the stabiliser chain modulo pi; closed by
+# 8 10^7 and 6 10^13) by the stabilizer chain modulo pi; closed by
 # enumeration (2 and 3 classes of pairs)
 group_mass_case A6x3 F21 1/42
 group_mass_case A6x4 F21 5/1008
-# A split prime of a CM centre with a nontrivial factor: C4 x S5 on
+# A split prime of a CM center with a nontrivial factor: C4 x S5 on
 # E8 (x) Z[i] = E8 + E8 (i acting by J, S5 = W(A4) diagonally on the
-# A4 + A4 of E8, glued at 5): centre Q(i), multiplicity 2, 5 split in
+# A4 + A4 of E8, glued at 5): center Q(i), multiplicity 2, 5 split in
 # Q(i); the pi-adic search refuses the split prime and the K-linear chain
 # over Z_5 gives the image (480 elements), orbit 6. Closed by enumeration
 # (2 classes). About 2.5 minutes, in FiniteGroupComponents.
 group_mass_case E8i C4S5 3/16
-# An inert prime of a CM centre with a nontrivial factor: C3 x S5 on
-# E8 (x) A2 = E8 (x) Z[zeta_3]: centre Q(zeta_3), 5 inert, the image at 5
+# An inert prime of a CM center with a nontrivial factor: C3 x S5 on
+# E8 (x) A2 = E8 (x) Z[zeta_3]: center Q(zeta_3), 5 inert, the image at 5
 # of order 720 = |U_2(F_5)|, orbit 6. Closed by enumeration (1 class).
 group_mass_case E8w C3S5 1/12
 # Quaternionic components (End_G = M_r(D), D a definite quaternion
@@ -419,7 +419,7 @@ group_mass_case E8w C3S5 1/12
 # Hurwitz order D4 and on D4^2 (Hashimoto-Ibukiyama, principal genus), on
 # E8 as a Hurwitz lattice (the non-principal genus, (2^2 - 1)/5760), on
 # the Lipschitz order 2Z^4 (a non-maximal multiplier ring); 2I on the
-# icosian E8 (centre Q(sqrt 5), 2^-2 zeta_K(-1)). Each genus is one class,
+# icosian E8 (center Q(sqrt 5), 2^-2 zeta_K(-1)). Each genus is one class,
 # which GENUS_EnumerateIsometry confirms.
 group_mass_case qD4x1 Q8 1/24
 group_mass_case qD4x2 Q8 1/1152
@@ -428,7 +428,7 @@ group_mass_case qZ4 Q8 1/8
 group_mass_case qE8ico 2I 1/120
 # Two genera with several classes: Q8 on D4^4 (Hashimoto-Ibukiyama, 2
 # classes) and 2I on {(x, y) in I^2 : x = y (1 + i) mod 2 I}, I the
-# icosians (centre Q(sqrt 5), local ratio 272 at 2, 3 classes); and Q8 on
+# icosians (center Q(sqrt 5), local ratio 272 at 2, 3 classes); and Q8 on
 # E8 + D4 and D4^3 (one class each).
 group_mass_case qD4x4 Q8 17/39813120
 group_mass_case qIcoLam 2I 17/1800
@@ -447,8 +447,8 @@ group_mass_case qD4A2W2 QS 5/576
 # a nontrivial factor: D4 (x) A2 + I (x) W, I = H (1 + i + j) + 3 H a left
 # ideal of index 9 of the Hurwitz order, the orbit of L/N of length 4 at 3
 group_mass_case qD4Ideal QS 1/6
-# Centres other than Q(sqrt 5): the dicyclic groups Dic_n on Z[z] + Z[z] j,
-# z a primitive 2n-th root of 1, centre Q(z + 1/z): Q(sqrt 2), Q(sqrt 5),
+# Centers other than Q(sqrt 5): the dicyclic groups Dic_n on Z[z] + Z[z] j,
+# z a primitive 2n-th root of 1, center Q(z + 1/z): Q(sqrt 2), Q(sqrt 5),
 # Q(sqrt 3) and the cubic Q(zeta_9)^+ and Q(zeta_7)^+ (D ramified at the
 # prime over 3, resp. 7; rank one over the maximal order there, ratio 1)
 group_mass_case qDic4 Dic 1/16
@@ -467,7 +467,7 @@ group_mass_case bg1235c4 G 1/16
 group_mass_case bg0555c2 G 403/768
 group_mass_case bg2129p242 G 1/6
 group_mass_case bg2141p1441 G 1/24
-# A centre K of degree 2 whose order on X is not O_K (the mass by
+# A center K of degree 2 whose order on X is not O_K (the mass by
 # comparison with O_K X), and a search of the equivariant isometries
 # stopped by its node budget (C8).
 group_mass_case bg0502p192 G 1/16
@@ -478,7 +478,7 @@ group_mass_case bg0578p72 G 1/6
 group_mass_case bg1577p576 G 1/8
 group_mass_case bg0806p576 G 1/64
 group_mass_case bg0840c8 G 1/256
-# F55 = C11 : C5 diagonal on A10 + A10: centre Q(sqrt -11), multiplicity 2,
+# F55 = C11 : C5 diagonal on A10 + A10: center Q(sqrt -11), multiplicity 2,
 # the factor at the ramified prime 11 by the pi-adic chain (an image of
 # order about 3 10^4, orbit 1); the module N^#/N at 11 is beyond the old
 # encoding bound. At 5 (split) the factor is always 1 for F55: rho is
@@ -487,7 +487,7 @@ group_mass_case bg0840c8 G 1/256
 group_mass_case A10x2 F55 5/24
 group_mass_case E8E8_16 S3diag2 143/1203948748800
 # The dihedral group D5 = <(12345), (25)(34)> in W(A4): End_G has the
-# totally real centre Q(sqrt 5), so the multiplicity lattice is quadratic
+# totally real center Q(sqrt 5), so the multiplicity lattice is quadratic
 # over Q(sqrt 5). Diagonally on A4 + A4 (rank two, mass 1/8), and on two
 # A4, one in each E8 of E8+E8 (glued at 5 to the fixed lattice, mass
 # 13/921600, closed by GENUS_EnumerateIsometry with 2 classes).
@@ -497,9 +497,16 @@ group_mass_case E8E8D5 D5 13/921600
 # found by the pi-adic search over O_K (the solutions modulo 5 of the
 # trace form are about 10^4 times too many): D5 diagonally on A4^3 (factor
 # 1, the image of order 30000), and on the three A4 of E8 + A4 (factor 2,
-# so the mass 1/8 is that of the seed, with a centraliser of order 8)
+# so the mass 1/8 is that of the seed, with a centralizer of order 8)
 group_mass_case A4A4A4 D5 1/48
 group_mass_case E8A4 D5 1/8
+# The binary icosahedral group 2I acting diagonally on I^k, I the icosians
+# as the lattice E8 (Ico^k): the quaternionic Hermitian lattice I^2 alone
+# in its genus, its mass 1/(2 120^2), I^3 (two classes); and 2I x C3, 2I
+# on the icosians and w on a second E8 (one class).
+group_mass_case Ico2 2I 1/28800
+group_mass_case Ico3 2I 67/72576000
+group_mass_case IcoE8w G 1/18662400
 
 # The brute-force check for the groups <g, tau>, tau in C_{O(L)}(g); the
 # ratios are integers but not 1, as (g, tau) and (g, g tau) generate the

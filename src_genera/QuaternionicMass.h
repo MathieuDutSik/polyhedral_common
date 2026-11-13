@@ -27,7 +27,7 @@
   The mass of a component V_rho of a finite group G whose End_G(V_rho) is
   M_r(D), D a totally definite quaternion algebra over a totally real field
   K of degree c (Albert type III: the adjoint involution is of symplectic
-  type, and the centraliser C_rho = U is an inner form of Sp_{2r} over K,
+  type, and the centralizer C_rho = U is an inner form of Sp_{2r} over K,
   simply connected).
 
   The method compares volumes. For two lattices X and S in D-Hermitian
@@ -83,6 +83,244 @@ struct QuaternionicMassBounds {
   size_t max_overorder = size_t(1) << 24;
   MultiplicityFactorBounds image;
 };
+
+/*
+  A Z-basis (rows) of the integer x with x Eq = 0, for the commutant
+  systems: many unknowns (k^2), many more conditions than their rank, and
+  a kernel of small dimension. The integral elimination of the whole
+  system suffers from the growth of the coefficients, so the kernel is
+  found modulo p and lifted:
+  - the reduced echelon form modulo p of the conditions independent
+    modulo p (ColumnRankProfileModPrime), giving the kernel basis K with
+    the identity on the free unknowns;
+  - its entries as fractions by rational reconstruction, and K Eq = 0
+    checked exactly. The rank over Q is at least the rank modulo p, so the
+    rational kernel has dimension at most that of K, and K, of full rank,
+    spans it;
+  - the saturation: the integer points of span_Q(K) are the y K with y
+    integral (the coordinates on the free unknowns) and y K integral, that
+    is y (D K) = 0 modulo the common denominator D of K, one column at a
+    time on a basis of the y found so far.
+  When the reconstruction fails or does not check, the integral
+  elimination of the full system, which is also the comparison under
+  SANITY_CHECK_QUATERNIONIC_MASS for the small systems.
+ */
+template <typename Tint>
+MyMatrix<Tint> IntegralKernelOfConditions(MyMatrix<Tint> const &Eq) {
+  int N = Eq.rows();
+  int n_cond = Eq.cols();
+  int64_t const p = 2147483629;
+  Tint const p_T = UniversalScalarConversion<Tint, int64_t>(p);
+  auto mod = [&](Tint const &x) -> int64_t {
+    return UniversalScalarConversion<int64_t, Tint>(ResInt(x, p_T));
+  };
+  auto inv = [&](int64_t a) -> int64_t {
+    int64_t res = 1, base = a, e = p - 2;
+    while (e > 0) {
+      if (e & 1)
+        res = (res * base) % p;
+      base = (base * base) % p;
+      e >>= 1;
+    }
+    return res;
+  };
+  auto fallback = [&]() -> MyMatrix<Tint> {
+    return NullspaceIntTrMat(MyMatrix<Tint>(Eq.transpose()));
+  };
+  std::vector<int> cols = ColumnRankProfileModPrime(Eq);
+  int r = static_cast<int>(cols.size());
+  // the reduced echelon form modulo p of the selected conditions (rows)
+  std::vector<std::vector<int64_t>> A(r, std::vector<int64_t>(N));
+  for (int j = 0; j < r; j++) {
+    for (int i = 0; i < N; i++) {
+      A[j][i] = mod(Eq(i, cols[j]));
+    }
+  }
+  std::vector<int> pivcol;
+  std::vector<bool> is_pivot(N, false);
+  int row = 0;
+  for (int col = 0; col < N && row < r; col++) {
+    int found = -1;
+    for (int i = row; i < r; i++) {
+      if (A[i][col] != 0) {
+        found = i;
+        break;
+      }
+    }
+    if (found == -1) {
+      continue;
+    }
+    std::swap(A[row], A[found]);
+    int64_t a_inv = inv(A[row][col]);
+    for (int u = col; u < N; u++) {
+      A[row][u] = (A[row][u] * a_inv) % p;
+    }
+    for (int i = 0; i < r; i++) {
+      int64_t f = A[i][col];
+      if (i != row && f != 0) {
+        for (int u = col; u < N; u++) {
+          if (A[row][u] != 0) {
+            A[i][u] = (A[i][u] + (p - f) * A[row][u]) % p;
+          }
+        }
+      }
+    }
+    pivcol.push_back(col);
+    is_pivot[col] = true;
+    row++;
+  }
+  std::vector<int> freecol;
+  for (int u = 0; u < N; u++) {
+    if (!is_pivot[u]) {
+      freecol.push_back(u);
+    }
+  }
+  int d = static_cast<int>(freecol.size());
+  if (d == 0) {
+    return MyMatrix<Tint>(0, N);
+  }
+  // the fractions n/m with |n|, m below sqrt(p/2) from a residue
+  int64_t const bound = 32767;
+  auto reconstruct = [&](int64_t a) -> std::optional<std::pair<int64_t, int64_t>> {
+    int64_t r0 = p, r1 = a, t0 = 0, t1 = 1;
+    while (r1 > bound) {
+      int64_t q = r0 / r1;
+      int64_t r2 = r0 - q * r1;
+      int64_t t2 = t0 - q * t1;
+      r0 = r1;
+      r1 = r2;
+      t0 = t1;
+      t1 = t2;
+    }
+    if (t1 == 0 || t1 > bound || t1 < -bound) {
+      return {};
+    }
+    if (t1 < 0) {
+      return std::pair<int64_t, int64_t>{-r1, -t1};
+    }
+    return std::pair<int64_t, int64_t>{r1, t1};
+  };
+  // K(f, pivcol[i]) = -A[i][freecol[f]], K(f, freecol[f]) = 1
+  std::vector<std::vector<std::pair<int64_t, int64_t>>> Kfrac(
+      d, std::vector<std::pair<int64_t, int64_t>>(pivcol.size()));
+  Tint D(1);
+  for (int f = 0; f < d; f++) {
+    for (size_t i = 0; i < pivcol.size(); i++) {
+      int64_t a = (p - A[i][freecol[f]]) % p;
+      std::optional<std::pair<int64_t, int64_t>> opt = reconstruct(a);
+      if (!opt) {
+        return fallback();
+      }
+      Kfrac[f][i] = *opt;
+      Tint den = UniversalScalarConversion<Tint, int64_t>(opt->second);
+      D = LCMpair(D, den);
+    }
+  }
+  MyMatrix<Tint> KD = ZeroMatrix<Tint>(d, N);
+  for (int f = 0; f < d; f++) {
+    KD(f, freecol[f]) = D;
+    for (size_t i = 0; i < pivcol.size(); i++) {
+      auto const &[num, den] = Kfrac[f][i];
+      if (num != 0) {
+        Tint num_T = UniversalScalarConversion<Tint, int64_t>(num);
+        Tint den_T = UniversalScalarConversion<Tint, int64_t>(den);
+        KD(f, pivcol[i]) = num_T * (D / den_T);
+      }
+    }
+  }
+  // KD Eq = 0, by the nonzero entries of the columns of Eq
+  for (int c = 0; c < n_cond; c++) {
+    std::vector<int> nz;
+    for (int i = 0; i < N; i++) {
+      if (Eq(i, c) != 0) {
+        nz.push_back(i);
+      }
+    }
+    for (int f = 0; f < d; f++) {
+      Tint s(0);
+      for (int i : nz) {
+        s += KD(f, i) * Eq(i, c);
+      }
+      if (s != 0) {
+        return fallback();
+      }
+    }
+  }
+  if (D == 1) {
+    return KD;
+  }
+  // a basis B (rows) of the y in Z^d with y KD = 0 modulo D, one column
+  // at a time: the values v = B c modulo D brought to (g, 0, ..., 0) by
+  // unimodular row operations (Euclid), then the row of g multiplied by
+  // D / g
+  MyMatrix<Tint> B = IdentityMat<Tint>(d);
+  for (int u = 0; u < N; u++) {
+    if (!is_pivot[u]) {
+      // the column of a free unknown is D times a unit vector
+      continue;
+    }
+    std::vector<Tint> v(d);
+    bool all_zero = true;
+    for (int i = 0; i < d; i++) {
+      Tint s(0);
+      for (int f = 0; f < d; f++) {
+        if (B(i, f) != 0 && KD(f, u) != 0) {
+          s += B(i, f) * KD(f, u);
+        }
+      }
+      v[i] = ResInt(s, D);
+      if (v[i] != 0) {
+        all_zero = false;
+      }
+    }
+    if (all_zero) {
+      continue;
+    }
+    int i0 = -1;
+    for (int i = 0; i < d; i++) {
+      if (v[i] == 0) {
+        continue;
+      }
+      if (i0 == -1) {
+        i0 = i;
+        continue;
+      }
+      // Euclid on (v[i0], v[i]), the same operations on the rows
+      while (v[i] != 0) {
+        Tint q = QuoInt(v[i0], v[i]);
+        for (int f = 0; f < d; f++) {
+          B(i0, f) -= q * B(i, f);
+        }
+        v[i0] -= q * v[i];
+        std::swap(v[i0], v[i]);
+        B.row(i0).swap(B.row(i));
+      }
+    }
+    Tint g = GcdPair(v[i0], D);
+    Tint mult = D / g;
+    for (int f = 0; f < d; f++) {
+      B(i0, f) *= mult;
+    }
+  }
+  MyMatrix<Tint> res = B * KD;
+  for (int r2 = 0; r2 < res.rows(); r2++) {
+    for (int u = 0; u < N; u++) {
+      res(r2, u) /= D;
+    }
+  }
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
+  if (N <= 400) {
+    MyMatrix<Tint> ref = fallback();
+    if (ComputeRowHermiteNormalForm(ref).second !=
+        ComputeRowHermiteNormalForm(res).second) {
+      std::cerr << "QUAT_MASS: IntegralKernelOfConditions differs from the "
+                   "integral elimination\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return res;
+}
 
 template <typename T>
 std::vector<MyMatrix<T>> QuatZBasis(std::vector<MyMatrix<T>> const &L, int k) {
@@ -186,7 +424,7 @@ std::vector<MyMatrix<T>> QuatIntegralCommutant(MyMatrix<T> const &B,
       }
     }
   }
-  MyMatrix<Tint> ker = NullspaceIntTrMat(MyMatrix<Tint>(Eq.transpose()));
+  MyMatrix<Tint> ker = IntegralKernelOfConditions(Eq);
   std::vector<MyMatrix<T>> res;
   for (int r = 0; r < ker.rows(); r++) {
     MyMatrix<T> Y(k, k);
@@ -517,7 +755,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
 #endif
     for (Tint const &p_i : primes) {
       int64_t p = UniversalScalarConversion<int64_t, Tint>(p_i);
-      // whether O contains O_K: its integral centre has discriminant d_K
+      // whether O contains O_K: its integral center has discriminant d_K
       // (needed by the filter y^2 = 0 mod p O, x^2 = trd(x) x - nrd(x), and
       // by the restriction to the y with a y in p O below)
       bool has_OK = false;
@@ -982,24 +1220,24 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
 
 /*
   The type of the component, given in the columns convention: the Gram
-  matrix B, End_G (a Q-basis) and its centre. r >= 1 when End_G = M_r(D)
-  with a symplectic-type adjoint involution over a real centre (Albert
+  matrix B, End_G (a Q-basis) and its center. r >= 1 when End_G = M_r(D)
+  with a symplectic-type adjoint involution over a real center (Albert
   type III), 0 otherwise.
  */
 template <typename T>
 int QuaternionicRank(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &End,
-                     std::vector<MyMatrix<T>> const &Centre) {
+                     std::vector<MyMatrix<T>> const &Center) {
   int k = B.rows();
   MyMatrix<T> Binv = Inverse(B);
   auto adj = [&](MyMatrix<T> const &Y) -> MyMatrix<T> {
     return Binv * Y.transpose() * B;
   };
-  for (auto const &Z : Centre) {
+  for (auto const &Z : Center) {
     if (adj(Z) != Z) {
       return 0;
     }
   }
-  int c = static_cast<int>(Centre.size());
+  int c = static_cast<int>(Center.size());
   int e = static_cast<int>(End.size());
   if (c == 0 || e % (4 * c) != 0) {
     return 0;
@@ -1030,8 +1268,8 @@ int QuaternionicRank(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &End,
   The mass of the quaternionic component, columns convention: B the Gram
   matrix of X, Dspan matrices spanning D acting on X over Q (the group
   elements when G spans D, X = L_rho; the e g e restricted to X = L cap e
-  V_rho otherwise), FK the centre K (when c > 1) and d_K. The multiplier
-  ring O_X of X in D, the centre and the D-linear maps all come from
+  V_rho otherwise), FK the center K (when c > 1) and d_K. The multiplier
+  ring O_X of X in D, the center and the D-linear maps all come from
   Dspan.
  */
 template <typename T, typename Tint>
@@ -1045,8 +1283,8 @@ std::optional<T> QuaternionicComponentMass(
   // the multiplier ring of X in D
   std::vector<MyMatrix<T>> O0 = QuatIntegralPoints<T, Tint>(Dspan, k);
   std::vector<MyMatrix<T>> const &gens = O0;
-  // the centre of D: the elements of the span of O0 commuting with O0
-  std::vector<MyMatrix<T>> Centre;
+  // the center of D: the elements of the span of O0 commuting with O0
+  std::vector<MyMatrix<T>> Center;
   {
     int d0 = static_cast<int>(O0.size());
     int kk = k * k;
@@ -1067,10 +1305,10 @@ std::optional<T> QuaternionicComponentMass(
       for (int i = 0; i < d0; i++) {
         Z += ker(t, i) * O0[i];
       }
-      Centre.push_back(Z);
+      Center.push_back(Z);
     }
   }
-  int c = static_cast<int>(Centre.size());
+  int c = static_cast<int>(Center.size());
   int dimD = 4 * c;
   int dim_u = c * r * (2 * r + 1);
   MyMatrix<T> Binv = Inverse(B);
@@ -1079,7 +1317,7 @@ std::optional<T> QuaternionicComponentMass(
   };
   if (static_cast<int>(O0.size()) != dimD || k != dimD * r) {
     std::cerr << "QUAT_MASS: the span has dimension " << O0.size()
-              << " for a centre of degree " << c << " and rank " << k
+              << " for a center of degree " << c << " and rank " << k
               << ", not that of D\n";
     throw TerminalException{1};
   }
@@ -1270,16 +1508,16 @@ std::optional<T> QuaternionicComponentMass(
   };
   // the lambda with an integral Gram matrix: a lattice, by the integral
   // points of the span of the Gram matrices of a basis of K
-  std::vector<MyMatrix<T>> GramCentre;
-  for (auto const &Z : Centre) {
-    GramCentre.push_back(gram_S(Z));
+  std::vector<MyMatrix<T>> GramCenter;
+  for (auto const &Z : Center) {
+    GramCenter.push_back(gram_S(Z));
   }
-  std::vector<MyMatrix<T>> GramInt = QuatIntegralPoints<T, Tint>(GramCentre, kS);
+  std::vector<MyMatrix<T>> GramInt = QuatIntegralPoints<T, Tint>(GramCenter, kS);
   MyMatrix<T> Gflat(c, kS * kS);
   for (int t = 0; t < c; t++) {
     for (int u = 0; u < kS; u++) {
       for (int v = 0; v < kS; v++) {
-        Gflat(t, u * kS + v) = GramCentre[t](u, v);
+        Gflat(t, u * kS + v) = GramCenter[t](u, v);
       }
     }
   }
@@ -1298,7 +1536,7 @@ std::optional<T> QuaternionicComponentMass(
     }
     MyMatrix<T> lam = ZeroMatrix<T>(k, k);
     for (int t = 0; t < c; t++) {
-      lam += (*mu)(t) * Centre[t];
+      lam += (*mu)(t) * Center[t];
     }
     LambdaBasis.push_back(lam);
   }

@@ -47,11 +47,11 @@ run_case d25 klein8 6
 # characters with values +-1 have eigenvectors but P^12(F_5) is 50 times
 # smaller than P^12(F_7) for the fixed lattice of rank 13
 run_case E8E8 c6 3
-# a non-abelian group, W(A2) = S3: the neighbours of the irreducible
+# a non-abelian group, W(A2) = S3: the neighbors of the irreducible
 # isotropic G-submodules at p = 5, by random points in P^13(F_5), find the
 # class on D16+ (2 classes)
 run_case E8E8 S3 2
-# W(A2) diagonal on A2^3 in E6 (one class, centraliser of order 12, the
+# W(A2) diagonal on A2^3 in E6 (one class, centralizer of order 12, the
 # local factor 2) and on two orthogonal A2 of E8+E8 (3 classes)
 run_case E6diag A2diag 1
 run_case E6x2 A2diagx2 2
@@ -91,6 +91,11 @@ run_case A8 F21A8 2
 # D5 in W(A4) on two A4, one in each E8 of E8+E8: a component quadratic
 # over Q(sqrt 5) glued at 5 to the fixed lattice, 2 classes (at p = 3)
 run_case E8E8D5 D5 2
+# 2I diagonal on I^2 and I^3 (Ico^k, I the icosians as E8): 1 and 2 classes,
+# the second found at p = 11; 2I x C3 with w on a second E8: 1 class
+run_case Ico2 Ico2_2I 1
+run_case Ico3 Ico3_2I 2
+run_case IcoE8w IcoE8w_G 1
 
 # The even unimodular lattices of rank 8 and 16 with a structure over Z[w]
 # and Z[i] (Hentschel-Krieg-Nebe, Corollaries 1 and 2): 1, 1, 1 and 3 classes
@@ -139,7 +144,7 @@ if [ "$rc" != "1" ]; then
     exit 1
 fi
 
-# The module neighbours at p = 2, for groups of odd order on lattices of odd
+# The module neighbors at p = 2, for groups of odd order on lattices of odd
 # determinant: F21 on A8 and on A6^3, at the prime 2 alone; and the prime 2
 # refused for a group of even order (S3 = W(A2) on E8+E8)
 p2_case() {

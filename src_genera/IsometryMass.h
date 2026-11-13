@@ -43,10 +43,10 @@
   the sum over the isometry classes of pairs in the genus of the pair (the
   sigma-stable lattices of V = L (x) Q locally isometric to L as pairs).
 
-  Write C for the centraliser of sigma in O(V), K the stabiliser of L in
+  Write C for the centralizer of sigma in O(V), K the stabilizer of L in
   C(A_f), L_d = L cap ker Phi_d(sigma) for the d dividing the order m, and
   L_0 = (+)_d L_d, of finite index in L. An element of C preserves every
-  ker Phi_d(sigma), so K is contained in the stabiliser K_0 = prod_d K_d of
+  ker Phi_d(sigma), so K is contained in the stabilizer K_0 = prod_d K_d of
   L_0, and since C = prod_d C_d (orthogonal groups for d = 1, 2, unitary
   groups over Q(zeta_d) for d >= 3):
 
@@ -55,7 +55,7 @@
   The index is local: [K_0 : K] = prod_q |G_q . H_q|, the orbit of the glue
   H_q = (L / L_0) (x) Z_q in D(L_0)_q = (+)_d D(L_d)_q under the image G_q
   of K_{0,q}. H is a subgroup of the discriminant group and K_q is its
-  stabiliser. Only the primes q dividing [L : L_0] contribute, and they
+  stabilizer. Only the primes q dividing [L : L_0] contribute, and they
   divide m.
 
   The image G_q is the product over d of the images of the local groups
@@ -117,19 +117,19 @@ template <typename T> struct IsometryComponent {
   std::optional<MyMatrix<T>> multiplicity_gram;
   // the product over p | |G| of [O(X_p) : Stab(L_p)], when computed
   std::optional<T> multiplicity_factor;
-  // End_G with a centre K other than Q: the multiplicity lattice X, with
+  // End_G with a center K other than Q: the multiplicity lattice X, with
   // the actions of a Z-basis of O_K, is Hermitian over K when K is CM
   // (herm_field) and quadratic over K when K is totally real (quad_field)
   std::optional<AbelianCMField> herm_field;
   std::optional<AbelianCMField> quad_field;
-  MyMatrix<T> centre_gram;
-  std::vector<MyMatrix<T>> centre_omega;
+  MyMatrix<T> center_gram;
+  std::vector<MyMatrix<T>> center_omega;
   // End_G = M_r(D), D a totally definite quaternion algebra over a real
-  // centre: the mass of the component, computed directly
+  // center: the mass of the component, computed directly
   // (QuaternionicMass.h) when it could be
   bool quaternionic = false;
   std::optional<T> quaternionic_mass;
-  // a centre K whose order on X is not O_K: the mass of X computed
+  // a center K whose order on X is not O_K: the mass of X computed
   // directly (by comparison with O_K X), times multiplicity_factor
   bool direct = false;
   std::optional<T> direct_mass;
@@ -439,7 +439,7 @@ EquivariantModuleIsometries(PrimaryQuadModule const &M, size_t max_module,
   bool overflow = false;
   // the equivariance is only checked on the complete maps: a budget of
   // nodes, beyond which nothing is returned (the image of the local
-  // centraliser then comes from its generators, LocalImageOnModule)
+  // centralizer then comes from its generators, LocalImageOnModule)
   size_t n_node = 0;
   size_t const max_node = 500000;
   std::function<void(size_t)> rec = [&](size_t i) -> void {
@@ -599,11 +599,11 @@ GlueElements(std::vector<PrimaryQuadModule> const &mods,
   with a nondegenerate form, a bijection of M preserving b(x, y) for all x,
   y is additive (phi(x + y) - phi(x) - phi(y) is orthogonal to everything),
   so the isometries of M commuting with sigma are the automorphisms of the
-  complete graph on the elements of M with the vertices coloured by q(x)
+  complete graph on the elements of M with the vertices colored by q(x)
   and the edges by b(x, y) and by whether y = sigma(x). The glue H is added
   as one vertex per element, joined to its components: the automorphisms of
   that graph are the stabilizer of H in G = prod_s G_s (the module of each
-  vertex is in its colour, so the modules are not exchanged, and an element
+  vertex is in its color, so the modules are not exchanged, and an element
   of H is determined by its components). The orbit length is |G| / |Stab_G
   H|, the orders being those of the graph automorphism groups.
  */
@@ -635,7 +635,7 @@ GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
   if (n_vert > max_vertices) {
     return {};
   }
-  // the images by the generators of the group, one edge colour bit each
+  // the images by the generators of the group, one edge color bit each
   std::vector<std::vector<std::vector<ModuleElt>>> sigma_img(t);
   size_t n_bit = 1;
   for (size_t s = 0; s < t; s++) {
@@ -651,7 +651,7 @@ GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
       sigma_img[s].push_back(col);
     }
   }
-  // the edge colours are coded as 4 ((s BIG + b) 2^n_bit + flag) + 1 with
+  // the edge colors are coded as 4 ((s BIG + b) 2^n_bit + flag) + 1 with
   // s < t, b < N <= BIG / 4, flag < 2^n_bit: the largest code must fit
   {
     __int128 code = static_cast<__int128>(t) * BIG + BIG;
@@ -924,7 +924,7 @@ std::vector<MyMatrix<Tint>> IntegralCommutant(IsometryComponent<T> const &comp) 
       }
     }
   }
-  MyMatrix<Tint> ker = NullspaceIntTrMat(MyMatrix<Tint>(Eq.transpose()));
+  MyMatrix<Tint> ker = IntegralKernelOfConditions(Eq);
   std::vector<MyMatrix<Tint>> res;
   for (int r = 0; r < ker.rows(); r++) {
     MyMatrix<Tint> Y(k, k);
@@ -939,7 +939,7 @@ std::vector<MyMatrix<Tint>> IntegralCommutant(IsometryComponent<T> const &comp) 
 }
 
 /*
-  Elements of the local centraliser by the Cayley transform: for Y in the
+  Elements of the local centralizer by the Cayley transform: for Y in the
   commutant with Y A + A Y^T = 0 and I + Y invertible modulo q, g = (I - Y)
   (I + Y)^{-1} is an isometry (Y A = -A Y^T gives (I + Y) A = A (I - Y^T))
   commuting with the group, with denominators prime to q. Returned as
@@ -1027,7 +1027,7 @@ std::vector<MyMatrix<Tint>> CayleyLocalElements(IsometryComponent<T> const &comp
 
 /*
   The image in the automorphisms of the q-primary module M of D(L_d) of
-  the stabiliser of L_d in the centraliser C(Q_q) of the group acting on
+  the stabilizer of L_d in the centralizer C(Q_q) of the group acting on
   the component: the elements of the commutant Lambda of comp.sigma and
   comp.extra_sigma that preserve the form, found modulo q^c (q^c the
   exponent of M) by LocalStabilizerImage, then moved to M. Nothing beyond
@@ -1322,7 +1322,7 @@ template <typename T> struct IsometryMassResult {
   T index;
   std::vector<GlueOrbitResult<typename underlying_z_ring<T>::ring_type>> glue;
   T glue_factor;
-  // the image of a local centraliser on a glue module was beyond the
+  // the image of a local centralizer on a glue module was beyond the
   // bounds and taken to be all the equivariant isometries (Question q:surj
   // of the paper); only with IsometryMassBounds::allow_image_assumption
   bool image_assumed;
@@ -1351,7 +1351,7 @@ struct IsometryMassBounds {
   size_t max_vertices = 6000;
   // the L-values of the quadratic components with E not abelian
   QuadLValueMethod lvalue = QuadLValueMethod::Mpfr;
-  // when the image of the local centraliser on a glue module is beyond
+  // when the image of the local centralizer on a glue module is beyond
   // the bounds: stop (false), or take it to be all the equivariant
   // isometries (Question q:surj of the paper), the result then saying
   // image_assumed. A wrong assumption gives a wrong mass, which can stop
@@ -1495,7 +1495,7 @@ std::vector<MyMatrix<T>> GroupElementsClosure(std::vector<MyMatrix<T>> const &Li
   orbit is determined by the orders of the chi(h), and V_chi is the
   intersection over h in G of the kernels of Phi_{ord chi(h)}(h). On V_chi
   the group acts through the powers of one element g_chi with chi(g_chi) of
-  order e, so the centraliser of G in O(V_chi) is that of g_chi, and the
+  order e, so the centralizer of G in O(V_chi) is that of g_chi, and the
   component is that of the cyclic case for (L_chi, g_chi) and d = e.
  */
 template <typename T, typename Tint>
@@ -1654,9 +1654,9 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     } else if (comp.d == 0 && (comp.herm_field || comp.quad_field)) {
       std::optional<T> hm =
           comp.herm_field
-              ? HermitianMassAbelianLattice(comp.centre_gram, comp.centre_omega,
+              ? HermitianMassAbelianLattice(comp.center_gram, comp.center_omega,
                                             *comp.herm_field)
-              : QuadraticMassAbelianLattice(comp.centre_gram, comp.centre_omega,
+              : QuadraticMassAbelianLattice(comp.center_gram, comp.center_omega,
                                             *comp.quad_field, bounds.lvalue);
       if (hm && comp.multiplicity_factor) {
         cm.mass = *hm * *comp.multiplicity_factor;
@@ -1670,7 +1670,7 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     } else if (comp.d == 0) {
       if (comp.multiplicity_gram) {
         cm.mass = GenusMass<T, Tint>(*comp.multiplicity_gram);
-        // multiplicity one: the centraliser on the component is {+-1},
+        // multiplicity one: the centralizer on the component is {+-1},
         // which preserves every lattice, so no local factor is missing;
         // otherwise the local factors at p | |G|, unless beyond the bounds
         if (comp.multiplicity_factor) {
@@ -1788,7 +1788,7 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
           A cyclic component (d >= 3, one element acting) is a lattice over
           Z[sigma] = Z[zeta_d], the maximal order of Q(zeta_d), with an even
           trace form: the image of its local unitary group is the whole
-          centraliser of sigma in O(D(L_d)_q) (Brandhorst-Hofmann, Finite
+          centralizer of sigma in O(D(L_d)_q) (Brandhorst-Hofmann, Finite
           subgroups of automorphisms of K3 surfaces, Theorem 6.12 with
           Proposition 6.9). An empty entry means all the equivariant
           isometries, for the listing and for the graph.
@@ -1856,7 +1856,7 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
           LocalImageOnModule<T, Tint>(res.components[comp_pos[s]], mods[s], os);
       if (!img) {
         if (!bounds.allow_image_assumption) {
-          std::cerr << "ISOM_MASS: the image of the local centraliser on the "
+          std::cerr << "ISOM_MASS: the image of the local centralizer on the "
                        "glue module at q=" << q << " is beyond the bounds and "
                        "the image assumption (Question q:surj) is not "
                        "allowed, please insert the code\n";
@@ -2128,7 +2128,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
   }
   int w = k / m;
   // the gamma_a with the gamma_a X in direct sum (V_rho = W (x)_K U and
-  // X in l (x) U, l a line of W over the centre K)
+  // X in l (x) U, l a line of W over the center K)
   std::vector<size_t> ListGamma;
   {
     MyMatrix<T> rows(0, n);
@@ -2389,7 +2389,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
       return {};
     };
-    // with a centre K other than Q the search over the primes of K over
+    // with a center K other than Q the search over the primes of K over
     // p, pi-adically, first: it is exact and the fastest
     std::optional<std::vector<ModMat>> opt;
     bool rows_convention = !OmegaX.empty() && !quaternionic;
@@ -2463,7 +2463,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
          << LocalImageOrderValue(order, p) << "\n";
 #endif
     }
-    // a centre K beyond the pi-adic search: the same generators within the
+    // a center K beyond the pi-adic search: the same generators within the
     // integral commutant of O_K (K-linear maps), on the columns
     if (!opt && !OmegaX.empty()) {
       int Wn = MultiplicityNewtonPrecision(p);
@@ -2995,8 +2995,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
 
   On a component where the generators commute, G acts through a cyclic
   quotient and the component is that of the cyclic case for the element
-  acting with the largest order. Otherwise, End_G(V_rho) = Q is recognised
-  as a centre of dimension 1, End_G of dimension m^2, and a common
+  acting with the largest order. Otherwise, End_G(V_rho) = Q is recognized
+  as a center of dimension 1, End_G of dimension m^2, and a common
   eigenspace F of some elements h for eigenvalues +-1 of dimension m: F is
   then the image l (x) U of an idempotent of Q[H] of rank one on W, and X
   = L cap F, with the restriction of the form, is the multiplicity lattice
@@ -3445,7 +3445,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
     for (size_t i = 1; i < ListP.size(); i++) {
       comp.extra_sigma.push_back(action(ListP[i]));
     }
-    // End_G of the block and its centre
+    // End_G of the block and its center
     auto commutant = [&](std::vector<MyMatrix<T>> const &ListX)
         -> std::vector<MyMatrix<T>> {
       // the Y with X Y = Y X for all X, by the nullspace
@@ -3481,8 +3481,8 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       return res_c;
     };
     // the class sums, the exponent N of G and the a with sigma_a fixing
-    // the centre K of End_G (the subfield of Q(zeta_N) it is)
-    auto centre_field = [&]()
+    // the center K of End_G (the subfield of Q(zeta_N) it is)
+    auto center_field = [&]()
         -> std::tuple<std::vector<MyMatrix<T>>, int64_t, std::vector<int64_t>> {
       // the conjugacy classes and their sums on the block
       std::vector<int> ccls(n_elt, -1);
@@ -3529,24 +3529,71 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       return {ClassSum, Nexp, Hgens};
     };
     std::vector<MyMatrix<T>> End = commutant(ListAct);
-    // the centre of End_G: the elements of End_G commuting with End_G
-    std::vector<MyMatrix<T>> ListBoth = ListAct;
-    ListBoth.insert(ListBoth.end(), End.begin(), End.end());
-    int c = static_cast<int>(commutant(ListBoth).size());
+    /*
+      The center of End_G. End_G is the commutant of the image A of Q[G] on
+      the block, A is semisimple, so the center of End_G is that of A'' = A:
+      the span of the conjugacy class sums on the block. Computed as the
+      commutant of A and End_G together, it was a system of k^2 unknowns
+      and (1 + dim End_G) k^2 equations, beyond 13 GB for 2I diagonal on
+      I^4 (k = 32, dim End_G = 128).
+     */
+    std::vector<MyMatrix<T>> CenterBasis = [&]() -> std::vector<MyMatrix<T>> {
+      std::vector<int> ccls(n_elt, -1);
+      int n_ccls = 0;
+      for (size_t i = 0; i < n_elt; i++) {
+        if (ccls[i] != -1) {
+          continue;
+        }
+        for (size_t j = 0; j < n_elt; j++) {
+          ccls[conj(j, i)] = n_ccls;
+        }
+        n_ccls++;
+      }
+      std::vector<MyMatrix<T>> Sums(n_ccls, ZeroMatrix<T>(n, n));
+      for (size_t i = 0; i < n_elt; i++) {
+        Sums[ccls[i]] += elts[i];
+      }
+      std::vector<MyMatrix<T>> Acts;
+      MyMatrix<T> Fl(n_ccls, k * k);
+      for (int ic = 0; ic < n_ccls; ic++) {
+        Acts.push_back(action(Sums[ic]));
+        for (int u = 0; u < k; u++) {
+          for (int v = 0; v < k; v++) {
+            Fl(ic, u * k + v) = Acts[ic](u, v);
+          }
+        }
+      }
+      std::vector<MyMatrix<T>> basis;
+      for (int i_row : TMat_SelectRowCol(Fl).ListRowSelect) {
+        basis.push_back(Acts[i_row]);
+      }
+      return basis;
+    }();
+#ifdef SANITY_CHECK_ISOMETRY_MASS
+    {
+      std::vector<MyMatrix<T>> ListBoth = ListAct;
+      ListBoth.insert(ListBoth.end(), End.begin(), End.end());
+      if (commutant(ListBoth).size() != CenterBasis.size()) {
+        std::cerr << "ISOM_MASS: the class sums do not span the center\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    int c = static_cast<int>(CenterBasis.size());
     int e = static_cast<int>(End.size());
     int m = static_cast<int>(std::llround(std::sqrt(static_cast<double>(e))));
     bool central_q = (c == 1);
     {
       // End_G = M_r(D), D a quaternion algebra (Albert type III), in the
       // columns convention
-      std::vector<MyMatrix<T>> EndC, CentreC, GensC, EltsC;
+      std::vector<MyMatrix<T>> EndC, CenterC, GensC, EltsC;
       for (auto const &Y : End) {
         EndC.push_back(Y.transpose());
       }
-      for (auto const &Z : commutant(ListBoth)) {
-        CentreC.push_back(Z.transpose());
+      for (auto const &Z : CenterBasis) {
+        CenterC.push_back(Z.transpose());
       }
-      int rq = QuaternionicRank(Gram, EndC, CentreC);
+      int rq = QuaternionicRank(Gram, EndC, CenterC);
       if (rq > 0) {
         for (auto const &M : ListAct) {
           GensC.push_back(M.transpose());
@@ -3564,11 +3611,11 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         std::optional<AbelianCMField> FKq;
         T dKq(1);
         if (c > 1) {
-          auto [ClassSumq, Nexpq, Hgensq] = centre_field();
+          auto [ClassSumq, Nexpq, Hgensq] = center_field();
           (void)ClassSumq;
           FKq = MakeAbelianRealField(Nexpq, Hgensq);
           if (AbelianFieldDegree(*FKq) != c) {
-            std::cerr << "ISOM_MASS: the centre has degree " << c
+            std::cerr << "ISOM_MASS: the center has degree " << c
                       << " but the field found has degree "
                       << AbelianFieldDegree(*FKq) << "\n";
             throw TerminalException{1};
@@ -3649,7 +3696,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             for (auto const &W2 : QuatIntegralPoints<T, Tint>(DspanX, dimF)) {
               OmegaQ.push_back(W2.transpose());
             }
-            auto [ClassSumq, Nexpq, Hgensq] = centre_field();
+            auto [ClassSumq, Nexpq, Hgensq] = center_field();
             (void)Nexpq;
             (void)Hgensq;
             MultiplicityFactorBounds mbounds;
@@ -3664,7 +3711,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         }
 #ifdef DEBUG_ISOMETRY_MASS
         os << "ISOM_MASS: quaternionic component of rank " << k << ", r=" << rq
-           << ", centre of degree " << c << ", mass "
+           << ", center of degree " << c << ", mass "
            << (comp.quaternionic_mass ? "found" : "not found") << "\n";
 #endif
         res.push_back(comp);
@@ -3709,7 +3756,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         }
       }
       if (!found && m == 1) {
-        // multiplicity one: the centraliser on the component is {+-1},
+        // multiplicity one: the centralizer on the component is {+-1},
         // which preserves every lattice; the mass is that of any lattice of
         // rank one (1/2), without the line F and without a local factor
         MyMatrix<T> one(1, 1);
@@ -3725,17 +3772,17 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             A, found_basis, blk.E, elts, ListP, {}, {}, false, mbounds, os);
       }
     }
-    // with a centre of degree c, End_G = M_m(K) has dimension m^2 c
+    // with a center of degree c, End_G = M_m(K) has dimension m^2 c
     if (c > 1 && e % c == 0) {
       m = static_cast<int>(std::llround(std::sqrt(static_cast<double>(e / c))));
     }
     if (c > 1 && m * m * c == e) {
       /*
-        End_G = M_m(K) with K = Q(chi) the centre, of degree c. The
+        End_G = M_m(K) with K = Q(chi) the center, of degree c. The
         multiplicity space is X = L cap F, F the image of an idempotent of
         Q[H] of K-rank one on W, of dimension m c, with the action of the
         order generated by the class sums: Hermitian over K when K is CM
-        (the adjoint acts nontrivially on the centre), quadratic over K
+        (the adjoint acts nontrivially on the center), quadratic over K
         when K is totally real. K is the subfield of Q(zeta_N), N the
         exponent of G, fixed by the a with C_g = C_{g^a} on V_rho for every
         class (sigma_a sends the central character of C_g to that of
@@ -3744,17 +3791,17 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         no module of that dimension), and the component is then left
         without a mass.
        */
-      std::vector<MyMatrix<T>> Centre = commutant(ListBoth);
+      std::vector<MyMatrix<T>> const &Center = CenterBasis;
       MyMatrix<T> Gblk = blk.E * A * blk.E.transpose();
       MyMatrix<T> GblkInv = Inverse(Gblk);
       bool is_cm = false;
-      for (auto const &Z : Centre) {
+      for (auto const &Z : Center) {
         MyMatrix<T> Zs = (GblkInv * Z * Gblk).transpose();
         if (Zs != Z) {
           is_cm = true;
         }
       }
-      auto [ClassSum, Nexp, Hgens] = centre_field();
+      auto [ClassSum, Nexp, Hgens] = center_field();
       std::optional<MyMatrix<T>> found_basis;
       if (Nexp > 2) {
         std::vector<MyMatrix<T>> cand;
@@ -3779,7 +3826,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             EndomorphismSpanSubmodule<T, Tint>(blk.E, End, m * c);
       }
 #ifdef DEBUG_ISOMETRY_MASS
-      os << "ISOM_MASS: centre of degree " << c << " (" << (is_cm ? "CM" : "real")
+      os << "ISOM_MASS: center of degree " << c << " (" << (is_cm ? "CM" : "real")
          << "), m=" << m << ", Nexp=" << Nexp << ", F "
          << (found_basis ? "found" : "not found") << "\n";
 #endif
@@ -3879,8 +3926,8 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           } else {
             comp.quad_field = Fk;
           }
-          comp.centre_gram = Xb * A * Xb.transpose();
-          comp.centre_omega = Omega;
+          comp.center_gram = Xb * A * Xb.transpose();
+          comp.center_omega = Omega;
           MultiplicityFactorBounds mbounds;
           comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
               A, Xb, blk.E, elts, ListP, Omega, ClassSum, false, mbounds, os);
