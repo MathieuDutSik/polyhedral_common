@@ -1134,9 +1134,11 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 OrbitSplitCanonicalizeListMat(std::vector<MyMatrix<T>> const &ListMat,
                               InvariantFamilyKind kind, std::ostream &os) {
-  if (kind == InvariantFamilyKind::DiagonalBound) {
-    std::cerr << "OSC: a canonical form needs an intrinsic family, the "
-                 "diagonal_bound one depends on the basis\n";
+  if (kind == InvariantFamilyKind::DiagonalBound ||
+      !InvariantFamilyKindSpans(kind)) {
+    std::cerr << "OSC: a canonical form needs an intrinsic family that "
+                 "spans the lattice, not "
+              << NameInvariantFamilyKind(kind) << "\n";
     throw TerminalException{1};
   }
   std::vector<MyMatrix<Tint>> ListMatInt =

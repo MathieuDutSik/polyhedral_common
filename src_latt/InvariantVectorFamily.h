@@ -3,6 +3,7 @@
 #define SRC_LATT_INVARIANTVECTORFAMILY_H_
 
 // clang-format off
+#include "NumberTheorySafeInt.h"
 #include "Shvec_exact.h"
 #include "Positivity.h"
 #include "Timings.h"
@@ -487,8 +488,9 @@ template <typename T, typename Tint, typename Ffinal, typename Finvariant>
 MyMatrix<Tint> ExtractInvariantVectorFamilyHalf(MyMatrix<T> const &GramMat,
                                                 Ffinal f_final,
                                                 Finvariant f_invariant,
+                                                GramReduction reduction,
                                                 std::ostream &os) {
-  CVPSolver<T, Tint> solver(GramMat, os);
+  CVPSolver<T, Tint> solver = GetCVPSolver<T, Tint>(GramMat, reduction, os);
   ShellFamilyBuilder<T, Tint, Ffinal, Finvariant> builder(GramMat, solver,
                                                           f_final, f_invariant);
   while (!builder.is_done()) {
@@ -504,7 +506,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &GramMat,
                                             std::ostream &os) {
   MyMatrix<Tint> SHVhalf =
       ExtractInvariantVectorFamilyHalf<T, Tint, Ffinal, Finvariant>(
-          GramMat, f_final, f_invariant, os);
+          GramMat, f_final, f_invariant, GramReduction::Reduce, os);
   return matrix_duplication(SHVhalf);
 }
 
@@ -512,6 +514,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &GramMat,
 // ExtractInvariantVectorFamilyFullRank above; for callers that want the pairs.
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyFullRankHalf(MyMatrix<T> const &eMat,
+                                                        GramReduction reduction,
                                                         std::ostream &os) {
   int n = eMat.rows();
   auto f_final = [&]([[maybe_unused]] MyMatrix<Tint> const &M,
@@ -524,7 +527,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyFullRankHalf(MyMatrix<T> const &eMat,
   };
   return ExtractInvariantVectorFamilyHalf<T, Tint, decltype(f_final),
                                           decltype(f_invariant)>(
-      eMat, f_final, f_invariant, os);
+      eMat, f_final, f_invariant, reduction, os);
 }
 
 /*
@@ -617,6 +620,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat,
 // that would otherwise immediately undo the duplication themselves.
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyZbasisHalf(MyMatrix<T> const &eMat,
+                                                      GramReduction reduction,
                                                       std::ostream &os) {
   int n = eMat.cols();
   auto f_final = [&]([[maybe_unused]] MyMatrix<Tint> const &M, FundInvariantVectorFamily<Tint> const& fi) -> bool {
@@ -625,13 +629,16 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasisHalf(MyMatrix<T> const &eMat,
   auto f_invariant=[&](MyMatrix<Tint> const &M) -> FundInvariantVectorFamily<Tint> {
     return ComputeFundamentalInvariant(M, os);
   };
-  return ExtractInvariantVectorFamilyHalf<T, Tint, decltype(f_final), decltype(f_invariant)>(eMat, f_final, f_invariant, os);
+  return ExtractInvariantVectorFamilyHalf<T, Tint, decltype(f_final),
+                                          decltype(f_invariant)>(
+      eMat, f_final, f_invariant, reduction, os);
 }
 
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
                                                   std::ostream &os) {
-  return matrix_duplication(ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(eMat, os));
+  return matrix_duplication(ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(
+      eMat, GramReduction::Reduce, os));
 }
 
 /*
@@ -2117,13 +2124,22 @@ CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
     then the index of the span, until it spans the lattice
     (ExtractInvariantVectorFamilyZbasisHalf): the roots and the vectors of
     norm 4 for A2^12, the 98280 pairs of minimal vectors for Leech.
+  * shells_fullrank: the shells of increasing norm that improve the rank,
+    until it is full (ExtractInvariantVectorFamilyFullRankHalf): the roots
+    of every Niemeier lattice with roots, a few hundred pairs where
+    shells_zbasis takes the 10^5 vectors of norm 4 when the roots do not
+    span. It has full rank but need not span: enough for the correctness
+    of the isometry and automorphism searches, not for the canonical bases;
+    when it does not span, the searched basis has an index and the search
+    meets many rational leaves (a centraliser of (E8^3, i) took minutes,
+    against seconds on shells_zbasis).
   * diagonal_bound: the vectors of norm at most the largest diagonal entry
     of the reduced Gram matrix, the vector set of Plesken and Souvignier's
     paper and of Hecke. It contains the reduced basis, but the bound is a
     property of the basis: two isometric forms get families of the same
     kind only when the bound is the same, which the caller has to ensure.
 
-  All four span the lattice.
+  All but shells_fullrank span the lattice (InvariantFamilyKindSpans).
 
   The Gram matrix is LLL-reduced by the caller.
  */
@@ -2131,8 +2147,13 @@ enum class InvariantFamilyKind {
   ZspanClosure,
   RootZspanClosure,
   ShellsZbasis,
+  ShellsFullRank,
   DiagonalBound
 };
+
+inline bool InvariantFamilyKindSpans(InvariantFamilyKind kind) {
+  return kind != InvariantFamilyKind::ShellsFullRank;
+}
 
 inline std::string NameInvariantFamilyKind(InvariantFamilyKind kind) {
   switch (kind) {
@@ -2142,6 +2163,8 @@ inline std::string NameInvariantFamilyKind(InvariantFamilyKind kind) {
     return "root_zspan_closure";
   case InvariantFamilyKind::ShellsZbasis:
     return "shells_zbasis";
+  case InvariantFamilyKind::ShellsFullRank:
+    return "shells_fullrank";
   case InvariantFamilyKind::DiagonalBound:
     return "diagonal_bound";
   }
@@ -2152,7 +2175,7 @@ inline std::string NameInvariantFamilyKind(InvariantFamilyKind kind) {
 inline InvariantFamilyKind ParseInvariantFamilyKind(std::string const &name) {
   for (InvariantFamilyKind kind :
        {InvariantFamilyKind::ZspanClosure, InvariantFamilyKind::RootZspanClosure,
-        InvariantFamilyKind::ShellsZbasis,
+        InvariantFamilyKind::ShellsZbasis, InvariantFamilyKind::ShellsFullRank,
         InvariantFamilyKind::DiagonalBound}) {
     if (NameInvariantFamilyKind(kind) == name) {
       return kind;
@@ -2160,7 +2183,7 @@ inline InvariantFamilyKind ParseInvariantFamilyKind(std::string const &name) {
   }
   std::cerr << "IVF: unknown family kind " << name
             << ", the kinds are zspan_closure, root_zspan_closure, "
-               "shells_zbasis and diagonal_bound\n";
+               "shells_zbasis, shells_fullrank and diagonal_bound\n";
   throw TerminalException{1};
 }
 
@@ -2191,9 +2214,9 @@ MyMatrix<Tint> InvariantFamilyHalfFromFull(MyMatrix<Tint> const &full) {
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint> InvariantFamilyHalf(MyMatrix<T> const &GramRed,
-                                   InvariantFamilyKind kind,
-                                   std::ostream &os) {
+MyMatrix<Tint> InvariantFamilyHalfKernel(MyMatrix<T> const &GramRed,
+                                         InvariantFamilyKind kind,
+                                         std::ostream &os) {
   switch (kind) {
   case InvariantFamilyKind::ZspanClosure:
     return InvariantFamilyHalfFromFull(inner_span_iterated_shortest<T, Tint>(
@@ -2203,16 +2226,63 @@ MyMatrix<Tint> InvariantFamilyHalf(MyMatrix<T> const &GramRed,
         inner_span_root_iterated_shortest<T, Tint>(
             GramRed, GramReduction::AlreadyReduced, os));
   case InvariantFamilyKind::ShellsZbasis:
-    return ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(GramRed, os);
+    return ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(
+        GramRed, GramReduction::AlreadyReduced, os);
+  case InvariantFamilyKind::ShellsFullRank:
+    return ExtractInvariantVectorFamilyFullRankHalf<T, Tint>(
+        GramRed, GramReduction::AlreadyReduced, os);
   case InvariantFamilyKind::DiagonalBound: {
     int n = GramRed.rows();
+    CVPSolver<T, Tint> solver =
+        GetCVPSolver<T, Tint>(GramRed, GramReduction::AlreadyReduced, os);
     std::vector<MyVector<Tint>> ListVect =
-        computeLevel_GramMat<T, Tint>(GramRed, MaximumDiagonal(GramRed), os);
+        solver.at_most_norm_vectors(MaximumDiagonal(GramRed));
     return MatrixFromVectorFamilyDim(n, ListVect);
   }
   }
   std::cerr << "IVF: unknown family kind\n";
   throw TerminalException{1};
+}
+
+/*
+  The family of the kind. For an integral Gram matrix the enumeration runs
+  first over SafeInt64, which throws SafeIntException on any overflow, and
+  only then over T and Tint: the result is the same, the shells of a
+  rank 24 lattice being enumerated far faster than in GMP (the 98280
+  pairs of minimal vectors of the Leech lattice in 0.5 s against 27 s).
+  The Gram matrix is LLL-reduced by the caller and is not reduced again:
+  a second reduction is the larger cost, and over SafeInt64 it overflows.
+ */
+template <typename T, typename Tint>
+MyMatrix<Tint> InvariantFamilyHalf(MyMatrix<T> const &GramRed,
+                                   InvariantFamilyKind kind,
+                                   std::ostream &os) {
+  if constexpr (!std::is_same_v<T, SafeInt64> &&
+                (is_implementation_of_Z<T>::value ||
+                 is_implementation_of_Q<T>::value)) {
+    bool fits = IsIntegralMatrix(GramRed);
+    T const limit = UniversalScalarConversion<T, int64_t>(int64_t(1) << 40);
+    for (int i = 0; i < GramRed.rows() && fits; i++) {
+      for (int j = 0; j < GramRed.cols() && fits; j++) {
+        fits = T_abs(GramRed(i, j)) < limit;
+      }
+    }
+    if (fits) {
+      try {
+        MyMatrix<SafeInt64> G_s = UniversalMatrixConversion<SafeInt64, int64_t>(
+            UniversalMatrixConversion<int64_t, T>(GramRed));
+        MyMatrix<SafeInt64> fam_s =
+            InvariantFamilyHalfKernel<SafeInt64, SafeInt64>(G_s, kind, os);
+        return UniversalMatrixConversion<Tint, int64_t>(
+            UniversalMatrixConversion<int64_t, SafeInt64>(fam_s));
+      } catch (SafeIntException const &) {
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+        os << "IVF: overflow of SafeInt64, the family over T\n";
+#endif
+      }
+    }
+  }
+  return InvariantFamilyHalfKernel<T, Tint>(GramRed, kind, os);
 }
 
 // clang-format off

@@ -319,7 +319,10 @@ LatticeMethodsChangeBasis(std::vector<MyMatrix<T>> const &ListMat,
 
   * A tuple of forms: plesken_souvignier on the shells_zbasis family, the
     canonical form by orbit splitting with the graph as fallback (the
-    splitting declines for whole isometry classes). The graph of the
+    splitting declines for whole isometry classes). The smaller
+    shells_fullrank family (the roots of a Niemeier lattice) does not span
+    when the roots do not, and the search then meets many rational leaves:
+    one centraliser of (E8^3, i) took minutes on it. The graph of the
     characteristic family of the tuple is slow when the common automorphism
     group is large (10^12 for W(A3) on E8+E8), and the Z-span closure of the
     other families has millions of vectors on some rank 24 lattices.

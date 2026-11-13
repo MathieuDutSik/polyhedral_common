@@ -665,7 +665,8 @@ TshortestPerfect<T, Tint> build_tshortest_perfect(MyMatrix<T> const &eMat,
   if (IsFullDimZbasis(rec_shv.SHV, os)) {
     return {std::move(rec_shv), {}};
   }
-  MyMatrix<Tint> SHV_half = ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(eMat, os);
+  MyMatrix<Tint> SHV_half = ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(
+      eMat, GramReduction::Reduce, os);
   return {std::move(rec_shv), std::move(SHV_half)};
 }
 

@@ -125,13 +125,13 @@ void process(std::string choice, std::string MatFile,
     // spanning invariant families.
     if (choice == "fullrank_half") {
       is_antipodal = false;
-      return ExtractInvariantVectorFamilyFullRankHalf<T, Tint>(GramMat,
-                                                               std::cerr);
+      return ExtractInvariantVectorFamilyFullRankHalf<T, Tint>(
+          GramMat, GramReduction::Reduce, std::cerr);
     }
     if (choice == "spanning_half") {
       is_antipodal = false;
-      return ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(GramMat,
-                                                             std::cerr);
+      return ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(
+          GramMat, GramReduction::Reduce, std::cerr);
     }
     std::cerr << "Failed to find a matching entry for choice\n";
     std::cerr << "Possible choices: shortest, iterated_shortest, "
