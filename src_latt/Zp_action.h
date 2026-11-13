@@ -58,7 +58,6 @@ ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T>> co
 #ifdef DEBUG_ZP_ACTION
   os << "ZPA: Initial Vlist built\n";
 #endif
-  IntegerSubsetStorage set_orbit = VSLT_InitializeStorage(nbPoint);
   std::vector<size_t> gen_orbit;
   gen_orbit.reserve(nbPoint);
   MyVector<T> v1(dim), v2(dim);
@@ -72,12 +71,14 @@ ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T>> co
     return vector_to_size_t(dim, v2, mod_val_s);
   };
   size_t i_orbit = 0;
+  // A point has been reached, in this orbit or an earlier one, exactly when
+  // it is no longer in Vlist. Testing Vlist avoids a per-orbit set of all the
+  // points, whose clearing made the enumeration quadratic in the number of
+  // points when there are many orbits.
   auto treat_point=[&](size_t TheFirst) -> void {
     gen_orbit.clear();
-    VSLT_ZeroAssignment(set_orbit);
     auto f_insert=[&](size_t pt) -> void {
-      if (!VSLT_IsItInSubset(set_orbit, pt)) {
-        VSLT_StoreValue(set_orbit, pt);
+      if (VSLT_IsItInSubset(Vlist, pt)) {
         VSLT_RemoveValue(Vlist, pt);
         gen_orbit.push_back(pt);
         vect_orbits[pt] = i_orbit;
