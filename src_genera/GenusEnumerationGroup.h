@@ -747,8 +747,8 @@ GetPairAutInfo(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
   // automorphism groups, where the graph of the characteristic vector
   // family of the first form alone explodes.
   PleskenSouvignierAutomResult<Tint, Tgroup> aut =
-      PleskenSouvignierLatticeAutomorphismFamily<T, Tint, Tgroup>(
-          ListMat, PSVectorFamily::SpanningLevel, os);
+      PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(
+          ListMat, InvariantFamilyKind::ShellsZbasis, os);
   PairAutInfo<T, Tint, Tgroup> info;
   info.order = aut.order;
   auto preserves = [&](MyMatrix<Tint> const &h) -> bool {
@@ -826,7 +826,8 @@ CanonicalPairData<T> CanonicalPair(MyMatrix<T> const &A,
   }
   std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
   std::optional<MyMatrix<Tint>> opt =
-      OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(ListMat, os);
+      OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(
+          ListMat, DefaultInvariantFamilyKind(ListMat.size()), os);
   int method = 0;
   MyMatrix<Tint> B;
   if (opt) {
@@ -1402,8 +1403,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     lattices that may be isometric, and a neighbour is tested against the
     classes of its bucket by Plesken-Souvignier, pruned by their
     centralisers, on the vectors of norm at most B for the least B for
-    which they span the lattice (PleskenSouvignierSpanningFamily, an
-    isometry invariant; the largest diagonal entry of the reduced Gram
+    which they span the lattice (the shells_zbasis family, an isometry
+    invariant; the largest diagonal entry of the reduced Gram
     matrix, the bound of the paper and of Hecke, depends on the basis and
     can be far larger). The bucket of an integral lattice whose vectors of
     norm at most 2 have full rank is keyed by its Weyl-chamber canonical
@@ -1544,19 +1545,26 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         bucket.Rmat = recK.Pmat;
         if (use_ps) {
           bucket.fam = std::make_shared<MyMatrix<Tint> const>(
-              PleskenSouvignierSpanningFamily<T, Tint>(recK.GramMatRed, os)
-                  .second);
+              InvariantFamilyHalf<T, Tint>(
+                  recK.GramMatRed, InvariantFamilyKind::ShellsZbasis, os));
         }
         iter = MapBucketRoot.emplace(bd.Akey, bucket).first;
       }
       bd.M = iter->second.Rmat * B;
       bd.fam = iter->second.fam;
     } else {
-      std::pair<T, MyMatrix<Tint>> fam =
-          PleskenSouvignierSpanningFamily<T, Tint>(rec.GramMatRed, os);
-      bd.key_free = {fam.first, static_cast<size_t>(fam.second.rows())};
+      MyMatrix<Tint> fam = InvariantFamilyHalf<T, Tint>(
+          rec.GramMatRed, InvariantFamilyKind::ShellsZbasis, os);
+      // the largest norm of the family, an invariant like its size
+      T max_norm(0);
+      for (int i = 0; i < fam.rows(); i++) {
+        MyVector<T> v =
+            UniversalVectorConversion<T, Tint>(GetMatrixRow(fam, i));
+        max_norm = std::max(max_norm, T(v.dot(rec.GramMatRed * v)));
+      }
+      bd.key_free = {max_norm, static_cast<size_t>(fam.rows())};
       bd.M = rec.Pmat;
-      bd.fam = std::make_shared<MyMatrix<Tint> const>(std::move(fam.second));
+      bd.fam = std::make_shared<MyMatrix<Tint> const>(std::move(fam));
     }
     MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(bd.M);
     for (auto const &F : PairForms(A, ListP)) {

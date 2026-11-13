@@ -259,7 +259,8 @@ MyMatrix<Tint> LatticeCanonicalBasisReduced(MyMatrix<T> const &GramMat,
     // The failure is a property of the isometry class, so the forms the
     // method does canonicalize remain comparable with each other.
     std::optional<MyMatrix<Tint>> opt =
-        OrbitSplitCanonicalizeGram<T, Tint, Tgroup>(GramMat, os);
+        OrbitSplitCanonicalizeGram<T, Tint, Tgroup>(
+            GramMat, DefaultInvariantFamilyKind(1), os);
     if (!opt && heuristic) {
       // The same failure for every lattice of the isometry class, so the
       // fallback keeps the canonical forms of heuristic comparable.
@@ -324,8 +325,9 @@ LatticeIsometryReduced(std::vector<MyMatrix<T>> const &ListMat1,
     return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
                                                           os);
   case LatticeStabCanIsomMethod::PleskenSouvignier:
-    return PleskenSouvignierLatticeIsometry<T, Tint>(ListMat1, ListMat2,
-                                                     ListGenAut2, os);
+    return PleskenSouvignierLatticeIsometry<T, Tint>(
+        ListMat1, ListMat2, ListGenAut2,
+        DefaultInvariantFamilyKind(ListMat1.size()), os);
   case LatticeStabCanIsomMethod::Vinberg:
   case LatticeStabCanIsomMethod::Weyl:
     CheckLatticeMethodIntegral(ListMat1, name);
@@ -397,7 +399,8 @@ LatticeAutomorphismGroupReduced(std::vector<MyMatrix<T>> const &ListMat,
     return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);
   case LatticeStabCanIsomMethod::PleskenSouvignier: {
     PleskenSouvignierAutomResult<Tint, Tgroup> result =
-        PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(ListMat, os);
+        PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(
+            ListMat, DefaultInvariantFamilyKind(ListMat.size()), os);
     return {std::move(result.ListGen), result.order};
   }
   case LatticeStabCanIsomMethod::Vinberg:

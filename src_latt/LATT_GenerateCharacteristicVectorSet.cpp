@@ -106,10 +106,8 @@ void process(std::string choice, std::string MatFile,
     // explodes on the classes whose reduced diagonal has one large entry.
     if (choice == "plesken_souvignier" || choice == "ps_normball") {
       LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(GramMat, std::cerr);
-      T bound = PleskenSouvignierBound(rec.GramMatRed);
-      MyMatrix<Tint> half =
-          PleskenSouvignierVectorFamily<T, Tint>(rec.GramMatRed, bound,
-                                                 std::cerr);
+      MyMatrix<Tint> half = InvariantFamilyHalf<T, Tint>(
+          rec.GramMatRed, InvariantFamilyKind::DiagonalBound, std::cerr);
       int n_pair = half.rows();
       int dim = half.cols();
       MyMatrix<Tint> res(2 * n_pair, dim);

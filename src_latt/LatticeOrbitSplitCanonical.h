@@ -1133,7 +1133,12 @@ OrbitSplitCanonicalizeKernel(std::vector<MyMatrix<Tint>> const &ListMatRed,
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 OrbitSplitCanonicalizeListMat(std::vector<MyMatrix<T>> const &ListMat,
-                              std::ostream &os) {
+                              InvariantFamilyKind kind, std::ostream &os) {
+  if (kind == InvariantFamilyKind::DiagonalBound) {
+    std::cerr << "OSC: a canonical form needs an intrinsic family, the "
+                 "diagonal_bound one depends on the basis\n";
+    throw TerminalException{1};
+  }
   std::vector<MyMatrix<Tint>> ListMatInt =
       PleskenSouvignierIntegralForms<T, Tint>(ListMat);
   LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(ListMat[0], os);
@@ -1142,13 +1147,11 @@ OrbitSplitCanonicalizeListMat(std::vector<MyMatrix<T>> const &ListMat,
   for (auto &eMat : ListMatInt) {
     ListMatRed.push_back(Pmat * eMat * Pmat.transpose());
   }
-  // As for the automorphisms: the root variant of the family for a single
-  // form, the plain shortest-vector tower for several.
-  bool single = (ListMat.size() == 1);
   MyMatrix<Tint> SHVhalf =
-      PleskenSouvignierZspanFamilyHalf<T, Tint>(rec.GramMatRed, single, os);
+      InvariantFamilyHalf<T, Tint>(rec.GramMatRed, kind, os);
 #ifdef DEBUG_ORBIT_SPLIT_CANONICAL
-  os << "OSC: Z-spanning family of " << SHVhalf.rows() << " antipodal pairs\n";
+  os << "OSC: family " << NameInvariantFamilyKind(kind) << " of "
+     << SHVhalf.rows() << " antipodal pairs\n";
 #endif
   std::optional<MyMatrix<Tint>> opt =
       OrbitSplitCanonicalizeKernel<Tint, Tgroup>(ListMatRed, SHVhalf, os);
@@ -1167,9 +1170,10 @@ OrbitSplitCanonicalizeListMat(std::vector<MyMatrix<T>> const &ListMat,
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
-OrbitSplitCanonicalizeGram(MyMatrix<T> const &GramMat, std::ostream &os) {
+OrbitSplitCanonicalizeGram(MyMatrix<T> const &GramMat, InvariantFamilyKind kind,
+                           std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{GramMat};
-  return OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(ListMat, os);
+  return OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(ListMat, kind, os);
 }
 
 // clang-format off

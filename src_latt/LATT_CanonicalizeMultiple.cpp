@@ -44,8 +44,9 @@ void ComputeCanonicalMultiple(std::string const &FileI,
         throw TerminalException{1};
       }
       std::optional<MyMatrix<Tint>> opt =
-          OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(ListMatrix,
-                                                         std::cerr);
+          OrbitSplitCanonicalizeListMat<T, Tint, Tgroup>(
+              ListMatrix, DefaultInvariantFamilyKind(ListMatrix.size()),
+              std::cerr);
       if (!opt) {
         std::cerr << "LATT_CanonicalizeMultiple: the orbit splitting could "
                      "not select a canonical prefix, no canonical form for "

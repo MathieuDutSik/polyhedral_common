@@ -251,6 +251,26 @@ ComputeFundamentalInvariant(MyMatrix<Tint> const &M,
   os << "IVF: ComputeFundamentalInvariant, beginning\n";
   WriteMatrix(os, M);
 #endif
+  if constexpr (use_hnf_mod_D<Tint>::value) {
+    // Of full rank, the index of the span is the determinant of its
+    // Hermite normal form, computed modulo a determinant without the
+    // coefficient growth of the Smith form on families of 10^5 vectors.
+    int n = M.cols();
+    // full rank modulo a prime certifies full rank
+    if (M.rows() >= n &&
+        static_cast<int>(
+            ColumnRankProfileModPrime(MyMatrix<Tint>(M.transpose())).size()) ==
+            n) {
+      std::optional<MyMatrix<Tint>> optH = HermiteNormalFormModD_or_none(M);
+      if (optH) {
+        Tint index(1);
+        for (int i = 0; i < n; i++) {
+          index *= T_abs((*optH)(i, i));
+        }
+        return {n, index};
+      }
+    }
+  }
   MyVector<Tint> eVect = SmithNormalFormInvariant(M);
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
   os << "IVF: ComputeFundamentalInvariant, We have eVect\n";
@@ -2075,6 +2095,124 @@ CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
     MyMatrix<Tfield> GramMat_F = UniversalMatrixConversion<Tfield, T>(GramMat);
     return GetCanonicVectorFamily_kernel<Tfield, Tint>(GramMat_F, os);
   }
+}
+
+/*
+  The invariant vector families, by kind. A family is a set of vectors of
+  the lattice, one per antipodal pair, defined from the form alone, so
+  that it is invariant under the automorphisms and an isometry maps the
+  family of one form onto the family of the other. The methods of
+  LatticeMethods.h run on such a family; what they need of it differs:
+  the isometry and automorphism searches (Plesken-Souvignier, the graph)
+  need full rank, the canonical bases taken from the family need it to
+  span the lattice.
+
+  * zspan_closure: the iterated shortest vectors completed to a Z-spanning
+    family (inner_span_iterated_shortest). It can be very large when the
+    short vectors span a sublattice of large index: 12.7 10^6 vectors for
+    the Niemeier lattice A2^12 (all the minimal vectors of every coset).
+  * root_zspan_closure: the same tower started from the roots, for a single
+    integral form (inner_span_root_iterated_shortest).
+  * shells_zbasis: the shells of increasing norm that improve the rank and
+    then the index of the span, until it spans the lattice
+    (ExtractInvariantVectorFamilyZbasisHalf): the roots and the vectors of
+    norm 4 for A2^12, the 98280 pairs of minimal vectors for Leech.
+  * diagonal_bound: the vectors of norm at most the largest diagonal entry
+    of the reduced Gram matrix, the vector set of Plesken and Souvignier's
+    paper and of Hecke. It contains the reduced basis, but the bound is a
+    property of the basis: two isometric forms get families of the same
+    kind only when the bound is the same, which the caller has to ensure.
+
+  All four span the lattice.
+
+  The Gram matrix is LLL-reduced by the caller.
+ */
+enum class InvariantFamilyKind {
+  ZspanClosure,
+  RootZspanClosure,
+  ShellsZbasis,
+  DiagonalBound
+};
+
+inline std::string NameInvariantFamilyKind(InvariantFamilyKind kind) {
+  switch (kind) {
+  case InvariantFamilyKind::ZspanClosure:
+    return "zspan_closure";
+  case InvariantFamilyKind::RootZspanClosure:
+    return "root_zspan_closure";
+  case InvariantFamilyKind::ShellsZbasis:
+    return "shells_zbasis";
+  case InvariantFamilyKind::DiagonalBound:
+    return "diagonal_bound";
+  }
+  std::cerr << "IVF: unknown family kind\n";
+  throw TerminalException{1};
+}
+
+inline InvariantFamilyKind ParseInvariantFamilyKind(std::string const &name) {
+  for (InvariantFamilyKind kind :
+       {InvariantFamilyKind::ZspanClosure, InvariantFamilyKind::RootZspanClosure,
+        InvariantFamilyKind::ShellsZbasis,
+        InvariantFamilyKind::DiagonalBound}) {
+    if (NameInvariantFamilyKind(kind) == name) {
+      return kind;
+    }
+  }
+  std::cerr << "IVF: unknown family kind " << name
+            << ", the kinds are zspan_closure, root_zspan_closure, "
+               "shells_zbasis and diagonal_bound\n";
+  throw TerminalException{1};
+}
+
+/*
+  The kind the Plesken-Souvignier based computations take when the caller
+  does not choose: the tower from the roots for a single form, where the
+  roots are a meaningful block, the plain tower for several forms, where
+  "root" is not a notion of the tuple.
+ */
+inline InvariantFamilyKind DefaultInvariantFamilyKind(size_t n_forms) {
+  return (n_forms == 1) ? InvariantFamilyKind::RootZspanClosure
+                        : InvariantFamilyKind::ZspanClosure;
+}
+
+// One vector per antipodal pair, sign-normalized, without repetition.
+template <typename Tint>
+MyMatrix<Tint> InvariantFamilyHalfFromFull(MyMatrix<Tint> const &full) {
+  int n = full.cols();
+  std::unordered_set<MyVector<Tint>> seen;
+  std::vector<MyVector<Tint>> rows;
+  for (int i = 0; i < full.rows(); i++) {
+    MyVector<Tint> c = SignCanonicalizeVector(GetMatrixRow(full, i));
+    if (seen.insert(c).second) {
+      rows.push_back(c);
+    }
+  }
+  return MatrixFromVectorFamilyDim(n, rows);
+}
+
+template <typename T, typename Tint>
+MyMatrix<Tint> InvariantFamilyHalf(MyMatrix<T> const &GramRed,
+                                   InvariantFamilyKind kind,
+                                   std::ostream &os) {
+  switch (kind) {
+  case InvariantFamilyKind::ZspanClosure:
+    return InvariantFamilyHalfFromFull(inner_span_iterated_shortest<T, Tint>(
+        GramRed, GramReduction::AlreadyReduced, os));
+  case InvariantFamilyKind::RootZspanClosure:
+    return InvariantFamilyHalfFromFull(
+        inner_span_root_iterated_shortest<T, Tint>(
+            GramRed, GramReduction::AlreadyReduced, os));
+  case InvariantFamilyKind::ShellsZbasis:
+    return ExtractInvariantVectorFamilyZbasisHalf<T, Tint>(GramRed, os);
+  case InvariantFamilyKind::DiagonalBound: {
+    int n = GramRed.rows();
+    std::vector<MyVector<Tint>> ListVect =
+        computeLevel_GramMat<T, Tint>(GramRed, MaximumDiagonal(GramRed), os);
+    return MatrixFromVectorFamilyDim(n, ListVect);
+  }
+  }
+  std::cerr << "IVF: unknown family kind\n";
+  throw TerminalException{1};
 }
 
 // clang-format off

@@ -7,8 +7,6 @@
 #include "Shvec_exact.h"
 #include "ClassicLLL.h"
 #include "InvariantVectorFamily.h"
-#include "ResidueArithmetic.h"
-#include "factorizations.h"
 #include <optional>
 #include <unordered_set>
 #include <utility>
@@ -29,217 +27,15 @@
 
 /*
   The lattice-level entry points of the Plesken-Souvignier engine of
-  src_group/PleskenSouvignier.h: they LLL-reduce the Gram matrix, build a
-  Z-spanning characteristic vector family of it
-  (PleskenSouvignierZspanFamilyHalf), run the engine in the reduced basis,
-  and transport the answers back to the original basis. The short vector
-  enumeration and the LLL are what the engine header cannot depend on,
-  which is why these wrappers live in src_latt.
-
-  The vector set of the paper -- the vectors of norm at most the largest
-  diagonal entry of the reduced Gram matrix, which contains the standard
-  basis and is invariant -- is no longer what the engine is run on; it
-  remains below (PleskenSouvignierVectorFamily) for
-  LATT_GenerateCharacteristicVectorSet.
+  src_group/PleskenSouvignier.h: they LLL-reduce the Gram matrix, take the
+  invariant vector family of the kind asked for (InvariantFamilyHalf of
+  InvariantVectorFamily.h), run the engine in the reduced basis, and
+  transport the answers back to the original basis. The engine needs a
+  family of full rank invariant under the group: it draws the searched
+  basis from the family and discards the rational leaves when that basis
+  does not span. Which family is best depends on the lattice (see the
+  kinds); the choice is the caller's.
  */
-
-// The vector set of the paper for a Gram matrix, one vector per
-// antipodal pair: the vectors of norm at most max_i GramMat(i, i).
-template <typename T, typename Tint>
-MyMatrix<Tint> PleskenSouvignierVectorFamily(MyMatrix<T> const &GramMat,
-                                             T const &bound,
-                                             std::ostream &os) {
-  int n = GramMat.rows();
-  std::vector<MyVector<Tint>> ListVect =
-      computeLevel_GramMat<T, Tint>(GramMat, bound, os);
-  return MatrixFromVectorFamilyDim(n, ListVect);
-}
-
-template <typename T> T PleskenSouvignierBound(MyMatrix<T> const &GramMat) {
-  int n = GramMat.rows();
-  T bound = GramMat(0, 0);
-  for (int i = 1; i < n; i++) {
-    if (GramMat(i, i) > bound) {
-      bound = GramMat(i, i);
-    }
-  }
-  return bound;
-}
-
-/*
-  Whether the rows of SHV span Z^n. n independent rows span a sublattice of
-  index D = |det|; the index of the span of all the rows divides D, and a
-  prime p divides it if and only if the rows have rank below n modulo p.
-  No Hermite normal form of the family is computed.
- */
-template <typename Tint>
-bool PleskenSouvignierRowsSpan(MyMatrix<Tint> const &SHV) {
-  using Tfield = typename overlying_field<Tint>::field_type;
-  int n = SHV.cols();
-  int m = SHV.rows();
-  // independent rows, by an echelon form over Q kept row by row
-  std::vector<MyVector<Tfield>> ech;
-  std::vector<int> piv;
-  std::vector<int> sel;
-  for (int j = 0; j < m && static_cast<int>(sel.size()) < n; j++) {
-    MyVector<Tfield> v = UniversalVectorConversion<Tfield, Tint>(
-        MyVector<Tint>(SHV.row(j).transpose()));
-    for (size_t k = 0; k < ech.size(); k++) {
-      if (v(piv[k]) != 0) {
-        Tfield c = v(piv[k]) / ech[k](piv[k]);
-        v -= c * ech[k];
-      }
-    }
-    int pos = -1;
-    for (int i = 0; i < n; i++) {
-      if (v(i) != 0) {
-        pos = i;
-        break;
-      }
-    }
-    if (pos >= 0) {
-      ech.push_back(v);
-      piv.push_back(pos);
-      sel.push_back(j);
-    }
-  }
-  if (static_cast<int>(sel.size()) < n) {
-    return false;
-  }
-  MyMatrix<Tint> Bsel(n, n);
-  for (int i = 0; i < n; i++) {
-    Bsel.row(i) = SHV.row(sel[i]);
-  }
-  Tint D = T_abs(DeterminantMat(Bsel));
-  if (D == 1) {
-    return true;
-  }
-  for (auto const &p_T : FactorsInt(D)) {
-    int64_t p = ResidueModulusOf(p_T);
-    // the rank modulo p, by an echelon form kept row by row
-    std::vector<std::vector<int64_t>> echp;
-    std::vector<int> pivp;
-    for (int j = 0; j < m && static_cast<int>(echp.size()) < n; j++) {
-      std::vector<int64_t> v(n);
-      for (int i = 0; i < n; i++) {
-        v[i] = ResModOf(SHV(j, i), p);
-      }
-      for (size_t k = 0; k < echp.size(); k++) {
-        int64_t c = v[pivp[k]];
-        if (c != 0) {
-          for (int i = 0; i < n; i++) {
-            v[i] = ResSub(v[i], ResMul(c, echp[k][i], p), p);
-          }
-        }
-      }
-      int pos = -1;
-      for (int i = 0; i < n; i++) {
-        if (v[i] != 0) {
-          pos = i;
-          break;
-        }
-      }
-      if (pos >= 0) {
-        int64_t inv = ResInv(v[pos], p);
-        for (int i = 0; i < n; i++) {
-          v[i] = ResMul(v[i], inv, p);
-        }
-        echp.push_back(v);
-        pivp.push_back(pos);
-      }
-    }
-    if (static_cast<int>(echp.size()) < n) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/*
-  The vectors of norm at most B, one per antipodal pair, for the least B
-  for which they span the lattice, and that B. It is an isometry invariant,
-  so two isometric lattices get the same B and families of the same size,
-  and at most the largest diagonal entry of the reduced Gram matrix GramMat,
-  whose basis vectors have norm at most that: 2 for E8^3 and the Niemeier
-  lattices whose roots span, 4 for the Leech lattice and for A2^12. The
-  norms are multiples of g, the gcd of the G_ii and the 2 G_ij, and every
-  level from the minimum up is tried.
- */
-template <typename T, typename Tint>
-std::pair<T, MyMatrix<Tint>>
-PleskenSouvignierSpanningFamily(MyMatrix<T> const &GramMat, std::ostream &os) {
-  if constexpr (!is_implementation_of_Q<T>::value &&
-                !is_implementation_of_Z<T>::value) {
-    // over a real field the norms are not discrete
-    std::cerr << "PS: the spanning level needs a rational Gram matrix\n";
-    throw TerminalException{1};
-  } else {
-    int n = GramMat.rows();
-    T maxdiag = PleskenSouvignierBound(GramMat);
-    // g = gcd / d, with d the lcm of the denominators
-    Tint d(1);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j <= i; j++) {
-        T x = (i == j) ? GramMat(i, i) : T(2) * GramMat(i, j);
-        Tint den = UniversalScalarConversion<Tint, T>(GetDenominator(x));
-        d = LCMpair(d, den);
-      }
-    }
-    T d_T = UniversalScalarConversion<T, Tint>(d);
-    Tint gnum(0);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j <= i; j++) {
-        T x = (i == j) ? GramMat(i, i) : T(2) * GramMat(i, j);
-        gnum = GcdPair(gnum, UniversalScalarConversion<Tint, T>(x * d_T));
-      }
-    }
-    T step = UniversalScalarConversion<T, Tint>(T_abs(gnum)) / d_T;
-    Tshortest<T, Tint> sv = T_ShortestVectorHalf<T, Tint>(GramMat, os);
-    int prev_rows = -1;
-    for (T B = sv.min; B < maxdiag; B += step) {
-      MyMatrix<Tint> fam =
-          PleskenSouvignierVectorFamily<T, Tint>(GramMat, B, os);
-      if (fam.rows() != prev_rows && PleskenSouvignierRowsSpan(fam)) {
-        return {B, fam};
-      }
-      prev_rows = fam.rows();
-    }
-    return {maxdiag,
-            PleskenSouvignierVectorFamily<T, Tint>(GramMat, maxdiag, os)};
-  }
-}
-
-/*
-  The Z-spanning characteristic vector family fed to the Plesken-Souvignier
-  backtrack, one vector per antipodal pair. A Z-spanning family is what the
-  engine needs to work reliably: a searched basis drawn from it is unimodular,
-  so the backtrack has no rational leaves. The construction is intrinsic (no
-  norm bound), hence an isometry invariant, so the two sides of an isometry
-  test build corresponding families independently. The root variant is used
-  for a single form, where the norm-2 roots are a meaningful block; for
-  several forms at once, where "root" is not a notion of the pair, the plain
-  shortest-vector tower is used instead. GramMat is the LLL-reduced Gram
-  matrix of the callers, which is not reduced again.
- */
-template <typename T, typename Tint>
-MyMatrix<Tint> PleskenSouvignierZspanFamilyHalf(MyMatrix<T> const &GramMat,
-                                                bool single, std::ostream &os) {
-  int n = GramMat.rows();
-  MyMatrix<Tint> full =
-      single ? inner_span_root_iterated_shortest<T, Tint>(
-                   GramMat, GramReduction::AlreadyReduced, os)
-             : inner_span_iterated_shortest<T, Tint>(
-                   GramMat, GramReduction::AlreadyReduced, os);
-  std::unordered_set<MyVector<Tint>> seen;
-  std::vector<MyVector<Tint>> rows;
-  for (int i = 0; i < full.rows(); i++) {
-    MyVector<Tint> c = SignCanonicalizeVector(GetMatrixRow(full, i));
-    if (seen.insert(c).second) {
-      rows.push_back(c);
-    }
-  }
-  return MatrixFromVectorFamilyDim(n, rows);
-}
 
 /*
   The kind of a matrix for the engine, which compares the products of the
@@ -355,17 +151,6 @@ PleskenSouvignierIntegralFormsPair(std::vector<MyMatrix<T>> const &ListMat1,
 }
 
 /*
-  The vector family of an automorphism computation. Both are invariant under
-  the automorphisms and span the lattice: ZspanClosure the iterated
-  shortest closure (PleskenSouvignierZspanFamilyHalf), SpanningLevel the
-  vectors of norm at most the least level that spans
-  (PleskenSouvignierSpanningFamily). The closure can be far larger when the
-  short vectors span a sublattice of large index (12.7 10^6 vectors for
-  A2^12, against the 1.9 10^5 of norm at most 4).
- */
-enum class PSVectorFamily { ZspanClosure, SpanningLevel };
-
-/*
   The automorphism group of the configuration: generators over the ring
   in the ORIGINAL basis, satisfying g * M * g^T = M for every matrix of
   ListMat, and the orbit lengths along the stabilizer chain whose
@@ -376,9 +161,9 @@ enum class PSVectorFamily { ZspanClosure, SpanningLevel };
  */
 template <typename T, typename Tint, typename Tgroup>
 PleskenSouvignierAutomResult<Tint, Tgroup>
-PleskenSouvignierLatticeAutomorphismFamily(
-    std::vector<MyMatrix<T>> const &ListMat, PSVectorFamily family,
-    std::ostream &os) {
+PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
+                                     InvariantFamilyKind kind,
+                                     std::ostream &os) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
@@ -392,16 +177,11 @@ PleskenSouvignierLatticeAutomorphismFamily(
   for (auto &eMat : ListMatInt) {
     ListMatRed.push_back(Pmat * eMat * Pmat.transpose());
   }
-  bool single = (ListMat.size() == 1);
   MyMatrix<Tint> SHVhalf =
-      (family == PSVectorFamily::ZspanClosure)
-          ? PleskenSouvignierZspanFamilyHalf<T, Tint>(rec.GramMatRed, single,
-                                                      os)
-          : PleskenSouvignierSpanningFamily<T, Tint>(rec.GramMatRed, os).second;
+      InvariantFamilyHalf<T, Tint>(rec.GramMatRed, kind, os);
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
-  os << "PS: automorphism, family " << static_cast<int>(family)
-     << " (single=" << single << "), " << SHVhalf.rows()
-     << " antipodal pairs\n";
+  os << "PS: automorphism, family " << NameInvariantFamilyKind(kind) << ", "
+     << SHVhalf.rows() << " antipodal pairs\n";
 #endif
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   os << "|PS: LatticeAutomorphism, preparation|=" << time << "\n";
@@ -431,19 +211,13 @@ PleskenSouvignierLatticeAutomorphismFamily(
   return result;
 }
 
-template <typename T, typename Tint, typename Tgroup>
-PleskenSouvignierAutomResult<Tint, Tgroup>
-PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
-                                     std::ostream &os) {
-  return PleskenSouvignierLatticeAutomorphismFamily<T, Tint, Tgroup>(
-      ListMat, PSVectorFamily::ZspanClosure, os);
-}
 
 /*
   The isometry test: P with P * ListMat1[i] * P^T = ListMat2[i] for
   every i, in the original bases, or nothing. The two sides build their
-  Z-spanning families independently; the construction is intrinsic, which
-  is what makes them correspond under any isometry. ListGenAut2 is any
+  families of the kind independently; the construction is intrinsic, which
+  is what makes them correspond under any isometry. diagonal_bound is not
+  intrinsic (its bound depends on the reduced basis) and is refused. ListGenAut2 is any
   set of automorphisms of the second configuration in its original
   basis, typically the generators the caller already knows for a lattice
   it tests many candidates against; the orbits they generate prune the
@@ -453,10 +227,16 @@ template <typename T, typename Tint>
 std::optional<MyMatrix<Tint>> PleskenSouvignierLatticeIsometry(
     std::vector<MyMatrix<T>> const &ListMat1,
     std::vector<MyMatrix<T>> const &ListMat2,
-    std::vector<MyMatrix<Tint>> const &ListGenAut2, std::ostream &os) {
+    std::vector<MyMatrix<Tint>> const &ListGenAut2, InvariantFamilyKind kind,
+    std::ostream &os) {
 #ifdef TIMINGS_PLESKEN_SOUVIGNIER
   MicrosecondTime time;
 #endif
+  if (kind == InvariantFamilyKind::DiagonalBound) {
+    std::cerr << "PleskenSouvignierLatticeIsometry: the diagonal_bound family "
+                 "depends on the basis, it cannot be used on two lattices\n";
+    throw TerminalException{1};
+  }
   if (ListMat1.size() != ListMat2.size()) {
     std::cerr << "PleskenSouvignierLatticeIsometry: the two lists of "
                  "matrices have different lengths\n";
@@ -483,14 +263,13 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierLatticeIsometry(
   for (auto &eMat : ListMatInt2) {
     ListMatRed2.push_back(Pmat2 * eMat * Pmat2.transpose());
   }
-  bool single = (ListMat1.size() == 1);
   MyMatrix<Tint> SHVhalf1 =
-      PleskenSouvignierZspanFamilyHalf<T, Tint>(rec1.GramMatRed, single, os);
+      InvariantFamilyHalf<T, Tint>(rec1.GramMatRed, kind, os);
   MyMatrix<Tint> SHVhalf2 =
-      PleskenSouvignierZspanFamilyHalf<T, Tint>(rec2.GramMatRed, single, os);
+      InvariantFamilyHalf<T, Tint>(rec2.GramMatRed, kind, os);
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
-  os << "PS: isometry, Z-spanning families (single=" << single << "), pairs "
-     << SHVhalf1.rows() << " / " << SHVhalf2.rows() << "\n";
+  os << "PS: isometry, families " << NameInvariantFamilyKind(kind)
+     << ", pairs " << SHVhalf1.rows() << " / " << SHVhalf2.rows() << "\n";
 #endif
   MyMatrix<Tint> Pmat2Inv = Inverse(Pmat2);
 #ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
