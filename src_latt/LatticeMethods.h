@@ -521,6 +521,15 @@ LatticeIsometry(std::vector<MyMatrix<T>> const &ListMat1,
       ListMat1[0].rows() != ListMat2[0].rows()) {
     return {};
   }
+  // The integrality of each form is preserved by the isometries, and the
+  // method, chosen from the first tuple, may refuse a non-integral form of
+  // the second (the root-system methods): a pair that differs in it is
+  // answered here.
+  for (size_t i = 0; i < ListMat1.size(); i++) {
+    if (IsIntegralMatrix(ListMat1[i]) != IsIntegralMatrix(ListMat2[i])) {
+      return {};
+    }
+  }
 #ifdef SANITY_CHECK_LATTICE_METHODS
   CheckLatticeMethodPositiveDefinite(ListMat1[0], "LatticeIsometry", os);
   CheckLatticeMethodPositiveDefinite(ListMat2[0], "LatticeIsometry", os);

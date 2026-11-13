@@ -350,7 +350,10 @@ ListNonIsomorphic:=[
   rec(name1:="Z3", eG1:=IdentityMat(3), name2:="diag149", eG2:=DiagonalMat([1,4,9])),
   rec(name1:="D4", eG1:=get_Dn(4), name2:="Z4", eG2:=IdentityMat(4)),
   rec(name1:="D4", eG1:=get_Dn(4), name2:="A4", eG2:=get_An(4)),
-  rec(name1:="D5", eG1:=get_Dn(5), name2:="A5", eG2:=get_An(5))];
+  rec(name1:="D5", eG1:=get_Dn(5), name2:="A5", eG2:=get_An(5)),
+  # an integral form against a non-integral one: the root-system methods
+  # chosen for A2 must answer, not refuse the second form
+  rec(name1:="A2", eG1:=get_An(2), name2:="diag(1/2,3)", eG2:=DiagonalMat([1/2,3]))];
 
 test_non_isomorphic:=function()
     local n_error, eRec, test_iso;
@@ -457,7 +460,8 @@ test_all_aut_iso_methods:=function()
     od;
     for eRec in ListNonIsomorphic
     do
-        for method in get_iso_methods(eRec.eG1)
+        # heuristic: weyl_chamber for the integral lattices with roots
+        for method in Concatenation(get_iso_methods(eRec.eG1), ["heuristic"])
         do
             test_iso:=get_latt_isomorphism_test(eRec.eG1, eRec.eG2, rec(method:=method));
             Print("  ", method, " ", eRec.name1, " against ", eRec.name2, " iso=", test_iso, "\n");
@@ -547,7 +551,8 @@ test_canonical_vinberg:=function()
             n_error:=n_error + test_canonical_vinberg_one(Concatenation("ListMat[", String(iMat), "]"), ListMat[iMat]);
         fi;
     od;
-    for eRec in ListNonIsomorphic
+    # vinberg needs integral forms
+    for eRec in Filtered(ListNonIsomorphic, x->ForAll(Flat(x.eG1), IsInt) and ForAll(Flat(x.eG2), IsInt))
     do
         can1:=get_latt_canonical_form(eRec.eG1, rec(method:="vinberg"));
         can2:=get_latt_canonical_form(eRec.eG2, rec(method:="vinberg"));
