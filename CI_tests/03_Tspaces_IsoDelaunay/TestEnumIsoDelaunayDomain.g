@@ -260,6 +260,10 @@ ListCases:=[];
 set_canonical_examples:=function()
     Add(ListCases, rec(n:=4, d:=-4, comm_choice:="Use_realimag"));
     Add(ListCases, rec(n:=3, d:=-3, comm_choice:="Use_realimag", n_domains:=23413));
+    # With the full group K_n(R): 22.5 min with flint arithmetic, peak memory
+    # 9.7 GB (2026-11-12). 23413 = 2 * 11581 + 251: 11581 pairs of classes
+    # exchanged by the conjugation and 251 classes fixed by it.
+    Add(ListCases, rec(n:=3, d:=-3, comm_choice:="Use_realimag", use_outer:=true, n_domains:=11832));
     Add(ListCases, rec(n:=3, d:=-4, comm_choice:="Use_realimag", n_domains:=206));
 end;
 
