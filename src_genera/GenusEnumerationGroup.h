@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cmath>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <optional>
 #include <utility>
@@ -154,6 +155,45 @@ inline PairRecognition ExtractPairRecognitionOption(int &argc, char *argv[]) {
     std::string a = argv[i];
     if (a.rfind(key, 0) == 0) {
       res = ParsePairRecognition(a.substr(key.size()));
+    } else {
+      argv[j++] = argv[i];
+    }
+  }
+  argc = j;
+  return res;
+}
+
+/*
+  The method of the isometry tests and of the centralisers when a pair is
+  recognised by isometry tests: plesken_souvignier (default), on a
+  Z-spanning family shared by the bucket, graph, on the Q-spanning
+  characteristic family of the pair forms, or iterated_shortest. The other
+  lattice methods use the first form alone and do not apply to pairs.
+ */
+inline LatticeStabCanIsomMethod
+ParsePairIsometryMethod(std::string const &s) {
+  LatticeStabCanIsomMethod method = ParseLatticeStabCanIsomMethod(s);
+  if (method != LatticeStabCanIsomMethod::PleskenSouvignier &&
+      method != LatticeStabCanIsomMethod::Graph &&
+      method != LatticeStabCanIsomMethod::IteratedShortest) {
+    std::cerr << "GENUS_GROUP: isomorphism_method=" << s
+              << " is not graph, plesken_souvignier or iterated_shortest, "
+                 "the methods that apply to several forms\n";
+    throw TerminalException{1};
+  }
+  return method;
+}
+
+// isomorphism_method=NAME anywhere on the command line, removed from argv
+inline LatticeStabCanIsomMethod
+ExtractPairIsometryMethodOption(int &argc, char *argv[]) {
+  LatticeStabCanIsomMethod res = LatticeStabCanIsomMethod::PleskenSouvignier;
+  std::string const key = "isomorphism_method=";
+  int j = 0;
+  for (int i = 0; i < argc; i++) {
+    std::string a = argv[i];
+    if (a.rfind(key, 0) == 0) {
+      res = ParsePairIsometryMethod(a.substr(key.size()));
     } else {
       argv[j++] = argv[i];
     }
@@ -707,7 +747,8 @@ GetPairAutInfo(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
   // automorphism groups, where the graph of the characteristic vector
   // family of the first form alone explodes.
   PleskenSouvignierAutomResult<Tint, Tgroup> aut =
-      PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(ListMat, os);
+      PleskenSouvignierLatticeAutomorphismFamily<T, Tint, Tgroup>(
+          ListMat, PSVectorFamily::SpanningLevel, os);
   PairAutInfo<T, Tint, Tgroup> info;
   info.order = aut.order;
   auto preserves = [&](MyMatrix<Tint> const &h) -> bool {
@@ -728,6 +769,30 @@ GetPairAutInfo(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
       std::cerr << "GENUS_GROUP: an automorphism of the pair is wrong\n";
       throw TerminalException{1};
     }
+  }
+  return info;
+}
+
+// The centraliser of the pair by the lattice method on its forms.
+template <typename T, typename Tint, typename Tgroup>
+PairAutInfo<T, Tint, Tgroup>
+GetPairAutInfoMethod(MyMatrix<T> const &A,
+                     std::vector<MyMatrix<T>> const &ListP,
+                     LatticeStabCanIsomMethod method, std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat = PairForms(A, ListP);
+  IntAutomorphismGroup<Tint, Tgroup> aut =
+      LatticeAutomorphismGroup<T, Tint, Tgroup>(ListMat, method, os);
+  PairAutInfo<T, Tint, Tgroup> info;
+  info.order = aut.order;
+  for (auto &h : aut.ListGen) {
+    MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);
+    for (auto &M : ListMat) {
+      if (h_T * M * h_T.transpose() != M) {
+        std::cerr << "GENUS_GROUP: an automorphism of the pair is wrong\n";
+        throw TerminalException{1};
+      }
+    }
+    info.ListGenMat.push_back(h);
   }
   return info;
 }
@@ -1266,7 +1331,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         &ListSeed,
     typename GenusEnumerationGroupResult<T, Tgroup>::Tmass const &TotalMass,
     int prime, size_t max_prime, PairRecognition recognition,
-    std::ostream &os) {
+    LatticeStabCanIsomMethod iso_method, std::ostream &os) {
   using Tresult = GenusEnumerationGroupResult<T, Tgroup>;
   using Tmass = typename Tresult::Tmass;
   using TintGroup = typename Tgroup::Tint;
@@ -1331,40 +1396,51 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     return 2;
   };
   /*
-    A class is recognised by isometry tests rather than canonical forms:
-    the classes are bucketed by the canonical form of the lattice alone
-    (the fast Weyl-chamber one), and a neighbour is tested against those of
-    its bucket by Plesken-Souvignier on the pair forms, pruned by the
-    known centraliser of the class. The canonical form of a pair is slow
-    when the centraliser is large (10^12 for W(A3) on E8+E8, 99% of the
-    time), and with random points most neighbours are known classes, for
-    which an isometry is found quickly.
-   */
-  /*
     A known class is recognised in one of two ways, chosen by their
     measured cost: the canonical form of the pair (key in MapCanonic), or
-    isometry tests. For the latter the classes with the same lattice are
-    put in one bucket, keyed by the canonical form Akey = B A B^T of the
-    lattice (the fast Weyl-chamber one); every pair of the bucket is moved
-    by B to that canonical basis, then by a fixed LLL reduction R of Akey,
-    so that all of them share one Gram matrix and one Z-spanning family,
-    computed once per bucket, and a neighbour costs the canonical form of
-    its lattice and the Plesken-Souvignier backtrack against the classes of
-    its bucket, pruned by their centralisers. Which is cheaper depends on
-    the case: the canonical form of the pair takes 99% of the time for
-    W(A3) on E8+E8 and less than the isometry tests for two reflections.
-    The first neighbours try both in turn, then the cheaper on average is
-    used; a class gets the data of a method when that method first meets
-    it, so both always see all the classes.
+    isometry tests. For the latter the classes are put in buckets of
+    lattices that may be isometric, and a neighbour is tested against the
+    classes of its bucket by Plesken-Souvignier, pruned by their
+    centralisers, on the vectors of norm at most B for the least B for
+    which they span the lattice (PleskenSouvignierSpanningFamily, an
+    isometry invariant; the largest diagonal entry of the reduced Gram
+    matrix, the bound of the paper and of Hecke, depends on the basis and
+    can be far larger). The bucket of an integral lattice whose vectors of
+    norm at most 2 have full rank is keyed by its Weyl-chamber canonical
+    form Akey = B A B^T: every pair of the bucket is moved by B, then by a
+    fixed LLL reduction R of Akey, so that all of them share one Gram
+    matrix and one family, computed once per bucket. Another lattice has
+    no fast canonical form (no method gives one of the Leech lattice in
+    minutes, and the Weyl-chamber one of a lattice whose roots do not have
+    full rank built a graph beyond 5 GB in seconds in the genus of
+    A2^12): its pairs are kept in the LLL-reduced basis of the lattice
+    with their own family, in a bucket keyed by B and the size of the
+    family.
+    Which way is cheaper depends on the case: the canonical form of the
+    pair takes 99% of the time for W(A3) on E8+E8 and less than the
+    isometry tests for two reflections. The first neighbours try both in
+    turn, then the cheaper on average is used; a class gets the data of a
+    method when that method first meets it, so both always see all the
+    classes.
    */
+  using FamPtr = std::shared_ptr<MyMatrix<Tint> const>;
   struct PairBucket {
+    // with roots: the reduction R of Akey and the family of the bucket
     MyMatrix<Tint> Rmat;
-    MyMatrix<Tint> SHVhalf;
+    FamPtr fam;
     std::vector<size_t> classes;
   };
-  std::map<MyMatrix<T>, PairBucket> MapBucket;
+  std::map<MyMatrix<T>, PairBucket> MapBucketRoot;
+  std::map<std::pair<T, size_t>, PairBucket> MapBucketFree;
   std::vector<std::vector<MyMatrix<Tint>>> ListFormsRed;
   std::vector<std::vector<MyMatrix<Tint>>> ListAutRed;
+  std::vector<FamPtr> ListFamRed;
+  // the multiset of the values (v^T F v)_F of the forms on the family, an
+  // invariant of the pair since the family is: unequal values rule a class
+  // out before the backtrack, which on non-isometric pairs searches to the
+  // end
+  using FormValues = std::map<std::vector<Tint>, size_t>;
+  std::vector<FormValues> ListValues;
   std::vector<uint8_t> ListInBucket;
   std::vector<uint8_t> ListHasKey;
   double t_can = 0, t_iso = 0;
@@ -1379,36 +1455,121 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
             : CanonicalPair<T, Tint, Tgroup>(A, ListP, os);
     return {can.method, PairForms(can.Acan, can.ListPcan)};
   };
-  // the bucket data of a pair: its bucket and its forms in the reduced
-  // canonical basis, with the basis change M = R B
+  // the bucket data of a pair: its bucket, the basis change M to the
+  // basis of the bucket, its forms and its family in that basis
   struct BucketData {
+    bool with_roots;
     MyMatrix<T> Akey;
+    std::pair<T, size_t> key_free;
     MyMatrix<Tint> M;
     std::vector<MyMatrix<Tint>> forms;
+    FamPtr fam;
+    FormValues values;
+  };
+  auto form_values = [&](std::vector<MyMatrix<Tint>> const &forms,
+                         MyMatrix<Tint> const &fam) -> FormValues {
+    int m = fam.rows();
+    int n = fam.cols();
+    size_t nbMat = forms.size();
+    std::vector<std::vector<Tint>> vals(m, std::vector<Tint>(nbMat));
+    // |v^T F v| <= n^2 max|v|^2 max|F| bounds the products and their sums
+    Tint maxV(0), maxF(0);
+    for (int j = 0; j < m; j++) {
+      for (int i = 0; i < n; i++) {
+        maxV = std::max(maxV, Tint(T_abs(fam(j, i))));
+      }
+    }
+    for (auto const &F : forms) {
+      for (int i = 0; i < n; i++) {
+        for (int k = 0; k < n; k++) {
+          maxF = std::max(maxF, Tint(T_abs(F(i, k))));
+        }
+      }
+    }
+    Tint bound = Tint(n) * Tint(n) * maxV * maxV * maxF;
+    if (bound < UniversalScalarConversion<Tint, int64_t>(int64_t(1) << 62)) {
+      MyMatrix<int64_t> fam64 = UniversalMatrixConversion<int64_t, Tint>(fam);
+      for (size_t iMat = 0; iMat < nbMat; iMat++) {
+        MyMatrix<int64_t> W =
+            fam64 * UniversalMatrixConversion<int64_t, Tint>(forms[iMat]);
+        for (int j = 0; j < m; j++) {
+          vals[j][iMat] = UniversalScalarConversion<Tint, int64_t>(
+              W.row(j).dot(fam64.row(j)));
+        }
+      }
+    } else {
+      for (size_t iMat = 0; iMat < nbMat; iMat++) {
+        MyMatrix<Tint> W = fam * forms[iMat];
+        for (int j = 0; j < m; j++) {
+          vals[j][iMat] = W.row(j).dot(fam.row(j));
+        }
+      }
+    }
+    FormValues res;
+    for (auto &v : vals) {
+      res[v] += 1;
+    }
+    return res;
+  };
+  bool use_ps = iso_method == LatticeStabCanIsomMethod::PleskenSouvignier;
+  // whether the lattice is integral and its vectors of norm at most 2 have
+  // full rank, an isometry invariant
+  auto has_roots = [&](MyMatrix<T> const &GramRed) -> bool {
+    if (!IsIntegralMatrix(GramRed)) {
+      return false;
+    }
+    std::vector<MyVector<Tint>> roots =
+        computeLevel_GramMat<T, Tint>(GramRed, T(2), os);
+    if (static_cast<int>(roots.size()) < GramRed.rows()) {
+      return false;
+    }
+    MyMatrix<T> M =
+        UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(roots));
+    return RankMat(M) == GramRed.rows();
   };
   auto bucket_data = [&](MyMatrix<T> const &A,
                          std::vector<MyMatrix<T>> const &ListP) -> BucketData {
-    MyMatrix<Tint> B =
-        LatticeCanonicalBasis<T, Tint, Tgroup>(A, GenusMethods().canonical, os);
-    MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
-    MyMatrix<T> Akey = B_T * A * B_T.transpose();
-    auto iter = MapBucket.find(Akey);
-    if (iter == MapBucket.end()) {
-      PairBucket bucket;
-      LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(Akey, os);
-      bucket.Rmat = rec.Pmat;
-      bucket.SHVhalf =
-          PleskenSouvignierZspanFamilyHalf<T, Tint>(rec.GramMatRed, false, os);
-      iter = MapBucket.emplace(Akey, bucket).first;
+    BucketData bd;
+    LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(A, os);
+    bd.with_roots = has_roots(rec.GramMatRed);
+    if (bd.with_roots) {
+      MyMatrix<Tint> B = LatticeCanonicalBasis<T, Tint, Tgroup>(
+          A, LatticeStabCanIsomMethod::WeylChamber, os);
+      MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
+      bd.Akey = B_T * A * B_T.transpose();
+      auto iter = MapBucketRoot.find(bd.Akey);
+      if (iter == MapBucketRoot.end()) {
+        PairBucket bucket;
+        LLLreduction<T, Tint> recK = LLLreducedBasis<T, Tint>(bd.Akey, os);
+        bucket.Rmat = recK.Pmat;
+        if (use_ps) {
+          bucket.fam = std::make_shared<MyMatrix<Tint> const>(
+              PleskenSouvignierSpanningFamily<T, Tint>(recK.GramMatRed, os)
+                  .second);
+        }
+        iter = MapBucketRoot.emplace(bd.Akey, bucket).first;
+      }
+      bd.M = iter->second.Rmat * B;
+      bd.fam = iter->second.fam;
+    } else {
+      std::pair<T, MyMatrix<Tint>> fam =
+          PleskenSouvignierSpanningFamily<T, Tint>(rec.GramMatRed, os);
+      bd.key_free = {fam.first, static_cast<size_t>(fam.second.rows())};
+      bd.M = rec.Pmat;
+      bd.fam = std::make_shared<MyMatrix<Tint> const>(std::move(fam.second));
     }
-    MyMatrix<Tint> M = iter->second.Rmat * B;
-    MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(M);
-    std::vector<MyMatrix<Tint>> forms;
+    MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(bd.M);
     for (auto const &F : PairForms(A, ListP)) {
-      forms.push_back(UniversalMatrixConversion<Tint, T>(
+      bd.forms.push_back(UniversalMatrixConversion<Tint, T>(
           MyMatrix<T>(M_T * F * M_T.transpose())));
     }
-    return {Akey, M, forms};
+    if (bd.fam) {
+      bd.values = form_values(bd.forms, *bd.fam);
+    }
+    return bd;
+  };
+  auto bucket_of = [&](BucketData const &bd) -> PairBucket & {
+    return bd.with_roots ? MapBucketRoot[bd.Akey] : MapBucketFree[bd.key_free];
   };
   auto put_in_bucket = [&](size_t idx, BucketData const &bd) -> void {
     MyMatrix<Tint> Minv = Inverse(bd.M);
@@ -1418,20 +1579,28 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
     ListFormsRed[idx] = bd.forms;
     ListAutRed[idx] = gens_red;
+    ListFamRed[idx] = bd.fam;
+    ListValues[idx] = bd.values;
     ListInBucket[idx] = 1;
-    MapBucket[bd.Akey].classes.push_back(idx);
+    bucket_of(bd).classes.push_back(idx);
   };
   auto add_class = [&](MyMatrix<T> const &A,
                        std::vector<MyMatrix<T>> const &ListP) -> size_t {
+    bool scalar = AllScalarIsometries(ListP);
     PairAutInfo<T, Tint, Tgroup> info =
-        (recognition == PairRecognition::QSpan && !AllScalarIsometries(ListP))
+        (recognition == PairRecognition::QSpan && !scalar)
             ? GetPairAutInfoQSpan<T, Tint, Tgroup>(A, ListP, os)
+        : (iso_method != LatticeStabCanIsomMethod::PleskenSouvignier &&
+           !scalar)
+            ? GetPairAutInfoMethod<T, Tint, Tgroup>(A, ListP, iso_method, os)
             : GetPairAutInfo<T, Tint, Tgroup>(A, ListP, os);
     size_t idx = ListPairWork.size();
     ListPairWork.push_back({A, ListP});
     ListAutInfo.push_back(info);
     ListFormsRed.push_back({});
     ListAutRed.push_back({});
+    ListFamRed.push_back({});
+    ListValues.push_back({});
     ListInBucket.push_back(0);
     ListHasKey.push_back(0);
     result.ListGram.push_back(A);
@@ -1477,12 +1646,39 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       }
     }
     BucketData bd = bucket_data(A, ListP);
-    PairBucket &bucket = MapBucket[bd.Akey];
+    PairBucket &bucket = bucket_of(bd);
+    auto forms_T = [](std::vector<MyMatrix<Tint>> const &L)
+        -> std::vector<MyMatrix<T>> {
+      std::vector<MyMatrix<T>> res;
+      for (auto const &F : L) {
+        res.push_back(UniversalMatrixConversion<T, Tint>(F));
+      }
+      return res;
+    };
+    // the data of the neighbour, the searched side of every test
+    std::optional<PSSearchData<Tint>> sd;
+    if (use_ps && !bucket.classes.empty()) {
+      sd = PleskenSouvignierSearchData<Tint>(bd.forms, *bd.fam, os);
+    }
     for (size_t i_b = 0; i_b < bucket.classes.size(); i_b++) {
       size_t idx = bucket.classes[i_b];
-      std::optional<MyMatrix<Tint>> opt = PleskenSouvignierIsometry<Tint>(
-          bd.forms, bucket.SHVhalf, ListFormsRed[idx], bucket.SHVhalf,
-          ListAutRed[idx], PSIsometryOptions<Tint>{.depth = 0}, os);
+      std::optional<MyMatrix<Tint>> opt;
+      if (use_ps) {
+        if (ListValues[idx] != bd.values) {
+          continue;
+        }
+        opt = PleskenSouvignierIsometry<Tint>(
+            bd.forms, *bd.fam, ListFormsRed[idx], *ListFamRed[idx],
+            ListAutRed[idx],
+            PSIsometryOptions<Tint>{.depth = 0,
+                                    .basis_data1 = sd->basis_data,
+                                    .fingerprint1 = sd->fingerprint},
+            os);
+      } else {
+        opt = LatticeIsometry<T, Tint, Tgroup>(
+            forms_T(bd.forms), forms_T(ListFormsRed[idx]), ListAutRed[idx],
+            iso_method, os);
+      }
       if (opt) {
         // the class matched last is tried first next time
         std::swap(bucket.classes[i_b], bucket.classes[0]);
@@ -1855,13 +2051,13 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationGroup(
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListSeed,
     typename GenusEnumerationGroupResult<T, Tgroup>::Tmass const &TotalMass,
     int prime, size_t max_prime, PairRecognition recognition,
-    std::ostream &os) {
+    LatticeStabCanIsomMethod iso_method, std::ostream &os) {
   std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> ListSeedGroup;
   for (auto const &eSeed : ListSeed) {
     ListSeedGroup.push_back({eSeed.first, {eSeed.second}});
   }
   return GenusEnumerationAbelianGroup<T, Tint, Tgroup>(
-      ListSeedGroup, TotalMass, prime, max_prime, recognition, os);
+      ListSeedGroup, TotalMass, prime, max_prime, recognition, iso_method, os);
 }
 
 template <typename T, typename Tgroup>

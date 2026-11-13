@@ -29,7 +29,7 @@ template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &FileGram, std::string const &FileIsom,
              std::string const &FileMass, std::string const &OutFormat,
              int prime, size_t max_prime, PairRecognition recognition,
-             std::ostream &os) {
+             LatticeStabCanIsomMethod iso_method, std::ostream &os) {
   std::vector<MyMatrix<T>> ListGram = ReadListMatrixFile<T>(FileGram);
   std::vector<MyMatrix<T>> ListIsom = ReadListMatrixFile<T>(FileIsom);
   if (ListGram.empty() || ListIsom.empty() ||
@@ -62,7 +62,8 @@ void process(std::string const &FileGram, std::string const &FileIsom,
   Tmass TotalMass = ReadMassFile<Tmass>(FileMass);
   GenusEnumerationGroupResult<T, Tgroup> result =
       GenusEnumerationAbelianGroup<T, Tint, Tgroup>(
-          ListSeed, TotalMass, prime, max_prime, recognition, std::cerr);
+          ListSeed, TotalMass, prime, max_prime, recognition, iso_method,
+          std::cerr);
   WriteGenusEnumerationGroupResult(os, result, OutFormat);
   CheckGenusEnumerationGroupResult(result);
 }
@@ -79,6 +80,8 @@ int main(int argc, char *argv[]) {
     using Tgroup = permutalib::Group<Telt, TintGroup>;
     std::string arith = ExtractArithmeticOption(argc, argv, "gmp");
     PairRecognition recognition = ExtractPairRecognitionOption(argc, argv);
+    LatticeStabCanIsomMethod iso_method =
+        ExtractPairIsometryMethodOption(argc, argv);
     ArithmeticDispatch dispatch;
     if (argc < 4 || argc > 8) {
       std::cerr << "GENUS_EnumerateIsometry [Gram] [Isometry] [Mass] "
@@ -109,6 +112,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "        isometry tests or by the canonical form of the pair\n";
       std::cerr << "        (costly on rank 24 lattices), auto by the cheaper;\n";
       std::cerr << "        qspan: the graph method alone, on a Q-spanning family\n";
+      std::cerr << "isomorphism_method=NAME (anywhere, optional, default\n";
+      std::cerr << "        plesken_souvignier): the method of the isometry\n";
+      std::cerr << "        tests and of the centralisers, among graph,\n";
+      std::cerr << "        plesken_souvignier and iterated_shortest\n";
       std::cerr << "arithmetic=NAME (anywhere, optional, default gmp): the\n";
       std::cerr << "        arithmetic of the computation, among\n";
       dispatch.print_descriptions(std::cerr);
@@ -125,7 +132,7 @@ int main(int argc, char *argv[]) {
         dispatch, [&]<typename T, typename Tint>() -> void {
           auto f = [&](std::ostream &os) -> void {
             process<T, Tint, Tgroup>(FileGram, FileIsom, FileMass, OutFormat, prime,
-                                     max_prime, recognition, os);
+                                     max_prime, recognition, iso_method, os);
           };
           FILE_PrintStderrStdoutFile(OutFile, f);
         });

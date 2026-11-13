@@ -99,6 +99,41 @@ run_case lit_E8x2 lit_w_E8x2 1
 run_case lit_E8x1 lit_i_E8x1 1
 run_case lit_E8x2 lit_i_E8x2 3
 
+# The recognition by isometry tests alone, by Plesken-Souvignier on the
+# least spanning level of vectors (the default) and by the graph method; a
+# lattice method that reads the first form only is refused for pairs.
+opt_case() {
+    lat=$1
+    isom=$2
+    expected=$3
+    shift 3
+    echo "--- ($lat, $isom) with $*, expecting $expected classes ---"
+    out=$($BIN eiso_${lat}.txt eiso_${isom}.txt eiso_mass_${isom}.txt \
+              Summary stdout "$@" 2>/dev/null)
+    echo "$out"
+    nb=$(echo "$out" | sed -n 's/^classes of pairs = //p')
+    complete=$(echo "$out" | sed -n 's/^complete = //p')
+    if [ "$nb" != "$expected" ] || [ "$complete" != "true" ]; then
+        echo "ERROR: ($lat, $isom) with $* gave $nb classes, complete=$complete" >&2
+        exit 1
+    fi
+}
+opt_case E8E8 klein16 4 recognition=isometry
+opt_case d25 klein8 6 recognition=isometry
+opt_case qIcoLam qIcoLam2I 3 recognition=isometry
+opt_case lit_E8x2 lit_i_E8x2 3 recognition=isometry
+opt_case E8E8 refl16 2 recognition=isometry isomorphism_method=graph
+opt_case d25 klein8 6 recognition=isometry isomorphism_method=graph
+echo "--- isomorphism_method=weyl_chamber must be refused ---"
+rc=0
+$BIN eiso_E8E8.txt eiso_refl16.txt eiso_mass_refl16.txt Summary stdout \
+     recognition=isometry isomorphism_method=weyl_chamber > /dev/null 2>&1 \
+     || rc=$?
+if [ "$rc" != "1" ]; then
+    echo "ERROR: isomorphism_method=weyl_chamber was not refused (exit $rc)" >&2
+    exit 1
+fi
+
 # The module neighbours at p = 2, for groups of odd order on lattices of odd
 # determinant: F21 on A8 and on A6^3, at the prime 2 alone; and the prime 2
 # refused for a group of even order (S3 = W(A2) on E8+E8)

@@ -237,6 +237,8 @@ get_canonicalization_matrix(MyMatrix<Tint> const &SHVcan,
     in coefficient size (beyond 20 GB).
    */
   int k = SHVcan.cols();
+  // the columns where the rank modulo p increases
+  std::vector<int> pivcols;
   {
     int64_t const p = 2147483647;
     std::vector<std::vector<int64_t>> basis;  // echelon rows, pivot first
@@ -278,14 +280,53 @@ get_canonicalization_matrix(MyMatrix<Tint> const &SHVcan,
         }
         basis.push_back(v);
         pivpos.push_back(pv);
+        pivcols.push_back(c);
         if (static_cast<int>(basis.size()) == n) {
           k = c + 1;
         }
       }
     }
   }
-  MyMatrix<Tint> H =
-      ComputeRowHermiteNormalForm_second(MyMatrix<Tint>(SHVcan.leftCols(k)));
+  /*
+    With A = S_k of full rank n and P its pivot columns, H_P = HNF(A_P) is
+    the normal form of a square nonsingular matrix, computed modulo its
+    determinant without coefficient growth, with U = H_P A_P^{-1}; then
+    U A is the normal form of A: every column before the pivot of row i is
+    a rational combination of pivot columns of rows below i, so row i
+    vanishes there. P is found modulo p, so the zeros are checked, with the
+    generic normal form when they fail (a pivot found late).
+   */
+  auto prefix_normal_form = [&]() -> std::optional<MyMatrix<Tint>> {
+    if constexpr (!use_hnf_mod_D<Tint>::value) {
+      return {};
+    } else {
+      if (static_cast<int>(pivcols.size()) != n) {
+        return {};
+      }
+      MyMatrix<Tint> A_P(n, n);
+      for (int j = 0; j < n; j++) {
+        A_P.col(j) = SHVcan.col(pivcols[j]);
+      }
+      std::optional<std::pair<MyMatrix<Tint>, MyMatrix<Tint>>> opt =
+          HermiteNormalFormModDTransform_or_none(A_P);
+      if (!opt) {
+        return {};
+      }
+      MyMatrix<Tint> Hk = opt->first * MyMatrix<Tint>(SHVcan.leftCols(k));
+      for (int i = 0; i < n; i++) {
+        for (int c = 0; c < pivcols[i]; c++) {
+          if (Hk(i, c) != 0) {
+            return {};
+          }
+        }
+      }
+      return Hk;
+    }
+  };
+  std::optional<MyMatrix<Tint>> optH = prefix_normal_form();
+  MyMatrix<Tint> H = optH ? std::move(*optH)
+                          : ComputeRowHermiteNormalForm_second(
+                                MyMatrix<Tint>(SHVcan.leftCols(k)));
 #ifdef SANITY_CHECK_LATTICE_STAB_EQUI_CAN
   {
     MyMatrix<Tint> Hfull = ComputeRowHermiteNormalForm_second(SHVcan);

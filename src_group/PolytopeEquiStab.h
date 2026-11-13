@@ -2582,45 +2582,91 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
 #endif
   size_t nbRow = SHV.rows();
   size_t nbMat = ListMat.size();
+  // The scalar products are the entries of SHV M SHV^T. They are computed by
+  // matrix products, a block of rows at a time so that the memory stays that
+  // of a block: the rows [b0, b1) against the columns f2 reads for them,
+  // those below b1 in the symmetric case and all of them otherwise. This
+  // relies on the order in which the WeightMatrix constructor calls f1, row
+  // after row from 0. Tc is the type of the products: T, or int64_t when T
+  // is an integer type and the bound below certifies that every product and
+  // sum fits (the GMP matrix products dominated the canonical forms of the
+  // rank 24 lattices).
+  auto compute = [&]<typename Tc>(std::vector<MyMatrix<Tc>> const &ListMatC,
+                                  MyMatrix<Tc> const &SHV_C)
+      -> WeightMatrix<is_symm, std::vector<T>, Tidx_value> {
+    size_t const block_size = 64;
+    std::vector<MyMatrix<Tc>> ListSHVM(nbMat);
+    for (size_t iMat = 0; iMat < nbMat; iMat++) {
+      ListSHVM[iMat] = SHV_C * ListMatC[iMat];
+    }
+    std::vector<MyMatrix<Tc>> ListBlock(nbMat);
+    size_t b0 = 0;
+    size_t cur_row = 0;
+    auto f1 = [&](size_t iRow) -> void {
+      cur_row = iRow;
+      if (iRow % block_size != 0) {
+        return;
+      }
+      b0 = iRow;
+      size_t b1 = std::min(nbRow, b0 + block_size);
+      size_t n_col = is_symm ? b1 : nbRow;
+      for (size_t iMat = 0; iMat < nbMat; iMat++) {
+        ListBlock[iMat] = ListSHVM[iMat].middleRows(b0, b1 - b0) *
+                          SHV_C.topRows(n_col).transpose();
+      }
+    };
+    std::vector<T> ListScal(nbMat);
+    // Returned by reference: the weight matrix copies it only for a new
+    // weight.
+    auto f2 = [&](size_t iCol) -> std::vector<T> const & {
+      for (size_t iMat = 0; iMat < nbMat; iMat++) {
+        ListScal[iMat] = UniversalScalarConversion<T, Tc>(
+            ListBlock[iMat](cur_row - b0, iCol));
+      }
+      return ListScal;
+    };
+    return WeightMatrix<is_symm, std::vector<T>, Tidx_value>(nbRow, f1, f2,
+                                                             os);
+  };
+  if constexpr (is_implementation_of_Z<T>::value) {
+    // |(SHV M SHV^T)_ij| <= n^2 max|SHV|^2 max|M|, and the partial sums of
+    // both products stay below it.
+    Tint maxV(0);
+    for (int i = 0; i < SHV.rows(); i++) {
+      for (int k = 0; k < SHV.cols(); k++) {
+        Tint a = T_abs(SHV(i, k));
+        if (a > maxV) {
+          maxV = a;
+        }
+      }
+    }
+    T maxM(0);
+    for (auto const &eMat : ListMat) {
+      for (int i = 0; i < eMat.rows(); i++) {
+        for (int k = 0; k < eMat.cols(); k++) {
+          T a = T_abs(eMat(i, k));
+          if (a > maxM) {
+            maxM = a;
+          }
+        }
+      }
+    }
+    T n_T(SHV.cols());
+    T maxV_T = UniversalScalarConversion<T, Tint>(maxV);
+    T bound = n_T * n_T * maxV_T * maxV_T * maxM;
+    T limit = UniversalScalarConversion<T, int64_t>(int64_t(1) << 62);
+    if (bound < limit) {
+      std::vector<MyMatrix<int64_t>> ListMat64;
+      for (auto const &eMat : ListMat) {
+        ListMat64.push_back(UniversalMatrixConversion<int64_t, T>(eMat));
+      }
+      return compute(ListMat64, UniversalMatrixConversion<int64_t, Tint>(SHV));
+    }
+  }
   // The family over T, for the same reason as in the antipodal variant above:
   // the products mix a Gram entry with a vector entry, and the conversion is
   // paid once for the family rather than once per entry of the weight matrix.
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  // The scalar products are the entries of SHV M SHV^T. They are computed by
-  // matrix products, a block of rows at a time so that the memory stays that of a block: the rows
-  // [b0, b1) against the columns f2 reads for them, those below b1 in the
-  // symmetric case and all of them otherwise. This relies on the order in
-  // which the WeightMatrix constructor calls f1, row after row from 0.
-  size_t const block_size = 64;
-  std::vector<MyMatrix<T>> ListSHVM(nbMat);
-  for (size_t iMat = 0; iMat < nbMat; iMat++) {
-    ListSHVM[iMat] = SHV_T * ListMat[iMat];
-  }
-  std::vector<MyMatrix<T>> ListBlock(nbMat);
-  size_t b0 = 0;
-  size_t cur_row = 0;
-  auto f1 = [&](size_t iRow) -> void {
-    cur_row = iRow;
-    if (iRow % block_size != 0) {
-      return;
-    }
-    b0 = iRow;
-    size_t b1 = std::min(nbRow, b0 + block_size);
-    size_t n_col = is_symm ? b1 : nbRow;
-    for (size_t iMat = 0; iMat < nbMat; iMat++) {
-      ListBlock[iMat] = ListSHVM[iMat].middleRows(b0, b1 - b0) *
-                        SHV_T.topRows(n_col).transpose();
-    }
-  };
-  std::vector<T> ListScal(nbMat);
-  // Returned by reference: the weight matrix copies it only for a new weight.
-  auto f2 = [&](size_t iCol) -> std::vector<T> const & {
-    for (size_t iMat = 0; iMat < nbMat; iMat++) {
-      ListScal[iMat] = ListBlock[iMat](cur_row - b0, iCol);
-    }
-    return ListScal;
-  };
-  return WeightMatrix<is_symm, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
+  return compute(ListMat, UniversalMatrixConversion<T, Tint>(SHV));
 }
 
 template <bool is_symmetric, typename T, typename Tidx_value>

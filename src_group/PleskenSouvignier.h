@@ -343,10 +343,13 @@ Tint ps_scal_rows(PleskenSouvignierContext<Tint> const &ctx, int j0, int k0,
   The count of the paper's fingerprint: the number of signed vectors
   whose norms match those of the basis vector of list index J and whose
   products with the first I chain-position basis vectors match those of
-  that basis vector, both read off Fmat.
+  that basis vector, both read off Fmat. Scal[iMat](j, b) is the product
+  of the family row j with the basis vector b under ListMat[iMat], computed
+  once by ps_fingerprint.
  */
 template <typename Tint>
-int ps_possible(PleskenSouvignierContext<Tint> const &ctx, int I, int J) {
+int ps_possible(PleskenSouvignierContext<Tint> const &ctx,
+                std::vector<MyMatrix<Tint>> const &Scal, int I, int J) {
   int m = ctx.VS.m;
   int nbMat = ctx.ListMat.size();
   int count = 0;
@@ -365,7 +368,7 @@ int ps_possible(PleskenSouvignierContext<Tint> const &ctx, int I, int J) {
     bool okm = true;
     for (int iMat = 0; iMat < nbMat && (okp || okm); iMat++) {
       for (int k = 0; k < I; k++) {
-        Tint sc = ps_scal_rows(ctx, j, ctx.bas[ctx.per[k]], iMat);
+        Tint const &sc = Scal[iMat](j, ctx.per[k]);
         Tint const &target = ctx.Fmat[iMat](J, ctx.per[k]);
         if (sc != target) {
           okp = false;
@@ -400,9 +403,19 @@ void ps_fingerprint(PleskenSouvignierContext<Tint> &ctx) {
   for (int i = 0; i < n; i++) {
     ctx.per[i] = i;
   }
+  int m = ctx.VS.m;
+  int nbMat = ctx.ListMat.size();
+  std::vector<MyMatrix<Tint>> Scal(nbMat, MyMatrix<Tint>(m, n));
+  for (int iMat = 0; iMat < nbMat; iMat++) {
+    for (int j = 0; j < m; j++) {
+      for (int b = 0; b < n; b++) {
+        Scal[iMat](j, b) = ps_scal_rows(ctx, j, ctx.bas[b], iMat);
+      }
+    }
+  }
   std::vector<std::vector<int>> fp(n, std::vector<int>(n, 0));
   for (int i = 0; i < n; i++) {
-    fp[0][i] = ps_possible(ctx, 0, i);
+    fp[0][i] = ps_possible(ctx, Scal, 0, i);
   }
   for (int i = 0; i < n - 1; i++) {
     int mini = i;
@@ -413,7 +426,7 @@ void ps_fingerprint(PleskenSouvignierContext<Tint> &ctx) {
     }
     std::swap(ctx.per[mini], ctx.per[i]);
     for (int j = i + 1; j < n; j++) {
-      fp[i + 1][ctx.per[j]] = ps_possible(ctx, i + 1, ctx.per[j]);
+      fp[i + 1][ctx.per[j]] = ps_possible(ctx, Scal, i + 1, ctx.per[j]);
     }
   }
   ctx.fp_diagonal.resize(n);
@@ -738,6 +751,16 @@ PSBasisData<Tint> ps_basis_data(PleskenSouvignierContext<Tint> const &ctx) {
   The options of the context, given by name at the call site, for example
   {.with_fingerprint = true, .depth = 0, .adjdet0 = adjdet0}.
  */
+/*
+  The fingerprint of a context (ps_fingerprint): the order of the searched
+  basis and the diagonal counts. It depends only on the forms and the
+  family (see PleskenSouvignierSearchData).
+ */
+struct PSFingerprint {
+  std::vector<int> per;
+  std::vector<int> fp_diagonal;
+};
+
 template <typename Tint> struct PSContextOptions {
   // Set for the lattice whose basis is searched (see the context).
   bool with_fingerprint = false;
@@ -748,6 +771,8 @@ template <typename Tint> struct PSContextOptions {
   std::optional<std::pair<MyMatrix<Tint>, Tint>> adjdet0;
   // The searched basis and its inverse data, when already known.
   std::optional<PSBasisData<Tint>> basis_data;
+  // The fingerprint, when already known.
+  std::optional<PSFingerprint> fingerprint;
 };
 
 template <typename Tint>
@@ -833,7 +858,12 @@ PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
       }
       ctx.Fmat.push_back(F);
     }
-    ps_fingerprint(ctx);
+    if (options.fingerprint) {
+      ctx.per = options.fingerprint->per;
+      ctx.fp_diagonal = options.fingerprint->fp_diagonal;
+    } else {
+      ps_fingerprint(ctx);
+    }
     ctx.std_basis.resize(n);
     for (int i = 0; i < n; i++) {
       // The basis vectors are family rows, which are stored as the
@@ -1573,6 +1603,25 @@ ps_int64_bounds(std::vector<MyMatrix<Tint>> const &ListMat,
   return b;
 }
 
+// The bounds of the int64 certificate with the searched basis bd.
+template <typename Tint>
+void ps_register_basis_data(PSBasisData<Tint> const &bd,
+                            PSInt64Bounds<Tint> &bounds) {
+  bounds.has_basis_data = true;
+  bounds.BadjMax = Tint(1);
+  for (int i = 0; i < bd.Badj.rows(); i++) {
+    for (int k = 0; k < bd.Badj.cols(); k++) {
+      Tint val = T_abs(bd.Badj(i, k));
+      if (val > bounds.BadjMax) {
+        bounds.BadjMax = val;
+      }
+    }
+  }
+  if (bd.Bden > bounds.BadjMax) {
+    bounds.BadjMax = bd.Bden;
+  }
+}
+
 /*
   When the family lacks the standard basis, the basis of the search is
   selected once over the big integers, by a context built without vector
@@ -1593,19 +1642,7 @@ ps_basis_data_for_int64(std::vector<MyMatrix<Tint>> const &ListMat,
           .with_fingerprint = true, .depth = 0, .adjdet0 = adjdet0},
       os);
   PSBasisData<Tint> bd = ps_basis_data(ctx);
-  bounds.has_basis_data = true;
-  bounds.BadjMax = Tint(1);
-  for (int i = 0; i < bd.Badj.rows(); i++) {
-    for (int k = 0; k < bd.Badj.cols(); k++) {
-      Tint val = T_abs(bd.Badj(i, k));
-      if (val > bounds.BadjMax) {
-        bounds.BadjMax = val;
-      }
-    }
-  }
-  if (bd.Bden > bounds.BadjMax) {
-    bounds.BadjMax = bd.Bden;
-  }
+  ps_register_basis_data(bd, bounds);
   return bd;
 }
 
@@ -1967,7 +2004,60 @@ template <typename Tint> struct PSIsometryOptions {
   std::optional<std::pair<MyMatrix<Tint>, Tint>> adjdet2;
   // The basis searched on the first configuration, when already known.
   std::optional<PSBasisData<Tint>> basis_data1;
+  // The fingerprint of the first configuration, when already known.
+  std::optional<PSFingerprint> fingerprint1;
 };
+
+/*
+  What an isometry test computes on the searched configuration alone, its
+  first argument: the fingerprint and, when the family lacks the standard
+  basis, the searched basis. A caller testing one configuration against
+  many computes them once and passes them to each test. The fingerprint
+  is a list of candidate counts, the same in any arithmetic, so it is
+  computed in int64 when the bounds of the configuration certify it.
+ */
+template <typename Tint> struct PSSearchData {
+  PSFingerprint fingerprint;
+  std::optional<PSBasisData<Tint>> basis_data;
+};
+
+template <typename Tint>
+PSSearchData<Tint>
+PleskenSouvignierSearchData(std::vector<MyMatrix<Tint>> const &ListMat,
+                            MyMatrix<Tint> const &SHVhalf, std::ostream &os) {
+  if constexpr (!std::is_same_v<Tint, int64_t>) {
+    std::pair<MyMatrix<Tint>, Tint> adjdet = AdjugateDeterminant(ListMat[0]);
+    PSInt64Bounds<Tint> bounds = ps_int64_bounds(ListMat, SHVhalf, adjdet);
+    if (!bounds.has_std_basis) {
+      // the context that selects the basis, as ps_basis_data_for_int64
+      PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
+          ListMat, SHVhalf,
+          PSContextOptions<Tint>{
+              .with_fingerprint = true, .depth = 0, .adjdet0 = adjdet},
+          os);
+      return {{ctx.per, ctx.fp_diagonal}, ps_basis_data(ctx)};
+    }
+    if (ps_certify_int64(bounds, os)) {
+      PleskenSouvignierContext<int64_t> ctx = PleskenSouvignierBuildContext(
+          UniversalStdVectorMatrixConversion<int64_t, Tint>(ListMat),
+          UniversalMatrixConversion<int64_t, Tint>(SHVhalf),
+          PSContextOptions<int64_t>{.with_fingerprint = true,
+                                    .depth = 0,
+                                    .adjdet0 = ps_adjdet_to_int64(adjdet)},
+          os);
+      return {{ctx.per, ctx.fp_diagonal}, {}};
+    }
+    PleskenSouvignierContext<Tint> ctx = PleskenSouvignierBuildContext(
+        ListMat, SHVhalf,
+        PSContextOptions<Tint>{
+            .with_fingerprint = true, .depth = 0, .adjdet0 = adjdet},
+        os);
+    return {{ctx.per, ctx.fp_diagonal}, {}};
+  } else {
+    std::cerr << "PS: the search data is computed from the big integers\n";
+    throw TerminalException{1};
+  }
+}
 
 template <typename Tint>
 std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
@@ -2035,8 +2125,13 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
         ps_int64_bounds(ListMat1, SHVhalf1, adjdet1),
         ps_int64_bounds(ListMat2, SHVhalf2, adjdet2));
     // The basis is searched on the first configuration only.
-    std::optional<PSBasisData<Tint>> bd =
-        ps_basis_data_for_int64(ListMat1, SHVhalf1, adjdet1, bounds, os);
+    std::optional<PSBasisData<Tint>> bd;
+    if (!bounds.has_std_basis && options.basis_data1) {
+      bd = options.basis_data1;
+      ps_register_basis_data(*bd, bounds);
+    } else {
+      bd = ps_basis_data_for_int64(ListMat1, SHVhalf1, adjdet1, bounds, os);
+    }
     if (ps_certify_int64(bounds, os)) {
       std::optional<PSBasisData<int64_t>> bd64;
       if (bd) {
@@ -2053,7 +2148,8 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
                   .depth = options.depth,
                   .adjdet1 = ps_adjdet_to_int64(adjdet1),
                   .adjdet2 = ps_adjdet_to_int64(adjdet2),
-                  .basis_data1 = bd64},
+                  .basis_data1 = bd64,
+                  .fingerprint1 = options.fingerprint1},
               os);
       if (!opt64) {
         return {};
@@ -2067,7 +2163,8 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierIsometry(
       PSContextOptions<Tint>{.with_fingerprint = true,
                              .depth = options.depth,
                              .adjdet0 = adjdet1,
-                             .basis_data = options.basis_data1},
+                             .basis_data = options.basis_data1,
+                             .fingerprint = options.fingerprint1},
       os);
   PleskenSouvignierContext<Tint> Co = PleskenSouvignierBuildContext(
       ListMat2, SHVhalf2,

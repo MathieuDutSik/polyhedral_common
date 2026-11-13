@@ -133,7 +133,8 @@ void process(std::string const &mode, std::string const &FileGram1,
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListSeed{
         {gp.gram, gp.isom}};
     Tresult result = GenusEnumerationGroup<T, Tint, Tgroup>(
-        ListSeed, TotalMass, 0, 6, PairRecognition::Auto, std::cerr);
+        ListSeed, TotalMass, 0, 6, PairRecognition::Auto,
+        LatticeStabCanIsomMethod::PleskenSouvignier, std::cerr);
     for (size_t i = 0; i < result.ListGram.size(); i++) {
       known.insert(key_of(result.ListGram[i], result.ListListIsom[i][0]));
     }
