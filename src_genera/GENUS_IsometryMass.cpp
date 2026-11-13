@@ -8,6 +8,7 @@
 #include "IsometryMass.h"
 #include "AbelianHermitianMass.h"
 #include "AbelianQuadraticMass.h"
+#include "LatticeMethods.h"
 #include <fstream>
 #include <map>
 #include <set>
@@ -136,19 +137,17 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>> OrthogonalGroupElements(MyMatrix<T> const &A,
                                                  T &order_T) {
   int n = A.rows();
+  // the generators satisfy g A g^T = A (LatticeAutomorphismGroup)
+  std::vector<MyMatrix<T>> ListMat{A};
   IntAutomorphismGroup<Tint, Tgroup> aut =
-      IteratedShortestAutomorphismGroup<T, Tint, Tgroup>(A, std::cerr);
+      LatticeAutomorphismGroup<T, Tint, Tgroup>(
+          ListMat,
+          LatticeMethodChoice(LatticeStabCanIsomMethod::Graph,
+                              InvariantFamilyKind::IteratedShortest),
+          std::cerr);
   std::vector<MyMatrix<T>> gens;
   for (auto const &eGen : aut.ListGen) {
-    MyMatrix<T> M = UniversalMatrixConversion<T, Tint>(eGen);
-    if (M * A * M.transpose() == A) {
-      gens.push_back(M);
-    } else if (M.transpose() * A * M == A) {
-      gens.push_back(M.transpose());
-    } else {
-      std::cerr << "GENUS_IsometryMass: a generator is not an isometry\n";
-      throw TerminalException{1};
-    }
+    gens.push_back(UniversalMatrixConversion<T, Tint>(eGen));
   }
   size_t max_elt = 2000000;
   std::set<std::vector<int64_t>> seen;

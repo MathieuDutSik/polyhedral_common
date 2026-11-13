@@ -2114,6 +2114,11 @@ CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
   need full rank, the canonical bases taken from the family need it to
   span the lattice.
 
+  * characteristic: the smaller of the shells up to full rank and the
+    closest-vector family (GetCanonicVectorFamily), the family of the graph
+    method; full rank, spanning or not.
+  * iterated_shortest, root_iterated_shortest: the iterated shortest
+    vectors, from the shortest vectors or from the roots, up to full rank.
   * zspan_closure: the iterated shortest vectors completed to a Z-spanning
     family (inner_span_iterated_shortest). It can be very large when the
     short vectors span a sublattice of large index: 12.7 10^6 vectors for
@@ -2139,11 +2144,15 @@ CanonicVectorFamily<Tint> GetCanonicVectorFamily(MyMatrix<T> const &GramMat,
     property of the basis: two isometric forms get families of the same
     kind only when the bound is the same, which the caller has to ensure.
 
-  All but shells_fullrank span the lattice (InvariantFamilyKindSpans).
+  The Z-spanning kinds are those of InvariantFamilyKindSpans; the others
+  have full rank.
 
   The Gram matrix is LLL-reduced by the caller.
  */
 enum class InvariantFamilyKind {
+  Characteristic,
+  IteratedShortest,
+  RootIteratedShortest,
   ZspanClosure,
   RootZspanClosure,
   ShellsZbasis,
@@ -2151,12 +2160,32 @@ enum class InvariantFamilyKind {
   DiagonalBound
 };
 
+// Whether the families of the kind always span the lattice (Z-spanning),
+// rather than having full rank only (Q-spanning).
 inline bool InvariantFamilyKindSpans(InvariantFamilyKind kind) {
-  return kind != InvariantFamilyKind::ShellsFullRank;
+  switch (kind) {
+  case InvariantFamilyKind::ZspanClosure:
+  case InvariantFamilyKind::RootZspanClosure:
+  case InvariantFamilyKind::ShellsZbasis:
+  case InvariantFamilyKind::DiagonalBound:
+    return true;
+  case InvariantFamilyKind::Characteristic:
+  case InvariantFamilyKind::IteratedShortest:
+  case InvariantFamilyKind::RootIteratedShortest:
+  case InvariantFamilyKind::ShellsFullRank:
+    return false;
+  }
+  return false;
 }
 
 inline std::string NameInvariantFamilyKind(InvariantFamilyKind kind) {
   switch (kind) {
+  case InvariantFamilyKind::Characteristic:
+    return "characteristic";
+  case InvariantFamilyKind::IteratedShortest:
+    return "iterated_shortest";
+  case InvariantFamilyKind::RootIteratedShortest:
+    return "root_iterated_shortest";
   case InvariantFamilyKind::ZspanClosure:
     return "zspan_closure";
   case InvariantFamilyKind::RootZspanClosure:
@@ -2174,7 +2203,10 @@ inline std::string NameInvariantFamilyKind(InvariantFamilyKind kind) {
 
 inline InvariantFamilyKind ParseInvariantFamilyKind(std::string const &name) {
   for (InvariantFamilyKind kind :
-       {InvariantFamilyKind::ZspanClosure, InvariantFamilyKind::RootZspanClosure,
+       {InvariantFamilyKind::Characteristic,
+        InvariantFamilyKind::IteratedShortest,
+        InvariantFamilyKind::RootIteratedShortest,
+        InvariantFamilyKind::ZspanClosure, InvariantFamilyKind::RootZspanClosure,
         InvariantFamilyKind::ShellsZbasis, InvariantFamilyKind::ShellsFullRank,
         InvariantFamilyKind::DiagonalBound}) {
     if (NameInvariantFamilyKind(kind) == name) {
@@ -2182,7 +2214,8 @@ inline InvariantFamilyKind ParseInvariantFamilyKind(std::string const &name) {
     }
   }
   std::cerr << "IVF: unknown family kind " << name
-            << ", the kinds are zspan_closure, root_zspan_closure, "
+            << ", the kinds are characteristic, iterated_shortest, "
+               "root_iterated_shortest, zspan_closure, root_zspan_closure, "
                "shells_zbasis, shells_fullrank and diagonal_bound\n";
   throw TerminalException{1};
 }
@@ -2218,6 +2251,12 @@ MyMatrix<Tint> InvariantFamilyHalfKernel(MyMatrix<T> const &GramRed,
                                          InvariantFamilyKind kind,
                                          std::ostream &os) {
   switch (kind) {
+  case InvariantFamilyKind::Characteristic:
+    return GetCanonicVectorFamily<T, Tint>(GramRed, os).SHVhalf;
+  case InvariantFamilyKind::IteratedShortest:
+    return IteratedShortestVectorFamilyHalf<T, Tint>(GramRed, os);
+  case InvariantFamilyKind::RootIteratedShortest:
+    return RootIteratedShortestVectorFamilyHalf<T, Tint>(GramRed, os);
   case InvariantFamilyKind::ZspanClosure:
     return InvariantFamilyHalfFromFull(inner_span_iterated_shortest<T, Tint>(
         GramRed, GramReduction::AlreadyReduced, os));
@@ -2260,7 +2299,14 @@ MyMatrix<Tint> InvariantFamilyHalf(MyMatrix<T> const &GramRed,
   if constexpr (!std::is_same_v<T, SafeInt64> &&
                 (is_implementation_of_Z<T>::value ||
                  is_implementation_of_Q<T>::value)) {
-    bool fits = IsIntegralMatrix(GramRed);
+    // the constructions by shells of the solver; the others go through
+    // field arithmetic, which SafeInt64 does not provide
+    bool fits = kind == InvariantFamilyKind::ShellsZbasis ||
+                kind == InvariantFamilyKind::ShellsFullRank ||
+                kind == InvariantFamilyKind::DiagonalBound ||
+                kind == InvariantFamilyKind::ZspanClosure ||
+                kind == InvariantFamilyKind::RootZspanClosure;
+    fits = fits && IsIntegralMatrix(GramRed);
     T const limit = UniversalScalarConversion<T, int64_t>(int64_t(1) << 40);
     for (int i = 0; i < GramRed.rows() && fits; i++) {
       for (int j = 0; j < GramRed.cols() && fits; j++) {

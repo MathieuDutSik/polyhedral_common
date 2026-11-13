@@ -58,14 +58,26 @@ enum class LatticeStabCanIsomMethod {
   Vinberg,
   Weyl,
   WeylChamber,
-  IteratedShortest,
   Heuristic
 };
 
 /*
-  A method: its name, what it computes, and a description for the usage and
-  namelist texts. canonical_form: whether it gives a canonical form (all but
-  iterated_shortest). several_forms: whether it applies to a tuple of forms
+  A method: its name, the algorithm and the vector family it stands for,
+  what it computes, and a description for the usage and namelist texts.
+
+  The algorithm and the family are separate choices. graph builds the graph
+  of an invariant family of vectors weighted by the forms, and keeps the
+  transformations that preserve Z^n (MatrixGroup.h), so that the family need
+  only have full rank; plesken_souvignier searches the images of a basis in
+  the family, and needs full rank too, with fewer rational leaves when it
+  spans. Both take any kind of InvariantFamilyKind (graph:KIND,
+  plesken_souvignier:KIND); the root-system methods (vinberg, weyl,
+  weyl_chamber) build their own families. iterated_shortest is the name of
+  graph:iterated_shortest.
+
+  canonical_form: whether it gives a canonical form (the canonical form of
+  plesken_souvignier, by orbit splitting, needs a family that spans).
+  several_forms: whether it applies to a tuple of forms
   (A_1, ..., A_k), A_1 positive definite, whose isometries U A_i U^T = B_i
   and automorphisms are wanted together; the root-system methods read the
   first form only. A tuple whose forms are all multiples of the first is the
@@ -74,6 +86,7 @@ enum class LatticeStabCanIsomMethod {
 struct LatticeStabCanIsomMethodEntry {
   std::string name;
   LatticeStabCanIsomMethod method;
+  std::optional<InvariantFamilyKind> family;
   bool canonical_form;
   bool several_forms;
   std::string description;
@@ -82,28 +95,29 @@ struct LatticeStabCanIsomMethodEntry {
 inline std::vector<LatticeStabCanIsomMethodEntry>
 ListLatticeStabCanIsomMethod() {
   return {
-      {"graph", LatticeStabCanIsomMethod::Graph, true, true,
-       "from the characteristic vector family"},
-      {"plesken_souvignier", LatticeStabCanIsomMethod::PleskenSouvignier, true,
-       true,
+      {"graph", LatticeStabCanIsomMethod::Graph, {}, true, true,
+       "the graph of an invariant vector family, the characteristic one by "
+       "default (graph:KIND chooses it, see InvariantFamilyKind)"},
+      {"plesken_souvignier", LatticeStabCanIsomMethod::PleskenSouvignier, {},
+       true, true,
        "the Plesken-Souvignier backtrack on an invariant vector family "
        "(plesken_souvignier:KIND chooses it, see InvariantFamilyKind); the "
        "canonical form by orbit splitting over its automorphism group, "
        "viable on large families (Leech), can decline on some inputs"},
-      {"vinberg", LatticeStabCanIsomMethod::Vinberg, true, false,
+      {"vinberg", LatticeStabCanIsomMethod::Vinberg, {}, true, false,
        "along the root decomposition, the automorphism group as W(R) rtimes "
        "Aut(L, rho); integral form"},
-      {"weyl", LatticeStabCanIsomMethod::Weyl, true, false,
+      {"weyl", LatticeStabCanIsomMethod::Weyl, {}, true, false,
        "as vinberg, with only the simple roots in the family; the isometry "
        "and the automorphism group are those of vinberg"},
-      {"weyl_chamber", LatticeStabCanIsomMethod::WeylChamber, true, false,
+      {"weyl_chamber", LatticeStabCanIsomMethod::WeylChamber, {}, true, false,
        "the characteristic vectors in the Weyl chamber and the simple roots, "
        "a family spanning the lattice; integral form"},
-      {"iterated_shortest", LatticeStabCanIsomMethod::IteratedShortest, false,
-       true,
-       "the MatrixGroup algorithm on the full-rank iterated-shortest family; "
-       "isometry and automorphism group only"},
-      {"heuristic", LatticeStabCanIsomMethod::Heuristic, true, true,
+      {"iterated_shortest", LatticeStabCanIsomMethod::Graph,
+       InvariantFamilyKind::IteratedShortest, true, true,
+       "graph:iterated_shortest, the graph of the iterated shortest vectors "
+       "up to full rank"},
+      {"heuristic", LatticeStabCanIsomMethod::Heuristic, {}, true, true,
        "chooses from isometry invariants (ChooseHeuristicMethod): for one "
        "integral form weyl_chamber if it has vectors of norm at most 2, "
        "otherwise plesken_souvignier if it has many minimal vectors (Leech) "
@@ -163,9 +177,9 @@ inline bool LatticeMethodGivesCanonicalForm(LatticeStabCanIsomMethod method) {
 /*
   A method with, for plesken_souvignier, the invariant vector family it runs
   on; written NAME or plesken_souvignier:KIND. Without a family the
-  Plesken-Souvignier computations take DefaultInvariantFamilyKind, and the
-  heuristic its own choice. The conversion from a method is implicit so that
-  a method is a choice.
+  graph takes the characteristic family, plesken_souvignier
+  DefaultInvariantFamilyKind, and the heuristic its own choice. The
+  conversion from a method is implicit so that a method is a choice.
  */
 struct LatticeMethodChoice {
   LatticeStabCanIsomMethod method;
@@ -176,20 +190,34 @@ struct LatticeMethodChoice {
                       InvariantFamilyKind family_)
       : method(method_), family(family_) {}
   InvariantFamilyKind family_for(size_t n_forms) const {
-    return family ? *family : DefaultInvariantFamilyKind(n_forms);
+    if (family) {
+      return *family;
+    }
+    if (method == LatticeStabCanIsomMethod::Graph) {
+      return InvariantFamilyKind::Characteristic;
+    }
+    return DefaultInvariantFamilyKind(n_forms);
   }
 };
 
 inline LatticeMethodChoice ParseLatticeMethodChoice(std::string const &name) {
   size_t pos = name.find(':');
   if (pos == std::string::npos) {
+    for (auto &entry : ListLatticeStabCanIsomMethod()) {
+      if (entry.name == name) {
+        return entry.family ? LatticeMethodChoice(entry.method, *entry.family)
+                            : LatticeMethodChoice(entry.method);
+      }
+    }
+    // the error message of the parse
     return LatticeMethodChoice(ParseLatticeStabCanIsomMethod(name));
   }
   LatticeStabCanIsomMethod method =
       ParseLatticeStabCanIsomMethod(name.substr(0, pos));
-  if (method != LatticeStabCanIsomMethod::PleskenSouvignier) {
-    std::cerr << "LATTICE_METHODS: only plesken_souvignier takes a family, "
-              << "not " << name << "\n";
+  if (method != LatticeStabCanIsomMethod::PleskenSouvignier &&
+      method != LatticeStabCanIsomMethod::Graph) {
+    std::cerr << "LATTICE_METHODS: only graph and plesken_souvignier take a "
+              << "family, not " << name << "\n";
     throw TerminalException{1};
   }
   return LatticeMethodChoice(method,
@@ -308,6 +336,16 @@ LatticeMethodsChangeBasis(std::vector<MyMatrix<T>> const &ListMat,
   return ListMatRed;
 }
 
+// The family of the kind of the reduced Gram matrix GramRed, with whether
+// it spans the lattice, for the graph methods.
+template <typename T, typename Tint>
+CanonicVectorFamily<Tint> LatticeMethodsFamily(MyMatrix<T> const &GramRed,
+                                               InvariantFamilyKind kind,
+                                               std::ostream &os) {
+  return get_canonic_vector_family<Tint>(
+      InvariantFamilyHalf<T, Tint>(GramRed, kind, os));
+}
+
 /*
   The method chosen by heuristic for the LLL-reduced forms ListMat. The
   choice depends only on isometry invariants of the forms (whether the
@@ -391,11 +429,22 @@ LatticeCanonicalBasisMultipleReduced(std::vector<MyMatrix<T>> const &ListMat,
   }
   CheckLatticeMethodApplies(ListMat, method);
   switch (method) {
-  case LatticeStabCanIsomMethod::Graph:
-    if (ListMat.size() == 1) {
-      return ComputeCanonicalForm<T, Tint, Tgroup>(ListMat[0], os);
+  case LatticeStabCanIsomMethod::Graph: {
+    InvariantFamilyKind kind = choice.family_for(ListMat.size());
+    if (kind == InvariantFamilyKind::DiagonalBound) {
+      std::cerr << "LATTICE_METHODS: a canonical form needs an intrinsic "
+                   "family, the diagonal_bound one depends on the basis\n";
+      throw TerminalException{1};
     }
-    return ComputeCanonicalFormMultiple<T, Tint, Tgroup>(ListMat, os);
+    if (kind == InvariantFamilyKind::Characteristic) {
+      if (ListMat.size() == 1) {
+        return ComputeCanonicalForm<T, Tint, Tgroup>(ListMat[0], os);
+      }
+      return ComputeCanonicalFormMultiple<T, Tint, Tgroup>(ListMat, os);
+    }
+    return ComputeCanonicalForm_family<T, Tint, Tgroup>(
+        ListMat, LatticeMethodsFamily<T, Tint>(ListMat[0], kind, os), os);
+  }
   case LatticeStabCanIsomMethod::PleskenSouvignier: {
     // The failure is a property of the isometry class, so the forms the
     // method does canonicalize remain comparable with each other.
@@ -423,7 +472,6 @@ LatticeCanonicalBasisMultipleReduced(std::vector<MyMatrix<T>> const &ListMat,
     return ComputeCanonicalFormWeylReduced<T, Tint, Tgroup>(ListMat[0], os);
   case LatticeStabCanIsomMethod::WeylChamber:
     return ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(ListMat[0], os);
-  case LatticeStabCanIsomMethod::IteratedShortest:
   case LatticeStabCanIsomMethod::Heuristic:
     break;
   }
@@ -487,9 +535,21 @@ LatticeIsometryReduced(std::vector<MyMatrix<T>> const &ListMat1,
   CheckLatticeMethodApplies(ListMat1, method);
   CheckLatticeMethodApplies(ListMat2, method);
   switch (method) {
-  case LatticeStabCanIsomMethod::Graph:
-    return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
-                                                          os);
+  case LatticeStabCanIsomMethod::Graph: {
+    InvariantFamilyKind kind = choice.family_for(ListMat1.size());
+    if (kind == InvariantFamilyKind::Characteristic) {
+      return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2,
+                                                            os);
+    }
+    if (kind == InvariantFamilyKind::DiagonalBound) {
+      std::cerr << "LATTICE_METHODS: the diagonal_bound family depends on the "
+                   "basis, it cannot be used on two lattices\n";
+      throw TerminalException{1};
+    }
+    return ArithmeticEquivalenceMultiple_family<T, Tint, Tgroup>(
+        ListMat1, LatticeMethodsFamily<T, Tint>(ListMat1[0], kind, os),
+        ListMat2, LatticeMethodsFamily<T, Tint>(ListMat2[0], kind, os), os);
+  }
   case LatticeStabCanIsomMethod::PleskenSouvignier:
     return PleskenSouvignierLatticeIsometry<T, Tint>(
         ListMat1, ListMat2, ListGenAut2, choice.family_for(ListMat1.size()),
@@ -501,9 +561,6 @@ LatticeIsometryReduced(std::vector<MyMatrix<T>> const &ListMat1,
   case LatticeStabCanIsomMethod::WeylChamber:
     return ComputeIsometryWeylChamber<T, Tint, Tgroup>(ListMat1[0],
                                                        ListMat2[0], os);
-  case LatticeStabCanIsomMethod::IteratedShortest:
-    return IteratedShortestEquivalenceMultiple<T, Tint, Tgroup>(ListMat1,
-                                                                ListMat2, os);
   case LatticeStabCanIsomMethod::Heuristic:
     break;
   }
@@ -596,8 +653,16 @@ LatticeAutomorphismGroupReduced(std::vector<MyMatrix<T>> const &ListMat,
   LatticeStabCanIsomMethod method = choice.method;
   CheckLatticeMethodApplies(ListMat, method);
   switch (method) {
-  case LatticeStabCanIsomMethod::Graph:
-    return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);
+  case LatticeStabCanIsomMethod::Graph: {
+    InvariantFamilyKind kind = choice.family_for(ListMat.size());
+    if (kind == InvariantFamilyKind::Characteristic) {
+      return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);
+    }
+    CanonicVectorFamily<Tint> fam =
+        LatticeMethodsFamily<T, Tint>(ListMat[0], kind, os);
+    return GetIntAutomorphism_Family<T, Tint, Tgroup>(ListMat, fam,
+                                                      fam.get_full(), os);
+  }
   case LatticeStabCanIsomMethod::PleskenSouvignier: {
     PleskenSouvignierAutomResult<Tint, Tgroup> result =
         PleskenSouvignierLatticeAutomorphism<T, Tint, Tgroup>(
@@ -615,9 +680,6 @@ LatticeAutomorphismGroupReduced(std::vector<MyMatrix<T>> const &ListMat,
         ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0], os);
     return {std::move(vin.ListGen), vin.order};
   }
-  case LatticeStabCanIsomMethod::IteratedShortest:
-    return IteratedShortestAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
-                                                                      os);
   case LatticeStabCanIsomMethod::Heuristic:
     break;
   }
