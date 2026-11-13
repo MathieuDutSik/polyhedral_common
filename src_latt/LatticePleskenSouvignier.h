@@ -7,6 +7,7 @@
 #include "Shvec_exact.h"
 #include "ClassicLLL.h"
 #include "InvariantVectorFamily.h"
+#include <map>
 #include <optional>
 #include <unordered_set>
 #include <utility>
@@ -36,6 +37,115 @@
   does not span. Which family is best depends on the lattice (see the
   kinds); the choice is the caller's.
  */
+
+/*
+  The values (v M v^T)_M of the forms of ListMat on the rows v of SHV, in
+  int64 when the bound n^2 max|v|^2 max|M| < 2^62 certifies every product
+  and sum, and in Tint otherwise.
+ */
+template <typename Tint>
+std::vector<std::vector<Tint>>
+FormValuesOnFamily(std::vector<MyMatrix<Tint>> const &ListMat,
+                   MyMatrix<Tint> const &SHV) {
+  int m = SHV.rows();
+  int n = SHV.cols();
+  size_t nbMat = ListMat.size();
+  std::vector<std::vector<Tint>> vals(m, std::vector<Tint>(nbMat));
+  Tint maxV(0), maxF(0);
+  for (int j = 0; j < m; j++) {
+    for (int i = 0; i < n; i++) {
+      Tint a = T_abs(SHV(j, i));
+      if (a > maxV) {
+        maxV = a;
+      }
+    }
+  }
+  for (auto const &F : ListMat) {
+    for (int i = 0; i < n; i++) {
+      for (int k = 0; k < n; k++) {
+        Tint a = T_abs(F(i, k));
+        if (a > maxF) {
+          maxF = a;
+        }
+      }
+    }
+  }
+  Tint bound = Tint(n) * Tint(n) * maxV * maxV * maxF;
+  if (bound < UniversalScalarConversion<Tint, int64_t>(int64_t(1) << 62)) {
+    MyMatrix<int64_t> SHV64 = UniversalMatrixConversion<int64_t, Tint>(SHV);
+    for (size_t iMat = 0; iMat < nbMat; iMat++) {
+      MyMatrix<int64_t> W =
+          SHV64 * UniversalMatrixConversion<int64_t, Tint>(ListMat[iMat]);
+      for (int j = 0; j < m; j++) {
+        vals[j][iMat] =
+            UniversalScalarConversion<Tint, int64_t>(W.row(j).dot(SHV64.row(j)));
+      }
+    }
+    return vals;
+  }
+  for (size_t iMat = 0; iMat < nbMat; iMat++) {
+    MyMatrix<Tint> W = SHV * ListMat[iMat];
+    for (int j = 0; j < m; j++) {
+      vals[j][iMat] = W.row(j).dot(SHV.row(j));
+    }
+  }
+  return vals;
+}
+
+/*
+  A smaller invariant family for a tuple of forms. Every common
+  automorphism, and every isometry between two tuples, preserves the values
+  (v A_i v^T)_i of a vector, so the family of the first form splits into
+  the classes of equal values, permuted among themselves. The classes are
+  taken in the order of their size and values, an invariant order, until
+  their union spans the lattice: a family that need not be the whole one,
+  but spans, as the searches and the canonical bases want it (a family of
+  full rank only makes Plesken-Souvignier meet rational leaves). The whole
+  family is returned when no proper union spans.
+ */
+template <typename Tint>
+MyMatrix<Tint> RefineFamilyByForms(std::vector<MyMatrix<Tint>> const &ListMat,
+                                   MyMatrix<Tint> const &SHVhalf,
+                                   std::ostream &os) {
+  int n = SHVhalf.cols();
+  if (ListMat.size() <= 1 || SHVhalf.rows() == 0) {
+    return SHVhalf;
+  }
+  std::vector<std::vector<Tint>> vals = FormValuesOnFamily(ListMat, SHVhalf);
+  std::map<std::vector<Tint>, std::vector<int>> classes;
+  for (int j = 0; j < SHVhalf.rows(); j++) {
+    classes[vals[j]].push_back(j);
+  }
+  if (classes.size() == 1) {
+    return SHVhalf;
+  }
+  std::vector<std::pair<size_t, std::vector<Tint>>> order;
+  for (auto const &kv : classes) {
+    order.push_back({kv.second.size(), kv.first});
+  }
+  std::sort(order.begin(), order.end());
+  std::vector<int> rows;
+  for (size_t i_cl = 0; i_cl + 1 < order.size(); i_cl++) {
+    for (int j : classes[order[i_cl].second]) {
+      rows.push_back(j);
+    }
+    if (static_cast<int>(rows.size()) < n) {
+      continue;
+    }
+    MyMatrix<Tint> sub(rows.size(), n);
+    for (size_t u = 0; u < rows.size(); u++) {
+      sub.row(u) = SHVhalf.row(rows[u]);
+    }
+    if (IsCompleteSystem(ComputeFundamentalInvariant(sub, os), n)) {
+#ifdef DEBUG_PLESKEN_SOUVIGNIER
+      os << "PS: the family refined by the forms, " << sub.rows() << " of "
+         << SHVhalf.rows() << " pairs\n";
+#endif
+      return sub;
+    }
+  }
+  return SHVhalf;
+}
 
 /*
   The kind of a matrix for the engine, which compares the products of the
@@ -178,7 +288,9 @@ PleskenSouvignierLatticeAutomorphism(std::vector<MyMatrix<T>> const &ListMat,
     ListMatRed.push_back(Pmat * eMat * Pmat.transpose());
   }
   MyMatrix<Tint> SHVhalf =
-      InvariantFamilyHalf<T, Tint>(rec.GramMatRed, kind, os);
+      RefineFamilyByForms<Tint>(
+          ListMatRed, InvariantFamilyHalf<T, Tint>(rec.GramMatRed, kind, os),
+          os);
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
   os << "PS: automorphism, family " << NameInvariantFamilyKind(kind) << ", "
      << SHVhalf.rows() << " antipodal pairs\n";
@@ -264,9 +376,13 @@ std::optional<MyMatrix<Tint>> PleskenSouvignierLatticeIsometry(
     ListMatRed2.push_back(Pmat2 * eMat * Pmat2.transpose());
   }
   MyMatrix<Tint> SHVhalf1 =
-      InvariantFamilyHalf<T, Tint>(rec1.GramMatRed, kind, os);
+      RefineFamilyByForms<Tint>(
+          ListMatRed1,
+          InvariantFamilyHalf<T, Tint>(rec1.GramMatRed, kind, os), os);
   MyMatrix<Tint> SHVhalf2 =
-      InvariantFamilyHalf<T, Tint>(rec2.GramMatRed, kind, os);
+      RefineFamilyByForms<Tint>(
+          ListMatRed2,
+          InvariantFamilyHalf<T, Tint>(rec2.GramMatRed, kind, os), os);
 #ifdef DEBUG_PLESKEN_SOUVIGNIER
   os << "PS: isometry, families " << NameInvariantFamilyKind(kind)
      << ", pairs " << SHVhalf1.rows() << " / " << SHVhalf2.rows() << "\n";

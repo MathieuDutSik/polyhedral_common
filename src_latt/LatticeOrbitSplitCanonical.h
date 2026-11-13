@@ -1150,7 +1150,9 @@ OrbitSplitCanonicalizeListMat(std::vector<MyMatrix<T>> const &ListMat,
     ListMatRed.push_back(Pmat * eMat * Pmat.transpose());
   }
   MyMatrix<Tint> SHVhalf =
-      InvariantFamilyHalf<T, Tint>(rec.GramMatRed, kind, os);
+      RefineFamilyByForms<Tint>(
+          ListMatRed, InvariantFamilyHalf<T, Tint>(rec.GramMatRed, kind, os),
+          os);
 #ifdef DEBUG_ORBIT_SPLIT_CANONICAL
   os << "OSC: family " << NameInvariantFamilyKind(kind) << " of "
      << SHVhalf.rows() << " antipodal pairs\n";
