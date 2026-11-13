@@ -2134,7 +2134,7 @@ FlippingLtype(
       ListOrbitDelaunay.l_dels[iDelaunay].EXT,
       ListOrbitDelaunay.l_dels[iDelaunay].GRP,
       {}};
-    l_dels.push_back(del);
+    l_dels.push_back(std::move(del));
   }
   for (int iInfo = 0; iInfo < n_info; iInfo++) {
     int n_facet = ListInfo[iInfo].size();
@@ -2150,7 +2150,7 @@ FlippingLtype(
         Tgroup GRP = ListInfo[iInfo][iFacet].TheStab;
         Delaunay_EntryIneq<Tring, Tgroup> del{ListInfo[iInfo][iFacet].EXT, GRP,
                                           {}};
-        l_dels.push_back(del);
+        l_dels.push_back(std::move(del));
       }
     }
   }
@@ -2247,7 +2247,7 @@ FlippingLtype(
           // Case 1: neither this orbit nor its neighbour were touched by the
           // flip (both stay Position_old), so the adjacency (eInc, eBigMat)
           // is byte-identical to the old one and so is its inequality.
-          MyVector<Tring> eIneq = eAdj.eIneq;
+          MyVector<Tring> const &eIneq = eAdj.eIneq;
 #ifdef SANITY_CHECK_FLIP_CASE1_INEQ
           {
             ensure_vipc_cont();
@@ -2273,7 +2273,7 @@ FlippingLtype(
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 1");
 #endif
-          ListAdj.push_back(NAdj);
+          ListAdj.push_back(std::move(NAdj));
         } else {
           int iInfo = vect_iInfo[iDelaunayOld];
           int iFacet = vect_lower_iFacet[iDelaunayOld];
@@ -2327,7 +2327,7 @@ FlippingLtype(
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 2");
 #endif
-          ListAdj.push_back(NAdj);
+          ListAdj.push_back(std::move(NAdj));
         }
       }
     } else {
@@ -2418,7 +2418,7 @@ FlippingLtype(
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 3");
 #endif
-          ListAdj.push_back(NAdj);
+          ListAdj.push_back(std::move(NAdj));
         }
         if (ListInfo[iInfo][jFacet].Position == -1) {
           int iDelaunayOrigin = ListInfo[iInfo][jFacet].iDelaunayOrigin;
@@ -2452,7 +2452,7 @@ FlippingLtype(
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 4");
 #endif
-            ListAdj.push_back(NAdj);
+            ListAdj.push_back(std::move(NAdj));
           } else {
             int jInfo = vect_iInfo[jDelaunayOld];
             int iFacet2 = vect_lower_iFacet[jDelaunayOld];
@@ -2497,7 +2497,7 @@ FlippingLtype(
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 5");
 #endif
-            ListAdj.push_back(NAdj);
+            ListAdj.push_back(std::move(NAdj));
           }
         }
         if (ListInfo[iInfo][jFacet].Position == 1) {
@@ -2519,11 +2519,11 @@ FlippingLtype(
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 6");
 #endif
-          ListAdj.push_back(NAdj);
+          ListAdj.push_back(std::move(NAdj));
         }
       }
     }
-    l_dels[iOrb].ListAdj = ListAdj;
+    l_dels[iOrb].ListAdj = std::move(ListAdj);
   }
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   time_flt_adjacencies += time_ad.eval_int64();
@@ -3494,9 +3494,11 @@ struct DataIsoDelaunayDomainsFunc {
   std::optional<std::vector<TadjI>> f_adj(Tobj &x_in) {
     IsoDelaunayDomain<T, Tint, Tgroup> const& x = x_in.DT_gram;
     ResultDelaunayAdj<T,Tint,Tgroup> result = get_result_delaunay_adj(x, data);
-    x_in.ListIneqRed = result.ListIneqRed;
-    x_in.GRPperm = result.GRPperm;
-    return result.l_adj;
+    x_in.ListIneqRed = std::move(result.ListIneqRed);
+    x_in.GRPperm = std::move(result.GRPperm);
+    // A member of a local is not moved implicitly on return; without the
+    // std::move every adjacent domain (with its tessellation) is copied.
+    return std::move(result.l_adj);
   }
   Tobj f_adji_obj(TadjI const &x) { return {x.DT_gram, {}, {}}; }
   size_t f_complexity([[maybe_unused]] Tobj const &x) {

@@ -211,7 +211,7 @@ get_rec_info:=function(fProg, d, n, comm_choice, use_outer, keep_error)
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&DATA\n");
-    AppendTo(output, " arithmetic = \"gmp\"\n");
+    AppendTo(output, " arithmetic = \"flint\"\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&TSPACE\n");

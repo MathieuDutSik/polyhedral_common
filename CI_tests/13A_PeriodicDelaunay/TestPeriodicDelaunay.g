@@ -87,7 +87,7 @@ RunIsoDelaunay:=function(ListCoset, dim, OutFormat, tag)
     strNml:=Concatenation(strNml, " OutFormat = \"", OutFormat, "\"\n");
     strNml:=Concatenation(strNml, "/\n\n");
     strNml:=Concatenation(strNml, "&DATA\n");
-    strNml:=Concatenation(strNml, " arithmetic = \"gmp\"\n");
+    strNml:=Concatenation(strNml, " arithmetic = \"flint\"\n");
     strNml:=Concatenation(strNml, " FileDualDescription = \"unset\"\n");
     strNml:=Concatenation(strNml, " FileCosets = \"", FileCosets, "\"\n");
     strNml:=Concatenation(strNml, "/\n\n");
@@ -136,7 +136,7 @@ RunPeriodicDelaunay:=function(arg)
     strNml:=Concatenation(strNml, " OutFile = \"", FileRes, "\"\n");
     strNml:=Concatenation(strNml, " OutFormat = \"SummaryGAP\"\n");
     strNml:=Concatenation(strNml, "/\n\n&DATA\n");
-    strNml:=Concatenation(strNml, " arithmetic = \"gmp\"\n");
+    strNml:=Concatenation(strNml, " arithmetic = \"flint\"\n");
     strNml:=Concatenation(strNml, " GRAMfile = \"", FileG, "\"\n");
     strNml:=Concatenation(strNml, " FileCosets = \"", FileC, "\"\n");
     strNml:=Concatenation(strNml, "/\n");

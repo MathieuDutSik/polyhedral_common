@@ -204,7 +204,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     MicrosecondTime time_f_insert_conclusion;
 #endif
     for (auto &idx : vect) {
-      Tobj y = f_idx_obj(idx);
+      Tobj const &y = f_idx_obj(idx);
 #ifdef DEBUG_ADJACENCY_SCHEME
       os << "ADJ_SCH: process_singleEntry_AdjI Before f_repr idx=" << idx
          << "\n";
@@ -535,7 +535,11 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
     l_obj[i_orb].ListAdj = ListAdj;
   };
   auto f_adji_obj = [&](TadjI const &x) -> Tobj { return data.f_adji_obj(x); };
-  auto f_idx_obj = [&](size_t const &idx) -> Tobj { return l_obj[idx].x; };
+  // By reference: l_obj does not grow while the reference is in use (f_repr
+  // runs before f_spann / f_insert), and a copy is a whole object.
+  auto f_idx_obj = [&](size_t const &idx) -> Tobj const & {
+    return l_obj[idx].x;
+  };
   auto f_next = [&]() -> std::optional<std::pair<bool, Tobj>> { return {}; };
   auto f_insert = [&](Tobj const &x) -> bool {
     l_obj.push_back({x, {}});

@@ -30,9 +30,10 @@ CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(NAUTY_LINK) $(shell pkg-config --libs ompi) $(MPI_LINK_CPP)
 
-# Optional flint arithmetic: build with `make ENABLE_FLINT_SUPPORT=1`.
+# Flint arithmetic, on by default: `make ENABLE_FLINT_SUPPORT=0` disables it.
 # FLINT_INCDIR / FLINT_LINK can be set in the environment; the defaults
 # assume flint is installed next to gmp.
+ENABLE_FLINT_SUPPORT ?= 1
 ifeq ($(ENABLE_FLINT_SUPPORT),1)
 FLINT_INCDIR	?= $(GMP_INCDIR)
 FLINT_LINK	?= -lflint

@@ -28,7 +28,7 @@ write_enum_nml := function(FileNml, dim, OutFile, DomPrefix)
     AppendTo(os, " OutFormat = \"NumberGAP\"\n");
     AppendTo(os, "/\n");
     AppendTo(os, "&DATA\n");
-    AppendTo(os, " arithmetic = \"gmp\"\n");
+    AppendTo(os, " arithmetic = \"flint\"\n");
     AppendTo(os, " FileDualDescription = \"unset\"\n");
     AppendTo(os, " CommonGramMat = \"unset\"\n");
     AppendTo(os, " PrefixIsoDelaunayDomains = \"", DomPrefix, "\"\n");
@@ -57,7 +57,7 @@ write_per_nml := function(FileNml, dim, OutFile, DomPrefix, FileCosets,
     AppendTo(os, " OutFormat = \"NumberGAP\"\n");
     AppendTo(os, "/\n");
     AppendTo(os, "&DATA\n");
-    AppendTo(os, " arithmetic = \"gmp\"\n");
+    AppendTo(os, " arithmetic = \"flint\"\n");
     AppendTo(os, " FileDualDescription = \"unset\"\n");
     AppendTo(os, " FileCosets = \"", FileCosets, "\"\n");
     AppendTo(os, " PrefixIsoDelaunayDomains = \"", DomPrefix, "\"\n");
@@ -82,7 +82,7 @@ write_ana_nml := function(FileNml, FileDom, OutFile, FileCov, FileLinSpa,
     AppendTo(os, " OutFile = \"", OutFile, "\"\n");
     AppendTo(os, "/\n");
     AppendTo(os, "&DATA\n");
-    AppendTo(os, " arithmetic = \"gmp\"\n");
+    AppendTo(os, " arithmetic = \"flint\"\n");
     AppendTo(os, " FileIsoDelaunay = \"", FileDom, "\"\n");
     AppendTo(os, " FileLinSpace = \"", FileLinSpa, "\"\n");
     AppendTo(os, " FileCosets = \"", FileCosets, "\"\n");
@@ -263,7 +263,7 @@ write_rec_nml := function(FileNml, dim, OutFile, FileCosets, budget)
     AppendTo(os, " OutFile = \"", OutFile, "\"\n");
     AppendTo(os, "/\n");
     AppendTo(os, "&DATA\n");
-    AppendTo(os, " arithmetic = \"gmp\"\n");
+    AppendTo(os, " arithmetic = \"flint\"\n");
     AppendTo(os, " FileDualDescription = \"unset\"\n");
     AppendTo(os, " FileCosets = \"", FileCosets, "\"\n");
     AppendTo(os, "/\n");

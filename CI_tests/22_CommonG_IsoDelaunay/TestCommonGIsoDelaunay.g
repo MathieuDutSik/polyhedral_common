@@ -31,7 +31,7 @@ write_enum_nml := function(FileNml, dim, OutFile, DomPrefix, CommonG)
     AppendTo(os, " OutFormat = \"NumberGAP\"\n");
     AppendTo(os, "/\n");
     AppendTo(os, "&DATA\n");
-    AppendTo(os, " arithmetic = \"gmp\"\n");
+    AppendTo(os, " arithmetic = \"flint\"\n");
     AppendTo(os, " FileDualDescription = \"unset\"\n");
     AppendTo(os, " CommonGramMat = \"", CommonG, "\"\n");
     AppendTo(os, " PrefixIsoDelaunayDomains = \"", DomPrefix, "\"\n");
@@ -92,7 +92,7 @@ extract_rigid := function(DomPrefix, nbDomains)
         os := OutputTextFile(FileNml, true);
         SetPrintFormattingStatus(os, false);
         AppendTo(os, "&DATA\n");
-        AppendTo(os, " arithmetic = \"gmp\"\n");
+        AppendTo(os, " arithmetic = \"flint\"\n");
         AppendTo(os, " FileIsoDelaunay = \"", DomFile, "\"\n");
         AppendTo(os, "/\n");
         AppendTo(os, "&SYSTEM\n");

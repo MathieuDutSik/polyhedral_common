@@ -9,7 +9,7 @@
 /
 
 &DATA
- arithmetic = "gmp"
+ arithmetic = "flint"
  FileDualDescription = "unset"
 /
 

@@ -34,7 +34,7 @@ RunRecord:=function()
     strOut:=Concatenation(strOut, " max_runtime_second = 0\n");
     strOut:=Concatenation(strOut, "/\n\n");
     strOut:=Concatenation(strOut, "&DATA\n");
-    strOut:=Concatenation(strOut, " arithmetic = \"gmp\"\n");
+    strOut:=Concatenation(strOut, " arithmetic = \"flint\"\n");
     strOut:=Concatenation(strOut, " GRAMfile = \"PackingCoveringRecord/Gram_witness\"\n");
     strOut:=Concatenation(strOut, " FileCosets = \"PackingCoveringRecord/Cosets_witness\"\n");
     strOut:=Concatenation(strOut, "/\n");

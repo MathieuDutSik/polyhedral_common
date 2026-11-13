@@ -23,6 +23,9 @@ jobs:
       LIBBLISS_PATH: /home/runner/opt/libbliss
       LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
       LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+      FLINT_PATH: /home/runner/opt/flint
+      FLINT_INCDIR: /home/runner/opt/flint/include
+      FLINT_LINK: "-L/home/runner/opt/flint/lib -lflint -Wl,-rpath,/home/runner/opt/flint/lib"
 
     steps:
       - uses: actions/checkout@v7
@@ -34,6 +37,7 @@ jobs:
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-flint
       - uses: ./.github/actions/install-gap
       - name: Test covering density optimization over iso-Delaunay domains
         run: |
