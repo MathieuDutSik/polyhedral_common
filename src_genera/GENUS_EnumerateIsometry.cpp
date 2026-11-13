@@ -116,7 +116,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "        heuristic): the methods of the canonical form, of\n";
       std::cerr << "        the isometry tests and of the centralisers, as\n";
       std::cerr << "        NAME or plesken_souvignier:FAMILY (FAMILY among\n";
-      std::cerr << "        zspan_closure, root_zspan_closure, shells_zbasis);\n";
+      std::cerr << "        zspan_closure, root_zspan_closure,\n";
+      std::cerr << "        shells_zbasis, shells_fullrank);\n";
       std::cerr << "        the methods that apply to pairs:\n";
       for (auto &entry : ListLatticeStabCanIsomMethod()) {
         if (entry.several_forms) {

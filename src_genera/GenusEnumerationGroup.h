@@ -14,6 +14,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <set>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -841,6 +842,20 @@ inline int NextPrimeAfter(int q) {
   F_p gives no neighbour and is left out. The genus fixes the dimensions,
   so the first class gives them.
  */
+// The number of points of the projective spaces of the joint eigenspaces
+// over F_p, which the eigenvector neighbours at p visit; 0 when there is no
+// eigenspace over F_p.
+template <typename Tint>
+double EigenNeighborCost(std::vector<MyMatrix<Tint>> const &ListP_int, int m,
+                         int p) {
+  double cost = 0;
+  for (auto const &ed : ComputeJointEigenspaces(ListP_int, m, p)) {
+    double k = static_cast<double>(ed.space.basis.size());
+    cost += (std::pow(static_cast<double>(p), k) - 1) / (p - 1);
+  }
+  return cost;
+}
+
 template <typename T, typename Tint>
 std::vector<int> OrderedNeighborPrimes(std::vector<MyMatrix<T>> const &ListP,
                                        int m, T const &det, bool scalar) {
@@ -857,15 +872,9 @@ std::vector<int> OrderedNeighborPrimes(std::vector<MyMatrix<T>> const &ListP,
     if (!IsGoodNeighborPrime(p, m, det, scalar)) {
       continue;
     }
-    std::vector<EigenspaceData> ListEig =
-        ComputeJointEigenspaces(ListP_int, m, p);
-    if (ListEig.empty()) {
+    double cost = EigenNeighborCost<Tint>(ListP_int, m, p);
+    if (cost == 0) {
       continue;
-    }
-    double cost = 0;
-    for (auto const &ed : ListEig) {
-      double k = static_cast<double>(ed.space.basis.size());
-      cost += (std::pow(static_cast<double>(p), k) - 1) / (p - 1);
     }
     ListCost.push_back({cost, p});
   }
@@ -1053,9 +1062,23 @@ inline double TypeCost(IrreducibleType const &tp, int64_t p) {
   return (std::pow(q, m) - 1) / (q - 1);
 }
 
+// The number of points sum_tau (q^m_tau - 1) / (q - 1) of the projective
+// spaces that the module neighbours at p visit.
+template <typename T>
+double ModuleNeighborCost(MyMatrix<T> const &A,
+                          std::vector<MyMatrix<T>> const &ListP, int p) {
+  GroupModuleAtPrime gm = ComputeGroupModuleAtPrime(A, ListP, p);
+  double cost = 0;
+  for (auto const &tp : gm.types) {
+    cost += TypeCost(tp, p);
+  }
+  return cost;
+}
+
 /*
-  The odd good primes for a non-abelian group, in the order of the number
-  of points sum_tau (q^m_tau - 1) / (q - 1) of their projective spaces.
+  The good primes (2 included when |G| and det are odd) for the module
+  neighbours, in the order of the number of points of their projective
+  spaces.
  */
 template <typename T>
 std::vector<int> OrderedNeighborPrimesModule(MyMatrix<T> const &A,
@@ -1069,12 +1092,7 @@ std::vector<int> OrderedNeighborPrimesModule(MyMatrix<T> const &A,
     if (!IsGoodNeighborPrime(p, m, det, false)) {
       continue;
     }
-    GroupModuleAtPrime gm = ComputeGroupModuleAtPrime(A, ListP, p);
-    double cost = 0;
-    for (auto const &tp : gm.types) {
-      cost += TypeCost(tp, p);
-    }
-    ListCost.push_back({cost, p});
+    ListCost.push_back({ModuleNeighborCost(A, ListP, p), p});
   }
   std::stable_sort(ListCost.begin(), ListCost.end());
   std::vector<int> res;
@@ -1237,9 +1255,29 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     mass has not closed (the cheapest prime is exhausted first); beyond,
     only random points, four times as many in each final round. The seeds
     are fixed per round. The mass, not the visit, certifies completeness.
+
+    A medium space of a class with a large centraliser has few orbits, at
+    least n_point / |C| and close to it: when that bound is at most
+    orbit_budget its orbits are built at once rather than deferred, after
+    n_sample_before_orbits random points (which close the genera with few
+    classes before a traversal costing up to tens of seconds: E8+E8 with
+    S3 diagonal on two A2 takes 23 s against 2 s). Random
+    points reach a class with a probability proportional to its mass, while
+    by m(L) N(L -> L') = m(L') N(L' -> L) the rare classes are the
+    neighbours of the rare ones: (E8^3, i) found 15 of its 28 classes, 99.7%
+    of the mass, in 40 minutes of random points at p = 5. The spaces up to
+    large_space = 4 10^8 points are those of the eigenspaces of rank 12 at
+    p = 5 (6.1 10^7 points) and of P^11(F_4) (5.6 10^6 points); the visited
+    points are a bitset.
    */
   size_t const small_space = 5000000;
-  size_t const large_space = 20000000;
+  size_t const large_space = 400000000;
+  double const orbit_budget = 2000;
+  // a few random points first, which close at once the genera with few
+  // classes before a traversal of up to 4 10^8 points
+  size_t const n_sample_before_orbits = 20;
+  // the (class, prime index) whose medium spaces were cut into orbits at once
+  std::set<std::pair<size_t, size_t>> orbits_done;
   size_t n_sample = 200;
   size_t i_round = 0;
   bool more_rounds = false;
@@ -1247,16 +1285,24 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
   std::vector<uint8_t> deferred;
   bool orbit_phase = false;
   size_t i_prime_cur = 0;
-  // 0: nothing to do, 1: build the orbits, 2: random points
-  auto visit_mode = [&](size_t n_point) -> int {
+  // 0: nothing to do, 1: build the orbits, 2: random points, 3: a few
+  // random points then the orbits
+  auto visit_mode = [&](size_t n_point, size_t pos) -> int {
+    bool medium = n_point > small_space && n_point <= large_space;
     if (orbit_phase) {
-      return (n_point > small_space && n_point <= large_space) ? 1 : 0;
+      return (medium && orbits_done.count({pos, i_prime_cur}) == 0) ? 1 : 0;
     }
     if (n_point <= small_space) {
       return (i_round == 0) ? 1 : 0;
     }
     if (n_point <= large_space) {
       if (i_round == 0) {
+        double cent = UniversalScalarConversion<double, TintGroup>(
+            ListAutInfo[pos].order);
+        if (static_cast<double>(n_point) <= orbit_budget * cent) {
+          orbits_done.insert({pos, i_prime_cur});
+          return 3;
+        }
         if (deferred.size() <= i_prime_cur) {
           deferred.resize(i_prime_cur + 1, 0);
         }
@@ -1422,14 +1468,6 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     } else {
       MyMatrix<Tint> fam = InvariantFamilyHalf<T, Tint>(
           rec.GramMatRed, ps_family, os);
-      // the largest norm of the family, an invariant like its size
-      T max_norm(0);
-      for (int i = 0; i < fam.rows(); i++) {
-        MyVector<T> v =
-            UniversalVectorConversion<T, Tint>(GetMatrixRow(fam, i));
-        max_norm = std::max(max_norm, T(v.dot(rec.GramMatRed * v)));
-      }
-      bd.key_free = {max_norm, static_cast<size_t>(fam.rows())};
       bd.M = rec.Pmat;
       bd.fam = std::make_shared<MyMatrix<Tint> const>(std::move(fam));
     }
@@ -1440,6 +1478,16 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
     if (bd.fam) {
       bd.values = form_values(bd.forms, *bd.fam);
+    }
+    if (!bd.with_roots) {
+      // the largest norm of the family (the first form, of the reduced
+      // basis, is the first value), an invariant like its size
+      Tint max_norm(0);
+      for (auto const &kv : bd.values) {
+        max_norm = std::max(max_norm, kv.first[0]);
+      }
+      bd.key_free = {UniversalScalarConversion<T, Tint>(max_norm),
+                     static_cast<size_t>(bd.fam->rows())};
     }
     return bd;
   };
@@ -1672,7 +1720,34 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         ListAct.push_back(ActionOnHom(tp, theta_pow, h, p));
       }
       size_t n_point = NumberProjectivePointsFq(mdim, F.q);
+      // for a small field the products are read in tables
+      bool tables = static_cast<size_t>(F.q) <= fq_tables_max_q;
+      FqTables tb;
+      std::vector<std::vector<int>> ListActCodes;
+      if (tables) {
+        tb = BuildFqTables(F);
+        for (auto const &act : ListAct) {
+          ListActCodes.push_back(ActionOnHomCodes(F, act));
+        }
+      }
+      std::vector<int> x_codes(mdim), y_codes(mdim);
       auto image = [&](size_t i_gen, size_t idx) -> size_t {
+        if (tables) {
+          ProjectivePointCodesOfIndex(tb, mdim, idx, x_codes);
+          ApplyActionOnHomCodes(tb, mdim, ListActCodes[i_gen], x_codes,
+                                y_codes);
+          size_t res = IndexOfProjectivePointCodes(tb, mdim, y_codes);
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
+          std::vector<std::vector<int64_t>> alpha =
+              ProjectivePointFqOfIndex(F, mdim, idx);
+          if (res != IndexOfProjectivePointFq(
+                         F, mdim, ApplyActionOnHom(F, ListAct[i_gen], alpha))) {
+            std::cerr << "GENUS_GROUP: the tables of F_q disagree\n";
+            throw TerminalException{1};
+          }
+#endif
+          return res;
+        }
         std::vector<std::vector<int64_t>> alpha =
             ProjectivePointFqOfIndex(F, mdim, idx);
         return IndexOfProjectivePointFq(
@@ -1724,19 +1799,21 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         closed = (result.accumulated_mass >= TotalMass);
         return closed;
       };
-      int mode = visit_mode(n_point);
-      if (mode == 1) {
-        IndexOrbitForEach(n_point, ListAct.size(), image, visit);
-      } else if (mode == 2) {
+      int mode = visit_mode(n_point, pos);
+      if (mode == 2 || mode == 3) {
         std::mt19937_64 rng_point(static_cast<uint64_t>(pos) * 7919ULL +
                                   static_cast<uint64_t>(p) * 104729ULL +
                                   i_round);
         std::uniform_int_distribution<size_t> unif(0, n_point - 1);
-        for (size_t i_s = 0; i_s < n_sample; i_s++) {
+        size_t n_draw = (mode == 3) ? n_sample_before_orbits : n_sample;
+        for (size_t i_s = 0; i_s < n_draw; i_s++) {
           if (visit(unif(rng_point))) {
             break;
           }
         }
+      }
+      if (mode == 1 || (mode == 3 && !closed)) {
+        IndexOrbitForEach(n_point, ListAct.size(), image, visit);
       }
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
       os << "GENUS_GROUP: class " << (pos + 1) << " p=" << p << " type dim="
@@ -1748,9 +1825,20 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       }
     }
   };
+  /*
+    The neighbours of a class are taken among the G-submodules (the module
+    path, valid for any group) or, for an abelian group, among the joint
+    eigenvectors (a special case, cheaper at the primes where the
+    characters have their values in F_p but blind at the others). For an
+    abelian group the module path is taken when its cheapest prime visits
+    fewer points: C3 on A2^12 has no eigenvector over F_2 and its
+    eigenspaces over F_7 have 2.3 10^9 points each, while the module
+    neighbours at 2 visit P^11(F_4), 5.6 10^6 points, and close the genus.
+   */
+  bool module_path = !abelian;
   auto expand_at = [&](size_t pos, int p, size_t i_prime) -> void {
     i_prime_cur = i_prime;
-    if (!abelian) {
+    if (module_path) {
       expand_at_module(pos, p, i_prime);
       return;
     }
@@ -1802,20 +1890,22 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
             return closed;
           };
       size_t n_line = NumberProjectiveLines(static_cast<int>(k), p);
-      int mode = visit_mode(n_line);
-      if (mode == 1) {
-        ProjectiveLineOrbitForEach<Tint>(static_cast<int>(k), p, ListGenEig,
-                                         visit_line);
-      } else if (mode == 2) {
+      int mode = visit_mode(n_line, pos);
+      if (mode == 2 || mode == 3) {
         std::mt19937_64 rng_point(static_cast<uint64_t>(pos) * 7919ULL +
                                   static_cast<uint64_t>(p) * 104729ULL +
                                   i_round);
         std::uniform_int_distribution<size_t> unif(0, n_line - 1);
-        for (size_t i_s = 0; i_s < n_sample; i_s++) {
+        size_t n_draw = (mode == 3) ? n_sample_before_orbits : n_sample;
+        for (size_t i_s = 0; i_s < n_draw; i_s++) {
           if (visit_line(unif(rng_point))) {
             break;
           }
         }
+      }
+      if (mode == 1 || (mode == 3 && !closed)) {
+        ProjectiveLineOrbitForEach<Tint>(static_cast<int>(k), p, ListGenEig,
+                                         visit_line);
       }
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
       os << "GENUS_GROUP: class " << (pos + 1) << " p=" << p
@@ -1833,6 +1923,13 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
                 << " divides m det\n";
       throw TerminalException{1};
     }
+    if (abelian) {
+      std::vector<MyMatrix<Tint>> ListP_int;
+      for (auto const &P : ListPairWork[0].second) {
+        ListP_int.push_back(UniversalMatrixConversion<Tint, T>(P));
+      }
+      module_path = EigenNeighborCost<Tint>(ListP_int, m, prime) == 0;
+    }
     result.ListPrimeUsed.push_back(prime);
     result.ListNewClassPerPrime.push_back(0);
     for (size_t pos = 0;
@@ -1841,11 +1938,33 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       expand_at(pos, prime, 0);
     }
   } else {
-    std::vector<int> ListCandidate =
-        abelian ? OrderedNeighborPrimes<T, Tint>(ListPairWork[0].second, m,
-                                                  det, scalar)
-                : OrderedNeighborPrimesModule(ListPairWork[0].first,
-                                              ListPairWork[0].second, m, det);
+    std::vector<int> ListCandidate;
+    if (abelian) {
+      std::vector<int> ListEigen = OrderedNeighborPrimes<T, Tint>(
+          ListPairWork[0].second, m, det, scalar);
+      std::vector<int> ListModule = OrderedNeighborPrimesModule(
+          ListPairWork[0].first, ListPairWork[0].second, m, det);
+      std::vector<MyMatrix<Tint>> ListP_int;
+      for (auto const &P : ListPairWork[0].second) {
+        ListP_int.push_back(UniversalMatrixConversion<Tint, T>(P));
+      }
+      double cost_eigen =
+          EigenNeighborCost<Tint>(ListP_int, m, ListEigen[0]);
+      double cost_module = ModuleNeighborCost(
+          ListPairWork[0].first, ListPairWork[0].second, ListModule[0]);
+      module_path = cost_module < cost_eigen;
+      ListCandidate = module_path ? ListModule : ListEigen;
+#ifdef DEBUG_GENUS_ENUMERATION_GROUP
+      os << "GENUS_GROUP: abelian group, eigenvector neighbours at "
+         << ListEigen[0] << " visit " << cost_eigen
+         << " points, module neighbours at " << ListModule[0] << " visit "
+         << cost_module << ", the " << (module_path ? "module" : "eigenvector")
+         << " path\n";
+#endif
+    } else {
+      ListCandidate = OrderedNeighborPrimesModule(
+          ListPairWork[0].first, ListPairWork[0].second, m, det);
+    }
     std::vector<size_t> next_expand;
     while (result.accumulated_mass < TotalMass) {
       size_t i_work = result.ListPrimeUsed.size();

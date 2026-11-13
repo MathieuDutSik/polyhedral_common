@@ -780,6 +780,125 @@ inline size_t IndexOfProjectivePointFq(FiniteFieldModP const &F, int m,
   return offset + idx;
 }
 
+/*
+  F_q for a small q as tables on the codes of FqEncode, and the projective
+  points and the action on Hom of the orbit enumeration in those codes: the
+  same indices as ProjectivePointFqOfIndex and IndexOfProjectivePointFq,
+  without the polynomial arithmetic and the allocations of every product
+  (the orbits of P^11(F_4), 5.6 10^6 points, under the centraliser of
+  (A2^12, w) took about ten minutes per class).
+ */
+struct FqTables {
+  int64_t q;
+  std::vector<int> add;
+  std::vector<int> mul;
+  std::vector<int> inv;
+};
+
+inline size_t const fq_tables_max_q = 4096;
+
+inline FqTables BuildFqTables(FiniteFieldModP const &F) {
+  int64_t q = F.q;
+  FqTables tb{q, std::vector<int>(q * q), std::vector<int>(q * q),
+              std::vector<int>(q, 0)};
+  for (int64_t a = 0; a < q; a++) {
+    std::vector<int64_t> fa = FqDecode(F, a);
+    for (int64_t b = 0; b < q; b++) {
+      std::vector<int64_t> fb = FqDecode(F, b);
+      tb.add[a * q + b] = static_cast<int>(FqEncode(F, FqAdd(F, fa, fb)));
+      int c = static_cast<int>(FqEncode(F, FqMul(F, fa, fb)));
+      tb.mul[a * q + b] = c;
+      if (c == 1) {
+        tb.inv[a] = static_cast<int>(b);
+      }
+    }
+  }
+  return tb;
+}
+
+// The point of index idx as codes, x of size m.
+inline void ProjectivePointCodesOfIndex(FqTables const &tb, int m, size_t idx,
+                                        std::vector<int> &x) {
+  size_t q = static_cast<size_t>(tb.q);
+  size_t pw = 1;
+  // the block of the lead i holds q^{m-1-i} points, in the order i = m-1
+  // (one point) up to i = 0
+  int lead = m - 1;
+  for (int i = m - 1; i >= 0; i--) {
+    if (idx < pw) {
+      lead = i;
+      break;
+    }
+    idx -= pw;
+    pw *= q;
+  }
+  for (int j = 0; j < lead; j++) {
+    x[j] = 0;
+  }
+  x[lead] = 1;
+  for (int j = m - 1; j > lead; j--) {
+    x[j] = static_cast<int>(idx % q);
+    idx /= q;
+  }
+}
+
+// The index of the point of codes x, which is normalized in place.
+inline size_t IndexOfProjectivePointCodes(FqTables const &tb, int m,
+                                          std::vector<int> &x) {
+  size_t q = static_cast<size_t>(tb.q);
+  int lead = 0;
+  while (lead < m && x[lead] == 0) {
+    lead++;
+  }
+  int inv = tb.inv[x[lead]];
+  for (int j = lead; j < m; j++) {
+    x[j] = tb.mul[x[j] * tb.q + inv];
+  }
+  size_t offset = 0, pw = 1;
+  for (int i = m - 1; i > lead; i--) {
+    offset += pw;
+    pw *= q;
+  }
+  size_t idx = 0;
+  for (int j = lead + 1; j < m; j++) {
+    idx = idx * q + static_cast<size_t>(x[j]);
+  }
+  return offset + idx;
+}
+
+// The action of ApplyActionOnHom in codes: cc[i * m + j] the code of c[i][j].
+inline std::vector<int>
+ActionOnHomCodes(FiniteFieldModP const &F,
+                 std::vector<std::vector<std::vector<int64_t>>> const &c) {
+  size_t m = c.size();
+  std::vector<int> cc(m * m);
+  for (size_t i = 0; i < m; i++) {
+    for (size_t j = 0; j < m; j++) {
+      cc[i * m + j] = static_cast<int>(FqEncode(F, c[i][j]));
+    }
+  }
+  return cc;
+}
+
+inline void ApplyActionOnHomCodes(FqTables const &tb, int m,
+                                  std::vector<int> const &cc,
+                                  std::vector<int> const &alpha,
+                                  std::vector<int> &beta) {
+  for (int j = 0; j < m; j++) {
+    beta[j] = 0;
+  }
+  for (int i = 0; i < m; i++) {
+    if (alpha[i] == 0) {
+      continue;
+    }
+    int const *row = cc.data() + i * m;
+    int const *mul_a = tb.mul.data() + alpha[i] * tb.q;
+    for (int j = 0; j < m; j++) {
+      beta[j] = tb.add[beta[j] * tb.q + mul_a[row[j]]];
+    }
+  }
+}
+
 inline std::vector<int64_t> FlattenModMat(ModMat const &X) {
   std::vector<int64_t> v;
   for (auto const &row : X) {
