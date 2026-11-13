@@ -46,9 +46,14 @@ run_case rank8_det25 3
 # The same genus without FileMass: the mass is computed from the seed by the
 # mass formula, and must close at the same 3 classes.
 run_case rank8_det25_computedmass 3
+# The same genus from its symbol alone: the seed is built from the symbol
+# (GenusSymbol.h), and the mass is computed from that seed.
+run_case rank8_det25_symbol 3
 # An odd genus, the odd unimodular lattices of rank 12 (Z^12, E8 + Z^4 and
 # D12+), enumerated through the genus of their even sublattices.
 run_case I12_odd 3
+# The same odd genus from its symbol alone.
+run_case I12_symbol 3
 
 # A negative case. With a target mass that cannot be reached -- which is what
 # a missing spinor genus, or an unsuitable prime, looks like -- the program

@@ -1,0 +1,8 @@
+&DATA
+ arithmetic = "gmp"
+ GenusSymbol = "12.12.1.1.I{1}^{12}_{4}"
+/
+
+&METHOD
+ strategy = "random_walk"
+/

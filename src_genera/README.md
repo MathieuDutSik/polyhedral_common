@@ -1,4 +1,4 @@
-# src_genera: enumeration of a genus of even positive definite lattices
+# src_genera: enumeration of a genus of integral positive definite lattices
 
 `GENUS_Enumerate` lists the isometry classes of a genus by Kneser
 p-neighbours, deduplicating by canonical form and stopping when the
@@ -40,10 +40,13 @@ full list of entries, their defaults and their documentation.
     /
 
 * `DATA` -- the seeds, one or more Gram matrices in the ListMatrix format,
-  and optionally the mass of the genus as `num den` or a single integer. When
-  `FileMass` is left unset, the mass is computed from the first seed by the
-  mass formula of Conway and Sloane (`GenusMass` in `GenusMass.h`). The seeds
-  must be even, positive definite, and of the same rank and determinant.
+  or the genus symbol `GenusSymbol` from which one seed is built when
+  `FileLattice` is unset (see "Getting the input" below); and optionally
+  the mass of the genus as `num den` or a single integer. When `FileMass` is
+  left unset, the mass is computed from the first seed by the mass formula
+  of Conway and Sloane (`GenusMass` in `GenusMass.h`). The seeds must be
+  integral, positive definite, all even or all odd, and of the same rank
+  and determinant.
 * `METHOD` -- the `strategy`: `out_prime` (the default, one prime, `prime`
   or the smallest one not dividing det), `iterate` or `random_walk` (see
   `NeighborStrategy` in `GenusEnumeration.h`); the `recognition` of a known
@@ -99,11 +102,27 @@ of these primes reach every spinor genus, so one seed suffices for them.
 
 ## Getting the input
 
-The mass is computed by the program when `FileMass` is unset. A seed, a
-lattice of the genus, has to be given: the program does not build one from a
-genus symbol. Hecke (or Sage, or Magma) gives one cheaply, and also the mass
-if one prefers to pass it. Timings for
-`representative(G)` and `mass(G)` in Hecke on rank 14: 0.02 to 0.8 s per genus.
+There are two ways in:
+
+* seeds and, optionally, the mass: `FileLattice` and `FileMass`, as above;
+* the genus symbol alone: `FileLattice` unset and, for instance,
+
+      GenusSymbol = "II{1}^{8}_{II}{2}^{2}_{2}{5}^{2}"
+
+  in the notation of the DefLatDB labels (Conway-Sloane symbols, with
+  `[ ... ]_{t}` for a compartment of total oddity t; the unimodular
+  components at the odd primes may be omitted, and the prefix
+  `rank.n_plus.det.level.` of the labels is accepted). The program builds
+  one lattice of the genus (`GenusSymbolRepresentative` in `GenusSymbol.h`)
+  as Hecke and SageMath do: a rational quadratic form with the local
+  invariants of the symbol, an even lattice in it that is maximal at every
+  prime, then a descent at each p dividing 2 det to the local class of the
+  symbol. The genus of the result is checked against the symbol, and the
+  mass is then computed from it.
+
+With both set, the seeds are checked to lie in the genus of the symbol. A
+symbol gives a single seed, so a genus with several spinor genera needs
+`iterate` or `random_walk` rather than `out_prime` (see above).
 
 ## Performance notes
 

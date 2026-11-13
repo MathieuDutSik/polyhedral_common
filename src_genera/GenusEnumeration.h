@@ -1936,7 +1936,15 @@ One or more Gram matrices in the ListMatrix format, the seeds. With\n\
 out_prime, which stays at one prime not dividing det, one seed per spinor\n\
 genus may be needed: the p-neighbour graph is connected on a spinor genus,\n\
 not on a genus. iterate and random_walk bring in further primes, whose\n\
-neighbours move between the spinor genera, so one seed suffices for them";
+neighbours move between the spinor genera, so one seed suffices for them.\n\
+If unset, the seed is built from GenusSymbol";
+    ListStringValues_doc["GenusSymbol"] = "Default: unset\n\
+The genus as a Conway-Sloane symbol in the notation of the DefLatDB labels,\n\
+e.g. II{1}^{8}_{II}{2}^{2}_{2}{5}^{2} or I[{1}^{-8}{2}^{2}]_{4}{3}^{1},\n\
+optionally prefixed by rank.n_plus.det.level. (see GenusSymbol.h). With\n\
+FileLattice unset, one seed of the genus is built from it; with both set,\n\
+the seeds are checked to lie in that genus. A single seed may miss spinor\n\
+genera with out_prime: use iterate if the genus may have several";
     ListStringValues_doc["FileMass"] = "Default: unset\n\
 The mass of the genus, as \"num den\" or a single integer. The enumeration\n\
 stops when sum 1/|Aut| reaches it, and that equality certifies completeness.\n\

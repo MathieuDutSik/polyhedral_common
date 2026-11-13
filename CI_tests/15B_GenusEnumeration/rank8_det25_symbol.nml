@@ -1,0 +1,8 @@
+&DATA
+ arithmetic = "gmp"
+ GenusSymbol = "8.8.25.25.II{1}^{8}_{II}{25}^{-1}"
+/
+
+&METHOD
+ strategy = "iterate"
+/

@@ -10,8 +10,10 @@
 #include "LocalDensity.h"
 #include "GenusMass.h"
 #include "GenusEnumerationOdd.h"
+#include "GenusSymbol.h"
 #include "SignatureSymmetric.h"
 #include "Arithmetic_dispatch_types.h"
+#include <optional>
 #include <string>
 #include <vector>
 // clang-format on
@@ -22,11 +24,34 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
   std::string FileLattice = BlockDATA.get_string("FileLattice");
   std::string FileMass = BlockDATA.get_string("FileMass");
+  std::string GenusSymbolStr = BlockDATA.get_string("GenusSymbol");
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
   GenusSpec spec = ReadGenusSpec(eFull);
-  std::vector<MyMatrix<T>> ListSeed = ReadListMatrixFile<T>(FileLattice);
+  // The seeds: read from FileLattice, or, when it is unset, one seed built
+  // from the genus symbol (GenusSymbol.h). The symbol is handled in
+  // mpq_class / mpz_class whatever T is.
+  std::optional<GenusSymbol> symbol;
+  if (GenusSymbolStr != "unset") {
+    symbol = ParseGenusSymbol<mpz_class>(GenusSymbolStr);
+  }
+  std::vector<MyMatrix<T>> ListSeed;
+  if (FileLattice == "unset") {
+    if (!symbol) {
+      std::cerr << "GENUS_Enumerate: FileLattice and GenusSymbol are both "
+                   "unset, one of them is needed\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<mpq_class> Seed =
+        GenusSymbolRepresentative<mpq_class, mpz_class>(*symbol, os);
+    os << "GENUS_Enumerate: the seed built from the genus symbol "
+       << GenusSymbolString(*symbol) << " is\n";
+    WriteMatrix(os, Seed);
+    ListSeed.push_back(UniversalMatrixConversion<T, mpq_class>(Seed));
+  } else {
+    ListSeed = ReadListMatrixFile<T>(FileLattice);
+  }
   if (ListSeed.empty()) {
     std::cerr << "GENUS_Enumerate: no seed lattice in " << FileLattice << "\n";
     throw TerminalException{1};
@@ -61,6 +86,19 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
                 << " have the determinants " << det << " and "
                 << DeterminantMat(eSeed) << "\n";
       throw TerminalException{1};
+    }
+  }
+  if (symbol && FileLattice != "unset") {
+    for (auto &eSeed : ListSeed) {
+      GenusSymbol s_seed = GenusSymbolOfGram<mpq_class, mpz_class>(
+          UniversalMatrixConversion<mpq_class, T>(eSeed));
+      if (s_seed != *symbol) {
+        std::cerr << "GENUS_Enumerate: a seed in " << FileLattice
+                  << " has the genus " << GenusSymbolString(s_seed)
+                  << ", not GenusSymbol = " << GenusSymbolString(*symbol)
+                  << "\n";
+        throw TerminalException{1};
+      }
     }
   }
   // Even or odd: all the seeds of one genus have the same parity.
