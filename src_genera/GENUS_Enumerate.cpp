@@ -9,6 +9,7 @@
 #include "GenusEnumeration.h"
 #include "LocalDensity.h"
 #include "GenusMass.h"
+#include "GenusEnumerationOdd.h"
 #include "SignatureSymmetric.h"
 #include "Arithmetic_dispatch_types.h"
 #include <string>
@@ -42,15 +43,11 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
                 << " is not symmetric positive definite\n";
       throw TerminalException{1};
     }
-    // The neighbour construction and the mass are those of even lattices.
-    bool is_even = IsIntegralMatrix(eSeed);
-    for (int i = 0; i < eSeed.rows() && is_even; i++) {
-      is_even = IsInteger(eSeed(i, i) / T(2));
-    }
-    if (!is_even) {
+    // The seeds are integral. Even seeds are enumerated directly; odd ones
+    // through their even sublattices (GenusEnumerationOdd.h).
+    if (!IsIntegralMatrix(eSeed)) {
       std::cerr << "GENUS_Enumerate: a seed Gram matrix in " << FileLattice
-                << " is not integral with an even diagonal, so it is not "
-                   "an even lattice\n";
+                << " is not integral\n";
       throw TerminalException{1};
     }
     if (eSeed.rows() != rank) {
@@ -66,13 +63,38 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
       throw TerminalException{1};
     }
   }
+  // Even or odd: all the seeds of one genus have the same parity.
+  auto is_even = [](MyMatrix<T> const &M) -> bool {
+    for (int i = 0; i < M.rows(); i++) {
+      if (!IsInteger(M(i, i) / T(2))) {
+        return false;
+      }
+    }
+    return true;
+  };
+  bool even = is_even(ListSeed[0]);
+  for (auto &eSeed : ListSeed) {
+    if (is_even(eSeed) != even) {
+      std::cerr << "GENUS_Enumerate: the seeds in " << FileLattice
+                << " are not all even or all odd\n";
+      throw TerminalException{1};
+    }
+  }
+  if (!even) {
+    os << "GENUS_Enumerate: the seeds are odd, the genus is enumerated "
+          "through the genus of their even sublattices\n";
+  }
   // The mass: read from FileMass, or, when it is unset, computed from the
   // first seed by the mass formula. Tmass is mpq_class, the type GenusMass
-  // computes in.
+  // computes in. The genus of an odd L has the classes, automorphism groups
+  // and mass of the genus of L(2), which is even.
   Tmass TotalMass;
   if (FileMass == "unset") {
     MyMatrix<mpq_class> Gram =
         UniversalMatrixConversion<mpq_class, T>(ListSeed[0]);
+    if (!even) {
+      Gram *= mpq_class(2);
+    }
     TotalMass = GenusMass<mpq_class, mpz_class>(Gram);
     os << "GENUS_Enumerate: the mass " << TotalMass
        << " of the genus is computed from the first seed\n";
@@ -81,11 +103,17 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   }
   int prime = spec.prime;
   if (spec.strategy == NeighborStrategy::OutPrime && prime == 0) {
-    prime = ChooseNeighborPrime<T>(det);
+    // For odd seeds the enumerated genus is that of the even sublattices,
+    // of determinant 4 det.
+    prime = ChooseNeighborPrime<T>(even ? det : T(4) * det);
   }
-  GenusEnumerationResult<T, Tgroup> result = GenusEnumeration<T, Tint, Tgroup>(
-      ListSeed, TotalMass, prime, spec.methods, spec.strategy, spec.rw,
-      spec.hecke, spec.order, max_runtime_second, os);
+  GenusEnumerationResult<T, Tgroup> result =
+      even ? GenusEnumeration<T, Tint, Tgroup>(
+                 ListSeed, TotalMass, prime, spec.methods, spec.strategy,
+                 spec.rw, spec.hecke, spec.order, max_runtime_second, os)
+           : GenusEnumerationOdd<T, Tint, Tgroup>(
+                 ListSeed, TotalMass, prime, spec.methods, spec.strategy,
+                 spec.rw, spec.hecke, spec.order, max_runtime_second, os);
   // With the iterate and random_walk strategies there is no single prime; 0
   // marks that in the output record.
   int prime_out = (spec.strategy == NeighborStrategy::OutPrime) ? prime : 0;

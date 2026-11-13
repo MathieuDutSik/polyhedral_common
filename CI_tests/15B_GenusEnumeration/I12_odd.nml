@@ -1,0 +1,8 @@
+&DATA
+ arithmetic = "gmp"
+ FileLattice = "I12_lattice.txt"
+/
+
+&METHOD
+ strategy = "random_walk"
+/
