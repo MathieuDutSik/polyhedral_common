@@ -934,6 +934,72 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
   throw TerminalException{1};
 }
 
+/*
+  The objects of the flips of one iso-Delaunay domain that depend only on its
+  tessellation. Every flip across a wall of the domain starts from the same
+  tessellation, so these are built once, lazily per Delaunay orbit, and
+  shared by all of them instead of being rebuilt at every flip:
+  * the precompute representing the vertex permutations of the orbit as
+    matrices (the matching of the facets of the old tessellation),
+  * the matrices of the generators of its stabilizer (the generators of the
+    repartitioning polytopes),
+  * the Voronoi inequality precompute and the vertex container (the
+    inequalities of the orbits that the flip leaves unchanged).
+  The entries refer to the matrices of DTI, which has to outlive the cache.
+  A ContainerMatrix cannot be moved (its hash functions refer to it), hence
+  the unique_ptr.
+ */
+template <typename Tring, typename Tgroup> struct FlippingTessellationCache {
+  DelaunayTesselationIneq<Tring, Tgroup> const &DTI;
+  std::vector<std::vector<Tring>> ListGramRing;
+  std::ostream &os;
+  std::vector<std::optional<RepresentVertexPermutationPreComput<Tring>>>
+      l_precomp;
+  std::vector<std::optional<std::vector<MyMatrix<Tring>>>> l_stab_gens;
+  std::vector<std::optional<VoronoiInequalityPreComput<Tring>>> l_vipc;
+  std::vector<std::unique_ptr<ContainerMatrix<Tring>>> l_cont;
+  FlippingTessellationCache(DelaunayTesselationIneq<Tring, Tgroup> const &_DTI,
+                            std::vector<std::vector<Tring>> _ListGramRing,
+                            std::ostream &_os)
+      : DTI(_DTI), ListGramRing(std::move(_ListGramRing)), os(_os),
+        l_precomp(DTI.l_dels.size()), l_stab_gens(DTI.l_dels.size()),
+        l_vipc(DTI.l_dels.size()), l_cont(DTI.l_dels.size()) {}
+  RepresentVertexPermutationPreComput<Tring> const &get_precomp(int iDel) {
+    std::optional<RepresentVertexPermutationPreComput<Tring>> &precomp =
+        l_precomp[iDel];
+    if (!precomp) {
+      precomp.emplace(DTI.l_dels[iDel].EXT);
+    }
+    return *precomp;
+  }
+  std::vector<MyMatrix<Tring>> const &get_stab_gens(int iDel) {
+    std::optional<std::vector<MyMatrix<Tring>>> &gens = l_stab_gens[iDel];
+    if (!gens) {
+      std::vector<MyMatrix<Tring>> l_mat;
+      for (auto &ePermGen : DTI.l_dels[iDel].GRP.SmallGeneratingSet()) {
+        l_mat.push_back(get_precomp(iDel).represent(ePermGen));
+      }
+      gens = std::move(l_mat);
+    }
+    return *gens;
+  }
+  VoronoiInequalityPreComput<Tring> const &get_vipc(int iDel) {
+    std::optional<VoronoiInequalityPreComput<Tring>> &vipc = l_vipc[iDel];
+    if (!vipc) {
+      vipc.emplace(BuildVoronoiIneqPreComputeChecked<Tring>(
+          DTI.l_dels[iDel].EXT, ListGramRing, os));
+    }
+    return *vipc;
+  }
+  ContainerMatrix<Tring> const &get_cont(int iDel) {
+    std::unique_ptr<ContainerMatrix<Tring>> &cont = l_cont[iDel];
+    if (!cont) {
+      cont = std::make_unique<ContainerMatrix<Tring>>(DTI.l_dels[iDel].EXT);
+    }
+    return *cont;
+  }
+};
+
 template <typename Tint, typename Tgroup> struct RepartEntry {
   MyMatrix<Tint> EXT;
   Tgroup TheStab;
@@ -989,11 +1055,11 @@ template <typename Tint, typename Tgroup> struct FullRepart {
  */
 template <typename Tring, typename Tgroup>
 FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
-    size_t eIdx,
-    DelaunayTesselationIneq<Tring, Tgroup> const &ListOrbitDelaunay,
+    size_t eIdx, FlippingTessellationCache<Tring, Tgroup> &cache,
     std::vector<AdjInfo> const &ListInformationsOneFlipping,
     MyMatrix<Tring> const &InteriorElement,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, std::ostream &os) {
+  DelaunayTesselationIneq<Tring, Tgroup> const &ListOrbitDelaunay = cache.DTI;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FindRepartitionningInfoNextGeneration, begin FRING\n";
   os << "ISODEL: |ListInformationsOneFlipping|="
@@ -1293,18 +1359,17 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: FuncInsertCenter, step 6, A\n";
 #endif
-      MyMatrix<Tring> const &EXT =
-          ListOrbitDelaunay.l_dels[TheRec.iDelaunay].EXT;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: FuncInsertCenter, step 6, B\n";
 #endif
-      std::vector<Telt> LGens = ListOrbitDelaunay.l_dels[TheRec.iDelaunay].GRP.SmallGeneratingSet();
-      if (!LGens.empty()) {
+      // The stabilizer generators of an old Delaunay orbit as matrices are
+      // the same at every flip of the domain: they come from the cache.
+      std::vector<MyMatrix<Tring>> const &LMatGens =
+          cache.get_stab_gens(TheRec.iDelaunay);
+      if (!LMatGens.empty()) {
         MyMatrix<Tring> const &BigMatR = TheRec.eBigMat;
         MyMatrix<Tring> BigMatI = Inverse(BigMatR);
-        RepresentVertexPermutationPreComput<Tring> precomp_ext(EXT);
-        for (auto &ePermGen : LGens) {
-          MyMatrix<Tring> eBigMat = precomp_ext.represent(ePermGen);
+        for (auto &eBigMat : LMatGens) {
           MyMatrix<Tring> eBigMat_new = BigMatI * eBigMat * BigMatR;
           FuncInsertGenerator(eBigMat_new);
         }
@@ -1734,11 +1799,14 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
 template <typename Tring, typename Tgroup>
 DelaunayTesselationIneq<Tring, Tgroup>
 FlippingLtype(
-    DelaunayTesselationIneq<Tring, Tgroup> const &ListOrbitDelaunay,
+    FlippingTessellationCache<Tring, Tgroup> &cache,
     MyMatrix<Tring> const &InteriorElement,
     std::vector<AdjInfo> const &ListInformationsOneFlipping,
-    std::vector<std::vector<Tring>> const &ListGramRing,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, std::ostream &os) {
+  // The tessellation being flipped and the objects derived from it are those
+  // of the cache, shared by all the flips of the domain.
+  DelaunayTesselationIneq<Tring, Tgroup> const &ListOrbitDelaunay = cache.DTI;
+  std::vector<std::vector<Tring>> const &ListGramRing = cache.ListGramRing;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: FLT: FlippingLtype, begin\n";
 #endif
@@ -1815,8 +1883,7 @@ FlippingLtype(
     MicrosecondTime time_r;
 #endif
     FullRepart<Tring, Tgroup> fr = FindRepartitionningInfoNextGeneration(
-        eIdx, ListOrbitDelaunay, ListInformationsOneFlipping, InteriorElement,
-        AllArr, os);
+        eIdx, cache, ListInformationsOneFlipping, InteriorElement, AllArr, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
     time_flt_repart += time_r.eval_int64();
 #endif
@@ -1849,8 +1916,8 @@ FlippingLtype(
     os << "ISODEL: FLT: n_minus=" << n_minus << " n_zero=" << n_zero
        << " n_plus=" << n_plus << "\n";
 #endif
-    ListInfo.push_back(fr.cells);
-    ListIso.push_back(fr.eIso);
+    ListInfo.push_back(std::move(fr.cells));
+    ListIso.push_back(std::move(fr.eIso));
     for (auto &pos : eConn) {
       vect_iInfo[pos] = iInfo;
     }
@@ -1860,14 +1927,12 @@ FlippingLtype(
     Delaunay_AdjO<Tring> adj;
     MyMatrix<Tring> eBigMat;
   };
-  // Lazy per-orbit basis-inversion caches for representing vertex
-  // permutations: entry iDelaunay for the old tessellation orbits, entry
-  // (iInfo, iFacet) for the repartitioning facets. A barrel facet caches
-  // the precompute of its isobarycenter-extended matrix (see get_bigmat),
-  // the other facets that of their plain vertex matrix; each slot is only
-  // ever used by the branch matching its Position.
-  std::vector<std::optional<RepresentVertexPermutationPreComput<Tring>>>
-      l_precomp_old(n_dels);
+  // Lazy per-facet basis-inversion caches for representing vertex
+  // permutations, entry (iInfo, iFacet) for the repartitioning facets (those
+  // of the old tessellation orbits are in the cache, shared by the flips). A
+  // barrel facet caches the precompute of its isobarycenter-extended matrix
+  // (see get_bigmat), the other facets that of their plain vertex matrix;
+  // each slot is only ever used by the branch matching its Position.
   std::vector<
       std::vector<std::optional<RepresentVertexPermutationPreComput<Tring>>>>
       ll_precomp_info;
@@ -1986,9 +2051,9 @@ FlippingLtype(
     MicrosecondTime time_go;
     AccumOnExit<MicrosecondTime> accum_go(time_go, time_flt_matching_old);
 #endif
-    MyMatrix<Tring> const &EXT = ListOrbitDelaunay.l_dels[iDelaunayOld].EXT;
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
-    CheckFacetInequality(EXT, eInc, "get_matching_old_tessel EXT eInc");
+    CheckFacetInequality(ListOrbitDelaunay.l_dels[iDelaunayOld].EXT, eInc,
+                         "get_matching_old_tessel EXT eInc");
 #endif
     for (auto &eAdj : ListOrbitDelaunay.l_dels[iDelaunayOld].ListAdj) {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
@@ -2004,12 +2069,8 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         MicrosecondTime time_b;
 #endif
-        std::optional<RepresentVertexPermutationPreComput<Tring>> &precomp =
-            l_precomp_old[iDelaunayOld];
-        if (!precomp) {
-          precomp.emplace(EXT);
-        }
-        MyMatrix<Tring> eBigMat = precomp->represent(*opt);
+        MyMatrix<Tring> eBigMat =
+            cache.get_precomp(iDelaunayOld).represent(*opt);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_flt_bigmat += time_b.eval_int64();
 #endif
@@ -2217,17 +2278,29 @@ FlippingLtype(
     std::vector<Delaunay_AdjIneqO<Tring>> ListAdj;
     // Most orbits surviving a flip have every adjacency in Case 1 (no
     // recomputation needed at all), so building the Voronoi precompute for
-    // this orbit is deferred until an adjacency actually requires it.
-    std::optional<VoronoiInequalityPreComput<Tring>> vipc_opt;
-    std::optional<ContainerMatrix<Tring>> cont_opt;
+    // this orbit is deferred until an adjacency actually requires it. An
+    // orbit surviving the flip has the vertex matrix of its old orbit, so its
+    // precompute and container are those of the cache, shared by the flips;
+    // a new orbit builds its own.
+    VoronoiInequalityPreComput<Tring> const *vipc_ptr = nullptr;
+    ContainerMatrix<Tring> const *cont_ptr = nullptr;
+    std::optional<VoronoiInequalityPreComput<Tring>> vipc_own;
+    std::unique_ptr<ContainerMatrix<Tring>> cont_own;
     auto ensure_vipc_cont = [&]() -> void {
-      if (!vipc_opt) {
+      if (!vipc_ptr) {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         MicrosecondTime time_v;
 #endif
-        vipc_opt.emplace(BuildVoronoiIneqPreComputeChecked<Tring>(
-            l_dels[iOrb].EXT, ListGramRing, os));
-        cont_opt.emplace(l_dels[iOrb].EXT);
+        if (ds.Position == Position_old) {
+          vipc_ptr = &cache.get_vipc(ds.iDelaunay);
+          cont_ptr = &cache.get_cont(ds.iDelaunay);
+        } else {
+          vipc_own.emplace(BuildVoronoiIneqPreComputeChecked<Tring>(
+              l_dels[iOrb].EXT, ListGramRing, os));
+          cont_own = std::make_unique<ContainerMatrix<Tring>>(l_dels[iOrb].EXT);
+          vipc_ptr = &*vipc_own;
+          cont_ptr = cont_own.get();
+        }
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_flt_vipc += time_v.eval_int64();
 #endif
@@ -2252,7 +2325,7 @@ FlippingLtype(
           {
             ensure_vipc_cont();
             MyVector<Tring> eIneqCheck = ComputeDelaunayAdjIneq(
-                *vipc_opt, *cont_opt, l_dels[iOrbAdj].EXT, eAdj.eBigMat,
+                *vipc_ptr, *cont_ptr, l_dels[iOrbAdj].EXT, eAdj.eBigMat,
                 ListGramRing, os);
             if (eIneqCheck != eIneq) {
               std::cerr << "FLIP_CASE1_INEQ: SANITY_CHECK failed: the "
@@ -2317,7 +2390,7 @@ FlippingLtype(
           MicrosecondTime time_i;
 #endif
           MyVector<Tring> eIneq = ComputeDelaunayAdjIneq(
-              *vipc_opt, *cont_opt, l_dels[Pos].EXT, BigMat1, ListGramRing,
+              *vipc_ptr, *cont_ptr, l_dels[Pos].EXT, BigMat1, ListGramRing,
               os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_ineq += time_i.eval_int64();
@@ -2408,7 +2481,7 @@ FlippingLtype(
           MicrosecondTime time_i;
 #endif
           MyVector<Tring> eIneq = ComputeDelaunayAdjIneq(
-              *vipc_opt, *cont_opt, l_dels[Pos].EXT, BigMat2, ListGramRing,
+              *vipc_ptr, *cont_ptr, l_dels[Pos].EXT, BigMat2, ListGramRing,
               os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_ineq += time_i.eval_int64();
@@ -2442,7 +2515,7 @@ FlippingLtype(
             MicrosecondTime time_i;
 #endif
             MyVector<Tring> eIneq = ComputeDelaunayAdjIneq(
-                *vipc_opt, *cont_opt, l_dels[Pos2].EXT, BigMat1, ListGramRing,
+                *vipc_ptr, *cont_ptr, l_dels[Pos2].EXT, BigMat1, ListGramRing,
                 os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
             time_flt_ineq += time_i.eval_int64();
@@ -2487,7 +2560,7 @@ FlippingLtype(
             MicrosecondTime time_i;
 #endif
             MyVector<Tring> eIneq = ComputeDelaunayAdjIneq(
-                *vipc_opt, *cont_opt, l_dels[Pos].EXT, BigMat1, ListGramRing,
+                *vipc_ptr, *cont_ptr, l_dels[Pos].EXT, BigMat1, ListGramRing,
                 os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
             time_flt_ineq += time_i.eval_int64();
@@ -2509,7 +2582,7 @@ FlippingLtype(
           MicrosecondTime time_i;
 #endif
           MyVector<Tring> eIneq = ComputeDelaunayAdjIneq(
-              *vipc_opt, *cont_opt, l_dels[Pos].EXT, eAdj.eBigMat,
+              *vipc_ptr, *cont_ptr, l_dels[Pos].EXT, eAdj.eBigMat,
               ListGramRing, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_ineq += time_i.eval_int64();
@@ -3165,19 +3238,17 @@ template <typename T, typename Tint, typename Tgroup>
 IsoDelaunayDomain_AdjI<T, Tint, Tgroup>
 get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
              DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+             FlippingTessellationCache<Tint, Tgroup> &cache,
              FullAdjInfo<Tint> const &eRecIneq) {
   std::ostream &os = data.rddo.os;
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   MicrosecondTime time_s_adj;
 #endif
-  std::vector<std::vector<Tint>> ListGramRing =
-      GetListGramRing(data.LinSpa.ListLineMat);
   // The flipping runs entirely over the ring: the interior element enters
   // only through the lifting heights, for which a positive fraction-free
   // rescaling changes nothing.
-  DelaunayTesselationIneq<Tint, Tgroup> DTIadj =
-    FlippingLtype(x.DT, x.GramMat, eRecIneq.ListAdjInfo, ListGramRing,
-                  data.rddo.AllArr, os);
+  DelaunayTesselationIneq<Tint, Tgroup> DTIadj = FlippingLtype(
+      cache, x.GramMat, eRecIneq.ListAdjInfo, data.rddo.AllArr, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: s_adj, FlippingLtype|=" << time_s_adj << "\n";
 #endif
@@ -3193,7 +3264,8 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
     MyVector<T> g_vec =
         LINSPA_GetVectorOfMatrixExpression(data.LinSpa, *data.CommonGramMat);
     for (auto &eDel : DTIadj.l_dels) {
-      if (!IsDelaunayAcceptableForGramMat(eDel.EXT, ListGramRing, g_vec, os)) {
+      if (!IsDelaunayAcceptableForGramMat(eDel.EXT, cache.ListGramRing, g_vec,
+                                          os)) {
         std::cerr << "ISODEL: get_adjacent, star-of-G: crossed a wall on which "
                      "G lies but the adjacent domain does not contain G\n";
         throw TerminalException{1};
@@ -3210,7 +3282,7 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   {
     std::vector<FullAdjInfo<Tint>> ListIneqAdjSlow =
       ComputeDefiningIneqIsoDelaunayDomain(
-          StripDelaunayTesselationIneq(DTIadj), ListGramRing, os);
+          StripDelaunayTesselationIneq(DTIadj), cache.ListGramRing, os);
     std::set<MyVector<Tint>> setFast, setSlow;
     for (auto &eFullAI : ListIneqAdj) {
       setFast.insert(eFullAI.eIneq);
@@ -3248,6 +3320,18 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   return {eRecIneq.eIneq, std::move(IsoDelAdj)};
 }
 
+// A single flip: the cache lives for this flip only. The flips of all the
+// walls of a domain share one cache (get_result_delaunay_adj_kernel).
+template <typename T, typename Tint, typename Tgroup>
+IsoDelaunayDomain_AdjI<T, Tint, Tgroup>
+get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+             DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+             FullAdjInfo<Tint> const &eRecIneq) {
+  FlippingTessellationCache<Tint, Tgroup> cache(
+      x.DT, GetListGramRing(data.LinSpa.ListLineMat), data.rddo.os);
+  return get_adjacent<T, Tint, Tgroup>(x, data, cache, eRecIneq);
+}
+
 /*
   Full adjacency computation: the combinatorial pre-result followed by an
   actual flip for every flippable facet. Same kernel / wrapper split as
@@ -3261,9 +3345,13 @@ get_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   PreResultDelaunayAdj<T, Tint, Tgroup> pre =
     get_pre_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot);
   std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
+  // All the flips start from x.DT: what depends only on it is built once.
+  FlippingTessellationCache<Tint, Tgroup> cache(
+      x.DT, GetListGramRing(data.LinSpa.ListLineMat), data.rddo.os);
   for (size_t k = 0; k < pre.l_test.size(); k++) {
     if (pre.l_test[k]) {
-      l_adj.push_back(get_adjacent<T, Tint, Tgroup>(x, data, pre.ListIneqRed[k]));
+      l_adj.push_back(
+          get_adjacent<T, Tint, Tgroup>(x, data, cache, pre.ListIneqRed[k]));
     }
   }
   return {std::move(pre.ListIneqRed), std::move(pre.GRPperm), std::move(l_adj)};
