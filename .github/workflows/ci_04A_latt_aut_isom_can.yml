@@ -53,5 +53,6 @@ jobs:
             echo "The gap test code has not created the expected file" >&2
             exit 1
           fi
+          ./RunMethodFamilies.sh
           cd ../..
           echo "After canonicalization stuff"
