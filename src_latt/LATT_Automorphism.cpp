@@ -39,7 +39,7 @@ void ComputeAutomorphism(std::string const &FileListMat,
               << FileListMat << " is not symmetric positive definite\n";
     throw TerminalException{1};
   }
-  LatticeStabCanIsomMethod emethod = ParseLatticeStabCanIsomMethod(method);
+  LatticeMethodChoice emethod = ParseLatticeMethodChoice(method);
   IntAutomorphismGroup<Tint, Tgroup> group =
       LatticeAutomorphismGroup<T, Tint, Tgroup>(ListMat, emethod, std::cerr);
   if (OutFormat == "GAP_order") {

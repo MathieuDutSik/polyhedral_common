@@ -55,7 +55,7 @@ void ComputeIsomorphism(std::string const &FileListMat1,
     std::cerr << "LATT_Isomorphism: the two lists have different lengths\n";
     throw TerminalException{1};
   }
-  LatticeStabCanIsomMethod emethod = ParseLatticeStabCanIsomMethod(method);
+  LatticeMethodChoice emethod = ParseLatticeMethodChoice(method);
   std::vector<MyMatrix<Tint>> ListGenAut2;
   std::optional<MyMatrix<Tint>> equiv = LatticeIsometry<T, Tint, Tgroup>(
       ListMat1, ListMat2, ListGenAut2, emethod, std::cerr);

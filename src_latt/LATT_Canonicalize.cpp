@@ -31,7 +31,7 @@ void ComputeCanonical(std::string const &FileI, std::string const &OutFormat,
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
-  LatticeStabCanIsomMethod emethod = ParseLatticeStabCanIsomMethod(method);
+  LatticeMethodChoice emethod = ParseLatticeMethodChoice(method);
   MyMatrix<Tint> B =
       LatticeCanonicalBasis<T, Tint, Tgroup>(eMat, emethod, std::cerr);
   MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
