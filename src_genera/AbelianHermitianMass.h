@@ -901,10 +901,15 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
       Nexp -= static_cast<int64_t>(mi + 1) * (mi / 2);
       fac /= HeckeGroupOrderSp<T>(mi, qK);
     } else {
+      // divided by (pi pi-bar)^{w / 2}, w of either sign (a block of
+      // negative scale when the form has denominators at P)
       ElemE<T> u = kv.second.second;
       int w = EValuation(u, K, q);
       for (int i = 0; i < w / 2; i++) {
         u = EMul(u, pinv, K);
+      }
+      for (int i = 0; i < -w / 2; i++) {
+        u = EMul(u, pipibar, K);
       }
       if ((mi * (mi - 1) / 2) % 2 == 1) {
         for (auto &x : u) {

@@ -210,6 +210,13 @@ hab_case s13m3 39 4 5/9
 hab_case s17m1 68 9 3/4
 hab_case s17m2 136 9,19 1950
 hab_case s5m19 95 4 500
+# the cyclic quartic CM field of conductor 13 (13 totally ramified, so
+# that a form with a denominator at the prime over 13 still has an integral
+# trace form): O_E^m with the form lambda I, lambda = 1 and lambda =
+# (13 + sqrt 13) / 26 (a Jordan block of scale -2), masses of Hecke.jl
+hab_case c13one2 13 1,3,9 7/24
+hab_case c13neg2 13 1,3,9 7/24
+hab_case c13neg3 13 1,3,9 111/208
 # The local masses (the products of the local factors) of quadratic
 # lattices over totally real abelian fields, as given by Hecke.jl
 # (local_mass): odd primes ramified or split, the dyadic primes unramified
@@ -506,6 +513,13 @@ group_mass_case E8A4 D5 1/8
 # on the icosians and w on a second E8 (one class).
 group_mass_case Ico2 2I 1/28800
 group_mass_case Ico3 2I 67/72576000
+# C5 by the Coxeter element on A4^k: Hermitian lattices over Q(zeta_5)
+# whose form has a denominator at the prime over 5 (a Jordan block of
+# negative scale there); the masses are those of Hecke.jl, and the even
+# ranks were wrong before the unit of such a block was normalized.
+group_mass_case A4x2 C5 1/200
+group_mass_case A4x3 C5 1/6000
+group_mass_case A4x4 C5 13/720000
 group_mass_case IcoE8w G 1/18662400
 
 # The brute-force check for the groups <g, tau>, tau in C_{O(L)}(g); the

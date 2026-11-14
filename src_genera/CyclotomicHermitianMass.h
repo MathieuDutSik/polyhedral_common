@@ -2107,9 +2107,14 @@ HermitianLocalFactorRamified(MyMatrix<T> const &B,
       // det = (pi pi-bar)^{s mi / 2} u
       ElemE<T> u = kv.second.second;
       int w = EValuation(u, K, q);
+      // divided by (pi pi-bar)^{w / 2}, w of either sign (a block of
+      // negative scale when the form has denominators at P)
       ElemE<T> pinv = EInv(pipibar, K);
       for (int i = 0; i < w / 2; i++) {
         u = EMul(u, pinv, K);
+      }
+      for (int i = 0; i < -w / 2; i++) {
+        u = EMul(u, pipibar, K);
       }
       // the discriminant (-1)^{m_i (m_i - 1) / 2} det, as in Hecke.jl
       Tint res_u = EResidue(u, q);

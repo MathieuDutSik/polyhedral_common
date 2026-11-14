@@ -96,6 +96,8 @@ run_case E8E8D5 D5 2
 run_case Ico2 Ico2_2I 1
 run_case Ico3 Ico3_2I 2
 run_case IcoE8w IcoE8w_G 1
+# C5 by the Coxeter element on A4^4: two classes, the mass of Hecke.jl
+run_case A4x4 A4x4_C5 2
 
 # The even unimodular lattices of rank 8 and 16 with a structure over Z[w]
 # and Z[i] (Hentschel-Krieg-Nebe, Corollaries 1 and 2): 1, 1, 1 and 3 classes
