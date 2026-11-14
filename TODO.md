@@ -514,3 +514,24 @@ to the zero vector, and `LinPolytopeIntegral_Stabilizer` (through
 `SublatticeBasisChange` in `src_group/MatrixGroup.h`) requires a full-rank
 configuration, so an Eigen size assertion fires. To be fixed together with
 the connectivity test.
+
+## src_genera: recognition by the BV invariant, untested
+
+`recognition = "invariant"` and `isomorphism_bucket = "bv"` in
+`GENUS_Enumerate` (2026-11-14) use the invariant of Chenevier and Taïbi
+(`LatticeBV` in `src_latt/LatticeInvariantBV.h`: the vectors of norm at most
+M up to sign, A_ij = f(b(v_i, v_j)), the sorted rows of (A, A^2) hashed).
+They compile but have not been run. To do:
+
+* a CI case, e.g. `rank8_det25` with `recognition = "invariant"`;
+* the genera of Chenevier-Taïbi that failed with the canonical forms (memory
+  of the Leech-like classes): p1_n25, p3_n25, p3_n26, p5_n24, p5_n25 in
+  `Hard_instances/chenevier_taibi_benchmark`; check that the invariant
+  separates the classes (the mass closes) and compare the time with
+  `recognition = "canonical"`;
+* which `bv_function` (parity, absolute, modular) separates the classes of
+  even genera, where the parity graph can be poor; Chenevier and Taïbi glue
+  their even genera of determinant p, 2p into odd unimodular lattices with
+  marked vectors, which is not ported;
+* the choice of M (`bv_min_vectors`): N too small separates badly, N large
+  costs N^3.

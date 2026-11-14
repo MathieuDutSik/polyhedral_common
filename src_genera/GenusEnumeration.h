@@ -12,6 +12,7 @@
 #include "LatticeAutomorphismVinberg.h"
 #include "LatticePleskenSouvignier.h"
 #include "InvariantVectorFamily.h"
+#include "LatticeInvariantBV.h"
 #include "ClassicLLL.h"
 #include "Positivity.h"
 #include "Namelist.h"
@@ -612,13 +613,24 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
   How the classes are told apart and their automorphism groups computed, by
   the methods of src_latt/LatticeMethods.h.
 
-  by_canonical true: a canonical Gram matrix per neighbor (canonical), and a
-  known class is a dictionary lookup. by_canonical false: the neighbors are
-  bucketed by a cheap isometry invariant and, within a bucket, told apart by
-  the isometry test (isomorphism), as in the isomorphism strategy of
-  Hecke.jl; the Plesken-Souvignier test is pruned by the automorphism group
-  of the known class. The automorphism groups (automorphism) give the orders
-  for the mass and the generators for the orbits of projective points.
+  GenusRecognition::Canonical: a canonical Gram matrix per neighbor
+  (canonical), and a known class is a dictionary lookup.
+  GenusRecognition::Isomorphism: the neighbors are bucketed by a cheap
+  isometry invariant (that of GenusIsoInvariant, or the BV invariant of
+  src_latt/LatticeInvariantBV.h with bucket_bv) and, within a bucket, told
+  apart by the isometry test (isomorphism), as in the isomorphism strategy
+  of Hecke.jl; the Plesken-Souvignier test is pruned by the automorphism
+  group of the known class.
+  GenusRecognition::Invariant: a neighbor is a known class iff its BV
+  invariant is that of a known class, with no isometry test, as Chenevier
+  and Taibi do. Different invariants prove that the classes are distinct,
+  so the classes found are pairwise non-isometric and the mass never
+  overshoots; two classes with the same invariant would be counted once, the
+  mass would fall short and the result would be reported incomplete. When
+  the mass closes, the list is therefore certified complete, whatever the
+  quality of the invariant.
+  The automorphism groups (automorphism) give the orders for the mass and
+  the generators for the orbits of projective points.
 
   The defaults are the Weyl-chamber methods (Brandhorst-Hofmann, Prop. 7.6)
   for both: the characteristic vectors in one Weyl chamber and the simple
@@ -628,8 +640,14 @@ GenusNeighbor(MyMatrix<Tint> const &G, std::vector<int> const &v_line, int p,
   the automorphism group 38 and 16 ms against 73 and 35 for vinberg, the
   next fastest.
  */
+enum class GenusRecognition { Canonical, Isomorphism, Invariant };
+
 struct GenusMethods {
-  bool by_canonical = true;
+  GenusRecognition recognition = GenusRecognition::Canonical;
+  // with Isomorphism, the buckets by the BV invariant rather than by
+  // GenusIsoInvariant
+  bool bucket_bv = false;
+  LatticeBVOptions bv;
   LatticeMethodChoice canonical = LatticeStabCanIsomMethod::WeylChamber;
   LatticeMethodChoice isomorphism = LatticeStabCanIsomMethod::PleskenSouvignier;
   LatticeMethodChoice automorphism = LatticeStabCanIsomMethod::WeylChamber;
@@ -1101,6 +1119,10 @@ struct GenusEnumerationState {
   // invariant.
   std::map<MyMatrix<T>, size_t> MapCanonic;
   std::map<std::map<T, int>, std::vector<size_t>> MapInvariant;
+  // the buckets by the BV invariant (Isomorphism with bucket_bv), and the
+  // classes by their BV invariant (Invariant)
+  std::map<LatticeBVInvariant<T>, std::vector<size_t>> MapBucketBV;
+  std::map<LatticeBVInvariant<T>, size_t> MapBV;
   std::vector<MyMatrix<T>> ListGramWork;
   // The automorphism data is kept alongside: it is the expensive part, it is
   // needed twice (the order for the mass, the generators for the orbits of
@@ -1211,7 +1233,7 @@ struct GenusEnumerationState {
   // lattice need not be reduced: the methods of LatticeMethods.h reduce their
   // input.
   std::pair<bool, size_t> insert_index(MyMatrix<T> const &GramMat) {
-    if (methods.by_canonical) {
+    if (methods.recognition == GenusRecognition::Canonical) {
       MyMatrix<T> GramCan =
           GenusCanonicalGram<T, Tint, Tgroup>(GramMat, methods.canonical, os);
       // One search of the map: the entry is created here and its index
@@ -1225,11 +1247,25 @@ struct GenusEnumerationState {
       iter->second = add(iter->first, info);
       return {true, iter->second};
     }
+    if (methods.recognition == GenusRecognition::Invariant) {
+      // By the BV invariant alone, see GenusMethods.
+      LatticeBVInvariant<T> bv = LatticeBV<T, Tint>(GramMat, methods.bv, os);
+      auto [iter, is_new] = MapBV.try_emplace(bv, 0);
+      if (!is_new) {
+        return {false, iter->second};
+      }
+      LatticeAutInfo<T, Tint, Tgroup> info =
+          GetLatticeAutInfo<T, Tint, Tgroup>(GramMat, methods, os);
+      iter->second = add(GramMat, info);
+      return {true, iter->second};
+    }
     // By isometry: bucket by the cheap invariant, then run the isometry
     // test against the same-invariant classes, with the automorphism
     // generators of the known class.
-    std::map<T, int> inv = GenusIsoInvariant<T, Tint>(GramMat, os);
-    std::vector<size_t> &bucket = MapInvariant[inv];
+    std::vector<size_t> &bucket =
+        methods.bucket_bv
+            ? MapBucketBV[LatticeBV<T, Tint>(GramMat, methods.bv, os)]
+            : MapInvariant[GenusIsoInvariant<T, Tint>(GramMat, os)];
     for (size_t idx : bucket) {
       std::vector<MyMatrix<T>> LM1{GramMat};
       std::vector<MyMatrix<T>> LM2{result.ListGram[idx]};
@@ -1939,8 +1975,27 @@ The prime of out_prime, 0 for the smallest prime not dividing det. Ignored\n\
 by iterate and random_walk";
     ListStringValues_doc["recognition"] = "Default: canonical\n\
 How a known class is recognized, see GenusMethods: canonical (by the\n\
-canonical form of canonical_method) or isomorphism (by the isometry test\n\
-of isomorphism_method within the buckets of a cheap invariant)";
+canonical form of canonical_method), isomorphism (by the isometry test\n\
+of isomorphism_method within the buckets of a cheap invariant, see\n\
+isomorphism_bucket) or invariant (by the BV invariant alone, with no\n\
+isometry test: the result is certified when the mass closes, and reported\n\
+incomplete if two classes share an invariant)";
+    ListStringValues_doc["isomorphism_bucket"] = "Default: shortest_family\n\
+The invariant of the buckets of recognition isomorphism: shortest_family\n\
+(the norms of the iterated shortest vector family) or bv (the BV\n\
+invariant of src_latt/LatticeInvariantBV.h, finer and cubic in the number\n\
+of short vectors)";
+    ListStringValues_doc["bv_function"] = "Default: parity\n\
+The function of the inner products in the BV invariant: parity (b mod 2,\n\
+bit operations), absolute (|b|) or modular (+-b mod bv_modulus)";
+    ListIntValues_doc["bv_modulus"] = "Default: 3\n\
+The modulus of bv_function modular";
+    ListIntValues_doc["bv_min_vectors"] = "Default: 0\n\
+The BV invariant uses the vectors of norm at most M, up to sign, for the\n\
+least M giving at least this many of them; 0 for twice the rank";
+    ListIntValues_doc["bv_max_vectors"] = "Default: 20000\n\
+Above this number of vectors the BV invariant stops with an error rather\n\
+than take a cubic time";
     ListStringValues_doc["canonical_method"] =
         "Default: weyl_chamber\nThe method of the canonical form, with "
         "recognition canonical. The methods are:" +
@@ -2040,14 +2095,38 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
   }
   std::string recognition = BlockMETHOD.get_string("recognition");
   if (recognition == "canonical") {
-    spec.methods.by_canonical = true;
+    spec.methods.recognition = GenusRecognition::Canonical;
   } else if (recognition == "isomorphism") {
-    spec.methods.by_canonical = false;
+    spec.methods.recognition = GenusRecognition::Isomorphism;
+  } else if (recognition == "invariant") {
+    spec.methods.recognition = GenusRecognition::Invariant;
   } else {
     std::cerr << "GENUS: unrecognized recognition \"" << recognition
-              << "\". Allowed: canonical, isomorphism\n";
+              << "\". Allowed: canonical, isomorphism, invariant\n";
     throw TerminalException{1};
   }
+  std::string bucket = BlockMETHOD.get_string("isomorphism_bucket");
+  if (bucket == "shortest_family") {
+    spec.methods.bucket_bv = false;
+  } else if (bucket == "bv") {
+    spec.methods.bucket_bv = true;
+  } else {
+    std::cerr << "GENUS: unrecognized isomorphism_bucket \"" << bucket
+              << "\". Allowed: shortest_family, bv\n";
+    throw TerminalException{1};
+  }
+  spec.methods.bv.function =
+      ParseBVFunction(BlockMETHOD.get_string("bv_function"));
+  spec.methods.bv.modulus = BlockMETHOD.get_int("bv_modulus");
+  int bv_min = BlockMETHOD.get_int("bv_min_vectors");
+  int bv_max = BlockMETHOD.get_int("bv_max_vectors");
+  if (bv_min < 0 || bv_max <= 0) {
+    std::cerr << "GENUS: bv_min_vectors must be nonnegative and "
+                 "bv_max_vectors positive\n";
+    throw TerminalException{1};
+  }
+  spec.methods.bv.min_vectors = static_cast<size_t>(bv_min);
+  spec.methods.bv.max_vectors = static_cast<size_t>(bv_max);
   spec.methods.canonical = ParseLatticeMethodChoice(
       BlockMETHOD.get_string("canonical_method"));
   spec.methods.isomorphism = ParseLatticeMethodChoice(
@@ -2150,7 +2229,8 @@ void WriteGenusEnumerationResult(
     if (!result.complete) {
       os << "The accumulated mass is short of the target. Either the genus "
          << "has several spinor genera and one seed per spinor genus is "
-         << "needed, or the prime is not suitable.\n";
+         << "needed, or the prime is not suitable, or, with recognition "
+         << "invariant, two classes share their BV invariant.\n";
     }
     return;
   }

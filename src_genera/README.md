@@ -50,8 +50,11 @@ full list of entries, their defaults and their documentation.
 * `METHOD` -- the `strategy`: `out_prime` (the default, one prime, `prime`
   or the smallest one not dividing det), `iterate` or `random_walk` (see
   `NeighborStrategy` in `GenusEnumeration.h`); the `recognition` of a known
-  class, by its canonical form (`canonical`) or by the isometry test within
-  the buckets of a cheap invariant (`isomorphism`), with the
+  class, by its canonical form (`canonical`), by the isometry test within
+  the buckets of a cheap invariant (`isomorphism`, the buckets being chosen
+  by `isomorphism_bucket`), or by the BV invariant of Chenevier and Taïbi
+  alone (`invariant`, see `src_latt/LatticeInvariantBV.h` and the entries
+  `bv_function`, `bv_modulus`, `bv_min_vectors`, `bv_max_vectors`), with the
   `canonical_method`, `isomorphism_method` and `automorphism_method` of
   `src_latt/LatticeMethods.h`, the same methods as `LATT_Canonicalize`,
   `LATT_Isomorphism` and `LATT_Automorphism` (see `GenusMethods`); `hecke`
@@ -86,6 +89,19 @@ The enumeration accumulates that sum and stops on equality. Since the mass is
 supplied independently, this is a proof of completeness rather than a
 termination heuristic: an error in the neighbor construction cannot return a
 short list silently, it shows up as a mass that never closes.
+
+## Recognition by an invariant
+
+With `recognition = "invariant"` a neighbor is taken for a known class when
+its BV invariant (Chenevier-Taïbi, cubic in the number of short vectors) is
+that of a known class; no canonical form and no isometry test are computed,
+only one automorphism group per class. Different invariants prove that two
+lattices are not isometric, so the classes found are distinct and the mass
+cannot overshoot. If two classes share an invariant, one of them is lost,
+the mass falls short and the run reports `complete = false`: switch then to
+`isomorphism` with `isomorphism_bucket = "bv"`, which uses the same invariant
+for the buckets and settles the collisions by the isometry test. When the
+mass closes, the list is certified complete either way.
 
 ## Spinor genera
 
