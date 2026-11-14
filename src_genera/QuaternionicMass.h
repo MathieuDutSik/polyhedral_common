@@ -111,21 +111,21 @@ template <typename Tint>
 MyMatrix<Tint> IntegralKernelOfConditions(MyMatrix<Tint> const &Eq) {
   int N = Eq.rows();
   int n_cond = Eq.cols();
-  int64_t const p = 2147483629;
+  T_small_prime const p = 2147483629;
   auto fallback = [&]() -> MyMatrix<Tint> {
     return NullspaceIntTrMat(MyMatrix<Tint>(Eq.transpose()));
   };
   std::vector<int> cols = ColumnRankProfileModPrime(Eq);
   int r = static_cast<int>(cols.size());
   // the reduced echelon form modulo p of the selected conditions (rows)
-  ModRowsI64 A(r, std::vector<int64_t>(N));
+  ModMatrix A(r, N);
   for (int j = 0; j < r; j++) {
     for (int i = 0; i < N; i++) {
-      A[j][i] = ResModOfI64(Eq(i, cols[j]), p);
+      A(j, i) = ResModOf(Eq(i, cols[j]), p);
     }
   }
-  RowSpaceModPI64 rs = ComputeRowSpaceModPI64(std::move(A), p);
-  ModRowsI64 const &E = rs.basis;
+  RowSpaceModP rs = ComputeRowSpaceModP(std::move(A), p);
+  ModMatrix const &E = rs.basis;
   std::vector<int> pivcol(rs.pivots.begin(), rs.pivots.end());
   std::vector<bool> is_pivot(N, false);
   for (int col : pivcol) {
@@ -143,8 +143,9 @@ MyMatrix<Tint> IntegralKernelOfConditions(MyMatrix<Tint> const &Eq) {
   }
   // the fractions n/m with |n|, m below sqrt(p/2) from a residue
   int64_t const bound = 32767;
-  auto reconstruct = [&](int64_t a) -> std::optional<std::pair<int64_t, int64_t>> {
-    int64_t r0 = p, r1 = a, t0 = 0, t1 = 1;
+  auto reconstruct = [&](T_residue a)
+      -> std::optional<std::pair<int64_t, int64_t>> {
+    int64_t r0 = ResToSigned(p), r1 = ResToSigned(a), t0 = 0, t1 = 1;
     while (r1 > bound) {
       int64_t q = r0 / r1;
       int64_t r2 = r0 - q * r1;
@@ -168,7 +169,7 @@ MyMatrix<Tint> IntegralKernelOfConditions(MyMatrix<Tint> const &Eq) {
   Tint D(1);
   for (int f = 0; f < d; f++) {
     for (size_t i = 0; i < pivcol.size(); i++) {
-      int64_t a = ResNegI64(E[i][freecol[f]], p);
+      T_residue a = ResNeg(E(static_cast<int>(i), freecol[f]), p);
       std::optional<std::pair<int64_t, int64_t>> opt = reconstruct(a);
       if (!opt) {
         return fallback();
@@ -612,26 +613,23 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           Gt(i, j) = QuatTrTrd(O[i], O[j], r);
         }
       }
-      ModRowsI64 Gp(d, std::vector<int64_t>(d));
-      for (int i = 0; i < d; i++) {
-        for (int j = 0; j < d; j++) {
-          Gp[i][j] = ResidueOfInteger(Gt(i, j), p);
-        }
-      }
-      RowSpaceModPI64 rsI = ComputeRowSpaceModPI64(Gp, p);
+      T_small_prime p_u = static_cast<T_small_prime>(p);
+      RowSpaceModP rsI = ComputeRowSpaceModP(ModMatrixOfMatrix(Gt, p_u), p_u);
+      // the kernel vectors, one per free column in increasing order
+      ModMatrix kerI = FreeKernelBasisModP(rsI, d, p_u);
       std::vector<bool> pivI(d, false);
       for (size_t pv : rsI.pivots) {
         pivI[pv] = true;
       }
       std::vector<MyVector<T>> Igen;
+      int i_kerI = 0;
       for (int f = 0; f < d; f++) {
         if (!pivI[f]) {
-          MyVector<T> v = ZeroVector<T>(d);
-          v(f) = T(1);
-          for (size_t i2 = 0; i2 < rsI.pivots.size(); i2++) {
-            v(static_cast<int>(rsI.pivots[i2])) =
-                ScalarFromInt64<T>(ResModI64(-rsI.basis[i2][f], p));
+          MyVector<T> v(d);
+          for (int a = 0; a < d; a++) {
+            v(a) = UniversalScalarConversion<T, T_residue>(kerI(i_kerI, a));
           }
+          i_kerI++;
           Igen.push_back(v);
         }
         MyVector<T> w = ZeroVector<T>(d);
@@ -755,13 +753,14 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         has_OK = (4 * r * cc == k) && (T_abs(DeterminantMat(Gz)) == dK);
       }
       // the x = sum a_i w_i / p in O^#: sum_i a_i Tr trd(w_i w_j) = 0 mod p
-      ModRowsI64 Gm(d, std::vector<int64_t>(d));
+      T_small_prime p_u = static_cast<T_small_prime>(p);
+      MyMatrix<T> GmT(d, d);
       for (int i = 0; i < d; i++) {
         for (int j = 0; j < d; j++) {
-          T v = QuatTrTrd(O[i], O[j], r);
-          Gm[j][i] = ResidueOfInteger(v, p);
+          GmT(j, i) = QuatTrTrd(O[i], O[j], r);
         }
       }
+      ModMatrix Gm = ModMatrixOfMatrix(GmT, p_u);
       /*
         With O_K in O: an overorder O' at p has an x outside O with a x in
         O, a the product of the primes of K over p (O'/O is an O_K-module
@@ -800,7 +799,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           pm *= p;
         }
         // the Frobenius z -> z^{p^m} on O_K / p O_K, columns
-        ModRowsI64 Fr(cc, std::vector<int64_t>(cc));
+        MyMatrix<T> FrT(cc, cc);
         for (int t = 0; t < cc; t++) {
           MyMatrix<T> Zp = IdentityMat<T>(k);
           for (int64_t e2 = 0; e2 < pm; e2++) {
@@ -808,26 +807,19 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           }
           MyVector<T> cz = coordsZ(Zp);
           for (int u = 0; u < cc; u++) {
-            Fr[u][t] = ResidueOfInteger(cz(u), p);
+            FrT(u, t) = cz(u);
           }
         }
-        RowSpaceModPI64 rf = ComputeRowSpaceModPI64(Fr, p);
-        std::vector<bool> pivf(cc, false);
-        for (size_t pv : rf.pivots) {
-          pivf[pv] = true;
-        }
-        for (int f = 0; f < cc; f++) {
-          if (pivf[f]) {
-            continue;
-          }
-          std::vector<int64_t> v(cc, 0);
-          v[f] = 1;
-          for (size_t i2 = 0; i2 < rf.pivots.size(); i2++) {
-            v[rf.pivots[i2]] = ResModI64(-rf.basis[i2][f], p);
-          }
+        RowSpaceModP rf =
+            ComputeRowSpaceModP(ModMatrixOfMatrix(FrT, p_u), p_u);
+        ModMatrix kerF = FreeKernelBasisModP(rf, cc, p_u);
+        for (int i_f = 0; i_f < kerF.rows(); i_f++) {
           MyMatrix<T> nz = ZeroMatrix<T>(k, k);
           for (int t = 0; t < cc; t++) {
-            nz += ScalarFromInt64<T>(v[t]) * Zs[t];
+            if (kerF(i_f, t) != 0) {
+              nz += UniversalScalarConversion<T, T_residue>(kerF(i_f, t)) *
+                    Zs[t];
+            }
           }
           // the coordinates of nz y in O, 0 modulo p
           std::vector<MyVector<T>> cols_n;
@@ -835,36 +827,21 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
             cols_n.push_back(coordsO(MyMatrix<T>(nz * O[i])));
           }
           for (int t = 0; t < d; t++) {
-            std::vector<int64_t> row(d);
+            ModVector row(d);
             for (int i = 0; i < d; i++) {
-              row[i] = ResidueOfInteger(cols_n[i](t), p);
+              row[i] = ResModOf(GetNumerator_z(cols_n[i](t)), p_u);
             }
-            Gm.push_back(row);
+            AppendModRow(Gm, row);
           }
         }
       }
-      RowSpaceModPI64 rs = ComputeRowSpaceModPI64(Gm, p);
-      std::vector<bool> is_piv(d, false);
-      for (size_t pv : rs.pivots) {
-        is_piv[pv] = true;
-      }
-      ModRowsI64 ker;
-      for (int f = 0; f < d; f++) {
-        if (is_piv[f]) {
-          continue;
-        }
-        std::vector<int64_t> v(d, 0);
-        v[f] = 1;
-        for (size_t i = 0; i < rs.pivots.size(); i++) {
-          v[rs.pivots[i]] = ResModI64(-rs.basis[i][f], p);
-        }
-        ker.push_back(v);
-      }
+      ModMatrix ker = FreeKernelBasisModP(ComputeRowSpaceModP(Gm, p_u), d, p_u);
+      size_t n_ker = static_cast<size_t>(ker.rows());
 #ifdef DEBUG_QUATERNIONIC_MASS
     os << "QUAT_MASS: time " << "kernel computed" << " " << std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count() << "\n";
 #endif
       size_t n_el = 1;
-      for (size_t i = 0; i < ker.size(); i++) {
+      for (size_t i = 0; i < n_ker; i++) {
         n_el *= static_cast<size_t>(p);
         if (n_el > bounds.max_overorder) {
 #ifdef DEBUG_QUATERNIONIC_MASS
@@ -911,32 +888,32 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
 #ifdef DEBUG_QUATERNIONIC_MASS
     os << "QUAT_MASS: time " << "filters precomputed" << " " << std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count() << "\n";
 #endif
-      std::vector<int64_t> coef(ker.size(), 0), a(d);
+      std::vector<int64_t> coef(n_ker, 0), a(d);
       size_t n_q2 = 0, n_t3 = 0, n_pair = 0, n_sq = 0, n_closure = 0;
       for (size_t s = 1; s < n_el && !enlarged; s++) {
         size_t tt = s;
-        for (size_t i = 0; i < ker.size(); i++) {
+        for (size_t i = 0; i < n_ker; i++) {
           coef[i] = static_cast<int64_t>(tt % static_cast<size_t>(p));
           tt /= static_cast<size_t>(p);
         }
         // x and lambda x (lambda prime to p) generate the same order at p:
         // one coefficient vector per line, the last nonzero one being 1
         {
-          size_t i_last = ker.size();
-          for (size_t i = ker.size(); i-- > 0;) {
+          size_t i_last = n_ker;
+          for (size_t i = n_ker; i-- > 0;) {
             if (coef[i] != 0) {
               i_last = i;
               break;
             }
           }
-          if (i_last == ker.size() || coef[i_last] != 1) {
+          if (i_last == n_ker || coef[i_last] != 1) {
             continue;
           }
         }
         for (int i = 0; i < d; i++) {
           int64_t ai = 0;
-          for (size_t j = 0; j < ker.size(); j++) {
-            ai = (ai + coef[j] * ker[j][i]) % p;
+          for (size_t j = 0; j < n_ker; j++) {
+            ai = (ai + coef[j] * ResToSigned(ker(static_cast<int>(j), i))) % p;
           }
           a[i] = ai;
         }
@@ -1043,7 +1020,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
       }
 #ifdef DEBUG_QUATERNIONIC_MASS
       os << "QUAT_MASS: overorder candidates at p=" << p << ": " << n_el
-         << " (space of dimension " << ker.size() << "), passing Tr y^2 "
+         << " (space of dimension " << n_ker << "), passing Tr y^2 "
          << n_q2 << ", Tr y^2 w " << n_t3 << ", (y w)(y w') " << n_pair
          << ", y^2 " << n_sq << ", closures " << n_closure << "\n";
 #endif
