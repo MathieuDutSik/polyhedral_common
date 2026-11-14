@@ -432,7 +432,7 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
     if (bad.count(p) == 0 && p > 2 * n) {
       lp = GP.local(p);
     } else if (bad.count(p) == 0) {
-      PolyQ fq = PolyReduce(PolyQ(K.Phi.begin(), K.Phi.end()), p);
+      PolyQ fq = PolyReduceSigned(K.Phi, p);
       PolyQ dq;
       for (auto const &c : dint) {
         Tint r = ResInt(c, UniversalScalarConversion<Tint, int64_t>(p));
@@ -473,7 +473,7 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
       if (lg) {
         ElemE<T> dp = disc_of(*lg, LocalOKGram(B, *lg, p));
         for (auto const &[g, e] :
-             FactorModQWithMultiplicity(PolyQ(lg->f.begin(), lg->f.end()), p)) {
+             FactorModQWithMultiplicity(PolyReduceSigned(lg->f, p), p)) {
           bps.push_back({*lg, g, e, dp});
         }
       } else {

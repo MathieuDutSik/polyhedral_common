@@ -37,10 +37,11 @@
 // The Jordan invariants of a symmetric j x j matrix modulo p^k, p odd, as a
 // key: for v = 0, ..., k-1 the pair (count, Legendre symbol of the product),
 // then the number of entries of level >= k.
-inline std::vector<int> SymmetricOrbitKey(std::vector<int64_t> a, int j,
-                                          int64_t p, int k, int64_t mod) {
-  auto val = [&](int64_t x) -> int {
-    x = ResMod(x, mod);
+inline std::vector<int> SymmetricOrbitKey(std::vector<T_residue> a, int j,
+                                          T_small_prime p, int k,
+                                          T_residue mod) {
+  auto val = [&](T_residue x) -> int {
+    x %= mod;
     if (x == 0) {
       return k;
     }
@@ -52,7 +53,7 @@ inline std::vector<int> SymmetricOrbitKey(std::vector<int64_t> a, int j,
     return v;
   };
   std::vector<int> count(k + 1, 0);
-  std::vector<int64_t> prod(k, 1);
+  std::vector<T_residue> prod(k, 1);
   std::vector<bool> active(j, true);
   int n_active = j;
   while (n_active > 0) {
@@ -87,68 +88,65 @@ inline std::vector<int> SymmetricOrbitKey(std::vector<int64_t> a, int j,
       // column best_j to row and column i0
       int j0 = best_j;
       for (int c = 0; c < j; c++) {
-        a[i0 * j + c] = ResMod(a[i0 * j + c] + a[j0 * j + c], mod);
+        a[i0 * j + c] = ResAdd(a[i0 * j + c], a[j0 * j + c], mod);
       }
       for (int r = 0; r < j; r++) {
-        a[r * j + i0] = ResMod(a[r * j + i0] + a[r * j + j0], mod);
+        a[r * j + i0] = ResAdd(a[r * j + i0], a[r * j + j0], mod);
       }
     }
-    int64_t piv = ResMod(a[i0 * j + i0], mod);
+    T_residue piv = a[i0 * j + i0] % mod;
     int v = val(piv);
-    int64_t pv = MyPow<int64_t>(p, v);
-    int64_t u = piv / pv;
-    int64_t u_inv = ResInv(u, mod);
+    T_residue pv = MyPow<T_residue>(p, v);
+    T_residue u = piv / pv;
+    T_residue u_inv = ResInv(u, mod);
     // the Schur complement: a_rs <- a_rs - (a_ri / a_ii) a_is
     for (int r = 0; r < j; r++) {
       if (!active[r] || r == i0) {
         continue;
       }
-      int64_t ari = ResMod(a[r * j + i0], mod);
-      int64_t f = ResMul(ari / pv, u_inv, mod);
+      T_residue ari = a[r * j + i0] % mod;
+      T_residue f = ResMul(ari / pv, u_inv, mod);
       for (int c = 0; c < j; c++) {
         if (!active[c] || c == i0) {
           continue;
         }
-        a[r * j + c] = ResMod(a[r * j + c] - ResMul(f, a[i0 * j + c], mod), mod);
+        a[r * j + c] = ResSub(a[r * j + c], ResMul(f, a[i0 * j + c], mod), mod);
       }
     }
     count[v]++;
-    prod[v] = ResMul(prod[v], u, p);
+    prod[v] = ResMul(prod[v], u % p, p);
     active[i0] = false;
     n_active--;
   }
   std::vector<int> key;
   for (int v = 0; v < k; v++) {
     key.push_back(count[v]);
-    key.push_back(count[v] > 0 ? kronecker_symbol<int64_t>(prod[v], p) : 0);
+    key.push_back(count[v] > 0 ? KroneckerResidue(prod[v], p) : 0);
   }
   key.push_back(count[k]);
   return key;
 }
 
 struct SymmetricOrbits {
-  int64_t p;
+  T_small_prime p;
   int k;
   int j;
-  int64_t mod;
+  T_residue mod;
   std::map<std::vector<int>, int> index;
-  std::vector<std::vector<int64_t>> rep;
-  // H[class of c][C][A], keyed by the class of c
-  std::map<std::pair<int, int64_t>, std::vector<std::vector<int64_t>>> H;
+  std::vector<std::vector<T_residue>> rep;
+  // H[class of c][C][A], keyed by the class of c: the numbers of vectors
+  std::map<std::pair<int, T_residue>, std::vector<std::vector<int64_t>>> H;
   int n_orbit() const { return static_cast<int>(rep.size()); }
 };
 
 // All the orbits, with a diagonal representative of each.
-inline SymmetricOrbits BuildSymmetricOrbits(int64_t p, int k, int j) {
+inline SymmetricOrbits BuildSymmetricOrbits(T_small_prime p, int k, int j) {
   SymmetricOrbits so;
   so.p = p;
   so.k = k;
   so.j = j;
-  so.mod = MyPow<int64_t>(p, k);
-  int64_t nonres = 2;
-  while (kronecker_symbol<int64_t>(nonres, p) != -1) {
-    nonres++;
-  }
+  so.mod = MyPow<T_residue>(p, k);
+  T_residue nonres = LeastNonResidue(p);
   // the levels of the j diagonal entries, non-decreasing, level k for 0
   std::vector<int> levels(j, 0);
   std::function<void(int, int)> rec = [&](int pos, int min_level) -> void {
@@ -162,19 +160,19 @@ inline SymmetricOrbits BuildSymmetricOrbits(int64_t p, int k, int j) {
       }
       int n_present = static_cast<int>(present.size());
       for (int mask = 0; mask < (1 << n_present); mask++) {
-        std::vector<int64_t> M(j * j, 0);
+        std::vector<T_residue> M(j * j, 0);
         for (int ip = 0; ip < n_present; ip++) {
           int v = present[ip];
           bool minus = ((mask >> ip) & 1) != 0;
           int last = -1;
           for (int e = 0; e < j; e++) {
             if (levels[e] == v) {
-              M[e * j + e] = MyPow<int64_t>(p, v);
+              M[e * j + e] = MyPow<T_residue>(p, v);
               last = e;
             }
           }
           if (minus) {
-            M[last * j + last] = ResMul(MyPow<int64_t>(p, v), nonres, so.mod);
+            M[last * j + last] = ResMul(MyPow<T_residue>(p, v), nonres, so.mod);
           }
         }
         std::vector<int> key = SymmetricOrbitKey(M, j, p, k, so.mod);
@@ -196,33 +194,33 @@ inline SymmetricOrbits BuildSymmetricOrbits(int64_t p, int k, int j) {
 
 // H_c for the class (e, u) of a coefficient c = p^e u.
 inline std::vector<std::vector<int64_t>> const &
-SymmetricOrbitTransitions(SymmetricOrbits &so, int e, int64_t u) {
+SymmetricOrbitTransitions(SymmetricOrbits &so, int e, T_residue u) {
   auto key = std::make_pair(e, u);
   auto iter = so.H.find(key);
   if (iter != so.H.end()) {
     return iter->second;
   }
   int j = so.j;
-  int64_t mod = so.mod;
-  int64_t c = (e >= so.k) ? 0 : ResMul(MyPow<int64_t>(so.p, e), u, mod);
+  T_residue mod = so.mod;
+  T_residue c = (e >= so.k) ? 0 : ResMul(MyPow<T_residue>(so.p, e), u, mod);
   int no = so.n_orbit();
   std::vector<std::vector<int64_t>> H(no, std::vector<int64_t>(no, 0));
-  std::vector<int64_t> x(j, 0);
-  int64_t n_vec = MyPow<int64_t>(mod, j);
+  std::vector<T_residue> x(j, 0);
+  uint64_t n_vec = MyPow<uint64_t>(mod, j);
   for (int C = 0; C < no; C++) {
-    std::vector<int64_t> const &SC = so.rep[C];
-    for (int64_t idx = 0; idx < n_vec; idx++) {
-      int64_t w = idx;
+    std::vector<T_residue> const &SC = so.rep[C];
+    for (uint64_t idx = 0; idx < n_vec; idx++) {
+      uint64_t w = idx;
       for (int i = 0; i < j; i++) {
         x[i] = w % mod;
         w /= mod;
       }
-      std::vector<int64_t> M = SC;
+      std::vector<T_residue> M = SC;
       if (c != 0) {
         for (int r = 0; r < j; r++) {
-          int64_t cx = ResMul(c, x[r], mod);
+          T_residue cx = ResMul(c, x[r], mod);
           for (int s = 0; s < j; s++) {
-            M[r * j + s] = ResMod(M[r * j + s] - ResMul(cx, x[s], mod), mod);
+            M[r * j + s] = ResSub(M[r * j + s], ResMul(cx, x[s], mod), mod);
           }
         }
       }

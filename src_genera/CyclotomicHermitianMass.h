@@ -356,9 +356,9 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
   int f = MultiplicativeOrder(q, dp);
   std::vector<int64_t> PhiD = CyclotomicPolynomial(static_cast<int>(d));
   std::vector<int64_t> PhiDp = CyclotomicPolynomial(static_cast<int>(dp));
-  PolyQ phid_q = PolyReduce(PolyQ(PhiD.begin(), PhiD.end()), q);
+  PolyQ phid_q = PolyReduceSigned(PhiD, q);
   std::vector<PolyQ> gs =
-      EqualDegreeFactorization(PolyReduce(PolyQ(PhiDp.begin(), PhiDp.end()), q),
+      EqualDegreeFactorization(PolyReduceSigned(PhiDp, q),
                                f, q);
   // the precision: beyond the exponent of the discriminant group at q
   int vdet = RationalValuation(DeterminantMat(B), q);
@@ -385,7 +385,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
     PolyQ Qp = PolyDivModQ(phid_q, P, q).first;
     // e = Qp * (Qp^{-1} mod P): 1 modulo P, 0 modulo Qp
     PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
-    PolyZ<Tint> ez = UniversalStdVectorScalarConversion<Tint, int64_t>(e0);
+    PolyZ<Tint> ez = PolyZOfPolyQ<Tint>(e0);
     ez = PolyZReduce(ez, PhiD, Q);
     for (int it = 0; it < 64; it++) {
       PolyZ<Tint> e2 = PolyZReduce(PolyZMul(ez, ez), PhiD, Q);
@@ -436,18 +436,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
     }
     MyMatrix<T> E = idempotent_matrix(gs[i]);
     // the O_P-rank: the rank modulo q of E divided by [O_P : Z_q]
-    std::vector<std::vector<int64_t>> Emod(r, std::vector<int64_t>(r));
-    Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
-    for (int u = 0; u < r; u++) {
-      for (int v = 0; v < r; v++) {
-        Tint x = ResInt(GetNumerator_z(E(u, v)), qz);
-        if (x < 0) {
-          x += qz;
-        }
-        Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
-      }
-    }
-    int rk = RankModPrime(Emod, q);
+    int rk = static_cast<int>(RankModPrime(ModMatrixOfMatrix(E, q), q));
     int m = rk / static_cast<int>(e_ram * f);
     // len[k] = log_q |pi^k X|, X = e_P L^# / e_P L, until it vanishes
     std::vector<int> len;
@@ -549,7 +538,6 @@ template <typename T>
 inline HermitianLocalGram<T>
 ComputeHermitianLocalGram(MyMatrix<T> const &B,
                           MyMatrix<T> const &S, int64_t d, int64_t q) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
   int r = B.rows();
   CyclotomicField<T> K;
   K.d = d;
@@ -598,36 +586,19 @@ ComputeHermitianLocalGram(MyMatrix<T> const &B,
   // an O_P-basis among the standard vectors: independent modulo pi L
   MyMatrix<T> Id = IdentityMat<T>(r);
   MyMatrix<T> Pi = Id - S;
-  std::vector<std::vector<int64_t>> rows;
-  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
-  auto red = [&](T const &x) -> int64_t {
-    Tint v = ResInt(GetNumerator_z(x), qz);
-    if (v < 0) {
-      v += qz;
-    }
-    return UniversalScalarConversion<int64_t, Tint>(v);
-  };
-  for (int i = 0; i < r; i++) {
-    std::vector<int64_t> row(r);
-    for (int j = 0; j < r; j++) {
-      row[j] = red(Pi(i, j));
-    }
-    rows.push_back(row);
-  }
-  int base_rank = RankModPrime(rows, q);
+  ModMatrix rows = ModMatrixOfMatrix(Pi, q);
+  int base_rank = static_cast<int>(RankModPrime(rows, q));
   std::vector<int> chosen;
   for (int k = 0; k < r && static_cast<int>(chosen.size()) < m; k++) {
-    std::vector<std::vector<int64_t>> test = rows;
-    for (int c : chosen) {
-      std::vector<int64_t> e(r, 0);
-      e[c] = 1;
-      test.push_back(e);
+    // the rows of Pi and the unit vectors of chosen and of k
+    int n_c = static_cast<int>(chosen.size());
+    ModMatrix test = ZeroMatrix<T_residue>(r + n_c + 1, r);
+    test.topRows(r) = rows;
+    for (int i_c = 0; i_c < n_c; i_c++) {
+      test(r + i_c, chosen[i_c]) = 1;
     }
-    std::vector<int64_t> e(r, 0);
-    e[k] = 1;
-    test.push_back(e);
-    if (static_cast<int>(RankModPrime(test, q)) ==
-        base_rank + static_cast<int>(chosen.size()) + 1) {
+    test(r + n_c, k) = 1;
+    if (static_cast<int>(RankModPrime(test, q)) == base_rank + n_c + 1) {
       chosen.push_back(k);
     }
   }

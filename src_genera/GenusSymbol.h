@@ -3,6 +3,7 @@
 #define SRC_GENERA_GENUSSYMBOL_H_
 
 // clang-format off
+#include "ResidueArithmeticLegacy.h"
 #include "GeneraArithmetic.h"
 #include "LocalDensity.h"
 #include "LocalDensityOverlattice.h"
@@ -144,7 +145,7 @@ inline std::string GenusSymbolString(GenusSymbol const &s) {
       inner += comp(power(2, s.sym2[k][0]), s.sym2[k][1], s.sym2[k][2]);
       oddity += s.sym2[k][4];
     }
-    oddity = static_cast<int>(ResMod(oddity, 8));
+    oddity = static_cast<int>(ResModI64(oddity, 8));
     if (j == i + 1) {
       str += inner + "_{" + std::to_string(oddity) + "}";
     } else {
@@ -174,7 +175,7 @@ std::vector<std::array<int, 3>> OddPrimeSymbolOfGram(MyMatrix<T> const &G,
       iter = levels.emplace(c.val, std::make_pair(0, int64_t(1))).first;
     }
     iter->second.first++;
-    iter->second.second = ResMul(iter->second.second, c.unit, p);
+    iter->second.second = ResMulI64(iter->second.second, c.unit, p);
   }
   std::vector<std::array<int, 3>> res;
   for (auto const &[k, rp] : levels) {
@@ -319,7 +320,7 @@ template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) 
       }
       pos++;
       int t = std::stoi(read_item());
-      compart[0][4] = static_cast<int>(ResMod(t, 8));
+      compart[0][4] = static_cast<int>(ResModI64(t, 8));
       comps2.insert(comps2.end(), compart.begin(), compart.end());
       continue;
     }
@@ -336,7 +337,7 @@ template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) 
       } else {
         comps2.push_back({static_cast<int>(k), static_cast<int>(r),
                           static_cast<int>(sign), 1,
-                          static_cast<int>(ResMod(std::stoi(sub), 8))});
+                          static_cast<int>(ResModI64(std::stoi(sub), 8))});
       }
     } else {
       if (pos < str.size() && str[pos] == '_') {
@@ -786,15 +787,15 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
   auto add_row = [&](int k, int j, int64_t f) -> void {
     // e_k <- e_k + f e_j
     for (int c = 0; c < m; c++) {
-      W[k][c] = ResMod(W[k][c] + f * W[j][c], p);
+      W[k][c] = ResModI64(W[k][c] + f * W[j][c], p);
     }
     for (int c = 0; c < m; c++) {
-      M[k][c] = ResMod(M[k][c] + f * M[j][c], p);
+      M[k][c] = ResModI64(M[k][c] + f * M[j][c], p);
     }
     for (int c = 0; c < m; c++) {
       M[c][k] = M[k][c];
     }
-    M[k][k] = ResMod(M[k][k] + f * M[j][k], p);
+    M[k][k] = ResModI64(M[k][k] + f * M[j][k], p);
   };
   std::vector<int64_t> delta;
   for (int k = 0; k < m; k++) {
@@ -820,10 +821,10 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
         }
       }
     }
-    int64_t inv = ResInv(M[k][k], p);
+    int64_t inv = ResInvI64(M[k][k], p);
     for (int i = k + 1; i < m; i++) {
       if (M[i][k] != 0) {
-        add_row(i, k, ResMod(-ResMul(M[i][k], inv, p), p));
+        add_row(i, k, ResModI64(-ResMulI64(M[i][k], inv, p), p));
       }
     }
     delta.push_back(M[k][k]);
@@ -833,14 +834,14 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
     std::vector<int64_t> v(m, 0);
     for (auto const &[i, f] : terms) {
       for (int c = 0; c < m; c++) {
-        v[c] = ResMod(v[c] + ResMul(f, W[i][c], p), p);
+        v[c] = ResModI64(v[c] + ResMulI64(f, W[i][c], p), p);
       }
     }
     return v;
   };
   for (int i = 0; i < m; i++) {
     for (int j = i + 1; j < m; j++) {
-      int64_t r = ResMul(p - delta[i], ResInv(delta[j], p), p);
+      int64_t r = ResMulI64(p - delta[i], ResInvI64(delta[j], p), p);
       if (kronecker_symbol<int64_t>(r, p) == 1) {
         return combine({{i, 1}, {j, SqrtModPrime(r, p)}});
       }
@@ -848,10 +849,10 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
   }
   if (m >= 3) {
     // delta_0 + delta_1 y^2 + delta_2 z^2 = 0 has a solution
-    int64_t inv2 = ResInv(delta[2], p);
+    int64_t inv2 = ResInvI64(delta[2], p);
     for (int64_t y = 0; y < p; y++) {
-      int64_t val = ResMod(delta[0] + ResMul(delta[1], ResMul(y, y, p), p), p);
-      int64_t r = ResMul(p - val, inv2, p);
+      int64_t val = ResModI64(delta[0] + ResMulI64(delta[1], ResMulI64(y, y, p), p), p);
+      int64_t r = ResMulI64(p - val, inv2, p);
       if (r == 0 || kronecker_symbol<int64_t>(r, p) == 1) {
         return combine({{0, 1}, {1, y}, {2, SqrtModPrime(r, p)}});
       }
@@ -869,7 +870,8 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
 template <typename T, typename Tint>
 std::optional<std::vector<int64_t>>
 IsotropicRadicalVector(MyMatrix<T> const &G, int64_t p) {
-  std::vector<std::vector<int64_t>> R = KernelBasisModP<T, Tint>(G, p);
+  std::vector<std::vector<int64_t>> R =
+      ModRowsOfModMatrixI64(KernelBasisModP(G, p));
   int m = R.size();
   int n = G.rows();
   if (m == 0) {
@@ -890,7 +892,7 @@ IsotropicRadicalVector(MyMatrix<T> const &G, int64_t p) {
     std::vector<int64_t> y(n, 0);
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < n; j++) {
-        y[j] = ResMod(y[j] + c[i] * R[i][j], p);
+        y[j] = ResModI64(y[j] + c[i] * R[i][j], p);
       }
     }
     return y;
@@ -938,7 +940,7 @@ IsotropicRadicalVector(MyMatrix<T> const &G, int64_t p) {
           }
         }
       }
-      if (ResMod(norm, 8) == 0) {
+      if (ResModI64(norm, 8) == 0) {
         return combine(c);
       }
     }
@@ -954,9 +956,9 @@ void GoUp(SymbolLattice<T> &L, std::vector<int64_t> y, int64_t p) {
   while (y[k] == 0) {
     k++;
   }
-  int64_t inv = ResInv(y[k], p);
+  int64_t inv = ResInvI64(y[k], p);
   for (auto &x : y) {
-    x = ResMul(x, inv, p);
+    x = ResMulI64(x, inv, p);
   }
   MyMatrix<T> E = IdentityMat<T>(n);
   T p_T(static_cast<long>(p));
@@ -1086,7 +1088,7 @@ std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,
     std::vector<int64_t> f(n, 0);
     for (auto const &[i, l] : c) {
       for (int r = 0; r < n; r++) {
-        f[r] = ResMod(f[r] + ResMul(Qp[r][i], l, p), p);
+        f[r] = ResModI64(f[r] + ResMulI64(Qp[r][i], l, p), p);
       }
     }
     int k = 0;
@@ -1096,9 +1098,9 @@ std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,
     if (k == n) {
       return;
     }
-    int64_t inv = ResInv(f[k], p);
+    int64_t inv = ResInvI64(f[k], p);
     for (auto &x : f) {
-      x = ResMul(x, inv, p);
+      x = ResMulI64(x, inv, p);
     }
     if (seen.insert(f).second) {
       res.push_back(f);
@@ -1112,7 +1114,7 @@ std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,
       for (int j = i + 1; j < n; j++) {
         std::vector<int64_t> ls = lambdas;
         if (p != 2 && diag[i] != 0 && diag[j] != 0 && cls[i].val == cls[j].val) {
-          int64_t r = ResMul(p - cls[i].unit, ResInv(cls[j].unit, p), p);
+          int64_t r = ResMulI64(p - cls[i].unit, ResInvI64(cls[j].unit, p), p);
           if (kronecker_symbol<int64_t>(r, p) == 1) {
             ls.push_back(SqrtModPrime(r, p));
           }
@@ -1253,15 +1255,15 @@ inline MyMatrix<int64_t> SublatticeGramModular(MyMatrix<int64_t> const &Gm,
     for (int j = i; j < n; j++) {
       int64_t val;
       if (i == k && j == k) {
-        val = ResMul(ResMul(p, p, M), Gm(k, k), M);
+        val = ResMulI64(ResMulI64(p, p, M), Gm(k, k), M);
       } else if (i == k || j == k) {
         int o = (i == k) ? j : i;
-        val = ResMul(p, Gm(o, k) - ResMul(f[o], Gm(k, k), M), M);
+        val = ResMulI64(p, Gm(o, k) - ResMulI64(f[o], Gm(k, k), M), M);
       } else {
-        val = Gm(i, j) - ResMul(f[j], Gm(i, k), M) -
-              ResMul(f[i], Gm(k, j), M) +
-              ResMul(ResMul(f[i], f[j], M), Gm(k, k), M);
-        val = ResMod(val, M);
+        val = Gm(i, j) - ResMulI64(f[j], Gm(i, k), M) -
+              ResMulI64(f[i], Gm(k, j), M) +
+              ResMulI64(ResMulI64(f[i], f[j], M), Gm(k, k), M);
+        val = ResModI64(val, M);
       }
       H(i, j) = val;
       H(j, i) = val;
@@ -1318,9 +1320,9 @@ inline std::vector<std::vector<int64_t>> AllLinearForms(int n, int64_t p) {
     if (k == -1) {
       continue;
     }
-    int64_t inv = ResInv(f[k], p);
+    int64_t inv = ResInvI64(f[k], p);
     for (auto &x : f) {
-      x = ResMul(x, inv, p);
+      x = ResMulI64(x, inv, p);
     }
     res.push_back(f);
   }

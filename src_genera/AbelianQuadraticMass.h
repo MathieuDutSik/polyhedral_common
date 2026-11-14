@@ -3,6 +3,7 @@
 #define SRC_GENERA_ABELIANQUADRATICMASS_H_
 
 // clang-format off
+#include "ResidueArithmeticLegacy.h"
 #include "NumberFieldElement.h"
 #include "ClassicalGroupOrders.h"
 #include "GeneraArithmetic.h"
@@ -1625,7 +1626,7 @@ QuadLocalFactorsByIdempotents(MyMatrix<T> const &B,
         row[j] = UniversalScalarConversion<int64_t, Tint>(x);
       }
       acc.push_back(row);
-      if (RankModPrime(acc, q) == acc.size()) {
+      if (RankModPrimeI64(acc, q) == acc.size()) {
         chosen.push_back(i);
       } else {
         acc.pop_back();
@@ -1669,7 +1670,7 @@ inline bool DedekindRegularAt(std::vector<int64_t> const &f,
   }
   PolyZ<Tint> prod{Tint(1)};
   for (auto const &[gi, ei] : fac) {
-    PolyZ<Tint> gz = UniversalStdVectorScalarConversion<Tint, int64_t>(gi);
+    PolyZ<Tint> gz = PolyZOfPolyQ<Tint>(gi);
     for (int k = 0; k < ei; k++) {
       prod = PolyZMul(prod, gz);
     }
@@ -1738,8 +1739,8 @@ QuadPrimeGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
     if (den < 0) {
       den += qz;
     }
-    return ResMul(UniversalScalarConversion<int64_t, Tint>(num),
-                   ResInv(UniversalScalarConversion<int64_t, Tint>(den), q),
+    return ResMulI64(UniversalScalarConversion<int64_t, Tint>(num),
+                   ResInvI64(UniversalScalarConversion<int64_t, Tint>(den), q),
                    q);
   };
   // the small elements of O_K, by increasing size
@@ -1799,7 +1800,7 @@ QuadPrimeGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
     }
     LocalGenerator<T> lg{S, f, conj};
     std::vector<std::pair<PolyQ, int>> fac =
-        FactorModQWithMultiplicity(PolyQ(f.begin(), f.end()), q);
+        FactorModQWithMultiplicity(PolyReduceSigned(f, q), q);
     for (auto const &[g, mult] : fac) {
       if (mult != e_ram || static_cast<int>(g.size()) - 1 != f_res ||
           !DedekindRegularAt<Tint>(f, fac, g, mult, q)) {
@@ -1834,7 +1835,7 @@ QuadPrimeGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
           }
           test.push_back(row);
         }
-        if (RankModPrime(test, q) == test.size()) {
+        if (RankModPrimeI64(test, q) == test.size()) {
           chosen.push_back(v);
           acc = test;
         }
@@ -1910,7 +1911,7 @@ QuadLocalFactorAtPrime(MyMatrix<T> const &B,
     return QuadLocalFactorsByPrimeGenerators(B, Omega, q, dK);
   }
   std::vector<std::pair<PolyQ, int>> fac =
-      FactorModQWithMultiplicity(PolyQ(lg->f.begin(), lg->f.end()), q);
+      FactorModQWithMultiplicity(PolyReduceSigned(lg->f, q), q);
   int m = B.rows() / (static_cast<int>(lg->f.size()) - 1);
   if (m == 1) {
     return T(1);
@@ -2378,7 +2379,7 @@ AbelianQuadraticExtensionField(MyMatrix<T> const &B,
       dl = EScal(dl, T(-1));
     }
     std::vector<std::pair<PolyQ, int>> fac =
-        FactorModQWithMultiplicity(PolyQ(lg->f.begin(), lg->f.end()), l);
+        FactorModQWithMultiplicity(PolyReduceSigned(lg->f, l), l);
     LocalPrimeK<T> P = MakeLocalPrimeK(*lg, fac[0].first, 1, l);
     if (LocalVal(dl, P) != 0) {
       continue;
@@ -2666,7 +2667,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
   int deg = static_cast<int>(lg->f.size()) - 1;
   int r = B.rows();
   std::vector<std::pair<PolyQ, int>> fac =
-      FactorModQWithMultiplicity(PolyQ(lg->f.begin(), lg->f.end()), p);
+      FactorModQWithMultiplicity(PolyReduceSigned(lg->f, p), p);
   {
     std::vector<AbelianPrime> aps = AbelianPrimesOverQ(*lg, p, 1);
     for (size_t i = 0; i < aps.size(); i++) {
@@ -2827,15 +2828,15 @@ LocalImagePiAdic(MyMatrix<T> const &B,
           continue;
         }
         std::swap(aug[piv], aug[row]);
-        int64_t iv = ResInv(((aug[row][col] % p) + p) % p, p);
+        int64_t iv = ResInvI64(((aug[row][col] % p) + p) % p, p);
         for (auto &x : aug[row]) {
-          x = ResMul(((x % p) + p) % p, iv, p);
+          x = ResMulI64(((x % p) + p) % p, iv, p);
         }
         for (size_t i = 0; i < aug.size(); i++) {
           int64_t f0 = ((aug[i][col] % p) + p) % p;
           if (i != row && f0 != 0) {
             for (size_t j = 0; j <= nvar; j++) {
-              aug[i][j] = ((aug[i][j] - ResMul(f0, ((aug[row][j] % p) + p) % p, p)) % p + p) % p;
+              aug[i][j] = ((aug[i][j] - ResMulI64(f0, ((aug[row][j] % p) + p) % p, p)) % p + p) % p;
             }
           }
         }

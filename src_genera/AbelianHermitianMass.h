@@ -3,6 +3,7 @@
 #define SRC_GENERA_ABELIANHERMITIANMASS_H_
 
 // clang-format off
+#include "ResidueArithmeticLegacy.h"
 #include "NumberFieldElement.h"
 #include "ClassicalGroupOrders.h"
 #include "PolynomialModQ.h"
@@ -258,7 +259,7 @@ inline std::vector<AbelianPrime>
 AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   std::vector<std::pair<PolyQ, int>> fac =
-      FactorModQWithMultiplicity(PolyQ(lg.f.begin(), lg.f.end()), q);
+      FactorModQWithMultiplicity(PolyReduceSigned(lg.f, q), q);
   // the conjugate of the prime of g: the factor dividing g(conj(x))
   auto compose_conj = [&](PolyQ const &g) -> PolyQ {
     // g(c(x)) modulo f and q, c the conjugate of theta (q-integral)
@@ -273,10 +274,10 @@ AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
       if (den < 0) {
         den += qz;
       }
-      int64_t v = ResMul(UniversalScalarConversion<int64_t, Tint>(num), ResInv(UniversalScalarConversion<int64_t, Tint>(den), q), q);
+      int64_t v = ResMulI64(UniversalScalarConversion<int64_t, Tint>(num), ResInvI64(UniversalScalarConversion<int64_t, Tint>(den), q), q);
       c.push_back(v);
     }
-    PolyQ fq = PolyReduce(PolyQ(lg.f.begin(), lg.f.end()), q);
+    PolyQ fq = PolyReduceSigned(lg.f, q);
     PolyQ res = {0};
     for (size_t i = g.size(); i-- > 0;) {
       res = PolyDivModQ(PolyMulQ(res, c, q), fq, q).second;
@@ -333,14 +334,14 @@ inline PolyZ<Tint> AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
                                         PolyQ const &g, int e, int64_t q,
                                         int N) {
   Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), N);
-  PolyQ fq = PolyReduce(PolyQ(f.begin(), f.end()), q);
+  PolyQ fq = PolyReduceSigned(f, q);
   PolyQ P = {1};
   for (int i = 0; i < e; i++) {
     P = PolyMulQ(P, g, q);
   }
   PolyQ Qp = PolyDivModQ(fq, P, q).first;
   PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
-  PolyZ<Tint> ez = UniversalStdVectorScalarConversion<Tint, int64_t>(e0);
+  PolyZ<Tint> ez = PolyZOfPolyQ<Tint>(e0);
   ez = PolyZReduce(ez, f, Q);
   for (int it = 0; it < 64; it++) {
     PolyZ<Tint> e2 = PolyZReduce(PolyZMul(ez, ez), f, Q);
@@ -429,7 +430,7 @@ AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
       Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
     }
   }
-  int rk = RankModPrime(Emod, q);
+  int rk = RankModPrimeI64(Emod, q);
   int m = rk / (ap.e * f_res);
   int delta = 0;
   {
@@ -594,7 +595,7 @@ inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
   PolyZ<Tint> z = PolyZReduce(PolyZMul(LocalEps(P, k + 1), y), P.K.Phi, Q);
   Tint qz = UniversalScalarConversion<Tint, int64_t>(P.q);
   Tint dd = ResInt(QuoInt(d, qk), qz);
-  int64_t inv = ResInv(UniversalScalarConversion<int64_t, Tint>(dd), P.q);
+  int64_t inv = ResInvI64(UniversalScalarConversion<int64_t, Tint>(dd), P.q);
   PolyQ res;
   for (auto const &c : z) {
     if (ResInt(c, qk) != 0) {
@@ -602,7 +603,7 @@ inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
       throw TerminalException{1};
     }
     Tint t = ResInt(QuoInt(c, qk), qz);
-    res.push_back(ResMul(UniversalScalarConversion<int64_t, Tint>(t), inv, P.q));
+    res.push_back(ResMulI64(UniversalScalarConversion<int64_t, Tint>(t), inv, P.q));
   }
   PolyTrim(res);
   if (res.empty()) {
@@ -681,7 +682,7 @@ LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
     if (den < 0) {
       den += qz;
     }
-    return ResMul(UniversalScalarConversion<int64_t, Tint>(num), ResInv(UniversalScalarConversion<int64_t, Tint>(den), q), q);
+    return ResMulI64(UniversalScalarConversion<int64_t, Tint>(num), ResInvI64(UniversalScalarConversion<int64_t, Tint>(den), q), q);
   };
   std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
   for (int t = 1; t < deg; t++) {
@@ -706,7 +707,7 @@ LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
     for (auto &row : orbit_rows(v)) {
       test.push_back(row);
     }
-    if (RankModPrime(test, q) == test.size()) {
+    if (RankModPrimeI64(test, q) == test.size()) {
       chosen.push_back(v);
       acc = test;
     }
@@ -1276,7 +1277,7 @@ JordanFromIdempotent(MyMatrix<T> const &B, MyMatrix<T> const &E,
       Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
     }
   }
-  int m = RankModPrime(Emod, q) / (e_ram * f_res);
+  int m = RankModPrimeI64(Emod, q) / (e_ram * f_res);
   HermitianLocalJordan hj;
   hj.type = type;
   hj.f_K = f_K;
@@ -1383,7 +1384,7 @@ PrimeIdempotentsByRefinement(MyMatrix<T> const &B,
       if (f.empty()) {
         continue;
       }
-      PolyQ fq = PolyReduce(PolyQ(f.begin(), f.end()), q);
+      PolyQ fq = PolyReduceSigned(f, q);
       std::vector<std::pair<PolyQ, int>> fac = FactorModQWithMultiplicity(fq, q);
       if (fac.size() <= 1) {
         continue;

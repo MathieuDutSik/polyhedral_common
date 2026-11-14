@@ -60,36 +60,37 @@
 //
 
 // The modulus of the unit residues at p.
-inline int64_t UnitModulus(int64_t p) { return (p == 2) ? 8 : p; }
+inline T_residue UnitModulus(T_small_prime p) { return (p == 2) ? 8 : p; }
 
 // A non-zero element of Q_p up to the information Hilbert symbols and
 // characters need: p^val * u, u a unit known modulo UnitModulus(p).
 struct PadicClass {
   int val;
-  int64_t unit;
+  T_residue unit;
 };
 
 inline PadicClass PadicMul(PadicClass const &x, PadicClass const &y,
-                           int64_t p) {
+                           T_small_prime p) {
   return {x.val + y.val, ResMul(x.unit, y.unit, UnitModulus(p))};
 }
 
-inline PadicClass PadicFromInt64(int64_t x, int64_t p) {
+inline PadicClass PadicFromInt64(int64_t x, T_small_prime p) {
   if (x == 0) {
     std::cerr << "SSER: PadicFromInt64 called on zero\n";
     throw TerminalException{1};
   }
+  int64_t p_s = static_cast<int64_t>(p);
   int val = 0;
-  while (x % p == 0) {
-    x /= p;
+  while (x % p_s == 0) {
+    x /= p_s;
     val++;
   }
-  return {val, ResMod(x, UnitModulus(p))};
+  return {val, ResModSigned(x, UnitModulus(p))};
 }
 
 // The class of a non-zero rational, from its numerator and denominator.
 template <typename T, typename Tint>
-PadicClass PadicFromRational(T const &x, int64_t p) {
+PadicClass PadicFromRational(T const &x, T_small_prime p) {
   if (x == 0) {
     std::cerr << "SSER: PadicFromRational called on zero\n";
     throw TerminalException{1};
@@ -106,18 +107,13 @@ PadicClass PadicFromRational(T const &x, int64_t p) {
     den /= p_T;
     val--;
   }
-  int64_t M = UnitModulus(p);
-  Tint M_T(static_cast<long>(M));
-  int64_t num_r =
-      UniversalScalarConversion<int64_t, Tint>(ResInt(num, M_T));
-  int64_t den_r =
-      UniversalScalarConversion<int64_t, Tint>(ResInt(den, M_T));
-  return {val, ResMul(num_r, ResInv(den_r, M), M)};
+  T_residue M = UnitModulus(p);
+  return {val, ResMul(ResModOf(num, M), ResInv(ResModOf(den, M), M), M)};
 }
 
 // The Hilbert symbol (x, y)_p.
 inline int HilbertSymbolClass(PadicClass const &x, PadicClass const &y,
-                              int64_t p) {
+                              T_small_prime p) {
   int64_t a = x.val, b = y.val;
   if (p != 2) {
     int sign = 1;
@@ -125,18 +121,19 @@ inline int HilbertSymbolClass(PadicClass const &x, PadicClass const &y,
       sign = -1;
     }
     if (b % 2 != 0) {
-      sign *= kronecker_symbol<int64_t>(x.unit, p);
+      sign *= KroneckerResidue(x.unit, p);
     }
     if (a % 2 != 0) {
-      sign *= kronecker_symbol<int64_t>(y.unit, p);
+      sign *= KroneckerResidue(y.unit, p);
     }
     return sign;
   }
-  int64_t u = x.unit, v = y.unit;
+  // u and v odd residues modulo 8
+  int64_t u = ResToSigned(x.unit), v = ResToSigned(y.unit);
   auto eps = [](int64_t w) -> int64_t { return ((w - 1) / 2) % 2; };
   auto omega = [](int64_t w) -> int64_t { return ((w * w - 1) / 8) % 2; };
   int64_t e = eps(u) * eps(v) + a * omega(v) + b * omega(u);
-  return (ResMod(e, 2) == 0) ? 1 : -1;
+  return (e % 2 == 0) ? 1 : -1;
 }
 
 // The quadratic character chi_p of Katsurada: 0 when Q_p(sqrt x) / Q_p is
@@ -168,11 +165,11 @@ enum class SiegelBlockKind { Unit = 0, H = 1, Y = 2 };
 struct SiegelJordanBlock {
   int e;
   SiegelBlockKind kind;
-  int64_t unit;
+  T_residue unit;
 };
 
 struct SiegelJordanBlocks {
-  int64_t p;
+  T_small_prime p;
   std::vector<SiegelJordanBlock> blocks;
   int dim() const {
     int d = 0;
@@ -236,7 +233,7 @@ inline int ContentOrder(SiegelJordanBlocks const &q) {
 }
 
 inline int HasseInvariantOMeara(SiegelJordanBlocks const &q) {
-  int64_t p = q.p;
+  T_small_prime p = q.p;
   std::vector<PadicClass> diag = RationalDiagonal(q);
   int res = 1;
   for (size_t i = 0; i < diag.size(); i++) {
@@ -244,15 +241,16 @@ inline int HasseInvariantOMeara(SiegelJordanBlocks const &q) {
       res *= HilbertSymbolClass(diag[i], diag[j], p);
     }
   }
-  PadicClass minus_one = {0, ResMod(-1, UnitModulus(p))};
+  PadicClass minus_one = {0, UnitModulus(p) - 1};
   return res * HilbertSymbolClass(GramDetClass(q), minus_one, p);
 }
 
-inline PadicClass PadicSignedPower(int r, PadicClass const &x, int64_t p) {
+inline PadicClass PadicSignedPower(int r, PadicClass const &x,
+                                   T_small_prime p) {
   if (r % 2 == 0) {
     return x;
   }
-  return {x.val, ResMul(x.unit, -1, UnitModulus(p))};
+  return {x.val, ResNeg(x.unit, UnitModulus(p))};
 }
 
 // The invariants of Katsurada, Section 3.
@@ -261,11 +259,11 @@ inline int XiInvariant(SiegelJordanBlocks const &q) {
 }
 
 inline int EtaInvariant(SiegelJordanBlocks const &q) {
-  int64_t p = q.p;
+  T_small_prime p = q.p;
   int n = q.dim();
   PadicClass det = GramDetClass(q);
   int h1 = HilbertSymbolClass(det, PadicSignedPower((n - 1) / 2, det, p), p);
-  PadicClass minus_one = {0, ResMod(-1, UnitModulus(p))};
+  PadicClass minus_one = {0, UnitModulus(p) - 1};
   int h2 = HilbertSymbolClass(minus_one, minus_one, p);
   int exp_h2 = ((n * n - 1) / 8) % 2;
   return HasseInvariantOMeara(q) * h1 * ((exp_h2 == 0) ? 1 : h2);
@@ -400,19 +398,15 @@ std::vector<T> JordanDiagonalOdd(MyMatrix<T> S, int64_t p) {
 }
 
 template <typename T, typename Tint>
-SiegelJordanBlocks JordanBlocksOdd(MyMatrix<T> const &B, int64_t p) {
+SiegelJordanBlocks JordanBlocksOdd(MyMatrix<T> const &B, T_small_prime p) {
   std::vector<T> diag = JordanDiagonalOdd<T, Tint>(B, p);
-  // the least quadratic non-residue modulo p
-  int64_t nonres = 2;
-  while (kronecker_symbol<int64_t>(nonres, p) != -1) {
-    nonres++;
-  }
+  T_residue nonres = LeastNonResidue(p);
   std::vector<SiegelJordanBlock> res;
   size_t i = 0;
   while (i < diag.size()) {
     PadicClass c0 = PadicFromRational<T, Tint>(diag[i], p);
     int e = c0.val;
-    int64_t prod = 1;
+    T_residue prod = 1;
     size_t j = i;
     std::vector<SiegelJordanBlock> part;
     while (j < diag.size()) {
@@ -424,7 +418,7 @@ SiegelJordanBlocks JordanBlocksOdd(MyMatrix<T> const &B, int64_t p) {
       part.push_back({e, SiegelBlockKind::Unit, 1});
       j++;
     }
-    if (kronecker_symbol<int64_t>(prod, p) == -1) {
+    if (KroneckerResidue(prod, p) == -1) {
       part.back().unit = nonres;
     }
     res.insert(res.end(), part.begin(), part.end());
@@ -437,12 +431,13 @@ SiegelJordanBlocks JordanBlocksOdd(MyMatrix<T> const &B, int64_t p) {
 }
 
 // Whether a x^2 + b y^2 + c z^2 represents zero over Z_2, a, b, c odd.
-inline bool DoesTwoAdicallyRepresentZero(int64_t a, int64_t b, int64_t c) {
-  for (int64_t x : {0, 1, 4}) {
-    for (int64_t y : {0, 1, 4}) {
-      for (int64_t z : {0, 1, 4}) {
+inline bool DoesTwoAdicallyRepresentZero(T_residue a, T_residue b,
+                                         T_residue c) {
+  for (T_residue x : {0, 1, 4}) {
+    for (T_residue y : {0, 1, 4}) {
+      for (T_residue z : {0, 1, 4}) {
         bool some_odd = (x % 2 == 1) || (y % 2 == 1) || (z % 2 == 1);
-        if (some_odd && ResMod(a * x + b * y + c * z, 8) == 0) {
+        if (some_odd && (a * x + b * y + c * z) % 8 == 0) {
           return true;
         }
       }
@@ -455,7 +450,7 @@ inline bool DoesTwoAdicallyRepresentZero(int64_t a, int64_t b, int64_t c) {
 // binary form h / y produced from three of them.
 struct TwoAdicItem {
   bool is_binary;
-  int64_t unit;
+  T_residue unit;
   SiegelBlockKind kind;
 };
 
@@ -466,15 +461,15 @@ TransJordanDec2(std::vector<TwoAdicItem> const &us) {
   if (us.size() <= 2) {
     return us;
   }
-  int64_t u1 = us[0].unit, u2 = us[1].unit, u3 = us[2].unit;
-  int64_t u = ResMod(u1 * u2 * u3, 8);
+  T_residue u1 = us[0].unit, u2 = us[1].unit, u3 = us[2].unit;
+  T_residue u = (u1 * u2 * u3) % 8;
   std::vector<TwoAdicItem> rest(us.begin() + 3, us.end());
   std::vector<TwoAdicItem> l = TransJordanDec2(rest);
   if (DoesTwoAdicallyRepresentZero(u1, u2, u3)) {
-    l.push_back({false, ResMod(-u, 8), SiegelBlockKind::Unit});
+    l.push_back({false, ResNeg(u, T_residue(8)), SiegelBlockKind::Unit});
     l.push_back({true, 0, SiegelBlockKind::H});
   } else {
-    l.push_back({false, ResMod(3 * u, 8), SiegelBlockKind::Unit});
+    l.push_back({false, (3 * u) % 8, SiegelBlockKind::Unit});
     l.push_back({true, 0, SiegelBlockKind::Y});
   }
   std::vector<TwoAdicItem> l_diag, l_non_diag;
@@ -683,7 +678,7 @@ UnivariatePolynomial<T> SiegelSeriesDim2(SiegelJordanBlocks const &q) {
   // det_4 = 4 * Gram_det, and the local class of the fundamental
   // discriminant of -det_4
   PadicClass det4 = PadicMul(GramDetClass(q), PadicFromInt64(4, p), p);
-  PadicClass x = {det4.val, ResMul(det4.unit, -1, UnitModulus(p))};
+  PadicClass x = {det4.val, ResNeg(det4.unit, UnitModulus(p))};
   int val_fd;
   int kron_fd;
   if (p != 2) {

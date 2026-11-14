@@ -57,14 +57,14 @@
 //
 
 struct ResidueClasses {
-  int64_t p;
+  T_small_prime p;
   int k;
-  int64_t modulus;
+  T_residue modulus;
   // class index of every residue, and the size of each class
   std::vector<int> class_of;
   std::vector<int64_t> size;
   // a representative of each class
-  std::vector<int64_t> rep;
+  std::vector<T_residue> rep;
   // structure constants: n_sum[A][B][C] = #{(c1, c2) in A x B :
   // c1 + c2 = rep[C]}
   std::vector<std::vector<std::vector<int64_t>>> n_sum;
@@ -72,9 +72,10 @@ struct ResidueClasses {
 };
 
 // The class key of a residue c modulo p^k: (v, unit key), v = k for c = 0.
-inline std::pair<int, int64_t> ResidueClassKey(int64_t c, int64_t p, int k,
-                                                int64_t modulus) {
-  c = ResMod(c, modulus);
+inline std::pair<int, T_character> ResidueClassKey(T_residue c,
+                                                    T_small_prime p, int k,
+                                                    T_residue modulus) {
+  c %= modulus;
   if (c == 0) {
     return {k, 0};
   }
@@ -84,21 +85,21 @@ inline std::pair<int, int64_t> ResidueClassKey(int64_t c, int64_t p, int k,
     v++;
   }
   if (p != 2) {
-    return {v, kronecker_symbol<int64_t>(c, p)};
+    return {v, KroneckerResidue(c, p)};
   }
-  int64_t rem = MyPow<int64_t>(2, k - v);
-  int64_t mod_u = std::min<int64_t>(8, rem);
-  return {v, c % mod_u};
+  T_residue rem = MyPow<T_residue>(2, k - v);
+  T_residue mod_u = std::min<T_residue>(8, rem);
+  return {v, static_cast<T_character>(c % mod_u)};
 }
 
-inline ResidueClasses BuildResidueClasses(int64_t p, int k) {
+inline ResidueClasses BuildResidueClasses(T_small_prime p, int k) {
   ResidueClasses rc;
   rc.p = p;
   rc.k = k;
-  rc.modulus = MyPow<int64_t>(p, k);
-  std::map<std::pair<int, int64_t>, int> index;
+  rc.modulus = MyPow<T_residue>(p, k);
+  std::map<std::pair<int, T_character>, int> index;
   rc.class_of.resize(rc.modulus);
-  for (int64_t c = 0; c < rc.modulus; c++) {
+  for (T_residue c = 0; c < rc.modulus; c++) {
     auto key = ResidueClassKey(c, p, k, rc.modulus);
     auto iter = index.find(key);
     int idx;
@@ -117,9 +118,9 @@ inline ResidueClasses BuildResidueClasses(int64_t p, int k) {
   rc.n_sum.assign(nc, std::vector<std::vector<int64_t>>(
                           nc, std::vector<int64_t>(nc, 0)));
   for (int C = 0; C < nc; C++) {
-    int64_t c0 = rc.rep[C];
-    for (int64_t c1 = 0; c1 < rc.modulus; c1++) {
-      int64_t c2 = ResMod(c0 - c1, rc.modulus);
+    T_residue c0 = rc.rep[C];
+    for (T_residue c1 = 0; c1 < rc.modulus; c1++) {
+      T_residue c2 = ResSub(c0, c1, rc.modulus);
       rc.n_sum[rc.class_of[c1]][rc.class_of[c2]][C]++;
     }
   }
@@ -134,8 +135,8 @@ inline ResidueClasses BuildResidueClasses(int64_t p, int k) {
  */
 template <typename T> struct BadPrimeDensityCache {
   SymmetricOrbitsCache orbits;
-  std::map<std::tuple<int64_t, std::vector<std::pair<int, int64_t>>,
-                      std::vector<std::pair<int, int64_t>>>,
+  std::map<std::tuple<int64_t, std::vector<std::pair<int, T_residue>>,
+                      std::vector<std::pair<int, T_residue>>>,
            std::optional<T>>
       counting;
   std::map<std::pair<int64_t, int>, ResidueClasses> classes;
@@ -150,7 +151,7 @@ template <typename T> struct BadPrimeDensityCache {
 
 inline ResidueClasses const &
 GetResidueClasses(std::map<std::pair<int64_t, int>, ResidueClasses> &classes,
-                  int64_t p, int k) {
+                  T_small_prime p, int k) {
   auto key = std::make_pair(p, k);
   auto iter = classes.find(key);
   if (iter != classes.end()) {
@@ -193,9 +194,9 @@ std::vector<T> ConvolveClassFunctions(ResidueClasses const &rc,
 template <typename T>
 std::vector<T> BlockValueDistribution(ResidueClasses const &rc,
                                       SiegelJordanBlock const &b) {
-  int64_t M = rc.modulus;
+  T_residue M = rc.modulus;
   std::vector<int64_t> hist(M, 0);
-  int64_t pe = 1;
+  T_residue pe = 1;
   for (int i = 0; i < b.e && pe < M; i++) {
     pe *= rc.p;
   }
@@ -203,16 +204,17 @@ std::vector<T> BlockValueDistribution(ResidueClasses const &rc,
     pe = 0;
   }
   if (b.kind == SiegelBlockKind::Unit) {
-    for (int64_t x = 0; x < M; x++) {
-      hist[ResMul(ResMul(pe, b.unit, M), ResMul(x, x, M), M)]++;
+    T_residue pe_u = ResMul(pe, b.unit, M);
+    for (T_residue x = 0; x < M; x++) {
+      hist[ResMul(pe_u, ResMul(x, x, M), M)]++;
     }
   } else {
     // 2^e x y, or 2^e (x^2 + x y + y^2)
-    for (int64_t x = 0; x < M; x++) {
-      for (int64_t y = 0; y < M; y++) {
-        int64_t q = ResMul(x, y, M);
+    for (T_residue x = 0; x < M; x++) {
+      for (T_residue y = 0; y < M; y++) {
+        T_residue q = ResMul(x, y, M);
         if (b.kind == SiegelBlockKind::Y) {
-          q = ResMod(q + ResMul(x, x, M) + ResMul(y, y, M), M);
+          q = ResAdd(ResAdd(q, ResMul(x, x, M), M), ResMul(y, y, M), M);
         }
         hist[ResMul(pe, q, M)]++;
       }
@@ -221,7 +223,7 @@ std::vector<T> BlockValueDistribution(ResidueClasses const &rc,
   int nc = rc.n_class();
   std::vector<T> f(nc, T(0));
   std::vector<bool> seen(nc, false);
-  for (int64_t c = 0; c < M; c++) {
+  for (T_residue c = 0; c < M; c++) {
     int A = rc.class_of[c];
     if (!seen[A]) {
       f[A] = ScalarFromInt64<T>(hist[c]);
@@ -257,11 +259,11 @@ T CountRepresentationsModPk(ResidueClasses const &rc,
     }
     total = ConvolveClassFunctions(rc, total, iter->second);
   }
-  int64_t a_res;
+  T_residue a_res;
   if (a.val >= rc.k) {
     a_res = 0;
   } else {
-    a_res = ResMul(MyPow<int64_t>(rc.p, a.val), a.unit, rc.modulus);
+    a_res = ResMul(MyPow<T_residue>(rc.p, a.val), a.unit, rc.modulus);
     // a.unit is only known modulo UnitModulus(p), which is all the class
     // of a depends on
   }
@@ -272,24 +274,25 @@ T CountRepresentationsModPk(ResidueClasses const &rc,
 // and determinant class d over F_p, p odd (Lidl-Niederreiter, Theorems
 // 6.26 and 6.27).
 template <typename T>
-T QuadraticFormValueCount(int r, int64_t d, int64_t c, int64_t p) {
-  T p_T = ScalarFromInt64<T>(p);
-  c = ResMod(c, p);
+T QuadraticFormValueCount(int r, int64_t d, int64_t c_in, T_small_prime p) {
+  T p_T = ScalarFromInt64<T>(static_cast<int64_t>(p));
+  T_residue c = ResModSigned(c_in, p);
+  T_residue d_r = ResModSigned(d, p);
   if (r == 0) {
     return (c == 0) ? T(1) : T(0);
   }
   T base = MyPowSigned(p_T, r - 1);
   if (r % 2 == 0) {
-    int64_t sgn = ((r / 2) % 2 == 0) ? 1 : p - 1;
-    int eta = kronecker_symbol<int64_t>(ResMul(sgn, ResMod(d, p), p), p);
+    T_residue sgn = ((r / 2) % 2 == 0) ? 1 : p - 1;
+    int eta = KroneckerResidue(ResMul(sgn, d_r, p), p);
     T nu = (c == 0) ? p_T - T(1) : T(-1);
     return base + nu * MyPowSigned(p_T, r / 2 - 1) * ScalarFromInt64<T>(eta);
   }
   if (c == 0) {
     return base;
   }
-  int64_t sgn = (((r - 1) / 2) % 2 == 0) ? 1 : p - 1;
-  int eta = kronecker_symbol<int64_t>(ResMul(ResMul(sgn, c, p), ResMod(d, p), p), p);
+  T_residue sgn = (((r - 1) / 2) % 2 == 0) ? 1 : p - 1;
+  int eta = KroneckerResidue(ResMul(ResMul(sgn, c, p), d_r, p), p);
   return base + MyPowSigned(p_T, (r - 1) / 2) * ScalarFromInt64<T>(eta);
 }
 
@@ -305,8 +308,8 @@ T QuadraticFormValueCount(int r, int64_t d, int64_t c, int64_t p) {
       alpha(p a', T) = (#{T_0 = 0} - 1) / p^{r-1} + p^{1-r} alpha(a', T').
  */
 template <typename T>
-T RankOneDensityOddLevels(std::map<int, std::pair<int, int64_t>> const &levels,
-                          int v, int64_t u, int64_t p) {
+T RankOneDensityOddLevels(std::map<int, std::pair<int, T_residue>> const &levels,
+                          int v, int64_t u, T_small_prime p) {
   int r0 = 0;
   int64_t d0 = 1;
   auto iter = levels.find(0);
@@ -326,7 +329,7 @@ T RankOneDensityOddLevels(std::map<int, std::pair<int, int64_t>> const &levels,
     c0 = (QuadraticFormValueCount<T>(r0, d0, 0, p) - T(1)) /
          MyPowSigned(p_T, r0 - 1);
   }
-  std::map<int, std::pair<int, int64_t>> next;
+  std::map<int, std::pair<int, T_residue>> next;
   for (auto const &kv : levels) {
     int e = (kv.first == 0) ? 1 : kv.first - 1;
     auto &lv = next[e];
@@ -342,8 +345,8 @@ T RankOneDensityOddLevels(std::map<int, std::pair<int, int64_t>> const &levels,
 
 template <typename T>
 T RankOneDensityOdd(SiegelJordanBlocks const &q, PadicClass const &a) {
-  int64_t p = q.p;
-  std::map<int, std::pair<int, int64_t>> levels;
+  T_small_prime p = q.p;
+  std::map<int, std::pair<int, T_residue>> levels;
   for (auto const &b : q.blocks) {
     if (b.kind != SiegelBlockKind::Unit) {
       std::cerr << "LDBP: a binary block at an odd prime\n";
@@ -354,9 +357,9 @@ T RankOneDensityOdd(SiegelJordanBlocks const &q, PadicClass const &a) {
       lv.second = 1;
     }
     lv.first++;
-    lv.second = ResMul(lv.second, ResMod(b.unit, p), p);
+    lv.second = ResMul(lv.second, b.unit % p, p);
   }
-  return RankOneDensityOddLevels<T>(levels, a.val, ResMod(a.unit, p), p);
+  return RankOneDensityOddLevels<T>(levels, a.val, a.unit % p, p);
 }
 
 template <typename T>
@@ -375,7 +378,7 @@ T RankOneDensity(SiegelJordanBlocks const &q, PadicClass const &a,
   if (cache_iter != cache.rank_one.end()) {
     return cache_iter->second;
   }
-  int64_t p = q.p;
+  T_small_prime p = q.p;
   if (p != 2) {
     T val = RankOneDensityOdd<T>(q, a);
 #ifdef SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES_EXTENSIVE
@@ -403,7 +406,7 @@ template <typename T>
 T RankOneDensityCounting(SiegelJordanBlocks const &q, PadicClass const &a,
                          BadPrimeDensityCache<T> &cache) {
   auto cache_key = std::make_tuple(SiegelBlocksKey(q), a.val, a.unit);
-  int64_t p = q.p;
+  T_small_prime p = q.p;
   int n = q.dim();
   int e_max = 0;
   for (auto const &b : q.blocks) {
@@ -441,11 +444,11 @@ T RankOneDensityCounting(SiegelJordanBlocks const &q, PadicClass const &a,
 template <typename T>
 std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
                                  std::vector<PadicClass> const &Cdiag,
-                                 int64_t p, BadPrimeDensityCache<T> &cache,
+                                 T_small_prime p, BadPrimeDensityCache<T> &cache,
                                  double budget = 4.0e8) {
   auto class_list = [](std::vector<PadicClass> const &L)
-      -> std::vector<std::pair<int, int64_t>> {
-    std::vector<std::pair<int, int64_t>> v;
+      -> std::vector<std::pair<int, T_residue>> {
+    std::vector<std::pair<int, T_residue>> v;
     for (auto const &c : L) {
       v.emplace_back(c.val, c.unit);
     }
@@ -471,7 +474,7 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
   }
   T p_T = ScalarFromInt64<T>(p);
   // the coefficients of C up to unit squares: one transition table each
-  std::set<std::pair<int, int64_t>> c_classes;
+  std::set<std::pair<int, T_residue>> c_classes;
   for (auto const &c : Cdiag) {
     c_classes.insert({c.val, kronecker_symbol<int64_t>(c.unit, p)});
   }
@@ -494,10 +497,10 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
     SymmetricOrbits &so = cache.orbits.get(p, k, j);
     int no = so.n_orbit();
     std::vector<T> state(no, T(0));
-    std::vector<int64_t> zero(j * j, 0);
+    std::vector<T_residue> zero(j * j, 0);
     state[so.index.at(SymmetricOrbitKey(zero, j, p, k, so.mod))] = T(1);
     for (auto const &c : Cdiag) {
-      int64_t u = (kronecker_symbol<int64_t>(c.unit, p) == 1) ? 1 : c.unit;
+      T_residue u = (KroneckerResidue(c.unit, p) == 1) ? 1 : c.unit;
       auto const &H = SymmetricOrbitTransitions(so, c.val, u);
       std::vector<T> next(no, T(0));
       for (int Cc = 0; Cc < no; Cc++) {
@@ -509,12 +512,12 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
       }
       state = next;
     }
-    std::vector<int64_t> target(j * j, 0);
+    std::vector<T_residue> target(j * j, 0);
     for (int i = 0; i < j; i++) {
       target[i * j + i] =
           (Sigma[i].val >= k)
               ? 0
-              : ResMul(MyPow<int64_t>(p, Sigma[i].val), Sigma[i].unit, so.mod);
+              : ResMul(MyPow<T_residue>(p, Sigma[i].val), Sigma[i].unit, so.mod);
     }
     T N = state[so.index.at(SymmetricOrbitKey(target, j, p, k, so.mod))];
     return N / MyPowSigned(p_T, k * (n * j - j * (j + 1) / 2));
@@ -544,7 +547,7 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
 
 // The blocks of a diagonal form given by p-adic classes.
 inline SiegelJordanBlocks BlocksOfDiagonal(std::vector<PadicClass> const &D,
-                                           int64_t p) {
+                                           T_small_prime p) {
   SiegelJordanBlocks q;
   q.p = p;
   for (auto const &c : D) {
@@ -566,7 +569,7 @@ inline SiegelJordanBlocks BlocksOfDiagonal(std::vector<PadicClass> const &D,
                eps = Legendre((-1)^m det), +1 for the split space.
  */
 template <typename T>
-T IsotropicSubspaceCount(int r, int det_leg, int w, int64_t p) {
+T IsotropicSubspaceCount(int r, int det_leg, int w, T_small_prime p) {
   if (w == 0) {
     return T(1);
   }
@@ -594,7 +597,7 @@ T IsotropicSubspaceCount(int r, int det_leg, int w, int64_t p) {
 
 template <typename T>
 T DensityOddDiagonal(std::vector<PadicClass> const &Sigma,
-                     std::vector<PadicClass> const &Cdiag, int64_t p,
+                     std::vector<PadicClass> const &Cdiag, T_small_prime p,
                      BadPrimeDensityCache<T> &cache);
 
 /*
@@ -620,13 +623,13 @@ T DensityOddDiagonal(std::vector<PadicClass> const &Sigma,
  */
 template <typename T>
 T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
-                     std::vector<PadicClass> const &Cdiag, int64_t p,
+                     std::vector<PadicClass> const &Cdiag, T_small_prime p,
                      BadPrimeDensityCache<T> &cache) {
   int j = static_cast<int>(Sigma.size());
   int n = static_cast<int>(Cdiag.size());
   int d = n * j - j * (j + 1) / 2;
   std::vector<PadicClass> C0, C1;
-  int64_t det0 = 1;
+  T_residue det0 = 1;
   for (auto const &c : Cdiag) {
     if (c.val == 0) {
       C0.push_back(c);
@@ -673,7 +676,7 @@ T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
     int r2 = r - 2 * wp;
     if (r2 > 0) {
       // det C_0'' = (-1)^{wp} det C_0
-      int64_t target = ResMul(det0, (wp % 2 == 0) ? 1 : p - 1, p);
+      T_residue target = ResMul(det0, (wp % 2 == 0) ? 1 : p - 1, p);
       for (int i = 0; i < r2 - 1; i++) {
         G.push_back({1, 1});
       }
@@ -705,7 +708,7 @@ T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
  */
 template <typename T>
 T DensityOddDiagonal(std::vector<PadicClass> const &Sigma,
-                     std::vector<PadicClass> const &Cdiag, int64_t p,
+                     std::vector<PadicClass> const &Cdiag, T_small_prime p,
                      BadPrimeDensityCache<T> &cache) {
   std::vector<PadicClass> units, nonunits;
   for (auto const &s : Sigma) {
@@ -734,12 +737,12 @@ T DensityOddDiagonal(std::vector<PadicClass> const &Sigma,
       D = rest;
       continue;
     }
-    int64_t prod = 1;
+    T_residue prod = 1;
     for (auto const &c : uni) {
       prod = ResMul(prod, c.unit, p);
     }
     std::vector<PadicClass> keep(uni.begin(), uni.end() - 2);
-    int64_t prod_keep = 1;
+    T_residue prod_keep = 1;
     for (auto const &c : keep) {
       prod_keep = ResMul(prod_keep, c.unit, p);
     }
@@ -764,7 +767,7 @@ T DensityOddDiagonal(std::vector<PadicClass> const &Sigma,
 // The diagonal Jordan entries of the half-integral S / 2 at an odd prime,
 // as p-adic classes in the order produced by the decomposition.
 template <typename T, typename Tint>
-std::vector<PadicClass> OddDiagonalClasses(MyMatrix<T> const &S, int64_t p) {
+std::vector<PadicClass> OddDiagonalClasses(MyMatrix<T> const &S, T_small_prime p) {
   std::vector<T> diag = JordanDiagonalOdd<T, Tint>(S / T(2), p);
   std::vector<PadicClass> res;
   for (auto const &d : diag) {
@@ -781,7 +784,7 @@ std::vector<PadicClass> OddDiagonalClasses(MyMatrix<T> const &S, int64_t p) {
  */
 template <typename T, typename Tint>
 std::optional<T> UnitChainDensity(MyMatrix<T> const &S,
-                                  std::vector<PadicClass> const &DT, int64_t p,
+                                  std::vector<PadicClass> const &DT, T_small_prime p,
                                   BadPrimeDensityCache<T> &cache) {
   if (p == 2) {
     std::cerr << "LDBP: the unit chain is for odd primes\n";
@@ -826,16 +829,16 @@ std::optional<T> UnitChainDensity(MyMatrix<T> const &S,
       D = rest;
       continue;
     }
-    int64_t prod = 1;
+    T_residue prod = 1;
     for (auto const &c : uni) {
       prod = ResMul(prod, c.unit, p);
     }
     std::vector<PadicClass> keep(uni.begin(), uni.end() - 2);
-    int64_t prod_keep = 1;
+    T_residue prod_keep = 1;
     for (auto const &c : keep) {
       prod_keep = ResMul(prod_keep, c.unit, p);
     }
-    int64_t last = ResMul(prod, ResInv(ResMul(s.unit, prod_keep, p), p), p);
+    T_residue last = ResMul(prod, ResInv(ResMul(s.unit, prod_keep, p), p), p);
     keep.push_back({0, last});
     D = keep;
     D.insert(D.end(), rest.begin(), rest.end());
@@ -881,7 +884,7 @@ GenusDensityData ComputeGenusDensityData(MyMatrix<T> const &Tgram) {
   GenusDensityData data;
   data.n = Tgram.rows();
   data.detT = DeterminantInt64<T, Tint>(Tgram);
-  for (int64_t p : BadPrimes(1, data.detT)) {
+  for (T_small_prime p : BadPrimes(1, data.detT)) {
     if (p != 2) {
       data.odd_diagonal[p] = OddDiagonalClasses<T, Tint>(Tgram, p);
     }

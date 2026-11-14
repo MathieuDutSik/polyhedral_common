@@ -259,29 +259,14 @@ void CheckGenusEnumerationGroupResult(
   modulo p.
  */
 struct EigenspaceData {
-  int64_t lambda;
-  int64_t lambda2;
+  T_residue lambda;
+  T_residue lambda2;
   ModMatrix E;
   RowSpaceModP space;
   // the character takes only the values +-1, so the vectors need not be
   // isotropic
   bool is_real;
 };
-
-template <typename Tint>
-ModMatrix ReduceMatrixMod(MyMatrix<Tint> const &M, int64_t mod) {
-  int n = M.rows();
-  int l = M.cols();
-  ModMatrix R(n, std::vector<int64_t>(l));
-  Tint mod_T = UniversalScalarConversion<Tint, int64_t>(mod);
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < l; j++) {
-      Tint r = M(i, j) % mod_T;
-      R[i][j] = ResMod(UniversalScalarConversion<int64_t, Tint>(r), mod);
-    }
-  }
-  return R;
-}
 
 // sigma = +-I: the centralizer is the whole of O(L)
 template <typename T> bool IsScalarIsometry(MyMatrix<T> const &P) {
@@ -301,55 +286,49 @@ template <typename T> bool IsScalarIsometry(MyMatrix<T> const &P) {
 
 template <typename Tint>
 std::vector<EigenspaceData> ComputeEigenspaces(MyMatrix<Tint> const &P, int m,
-                                               int p) {
+                                               T_small_prime p) {
   std::vector<EigenspaceData> res;
   int n = P.rows();
-  int64_t p2 = static_cast<int64_t>(p) * p;
+  T_residue p2 = p * p;
   if (IsScalarIsometry(P)) {
     // every vector is an eigenvector, for any p (p = 2 included)
-    ModMatrix Id(n, std::vector<int64_t>(n, 0));
-    for (int i = 0; i < n; i++) {
-      Id[i][i] = 1;
-    }
-    // reduced modulo p^2 before the conversion (P(0, 0) is unbounded)
-    Tint p2_T = UniversalScalarConversion<Tint, int64_t>(p2);
-    int64_t c = UniversalScalarConversion<int64_t, Tint>(ResInt(P(0, 0), p2_T));
+    ModMatrix Id = ModMatrixIdentity(n);
+    T_residue c = ResModOf(P(0, 0), p2);
     RowSpaceModP space = ComputeRowSpaceModP(Id, p);
-    res.push_back({ResMod(c, p), ResMod(c, p2), std::move(Id),
-                   std::move(space), true});
+    res.push_back({c % p, c, std::move(Id), std::move(space), true});
     return res;
   }
-  ModMatrix P2 = ReduceMatrixMod(P, p2);
-  for (int64_t lambda = 1; lambda < p; lambda++) {
+  ModMatrix P2 = ModMatrixOfMatrix(P, p2);
+  for (T_residue lambda = 1; lambda < p; lambda++) {
     if (ResPow(lambda, m, p) != 1) {
       continue;
     }
-    int64_t lambda2 = ResPow(lambda, p, p2);
+    T_residue lambda2 = ResPow(lambda, p, p2);
     // R = (x^m - 1) / (x - lambda2) = sum_k r_k x^k, r_{m-1} = 1,
     // r_{k-1} = lambda2 r_k
-    std::vector<int64_t> r(m, 0);
+    ModVector r(m, 0);
     r[m - 1] = 1;
     for (int k = m - 1; k >= 1; k--) {
-      r[k - 1] = (lambda2 * r[k]) % p2;
+      r[k - 1] = ResMul(lambda2, r[k], p2);
     }
     // R(P) by Horner
-    ModMatrix RP(n, std::vector<int64_t>(n, 0));
+    ModMatrix RP = ZeroMatrix<T_residue>(n, n);
     for (int k = m - 1; k >= 0; k--) {
       RP = ModMatrixProduct(RP, P2, p2);
       for (int i = 0; i < n; i++) {
-        RP[i][i] = (RP[i][i] + r[k]) % p2;
+        RP(i, i) = ResAdd(RP(i, i), r[k], p2);
       }
     }
-    int64_t Rlambda = (static_cast<int64_t>(m) % p2) *
-                      ResPow(lambda2, m - 1, p2) % p2;
-    int64_t inv = ResInv(Rlambda, p2);
-    for (auto &row : RP) {
-      for (auto &x : row) {
-        x = (x * inv) % p2;
+    T_residue Rlambda = ResMul(static_cast<T_residue>(m) % p2,
+                               ResPow(lambda2, m - 1, p2), p2);
+    T_residue inv = ResInv(Rlambda, p2);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        RP(i, j) = ResMul(RP(i, j), inv, p2);
       }
     }
     RowSpaceModP space = ComputeRowSpaceModP(RP, p);
-    if (space.basis.empty()) {
+    if (space.basis.rows() == 0) {
       continue;
     }
     bool is_real = (lambda == 1 || lambda == p - 1);
@@ -366,9 +345,9 @@ std::vector<EigenspaceData> ComputeEigenspaces(MyMatrix<Tint> const &P, int m,
 template <typename Tint>
 std::vector<EigenspaceData>
 ComputeJointEigenspaces(std::vector<MyMatrix<Tint>> const &ListP, int m,
-                        int p) {
+                        T_small_prime p) {
   std::vector<EigenspaceData> res = ComputeEigenspaces(ListP[0], m, p);
-  int64_t p2 = static_cast<int64_t>(p) * p;
+  T_residue p2 = p * p;
   for (size_t i = 1; i < ListP.size(); i++) {
     if (IsScalarIsometry(ListP[i])) {
       continue;
@@ -379,7 +358,7 @@ ComputeJointEigenspaces(std::vector<MyMatrix<Tint>> const &ListP, int m,
       for (auto const &ed2 : ListEig) {
         ModMatrix E = ModMatrixProduct(ed1.E, ed2.E, p2);
         RowSpaceModP space = ComputeRowSpaceModP(E, p);
-        if (space.basis.empty()) {
+        if (space.basis.rows() == 0) {
           continue;
         }
         next.push_back({ed1.lambda, ed1.lambda2, std::move(E),
@@ -394,23 +373,14 @@ ComputeJointEigenspaces(std::vector<MyMatrix<Tint>> const &ListP, int m,
 // The action of h (on the row vectors) on the eigenspace, in its basis.
 template <typename Tint>
 MyMatrix<Tint> EigenspaceAction(EigenspaceData const &ed, MyMatrix<Tint> const &h,
-                                int p) {
-  size_t k = ed.space.basis.size();
-  int n = h.rows();
-  ModMatrix hp = ReduceMatrixMod(h, p);
+                                T_small_prime p) {
+  int k = ed.space.basis.rows();
+  ModMatrix img = ModMatrixProduct(ed.space.basis, ModMatrixOfMatrix(h, p), p);
   MyMatrix<Tint> M(k, k);
-  for (size_t i = 0; i < k; i++) {
-    std::vector<int64_t> img(n, 0);
-    for (int a = 0; a < n; a++) {
-      int64_t x = ed.space.basis[i][a];
-      if (x != 0) {
-        for (int b = 0; b < n; b++) {
-          img[b] = (img[b] + x * hp[a][b]) % p;
-        }
-      }
-    }
-    for (size_t j = 0; j < k; j++) {
-      M(i, j) = UniversalScalarConversion<Tint, int64_t>(img[ed.space.pivots[j]]);
+  for (int i = 0; i < k; i++) {
+    for (int j = 0; j < k; j++) {
+      M(i, j) = UniversalScalarConversion<Tint, T_residue>(
+          img(i, static_cast<int>(ed.space.pivots[j])));
     }
   }
   return M;
@@ -424,39 +394,39 @@ MyMatrix<Tint> EigenspaceAction(EigenspaceData const &ed, MyMatrix<Tint> const &
 template <typename Tint>
 std::optional<std::vector<int>>
 EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
-                          MyMatrix<Tint> const &G, int p) {
+                          MyMatrix<Tint> const &G, T_small_prime p) {
   int n = G.rows();
-  int64_t p2 = static_cast<int64_t>(p) * p;
-  size_t k = ed.space.basis.size();
-  std::vector<int64_t> x(n, 0);
-  for (size_t i = 0; i < k; i++) {
+  T_residue p2 = p * p;
+  int k = ed.space.basis.rows();
+  ModVector x(n, 0);
+  for (int i = 0; i < k; i++) {
     if (c[i] != 0) {
+      T_residue c_i = static_cast<T_residue>(c[i]);
       for (int a = 0; a < n; a++) {
-        x[a] = (x[a] + c[i] * ed.space.basis[i][a]) % p;
+        x[a] = ResAdd(x[a], ResMul(c_i, ed.space.basis(i, a), p), p);
       }
     }
   }
-  auto apply_E = [&](std::vector<int64_t> const &y) -> std::vector<int64_t> {
-    std::vector<int64_t> z(n, 0);
+  auto apply_E = [&](ModVector const &y) -> ModVector {
+    ModVector z(n, 0);
     for (int a = 0; a < n; a++) {
       if (y[a] != 0) {
         for (int b = 0; b < n; b++) {
-          z[b] = (z[b] + y[a] * ed.E[a][b]) % p2;
+          z[b] = ResAdd(z[b], ResMul(y[a], ed.E(a, b), p2), p2);
         }
       }
     }
     return z;
   };
-  auto bilinear = [&](std::vector<int64_t> const &u,
-                      std::vector<int64_t> const &v) -> Tint {
+  auto bilinear = [&](ModVector const &u, ModVector const &v) -> Tint {
     MyVector<Tint> v_T(n);
     for (int b = 0; b < n; b++) {
-      v_T(b) = UniversalScalarConversion<Tint, int64_t>(v[b]);
+      v_T(b) = UniversalScalarConversion<Tint, T_residue>(v[b]);
     }
     Tint sum(0);
     for (int a = 0; a < n; a++) {
       if (u[a] != 0) {
-        Tint u_a = UniversalScalarConversion<Tint, int64_t>(u[a]);
+        Tint u_a = UniversalScalarConversion<Tint, T_residue>(u[a]);
         for (int b = 0; b < n; b++) {
           sum += u_a * G(a, b) * v_T(b);
         }
@@ -464,7 +434,7 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
     }
     return sum;
   };
-  std::vector<int64_t> v = apply_E(x);
+  ModVector v = apply_E(x);
   Tint q = bilinear(v, v);
   // e = v_p(2): the neighbor needs v_p((v, v)) >= e + 2, the isotropy
   // modulo p is v_p >= e + 1, and the valuation e + 1 is corrected.
@@ -492,12 +462,16 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
       valuation >= e + 2, the last term because (u, u) is even. The
       correction stays in the eigenlattice, so v remains an eigenvector.
      */
-    std::optional<std::vector<int64_t>> opt_u;
+    std::optional<ModVector> opt_u;
     Tint bvu;
-    for (size_t i = 0; i < k && !opt_u; i++) {
-      std::vector<int64_t> u = apply_E(ed.space.basis[i]);
+    for (int i = 0; i < k && !opt_u; i++) {
+      ModVector u_row(n);
+      for (int a = 0; a < n; a++) {
+        u_row[a] = ed.space.basis(i, a);
+      }
+      ModVector u = apply_E(u_row);
       Tint b = bilinear(v, u);
-      if (ResidueModP(b, p) != 0) {
+      if (ResModOf(b, p) != 0) {
         opt_u = u;
         bvu = b;
       }
@@ -507,20 +481,13 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
       // unimodular L_p
       return {};
     }
-    Tint p_T(p);
-    Tint q_red = q;
-    for (int i = 0; i < e + 1; i++) {
-      q_red /= p_T;
-    }
-    Tint twob_red = Tint(2) * bvu;
-    for (int i = 0; i < e; i++) {
-      twob_red /= p_T;
-    }
-    int64_t a = (static_cast<int64_t>(ResidueModP(q_red, p)) *
-                 ResInv(ResidueModP(twob_red, p), p)) %
-                p;
-    // a p u_i is below p^4, which int64 does not hold for every p
-    int64_t ap = ResMul(a, p, p2);
+    Tint p_T = UniversalScalarConversion<Tint, T_small_prime>(p);
+    Tint q_red = q / MyPow(p_T, e + 1);
+    Tint twob_red = (Tint(2) * bvu) / MyPow(p_T, e);
+    T_residue a =
+        ResMul(ResModOf(q_red, p), ResInv(ResModOf(twob_red, p), p), p);
+    // a p u_i is below p^4, which 64 bits do not hold for every p
+    T_residue ap = ResMul(a, p, p2);
     for (int i = 0; i < n; i++) {
       v[i] = ResSub(v[i], ResMul(ap, (*opt_u)[i], p2), p2);
     }
@@ -547,48 +514,96 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
   ProjectiveLineOrbitRepresentatives, the enumeration of pairs usually
   closes its mass after a few orbits, and the rest of the space is never
   traversed.
+
+  form (n x n, or empty) is the quadratic form of the lattice on the
+  coordinates, modulo form_mod (p, or 4 at p = 2): a line with
+  c form c^T != 0 modulo form_mod is anisotropic and gives no neighbor, and
+  so does its whole orbit, the group acting by isometries. Those lines are
+  tested one by one and their orbits never built: on an eigenspace of
+  +-1 they are most of the space, and the test costs one image while an
+  orbit costs one image per generator and point.
  */
 template <typename Tint, typename F>
-void ProjectiveLineOrbitForEach(int n, int p,
+void ProjectiveLineOrbitForEach(int n, T_small_prime p,
                                 std::vector<MyMatrix<Tint>> const &ListGen,
+                                ModMatrix const &form, T_residue form_mod,
                                 F f) {
-  size_t n_line = NumberProjectiveLines(n, p);
-  std::vector<std::vector<int>> ListGenRed;
+  size_t n_line = NumberProjectiveLines(n, static_cast<int>(p));
+  std::vector<std::vector<T_residue>> ListGenRed;
   for (auto &eGen : ListGen) {
-    if (!IsScalarModP(eGen, p)) {
-      std::vector<int> gred(n * n);
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-          gred[i * n + j] = ResidueModP(eGen(i, j), p);
-        }
-      }
+    if (!IsScalarModP(eGen, static_cast<int>(p))) {
+      ModVector gred = FlattenModMatrix(ModMatrixOfMatrix(eGen, p));
       ListGenRed.push_back(gred);
     }
   }
+  ProjectiveLineCoder coder(n, p);
+  std::vector<ProjectiveLineCoder::T_coord> v(n), w(n);
+  std::vector<uint64_t> form_flat;
+  if (form.rows() > 0) {
+    form_flat = FlattenModMatrix(form);
+  }
+  // the coordinates are below p < 2^20 and the entries below 4 p
+  auto is_anisotropic = [&](std::vector<ProjectiveLineCoder::T_coord> const &c)
+      -> bool {
+    if (form_flat.empty()) {
+      return false;
+    }
+    uint64_t s = 0;
+    for (int i = 0; i < n; i++) {
+      if (c[i] != 0) {
+        uint64_t t = 0;
+        for (int j = 0; j < n; j++) {
+          t += form_flat[i * n + j] * c[j];
+        }
+        s = (s + c[i] * (t % form_mod)) % form_mod;
+      }
+    }
+    return s != 0;
+  };
   if (ListGenRed.empty()) {
     for (size_t i_line = 0; i_line < n_line; i_line++) {
-      if (f(i_line)) {
+      coder.decode(i_line, v);
+      if (!is_anisotropic(v) && f(i_line)) {
         return;
       }
     }
     return;
   }
-  std::vector<int> w(n);
-  auto image = [&](std::vector<int> const &v,
-                   std::vector<int> const &gred) -> size_t {
-    for (int j = 0; j < n; j++) {
-      int64_t sum = 0;
-      for (int i = 0; i < n; i++) {
-        sum += static_cast<int64_t>(v[i]) * gred[i * n + j];
+  std::vector<std::vector<ProjectiveLineCoder::T_coord>> ListGenCoord;
+  for (auto const &gred : ListGenRed) {
+    ListGenCoord.push_back(coder.coords(gred));
+  }
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
+  // the coder against ProjectiveLineOfIndex and IndexOfProjectiveLine
+  for (size_t i_line = 0; i_line < std::min(n_line, size_t(1000)); i_line++) {
+    coder.decode(i_line, v);
+    std::vector<int> v_ref = ProjectiveLineOfIndex(n, static_cast<int>(p), i_line);
+    for (size_t i_gen = 0; i_gen < ListGenRed.size(); i_gen++) {
+      ModVector const &gred = ListGenRed[i_gen];
+      std::vector<int> w_ref(n, 0);
+      for (int j = 0; j < n; j++) {
+        T_residue sum = 0;
+        for (int i = 0; i < n; i++) {
+          sum = ResAdd(sum, ResMul(static_cast<T_residue>(v_ref[i]), gred[i * n + j], p), p);
+        }
+        w_ref[j] = static_cast<int>(sum);
       }
-      w[j] = static_cast<int>(sum % p);
+      if (coder.image(v, ListGenCoord[i_gen], w) !=
+          IndexOfProjectiveLine(w_ref, static_cast<int>(p))) {
+        std::cerr << "GENUS_GROUP: the projective line coder disagrees\n";
+        throw TerminalException{1};
+      }
     }
-    return IndexOfProjectiveLine(w, p);
-  };
+  }
+#endif
   Face status(n_line);
   std::vector<size_t> ListActive;
   for (size_t i_line = 0; i_line < n_line; i_line++) {
     if (status[i_line]) {
+      continue;
+    }
+    coder.decode(i_line, v);
+    if (is_anisotropic(v)) {
       continue;
     }
     status[i_line] = 1;
@@ -596,9 +611,9 @@ void ProjectiveLineOrbitForEach(int n, int p,
     while (!ListActive.empty()) {
       size_t pos = ListActive.back();
       ListActive.pop_back();
-      std::vector<int> v = ProjectiveLineOfIndex(n, p, pos);
-      for (auto &gred : ListGenRed) {
-        size_t img = image(v, gred);
+      coder.decode(pos, v);
+      for (auto const &g : ListGenCoord) {
+        size_t img = coder.image(v, g, w);
         if (!status[img]) {
           status[img] = 1;
           ListActive.push_back(img);
@@ -738,7 +753,7 @@ double EigenNeighborCost(std::vector<MyMatrix<Tint>> const &ListP_int, int m,
                          int p) {
   double cost = 0;
   for (auto const &ed : ComputeJointEigenspaces(ListP_int, m, p)) {
-    double k = static_cast<double>(ed.space.basis.size());
+    double k = static_cast<double>(ed.space.basis.rows());
     cost += (std::pow(static_cast<double>(p), k) - 1) / (p - 1);
   }
   return cost;
@@ -859,20 +874,6 @@ GroupElementsAndInverses(std::vector<MyMatrix<T>> const &ListP,
   return {elts, inv};
 }
 
-template <typename T>
-ModMatrix ModMatOfMatrix(MyMatrix<T> const &M, int64_t mod) {
-  int n = M.rows(), l = M.cols();
-  ModMatrix R(n, std::vector<int64_t>(l));
-  T mod_T = UniversalScalarConversion<T, int64_t>(mod);
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < l; j++) {
-      T r = ResInt(M(i, j), mod_T);
-      R[i][j] = ResMod(UniversalScalarConversion<int64_t, T>(r), mod);
-    }
-  }
-  return R;
-}
-
 /*
   The G-module data of a class at the prime p: the irreducible types of
   L/pL and the elements of G modulo p and p^2.
@@ -886,49 +887,48 @@ struct GroupModuleAtPrime {
 };
 
 /*
-  Q(x) = b(x, x) / 2 = 0 mod 2 for x with entries in {0, 1}: b(x, x) mod 4,
+  Q(x) = b(x, x) / 2 = 0 mod 2 for the row x of X, entries in {0, 1}: b(x, x) mod 4,
   A8 the Gram matrix modulo 8 (an even lattice). With b(x, y) = 0 mod 2 on
   a basis this makes the span totally singular.
  */
-inline bool IsSingularModTwo(std::vector<int64_t> const &x, ModMatrix const &A8) {
-  size_t n = x.size();
-  int64_t v = 0;
-  for (size_t a = 0; a < n; a++) {
-    if ((x[a] & 1) != 0) {
-      for (size_t b = 0; b < n; b++) {
-        if ((x[b] & 1) == 0) {
-          continue;
+inline bool IsSingularModTwo(ModMatrix const &X, int i, ModMatrix const &A8) {
+  int n = X.cols();
+  T_residue v = 0;
+  for (int a = 0; a < n; a++) {
+    if ((X(i, a) & 1) != 0) {
+      for (int b = 0; b < n; b++) {
+        if ((X(i, b) & 1) != 0) {
+          v += A8(a, b);
         }
-        v = (v + ResMod(A8[a][b], 4)) % 4;
       }
     }
   }
-  return v == 0;
+  return v % 4 == 0;
 }
 
 template <typename T>
 GroupModuleAtPrime ComputeGroupModuleAtPrime(MyMatrix<T> const &A,
                                              std::vector<MyMatrix<T>> const &ListP,
-                                             int64_t p) {
+                                             T_small_prime p) {
   GroupModuleAtPrime gm;
   std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> ei =
       GroupElementsAndInverses(ListP, 1000000);
   std::vector<ModMatrix> elt, eltinv;
   for (size_t i = 0; i < ei.first.size(); i++) {
-    elt.push_back(ModMatOfMatrix(ei.first[i], p));
-    eltinv.push_back(ModMatOfMatrix(ei.second[i], p));
-    gm.elt2.push_back(ModMatOfMatrix(ei.first[i], p * p));
-    gm.eltinv2.push_back(ModMatOfMatrix(ei.second[i], p * p));
+    elt.push_back(ModMatrixOfMatrix(ei.first[i], p));
+    eltinv.push_back(ModMatrixOfMatrix(ei.second[i], p));
+    gm.elt2.push_back(ModMatrixOfMatrix(ei.first[i], p * p));
+    gm.eltinv2.push_back(ModMatrixOfMatrix(ei.second[i], p * p));
   }
   for (auto const &P : ListP) {
-    gm.gens.push_back(ModMatOfMatrix(P, p));
+    gm.gens.push_back(ModMatrixOfMatrix(P, p));
   }
   // modulo 8 at p = 2: the norms of the lifts are read modulo 8
-  gm.A = ModMatOfMatrix(A, (p == 2) ? 8 : p * p);
-  ModMatrix A_p = ModMatOfMatrix(A, p);
+  gm.A = ModMatrixOfMatrix(A, (p == 2) ? 8 : p * p);
+  ModMatrix A_p = ModMatrixOfMatrix(A, p);
   // a fixed seed: the decomposition is deterministic for a given input
-  std::mt19937_64 rng(static_cast<uint64_t>(p) * 1000003ULL + A.rows());
-  gm.types = IrreducibleTypes(static_cast<size_t>(A.rows()), gm.gens, elt,
+  std::mt19937_64 rng(p * 1000003ULL + static_cast<uint64_t>(A.rows()));
+  gm.types = IrreducibleTypes(A.rows(), gm.gens, elt,
                               eltinv, A_p, p, rng);
   if (p == 2) {
     // totally isotropic for b mod 2 is not enough: the isotypic part is
@@ -940,8 +940,9 @@ GroupModuleAtPrime ComputeGroupModuleAtPrime(MyMatrix<T> const &A,
       std::vector<ModMatrix> theta_pow = ThetaPowers(tp, p);
       for (auto const &X : tp.Phi) {
         for (auto const &tp_a : theta_pow) {
-          for (auto const &row : ModMatrixProduct(tp_a, X, p)) {
-            if (!IsSingularModTwo(row, gm.A)) {
+          ModMatrix Y = ModMatrixProduct(tp_a, X, p);
+          for (int i = 0; i < Y.rows(); i++) {
+            if (!IsSingularModTwo(Y, i, gm.A)) {
               tp.isotypic_isotropic = false;
             }
           }
@@ -952,7 +953,7 @@ GroupModuleAtPrime ComputeGroupModuleAtPrime(MyMatrix<T> const &A,
   return gm;
 }
 
-inline double TypeCost(IrreducibleType const &tp, int64_t p) {
+inline double TypeCost(IrreducibleType const &tp, T_small_prime p) {
   double q = std::pow(static_cast<double>(p), tp.f);
   double m = static_cast<double>(tp.Phi.size());
   return (std::pow(q, m) - 1) / (q - 1);
@@ -1064,20 +1065,14 @@ void IndexOrbitForEach(size_t n_point, size_t n_gen, Fimage image, F f) {
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>
 GroupNeighborPair(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
-                  ModMatrix const &St, ModMatrix const &A2, int64_t p,
+                  ModMatrix const &St, ModMatrix const &A2, T_small_prime p,
                   std::ostream &os) {
   int n = A.rows();
-  ModMatrix gens = GroupNeighborGenerators(St, A2, p);
-  MyMatrix<Tint> Gen(static_cast<int>(gens.size()), n);
-  for (size_t i = 0; i < gens.size(); i++) {
-    for (int j = 0; j < n; j++) {
-      Gen(static_cast<int>(i), j) =
-          UniversalScalarConversion<Tint, int64_t>(gens[i][j]);
-    }
-  }
+  MyMatrix<Tint> Gen = UniversalMatrixConversion<Tint, T_residue>(
+      GroupNeighborGenerators(St, A2, p));
   MyMatrix<Tint> Bz = GetZbasis(Gen);
   MyMatrix<T> B = UniversalMatrixConversion<T, Tint>(Bz) /
-                  UniversalScalarConversion<T, int64_t>(p);
+                  UniversalScalarConversion<T, T_small_prime>(p);
   MyMatrix<T> GramN = B * A * B.transpose();
   if (!IsIntegralMatrix(GramN)) {
     std::cerr << "GENUS_GROUP: the module neighbor is not integral\n";
@@ -1584,7 +1579,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
     (void)f_insert(A, ListP);
   }
-  auto expand_at_module = [&](size_t pos, int p, size_t i_prime) -> void {
+  auto expand_at_module = [&](size_t pos, T_small_prime p, size_t i_prime) -> void {
     MyMatrix<T> A = ListPairWork[pos].first;
     std::vector<MyMatrix<T>> ListP = ListPairWork[pos].second;
     GroupModuleAtPrime gm = ComputeGroupModuleAtPrime(A, ListP, p);
@@ -1597,14 +1592,14 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     });
     std::vector<ModMatrix> ListCent;
     for (auto const &h : ListAutInfo[pos].ListGen) {
-      ListCent.push_back(ModMatOfMatrix(UniversalMatrixConversion<T, Tint>(h), p));
+      ListCent.push_back(ModMatrixOfMatrix(UniversalMatrixConversion<T, Tint>(h), p));
     }
     for (size_t i_type : order) {
       IrreducibleType const &tp = gm.types[i_type];
       FiniteFieldModP F{p, tp.f, tp.mu, 1};
       for (int a = 0; a < tp.f; a++) {
         // the elements of F_q are coded by integers below q
-        if (F.q > (int64_t(1) << 62) / p) {
+        if (F.q > kMaxResidueModulus / p) {
           std::cerr << "GENUS: the field F_" << p << "^" << tp.f
                     << " is too large for the codes of its elements\n";
           throw TerminalException{1};
@@ -1613,7 +1608,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       }
       int mdim = static_cast<int>(tp.Phi.size());
       std::vector<ModMatrix> theta_pow = ThetaPowers(tp, p);
-      std::vector<std::vector<std::vector<std::vector<int64_t>>>> ListAct;
+      std::vector<std::vector<std::vector<ModVector>>> ListAct;
       for (auto const &h : ListCent) {
         ListAct.push_back(ActionOnHom(tp, theta_pow, h, p));
       }
@@ -1636,7 +1631,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
                                 y_codes);
           size_t res = IndexOfProjectivePointCodes(tb, mdim, y_codes);
 #ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
-          std::vector<std::vector<int64_t>> alpha =
+          std::vector<ModVector> alpha =
               ProjectivePointFqOfIndex(F, mdim, idx);
           if (res != IndexOfProjectivePointFq(
                          F, mdim, ApplyActionOnHom(F, ListAct[i_gen], alpha))) {
@@ -1646,7 +1641,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
 #endif
           return res;
         }
-        std::vector<std::vector<int64_t>> alpha =
+        std::vector<ModVector> alpha =
             ProjectivePointFqOfIndex(F, mdim, idx);
         return IndexOfProjectivePointFq(
             F, mdim, ApplyActionOnHom(F, ListAct[i_gen], alpha));
@@ -1659,29 +1654,23 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
         n_orbit++;
 #endif
-        std::vector<std::vector<int64_t>> alpha =
+        std::vector<ModVector> alpha =
             ProjectivePointFqOfIndex(F, mdim, idx);
         ModMatrix S_rows = HomOfPoint(tp, theta_pow, alpha, p);
         if (!tp.isotypic_isotropic) {
           if (p == 2) {
-            for (auto const &row : S_rows) {
-              if (!IsSingularModTwo(row, gm.A)) {
+            for (int i = 0; i < S_rows.rows(); i++) {
+              if (!IsSingularModTwo(S_rows, i, gm.A)) {
                 return false;
               }
             }
           }
-          ModMatrix A_p = ModMatOfMatrix(A, p);
-          ModMatrix SA = ModMatrixProduct(S_rows, A_p, p);
-          for (auto const &x : SA) {
-            for (auto const &y : S_rows) {
-              int64_t v = 0;
-              for (size_t c = 0; c < x.size(); c++) {
-                v = (v + ResMul(x[c], y[c], p)) % p;
-              }
-              if (v != 0) {
-                return false;
-              }
-            }
+          ModMatrix A_p = ModMatrixOfMatrix(A, p);
+          ModMatrix SAS = ModMatrixProduct(
+              ModMatrixProduct(S_rows, A_p, p),
+              ModMatrix(S_rows.transpose()), p);
+          if (!SAS.isZero()) {
+            return false;
           }
         }
         std::optional<ModMatrix> St =
@@ -1700,7 +1689,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       int mode = visit_mode(n_point, pos, i_type);
       if (mode == 2 || mode == 3) {
         std::mt19937_64 rng_point(static_cast<uint64_t>(pos) * 7919ULL +
-                                  static_cast<uint64_t>(p) * 104729ULL +
+                                  p * 104729ULL +
                                   i_round);
         std::uniform_int_distribution<size_t> unif(0, n_point - 1);
         size_t n_draw = (mode == 3) ? n_sample_before_orbits : n_sample;
@@ -1715,7 +1704,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       }
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
       os << "GENUS_GROUP: class " << (pos + 1) << " p=" << p << " type dim="
-         << tp.S0.space.basis.size() << " q=" << F.q << " m=" << mdim
+         << tp.S0.space.basis.rows() << " q=" << F.q << " m=" << mdim
          << " orbits visited=" << n_orbit << "\n";
 #endif
       if (closed) {
@@ -1734,7 +1723,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     neighbors at 2 visit P^11(F_4), 5.6 10^6 points, and close the genus.
    */
   bool module_path = !abelian;
-  auto expand_at = [&](size_t pos, int p, size_t i_prime) -> void {
+  auto expand_at = [&](size_t pos, T_small_prime p, size_t i_prime) -> void {
     i_prime_cur = i_prime;
     if (module_path) {
       expand_at_module(pos, p, i_prime);
@@ -1751,11 +1740,11 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     // the mass may close before a large one is ever cut into orbits.
     std::stable_sort(ListEig.begin(), ListEig.end(),
                      [](EigenspaceData const &x, EigenspaceData const &y) {
-                       return x.space.basis.size() < y.space.basis.size();
+                       return x.space.basis.rows() < y.space.basis.rows();
                      });
     for (size_t i_space = 0; i_space < ListEig.size(); i_space++) {
       EigenspaceData &ed = ListEig[i_space];
-      size_t k = ed.space.basis.size();
+      size_t k = static_cast<size_t>(ed.space.basis.rows());
       std::vector<MyMatrix<Tint>> ListGenEig;
       for (auto &h : ListAutInfo[pos].ListGen) {
         ListGenEig.push_back(EigenspaceAction(ed, h, p));
@@ -1790,7 +1779,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       int mode = visit_mode(n_line, pos, i_space);
       if (mode == 2 || mode == 3) {
         std::mt19937_64 rng_point(static_cast<uint64_t>(pos) * 7919ULL +
-                                  static_cast<uint64_t>(p) * 104729ULL +
+                                  p * 104729ULL +
                                   i_round);
         std::uniform_int_distribution<size_t> unif(0, n_line - 1);
         size_t n_draw = (mode == 3) ? n_sample_before_orbits : n_sample;
@@ -1801,8 +1790,18 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         }
       }
       if (mode == 1 || (mode == 3 && !closed)) {
+        // the form on the coordinates, for the eigenvalues +-1 only: the
+        // other eigenspaces are totally isotropic
+        ModMatrix form(0, 0);
+        T_residue form_mod = (p == 2) ? 4 : p;
+        if (ed.is_real) {
+          MyMatrix<Tint> B =
+              UniversalMatrixConversion<Tint, T_residue>(ed.space.basis);
+          form = ModMatrixOfMatrix(MyMatrix<Tint>(B * G_int * B.transpose()),
+                                   form_mod);
+        }
         ProjectiveLineOrbitForEach<Tint>(static_cast<int>(k), p, ListGenEig,
-                                         visit_line);
+                                         form, form_mod, visit_line);
       }
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
       os << "GENUS_GROUP: class " << (pos + 1) << " p=" << p

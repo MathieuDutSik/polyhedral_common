@@ -32,8 +32,8 @@ struct Case {
 };
 
 // e, the residues of A and of p^e A^{-1} modulo p^W
-void Prepare(MyMatrix<T> const &A, int64_t p, int &e, ModMatrix &A_mod,
-             ModMatrix &Be) {
+void Prepare(MyMatrix<T> const &A, int64_t p, int &e, ModRowsI64 &A_mod,
+             ModRowsI64 &Be) {
   int m = A.rows();
   MyMatrix<T> Ainv = Inverse(A);
   e = 0;
@@ -65,9 +65,9 @@ void Prepare(MyMatrix<T> const &A, int64_t p, int &e, ModMatrix &A_mod,
   }
 }
 
-ModMatrix ToMod(MyMatrix<T> const &Y) {
+ModRowsI64 ToMod(MyMatrix<T> const &Y) {
   int m = Y.rows();
-  ModMatrix Ym(m, std::vector<int64_t>(m));
+  ModRowsI64 Ym(m, std::vector<int64_t>(m));
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
       Ym[i][j] = UniversalScalarConversion<int64_t, T>(Y(i, j));
@@ -81,9 +81,9 @@ ModMatrix ToMod(MyMatrix<T> const &Y) {
 int Compare(Case const &cs, int64_t p, int c) {
   int m = cs.A.rows();
   int e;
-  ModMatrix A_mod, Be;
+  ModRowsI64 A_mod, Be;
   Prepare(cs.A, p, e, A_mod, Be);
-  std::vector<ModMatrix> Om, Lam, Forms;
+  std::vector<ModRowsI64> Om, Lam, Forms;
   for (auto const &X : cs.Om) {
     Om.push_back(ToMod(X));
   }
@@ -109,18 +109,18 @@ int Compare(Case const &cs, int64_t p, int c) {
   std::vector<MyMatrix<Tint>> LamInt =
       UniversalStdVectorMatrixConversion<Tint, T>(cs.Lam);
   int64_t pW = ResiduePrimePower(p, MultiplicityNewtonPrecision(p));
-  std::optional<std::vector<ModMatrix>> Lie = ResidueMatrices(
+  std::optional<std::vector<ModRowsI64>> Lie = ResidueMatrices(
       IntegralLieLatticeColumns<T, Tint>(cs.A, LamInt), pW);
-  std::optional<std::vector<ModMatrix>> gens = LocalOrthogonalImageGenerators(
+  std::optional<std::vector<ModRowsI64>> gens = LocalOrthogonalImageGenerators(
       A_mod, Be, Om, Lam, Forms, Lie, p, c, e, bounds, &ord);
   auto t1 = std::chrono::steady_clock::now();
   // the listing, on the rows: the transposes of the commutant, or all the
   // matrices
-  std::vector<ModMatrix> basis;
+  std::vector<ModRowsI64> basis;
   if (cs.Lam.empty()) {
     for (int a = 0; a < m; a++) {
       for (int b = 0; b < m; b++) {
-        ModMatrix E(m, std::vector<int64_t>(m, 0));
+        ModRowsI64 E(m, std::vector<int64_t>(m, 0));
         E[a][b] = 1;
         basis.push_back(E);
       }
@@ -130,7 +130,7 @@ int Compare(Case const &cs, int64_t p, int c) {
       basis.push_back(ToMod(MyMatrix<T>(X.transpose())));
     }
   }
-  std::optional<std::vector<ModMatrix>> list =
+  std::optional<std::vector<ModRowsI64>> list =
       LocalStabilizerImage(A_mod, basis, p, c, e, bounds);
   auto t2 = std::chrono::steady_clock::now();
   double s1 = std::chrono::duration<double>(t1 - t0).count();

@@ -3,6 +3,7 @@
 #define SRC_GENERA_ISOMETRYGLUE_H_
 
 // clang-format off
+#include "ResidueArithmeticLegacy.h"
 #include "GeneraArithmetic.h"
 #include "IsometryMass.h"
 #include "GenusEnumerationGroup.h"
@@ -76,10 +77,10 @@ inline PrimaryQuadModule DirectSumModule(PrimaryQuadModule const &M1,
     int64_t scale = M.N / Mi.N;
     for (size_t i = 0; i < Mi.rank(); i++) {
       for (size_t j = 0; j < Mi.rank(); j++) {
-        M.bnum[shift + i][shift + j] = ResMul(Mi.bnum[i][j], scale, M.N);
+        M.bnum[shift + i][shift + j] = ResMulI64(Mi.bnum[i][j], scale, M.N);
         M.sigma_img[shift + i][shift + j] = Mi.sigma_img[i][j];
       }
-      M.qnum[shift + i] = ResMul(Mi.qnum[i], scale, 2 * M.N);
+      M.qnum[shift + i] = ResMulI64(Mi.qnum[i], scale, 2 * M.N);
     }
   };
   insert(M1, 0);
@@ -110,7 +111,7 @@ inline ModuleElt ModuleSum(PrimaryQuadModule const &M, ModuleElt const &x,
                            ModuleElt const &y) {
   ModuleElt z(M.rank());
   for (size_t i = 0; i < M.rank(); i++) {
-    z[i] = ResAdd(x[i], y[i], M.ord[i]);
+    z[i] = ResAddI64(x[i], y[i], M.ord[i]);
   }
   return z;
 }

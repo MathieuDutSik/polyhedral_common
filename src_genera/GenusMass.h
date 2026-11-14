@@ -103,7 +103,7 @@ SpeciesListTwo(std::vector<std::array<int, 5>> const &sym) {
     bool free = dense[k - 1][3] != 1 && dense[k + 1][3] != 1;
     int n = dense[k][1];
     int o = dense[k][4];
-    int d = ResMod(dense[k][2], 8);
+    int d = static_cast<int>(ResModSigned(dense[k][2], 8));
     if (d == 3 || d == 5) {
       o = (o + 4) % 8;
     }

@@ -14,7 +14,7 @@
   forms), and the order read from the pivots is the order of the subgroup.
  */
 
-std::set<std::vector<int64_t>> BruteSpan(ModMatrix const &gens, int64_t N,
+std::set<std::vector<int64_t>> BruteSpan(ModRowsI64 const &gens, int64_t N,
                                          size_t r) {
   std::set<std::vector<int64_t>> seen{std::vector<int64_t>(r, 0)};
   std::vector<std::vector<int64_t>> queue{std::vector<int64_t>(r, 0)};
@@ -46,8 +46,8 @@ int main() {
           continue;
         }
         for (int trial = 0; trial < 40; trial++) {
-          auto random_gens = [&](size_t k) -> ModMatrix {
-            ModMatrix g;
+          auto random_gens = [&](size_t k) -> ModRowsI64 {
+            ModRowsI64 g;
             for (size_t i = 0; i < k; i++) {
               std::vector<int64_t> row(r);
               for (size_t a = 0; a < r; a++) {
@@ -62,12 +62,12 @@ int main() {
             }
             return g;
           };
-          ModMatrix g1 = random_gens(1 + rng() % 3);
+          ModRowsI64 g1 = random_gens(1 + rng() % 3);
           std::set<std::vector<int64_t>> S1 = BruteSpan(g1, N, r);
           // another generating set of the same subgroup: random elements
           // of S1 together with g1 shuffled and combined
           std::vector<std::vector<int64_t>> elts(S1.begin(), S1.end());
-          ModMatrix g2;
+          ModRowsI64 g2;
           for (size_t i = 0; i < g1.size(); i++) {
             std::vector<int64_t> row = g1[(i + 1) % g1.size()];
             std::vector<int64_t> const &z = elts[rng() % elts.size()];
@@ -82,8 +82,8 @@ int main() {
           for (size_t i = 0; i < g1.size(); i++) {
             g2.push_back(g1[i]);
           }
-          ModMatrix H1 = HowellFormPrimePower(g1, p, C);
-          ModMatrix H2 = HowellFormPrimePower(g2, p, C);
+          ModRowsI64 H1 = HowellFormPrimePower(g1, p, C);
+          ModRowsI64 H2 = HowellFormPrimePower(g2, p, C);
           if (H1 != H2) {
             std::cerr << "Test_HowellForm: two forms for one subgroup (p=" << p
                       << " C=" << C << " r=" << r << ")\n";
@@ -110,7 +110,7 @@ int main() {
             return 1;
           }
           // a random other subgroup: same form iff same subgroup
-          ModMatrix g3 = random_gens(1 + rng() % 3);
+          ModRowsI64 g3 = random_gens(1 + rng() % 3);
           std::set<std::vector<int64_t>> S3 = BruteSpan(g3, N, r);
           bool same_form = (HowellFormPrimePower(g3, p, C) == H1);
           if (same_form != (S3 == S1)) {

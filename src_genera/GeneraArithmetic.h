@@ -35,6 +35,16 @@ template <typename T> T RationalFraction(int64_t a, int64_t b) {
   return x;
 }
 
+// The value of a character, or a small signed key standing for one (a
+// Legendre symbol, a unit residue modulo 8).
+using T_character = int64_t;
+
+// The Legendre (Kronecker) symbol of a residue a modulo the prime p.
+inline int KroneckerResidue(T_residue a, T_small_prime p) {
+  return kronecker_symbol<int64_t>(static_cast<int64_t>(a),
+                                   static_cast<int64_t>(p));
+}
+
 // v_p(x) for a nonzero integer x.
 template <typename Tint> int IntegerValuation(Tint const &x, int64_t p) {
   return static_cast<int>(
@@ -110,12 +120,13 @@ inline std::pair<int64_t, int> PrimePowerDecomposition(int64_t q) {
   return {p, k};
 }
 
-inline int64_t LeastNonResidue(int64_t p) {
+inline T_residue LeastNonResidue(T_small_prime p) {
+  int64_t p_s = static_cast<int64_t>(p);
   int64_t u = 2;
-  while (kronecker_symbol<int64_t>(u, p) != -1) {
+  while (kronecker_symbol<int64_t>(u, p_s) != -1) {
     u++;
   }
-  return u;
+  return static_cast<T_residue>(u);
 }
 
 inline std::vector<int64_t> SmallPrimeDivisors(int64_t x) {
@@ -147,30 +158,30 @@ inline bool IsSquareFree(int64_t x) {
 }
 
 // A square root of the square a modulo the odd prime p (Tonelli-Shanks).
-inline int64_t SqrtModPrime(int64_t a, int64_t p) {
-  a = ResMod(a, p);
+inline T_residue SqrtModPrime(T_residue a, T_small_prime p) {
+  a %= p;
   if (a == 0) {
     return 0;
   }
-  int64_t q = p - 1;
+  uint64_t q = p - 1;
   int s = 0;
   while (q % 2 == 0) {
     q /= 2;
     s++;
   }
-  int64_t z = LeastNonResidue(p);
-  int64_t m = s;
-  int64_t c = ResPow(z, q, p);
-  int64_t t = ResPow(a, q, p);
-  int64_t r = ResPow(a, (q + 1) / 2, p);
+  int m = s;
+  T_residue c = ResPow(LeastNonResidue(p), q, p);
+  T_residue t = ResPow(a, q, p);
+  T_residue r = ResPow(a, (q + 1) / 2, p);
   while (t != 1) {
-    int64_t i = 0, t2 = t;
+    int i = 0;
+    T_residue t2 = t;
     while (t2 != 1) {
       t2 = ResMul(t2, t2, p);
       i++;
     }
-    int64_t b = c;
-    for (int64_t j = 0; j < m - i - 1; j++) {
+    T_residue b = c;
+    for (int j = 0; j < m - i - 1; j++) {
       b = ResMul(b, b, p);
     }
     m = i;
@@ -182,13 +193,11 @@ inline int64_t SqrtModPrime(int64_t a, int64_t p) {
 }
 
 // The integer residue of the p-integral rational x modulo M.
-template <typename T, typename Tint> int64_t ResidueModInt(T const &x, int64_t M) {
-  Tint M_T(static_cast<long>(M));
+template <typename T, typename Tint>
+T_residue ResidueModInt(T const &x, T_residue M) {
   Tint num = UniversalScalarConversion<Tint, T>(GetNumerator(x));
   Tint den = UniversalScalarConversion<Tint, T>(GetDenominator(x));
-  int64_t num_r = UniversalScalarConversion<int64_t, Tint>(ResInt(num, M_T));
-  int64_t den_r = UniversalScalarConversion<int64_t, Tint>(ResInt(den, M_T));
-  return ResMul(num_r, ResInv(den_r, M), M);
+  return ResMul(ResModOf(num, M), ResInv(ResModOf(den, M), M), M);
 }
 
 inline int64_t EulerPhi(int64_t d) {
@@ -376,7 +385,7 @@ template <typename T> T GaussianBinomial(int a, int b, int64_t p) {
 
 inline int FloorDiv2(int a) { return (a >= 0) ? a / 2 : -((-a + 1) / 2); }
 
-inline int MinusOnePower(int e) { return (ResMod(e, 2) == 0) ? 1 : -1; }
+inline int MinusOnePower(int e) { return (e % 2 == 0) ? 1 : -1; }
 /*
   The same key for an integral (even at p = 2) Gram matrix in int64, by a
   Jordan splitting modulo p^K, K = v_p(det) + 5: pivoting on an entry of
@@ -386,7 +395,7 @@ inline int MinusOnePower(int e) { return (ResMod(e, 2) == 0) ? 1 : -1; }
   block. Returns nothing when p^{2K} would overflow; the caller then uses
   LocalSymbolKey.
  */
-inline int64_t ValuationResidue(int64_t x, int64_t p, int K) {
+inline int ValuationResidue(T_residue x, T_small_prime p, int K) {
   if (x == 0) {
     return K;
   }

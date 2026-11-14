@@ -68,13 +68,17 @@ struct GroupSubmodule {
 
 inline GroupSubmodule MakeGroupSubmodule(RowSpaceModP const &space,
                                          std::vector<ModMatrix> const &gens,
-                                         int64_t p) {
+                                         T_small_prime p) {
   GroupSubmodule sm{space, {}};
+  int k = space.basis.rows();
   for (auto const &g : gens) {
     ModMatrix img = ModMatrixProduct(space.basis, g, p);
-    ModMatrix a;
-    for (auto const &row : img) {
-      a.push_back(CoordinatesInRowSpaceModP(space, row));
+    // the coordinates of a vector of the row space are its pivot entries
+    ModMatrix a(k, k);
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < k; j++) {
+        a(i, j) = img(i, static_cast<int>(space.pivots[j]));
+      }
     }
     sm.act.push_back(a);
   }
@@ -82,17 +86,17 @@ inline GroupSubmodule MakeGroupSubmodule(RowSpaceModP const &space,
 }
 
 // The G-submodule spanned by the orbit of the rows of V.
-inline RowSpaceModP SpinModule(ModMatrix const &V, std::vector<ModMatrix> const &gens,
-                              int64_t p) {
+inline RowSpaceModP SpinModule(ModMatrix const &V,
+                               std::vector<ModMatrix> const &gens,
+                               T_small_prime p) {
   RowSpaceModP rs = ComputeRowSpaceModP(V, p);
   while (true) {
     ModMatrix rows = rs.basis;
     for (auto const &g : gens) {
-      ModMatrix img = ModMatrixProduct(rs.basis, g, p);
-      rows.insert(rows.end(), img.begin(), img.end());
+      rows = Concatenate(rows, ModMatrixProduct(rs.basis, g, p));
     }
     RowSpaceModP rs2 = ComputeRowSpaceModP(rows, p);
-    if (rs2.basis.size() == rs.basis.size()) {
+    if (rs2.basis.rows() == rs.basis.rows()) {
       return rs;
     }
     rs = std::move(rs2);
@@ -104,38 +108,38 @@ inline RowSpaceModP SpinModule(ModMatrix const &V, std::vector<ModMatrix> const 
   act_S[g] X = X act_T[g], by the nullspace of the linear system.
  */
 inline std::vector<ModMatrix> HomGroupModules(GroupSubmodule const &S,
-                                           GroupSubmodule const &T, int64_t p) {
-  size_t k = S.space.basis.size();
-  size_t l = T.space.basis.size();
-  size_t n_var = k * l;
-  // the equations, as columns of a matrix with n_var rows
-  ModMatrix M(n_var);
+                                              GroupSubmodule const &T,
+                                              T_small_prime p) {
+  int k = S.space.basis.rows();
+  int l = T.space.basis.rows();
+  int n_var = k * l;
+  int n_eq = static_cast<int>(S.act.size()) * k * l;
+  // the equations, as the columns of a matrix with n_var rows
+  ModMatrix M = ZeroMatrix<T_residue>(n_var, n_eq);
+  int e = 0;
   for (size_t ig = 0; ig < S.act.size(); ig++) {
     ModMatrix const &a = S.act[ig];
     ModMatrix const &b = T.act[ig];
-    for (size_t i = 0; i < k; i++) {
-      for (size_t j = 0; j < l; j++) {
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < l; j++) {
         // (a X - X b)(i, j) = sum_u a(i,u) X(u,j) - sum_v X(i,v) b(v,j)
-        std::vector<int64_t> col(n_var, 0);
-        for (size_t u = 0; u < k; u++) {
-          col[u * l + j] = ResMod(col[u * l + j] + a[i][u], p);
+        for (int u = 0; u < k; u++) {
+          M(u * l + j, e) = ResAdd(M(u * l + j, e), a(i, u), p);
         }
-        for (size_t v = 0; v < l; v++) {
-          col[i * l + v] = ResMod(col[i * l + v] - b[v][j], p);
+        for (int v = 0; v < l; v++) {
+          M(i * l + v, e) = ResSub(M(i * l + v, e), b(v, j), p);
         }
-        for (size_t w = 0; w < n_var; w++) {
-          M[w].push_back(col[w]);
-        }
+        e++;
       }
     }
   }
   ModMatrix ker = LeftNullspaceModP(M, p);
   std::vector<ModMatrix> res;
-  for (auto const &x : ker) {
-    ModMatrix X(k, std::vector<int64_t>(l));
-    for (size_t i = 0; i < k; i++) {
-      for (size_t j = 0; j < l; j++) {
-        X[i][j] = x[i * l + j];
+  for (int r = 0; r < ker.rows(); r++) {
+    ModMatrix X(k, l);
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < l; j++) {
+        X(i, j) = ker(r, i * l + j);
       }
     }
     res.push_back(X);
@@ -145,41 +149,39 @@ inline std::vector<ModMatrix> HomGroupModules(GroupSubmodule const &S,
 
 // The minimal polynomial of a square matrix, by the first dependence of
 // its powers.
-inline PolyQ ModMinimalPolynomial(ModMatrix const &X, int64_t p) {
-  size_t k = X.size();
-  ModMatrix flat;
+inline PolyQ ModMinimalPolynomial(ModMatrix const &X, T_small_prime p) {
+  int k = X.rows();
+  ModMatrix flat(0, k * k);
   ModMatrix pw = ModMatrixIdentity(k);
-  for (size_t d = 0; d <= k; d++) {
-    std::vector<int64_t> v;
-    for (auto const &row : pw) {
-      v.insert(v.end(), row.begin(), row.end());
-    }
-    if (!flat.empty()) {
-      std::optional<std::vector<int64_t>> sol = SolveRowsModP(flat, v, p);
+  for (int d = 0; d <= k; d++) {
+    ModVector v = FlattenModMatrix(pw);
+    if (flat.rows() > 0) {
+      std::optional<ModVector> sol = SolveRowsModP(flat, v, p);
       if (sol) {
         // X^d = sum_i sol_i X^i
         PolyQ mu(d + 1, 0);
-        for (size_t i = 0; i < d; i++) {
-          mu[i] = ResMod(-(*sol)[i], p);
+        for (int i = 0; i < d; i++) {
+          mu[i] = ResNeg((*sol)[i], p);
         }
         mu[d] = 1;
         return mu;
       }
     }
-    flat.push_back(v);
+    AppendModRow(flat, v);
     pw = ModMatrixProduct(pw, X, p);
   }
   std::cerr << "GROUP_NEIGHBOR: no minimal polynomial found\n";
   throw TerminalException{1};
 }
 
-inline ModMatrix PolyOfMatrix(PolyQ const &f, ModMatrix const &X, int64_t p) {
-  size_t k = X.size();
-  ModMatrix res(k, std::vector<int64_t>(k, 0));
+inline ModMatrix PolyOfMatrix(PolyQ const &f, ModMatrix const &X,
+                              T_small_prime p) {
+  int k = X.rows();
+  ModMatrix res = ZeroMatrix<T_residue>(k, k);
   for (size_t i = f.size(); i-- > 0;) {
     res = ModMatrixProduct(res, X, p);
-    for (size_t j = 0; j < k; j++) {
-      res[j][j] = ResMod(res[j][j] + f[i], p);
+    for (int j = 0; j < k; j++) {
+      res(j, j) = ResAdd(res(j, j), f[i] % p, p);
     }
   }
   return res;
@@ -209,40 +211,37 @@ struct IrreducibleType {
  */
 inline std::pair<GroupSubmodule, std::pair<ModMatrix, PolyQ>>
 IrreducibleSubmodule(RowSpaceModP const &W, std::vector<ModMatrix> const &gens,
-                     int64_t p, std::mt19937_64 &rng) {
-  size_t n = W.basis[0].size();
-  std::uniform_int_distribution<int64_t> unif(0, p - 1);
-  auto random_combination = [&](ModMatrix const &B) -> std::vector<int64_t> {
-    std::vector<int64_t> v(B.empty() ? n : B[0].size(), 0);
-    for (auto const &row : B) {
-      int64_t c = unif(rng);
-      for (size_t j = 0; j < v.size(); j++) {
-        v[j] = ResMod(v[j] + ResMul(c, row[j], p), p);
+                     T_small_prime p, std::mt19937_64 &rng) {
+  int n = W.basis.cols();
+  std::uniform_int_distribution<T_residue> unif(0, p - 1);
+  ModMatrix v(1, n);
+  do {
+    for (int j = 0; j < n; j++) {
+      v(0, j) = 0;
+    }
+    for (int r = 0; r < W.basis.rows(); r++) {
+      T_residue c = unif(rng);
+      for (int j = 0; j < n; j++) {
+        v(0, j) = ResAdd(v(0, j), ResMul(c, W.basis(r, j), p), p);
       }
     }
-    return v;
-  };
-  std::vector<int64_t> v;
-  do {
-    v = random_combination(W.basis);
-  } while (std::all_of(v.begin(), v.end(), [](int64_t x) { return x == 0; }));
-  RowSpaceModP S = SpinModule({v}, gens, p);
+  } while (IsZeroMatrix(v));
+  RowSpaceModP S = SpinModule(v, gens, p);
   for (int iter = 0; iter < 10000; iter++) {
     GroupSubmodule sm = MakeGroupSubmodule(S, gens, p);
     std::vector<ModMatrix> End = HomGroupModules(sm, sm, p);
     size_t d = End.size();
+    int k = S.basis.rows();
     if (d == 1) {
-      size_t k = S.basis.size();
-      return {sm, {ModMatrixIdentity(k), PolyQ{ResMod(-1, p), 1}}};
+      return {sm, {ModMatrixIdentity(k), PolyQ{p - 1, 1}}};
     }
     // a random element of End_G(S)
-    size_t k = S.basis.size();
-    ModMatrix x(k, std::vector<int64_t>(k, 0));
+    ModMatrix x = ZeroMatrix<T_residue>(k, k);
     for (auto const &E : End) {
-      int64_t c = unif(rng);
-      for (size_t i = 0; i < k; i++) {
-        for (size_t j = 0; j < k; j++) {
-          x[i][j] = ResMod(x[i][j] + ResMul(c, E[i][j], p), p);
+      T_residue c = unif(rng);
+      for (int i = 0; i < k; i++) {
+        for (int j = 0; j < k; j++) {
+          x(i, j) = ResAdd(x(i, j), ResMul(c, E(i, j), p), p);
         }
       }
     }
@@ -261,7 +260,7 @@ IrreducibleSubmodule(RowSpaceModP const &W, std::vector<ModMatrix> const &gens,
     for (size_t e = 1; e <= mu.size() - 1; e++) {
       PolyQ y = xpol;
       for (size_t i = 0; i < e; i++) {
-        y = PolyPowModQ(y, static_cast<uint64_t>(p), mu, p);
+        y = PolyPowModQ(y, p, mu, p);
       }
       PolyQ g = PolyGcdQ(PolySubQ(y, xpol, p), mu, p);
       PolyTrim(g);
@@ -276,7 +275,7 @@ IrreducibleSubmodule(RowSpaceModP const &W, std::vector<ModMatrix> const &gens,
       for (size_t e = 1; e < mu.size() && h.empty(); e++) {
         PolyQ y = xpol;
         for (size_t i = 0; i < e; i++) {
-          y = PolyPowModQ(y, static_cast<uint64_t>(p), mu, p);
+          y = PolyPowModQ(y, p, mu, p);
         }
         PolyQ g = PolyGcdQ(PolySubQ(y, xpol, p), mu, p);
         PolyTrim(g);
@@ -293,7 +292,7 @@ IrreducibleSubmodule(RowSpaceModP const &W, std::vector<ModMatrix> const &gens,
     }
     ModMatrix hx = PolyOfMatrix(h, x, p);
     ModMatrix ker = LeftNullspaceModP(hx, p);
-    if (ker.empty() || ker.size() == k) {
+    if (ker.rows() == 0 || ker.rows() == k) {
       continue;
     }
     // back to the ambient coordinates
@@ -309,39 +308,41 @@ IrreducibleSubmodule(RowSpaceModP const &W, std::vector<ModMatrix> const &gens,
   ListElt and ListEltInv: the elements and their inverses modulo p.
  */
 inline ModMatrix EquivariantProjector(RowSpaceModP const &U,
-                                   std::vector<ModMatrix> const &ListElt,
-                                   std::vector<ModMatrix> const &ListEltInv,
-                                   int64_t p) {
-  size_t n = ListElt[0].size();
-  ModMatrix E0(n, std::vector<int64_t>(n, 0));
+                                      std::vector<ModMatrix> const &ListElt,
+                                      std::vector<ModMatrix> const &ListEltInv,
+                                      T_small_prime p) {
+  int n = ListElt[0].rows();
+  ModMatrix E0 = ZeroMatrix<T_residue>(n, n);
   for (size_t i = 0; i < U.pivots.size(); i++) {
-    E0[U.pivots[i]] = U.basis[i];
+    E0.row(static_cast<int>(U.pivots[i])) = U.basis.row(static_cast<int>(i));
   }
-  ModMatrix E(n, std::vector<int64_t>(n, 0));
+  ModMatrix E = ZeroMatrix<T_residue>(n, n);
   for (size_t ig = 0; ig < ListElt.size(); ig++) {
-    ModMatrix X = ModMatrixProduct(ModMatrixProduct(ListEltInv[ig], E0, p), ListElt[ig], p);
-    for (size_t i = 0; i < n; i++) {
-      for (size_t j = 0; j < n; j++) {
-        E[i][j] = (E[i][j] + X[i][j]) % p;
+    ModMatrix X = ModMatrixProduct(ModMatrixProduct(ListEltInv[ig], E0, p),
+                                   ListElt[ig], p);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        E(i, j) = ResAdd(E(i, j), X(i, j), p);
       }
     }
   }
-  int64_t inv = ResInv(ResMod(static_cast<int64_t>(ListElt.size()), p), p);
-  for (auto &row : E) {
-    for (auto &x : row) {
-      x = ResMul(x, inv, p);
+  T_residue inv = ResInv(ListElt.size() % p, p);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      E(i, j) = ResMul(E(i, j), inv, p);
     }
   }
   return E;
 }
 
 // The row space of I - E.
-inline RowSpaceModP ComplementOfProjector(ModMatrix const &E, int64_t p) {
-  size_t n = E.size();
+inline RowSpaceModP ComplementOfProjector(ModMatrix const &E,
+                                          T_small_prime p) {
+  int n = E.rows();
   ModMatrix C = ModMatrixIdentity(n);
-  for (size_t i = 0; i < n; i++) {
-    for (size_t j = 0; j < n; j++) {
-      C[i][j] = ResMod(C[i][j] - E[i][j], p);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      C(i, j) = ResSub(C(i, j), E(i, j), p);
     }
   }
   return ComputeRowSpaceModP(C, p);
@@ -353,16 +354,16 @@ inline RowSpaceModP ComplementOfProjector(ModMatrix const &E, int64_t p) {
   test of total isotropy of an isotypic part.
  */
 inline std::vector<IrreducibleType>
-IrreducibleTypes(size_t n, std::vector<ModMatrix> const &gens,
+IrreducibleTypes(int n, std::vector<ModMatrix> const &gens,
                  std::vector<ModMatrix> const &ListElt,
                  std::vector<ModMatrix> const &ListEltInv, ModMatrix const &A,
-                 int64_t p, std::mt19937_64 &rng) {
+                 T_small_prime p, std::mt19937_64 &rng) {
   std::vector<IrreducibleType> res;
   RowSpaceModP Full = ComputeRowSpaceModP(ModMatrixIdentity(n), p);
   GroupSubmodule FullMod = MakeGroupSubmodule(Full, gens, p);
-  ModMatrix found;
+  ModMatrix found(0, n);
   RowSpaceModP Rest = Full;
-  while (!Rest.basis.empty()) {
+  while (Rest.basis.rows() > 0) {
     std::pair<GroupSubmodule, std::pair<ModMatrix, PolyQ>> irr =
         IrreducibleSubmodule(Rest, gens, p, rng);
     IrreducibleType tp;
@@ -370,81 +371,56 @@ IrreducibleTypes(size_t n, std::vector<ModMatrix> const &gens,
     tp.theta = irr.second.first;
     tp.mu = irr.second.second;
     tp.f = static_cast<int>(tp.mu.size()) - 1;
-    size_t k = tp.S0.space.basis.size();
-    std::vector<ModMatrix> Hom = HomGroupModules(tp.S0, FullMod, p);
+    int k = tp.S0.space.basis.rows();
     // the k x n matrices of the maps (the full module has the standard
     // basis)
-    std::vector<ModMatrix> HomMat = Hom;
+    std::vector<ModMatrix> HomMat = HomGroupModules(tp.S0, FullMod, p);
     // an F_q-basis
     std::vector<ModMatrix> theta_pow{ModMatrixIdentity(k)};
     for (int a = 1; a < tp.f; a++) {
       theta_pow.push_back(ModMatrixProduct(theta_pow.back(), tp.theta, p));
     }
-    auto flatten = [&](ModMatrix const &X) -> std::vector<int64_t> {
-      std::vector<int64_t> v;
-      for (auto const &row : X) {
-        v.insert(v.end(), row.begin(), row.end());
-      }
-      return v;
-    };
-    ModMatrix span;
+    ModMatrix span(0, k * n);
     for (auto const &X : HomMat) {
       ModMatrix test = span;
-      test.push_back(flatten(X));
-      if (RankModPrime(test, p) == span.size()) {
+      AppendModRow(test, FlattenModMatrix(X));
+      if (RankModPrime(test, p) == static_cast<size_t>(span.rows())) {
         continue;
       }
       tp.Phi.push_back(X);
       for (auto const &tp_a : theta_pow) {
-        span.push_back(flatten(ModMatrixProduct(tp_a, X, p)));
+        AppendModRow(span, FlattenModMatrix(ModMatrixProduct(tp_a, X, p)));
       }
       span = ComputeRowSpaceModP(span, p).basis;
     }
     // the isotypic part
-    ModMatrix iso_rows;
+    ModMatrix iso_rows(0, n);
     for (auto const &X : tp.Phi) {
       for (auto const &tp_a : theta_pow) {
-        ModMatrix Y = ModMatrixProduct(tp_a, X, p);
-        iso_rows.insert(iso_rows.end(), Y.begin(), Y.end());
+        iso_rows = Concatenate(iso_rows, ModMatrixProduct(tp_a, X, p));
       }
     }
     RowSpaceModP Iso = ComputeRowSpaceModP(iso_rows, p);
     // b on the isotypic part
     ModMatrix B = ModMatrixProduct(ModMatrixProduct(Iso.basis, A, p),
-                         [&] {
-                           ModMatrix T(n, std::vector<int64_t>(Iso.basis.size()));
-                           for (size_t i = 0; i < n; i++) {
-                             for (size_t j = 0; j < Iso.basis.size(); j++) {
-                               T[i][j] = Iso.basis[j][i];
-                             }
-                           }
-                           return T;
-                         }(),
-                         p);
-    tp.isotypic_isotropic = true;
-    for (auto const &row : B) {
-      for (auto x : row) {
-        if (x != 0) {
-          tp.isotypic_isotropic = false;
-        }
-      }
-    }
+                                   ModMatrix(Iso.basis.transpose()), p);
+    tp.isotypic_isotropic = IsZeroMatrix(B);
 #ifdef DEBUG_GROUP_NEIGHBOR_MOD_P
     std::cerr << "GROUP_NEIGHBOR: p=" << p << " type dim=" << k
               << " f=" << tp.f << " m=" << tp.Phi.size()
-              << " isotypic dim=" << Iso.basis.size()
+              << " isotypic dim=" << Iso.basis.rows()
               << " isotropic=" << tp.isotypic_isotropic << "\n";
 #endif
-    if (Iso.basis.size() != k * tp.Phi.size()) {
+    if (Iso.basis.rows() != k * static_cast<int>(tp.Phi.size())) {
       std::cerr << "GROUP_NEIGHBOR: the isotypic part has dimension "
-                << Iso.basis.size() << " instead of " << k * tp.Phi.size()
+                << Iso.basis.rows() << " instead of " << k * tp.Phi.size()
                 << "\n";
       throw TerminalException{1};
     }
-    found.insert(found.end(), Iso.basis.begin(), Iso.basis.end());
+    found = Concatenate(found, Iso.basis);
     res.push_back(tp);
     RowSpaceModP Found = ComputeRowSpaceModP(found, p);
-    if (Found.basis.size() == n) {
+    if (Found.basis.rows() == n) {
       break;
     }
     ModMatrix E = EquivariantProjector(Found, ListElt, ListEltInv, p);
@@ -454,16 +430,9 @@ IrreducibleTypes(size_t n, std::vector<ModMatrix> const &gens,
 }
 
 
-inline std::vector<int64_t> FlattenModMat(ModMatrix const &X) {
-  std::vector<int64_t> v;
-  for (auto const &row : X) {
-    v.insert(v.end(), row.begin(), row.end());
-  }
-  return v;
-}
-
-inline std::vector<ModMatrix> ThetaPowers(IrreducibleType const &tp, int64_t p) {
-  size_t k = tp.S0.space.basis.size();
+inline std::vector<ModMatrix> ThetaPowers(IrreducibleType const &tp,
+                                          T_small_prime p) {
+  int k = tp.S0.space.basis.rows();
   std::vector<ModMatrix> res{ModMatrixIdentity(k)};
   for (int a = 1; a < tp.f; a++) {
     res.push_back(ModMatrixProduct(res.back(), tp.theta, p));
@@ -473,22 +442,21 @@ inline std::vector<ModMatrix> ThetaPowers(IrreducibleType const &tp, int64_t p) 
 
 // sum_i alpha_i(theta) Phi_i, a k x n matrix whose rows span the submodule.
 inline ModMatrix HomOfPoint(IrreducibleType const &tp,
-                         std::vector<ModMatrix> const &theta_pow,
-                         std::vector<std::vector<int64_t>> const &alpha,
-                         int64_t p) {
-  size_t k = tp.S0.space.basis.size();
-  size_t n = tp.Phi[0][0].size();
-  ModMatrix res(k, std::vector<int64_t>(n, 0));
+                            std::vector<ModMatrix> const &theta_pow,
+                            std::vector<ModVector> const &alpha,
+                            T_small_prime p) {
+  int k = tp.S0.space.basis.rows();
+  int n = tp.Phi[0].cols();
+  ModMatrix res = ZeroMatrix<T_residue>(k, n);
   for (size_t i = 0; i < tp.Phi.size(); i++) {
     for (int a = 0; a < tp.f; a++) {
-      int64_t c = alpha[i][a];
-      if (c == 0) {
-        continue;
-      }
-      ModMatrix Y = ModMatrixProduct(theta_pow[a], tp.Phi[i], p);
-      for (size_t u = 0; u < k; u++) {
-        for (size_t v = 0; v < n; v++) {
-          res[u][v] = ResMod(res[u][v] + ResMul(c, Y[u][v], p), p);
+      T_residue c = alpha[i][a];
+      if (c != 0) {
+        ModMatrix Y = ModMatrixProduct(theta_pow[a], tp.Phi[i], p);
+        for (int u = 0; u < k; u++) {
+          for (int v = 0; v < n; v++) {
+            res(u, v) = ResAdd(res(u, v), ResMul(c, Y(u, v), p), p);
+          }
         }
       }
     }
@@ -501,45 +469,43 @@ inline ModMatrix HomOfPoint(IrreducibleType const &tp,
   Hom_G(S0, L/pL): Phi_i h = sum_j c_ij(theta) Phi_j, so that the point
   alpha goes to beta_j = sum_i alpha_i c_ij.
  */
-inline std::vector<std::vector<std::vector<int64_t>>>
+inline std::vector<std::vector<ModVector>>
 ActionOnHom(IrreducibleType const &tp, std::vector<ModMatrix> const &theta_pow,
-            ModMatrix const &h, int64_t p) {
+            ModMatrix const &h, T_small_prime p) {
   size_t m = tp.Phi.size();
   ModMatrix basis;
   for (size_t j = 0; j < m; j++) {
     for (int a = 0; a < tp.f; a++) {
-      basis.push_back(FlattenModMat(ModMatrixProduct(theta_pow[a], tp.Phi[j], p)));
+      AppendModRow(basis,
+                   FlattenModMatrix(ModMatrixProduct(theta_pow[a], tp.Phi[j], p)));
     }
   }
-  std::vector<std::vector<std::vector<int64_t>>> c(
-      m, std::vector<std::vector<int64_t>>(m));
+  std::vector<std::vector<ModVector>> c(m, std::vector<ModVector>(m));
   for (size_t i = 0; i < m; i++) {
-    std::optional<std::vector<int64_t>> sol = SolveRowsModP(
-        basis, FlattenModMat(ModMatrixProduct(tp.Phi[i], h, p)), p);
+    std::optional<ModVector> sol = SolveRowsModP(
+        basis, FlattenModMatrix(ModMatrixProduct(tp.Phi[i], h, p)), p);
     if (!sol) {
       std::cerr << "GROUP_NEIGHBOR: h does not preserve Hom_G(S0, L/pL)\n";
       throw TerminalException{1};
     }
     for (size_t j = 0; j < m; j++) {
-      c[i][j] = std::vector<int64_t>(sol->begin() + j * tp.f,
-                                     sol->begin() + (j + 1) * tp.f);
+      c[i][j] = ModVector(sol->begin() + j * tp.f, sol->begin() + (j + 1) * tp.f);
     }
   }
   return c;
 }
 
-inline std::vector<std::vector<int64_t>>
+inline std::vector<ModVector>
 ApplyActionOnHom(FiniteFieldModP const &F,
-                 std::vector<std::vector<std::vector<int64_t>>> const &c,
-                 std::vector<std::vector<int64_t>> const &alpha) {
+                 std::vector<std::vector<ModVector>> const &c,
+                 std::vector<ModVector> const &alpha) {
   size_t m = alpha.size();
-  std::vector<std::vector<int64_t>> beta(m, std::vector<int64_t>(F.f, 0));
+  std::vector<ModVector> beta(m, ModVector(F.f, 0));
   for (size_t i = 0; i < m; i++) {
-    if (FqIsZero(alpha[i])) {
-      continue;
-    }
-    for (size_t j = 0; j < m; j++) {
-      beta[j] = FqAdd(F, beta[j], FqMul(F, alpha[i], c[i][j]));
+    if (!FqIsZero(alpha[i])) {
+      for (size_t j = 0; j < m; j++) {
+        beta[j] = FqAdd(F, beta[j], FqMul(F, alpha[i], c[i][j]));
+      }
     }
   }
   return beta;
@@ -567,14 +533,15 @@ ApplyActionOnHom(FiniteFieldModP const &F,
 inline std::optional<ModMatrix>
 LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
                        std::vector<ModMatrix> const &ListElt2,
-                       std::vector<ModMatrix> const &ListEltInv2, int64_t p) {
-  int64_t p2 = p * p;
-  size_t n = A.size();
-  size_t k = S_rows.size();
-  auto reduce = [&](ModMatrix X, int64_t mod) -> ModMatrix {
-    for (auto &row : X) {
-      for (auto &x : row) {
-        x = ResMod(x, mod);
+                       std::vector<ModMatrix> const &ListEltInv2,
+                       T_small_prime p) {
+  T_residue p2 = p * p;
+  int n = A.rows();
+  int k = S_rows.rows();
+  auto reduce = [&](ModMatrix X, T_residue mod) -> ModMatrix {
+    for (int i = 0; i < X.rows(); i++) {
+      for (int j = 0; j < X.cols(); j++) {
+        X(i, j) %= mod;
       }
     }
     return X;
@@ -587,66 +554,70 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
   RowSpaceModP S = ComputeRowSpaceModP(S_rows, p);
   ModMatrix ES = EquivariantProjector(S, ListElt, ListEltInv, p);
   // the average modulo p^2 of the integer lift, then made idempotent
-  ModMatrix E1(n, std::vector<int64_t>(n, 0));
+  ModMatrix E1 = ZeroMatrix<T_residue>(n, n);
   for (size_t ig = 0; ig < ListElt2.size(); ig++) {
-    ModMatrix X =
-        ModMatrixProduct(ModMatrixProduct(ListEltInv2[ig], ES, p2), ListElt2[ig], p2);
-    for (size_t i = 0; i < n; i++) {
-      for (size_t j = 0; j < n; j++) {
-        E1[i][j] = (E1[i][j] + X[i][j]) % p2;
+    ModMatrix X = ModMatrixProduct(ModMatrixProduct(ListEltInv2[ig], ES, p2),
+                                   ListElt2[ig], p2);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        E1(i, j) = ResAdd(E1(i, j), X(i, j), p2);
       }
     }
   }
-  int64_t inv = ResInv(ResMod(static_cast<int64_t>(ListElt2.size()), p2), p2);
-  for (auto &row : E1) {
-    for (auto &x : row) {
-      x = ResMul(x, inv, p2);
+  T_residue inv = ResInv(ListElt2.size() % p2, p2);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      E1(i, j) = ResMul(E1(i, j), inv, p2);
     }
   }
   ModMatrix E1sq = ModMatrixProduct(E1, E1, p2);
   ModMatrix E1cu = ModMatrixProduct(E1sq, E1, p2);
-  ModMatrix E2(n, std::vector<int64_t>(n));
-  for (size_t i = 0; i < n; i++) {
-    for (size_t j = 0; j < n; j++) {
-      E2[i][j] = ResMod(3 * E1sq[i][j] - 2 * E1cu[i][j], p2);
+  ModMatrix E2(n, n);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      // 3 E^2 - 2 E^3
+      E2(i, j) = ResSub(ResMul(T_residue(3), E1sq(i, j), p2),
+                        ResMul(T_residue(2), E1cu(i, j), p2),
+                        p2);
     }
   }
   ModMatrix St = ModMatrixProduct(S.basis, E2, p2);
   // the norms modulo 8 at p = 2: b(s~, s~) mod 8 depends on s~ mod 4 only,
   // the lattice being even
-  int64_t pnorm = (p == 2) ? 8 : p2;
-  auto bil = [&](std::vector<int64_t> const &x, std::vector<int64_t> const &y,
-                 int64_t mod) -> int64_t {
-    int64_t sum = 0;
-    for (size_t a = 0; a < n; a++) {
-      if (x[a] == 0) {
-        continue;
+  T_residue pnorm = (p == 2) ? 8 : p2;
+  // b(x, y) modulo mod for the rows x, y of matrices of residues
+  auto bil = [&](ModMatrix const &X, int ix, ModMatrix const &Y, int iy,
+                 T_residue mod) -> T_residue {
+    T_residue sum = 0;
+    for (int a = 0; a < n; a++) {
+      T_residue x_a = X(ix, a) % mod;
+      if (x_a != 0) {
+        T_residue t = 0;
+        for (int b = 0; b < n; b++) {
+          t = ResAdd(t, ResMul(A(a, b) % mod, Y(iy, b) % mod, mod), mod);
+        }
+        sum = ResAdd(sum, ResMul(x_a, t, mod), mod);
       }
-      int64_t t = 0;
-      for (size_t b = 0; b < n; b++) {
-        t = (t + ResMul(ResMod(A[a][b], mod), y[b], mod)) % mod;
-      }
-      sum = (sum + ResMul(x[a], t, mod)) % mod;
     }
     return sum;
   };
   // beta = b(s~_i, s~_j) / p modulo p
-  ModMatrix beta(k, std::vector<int64_t>(k));
-  for (size_t i = 0; i < k; i++) {
-    for (size_t j = 0; j < k; j++) {
-      int64_t v = bil(St[i], St[j], p2);
+  ModMatrix beta(k, k);
+  for (int i = 0; i < k; i++) {
+    for (int j = 0; j < k; j++) {
+      T_residue v = bil(St, i, St, j, p2);
       if (v % p != 0) {
         std::cerr << "GROUP_NEIGHBOR: the submodule is not isotropic\n";
         throw TerminalException{1};
       }
-      beta[i][j] = v / p;
+      beta(i, j) = v / p;
     }
   }
   // p = 2: gamma = b(s~_i, s~_i) / 4 modulo 2, S being totally singular
-  std::vector<int64_t> gamma(k, 0);
+  ModVector gamma(k, 0);
   if (p == 2) {
-    for (size_t i = 0; i < k; i++) {
-      int64_t v = bil(St[i], St[i], 8);
+    for (int i = 0; i < k; i++) {
+      T_residue v = bil(St, i, St, i, 8);
       if (v % 4 != 0) {
         std::cerr << "GROUP_NEIGHBOR: the submodule is not singular\n";
         throw TerminalException{1};
@@ -655,29 +626,20 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
     }
   }
   // T: a G-stable complement of S^perp, paired perfectly with S
-  ModMatrix AS(n, std::vector<int64_t>(k));
-  for (size_t a = 0; a < n; a++) {
-    for (size_t j = 0; j < k; j++) {
-      int64_t t = 0;
-      for (size_t b = 0; b < n; b++) {
-        t = (t + ResMul(ResMod(A[a][b], p), S.basis[j][b], p)) % p;
-      }
-      AS[a][j] = t;
-    }
-  }
+  ModMatrix AS = ModMatrixProduct(reduce(A, p), ModMatrix(S.basis.transpose()), p);
   RowSpaceModP Sperp = ComputeRowSpaceModP(LeftNullspaceModP(AS, p), p);
   ModMatrix Eperp = EquivariantProjector(Sperp, ListElt, ListEltInv, p);
   RowSpaceModP T = ComplementOfProjector(Eperp, p);
-  if (T.basis.size() != k) {
+  if (T.basis.rows() != k) {
     std::cerr << "GROUP_NEIGHBOR: the complement of S^perp has dimension "
-              << T.basis.size() << " instead of " << k << "\n";
+              << T.basis.rows() << " instead of " << k << "\n";
     throw TerminalException{1};
   }
   // M(i, l) = b(s_i, tau_l), invertible
-  ModMatrix M(k, std::vector<int64_t>(k));
-  for (size_t i = 0; i < k; i++) {
-    for (size_t l = 0; l < k; l++) {
-      M[i][l] = bil(S.basis[i], T.basis[l], p);
+  ModMatrix M(k, k);
+  for (int i = 0; i < k; i++) {
+    for (int l = 0; l < k; l++) {
+      M(i, l) = bil(S.basis, i, T.basis, l, p);
     }
   }
   /*
@@ -686,92 +648,78 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
     beta, psi(s_i, s_i) = gamma_i (see above), with the action R_g of the
     elements on the basis of S.
    */
-  ModMatrix psi(k, std::vector<int64_t>(k, 0));
+  ModMatrix psi = ZeroMatrix<T_residue>(k, k);
   if (p != 2) {
-    int64_t half = ResInv(2, p);
-    for (size_t i = 0; i < k; i++) {
-      for (size_t j = 0; j < k; j++) {
-        psi[i][j] = ResMod(-ResMul(beta[i][j], half, p), p);
+    T_residue half = ResInv(T_residue(2), p);
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < k; j++) {
+        psi(i, j) = ResNeg(ResMul(beta(i, j), half, p), p);
       }
     }
   } else {
-    ModMatrix psi0(k, std::vector<int64_t>(k, 0));
-    for (size_t i = 0; i < k; i++) {
-      psi0[i][i] = ResMod(gamma[i], 2);
-      for (size_t j = i + 1; j < k; j++) {
-        psi0[i][j] = ResMod(beta[i][j], 2);
-      }
-    }
-    // S^T, to read the coordinates of a vector of S in its basis
-    ModMatrix SbT(n, std::vector<int64_t>(k));
-    for (size_t a = 0; a < n; a++) {
-      for (size_t i = 0; i < k; i++) {
-        SbT[a][i] = S.basis[i][a];
+    ModMatrix psi0 = ZeroMatrix<T_residue>(k, k);
+    for (int i = 0; i < k; i++) {
+      psi0(i, i) = gamma[i] % 2;
+      for (int j = i + 1; j < k; j++) {
+        psi0(i, j) = beta(i, j) % 2;
       }
     }
     for (auto const &g : ListElt) {
       ModMatrix Sg = ModMatrixProduct(S.basis, g, 2);
-      ModMatrix R(k, std::vector<int64_t>(k));
-      for (size_t i = 0; i < k; i++) {
-        std::optional<std::vector<int64_t>> r = SolveRowsModP(
-            [&] {
-              ModMatrix Sb(k, std::vector<int64_t>(n));
-              for (size_t a = 0; a < k; a++) {
-                Sb[a] = S.basis[a];
-              }
-              return Sb;
-            }(),
-            Sg[i], 2);
+      ModMatrix R(k, k);
+      for (int i = 0; i < k; i++) {
+        ModVector row(n);
+        for (int a = 0; a < n; a++) {
+          row[a] = Sg(i, a);
+        }
+        std::optional<ModVector> r = SolveRowsModP(S.basis, row, 2);
         if (!r) {
           std::cerr << "GROUP_NEIGHBOR: S is not G-stable\n";
           throw TerminalException{1};
         }
-        R[i] = *r;
+        for (int l = 0; l < k; l++) {
+          R(i, l) = (*r)[l];
+        }
       }
-      // psi += R psi0 R^T
+      // psi += R psi0 R^T over F_2
       ModMatrix Rpsi = ModMatrixProduct(R, psi0, 2);
-      for (size_t i = 0; i < k; i++) {
-        for (size_t j = 0; j < k; j++) {
-          int64_t v = 0;
-          for (size_t l = 0; l < k; l++) {
-            v ^= (Rpsi[i][l] & R[j][l]);
+      for (int i = 0; i < k; i++) {
+        for (int j = 0; j < k; j++) {
+          T_residue v = 0;
+          for (int l = 0; l < k; l++) {
+            v ^= (Rpsi(i, l) & R(j, l));
           }
-          psi[i][j] ^= v;
+          psi(i, j) ^= v;
         }
       }
     }
-    (void)SbT;
   }
   // t_j = sum_l x_l tau_l with sum_l M(i, l) x_l = psi(i, j)
-  ModMatrix Mt(k, std::vector<int64_t>(k));
-  for (size_t i = 0; i < k; i++) {
-    for (size_t l = 0; l < k; l++) {
-      Mt[l][i] = M[i][l];
-    }
-  }
-  for (size_t j = 0; j < k; j++) {
-    std::vector<int64_t> rhs(k);
-    for (size_t i = 0; i < k; i++) {
-      rhs[i] = psi[i][j];
+  ModMatrix Mt(M.transpose());
+  for (int j = 0; j < k; j++) {
+    ModVector rhs(k);
+    for (int i = 0; i < k; i++) {
+      rhs[i] = psi(i, j);
     }
     // x Mt = rhs, i.e. sum_l x_l M(i, l) = rhs_i
-    std::optional<std::vector<int64_t>> x = SolveRowsModP(Mt, rhs, p);
+    std::optional<ModVector> x = SolveRowsModP(Mt, rhs, p);
     if (!x) {
       std::cerr << "GROUP_NEIGHBOR: S and T are not in duality\n";
       throw TerminalException{1};
     }
-    for (size_t l = 0; l < k; l++) {
-      for (size_t c = 0; c < n; c++) {
-        St[j][c] = ResMod(St[j][c] + p * ResMul((*x)[l], T.basis[l][c], p), p2);
+    for (int l = 0; l < k; l++) {
+      for (int c = 0; c < n; c++) {
+        T_residue add = p * ResMul((*x)[l], T.basis(l, c), p);
+        St(j, c) = ResAdd(St(j, c), add, p2);
       }
     }
   }
-  for (size_t i = 0; i < k; i++) {
-    if (bil(St[i], St[i], pnorm) != 0) {
+  for (int i = 0; i < k; i++) {
+    if (bil(St, i, St, i, pnorm) != 0) {
       return {};
     }
-    for (size_t j = 0; j < k; j++) {
-      if (bil(St[i], St[j], p2) != 0) {
+    for (int j = 0; j < k; j++) {
+      if (bil(St, i, St, j, p2) != 0) {
         return {};
       }
     }
@@ -780,16 +728,12 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
   // G-stable modulo p^2: every s~ g is in the span of the s~ modulo p^2,
   // tested on the reduction of the coordinates
   for (auto const &g : ListElt2) {
-    ModMatrix img = ModMatrixProduct(St, g, p2);
-    ModMatrix Smod = reduce(St, p);
-    RowSpaceModP rs = ComputeRowSpaceModP(Smod, p);
-    for (auto const &row : img) {
-      std::vector<int64_t> r = row;
-      for (auto &x : r) {
-        x = ResMod(x, p);
-      }
-      if (RankModPrime([&] { ModMatrix X = rs.basis; X.push_back(r); return X; }(),
-                  p) != k) {
+    ModMatrix img = reduce(ModMatrixProduct(St, g, p2), p);
+    RowSpaceModP rs = ComputeRowSpaceModP(reduce(St, p), p);
+    for (int r = 0; r < img.rows(); r++) {
+      ModMatrix X = rs.basis;
+      AppendModRow(X, FlattenModMatrix(img.row(r)));
+      if (RankModPrime(X, p) != static_cast<size_t>(k)) {
         std::cerr << "GROUP_NEIGHBOR: the lift is not G-stable\n";
         throw TerminalException{1};
       }
@@ -804,37 +748,33 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
   lifts of a basis of the kernel of x -> x A S~^T modulo p, and the rows of
   S~.
  */
-inline ModMatrix GroupNeighborGenerators(ModMatrix const &St, ModMatrix const &A,
-                                      int64_t p) {
-  size_t n = A.size();
-  size_t k = St.size();
-  ModMatrix AS(n, std::vector<int64_t>(k));
-  for (size_t a = 0; a < n; a++) {
-    for (size_t j = 0; j < k; j++) {
-      int64_t t = 0;
-      for (size_t b = 0; b < n; b++) {
-        t = (t + ResMul(ResMod(A[a][b], p), ResMod(St[j][b], p), p)) % p;
-      }
-      AS[a][j] = t;
+inline ModMatrix GroupNeighborGenerators(ModMatrix const &St,
+                                         ModMatrix const &A, T_small_prime p) {
+  int n = A.rows();
+  int k = St.rows();
+  ModMatrix A_p(n, n), St_p(k, n);
+  for (int a = 0; a < n; a++) {
+    for (int b = 0; b < n; b++) {
+      A_p(a, b) = A(a, b) % p;
     }
   }
-  ModMatrix ker = LeftNullspaceModP(AS, p);
-  ModMatrix gens;
-  for (size_t i = 0; i < n; i++) {
-    std::vector<int64_t> v(n, 0);
-    v[i] = p * p;
-    gens.push_back(v);
-  }
-  for (auto const &x : ker) {
-    std::vector<int64_t> v(n);
-    for (size_t i = 0; i < n; i++) {
-      v[i] = p * x[i];
+  for (int j = 0; j < k; j++) {
+    for (int b = 0; b < n; b++) {
+      St_p(j, b) = St(j, b) % p;
     }
-    gens.push_back(v);
   }
-  for (auto const &row : St) {
-    gens.push_back(row);
+  ModMatrix ker =
+      LeftNullspaceModP(ModMatrixProduct(A_p, ModMatrix(St_p.transpose()), p), p);
+  ModMatrix gens = ZeroMatrix<T_residue>(n + ker.rows() + k, n);
+  for (int i = 0; i < n; i++) {
+    gens(i, i) = p * p;
   }
+  for (int r = 0; r < ker.rows(); r++) {
+    for (int i = 0; i < n; i++) {
+      gens(n + r, i) = p * ker(r, i);
+    }
+  }
+  gens.bottomRows(k) = St;
   return gens;
 }
 

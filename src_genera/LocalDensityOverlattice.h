@@ -7,6 +7,7 @@
 #include "LocalDensityBadPrimes.h"
 #include "MAT_MatrixInt.h"
 #include "ResidueArithmetic.h"
+#include "MAT_MatrixModPrime.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -33,8 +34,9 @@
 // Legendre symbol of the product of its units (of T / 2; the factor 2 is a
 // unit and changes the classes of both sides alike).
 inline std::vector<std::array<int, 3>>
-OddLocalSymbolFromClasses(std::vector<PadicClass> const &classes, int64_t p) {
-  std::map<int, std::pair<int, int64_t>> levels;
+OddLocalSymbolFromClasses(std::vector<PadicClass> const &classes,
+                          T_small_prime p) {
+  std::map<int, std::pair<int, T_residue>> levels;
   for (auto const &c : classes) {
     auto &lv = levels[c.val];
     if (lv.first == 0) {
@@ -45,7 +47,7 @@ OddLocalSymbolFromClasses(std::vector<PadicClass> const &classes, int64_t p) {
   }
   std::vector<std::array<int, 3>> res;
   for (auto const &kv : levels) {
-    res.push_back({kv.first, kv.second.first, kronecker_symbol<int64_t>(kv.second.second, p)});
+    res.push_back({kv.first, kv.second.first, KroneckerResidue(kv.second.second, p)});
   }
   return res;
 }
@@ -95,7 +97,7 @@ CanonicalTwoAdicReduction(std::vector<std::array<int, 5>> sym) {
       oddity += sym[i][4];
       sym[i][4] = 0;
     }
-    sym[compart[0]][4] = ResMod(oddity, 8);
+    sym[compart[0]][4] = ResModSigned(oddity, 8);
   }
   // trains
   std::vector<std::vector<int>> trains;
@@ -132,7 +134,7 @@ CanonicalTwoAdicReduction(std::vector<std::array<int, 5>> sym) {
           bool in = std::find(compart.begin(), compart.end(), t1 - 1) != compart.end() ||
                     std::find(compart.begin(), compart.end(), t1) != compart.end();
           if (in) {
-            sym[compart[0]][4] = ResMod(sym[compart[0]][4] + 4, 8);
+            sym[compart[0]][4] = ResModSigned(sym[compart[0]][4] + 4, 8);
           }
         }
       }
@@ -160,15 +162,15 @@ TwoAdicSymbolFromSplitting(std::vector<SiegelJordanBlock> const &blocks) {
     auto &c = iter->second;
     if (b.kind == SiegelBlockKind::Unit) {
       c[1] += 1;
-      c[2] = static_cast<int>(ResMul(c[2], b.unit, 8));
+      c[2] = (c[2] * static_cast<int>(b.unit)) % 8;
       c[3] = 1;
-      c[4] = ResMod(c[4] + b.unit, 8);
+      c[4] = (c[4] + static_cast<int>(b.unit)) % 8;
     } else if (b.kind == SiegelBlockKind::H) {
       c[1] += 2;
-      c[2] = static_cast<int>(ResMul(c[2], 7, 8));
+      c[2] = (c[2] * 7) % 8;
     } else {
       c[1] += 2;
-      c[2] = static_cast<int>(ResMul(c[2], 3, 8));
+      c[2] = (c[2] * 3) % 8;
     }
   }
   std::vector<std::array<int, 5>> sym;
@@ -208,20 +210,21 @@ std::vector<int> LocalSymbolKey(MyMatrix<T> const &Gram, int64_t p) {
 }
 
 inline std::optional<std::vector<int>>
-LocalSymbolKeyModular(MyMatrix<int64_t> const &Gram, int64_t p, int v_det) {
+LocalSymbolKeyModular(MyMatrix<int64_t> const &Gram, T_small_prime p,
+                      int v_det) {
   int n = Gram.rows();
   int K = v_det + 5;
-  int64_t M = 1;
+  T_residue M = 1;
   for (int i = 0; i < K; i++) {
-    if (M > (int64_t(1) << 30) / p) {
+    if (M > (T_residue(1) << 30) / p) {
       return {};
     }
     M *= p;
   }
-  std::vector<std::vector<int64_t>> A(n, std::vector<int64_t>(n));
+  ModMatrix A(n, n);
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      A[i][j] = ResMod(Gram(i, j), M);
+      A(i, j) = ResModSigned(Gram(i, j), M);
     }
   }
   std::vector<int> active(n);
@@ -231,10 +234,10 @@ LocalSymbolKeyModular(MyMatrix<int64_t> const &Gram, int64_t p, int v_det) {
   auto remove = [&](int i) -> void {
     active.erase(std::find(active.begin(), active.end(), i));
   };
-  int64_t pe_div;
+  T_residue pe_div;
   std::vector<SiegelJordanBlock> blocks2;
   std::vector<PadicClass> classes;
-  int64_t inv2 = (p == 2) ? 0 : ResInv(2, p);
+  T_residue inv2 = (p == 2) ? 0 : ResInv(T_residue(2), p);
   while (!active.empty()) {
     int best_v = K + 1, bi = -1, bj = -1;
     for (int i : active) {
@@ -242,7 +245,7 @@ LocalSymbolKeyModular(MyMatrix<int64_t> const &Gram, int64_t p, int v_det) {
         if (j < i) {
           continue;
         }
-        int v = static_cast<int>(ValuationResidue(A[i][j], p, K));
+        int v = static_cast<int>(ValuationResidue(A(i, j), p, K));
         // a diagonal pivot when it has the minimal valuation
         if (v < best_v || (v == best_v && i == j && bi != bj)) {
           best_v = v;
@@ -256,65 +259,71 @@ LocalSymbolKeyModular(MyMatrix<int64_t> const &Gram, int64_t p, int v_det) {
       return {};
     }
     int e = best_v;
-    pe_div = MyPow<int64_t>(p, e);
+    pe_div = MyPow<T_residue>(p, e);
     if (bi != bj && p != 2) {
       // x_i <- x_i + x_j makes the diagonal of valuation e
       int i = bi, j = bj;
       for (int k : active) {
-        A[i][k] = ResMod(A[i][k] + A[j][k], M);
+        A(i, k) = ResAdd(A(i, k), A(j, k), M);
       }
       for (int k : active) {
-        A[k][i] = (k == i) ? A[k][i] : A[i][k];
+        A(k, i) = (k == i) ? A(k, i) : A(i, k);
       }
-      A[i][i] = ResMod(A[i][i] + A[j][i], M);
+      A(i, i) = ResAdd(A(i, i), A(j, i), M);
       bj = bi;
-      if (ValuationResidue(A[i][i], p, K) != e) {
+      if (ValuationResidue(A(i, i), p, K) != e) {
         std::cerr << "LDOV: the diagonal pivot has the wrong valuation\n";
         throw TerminalException{1};
       }
     }
     if (bi == bj) {
       int i = bi;
-      int64_t u = A[i][i] / pe_div;
-      int64_t uinv = ResInv(u, M / pe_div);
+      T_residue u = A(i, i) / pe_div;
+      T_residue Mq = M / pe_div;
+      T_residue uinv = ResInv(u, Mq);
       remove(i);
       for (int j : active) {
-        int64_t fj = ResMod((A[j][i] / pe_div) * uinv, M / pe_div);
+        T_residue fj = ResMul(A(j, i) / pe_div, uinv, Mq);
         for (int k : active) {
-          A[j][k] = ResMod(A[j][k] - fj * A[i][k], M);
+          A(j, k) = ResSub(A(j, k), ResMul(fj, A(i, k), M), M);
         }
       }
       if (p == 2) {
-        blocks2.push_back({e - 1, SiegelBlockKind::Unit, ResMod(u, 8)});
+        blocks2.push_back({e - 1, SiegelBlockKind::Unit, u % 8});
       } else {
-        classes.push_back({e, ResMul(ResMod(u, p), inv2, p)});
+        classes.push_back({e, ResMul(u % p, inv2, p)});
       }
     } else {
       int i = bi, j = bj;
-      int64_t a = A[i][i], b = A[i][j], c = A[j][j];
-      int64_t pe2 = pe_div * pe_div;
+      // the determinant a c - b^2 and the numerators below are exact
+      // signed integers, below 2^60 as M <= 2^30
+      int64_t a = ResToSigned(A(i, i)), b = ResToSigned(A(i, j));
+      int64_t c = ResToSigned(A(j, j));
+      int64_t pe2 = ResToSigned(pe_div) * ResToSigned(pe_div);
       int64_t d = a * c - b * b;
-      int64_t d_red = ResMod(d / pe2, M / pe_div);
-      int64_t dinv = ResInv(d_red, M / pe_div);
+      T_residue Mq = M / pe_div;
+      T_residue d_red = ResModSigned(d / pe2, Mq);
+      T_residue dinv = ResInv(d_red, Mq);
       remove(i);
       remove(j);
-      std::vector<std::pair<int64_t, int64_t>> coef;
+      std::vector<std::pair<T_residue, T_residue>> coef;
       for (int k : active) {
-        int64_t num_a = c * A[i][k] - b * A[j][k];
-        int64_t num_b = a * A[j][k] - b * A[i][k];
-        int64_t al = ResMod((num_a / pe2) % (M / pe_div) * dinv, M / pe_div);
-        int64_t be = ResMod((num_b / pe2) % (M / pe_div) * dinv, M / pe_div);
+        int64_t A_ik = ResToSigned(A(i, k)), A_jk = ResToSigned(A(j, k));
+        int64_t num_a = c * A_ik - b * A_jk;
+        int64_t num_b = a * A_jk - b * A_ik;
+        T_residue al = ResMul(ResModSigned(num_a / pe2, Mq), dinv, Mq);
+        T_residue be = ResMul(ResModSigned(num_b / pe2, Mq), dinv, Mq);
         coef.push_back({al, be});
       }
       for (size_t x = 0; x < active.size(); x++) {
         int kx = active[x];
         for (int l : active) {
-          A[kx][l] = ResMod(A[kx][l] - coef[x].first * A[i][l] -
-                                     coef[x].second * A[j][l],
-                                 M);
+          T_residue sub = ResAdd(ResMul(coef[x].first, A(i, l), M),
+                                 ResMul(coef[x].second, A(j, l), M), M);
+          A(kx, l) = ResSub(A(kx, l), sub, M);
         }
       }
-      bool is_y = (ResMod(d_red, 8) == 3);
+      bool is_y = (d_red % 8 == 3);
       blocks2.push_back({e, is_y ? SiegelBlockKind::Y : SiegelBlockKind::H, 0});
     }
   }
@@ -368,17 +377,17 @@ bool LocallyIsometric(MyMatrix<T> const &G1, MyMatrix<T> const &G2, int64_t p) {
 template <typename T> struct UnimodularSplit {
   // the rank of the unimodular component, and its determinant class
   int r_U;
-  int64_t detU_unit;
+  T_residue detU_unit;
   // the Gram matrix of the rest, integral, in the normalization of the input
   MyMatrix<T> P;
 };
 
 template <typename T, typename Tint>
 UnimodularSplit<T> ComputeUnimodularSplit(MyMatrix<T> const &Tgram,
-                                          int64_t p) {
+                                          T_small_prime p) {
   UnimodularSplit<T> res;
   res.r_U = 0;
-  int64_t M = UnitModulus(p);
+  T_residue M = UnitModulus(p);
   res.detU_unit = 1;
   std::vector<MyMatrix<T>> blocksP;
   if (p == 2) {
@@ -405,7 +414,7 @@ UnimodularSplit<T> ComputeUnimodularSplit(MyMatrix<T> const &Tgram,
       if (b.e == 0) {
         res.r_U += 2;
         res.detU_unit = ResMul(res.detU_unit,
-                               (b.kind == SiegelBlockKind::H) ? 7 : 3, M);
+                               T_residue((b.kind == SiegelBlockKind::H) ? 7 : 3), M);
       } else {
         blocksP.push_back(G);
       }
@@ -416,7 +425,7 @@ UnimodularSplit<T> ComputeUnimodularSplit(MyMatrix<T> const &Tgram,
       // the diagonal entry 2 c of T
       if (c.val == 0) {
         res.r_U++;
-        res.detU_unit = ResMul(res.detU_unit, ResMul(2, c.unit, M), M);
+        res.detU_unit = ResMul(res.detU_unit, ResMul(T_residue(2), c.unit, M), M);
       } else {
         MyMatrix<T> G(1, 1);
         G(0, 0) = T(2) * MyPowSigned(ScalarFromInt64<T>(p), c.val) *
@@ -455,84 +464,30 @@ template <typename T> bool LatticeContained(MyMatrix<T> const &B1,
   return IsIntegralMatrix(MyMatrix<T>(B1 * Inverse(B2)));
 }
 
-// A basis of the left kernel {c : c G = 0 mod p} of an integral G, by
-// Gaussian elimination over F_p.
-template <typename T, typename Tint>
-std::vector<std::vector<int64_t>> KernelBasisModP(MyMatrix<T> const &G,
-                                                  int64_t p) {
-  int m = G.rows();
-  Tint p_T(static_cast<long>(p));
+// A basis of the left kernel {c : c G = 0 mod p} of an integral G, one
+// vector per free unknown of the echelon form of the system: the vector of
+// the free unknown f has a 1 at f and 0 at the other free unknowns.
+template <typename T>
+ModMatrix KernelBasisModP(MyMatrix<T> const &G, T_small_prime p) {
   // the columns of G mod p, as the rows of the system c G = 0
-  std::vector<std::vector<int64_t>> A(m, std::vector<int64_t>(m));
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < m; j++) {
-      Tint g = UniversalScalarConversion<Tint, T>(G(j, i));
-      A[i][j] = UniversalScalarConversion<int64_t, Tint>(ResInt(g, p_T));
-    }
-  }
-  // row reduction of A (m equations in the m unknowns c)
-  std::vector<int> pivot_col;
-  int row = 0;
-  for (int col = 0; col < m && row < m; col++) {
-    int piv = -1;
-    for (int r = row; r < m; r++) {
-      if (A[r][col] % p != 0) {
-        piv = r;
-        break;
-      }
-    }
-    if (piv == -1) {
-      continue;
-    }
-    std::swap(A[row], A[piv]);
-    int64_t inv = ResInv(A[row][col], p);
-    for (int c = 0; c < m; c++) {
-      A[row][c] = ResMul(A[row][c], inv, p);
-    }
-    for (int r = 0; r < m; r++) {
-      if (r != row && A[r][col] != 0) {
-        int64_t f = A[r][col];
-        for (int c = 0; c < m; c++) {
-          A[r][c] = ResMod(A[r][c] - ResMul(f, A[row][c], p), p);
-        }
-      }
-    }
-    pivot_col.push_back(col);
-    row++;
-  }
-  std::vector<int> free_col;
-  for (int col = 0; col < m; col++) {
-    if (std::find(pivot_col.begin(), pivot_col.end(), col) == pivot_col.end()) {
-      free_col.push_back(col);
-    }
-  }
-  int t = static_cast<int>(free_col.size());
-  // a basis of the kernel, one vector per free unknown
-  std::vector<std::vector<int64_t>> basis;
-  for (int f = 0; f < t; f++) {
-    std::vector<int64_t> v(m, 0);
-    v[free_col[f]] = 1;
-    for (size_t r = 0; r < pivot_col.size(); r++) {
-      v[pivot_col[r]] = ResMod(-A[r][free_col[f]], p);
-    }
-    basis.push_back(v);
-  }
-  return basis;
+  RowSpaceModP rs =
+      ComputeRowSpaceModP(ModMatrixOfMatrix(MyMatrix<T>(G.transpose()), p), p);
+  return FreeKernelBasisModP(rs, G.rows(), p);
 }
 
 // The vectors c of (Z/p)^m with c G = 0 mod p, one per line (first non-zero
 // coordinate 1).
-template <typename T, typename Tint>
-std::vector<std::vector<int64_t>> ProjectiveKernelModP(MyMatrix<T> const &G,
-                                                       int64_t p) {
+template <typename T>
+std::vector<ModVector> ProjectiveKernelModP(MyMatrix<T> const &G,
+                                            T_small_prime p) {
   int m = G.rows();
-  std::vector<std::vector<int64_t>> basis = KernelBasisModP<T, Tint>(G, p);
-  int t = static_cast<int>(basis.size());
-  std::vector<std::vector<int64_t>> dirs;
-  int64_t total = MyPow<int64_t>(p, t);
-  for (int64_t idx = 1; idx < total; idx++) {
-    std::vector<int64_t> coef(t);
-    int64_t w = idx;
+  ModMatrix basis = KernelBasisModP(G, p);
+  int t = basis.rows();
+  std::vector<ModVector> dirs;
+  uint64_t total = MyPow<uint64_t>(p, t);
+  for (uint64_t idx = 1; idx < total; idx++) {
+    ModVector coef(t);
+    uint64_t w = idx;
     for (int i = 0; i < t; i++) {
       coef[i] = w % p;
       w /= p;
@@ -544,10 +499,12 @@ std::vector<std::vector<int64_t>> ProjectiveKernelModP(MyMatrix<T> const &G,
     if (coef[first] != 1) {
       continue;
     }
-    std::vector<int64_t> c(m, 0);
+    ModVector c(m, 0);
     for (int i = 0; i < t; i++) {
-      for (int j = 0; j < m; j++) {
-        c[j] = ResMod(c[j] + coef[i] * basis[i][j], p);
+      if (coef[i] != 0) {
+        for (int j = 0; j < m; j++) {
+          c[j] = ResAdd(c[j], ResMul(coef[i], basis(i, j), p), p);
+        }
       }
     }
     dirs.push_back(c);
@@ -569,14 +526,13 @@ OverlatticeSet<T> EnumerateOverlattices(MyMatrix<T> const &R, int64_t p) {
     MyMatrix<T> B = os.basis[pos];
     // v = c B / p lies in the dual of Lambda iff c G_Lambda = 0 mod p, so the
     // extensions of index p come from the left kernel of G_Lambda mod p
-    std::vector<std::vector<int64_t>> dirs =
-        ProjectiveKernelModP<T, Tint>(os.gram[pos], p);
+    std::vector<ModVector> dirs = ProjectiveKernelModP(os.gram[pos], p);
     for (auto const &c : dirs) {
       MyVector<T> v = ZeroVector<T>(m);
       for (int i = 0; i < m; i++) {
         if (c[i] != 0) {
           for (int j = 0; j < m; j++) {
-            v(j) += ScalarFromInt64<T>(c[i]) * B(i, j);
+            v(j) += UniversalScalarConversion<T, T_residue>(c[i]) * B(i, j);
           }
         }
       }
@@ -721,8 +677,15 @@ template <typename T, typename Tint>
 std::vector<ElementaryOverlatticeClass<T>>
 ElementaryOverlatticeClasses(MyMatrix<T> const &R, int64_t p) {
   int m = R.rows();
-  std::vector<std::vector<int64_t>> kb = KernelBasisModP<T, Tint>(R, p);
-  int t = static_cast<int>(kb.size());
+  // the kernel basis as signed integers: the lifts below are integral
+  ModMatrix kb_mod = KernelBasisModP(R, p);
+  int t = kb_mod.rows();
+  std::vector<std::vector<int64_t>> kb(t, std::vector<int64_t>(m));
+  for (int i = 0; i < t; i++) {
+    for (int j = 0; j < m; j++) {
+      kb[i][j] = ResToSigned(kb_mod(i, j));
+    }
+  }
   int64_t p2 = p * p;
   int64_t mod_q = (p == 2) ? 2 * p2 : p2;
   std::vector<std::vector<int64_t>> Ri(m, std::vector<int64_t>(m));
@@ -748,9 +711,9 @@ ElementaryOverlatticeClasses(MyMatrix<T> const &R, int64_t p) {
   std::vector<std::vector<int64_t>> Bm(t, std::vector<int64_t>(t));
   for (int i = 0; i < t; i++) {
     for (int j = 0; j < t; j++) {
-      Bm[i][j] = ResMod(form(kb[i], kb[j]), p2);
+      Bm[i][j] = ResModSigned(form(kb[i], kb[j]), p2);
     }
-    Qd[i] = ResMod(form(kb[i], kb[i]), mod_q);
+    Qd[i] = ResModSigned(form(kb[i], kb[i]), mod_q);
   }
   auto q_of = [&](std::vector<int64_t> const &a) -> int64_t {
     int64_t s = 0;
@@ -763,7 +726,7 @@ ElementaryOverlatticeClasses(MyMatrix<T> const &R, int64_t p) {
         s += 2 * a[i] * a[j] * Bm[i][j];
       }
     }
-    return ResMod(s, mod_q);
+    return ResModSigned(s, mod_q);
   };
   auto b_of = [&](std::vector<int64_t> const &a,
                   std::vector<int64_t> const &a2) -> int64_t {
@@ -775,7 +738,7 @@ ElementaryOverlatticeClasses(MyMatrix<T> const &R, int64_t p) {
         }
       }
     }
-    return ResMod(s, p2);
+    return ResModSigned(s, p2);
   };
   // the free column of each kernel vector: kb[i] has a 1 there and 0 at
   // the free columns of the others
@@ -1001,7 +964,7 @@ std::optional<T> OverlatticeDensity(MyMatrix<T> const &S, MyMatrix<T> const &Tgr
     return {};
   }
   // det N = (-1)^{mP} det U up to squares
-  int64_t detN = SignedPower(mP, us.detU_unit);
+  int64_t detN = SignedPower(mP, ResToSigned(us.detU_unit));
   int xi_N = kronecker_symbol<int64_t>(SignedPower(n_N / 2, detN), p);
   if (mP == 0) {
     return AlphaUnimodularTarget<T, Tint>(S, p, n / 2, xi_N, cache);
@@ -1065,7 +1028,7 @@ ComputeOverlatticeGenusData(MyMatrix<T> const &Tgram, int64_t p,
   if (data.n_N % 2 != 0) {
     return {};
   }
-  int64_t detN = SignedPower(mP, us.detU_unit);
+  int64_t detN = SignedPower(mP, ResToSigned(us.detU_unit));
   data.xi_N = kronecker_symbol<int64_t>(SignedPower(data.n_N / 2, detN), p);
   data.unimodular = (mP == 0);
   if (!data.unimodular) {
@@ -1142,7 +1105,7 @@ std::optional<T> BruteForceDensity(MyMatrix<T> const &S, MyMatrix<T> const &Tgra
             }
           }
           int64_t mod = (a == b) ? q2 : q;
-          if (ResMod(val - Si[a * m + b], mod) != 0) {
+          if (ResModSigned(val - Si[a * m + b], mod) != 0) {
             ok = false;
           }
         }
@@ -1324,7 +1287,7 @@ OverlatticeClassCountsAtIndex(MyMatrix<T> const &R, int64_t p, int h) {
     for (auto const &key : frontier) {
       std::vector<std::vector<int64_t>> M = unpack(key);
       auto [G, MR] = gram_of(M);
-      for (auto const &c : ProjectiveKernelModP<int64_t, int64_t>(G, p)) {
+      for (auto const &c : ProjectiveKernelModP(G, p)) {
         std::vector<int64_t> v(m, 0);
         for (int i = 0; i < m; i++) {
           if (c[i] != 0) {

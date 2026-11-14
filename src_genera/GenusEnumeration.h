@@ -300,16 +300,13 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     // cancel. Both nrm and 2 p (v,e_jpiv) have valuation e + 1, so the ratio
     // is a p-adic unit and a is well defined.
     Tint den = Tint(2) * Tint(p) * w(jpiv);
-    Tint p_T(p);
-    Tint num_red = nrm;
-    Tint den_red = den;
-    for (int i = 0; i < e + 1; i++) {
-      num_red /= p_T;
-      den_red /= p_T;
-    }
-    int a = (ResidueModP(num_red, p) *
-             ResInv(ResidueModP(den_red, p), p)) % p;
-    v(jpiv) -= Tint(a) * Tint(p);
+    Tint p_e1 = MyPow(Tint(p), e + 1);
+    T_small_prime p_u = static_cast<T_small_prime>(p);
+    Tint num_red = nrm / p_e1;
+    Tint den_red = den / p_e1;
+    T_residue a = ResMul(ResModOf(num_red, p_u),
+                         ResInv(ResModOf(den_red, p_u), p_u), p_u);
+    v(jpiv) -= UniversalScalarConversion<Tint, T_residue>(a) * Tint(p);
     w = G * v;
     nrm = v.dot(w);
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
@@ -326,15 +323,16 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     the vectors e_i - c_i e_jpiv for i != jpiv, together with p e_jpiv. That is
     a triangular basis of determinant p, so the index is p as it must be.
    */
-  int inv_pivot = ResInv(ResidueModP(w(jpiv), p), p);
+  T_small_prime p_u = static_cast<T_small_prime>(p);
+  T_residue inv_pivot = ResInv(ResModOf(w(jpiv), p_u), p_u);
   MyMatrix<Tint> Bsub = ZeroMatrix<Tint>(n, n);
   for (int i = 0; i < n; i++) {
     if (i == jpiv) {
       Bsub(i, jpiv) = Tint(p);
     } else {
-      int c = (ResidueModP(w(i), p) * inv_pivot) % p;
+      T_residue c = ResMul(ResModOf(w(i), p_u), inv_pivot, p_u);
       Bsub(i, i) = Tint(1);
-      Bsub(i, jpiv) = -Tint(c);
+      Bsub(i, jpiv) = -UniversalScalarConversion<Tint, T_residue>(c);
     }
   }
   /*
@@ -575,34 +573,20 @@ ProjectiveLineSelection
 ProjectiveLineOrbitRepresentativesGeneric(
     int n, int p, std::vector<MyMatrix<Tint>> const &ListGen) {
   size_t n_line = NumberProjectiveLines(n, p);
-  // the generators as reduced integer matrices mod p, scalars dropped
-  std::vector<std::vector<int>> ListGenRed;
+  T_small_prime p_u = static_cast<T_small_prime>(p);
+  ProjectiveLineCoder coder(n, p_u);
+  // the generators reduced mod p, scalars dropped
+  std::vector<std::vector<ProjectiveLineCoder::T_coord>> ListGenRed;
   for (auto &eGen : ListGen) {
     if (!IsScalarModP(eGen, p)) {
-      std::vector<int> gred(n * n);
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-          gred[i * n + j] = ResidueModP(eGen(i, j), p);
-        }
-      }
-      ListGenRed.push_back(gred);
+      ListGenRed.push_back(
+          coder.coords(FlattenModMatrix(ModMatrixOfMatrix(eGen, p_u))));
     }
   }
   if (ListGenRed.empty()) {
     return {true, n_line, {}, {}};
   }
-  auto image = [&](std::vector<int> const &v,
-                   std::vector<int> const &gred) -> size_t {
-    std::vector<int> w(n, 0);
-    for (int j = 0; j < n; j++) {
-      int64_t sum = 0;
-      for (int i = 0; i < n; i++) {
-        sum += static_cast<int64_t>(v[i]) * gred[i * n + j];
-      }
-      w[j] = static_cast<int>(sum % p);
-    }
-    return IndexOfProjectiveLine(w, p);
-  };
+  std::vector<ProjectiveLineCoder::T_coord> v(n), w(n);
   Face status(n_line);
   std::vector<size_t> ListRepr;
   std::vector<size_t> ListOrbitSize;
@@ -619,9 +603,9 @@ ProjectiveLineOrbitRepresentativesGeneric(
       size_t pos = ListActive.back();
       ListActive.pop_back();
       orbit_size++;
-      std::vector<int> v = ProjectiveLineOfIndex(n, p, pos);
-      for (auto &gred : ListGenRed) {
-        size_t img = image(v, gred);
+      coder.decode(pos, v);
+      for (auto const &gred : ListGenRed) {
+        size_t img = coder.image(v, gred, w);
         if (!status[img]) {
           status[img] = 1;
           ListActive.push_back(img);

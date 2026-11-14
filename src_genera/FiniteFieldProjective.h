@@ -5,6 +5,7 @@
 // clang-format off
 #include "PolynomialModQ.h"
 #include "GeneraArithmetic.h"
+#include "MAT_MatrixModPrime.h"
 #include <cstdint>
 #include <iostream>
 #include <vector>
@@ -90,7 +91,9 @@ inline size_t IndexOfProjectiveLine(std::vector<int> const &v, int p) {
     throw TerminalException{1};
   }
 #endif
-  int scal = ResInv(v[ipos], p);
+  int scal = static_cast<int>(
+      ResInv(ResModSigned(v[ipos], static_cast<T_residue>(p)),
+             static_cast<T_residue>(p)));
   // start of the block: sum_{k < ipos} p^{n-k-1}
   size_t block = MyPow<size_t>(p_s, n - 1);
   size_t index = 0;
@@ -115,11 +118,11 @@ inline std::vector<std::vector<int>> EnumerateProjectiveLines(int n, int p) {
   std::vector<std::vector<int>> ListLines;
   for (int ipos = 0; ipos < n; ipos++) {
     int n_free = n - ipos - 1;
-    int64_t n_case = MyPow<int64_t>(p, n_free);
-    for (int64_t idx = 0; idx < n_case; idx++) {
+    uint64_t n_case = MyPow<uint64_t>(static_cast<uint64_t>(p), n_free);
+    for (uint64_t idx = 0; idx < n_case; idx++) {
       std::vector<int> v(n, 0);
       v[ipos] = 1;
-      int64_t work = idx;
+      uint64_t work = idx;
       for (int i = ipos + 1; i < n; i++) {
         v[i] = static_cast<int>(work % p);
         work /= p;
@@ -180,42 +183,208 @@ inline void CheckProjectiveLineIndexing(int n, int p) {
 #endif
 
 /*
+  The indexing of ProjectiveLineOfIndex and IndexOfProjectiveLine for the
+  traversals of a projective space, without their allocations and their
+  inversions modulo p: the coordinates are in buffers of the caller, the
+  inverses in a table, the block starts precomputed. Its image of a line
+  under a matrix modulo p is the inner loop of the orbit enumerations, and
+  that loop is bound by the divisions (n of them to decode, n to reduce
+  the image, n to normalize it). For p <= 256 they are read in tables: the
+  digits of p^k_chunk consecutive coordinates at once, the residues of the
+  sums of n products, the products modulo p. P^11(F_5) has 6.1 10^7 points,
+  each visited once per generator of the centralizer.
+ */
+struct ProjectiveLineCoder {
+  using T_coord = uint32_t;
+  int n;
+  T_small_prime p;
+  // the index of the first line of the block ipos (first non-zero ipos)
+  std::vector<size_t> block_start;
+  std::vector<T_coord> inv;
+  bool small;
+  int k_chunk;
+  size_t p_chunk;
+  // digits[c * k_chunk + t]: the digit t of c < p^k_chunk
+  std::vector<uint8_t> digits;
+  // red[x] = x mod p for x <= n (p - 1)^2, mul[a * p + b] = a b mod p
+  std::vector<uint8_t> red;
+  std::vector<uint8_t> mul;
+
+  ProjectiveLineCoder(int n_, T_small_prime p_)
+      : n(n_), p(p_), block_start(n_ + 1), inv(p_, 0), small(false),
+        k_chunk(1), p_chunk(p_) {
+    if (p >= (T_small_prime(1) << 20)) {
+      std::cerr << "GENUS: ProjectiveLineCoder for p=" << p
+                << " beyond 2^20\n";
+      throw TerminalException{1};
+    }
+    size_t block = MyPow<size_t>(p, n - 1);
+    block_start[0] = 0;
+    for (int ipos = 0; ipos < n; ipos++) {
+      block_start[ipos + 1] = block_start[ipos] + block;
+      block /= p;
+    }
+    for (T_residue a = 1; a < p; a++) {
+      inv[a] = static_cast<T_coord>(ResInv(a, p));
+    }
+    size_t max_sum = static_cast<size_t>(n) * (p - 1) * (p - 1);
+    small = (p <= 256 && max_sum < (size_t(1) << 24));
+    if (small) {
+      while (p_chunk * p <= 4096) {
+        p_chunk *= p;
+        k_chunk++;
+      }
+      digits.resize(p_chunk * k_chunk);
+      for (size_t c = 0; c < p_chunk; c++) {
+        size_t w = c;
+        for (int t = 0; t < k_chunk; t++) {
+          digits[c * k_chunk + t] = static_cast<uint8_t>(w % p);
+          w /= p;
+        }
+      }
+      red.resize(max_sum + 1);
+      for (size_t x = 0; x <= max_sum; x++) {
+        red[x] = static_cast<uint8_t>(x % p);
+      }
+      mul.resize(p * p);
+      for (T_residue a = 0; a < p; a++) {
+        for (T_residue b = 0; b < p; b++) {
+          mul[a * p + b] = static_cast<uint8_t>((a * b) % p);
+        }
+      }
+    }
+  }
+
+  // The generator g (on the row vectors, g[i * n + j] in [0, p)) as coords.
+  std::vector<T_coord> coords(ModVector const &g) const {
+    return std::vector<T_coord>(g.begin(), g.end());
+  }
+
+  void decode(size_t index, std::vector<T_coord> &v) const {
+    int ipos = 0;
+    while (index >= block_start[ipos + 1]) {
+      ipos++;
+    }
+    size_t work = index - block_start[ipos];
+    for (int i = 0; i < ipos; i++) {
+      v[i] = 0;
+    }
+    v[ipos] = 1;
+    if (small) {
+      int i = ipos + 1;
+      while (i < n) {
+        size_t c = work % p_chunk;
+        work /= p_chunk;
+        uint8_t const *d = digits.data() + c * k_chunk;
+        for (int t = 0; t < k_chunk && i < n; t++) {
+          v[i++] = d[t];
+        }
+      }
+      return;
+    }
+    for (int i = ipos + 1; i < n; i++) {
+      v[i] = static_cast<T_coord>(work % p);
+      work /= p;
+    }
+  }
+
+  // the index of the line of w, coordinates in [0, p) not all zero
+  size_t encode(std::vector<T_coord> const &w) const {
+    int ipos = 0;
+    while (w[ipos] == 0) {
+      ipos++;
+    }
+    T_coord scal = inv[w[ipos]];
+    size_t index = block_start[ipos];
+    size_t mult = 1;
+    if (small) {
+      uint8_t const *mul_s = mul.data() + scal;
+      for (int i = ipos + 1; i < n; i++) {
+        index += mult * mul_s[w[i] * p];
+        mult *= p;
+      }
+      return index;
+    }
+    for (int i = ipos + 1; i < n; i++) {
+      index += mult * ((static_cast<uint64_t>(w[i]) * scal) % p);
+      mult *= p;
+    }
+    return index;
+  }
+
+  /*
+    The index of the image of the line of v under g (from coords), w a
+    buffer. For small p the sums of n products stay below 2^24; otherwise
+    the products are below 2^40 and summed in 64 bits.
+   */
+  size_t image(std::vector<T_coord> const &v, std::vector<T_coord> const &g,
+               std::vector<T_coord> &w) const {
+    if (small) {
+      for (int j = 0; j < n; j++) {
+        w[j] = 0;
+      }
+      for (int i = 0; i < n; i++) {
+        T_coord v_i = v[i];
+        if (v_i != 0) {
+          T_coord const *row = g.data() + i * n;
+          for (int j = 0; j < n; j++) {
+            w[j] += v_i * row[j];
+          }
+        }
+      }
+      for (int j = 0; j < n; j++) {
+        w[j] = red[w[j]];
+      }
+      return encode(w);
+    }
+    for (int j = 0; j < n; j++) {
+      uint64_t sum = 0;
+      for (int i = 0; i < n; i++) {
+        sum += static_cast<uint64_t>(v[i]) * g[i * n + j];
+      }
+      w[j] = static_cast<T_coord>(sum % p);
+    }
+    return encode(w);
+  }
+};
+
+/*
   F_q = F_p[theta] / mu: elements as coefficient vectors of length f, and
   an encoding as integers in [0, q).
  */
 struct FiniteFieldModP {
-  int64_t p;
+  T_small_prime p;
   int f;
   PolyQ mu;
-  int64_t q;
+  uint64_t q;
 };
 
-inline std::vector<int64_t> FqMul(FiniteFieldModP const &F,
-                                  std::vector<int64_t> const &a,
-                                  std::vector<int64_t> const &b) {
+inline ModVector FqMul(FiniteFieldModP const &F,
+                                  ModVector const &a,
+                                  ModVector const &b) {
   PolyQ prod = PolyMulQ(a, b, F.p);
   std::pair<PolyQ, PolyQ> qr = PolyDivModQ(prod, F.mu, F.p);
-  std::vector<int64_t> r = qr.second;
+  ModVector r = qr.second;
   r.resize(F.f, 0);
   return r;
 }
 
-inline std::vector<int64_t> FqAdd(FiniteFieldModP const &F,
-                                  std::vector<int64_t> const &a,
-                                  std::vector<int64_t> const &b) {
-  std::vector<int64_t> r(F.f);
+inline ModVector FqAdd(FiniteFieldModP const &F,
+                                  ModVector const &a,
+                                  ModVector const &b) {
+  ModVector r(F.f);
   for (int i = 0; i < F.f; i++) {
-    r[i] = (a[i] + b[i]) % F.p;
+    r[i] = ResAdd(a[i], b[i], F.p);
   }
   return r;
 }
 
-inline bool FqIsZero(std::vector<int64_t> const &a) {
-  return std::all_of(a.begin(), a.end(), [](int64_t x) { return x == 0; });
+inline bool FqIsZero(ModVector const &a) {
+  return std::all_of(a.begin(), a.end(), [](T_residue x) { return x == 0; });
 }
 
-inline std::vector<int64_t> FqInverse(FiniteFieldModP const &F,
-                                      std::vector<int64_t> const &a) {
+inline ModVector FqInverse(FiniteFieldModP const &F,
+                                      ModVector const &a) {
   PolyQ a2 = a;
   PolyTrim(a2);
   PolyQ inv = PolyInverseModQ(a2, F.mu, F.p);
@@ -223,17 +392,16 @@ inline std::vector<int64_t> FqInverse(FiniteFieldModP const &F,
   return inv;
 }
 
-inline int64_t FqEncode(FiniteFieldModP const &F,
-                        std::vector<int64_t> const &a) {
-  int64_t c = 0;
+inline uint64_t FqEncode(FiniteFieldModP const &F, ModVector const &a) {
+  uint64_t c = 0;
   for (int i = F.f; i-- > 0;) {
     c = c * F.p + a[i];
   }
   return c;
 }
 
-inline std::vector<int64_t> FqDecode(FiniteFieldModP const &F, int64_t c) {
-  std::vector<int64_t> a(F.f);
+inline ModVector FqDecode(FiniteFieldModP const &F, uint64_t c) {
+  ModVector a(F.f);
   for (int i = 0; i < F.f; i++) {
     a[i] = c % F.p;
     c /= F.p;
@@ -246,7 +414,7 @@ inline std::vector<int64_t> FqDecode(FiniteFieldModP const &F, int64_t c) {
   equal to 1, indexed by the position i of that coordinate (q^{m-1-i}
   points each) and the remaining coordinates in base q.
  */
-inline size_t NumberProjectivePointsFq(int m, int64_t q) {
+inline size_t NumberProjectivePointsFq(int m, uint64_t q) {
   // the points are indexed by size_t: a count beyond it is refused, as in
   // NumberProjectiveLines, rather than wrapped around
   size_t const max_val = std::numeric_limits<size_t>::max();
@@ -270,7 +438,7 @@ inline size_t NumberProjectivePointsFq(int m, int64_t q) {
   return tot;
 }
 
-inline std::vector<std::vector<int64_t>>
+inline std::vector<ModVector>
 ProjectivePointFqOfIndex(FiniteFieldModP const &F, int m, size_t idx) {
   // the blocks in the order i = m-1 (one point) up to i = 0
   size_t q = static_cast<size_t>(F.q);
@@ -288,23 +456,23 @@ ProjectivePointFqOfIndex(FiniteFieldModP const &F, int m, size_t idx) {
     }
     idx -= block[i];
   }
-  std::vector<std::vector<int64_t>> x(m, std::vector<int64_t>(F.f, 0));
+  std::vector<ModVector> x(m, ModVector(F.f, 0));
   x[lead][0] = 1;
   for (int j = m - 1; j > lead; j--) {
-    x[j] = FqDecode(F, static_cast<int64_t>(idx % q));
+    x[j] = FqDecode(F, idx % q);
     idx /= q;
   }
   return x;
 }
 
 inline size_t IndexOfProjectivePointFq(FiniteFieldModP const &F, int m,
-                                       std::vector<std::vector<int64_t>> x) {
+                                       std::vector<ModVector> x) {
   size_t q = static_cast<size_t>(F.q);
   int lead = 0;
   while (lead < m && FqIsZero(x[lead])) {
     lead++;
   }
-  std::vector<int64_t> inv = FqInverse(F, x[lead]);
+  ModVector inv = FqInverse(F, x[lead]);
   for (int j = lead; j < m; j++) {
     x[j] = FqMul(F, x[j], inv);
   }
@@ -329,7 +497,7 @@ inline size_t IndexOfProjectivePointFq(FiniteFieldModP const &F, int m,
   (A2^12, w) took about ten minutes per class).
  */
 struct FqTables {
-  int64_t q;
+  uint64_t q;
   std::vector<int> add;
   std::vector<int> mul;
   std::vector<int> inv;
@@ -338,13 +506,13 @@ struct FqTables {
 inline size_t const fq_tables_max_q = 4096;
 
 inline FqTables BuildFqTables(FiniteFieldModP const &F) {
-  int64_t q = F.q;
+  uint64_t q = F.q;
   FqTables tb{q, std::vector<int>(q * q), std::vector<int>(q * q),
               std::vector<int>(q, 0)};
-  for (int64_t a = 0; a < q; a++) {
-    std::vector<int64_t> fa = FqDecode(F, a);
-    for (int64_t b = 0; b < q; b++) {
-      std::vector<int64_t> fb = FqDecode(F, b);
+  for (uint64_t a = 0; a < q; a++) {
+    ModVector fa = FqDecode(F, a);
+    for (uint64_t b = 0; b < q; b++) {
+      ModVector fb = FqDecode(F, b);
       tb.add[a * q + b] = static_cast<int>(FqEncode(F, FqAdd(F, fa, fb)));
       int c = static_cast<int>(FqEncode(F, FqMul(F, fa, fb)));
       tb.mul[a * q + b] = c;
@@ -409,7 +577,7 @@ inline size_t IndexOfProjectivePointCodes(FqTables const &tb, int m,
 // The action of ApplyActionOnHom in codes: cc[i * m + j] the code of c[i][j].
 inline std::vector<int>
 ActionOnHomCodes(FiniteFieldModP const &F,
-                 std::vector<std::vector<std::vector<int64_t>>> const &c) {
+                 std::vector<std::vector<ModVector>> const &c) {
   size_t m = c.size();
   std::vector<int> cc(m * m);
   for (size_t i = 0; i < m; i++) {
