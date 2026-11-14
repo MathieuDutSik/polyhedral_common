@@ -520,6 +520,17 @@ group_mass_case Ico3 2I 67/72576000
 group_mass_case A4x2 C5 1/200
 group_mass_case A4x3 C5 1/6000
 group_mass_case A4x4 C5 13/720000
+# Albert type II: SmallGroup(48, 15) = (C3 x D8) : C2 on the component of
+# its rational character of degree 4 with indicator +1 and Schur index 2
+# (End_G = M_2(D), D the quaternion algebra over Q ramified at 2 and 3,
+# indefinite) in Z[G] with the standard form: the mass of such a component
+# is not computed, and has to be reported unsupported, not guessed.
+echo "--- (G48_15 on its type II component), expecting unsupported ---"
+out=$($BIN group isom_G48_15.txt isom_G48_15_G.txt stdout 2>/dev/null)
+if ! echo "$out" | grep -q 'unsupported_component:=true'; then
+    echo "ERROR: the Albert type II component was not reported unsupported" >&2
+    exit 1
+fi
 group_mass_case IcoE8w G 1/18662400
 
 # The brute-force check for the groups <g, tau>, tau in C_{O(L)}(g); the
