@@ -9,6 +9,7 @@
 #include "POLY_DualDesc_reverse_search.h"
 #include "Positivity.h"
 #include "POLY_AdjacencyScheme.h"
+#include "POLY_AdjacencyKnown.h"
 #include "hash_functions.h"
 #include "Tspace_Namelist.h"
 #include "SystemNamelist.h"
@@ -79,6 +80,9 @@ template <typename T, typename Tint> struct PerfectTspace_AdjI {
   Face eInc;
   MyMatrix<T> Gram;
   TshortestPerfect<T, Tint> tsp;
+  // The shortest vectors of the facet eInc, shared with Gram: with them the
+  // facet is known from the side of Gram (DataPerfectTspaceFunc::f_reverse).
+  MyMatrix<Tint> FacetSHV;
 };
 
 template <typename Tint> struct PerfectTspace_AdjO {
@@ -139,11 +143,23 @@ get_reduced_gram(OnlineHierarchicalMatrixReduction<Tint> const &onl_gens,
   return {P, g_ret};
 }
 
+template <typename T, typename Tint> struct PerfectTspaceAdjacencies {
+  std::vector<PerfectTspace_AdjI<T, Tint>> ListAdj;
+  // The indices of the known facets that replace a flip.
+  std::vector<size_t> l_known_used;
+};
+
+/*
+  The adjacent perfect forms, one per orbit of facets of the perfect domain.
+  The facets of l_known (on the duplicated shortest vectors, as eInc) are
+  those whose adjacent perfect form is already known (AdjacencyKnown): the
+  orbit of such a facet is not flipped.
+ */
 template <typename T, typename Tint, typename Tgroup>
-std::vector<PerfectTspace_AdjI<T, Tint>>
+PerfectTspaceAdjacencies<T, Tint>
 TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
                       TshortestPerfect<T, Tint> const &tsp, Tgroup const &GRP,
-                      std::ostream &os) {
+                      std::vector<Face> const &l_known, std::ostream &os) {
 #ifdef TIMINGS_PERFECT_TSPACE
   HumanTime time;
 #endif
@@ -184,12 +200,34 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
   size_t pos = 0;
 #endif
 
+  // The known facets on the blocks of shortest vectors, as ListIncd.
+  std::vector<Face> l_known_sma;
+  for (auto &f_big : l_known) {
+    size_t n_block = ryshk.ListBlockFirst.size();
+    Face f_sma(n_block);
+    for (size_t i_block = 0; i_block < n_block; i_block++) {
+      f_sma[i_block] = f_big[ryshk.ListBlockFirst[i_block]];
+    }
+    l_known_sma.push_back(f_sma);
+  }
+  std::vector<std::optional<size_t>> l_match =
+      MatchKnownFacets(ryshk.GRPsub, ryshk.ListIncd, l_known_sma);
+  std::vector<size_t> l_known_used;
+  MyMatrix<Tint> SHV_dup =
+      conversion_and_duplication<Tint, Tint>(tsp.rec_shv.SHV);
   SubsetRankOneSolver<T> solver_perf(ryshk.PerfDomEXT);
+  size_t i_orb = 0;
   for (auto &incd_sma : ryshk.ListIncd) {
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: pos=" << pos << " incd_sma=" << incd_sma << "\n";
     pos += 1;
 #endif
+    std::optional<size_t> const &opt = l_match[i_orb];
+    i_orb++;
+    if (opt) {
+      l_known_used.push_back(*opt);
+      continue;
+    }
     MyVector<T> eFacet = solver_perf.GetPositiveKernelVector(incd_sma);
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     // A facet whose direction is positive semidefinite lies in the
@@ -228,13 +266,15 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
     Face incd_big = get_big_incd(ryshk, incd_sma);
     TshortestPerfect<T, Tint> tsp_adj =
         build_tshortest_perfect<T, Tint>(pair.first, pair.second, os);
-    PerfectTspace_AdjI<T, Tint> eAdj{incd_big, pair.first, std::move(tsp_adj)};
-    ListAdj.push_back(eAdj);
+    MyMatrix<Tint> FacetSHV = SelectRow(SHV_dup, incd_big);
+    PerfectTspace_AdjI<T, Tint> eAdj{incd_big, pair.first, std::move(tsp_adj),
+                                     std::move(FacetSHV)};
+    ListAdj.push_back(std::move(eAdj));
   }
 #ifdef TIMINGS_PERFECT_TSPACE
   os << "|PERF_TSPACE: GetAdj_ListAdj|=" << time << "\n";
 #endif
-  return ListAdj;
+  return {std::move(ListAdj), std::move(l_known_used)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -310,6 +350,35 @@ struct DataPerfectTspaceFunc {
   }
 
   std::optional<std::vector<TadjI>> f_adj(Tobj &x) {
+    std::optional<AdjacencyKnown<TadjI>> opt = f_adj_known(x, {});
+    return std::move(opt->l_adj);
+  }
+  /*
+    The adjacency of x across the facet shared with the perfect form the flip
+    y comes from (AdjacencyKnown). P = adj.eBigMat satisfies
+    P x.Gram P^T = y.Gram (LINSPA_TestEquivalenceGramMatrix_SHV), so a
+    shortest vector w of y gives the shortest vector w P of x: the facet of x
+    is the one of the vectors y.FacetSHV P, and the perfect form across it is
+    the origin one mapped by P^{-1}.
+   */
+  std::optional<TadjO> f_reverse(Tobj const &x, TadjI const &y,
+                                 TadjO const &adj) {
+    MyMatrix<Tint> SHV_dup =
+        conversion_and_duplication<Tint, Tint>(x.tsp.rec_shv.SHV);
+    MyMatrix<Tint> FacetSHV_x = y.FacetSHV * adj.eBigMat;
+    std::optional<Face> opt = FaceOfRows(SHV_dup, FacetSHV_x);
+    if (!opt) {
+#ifdef SANITY_CHECK_PERFECT_TSPACE
+      std::cerr << "PERF_TSPACE: f_reverse, the shared facet is not one of "
+                   "x\n";
+      throw TerminalException{1};
+#endif
+      return {};
+    }
+    return TadjO{std::move(*opt), Inverse(adj.eBigMat)};
+  }
+  std::optional<AdjacencyKnown<TadjI>>
+  f_adj_known(Tobj &x, std::vector<TadjO> const &l_known) {
     std::ostream &os = get_os();
     std::pair<Tgroup, std::vector<MyMatrix<Tint>>> pair =
         SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.tsp,
@@ -327,8 +396,14 @@ struct DataPerfectTspaceFunc {
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: B, |onl_gens|=" << data.onl_gens.size() << "\n";
 #endif
-    return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, x.tsp, x.GRP,
-                                          os);
+    std::vector<Face> l_known_face;
+    for (auto &eKnown : l_known) {
+      l_known_face.push_back(eKnown.eInc);
+    }
+    PerfectTspaceAdjacencies<T, Tint> result = TSPACE_GetAdjacencies<T, Tint>(
+        data.LinSpa, x.Gram, x.tsp, x.GRP, l_known_face, os);
+    return AdjacencyKnown<TadjI>{std::move(result.ListAdj),
+                                 std::move(result.l_known_used)};
   }
 
   Tobj f_adji_obj(TadjI const &x) {
@@ -393,6 +468,7 @@ inline void serialize(Archive &ar, PerfectTspace_AdjI<T, Tint> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("eInc", eRec.eInc);
   ar &make_nvp("Gram", eRec.Gram);
+  ar &make_nvp("FacetSHV", eRec.FacetSHV);
 }
 template <class Archive, typename Tint>
 inline void serialize(Archive &ar, PerfectTspace_AdjO<Tint> &eRec,

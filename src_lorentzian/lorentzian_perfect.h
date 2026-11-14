@@ -7,6 +7,7 @@
 #include "PolytopeEquiStabInt.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
+#include "POLY_AdjacencyKnown.h"
 #include "SystemNamelist.h"
 #include "Arithmetic_dispatch_types.h"
 #include "fractions.h"
@@ -1312,6 +1313,9 @@ inline void serialize(Archive &ar, PerfLorentzian_Obj<Tint, Tgroup> &eRec,
 template <typename Tint> struct PerfLorentzian_AdjI {
   Face eInc;
   MyMatrix<Tint> EXT;
+  // The vertices of the facet eInc, shared with EXT: with them the facet is
+  // known from the side of EXT (DataPerfectLorentzianFunc::f_reverse).
+  MyMatrix<Tint> FacetEXT;
 };
 
 namespace boost::serialization {
@@ -1320,6 +1324,7 @@ inline void serialize(Archive &ar, PerfLorentzian_AdjI<Tint> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("eInc", eRec.eInc);
   ar &make_nvp("EXT", eRec.EXT);
+  ar &make_nvp("FacetEXT", eRec.FacetEXT);
 }
 } // namespace boost::serialization
 
@@ -1438,6 +1443,39 @@ struct DataPerfectLorentzianFunc {
     return {x_ret, ret};
   }
   std::optional<std::vector<TadjI>> f_adj(Tobj &x) {
+    std::optional<AdjacencyKnown<TadjI>> opt = f_adj_known(x, {});
+    return std::move(opt->l_adj);
+  }
+  /*
+    The adjacency of x across the facet shared with the perfect form the flip
+    y comes from (AdjacencyKnown). P = adj.eBigMat satisfies x.EXT P = y.EXT
+    up to the order of the rows (LORENTZ_TestEquivalence), so the vertices
+    of the shared facet are y.FacetEXT P^{-1} in the frame of x, and the
+    perfect form across it is the origin one mapped by P^{-1}.
+   */
+  std::optional<TadjO> f_reverse(Tobj const &x, TadjI const &y,
+                                 TadjO const &adj) {
+    MyMatrix<Tint> Pinv = Inverse(adj.eBigMat);
+#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
+    MyMatrix<Tint> EXT_img = x.EXT * adj.eBigMat;
+    if (!FaceOfRows(y.EXT, EXT_img)) {
+      std::cerr << "LORPERF: f_reverse, x.EXT eBigMat is not y.EXT\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyMatrix<Tint> FacetEXT_x = y.FacetEXT * Pinv;
+    std::optional<Face> opt = FaceOfRows(x.EXT, FacetEXT_x);
+    if (!opt) {
+#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
+      std::cerr << "LORPERF: f_reverse, the shared facet is not one of x\n";
+      throw TerminalException{1};
+#endif
+      return {};
+    }
+    return TadjO{std::move(*opt), std::move(Pinv)};
+  }
+  std::optional<AdjacencyKnown<TadjI>>
+  f_adj_known(Tobj &x, std::vector<TadjO> const &l_known) {
 #ifdef TIMINGS_LORENTZIAN_PERFECT
     MicrosecondTime time;
 #endif
@@ -1466,18 +1504,34 @@ struct DataPerfectLorentzianFunc {
       MyVector<Tint> V = GetMatrixRow(x.EXT, i_row);
       ListIso.emplace_back(std::move(V));
     }
+    // The orbits of facets whose adjacent perfect form is already known
+    // (AdjacencyKnown) are not flipped.
+    std::vector<Face> l_known_face;
+    for (auto &eKnown : l_known) {
+      l_known_face.push_back(eKnown.eInc);
+    }
+    std::vector<std::optional<size_t>> l_match =
+        MatchKnownFacets(x.GRP, TheOutput, l_known_face);
+    std::vector<size_t> l_known_used;
     std::vector<TadjI> ListAdj;
+    size_t i_orb = 0;
     for (auto &eInc : TheOutput) {
+      std::optional<size_t> const &opt = l_match[i_orb];
+      i_orb++;
+      if (opt) {
+        l_known_used.push_back(*opt);
+        continue;
+      }
       LorentzianPerfectEntry<T, Tint> eRecFlip = LORENTZ_DoFlipping<T, Tint>(
           data.LorMat, ListIso, eInc, data.TheOption, os);
       MyMatrix<Tint> EXTflip = LORENTZ_GetEXT(eRecFlip);
-      TadjI eAdj{eInc, EXTflip};
-      ListAdj.push_back(eAdj);
+      TadjI eAdj{eInc, EXTflip, SelectRow(x.EXT, eInc)};
+      ListAdj.push_back(std::move(eAdj));
     }
 #ifdef TIMINGS_LORENTZIAN_PERFECT
     os << "|LORPERF: LorPerfect(f_adj)|=" << time << "\n";
 #endif
-    return ListAdj;
+    return AdjacencyKnown<TadjI>{std::move(ListAdj), std::move(l_known_used)};
   }
   Tobj f_adji_obj(TadjI const &x) {
     MyMatrix<Tint> EXT = x.EXT;

@@ -9,6 +9,7 @@
 #include "MatrixGroup.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
+#include "POLY_AdjacencyKnown.h"
 #include "GraverBasis.h"
 #include "SystemNamelist.h"
 #include "Arithmetic_dispatch_types.h"
@@ -504,6 +505,9 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
 template <typename T> struct Delaunay_AdjI {
   Face eInc;
   MyMatrix<T> EXT;
+  // The vertices of the facet eInc, shared with EXT: with them the facet is
+  // known from the side of EXT (DataLatticeFunc::f_reverse).
+  MyMatrix<T> FacetEXT;
 };
 
 namespace boost::serialization {
@@ -512,6 +516,7 @@ inline void serialize(Archive &ar, Delaunay_AdjI<T> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("eInc", eRec.eInc);
   ar &make_nvp("EXT", eRec.EXT);
+  ar &make_nvp("FacetEXT", eRec.FacetEXT);
 }
 } // namespace boost::serialization
 
@@ -760,10 +765,24 @@ void WriteEntryPYTHON(std::ostream &os_out,
   WriteEntryPYTHON_l_dels<T, Tgroup>(os_out, DT.l_dels);
 }
 
+template <typename Tint, typename Tgroup> struct GroupAndAdjacencies {
+  Tgroup GRP;
+  std::vector<Delaunay_AdjI<Tint>> ListAdj;
+  // The indices of the known facets that replace a computation.
+  std::vector<size_t> l_known_used;
+};
+
+/*
+  The stabilizer of the Delaunay polytope EXT and its adjacent Delaunay
+  polytopes, one per orbit of facets. The facets of l_known are those whose
+  adjacent polytope is already known (AdjacencyKnown): the orbit of such a
+  facet is not computed.
+ */
 template <typename T, typename Tint, typename Tgroup>
-std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>>
+GroupAndAdjacencies<Tint, Tgroup>
 ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
-                           MyMatrix<Tint> const &EXT) {
+                           MyMatrix<Tint> const &EXT,
+                           std::vector<Face> const &l_known = {}) {
   std::ostream &os = eData.rddo.os;
   // The stabilizer, the dual description and the flipping to the adjacent
   // cells all run on the field view; the adjacent cells themselves come out
@@ -786,8 +805,18 @@ ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
   os << "DEL_ENUM: |TheOutput|=" << TheOutput.size() << "\n";
 #endif
   std::vector<Delaunay_AdjI<Tint>> ListAdj;
+  std::vector<std::optional<size_t>> l_match =
+      MatchKnownFacets(GRPlatt, TheOutput, l_known);
+  std::vector<size_t> l_known_used;
   SubsetRankOneSolver<T> ext_solver(EXT_T);
+  size_t i_orb = 0;
   for (auto &eOrbB : TheOutput) {
+    std::optional<size_t> const &opt = l_match[i_orb];
+    i_orb++;
+    if (opt) {
+      l_known_used.push_back(*opt);
+      continue;
+    }
     MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
         eData.solver, eData.ShvGraverBasis, EXT_T, ext_solver, eOrbB, os);
 #ifdef SANITY_CHECK_DELAUNAY_ENUMERATION
@@ -796,13 +825,14 @@ ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
       throw TerminalException{1};
     }
 #endif
-    Delaunay_AdjI<Tint> eAdj{eOrbB, std::move(EXTadj)};
-    ListAdj.push_back(eAdj);
+    Delaunay_AdjI<Tint> eAdj{eOrbB, std::move(EXTadj), SelectRow(EXT, eOrbB)};
+    ListAdj.push_back(std::move(eAdj));
   }
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: |ListAdj|=" << ListAdj.size() << "\n";
+  os << "DEL_ENUM: |ListAdj|=" << ListAdj.size()
+     << " |l_known_used|=" << l_known_used.size() << "\n";
 #endif
-  return {GRPlatt, std::move(ListAdj)};
+  return {std::move(GRPlatt), std::move(ListAdj), std::move(l_known_used)};
 }
 
 template <typename T, typename Tgroup> struct Delaunay_Obj {
@@ -897,20 +927,69 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
     return {x_ret, ret};
   }
   std::optional<std::vector<TadjI>> f_adj(Tobj &x) {
-    std::pair<Tgroup, std::vector<TadjI>> pair =
-        ComputeGroupAndAdjacencies<T, Tint, Tgroup>(data, x.EXT);
-    x.GRP = pair.first;
+    std::optional<AdjacencyKnown<TadjI>> opt = f_adj_known(x, {});
+    if (!opt) {
+      return {};
+    }
+    return std::move(opt->l_adj);
+  }
+  /*
+    The adjacency of x across the facet shared with the polytope the flip y
+    comes from (AdjacencyKnown). P = adj.eBigMat satisfies x.EXT P = y.EXT
+    up to the order of the rows (Delaunay_TestEquivalence), so the vertices
+    of the shared facet are y.FacetEXT P^{-1} in the frame of x, and the
+    polytope across that facet is the origin one mapped by P^{-1}.
+
+    Not with CommonGramMat: every pair of adjacent polytopes has to be
+    checked against it in f_adj, and the equivalences need not preserve it,
+    so a pair accepted from one side does not settle the other.
+   */
+  std::optional<TadjO> f_reverse(Tobj const &x, TadjI const &y,
+                                 TadjO const &adj) {
+    if (data.CommonGramMat) {
+      return {};
+    }
+    MyMatrix<Tint> Pinv = Inverse(adj.eBigMat);
+#ifdef SANITY_CHECK_DELAUNAY_ENUMERATION
+    if (!FaceOfRows(y.EXT, MyMatrix<Tint>(x.EXT * adj.eBigMat))) {
+      std::cerr << "DEL_ENUM: f_reverse, x.EXT eBigMat is not y.EXT\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyMatrix<Tint> FacetEXT_x = y.FacetEXT * Pinv;
+    std::optional<Face> opt = FaceOfRows(x.EXT, FacetEXT_x);
+    if (!opt) {
+#ifdef SANITY_CHECK_DELAUNAY_ENUMERATION
+      std::cerr << "DEL_ENUM: f_reverse, the shared facet is not one of x\n";
+      throw TerminalException{1};
+#endif
+      return {};
+    }
+    return TadjO{std::move(*opt), std::move(Pinv)};
+  }
+  std::optional<AdjacencyKnown<TadjI>>
+  f_adj_known(Tobj &x, std::vector<TadjO> const &l_known) {
+    std::vector<Face> l_known_face;
+    for (auto &eKnown : l_known) {
+      l_known_face.push_back(eKnown.eInc);
+    }
+    GroupAndAdjacencies<Tint, Tgroup> result =
+        ComputeGroupAndAdjacencies<T, Tint, Tgroup>(data, x.EXT, l_known_face);
+    x.GRP = std::move(result.GRP);
+    // With CommonGramMat there are no known adjacencies (f_reverse), so
+    // every pair is checked.
     if (data.CommonGramMat) {
       MyMatrix<T> const &TestGram = *data.CommonGramMat;
       std::ostream &os = data.rddo.os;
-      for (auto &adj : pair.second) {
+      for (auto &adj : result.ListAdj) {
         if (!IsDelaunayPairAcceptableForGramMat(x.EXT, adj.EXT, TestGram,
                                                 os)) {
           return {};
         }
       }
     }
-    return pair.second;
+    return AdjacencyKnown<TadjI>{std::move(result.ListAdj),
+                                 std::move(result.l_known_used)};
   }
   Tobj f_adji_obj(TadjI const &x) {
     MyMatrix<Tint> EXT = x.EXT;
