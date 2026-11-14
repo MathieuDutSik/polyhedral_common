@@ -17,8 +17,8 @@ printf '1\n4 4\n2 -1 0 0\n-1 2 0 0\n0 0 2 -1\n0 0 -1 2\n' > $TMP/A2A2
 # the swap s of the two summands, as the second form A s^T
 printf '2\n4 4\n2 -1 0 0\n-1 2 0 0\n0 0 2 -1\n0 0 -1 2\n4 4\n0 0 2 -1\n0 0 -1 2\n2 -1 0 0\n-1 2 0 0\n' > $TMP/A2A2swap
 
-METHODS_ONE="graph graph:characteristic graph:iterated_shortest graph:root_iterated_shortest graph:shells_zbasis graph:zspan_closure iterated_shortest plesken_souvignier plesken_souvignier:shells_zbasis plesken_souvignier:characteristic heuristic vinberg weyl_chamber"
-METHODS_SEVERAL="graph graph:iterated_shortest graph:shells_zbasis iterated_shortest plesken_souvignier plesken_souvignier:shells_zbasis plesken_souvignier:zspan_closure heuristic"
+METHODS_ONE="graph graph:characteristic graph:iterated_shortest graph:root_iterated_shortest graph:shells_zbasis graph:zspan_closure iterated_shortest plesken_souvignier plesken_souvignier:shells_zbasis plesken_souvignier:characteristic heuristic vinberg weyl_chamber conjugacy"
+METHODS_SEVERAL="graph graph:iterated_shortest graph:shells_zbasis iterated_shortest plesken_souvignier plesken_souvignier:shells_zbasis plesken_souvignier:zspan_closure heuristic conjugacy"
 
 check_order() {
     lat=$1

@@ -10,8 +10,12 @@
 #include "LatticeAutomorphismVinberg.h"
 #include "ClassicLLL.h"
 #include "SignatureSymmetric.h"
+#include "LatticeFamilyPermutation.h"
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -58,6 +62,7 @@ enum class LatticeStabCanIsomMethod {
   Vinberg,
   Weyl,
   WeylChamber,
+  Conjugacy,
   Heuristic
 };
 
@@ -117,6 +122,13 @@ ListLatticeStabCanIsomMethod() {
        InvariantFamilyKind::IteratedShortest, true, true,
        "graph:iterated_shortest, the graph of the iterated shortest vectors "
        "up to full rank"},
+      {"conjugacy", LatticeStabCanIsomMethod::Conjugacy, {}, false, true,
+       "for a tuple (A, A P_1^T, ..., A P_k^T), the P_i automorphisms of A "
+       "(the pairs of the genus enumeration): O(A) by the heuristic, acting "
+       "on an invariant family (conjugacy:KIND, the iterated shortest "
+       "vectors by default), and the centralizer of the P_i or the "
+       "conjugation of one tuple to the other in it by the partition "
+       "backtrack of permutalib; no canonical form"},
       {"heuristic", LatticeStabCanIsomMethod::Heuristic, {}, true, true,
        "chooses from isometry invariants (ChooseHeuristicMethod): for one "
        "integral form weyl_chamber if it has vectors of norm at most 2, "
@@ -196,6 +208,9 @@ struct LatticeMethodChoice {
     if (method == LatticeStabCanIsomMethod::Graph) {
       return InvariantFamilyKind::Characteristic;
     }
+    if (method == LatticeStabCanIsomMethod::Conjugacy) {
+      return InvariantFamilyKind::IteratedShortest;
+    }
     return DefaultInvariantFamilyKind(n_forms);
   }
 };
@@ -215,9 +230,10 @@ inline LatticeMethodChoice ParseLatticeMethodChoice(std::string const &name) {
   LatticeStabCanIsomMethod method =
       ParseLatticeStabCanIsomMethod(name.substr(0, pos));
   if (method != LatticeStabCanIsomMethod::PleskenSouvignier &&
-      method != LatticeStabCanIsomMethod::Graph) {
-    std::cerr << "LATTICE_METHODS: only graph and plesken_souvignier take a "
-              << "family, not " << name << "\n";
+      method != LatticeStabCanIsomMethod::Graph &&
+      method != LatticeStabCanIsomMethod::Conjugacy) {
+    std::cerr << "LATTICE_METHODS: only graph, plesken_souvignier and "
+              << "conjugacy take a family, not " << name << "\n";
     throw TerminalException{1};
   }
   return LatticeMethodChoice(method,
@@ -472,6 +488,7 @@ LatticeCanonicalBasisMultipleReduced(std::vector<MyMatrix<T>> const &ListMat,
     return ComputeCanonicalFormWeylReduced<T, Tint, Tgroup>(ListMat[0], os);
   case LatticeStabCanIsomMethod::WeylChamber:
     return ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(ListMat[0], os);
+  case LatticeStabCanIsomMethod::Conjugacy:
   case LatticeStabCanIsomMethod::Heuristic:
     break;
   }
@@ -512,6 +529,188 @@ MyMatrix<Tint> LatticeCanonicalBasis(MyMatrix<T> const &GramMat,
                                      std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{GramMat};
   return LatticeCanonicalBasisMultiple<T, Tint, Tgroup>(ListMat, choice, os);
+}
+
+template <typename T, typename Tint, typename Tgroup>
+IntAutomorphismGroup<Tint, Tgroup>
+LatticeAutomorphismGroupReduced(std::vector<MyMatrix<T>> const &ListMat,
+                                LatticeMethodChoice choice, std::ostream &os);
+
+/*
+  The method conjugacy (see LatticeFamilyPermutation.h). The forms after
+  the first are B_i = A P_i^T with P_i = (A^{-1} B_i)^T an automorphism of
+  A, and an automorphism g of A preserves B_i if and only if it commutes
+  with P_i: g B_i g^T = A (g P_i g^{-1})^T.
+ */
+template <typename T, typename Tint, typename Telt>
+std::vector<Telt>
+ConjugacyFormPermutations(std::vector<MyMatrix<T>> const &ListMat,
+                          LatticeFamilyPermutation<Tint, Telt> const &rep) {
+  MyMatrix<T> Ainv = Inverse(ListMat[0]);
+  std::vector<Telt> res;
+  for (size_t i = 1; i < ListMat.size(); i++) {
+    MyMatrix<T> P = (Ainv * ListMat[i]).transpose();
+    std::optional<Telt> opt;
+    if (IsIntegralMatrix(P)) {
+      opt = rep.permutation(UniversalMatrixConversion<Tint, T>(P));
+    }
+    if (!opt) {
+      std::cerr << "LATTICE_METHODS: the method conjugacy needs the forms "
+                   "A P^T, P an automorphism of the first form A, and form "
+                << i << " is not one\n";
+      throw TerminalException{1};
+    }
+    res.push_back(*opt);
+  }
+  return res;
+}
+
+/*
+  The data of the first form A of the method conjugacy, kept in a bounded
+  cache keyed by A: in the genus enumeration the second tuple of every
+  isometry test is a known class, whose first form comes again and again.
+  - the canonical basis B of A (B A B^T canonical, by the heuristic), from
+    which the isometries of first forms are B_2^{-1} B_1;
+  - O(A) by the heuristic, as matrices and as permutations of the family.
+ */
+template <typename T, typename Tint, typename Tgroup> struct ConjugacyFirstForm {
+  using Telt = typename Tgroup::Telt;
+  MyMatrix<Tint> canonical_basis;
+  MyMatrix<T> canonical_form;
+  std::optional<IntAutomorphismGroup<Tint, Tgroup>> aut;
+  std::optional<LatticeFamilyPermutation<Tint, Telt>> rep;
+  std::optional<Tgroup> G;
+};
+
+size_t const conjugacy_cache_max_size = 256;
+
+template <typename T, typename Tint, typename Tgroup>
+std::shared_ptr<ConjugacyFirstForm<T, Tint, Tgroup>>
+ConjugacyFirstFormData(MyMatrix<T> const &A, bool with_group,
+                       LatticeMethodChoice const &choice, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tdata = ConjugacyFirstForm<T, Tint, Tgroup>;
+  static std::mutex mtx;
+  static std::unordered_map<MyMatrix<T>, std::shared_ptr<Tdata>> cache;
+  std::shared_ptr<Tdata> data;
+  {
+    std::lock_guard<std::mutex> lock(mtx);
+    auto iter = cache.find(A);
+    if (iter != cache.end()) {
+      data = iter->second;
+    }
+  }
+  if (!data) {
+    data = std::make_shared<Tdata>();
+    std::vector<MyMatrix<T>> ListA{A};
+    data->canonical_basis = LatticeCanonicalBasisMultipleReduced<T, Tint, Tgroup>(
+        ListA, LatticeStabCanIsomMethod::Heuristic, os);
+    MyMatrix<T> B = UniversalMatrixConversion<T, Tint>(data->canonical_basis);
+    data->canonical_form = B * A * B.transpose();
+  }
+  if (with_group && !data->G) {
+    std::vector<MyMatrix<T>> ListA{A};
+    IntAutomorphismGroup<Tint, Tgroup> aut =
+        LatticeAutomorphismGroupReduced<T, Tint, Tgroup>(
+            ListA, LatticeStabCanIsomMethod::Heuristic, os);
+    LatticeFamilyPermutation<Tint, Telt> rep(
+        InvariantFamilyHalf<T, Tint>(A, choice.family_for(1), os));
+    std::vector<Telt> gens;
+    for (auto &g : aut.ListGen) {
+      std::optional<Telt> opt = rep.permutation(g);
+      if (!opt) {
+        std::cerr << "LATTICE_METHODS: an automorphism does not preserve the "
+                     "invariant family\n";
+        throw TerminalException{1};
+      }
+      gens.push_back(*opt);
+    }
+    std::vector<Tidx> v_id(rep.degree());
+    for (size_t i = 0; i < rep.degree(); i++) {
+      v_id[i] = static_cast<Tidx>(i);
+    }
+    // the order is known, so that the chain is built by the randomized method
+    data->G = Tgroup(gens, Telt(std::move(v_id)), aut.order);
+    data->aut = std::move(aut);
+    data->rep = std::move(rep);
+#ifdef DEBUG_LATTICE_METHODS
+    os << "LATTICE_METHODS: conjugacy, |O(A)|=" << data->G->size() << " on "
+       << data->rep->degree() << " vectors\n";
+#endif
+  }
+  {
+    std::lock_guard<std::mutex> lock(mtx);
+    if (cache.size() >= conjugacy_cache_max_size) {
+      cache.clear();
+    }
+    cache[A] = data;
+  }
+  return data;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+IntAutomorphismGroup<Tint, Tgroup>
+ConjugacyLatticeAutomorphismGroup(std::vector<MyMatrix<T>> const &ListMat,
+                                  LatticeMethodChoice const &choice,
+                                  std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  std::shared_ptr<ConjugacyFirstForm<T, Tint, Tgroup>> ff =
+      ConjugacyFirstFormData<T, Tint, Tgroup>(ListMat[0], true, choice, os);
+  if (ListMat.size() == 1) {
+    return *ff->aut;
+  }
+  std::vector<Telt> e = ConjugacyFormPermutations(ListMat, *ff->rep);
+  Tgroup C = (e.size() == 1)
+                 ? ff->G->Centralizer_elt(e[0])
+                 : ff->G->Centralizer_grp(Tgroup(e, ff->G->get_identity()));
+  IntAutomorphismGroup<Tint, Tgroup> res;
+  for (auto &p : C.GeneratorsOfGroup()) {
+    res.ListGen.push_back(ff->rep->matrix(p));
+  }
+  res.order = C.size();
+  return res;
+}
+
+/*
+  h an isometry of the first forms, h A_1 h^T = A_2, carries the tuple 1 to
+  (A_2, h B_i h^T) = (A_2, A_2 (h P_i h^{-1})^T); then y in O(A_2) with
+  y (h P_i h^{-1}) y^{-1} = Q_i, Q_i those of the tuple 2, gives y h.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+ConjugacyLatticeIsometry(std::vector<MyMatrix<T>> const &ListMat1,
+                         std::vector<MyMatrix<T>> const &ListMat2,
+                         LatticeMethodChoice const &choice, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  bool with_group = ListMat1.size() > 1;
+  std::shared_ptr<ConjugacyFirstForm<T, Tint, Tgroup>> ff1 =
+      ConjugacyFirstFormData<T, Tint, Tgroup>(ListMat1[0], false, choice, os);
+  std::shared_ptr<ConjugacyFirstForm<T, Tint, Tgroup>> ff2 =
+      ConjugacyFirstFormData<T, Tint, Tgroup>(ListMat2[0], with_group, choice,
+                                              os);
+  if (ff1->canonical_form != ff2->canonical_form) {
+    return {};
+  }
+  // B_1 A_1 B_1^T = B_2 A_2 B_2^T
+  MyMatrix<Tint> h = Inverse(ff2->canonical_basis) * ff1->canonical_basis;
+  if (!with_group) {
+    return h;
+  }
+  MyMatrix<T> h_T = UniversalMatrixConversion<T, Tint>(h);
+  std::vector<MyMatrix<T>> ListTrans{ListMat2[0]};
+  for (size_t i = 1; i < ListMat1.size(); i++) {
+    ListTrans.push_back(h_T * ListMat1[i] * h_T.transpose());
+  }
+  std::vector<Telt> e2 = ConjugacyFormPermutations(ListMat2, *ff2->rep);
+  std::vector<Telt> e1 = ConjugacyFormPermutations(ListTrans, *ff2->rep);
+  // y^{-1} Q_i y = h P_i h^{-1}, that is y (h P_i h^{-1}) y^{-1} = Q_i
+  std::optional<Telt> opt_y =
+      ff2->G->RepresentativeAction_ConjugationTuple(e2, e1);
+  if (!opt_y) {
+    return {};
+  }
+  return MyMatrix<Tint>(ff2->rep->matrix(*opt_y) * h);
 }
 
 /*
@@ -561,6 +760,9 @@ LatticeIsometryReduced(std::vector<MyMatrix<T>> const &ListMat1,
   case LatticeStabCanIsomMethod::WeylChamber:
     return ComputeIsometryWeylChamber<T, Tint, Tgroup>(ListMat1[0],
                                                        ListMat2[0], os);
+  case LatticeStabCanIsomMethod::Conjugacy:
+    return ConjugacyLatticeIsometry<T, Tint, Tgroup>(ListMat1, ListMat2,
+                                                     choice, os);
   case LatticeStabCanIsomMethod::Heuristic:
     break;
   }
@@ -680,6 +882,9 @@ LatticeAutomorphismGroupReduced(std::vector<MyMatrix<T>> const &ListMat,
         ComputeAutomorphismWeylChamber<T, Tint, Tgroup>(ListMat[0], os);
     return {std::move(vin.ListGen), vin.order};
   }
+  case LatticeStabCanIsomMethod::Conjugacy:
+    return ConjugacyLatticeAutomorphismGroup<T, Tint, Tgroup>(ListMat, choice,
+                                                              os);
   case LatticeStabCanIsomMethod::Heuristic:
     break;
   }
