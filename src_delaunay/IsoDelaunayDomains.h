@@ -2963,6 +2963,9 @@ struct ResultDelaunayAdj {
   std::vector<FullAdjInfo<Tint>> ListIneqRed;
   Tgroup GRPperm;
   std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
+  // The indices of the known adjacencies passed to
+  // get_result_delaunay_adj_kernel that replace a flip (AdjacencyKnown).
+  std::vector<size_t> l_known_used;
 };
 
 /*
@@ -2980,6 +2983,10 @@ struct PreResultDelaunayAdj {
   std::vector<FullAdjInfo<Tint>> ListIneqRed;
   Tgroup GRPperm;
   std::vector<bool> l_test;
+  // For each preferred wall passed to get_pre_result_delaunay_adj_kernel,
+  // its position in ListIneqRed if it was taken as the representative of
+  // its orbit.
+  std::vector<std::optional<size_t>> l_preferred_pos;
 };
 
 /*
@@ -3046,12 +3053,19 @@ get_stabilizer_gens(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   argument instead of computing them, so that the enumeration of the
   periodic iso-Delaunay domains can pass the subgroup that also preserves
   its point set: the wall orbits are the orbits under that group.
+
+  A wall of l_preferred (canonical inequality, as in ListIneqRed) is taken
+  as the representative of its orbit, the first one if several are in the
+  same orbit. The walls whose adjacency is already known are passed that
+  way, so that the known adjacency is the one of the representative.
  */
 template <typename T, typename Tint, typename Tgroup>
 PreResultDelaunayAdj<T, Tint, Tgroup>
-get_pre_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
-                            DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
-                            std::vector<MyMatrix<Tint>> const &ListGenTot) {
+get_pre_result_delaunay_adj_kernel(
+    IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+    DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+    std::vector<MyMatrix<Tint>> const &ListGenTot,
+    std::vector<MyVector<Tint>> const &l_preferred = {}) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::ostream &os = data.rddo.os;
@@ -3167,7 +3181,32 @@ get_pre_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
   os << "|ISODEL: f_adj, GRPperm|=" << time_f_adj << "\n";
 #endif
 
-  std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
+  // The orbit representatives: the first point of each orbit, or the
+  // preferred wall of the orbit if there is one.
+  std::vector<std::optional<size_t>> l_preferred_irred;
+  for (auto &eV : l_preferred) {
+    auto iter = map_ineq.find(eV);
+    if (iter == map_ineq.end()) {
+      l_preferred_irred.push_back({});
+    } else {
+      l_preferred_irred.push_back(iter->second);
+    }
+  }
+  size_t n_preferred = l_preferred.size();
+  std::vector<std::optional<size_t>> l_preferred_pos(n_preferred);
+  std::vector<size_t> l_idx;
+  for (auto &eOrb : DecomposeOrbitPoint_Full(GRPperm)) {
+    size_t i_rep = eOrb.find_first();
+    for (size_t u = 0; u < n_preferred; u++) {
+      std::optional<size_t> const &opt = l_preferred_irred[u];
+      if (opt && eOrb[*opt] == 1) {
+        i_rep = *opt;
+        l_preferred_pos[u] = l_idx.size();
+        break;
+      }
+    }
+    l_idx.push_back(i_rep);
+  }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISODEL: f_adj: |GRPperm|=" << GRPperm.size()
      << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
@@ -3210,7 +3249,8 @@ get_pre_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: f_adj, pre-result|=" << time_f_adj << "\n";
 #endif
-  return {std::move(ListIneqRed), std::move(GRPperm), std::move(l_test)};
+  return {std::move(ListIneqRed), std::move(GRPperm), std::move(l_test),
+          std::move(l_preferred_pos)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -3333,28 +3373,146 @@ get_adjacent(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
 }
 
 /*
+  The adjacency seen from the other side (f_reverse of AdjacencyKnown).
+
+  y is the flip of a domain A across its wall adj.V, in the frame of A, and
+  adj its resolution to the domain x: P = adj.eBigMat satisfies
+  P x.GramMat P^T = y.GramMat (LINSPA_TestEquivalenceGramMatrix_SHV), so x
+  is the set of the G with P G P^T in the domain of y. The wall of y crossed
+  back is -adj.V, and a wall W of y is the wall MatSpace(P) W of x, with
+  MatSpace(P) = matrix_in_t_space(P), as for the stabilizer in
+  get_pre_result_delaunay_adj_kernel. Flipping x across that wall gives the
+  domain of the G with P G P^T in A: it is P^{-1} A P^{-T}, so the
+  adjacency of x leads to A through P^{-1}.
+
+  For a domain created by the flip (f_spann), P is the identity: the wall is
+  -adj.V and the transformation the identity.
+ */
+template <typename T, typename Tint, typename Tgroup>
+IsoDelaunayDomain_AdjO<Tint> get_reverse_adjacency(
+    DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+    [[maybe_unused]] IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+    [[maybe_unused]] IsoDelaunayDomain_AdjI<T, Tint, Tgroup> const &y,
+    IsoDelaunayDomain_AdjO<Tint> const &adj) {
+  MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(adj.eBigMat);
+  MyMatrix<T> MatSpace = matrix_in_t_space(P_T, data.LinSpa);
+  MyVector<T> V_back = -UniversalVectorConversion<T, Tint>(adj.V);
+  MyVector<T> V_img = MatSpace * V_back;
+  MyVector<Tint> V_rev = RemoveFractionVectorPlusCoeffRing(V_img).TheVect;
+  MyMatrix<Tint> eBigMat_rev = Inverse(adj.eBigMat);
+#if defined(SANITY_CHECK_ISO_DELAUNAY_DOMAIN) ||                             \
+    defined(SANITY_CHECK_ISO_DELAUNAY_DOMAIN_EXTENSIVE)
+  // The wall of x carrying the reverse adjacency, with its tessellation.
+  auto get_wall = [&](IsoDelaunayDomain<T, Tint, Tgroup> const &z,
+                      MyVector<Tint> const &V,
+                      std::string const &context) -> FullAdjInfo<Tint> {
+    for (auto &eRec : ComputeListIneqFromTesselationIneq(z.DT)) {
+      if (eRec.eIneq == V) {
+        return eRec;
+      }
+    }
+    std::cerr << "ISODEL: get_reverse_adjacency, the wall V="
+              << StringVectorGAP(V) << " is not one of " << context << "\n";
+    throw TerminalException{1};
+  };
+#endif
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
+  (void)get_wall(x, V_rev, "the domain the adjacency is resolved to");
+#endif
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN_EXTENSIVE
+  std::cerr << "ISODEL: SANITY_CHECK_ISO_DELAUNAY_DOMAIN_EXTENSIVE, checking a "
+               "reverse adjacency by flipping both domains\n";
+  {
+    // A_rec: the domain the flip y comes from, recovered by flipping y back.
+    // F_rev: the flip of x across the reverse wall. The reverse
+    // transformation has to map the domain of A_rec onto the one of F_rev,
+    // hence the interior Gram matrix of A_rec into the interior of F_rev.
+    // adj.V is primitive, so is its opposite: it is the wall as y stores it.
+    MyVector<Tint> V_neg = -adj.V;
+    IsoDelaunayDomain_AdjI<T, Tint, Tgroup> A_rec =
+        get_adjacent<T, Tint, Tgroup>(
+            y.DT_gram, data,
+            get_wall(y.DT_gram, V_neg, "the flipped domain"));
+    IsoDelaunayDomain_AdjI<T, Tint, Tgroup> F_rev =
+        get_adjacent<T, Tint, Tgroup>(
+            x, data, get_wall(x, V_rev, "the domain resolved to"));
+    MyMatrix<T> Q_T = UniversalMatrixConversion<T, Tint>(eBigMat_rev);
+    MyMatrix<T> G_A = UniversalMatrixConversion<T, Tint>(A_rec.DT_gram.GramMat);
+    MyMatrix<T> G_img = Q_T * G_A * Q_T.transpose();
+    MyVector<T> c_img = LINSPA_GetVectorOfMatrixExpression(data.LinSpa, G_img);
+    for (auto &eRec : ComputeListIneqFromTesselationIneq(F_rev.DT_gram.DT)) {
+      MyVector<T> eIneq_T = UniversalVectorConversion<T, Tint>(eRec.eIneq);
+      T scal = eIneq_T.dot(c_img);
+      if (scal <= 0) {
+        std::cerr << "ISODEL: get_reverse_adjacency, the reverse "
+                     "transformation does not map the domain of origin onto "
+                     "the flip of the domain resolved to\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+  std::cerr << "ISODEL: SANITY_CHECK_ISO_DELAUNAY_DOMAIN_EXTENSIVE, done\n";
+#endif
+  return {std::move(V_rev), std::move(eBigMat_rev)};
+}
+
+/*
   Full adjacency computation: the combinatorial pre-result followed by an
   actual flip for every flippable facet. Same kernel / wrapper split as
   get_pre_result_delaunay_adj, and for the same reason.
+
+  The adjacencies of l_known (given by get_reverse_adjacency) are those of
+  walls that do not need a flip: such a wall is taken as the representative
+  of its orbit and its known adjacency replaces the flip. l_known_used
+  gives the indices of those used.
  */
 template <typename T, typename Tint, typename Tgroup>
-ResultDelaunayAdj<T, Tint, Tgroup>
-get_result_delaunay_adj_kernel(IsoDelaunayDomain<T, Tint, Tgroup> const &x,
-                        DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
-                        std::vector<MyMatrix<Tint>> const &ListGenTot) {
+ResultDelaunayAdj<T, Tint, Tgroup> get_result_delaunay_adj_kernel(
+    IsoDelaunayDomain<T, Tint, Tgroup> const &x,
+    DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
+    std::vector<MyMatrix<Tint>> const &ListGenTot,
+    std::vector<IsoDelaunayDomain_AdjO<Tint>> const &l_known = {}) {
+  std::vector<MyVector<Tint>> l_preferred;
+  for (auto &eKnown : l_known) {
+    l_preferred.push_back(eKnown.V);
+  }
   PreResultDelaunayAdj<T, Tint, Tgroup> pre =
-    get_pre_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot);
+      get_pre_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot,
+                                                          l_preferred);
+  size_t n_wall = pre.ListIneqRed.size();
+  std::vector<uint8_t> l_known_wall(n_wall, 0);
+  std::vector<size_t> l_known_used;
+  for (size_t u = 0; u < l_known.size(); u++) {
+    std::optional<size_t> const &opt = pre.l_preferred_pos[u];
+    // A known adjacency crosses a wall of x that is flippable (it was
+    // flipped from the other side) and alone in its orbit among the known
+    // ones (two would come from equivalent domains). Otherwise the known
+    // adjacency is not used and the flip is done, which is always correct.
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
+    if (!opt || !pre.l_test[*opt]) {
+      std::cerr << "ISODEL: get_result_delaunay_adj_kernel, the known "
+                   "adjacency u="
+                << u << " is not on a flippable wall representative\n";
+      throw TerminalException{1};
+    }
+#endif
+    if (opt && pre.l_test[*opt]) {
+      l_known_wall[*opt] = 1;
+      l_known_used.push_back(u);
+    }
+  }
   std::vector<IsoDelaunayDomain_AdjI<T, Tint, Tgroup>> l_adj;
   // All the flips start from x.DT: what depends only on it is built once.
   FlippingTessellationCache<Tint, Tgroup> cache(
       x.DT, GetListGramRing(data.LinSpa.ListLineMat), data.rddo.os);
-  for (size_t k = 0; k < pre.l_test.size(); k++) {
-    if (pre.l_test[k]) {
+  for (size_t k = 0; k < n_wall; k++) {
+    if (pre.l_test[k] && l_known_wall[k] == 0) {
       l_adj.push_back(
           get_adjacent<T, Tint, Tgroup>(x, data, cache, pre.ListIneqRed[k]));
     }
   }
-  return {std::move(pre.ListIneqRed), std::move(pre.GRPperm), std::move(l_adj)};
+  return {std::move(pre.ListIneqRed), std::move(pre.GRPperm), std::move(l_adj),
+          std::move(l_known_used)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -3587,6 +3745,25 @@ struct DataIsoDelaunayDomainsFunc {
     // A member of a local is not moved implicitly on return; without the
     // std::move every adjacent domain (with its tessellation) is copied.
     return std::move(result.l_adj);
+  }
+  // The adjacency between two domains is the same wall seen from each side,
+  // so the flip across a wall is done from one side only (AdjacencyKnown).
+  std::optional<TadjO> f_reverse(Tobj const &x, TadjI const &y,
+                                 TadjO const &adj) {
+    return get_reverse_adjacency<T, Tint, Tgroup>(data, x.DT_gram, y, adj);
+  }
+  std::optional<AdjacencyKnown<TadjI>>
+  f_adj_known(Tobj &x_in, std::vector<TadjO> const &l_known) {
+    IsoDelaunayDomain<T, Tint, Tgroup> const &x = x_in.DT_gram;
+    std::vector<MyMatrix<Tint>> ListGenTot =
+        get_stabilizer_gens(x, data, data.rddo.os);
+    ResultDelaunayAdj<T, Tint, Tgroup> result =
+        get_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot,
+                                                        l_known);
+    x_in.ListIneqRed = std::move(result.ListIneqRed);
+    x_in.GRPperm = std::move(result.GRPperm);
+    return AdjacencyKnown<TadjI>{std::move(result.l_adj),
+                                 std::move(result.l_known_used)};
   }
   Tobj f_adji_obj(TadjI const &x) { return {x.DT_gram, {}, {}}; }
   size_t f_complexity([[maybe_unused]] Tobj const &x) {

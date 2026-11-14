@@ -1381,9 +1381,28 @@ struct PeriodicDataIsoDelaunayDomainsFunc {
     std::vector<MyMatrix<Tint>> ListGenTot = get_stab_gens(x.GramMat, x.SHV);
     ResultDelaunayAdj<T, Tint, Tgroup> result =
         get_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot);
-    x_in.ListIneqRed = result.ListIneqRed;
-    x_in.GRPperm = result.GRPperm;
-    return result.l_adj;
+    x_in.ListIneqRed = std::move(result.ListIneqRed);
+    x_in.GRPperm = std::move(result.GRPperm);
+    return std::move(result.l_adj);
+  }
+  // As for the lattice iso-Delaunay domains: the equivalences are those of
+  // the lattice ones restricted to the point set, which the inverse of one
+  // of them preserves as well.
+  std::optional<TadjO> f_reverse(Tobj const &x, TadjI const &y,
+                                 TadjO const &adj) {
+    return get_reverse_adjacency<T, Tint, Tgroup>(data, x.DT_gram, y, adj);
+  }
+  std::optional<AdjacencyKnown<TadjI>>
+  f_adj_known(Tobj &x_in, std::vector<TadjO> const &l_known) {
+    IsoDelaunayDomain<T, Tint, Tgroup> const &x = x_in.DT_gram;
+    std::vector<MyMatrix<Tint>> ListGenTot = get_stab_gens(x.GramMat, x.SHV);
+    ResultDelaunayAdj<T, Tint, Tgroup> result =
+        get_result_delaunay_adj_kernel<T, Tint, Tgroup>(x, data, ListGenTot,
+                                                        l_known);
+    x_in.ListIneqRed = std::move(result.ListIneqRed);
+    x_in.GRPperm = std::move(result.GRPperm);
+    return AdjacencyKnown<TadjI>{std::move(result.l_adj),
+                                 std::move(result.l_known_used)};
   }
   Tobj f_adji_obj(TadjI const &x) { return {x.DT_gram, {}, {}}; }
   size_t f_complexity([[maybe_unused]] Tobj const &x) { return 0; }

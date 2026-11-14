@@ -193,6 +193,11 @@ inline void serialize(Archive &ar, AdjO_MPI<TadjO> &eRec,
     is the case. Also take
   f_spann(TadjI, int, int) -> std::pair<Tobj, TabjO> : Generate from the
     equivalence the object to be inserted and the equivalence to be sent.
+  f_record(size_t, Tobj, TadjI, TadjO, int, int) -> void : called on every
+    resolved adjacency, with the index and the object it was resolved to,
+    the adjacency, its resolution and the processor and index of the object
+    it comes from (see AdjacencyKnown). Both objects are known on the
+    processor owning the target, which is the one that treats it.
   ---
   The exchanges that we have:
   * Sending of entriesAdjI
@@ -211,13 +216,15 @@ inline void serialize(Archive &ar, AdjO_MPI<TadjO> &eRec,
 template <typename Tobj, typename TadjI, typename TadjO, typename Fnext,
           typename Finsert, typename Fadji_obj, typename Fidx_obj,
           typename Fsave_status, typename Finit, typename Fadj,
-          typename Fset_adj, typename Fhash, typename Frepr, typename Fspann>
+          typename Fset_adj, typename Fhash, typename Frepr, typename Fspann,
+          typename Frecord>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
                            int const &max_time_second, Fnext f_next,
                            Finsert f_insert, Fadji_obj f_adji_obj,
                            Fidx_obj f_idx_obj, Fsave_status f_save_status,
                            Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                            Fhash f_hash, Frepr f_repr, Fspann f_spann,
+                           Frecord f_record,
                            [[maybe_unused]] std::ostream &os) {
   SingletonTime start;
   int i_rank = comm.rank();
@@ -313,6 +320,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
         os << "MPI_ADJ_SCH: Conclude with an equivalence\n";
 #endif
+        f_record(idx, x, eI.x, *opt, eI.i_proc_orig, eI.i_orb_orig);
         return f_ret(*opt);
       }
     }
@@ -339,6 +347,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     notdone.push_back(n_obj);
     vect.push_back(n_obj);
     f_save_status(n_obj, false);
+    f_record(n_obj, pair.first, eI.x, pair.second, eI.i_proc_orig,
+             eI.i_orb_orig);
     n_obj++;
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
     os << "MPI_ADJ_SCH: process_single_entryAdjI, now n_obj=" << n_obj << "\n";
@@ -1032,13 +1042,66 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
   };
   std::vector<DatabaseEntry_MPI<Tobj, TadjO>> l_obj;
   std::vector<uint8_t> l_status;
+  // The adjacencies known from the other side (see AdjacencyKnown), by local
+  // object. Once an object is treated, its entry holds the ones that replaced
+  // a computation, which f_set_adj adds to the computed ones.
+  std::vector<std::vector<TadjO_work>> l_known;
+  auto f_record = [&]([[maybe_unused]] size_t const &i_target,
+                      [[maybe_unused]] Tobj const &x_target,
+                      [[maybe_unused]] TadjI const &y,
+                      [[maybe_unused]] TadjO_work const &adj,
+                      [[maybe_unused]] int const &i_proc_orig,
+                      [[maybe_unused]] int const &i_orb_orig) -> void {
+    if constexpr (HasKnownAdjacencies<Tdata>) {
+      // A treated object has computed all its adjacencies already.
+      if (l_status[i_target] == 1) {
+        return;
+      }
+      std::optional<TadjO> opt = data.f_reverse(x_target, y, adj.x);
+      if (opt) {
+        if (l_known.size() <= i_target) {
+          l_known.resize(i_target + 1);
+        }
+        l_known[i_target].push_back({std::move(*opt), i_proc_orig, i_orb_orig});
+      }
+    }
+  };
   auto f_adj = [&](int const &i_orb) -> std::optional<std::vector<TadjI>> {
     Tobj &x = l_obj[i_orb].x;
-    return data.f_adj(x);
+    if constexpr (HasKnownAdjacencies<Tdata>) {
+      size_t i_orb_s = static_cast<size_t>(i_orb);
+      if (l_known.size() <= i_orb_s) {
+        l_known.resize(i_orb_s + 1);
+      }
+      std::vector<TadjO_work> &l_work = l_known[i_orb_s];
+      std::vector<TadjO> l_known_x;
+      for (auto &eWork : l_work) {
+        l_known_x.push_back(eWork.x);
+      }
+      std::optional<AdjacencyKnown<TadjI>> opt = data.f_adj_known(x, l_known_x);
+      if (!opt) {
+        return {};
+      }
+      std::vector<TadjO_work> l_used;
+      for (auto &i_used : opt->l_known_used) {
+        l_used.push_back(std::move(l_work[i_used]));
+      }
+      l_work = std::move(l_used);
+      return std::move(opt->l_adj);
+    } else {
+      return data.f_adj(x);
+    }
   };
   auto f_set_adj = [&](int const &i_orb,
                        std::vector<TadjO_work> const &ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
+    if constexpr (HasKnownAdjacencies<Tdata>) {
+      std::vector<TadjO_work> &l_work = l_known[i_orb];
+      for (auto &eWork : l_work) {
+        l_obj[i_orb].ListAdj.push_back(std::move(eWork));
+      }
+      l_work = std::vector<TadjO_work>();
+    }
   };
   auto f_adji_obj = [&](TadjI const &x) -> Tobj { return data.f_adji_obj(x); };
   auto f_idx_obj = [&](size_t const &idx) -> Tobj { return l_obj[idx].x; };
@@ -1075,9 +1138,10 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
       Tobj, TadjI, TadjO_work, decltype(f_next), decltype(f_insert),
       decltype(f_adji_obj), decltype(f_idx_obj), decltype(f_save_status),
       decltype(f_init), decltype(f_adj), decltype(f_set_adj), decltype(f_hash),
-      decltype(f_repr), decltype(f_spann)>(
+      decltype(f_repr), decltype(f_spann), decltype(f_record)>(
       comm, max_runtime_second, f_next, f_insert, f_adji_obj, f_idx_obj,
-      f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann, os);
+      f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann,
+      f_record, os);
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
   os << "MPI_ADJ_SCH: Termination test=" << test << "\n";
 #endif

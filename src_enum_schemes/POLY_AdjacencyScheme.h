@@ -5,6 +5,8 @@
 // clang-format off
 #include "boost_serialization.h"
 #include "Timings.h"
+#include <concepts>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -158,6 +160,45 @@ template <typename TadjO> struct entryAdjO {
   int i_orb_orig;
 };
 
+/*
+  The adjacencies already known from the other side.
+
+  When an adjacency of an object A is resolved to an object B, the adjacency
+  of B leading back to A is known as well, provided the adjacency relation is
+  symmetric. If B is not treated yet, it is recorded with B, and when B is
+  treated it is not computed again. An enumeration declares the symmetry by
+  providing (HasKnownAdjacencies):
+  * f_reverse(x, y, adj) -> std::optional<TadjO>: y is an adjacency of
+    another object, resolved to the object x by adj (the result of f_repr
+    or f_spann). It returns the adjacency of x leading back to that object,
+    or nothing if it cannot tell (the adjacency is then computed).
+  * f_adj_known(x, l_known) -> std::optional<AdjacencyKnown<TadjI>>: the
+    same as f_adj(x), except that the adjacencies l_known of x, given as
+    f_reverse produced them, need not be computed. l_adj contains the
+    adjacencies still to be resolved and l_known_used the indices in
+    l_known of those that replace a computation: they are the adjacencies of
+    x together with l_adj, the others are dropped.
+  The enumerations without them are unchanged.
+ */
+template <typename TadjI> struct AdjacencyKnown {
+  std::vector<TadjI> l_adj;
+  std::vector<size_t> l_known_used;
+};
+
+template <typename Tdata>
+concept HasKnownAdjacencies =
+    requires(Tdata &data, typename Tdata::Tobj &x,
+             typename Tdata::Tobj const &x_c, typename Tdata::TadjI const &y,
+             typename Tdata::TadjO const &adj,
+             std::vector<typename Tdata::TadjO> const &l_known) {
+      {
+        data.f_reverse(x_c, y, adj)
+      } -> std::same_as<std::optional<typename Tdata::TadjO>>;
+      {
+        data.f_adj_known(x, l_known)
+      } -> std::same_as<std::optional<AdjacencyKnown<typename Tdata::TadjI>>>;
+    };
+
 namespace boost::serialization {
 template <class Archive, typename TadjO>
 inline void serialize(Archive &ar, entryAdjO<TadjO> &eRec,
@@ -171,15 +212,21 @@ inline void serialize(Archive &ar, entryAdjO<TadjO> &eRec,
 // stopped on the time limit (a valid, possibly partial, result), false if it
 // was terminated early by a rejection (f_insert / f_adj signalling an
 // unacceptable object).
+//
+// f_record(i_target, x_target, y, adj, i_orig) is called on every resolved
+// adjacency: the adjacency y of the object i_orig was resolved by adj to the
+// object i_target, which is x_target (see AdjacencyKnown).
 template <typename Tobj, typename TadjI, typename TadjO, typename Fnext,
           typename Finsert, typename Fadji_obj, typename Fidx_obj,
           typename Fsave_status, typename Finit, typename Fadj,
-          typename Fset_adj, typename Fhash, typename Frepr, typename Fspann>
+          typename Fset_adj, typename Fhash, typename Frepr, typename Fspann,
+          typename Frecord>
 bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
                               Finsert f_insert, Fadji_obj f_adji_obj,
                               Fidx_obj f_idx_obj, Fsave_status f_save_status,
                               Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                               Fhash f_hash, Frepr f_repr, Fspann f_spann,
+                              Frecord f_record,
                               [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_ADJACENCY_SCHEME
   os << "ADJ_SCH: Beginning of compute_adjacency_serial\n";
@@ -189,7 +236,8 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
   std::unordered_map<size_t, std::vector<size_t>> indices_by_hash;
   std::vector<size_t> notdone;
   bool early_termination = false;
-  auto process_singleEntry_AdjI = [&](TadjI const &x_adjI) -> TadjO {
+  auto process_singleEntry_AdjI = [&](TadjI const &x_adjI,
+                                      size_t const &idx_orig) -> TadjO {
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: process_singleEntry_AdjI before f_hash\n";
 #endif
@@ -227,6 +275,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #ifdef DEBUG_ADJACENCY_SCHEME
         os << "ADJ_SCH: process_singleEntry_AdjI Find an equivalence\n";
 #endif
+        f_record(idx, y, x_adjI, *opt, idx_orig);
         return *opt;
       }
     }
@@ -256,6 +305,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     bool is_treated = false;
     f_save_status(n_obj, is_treated);
     notdone.push_back(n_obj);
+    f_record(n_obj, pair.first, x_adjI, pair.second, idx_orig);
     n_obj += 1;
     return pair.second;
   };
@@ -309,7 +359,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     std::vector<TadjI> const &l_adj_i = *opt_adj_i;
     std::vector<TadjO> l_adj_o;
     for (auto &adj_i : l_adj_i) {
-      TadjO adj_o = process_singleEntry_AdjI(adj_i);
+      TadjO adj_o = process_singleEntry_AdjI(adj_i, idx);
       l_adj_o.push_back(adj_o);
     }
 #ifdef TIMINGS_ADJACENCY_SCHEME
@@ -526,13 +576,66 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
   };
   std::vector<DatabaseEntry_Serial<Tobj, TadjO>> l_obj;
   std::vector<uint8_t> l_status;
+  // The adjacencies known from the other side (see AdjacencyKnown), by
+  // object. Once an object is treated, its entry holds the ones that
+  // replaced a computation, which f_set_adj adds to the computed ones.
+  std::vector<std::vector<TadjO_work>> l_known;
+  auto f_record = [&]([[maybe_unused]] size_t const &i_target,
+                      [[maybe_unused]] Tobj const &x_target,
+                      [[maybe_unused]] TadjI const &y,
+                      [[maybe_unused]] TadjO_work const &adj,
+                      [[maybe_unused]] size_t const &i_orig) -> void {
+    if constexpr (HasKnownAdjacencies<Tdata>) {
+      // A treated object has computed all its adjacencies already.
+      if (l_status[i_target] == 1) {
+        return;
+      }
+      std::optional<TadjO> opt = data.f_reverse(x_target, y, adj.x);
+      if (opt) {
+        if (l_known.size() <= i_target) {
+          l_known.resize(i_target + 1);
+        }
+        int i_orig_i = static_cast<int>(i_orig);
+        l_known[i_target].push_back({std::move(*opt), i_orig_i});
+      }
+    }
+  };
   auto f_adj = [&](int const &i_orb) -> std::optional<std::vector<TadjI>> {
     Tobj &x = l_obj[i_orb].x;
-    return data.f_adj(x);
+    if constexpr (HasKnownAdjacencies<Tdata>) {
+      size_t i_orb_s = static_cast<size_t>(i_orb);
+      if (l_known.size() <= i_orb_s) {
+        l_known.resize(i_orb_s + 1);
+      }
+      std::vector<TadjO_work> &l_work = l_known[i_orb_s];
+      std::vector<TadjO> l_known_x;
+      for (auto &eWork : l_work) {
+        l_known_x.push_back(eWork.x);
+      }
+      std::optional<AdjacencyKnown<TadjI>> opt = data.f_adj_known(x, l_known_x);
+      if (!opt) {
+        return {};
+      }
+      std::vector<TadjO_work> l_used;
+      for (auto &i_used : opt->l_known_used) {
+        l_used.push_back(std::move(l_work[i_used]));
+      }
+      l_work = std::move(l_used);
+      return std::move(opt->l_adj);
+    } else {
+      return data.f_adj(x);
+    }
   };
   auto f_set_adj = [&](int const &i_orb,
                        std::vector<TadjO_work> const &ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
+    if constexpr (HasKnownAdjacencies<Tdata>) {
+      std::vector<TadjO_work> &l_work = l_known[i_orb];
+      for (auto &eWork : l_work) {
+        l_obj[i_orb].ListAdj.push_back(std::move(eWork));
+      }
+      l_work = std::vector<TadjO_work>();
+    }
   };
   auto f_adji_obj = [&](TadjI const &x) -> Tobj { return data.f_adji_obj(x); };
   // By reference: l_obj does not grow while the reference is in use (f_repr
@@ -570,9 +673,10 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
       Tobj, TadjI, TadjO_work, decltype(f_next), decltype(f_insert),
       decltype(f_adji_obj), decltype(f_idx_obj), decltype(f_save_status),
       decltype(f_init), decltype(f_adj), decltype(f_set_adj), decltype(f_hash),
-      decltype(f_repr), decltype(f_spann)>(
+      decltype(f_repr), decltype(f_spann), decltype(f_record)>(
       max_runtime_second, f_next, f_insert, f_adji_obj, f_idx_obj,
-      f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann, os);
+      f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann,
+      f_record, os);
   if (!is_correct) {
     return {};
   }
