@@ -3,10 +3,10 @@
 #define SRC_GENERA_ABELIANHERMITIANMASS_H_
 
 // clang-format off
-#include "ResidueArithmeticLegacy.h"
 #include "NumberFieldElement.h"
 #include "ClassicalGroupOrders.h"
 #include "PolynomialModQ.h"
+#include "MAT_MatrixModPrime.h"
 #include "CyclotomicHermitianMass.h"
 #include <map>
 #include <memory>
@@ -225,14 +225,16 @@ FindLocalGenerator(MyMatrix<T> const &B,
   return {};
 }
 
-// The matrix of g(S) for a polynomial g with integer coefficients.
-template <typename T>
-inline MyMatrix<T> PolyOfMatrixQ(PolyQ const &g, MyMatrix<T> const &S) {
+// The matrix of g(S) for a polynomial g with integer coefficients, or
+// residues read as integers.
+template <typename T, typename Tcoef>
+inline MyMatrix<T> PolyOfMatrixQ(std::vector<Tcoef> const &g,
+                                 MyMatrix<T> const &S) {
   int r = S.rows();
   MyMatrix<T> res = ZeroMatrix<T>(r, r);
   for (size_t i = g.size(); i-- > 0;) {
     res = res * S;
-    T g_i = UniversalScalarConversion<T, int64_t>(g[i]);
+    T g_i = UniversalScalarConversion<T, Tcoef>(g[i]);
     for (int j = 0; j < r; j++) {
       res(j, j) += g_i;
     }
@@ -263,19 +265,9 @@ AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
   // the conjugate of the prime of g: the factor dividing g(conj(x))
   auto compose_conj = [&](PolyQ const &g) -> PolyQ {
     // g(c(x)) modulo f and q, c the conjugate of theta (q-integral)
-    Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
     PolyQ c;
     for (auto const &x : lg.conj) {
-      Tint num = ResInt(GetNumerator_z(x), qz);
-      Tint den = ResInt(GetDenominator_z(x), qz);
-      if (num < 0) {
-        num += qz;
-      }
-      if (den < 0) {
-        den += qz;
-      }
-      int64_t v = ResMulI64(UniversalScalarConversion<int64_t, Tint>(num), ResInvI64(UniversalScalarConversion<int64_t, Tint>(den), q), q);
-      c.push_back(v);
+      c.push_back(ResidueModInt<T, Tint>(x, static_cast<T_residue>(q)));
     }
     PolyQ fq = PolyReduceSigned(lg.f, q);
     PolyQ res = {0};
@@ -384,7 +376,6 @@ inline HermitianLocalJordan
 AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
                      std::vector<AbelianPrime> const &primes, size_t i_prime,
                      int64_t q) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
   int r = B.rows();
   AbelianPrime const &ap = primes[i_prime];
   int f_res = static_cast<int>(ap.g.size()) - 1;
@@ -413,24 +404,15 @@ AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
   // delta = v_P(f'(theta)): v_q(det(f'(S) E + 1 - E)) on X is m f v_P
   int deg = static_cast<int>(f.size()) - 1;
   int m_total = r / deg;
-  PolyQ fprime;
+  std::vector<int64_t> fprime;
   for (size_t k = 1; k < f.size(); k++) {
     fprime.push_back(static_cast<int64_t>(k) * f[k]);
   }
   MyMatrix<T> FP = PolyOfMatrixQ(fprime, lg.S);
   // the O_P-rank m
-  std::vector<std::vector<int64_t>> Emod(r, std::vector<int64_t>(r));
-  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
-  for (int u = 0; u < r; u++) {
-    for (int v = 0; v < r; v++) {
-      Tint x = ResInt(GetNumerator_z(E(u, v)), qz);
-      if (x < 0) {
-        x += qz;
-      }
-      Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
-    }
-  }
-  int rk = RankModPrimeI64(Emod, q);
+  T_small_prime q_u = static_cast<T_small_prime>(q);
+  ModMatrix Emod = ModMatrixOfMatrix(E, q_u);
+  int rk = static_cast<int>(RankModPrime(Emod, q_u));
   int m = rk / (ap.e * f_res);
   int delta = 0;
   {
@@ -593,17 +575,15 @@ inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
   Tint qk = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(P.q), k);
   Tint Q = qk * UniversalScalarConversion<Tint, int64_t>(P.q);
   PolyZ<Tint> z = PolyZReduce(PolyZMul(LocalEps(P, k + 1), y), P.K.Phi, Q);
-  Tint qz = UniversalScalarConversion<Tint, int64_t>(P.q);
-  Tint dd = ResInt(QuoInt(d, qk), qz);
-  int64_t inv = ResInvI64(UniversalScalarConversion<int64_t, Tint>(dd), P.q);
+  T_small_prime q_u = static_cast<T_small_prime>(P.q);
+  T_residue inv = ResInv(ResModOf(QuoInt(d, qk), q_u), q_u);
   PolyQ res;
   for (auto const &c : z) {
     if (ResInt(c, qk) != 0) {
       std::cerr << "ABQUAD: the residue of a non integral element\n";
       throw TerminalException{1};
     }
-    Tint t = ResInt(QuoInt(c, qk), qz);
-    res.push_back(ResMulI64(UniversalScalarConversion<int64_t, Tint>(t), inv, P.q));
+    res.push_back(ResMul(ResModOf(QuoInt(c, qk), q_u), inv, q_u));
   }
   PolyTrim(res);
   if (res.empty()) {
@@ -672,42 +652,32 @@ LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
   int r = B.rows();
   int deg = static_cast<int>(lg.f.size()) - 1;
   int m = r / deg;
-  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
-  auto red = [&](T const &x) -> int64_t {
-    Tint num = ResInt(GetNumerator_z(x), qz);
-    Tint den = ResInt(GetDenominator_z(x), qz);
-    if (num < 0) {
-      num += qz;
-    }
-    if (den < 0) {
-      den += qz;
-    }
-    return ResMulI64(UniversalScalarConversion<int64_t, Tint>(num), ResInvI64(UniversalScalarConversion<int64_t, Tint>(den), q), q);
+  T_small_prime q_u = static_cast<T_small_prime>(q);
+  auto red = [&](T const &x) -> T_residue {
+    return ResidueModInt<T, Tint>(x, q_u);
   };
   std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
   for (int t = 1; t < deg; t++) {
     Spow.push_back(Spow.back() * lg.S);
   }
-  auto orbit_rows = [&](MyVector<T> const &v) {
-    std::vector<std::vector<int64_t>> rows;
+  auto orbit_rows = [&](MyVector<T> const &v) -> ModMatrix {
+    ModMatrix rows(deg, r);
     for (int t = 0; t < deg; t++) {
       MyVector<T> w = Spow[t].transpose() * v;
-      std::vector<int64_t> row(r);
       for (int j = 0; j < r; j++) {
-        row[j] = red(w(j));
+        rows(t, j) = red(w(j));
       }
-      rows.push_back(row);
     }
     return rows;
   };
   std::vector<MyVector<T>> chosen;
-  std::vector<std::vector<int64_t>> acc;
+  ModMatrix acc(0, r);
   auto try_add = [&](MyVector<T> const &v) -> void {
-    std::vector<std::vector<int64_t>> test = acc;
-    for (auto &row : orbit_rows(v)) {
-      test.push_back(row);
-    }
-    if (RankModPrimeI64(test, q) == test.size()) {
+    ModMatrix rows = orbit_rows(v);
+    ModMatrix test(acc.rows() + rows.rows(), r);
+    test.topRows(acc.rows()) = acc;
+    test.bottomRows(rows.rows()) = rows;
+    if (RankModPrime(test, q_u) == static_cast<size_t>(test.rows())) {
       chosen.push_back(v);
       acc = test;
     }
@@ -1264,20 +1234,9 @@ inline HermitianLocalJordan
 JordanFromIdempotent(MyMatrix<T> const &B, MyMatrix<T> const &E,
                      MyMatrix<T> const &Pi, int f_res, int e_ram,
                      int delta, int type, int f_K, int64_t q, int bound) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  int r = B.rows();
-  std::vector<std::vector<int64_t>> Emod(r, std::vector<int64_t>(r));
-  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
-  for (int u = 0; u < r; u++) {
-    for (int v = 0; v < r; v++) {
-      Tint x = ResInt(GetNumerator_z(E(u, v)), qz);
-      if (x < 0) {
-        x += qz;
-      }
-      Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
-    }
-  }
-  int m = RankModPrimeI64(Emod, q) / (e_ram * f_res);
+  T_small_prime q_u = static_cast<T_small_prime>(q);
+  ModMatrix Emod = ModMatrixOfMatrix(E, q_u);
+  int m = static_cast<int>(RankModPrime(Emod, q_u)) / (e_ram * f_res);
   HermitianLocalJordan hj;
   hj.type = type;
   hj.f_K = f_K;

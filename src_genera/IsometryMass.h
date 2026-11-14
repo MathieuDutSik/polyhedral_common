@@ -281,7 +281,7 @@ PrimaryQuadModule BuildPrimaryQuadModule(IsometryComponent<T> const &comp,
     }
     int64_t qe = ResiduePrimePower(q, v);
     // the quadratic form is read modulo 2 N
-    if (qe > kMaxResidueModulus / 2) {
+    if (qe > ResToSigned(kMaxResidueModulus / 2)) {
       ResidueModulusTooLarge("2 * " + std::to_string(qe));
     }
     M.index.push_back(static_cast<int>(i));
