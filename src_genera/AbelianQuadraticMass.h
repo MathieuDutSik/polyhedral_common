@@ -3,7 +3,7 @@
 #define SRC_GENERA_ABELIANQUADRATICMASS_H_
 
 // clang-format off
-#include "ResidueArithmeticLegacy.h"
+#include "MAT_MatrixModPrime.h"
 #include "NumberFieldElement.h"
 #include "ClassicalGroupOrders.h"
 #include "GeneraArithmetic.h"
@@ -1596,7 +1596,6 @@ inline std::optional<T>
 QuadLocalFactorsByIdempotents(MyMatrix<T> const &B,
                               std::vector<MyMatrix<T>> const &Omega,
                               int64_t q, PrimeDecompositionData const &dK) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
   if (dK.e != 1 || dK.f != 1) {
     return {};
   }
@@ -1610,26 +1609,20 @@ QuadLocalFactorsByIdempotents(MyMatrix<T> const &B,
   lgQ.S = ZeroMatrix<T>(1, 1);
   lgQ.f = {0, 1};
   lgQ.conj = {T(0)};
-  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
+  T_small_prime q_u = static_cast<T_small_prime>(q);
   T res(1);
   for (auto const &E : idem) {
     // the rows of E independent modulo q: a Z_q-basis of eps_p X
-    std::vector<std::vector<int64_t>> acc;
+    ModMatrix Emod = ModMatrixOfMatrix(E, q_u);
+    ModMatrix acc(0, E.cols());
     std::vector<int> chosen;
     for (int i = 0; i < E.rows(); i++) {
-      std::vector<int64_t> row(E.cols());
-      for (int j = 0; j < E.cols(); j++) {
-        Tint x = ResInt(GetNumerator_z(E(i, j)), qz);
-        if (x < 0) {
-          x += qz;
-        }
-        row[j] = UniversalScalarConversion<int64_t, Tint>(x);
-      }
-      acc.push_back(row);
-      if (RankModPrimeI64(acc, q) == acc.size()) {
+      ModMatrix test(acc.rows() + 1, E.cols());
+      test.topRows(acc.rows()) = acc;
+      test.row(acc.rows()) = Emod.row(i);
+      if (RankModPrime(test, q_u) == static_cast<size_t>(test.rows())) {
         chosen.push_back(i);
-      } else {
-        acc.pop_back();
+        acc = test;
       }
     }
     int m = static_cast<int>(chosen.size());
@@ -1729,19 +1722,9 @@ QuadPrimeGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
   int r = B.rows();
   int m = r / deg;
   int f_res = static_cast<int>(dK.f);
-  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
-  auto red = [&](T const &x) -> int64_t {
-    Tint num = ResInt(GetNumerator_z(x), qz);
-    Tint den = ResInt(GetDenominator_z(x), qz);
-    if (num < 0) {
-      num += qz;
-    }
-    if (den < 0) {
-      den += qz;
-    }
-    return ResMulI64(UniversalScalarConversion<int64_t, Tint>(num),
-                   ResInvI64(UniversalScalarConversion<int64_t, Tint>(den), q),
-                   q);
+  T_small_prime q_u = static_cast<T_small_prime>(q);
+  auto red = [&](T const &x) -> T_residue {
+    return ResidueModInt<T, Tint>(x, q_u);
   };
   // the small elements of O_K, by increasing size
   std::vector<std::vector<int>> cands;
@@ -1824,18 +1807,17 @@ QuadPrimeGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
         Spow.push_back(Spow.back() * S);
       }
       std::vector<MyVector<T>> chosen;
-      std::vector<std::vector<int64_t>> acc;
+      ModMatrix acc(0, r);
       auto try_add = [&](MyVector<T> const &v) -> void {
-        std::vector<std::vector<int64_t>> test = acc;
+        ModMatrix test(acc.rows() + ef, r);
+        test.topRows(acc.rows()) = acc;
         for (int t = 0; t < ef; t++) {
           MyVector<T> w = E.transpose() * (Spow[t].transpose() * v);
-          std::vector<int64_t> row(r);
           for (int j = 0; j < r; j++) {
-            row[j] = red(w(j));
+            test(acc.rows() + t, j) = red(w(j));
           }
-          test.push_back(row);
         }
-        if (RankModPrimeI64(test, q) == test.size()) {
+        if (RankModPrime(test, q_u) == static_cast<size_t>(test.rows())) {
           chosen.push_back(v);
           acc = test;
         }
@@ -2815,58 +2797,32 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       return M;
     };
     // affine solutions of rows [coefficients | rhs] over F_q
-    auto affine = [&](IMat aug, size_t nvar)
+    auto affine = [&](IMat const &aug, size_t nvar)
         -> std::optional<std::pair<std::vector<int64_t>, IMat>> {
-      size_t row = 0;
-      std::vector<size_t> pivots;
-      for (size_t col = 0; col < nvar && row < aug.size(); col++) {
-        size_t piv = row;
-        while (piv < aug.size() && aug[piv][col] % p == 0) {
-          piv++;
+      T_small_prime p_u = static_cast<T_small_prime>(p);
+      int n_row = static_cast<int>(aug.size());
+      int n_var = static_cast<int>(nvar);
+      ModMatrix A(n_row, n_var + 1);
+      for (int i = 0; i < n_row; i++) {
+        for (int j = 0; j <= n_var; j++) {
+          A(i, j) = ResModSigned(aug[i][j], p_u);
         }
-        if (piv == aug.size()) {
-          continue;
-        }
-        std::swap(aug[piv], aug[row]);
-        int64_t iv = ResInvI64(((aug[row][col] % p) + p) % p, p);
-        for (auto &x : aug[row]) {
-          x = ResMulI64(((x % p) + p) % p, iv, p);
-        }
-        for (size_t i = 0; i < aug.size(); i++) {
-          int64_t f0 = ((aug[i][col] % p) + p) % p;
-          if (i != row && f0 != 0) {
-            for (size_t j = 0; j <= nvar; j++) {
-              aug[i][j] = ((aug[i][j] - ResMulI64(f0, ((aug[row][j] % p) + p) % p, p)) % p + p) % p;
-            }
-          }
-        }
-        pivots.push_back(col);
-        row++;
       }
-      for (size_t i = row; i < aug.size(); i++) {
-        if (((aug[i][nvar] % p) + p) % p != 0) {
+      // a pivot in the column of the right-hand side: no solution
+      RowSpaceModP rs = ComputeRowSpaceModP(std::move(A), p_u);
+      std::vector<int64_t> part(nvar, 0);
+      for (size_t i = 0; i < rs.pivots.size(); i++) {
+        if (rs.pivots[i] == nvar) {
           return {};
         }
+        part[rs.pivots[i]] = ResToSigned(rs.basis(static_cast<int>(i), n_var));
       }
-      std::vector<int64_t> part(nvar, 0);
-      for (size_t i = 0; i < pivots.size(); i++) {
-        part[pivots[i]] = ((aug[i][nvar] % p) + p) % p;
-      }
-      std::vector<bool> isp(nvar, false);
-      for (size_t pv : pivots) {
-        isp[pv] = true;
-      }
-      IMat ker;
-      for (size_t fcol = 0; fcol < nvar; fcol++) {
-        if (isp[fcol]) {
-          continue;
+      ModMatrix K = FreeKernelBasisModP(rs, n_var, p_u);
+      IMat ker(K.rows(), std::vector<int64_t>(nvar));
+      for (int i = 0; i < K.rows(); i++) {
+        for (int j = 0; j < n_var; j++) {
+          ker[i][j] = ResToSigned(K(i, j));
         }
-        std::vector<int64_t> v(nvar, 0);
-        v[fcol] = 1;
-        for (size_t i = 0; i < pivots.size(); i++) {
-          v[pivots[i]] = ((p - ((aug[i][fcol] % p) + p) % p) % p);
-        }
-        ker.push_back(v);
       }
       return std::make_pair(part, ker);
     };
