@@ -145,10 +145,8 @@ std::vector<MyMatrix<T>> OrthogonalGroupElements(MyMatrix<T> const &A,
           LatticeMethodChoice(LatticeStabCanIsomMethod::Graph,
                               InvariantFamilyKind::IteratedShortest),
           std::cerr);
-  std::vector<MyMatrix<T>> gens;
-  for (auto const &eGen : aut.ListGen) {
-    gens.push_back(UniversalMatrixConversion<T, Tint>(eGen));
-  }
+  std::vector<MyMatrix<T>> gens =
+      UniversalStdVectorMatrixConversion<T, Tint>(aut.ListGen);
   size_t max_elt = 2000000;
   std::set<std::vector<int64_t>> seen;
   std::vector<MyMatrix<T>> elts{IdentityMat<T>(n)};

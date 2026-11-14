@@ -192,12 +192,11 @@ inline int64_t ModuleB(PrimaryQuadModule const &M, ModuleElt const &x,
                        ModuleElt const &y) {
   int64_t val = 0;
   for (size_t i = 0; i < M.rank(); i++) {
-    if (x[i] == 0) {
-      continue;
-    }
-    for (size_t j = 0; j < M.rank(); j++) {
-      int64_t t = ResMul(x[i], y[j], M.N);
-      val = ResAdd(val, ResMul(t, M.bnum[i][j], M.N), M.N);
+    if (x[i] != 0) {
+      for (size_t j = 0; j < M.rank(); j++) {
+        int64_t t = ResMul(x[i], y[j], M.N);
+        val = ResAdd(val, ResMul(t, M.bnum[i][j], M.N), M.N);
+      }
     }
   }
   return val;
@@ -223,11 +222,10 @@ inline ModuleElt ModuleCombination(PrimaryQuadModule const &M,
                                    std::vector<ModuleElt> const &y) {
   ModuleElt res(M.rank(), 0);
   for (size_t i = 0; i < M.rank(); i++) {
-    if (a[i] == 0) {
-      continue;
-    }
-    for (size_t j = 0; j < M.rank(); j++) {
-      res[j] = ResAdd(res[j], ResMul(a[i], y[i][j], M.ord[j]), M.ord[j]);
+    if (a[i] != 0) {
+      for (size_t j = 0; j < M.rank(); j++) {
+        res[j] = ResAdd(res[j], ResMul(a[i], y[i][j], M.ord[j]), M.ord[j]);
+      }
     }
   }
   return res;
@@ -906,12 +904,7 @@ std::vector<MyMatrix<Tint>> IntegralCommutant(IsometryComponent<T> const &comp) 
   ListX.insert(ListX.end(), comp.extra_sigma.begin(), comp.extra_sigma.end());
   // the integral commutant: Y X = X Y, saturated
   int kk = k * k;
-  MyMatrix<Tint> Eq(kk, kk * static_cast<int>(ListX.size()));
-  for (int i = 0; i < Eq.rows(); i++) {
-    for (int j = 0; j < Eq.cols(); j++) {
-      Eq(i, j) = 0;
-    }
-  }
+  MyMatrix<Tint> Eq = ZeroMatrix<Tint>(kk, kk * static_cast<int>(ListX.size()));
   for (size_t ix = 0; ix < ListX.size(); ix++) {
     MyMatrix<Tint> X = UniversalMatrixConversion<Tint, T>(ListX[ix]);
     for (int u = 0; u < k; u++) {
@@ -2824,11 +2817,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
                      std::vector<int64_t> const &x) -> std::vector<int64_t> {
       std::vector<int64_t> y(r, 0);
       for (size_t s = 0; s < r; s++) {
-        if (x[s] == 0) {
-          continue;
-        }
-        for (size_t u = 0; u < r; u++) {
-          y[u] = ResAdd(y[u], ResMul(x[s], act[s][u], ListOrd[u]), ListOrd[u]);
+        if (x[s] != 0) {
+          for (size_t u = 0; u < r; u++) {
+            y[u] = ResAdd(y[u], ResMul(x[s], act[s][u], ListOrd[u]), ListOrd[u]);
+          }
         }
       }
       return y;
@@ -3218,17 +3210,16 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
     for (int u = 0; u < n; u++) {
       for (int w = 0; w < n; w++) {
         int64_t xv = X[u * n + w];
-        if (xv == 0) {
-          continue;
-        }
-        for (int v = 0; v < n; v++) {
-          __int128 z = static_cast<__int128>(Z[u * n + v]) +
-                       static_cast<__int128>(xv) * Y[w * n + v];
-          if (z > INT64_MAX || z < INT64_MIN) {
-            std::cerr << "ISOM_MASS: a product of group elements overflows\n";
-            throw TerminalException{1};
+        if (xv != 0) {
+          for (int v = 0; v < n; v++) {
+            __int128 z = static_cast<__int128>(Z[u * n + v]) +
+                         static_cast<__int128>(xv) * Y[w * n + v];
+            if (z > INT64_MAX || z < INT64_MIN) {
+              std::cerr << "ISOM_MASS: a product of group elements overflows\n";
+              throw TerminalException{1};
+            }
+            Z[u * n + v] = static_cast<int64_t>(z);
           }
-          Z[u * n + v] = static_cast<int64_t>(z);
         }
       }
     }

@@ -768,13 +768,15 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
       N--;
     }
   }
+  // after: the total rank of the components after the i-th
+  int64_t after = 0;
   for (size_t i = 0; i < nc; i++) {
-    int64_t after = 0;
-    for (size_t j = i + 1; j < nc; j++) {
-      after += M[j];
-    }
-    N += static_cast<int64_t>(S[i]) * M[i] * (M[i] + 1) / 2;
-    N += static_cast<int64_t>(S[i]) * M[i] * after;
+    after += M[i];
+  }
+  for (size_t i = 0; i < nc; i++) {
+    after -= M[i];
+    int64_t sm = static_cast<int64_t>(S[i]) * M[i];
+    N += sm * (M[i] + 1) / 2 + sm * after;
   }
   for (auto const &v : V) {
     if (v.first == 0) {
@@ -1690,10 +1692,7 @@ inline bool DedekindRegularAt(std::vector<int64_t> const &f,
   }
   PolyZ<Tint> prod{Tint(1)};
   for (auto const &[gi, ei] : fac) {
-    PolyZ<Tint> gz;
-    for (int64_t c : gi) {
-      gz.push_back(UniversalScalarConversion<Tint, int64_t>(c));
-    }
+    PolyZ<Tint> gz = UniversalStdVectorScalarConversion<Tint, int64_t>(gi);
     for (int k = 0; k < ei; k++) {
       prod = PolyZMul(prod, gz);
     }
@@ -2085,10 +2084,7 @@ inline std::optional<ElemE<T>> SqrtInK(ElemE<T> const &d, CyclotomicField<T> con
   for (size_t i = 0; i < prec; i++) {
     eps /= 2;
   }
-  std::vector<T> poly;
-  for (auto const &x : K.Phi) {
-    poly.push_back(UniversalScalarConversion<T, int64_t>(x));
-  }
+  std::vector<T> poly = UniversalStdVectorScalarConversion<T, int64_t>(K.Phi);
   std::vector<T> th = real_roots_approximation(poly, eps);
   if (static_cast<int>(th.size()) != n) {
     std::cerr << "ABQUAD: the field is not totally real\n";
@@ -2202,10 +2198,7 @@ std::vector<ElemE<T>> AutomorphismsTotallyReal(CyclotomicField<T> const &K) {
     }
     return EIsZero(v);
   };
-  std::vector<T> poly;
-  for (auto const &c : K.Phi) {
-    poly.push_back(UniversalScalarConversion<T, int64_t>(c));
-  }
+  std::vector<T> poly = UniversalStdVectorScalarConversion<T, int64_t>(K.Phi);
   for (size_t prec : {256, 512, 1024, 2048, 4096}) {
     T eps(1);
     for (size_t i = 0; i < prec; i++) {
@@ -3730,11 +3723,10 @@ LocalImagePiAdic(MyMatrix<T> const &B,
             IMat y(r, std::vector<int64_t>(r, 0));
             for (int a2 = 0; a2 < r; a2++) {
               for (int k2 = 0; k2 < r; k2++) {
-                if (x[a2][k2] == 0) {
-                  continue;
-                }
-                for (int b2 = 0; b2 < r; b2++) {
-                  y[a2][b2] = (y[a2][b2] + x[a2][k2] * g[k2][b2]) % pcl;
+                if (x[a2][k2] != 0) {
+                  for (int b2 = 0; b2 < r; b2++) {
+                    y[a2][b2] = (y[a2][b2] + x[a2][k2] * g[k2][b2]) % pcl;
+                  }
                 }
               }
             }

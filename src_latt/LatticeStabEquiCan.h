@@ -110,11 +110,8 @@ bool IsIntegralListMat(std::vector<MyMatrix<T>> const &ListMat) {
 template <typename T, typename Tring>
 std::vector<MyMatrix<Tring>>
 ConvertListMatToRing(std::vector<MyMatrix<T>> const &ListMat) {
-  std::vector<MyMatrix<Tring>> ListMatRet;
-  ListMatRet.reserve(ListMat.size());
-  for (auto &eMat : ListMat) {
-    ListMatRet.push_back(UniversalMatrixConversion<Tring, T>(eMat));
-  }
+  std::vector<MyMatrix<Tring>> ListMatRet =
+      UniversalStdVectorMatrixConversion<Tring, T>(ListMat);
   return ListMatRet;
 }
 

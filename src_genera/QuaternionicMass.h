@@ -941,11 +941,10 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         }
         int64_t q2 = 0;
         for (int i = 0; i < d; i++) {
-          if (a[i] == 0) {
-            continue;
-          }
-          for (int j = 0; j < d; j++) {
-            q2 = (q2 + a[i] * a[j] % p2 * Tij[i][j]) % p2;
+          if (a[i] != 0) {
+            for (int j = 0; j < d; j++) {
+              q2 = (q2 + a[i] * a[j] % p2 * Tij[i][j]) % p2;
+            }
           }
         }
         if (q2 != 0) {
@@ -956,11 +955,10 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         for (int kk = 0; kk < d && t3_zero; kk++) {
           int64_t v = 0;
           for (int i = 0; i < d; i++) {
-            if (a[i] == 0) {
-              continue;
-            }
-            for (int j = 0; j < d; j++) {
-              v = (v + a[i] * a[j] % p2 * T3[i][j][kk]) % p2;
+            if (a[i] != 0) {
+              for (int j = 0; j < d; j++) {
+                v = (v + a[i] * a[j] % p2 * T3[i][j][kk]) % p2;
+              }
             }
           }
           if (v != 0) {
@@ -977,11 +975,10 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           std::vector<std::vector<int64_t>> vk(d, std::vector<int64_t>(d, 0));
           for (int kk = 0; kk < d; kk++) {
             for (int i = 0; i < d; i++) {
-              if (a[i] == 0) {
-                continue;
-              }
-              for (int t2 = 0; t2 < d; t2++) {
-                vk[kk][t2] = (vk[kk][t2] + a[i] * C2[i][kk][t2]) % p2;
+              if (a[i] != 0) {
+                for (int t2 = 0; t2 < d; t2++) {
+                  vk[kk][t2] = (vk[kk][t2] + a[i] * C2[i][kk][t2]) % p2;
+                }
               }
             }
           }
@@ -1012,11 +1009,10 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         for (int t = 0; t < d && sq_zero && has_OK; t++) {
           int64_t v = 0;
           for (int i = 0; i < d; i++) {
-            if (a[i] == 0) {
-              continue;
-            }
-            for (int j = 0; j < d; j++) {
-              v = (v + a[i] * a[j] % p * Sij[i][j][t]) % p;
+            if (a[i] != 0) {
+              for (int j = 0; j < d; j++) {
+                v = (v + a[i] * a[j] % p * Sij[i][j][t]) % p;
+              }
             }
           }
           if (v != 0) {
@@ -1148,10 +1144,8 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
 #else
   int c_top = c;
 #endif
-  std::vector<MyMatrix<Tint>> LamInt;
-  for (auto const &Y : Lam) {
-    LamInt.push_back(UniversalMatrixConversion<Tint, T>(Y));
-  }
+  std::vector<MyMatrix<Tint>> LamInt =
+      UniversalStdVectorMatrixConversion<Tint, T>(Lam);
   std::optional<std::vector<ModMatrix>> Lie = ResidueMatrices(
       IntegralLieLatticeColumns<T, Tint>(B, LamInt), ResidueModulusOf(pW));
   for (int cc = c; cc <= c_top; cc++) {

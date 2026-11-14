@@ -332,11 +332,10 @@ std::vector<T> ReduceCyclotomic(std::vector<T> const &x, int64_t e) {
   std::vector<T> r = x;
   for (int k = static_cast<int>(r.size()) - 1; k >= deg; k--) {
     T c = r[k];
-    if (c == 0) {
-      continue;
-    }
-    for (int j = 0; j <= deg; j++) {
-      r[k - deg + j] -= c * ScalarFromInt64<T>(Phi[j]);
+    if (c != 0) {
+      for (int j = 0; j <= deg; j++) {
+        r[k - deg + j] -= c * ScalarFromInt64<T>(Phi[j]);
+      }
     }
   }
   r.resize(deg);
@@ -962,11 +961,10 @@ inline PolyZ<Tint> PolyZReduce(PolyZ<Tint> a, std::vector<int64_t> const &Phi,
   int deg = static_cast<int>(Phi.size()) - 1;
   for (int k = static_cast<int>(a.size()) - 1; k >= deg; k--) {
     Tint c = a[k];
-    if (c == 0) {
-      continue;
-    }
-    for (int j = 0; j <= deg; j++) {
-      a[k - deg + j] -= c * UniversalScalarConversion<Tint, int64_t>(Phi[j]);
+    if (c != 0) {
+      for (int j = 0; j <= deg; j++) {
+        a[k - deg + j] -= c * UniversalScalarConversion<Tint, int64_t>(Phi[j]);
+      }
     }
   }
   a.resize(deg, Tint(0));
@@ -1087,10 +1085,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
     PolyQ Qp = PolyDivModQ(phid_q, P, q).first;
     // e = Qp * (Qp^{-1} mod P): 1 modulo P, 0 modulo Qp
     PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
-    PolyZ<Tint> ez;
-    for (int64_t c : e0) {
-      ez.push_back(UniversalScalarConversion<Tint, int64_t>(c));
-    }
+    PolyZ<Tint> ez = UniversalStdVectorScalarConversion<Tint, int64_t>(e0);
     ez = PolyZReduce(ez, PhiD, Q);
     for (int it = 0; it < 64; it++) {
       PolyZ<Tint> e2 = PolyZReduce(PolyZMul(ez, ez), PhiD, Q);
@@ -1277,11 +1272,10 @@ inline ElemE<T> EReduce(std::vector<T> a, CyclotomicField<T> const &K) {
   int deg = K.deg;
   for (int k = static_cast<int>(a.size()) - 1; k >= deg; k--) {
     T c = a[k];
-    if (c == 0) {
-      continue;
-    }
-    for (int j = 0; j <= deg; j++) {
-      a[k - deg + j] -= c * UniversalScalarConversion<T, int64_t>(K.Phi[j]);
+    if (c != 0) {
+      for (int j = 0; j <= deg; j++) {
+        a[k - deg + j] -= c * UniversalScalarConversion<T, int64_t>(K.Phi[j]);
+      }
     }
   }
   a.resize(deg, T(0));
@@ -1292,11 +1286,10 @@ template <typename T>
 inline ElemE<T> EMul(ElemE<T> const &a, ElemE<T> const &b, CyclotomicField<T> const &K) {
   std::vector<T> c(a.size() + b.size(), T(0));
   for (size_t i = 0; i < a.size(); i++) {
-    if (a[i] == 0) {
-      continue;
-    }
-    for (size_t j = 0; j < b.size(); j++) {
-      c[i + j] += a[i] * b[j];
+    if (a[i] != 0) {
+      for (size_t j = 0; j < b.size(); j++) {
+        c[i + j] += a[i] * b[j];
+      }
     }
   }
   return EReduce(c, K);
@@ -2124,8 +2117,9 @@ HermitianLocalFactorRamified(MyMatrix<T> const &B,
       int leg = LegendreModQ<Tint>(res_u, q);
       f /= HeckeGroupOrderO<T>(mi, leg, qT);
     }
-    N -= static_cast<int64_t>(s) * mi * ri;
-    N += static_cast<int64_t>(s) * mi * m / 2;
+    int64_t smi = static_cast<int64_t>(s) * mi;
+    N -= smi * ri;
+    N += smi * m / 2;
   }
   if (m % 2 == 0) {
     N += m / 2;

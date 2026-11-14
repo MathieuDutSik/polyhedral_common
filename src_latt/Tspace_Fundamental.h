@@ -279,11 +279,8 @@ LINSPA_GetRingVersion(LinSpaceMatrix<T> const &LinSpa) {
   using Tring = typename underlying_ring<T>::ring_type;
   auto f_list = [](std::vector<MyMatrix<T>> const &l)
       -> std::vector<MyMatrix<Tring>> {
-    std::vector<MyMatrix<Tring>> l_ret;
-    l_ret.reserve(l.size());
-    for (auto &eMat : l) {
-      l_ret.push_back(UniversalMatrixConversion<Tring, T>(eMat));
-    }
+    std::vector<MyMatrix<Tring>> l_ret =
+        UniversalStdVectorMatrixConversion<Tring, T>(l);
     return l_ret;
   };
   std::vector<MyMatrix<Tring>> ListMat = f_list(LinSpa.ListMat);

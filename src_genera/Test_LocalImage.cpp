@@ -106,10 +106,8 @@ int Compare(Case const &cs, int64_t p, int c) {
   bounds.max_solution = 200000;
   LocalImageOrder ord;
   auto t0 = std::chrono::steady_clock::now();
-  std::vector<MyMatrix<Tint>> LamInt;
-  for (auto const &X : cs.Lam) {
-    LamInt.push_back(UniversalMatrixConversion<Tint, T>(X));
-  }
+  std::vector<MyMatrix<Tint>> LamInt =
+      UniversalStdVectorMatrixConversion<Tint, T>(cs.Lam);
   int64_t pW = ResiduePrimePower(p, MultiplicityNewtonPrecision(p));
   std::optional<std::vector<ModMatrix>> Lie = ResidueMatrices(
       IntegralLieLatticeColumns<T, Tint>(cs.A, LamInt), pW);

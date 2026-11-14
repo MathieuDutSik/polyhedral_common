@@ -620,15 +620,7 @@ OverlatticeSet<T> EnumerateOverlattices(MyMatrix<T> const &R, int64_t p) {
       if (!IsInteger(nv) || (even && !IsInteger(nv / T(2)))) {
         continue;
       }
-      MyMatrix<T> Ext(m + 1, m);
-      for (int i = 0; i < m; i++) {
-        for (int j = 0; j < m; j++) {
-          Ext(i, j) = B(i, j);
-        }
-      }
-      for (int j = 0; j < m; j++) {
-        Ext(m, j) = v(j);
-      }
+      MyMatrix<T> Ext = ConcatenateMatVec(B, v);
       MyMatrix<T> Bnew = GetZbasis(Ext);
       int val_new = os.val[pos] + 1;
       // an overlattice of index p^val lies in p^{-val} Z^m: the Hermite

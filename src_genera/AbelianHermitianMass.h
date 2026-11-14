@@ -125,15 +125,9 @@ inline KrylovData<T> KrylovMinimalPolynomial(MyMatrix<T> const &S) {
   std::vector<MyVector<T>> pw{v};
   for (int k = 1; k <= r; k++) {
     MyVector<T> w = S.transpose() * pw.back();
-    MyMatrix<T> M(k + 1, r);
-    for (int i = 0; i < k; i++) {
-      for (int j = 0; j < r; j++) {
-        M(i, j) = pw[i](j);
-      }
-    }
-    for (int j = 0; j < r; j++) {
-      M(k, j) = w(j);
-    }
+    std::vector<MyVector<T>> rows = pw;
+    rows.push_back(w);
+    MyMatrix<T> M = MatrixFromVectorFamily(rows);
     MyMatrix<T> ker = NullspaceMat(M);
     if (ker.rows() > 0) {
       // sum_i ker(0, i) v S^i = 0, normalized at i = k
@@ -272,9 +266,28 @@ inline MyMatrix<T> PolyOfMatrixQ(PolyQ const &g, MyMatrix<T> const &S) {
   MyMatrix<T> res = ZeroMatrix<T>(r, r);
   for (size_t i = g.size(); i-- > 0;) {
     res = res * S;
+    T g_i = UniversalScalarConversion<T, int64_t>(g[i]);
     for (int j = 0; j < r; j++) {
-      res(j, j) += UniversalScalarConversion<T, int64_t>(g[i]);
+      res(j, j) += g_i;
     }
+  }
+  return res;
+}
+
+// g(theta) in E = Q(theta), g with integer coefficients.
+template <typename T>
+inline ElemE<T> EPolyOfTheta(PolyQ const &g, CyclotomicField<T> const &K) {
+  ElemE<T> res(K.deg, T(0));
+  ElemE<T> pw = EZetaPower(0, K);
+  ElemE<T> theta = EZetaPower(1, K);
+  for (size_t i = 0; i < g.size(); i++) {
+    if (g[i] != 0) {
+      T g_i = UniversalScalarConversion<T, int64_t>(g[i]);
+      for (int t = 0; t < K.deg; t++) {
+        res[t] += g_i * pw[t];
+      }
+    }
+    pw = EMul(pw, theta, K);
   }
   return res;
 }
@@ -380,10 +393,7 @@ inline PolyZ<Tint> AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
   }
   PolyQ Qp = PolyDivModQ(fq, P, q).first;
   PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
-  PolyZ<Tint> ez;
-  for (int64_t c : e0) {
-    ez.push_back(UniversalScalarConversion<Tint, int64_t>(c));
-  }
+  PolyZ<Tint> ez = UniversalStdVectorScalarConversion<Tint, int64_t>(e0);
   ez = PolyZReduce(ez, f, Q);
   for (int it = 0; it < 64; it++) {
     PolyZ<Tint> e2 = PolyZReduce(PolyZMul(ez, ez), f, Q);
@@ -555,21 +565,12 @@ inline LocalPrimeK<T> MakeLocalPrimeK(LocalGenerator<T> const &lg, PolyQ const &
   P.g = g;
   P.e = e;
   P.f_res = static_cast<int>(g.size()) - 1;
-  P.qf = Tint(1);
-  for (int i = 0; i < P.f_res; i++) {
-    P.qf *= UniversalScalarConversion<Tint, int64_t>(q);
-  }
-  P.pi = ElemE<T>(deg, T(0));
+  P.qf = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), P.f_res);
   if (e == 1) {
+    P.pi = ElemE<T>(deg, T(0));
     P.pi[0] = UniversalScalarConversion<T, int64_t>(q);
   } else {
-    ElemE<T> pw = EZetaPower(0, P.K);
-    for (size_t i = 0; i < g.size(); i++) {
-      for (int t = 0; t < deg; t++) {
-        P.pi[t] += UniversalScalarConversion<T, int64_t>(g[i]) * pw[t];
-      }
-      pw = EMul(pw, EZetaPower(1, P.K), P.K);
-    }
+    P.pi = EPolyOfTheta(g, P.K);
   }
   P.pi_inv = EInv(P.pi, P.K);
   return P;
@@ -853,7 +854,6 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
   AbelianLocalGram<T> alg = AbelianLocalHermitianGram(B, lg, ap, q);
   CyclotomicField<T> const &K = alg.K;
   int m = alg.m;
-  int deg = K.deg;
   std::vector<std::vector<ElemE<T>>> const &H = alg.H;
   std::map<int, std::pair<int, ElemE<T>>> blocks;
   for (auto &kv : HermitianJordanSplit(H, K, q)) {
@@ -870,16 +870,7 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
   int64_t Nexp = 0;
   int after_total = m;
   // pi = g(theta), and pi pi-bar
-  ElemE<T> pi(deg, T(0));
-  {
-    ElemE<T> pw = EZetaPower(0, K);
-    for (size_t i = 0; i < ap.g.size(); i++) {
-      for (int t = 0; t < deg; t++) {
-        pi[t] += UniversalScalarConversion<T, int64_t>(ap.g[i]) * pw[t];
-      }
-      pw = EMul(pw, EZetaPower(1, K), K);
-    }
-  }
+  ElemE<T> pi = EPolyOfTheta(ap.g, K);
   ElemE<T> pipibar = EMul(pi, EConj(pi, K), K);
   ElemE<T> pinv = EInv(pipibar, K);
   // the square class of a P-unit in the residue field F_q[x] / g
@@ -918,8 +909,9 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
       }
       fac /= HeckeGroupOrderO<T>(mi, is_square(u), qK);
     }
-    Nexp -= static_cast<int64_t>(s) * mi * ri;
-    Nexp += static_cast<int64_t>(s) * mi * m / 2;
+    int64_t smi = static_cast<int64_t>(s) * mi;
+    Nexp -= smi * ri;
+    Nexp += smi * m / 2;
   }
   if (m % 2 == 0) {
     Nexp += m / 2;
@@ -1200,16 +1192,7 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
   int deg = K.deg;
   int m = alg.m;
   C.one = EZetaPower(0, K);
-  C.pi = ElemE<T>(deg, T(0));
-  {
-    ElemE<T> pw = C.one;
-    for (size_t i = 0; i < ap.g.size(); i++) {
-      for (int t = 0; t < deg; t++) {
-        C.pi[t] += UniversalScalarConversion<T, int64_t>(ap.g[i]) * pw[t];
-      }
-      pw = EMul(pw, EZetaPower(1, K), K);
-    }
-  }
+  C.pi = EPolyOfTheta(ap.g, K);
   C.pi_inv = EInv(C.pi, K);
   C.pipibar = EMul(C.pi, EConj(C.pi, K), K);
   C.pipibar_inv = EInv(C.pipibar, K);

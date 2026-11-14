@@ -170,18 +170,17 @@ std::vector<T> ConvolveClassFunctions(ResidueClasses const &rc,
   int nc = rc.n_class();
   std::vector<T> h(nc, T(0));
   for (int A = 0; A < nc; A++) {
-    if (f[A] == 0) {
-      continue;
-    }
-    for (int B = 0; B < nc; B++) {
-      if (g[B] == 0) {
-        continue;
-      }
-      T fg = f[A] * g[B];
-      for (int C = 0; C < nc; C++) {
-        int64_t cnt = rc.n_sum[A][B][C];
-        if (cnt != 0) {
-          h[C] += fg * ScalarFromInt64<T>(cnt);
+    if (f[A] != 0) {
+      for (int B = 0; B < nc; B++) {
+        if (g[B] == 0) {
+          continue;
+        }
+        T fg = f[A] * g[B];
+        for (int C = 0; C < nc; C++) {
+          int64_t cnt = rc.n_sum[A][B][C];
+          if (cnt != 0) {
+            h[C] += fg * ScalarFromInt64<T>(cnt);
+          }
         }
       }
     }

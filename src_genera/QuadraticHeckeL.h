@@ -120,11 +120,10 @@ struct QuadHeckeModRing {
            std::vector<uint64_t> &out) {
     std::fill(tmp.begin(), tmp.end(), 0);
     for (int i = 0; i < n; i++) {
-      if (a[i] == 0) {
-        continue;
-      }
-      for (int j = 0; j < n; j++) {
-        tmp[i + j] = add(tmp[i + j], mont_mul(a[i], b[j]));
+      if (a[i] != 0) {
+        for (int j = 0; j < n; j++) {
+          tmp[i + j] = add(tmp[i + j], mont_mul(a[i], b[j]));
+        }
       }
     }
     reduce(out);
@@ -524,9 +523,8 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
             }
           }
         }
-        for (int i = 0; i < hp.cond_exp * fr; i++) {
-          res.norm_conductor *= UniversalScalarConversion<Tint, int64_t>(p);
-        }
+        res.norm_conductor *= MyPow<Tint>(
+            UniversalScalarConversion<Tint, int64_t>(p), hp.cond_exp * fr);
         lp.push_back(hp);
       }
     }

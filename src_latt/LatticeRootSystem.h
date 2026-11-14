@@ -103,11 +103,14 @@ template <typename T, typename Tint>
 Tint RootScal(MyMatrix<T> const &GramMat, MyVector<Tint> const &u,
               MyVector<Tint> const &v) {
   int n = u.size();
+  MyVector<T> v_T = UniversalVectorConversion<T, Tint>(v);
   T sum(0);
   for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      sum += GramMat(i, j) * UniversalScalarConversion<T, Tint>(u(i)) *
-             UniversalScalarConversion<T, Tint>(v(j));
+    if (u(i) != 0) {
+      T u_i = UniversalScalarConversion<T, Tint>(u(i));
+      for (int j = 0; j < n; j++) {
+        sum += GramMat(i, j) * u_i * v_T(j);
+      }
     }
   }
   return UniversalScalarConversion<Tint, T>(sum);

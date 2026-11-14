@@ -986,11 +986,10 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
                  std::vector<int64_t> const &y) -> int64_t {
     int64_t s = 0;
     for (size_t a = 0; a < m; a++) {
-      if (x[a] == 0) {
-        continue;
-      }
-      for (size_t b = 0; b < m; b++) {
-        s = (s + x[a] * Ap[a][b] % p * y[b]) % p;
+      if (x[a] != 0) {
+        for (size_t b = 0; b < m; b++) {
+          s = (s + x[a] * Ap[a][b] % p * y[b]) % p;
+        }
       }
     }
     return s;
@@ -1168,11 +1167,10 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
     ModMatrix res(coef.size(), std::vector<int64_t>(d_lam, 0));
     for (size_t r2 = 0; r2 < coef.size(); r2++) {
       for (size_t v = 0; v < m * m; v++) {
-        if (coef[r2][v] == 0) {
-          continue;
-        }
-        for (size_t l = 0; l < d_lam; l++) {
-          res[r2][l] = (res[r2][l] + coef[r2][v] * Mlam[v][l]) % p;
+        if (coef[r2][v] != 0) {
+          for (size_t l = 0; l < d_lam; l++) {
+            res[r2][l] = (res[r2][l] + coef[r2][v] * Mlam[v][l]) % p;
+          }
         }
       }
     }
@@ -1181,11 +1179,10 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
   auto to_matrix_vec = [&](std::vector<int64_t> const &dv) -> std::vector<int64_t> {
     std::vector<int64_t> x(m * m, 0);
     for (size_t l = 0; l < d_lam; l++) {
-      if (dv[l] == 0) {
-        continue;
-      }
-      for (size_t v = 0; v < m * m; v++) {
-        x[v] = (x[v] + dv[l] * Mlam[v][l]) % p;
+      if (dv[l] != 0) {
+        for (size_t v = 0; v < m * m; v++) {
+          x[v] = (x[v] + dv[l] * Mlam[v][l]) % p;
+        }
       }
     }
     return x;
@@ -1499,11 +1496,10 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
       }
       std::vector<int64_t> c2 = good->part;
       for (size_t i = 0; i < good->ker.size(); i++) {
-        if (u[i] == 0) {
-          continue;
-        }
-        for (size_t v = 0; v < dim; v++) {
-          c2[v] = (c2[v] + u[i] * good->ker[i][v]) % p;
+        if (u[i] != 0) {
+          for (size_t v = 0; v < dim; v++) {
+            c2[v] = (c2[v] + u[i] * good->ker[i][v]) % p;
+          }
         }
       }
       return c2;
@@ -1645,14 +1641,13 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
                       std::vector<int64_t> const &w, __int128 M) -> __int128 {
     __int128 sacc = 0;
     for (size_t a = 0; a < m; a++) {
-      if (u[a] == 0) {
-        continue;
-      }
-      for (size_t b = 0; b < m; b++) {
-        if (w[b] == 0) {
-          continue;
+      if (u[a] != 0) {
+        for (size_t b = 0; b < m; b++) {
+          if (w[b] == 0) {
+            continue;
+          }
+          sacc = (sacc + static_cast<__int128>(u[a]) * (A[a][b] % M) % M * w[b]) % M;
         }
-        sacc = (sacc + static_cast<__int128>(u[a]) * (A[a][b] % M) % M * w[b]) % M;
       }
     }
     return ((sacc % M) + M) % M;
@@ -1696,12 +1691,11 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
     }
     __int128 sacc = 0;
     for (size_t a = 0; a < m; a++) {
-      if (y[a] == 0) {
-        continue;
-      }
-      for (size_t b = 0; b < m; b++) {
-        if (y[b] != 0) {
-          sacc += A[a][b];
+      if (y[a] != 0) {
+        for (size_t b = 0; b < m; b++) {
+          if (y[b] != 0) {
+            sacc += A[a][b];
+          }
         }
       }
     }
@@ -1811,11 +1805,10 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
     for (auto const &N : Bilp) {
       int64_t sacc = 0;
       for (size_t a = 0; a < m; a++) {
-        if (y[a] == 0) {
-          continue;
-        }
-        for (size_t b = 0; b < m; b++) {
-          sacc = (sacc + y[a] * N[a][b] % p * y[b]) % p;
+        if (y[a] != 0) {
+          for (size_t b = 0; b < m; b++) {
+            sacc = (sacc + y[a] * N[a][b] % p * y[b]) % p;
+          }
         }
       }
       if (sacc != N[j][j]) {
@@ -1894,11 +1887,10 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
                     ModMatrix const &N) -> std::vector<int64_t> {
       std::vector<int64_t> row(m, 0);
       for (size_t a = 0; a < m; a++) {
-        if (u[a] == 0) {
-          continue;
-        }
-        for (size_t b = 0; b < m; b++) {
-          row[b] = (row[b] + u[a] * N[a][b]) % p;
+        if (u[a] != 0) {
+          for (size_t b = 0; b < m; b++) {
+            row[b] = (row[b] + u[a] * N[a][b]) % p;
+          }
         }
       }
       return row;
@@ -2003,12 +1995,11 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
       for (size_t b = a; b < m; b++) {
         __int128 sacc = 0;
         for (size_t u = 0; u < m; u++) {
-          if (g[a][u] == 0) {
-            continue;
-          }
-          for (size_t v = 0; v < m; v++) {
-            if (g[b][v] != 0) {
-              sacc += static_cast<__int128>(g[a][u]) * (Be[u][v] % mod_dual) * g[b][v];
+          if (g[a][u] != 0) {
+            for (size_t v = 0; v < m; v++) {
+              if (g[b][v] != 0) {
+                sacc += static_cast<__int128>(g[a][u]) * (Be[u][v] % mod_dual) * g[b][v];
+              }
             }
           }
         }
@@ -2573,9 +2564,6 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsSearc
 #endif
   int W = MultiplicityNewtonPrecision(p);
   int64_t pW = MyPow<int64_t>(p, W);
-  auto mulmod = [](int64_t x, int64_t y, int64_t M) -> int64_t {
-    return ResMul(x, y, M);
-  };
   auto matmul = [](ModMatrix const &X, ModMatrix const &Y, int64_t M) -> ModMatrix {
     return ModMatrixProduct(X, Y, M);
   };
@@ -2624,14 +2612,13 @@ inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsSearc
     for (size_t b = 0; b < m; b++) {
       __int128 sacc = 0;
       for (size_t k = 0; k < m; k++) {
-        if (P[k][a] == 0) {
-          continue;
-        }
-        for (size_t l = 0; l < m; l++) {
-          // reduced after each product: the entries of P (a Jordan basis)
-          // are residues modulo p^W, and three of them overflow 128 bits
-          __int128 t1 = static_cast<__int128>(P[k][a]) * ResMod(A[k][l], pW) % pW;
-          sacc = (sacc + t1 * P[l][b]) % pW;
+        if (P[k][a] != 0) {
+          for (size_t l = 0; l < m; l++) {
+            // reduced after each product: the entries of P (a Jordan basis)
+            // are residues modulo p^W, and three of them overflow 128 bits
+            __int128 t1 = static_cast<__int128>(P[k][a]) * ResMod(A[k][l], pW) % pW;
+            sacc = (sacc + t1 * P[l][b]) % pW;
+          }
         }
       }
       A2[a][b] = ResMod(static_cast<int64_t>(sacc), pW);
@@ -2783,12 +2770,11 @@ LocalStabilizerImage(ModMatrix const &A_in, std::vector<ModMatrix> const &basis_
   auto matrix_of = [&](Coord const &x) -> std::vector<std::vector<__int128>> {
     std::vector<std::vector<__int128>> g(m, std::vector<__int128>(m, 0));
     for (size_t i = 0; i < dim; i++) {
-      if (x[i] == 0) {
-        continue;
-      }
-      for (size_t a = 0; a < m; a++) {
-        for (size_t b = 0; b < m; b++) {
-          g[a][b] = (g[a][b] + static_cast<__int128>(x[i]) * basis[i][a][b]) % M;
+      if (x[i] != 0) {
+        for (size_t a = 0; a < m; a++) {
+          for (size_t b = 0; b < m; b++) {
+            g[a][b] = (g[a][b] + static_cast<__int128>(x[i]) * basis[i][a][b]) % M;
+          }
         }
       }
     }

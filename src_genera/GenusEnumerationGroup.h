@@ -402,11 +402,10 @@ MyMatrix<Tint> EigenspaceAction(EigenspaceData const &ed, MyMatrix<Tint> const &
     std::vector<int64_t> img(n, 0);
     for (int a = 0; a < n; a++) {
       int64_t x = ed.space.basis[i][a];
-      if (x == 0) {
-        continue;
-      }
-      for (int b = 0; b < n; b++) {
-        img[b] = (img[b] + x * hp[a][b]) % p;
+      if (x != 0) {
+        for (int b = 0; b < n; b++) {
+          img[b] = (img[b] + x * hp[a][b]) % p;
+        }
       }
     }
     for (size_t j = 0; j < k; j++) {
@@ -430,35 +429,36 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
   size_t k = ed.space.basis.size();
   std::vector<int64_t> x(n, 0);
   for (size_t i = 0; i < k; i++) {
-    if (c[i] == 0) {
-      continue;
-    }
-    for (int a = 0; a < n; a++) {
-      x[a] = (x[a] + c[i] * ed.space.basis[i][a]) % p;
+    if (c[i] != 0) {
+      for (int a = 0; a < n; a++) {
+        x[a] = (x[a] + c[i] * ed.space.basis[i][a]) % p;
+      }
     }
   }
   auto apply_E = [&](std::vector<int64_t> const &y) -> std::vector<int64_t> {
     std::vector<int64_t> z(n, 0);
     for (int a = 0; a < n; a++) {
-      if (y[a] == 0) {
-        continue;
-      }
-      for (int b = 0; b < n; b++) {
-        z[b] = (z[b] + y[a] * ed.E[a][b]) % p2;
+      if (y[a] != 0) {
+        for (int b = 0; b < n; b++) {
+          z[b] = (z[b] + y[a] * ed.E[a][b]) % p2;
+        }
       }
     }
     return z;
   };
   auto bilinear = [&](std::vector<int64_t> const &u,
                       std::vector<int64_t> const &v) -> Tint {
+    MyVector<Tint> v_T(n);
+    for (int b = 0; b < n; b++) {
+      v_T(b) = UniversalScalarConversion<Tint, int64_t>(v[b]);
+    }
     Tint sum(0);
     for (int a = 0; a < n; a++) {
-      if (u[a] == 0) {
-        continue;
-      }
-      for (int b = 0; b < n; b++) {
-        sum += UniversalScalarConversion<Tint, int64_t>(u[a]) * G(a, b) *
-               UniversalScalarConversion<Tint, int64_t>(v[b]);
+      if (u[a] != 0) {
+        Tint u_a = UniversalScalarConversion<Tint, int64_t>(u[a]);
+        for (int b = 0; b < n; b++) {
+          sum += u_a * G(a, b) * v_T(b);
+        }
       }
     }
     return sum;
@@ -774,10 +774,8 @@ double EigenNeighborCost(std::vector<MyMatrix<Tint>> const &ListP_int, int m,
 template <typename T, typename Tint>
 std::vector<int> OrderedNeighborPrimes(std::vector<MyMatrix<T>> const &ListP,
                                        int m, T const &det, bool scalar) {
-  std::vector<MyMatrix<Tint>> ListP_int;
-  for (auto const &P : ListP) {
-    ListP_int.push_back(UniversalMatrixConversion<Tint, T>(P));
-  }
+  std::vector<MyMatrix<Tint>> ListP_int =
+      UniversalStdVectorMatrixConversion<Tint, T>(ListP);
   // the first good primes with an eigenspace over F_p
   size_t n_cand = 12;
   std::vector<std::pair<double, int>> ListCost;
@@ -912,14 +910,13 @@ inline bool IsSingularModTwo(std::vector<int64_t> const &x, ModMatrix const &A8)
   size_t n = x.size();
   int64_t v = 0;
   for (size_t a = 0; a < n; a++) {
-    if ((x[a] & 1) == 0) {
-      continue;
-    }
-    for (size_t b = 0; b < n; b++) {
-      if ((x[b] & 1) == 0) {
-        continue;
+    if ((x[a] & 1) != 0) {
+      for (size_t b = 0; b < n; b++) {
+        if ((x[b] & 1) == 0) {
+          continue;
+        }
+        v = (v + ResMod(A8[a][b], 4)) % 4;
       }
-      v = (v + ResMod(A8[a][b], 4)) % 4;
     }
   }
   return v == 0;
@@ -1392,8 +1389,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
     MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(bd.M);
     for (auto const &F : PairForms(A, ListP)) {
-      bd.forms.push_back(UniversalMatrixConversion<Tint, T>(
-          MyMatrix<T>(M_T * F * M_T.transpose())));
+      MyMatrix<T> F_M = M_T * F * M_T.transpose();
+      bd.forms.push_back(UniversalMatrixConversion<Tint, T>(F_M));
     }
     if (bd.fam) {
       bd.values = form_values(bd.forms, *bd.fam);
@@ -1485,10 +1482,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     PairBucket &bucket = bucket_of(bd);
     auto forms_T = [](std::vector<MyMatrix<Tint>> const &L)
         -> std::vector<MyMatrix<T>> {
-      std::vector<MyMatrix<T>> res;
-      for (auto const &F : L) {
-        res.push_back(UniversalMatrixConversion<T, Tint>(F));
-      }
+      std::vector<MyMatrix<T>> res =
+          UniversalStdVectorMatrixConversion<T, Tint>(L);
       return res;
     };
     // the data of the neighbor, the searched side of every test
@@ -1764,10 +1759,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     MyMatrix<T> A = ListPairWork[pos].first;
     std::vector<MyMatrix<T>> ListP = ListPairWork[pos].second;
     MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(A);
-    std::vector<MyMatrix<Tint>> ListP_int;
-    for (auto const &P : ListP) {
-      ListP_int.push_back(UniversalMatrixConversion<Tint, T>(P));
-    }
+    std::vector<MyMatrix<Tint>> ListP_int =
+        UniversalStdVectorMatrixConversion<Tint, T>(ListP);
     std::vector<EigenspaceData> ListEig =
         ComputeJointEigenspaces(ListP_int, m, p);
     // The small eigenspaces first: their projective spaces are cheap, and
@@ -1844,10 +1837,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       throw TerminalException{1};
     }
     if (abelian) {
-      std::vector<MyMatrix<Tint>> ListP_int;
-      for (auto const &P : ListPairWork[0].second) {
-        ListP_int.push_back(UniversalMatrixConversion<Tint, T>(P));
-      }
+      std::vector<MyMatrix<Tint>> ListP_int =
+          UniversalStdVectorMatrixConversion<Tint, T>(ListPairWork[0].second);
       module_path = EigenNeighborCost<Tint>(ListP_int, m, prime) == 0;
     }
     result.ListPrimeUsed.push_back(prime);
@@ -1864,10 +1855,8 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
           ListPairWork[0].second, m, det, scalar);
       std::vector<int> ListModule = OrderedNeighborPrimesModule(
           ListPairWork[0].first, ListPairWork[0].second, m, det);
-      std::vector<MyMatrix<Tint>> ListP_int;
-      for (auto const &P : ListPairWork[0].second) {
-        ListP_int.push_back(UniversalMatrixConversion<Tint, T>(P));
-      }
+      std::vector<MyMatrix<Tint>> ListP_int =
+          UniversalStdVectorMatrixConversion<Tint, T>(ListPairWork[0].second);
       double cost_eigen =
           EigenNeighborCost<Tint>(ListP_int, m, ListEigen[0]);
       double cost_module = ModuleNeighborCost(
