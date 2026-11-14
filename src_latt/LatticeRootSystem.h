@@ -70,9 +70,7 @@ void WeylOrderComponent(DynkinComponent const &c,
   } else if (c.letter == 'D') {
     // |W(D_k)| = 2^{k-1} k!
     TintGroup w = fact(k);
-    for (int i = 0; i < k - 1; i++) {
-      w *= 2;
-    }
+    w *= MyPow<TintGroup>(2, k - 1);
     acc *= w;
   } else if (c.letter == 'E') {
     if (k == 6) {

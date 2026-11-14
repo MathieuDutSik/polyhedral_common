@@ -213,10 +213,7 @@ template <typename Tint> Tint AutOrderIrreducible(char letter, int r) {
     if (r == 4) {
       return ScalarFromInt64<Tint>(1152);
     }
-    Tint pow2(1);
-    for (int i = 0; i < r; i++) {
-      pow2 *= Tint(2);
-    }
+    Tint pow2 = MyPow<Tint>(Tint(2), r);
     return pow2 * fact;
   }
   if (r == 6) {

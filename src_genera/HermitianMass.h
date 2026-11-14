@@ -142,9 +142,7 @@ template <typename T> T HermitianPowerInt(int64_t q, int e) {
   T res(1);
   T q_T = ScalarFromInt64<T>(q);
   if (e >= 0) {
-    for (int i = 0; i < e; i++) {
-      res *= q_T;
-    }
+    res *= MyPow<T>(q_T, e);
   } else {
     for (int i = 0; i < -e; i++) {
       res /= q_T;
@@ -211,10 +209,7 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
   int64_t absD = -D;
   // unimodular at every prime iff det B = |D|^m
   T detB = DeterminantMat(UniversalMatrixConversion<T, Tint>(ring.B));
-  T target(1);
-  for (int i = 0; i < m; i++) {
-    target *= ScalarFromInt64<T>(absD);
-  }
+  T target = MyPow<T>(ScalarFromInt64<T>(absD), m);
   if (T_abs(detB) != target) {
 #ifdef DEBUG_HERMITIAN_MASS
     os << "HMASS: the lattice is not unimodular, det B = " << detB << "\n";

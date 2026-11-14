@@ -477,9 +477,7 @@ GetListGenAutomorphism_AbsTrick_kernel(
   // 2^n_comp times the one on the pairs, which is the order of the graph.
   using TintGroup = typename Tgroup::Tint;
   TintGroup order = GetGraphGroupOrder<TintGroup>(gens_order);
-  for (size_t i_comp = 0; i_comp < opt->n_comp; i_comp++) {
-    order *= 2;
-  }
+  order *= MyPow<TintGroup>(2, opt->n_comp);
   return StabGeneratorsOrder<Tidx, TintGroup>{std::move(opt->ListGen), order};
 }
 

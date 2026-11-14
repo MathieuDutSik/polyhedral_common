@@ -694,10 +694,7 @@ GeneralLevelSpace get_general_level_space(RealifiedRing<T, Tint> const &ring, My
   }
   gls.Hn = gls.hnf_key(rowsA);
   // the order of a line is N(n), so its lattice has index N(n)^{m - 1}
-  int64_t target = 1;
-  for (int i = 0; i < ring.m - 1; i++) {
-    target *= lev.norm;
-  }
+  int64_t target = MyPow<int64_t>(lev.norm, ring.m - 1);
   // the vectors of L / n L: a transversal from the diagonal of Hn
   std::vector<int64_t> diag(n);
   int64_t total = 1;

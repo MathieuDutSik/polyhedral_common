@@ -16,6 +16,7 @@
 #include "Positivity.h"
 #include "Namelist.h"
 #include "Basic_random.h"
+#include "ResidueArithmetic.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -198,28 +199,6 @@ template <typename T, typename Tgroup> struct GenusEnumerationResult {
   bool stopped_by_runtime = false;
 };
 
-// Inverse of a modulo the prime p, by extended Euclid. p is small.
-inline int InverseModP(int a, int p) {
-  int a_red = ((a % p) + p) % p;
-#ifdef SANITY_CHECK_GENUS_ENUMERATION
-  if (a_red == 0) {
-    std::cerr << "GENUS: InverseModP called on a multiple of p\n";
-    throw TerminalException{1};
-  }
-#endif
-  int r0 = p, r1 = a_red, s0 = 0, s1 = 1;
-  while (r1 != 0) {
-    int q = r0 / r1;
-    int r2 = r0 - q * r1;
-    int s2 = s0 - q * s1;
-    r0 = r1;
-    r1 = r2;
-    s0 = s1;
-    s1 = s2;
-  }
-  return ((s0 % p) + p) % p;
-}
-
 template <typename Tint> int ResidueModP(Tint const &x, int p) {
   Tint p_T(p);
   Tint r = x % p_T;
@@ -286,10 +265,7 @@ inline size_t NumberProjectiveLines(int n, int p) {
 inline std::vector<int> ProjectiveLineOfIndex(int n, int p, size_t index) {
   size_t p_s = static_cast<size_t>(p);
   // block size p^{n-1} of the block ipos = 0
-  size_t block = 1;
-  for (int i = 0; i < n - 1; i++) {
-    block *= p_s;
-  }
+  size_t block = MyPow<size_t>(p_s, n - 1);
   size_t work = index;
   int ipos = 0;
   while (work >= block) {
@@ -325,12 +301,9 @@ inline size_t IndexOfProjectiveLine(std::vector<int> const &v, int p) {
     throw TerminalException{1};
   }
 #endif
-  int scal = InverseModP(v[ipos], p);
+  int scal = ResInv(v[ipos], p);
   // start of the block: sum_{k < ipos} p^{n-k-1}
-  size_t block = 1;
-  for (int i = 0; i < n - 1; i++) {
-    block *= p_s;
-  }
+  size_t block = MyPow<size_t>(p_s, n - 1);
   size_t index = 0;
   for (int k = 0; k < ipos; k++) {
     index += block;
@@ -353,10 +326,7 @@ inline std::vector<std::vector<int>> EnumerateProjectiveLines(int n, int p) {
   std::vector<std::vector<int>> ListLines;
   for (int ipos = 0; ipos < n; ipos++) {
     int n_free = n - ipos - 1;
-    int64_t n_case = 1;
-    for (int i = 0; i < n_free; i++) {
-      n_case *= p;
-    }
+    int64_t n_case = MyPow<int64_t>(p, n_free);
     for (int64_t idx = 0; idx < n_case; idx++) {
       std::vector<int> v(n, 0);
       v[ipos] = 1;
@@ -525,7 +495,7 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
       den_red /= p_T;
     }
     int a = (ResidueModP(num_red, p) *
-             InverseModP(ResidueModP(den_red, p), p)) % p;
+             ResInv(ResidueModP(den_red, p), p)) % p;
     v(jpiv) -= Tint(a) * Tint(p);
     w = G * v;
     nrm = v.dot(w);
@@ -543,7 +513,7 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     the vectors e_i - c_i e_jpiv for i != jpiv, together with p e_jpiv. That is
     a triangular basis of determinant p, so the index is p as it must be.
    */
-  int inv_pivot = InverseModP(ResidueModP(w(jpiv), p), p);
+  int inv_pivot = ResInv(ResidueModP(w(jpiv), p), p);
   MyMatrix<Tint> Bsub(n, n);
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {

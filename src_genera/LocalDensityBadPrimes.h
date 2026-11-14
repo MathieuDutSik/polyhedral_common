@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "SymmetricOrbitCounting.h"
+#include "ResidueArithmetic.h"
 #include <algorithm>
 #include <cstdint>
 #include <functional>
@@ -72,7 +73,7 @@ struct ResidueClasses {
 // The class key of a residue c modulo p^k: (v, unit key), v = k for c = 0.
 inline std::pair<int, int64_t> ResidueClassKey(int64_t c, int64_t p, int k,
                                                 int64_t modulus) {
-  c = ModPositive(c, modulus);
+  c = ResMod(c, modulus);
   if (c == 0) {
     return {k, 0};
   }
@@ -84,7 +85,7 @@ inline std::pair<int, int64_t> ResidueClassKey(int64_t c, int64_t p, int k,
   if (p != 2) {
     return {v, LegendreUnit(c, p)};
   }
-  int64_t rem = PowerInt64(2, k - v);
+  int64_t rem = MyPow<int64_t>(2, k - v);
   int64_t mod_u = std::min<int64_t>(8, rem);
   return {v, c % mod_u};
 }
@@ -93,7 +94,7 @@ inline ResidueClasses BuildResidueClasses(int64_t p, int k) {
   ResidueClasses rc;
   rc.p = p;
   rc.k = k;
-  rc.modulus = PowerInt64(p, k);
+  rc.modulus = MyPow<int64_t>(p, k);
   std::map<std::pair<int, int64_t>, int> index;
   rc.class_of.resize(rc.modulus);
   for (int64_t c = 0; c < rc.modulus; c++) {
@@ -117,7 +118,7 @@ inline ResidueClasses BuildResidueClasses(int64_t p, int k) {
   for (int C = 0; C < nc; C++) {
     int64_t c0 = rc.rep[C];
     for (int64_t c1 = 0; c1 < rc.modulus; c1++) {
-      int64_t c2 = ModPositive(c0 - c1, rc.modulus);
+      int64_t c2 = ResMod(c0 - c1, rc.modulus);
       rc.n_sum[rc.class_of[c1]][rc.class_of[c2]][C]++;
     }
   }
@@ -203,17 +204,17 @@ std::vector<T> BlockValueDistribution(ResidueClasses const &rc,
   }
   if (b.kind == SiegelBlockKind::Unit) {
     for (int64_t x = 0; x < M; x++) {
-      hist[MulMod(MulMod(pe, b.unit, M), MulMod(x, x, M), M)]++;
+      hist[ResMul(ResMul(pe, b.unit, M), ResMul(x, x, M), M)]++;
     }
   } else {
     // 2^e x y, or 2^e (x^2 + x y + y^2)
     for (int64_t x = 0; x < M; x++) {
       for (int64_t y = 0; y < M; y++) {
-        int64_t q = MulMod(x, y, M);
+        int64_t q = ResMul(x, y, M);
         if (b.kind == SiegelBlockKind::Y) {
-          q = ModPositive(q + MulMod(x, x, M) + MulMod(y, y, M), M);
+          q = ResMod(q + ResMul(x, x, M) + ResMul(y, y, M), M);
         }
-        hist[MulMod(pe, q, M)]++;
+        hist[ResMul(pe, q, M)]++;
       }
     }
   }
@@ -260,7 +261,7 @@ T CountRepresentationsModPk(ResidueClasses const &rc,
   if (a.val >= rc.k) {
     a_res = 0;
   } else {
-    a_res = MulMod(PowerInt64(rc.p, a.val), a.unit, rc.modulus);
+    a_res = ResMul(MyPow<int64_t>(rc.p, a.val), a.unit, rc.modulus);
     // a.unit is only known modulo UnitModulus(p), which is all the class
     // of a depends on
   }
@@ -273,23 +274,23 @@ T CountRepresentationsModPk(ResidueClasses const &rc,
 template <typename T>
 T QuadraticFormValueCount(int r, int64_t d, int64_t c, int64_t p) {
   T p_T = ScalarFromInt64<T>(p);
-  c = ModPositive(c, p);
+  c = ResMod(c, p);
   if (r == 0) {
     return (c == 0) ? T(1) : T(0);
   }
-  T base = PowerInt(p_T, r - 1);
+  T base = MyPowSigned(p_T, r - 1);
   if (r % 2 == 0) {
     int64_t sgn = ((r / 2) % 2 == 0) ? 1 : p - 1;
-    int eta = LegendreUnit(MulMod(sgn, ModPositive(d, p), p), p);
+    int eta = LegendreUnit(ResMul(sgn, ResMod(d, p), p), p);
     T nu = (c == 0) ? p_T - T(1) : T(-1);
-    return base + nu * PowerInt(p_T, r / 2 - 1) * ScalarFromInt64<T>(eta);
+    return base + nu * MyPowSigned(p_T, r / 2 - 1) * ScalarFromInt64<T>(eta);
   }
   if (c == 0) {
     return base;
   }
   int64_t sgn = (((r - 1) / 2) % 2 == 0) ? 1 : p - 1;
-  int eta = LegendreUnit(MulMod(MulMod(sgn, c, p), ModPositive(d, p), p), p);
-  return base + PowerInt(p_T, (r - 1) / 2) * ScalarFromInt64<T>(eta);
+  int eta = LegendreUnit(ResMul(ResMul(sgn, c, p), ResMod(d, p), p), p);
+  return base + MyPowSigned(p_T, (r - 1) / 2) * ScalarFromInt64<T>(eta);
 }
 
 /*
@@ -318,12 +319,12 @@ T RankOneDensityOddLevels(std::map<int, std::pair<int, int64_t>> const &levels,
     if (r0 == 0) {
       return T(0);
     }
-    return QuadraticFormValueCount<T>(r0, d0, u, p) / PowerInt(p_T, r0 - 1);
+    return QuadraticFormValueCount<T>(r0, d0, u, p) / MyPowSigned(p_T, r0 - 1);
   }
   T c0(0);
   if (r0 > 0) {
     c0 = (QuadraticFormValueCount<T>(r0, d0, 0, p) - T(1)) /
-         PowerInt(p_T, r0 - 1);
+         MyPowSigned(p_T, r0 - 1);
   }
   std::map<int, std::pair<int, int64_t>> next;
   for (auto const &kv : levels) {
@@ -333,9 +334,9 @@ T RankOneDensityOddLevels(std::map<int, std::pair<int, int64_t>> const &levels,
       lv.second = 1;
     }
     lv.first += kv.second.first;
-    lv.second = MulMod(lv.second, kv.second.second, p);
+    lv.second = ResMul(lv.second, kv.second.second, p);
   }
-  return c0 + PowerInt(p_T, 1 - r0) *
+  return c0 + MyPowSigned(p_T, 1 - r0) *
                   RankOneDensityOddLevels<T>(next, v - 1, u, p);
 }
 
@@ -353,9 +354,9 @@ T RankOneDensityOdd(SiegelJordanBlocks const &q, PadicClass const &a) {
       lv.second = 1;
     }
     lv.first++;
-    lv.second = MulMod(lv.second, ModPositive(b.unit, p), p);
+    lv.second = ResMul(lv.second, ResMod(b.unit, p), p);
   }
-  return RankOneDensityOddLevels<T>(levels, a.val, ModPositive(a.unit, p), p);
+  return RankOneDensityOddLevels<T>(levels, a.val, ResMod(a.unit, p), p);
 }
 
 template <typename T>
@@ -413,7 +414,7 @@ T RankOneDensityCounting(SiegelJordanBlocks const &q, PadicClass const &a,
   auto density_at = [&](int kk) -> T {
     ResidueClasses const &rc = GetResidueClasses(cache.classes, p, kk);
     return CountRepresentationsModPk<T>(rc, q, a, cache) /
-           PowerInt(p_T, kk * (n - 1));
+           MyPowSigned(p_T, kk * (n - 1));
   };
   T prev = density_at(k);
   while (true) {
@@ -514,10 +515,10 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
       target[i * j + i] =
           (Sigma[i].val >= k)
               ? 0
-              : MulMod(PowerInt64(p, Sigma[i].val), Sigma[i].unit, so.mod);
+              : ResMul(MyPow<int64_t>(p, Sigma[i].val), Sigma[i].unit, so.mod);
     }
     T N = state[so.index.at(SymmetricOrbitKey(target, j, p, k, so.mod))];
-    return N / PowerInt(p_T, k * (n * j - j * (j + 1) / 2));
+    return N / MyPowSigned(p_T, k * (n * j - j * (j + 1) / 2));
   };
   int k = v_max + e_max + 2;
   // the stabilization needs at least the levels k and k + 1: decline before
@@ -566,8 +567,8 @@ template <typename T> T GaussianBinomial(int a, int b, int64_t p) {
   T p_T = ScalarFromInt64<T>(p);
   T res(1);
   for (int i = 0; i < b; i++) {
-    res *= PowerInt(p_T, a - i) - T(1);
-    res /= PowerInt(p_T, i + 1) - T(1);
+    res *= MyPowSigned(p_T, a - i) - T(1);
+    res /= MyPowSigned(p_T, i + 1) - T(1);
   }
   return res;
 }
@@ -593,16 +594,16 @@ T IsotropicSubspaceCount(int r, int det_leg, int w, int64_t p) {
   if (r % 2 == 1) {
     int m = (r - 1) / 2;
     for (int i = 0; i < w; i++) {
-      res *= PowerInt(p_T, 2 * (m - i)) - T(1);
-      res /= PowerInt(p_T, i + 1) - T(1);
+      res *= MyPowSigned(p_T, 2 * (m - i)) - T(1);
+      res /= MyPowSigned(p_T, i + 1) - T(1);
     }
     return res;
   }
   int m = r / 2;
   int eps = det_leg * (((m % 2) == 0 || ((p - 1) / 2) % 2 == 0) ? 1 : -1);
   for (int i = 0; i < w; i++) {
-    res *= (PowerInt(p_T, m - i) - T(eps)) * (PowerInt(p_T, m - i - 1) + T(eps));
-    res /= PowerInt(p_T, i + 1) - T(1);
+    res *= (MyPowSigned(p_T, m - i) - T(eps)) * (MyPowSigned(p_T, m - i - 1) + T(eps));
+    res /= MyPowSigned(p_T, i + 1) - T(1);
   }
   return res;
 }
@@ -645,7 +646,7 @@ T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
   for (auto const &c : Cdiag) {
     if (c.val == 0) {
       C0.push_back(c);
-      det0 = MulMod(det0, c.unit, p);
+      det0 = ResMul(det0, c.unit, p);
     } else {
       C1.push_back({c.val - 1, c.unit});
     }
@@ -670,7 +671,7 @@ T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
     T coef(0);
     for (int w = wp; w <= w_max; w++) {
       int t = w - wp;
-      T mu = PowerInt(p_T, t * (t - 1) / 2);
+      T mu = MyPowSigned(p_T, t * (t - 1) / 2);
       if (t % 2 == 1) {
         mu = -mu;
       }
@@ -688,14 +689,14 @@ T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
     int r2 = r - 2 * wp;
     if (r2 > 0) {
       // det C_0'' = (-1)^{wp} det C_0
-      int64_t target = MulMod(det0, (wp % 2 == 0) ? 1 : p - 1, p);
+      int64_t target = ResMul(det0, (wp % 2 == 0) ? 1 : p - 1, p);
       for (int i = 0; i < r2 - 1; i++) {
         G.push_back({1, 1});
       }
       G.push_back({1, target});
     }
     G.insert(G.end(), C1.begin(), C1.end());
-    T beta = PowerInt(p_T, (n - r + wp) * j - d) *
+    T beta = MyPowSigned(p_T, (n - r + wp) * j - d) *
              DensityOddDiagonal<T>(SigmaRed, G, p, cache);
     total += coef * beta;
   }
@@ -751,15 +752,15 @@ T DensityOddDiagonal(std::vector<PadicClass> const &Sigma,
     }
     int64_t prod = 1;
     for (auto const &c : uni) {
-      prod = MulMod(prod, c.unit, p);
+      prod = ResMul(prod, c.unit, p);
     }
     std::vector<PadicClass> keep(uni.begin(), uni.end() - 2);
     int64_t prod_keep = 1;
     for (auto const &c : keep) {
-      prod_keep = MulMod(prod_keep, c.unit, p);
+      prod_keep = ResMul(prod_keep, c.unit, p);
     }
     keep.push_back(
-        {0, MulMod(prod, InverseModInt64(MulMod(s.unit, prod_keep, p), p), p)});
+        {0, ResMul(prod, ResInv(ResMul(s.unit, prod_keep, p), p), p)});
     D = keep;
     D.insert(D.end(), rest.begin(), rest.end());
   }
@@ -843,14 +844,14 @@ std::optional<T> UnitChainDensity(MyMatrix<T> const &S,
     }
     int64_t prod = 1;
     for (auto const &c : uni) {
-      prod = MulMod(prod, c.unit, p);
+      prod = ResMul(prod, c.unit, p);
     }
     std::vector<PadicClass> keep(uni.begin(), uni.end() - 2);
     int64_t prod_keep = 1;
     for (auto const &c : keep) {
-      prod_keep = MulMod(prod_keep, c.unit, p);
+      prod_keep = ResMul(prod_keep, c.unit, p);
     }
-    int64_t last = MulMod(prod, InverseModInt64(MulMod(s.unit, prod_keep, p), p), p);
+    int64_t last = ResMul(prod, ResInv(ResMul(s.unit, prod_keep, p), p), p);
     keep.push_back({0, last});
     D = keep;
     D.insert(D.end(), rest.begin(), rest.end());

@@ -197,10 +197,7 @@ template <typename T> T UpperKthRootBound(T const &R, int const &k) {
     return T(0);
   }
   auto pow_ge = [&](T const &x) -> bool {
-    T p(1);
-    for (int i = 0; i < k; i++) {
-      p *= x;
-    }
+    T p = MyPow<T>(x, k);
     return p >= R;
   };
   T lo(0);
@@ -816,10 +813,7 @@ Rankin_k_level_repinfo(SublatticeStabEquiData<T, Tint> const &data,
     }
     T HermPow = GetUpperBoundHermitePower<T>(k);
     T MprevA = HermPow * MaxDet / minA;
-    T Mpow(1);
-    for (int i = 0; i < k - 1; i++) {
-      Mpow *= MaxDet;
-    }
+    T Mpow = MyPow<T>(MaxDet, k - 1);
     T MprevB = UpperKthRootBound<T>(HermPow * Mpow, k);
     T Mprev = (MprevA < MprevB) ? MprevA : MprevB;
     std::vector<SublatticeRepInfo<Tint>> l_prev =

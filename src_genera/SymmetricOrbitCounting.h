@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "SiegelSeries.h"
+#include "ResidueArithmetic.h"
 #include <algorithm>
 #include <cstdint>
 #include <functional>
@@ -12,14 +13,6 @@
 #include <utility>
 #include <vector>
 // clang-format on
-
-inline int64_t PowerInt64(int64_t a, int e) {
-  int64_t r = 1;
-  for (int i = 0; i < e; i++) {
-    r *= a;
-  }
-  return r;
-}
 
 //
 // Counting for several non-unit columns: orbit class functions on Sym_j
@@ -47,7 +40,7 @@ inline int64_t PowerInt64(int64_t a, int e) {
 inline std::vector<int> SymmetricOrbitKey(std::vector<int64_t> a, int j,
                                           int64_t p, int k, int64_t mod) {
   auto val = [&](int64_t x) -> int {
-    x = ModPositive(x, mod);
+    x = ResMod(x, mod);
     if (x == 0) {
       return k;
     }
@@ -94,33 +87,33 @@ inline std::vector<int> SymmetricOrbitKey(std::vector<int64_t> a, int j,
       // column best_j to row and column i0
       int j0 = best_j;
       for (int c = 0; c < j; c++) {
-        a[i0 * j + c] = ModPositive(a[i0 * j + c] + a[j0 * j + c], mod);
+        a[i0 * j + c] = ResMod(a[i0 * j + c] + a[j0 * j + c], mod);
       }
       for (int r = 0; r < j; r++) {
-        a[r * j + i0] = ModPositive(a[r * j + i0] + a[r * j + j0], mod);
+        a[r * j + i0] = ResMod(a[r * j + i0] + a[r * j + j0], mod);
       }
     }
-    int64_t piv = ModPositive(a[i0 * j + i0], mod);
+    int64_t piv = ResMod(a[i0 * j + i0], mod);
     int v = val(piv);
-    int64_t pv = PowerInt64(p, v);
+    int64_t pv = MyPow<int64_t>(p, v);
     int64_t u = piv / pv;
-    int64_t u_inv = InverseModInt64(u, mod);
+    int64_t u_inv = ResInv(u, mod);
     // the Schur complement: a_rs <- a_rs - (a_ri / a_ii) a_is
     for (int r = 0; r < j; r++) {
       if (!active[r] || r == i0) {
         continue;
       }
-      int64_t ari = ModPositive(a[r * j + i0], mod);
-      int64_t f = MulMod(ari / pv, u_inv, mod);
+      int64_t ari = ResMod(a[r * j + i0], mod);
+      int64_t f = ResMul(ari / pv, u_inv, mod);
       for (int c = 0; c < j; c++) {
         if (!active[c] || c == i0) {
           continue;
         }
-        a[r * j + c] = ModPositive(a[r * j + c] - MulMod(f, a[i0 * j + c], mod), mod);
+        a[r * j + c] = ResMod(a[r * j + c] - ResMul(f, a[i0 * j + c], mod), mod);
       }
     }
     count[v]++;
-    prod[v] = MulMod(prod[v], u, p);
+    prod[v] = ResMul(prod[v], u, p);
     active[i0] = false;
     n_active--;
   }
@@ -151,7 +144,7 @@ inline SymmetricOrbits BuildSymmetricOrbits(int64_t p, int k, int j) {
   so.p = p;
   so.k = k;
   so.j = j;
-  so.mod = PowerInt64(p, k);
+  so.mod = MyPow<int64_t>(p, k);
   int64_t nonres = 2;
   while (LegendreUnit(nonres, p) != -1) {
     nonres++;
@@ -176,12 +169,12 @@ inline SymmetricOrbits BuildSymmetricOrbits(int64_t p, int k, int j) {
           int last = -1;
           for (int e = 0; e < j; e++) {
             if (levels[e] == v) {
-              M[e * j + e] = PowerInt64(p, v);
+              M[e * j + e] = MyPow<int64_t>(p, v);
               last = e;
             }
           }
           if (minus) {
-            M[last * j + last] = MulMod(PowerInt64(p, v), nonres, so.mod);
+            M[last * j + last] = ResMul(MyPow<int64_t>(p, v), nonres, so.mod);
           }
         }
         std::vector<int> key = SymmetricOrbitKey(M, j, p, k, so.mod);
@@ -211,14 +204,11 @@ SymmetricOrbitTransitions(SymmetricOrbits &so, int e, int64_t u) {
   }
   int j = so.j;
   int64_t mod = so.mod;
-  int64_t c = (e >= so.k) ? 0 : MulMod(PowerInt64(so.p, e), u, mod);
+  int64_t c = (e >= so.k) ? 0 : ResMul(MyPow<int64_t>(so.p, e), u, mod);
   int no = so.n_orbit();
   std::vector<std::vector<int64_t>> H(no, std::vector<int64_t>(no, 0));
   std::vector<int64_t> x(j, 0);
-  int64_t n_vec = 1;
-  for (int i = 0; i < j; i++) {
-    n_vec *= mod;
-  }
+  int64_t n_vec = MyPow<int64_t>(mod, j);
   for (int C = 0; C < no; C++) {
     std::vector<int64_t> const &SC = so.rep[C];
     for (int64_t idx = 0; idx < n_vec; idx++) {
@@ -230,9 +220,9 @@ SymmetricOrbitTransitions(SymmetricOrbits &so, int e, int64_t u) {
       std::vector<int64_t> M = SC;
       if (c != 0) {
         for (int r = 0; r < j; r++) {
-          int64_t cx = MulMod(c, x[r], mod);
+          int64_t cx = ResMul(c, x[r], mod);
           for (int s = 0; s < j; s++) {
-            M[r * j + s] = ModPositive(M[r * j + s] - MulMod(cx, x[s], mod), mod);
+            M[r * j + s] = ResMod(M[r * j + s] - ResMul(cx, x[s], mod), mod);
           }
         }
       }

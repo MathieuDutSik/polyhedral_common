@@ -105,15 +105,10 @@ T EulerValueAtPrime(std::vector<EulerTerm> const &terms, int64_t p) {
   T p_T = ScalarFromInt64<T>(p);
   for (auto const &term : terms) {
     int chi = QuadraticCharacter(term.D, p);
-    T ps(1);
-    for (int i = 0; i < term.s; i++) {
-      ps *= p_T;
-    }
+    T ps = MyPow<T>(p_T, term.s);
     T factor = T(1) - T(chi) / ps;
     if (term.e >= 0) {
-      for (int i = 0; i < term.e; i++) {
-        val *= factor;
-      }
+      val *= MyPow<T>(factor, term.e);
     } else {
       for (int i = 0; i < -term.e; i++) {
         val /= factor;

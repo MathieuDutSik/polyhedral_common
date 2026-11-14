@@ -40,10 +40,7 @@ template <typename T> T DiagonalFactorMp(int species, int64_t p) {
     mp *= T(1) - T(1) / pk;
   }
   if (n % 2 == 0) {
-    T ps(1);
-    for (int i = 0; i < s; i++) {
-      ps *= p_T;
-    }
+    T ps = MyPow<T>(p_T, s);
     T sign = (species > 0) ? T(1) : T(-1);
     mp *= T(1) - sign / ps;
   }
@@ -106,7 +103,7 @@ SpeciesListTwo(std::vector<std::array<int, 5>> const &sym) {
     bool free = dense[k - 1][3] != 1 && dense[k + 1][3] != 1;
     int n = dense[k][1];
     int o = dense[k][4];
-    int d = ModPositive(dense[k][2], 8);
+    int d = ResMod(dense[k][2], 8);
     if (d == 3 || d == 5) {
       o = (o + 4) % 8;
     }
@@ -157,10 +154,7 @@ template <typename T> T StandardPMass(int n, int64_t det, int64_t p) {
     int64_t D = SignedPower(s, det);
     // the Kronecker symbol (4 D / p): 0 at p = 2 and at p | D
     int eps = (p == 2) ? 0 : KroneckerSymbol(D, p);
-    T ps(1);
-    for (int i = 0; i < s; i++) {
-      ps *= p_T;
-    }
+    T ps = MyPow<T>(p_T, s);
     std_inv *= T(1) - ScalarFromInt64<T>(eps) / ps;
   }
   return T(1) / std_inv;
@@ -188,10 +182,7 @@ template <typename T, typename Tint> T GenusMass(MyMatrix<T> const &Gram) {
     std_mass = std_mass * LQuadraticValue<T>(s, d);
     // the Euler factors at the primes of the local symbols
     for (int64_t p : primes) {
-      T ps(1);
-      for (int i = 0; i < s; i++) {
-        ps *= ScalarFromInt64<T>(p);
-      }
+      T ps = MyPow<T>(ScalarFromInt64<T>(p), s);
       T fac = T(1) - ScalarFromInt64<T>(KroneckerSymbol(d, p)) / ps;
       std_mass = std_mass * PiRadicalRational<T>(fac);
     }
@@ -216,9 +207,7 @@ template <typename T, typename Tint> T GenusMass(MyMatrix<T> const &Gram) {
       m_p = PMass<T>(SpeciesListTwo(sym), scale_rank, p);
       T type_factor(1);
       int e = n_I_I - n_II;
-      for (int i = 0; i < (e >= 0 ? e : -e); i++) {
-        type_factor *= T(2);
-      }
+      type_factor *= MyPow<T>(T(2), (e >= 0 ? e : -e));
       if (e < 0) {
         type_factor = T(1) / type_factor;
       }

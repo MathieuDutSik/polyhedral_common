@@ -254,10 +254,7 @@ PiRadical<T> PiRadicalPower(PiRadical<T> const &x, int e) {
 // x^(num/2) for a positive rational x, as q * sqrt(r).
 template <typename T> PiRadical<T> RationalHalfPower(T const &x, int num) {
   int abs_num = (num >= 0) ? num : -num;
-  T q(1);
-  for (int i = 0; i < abs_num / 2; i++) {
-    q *= x;
-  }
+  T q = MyPow<T>(x, abs_num / 2);
   T rad = (abs_num % 2 == 1) ? x : T(1);
   PiRadical<T> res = {q, T(0), rad};
   return (num >= 0) ? res : PiRadicalInverse(res);
@@ -302,10 +299,7 @@ template <typename T> PiRadical<T> GammaHalfInteger(int j) {
   for (int i = j - 2; i >= 1; i -= 2) {
     dfact *= T(i);
   }
-  T pow2(1);
-  for (int i = 0; i < (j - 1) / 2; i++) {
-    pow2 *= T(2);
-  }
+  T pow2 = MyPow<T>(T(2), (j - 1) / 2);
   return {dfact / pow2, T(1) / T(2), T(1)};
 }
 
@@ -318,9 +312,7 @@ template <typename T> PiRadical<T> ZetaEvenValue(int k) {
   }
   std::vector<T> B = BernoulliNumbers<T>(k);
   T q = B[k];
-  for (int i = 0; i < k; i++) {
-    q *= T(2);
-  }
+  q *= MyPow<T>(T(2), k);
   T fact(1);
   for (int i = 2; i <= k; i++) {
     fact *= T(i);

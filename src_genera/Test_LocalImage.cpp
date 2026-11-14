@@ -32,8 +32,8 @@ struct Case {
 };
 
 // e, the residues of A and of p^e A^{-1} modulo p^W
-void Prepare(MyMatrix<T> const &A, int64_t p, int &e, ModMat &A_mod,
-             ModMat &Be) {
+void Prepare(MyMatrix<T> const &A, int64_t p, int &e, ModMatrix &A_mod,
+             ModMatrix &Be) {
   int m = A.rows();
   MyMatrix<T> Ainv = Inverse(A);
   e = 0;
@@ -45,14 +45,9 @@ void Prepare(MyMatrix<T> const &A, int64_t p, int &e, ModMat &A_mod,
     }
   }
   int W = MultiplicityNewtonPrecision(p);
-  Tint pW = 1;
-  for (int i = 0; i < W; i++) {
-    pW *= static_cast<long>(p);
-  }
+  Tint pW = MyPow<Tint>(static_cast<long>(p), W);
   T pe = 1;
-  for (int i = 0; i < e; i++) {
-    pe *= static_cast<long>(p);
-  }
+  pe *= MyPow<T>(static_cast<long>(p), e);
   A_mod.assign(m, std::vector<int64_t>(m));
   Be.assign(m, std::vector<int64_t>(m));
   for (int i = 0; i < m; i++) {
@@ -70,9 +65,9 @@ void Prepare(MyMatrix<T> const &A, int64_t p, int &e, ModMat &A_mod,
   }
 }
 
-ModMat ToMod(MyMatrix<T> const &Y) {
+ModMatrix ToMod(MyMatrix<T> const &Y) {
   int m = Y.rows();
-  ModMat Ym(m, std::vector<int64_t>(m));
+  ModMatrix Ym(m, std::vector<int64_t>(m));
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
       Ym[i][j] = UniversalScalarConversion<int64_t, T>(Y(i, j));
@@ -86,9 +81,9 @@ ModMat ToMod(MyMatrix<T> const &Y) {
 int Compare(Case const &cs, int64_t p, int c) {
   int m = cs.A.rows();
   int e;
-  ModMat A_mod, Be;
+  ModMatrix A_mod, Be;
   Prepare(cs.A, p, e, A_mod, Be);
-  std::vector<ModMat> Om, Lam, Forms;
+  std::vector<ModMatrix> Om, Lam, Forms;
   for (auto const &X : cs.Om) {
     Om.push_back(ToMod(X));
   }
@@ -116,18 +111,18 @@ int Compare(Case const &cs, int64_t p, int c) {
     LamInt.push_back(UniversalMatrixConversion<Tint, T>(X));
   }
   int64_t pW = ResiduePrimePower(p, MultiplicityNewtonPrecision(p));
-  std::optional<std::vector<ModMat>> Lie = ResidueMatrices(
+  std::optional<std::vector<ModMatrix>> Lie = ResidueMatrices(
       IntegralLieLatticeColumns<T, Tint>(cs.A, LamInt), pW);
-  std::optional<std::vector<ModMat>> gens = LocalOrthogonalImageGenerators(
+  std::optional<std::vector<ModMatrix>> gens = LocalOrthogonalImageGenerators(
       A_mod, Be, Om, Lam, Forms, Lie, p, c, e, bounds, &ord);
   auto t1 = std::chrono::steady_clock::now();
   // the listing, on the rows: the transposes of the commutant, or all the
   // matrices
-  std::vector<ModMat> basis;
+  std::vector<ModMatrix> basis;
   if (cs.Lam.empty()) {
     for (int a = 0; a < m; a++) {
       for (int b = 0; b < m; b++) {
-        ModMat E(m, std::vector<int64_t>(m, 0));
+        ModMatrix E(m, std::vector<int64_t>(m, 0));
         E[a][b] = 1;
         basis.push_back(E);
       }
@@ -137,7 +132,7 @@ int Compare(Case const &cs, int64_t p, int c) {
       basis.push_back(ToMod(MyMatrix<T>(X.transpose())));
     }
   }
-  std::optional<std::vector<ModMat>> list =
+  std::optional<std::vector<ModMatrix>> list =
       LocalStabilizerImage(A_mod, basis, p, c, e, bounds);
   auto t2 = std::chrono::steady_clock::now();
   double s1 = std::chrono::duration<double>(t1 - t0).count();
@@ -155,9 +150,7 @@ int Compare(Case const &cs, int64_t p, int c) {
   for (size_t x : ord.orbits) {
     n_gen *= static_cast<long>(x);
   }
-  for (size_t i = 0; i < ord.layer_exp; i++) {
-    n_gen *= static_cast<long>(p);
-  }
+  n_gen *= MyPow<Tint>(static_cast<long>(p), ord.layer_exp);
   Tint n_list = static_cast<long>(list->size());
   if (n_gen != n_list) {
     std::cerr << "MISMATCH p=" << p << " c=" << c << " e=" << e << " m=" << m

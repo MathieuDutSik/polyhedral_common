@@ -9,6 +9,7 @@
 #include "factorizations.h"
 #include "NumberTheoryModular.h"
 #include "PolynomialRealRoots.h"
+#include "MAT_MatrixModPrime.h"
 #include <functional>
 #include <optional>
 #include <cstdint>
@@ -487,10 +488,7 @@ inline T ProductDirichletLValues(int64_t d, int k, int parity,
       n_complex++;
       std::vector<T> Bred = ReduceCyclotomic(Bk, e);
       T kk(k);
-      T kpow(1);
-      for (int64_t i = 0; i < phi_e; i++) {
-        kpow *= kk;
-      }
+      T kpow = MyPow<T>(kk, phi_e);
       // N(-B / k) = N(B) / k^{phi(e)}, phi(e) even
       norm_prod *= NormCyclotomic(Bred, e) / kpow;
     }
@@ -741,13 +739,6 @@ inline T RankOneHermitianMassAbelian(AbelianCMField const &F) {
 
 using PolyQ = std::vector<int64_t>;
 
-// a b modulo q without overflow, for 0 <= a, b < q < 2^62
-inline int64_t MulModQ(int64_t a, int64_t b, int64_t q) {
-  __int128 p = static_cast<__int128>(a) * static_cast<__int128>(b);
-  int64_t r = static_cast<int64_t>(p % q);
-  return (r < 0) ? r + q : r;
-}
-
 inline void PolyTrim(PolyQ &a) {
   while (!a.empty() && a.back() == 0) {
     a.pop_back();
@@ -769,7 +760,7 @@ inline PolyQ PolyMulQ(PolyQ const &a, PolyQ const &b, int64_t q) {
   PolyQ c(a.size() + b.size() - 1, 0);
   for (size_t i = 0; i < a.size(); i++) {
     for (size_t j = 0; j < b.size(); j++) {
-      c[i + j] = (c[i + j] + MulModQ(a[i], b[j], q)) % q;
+      c[i + j] = (c[i + j] + ResMul(a[i], b[j], q)) % q;
     }
   }
   PolyTrim(c);
@@ -787,33 +778,19 @@ inline PolyQ PolySubQ(PolyQ a, PolyQ const &b, int64_t q) {
   return a;
 }
 
-inline int64_t InvModQ(int64_t a, int64_t q) {
-  int64_t r0 = q, r1 = ((a % q) + q) % q, s0 = 0, s1 = 1;
-  while (r1 != 0) {
-    int64_t t = r0 / r1;
-    int64_t r2 = r0 - t * r1;
-    r0 = r1;
-    r1 = r2;
-    int64_t s2 = static_cast<int64_t>((static_cast<__int128>(s0) - static_cast<__int128>(t) * s1) % q);
-    s0 = s1;
-    s1 = s2;
-  }
-  return ((s0 % q) + q) % q;
-}
-
 // quotient and remainder modulo q, b nonzero
 inline std::pair<PolyQ, PolyQ> PolyDivModQ(PolyQ a, PolyQ const &b, int64_t q) {
   PolyTrim(a);
   if (a.size() < b.size()) {
     return {{}, a};
   }
-  int64_t inv = InvModQ(b.back(), q);
+  int64_t inv = ResInv(b.back(), q);
   PolyQ quo(a.size() - b.size() + 1, 0);
   for (size_t k = a.size() - b.size() + 1; k-- > 0;) {
-    int64_t c = MulModQ(a[k + b.size() - 1], inv, q);
+    int64_t c = ResMul(a[k + b.size() - 1], inv, q);
     quo[k] = c;
     for (size_t j = 0; j < b.size(); j++) {
-      a[k + j] = ((a[k + j] - MulModQ(c, b[j], q)) % q + q) % q;
+      a[k + j] = ((a[k + j] - ResMul(c, b[j], q)) % q + q) % q;
     }
   }
   PolyTrim(a);
@@ -825,9 +802,9 @@ inline PolyQ PolyMonicQ(PolyQ a, int64_t q) {
   if (a.empty()) {
     return a;
   }
-  int64_t inv = InvModQ(a.back(), q);
+  int64_t inv = ResInv(a.back(), q);
   for (auto &x : a) {
-    x = MulModQ(x, inv, q);
+    x = ResMul(x, inv, q);
   }
   return a;
 }
@@ -860,9 +837,9 @@ inline PolyQ PolyInverseModQ(PolyQ const &a, PolyQ const &b, int64_t q) {
     std::cerr << "CYCLO: the polynomials are not coprime\n";
     throw TerminalException{1};
   }
-  int64_t inv = InvModQ(r0[0], q);
+  int64_t inv = ResInv(r0[0], q);
   for (auto &x : s0) {
-    x = MulModQ(x, inv, q);
+    x = ResMul(x, inv, q);
   }
   return PolyDivModQ(s0, b, q).second;
 }
@@ -1031,36 +1008,6 @@ int ValuationQRational(T const &x, int64_t q) {
   return rational_prime_valuation(x, UniversalScalarConversion<Tint, int64_t>(q));
 }
 
-inline int RankModQ(std::vector<std::vector<int64_t>> M, int64_t q) {
-  int rows = static_cast<int>(M.size());
-  int cols = rows ? static_cast<int>(M[0].size()) : 0;
-  int rank = 0;
-  for (int c = 0; c < cols && rank < rows; c++) {
-    int piv = -1;
-    for (int i = rank; i < rows; i++) {
-      if (M[i][c] % q != 0) {
-        piv = i;
-        break;
-      }
-    }
-    if (piv < 0) {
-      continue;
-    }
-    std::swap(M[piv], M[rank]);
-    int64_t inv = InvModQ(M[rank][c], q);
-    for (int i = 0; i < rows; i++) {
-      if (i != rank && M[i][c] % q != 0) {
-        int64_t t = MulModQ(M[i][c], inv, q);
-        for (int j = 0; j < cols; j++) {
-          M[i][j] = ((M[i][j] - MulModQ(t, M[rank][j], q)) % q + q) % q;
-        }
-      }
-    }
-    rank++;
-  }
-  return rank;
-}
-
 // v_q of the index [L + span(rows of M) : L], M rational, L = Z^r.
 template <typename T>
 inline int ValuationIndexOverlattice(MyMatrix<T> const &M, int64_t q) {
@@ -1086,9 +1033,7 @@ inline int ValuationIndexOverlattice(MyMatrix<T> const &M, int64_t q) {
   }
   MyMatrix<Tint> Bz = GetZbasis(G);
   T idx = T(Tint(1)) / T(DeterminantMat(Bz));
-  for (int i = 0; i < r; i++) {
-    idx *= T(D);
-  }
+  idx *= MyPow<T>(T(D), r);
   return ValuationQRational(idx, q);
 }
 
@@ -1120,10 +1065,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
   // the precision: beyond the exponent of the discriminant group at q
   int vdet = ValuationQRational(DeterminantMat(B), q);
   int N = vdet + 4;
-  Tint Q(1);
-  for (int i = 0; i < N; i++) {
-    Q *= UniversalScalarConversion<Tint, int64_t>(q);
-  }
+  Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), N);
   // the dual basis, the uniformizer and the idempotent of each factor
   MyMatrix<T> Binv = Inverse(B);
   MyMatrix<T> Id = IdentityMat<T>(r);
@@ -1210,7 +1152,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
         Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
       }
     }
-    int rk = RankModQ(Emod, q);
+    int rk = RankModPrime(Emod, q);
     int m = rk / static_cast<int>(e_ram * f);
     // len[k] = log_q |pi^k X|, X = e_P L^# / e_P L, until it vanishes
     std::vector<int> len;
@@ -1269,10 +1211,7 @@ inline T HermitianLocalFactorUnramified(HermitianLocalJordan const &hj,
   if (hj.blocks.size() <= 1) {
     return T(1);
   }
-  T qK(1);
-  for (int i = 0; i < hj.f_K; i++) {
-    qK *= UniversalScalarConversion<T, int64_t>(q);
-  }
+  T qK = MyPow<T>(UniversalScalarConversion<T, int64_t>(q), hj.f_K);
   int m = 0;
   for (auto &b : hj.blocks) {
     m += b.second;
@@ -1590,7 +1529,7 @@ ComputeHermitianLocalGram(MyMatrix<T> const &B,
     }
     rows.push_back(row);
   }
-  int base_rank = RankModQ(rows, q);
+  int base_rank = RankModPrime(rows, q);
   std::vector<int> chosen;
   for (int k = 0; k < r && static_cast<int>(chosen.size()) < m; k++) {
     std::vector<std::vector<int64_t>> test = rows;
@@ -1602,7 +1541,7 @@ ComputeHermitianLocalGram(MyMatrix<T> const &B,
     std::vector<int64_t> e(r, 0);
     e[k] = 1;
     test.push_back(e);
-    if (RankModQ(test, q) == base_rank + static_cast<int>(chosen.size()) + 1) {
+    if (RankModPrime(test, q) == base_rank + static_cast<int>(chosen.size()) + 1) {
       chosen.push_back(k);
     }
   }
@@ -2066,10 +2005,7 @@ HermitianLocalFactorDyadic(MyMatrix<T> const &B,
     if (DyadicIsLocalNorm(det, C)) {
       return T(1);
     }
-    T qm(1);
-    for (int i = 0; i < m; i++) {
-      qm *= 2;
-    }
+    T qm = MyPow<T>(2, m);
     return (qm - 1) / UniversalScalarConversion<T, int64_t>(2 * q + 2);
   };
   int nL = DyadicNormVal(hlg.H, C);

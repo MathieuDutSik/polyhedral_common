@@ -190,10 +190,7 @@ FindLocalGenerator(MyMatrix<T> const &B,
   MyMatrix<T> Binv = Inverse(B);
   // combinations with coefficients in [-2, 2], by increasing size
   std::vector<std::vector<int>> cands;
-  int n_tot = 1;
-  for (int i = 0; i < deg; i++) {
-    n_tot *= 5;
-  }
+  int n_tot = MyPow<int>(5, deg);
   for (int u = 0; u < n_tot; u++) {
     std::vector<int> c(deg);
     int t = u;
@@ -268,15 +265,6 @@ FindLocalGenerator(MyMatrix<T> const &B,
   return {};
 }
 
-template <typename Tint>
-inline Tint PowInt(int64_t q, int64_t e) {
-  Tint r(1);
-  for (int64_t i = 0; i < e; i++) {
-    r *= UniversalScalarConversion<Tint, int64_t>(q);
-  }
-  return r;
-}
-
 // The matrix of g(S) for a polynomial g with integer coefficients.
 template <typename T>
 inline MyMatrix<T> PolyOfMatrixQ(PolyQ const &g, MyMatrix<T> const &S) {
@@ -325,7 +313,7 @@ AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
       if (den < 0) {
         den += qz;
       }
-      int64_t v = MulModQ(UniversalScalarConversion<int64_t, Tint>(num), InvModQ(UniversalScalarConversion<int64_t, Tint>(den), q), q);
+      int64_t v = ResMul(UniversalScalarConversion<int64_t, Tint>(num), ResInv(UniversalScalarConversion<int64_t, Tint>(den), q), q);
       c.push_back(v);
     }
     PolyQ fq = PolyReduce(PolyQ(lg.f.begin(), lg.f.end()), q);
@@ -384,7 +372,7 @@ template <typename Tint>
 inline PolyZ<Tint> AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
                                         PolyQ const &g, int e, int64_t q,
                                         int N) {
-  Tint Q = PowInt<Tint>(q, N);
+  Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), N);
   PolyQ fq = PolyReduce(PolyQ(f.begin(), f.end()), q);
   PolyQ P = {1};
   for (int i = 0; i < e; i++) {
@@ -484,7 +472,7 @@ AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
       Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
     }
   }
-  int rk = RankModQ(Emod, q);
+  int rk = RankModPrime(Emod, q);
   int m = rk / (ap.e * f_res);
   int delta = 0;
   {
@@ -636,7 +624,7 @@ inline int LocalVal(ElemE<T> const &x, LocalPrimeK<T> &P) {
   int k = ValuationInteger(d, P.q);
   int N = P.f_res * (P.e * k + 4) + 4;
   while (true) {
-    Tint Q = PowInt<Tint>(P.q, N);
+    Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(P.q), N);
     PolyZ<Tint> const &eps = LocalEps(P, N);
     PolyZ<Tint> w = PolyZReduce(PolyZMul(eps, y), P.K.Phi, Q);
     for (size_t i = 0; i < eps.size(); i++) {
@@ -664,12 +652,12 @@ inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   auto [y, d] = ClearDenominators(x);
   int k = ValuationInteger(d, P.q);
-  Tint qk = PowInt<Tint>(P.q, k);
+  Tint qk = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(P.q), k);
   Tint Q = qk * UniversalScalarConversion<Tint, int64_t>(P.q);
   PolyZ<Tint> z = PolyZReduce(PolyZMul(LocalEps(P, k + 1), y), P.K.Phi, Q);
   Tint qz = UniversalScalarConversion<Tint, int64_t>(P.q);
   Tint dd = ResInt(QuoInt(d, qk), qz);
-  int64_t inv = InvModQ(UniversalScalarConversion<int64_t, Tint>(dd), P.q);
+  int64_t inv = ResInv(UniversalScalarConversion<int64_t, Tint>(dd), P.q);
   PolyQ res;
   for (auto const &c : z) {
     if (ResInt(c, qk) != 0) {
@@ -677,7 +665,7 @@ inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
       throw TerminalException{1};
     }
     Tint t = ResInt(QuoInt(c, qk), qz);
-    res.push_back(MulModQ(UniversalScalarConversion<int64_t, Tint>(t), inv, P.q));
+    res.push_back(ResMul(UniversalScalarConversion<int64_t, Tint>(t), inv, P.q));
   }
   PolyTrim(res);
   if (res.empty()) {
@@ -756,7 +744,7 @@ LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
     if (den < 0) {
       den += qz;
     }
-    return MulModQ(UniversalScalarConversion<int64_t, Tint>(num), InvModQ(UniversalScalarConversion<int64_t, Tint>(den), q), q);
+    return ResMul(UniversalScalarConversion<int64_t, Tint>(num), ResInv(UniversalScalarConversion<int64_t, Tint>(den), q), q);
   };
   std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
   for (int t = 1; t < deg; t++) {
@@ -781,7 +769,7 @@ LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
     for (auto &row : orbit_rows(v)) {
       test.push_back(row);
     }
-    if (RankModQ(test, q) == static_cast<int>(test.size())) {
+    if (RankModPrime(test, q) == static_cast<int>(test.size())) {
       chosen.push_back(v);
       acc = test;
     }
@@ -877,10 +865,7 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
     }
     blocks[kv.first] = {rk, det};
   }
-  T qK(1);
-  for (int i = 0; i < ap.f_K; i++) {
-    qK *= UniversalScalarConversion<T, int64_t>(q);
-  }
+  T qK = MyPow<T>(UniversalScalarConversion<T, int64_t>(q), ap.f_K);
   T fac = HeckeGroupOrderSp<T>(2 * (m / 2), qK);
   int64_t Nexp = 0;
   int after_total = m;
@@ -1280,10 +1265,7 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
     if (GDIsLocalNorm(det, C)) {
       return T(1);
     }
-    T qm(1);
-    for (int i = 0; i < m; i++) {
-      qm *= UniversalScalarConversion<T, int64_t>(qK);
-    }
+    T qm = MyPow<T>(UniversalScalarConversion<T, int64_t>(qK), m);
     return (qm - 1) / UniversalScalarConversion<T, int64_t>(2 * qK + 2);
   };
   int nL = GDNormVal(alg.H, C);
@@ -1371,7 +1353,7 @@ JordanFromIdempotent(MyMatrix<T> const &B, MyMatrix<T> const &E,
       Emod[u][v] = UniversalScalarConversion<int64_t, Tint>(x);
     }
   }
-  int m = RankModQ(Emod, q) / (e_ram * f_res);
+  int m = RankModPrime(Emod, q) / (e_ram * f_res);
   HermitianLocalJordan hj;
   hj.type = type;
   hj.f_K = f_K;
@@ -1424,7 +1406,7 @@ PrimeIdempotentsByRefinement(MyMatrix<T> const &B,
   int deg = static_cast<int>(Omega.size());
   int vdet = ValuationQRational(DeterminantMat(B), q);
   int N = vdet + 6;
-  Tint Q = PowInt<Tint>(q, N);
+  Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), N);
   Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
   auto reduce_mod = [&](MyMatrix<T> M, Tint const &mod) {
     for (int i = 0; i < M.rows(); i++) {
@@ -1522,7 +1504,7 @@ UnramifiedFactorsByIdempotents(MyMatrix<T> const &B,
   int r = B.rows();
   int vdet = ValuationQRational(DeterminantMat(B), q);
   int N = vdet + 6;
-  Tint Q = PowInt<Tint>(q, N);
+  Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), N);
   Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
   auto reduce_mod = [&](MyMatrix<T> M, Tint const &mod) {
     for (int i = 0; i < M.rows(); i++) {

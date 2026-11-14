@@ -10,6 +10,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "factorizations.h"
+#include "MAT_MatrixModPrime.h"
 #include <algorithm>
 #include <chrono>
 #include <map>
@@ -110,64 +111,24 @@ MyMatrix<Tint> IntegralKernelOfConditions(MyMatrix<Tint> const &Eq) {
   int N = Eq.rows();
   int n_cond = Eq.cols();
   int64_t const p = 2147483629;
-  Tint const p_T = UniversalScalarConversion<Tint, int64_t>(p);
-  auto mod = [&](Tint const &x) -> int64_t {
-    return UniversalScalarConversion<int64_t, Tint>(ResInt(x, p_T));
-  };
-  auto inv = [&](int64_t a) -> int64_t {
-    int64_t res = 1, base = a, e = p - 2;
-    while (e > 0) {
-      if (e & 1)
-        res = (res * base) % p;
-      base = (base * base) % p;
-      e >>= 1;
-    }
-    return res;
-  };
   auto fallback = [&]() -> MyMatrix<Tint> {
     return NullspaceIntTrMat(MyMatrix<Tint>(Eq.transpose()));
   };
   std::vector<int> cols = ColumnRankProfileModPrime(Eq);
   int r = static_cast<int>(cols.size());
   // the reduced echelon form modulo p of the selected conditions (rows)
-  std::vector<std::vector<int64_t>> A(r, std::vector<int64_t>(N));
+  ModMatrix A(r, std::vector<int64_t>(N));
   for (int j = 0; j < r; j++) {
     for (int i = 0; i < N; i++) {
-      A[j][i] = mod(Eq(i, cols[j]));
+      A[j][i] = ResModOf(Eq(i, cols[j]), p);
     }
   }
-  std::vector<int> pivcol;
+  RowSpaceModP rs = ComputeRowSpaceModP(std::move(A), p);
+  ModMatrix const &E = rs.basis;
+  std::vector<int> pivcol(rs.pivots.begin(), rs.pivots.end());
   std::vector<bool> is_pivot(N, false);
-  int row = 0;
-  for (int col = 0; col < N && row < r; col++) {
-    int found = -1;
-    for (int i = row; i < r; i++) {
-      if (A[i][col] != 0) {
-        found = i;
-        break;
-      }
-    }
-    if (found == -1) {
-      continue;
-    }
-    std::swap(A[row], A[found]);
-    int64_t a_inv = inv(A[row][col]);
-    for (int u = col; u < N; u++) {
-      A[row][u] = (A[row][u] * a_inv) % p;
-    }
-    for (int i = 0; i < r; i++) {
-      int64_t f = A[i][col];
-      if (i != row && f != 0) {
-        for (int u = col; u < N; u++) {
-          if (A[row][u] != 0) {
-            A[i][u] = (A[i][u] + (p - f) * A[row][u]) % p;
-          }
-        }
-      }
-    }
-    pivcol.push_back(col);
+  for (int col : pivcol) {
     is_pivot[col] = true;
-    row++;
   }
   std::vector<int> freecol;
   for (int u = 0; u < N; u++) {
@@ -200,13 +161,13 @@ MyMatrix<Tint> IntegralKernelOfConditions(MyMatrix<Tint> const &Eq) {
     }
     return std::pair<int64_t, int64_t>{r1, t1};
   };
-  // K(f, pivcol[i]) = -A[i][freecol[f]], K(f, freecol[f]) = 1
+  // K(f, pivcol[i]) = -E[i][freecol[f]], K(f, freecol[f]) = 1
   std::vector<std::vector<std::pair<int64_t, int64_t>>> Kfrac(
       d, std::vector<std::pair<int64_t, int64_t>>(pivcol.size()));
   Tint D(1);
   for (int f = 0; f < d; f++) {
     for (size_t i = 0; i < pivcol.size(); i++) {
-      int64_t a = (p - A[i][freecol[f]]) % p;
+      int64_t a = ResNeg(E[i][freecol[f]], p);
       std::optional<std::pair<int64_t, int64_t>> opt = reconstruct(a);
       if (!opt) {
         return fallback();
@@ -650,13 +611,13 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           Gt(i, j) = QuatTrTrd(O[i], O[j], r);
         }
       }
-      ModMat Gp(d, std::vector<int64_t>(d));
+      ModMatrix Gp(d, std::vector<int64_t>(d));
       for (int i = 0; i < d; i++) {
         for (int j = 0; j < d; j++) {
           Gp[i][j] = ResidueOfInteger(Gt(i, j), p);
         }
       }
-      ModRowSpace rsI = ModRowReduce(Gp, p);
+      RowSpaceModP rsI = ComputeRowSpaceModP(Gp, p);
       std::vector<bool> pivI(d, false);
       for (size_t pv : rsI.pivots) {
         pivI[pv] = true;
@@ -668,7 +629,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           v(f) = T(1);
           for (size_t i2 = 0; i2 < rsI.pivots.size(); i2++) {
             v(static_cast<int>(rsI.pivots[i2])) =
-                ScalarFromInt64<T>(ModP(-rsI.basis[i2][f], p));
+                ScalarFromInt64<T>(ResMod(-rsI.basis[i2][f], p));
           }
           Igen.push_back(v);
         }
@@ -793,7 +754,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         has_OK = (4 * r * cc == k) && (T_abs(DeterminantMat(Gz)) == dK);
       }
       // the x = sum a_i w_i / p in O^#: sum_i a_i Tr trd(w_i w_j) = 0 mod p
-      ModMat Gm(d, std::vector<int64_t>(d));
+      ModMatrix Gm(d, std::vector<int64_t>(d));
       for (int i = 0; i < d; i++) {
         for (int j = 0; j < d; j++) {
           T v = QuatTrTrd(O[i], O[j], r);
@@ -838,7 +799,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           pm *= p;
         }
         // the Frobenius z -> z^{p^m} on O_K / p O_K, columns
-        ModMat Fr(cc, std::vector<int64_t>(cc));
+        ModMatrix Fr(cc, std::vector<int64_t>(cc));
         for (int t = 0; t < cc; t++) {
           MyMatrix<T> Zp = IdentityMat<T>(k);
           for (int64_t e2 = 0; e2 < pm; e2++) {
@@ -849,7 +810,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
             Fr[u][t] = ResidueOfInteger(cz(u), p);
           }
         }
-        ModRowSpace rf = ModRowReduce(Fr, p);
+        RowSpaceModP rf = ComputeRowSpaceModP(Fr, p);
         std::vector<bool> pivf(cc, false);
         for (size_t pv : rf.pivots) {
           pivf[pv] = true;
@@ -861,7 +822,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           std::vector<int64_t> v(cc, 0);
           v[f] = 1;
           for (size_t i2 = 0; i2 < rf.pivots.size(); i2++) {
-            v[rf.pivots[i2]] = ModP(-rf.basis[i2][f], p);
+            v[rf.pivots[i2]] = ResMod(-rf.basis[i2][f], p);
           }
           MyMatrix<T> nz = ZeroMatrix<T>(k, k);
           for (int t = 0; t < cc; t++) {
@@ -881,12 +842,12 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           }
         }
       }
-      ModRowSpace rs = ModRowReduce(Gm, p);
+      RowSpaceModP rs = ComputeRowSpaceModP(Gm, p);
       std::vector<bool> is_piv(d, false);
       for (size_t pv : rs.pivots) {
         is_piv[pv] = true;
       }
-      ModMat ker;
+      ModMatrix ker;
       for (int f = 0; f < d; f++) {
         if (is_piv[f]) {
           continue;
@@ -894,7 +855,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         std::vector<int64_t> v(d, 0);
         v[f] = 1;
         for (size_t i = 0; i < rs.pivots.size(); i++) {
-          v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
+          v[rs.pivots[i]] = ResMod(-rs.basis[i][f], p);
         }
         ker.push_back(v);
       }
@@ -1127,15 +1088,10 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
     }
   }
   int Wn = MultiplicityNewtonPrecision(p);
-  Tint pW(1);
-  for (int i = 0; i < Wn; i++) {
-    pW *= UniversalScalarConversion<Tint, int64_t>(p);
-  }
+  Tint pW = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), Wn);
   T pe(1);
-  for (int i = 0; i < e; i++) {
-    pe *= UniversalScalarConversion<T, int64_t>(p);
-  }
-  ModMat A_mod(m, std::vector<int64_t>(m)), Be(m, std::vector<int64_t>(m));
+  pe *= MyPow<T>(UniversalScalarConversion<T, int64_t>(p), e);
+  ModMatrix A_mod(m, std::vector<int64_t>(m)), Be(m, std::vector<int64_t>(m));
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
       Tint av = ResInt(UniversalScalarConversion<Tint, T>(B(i, j)), pW);
@@ -1155,8 +1111,8 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
   }
   // the residues modulo p^W in [0, p^W): the searches only use the
   // matrices modulo p^W, and their entries may not fit in 64 bits
-  auto to_mod = [&](MyMatrix<T> const &Y) -> ModMat {
-    ModMat Ym(m, std::vector<int64_t>(m));
+  auto to_mod = [&](MyMatrix<T> const &Y) -> ModMatrix {
+    ModMatrix Ym(m, std::vector<int64_t>(m));
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         Tint v = ResInt(UniversalScalarConversion<Tint, T>(Y(i, j)), pW);
@@ -1168,7 +1124,7 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
     }
     return Ym;
   };
-  std::vector<ModMat> Om, LamM, FormsM;
+  std::vector<ModMatrix> Om, LamM, FormsM;
   for (auto const &N : Forms) {
     FormsM.push_back(to_mod(N));
   }
@@ -1183,9 +1139,7 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
     for (size_t x : o.orbits) {
       v *= UniversalScalarConversion<Tint, int64_t>(static_cast<int64_t>(x));
     }
-    for (size_t i = 0; i < o.layer_exp; i++) {
-      v *= UniversalScalarConversion<Tint, int64_t>(p);
-    }
+    v *= MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), o.layer_exp);
     return v;
   };
   std::vector<Tint> res;
@@ -1198,11 +1152,11 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
   for (auto const &Y : Lam) {
     LamInt.push_back(UniversalMatrixConversion<Tint, T>(Y));
   }
-  std::optional<std::vector<ModMat>> Lie = ResidueMatrices(
+  std::optional<std::vector<ModMatrix>> Lie = ResidueMatrices(
       IntegralLieLatticeColumns<T, Tint>(B, LamInt), ResidueModulusOf(pW));
   for (int cc = c; cc <= c_top; cc++) {
     LocalImageOrder ord;
-    std::optional<std::vector<ModMat>> opt = LocalOrthogonalImageGenerators(
+    std::optional<std::vector<ModMatrix>> opt = LocalOrthogonalImageGenerators(
         A_mod, Be, Om, LamM, FormsM, Lie, p, cc, e, bounds, &ord);
 #ifdef DEBUG_QUATERNIONIC_MASS
     os << "QUAT_MASS: p=" << p << " c=" << cc << " e=" << e << " image "
@@ -1432,10 +1386,7 @@ std::optional<T> QuaternionicComponentMass(
     }
     int g_ram = v / (2 * f);
     n_ram_places += g_ram;
-    T q(1);
-    for (int i = 0; i < f; i++) {
-      q *= UniversalScalarConversion<T, int64_t>(p);
-    }
+    T q = MyPow<T>(UniversalScalarConversion<T, int64_t>(p), f);
     for (int s = 0; s < g_ram; s++) {
       T qi(1);
       for (int i = 1; i <= r; i++) {
@@ -1776,10 +1727,7 @@ std::optional<T> QuaternionicComponentMass(
     if (!nS) {
       return {};
     }
-    Tint pdim(1);
-    for (int i = 0; i < dim_u; i++) {
-      pdim *= UniversalScalarConversion<Tint, int64_t>(p);
-    }
+    Tint pdim = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), dim_u);
 #ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if (nX->second != nX->first * pdim || nS->second != nS->first * pdim) {
       std::cerr << "QUAT_MASS: the images at p=" << p << " do not grow by p^"

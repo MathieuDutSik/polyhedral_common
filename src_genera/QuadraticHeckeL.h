@@ -1430,9 +1430,7 @@ Tint MinkowskiMultiple(AbelianCMField const &FK, int m) {
   auto glf = [&](int64_t p) -> Tint {
     Tint q(1);
     Tint pz = UniversalScalarConversion<Tint, int64_t>(p);
-    for (int64_t i = 0; i < min_f(p); i++) {
-      q *= pz;
-    }
+    q *= MyPow<Tint>(pz, min_f(p));
     Tint res(1);
     Tint qi(1);
     for (int i = 1; i <= m; i++) {

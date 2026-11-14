@@ -106,10 +106,7 @@ void EnumerateOrbitPrimitiveVector(
     std::vector<MyMatrix<int>> const &ListMat, int const &pPrime,
     int const &dim,
     std::function<void(std::vector<int> const &, int const &)> const &FCT) {
-  Tint expo(1);
-  for (int i = 0; i < dim; i++) {
-    expo *= pPrime;
-  }
+  Tint expo = MyPow<Tint>(pPrime, dim);
   Tint TotalNb = (expo - 1) / (pPrime - 1);
   Face StatusVect(TotalNb);
   for (Tint i = 0; i < TotalNb; i++) {

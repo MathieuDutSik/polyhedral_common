@@ -5,6 +5,7 @@
 // clang-format off
 #include "GroupNeighborModP.h"
 #include "ResidueArithmetic.h"
+#include "MAT_MatrixModPrime.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "factorizations.h"
@@ -70,17 +71,17 @@ struct MultiplicityFactorBounds {
  */
 struct LiftAffineSpace {
   std::vector<int64_t> part;
-  ModMat ker;
+  ModMatrix ker;
 };
 
 // the linear system of the lifts of g from p^j to p^{j+1}: coef Delta =
 // rhs modulo p, the equations indexed by a <= b
 struct LiftSystem {
-  ModMat coef;
+  ModMatrix coef;
   std::vector<int64_t> rhs;
 };
 
-inline LiftSystem MakeLiftSystem(ModMat const &g, ModMat const &A, int64_t p,
+inline LiftSystem MakeLiftSystem(ModMatrix const &g, ModMatrix const &A, int64_t p,
                                  int64_t pj) {
   size_t m = A.size();
   int64_t pj1 = pj * p;
@@ -117,19 +118,19 @@ inline LiftSystem MakeLiftSystem(ModMat const &g, ModMat const &A, int64_t p,
   // the linear system over the m^2 entries of Delta, equations a <= b:
   // sum_c Delta(c, a) (A g)(c, b) + (A g)(c, a) Delta(c, b) = -E(a,b)/p^j
   size_t n_var = m * m;
-  ModMat coef;
+  ModMatrix coef;
   std::vector<int64_t> rhs;
   for (size_t a = 0; a < m; a++) {
     for (size_t b = a; b < m; b++) {
       std::vector<int64_t> row(n_var, 0);
       for (size_t c = 0; c < m; c++) {
-        int64_t x = ModP(static_cast<int64_t>(Ag[c][b] % p), p);
-        row[c * m + a] = ModP(row[c * m + a] + x, p);
-        int64_t y = ModP(static_cast<int64_t>(Ag[c][a] % p), p);
-        row[c * m + b] = ModP(row[c * m + b] + y, p);
+        int64_t x = ResMod(static_cast<int64_t>(Ag[c][b] % p), p);
+        row[c * m + a] = ResMod(row[c * m + a] + x, p);
+        int64_t y = ResMod(static_cast<int64_t>(Ag[c][a] % p), p);
+        row[c * m + b] = ResMod(row[c * m + b] + y, p);
       }
       coef.push_back(row);
-      rhs.push_back(ModP(-Ered[a][b], p));
+      rhs.push_back(ResMod(-Ered[a][b], p));
     }
   }
   return LiftSystem{coef, rhs};
@@ -137,7 +138,7 @@ inline LiftSystem MakeLiftSystem(ModMat const &g, ModMat const &A, int64_t p,
 // The right-hand side of the system of MakeLiftSystem alone: -E / p^j
 // modulo p for the a <= b, E = g^T A g - A (its matrix depends on g modulo
 // p only, so a search that changes g by p^j Delta needs only this)
-inline std::vector<int64_t> LiftRhs(ModMat const &g, ModMat const &A, int64_t p,
+inline std::vector<int64_t> LiftRhs(ModMatrix const &g, ModMatrix const &A, int64_t p,
                                     int64_t pj) {
   size_t m = A.size();
   int64_t pj1 = pj * p;
@@ -174,31 +175,31 @@ inline std::vector<int64_t> LiftRhs(ModMat const &g, ModMat const &A, int64_t p,
   std::vector<int64_t> rhs;
   for (size_t a = 0; a < m; a++) {
     for (size_t b = a; b < m; b++) {
-      rhs.push_back(ModP(-Ered[a][b], p));
+      rhs.push_back(ResMod(-Ered[a][b], p));
     }
   }
   return rhs;
 }
 
 
-inline std::optional<LiftAffineSpace> LiftAffine(ModMat const &g,
-                                                 ModMat const &A, int64_t p,
+inline std::optional<LiftAffineSpace> LiftAffine(ModMatrix const &g,
+                                                 ModMatrix const &A, int64_t p,
                                                  int64_t pj) {
   size_t m = A.size();
   size_t n_var = m * m;
   LiftSystem sys = MakeLiftSystem(g, A, p, pj);
-  ModMat const &coef = sys.coef;
+  ModMatrix const &coef = sys.coef;
   std::vector<int64_t> const &rhs = sys.rhs;
   // the affine solutions: x with coef x = rhs
   size_t n_eq = coef.size();
-  ModMat aug(n_eq, std::vector<int64_t>(n_var + 1));
+  ModMatrix aug(n_eq, std::vector<int64_t>(n_var + 1));
   for (size_t e = 0; e < n_eq; e++) {
     for (size_t v = 0; v < n_var; v++) {
       aug[e][v] = coef[e][v];
     }
     aug[e][n_var] = rhs[e];
   }
-  ModRowSpace rs = ModRowReduce(aug, p);
+  RowSpaceModP rs = ComputeRowSpaceModP(aug, p);
   for (size_t i = 0; i < rs.pivots.size(); i++) {
     if (rs.pivots[i] == n_var) {
       return {};
@@ -212,7 +213,7 @@ inline std::optional<LiftAffineSpace> LiftAffine(ModMat const &g,
   for (size_t piv : rs.pivots) {
     is_pivot[piv] = true;
   }
-  ModMat ker;
+  ModMatrix ker;
   for (size_t f = 0; f < n_var; f++) {
     if (is_pivot[f]) {
       continue;
@@ -220,7 +221,7 @@ inline std::optional<LiftAffineSpace> LiftAffine(ModMat const &g,
     std::vector<int64_t> v(n_var, 0);
     v[f] = 1;
     for (size_t i = 0; i < rs.pivots.size(); i++) {
-      v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
+      v[rs.pivots[i]] = ResMod(-rs.basis[i][f], p);
     }
     ker.push_back(v);
   }
@@ -228,7 +229,7 @@ inline std::optional<LiftAffineSpace> LiftAffine(ModMat const &g,
 }
 
 // the element g + p^j Delta, Delta = part + sum_i coef_i ker_i
-inline ModMat LiftAffineElement(ModMat const &g, LiftAffineSpace const &sp,
+inline ModMatrix LiftAffineElement(ModMatrix const &g, LiftAffineSpace const &sp,
                                 std::vector<int64_t> const &coef, int64_t p,
                                 int64_t pj) {
   size_t m = g.size();
@@ -241,27 +242,24 @@ inline ModMat LiftAffineElement(ModMat const &g, LiftAffineSpace const &sp,
       }
     }
   }
-  ModMat g2 = g;
+  ModMatrix g2 = g;
   for (size_t a = 0; a < m; a++) {
     for (size_t b = 0; b < m; b++) {
-      g2[a][b] = ModP(g[a][b] + pj * x[a * m + b], pj1);
+      g2[a][b] = ResMod(g[a][b] + pj * x[a * m + b], pj1);
     }
   }
   return g2;
 }
 
-inline std::vector<ModMat> LiftSolutions(ModMat const &g, ModMat const &A,
+inline std::vector<ModMatrix> LiftSolutions(ModMatrix const &g, ModMatrix const &A,
                                          int64_t p, int j, int64_t pj) {
   (void)j;
   std::optional<LiftAffineSpace> sp = LiftAffine(g, A, p, pj);
   if (!sp) {
     return {};
   }
-  std::vector<ModMat> res;
-  size_t n_sol = 1;
-  for (size_t i = 0; i < sp->ker.size(); i++) {
-    n_sol *= static_cast<size_t>(p);
-  }
+  std::vector<ModMatrix> res;
+  size_t n_sol = MyPow<size_t>(static_cast<size_t>(p), sp->ker.size());
   std::vector<int64_t> coef(sp->ker.size());
   for (size_t s = 0; s < n_sol; s++) {
     size_t t = s;
@@ -275,15 +273,12 @@ inline std::vector<ModMat> LiftSolutions(ModMat const &g, ModMat const &A,
 }
 
 // The solutions modulo p of g^T A g = A with g invertible, column by column.
-inline std::optional<std::vector<ModMat>>
-SolutionsModP(ModMat const &A, int64_t p, size_t max_solution,
+inline std::optional<std::vector<ModMatrix>>
+SolutionsModP(ModMatrix const &A, int64_t p, size_t max_solution,
               size_t max_node) {
   size_t m = A.size();
   std::vector<std::vector<int64_t>> vects;
-  size_t n_vect = 1;
-  for (size_t i = 0; i < m; i++) {
-    n_vect *= static_cast<size_t>(p);
-  }
+  size_t n_vect = MyPow<size_t>(static_cast<size_t>(p), m);
   for (size_t u = 0; u < n_vect; u++) {
     std::vector<int64_t> v(m);
     size_t t = u;
@@ -298,12 +293,12 @@ SolutionsModP(ModMat const &A, int64_t p, size_t max_solution,
     int64_t s = 0;
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
-        s = (s + x[a] * ModP(A[a][b], p) % p * y[b]) % p;
+        s = (s + x[a] * ResMod(A[a][b], p) % p * y[b]) % p;
       }
     }
     return s;
   };
-  std::vector<ModMat> res;
+  std::vector<ModMatrix> res;
   std::vector<std::vector<int64_t>> cols(m);
   bool overflow = false;
   size_t n_node = 0;
@@ -313,13 +308,13 @@ SolutionsModP(ModMat const &A, int64_t p, size_t max_solution,
     }
 
     if (j == m) {
-      ModMat g(m, std::vector<int64_t>(m));
+      ModMatrix g(m, std::vector<int64_t>(m));
       for (size_t a = 0; a < m; a++) {
         for (size_t b = 0; b < m; b++) {
           g[a][b] = cols[b][a];
         }
       }
-      if (ModRank(g, p) == m) {
+      if (RankModPrime(g, p) == m) {
         res.push_back(g);
         if (res.size() > max_solution) {
           overflow = true;
@@ -336,7 +331,7 @@ SolutionsModP(ModMat const &A, int64_t p, size_t max_solution,
       bool ok = true;
       for (size_t i = 0; i <= j && ok; i++) {
         std::vector<int64_t> const &w = (i == j) ? v : cols[i];
-        if (bil(w, v) != ModP(A[i][j], p)) {
+        if (bil(w, v) != ResMod(A[i][j], p)) {
           ok = false;
         }
       }
@@ -405,7 +400,7 @@ inline std::optional<int64_t> LocalImageModulus(int64_t p, int c, int e) {
   below 2^120. Beyond that they return nothing (the factor is then not
   computed), rather than overflow.
  */
-inline bool ResiduesFitInt128(ModMat const &A, int64_t p, int K) {
+inline bool ResiduesFitInt128(ModMatrix const &A, int64_t p, int K) {
   double bits = 0;
   int64_t mx = 1;
   for (auto const &row : A) {
@@ -423,8 +418,8 @@ inline bool ResiduesFitInt128(ModMat const &A, int64_t p, int K) {
   The image of O(X_p) in GL_m(Z / p^c), X with Gram matrix A (integral);
   nothing beyond the bounds.
  */
-inline std::optional<std::vector<ModMat>>
-LocalOrthogonalImage(ModMat const &A_in, int64_t p, int c, int e,
+inline std::optional<std::vector<ModMatrix>>
+LocalOrthogonalImage(ModMatrix const &A_in, int64_t p, int c, int e,
                      MultiplicityFactorBounds const &bounds) {
   int t = (p == 2) ? 1 : 0;
   int K = std::max(c + e + t, e + 2 * t + 1);
@@ -433,7 +428,7 @@ LocalOrthogonalImage(ModMat const &A_in, int64_t p, int c, int e,
   if (!optM) {
     return {};
   }
-  ModMat A = A_in;
+  ModMatrix A = A_in;
   for (auto &row : A) {
     for (auto &x : row) {
       x = CenteredModP(x, *optM);
@@ -442,17 +437,17 @@ LocalOrthogonalImage(ModMat const &A_in, int64_t p, int c, int e,
   if (!ResiduesFitInt128(A, p, K)) {
     return {};
   }
-  std::optional<std::vector<ModMat>> opt =
+  std::optional<std::vector<ModMatrix>> opt =
       SolutionsModP(A, p, bounds.max_solution, bounds.max_node);
   if (!opt) {
     return {};
   }
-  std::vector<ModMat> level = *opt;
+  std::vector<ModMatrix> level = *opt;
   int64_t pj = p;
   for (int j = 1; j < c; j++) {
-    std::vector<ModMat> next;
+    std::vector<ModMatrix> next;
     for (auto const &g : level) {
-      std::vector<ModMat> lifts = LiftSolutions(g, A, p, j, pj);
+      std::vector<ModMatrix> lifts = LiftSolutions(g, A, p, j, pj);
       next.insert(next.end(), lifts.begin(), lifts.end());
       if (next.size() > bounds.max_solution) {
         return {};
@@ -462,12 +457,12 @@ LocalOrthogonalImage(ModMat const &A_in, int64_t p, int c, int e,
     pj *= p;
   }
   // keep those that lift to level K
-  std::function<bool(ModMat const &, int, int64_t)> liftable =
-      [&](ModMat const &g, int j, int64_t pj_loc) -> bool {
+  std::function<bool(ModMatrix const &, int, int64_t)> liftable =
+      [&](ModMatrix const &g, int j, int64_t pj_loc) -> bool {
     if (j >= K) {
       return true;
     }
-    std::vector<ModMat> lifts = LiftSolutions(g, A, p, j, pj_loc);
+    std::vector<ModMatrix> lifts = LiftSolutions(g, A, p, j, pj_loc);
     for (auto const &g2 : lifts) {
       if (liftable(g2, j + 1, pj_loc * p)) {
         return true;
@@ -475,7 +470,7 @@ LocalOrthogonalImage(ModMat const &A_in, int64_t p, int c, int e,
     }
     return false;
   };
-  std::vector<ModMat> res;
+  std::vector<ModMatrix> res;
   for (auto const &g : level) {
     if (liftable(g, c, pj)) {
       res.push_back(g);
@@ -493,29 +488,12 @@ LocalOrthogonalImage(ModMat const &A_in, int64_t p, int c, int e,
   p^v reduced into [0, p^v). Two generating sets give the same form exactly
   when they generate the same subgroup.
  */
-inline ModMat HowellFormPrimePower(ModMat rows, int64_t p, int C) {
-  int64_t N = 1;
-  for (int i = 0; i < C; i++) {
-    N *= p;
-  }
+inline ModMatrix HowellFormPrimePower(ModMatrix rows, int64_t p, int C) {
+  int64_t N = MyPow<int64_t>(p, C);
   auto mulmod = [&](int64_t x, int64_t y) -> int64_t {
-    __int128 r2 = static_cast<__int128>(x) * y % N;
-    return static_cast<int64_t>((r2 < 0) ? r2 + N : r2);
+    return ResMul(x, y, N);
   };
-  auto inv_mod = [&](int64_t a) -> int64_t {
-    int64_t r0 = N, r1 = ((a % N) + N) % N, s0 = 0, s1 = 1;
-    while (r1 != 0) {
-      int64_t q = r0 / r1;
-      int64_t r2 = r0 - q * r1;
-      r0 = r1;
-      r1 = r2;
-      int64_t s2 = static_cast<int64_t>(
-          (static_cast<__int128>(s0) - static_cast<__int128>(q) * s1) % N);
-      s0 = s1;
-      s1 = s2;
-    }
-    return ((s0 % N) + N) % N;
-  };
+  auto inv_mod = [&](int64_t a) -> int64_t { return ResInv(a, N); };
   auto val = [&](int64_t x) -> int {
     if (x == 0) {
       return C;
@@ -533,8 +511,8 @@ inline ModMat HowellFormPrimePower(ModMat rows, int64_t p, int C) {
       x = ((x % N) + N) % N;
     }
   }
-  ModMat W = rows;
-  ModMat R;
+  ModMatrix W = rows;
+  ModMatrix R;
   std::vector<size_t> piv_col;
   std::vector<int> piv_val;
   for (size_t j = 0; j < r; j++) {
@@ -553,10 +531,7 @@ inline ModMat HowellFormPrimePower(ModMat rows, int64_t p, int C) {
     }
     std::vector<int64_t> pr = W[imin];
     W.erase(W.begin() + static_cast<long>(imin));
-    int64_t pv = 1;
-    for (int i = 0; i < vmin; i++) {
-      pv *= p;
-    }
+    int64_t pv = MyPow<int64_t>(p, vmin);
     // pivot p^vmin
     int64_t u = pr[j] / pv;
     int64_t ui = inv_mod(u);
@@ -592,10 +567,7 @@ inline ModMat HowellFormPrimePower(ModMat rows, int64_t p, int C) {
   // the entries above the pivots in [0, p^v)
   for (size_t i = 0; i < R.size(); i++) {
     size_t j = piv_col[i];
-    int64_t pv = 1;
-    for (int t = 0; t < piv_val[i]; t++) {
-      pv *= p;
-    }
+    int64_t pv = MyPow<int64_t>(p, piv_val[i]);
     for (size_t k = 0; k < i; k++) {
       int64_t q = R[k][j] / pv;
       if (q != 0) {
@@ -645,33 +617,16 @@ inline int MultiplicityNewtonPrecision(int64_t p) {
   columns of level >= i, which lie in it exactly. The precision decreases
   by the levels met, far above what the search uses.
  */
-inline std::pair<ModMat, std::vector<int>>
-JordanBasisModPW(ModMat const &A, int64_t p, int W) {
+inline std::pair<ModMatrix, std::vector<int>>
+JordanBasisModPW(ModMatrix const &A, int64_t p, int W) {
   size_t m = A.size();
-  int64_t pW = 1;
-  for (int i = 0; i < W; i++) {
-    pW *= p;
-  }
+  int64_t pW = MyPow<int64_t>(p, W);
   auto mulmod = [&](int64_t x, int64_t y) -> int64_t {
-    __int128 r = static_cast<__int128>(x) * y % pW;
-    return static_cast<int64_t>((r < 0) ? r + pW : r);
+    return ResMul(x, y, pW);
   };
-  auto inv_mod = [&](int64_t a) -> int64_t {
-    int64_t r0 = pW, r1 = ((a % pW) + pW) % pW, s0 = 0, s1 = 1;
-    while (r1 != 0) {
-      int64_t q = r0 / r1;
-      int64_t r2 = r0 - q * r1;
-      r0 = r1;
-      r1 = r2;
-      int64_t s2 = static_cast<int64_t>(
-          (static_cast<__int128>(s0) - static_cast<__int128>(q) * s1) % pW);
-      s0 = s1;
-      s1 = s2;
-    }
-    return ((s0 % pW) + pW) % pW;
-  };
+  auto inv_mod = [&](int64_t a) -> int64_t { return ResInv(a, pW); };
   auto val = [&](int64_t x) -> int {
-    x = ModP(x, pW);
+    x = ResMod(x, pW);
     if (x == 0) {
       return W;
     }
@@ -682,13 +637,13 @@ JordanBasisModPW(ModMat const &A, int64_t p, int W) {
     }
     return v;
   };
-  ModMat M(m, std::vector<int64_t>(m));
+  ModMatrix M(m, std::vector<int64_t>(m));
   for (size_t a = 0; a < m; a++) {
     for (size_t b = 0; b < m; b++) {
-      M[a][b] = ModP(A[a][b], pW);
+      M[a][b] = ResMod(A[a][b], pW);
     }
   }
-  ModMat P(m, std::vector<int64_t>(m, 0));
+  ModMatrix P(m, std::vector<int64_t>(m, 0));
   for (size_t a = 0; a < m; a++) {
     P[a][a] = 1;
   }
@@ -698,13 +653,13 @@ JordanBasisModPW(ModMat const &A, int64_t p, int W) {
       return;
     }
     for (size_t u = 0; u < m; u++) {
-      M[u][b] = ModP(M[u][b] + mulmod(f, M[u][a]), pW);
+      M[u][b] = ResMod(M[u][b] + mulmod(f, M[u][a]), pW);
     }
     for (size_t u = 0; u < m; u++) {
-      M[b][u] = ModP(M[b][u] + mulmod(f, M[a][u]), pW);
+      M[b][u] = ResMod(M[b][u] + mulmod(f, M[a][u]), pW);
     }
     for (size_t u = 0; u < m; u++) {
-      P[u][b] = ModP(P[u][b] + mulmod(f, P[u][a]), pW);
+      P[u][b] = ResMod(P[u][b] + mulmod(f, P[u][a]), pW);
     }
   };
   auto swap_idx = [&](size_t a, size_t b) -> void {
@@ -754,10 +709,7 @@ JordanBasisModPW(ModMat const &A, int64_t p, int W) {
       add(ia, ib, 1);
       diag = ia;
     }
-    int64_t pv = 1;
-    for (int i = 0; i < vmin; i++) {
-      pv *= p;
-    }
+    int64_t pv = MyPow<int64_t>(p, vmin);
     if (diag != m) {
       swap_idx(diag, start);
       int64_t u0 = M[start][start] / pv;
@@ -767,7 +719,7 @@ JordanBasisModPW(ModMat const &A, int64_t p, int W) {
           continue;
         }
         int64_t q = M[start][b] / pv;
-        add(b, start, ModP(-mulmod(q, iu), pW));
+        add(b, start, ResMod(-mulmod(q, iu), pW));
       }
       levels[start] = vmin;
       start++;
@@ -786,7 +738,7 @@ JordanBasisModPW(ModMat const &A, int64_t p, int W) {
     swap_idx(ib, start + 1);
     int64_t x = M[start][start] / pv, y = M[start][start + 1] / pv,
             z = M[start + 1][start + 1] / pv;
-    int64_t det = ModP(mulmod(x, z) - mulmod(y, y), pW);
+    int64_t det = ResMod(mulmod(x, z) - mulmod(y, y), pW);
     int64_t idet = inv_mod(det);
     for (size_t c = start + 2; c < m; c++) {
       int64_t r1 = M[start][c] / pv, r2 = M[start + 1][c] / pv;
@@ -794,8 +746,8 @@ JordanBasisModPW(ModMat const &A, int64_t p, int W) {
         continue;
       }
       // (f1, f2) = -B^{-1} (r1, r2), B^{-1} = [[z, -y], [-y, x]] / det
-      int64_t f1 = ModP(-mulmod(idet, ModP(mulmod(z, r1) - mulmod(y, r2), pW)), pW);
-      int64_t f2 = ModP(-mulmod(idet, ModP(mulmod(x, r2) - mulmod(y, r1), pW)), pW);
+      int64_t f1 = ResMod(-mulmod(idet, ResMod(mulmod(z, r1) - mulmod(y, r2), pW)), pW);
+      int64_t f2 = ResMod(-mulmod(idet, ResMod(mulmod(x, r2) - mulmod(y, r1), pW)), pW);
       add(c, start, f1);
       add(c, start + 1, f2);
     }
@@ -809,10 +761,10 @@ JordanBasisModPW(ModMat const &A, int64_t p, int W) {
       __int128 sacc = 0;
       for (size_t k = 0; k < m; k++) {
         for (size_t l = 0; l < m; l++) {
-          sacc = (sacc + static_cast<__int128>(P[k][a]) * ModP(A[k][l], pW) % pW * P[l][b]) % pW;
+          sacc = (sacc + static_cast<__int128>(P[k][a]) * ResMod(A[k][l], pW) % pW * P[l][b]) % pW;
         }
       }
-      if (ModP(static_cast<int64_t>(sacc), pW) != M[a][b]) {
+      if (ResMod(static_cast<int64_t>(sacc), pW) != M[a][b]) {
         std::cerr << "JORDAN: P^T A P differs from the reduced matrix at " << a
                   << "," << b << "\n";
         throw TerminalException{1};
@@ -901,11 +853,11 @@ IntegralLieLatticeColumns(MyMatrix<T> const &A,
 // Integer matrices as residues modulo M, for the Lie lattice given to
 // LocalOrthogonalImageGenerators.
 template <typename Tint>
-std::vector<ModMat> ResidueMatrices(std::vector<MyMatrix<Tint>> const &l,
+std::vector<ModMatrix> ResidueMatrices(std::vector<MyMatrix<Tint>> const &l,
                                     int64_t M) {
-  std::vector<ModMat> res;
+  std::vector<ModMatrix> res;
   for (auto const &Y : l) {
-    ModMat R(Y.rows(), std::vector<int64_t>(Y.cols()));
+    ModMatrix R(Y.rows(), std::vector<int64_t>(Y.cols()));
     for (int a = 0; a < Y.rows(); a++) {
       for (int b = 0; b < Y.cols(); b++) {
         R[a][b] = ResModOf(Y(a, b), M);
@@ -922,42 +874,31 @@ std::vector<ModMat> ResidueMatrices(std::vector<MyMatrix<Tint>> const &l,
   odd and 2 for p = 2, modulo p^c, on the columns; the exponents of the
   layers are added to layer_exp.
  */
-inline std::vector<ModMat> CayleyLayerGenerators(std::vector<ModMat> const &Lie,
+inline std::vector<ModMatrix> CayleyLayerGenerators(std::vector<ModMatrix> const &Lie,
                                                  int64_t p, int c,
                                                  size_t &layer_exp) {
-  std::vector<ModMat> res;
+  std::vector<ModMatrix> res;
   int64_t pc = ResiduePrimePower(p, c);
   int j0 = (p == 2) ? 2 : 1;
   for (int j = j0; j < c; j++) {
     int64_t scale = ResiduePrimePower(p, (p == 2) ? j - 1 : j);
     for (auto const &Y0 : Lie) {
       size_t m = Y0.size();
-      ModMat Y(m, std::vector<int64_t>(m));
+      ModMatrix Y(m, std::vector<int64_t>(m));
       for (size_t a = 0; a < m; a++) {
         for (size_t b = 0; b < m; b++) {
           Y[a][b] = ResMul(ResMod(Y0[a][b], pc), ResMod(scale, pc), pc);
         }
       }
-      auto mul = [&](ModMat const &X, ModMat const &Z) -> ModMat {
-        ModMat R(m, std::vector<int64_t>(m, 0));
-        for (size_t a = 0; a < m; a++) {
-          for (size_t k = 0; k < m; k++) {
-            if (X[a][k] == 0) {
-              continue;
-            }
-            for (size_t b = 0; b < m; b++) {
-              R[a][b] = ResAdd(R[a][b], ResMul(X[a][k], Z[k][b], pc), pc);
-            }
-          }
-        }
-        return R;
+      auto mul = [&](ModMatrix const &X, ModMatrix const &Z) -> ModMatrix {
+        return ModMatrixProduct(X, Z, pc);
       };
       // (1 - Y)^{-1} = sum_{k < c} Y^k, Y being divisible by p
-      ModMat Id(m, std::vector<int64_t>(m, 0));
+      ModMatrix Id(m, std::vector<int64_t>(m, 0));
       for (size_t a = 0; a < m; a++) {
         Id[a][a] = ResMod(1, pc);
       }
-      ModMat inv = Id, pw = Id;
+      ModMatrix inv = Id, pw = Id;
       for (int k = 1; k < c; k++) {
         pw = mul(pw, Y);
         for (size_t a = 0; a < m; a++) {
@@ -966,7 +907,7 @@ inline std::vector<ModMat> CayleyLayerGenerators(std::vector<ModMat> const &Lie,
           }
         }
       }
-      ModMat onePlus = Id;
+      ModMatrix onePlus = Id;
       for (size_t a = 0; a < m; a++) {
         for (size_t b = 0; b < m; b++) {
           onePlus[a][b] = ResAdd(onePlus[a][b], Y[a][b], pc);
@@ -1013,9 +954,9 @@ inline std::vector<ModMat> CayleyLayerGenerators(std::vector<ModMat> const &Lie,
   lengths and of the orders of the layers (order, when asked). Nothing
   beyond the bounds.
  */
-inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
-    ModMat const &A, ModMat const &Be, std::vector<ModMat> const &Om,
-    std::vector<ModMat> const &Lam, std::vector<ModMat> const &Bil, int64_t p,
+inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsCore(
+    ModMatrix const &A, ModMatrix const &Be, std::vector<ModMatrix> const &Om,
+    std::vector<ModMatrix> const &Lam, std::vector<ModMatrix> const &Bil, int64_t p,
     int c, int e, std::vector<int> const &levels, int layer_max,
     MultiplicityFactorBounds const &bounds, LocalImageOrder *order) {
   size_t m = A.size();
@@ -1034,14 +975,11 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       small_space = false;
     }
   }
-  int64_t pc = 1;
-  for (int i = 0; i < c; i++) {
-    pc *= p;
-  }
-  ModMat Ap(m, std::vector<int64_t>(m));
+  int64_t pc = MyPow<int64_t>(p, c);
+  ModMatrix Ap(m, std::vector<int64_t>(m));
   for (size_t a = 0; a < m; a++) {
     for (size_t b = 0; b < m; b++) {
-      Ap[a][b] = ModP(A[a][b], p);
+      Ap[a][b] = ResMod(A[a][b], p);
     }
   }
   auto bil = [&](std::vector<int64_t> const &x,
@@ -1064,47 +1002,19 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     return {};
   }
   // the inverse of a modulo M, gcd(a, M) = 1
-  auto inv_mod = [](int64_t a, int64_t M) -> int64_t {
-    int64_t r0 = M, r1 = ((a % M) + M) % M, s0 = 0, s1 = 1;
-    while (r1 != 0) {
-      int64_t q = r0 / r1;
-      int64_t r2 = r0 - q * r1;
-      r0 = r1;
-      r1 = r2;
-      int64_t s2 = static_cast<int64_t>(
-          (static_cast<__int128>(s0) - static_cast<__int128>(q) * s1) % M);
-      s0 = s1;
-      s1 = s2;
-    }
-    return ((s0 % M) + M) % M;
-  };
+  auto inv_mod = [](int64_t a, int64_t M) -> int64_t { return ResInv(a, M); };
   auto pow_p = [&](int k) -> int64_t {
-    int64_t r = 1;
-    for (int i = 0; i < k; i++) {
-      r *= p;
-    }
+    int64_t r = MyPow<int64_t>(p, k);
     return r;
   };
   auto mulmod = [](int64_t x, int64_t y, int64_t M) -> int64_t {
-    __int128 r = static_cast<__int128>(x) * y % M;
-    return static_cast<int64_t>((r < 0) ? r + M : r);
+    return ResMul(x, y, M);
   };
-  auto matmul = [&](ModMat const &X, ModMat const &Y, int64_t M) -> ModMat {
-    ModMat Z(m, std::vector<int64_t>(m, 0));
-    for (size_t a = 0; a < m; a++) {
-      for (size_t k = 0; k < m; k++) {
-        if (X[a][k] == 0) {
-          continue;
-        }
-        for (size_t b = 0; b < m; b++) {
-          Z[a][b] = (Z[a][b] + mulmod(X[a][k], Y[k][b], M)) % M;
-        }
-      }
-    }
-    return Z;
+  auto matmul = [](ModMatrix const &X, ModMatrix const &Y, int64_t M) -> ModMatrix {
+    return ModMatrixProduct(X, Y, M);
   };
-  auto transpose = [&](ModMat const &X) -> ModMat {
-    ModMat Z(m, std::vector<int64_t>(m));
+  auto transpose = [&](ModMatrix const &X) -> ModMatrix {
+    ModMatrix Z(m, std::vector<int64_t>(m));
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
         Z[a][b] = X[b][a];
@@ -1112,21 +1022,21 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     return Z;
   };
-  auto reduce = [&](ModMat X, int64_t M) -> ModMat {
+  auto reduce = [&](ModMatrix X, int64_t M) -> ModMatrix {
     for (auto &row : X) {
       for (auto &x : row) {
-        x = ModP(x, M);
+        x = ResMod(x, M);
       }
     }
     return X;
   };
   // the inverse modulo p^k of g, invertible modulo p: modulo p by Gauss,
   // then X <- X (2 - g X)
-  auto inverse_mod = [&](ModMat const &g, int k) -> std::optional<ModMat> {
-    ModMat aug(m, std::vector<int64_t>(2 * m, 0));
+  auto inverse_mod = [&](ModMatrix const &g, int k) -> std::optional<ModMatrix> {
+    ModMatrix aug(m, std::vector<int64_t>(2 * m, 0));
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
-        aug[a][b] = ModP(g[a][b], p);
+        aug[a][b] = ResMod(g[a][b], p);
       }
       aug[a][m + a] = 1;
     }
@@ -1147,12 +1057,12 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         if (a != col && aug[a][col] != 0) {
           int64_t f0 = aug[a][col];
           for (size_t b = 0; b < 2 * m; b++) {
-            aug[a][b] = ModP(aug[a][b] - f0 * aug[col][b], p);
+            aug[a][b] = ResMod(aug[a][b] - f0 * aug[col][b], p);
           }
         }
       }
     }
-    ModMat X(m, std::vector<int64_t>(m));
+    ModMatrix X(m, std::vector<int64_t>(m));
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
         X[a][b] = aug[a][m + b];
@@ -1162,10 +1072,10 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     while (prec < k) {
       prec = std::min(2 * prec, k);
       int64_t M = pow_p(prec);
-      ModMat gX = matmul(reduce(g, M), X, M);
+      ModMatrix gX = matmul(reduce(g, M), X, M);
       for (size_t a = 0; a < m; a++) {
         for (size_t b = 0; b < m; b++) {
-          gX[a][b] = ModP(((a == b) ? 2 : 0) - gX[a][b], M);
+          gX[a][b] = ResMod(((a == b) ? 2 : 0) - gX[a][b], M);
         }
       }
       X = matmul(X, gX, M);
@@ -1173,13 +1083,13 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     return X;
   };
   // the valuation of g^T A g - A, up to k
-  auto error_val = [&](ModMat const &g, int k) -> int {
+  auto error_val = [&](ModMatrix const &g, int k) -> int {
     int64_t M = pow_p(k);
-    ModMat E = matmul(transpose(g), matmul(reduce(A, M), g, M), M);
+    ModMatrix E = matmul(transpose(g), matmul(reduce(A, M), g, M), M);
     int v = k;
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
-        int64_t x = ModP(E[a][b] - A[a][b], M);
+        int64_t x = ResMod(E[a][b] - A[a][b], M);
         int vx = 0;
         while (vx < k && x % p == 0) {
           x /= p;
@@ -1194,7 +1104,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // isometry known modulo p^c, the steps g -> g - (1/2) A^{-1} g^{-T} E,
   // A^{-1} = Be / p^e, the precision of the representatives decreasing by
   // e + t at each step
-  auto newton = [&](ModMat g) -> std::optional<ModMat> {
+  auto newton = [&](ModMatrix g) -> std::optional<ModMatrix> {
     int prec = W;
     for (int it = 0; it < 64; it++) {
       int v = error_val(g, prec);
@@ -1205,17 +1115,17 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         return {};
       }
       int64_t M = pow_p(prec);
-      std::optional<ModMat> gi = inverse_mod(g, prec);
+      std::optional<ModMatrix> gi = inverse_mod(g, prec);
       if (!gi) {
         return {};
       }
-      ModMat E = matmul(transpose(g), matmul(reduce(A, M), g, M), M);
+      ModMatrix E = matmul(transpose(g), matmul(reduce(A, M), g, M), M);
       for (size_t a = 0; a < m; a++) {
         for (size_t b = 0; b < m; b++) {
-          E[a][b] = ModP(E[a][b] - A[a][b], M);
+          E[a][b] = ResMod(E[a][b] - A[a][b], M);
         }
       }
-      ModMat F = matmul(reduce(Be, M), matmul(transpose(*gi), E, M), M);
+      ModMatrix F = matmul(reduce(Be, M), matmul(transpose(*gi), E, M), M);
       // F / p^e (/ 2 when p = 2) holds modulo p^{prec - e - t}
       int64_t div = pow_p(e + t);
       int nprec = prec - e - t;
@@ -1229,7 +1139,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
           }
           x = (x / div) % NM;
           x = mulmod(x, inv2, NM);
-          g[a][b] = ModP(g[a][b] - x, NM);
+          g[a][b] = ResMod(g[a][b] - x, NM);
         }
       }
       prec = nprec;
@@ -1240,22 +1150,22 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // in Lam mod p: the system of MakeLiftSystem restricted to the
   // coordinates of Lam, its solutions written back as matrices.
   size_t d_lam = Lam.size();
-  ModMat Mlam;  // m^2 x d_lam, the vec of the Lam_lambda modulo p
+  ModMatrix Mlam;  // m^2 x d_lam, the vec of the Lam_lambda modulo p
   if (d_lam > 0) {
     Mlam.assign(m * m, std::vector<int64_t>(d_lam, 0));
     for (size_t l = 0; l < d_lam; l++) {
       for (size_t a2 = 0; a2 < m; a2++) {
         for (size_t b2 = 0; b2 < m; b2++) {
-          Mlam[a2 * m + b2][l] = ModP(Lam[l][a2][b2], p);
+          Mlam[a2 * m + b2][l] = ResMod(Lam[l][a2][b2], p);
         }
       }
     }
   }
-  auto restrict_coef = [&](ModMat const &coef) -> ModMat {
+  auto restrict_coef = [&](ModMatrix const &coef) -> ModMatrix {
     if (d_lam == 0) {
       return coef;
     }
-    ModMat res(coef.size(), std::vector<int64_t>(d_lam, 0));
+    ModMatrix res(coef.size(), std::vector<int64_t>(d_lam, 0));
     for (size_t r2 = 0; r2 < coef.size(); r2++) {
       for (size_t v = 0; v < m * m; v++) {
         if (coef[r2][v] == 0) {
@@ -1280,20 +1190,20 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     return x;
   };
-  auto lift_aff = [&](ModMat const &g,
+  auto lift_aff = [&](ModMatrix const &g,
                       int64_t pjl) -> std::optional<LiftAffineSpace> {
     if (d_lam == 0) {
       return LiftAffine(g, A, p, pjl);
     }
     LiftSystem sys = MakeLiftSystem(g, A, p, pjl);
-    ModMat cf = restrict_coef(sys.coef);
-    ModMat aug;
+    ModMatrix cf = restrict_coef(sys.coef);
+    ModMatrix aug;
     for (size_t r2 = 0; r2 < cf.size(); r2++) {
       std::vector<int64_t> row = cf[r2];
       row.push_back(sys.rhs[r2]);
       aug.push_back(row);
     }
-    ModRowSpace rs = ModRowReduce(aug, p);
+    RowSpaceModP rs = ComputeRowSpaceModP(aug, p);
     for (size_t piv : rs.pivots) {
       if (piv == d_lam) {
         return {};
@@ -1316,7 +1226,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       std::vector<int64_t> v(d_lam, 0);
       v[f] = 1;
       for (size_t i2 = 0; i2 < rs.pivots.size(); i2++) {
-        v[rs.pivots[i2]] = ModP(-rs.basis[i2][f], p);
+        v[rs.pivots[i2]] = ResMod(-rs.basis[i2][f], p);
       }
       res.ker.push_back(to_matrix_vec(v));
     }
@@ -1327,10 +1237,10 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // modulo p^k, then the combination of the Lam_lambda modulo p^W
   std::vector<size_t> lam_rows;
   if (d_lam > 0) {
-    ModMat test;
+    ModMatrix test;
     for (size_t v = 0; v < m * m && lam_rows.size() < d_lam; v++) {
       test.push_back(Mlam[v]);
-      if (ModRank(test, p) == test.size()) {
+      if (RankModPrime(test, p) == test.size()) {
         lam_rows.push_back(v);
       } else {
         test.pop_back();
@@ -1343,31 +1253,31 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   int64_t pWfull = pow_p(W);
   // the inverse modulo p^k of the matrix S of the chosen rows of Lam,
   // computed once for each k (project is called at every node)
-  std::map<int, ModMat> sinv_cache;
-  auto lam_sinv = [&](int k) -> ModMat const & {
+  std::map<int, ModMatrix> sinv_cache;
+  auto lam_sinv = [&](int k) -> ModMatrix const & {
     auto iter = sinv_cache.find(k);
     if (iter != sinv_cache.end()) {
       return iter->second;
     }
     int64_t M = pow_p(k);
     // S: the d x d matrix of the chosen rows, its inverse modulo p^k
-    ModMat S(d_lam, std::vector<int64_t>(d_lam));
+    ModMatrix S(d_lam, std::vector<int64_t>(d_lam));
     for (size_t r2 = 0; r2 < d_lam; r2++) {
       size_t v = lam_rows[r2];
       for (size_t l = 0; l < d_lam; l++) {
-        S[r2][l] = ModP(Lam[l][v / m][v % m], M);
+        S[r2][l] = ResMod(Lam[l][v / m][v % m], M);
       }
     }
     // the inverse modulo p, then Newton
-    ModMat aug(d_lam, std::vector<int64_t>(2 * d_lam, 0));
+    ModMatrix aug(d_lam, std::vector<int64_t>(2 * d_lam, 0));
     for (size_t r2 = 0; r2 < d_lam; r2++) {
       for (size_t l = 0; l < d_lam; l++) {
-        aug[r2][l] = ModP(S[r2][l], p);
+        aug[r2][l] = ResMod(S[r2][l], p);
       }
       aug[r2][d_lam + r2] = 1;
     }
-    ModRowSpace rr = ModRowReduce(aug, p);
-    ModMat Sinv(d_lam, std::vector<int64_t>(d_lam));
+    RowSpaceModP rr = ComputeRowSpaceModP(aug, p);
+    ModMatrix Sinv(d_lam, std::vector<int64_t>(d_lam));
     for (size_t r2 = 0; r2 < d_lam; r2++) {
       for (size_t l = 0; l < d_lam; l++) {
         Sinv[r2][l] = rr.basis[r2][d_lam + l];
@@ -1377,20 +1287,20 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     while (prec2 < k) {
       prec2 = std::min(2 * prec2, k);
       int64_t M2 = pow_p(prec2);
-      ModMat SX(d_lam, std::vector<int64_t>(d_lam, 0));
+      ModMatrix SX(d_lam, std::vector<int64_t>(d_lam, 0));
       for (size_t a2 = 0; a2 < d_lam; a2++) {
         for (size_t k2 = 0; k2 < d_lam; k2++) {
           for (size_t b2 = 0; b2 < d_lam; b2++) {
-            SX[a2][b2] = (SX[a2][b2] + mulmod(ModP(S[a2][k2], M2), Sinv[k2][b2], M2)) % M2;
+            SX[a2][b2] = (SX[a2][b2] + mulmod(ResMod(S[a2][k2], M2), Sinv[k2][b2], M2)) % M2;
           }
         }
       }
       for (size_t a2 = 0; a2 < d_lam; a2++) {
         for (size_t b2 = 0; b2 < d_lam; b2++) {
-          SX[a2][b2] = ModP(((a2 == b2) ? 2 : 0) - SX[a2][b2], M2);
+          SX[a2][b2] = ResMod(((a2 == b2) ? 2 : 0) - SX[a2][b2], M2);
         }
       }
-      ModMat NS(d_lam, std::vector<int64_t>(d_lam, 0));
+      ModMatrix NS(d_lam, std::vector<int64_t>(d_lam, 0));
       for (size_t a2 = 0; a2 < d_lam; a2++) {
         for (size_t k2 = 0; k2 < d_lam; k2++) {
           for (size_t b2 = 0; b2 < d_lam; b2++) {
@@ -1402,24 +1312,24 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     return sinv_cache.emplace(k, Sinv).first->second;
   };
-  auto project = [&](ModMat const &g, int k) -> ModMat {
+  auto project = [&](ModMatrix const &g, int k) -> ModMatrix {
     if (d_lam == 0) {
       return g;
     }
     int64_t M = pow_p(k);
-    ModMat const &Sinv = lam_sinv(k);
+    ModMatrix const &Sinv = lam_sinv(k);
     std::vector<int64_t> coefs(d_lam, 0);
     for (size_t l = 0; l < d_lam; l++) {
       for (size_t r2 = 0; r2 < d_lam; r2++) {
         size_t v = lam_rows[r2];
-        coefs[l] = (coefs[l] + mulmod(Sinv[l][r2], ModP(g[v / m][v % m], M), M)) % M;
+        coefs[l] = (coefs[l] + mulmod(Sinv[l][r2], ResMod(g[v / m][v % m], M), M)) % M;
       }
     }
-    ModMat h(m, std::vector<int64_t>(m, 0));
+    ModMatrix h(m, std::vector<int64_t>(m, 0));
     for (size_t l = 0; l < d_lam; l++) {
       for (size_t a2 = 0; a2 < m; a2++) {
         for (size_t b2 = 0; b2 < m; b2++) {
-          h[a2][b2] = (h[a2][b2] + mulmod(coefs[l], ModP(Lam[l][a2][b2], pWfull), pWfull)) % pWfull;
+          h[a2][b2] = (h[a2][b2] + mulmod(coefs[l], ResMod(Lam[l][a2][b2], pWfull), pWfull)) % pWfull;
         }
       }
     }
@@ -1427,9 +1337,9 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   };
   // a solution modulo p^target extending the solution g modulo p^j, the
   // first found by a depth-first search over the affine spaces
-  std::function<std::optional<ModMat>(ModMat const &, int, int64_t, int)>
-      extend = [&](ModMat const &g, int j, int64_t pjl,
-                   int target) -> std::optional<ModMat> {
+  std::function<std::optional<ModMatrix>(ModMatrix const &, int, int64_t, int)>
+      extend = [&](ModMatrix const &g, int j, int64_t pjl,
+                   int target) -> std::optional<ModMatrix> {
     if (j >= target) {
       return g;
     }
@@ -1439,7 +1349,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     // with a commutant, g in Lam modulo p^{j+1} (it is modulo p^j), so that
     // the lifts g + p^j Delta, Delta in Lam, are in Lam modulo p^{j+1}
-    ModMat gl = (d_lam > 0) ? reduce(project(g, j), pjl * p) : g;
+    ModMatrix gl = (d_lam > 0) ? reduce(project(g, j), pjl * p) : g;
     std::optional<LiftAffineSpace> sp = lift_aff(gl, pjl);
     if (!sp) {
       return {};
@@ -1459,26 +1369,26 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     if (j + 1 < target && dim > 0) {
       int64_t pj1 = pjl * p;
       auto next_sys = [&](std::vector<int64_t> const &cf0) -> LiftSystem {
-        ModMat g2 = LiftAffineElement(gl, *sp, cf0, p, pjl);
-        ModMat gp = (d_lam > 0) ? reduce(project(g2, j + 1), pj1 * p) : g2;
+        ModMatrix g2 = LiftAffineElement(gl, *sp, cf0, p, pjl);
+        ModMatrix gp = (d_lam > 0) ? reduce(project(g2, j + 1), pj1 * p) : g2;
         return MakeLiftSystem(gp, A, p, pj1);
       };
       LiftSystem sys0 = next_sys(std::vector<int64_t>(dim, 0));
-      ModMat cf = restrict_coef(sys0.coef);
+      ModMatrix cf = restrict_coef(sys0.coef);
       size_t n_eq = cf.size();
       size_t n_var = cf.empty() ? 0 : cf[0].size();
-      ModMat cfT(n_var, std::vector<int64_t>(n_eq));
+      ModMatrix cfT(n_var, std::vector<int64_t>(n_eq));
       for (size_t a = 0; a < n_eq; a++) {
         for (size_t b = 0; b < n_var; b++) {
           cfT[b][a] = cf[a][b];
         }
       }
-      ModRowSpace rsT = ModRowReduce(cfT, p);
+      RowSpaceModP rsT = ComputeRowSpaceModP(cfT, p);
       std::vector<bool> is_piv(n_eq, false);
       for (size_t pv : rsT.pivots) {
         is_piv[pv] = true;
       }
-      ModMat L;
+      ModMatrix L;
       for (size_t f = 0; f < n_eq; f++) {
         if (is_piv[f]) {
           continue;
@@ -1486,13 +1396,13 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         std::vector<int64_t> v(n_eq, 0);
         v[f] = 1;
         for (size_t i2 = 0; i2 < rsT.pivots.size(); i2++) {
-          v[rsT.pivots[i2]] = ModP(-rsT.basis[i2][f], p);
+          v[rsT.pivots[i2]] = ResMod(-rsT.basis[i2][f], p);
         }
         L.push_back(v);
       }
       auto residual = [&](std::vector<int64_t> const &cf0) -> std::vector<int64_t> {
-        ModMat g2 = LiftAffineElement(gl, *sp, cf0, p, pjl);
-        ModMat gp = (d_lam > 0) ? reduce(project(g2, j + 1), pj1 * p) : g2;
+        ModMatrix g2 = LiftAffineElement(gl, *sp, cf0, p, pjl);
+        ModMatrix gp = (d_lam > 0) ? reduce(project(g2, j + 1), pj1 * p) : g2;
         std::vector<int64_t> rv = LiftRhs(gp, A, p, pj1);
         std::vector<int64_t> r(L.size(), 0);
         for (size_t k2 = 0; k2 < L.size(); k2++) {
@@ -1525,7 +1435,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
           ci[k2] = (ci[k2] + 1) % p;
           std::vector<int64_t> rik = residual(ci);
           for (size_t a = 0; a < L.size(); a++) {
-            if (ModP(rik[a] - ri[i][a] - ri[k2][a] + r0[a], p) != 0) {
+            if (ResMod(rik[a] - ri[i][a] - ri[k2][a] + r0[a], p) != 0) {
               affine_r = false;
             }
           }
@@ -1538,19 +1448,19 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       }
       if (affine_r) {
         // sum_i c_i (r_i - r_0) = -r_0
-        ModMat aug;
+        ModMatrix aug;
         for (size_t a = 0; a < L.size(); a++) {
           std::vector<int64_t> row(dim + 1);
           for (size_t i = 0; i < dim; i++) {
-            row[i] = ModP(ri[i][a] - r0[a], p);
+            row[i] = ResMod(ri[i][a] - r0[a], p);
           }
-          row[dim] = ModP(-r0[a], p);
+          row[dim] = ResMod(-r0[a], p);
           aug.push_back(row);
         }
         LiftAffineSpace gs;
         gs.part.assign(dim, 0);
         if (!aug.empty()) {
-          ModRowSpace rs = ModRowReduce(aug, p);
+          RowSpaceModP rs = ComputeRowSpaceModP(aug, p);
           for (size_t pv : rs.pivots) {
             if (pv == dim) {
               return {};
@@ -1568,7 +1478,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
             std::vector<int64_t> v(dim, 0);
             v[f] = 1;
             for (size_t i2 = 0; i2 < rs.pivots.size(); i2++) {
-              v[rs.pivots[i2]] = ModP(-rs.basis[i2][f], p);
+              v[rs.pivots[i2]] = ResMod(-rs.basis[i2][f], p);
             }
             gs.ker.push_back(v);
           }
@@ -1601,7 +1511,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     size_t dim_s = good ? good->ker.size() : dim;
     std::vector<int64_t> coef(dim_s, 0);
     while (!over) {
-      std::optional<ModMat> r = extend(
+      std::optional<ModMatrix> r = extend(
           LiftAffineElement(gl, *sp, to_coef(coef), p, pjl), j + 1, pjl * p,
           target);
       if (r) {
@@ -1622,14 +1532,14 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // the element of G (modulo p^c) congruent to the solution g modulo p^j,
   // when there is one: a solution modulo p^k, k = max(j + e + t, e + 2t +
   // 1), extending g, then Newton
-  auto lift_path = [&](ModMat const &g, int j,
-                       int64_t pjl) -> std::optional<ModMat> {
+  auto lift_path = [&](ModMatrix const &g, int j,
+                       int64_t pjl) -> std::optional<ModMatrix> {
     int target = std::max(j + e + t, e + 2 * t + 1);
-    std::optional<ModMat> sol = extend(g, j, pjl, target);
+    std::optional<ModMatrix> sol = extend(g, j, pjl, target);
     if (!sol) {
       return {};
     }
-    std::optional<ModMat> h = newton(project(*sol, target));
+    std::optional<ModMatrix> h = newton(project(*sol, target));
     if (!h) {
       std::cerr << "MULT_FACTOR: Newton did not converge\n";
       throw TerminalException{1};
@@ -1639,9 +1549,9 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // the affine space {x : fixed_k x = rhs_k}, the fixed_k linear forms
   auto affine = [&](std::vector<std::vector<int64_t>> const &fixed,
                     std::vector<int64_t> const &rhs)
-      -> std::optional<std::pair<std::vector<int64_t>, ModMat>> {
+      -> std::optional<std::pair<std::vector<int64_t>, ModMatrix>> {
     if (fixed.empty()) {
-      ModMat ker;
+      ModMatrix ker;
       for (size_t v = 0; v < m; v++) {
         std::vector<int64_t> e1(m, 0);
         e1[v] = 1;
@@ -1649,16 +1559,16 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       }
       return std::make_pair(std::vector<int64_t>(m, 0), ker);
     }
-    ModMat aug;
+    ModMatrix aug;
     for (size_t k = 0; k < fixed.size(); k++) {
       std::vector<int64_t> row(m + 1, 0);
       for (size_t b = 0; b < m; b++) {
         row[b] = fixed[k][b];
       }
-      row[m] = ModP(rhs[k], p);
+      row[m] = ResMod(rhs[k], p);
       aug.push_back(row);
     }
-    ModRowSpace rs = ModRowReduce(aug, p);
+    RowSpaceModP rs = ComputeRowSpaceModP(aug, p);
     for (size_t piv : rs.pivots) {
       if (piv == m) {
         return {};
@@ -1672,7 +1582,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     for (size_t pv : rs.pivots) {
       is_piv[pv] = true;
     }
-    ModMat ker;
+    ModMatrix ker;
     for (size_t f = 0; f < m; f++) {
       if (is_piv[f]) {
         continue;
@@ -1680,7 +1590,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       std::vector<int64_t> v(m, 0);
       v[f] = 1;
       for (size_t i = 0; i < rs.pivots.size(); i++) {
-        v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
+        v[rs.pivots[i]] = ResMod(-rs.basis[i][f], p);
       }
       ker.push_back(v);
     }
@@ -1688,7 +1598,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   };
   // f(x) for the x of the affine space with B(x, x) = q, until f is true
   auto for_each_vector =
-      [&](std::pair<std::vector<int64_t>, ModMat> const &sp, int64_t q,
+      [&](std::pair<std::vector<int64_t>, ModMatrix> const &sp, int64_t q,
           std::function<bool(std::vector<int64_t> const &)> const &f) -> void {
     size_t dim = sp.second.size();
     std::vector<int64_t> coef(dim, 0);
@@ -1728,10 +1638,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // B(y_k, y) modulo p^{l + 1} only when l_k = l_j = l; between different
   // levels nothing beyond the conditions modulo p.
   auto ppow = [&](int k) -> __int128 {
-    __int128 r = 1;
-    for (int i2 = 0; i2 < k; i2++) {
-      r *= p;
-    }
+    __int128 r = MyPow<__int128>(p, k);
     return r;
   };
   auto pair_mod = [&](std::vector<int64_t> const &u,
@@ -1811,7 +1718,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     Omc[w].assign(m, std::vector<int64_t>(m));
     for (size_t a2 = 0; a2 < m; a2++) {
       for (size_t b2 = 0; b2 < m; b2++) {
-        Omc[w][a2][b2] = ModP(Om[w][a2][b2], p);
+        Omc[w][a2][b2] = ResMod(Om[w][a2][b2], p);
       }
     }
   }
@@ -1819,12 +1726,12 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // B(w x, y) for w in the trace dual of the order acting): the conditions
   // y_k^T N y = N_kj modulo p, sharper than those of Om where the order is
   // ramified
-  std::vector<ModMat> Bilp;
+  std::vector<ModMatrix> Bilp;
   for (auto const &N : Bil) {
-    ModMat Np(m, std::vector<int64_t>(m));
+    ModMatrix Np(m, std::vector<int64_t>(m));
     for (size_t a2 = 0; a2 < m; a2++) {
       for (size_t b2 = 0; b2 < m; b2++) {
-        Np[a2][b2] = ModP(N[a2][b2], p);
+        Np[a2][b2] = ResMod(N[a2][b2], p);
       }
     }
     Bilp.push_back(Np);
@@ -1843,13 +1750,13 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   std::vector<std::vector<std::tuple<size_t, size_t, int64_t>>> forced_combo(m);
   if (n_om > 0) {
     std::vector<std::pair<size_t, size_t>> labels;
-    ModMat span;
+    ModMatrix span;
     for (size_t j = 0; j < m; j++) {
       std::vector<int64_t> ej(m, 0);
       ej[j] = 1;
       if (!span.empty()) {
         // solve sum c_r span_r = e_j
-        ModMat aug(m, std::vector<int64_t>(span.size() + 1, 0));
+        ModMatrix aug(m, std::vector<int64_t>(span.size() + 1, 0));
         for (size_t r2 = 0; r2 < span.size(); r2++) {
           for (size_t a2 = 0; a2 < m; a2++) {
             aug[a2][r2] = span[r2][a2];
@@ -1858,7 +1765,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         for (size_t a2 = 0; a2 < m; a2++) {
           aug[a2][span.size()] = ej[a2];
         }
-        ModRowSpace rs = ModRowReduce(aug, p);
+        RowSpaceModP rs = ComputeRowSpaceModP(aug, p);
         bool solvable = true;
         for (size_t pv : rs.pivots) {
           if (pv == span.size()) {
@@ -1921,7 +1828,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // Lam modulo p when adding vec(g) keeps the rank. Commuting with Om
   // modulo p is weaker when Om modulo p spans less than the order it
   // generates over Z_p does.
-  ModMat lam_vecs;
+  ModMatrix lam_vecs;
   for (size_t l = 0; l < d_lam; l++) {
     std::vector<int64_t> v(m * m);
     for (size_t w = 0; w < m * m; w++) {
@@ -1929,23 +1836,23 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     lam_vecs.push_back(v);
   }
-  auto in_lam = [&](ModMat const &g) -> bool {
+  auto in_lam = [&](ModMatrix const &g) -> bool {
     if (d_lam == 0) {
       return true;
     }
-    ModMat test = lam_vecs;
+    ModMatrix test = lam_vecs;
     std::vector<int64_t> v(m * m);
     for (size_t a2 = 0; a2 < m; a2++) {
       for (size_t b2 = 0; b2 < m; b2++) {
-        v[a2 * m + b2] = ModP(g[a2][b2], p);
+        v[a2 * m + b2] = ResMod(g[a2][b2], p);
       }
     }
     test.push_back(v);
-    return ModRank(test, p) == d_lam;
+    return RankModPrime(test, p) == d_lam;
   };
   // the full check of a candidate modulo p: isometry, invertible,
   // commuting with Om and in Lam
-  auto full_ok = [&](ModMat const &g) -> bool {
+  auto full_ok = [&](ModMatrix const &g) -> bool {
     if (!in_lam(g)) {
       return false;
     }
@@ -1975,7 +1882,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         }
       }
     }
-    return ModRank(g, p) == m;
+    return RankModPrime(g, p) == m;
   };
   // the affine conditions on the image of e_j given the columns k < j
   auto conditions = [&](size_t j, std::vector<std::vector<int64_t>> &fixed,
@@ -1984,7 +1891,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     rhs.clear();
     // the linear form x -> u^T N x modulo p
     auto form = [&](std::vector<int64_t> const &u,
-                    ModMat const &N) -> std::vector<int64_t> {
+                    ModMatrix const &N) -> std::vector<int64_t> {
       std::vector<int64_t> row(m, 0);
       for (size_t a = 0; a < m; a++) {
         if (u[a] == 0) {
@@ -2088,7 +1995,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   // the columns, and it rejects at once most of the solutions modulo p
   // that do not lift.
   int64_t mod_dual = (p == 2) ? 4 : p;
-  auto dual_ok = [&](ModMat const &g) -> bool {
+  auto dual_ok = [&](ModMatrix const &g) -> bool {
     if (e == 0) {
       return true;
     }
@@ -2115,13 +2022,13 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     return true;
   };
   auto independent = [&](size_t j) -> bool {
-    ModMat Mc(cols.begin(), cols.begin() + j + 1);
-    return ModRank(Mc, p) == j + 1;
+    ModMatrix Mc(cols.begin(), cols.begin() + j + 1);
+    return RankModPrime(Mc, p) == j + 1;
   };
-  std::function<std::optional<ModMat>(size_t)> complete =
-      [&](size_t j) -> std::optional<ModMat> {
+  std::function<std::optional<ModMatrix>(size_t)> complete =
+      [&](size_t j) -> std::optional<ModMatrix> {
     if (j == m) {
-      ModMat g(m, std::vector<int64_t>(m));
+      ModMatrix g(m, std::vector<int64_t>(m));
       for (size_t a = 0; a < m; a++) {
         for (size_t b = 0; b < m; b++) {
           g[a][b] = cols[b][a];
@@ -2135,7 +2042,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         n_dual_fail++;
         return {};
       }
-      std::optional<ModMat> lg = lift_path(g, 1, p);
+      std::optional<ModMatrix> lg = lift_path(g, 1, p);
       if (!lg) {
         n_lift_fail++;
       }
@@ -2185,12 +2092,12 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     std::vector<std::vector<int64_t>> fixed;
     std::vector<int64_t> rhs;
     conditions(j, fixed, rhs);
-    std::optional<std::pair<std::vector<int64_t>, ModMat>> sp =
+    std::optional<std::pair<std::vector<int64_t>, ModMatrix>> sp =
         affine(fixed, rhs);
     if (!sp) {
       return {};
     }
-    std::optional<ModMat> res;
+    std::optional<ModMatrix> res;
     for_each_vector(*sp, Ap[j][j], [&](std::vector<int64_t> const &x) -> bool {
       if (++n_node > bounds.max_node) {
         over = true;
@@ -2215,18 +2122,18 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     }
     return idx;
   };
-  auto apply = [&](ModMat const &g,
+  auto apply = [&](ModMatrix const &g,
                    std::vector<int64_t> const &x) -> std::vector<int64_t> {
     std::vector<int64_t> y(m, 0);
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
-        y[a] = (y[a] + ModP(g[a][b], p) * x[b]) % p;
+        y[a] = (y[a] + ResMod(g[a][b], p) * x[b]) % p;
       }
     }
     return y;
   };
-  std::vector<ModMat> gens1;
-  std::vector<ModMat> gens;
+  std::vector<ModMatrix> gens1;
+  std::vector<ModMatrix> gens;
   LocalImageOrder ord;
   for (size_t i = m; i-- > 0;) {
     std::vector<int64_t> ei(m, 0);
@@ -2269,7 +2176,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       bfs({ei});
       return orbit_pts.size();
     };
-    auto close_new = [&](ModMat const &g) -> size_t {
+    auto close_new = [&](ModMatrix const &g) -> size_t {
       std::vector<std::vector<int64_t>> queue;
       size_t n0 = orbit_pts.size();
       for (size_t i0 = 0; i0 < n0; i0++) {
@@ -2299,7 +2206,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     std::vector<std::vector<int64_t>> fixed;
     std::vector<int64_t> rhs;
     conditions(i, fixed, rhs);
-    std::optional<std::pair<std::vector<int64_t>, ModMat>> sp =
+    std::optional<std::pair<std::vector<int64_t>, ModMatrix>> sp =
         affine(fixed, rhs);
     if (!sp) {
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
@@ -2326,15 +2233,15 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
         n_fail++;
         return false;
       }
-      std::optional<ModMat> g = complete(i + 1);
+      std::optional<ModMatrix> g = complete(i + 1);
       if (over) {
         return true;
       }
       if (g) {
-        ModMat g1 = *g;
+        ModMatrix g1 = *g;
         for (auto &row : g1) {
           for (auto &x : row) {
-            x = ModP(x, p);
+            x = ResMod(x, p);
           }
         }
         gens1.push_back(g1);
@@ -2363,7 +2270,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   }
   // the layers below layer_max (the others by the Cayley transforms of
   // the Lie lattice, in LocalOrthogonalImageGenerators)
-  ModMat Id(m, std::vector<int64_t>(m, 0));
+  ModMatrix Id(m, std::vector<int64_t>(m, 0));
   for (size_t a = 0; a < m; a++) {
     Id[a][a] = 1;
   }
@@ -2377,13 +2284,13 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       return {};
     }
     // the basis vectors of the layer that lift, and those that do not
-    std::vector<ModMat> lifts;
+    std::vector<ModMatrix> lifts;
     std::vector<size_t> lifted, failed;
     for (size_t i0 = 0; i0 < sp->ker.size(); i0++) {
       std::vector<int64_t> coef(sp->ker.size(), 0);
       coef[i0] = 1;
-      ModMat g = LiftAffineElement(Id, *sp, coef, p, pj);
-      std::optional<ModMat> lf = lift_path(g, j + 1, pj * p);
+      ModMatrix g = LiftAffineElement(Id, *sp, coef, p, pj);
+      std::optional<ModMatrix> lf = lift_path(g, j + 1, pj * p);
       if (over) {
         return {};
       }
@@ -2411,28 +2318,28 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
     if (!all && p != 2 && e == 1) {
       size_t dim = sp->ker.size();
       int64_t pj1 = pj * p;
-      auto layer_elt = [&](std::vector<int64_t> const &coefv) -> ModMat {
+      auto layer_elt = [&](std::vector<int64_t> const &coefv) -> ModMatrix {
         return LiftAffineElement(Id, *sp, coefv, p, pj);
       };
       LiftSystem sys0 = MakeLiftSystem(layer_elt(std::vector<int64_t>(dim, 0)),
                                        A, p, pj1);
-      ModMat coef0 = restrict_coef(sys0.coef);
+      ModMatrix coef0 = restrict_coef(sys0.coef);
       size_t n_eq = coef0.size();
       size_t n_var = coef0.empty() ? 0 : coef0[0].size();
       // the left kernel: the y with y^T coef = 0
-      ModMat coefT(n_var, std::vector<int64_t>(n_eq));
+      ModMatrix coefT(n_var, std::vector<int64_t>(n_eq));
       for (size_t a = 0; a < n_eq; a++) {
         for (size_t b = 0; b < n_var; b++) {
           coefT[b][a] = coef0[a][b];
         }
       }
-      auto nullspace = [&](ModMat const &M, size_t ncol) -> ModMat {
-        ModRowSpace rs = ModRowReduce(M, p);
+      auto nullspace = [&](ModMatrix const &M, size_t ncol) -> ModMatrix {
+        RowSpaceModP rs = ComputeRowSpaceModP(M, p);
         std::vector<bool> is_piv(ncol, false);
         for (size_t pv : rs.pivots) {
           is_piv[pv] = true;
         }
-        ModMat ker;
+        ModMatrix ker;
         for (size_t f = 0; f < ncol; f++) {
           if (is_piv[f]) {
             continue;
@@ -2440,13 +2347,13 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
           std::vector<int64_t> v(ncol, 0);
           v[f] = 1;
           for (size_t i = 0; i < rs.pivots.size(); i++) {
-            v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
+            v[rs.pivots[i]] = ResMod(-rs.basis[i][f], p);
           }
           ker.push_back(v);
         }
         return ker;
       };
-      ModMat L = nullspace(coefT, n_eq);
+      ModMatrix L = nullspace(coefT, n_eq);
       auto fval = [&](std::vector<int64_t> const &coefv) -> std::vector<int64_t> {
         LiftSystem sys = MakeLiftSystem(layer_elt(coefv), A, p, pj1);
         std::vector<int64_t> r(L.size(), 0);
@@ -2460,18 +2367,18 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       int64_t inv2 = (p + 1) / 2;
       // l on the basis of the layer: l(b) = f(b) - q(b), q(b) = (f(2b) -
       // 2 f(b)) / 2
-      ModMat lmat(L.size(), std::vector<int64_t>(dim, 0));
+      ModMatrix lmat(L.size(), std::vector<int64_t>(dim, 0));
       for (size_t i = 0; i < dim; i++) {
         std::vector<int64_t> c1(dim, 0), c2(dim, 0);
         c1[i] = 1;
         c2[i] = 2 % p;
         std::vector<int64_t> f1 = fval(c1), f2 = fval(c2);
         for (size_t k = 0; k < L.size(); k++) {
-          int64_t q = ModP(f2[k] - 2 * f1[k], p) * inv2 % p;
-          lmat[k][i] = ModP(f1[k] - q, p);
+          int64_t q = ResMod(f2[k] - 2 * f1[k], p) * inv2 % p;
+          lmat[k][i] = ResMod(f1[k] - q, p);
         }
       }
-      ModMat W0 = nullspace(lmat, dim);
+      ModMatrix W0 = nullspace(lmat, dim);
       bool q_zero = true;
       for (size_t a = 0; a < W0.size() && q_zero; a++) {
         for (size_t b = a; b < W0.size() && q_zero; b++) {
@@ -2490,7 +2397,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       }
       if (q_zero) {
         for (auto const &w : W0) {
-          std::optional<ModMat> lf = lift_path(layer_elt(w), j + 1, pj1);
+          std::optional<ModMatrix> lf = lift_path(layer_elt(w), j + 1, pj1);
           if (over) {
             return {};
           }
@@ -2518,14 +2425,14 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
       // spanned by the elements found, at the cost of at most |failed|
       // p^{codim V} lifts.
       size_t dim = sp->ker.size();
-      ModMat liftable_coefs;
-      std::vector<ModMat> liftable_elts = lifts;
+      ModMatrix liftable_coefs;
+      std::vector<ModMatrix> liftable_elts = lifts;
       for (size_t i0 : lifted) {
         std::vector<int64_t> coef(dim, 0);
         coef[i0] = 1;
         liftable_coefs.push_back(coef);
       }
-      ModMat reps;
+      ModMatrix reps;
       for (size_t i0 : failed) {
         size_t n_el = 1;
         for (size_t i = 0; i < reps.size(); i++) {
@@ -2553,8 +2460,8 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
             // f itself is known not to lift
             continue;
           }
-          ModMat g = LiftAffineElement(Id, *sp, coef, p, pj);
-          std::optional<ModMat> lf = lift_path(g, j + 1, pj * p);
+          ModMatrix g = LiftAffineElement(Id, *sp, coef, p, pj);
+          std::optional<ModMatrix> lf = lift_path(g, j + 1, pj * p);
           if (over) {
             return {};
           }
@@ -2570,7 +2477,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
           reps.push_back(coef);
         }
       }
-      if (ModRank(liftable_coefs, p) != liftable_coefs.size()) {
+      if (RankModPrime(liftable_coefs, p) != liftable_coefs.size()) {
         std::cerr << "MULT_FACTOR: the layer elements found are dependent\n";
         throw TerminalException{1};
       }
@@ -2609,18 +2516,18 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsCore(
   >= 1 at p odd and j >= 2 at p = 2, and the search only builds G mod p
   (and the first layer at p = 2); when not, all the layers are searched.
  */
-inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
-    ModMat const &A, ModMat const &Be, std::vector<ModMat> const &Om,
-    std::vector<ModMat> const &Lam, std::vector<ModMat> const &Bil, int64_t p,
+inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsSearch(
+    ModMatrix const &A, ModMatrix const &Be, std::vector<ModMatrix> const &Om,
+    std::vector<ModMatrix> const &Lam, std::vector<ModMatrix> const &Bil, int64_t p,
     int c, int e, int layer_max, MultiplicityFactorBounds const &bounds,
     LocalImageOrder *order);
 
-inline std::optional<std::vector<ModMat>>
-LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
-                               std::vector<ModMat> const &Om,
-                               std::vector<ModMat> const &Lam,
-                               std::vector<ModMat> const &Bil,
-                               std::optional<std::vector<ModMat>> const &Lie,
+inline std::optional<std::vector<ModMatrix>>
+LocalOrthogonalImageGenerators(ModMatrix const &A, ModMatrix const &Be,
+                               std::vector<ModMatrix> const &Om,
+                               std::vector<ModMatrix> const &Lam,
+                               std::vector<ModMatrix> const &Bil,
+                               std::optional<std::vector<ModMatrix>> const &Lie,
                                int64_t p, int c, int e,
                                MultiplicityFactorBounds const &bounds,
                                LocalImageOrder *order) {
@@ -2629,13 +2536,13 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
     layer_max = (p == 2) ? 2 : 1;
   }
   LocalImageOrder ord;
-  std::optional<std::vector<ModMat>> gens = LocalOrthogonalImageGeneratorsSearch(
+  std::optional<std::vector<ModMatrix>> gens = LocalOrthogonalImageGeneratorsSearch(
       A, Be, Om, Lam, Bil, p, c, e, layer_max, bounds, &ord);
   if (!gens) {
     return {};
   }
   if (Lie) {
-    std::vector<ModMat> layer = CayleyLayerGenerators(*Lie, p, c, ord.layer_exp);
+    std::vector<ModMatrix> layer = CayleyLayerGenerators(*Lie, p, c, ord.layer_exp);
     gens->insert(gens->end(), layer.begin(), layer.end());
   }
   if (order) {
@@ -2644,9 +2551,9 @@ LocalOrthogonalImageGenerators(ModMat const &A, ModMat const &Be,
   return gens;
 }
 
-inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
-    ModMat const &A, ModMat const &Be, std::vector<ModMat> const &Om,
-    std::vector<ModMat> const &Lam, std::vector<ModMat> const &Bil, int64_t p,
+inline std::optional<std::vector<ModMatrix>> LocalOrthogonalImageGeneratorsSearch(
+    ModMatrix const &A, ModMatrix const &Be, std::vector<ModMatrix> const &Om,
+    std::vector<ModMatrix> const &Lam, std::vector<ModMatrix> const &Bil, int64_t p,
     int c, int e, int layer_max, MultiplicityFactorBounds const &bounds,
     LocalImageOrder *order) {
   size_t m = A.size();
@@ -2665,30 +2572,15 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
   std::cerr << "\n";
 #endif
   int W = MultiplicityNewtonPrecision(p);
-  int64_t pW = 1;
-  for (int i = 0; i < W; i++) {
-    pW *= p;
-  }
+  int64_t pW = MyPow<int64_t>(p, W);
   auto mulmod = [](int64_t x, int64_t y, int64_t M) -> int64_t {
-    __int128 r = static_cast<__int128>(x) * y % M;
-    return static_cast<int64_t>((r < 0) ? r + M : r);
+    return ResMul(x, y, M);
   };
-  auto matmul = [&](ModMat const &X, ModMat const &Y, int64_t M) -> ModMat {
-    ModMat Z(m, std::vector<int64_t>(m, 0));
-    for (size_t a = 0; a < m; a++) {
-      for (size_t k = 0; k < m; k++) {
-        if (X[a][k] == 0) {
-          continue;
-        }
-        for (size_t b = 0; b < m; b++) {
-          Z[a][b] = (Z[a][b] + mulmod(X[a][k], Y[k][b], M)) % M;
-        }
-      }
-    }
-    return Z;
+  auto matmul = [](ModMatrix const &X, ModMatrix const &Y, int64_t M) -> ModMatrix {
+    return ModMatrixProduct(X, Y, M);
   };
-  auto transpose = [&](ModMat const &X) -> ModMat {
-    ModMat Z(m, std::vector<int64_t>(m));
+  auto transpose = [&](ModMatrix const &X) -> ModMatrix {
+    ModMatrix Z(m, std::vector<int64_t>(m));
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
         Z[a][b] = X[b][a];
@@ -2697,16 +2589,16 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
     return Z;
   };
   // P^{-1} modulo p^W: modulo p by Gauss, then X <- X (2 - P X)
-  ModMat Pinv(m, std::vector<int64_t>(m));
+  ModMatrix Pinv(m, std::vector<int64_t>(m));
   {
-    ModMat aug(m, std::vector<int64_t>(2 * m, 0));
+    ModMatrix aug(m, std::vector<int64_t>(2 * m, 0));
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
-        aug[a][b] = ModP(P[a][b], p);
+        aug[a][b] = ResMod(P[a][b], p);
       }
       aug[a][m + a] = 1;
     }
-    ModRowSpace rr = ModRowReduce(aug, p);
+    RowSpaceModP rr = ComputeRowSpaceModP(aug, p);
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
         Pinv[a][b] = rr.basis[a][m + b];
@@ -2715,10 +2607,10 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
     int64_t M = p;
     while (M < pW) {
       M = (M > pW / M) ? pW : M * M;
-      ModMat PX = matmul(P, Pinv, M);
+      ModMatrix PX = matmul(P, Pinv, M);
       for (size_t a = 0; a < m; a++) {
         for (size_t b = 0; b < m; b++) {
-          PX[a][b] = ModP(((a == b) ? 2 : 0) - PX[a][b], M);
+          PX[a][b] = ResMod(((a == b) ? 2 : 0) - PX[a][b], M);
         }
       }
       Pinv = matmul(Pinv, PX, M);
@@ -2727,7 +2619,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
   // A' = P^T A P and Be' = P^{-1} Be P^{-T} modulo p^W: the search uses A
   // modulo p^W only, and A may be given as residues modulo p^W, for which
   // the exact product does not fit in 64 bits
-  ModMat A2(m, std::vector<int64_t>(m, 0));
+  ModMatrix A2(m, std::vector<int64_t>(m, 0));
   for (size_t a = 0; a < m; a++) {
     for (size_t b = 0; b < m; b++) {
       __int128 sacc = 0;
@@ -2738,14 +2630,14 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
         for (size_t l = 0; l < m; l++) {
           // reduced after each product: the entries of P (a Jordan basis)
           // are residues modulo p^W, and three of them overflow 128 bits
-          __int128 t1 = static_cast<__int128>(P[k][a]) * ModP(A[k][l], pW) % pW;
+          __int128 t1 = static_cast<__int128>(P[k][a]) * ResMod(A[k][l], pW) % pW;
           sacc = (sacc + t1 * P[l][b]) % pW;
         }
       }
-      A2[a][b] = ModP(static_cast<int64_t>(sacc), pW);
+      A2[a][b] = ResMod(static_cast<int64_t>(sacc), pW);
     }
   }
-  ModMat Be2 = matmul(matmul(Pinv, Be, pW), transpose(Pinv), pW);
+  ModMatrix Be2 = matmul(matmul(Pinv, Be, pW), transpose(Pinv), pW);
   // the levels: A'_ab divisible by p^{max(l_a, l_b)}
   for (size_t a = 0; a < m; a++) {
     for (size_t b = 0; b < m; b++) {
@@ -2753,7 +2645,7 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
       for (int i = 0; i < std::max(levels[a], levels[b]) && i < 20; i++) {
         pl *= p;
       }
-      if (ModP(A2[a][b], pW) % pl != 0) {
+      if (ResMod(A2[a][b], pW) % pl != 0) {
         std::cerr << "MULT_FACTOR: the Jordan basis does not have the levels "
                      "given, p=" << p << " a=" << a << " b=" << b << " levels";
         for (int l : levels) {
@@ -2762,14 +2654,14 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
         std::cerr << "\nA mod p^3 =";
         for (size_t u = 0; u < m; u++) {
           for (size_t v = 0; v < m; v++) {
-            std::cerr << " " << ModP(A[u][v], p * p * p);
+            std::cerr << " " << ResMod(A[u][v], p * p * p);
           }
           std::cerr << " |";
         }
         std::cerr << "\nA' mod p^3 =";
         for (size_t u = 0; u < m; u++) {
           for (size_t v = 0; v < m; v++) {
-            std::cerr << " " << ModP(A2[u][v], p * p * p);
+            std::cerr << " " << ResMod(A2[u][v], p * p * p);
           }
           std::cerr << " |";
         }
@@ -2782,23 +2674,23 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
   std::cerr << "MULT_FACTOR: A' modulo p^3:";
   for (size_t a = 0; a < m; a++) {
     for (size_t b = 0; b < m; b++) {
-      std::cerr << " " << ModP(A2[a][b], p * p * p);
+      std::cerr << " " << ResMod(A2[a][b], p * p * p);
     }
     std::cerr << " |";
   }
   std::cerr << "\n";
 #endif
   // the action of O_K and the commutant in the new basis: P^{-1} X P
-  auto conj = [&](ModMat const &X) -> ModMat {
-    ModMat Xr = X;
+  auto conj = [&](ModMatrix const &X) -> ModMatrix {
+    ModMatrix Xr = X;
     for (auto &row : Xr) {
       for (auto &x : row) {
-        x = ModP(x, pW);
+        x = ResMod(x, pW);
       }
     }
     return matmul(matmul(Pinv, Xr, pW), P, pW);
   };
-  std::vector<ModMat> Om2, Lam2;
+  std::vector<ModMatrix> Om2, Lam2;
   for (auto const &X : Om) {
     Om2.push_back(conj(X));
   }
@@ -2806,15 +2698,15 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
     Lam2.push_back(conj(X));
   }
   // the bilinear forms: x = P x', so N -> P^T N P
-  std::vector<ModMat> Bil2;
+  std::vector<ModMatrix> Bil2;
   for (auto const &N : Bil) {
-    ModMat Nr = N;
+    ModMatrix Nr = N;
     for (auto &row : Nr) {
       for (auto &x : row) {
-        x = ModP(x, pW);
+        x = ResMod(x, pW);
       }
     }
-    ModMat PT(m, std::vector<int64_t>(m));
+    ModMatrix PT(m, std::vector<int64_t>(m));
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
         PT[a][b] = P[b][a];
@@ -2822,17 +2714,14 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
     }
     Bil2.push_back(matmul(matmul(PT, Nr, pW), P, pW));
   }
-  std::optional<std::vector<ModMat>> gens =
+  std::optional<std::vector<ModMatrix>> gens =
       LocalOrthogonalImageGeneratorsCore(A2, Be2, Om2, Lam2, Bil2, p, c, e,
                                          levels, layer_max, bounds, order);
   if (!gens) {
     return {};
   }
-  int64_t pc = 1;
-  for (int i = 0; i < c; i++) {
-    pc *= p;
-  }
-  std::vector<ModMat> res;
+  int64_t pc = MyPow<int64_t>(p, c);
+  std::vector<ModMatrix> res;
   for (auto const &g : *gens) {
     res.push_back(matmul(matmul(P, g, pc), Pinv, pc));
   }
@@ -2850,8 +2739,8 @@ inline std::optional<std::vector<ModMat>> LocalOrthogonalImageGeneratorsSearch(
   solutions modulo p^K, lifted level by level by Delta in Lambda / p
   Lambda. Nothing beyond the bounds.
  */
-inline std::optional<std::vector<ModMat>>
-LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
+inline std::optional<std::vector<ModMatrix>>
+LocalStabilizerImage(ModMatrix const &A_in, std::vector<ModMatrix> const &basis_in,
                      int64_t p, int c, int e,
                      MultiplicityFactorBounds const &bounds) {
   // A and the basis of Lambda, exact or modulo p^{K+1}: a solution is kept
@@ -2873,13 +2762,13 @@ LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
     return {};
   }
   int64_t const M = *optM;
-  ModMat A(m, std::vector<int64_t>(m));
+  ModMatrix A(m, std::vector<int64_t>(m));
   for (size_t a = 0; a < m; a++) {
     for (size_t b = 0; b < m; b++) {
       A[a][b] = CenteredModP(A_in[a][b], M);
     }
   }
-  std::vector<ModMat> basis = basis_in;
+  std::vector<ModMatrix> basis = basis_in;
   for (auto &B : basis) {
     for (auto &row : B) {
       for (auto &x : row) {
@@ -2975,13 +2864,13 @@ LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
     if (!ok) {
       continue;
     }
-    ModMat gp(m, std::vector<int64_t>(m));
+    ModMatrix gp(m, std::vector<int64_t>(m));
     for (size_t a = 0; a < m; a++) {
       for (size_t b = 0; b < m; b++) {
         gp[a][b] = mod_p(g[a][b]);
       }
     }
-    if (ModRank(gp, p) == m) {
+    if (RankModPrime(gp, p) == m) {
       level.push_back(x);
       if (level.size() > bounds.max_solution) {
         return {};
@@ -3003,7 +2892,7 @@ LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
         gA[a][b] = mod_p(sum);
       }
     }
-    ModMat aug;
+    ModMatrix aug;
     for (size_t a = 0; a < m; a++) {
       for (size_t b = a; b < m; b++) {
         std::vector<int64_t> row(dim + 1, 0);
@@ -3014,7 +2903,7 @@ LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
             v += mod_p(basis[i][a][u]) * gA[b][u] % p;
             v += gA[a][u] * mod_p(basis[i][b][u]) % p;
           }
-          row[i] = ModP(v, p);
+          row[i] = ResMod(v, p);
         }
         __int128 r = E[a][b] % pj1;
         if (r < 0) {
@@ -3024,11 +2913,11 @@ LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
           std::cerr << "MULT_FACTOR: not a solution modulo p^j\n";
           throw TerminalException{1};
         }
-        row[dim] = ModP(-static_cast<int64_t>(r / pj), p);
+        row[dim] = ResMod(-static_cast<int64_t>(r / pj), p);
         aug.push_back(row);
       }
     }
-    ModRowSpace rs = ModRowReduce(aug, p);
+    RowSpaceModP rs = ComputeRowSpaceModP(aug, p);
     for (size_t piv : rs.pivots) {
       if (piv == dim) {
         return {};
@@ -3050,14 +2939,11 @@ LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
       Coord v(dim, 0);
       v[f] = 1;
       for (size_t i = 0; i < rs.pivots.size(); i++) {
-        v[rs.pivots[i]] = ModP(-rs.basis[i][f], p);
+        v[rs.pivots[i]] = ResMod(-rs.basis[i][f], p);
       }
       ker.push_back(v);
     }
-    size_t n_sol = 1;
-    for (size_t i = 0; i < ker.size(); i++) {
-      n_sol *= static_cast<size_t>(p);
-    }
+    size_t n_sol = MyPow<size_t>(static_cast<size_t>(p), ker.size());
     std::vector<Coord> res;
     for (size_t u = 0; u < n_sol; u++) {
       Coord y = part;
@@ -3102,11 +2988,11 @@ LocalStabilizerImage(ModMat const &A_in, std::vector<ModMat> const &basis_in,
     }
     return false;
   };
-  std::vector<ModMat> res;
+  std::vector<ModMatrix> res;
   for (auto const &x : level) {
     if (liftable(x, std::max(c, 1), pj)) {
       std::vector<std::vector<__int128>> g = matrix_of(x);
-      ModMat gm(m, std::vector<int64_t>(m));
+      ModMatrix gm(m, std::vector<int64_t>(m));
       for (size_t a = 0; a < m; a++) {
         for (size_t b = 0; b < m; b++) {
           gm[a][b] = static_cast<int64_t>(g[a][b]);

@@ -7,6 +7,7 @@
 #include "LocalDensityOverlattice.h"
 #include "ClassicLLL.h"
 #include "MAT_MatrixInt.h"
+#include "ResidueArithmetic.h"
 #include <array>
 #include <cstdint>
 #include <map>
@@ -101,16 +102,12 @@ inline bool operator!=(GenusSymbol const &a, GenusSymbol const &b) {
 template <typename Tint> Tint GenusSymbolDeterminant(GenusSymbol const &s) {
   Tint det(1);
   for (auto const &c : s.sym2) {
-    for (int i = 0; i < c[0] * c[1]; i++) {
-      det *= Tint(2);
-    }
+    det *= MyPow<Tint>(Tint(2), c[0] * c[1]);
   }
   for (auto const &[p, comps] : s.sym_odd) {
     Tint p_T(static_cast<long>(p));
     for (auto const &c : comps) {
-      for (int i = 0; i < c[0] * c[1]; i++) {
-        det *= p_T;
-      }
+      det *= MyPow<Tint>(p_T, c[0] * c[1]);
     }
   }
   return det;
@@ -123,10 +120,7 @@ inline std::string GenusSymbolString(GenusSymbol const &s) {
            std::to_string(sign * rank) + "}";
   };
   auto power = [](int64_t p, int k) -> int64_t {
-    int64_t q = 1;
-    for (int i = 0; i < k; i++) {
-      q *= p;
-    }
+    int64_t q = MyPow<int64_t>(p, k);
     return q;
   };
   size_t i = 0;
@@ -149,7 +143,7 @@ inline std::string GenusSymbolString(GenusSymbol const &s) {
       inner += comp(power(2, s.sym2[k][0]), s.sym2[k][1], s.sym2[k][2]);
       oddity += s.sym2[k][4];
     }
-    oddity = static_cast<int>(ModPositive(oddity, 8));
+    oddity = static_cast<int>(ResMod(oddity, 8));
     if (j == i + 1) {
       str += inner + "_{" + std::to_string(oddity) + "}";
     } else {
@@ -193,7 +187,7 @@ std::vector<std::array<int, 3>> OddPrimeSymbolOfGram(MyMatrix<T> const &G,
       iter = levels.emplace(c.val, std::make_pair(0, int64_t(1))).first;
     }
     iter->second.first++;
-    iter->second.second = MulMod(iter->second.second, c.unit, p);
+    iter->second.second = ResMul(iter->second.second, c.unit, p);
   }
   std::vector<std::array<int, 3>> res;
   for (auto const &[k, rp] : levels) {
@@ -363,7 +357,7 @@ template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) 
       }
       pos++;
       int t = std::stoi(read_item());
-      compart[0][4] = static_cast<int>(ModPositive(t, 8));
+      compart[0][4] = static_cast<int>(ResMod(t, 8));
       comps2.insert(comps2.end(), compart.begin(), compart.end());
       continue;
     }
@@ -380,7 +374,7 @@ template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) 
       } else {
         comps2.push_back({static_cast<int>(k), static_cast<int>(r),
                           static_cast<int>(sign), 1,
-                          static_cast<int>(ModPositive(std::stoi(sub), 8))});
+                          static_cast<int>(ResMod(std::stoi(sub), 8))});
       }
     } else {
       if (pos < str.size() && str[pos] == '_') {
@@ -434,16 +428,12 @@ template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) 
   // the determinant, from the components
   Tint det(1);
   for (auto const &c : raw2) {
-    for (int i = 0; i < c[0] * c[1]; i++) {
-      det *= Tint(2);
-    }
+    det *= MyPow<Tint>(Tint(2), c[0] * c[1]);
   }
   for (auto const &[p, comps] : comps_odd) {
     Tint p_T(static_cast<long>(p));
     for (auto const &c : comps) {
-      for (int i = 0; i < c[0] * c[1]; i++) {
-        det *= p_T;
-      }
+      det *= MyPow<Tint>(p_T, c[0] * c[1]);
     }
   }
   if (prefix_det && *prefix_det != det) {
@@ -535,9 +525,7 @@ template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) 
 template <typename T> T PrimePowerT(int64_t p, int k) {
   T q(1);
   T p_T(static_cast<long>(p));
-  for (int i = 0; i < k; i++) {
-    q *= p_T;
-  }
+  q *= MyPow<T>(p_T, k);
   return q;
 }
 
@@ -864,22 +852,9 @@ void ApplyBasisChange(SymbolLattice<T> &L, MyMatrix<T> const &E) {
   L.G = E * L.G * E.transpose();
 }
 
-inline int64_t PowModPrime(int64_t a, int64_t e, int64_t p) {
-  int64_t res = 1;
-  a = ModPositive(a, p);
-  while (e > 0) {
-    if (e % 2 == 1) {
-      res = MulMod(res, a, p);
-    }
-    a = MulMod(a, a, p);
-    e /= 2;
-  }
-  return res;
-}
-
 // A square root of the square a modulo the odd prime p (Tonelli-Shanks).
 inline int64_t SqrtModPrime(int64_t a, int64_t p) {
-  a = ModPositive(a, p);
+  a = ResMod(a, p);
   if (a == 0) {
     return 0;
   }
@@ -891,23 +866,23 @@ inline int64_t SqrtModPrime(int64_t a, int64_t p) {
   }
   int64_t z = LeastNonResidue(p);
   int64_t m = s;
-  int64_t c = PowModPrime(z, q, p);
-  int64_t t = PowModPrime(a, q, p);
-  int64_t r = PowModPrime(a, (q + 1) / 2, p);
+  int64_t c = ResPow(z, q, p);
+  int64_t t = ResPow(a, q, p);
+  int64_t r = ResPow(a, (q + 1) / 2, p);
   while (t != 1) {
     int64_t i = 0, t2 = t;
     while (t2 != 1) {
-      t2 = MulMod(t2, t2, p);
+      t2 = ResMul(t2, t2, p);
       i++;
     }
     int64_t b = c;
     for (int64_t j = 0; j < m - i - 1; j++) {
-      b = MulMod(b, b, p);
+      b = ResMul(b, b, p);
     }
     m = i;
-    c = MulMod(b, b, p);
-    t = MulMod(t, c, p);
-    r = MulMod(r, b, p);
+    c = ResMul(b, b, p);
+    t = ResMul(t, c, p);
+    r = ResMul(r, b, p);
   }
   return r;
 }
@@ -924,15 +899,15 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
   auto add_row = [&](int k, int j, int64_t f) -> void {
     // e_k <- e_k + f e_j
     for (int c = 0; c < m; c++) {
-      W[k][c] = ModPositive(W[k][c] + f * W[j][c], p);
+      W[k][c] = ResMod(W[k][c] + f * W[j][c], p);
     }
     for (int c = 0; c < m; c++) {
-      M[k][c] = ModPositive(M[k][c] + f * M[j][c], p);
+      M[k][c] = ResMod(M[k][c] + f * M[j][c], p);
     }
     for (int c = 0; c < m; c++) {
       M[c][k] = M[k][c];
     }
-    M[k][k] = ModPositive(M[k][k] + f * M[j][k], p);
+    M[k][k] = ResMod(M[k][k] + f * M[j][k], p);
   };
   std::vector<int64_t> delta;
   for (int k = 0; k < m; k++) {
@@ -958,10 +933,10 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
         }
       }
     }
-    int64_t inv = InverseModInt64(M[k][k], p);
+    int64_t inv = ResInv(M[k][k], p);
     for (int i = k + 1; i < m; i++) {
       if (M[i][k] != 0) {
-        add_row(i, k, ModPositive(-MulMod(M[i][k], inv, p), p));
+        add_row(i, k, ResMod(-ResMul(M[i][k], inv, p), p));
       }
     }
     delta.push_back(M[k][k]);
@@ -971,14 +946,14 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
     std::vector<int64_t> v(m, 0);
     for (auto const &[i, f] : terms) {
       for (int c = 0; c < m; c++) {
-        v[c] = ModPositive(v[c] + MulMod(f, W[i][c], p), p);
+        v[c] = ResMod(v[c] + ResMul(f, W[i][c], p), p);
       }
     }
     return v;
   };
   for (int i = 0; i < m; i++) {
     for (int j = i + 1; j < m; j++) {
-      int64_t r = MulMod(p - delta[i], InverseModInt64(delta[j], p), p);
+      int64_t r = ResMul(p - delta[i], ResInv(delta[j], p), p);
       if (LegendreUnit(r, p) == 1) {
         return combine({{i, 1}, {j, SqrtModPrime(r, p)}});
       }
@@ -986,10 +961,10 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
   }
   if (m >= 3) {
     // delta_0 + delta_1 y^2 + delta_2 z^2 = 0 has a solution
-    int64_t inv2 = InverseModInt64(delta[2], p);
+    int64_t inv2 = ResInv(delta[2], p);
     for (int64_t y = 0; y < p; y++) {
-      int64_t val = ModPositive(delta[0] + MulMod(delta[1], MulMod(y, y, p), p), p);
-      int64_t r = MulMod(p - val, inv2, p);
+      int64_t val = ResMod(delta[0] + ResMul(delta[1], ResMul(y, y, p), p), p);
+      int64_t r = ResMul(p - val, inv2, p);
       if (r == 0 || LegendreUnit(r, p) == 1) {
         return combine({{0, 1}, {1, y}, {2, SqrtModPrime(r, p)}});
       }
@@ -1005,7 +980,7 @@ template <typename T, typename Tint> int64_t ResidueModInt(T const &x, int64_t M
   Tint den = UniversalScalarConversion<Tint, T>(GetDenominator(x));
   int64_t num_r = UniversalScalarConversion<int64_t, Tint>(ResInt(num, M_T));
   int64_t den_r = UniversalScalarConversion<int64_t, Tint>(ResInt(den, M_T));
-  return MulMod(num_r, InverseModInt64(den_r, M), M);
+  return ResMul(num_r, ResInv(den_r, M), M);
 }
 
 /*
@@ -1038,7 +1013,7 @@ IsotropicRadicalVector(MyMatrix<T> const &G, int64_t p) {
     std::vector<int64_t> y(n, 0);
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < n; j++) {
-        y[j] = ModPositive(y[j] + c[i] * R[i][j], p);
+        y[j] = ResMod(y[j] + c[i] * R[i][j], p);
       }
     }
     return y;
@@ -1086,7 +1061,7 @@ IsotropicRadicalVector(MyMatrix<T> const &G, int64_t p) {
           }
         }
       }
-      if (ModPositive(norm, 8) == 0) {
+      if (ResMod(norm, 8) == 0) {
         return combine(c);
       }
     }
@@ -1102,9 +1077,9 @@ void GoUp(SymbolLattice<T> &L, std::vector<int64_t> y, int64_t p) {
   while (y[k] == 0) {
     k++;
   }
-  int64_t inv = InverseModInt64(y[k], p);
+  int64_t inv = ResInv(y[k], p);
   for (auto &x : y) {
-    x = MulMod(x, inv, p);
+    x = ResMul(x, inv, p);
   }
   MyMatrix<T> E = IdentityMat<T>(n);
   T p_T(static_cast<long>(p));
@@ -1234,7 +1209,7 @@ std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,
     std::vector<int64_t> f(n, 0);
     for (auto const &[i, l] : c) {
       for (int r = 0; r < n; r++) {
-        f[r] = ModPositive(f[r] + MulMod(Qp[r][i], l, p), p);
+        f[r] = ResMod(f[r] + ResMul(Qp[r][i], l, p), p);
       }
     }
     int k = 0;
@@ -1244,9 +1219,9 @@ std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,
     if (k == n) {
       return;
     }
-    int64_t inv = InverseModInt64(f[k], p);
+    int64_t inv = ResInv(f[k], p);
     for (auto &x : f) {
-      x = MulMod(x, inv, p);
+      x = ResMul(x, inv, p);
     }
     if (seen.insert(f).second) {
       res.push_back(f);
@@ -1260,7 +1235,7 @@ std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,
       for (int j = i + 1; j < n; j++) {
         std::vector<int64_t> ls = lambdas;
         if (p != 2 && diag[i] != 0 && diag[j] != 0 && cls[i].val == cls[j].val) {
-          int64_t r = MulMod(p - cls[i].unit, InverseModInt64(cls[j].unit, p), p);
+          int64_t r = ResMul(p - cls[i].unit, ResInv(cls[j].unit, p), p);
           if (LegendreUnit(r, p) == 1) {
             ls.push_back(SqrtModPrime(r, p));
           }
@@ -1401,15 +1376,15 @@ inline MyMatrix<int64_t> SublatticeGramModular(MyMatrix<int64_t> const &Gm,
     for (int j = i; j < n; j++) {
       int64_t val;
       if (i == k && j == k) {
-        val = MulMod(MulMod(p, p, M), Gm(k, k), M);
+        val = ResMul(ResMul(p, p, M), Gm(k, k), M);
       } else if (i == k || j == k) {
         int o = (i == k) ? j : i;
-        val = MulMod(p, Gm(o, k) - MulMod(f[o], Gm(k, k), M), M);
+        val = ResMul(p, Gm(o, k) - ResMul(f[o], Gm(k, k), M), M);
       } else {
-        val = Gm(i, j) - MulMod(f[j], Gm(i, k), M) -
-              MulMod(f[i], Gm(k, j), M) +
-              MulMod(MulMod(f[i], f[j], M), Gm(k, k), M);
-        val = ModPositive(val, M);
+        val = Gm(i, j) - ResMul(f[j], Gm(i, k), M) -
+              ResMul(f[i], Gm(k, j), M) +
+              ResMul(ResMul(f[i], f[j], M), Gm(k, k), M);
+        val = ResMod(val, M);
       }
       H(i, j) = val;
       H(j, i) = val;
@@ -1466,9 +1441,9 @@ inline std::vector<std::vector<int64_t>> AllLinearForms(int n, int64_t p) {
     if (k == -1) {
       continue;
     }
-    int64_t inv = InverseModInt64(f[k], p);
+    int64_t inv = ResInv(f[k], p);
     for (auto &x : f) {
-      x = MulMod(x, inv, p);
+      x = ResMul(x, inv, p);
     }
     res.push_back(f);
   }

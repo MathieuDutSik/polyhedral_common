@@ -5,6 +5,7 @@
 // clang-format off
 #include "MAT_Matrix.h"
 #include "SiegelSpecialValues.h"
+#include "ResidueArithmetic.h"
 #include <cstdint>
 #include <map>
 #include <tuple>
@@ -224,32 +225,6 @@ UnivariatePolynomial<T> RatToPolynomial(RationalFunction<T> const &A) {
 // p-adic square classes
 //
 
-inline int64_t ModPositive(int64_t a, int64_t M) { return ((a % M) + M) % M; }
-
-inline int64_t InverseModInt64(int64_t a, int64_t M) {
-  int64_t r0 = M, r1 = ModPositive(a, M), s0 = 0, s1 = 1;
-  while (r1 != 0) {
-    int64_t q = r0 / r1;
-    int64_t r2 = r0 - q * r1;
-    int64_t s2 = s0 - q * s1;
-    r0 = r1;
-    r1 = r2;
-    s0 = s1;
-    s1 = s2;
-  }
-  if (r0 != 1) {
-    std::cerr << "SSER: " << a << " is not invertible modulo " << M << "\n";
-    throw TerminalException{1};
-  }
-  return ModPositive(s0, M);
-}
-
-inline int64_t MulMod(int64_t a, int64_t b, int64_t M) {
-  __int128 prod = static_cast<__int128>(ModPositive(a, M)) *
-                  static_cast<__int128>(ModPositive(b, M));
-  return static_cast<int64_t>(prod % M);
-}
-
 // The modulus of the unit residues at p.
 inline int64_t UnitModulus(int64_t p) { return (p == 2) ? 8 : p; }
 
@@ -262,7 +237,7 @@ struct PadicClass {
 
 inline PadicClass PadicMul(PadicClass const &x, PadicClass const &y,
                            int64_t p) {
-  return {x.val + y.val, MulMod(x.unit, y.unit, UnitModulus(p))};
+  return {x.val + y.val, ResMul(x.unit, y.unit, UnitModulus(p))};
 }
 
 inline PadicClass PadicFromInt64(int64_t x, int64_t p) {
@@ -275,7 +250,7 @@ inline PadicClass PadicFromInt64(int64_t x, int64_t p) {
     x /= p;
     val++;
   }
-  return {val, ModPositive(x, UnitModulus(p))};
+  return {val, ResMod(x, UnitModulus(p))};
 }
 
 // The class of a non-zero rational, from its numerator and denominator.
@@ -303,7 +278,7 @@ PadicClass PadicFromRational(T const &x, int64_t p) {
       UniversalScalarConversion<int64_t, Tint>(ResInt(num, M_T));
   int64_t den_r =
       UniversalScalarConversion<int64_t, Tint>(ResInt(den, M_T));
-  return {val, MulMod(num_r, InverseModInt64(den_r, M), M)};
+  return {val, ResMul(num_r, ResInv(den_r, M), M)};
 }
 
 // The Legendre symbol of a unit residue modulo the odd prime p.
@@ -330,7 +305,7 @@ inline int HilbertSymbolClass(PadicClass const &x, PadicClass const &y,
   auto eps = [](int64_t w) -> int64_t { return ((w - 1) / 2) % 2; };
   auto omega = [](int64_t w) -> int64_t { return ((w * w - 1) / 8) % 2; };
   int64_t e = eps(u) * eps(v) + a * omega(v) + b * omega(u);
-  return (ModPositive(e, 2) == 0) ? 1 : -1;
+  return (ResMod(e, 2) == 0) ? 1 : -1;
 }
 
 // The quadratic character chi_p of Katsurada: 0 when Q_p(sqrt x) / Q_p is
@@ -438,7 +413,7 @@ inline int HasseInvariantOMeara(SiegelJordanBlocks const &q) {
       res *= HilbertSymbolClass(diag[i], diag[j], p);
     }
   }
-  PadicClass minus_one = {0, ModPositive(-1, UnitModulus(p))};
+  PadicClass minus_one = {0, ResMod(-1, UnitModulus(p))};
   return res * HilbertSymbolClass(GramDetClass(q), minus_one, p);
 }
 
@@ -446,7 +421,7 @@ inline PadicClass PadicSignedPower(int r, PadicClass const &x, int64_t p) {
   if (r % 2 == 0) {
     return x;
   }
-  return {x.val, MulMod(x.unit, -1, UnitModulus(p))};
+  return {x.val, ResMul(x.unit, -1, UnitModulus(p))};
 }
 
 // The invariants of Katsurada, Section 3.
@@ -459,7 +434,7 @@ inline int EtaInvariant(SiegelJordanBlocks const &q) {
   int n = q.dim();
   PadicClass det = GramDetClass(q);
   int h1 = HilbertSymbolClass(det, PadicSignedPower((n - 1) / 2, det, p), p);
-  PadicClass minus_one = {0, ModPositive(-1, UnitModulus(p))};
+  PadicClass minus_one = {0, ResMod(-1, UnitModulus(p))};
   int h2 = HilbertSymbolClass(minus_one, minus_one, p);
   int exp_h2 = ((n * n - 1) / 8) % 2;
   return HasseInvariantOMeara(q) * h1 * ((exp_h2 == 0) ? 1 : h2);
@@ -486,7 +461,7 @@ inline int DeltaInvariant(SiegelJordanBlocks const &q) {
 
 inline int XiDash(int xi) { return 1 + xi - xi * xi; }
 
-inline int MinusOnePower(int e) { return (ModPositive(e, 2) == 0) ? 1 : -1; }
+inline int MinusOnePower(int e) { return (ResMod(e, 2) == 0) ? 1 : -1; }
 
 //
 // Jordan decomposition over Z_p of a half-integral matrix
@@ -618,7 +593,7 @@ SiegelJordanBlocks JordanBlocksOdd(MyMatrix<T> const &B, int64_t p) {
       if (c.val != e) {
         break;
       }
-      prod = MulMod(prod, c.unit, p);
+      prod = ResMul(prod, c.unit, p);
       part.push_back({e, SiegelBlockKind::Unit, 1});
       j++;
     }
@@ -640,7 +615,7 @@ inline bool DoesTwoAdicallyRepresentZero(int64_t a, int64_t b, int64_t c) {
     for (int64_t y : {0, 1, 4}) {
       for (int64_t z : {0, 1, 4}) {
         bool some_odd = (x % 2 == 1) || (y % 2 == 1) || (z % 2 == 1);
-        if (some_odd && ModPositive(a * x + b * y + c * z, 8) == 0) {
+        if (some_odd && ResMod(a * x + b * y + c * z, 8) == 0) {
           return true;
         }
       }
@@ -665,14 +640,14 @@ TransJordanDec2(std::vector<TwoAdicItem> const &us) {
     return us;
   }
   int64_t u1 = us[0].unit, u2 = us[1].unit, u3 = us[2].unit;
-  int64_t u = ModPositive(u1 * u2 * u3, 8);
+  int64_t u = ResMod(u1 * u2 * u3, 8);
   std::vector<TwoAdicItem> rest(us.begin() + 3, us.end());
   std::vector<TwoAdicItem> l = TransJordanDec2(rest);
   if (DoesTwoAdicallyRepresentZero(u1, u2, u3)) {
-    l.push_back({false, ModPositive(-u, 8), SiegelBlockKind::Unit});
+    l.push_back({false, ResMod(-u, 8), SiegelBlockKind::Unit});
     l.push_back({true, 0, SiegelBlockKind::H});
   } else {
-    l.push_back({false, ModPositive(3 * u, 8), SiegelBlockKind::Unit});
+    l.push_back({false, ResMod(3 * u, 8), SiegelBlockKind::Unit});
     l.push_back({true, 0, SiegelBlockKind::Y});
   }
   std::vector<TwoAdicItem> l_diag, l_non_diag;
@@ -758,10 +733,7 @@ std::vector<SiegelJordanBlock> JordanSplitting2(MyMatrix<T> S) {
       raw.push_back({c.val, SiegelBlockKind::Unit, c.unit});
     } else {
       int e = PadicFromRational<T, Tint>(M(0, 1), p).val + 1;
-      T scale(1);
-      for (int i = 0; i < e - 1; i++) {
-        scale *= T(2);
-      }
+      T scale = MyPow<T>(T(2), e - 1);
       for (int i = e - 1; i < 0; i++) {
         scale /= T(2);
       }
@@ -827,20 +799,6 @@ SiegelJordanBlocks JordanBlocks2(MyMatrix<T> const &S) {
 // Katsurada's recursion
 //
 
-template <typename T> T PowerInt(T const &a, int e) {
-  T res(1);
-  if (e >= 0) {
-    for (int i = 0; i < e; i++) {
-      res *= a;
-    }
-  } else {
-    for (int i = 0; i < -e; i++) {
-      res /= a;
-    }
-  }
-  return res;
-}
-
 // 1 - c X^d
 template <typename T> UnivariatePolynomial<T> OneMinus(T const &c, int d) {
   return PolyConstant<T>(T(1)) - PolyMonomial<T>(c, d);
@@ -867,7 +825,7 @@ UnivariatePolynomial<T> SiegelSeriesDim1(SiegelJordanBlocks const &q) {
   T p_T = ScalarFromInt64<T>(q.p);
   UnivariatePolynomial<T> P;
   for (int a = 0; a <= ContentOrder(q); a++) {
-    P = P + PolyMonomial<T>(PowerInt(p_T, a), a);
+    P = P + PolyMonomial<T>(MyPowSigned(p_T, a), a);
   }
   return P;
 }
@@ -882,16 +840,16 @@ RationalFunction<T> SiegelSeriesDim2Kernel(int64_t p, int a, int b) {
   // r1 = (1 - (p^2 X)^{a+1}) / (1 - p^2 X) = sum_{i=0}^{a} (p^2 X)^i
   UnivariatePolynomial<T> r1;
   for (int i = 0; i <= a; i++) {
-    r1 = r1 + PolyMonomial<T>(PowerInt(p_T, 2 * i), i);
+    r1 = r1 + PolyMonomial<T>(MyPowSigned(p_T, 2 * i), i);
   }
   UnivariatePolynomial<T> rn2 =
-      PolyMonomial<T>(PowerInt(p_T, 3 * b + 1), 2 * b + 1) -
-      PolyMonomial<T>(PowerInt(p_T, b + 2 * b - a), 2 * b - a);
+      PolyMonomial<T>(MyPowSigned(p_T, 3 * b + 1), 2 * b + 1) -
+      PolyMonomial<T>(MyPowSigned(p_T, b + 2 * b - a), 2 * b - a);
   UnivariatePolynomial<T> rd2 =
       PolyMonomial<T>(p_T, 1) - PolyConstant<T>(T(1));
   // (r1 - rn2 / rd2) / (1 - p^3 X^2)
   RationalFunction<T> res = {r1 * rd2 - rn2,
-                             rd2 * OneMinus<T>(PowerInt(p_T, 3), 2)};
+                             rd2 * OneMinus<T>(MyPowSigned(p_T, 3), 2)};
   return res;
 }
 
@@ -903,7 +861,7 @@ UnivariatePolynomial<T> SiegelSeriesDim2(SiegelJordanBlocks const &q) {
   // det_4 = 4 * Gram_det, and the local class of the fundamental
   // discriminant of -det_4
   PadicClass det4 = PadicMul(GramDetClass(q), PadicFromInt64(4, p), p);
-  PadicClass x = {det4.val, MulMod(det4.unit, -1, UnitModulus(p))};
+  PadicClass x = {det4.val, ResMul(det4.unit, -1, UnitModulus(p))};
   int val_fd;
   int kron_fd;
   if (p != 2) {
@@ -941,12 +899,12 @@ RationalFunction<T> KatsuradaC1(SiegelJordanBlocks const &q,
   int n = q.dim();
   if (n % 2 == 0) {
     int xi = XiInvariant(q);
-    return {OneMinus<T>(PowerInt(p_T, n / 2) * T(xi), 1),
-            OneMinus<T>(PowerInt(p_T, n + 1), 2)};
+    return {OneMinus<T>(MyPowSigned(p_T, n / 2) * T(xi), 1),
+            OneMinus<T>(MyPowSigned(p_T, n + 1), 2)};
   }
   int xi_tilde = (n > 1) ? XiInvariant(q2) : 1;
   return {PolyConstant<T>(T(1)),
-          OneMinus<T>(PowerInt(p_T, (n + 1) / 2) * T(xi_tilde), 1)};
+          OneMinus<T>(MyPowSigned(p_T, (n + 1) / 2) * T(xi_tilde), 1)};
 }
 
 template <typename T>
@@ -963,11 +921,11 @@ RationalFunction<T> KatsuradaC0(SiegelJordanBlocks const &q,
     int expt = delta - delta_tilde + xi * xi;
     CheckNonNegative(expt);
     T coef = T(MinusOnePower(xi + 1) * xi_dash * eta_tilde) *
-             PowerInt(p_T, (n / 2) * expt + CheckedHalf(delta));
+             MyPowSigned(p_T, (n / 2) * expt + CheckedHalf(delta));
     UnivariatePolynomial<T> num =
-        OneMinus<T>(PowerInt(p_T, n / 2 + 1) * T(xi), 1) *
+        OneMinus<T>(MyPowSigned(p_T, n / 2 + 1) * T(xi), 1) *
         PolyMonomial<T>(coef, expt);
-    return {num, OneMinus<T>(PowerInt(p_T, n + 1), 2)};
+    return {num, OneMinus<T>(MyPowSigned(p_T, n + 1), 2)};
   }
   int eta = EtaInvariant(q);
   int delta = DeltaInvariant(q);
@@ -980,10 +938,10 @@ RationalFunction<T> KatsuradaC0(SiegelJordanBlocks const &q,
   int expt = delta - delta_tilde + 2 - xi_tilde * xi_tilde;
   CheckNonNegative(expt);
   T coef = T(MinusOnePower(xi_tilde) * xi_tilde_dash * eta) *
-           PowerInt(p_T, ((n - 1) / 2) * expt +
+           MyPowSigned(p_T, ((n - 1) / 2) * expt +
                              CheckedHalf(2 * delta - delta_tilde + 2));
   return {PolyMonomial<T>(coef, expt),
-          OneMinus<T>(PowerInt(p_T, (n + 1) / 2) * T(xi_tilde), 1)};
+          OneMinus<T>(MyPowSigned(p_T, (n + 1) / 2) * T(xi_tilde), 1)};
 }
 
 inline SiegelJordanBlocks BlocksTail(SiegelJordanBlocks const &q,
@@ -1049,49 +1007,49 @@ KatsuradaTheorem42Coefficients(std::vector<SiegelJordanBlock> const &b1,
     } else {
       eta_tilde = 1;
     }
-    c11 = {OneMinus<T>(PowerInt(two, n / 2) * T(xi), 1),
-           OneMinus<T>(PowerInt(two, n + 1), 2)};
+    c11 = {OneMinus<T>(MyPowSigned(two, n / 2) * T(xi), 1),
+           OneMinus<T>(MyPowSigned(two, n + 1), 2)};
     int expt = delta - delta_tilde + xi * xi + sigma;
     CheckNonNegative(expt);
     T coef10 = T(MinusOnePower(xi + 1) * xi_dash * eta_tilde) *
-               PowerInt(two, CheckedHalf(delta) + (n / 2) * expt);
-    c10 = {OneMinus<T>(PowerInt(two, n / 2 + 1) * T(xi), 1) *
+               MyPowSigned(two, CheckedHalf(delta) + (n / 2) * expt);
+    c10 = {OneMinus<T>(MyPowSigned(two, n / 2 + 1) * T(xi), 1) *
                PolyMonomial<T>(coef10, expt),
-           OneMinus<T>(PowerInt(two, n + 1), 2)};
+           OneMinus<T>(MyPowSigned(two, n + 1), 2)};
     c21 = {PolyConstant<T>(T(1)),
-           OneMinus<T>(PowerInt(two, n / 2) * T(xi_hat), 1)};
+           OneMinus<T>(MyPowSigned(two, n / 2) * T(xi_hat), 1)};
     int expt2 = delta_tilde - delta_hat + 2 - xi_hat * xi_hat - sigma;
     CheckNonNegative(expt2);
     T coef20 = T(MinusOnePower(xi_hat) * xi_hat_dash * eta_tilde) *
-               PowerInt(two, ((n - 2) / 2) * expt2 +
+               MyPowSigned(two, ((n - 2) / 2) * expt2 +
                                  CheckedHalf(2 * delta_tilde - delta_hat + 2 -
                                              2 * sigma));
     c20 = {PolyMonomial<T>(coef20, expt2),
-           OneMinus<T>(PowerInt(two, n / 2) * T(xi_hat), 1)};
+           OneMinus<T>(MyPowSigned(two, n / 2) * T(xi_hat), 1)};
   } else {
     int eta = EtaInvariant(q);
     int eta_hat = EtaInvariant(q2);
     int xi_tilde = (!b1_unit && SmallD(q3) % 2 == 0) ? 1 : 0;
     c11 = {PolyConstant<T>(T(1)),
-           OneMinus<T>(PowerInt(two, (n + 1) / 2) * T(xi_tilde), 1)};
+           OneMinus<T>(MyPowSigned(two, (n + 1) / 2) * T(xi_tilde), 1)};
     int expt = delta - delta_tilde + 2 - xi_tilde * xi_tilde + sigma;
     CheckNonNegative(expt);
     T coef10 = T(MinusOnePower(xi_tilde) * eta) *
-               PowerInt(two, ((n - 1) / 2) * expt +
+               MyPowSigned(two, ((n - 1) / 2) * expt +
                                  CheckedHalf(2 * delta - delta_tilde + 2 +
                                              sigma));
     c10 = {PolyMonomial<T>(coef10, expt),
-           OneMinus<T>(PowerInt(two, (n + 1) / 2) * T(xi_tilde), 1)};
-    c21 = {OneMinus<T>(PowerInt(two, (n - 1) / 2) * T(xi_tilde), 1),
-           OneMinus<T>(PowerInt(two, n), 2)};
+           OneMinus<T>(MyPowSigned(two, (n + 1) / 2) * T(xi_tilde), 1)};
+    c21 = {OneMinus<T>(MyPowSigned(two, (n - 1) / 2) * T(xi_tilde), 1),
+           OneMinus<T>(MyPowSigned(two, n), 2)};
     int expt2 = delta_tilde - delta_hat + xi_tilde * xi_tilde - sigma;
     CheckNonNegative(expt2);
     T coef20 = T(MinusOnePower(xi_tilde + 1) * eta_hat) *
-               PowerInt(two, ((n - 1) / 2) * expt2 +
+               MyPowSigned(two, ((n - 1) / 2) * expt2 +
                                  CheckedHalf(delta_tilde - sigma));
-    c20 = {OneMinus<T>(PowerInt(two, (n + 1) / 2) * T(xi_tilde), 1) *
+    c20 = {OneMinus<T>(MyPowSigned(two, (n + 1) / 2) * T(xi_tilde), 1) *
                PolyMonomial<T>(coef20, expt2),
-           OneMinus<T>(PowerInt(two, n), 2)};
+           OneMinus<T>(MyPowSigned(two, n), 2)};
   }
   return {c11, c10, c21, c20};
 }
@@ -1203,21 +1161,21 @@ T AlphaUnimodularTarget(MyMatrix<T> const &S, int64_t p, int k, int xi_T,
                         SiegelSeriesCache<T> &cache) {
   int m = S.rows();
   T p_T = ScalarFromInt64<T>(p);
-  T X = T(xi_T) / PowerInt(p_T, k);
+  T X = T(xi_T) / MyPowSigned(p_T, k);
   UnivariatePolynomial<T> F = SiegelSeriesPolynomial<T, Tint>(S, p, cache);
   T val = PolyEvaluate(F, X) * (T(1) - X);
   for (int i = 1; i <= m / 2; i++) {
-    val *= T(1) - PowerInt(p_T, 2 * i) * X * X;
+    val *= T(1) - MyPowSigned(p_T, 2 * i) * X * X;
   }
   if (m % 2 == 0) {
     Tint detS_int = UniversalScalarConversion<Tint, T>(DeterminantMat(S));
     int64_t detS = UniversalScalarConversion<int64_t, Tint>(detS_int);
     int64_t DB = FundamentalDiscriminant(SignedPower(m / 2, detS));
     int xi_B = QuadraticCharacter(DB, p);
-    val /= T(1) - PowerInt(p_T, m / 2) * T(xi_B) * X;
+    val /= T(1) - MyPowSigned(p_T, m / 2) * T(xi_B) * X;
   }
   if (p == 2) {
-    val *= PowerInt(T(2), m - 1);
+    val *= MyPowSigned(T(2), m - 1);
   }
   return val;
 }

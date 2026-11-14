@@ -180,10 +180,7 @@ inline T QuadLocalFactorOdd(std::vector<QuadJordanBlock> blocks,
     throw TerminalException{1};
   }
   int64_t N = N2 / 2;
-  T qpow(1);
-  for (int64_t i = 0; i < (N >= 0 ? N : -N); i++) {
-    qpow *= qf;
-  }
+  T qpow = MyPow<T>(qf, (N >= 0 ? N : -N));
   return (N >= 0) ? T(qpow * f) : T(f / qpow);
 }
 
@@ -679,10 +676,7 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
     }
   }
   auto pow2 = [&](int k) -> T {
-    T r(1);
-    for (int i = 0; i < (k >= 0 ? k : -k); i++) {
-      r *= 2;
-    }
+    T r = MyPow<T>(2, (k >= 0 ? k : -k));
     return (k >= 0) ? r : T(1 / r);
   };
   // the forms V_s: dimension and type
@@ -789,10 +783,7 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
     res *= HeckeGroupOrderO<T>(v.first, v.second, q) / 2;
   }
   auto qpow = [&](int64_t k) -> T {
-    T r(1);
-    for (int64_t i = 0; i < (k >= 0 ? k : -k); i++) {
-      r *= q;
-    }
+    T r = MyPow<T>(q, (k >= 0 ? k : -k));
     return (k >= 0) ? r : T(1 / r);
   };
   T beta = qpow(N) * res / 2;
@@ -1113,10 +1104,7 @@ inline int ScaleValK(KMat<T> const &G, LocalPrimeK<T> &P) {
 
 template <typename T>
 inline T QPowRat(T const &q, int64_t k) {
-  T r(1);
-  for (int64_t i = 0; i < (k >= 0 ? k : -k); i++) {
-    r *= q;
-  }
+  T r = MyPow<T>(q, (k >= 0 ? k : -k));
   return (k >= 0) ? r : T(1 / r);
 }
 
@@ -1313,10 +1301,7 @@ inline bool IsLocallyIsometricDyadic(QuadKirschmerSymbol<T> const &S1,
 inline std::vector<std::vector<PolyQ>> ProjectivePointsGF(int m,
                                                           ResidueFieldGF const &F) {
   std::vector<PolyQ> elts;
-  int64_t qf = 1;
-  for (int i = 0; i < F.f; i++) {
-    qf *= F.q;
-  }
+  int64_t qf = MyPow<int64_t>(F.q, F.f);
   for (int64_t u = 0; u < qf; u++) {
     PolyQ a;
     int64_t t = u;
@@ -1330,10 +1315,7 @@ inline std::vector<std::vector<PolyQ>> ProjectivePointsGF(int m,
   std::vector<std::vector<PolyQ>> res;
   for (int lead = 0; lead < m; lead++) {
     int nfree = m - lead - 1;
-    int64_t tot = 1;
-    for (int i = 0; i < nfree; i++) {
-      tot *= qf;
-    }
+    int64_t tot = MyPow<int64_t>(qf, nfree);
     for (int64_t u = 0; u < tot; u++) {
       std::vector<PolyQ> v(m);
       v[lead] = {1};
@@ -1664,7 +1646,7 @@ QuadLocalFactorsByIdempotents(MyMatrix<T> const &B,
         row[j] = UniversalScalarConversion<int64_t, Tint>(x);
       }
       acc.push_back(row);
-      if (RankModQ(acc, q) == static_cast<int>(acc.size())) {
+      if (RankModPrime(acc, q) == static_cast<int>(acc.size())) {
         chosen.push_back(i);
       } else {
         acc.pop_back();
@@ -1780,16 +1762,13 @@ QuadPrimeGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
     if (den < 0) {
       den += qz;
     }
-    return MulModQ(UniversalScalarConversion<int64_t, Tint>(num),
-                   InvModQ(UniversalScalarConversion<int64_t, Tint>(den), q),
+    return ResMul(UniversalScalarConversion<int64_t, Tint>(num),
+                   ResInv(UniversalScalarConversion<int64_t, Tint>(den), q),
                    q);
   };
   // the small elements of O_K, by increasing size
   std::vector<std::vector<int>> cands;
-  int n_tot = 1;
-  for (int i = 0; i < deg; i++) {
-    n_tot *= 7;
-  }
+  int n_tot = MyPow<int>(7, deg);
   for (int u = 0; u < n_tot; u++) {
     std::vector<int> c(deg);
     int t = u;
@@ -1879,7 +1858,7 @@ QuadPrimeGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
           }
           test.push_back(row);
         }
-        if (RankModQ(test, q) == static_cast<int>(test.size())) {
+        if (RankModPrime(test, q) == static_cast<int>(test.size())) {
           chosen.push_back(v);
           acc = test;
         }
@@ -2005,9 +1984,7 @@ QuadraticLocalFactors(MyMatrix<T> const &B,
     for (int64_t p = 2; p <= x; p++) {
       if (x % p == 0) {
         int v = DiscriminantValuationCharacters(G, XK, p);
-        for (int i = 0; i < v; i++) {
-          dK *= UniversalScalarConversion<Tint, int64_t>(p);
-        }
+        dK *= MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), v);
         while (x % p == 0) {
           x /= p;
         }
@@ -2239,10 +2216,7 @@ std::vector<ElemE<T>> AutomorphismsTotallyReal(CyclotomicField<T> const &K) {
       std::cerr << "ABQUAD: the field is not totally real\n";
       throw TerminalException{1};
     }
-    T W2(1);
-    for (size_t i = 0; i < prec; i++) {
-      W2 *= 2;
-    }
+    T W2 = MyPow<T>(2, prec);
     std::vector<ElemE<T>> res;
     for (int j = 0; j < n; j++) {
       std::vector<T> v(n + 1);
@@ -2417,9 +2391,7 @@ AbelianQuadraticExtensionField(MyMatrix<T> const &B,
   for (int64_t p : ps) {
     int64_t pk = 1;
     int k = (p == 2) ? std::max(vp(FK.n, 2) + 1, 3) : std::max(vp(FK.n, p), 1);
-    for (int i = 0; i < k; i++) {
-      pk *= p;
-    }
+    pk *= MyPow<int64_t>(p, k);
     N = std::lcm(N, pk);
   }
   AbelianCMField FK2 = LiftAbelianField(FK, N);
@@ -2774,7 +2746,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
     }
   }
   MyMatrix<T> Winv = Inverse(W);
-  Tint pc = PowInt<Tint>(p, c);
+  Tint pc = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), c);
   auto mod_pc = [&](T const &x) -> int64_t {
     Tint den = GetDenominator_z(x);
     Tint inv = mod_inv(ResInt(den, pc), pc);
@@ -2908,15 +2880,15 @@ LocalImagePiAdic(MyMatrix<T> const &B,
           continue;
         }
         std::swap(aug[piv], aug[row]);
-        int64_t iv = InvModQ(((aug[row][col] % p) + p) % p, p);
+        int64_t iv = ResInv(((aug[row][col] % p) + p) % p, p);
         for (auto &x : aug[row]) {
-          x = MulModQ(((x % p) + p) % p, iv, p);
+          x = ResMul(((x % p) + p) % p, iv, p);
         }
         for (size_t i = 0; i < aug.size(); i++) {
           int64_t f0 = ((aug[i][col] % p) + p) % p;
           if (i != row && f0 != 0) {
             for (size_t j = 0; j <= nvar; j++) {
-              aug[i][j] = ((aug[i][j] - MulModQ(f0, ((aug[row][j] % p) + p) % p, p)) % p + p) % p;
+              aug[i][j] = ((aug[i][j] - ResMul(f0, ((aug[row][j] % p) + p) % p, p)) % p + p) % p;
             }
           }
         }
@@ -3188,10 +3160,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       return affine(aug, nvar);
     };
     auto n_lifts = [&](std::pair<std::vector<int64_t>, IMat> const &sp) -> size_t {
-      size_t n_y = 1;
-      for (size_t u = 0; u < sp.second.size(); u++) {
-        n_y *= static_cast<size_t>(p);
-      }
+      size_t n_y = MyPow<size_t>(static_cast<size_t>(p), sp.second.size());
       return n_y;
     };
     auto make_lift = [&](GMat const &gm, int j,
@@ -3269,7 +3238,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
     };
     // the matrices on X modulo p^c
     int Nprec = c + 1;
-    Tint Qp = PowInt<Tint>(p, Nprec);
+    Tint Qp = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), Nprec);
     PolyZ<Tint> eps = LocalEps(P, Nprec);
     auto to_X = [&](GMat const &gm) -> IMat {
       MyMatrix<T> Mf = ZeroMatrix<T>(r, r);

@@ -982,10 +982,7 @@ std::vector<MyMatrix<Tint>> CayleyLocalElements(IsometryComponent<T> const &comp
     return res;
   }
   Tint q_T = UniversalScalarConversion<Tint, int64_t>(q);
-  Tint qc(1);
-  for (int i = 0; i < c; i++) {
-    qc *= q_T;
-  }
+  Tint qc = MyPow<Tint>(q_T, c);
   std::mt19937_64 rng(static_cast<uint64_t>(q) * 2654435761ULL + k);
   std::uniform_int_distribution<int> unif(-2, 2);
   MyMatrix<Tint> Id = IdentityMat<Tint>(k);
@@ -1070,8 +1067,8 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
   // the size of the exact entries. Beyond 2^62 the listing is left out.
   std::optional<int64_t> listing_mod = LocalImageModulus(q, c, e);
   bool listable = listing_mod.has_value();
-  auto exact = [&](MyMatrix<Tint> const &X) -> ModMat {
-    ModMat R(k, std::vector<int64_t>(k, 0));
+  auto exact = [&](MyMatrix<Tint> const &X) -> ModMatrix {
+    ModMatrix R(k, std::vector<int64_t>(k, 0));
     if (listable) {
       for (int i = 0; i < k; i++) {
         for (int j = 0; j < k; j++) {
@@ -1083,12 +1080,9 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
   };
   // the residues modulo q^W, for the certified generators
   int Wq = MultiplicityNewtonPrecision(M.q);
-  Tint qW(1);
-  for (int i = 0; i < Wq; i++) {
-    qW *= UniversalScalarConversion<Tint, int64_t>(M.q);
-  }
-  auto residues = [&](MyMatrix<Tint> const &X) -> ModMat {
-    ModMat R(k, std::vector<int64_t>(k));
+  Tint qW = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(M.q), Wq);
+  auto residues = [&](MyMatrix<Tint> const &X) -> ModMatrix {
+    ModMatrix R(k, std::vector<int64_t>(k));
     for (int i = 0; i < k; i++) {
       for (int j = 0; j < k; j++) {
         Tint v = ResInt(X(i, j), qW);
@@ -1100,7 +1094,7 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
     }
     return R;
   };
-  std::vector<ModMat> basis;
+  std::vector<ModMatrix> basis;
   for (int r = 0; r < ker.rows(); r++) {
     MyMatrix<Tint> Y(k, k);
     for (int u = 0; u < k; u++) {
@@ -1110,7 +1104,7 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
     }
     basis.push_back(exact(Y));
   }
-  ModMat A_mod = exact(UniversalMatrixConversion<Tint, T>(comp.gram));
+  ModMatrix A_mod = exact(UniversalMatrixConversion<Tint, T>(comp.gram));
   MultiplicityFactorBounds mbounds;
   /*
     First the certified generators of the image modulo q^c
@@ -1121,16 +1115,10 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
    */
   {
     int Wn = MultiplicityNewtonPrecision(q);
-    Tint pW(1);
-    for (int i = 0; i < Wn; i++) {
-      pW *= UniversalScalarConversion<Tint, int64_t>(q);
-    }
+    Tint pW = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), Wn);
     MyMatrix<T> Binv = Inverse(comp.gram);
-    T pe(1);
-    for (int i = 0; i < e; i++) {
-      pe *= UniversalScalarConversion<T, int64_t>(q);
-    }
-    ModMat Be(k, std::vector<int64_t>(k));
+    T pe = MyPow<T>(UniversalScalarConversion<T, int64_t>(q), e);
+    ModMatrix Be(k, std::vector<int64_t>(k));
     for (int i = 0; i < k; i++) {
       for (int j = 0; j < k; j++) {
         T x = Binv(i, j) * pe;
@@ -1153,7 +1141,7 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
         on_rows = false;
       }
     }
-    std::vector<ModMat> Om, Lam;
+    std::vector<ModMatrix> Om, Lam;
     for (auto const &X : ListX) {
       MyMatrix<Tint> Xi = UniversalMatrixConversion<Tint, T>(
           on_rows ? MyMatrix<T>(X.transpose()) : X);
@@ -1166,11 +1154,11 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
     for (auto const &Y : ListComm) {
       CommCols.push_back(on_rows ? MyMatrix<Tint>(Y.transpose()) : Y);
     }
-    std::optional<std::vector<ModMat>> Lie = ResidueMatrices(
+    std::optional<std::vector<ModMatrix>> Lie = ResidueMatrices(
         IntegralLieLatticeColumns<T, Tint>(comp.gram, CommCols),
         ResidueModulusOf(qW));
     LocalImageOrder ord;
-    std::optional<std::vector<ModMat>> ggens = LocalOrthogonalImageGenerators(
+    std::optional<std::vector<ModMatrix>> ggens = LocalOrthogonalImageGenerators(
         residues(UniversalMatrixConversion<Tint, T>(comp.gram)), Be, Om, Lam,
         {}, Lie, q, c, e, mbounds, &ord);
     if (ggens) {
@@ -1219,7 +1207,7 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
 #endif
 #ifdef SANITY_CHECK_ISOMETRY_MASS
         // the listed image, when within the bounds, is the same set
-        std::optional<std::vector<ModMat>> lst;
+        std::optional<std::vector<ModMatrix>> lst;
         if (listable) {
           lst = LocalStabilizerImage(A_mod, basis, q, c, e, mbounds);
         }
@@ -1249,7 +1237,7 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
   if (!listable) {
     return {};
   }
-  std::optional<std::vector<ModMat>> opt =
+  std::optional<std::vector<ModMatrix>> opt =
       LocalStabilizerImage(A_mod, basis, q, c, e, mbounds);
   if (!opt) {
     return {};
@@ -1971,10 +1959,7 @@ std::vector<MyMatrix<Tint>> LocalReflections(MyMatrix<T> const &A, int64_t p,
                                              int c, size_t count) {
   int m = A.rows();
   T p_T = UniversalScalarConversion<T, int64_t>(p);
-  Tint pc(1);
-  for (int i = 0; i < c; i++) {
-    pc *= UniversalScalarConversion<Tint, int64_t>(p);
-  }
+  Tint pc = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), c);
   auto p_integral = [&](T const &x) -> bool {
     Tint den = GetDenominator_z(x);
     return ResInt(den, UniversalScalarConversion<Tint, int64_t>(p)) != 0;
@@ -1987,10 +1972,7 @@ std::vector<MyMatrix<Tint>> LocalReflections(MyMatrix<T> const &A, int64_t p,
   };
   (void)p_T;
   std::vector<MyMatrix<Tint>> res;
-  size_t n_cand = 1;
-  for (int i = 0; i < m; i++) {
-    n_cand *= 3;
-  }
+  size_t n_cand = MyPow<size_t>(3, m);
   for (size_t u = 1; u < n_cand && res.size() < count; u++) {
     MyVector<T> v(m);
     size_t t = u;
@@ -2391,7 +2373,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     };
     // with a center K other than Q the search over the primes of K over
     // p, pi-adically, first: it is exact and the fastest
-    std::optional<std::vector<ModMat>> opt;
+    std::optional<std::vector<ModMatrix>> opt;
     bool rows_convention = !OmegaX.empty() && !quaternionic;
     if (!OmegaX.empty() && !quaternionic) {
       opt = LocalImagePiAdic(GramX, OmegaX, p, c, bounds.max_solution);
@@ -2413,7 +2395,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
       }
     }
-    ModMat A_mod(m, std::vector<int64_t>(m));
+    ModMatrix A_mod(m, std::vector<int64_t>(m));
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         // exact (the generators read it modulo p^W, the listings modulo
@@ -2430,15 +2412,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     if (!opt && OmegaX.empty()) {
       int Wn = MultiplicityNewtonPrecision(p);
       Tint pW = UniversalScalarConversion<Tint, int64_t>(1);
-      for (int i = 0; i < Wn; i++) {
-        pW *= UniversalScalarConversion<Tint, int64_t>(p);
-      }
+      pW *= MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), Wn);
       MyMatrix<T> Binv = Inverse(GramX);
-      T pe(1);
-      for (int i = 0; i < e; i++) {
-        pe *= UniversalScalarConversion<T, int64_t>(p);
-      }
-      ModMat Be(m, std::vector<int64_t>(m));
+      T pe = MyPow<T>(UniversalScalarConversion<T, int64_t>(p), e);
+      ModMatrix Be(m, std::vector<int64_t>(m));
       for (int i = 0; i < m; i++) {
         for (int j = 0; j < m; j++) {
           T x = Binv(i, j) * pe;
@@ -2452,7 +2429,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
       }
       LocalImageOrder order;
-      std::optional<std::vector<ModMat>> Lie = ResidueMatrices(
+      std::optional<std::vector<ModMatrix>> Lie = ResidueMatrices(
           IntegralLieLatticeColumns<T, Tint>(GramX, {}), ResidueModulusOf(pW));
       opt = LocalOrthogonalImageGenerators(A_mod, Be, {}, {}, {}, Lie, p, c, e,
                                            bounds, &order);
@@ -2468,15 +2445,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     if (!opt && !OmegaX.empty()) {
       int Wn = MultiplicityNewtonPrecision(p);
       Tint pW = UniversalScalarConversion<Tint, int64_t>(1);
-      for (int i = 0; i < Wn; i++) {
-        pW *= UniversalScalarConversion<Tint, int64_t>(p);
-      }
+      pW *= MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), Wn);
       MyMatrix<T> Binv = Inverse(GramX);
-      T pe(1);
-      for (int i = 0; i < e; i++) {
-        pe *= UniversalScalarConversion<T, int64_t>(p);
-      }
-      ModMat Be(m, std::vector<int64_t>(m));
+      T pe = MyPow<T>(UniversalScalarConversion<T, int64_t>(p), e);
+      ModMatrix Be(m, std::vector<int64_t>(m));
       for (int i = 0; i < m; i++) {
         for (int j = 0; j < m; j++) {
           T x = Binv(i, j) * pe;
@@ -2489,8 +2461,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
           Be[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
         }
       }
-      auto to_cols = [&](MyMatrix<T> const &Y) -> ModMat {
-        ModMat Ym(m, std::vector<int64_t>(m));
+      auto to_cols = [&](MyMatrix<T> const &Y) -> ModMatrix {
+        ModMatrix Ym(m, std::vector<int64_t>(m));
         for (int i = 0; i < m; i++) {
           for (int j = 0; j < m; j++) {
             // residues modulo p^W, which is all the generators read
@@ -2503,7 +2475,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
         return Ym;
       };
-      std::vector<ModMat> Om, Lam;
+      std::vector<ModMatrix> Om, Lam;
       for (auto const &W2 : OmegaX) {
         Om.push_back(to_cols(W2));
       }
@@ -2515,20 +2487,20 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
         CommColsX.push_back(MyMatrix<Tint>(Y.transpose()));
       }
-      std::optional<std::vector<ModMat>> LieX = ResidueMatrices(
+      std::optional<std::vector<ModMatrix>> LieX = ResidueMatrices(
           IntegralLieLatticeColumns<T, Tint>(GramX, CommColsX),
           ResidueModulusOf(pW));
       // for a quaternion order, the forms B(w x, y) = x W GramX y^T, w in
       // the trace dual (the integral points of their span), as residues
       // modulo p^W
-      std::vector<ModMat> Forms;
+      std::vector<ModMatrix> Forms;
       if (quaternionic) {
         std::vector<MyMatrix<T>> Ls;
         for (auto const &W2 : OmegaX) {
           Ls.push_back(MyMatrix<T>(W2 * GramX));
         }
         for (auto const &N : QuatIntegralPoints<T, Tint>(Ls, m)) {
-          ModMat Nm(m, std::vector<int64_t>(m));
+          ModMatrix Nm(m, std::vector<int64_t>(m));
           for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
               Tint v = ResInt(UniversalScalarConversion<Tint, T>(N(i, j)), pW);
@@ -2573,9 +2545,9 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       // the basis as residues modulo the modulus of the listing
       std::optional<int64_t> listing_mod = LocalImageModulus(p, c, e);
       if (listing_mod) {
-        std::vector<ModMat> basis;
+        std::vector<ModMatrix> basis;
         for (auto const &Y : IntegralCommutant<T, Tint>(compX)) {
-          ModMat Ym(m, std::vector<int64_t>(m));
+          ModMatrix Ym(m, std::vector<int64_t>(m));
           for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
               Ym[i][j] = CenteredResidueOfInteger(Y(i, j), *listing_mod);
@@ -2602,15 +2574,10 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     if (opt && !gens_over_K && rows_convention && !OmegaX.empty()) {
       int Wn = MultiplicityNewtonPrecision(p);
       Tint pW = UniversalScalarConversion<Tint, int64_t>(1);
-      for (int i = 0; i < Wn; i++) {
-        pW *= UniversalScalarConversion<Tint, int64_t>(p);
-      }
+      pW *= MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), Wn);
       MyMatrix<T> Binv = Inverse(GramX);
-      T pe(1);
-      for (int i = 0; i < e; i++) {
-        pe *= UniversalScalarConversion<T, int64_t>(p);
-      }
-      ModMat Be(m, std::vector<int64_t>(m));
+      T pe = MyPow<T>(UniversalScalarConversion<T, int64_t>(p), e);
+      ModMatrix Be(m, std::vector<int64_t>(m));
       for (int i = 0; i < m; i++) {
         for (int j = 0; j < m; j++) {
           T x = Binv(i, j) * pe;
@@ -2623,8 +2590,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
           Be[i][j] = UniversalScalarConversion<int64_t, Tint>(v);
         }
       }
-      auto to_cols = [&](MyMatrix<T> const &Y) -> ModMat {
-        ModMat Ym(m, std::vector<int64_t>(m));
+      auto to_cols = [&](MyMatrix<T> const &Y) -> ModMatrix {
+        ModMatrix Ym(m, std::vector<int64_t>(m));
         for (int i = 0; i < m; i++) {
           for (int j = 0; j < m; j++) {
             // residues modulo p^W, which is all the generators read
@@ -2637,7 +2604,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
         return Ym;
       };
-      std::vector<ModMat> Om, Lam;
+      std::vector<ModMatrix> Om, Lam;
       for (auto const &W2 : OmegaX) {
         Om.push_back(to_cols(W2));
       }
@@ -2649,23 +2616,23 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         Lam.push_back(to_cols(UniversalMatrixConversion<T, Tint>(Y)));
         CommCols3.push_back(MyMatrix<Tint>(Y.transpose()));
       }
-      std::optional<std::vector<ModMat>> Lie3 = ResidueMatrices(
+      std::optional<std::vector<ModMatrix>> Lie3 = ResidueMatrices(
           IntegralLieLatticeColumns<T, Tint>(GramX, CommCols3),
           ResidueModulusOf(pW));
       LocalImageOrder order_k;
-      std::optional<std::vector<ModMat>> kg = LocalOrthogonalImageGenerators(
+      std::optional<std::vector<ModMatrix>> kg = LocalOrthogonalImageGenerators(
           A_mod, Be, Om, Lam, {}, Lie3, p, c, e, bounds, &order_k);
       if (kg) {
         int64_t pcl = ResiduePrimePower(p, c);
-        auto closure_of = [&](std::vector<ModMat> const &gens, bool transpose,
-                              size_t cap) -> std::set<ModMat> {
-          ModMat Idm(m, std::vector<int64_t>(m, 0));
+        auto closure_of = [&](std::vector<ModMatrix> const &gens, bool transpose,
+                              size_t cap) -> std::set<ModMatrix> {
+          ModMatrix Idm(m, std::vector<int64_t>(m, 0));
           for (int i = 0; i < m; i++) {
             Idm[i][i] = 1;
           }
-          std::vector<ModMat> gs;
+          std::vector<ModMatrix> gs;
           for (auto const &g : gens) {
-            ModMat h(m, std::vector<int64_t>(m));
+            ModMatrix h(m, std::vector<int64_t>(m));
             for (int i = 0; i < m; i++) {
               for (int j = 0; j < m; j++) {
                 h[i][j] = ResMod(transpose ? g[j][i] : g[i][j], pcl);
@@ -2673,13 +2640,13 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
             }
             gs.push_back(h);
           }
-          std::set<ModMat> cl{Idm};
-          std::vector<ModMat> queue{Idm};
+          std::set<ModMatrix> cl{Idm};
+          std::vector<ModMatrix> queue{Idm};
           while (!queue.empty() && cl.size() <= cap) {
-            ModMat x = queue.back();
+            ModMatrix x = queue.back();
             queue.pop_back();
             for (auto const &g : gs) {
-              ModMat y(m, std::vector<int64_t>(m, 0));
+              ModMatrix y(m, std::vector<int64_t>(m, 0));
               for (int a = 0; a < m; a++) {
                 for (int k2 = 0; k2 < m; k2++) {
                   for (int b = 0; b < m; b++) {
@@ -2697,9 +2664,9 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         // when the pi-adic result is the list of the image: the K-linear
         // generators are in it and their group, of the order given by the
         // chain, has its order; else the closures are compared
-        std::set<ModMat> listed_set;
+        std::set<ModMatrix> listed_set;
         for (auto const &g : *opt) {
-          ModMat h(m, std::vector<int64_t>(m));
+          ModMatrix h(m, std::vector<int64_t>(m));
           for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
               h[i][j] = ResMod(g[j][i], pcl);
@@ -2709,7 +2676,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         }
         bool all_in = true;
         for (auto const &g : *kg) {
-          ModMat h = g;
+          ModMatrix h = g;
           for (auto &row : h) {
             for (auto &x : row) {
               x = ResMod(x, pcl);
@@ -2725,8 +2692,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
                     << "pi-adic image, of the same order " << listed_set.size()
                     << " (p=" << p << ")\n";
         } else {
-        std::set<ModMat> c2 = closure_of(*opt, true, 2000000);
-        std::set<ModMat> c1 = closure_of(*kg, false, c2.size());
+        std::set<ModMatrix> c2 = closure_of(*opt, true, 2000000);
+        std::set<ModMatrix> c1 = closure_of(*kg, false, c2.size());
         if (c1 != c2) {
           std::cerr << "MULT_FACTOR: SANITY: the K-linear generators give "
                     << c1.size() << " elements, the pi-adic image "
@@ -2742,18 +2709,18 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     // the group generated by the generators is the image listed by the old
     // searches, when these fit in their bounds (on the columns)
     if (gens_over_Q || gens_over_K) {
-      std::optional<std::vector<ModMat>> listed;
+      std::optional<std::vector<ModMatrix>> listed;
       if (gens_over_Q) {
         listed = LocalOrthogonalImage(A_mod, p, c, e, bounds);
       } else {
         IsometryComponent<T> compX2 = BuildIsometryComponent<T, Tint>(
             A, Xb, IdentityMat<T>(A.rows()), 1);
         compX2.extra_sigma = OmegaX;
-        std::vector<ModMat> basis2;
+        std::vector<ModMatrix> basis2;
         std::optional<int64_t> listing_mod = LocalImageModulus(p, c, e);
         for (auto const &Y : listing_mod ? IntegralCommutant<T, Tint>(compX2)
                                          : std::vector<MyMatrix<Tint>>{}) {
-          ModMat Ym(m, std::vector<int64_t>(m));
+          ModMatrix Ym(m, std::vector<int64_t>(m));
           for (int i = 0; i < m; i++) {
             for (int j = 0; j < m; j++) {
               Ym[i][j] = CenteredResidueOfInteger(Y(i, j), *listing_mod);
@@ -2767,7 +2734,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         if (listed) {
           // rows to columns
           for (auto &g : *listed) {
-            ModMat h(m, std::vector<int64_t>(m));
+            ModMatrix h(m, std::vector<int64_t>(m));
             for (int i = 0; i < m; i++) {
               for (int j = 0; j < m; j++) {
                 h[i][j] = g[j][i];
@@ -2779,9 +2746,9 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
       if (listed) {
         int64_t pcl = ResiduePrimePower(p, c);
-        std::set<ModMat> listed_set;
+        std::set<ModMatrix> listed_set;
         for (auto const &g : *listed) {
-          ModMat h = g;
+          ModMatrix h = g;
           for (auto &row : h) {
             for (auto &x : row) {
               x = ResMod(x, pcl);
@@ -2789,17 +2756,17 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
           }
           listed_set.insert(h);
         }
-        ModMat Idm(m, std::vector<int64_t>(m, 0));
+        ModMatrix Idm(m, std::vector<int64_t>(m, 0));
         for (int i = 0; i < m; i++) {
           Idm[i][i] = 1;
         }
-        std::set<ModMat> closure{Idm};
-        std::vector<ModMat> queue{Idm};
+        std::set<ModMatrix> closure{Idm};
+        std::vector<ModMatrix> queue{Idm};
         while (!queue.empty() && closure.size() <= listed_set.size()) {
-          ModMat x = queue.back();
+          ModMatrix x = queue.back();
           queue.pop_back();
           for (auto const &g : *opt) {
-            ModMat y(m, std::vector<int64_t>(m, 0));
+            ModMatrix y(m, std::vector<int64_t>(m, 0));
             for (int a = 0; a < m; a++) {
               for (int k2 = 0; k2 < m; k2++) {
                 for (int b = 0; b < m; b++) {
@@ -2826,7 +2793,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
 #endif
     // the action of an element on the generators f_s of the p-part: the
     // rows f_s (B_V coordinates) moved by 1 (x) g
-    auto act_gens = [&](ModMat const &g) -> std::vector<std::vector<int64_t>> {
+    auto act_gens = [&](ModMatrix const &g) -> std::vector<std::vector<int64_t>> {
       std::vector<std::vector<int64_t>> res;
       for (size_t s = 0; s < r; s++) {
         MyVector<T> f = GetMatrixRow(F_c, ListIdx[s]);
@@ -2889,8 +2856,8 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     int64_t pC = ResiduePrimePower(p, Cexp);
     auto powp = [&](int k) -> int64_t { return ResiduePrimePower(p, k); };
     auto canon = [&](std::vector<std::vector<int64_t>> const &gens_orig)
-        -> ModMat {
-      ModMat sc;
+        -> ModMatrix {
+      ModMatrix sc;
       for (auto const &x : gens_orig) {
         std::vector<int64_t> y(r);
         for (size_t s2 = 0; s2 < r; s2++) {
@@ -2910,18 +2877,18 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     // the element lists only serve the sanity check
     (void)span;
     (void)decode;
-    ModMat L0c = canon(Lgens);
-    std::set<ModMat> orbit{L0c};
-    std::vector<ModMat> queue{L0c};
+    ModMatrix L0c = canon(Lgens);
+    std::set<ModMatrix> orbit{L0c};
+    std::vector<ModMatrix> queue{L0c};
     while (!queue.empty()) {
-      ModMat H = queue.back();
+      ModMatrix H = queue.back();
       queue.pop_back();
       for (auto const &act : ListAct) {
         std::vector<std::vector<int64_t>> img;
         for (auto const &row : H) {
           img.push_back(apply(act, unscale(row)));
         }
-        ModMat Hc = canon(img);
+        ModMatrix Hc = canon(img);
         if (orbit.insert(Hc).second) {
           queue.push_back(Hc);
         }
@@ -3099,8 +3066,8 @@ FirstKernelOfDimension(std::vector<MyMatrix<T>> const &conditions,
                        std::vector<MyMatrix<T>> const &cand,
                        std::vector<size_t> const &owner, int n, int dim) {
   int64_t const p = 2147483647;
-  auto to_mod = [&](MyMatrix<T> const &M) -> ModMat {
-    ModMat R(M.rows(), std::vector<int64_t>(M.cols()));
+  auto to_mod = [&](MyMatrix<T> const &M) -> ModMatrix {
+    ModMatrix R(M.rows(), std::vector<int64_t>(M.cols()));
     for (int i = 0; i < M.rows(); i++) {
       for (int j = 0; j < M.cols(); j++) {
         if (!IsInteger(M(i, j))) {
@@ -3138,18 +3105,18 @@ FirstKernelOfDimension(std::vector<MyMatrix<T>> const &conditions,
     return UniversalMatrixConversion<T, Tint>(K_i);
   };
   // the block modulo p, then each S_c in its coordinates
-  ModMat B;
+  ModMatrix B;
   if (conditions.empty()) {
     B.assign(n, std::vector<int64_t>(n, 0));
     for (int i = 0; i < n; i++) {
       B[i][i] = 1;
     }
   } else {
-    B = ModLeftNullspace(to_mod(hconcat(conditions)), p);
+    B = LeftNullspaceModP(to_mod(hconcat(conditions)), p);
   }
-  std::vector<ModMat> S(cand.size());
+  std::vector<ModMatrix> S(cand.size());
   for (size_t c = 0; c < cand.size(); c++) {
-    S[c] = B.empty() ? ModMat{} : ModLeftNullspace(ModMatMul(B, to_mod(cand[c]), p), p);
+    S[c] = B.empty() ? ModMatrix{} : LeftNullspaceModP(ModMatrixProduct(B, to_mod(cand[c]), p), p);
   }
   for (size_t a = 0; a < cand.size(); a++) {
     if (static_cast<int>(S[a].size()) == dim) {
@@ -3166,10 +3133,10 @@ FirstKernelOfDimension(std::vector<MyMatrix<T>> const &conditions,
       if (owner[a] == owner[b] || static_cast<int>(S[b].size()) < dim) {
         continue;
       }
-      ModMat stacked = S[a];
+      ModMatrix stacked = S[a];
       stacked.insert(stacked.end(), S[b].begin(), S[b].end());
       int d = static_cast<int>(S[a].size() + S[b].size()) -
-              static_cast<int>(ModRank(stacked, p));
+              static_cast<int>(RankModPrime(stacked, p));
       if (d == dim) {
         if (std::optional<MyMatrix<T>> opt = exact({a, b})) {
           return opt;
@@ -4042,10 +4009,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             bool enlarged = false;
             for (Tint const &p_i : pr) {
               int64_t pp = UniversalScalarConversion<int64_t, Tint>(p_i);
-              size_t n_el = 1;
-              for (int i = 0; i < c; i++) {
-                n_el *= static_cast<size_t>(pp);
-              }
+              size_t n_el = MyPow<size_t>(static_cast<size_t>(pp), c);
               for (size_t sidx = 1; sidx < n_el && !enlarged; sidx++) {
                 size_t tt = sidx;
                 MyMatrix<T> x = ZeroMatrix<T>(mX, mX);
