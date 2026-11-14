@@ -3,6 +3,7 @@
 #define SRC_GENERA_LOCALDENSITYBADPRIMES_H_
 
 // clang-format off
+#include "GeneraArithmetic.h"
 #include "SymmetricOrbitCounting.h"
 #include "ResidueArithmetic.h"
 #include <algorithm>
@@ -83,7 +84,7 @@ inline std::pair<int, int64_t> ResidueClassKey(int64_t c, int64_t p, int k,
     v++;
   }
   if (p != 2) {
-    return {v, LegendreUnit(c, p)};
+    return {v, kronecker_symbol<int64_t>(c, p)};
   }
   int64_t rem = MyPow<int64_t>(2, k - v);
   int64_t mod_u = std::min<int64_t>(8, rem);
@@ -280,7 +281,7 @@ T QuadraticFormValueCount(int r, int64_t d, int64_t c, int64_t p) {
   T base = MyPowSigned(p_T, r - 1);
   if (r % 2 == 0) {
     int64_t sgn = ((r / 2) % 2 == 0) ? 1 : p - 1;
-    int eta = LegendreUnit(ResMul(sgn, ResMod(d, p), p), p);
+    int eta = kronecker_symbol<int64_t>(ResMul(sgn, ResMod(d, p), p), p);
     T nu = (c == 0) ? p_T - T(1) : T(-1);
     return base + nu * MyPowSigned(p_T, r / 2 - 1) * ScalarFromInt64<T>(eta);
   }
@@ -288,7 +289,7 @@ T QuadraticFormValueCount(int r, int64_t d, int64_t c, int64_t p) {
     return base;
   }
   int64_t sgn = (((r - 1) / 2) % 2 == 0) ? 1 : p - 1;
-  int eta = LegendreUnit(ResMul(ResMul(sgn, c, p), ResMod(d, p), p), p);
+  int eta = kronecker_symbol<int64_t>(ResMul(ResMul(sgn, c, p), ResMod(d, p), p), p);
   return base + MyPowSigned(p_T, (r - 1) / 2) * ScalarFromInt64<T>(eta);
 }
 
@@ -431,7 +432,6 @@ T RankOneDensityCounting(SiegelJordanBlocks const &q, PadicClass const &a,
   }
 }
 
-
 /*
   alpha_p(Sigma, C) for Sigma = diag(s_1, ..., s_j) and C = diag(c_1, ...)
   given by their p-adic classes, p odd, by counting; k is raised until two
@@ -473,7 +473,7 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
   // the coefficients of C up to unit squares: one transition table each
   std::set<std::pair<int, int64_t>> c_classes;
   for (auto const &c : Cdiag) {
-    c_classes.insert({c.val, LegendreUnit(c.unit, p)});
+    c_classes.insert({c.val, kronecker_symbol<int64_t>(c.unit, p)});
   }
   double n_c = static_cast<double>(c_classes.size());
   // the cost of the transition tables at level k, p^{jk} * orbits * classes
@@ -497,7 +497,7 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
     std::vector<int64_t> zero(j * j, 0);
     state[so.index.at(SymmetricOrbitKey(zero, j, p, k, so.mod))] = T(1);
     for (auto const &c : Cdiag) {
-      int64_t u = (LegendreUnit(c.unit, p) == 1) ? 1 : c.unit;
+      int64_t u = (kronecker_symbol<int64_t>(c.unit, p) == 1) ? 1 : c.unit;
       auto const &H = SymmetricOrbitTransitions(so, c.val, u);
       std::vector<T> next(no, T(0));
       for (int Cc = 0; Cc < no; Cc++) {
@@ -542,7 +542,6 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
   }
 }
 
-
 // The blocks of a diagonal form given by p-adic classes.
 inline SiegelJordanBlocks BlocksOfDiagonal(std::vector<PadicClass> const &D,
                                            int64_t p) {
@@ -557,20 +556,6 @@ inline SiegelJordanBlocks BlocksOfDiagonal(std::vector<PadicClass> const &D,
 //
 // The reduction formula for several non-unit columns
 //
-
-// The Gaussian binomial coefficient [a b]_p.
-template <typename T> T GaussianBinomial(int a, int b, int64_t p) {
-  if (b < 0 || b > a) {
-    return T(0);
-  }
-  T p_T = ScalarFromInt64<T>(p);
-  T res(1);
-  for (int i = 0; i < b; i++) {
-    res *= MyPowSigned(p_T, a - i) - T(1);
-    res /= MyPowSigned(p_T, i + 1) - T(1);
-  }
-  return res;
-}
 
 /*
   The number of totally isotropic subspaces of dimension w of a
@@ -651,7 +636,7 @@ T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
     }
   }
   int r = static_cast<int>(C0.size());
-  int det_leg = LegendreUnit(det0, p);
+  int det_leg = kronecker_symbol<int64_t>(det0, p);
   std::vector<PadicClass> SigmaRed;
   for (auto const &s : Sigma) {
     SigmaRed.push_back({s.val - 1, s.unit});
@@ -857,7 +842,6 @@ std::optional<T> UnitChainDensity(MyMatrix<T> const &S,
   }
   return alpha;
 }
-
 
 //
 // The representation mass M_S / mass(G)

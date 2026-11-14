@@ -3,6 +3,7 @@
 #define SRC_GENERA_GENUSENUMERATIONGROUP_H_
 
 // clang-format off
+#include "GeneraArithmetic.h"
 #include "GenusEnumeration.h"
 #include "LatticeOrbitSplitCanonical.h"
 #include "GroupNeighborModP.h"
@@ -469,7 +470,7 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
   // modulo p is v_p >= e + 1, and the valuation e + 1 is corrected.
   int e = (p == 2) ? 1 : 0;
   bool is_pm1 = ed.is_real;
-  int val = (q == 0) ? e + 2 : ValuationP(q, p);
+  int val = (q == 0) ? e + 2 : IntegerValuation(q, p);
   if (val < e + 1) {
     if (!is_pm1) {
       std::cerr << "GENUS_GROUP: an eigenvector of an eigenvalue != +-1 is "
@@ -525,7 +526,7 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
     }
 #ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
     Tint q_new = bilinear(v, v);
-    if (q_new != 0 && ValuationP(q_new, p) < e + 2) {
+    if (q_new != 0 && IntegerValuation(q_new, p) < e + 2) {
       std::cerr << "GENUS_GROUP: the correction to an isotropic vector "
                    "failed\n";
       throw TerminalException{1};
@@ -727,23 +728,6 @@ bool IsGoodNeighborPrime(int p, int m, T const &det, bool scalar) {
   }
   T p_T(p);
   return ResInt(det, p_T) != T(0);
-}
-
-inline int NextPrimeAfter(int q) {
-  int cand = q + 1;
-  while (true) {
-    bool is_prime = cand >= 2;
-    for (int d = 2; d * d <= cand; d++) {
-      if (cand % d == 0) {
-        is_prime = false;
-        break;
-      }
-    }
-    if (is_prime) {
-      return cand;
-    }
-    cand++;
-  }
 }
 
 // The number of points of the projective spaces of the joint eigenspaces

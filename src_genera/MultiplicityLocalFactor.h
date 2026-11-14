@@ -3,6 +3,7 @@
 #define SRC_GENERA_MULTIPLICITYLOCALFACTOR_H_
 
 // clang-format off
+#include "GeneraArithmetic.h"
 #include "GroupNeighborModP.h"
 #include "ResidueArithmetic.h"
 #include "MAT_MatrixModPrime.h"
@@ -181,7 +182,6 @@ inline std::vector<int64_t> LiftRhs(ModMatrix const &g, ModMatrix const &A, int6
   return rhs;
 }
 
-
 inline std::optional<LiftAffineSpace> LiftAffine(ModMatrix const &g,
                                                  ModMatrix const &A, int64_t p,
                                                  int64_t pj) {
@@ -346,32 +346,6 @@ SolutionsModP(ModMatrix const &A, int64_t p, size_t max_solution,
     return {};
   }
   return res;
-}
-
-// The residue in [0, mod) of the integer val, reduced exactly before the
-// conversion to 64 bits (val itself may not fit: the images of a vector by
-// a local isometry known modulo q^c have large coordinates)
-template <typename T> int64_t ResidueOfInteger(T const &val, int64_t mod) {
-  T mod_T = ScalarFromInt64<T>(mod);
-  T fl = UniversalFloorScalarInteger<T, T>(val / mod_T);
-  T r = val - mod_T * fl;
-  return UniversalScalarConversion<int64_t, T>(r);
-}
-
-// The residue in (-mod/2, mod/2] of val: an entry smaller than mod / 2 is
-// kept as it is
-template <typename T>
-int64_t CenteredResidueOfInteger(T const &val, int64_t mod) {
-  int64_t r = ResidueOfInteger(val, mod);
-  return (r > mod / 2) ? r - mod : r;
-}
-
-inline int64_t CenteredModP(int64_t x, int64_t mod) {
-  int64_t r = x % mod;
-  if (r < 0) {
-    r += mod;
-  }
-  return (r > mod / 2) ? r - mod : r;
 }
 
 /*
@@ -2988,18 +2962,6 @@ LocalStabilizerImage(ModMatrix const &A_in, std::vector<ModMatrix> const &basis_
     }
   }
   return res;
-}
-
-template <typename T> int ValuationOfRational(T const &x, int64_t p) {
-  // x nonzero
-  T y = x;
-  T p_T = UniversalScalarConversion<T, int64_t>(p);
-  int v = 0;
-  while (IsInteger(y / p_T)) {
-    y /= p_T;
-    v++;
-  }
-  return v;
 }
 
 // clang-format off

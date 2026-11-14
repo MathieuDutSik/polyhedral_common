@@ -40,7 +40,7 @@ void Prepare(MyMatrix<T> const &A, int64_t p, int &e, ModMatrix &A_mod,
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
       if (Ainv(i, j) != 0) {
-        e = std::max(e, ValuationOfRational(T(GetDenominator(Ainv(i, j))), p));
+        e = std::max(e, RationalValuation(T(GetDenominator(Ainv(i, j))), p));
       }
     }
   }
@@ -202,7 +202,7 @@ int main() {
           A = T(2) * A;
         }
         T det = DeterminantMat(A);
-        if (det == 0 || ValuationOfRational(det, p) == 0) {
+        if (det == 0 || RationalValuation(det, p) == 0) {
           continue;
         }
         found++;

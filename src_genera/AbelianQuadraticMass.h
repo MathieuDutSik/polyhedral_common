@@ -3,6 +3,9 @@
 #define SRC_GENERA_ABELIANQUADRATICMASS_H_
 
 // clang-format off
+#include "NumberFieldElement.h"
+#include "ClassicalGroupOrders.h"
+#include "GeneraArithmetic.h"
 #include "AbelianHermitianMass.h"
 #include "ClassicLLL.h"
 #include <algorithm>
@@ -203,22 +206,6 @@ template <typename T> struct LocalJordanComponent {
     return r;
   }
 };
-
-template <typename T>
-inline ElemE<T> EAddE(ElemE<T> a, ElemE<T> const &b) {
-  for (size_t i = 0; i < a.size(); i++) {
-    a[i] += b[i];
-  }
-  return a;
-}
-
-template <typename T>
-inline ElemE<T> EScal(ElemE<T> a, T const &c) {
-  for (auto &x : a) {
-    x *= c;
-  }
-  return a;
-}
 
 template <typename T>
 inline std::vector<LocalJordanComponent<T>>
@@ -848,16 +835,6 @@ inline ElemE<T> LiftResidue(PolyQ const &r, CyclotomicField<T> const &K) {
   }
   return x;
 }
-
-template <typename T>
-inline bool EIsOne(ElemE<T> const &a) {
-  ElemE<T> b = a;
-  b[0] -= 1;
-  return EIsZero(b);
-}
-
-template <typename T>
-inline ElemE<T> EOne(CyclotomicField<T> const &K) { return EZetaPower(0, K); }
 
 // (the defect of the unit a, a in the same square class with a - 1 of that
 // valuation), at a dyadic prime
@@ -1648,7 +1625,7 @@ QuadLocalFactorsByIdempotents(MyMatrix<T> const &B,
         row[j] = UniversalScalarConversion<int64_t, Tint>(x);
       }
       acc.push_back(row);
-      if (RankModPrime(acc, q) == static_cast<int>(acc.size())) {
+      if (RankModPrime(acc, q) == acc.size()) {
         chosen.push_back(i);
       } else {
         acc.pop_back();
@@ -1857,7 +1834,7 @@ QuadPrimeGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
           }
           test.push_back(row);
         }
-        if (RankModPrime(test, q) == static_cast<int>(test.size())) {
+        if (RankModPrime(test, q) == test.size()) {
           chosen.push_back(v);
           acc = test;
         }
@@ -2011,7 +1988,7 @@ QuadraticLocalFactors(MyMatrix<T> const &B,
   for (int64_t q : primes) {
     if (q != 2) {
       // the sum over the primes p of K over q of f_p v_p(det phi)
-      int c = ValuationQRational(detB, q) -
+      int c = RationalValuation(detB, q) -
               m * DiscriminantValuationCharacters(G, XK, q);
       if (c == 0) {
         continue;
@@ -2021,29 +1998,6 @@ QuadraticLocalFactors(MyMatrix<T> const &B,
                                     PrimeDecompositionCharacters(G, XK, q));
   }
   return res;
-}
-
-/*
-  The square roots in the totally real K = Q(theta): d = y^2 forces y in
-  den^{-1} O_K, O_K in disc(f)^{-1} Z[theta], and y(theta_j) = +/- the
-  square root of d(theta_j) at the real roots theta_j of f. The roots and
-  the square roots are approximated by rationals (PolynomialRealRoots.h),
-  the Vandermonde system is solved exactly on those approximations, and
-  for each sign pattern the coordinates of y are rounded and the candidate
-  is checked exactly; so a square root returned is exact, and none is
-  missed as the precision bounds the rounding error.
- */
-template <typename Tint> size_t BitLength(Tint x) {
-  if (x < 0) {
-    x = -x;
-  }
-  size_t n = 0;
-  Tint two(2);
-  while (x > 0) {
-    x = QuoInt(x, two);
-    n++;
-  }
-  return n;
 }
 
 template <typename T>
@@ -2640,7 +2594,7 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
           AbelianCMField FK2 = LiftAbelianField(FK, N);
           std::vector<int64_t> HE;
           for (int64_t a : FK2.H) {
-            if (KroneckerSymbol(Dq, a) == 1) {
+            if (kronecker_symbol<int64_t>(Dq, a) == 1) {
               HE.push_back(a);
             }
           }
@@ -3503,7 +3457,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       };
       std::vector<std::vector<Row>> gens1;
       std::vector<GMat> elems;
-      double log_order = 0;
+      [[maybe_unused]] double log_order = 0;
       std::vector<Row> rows(m);
       std::function<std::optional<GMat>(int)> complete =
           [&](int j) -> std::optional<GMat> {
@@ -3562,7 +3516,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
           }
         };
         close();
-        size_t n_cand = 0, n_fail = 0;
+        [[maybe_unused]] size_t n_cand = 0, n_fail = 0;
         for_each_row(prefix, i, [&](Row const &y) -> bool {
           n_cand++;
           if (in_orbit[encode_row(y)]) {

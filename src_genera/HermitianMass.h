@@ -3,6 +3,7 @@
 #define SRC_GENERA_HERMITIANMASS_H_
 
 // clang-format off
+#include "GeneraArithmetic.h"
 #include "RealifiedRing.h"
 #include "SiegelSpecialValues.h"
 #include "SiegelSeries.h"
@@ -41,30 +42,6 @@
   Checked against Hecke.jl on O_K^m for m = 2, 3, 4 and D = -3, -4, -7,
   -8, -11.
  */
-
-inline bool IsFundamentalDiscriminant(int64_t D) {
-  auto squarefree = [](int64_t x) -> bool {
-    if (x < 0) {
-      x = -x;
-    }
-    for (int64_t d = 2; d * d <= x; d++) {
-      if (x % (d * d) == 0) {
-        return false;
-      }
-    }
-    return true;
-  };
-  int64_t r = ((D % 4) + 4) % 4;
-  if (r == 1) {
-    return squarefree(D);
-  }
-  if (r == 0) {
-    int64_t k = D / 4;
-    int64_t rk = ((k % 4) + 4) % 4;
-    return (rk == 2 || rk == 3) && squarefree(k);
-  }
-  return false;
-}
 
 /*
   The Hermitian Gram matrix of the standard lattice O_K^m of the ring: the
@@ -138,19 +115,6 @@ template <typename T> bool IsLocalNormQuadratic(T const &x, int64_t D, int64_t p
   return HilbertSymbolClass(cx, cD, p) == 1;
 }
 
-template <typename T> T HermitianPowerInt(int64_t q, int e) {
-  T res(1);
-  T q_T = ScalarFromInt64<T>(q);
-  if (e >= 0) {
-    res *= MyPow<T>(q_T, e);
-  } else {
-    for (int i = 0; i < -e; i++) {
-      res /= q_T;
-    }
-  }
-  return res;
-}
-
 /*
   The local factor at the dyadic ramified prime of a unimodular lattice:
   the case m0 = m, m1 = 0 of _local_factor_dyadic of Hecke.jl. e = v_2(D),
@@ -167,25 +131,25 @@ T HermitianLocalFactorDyadicUnimodular(int m, int e, int norm_val, bool d_is_nor
   int k1 = 0;
   int f2 = e / 2;
   int l = norm_val / 2;
-  T fac_m = HermitianPowerInt<T>(q, m) - T(1);
+  T fac_m = MyPowSigned<T>(ScalarFromInt64<T>(q), m) - T(1);
   if (d_is_norm) {
     bool h0 = (norm_val == 2 * f2);
     if (h0) {
       int t = (e % 2 == 0) ? k1 : k0;
-      return (HermitianPowerInt<T>(q, t) + T(1)) * half;
+      return (MyPowSigned<T>(ScalarFromInt64<T>(q), t) + T(1)) * half;
     }
     if (e % 2 == 0) {
-      return HermitianPowerInt<T>(q, m * (f2 - 1 - l) + k1) * fac_m * half;
+      return MyPowSigned<T>(ScalarFromInt64<T>(q), m * (f2 - 1 - l) + k1) * fac_m * half;
     }
-    return HermitianPowerInt<T>(q, m * (f2 - l) - k0) * fac_m * half;
+    return MyPowSigned<T>(ScalarFromInt64<T>(q), m * (f2 - l) - k0) * fac_m * half;
   }
   if (e % 2 == 1) {
     if (l == (e - 1) / 2) {
-      return (HermitianPowerInt<T>(q, k0) - T(1)) * half;
+      return (MyPowSigned<T>(ScalarFromInt64<T>(q), k0) - T(1)) * half;
     }
-    return HermitianPowerInt<T>(q, m * (f2 - l) - k0) * fac_m * half;
+    return MyPowSigned<T>(ScalarFromInt64<T>(q), m * (f2 - l) - k0) * fac_m * half;
   }
-  return HermitianPowerInt<T>(q, m * (f2 - 1 - l) + k1) * fac_m * half;
+  return MyPowSigned<T>(ScalarFromInt64<T>(q), m * (f2 - 1 - l) + k1) * fac_m * half;
 }
 
 /*
@@ -217,7 +181,7 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
     return {};
   }
   // the standard mass
-  T mass = HermitianPowerInt<T>(2, 1 - m);
+  T mass = MyPowSigned<T>(ScalarFromInt64<T>(2), 1 - m);
   for (int i = 1; i <= m; i++) {
     int64_t chi = (i % 2 == 1) ? D : 1;
     T Lval = -GeneralizedBernoulli<T>(i, chi) / ScalarFromInt64<T>(i);
@@ -253,7 +217,7 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
       if (m % 2 == 1) {
         lambda = T(1) / T(2);
       } else {
-        lambda = (HermitianPowerInt<T>(p, m / 2) + ScalarFromInt64<T>(d_is_norm ? 1 : -1)) / T(2);
+        lambda = (MyPowSigned<T>(ScalarFromInt64<T>(p), m / 2) + ScalarFromInt64<T>(d_is_norm ? 1 : -1)) / T(2);
       }
     } else {
       int e = 0;

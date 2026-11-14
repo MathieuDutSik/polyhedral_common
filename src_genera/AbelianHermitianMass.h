@@ -3,6 +3,9 @@
 #define SRC_GENERA_ABELIANHERMITIANMASS_H_
 
 // clang-format off
+#include "NumberFieldElement.h"
+#include "ClassicalGroupOrders.h"
+#include "PolynomialModQ.h"
 #include "CyclotomicHermitianMass.h"
 #include <map>
 #include <memory>
@@ -44,44 +47,6 @@
   square classes, and the group orders of Hecke at q^{f_K}; for q = 2 the
   chain method with the relative different exponent.
  */
-
-// The distinct irreducible factors of f modulo q with their multiplicities.
-inline std::vector<std::pair<PolyQ, int>> FactorModQWithMultiplicity(PolyQ f,
-                                                                      int64_t q) {
-  f = PolyMonicQ(PolyReduce(f, q), q);
-  std::vector<std::pair<PolyQ, int>> res;
-  PolyQ rem = f;
-  int deg = static_cast<int>(f.size()) - 1;
-  PolyQ xpol{0, 1};
-  for (int k = 1; k <= deg && rem.size() > 1; k++) {
-    // x^{q^k} - x modulo rem: the product of the irreducible factors of
-    // degree dividing k, the smaller ones being already removed
-    PolyQ y = xpol;
-    for (int i = 0; i < k; i++) {
-      y = PolyPowModQ(y, static_cast<uint64_t>(q), rem, q);
-    }
-    PolyQ g = PolyGcdQ(PolySubQ(y, xpol, q), rem, q);
-    PolyTrim(g);
-    if (g.size() <= 1) {
-      continue;
-    }
-    for (auto const &fac : EqualDegreeFactorization(PolyMonicQ(g, q), k, q)) {
-      int mult = 0;
-      while (true) {
-        std::pair<PolyQ, PolyQ> qr = PolyDivModQ(rem, fac, q);
-        PolyQ r = qr.second;
-        PolyTrim(r);
-        if (!r.empty()) {
-          break;
-        }
-        rem = qr.first;
-        mult++;
-      }
-      res.push_back({fac, mult});
-    }
-  }
-  return res;
-}
 
 // Tr(theta^k), k = 0, ..., 2 deg, from the minimal polynomial by Newton.
 template <typename T>
@@ -180,7 +145,7 @@ FindLocalGenerator(MyMatrix<T> const &B,
       Tr(i, j) = t / UniversalScalarConversion<T, int64_t>(m);
     }
   }
-  int vdisc = ValuationQRational(DeterminantMat(Tr), q);
+  int vdisc = RationalValuation(DeterminantMat(Tr), q);
   MyMatrix<T> Binv = Inverse(B);
   // combinations with coefficients in [-2, 2], by increasing size
   std::vector<std::vector<int>> cands;
@@ -235,7 +200,7 @@ FindLocalGenerator(MyMatrix<T> const &B,
         D(i, j) = pt[i + j];
       }
     }
-    if (ValuationQRational(DeterminantMat(D), q) != vdisc) {
+    if (RationalValuation(DeterminantMat(D), q) != vdisc) {
       continue;
     }
     // the conjugate: S* = (B^{-1} S B)^T on the rows, v S* in the Krylov
@@ -270,24 +235,6 @@ inline MyMatrix<T> PolyOfMatrixQ(PolyQ const &g, MyMatrix<T> const &S) {
     for (int j = 0; j < r; j++) {
       res(j, j) += g_i;
     }
-  }
-  return res;
-}
-
-// g(theta) in E = Q(theta), g with integer coefficients.
-template <typename T>
-inline ElemE<T> EPolyOfTheta(PolyQ const &g, CyclotomicField<T> const &K) {
-  ElemE<T> res(K.deg, T(0));
-  ElemE<T> pw = EZetaPower(0, K);
-  ElemE<T> theta = EZetaPower(1, K);
-  for (size_t i = 0; i < g.size(); i++) {
-    if (g[i] != 0) {
-      T g_i = UniversalScalarConversion<T, int64_t>(g[i]);
-      for (int t = 0; t < K.deg; t++) {
-        res[t] += g_i * pw[t];
-      }
-    }
-    pw = EMul(pw, theta, K);
   }
   return res;
 }
@@ -440,7 +387,7 @@ AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
   int r = B.rows();
   AbelianPrime const &ap = primes[i_prime];
   int f_res = static_cast<int>(ap.g.size()) - 1;
-  int vdet = ValuationQRational(DeterminantMat(B), q);
+  int vdet = RationalValuation(DeterminantMat(B), q);
   std::vector<int64_t> f = lg.f;
   // the precision covers the discriminant group and the different
   int vdiscf = 0;
@@ -453,7 +400,7 @@ AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
         D(a, b) = pt[a + b];
       }
     }
-    vdiscf = ValuationQRational(DeterminantMat(D), q);
+    vdiscf = RationalValuation(DeterminantMat(D), q);
   }
   int N = vdet + vdiscf + 6;
   MyMatrix<T> Id = IdentityMat<T>(r);
@@ -487,7 +434,7 @@ AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
   int delta = 0;
   {
     MyMatrix<T> M = FP * E + Id - E;
-    int vv = ValuationQRational(DeterminantMat(M), q);
+    int vv = RationalValuation(DeterminantMat(M), q);
     // on X the prime part has Z_q-rank m e f, and det = N(f')^m locally
     delta = vv / (m * f_res);
   }
@@ -604,17 +551,6 @@ ClearDenominators(ElemE<T> const &x) {
   return {y, d};
 }
 
-template <typename Tint>
-inline int ValuationInteger(Tint x, int64_t q) {
-  int v = 0;
-  Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
-  while (x != 0 && ResInt(x, qz) == 0) {
-    x = QuoInt(x, qz);
-    v++;
-  }
-  return v;
-}
-
 template <typename T>
 inline int LocalVal(ElemE<T> const &x, LocalPrimeK<T> &P) {
   using Tint = typename underlying_z_ring<T>::ring_type;
@@ -622,7 +558,7 @@ inline int LocalVal(ElemE<T> const &x, LocalPrimeK<T> &P) {
     return 1 << 28;
   }
   auto [y, d] = ClearDenominators(x);
-  int k = ValuationInteger(d, P.q);
+  int k = IntegerValuation(d, P.q);
   int N = P.f_res * (P.e * k + 4) + 4;
   while (true) {
     Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(P.q), N);
@@ -640,7 +576,7 @@ inline int LocalVal(ElemE<T> const &x, LocalPrimeK<T> &P) {
     T det = DeterminantMat(EMulMatrix(we, P.K));
     Tint dn = GetNumerator_z(det);
     if (ResInt(dn, Q) != 0) {
-      int v = ValuationInteger(dn, P.q);
+      int v = IntegerValuation(dn, P.q);
       return v / P.f_res - P.e * k;
     }
     N *= 2;
@@ -652,7 +588,7 @@ template <typename T>
 inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   auto [y, d] = ClearDenominators(x);
-  int k = ValuationInteger(d, P.q);
+  int k = IntegerValuation(d, P.q);
   Tint qk = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(P.q), k);
   Tint Q = qk * UniversalScalarConversion<Tint, int64_t>(P.q);
   PolyZ<Tint> z = PolyZReduce(PolyZMul(LocalEps(P, k + 1), y), P.K.Phi, Q);
@@ -770,7 +706,7 @@ LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
     for (auto &row : orbit_rows(v)) {
       test.push_back(row);
     }
-    if (RankModPrime(test, q) == static_cast<int>(test.size())) {
+    if (RankModPrime(test, q) == test.size()) {
       chosen.push_back(v);
       acc = test;
     }
@@ -816,7 +752,6 @@ inline ElemE<T> LocalShift(ElemE<T> x, int k, LocalPrimeK<T> const &P) {
   }
   return x;
 }
-
 
 /*
   The local factor at a ramified prime P of K over the odd prime q: the
@@ -1392,7 +1327,7 @@ PrimeIdempotentsByRefinement(MyMatrix<T> const &B,
   using Tint = typename underlying_z_ring<T>::ring_type;
   int r = B.rows();
   int deg = static_cast<int>(Omega.size());
-  int vdet = ValuationQRational(DeterminantMat(B), q);
+  int vdet = RationalValuation(DeterminantMat(B), q);
   int N = vdet + 6;
   Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), N);
   Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
@@ -1490,7 +1425,7 @@ UnramifiedFactorsByIdempotents(MyMatrix<T> const &B,
                                int64_t q, PrimeDecompositionData const &dE) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   int r = B.rows();
-  int vdet = ValuationQRational(DeterminantMat(B), q);
+  int vdet = RationalValuation(DeterminantMat(B), q);
   int N = vdet + 6;
   Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), N);
   Tint qz = UniversalScalarConversion<Tint, int64_t>(q);

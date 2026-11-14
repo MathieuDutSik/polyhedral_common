@@ -3,6 +3,7 @@
 #define SRC_GENERA_SIEGELSPECIALVALUES_H_
 
 // clang-format off
+#include "GeneraArithmetic.h"
 #include "NumberTheory.h"
 #include "factorizations.h"
 #include <cstdint>
@@ -42,114 +43,22 @@
 // Integers: Kronecker symbol, square-free parts, fundamental discriminants
 //
 
-// A 64-bit integer as an element of T. int64_t is long long on some
-// platforms, for which the GMP and FLINT classes have no constructor; long
-// is 64 bits wide on every LP64 platform this code targets.
-template <typename T> T ScalarFromInt64(int64_t x) {
-  static_assert(sizeof(long) == sizeof(int64_t), "long must be 64 bits");
-  return T(static_cast<long>(x));
-}
-
-// The Kronecker symbol (a / n) for n > 0.
-inline int KroneckerSymbol(int64_t a, int64_t n) {
-#ifdef SANITY_CHECK_SIEGEL_SPECIAL_VALUES
-  if (n <= 0) {
-    std::cerr << "SSV: KroneckerSymbol needs n > 0, got n=" << n << "\n";
-    throw TerminalException{1};
-  }
-#endif
-  int result = 1;
-  while (n % 2 == 0) {
-    n /= 2;
-    if (a % 2 == 0) {
-      return 0;
-    }
-    int64_t r = ((a % 8) + 8) % 8;
-    if (r == 3 || r == 5) {
-      result = -result;
-    }
-  }
-  // n odd and positive: the Jacobi symbol
-  int64_t aa = ((a % n) + n) % n;
-  int64_t nn = n;
-  while (aa != 0) {
-    while (aa % 2 == 0) {
-      aa /= 2;
-      int64_t r = nn % 8;
-      if (r == 3 || r == 5) {
-        result = -result;
-      }
-    }
-    std::swap(aa, nn);
-    if (aa % 4 == 3 && nn % 4 == 3) {
-      result = -result;
-    }
-    aa %= nn;
-  }
-  return (nn == 1) ? result : 0;
-}
-
-// (-1)^r x.
-inline int64_t SignedPower(int r, int64_t x) { return (r % 2 == 0) ? x : -x; }
-
-// The square-free part of a non-zero integer, with its sign.
-inline int64_t SquareFreePart(int64_t x) {
-  if (x == 0) {
-    std::cerr << "SSV: SquareFreePart called on zero\n";
-    throw TerminalException{1};
-  }
-  int64_t sign = (x < 0) ? -1 : 1;
-  int64_t abs_x = (x < 0) ? -x : x;
-  int64_t sqf = 1;
-  if (abs_x > 1) {
-    std::map<int64_t, size_t> fact = FactorsIntMap<int64_t>(abs_x);
-    for (auto &kv : fact) {
-      if (kv.second % 2 == 1) {
-        sqf *= kv.first;
-      }
-    }
-  }
-  return sign * sqf;
-}
-
-// The discriminant of Q(sqrt(x)) for x non-zero; 1 when x is a square.
-inline int64_t FundamentalDiscriminant(int64_t x) {
-  int64_t d = SquareFreePart(x);
-  if (d == 1) {
-    return 1;
-  }
-  int64_t r = ((d % 4) + 4) % 4;
-  return (r == 1) ? d : 4 * d;
-}
-
 // chi_D(a) for a fundamental discriminant D (D = 1: the trivial character).
 inline int QuadraticCharacter(int64_t D, int64_t a) {
   if (D == 1) {
     return 1;
   }
   if (a > 0) {
-    return KroneckerSymbol(D, a);
+    return kronecker_symbol<int64_t>(D, a);
   }
   // chi_D(-1) is the sign of D
   int sign = (D > 0) ? 1 : -1;
-  return sign * KroneckerSymbol(D, -a);
+  return sign * kronecker_symbol<int64_t>(D, -a);
 }
 
 //
 // Bernoulli numbers
 //
-
-template <typename T> T BinomialCoefficient(int n, int k) {
-  if (k < 0 || k > n) {
-    return T(0);
-  }
-  T res(1);
-  for (int i = 1; i <= k; i++) {
-    res *= T(n - k + i);
-    res /= T(i);
-  }
-  return res;
-}
 
 // B_0, ..., B_kmax with B_1 = -1/2, from sum_{j=0}^{m} C(m+1, j) B_j = 0.
 template <typename T> std::vector<T> BernoulliNumbers(int kmax) {
@@ -187,7 +96,7 @@ template <typename T> T GeneralizedBernoulli(int k, int64_t D) {
   int64_t f = (D < 0) ? -D : D;
   std::vector<T> S(k + 1, T(0));
   for (int64_t a = 1; a <= f; a++) {
-    int c = KroneckerSymbol(D, a);
+    int c = kronecker_symbol<int64_t>(D, a);
     if (c == 0) {
       continue;
     }

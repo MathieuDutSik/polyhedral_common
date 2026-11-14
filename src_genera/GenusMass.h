@@ -53,7 +53,7 @@ template <typename T, typename Tint>
 std::vector<std::array<int, 3>> OddSymbolOfGram(MyMatrix<T> const &Gram,
                                                 int64_t p) {
   std::vector<std::array<int, 3>> sym = OddLocalSymbol<T, Tint>(Gram, p);
-  int leg2 = LegendreUnit(2, p);
+  int leg2 = kronecker_symbol<int64_t>(2, p);
   for (auto &c : sym) {
     if (c[1] % 2 == 1) {
       c[2] *= leg2;
@@ -153,7 +153,7 @@ template <typename T> T StandardPMass(int n, int64_t det, int64_t p) {
   if (n % 2 == 0) {
     int64_t D = SignedPower(s, det);
     // the Kronecker symbol (4 D / p): 0 at p = 2 and at p | D
-    int eps = (p == 2) ? 0 : KroneckerSymbol(D, p);
+    int eps = (p == 2) ? 0 : kronecker_symbol<int64_t>(D, p);
     T ps = MyPow<T>(p_T, s);
     std_inv *= T(1) - ScalarFromInt64<T>(eps) / ps;
   }
@@ -183,7 +183,7 @@ template <typename T, typename Tint> T GenusMass(MyMatrix<T> const &Gram) {
     // the Euler factors at the primes of the local symbols
     for (int64_t p : primes) {
       T ps = MyPow<T>(ScalarFromInt64<T>(p), s);
-      T fac = T(1) - ScalarFromInt64<T>(KroneckerSymbol(d, p)) / ps;
+      T fac = T(1) - ScalarFromInt64<T>(kronecker_symbol<int64_t>(d, p)) / ps;
       std_mass = std_mass * PiRadicalRational<T>(fac);
     }
   }

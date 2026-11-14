@@ -3,6 +3,7 @@
 #define SRC_GENERA_ISOMETRYGLUE_H_
 
 // clang-format off
+#include "GeneraArithmetic.h"
 #include "IsometryMass.h"
 #include "GenusEnumerationGroup.h"
 #include <map>
@@ -261,24 +262,6 @@ GlueSubgroups(PrimaryQuadModule const &M, size_t r1, int64_t max_order,
     }
   }
   return res;
-}
-
-// The floor of the square root of a nonnegative integer.
-template <typename Tint> Tint IntegerSquareRoot(Tint const &a) {
-  Tint lo(0), hi(1);
-  while (hi * hi <= a) {
-    hi *= 2;
-  }
-  // lo^2 <= a < hi^2
-  while (hi - lo > 1) {
-    Tint mid = (lo + hi) / 2;
-    if (mid * mid <= a) {
-      lo = mid;
-    } else {
-      hi = mid;
-    }
-  }
-  return lo;
 }
 
 template <typename T> struct GluedPair {

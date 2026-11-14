@@ -3,6 +3,8 @@
 #define SRC_GENERA_GENUSENUMERATION_H_
 
 // clang-format off
+#include "FiniteFieldProjective.h"
+#include "GeneraArithmetic.h"
 #include "Boost_bitset.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
@@ -200,196 +202,6 @@ template <typename T, typename Tgroup> struct GenusEnumerationResult {
   bool stopped_by_runtime = false;
 };
 
-template <typename Tint> int ResidueModP(Tint const &x, int p) {
-  Tint p_T(p);
-  Tint r = x % p_T;
-  int r_int = UniversalScalarConversion<int, Tint>(r);
-  return ((r_int % p) + p) % p;
-}
-
-// The p-adic valuation of a non-zero integer.
-template <typename Tint> int ValuationP(Tint const &x, int p) {
-#ifdef SANITY_CHECK_GENUS_ENUMERATION
-  if (x == 0) {
-    std::cerr << "GENUS: ValuationP called on zero\n";
-    throw TerminalException{1};
-  }
-#endif
-  Tint p_T(p);
-  Tint work = x;
-  if (work < 0) {
-    work = -work;
-  }
-  int val = 0;
-  while (work % p_T == 0) {
-    work /= p_T;
-    val++;
-  }
-  return val;
-}
-
-/*
-  The points of the projective space P^{n-1}(F_p), indexed WITHOUT being
-  enumerated. There are (p^n - 1) / (p - 1) of them: 16383 for n = 14 and
-  p = 2, but 1.5 x 10^9 at p = 5, where materializing the list (as an
-  earlier version did) is itself a hundred gigabytes. The representatives
-  are the vectors whose first non-zero coordinate is 1; the index runs
-  through the blocks ipos = 0, ..., n-1 (position of that coordinate), each
-  block of size p^{n-ipos-1}, the free coordinates read little-endian
-  (v[ipos+1] least significant). ProjectiveLineOfIndex and
-  IndexOfProjectiveLine are mutually inverse bijections for this order.
- */
-inline size_t NumberProjectiveLines(int n, int p) {
-  size_t const max_val = std::numeric_limits<size_t>::max();
-  size_t p_s = static_cast<size_t>(p);
-  size_t total = 0;
-  size_t power = 1;
-  for (int k = 0; k < n; k++) {
-    if (total > max_val - power) {
-      std::cerr << "GENUS: (p^n - 1)/(p - 1) overflows size_t for p=" << p
-                << " n=" << n << "\n";
-      throw TerminalException{1};
-    }
-    total += power;
-    if (k + 1 < n) {
-      if (power > max_val / p_s) {
-        std::cerr << "GENUS: p^" << (k + 1) << " overflows size_t for p=" << p
-                  << "\n";
-        throw TerminalException{1};
-      }
-      power *= p_s;
-    }
-  }
-  return total;
-}
-
-inline std::vector<int> ProjectiveLineOfIndex(int n, int p, size_t index) {
-  size_t p_s = static_cast<size_t>(p);
-  // block size p^{n-1} of the block ipos = 0
-  size_t block = MyPow<size_t>(p_s, n - 1);
-  size_t work = index;
-  int ipos = 0;
-  while (work >= block) {
-    work -= block;
-    block /= p_s;
-    ipos++;
-#ifdef SANITY_CHECK_GENUS_ENUMERATION
-    if (ipos == n) {
-      std::cerr << "GENUS: ProjectiveLineOfIndex, index out of range\n";
-      throw TerminalException{1};
-    }
-#endif
-  }
-  std::vector<int> v(n, 0);
-  v[ipos] = 1;
-  for (int i = ipos + 1; i < n; i++) {
-    v[i] = static_cast<int>(work % p_s);
-    work /= p_s;
-  }
-  return v;
-}
-
-inline size_t IndexOfProjectiveLine(std::vector<int> const &v, int p) {
-  size_t p_s = static_cast<size_t>(p);
-  int n = static_cast<int>(v.size());
-  int ipos = 0;
-  while (ipos < n && ((v[ipos] % p) + p) % p == 0) {
-    ipos++;
-  }
-#ifdef SANITY_CHECK_GENUS_ENUMERATION
-  if (ipos == n) {
-    std::cerr << "GENUS: IndexOfProjectiveLine called on the zero vector\n";
-    throw TerminalException{1};
-  }
-#endif
-  int scal = ResInv(v[ipos], p);
-  // start of the block: sum_{k < ipos} p^{n-k-1}
-  size_t block = MyPow<size_t>(p_s, n - 1);
-  size_t index = 0;
-  for (int k = 0; k < ipos; k++) {
-    index += block;
-    block /= p_s;
-  }
-  // offset inside the block, little-endian in the normalized coordinates
-  size_t mult = 1;
-  for (int i = ipos + 1; i < n; i++) {
-    int val = ((((v[i] % p) + p) % p) * scal) % p;
-    index += mult * static_cast<size_t>(val);
-    mult *= p_s;
-  }
-  return index;
-}
-
-// Kept only for the sanity check of the indexing, as an INDEPENDENT
-// enumeration of the same order (small cases only); the enumeration itself
-// never materializes the projective space.
-inline std::vector<std::vector<int>> EnumerateProjectiveLines(int n, int p) {
-  std::vector<std::vector<int>> ListLines;
-  for (int ipos = 0; ipos < n; ipos++) {
-    int n_free = n - ipos - 1;
-    int64_t n_case = MyPow<int64_t>(p, n_free);
-    for (int64_t idx = 0; idx < n_case; idx++) {
-      std::vector<int> v(n, 0);
-      v[ipos] = 1;
-      int64_t work = idx;
-      for (int i = ipos + 1; i < n; i++) {
-        v[i] = static_cast<int>(work % p);
-        work /= p;
-      }
-      ListLines.push_back(v);
-    }
-  }
-  return ListLines;
-}
-
-#ifdef SANITY_CHECK_GENUS_ENUMERATION
-// The indexing against the independent enumeration: exhaustive when the
-// space is small, and for a large space the roundtrip index -> line ->
-// index on the block boundaries and on a stride through the range.
-inline void CheckProjectiveLineIndexing(int n, int p) {
-  size_t n_line = NumberProjectiveLines(n, p);
-  if (n_line <= 100000) {
-    std::vector<std::vector<int>> ListLines = EnumerateProjectiveLines(n, p);
-    if (ListLines.size() != n_line) {
-      std::cerr << "GENUS: NumberProjectiveLines disagrees with the "
-                   "enumeration\n";
-      throw TerminalException{1};
-    }
-    for (size_t i = 0; i < n_line; i++) {
-      if (ProjectiveLineOfIndex(n, p, i) != ListLines[i] ||
-          IndexOfProjectiveLine(ListLines[i], p) != i) {
-        std::cerr << "GENUS: projective line indexing broken at index " << i
-                  << "\n";
-        throw TerminalException{1};
-      }
-    }
-    return;
-  }
-  auto roundtrip = [&](size_t i) -> void {
-    std::vector<int> v = ProjectiveLineOfIndex(n, p, i);
-    if (IndexOfProjectiveLine(v, p) != i) {
-      std::cerr << "GENUS: projective line roundtrip broken at index " << i
-                << "\n";
-      throw TerminalException{1};
-    }
-  };
-  size_t block_start = 0;
-  size_t block = n_line - (n_line - 1) / static_cast<size_t>(p);
-  // block = p^{n-1}; the boundaries of every block and their neighbors
-  for (int ipos = 0; ipos < n; ipos++) {
-    roundtrip(block_start);
-    if (block_start + block - 1 < n_line) {
-      roundtrip(block_start + block - 1);
-    }
-    block_start += block;
-    block /= static_cast<size_t>(p);
-  }
-  size_t stride = 1 + n_line / 10000;
-  for (size_t i = 0; i < n_line; i += stride) {
-    roundtrip(i);
-  }
-}
-#endif
 
 /*
   The p-neighbor of the lattice with Gram matrix G attached to an isotropic
@@ -458,7 +270,7 @@ GenusNeighborLineData(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
   }
   int e = (p == 2) ? 1 : 0;
   Tint nrm = v.dot(w);
-  int val = ValuationP(nrm, p);
+  int val = IntegerValuation(nrm, p);
   if (val <= e) {
     return {};
   }
@@ -501,9 +313,9 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     w = G * v;
     nrm = v.dot(w);
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
-    if (ValuationP(nrm, p) < e + 2) {
+    if (IntegerValuation(nrm, p) < e + 2) {
       std::cerr << "GENUS: the correction of the isotropic vector failed, "
-                << "valuation is " << ValuationP(nrm, p) << " and should be at "
+                << "valuation is " << IntegerValuation(nrm, p) << " and should be at "
                 << "least " << (e + 2) << "\n";
       throw TerminalException{1};
     }
@@ -1558,25 +1370,6 @@ void GenusEnumerationOutPrime(GenusEnumerationState<T, Tint, Tgroup> &state,
   }
 }
 
-// The smallest prime larger than q, for the schedules that bring in the
-// primes one after the other.
-inline int GenusNextPrime(int q) {
-  int cand = q + 1;
-  while (true) {
-    bool is_prime = cand >= 2;
-    for (int d = 2; d * d <= cand; d++) {
-      if (cand % d == 0) {
-        is_prime = false;
-        break;
-      }
-    }
-    if (is_prime) {
-      return cand;
-    }
-    cand++;
-  }
-}
-
 /*
   The iterate schedule: see NeighborStrategy. ListPrimeUsed holds the
   primes in play in increasing order; is_expanded[i][pos] tells whether the
@@ -1614,7 +1407,7 @@ void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
       }
     }
     if (i_work == ListPrimeUsed.size()) {
-      int p_new = ListPrimeUsed.empty() ? 2 : GenusNextPrime(ListPrimeUsed.back());
+      int p_new = ListPrimeUsed.empty() ? 2 : NextPrimeAfter(ListPrimeUsed.back());
       ListPrimeUsed.push_back(p_new);
       result.ListNewClassPerPrime.push_back(0);
       is_expanded.push_back(std::vector<bool>(n_class, false));
@@ -1666,8 +1459,8 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
   } else {
     T det = DeterminantMat(state.ListGramWork[0]);
     int p_start = std::max(rw.walk_prime_min, 3);
-    for (int p = GenusNextPrime(p_start - 1); p <= rw.walk_prime_max;
-         p = GenusNextPrime(p)) {
+    for (int p = NextPrimeAfter(p_start - 1); p <= rw.walk_prime_max;
+         p = NextPrimeAfter(p)) {
       if (ResInt(det, T(p)) != T(0)) {
         walk_primes.push_back(p);
       }
@@ -1823,7 +1616,7 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
       }
     }
     if (i_work == ListPrimeUsed.size()) {
-      int p_new = ListPrimeUsed.empty() ? 2 : GenusNextPrime(ListPrimeUsed.back());
+      int p_new = ListPrimeUsed.empty() ? 2 : NextPrimeAfter(ListPrimeUsed.back());
       ListPrimeUsed.push_back(p_new);
       result.ListNewClassPerPrime.push_back(0);
       is_expanded.push_back(std::vector<bool>(n_class, false));

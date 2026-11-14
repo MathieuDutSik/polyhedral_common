@@ -1079,7 +1079,7 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < m; j++) {
       if (Binv(i, j) != T(0)) {
-        e = std::max(e, ValuationOfRational(T(GetDenominator(Binv(i, j))), p));
+        e = std::max(e, RationalValuation(T(GetDenominator(Binv(i, j))), p));
       }
     }
   }
@@ -1365,7 +1365,7 @@ std::optional<T> QuaternionicComponentMass(
   int n_ram_places = c;
   for (Tint const &p_i : ram) {
     int64_t p = UniversalScalarConversion<int64_t, Tint>(p_i);
-    int v = ValuationOfRational(qmax, p);
+    int v = RationalValuation(qmax, p);
     int f = 1, g = 1;
     if (FK) {
       auto [ee, ff, gg] = AbelianPrimeDecomposition(FK->n, FK->H, p);
@@ -1697,8 +1697,8 @@ std::optional<T> QuaternionicComponentMass(
       run over the orbit, of size about p^{dim u}). The Lie lattices then
       have the same discriminant at p, which is checked.
      */
-    if (r == 1 && ValuationOfRational(index_O, p) == 0) {
-      if (ValuationOfRational(discX, p) != ValuationOfRational(discS, p)) {
+    if (r == 1 && RationalValuation(index_O, p) == 0) {
+      if (RationalValuation(discX, p) != RationalValuation(discS, p)) {
         std::cerr << "QUAT_MASS: rank one over the maximal order at p=" << p
                   << " but the Lie lattices differ there\n";
         throw TerminalException{1};
@@ -1729,8 +1729,8 @@ std::optional<T> QuaternionicComponentMass(
       throw TerminalException{1};
     }
 #endif
-    int vX = ValuationOfRational(discX, p);
-    int vS = ValuationOfRational(discS, p);
+    int vX = RationalValuation(discX, p);
+    int vS = RationalValuation(discS, p);
     if ((vX - vS) % 2 != 0) {
       std::cerr << "QUAT_MASS: the Lie discriminants differ by an odd power of "
                 << p << "\n";

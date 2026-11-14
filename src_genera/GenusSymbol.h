@@ -3,6 +3,7 @@
 #define SRC_GENERA_GENUSSYMBOL_H_
 
 // clang-format off
+#include "GeneraArithmetic.h"
 #include "LocalDensity.h"
 #include "LocalDensityOverlattice.h"
 #include "ClassicLLL.h"
@@ -161,20 +162,6 @@ inline std::string GenusSymbolString(GenusSymbol const &s) {
   return str;
 }
 
-// The odd prime factors of the positive integer N, without multiplicity.
-template <typename Tint> std::vector<int64_t> OddPrimeDivisors(Tint const &N) {
-  std::set<int64_t> primes;
-  if (N > Tint(1)) {
-    for (auto const &q : FactorsInt(N)) {
-      int64_t q_i = UniversalScalarConversion<int64_t, Tint>(q);
-      if (q_i != 2) {
-        primes.insert(q_i);
-      }
-    }
-  }
-  return std::vector<int64_t>(primes.begin(), primes.end());
-}
-
 // The Jordan components (scale exponent, rank, sign) of G at the odd p.
 template <typename T, typename Tint>
 std::vector<std::array<int, 3>> OddPrimeSymbolOfGram(MyMatrix<T> const &G,
@@ -191,7 +178,7 @@ std::vector<std::array<int, 3>> OddPrimeSymbolOfGram(MyMatrix<T> const &G,
   }
   std::vector<std::array<int, 3>> res;
   for (auto const &[k, rp] : levels) {
-    res.push_back({k, rp.first, LegendreUnit(rp.second, p)});
+    res.push_back({k, rp.first, kronecker_symbol<int64_t>(rp.second, p)});
   }
   return res;
 }
@@ -224,31 +211,6 @@ GenusSymbol GenusSymbolOfGram(MyMatrix<T> const &G) {
 //
 // Parsing
 //
-
-// The prime and the exponent of the prime power q (1 counts as 2^0).
-inline std::pair<int64_t, int> PrimePowerDecomposition(int64_t q) {
-  if (q < 1) {
-    std::cerr << "GSYM: the scale " << q << " is not a positive integer\n";
-    throw TerminalException{1};
-  }
-  if (q == 1) {
-    return {2, 0};
-  }
-  int64_t p = 2;
-  while (q % p != 0) {
-    p++;
-  }
-  int k = 0;
-  while (q % p == 0) {
-    q /= p;
-    k++;
-  }
-  if (q != 1) {
-    std::cerr << "GSYM: a scale is not a prime power\n";
-    throw TerminalException{1};
-  }
-  return {p, k};
-}
 
 template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) {
   std::string str;
@@ -468,7 +430,7 @@ template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) 
       u /= p_T;
     }
     int64_t u_p = UniversalScalarConversion<int64_t, Tint>(ResInt(u, p_T));
-    int sign_det = LegendreUnit(u_p, p);
+    int sign_det = kronecker_symbol<int64_t>(u_p, p);
     int prod = 1, r_other = 0;
     bool has_unimodular = false;
     std::vector<std::array<int, 3>> kept;
@@ -522,21 +484,6 @@ template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) 
 // The local Gram matrices
 //
 
-template <typename T> T PrimePowerT(int64_t p, int k) {
-  T q(1);
-  T p_T(static_cast<long>(p));
-  q *= MyPow<T>(p_T, k);
-  return q;
-}
-
-inline int64_t LeastNonResidue(int64_t p) {
-  int64_t u = 2;
-  while (LegendreUnit(u, p) != -1) {
-    u++;
-  }
-  return u;
-}
-
 // Odd p: p^k diag(1, ..., 1, delta) per component, delta a non-residue for
 // the sign -1.
 template <typename T>
@@ -546,7 +493,7 @@ MyMatrix<T> OddPrimeLocalGram(int64_t p,
   MyMatrix<T> G = ZeroMatrix<T>(n, n);
   int pos = 0;
   for (auto const &c : comps) {
-    T q = PrimePowerT<T>(p, c[0]);
+    T q = MyPow<T>(UniversalScalarConversion<T, int64_t>(p), c[0]);
     for (int i = 0; i < c[1]; i++) {
       G(pos + i, pos + i) = q;
     }
@@ -639,7 +586,7 @@ MyMatrix<T> TwoAdicLocalGram(std::vector<std::array<int, 5>> const &sym2,
       MyMatrix<T> G = ZeroMatrix<T>(n, n);
       int pos = 0;
       for (auto const &c : raw) {
-        T q = PrimePowerT<T>(2, c[0]);
+        T q = MyPow<T>(UniversalScalarConversion<T, int64_t>(2), c[0]);
         if (c[3] == 1) {
           std::vector<int64_t> units = *OddUnitDiagonal(c[1], c[2], c[4]);
           for (int i = 0; i < c[1]; i++) {
@@ -740,31 +687,6 @@ int HasseInvariantDiagonal(std::vector<T> const &diag, int64_t p) {
   return h;
 }
 
-inline std::vector<int64_t> SmallPrimeDivisors(int64_t x) {
-  std::vector<int64_t> res;
-  for (int64_t q = 2; q * q <= x; q++) {
-    if (x % q == 0) {
-      res.push_back(q);
-      while (x % q == 0) {
-        x /= q;
-      }
-    }
-  }
-  if (x > 1) {
-    res.push_back(x);
-  }
-  return res;
-}
-
-inline bool IsSquareFree(int64_t x) {
-  for (int64_t q = 2; q * q <= x; q++) {
-    if (x % (q * q) == 0) {
-      return false;
-    }
-  }
-  return true;
-}
-
 /*
   A positive diagonal form over Q of rank n and determinant d with the
   Hasse invariant hasse[p] at the primes of `hasse` and 1 at the others:
@@ -852,41 +774,6 @@ void ApplyBasisChange(SymbolLattice<T> &L, MyMatrix<T> const &E) {
   L.G = E * L.G * E.transpose();
 }
 
-// A square root of the square a modulo the odd prime p (Tonelli-Shanks).
-inline int64_t SqrtModPrime(int64_t a, int64_t p) {
-  a = ResMod(a, p);
-  if (a == 0) {
-    return 0;
-  }
-  int64_t q = p - 1;
-  int s = 0;
-  while (q % 2 == 0) {
-    q /= 2;
-    s++;
-  }
-  int64_t z = LeastNonResidue(p);
-  int64_t m = s;
-  int64_t c = ResPow(z, q, p);
-  int64_t t = ResPow(a, q, p);
-  int64_t r = ResPow(a, (q + 1) / 2, p);
-  while (t != 1) {
-    int64_t i = 0, t2 = t;
-    while (t2 != 1) {
-      t2 = ResMul(t2, t2, p);
-      i++;
-    }
-    int64_t b = c;
-    for (int64_t j = 0; j < m - i - 1; j++) {
-      b = ResMul(b, b, p);
-    }
-    m = i;
-    c = ResMul(b, b, p);
-    t = ResMul(t, c, p);
-    r = ResMul(r, b, p);
-  }
-  return r;
-}
-
 // A non-zero isotropic vector of the quadratic form c M c^T over F_p, p
 // odd, M symmetric, by a diagonalization W M W^T = diag(delta).
 inline std::optional<std::vector<int64_t>>
@@ -954,7 +841,7 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
   for (int i = 0; i < m; i++) {
     for (int j = i + 1; j < m; j++) {
       int64_t r = ResMul(p - delta[i], ResInv(delta[j], p), p);
-      if (LegendreUnit(r, p) == 1) {
+      if (kronecker_symbol<int64_t>(r, p) == 1) {
         return combine({{i, 1}, {j, SqrtModPrime(r, p)}});
       }
     }
@@ -965,22 +852,12 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
     for (int64_t y = 0; y < p; y++) {
       int64_t val = ResMod(delta[0] + ResMul(delta[1], ResMul(y, y, p), p), p);
       int64_t r = ResMul(p - val, inv2, p);
-      if (r == 0 || LegendreUnit(r, p) == 1) {
+      if (r == 0 || kronecker_symbol<int64_t>(r, p) == 1) {
         return combine({{0, 1}, {1, y}, {2, SqrtModPrime(r, p)}});
       }
     }
   }
   return {};
-}
-
-// The integer residue of the p-integral rational x modulo M.
-template <typename T, typename Tint> int64_t ResidueModInt(T const &x, int64_t M) {
-  Tint M_T(static_cast<long>(M));
-  Tint num = UniversalScalarConversion<Tint, T>(GetNumerator(x));
-  Tint den = UniversalScalarConversion<Tint, T>(GetDenominator(x));
-  int64_t num_r = UniversalScalarConversion<int64_t, Tint>(ResInt(num, M_T));
-  int64_t den_r = UniversalScalarConversion<int64_t, Tint>(ResInt(den, M_T));
-  return ResMul(num_r, ResInv(den_r, M), M);
 }
 
 /*
@@ -1236,7 +1113,7 @@ std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,
         std::vector<int64_t> ls = lambdas;
         if (p != 2 && diag[i] != 0 && diag[j] != 0 && cls[i].val == cls[j].val) {
           int64_t r = ResMul(p - cls[i].unit, ResInv(cls[j].unit, p), p);
-          if (LegendreUnit(r, p) == 1) {
+          if (kronecker_symbol<int64_t>(r, p) == 1) {
             ls.push_back(SqrtModPrime(r, p));
           }
         }
@@ -1585,7 +1462,7 @@ MyMatrix<T> GenusSymbolRepresentative(GenusSymbol const &s, std::ostream &os) {
     T ratio = DeterminantMat(Gp) / d_T;
     PadicClass c = PadicFromRational<T, Tint>(ratio, p);
     bool square = (c.val % 2 == 0) &&
-                  ((p == 2) ? (c.unit == 1) : (LegendreUnit(c.unit, p) == 1));
+                  ((p == 2) ? (c.unit == 1) : (kronecker_symbol<int64_t>(c.unit, p) == 1));
     if (!square) {
       std::cerr << "GSYM: the symbol at p=" << p
                 << " does not match the determinant " << d << "\n";

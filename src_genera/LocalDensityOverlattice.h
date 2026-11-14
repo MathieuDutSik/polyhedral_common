@@ -3,6 +3,7 @@
 #define SRC_GENERA_LOCALDENSITYOVERLATTICE_H_
 
 // clang-format off
+#include "GeneraArithmetic.h"
 #include "LocalDensityBadPrimes.h"
 #include "MAT_MatrixInt.h"
 #include "ResidueArithmetic.h"
@@ -44,7 +45,7 @@ OddLocalSymbolFromClasses(std::vector<PadicClass> const &classes, int64_t p) {
   }
   std::vector<std::array<int, 3>> res;
   for (auto const &kv : levels) {
-    res.push_back({kv.first, kv.second.first, LegendreUnit(kv.second.second, p)});
+    res.push_back({kv.first, kv.second.first, kronecker_symbol<int64_t>(kv.second.second, p)});
   }
   return res;
 }
@@ -204,27 +205,6 @@ std::vector<int> LocalSymbolKey(MyMatrix<T> const &Gram, int64_t p) {
     }
   }
   return key;
-}
-
-/*
-  The same key for an integral (even at p = 2) Gram matrix in int64, by a
-  Jordan splitting modulo p^K, K = v_p(det) + 5: pivoting on an entry of
-  minimal valuation e, every update subtracts a product of a quotient known
-  modulo p^{K-e} by an entry of valuation >= e, so the entries stay exact
-  modulo p^K, which determines the units modulo 8 (or p) of every Jordan
-  block. Returns nothing when p^{2K} would overflow; the caller then uses
-  LocalSymbolKey.
- */
-inline int64_t ValuationResidue(int64_t x, int64_t p, int K) {
-  if (x == 0) {
-    return K;
-  }
-  int v = 0;
-  while (x % p == 0) {
-    x /= p;
-    v++;
-  }
-  return v;
 }
 
 inline std::optional<std::vector<int>>
@@ -474,7 +454,6 @@ template <typename T> bool LatticeContained(MyMatrix<T> const &B1,
                                             MyMatrix<T> const &B2) {
   return IsIntegralMatrix(MyMatrix<T>(B1 * Inverse(B2)));
 }
-
 
 // A basis of the left kernel {c : c G = 0 mod p} of an integral G, by
 // Gaussian elimination over F_p.
@@ -1023,7 +1002,7 @@ std::optional<T> OverlatticeDensity(MyMatrix<T> const &S, MyMatrix<T> const &Tgr
   }
   // det N = (-1)^{mP} det U up to squares
   int64_t detN = SignedPower(mP, us.detU_unit);
-  int xi_N = KroneckerSymbol(SignedPower(n_N / 2, detN), p);
+  int xi_N = kronecker_symbol<int64_t>(SignedPower(n_N / 2, detN), p);
   if (mP == 0) {
     return AlphaUnimodularTarget<T, Tint>(S, p, n / 2, xi_N, cache);
   }
@@ -1059,7 +1038,6 @@ std::optional<T> OverlatticeDensity(MyMatrix<T> const &S, MyMatrix<T> const &Tgr
   return conv * num / den;
 }
 
-
 /*
   What the gluing needs of a genus at p, computed once: the overlattices of
   R, the class of N, and the denominator alpha^*(R, N).
@@ -1088,7 +1066,7 @@ ComputeOverlatticeGenusData(MyMatrix<T> const &Tgram, int64_t p,
     return {};
   }
   int64_t detN = SignedPower(mP, us.detU_unit);
-  data.xi_N = KroneckerSymbol(SignedPower(data.n_N / 2, detN), p);
+  data.xi_N = kronecker_symbol<int64_t>(SignedPower(data.n_N / 2, detN), p);
   data.unimodular = (mP == 0);
   if (!data.unimodular) {
     data.classes = ElementaryOverlatticeClasses<T, Tint>(-us.P, p);
@@ -1183,7 +1161,6 @@ std::optional<T> BruteForceDensity(MyMatrix<T> const &S, MyMatrix<T> const &Tgra
   }
   return v2;
 }
-
 
 //
 // M_R for R of full rank
@@ -1525,7 +1502,7 @@ T LocalDensityAtPrime(MyMatrix<T> const &S, GenusDensityDataFull<T> const &data,
   int64_t detT = data.odd.detT;
   if (detT % p != 0) {
     int k = data.odd.n / 2;
-    int xi_T = KroneckerSymbol(SignedPower(k, detT), p);
+    int xi_T = kronecker_symbol<int64_t>(SignedPower(k, detT), p);
     return AlphaUnimodularTarget<T, Tint>(S, p, k, xi_T, cache.siegel);
   }
   if (p == 2) {
@@ -1561,7 +1538,6 @@ T MassRatioFromDensitiesFull(MyMatrix<T> const &S,
   }
   return val;
 }
-
 
 // clang-format off
 #endif  // SRC_GENERA_LOCALDENSITYOVERLATTICE_H_

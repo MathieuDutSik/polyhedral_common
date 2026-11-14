@@ -1049,7 +1049,7 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
     for (int i = 0; i < k; i++) {
       for (int j = 0; j < k; j++) {
         if (Ainv(i, j) != T(0)) {
-          e = std::max(e, ValuationOfRational(GetDenominator(Ainv(i, j)), q));
+          e = std::max(e, RationalValuation(GetDenominator(Ainv(i, j)), q));
         }
       }
     }
@@ -2207,7 +2207,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       if (d == T(0)) {
         structural_failure("N^# / N is infinite");
       }
-      int v = ValuationOfRational(d, p);
+      int v = RationalValuation(d, p);
       if (v > 0) {
         ListIdx.push_back(i);
         ListOrd.push_back(ResiduePrimePower(p, v));
@@ -2383,7 +2383,7 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
         for (int j = 0; j < m; j++) {
           if (Ainv(i, j) != T(0)) {
             T den = GetDenominator(Ainv(i, j));
-            e = std::max(e, ValuationOfRational(den, p));
+            e = std::max(e, RationalValuation(den, p));
           }
         }
       }
@@ -4109,8 +4109,8 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
                   mass_X = {};
                   break;
                 }
-                int vX = ValuationOfRational(discX, pp);
-                int vS = ValuationOfRational(discS, pp);
+                int vX = RationalValuation(discX, pp);
+                int vS = RationalValuation(discS, pp);
                 if ((vX - vS) % 2 != 0) {
                   std::cerr << "ISOM_MASS: the Lie discriminants differ by an "
                                "odd power of " << pp << "\n";

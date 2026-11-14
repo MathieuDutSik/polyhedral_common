@@ -120,7 +120,7 @@ inline std::vector<int> SymmetricOrbitKey(std::vector<int64_t> a, int j,
   std::vector<int> key;
   for (int v = 0; v < k; v++) {
     key.push_back(count[v]);
-    key.push_back(count[v] > 0 ? LegendreUnit(prod[v], p) : 0);
+    key.push_back(count[v] > 0 ? kronecker_symbol<int64_t>(prod[v], p) : 0);
   }
   key.push_back(count[k]);
   return key;
@@ -146,7 +146,7 @@ inline SymmetricOrbits BuildSymmetricOrbits(int64_t p, int k, int j) {
   so.j = j;
   so.mod = MyPow<int64_t>(p, k);
   int64_t nonres = 2;
-  while (LegendreUnit(nonres, p) != -1) {
+  while (kronecker_symbol<int64_t>(nonres, p) != -1) {
     nonres++;
   }
   // the levels of the j diagonal entries, non-decreasing, level k for 0
@@ -236,7 +236,6 @@ SymmetricOrbitTransitions(SymmetricOrbits &so, int e, int64_t u) {
   }
   return so.H.emplace(key, std::move(H)).first->second;
 }
-
 
 // The orbit tables, one per (p, k, j), filled lazily and shared by all the
 // counts of a computation.
