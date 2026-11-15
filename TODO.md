@@ -555,3 +555,30 @@ is not known. To check: the peak with a finer sampling (`RUN_CAPPED_POLL`) to
 exclude a sampling artifact, then the size of `l_known` along the run, and
 whether the order of the treated objects changes the number of objects alive
 at the same time. The 10 GB local limit is close for this case.
+
+## src_genera: survey of the small groups (2026-11-15, stopped at 3 hours)
+
+Every SmallGroup of order <= 48, each faithful rational irreducible
+representation on a minimal left ideal of Z[G] (rank <= 24), then L + L
+and a maximal G-sublattice at p = 2, 3, 5. For each case: GENUS_IsometryMass,
+GENUS_EnumerateIsometry with that mass as target (must close), and a
+saturation run with twice the mass (must find nothing more). Scripts and
+results in Paper_genus_enumeration/results/small_groups_survey/ (gen.g,
+derive.g, run.sh, run2.sh, results*.tsv; the paths still point at a scratch
+directory). Restart: the 140 derived cases not run (from g40_4 on), orders
+beyond 48, longer caps.
+
+- 145 base cases: 140 masses, all closed, no extra class; 4 genera with >= 2
+  classes. 409 of 549 derived cases: 385 masses, all closed, no extra class;
+  21 genera with >= 2 classes (up to 5).
+- Unsupported, not handled: g40_1_c11 and g48_1_c19 (complex character with
+  Schur index 2: a quaternion algebra over a CM field with an involution of
+  the second kind) and their derived lattices.
+- Unsupported after 234 s: g28_1_c5 + itself (Dic_7, type III of rank 2
+  over Q(zeta_7)^+), beyond the search bounds.
+- Mass beyond 300 s: g44_1_c10 (type III over Q(zeta_11)^+, rank 20), the
+  sublattices of g28_1_c5 at 2, 3, 5 (type III over Q(zeta_7)^+; dividing
+  the Gram matrix by its content does not help), g32_20_c8 at 2, 3,
+  g40_4_c8 at 2, 3, and the sums g20_1_c5, g24_4_c8, g32_42_c11, g36_1_c10.
+- Saturation runs beyond 300 s on the cyclotomic lattices of rank >= 16
+  (inconclusive, not failures).
