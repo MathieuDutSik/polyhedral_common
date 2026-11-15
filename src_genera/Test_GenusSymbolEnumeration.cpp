@@ -9,7 +9,8 @@
 /*
   The genera of even positive definite lattices of rank n and determinant
   d (EnumerateEvenGenusSymbols), for comparison with genera() of SageMath:
-    count n dmin dmax : a line "n d number" per d
+    count n dmin dmax : a line "n d number" per d (countodd, listodd:
+                        the odd lattices)
     list n d [build [gram]] : the symbols; with build, a lattice of each
                         genus is constructed (GenusSymbolRepresentative
                         checks its genus) and its symbol compared, printed
@@ -27,13 +28,19 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     std::string mode = argv[1];
+    // countodd / listodd: the odd lattices
+    bool even = true;
+    if (mode == "countodd" || mode == "listodd") {
+      even = false;
+      mode = mode.substr(0, mode.size() - 3);
+    }
     int n = std::stoi(argv[2]);
     if (mode == "count") {
       int64_t dmin = std::stoll(argv[3]);
       int64_t dmax = std::stoll(argv[4]);
       for (int64_t d = dmin; d <= dmax; d++) {
         std::vector<GenusSymbol> l =
-            EnumerateEvenGenusSymbols<Tint>(n, Tint(static_cast<long>(d)));
+            EnumerateGenusSymbols<Tint>(n, Tint(static_cast<long>(d)), even);
         std::cout << n << " " << d << " " << l.size() << "\n";
       }
       return 0;
@@ -41,7 +48,7 @@ int main(int argc, char *argv[]) {
     int64_t d = std::stoll(argv[3]);
     bool build = (argc > 4 && std::string(argv[4]) == "build");
     std::vector<GenusSymbol> l =
-        EnumerateEvenGenusSymbols<Tint>(n, Tint(static_cast<long>(d)));
+        EnumerateGenusSymbols<Tint>(n, Tint(static_cast<long>(d)), even);
     for (auto const &g : l) {
       std::cout << GenusSymbolString(g);
       if (build) {

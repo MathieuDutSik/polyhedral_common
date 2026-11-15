@@ -198,6 +198,114 @@ std::vector<GluedPair<T>> InvolutionSeeds(MyMatrix<T> const &A, int r,
   return res;
 }
 
+/*
+  The seeds of every genus of pairs (L, sigma), L in the genus of A,
+  sigma = 1 (+) sigma_2 with a +1-piece of rank r and the other piece in
+  the genus of one of the pairs (A_2, sigma_2) of the list (all the genera
+  of pairs of that piece, e.g. the Hermitian genera over Z[zeta_d] of
+  Hecke.jl). For a piece of determinant D and a glue of order s, the
+  +1-piece has determinant d s^2 / D, s | D; its genera are enumerated.
+ */
+// mu(1) for the minimal polynomial mu of g: the glue of (L_1, 1) and
+// (L_2, g) is killed by mu(1), since mu(x) - mu(1) is a multiple of x - 1.
+template <typename T> T MinimalPolynomialAtOne(MyMatrix<T> const &g) {
+  int n = g.rows();
+  auto flat = [&](MyMatrix<T> const &M) -> MyVector<T> {
+    MyVector<T> v(n * n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        v(i * n + j) = M(i, j);
+      }
+    }
+    return v;
+  };
+  std::vector<MyVector<T>> pw{flat(IdentityMat<T>(n))};
+  MyMatrix<T> M = IdentityMat<T>(n);
+  while (true) {
+    M = M * g;
+    MyVector<T> w = flat(M);
+    std::optional<MyVector<T>> opt =
+        SolutionMat(MatrixFromVectorFamily(pw), w);
+    if (opt) {
+      // mu(x) = x^k - sum_i c_i x^i
+      T val(1);
+      for (int i = 0; i < opt->size(); i++) {
+        val -= (*opt)(i);
+      }
+      return T_abs(val);
+    }
+    pw.push_back(w);
+  }
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<GluedPair<T>>
+PieceSeeds(MyMatrix<T> const &A, int r,
+           std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &pieces,
+           std::ostream &os) {
+  int n = A.rows();
+  T det = DeterminantMat(A);
+  GenusSymbol S = GenusSymbolOfGram<T, Tint>(A);
+  Tint d = UniversalScalarConversion<Tint, T>(det);
+  std::vector<GluedPair<T>> res;
+  IsometryGlueBounds bounds;
+  std::map<std::string, MyMatrix<T>> reps;
+  size_t n_cand = 0;
+  for (auto const &[A2, g2] : pieces) {
+    if (A2.rows() != n - r) {
+      continue;
+    }
+    if (r == 0) {
+      if (GenusSymbolOfGram<T, Tint>(A2) == S) {
+        res.push_back({A2, g2, det, 1});
+      }
+      continue;
+    }
+    Tint D = UniversalScalarConversion<Tint, T>(DeterminantMat(A2));
+    // the glue is killed by mu(1) and has at most min(r, n - r) generators
+    Tint R = UniversalScalarConversion<Tint, T>(MinimalPolynomialAtOne(g2));
+    size_t max_gen = static_cast<size_t>(std::min(r, n - r));
+    std::vector<Tint> divisors{Tint(1)};
+    if (R > 1) {
+      for (auto const &[q, mult] : FactorsIntMap(R)) {
+        std::vector<Tint> next;
+        for (auto const &x : divisors) {
+          Tint y = x;
+          for (size_t i = 0; i <= mult * max_gen; i++) {
+            next.push_back(y);
+            y *= q;
+          }
+        }
+        divisors = next;
+      }
+    }
+    for (Tint const &sg : divisors) {
+      Tint num = d * sg * sg;
+      if (ResInt(D, sg) != 0 || ResInt(num, D) != 0) {
+        continue;
+      }
+      Tint D1 = num / D;
+      for (auto const &g1 : EnumerateEvenGenusSymbols<Tint>(r, D1)) {
+        n_cand++;
+        std::string key = GenusSymbolString(g1);
+        if (reps.count(key) == 0) {
+          reps[key] = GenusSymbolRepresentative<T, Tint>(g1, os);
+        }
+        std::vector<GluedPair<T>> glued = GlueIsometryPairs<T, Tint, Tgroup>(
+            reps[key], IdentityMat<T>(r), A2, g2, det, bounds, os);
+        for (auto const &gl : glued) {
+          if (GenusSymbolOfGram<T, Tint>(gl.gram) == S) {
+            res.push_back(gl);
+          }
+        }
+      }
+    }
+  }
+  std::cerr << "GENUS_GlueIsometry: " << n_cand << " pairs of pieces, "
+            << res.size() << " glued pairs in the genus of L\n";
+  return res;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &mode, std::string const &FileGram1,
              std::string const &FileIsom1, std::string const &FileGram2,
@@ -205,7 +313,18 @@ void process(std::string const &mode, std::string const &FileGram1,
              std::string const &OutFormat, QuadLValueMethod lvalue,
              std::ostream &os) {
   std::vector<GluedPair<T>> ListGlued;
-  if (mode == "involutions") {
+  if (mode == "pieces") {
+    // FileGram1 the lattice, FileIsom1 the rank of the +1-piece, FileGram2
+    // the list of the other pieces (Gram matrix, then isometry, in turn)
+    std::vector<MyMatrix<T>> lst = ReadListMatrixFile<T>(FileGram2);
+    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> pieces;
+    for (size_t i = 0; i + 1 < lst.size(); i += 2) {
+      pieces.push_back({lst[i], lst[i + 1]});
+    }
+    ListGlued = PieceSeeds<T, Tint, Tgroup>(ReadMatrixFile<T>(FileGram1),
+                                            std::stoi(FileIsom1), pieces,
+                                            std::cerr);
+  } else if (mode == "involutions") {
     // FileGram1 the lattice, FileIsom1 the rank of the +1-eigenspace
     ListGlued = InvolutionSeeds<T, Tint, Tgroup>(
         ReadMatrixFile<T>(FileGram1), std::stoi(FileIsom1), std::cerr);
@@ -251,9 +370,9 @@ void process(std::string const &mode, std::string const &FileGram1,
               << " (Summary, GAP or ListMatrix)\n";
     throw TerminalException{1};
   }
-  if (mode != "enumerate" && mode != "involutions") {
-    std::cerr << "GENUS_GlueIsometry: the mode must be glue, enumerate or "
-                 "involutions\n";
+  if (mode != "enumerate" && mode != "involutions" && mode != "pieces") {
+    std::cerr << "GENUS_GlueIsometry: the mode must be glue, enumerate, "
+                 "involutions or pieces\n";
     throw TerminalException{1};
   }
   using Tresult = GenusEnumerationGroupResult<T, Tgroup>;
@@ -389,11 +508,16 @@ int main(int argc, char *argv[]) {
     ArithmeticDispatch dispatch;
     QuadLValueMethod lvalue = ExtractQuadLValueOption(argc, argv);
     bool involutions = (argc >= 2 && std::string(argv[1]) == "involutions");
-    if (involutions ? (argc < 4 || argc > 8) : (argc < 7 || argc > 10)) {
+    bool pieces_mode = (argc >= 2 && std::string(argv[1]) == "pieces");
+    if (involutions ? (argc < 4 || argc > 8)
+                    : pieces_mode ? (argc < 5 || argc > 9)
+                                  : (argc < 7 || argc > 10)) {
       std::cerr << "GENUS_GlueIsometry [mode] [Gram1] [Isom1] [Gram2] [Isom2] "
                    "[det] [OutFormat] [OutFile]\n";
       std::cerr << "GENUS_GlueIsometry involutions [Gram] [r] [OutFormat] "
                    "[OutFile]\n";
+      std::cerr << "GENUS_GlueIsometry pieces [Gram] [r] [FilePieces] "
+                   "[OutFormat] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "mode             : glue or enumerate\n";
       std::cerr
@@ -416,6 +540,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "            genus of Gram, sigma an involution with a\n";
       std::cerr << "            +1-eigenspace of rank r, by the genera of\n";
       std::cerr << "            the pieces, glued, then as enumerate\n";
+      std::cerr << "pieces    : the same with sigma = 1 (+) sigma_2, the\n";
+      std::cerr << "            +1-piece of rank r and the other one among\n";
+      std::cerr << "            the pairs of FilePieces (a list of Gram\n";
+      std::cerr << "            matrices and isometries, one per genus)\n";
       std::cerr << "\n";
       std::cerr << "lvalue=double / lvalue=mpfr / lvalue=arb (anywhere,\n";
       std::cerr << "        optional): the L-values of the quadratic masses\n";
@@ -434,6 +562,10 @@ int main(int argc, char *argv[]) {
     if (involutions) {
       OutFormat = (argc >= 5) ? argv[4] : "Summary";
       OutFile = (argc >= 6) ? argv[5] : "stderr";
+    } else if (pieces_mode) {
+      FileGram2 = argv[4];
+      OutFormat = (argc >= 6) ? argv[5] : "Summary";
+      OutFile = (argc >= 7) ? argv[6] : "stderr";
     } else {
       FileGram2 = argv[4];
       FileIsom2 = argv[5];

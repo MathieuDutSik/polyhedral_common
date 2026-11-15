@@ -79,6 +79,48 @@ invol_case A2x4 3 229/27648
 invol_case A2x4 4 6925/331776
 invol_case A2x4 7 13/82944
 
+# The order-d isometries sigma = 1 (+) sigma_2 with char poly
+# (x - 1)^r Phi_d^b on a genus: the +1-pieces from the genus symbols, the
+# pieces (L_2, sigma_2) one per hermitian genus over Z[zeta_d], made by
+# HermitianPieces.jl (Hecke.jl): d = 5, 8, 10, 12 over a real centre
+# K_0 != Q, the trace form integral for the scales in the inverse of the
+# absolute different. The expected masses are the sums of
+# 1 / |O(Lambda)| over the classes Lambda of the genus and the elements of
+# O(Lambda) of that char poly (GAP).
+herm_case() {
+    lat=$1
+    d=$2
+    b=$3
+    r=$4
+    expected=$5
+    out=$($BIN pieces invol_${lat}.txt $r herm_${lat}_d${d}_b${b}.txt Summary stdout 2>/dev/null)
+    total=$(echo "$out" | sed -n 's/^total mass = //p')
+    complete=$(echo "$out" | sed -n 's/^complete = //p')
+    echo "--- Phi_$d^$b on the genus of $lat: total mass $total (expecting $expected) ---"
+    if [ "$total" != "$expected" ] || [ "$complete" != "true" ]; then
+        echo "ERROR: pieces $lat d=$d b=$b gave $total, complete=$complete" >&2
+        exit 1
+    fi
+}
+herm_case E8 3 1 6 1/311040
+herm_case E8 3 2 4 1/2592
+herm_case E8 3 3 2 1/7776
+herm_case E8 3 4 0 1/155520
+herm_case E8 4 1 6 0
+herm_case E8 4 2 4 1/18432
+herm_case E8 4 3 2 0
+herm_case E8 4 4 0 1/46080
+herm_case E8 6 4 0 1/155520
+herm_case E8 5 1 4 1/1200
+herm_case E8 5 2 0 1/600
+herm_case E8 8 2 0 1/192
+herm_case E8 10 2 0 1/600
+herm_case E8 12 2 0 1/288
+herm_case A2x4 3 1 6 19/62208
+herm_case A2x4 3 2 4 193/20736
+herm_case A2x4 3 3 2 109/15552
+herm_case A2x4 3 4 0 19/31104
+
 # The genera of even lattices of rank n and determinant d against
 # SageMath, for n <= 8 and d <= 64
 TSE=../../src_genera/Test_GenusSymbolEnumeration
@@ -88,6 +130,12 @@ if [ "$ours" != "$(grep -v '^#' genus_symbol_counts_sage.txt)" ]; then
     exit 1
 fi
 echo "--- the numbers of genera of 512 (rank, determinant) agree with SageMath ---"
+ours=$(for n in 1 2 3 4 5 6 7 8; do $TSE countodd $n 1 64; done)
+if [ "$ours" != "$(grep -v '^#' genus_symbol_counts_odd_sage.txt)" ]; then
+    echo "ERROR: the numbers of odd genera differ from those of SageMath" >&2
+    exit 1
+fi
+echo "--- the numbers of odd genera of 512 (rank, determinant) agree with SageMath ---"
 
 echo "All gluing tests passed"
 touch CI_CONCLUSION

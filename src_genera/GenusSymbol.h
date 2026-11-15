@@ -1547,8 +1547,10 @@ MyMatrix<T> GenusSymbolRepresentative(GenusSymbol const &s, std::ostream &os) {
 }
 
 /*
-  All the genera of positive definite even lattices of rank n and
-  determinant d, as symbols (the analogue of genera() of SageMath).
+  All the genera of positive definite lattices of rank n and determinant
+  d, even or odd, as symbols (the analogue of genera() of SageMath). An
+  odd lattice has an odd unimodular component at 2, an even one an even
+  (or no) unimodular component.
 
   At an odd p with p^v || d: the Jordan components (k, n_k, eps_k), scales
   k >= 0, sum n_k = n, sum k n_k = v, prod eps_k = ((d / p^v) / p). At p =
@@ -1614,7 +1616,7 @@ inline std::vector<std::vector<int>> JordanRankCompositions(int n, int v) {
 }
 
 template <typename Tint>
-std::vector<GenusSymbol> EnumerateEvenGenusSymbols(int n, Tint const &d) {
+std::vector<GenusSymbol> EnumerateGenusSymbols(int n, Tint const &d, bool even) {
   std::vector<GenusSymbol> res;
   if (n <= 0 || d <= 0) {
     return res;
@@ -1684,16 +1686,20 @@ std::vector<GenusSymbol> EnumerateEvenGenusSymbols(int n, Tint const &d) {
         present.push_back(k);
       }
     }
+    // an odd lattice has an odd unimodular component at 2
+    if (!even && comp[0] == 0) {
+      continue;
+    }
     std::vector<std::vector<std::array<int, 3>>> options;
     bool ok = true;
     for (int k : present) {
       std::vector<std::array<int, 3>> opt;
       int nk = comp[k];
-      if (nk % 2 == 0) {
+      if (nk % 2 == 0 && (k > 0 || even)) {
         opt.push_back({1, 0, 0});
         opt.push_back({-1, 0, 0});
       }
-      if (k > 0) {
+      if (k > 0 || !even) {
         std::array<std::array<bool, 8>, 2> pr = OddTwoAdicPairs(nk);
         for (int e = 0; e < 2; e++) {
           for (int t = 0; t < 8; t++) {
@@ -1781,7 +1787,7 @@ std::vector<GenusSymbol> EnumerateEvenGenusSymbols(int n, Tint const &d) {
       if (((oddity(s2) - ex - n) % 8 + 8) % 8 == 0) {
         GenusSymbol g;
         g.rank = n;
-        g.even = true;
+        g.even = even;
         g.sym2 = s2;
         for (size_t i = 0; i < odd_primes.size(); i++) {
           g.sym_odd[odd_primes[i]] = local_odd[i][idx[i]];
@@ -1800,6 +1806,11 @@ std::vector<GenusSymbol> EnumerateEvenGenusSymbols(int n, Tint const &d) {
     }
   }
   return res;
+}
+
+template <typename Tint>
+std::vector<GenusSymbol> EnumerateEvenGenusSymbols(int n, Tint const &d) {
+  return EnumerateGenusSymbols<Tint>(n, d, true);
 }
 
 // clang-format off
