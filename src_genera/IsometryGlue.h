@@ -469,6 +469,13 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
   MyMatrix<T> P0 = BlockDiagonal(P1, P2);
   std::vector<GluedPair<T>> res;
   std::set<std::vector<MyMatrix<T>>> known;
+  // no subgroup at some prime (none of the order the determinant asks
+  // for): no glued lattice, before the product reads ListLifts[iq][0]
+  for (auto const &lifts : ListLifts) {
+    if (lifts.empty()) {
+      return res;
+    }
+  }
   // the product over the primes
   std::vector<size_t> choice(primes.size(), 0);
   while (true) {

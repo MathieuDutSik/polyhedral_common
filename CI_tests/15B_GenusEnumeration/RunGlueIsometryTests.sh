@@ -46,5 +46,48 @@ glue_case A1 A1_mI E7E8 E7E8_id 1 1 2
 glue_case A2 A2_w E6E8 E6E8_id 1 1 2
 glue_case D4D4 D4D4_id D4D4 D4D4_mI 1 1 1
 
+# Every genus of pairs (L, sigma), sigma an involution with a +1-eigenspace
+# of rank r and L in a given genus, from the genera of the pieces (even, of
+# ranks r and n - r, d_+ d_- = d 4^a, the odd local symbols adding up to
+# those of L): the total mass must be the sum over the classes Lambda of
+# the genus of #{sigma in O(Lambda) of that type} / |O(Lambda)|, computed
+# in GAP (W(E8) for E8; the two classes A2^4 and its neighbour of
+# determinant 81).
+invol_case() {
+    lat=$1
+    r=$2
+    expected=$3
+    out=$($BIN involutions invol_${lat}.txt $r Summary stdout 2>/dev/null)
+    total=$(echo "$out" | sed -n 's/^total mass = //p')
+    complete=$(echo "$out" | sed -n 's/^complete = //p')
+    echo "--- involutions of rank $r on the genus of $lat: total mass $total (expecting $expected) ---"
+    if [ "$total" != "$expected" ] || [ "$complete" != "true" ]; then
+        echo "ERROR: involutions $lat r=$r gave $total, complete=$complete" >&2
+        exit 1
+    fi
+}
+invol_case E8 0 1/696729600
+invol_case E8 1 1/5806080
+invol_case E8 2 1/184320
+invol_case E8 3 1/18432
+invol_case E8 4 37/221184
+invol_case E8 5 1/18432
+invol_case E8 8 1/696729600
+invol_case A2x4 1 13/82944
+invol_case A2x4 2 805/497664
+invol_case A2x4 3 229/27648
+invol_case A2x4 4 6925/331776
+invol_case A2x4 7 13/82944
+
+# The genera of even lattices of rank n and determinant d against
+# SageMath, for n <= 8 and d <= 64
+TSE=../../src_genera/Test_GenusSymbolEnumeration
+ours=$(for n in 1 2 3 4 5 6 7 8; do $TSE count $n 1 64; done)
+if [ "$ours" != "$(grep -v '^#' genus_symbol_counts_sage.txt)" ]; then
+    echo "ERROR: the numbers of genera differ from those of SageMath" >&2
+    exit 1
+fi
+echo "--- the numbers of genera of 512 (rank, determinant) agree with SageMath ---"
+
 echo "All gluing tests passed"
 touch CI_CONCLUSION

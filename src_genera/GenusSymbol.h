@@ -11,6 +11,8 @@
 #include "MAT_MatrixInt.h"
 #include "ResidueArithmetic.h"
 #include <array>
+#include <functional>
+#include <set>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -1542,6 +1544,262 @@ MyMatrix<T> GenusSymbolRepresentative(GenusSymbol const &s, std::ostream &os) {
     throw TerminalException{1};
   }
   return L.G;
+}
+
+/*
+  All the genera of positive definite even lattices of rank n and
+  determinant d, as symbols (the analogue of genera() of SageMath).
+
+  At an odd p with p^v || d: the Jordan components (k, n_k, eps_k), scales
+  k >= 0, sum n_k = n, sum k n_k = v, prod eps_k = ((d / p^v) / p). At p =
+  2: the components (k, n_k, eps_k, type, oddity), the unimodular one even
+  (the lattice is even), an even component of even rank and oddity 0, an
+  odd one with the (eps, t) of a diagonal form of n_k units (a dynamic
+  programme on (2 / u), u mod 8), prod eps_k = (2 / (d / 2^v)); the raw
+  symbol is put in canonical form, which merges the equivalent ones. The
+  local symbols exist; the global genus exists iff the oddity formula
+  holds: the oddity of the 2-adic symbol (sum of the oddities, plus 4 for
+  each component of odd scale exponent and sign -1) minus the sum of the
+  p-excesses (sum n_k (p^k - 1), plus 4 for each component of odd scale
+  exponent and sign -1) is the signature n modulo 8 (Conway-Sloane,
+  Chapter 15, 7.7 and 10.5).
+ */
+
+// The (eps, oddity) pairs of the odd unimodular Z_2-forms of rank r:
+// res[(eps + 1) / 2][t].
+inline std::array<std::array<bool, 8>, 2> OddTwoAdicPairs(int r) {
+  std::array<std::array<bool, 8>, 2> cur{};
+  cur[1][0] = true;
+  for (int i = 0; i < r; i++) {
+    std::array<std::array<bool, 8>, 2> next{};
+    for (int e = 0; e < 2; e++) {
+      for (int t = 0; t < 8; t++) {
+        if (!cur[e][t]) {
+          continue;
+        }
+        for (int u : {1, 3, 5, 7}) {
+          int eu = (u == 1 || u == 7) ? 1 : 0;
+          // eps multiplies: index 1 for +1, 0 for -1
+          int ne = (e == eu) ? 1 : 0;
+          next[ne][(t + u) % 8] = true;
+        }
+      }
+    }
+    cur = next;
+  }
+  return cur;
+}
+
+// The compositions of (n, v) into Jordan ranks: n_k for k = 0..v, sum n_k
+// = n, sum k n_k = v.
+inline std::vector<std::vector<int>> JordanRankCompositions(int n, int v) {
+  std::vector<std::vector<int>> res;
+  std::vector<int> cur(v + 1, 0);
+  std::function<void(int, int, int)> rec = [&](int k, int r_left, int v_left) {
+    if (k == 0) {
+      if (v_left == 0) {
+        cur[0] = r_left;
+        res.push_back(cur);
+      }
+      return;
+    }
+    for (int nk = 0; nk * k <= v_left && nk <= r_left; nk++) {
+      cur[k] = nk;
+      rec(k - 1, r_left - nk, v_left - nk * k);
+    }
+    cur[k] = 0;
+  };
+  rec(v, n, v);
+  return res;
+}
+
+template <typename Tint>
+std::vector<GenusSymbol> EnumerateEvenGenusSymbols(int n, Tint const &d) {
+  std::vector<GenusSymbol> res;
+  if (n <= 0 || d <= 0) {
+    return res;
+  }
+  std::map<Tint, size_t> fac;
+  if (d > 1) {
+    fac = FactorsIntMap(d);
+  }
+  // the local symbols at the odd primes
+  std::vector<int64_t> odd_primes;
+  std::vector<std::vector<std::vector<std::array<int, 3>>>> local_odd;
+  int v2 = 0;
+  for (auto const &[q, mult] : fac) {
+    int64_t p = UniversalScalarConversion<int64_t, Tint>(q);
+    int v = static_cast<int>(mult);
+    if (p == 2) {
+      v2 = v;
+      continue;
+    }
+    Tint u = d;
+    for (int i = 0; i < v; i++) {
+      u /= q;
+    }
+    int sign_det = kronecker_symbol<int64_t>(
+        UniversalScalarConversion<int64_t, Tint>(ResInt(u, q)), p);
+    std::vector<std::vector<std::array<int, 3>>> lst;
+    for (auto const &comp : JordanRankCompositions(n, v)) {
+      std::vector<int> present;
+      for (int k = 0; k <= v; k++) {
+        if (comp[k] > 0) {
+          present.push_back(k);
+        }
+      }
+      size_t np = present.size();
+      for (uint64_t mask = 0; mask < (uint64_t(1) << np); mask++) {
+        int prod = 1;
+        std::vector<std::array<int, 3>> sym;
+        for (size_t i = 0; i < np; i++) {
+          int eps = ((mask >> i) & 1) ? -1 : 1;
+          prod *= eps;
+          sym.push_back({present[i], comp[present[i]], eps});
+        }
+        if (prod == sign_det) {
+          lst.push_back(sym);
+        }
+      }
+    }
+    odd_primes.push_back(p);
+    local_odd.push_back(lst);
+  }
+  // the local symbols at 2, canonical, without repetition
+  int sign2;
+  {
+    Tint u = d;
+    for (int i = 0; i < v2; i++) {
+      u /= Tint(2);
+    }
+    int64_t u8 = UniversalScalarConversion<int64_t, Tint>(ResInt(u, Tint(8)));
+    sign2 = (u8 == 1 || u8 == 7) ? 1 : -1;
+  }
+  std::set<std::vector<std::array<int, 5>>> local2;
+  for (auto const &comp : JordanRankCompositions(n, v2)) {
+    // the options of each present component: (sign, type, oddity)
+    std::vector<int> present;
+    for (int k = 0; k <= v2; k++) {
+      if (comp[k] > 0) {
+        present.push_back(k);
+      }
+    }
+    std::vector<std::vector<std::array<int, 3>>> options;
+    bool ok = true;
+    for (int k : present) {
+      std::vector<std::array<int, 3>> opt;
+      int nk = comp[k];
+      if (nk % 2 == 0) {
+        opt.push_back({1, 0, 0});
+        opt.push_back({-1, 0, 0});
+      }
+      if (k > 0) {
+        std::array<std::array<bool, 8>, 2> pr = OddTwoAdicPairs(nk);
+        for (int e = 0; e < 2; e++) {
+          for (int t = 0; t < 8; t++) {
+            if (pr[e][t]) {
+              opt.push_back({e == 1 ? 1 : -1, 1, t});
+            }
+          }
+        }
+      }
+      if (opt.empty()) {
+        ok = false;
+        break;
+      }
+      options.push_back(opt);
+    }
+    if (!ok) {
+      continue;
+    }
+    std::vector<size_t> idx(present.size(), 0);
+    while (true) {
+      std::vector<std::array<int, 5>> raw;
+      int prod = 1;
+      for (size_t i = 0; i < present.size(); i++) {
+        auto const &o = options[i][idx[i]];
+        raw.push_back({present[i], comp[present[i]], o[0], o[1], o[2]});
+        prod *= o[0];
+      }
+      if (prod == sign2) {
+        local2.insert(CanonicalTwoAdicReduction(raw));
+      }
+      size_t i = 0;
+      while (i < idx.size() && idx[i] + 1 == options[i].size()) {
+        idx[i] = 0;
+        i++;
+      }
+      if (i == idx.size()) {
+        break;
+      }
+      idx[i]++;
+    }
+  }
+  // the excesses and the oddity
+  auto excess = [](int64_t p, std::vector<std::array<int, 3>> const &sym) -> int {
+    int64_t e = 0;
+    for (auto const &c : sym) {
+      int64_t pk = 1;
+      for (int i = 0; i < c[0]; i++) {
+        pk = (pk * p) % 8;
+      }
+      e += static_cast<int64_t>(c[1]) * (pk - 1);
+      if (c[0] % 2 == 1 && c[2] == -1) {
+        e += 4;
+      }
+    }
+    return static_cast<int>(((e % 8) + 8) % 8);
+  };
+  auto oddity = [](std::vector<std::array<int, 5>> const &sym2) -> int {
+    int t = 0;
+    for (auto const &c : sym2) {
+      t += c[4];
+      if (c[0] % 2 == 1 && c[2] == -1) {
+        t += 4;
+      }
+    }
+    return ((t % 8) + 8) % 8;
+  };
+  // the products of the local symbols with the oddity formula
+  std::vector<size_t> idx(odd_primes.size(), 0);
+  for (auto const &s2 : local2) {
+    std::fill(idx.begin(), idx.end(), 0);
+    bool empty = false;
+    for (auto const &l : local_odd) {
+      if (l.empty()) {
+        empty = true;
+      }
+    }
+    if (empty) {
+      break;
+    }
+    while (true) {
+      int ex = 0;
+      for (size_t i = 0; i < odd_primes.size(); i++) {
+        ex += excess(odd_primes[i], local_odd[i][idx[i]]);
+      }
+      if (((oddity(s2) - ex - n) % 8 + 8) % 8 == 0) {
+        GenusSymbol g;
+        g.rank = n;
+        g.even = true;
+        g.sym2 = s2;
+        for (size_t i = 0; i < odd_primes.size(); i++) {
+          g.sym_odd[odd_primes[i]] = local_odd[i][idx[i]];
+        }
+        res.push_back(g);
+      }
+      size_t i = 0;
+      while (i < idx.size() && idx[i] + 1 == local_odd[i].size()) {
+        idx[i] = 0;
+        i++;
+      }
+      if (i == idx.size()) {
+        break;
+      }
+      idx[i]++;
+    }
+  }
+  return res;
 }
 
 // clang-format off
