@@ -1046,11 +1046,13 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
  */
 template <typename T, typename Tint>
 std::optional<std::pair<Tint, Tint>>
-QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
-                     std::vector<MyMatrix<T>> const &Lam,
-                     std::vector<MyMatrix<T>> const &Forms, int64_t p, int c,
-                     MultiplicityFactorBounds const &bounds,
-                     [[maybe_unused]] std::ostream &os) {
+QuatLocalImageOrdersGenerators(MyMatrix<T> const &B,
+                               std::vector<MyMatrix<T>> const &gens,
+                               std::vector<MyMatrix<T>> const &Lam,
+                               std::vector<MyMatrix<T>> const &Forms, int64_t p,
+                               int c, MultiplicityFactorBounds const &bounds,
+                               std::vector<ModRowsI64> *image_gens,
+                               [[maybe_unused]] std::ostream &os) {
   int m = B.rows();
   int e = 0;
   MyMatrix<T> Binv = Inverse(B);
@@ -1138,10 +1140,24 @@ QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
     if (!opt) {
       return {};
     }
+    if (image_gens && cc == c) {
+      *image_gens = *opt;
+    }
     res.push_back(exact(ord));
   }
   // without the sanity check the order modulo p^{c+1} is the theorem's
   return std::make_pair(res[0], res.size() > 1 ? res[1] : Tint(0));
+}
+
+// The orders alone.
+template <typename T, typename Tint>
+std::optional<std::pair<Tint, Tint>>
+QuatLocalImageOrders(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &gens,
+                     std::vector<MyMatrix<T>> const &Lam,
+                     std::vector<MyMatrix<T>> const &Forms, int64_t p, int c,
+                     MultiplicityFactorBounds const &bounds, std::ostream &os) {
+  return QuatLocalImageOrdersGenerators<T, Tint>(B, gens, Lam, Forms, p, c,
+                                                 bounds, nullptr, os);
 }
 
 /*

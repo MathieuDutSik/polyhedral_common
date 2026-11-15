@@ -3554,15 +3554,72 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         CenterC.push_back(Z.transpose());
       }
       int rq = QuaternionicRank(Gram, EndC, CenterC);
-      // Albert type II of rank one over D: the same reduction to X, the
-      // mass of AlbertTypeTwoRankOneMass
+      // Albert type II over D: the same reduction to X, the mass of
+      // AlbertTypeTwoRankOneMass (r = 1) or AlbertTypeTwoOrthogonalMass.
+      // For r >= 2 the split M_{2r}(Q) of type I has the same dimensions:
+      // D is only seen on X, and when it is split (or G does not span an
+      // M_s(D)) the block goes on to the type I path.
       bool type2 = false;
-      if (rq == 0 && IsAlbertTypeTwoRankOne<T, Tint>(Gram, EndC, CenterC,
-                                                     QuaternionicMassBounds(),
-                                                     os)) {
-        rq = 1;
-        type2 = true;
+      bool type2_split = false;
+      std::optional<AbelianCMField> FKq_holder;
+      T dKq_holder(1);
+      if (rq == 0) {
+        int r2 = AlbertTypeTwoRankCandidate(Gram, EndC, CenterC);
+        if (r2 == 1) {
+          // the center K, its discriminant, and D a division algebra
+          if (c > 1) {
+            auto [ClassSum2, Nexp2, Hgens2] = center_field();
+            (void)ClassSum2;
+            FKq_holder = MakeAbelianRealField(Nexp2, Hgens2);
+            DirichletGroup Gd = ComputeDirichletGroup(FKq_holder->n);
+            for (auto const &t : FieldCharacters(Gd, FKq_holder->H, false)) {
+              dKq_holder *= ScalarFromInt64<T>(PrimitiveCharacter(Gd, t).first);
+            }
+          }
+          if (EndIsQuaternionDivision<T, Tint>(EndC, k, c, dKq_holder,
+                                               QuaternionicMassBounds(), os)) {
+            rq = 1;
+            type2 = true;
+          }
+        } else if (r2 >= 2 && c == 1) {
+          rq = r2;
+          type2 = true;
+        }
       }
+      auto quat_mass = [&](MyMatrix<T> const &Gx,
+                           std::vector<MyMatrix<T>> const &Ds,
+                           QuaternionicMassBounds const &qb) -> std::optional<T> {
+        if (!type2) {
+          std::optional<T> qm = QuaternionicComponentMass<T, Tint>(
+              Gx, Ds, FKq_holder, dKq_holder, rq, qb, os);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
+          // the measures of the Tamagawa route on type III, rank one over Q
+          if (qm && rq == 1 && c == 1) {
+            std::optional<T> tm = TypeThreeRankOneTamagawaMass<T, Tint>(
+                Gx, Ds, AlbertTypeTwoMassBounds{qb}, os);
+            os << "ISOM_MASS: type III rank one, mass " << *qm
+               << ", by the Tamagawa number " << (tm ? *tm : T(-1)) << "\n";
+            if (tm && *tm != *qm) {
+              std::cerr << "ISOM_MASS: the Tamagawa route disagrees on type III\n";
+              throw TerminalException{1};
+            }
+          }
+#endif
+          return qm;
+        }
+        if (rq == 1) {
+          AlbertTypeTwoMassBounds b2;
+          b2.quat = qb;
+          return AlbertTypeTwoRankOneMass<T, Tint>(Gx, Ds, FKq_holder,
+                                                   dKq_holder, b2, os);
+        }
+        if (!QuaternionSpanIsDivision<T, Tint>(Ds, Gx.rows(), rq, qb, os)) {
+          type2_split = true;
+          return {};
+        }
+        return AlbertTypeTwoOrthogonalMass<T, Tint>(
+            Gx, Ds, rq, AlbertTypeTwoMassBounds{qb, QuadLValueMethod::Mpfr}, os);
+      };
       if (rq > 0) {
         for (auto const &M : ListAct) {
           GensC.push_back(M.transpose());
@@ -3612,17 +3669,22 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         int sq = static_cast<int>(std::llround(
             std::sqrt(static_cast<double>(dimA) / static_cast<double>(4 * c))));
         if (4 * c * sq * sq != dimA || k != 4 * c * sq * rq) {
-          std::cerr << "ISOM_MASS: G spans an algebra of dimension " << dimA
-                    << " on a quaternionic block of rank " << k << "\n";
-          throw TerminalException{1};
+          if (!(type2 && rq >= 2)) {
+            std::cerr << "ISOM_MASS: G spans an algebra of dimension " << dimA
+                      << " on a quaternionic block of rank " << k << "\n";
+            throw TerminalException{1};
+          }
+          type2_split = true;
         }
-        if (sq == 1) {
+        if (!type2) {
+          FKq_holder = FKq;
+          dKq_holder = dKq;
+        }
+        if (type2_split) {
+          // the split M_{2r}(Q): the type I path below
+        } else if (sq == 1) {
           // X = L_rho, on which G spans D
-          comp.quaternionic_mass =
-              type2 ? AlbertTypeTwoRankOneMass<T, Tint>(
-                          Gram, EltsC, AlbertTypeTwoMassBounds{qbounds}, os)
-                    : QuaternionicComponentMass<T, Tint>(
-                          Gram, EltsC, FKq, dKq, rq, qbounds, os);
+          comp.quaternionic_mass = quat_mass(Gram, EltsC, qbounds);
           comp.multiplicity_factor = T(1);
         } else {
           /*
@@ -3662,11 +3724,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
               DspanX.push_back(MyMatrix<T>(Xb * x * A * Xb.transpose() * GramXinv)
                                    .transpose());
             }
-            comp.quaternionic_mass =
-                type2 ? AlbertTypeTwoRankOneMass<T, Tint>(
-                            GramX, DspanX, AlbertTypeTwoMassBounds{qbounds}, os)
-                      : QuaternionicComponentMass<T, Tint>(
-                            GramX, DspanX, FKq, dKq, rq, qbounds, os);
+            comp.quaternionic_mass = quat_mass(GramX, DspanX, qbounds);
             std::vector<MyMatrix<T>> OmegaQ;
             for (auto const &W2 : QuatIntegralPoints<T, Tint>(DspanX, dimF)) {
               OmegaQ.push_back(W2.transpose());
@@ -3675,8 +3733,11 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             (void)Nexpq;
             (void)Hgensq;
             MultiplicityFactorBounds mbounds;
-            comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
-                A, Xb, blk.E, elts, ListP, OmegaQ, ClassSumq, true, mbounds, os);
+            if (!type2_split) {
+              comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
+                  A, Xb, blk.E, elts, ListP, OmegaQ, ClassSumq, true, mbounds,
+                  os);
+            }
           }
 #ifdef DEBUG_ISOMETRY_MASS
           os << "ISOM_MASS: quaternionic with s=" << sq << ", X "
@@ -3689,8 +3750,13 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
            << ", center of degree " << c << ", mass "
            << (comp.quaternionic_mass ? "found" : "not found") << "\n";
 #endif
-        res.push_back(comp);
-        continue;
+        if (!type2_split) {
+          res.push_back(comp);
+          continue;
+        }
+        comp.quaternionic = false;
+        comp.quaternionic_mass.reset();
+        comp.multiplicity_factor.reset();
       }
     }
     if (central_q && m * m == e) {

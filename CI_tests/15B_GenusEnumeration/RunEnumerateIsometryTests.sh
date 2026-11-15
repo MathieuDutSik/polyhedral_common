@@ -62,6 +62,12 @@ run_case E8w C3S5 1
 # index 13^4 of A2^4 (13 inert in E = Q(sqrt(-6))), mass 7/2 from the
 # torus of E: 7 classes
 run_case A2x4s13 G48_15s13 7
+# rank two over D: A2^4 + an index-5^4 sublattice of A2^4, mass 15 by the
+# Tamagawa number of the inner form of SO_4: 34 classes
+run_case R2w6s5 G48_15R2s5 34
+# rank one over Q(sqrt 5): SmallGroup(80, 15) on a G-sublattice of index
+# 3^8 of a minimal left ideal, mass 5/2: 5 classes
+run_case G80s3 G80_15s3 5
 run_case qD4x2 qD4x2Q8 1
 run_case qE8h qE8hQ8 1
 run_case qZ4 qZ4Q8 1

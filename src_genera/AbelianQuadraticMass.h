@@ -2285,29 +2285,23 @@ IndexTwoSubgroups(std::vector<int64_t> const &Hl, int64_t N) {
 /*
   E = K(sqrt d) for the discriminant d of the quadratic lattice (B,
   Omega), when E is abelian over Q: (N, H_E). Nothing when E is not
-  abelian.
+  abelian. The conductor is bounded from the primes ps, which must
+  contain those ramified in E (and those of 2 n): by default the primes
+  of N(d), which may carry primes unramified in E when d was computed in
+  a basis local at another prime.
  */
 template <typename T>
-std::optional<AbelianCMField>
-AbelianQuadraticExtensionField(MyMatrix<T> const &B,
-                               std::vector<MyMatrix<T>> const &Omega,
-                               AbelianCMField const &FK, ElemE<T> const &d,
-                               CyclotomicField<T> const &K, int m) {
+std::optional<AbelianCMField> AbelianQuadraticExtensionFieldPrimes(
+    MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
+    AbelianCMField const &FK, ElemE<T> const &d, CyclotomicField<T> const &K,
+    int m, std::set<int64_t> ps) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   std::vector<ElemE<T>> auts = AutomorphismsTotallyReal(K);
   if (!IsAbelianQuadraticExtension(d, K, auts)) {
     return {};
   }
-  // the conductor bound
-  T Nd = DeterminantMat(EMulMatrix(d, K));
-  std::set<int64_t> ps;
-  for (Tint x : {Tint(T_abs(GetNumerator_z(Nd))), Tint(GetDenominator_z(Nd)),
-                 UniversalScalarConversion<Tint, int64_t>(2 * FK.n)}) {
-    if (x > 1) {
-      for (Tint const &p : FactorsInt(x)) {
-        ps.insert(UniversalScalarConversion<int64_t, Tint>(p));
-      }
-    }
+  for (Tint const &p : FactorsInt(UniversalScalarConversion<Tint, int64_t>(2 * FK.n))) {
+    ps.insert(UniversalScalarConversion<int64_t, Tint>(p));
   }
   auto vp = [](int64_t x, int64_t p) -> int {
     int v = 0;
@@ -2489,6 +2483,25 @@ QuadDiscriminantK(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega) {
     d = EScal(d, T(-1));
   }
   return std::make_pair(K, d);
+}
+
+template <typename T>
+std::optional<AbelianCMField>
+AbelianQuadraticExtensionField(MyMatrix<T> const &B,
+                               std::vector<MyMatrix<T>> const &Omega,
+                               AbelianCMField const &FK, ElemE<T> const &d,
+                               CyclotomicField<T> const &K, int m) {
+  using Tint = typename underlying_z_ring<T>::ring_type;
+  T Nd = DeterminantMat(EMulMatrix(d, K));
+  std::set<int64_t> ps;
+  for (Tint x : {Tint(T_abs(GetNumerator_z(Nd))), Tint(GetDenominator_z(Nd))}) {
+    if (x > 1) {
+      for (Tint const &p : FactorsInt(x)) {
+        ps.insert(UniversalScalarConversion<int64_t, Tint>(p));
+      }
+    }
+  }
+  return AbelianQuadraticExtensionFieldPrimes(B, Omega, FK, d, K, m, ps);
 }
 
 /*

@@ -524,7 +524,7 @@ group_mass_case A4x4 C5 13/720000
 # its rational character of degree 4 with indicator +1 and Schur index 2
 # (End_G = M_2(D), D the quaternion algebra over Q ramified at 2 and 3,
 # indefinite) in Z[G] with the standard form: the mass of such a component
-# is not computed, and has to be reported unsupported, not guessed.
+# was first reported unsupported; it is now computed (rank two, below).
 # Albert type II of rank one over D: the same character on a lattice of
 # rank 8 (L = A2^4 with two G-structures, E = Q(sqrt(-6)) and Q(sqrt(-3))
 # for the skew-adjoint mu of End_G = D) and on G-sublattices of index p^4
@@ -543,13 +543,44 @@ for c in "A2x4w6 1/2" "A2x4w3 1/6" "A2x4s5 1" "A2x4s5b 1/2" "A2x4s13 7/2" \
         exit 1
     fi
 done
-# rank two over D (r = 2, Eichler) is not done yet
-echo "--- (G48_15 on its type II component), expecting unsupported ---"
-out=$($BIN group isom_G48_15.txt isom_G48_15_G.txt stdout 2>/dev/null)
-if ! echo "$out" | grep -q 'unsupported_component:=true'; then
-    echo "ERROR: the Albert type II component was not reported unsupported" >&2
-    exit 1
-fi
+# Rank one over the centre K = Q(sqrt 5): SmallGroup(80, 15) by chi_16 +
+# chi_17 (Schur index 2 over K) on a minimal left ideal of Z[G], and on a
+# G-sublattice of index 3^8 (3 inert in K, index 5 of the stabilizer in
+# the torus of E = K(mu), abelian of conductor 80): closed by
+# GENUS_EnumerateIsometry (1 and 5 classes).
+for c in "G80_15 G80_15_G 1/2" "G80_15_s3 G80_15_s3_G 5/2"; do
+    set -- $c
+    echo "--- mass of ($1, <G>) over Q(sqrt 5), expecting $3 ---"
+    out=$($BIN group isom_$1.txt isom_$2.txt stdout 2>/dev/null)
+    mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
+    echo "mass = $mass"
+    if [ "$mass" != "$3" ]; then
+        echo "ERROR: ($1, <G>) gave the mass $mass, expected $3" >&2
+        exit 1
+    fi
+done
+# Rank two over D, by the Tamagawa number of the inner form of SO_4: the
+# component of Z[G] (rank 16, discriminant field Q x Q), the sums of two
+# of the lattices of rank 8 above (Q(sqrt 2) for E = Q(sqrt(-3)) and
+# Q(sqrt(-6))), and one with the index-5^4 lattice (local factor at 5).
+# Closed by GENUS_EnumerateIsometry (34 classes for the last), with no
+# further class at six more primes for those closed by their seed.
+for c in "G 1/48" "R2w3w6_G 1/12" "R2w6w6_G 1/4" "R2w3w3_G 1/72" \
+         "R2w6s5_G 15"; do
+    set -- $c
+    lat=isom_G48_15.txt
+    if [ "$1" != "G" ]; then
+        lat=isom_G48_15_${1%_G}.txt
+    fi
+    echo "--- mass of (G48_15 rank two, $1), expecting $2 ---"
+    out=$($BIN group $lat isom_G48_15_$1.txt stdout 2>/dev/null)
+    mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
+    echo "mass = $mass"
+    if [ "$mass" != "$2" ]; then
+        echo "ERROR: (G48_15 rank two, $1) gave the mass $mass, expected $2" >&2
+        exit 1
+    fi
+done
 group_mass_case IcoE8w G 1/18662400
 
 # The brute-force check for the groups <g, tau>, tau in C_{O(L)}(g); the
