@@ -53,7 +53,8 @@ template <typename T, typename Tint> struct EichlerComponent {
   MyMatrix<T> Gram;
 };
 
-// Whether v is decomposable; if so, the x of a split v = x + (v - x).
+// Whether v is decomposable; if so, the x of a split v = x + (v - x). The
+// enumeration stops at the first such x.
 template <typename T, typename Tint>
 std::optional<MyVector<Tint>>
 EichlerSplitVector(CVPSolver<T, Tint> const &solver, MyMatrix<T> const &G,
@@ -62,9 +63,8 @@ EichlerSplitVector(CVPSolver<T, Tint> const &solver, MyMatrix<T> const &G,
   MyVector<T> vT = UniversalVectorConversion<T, Tint>(v);
   T norm = vT.dot(G * vT);
   MyVector<T> center = vT / T(2);
-  std::vector<MyVector<Tint>> ListX =
-      solver.fixed_dist_vectors(center, norm / T(4));
-  for (auto const &x : ListX) {
+  std::optional<MyVector<Tint>> result;
+  auto f_ins = [&](MyVector<Tint> const &x) -> bool {
     bool is_zero = true, is_v = true;
     for (int i = 0; i < n; i++) {
       if (x(i) != 0) {
@@ -74,21 +74,25 @@ EichlerSplitVector(CVPSolver<T, Tint> const &solver, MyMatrix<T> const &G,
         is_v = false;
       }
     }
-    if (!is_zero && !is_v) {
-      return x;
+    if (is_zero || is_v) {
+      return true;
     }
-  }
-  return {};
+    result = x;
+    return false;
+  };
+  solver.fixed_dist_vectors_f(center, f_ins, norm / T(4));
+  return result;
 }
 
 template <typename T, typename Tint>
 std::vector<EichlerComponent<T, Tint>>
 EichlerDecomposition(MyMatrix<T> const &G, std::ostream &os) {
   int n = G.rows();
-  CVPSolver<T, Tint> solver(G, os);
-  T min = solver.shortest_vectors().min;
-  // the starting generating set: an LLL-reduced basis
+  // the starting generating set: an LLL-reduced basis, whose reduction the
+  // solver reuses rather than compute its own
   LLLreduction<T, Tint> red = LLLreducedBasis<T, Tint>(G, os);
+  CVPSolver<T, Tint> solver(G, red, os);
+  T min = solver.shortest_vectors().min;
   std::vector<MyVector<Tint>> work;
   for (int i = 0; i < n; i++) {
     work.push_back(GetMatrixRow(red.Pmat, i));

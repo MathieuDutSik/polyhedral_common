@@ -8,6 +8,7 @@
 #include "MAT_MatrixInt.h"
 #include "POLY_LinearProgramming.h"
 #include <cmath>
+#include <type_traits>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -1363,6 +1364,9 @@ public:
     }
     return {TheNorm, std::move(ListClos)};
   }
+  // f_ins is called on every vector at distance TheNorm from eV. It returns
+  // nothing, or a bool: false stops the enumeration (as when the first
+  // vector with some property is all that is needed).
   template <typename Fins>
   void fixed_dist_vectors_f(MyVector<T> const &eV, Fins f_ins,
                             T const &TheNorm) const {
@@ -1380,7 +1384,11 @@ public:
           throw TerminalException{1};
         }
 #endif
-        f_ins(x);
+        if constexpr (std::is_same_v<decltype(f_ins(x)), bool>) {
+          return f_ins(x);
+        } else {
+          f_ins(x);
+        }
       }
       return true;
     };
