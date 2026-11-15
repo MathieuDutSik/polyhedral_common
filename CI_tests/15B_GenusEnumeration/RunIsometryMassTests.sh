@@ -525,6 +525,25 @@ group_mass_case A4x4 C5 13/720000
 # (End_G = M_2(D), D the quaternion algebra over Q ramified at 2 and 3,
 # indefinite) in Z[G] with the standard form: the mass of such a component
 # is not computed, and has to be reported unsupported, not guessed.
+# Albert type II of rank one over D: the same character on a lattice of
+# rank 8 (L = A2^4 with two G-structures, E = Q(sqrt(-6)) and Q(sqrt(-3))
+# for the skew-adjoint mu of End_G = D) and on G-sublattices of index p^4
+# (p = 5 split in E, 13 inert, 2 ramified in D): the masses closed by
+# GENUS_EnumerateIsometry, with no further class at six more primes, the
+# two masses on A2^4 being also those of the Hom count over its genus.
+for c in "A2x4w6 1/2" "A2x4w3 1/6" "A2x4s5 1" "A2x4s5b 1/2" "A2x4s13 7/2" \
+         "A2x4s2 1/2"; do
+    set -- $c
+    echo "--- mass of (G48_15 on $1), expecting $2 ---"
+    out=$($BIN group isom_G48_15_$1.txt isom_G48_15_$1_G.txt stdout 2>/dev/null)
+    mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
+    echo "mass = $mass"
+    if [ "$mass" != "$2" ]; then
+        echo "ERROR: (G48_15 on $1) gave the mass $mass, expected $2" >&2
+        exit 1
+    fi
+done
+# rank two over D (r = 2, Eichler) is not done yet
 echo "--- (G48_15 on its type II component), expecting unsupported ---"
 out=$($BIN group isom_G48_15.txt isom_G48_15_G.txt stdout 2>/dev/null)
 if ! echo "$out" | grep -q 'unsupported_component:=true'; then

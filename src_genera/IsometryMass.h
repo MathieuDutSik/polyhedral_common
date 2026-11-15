@@ -8,6 +8,7 @@
 #include "GenusMass.h"
 #include "CyclotomicHermitianMass.h"
 #include "MultiplicityLocalFactor.h"
+#include "AlbertTypeTwoMass.h"
 #include "ResidueArithmetic.h"
 #include "AbelianHermitianMass.h"
 #include "AbelianQuadraticMass.h"
@@ -3553,6 +3554,15 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         CenterC.push_back(Z.transpose());
       }
       int rq = QuaternionicRank(Gram, EndC, CenterC);
+      // Albert type II of rank one over D: the same reduction to X, the
+      // mass of AlbertTypeTwoRankOneMass
+      bool type2 = false;
+      if (rq == 0 && IsAlbertTypeTwoRankOne<T, Tint>(Gram, EndC, CenterC,
+                                                     QuaternionicMassBounds(),
+                                                     os)) {
+        rq = 1;
+        type2 = true;
+      }
       if (rq > 0) {
         for (auto const &M : ListAct) {
           GensC.push_back(M.transpose());
@@ -3608,8 +3618,11 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         }
         if (sq == 1) {
           // X = L_rho, on which G spans D
-          comp.quaternionic_mass = QuaternionicComponentMass<T, Tint>(
-              Gram, EltsC, FKq, dKq, rq, qbounds, os);
+          comp.quaternionic_mass =
+              type2 ? AlbertTypeTwoRankOneMass<T, Tint>(
+                          Gram, EltsC, AlbertTypeTwoMassBounds{qbounds}, os)
+                    : QuaternionicComponentMass<T, Tint>(
+                          Gram, EltsC, FKq, dKq, rq, qbounds, os);
           comp.multiplicity_factor = T(1);
         } else {
           /*
@@ -3649,8 +3662,11 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
               DspanX.push_back(MyMatrix<T>(Xb * x * A * Xb.transpose() * GramXinv)
                                    .transpose());
             }
-            comp.quaternionic_mass = QuaternionicComponentMass<T, Tint>(
-                GramX, DspanX, FKq, dKq, rq, qbounds, os);
+            comp.quaternionic_mass =
+                type2 ? AlbertTypeTwoRankOneMass<T, Tint>(
+                            GramX, DspanX, AlbertTypeTwoMassBounds{qbounds}, os)
+                      : QuaternionicComponentMass<T, Tint>(
+                            GramX, DspanX, FKq, dKq, rq, qbounds, os);
             std::vector<MyMatrix<T>> OmegaQ;
             for (auto const &W2 : QuatIntegralPoints<T, Tint>(DspanX, dimF)) {
               OmegaQ.push_back(W2.transpose());
