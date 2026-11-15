@@ -837,6 +837,7 @@ set(
   VectFamily_Reduction
   LATT_EquiStabFamily
   LATT_ShvecSieve
+  LATT_EichlerDecomposition
 )
 foreach(target IN LISTS LATT_PROGRAMS)
   add_polyhedral_binary(
