@@ -559,6 +559,24 @@ for c in "G80_15 G80_15_G 1/2" "G80_15_s3 G80_15_s3_G 5/2"; do
         exit 1
     fi
 done
+# A complex character of Schur index 2: SmallGroup(48, 1) by chi_19 (End_G
+# a quaternion division algebra over a quartic CM center), U(D, tau) an
+# inner form of U_2 over K^+, by the Tamagawa number, on a G-sublattice of
+# index 2 of a minimal left ideal of Z[G] (mass 1/16; 1/48 on the ideal
+# itself, isom_G48_1, left out: 5 minutes in the image search). Each genus
+# is one class, closed by GENUS_EnumerateIsometry, nothing more at six
+# primes.
+for c in "G48_1_s2 G48_1_s2_G 1/16"; do
+    set -- $c
+    echo "--- mass of ($1, <G>), Schur index 2 over a CM center, expecting $3 ---"
+    out=$($BIN group isom_$1.txt isom_$2.txt stdout 2>/dev/null)
+    mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
+    echo "mass = $mass"
+    if [ "$mass" != "$3" ]; then
+        echo "ERROR: ($1, <G>) gave the mass $mass, expected $3" >&2
+        exit 1
+    fi
+done
 # Rank two over D, by the Tamagawa number of the inner form of SO_4: the
 # component of Z[G] (rank 16, discriminant field Q x Q), the sums of two
 # of the lattices of rank 8 above (Q(sqrt 2) for E = Q(sqrt(-3)) and

@@ -571,9 +571,14 @@ beyond 48, longer caps.
 - 145 base cases: 140 masses, all closed, no extra class; 4 genera with >= 2
   classes. 409 of 549 derived cases: 385 masses, all closed, no extra class;
   21 genera with >= 2 classes (up to 5).
-- Unsupported, not handled: g40_1_c11 and g48_1_c19 (complex character with
-  Schur index 2: a quaternion algebra over a CM field with an involution of
-  the second kind) and their derived lattices.
+- Unsupported then: g40_1_c11 and g48_1_c19 (complex character with Schur
+  index 2: a quaternion algebra over a CM field with an involution of the
+  second kind). Now UnitaryInnerFormMass.h (Tamagawa number of the inner
+  form of U_2), on X = L_rho only: g48_1_c19 1/48 (5 min), its index-2
+  sublattice 1/16 (2.3 min), both closed by enumeration. Still open: the
+  reduction X = L cap e V_rho when G spans M_s(D), s > 1; the speed of the
+  image searches on the whole block of rank 16 (g40_1_c11 beyond 10 min,
+  at 5, ramified in K; the g48_1 sublattices at 3 and 5 beyond 5 min).
 - Unsupported after 234 s: g28_1_c5 + itself (Dic_7, type III of rank 2
   over Q(zeta_7)^+), beyond the search bounds.
 - Mass beyond 300 s: g44_1_c10 (type III over Q(zeta_11)^+, rank 20), the

@@ -9,6 +9,7 @@
 #include "CyclotomicHermitianMass.h"
 #include "MultiplicityLocalFactor.h"
 #include "AlbertTypeTwoMass.h"
+#include "UnitaryInnerFormMass.h"
 #include "ResidueArithmetic.h"
 #include "AbelianHermitianMass.h"
 #include "AbelianQuadraticMass.h"
@@ -3871,6 +3872,54 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
          << "), m=" << m << ", Nexp=" << Nexp << ", F "
          << (found_basis ? "found" : "not found") << "\n";
 #endif
+      // the unitary group on the whole block, by the Tamagawa number
+      auto unitary_block_mass = [&]() -> std::optional<T> {
+        std::vector<MyMatrix<T>> EltsBlk;
+        for (auto const &x : elts) {
+          EltsBlk.push_back(action(x).transpose());
+        }
+        return UnitaryInnerFormMass<T, Tint>(
+            Gblk, EltsBlk, MakeAbelianCMField(Nexp, Hgens), m,
+            QuaternionicMassBounds(), os);
+      };
+#ifdef SANITY_CHECK_UNITARY_INNER_FORM_MASS
+      if (found_basis && is_cm && m <= 2) {
+        std::optional<T> um = unitary_block_mass();
+        os << "ISOM_MASS: unitary mass of the block by the Tamagawa number "
+           << (um ? *um : T(-1)) << "\n";
+      }
+#endif
+      if (!found_basis && is_cm && m == 2) {
+        /*
+          End_G = D, a quaternion division algebra over the CM center K (a
+          complex character of Schur index 2): U(D, tau) is an inner form
+          of U_2 over K^+. When G spans the commutant of D on the block
+          (of dimension 4 c), X is the whole block.
+         */
+        int dimA = 0;
+        {
+          MyMatrix<T> Fl(static_cast<int>(n_elt), k * k);
+          for (size_t i = 0; i < n_elt; i++) {
+            MyMatrix<T> Ai = action(elts[i]);
+            for (int u2 = 0; u2 < k; u2++) {
+              for (int v2 = 0; v2 < k; v2++) {
+                Fl(static_cast<int>(i), u2 * k + v2) = Ai(u2, v2);
+              }
+            }
+          }
+          dimA = RankMat(Fl);
+        }
+        if (dimA == 4 * c && k == 4 * c) {
+          comp.direct = true;
+          comp.direct_mass = unitary_block_mass();
+          comp.multiplicity_factor = T(1);
+        }
+#ifdef DEBUG_ISOMETRY_MASS
+        os << "ISOM_MASS: End_G a quaternion division algebra over the CM "
+           << "center, G spans an algebra of dimension " << dimA << ", mass "
+           << (comp.direct_mass ? "found" : "not found") << "\n";
+#endif
+      }
       if (found_basis) {
         MyMatrix<T> const &Xb = *found_basis;
         int mX = Xb.rows();
