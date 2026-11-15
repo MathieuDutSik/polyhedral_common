@@ -535,3 +535,23 @@ They compile but have not been run. To do:
   marked vectors, which is not ported;
 * the choice of M (`bv_min_vectors`): N too small separates badly, N large
   costs N^3.
+
+## Adjacency schemes: memory increase with the known adjacencies, unexplained
+
+With the adjacencies known from the other side (`AdjacencyKnown`, commit
+`e367d832`), the iso-Delaunay enumeration of the star of the identity in the
+classic GL_5(Z) T-space (`TypeTspace = "Classic"`, `ClassicDim = 5`,
+`CommonGramMat` the identity, 21188 domains) has a peak memory of 9.8 GB
+against 7.5 GB before (measured 2026-11-14, flint arithmetic, peak tree RSS
+of `scripts/run_capped.sh`, sampled every 10 s). The CPU time went down as
+for the other cases (1086 s -> 693 s). The other cases measured do not show
+it: star of A_5 247/247 MB, periodic Z^4 + {0, (1/3,1/3,1/3,1/3)} 311/313 MB,
+n=3 d=-4 169/168 MB.
+
+The recorded adjacencies (`l_known` in `EnumerateAndStore_Serial`, one
+`IsoDelaunayDomain_AdjO` per adjacency to an object not yet treated, freed
+when it is treated) should account for a few hundred MB at most, so the cause
+is not known. To check: the peak with a finer sampling (`RUN_CAPPED_POLL`) to
+exclude a sampling artifact, then the size of `l_known` along the run, and
+whether the order of the treated objects changes the number of objects alive
+at the same time. The 10 GB local limit is close for this case.
