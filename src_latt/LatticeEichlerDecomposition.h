@@ -159,6 +159,11 @@ EichlerDecomposition(MyMatrix<T> const &G, std::ostream &os) {
     classes[find(i)].push_back(i);
   }
   std::vector<EichlerComponent<T, Tint>> result;
+  if (classes.size() == 1) {
+    // indecomposable: L itself, in its own basis
+    result.push_back({IdentityMat<Tint>(n), G});
+    return result;
+  }
   for (auto const &[root, members] : classes) {
     MyMatrix<Tint> Gens(members.size(), n);
     for (size_t r = 0; r < members.size(); r++) {

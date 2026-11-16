@@ -63,7 +63,8 @@ enum class LatticeStabCanIsomMethod {
   Weyl,
   WeylChamber,
   Conjugacy,
-  Heuristic
+  Heuristic,
+  EichlerHeuristic
 };
 
 /*
@@ -134,7 +135,13 @@ ListLatticeStabCanIsomMethod() {
        "integral form weyl_chamber if it has vectors of norm at most 2, "
        "otherwise plesken_souvignier if it has many minimal vectors (Leech) "
        "and graph if not; for a tuple of forms plesken_souvignier on the "
-       "shells_zbasis family"}};
+       "shells_zbasis family"},
+      {"eichler_heuristic", LatticeStabCanIsomMethod::EichlerHeuristic, {},
+       true, false,
+       "the Eichler decomposition into indecomposable orthogonal summands, "
+       "then heuristic on each summand (LatticeEichlerHeuristic.h); helps "
+       "when the method heuristic chooses for the whole lattice fails on one "
+       "summand (Leech + A1)"}};
 }
 
 inline LatticeStabCanIsomMethod
@@ -425,6 +432,19 @@ ChooseHeuristicMethod(std::vector<MyMatrix<T>> const &ListMat, bool canonical,
              : LatticeStabCanIsomMethod::Graph;
 }
 
+// The method eichler_heuristic, defined in LatticeEichlerHeuristic.h,
+// which is included at the end of this file.
+template <typename T, typename Tint, typename Tgroup>
+MyMatrix<Tint> EichlerHeuristicCanonicalBasis(MyMatrix<T> const &G,
+                                              std::ostream &os);
+template <typename T, typename Tint, typename Tgroup>
+IntAutomorphismGroup<Tint, Tgroup>
+EichlerHeuristicAutomorphismGroup(MyMatrix<T> const &G, std::ostream &os);
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+EichlerHeuristicIsometry(MyMatrix<T> const &G1, MyMatrix<T> const &G2,
+                         std::ostream &os);
+
 /*
   The canonical form of the tuple of forms ListMat by the method: a basis B,
   as rows, with the B A_i B^T canonical. The Reduced variant assumes ListMat
@@ -488,6 +508,8 @@ LatticeCanonicalBasisMultipleReduced(std::vector<MyMatrix<T>> const &ListMat,
     return ComputeCanonicalFormWeylReduced<T, Tint, Tgroup>(ListMat[0], os);
   case LatticeStabCanIsomMethod::WeylChamber:
     return ComputeCanonicalFormWeylChamber<T, Tint, Tgroup>(ListMat[0], os);
+  case LatticeStabCanIsomMethod::EichlerHeuristic:
+    return EichlerHeuristicCanonicalBasis<T, Tint, Tgroup>(ListMat[0], os);
   case LatticeStabCanIsomMethod::Conjugacy:
   case LatticeStabCanIsomMethod::Heuristic:
     break;
@@ -763,6 +785,9 @@ LatticeIsometryReduced(std::vector<MyMatrix<T>> const &ListMat1,
   case LatticeStabCanIsomMethod::Conjugacy:
     return ConjugacyLatticeIsometry<T, Tint, Tgroup>(ListMat1, ListMat2,
                                                      choice, os);
+  case LatticeStabCanIsomMethod::EichlerHeuristic:
+    return EichlerHeuristicIsometry<T, Tint, Tgroup>(ListMat1[0], ListMat2[0],
+                                                     os);
   case LatticeStabCanIsomMethod::Heuristic:
     break;
   }
@@ -885,6 +910,8 @@ LatticeAutomorphismGroupReduced(std::vector<MyMatrix<T>> const &ListMat,
   case LatticeStabCanIsomMethod::Conjugacy:
     return ConjugacyLatticeAutomorphismGroup<T, Tint, Tgroup>(ListMat, choice,
                                                               os);
+  case LatticeStabCanIsomMethod::EichlerHeuristic:
+    return EichlerHeuristicAutomorphismGroup<T, Tint, Tgroup>(ListMat[0], os);
   case LatticeStabCanIsomMethod::Heuristic:
     break;
   }
@@ -928,6 +955,10 @@ LatticeAutomorphismGroup(std::vector<MyMatrix<T>> const &ListMat,
 #endif
   return aut;
 }
+
+// The definitions of the method eichler_heuristic, which use the dispatchers
+// above on the summands.
+#include "LatticeEichlerHeuristic.h"
 
 // clang-format off
 #endif  // SRC_LATT_LATTICEMETHODS_H_
