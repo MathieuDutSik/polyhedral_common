@@ -32,8 +32,10 @@ groups, e.g. from GENUS_Enumerate and LATT_Automorphism):
              Read("CharPolyOracle.g");' | gap -q
   2. python3 MakeCharPolyTests.py LAT ... (all the genera at once, as it
      writes charpoly_tests.txt and charpoly/jobs.txt)
-  3. julia HermitianPieces.jl --jobs charpoly/jobs.txt (Hecke.jl; a file
-     already made can be left out of the jobs)
+  3. ../../src_genera/GENUS_HermitianPieces --jobs charpoly/jobs.txt (C++,
+     a few minutes), or julia HermitianPieces.jl --jobs charpoly/jobs.txt
+     (Hecke.jl, the files of the tests; a file already made can be left
+     out of the jobs)
   4. RunCharPolyTests.sh charpoly_tests.txt, and charpoly_tests_ci.txt the
      fast cases.
 """

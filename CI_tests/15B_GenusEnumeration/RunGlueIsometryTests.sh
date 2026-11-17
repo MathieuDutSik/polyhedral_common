@@ -148,5 +148,20 @@ if [ "$ours" != "$theirs" ]; then
 fi
 echo "--- the numbers of hermitian genera of $(echo "$theirs" | wc -l | tr -d ' ') cases agree with Hecke ---"
 
+# The pieces of GENUS_HermitianPieces (HermitianLattice.h, without Hecke)
+# against those of Hecke.jl: every genus of each file must be found
+THL=../../src_genera/Test_HermitianLattice
+n_cmp=0
+while read -r d b N f; do
+    case "$d" in ''|'#'*) continue ;; esac
+    r=$($THL compare "$f" "$d" "$b" "$N" 2>/dev/null | tail -1)
+    if [ "${r##*missing=}" != "0" ]; then
+        echo "ERROR: the hermitian pieces of $f: $r" >&2
+        exit 1
+    fi
+    n_cmp=$((n_cmp + 1))
+done < hermitian_pieces_compare_ci.txt
+echo "--- the hermitian pieces of $n_cmp files of Hecke are all found ---"
+
 echo "All gluing tests passed"
 touch CI_CONCLUSION
