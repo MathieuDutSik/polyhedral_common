@@ -137,5 +137,16 @@ if [ "$ours" != "$(grep -v '^#' genus_symbol_counts_odd_sage.txt)" ]; then
 fi
 echo "--- the numbers of odd genera of 512 (rank, determinant) agree with SageMath ---"
 
+# The genera of hermitian lattices over Q(zeta_d) / Q(zeta_d)^+ against
+# hermitian_genera of Hecke.jl (HermitianGenusCounts.jl), d not a power of 2
+THG=../../src_genera/Test_HermitianGenus
+ours=$(grep -v '^#' hermitian_genus_counts_hecke.txt | while read -r d b N c; do $THG count $d $b $N; done)
+theirs=$(grep -v '^#' hermitian_genus_counts_hecke.txt | awk '{print $1, $2, $3, $4}')
+if [ "$ours" != "$theirs" ]; then
+    echo "ERROR: the numbers of hermitian genera differ from those of Hecke" >&2
+    exit 1
+fi
+echo "--- the numbers of hermitian genera of $(echo "$theirs" | wc -l | tr -d ' ') cases agree with Hecke ---"
+
 echo "All gluing tests passed"
 touch CI_CONCLUSION
