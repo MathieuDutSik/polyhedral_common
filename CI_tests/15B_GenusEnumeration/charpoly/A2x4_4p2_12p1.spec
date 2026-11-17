@@ -1,0 +1,2 @@
+file charpoly/herm_d4_b2_N531441_E27.txt
+file charpoly/herm_d12_b1_N531441_E27.txt

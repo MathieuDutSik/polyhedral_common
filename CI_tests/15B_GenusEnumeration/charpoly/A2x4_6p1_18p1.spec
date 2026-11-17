@@ -1,0 +1,2 @@
+file charpoly/herm_d6_b1_N6561_E27.txt
+file charpoly/herm_d18_b1_N6561_E27.txt

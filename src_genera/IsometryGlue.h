@@ -7,6 +7,7 @@
 #include "GeneraArithmetic.h"
 #include "IsometryMass.h"
 #include "GenusEnumerationGroup.h"
+#include <functional>
 #include <map>
 #include <optional>
 #include <set>
@@ -88,25 +89,6 @@ inline PrimaryQuadModule DirectSumModule(PrimaryQuadModule const &M1,
   return M;
 }
 
-// The element of index idx in the mixed radix of the orders, and back.
-inline ModuleElt ModuleEltOfIndex(PrimaryQuadModule const &M, size_t idx) {
-  ModuleElt x(M.rank());
-  for (size_t i = 0; i < M.rank(); i++) {
-    size_t o = static_cast<size_t>(M.ord[i]);
-    x[i] = static_cast<int64_t>(idx % o);
-    idx /= o;
-  }
-  return x;
-}
-
-inline size_t ModuleIndexOfElt(PrimaryQuadModule const &M, ModuleElt const &x) {
-  size_t idx = 0;
-  for (size_t i = M.rank(); i-- > 0;) {
-    idx = idx * static_cast<size_t>(M.ord[i]) + static_cast<size_t>(x[i]);
-  }
-  return idx;
-}
-
 inline ModuleElt ModuleSum(PrimaryQuadModule const &M, ModuleElt const &x,
                            ModuleElt const &y) {
   ModuleElt z(M.rank());
@@ -117,18 +99,28 @@ inline ModuleElt ModuleSum(PrimaryQuadModule const &M, ModuleElt const &x,
 }
 
 /*
-  A sigma-stable subgroup: its elements as sorted indices, and generators,
-  from which the vectors of the glue are lifted.
+  A sigma-stable subgroup: its elements as sorted indices, generators (the
+  subgroup is the span of their sigma-orbits) and the elements of these
+  orbits, which generate it as a group and from which the vectors of the
+  glue are lifted: lifting the generators alone gives a lattice that is not
+  sigma-stable when sigma moves them, which happens when sigma acts on both
+  summands by more than +-1.
  */
 struct GlueSubgroup {
   std::vector<size_t> elements;
   std::vector<ModuleElt> gens;
+  std::vector<ModuleElt> orbit_gens;
 };
 
 /*
   The sigma-stable isotropic subgroups of M = M1 (+) M2 meeting neither
   summand, of order dividing max_order (0: any order), the trivial one
-  included. They are grown one generator at a time from the candidates,
+  included, inside the elements killed by exponent (a power of q, 0: no
+  bound; the glue is killed by the resultant of the minimal polynomials
+  of the two sides, see GlueIsometryPairs). That submodule is closed under
+  the sums, sigma and the automorphisms, so it is listed alone: on a
+  generator of order q^k its coordinate is c q^(k - min(k, v)), c taken
+  modulo q^min(k, v), for exponent = q^v. They are grown one generator at a time from the candidates,
   the isotropic elements with both projections nonzero: a subgroup is the
   span of the sigma-orbits of its generators, and is kept when all its
   elements are isotropic (then the bilinear form vanishes on it too) and
@@ -136,25 +128,67 @@ struct GlueSubgroup {
   subgroup is reached, since its elements are candidates and it is the
   union of a chain of spans of them. Nothing is returned beyond the bounds.
 
+  With action generators (automorphisms of M commuting with sigma), all
+  the subgroups are returned with the permutations of the list by these
+  generators, for the orbits on several primes at once in
+  GlueIsometryPairs.
+
   With group generators (automorphisms of M commuting with sigma), one
   subgroup per orbit is returned: the orbit of each new subgroup is
   marked as known, and only the representatives are extended, which is
   enough since phi(span(Gamma, x)) = span(phi(Gamma), phi(x)).
  */
-inline std::optional<std::vector<GlueSubgroup>>
+struct GlueSubgroupList {
+  std::vector<GlueSubgroup> subgroups;
+  // with action generators: perms[k][i] is the index of the image of
+  // subgroups[i] by the k-th generator
+  std::vector<std::vector<size_t>> perms;
+};
+
+inline std::optional<GlueSubgroupList>
 GlueSubgroups(PrimaryQuadModule const &M, size_t r1, int64_t max_order,
-              std::vector<ModuleAut> const &group_gens,
+              int64_t exponent, std::vector<ModuleAut> const &group_gens,
+              std::vector<ModuleAut> const &action_gens,
               IsometryGlueBounds const &bounds) {
-  if (M.size() > bounds.max_module) {
-    return {};
-  }
-  size_t n_elt = M.size();
   size_t r = M.rank();
+  // the orders of the coordinates c in the torsion submodule, and the
+  // multipliers from c to the coordinates in M
+  std::vector<int64_t> sub_ord(r), mult(r);
+  size_t n_elt = 1;
+  for (size_t i = 0; i < r; i++) {
+    sub_ord[i] = M.ord[i];
+    if (exponent != 0 && exponent < M.ord[i]) {
+      sub_ord[i] = exponent;
+    }
+    mult[i] = M.ord[i] / sub_ord[i];
+    size_t o = static_cast<size_t>(sub_ord[i]);
+    if (n_elt > bounds.max_module / o) {
+      return {};
+    }
+    n_elt *= o;
+  }
+  auto elt_of_index = [&](size_t idx) -> ModuleElt {
+    ModuleElt x(r);
+    for (size_t i = 0; i < r; i++) {
+      size_t o = static_cast<size_t>(sub_ord[i]);
+      x[i] = static_cast<int64_t>(idx % o) * mult[i];
+      idx /= o;
+    }
+    return x;
+  };
+  auto index_of_elt = [&](ModuleElt const &x) -> size_t {
+    size_t idx = 0;
+    for (size_t i = r; i-- > 0;) {
+      idx = idx * static_cast<size_t>(sub_ord[i]) +
+            static_cast<size_t>(x[i] / mult[i]);
+    }
+    return idx;
+  };
   std::vector<ModuleElt> elts(n_elt);
   std::vector<int64_t> qval(n_elt);
   std::vector<uint8_t> admissible(n_elt);
   for (size_t u = 0; u < n_elt; u++) {
-    elts[u] = ModuleEltOfIndex(M, u);
+    elts[u] = elt_of_index(u);
     qval[u] = ModuleQ(M, elts[u]);
     bool nz1 = false, nz2 = false;
     for (size_t i = 0; i < r; i++) {
@@ -173,9 +207,9 @@ GlueSubgroups(PrimaryQuadModule const &M, size_t r1, int64_t max_order,
   auto apply_sigma = [&](ModuleElt const &x) -> ModuleElt {
     return ModuleCombination(M, x, M.sigma_img);
   };
-  // the span of the sigma-orbits of gens, or nothing if not admissible
-  auto span = [&](std::vector<ModuleElt> const &gens)
-      -> std::optional<std::vector<size_t>> {
+  // the elements of the sigma-orbits of gens
+  auto orbits = [&](std::vector<ModuleElt> const &gens)
+      -> std::vector<ModuleElt> {
     std::vector<ModuleElt> trans;
     for (auto const &g : gens) {
       ModuleElt h = g;
@@ -187,13 +221,19 @@ GlueSubgroups(PrimaryQuadModule const &M, size_t r1, int64_t max_order,
         }
       }
     }
+    return trans;
+  };
+  // the span of the sigma-orbits of gens, or nothing if not admissible
+  auto span = [&](std::vector<ModuleElt> const &gens)
+      -> std::optional<std::vector<size_t>> {
+    std::vector<ModuleElt> trans = orbits(gens);
     std::set<size_t> seen{0};
     std::vector<size_t> queue{0};
     while (!queue.empty()) {
       size_t u = queue.back();
       queue.pop_back();
       for (auto const &h : trans) {
-        size_t v = ModuleIndexOfElt(M, ModuleSum(M, elts[u], h));
+        size_t v = index_of_elt(ModuleSum(M, elts[u], h));
         if (seen.insert(v).second) {
           if (!admissible[v]) {
             return {};
@@ -212,12 +252,12 @@ GlueSubgroups(PrimaryQuadModule const &M, size_t r1, int64_t max_order,
                    ModuleAut const &phi) -> std::vector<size_t> {
     std::vector<size_t> img;
     for (size_t u : elements) {
-      img.push_back(ModuleIndexOfElt(M, ModuleCombination(M, elts[u], phi)));
+      img.push_back(index_of_elt(ModuleCombination(M, elts[u], phi)));
     }
     std::sort(img.begin(), img.end());
     return img;
   };
-  std::vector<GlueSubgroup> res{{{0}, {}}};
+  std::vector<GlueSubgroup> res{{{0}, {}, {}}};
   std::set<std::vector<size_t>> known{{0}};
   // marks the orbit of a new subgroup, returns false if it was known
   auto insert_orbit = [&](std::vector<size_t> const &elements) -> bool {
@@ -255,14 +295,111 @@ GlueSubgroups(PrimaryQuadModule const &M, size_t r1, int64_t max_order,
         continue;
       }
       if (insert_orbit(*opt)) {
-        res.push_back({*opt, gens_new});
+        res.push_back({*opt, gens_new, orbits(gens_new)});
         if (res.size() > bounds.max_subgroup) {
           return {};
         }
       }
     }
   }
-  return res;
+  GlueSubgroupList out;
+  if (!action_gens.empty()) {
+    std::map<std::vector<size_t>, size_t> index;
+    for (size_t i = 0; i < res.size(); i++) {
+      index[res[i].elements] = i;
+    }
+    for (auto const &phi : action_gens) {
+      std::vector<size_t> perm;
+      for (auto const &sg : res) {
+        auto iter = index.find(image(sg.elements, phi));
+        if (iter == index.end()) {
+          std::cerr << "ISOM_GLUE: the subgroups are not stable under the "
+                       "centralizers\n";
+          throw TerminalException{1};
+        }
+        perm.push_back(iter->second);
+      }
+      out.perms.push_back(perm);
+    }
+  }
+  out.subgroups = std::move(res);
+  return out;
+}
+
+/*
+  Polynomials as the vectors of their coefficients, of increasing degree.
+ */
+template <typename T> std::vector<T> PolyProductCoeffs(std::vector<T> const &a,
+                                                       std::vector<T> const &b) {
+  std::vector<T> c(a.size() + b.size() - 1, T(0));
+  for (size_t i = 0; i < a.size(); i++) {
+    for (size_t j = 0; j < b.size(); j++) {
+      c[i + j] += a[i] * b[j];
+    }
+  }
+  return c;
+}
+
+// The monic minimal polynomial of the square matrix g.
+template <typename T>
+std::vector<T> MinimalPolynomialCoeffs(MyMatrix<T> const &g) {
+  int n = g.rows();
+  auto flat = [&](MyMatrix<T> const &M) -> MyVector<T> {
+    MyVector<T> v(n * n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        v(i * n + j) = M(i, j);
+      }
+    }
+    return v;
+  };
+  std::vector<MyVector<T>> pw{flat(IdentityMat<T>(n))};
+  MyMatrix<T> M = IdentityMat<T>(n);
+  while (true) {
+    M = M * g;
+    MyVector<T> w = flat(M);
+    std::optional<MyVector<T>> opt =
+        SolutionMat(MatrixFromVectorFamily(pw), w);
+    if (opt) {
+      // g^k = sum_i c_i g^i
+      std::vector<T> mu;
+      for (int i = 0; i < opt->size(); i++) {
+        mu.push_back(-(*opt)(i));
+      }
+      mu.push_back(T(1));
+      return mu;
+    }
+    pw.push_back(w);
+  }
+}
+
+// The resultant of a and b, the determinant of their Sylvester matrix.
+template <typename T>
+T PolyResultant(std::vector<T> const &a, std::vector<T> const &b) {
+  int da = static_cast<int>(a.size()) - 1;
+  int db = static_cast<int>(b.size()) - 1;
+  if (da == 0 && db == 0) {
+    return T(1);
+  }
+  if (da == 0) {
+    return MyPow<T>(a[0], db);
+  }
+  if (db == 0) {
+    return MyPow<T>(b[0], da);
+  }
+  int m = da + db;
+  MyMatrix<T> S = ZeroMatrix<T>(m, m);
+  for (int i = 0; i < db; i++) {
+    for (int k = 0; k <= da; k++) {
+      S(i, i + k) = a[da - k];
+    }
+  }
+  for (int i = 0; i < da; i++) {
+    for (int k = 0; k <= db; k++) {
+      S(db + i, i + k) = b[db - k];
+    }
+  }
+  return DeterminantMat(S);
 }
 
 template <typename T> struct GluedPair {
@@ -311,8 +448,16 @@ inline ModuleAut ExtendModuleAut(ModuleAut const &phi, size_t r1, size_t r2,
 
 /*
   The distinct classes of the sigma-stable primitive extensions of (L_1,
-  sigma_1) (+) (L_2, sigma_2), of determinant det when det is given, as
-  canonical pairs.
+  sigma_1) (+) (L_2, sigma_2), of determinant det when det is given.
+
+  An isometry between two of them maps the sublattices ker mu_i(sigma) onto
+  each other, so restricts to an element of C_1 x C_2, the centralizers of
+  the sigma_i in O(L_i): the classes are the C_1 x C_2-orbits of the glue
+  groups. At one prime, GlueSubgroups gives one subgroup per orbit. At
+  several primes, the group acts on the lists of all the subgroups of each
+  prime: one subgroup per orbit at the first prime, then per orbit of its
+  stabilizer at the second, and so on. Either way the glued pairs are
+  distinct classes, returned in an LLL-reduced basis.
  */
 template <typename T, typename Tint, typename Tgroup>
 std::vector<GluedPair<T>>
@@ -343,14 +488,36 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
     }
     target = root;
   }
-  // the primes dividing both determinants
-  Tint g_i = UniversalScalarConversion<Tint, T>(GcdPair(det1, det2));
+  // the glue is killed by g_1 and g_2 acting on it, so by the resultant
+  // of their minimal polynomials (u mu_1 + v mu_2 = Res, u, v in Z[x]),
+  // when they are coprime: only its primes, and the elements killed by it
+  T res_mu = T_abs(PolyResultant(MinimalPolynomialCoeffs(P1),
+                                 MinimalPolynomialCoeffs(P2)));
+  // the primes dividing both determinants (and the resultant)
+  T g_T = GcdPair(det1, det2);
+  if (res_mu != 0) {
+    g_T = GcdPair(g_T, res_mu);
+  }
+  Tint g_i = UniversalScalarConversion<Tint, T>(g_T);
   std::vector<Tint> primes;
   if (g_i > 1) {
     primes = FactorsInt(g_i);
     std::sort(primes.begin(), primes.end());
     primes.erase(std::unique(primes.begin(), primes.end()), primes.end());
   }
+  // the q-part of the resultant, 0 for no bound
+  auto exponent_at = [&](Tint const &q_i) -> int64_t {
+    if (res_mu == 0) {
+      return 0;
+    }
+    Tint rest = UniversalScalarConversion<Tint, T>(res_mu);
+    Tint qe(1);
+    while (ResInt(rest, q_i) == 0) {
+      rest /= q_i;
+      qe *= q_i;
+    }
+    return UniversalScalarConversion<int64_t, Tint>(qe);
+  };
   if (target) {
     // the glue order is supported on these primes
     Tint rest = *target;
@@ -392,9 +559,13 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
       }
     }
   }
-  // per prime, the subgroups with the lifts of their generators
+  // the orbits are taken on all the primes at once when there are several
+  bool exact_orbits = primes.size() > 1;
+  // per prime, the subgroups with the lifts of their generators, and the
+  // permutations of them by the generators of C_1 x C_2 (exact_orbits)
   std::vector<std::vector<std::vector<MyVector<T>>>> ListLifts;
   std::vector<std::vector<int64_t>> ListOrders;
+  std::vector<std::vector<std::vector<size_t>>> ListPerms;
   for (size_t iq = 0; iq < primes.size(); iq++) {
     Tint const &q_i = primes[iq];
     int64_t q = UniversalScalarConversion<int64_t, Tint>(q_i);
@@ -404,7 +575,7 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
     std::vector<MyVector<T>> gens1 = PrimaryModuleGenerators(comp1, M1);
     std::vector<MyVector<T>> gens2 = PrimaryModuleGenerators(comp2, M2);
     std::vector<ModuleAut> group_gens;
-    if (iq == i_reduced) {
+    if (iq == i_reduced || exact_orbits) {
       for (auto const &h : ListGen1) {
         group_gens.push_back(ExtendModuleAut(
             ModuleActionOfIsometry(comp1, M1, gens1, h), M1.rank(),
@@ -426,8 +597,10 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
       }
       max_order = UniversalScalarConversion<int64_t, Tint>(qe);
     }
-    std::optional<std::vector<GlueSubgroup>> opt =
-        GlueSubgroups(M, M1.rank(), max_order, group_gens, bounds);
+    std::optional<GlueSubgroupList> opt = GlueSubgroups(
+        M, M1.rank(), max_order, exponent_at(q_i),
+        exact_orbits ? std::vector<ModuleAut>{} : group_gens,
+        exact_orbits ? group_gens : std::vector<ModuleAut>{}, bounds);
     if (!opt) {
       std::cerr << "ISOM_GLUE: the glue at q=" << q
                 << " exceeds the bounds\n";
@@ -435,13 +608,17 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
     }
     std::vector<std::vector<MyVector<T>>> lifts;
     std::vector<int64_t> orders;
-    for (auto const &sg : *opt) {
+    // the kept subgroups (of the order asked for) are a union of orbits
+    std::vector<size_t> new_index(opt->subgroups.size(), 0);
+    for (size_t isg = 0; isg < opt->subgroups.size(); isg++) {
+      GlueSubgroup const &sg = opt->subgroups[isg];
       int64_t order = static_cast<int64_t>(sg.elements.size());
       if (max_order != 0 && order != max_order) {
         continue;
       }
+      new_index[isg] = lifts.size();
       std::vector<MyVector<T>> vects;
-      for (auto const &x : sg.gens) {
+      for (auto const &x : sg.orbit_gens) {
         MyVector<T> v = ZeroVector<T>(n);
         for (size_t i = 0; i < M1.rank(); i++) {
           for (int j = 0; j < n1; j++) {
@@ -462,13 +639,24 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
     os << "ISOM_GLUE: q=" << q << " |D1|=" << M1.size() << " |D2|="
        << M2.size() << " subgroups=" << lifts.size() << "\n";
 #endif
+    std::vector<std::vector<size_t>> perms;
+    for (auto const &perm : opt->perms) {
+      std::vector<size_t> p(lifts.size());
+      for (size_t isg = 0; isg < opt->subgroups.size(); isg++) {
+        int64_t order = static_cast<int64_t>(opt->subgroups[isg].elements.size());
+        if (max_order == 0 || order == max_order) {
+          p[new_index[isg]] = new_index[perm[isg]];
+        }
+      }
+      perms.push_back(p);
+    }
     ListLifts.push_back(lifts);
     ListOrders.push_back(orders);
+    ListPerms.push_back(perms);
   }
   MyMatrix<T> A0 = BlockDiagonal(A1, A2);
   MyMatrix<T> P0 = BlockDiagonal(P1, P2);
   std::vector<GluedPair<T>> res;
-  std::set<std::vector<MyMatrix<T>>> known;
   // no subgroup at some prime (none of the order the determinant asks
   // for): no glued lattice, before the product reads ListLifts[iq][0]
   for (auto const &lifts : ListLifts) {
@@ -476,9 +664,7 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
       return res;
     }
   }
-  // the product over the primes
-  std::vector<size_t> choice(primes.size(), 0);
-  while (true) {
+  auto build = [&](std::vector<size_t> const &choice) -> void {
     std::vector<MyVector<T>> rows;
     T glue_order(1);
     for (size_t iq = 0; iq < primes.size(); iq++) {
@@ -487,71 +673,120 @@ GlueIsometryPairs(MyMatrix<T> const &A1, MyMatrix<T> const &g1,
       }
       glue_order *= ScalarFromInt64<T>(ListOrders[iq][choice[iq]]);
     }
-    bool ok = true;
-    for (size_t iq = 0; iq < primes.size(); iq++) {
-      ok = ok && !ListLifts[iq].empty();
+    MyMatrix<T> Gen(n + static_cast<int>(rows.size()), n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        Gen(i, j) = (i == j) ? T(1) : T(0);
+      }
     }
-    if (ok) {
-      MyMatrix<T> Gen(n + static_cast<int>(rows.size()), n);
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-          Gen(i, j) = (i == j) ? T(1) : T(0);
-        }
+    for (size_t k = 0; k < rows.size(); k++) {
+      for (int j = 0; j < n; j++) {
+        Gen(n + static_cast<int>(k), j) = rows[k](j);
       }
-      for (size_t k = 0; k < rows.size(); k++) {
-        for (int j = 0; j < n; j++) {
-          Gen(n + static_cast<int>(k), j) = rows[k](j);
-        }
+    }
+    // a Z-basis of the overlattice, through integer coordinates
+    std::vector<T> ListDen;
+    for (int i = 0; i < Gen.rows(); i++) {
+      for (int j = 0; j < n; j++) {
+        ListDen.push_back(GetDenominator(Gen(i, j)));
       }
-      // a Z-basis of the overlattice, through integer coordinates
-      std::vector<T> ListDen;
-      for (int i = 0; i < Gen.rows(); i++) {
-        for (int j = 0; j < n; j++) {
-          ListDen.push_back(GetDenominator(Gen(i, j)));
-        }
-      }
-      T den = LCMlist(ListDen);
-      MyMatrix<Tint> Gen_i =
-          UniversalMatrixConversion<Tint, T>(MyMatrix<T>(Gen * den));
-      MyMatrix<Tint> B_i = GetZbasis(Gen_i);
-      MyMatrix<T> B = UniversalMatrixConversion<T, Tint>(B_i) / den;
-      MyMatrix<T> A = B * A0 * B.transpose();
-      MyMatrix<T> P = B * P0 * Inverse(B);
-      if (!IsIntegralMatrix(A) || !IsIntegralMatrix(P)) {
-        std::cerr << "ISOM_GLUE: the glued lattice is not integral or not "
-                     "stable\n";
+    }
+    T den = LCMlist(ListDen);
+    MyMatrix<Tint> Gen_i =
+        UniversalMatrixConversion<Tint, T>(MyMatrix<T>(Gen * den));
+    MyMatrix<Tint> B_i = GetZbasis(Gen_i);
+    MyMatrix<T> B = UniversalMatrixConversion<T, Tint>(B_i) / den;
+    MyMatrix<T> A = B * A0 * B.transpose();
+    MyMatrix<T> P = B * P0 * Inverse(B);
+    if (!IsIntegralMatrix(A) || !IsIntegralMatrix(P)) {
+      std::cerr << "ISOM_GLUE: the glued lattice is not integral or not "
+                   "stable\n";
+      throw TerminalException{1};
+    }
+    for (int i = 0; i < n; i++) {
+      if (!IsInteger(A(i, i) / T(2))) {
+        std::cerr << "ISOM_GLUE: the glued lattice is not even\n";
         throw TerminalException{1};
       }
-      for (int i = 0; i < n; i++) {
-        if (!IsInteger(A(i, i) / T(2))) {
-          std::cerr << "ISOM_GLUE: the glued lattice is not even\n";
-          throw TerminalException{1};
+    }
+    MyMatrix<T> B_T =
+        UniversalMatrixConversion<T, Tint>(LLLreducedBasis<T, Tint>(A, os).Pmat);
+    MyMatrix<T> Ared = B_T * A * B_T.transpose();
+    MyMatrix<T> Pred = B_T * P * Inverse(B_T);
+    res.push_back({Ared, Pred.transpose(), DeterminantMat(Ared), glue_order});
+  };
+  if (!exact_orbits) {
+    // at most one prime, its subgroups up to C_1 x C_2 already
+    std::vector<size_t> choice(primes.size(), 0);
+    if (primes.empty()) {
+      build(choice);
+    } else {
+      for (size_t i = 0; i < ListLifts[0].size(); i++) {
+        choice[0] = i;
+        build(choice);
+      }
+    }
+    return res;
+  }
+  // C_1 x C_2 acting on the disjoint union of the lists of the primes
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  std::vector<size_t> offset;
+  size_t n_point = 0;
+  for (auto const &lifts : ListLifts) {
+    offset.push_back(n_point);
+    n_point += lifts.size();
+  }
+  std::vector<Telt> LGen;
+  size_t n_gen = ListPerms[0].size();
+  for (size_t k = 0; k < n_gen; k++) {
+    std::vector<Tidx> v(n_point);
+    for (size_t iq = 0; iq < primes.size(); iq++) {
+      for (size_t i = 0; i < ListLifts[iq].size(); i++) {
+        v[offset[iq] + i] = static_cast<Tidx>(offset[iq] + ListPerms[iq][k][i]);
+      }
+    }
+    LGen.push_back(Telt(v));
+  }
+  Tgroup G(LGen, Telt(static_cast<Tidx>(n_point)));
+  std::vector<size_t> choice(primes.size(), 0);
+  std::function<void(size_t, Tgroup const &)> rec =
+      [&](size_t iq, Tgroup const &H) -> void {
+    if (iq == primes.size()) {
+      build(choice);
+      return;
+    }
+    std::vector<Telt> hgens = H.GeneratorsOfGroup();
+    size_t sz = ListLifts[iq].size();
+    std::vector<uint8_t> seen(sz, 0);
+    for (size_t i = 0; i < sz; i++) {
+      if (seen[i]) {
+        continue;
+      }
+      // the orbit of i under H
+      seen[i] = 1;
+      std::vector<size_t> queue{i};
+      while (!queue.empty()) {
+        size_t u = queue.back();
+        queue.pop_back();
+        for (auto const &h : hgens) {
+          size_t w = static_cast<size_t>(h.at(static_cast<Tidx>(offset[iq] + u))) -
+                     offset[iq];
+          if (!seen[w]) {
+            seen[w] = 1;
+            queue.push_back(w);
+          }
         }
       }
-      MyMatrix<T> B_T =
-          UniversalMatrixConversion<T, Tint>(PairCanonicalBasis<T, Tint, Tgroup>(
-              A, std::vector<MyMatrix<T>>{P}, methods.canonical, os));
-      MyMatrix<T> Acan = B_T * A * B_T.transpose();
-      MyMatrix<T> Pcan = B_T * P * Inverse(B_T);
-      if (known.insert(PairForms(Acan, std::vector<MyMatrix<T>>{Pcan}))
-              .second) {
-        T det_glued = DeterminantMat(Acan);
-        res.push_back({Acan, Pcan.transpose(), det_glued, glue_order});
+      choice[iq] = i;
+      if (iq + 1 < primes.size()) {
+        rec(iq + 1, H.Stabilizer_OnPoints(static_cast<Tidx>(offset[iq] + i)));
+      } else {
+        rec(iq + 1, H);
       }
     }
-    size_t iq = 0;
-    while (iq < primes.size()) {
-      choice[iq]++;
-      if (choice[iq] < ListLifts[iq].size()) {
-        break;
-      }
-      choice[iq] = 0;
-      iq++;
-    }
-    if (iq == primes.size()) {
-      break;
-    }
-  }
+  };
+  rec(0, G);
   return res;
 }
 
