@@ -10,6 +10,8 @@ charpoly/LAT.txt, write
 - charpoly/jobs.txt: the piece files to make with
   julia HermitianPieces.jl --jobs charpoly/jobs.txt
 - charpoly_tests.txt: the lines "LAT sig mass".
+For an odd lattice the pieces are those of its even sublattice (of the same
+characteristic polynomial, its determinant 4 det).
 
 The bounds of a piece P = Phi_d^b, rank b phi(d), of a lattice L of rank n
 and determinant det: the glue with the rest is killed by R = prod_e
@@ -108,6 +110,26 @@ def exponent_discriminant(M):
     return e
 
 
+def even_sublattice(A):
+    """The Gram matrix of the even sublattice of an odd lattice, in the basis
+    of EvenSublatticeBasis (IsometryGlueFactors.h); A itself when even."""
+    n = len(A)
+    odd = [i for i in range(n) if A[i][i] % 2 != 0]
+    if not odd:
+        return A
+    i0 = odd[0]
+    B = [[int(i == j) for j in range(n)] for i in range(n)]
+    for j in odd:
+        if j == i0:
+            B[j][j] = 2
+        else:
+            B[j][i0] = 1
+    BA = [[sum(B[i][k] * A[k][j] for k in range(n)) for j in range(n)]
+          for i in range(n)]
+    return [[sum(BA[i][k] * B[j][k] for k in range(n)) for j in range(n)]
+            for i in range(n)]
+
+
 def read_gram(path):
     words = open(path).read().split()
     n = int(words[0])
@@ -119,7 +141,9 @@ def main():
     jobs = {}
     tests = []
     for lat in sys.argv[1:]:
-        A = read_gram(f"charpoly/{lat}.txt")
+        # an odd lattice: GENUS_GlueIsometry glues the pieces of its even
+        # sublattice, so the bounds are those of the even sublattice
+        A = even_sublattice(read_gram(f"charpoly/{lat}.txt"))
         n = len(A)
         det = det_int(A)
         expo = exponent_discriminant(A)

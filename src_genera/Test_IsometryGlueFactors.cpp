@@ -4,6 +4,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "IsometryGlueFactors.h"
+#include <random>
 #include <set>
 #include <string>
 #include <vector>
@@ -23,7 +24,13 @@
   - SublatticeDeterminants: against the definition, the D with s | D and
     D | d s for some s | S, by a search over D <= d S;
   - IsAdmissibleGlue: on the involutions of E8 (d+ = d- = 2^a, glue 2^a)
-    and on cases that fail each condition.
+    and on cases that fail each condition;
+  - EvenSublatticeBasis: on random odd lattices, a sublattice of index 2
+    with even norms;
+  - OddOverlatticeOrbits: on D_n, the even sublattice of I_n, with sigma =
+    1 and no group, the odd overlattices of D(D_n) of order 2: the vector
+    class always, the two spinor classes (of norm n / 4) when n / 4 is an
+    odd integer: 3 for n = 4, 12, 1 for n = 5, 6, 8; all unimodular.
  */
 
 using T = mpq_class;
@@ -231,6 +238,55 @@ int main() {
     }
     if (IsAdmissibleGlue<T, Tint>(T(2), T(4), T(1), Tint(16))) {
       fail("a glue of non square order is admissible");
+    }
+    // the even sublattices
+    std::mt19937 rng(17);
+    for (int iter = 0; iter < 100; iter++) {
+      int n = 1 + static_cast<int>(rng() % 6);
+      MyMatrix<T> A = ZeroMatrix<T>(n, n);
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < i; j++) {
+          int x = static_cast<int>(rng() % 5) - 2;
+          A(i, j) = x;
+          A(j, i) = x;
+        }
+        A(i, i) = static_cast<int>(rng() % 7);
+      }
+      A(0, 0) = 1 + 2 * static_cast<int>(rng() % 3);
+      MyMatrix<T> B = EvenSublatticeBasis(A);
+      MyMatrix<T> A0 = B * A * B.transpose();
+      if (T_abs(DeterminantMat(B)) != 2) {
+        fail("the even sublattice is not of index 2");
+      }
+      for (int i = 0; i < n; i++) {
+        if (!IsInteger(A0(i, i) / T(2))) {
+          fail("the even sublattice has an odd norm");
+        }
+      }
+    }
+    // the odd overlattices of D_n
+    for (auto const &[n, expected] :
+         std::vector<std::pair<int, size_t>>{{4, 3}, {5, 1}, {6, 1}, {8, 1}, {12, 3}}) {
+      MyMatrix<T> In = IdentityMat<T>(n);
+      MyMatrix<T> B = EvenSublatticeBasis(In);
+      MyMatrix<T> A0 = B * In * B.transpose();
+      std::vector<OddOverlattice<T>> ov = OddOverlatticeOrbits<T, Tint>(
+          A0, IdentityMat<T>(n), std::vector<MyMatrix<Tint>>{});
+      if (ov.size() != expected) {
+        fail("the odd overlattices of D_" + std::to_string(n) + ": " +
+             std::to_string(ov.size()));
+      }
+      for (auto const &o : ov) {
+        MyMatrix<T> AL = o.basis * A0 * o.basis.transpose();
+        bool is_odd = false;
+        for (int i = 0; i < n; i++) {
+          is_odd = is_odd || !IsInteger(AL(i, i) / T(2));
+        }
+        if (!IsIntegralMatrix(AL) || T_abs(DeterminantMat(AL)) != 1 ||
+            !is_odd || o.orbit_size != 1) {
+          fail("an odd overlattice of D_" + std::to_string(n));
+        }
+      }
     }
     std::cerr << "n_error=" << n_error << "\n";
     if (n_error > 0) {

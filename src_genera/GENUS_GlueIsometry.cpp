@@ -213,11 +213,24 @@ void process(std::string const &mode, std::string const &FileGram1,
              std::string const &OutFormat, QuadLValueMethod lvalue,
              std::ostream &os) {
   std::vector<GluedPair<T>> ListGlued;
+  // an odd lattice (factors): the pairs of its even sublattice, then the
+  // odd overlattices (IsometryGlueFactors.h)
+  std::optional<MyMatrix<T>> odd_gram;
   if (mode == "factors") {
-    // FileGram1 the lattice, FileIsom1 the spec file of the factors
+    // FileGram1 the lattice, FileIsom1 the spec file of the factors (the
+    // pieces of the even sublattice when the lattice is odd)
+    MyMatrix<T> A = ReadMatrixFile<T>(FileGram1);
+    bool is_even = true;
+    for (int i = 0; i < A.rows(); i++) {
+      is_even = is_even && IsInteger(A(i, i) / T(2));
+    }
+    if (!is_even) {
+      odd_gram = A;
+      MyMatrix<T> B0 = EvenSublatticeBasis(A);
+      A = B0 * A * B0.transpose();
+    }
     ListGlued = FactorSeeds<T, Tint, Tgroup>(
-        ReadMatrixFile<T>(FileGram1), ReadIsometryFactors<T>(FileIsom1),
-        std::cerr);
+        A, ReadIsometryFactors<T>(FileIsom1), std::cerr);
   } else if (mode == "pieces") {
     // FileGram1 the lattice, FileIsom1 the rank r of the +1-piece, FileGram2
     // the list of the other pieces: the factors "file FileGram2" and
@@ -326,6 +339,57 @@ void process(std::string const &mode, std::string const &FileGram1,
     // the seed itself, in case the enumeration stopped short
     known.insert(key_of(gp.gram, gp.isom));
     ListGenus.push_back({gp, *mres.mass, result});
+  }
+  if (odd_gram) {
+    // the classes of the odd pairs (L, sigma), L in the genus of odd_gram:
+    // the orbits of the odd overlattices of the classes of the even pairs
+    GenusSymbol S_odd = GenusSymbolOfGram<T, Tint>(*odd_gram);
+    Tmass total_odd(0);
+    size_t n_odd = 0;
+    bool all_complete = n_without_mass == 0;
+    for (auto const &rec : ListGenus) {
+      all_complete = all_complete && rec.result.complete;
+      for (size_t i = 0; i < rec.result.ListGram.size(); i++) {
+        MyMatrix<T> const &A0 = rec.result.ListGram[i];
+        MyMatrix<T> P = rec.result.ListListIsom[i][0].transpose();
+        std::vector<MyMatrix<Tint>> ListGen =
+            PairCentralizer<T, Tint, Tgroup>(A0, std::vector<MyMatrix<T>>{P},
+                                             methods.automorphism, std::cerr)
+                .ListGen;
+        for (auto const &ov :
+             OddOverlatticeOrbits<T, Tint>(A0, P, ListGen)) {
+          MyMatrix<T> AL = ov.basis * A0 * ov.basis.transpose();
+          if (GenusSymbolOfGram<T, Tint>(AL) != S_odd) {
+            continue;
+          }
+          n_odd++;
+          total_odd += Tmass(static_cast<long>(ov.orbit_size)) /
+                       Tmass(rec.result.ListCentralizerOrder[i]);
+        }
+      }
+    }
+    if (OutFormat != "Summary") {
+      std::cerr << "GENUS_GlueIsometry: an odd lattice has only the Summary "
+                   "output\n";
+      throw TerminalException{1};
+    }
+    os << "genera of pairs of the even sublattice = " << ListGenus.size()
+       << "\n";
+    os << "classes of odd pairs = " << n_odd << "\n";
+    os << "total mass = " << total_odd << "\n";
+    os << "complete = " << (all_complete ? "true" : "false") << "\n";
+    for (auto const &rec : ListGenus) {
+      if (rec.result.mass_exceeded()) {
+        throw GenusMassExceededException{};
+      }
+    }
+    for (auto const &rec : ListGenus) {
+      CheckGenusEnumerationGroupResult(rec.result);
+    }
+    if (n_without_mass > 0) {
+      throw GenusMassNotClosedException{};
+    }
+    return;
   }
   // after the output: a genus whose classes weigh more than its mass first,
   // then the genera that did not close or have no proved mass

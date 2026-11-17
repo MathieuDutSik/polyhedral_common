@@ -4,7 +4,9 @@
 # charpoly/LAT.txt with the factors of charpoly/LAT_sig.spec must give the
 # total mass of the oracle (CharPolyOracle.g: the sum over the classes
 # Lambda of the genus and the sigma in O(Lambda) of characteristic
-# polynomial sig of 1 / |O(Lambda)|), every genus of pairs closed.
+# polynomial sig of 1 / |O(Lambda)|), every genus of pairs closed. For an
+# odd lattice (I4, I8, I9, A2I2) the pairs of its even sublattice are
+# enumerated, then their odd overlattices (IsometryGlueFactors.h).
 #
 # The data: MakeCharPolyTests.py (spec files, the jobs of the piece files
 # for HermitianPieces.jl, the full table charpoly_tests.txt); the default
