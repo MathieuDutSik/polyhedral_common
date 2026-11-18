@@ -810,12 +810,17 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
         }
       }
     } else if (f.irrep) {
-      // the certified search when rho has Schur index 1, otherwise the
-      // search by steps up and down
+      // the complete searches, by End(M) for Schur index 1, otherwise by
+      // maximal orders; the search by steps up and down when beyond the
+      // bounds
       std::vector<Tint> gp = GroupLatticePrimes<T, Tint>(*f.irrep);
       std::optional<std::vector<GroupLattice<T>>> cert =
           IsotypicPiecesCertified<T, Tint, Tgroup>(*f.irrep, f.multiplicity,
                                                    dets, gp, os);
+      if (!cert) {
+        cert = IsotypicPiecesMaximalOrder<T, Tint, Tgroup>(
+            *f.irrep, f.multiplicity, dets, gp, os);
+      }
       std::vector<GroupLattice<T>> list_P =
           cert ? *cert
                : IsotypicPieces<T, Tint, Tgroup>(*f.irrep, f.multiplicity,
