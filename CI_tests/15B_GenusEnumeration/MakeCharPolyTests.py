@@ -10,7 +10,8 @@ charpoly/LAT.txt, write
 - charpoly/jobs.txt: the piece files to make with
   julia HermitianPieces.jl --jobs charpoly/jobs.txt
 - charpoly_tests.txt: the lines "LAT sig mass".
-For a genus with a file charpoly/klein_LAT.txt (KleinOracle.g: lines
+For a genus with a file charpoly/klein_LAT.txt (CharPolyOracle.g with
+Klein := true: lines
 "m++,m+-,m-+,m-- mass" for G = Z/2 x Z/2), also charpoly/LAT_kTYPE.spec,
 "group 2" and the factors "orth s1 s2 m", and the lines "LAT kTYPE mass".
 For an odd lattice the pieces are those of its even sublattice (of the same

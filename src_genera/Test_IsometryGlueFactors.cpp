@@ -202,7 +202,7 @@ int main() {
       for (int res : {1, 2, 3, 4, 5, 6}) {
         for (int m = 0; m <= 3; m++) {
           std::vector<Tint> got =
-              SublatticeDeterminants<Tint>(Tint(d), Tint(res), m);
+              SublatticeDeterminants<Tint>(Tint(d), MyPow<Tint>(Tint(res), m));
           Tint S = MyPow<Tint>(Tint(res), m);
           std::vector<Tint> brute;
           for (Tint D = 1; D <= Tint(d) * S; D++) {

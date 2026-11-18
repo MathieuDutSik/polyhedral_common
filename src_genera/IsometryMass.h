@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
+#include "MAT_MatrixPolynomial.h"
 #include "LocalDensity.h"
 #include "GenusMass.h"
 #include "CyclotomicHermitianMass.h"
@@ -83,19 +84,6 @@
   g^T, as in the rest of the code.
  */
 
-template <typename T>
-MyMatrix<T> EvaluatePolynomialMatrix(std::vector<int64_t> const &coeff,
-                                     MyMatrix<T> const &P) {
-  int n = P.rows();
-  MyMatrix<T> res = ZeroMatrix<T>(n, n);
-  for (size_t k = coeff.size(); k-- > 0;) {
-    res = res * P;
-    for (int i = 0; i < n; i++) {
-      res(i, i) += ScalarFromInt64<T>(coeff[k]);
-    }
-  }
-  return res;
-}
 
 /*
   One component L_d: a basis (rows, coordinates in L), its Gram matrix, the

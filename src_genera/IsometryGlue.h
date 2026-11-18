@@ -7,6 +7,7 @@
 #include "GeneraArithmetic.h"
 #include "IsometryMass.h"
 #include "GenusEnumerationGroup.h"
+#include "MAT_MatrixPolynomial.h"
 #include <functional>
 #include <map>
 #include <optional>
@@ -364,82 +365,6 @@ GlueSubgroups(PrimaryQuadModule const &M, size_t r1, int64_t max_order,
   return out;
 }
 
-/*
-  Polynomials as the vectors of their coefficients, of increasing degree.
- */
-template <typename T> std::vector<T> PolyProductCoeffs(std::vector<T> const &a,
-                                                       std::vector<T> const &b) {
-  std::vector<T> c(a.size() + b.size() - 1, T(0));
-  for (size_t i = 0; i < a.size(); i++) {
-    for (size_t j = 0; j < b.size(); j++) {
-      c[i + j] += a[i] * b[j];
-    }
-  }
-  return c;
-}
-
-// The monic minimal polynomial of the square matrix g.
-template <typename T>
-std::vector<T> MinimalPolynomialCoeffs(MyMatrix<T> const &g) {
-  int n = g.rows();
-  auto flat = [&](MyMatrix<T> const &M) -> MyVector<T> {
-    MyVector<T> v(n * n);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        v(i * n + j) = M(i, j);
-      }
-    }
-    return v;
-  };
-  std::vector<MyVector<T>> pw{flat(IdentityMat<T>(n))};
-  MyMatrix<T> M = IdentityMat<T>(n);
-  while (true) {
-    M = M * g;
-    MyVector<T> w = flat(M);
-    std::optional<MyVector<T>> opt =
-        SolutionMat(MatrixFromVectorFamily(pw), w);
-    if (opt) {
-      // g^k = sum_i c_i g^i
-      std::vector<T> mu;
-      for (int i = 0; i < opt->size(); i++) {
-        mu.push_back(-(*opt)(i));
-      }
-      mu.push_back(T(1));
-      return mu;
-    }
-    pw.push_back(w);
-  }
-}
-
-// The resultant of a and b, the determinant of their Sylvester matrix.
-template <typename T>
-T PolyResultant(std::vector<T> const &a, std::vector<T> const &b) {
-  int da = static_cast<int>(a.size()) - 1;
-  int db = static_cast<int>(b.size()) - 1;
-  if (da == 0 && db == 0) {
-    return T(1);
-  }
-  if (da == 0) {
-    return MyPow<T>(a[0], db);
-  }
-  if (db == 0) {
-    return MyPow<T>(b[0], da);
-  }
-  int m = da + db;
-  MyMatrix<T> S = ZeroMatrix<T>(m, m);
-  for (int i = 0; i < db; i++) {
-    for (int k = 0; k <= da; k++) {
-      S(i, i + k) = a[da - k];
-    }
-  }
-  for (int i = 0; i < da; i++) {
-    for (int k = 0; k <= db; k++) {
-      S(db + i, i + k) = b[db - k];
-    }
-  }
-  return DeterminantMat(S);
-}
-
 template <typename T> struct GluedPair {
   MyMatrix<T> gram;
   // acting on the columns, g^T A g = A
@@ -764,18 +689,8 @@ GlueGroupPairs(MyMatrix<T> const &A1, std::vector<MyMatrix<T>> const &gens1,
         Gen(n + static_cast<int>(k), j) = rows[k](j);
       }
     }
-    // a Z-basis of the overlattice, through integer coordinates
-    std::vector<T> ListDen;
-    for (int i = 0; i < Gen.rows(); i++) {
-      for (int j = 0; j < n; j++) {
-        ListDen.push_back(GetDenominator(Gen(i, j)));
-      }
-    }
-    T den = LCMlist(ListDen);
-    MyMatrix<Tint> Gen_i =
-        UniversalMatrixConversion<Tint, T>(MyMatrix<T>(Gen * den));
-    MyMatrix<Tint> B_i = GetZbasis(Gen_i);
-    MyMatrix<T> B = UniversalMatrixConversion<T, Tint>(B_i) / den;
+    // a Z-basis of the overlattice (GetZbasis takes rational generators)
+    MyMatrix<T> B = GetZbasis(Gen);
     MyMatrix<T> A = B * A0 * B.transpose();
     MyMatrix<T> Binv = Inverse(B);
     std::vector<MyMatrix<T>> ListP;

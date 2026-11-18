@@ -6,6 +6,7 @@
 #include "HermitianGenus.h"
 #include "GenusSymbol.h"
 #include "MAT_MatrixInt.h"
+#include "MAT_MatrixPolynomial.h"
 #include "ClassicLLL.h"
 #include <cmath>
 #include <deque>
@@ -51,34 +52,7 @@ MyMatrix<T> HermPrimitiveRoot(MyMatrix<T> const &P, int64_t d) {
   return P;
 }
 
-template <typename T>
-MyMatrix<T> HermMatrixPower(MyMatrix<T> const &M, int64_t e) {
-  int n = M.rows();
-  MyMatrix<T> res = IdentityMat<T>(n);
-  MyMatrix<T> b = M;
-  while (e > 0) {
-    if (e & 1) {
-      res = res * b;
-    }
-    b = b * b;
-    e >>= 1;
-  }
-  return res;
-}
 
-// g(M) for a polynomial g with integer coefficients, increasing degree.
-template <typename T>
-MyMatrix<T> HermEvalPoly(std::vector<int64_t> const &g, MyMatrix<T> const &M) {
-  int n = M.rows();
-  MyMatrix<T> res = ZeroMatrix<T>(n, n);
-  for (size_t k = g.size(); k-- > 0;) {
-    res = res * M;
-    for (int i = 0; i < n; i++) {
-      res(i, i) += T(static_cast<long>(g[k]));
-    }
-  }
-  return res;
-}
 
 /*
   The order of the kernel on D(L) = L^# / L of the endomorphisms x -> x M_t
@@ -86,6 +60,15 @@ MyMatrix<T> HermEvalPoly(std::vector<int64_t> const &g, MyMatrix<T> const &M) {
   Z^n with y G^-1 M_t integral, a lattice containing Z^n G, of index the
   order sought.
  */
+// A polynomial mod l (coefficients in [0, l)) as one over Z.
+inline std::vector<int64_t> HermLiftPoly(PolyQ const &g) {
+  std::vector<int64_t> res;
+  for (auto c : g) {
+    res.push_back(static_cast<int64_t>(c));
+  }
+  return res;
+}
+
 /*
   A basis (rows) of the lattice of the y in the lattice of basis S (rows,
   rational) with y A_t integral for all t (A_t invertible over Q).
@@ -129,35 +112,9 @@ MyMatrix<T> HermIntegralPreimage(MyMatrix<T> const &S,
 
 template <typename T, typename Tint>
 Tint HermKernelOrder(MyMatrix<T> const &G, std::vector<MyMatrix<T>> const &Ms) {
-  int n = G.rows();
-  MyMatrix<T> Ginv = Inverse(G);
-  MyMatrix<Tint> K = IdentityMat<Tint>(n);
-  for (auto const &M : Ms) {
-    // {y : y A in Z^n} = Z^n A^-1 cap Z^n, A = G^-1 M
-    MyMatrix<T> Ainv = Inverse(MyMatrix<T>(Ginv * M));
-    std::vector<T> ListDen;
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        ListDen.push_back(GetDenominator(Ainv(i, j)));
-      }
-    }
-    T den = LCMlist(ListDen);
-    MyMatrix<Tint> B =
-        UniversalMatrixConversion<Tint, T>(MyMatrix<T>(Ainv * den));
-    Tint den_i = UniversalScalarConversion<Tint, T>(den);
-    MyMatrix<Tint> Kden = K * den_i;
-    MyMatrix<Tint> I = IntersectionLattice(Kden, B);
-    // back to the scale of K: I / den
-    for (int i = 0; i < I.rows(); i++) {
-      for (int j = 0; j < n; j++) {
-        I(i, j) /= den_i;
-      }
-    }
-    K = I;
-  }
-  Tint detK = T_abs(DeterminantMat(K));
-  Tint detG = UniversalScalarConversion<Tint, T>(T_abs(DeterminantMat(G)));
-  return detG / detK;
+  // the x of L^# (basis G^-1) with x M integral, over L = Z^n
+  MyMatrix<T> K = HermIntegralPreimage<T, Tint>(Inverse(G), Ms);
+  return UniversalScalarConversion<Tint, T>(T(1) / T_abs(DeterminantMat(K)));
 }
 
 // The valuation of the positive integer x at l.
@@ -204,7 +161,7 @@ std::map<int64_t, std::vector<std::vector<int>>>
 HermitianLocalStructure(MyMatrix<T> const &G, MyMatrix<T> const &P,
                         int64_t d) {
   int n = G.rows();
-  int64_t dn = HermNormalizedConductor(d);
+  int64_t dn = NormalizeCyclotomicIndex(d);
   MyMatrix<T> Z = HermPrimitiveRoot(P, d);
   Tint detG = UniversalScalarConversion<Tint, T>(T_abs(DeterminantMat(G)));
   std::map<int64_t, std::vector<std::vector<int>>> res;
@@ -223,16 +180,16 @@ HermitianLocalStructure(MyMatrix<T> const &G, MyMatrix<T> const &P,
     if (la == 1) {
       U = T(static_cast<long>(l)) * IdentityMat<T>(n);
     } else {
-      U = IdentityMat<T>(n) - HermMatrixPower(Z, m);
+      U = IdentityMat<T>(n) - MatrixPower(Z, m);
     }
     // the cuts to the primes P above l
     std::vector<MyMatrix<T>> cuts;
-    int64_t f = HermOrderMod(l, m);
-    if (m > 2 && HermEulerPhi(m) / f > 1) {
-      MyMatrix<T> Zp = HermMatrixPower(Z, la);
-      int vmax = static_cast<int>(HermEulerPhi(la) * static_cast<int64_t>(mult));
+    int64_t f = MultiplicativeOrder(l, m);
+    if (m > 2 && EulerPhi(m) / f > 1) {
+      MyMatrix<T> Zp = MatrixPower(Z, la);
+      int vmax = static_cast<int>(EulerPhi(la) * static_cast<int64_t>(mult));
       for (auto const &g : HermCyclotomicFactorsModL(m, l)) {
-        cuts.push_back(HermMatrixPower(HermEvalPoly(g, Zp), vmax + 1));
+        cuts.push_back(MatrixPower(EvaluatePolynomialMatrix(HermLiftPoly(g), Zp), vmax + 1));
       }
     } else {
       cuts.push_back(IdentityMat<T>(n) * T(0));
@@ -248,7 +205,7 @@ HermitianLocalStructure(MyMatrix<T> const &G, MyMatrix<T> const &P,
       int last = -1;
       // the P-adic lengths are at most e v_l(det), e = phi(l^a) the
       // ramification index of P over l
-      int imax = static_cast<int>(HermEulerPhi(la) * static_cast<int64_t>(mult)) + 1;
+      int imax = static_cast<int>(EulerPhi(la) * static_cast<int64_t>(mult)) + 1;
       for (int i = 1; i <= imax; i++) {
         Ui = Ui * U;
         std::vector<MyMatrix<T>> Ms{Ui};
@@ -284,7 +241,6 @@ HermitianLocalStructure(MyMatrix<T> const &G, MyMatrix<T> const &P,
 template <typename T> struct HermPrimeCuts {
   MyMatrix<T> U;
   std::vector<MyMatrix<T>> cuts;
-  int64_t q;
 };
 
 template <typename T>
@@ -300,18 +256,14 @@ HermPrimeCuts<T> HermGetPrimeCuts(MyMatrix<T> const &Z, int64_t dn, int64_t l,
   if (la == 1) {
     res.U = T(static_cast<long>(l)) * IdentityMat<T>(n);
   } else {
-    res.U = IdentityMat<T>(n) - HermMatrixPower(Z, m);
+    res.U = IdentityMat<T>(n) - MatrixPower(Z, m);
   }
-  int64_t f = HermOrderMod(l, m);
-  if (m > 2 && HermEulerPhi(m) / f > 1) {
-    MyMatrix<T> Zp = HermMatrixPower(Z, la);
+  int64_t f = MultiplicativeOrder(l, m);
+  if (m > 2 && EulerPhi(m) / f > 1) {
+    MyMatrix<T> Zp = MatrixPower(Z, la);
     for (auto const &g : HermCyclotomicFactorsModL(m, l)) {
-      res.cuts.push_back(HermMatrixPower(HermEvalPoly(g, Zp), cut_power));
+      res.cuts.push_back(MatrixPower(EvaluatePolynomialMatrix(HermLiftPoly(g), Zp), cut_power));
     }
-  }
-  res.q = 1;
-  for (int64_t k = 0; k < f; k++) {
-    res.q *= l;
   }
   return res;
 }
@@ -329,18 +281,26 @@ std::vector<MyVector<T>> HermQuotientReps(MyMatrix<T> const &B,
   ResultSmithNormalForm<Tint> snf = SmithNormalForm(C_i);
   MyMatrix<Tint> D = snf.ROW * C_i * snf.COL;
   MyMatrix<T> Bp = Inverse(UniversalMatrixConversion<T, Tint>(snf.COL)) * B;
-  std::vector<int64_t> ord;
+  // the orders of the cyclic factors, enumerated so bounded in size
+  std::vector<size_t> ord;
+  Tint total(1);
   for (int i = 0; i < n; i++) {
-    ord.push_back(UniversalScalarConversion<int64_t, Tint>(T_abs(D(i, i))));
+    Tint o = T_abs(D(i, i));
+    total *= o;
+    if (total > Tint(static_cast<long>(1) << 24)) {
+      std::cerr << "HERM_LATTICE: the quotient is too large to enumerate\n";
+      throw TerminalException{1};
+    }
+    ord.push_back(UniversalScalarConversion<size_t, Tint>(o));
   }
   std::vector<MyVector<T>> res;
-  std::vector<int64_t> c(n, 0);
+  std::vector<size_t> c(n, 0);
   while (true) {
     MyVector<T> v = ZeroVector<T>(B.cols());
     for (int i = 0; i < n; i++) {
       if (c[i] != 0) {
         for (int j = 0; j < B.cols(); j++) {
-          v(j) += T(static_cast<long>(c[i])) * Bp(i, j);
+          v(j) += UniversalScalarConversion<T, size_t>(c[i]) * Bp(i, j);
         }
       }
     }
@@ -361,19 +321,6 @@ std::vector<MyVector<T>> HermQuotientReps(MyMatrix<T> const &B,
   return res;
 }
 
-// The Z-basis (rows) of the lattice spanned by the rows of M (rational).
-template <typename T, typename Tint>
-MyMatrix<T> HermZbasis(MyMatrix<T> const &M) {
-  std::vector<T> ListDen;
-  for (int i = 0; i < M.rows(); i++) {
-    for (int j = 0; j < M.cols(); j++) {
-      ListDen.push_back(GetDenominator(M(i, j)));
-    }
-  }
-  T den = LCMlist(ListDen);
-  MyMatrix<Tint> M_i = UniversalMatrixConversion<Tint, T>(MyMatrix<T>(M * den));
-  return UniversalMatrixConversion<T, Tint>(GetZbasis(M_i)) / den;
-}
 
 // The pair on the lattice of basis W (rows, in the coordinates of L),
 // LLL reduced.
@@ -417,9 +364,9 @@ std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>>
 HermNeighbors(MyMatrix<T> const &G, MyMatrix<T> const &P, int64_t d,
               int64_t l, bool over, bool under, bool first_only) {
   int n = G.rows();
-  int64_t dn = HermNormalizedConductor(d);
+  int64_t dn = NormalizeCyclotomicIndex(d);
   MyMatrix<T> Z = HermPrimitiveRoot(P, d);
-  int phi = static_cast<int>(HermEulerPhi(dn));
+  int phi = static_cast<int>(EulerPhi(dn));
   HermPrimeCuts<T> pc = HermGetPrimeCuts(Z, dn, l, 1);
   std::vector<MyMatrix<T>> parts = pc.cuts;
   if (parts.empty()) {
@@ -445,6 +392,18 @@ HermNeighbors(MyMatrix<T> const &G, MyMatrix<T> const &P, int64_t d,
     }
     return M;
   };
+  // keeps the lattice of basis W when even, true when the search may stop
+  auto keep_if_even = [&](MyMatrix<T> const &W) -> bool {
+    MyMatrix<T> G1 = W * G * W.transpose();
+    bool ok = IsIntegralMatrix(G1);
+    for (int i = 0; ok && i < n; i++) {
+      ok = IsInteger(G1(i, i) / T(2));
+    }
+    if (ok) {
+      res.push_back(HermRestrictPair<T, Tint>(G, P, W));
+    }
+    return ok && first_only;
+  };
   for (auto const &cut : parts) {
     if (over) {
       // B = {x in L^# : x U in L, x cut in L}, in the coordinates of L
@@ -457,17 +416,8 @@ HermNeighbors(MyMatrix<T> const &G, MyMatrix<T> const &P, int64_t d,
         if (v.isZero()) {
           continue;
         }
-        MyMatrix<T> W = HermZbasis<T, Tint>(orbit_rows(Id, v));
-        MyMatrix<T> G1 = W * G * W.transpose();
-        bool ok = IsIntegralMatrix(G1);
-        for (int i = 0; ok && i < n; i++) {
-          ok = IsInteger(G1(i, i) / T(2));
-        }
-        if (ok) {
-          res.push_back(HermRestrictPair<T, Tint>(G, P, W));
-          if (first_only) {
-            return res;
-          }
+        if (keep_if_even(GetZbasis(orbit_rows(Id, v)))) {
+          return res;
         }
       }
     }
@@ -484,17 +434,11 @@ HermNeighbors(MyMatrix<T> const &G, MyMatrix<T> const &P, int64_t d,
         if (w.isZero()) {
           continue;
         }
-        MyMatrix<T> Wd = HermZbasis<T, Tint>(orbit_rows(Ginv, w));
+        MyMatrix<T> Wd = GetZbasis(orbit_rows(Ginv, w));
         // the dual of the lattice of basis Wd: (Wd G Wd^T)^-1 Wd
-        MyMatrix<T> W = Inverse(MyMatrix<T>(Wd * G * Wd.transpose())) * Wd;
-        W = HermZbasis<T, Tint>(W);
-        MyMatrix<T> G1 = W * G * W.transpose();
-        bool ok = IsIntegralMatrix(G1);
-        for (int i = 0; ok && i < n; i++) {
-          ok = IsInteger(G1(i, i) / T(2));
-        }
-        if (ok) {
-          res.push_back(HermRestrictPair<T, Tint>(G, P, W));
+        if (keep_if_even(GetZbasis(MyMatrix<T>(
+                Inverse(MyMatrix<T>(Wd * G * Wd.transpose())) * Wd)))) {
+          return res;
         }
       }
     }
@@ -502,37 +446,6 @@ HermNeighbors(MyMatrix<T> const &G, MyMatrix<T> const &P, int64_t d,
   return res;
 }
 
-// Tr_{Q(zeta_n) / Q}(zeta_n^j), the Ramanujan sum c_n(j).
-inline int64_t HermRamanujanSum(int64_t n, int64_t j) {
-  int64_t g = std::gcd(n, ((j % n) + n) % n);
-  if (g == 0) {
-    g = n;
-  }
-  int64_t res = 0;
-  for (int64_t e = 1; e <= g; e++) {
-    if (g % e != 0) {
-      continue;
-    }
-    int64_t k = n / e;
-    // mu(k)
-    int64_t mu = 1, x = k;
-    for (int64_t p = 2; p * p <= x; p++) {
-      if (x % p == 0) {
-        x /= p;
-        if (x % p == 0) {
-          mu = 0;
-          break;
-        }
-        mu = -mu;
-      }
-    }
-    if (mu != 0 && x > 1) {
-      mu = -mu;
-    }
-    res += mu * e;
-  }
-  return res;
-}
 
 /*
   The pair of O_E^b with the hermitian form diag(1, ..., 1, a), a = sum_k
@@ -543,8 +456,8 @@ inline int64_t HermRamanujanSum(int64_t n, int64_t j) {
 template <typename T>
 std::pair<MyMatrix<T>, MyMatrix<T>>
 HermStandardPair(int64_t d, int b, std::vector<int64_t> const &a) {
-  int64_t dn = HermNormalizedConductor(d);
-  int phi = static_cast<int>(HermEulerPhi(dn));
+  int64_t dn = NormalizeCyclotomicIndex(d);
+  int phi = static_cast<int>(EulerPhi(dn));
   int n = b * phi;
   // a as a Laurent polynomial in zeta: sum_k c_k (zeta + zeta^-1)^k
   std::map<int64_t, int64_t> lau;
@@ -558,11 +471,11 @@ HermStandardPair(int64_t d, int b, std::vector<int64_t> const &a) {
   }
   auto tr = [&](bool with_a, int64_t j) -> int64_t {
     if (!with_a) {
-      return HermRamanujanSum(dn, j);
+      return RamanujanSum(dn, j);
     }
     int64_t s = 0;
     for (auto const &[e, c] : lau) {
-      s += c * HermRamanujanSum(dn, j + e);
+      s += c * RamanujanSum(dn, j + e);
     }
     return s;
   };
@@ -575,7 +488,7 @@ HermStandardPair(int64_t d, int b, std::vector<int64_t> const &a) {
       }
     }
   }
-  std::vector<int64_t> cyc = HermCyclotomic(dn);
+  std::vector<int64_t> cyc = CyclotomicPolynomial(static_cast<int>(dn));
   MyMatrix<T> Z = ZeroMatrix<T>(n, n);
   for (int blk = 0; blk < b; blk++) {
     int o = blk * phi;
@@ -605,8 +518,8 @@ HermStandardPair(int64_t d, int b, std::vector<int64_t> const &a) {
 inline std::vector<std::vector<int64_t>>
 HermDefaultStarts(int64_t d, int64_t N_small, int64_t bound,
                   size_t max_starts) {
-  int64_t dn = HermNormalizedConductor(d);
-  int64_t deg = HermEulerPhi(dn) / 2;
+  int64_t dn = NormalizeCyclotomicIndex(d);
+  int64_t deg = EulerPhi(dn) / 2;
   int max_deg = static_cast<int>(std::min<int64_t>(2, deg - 1));
   std::vector<double> conj;
   for (int64_t k = 1; 2 * k < dn || (dn <= 2 && k == 1); k++) {
@@ -635,15 +548,14 @@ HermDefaultStarts(int64_t d, int64_t N_small, int64_t bound,
           continue;
         }
         int64_t nm = static_cast<int64_t>(std::llround(norm));
-        int64_t x = nm;
-        for (int64_t p = 2; p * p <= x; p++) {
-          if (x % p == 0 && rel % p == 0) {
-            while (x % p == 0) {
-              x /= p;
-            }
+        // the primes of the norm must divide 2 d N
+        bool relevant = true;
+        if (nm > 1) {
+          for (auto const &[p, mult] : FactorsIntMap(nm)) {
+            relevant = relevant && (rel % p == 0);
           }
         }
-        if (x > 1 && rel % x != 0) {
+        if (!relevant) {
           continue;
         }
         std::vector<int64_t> a{c0};
@@ -672,9 +584,6 @@ HermDefaultStarts(int64_t d, int64_t N_small, int64_t bound,
   return res;
 }
 
-template <typename Tint> bool HermDivides(Tint const &a, Tint const &b) {
-  return ResInt(b, a) == 0;
-}
 
 /*
   The pieces: one pair (L, sigma) per invariant (so per hermitian genus,
@@ -714,16 +623,16 @@ HermitianPiecesSearch(int64_t d, int b, Tint const &N,
   auto descend = [&](Tpair pr) -> std::optional<Tpair> {
     while (true) {
       Tint det = det_of(pr.first);
-      if (HermDivides(det, N)) {
+      if (ResInt(N, det) == 0) {
         return pr;
       }
       bool moved = false;
       for (auto const &[l_i, mult] : FactorsIntMap(det)) {
-        int vN = HermDivides(l_i, N) ? HermValuation(N, UniversalScalarConversion<int64_t, Tint>(l_i)) : 0;
+        int64_t l = UniversalScalarConversion<int64_t, Tint>(l_i);
+        int vN = HermValuation(N, l);
         if (static_cast<int>(mult) <= vN) {
           continue;
         }
-        int64_t l = UniversalScalarConversion<int64_t, Tint>(l_i);
         std::vector<Tpair> nbs = HermNeighbors<T, Tint>(
             pr.first, pr.second, d, l, true, false, true);
         if (!nbs.empty()) {
@@ -764,7 +673,7 @@ HermitianPiecesSearch(int64_t d, int b, Tint const &N,
       for (auto const &nb :
            HermNeighbors<T, Tint>(pr.first, pr.second, d, l, true, true,
                                   false)) {
-        if (!HermDivides(det_of(nb.first), N)) {
+        if (ResInt(N, det_of(nb.first)) != 0) {
           continue;
         }
         std::string key =
@@ -781,6 +690,19 @@ HermitianPiecesSearch(int64_t d, int b, Tint const &N,
   }
   os << "HERM_PIECES: " << res.size() << " pieces\n";
   return res;
+}
+
+/*
+  The pieces of rank b over Z[zeta_d] with even trace lattice of
+  determinant dividing N, from the default starts (coefficients up to 4,
+  at most 40 of them, enough in all the tests).
+ */
+template <typename T, typename Tint>
+std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>>
+HermitianPieces(int64_t d, int b, Tint const &N, std::ostream &os) {
+  int64_t N_small = UniversalScalarConversion<int64_t, Tint>(N);
+  return HermitianPiecesSearch<T, Tint>(
+      d, b, N, HermDefaultStarts(d, N_small, 4, 40), os);
 }
 
 // clang-format off

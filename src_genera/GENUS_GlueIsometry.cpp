@@ -161,19 +161,7 @@ std::vector<GluedPair<T>> InvolutionSeeds(MyMatrix<T> const &A, int r,
   for (int a = 0; a <= std::min(r, rm); a++) {
     Tint N = d * MyPow<Tint>(Tint(2), 2 * a);
     Tint two_a = MyPow<Tint>(Tint(2), a);
-    std::vector<Tint> divisors{Tint(1)};
-    for (auto const &[q, mult] : FactorsIntMap(N)) {
-      std::vector<Tint> next;
-      for (auto const &x : divisors) {
-        Tint y = x;
-        for (size_t i = 0; i <= mult; i++) {
-          next.push_back(y);
-          y *= q;
-        }
-      }
-      divisors = next;
-    }
-    for (Tint const &dp : divisors) {
+    for (Tint const &dp : DivisorsOf(N)) {
       Tint dm = N / dp;
       if (ResInt(dp, two_a) != 0 || ResInt(dm, two_a) != 0) {
         continue;
@@ -350,6 +338,21 @@ void process(std::string const &mode, std::string const &FileGram1,
     known.insert(key_of(gp.gram, gens));
     ListGenus.push_back({gp, *mres.mass, result});
   }
+  // after the output: a genus whose classes weigh more than its mass first,
+  // then the genera that did not close or have no proved mass
+  auto check_genera = [&]() -> void {
+    for (auto const &rec : ListGenus) {
+      if (rec.result.mass_exceeded()) {
+        throw GenusMassExceededException{};
+      }
+    }
+    for (auto const &rec : ListGenus) {
+      CheckGenusEnumerationGroupResult(rec.result);
+    }
+    if (n_without_mass > 0) {
+      throw GenusMassNotClosedException{};
+    }
+  };
   if (odd_gram) {
     // the classes of the odd pairs (L, sigma), L in the genus of odd_gram:
     // the orbits of the odd overlattices of the classes of the even pairs
@@ -391,34 +394,9 @@ void process(std::string const &mode, std::string const &FileGram1,
     os << "classes of odd pairs = " << n_odd << "\n";
     os << "total mass = " << total_odd << "\n";
     os << "complete = " << (all_complete ? "true" : "false") << "\n";
-    for (auto const &rec : ListGenus) {
-      if (rec.result.mass_exceeded()) {
-        throw GenusMassExceededException{};
-      }
-    }
-    for (auto const &rec : ListGenus) {
-      CheckGenusEnumerationGroupResult(rec.result);
-    }
-    if (n_without_mass > 0) {
-      throw GenusMassNotClosedException{};
-    }
+    check_genera();
     return;
   }
-  // after the output: a genus whose classes weigh more than its mass first,
-  // then the genera that did not close or have no proved mass
-  auto check_genera = [&]() -> void {
-    for (auto const &rec : ListGenus) {
-      if (rec.result.mass_exceeded()) {
-        throw GenusMassExceededException{};
-      }
-    }
-    for (auto const &rec : ListGenus) {
-      CheckGenusEnumerationGroupResult(rec.result);
-    }
-    if (n_without_mass > 0) {
-      throw GenusMassNotClosedException{};
-    }
-  };
   if (OutFormat == "Summary") {
     os << "glued pairs = " << ListGlued.size() << "\n";
     os << "genera of pairs = " << ListGenus.size() << "\n";

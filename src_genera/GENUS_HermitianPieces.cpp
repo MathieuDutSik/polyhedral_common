@@ -26,11 +26,7 @@ using Tint = mpz_class;
 
 void WritePieces(int64_t d, int b, Tint const &N, std::string const &out) {
   std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> pieces =
-      HermitianPiecesSearch<T, Tint>(
-          d, b, N,
-          HermDefaultStarts(d, UniversalScalarConversion<int64_t, Tint>(N), 4,
-                            40),
-          std::cerr);
+      HermitianPieces<T, Tint>(d, b, N, std::cerr);
   std::ofstream os(out);
   os << 2 * pieces.size() << "\n";
   for (auto const &[G, P] : pieces) {

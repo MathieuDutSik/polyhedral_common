@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "IsometryGlue.h"
+#include "CyclotomicArithmetic.h"
+#include "MAT_MatrixModPrime.h"
 #include "GenusSymbol.h"
 #include <algorithm>
 #include <fstream>
@@ -48,59 +50,23 @@
   IsometryGlue.h).
  */
 
-// Phi_d, by dividing x^d - 1 by the Phi_e, e | d, e < d.
+// Phi_d with coefficients in T (CyclotomicPolynomial of
+// CyclotomicArithmetic.h).
 template <typename T> std::vector<T> CyclotomicPolynomialCoeffs(int d) {
-  std::vector<T> num(d + 1, T(0));
-  num[0] = T(-1);
-  num[d] = T(1);
-  for (int e = 1; e < d; e++) {
-    if (d % e != 0) {
-      continue;
-    }
-    std::vector<T> den = CyclotomicPolynomialCoeffs<T>(e);
-    // exact division by the monic den
-    int dn = static_cast<int>(num.size()) - 1;
-    int dd = static_cast<int>(den.size()) - 1;
-    std::vector<T> quo(dn - dd + 1, T(0));
-    for (int k = dn - dd; k >= 0; k--) {
-      quo[k] = num[k + dd];
-      for (int i = 0; i <= dd; i++) {
-        num[k + i] -= quo[k] * den[i];
-      }
-    }
-    num = quo;
+  std::vector<T> res;
+  for (int64_t c : CyclotomicPolynomial(d)) {
+    res.push_back(UniversalScalarConversion<T, int64_t>(c));
   }
-  return num;
-}
-
-// The positive divisors of N > 0.
-template <typename Tint> std::vector<Tint> DivisorsOf(Tint const &N) {
-  std::vector<Tint> divisors{Tint(1)};
-  if (N > 1) {
-    for (auto const &[q, mult] : FactorsIntMap(N)) {
-      std::vector<Tint> next;
-      for (auto const &x : divisors) {
-        Tint y = x;
-        for (size_t i = 0; i <= mult; i++) {
-          next.push_back(y);
-          y *= q;
-        }
-      }
-      divisors = next;
-    }
-  }
-  std::sort(divisors.begin(), divisors.end());
-  return divisors;
+  return res;
 }
 
 /*
   The possible determinants s e (s | S, e | d) of a sigma-stable primitive
-  sublattice X of L, det L = d, with S = Res^min(rank X, rank Y) as above.
+  sublattice X of L, det L = d, S a multiple of the order of the glue (e.g.
+  Res^min(rank X, rank Y) as above).
  */
 template <typename Tint>
-std::vector<Tint> SublatticeDeterminants(Tint const &d, Tint const &res,
-                                         int max_gen) {
-  Tint S = MyPow<Tint>(T_abs(res), max_gen);
+std::vector<Tint> SublatticeDeterminants(Tint const &d, Tint const &S) {
   std::set<Tint> dets;
   for (auto const &s : DivisorsOf(S)) {
     for (auto const &e : DivisorsOf(d)) {
@@ -132,14 +98,6 @@ template <typename T> struct IsometryFactor {
   std::vector<std::vector<T>> mus;
 };
 
-template <typename T>
-MyMatrix<T> FactorMatrixPower(MyMatrix<T> const &g, int64_t e) {
-  MyMatrix<T> res = IdentityMat<T>(g.rows());
-  for (int64_t i = 0; i < e; i++) {
-    res = res * g;
-  }
-  return res;
-}
 
 /*
   A factor from one line of a spec file, for a group of n_gen generators:
@@ -205,7 +163,7 @@ IsometryFactor<T> ParseIsometryFactor(std::string const &line, int n_gen) {
     CheckIsometryInput(lst[i], lst[i + 1]);
     std::vector<MyMatrix<T>> gens;
     for (int64_t e : f.powers) {
-      gens.push_back(FactorMatrixPower(lst[i + 1], e));
+      gens.push_back(MatrixPower(lst[i + 1], e));
     }
     f.pieces.push_back({lst[i], gens});
   }
@@ -354,13 +312,7 @@ int64_t CharacterFieldDegree(IsometryFactor<T> const &f) {
     int64_t o = CyclotomicIndexOf(mu);
     ord = ord / std::gcd(ord, o) * o;
   }
-  int64_t deg = 0;
-  for (int64_t k = 1; k <= ord; k++) {
-    if (std::gcd(k, ord) == 1) {
-      deg++;
-    }
-  }
-  return deg;
+  return EulerPhi(ord);
 }
 
 template <typename T, typename Tint>
@@ -484,17 +436,6 @@ GlueBound<Tint> GlueBounds(std::vector<IsometryFactor<T>> const &factors,
   return {E, MyPow<Tint>(E, std::min(c_X, c_Y))};
 }
 
-// The possible determinants s e, s | S, e | d (see above).
-template <typename Tint>
-std::vector<Tint> SublatticeDeterminantsOfBound(Tint const &d, Tint const &S) {
-  std::set<Tint> dets;
-  for (auto const &s : DivisorsOf(S)) {
-    for (auto const &e : DivisorsOf(d)) {
-      dets.insert(s * e);
-    }
-  }
-  return std::vector<Tint>(dets.begin(), dets.end());
-}
 
 /*
   The possible determinants of the sublattice of L on the factors in idx,
@@ -510,7 +451,7 @@ FactorDeterminants(std::vector<IsometryFactor<T>> const &factors,
       rest.push_back(i);
     }
   }
-  return SublatticeDeterminantsOfBound(
+  return SublatticeDeterminants(
       d, GlueBounds<T, Tint>(factors, idx, rest).order);
 }
 
@@ -764,53 +705,20 @@ std::vector<OddOverlattice<T>>
 OddOverlatticeOrbits(MyMatrix<T> const &A0, std::vector<MyMatrix<T>> const &ListP,
                      std::vector<MyMatrix<Tint>> const &ListGen) {
   int n = A0.rows();
-  auto mod2 = [](T const &x) -> int {
-    Tint xi = UniversalScalarConversion<Tint, T>(x);
-    return (ResInt(xi, Tint(2)) == 0) ? 0 : 1;
-  };
-  // the kernel of A0 mod 2, by Gaussian elimination over F_2
-  std::vector<std::vector<int>> M(n, std::vector<int>(n));
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      M[i][j] = mod2(A0(i, j));
-    }
-  }
-  std::vector<int> pivot_col;
-  int rank = 0;
-  for (int c = 0; c < n && rank < n; c++) {
-    int piv = -1;
-    for (int r = rank; r < n; r++) {
-      if (M[r][c]) {
-        piv = r;
-        break;
-      }
-    }
-    if (piv < 0) {
-      continue;
-    }
-    std::swap(M[piv], M[rank]);
-    for (int r = 0; r < n; r++) {
-      if (r != rank && M[r][c]) {
-        for (int k = 0; k < n; k++) {
-          M[r][k] ^= M[rank][k];
-        }
-      }
-    }
-    pivot_col.push_back(c);
-    rank++;
-  }
-  // A0 is symmetric: the kernel of v -> v A0 is that of x -> A0 x
+  // the kernel of A0 mod 2 (A0 symmetric: x A0 = 0 iff A0 x = 0)
+  ModMatrix K = LeftNullspaceModP(ModMatrixOfMatrix(A0, 2), 2);
   std::vector<std::vector<int>> kernel;
-  for (int f = 0; f < n; f++) {
-    if (std::find(pivot_col.begin(), pivot_col.end(), f) != pivot_col.end()) {
-      continue;
-    }
-    std::vector<int> v(n, 0);
-    v[f] = 1;
-    for (int r = 0; r < rank; r++) {
-      v[pivot_col[r]] = M[r][f];
+  for (int b = 0; b < K.rows(); b++) {
+    std::vector<int> v(n);
+    for (int i = 0; i < n; i++) {
+      v[i] = static_cast<int>(K(b, i));
     }
     kernel.push_back(v);
+  }
+  // the vectors are keyed by 64-bit masks
+  if (n > 64) {
+    std::cerr << "ISOM_FACTORS: the odd overlattices are for rank <= 64\n";
+    throw TerminalException{1};
   }
   if (kernel.size() > 24) {
     std::cerr << "ISOM_FACTORS: D(L_0)[2] is too large\n";
@@ -823,23 +731,28 @@ OddOverlatticeOrbits(MyMatrix<T> const &A0, std::vector<MyMatrix<T>> const &List
     }
     return k;
   };
+  // v -> v h mod 2, for the matrices reduced mod 2
   auto act = [&](std::vector<int> const &v,
-                 MyMatrix<T> const &h) -> std::vector<int> {
+                 ModMatrix const &h) -> std::vector<int> {
     std::vector<int> w(n, 0);
     for (int j = 0; j < n; j++) {
-      int s = 0;
+      T_residue s = 0;
       for (int i = 0; i < n; i++) {
         if (v[i]) {
-          s ^= mod2(h(i, j));
+          s ^= h(i, j);
         }
       }
-      w[j] = s;
+      w[j] = static_cast<int>(s);
     }
     return w;
   };
-  std::vector<MyMatrix<T>> gens;
+  std::vector<ModMatrix> ListP2;
+  for (auto const &P : ListP) {
+    ListP2.push_back(ModMatrixOfMatrix(P, 2));
+  }
+  std::vector<ModMatrix> gens;
   for (auto const &h : ListGen) {
-    gens.push_back(UniversalMatrixConversion<T, Tint>(h));
+    gens.push_back(ModMatrixOfMatrix(h, 2));
   }
   // the admissible w
   std::set<uint64_t> admissible;
@@ -855,8 +768,8 @@ OddOverlatticeOrbits(MyMatrix<T> const &A0, std::vector<MyMatrix<T>> const &List
       }
     }
     bool fixed = true;
-    for (auto const &P : ListP) {
-      fixed = fixed && (act(v, P) == v);
+    for (auto const &P2 : ListP2) {
+      fixed = fixed && (act(v, P2) == v);
     }
     if (!fixed) {
       continue;

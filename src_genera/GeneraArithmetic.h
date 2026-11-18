@@ -239,6 +239,66 @@ inline int MultiplicativeOrder(int64_t q, int64_t m) {
   return o;
 }
 
+// Whether t is a power of x modulo m (x prime to m; always for m <= 2).
+inline bool IsPowerModulo(int64_t t, int64_t x, int64_t m) {
+  if (m <= 2) {
+    return true;
+  }
+  int64_t target = ((t % m) + m) % m;
+  int64_t y = 1;
+  int ord = MultiplicativeOrder(x, m);
+  for (int k = 0; k < ord; k++) {
+    if (y == target) {
+      return true;
+    }
+    y = (y * (x % m)) % m;
+  }
+  return false;
+}
+
+// The prime p when d = p^k, k >= 1, 0 otherwise.
+inline int64_t PrimeOfPrimePower(int64_t d) {
+  if (!IsPrimePower(d)) {
+    return 0;
+  }
+  int64_t p = 2;
+  while (d % p != 0) {
+    p++;
+  }
+  return p;
+}
+
+// The Moebius function.
+inline int Moebius(int64_t n) {
+  int mu = 1;
+  for (int64_t p = 2; p * p <= n; p++) {
+    if (n % p == 0) {
+      n /= p;
+      if (n % p == 0) {
+        return 0;
+      }
+      mu = -mu;
+    }
+  }
+  return (n > 1) ? -mu : mu;
+}
+
+// The Ramanujan sum c_n(j) = Tr_{Q(zeta_n) / Q}(zeta_n^j) = sum_{e | gcd(n,
+// j)} mu(n / e) e.
+inline int64_t RamanujanSum(int64_t n, int64_t j) {
+  int64_t g = std::gcd(n, ((j % n) + n) % n);
+  if (g == 0) {
+    g = n;
+  }
+  int64_t res = 0;
+  for (int64_t e = 1; e <= g; e++) {
+    if (g % e == 0) {
+      res += Moebius(n / e) * e;
+    }
+  }
+  return res;
+}
+
 template <typename Tint>
 inline int LegendreModQ(Tint const &a, int64_t q) {
   return jacobi_symbol(a, UniversalScalarConversion<Tint, int64_t>(q));

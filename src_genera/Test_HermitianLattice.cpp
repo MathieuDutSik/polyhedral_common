@@ -26,13 +26,8 @@ int main(int argc, char *argv[]) {
       int64_t d = std::stoll(argv[3]);
       int b = std::stoi(argv[4]);
       Tint N(argv[5]);
-      int64_t start_bound = (argc >= 7) ? std::stoll(argv[6]) : 4;
-      std::vector<std::vector<int64_t>> starts = HermDefaultStarts(
-          d, UniversalScalarConversion<int64_t, Tint>(N), start_bound, 40);
-      std::cerr << "starts: " << starts.size() << "\n";
       std::set<std::string> ours;
-      for (auto const &pr :
-           HermitianPiecesSearch<T, Tint>(d, b, N, starts, std::cerr)) {
+      for (auto const &pr : HermitianPieces<T, Tint>(d, b, N, std::cerr)) {
         ours.insert(HermitianPairInvariant<T, Tint>(pr.first, pr.second, d));
       }
       size_t n_missing = 0, n_file = 0;
