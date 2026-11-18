@@ -17,7 +17,6 @@
 #include <map>
 #include <optional>
 #include <random>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1811,6 +1810,73 @@ std::vector<GenusSymbol> EnumerateGenusSymbols(int n, Tint const &d, bool even) 
 template <typename Tint>
 std::vector<GenusSymbol> EnumerateEvenGenusSymbols(int n, Tint const &d) {
   return EnumerateGenusSymbols<Tint>(n, d, true);
+}
+
+/*
+  The odd local symbol of g at p, also for a prime p not dividing its
+  determinant, where it is one unimodular component (0, rank, (det / p)).
+ */
+template <typename Tint>
+std::vector<std::array<int, 3>> OddLocalComponents(GenusSymbol const &g,
+                                                   int64_t p) {
+  auto iter = g.sym_odd.find(p);
+  if (iter != g.sym_odd.end()) {
+    return iter->second;
+  }
+  Tint d = GenusSymbolDeterminant<Tint>(g);
+  int64_t r = UniversalScalarConversion<int64_t, Tint>(
+      ResInt(d, Tint(static_cast<long>(p))));
+  return {{0, g.rank, kronecker_symbol<int64_t>(r, p)}};
+}
+
+/*
+  Whether, at every odd prime p of the three symbols outside skip, the
+  local symbols of g1 and g2 add up (the components of equal scale merged)
+  to that of s: a necessary condition for a lattice of genus s to contain
+  g1 (+) g2 with a glue supported on the primes of skip, as then L_p = (L_1)_p
+  (+) (L_2)_p.
+ */
+template <typename Tint>
+bool OddSymbolsAddUp(GenusSymbol const &g1, GenusSymbol const &g2,
+                     GenusSymbol const &s, std::set<int64_t> const &skip) {
+  std::set<int64_t> primes;
+  for (auto const *g : {&g1, &g2, &s}) {
+    for (auto const &kv : g->sym_odd) {
+      if (skip.count(kv.first) == 0) {
+        primes.insert(kv.first);
+      }
+    }
+  }
+  for (int64_t p : primes) {
+    std::map<int, std::pair<int, int>> merged;
+    for (auto const *g : {&g1, &g2}) {
+      for (auto const &c : OddLocalComponents<Tint>(*g, p)) {
+        auto &m = merged[c[0]];
+        if (m.first == 0) {
+          m.second = 1;
+        }
+        m.first += c[1];
+        m.second *= c[2];
+      }
+    }
+    std::vector<std::array<int, 3>> sum;
+    for (auto const &[k, rs] : merged) {
+      if (rs.first > 0) {
+        sum.push_back({k, rs.first, rs.second});
+      }
+    }
+    std::vector<std::array<int, 3>> target;
+    for (auto const &c : OddLocalComponents<Tint>(s, p)) {
+      if (c[1] > 0) {
+        target.push_back(c);
+      }
+    }
+    std::sort(target.begin(), target.end());
+    if (sum != target) {
+      return false;
+    }
+  }
+  return true;
 }
 
 // clang-format off

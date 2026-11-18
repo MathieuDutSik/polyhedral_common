@@ -99,54 +99,38 @@ template <typename T> struct IsometryFactor {
 };
 
 
-/*
-  A factor from one line of a spec file, for a group of n_gen generators:
-      orth s_1 ... s_k r
-      file <path> e_1 ... e_k   (e_1 = 1 by default when k = 1)
- */
+// The factor "orth s_1 ... s_k r": g_j = s_j Id on the even genera of rank r.
 template <typename T>
-IsometryFactor<T> ParseIsometryFactor(std::string const &line, int n_gen) {
-  std::istringstream ls(line);
-  std::string kind;
-  ls >> kind;
+IsometryFactor<T> MakeOrthFactor(std::vector<int> const &signs, int rank) {
   IsometryFactor<T> f;
-  f.desc = line;
-  if (kind == "orth") {
-    f.orth = true;
-    for (int j = 0; j < n_gen; j++) {
-      int s = 0;
-      if (!(ls >> s) || (s != 1 && s != -1)) {
-        std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
-        throw TerminalException{1};
-      }
-      f.signs.push_back(s);
-      f.mus.push_back({T(-s), T(1)});
-    }
-    if (!(ls >> f.rank) || f.rank <= 0) {
-      std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
+  f.desc = "orth";
+  f.orth = true;
+  for (int s : signs) {
+    if (s != 1 && s != -1) {
+      std::cerr << "ISOM_FACTORS: a sign must be 1 or -1\n";
       throw TerminalException{1};
     }
-    return f;
+    f.signs.push_back(s);
+    f.mus.push_back({T(-s), T(1)});
+    f.desc += " " + std::to_string(s);
   }
-  if (kind != "file") {
-    std::cerr << "ISOM_FACTORS: unknown kind " << kind << "\n";
+  if (rank <= 0) {
+    std::cerr << "ISOM_FACTORS: the rank of an orth factor must be positive\n";
     throw TerminalException{1};
   }
-  std::string path;
-  if (!(ls >> path)) {
-    std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
-    throw TerminalException{1};
-  }
+  f.rank = rank;
+  f.desc += " " + std::to_string(rank);
+  return f;
+}
+
+// The factor "file path e_1 ... e_k": g_j = g^e_j on the pieces of the file.
+template <typename T>
+IsometryFactor<T> MakeFileFactor(std::string const &path,
+                                 std::vector<int64_t> const &powers) {
+  IsometryFactor<T> f;
+  f.desc = "file " + path;
   f.orth = false;
-  for (int j = 0; j < n_gen; j++) {
-    int64_t e = 1;
-    if (!(ls >> e)) {
-      if (n_gen > 1) {
-        std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
-        throw TerminalException{1};
-      }
-      e = 1;
-    }
+  for (int64_t e : powers) {
     if (e < 0) {
       std::cerr << "ISOM_FACTORS: the powers must be non negative\n";
       throw TerminalException{1};
@@ -188,6 +172,50 @@ IsometryFactor<T> ParseIsometryFactor(std::string const &line, int n_gen) {
     }
   }
   return f;
+}
+
+/*
+  A factor from one line of a spec file, for a group of n_gen generators:
+      orth s_1 ... s_k r
+      file <path> e_1 ... e_k   (e_1 = 1 by default when k = 1)
+ */
+template <typename T>
+IsometryFactor<T> ParseIsometryFactor(std::string const &line, int n_gen) {
+  std::istringstream ls(line);
+  std::string kind;
+  ls >> kind;
+  if (kind == "orth") {
+    std::vector<int> signs(n_gen);
+    int rank = 0;
+    for (auto &s : signs) {
+      if (!(ls >> s)) {
+        std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
+        throw TerminalException{1};
+      }
+    }
+    if (!(ls >> rank)) {
+      std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
+      throw TerminalException{1};
+    }
+    return MakeOrthFactor<T>(signs, rank);
+  }
+  if (kind != "file") {
+    std::cerr << "ISOM_FACTORS: unknown kind " << kind << "\n";
+    throw TerminalException{1};
+  }
+  std::string path;
+  if (!(ls >> path)) {
+    std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
+    throw TerminalException{1};
+  }
+  std::vector<int64_t> powers(n_gen, 1);
+  for (int j = 0; j < n_gen; j++) {
+    if (!(ls >> powers[j]) && n_gen > 1) {
+      std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
+      throw TerminalException{1};
+    }
+  }
+  return MakeFileFactor<T>(path, powers);
 }
 
 // One generator unless stated by a first line "group k".
@@ -590,10 +618,33 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
     Tint const &S_glue = gb.order;
     std::set<std::vector<MyMatrix<T>>> known;
     std::vector<GluedPair<T>> next;
+    // the last step: at an odd prime not dividing the bound of the glue,
+    // the local symbols of M_{j-1} and P_j add up to that of L
+    std::set<int64_t> glue_primes;
+    std::vector<GenusSymbol> piece_symbols;
+    if (last) {
+      if (S_glue > 1) {
+        for (auto const &[q, mult] : FactorsIntMap(S_glue)) {
+          glue_primes.insert(UniversalScalarConversion<int64_t, Tint>(q));
+        }
+      }
+      for (auto const &pc : factors[j].pieces) {
+        piece_symbols.push_back(GenusSymbolOfGram<T, Tint>(pc.first));
+      }
+    }
     for (auto const &cur : current) {
-      for (auto const &[A2, gens2] : factors[j].pieces) {
+      std::optional<GenusSymbol> cur_symbol;
+      if (last) {
+        cur_symbol = GenusSymbolOfGram<T, Tint>(cur.gram);
+      }
+      for (size_t ip = 0; ip < factors[j].pieces.size(); ip++) {
+        auto const &[A2, gens2] = factors[j].pieces[ip];
         T det2 = DeterminantMat(A2);
         if (last && !IsAdmissibleGlue(cur.det, det2, det, S_glue)) {
+          continue;
+        }
+        if (last && !OddSymbolsAddUp<Tint>(*cur_symbol, piece_symbols[ip], S,
+                                          glue_primes)) {
           continue;
         }
         if (!last && dets) {

@@ -62,136 +62,27 @@ void WriteGluedPairGAP(std::ostream &os, GluedPair<T> const &gp) {
 }
 
 /*
-  The odd local symbols of g1 + g2 (the components of equal scale merged)
-  against those of s. A symbol lists only the primes of its determinant:
-  at another odd p the lattice is unimodular, a component (0, rank, (det /
-  p)).
- */
-inline std::vector<std::array<int, 3>> OddLocalComponents(GenusSymbol const &g,
-                                                          int64_t p) {
-  auto iter = g.sym_odd.find(p);
-  if (iter != g.sym_odd.end()) {
-    return iter->second;
-  }
-  mpz_class d = GenusSymbolDeterminant<mpz_class>(g);
-  mpz_class r = d % mpz_class(static_cast<long>(p));
-  int sign = kronecker_symbol<int64_t>(r.get_si(), p);
-  return {{0, g.rank, sign}};
-}
-
-inline bool OddSymbolsAddUp(GenusSymbol const &g1, GenusSymbol const &g2,
-                            GenusSymbol const &s) {
-  std::set<int64_t> primes;
-  for (auto const *g : {&g1, &g2, &s}) {
-    for (auto const &kv : g->sym_odd) {
-      primes.insert(kv.first);
-    }
-  }
-  for (int64_t p : primes) {
-    std::map<int, std::pair<int, int>> merged;
-    for (auto const *g : {&g1, &g2}) {
-      for (auto const &c : OddLocalComponents(*g, p)) {
-        auto &m = merged[c[0]];
-        if (m.first == 0) {
-          m.second = 1;
-        }
-        m.first += c[1];
-        m.second *= c[2];
-      }
-    }
-    std::vector<std::array<int, 3>> sum;
-    for (auto const &[k, rs] : merged) {
-      if (rs.first > 0) {
-        sum.push_back({k, rs.first, rs.second});
-      }
-    }
-    std::vector<std::array<int, 3>> target;
-    for (auto const &c : OddLocalComponents(s, p)) {
-      if (c[1] > 0) {
-        target.push_back(c);
-      }
-    }
-    std::sort(target.begin(), target.end());
-    if (sum != target) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/*
   The seeds of every genus of pairs (L, sigma), L in the genus of A and
-  sigma an involution with a +1-eigenspace of rank r.
+  sigma an involution with a +1-eigenspace of rank r: the factors "orth 1
+  r" and "orth -1 n - r" (IsometryGlueFactors.h).
  */
 template <typename T, typename Tint, typename Tgroup>
 std::vector<GluedPair<T>> InvolutionSeeds(MyMatrix<T> const &A, int r,
                                           std::ostream &os) {
   int n = A.rows();
-  int rm = n - r;
-  if (r < 0 || rm < 0) {
+  if (r < 0 || r > n) {
     std::cerr << "GENUS_GlueIsometry: the rank " << r << " is not in [0, "
               << n << "]\n";
     throw TerminalException{1};
   }
-  T det = DeterminantMat(A);
-  std::vector<GluedPair<T>> res;
-  if (r == 0 || rm == 0) {
-    MyMatrix<T> g = IdentityMat<T>(n);
-    if (r == 0) {
-      g = -g;
-    }
-    res.push_back({A, g, det, 1});
-    return res;
+  std::vector<IsometryFactor<T>> factors;
+  if (r > 0) {
+    factors.push_back(MakeOrthFactor<T>({1}, r));
   }
-  GenusSymbol S = GenusSymbolOfGram<T, Tint>(A);
-  Tint d = UniversalScalarConversion<Tint, T>(det);
-  std::map<std::string, MyMatrix<T>> reps;
-  auto rep_of = [&](GenusSymbol const &g) -> MyMatrix<T> {
-    std::string key = GenusSymbolString(g);
-    auto iter = reps.find(key);
-    if (iter != reps.end()) {
-      return iter->second;
-    }
-    MyMatrix<T> G = GenusSymbolRepresentative<T, Tint>(g, os);
-    reps[key] = G;
-    return G;
-  };
-  IsometryGlueBounds bounds;
-  size_t n_cand = 0;
-  for (int a = 0; a <= std::min(r, rm); a++) {
-    Tint N = d * MyPow<Tint>(Tint(2), 2 * a);
-    Tint two_a = MyPow<Tint>(Tint(2), a);
-    for (Tint const &dp : DivisorsOf(N)) {
-      Tint dm = N / dp;
-      if (ResInt(dp, two_a) != 0 || ResInt(dm, two_a) != 0) {
-        continue;
-      }
-      std::vector<GenusSymbol> Lp = EnumerateEvenGenusSymbols<Tint>(r, dp);
-      std::vector<GenusSymbol> Lm = EnumerateEvenGenusSymbols<Tint>(rm, dm);
-      for (auto const &gp : Lp) {
-        for (auto const &gm : Lm) {
-          if (!OddSymbolsAddUp(gp, gm, S)) {
-            continue;
-          }
-          n_cand++;
-          std::cerr << "GENUS_GlueIsometry: pieces " << GenusSymbolString(gp)
-                    << " and " << GenusSymbolString(gm) << "\n";
-          MyMatrix<T> Ap = rep_of(gp), Am = rep_of(gm);
-          std::vector<GluedPair<T>> glued = GlueIsometryPairs<T, Tint, Tgroup>(
-              Ap, IdentityMat<T>(r), Am, MyMatrix<T>(-IdentityMat<T>(rm)), det,
-              bounds, os);
-          for (auto const &gl : glued) {
-            if (GenusSymbolOfGram<T, Tint>(gl.gram) == S) {
-              res.push_back(gl);
-            }
-          }
-        }
-      }
-    }
+  if (r < n) {
+    factors.push_back(MakeOrthFactor<T>({-1}, n - r));
   }
-  std::cerr << "GENUS_GlueIsometry: " << n_cand << " pairs of genera of the "
-            << "pieces, " << res.size() << " glued pairs in the genus of L\n";
-  return res;
+  return FactorSeeds<T, Tint, Tgroup>(A, factors, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -224,9 +115,9 @@ void process(std::string const &mode, std::string const &FileGram1,
     // the list of the other pieces: the factors "file FileGram2" and
     // "orth 1 r"
     std::vector<IsometryFactor<T>> factors{
-        ParseIsometryFactor<T>("file " + FileGram2)};
+        MakeFileFactor<T>(FileGram2, std::vector<int64_t>{1})};
     if (std::stoi(FileIsom1) > 0) {
-      factors.push_back(ParseIsometryFactor<T>("orth 1 " + FileIsom1));
+      factors.push_back(MakeOrthFactor<T>({1}, std::stoi(FileIsom1)));
     }
     ListGlued = FactorSeeds<T, Tint, Tgroup>(ReadMatrixFile<T>(FileGram1),
                                              factors, std::cerr);
