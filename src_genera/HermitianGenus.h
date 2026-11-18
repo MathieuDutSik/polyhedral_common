@@ -61,14 +61,19 @@ struct HermPrimeData {
   int64_t e0;
 };
 
-inline HermPrimeData HermPrimesAbove(int64_t d_in, int64_t l) {
-  int64_t d = NormalizeCyclotomicIndex(d_in);
+// The l-part l^a of d.
+inline int64_t HermPrimePowerPart(int64_t d, int64_t l) {
   int64_t la = 1;
-  int64_t m = d;
-  while (m % l == 0) {
-    m /= l;
+  for (int64_t x = d; x % l == 0; x /= l) {
     la *= l;
   }
+  return la;
+}
+
+inline HermPrimeData HermPrimesAbove(int64_t d_in, int64_t l) {
+  int64_t d = NormalizeCyclotomicIndex(d_in);
+  int64_t la = HermPrimePowerPart(d, l);
+  int64_t m = d / la;
   HermPrimeData res;
   res.l = l;
   res.dyadic = (l == 2);

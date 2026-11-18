@@ -153,6 +153,42 @@ inline std::vector<int> HermMultiplicities(std::vector<int> const &logs) {
 }
 
 /*
+  The uniformizer at the primes above l and the cuts to each of them
+  (empty: a single prime), the cuts of power cut_power.
+ */
+template <typename T> struct HermPrimeCuts {
+  MyMatrix<T> U;
+  std::vector<MyMatrix<T>> cuts;
+  // the residue degree f and the ramification index e of the primes
+  // above l, d = l^a m: f = ord(l mod m), e = phi(l^a)
+  int64_t f;
+  int64_t e;
+};
+
+template <typename T>
+HermPrimeCuts<T> HermGetPrimeCuts(MyMatrix<T> const &Z, int64_t dn, int64_t l,
+                                  int cut_power) {
+  int n = Z.rows();
+  int64_t la = HermPrimePowerPart(dn, l);
+  int64_t m = dn / la;
+  HermPrimeCuts<T> res;
+  if (la == 1) {
+    res.U = T(static_cast<long>(l)) * IdentityMat<T>(n);
+  } else {
+    res.U = IdentityMat<T>(n) - MatrixPower(Z, m);
+  }
+  res.f = MultiplicativeOrder(l, m);
+  res.e = EulerPhi(la);
+  if (m > 2 && EulerPhi(m) / res.f > 1) {
+    MyMatrix<T> Zp = MatrixPower(Z, la);
+    for (auto const &g : HermCyclotomicFactorsModL(m, l)) {
+      res.cuts.push_back(MatrixPower(EvaluatePolynomialMatrix(HermLiftPoly(g), Zp), cut_power));
+    }
+  }
+  return res;
+}
+
+/*
   Per prime l of det G, the multiplicities r_{P,k} of D(L) at the primes P
   above l, as a sorted list over the P.
  */
@@ -170,56 +206,37 @@ HermitianLocalStructure(MyMatrix<T> const &G, MyMatrix<T> const &P,
   }
   for (auto const &[l_i, mult] : FactorsIntMap(detG)) {
     int64_t l = UniversalScalarConversion<int64_t, Tint>(l_i);
-    int64_t la = 1, m = dn;
-    while (m % l == 0) {
-      m /= l;
-      la *= l;
+    // the P-adic lengths are at most e v_l(det): a cut of that power kills
+    // the parts at the other primes
+    int64_t e = EulerPhi(HermPrimePowerPart(dn, l));
+    int imax = static_cast<int>(e * static_cast<int64_t>(mult)) + 1;
+    HermPrimeCuts<T> pc = HermGetPrimeCuts(Z, dn, l, imax);
+    std::vector<std::optional<MyMatrix<T>>> cuts;
+    for (auto const &c : pc.cuts) {
+      cuts.push_back(c);
     }
-    // the uniformizer at the primes above l
-    MyMatrix<T> U;
-    if (la == 1) {
-      U = T(static_cast<long>(l)) * IdentityMat<T>(n);
-    } else {
-      U = IdentityMat<T>(n) - MatrixPower(Z, m);
+    if (cuts.empty()) {
+      cuts.push_back(std::nullopt);
     }
-    // the cuts to the primes P above l
-    std::vector<MyMatrix<T>> cuts;
-    int64_t f = MultiplicativeOrder(l, m);
-    if (m > 2 && EulerPhi(m) / f > 1) {
-      MyMatrix<T> Zp = MatrixPower(Z, la);
-      int vmax = static_cast<int>(EulerPhi(la) * static_cast<int64_t>(mult));
-      for (auto const &g : HermCyclotomicFactorsModL(m, l)) {
-        cuts.push_back(MatrixPower(EvaluatePolynomialMatrix(HermLiftPoly(g), Zp), vmax + 1));
-      }
-    } else {
-      cuts.push_back(IdentityMat<T>(n) * T(0));
-    }
-    int64_t q = 1;
-    for (int64_t k = 0; k < f; k++) {
-      q *= l;
-    }
+    int f = static_cast<int>(pc.f);
     std::vector<std::vector<int>> structs;
     for (auto const &cut : cuts) {
       std::vector<int> logs;
       MyMatrix<T> Ui = IdentityMat<T>(n);
       int last = -1;
-      // the P-adic lengths are at most e v_l(det), e = phi(l^a) the
-      // ramification index of P over l
-      int imax = static_cast<int>(EulerPhi(la) * static_cast<int64_t>(mult)) + 1;
       for (int i = 1; i <= imax; i++) {
-        Ui = Ui * U;
+        Ui = Ui * pc.U;
         std::vector<MyMatrix<T>> Ms{Ui};
-        bool has_cut = !IsZeroMatrix(cut);
-        if (has_cut) {
-          Ms.push_back(cut);
+        if (cut) {
+          Ms.push_back(*cut);
         }
         Tint ord = HermKernelOrder<T, Tint>(G, Ms);
         int v = HermValuation(ord, l);
-        if (v % static_cast<int>(f) != 0) {
+        if (v % f != 0) {
           std::cerr << "HERM_LATTICE: the kernel order is not a power of q\n";
           throw TerminalException{1};
         }
-        int lg = v / static_cast<int>(f);
+        int lg = v / f;
         logs.push_back(lg);
         if (lg == last) {
           break;
@@ -230,40 +247,6 @@ HermitianLocalStructure(MyMatrix<T> const &G, MyMatrix<T> const &P,
     }
     std::sort(structs.begin(), structs.end());
     res[l] = structs;
-  }
-  return res;
-}
-
-/*
-  The uniformizer at the primes above l and the cuts to each of them
-  (empty: a single prime), the cuts of power cut_power.
- */
-template <typename T> struct HermPrimeCuts {
-  MyMatrix<T> U;
-  std::vector<MyMatrix<T>> cuts;
-};
-
-template <typename T>
-HermPrimeCuts<T> HermGetPrimeCuts(MyMatrix<T> const &Z, int64_t dn, int64_t l,
-                                  int cut_power) {
-  int n = Z.rows();
-  int64_t la = 1, m = dn;
-  while (m % l == 0) {
-    m /= l;
-    la *= l;
-  }
-  HermPrimeCuts<T> res;
-  if (la == 1) {
-    res.U = T(static_cast<long>(l)) * IdentityMat<T>(n);
-  } else {
-    res.U = IdentityMat<T>(n) - MatrixPower(Z, m);
-  }
-  int64_t f = MultiplicativeOrder(l, m);
-  if (m > 2 && EulerPhi(m) / f > 1) {
-    MyMatrix<T> Zp = MatrixPower(Z, la);
-    for (auto const &g : HermCyclotomicFactorsModL(m, l)) {
-      res.cuts.push_back(MatrixPower(EvaluatePolynomialMatrix(HermLiftPoly(g), Zp), cut_power));
-    }
   }
   return res;
 }
