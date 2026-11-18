@@ -116,6 +116,18 @@ rather than presenting a partial list as an answer. `iterate` and
 `random_walk` bring in further primes until the mass closes, and the classes
 of these primes reach every spinor genus, so one seed suffices for them.
 
+The number of spinor genera is computed from the genus symbol, without any
+enumeration (`GenusSpinor.h`, the method of Conway-Sloane, Chapter 15, 9.6,
+as in SageMath), and so is, for every prime l not dividing 2 det, the
+number of connected components of the l-neighbour graph. With `out_prime`
+and `prime = 0`, `GENUS_Enumerate` prints the number of spinor genera of the
+enumerated genus and, when there are several, uses the smallest odd prime
+whose neighbour graph is connected, so that one seed suffices. The program
+`GENUS_SpinorGenera` reports these numbers for a symbol (`symbol`), a Gram
+matrix (`gram`) or a list of lattices (`list`); on the 4768 even DefLatDB
+genera of rank >= 3 and 2 <= h <= 300 its proper and improper counts are
+those of SageMath.
+
 ## Getting the input
 
 There are two ways in:

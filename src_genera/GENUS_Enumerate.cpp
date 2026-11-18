@@ -11,6 +11,7 @@
 #include "GenusMass.h"
 #include "GenusEnumerationOdd.h"
 #include "GenusSymbol.h"
+#include "GenusSpinor.h"
 #include "SignatureSymmetric.h"
 #include "Arithmetic_dispatch_types.h"
 #include <optional>
@@ -143,7 +144,44 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   if (spec.strategy == NeighborStrategy::OutPrime && prime == 0) {
     // For odd seeds the enumerated genus is that of the even sublattices,
     // of determinant 4 det.
-    prime = ChooseNeighborPrime<T>(even ? det : T(4) * det);
+    T det_enum = even ? det : T(4) * det;
+    prime = ChooseNeighborPrime<T>(det_enum);
+    // The spinor genera of the enumerated genus (GenusSpinor.h). When there
+    // are several, the l-neighbour graph of the genus is connected only for
+    // some primes l: the smallest odd one is taken, if there is one, so that
+    // a single seed suffices.
+    if (rank >= 3) {
+      MyMatrix<mpq_class> G_enum = UniversalMatrixConversion<mpq_class, T>(
+          even ? ListSeed[0] : EvenSublatticeGram<T, Tint>(ListSeed[0]));
+      SpinorGenusData spinor = GenusSpinorData<mpq_class, mpz_class>(
+          GenusSymbolOfGram<mpq_class, mpz_class>(G_enum), G_enum);
+      int n_spinor = spinor.n_spinor_genera();
+      os << "GENUS_Enumerate: " << n_spinor
+         << " spinor genera in the enumerated genus\n";
+      if (n_spinor > 1) {
+        std::optional<int> connected;
+        for (int l = 3; l < 1000 && !connected; l += 2) {
+          bool is_prime = true;
+          for (int f = 3; f * f <= l; f += 2) {
+            if (l % f == 0) {
+              is_prime = false;
+            }
+          }
+          if (is_prime && ResInt(det_enum, T(l)) != 0 &&
+              spinor.neighbor_components<mpz_class>(l) == 1) {
+            connected = l;
+          }
+        }
+        if (connected) {
+          prime = *connected;
+          os << "GENUS_Enumerate: the prime " << prime
+             << " connects them, it is used\n";
+        } else if (static_cast<int>(ListSeed.size()) < n_spinor) {
+          os << "GENUS_Enumerate: no single prime connects them; give one "
+                "seed per spinor genus, or use iterate or random_walk\n";
+        }
+      }
+    }
   }
   GenusEnumerationResult<T, Tgroup> result =
       even ? GenusEnumeration<T, Tint, Tgroup>(

@@ -142,6 +142,7 @@ src_genera/Test_QuadHeckeL
 src_genera/Test_HowellForm
 src_genera/Test_LocalImage
 src_genera/Test_GenusSymbol
+src_genera/GENUS_SpinorGenera
 src_group/POLY_HashWeightMatrixLimited
 src_indefinite/INDEF_*
 src_isotropy/LATT_*
