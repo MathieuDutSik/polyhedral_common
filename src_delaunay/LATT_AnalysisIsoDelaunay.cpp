@@ -21,8 +21,9 @@
   Tint, Tgroup> as written by LATT_SerialComputeDelaunay's FileIsoDelaunayDomain
   QUERIES option or by LATT_SerialLattice_IsoDelaunayDomain's per-domain dump)
   and always reports the cheap combinatorial data:
-    * |ListIneq|   — full set of defining inequalities
-                     (ComputeDefiningIneqIsoDelaunayDomain)
+    * |ListIneq|   — full set of defining inequalities: those of the orbit
+                     representatives (ComputeListIneqFromTesselationIneq),
+                     closed under the stabilizer of the Gram matrix
     * |ListIrred|  — irredundant inequalities (get_non_redundant_indices)
 
   Everything that needs the extreme rays of the cone (the dual description) or
@@ -131,8 +132,51 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
     throw TerminalException{1};
   }
   //
+  // The tessellation stores one Delaunay polytope per orbit of the stabilizer
+  // of x.GramMat, so ListIneq holds only the walls of these representatives.
+  // The walls of the other polytopes are their images under the stabilizer,
+  // which acts on the T-space nontrivially as soon as it is larger than {±1}.
+  // They are added here by an orbit closure, as in WriteQuantizerLtypeJSON,
+  // since otherwise the cone, its facets and its extreme rays are wrong.
+  HumanTime t_orb;
+  int n_ineq_rep = n_ineq;
+  std::vector<MyMatrix<T>> tspace_action;
+  {
+    MyMatrix<T> GramMat_T = UniversalMatrixConversion<T, Tint>(x.GramMat);
+    std::optional<MyMatrix<T>> CommonGramMat;
+    for (MyMatrix<T> const &g : LINSPA_ComputeStabilizer<T, Tint, Tgroup>(
+             LinSpa, GramMat_T, CommonGramMat, os)) {
+      tspace_action.push_back(matrix_in_t_space(g, LinSpa));
+    }
+  }
+  std::unordered_set<MyVector<T>> ineq_seen;
+  std::vector<MyVector<T>> ineq_all;
+  for (FullAdjInfo<Tint> const &fai : ListIneq) {
+    MyVector<T> v = RemoveFractionVector(
+        UniversalVectorConversion<T, Tint>(fai.eIneq));
+    if (ineq_seen.insert(v).second) {
+      ineq_all.push_back(v);
+    }
+  }
+  for (size_t pos = 0; pos < ineq_all.size(); pos++) {
+    for (MyMatrix<T> const &MatSpace : tspace_action) {
+      MyVector<T> v_img =
+          RemoveFractionVector(MyVector<T>(MatSpace * ineq_all[pos]));
+      if (ineq_seen.insert(v_img).second) {
+        ineq_all.push_back(v_img);
+      }
+    }
+  }
+  n_ineq = ineq_all.size();
+  os << "ANA: orbit closure under the |gens|=" << tspace_action.size()
+     << " stabilizer generators: n_ineq " << n_ineq_rep << " -> " << n_ineq
+     << " |elapsed|=" << t_orb << "\n";
+  //
   HumanTime t2;
-  MyMatrix<T> FAC = UniversalMatrixConversion<T, Tint>(GetFACineq(ListIneq));
+  MyMatrix<T> FAC(n_ineq, dimSpaceIneq);
+  for (int i_ineq = 0; i_ineq < n_ineq; i_ineq++) {
+    AssignMatrixRow(FAC, i_ineq, ineq_all[i_ineq]);
+  }
   std::vector<int> ListIrred = get_non_redundant_indices(FAC, os);
   int n_irred = ListIrred.size();
   MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
@@ -140,6 +184,7 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
      << " |elapsed|=" << t2 << "\n";
   //
   os_out << "n=" << n << " sym_dim=" << sym_dim << "\n";
+  os_out << "n_ineq_rep=" << n_ineq_rep << "\n";
   os_out << "n_ineq=" << n_ineq << "\n";
   os_out << "n_irred=" << n_irred << "\n";
   //
