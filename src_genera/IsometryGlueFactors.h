@@ -810,9 +810,17 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
         }
       }
     } else if (f.irrep) {
-      for (auto const &P : IsotypicPieces<T, Tint, Tgroup>(
-               *f.irrep, f.multiplicity, dets,
-               GroupLatticePrimes<T, Tint>(*f.irrep), os)) {
+      // the certified search when rho has Schur index 1, otherwise the
+      // search by steps up and down
+      std::vector<Tint> gp = GroupLatticePrimes<T, Tint>(*f.irrep);
+      std::optional<std::vector<GroupLattice<T>>> cert =
+          IsotypicPiecesCertified<T, Tint, Tgroup>(*f.irrep, f.multiplicity,
+                                                   dets, gp, os);
+      std::vector<GroupLattice<T>> list_P =
+          cert ? *cert
+               : IsotypicPieces<T, Tint, Tgroup>(*f.irrep, f.multiplicity,
+                                                 dets, gp, os);
+      for (auto const &P : list_P) {
         if (OddSymbolFitsIn<Tint>(GenusSymbolOfGram<T, Tint>(P.gram), S,
                                   glue_primes)) {
           f.pieces.push_back({P.gram, P.gens});

@@ -7,7 +7,9 @@
 #include "GenusSymbol.h"
 #include "GroupNeighborModP.h"
 #include "MAT_MatrixModPrime.h"
+#include <limits>
 #include <map>
+#include <optional>
 #include <set>
 #include <utility>
 #include <vector>
@@ -173,7 +175,8 @@ IrreducibleSubmodulesOf(RowSpaceModP const &W,
  */
 template <typename T>
 std::vector<GroupLattice<T>> FlipNeighbors(GroupLattice<T> const &L,
-                                           T_small_prime p, size_t &n_down) {
+                                           T_small_prime p, size_t &n_down,
+                                           bool with_up) {
   int n = L.gram.rows();
   std::vector<ModMatrix> gens_row, gens_tr;
   for (auto const &g : L.gens) {
@@ -202,6 +205,9 @@ std::vector<GroupLattice<T>> FlipNeighbors(GroupLattice<T> const &L,
     res.push_back(GroupLatticeOfRows(L, Gen));
   }
   n_down = res.size();
+  if (!with_up) {
+    return res;
+  }
   // up: W in the kernel of the Gram matrix modulo p
   ModMatrix K = LeftNullspaceModP(ModMatrixOfMatrix(L.gram, p), p);
   if (K.rows() > 0) {
@@ -493,7 +499,8 @@ IsotypicPieces(GroupLattice<T> const &M, int c, std::vector<Tint> const &dets,
     for (auto const &p : group_primes) {
       T_small_prime p_s = UniversalScalarConversion<T_small_prime, Tint>(p);
       size_t n_down = 0;
-      std::vector<GroupLattice<T>> neigh = FlipNeighbors(L, p_s, n_down);
+      std::vector<GroupLattice<T>> neigh =
+          FlipNeighbors(L, p_s, n_down, true);
       for (size_t i = 0; i < neigh.size(); i++) {
         insert(neigh[i], i < n_down);
       }
@@ -508,6 +515,247 @@ IsotypicPieces(GroupLattice<T> const &M, int c, std::vector<Tint> const &dets,
   }
   os << "ISOM_PIECES: " << n_start << " starts, " << queue.size()
      << " lattices, " << res.size() << " pieces of admissible determinant\n";
+  return res;
+}
+
+/*
+  The certified search, for rho of Schur index 1 (ListGens(Z[G]) of full
+  rank n^2 in End(M) = M_n(Z)).
+
+  Let Lambda be the image of Z_p[G] in End(V_rho) and Lambda' = End(M_p) =
+  M_n(Z_p), a maximal order containing it, p^a the exponent of Lambda' /
+  Lambda (ConductorExponent). For a G-lattice L, N = Lambda' L is a
+  Lambda'-lattice and p^a N subset Lambda L = L subset N. By Morita, N = M
+  (x) X with the form b_M (x) q, and as p^a N is in L, integral, q has
+  values in p^{-2a - v} (v the valuation of the content of b_M): N is an M
+  (x) X with its form divided by p^e, X integral, 0 <= e <= 2a + v, and
+  v_p det N >= v_p det L - 2 a rank L. L is reached from N by a chain of
+  maximal G-sublattices, whose determinants grow from det N to det L. So
+  every piece of determinant D is found by the steps down from the
+  starts M (x) X / prod p^e_p, X over the genera (odd and even) of rank c
+  whose determinant puts that of the start between v_p(D) - 2 a_p rank and
+  v_p(D) at each prime p of G (and right outside them), cutting the lattices
+  whose determinant goes beyond the largest admissible valuation: a finite
+  and complete search, up to the completeness of the genus symbols and the
+  Morita equivalence. One pair per class, by the canonical form (of the
+  form scaled to be integral).
+ */
+
+// v_p of the exponent of M_n(Z) / span(g, g in G), or nullopt when the
+// span is not of full rank n^2.
+template <typename T, typename Tint>
+std::optional<int> ConductorExponent(GroupLattice<T> const &M, Tint const &p) {
+  int n = M.gram.rows();
+  std::vector<MyMatrix<T>> ListP;
+  for (auto const &g : M.gens) {
+    ListP.push_back(g.transpose());
+  }
+  std::vector<MyMatrix<T>> elts =
+      GroupElementsAndInverses(ListP, 100000).first;
+  MyMatrix<T> Span(static_cast<int>(elts.size()), n * n);
+  for (size_t k = 0; k < elts.size(); k++) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        Span(static_cast<int>(k), i * n + j) = elts[k](i, j);
+      }
+    }
+  }
+  MyMatrix<T> B = GetZbasis(Span);
+  if (B.rows() != n * n) {
+    return {};
+  }
+  MyMatrix<T> Binv = Inverse(B);
+  Tint e(1);
+  for (int i = 0; i < n * n; i++) {
+    for (int j = 0; j < n * n; j++) {
+      e = LCMpair(e, UniversalScalarConversion<Tint, T>(GetDenominator(Binv(i, j))));
+    }
+  }
+  int a = 0;
+  while (ResInt(e, p) == 0) {
+    e /= p;
+    a++;
+  }
+  return a;
+}
+
+// v_p of a nonzero rational.
+template <typename T, typename Tint> int RationalValuation(T const &x, Tint const &p) {
+  T den = GetDenominator(x);
+  T num = x * den;
+  Tint num_i = UniversalScalarConversion<Tint, T>(T_abs(num));
+  Tint den_i = UniversalScalarConversion<Tint, T>(den);
+  int v = 0;
+  while (ResInt(num_i, p) == 0) {
+    num_i /= p;
+    v++;
+  }
+  while (ResInt(den_i, p) == 0) {
+    den_i /= p;
+    v--;
+  }
+  return v;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::optional<std::vector<GroupLattice<T>>>
+IsotypicPiecesCertified(GroupLattice<T> const &M, int c,
+                        std::vector<Tint> const &dets,
+                        std::vector<Tint> const &group_primes,
+                        std::ostream &os) {
+  int n = M.gram.rows();
+  int rank = n * c;
+  // per prime of G: a_p, the content and det valuations of M, the range
+  std::vector<int> a, v_cont, v_detM, hi, lo;
+  for (auto const &p : group_primes) {
+    std::optional<int> opt = ConductorExponent<T, Tint>(M, p);
+    if (!opt) {
+      return {};
+    }
+    a.push_back(*opt);
+    int vc = std::numeric_limits<int>::max();
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (M.gram(i, j) != 0) {
+          vc = std::min(vc, RationalValuation<T, Tint>(M.gram(i, j), p));
+        }
+      }
+    }
+    v_cont.push_back(vc);
+    v_detM.push_back(RationalValuation<T, Tint>(DeterminantMat(M.gram), p));
+    int h = 0, l = std::numeric_limits<int>::max();
+    for (auto const &D : dets) {
+      int vD = RationalValuation<T, Tint>(UniversalScalarConversion<T, Tint>(D), p);
+      h = std::max(h, vD);
+      l = std::min(l, vD);
+    }
+    hi.push_back(h);
+    lo.push_back(l - 2 * a.back() * rank);
+  }
+  // the determinants of X outside the primes of G
+  // M is integral: its determinant is an integer
+  Tint det_M = UniversalScalarConversion<Tint, T>(DeterminantMat(M.gram));
+  auto out_part = [&](Tint x) -> Tint {
+    for (auto const &p : group_primes) {
+      while (ResInt(x, p) == 0) {
+        x /= p;
+      }
+    }
+    return x;
+  };
+  Tint det_M_out = out_part(det_M);
+  std::set<Tint> dets_X_out;
+  for (auto const &D : dets) {
+    Tint D_out = out_part(D);
+    Tint M_part = MyPow<Tint>(det_M_out, c);
+    if (ResInt(D_out, M_part) != 0) {
+      continue;
+    }
+    Tint rest = D_out / M_part;
+    Tint root(1);
+    bool ok = true;
+    if (rest > 1) {
+      for (auto const &[q, e] : FactorsIntMap(rest)) {
+        if (static_cast<int>(e) % n != 0) {
+          ok = false;
+          break;
+        }
+        root *= MyPow<Tint>(q, static_cast<int>(e) / n);
+      }
+    }
+    if (ok) {
+      dets_X_out.insert(root);
+    }
+  }
+  LatticeMethodChoice choice = DefaultPairMethods().canonical;
+  std::set<std::vector<MyMatrix<T>>> known;
+  std::vector<GroupLattice<T>> queue, res;
+  auto insert = [&](GroupLattice<T> const &L) -> void {
+    T det = DeterminantMat(L.gram);
+    for (size_t ip = 0; ip < group_primes.size(); ip++) {
+      if (RationalValuation<T, Tint>(det, group_primes[ip]) > hi[ip]) {
+        return;
+      }
+    }
+    // the canonical form of the form scaled to be integral
+    T den(1);
+    for (int i = 0; i < L.gram.rows(); i++) {
+      for (int j = 0; j < L.gram.cols(); j++) {
+        den = LCMpair(den, GetDenominator(L.gram(i, j)));
+      }
+    }
+    std::vector<MyMatrix<T>> ListP;
+    for (auto const &g : L.gens) {
+      ListP.push_back(g.transpose());
+    }
+    MyMatrix<T> A = den * L.gram;
+    MyMatrix<Tint> B = PairCanonicalBasis<T, Tint, Tgroup>(A, ListP, choice, os);
+    GroupLattice<T> Lc =
+        GroupLatticeInBasis(L, UniversalMatrixConversion<T, Tint>(B));
+    std::vector<MyMatrix<T>> key{Lc.gram};
+    for (auto const &g : Lc.gens) {
+      key.push_back(g);
+    }
+    if (known.insert(key).second) {
+      queue.push_back(Lc);
+    }
+  };
+  // the starts: per prime of G, the scaling e and the valuation of det X
+  std::vector<std::pair<Tint, Tint>> choices{{Tint(1), Tint(1)}};
+  for (size_t ip = 0; ip < group_primes.size(); ip++) {
+    Tint const &p = group_primes[ip];
+    std::vector<std::pair<Tint, Tint>> next;
+    for (int e = 0; e <= 2 * a[ip] + v_cont[ip]; e++) {
+      // v(det N) = c v(det M) + n v(det X) - rank e in [lo, hi]
+      for (int vx = 0; c * v_detM[ip] + n * vx - rank * e <= hi[ip]; vx++) {
+        if (c * v_detM[ip] + n * vx - rank * e < lo[ip]) {
+          continue;
+        }
+        for (auto const &[sc, dx] : choices) {
+          next.push_back({sc * MyPow<Tint>(p, e), dx * MyPow<Tint>(p, vx)});
+        }
+      }
+    }
+    choices = next;
+  }
+  size_t n_X = 0;
+  for (auto const &d_out : dets_X_out) {
+    for (auto const &[sc, dx] : choices) {
+      for (bool even : {true, false}) {
+        for (auto const &gs : EnumerateGenusSymbols<Tint>(c, d_out * dx, even)) {
+          MyMatrix<T> X = GenusSymbolRepresentative<T, Tint>(gs, os);
+          GroupLattice<T> N = TensorWithLattice(M, X);
+          N.gram /= UniversalScalarConversion<T, Tint>(sc);
+          insert(N);
+          n_X++;
+        }
+      }
+    }
+  }
+  size_t n_start = queue.size();
+  for (size_t pos = 0; pos < queue.size(); pos++) {
+    GroupLattice<T> L = queue[pos];
+    for (auto const &p : group_primes) {
+      T_small_prime p_s = UniversalScalarConversion<T_small_prime, Tint>(p);
+      size_t n_down = 0;
+      std::vector<GroupLattice<T>> neigh = FlipNeighbors(L, p_s, n_down, false);
+      for (size_t i = 0; i < n_down; i++) {
+        insert(neigh[i]);
+      }
+    }
+  }
+  for (auto const &L : queue) {
+    if (!IsEvenIntegralGram(L.gram)) {
+      continue;
+    }
+    Tint det_L = UniversalScalarConversion<Tint, T>(DeterminantMat(L.gram));
+    if (std::binary_search(dets.begin(), dets.end(), det_L)) {
+      res.push_back(L);
+    }
+  }
+  os << "ISOM_PIECES: certified, " << n_X << " X, " << n_start << " starts, "
+     << queue.size() << " lattices, " << res.size()
+     << " pieces of admissible determinant\n";
   return res;
 }
 
