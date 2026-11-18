@@ -583,11 +583,20 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
       return {};
     }
   }
-  // glue the factors with the fewest pieces first
+  // the order of the gluing, by increasing number of pieces. For a single
+  // isometry the last step, with the target determinant and genus, meets
+  // every intermediate pair, so it takes the factor with the fewest pieces
+  // (an I9 case: 638 seconds to 2). For a group the factors keep the
+  // increasing order, which glues first parts separated from the others by
+  // a generator, whose glue is well bounded (rotating made a case of
+  // Z/2 x Z/2 on A2^4 go from 44 seconds to beyond 600).
   std::sort(factors.begin(), factors.end(),
             [](IsometryFactor<T> const &x, IsometryFactor<T> const &y) {
               return x.pieces.size() < y.pieces.size();
             });
+  if (n_gen == 1 && factors.size() > 2) {
+    std::rotate(factors.begin(), factors.begin() + 1, factors.end());
+  }
   IsometryGlueBounds bounds;
   auto split_gens = [](std::vector<MyMatrix<T>> const &gens)
       -> std::vector<MyMatrix<T>> {
