@@ -271,7 +271,8 @@ int main() {
       MyMatrix<T> B = EvenSublatticeBasis(In);
       MyMatrix<T> A0 = B * In * B.transpose();
       std::vector<OddOverlattice<T>> ov = OddOverlatticeOrbits<T, Tint>(
-          A0, IdentityMat<T>(n), std::vector<MyMatrix<Tint>>{});
+          A0, std::vector<MyMatrix<T>>{IdentityMat<T>(n)},
+          std::vector<MyMatrix<Tint>>{});
       if (ov.size() != expected) {
         fail("the odd overlattices of D_" + std::to_string(n) + ": " +
              std::to_string(ov.size()));

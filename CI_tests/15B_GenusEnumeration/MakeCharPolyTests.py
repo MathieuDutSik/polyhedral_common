@@ -10,6 +10,9 @@ charpoly/LAT.txt, write
 - charpoly/jobs.txt: the piece files to make with
   julia HermitianPieces.jl --jobs charpoly/jobs.txt
 - charpoly_tests.txt: the lines "LAT sig mass".
+For a genus with a file charpoly/klein_LAT.txt (KleinOracle.g: lines
+"m++,m+-,m-+,m-- mass" for G = Z/2 x Z/2), also charpoly/LAT_kTYPE.spec,
+"group 2" and the factors "orth s1 s2 m", and the lines "LAT kTYPE mass".
 For an odd lattice the pieces are those of its even sublattice (of the same
 characteristic polynomial, its determinant 4 det).
 
@@ -173,6 +176,23 @@ def main():
             with open(f"charpoly/{lat}_{sig_name}.spec", "w") as f:
                 f.write("\n".join(spec) + "\n")
             tests.append(f"{lat} {sig_name} {mass}")
+        # G = Z/2 x Z/2: the factors by the joint eigenspaces
+        try:
+            klein = open(f"charpoly/klein_{lat}.txt").read().split("\n")
+        except FileNotFoundError:
+            klein = []
+        signs = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+        for line in klein:
+            if not line.strip():
+                continue
+            typ, mass = line.split()
+            dims = list(map(int, typ.split(",")))
+            name = "k" + "_".join(map(str, dims))
+            spec = ["group 2"] + [f"orth {s1} {s2} {m}"
+                                  for (s1, s2), m in zip(signs, dims) if m > 0]
+            with open(f"charpoly/{lat}_{name}.spec", "w") as fs:
+                fs.write("\n".join(spec) + "\n")
+            tests.append(f"{lat} {name} {mass}")
     with open("charpoly/jobs.txt", "w") as f:
         for name, (d, b, N, E) in sorted(jobs.items()):
             f.write(f"{d} {b} {N} {E} {name}\n")

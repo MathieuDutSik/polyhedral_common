@@ -13,7 +13,7 @@
 # table charpoly_tests_ci.txt is a part of it, the cases of a few seconds.
 #
 # Usage: RunCharPolyTests.sh [table] [timeout in seconds, default 600]
-# (a case beyond the timeout is a failure)
+# (a case beyond the timeout is killed, a failure)
 set -e
 BIN=${BIN:-../../src_genera/GENUS_GlueIsometry}
 TABLE=${1:-charpoly_tests_ci.txt}
@@ -27,7 +27,7 @@ while read -r lat sig expected; do
     n_case=$((n_case + 1))
     start=$(date +%s)
     status=0
-    out=$(timeout "$TMAX" $BIN factors charpoly/${lat}.txt \
+    out=$(timeout -s KILL "$TMAX" $BIN factors charpoly/${lat}.txt \
               charpoly/${lat}_${sig}.spec Summary stdout 2>/dev/null) || status=$?
     end=$(date +%s)
     total=$(echo "$out" | sed -n 's/^total mass = //p')

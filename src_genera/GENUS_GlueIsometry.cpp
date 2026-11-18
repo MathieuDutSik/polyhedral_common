@@ -298,11 +298,15 @@ void process(std::string const &mode, std::string const &FileGram1,
   using Tmass = typename Tresult::Tmass;
   PairMethods methods = DefaultPairMethods();
   std::set<std::vector<MyMatrix<T>>> known;
-  auto key_of = [&](MyMatrix<T> const &A,
-                    MyMatrix<T> const &g) -> std::vector<MyMatrix<T>> {
-    return PairCanonicalForms<T, Tint, Tgroup>(
-        A, std::vector<MyMatrix<T>>{g.transpose()}, methods.canonical,
-        std::cerr);
+  // the classes by canonical forms, with all the generators of a group
+  auto key_of = [&](MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &gens)
+      -> std::vector<MyMatrix<T>> {
+    std::vector<MyMatrix<T>> ListP;
+    for (auto const &g : gens) {
+      ListP.push_back(g.transpose());
+    }
+    return PairCanonicalForms<T, Tint, Tgroup>(A, ListP, methods.canonical,
+                                               std::cerr);
   };
   struct GenusRecord {
     GluedPair<T> seed;
@@ -312,14 +316,20 @@ void process(std::string const &mode, std::string const &FileGram1,
   std::vector<GenusRecord> ListGenus;
   size_t n_without_mass = 0;
   for (auto const &gp : ListGlued) {
-    if (known.count(key_of(gp.gram, gp.isom)) == 1) {
+    std::vector<MyMatrix<T>> gens = GluedGens(gp);
+    if (known.count(key_of(gp.gram, gens)) == 1) {
       continue;
     }
     IsometryMassBounds mass_bounds;
     mass_bounds.lvalue = lvalue;
     std::map<int, T> herm_mass;
-    IsometryMassResult<T> mres = IsometryGenusMass<T, Tint>(
-        gp.gram, gp.isom, herm_mass, mass_bounds, std::cerr);
+    // a group (several generators): FiniteGroupGenusMass
+    IsometryMassResult<T> mres =
+        gens.size() == 1
+            ? IsometryGenusMass<T, Tint>(gp.gram, gp.isom, herm_mass,
+                                         mass_bounds, std::cerr)
+            : FiniteGroupGenusMass<T, Tint>(gp.gram, gens, mass_bounds,
+                                            std::cerr);
     if (!mres.mass) {
       // no component mass, or local factors missing
       // (mass_without_local_factors, only a lower bound)
@@ -329,15 +339,15 @@ void process(std::string const &mode, std::string const &FileGram1,
       continue;
     }
     Tmass TotalMass = MassToGroupField<Tmass>(*mres.mass);
-    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListSeed{
-        {gp.gram, gp.isom}};
-    Tresult result = GenusEnumerationGroup<T, Tint, Tgroup>(
+    std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> ListSeed{
+        {gp.gram, gens}};
+    Tresult result = GenusEnumerationAbelianGroup<T, Tint, Tgroup>(
         ListSeed, TotalMass, 0, 6, methods, std::cerr);
     for (size_t i = 0; i < result.ListGram.size(); i++) {
-      known.insert(key_of(result.ListGram[i], result.ListListIsom[i][0]));
+      known.insert(key_of(result.ListGram[i], result.ListListIsom[i]));
     }
     // the seed itself, in case the enumeration stopped short
-    known.insert(key_of(gp.gram, gp.isom));
+    known.insert(key_of(gp.gram, gens));
     ListGenus.push_back({gp, *mres.mass, result});
   }
   if (odd_gram) {
@@ -351,13 +361,16 @@ void process(std::string const &mode, std::string const &FileGram1,
       all_complete = all_complete && rec.result.complete;
       for (size_t i = 0; i < rec.result.ListGram.size(); i++) {
         MyMatrix<T> const &A0 = rec.result.ListGram[i];
-        MyMatrix<T> P = rec.result.ListListIsom[i][0].transpose();
+        std::vector<MyMatrix<T>> ListP;
+        for (auto const &g : rec.result.ListListIsom[i]) {
+          ListP.push_back(g.transpose());
+        }
         std::vector<MyMatrix<Tint>> ListGen =
-            PairCentralizer<T, Tint, Tgroup>(A0, std::vector<MyMatrix<T>>{P},
-                                             methods.automorphism, std::cerr)
+            PairCentralizer<T, Tint, Tgroup>(A0, ListP, methods.automorphism,
+                                             std::cerr)
                 .ListGen;
         for (auto const &ov :
-             OddOverlatticeOrbits<T, Tint>(A0, P, ListGen)) {
+             OddOverlatticeOrbits<T, Tint>(A0, ListP, ListGen)) {
           MyMatrix<T> AL = ov.basis * A0 * ov.basis.transpose();
           if (GenusSymbolOfGram<T, Tint>(AL) != S_odd) {
             continue;
