@@ -587,3 +587,45 @@ beyond 48, longer caps.
   g40_4_c8 at 2, 3, and the sums g20_1_c5, g24_4_c8, g32_42_c11, g36_1_c10.
 - Saturation runs beyond 300 s on the cyclotomic lattices of rank >= 16
   (inconclusive, not failures).
+
+## src_latt: making the Eichler decomposition usable, and the heuristic
+
+The method `eichler_heuristic` (`LatticeEichlerHeuristic.h`, 2026-11-16)
+decomposes a lattice into its indecomposable orthogonal summands (Eichler,
+`LatticeEichlerDecomposition.h`) and applies `heuristic` to each. Measured on
+the 121 classes of rank 25 and determinant 2 of Chenevier-Taïbi
+(`Hard_instances/chenevier_taibi_benchmark/p1_n25`), release build, under
+load, canonical form plus automorphism group:
+
+* c023 = A1 + a rank 24 lattice: beyond 18 GB with `heuristic`, 175 s with
+  `eichler_heuristic` (the A1 root sends `heuristic` to `weyl_chamber`,
+  whose family on the root-free rank 24 part explodes);
+* the 93 indecomposable classes: 113.0 s against 128.4 s, +14%, the
+  decomposition done once for the canonical form and once more for the
+  group;
+* the 25 other decomposable classes: 34.5 s against 93.4 s, mostly in the
+  automorphism groups of the summands (c013: 0.73 s against 0.12 s);
+* c119 and c120 (indecomposable) fail with both.
+
+It is an option, not the default. To make it usable as the default:
+
+* do the decomposition once per lattice rather than once per computation
+  (canonical form, group, isometry);
+* find why the automorphism group of a summand is slower than that of the
+  whole lattice (the LLL-reduced basis of the summand, from the Hermite
+  normal form of `GetZbasis`, may be worse than that of the lattice);
+* a cheaper indecomposability test: a lower bound of min(L) without the
+  shortest vector enumeration (min_i |b_i^*|^2 of the Gram-Schmidt basis is
+  one, for any basis) would spare the fixed-distance searches on most basis
+  vectors;
+* then decide whether `heuristic` itself should try the decomposition, for
+  instance only when it would choose `weyl_chamber` for a lattice whose
+  roots do not span it, which is where the gain is.
+
+More generally `heuristic` (`ChooseHeuristicMethod`) needs work: c119 and
+c120 exceed the memory cap whatever the method, and its choice rests on two
+invariants only (vectors of norm at most 2, the number of minimal vectors).
+
+Timings must come from a release build: the `CHOICE_COMPILATION` of the
+environment adds `-DDEBUG -DTIMINGS -DSANITY_CHECK` to every build, which
+slowed the measurements above by up to a factor of 10 before it was noticed.
