@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "IsometryGlue.h"
+#include "IsotypicPieces.h"
 #include "CyclotomicArithmetic.h"
 #include "MAT_MatrixModPrime.h"
 #include "GenusSymbol.h"
@@ -84,13 +85,21 @@ std::vector<Tint> SublatticeDeterminants(Tint const &d, Tint const &S) {
   - orth: g_j = signs[j] Id, the pieces are the even genera of rank r of the
     admissible determinants, made here;
   - file: the pieces of a file (Gram matrix, then isometry g, in turn),
-    e.g. the hermitian genera of GENUS_HermitianPieces, with g_j = g^e_j.
+    e.g. the hermitian genera of GENUS_HermitianPieces, with g_j = g^e_j;
+  - irrep: the pieces rho^c, rho an absolutely irreducible rational
+    representation of G given by a G-lattice M (IsotypicPieces.h), made
+    here.
   For an abelian G the pieces of L are its isotypic parts, on which G acts
-  through a character: the factors must have distinct characters.
+  through a character (character = true): the factors must have distinct
+  characters. For an irrep factor G does not act through a character, and
+  the glue is bounded by the resultants of the generators alone.
  */
 template <typename T> struct IsometryFactor {
   std::string desc;
   bool orth;
+  bool character = true;
+  std::optional<GroupLattice<T>> irrep;
+  int multiplicity = 0;
   std::vector<int> signs;
   std::vector<int64_t> powers;
   int rank;
@@ -176,9 +185,39 @@ IsometryFactor<T> MakeFileFactor(std::string const &path,
 }
 
 /*
+  The factor "irrep path c": the file holds the Gram matrix of a G-lattice
+  M in rho, then the actions of the n_gen generators on it (on the
+  columns); the pieces are made in FactorSeeds.
+ */
+template <typename T>
+IsometryFactor<T> MakeIrrepFactor(std::string const &path, int c, int n_gen) {
+  std::vector<MyMatrix<T>> lst = ReadListMatrixFile<T>(path);
+  if (static_cast<int>(lst.size()) != n_gen + 1 || c <= 0) {
+    std::cerr << "ISOM_FACTORS: " << path << " must hold a Gram matrix and "
+              << n_gen << " generators, and c must be positive\n";
+    throw TerminalException{1};
+  }
+  IsometryFactor<T> f;
+  f.desc = "irrep " + path + " " + std::to_string(c);
+  f.orth = false;
+  f.character = false;
+  f.multiplicity = c;
+  GroupLattice<T> M{lst[0], {}};
+  for (int j = 0; j < n_gen; j++) {
+    CheckIsometryInput(lst[0], lst[j + 1]);
+    M.gens.push_back(lst[j + 1]);
+    f.mus.push_back(MinimalPolynomialCoeffs(lst[j + 1]));
+  }
+  f.irrep = M;
+  f.rank = M.gram.rows() * c;
+  return f;
+}
+
+/*
   A factor from one line of a spec file, for a group of n_gen generators:
       orth s_1 ... s_k r
       file <path> e_1 ... e_k   (e_1 = 1 by default when k = 1)
+      irrep <path> c
  */
 template <typename T>
 IsometryFactor<T> ParseIsometryFactor(std::string const &line, int n_gen) {
@@ -199,6 +238,15 @@ IsometryFactor<T> ParseIsometryFactor(std::string const &line, int n_gen) {
       throw TerminalException{1};
     }
     return MakeOrthFactor<T>(signs, rank);
+  }
+  if (kind == "irrep") {
+    std::string path;
+    int c = 0;
+    if (!(ls >> path >> c)) {
+      std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
+      throw TerminalException{1};
+    }
+    return MakeIrrepFactor<T>(path, c, n_gen);
   }
   if (kind != "file") {
     std::cerr << "ISOM_FACTORS: unknown kind " << kind << "\n";
@@ -256,18 +304,64 @@ std::vector<IsometryFactor<T>> ReadIsometryFactors(std::string const &file) {
 }
 
 /*
+  The cyclotomic factors of the minimal polynomial mu of an element of
+  finite order (a product of distinct cyclotomic polynomials): the n with
+  Phi_n | mu, by trial division.
+ */
+template <typename T> std::set<int> CyclotomicFactorsOf(std::vector<T> mu) {
+  std::set<int> res;
+  int deg = static_cast<int>(mu.size()) - 1;
+  for (int n = 1; deg > 0 && n <= 4 * deg * deg + 6; n++) {
+    std::vector<T> phi = CyclotomicPolynomialCoeffs<T>(n);
+    int dphi = static_cast<int>(phi.size()) - 1;
+    if (dphi > deg) {
+      continue;
+    }
+    // the division of mu by the monic phi
+    std::vector<T> rem = mu;
+    std::vector<T> quo(deg - dphi + 1, T(0));
+    for (int k = deg - dphi; k >= 0; k--) {
+      T q = rem[k + dphi];
+      quo[k] = q;
+      for (int i = 0; i <= dphi; i++) {
+        rem[k + i] -= q * phi[i];
+      }
+    }
+    bool zero = true;
+    for (int i = 0; i < dphi; i++) {
+      zero = zero && rem[i] == 0;
+    }
+    if (zero) {
+      res.insert(n);
+      mu = quo;
+      deg -= dphi;
+    }
+  }
+  if (deg != 0) {
+    std::cerr << "ISOM_FACTORS: a minimal polynomial is not a product of "
+                 "cyclotomic polynomials\n";
+    throw TerminalException{1};
+  }
+  return res;
+}
+
+/*
   The minimal polynomial of g_j on the sum of the factors in idx: the lcm
-  of theirs, the product of the distinct ones (cyclotomic polynomials).
+  of theirs, the product of the distinct cyclotomic polynomials dividing
+  one of them.
  */
 template <typename T>
 std::vector<T> FactorsProduct(std::vector<IsometryFactor<T>> const &factors,
                               std::vector<size_t> const &idx, size_t j) {
-  std::vector<T> p{T(1)};
-  std::set<std::vector<T>> seen;
+  std::set<int> cyc;
   for (size_t i : idx) {
-    if (seen.insert(factors[i].mus[j]).second) {
-      p = PolyProductCoeffs(p, factors[i].mus[j]);
+    for (int n : CyclotomicFactorsOf(factors[i].mus[j])) {
+      cyc.insert(n);
     }
+  }
+  std::vector<T> p{T(1)};
+  for (int n : cyc) {
+    p = PolyProductCoeffs(p, CyclotomicPolynomialCoeffs<T>(n));
   }
   return p;
 }
@@ -344,6 +438,38 @@ int64_t CharacterFieldDegree(IsometryFactor<T> const &f) {
   return EulerPhi(ord);
 }
 
+/*
+  The order of the image of G acting on the sum of the factors, from a
+  G-lattice of each (the signs of an orth factor, M for an irrep factor,
+  the first piece otherwise), by closure of the block diagonal generators.
+ */
+template <typename T, typename Tint>
+Tint FactorsGroupOrder(std::vector<IsometryFactor<T>> const &factors) {
+  size_t n_gen = factors[0].mus.size();
+  std::vector<std::vector<MyMatrix<T>>> blocks(n_gen);
+  for (auto const &f : factors) {
+    for (size_t j = 0; j < n_gen; j++) {
+      if (f.orth) {
+        blocks[j].push_back(T(f.signs[j]) * IdentityMat<T>(1));
+      } else if (f.irrep) {
+        blocks[j].push_back(f.irrep->gens[j]);
+      } else {
+        blocks[j].push_back(f.pieces[0].second[j]);
+      }
+    }
+  }
+  std::vector<MyMatrix<T>> ListP;
+  for (auto const &bl : blocks) {
+    MyMatrix<T> P = bl[0];
+    for (size_t k = 1; k < bl.size(); k++) {
+      P = BlockDiagonal(P, bl[k]);
+    }
+    ListP.push_back(P);
+  }
+  size_t order = GroupElementsAndInverses(ListP, 1000000).first.size();
+  return Tint(static_cast<long>(order));
+}
+
 template <typename T, typename Tint>
 GlueBound<Tint> GlueBounds(std::vector<IsometryFactor<T>> const &factors,
                            std::vector<size_t> const &idx_in,
@@ -370,6 +496,35 @@ GlueBound<Tint> GlueBounds(std::vector<IsometryFactor<T>> const &factors,
   }
   for (size_t i : idx_out) {
     rank_out += factors[i].rank;
+  }
+  bool all_character = true;
+  for (auto const *idx : {&idx_in, &idx_out}) {
+    for (size_t i : *idx) {
+      all_character = all_character && factors[i].character;
+    }
+  }
+  if (!all_character) {
+    // the glue is killed by the resultant of any generator separating the
+    // two sides, and is generated by min(rank X, rank Y) elements
+    Tint expo(0), order(0);
+    for (size_t j = 0; j < n_gen; j++) {
+      T res = T_abs(PolyResultant(FactorsProduct(factors, idx_in, j),
+                                  FactorsProduct(factors, idx_out, j)));
+      if (res != 0) {
+        Tint res_i = UniversalScalarConversion<Tint, T>(res);
+        Tint ord_j = MyPow<Tint>(res_i, std::min(rank_in, rank_out));
+        expo = (expo == 0) ? res_i : GcdPair(expo, res_i);
+        order = (order == 0) ? ord_j : GcdPair(order, ord_j);
+      }
+    }
+    if (expo == 0) {
+      // no generator separates them: the glue is killed by the order N of
+      // the image H of G, as N e_X is in Z[H] for the central idempotent
+      // e_X, acting as N on X and 0 on Y
+      Tint N = FactorsGroupOrder<T, Tint>(factors);
+      return {N, MyPow<Tint>(N, std::min(rank_in, rank_out))};
+    }
+    return {expo, order};
   }
   if (idx_in.size() != 1 && idx_out.size() != 1) {
     Tint prod(1);
@@ -585,6 +740,15 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
             f.pieces.push_back(
                 {GenusSymbolRepresentative<T, Tint>(gs, os), gens});
           }
+        }
+      }
+    } else if (f.irrep) {
+      for (auto const &P : IsotypicPieces<T, Tint, Tgroup>(
+               *f.irrep, f.multiplicity, dets,
+               GroupLatticePrimes<T, Tint>(*f.irrep), os)) {
+        if (OddSymbolFitsIn<Tint>(GenusSymbolOfGram<T, Tint>(P.gram), S,
+                                  glue_primes)) {
+          f.pieces.push_back({P.gram, P.gens});
         }
       }
     } else {

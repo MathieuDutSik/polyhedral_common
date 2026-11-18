@@ -1,0 +1,77 @@
+# The irreducible characters of a finite group G as factors of the spec
+# files of GENUS_GlueIsometry factors (MakeGroupTests.py): for each chi in
+# Irr(G), in the order of GAP, a line of OutFile
+#   orth s_1 ... s_k       a linear character of values s_j = +-1 on the
+#                          generators;
+#   irrep FILE             an absolutely irreducible rational character of
+#                          higher degree, FILE (Prefix_i.txt) holding a
+#                          G-lattice M in it: its Gram matrix, then the
+#                          actions of the generators on the columns;
+#   unsupported REASON     otherwise (a character field K != Q, or no
+#                          permutation character of multiplicity one).
+# M is the projection by the central idempotent e_chi of the permutation
+# lattice Z[G/H], H a subgroup with <chi, 1_H^G> = 1, so that the image is
+# irreducible of degree chi(1); the permutation form restricted to it is
+# G-invariant, scaled to be integral and primitive.
+#
+# Usage: gap -q with GroupGens, OutFile and Prefix bound first, e.g.
+#   GroupGens:=[(1,2,3,4),(1,2)];; OutFile:="group/group_S4.txt";;
+#   Prefix:="group/irrep_S4";; Read("GroupIrreps.g");
+G := Group(GroupGens);;
+irr := Irr(G);;
+ccG := ConjugacyClasses(G);;
+subs := List(ConjugacyClassesSubgroups(G), Representative);;
+out := OutputTextFile(OutFile, false);;
+SetPrintFormattingStatus(out, false);;
+WriteMat := function(f, M)
+  local row;
+  AppendTo(f, Length(M), " ", Length(M[1]), "\n");
+  for row in M do
+    AppendTo(f, JoinStringsWithSeparator(List(row, String), " "), "\n");
+  od;
+end;;
+for i in [1 .. Length(irr)] do
+  chi := irr[i];
+  if chi[1] = 1 then
+    vals := List(GroupGens, g -> g^chi);
+    if ForAll(vals, v -> v = 1 or v = -1) then
+      PrintTo(out, "orth ", JoinStringsWithSeparator(List(vals, String), " "),
+              "\n");
+    else
+      PrintTo(out, "unsupported character field\n");
+    fi;
+    continue;
+  fi;
+  if not ForAll(chi, IsRat) then
+    PrintTo(out, "unsupported character field\n");
+    continue;
+  fi;
+  H := First(subs, h -> ScalarProduct(chi, PermutationCharacter(G, h)) = 1);
+  if H = fail then
+    PrintTo(out, "unsupported no permutation character of multiplicity one\n");
+    continue;
+  fi;
+  hom := ActionHomomorphism(G, RightCosets(G, H), OnRight);;
+  n := Index(G, H);
+  pm := g -> PermutationMat(Image(hom, g), n);
+  # the central idempotent, times |G| / chi(1): integral
+  Echi := Sum(ccG, c -> (Representative(c)^-1)^chi * Sum(AsList(c), pm));;
+  B := BaseIntMat(Echi);;
+  # the action on the rows of B (x -> x P), and the induced form
+  F := B * TransposedMat(B);;
+  F := F / Gcd(Flat(F));;
+  if ForAny(DiagonalOfMat(F), x -> x mod 2 <> 0) then
+    F := 2 * F;
+  fi;
+  file := Concatenation(Prefix, "_", String(i), ".txt");
+  PrintTo(file, Length(GroupGens) + 1, "\n");
+  WriteMat(file, F);
+  for g in GroupGens do
+    P := List(B, row -> SolutionMat(B, row * pm(g)));
+    # on the columns: g^T F g = F with g = P^T
+    WriteMat(file, TransposedMat(P));
+  od;
+  PrintTo(out, "irrep ", file, "\n");
+od;
+CloseStream(out);
+QUIT;
