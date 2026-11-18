@@ -8,13 +8,17 @@ group/oracle_LAT_G.txt (GroupOracle.g: a comment line with the degrees of
 Irr(G), then lines "m1,...,mk mass", the multiplicities of the irreducible
 characters in the order of GAP) and a description group/group_G.txt
 (GroupIrreps.g: a line per irreducible character, "orth s_1 ... s_k",
-"irrep FILE" or "unsupported ..."), write
+"herm d e_1 ... e_k", "conj i", "irrep FILE m" or "unsupported ..."),
+write
 - charpoly/LAT_gG_m1_..._mk.spec: "group k", then a factor per irreducible
   character of nonzero multiplicity m: "orth s_1 ... s_k m" for a linear
   character of values s_j = +-1 on the generators, "irrep FILE m" for an
   absolutely irreducible character of higher degree, FILE holding a
-  G-lattice in it (IsotypicPieces.h); no spec when a character of nonzero
-  multiplicity is unsupported;
+  G-lattice in its rational representation, of Schur index m: c = the
+  multiplicity / m (IsotypicPieces.h); "herm d b e_1 ... e_k" for a
+  linear character of values zeta_d^e_j and its Galois conjugates, all of
+  multiplicity b; no spec when a character of nonzero multiplicity is
+  unsupported;
 - group_tests.txt: the lines "LAT gG_m1_..._mk mass".
 
 Usage (from CI_tests/15B_GenusEnumeration), the generators of G as
@@ -41,8 +45,12 @@ def read_group(grp):
                 continue
             if w[0] == "orth":
                 irr.append(("orth", [int(x) for x in w[1:]]))
+            elif w[0] == "herm":
+                irr.append(("herm", [int(x) for x in w[1:]]))
+            elif w[0] == "conj":
+                irr.append(("conj", int(w[1]) - 1))
             elif w[0] == "irrep":
-                irr.append(("irrep", w[1]))
+                irr.append(("irrep", (w[1], int(w[2]) if len(w) > 2 else 1)))
             else:
                 irr.append(("unsupported", " ".join(w[1:])))
     n_gen = max((len(d) for k, d in irr if k == "orth"), default=0)
@@ -72,14 +80,26 @@ def main(args):
                 if any(m != 0 and kind == "unsupported"
                        for (kind, data), m in zip(g["irr"], mult)):
                     continue
+                ok = True
                 for (kind, data), m in zip(g["irr"], mult):
-                    if m == 0:
+                    if kind == "conj" and m != mult[data]:
+                        ok = False
+                    if kind == "irrep" and m % data[1] != 0:
+                        ok = False
+                if not ok:
+                    sys.exit(f"{arg} {typ}: multiplicities inconsistent "
+                             "with the Galois orbits or Schur indices")
+                for (kind, data), m in zip(g["irr"], mult):
+                    if m == 0 or kind == "conj":
                         continue
                     if kind == "orth":
                         spec.append("orth " + " ".join(str(s) for s in data)
                                     + f" {m}")
+                    elif kind == "herm":
+                        spec.append(f"herm {data[0]} {m} "
+                                    + " ".join(str(e) for e in data[1:]))
                     else:
-                        spec.append(f"irrep {data} {m}")
+                        spec.append(f"irrep {data[0]} {m // data[1]}")
                 with open(f"charpoly/{lat}_{sig}.spec", "w") as f2:
                     f2.write("\n".join(spec) + "\n")
                 lines.append(f"{lat} {sig} {mass}")

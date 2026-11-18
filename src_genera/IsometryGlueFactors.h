@@ -5,6 +5,7 @@
 // clang-format off
 #include "IsometryGlue.h"
 #include "IsotypicPieces.h"
+#include "HermitianLattice.h"
 #include "CyclotomicArithmetic.h"
 #include "MAT_MatrixModPrime.h"
 #include "GenusSymbol.h"
@@ -88,7 +89,10 @@ std::vector<Tint> SublatticeDeterminants(Tint const &d, Tint const &S) {
     e.g. the hermitian genera of GENUS_HermitianPieces, with g_j = g^e_j;
   - irrep: the pieces rho^c, rho an absolutely irreducible rational
     representation of G given by a G-lattice M (IsotypicPieces.h), made
-    here.
+    here;
+  - herm: the hermitian genera over Z[zeta_d] of rank b (HermitianPieces of
+    HermitianLattice.h), made here, with g_j = zeta^e_j: G acting through a
+    linear character of values in Q(zeta_d) and its Galois conjugates.
   For an abelian G the pieces of L are its isotypic parts, on which G acts
   through a character (character = true): the factors must have distinct
   characters. For an irrep factor G does not act through a character, and
@@ -100,6 +104,7 @@ template <typename T> struct IsometryFactor {
   bool character = true;
   std::optional<GroupLattice<T>> irrep;
   int multiplicity = 0;
+  int64_t herm_d = 0;
   std::vector<int> signs;
   std::vector<int64_t> powers;
   int rank;
@@ -214,10 +219,42 @@ IsometryFactor<T> MakeIrrepFactor(std::string const &path, int c, int n_gen) {
 }
 
 /*
+  The factor "herm d b e_1 ... e_k": the hermitian genera of rank b over
+  Z[zeta_d], g_j = zeta_d^e_j, made in FactorSeeds; mu_j = Phi_{d / gcd(d,
+  e_j)}.
+ */
+template <typename T>
+IsometryFactor<T> MakeHermFactor(int64_t d, int b,
+                                 std::vector<int64_t> const &powers) {
+  if (d < 3 || b <= 0) {
+    std::cerr << "ISOM_FACTORS: herm needs d >= 3 and b > 0\n";
+    throw TerminalException{1};
+  }
+  IsometryFactor<T> f;
+  f.desc = "herm " + std::to_string(d) + " " + std::to_string(b);
+  f.orth = false;
+  f.herm_d = d;
+  f.multiplicity = b;
+  for (int64_t e : powers) {
+    if (e < 0) {
+      std::cerr << "ISOM_FACTORS: the powers must be non negative\n";
+      throw TerminalException{1};
+    }
+    f.powers.push_back(e);
+    f.mus.push_back(CyclotomicPolynomialCoeffs<T>(
+        static_cast<int>(d / std::gcd(d, e))));
+    f.desc += " " + std::to_string(e);
+  }
+  f.rank = b * static_cast<int>(EulerPhi(d));
+  return f;
+}
+
+/*
   A factor from one line of a spec file, for a group of n_gen generators:
       orth s_1 ... s_k r
       file <path> e_1 ... e_k   (e_1 = 1 by default when k = 1)
       irrep <path> c
+      herm d b e_1 ... e_k
  */
 template <typename T>
 IsometryFactor<T> ParseIsometryFactor(std::string const &line, int n_gen) {
@@ -238,6 +275,22 @@ IsometryFactor<T> ParseIsometryFactor(std::string const &line, int n_gen) {
       throw TerminalException{1};
     }
     return MakeOrthFactor<T>(signs, rank);
+  }
+  if (kind == "herm") {
+    int64_t d = 0;
+    int b = 0;
+    std::vector<int64_t> powers(n_gen, 1);
+    if (!(ls >> d >> b)) {
+      std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
+      throw TerminalException{1};
+    }
+    for (int j = 0; j < n_gen; j++) {
+      if (!(ls >> powers[j])) {
+        std::cerr << "ISOM_FACTORS: bad line: " << line << "\n";
+        throw TerminalException{1};
+      }
+    }
+    return MakeHermFactor<T>(d, b, powers);
   }
   if (kind == "irrep") {
     std::string path;
@@ -441,7 +494,8 @@ int64_t CharacterFieldDegree(IsometryFactor<T> const &f) {
 /*
   The order of the image of G acting on the sum of the factors, from a
   G-lattice of each (the signs of an orth factor, M for an irrep factor,
-  the first piece otherwise), by closure of the block diagonal generators.
+  zeta_d for a herm factor, the first piece otherwise), by closure of the
+  block diagonal generators.
  */
 template <typename T, typename Tint>
 Tint FactorsGroupOrder(std::vector<IsometryFactor<T>> const &factors) {
@@ -453,6 +507,19 @@ Tint FactorsGroupOrder(std::vector<IsometryFactor<T>> const &factors) {
         blocks[j].push_back(T(f.signs[j]) * IdentityMat<T>(1));
       } else if (f.irrep) {
         blocks[j].push_back(f.irrep->gens[j]);
+      } else if (f.herm_d != 0) {
+        // zeta_d acting on Z[zeta_d] by the companion matrix of Phi_d
+        std::vector<T> phi = CyclotomicPolynomialCoeffs<T>(
+            static_cast<int>(f.herm_d));
+        int k = static_cast<int>(phi.size()) - 1;
+        MyMatrix<T> C = ZeroMatrix<T>(k, k);
+        for (int i = 0; i + 1 < k; i++) {
+          C(i + 1, i) = T(1);
+        }
+        for (int i = 0; i < k; i++) {
+          C(i, k - 1) = -phi[i];
+        }
+        blocks[j].push_back(MatrixPower(C, f.powers[j]));
       } else {
         blocks[j].push_back(f.pieces[0].second[j]);
       }
@@ -752,6 +819,21 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
         }
       }
     } else {
+      if (f.herm_d != 0) {
+        Tint N(1);
+        for (auto const &D : dets) {
+          N = LCMpair(N, D);
+        }
+        for (auto const &[G, P] :
+             HermitianPieces<T, Tint>(f.herm_d, f.multiplicity, N, os)) {
+          MyMatrix<T> g = P.transpose();
+          std::vector<MyMatrix<T>> gens;
+          for (int64_t e : f.powers) {
+            gens.push_back(MatrixPower(g, e));
+          }
+          f.pieces.push_back({G, gens});
+        }
+      }
       std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> kept;
       for (auto const &pc : f.pieces) {
         if (IsAdmissibleDeterminant(dets, DeterminantMat(pc.first)) &&

@@ -3,15 +3,22 @@
 # Irr(G), in the order of GAP, a line of OutFile
 #   orth s_1 ... s_k       a linear character of values s_j = +-1 on the
 #                          generators;
-#   irrep FILE             an absolutely irreducible rational character of
-#                          higher degree, FILE (Prefix_i.txt) holding a
-#                          G-lattice M in it: its Gram matrix, then the
+#   herm d e_1 ... e_k     a linear character of values zeta_d^e_j on the
+#                          generators, d >= 3, the first of its Galois
+#                          orbit;
+#   conj i                 a Galois conjugate of the character i;
+#   irrep FILE m           a rational character of higher degree, of Schur
+#                          index m (1, or 2 for the indicator -1), FILE
+#                          (Prefix_i.txt) holding a G-lattice M in the
+#                          rational irreducible representation, of
+#                          character m chi: its Gram matrix, then the
 #                          actions of the generators on the columns;
-#   unsupported REASON     otherwise (a character field K != Q, or no
-#                          permutation character of multiplicity one).
+#   unsupported REASON     otherwise (a character field K != Q of degree
+#                          > 1, or no permutation character of multiplicity
+#                          m).
 # M is the projection by the central idempotent e_chi of the permutation
-# lattice Z[G/H], H a subgroup with <chi, 1_H^G> = 1, so that the image is
-# irreducible of degree chi(1); the permutation form restricted to it is
+# lattice Z[G/H], H a subgroup with <chi, 1_H^G> = m, so that the image is
+# irreducible of degree m chi(1); the permutation form restricted to it is
 # G-invariant, scaled to be integral and primitive.
 #
 # Usage: gap -q with GroupGens, OutFile and Prefix bound first, e.g.
@@ -30,6 +37,7 @@ WriteMat := function(f, M)
     AppendTo(f, JoinStringsWithSeparator(List(row, String), " "), "\n");
   od;
 end;;
+first := [];;
 for i in [1 .. Length(irr)] do
   chi := irr[i];
   if chi[1] = 1 then
@@ -37,18 +45,36 @@ for i in [1 .. Length(irr)] do
     if ForAll(vals, v -> v = 1 or v = -1) then
       PrintTo(out, "orth ", JoinStringsWithSeparator(List(vals, String), " "),
               "\n");
-    else
-      PrintTo(out, "unsupported character field\n");
+      continue;
     fi;
+    # a Galois conjugate of an earlier linear character
+    cond := Conductor(chi);
+    j := First([1 .. i - 1], k -> irr[k][1] = 1 and
+               ForAny(Filtered([1 .. cond], a -> Gcd(a, cond) = 1),
+                      a -> List(GroupGens, g -> GaloisCyc(g^irr[k], a)) =
+                           vals));
+    if j <> fail then
+      PrintTo(out, "conj ", j, "\n");
+      continue;
+    fi;
+    d := Lcm(List(vals, v -> Order(v)));
+    es := List(vals, v -> First([0 .. d - 1], e -> E(d)^e = v));
+    PrintTo(out, "herm ", d, " ", JoinStringsWithSeparator(List(es, String),
+                                                         " "), "\n");
     continue;
   fi;
   if not ForAll(chi, IsRat) then
     PrintTo(out, "unsupported character field\n");
     continue;
   fi;
-  H := First(subs, h -> ScalarProduct(chi, PermutationCharacter(G, h)) = 1);
+  m := 1;
+  if Indicator(CharacterTable(G), [chi], 2)[1] = -1 then
+    m := 2;
+  fi;
+  H := First(subs, h -> ScalarProduct(chi, PermutationCharacter(G, h)) = m);
   if H = fail then
-    PrintTo(out, "unsupported no permutation character of multiplicity one\n");
+    PrintTo(out, "unsupported no permutation character of multiplicity ",
+            m, "\n");
     continue;
   fi;
   hom := ActionHomomorphism(G, RightCosets(G, H), OnRight);;
@@ -71,7 +97,7 @@ for i in [1 .. Length(irr)] do
     # on the columns: g^T F g = F with g = P^T
     WriteMat(file, TransposedMat(P));
   od;
-  PrintTo(out, "irrep ", file, "\n");
+  PrintTo(out, "irrep ", file, " ", m, "\n");
 od;
 CloseStream(out);
 QUIT;

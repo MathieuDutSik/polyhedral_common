@@ -1,0 +1,4 @@
+orth 1 1
+herm 3 1 2
+conj 2
+irrep group/irrep_A4_4.txt 1

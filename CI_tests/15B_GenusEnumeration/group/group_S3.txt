@@ -1,0 +1,3 @@
+orth 1 1
+orth 1 -1
+irrep group/irrep_S3_3.txt 1
