@@ -1879,6 +1879,38 @@ bool OddSymbolsAddUp(GenusSymbol const &g1, GenusSymbol const &g2,
   return true;
 }
 
+/*
+  Whether the odd local symbols of g fit in those of s at every odd prime p
+  outside skip: for each scale, the rank of g at most that of s. Necessary
+  for a primitive sublattice of genus g of a lattice of genus s whose glue
+  with its complement is supported on the primes of skip, as then s_p is
+  the orthogonal sum of g_p and of the complement.
+ */
+template <typename Tint>
+bool OddSymbolFitsIn(GenusSymbol const &g, GenusSymbol const &s,
+                     std::set<int64_t> const &skip) {
+  std::set<int64_t> primes;
+  for (auto const *x : {&g, &s}) {
+    for (auto const &kv : x->sym_odd) {
+      if (skip.count(kv.first) == 0) {
+        primes.insert(kv.first);
+      }
+    }
+  }
+  for (int64_t p : primes) {
+    std::map<int, int> rank_s;
+    for (auto const &c : OddLocalComponents<Tint>(s, p)) {
+      rank_s[c[0]] += c[1];
+    }
+    for (auto const &c : OddLocalComponents<Tint>(g, p)) {
+      if (c[1] > rank_s[c[0]]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 // clang-format off
 #endif  // SRC_GENERA_GENUSSYMBOL_H_
 // clang-format on

@@ -9,6 +9,7 @@
 #include "GenusSymbol.h"
 #include <algorithm>
 #include <fstream>
+#include <functional>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -557,7 +558,22 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
   for (size_t i = 0; i < factors.size(); i++) {
     IsometryFactor<T> &f = factors[i];
     // a single factor against the rest: always a bound
-    std::vector<Tint> dets = *FactorDeterminants(factors, {i}, d);
+    std::vector<size_t> rest;
+    for (size_t k = 0; k < factors.size(); k++) {
+      if (k != i) {
+        rest.push_back(k);
+      }
+    }
+    Tint S_i = GlueBounds<T, Tint>(factors, {i}, rest).order;
+    std::vector<Tint> dets = SublatticeDeterminants(d, S_i);
+    // at an odd prime outside the glue the piece is an orthogonal summand
+    // of L locally: its odd symbol fits in that of L
+    std::set<int64_t> glue_primes;
+    if (S_i > 1) {
+      for (auto const &[q, mult] : FactorsIntMap(S_i)) {
+        glue_primes.insert(UniversalScalarConversion<int64_t, Tint>(q));
+      }
+    }
     if (f.orth) {
       std::vector<MyMatrix<T>> gens;
       for (int s : f.signs) {
@@ -565,13 +581,18 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
       }
       for (auto const &D : dets) {
         for (auto const &gs : EnumerateEvenGenusSymbols<Tint>(f.rank, D)) {
-          f.pieces.push_back({GenusSymbolRepresentative<T, Tint>(gs, os), gens});
+          if (OddSymbolFitsIn<Tint>(gs, S, glue_primes)) {
+            f.pieces.push_back(
+                {GenusSymbolRepresentative<T, Tint>(gs, os), gens});
+          }
         }
       }
     } else {
       std::vector<std::pair<MyMatrix<T>, std::vector<MyMatrix<T>>>> kept;
       for (auto const &pc : f.pieces) {
-        if (IsAdmissibleDeterminant(dets, DeterminantMat(pc.first))) {
+        if (IsAdmissibleDeterminant(dets, DeterminantMat(pc.first)) &&
+            OddSymbolFitsIn<Tint>(GenusSymbolOfGram<T, Tint>(pc.first), S,
+                                  glue_primes)) {
           kept.push_back(pc);
         }
       }
@@ -583,85 +604,156 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
       return {};
     }
   }
-  // the order of the gluing, by increasing number of pieces. For a single
-  // isometry the last step, with the target determinant and genus, meets
-  // every intermediate pair, so it takes the factor with the fewest pieces
-  // (an I9 case: 638 seconds to 2). For a group the factors keep the
-  // increasing order, which glues first parts separated from the others by
-  // a generator, whose glue is well bounded (rotating made a case of
-  // Z/2 x Z/2 on A2^4 go from 44 seconds to beyond 600).
-  std::sort(factors.begin(), factors.end(),
-            [](IsometryFactor<T> const &x, IsometryFactor<T> const &y) {
-              return x.pieces.size() < y.pieces.size();
-            });
-  if (n_gen == 1 && factors.size() > 2) {
-    std::rotate(factors.begin(), factors.begin() + 1, factors.end());
-  }
+  /*
+    The gluing, as a tree: the sum of the factors of a set is glued from
+    the sums of two parts.
+    - A group: the parts are separated by a generator g_j (the factors of
+      one minimal polynomial of g_j against the others), so that the glue
+      between them is bounded by the resultant for g_j; the most balanced
+      split by rank is taken. The large factors then do not meet every
+      intermediate pair (a case of Z/2 x Z/2 on A2^4 was beyond 10 minutes
+      as a chain).
+    - A single isometry: a chain by increasing number of pieces, except
+      that the whole lattice glues last the factor with the fewest pieces:
+      the last step, with the target determinant and genus, meets every
+      intermediate pair (an I9 case: 638 seconds to 2).
+    Every intermediate sum is primitive in L: its determinant is
+    admissible and its odd symbol fits in that of L outside the primes of
+    its glue with the complement.
+   */
   IsometryGlueBounds bounds;
   auto split_gens = [](std::vector<MyMatrix<T>> const &gens)
       -> std::vector<MyMatrix<T>> {
     return std::vector<MyMatrix<T>>(gens.begin() + 1, gens.end());
   };
-  // the glued pairs so far, glue_order the product of the glue orders
-  std::vector<GluedPair<T>> current;
-  for (auto const &[A1, gens1] : factors[0].pieces) {
-    current.push_back(
-        {A1, gens1[0], DeterminantMat(A1), T(1), split_gens(gens1)});
+  auto primes_of = [](Tint const &x) -> std::set<int64_t> {
+    std::set<int64_t> res;
+    if (x > 1) {
+      for (auto const &[q, mult] : FactorsIntMap(x)) {
+        res.insert(UniversalScalarConversion<int64_t, Tint>(q));
+      }
+    }
+    return res;
+  };
+  auto rank_of = [&](std::vector<size_t> const &idx) -> int {
+    int r = 0;
+    for (size_t i : idx) {
+      r += factors[i].rank;
+    }
+    return r;
+  };
+  std::vector<size_t> all(factors.size());
+  for (size_t i = 0; i < factors.size(); i++) {
+    all[i] = i;
   }
-  std::vector<size_t> idx{0};
-  for (size_t j = 1; j < factors.size(); j++) {
-    idx.push_back(j);
-    bool last = (j + 1 == factors.size());
-    // the determinants of M_j, when bounded
+  // the split of idx into two parts
+  auto split = [&](std::vector<size_t> const &idx, bool top)
+      -> std::pair<std::vector<size_t>, std::vector<size_t>> {
+    if (n_gen > 1) {
+      std::optional<std::pair<std::vector<size_t>, std::vector<size_t>>> best;
+      int best_gap = 0;
+      int rank_all = rank_of(idx);
+      for (size_t j = 0; j < n_gen; j++) {
+        std::map<std::vector<T>, std::vector<size_t>> classes;
+        for (size_t i : idx) {
+          classes[factors[i].mus[j]].push_back(i);
+        }
+        if (classes.size() < 2) {
+          continue;
+        }
+        for (auto const &[mu, part] : classes) {
+          std::vector<size_t> other;
+          for (size_t i : idx) {
+            if (std::find(part.begin(), part.end(), i) == part.end()) {
+              other.push_back(i);
+            }
+          }
+          int gap = std::abs(rank_all - 2 * rank_of(part));
+          if (!best || gap < best_gap) {
+            best = std::make_pair(part, other);
+            best_gap = gap;
+          }
+        }
+      }
+      if (best) {
+        return *best;
+      }
+    }
+    // a chain: the factor of the fewest pieces last at the top, the one of
+    // the most pieces last below
+    auto cmp = [&](size_t x, size_t y) -> bool {
+      return factors[x].pieces.size() < factors[y].pieces.size();
+    };
+    size_t last = top ? *std::min_element(idx.begin(), idx.end(), cmp)
+                      : *std::max_element(idx.begin(), idx.end(), cmp);
+    std::vector<size_t> first;
+    for (size_t i : idx) {
+      if (i != last) {
+        first.push_back(i);
+      }
+    }
+    return {first, {last}};
+  };
+  std::function<std::vector<GluedPair<T>>(std::vector<size_t> const &, bool)>
+      seeds = [&](std::vector<size_t> const &idx,
+                  bool top) -> std::vector<GluedPair<T>> {
+    if (idx.size() == 1) {
+      std::vector<GluedPair<T>> res;
+      for (auto const &[A1, gens1] : factors[idx[0]].pieces) {
+        res.push_back(
+            {A1, gens1[0], DeterminantMat(A1), T(1), split_gens(gens1)});
+      }
+      return res;
+    }
+    auto [idx_a, idx_b] = split(idx, top);
+    std::vector<GluedPair<T>> seeds_a = seeds(idx_a, false);
+    std::vector<GluedPair<T>> seeds_b = seeds(idx_b, false);
+    GlueBound<Tint> gb = GlueBounds<T, Tint>(factors, idx_a, idx_b);
+    std::set<int64_t> glue_primes = primes_of(gb.order);
+    // the conditions on the sum of idx, primitive in L
     std::optional<std::vector<Tint>> dets;
-    if (!last) {
+    std::set<int64_t> sum_primes;
+    if (!top) {
       dets = FactorDeterminants(factors, idx, d);
+      std::vector<size_t> rest;
+      for (size_t i : all) {
+        if (std::find(idx.begin(), idx.end(), i) == idx.end()) {
+          rest.push_back(i);
+        }
+      }
+      sum_primes = primes_of(GlueBounds<T, Tint>(factors, idx, rest).order);
     }
     std::optional<T> target;
-    if (last) {
+    if (top) {
       target = det;
     }
-    // the glue between M_{j-1} and P_j
-    std::vector<size_t> idx_prev(idx.begin(), idx.end() - 1);
-    GlueBound<Tint> gb = GlueBounds<T, Tint>(factors, idx_prev, {j});
-    Tint const &S_glue = gb.order;
-    std::set<std::vector<MyMatrix<T>>> known;
-    std::vector<GluedPair<T>> next;
-    // the last step: at an odd prime not dividing the bound of the glue,
-    // the local symbols of M_{j-1} and P_j add up to that of L
-    std::set<int64_t> glue_primes;
-    std::vector<GenusSymbol> piece_symbols;
-    if (last) {
-      if (S_glue > 1) {
-        for (auto const &[q, mult] : FactorsIntMap(S_glue)) {
-          glue_primes.insert(UniversalScalarConversion<int64_t, Tint>(q));
-        }
+    std::vector<GenusSymbol> sym_a, sym_b;
+    if (top) {
+      for (auto const &x : seeds_a) {
+        sym_a.push_back(GenusSymbolOfGram<T, Tint>(x.gram));
       }
-      for (auto const &pc : factors[j].pieces) {
-        piece_symbols.push_back(GenusSymbolOfGram<T, Tint>(pc.first));
+      for (auto const &x : seeds_b) {
+        sym_b.push_back(GenusSymbolOfGram<T, Tint>(x.gram));
       }
     }
-    for (auto const &cur : current) {
-      std::optional<GenusSymbol> cur_symbol;
-      if (last) {
-        cur_symbol = GenusSymbolOfGram<T, Tint>(cur.gram);
-      }
-      for (size_t ip = 0; ip < factors[j].pieces.size(); ip++) {
-        auto const &[A2, gens2] = factors[j].pieces[ip];
-        T det2 = DeterminantMat(A2);
-        if (last && !IsAdmissibleGlue(cur.det, det2, det, S_glue)) {
-          continue;
-        }
-        if (last && !OddSymbolsAddUp<Tint>(*cur_symbol, piece_symbols[ip], S,
-                                          glue_primes)) {
-          continue;
-        }
-        if (!last && dets) {
-          // some admissible determinant of M_j must be reachable
+    std::set<std::vector<MyMatrix<T>>> known;
+    std::vector<GluedPair<T>> res;
+    for (size_t ia = 0; ia < seeds_a.size(); ia++) {
+      GluedPair<T> const &a = seeds_a[ia];
+      for (size_t ib = 0; ib < seeds_b.size(); ib++) {
+        GluedPair<T> const &b = seeds_b[ib];
+        if (top) {
+          if (!IsAdmissibleGlue(a.det, b.det, det, gb.order) ||
+              !OddSymbolsAddUp<Tint>(sym_a[ia], sym_b[ib], S, glue_primes)) {
+            continue;
+          }
+        } else if (dets) {
+          // some admissible determinant of the sum must be reachable
           bool reachable = false;
           for (auto const &D : *dets) {
-            T D_T = UniversalScalarConversion<T, Tint>(D);
-            if (IsAdmissibleGlue(cur.det, det2, D_T, S_glue)) {
+            if (IsAdmissibleGlue(a.det, b.det,
+                                 UniversalScalarConversion<T, Tint>(D),
+                                 gb.order)) {
               reachable = true;
               break;
             }
@@ -671,13 +763,20 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
           }
         }
         for (auto const &gl : GlueGroupPairs<T, Tint, Tgroup>(
-                 cur.gram, GluedGens(cur), A2, gens2, target,
+                 a.gram, GluedGens(a), b.gram, GluedGens(b), target,
                  std::optional<Tint>(gb.exponent), bounds, os)) {
-          if (!last && dets && !IsAdmissibleDeterminant(*dets, gl.det)) {
-            continue;
-          }
-          if (last && GenusSymbolOfGram<T, Tint>(gl.gram) != S) {
-            continue;
+          if (top) {
+            if (GenusSymbolOfGram<T, Tint>(gl.gram) != S) {
+              continue;
+            }
+          } else {
+            if (dets && !IsAdmissibleDeterminant(*dets, gl.det)) {
+              continue;
+            }
+            if (!OddSymbolFitsIn<Tint>(GenusSymbolOfGram<T, Tint>(gl.gram), S,
+                                       sum_primes)) {
+              continue;
+            }
           }
           std::vector<MyMatrix<T>> ListP;
           for (auto const &g : GluedGens(gl)) {
@@ -685,18 +784,18 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
           }
           if (known.insert(PairForms(gl.gram, ListP)).second) {
             GluedPair<T> gp = gl;
-            gp.glue_order = cur.glue_order * gl.glue_order;
-            next.push_back(gp);
+            gp.glue_order = a.glue_order * b.glue_order * gl.glue_order;
+            res.push_back(gp);
           }
         }
       }
     }
-    std::cerr << "ISOM_FACTORS: step " << j << ", " << next.size()
-              << " glued pairs\n";
-    current = next;
-  }
+    std::cerr << "ISOM_FACTORS: " << idx.size() << " factors (rank "
+              << rank_of(idx) << "), " << res.size() << " glued pairs\n";
+    return res;
+  };
   std::vector<GluedPair<T>> res;
-  for (auto const &gp : current) {
+  for (auto const &gp : seeds(all, true)) {
     if (factors.size() == 1 &&
         (gp.det != det || GenusSymbolOfGram<T, Tint>(gp.gram) != S)) {
       continue;
