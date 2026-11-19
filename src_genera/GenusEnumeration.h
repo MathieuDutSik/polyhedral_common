@@ -1713,13 +1713,9 @@ The genus as a Conway-Sloane symbol in the notation of the DefLatDB labels,\n\
 e.g. II{1}^{8}_{II}{2}^{2}_{2}{5}^{2} or I[{1}^{-8}{2}^{2}]_{4}{3}^{1},\n\
 optionally prefixed by rank.n_plus.det.level. (see GenusSymbol.h). With\n\
 FileLattice unset, one seed of the genus is built from it; with both set,\n\
-the seeds are checked to lie in that genus. A single seed may miss spinor\n\
-genera with out_prime: use iterate if the genus may have several";
-    ListStringValues_doc["FileMass"] = "Default: unset\n\
-The mass of the genus, as \"num den\" or a single integer. The enumeration\n\
-stops when sum 1/|Aut| reaches it, and that equality certifies completeness.\n\
-If unset, the mass is computed from the first seed by the mass formula of\n\
-Conway and Sloane (GenusMass in GenusMass.h)";
+the seeds are checked to lie in that genus. When the genus has several\n\
+spinor genera, out_prime with prime = 0 picks a prime that connects them\n\
+if there is one (GenusSpinor.h)";
     ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // METHOD

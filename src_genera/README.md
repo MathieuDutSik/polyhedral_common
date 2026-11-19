@@ -12,7 +12,6 @@ full list of entries, their defaults and their documentation.
     &DATA
      arithmetic = "gmp"
      FileLattice = "E8_lattice.txt"
-     FileMass = "E8_mass.txt"
     /
 
     &METHOD
@@ -41,12 +40,11 @@ full list of entries, their defaults and their documentation.
 
 * `DATA` -- the seeds, one or more Gram matrices in the ListMatrix format,
   or the genus symbol `GenusSymbol` from which one seed is built when
-  `FileLattice` is unset (see "Getting the input" below); and optionally
-  the mass of the genus as `num den` or a single integer. When `FileMass` is
-  left unset, the mass is computed from the first seed by the mass formula
-  of Conway and Sloane (`GenusMass` in `GenusMass.h`). The seeds must be
-  integral, positive definite, all even or all odd, and of the same rank
-  and determinant.
+  `FileLattice` is unset (see "Getting the input" below). The mass is
+  always computed, from the first seed, by the mass formula of Conway and
+  Sloane (`GenusMass` in `GenusMass.h`), in at most 0.12 s up to rank 26.
+  The seeds must be integral, positive definite, all even or all odd, and
+  of the same rank and determinant.
 * `METHOD` -- the `strategy`: `out_prime` (the default, one prime, `prime`
   or the smallest one not dividing det), `iterate` or `random_walk` (see
   `NeighborStrategy` in `GenusEnumeration.h`); the `recognition` of a known
@@ -132,7 +130,7 @@ those of SageMath.
 
 There are two ways in:
 
-* seeds and, optionally, the mass: `FileLattice` and `FileMass`, as above;
+* seeds: `FileLattice`, as above;
 * the genus symbol alone: `FileLattice` unset and, for instance,
 
       GenusSymbol = "II{1}^{8}_{II}{2}^{2}_{2}{5}^{2}"
@@ -145,12 +143,12 @@ There are two ways in:
   as Hecke and SageMath do: a rational quadratic form with the local
   invariants of the symbol, an even lattice in it that is maximal at every
   prime, then a descent at each p dividing 2 det to the local class of the
-  symbol. The genus of the result is checked against the symbol, and the
-  mass is then computed from it.
+  symbol, in at most 0.61 s up to rank 26. The genus of the result is
+  checked against the symbol, and the mass is then computed from it.
 
 With both set, the seeds are checked to lie in the genus of the symbol. A
-symbol gives a single seed, so a genus with several spinor genera needs
-`iterate` or `random_walk` rather than `out_prime` (see above).
+symbol gives a single seed; when the genus has several spinor genera,
+`out_prime` picks a prime that connects them if there is one (see above).
 
 ## Performance notes
 

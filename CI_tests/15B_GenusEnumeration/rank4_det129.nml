@@ -1,7 +1,6 @@
 &DATA
  arithmetic = "gmp"
  FileLattice = "rank4_det129_lattice.txt"
- FileMass = "rank4_det129_mass.txt"
 /
 
 &METHOD

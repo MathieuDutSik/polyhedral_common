@@ -1,12 +1,15 @@
 #!/bin/bash
 # Enumerate a few genera and check the class number and the mass certificate.
 #
-# The three cases are small on purpose so that the test stays quick, but they
+# The cases are small on purpose so that the test stays quick, but they
 # exercise the parts that matter: the p = 2 neighbor construction on an even
-# lattice of odd determinant, the deduplication (the second and third cases
-# have several classes), and the mass as the stopping criterion.
+# lattice of odd determinant, the deduplication (most cases have several
+# classes), the mass computed by the program as the stopping criterion
+# (checked against the mass given by Hecke where name_mass.txt exists), the
+# seed built from a genus symbol, an odd genus, and the choice of the prime
+# for a genus with two spinor genera.
 #
-# Expected values come from Hecke: 1, 2 and 3 classes respectively.
+# The expected class numbers come from Hecke and DefLatDB.
 set -e
 BIN=../../src_genera/GENUS_Enumerate
 
@@ -38,14 +41,23 @@ run_case() {
              "certified complete" >&2
         exit 1
     fi
+    # The mass is computed by the program; where the mass of the genus is
+    # known independently (from Hecke, name_mass.txt as "num den"), the two
+    # must agree.
+    if [ -f ${name}_mass.txt ]; then
+        known=$(tr -s ' \n' ' ' < ${name}_mass.txt | sed 's/ *$//' | sed 's# #/#')
+        target=$(echo "$out" | sed -n 's/^target mass = //p')
+        if [ "$target" != "$known" ]; then
+            echo "ERROR: $name has the computed mass $target, the known one is" \
+                 "$known" >&2
+            exit 1
+        fi
+    fi
 }
 
 run_case E8 1
 run_case rank8_det9 2
 run_case rank8_det25 3
-# The same genus without FileMass: the mass is computed from the seed by the
-# mass formula, and must close at the same 3 classes.
-run_case rank8_det25_computedmass 3
 # The same genus from its symbol alone: the seed is built from the symbol
 # (GenusSymbol.h), and the mass is computed from that seed.
 run_case rank8_det25_symbol 3
@@ -54,18 +66,24 @@ run_case rank8_det25_symbol 3
 run_case I12_odd 3
 # The same odd genus from its symbol alone.
 run_case I12_symbol 3
+# A genus with two spinor genera (DefLatDB c02371). The default prime of
+# out_prime would be 5 anyway, but the program must find from the spinor
+# kernels that 5 connects the two spinor genera, and close the mass with
+# the single seed built from the symbol.
+run_case spinor_two 3
 
-# A negative case. With a target mass that cannot be reached -- which is what
-# a missing spinor genus, or an unsuitable prime, looks like -- the program
-# must terminate and report the enumeration as INCOMPLETE. Reporting
-# completeness here, or looping, would mean the mass certificate is not doing
-# its job, and every result of the program rests on that certificate.
-echo "--- E8 with an unreachable mass (expecting complete = false) ---"
-out=$(run_nml E8_wrongmass)
+# A negative case. The same genus at the prime 7, whose neighbour graph
+# leaves out one of the two spinor genera: the program must terminate and
+# report the enumeration as INCOMPLETE. Reporting completeness here, or
+# looping, would mean the mass certificate is not doing its job, and every
+# result of the program rests on that certificate.
+echo "--- spinor_disconnected (expecting complete = false) ---"
+out=$(run_nml spinor_disconnected)
 echo "$out"
 complete=$(echo "$out" | sed -n 's/^complete = //p')
 if [ "$complete" != "false" ]; then
-    echo "ERROR: an unreachable mass was reported as complete=$complete" >&2
+    echo "ERROR: a genus missing a spinor genus was reported as" \
+         "complete=$complete" >&2
     exit 1
 fi
 

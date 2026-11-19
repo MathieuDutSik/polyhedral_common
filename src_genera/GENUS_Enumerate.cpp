@@ -24,7 +24,6 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
   std::string FileLattice = BlockDATA.get_string("FileLattice");
-  std::string FileMass = BlockDATA.get_string("FileMass");
   std::string GenusSymbolStr = BlockDATA.get_string("GenusSymbol");
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
@@ -123,23 +122,19 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
     os << "GENUS_Enumerate: the seeds are odd, the genus is enumerated "
           "through the genus of their even sublattices\n";
   }
-  // The mass: read from FileMass, or, when it is unset, computed from the
-  // first seed by the mass formula. Tmass is mpq_class, the type GenusMass
-  // computes in. The genus of an odd L has the classes, automorphism groups
-  // and mass of the genus of L(2), which is even.
-  Tmass TotalMass;
-  if (FileMass == "unset") {
-    MyMatrix<mpq_class> Gram =
-        UniversalMatrixConversion<mpq_class, T>(ListSeed[0]);
-    if (!even) {
-      Gram *= mpq_class(2);
-    }
-    TotalMass = GenusMass<mpq_class, mpz_class>(Gram);
-    os << "GENUS_Enumerate: the mass " << TotalMass
-       << " of the genus is computed from the first seed\n";
-  } else {
-    TotalMass = ReadMassFile<Tmass>(FileMass);
+  // The mass, computed from the first seed by the mass formula of Conway
+  // and Sloane (GenusMass.h); the enumeration stops when sum 1/|Aut|
+  // reaches it, and that equality certifies completeness. Tmass is
+  // mpq_class, the type GenusMass computes in. The genus of an odd L has the
+  // classes, automorphism groups and mass of the genus of L(2), which is
+  // even.
+  MyMatrix<mpq_class> GramMass =
+      UniversalMatrixConversion<mpq_class, T>(ListSeed[0]);
+  if (!even) {
+    GramMass *= mpq_class(2);
   }
+  Tmass TotalMass = GenusMass<mpq_class, mpz_class>(GramMass);
+  os << "GENUS_Enumerate: the mass of the genus is " << TotalMass << "\n";
   int prime = spec.prime;
   if (spec.strategy == NeighborStrategy::OutPrime && prime == 0) {
     // For odd seeds the enumerated genus is that of the even sublattices,
