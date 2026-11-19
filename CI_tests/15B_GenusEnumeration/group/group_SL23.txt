@@ -2,6 +2,6 @@ orth 1 1 1
 herm 3 0 0 2
 conj 2
 irrep group/irrep_SL23_4.txt 2
-unsupported character field
-unsupported character field
+irrep group/irrep_SL23_5.txt 1
+conj 5
 irrep group/irrep_SL23_7.txt 1

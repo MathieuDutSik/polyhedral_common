@@ -13,9 +13,12 @@
 #                          rational irreducible representation, of
 #                          character m chi: its Gram matrix, then the
 #                          actions of the generators on the columns;
-#   unsupported REASON     otherwise (a character field K != Q of degree
-#                          > 1, or no permutation character of multiplicity
-#                          m).
+#   unsupported REASON     otherwise (no permutation character of
+#                          multiplicity m).
+# A character of degree > 1 and field K = Q(chi) != Q: its Galois orbit
+# makes the rational irreducible representation, of character m sum_sigma
+# chi^sigma, carried by the first of the orbit ("irrep FILE m"), the others
+# "conj i".
 # M is the projection by the central idempotent e_chi of the permutation
 # lattice Z[G/H], H a subgroup with <chi, 1_H^G> = m, so that the image is
 # irreducible of degree m chi(1); the permutation form restricted to it is
@@ -63,8 +66,14 @@ for i in [1 .. Length(irr)] do
                                                          " "), "\n");
     continue;
   fi;
-  if not ForAll(chi, IsRat) then
-    PrintTo(out, "unsupported character field\n");
+  # the Galois orbit of chi: the conjugates of an earlier character are
+  # marked, the first one carries the rational representation
+  cond := Conductor(chi);
+  conjs := Set(List(Filtered([1 .. cond], a -> Gcd(a, cond) = 1),
+                    a -> GaloisCyc(chi, a)));;
+  j := First([1 .. i - 1], k -> irr[k] in conjs);
+  if j <> fail then
+    PrintTo(out, "conj ", j, "\n");
     continue;
   fi;
   m := 1;
@@ -80,8 +89,10 @@ for i in [1 .. Length(irr)] do
   hom := ActionHomomorphism(G, RightCosets(G, H), OnRight);;
   n := Index(G, H);
   pm := g -> PermutationMat(Image(hom, g), n);
-  # the central idempotent, times |G| / chi(1): integral
-  Echi := Sum(ccG, c -> (Representative(c)^-1)^chi * Sum(AsList(c), pm));;
+  # the central idempotent of the rational representation (the sum over
+  # the Galois orbit), times |G| / chi(1): integral
+  Echi := Sum(ccG, c -> Sum(conjs, x -> (Representative(c)^-1)^x) *
+                        Sum(AsList(c), pm));;
   B := BaseIntMat(Echi);;
   # the action on the rows of B (x -> x P), and the induced form
   F := B * TransposedMat(B);;

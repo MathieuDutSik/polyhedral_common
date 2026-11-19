@@ -1,0 +1,4 @@
+orth 1 1
+orth 1 -1
+irrep group/irrep_D10_3.txt 1
+conj 3

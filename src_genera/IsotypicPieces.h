@@ -885,12 +885,69 @@ MaximalOrderAt(GroupLattice<T> const &M, Tint const &p, size_t max_elt) {
   bool changed = true;
   while (changed) {
     changed = false;
+    // a necessary condition on x = y / p: y Lam y in p Lam, the quadratic
+    // forms sum_{j,k} c_j c_k [b_j b_i b_k] modulo p (Lam a ring: integral
+    // coordinates)
+    std::vector<MyMatrix<T>> bas = UnflattenMatrices(Lam, n);
+    MyMatrix<T> LamCoordInv = Inverse(coords(Lam));
+    // tri[(j * dim + i) * dim + k] = coordinates of b_j b_i b_k mod p
+    std::vector<std::vector<int64_t>> tri(dim * dim * dim);
+    for (int j = 0; j < dim; j++) {
+      for (int i = 0; i < dim; i++) {
+        MyMatrix<T> ji = bas[j] * bas[i];
+        for (int k = 0; k < dim; k++) {
+          MyMatrix<T> prod = ji * bas[k];
+          MyMatrix<T> fl = FlattenMatrices(std::vector<MyMatrix<T>>{prod});
+          MyMatrix<T> co = coords(fl) * LamCoordInv;
+          std::vector<int64_t> v(dim);
+          for (int u = 0; u < dim; u++) {
+            Tint cu = UniversalScalarConversion<Tint, T>(co(0, u));
+            v[u] = UniversalScalarConversion<int64_t, Tint>(ResInt(cu, p));
+          }
+          tri[(j * dim + i) * dim + k] = v;
+        }
+      }
+    }
+    auto passes = [&](std::vector<int> const &c) -> bool {
+      for (int i = 0; i < dim; i++) {
+        std::vector<int64_t> acc(dim, 0);
+        for (int j = 0; j < dim; j++) {
+          if (c[j] == 0) {
+            continue;
+          }
+          for (int k = 0; k < dim; k++) {
+            if (c[k] == 0) {
+              continue;
+            }
+            int64_t f = c[j] * c[k];
+            std::vector<int64_t> const &t = tri[(j * dim + i) * dim + k];
+            for (int u = 0; u < dim; u++) {
+              acc[u] = (acc[u] + f * t[u]) % p_i;
+            }
+          }
+        }
+        for (int u = 0; u < dim; u++) {
+          if (acc[u] != 0) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
     std::vector<int> c(dim, 0);
     for (size_t idx = 1; idx < n_elt && !changed; idx++) {
       size_t x = idx;
+      int lead = -1;
       for (int i = 0; i < dim; i++) {
         c[i] = static_cast<int>(x % p_i);
         x /= p_i;
+        if (c[i] != 0 && lead < 0) {
+          lead = i;
+        }
+      }
+      // up to the scalars, and the cheap condition first
+      if (c[lead] != 1 || !passes(c)) {
+        continue;
       }
       MyMatrix<T> S(dim + 1, n * n);
       for (int i = 0; i < dim; i++) {
@@ -993,6 +1050,135 @@ StepsDownWithCut(std::vector<GroupLattice<T>> const &starts,
 }
 
 /*
+  The twists of M: for a in the self-adjoint part S of End_G(M) (K when
+  End_G(rho) = K is a totally real field, K^+ for a CM field, Q for a
+  quaternion algebra with its canonical involution), M(a) is M with the
+  form b_M(a x, y), positive when a is totally positive. A form over K of
+  rank c is diagonal, <a_1, ..., a_c>, so the sums of twists M(a_i) reach
+  every rational class, which M (x) X, X over Z, does not when S != Q.
+
+  The a are the integral elements of S (a Z-basis of S cap M_n(Z)) with
+  Tr(a^2) <= bound, totally positive: a search by a box, the bound making
+  room for the norms asked for (up to the unit squares, a reduced a has a
+  trace of the order of n N(a)^{1/n}).
+ */
+template <typename T, typename Tint>
+std::vector<MyMatrix<T>> SelfAdjointCommutantBasis(GroupLattice<T> const &M) {
+  int n = M.gram.rows();
+  int N = n * n;
+  std::vector<std::vector<T>> eqs;
+  // X g - g X = 0 for the gens, X^T A - A X = 0
+  for (auto const &g : M.gens) {
+    for (int r = 0; r < n; r++) {
+      for (int c = 0; c < n; c++) {
+        std::vector<T> e(N, T(0));
+        for (int t = 0; t < n; t++) {
+          e[r * n + t] += g(t, c);
+          e[t * n + c] -= g(r, t);
+        }
+        eqs.push_back(e);
+      }
+    }
+  }
+  MyMatrix<T> const &A = M.gram;
+  for (int r = 0; r < n; r++) {
+    for (int c = 0; c < n; c++) {
+      std::vector<T> e(N, T(0));
+      for (int t = 0; t < n; t++) {
+        e[t * n + r] += A(t, c);
+        e[t * n + c] -= A(r, t);
+      }
+      eqs.push_back(e);
+    }
+  }
+  MyMatrix<T> Eq(static_cast<int>(eqs.size()), N);
+  for (size_t i = 0; i < eqs.size(); i++) {
+    for (int j = 0; j < N; j++) {
+      Eq(static_cast<int>(i), j) = eqs[i][j];
+    }
+  }
+  MyMatrix<T> Sol = NullspaceTrMat(Eq);
+  MyMatrix<T> SolZ = IntegralSpaceSaturation(Sol);
+  return UnflattenMatrices(SolZ, n);
+}
+
+template <typename T>
+GroupLattice<T> DirectSumGroupLattice(GroupLattice<T> const &X,
+                                      GroupLattice<T> const &Y) {
+  auto blk = [](MyMatrix<T> const &U, MyMatrix<T> const &V) -> MyMatrix<T> {
+    MyMatrix<T> R = ZeroMatrix<T>(U.rows() + V.rows(), U.cols() + V.cols());
+    R.block(0, 0, U.rows(), U.cols()) = U;
+    R.block(U.rows(), U.cols(), V.rows(), V.cols()) = V;
+    return R;
+  };
+  GroupLattice<T> res{blk(X.gram, Y.gram), {}};
+  for (size_t j = 0; j < X.gens.size(); j++) {
+    res.gens.push_back(blk(X.gens[j], Y.gens[j]));
+  }
+  return res;
+}
+
+// The totally positive a in the integral self-adjoint commutant with
+// Tr(a^2) <= bound2, as the twisted Gram matrices a^T A (one per form).
+template <typename T, typename Tint>
+std::vector<MyMatrix<T>> TwistedGrams(GroupLattice<T> const &M,
+                                      std::vector<MyMatrix<T>> const &S,
+                                      T const &bound2) {
+  int k = S.size();
+  MyMatrix<T> Q(k, k);
+  for (int i = 0; i < k; i++) {
+    for (int j = 0; j < k; j++) {
+      MyMatrix<T> P = S[i] * S[j];
+      T tr(0);
+      for (int u = 0; u < P.rows(); u++) {
+        tr += P(u, u);
+      }
+      Q(i, j) = tr;
+    }
+  }
+  MyMatrix<T> Qinv = Inverse(Q);
+  std::vector<int64_t> box(k);
+  for (int i = 0; i < k; i++) {
+    T r2 = bound2 * Qinv(i, i);
+    int64_t r = 0;
+    while (ScalarFromInt64<T>((r + 1) * (r + 1)) <= r2) {
+      r++;
+    }
+    box[i] = r;
+  }
+  std::set<MyMatrix<T>> seen;
+  std::vector<MyMatrix<T>> res;
+  std::vector<int64_t> v(k);
+  std::function<void(int)> rec = [&](int i) -> void {
+    if (i == k) {
+      MyMatrix<T> X = ZeroMatrix<T>(M.gram.rows(), M.gram.rows());
+      for (int u = 0; u < k; u++) {
+        X += ScalarFromInt64<T>(v[u]) * S[u];
+      }
+      T q(0);
+      MyMatrix<T> X2 = X * X;
+      for (int u = 0; u < X2.rows(); u++) {
+        q += X2(u, u);
+      }
+      if (q == 0 || q > bound2) {
+        return;
+      }
+      MyMatrix<T> Aa = X.transpose() * M.gram;
+      if (IsPositiveDefinite(Aa, std::cerr) && seen.insert(Aa).second) {
+        res.push_back(Aa);
+      }
+      return;
+    }
+    for (int64_t x = -box[i]; x <= box[i]; x++) {
+      v[i] = x;
+      rec(i + 1);
+    }
+  };
+  rec(0);
+  return res;
+}
+
+/*
   The pieces by the maximal orders (any Schur index, see the comment
   above): nullopt when a maximal order is beyond the bounds.
  */
@@ -1056,7 +1242,8 @@ IsotypicPiecesMaximalOrder(GroupLattice<T> const &M, int c,
       dets_X_out.insert(root);
     }
   }
-  // one X per local symbol outside the primes of G
+  // one X per local symbol outside the primes of G and rational class at
+  // them
   std::vector<Tint> extra{Tint(1)};
   for (auto const &p : group_primes) {
     std::vector<Tint> next;
@@ -1074,19 +1261,12 @@ IsotypicPiecesMaximalOrder(GroupLattice<T> const &M, int c,
     for (auto const &e : extra) {
       for (bool even : {true, false}) {
         for (auto const &gs : EnumerateGenusSymbols<Tint>(c, d_out * e, even)) {
+          // the local symbols outside the primes of G and the rational
+          // class at them (several when End_G(rho) is a field K != Q: a
+          // hermitian form <a> over K / K^+ depends on a modulo the local
+          // norms)
           std::vector<int64_t> key = StartKey<T, Tint>(gs, d_out * e,
                                                        group_primes, os);
-          // the part outside the primes of G only
-          size_t cut = 0;
-          int n_sep = 0;
-          while (cut < key.size() && n_sep < 2) {
-            if (key[cut] == -1) {
-              n_sep++;
-            }
-            cut++;
-          }
-          key.resize(cut);
-          key[1] = 0;
           auto iter = starts_X.find(key);
           if (iter == starts_X.end() || d_out * e < iter->second.first) {
             starts_X[key] = {d_out * e, gs};
@@ -1095,12 +1275,69 @@ IsotypicPiecesMaximalOrder(GroupLattice<T> const &M, int c,
       }
     }
   }
-  std::vector<GroupLattice<T>> starts;
+  // the starts before the steps at the primes of G, with their layout: M
+  // (x) X (coordinates i c + k) or a direct sum of twists (u n + i)
+  std::vector<std::pair<GroupLattice<T>, bool>> before;
   for (auto const &[key, val] : starts_X) {
     MyMatrix<T> X = GenusSymbolRepresentative<T, Tint>(val.second, os);
-    GroupLattice<T> L = TensorWithLattice(M, X);
+    before.push_back({TensorWithLattice(M, X), true});
+  }
+  // the sums of twists, when the self-adjoint commutant is larger than Q
+  std::vector<MyMatrix<T>> S = SelfAdjointCommutantBasis<T, Tint>(M);
+  if (S.size() > 1) {
+    // the norms asked for: outside the primes of G, those of the pieces,
+    // and up to p^n at the primes of G
+    Tint big(1);
+    for (auto const &d : dets_X_out) {
+      big = std::max(big, MyPow<Tint>(d, n));
+    }
+    for (auto const &p : group_primes) {
+      big *= MyPow<Tint>(p, n);
+    }
+    // Tr(a)^2 <= (4 n big^{1/n})^2, by the integer root
+    Tint root(1);
+    while (MyPow<Tint>(root + 1, n) <= big) {
+      root += 1;
+    }
+    T bound = T(4 * n) * UniversalScalarConversion<T, Tint>(root + 1);
+    std::vector<MyMatrix<T>> twists = TwistedGrams<T, Tint>(M, S, bound * bound);
+    std::set<Tint> dets_out_target;
+    for (auto const &D : dets) {
+      dets_out_target.insert(out_part(D));
+    }
+    // the multisets of c twists whose determinant has a right part
+    // outside the primes of G
+    std::vector<size_t> idx(c, 0);
+    std::function<void(int, size_t)> rec = [&](int i, size_t from) -> void {
+      if (i == c) {
+        GroupLattice<T> L{twists[idx[0]], M.gens};
+        for (int u = 1; u < c; u++) {
+          L = DirectSumGroupLattice(L, GroupLattice<T>{twists[idx[u]], M.gens});
+        }
+        Tint d_out = out_part(UniversalScalarConversion<Tint, T>(
+            DeterminantMat(L.gram)));
+        if (dets_out_target.count(d_out) > 0) {
+          before.push_back({L, false});
+        }
+        return;
+      }
+      for (size_t t = from; t < twists.size(); t++) {
+        idx[i] = t;
+        rec(i + 1, t);
+      }
+    };
+    if (!twists.empty()) {
+      rec(0, 0);
+    }
+    os << "ISOM_PIECES: " << S.size() << "-dimensional self-adjoint "
+       << "commutant, " << twists.size() << " twists\n";
+  }
+  std::vector<GroupLattice<T>> starts;
+  for (auto [L, tensor_layout] : before) {
     int nL = L.gram.rows();
-    MyMatrix<T> I = IdentityMat<T>(X.rows());
+    // L is M (x) Z^c up to the form: the operators of Lambda'_p act as
+    // lambda (x) Id_c on the coordinates of M (x) Z^c
+    MyMatrix<T> I = IdentityMat<T>(nL / n);
     for (size_t ip = 0; ip < group_primes.size(); ip++) {
       T p_T = UniversalScalarConversion<T, Tint>(group_primes[ip]);
       T_small_prime p_s =
@@ -1108,17 +1345,36 @@ IsotypicPiecesMaximalOrder(GroupLattice<T> const &M, int c,
       // L with the operators of Lambda'_p, then Lambda'_p L
       GroupLattice<T> LL = L;
       for (auto const &lam : orders[ip].basis) {
-        LL.gens.push_back(TensorWithLattice(GroupLattice<T>{lam, {}}, I).gram);
+        GroupLattice<T> lam_c =
+            tensor_layout
+                ? TensorWithLattice(GroupLattice<T>{lam, {}}, I)
+                : TensorWithLattice(GroupLattice<T>{I, {}}, lam);
+        LL.gens.push_back(lam_c.gram);
       }
       MyMatrix<T> Gen = IdentityMat<T>(nL);
       for (size_t k = n_gen; k < LL.gens.size(); k++) {
         Gen = Concatenate(Gen, MyMatrix<T>(LL.gens[k].transpose()));
       }
       LL = GroupLatticeOfRows(LL, Gen);
-      // up to a maximal p^{-2a}-integral Lambda'_p-lattice
+      // up to a maximal p^{-2a}-integral Lambda'_p-lattice; the form also
+      // multiplied by the part prime to p of its denominator (from the
+      // other primes of G), a unit at p
       T scale = 1;
       for (int i = 0; i < 2 * orders[ip].a; i++) {
         scale *= p_T;
+      }
+      {
+        T den(1);
+        for (int i = 0; i < nL; i++) {
+          for (int j = 0; j < nL; j++) {
+            den = LCMpair(den, GetDenominator(LL.gram(i, j)));
+          }
+        }
+        Tint den_i = UniversalScalarConversion<Tint, T>(den);
+        while (ResInt(den_i, group_primes[ip]) == 0) {
+          den_i /= group_primes[ip];
+        }
+        scale *= UniversalScalarConversion<T, Tint>(den_i);
       }
       LL.gram *= scale;
       while (true) {
