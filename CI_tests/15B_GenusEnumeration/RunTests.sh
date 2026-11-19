@@ -4,10 +4,10 @@
 # The cases are small on purpose so that the test stays quick, but they
 # exercise the parts that matter: the p = 2 neighbor construction on an even
 # lattice of odd determinant, the deduplication (most cases have several
-# classes), the mass computed by the program as the stopping criterion
-# (checked against the mass given by Hecke where name_mass.txt exists), the
-# seed built from a genus symbol, an odd genus, and the choice of the prime
-# for a genus with two spinor genera.
+# classes), the seed built from the genus symbol, which is the input, the
+# mass computed by the program as the stopping criterion (checked against
+# the mass given by Hecke where name_mass.txt exists), an odd genus, and the
+# choice of the prime for a genus with two spinor genera.
 #
 # The expected class numbers come from Hecke and DefLatDB.
 set -e
@@ -58,14 +58,9 @@ run_case() {
 run_case E8 1
 run_case rank8_det9 2
 run_case rank8_det25 3
-# The same genus from its symbol alone: the seed is built from the symbol
-# (GenusSymbol.h), and the mass is computed from that seed.
-run_case rank8_det25_symbol 3
 # An odd genus, the odd unimodular lattices of rank 12 (Z^12, E8 + Z^4 and
 # D12+), enumerated through the genus of their even sublattices.
 run_case I12_odd 3
-# The same odd genus from its symbol alone.
-run_case I12_symbol 3
 # A genus with two spinor genera (DefLatDB c02371). The default prime of
 # out_prime would be 5 anyway, but the program must find from the spinor
 # kernels that 5 connects the two spinor genera, and close the mass with

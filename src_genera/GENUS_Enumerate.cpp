@@ -23,104 +23,37 @@ template <typename T, typename Tint, typename Tgroup>
 void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
-  std::string FileLattice = BlockDATA.get_string("FileLattice");
   std::string GenusSymbolStr = BlockDATA.get_string("GenusSymbol");
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
   GenusSpec spec = ReadGenusSpec(eFull);
-  // The seeds: read from FileLattice, or, when it is unset, one seed built
-  // from the genus symbol (GenusSymbol.h). The symbol is handled in
-  // mpq_class / mpz_class whatever T is.
-  std::optional<GenusSymbol> symbol;
-  if (GenusSymbolStr != "unset") {
-    symbol = ParseGenusSymbol<mpz_class>(GenusSymbolStr);
-  }
-  std::vector<MyMatrix<T>> ListSeed;
-  if (FileLattice == "unset") {
-    if (!symbol) {
-      std::cerr << "GENUS_Enumerate: FileLattice and GenusSymbol are both "
-                   "unset, one of them is needed\n";
-      throw TerminalException{1};
-    }
-    MyMatrix<mpq_class> Seed =
-        GenusSymbolRepresentative<mpq_class, mpz_class>(*symbol, os);
-    os << "GENUS_Enumerate: the seed built from the genus symbol "
-       << GenusSymbolString(*symbol) << " is\n";
-    WriteMatrix(os, Seed);
-    ListSeed.push_back(UniversalMatrixConversion<T, mpq_class>(Seed));
-  } else {
-    ListSeed = ReadListMatrixFile<T>(FileLattice);
-  }
-  if (ListSeed.empty()) {
-    std::cerr << "GENUS_Enumerate: no seed lattice in " << FileLattice << "\n";
+  // The input is the genus, as a symbol (GenusSymbol.h); a lattice is
+  // turned into its symbol by GENUS_GetGenusFromLattice. The seed is built
+  // from the symbol, in mpq_class / mpz_class whatever T is.
+  if (GenusSymbolStr == "unset") {
+    std::cerr << "GENUS_Enumerate: GenusSymbol is needed (GENUS_"
+                 "GetGenusFromLattice gives the symbol of a lattice)\n";
     throw TerminalException{1};
   }
+  GenusSymbol symbol = ParseGenusSymbol<mpz_class>(GenusSymbolStr);
+  MyMatrix<mpq_class> Seed =
+      GenusSymbolRepresentative<mpq_class, mpz_class>(symbol, os);
+  os << "GENUS_Enumerate: the seed built from the genus symbol "
+     << GenusSymbolString(symbol) << " is\n";
+  WriteMatrix(os, Seed);
+  std::vector<MyMatrix<T>> ListSeed{UniversalMatrixConversion<T, mpq_class>(Seed)};
   // A sum of 1 / |Aut(L)|, so a fraction over the type the groups count
   // with, which has nothing to do with the type of the Gram matrices.
   using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
-  // The seeds of one genus have the same rank and the same determinant.
-  int rank = ListSeed[0].rows();
+  int rank = symbol.rank;
   T det = DeterminantMat(ListSeed[0]);
-  for (auto &eSeed : ListSeed) {
-    if (!IsSymmetricMatrix(eSeed) || !IsPositiveDefinite(eSeed, std::cerr)) {
-      std::cerr << "GENUS_Enumerate: a seed Gram matrix in " << FileLattice
-                << " is not symmetric positive definite\n";
-      throw TerminalException{1};
-    }
-    // The seeds are integral. Even seeds are enumerated directly; odd ones
-    // through their even sublattices (GenusEnumerationOdd.h).
-    if (!IsIntegralMatrix(eSeed)) {
-      std::cerr << "GENUS_Enumerate: a seed Gram matrix in " << FileLattice
-                << " is not integral\n";
-      throw TerminalException{1};
-    }
-    if (eSeed.rows() != rank) {
-      std::cerr << "GENUS_Enumerate: the seeds in " << FileLattice
-                << " have the ranks " << rank << " and " << eSeed.rows()
-                << "\n";
-      throw TerminalException{1};
-    }
-    if (DeterminantMat(eSeed) != det) {
-      std::cerr << "GENUS_Enumerate: the seeds in " << FileLattice
-                << " have the determinants " << det << " and "
-                << DeterminantMat(eSeed) << "\n";
-      throw TerminalException{1};
-    }
-  }
-  if (symbol && FileLattice != "unset") {
-    for (auto &eSeed : ListSeed) {
-      GenusSymbol s_seed = GenusSymbolOfGram<mpq_class, mpz_class>(
-          UniversalMatrixConversion<mpq_class, T>(eSeed));
-      if (s_seed != *symbol) {
-        std::cerr << "GENUS_Enumerate: a seed in " << FileLattice
-                  << " has the genus " << GenusSymbolString(s_seed)
-                  << ", not GenusSymbol = " << GenusSymbolString(*symbol)
-                  << "\n";
-        throw TerminalException{1};
-      }
-    }
-  }
-  // Even or odd: all the seeds of one genus have the same parity.
-  auto is_even = [](MyMatrix<T> const &M) -> bool {
-    for (int i = 0; i < M.rows(); i++) {
-      if (!IsInteger(M(i, i) / T(2))) {
-        return false;
-      }
-    }
-    return true;
-  };
-  bool even = is_even(ListSeed[0]);
-  for (auto &eSeed : ListSeed) {
-    if (is_even(eSeed) != even) {
-      std::cerr << "GENUS_Enumerate: the seeds in " << FileLattice
-                << " are not all even or all odd\n";
-      throw TerminalException{1};
-    }
-  }
+  // Even genera are enumerated directly; odd ones through the genus of the
+  // even sublattices (GenusEnumerationOdd.h).
+  bool even = symbol.even;
   if (!even) {
-    os << "GENUS_Enumerate: the seeds are odd, the genus is enumerated "
-          "through the genus of their even sublattices\n";
+    os << "GENUS_Enumerate: the genus is odd, it is enumerated through the "
+          "genus of the even sublattices\n";
   }
   // The mass, computed from the first seed by the mass formula of Conway
   // and Sloane (GenusMass.h); the enumeration stops when sum 1/|Aut|
@@ -171,9 +104,9 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
           prime = *connected;
           os << "GENUS_Enumerate: the prime " << prime
              << " connects them, it is used\n";
-        } else if (static_cast<int>(ListSeed.size()) < n_spinor) {
-          os << "GENUS_Enumerate: no single prime connects them; give one "
-                "seed per spinor genus, or use iterate or random_walk\n";
+        } else {
+          os << "GENUS_Enumerate: no single prime connects them, use "
+                "iterate or random_walk\n";
         }
       }
     }

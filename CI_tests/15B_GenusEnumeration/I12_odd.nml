@@ -1,6 +1,6 @@
 &DATA
  arithmetic = "gmp"
- FileLattice = "I12_lattice.txt"
+ GenusSymbol = "I{1}^{12}_{4}"
 /
 
 &METHOD

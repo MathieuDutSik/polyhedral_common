@@ -1,6 +1,6 @@
 &DATA
  arithmetic = "gmp"
- FileLattice = "rank4_det129_lattice.txt"
+ GenusSymbol = "II{1}^{4}_{II}{3}^{-1}{43}^{-1}"
 /
 
 &METHOD

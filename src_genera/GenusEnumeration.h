@@ -1701,21 +1701,16 @@ inline FullNamelist NAMELIST_GetStandard_GENUS_ENUMERATE() {
     std::map<std::string, std::string> ListStringValues_doc;
     ListStringValues_doc["arithmetic"] = "Default: gmp\n\
 The arithmetic of the Gram matrices";
-    ListStringValues_doc["FileLattice"] = "Default: unset\n\
-One or more Gram matrices in the ListMatrix format, the seeds. With\n\
-out_prime, which stays at one prime not dividing det, one seed per spinor\n\
-genus may be needed: the p-neighbor graph is connected on a spinor genus,\n\
-not on a genus. iterate and random_walk bring in further primes, whose\n\
-neighbors move between the spinor genera, so one seed suffices for them.\n\
-If unset, the seed is built from GenusSymbol";
-    ListStringValues_doc["GenusSymbol"] = "Default: unset\n\
-The genus as a Conway-Sloane symbol in the notation of the DefLatDB labels,\n\
-e.g. II{1}^{8}_{II}{2}^{2}_{2}{5}^{2} or I[{1}^{-8}{2}^{2}]_{4}{3}^{1},\n\
-optionally prefixed by rank.n_plus.det.level. (see GenusSymbol.h). With\n\
-FileLattice unset, one seed of the genus is built from it; with both set,\n\
-the seeds are checked to lie in that genus. When the genus has several\n\
-spinor genera, out_prime with prime = 0 picks a prime that connects them\n\
-if there is one (GenusSpinor.h)";
+    ListStringValues_doc["GenusSymbol"] = "Default: unset (required)\n\
+The genus to enumerate, as a Conway-Sloane symbol in the notation of the\n\
+DefLatDB labels, e.g. II{1}^{8}_{II}{2}^{2}_{2}{5}^{2} or\n\
+I[{1}^{-8}{2}^{2}]_{4}{3}^{1}, optionally prefixed by\n\
+rank.n_plus.det.level. (see GenusSymbol.h). GENUS_GetGenusFromLattice\n\
+gives the symbol of a lattice. The seed of the enumeration is built from\n\
+it, and the mass is computed from that seed. With out_prime and prime = 0,\n\
+when the genus has several spinor genera, a prime connecting them is\n\
+picked if there is one (GenusSpinor.h); otherwise iterate and random_walk,\n\
+which bring in further primes, reach them from the one seed";
     ListBlock["DATA"].setListStringValues_doc(ListStringValues_doc);
   }
   // METHOD

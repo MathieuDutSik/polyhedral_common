@@ -11,7 +11,7 @@ full list of entries, their defaults and their documentation.
 
     &DATA
      arithmetic = "gmp"
-     FileLattice = "E8_lattice.txt"
+     GenusSymbol = "II{1}^{8}_{II}"
     /
 
     &METHOD
@@ -38,13 +38,11 @@ full list of entries, their defaults and their documentation.
      OutFile = "stdout"
     /
 
-* `DATA` -- the seeds, one or more Gram matrices in the ListMatrix format,
-  or the genus symbol `GenusSymbol` from which one seed is built when
-  `FileLattice` is unset (see "Getting the input" below). The mass is
-  always computed, from the first seed, by the mass formula of Conway and
-  Sloane (`GenusMass` in `GenusMass.h`), in at most 0.12 s up to rank 26.
-  The seeds must be integral, positive definite, all even or all odd, and
-  of the same rank and determinant.
+* `DATA` -- the genus, `GenusSymbol` (see "Getting the input" below), the
+  only input on the genus. The seed of the enumeration is built from it,
+  and the mass is computed from that seed by the mass formula of Conway and
+  Sloane (`GenusMass` in `GenusMass.h`); both take well under a second up
+  to rank 26.
 * `METHOD` -- the `strategy`: `out_prime` (the default, one prime, `prime`
   or the smallest one not dividing det), `iterate` or `random_walk` (see
   `NeighborStrategy` in `GenusEnumeration.h`); the `recognition` of a known
@@ -106,13 +104,13 @@ mass closes, the list is certified complete either way.
 For a prime p not dividing det, the p-neighbor graph is connected on a
 SPINOR genus, not on a genus, and its neighbors move from one spinor genus to
 the one given by the class of p in the group of spinor genera. With
-`out_prime`, which stays at one prime, a genus with several spinor genera may
-therefore need one seed per spinor genus, which is why `FileLattice` takes a
-list; given too few seeds the enumeration converges to a proper subset, the
-mass falls short, and the program reports `complete = false` and says why
-rather than presenting a partial list as an answer. `iterate` and
-`random_walk` bring in further primes until the mass closes, and the classes
-of these primes reach every spinor genus, so one seed suffices for them.
+`out_prime`, which stays at one prime, the enumeration of a genus with
+several spinor genera from its one seed covers all of them only if that
+prime connects them; otherwise it converges to a proper subset, the mass
+falls short, and the program reports `complete = false` and says why rather
+than presenting a partial list as an answer. `iterate` and `random_walk`
+bring in further primes until the mass closes, and the classes of these
+primes reach every spinor genus.
 
 The number of spinor genera is computed from the genus symbol, without any
 enumeration (`GenusSpinor.h`, the method of Conway-Sloane, Chapter 15, 9.6,
@@ -128,27 +126,28 @@ those of SageMath.
 
 ## Getting the input
 
-There are two ways in:
+The genus is given by its symbol, for instance
 
-* seeds: `FileLattice`, as above;
-* the genus symbol alone: `FileLattice` unset and, for instance,
+    GenusSymbol = "II{1}^{8}_{II}{2}^{2}_{2}{5}^{2}"
 
-      GenusSymbol = "II{1}^{8}_{II}{2}^{2}_{2}{5}^{2}"
+in the notation of the DefLatDB labels (Conway-Sloane symbols, with
+`[ ... ]_{t}` for a compartment of total oddity t; the unimodular components
+at the odd primes may be omitted, and the prefix `rank.n_plus.det.level.` of
+the labels is accepted). For a genus known through one of its lattices,
 
-  in the notation of the DefLatDB labels (Conway-Sloane symbols, with
-  `[ ... ]_{t}` for a compartment of total oddity t; the unimodular
-  components at the odd primes may be omitted, and the prefix
-  `rank.n_plus.det.level.` of the labels is accepted). The program builds
-  one lattice of the genus (`GenusSymbolRepresentative` in `GenusSymbol.h`)
-  as Hecke and SageMath do: a rational quadratic form with the local
-  invariants of the symbol, an even lattice in it that is maximal at every
-  prime, then a descent at each p dividing 2 det to the local class of the
-  symbol, in at most 0.61 s up to rank 26. The genus of the result is
-  checked against the symbol, and the mass is then computed from it.
+    GENUS_GetGenusFromLattice lattice.txt
 
-With both set, the seeds are checked to lie in the genus of the symbol. A
-symbol gives a single seed; when the genus has several spinor genera,
-`out_prime` picks a prime that connects them if there is one (see above).
+prints the symbol of the Gram matrix in `lattice.txt`, in milliseconds.
+
+The program builds one lattice of the genus (`GenusSymbolRepresentative` in
+`GenusSymbol.h`) as Hecke and SageMath do: a rational quadratic form with the
+local invariants of the symbol, an even lattice in it that is maximal at
+every prime, then a descent at each p dividing 2 det to the local class of
+the symbol, in at most 0.61 s up to rank 26. The genus of the result is
+checked against the symbol, and the mass is then computed from it. A single
+seed suffices: when the genus has several spinor genera, `out_prime` picks a
+prime that connects them if there is one, and `iterate` and `random_walk`
+bring in further primes (see above).
 
 ## Performance notes
 
