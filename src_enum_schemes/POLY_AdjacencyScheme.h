@@ -295,7 +295,12 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     os << "ADJ_SCH: process_singleEntry_AdjI after f_spann\n";
 #endif
     vect.push_back(n_obj);
-    bool test = f_insert(pair.first);
+    bool is_treated = false;
+    f_save_status(n_obj, is_treated);
+    notdone.push_back(n_obj);
+    // f_record reads the new object, which f_insert then takes over.
+    f_record(n_obj, pair.first, x_adjI, pair.second, idx_orig);
+    bool test = f_insert(std::move(pair.first));
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: process_singleEntry_AdjI after f_insert test=" << test
        << "\n";
@@ -303,10 +308,6 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     if (test) {
       early_termination = true;
     }
-    bool is_treated = false;
-    f_save_status(n_obj, is_treated);
-    notdone.push_back(n_obj);
-    f_record(n_obj, pair.first, x_adjI, pair.second, idx_orig);
     n_obj += 1;
     return pair.second;
   };
@@ -399,7 +400,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: before f_insert\n";
 #endif
-    bool test = f_insert(x);
+    bool test = f_insert(std::move(x));
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: after f_insert test=" << test << "\n";
 #endif
@@ -649,12 +650,13 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
     return l_obj[idx].x;
   };
   auto f_next = [&]() -> std::optional<std::pair<bool, Tobj>> { return {}; };
-  auto f_insert = [&](Tobj const &x) -> bool {
-    l_obj.push_back({x, {}});
+  // The object is moved into the database, not copied.
+  auto f_insert = [&](Tobj &&x) -> bool {
+    l_obj.push_back({std::move(x), {}});
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: EnumerateAndStore_Serial: |l_obj|=" << l_obj.size() << "\n";
 #endif
-    bool test = f_incorrect(x);
+    bool test = f_incorrect(l_obj.back().x);
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: EnumerateAndStore_Serial: test=" << test << "\n";
     size_t n_sum = 0;
