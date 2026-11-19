@@ -41,7 +41,58 @@
               Exit status as GENUS_EnumerateIsometry: 2 when a genus did
               not close or a glued pair has no proved mass, 3 when the
               classes of a genus weigh more than its mass.
+
+  The mass of each genus certifies the classes found in it, not the list
+  of the genera: a genus never seeded would be missing with no sign. The
+  option target=NUM/DEN gives the total over all the genera of pairs
+  (e.g. GroupOracle.g, sum_Lambda #Hom(G, O(Lambda)) of the type /
+  |O(Lambda)|): the total found must equal it ("certified = true"); less is
+  an incomplete list (exit 2), more an error (exit 3).
  */
+
+/*
+  The option target=NUM/DEN, anywhere among the arguments and removed from
+  them.
+ */
+inline std::optional<std::string> ExtractTargetOption(int &argc, char *argv[]) {
+  std::optional<std::string> res;
+  int j = 0;
+  for (int i = 0; i < argc; i++) {
+    std::string a = argv[i];
+    if (a.rfind("target=", 0) == 0) {
+      res = a.substr(7);
+    } else {
+      argv[j++] = argv[i];
+    }
+  }
+  argc = j;
+  return res;
+}
+
+/*
+  The total of the genera found against the target, after the output: the
+  line "certified = true" when equal, an exception otherwise.
+ */
+template <typename T>
+void CheckTargetTotal(std::ostream &os, T const &total,
+                      std::optional<std::string> const &target) {
+  if (!target) {
+    return;
+  }
+  T t(*target);
+  os << "target mass = " << t << "\n";
+  os << "certified = " << (total == t ? "true" : "false") << "\n";
+  if (total < t) {
+    std::cerr << "GENUS_GlueIsometry: the genera found weigh " << total
+              << ", less than the target " << t << ": genera are missing\n";
+    throw GenusMassNotClosedException{};
+  }
+  if (total > t) {
+    std::cerr << "GENUS_GlueIsometry: the genera found weigh " << total
+              << ", more than the target " << t << "\n";
+    throw GenusMassExceededException{};
+  }
+}
 
 template <typename T>
 std::optional<T> ReadDeterminantArg(std::string const &s) {
@@ -90,7 +141,7 @@ void process(std::string const &mode, std::string const &FileGram1,
              std::string const &FileIsom1, std::string const &FileGram2,
              std::string const &FileIsom2, std::string const &det_arg,
              std::string const &OutFormat, QuadLValueMethod lvalue,
-             std::ostream &os) {
+             std::optional<std::string> const &target, std::ostream &os) {
   std::vector<GluedPair<T>> ListGlued;
   // an odd lattice (factors): the pairs of its even sublattice, then the
   // odd overlattices (IsometryGlueFactors.h)
@@ -286,6 +337,7 @@ void process(std::string const &mode, std::string const &FileGram1,
     os << "total mass = " << total_odd << "\n";
     os << "complete = " << (all_complete ? "true" : "false") << "\n";
     check_genera();
+    CheckTargetTotal(os, UniversalScalarConversion<T, Tmass>(total_odd), target);
     return;
   }
   if (OutFormat == "Summary") {
@@ -311,6 +363,7 @@ void process(std::string const &mode, std::string const &FileGram1,
     os << "complete = "
        << (all_complete && n_without_mass == 0 ? "true" : "false") << "\n";
     check_genera();
+    CheckTargetTotal(os, total, target);
     return;
   }
   if (OutFormat == "GAP") {
@@ -359,6 +412,7 @@ int main(int argc, char *argv[]) {
     std::string arith = ExtractArithmeticOption(argc, argv, "gmp");
     ArithmeticDispatch dispatch;
     QuadLValueMethod lvalue = ExtractQuadLValueOption(argc, argv);
+    std::optional<std::string> target = ExtractTargetOption(argc, argv);
     // involutions and factors: [Gram] [r or FileSpec] [OutFormat] [OutFile]
     bool short_args = (argc >= 2 && (std::string(argv[1]) == "involutions" ||
                                      std::string(argv[1]) == "factors"));
@@ -406,6 +460,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "            +1 or -1) or file FilePieces, the pieces\n";
       std::cerr << "            glued one factor at a time\n";
       std::cerr << "\n";
+      std::cerr << "target=NUM/DEN (anywhere, optional): the total mass of\n";
+      std::cerr << "        all the genera of pairs (e.g. GroupOracle.g);\n";
+      std::cerr << "        the genera found must reach it (certified =\n";
+      std::cerr << "        true), exit 2 when they weigh less, 3 more\n";
       std::cerr << "lvalue=double / lvalue=mpfr / lvalue=arb (anywhere,\n";
       std::cerr << "        optional): the L-values of the quadratic masses\n";
       std::cerr << "        with E not abelian, in double precision (when\n";
@@ -438,7 +496,7 @@ int main(int argc, char *argv[]) {
         dispatch, [&]<typename T, typename Tint>() -> void {
           auto f = [&](std::ostream &os) -> void {
             process<T, Tint, Tgroup>(mode, FileGram1, FileIsom1, FileGram2, FileIsom2,
-                                     det_arg, OutFormat, lvalue, os);
+                                     det_arg, OutFormat, lvalue, target, os);
           };
           FILE_PrintStderrStdoutFile(OutFile, f);
         });

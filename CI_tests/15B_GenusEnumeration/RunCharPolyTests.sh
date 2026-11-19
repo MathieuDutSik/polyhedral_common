@@ -4,7 +4,9 @@
 # charpoly/LAT.txt with the factors of charpoly/LAT_sig.spec must give the
 # total mass of the oracle (CharPolyOracle.g: the sum over the classes
 # Lambda of the genus and the sigma in O(Lambda) of characteristic
-# polynomial sig of 1 / |O(Lambda)|), every genus of pairs closed. For an
+# polynomial sig of 1 / |O(Lambda)|), every genus of pairs closed. The
+# oracle's mass is passed as target=, so the program itself certifies that
+# no genus of pairs is missing ("certified = true"). For an
 # odd lattice (I4, I8, I9, A2I2) the pairs of its even sublattice are
 # enumerated, then their odd overlattices (IsometryGlueFactors.h).
 #
@@ -28,12 +30,15 @@ while read -r lat sig expected; do
     start=$(date +%s)
     status=0
     out=$(timeout -s KILL "$TMAX" $BIN factors charpoly/${lat}.txt \
-              charpoly/${lat}_${sig}.spec Summary stdout 2>/dev/null) || status=$?
+              charpoly/${lat}_${sig}.spec Summary stdout target=$expected \
+              2>/dev/null) || status=$?
     end=$(date +%s)
     total=$(echo "$out" | sed -n 's/^total mass = //p')
     complete=$(echo "$out" | sed -n 's/^complete = //p')
+    certified=$(echo "$out" | sed -n 's/^certified = //p')
     echo "--- $lat $sig: total mass $total (expecting $expected), $((end - start))s ---"
-    if [ "$status" != 0 ] || [ "$total" != "$expected" ] || [ "$complete" != "true" ]; then
+    if [ "$status" != 0 ] || [ "$total" != "$expected" ] || [ "$complete" != "true" ] \
+           || [ "$certified" != "true" ]; then
         echo "ERROR: $lat $sig gave $total, complete=$complete, status=$status" >&2
         n_fail=$((n_fail + 1))
     fi
