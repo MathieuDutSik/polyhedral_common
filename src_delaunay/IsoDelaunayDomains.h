@@ -20,6 +20,7 @@
 #include <memory>
 #include <set>
 #include <utility>
+#include <variant>
 #include <limits>
 // clang-format on
 
@@ -408,6 +409,107 @@ inline void serialize(Archive &ar, FullAdjInfo<T> &eRec,
 } // namespace boost::serialization
 
 /*
+  The matrix eBigMat of an adjacency of a DelaunayTesselationIneq. It acts
+  on the rows (1, x) of the vertex matrices and is of the form
+  [[1, t], [0, L]], with t a translation and L the linear part. For most
+  adjacencies L is Id or -Id, and for all of them when the stabilizer of the
+  form is {Id, -Id}. Such a matrix is kept as the sign of L and t, the
+  latter empty when it is zero; any other matrix is kept as it is. full()
+  gives the matrix back.
+ */
+template <typename Tint> struct DelaunayBigMatSigned {
+  // The number of rows of the matrix.
+  int dim;
+  // The linear part is sign * Id.
+  int sign;
+  // The translation, empty when it is zero.
+  MyVector<Tint> t;
+};
+
+template <typename Tint> class DelaunayBigMat {
+private:
+  std::variant<MyMatrix<Tint>, DelaunayBigMatSigned<Tint>> data;
+
+  // The sign s if M is [[1, t], [0, s Id]] with s = 1 or -1, 0 otherwise.
+  static int get_sign(MyMatrix<Tint> const &M) {
+    int dim = M.rows();
+    if (dim == 0 || M.cols() != dim || M(0, 0) != Tint(1)) {
+      return 0;
+    }
+    for (int i = 1; i < dim; i++) {
+      if (M(i, 0) != Tint(0)) {
+        return 0;
+      }
+    }
+    for (int sign : {1, -1}) {
+      Tint diag(sign);
+      bool is_ok = true;
+      for (int i = 1; i < dim && is_ok; i++) {
+        for (int j = 1; j < dim; j++) {
+          Tint expected = (i == j) ? diag : Tint(0);
+          if (M(i, j) != expected) {
+            is_ok = false;
+            break;
+          }
+        }
+      }
+      if (is_ok) {
+        return sign;
+      }
+    }
+    return 0;
+  }
+
+public:
+  DelaunayBigMat() : data(MyMatrix<Tint>()) {}
+  // Implicit, so that an adjacency is built from a matrix as before.
+  DelaunayBigMat(MyMatrix<Tint> const &M) {
+    int sign = get_sign(M);
+    if (sign == 0) {
+      data = M;
+      return;
+    }
+    int dim = M.rows();
+    MyVector<Tint> t;
+    for (int j = 1; j < dim; j++) {
+      if (M(0, j) != Tint(0)) {
+        t.resize(dim - 1);
+        for (int k = 1; k < dim; k++) {
+          t(k - 1) = M(0, k);
+        }
+        break;
+      }
+    }
+    data = DelaunayBigMatSigned<Tint>{dim, sign, std::move(t)};
+  }
+  DelaunayBigMat(MyMatrix<Tint> &&M) {
+    if (get_sign(M) == 0) {
+      data = std::move(M);
+      return;
+    }
+    *this = DelaunayBigMat(static_cast<MyMatrix<Tint> const &>(M));
+  }
+  MyMatrix<Tint> full() const {
+    if (auto const *M = std::get_if<MyMatrix<Tint>>(&data)) {
+      return *M;
+    }
+    DelaunayBigMatSigned<Tint> const &s =
+        std::get<DelaunayBigMatSigned<Tint>>(data);
+    MyMatrix<Tint> M = ZeroMatrix<Tint>(s.dim, s.dim);
+    M(0, 0) = Tint(1);
+    for (int i = 1; i < s.dim; i++) {
+      M(i, i) = Tint(s.sign);
+    }
+    if (s.t.size() > 0) {
+      for (int j = 1; j < s.dim; j++) {
+        M(0, j) = s.t(j - 1);
+      }
+    }
+    return M;
+  }
+};
+
+/*
   A DelaunayTesselation annotated with, on top of each Delaunay_AdjO, the
   (ScalarCanonicalizationVector-reduced) Voronoi inequality of that
   adjacency. Carrying the inequalities alongside the tessellation lets a
@@ -423,7 +525,7 @@ inline void serialize(Archive &ar, FullAdjInfo<T> &eRec,
  */
 template <typename Tint> struct Delaunay_AdjIneqO {
   Face eInc;
-  MyMatrix<Tint> eBigMat;
+  DelaunayBigMat<Tint> eBigMat;
   int iOrb;
   // The index in l_ineq of the (ScalarCanonicalizationVector-reduced)
   // Voronoi inequality.
@@ -469,7 +571,16 @@ template <class Archive, typename Tint>
 inline void serialize(Archive &ar, Delaunay_AdjIneqO<Tint> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("eInc", eRec.eInc);
-  ar &make_nvp("eBigMat", eRec.eBigMat);
+  // Written as the whole matrix, so that the archives do not depend on how
+  // the matrix is kept.
+  MyMatrix<Tint> eBigMat;
+  if constexpr (Archive::is_saving::value) {
+    eBigMat = eRec.eBigMat.full();
+  }
+  ar &make_nvp("eBigMat", eBigMat);
+  if constexpr (Archive::is_loading::value) {
+    eRec.eBigMat = DelaunayBigMat<Tint>(std::move(eBigMat));
+  }
   ar &make_nvp("iOrb", eRec.iOrb);
   ar &make_nvp("i_ineq", eRec.i_ineq);
 }
@@ -515,7 +626,7 @@ StripDelaunayTesselationIneq(
   for (auto &eDel : DTI.l_dels) {
     std::vector<Delaunay_AdjO<Tint>> ListAdj;
     for (auto &eAdj : eDel.ListAdj) {
-      ListAdj.push_back({eAdj.eInc, eAdj.eBigMat, eAdj.iOrb});
+      ListAdj.push_back({eAdj.eInc, eAdj.eBigMat.full(), eAdj.iOrb});
     }
     l_dels.push_back({eDel.EXT, eDel.GRP, std::move(ListAdj)});
   }
@@ -1454,8 +1565,9 @@ FullRepart<Tring, Tgroup> FindRepartitionningInfoNextGeneration(
       TypeOrbitCenter eEnt = ListOrbitCenter[iCent];
       for (auto &eCase : ListInformationsOneFlipping) {
         if (eEnt.iDelaunay == eCase.iOrb) {
-          MyMatrix<Tring> const &eBigMat =
-              ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].eBigMat;
+          MyMatrix<Tring> const eBigMat = ListOrbitDelaunay.l_dels[eCase.iOrb]
+                                              .ListAdj[eCase.i_adj]
+                                              .eBigMat.full();
           int iOrbAdj =
               ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].iOrb;
           MyMatrix<Tring> eBigMatNew = eBigMat * eEnt.eBigMat;
@@ -2107,7 +2219,8 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_flt_bigmat += time_b.eval_int64();
 #endif
-        return {{eAdj.eInc, eAdj.eBigMat, eAdj.iOrb}, std::move(eBigMat)};
+        return {{eAdj.eInc, eAdj.eBigMat.full(), eAdj.iOrb},
+                std::move(eBigMat)};
       }
     }
     std::cerr << "ISO_EDGE: FLT: iDelaunayOld=" << iDelaunayOld
@@ -2269,7 +2382,7 @@ FlippingLtype(
     MyMatrix<Tring> const &EXT = l_dels[iOrb].EXT;
     ContainerMatrix<Tring> cont(EXT);
     Face f_att(EXT.rows());
-    MyMatrix<Tring> EXTadj = l_dels[NewAdj.iOrb].EXT * NewAdj.eBigMat;
+    MyMatrix<Tring> EXTadj = l_dels[NewAdj.iOrb].EXT * NewAdj.eBigMat.full();
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FLT: check_adj iOrb=" << iOrb
        << " NewAdj.iOrb=" << NewAdj.iOrb << "\n";
@@ -2361,7 +2474,8 @@ FlippingLtype(
           {
             ensure_vipc_cont();
             MyVector<Tring> eIneqCheck = ComputeDelaunayAdjIneq(
-                *vipc_ptr, *cont_ptr, l_dels[iOrbAdj].EXT, eAdj.eBigMat,
+                *vipc_ptr, *cont_ptr, l_dels[iOrbAdj].EXT,
+                eAdj.eBigMat.full(),
                 ListGramRing, os);
             if (eIneqCheck != eIneq) {
               std::cerr << "FLIP_CASE1_INEQ: SANITY_CHECK failed: the "
@@ -2376,7 +2490,7 @@ FlippingLtype(
                                         table.insert(MyVector<Tring>(eIneq))};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           os << "ISODEL: eAdj.eBigMat=\n";
-          WriteMatrix(os, eAdj.eBigMat);
+          WriteMatrix(os, eAdj.eBigMat.full());
           os << "ISODEL: iOrb=" << iOrb << " iOrbAdj=" << iOrbAdj << "\n";
 #endif
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
@@ -2388,7 +2502,7 @@ FlippingLtype(
           int iFacet = vect_lower_iFacet[iDelaunayOld];
           RepartEntry<Tring, Tgroup> const &eFacet = ListInfo[iInfo][iFacet];
           MyMatrix<Tring> ImageEXT =
-              ListOrbitDelaunay.l_dels[iDelaunayOld].EXT * eAdj.eBigMat;
+              ListOrbitDelaunay.l_dels[iDelaunayOld].EXT * eAdj.eBigMat.full();
           Face Linc = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunay].EXT,
                                       eAdj.eInc, ImageEXT);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -2414,7 +2528,8 @@ FlippingLtype(
           MicrosecondTime time_ch1;
 #endif
           MyMatrix<Tring> BigMat1 = RecMatch.adj.eBigMat * RecMatch.eBigMat *
-                                    eFacet.get_bigmat_inv() * eAdj.eBigMat;
+                                    eFacet.get_bigmat_inv() *
+                                    eAdj.eBigMat.full();
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_chain += time_ch1.eval_int64();
 #endif
