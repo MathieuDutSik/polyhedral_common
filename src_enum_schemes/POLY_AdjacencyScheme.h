@@ -6,6 +6,7 @@
 #include "boost_serialization.h"
 #include "Timings.h"
 #include <concepts>
+#include <deque>
 #include <optional>
 #include <unordered_map>
 #include <utility>
@@ -571,10 +572,14 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
   auto f_spann = [&](TadjI const &x, int i_orb) -> std::pair<Tobj, TadjO_work> {
     std::pair<Tobj, TadjO> pair = data.f_spann(x);
     TadjO_work xo_work{pair.second, i_orb};
-    std::pair<Tobj, TadjO_work> pair_ret{pair.first, xo_work};
+    std::pair<Tobj, TadjO_work> pair_ret{std::move(pair.first), xo_work};
     return pair_ret;
   };
-  std::vector<DatabaseEntry_Serial<Tobj, TadjO>> l_obj;
+  // A deque, not a vector: a vector moves its elements when it grows, and it
+  // copies them when their move constructor is not noexcept, which is the
+  // case of the objects holding a group or a Face. Each growth would then
+  // copy the whole database. A deque does not move its elements.
+  std::deque<DatabaseEntry_Serial<Tobj, TadjO>> l_obj;
   std::vector<uint8_t> l_status;
   // The adjacencies known from the other side (see AdjacencyKnown), by
   // object. Once an object is treated, its entry holds the ones that
@@ -638,8 +643,8 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
     }
   };
   auto f_adji_obj = [&](TadjI const &x) -> Tobj { return data.f_adji_obj(x); };
-  // By reference: l_obj does not grow while the reference is in use (f_repr
-  // runs before f_spann / f_insert), and a copy is a whole object.
+  // By reference: a copy is a whole object, and a reference to an element of
+  // a deque stays valid when the deque grows.
   auto f_idx_obj = [&](size_t const &idx) -> Tobj const & {
     return l_obj[idx].x;
   };
@@ -680,7 +685,14 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
   if (!is_correct) {
     return {};
   }
-  return l_obj;
+  // The capacity is reserved, so that the elements are moved one by one and
+  // never copied.
+  std::vector<DatabaseEntry_Serial<Tobj, TadjO>> l_ret;
+  l_ret.reserve(l_obj.size());
+  for (auto &entry : l_obj) {
+    l_ret.push_back(std::move(entry));
+  }
+  return l_ret;
 }
 
 template <typename TadjO>
