@@ -1139,6 +1139,7 @@ BuildPeriodicDelaunayTesselationIneq(
     std::vector<std::vector<Tring>> const &ListGramRing, std::ostream &os) {
   int n_del = l_ent.size();
   std::vector<Delaunay_EntryIneq<Tring, Tgroup>> l_dels(n_del);
+  IneqTable<Tring> table;
   for (int i_del = 0; i_del < n_del; i_del++) {
     MyMatrix<Tring> const &EXT = l_ent[i_del].x.EXT;
     VoronoiInequalityPreComput<Tring> vipc =
@@ -1150,11 +1151,11 @@ BuildPeriodicDelaunayTesselationIneq(
           ComputeDelaunayAdjIneq(vipc, cont, l_ent[eAdj.iOrb].x.EXT,
                                  eAdj.x.eBigMat, ListGramRing, os);
       ListAdj.push_back({eAdj.x.eInc, eAdj.x.eBigMat, eAdj.iOrb,
-                         std::move(eIneq)});
+                         table.insert(std::move(eIneq))});
     }
     l_dels[i_del] = {EXT, l_ent[i_del].x.GRP, std::move(ListAdj)};
   }
-  return {std::move(l_dels)};
+  return {std::move(l_dels), std::move(table.l_ineq)};
 }
 
 /*

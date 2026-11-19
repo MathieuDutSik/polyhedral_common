@@ -415,14 +415,19 @@ inline void serialize(Archive &ar, FullAdjInfo<T> &eRec,
   survive the flip unchanged instead of recomputing every inequality of
   the whole tessellation from scratch (see the Case 1 handling in
   FlippingLtype).
+
+  Many adjacencies give the same inequality: those crossing the same wall
+  of the iso-Delaunay domain. The distinct inequalities are therefore
+  stored once, in l_ineq, and an adjacency holds the index i_ineq of its
+  inequality there.
  */
 template <typename Tint> struct Delaunay_AdjIneqO {
   Face eInc;
   MyMatrix<Tint> eBigMat;
   int iOrb;
-  // The (ScalarCanonicalizationVector-reduced) Voronoi inequality; its
-  // canonical representative is primitive, hence stored over the ring.
-  MyVector<Tint> eIneq;
+  // The index in l_ineq of the (ScalarCanonicalizationVector-reduced)
+  // Voronoi inequality.
+  int i_ineq;
 };
 
 template <typename Tint, typename Tgroup>
@@ -435,6 +440,28 @@ struct Delaunay_EntryIneq {
 template <typename Tint, typename Tgroup>
 struct DelaunayTesselationIneq {
   std::vector<Delaunay_EntryIneq<Tint, Tgroup>> l_dels;
+  // The distinct inequalities; their canonical representatives are
+  // primitive, hence stored over the ring.
+  std::vector<MyVector<Tint>> l_ineq;
+};
+
+/*
+  The distinct inequalities of a tessellation being built. insert returns
+  the index of the inequality, adding it if it is new.
+ */
+template <typename Tint> struct IneqTable {
+  std::vector<MyVector<Tint>> l_ineq;
+  std::unordered_map<MyVector<Tint>, int> map;
+  int insert(MyVector<Tint> &&V) {
+    auto iter = map.find(V);
+    if (iter != map.end()) {
+      return iter->second;
+    }
+    int pos = l_ineq.size();
+    map.emplace(V, pos);
+    l_ineq.push_back(std::move(V));
+    return pos;
+  }
 };
 
 namespace boost::serialization {
@@ -444,7 +471,7 @@ inline void serialize(Archive &ar, Delaunay_AdjIneqO<Tint> &eRec,
   ar &make_nvp("eInc", eRec.eInc);
   ar &make_nvp("eBigMat", eRec.eBigMat);
   ar &make_nvp("iOrb", eRec.iOrb);
-  ar &make_nvp("eIneq", eRec.eIneq);
+  ar &make_nvp("i_ineq", eRec.i_ineq);
 }
 template <class Archive, typename Tint, typename Tgroup>
 inline void serialize(Archive &ar,
@@ -459,6 +486,7 @@ inline void serialize(Archive &ar,
                       DelaunayTesselationIneq<Tint, Tgroup> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("l_dels", eRec.l_dels);
+  ar &make_nvp("l_ineq", eRec.l_ineq);
 }
 } // namespace boost::serialization
 
@@ -624,6 +652,7 @@ DelaunayTesselationIneq<Tint, Tgroup> BuildDelaunayTesselationIneq(
     std::vector<std::vector<Tint>> const &ListGramRing, std::ostream &os) {
   int n_del = DT.l_dels.size();
   std::vector<Delaunay_EntryIneq<Tint, Tgroup>> l_dels(n_del);
+  IneqTable<Tint> table;
   for (int i_del = 0; i_del < n_del; i_del++) {
     Delaunay_Entry<Tint, Tgroup> const &eDel = DT.l_dels[i_del];
     VoronoiInequalityPreComput<Tint> vipc =
@@ -636,11 +665,11 @@ DelaunayTesselationIneq<Tint, Tgroup> BuildDelaunayTesselationIneq(
       MyVector<Tint> eIneq = ComputeDelaunayAdjIneq(
           vipc, cont, DT.l_dels[adj.iOrb].EXT, adj.eBigMat, ListGramRing, os);
       ListAdjIneq[i_adj] = {adj.eInc, adj.eBigMat, adj.iOrb,
-                            std::move(eIneq)};
+                            table.insert(std::move(eIneq))};
     }
     l_dels[i_del] = {eDel.EXT, eDel.GRP, std::move(ListAdjIneq)};
   }
-  return {std::move(l_dels)};
+  return {std::move(l_dels), std::move(table.l_ineq)};
 }
 
 /*
@@ -651,19 +680,23 @@ DelaunayTesselationIneq<Tint, Tgroup> BuildDelaunayTesselationIneq(
 template <typename Tint, typename Tgroup>
 std::vector<FullAdjInfo<Tint>> ComputeListIneqFromTesselationIneq(
     DelaunayTesselationIneq<Tint, Tgroup> const &DTI) {
-  std::unordered_map<MyVector<Tint>, std::vector<AdjInfo>> map;
+  // The inequalities are already grouped in DTI.l_ineq: an adjacency gives
+  // the index of its inequality there.
+  size_t n_ineq = DTI.l_ineq.size();
+  std::vector<std::vector<AdjInfo>> l_adj_info(n_ineq);
   int n_del = DTI.l_dels.size();
   for (int i_del = 0; i_del < n_del; i_del++) {
     int n_adj = DTI.l_dels[i_del].ListAdj.size();
     for (int i_adj = 0; i_adj < n_adj; i_adj++) {
-      MyVector<Tint> const &V_red = DTI.l_dels[i_del].ListAdj[i_adj].eIneq;
-      AdjInfo eAdj{i_del, i_adj};
-      map[V_red].push_back(eAdj);
+      int i_ineq = DTI.l_dels[i_del].ListAdj[i_adj].i_ineq;
+      l_adj_info[i_ineq].push_back({i_del, i_adj});
     }
   }
   std::vector<FullAdjInfo<Tint>> l_ret;
-  for (auto &kv : map) {
-    l_ret.push_back({kv.first, kv.second});
+  for (size_t i_ineq = 0; i_ineq < n_ineq; i_ineq++) {
+    if (!l_adj_info[i_ineq].empty()) {
+      l_ret.push_back({DTI.l_ineq[i_ineq], std::move(l_adj_info[i_ineq])});
+    }
   }
   return l_ret;
 }
@@ -2175,6 +2208,8 @@ FlippingLtype(
     return {};
   };
   std::vector<Delaunay_EntryIneq<Tring, Tgroup>> l_dels;
+  // The distinct inequalities of the flipped tessellation.
+  IneqTable<Tring> table;
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   MicrosecondTime time_sy;
 #endif
@@ -2320,7 +2355,8 @@ FlippingLtype(
           // Case 1: neither this orbit nor its neighbour were touched by the
           // flip (both stay Position_old), so the adjacency (eInc, eBigMat)
           // is byte-identical to the old one and so is its inequality.
-          MyVector<Tring> const &eIneq = eAdj.eIneq;
+          MyVector<Tring> const &eIneq =
+              ListOrbitDelaunay.l_ineq[eAdj.i_ineq];
 #ifdef SANITY_CHECK_FLIP_CASE1_INEQ
           {
             ensure_vipc_cont();
@@ -2337,7 +2373,7 @@ FlippingLtype(
           }
 #endif
           Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, eAdj.eBigMat, iOrbAdj,
-                                        eIneq};
+                                        table.insert(MyVector<Tring>(eIneq))};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           os << "ISODEL: eAdj.eBigMat=\n";
           WriteMatrix(os, eAdj.eBigMat);
@@ -2396,7 +2432,7 @@ FlippingLtype(
           time_flt_ineq += time_i.eval_int64();
 #endif
           Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat1), Pos,
-                                    std::move(eIneq)};
+                                    table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 2");
 #endif
@@ -2487,7 +2523,7 @@ FlippingLtype(
           time_flt_ineq += time_i.eval_int64();
 #endif
           Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat2), Pos,
-                                    std::move(eIneq)};
+                                    table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 3");
 #endif
@@ -2521,7 +2557,7 @@ FlippingLtype(
             time_flt_ineq += time_i.eval_int64();
 #endif
             Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat1), Pos2,
-                                      std::move(eIneq)};
+                                      table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 4");
 #endif
@@ -2566,7 +2602,7 @@ FlippingLtype(
             time_flt_ineq += time_i.eval_int64();
 #endif
             Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat1), Pos,
-                                      std::move(eIneq)};
+                                      table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 5");
 #endif
@@ -2588,7 +2624,7 @@ FlippingLtype(
           time_flt_ineq += time_i.eval_int64();
 #endif
           Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, eAdj.eBigMat, Pos,
-                                    std::move(eIneq)};
+                                    table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 6");
 #endif
@@ -2620,7 +2656,7 @@ FlippingLtype(
   os << "|ISODEL: FLT: face_transport|=" << time_flt_transport << "\n";
   os << "|ISODEL: FLT: full|=" << time_flt_full << "\n";
 #endif
-  return {std::move(l_dels)};
+  return {std::move(l_dels), std::move(table.l_ineq)};
 }
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
