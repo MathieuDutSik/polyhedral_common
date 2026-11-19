@@ -414,26 +414,42 @@ inline void serialize(Archive &ar, FullAdjInfo<T> &eRec,
   [[1, t], [0, L]], with t a translation and L the linear part. For most
   adjacencies L is Id or -Id, and for all of them when the stabilizer of the
   form is {Id, -Id}. Such a matrix is kept as the sign of L and t, the
-  latter empty when it is zero. For the other ones L is one of the few
+  latter absent when it is zero. For the other ones L is one of the few
   linear parts of the stabilizer, so it is kept once, in a
   LinearPartTable while the tessellation is built, and the matrix as a
   shared reference to L and t. full() gives the matrix back.
  */
+/*
+  An optional vector stored without a flag: the absent value is the empty
+  vector, so a present vector must be non-empty. It is read as a
+  std::optional.
+ */
+template <typename Tint> class CompactOptionalVector {
+private:
+  MyVector<Tint> V;
+
+public:
+  CompactOptionalVector() = default;
+  explicit CompactOptionalVector(MyVector<Tint> &&v) : V(std::move(v)) {}
+  explicit operator bool() const { return V.size() > 0; }
+  MyVector<Tint> const &operator*() const { return V; }
+};
+
 template <typename Tint> struct DelaunayBigMatSigned {
   // The number of rows of the matrix.
   int dim;
   // The linear part is sign * Id.
   int sign;
-  // The translation, empty when it is zero.
-  MyVector<Tint> t;
+  // The translation, absent when it is zero.
+  CompactOptionalVector<Tint> t;
 };
 
 template <typename Tint> struct DelaunayBigMatLinear {
   // The linear part, shared by the matrices of a tessellation with the same
   // linear part.
   std::shared_ptr<const MyMatrix<Tint>> L;
-  // The translation, empty when it is zero.
-  MyVector<Tint> t;
+  // The translation, absent when it is zero.
+  CompactOptionalVector<Tint> t;
 };
 
 /*
@@ -474,8 +490,8 @@ private:
     return true;
   }
 
-  // The translation t of M = [[1, t], [0, L]], empty when it is zero.
-  static MyVector<Tint> get_translation(MyMatrix<Tint> const &M) {
+  // The translation t of M = [[1, t], [0, L]], absent when it is zero.
+  static CompactOptionalVector<Tint> get_translation(MyMatrix<Tint> const &M) {
     int dim = M.rows();
     for (int j = 1; j < dim; j++) {
       if (M(0, j) != Tint(0)) {
@@ -483,10 +499,10 @@ private:
         for (int k = 1; k < dim; k++) {
           t(k - 1) = M(0, k);
         }
-        return t;
+        return CompactOptionalVector<Tint>(std::move(t));
       }
     }
-    return MyVector<Tint>();
+    return CompactOptionalVector<Tint>();
   }
 
   // The sign s if M is [[1, t], [0, s Id]] with s = 1 or -1, 0 otherwise.
@@ -517,10 +533,9 @@ private:
 public:
   DelaunayBigMat() : data(MyMatrix<Tint>()) {}
   // With a table, the linear part of a matrix other than [[1, t], [0, ±Id]]
-  // is shared through it; without, such a matrix is kept as it is. Implicit,
-  // so that an adjacency is built from a matrix as before.
-  DelaunayBigMat(MyMatrix<Tint> const &M,
-                 LinearPartTable<Tint> *table = nullptr) {
+  // is shared through it; with nullptr, such a matrix is kept as it is.
+  explicit DelaunayBigMat(MyMatrix<Tint> const &M,
+                          LinearPartTable<Tint> *table) {
     int sign = get_sign(M);
     if (sign != 0) {
       data = DelaunayBigMatSigned<Tint>{static_cast<int>(M.rows()), sign,
@@ -546,9 +561,9 @@ public:
       for (int i = 1; i < s->dim; i++) {
         M(i, i) = Tint(s->sign);
       }
-      if (s->t.size() > 0) {
+      if (s->t) {
         for (int j = 1; j < s->dim; j++) {
-          M(0, j) = s->t(j - 1);
+          M(0, j) = (*s->t)(j - 1);
         }
       }
       return M;
@@ -559,9 +574,9 @@ public:
     MyMatrix<Tint> M = ZeroMatrix<Tint>(dim, dim);
     M(0, 0) = Tint(1);
     M.block(1, 1, dim - 1, dim - 1) = *l.L;
-    if (l.t.size() > 0) {
+    if (l.t) {
       for (int j = 1; j < dim; j++) {
-        M(0, j) = l.t(j - 1);
+        M(0, j) = (*l.t)(j - 1);
       }
     }
     return M;
@@ -638,7 +653,7 @@ inline void serialize(Archive &ar, Delaunay_AdjIneqO<Tint> &eRec,
   }
   ar &make_nvp("eBigMat", eBigMat);
   if constexpr (Archive::is_loading::value) {
-    eRec.eBigMat = DelaunayBigMat<Tint>(std::move(eBigMat));
+    eRec.eBigMat = DelaunayBigMat<Tint>(eBigMat, nullptr);
   }
   ar &make_nvp("iOrb", eRec.iOrb);
   ar &make_nvp("i_ineq", eRec.i_ineq);
