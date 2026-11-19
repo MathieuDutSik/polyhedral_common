@@ -537,6 +537,62 @@ Tint FactorsGroupOrder(std::vector<IsometryFactor<T>> const &factors) {
   return Tint(static_cast<long>(order));
 }
 
+/*
+  A model of the representation of G of the factors, of the character of
+  the pairs (L, G) sought: block diagonal, s_j Id for an orth factor, M (x)
+  Id_c for an irrep factor, zeta_d^e_j (x) Id_b for a herm factor, the
+  first piece for a file factor; the generators acting on the columns
+  (GroupHomCount.h).
+ */
+template <typename T>
+std::vector<MyMatrix<T>>
+FactorsModelRepresentation(std::vector<IsometryFactor<T>> const &factors) {
+  size_t n_gen = factors[0].mus.size();
+  auto kron_id = [](MyMatrix<T> const &U, int c) -> MyMatrix<T> {
+    int m = U.rows();
+    MyMatrix<T> R = ZeroMatrix<T>(m * c, m * c);
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < m; j++) {
+        for (int k = 0; k < c; k++) {
+          R(i * c + k, j * c + k) = U(i, j);
+        }
+      }
+    }
+    return R;
+  };
+  std::vector<MyMatrix<T>> res;
+  for (size_t j = 0; j < n_gen; j++) {
+    std::vector<MyMatrix<T>> blocks;
+    for (auto const &f : factors) {
+      if (f.orth) {
+        blocks.push_back(T(f.signs[j]) * IdentityMat<T>(f.rank));
+      } else if (f.irrep) {
+        blocks.push_back(kron_id(f.irrep->gens[j], f.multiplicity));
+      } else if (f.herm_d != 0) {
+        std::vector<T> phi =
+            CyclotomicPolynomialCoeffs<T>(static_cast<int>(f.herm_d));
+        int k = static_cast<int>(phi.size()) - 1;
+        MyMatrix<T> Cm = ZeroMatrix<T>(k, k);
+        for (int i = 0; i + 1 < k; i++) {
+          Cm(i + 1, i) = T(1);
+        }
+        for (int i = 0; i < k; i++) {
+          Cm(i, k - 1) = -phi[i];
+        }
+        blocks.push_back(kron_id(MatrixPower(Cm, f.powers[j]), f.multiplicity));
+      } else {
+        blocks.push_back(f.pieces[0].second[j]);
+      }
+    }
+    MyMatrix<T> P = blocks[0];
+    for (size_t u = 1; u < blocks.size(); u++) {
+      P = BlockDiagonal(P, blocks[u]);
+    }
+    res.push_back(P);
+  }
+  return res;
+}
+
 template <typename T, typename Tint>
 GlueBound<Tint> GlueBounds(std::vector<IsometryFactor<T>> const &factors,
                            std::vector<size_t> const &idx_in,

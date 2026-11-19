@@ -6,6 +6,7 @@
 #include "Permutation.h"
 #include "IsometryGlue.h"
 #include "IsometryGlueFactors.h"
+#include "GroupHomCount.h"
 #include "GenusSymbol.h"
 #include <optional>
 #include <set>
@@ -47,7 +48,10 @@
   option target=NUM/DEN gives the total over all the genera of pairs
   (e.g. GroupOracle.g, sum_Lambda #Hom(G, O(Lambda)) of the type /
   |O(Lambda)|): the total found must equal it ("certified = true"); less is
-  an incomplete list (exit 2), more an error (exit 3).
+  an incomplete list (exit 2), more an error (exit 3). With target=auto
+  (factors mode, an even lattice) the total is computed here
+  (GroupHomCount.h: the classes of the genus, then the homomorphisms into
+  their orthogonal groups up to conjugacy).
  */
 
 /*
@@ -75,11 +79,11 @@ inline std::optional<std::string> ExtractTargetOption(int &argc, char *argv[]) {
  */
 template <typename T>
 void CheckTargetTotal(std::ostream &os, T const &total,
-                      std::optional<std::string> const &target) {
+                      std::optional<T> const &target) {
   if (!target) {
     return;
   }
-  T t(*target);
+  T const &t = *target;
   os << "target mass = " << t << "\n";
   os << "certified = " << (total == t ? "true" : "false") << "\n";
   if (total < t) {
@@ -146,6 +150,11 @@ void process(std::string const &mode, std::string const &FileGram1,
   // an odd lattice (factors): the pairs of its even sublattice, then the
   // odd overlattices (IsometryGlueFactors.h)
   std::optional<MyMatrix<T>> odd_gram;
+  // the target total of the genera of pairs, given or computed
+  std::optional<T> target_total;
+  if (target && *target != "auto") {
+    target_total = T(*target);
+  }
   if (mode == "factors") {
     // FileGram1 the lattice, FileIsom1 the spec file of the factors (the
     // pieces of the even sublattice when the lattice is odd)
@@ -159,8 +168,22 @@ void process(std::string const &mode, std::string const &FileGram1,
       MyMatrix<T> B0 = EvenSublatticeBasis(A);
       A = B0 * A * B0.transpose();
     }
-    ListGlued = FactorSeeds<T, Tint, Tgroup>(
-        A, ReadIsometryFactors<T>(FileIsom1), std::cerr);
+    std::vector<IsometryFactor<T>> factors = ReadIsometryFactors<T>(FileIsom1);
+    if (target && *target == "auto") {
+      if (odd_gram) {
+        std::cerr << "GENUS_GlueIsometry: target=auto needs an even lattice\n";
+        throw TerminalException{1};
+      }
+      std::optional<T> opt = HomomorphismGenusMass<T, Tint, Tgroup>(
+          A, FactorsModelRepresentation(factors), std::cerr);
+      if (!opt) {
+        std::cerr << "GENUS_GlueIsometry: the genus did not close, no "
+                     "target\n";
+        throw TerminalException{1};
+      }
+      target_total = *opt;
+    }
+    ListGlued = FactorSeeds<T, Tint, Tgroup>(A, factors, std::cerr);
   } else if (mode == "pieces") {
     // FileGram1 the lattice, FileIsom1 the rank r of the +1-piece, FileGram2
     // the list of the other pieces: the factors "file FileGram2" and
@@ -337,7 +360,8 @@ void process(std::string const &mode, std::string const &FileGram1,
     os << "total mass = " << total_odd << "\n";
     os << "complete = " << (all_complete ? "true" : "false") << "\n";
     check_genera();
-    CheckTargetTotal(os, UniversalScalarConversion<T, Tmass>(total_odd), target);
+    CheckTargetTotal(os, UniversalScalarConversion<T, Tmass>(total_odd),
+                     target_total);
     return;
   }
   if (OutFormat == "Summary") {
@@ -363,7 +387,7 @@ void process(std::string const &mode, std::string const &FileGram1,
     os << "complete = "
        << (all_complete && n_without_mass == 0 ? "true" : "false") << "\n";
     check_genera();
-    CheckTargetTotal(os, total, target);
+    CheckTargetTotal(os, total, target_total);
     return;
   }
   if (OutFormat == "GAP") {
@@ -463,7 +487,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "target=NUM/DEN (anywhere, optional): the total mass of\n";
       std::cerr << "        all the genera of pairs (e.g. GroupOracle.g);\n";
       std::cerr << "        the genera found must reach it (certified =\n";
-      std::cerr << "        true), exit 2 when they weigh less, 3 more\n";
+      std::cerr << "        true), exit 2 when they weigh less, 3 more;\n";
+      std::cerr << "        target=auto computes it (factors, even lattice)\n";
       std::cerr << "lvalue=double / lvalue=mpfr / lvalue=arb (anywhere,\n";
       std::cerr << "        optional): the L-values of the quadratic masses\n";
       std::cerr << "        with E not abelian, in double precision (when\n";

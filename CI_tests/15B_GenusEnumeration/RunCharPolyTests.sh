@@ -6,7 +6,10 @@
 # Lambda of the genus and the sigma in O(Lambda) of characteristic
 # polynomial sig of 1 / |O(Lambda)|), every genus of pairs closed. The
 # oracle's mass is passed as target=, so the program itself certifies that
-# no genus of pairs is missing ("certified = true"). For an
+# no genus of pairs is missing ("certified = true"). With TARGET=auto the
+# program computes the target itself (GroupHomCount.h), and the total is
+# still compared with the oracle (e.g. TARGET=auto RunCharPolyTests.sh
+# homcount_tests.txt). For an
 # odd lattice (I4, I8, I9, A2I2) the pairs of its even sublattice are
 # enumerated, then their odd overlattices (IsometryGlueFactors.h).
 #
@@ -27,10 +30,15 @@ while read -r lat sig expected; do
         ''|'#'*) continue ;;
     esac
     n_case=$((n_case + 1))
+    # the target: the oracle's mass, or computed by the program (TARGET=auto)
+    target_arg=$expected
+    if [ "${TARGET:-}" = "auto" ]; then
+        target_arg=auto
+    fi
     start=$(date +%s)
     status=0
     out=$(timeout -s KILL "$TMAX" $BIN factors charpoly/${lat}.txt \
-              charpoly/${lat}_${sig}.spec Summary stdout target=$expected \
+              charpoly/${lat}_${sig}.spec Summary stdout target=$target_arg \
               2>/dev/null) || status=$?
     end=$(date +%s)
     total=$(echo "$out" | sed -n 's/^total mass = //p')

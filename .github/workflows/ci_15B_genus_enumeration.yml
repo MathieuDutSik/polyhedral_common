@@ -115,6 +115,28 @@ jobs:
           fi
           cd ../..
 
+      - name: Test the genera of pairs of finite groups (GroupOracle.g)
+        run: |
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ./RunCharPolyTests.sh group_tests_ci.txt
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The group test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
+      - name: Test the target masses computed in C++ (target=auto)
+        run: |
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          TARGET=auto ./RunCharPolyTests.sh homcount_tests.txt
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The target mass test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
       - name: Test the local densities
         run: |
           cd CI_tests/15B_GenusEnumeration
