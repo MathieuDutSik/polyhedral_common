@@ -21,6 +21,7 @@
 #include <set>
 #include <utility>
 #include <variant>
+#include <bit>
 #include <limits>
 // clang-format on
 
@@ -584,6 +585,64 @@ public:
 };
 
 /*
+  The incidence eInc of an adjacency of a DelaunayTesselationIneq: the
+  vertices of the Delaunay polytope on the shared facet. A Face costs a
+  header and an allocation, while the polytopes have few vertices, the
+  simplices n+1 of them. Up to 64 vertices the incidence is therefore kept
+  as the bits of an integer, and as a Face beyond. full() gives the Face
+  back.
+ */
+class CompactFace {
+private:
+  uint64_t bits = 0;
+  int32_t n_vert = 0;
+  // The incidence when there are more than 64 vertices, nullptr otherwise.
+  std::unique_ptr<Face> large;
+
+public:
+  CompactFace() = default;
+  explicit CompactFace(Face const &f) : n_vert(static_cast<int32_t>(f.size())) {
+    if (f.size() > 64) {
+      large = std::make_unique<Face>(f);
+      return;
+    }
+    for (size_t i = f.find_first(); i != Face::npos; i = f.find_next(i)) {
+      bits |= uint64_t(1) << i;
+    }
+  }
+  CompactFace(CompactFace const &x)
+      : bits(x.bits), n_vert(x.n_vert),
+        large(x.large ? std::make_unique<Face>(*x.large) : nullptr) {}
+  CompactFace(CompactFace &&x) noexcept = default;
+  CompactFace &operator=(CompactFace const &x) {
+    bits = x.bits;
+    n_vert = x.n_vert;
+    large = x.large ? std::make_unique<Face>(*x.large) : nullptr;
+    return *this;
+  }
+  CompactFace &operator=(CompactFace &&x) noexcept = default;
+  Face full() const {
+    if (large) {
+      return *large;
+    }
+    Face f(n_vert);
+    for (int32_t i = 0; i < n_vert; i++) {
+      if ((bits >> i) & 1) {
+        f[i] = 1;
+      }
+    }
+    return f;
+  }
+  size_t size() const { return n_vert; }
+  size_t count() const {
+    if (large) {
+      return large->count();
+    }
+    return std::popcount(bits);
+  }
+};
+
+/*
   A DelaunayTesselation annotated with, on top of each Delaunay_AdjO, the
   (ScalarCanonicalizationVector-reduced) Voronoi inequality of that
   adjacency. Carrying the inequalities alongside the tessellation lets a
@@ -598,7 +657,7 @@ public:
   inequality there.
  */
 template <typename Tint> struct Delaunay_AdjIneqO {
-  Face eInc;
+  CompactFace eInc;
   DelaunayBigMat<Tint> eBigMat;
   int iOrb;
   // The index in l_ineq of the (ScalarCanonicalizationVector-reduced)
@@ -644,9 +703,16 @@ namespace boost::serialization {
 template <class Archive, typename Tint>
 inline void serialize(Archive &ar, Delaunay_AdjIneqO<Tint> &eRec,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("eInc", eRec.eInc);
-  // Written as the whole matrix, so that the archives do not depend on how
-  // the matrix is kept.
+  // The incidence and the matrix are written whole, so that the archives do
+  // not depend on how they are kept.
+  Face eInc;
+  if constexpr (Archive::is_saving::value) {
+    eInc = eRec.eInc.full();
+  }
+  ar &make_nvp("eInc", eInc);
+  if constexpr (Archive::is_loading::value) {
+    eRec.eInc = CompactFace(eInc);
+  }
   MyMatrix<Tint> eBigMat;
   if constexpr (Archive::is_saving::value) {
     eBigMat = eRec.eBigMat.full();
@@ -700,7 +766,7 @@ StripDelaunayTesselationIneq(
   for (auto &eDel : DTI.l_dels) {
     std::vector<Delaunay_AdjO<Tint>> ListAdj;
     for (auto &eAdj : eDel.ListAdj) {
-      ListAdj.push_back({eAdj.eInc, eAdj.eBigMat.full(), eAdj.iOrb});
+      ListAdj.push_back({eAdj.eInc.full(), eAdj.eBigMat.full(), eAdj.iOrb});
     }
     l_dels.push_back({eDel.EXT, eDel.GRP, std::move(ListAdj)});
   }
@@ -850,7 +916,7 @@ DelaunayTesselationIneq<Tint, Tgroup> BuildDelaunayTesselationIneq(
       Delaunay_AdjO<Tint> const &adj = eDel.ListAdj[i_adj];
       MyVector<Tint> eIneq = ComputeDelaunayAdjIneq(
           vipc, cont, DT.l_dels[adj.iOrb].EXT, adj.eBigMat, ListGramRing, os);
-      ListAdjIneq[i_adj] = {adj.eInc,
+      ListAdjIneq[i_adj] = {CompactFace(adj.eInc),
                             DelaunayBigMat<Tint>(adj.eBigMat, &lin_table),
                             adj.iOrb,
                             table.insert(std::move(eIneq))};
@@ -2283,7 +2349,7 @@ FlippingLtype(
 #endif
       std::optional<Telt> opt =
           ListOrbitDelaunay.l_dels[iDelaunayOld]
-              .GRP.RepresentativeAction_OnSets(eAdj.eInc, eInc);
+              .GRP.RepresentativeAction_OnSets(eAdj.eInc.full(), eInc);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
       time_flt_onsets += time_o.eval_int64();
 #endif
@@ -2296,7 +2362,7 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         time_flt_bigmat += time_b.eval_int64();
 #endif
-        return {{eAdj.eInc, eAdj.eBigMat.full(), eAdj.iOrb},
+        return {{eAdj.eInc.full(), eAdj.eBigMat.full(), eAdj.iOrb},
                 std::move(eBigMat)};
       }
     }
@@ -2488,7 +2554,7 @@ FlippingLtype(
     os << "ISODEL: FLT: NewAdj.eInc=" << NewAdj.eInc.size() << " / "
        << NewAdj.eInc.count() << "\n";
 #endif
-    if (f_att != NewAdj.eInc) {
+    if (f_att != NewAdj.eInc.full()) {
       std::cerr << "f_att should be equal to NewAdj.eInc\n";
       std::cerr << "Consistency error in context=" << context << "\n";
       throw TerminalException{1};
@@ -2583,7 +2649,7 @@ FlippingLtype(
           MyMatrix<Tring> ImageEXT =
               ListOrbitDelaunay.l_dels[iDelaunayOld].EXT * eAdj.eBigMat.full();
           Face Linc = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunay].EXT,
-                                      eAdj.eInc, ImageEXT);
+                                      eAdj.eInc.full(), ImageEXT);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           os << "ISODEL: FLT: iInfo=" << iInfo << " iFacet=" << iFacet
              << " |Linc|=" << Linc.size() << " / " << Linc.count() << "\n";
@@ -2719,7 +2785,7 @@ FlippingLtype(
           time_flt_ineq += time_i.eval_int64();
 #endif
           Delaunay_AdjIneqO<Tring> NAdj{
-              eAdj.eInc,
+              CompactFace(eAdj.eInc),
               DelaunayBigMat<Tring>(BigMat2, &lin_table), Pos,
               table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
@@ -2755,7 +2821,7 @@ FlippingLtype(
             time_flt_ineq += time_i.eval_int64();
 #endif
             Delaunay_AdjIneqO<Tring> NAdj{
-                eAdj.eInc,
+                CompactFace(eAdj.eInc),
                 DelaunayBigMat<Tring>(BigMat1, &lin_table), Pos2,
                 table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
@@ -2802,7 +2868,7 @@ FlippingLtype(
             time_flt_ineq += time_i.eval_int64();
 #endif
             Delaunay_AdjIneqO<Tring> NAdj{
-                eAdj.eInc,
+                CompactFace(eAdj.eInc),
                 DelaunayBigMat<Tring>(BigMat1, &lin_table), Pos,
                 table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
@@ -2826,7 +2892,7 @@ FlippingLtype(
           time_flt_ineq += time_i.eval_int64();
 #endif
           Delaunay_AdjIneqO<Tring> NAdj{
-              eAdj.eInc,
+              CompactFace(eAdj.eInc),
               DelaunayBigMat<Tring>(eAdj.eBigMat, &lin_table), Pos,
               table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN

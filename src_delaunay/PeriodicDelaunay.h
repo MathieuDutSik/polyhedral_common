@@ -1152,8 +1152,9 @@ BuildPeriodicDelaunayTesselationIneq(
           ComputeDelaunayAdjIneq(vipc, cont, l_ent[eAdj.iOrb].x.EXT,
                                  eAdj.x.eBigMat, ListGramRing, os);
       ListAdj.push_back(
-          {eAdj.x.eInc, DelaunayBigMat<Tring>(eAdj.x.eBigMat, &lin_table),
-           eAdj.iOrb, table.insert(std::move(eIneq))});
+          {CompactFace(eAdj.x.eInc),
+           DelaunayBigMat<Tring>(eAdj.x.eBigMat, &lin_table), eAdj.iOrb,
+           table.insert(std::move(eIneq))});
     }
     l_dels[i_del] = {EXT, l_ent[i_del].x.GRP, std::move(ListAdj)};
   }
