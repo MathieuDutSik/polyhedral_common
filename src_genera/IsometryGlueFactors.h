@@ -810,21 +810,30 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
         }
       }
     } else if (f.irrep) {
-      // the complete searches, by End(M) for Schur index 1, otherwise by
-      // maximal orders; the search by steps up and down when beyond the
-      // bounds
+      // the complete searches: the twists when End_G(M) is a field with a
+      // self-adjoint part larger than Q, End(M) for Schur index 1, the
+      // maximal orders otherwise; none applies (a maximal order beyond the
+      // bounds, a quaternion algebra over K^+ != Q) is an error, as a
+      // search that may miss pieces would miss genera without notice
       std::vector<Tint> gp = GroupLatticePrimes<T, Tint>(*f.irrep);
       std::optional<std::vector<GroupLattice<T>>> cert =
-          IsotypicPiecesCertified<T, Tint, Tgroup>(*f.irrep, f.multiplicity,
-                                                   dets, gp, os);
+          IsotypicPiecesTwisted<T, Tint, Tgroup>(*f.irrep, f.multiplicity,
+                                                 dets, os);
+      if (!cert) {
+        cert = IsotypicPiecesCertified<T, Tint, Tgroup>(
+            *f.irrep, f.multiplicity, dets, gp, os);
+      }
       if (!cert) {
         cert = IsotypicPiecesMaximalOrder<T, Tint, Tgroup>(
             *f.irrep, f.multiplicity, dets, gp, os);
       }
-      std::vector<GroupLattice<T>> list_P =
-          cert ? *cert
-               : IsotypicPieces<T, Tint, Tgroup>(*f.irrep, f.multiplicity,
-                                                 dets, gp, os);
+      if (!cert) {
+        std::cerr << "ISOM_FACTORS: " << f.desc
+                  << ": no complete search of the pieces for this "
+                     "representation\n";
+        throw TerminalException{1};
+      }
+      std::vector<GroupLattice<T>> const &list_P = *cert;
       for (auto const &P : list_P) {
         if (OddSymbolFitsIn<Tint>(GenusSymbolOfGram<T, Tint>(P.gram), S,
                                   glue_primes)) {
