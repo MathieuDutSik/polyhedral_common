@@ -414,8 +414,10 @@ inline void serialize(Archive &ar, FullAdjInfo<T> &eRec,
   [[1, t], [0, L]], with t a translation and L the linear part. For most
   adjacencies L is Id or -Id, and for all of them when the stabilizer of the
   form is {Id, -Id}. Such a matrix is kept as the sign of L and t, the
-  latter empty when it is zero; any other matrix is kept as it is. full()
-  gives the matrix back.
+  latter empty when it is zero. For the other ones L is one of the few
+  linear parts of the stabilizer, so it is kept once, in a
+  LinearPartTable while the tessellation is built, and the matrix as a
+  shared reference to L and t. full() gives the matrix back.
  */
 template <typename Tint> struct DelaunayBigMatSigned {
   // The number of rows of the matrix.
@@ -426,21 +428,73 @@ template <typename Tint> struct DelaunayBigMatSigned {
   MyVector<Tint> t;
 };
 
+template <typename Tint> struct DelaunayBigMatLinear {
+  // The linear part, shared by the matrices of a tessellation with the same
+  // linear part.
+  std::shared_ptr<const MyMatrix<Tint>> L;
+  // The translation, empty when it is zero.
+  MyVector<Tint> t;
+};
+
+/*
+  The linear parts of the matrices of a tessellation being built: get
+  returns the shared copy of L, adding it if it is new.
+ */
+template <typename Tint> struct LinearPartTable {
+  std::unordered_map<MyMatrix<Tint>, std::shared_ptr<const MyMatrix<Tint>>>
+      map;
+  std::shared_ptr<const MyMatrix<Tint>> get(MyMatrix<Tint> &&L) {
+    auto iter = map.find(L);
+    if (iter != map.end()) {
+      return iter->second;
+    }
+    auto ptr = std::make_shared<const MyMatrix<Tint>>(L);
+    map.emplace(std::move(L), ptr);
+    return ptr;
+  }
+};
+
 template <typename Tint> class DelaunayBigMat {
 private:
-  std::variant<MyMatrix<Tint>, DelaunayBigMatSigned<Tint>> data;
+  std::variant<MyMatrix<Tint>, DelaunayBigMatSigned<Tint>,
+               DelaunayBigMatLinear<Tint>>
+      data;
 
-  // The sign s if M is [[1, t], [0, s Id]] with s = 1 or -1, 0 otherwise.
-  static int get_sign(MyMatrix<Tint> const &M) {
+  // Whether M is of the form [[1, t], [0, L]].
+  static bool is_affine(MyMatrix<Tint> const &M) {
     int dim = M.rows();
     if (dim == 0 || M.cols() != dim || M(0, 0) != Tint(1)) {
-      return 0;
+      return false;
     }
     for (int i = 1; i < dim; i++) {
       if (M(i, 0) != Tint(0)) {
-        return 0;
+        return false;
       }
     }
+    return true;
+  }
+
+  // The translation t of M = [[1, t], [0, L]], empty when it is zero.
+  static MyVector<Tint> get_translation(MyMatrix<Tint> const &M) {
+    int dim = M.rows();
+    for (int j = 1; j < dim; j++) {
+      if (M(0, j) != Tint(0)) {
+        MyVector<Tint> t(dim - 1);
+        for (int k = 1; k < dim; k++) {
+          t(k - 1) = M(0, k);
+        }
+        return t;
+      }
+    }
+    return MyVector<Tint>();
+  }
+
+  // The sign s if M is [[1, t], [0, s Id]] with s = 1 or -1, 0 otherwise.
+  static int get_sign(MyMatrix<Tint> const &M) {
+    if (!is_affine(M)) {
+      return 0;
+    }
+    int dim = M.rows();
     for (int sign : {1, -1}) {
       Tint diag(sign);
       bool is_ok = true;
@@ -462,47 +516,52 @@ private:
 
 public:
   DelaunayBigMat() : data(MyMatrix<Tint>()) {}
-  // Implicit, so that an adjacency is built from a matrix as before.
-  DelaunayBigMat(MyMatrix<Tint> const &M) {
+  // With a table, the linear part of a matrix other than [[1, t], [0, ±Id]]
+  // is shared through it; without, such a matrix is kept as it is. Implicit,
+  // so that an adjacency is built from a matrix as before.
+  DelaunayBigMat(MyMatrix<Tint> const &M,
+                 LinearPartTable<Tint> *table = nullptr) {
     int sign = get_sign(M);
-    if (sign == 0) {
-      data = M;
+    if (sign != 0) {
+      data = DelaunayBigMatSigned<Tint>{static_cast<int>(M.rows()), sign,
+                                        get_translation(M)};
       return;
     }
-    int dim = M.rows();
-    MyVector<Tint> t;
-    for (int j = 1; j < dim; j++) {
-      if (M(0, j) != Tint(0)) {
-        t.resize(dim - 1);
-        for (int k = 1; k < dim; k++) {
-          t(k - 1) = M(0, k);
-        }
-        break;
-      }
-    }
-    data = DelaunayBigMatSigned<Tint>{dim, sign, std::move(t)};
-  }
-  DelaunayBigMat(MyMatrix<Tint> &&M) {
-    if (get_sign(M) == 0) {
-      data = std::move(M);
+    if (table != nullptr && is_affine(M)) {
+      int dim = M.rows();
+      MyMatrix<Tint> L = M.block(1, 1, dim - 1, dim - 1);
+      data = DelaunayBigMatLinear<Tint>{table->get(std::move(L)),
+                                        get_translation(M)};
       return;
     }
-    *this = DelaunayBigMat(static_cast<MyMatrix<Tint> const &>(M));
+    data = M;
   }
   MyMatrix<Tint> full() const {
     if (auto const *M = std::get_if<MyMatrix<Tint>>(&data)) {
       return *M;
     }
-    DelaunayBigMatSigned<Tint> const &s =
-        std::get<DelaunayBigMatSigned<Tint>>(data);
-    MyMatrix<Tint> M = ZeroMatrix<Tint>(s.dim, s.dim);
-    M(0, 0) = Tint(1);
-    for (int i = 1; i < s.dim; i++) {
-      M(i, i) = Tint(s.sign);
+    if (auto const *s = std::get_if<DelaunayBigMatSigned<Tint>>(&data)) {
+      MyMatrix<Tint> M = ZeroMatrix<Tint>(s->dim, s->dim);
+      M(0, 0) = Tint(1);
+      for (int i = 1; i < s->dim; i++) {
+        M(i, i) = Tint(s->sign);
+      }
+      if (s->t.size() > 0) {
+        for (int j = 1; j < s->dim; j++) {
+          M(0, j) = s->t(j - 1);
+        }
+      }
+      return M;
     }
-    if (s.t.size() > 0) {
-      for (int j = 1; j < s.dim; j++) {
-        M(0, j) = s.t(j - 1);
+    DelaunayBigMatLinear<Tint> const &l =
+        std::get<DelaunayBigMatLinear<Tint>>(data);
+    int dim = l.L->rows() + 1;
+    MyMatrix<Tint> M = ZeroMatrix<Tint>(dim, dim);
+    M(0, 0) = Tint(1);
+    M.block(1, 1, dim - 1, dim - 1) = *l.L;
+    if (l.t.size() > 0) {
+      for (int j = 1; j < dim; j++) {
+        M(0, j) = l.t(j - 1);
       }
     }
     return M;
@@ -764,6 +823,7 @@ DelaunayTesselationIneq<Tint, Tgroup> BuildDelaunayTesselationIneq(
   int n_del = DT.l_dels.size();
   std::vector<Delaunay_EntryIneq<Tint, Tgroup>> l_dels(n_del);
   IneqTable<Tint> table;
+  LinearPartTable<Tint> lin_table;
   for (int i_del = 0; i_del < n_del; i_del++) {
     Delaunay_Entry<Tint, Tgroup> const &eDel = DT.l_dels[i_del];
     VoronoiInequalityPreComput<Tint> vipc =
@@ -775,7 +835,9 @@ DelaunayTesselationIneq<Tint, Tgroup> BuildDelaunayTesselationIneq(
       Delaunay_AdjO<Tint> const &adj = eDel.ListAdj[i_adj];
       MyVector<Tint> eIneq = ComputeDelaunayAdjIneq(
           vipc, cont, DT.l_dels[adj.iOrb].EXT, adj.eBigMat, ListGramRing, os);
-      ListAdjIneq[i_adj] = {adj.eInc, adj.eBigMat, adj.iOrb,
+      ListAdjIneq[i_adj] = {adj.eInc,
+                            DelaunayBigMat<Tint>(adj.eBigMat, &lin_table),
+                            adj.iOrb,
                             table.insert(std::move(eIneq))};
     }
     l_dels[i_del] = {eDel.EXT, eDel.GRP, std::move(ListAdjIneq)};
@@ -2321,8 +2383,10 @@ FlippingLtype(
     return {};
   };
   std::vector<Delaunay_EntryIneq<Tring, Tgroup>> l_dels;
-  // The distinct inequalities of the flipped tessellation.
+  // The distinct inequalities and the linear parts of the flipped
+  // tessellation.
   IneqTable<Tring> table;
+  LinearPartTable<Tring> lin_table;
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   MicrosecondTime time_sy;
 #endif
@@ -2546,8 +2610,10 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_ineq += time_i.eval_int64();
 #endif
-          Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat1), Pos,
-                                    table.insert(std::move(eIneq))};
+          Delaunay_AdjIneqO<Tring> NAdj{
+              eAdj.eInc,
+              DelaunayBigMat<Tring>(BigMat1, &lin_table), Pos,
+              table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 2");
 #endif
@@ -2637,8 +2703,10 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_ineq += time_i.eval_int64();
 #endif
-          Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat2), Pos,
-                                    table.insert(std::move(eIneq))};
+          Delaunay_AdjIneqO<Tring> NAdj{
+              eAdj.eInc,
+              DelaunayBigMat<Tring>(BigMat2, &lin_table), Pos,
+              table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 3");
 #endif
@@ -2671,8 +2739,10 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
             time_flt_ineq += time_i.eval_int64();
 #endif
-            Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat1), Pos2,
-                                      table.insert(std::move(eIneq))};
+            Delaunay_AdjIneqO<Tring> NAdj{
+                eAdj.eInc,
+                DelaunayBigMat<Tring>(BigMat1, &lin_table), Pos2,
+                table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 4");
 #endif
@@ -2716,8 +2786,10 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
             time_flt_ineq += time_i.eval_int64();
 #endif
-            Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, std::move(BigMat1), Pos,
-                                      table.insert(std::move(eIneq))};
+            Delaunay_AdjIneqO<Tring> NAdj{
+                eAdj.eInc,
+                DelaunayBigMat<Tring>(BigMat1, &lin_table), Pos,
+                table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 5");
 #endif
@@ -2738,8 +2810,10 @@ FlippingLtype(
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
           time_flt_ineq += time_i.eval_int64();
 #endif
-          Delaunay_AdjIneqO<Tring> NAdj{eAdj.eInc, eAdj.eBigMat, Pos,
-                                    table.insert(std::move(eIneq))};
+          Delaunay_AdjIneqO<Tring> NAdj{
+              eAdj.eInc,
+              DelaunayBigMat<Tring>(eAdj.eBigMat, &lin_table), Pos,
+              table.insert(std::move(eIneq))};
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 6");
 #endif
