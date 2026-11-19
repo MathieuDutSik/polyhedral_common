@@ -1,5 +1,6 @@
-# LAT sig mass: cases run with target=auto (GroupHomCount.h), the target computed
-# in C++ and checked against the oracle's mass
+# LAT sig mass: cases run with target=auto, the target computed in C++
+# (GroupHomCount.h; for an odd lattice through GenusEnumerationOdd) and
+# checked against the mass of the oracle
 E8 gS3_2_2_2 55/432
 E8 gD8_0_0_0_4_2 1/1536
 E8 gD8_0_1_5_0_1 1/7680
@@ -45,3 +46,9 @@ A2x4 k0_2_3_3 1699/13824
 A2x4 k1_2_1_4 5371/27648
 A2x4 k3_0_4_1 1633/27648
 A2x4 k6_1_1_0 211/82944
+I8 16p1 1/16
+I8 1p2_4p1_5p1 1/80
+I8 1p6_3p1 1/23040
+I8 2p4_4p2 1/12288
+A2I2 1p1_2p1_6p1 1/12
+I9 1p1_24p1 1/48

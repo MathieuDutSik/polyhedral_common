@@ -49,7 +49,7 @@
   (e.g. GroupOracle.g, sum_Lambda #Hom(G, O(Lambda)) of the type /
   |O(Lambda)|): the total found must equal it ("certified = true"); less is
   an incomplete list (exit 2), more an error (exit 3). With target=auto
-  (factors mode, an even lattice) the total is computed here
+  (factors mode) the total is computed here
   (GroupHomCount.h: the classes of the genus, then the homomorphisms into
   their orthogonal groups up to conjugacy).
  */
@@ -170,12 +170,11 @@ void process(std::string const &mode, std::string const &FileGram1,
     }
     std::vector<IsometryFactor<T>> factors = ReadIsometryFactors<T>(FileIsom1);
     if (target && *target == "auto") {
-      if (odd_gram) {
-        std::cerr << "GENUS_GlueIsometry: target=auto needs an even lattice\n";
-        throw TerminalException{1};
-      }
+      // over the genus of the lattice given, odd or even: the pieces of the
+      // even sublattice carry the same rational representation
       std::optional<T> opt = HomomorphismGenusMass<T, Tint, Tgroup>(
-          A, FactorsModelRepresentation(factors), std::cerr);
+          odd_gram ? *odd_gram : A, FactorsModelRepresentation(factors),
+          std::cerr);
       if (!opt) {
         std::cerr << "GENUS_GlueIsometry: the genus did not close, no "
                      "target\n";
@@ -488,7 +487,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "        all the genera of pairs (e.g. GroupOracle.g);\n";
       std::cerr << "        the genera found must reach it (certified =\n";
       std::cerr << "        true), exit 2 when they weigh less, 3 more;\n";
-      std::cerr << "        target=auto computes it (factors, even lattice)\n";
+      std::cerr << "        target=auto computes it (factors mode)\n";
       std::cerr << "lvalue=double / lvalue=mpfr / lvalue=arb (anywhere,\n";
       std::cerr << "        optional): the L-values of the quadratic masses\n";
       std::cerr << "        with E not abelian, in double precision (when\n";

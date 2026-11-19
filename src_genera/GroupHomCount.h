@@ -5,6 +5,7 @@
 // clang-format off
 #include "GenusEnumeration.h"
 #include "GenusEnumerationGroup.h"
+#include "GenusEnumerationOdd.h"
 #include "GenusMass.h"
 #include "InvariantVectorFamily.h"
 #include "PERM_Fct.h"
@@ -234,9 +235,10 @@ T HomomorphismClassMass(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &R,
 }
 
 /*
-  The total over the genus of A: the classes by GenusEnumeration (closed by
-  GenusMass), then HomomorphismClassMass for each; nullopt when the
-  enumeration of the genus did not close.
+  The total over the genus of A: the classes by GenusEnumeration, or
+  GenusEnumerationOdd for an odd A (closed by GenusMass, which covers both),
+  then HomomorphismClassMass for each; nullopt when the enumeration of the
+  genus did not close.
  */
 template <typename T, typename Tint, typename Tgroup>
 std::optional<T> HomomorphismGenusMass(MyMatrix<T> const &A,
@@ -245,10 +247,19 @@ std::optional<T> HomomorphismGenusMass(MyMatrix<T> const &A,
   using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
   T mass = GenusMass<T, Tint>(A);
   GenusMethods methods;
-  GenusEnumerationResult<T, Tgroup> genus = GenusEnumeration<T, Tint, Tgroup>(
-      std::vector<MyMatrix<T>>{A}, MassToGroupField<Tmass>(mass), 0, methods,
-      NeighborStrategy::Iterate, GenusRandomWalkOptions(), false,
-      GenusOrderOptions(), -1, os);
+  bool even = true;
+  for (int i = 0; i < A.rows(); i++) {
+    even = even && IsInteger(A(i, i) / T(2));
+  }
+  GenusEnumerationResult<T, Tgroup> genus =
+      even ? GenusEnumeration<T, Tint, Tgroup>(
+                 std::vector<MyMatrix<T>>{A}, MassToGroupField<Tmass>(mass), 0,
+                 methods, NeighborStrategy::Iterate, GenusRandomWalkOptions(),
+                 false, GenusOrderOptions(), -1, os)
+           : GenusEnumerationOdd<T, Tint, Tgroup>(
+                 std::vector<MyMatrix<T>>{A}, MassToGroupField<Tmass>(mass), 0,
+                 methods, NeighborStrategy::Iterate, GenusRandomWalkOptions(),
+                 false, GenusOrderOptions(), -1, os);
   if (!genus.complete) {
     return {};
   }
