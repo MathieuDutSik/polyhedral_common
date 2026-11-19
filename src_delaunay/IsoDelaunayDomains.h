@@ -22,6 +22,7 @@
 #include <utility>
 #include <variant>
 #include <bit>
+#include <mutex>
 #include <limits>
 // clang-format on
 
@@ -665,10 +666,47 @@ template <typename Tint> struct Delaunay_AdjIneqO {
   int i_ineq;
 };
 
+/*
+  The group GRP of a Delaunay orbit of a DelaunayTesselationIneq. The
+  stabilizer of a Delaunay polytope is trivial in most cases, and a Group,
+  even trivial, costs a few hundred bytes. The trivial groups on the same
+  number of points are therefore one shared group, and any other group is
+  kept on its own. It is read as a pointer to the group.
+ */
+template <typename Tgroup> class CompactGroup {
+private:
+  using Tidx = typename Tgroup::Telt::Tidx;
+  std::shared_ptr<const Tgroup> ptr;
+  static std::shared_ptr<const Tgroup> trivial(Tidx n) {
+    static std::mutex mutex;
+    static std::map<Tidx, std::shared_ptr<const Tgroup>> cache;
+    std::lock_guard<std::mutex> lock(mutex);
+    auto iter = cache.find(n);
+    if (iter != cache.end()) {
+      return iter->second;
+    }
+    auto group = std::make_shared<const Tgroup>(n);
+    cache.emplace(n, group);
+    return group;
+  }
+
+public:
+  CompactGroup() : ptr(trivial(0)) {}
+  explicit CompactGroup(Tgroup const &G) {
+    if (G.size() == 1) {
+      ptr = trivial(G.n_act());
+    } else {
+      ptr = std::make_shared<const Tgroup>(G);
+    }
+  }
+  Tgroup const &operator*() const { return *ptr; }
+  Tgroup const *operator->() const { return ptr.get(); }
+};
+
 template <typename Tint, typename Tgroup>
 struct Delaunay_EntryIneq {
   MyMatrix<Tint> EXT;
-  Tgroup GRP;
+  CompactGroup<Tgroup> GRP;
   std::vector<Delaunay_AdjIneqO<Tint>> ListAdj;
 };
 
@@ -729,7 +767,16 @@ inline void serialize(Archive &ar,
                       Delaunay_EntryIneq<Tint, Tgroup> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("EXT", eRec.EXT);
-  ar &make_nvp("GRP", eRec.GRP);
+  // The group is written whole, so that the archives do not depend on how
+  // it is kept.
+  Tgroup GRP;
+  if constexpr (Archive::is_saving::value) {
+    GRP = *eRec.GRP;
+  }
+  ar &make_nvp("GRP", GRP);
+  if constexpr (Archive::is_loading::value) {
+    eRec.GRP = CompactGroup<Tgroup>(GRP);
+  }
   ar &make_nvp("ListAdj", eRec.ListAdj);
 }
 template <class Archive, typename Tint, typename Tgroup>
@@ -768,7 +815,7 @@ StripDelaunayTesselationIneq(
     for (auto &eAdj : eDel.ListAdj) {
       ListAdj.push_back({eAdj.eInc.full(), eAdj.eBigMat.full(), eAdj.iOrb});
     }
-    l_dels.push_back({eDel.EXT, eDel.GRP, std::move(ListAdj)});
+    l_dels.push_back({eDel.EXT, *eDel.GRP, std::move(ListAdj)});
   }
   return {std::move(l_dels)};
 }
@@ -921,7 +968,8 @@ DelaunayTesselationIneq<Tint, Tgroup> BuildDelaunayTesselationIneq(
                             adj.iOrb,
                             table.insert(std::move(eIneq))};
     }
-    l_dels[i_del] = {eDel.EXT, eDel.GRP, std::move(ListAdjIneq)};
+    l_dels[i_del] = {eDel.EXT, CompactGroup<Tgroup>(eDel.GRP),
+                     std::move(ListAdjIneq)};
   }
   return {std::move(l_dels), std::move(table.l_ineq)};
 }
@@ -1263,7 +1311,7 @@ template <typename Tring, typename Tgroup> struct FlippingTessellationCache {
     std::optional<std::vector<MyMatrix<Tring>>> &gens = l_stab_gens[iDel];
     if (!gens) {
       std::vector<MyMatrix<Tring>> l_mat;
-      for (auto &ePermGen : DTI.l_dels[iDel].GRP.SmallGeneratingSet()) {
+      for (auto &ePermGen : DTI.l_dels[iDel].GRP->SmallGeneratingSet()) {
         l_mat.push_back(get_precomp(iDel).represent(ePermGen));
       }
       gens = std::move(l_mat);
@@ -2349,7 +2397,7 @@ FlippingLtype(
 #endif
       std::optional<Telt> opt =
           ListOrbitDelaunay.l_dels[iDelaunayOld]
-              .GRP.RepresentativeAction_OnSets(eAdj.eInc.full(), eInc);
+              .GRP->RepresentativeAction_OnSets(eAdj.eInc.full(), eInc);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
       time_flt_onsets += time_o.eval_int64();
 #endif
@@ -2501,9 +2549,9 @@ FlippingLtype(
         os << "ISODEL: |l_dels|=" << l_dels.size() << " iInfo=" << iInfo
            << " iFacet=" << iFacet << "\n";
 #endif
-        Tgroup GRP = ListInfo[iInfo][iFacet].TheStab;
-        Delaunay_EntryIneq<Tring, Tgroup> del{ListInfo[iInfo][iFacet].EXT, GRP,
-                                          {}};
+        Delaunay_EntryIneq<Tring, Tgroup> del{
+            ListInfo[iInfo][iFacet].EXT,
+            CompactGroup<Tgroup>(ListInfo[iInfo][iFacet].TheStab), {}};
         l_dels.push_back(std::move(del));
       }
     }
@@ -3077,7 +3125,7 @@ size_t ComputeInvariantIsoDelaunayDomain(
   for (auto &eDel : DT.l_dels) {
     size_t hash = seed_delaunay;
     size_t hash_nVert = eDel.EXT.rows();
-    TintGroup ord_grp = eDel.GRP.size();
+    TintGroup ord_grp = eDel.GRP->size();
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN_PRESENTATION
     map_vert[hash_nVert] += 1;
     map_ord_grp[ord_grp] += 1;
