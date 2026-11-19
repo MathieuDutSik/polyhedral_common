@@ -109,7 +109,8 @@ void process(FullNamelist const &eFull, std::ostream &os) {
     return;
   }
   std::vector<Tout> l_tot =
-      unfold_opt(opt_l_tot, "EnumerateAndStore_Serial (Igusa vertices)");
+      unfold_opt(std::move(opt_l_tot),
+                 "EnumerateAndStore_Serial (Igusa vertices)");
   os << "IGUSA: number of orbits of vertices=" << l_tot.size() << "\n";
   //
   std::vector<Tobj> l_vert;

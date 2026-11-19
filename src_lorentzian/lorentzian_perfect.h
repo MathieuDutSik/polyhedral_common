@@ -1624,7 +1624,8 @@ LORENTZ_GetGeneratorsAutom_Reduced(MyMatrix<T> const &LorMat,
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
   std::vector<Tout> l_obj =
-      unfold_opt(opt_l_obj, "EnumerateAndStore_Serial (lorentzian automorphism)");
+      unfold_opt(std::move(opt_l_obj),
+                 "EnumerateAndStore_Serial (lorentzian automorphism)");
 
   std::vector<MyMatrix<Tint>> l_gen =
       LORENTZ_ExtractGeneratorsFromObjList<Tint, Telt>(l_obj);
@@ -1717,7 +1718,8 @@ LORENTZ_GetOrbitRepresentative_Kernel(MyMatrix<T> const &LorMat, T const &X,
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
   std::vector<Tout> l_obj =
-      unfold_opt(opt_l_obj, "EnumerateAndStore_Serial (lorentzian, X sign)");
+      unfold_opt(std::move(opt_l_obj),
+                 "EnumerateAndStore_Serial (lorentzian, X sign)");
   if (X != 0) {
     std::cerr << "LORPERF: Some code needs to be written for one sign\n";
     std::cerr << "LORPERF: For the other sign, that seems to require different "

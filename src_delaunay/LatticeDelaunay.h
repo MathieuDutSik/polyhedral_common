@@ -1273,7 +1273,7 @@ get_delaunay_tessellation_serial(DataLattice<T, Tint, Tgroup> &data,
     std::optional<DelaunayTesselation<Tint, Tgroup>> opt =
         EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(
             data, f_incorrect, max_runtime_second);
-    return unfold_opt(opt, "The Delaunay tesselation");
+    return unfold_opt(std::move(opt), "The Delaunay tesselation");
   };
   if (CacheFile == "none") {
     return compute();

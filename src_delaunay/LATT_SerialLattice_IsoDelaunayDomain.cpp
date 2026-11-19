@@ -57,7 +57,8 @@ template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
   std::vector<Tout> l_tot =
-      unfold_opt(opt_l_tot, "EnumerateAndStore_Serial (iso-Delaunay)");
+      unfold_opt(std::move(opt_l_tot),
+                 "EnumerateAndStore_Serial (iso-Delaunay)");
 
   // Optionally dump each enumerated domain as a boost text-archive of an
   // IsoDelaunayDomain (the format read by LATT_AnalysisIsoDelaunay), reusing

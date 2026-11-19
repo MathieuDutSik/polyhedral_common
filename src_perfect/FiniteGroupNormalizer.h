@@ -336,7 +336,8 @@ ComputeBravaisNormalizer(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
   std::vector<Tout> l_tot =
-      unfold_opt(opt_l_tot, "EnumerateAndStore_Serial (Bravais normalizer)");
+      unfold_opt(std::move(opt_l_tot),
+                 "EnumerateAndStore_Serial (Bravais normalizer)");
   for (auto const &entry : l_tot) {
     res.perfect_forms.push_back(entry.x.Gram);
   }

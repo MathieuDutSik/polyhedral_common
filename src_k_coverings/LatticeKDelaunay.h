@@ -1042,7 +1042,7 @@ ComputeKDelaunayTesselation(MyMatrix<T> const &GramMat, int const &k,
   std::optional<KDelaunayTesselation<Tint, Tgroup>> opt =
       EnumerationKDelaunayTiles<T, Tint, Tgroup, decltype(f_incorrect)>(
           data, k, f_incorrect, max_runtime_second);
-  return unfold_opt(opt, "The order-k Delaunay tiling");
+  return unfold_opt(std::move(opt), "The order-k Delaunay tiling");
 }
 
 // Consistency of the recorded adjacencies: the adjacent tile, mapped by
@@ -1395,7 +1395,7 @@ get_k_delaunay_tessellation_serial(DataLattice<T, Tint, Tgroup> &data,
         EnumerationKDelaunayTiles<T, Tint, Tgroup, decltype(f_incorrect)>(
             data, k, f_incorrect, max_runtime_second);
     KDelaunayTesselation<Tint, Tgroup> DT =
-        unfold_opt(opt, "The order-k Delaunay tiling");
+        unfold_opt(std::move(opt), "The order-k Delaunay tiling");
 #ifdef SANITY_CHECK_K_DELAUNAY
     check_k_delaunay_tessellation(DT, os);
 #endif
